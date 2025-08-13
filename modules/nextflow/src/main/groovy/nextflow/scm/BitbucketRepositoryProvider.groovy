@@ -48,7 +48,7 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
             return null
         }
 
-        String secret = getPassword() ?: getToken()
+        String secret = getToken() ?: getPassword()
         String authString = "${getUser()}:${secret}".bytes.encodeBase64().toString()
 
         return new String[] { "Authorization", "Basic " + authString }
@@ -62,7 +62,7 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
     /** {@inheritDoc} */
     @Override
     CredentialsProvider getGitCredentials() {
-        return new UsernamePasswordCredentialsProvider(getUser(), getPassword() ?: getToken())
+        return new UsernamePasswordCredentialsProvider(getUser(), getToken() ?: getPassword())
     }
 
     /** {@inheritDoc} */
