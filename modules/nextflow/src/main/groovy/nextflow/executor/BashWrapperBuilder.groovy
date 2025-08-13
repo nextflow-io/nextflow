@@ -342,6 +342,7 @@ class BashWrapperBuilder {
         binding.conda_activate = getCondaActivateSnippet()
         binding.spack_activate = getSpackActivateSnippet()
         binding.pixi_activate = getPixiActivateSnippet()
+        binding.package_activate = getPackageActivateSnippet()
 
         /*
          * add the task environment
@@ -582,6 +583,29 @@ class BashWrapperBuilder {
             result += "cd \"\$OLDPWD\"\n"
         }
         return result
+    }
+
+    private String getPackageActivateSnippet() {
+        import nextflow.packages.PackageManager
+        import nextflow.Global
+        
+        if (!packageSpec || !PackageManager.isEnabled(Global.session))
+            return null
+        
+        try {
+            def packageManager = new PackageManager(Global.session)
+            def envPath = packageManager.createEnvironment(packageSpec)
+            def activationScript = packageManager.getActivationScript(packageSpec, envPath)
+            
+            return """\
+                # ${packageSpec.provider} environment
+                ${activationScript}
+                """.stripIndent()
+        }
+        catch (Exception e) {
+            log.warn "Failed to create package environment: ${e.message}"
+            return null
+        }
     }
 
     protected String getTraceCommand(String interpreter) {
