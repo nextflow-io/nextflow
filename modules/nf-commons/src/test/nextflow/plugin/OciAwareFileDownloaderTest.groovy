@@ -332,7 +332,7 @@ class OciAwareFileDownloaderTest extends Specification {
         
         // Verify the sequence: initial request, redirect, auth challenge, token request, authenticated download
         wiremock.verify(getRequestedFor(urlPathEqualTo("/plugin.zip")))
-        wiremock.verify(3, getRequestedFor(urlPathEqualTo("/auth/plugin.zip"))) // String request for auth check, 2 successful requests (String + InputStream)
+        wiremock.verify(2, getRequestedFor(urlPathEqualTo("/auth/plugin.zip"))) // Auth challenge request + authenticated download
         wiremock.verify(getRequestedFor(urlPathEqualTo("/token")))
 
         cleanup:
