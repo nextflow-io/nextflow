@@ -47,13 +47,10 @@ class FusionHelper {
     static String runWithContainer(FusionScriptLauncher launcher, ContainerConfig containerConfig, String containerName, String containerOpts, List<String> runCmd) {
         if( !containerName )
             throw new IllegalArgumentException("Missing task container -- Fusion requires the task to be executed by a container process")
-        final engine = containerConfig.getEngine()
-        final containerBuilder = ContainerBuilder.create(engine, containerName)
+        final containerBuilder = ContainerBuilder.create(containerConfig, containerName)
                 .addMountWorkDir(false)
-                .addRunOptions(containerConfig.runOptions as String)
                 .addRunOptions(containerOpts)
-                .addRunOptions(containerConfig.fusionOptions())
-                .params(containerConfig)
+                .addRunOptions(containerConfig.getFusionOptions())
 
         // add fusion env vars
         for(Map.Entry<String,String> it : launcher.fusionEnv()) {

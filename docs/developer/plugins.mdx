@@ -132,6 +132,9 @@ import nextflow.script.dsl.Description
 ''')
 class MyPluginConfig implements ConfigScope {
 
+    /* required by extension point -- do not remove */
+    MyPluginConfig() {}
+
     MyPluginConfig(Map opts) {
         this.createMessage = opts.createMessage
     }
@@ -142,7 +145,7 @@ class MyPluginConfig implements ConfigScope {
 }
 ```
 
-While this approach is not required to support plugin config options, it allows Nextflow to recognize plugin definitions when validating the config.
+While this approach is not required to support plugin config options, it allows Nextflow to recognize plugin definitions when validating the config. See [Configuration scopes][config-scopes] for more information.
 
 ### Executors
 
@@ -294,7 +297,7 @@ channel
     .sqlInsert(into: 'BAR', columns: 'id', db: 'test')
 ```
 
-The above snippet is based on the [nf-sqldb](https://github.com/nextflow-io/nf-sqldb) plugin. The `fromQuery` factory 
+The above snippet is based on the [nf-sqldb](https://github.com/nextflow-io/nf-sqldb) plugin. The `fromQuery` factory
 is included under the alias `fromTable`.
 
 ### Process directives
@@ -357,7 +360,7 @@ import nextflow.trace.TraceObserver
 import nextflow.trace.TraceRecord
 
 class MyObserver implements TraceObserver {
-    
+
     @Override
     void onFlowBegin() {
         println "Okay, let's begin!"
@@ -377,7 +380,7 @@ class MyObserver implements TraceObserver {
     void onFilePublish(Path destination, Path source) {
         println "I published a file! It's located at ${path.toUriString()}"
     }
-    
+
     @Override
     void onFlowError(TaskHandler handler, TraceRecord trace) {
         println "Uh oh, something went wrong..."
@@ -554,6 +557,7 @@ Upload the plugins index to the repository hosted at [nextflow-io/plugins](https
 * [Understanding Gradle: The Build Lifecycle](https://proandroiddev.com/understanding-gradle-the-build-lifecycle-5118c1da613f)
 
 [cli-plugin]: /nextflow_docs/nextflow_repo/docs/reference/cli.mdx#plugin
+[config-scopes]: /nextflow_docs/nextflow_repo/docs/developer/config-scopes.mdx
 [process-directives]: /nextflow_docs/nextflow_repo/docs/process.mdx#directives
 [process-ext]: /nextflow_docs/nextflow_repo/docs/reference/process.mdx#ext
 [remote-files]: /nextflow_docs/nextflow_repo/docs/working-with-files.mdx#remote-files

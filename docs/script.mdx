@@ -105,6 +105,47 @@ Copying a map with the `+` operator is a safer way to modify maps in Nextflow, s
 
 See [Map\<K,V\>][stdlib-types-map] for the set of available map operations.
 
+## Tuples
+
+Tuples are used to store a fixed sequence of heterogeneous values. They are created using the `tuple` function:
+
+```nextflow
+person = tuple('Alice', 42, false)
+```
+
+Tuple elements are accessed by index:
+
+```nextflow
+name = person[0]
+age = person[1]
+is_male = person[2]
+```
+
+Tuples can be destructured in assignments:
+
+```nextflow
+(name, age, is_male) = person
+```
+
+As well as closure parameters:
+
+```nextflow
+coords = [
+    tuple(1, 2),
+    tuple(2, 4),
+    tuple(3, 6),
+    tuple(4, 8)
+]
+
+coords.each { x, y ->
+    println "x=$x, y=$y"
+}
+```
+
+Tuples are immutable -- once a tuple is created, its elements cannot be modified.
+
+See [Tuple][stdlib-types-tuple] for the set of available tuple operations.
+
 ## Operators
 
 Operators are symbols that perform specific functions on one or more values, and generally make code easier to read. This section highlights some of the most commonly used operators.
@@ -144,8 +185,8 @@ assert !true == false           // logical NOT
 The `in` and `!in` operators can be used to test *membership*, i.e. whether a collection contains a value:
 
 ```nextflow
-assert 'lo wo' in 'Hello world!'
 assert 2 in [1, 2, 3]
+assert 'a' in [a: 1, b: 2, c: 3]
 ```
 
 Arithmetic operators can be used to do math:
@@ -481,5 +522,6 @@ See [Workflows][workflow-page], [Processes][process-page], and [Modules][module-
 [stdlib-page]: /nextflow_docs/nextflow_repo/docs/reference/stdlib.mdx
 [stdlib-types-list]: /nextflow_docs/nextflow_repo/docs/reference/stdlib-types.mdx#liste
 [stdlib-types-map]: /nextflow_docs/nextflow_repo/docs/reference/stdlib-types.mdx#mapkv
+[stdlib-types-tuple]: /nextflow_docs/nextflow_repo/docs/reference/stdlib-types.mdx#stdlib-types-tuple
 [syntax-page]: /nextflow_docs/nextflow_repo/docs/reference/syntax.mdx
 [workflow-page]: /nextflow_docs/nextflow_repo/docs/workflow.mdx

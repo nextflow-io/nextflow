@@ -132,6 +132,24 @@ class ScriptFormatterTest extends Specification {
             }
             '''
         )
+
+        checkFormat(
+            '''\
+            workflow hello{
+            take: x ; y ; emit: result = x * y
+            }
+            ''',
+            '''\
+            workflow hello {
+                take:
+                x
+                y
+
+                emit:
+                result = x * y
+            }
+            '''
+        )
     }
 
     def 'should format a process definition' () {
@@ -341,11 +359,11 @@ class ScriptFormatterTest extends Specification {
         expect:
         checkFormat(
             '''\
-            Channel.of( 1, 2, 3 )
+            channel.of( 1, 2, 3 )
                 .multiMap{v->foo:bar:v}.set{result}
             ''',
             '''\
-            Channel.of(1, 2, 3)
+            channel.of(1, 2, 3)
                 .multiMap { v -> foo: bar: v }
                 .set { result }
             '''

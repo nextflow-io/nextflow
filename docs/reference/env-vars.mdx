@@ -58,6 +58,12 @@ Directory where Conda environments are stored. When using a computing cluster it
 
 Enable the use of Conda recipes defined by using the [conda][process-conda] directive. (default`false`).
 
+##### `NXF_CONTAINER_ENTRYPOINT_OVERRIDE`
+
+<DeprecatedInVersion version="22.10.0" />
+
+When `true`, override the container entrypoint with `/bin/bash` (default: `false`).
+
 ##### `NXF_DEFAULT_DSL`
 
 <AddedInVersion version="22.03.0-edge" />
@@ -229,6 +235,30 @@ Max number of attempts used for HTTP retryable operations (default: `5`).
 
 Max delay used for HTTP retryable operations (default: `90s`).
 
+##### `NXF_RETRY_POLICY_DELAY`
+
+<AddedInVersion version="25.06.0-edge" />
+
+Delay used for HTTP retryable operations (default: `350ms`).
+
+##### `NXF_RETRY_POLICY_JITTER`
+
+<AddedInVersion version="25.06.0-edge" />
+
+Jitter value used for HTTP retryable operations (default: `0.25`).
+
+##### `NXF_RETRY_POLICY_MAX_ATTEMPTS`
+
+<AddedInVersion version="25.06.0-edge" />
+
+Max number of attempts used for HTTP retryable operations (default: `5`).
+
+##### `NXF_RETRY_POLICY_MAX_DELAY`
+
+<AddedInVersion version="25.06.0-edge" />
+
+Max delay used for HTTP retryable operations (default: `90s`).
+
 ##### `NXF_SCM_FILE`
 
 <AddedInVersion version="20.10.0" />
@@ -311,7 +341,6 @@ Proxy authentication is supported by providing the credentials in the proxy URL,
 ##### `NO_PROXY`
 
 Defines one or more host names that should not use the proxy server. Separate multiple names using a comma character.
-
 
 [process-conda]: /nextflow_docs/nextflow_repo/docs/reference/process.mdx#conda
 [process-spack]: /nextflow_docs/nextflow_repo/docs/reference/process.mdx#spack

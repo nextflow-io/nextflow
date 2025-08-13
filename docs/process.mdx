@@ -637,7 +637,7 @@ hello
 
 ### Input tuples (`tuple`)
 
-The `tuple` qualifier allows you to group multiple values into a single input definition. It can be useful when a channel emits tuples of values that need to be handled separately. Each element in the tuple is associated with a corresponding element in the `tuple` definition. For example:
+The `tuple` qualifier groups multiple values into a single input definition. It can be useful when a channel emits [tuples][script-tuples] of values that need to be handled separately. Each element in the tuple is associated with a corresponding element in the `tuple` definition. For example:
 
 ```nextflow
 process cat {
@@ -1021,7 +1021,7 @@ If the command fails, the task will also fail. In Bash, you can append `|| true`
 
 ### Output tuples (`tuple`)
 
-The `tuple` qualifier allows you to output multiple values in a single channel. It is useful when you need to associate outputs with metadata, for example:
+The `tuple` qualifier outputs multiple values in a single channel as a [tuple][script-tuples]. It is useful when you need to associate outputs with metadata, for example:
 
 ```nextflow
 process blast {
@@ -1365,6 +1365,7 @@ process hello {
 [process-reference-outputs]: /nextflow_docs/nextflow_repo/docs/reference/process.mdx#outputs
 [process-template]: /nextflow_docs/nextflow_repo/docs/process.mdx#template
 [script-closure]: /nextflow_docs/nextflow_repo/docs/script.mdx#closures
+[script-tuples]: /nextflow_docs/nextflow_repo/docs/script.mdx#tuples
 [stdlib-types-path]: /nextflow_docs/nextflow_repo/docs/reference/stdlib-types.mdx#path
 [strict-syntax-page]: /nextflow_docs/nextflow_repo/docs/strict-syntax.mdx
 [string-interpolation]: /nextflow_docs/nextflow_repo/docs/script.mdx#string-interpolation

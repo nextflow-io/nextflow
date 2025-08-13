@@ -78,6 +78,7 @@ public interface ChannelNamespace extends Namespace {
         [Read more](https://nextflow.io/docs/latest/reference/channel.html#frompath)
     """)
     Channel<Path> fromPath(Map<String,?> opts, String pattern);
+    Channel<Path> fromPath(String pattern);
 
     @Description("""
         Create a channel that queries the [NCBI SRA](https://www.ncbi.nlm.nih.gov/sra) database and emits all FASTQ files matching the given project or accession ids.

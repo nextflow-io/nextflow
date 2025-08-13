@@ -9,5 +9,6 @@
 # defined by the Mozilla Public License, v. 2.0.
 #
 
+io.seqera.tower.plugin.TowerConfig
 io.seqera.tower.plugin.TowerFactory
 io.seqera.tower.plugin.TowerFusionToken

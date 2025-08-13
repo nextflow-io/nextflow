@@ -70,7 +70,7 @@ class AzFileCopyStrategyTest extends Specification {
         def workDir = mockAzPath( 'az://my-data/work/dir' )
         def token = '12345'
         def config = new AzConfig([storage:[sasToken: token]])
-        def executor = Mock(AzBatchExecutor) { getConfig() >> config }
+        def executor = Mock(AzBatchExecutor) { getAzConfig() >> config }
 
         when:
         def binding = new AzBatchScriptLauncher([
@@ -203,7 +203,7 @@ class AzFileCopyStrategyTest extends Specification {
         def token = '12345'
         def config = new AzConfig([storage:[sasToken: token]])
         def executor = Mock(AzBatchExecutor) {
-            getConfig() >> config
+            getAzConfig() >> config
             getRemoteBinDir() >> remoteBin
         }
 
@@ -345,7 +345,7 @@ class AzFileCopyStrategyTest extends Specification {
         def input2 = mockAzPath('az://my-data/work/dir/file2.txt')
         def token = '12345'
         def config = new AzConfig([storage:[sasToken: token]])
-        def executor = Mock(AzBatchExecutor) { getConfig() >> config }
+        def executor = Mock(AzBatchExecutor) { getAzConfig() >> config }
 
         when:
         def binding = new AzBatchScriptLauncher([
