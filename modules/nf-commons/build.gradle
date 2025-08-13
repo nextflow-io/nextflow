@@ -38,6 +38,7 @@ dependencies {
     api 'io.seqera:lib-retry:1.2.0'
     // patch gson dependency required by pf4j
     api 'com.google.code.gson:gson:2.13.1'
+    api 'io.seqera:npr-api:0.6.1'
 
     /* testImplementation inherited from top gradle build file */
     testImplementation(testFixtures(project(":nextflow")))
