@@ -1127,7 +1127,8 @@ While this option can be used with any process output, it cannot be applied to i
 
 When a process is only supplied with value channels, regular values, or no inputs, it returns outputs as value channels. For example:
 
-```nextflow file=./snippets/process-out-singleton.nf
+```nextflow
+file=./snippets/process-out-singleton.nf
 ```
 
 In the above example, the `echo` process is invoked with a regular value that is wrapped in a value channel. As a result, `echo` returns a value channel and `greet` is executed three times.
