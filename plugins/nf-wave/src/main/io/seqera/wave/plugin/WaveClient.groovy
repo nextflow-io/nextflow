@@ -493,6 +493,7 @@ class WaveClient {
         def attrs = new HashMap<String,String>()
         attrs.container = containerImage
         attrs.conda = task.config.conda as String
+        attrs.package = task.config.package
         if( bundle!=null && bundle.dockerfile ) {
             attrs.dockerfile = bundle.dockerfile.text
         }
@@ -553,6 +554,33 @@ class WaveClient {
                         .withEntries(DockerHelper.condaPackagesToList(attrs.conda))
                 }
 
+            }
+        }
+
+        /*
+         * If 'package' directive is specified use it to create a container file
+         * to assemble the target container
+         */
+        if( attrs.package && !packagesSpec ) {
+            import nextflow.packages.PackageManager
+            import nextflow.packages.PackageSpec
+            
+            if( containerScript )
+                throw new IllegalArgumentException("Unexpected package and $scriptType conflict while resolving wave container")
+
+            // Check if new package system is enabled
+            if( PackageManager.isEnabled(session) ) {
+                try {
+                    def defaultProvider = session.config.navigate('packages.provider', 'conda') as String
+                    PackageSpec spec = PackageManager.parseSpec(attrs.package, defaultProvider)
+                    
+                    if( spec ) {
+                        packagesSpec = convertToWavePackagesSpec(spec)
+                    }
+                }
+                catch( Exception e ) {
+                    log.warn "Failed to parse package specification for Wave: ${e.message}"
+                }
             }
         }
 
@@ -851,6 +879,58 @@ class WaveClient {
         }
         catch (FailsafeException e) {
             throw e.cause
+        }
+    }
+
+    /**
+     * Convert a Nextflow PackageSpec to Wave PackagesSpec
+     */
+    private PackagesSpec convertToWavePackagesSpec(nextflow.packages.PackageSpec spec) {
+        def waveSpec = new PackagesSpec()
+        
+        // Map provider to Wave PackagesSpec Type
+        def waveType = mapProviderToWaveType(spec.provider)
+        if (waveType) {
+            waveSpec.withType(waveType)
+        }
+        
+        // Set entries or environment
+        if (spec.hasEntries()) {
+            waveSpec.withEntries(spec.entries)
+        }
+        
+        if (spec.hasEnvironmentFile()) {
+            waveSpec.withEnvironment(spec.environment)
+        }
+        
+        // Set channels (conda-specific)
+        if (spec.channels && !spec.channels.empty) {
+            waveSpec.withChannels(spec.channels)
+        }
+        
+        // Set conda options if provider is conda
+        if (spec.provider == 'conda' && config.condaOpts()) {
+            waveSpec.withCondaOpts(config.condaOpts())
+        }
+        
+        return waveSpec
+    }
+    
+    /**
+     * Map provider name to Wave PackagesSpec Type
+     */
+    private PackagesSpec.Type mapProviderToWaveType(String provider) {
+        switch (provider?.toLowerCase()) {
+            case 'conda':
+            case 'mamba':
+            case 'micromamba':
+                return PackagesSpec.Type.CONDA
+            case 'pixi':
+                // Wave doesn't support pixi yet, so we'll use conda for now
+                return PackagesSpec.Type.CONDA
+            default:
+                log.warn "Unknown package provider for Wave: ${provider}, defaulting to CONDA"
+                return PackagesSpec.Type.CONDA
         }
     }
 }
