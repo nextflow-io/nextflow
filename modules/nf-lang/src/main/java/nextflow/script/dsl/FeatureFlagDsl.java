@@ -55,4 +55,10 @@ public class FeatureFlagDsl {
     """)
     public boolean previewRecursion;
 
+    @FeatureFlag("nextflow.preview.package")
+    @Description("""
+        When `true`, enables the unified package management system with the `package` directive.
+    """)
+    public boolean previewPackage;
+
 }
