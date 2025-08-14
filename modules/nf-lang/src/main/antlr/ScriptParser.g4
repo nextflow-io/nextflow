@@ -182,6 +182,7 @@ processBody
     // explicit "Mahesh" form
     |   (sep processDirectives)?
         (sep processInputs)?
+        (sep processWhen)?
         sep processExec
         (sep processStub)?
         sep processOutputs
@@ -227,27 +228,25 @@ workflowDef
 
 workflowBody
     // explicit main block with optional take/emit blocks
-    :   (sep TAKE COLON nls workflowTakes)?
-        sep MAIN COLON nls workflowMain
-        (sep EMIT COLON nls workflowEmits)?
-        (sep PUBLISH COLON nls workflowPublishers)?
+    :   (sep TAKE COLON nls take=workflowTakes)?
+        sep MAIN COLON nls main=blockStatements
+        (sep EMIT COLON nls emit=workflowEmits)?
+        (sep PUBLISH COLON nls publish=workflowPublishers)?
+        (sep ONCOMPLETE COLON nls onComplete=blockStatements)?
+        (sep ONERROR COLON nls onError=blockStatements)?
 
     // explicit emit block with optional take/main blocks
-    |   (sep TAKE COLON nls workflowTakes)?
-        (sep MAIN COLON nls workflowMain)?
-        sep EMIT COLON nls workflowEmits
-        (sep PUBLISH COLON nls workflowPublishers)?
+    |   (sep TAKE COLON nls take=workflowTakes)?
+        (sep MAIN COLON nls main=blockStatements)?
+        sep EMIT COLON nls emit=workflowEmits
+        (sep PUBLISH COLON nls publish=workflowPublishers)?
 
     // implicit main block
-    |   sep? workflowMain
+    |   sep? main=blockStatements
     ;
 
 workflowTakes
     :   identifier (sep identifier)*
-    ;
-
-workflowMain
-    :   blockStatements
     ;
 
 workflowEmits
@@ -517,6 +516,8 @@ identifier
     |   WORKFLOW
     |   EMIT
     |   MAIN
+    |   ONCOMPLETE
+    |   ONERROR
     |   PUBLISH
     |   TAKE
     ;
@@ -709,6 +710,8 @@ keywords
     |   WORKFLOW
     |   EMIT
     |   MAIN
+    |   ONCOMPLETE
+    |   ONERROR
     |   PUBLISH
     |   TAKE
     |   NullLiteral

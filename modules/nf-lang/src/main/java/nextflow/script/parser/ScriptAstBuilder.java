@@ -30,7 +30,7 @@ import nextflow.script.ast.ASTNodeMarker;
 import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.FeatureFlagNode;
 import nextflow.script.ast.FunctionNode;
-import nextflow.script.ast.IncludeModuleNode;
+import nextflow.script.ast.IncludeEntryNode;
 import nextflow.script.ast.IncludeNode;
 import nextflow.script.ast.IncompleteNode;
 import nextflow.script.ast.InvalidDeclaration;
@@ -341,11 +341,11 @@ public class ScriptAstBuilder {
 
     private IncludeNode includeDeclaration(IncludeDeclarationContext ctx) {
         var source = ast( string(ctx.stringLiteral()), ctx.stringLiteral() );
-        var modules = ctx.includeNames().includeName().stream()
+        var entries = ctx.includeNames().includeName().stream()
             .map(it -> {
                 var name = it.name.getText();
                 var alias = it.alias != null ? it.alias.getText() : null;
-                var result = new IncludeModuleNode(name, alias);
+                var result = new IncludeEntryNode(name, alias);
                 result.putNodeMetaData("_START_NAME", tokenPosition(it.name));
                 if( it.alias != null )
                     result.putNodeMetaData("_START_ALIAS", tokenPosition(it.alias));
@@ -353,7 +353,7 @@ public class ScriptAstBuilder {
             })
             .toList();
 
-        return ast( new IncludeNode(source, modules), ctx );
+        return ast( new IncludeNode(source, entries), ctx );
     }
 
     private ClassNode enumDef(EnumDefContext ctx) {
@@ -507,41 +507,40 @@ public class ScriptAstBuilder {
         var name = ctx.name != null ? ctx.name.getText() : null;
 
         if( ctx.body == null ) {
-            var result = ast( new WorkflowNode(name, null, null, null, null), ctx );
+            var result = ast( new WorkflowNode(name, EmptyStatement.INSTANCE), ctx );
             groovydocManager.handle(result, ctx);
             return result;
         }
 
-        var takes = workflowTakes(ctx.body.workflowTakes());
-        var emits = workflowEmits(ctx.body.workflowEmits());
-        var publishers = workflowPublishers(ctx.body.workflowPublishers());
-        var main = blockStatements(
-            ctx.body.workflowMain() != null
-                ? ctx.body.workflowMain().blockStatements()
-                : null
-        );
+        var takes = workflowTakes(ctx.body.take);
+        var main = blockSection(ctx.body.main);
+        var emits = workflowEmits(ctx.body.emit);
+        var publishers = workflowPublishers(ctx.body.publish);
+        var onComplete = blockSection(ctx.body.onComplete);
+        var onError = blockSection(ctx.body.onError);
 
         if( name == null ) {
-            if( takes instanceof BlockStatement )
+            if( ctx.body.take != null )
                 collectSyntaxError(new SyntaxException("Entry workflow cannot have a take section", takes));
-            if( emits instanceof BlockStatement )
+            if( ctx.body.emit != null )
                 collectSyntaxError(new SyntaxException("Entry workflow cannot have an emit section", emits));
         }
         if( name != null ) {
-            if( publishers instanceof BlockStatement )
+            if( ctx.body.publish != null )
                 collectSyntaxError(new SyntaxException("Named workflow cannot have a publish section", publishers));
+            if( ctx.body.onComplete != null )
+                collectSyntaxError(new SyntaxException("Named workflow cannot have an onComplete section", onComplete));
+            if( ctx.body.onError != null )
+                collectSyntaxError(new SyntaxException("Named workflow cannot have an onError section", onComplete));
         }
 
-        var result = ast( new WorkflowNode(name, takes, main, emits, publishers), ctx );
+        var result = ast( new WorkflowNode(name, takes, main, emits, publishers, onComplete, onError), ctx );
         groovydocManager.handle(result, ctx);
         return result;
     }
 
     private WorkflowNode workflowDef(BlockStatement main) {
-        var takes = EmptyStatement.INSTANCE;
-        var emits = EmptyStatement.INSTANCE;
-        var publishers = EmptyStatement.INSTANCE;
-        return new WorkflowNode(null, takes, main, emits, publishers);
+        return new WorkflowNode(null, main);
     }
 
     private Statement workflowTakes(WorkflowTakesContext ctx) {
@@ -558,6 +557,12 @@ public class ScriptAstBuilder {
         var result = ast( stmt(variableName(ctx)), ctx );
         saveTrailingComment(result, ctx);
         return result;
+    }
+
+    private Statement blockSection(BlockStatementsContext ctx) {
+        if( ctx == null )
+            return EmptyStatement.INSTANCE;
+        return blockStatements(ctx);
     }
 
     private Statement workflowEmits(WorkflowEmitsContext ctx) {
@@ -1545,24 +1550,12 @@ public class ScriptAstBuilder {
     /// MISCELLANEOUS
 
     private Parameter[] formalParameterList(FormalParameterListContext ctx) {
-        // NOTE: implicit `it` parameter is deprecated, but allow it for now
         if( ctx == null )
             return Parameter.EMPTY_ARRAY;
 
-        var params = ctx.formalParameter().stream()
+        return ctx.formalParameter().stream()
             .map(this::formalParameter)
-            .toList();
-        for( int n = params.size(), i = n - 1; i >= 0; i -= 1 ) {
-            var param = params.get(i);
-            for( var other : params ) {
-                if( other == param )
-                    continue;
-                if( other.getName().equals(param.getName()) )
-                    throw createParsingFailedException("Duplicated parameter '" + param.getName() + "' found", param);
-            }
-        }
-
-        return params.toArray(Parameter.EMPTY_ARRAY);
+            .toArray(Parameter[]::new);
     }
 
     private Parameter formalParameter(FormalParameterContext ctx) {

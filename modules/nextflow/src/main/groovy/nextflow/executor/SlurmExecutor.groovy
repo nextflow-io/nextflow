@@ -103,7 +103,7 @@ class SlurmExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
         addClusterOptionsDirective(task.config, result)
 
         // add slurm account from config
-        final account = session.getExecConfigProp(getName(), 'account', null) as String
+        final account = config.getExecConfigProp(name, 'account', null) as String
         if( account ) {
             result << '-A' << account
         }
@@ -212,7 +212,7 @@ class SlurmExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
     @Override
     void register() {
         super.register()
-        perCpuMemAllocation = session.getExecConfigProp(name, 'perCpuMemAllocation', false)
+        perCpuMemAllocation = config.getExecConfigProp(name, 'perCpuMemAllocation', false)
     }
 
     @Override

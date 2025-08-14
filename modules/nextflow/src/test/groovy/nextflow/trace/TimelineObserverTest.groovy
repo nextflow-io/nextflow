@@ -22,6 +22,7 @@ import java.nio.file.Paths
 
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskId
+import nextflow.trace.event.TaskEvent
 import spock.lang.Specification
 import test.TestHelper
 
@@ -130,10 +131,10 @@ class TimelineObserverTest extends Specification {
         h3.getTraceRecord() >> r3
 
         when:
-        def observer = new TimelineObserver(Mock(Path))
-        observer.onProcessComplete(h1, h1.getTraceRecord())
-        observer.onProcessComplete(h2, h2.getTraceRecord())
-        observer.onProcessComplete(h3, h3.getTraceRecord())
+        def observer = new TimelineObserver()
+        observer.onTaskComplete(new TaskEvent(h1, h1.getTraceRecord()))
+        observer.onTaskComplete(new TaskEvent(h2, h2.getTraceRecord()))
+        observer.onTaskComplete(new TaskEvent(h3, h3.getTraceRecord()))
         then:
         observer.records[TaskId.of(1)] == r1
         observer.records[TaskId.of(2)] == r2
@@ -173,7 +174,7 @@ class TimelineObserverTest extends Specification {
         r3.peak_rss = 70_000_000
 
         def file = TestHelper.createInMemTempFile('report.html')
-        def observer = new TimelineObserver(file)
+        def observer = new TimelineObserver(reportFile: file)
         observer.beginMillis = 1000
         observer.startMillis = 1000
         observer.endMillis = 3500

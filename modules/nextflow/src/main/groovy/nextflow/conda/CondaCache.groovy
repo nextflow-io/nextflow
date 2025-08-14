@@ -22,13 +22,13 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.ConcurrentHashMap
 
-import com.google.common.hash.Hashing
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.LazyDataflowVariable
 import nextflow.Global
+import nextflow.SysEnv
 import nextflow.file.FileMutex
 import nextflow.util.CacheHelper
 import nextflow.util.Duration
@@ -57,7 +57,7 @@ class CondaCache {
     /**
      * Timeout after which the environment creation is aborted
      */
-    private Duration createTimeout = Duration.of('20min')
+    private Duration createTimeout
 
     private String createOptions
 
@@ -73,7 +73,7 @@ class CondaCache {
 
     @PackageScope Duration getCreateTimeout() { createTimeout }
 
-    @PackageScope Map<String,String> getEnv() { System.getenv() }
+    @PackageScope Map<String,String> getEnv() { SysEnv.get() }
 
     @PackageScope Path getConfigCacheDir0() { configCacheDir0 }
 
@@ -281,7 +281,7 @@ class CondaCache {
         def cmd
         if( isYamlFilePath(condaEnv) ) {
             final target = isYamlUriPath(condaEnv) ? condaEnv : Escape.path(makeAbsolute(condaEnv))
-            final yesOpt = binaryName == 'micromamba' ? '--yes ' : ''
+            final yesOpt = binaryName=="mamba" || binaryName == "micromamba"  ? '--yes ' : ''
             cmd = "${binaryName} env create ${yesOpt}--prefix ${Escape.path(prefixPath)} --file ${target}"
         }
         else if( isTextFilePath(condaEnv) ) {

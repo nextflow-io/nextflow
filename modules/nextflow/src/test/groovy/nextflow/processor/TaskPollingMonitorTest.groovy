@@ -16,11 +16,15 @@
 
 package nextflow.processor
 
+import java.util.concurrent.atomic.LongAdder
 
 import nextflow.Session
+import nextflow.executor.ExecutorConfig
 import nextflow.util.Duration
 import nextflow.util.RateUnit
+import nextflow.util.ThrottlingExecutor
 import spock.lang.Specification
+import spock.lang.Unroll
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -31,12 +35,13 @@ class TaskPollingMonitorTest extends Specification {
 
         setup:
         def name = 'hello'
-        def session = new Session( executor: [pollInterval: '1h', queueSize: 11, dumpInterval: '3h'] )
+        def session = Mock(Session)
+        def config = new ExecutorConfig(pollInterval: '1h', queueSize: 11, dumpInterval: '3h')
 
         def defSize = 99
         def defPollDuration = Duration.of('44s')
         when:
-        def monitor = TaskPollingMonitor.create(session, name, defSize, defPollDuration)
+        def monitor = TaskPollingMonitor.create(session, config, name, defSize, defPollDuration)
         then:
         monitor.name == 'hello'
         monitor.pollIntervalMillis == Duration.of('1h').toMillis()
@@ -49,12 +54,12 @@ class TaskPollingMonitorTest extends Specification {
 
         given:
         def session = Mock(Session)
-        def monitor = new TaskPollingMonitor(name:'local', session: session, pollInterval: '1s', capacity: 100)
+        def config = new ExecutorConfig(submitRateLimit: RATE)
+        def monitor = new TaskPollingMonitor(name:'local', session: session, config: config, pollInterval: '1s', capacity: 100)
         
         when:
         def limit = monitor.createSubmitRateLimit()
         then:
-        1 * session.getExecConfigProp('local','submitRateLimit', null) >> RATE
         limit ? Math.round(limit.getRate()) : null == EXPECTED
 
         where:
@@ -146,6 +151,61 @@ class TaskPollingMonitorTest extends Specification {
         0 * handler.prepareLauncher()
         0 * handler.submit()
         3 * session.notifyTaskSubmit(handler)
+    }
+
+    @Unroll
+    def 'should check whether job can be submitted' () {
+        given:
+        def session = Mock(Session)
+        def monitor = Spy(new TaskPollingMonitor(name: 'foo', session: session, capacity: CAPACITY, pollInterval: Duration.of('1min')))
+        and:
+        def processor = Mock(TaskProcessor) {
+            getForksCount() >> new LongAdder()
+            getMaxForks() >> FORKS
+        }
+        def handler = Spy(TaskHandler)
+        handler.task = Mock(TaskRun) {
+            getProcessor() >> processor
+        }
+        def arrayHandler = Spy(TaskHandler) {
+            isReady() >> true
+        }
+        arrayHandler.task = Mock(TaskArrayRun) {
+            getArraySize() >> ARRAY
+            getProcessor() >> processor
+        }
+
+        and:
+        SUBMIT.times { monitor.runningQueue.add(handler)  }
+
+        expect:
+        monitor.runningQueue.size() == SUBMIT
+        monitor.canSubmit(arrayHandler) == EXPECTED
+        where:
+        CAPACITY | SUBMIT | FORKS | ARRAY | EXPECTED
+        0        | 0      | 0     | 2     | true
+        0        | 0      | 1     | 2     | false
+        10       | 5      | 0     | 5     | true
+        10       | 8      | 0     | 5     | false
+        10       | 0      | 1     | 5     | false
+    }
+
+    def 'should throw error if job array size exceeds queue size' () {
+        given:
+        def session = Mock(Session)
+        def monitor = Spy(new TaskPollingMonitor(name: 'foo', session: session, capacity: 2, pollInterval: Duration.of('1min')))
+        and:
+        def arrayHandler = Spy(TaskHandler)
+        arrayHandler.task = Mock(TaskArrayRun) {
+            getName() >> 'bar'
+            getArraySize() >> 4
+        }
+
+        when:
+        monitor.canSubmit(arrayHandler)
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message == 'Job array bar exceeds the queue size (array size: 4, queue size: 2)'
     }
 
 }

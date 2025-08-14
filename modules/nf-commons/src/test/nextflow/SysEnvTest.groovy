@@ -73,6 +73,51 @@ class SysEnvTest extends Specification {
         [:]             | true      | true
         [FOO:'false']   | false     | false
         [FOO:'true']    | true      | true
+    }
 
+    @Unroll
+    def 'should get integer value' () {
+        given:
+        SysEnv.push(STATE)
+
+        expect:
+        SysEnv.getInteger('FOO', DEF) == EXPECTED
+
+        where:
+        STATE           | DEF       | EXPECTED
+        [:]             | null      | null
+        [FOO:'0']       | null      | 0
+        [FOO:'1']       | null      | 1
+        and:
+        [:]             | 0         | 0
+        [FOO:'0']       | 0         | 0
+        [FOO:'100']     | 0         | 100
+        and:
+        [:]             | 1         | 1
+        [FOO:'0']       | 1         | 0
+        [FOO:'100']     | 1         | 100
+    }
+
+    @Unroll
+    def 'should get long value' () {
+        given:
+        SysEnv.push(STATE)
+
+        expect:
+        SysEnv.getLong('FOO', DEF) == EXPECTED
+
+        where:
+        STATE           | DEF       | EXPECTED
+        [:]             | null      | null
+        [FOO:'0']       | null      | 0
+        [FOO:'1']       | null      | 1
+        and:
+        [:]             | 0         | 0
+        [FOO:'0']       | 0         | 0
+        [FOO:'100']     | 0         | 100
+        and:
+        [:]             | 1         | 1
+        [FOO:'0']       | 1         | 0
+        [FOO:'100']     | 1         | 100
     }
 }

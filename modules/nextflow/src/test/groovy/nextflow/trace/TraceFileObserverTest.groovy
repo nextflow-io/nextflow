@@ -15,6 +15,7 @@
  */
 
 package nextflow.trace
+
 import java.nio.file.Files
 
 import nextflow.Session
@@ -25,6 +26,7 @@ import nextflow.processor.TaskId
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
+import nextflow.trace.event.TaskEvent
 import nextflow.util.CacheHelper
 import nextflow.util.Duration
 import spock.lang.Specification
@@ -107,7 +109,7 @@ class TraceFileObserverTest extends Specification {
         def now = System.currentTimeMillis()
 
         // the observer class under test
-        def observer = new TraceFileObserver(file)
+        def observer = new TraceFileObserver(tracePath: file)
 
         when:
         observer.onFlowCreate(null)
@@ -116,7 +118,7 @@ class TraceFileObserverTest extends Specification {
 
         when:
         handler.status = TaskStatus.SUBMITTED
-        observer.onProcessSubmit( handler, handler.getTraceRecord() )
+        observer.onTaskSubmit( new TaskEvent(handler, handler.getTraceRecord()) )
         def record = observer.current.get(TaskId.of(111))
         then:
         observer.separator == '\t'
@@ -129,7 +131,7 @@ class TraceFileObserverTest extends Specification {
         when:
         sleep 50
         handler.status = TaskStatus.RUNNING
-        observer.onProcessStart( handler, handler.getTraceRecord() )
+        observer.onTaskStart( new TaskEvent(handler, handler.getTraceRecord()) )
         record = observer.current.get(TaskId.of(111))
         then:
         record.start >= record.submit
@@ -139,7 +141,7 @@ class TraceFileObserverTest extends Specification {
         sleep 50
         handler.status = TaskStatus.COMPLETED
         handler.task.exitStatus = 127
-        observer.onProcessComplete(handler, handler.getTraceRecord())
+        observer.onTaskComplete( new TaskEvent(handler, handler.getTraceRecord()) )
         then:
         !(observer.current.containsKey(TaskId.of(111)))
 

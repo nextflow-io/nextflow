@@ -120,7 +120,7 @@ class AzBatchService implements Closeable {
 
     AzBatchService(AzBatchExecutor executor) {
         assert executor
-        this.config = executor.config
+        this.config = executor.azConfig
     }
 
     protected AzVmPoolSpec getPoolSpec(String poolId) {
@@ -331,7 +331,7 @@ class AzBatchService implements Closeable {
 
     protected int diskSlots(float disk, float vmDisk, int vmCpus) {
         BigDecimal result = disk / (vmDisk / vmCpus)
-        log.warn("[AZURE BATCH] diskSlots: disk=${disk}, vmDisk=${vmDisk}, vmCpus=${vmCpus}, result=${result}")
+        log.debug("[AZURE BATCH] diskSlots: disk=${disk}, vmDisk=${vmDisk}, vmCpus=${vmCpus}, result=${result}")
         result.setScale(0, RoundingMode.UP).intValue()
     }
 
@@ -835,7 +835,7 @@ class AzBatchService implements Closeable {
         }
 
         // otherwise return a StartTask object with the start task command and resource files
-        return new BatchStartTask(startCmd.join('; '))
+        return new BatchStartTask(startCmd.join(' && '))
             .setResourceFiles(resourceFiles)
             .setUserIdentity(userIdentity(opts.privileged, null, AutoUserScope.POOL))
     }

@@ -348,16 +348,6 @@ class WorkflowMetadata {
     }
 
     /**
-     * Dynamic getter for workflow metadata attributes
-     *
-     * @param field
-     * @return The value associated to the specified field
-     */
-    def get(String field) {
-        InvokerHelper.getProperty(this,field)
-    }
-
-    /**
      * Implements the following idiom in the pipeline script:
      * <pre>
      *     workflow.onError = {
@@ -495,11 +485,8 @@ class WorkflowMetadata {
      */
     protected void safeMailNotification() {
         try {
-            final notifier = new WorkflowNotifier(
-                workflow: this,
-                config: session.config,
-                variables: NF.binding.variables )
-            notifier.sendNotification()
+            final notifier = new WorkflowNotifier(NF.binding.variables, this)
+            notifier.sendNotification(session.config)
         }
         catch (Exception e) {
             log.warn "Failed to deliver notification email -- See the log file for details", e

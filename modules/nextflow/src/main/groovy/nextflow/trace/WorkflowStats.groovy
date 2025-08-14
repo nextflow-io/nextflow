@@ -26,6 +26,7 @@ import groovy.util.logging.Slf4j
 import nextflow.processor.ErrorStrategy
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
+import nextflow.processor.TaskStatus
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 /**
@@ -345,17 +346,24 @@ class WorkflowStats implements Cloneable {
 
     }
 
-    void markCompleted(TaskRun task, TraceRecord trace) {
+    void markCompleted(TaskRun task, TraceRecord trace, TaskStatus status) {
         ProgressRecord state = getOrCreateRecord(task.processor)
         state.taskName = task.name
         state.hash = task.hashLog
-        state.running --
-        state.loadCpus -= task.getConfig().getCpus()
-        state.loadMemory -= (task.getConfig().getMemory()?.toBytes() ?: 0)
 
-        this.runningCount --
-        this.loadCpus -= task.getConfig().getCpus()
-        this.loadMemory -= (task.getConfig().getMemory()?.toBytes() ?: 0)
+        if( status == TaskStatus.SUBMITTED ) {
+            state.submitted --
+            this.submittedCount --
+        }
+        else {
+            state.running --
+            state.loadCpus -= task.getConfig().getCpus()
+            state.loadMemory -= (task.getConfig().getMemory()?.toBytes() ?: 0)
+
+            this.runningCount --
+            this.loadCpus -= task.getConfig().getCpus()
+            this.loadMemory -= (task.getConfig().getMemory()?.toBytes() ?: 0)
+        }
 
         if( task.failed ) {
             state.failed ++

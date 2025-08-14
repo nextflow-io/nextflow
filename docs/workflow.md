@@ -541,7 +541,7 @@ The `path` directive can also be a closure which defines a custom publish path f
 workflow {
     main:
     ch_samples = channel.of(
-        [id: 'SAMP1', fastq_1: file('1.fastq'), fastq_1: file('2.fastq')]
+        [id: 'SAMP1', fastq_1: file('1.fastq'), fastq_2: file('2.fastq')]
     )
 
     publish:
@@ -572,6 +572,10 @@ output {
 
 Each `>>` specifies a *source file* and *publish target*. The source file should be a file or collection of files, and the publish target should be a directory or file name. If the publish target ends with a slash, it is treated as the directory in which source files are published. Otherwise, it is treated as the target filename of a source file. Only files that are published with the `>>` operator are saved to the output directory.
 
+:::{note}
+Files that do not originate from the work directory are not published.
+:::
+
 ### Index files
 
 Each output can create an index file of the values that were published. An index file preserves the structure of channel values, including metadata, which is simpler than encoding this information with directories and file names. The index file can be a CSV (`.csv`), JSON (`.json`), or YAML (`.yml`, `.yaml`) file. The channel values should be files, lists, or maps.
@@ -584,7 +588,7 @@ workflow {
     ch_samples = channel.of(
         [id: 1, name: 'sample 1', fastq_1: '1a.fastq', fastq_2: '1b.fastq'],
         [id: 2, name: 'sample 2', fastq_1: '2a.fastq', fastq_2: '2b.fastq'],
-        [id: 3, name: 'sample 3', fastq_1: '3a.fastq', fastq_2: '3b.fastq']
+        [id: 3, name: 'sample 3', fastq_1: '3a.fastq', fastq_2: null]
     )
 
     publish:
@@ -606,7 +610,7 @@ The above example will write the following CSV file to `results/samples.csv`:
 ```
 "1","sample 1","results/fastq/1a.fastq","results/fastq/1b.fastq"
 "2","sample 2","results/fastq/2a.fastq","results/fastq/2b.fastq"
-"3","sample 3","results/fastq/3a.fastq","results/fastq/3b.fastq"
+"3","sample 3","results/fastq/3a.fastq",""
 ```
 
 You can customize the index file with additional directives, for example:
@@ -625,8 +629,12 @@ This example will produce the following index file:
 "id"|"name"|"fastq_1"|"fastq_2"
 "1"|"sample 1"|"results/fastq/1a.fastq"|"results/fastq/1b.fastq"
 "2"|"sample 2"|"results/fastq/2a.fastq"|"results/fastq/2b.fastq"
-"3"|"sample 3"|"results/fastq/3a.fastq"|"results/fastq/3b.fastq"
+"3"|"sample 3"|"results/fastq/3a.fastq"|""
 ```
+
+:::{note}
+Files that do not originate from the work directory are not published, but are included in the index file.
+:::
 
 See [Output directives](#output-directives) for the list of available index directives.
 

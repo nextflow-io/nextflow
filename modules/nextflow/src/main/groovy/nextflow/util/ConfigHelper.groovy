@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2025, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,23 +34,6 @@ import org.yaml.snakeyaml.Yaml
 @Slf4j
 @CompileStatic
 class ConfigHelper {
-
-
-    def static getConfigProperty( def config, String execName, String propName ) {
-        def result = null
-
-        // make sure that the *executor* is a map object
-        // it could also be a plain string (when it specifies just the its name)
-        if( execName && config instanceof Map && config['$'+execName] instanceof Map ) {
-            result = config['$'+execName][propName]
-        }
-
-        if( result==null && config instanceof Map && config[propName] != null ) {
-            result = config[propName]
-        }
-
-        return result
-    }
 
     /**
      * Given a string value converts to its native object representation.
@@ -383,5 +366,6 @@ class ConfigHelper {
         else
             return value
     }
+
 }
 
