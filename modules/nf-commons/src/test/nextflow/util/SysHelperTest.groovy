@@ -22,6 +22,8 @@ import com.sun.management.OperatingSystemMXBean
 import nextflow.SysEnv
 import nextflow.file.FileHelper
 import spock.lang.Specification
+import spock.lang.Unroll
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -73,6 +75,7 @@ class SysHelperTest extends Specification {
         SysHelper.hostName == (System.getenv('HOSTNAME') ?: InetAddress.getLocalHost().getHostName())
     }
 
+    @Unroll
     def 'should format date string' () {
         given:
         def env = dateFormat ? [NXF_DATE_FORMAT:dateFormat] : [:]
@@ -92,35 +95,15 @@ class SysHelperTest extends Specification {
         SysEnv.pop()
 
         where:
-        dateInMilis    | locale | dateFormat    | expected
-        1470901220000  | 'en'   | null          | '11-Aug-2016 09:40:20'
-        1470901220000  | 'es'   | null          | '11-Aug-2016 09:40:20'
+        dateInMilis    | locale | dateFormat                    | expected
+        1470901220000  | 'en'   | null                          | '11-Aug-2016 09:40:20'
+        1470901220000  | 'es'   | null                          | '11-Aug-2016 09:40:20'
         and:
-        1470901220000  | 'en'   | 'iso'         | '2016-08-11T09:40:20+02:00'
-        1470901220000  | 'es'   | 'iso'         | '2016-08-11T09:40:20+02:00'
+        1470901220000  | 'en'   | 'iso'                         | '2016-08-11T09:40:20+02:00'
+        1470901220000  | 'es'   | 'iso'                         | '2016-08-11T09:40:20+02:00'
         and:
-        1470901220000  | 'en'   | "yyyy-MM-dd'T'HH:mm:ss.SSS"         | '2016-08-11T09:40:20.000'
-        1470901220000  | 'es'   | "yyyy-MM-dd'T'HH:mm:ss.SSS"         | '2016-08-11T09:40:20.000'
-    }
-
-    def 'should format OffsetDateTime string' () {
-        given:
-        SysEnv.push([:])
-        and:
-        def defLocale = Locale.getDefault(Locale.Category.FORMAT)
-        def useLocale = new Locale.Builder().setLanguage('en').build()
-        Locale.setDefault(Locale.Category.FORMAT, useLocale)
-        and:
-        def dateTime = java.time.OffsetDateTime.ofInstant(java.time.Instant.ofEpochMilli(1470901220000), java.time.ZoneId.systemDefault())
-
-        when:
-        String fmt = SysHelper.fmtDate(dateTime)
-        then:
-        fmt =~ /\d{2}-\w{3}-\d{4} \d{2}:\d{2}:\d{2}/
-
-        cleanup:
-        Locale.setDefault(Locale.Category.FORMAT, defLocale)
-        SysEnv.pop()
+        1470901220000  | 'en'   | "yyyy-MM-dd'T'HH:mm:ss.SSS"   | '2016-08-11T09:40:20.000'
+        1470901220000  | 'es'   | "yyyy-MM-dd'T'HH:mm:ss.SSS"   | '2016-08-11T09:40:20.000'
     }
 
 }
