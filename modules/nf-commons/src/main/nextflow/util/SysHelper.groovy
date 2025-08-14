@@ -72,6 +72,19 @@ class SysHelper {
         formatter.format(date)
     }
 
+    /**
+     * Given a {@link java.time.OffsetDateTime} object convert to a string representation
+     * according the {@link #DATE_FORMAT}
+     *
+     * @param dateTime
+     *      The OffsetDateTime to render as a string
+     * @return
+     *      The formatted date string
+     */
+    static String fmtDate(java.time.OffsetDateTime dateTime) {
+        fmtDate(Date.from(dateTime.toInstant()))
+    }
+
     static private String fmtEnv() {
         final result = SysEnv.get('NXF_DATE_FORMAT', DATE_FORMAT)
         return result.toLowerCase() == 'iso'
