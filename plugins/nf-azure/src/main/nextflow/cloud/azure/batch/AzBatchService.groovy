@@ -458,13 +458,6 @@ class AzBatchService implements Closeable {
             content.setConstraints(createJobConstraints(config.batch().jobMaxWallClockTime))
         }
         
-        // Configure job for auto-termination to prevent "job leak" where jobs
-        // remain active indefinitely, consuming quota after tasks complete
-        if (config.batch().terminateJobsOnCompletion) {
-            content.setOnAllTasksComplete(OnAllBatchTasksComplete.TERMINATE_JOB)
-            log.trace "[AZURE BATCH] Job ${jobId} configured for auto-termination on task completion"
-        }
-        
         apply(() -> client.createJob(content))
         return jobId
     }
