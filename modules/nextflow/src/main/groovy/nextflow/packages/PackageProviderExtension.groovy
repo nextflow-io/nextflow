@@ -17,7 +17,7 @@
 package nextflow.packages
 
 import groovy.transform.CompileStatic
-import nextflow.Session
+import nextflow.ISession
 import org.pf4j.ExtensionPoint
 
 /**
@@ -34,7 +34,7 @@ interface PackageProviderExtension extends ExtensionPoint {
      * @param session The current Nextflow session
      * @return A package provider instance
      */
-    PackageProvider createProvider(Session session)
+    PackageProvider createProvider(ISession session)
 
     /**
      * Get the priority of this extension (higher values take precedence)

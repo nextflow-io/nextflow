@@ -21,8 +21,8 @@ import java.util.concurrent.ConcurrentHashMap
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.Session
-import nextflow.plugin.PluginsFacade
+import nextflow.ISession
+import nextflow.plugin.Plugins
 
 /**
  * Manages package providers and coordinates package environment creation
@@ -34,9 +34,9 @@ import nextflow.plugin.PluginsFacade
 class PackageManager {
 
     private final Map<String, PackageProvider> providers = new ConcurrentHashMap<>()
-    private final Session session
+    private final ISession session
     
-    PackageManager(Session session) {
+    PackageManager(ISession session) {
         this.session = session
         initializeProviders()
     }
@@ -46,7 +46,7 @@ class PackageManager {
      */
     private void initializeProviders() {
         // Load package providers from plugins
-        def extensions = PluginsFacade.getExtensions(PackageProviderExtension)
+        def extensions = Plugins.getExtensions(PackageProviderExtension)
         for (PackageProviderExtension extension : extensions) {
             def provider = extension.createProvider(session)
             if (provider && provider.isAvailable()) {
@@ -174,7 +174,7 @@ class PackageManager {
      * @param session The current session
      * @return True if the feature is enabled
      */
-    static boolean isEnabled(Session session) {
+    static boolean isEnabled(ISession session) {
         return session.config.navigate('nextflow.preview.package', false) as Boolean
     }
 }
