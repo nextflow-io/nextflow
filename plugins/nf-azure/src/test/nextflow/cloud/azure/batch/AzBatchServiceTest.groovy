@@ -2,16 +2,24 @@ package nextflow.cloud.azure.batch
 
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
+import java.nio.file.Path
+import java.nio.file.Paths
+import java.nio.file.attribute.BasicFileAttributes
+import java.nio.file.spi.FileSystemProvider
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.function.Predicate
 
+import com.azure.compute.batch.models.BatchNodeIdentityReference
 import com.azure.compute.batch.models.BatchPool
+import com.azure.compute.batch.models.BatchPoolIdentity
 import com.azure.compute.batch.models.ElevationLevel
+import com.azure.compute.batch.models.UserAssignedIdentity
 import com.azure.compute.batch.models.EnvironmentSetting
 import com.azure.core.exception.HttpResponseException
 import com.azure.core.http.HttpResponse
 import com.azure.identity.ManagedIdentityCredential
+import com.azure.storage.blob.BlobClient
 import com.google.common.hash.HashCode
 import nextflow.Global
 import nextflow.Session
@@ -21,6 +29,8 @@ import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.config.AzManagedIdentityOpts
 import nextflow.cloud.azure.config.AzPoolOpts
 import nextflow.cloud.azure.config.AzStartTaskOpts
+import nextflow.cloud.azure.nio.AzFileSystem
+import nextflow.cloud.azure.nio.AzPath
 import nextflow.file.FileSystemPathFactory
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskConfig
@@ -38,6 +48,49 @@ import spock.lang.Unroll
 class AzBatchServiceTest extends Specification {
 
     static long _1GB = 1024 * 1024 * 1024
+
+    protected Path mockAzPath(String path, boolean isDir=false) {
+        assert path.startsWith('az://')
+
+        def tokens = path.tokenize('/')
+        def bucket = tokens[1]
+        def file = '/' + tokens[2..-1].join('/')
+
+        def attr = Mock(BasicFileAttributes)
+        attr.isDirectory() >> isDir
+        attr.isRegularFile() >> !isDir
+        attr.isSymbolicLink() >> false
+
+        def provider = Mock(FileSystemProvider)
+        provider.getScheme() >> 'az'
+        provider.readAttributes(_, _, _) >> attr
+
+        def fs = Mock(AzFileSystem)
+        fs.provider() >> provider
+        fs.toString() >> ('az://' + bucket)
+        def uri = GroovyMock(URI)
+        uri.toString() >> path
+
+        def BLOB_CLIENT = Mock(BlobClient) {
+            getBlobUrl() >> { path.replace('az://', 'http://account.blob.core.windows.net/') }
+        }
+
+        def result = GroovyMock(AzPath)
+        result.toUriString() >> path
+        result.toString() >> file
+        result.getFileSystem() >> fs
+        result.toUri() >> uri
+        result.resolve(_) >> { mockAzPath("$path/${it[0]}") }
+        result.toAbsolutePath() >> result
+        result.asBoolean() >> true
+        result.getParent() >> { def p=path.lastIndexOf('/'); p!=-1 ? mockAzPath("${path.substring(0,p)}", true) : null }
+        result.getFileName() >> { Paths.get(tokens[-1]) }
+        result.getName() >> tokens[1]
+        result.getContainerName() >> bucket
+        result.blobName() >> file.substring(1)  // Remove leading slash
+        result.blobClient() >> BLOB_CLIENT
+        return result
+    }
 
     def setup() {
         SysEnv.push([:])  // <-- clear the system host env
@@ -668,7 +721,7 @@ class AzBatchServiceTest extends Specification {
         then:
         1 * azure.getPoolSpec(POOL_ID) >> SPEC
         1 * azure.computeSlots(TASK, SPEC) >> 4
-        1 * azure.resourceFileUrls(TASK, SAS) >> []
+        1 * azure.resourceFileUrls(TASK, POOL_ID, null, SAS) >> []
         1 * azure.outputFileUrls(TASK, SAS) >> []
         and:
         result.id == 'nf-01000000'
@@ -712,7 +765,7 @@ class AzBatchServiceTest extends Specification {
         then:
         1 * azure.getPoolSpec(POOL_ID) >> SPEC
         1 * azure.computeSlots(TASK, SPEC) >> 4
-        1 * azure.resourceFileUrls(TASK, SAS) >> []
+        1 * azure.resourceFileUrls(TASK, POOL_ID, null, SAS) >> []
         1 * azure.outputFileUrls(TASK, SAS) >> []
         and:
         result.id == 'nf-02000000'
@@ -757,7 +810,7 @@ class AzBatchServiceTest extends Specification {
         then:
         1 * azure.getPoolSpec(POOL_ID) >> SPEC
         1 * azure.computeSlots(TASK, SPEC) >> 4
-        1 * azure.resourceFileUrls(TASK, SAS) >> []
+        1 * azure.resourceFileUrls(TASK, POOL_ID, null, SAS) >> []
         1 * azure.outputFileUrls(TASK, SAS) >> []
         and:
         result.id == 'nf-02000000'
@@ -800,7 +853,7 @@ class AzBatchServiceTest extends Specification {
         then:
         1 * azure.getPoolSpec(POOL_ID) >> SPEC
         1 * azure.computeSlots(TASK, SPEC) >> 1
-        1 * azure.resourceFileUrls(TASK, SAS) >> []
+        1 * azure.resourceFileUrls(TASK, POOL_ID, null, SAS) >> []
         1 * azure.outputFileUrls(TASK, SAS) >> []
         and:
         result.id == 'nf-01000000'
@@ -850,12 +903,230 @@ class AzBatchServiceTest extends Specification {
 
         when:
         def env = [:] as Map<String,String>
-        if( service.config.batch().poolIdentityClientId && true ) { // fusionEnabled = true
+        // This simulates the logic in AzFusionEnv - only set FUSION_AZ_MSI_CLIENT_ID if it's a specific client ID
+        if( service.config.batch().poolIdentityClientId && service.config.batch().poolIdentityClientId != true ) {
             env.put('FUSION_AZ_MSI_CLIENT_ID', service.config.batch().poolIdentityClientId)
         }
         
         then:
         env['FUSION_AZ_MSI_CLIENT_ID'] == POOL_IDENTITY_CLIENT_ID
+    }
+    
+    def 'should auto-discover pool identity when poolIdentityClientId is true' () {
+        given:
+        def CONFIG = new AzConfig([
+            batch: [poolIdentityClientId: true],
+            storage: [sasToken: 'test-sas-token', accountName: 'testaccount']
+        ])
+        def exec = createExecutor(CONFIG)
+        def service = new AzBatchService(exec)
+        
+        and:
+        Global.session = Mock(Session) {
+            getConfig() >> [fusion: [enabled: true]]
+        }
+
+        when:
+        def env = [:] as Map<String,String>
+        // When poolIdentityClientId is true, Fusion should auto-discover identity
+        if( service.config.batch().poolIdentityClientId && service.config.batch().poolIdentityClientId != true ) {
+            env.put('FUSION_AZ_MSI_CLIENT_ID', service.config.batch().poolIdentityClientId)
+        }
+        
+        then:
+        // FUSION_AZ_MSI_CLIENT_ID should not be set when poolIdentityClientId is true
+        env['FUSION_AZ_MSI_CLIENT_ID'] == null
+    }
+
+    def 'should create task with managed identity for resource files but still require SAS for outputs' () {
+        given:
+        Global.session = Mock(Session) { getConfig()>>[:] }
+        and:
+        def POOL_ID = 'my-pool'
+        def POOL_IDENTITY_CLIENT_ID = true  // Use auto-discovery
+        def SAS = 'test-sas-token'
+        def CONFIG = [
+            batch: [poolIdentityClientId: POOL_IDENTITY_CLIENT_ID],
+            storage: [accountName: 'myaccount', sasToken: SAS] 
+        ]
+        def exec = createExecutor(CONFIG)
+        AzBatchService azure = Spy(new AzBatchService(exec))
+        and:
+        def TASK = Mock(TaskRun) {
+            getHash() >> HashCode.fromInt(1)
+            getContainer() >> 'ubuntu:latest'
+            getConfig() >> Mock(TaskConfig)
+            getWorkDir() >> mockAzPath('az://container/work/dir')
+        }
+        and:
+        def SPEC = new AzVmPoolSpec(poolId: POOL_ID, vmType: Mock(AzVmType), opts: new AzPoolOpts([:]))
+
+        when:
+        def result = azure.createTask(POOL_ID, 'salmon', TASK)
+        then:
+        1 * azure.getPoolSpec(POOL_ID) >> SPEC
+        1 * azure.computeSlots(TASK, SPEC) >> 4
+        1 * azure.getPoolManagedIdentityResourceId(POOL_ID, true) >> '/subscriptions/123/resourceGroups/rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/my-identity'
+        1 * azure.resourceFileUrls(TASK, POOL_ID, true, SAS) >> []
+        1 * azure.outputFileUrls(TASK, SAS) >> [] // output files still need SAS token
+        and:
+        result.id == 'nf-01000000'
+        result.requiredSlots == 4
+        and:
+        result.commandLine == "bash -o pipefail -c 'bash .command.run 2>&1 | tee .command.log'"
+        and:
+        result.containerSettings.imageName == 'ubuntu:latest'
+        result.containerSettings.containerRunOptions == '-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro '
+    }
+
+    def 'should require SAS token when not using managed identity' () {
+        given:
+        Global.session = Mock(Session) { getConfig()>>[:] }
+        and:
+        def POOL_ID = 'my-pool'
+        def CONFIG = [
+            storage: [accountName: 'myaccount'] // No SAS token and no managed identity
+        ]
+        def exec = createExecutor(CONFIG)
+        AzBatchService azure = Spy(new AzBatchService(exec))
+        and:
+        def TASK = Mock(TaskRun) {
+            getHash() >> HashCode.fromInt(1)
+            getContainer() >> 'ubuntu:latest'
+            getConfig() >> Mock(TaskConfig)
+        }
+        and:
+        def SPEC = new AzVmPoolSpec(poolId: POOL_ID, vmType: Mock(AzVmType), opts: new AzPoolOpts([:]))
+
+        when:
+        azure.createTask(POOL_ID, 'salmon', TASK)
+        then:
+        1 * azure.getPoolSpec(POOL_ID) >> SPEC
+        and:
+        def e = thrown(IllegalArgumentException)
+        e.message == "Missing Azure Blob storage SAS token"
+    }
+
+    def 'should generate resource file URLs with identity reference for managed identity' () {
+        given:
+        def CONFIG = new AzConfig([
+            batch: [poolIdentityClientId: true, copyToolInstallMode: 'node'],
+            storage: [accountName: 'myaccount', sasToken: 'test-sas']
+        ])
+        def exec = createExecutor(CONFIG)
+        def service = Spy(new AzBatchService(exec))
+        and:
+        def cmdRun = mockAzPath('az://container/work/dir/.command.run')
+        def cmdScript = mockAzPath('az://container/work/dir/.command.sh')
+        def workDir = mockAzPath('az://container/work/dir')
+        and:
+        def TASK = Mock(TaskRun) {
+            getWorkDir() >> workDir
+            getStdin() >> null
+        }
+        // Mock the workDir.resolve() calls
+        workDir.resolve(TaskRun.CMD_RUN) >> cmdRun
+        workDir.resolve(TaskRun.CMD_SCRIPT) >> cmdScript
+        and:
+        def RESOURCE_ID = '/subscriptions/6186e1c7-3402-4fba-ba02-4567f2aeeb94/resourceGroups/rg-joint-jackass/providers/Microsoft.ManagedIdentity/userAssignedIdentities/nextflow-id'
+
+        when:
+        def result = service.resourceFileUrls(TASK, 'test-pool', true, 'test-sas') // poolId, poolIdentityClientId, SAS
+
+        then:
+        1 * service.getPoolManagedIdentityResourceId('test-pool', true) >> RESOURCE_ID
+        and:
+        result.size() == 2
+        result[0].httpUrl == 'http://account.blob.core.windows.net/container/work/dir/.command.run'
+        result[0].filePath == '.command.run'
+        result[0].identityReference != null  // Should have identity reference
+        result[0].identityReference.resourceId == RESOURCE_ID
+        
+        result[1].httpUrl == 'http://account.blob.core.windows.net/container/work/dir/.command.sh'
+        result[1].filePath == '.command.sh'
+        result[1].identityReference != null  // Should have identity reference
+        result[1].identityReference.resourceId == RESOURCE_ID
+        
+        // URLs should not contain SAS tokens
+        !result[0].httpUrl.contains('?')
+        !result[1].httpUrl.contains('?')
+    }
+
+    def 'should generate resource file URLs with SAS token when not using managed identity' () {
+        given:
+        def SAS = 'test-sas-token'
+        def CONFIG = new AzConfig([
+            batch: [copyToolInstallMode: 'node'],
+            storage: [sasToken: SAS, accountName: 'myaccount']
+        ])
+        def exec = createExecutor(CONFIG)
+        def service = new AzBatchService(exec)
+        and:
+        def cmdRun = mockAzPath('az://container/work/dir/.command.run')
+        def cmdScript = mockAzPath('az://container/work/dir/.command.sh')
+        def workDir = mockAzPath('az://container/work/dir')
+        and:
+        def TASK = Mock(TaskRun) {
+            getWorkDir() >> workDir
+            getStdin() >> null
+        }
+        // Mock the workDir.resolve() calls
+        workDir.resolve(TaskRun.CMD_RUN) >> cmdRun
+        workDir.resolve(TaskRun.CMD_SCRIPT) >> cmdScript
+
+        when:
+        def result = service.resourceFileUrls(TASK, 'test-pool', null, SAS) // poolId, no managed identity, use SAS
+
+        then:
+        result.size() == 2
+        result[0].httpUrl == 'http://account.blob.core.windows.net/container/work/dir/.command.run?test-sas-token'
+        result[0].filePath == '.command.run'
+        result[0].identityReference == null  // No identity reference when using SAS
+        
+        result[1].httpUrl == 'http://account.blob.core.windows.net/container/work/dir/.command.sh?test-sas-token'
+        result[1].filePath == '.command.sh'
+        result[1].identityReference == null  // No identity reference when using SAS
+        
+        // URLs should contain SAS tokens
+        result[0].httpUrl.contains('?test-sas-token')
+        result[1].httpUrl.contains('?test-sas-token')
+    }
+
+    def 'should generate resource file URLs with SAS when using managedIdentity config but no pool identity' () {
+        given:
+        def CONFIG = new AzConfig([
+            batch: [copyToolInstallMode: 'node'],
+            managedIdentity: [clientId: 'managed-identity-123'],
+            storage: [accountName: 'myaccount', sasToken: 'test-sas'] 
+        ])
+        def exec = createExecutor(CONFIG)
+        def service = new AzBatchService(exec)
+        and:
+        def cmdRun = mockAzPath('az://container/work/dir/.command.run')
+        def cmdScript = mockAzPath('az://container/work/dir/.command.sh')
+        def workDir = mockAzPath('az://container/work/dir')
+        and:
+        def TASK = Mock(TaskRun) {
+            getWorkDir() >> workDir
+            getStdin() >> null
+        }
+        // Mock the workDir.resolve() calls
+        workDir.resolve(TaskRun.CMD_RUN) >> cmdRun
+        workDir.resolve(TaskRun.CMD_SCRIPT) >> cmdScript
+
+        when:
+        def result = service.resourceFileUrls(TASK, 'test-pool', null, 'test-sas') // poolId, no managed identity, use SAS
+
+        then:
+        result.size() == 2
+        // Without pool identity, falls back to SAS token auth
+        result[0].httpUrl == 'http://account.blob.core.windows.net/container/work/dir/.command.run?test-sas'
+        result[0].filePath == '.command.run'
+        result[0].identityReference == null
+        
+        result[1].httpUrl == 'http://account.blob.core.windows.net/container/work/dir/.command.sh?test-sas'
+        result[1].filePath == '.command.sh'
+        result[1].identityReference == null
     }
 
 
@@ -1020,6 +1291,173 @@ class AzBatchServiceTest extends Specification {
             Duration.of('30m'),
             Duration.of('2d')
         ]
+    }
+
+    def 'should get pool managed identity resource ID with null or false'() {
+        given:
+        def exec = createExecutor()
+        def service = Spy(new AzBatchService(exec))
+        def poolId = 'test-pool'
+
+        when: 'poolIdentityClientId is null'
+        def result = service.getPoolManagedIdentityResourceId(poolId, null)
+        then:
+        result == null
+        0 * service.getPool(poolId) // Should not even call getPool
+
+        when: 'poolIdentityClientId is false'
+        result = service.getPoolManagedIdentityResourceId(poolId, false)
+        then:
+        result == null
+        0 * service.getPool(poolId) // Should not even call getPool
+    }
+
+    def 'should get pool managed identity resource ID with auto'() {
+        given:
+        def exec = createExecutor()
+        def service = Spy(new AzBatchService(exec))
+        def poolId = 'test-pool'
+        def resourceId = '/subscriptions/123/resourceGroups/rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/identity1'
+        
+        def identity1 = GroovyMock(UserAssignedIdentity) {
+            getResourceId() >> resourceId
+            getClientId() >> 'client-123'
+        }
+        def identity2 = GroovyMock(UserAssignedIdentity) {
+            getResourceId() >> '/subscriptions/123/resourceGroups/rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/identity2'
+            getClientId() >> 'client-456'
+        }
+        
+        def poolIdentity = GroovyMock(BatchPoolIdentity) {
+            getUserAssignedIdentities() >> [identity1, identity2]
+        }
+        def pool = GroovyMock(BatchPool)
+        pool.getIdentity() >> poolIdentity
+        pool.identity >> poolIdentity  // Also mock property access
+
+        when: 'poolIdentityClientId is "auto"'
+        def result = service.getPoolManagedIdentityResourceId(poolId, 'auto')
+        then:
+        1 * service.getPool(poolId) >> pool
+        result == resourceId // Should return first identity
+
+        when: 'poolIdentityClientId is true (backward compatibility)'
+        result = service.getPoolManagedIdentityResourceId(poolId, true)
+        then:
+        1 * service.getPool(poolId) >> pool
+        result == resourceId // Should return first identity
+    }
+
+    def 'should get pool managed identity resource ID with specific client ID'() {
+        given:
+        def exec = createExecutor()
+        def service = Spy(new AzBatchService(exec))
+        def poolId = 'test-pool'
+        def targetClientId = 'client-456'
+        def targetResourceId = '/subscriptions/123/resourceGroups/rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/identity2'
+        
+        def identity1 = Mock(UserAssignedIdentity) {
+            getResourceId() >> '/subscriptions/123/resourceGroups/rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/identity1'
+            getClientId() >> 'client-123'
+        }
+        def identity2 = Mock(UserAssignedIdentity) {
+            getResourceId() >> targetResourceId
+            getClientId() >> targetClientId
+        }
+        
+        def poolIdentity = Mock(BatchPoolIdentity) {
+            getUserAssignedIdentities() >> [identity1, identity2]
+        }
+        def pool = Mock(BatchPool) {
+            getIdentity() >> poolIdentity
+        }
+
+        when: 'specific client ID exists'
+        def result = service.getPoolManagedIdentityResourceId(poolId, targetClientId)
+        then:
+        1 * service.getPool(poolId) >> pool
+        result == targetResourceId
+
+        when: 'specific client ID does not exist'
+        result = service.getPoolManagedIdentityResourceId(poolId, 'non-existent-client')
+        then:
+        1 * service.getPool(poolId) >> pool
+        result == null // Should return null, not fallback
+    }
+
+    def 'should handle pool with no identity configuration'() {
+        given:
+        def exec = createExecutor()
+        def service = Spy(new AzBatchService(exec))
+        def poolId = 'test-pool'
+        
+        when: 'pool has no identity'
+        def pool = GroovyMock(BatchPool) {
+            getIdentity() >> null
+        }
+        def result = service.getPoolManagedIdentityResourceId(poolId, 'auto')
+        then:
+        1 * service.getPool(poolId) >> pool
+        result == null
+
+        when: 'pool is null'
+        result = service.getPoolManagedIdentityResourceId(poolId, 'auto')
+        then:
+        1 * service.getPool(poolId) >> null
+        result == null
+    }
+
+    def 'should handle pool with empty identities list'() {
+        given:
+        def exec = createExecutor()
+        def service = Spy(new AzBatchService(exec))
+        def poolId = 'test-pool'
+        
+        def poolIdentity = GroovyMock(BatchPoolIdentity) {
+            getUserAssignedIdentities() >> []
+        }
+        def pool = GroovyMock(BatchPool) {
+            getIdentity() >> poolIdentity
+        }
+
+        when:
+        def result = service.getPoolManagedIdentityResourceId(poolId, 'auto')
+        then:
+        1 * service.getPool(poolId) >> pool
+        result == null
+    }
+
+    def 'should handle exceptions when getting pool managed identity'() {
+        given:
+        def exec = createExecutor()
+        def service = Spy(new AzBatchService(exec))
+        def poolId = 'test-pool'
+
+        when:
+        def result = service.getPoolManagedIdentityResourceId(poolId, 'auto')
+        then:
+        1 * service.getPool(poolId) >> { throw new RuntimeException("Test exception") }
+        result == null // Should return null on error
+    }
+
+    def 'should handle unsupported poolIdentityClientId type'() {
+        given:
+        def exec = createExecutor()
+        def service = Spy(new AzBatchService(exec))
+        def poolId = 'test-pool'
+        
+        def poolIdentity = GroovyMock(BatchPoolIdentity) {
+            getUserAssignedIdentities() >> [GroovyMock(UserAssignedIdentity)]
+        }
+        def pool = GroovyMock(BatchPool) {
+            getIdentity() >> poolIdentity
+        }
+
+        when: 'poolIdentityClientId is an unsupported type'
+        def result = service.getPoolManagedIdentityResourceId(poolId, 123) // number instead of string
+        then:
+        1 * service.getPool(poolId) >> pool
+        result == null
     }
 
 }
