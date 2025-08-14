@@ -14,5 +14,6 @@
 # limitations under the License.
 #
 
+nextflow.k8s.K8sConfig
 nextflow.k8s.K8sExecutor
 nextflow.k8s.cli.KubeCommandImpl

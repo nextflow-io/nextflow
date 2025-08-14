@@ -24,6 +24,7 @@ import nextflow.Session
 import nextflow.SysEnv
 import nextflow.cloud.aws.config.AwsConfig
 import nextflow.cloud.aws.util.S3PathFactory
+import nextflow.container.DockerConfig
 import nextflow.processor.TaskBean
 import nextflow.util.Duration
 import spock.lang.Specification
@@ -623,13 +624,12 @@ class AwsBatchScriptLauncherTest extends Specification {
                 name: 'Hello 1',
                 workDir: Paths.get('/work/dir'),
                 script: 'echo Hello world!',
-                containerConfig: [fixOwnership: true],
+                containerConfig: new DockerConfig(fixOwnership: true),
                 input: 'Ciao ciao' ] as TaskBean, opts)
 
         when:
         def binding = builder.makeBinding()
         then:
-        builder.fixOwnership() >> true
         binding.fix_ownership == '[ ${NXF_OWNER:=\'\'} ] && (shopt -s extglob; GLOBIGNORE=\'..\'; chown -fR --from root $NXF_OWNER /work/dir/{*,.*}) || true'
 
     }

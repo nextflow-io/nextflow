@@ -1,0 +1,14 @@
+set -e
+
+#
+# run normal mode
+#
+echo ''
+NXF_PLUGINS_REGISTRY_URL=https://plugin-registry.dev-tower.net/api NXF_PLUGINS_DIR=$PWD/.nextflow/plugins/ $NXF_RUN -plugins nf-ci-integration-test@0.1.0 | tee stdout
+
+[[ `grep 'INFO' .nextflow.log | grep -c 'Downloading plugin nf-ci-integration-test@0.1.0'` == 1 ]] || false
+[[ `grep -c 'Pipeline is starting using nf-ci-test-integration plugin' stdout` == 1 ]] || false
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > sayhello'` == 1 ]] || false
+[[ `grep -c 'Hello world!' stdout` == 1 ]] || false
+[[ `grep -c 'Pipeline completed using nf-ci-test-integration plugin' stdout` == 1 ]] || false
+

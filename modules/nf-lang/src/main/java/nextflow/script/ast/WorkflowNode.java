@@ -18,8 +18,7 @@ package nextflow.script.ast;
 import java.lang.reflect.Modifier;
 import java.util.Optional;
 
-import nextflow.script.types.Channel;
-import nextflow.script.types.NamedTuple;
+import nextflow.script.types.Record;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.FieldNode;
@@ -43,13 +42,21 @@ public class WorkflowNode extends MethodNode {
     public final Statement main;
     public final Statement emits;
     public final Statement publishers;
+    public final Statement onComplete;
+    public final Statement onError;
 
-    public WorkflowNode(String name, Statement takes, Statement main, Statement emits, Statement publishers) {
+    public WorkflowNode(String name, Statement takes, Statement main, Statement emits, Statement publishers, Statement onComplete, Statement onError) {
         super(name, 0, dummyReturnType(emits), dummyParams(takes), ClassNode.EMPTY_ARRAY, EmptyStatement.INSTANCE);
         this.takes = takes;
         this.main = main;
         this.emits = emits;
         this.publishers = publishers;
+        this.onComplete = onComplete;
+        this.onError = onError;
+    }
+
+    public WorkflowNode(String name, Statement main) {
+        this(name, EmptyStatement.INSTANCE, main, EmptyStatement.INSTANCE, EmptyStatement.INSTANCE, EmptyStatement.INSTANCE, EmptyStatement.INSTANCE);
     }
 
     public boolean isEntry() {
@@ -68,7 +75,7 @@ public class WorkflowNode extends MethodNode {
     }
 
     private static ClassNode dummyReturnType(Statement emits) {
-        var cn = new ClassNode(NamedTuple.class);
+        var cn = new ClassNode(Record.class);
         asBlockStatements(emits).stream()
             .map(stmt -> ((ExpressionStatement) stmt).getExpression())
             .map(emit -> emitName(emit))

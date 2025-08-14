@@ -44,6 +44,7 @@ import dev.failsafe.event.ExecutionAttemptedEvent
 import dev.failsafe.function.CheckedSupplier
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.cloud.google.GoogleOpts
 import nextflow.util.TestOnly
 /**
  * Implements Google Batch HTTP client
@@ -57,20 +58,20 @@ class BatchClient {
     protected String projectId
     protected String location
     protected BatchServiceClient batchServiceClient
-    protected BatchConfig config
+    protected GoogleOpts config
     private Map<String, TaskStatusRecord> arrayTaskStatus = new ConcurrentHashMap<String, TaskStatusRecord>()
 
-    BatchClient(BatchConfig config) {
+    BatchClient(GoogleOpts config) {
         this.config = config
-        this.projectId = config.googleOpts.projectId
-        this.location = config.googleOpts.location
+        this.projectId = config.projectId
+        this.location = config.location
         this.batchServiceClient = createBatchService(config)
     }
 
     @TestOnly
     protected BatchClient() {}
 
-    protected CredentialsProvider createCredentialsProvider(BatchConfig config) {
+    protected CredentialsProvider createCredentialsProvider(GoogleOpts config) {
         if( !config.getCredentials() )
             return null
         return new CredentialsProvider() {
@@ -81,7 +82,7 @@ class BatchClient {
         }
     }
 
-    protected BatchServiceClient createBatchService(BatchConfig config) {
+    protected BatchServiceClient createBatchService(GoogleOpts config) {
         final provider = createCredentialsProvider(config)
         if( provider ) {
             log.debug "[GOOGLE BATCH] Creating service client with config credentials"
@@ -156,7 +157,7 @@ class BatchClient {
      * @return The {@link dev.failsafe.RetryPolicy} instance
      */
     protected <T> RetryPolicy<T> retryPolicy(Predicate<? extends Throwable> cond) {
-        final cfg = config.getRetryConfig()
+        final cfg = config.batch.getRetryConfig()
         final listener = new EventListener<ExecutionAttemptedEvent<T>>() {
             @Override
             void accept(ExecutionAttemptedEvent<T> event) throws Throwable {

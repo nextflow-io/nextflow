@@ -269,7 +269,7 @@ class ScriptRunnerTest extends Dsl2Spec {
             }
             '''
         and:
-        def config = [executor: 'nope', env: [HELLO: 'Hello world!']]
+        def config = [process: [executor: 'nope'], env: [HELLO: 'Hello world!']]
 
         expect:
         new MockScriptRunner(config).setScript(script).execute().val == 'Hello world!'
@@ -297,7 +297,7 @@ class ScriptRunnerTest extends Dsl2Spec {
             }
             '''
         and:
-        def config = [executor: 'nope']
+        def config = [process: [executor: 'nope']]
 
         expect:
         new MockScriptRunner(config).setScript(script).execute().val == 'cat filename'
@@ -310,8 +310,8 @@ class ScriptRunnerTest extends Dsl2Spec {
         given:
         // -- this represent the configuration file
         def config = '''
-            executor = 'nope'
             process {
+                executor = 'nope'
                 memory = '333'
                 withName: hola { cpus = '222'; time = '555' }
                 withName: ciao { cpus = '999' }
@@ -350,9 +350,8 @@ class ScriptRunnerTest extends Dsl2Spec {
         given:
         // -- this represent the configuration file
         def config = '''
-            executor = 'nope'
-
             process {
+                executor = 'nope'
                 memory = '333'
 
                 withName: hola {
@@ -398,7 +397,7 @@ class ScriptRunnerTest extends Dsl2Spec {
         given:
         // -- this represent the configuration file
         def config = '''
-            executor = 'nope'
+            process.executor = 'nope'
             process.module = 'a/1'
             '''
 
@@ -432,8 +431,8 @@ class ScriptRunnerTest extends Dsl2Spec {
          * the module defined in the config file 'b/2' has priority and overrides the 'a/1' and 'c/3'
          */
         def config = '''
-            executor = 'nope'
             process {
+                executor = 'nope'
                 module = 'a/1'
                 withName: hola { module = 'b/2:z/9' }
             }
@@ -470,7 +469,7 @@ class ScriptRunnerTest extends Dsl2Spec {
          * the module defined in the config file 'b/2' has priority and overrides the 'a/1' and 'c/3'
          */
         def config = '''
-            executor = 'nope'
+            process.executor = 'nope'
             process.module = 'a/1'
             '''
 
@@ -501,8 +500,8 @@ class ScriptRunnerTest extends Dsl2Spec {
         given:
         // -- this represent the configuration file
         def config = '''
-            executor = 'nope'
             process {
+              executor = 'nope'
               queue = 'short'
               cpus  = 2
               time  = '6 hour'
@@ -663,7 +662,7 @@ class ScriptRunnerTest extends Dsl2Spec {
          * the module defined in the config file 'b/2' has priority and overrides the 'a/1' and 'c/3'
          */
         def config = '''
-            executor = 'nope'
+            process.executor = 'nope'
             stubRun = true
             '''
 
@@ -703,7 +702,7 @@ class ScriptRunnerTest extends Dsl2Spec {
          * the module defined in the config file 'b/2' has priority and overrides the 'a/1' and 'c/3'
          */
         def config = '''
-            executor = 'nope'
+            process.executor = 'nope'
             stubRun = true
             '''
 
@@ -740,7 +739,7 @@ class ScriptRunnerTest extends Dsl2Spec {
          * the module defined in the config file 'b/2' has priority and overrides the 'a/1' and 'c/3'
          */
         def config = '''
-            executor = 'nope'
+            process.executor = 'nope'
             stubRun = true
             '''
 
