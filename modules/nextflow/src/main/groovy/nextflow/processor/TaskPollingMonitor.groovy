@@ -198,6 +198,47 @@ class TaskPollingMonitor implements TaskMonitor {
 
 
     /**
+     * Get the number of queue slots consumed by a task handler.
+     * Regular tasks consume 1 slot, job arrays consume slots equal to their array size.
+     *
+     * @param handler A {@link TaskHandler} for the task
+     * @return The number of queue slots consumed by this task
+     */
+    private int getTaskSlots(TaskHandler handler) {
+        return handler.task instanceof TaskArrayRun ?
+            ((TaskArrayRun) handler.task).getArraySize() : 1
+    }
+
+    /**
+     * Validates that a task handler can be submitted based on queue capacity constraints.
+     * Performs validation for job arrays that exceed queue capacity.
+     *
+     * @param handler A {@link TaskHandler} for the task to validate
+     * @return {@code true} if the task meets capacity constraints
+     * @throws IllegalArgumentException if job array size exceeds queue capacity
+     */
+    private boolean checkQueueCapacity(TaskHandler handler) {
+        // Calculate slots consumed by this task:
+        // - Regular tasks consume 1 slot
+        // - Job arrays consume slots equal to their array size  
+        int slots = getTaskSlots(handler)
+        
+        // Prevent job arrays larger than the entire queue capacity
+        // This catches configuration errors early with a clear error message
+        if (slots > capacity) {
+            throw new IllegalArgumentException(
+                "Process '${handler.task.name}' declares array size ($slots) " +
+                "which exceeds the executor queue size ($capacity)")
+        }
+        
+        // Check if there's enough remaining capacity for this task:
+        // - runningQueue.size() = currently running tasks
+        // - slots = slots needed for this new task
+        // - capacity = maximum allowed concurrent tasks
+        return runningQueue.size() + slots <= capacity
+    }
+
+    /**
      * Defines the strategy determining if a task can be submitted for execution.
      *
      * @param handler
@@ -207,12 +248,7 @@ class TaskPollingMonitor implements TaskMonitor {
      *      by the polling monitor
      */
     protected boolean canSubmit(TaskHandler handler) {
-        int slots = handler.getForksCount()
-        if( capacity > 0 && slots > capacity )
-            throw new IllegalArgumentException("Job array ${handler.task.name} exceeds the queue size (array size: $slots, queue size: $capacity)")
-        if( capacity > 0 && runningQueue.size() + slots > capacity )
-            return false
-        return handler.canForkProcess() && handler.isReady()
+        (capacity > 0 ? checkQueueCapacity(handler) : true) && handler.canForkProcess() && handler.isReady()
     }
 
     /**
