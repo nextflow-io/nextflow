@@ -564,7 +564,7 @@ class AzBatchService implements Closeable {
                 .setUserIdentity(userIdentity(pool.opts.privileged, pool.opts.runAs, AutoUserScope.TASK))
                 .setContainerSettings(containerOpts)
                 .setResourceFiles(resourceFileUrls(task, poolManagedIdentityResourceId, sas))
-                .setOutputFiles(outputFileUrls(task, sas))
+                .setOutputFiles(outputFileUrls(task, poolManagedIdentityResourceId, sas))
                 .setRequiredSlots(slots)
                 .setConstraints(constraints)
     }
@@ -667,27 +667,46 @@ class AzBatchService implements Closeable {
         return resFiles
     }
 
-    protected List<OutputFile> outputFileUrls(TaskRun task, String sas) {
+    protected List<OutputFile> outputFileUrls(TaskRun task, String poolManagedIdentityResourceId, String sas) {
         List<OutputFile> result = new ArrayList<>(20)
-        result << destFile(TaskRun.CMD_EXIT, task.workDir, sas)
-        result << destFile(TaskRun.CMD_LOG, task.workDir, sas)
-        result << destFile(TaskRun.CMD_OUTFILE, task.workDir, sas)
-        result << destFile(TaskRun.CMD_ERRFILE, task.workDir, sas)
-        result << destFile(TaskRun.CMD_SCRIPT, task.workDir, sas)
-        result << destFile(TaskRun.CMD_RUN, task.workDir, sas)
-        result << destFile(TaskRun.CMD_STAGE, task.workDir, sas)
-        result << destFile(TaskRun.CMD_TRACE, task.workDir, sas)
-        result << destFile(TaskRun.CMD_ENV, task.workDir, sas)
+        result << destFile(TaskRun.CMD_EXIT, task.workDir, poolManagedIdentityResourceId, sas)
+        result << destFile(TaskRun.CMD_LOG, task.workDir, poolManagedIdentityResourceId, sas)
+        result << destFile(TaskRun.CMD_OUTFILE, task.workDir, poolManagedIdentityResourceId, sas)
+        result << destFile(TaskRun.CMD_ERRFILE, task.workDir, poolManagedIdentityResourceId, sas)
+        result << destFile(TaskRun.CMD_SCRIPT, task.workDir, poolManagedIdentityResourceId, sas)
+        result << destFile(TaskRun.CMD_RUN, task.workDir, poolManagedIdentityResourceId, sas)
+        result << destFile(TaskRun.CMD_STAGE, task.workDir, poolManagedIdentityResourceId, sas)
+        result << destFile(TaskRun.CMD_TRACE, task.workDir, poolManagedIdentityResourceId, sas)
+        result << destFile(TaskRun.CMD_ENV, task.workDir, poolManagedIdentityResourceId, sas)
         return result
     }
 
-    protected OutputFile destFile(String localPath, Path targetDir, String sas) {
+    protected OutputFile destFile(String localPath, Path targetDir, String poolManagedIdentityResourceId, String sas) {
         log.debug "Task output path: $localPath -> ${targetDir.toUriString()}"
-        def target = targetDir.resolve(localPath)
-        final dest = new OutputFileBlobContainerDestination(AzHelper.toContainerUrl(targetDir,sas))
-                .setPath(target.subpath(1,target.nameCount).toString())
-
-        return new OutputFile(localPath, new OutputFileDestination().setContainer(dest), new OutputFileUploadConfig(OutputFileUploadCondition.TASK_COMPLETION))
+        
+        // Calculate the target blob path
+        def targetPath = targetDir.resolve(localPath)
+        def blobPath = targetPath.subpath(1, targetPath.nameCount).toString()
+        
+        // Create the destination with appropriate authentication
+        def containerUrl = AzHelper.toContainerUrl(targetDir, poolManagedIdentityResourceId ? null : sas)
+        def destination = new OutputFileBlobContainerDestination(containerUrl)
+                .setPath(blobPath)
+        
+        // Add identity reference if using managed identity
+        if( poolManagedIdentityResourceId ) {
+            log.debug "[AZURE BATCH] Setting identity reference for $localPath with resource ID: $poolManagedIdentityResourceId"
+            destination.setIdentityReference(
+                new BatchNodeIdentityReference().setResourceId(poolManagedIdentityResourceId)
+            )
+        }
+        
+        // Create and return the output file configuration
+        return new OutputFile(
+            localPath,
+            new OutputFileDestination().setContainer(destination),
+            new OutputFileUploadConfig(OutputFileUploadCondition.TASK_COMPLETION)
+        )
     }
 
     protected BatchSupportedImage getImage(AzPoolOpts opts) {
@@ -807,11 +826,14 @@ class AzBatchService implements Closeable {
 
         try {
             def pool = getPool(poolId)
-            if( !pool?.identity ) {
+            if( !pool ) {
                 return null
             }
             
-            def poolIdentity = pool.identity as BatchPoolIdentity
+            def poolIdentity = pool.getIdentity()
+            if( !poolIdentity ) {
+                return null
+            }
             List<UserAssignedIdentity> identities = poolIdentity?.getUserAssignedIdentities()
             
             if( !identities || identities.isEmpty() ) {
