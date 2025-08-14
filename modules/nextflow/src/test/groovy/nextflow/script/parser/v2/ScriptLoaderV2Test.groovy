@@ -177,4 +177,59 @@ class ScriptLoaderV2Test extends Dsl2Spec {
         noExceptionThrown()
     }
 
+    def 'should eagerly evaluate GStrings' () {
+
+        given:
+        def session = new Session()
+        def parser = new ScriptLoaderV2(session)
+
+        def TEXT = '''
+            workflow { 
+                assert "${'hello'}" == 'hello'
+                assert "${'hello'}" in ['hello']
+            }
+            '''
+
+        when:
+        parser.parse(TEXT)
+        parser.runScript()
+
+        then:
+        noExceptionThrown()
+    }
+
+    def 'should lazily evaluate process inputs/outputs/directives' () {
+
+        given:
+        def session = new Session()
+        session.executorFactory = new MockExecutorFactory()
+        def parser = new ScriptLoaderV2(session)
+
+        def TEXT = '''
+            process HELLO {
+                tag props.name
+
+                input:
+                val props
+
+                output:
+                val props.name
+
+                script:
+                "echo 'Hello ${props.name}'"
+            }
+
+            workflow {
+                HELLO( [name: 'World'] )
+            }
+            '''
+
+        when:
+        parser.parse(TEXT)
+        parser.runScript()
+
+        then:
+        noExceptionThrown()
+    }
+
 }
