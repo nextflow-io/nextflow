@@ -41,6 +41,8 @@ import nextflow.secret.SecretsLoader
 import nextflow.util.Escape
 import nextflow.util.MemoryUnit
 import nextflow.util.TestOnly
+import nextflow.packages.PackageManager
+import nextflow.Global
 /**
  * Builder to create the Bash script which is used to
  * wrap and launch the user task
@@ -586,9 +588,6 @@ class BashWrapperBuilder {
     }
 
     private String getPackageActivateSnippet() {
-        import nextflow.packages.PackageManager
-        import nextflow.Global
-        
         if (!packageSpec || !PackageManager.isEnabled(Global.session))
             return null
         

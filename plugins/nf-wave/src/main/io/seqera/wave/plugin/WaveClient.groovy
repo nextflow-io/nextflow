@@ -75,6 +75,8 @@ import nextflow.util.Threads
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import static nextflow.util.SysHelper.DEFAULT_DOCKER_PLATFORM
+import nextflow.packages.PackageManager
+import nextflow.packages.PackageSpec
 
 /**
  * Wave client service
@@ -562,9 +564,6 @@ class WaveClient {
          * to assemble the target container
          */
         if( attrs.package && !packagesSpec ) {
-            import nextflow.packages.PackageManager
-            import nextflow.packages.PackageSpec
-            
             if( containerScript )
                 throw new IllegalArgumentException("Unexpected package and $scriptType conflict while resolving wave container")
 
