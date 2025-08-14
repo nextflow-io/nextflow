@@ -416,6 +416,12 @@ class AzBatchService implements Closeable {
         new CloudMachineInfo(type: type, priceModel: PriceModel.standard, zone: config.batch().location)
     }
 
+    /**
+     * Get or create an Azure Batch job for the given pool and task.
+     * 
+     * Jobs are cached per (processor, poolId) pair for efficiency. With auto-termination enabled:
+     * - First task creates a new job, subsequent tasks reuse it
+     */
     synchronized String getOrCreateJob(String poolId, TaskRun task) {
         // Use the same job Id for the same Process,PoolId pair
         // The Pool is added to allow using different queue names (corresponding
@@ -443,12 +449,21 @@ class AzBatchService implements Closeable {
 
     protected String createJob0(String poolId, TaskRun task) {
         log.debug "[AZURE BATCH] created job for ${task.processor.name} with pool ${poolId}"
+        
         // create a batch job
         final jobId = makeJobId(task)
         final content = new BatchJobCreateContent(jobId, new BatchPoolInfo(poolId: poolId))
 
+        // Set job constraints (max wall clock time) if specified
         if (config.batch().jobMaxWallClockTime) {
             content.setConstraints(createJobConstraints(config.batch().jobMaxWallClockTime))
+        }
+        
+        // Configure job for auto-termination to prevent "job leak" where jobs
+        // remain active indefinitely, consuming quota after tasks complete
+        if (config.batch().terminateJobsOnCompletion) {
+            content.setOnAllTasksComplete(OnAllBatchTasksComplete.TERMINATE_JOB)
+            log.trace "[AZURE BATCH] Job ${jobId} configured for auto-termination on task completion"
         }
         
         apply(() -> client.createJob(content))
@@ -575,8 +590,10 @@ class AzBatchService implements Closeable {
     }
 
     /**
-     * Submit a task and transparently recover from a 409 job state conflict by
-     * creating a fresh job and retrying the submission.
+     * Submit a task to an Azure Batch job with automatic handling of terminated jobs.
+     * 
+     * Handles 409 conflicts when submitting to auto-terminated jobs by recreating
+     * the job and retrying the submission.
      */
     protected AzTaskKey submitTaskToJob(String poolId, String jobId, TaskRun task, BatchTaskCreateContent taskToAdd) {
         try {
@@ -594,8 +611,8 @@ class AzBatchService implements Closeable {
     }
 
     /**
-     * Create a new Azure Batch job for the given process and update internal bookkeeping
-     * so subsequent tasks for the same (process,pool) use the fresh job id.
+     * Create a new job when the original job is terminated and update job mappings.
+     * The new job will also be configured for auto-termination.
      */
     protected String recreateJobForTask(String poolId, TaskRun task, String oldJobId, String taskId) {
         log.debug "Job ${oldJobId} is in completed/terminating state, creating a new job for task ${taskId}"
@@ -607,7 +624,9 @@ class AzBatchService implements Closeable {
     }
 
     /**
-     * If configured, set the job to auto-terminate when all tasks complete.
+     * Configure job for auto-termination after task submission if enabled.
+     * Sets job to terminate when all tasks complete, freeing quota immediately.
+     * Errors are logged but don't fail the task submission.
      */
     protected void setAutoTerminateIfEnabled(String jobId, String taskId) {
         if( !config.batch().terminateJobsOnCompletion )
@@ -1065,7 +1084,8 @@ class AzBatchService implements Closeable {
     }
 
     /**
-     * Set all jobs to terminate on completion.
+     * Set all jobs to terminate on completion during graceful shutdown.
+     * Provides fallback for jobs that weren't configured for auto-termination.
      */
     protected void terminateJobs() {
         for( String jobId : allJobIds.values() ) {
