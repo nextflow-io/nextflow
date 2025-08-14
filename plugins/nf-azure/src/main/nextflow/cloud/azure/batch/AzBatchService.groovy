@@ -449,7 +449,6 @@ class AzBatchService implements Closeable {
 
     protected String createJob0(String poolId, TaskRun task) {
         log.debug "[AZURE BATCH] created job for ${task.processor.name} with pool ${poolId}"
-        
         // create a batch job
         final jobId = makeJobId(task)
         final content = new BatchJobCreateContent(jobId, new BatchPoolInfo(poolId: poolId))
