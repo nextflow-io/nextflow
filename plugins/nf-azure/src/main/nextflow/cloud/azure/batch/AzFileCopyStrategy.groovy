@@ -46,7 +46,7 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
 
     AzFileCopyStrategy(TaskBean bean, AzBatchExecutor executor) {
         super(bean)
-        this.config = executor.config
+        this.config = executor.azConfig
         this.remoteBinDir = executor.remoteBinDir
         this.sasToken = config.storage().sasToken
         this.maxParallelTransfers = config.batch().maxParallelTransfers

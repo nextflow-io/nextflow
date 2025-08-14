@@ -16,46 +16,36 @@
 
 package nextflow.cloud.aws
 
-import com.amazonaws.AmazonClientException
-import com.amazonaws.ClientConfiguration
-import com.amazonaws.auth.AWSCredentialsProvider
-import com.amazonaws.auth.AWSCredentialsProviderChain
-import com.amazonaws.auth.AWSStaticCredentialsProvider
-import com.amazonaws.auth.AnonymousAWSCredentials
-import com.amazonaws.auth.BasicAWSCredentials
-import com.amazonaws.auth.EC2ContainerCredentialsProviderWrapper
-import com.amazonaws.auth.EnvironmentVariableCredentialsProvider
-import com.amazonaws.auth.SystemPropertiesCredentialsProvider
-import com.amazonaws.auth.WebIdentityTokenCredentialsProvider
-import com.amazonaws.auth.profile.ProfileCredentialsProvider
-import com.amazonaws.auth.profile.ProfilesConfigFile
-import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
-import com.amazonaws.profile.path.AwsProfileFileLocationProvider
-import com.amazonaws.regions.InstanceMetadataRegionProvider
-import com.amazonaws.regions.Region
-import com.amazonaws.regions.RegionUtils
-import com.amazonaws.services.batch.AWSBatch
-import com.amazonaws.services.batch.AWSBatchClient
-import com.amazonaws.services.batch.AWSBatchClientBuilder
-import com.amazonaws.services.ec2.AmazonEC2
-import com.amazonaws.services.ec2.AmazonEC2Client
-import com.amazonaws.services.ec2.AmazonEC2ClientBuilder
-import com.amazonaws.services.ecs.AmazonECS
-import com.amazonaws.services.ecs.AmazonECSClientBuilder
-import com.amazonaws.services.logs.AWSLogs
-import com.amazonaws.services.logs.AWSLogsAsyncClientBuilder
-import com.amazonaws.services.s3.AmazonS3
-import com.amazonaws.services.s3.AmazonS3ClientBuilder
-import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder
-import com.amazonaws.services.securitytoken.model.GetCallerIdentityRequest
+import nextflow.cloud.aws.nio.util.S3AsyncClientConfiguration
+import nextflow.cloud.aws.nio.util.S3SyncClientConfiguration
+import software.amazon.awssdk.auth.credentials.AnonymousCredentialsProvider
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials
+import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration
+import software.amazon.awssdk.core.exception.SdkClientException
+import software.amazon.awssdk.http.SdkHttpClient
+import software.amazon.awssdk.regions.Region
+import software.amazon.awssdk.regions.providers.InstanceProfileRegionProvider
+import software.amazon.awssdk.services.batch.BatchClient
+import software.amazon.awssdk.services.cloudwatchlogs.CloudWatchLogsClient
+import software.amazon.awssdk.services.ec2.Ec2Client
+import software.amazon.awssdk.services.ecs.EcsClient
+import software.amazon.awssdk.services.s3.S3AsyncClient
+import software.amazon.awssdk.services.s3.S3Client
+import software.amazon.awssdk.services.s3.S3Configuration
+import software.amazon.awssdk.services.s3.S3CrtAsyncClientBuilder
+import software.amazon.awssdk.services.s3.multipart.MultipartConfiguration
+import software.amazon.awssdk.services.sts.StsClient
+import software.amazon.awssdk.services.sts.model.GetCallerIdentityRequest
+import software.amazon.awssdk.services.sts.model.StsException
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.SysEnv
 import nextflow.cloud.aws.config.AwsConfig
-import nextflow.cloud.aws.util.ConfigParser
-import nextflow.cloud.aws.util.S3CredentialsProvider
-import nextflow.cloud.aws.util.SsoCredentialsProviderV1
 import nextflow.exception.AbortOperationException
 /**
  * Implement a factory class for AWS client objects
@@ -137,10 +127,10 @@ class AwsClientFactory {
      */
     protected String fetchIamRole() {
         try {
-            def stsClient = AWSSecurityTokenServiceClientBuilder.defaultClient();
-            return stsClient.getCallerIdentity(new GetCallerIdentityRequest()).getArn()
+            final stsClient = StsClient.create()
+            return stsClient.getCallerIdentity(GetCallerIdentityRequest.builder().build() as GetCallerIdentityRequest).arn();
         }
-        catch( AmazonClientException e ) {
+        catch (StsException e) {
             log.trace "Unable to fetch IAM credentials -- Cause: ${e.message}"
             return null
         }
@@ -156,11 +146,11 @@ class AwsClientFactory {
      */
     private String fetchRegion() {
         try {
-            return new InstanceMetadataRegionProvider().getRegion()
+            return new InstanceProfileRegionProvider().getRegion().id();
         }
-        catch (AmazonClientException e) {
-            log.debug("Cannot fetch AWS region", e as Throwable)
-            return null
+        catch (SdkClientException e) {
+            log.debug("Cannot fetch AWS region", e);
+            return null;
         }
     }
 
@@ -171,148 +161,164 @@ class AwsClientFactory {
      * @return A {@link Region} corresponding to the specified region string
      */
     private Region getRegionObj(String region) {
-        final result = RegionUtils.getRegion(region)
+        final result = Region.of(region)
         if( !result )
             throw new IllegalArgumentException("Not a valid AWS region name: $region");
         return result
     }
 
     /**
-     * Gets or lazily creates an {@link AmazonEC2Client} instance given the current
+     * Gets or lazily creates an {@link Ec2Client} instance given the current
      * configuration parameter
      *
      * @return
-     *      An {@link AmazonEC2Client} instance
+     *      An {@link Ec2Client} instance
      */
-    synchronized AmazonEC2 getEc2Client() {
-
-        final builder = AmazonEC2ClientBuilder
-                .standard()
-                .withRegion(region)
-
-        final credentials = getCredentialsProvider0()
-        if( credentials )
-            builder.withCredentials(credentials)
-
-        return builder.build()
+    synchronized Ec2Client getEc2Client() {
+        return Ec2Client.builder()
+            .region(getRegionObj(region))
+            .credentialsProvider(getCredentialsProvider0())
+            .build()
     }
 
     /**
-     * Gets or lazily creates an {@link AWSBatchClient} instance given the current
+     * Gets or lazily creates an {@link BatchClient} instance given the current
      * configuration parameter
      *
      * @return
-     *      An {@link AWSBatchClient} instance
+     *      An {@link BatchClient} instance
      */
     @Memoized
-    AWSBatch getBatchClient() {
-        final builder = AWSBatchClientBuilder
-                .standard()
-                .withRegion(region)
-
-        final credentials = getCredentialsProvider0()
-        if( credentials )
-            builder.withCredentials(credentials)
-
-        return builder.build()
+    BatchClient getBatchClient() {
+        return BatchClient.builder()
+            .region(getRegionObj(region))
+            .credentialsProvider(getCredentialsProvider0())
+            .build()
     }
 
     @Memoized
-    AmazonECS getEcsClient() {
-
-        final builder = AmazonECSClientBuilder
-                .standard()
-                .withRegion(region)
-
-        final credentials = getCredentialsProvider0()
-        if( credentials )
-            builder.withCredentials(credentials)
-
-        return builder.build()
+    EcsClient getEcsClient() {
+        return EcsClient.builder()
+            .region(getRegionObj(region))
+            .credentialsProvider(getCredentialsProvider0())
+            .build()
     }
 
     @Memoized
-    AWSLogs getLogsClient() {
+    CloudWatchLogsClient getLogsClient() {
+        return CloudWatchLogsClient.builder().region(getRegionObj(region)).credentialsProvider(getCredentialsProvider0()).build()
+    }
 
-        final builder = AWSLogsAsyncClientBuilder
-                .standard()
-                .withRegion(region)
+    S3Client getS3Client(S3SyncClientConfiguration s3ClientConfig, boolean global = false) {
+        final SdkHttpClient.Builder httpClientBuilder = s3ClientConfig.getHttpClientBuilder()
+        final ClientOverrideConfiguration overrideConfiguration = s3ClientConfig.getClientOverrideConfiguration()
+        final builder = S3Client.builder()
+            .crossRegionAccessEnabled(global)
+            .credentialsProvider(getS3CredentialsProvider())
+            .serviceConfiguration(S3Configuration.builder()
+                .pathStyleAccessEnabled(config.s3Config.pathStyleAccess)
+                .multiRegionEnabled(global)
+                .build())
 
-        final credentials = getCredentialsProvider0()
-        if( credentials )
-            builder.withCredentials(credentials)
+        if( config.s3Config.endpoint )
+            builder.endpointOverride(URI.create(config.s3Config.endpoint))
+
+        // AWS SDK v2 region must be always set, even when endpoint is overridden
+        builder.region(getRegionObj(region))
+
+        if( httpClientBuilder != null )
+            builder.httpClientBuilder(httpClientBuilder)
+
+        if( overrideConfiguration != null )
+            builder.overrideConfiguration(overrideConfiguration)
 
         return builder.build()
     }
 
-    AmazonS3 getS3Client(ClientConfiguration clientConfig=null, boolean global=false) {
-        final builder = AmazonS3ClientBuilder
-                .standard()
-                .withPathStyleAccessEnabled(config.s3Config.pathStyleAccess)
-                .withForceGlobalBucketAccessEnabled(global)
+    S3AsyncClient getS3AsyncClient(S3AsyncClientConfiguration s3ClientConfig, boolean global = false) {
+        def builder = S3AsyncClient.crtBuilder()
+            .crossRegionAccessEnabled(global)
+            .credentialsProvider(getS3CredentialsProvider())
+            .forcePathStyle(config.s3Config.pathStyleAccess)
+            .region(getRegionObj(region))
+        if( config.s3Config.endpoint )
+            builder.endpointOverride(URI.create(config.s3Config.endpoint))
 
-        final endpoint = config.s3Config.endpoint
-        if( endpoint )
-            builder.withEndpointConfiguration(new EndpointConfiguration(endpoint, region))
-        else
-            builder.withRegion(region)
+        final retryConfiguration = s3ClientConfig.getCrtRetryConfiguration()
+        if( retryConfiguration != null )
+            builder.retryConfiguration(retryConfiguration)
 
-        final credentials = config.s3Config.anonymous
-                ? new AWSStaticCredentialsProvider(new AnonymousAWSCredentials())
-                : new S3CredentialsProvider(getCredentialsProvider0())
-        builder.withCredentials(credentials)
+        final httpConfiguration = s3ClientConfig.getCrtHttpConfiguration()
+        if( httpConfiguration != null )
+            builder.httpConfiguration(httpConfiguration)
 
-        if( clientConfig )
-            builder.withClientConfiguration(clientConfig)
+        final multipartConfig = s3ClientConfig.getMultipartConfiguration()
+        if( multipartConfig != null )
+            setMultipartConfiguration(multipartConfig, builder)
+
+        final throughput = s3ClientConfig.getTargetThroughputInGbps()
+        if( throughput != null )
+            builder.targetThroughputInGbps(throughput)
+
+        final nativeMemory = s3ClientConfig.getMaxNativeMemoryInBytes()
+        if (nativeMemory != null )
+            builder.maxNativeMemoryLimitInBytes(nativeMemory)
+
+        final maxConcurrency = s3ClientConfig.getMaxConcurrency()
+        if( maxConcurrency != null )
+            builder.maxConcurrency(maxConcurrency)
 
         return builder.build()
     }
+    /**
+     * Returns an AwsCredentialsProvider for S3 clients.
+     *
+     * This method wraps the same AWS credentials used for other clients, but ensures proper handling of anonymous S3 access.
+     * If the 'anonymous' flag is set in Nextflow's AWS S3 configuration, or if no credentials are resolved by other providers,
+     * an AnonymousCredentialsProvider instance is returned.
+     *
+     * Prior to AWS SDK v2, the S3CredentialsProvider automatically managed fallback to anonymous access when no credentials were found.
+     * However, due to a limitation in the AWS SDK v2 CRT Async S3 client (see https://github.com/aws/aws-sdk-java-v2/issues/5810),
+     * anonymous credentials only work when explicitly configured via AnonymousCredentialsProvider.
+     * Custom credential providers or provider chains that resolve to anonymous credentials are not handled correctly by the CRT client.
+     *
+     * To work around this, this method explicitly checks whether credentials can be resolved.
+     * If no credentials are found, it returns an AnonymousCredentialsProvider; otherwise, it returns the resolved provider.
+     *
+     * @return an AwsCredentialsProvider instance, falling back to anonymous if needed.
+     */
+    private AwsCredentialsProvider getS3CredentialsProvider() {
+        if ( config.s3Config.anonymous )
+            return AnonymousCredentialsProvider.create()
+        def provider = getCredentialsProvider0()
+        try {
+            provider.resolveCredentials()
+        } catch (Exception e) {
+            log.debug("No AWS credentials available - falling back to anonymous access")
+            return AnonymousCredentialsProvider.create()
+        }
+        return provider
+    }
 
-    protected AWSCredentialsProvider getCredentialsProvider0() {
+    private void setMultipartConfiguration(MultipartConfiguration multipartConfig, S3CrtAsyncClientBuilder builder) {
+        if( multipartConfig.minimumPartSizeInBytes() != null )
+            builder.minimumPartSizeInBytes(multipartConfig.minimumPartSizeInBytes())
+        if( multipartConfig.thresholdInBytes() != null )
+            builder.thresholdInBytes(multipartConfig.thresholdInBytes())
+    }
+
+    protected AwsCredentialsProvider getCredentialsProvider0() {
         if( accessKey && secretKey ) {
-            final creds = new BasicAWSCredentials(accessKey, secretKey)
-            return new AWSStaticCredentialsProvider(creds)
+            return StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKey, secretKey))
         }
 
         if( profile ) {
-            return new AWSCredentialsProviderChain(List.of(
-                    new ProfileCredentialsProvider(configFile(), profile),
-                    new SsoCredentialsProviderV1(profile)))
+            return ProfileCredentialsProvider.builder()
+                    .profileName(profile)
+                    .build()
         }
 
-        return new AWSCredentialsProviderChain(List.of(
-                new EnvironmentVariableCredentialsProvider(),
-                new SystemPropertiesCredentialsProvider(),
-                WebIdentityTokenCredentialsProvider.create(),
-                new ProfileCredentialsProvider(configFile(), null),
-                new SsoCredentialsProviderV1(),
-                new EC2ContainerCredentialsProviderWrapper()))
+        return DefaultCredentialsProvider.create()
     }
 
-    static ProfilesConfigFile configFile() {
-        final creds = AwsProfileFileLocationProvider.DEFAULT_CREDENTIALS_LOCATION_PROVIDER.getLocation()
-        final config = AwsProfileFileLocationProvider.DEFAULT_CONFIG_LOCATION_PROVIDER.getLocation()
-        if( creds && config && SysEnv.get('NXF_DISABLE_AWS_CONFIG_MERGE')!='true' ) {
-            log.debug "Merging AWS credentials file '$creds' and config file '$config'"
-            final parser = new ConfigParser()
-            // add the credentials first because it has higher priority
-            parser.parseConfig(creds.text)
-            // add also the content of config file
-            parser.parseConfig(config.text)
-            final temp = File.createTempFile('aws','config')
-            // merge into a temporary file
-            temp.deleteOnExit()
-            temp.text = parser.text()
-            return new ProfilesConfigFile(temp.absolutePath)
-        }
-        if( creds ) {
-            log.debug "Using AWS credentials file '$creds'"
-            return new ProfilesConfigFile(creds)
-        }
-        if( config ) {
-            log.debug "Using AWS config file '$config'"
-            return new ProfilesConfigFile(config)
-        }
-        return null
-    }
 }

@@ -113,7 +113,7 @@ class BashWrapperBuilderWithAzTest extends Specification {
         ])
 
         def exec = Mock(AzBatchExecutor) {
-            getConfig() >> new AzConfig([:])
+            getAzConfig() >> new AzConfig([:])
         }
         and:
         def copy = new AzFileCopyStrategy(bean, exec)

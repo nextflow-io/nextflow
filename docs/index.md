@@ -152,8 +152,20 @@ migrations/index
 
 developer/index
 developer/diagram
+developer/config-scopes
 developer/packages
 developer/plugins
+```
+
+```{toctree}
+:hidden:
+:caption: Tutorials
+:maxdepth: 1
+
+tutorials/data-lineage
+tutorials/workflow-outputs
+tutorials/metrics
+tutorials/flux
 ```
 
 ```{toctree}
@@ -161,8 +173,6 @@ developer/plugins
 :caption: Guides
 :maxdepth: 1
 
-data-lineage
-updating-spot-retries
-metrics
-flux
+guides/aws-java-sdk-v2
+guides/updating-spot-retries
 ```

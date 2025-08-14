@@ -19,8 +19,8 @@ package nextflow.trace
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
-import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
+import nextflow.trace.event.TaskEvent
 import nextflow.util.SimpleAgent
 
 /**
@@ -30,7 +30,7 @@ import nextflow.util.SimpleAgent
  */
 @Slf4j
 @CompileStatic
-class WorkflowStatsObserver implements TraceObserver {
+class WorkflowStatsObserver implements TraceObserverV2 {
 
     private WorkflowStats data = new WorkflowStats()
 
@@ -49,45 +49,45 @@ class WorkflowStatsObserver implements TraceObserver {
     }
 
     @Override
-    void onProcessCreate(TaskProcessor process){
+    void onProcessCreate(TaskProcessor process) {
         log.trace "== event create pid=${process.id}"
         agent.send { data.markCreated(process) }
     }
 
     @Override
-    void onProcessTerminate( TaskProcessor processor ) {
-        log.trace "== event terminated pid=${processor.id}"
-        agent.send { data.markTerminated(processor) }
+    void onProcessTerminate(TaskProcessor process) {
+        log.trace "== event terminated pid=${process.id}"
+        agent.send { data.markTerminated(process) }
     }
 
     @Override
-    void onProcessPending(TaskHandler handler, TraceRecord trace){
-        log.trace "== event pending pid=${handler.getTask().processor.id}; status=$handler.status"
-        agent.send { data.markPending(handler.getTask().processor) }
+    void onTaskPending(TaskEvent event) {
+        log.trace "== event pending pid=${event.handler.task.processor.id}; status=$event.handler.status"
+        agent.send { data.markPending(event.handler.task.processor) }
     }
 
     @Override
-    void onProcessSubmit(TaskHandler handler, TraceRecord trace){
-        log.trace "== event submit pid=${handler.getTask().processor.id}; status=$handler.status"
-        agent.send { data.markSubmitted(handler.getTask()) }
+    void onTaskSubmit(TaskEvent event) {
+        log.trace "== event submit pid=${event.handler.task.processor.id}; status=$event.handler.status"
+        agent.send { data.markSubmitted(event.handler.task) }
     }
 
     @Override
-    void onProcessStart(TaskHandler handler, TraceRecord trace){
-        log.trace "== event start pid=${handler.getTask().processor.id}; status=$handler.status"
-        agent.send { data.markRunning(handler.getTask()) }
+    void onTaskStart(TaskEvent event) {
+        log.trace "== event start pid=${event.handler.task.processor.id}; status=$event.handler.status"
+        agent.send { data.markRunning(event.handler.task) }
     }
 
     @Override
-    void onProcessComplete(TaskHandler handler, TraceRecord trace) {
-        log.trace "== event complete pid=${handler.getTask().processor.id}; status=$handler.status"
-        agent.send { data.markCompleted(handler.getTask(), trace) }
+    void onTaskComplete(TaskEvent event) {
+        log.trace "== event complete pid=${event.handler.task.processor.id}; status=$event.handler.status"
+        agent.send { data.markCompleted(event.handler.task, event.trace, event.handler.status) }
     }
 
     @Override
-    void onProcessCached(TaskHandler handler, TraceRecord trace){
-        log.trace "== event cached pid=${handler.getTask().processor.id}; status=$handler.status"
-        agent.send { data.markCached(handler.getTask(), trace) }
+    void onTaskCached(TaskEvent event) {
+        log.trace "== event cached pid=${event.handler.task.processor.id}; status=$event.handler.status"
+        agent.send { data.markCached(event.handler.task, event.trace) }
     }
 
     WorkflowStats getStats() {
@@ -95,7 +95,7 @@ class WorkflowStatsObserver implements TraceObserver {
     }
 
     WorkflowStats getQuickStats() {
-        agent.getQuickValue()
+        return agent.getQuickValue()
     }
 
     boolean hasProgressRecords() {

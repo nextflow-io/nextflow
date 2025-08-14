@@ -20,11 +20,10 @@ import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
-import com.amazonaws.services.batch.AWSBatch
-import com.amazonaws.services.batch.model.AWSBatchException
-import com.amazonaws.services.ecs.model.AccessDeniedException
-import com.amazonaws.services.logs.model.ResourceNotFoundException
-import groovy.transform.CompileDynamic
+import software.amazon.awssdk.services.batch.BatchClient
+import software.amazon.awssdk.services.batch.model.BatchException
+import software.amazon.awssdk.services.ecs.model.AccessDeniedException
+import software.amazon.awssdk.services.cloudwatchlogs.model.ResourceNotFoundException
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -177,7 +176,7 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExec
     }
 
     @PackageScope
-    AWSBatch getClient() {
+    BatchClient getClient() {
         client
     }
 
@@ -194,13 +193,14 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExec
 
         reaper = createExecutorService('AWSBatch-reaper')
 
-        final pollInterval = session.getPollInterval(name, Duration.of('10 sec'))
-        final dumpInterval = session.getMonitorDumpInterval(name)
-        final capacity = session.getQueueSize(name, 1000)
+        final pollInterval = config.getPollInterval(name, Duration.of('10 sec'))
+        final dumpInterval = config.getMonitorDumpInterval(name)
+        final capacity = config.getQueueSize(name, 1000)
 
         final def params = [
                 name: name,
                 session: session,
+                config: config,
                 pollInterval: pollInterval,
                 dumpInterval: dumpInterval,
                 capacity: capacity
@@ -234,11 +234,11 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExec
 
         // queue size can be overridden by submitter options below
         final qs = 5_000
-        final limit = session.getExecConfigProp(name,'submitRateLimit','50/s') as String
+        final limit = config.getExecConfigProp(name, 'submitRateLimit', '50/s') as String
         final size = Runtime.runtime.availableProcessors() * 5
 
         final opts = new ThrottlingExecutor.Options()
-                .retryOn { Throwable t -> t instanceof AWSBatchException && (t.errorCode=='TooManyRequestsException' || t.statusCode in RETRYABLE_STATUS) }
+                .retryOn { Throwable t -> t instanceof BatchException && (t.awsErrorDetails().errorCode() == 'TooManyRequestsException' || t.statusCode() in RETRYABLE_STATUS) }
                 .onFailure { Throwable t -> session?.abort(t) }
                 .onRateLimitChange { RateUnit rate -> logRateLimitChange(rate) }
                 .withRateLimit(limit)
@@ -247,15 +247,9 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExec
                 .withKeepAlive(Duration.of('1 min'))
                 .withAutoThrottle(true)
                 .withMaxRetries(10)
-                .withOptions( getConfigOpts() )
                 .withPoolName(name)
 
         ThrottlingExecutor.create(opts)
-    }
-
-    @CompileDynamic
-    protected Map getConfigOpts() {
-        session.config?.executor?.submitter as Map
     }
 
     @Override

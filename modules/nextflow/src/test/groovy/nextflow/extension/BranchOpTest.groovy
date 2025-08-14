@@ -293,7 +293,7 @@ class BranchOpTest extends Dsl2Spec  {
         ''')
         then:
         def e = thrown(ScriptCompilationException)
-        e.message.contains 'Branch evaluation closure should declare at least one parameter or use the implicit `it` parameter'
+        e.message.contains 'Branch criteria should declare at least one parameter or use the implicit `it` parameter'
     }
 
     def 'should error due to dup label' () {
@@ -303,7 +303,7 @@ class BranchOpTest extends Dsl2Spec  {
         ''')
         then:
         def e = thrown(ScriptCompilationException)
-        e.message.contains 'Branch label already used: foo'
+        e.message.contains 'Branch label already declared: foo'
     }
 
     def 'should error due to invalid bool expr' () {
@@ -323,7 +323,7 @@ class BranchOpTest extends Dsl2Spec  {
         ''')
         then:
         def e = thrown(ScriptCompilationException)
-        e.message.contains 'Branch evaluation closure should contain at least one branch expression'
+        e.message.contains 'Branch criteria should declare at least one branch'
 
         when:
         dsl_eval('''   
@@ -331,7 +331,7 @@ class BranchOpTest extends Dsl2Spec  {
         ''')
         then:
         def e2 = thrown(ScriptCompilationException)
-        e2.message.contains 'Branch evaluation closure should contain at least one branch expression'
+        e2.message.contains 'Branch criteria should declare at least one branch'
     }
 
 

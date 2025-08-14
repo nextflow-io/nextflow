@@ -34,30 +34,33 @@ import nextflow.Global
 @Slf4j
 class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
     
-    private boolean writeFake = true
+    private boolean writeFake
+
+    CharliecloudBuilder(String name, CharliecloudConfig config) {
+        this.image = name
+
+        if( config.runOptions )
+            addRunOptions(config.runOptions)
+
+        if( config.temp )
+            this.temp = config.temp
+
+        if( !config.writableInputMounts )
+            this.readOnlyInputs = true
+
+        this.writeFake = config.writeFake
+    }
 
     CharliecloudBuilder(String name) {
-        this.image = name
+        this(name, new CharliecloudConfig([:]))
     }
 
     @Override
     CharliecloudBuilder params(Map params) {
 
-        if( params.containsKey('temp') )
-            this.temp = params.temp
-
         if( params.containsKey('entry') )
             this.entryPoint = params.entry
 
-        if( params.containsKey('runOptions') )
-            addRunOptions(params.runOptions.toString())
-                
-        if ( params.containsKey('writeFake') )
-            this.writeFake = params.writeFake?.toString() != 'false'
-
-        if( params.containsKey('readOnlyInputs') )
-            this.readOnlyInputs = params.readOnlyInputs?.toString() == 'true'
-        
         return this
     }
 

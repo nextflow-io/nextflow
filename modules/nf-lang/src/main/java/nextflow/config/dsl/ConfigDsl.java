@@ -29,6 +29,8 @@ import nextflow.script.dsl.DslScope;
  */
 public interface ConfigDsl extends DslScope {
 
+    // constants
+
     @Deprecated
     @Constant("baseDir")
     @Description("""
@@ -53,6 +55,14 @@ public interface ConfigDsl extends DslScope {
         The directory where the main script is located.
     """)
     Path getProjectDir();
+
+    @Constant("secrets")
+    @Description("""
+        Map of pipeline secrets.
+    """)
+    Map<String,String> getSecrets();
+
+    // functions
 
     @Description("""
         Get the value of an environment variable from the launch environment.
