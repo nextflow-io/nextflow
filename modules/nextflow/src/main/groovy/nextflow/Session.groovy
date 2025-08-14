@@ -68,7 +68,6 @@ import nextflow.script.ScriptFile
 import nextflow.script.ScriptMeta
 import nextflow.script.ScriptRunner
 import nextflow.script.WorkflowMetadata
-import nextflow.pixi.PixiConfig
 import nextflow.spack.SpackConfig
 import nextflow.trace.AnsiLogObserver
 import nextflow.trace.TraceObserver
@@ -1196,11 +1195,6 @@ class Session implements ISession {
         return new SpackConfig(opts, getSystemEnv())
     }
 
-    @Memoized
-    PixiConfig getPixiConfig() {
-        final cfg = config.pixi as Map ?: Collections.emptyMap()
-        return new PixiConfig(cfg, getSystemEnv())
-    }
 
     /**
      * Get the container engine configuration for the specified engine. If no engine is specified

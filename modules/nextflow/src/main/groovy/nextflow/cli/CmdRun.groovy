@@ -250,11 +250,6 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-without-spack'], description = 'Disable the use of Spack environments')
     Boolean withoutSpack
 
-    @Parameter(names=['-with-pixi'], description = 'Use the specified Pixi environment package or file (must end with .toml suffix)')
-    String withPixi
-
-    @Parameter(names=['-without-pixi'], description = 'Disable the use of Pixi environments')
-    Boolean withoutPixi
 
     @Parameter(names=['-offline'], description = 'Do not check for remote project updates')
     boolean offline = System.getenv('NXF_OFFLINE')=='true'

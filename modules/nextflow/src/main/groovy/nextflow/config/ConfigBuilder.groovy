@@ -594,18 +594,6 @@ class ConfigBuilder {
             config.spack.enabled = true
         }
 
-        if( cmdRun.withoutPixi && config.pixi instanceof Map ) {
-            // disable pixi execution
-            log.debug "Disabling execution with Pixi as requested by command-line option `-without-pixi`"
-            config.pixi.enabled = false
-        }
-
-        // -- apply the pixi environment
-        if( cmdRun.withPixi ) {
-            if( cmdRun.withPixi != '-' )
-                config.process.pixi = cmdRun.withPixi
-            config.pixi.enabled = true
-        }
 
         // -- sets the resume option
         if( cmdRun.resume )
