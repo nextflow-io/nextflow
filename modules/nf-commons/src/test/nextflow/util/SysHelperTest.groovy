@@ -17,6 +17,7 @@
 package nextflow.util
 
 import java.lang.management.ManagementFactory
+import java.time.OffsetDateTime
 
 import com.sun.management.OperatingSystemMXBean
 import nextflow.SysEnv
@@ -104,6 +105,50 @@ class SysHelperTest extends Specification {
         and:
         1470901220000  | 'en'   | "yyyy-MM-dd'T'HH:mm:ss.SSS"   | '2016-08-11T09:40:20.000'
         1470901220000  | 'es'   | "yyyy-MM-dd'T'HH:mm:ss.SSS"   | '2016-08-11T09:40:20.000'
+    }
+
+    def 'should format OffsetDateTime preserving timezone' () {
+        given:
+        SysEnv.push([:])
+        and:
+        def defLocale = Locale.getDefault(Locale.Category.FORMAT)
+        def useLocale = new Locale.Builder().setLanguage('en').build()
+        Locale.setDefault(Locale.Category.FORMAT, useLocale)
+        and:
+        // Create OffsetDateTime with specific timezone +02:00 (epoch time 1470901220000 = 2016-08-11T07:40:20Z)
+        def dateTime = OffsetDateTime.ofInstant(Instant.ofEpochMilli(1470901220000), ZoneOffset.ofHours(2))
+
+        when:
+        String fmt = SysHelper.fmtDate(dateTime)
+        then:
+        // Should format using the original timezone (+02:00), which gives 09:40:20 local time
+        fmt == '11-Aug-2016 09:40:20'
+
+        cleanup:
+        Locale.setDefault(Locale.Category.FORMAT, defLocale)
+        SysEnv.pop()
+    }
+
+    def 'should format OffsetDateTime with ISO format preserving timezone' () {
+        given:
+        SysEnv.push([NXF_DATE_FORMAT: 'iso'])
+        and:
+        def defLocale = Locale.getDefault(Locale.Category.FORMAT)
+        def useLocale = new Locale.Builder().setLanguage('en').build()
+        Locale.setDefault(Locale.Category.FORMAT, useLocale)
+        and:
+        // Create OffsetDateTime with specific timezone +05:00 (epoch time 1470901220000 = 2016-08-11T07:40:20Z)
+        def dateTime = OffsetDateTime.ofInstant(Instant.ofEpochMilli(1470901220000), ZoneOffset.ofHours(5))
+
+        when:
+        String fmt = SysHelper.fmtDate(dateTime)
+        then:
+        // Should preserve the original +05:00 timezone, giving 12:40:20 local time
+        fmt == '2016-08-11T12:40:20+05:00'
+
+        cleanup:
+        Locale.setDefault(Locale.Category.FORMAT, defLocale)
+        SysEnv.pop()
     }
 
 }

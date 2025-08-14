@@ -19,6 +19,7 @@ package nextflow.util
 
 import java.lang.management.ManagementFactory
 import java.text.SimpleDateFormat
+import java.time.OffsetDateTime
 
 import com.sun.management.OperatingSystemMXBean
 import groovy.transform.CompileStatic
@@ -81,8 +82,11 @@ class SysHelper {
      * @return
      *      The formatted date string
      */
-    static String fmtDate(java.time.OffsetDateTime dateTime) {
-        fmtDate(Date.from(dateTime.toInstant()))
+    static String fmtDate(OffsetDateTime dateTime) {
+        // Convert to Date while preserving the original timezone
+        final date = Date.from(dateTime.toInstant())
+        final timezone = TimeZone.getTimeZone(dateTime.getOffset())
+        fmtDate(date, timezone)
     }
 
     static private String fmtEnv() {
