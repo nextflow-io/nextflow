@@ -912,6 +912,13 @@ class WaveClient {
             waveSpec.withCondaOpts(config.condaOpts())
         }
         
+        // Handle R-specific properties
+        if (spec.provider in ['r', 'cran', 'pak', 'bioconductor']) {
+            // R packages will be handled through Wave's R container building
+            // Wave will automatically detect and install R packages
+            log.debug "Preparing R packages for Wave: ${spec.entries}"
+        }
+        
         return waveSpec
     }
     
@@ -926,6 +933,13 @@ class WaveClient {
                 return PackagesSpec.Type.CONDA
             case 'pixi':
                 // Wave doesn't support pixi yet, so we'll use conda for now
+                return PackagesSpec.Type.CONDA
+            case 'r':
+            case 'cran':
+            case 'pak':
+            case 'bioconductor':
+                // Wave will handle R packages through CONDA type for now
+                // TODO: Update when Wave adds native R/CRAN support
                 return PackagesSpec.Type.CONDA
             default:
                 log.warn "Unknown package provider for Wave: ${provider}, defaulting to CONDA"

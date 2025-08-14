@@ -210,6 +210,34 @@ process pixiExample {
 }
 ```
 
+### R/CRAN
+
+The R provider supports CRAN and Bioconductor packages:
+- Uses pak by default (modern, fast package manager)
+- Automatic Bioconductor package detection
+- Custom repository support
+
+```nextflow
+process rAnalysis {
+    package "ggplot2 dplyr tidyr", provider: "r"
+    
+    script:
+    """
+    Rscript -e "library(ggplot2); library(dplyr)"
+    """
+}
+
+// Bioconductor packages
+process bioconductor {
+    package "DESeq2 edgeR", provider: "r"
+    
+    script:
+    """
+    Rscript -e "library(DESeq2); library(edgeR)"
+    """
+}
+```
+
 ## Migration from Legacy Directives
 
 ### From conda directive
