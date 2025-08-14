@@ -883,15 +883,29 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             final key = entry.getKey()
             final value = entry.getValue()
 
-            if (key != null && value != null) {
-                final sanitizedKey = sanitizeAwsBatchLabel(key.toString(), 128)
-                final sanitizedValue = sanitizeAwsBatchLabel(value.toString(), 256)
-
-                // Only add non-empty keys and values
-                if (sanitizedKey && sanitizedValue) {
-                    result.put(sanitizedKey, sanitizedValue)
-                }
+            // Handle null keys or values
+            if (key == null || value == null) {
+                log.warn "AWS Batch label dropped due to null ${key == null ? 'key' : 'value'}: key=${key}, value=${value}"
+                continue
             }
+
+            final originalKey = key.toString()
+            final originalValue = value.toString()
+            final sanitizedKey = sanitizeAwsBatchLabel(originalKey, 128)
+            final sanitizedValue = sanitizeAwsBatchLabel(originalValue, 256)
+
+            // Check if sanitization resulted in empty strings
+            if (!sanitizedKey || !sanitizedValue) {
+                log.warn "AWS Batch label dropped after sanitization - key: '${originalKey}' -> '${sanitizedKey ?: ''}', value: '${originalValue}' -> '${sanitizedValue ?: ''}'"
+                continue
+            }
+
+            // Log if values were modified during sanitization
+            if (sanitizedKey != originalKey || sanitizedValue != originalValue) {
+                log.warn "AWS Batch label sanitized - key: '${originalKey}' -> '${sanitizedKey}', value: '${originalValue}' -> '${sanitizedValue}'"
+            }
+
+            result.put(sanitizedKey, sanitizedValue)
         }
 
         return result
@@ -908,24 +922,19 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     protected String sanitizeAwsBatchLabel(String input, int maxLength) {
         if (!input) return input
 
-        // Replace invalid characters with underscores
+        // Replace invalid characters and clean up the string
         // AWS Batch allows: letters, numbers, spaces, and: _ . : / = + - @
-        String sanitized = input.replaceAll(/[^a-zA-Z0-9\s_.\:\/=+\-@]/, '_')
+        final sanitized = input
+            .replaceAll(/[^a-zA-Z0-9\s_.\:\/=+\-@]/, '_')  // Replace invalid chars with underscores
+            .replaceAll(/[_\s]{2,}/, '_')                    // Replace multiple consecutive underscores/spaces
+            .replaceAll(/^[_\s]+|[_\s]+$/, '')              // Remove leading/trailing underscores and spaces
 
-        // Replace multiple consecutive underscores/spaces with single underscore
-        sanitized = sanitized.replaceAll(/[_\s]{2,}/, '_')
+        // Truncate if necessary and clean up any trailing underscores/spaces
+        final result = sanitized.size() > maxLength 
+            ? sanitized.substring(0, maxLength).replaceAll(/[_\s]+$/, '')
+            : sanitized
 
-        // Remove leading/trailing underscores and spaces
-        sanitized = sanitized.replaceAll(/^[_\s]+|[_\s]+$/, '')
-
-        // Truncate if too long
-        if (sanitized.length() > maxLength) {
-            sanitized = sanitized.substring(0, maxLength)
-            // Remove trailing underscore/space after truncation
-            sanitized = sanitized.replaceAll(/[_\s]+$/, '')
-        }
-
-        return sanitized ?: null
+        return result ?: null
     }
 
     /**
