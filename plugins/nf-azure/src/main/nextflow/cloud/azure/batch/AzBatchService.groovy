@@ -1050,7 +1050,7 @@ class AzBatchService implements Closeable {
      * @param jobId The Azure Batch job ID to set for auto-termination
      */
     void setJobAutoTermination(String jobId) {
-        log.trace "Eagerly setting Azure Batch job ${jobId} to auto-terminate when all tasks complete"
+        log.trace "Setting Azure Batch job ${jobId} to auto-terminate when all tasks complete"
         setJobTermination(jobId)
     }
 
