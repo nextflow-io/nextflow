@@ -40,10 +40,11 @@ class TaskArrayRun extends TaskRun {
     @Override
     ContainerConfig getContainerConfig() {
         final config = super.getContainerConfig()
-        final envWhitelist = config.getEnvWhitelist() ?: []
-        final executor = (TaskArrayExecutor)processor.getExecutor()
-        envWhitelist << executor.getArrayIndexName()
-        config.put('envWhitelist', envWhitelist)
+        final envWhitelist = config.getEnvWhitelist()
+        if( envWhitelist != null ) {
+            final executor = (TaskArrayExecutor)processor.getExecutor()
+            envWhitelist.add(executor.getArrayIndexName())
+        }
         return config
     }
 

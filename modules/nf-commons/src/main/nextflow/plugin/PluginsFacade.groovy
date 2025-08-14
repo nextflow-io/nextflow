@@ -43,7 +43,9 @@ import org.pf4j.PluginStateListener
 class PluginsFacade implements PluginStateListener {
 
     @PackageScope
-    final static String DEFAULT_PLUGINS_REPO = 'https://raw.githubusercontent.com/nextflow-io/plugins/main/plugins.json'
+    final static String LEGACY_PLUGINS_REPO = 'https://raw.githubusercontent.com/nextflow-io/plugins/main/plugins.json'
+
+    final static String NEXTFLOW_PLUGINS_REPO = 'https://registry.nextflow.io/api'
 
     private static final String DEV_MODE = 'dev'
     private static final String PROD_MODE = 'prod'
@@ -61,7 +63,7 @@ class PluginsFacade implements PluginStateListener {
     PluginsFacade() {
         mode = getPluginsMode()
         root = getPluginsDir()
-        indexUrl = getPluginsIndexUrl()
+        indexUrl = getPluginsRegistryUrl()
         offline = env.get('NXF_OFFLINE') == 'true'
         if( mode==DEV_MODE && root.toString()=='plugins' && !isRunningFromDistArchive() )
             root = detectPluginsDevRoot()
@@ -69,7 +71,7 @@ class PluginsFacade implements PluginStateListener {
     }
 
     PluginsFacade(Path root, String mode=PROD_MODE, boolean offline=false,
-                  String indexUrl=DEFAULT_PLUGINS_REPO) {
+                  String indexUrl=LEGACY_PLUGINS_REPO) {
         this.mode = mode
         this.root = root
         this.offline = offline
@@ -110,7 +112,7 @@ class PluginsFacade implements PluginStateListener {
         if( !url.startsWith('https://') && !url.startsWith('http://') ) {
             throw new IllegalArgumentException("Plugins registry URL must start with 'http://' or 'https://': $url")
         }
-        if( url == DEFAULT_PLUGINS_REPO ) {
+        if( url == LEGACY_PLUGINS_REPO ) {
             return true
         }
         final hostname = URI.create(url).authority
@@ -119,13 +121,13 @@ class PluginsFacade implements PluginStateListener {
             || hostname.endsWith('.seqera.io')
     }
 
-    protected String getPluginsIndexUrl() {
-        final url = env.get('NXF_PLUGINS_INDEX_URL')
+    protected String getPluginsRegistryUrl() {
+        final url = env.get('NXF_PLUGINS_REGISTRY_URL')
         if( !url ) {
-            log.trace "Using default plugins url"
-            return DEFAULT_PLUGINS_REPO
+            log.trace "Using default plugins url: ${NEXTFLOW_PLUGINS_REPO}"
+            return NEXTFLOW_PLUGINS_REPO
         }
-        log.debug "Detected NXF_PLUGINS_INDEX_URL=$url"
+        log.debug "Detected NXF_PLUGINS_REGISTRY_URL=$url"
         if( !isSupportedIndex(url) ) {
             // warn that this is experimental behaviour
             log.warn """\

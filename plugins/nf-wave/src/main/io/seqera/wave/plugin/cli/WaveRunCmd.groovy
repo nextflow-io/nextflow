@@ -23,7 +23,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.seqera.wave.plugin.WaveClient
 import nextflow.Session
-import nextflow.container.DockerBuilder
+import nextflow.container.ContainerBuilder
 import nextflow.exception.AbortOperationException
 
 /**
@@ -71,11 +71,10 @@ class WaveRunCmd {
 
     void runContainer(String image, List<String> args=Collections.emptyList()) {
         final containerConfig = session.getContainerConfig()
-        final containerBuilder = new DockerBuilder(image)
+        final containerBuilder = ContainerBuilder.create(containerConfig, image)
                 .addMountWorkDir(false)
                 .addRunOptions('--rm')
                 .addMounts(containerMounts)
-                .params(containerConfig)
                 .params(containerParams)
 
         // add env variables

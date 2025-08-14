@@ -133,6 +133,9 @@ import nextflow.script.dsl.Description
 ''')
 class MyPluginConfig implements ConfigScope {
 
+    /* required by extension point -- do not remove */
+    MyPluginConfig() {}
+
     MyPluginConfig(Map opts) {
         this.createMessage = opts.createMessage
     }
@@ -143,7 +146,7 @@ class MyPluginConfig implements ConfigScope {
 }
 ```
 
-While this approach is not required to support plugin config options, it allows Nextflow to recognize plugin definitions when validating the config.
+While this approach is not required to support plugin config options, it allows Nextflow to recognize plugin definitions when validating the config. See {ref}`config-scopes-page` for more information.
 
 ### Executors
 
@@ -326,6 +329,8 @@ class MyExecutor extends Executor {
 
 }
 ```
+
+(plugins-trace-observers)=
 
 ### Trace observers
 

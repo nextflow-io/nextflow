@@ -284,7 +284,7 @@ public class Formatter extends CodeVisitorSupport {
             visit(receiver);
             if( inWrappedMethodChain ) {
                 incIndent();
-                if( !(receiver instanceof ClassExpression) ) {
+                if( !nextflow.script.types.Types.isNamespace(receiver.getType()) ) {
                     appendNewLine();
                     appendIndent();
                 }

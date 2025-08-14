@@ -20,7 +20,7 @@ import java.nio.file.Paths
 
 import nextflow.Session
 import nextflow.conda.CondaConfig
-import nextflow.container.ContainerConfig
+import nextflow.container.DockerConfig
 import nextflow.executor.Executor
 import nextflow.script.ProcessConfig
 import nextflow.util.MemoryUnit
@@ -69,7 +69,7 @@ class TaskBeanTest extends Specification {
         task.getTargetDir() >> Paths.get('/target/work/dir')
         task.getEnvironment() >> [alpha: 'one', beta: 'xxx', gamma: 'yyy']
         task.getContainer() >> 'busybox:latest'
-        task.getContainerConfig() >> [docker: true, registry: 'x']
+        task.getContainerConfig() >> new DockerConfig(registry: 'x')
         task.getCondaConfig() >> new CondaConfig([useMicromamba:true], [:])
 
         when:
@@ -90,7 +90,7 @@ class TaskBeanTest extends Specification {
         bean.afterScript == 'after do that'
 
         bean.containerImage == 'busybox:latest'
-        bean.containerConfig == [docker: true, registry: 'x'] as ContainerConfig
+        bean.containerConfig == new DockerConfig(registry: 'x')
         bean.containerMemory == new MemoryUnit('1GB')
         bean.statsEnabled
 
