@@ -17,7 +17,9 @@
 package nextflow.util
 
 import java.lang.management.ManagementFactory
+import java.time.Instant
 import java.time.OffsetDateTime
+import java.time.ZoneOffset
 
 import com.sun.management.OperatingSystemMXBean
 import nextflow.SysEnv
