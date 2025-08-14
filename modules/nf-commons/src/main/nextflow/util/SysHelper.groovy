@@ -38,7 +38,7 @@ class SysHelper {
 
     public static final String DEFAULT_DOCKER_PLATFORM = 'linux/amd64'
 
-    private static final String DATE_FORMAT = 'dd-MMM-yyyy HH:mm'
+    private static final String DATE_FORMAT = 'dd-MMM-yyyy HH:mm:ss'
 
     /**
      * Given a timestamp as epoch time convert to a string representation
@@ -113,7 +113,7 @@ class SysHelper {
     }
 
     static String getBootTimeString() {
-        new SimpleDateFormat(DATE_FORMAT).format(new Date(getBootTimeMillis()))
+        fmtDate(new Date(getBootTimeMillis()))
     }
 
     /**

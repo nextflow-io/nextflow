@@ -54,12 +54,12 @@
     <table cellpadding="4" >
         <tr>
         <td>Launch time</td>
-        <td>${workflow.start.format('dd-MMM-yyyy HH:mm:ss')}</td>
+        <td>${nextflow.util.SysHelper.fmtDate(workflow.start)}</td>
         </tr>
 
         <tr>
         <td>Ending time</td>
-        <td>${workflow.complete.format('dd-MMM-yyyy HH:mm:ss')} (duration: ${workflow.duration})</td>
+        <td>${nextflow.util.SysHelper.fmtDate(workflow.complete)} (duration: ${workflow.duration})</td>
         </tr>
         
         <tr>
