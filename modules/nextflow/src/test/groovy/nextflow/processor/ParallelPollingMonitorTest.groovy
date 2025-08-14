@@ -118,4 +118,26 @@ class ParallelPollingMonitorTest extends Specification {
         10          |   1    | false | false
     }
 
+    def 'should inherit array size validation from parent TaskPollingMonitor' () {
+        given:
+        def session = Mock(Session)
+        def throttlingExecutor = Mock(ThrottlingExecutor)
+        def monitor = new ParallelPollingMonitor(throttlingExecutor, [name: 'foo', session: session, capacity: 5, pollInterval: Duration.of('1min')])
+        and:
+        def processor = Mock(TaskProcessor)
+        def arrayHandler = Mock(TaskHandler) {
+            getTask() >> Mock(TaskArrayRun) {
+                getName() >> 'oversized_array'
+                getArraySize() >> 10
+                getProcessor() >> processor
+            }
+        }
+
+        when:
+        monitor.canSubmit(arrayHandler)
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains("Process 'oversized_array' declares array size (10) which exceeds the executor queue size (5)")
+    }
+
 }
