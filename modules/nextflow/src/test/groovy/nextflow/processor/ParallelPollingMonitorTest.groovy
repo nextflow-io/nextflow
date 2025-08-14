@@ -83,7 +83,7 @@ class ParallelPollingMonitorTest extends Specification {
         def retry = new AtomicInteger()
 
         def session = Mock(Session)
-        def handler = Spy(TaskHandler)
+        def handler = Mock(TaskHandler)
 
         def opts = new ThrottlingExecutor.Options()
             .retryOn(IllegalArgumentException)
