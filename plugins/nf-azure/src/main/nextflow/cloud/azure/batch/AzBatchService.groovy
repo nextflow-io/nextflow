@@ -577,6 +577,7 @@ class AzBatchService implements Closeable {
     AzTaskKey runTask(String poolId, String jobId, TaskRun task) {
         final BatchTaskCreateContent taskToAdd = createTask(poolId, jobId, task)
         final AzTaskKey submitted = submitTaskToJob(poolId, jobId, task, taskToAdd)
+        // Set auto-terminate so it does not consume quota after all tasks complete
         setAutoTerminateIfEnabled(submitted.jobId, taskToAdd.getId())
         return submitted
     }
@@ -625,7 +626,7 @@ class AzBatchService implements Closeable {
             return
         log.trace "Eagerly setting job ${jobId} to auto-terminate after submitting task ${taskId}"
         try {
-            setJobAutoTermination(jobId)
+            setJobTermination(jobId)
         }
         catch( Exception e ) {
             log.trace "Failed to eagerly set auto-termination for job ${jobId} after task submission - ${e.message ?: e}"
@@ -695,7 +696,7 @@ class AzBatchService implements Closeable {
     }
 
     protected OutputFile destFile(String localPath, Path targetDir, String sas) {
-        log.debug "Task output path: $localPath -> ${targetDir.toUriString()}"
+        log.trace "Task output path: $localPath -> ${targetDir.toUriString()}"
         def target = targetDir.resolve(localPath)
         final dest = new OutputFileBlobContainerDestination(AzHelper.toContainerUrl(targetDir,sas))
                 .setPath(target.subpath(1,target.nameCount).toString())
@@ -1036,23 +1037,12 @@ class AzBatchService implements Closeable {
     }
 
     /**
-     * Set a specific Azure Batch job to terminate when all tasks complete.
-     * This is called eagerly when a Nextflow process completes (all tasks submitted)
-     * rather than waiting for the entire pipeline to finish.
-     * 
-     * @param jobId The Azure Batch job ID to set for auto-termination
-     */
-    void setJobAutoTermination(String jobId) {
-        log.trace "Setting Azure Batch job ${jobId} to auto-terminate when all tasks complete"
-        setJobTermination(jobId)
-    }
-
-    /**
      * Set a job to terminate when all tasks complete.
      * 
      * @param jobId The Azure Batch job ID to set for auto-termination
      */
     protected void setJobTermination(String jobId) {
+        log.trace "Setting Azure Batch job ${jobId} to auto-terminate when all tasks complete"
         try {
             final job = apply(() -> client.getJob(jobId))
             
@@ -1072,16 +1062,6 @@ class AzBatchService implements Closeable {
         }
         catch (Exception e) {
             log.warn "Unable to set auto-termination for Azure Batch job ${jobId} - Reason: ${e.message ?: e}"
-        }
-    }
-
-    /**
-     * Set all jobs to terminate on completion during graceful shutdown.
-     * Provides fallback for jobs that weren't configured for auto-termination.
-     */
-    protected void terminateJobs() {
-        for( String jobId : allJobIds.values() ) {
-            setJobTermination(jobId)
         }
     }
 
@@ -1122,11 +1102,6 @@ class AzBatchService implements Closeable {
 
     @Override
     void close() {
-        // terminate all jobs to prevent them from occupying quota
-        if( config.batch().terminateJobsOnCompletion ) {
-            terminateJobs()
-        }
-
         // delete all jobs
         if( config.batch().deleteJobsOnCompletion ) {
             cleanupJobs()
