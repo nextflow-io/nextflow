@@ -207,12 +207,7 @@ class TaskPollingMonitor implements TaskMonitor {
      *      by the polling monitor
      */
     protected boolean canSubmit(TaskHandler handler) {
-        int slots = handler.getForksCount()
-        if( capacity > 0 && slots > capacity )
-            throw new IllegalArgumentException("Job array ${handler.task.name} exceeds the queue size (array size: $slots, queue size: $capacity)")
-        if( capacity > 0 && runningQueue.size() + slots > capacity )
-            return false
-        return handler.canForkProcess() && handler.isReady()
+        (capacity>0 ? runningQueue.size() < capacity : true) && handler.canForkProcess() && handler.isReady()
     }
 
     /**
