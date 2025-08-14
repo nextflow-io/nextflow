@@ -48,7 +48,8 @@ dependencies {
     }
 
     // address security vulnerabilities
-    runtimeOnly 'io.netty:netty-handler:4.1.118.Final'
+    runtimeOnly 'io.netty:netty-handler:4.1.124.Final'
+    runtimeOnly 'io.netty:netty-codec-http2:4.1.124.Final'
     runtimeOnly 'net.minidev:json-smart:2.5.2'
 
     testImplementation(testFixtures(project(":nextflow")))
