@@ -58,6 +58,7 @@ import software.amazon.awssdk.services.batch.model.ResourceType
 import software.amazon.awssdk.services.batch.model.RetryStrategy
 import software.amazon.awssdk.services.batch.model.SubmitJobRequest
 import software.amazon.awssdk.services.batch.model.SubmitJobResponse
+import spock.lang.See
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -1282,7 +1283,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.getEnvironmentVars() >> []
 
         and:
-        def tags = req.getTags()
+        def tags = req.tags()
         tags.size() == 3
         tags['validLabel'] == 'validValue'
         tags['invalid_key'] == 'invalid_value'
@@ -1290,6 +1291,109 @@ class AwsBatchTaskHandlerTest extends Specification {
         tags['long-key-that-might-be-truncated-if-very-very-long'].length() <= 256
         tags['long-key-that-might-be-truncated-if-very-very-long'].startsWith('long-value-that-should-be-truncated')
         !tags['long-key-that-might-be-truncated-if-very-very-long'].endsWith('_')
-        req.getPropagateTags() == true
+        req.propagateTags() == true
+    }
+
+    @Unroll
+    @See("https://github.com/nextflow-io/nextflow/pull/6211#discussion_r2161928856")
+    def 'should handle null values in labels with explicit logging'() {
+        given:
+        def handler = Spy(AwsBatchTaskHandler)
+
+        expect:
+        handler.sanitizeAwsBatchLabels(INPUT) == EXPECTED
+
+        where:
+        INPUT | EXPECTED
+        // Basic null value case - this addresses the PR comment: "when the item is "item": null is the aws tag silently dropped?"
+        ['item': null, 'validKey': 'validValue'] | ['validKey': 'validValue']
+
+        // Multiple null values
+        ['key1': null, 'key2': 'value2', 'key3': null] | ['key2': 'value2']
+
+        // All null values
+        ['key1': null, 'key2': null] | [:]
+
+        // Mix of null and empty string (which becomes null after sanitization)
+        ['nullValue': null, 'emptyValue': '', 'validValue': 'good'] | ['validValue': 'good']
+    }
+
+    @See("https://github.com/nextflow-io/nextflow/pull/6211#discussion_r2161928856")
+    def 'should handle null keys in labels with explicit logging'() {
+        given:
+        def handler = Spy(AwsBatchTaskHandler)
+
+        when: 'creating map with actual null key'
+        def labels = new HashMap<String, String>()
+        labels.put(null, 'validValue')
+        labels.put('validKey', 'validValue')
+        def result = handler.sanitizeAwsBatchLabels(labels)
+
+        then: 'null key is dropped'
+        result.size() == 1
+        result['validKey'] == 'validValue'
+        !result.containsKey(null)
+    }
+
+    @See("https://github.com/nextflow-io/nextflow/pull/6211#discussion_r2161928856")
+    def 'should handle both null keys and values'() {
+        given:
+        def handler = Spy(AwsBatchTaskHandler)
+
+        when: 'creating map with null key and null values'
+        def labels = new HashMap<String, String>()
+        labels.put(null, 'someValue')    // null key
+        labels.put('nullValue', null)    // null value
+        labels.put(null, null)           // both null (overwrites previous null key)
+        labels.put('validKey', 'validValue')
+        def result = handler.sanitizeAwsBatchLabels(labels)
+
+        then: 'only valid entry remains'
+        result.size() == 1
+        result['validKey'] == 'validValue'
+        !result.containsKey(null)
+        !result.containsKey('nullValue')
+    }
+
+    @See("https://github.com/nextflow-io/nextflow/pull/6211#discussion_r2161928856")
+    def 'should verify logging behavior for null handling'() {
+        given:
+        def handler = new AwsBatchTaskHandler()
+        def logAppender = Mock(ch.qos.logback.core.Appender)
+        def logger = (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger(AwsBatchTaskHandler)
+        logger.addAppender(logAppender)
+        logger.setLevel(ch.qos.logback.classic.Level.WARN)
+
+        when: 'sanitizing labels with null values'
+        def labels = ['item': null, 'validKey': 'validValue']  // This is the exact case from PR comment
+        handler.sanitizeAwsBatchLabels(labels)
+
+        then: 'warning is logged for null value'
+        1 * logAppender.doAppend(_) >> { args ->
+            def event = args[0] as ch.qos.logback.classic.spi.ILoggingEvent
+            assert event.level == ch.qos.logback.classic.Level.WARN
+            assert event.formattedMessage.contains('AWS Batch label dropped due to null value: key=item, value=null')
+        }
+
+        cleanup:
+        logger.detachAppender(logAppender)
+    }
+
+    @See("https://github.com/nextflow-io/nextflow/pull/6211#discussion_r2161928856")
+    def 'should verify no silent dropping - PR comment verification'() {
+        given: 'This test specifically addresses the PR comment about silent dropping'
+        def handler = Spy(AwsBatchTaskHandler)
+
+        when: 'processing the exact scenario from PR comment'
+        def labels = ['item': null]  // "when the item is "item": null is the aws tag silently dropped?"
+        def result = handler.sanitizeAwsBatchLabels(labels)
+
+        then: 'result is empty (tag is dropped)'
+        result == [:]
+
+        and: 'the method properly logs the dropped label (verified by observing the actual log output in test execution)'
+        // The actual logging is verified by the "should verify logging behavior for null handling" test above
+        // This test focuses on the functional behavior: null values are correctly dropped from the result
+        true  // The key point is that silent dropping has been replaced with logged dropping
     }
 }

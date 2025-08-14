@@ -930,7 +930,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             .replaceAll(/^[_\s]+|[_\s]+$/, '')              // Remove leading/trailing underscores and spaces
 
         // Truncate if necessary and clean up any trailing underscores/spaces
-        final result = sanitized.size() > maxLength 
+        final result = sanitized.size() > maxLength
             ? sanitized.substring(0, maxLength).replaceAll(/[_\s]+$/, '')
             : sanitized
 
