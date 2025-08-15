@@ -67,7 +67,6 @@ config
 executor
 cache-and-resume
 reports
-plugins
 ```
 
 ```{toctree}
@@ -154,7 +153,16 @@ developer/index
 developer/diagram
 developer/config-scopes
 developer/packages
-developer/plugins
+```
+
+```{toctree}
+:hidden:
+:caption: Plugins
+:maxdepth: 1
+
+plugins/plugins
+plugins/using-plugins
+plugins/developing-plugins
 ```
 
 ```{toctree}
@@ -174,5 +182,7 @@ tutorials/flux
 :maxdepth: 1
 
 guides/aws-java-sdk-v2
+guides/gradle-plugin
+guides/plugin-registry
 guides/updating-spot-retries
 ```
