@@ -5,7 +5,7 @@
 The Nextflow plugin ecosystem is evolving to support a more robust and user-friendly experience by simplifying the development, publishing, and discovery of Nextflow plugins. This page introduces the Nextflow plugin registry, the Nextflow Gradle plugin, and how to migrate to them.
 
 :::{note}
-The Nextflow plugin registry and Gradle plugin are currently available as a private beta. Plugin developers are encouraged to contact [info@nextflow.io](mailto:info@nextflow.io) for more information about accessing the registry.
+The Nextflow plugin registry and Gradle plugin are currently available as a public preview. Plugin developers can access the registry by contacting [info@nextflow.io](mailto:info@nextflow.io) to obtain registry access tokens.
 :::
 
 ## Overview
@@ -82,7 +82,7 @@ To migrate an existing Nextflow plugin:
     ```groovy
     // Plugins
     plugins {
-        id 'io.nextflow.nextflow-plugin' version '0.0.1-alpha4'
+        id 'io.nextflow.nextflow-plugin' version '1.0.0-beta.6'
     }
 
     // Dependencies (optional)
@@ -106,7 +106,7 @@ To migrate an existing Nextflow plugin:
 
         publishing {
             registry {
-                authToken = project.findProperty('pluginRegistry.accessToken')
+                authToken = project.findProperty('npr.apiKey')
             }
         }
     }
@@ -158,3 +158,52 @@ Alternatively, use the `nextflow plugin create` command to re-create your plugin
 The Nextflow Gradle plugin supports publishing plugins from the command line. See {ref}`gradle-plugin-publish` for more information.
 
 Once you migrate to the Gradle plugin, you will no longer be able to publish to the legacy plugin index. See the [transition timeline](#timeline) for more information.
+
+## Plugin Creation and Publishing Workflow
+
+### Components
+
+* **Nextflow** - https://github.com/nextflow-io/nextflow/
+* **Plugin template** - https://github.com/nextflow-io/nf-plugin-template  
+* **Gradle plugin for Nextflow** - https://github.com/nextflow-io/nextflow-plugin-gradle
+* **Plugin registry** - https://registry.nextflow.io/
+
+### Workflow Steps
+
+#### 1. Plugin Name Registration
+- User claims a unique plugin name via the Plugin registry (e.g., `nf-foo`)
+- Registry admin approves the plugin name claim (one-time process)
+
+#### 2. Plugin Creation  
+- User creates a new plugin using: `nextflow plugin create <plugin-name> <provider-name>`
+- Nextflow generates plugin scaffold using the Plugin template
+- Interactive mode available: `nextflow plugin create` (prompts for inputs)
+
+#### 3. Plugin Development
+- User completes plugin implementation based on the generated scaffold
+- Plugin structure follows standardized template with:
+  - Gradle build configuration using Nextflow Gradle plugin
+  - Extension points for custom functionality
+  - Unit and end-to-end tests
+  - Documentation templates
+
+#### 4. Local Testing
+- Install plugin locally: `make install` 
+- Test plugin: `make test`
+- Build plugin: `make assemble`
+
+#### 5. Plugin Publishing
+- Configure registry API key in `$HOME/.gradle/gradle.properties`:
+  ```
+  npr.apiKey=<YOUR_API_KEY>
+  ```
+- Release plugin: `make release`
+- The Gradle plugin handles upload to the Plugin registry
+- Plugin becomes accessible for public distribution
+- For additional configuration options, see the [Nextflow Gradle plugin documentation](https://github.com/nextflow-io/nextflow-plugin-gradle)
+
+### Key Features
+- **Registry-based distribution**: Centralized plugin discovery and versioning
+- **Standardized structure**: Consistent development experience across plugins  
+- **Automated publishing**: Command-line publishing with proper validation
+- **Backward compatibility**: Gradual migration from legacy GitHub-based system

@@ -5,7 +5,7 @@
 The [Nextflow Gradle plugin](https://github.com/nextflow-io/nextflow-plugin-gradle) simplifies plugin development by configuring default dependencies needed for Nextflow integration and defining Gradle tasks for building, testing, and publishing Nextflow plugins.
 
 :::{note}
-The Nextflow Gradle plugin and plugin registry are currently available as a private beta. See the {ref}`Migrating to the Nextflow plugin registry <plugin-registry-page>` for more information.
+The Nextflow Gradle plugin and plugin registry are currently available as a public preview. See the {ref}`Migrating to the Nextflow plugin registry <plugin-registry-page>` for more information.
 :::
 
 (gradle-plugin-create)=
@@ -82,9 +82,9 @@ To publish plugins:
 2. Add the following properties:
 
     ```
-    pluginRegistry.accessToken=<REGISTRY_ACCESS_TOKEN>
+    npr.apiKey=<YOUR_API_KEY>
     ```
 
-    Replace `<REGISTRY_ACCESS_TOKEN>` with your plugin registry access token.
+    Replace `<YOUR_API_KEY>` with your plugin registry API key. For additional configuration options, see the [Nextflow Gradle plugin documentation](https://github.com/nextflow-io/nextflow-plugin-gradle).
 
 3. Run `make release`.

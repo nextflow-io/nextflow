@@ -13,7 +13,7 @@ The [Nextflow plugin template](https://github.com/nextflow-io/nf-plugin-template
 You can use the `nextflow plugin create` sub-command to create plugins from the plugin template. See {ref}`gradle-plugin-create` for more information.
 
 :::{note}
-The Nextflow Gradle plugin is currently available as a private beta. See {ref}`Migrating to the Nextflow plugin registry <plugin-registry-page>` for more information.
+The Nextflow Gradle plugin is currently available as a public preview. See {ref}`Migrating to the Nextflow plugin registry <plugin-registry-page>` for more information.
 :::
 
 (dev-plugins-structure)=
@@ -93,7 +93,7 @@ It is versioned and published to the [Gradle Plugin Portal](https://plugins.grad
 
 ```nextflow
 plugins {
-    id 'io.nextflow.nextflow-plugin' version '0.0.1-alpha4'
+    id 'io.nextflow.nextflow-plugin' version '1.0.0-beta.6'
 }
 ```
 
