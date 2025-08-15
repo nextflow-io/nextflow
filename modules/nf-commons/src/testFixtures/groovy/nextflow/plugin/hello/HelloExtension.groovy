@@ -28,9 +28,9 @@ import nextflow.NF
 import nextflow.Session
 import nextflow.extension.CH
 import nextflow.extension.DataflowHelper
-import nextflow.plugin.extension.Function
-import nextflow.plugin.extension.Operator
-import nextflow.plugin.extension.PluginExtensionPoint
+import io.nextflow.gradle.extensions.Function
+import io.nextflow.gradle.extensions.Operator
+import io.nextflow.gradle.extensions.PluginExtensionPoint
 
 /**
  * @author : jorge <jorge.aguilera@seqera.io>
@@ -54,8 +54,8 @@ class HelloExtension extends PluginExtensionPoint {
      * @param session
      */
     @Override
-    protected void init(Session session) {
-        this.session = session
+    protected void init(Object session) {
+        this.session = session as Session
         this.initialized = true
     }
 
