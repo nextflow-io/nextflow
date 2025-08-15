@@ -89,7 +89,26 @@ class Launcher {
     }
 
     protected void init() {
-        allCommands = (List<CmdBase>)[
+        // Initialize built-in commands
+        allCommands = createBuiltInCommands()
+        
+        // Add plugin commands dynamically
+        addPluginCommands()
+
+        options = new CliOptions()
+        jcommander = new JCommander(options)
+        for( CmdBase cmd : allCommands ) {
+            cmd.launcher = this;
+            jcommander.addCommand(cmd.name, cmd, aliases(cmd))
+        }
+        jcommander.setProgramName( APP_NAME )
+    }
+
+    /**
+     * Create the list of built-in commands
+     */
+    private List<CmdBase> createBuiltInCommands() {
+        final commands = (List<CmdBase>)[
                 new CmdClean(),
                 new CmdClone(),
                 new CmdConsole(),
@@ -113,20 +132,53 @@ class Launcher {
         ]
 
         if(SecretsLoader.isEnabled())
-            allCommands.add(new CmdSecret())
+            commands.add(new CmdSecret())
 
         // legacy command
         final cmdCloud = SpuriousDeps.cmdCloud()
         if( cmdCloud )
-            allCommands.add(cmdCloud)
+            commands.add(cmdCloud)
 
-        options = new CliOptions()
-        jcommander = new JCommander(options)
-        for( CmdBase cmd : allCommands ) {
-            cmd.launcher = this;
-            jcommander.addCommand(cmd.name, cmd, aliases(cmd))
+        return commands
+    }
+
+    /**
+     * Discover and add plugin commands to the command list
+     */
+    private void addPluginCommands() {
+        try {
+            // Ensure plugins are initialized for command discovery
+            PluginCommandDiscovery.ensurePluginsInitialized()
+            
+            // Discover plugin commands
+            final pluginCommandMap = PluginCommandDiscovery.getCommandMap()
+            
+            // Check for conflicts between built-in and plugin commands
+            final builtInNames = allCommands.collect { it.name }.toSet()
+            
+            pluginCommandMap.each { commandName, extensionPoint ->
+                if (builtInNames.contains(commandName)) {
+                    log.warn("Plugin command '${commandName}' conflicts with built-in command - skipping plugin version")
+                }
+                else {
+                    try {
+                        final pluginCommand = extensionPoint.createCommand()
+                        if (pluginCommand) {
+                            allCommands.add(pluginCommand)
+                            log.debug("Added plugin command: ${commandName}")
+                        }
+                    }
+                    catch (Exception e) {
+                        log.warn("Failed to create plugin command '${commandName}': ${e.message}")
+                    }
+                }
+            }
+            
+            log.debug("Discovered ${pluginCommandMap.size()} plugin commands")
         }
-        jcommander.setProgramName( APP_NAME )
+        catch (Exception e) {
+            log.debug("Plugin command discovery failed: ${e.message}")
+        }
     }
 
     private static final String[] EMPTY = new String[0]
@@ -420,11 +472,21 @@ class Launcher {
 
         int len = 0
         def all = new TreeMap<String,String>()
-        new ArrayList<CmdBase>(commands).each {
-            def description = it.getClass().getAnnotation(Parameters)?.commandDescription()
+        new ArrayList<CmdBase>(commands).each { cmd ->
+            String description = null
+            
+            // Check if it's a plugin command with CommandExtensionPoint interface
+            if (cmd instanceof CommandExtensionPoint) {
+                description = ((CommandExtensionPoint) cmd).commandDescription
+            }
+            else {
+                // For built-in commands, use the @Parameters annotation
+                description = cmd.getClass().getAnnotation(Parameters)?.commandDescription()
+            }
+            
             if( description ) {
-                all[it.name] = description
-                if( it.name.size()>len ) len = it.name.size()
+                all[cmd.name] = description
+                if( cmd.name.size()>len ) len = cmd.name.size()
             }
         }
 
