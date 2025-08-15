@@ -17,6 +17,7 @@
 
 package io.seqera.wave.plugin
 
+import io.seqera.wave.plugin.cli.WaveCmd
 import io.seqera.wave.plugin.cli.WaveCmdEntry
 import nextflow.cli.PluginExecAware
 import nextflow.plugin.BasePlugin
