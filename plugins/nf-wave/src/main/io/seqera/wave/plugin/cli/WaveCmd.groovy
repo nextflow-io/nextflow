@@ -65,11 +65,18 @@ class WaveCmd extends PluginCommandBase {
     @Override
     protected void execute() {
         if (!args) {
-            throw new AbortOperationException("Missing Wave command - usage: nextflow wave <subcommand> [args...]")
+            showHelp()
+            return
         }
 
         final subCommand = args[0]
         final subArgs = args.size() > 1 ? args[1..-1] : []
+        
+        // Handle help requests for subcommands
+        if (subCommand == 'help' || subCommand == '-h' || subCommand == '--help') {
+            showHelp()
+            return
+        }
         
         // Execute the subcommand directly using the session
         switch (subCommand) {
@@ -88,6 +95,28 @@ class WaveCmd extends PluginCommandBase {
             default:
                 throw new AbortOperationException("Unknown wave command: $subCommand")
         }
+    }
+
+    private void showHelp() {
+        println """\
+Usage: nextflow wave <subcommand> [args...]
+
+Execute Wave container operations
+
+Available subcommands:
+  get-container     Get a container image URL from Wave service
+  run-container     Run a container using Wave service
+  pack              Pack a directory into a Wave container layer
+  debug-task        Debug a specific task execution with Wave
+
+Examples:
+  nextflow wave get-container --image ubuntu:20.04
+  nextflow wave run-container --image ubuntu:20.04 --run 'echo hello'
+  nextflow wave pack /path/to/directory
+  nextflow wave debug-task <task-id>
+
+For detailed help on a specific subcommand, use:
+  nextflow wave <subcommand> --help"""
     }
 
     protected String packContainer(List<String> args) {
