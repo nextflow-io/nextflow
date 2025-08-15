@@ -15,6 +15,7 @@
  */
 package nextflow.script.formatter;
 
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 
@@ -31,7 +32,9 @@ import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
 import nextflow.script.ast.WorkflowNode;
 import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.ast.expr.EmptyExpression;
+import org.codehaus.groovy.ast.expr.Expression;
 import org.codehaus.groovy.ast.expr.PropertyExpression;
 import org.codehaus.groovy.ast.expr.VariableExpression;
 import org.codehaus.groovy.ast.stmt.BlockStatement;
@@ -217,40 +220,39 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         }
         fmt.append(" {\n");
         fmt.incIndent();
-        if( node.takes instanceof BlockStatement ) {
+        var takes = node.getParameters();
+        if( takes.length > 0 ) {
             fmt.appendIndent();
             fmt.append("take:\n");
-            visitWorkflowTakes(asBlockStatements(node.takes));
+            visitWorkflowTakes(takes);
         }
-        if( node.main instanceof BlockStatement ) {
-            if( node.takes instanceof BlockStatement ) {
-                fmt.appendNewLine();
-            }
-            if( node.takes instanceof BlockStatement || node.emits instanceof BlockStatement || node.publishers instanceof BlockStatement ) {
+        if( !node.main.isEmpty() ) {
+            fmt.appendNewLine();
+            if( takes.length > 0 || !node.emits.isEmpty() || !node.publishers.isEmpty() ) {
                 fmt.appendIndent();
                 fmt.append("main:\n");
             }
             fmt.visit(node.main);
         }
-        if( node.emits instanceof BlockStatement ) {
+        if( !node.emits.isEmpty() ) {
             fmt.appendNewLine();
             fmt.appendIndent();
             fmt.append("emit:\n");
             visitWorkflowEmits(asBlockStatements(node.emits));
         }
-        if( node.publishers instanceof BlockStatement ) {
+        if( !node.publishers.isEmpty() ) {
             fmt.appendNewLine();
             fmt.appendIndent();
             fmt.append("publish:\n");
-            fmt.visit(node.publishers);
+            visitWorkflowPublishers(asBlockStatements(node.publishers));
         }
-        if( node.onComplete instanceof BlockStatement ) {
+        if( !node.onComplete.isEmpty() ) {
             fmt.appendNewLine();
             fmt.appendIndent();
             fmt.append("onComplete:\n");
             fmt.visit(node.onComplete);
         }
-        if( node.onError instanceof BlockStatement ) {
+        if( !node.onError.isEmpty() ) {
             fmt.appendNewLine();
             fmt.appendIndent();
             fmt.append("onError:\n");
@@ -260,57 +262,53 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         fmt.append("}\n");
     }
 
-    protected void visitWorkflowTakes(List<Statement> takes) {
+    private void visitWorkflowTakes(Parameter[] takes) {
         var alignmentWidth = options.harshilAlignment()
-            ? getMaxParameterWidth(takes)
+            ? maxParameterWidth(takes)
             : 0;
 
-        for( var stmt : takes ) {
-            var ve = asVarX(stmt);
+        for( var take : takes ) {
             fmt.appendIndent();
-            fmt.visit(ve);
-            if( fmt.hasTrailingComment(stmt) ) {
+            fmt.append(take.getName());
+            if( fmt.hasType(take) ) {
                 if( alignmentWidth > 0 ) {
-                    var padding = alignmentWidth - ve.getName().length();
+                    var padding = alignmentWidth - take.getName().length() + 1;
                     fmt.append(" ".repeat(padding));
                 }
-                fmt.appendTrailingComment(stmt);
+                fmt.append(": ");
+                fmt.visitTypeAnnotation(take.getType());
             }
+            fmt.appendTrailingComment(take);
             fmt.appendNewLine();
         }
     }
 
-    protected void visitWorkflowEmits(List<Statement> emits) {
+    private int maxParameterWidth(Parameter[] parameters) {
+        return Arrays.stream(parameters)
+            .map(param -> param.getName().length())
+            .max(Integer::compare).orElse(0);
+    }
+
+    private void visitWorkflowEmits(List<Statement> emits) {
         var alignmentWidth = options.harshilAlignment()
-            ? getMaxParameterWidth(emits)
+            ? maxParameterWidth(emits)
             : 0;
 
         for( var stmt : emits ) {
             var stmtX = (ExpressionStatement)stmt;
             var emit = stmtX.getExpression();
-            if( emit instanceof AssignmentExpression assign ) {
-                var ve = (VariableExpression)assign.getLeftExpression();
+            var target =
+                emit instanceof AssignmentExpression ae ? (VariableExpression)ae.getLeftExpression() :
+                emit instanceof VariableExpression ve ? ve :
+                null;
+            var source =
+                emit instanceof AssignmentExpression ae ? ae.getRightExpression() :
+                null;
+
+            if( target != null ) {
                 fmt.appendIndent();
-                fmt.visit(ve);
-                if( alignmentWidth > 0 ) {
-                    var padding = alignmentWidth - ve.getName().length();
-                    fmt.append(" ".repeat(padding));
-                }
-                fmt.append(" = ");
-                fmt.visit(assign.getRightExpression());
+                visitEmitAssignment(target, source, alignmentWidth);
                 fmt.appendTrailingComment(stmt);
-                fmt.appendNewLine();
-            }
-            else if( emit instanceof VariableExpression ve ) {
-                fmt.appendIndent();
-                fmt.visit(ve);
-                if( fmt.hasTrailingComment(stmt) ) {
-                    if( alignmentWidth > 0 ) {
-                        var padding = alignmentWidth - ve.getName().length();
-                        fmt.append(" ".repeat(padding));
-                    }
-                    fmt.appendTrailingComment(stmt);
-                }
                 fmt.appendNewLine();
             }
             else {
@@ -319,27 +317,58 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         }
     }
 
-    protected int getMaxParameterWidth(List<Statement> statements) {
+    private void visitWorkflowPublishers(List<Statement> publishers) {
+        var alignmentWidth = options.harshilAlignment()
+            ? maxParameterWidth(publishers)
+            : 0;
+
+        for( var stmt : publishers ) {
+            var stmtX = (ExpressionStatement)stmt;
+            var emit = (AssignmentExpression)stmtX.getExpression();
+            var target = (VariableExpression)emit.getLeftExpression();
+            var source = emit.getRightExpression();
+
+            fmt.appendIndent();
+            visitEmitAssignment(target, source, alignmentWidth);
+            fmt.appendTrailingComment(stmt);
+            fmt.appendNewLine();
+        }
+    }
+
+    private int maxParameterWidth(List<Statement> statements) {
         if( statements.size() == 1 )
             return 0;
 
-        int maxWidth = 0;
-        for( var stmt : statements ) {
-            var stmtX = (ExpressionStatement)stmt;
-            var emit = stmtX.getExpression();
-            int width = 0;
-            if( emit instanceof VariableExpression ve ) {
-                width = ve.getName().length();
-            }
-            else if( emit instanceof AssignmentExpression assign ) {
-                var target = (VariableExpression)assign.getLeftExpression();
-                width = target.getName().length();
-            }
+        return statements.stream()
+            .map((stmt) -> {
+                var stmtX = (ExpressionStatement)stmt;
+                var emit = stmtX.getExpression();
+                if( emit instanceof VariableExpression ve ) {
+                    return ve.getName().length();
+                }
+                if( emit instanceof AssignmentExpression assign ) {
+                    var target = (VariableExpression)assign.getLeftExpression();
+                    return target.getName().length();
+                }
+                return 0;
+            })
+            .max(Integer::compare).orElse(0);
+    }
 
-            if( maxWidth < width )
-                maxWidth = width;
+    private void visitEmitAssignment(VariableExpression target, Expression source, int alignmentWidth) {
+        fmt.append(target.getText());
+        if( fmt.hasType(target) ) {
+            if( alignmentWidth > 0 ) {
+                var padding = alignmentWidth - target.getName().length() + 1;
+                fmt.append(" ".repeat(padding));
+            }
+            fmt.append(": ");
+            fmt.visitTypeAnnotation(target.getType());
         }
-        return maxWidth;
+        if( source != null ) {
+            fmt.append(" = ");
+            fmt.visit(source);
+        }
     }
 
     @Override
@@ -349,17 +378,17 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         fmt.append(node.getName());
         fmt.append(" {\n");
         fmt.incIndent();
-        if( node.directives instanceof BlockStatement ) {
+        if( !node.directives.isEmpty() ) {
             visitDirectives(node.directives);
             fmt.appendNewLine();
         }
-        if( node.inputs instanceof BlockStatement ) {
+        if( !node.inputs.isEmpty() ) {
             fmt.appendIndent();
             fmt.append("input:\n");
             visitDirectives(node.inputs);
             fmt.appendNewLine();
         }
-        if( !options.maheshForm() && node.outputs instanceof BlockStatement ) {
+        if( !options.maheshForm() && !node.outputs.isEmpty() ) {
             visitProcessOutputs(node.outputs);
             fmt.appendNewLine();
         }
@@ -374,13 +403,13 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         fmt.append(node.type);
         fmt.append(":\n");
         fmt.visit(node.exec);
-        if( !(node.stub instanceof EmptyStatement) ) {
+        if( !node.stub.isEmpty() ) {
             fmt.appendNewLine();
             fmt.appendIndent();
             fmt.append("stub:\n");
             fmt.visit(node.stub);
         }
-        if( options.maheshForm() && node.outputs instanceof BlockStatement ) {
+        if( options.maheshForm() && !node.outputs.isEmpty() ) {
             fmt.appendNewLine();
             visitProcessOutputs(node.outputs);
         }
@@ -398,14 +427,15 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
     public void visitFunction(FunctionNode node) {
         fmt.appendLeadingComments(node);
         fmt.append("def ");
-        if( Formatter.isLegacyType(node.getReturnType()) ) {
-            fmt.visitTypeAnnotation(node.getReturnType());
-            fmt.append(' ');
-        }
         fmt.append(node.getName());
         fmt.append('(');
         fmt.visitParameters(node.getParameters());
-        fmt.append(") {\n");
+        fmt.append(')');
+        if( fmt.hasType(node.getReturnType()) ) {
+            fmt.append(" -> ");
+            fmt.visitTypeAnnotation(node.getReturnType());
+        }
+        fmt.append(" {\n");
         fmt.incIndent();
         fmt.visit(node.getCode());
         fmt.decIndent();
@@ -444,6 +474,10 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         fmt.appendLeadingComments(node);
         fmt.appendIndent();
         fmt.append(node.name);
+        if( fmt.hasType(node.type) ) {
+            fmt.append(": ");
+            fmt.visitTypeAnnotation(node.type);
+        }
         fmt.append(" {\n");
         fmt.incIndent();
         visitOutputBody((BlockStatement) node.body);
