@@ -146,17 +146,20 @@ class Launcher {
      * Discover and add plugin commands to the command list
      */
     private void addPluginCommands() {
+        log.debug("Starting plugin command discovery...")
         try {
             // Ensure plugins are initialized for command discovery
             PluginCommandDiscovery.ensurePluginsInitialized()
             
             // Discover plugin commands
             final pluginCommandMap = PluginCommandDiscovery.getCommandMap()
+            log.debug("Plugin command map contains ${pluginCommandMap.size()} commands")
             
             // Check for conflicts between built-in and plugin commands
             final builtInNames = allCommands.collect { it.name }.toSet()
             
             pluginCommandMap.each { commandName, extensionPoint ->
+                log.debug("Processing plugin command: ${commandName}")
                 if (builtInNames.contains(commandName)) {
                     log.warn("Plugin command '${commandName}' conflicts with built-in command - skipping plugin version")
                 }
@@ -177,7 +180,7 @@ class Launcher {
             log.debug("Discovered ${pluginCommandMap.size()} plugin commands")
         }
         catch (Exception e) {
-            log.debug("Plugin command discovery failed: ${e.message}")
+            log.warn("Plugin command discovery failed: ${e.message}", e)
         }
     }
 

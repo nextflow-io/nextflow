@@ -41,7 +41,12 @@ class PluginCommandDiscovery {
     static List<CommandExtensionPoint> discoverPluginCommands() {
         try {
             // Get all CommandExtensionPoint extensions from loaded plugins
-            return Plugins.getExtensions(CommandExtensionPoint)
+            final extensions = Plugins.getExtensions(CommandExtensionPoint)
+            log.debug("Found ${extensions.size()} CommandExtensionPoint extensions")
+            extensions.each { ext ->
+                log.debug("  - ${ext.class.name} providing command '${ext.commandName}'")
+            }
+            return extensions
         }
         catch (Exception e) {
             log.debug("Error discovering plugin commands: ${e.message}")
@@ -143,7 +148,7 @@ class PluginCommandDiscovery {
 
     /**
      * Initialize plugin system if not already initialized.
-     * This ensures plugins are loaded before command discovery.
+     * This ensures plugins are loaded and started before command discovery.
      */
     static void ensurePluginsInitialized() {
         try {
@@ -151,6 +156,19 @@ class PluginCommandDiscovery {
             if (!Plugins.manager) {
                 log.debug("Initializing plugin system for command discovery")
                 Plugins.init()
+            }
+            
+            final allPlugins = Plugins.manager.getPlugins()
+            log.debug("Found ${allPlugins.size()} plugins for command discovery")
+            
+            // Start all plugins so their extensions become available
+            // This is critical because PF4J only makes extensions discoverable after plugins are started
+            allPlugins.each { pluginWrapper ->
+                log.debug("Plugin ${pluginWrapper.pluginId} state: ${pluginWrapper.pluginState}")
+                if (pluginWrapper.pluginState != org.pf4j.PluginState.STARTED) {
+                    log.debug("Starting plugin: ${pluginWrapper.pluginId}")
+                    Plugins.manager.startPlugin(pluginWrapper.pluginId)
+                }
             }
         }
         catch (Exception e) {
