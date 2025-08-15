@@ -43,7 +43,7 @@ Alternatively, it can be specified by setting the variable `NXF_CONDA_ENABLED=tr
 
 ### Use Conda package names
 
-Conda package names can specified using the `conda` directive. Multiple package names can be specified by separating them with a blank space. For example:
+Conda package names can be specified using the `conda` directive. Multiple package names can be specified by separating them with a blank space. For example:
 
 ```nextflow
 process hello {
@@ -144,9 +144,9 @@ If you're using Mamba or Micromamba, use this command instead:
 micromamba env export --explicit > spec-file.txt
 ```
 
-You can also download Conda lock files from  [Wave](https://seqera.io/wave/) build pages.
+You can also download Conda lock files from [Wave](https://seqera.io/wave/) container build pages.
 
-These files list every package and its dependencies, so Conda doesn't need to resolve the environment. This makes environment setup faster and more reproducible.
+These files list every package and its dependencies, so Conda doesn't need to perform dependency resolution. This makes environment setup faster and more reproducible.
 
 Each file includes package URLs and, optionally, an MD5 hash for verifying file integrity:
 
