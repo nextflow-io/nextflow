@@ -43,7 +43,6 @@ You can list Azure regions with:
 ```bash
 az account list-locations -o table
 ```
-
 :::
 
 ## Authentication
