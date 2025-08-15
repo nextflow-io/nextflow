@@ -43,6 +43,7 @@ You can list Azure regions with:
 ```bash
 az account list-locations -o table
 ```
+
 :::
 
 ## Authentication
@@ -497,23 +498,27 @@ By default, Nextflow creates SAS tokens for specific containers and passes them 
 :::{versionadded} 25.05.0-edge
 :::
 
+:::{warning}
+Only available when using [Fusion filesystem](fusion.md)!
+:::
+
 You can also authenticate to Azure Storage using a managed identity when using Fusion.
 
 To do this:
 
 1. Create a user-assigned managed identity with the Azure Storage Blob Data Contributor role for your storage account.
 2. Attach the user-assigned managed identity to the node pool manually.
-3. Set `azure.managedIdentity.clientId` to this identity in your configuration.
+3. Set `azure.batch.poolIdentityClientId` to this identity in your configuration.
 
 ```groovy
 azure {
-    managedIdentity {
-        clientId = '<MANAGED_IDENTITY_CLIENT_ID>'
+    batch {
+        poolIdentityClientId = '<MANAGED_IDENTITY_CLIENT_ID>'
     }
 }
 ```
 
-Each task authenticates as the managed identity, and downloads and uploads files to Azure Storage using these credentials. It is possible to attach more than one managed identity to a pool. Fusion uses the identity specified by `azure.managedIdentity.clientId`.
+Each task authenticates as the managed identity, and downloads and uploads files to Azure Storage using these credentials. It is possible to attach more than one managed identity to a pool. Fusion uses the identity specified by `azure.batch.poolIdentityClientId`.
 
 ### Task packing
 
@@ -535,7 +540,7 @@ Azure virtual machines come with fixed storage disks that are not expandable. Ta
 
 Every process in your pipeline must specify a container in order to be executed on Azure Batch.
 
-Nextflow supports both public and private container images. You can pull public images from repositories such as https://community.wave.seqera.io/. You must authenticate for any private images that you use. Ensure the Batch pool has access when using a private registry like Azure Container Registry (ACR). Provide ACR credentials in the `azure.registry` configuration scope:
+Nextflow supports both public and private container images. You can pull public images from repositories such as <https://community.wave.seqera.io/>. You must authenticate for any private images that you use. Ensure the Batch pool has access when using a private registry like Azure Container Registry (ACR). Provide ACR credentials in the `azure.registry` configuration scope:
 
 ```groovy
 azure {
