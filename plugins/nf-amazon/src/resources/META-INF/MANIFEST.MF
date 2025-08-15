@@ -1,6 +1,6 @@
 Manifest-Version: 1.0
 Plugin-Class: nextflow.cloud.aws.AmazonPlugin
 Plugin-Id: nf-amazon
-Plugin-Version: 3.0.0
+Plugin-Version: 3.1.0
 Plugin-Provider: Seqera Labs
-Plugin-Requires: >=25.06.0-edge
+Plugin-Requires: >=25.07.0-edge
