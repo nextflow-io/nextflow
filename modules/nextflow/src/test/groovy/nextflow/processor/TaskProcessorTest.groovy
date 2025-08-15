@@ -1218,4 +1218,30 @@ class TaskProcessorTest extends Specification {
         0 * collector.collect(task)
         1 * exec.submit(task)
     }
+
+    def 'should compute eval outputs content deterministically'() {
+
+        setup:
+        def session = Mock(Session)
+        def script = Mock(BaseScript)
+        def config = Mock(ProcessConfig)
+        def processor = new DummyProcessor('test', session, script, config)
+
+        when:
+        def result1 = processor.computeEvalOutputsContent([
+            'nxf_out_eval_2': 'echo "value2"',
+            'nxf_out_eval_1': 'echo "value1"',
+            'nxf_out_eval_3': 'echo "value3"'
+        ])
+        
+        def result2 = processor.computeEvalOutputsContent([
+            'nxf_out_eval_3': 'echo "value3"',
+            'nxf_out_eval_1': 'echo "value1"',
+            'nxf_out_eval_2': 'echo "value2"'
+        ])
+
+        then:
+        result1 == result2
+        result1 == 'nxf_out_eval_1=echo "value1"\nnxf_out_eval_2=echo "value2"\nnxf_out_eval_3=echo "value3"'
+    }
 }
