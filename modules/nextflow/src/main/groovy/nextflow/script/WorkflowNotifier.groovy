@@ -22,6 +22,7 @@ import groovy.text.GStringTemplateEngine
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.mail.Attachment
+import nextflow.util.SysHelper
 import nextflow.mail.Mail
 import nextflow.mail.Mailer
 import nextflow.mail.Notification
@@ -214,6 +215,8 @@ class WorkflowNotifier {
             map.putAll(variables)
         if( binding )
             map.putAll(binding)
+        // Add SysHelper to template binding so it can be used in templates
+        map.put('SysHelper', SysHelper)
 
         def template = new GStringTemplateEngine().createTemplate(new InputStreamReader(source))
         template.make(map).toString()

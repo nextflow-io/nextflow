@@ -54,6 +54,11 @@ The following environment variables control the configuration of the Nextflow ru
   :::
 : When `true`, override the container entrypoint with `/bin/bash` (default: `false`).
 
+`NXF_DATE_FORMAT`
+: :::{versionadded} 25.07.0-edge
+  :::
+: Defines the format for date and time representations in notifications and reports. Supports custom formats (e.g., `yyyy-MM-dd HH:mm:ss`) or `iso` for ISO 8601 format with timezone (default: `dd-MMM-yyyy HH:mm:ss`).
+
 `NXF_DEFAULT_DSL`
 : :::{versionadded} 22.03.0-edge
   :::
@@ -161,8 +166,10 @@ The following environment variables control the configuration of the Nextflow ru
 `NXF_PLUGINS_DIR`
 : The path where the plugin archives are loaded and stored (default: `$NXF_HOME/plugins`).
 
-`NXF_PLUGINS_INDEX_URL`
-: The plugin registry URL from which to download plugins (default: `https://raw.githubusercontent.com/nextflow-io/plugins/main/plugins.json`).
+`NXF_PLUGINS_REGISTRY_URL`
+: :::{versionadded} 25.08.0-edge
+  :::
+: Specifies the URL of the plugin registry used to download and resolve plugins. This allows using custom or private plugin registries instead of the default public registry.
 
 `NXF_PLUGINS_TEST_REPOSITORY`
 : :::{versionadded} 23.04.0
@@ -193,6 +200,11 @@ The following environment variables control the configuration of the Nextflow ru
 : :::{versionadded} 25.06.0-edge
   :::
 : Max delay used for HTTP retryable operations (default: `90s`).
+
+`NXF_RETRY_POLICY_MULTIPLIER`
+: :::{versionadded} 25.08.0-edge
+  :::
+: Delay multiplier used for HTTP retryable operations (default: `2.0`).
 
 `NXF_SCM_FILE`
 : :::{versionadded} 20.10.0

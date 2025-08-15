@@ -36,7 +36,7 @@ class BitbucketRepositoryProviderTest extends Specification {
         when:
         def url = new BitbucketRepositoryProvider('pditommaso/tutorial',config).getCloneUrl()
         then:
-        url ==~ /https:\/\/\w+@bitbucket.org\/pditommaso\/tutorial.git/
+        url ==~ /https:\/\/.+@bitbucket.org\/pditommaso\/tutorial.git/
     }
 
     def testGetHomePage() {
@@ -182,11 +182,13 @@ class BitbucketRepositoryProviderTest extends Specification {
         provider.hasCredentials() == EXPECTED
 
         where:
-        EXPECTED    | CONFIG
-        false       | new ProviderConfig('bitbucket')
-        false       | new ProviderConfig('bitbucket').setUser('foo')
-        true        | new ProviderConfig('bitbucket').setUser('foo').setPassword('bar')
-        true        | new ProviderConfig('bitbucket').setToken('xyz')
+        EXPECTED | CONFIG
+        false    | new ProviderConfig('bitbucket')
+        false    | new ProviderConfig('bitbucket').setUser('foo')
+        false    | new ProviderConfig('bitbucket').setToken('xyz')
+        true     | new ProviderConfig('bitbucket').setUser('foo').setPassword('bar')
+        true     | new ProviderConfig('bitbucket').setUser('foo').setToken('xyz')
+        true     | new ProviderConfig('bitbucket').setUser('foo').setPassword('bar').setToken('xyz')
     }
 
     @Unroll
@@ -198,9 +200,9 @@ class BitbucketRepositoryProviderTest extends Specification {
         provider.getAuth() == EXPECTED as String[]
 
         where:
-        EXPECTED                                                        | CONFIG
-        null                                                            | new ProviderConfig('bitbucket')
-        ["Authorization", "Bearer xyz"]                                 | new ProviderConfig('bitbucket').setToken('xyz')
-        ["Authorization", "Basic ${"foo:bar".bytes.encodeBase64()}"]    | new ProviderConfig('bitbucket').setUser('foo').setPassword('bar')
+        EXPECTED                                                                 | CONFIG
+        null                                                                     | new ProviderConfig('bitbucket')
+        ["Authorization", "Basic ${"foo:bar".bytes.encodeBase64()}"]             | new ProviderConfig('bitbucket').setUser('foo').setPassword('bar')
+        ["Authorization", "Basic ${"foo@nextflow.io:xyz".bytes.encodeBase64()}"] | new ProviderConfig('bitbucket').setUser('foo@nextflow.io').setToken('xyz')
     }
 }

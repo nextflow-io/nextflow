@@ -153,7 +153,7 @@ class GoogleBatchMachineTypeSelector {
         final json = "${CLOUD_INFO_API}/providers/google/services/compute/regions/${region}/products".toURL().text
         final data = new JsonSlurper().parseText(json)
         final products = data['products'] as List<Map>
-        final averageSpotPrice = (List<Map> prices) -> prices.collect{it.price as float}.average() as float
+        final averageSpotPrice = (List<Map> prices) -> prices ? prices.collect{it.price as float}.average() as float : 0.0f
 
         products.collect {
             new MachineType(
