@@ -1277,7 +1277,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         1 * handler.getSubmitCommand() >> ['bash', '-c', 'test']
         1 * handler.maxSpotAttempts() >> 0
-        1 * handler.getAwsOptions() >> new AwsOptions()
+        1 * handler.getAwsOptions() >> new AwsOptions(awsConfig: new AwsConfig(batch: [sanitizeTags: true]))
         1 * handler.getJobQueue(task) >> 'test-queue'
         1 * handler.getJobDefinition(task) >> 'test-job-def'
         1 * handler.getEnvironmentVars() >> []
@@ -1291,6 +1291,72 @@ class AwsBatchTaskHandlerTest extends Specification {
         tags['long-key-that-might-be-truncated-if-very-very-long'].length() <= 256
         tags['long-key-that-might-be-truncated-if-very-very-long'].startsWith('long-value-that-should-be-truncated')
         !tags['long-key-that-might-be-truncated-if-very-very-long'].endsWith('_')
+        req.propagateTags() == true
+    }
+
+    def 'should not sanitize labels when sanitizeTags config is disabled'() {
+        given:
+        def task = Mock(TaskRun)
+        task.getName() >> 'batch-task'
+        task.getConfig() >> new TaskConfig(
+            resourceLabels: [
+                'validLabel': 'validValue',
+                'invalid#key': 'invalid$value', // These should NOT be sanitized
+                'special*chars?here': 'value with spaces & symbols!'
+            ]
+        )
+
+        def handler = Spy(AwsBatchTaskHandler)
+
+        when:
+        def req = handler.newSubmitRequest(task)
+        then:
+        1 * handler.getSubmitCommand() >> ['bash', '-c', 'test']
+        1 * handler.maxSpotAttempts() >> 0
+        1 * handler.getAwsOptions() >> new AwsOptions(awsConfig: new AwsConfig(batch: [sanitizeTags: false]))
+        1 * handler.getJobQueue(task) >> 'test-queue'
+        1 * handler.getJobDefinition(task) >> 'test-job-def'
+        1 * handler.getEnvironmentVars() >> []
+
+        and: 'labels should remain unchanged (not sanitized)'
+        def tags = req.tags()
+        tags.size() == 3
+        tags['validLabel'] == 'validValue'
+        tags['invalid#key'] == 'invalid$value'  // Should still contain invalid characters
+        tags['special*chars?here'] == 'value with spaces & symbols!'  // Should still contain invalid characters
+        req.propagateTags() == true
+    }
+
+    def 'should not sanitize labels by default when no sanitizeTags config is specified'() {
+        given:
+        def task = Mock(TaskRun)
+        task.getName() >> 'batch-task'
+        task.getConfig() >> new TaskConfig(
+            resourceLabels: [
+                'validLabel': 'validValue',
+                'invalid#key': 'invalid$value', // These should NOT be sanitized by default
+                'test&symbol': 'value(with)brackets'
+            ]
+        )
+
+        def handler = Spy(AwsBatchTaskHandler)
+
+        when:
+        def req = handler.newSubmitRequest(task)
+        then:
+        1 * handler.getSubmitCommand() >> ['bash', '-c', 'test']
+        1 * handler.maxSpotAttempts() >> 0
+        1 * handler.getAwsOptions() >> new AwsOptions() // No config specified, should default to false
+        1 * handler.getJobQueue(task) >> 'test-queue'
+        1 * handler.getJobDefinition(task) >> 'test-job-def'
+        1 * handler.getEnvironmentVars() >> []
+
+        and: 'labels should remain unchanged (not sanitized by default)'
+        def tags = req.tags()
+        tags.size() == 3
+        tags['validLabel'] == 'validValue'
+        tags['invalid#key'] == 'invalid$value'  // Should still contain invalid characters
+        tags['test&symbol'] == 'value(with)brackets'  // Should still contain invalid characters
         req.propagateTags() == true
     }
 
