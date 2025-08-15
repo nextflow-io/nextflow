@@ -17,6 +17,7 @@
 package nextflow.cli
 
 import groovy.transform.CompileStatic
+import groovy.transform.CompileDynamic
 import groovy.util.logging.Slf4j
 import nextflow.plugin.Plugins
 import org.pf4j.PluginWrapper
@@ -60,29 +61,48 @@ class PluginCommandDiscovery {
      * @return Map from command name to CommandExtensionPoint, with conflicts resolved by priority
      */
     static Map<String, CommandExtensionPoint> getCommandMap() {
-        final commands = discoverPluginCommands()
-        final commandMap = [:] as Map<String, CommandExtensionPoint>
-        
-        // Group commands by name and resolve conflicts by priority
-        final grouped = commands.groupBy { it.commandName }
-        
-        grouped.each { commandName, extensionPoints ->
-            if (extensionPoints.size() == 1) {
-                commandMap[commandName] = extensionPoints[0]
+        try {
+            final commands = discoverPluginCommands()
+            log.debug("Processing ${commands.size()} discovered commands")
+            final commandMap = [:] as Map<String, CommandExtensionPoint>
+            
+            // Group commands by name and resolve conflicts by priority
+            log.debug("Grouping commands by name...")
+            commands.each { cmd ->
+                log.debug("Processing command extension: ${cmd?.class?.name}")
+                try {
+                    log.debug("Getting command name from ${cmd}...")
+                    final name = cmd.commandName
+                    log.debug("Command name: ${name}")
+                } catch (Exception e) {
+                    log.debug("Error getting command name: ${e.message}")
+                    throw e
+                }
             }
-            else {
-                // Multiple plugins providing the same command name - choose by priority
-                final winner = extensionPoints.max { it.priority }
-                commandMap[commandName] = winner
-                
-                // Log warning about conflict resolution
-                log.warn("Command name conflict for '${commandName}': " +
-                        "Choosing plugin with priority ${winner.priority}. " +
-                        "Other candidates: ${extensionPoints.findAll { it != winner }.collect { "${it.class.name} (priority: ${it.priority})" }.join(', ')}")
+            
+            final grouped = commands.groupBy { it.commandName }
+            
+            grouped.each { commandName, extensionPoints ->
+                if (extensionPoints.size() == 1) {
+                    commandMap[commandName] = extensionPoints[0]
+                }
+                else {
+                    // Multiple plugins providing the same command name - choose by priority
+                    final winner = extensionPoints.max { it.priority }
+                    commandMap[commandName] = winner
+                    
+                    // Log warning about conflict resolution
+                    log.warn("Command name conflict for '${commandName}': " +
+                            "Choosing plugin with priority ${winner.priority}. " +
+                            "Other candidates: ${extensionPoints.findAll { it != winner }.collect { "${it.class.name} (priority: ${it.priority})" }.join(', ')}")
+                }
             }
+            
+            return commandMap
+        } catch (Exception e) {
+            log.debug("Error in getCommandMap: ${e.message}")
+            return [:]
         }
-        
-        return commandMap
     }
 
     /**
