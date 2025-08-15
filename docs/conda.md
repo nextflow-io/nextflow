@@ -35,6 +35,10 @@ The Conda environment feature is not supported by executors that use remote obje
 
 The use of Conda recipes specified using the {ref}`process-conda` directive needs to be enabled explicitly in the pipeline configuration file (i.e. `nextflow.config`):
 
+:::{note}
+Nextflow also provides a unified {ref}`package-page` system that supports conda and other package managers through a single interface. This newer system is enabled with the `preview.package` feature flag and provides a more consistent experience across different package managers.
+:::
+
 ```groovy
 conda.enabled = true
 ```
@@ -190,6 +194,49 @@ process hello {
 :::
 
 It is also possible to use [mamba](https://github.com/mamba-org/mamba) to speed up the creation of conda environments. For more information on how to enable this feature please refer to {ref}`Conda <config-conda>`.
+
+## Migration to Unified Package Management
+
+The unified {ref}`package-page` system provides a modern alternative to the conda directive. When the `preview.package` feature is enabled, you can use the new syntax:
+
+### Before (conda directive):
+```nextflow
+process example {
+    conda 'samtools=1.15 bcftools=1.15'
+    
+    script:
+    """
+    samtools --version
+    bcftools --version
+    """
+}
+```
+
+### After (package directive):
+```nextflow
+process example {
+    package 'samtools=1.15 bcftools=1.15', provider: 'conda'
+    
+    script:
+    """
+    samtools --version
+    bcftools --version
+    """
+}
+```
+
+To enable the unified package system:
+
+```groovy
+// nextflow.config
+nextflow.preview.package = true
+```
+
+The unified system provides:
+- Consistent interface across different package managers
+- Plugin-based architecture for extensibility
+- Better integration with containerization platforms
+- Support for multiple package managers (conda, pixi, etc.)
 
 ## Best practices
 
