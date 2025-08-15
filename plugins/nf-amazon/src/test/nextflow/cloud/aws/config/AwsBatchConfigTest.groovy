@@ -47,6 +47,7 @@ class AwsBatchConfigTest extends Specification {
         !batch.s5cmdPath
         batch.schedulingPriority == 0
         !batch.terminateUnschedulableJobs
+        !batch.sanitizeTags
     }
 
     def 'should create config with options' () {
@@ -152,5 +153,19 @@ class AwsBatchConfigTest extends Specification {
         [:]                                     | false
         [terminateUnschedulableJobs: false]     | false
         [terminateUnschedulableJobs: true]      | true
+    }
+
+    def 'should parse sanitizeTags flag' () {
+        given:
+        def opts = new AwsBatchConfig(OPTS)
+
+        expect:
+        opts.sanitizeTags == SANITIZE_TAGS
+
+        where:
+        OPTS                        | SANITIZE_TAGS
+        [:]                         | false
+        [sanitizeTags: false]       | false
+        [sanitizeTags: true]        | true
     }
 }

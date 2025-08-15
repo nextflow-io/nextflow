@@ -779,7 +779,8 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         builder.jobQueue(getJobQueue(task))
         builder.jobDefinition(getJobDefinition(task))
         if( labels ) {
-            builder.tags(sanitizeAwsBatchLabels(labels))
+            final tags = opts.sanitizeTags() ? sanitizeAwsBatchLabels(labels) : labels
+            builder.tags(tags)
             builder.propagateTags(true)
         }
         // set the share identifier
