@@ -632,7 +632,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         return result
     }
 
-    @Memoized 
+    @Memoized
     LogConfiguration getLogConfiguration(String name, String region) {
         LogConfiguration.builder()
             .logDriver('awslogs')
@@ -779,7 +779,8 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         builder.jobQueue(getJobQueue(task))
         builder.jobDefinition(getJobDefinition(task))
         if( labels ) {
-            builder.tags(labels)
+            final tags = opts.sanitizeTags() ? sanitizeAwsBatchLabels(labels) : labels
+            builder.tags(tags)
             builder.propagateTags(true)
         }
         // set the share identifier
@@ -862,6 +863,79 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         }
 
         return builder.build()
+    }
+
+    /**
+     * Sanitize resource labels to comply with AWS Batch tag requirements.
+     * AWS Batch tags have specific constraints:
+     * - Keys and values can contain: letters, numbers, spaces, and characters: _ . : / = + - @
+     * - Maximum key length: 128 characters
+     * - Maximum value length: 256 characters
+     *
+     * @param labels The original resource labels map
+     * @return A new map with sanitized labels suitable for AWS Batch tags
+     */
+    protected Map<String, String> sanitizeAwsBatchLabels(Map<String, String> labels) {
+        if (!labels) return labels
+
+        final result = new LinkedHashMap<String, String>()
+
+        for (Map.Entry<String, String> entry : labels.entrySet()) {
+            final key = entry.getKey()
+            final value = entry.getValue()
+
+            // Handle null keys or values
+            if (key == null || value == null) {
+                log.warn "AWS Batch label dropped due to null ${key == null ? 'key' : 'value'}: key=${key}, value=${value}"
+                continue
+            }
+
+            final originalKey = key.toString()
+            final originalValue = value.toString()
+            final sanitizedKey = sanitizeAwsBatchLabel(originalKey, 128)
+            final sanitizedValue = sanitizeAwsBatchLabel(originalValue, 256)
+
+            // Check if sanitization resulted in empty strings
+            if (!sanitizedKey || !sanitizedValue) {
+                log.warn "AWS Batch label dropped after sanitization - key: '${originalKey}' -> '${sanitizedKey ?: ''}', value: '${originalValue}' -> '${sanitizedValue ?: ''}'"
+                continue
+            }
+
+            // Log if values were modified during sanitization
+            if (sanitizedKey != originalKey || sanitizedValue != originalValue) {
+                log.warn "AWS Batch label sanitized - key: '${originalKey}' -> '${sanitizedKey}', value: '${originalValue}' -> '${sanitizedValue}'"
+            }
+
+            result.put(sanitizedKey, sanitizedValue)
+        }
+
+        return result
+    }
+
+    /**
+     * Sanitize a single label key or value for AWS Batch tags.
+     * Replaces invalid characters with underscores and truncates if necessary.
+     *
+     * @param input The input string to sanitize
+     * @param maxLength The maximum allowed length
+     * @return The sanitized string
+     */
+    protected String sanitizeAwsBatchLabel(String input, int maxLength) {
+        if (!input) return input
+
+        // Replace invalid characters and clean up the string
+        // AWS Batch allows: letters, numbers, spaces, and: _ . : / = + - @
+        final sanitized = input
+            .replaceAll(/[^a-zA-Z0-9\s_.\:\/=+\-@]/, '_')  // Replace invalid chars with underscores
+            .replaceAll(/[_\s]{2,}/, '_')                    // Replace multiple consecutive underscores/spaces
+            .replaceAll(/^[_\s]+|[_\s]+$/, '')              // Remove leading/trailing underscores and spaces
+
+        // Truncate if necessary and clean up any trailing underscores/spaces
+        final result = sanitized.size() > maxLength
+            ? sanitized.substring(0, maxLength).replaceAll(/[_\s]+$/, '')
+            : sanitized
+
+        return result ?: null
     }
 
     /**
