@@ -15,6 +15,7 @@
  */
 package nextflow.script.control;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -24,7 +25,8 @@ import nextflow.script.ast.FeatureFlagNode;
 import nextflow.script.ast.FunctionNode;
 import nextflow.script.ast.IncludeNode;
 import nextflow.script.ast.OutputBlockNode;
-import nextflow.script.ast.ParamNode;
+import nextflow.script.ast.ParamBlockNode;
+import nextflow.script.ast.ParamNodeV1;
 import nextflow.script.ast.ProcessNode;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
@@ -117,7 +119,24 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
     }
 
     @Override
-    public void visitParam(ParamNode node) {
+    public void visitParams(ParamBlockNode node) {
+        var statements = Arrays.stream(node.declarations)
+            .map((param) -> {
+                var name = constX(param.getName());
+                var type = classX(param.getType());
+                var arguments = param.hasInitialExpression()
+                    ? args(name, type, param.getInitialExpression())
+                    : args(name, type);
+                return stmt(callThisX("declare", arguments));
+            })
+            .toList();
+        var closure = closureX(block(new VariableScope(), statements));
+        var result = stmt(callThisX("params", args(closure)));
+        moduleNode.addStatement(result);
+    }
+
+    @Override
+    public void visitParamV1(ParamNodeV1 node) {
         var result = stmt(assignX(node.target, node.value));
         moduleNode.addStatement(result);
     }

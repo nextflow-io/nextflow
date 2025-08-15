@@ -325,12 +325,18 @@ class CmdRun extends CmdBase implements HubOptions {
         // -- specify the arguments
         final scriptFile = getScriptFile(pipeline)
 
+        // -- load command line params
+        final baseDir = scriptFile.parent
+        final cliParams = parsedParams(ConfigBuilder.getConfigVars(baseDir))
+
         // create the config object
         final builder = new ConfigBuilder()
                 .setOptions(launcher.options)
                 .setCmdRun(this)
-                .setBaseDir(scriptFile.parent)
-        final config = builder .build()
+                .setBaseDir(baseDir)
+                .setCliParams(cliParams)
+        final config = builder.build()
+        final configParams = builder.getConfigParams()
 
         // check DSL syntax in the config
         launchInfo(config, scriptFile)
@@ -376,7 +382,7 @@ class CmdRun extends CmdBase implements HubOptions {
         }
 
         // -- run it!
-        runner.execute(scriptArgs, this.entryName)
+        runner.execute(scriptArgs, cliParams, configParams, this.entryName)
     }
 
     protected void printBanner() {
@@ -698,7 +704,7 @@ class CmdRun extends CmdBase implements HubOptions {
     }
 
     static protected parseParamValue(String str) {
-        if ( SysEnv.get('NXF_DISABLE_PARAMS_TYPE_DETECTION') )
+        if ( SysEnv.get('NXF_DISABLE_PARAMS_TYPE_DETECTION') || NF.isSyntaxParserV2() )
             return str
 
         if ( str == null ) return null
