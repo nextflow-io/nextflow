@@ -32,7 +32,7 @@ The following configuration properties are supported for each provider configura
 : User password required to access private repositories on the SCM server.
 
 `providers.<provider>.token`
-: *Required only for private Gitlab servers*
+: *Required only for private Gitlab servers and supported for BitBucket*
 : Private API access token.
 
 `providers.<provider>.platform`
@@ -51,19 +51,23 @@ The following configuration properties are supported for each provider configura
 
 ### BitBucket
 
-Create a `bitbucket` entry in the [SCM configuration file](#git-configuration) specifying your user name and app password, as shown below:
+Create a `bitbucket` entry in the [SCM configuration file](#git-configuration) specifying your user name and either an API token or app password, as shown below:
 
 ```groovy
 providers {
     bitbucket {
         user = 'me'
-        password = 'my-secret'
+        token = 'my-api-token'
     }
 }
 ```
 
+:::{versionadded} 25.07.0-edge
+API tokens are supported for BitBucket authentication. When both `token` and `password` are provided, the API token takes priority over the app password.
+:::
+
 :::{note}
-App passwords are substitute passwords for a user account which you can use for scripts and integrating tools in order to avoid putting your real password into configuration files. Learn more at [this link](https://support.atlassian.com/bitbucket-cloud/docs/app-passwords/).
+API tokens are substitute passwords for a user account which you can use for scripts and integrating tools in order to avoid putting your real password into configuration files. Learn more about [app passwords](https://support.atlassian.com/bitbucket-cloud/docs/app-passwords/) and [API tokens](https://support.atlassian.com/bitbucket-cloud/docs/using-api-tokens/).
 :::
 
 ### BitBucket Server

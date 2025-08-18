@@ -54,6 +54,11 @@ The following environment variables control the configuration of the Nextflow ru
   :::
 : When `true`, override the container entrypoint with `/bin/bash` (default: `false`).
 
+`NXF_DATE_FORMAT`
+: :::{versionadded} 25.07.0-edge
+  :::
+: Defines the format for date and time representations in notifications and reports. Supports custom formats (e.g., `yyyy-MM-dd HH:mm:ss`) or `iso` for ISO 8601 format with timezone (default: `dd-MMM-yyyy HH:mm:ss`).
+
 `NXF_DEFAULT_DSL`
 : :::{versionadded} 22.03.0-edge
   :::
