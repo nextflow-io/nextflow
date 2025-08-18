@@ -91,7 +91,7 @@ To publish plugins to the [Nextflow plugin registry](https://registry.nextflow.i
     npr.apiKey=<API_KEY>
     ```
 
-    Replace `<API_KEY>` with your plugin registry API key. See {ref}`` for more information about creating an API key.
+    Replace `<API_KEY>` with your plugin registry API key. See {ref}`plugin-registry-create` for more information about creating an API key.
 
 3. Run `make release`.
 

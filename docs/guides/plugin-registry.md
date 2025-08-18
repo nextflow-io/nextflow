@@ -35,6 +35,8 @@ To claim ownership of a plugin:
 
 The plugin will show as **PENDING REVIEW** under **Pending Ownership Requests** until an admin approves the claim. Admin approval is required only once.
 
+(plugin-registry-create)=
+
 ## Creating an access token
 
 An API access token is required to publish plugins to the Nextflow plugin registry.
