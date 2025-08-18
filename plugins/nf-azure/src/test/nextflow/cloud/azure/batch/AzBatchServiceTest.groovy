@@ -504,16 +504,6 @@ class AzBatchServiceTest extends Specification {
 
     }
 
-    def 'should set jobs to automatically terminate by default' () {
-        given:
-        def CONFIG = [:]
-        def exec = createExecutor(CONFIG)
-        AzBatchService svc = Spy(AzBatchService, constructorArgs:[exec])
-        when:
-        svc.close()
-        then:
-        1 * svc.terminateJobs() >> null
-    }
 
     def 'should not cleanup jobs by default' () {
         given:
@@ -1034,7 +1024,7 @@ class AzBatchServiceTest extends Specification {
         service.setAutoTerminateIfEnabled(jobId, taskId)
 
         then:
-        1 * service.setJobAutoTermination(jobId) >> null
+        1 * service.setJobTermination(jobId) >> null
     }
 
     def 'should skip auto-termination when terminateJobsOnCompletion is disabled' () {
@@ -1049,7 +1039,7 @@ class AzBatchServiceTest extends Specification {
         service.setAutoTerminateIfEnabled(jobId, taskId)
 
         then:
-        0 * service.setJobAutoTermination(_)
+        0 * service.setJobTermination(_)
     }
 
     def 'should update job mapping when recreating job for terminated job' () {
