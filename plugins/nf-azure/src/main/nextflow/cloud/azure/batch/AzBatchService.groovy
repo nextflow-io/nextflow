@@ -609,9 +609,9 @@ class AzBatchService implements Closeable {
      */
     protected String recreateJobForTask(String poolId, TaskRun task, String oldJobId, String taskId) {
         log.debug "Job ${oldJobId} is in completed/terminating state, creating a new job for task ${taskId}"
-        allJobIds.values().removeAll { it == oldJobId }
-        final String newJobId = createJob0(poolId, task)
         final AzJobKey mapKey = new AzJobKey(task.processor, poolId)
+        allJobIds.remove(mapKey)
+        final String newJobId = createJob0(poolId, task)
         allJobIds[mapKey] = newJobId
         return newJobId
     }
