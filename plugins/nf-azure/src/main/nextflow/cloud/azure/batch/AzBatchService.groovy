@@ -1053,15 +1053,15 @@ class AzBatchService implements Closeable {
                     .setPoolInfo(poolInfo)
             apply(() -> client.updateJob(jobId, jobParameter))
         }
-        catch (HttpResponseException e) {
-            if (e.response.statusCode == 409) {
+        catch (Exception e) {
+            if (e instanceof HttpResponseException && e.response.statusCode == 409) {
                 log.debug "Azure Batch job ${jobId} already terminated or in terminal state, skipping auto-termination setup"
             } else {
-                log.warn "Unable to set auto-termination for Azure Batch job ${jobId} - HTTP Status: ${e.response.statusCode}, Reason: ${e.message ?: e}"
+                final reason = e instanceof HttpResponseException 
+                    ? "HTTP Status: ${e.response.statusCode}, Reason: ${e.message ?: e}"
+                    : "Reason: ${e.message ?: e}"
+                log.warn "Unable to set auto-termination for Azure Batch job ${jobId} - ${reason}"
             }
-        }
-        catch (Exception e) {
-            log.warn "Unable to set auto-termination for Azure Batch job ${jobId} - Reason: ${e.message ?: e}"
         }
     }
 
