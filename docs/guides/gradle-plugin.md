@@ -2,7 +2,7 @@
 
 # Using the Nextflow Gradle plugin
 
-The [Nextflow Gradle plugin](https://github.com/nextflow-io/nextflow-plugin-gradle) simplifies plugin development by configuring default dependencies needed for Nextflow integration and defining Gradle tasks for building, testing, and publishing Nextflow plugins.
+The [Nextflow Gradle plugin](https://github.com/nextflow-io/nextflow-plugin-gradle) simplifies plugin development by configuring default dependencies needed for Nextflow integration and defining Gradle tasks for building, testing, and publishing Nextflow plugins. The Gradle plugin is versioned and published to the [Gradle Plugin Portal](https://plugins.gradle.org/), allowing developers to manage it like any other dependency. As the plugin ecosystem evolves, the Gradle plugin will enable easier maintenance and adoption of improvements. This page introduces [Nextflow Gradle plugin](https://github.com/nextflow-io/nextflow-plugin-gradle) and how to use it.
 
 :::{note}
 The Nextflow Gradle plugin and plugin registry are currently available as a public preview. See the {ref}`Migrating to the Nextflow plugin registry <plugin-registry-page>` for more information.
@@ -25,7 +25,9 @@ To create Nextflow plugins with the Gradle plugin:
 
 3. Develop your plugin extension points. See {ref}`dev-plugins-extension-points` for more information.
 
-4. In the plugin root directory, run `make assemble`.
+4. Develop your tests. See {ref}`gradle-plugin-test` for more information.
+
+5. In the plugin root directory, run `make assemble`.
 
 ## Installing a plugin
 
@@ -45,15 +47,17 @@ To install plugins locally:
     nextflow run main.nf -plugins <PLUGIN_NAME>@<VERSION>
     ```
 
+    Replace `<PLUGIN_NAME>@<VERSION>` with your plugin name and version.
+
     :::{note}
-    Plugins can also be configured via nextflow configuration files. See {ref}`using-plugins-page` for more information.
+    Plugins can also be configured via Nextflow configuration files. See {ref}`using-plugins-page` for more information.
     :::
 
 (gradle-plugin-test)=
 
 ## Testing a plugin
 
-Testing your Nextflow plugin involves two complementary approaches: unit tests and end-to-end tests.
+Testing your Nextflow plugin requires unit tests and end-to-end tests.
 
 <h3>Unit tests</h3>
 
@@ -67,24 +71,30 @@ To run unit tests:
 
 <h3>End-to-end tests</h3>
 
-End-to-end tests are comprehensive tests that verify the behavior of an entire plugin as it would be used in Nextflow pipelines. End-to-end tests should be tailored to the needs of your plugin, but generally take the form of a small Nextflow pipeline. See the `validation` directory in the [plugin template](https://github.com/nextflow-io/nf-plugin-template) for an example end-to-end test.
+End-to-end tests are comprehensive tests that verify the behavior of an entire plugin as it would be used in Nextflow pipelines.
+
+End-to-end tests should be tailored to the needs of your plugin, but generally take the form of a small Nextflow pipeline. See the `validation` directory in the [plugin template](https://github.com/nextflow-io/nf-plugin-template) for an example end-to-end test.
 
 (gradle-plugin-publish)=
 
 ## Publishing a plugin
 
-The Nextflow Gradle plugin allows you to publish plugins to the Nextflow plugin registry from the command line.
+The Nextflow Gradle plugin allows you to publish plugins to the [Nextflow plugin registry](https://registry.nextflow.io/) from the command line.
 
-To publish plugins:
+To publish plugins to the [Nextflow plugin registry](https://registry.nextflow.io/):
 
 1. Create a file named `$HOME/.gradle/gradle.properties`, where `$HOME` is your home directory.
 
-2. Add the following properties:
+2. Add the following property:
 
     ```
-    npr.apiKey=<YOUR_API_KEY>
+    npr.apiKey=<API_KEY>
     ```
 
-    Replace `<YOUR_API_KEY>` with your plugin registry API key. For additional configuration options, see the [Nextflow Gradle plugin documentation](https://github.com/nextflow-io/nextflow-plugin-gradle).
+    Replace `<API_KEY>` with your plugin registry API key. See {ref}`` for more information about creating an API key.
 
 3. Run `make release`.
+
+## Additional resources
+
+For additional Nextflow Gradle plugin configuration options, see the [Nextflow Gradle plugin](https://github.com/nextflow-io/nextflow-plugin-gradle) repository.

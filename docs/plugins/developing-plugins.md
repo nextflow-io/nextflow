@@ -10,7 +10,7 @@ This page describes how to develop plugins for Nextflow.
 
 The [Nextflow plugin template](https://github.com/nextflow-io/nf-plugin-template/) is a scaffold for plugin development. It uses [Gradle](https://gradle.org/), a build automation tool optimized for Java and Groovy projects, as well as the [Nextflow Gradle plugin](https://github.com/nextflow-io/nextflow-plugin-gradle).
 
-You can use the `nextflow plugin create` sub-command to create plugins from the plugin template. See {ref}`gradle-plugin-create` for more information.
+You can use the `nextflow plugin create` sub-command to create plugins using the plugin template. See {ref}`gradle-plugin-create` for more information.
 
 :::{note}
 The Nextflow Gradle plugin is currently available as a public preview. See {ref}`Migrating to the Nextflow plugin registry <plugin-registry-page>` for more information.
@@ -495,7 +495,6 @@ The following environment variables are available to develop and test plugins:
 
 `NXF_PLUGINS_DEFAULT`
 : Whether to use the default plugins when no plugins are specified in the Nextflow configuration (default: true).
-
 
 `NXF_PLUGINS_DEV`
 : Comma-separated list of development plugin root directories.
