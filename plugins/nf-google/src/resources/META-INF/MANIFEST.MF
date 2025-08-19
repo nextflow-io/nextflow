@@ -4,3 +4,4 @@ Plugin-Id: nf-google
 Plugin-Version: 1.22.2
 Plugin-Provider: Seqera Labs
 Plugin-Requires: >=25.07.0-edge
+Plugin-Description: Enables Google Cloud Platform execution through Batch service with native Cloud Storage access and intelligent machine type selection

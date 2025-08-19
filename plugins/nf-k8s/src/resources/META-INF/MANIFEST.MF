@@ -4,3 +4,4 @@ Plugin-Id: nf-k8s
 Plugin-Version: 1.1.1
 Plugin-Provider: Seqera Labs
 Plugin-Requires: >=25.07.0-edge
+Plugin-Description: Provides native Kubernetes execution capability with advanced pod management, volume mounting, and resource allocation features
