@@ -239,18 +239,11 @@ class PluginUpdater extends UpdateManager {
         // 2. download to temporary location
         Path downloaded = safeDownloadPlugin(id, version);
 
-        // 3. rename to match the expected name
-        if ( downloaded.getFileName().toString() != "${pluginPath.getFileName()}.zip" ) {
-            final targetName = downloaded.resolveSibling("${pluginPath.getFileName()}.zip")
-            if ( !Files.move(downloaded, targetName) ) throw new PluginRuntimeException("Failed to rename '$downloaded'")
-            downloaded = targetName
-        }
-
-        // 4. unzip the content and delete downloaded file
+        // 3. unzip the content and delete downloaded file
         Path dir = FileUtils.expandIfZip(downloaded)
         FileHelper.deletePath(downloaded)
 
-        // 5. move the final destination the plugin directory
+        // 4. move the final destination the plugin directory
         assert pluginPath.getFileName() == dir.getFileName()
         try {
             safeMove(dir, pluginPath)
