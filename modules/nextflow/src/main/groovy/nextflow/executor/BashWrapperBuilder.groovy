@@ -87,9 +87,7 @@ class BashWrapperBuilder {
             log.warn "Invalid value for `NXF_DEBUG` variable: $str -- See http://www.nextflow.io/docs/latest/config.html#environment-variables"
         }
         BASH = Collections.unmodifiableList( level > 0 ? ['/bin/bash','-uex'] : ['/bin/bash','-ue'] )
-
     }
-
 
     @Delegate
     ScriptFileCopyStrategy copyStrategy
@@ -489,6 +487,7 @@ class BashWrapperBuilder {
     protected String getTaskMetadata() {
         final lines = new StringBuilder()
         lines << '### ---\n'
+        lines << "### id: '${bean.taskId}'\n"
         lines << "### name: '${bean.name}'\n"
         if( bean.arrayIndexName ) {
             lines << '### array:\n'
@@ -502,10 +501,16 @@ class BashWrapperBuilder {
         if( containerConfig?.isEnabled() )
             lines << "### container: '${bean.containerImage}'\n"
 
-        if( outputFiles.size() > 0 ) {
+        if( outputFiles ) {
             lines << '### outputs:\n'
             for( final output : bean.outputFiles )
                 lines << "### - '${output}'\n"
+        }
+
+        if( bean.upstreamTasks ) {
+            lines << '### upstream-tasks:\n'
+            for( final it : bean.upstreamTasks )
+                lines << "### - '${it}'\n"
         }
 
         lines << '### ...\n'

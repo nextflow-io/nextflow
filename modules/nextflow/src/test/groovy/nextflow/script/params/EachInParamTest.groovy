@@ -39,11 +39,11 @@ class EachInParamTest extends Specification {
         def each = new EachInParam(Mock(Binding), [])
 
         expect:
-        each.normalizeToVariable(1).val == [1]
-        each.normalizeToVariable([3,4,5]).val == [3,4,5]
-        each.normalizeToVariable(channel).val == [1,2,3,5]
-        each.normalizeToVariable(value).val == ['a']
-        each.normalizeToVariable(list).val == [4,5,6]
+        each.normalizeToVariable(1).unwrap() == [1]
+        each.normalizeToVariable([3,4,5]).unwrap() == [3,4,5]
+        each.normalizeToVariable(channel).unwrap() == [1,2,3,5]
+        each.normalizeToVariable(value).unwrap() == ['a']
+        each.normalizeToVariable(list).unwrap() == [4,5,6]
 
     }
 

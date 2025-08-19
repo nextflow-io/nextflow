@@ -33,6 +33,7 @@ import java.util.regex.Pattern
 import ch.artecat.grengine.Grengine
 import com.google.common.hash.HashCode
 import groovy.json.JsonOutput
+import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
@@ -80,6 +81,7 @@ import nextflow.file.FilePorter
 import nextflow.file.LogicalDataPath
 import nextflow.plugin.Plugins
 import nextflow.processor.tip.TaskTipProvider
+import nextflow.prov.Prov
 import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
@@ -132,6 +134,11 @@ class TaskProcessor {
         RunType(String str) { message=str };
     }
 
+    @Canonical
+    static class FairEntry {
+        Map<Short,List> emissions
+        TaskRun task
+    }
     static final public String TASK_CONTEXT_PROPERTY_NAME = 'task'
 
     final private static Pattern ENV_VAR_NAME = ~/[a-zA-Z_]+[a-zA-Z0-9_]*/
@@ -141,6 +148,8 @@ class TaskProcessor {
     @TestOnly private static volatile TaskProcessor currentProcessor0
 
     @TestOnly static TaskProcessor currentProcessor() { currentProcessor0 }
+
+    @TestOnly static Map<TaskId,TaskRun> allTasks = new HashMap<>()
 
     /**
      * Keeps track of the task instance executed by the current thread
@@ -250,9 +259,9 @@ class TaskProcessor {
 
     private static LockManager lockManager = new LockManager()
 
-    private List<Map<Short,List>> fairBuffers = new ArrayList<>()
+    private List<FairEntry> fairBuffers = new ArrayList<>()
 
-    private int currentEmission
+    private volatile int currentEmission
 
     private Boolean isFair0
 
@@ -550,7 +559,9 @@ class TaskProcessor {
 
             // the channel forwarding the data from the *iterator* process to the target task
             final linkingChannels = new ArrayList(size)
-            size.times { linkingChannels[it] = new DataflowQueue() }
+            for( int i=0; i<size; i++ ) {
+                linkingChannels[i] = new DataflowQueue()
+            }
 
             // the script implementing the iterating process
             final forwarder = new ForwardClosure(size, iteratorIndexes)
@@ -620,15 +631,17 @@ class TaskProcessor {
     final protected void invokeTask( Object[] args ) {
         assert args.size()==2
         final params = (TaskStartParams) args[0]
-        final values = (List) args[1]
-
+        final inputs = (List) args[1]
         // create and initialize the task instance to be executed
-        log.trace "Invoking task > $name with params=$params; values=$values"
+        log.trace "Invoking task > $name with params=$params; values=${inputs}"
 
         // -- create the task run instance
         final task = createTaskRun(params)
         // -- set the task instance as the current in this thread
         currentTask.set(task)
+        allTasks.put(task.id, task)
+        // track the task provenance for the given inputs 
+        final values = Prov.tracker.receiveInputs(task, inputs)
 
         // -- validate input lengths
         validateInputTuples(values)
@@ -1465,7 +1478,7 @@ class TaskProcessor {
             fairBindOutputs0(tuples, task)
         }
         else {
-            bindOutputs0(tuples)
+            bindOutputs0(tuples, task)
         }
 
         // -- finally prints out the task output when 'debug' is true
@@ -1478,25 +1491,26 @@ class TaskProcessor {
         synchronized (isFair0) {
             // decrement -1 because tasks are 1-based
             final index = task.index-1
+            FairEntry entry = new FairEntry(emissions, task)
             // store the task emission values in a buffer
-            fairBuffers[index-currentEmission] = emissions
+            fairBuffers[index-currentEmission] = entry
             // check if the current task index matches the expected next emission index
             if( currentEmission == index ) {
-                while( emissions!=null ) {
+                while( entry!=null ) {
                     // bind the emission values
-                    bindOutputs0(emissions)
+                    bindOutputs0(entry.emissions, entry.task)
                     // remove the head and try with the following
                     fairBuffers.remove(0)
                     // increase the index of the next emission
                     currentEmission++
                     // take the next emissions 
-                    emissions = fairBuffers[0]
+                    entry = fairBuffers[0]
                 }
             }
         }
     }
 
-    protected void bindOutputs0(Map<Short,List> tuples) {
+    protected void bindOutputs0(Map<Short,List> tuples, TaskRun task) {
         // -- bind out the collected values
         for( OutParam param : config.getOutputs() ) {
             final outValue = tuples[param.index]
@@ -1509,11 +1523,11 @@ class TaskProcessor {
             }
 
             log.trace "Process $name > Binding out param: ${param} = ${outValue}"
-            bindOutParam(param, outValue)
+            bindOutParam(param, outValue, task)
         }
     }
 
-    protected void bindOutParam( OutParam param, List values ) {
+    protected void bindOutParam( OutParam param, List values, TaskRun task ) {
         log.trace "<$name> Binding param $param with $values"
         final x = values.size() == 1 ? values[0] : values
         final ch = param.getOutChannel()
@@ -1523,7 +1537,7 @@ class TaskProcessor {
             // and result in a potential error. See https://github.com/nextflow-io/nextflow/issues/3768
             final copy = x instanceof List && x instanceof Cloneable ? x.clone() : x
             // emit the final value
-            ch.bind(copy)
+            Prov.tracker.bindOutput(task, ch, copy)
         }
     }
 
@@ -2382,7 +2396,7 @@ class TaskProcessor {
      * @param task The {@code TaskRun} instance to finalize
      */
     @PackageScope
-    final finalizeTask( TaskHandler handler) {
+    final finalizeTask(TaskHandler handler) {
         def task = handler.task
         log.trace "finalizing process > ${safeTaskName(task)} -- $task"
 
