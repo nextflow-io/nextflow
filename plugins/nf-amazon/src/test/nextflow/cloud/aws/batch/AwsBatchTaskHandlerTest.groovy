@@ -981,7 +981,14 @@ class AwsBatchTaskHandlerTest extends Specification {
         task.getName() >> 'batch-task'
         task.getConfig() >> new TaskConfig(memory: '8GB', cpus: 4, maxRetries: 2, errorStrategy: 'retry', resourceLabels:[a:'b'])
 
-        def handler = Spy(AwsBatchTaskHandler)
+        def session = Mock(Session) {
+            getConfig() >> Mock(ConfigObject) {
+                navigate('nextflow.enable.strict', false) >> false  // Normal mode
+            }
+        }
+        def executor = Mock(AwsBatchExecutor) { getSession() >> session }
+        def handler = Spy(AwsBatchTaskHandler) { getExecutor() >> executor }
+        handler.@executor = executor
 
         when:
         def req = handler.newSubmitRequest(task)
@@ -1139,124 +1146,75 @@ class AwsBatchTaskHandlerTest extends Specification {
     }
 
     @Unroll
-    def 'should sanitize AWS Batch label' () {
+    def 'should validate AWS Batch tag string constraints' () {
         given:
         def handler = Spy(AwsBatchTaskHandler)
 
         expect:
-        handler.sanitizeAwsBatchLabel(INPUT, MAX_LENGTH) == EXPECTED
+        handler.isValidAwsBatchTagString(INPUT, MAX_LENGTH) == EXPECTED
 
         where:
         INPUT                               | MAX_LENGTH | EXPECTED
-        // Valid labels that don't need sanitization
-        'validLabel'                        | 50         | 'validLabel'
-        'valid-label_123'                   | 50         | 'valid-label_123'
-        'valid.label:test/path=value+more'  | 50         | 'valid.label:test/path=value+more'
-        'label with spaces'                 | 50         | 'label with spaces'
-        'label-with@symbol'                 | 50         | 'label-with@symbol'
+        // Valid strings that meet AWS constraints
+        'validLabel'                        | 128        | true
+        'valid-label_123'                   | 128        | true
+        'valid.label:test/path=value+more'  | 128        | true
+        'label with spaces'                 | 128        | true
+        'label-with@symbol'                 | 128        | true
         and:
-        // Labels with invalid characters
-        'label#with#hash'                   | 50         | 'label_with_hash'
-        'label$with%special&chars'          | 50         | 'label_with_special_chars'
-        'label(with)brackets[and]braces{}'  | 50         | 'label_with_brackets_and_braces'
-        'label*with?wildcards'              | 50         | 'label_with_wildcards'
-        'unicode_λαβελ_test'                | 50         | 'unicode_test'
+        // Invalid characters for AWS Batch
+        'label#with#hash'                   | 128        | false
+        'label$with%special&chars'          | 128        | false
+        'label(with)brackets[and]braces{}'  | 128        | false
+        'label*with?wildcards'              | 128        | false
+        'unicode_λαβελ_test'                | 128        | false
         and:
-        // Multiple consecutive invalid characters
-        'label###multiple###hashes'         | 50         | 'label_multiple_hashes'
-        'label   multiple   spaces'         | 50         | 'label_multiple_spaces'
-        'label___multiple___underscores'    | 50         | 'label_multiple_underscores'
-        'label$%^&*special*&^%$chars'       | 50         | 'label_special_chars'
-        and:
-        // Leading/trailing invalid characters
-        '###leading-hashes'                 | 50         | 'leading-hashes'
-        'trailing-hashes###'                | 50         | 'trailing-hashes'
-        '   leading-spaces'                 | 50         | 'leading-spaces'
-        'trailing-spaces   '                | 50         | 'trailing-spaces'
-        '___leading-underscores'            | 50         | 'leading-underscores'
-        'trailing-underscores___'           | 50         | 'trailing-underscores'
-        and:
-        // Length truncation
-        'very-long-label-that-exceeds-max'  | 10         | 'very-long-'
-        'very-long-label-ending-with-_'     | 25         | 'very-long-label-ending-wi'
-        'very-long-label-ending-with-___'   | 28         | 'very-long-label-ending-with-'
+        // Length constraints (create a string longer than 128 chars)
+        ('very-long-label-that-exceeds-maximum-length-for-aws-batch-tags-which-is-128-characters-for-keys-and-256-for-values-test-extra-long-suffix-to-exceed-limit') | 128 | false
+        'valid-short-label'                 | 128        | true
         and:
         // Edge cases
-        null                                | 50         | null
-        ''                                  | 50         | ''
-        '   '                               | 50         | null
-        '___'                               | 50         | null
-        '###'                               | 50         | null
-        '_'                                 | 50         | null
-        ' '                                 | 50         | null
-        '#'                                 | 50         | null
-        and:
-        // Complex real-world scenarios
-        'user@domain.com'                   | 50         | 'user@domain.com'
-        'workflow-run-2024/01/15'           | 50         | 'workflow-run-2024/01/15'
-        'task.hash.0x1234abcd'              | 50         | 'task.hash.0x1234abcd'
-        'pipeline#name%with&special*chars'  | 50         | 'pipeline_name_with_special_chars'
-        'session-id:abc123#$%'              | 50         | 'session-id:abc123'
+        null                                | 128        | false
+        ''                                  | 128        | false
+        '   '                               | 128        | true  // Spaces are valid
     }
 
     @Unroll
-    def 'should sanitize AWS Batch labels map' () {
+    def 'should validate AWS Batch labels and return validation results' () {
         given:
         def handler = Spy(AwsBatchTaskHandler)
+        def session = Mock(Session) {
+            getConfig() >> Mock(ConfigObject) {
+                navigate('nextflow.enable.strict', false) >> IS_STRICT_MODE
+            }
+        }
+        def executor = Mock(AwsBatchExecutor) { getSession() >> session }
+        handler.@executor = executor
 
-        expect:
-        handler.sanitizeAwsBatchLabels(INPUT) == EXPECTED
+        when:
+        def result = handler.validateAwsBatchLabels(INPUT)
+
+        then:
+        result == EXPECTED_RESULT
 
         where:
-        INPUT | EXPECTED
-        // Null/empty input
-        null | null
-        [:] | [:]
+        INPUT | IS_STRICT_MODE | EXPECTED_RESULT
+        // Valid labels - should pass in both modes
+        [validKey: 'validValue'] | false | [validKey: 'validValue']
+        [validKey: 'validValue'] | true  | [validKey: 'validValue']
+        ['valid-key_123': 'valid-value_456'] | false | ['valid-key_123': 'valid-value_456']
+        ['valid-key_123': 'valid-value_456'] | true  | ['valid-key_123': 'valid-value_456']
         and:
-        // Valid labels
-        [validKey: 'validValue'] | [validKey: 'validValue']
-        ['valid-key_123': 'valid-value_456'] | ['valid-key_123': 'valid-value_456']
-        ['key.with:path/chars=test+more@symbol': 'value with spaces'] | ['key.with:path/chars=test+more@symbol': 'value with spaces']
+        // Mixed valid/invalid - normal mode warns and passes through, strict mode should be tested separately
+        ['validKey': 'validValue', 'invalid#key': 'invalid$value'] | false | ['validKey': 'validValue', 'invalid#key': 'invalid$value']
         and:
-        // Invalid characters in keys and values
-        ['key#with#hash': 'value$with%special&chars'] | ['key_with_hash': 'value_with_special_chars']
-        ['key(brackets)': 'value[squares]{braces}'] | ['key_brackets': 'value_squares_braces']
-        ['unicode_λkey': 'unicode_λvalue'] | ['unicode_key': 'unicode_value']
-        and:
-        // Multiple entries with mixed validity
-        ['validKey': 'validValue', 'invalid#key': 'invalid$value', 'another.valid:key': 'another+valid@value'] |
-        ['validKey': 'validValue', 'invalid_key': 'invalid_value', 'another.valid:key': 'another+valid@value']
-        and:
-        // Entries that should be filtered out (null/empty after sanitization)
-        ['validKey': 'validValue', '###': '$$$', '   ': '%%%', 'goodKey': 'goodValue'] |
-        ['validKey': 'validValue', 'goodKey': 'goodValue']
-        and:
-        // Null keys or values
-        ['validKey': null, null: 'validValue', 'goodKey': 'goodValue'] |
-        [null: 'validValue', 'goodKey': 'goodValue']
-        and:
-        // Real-world example with Nextflow resource labels
-        [
-            'uniqueRunId': 'tw-12345-workflow-run',
-            'taskHash': 'task.hash.0x1a2b3c4d#special',
-            'pipelineUser': 'user@domain.com',
-            'pipelineRunName': 'my-pipeline-run(2024)',
-            'pipelineSessionId': 'session#id$with%special&chars',
-            'pipelineResume': 'false',
-            'pipelineName': 'my_pipeline/name:version+tag'
-        ] |
-        [
-            'uniqueRunId': 'tw-12345-workflow-run',
-            'taskHash': 'task.hash.0x1a2b3c4d_special',
-            'pipelineUser': 'user@domain.com',
-            'pipelineRunName': 'my-pipeline-run_2024',
-            'pipelineSessionId': 'session_id_with_special_chars',
-            'pipelineResume': 'false',
-            'pipelineName': 'my_pipeline/name:version+tag'
-        ]
+        // Null/empty handling
+        null | false | null
+        [:] | false | [:]
+        ['validKey': null, 'goodKey': 'goodValue'] | false | ['goodKey': 'goodValue']
     }
 
-    def 'should apply label sanitization in submit request' () {
+    def 'should validate labels in submit request with warnings in normal mode' () {
         given:
         def task = Mock(TaskRun)
         task.getName() >> 'batch-task'
@@ -1265,109 +1223,120 @@ class AwsBatchTaskHandlerTest extends Specification {
             cpus: 4,
             resourceLabels: [
                 'validLabel': 'validValue',
-                'invalid#key': 'invalid$value',
-                'long-key-that-might-be-truncated-if-very-very-long': 'long-value-that-should-be-truncated-because-it-exceeds-the-maximum-allowed-length-for-aws-batch-tags-which-is-256-characters-and-this-string-is-definitely-longer-than-that-limit-so-it-will-be-cut-off-at-the-appropriate-length-and-cleaned-up'
+                'invalid#key': 'invalid$value',  // Invalid characters
+                ('keyThatIsTooLongForAwsBatchWhichHas128CharacterLimit' + 'AndWillCauseValidationToFailWithASpecificErrorMessageThatTellsTheUserWhatWentWrong'): 'value'
             ]
         )
 
-        def handler = Spy(AwsBatchTaskHandler)
+        def session = Mock(Session) {
+            getConfig() >> Mock(ConfigObject) {
+                navigate('nextflow.enable.strict', false) >> false  // Normal mode
+            }
+        }
+        def executor = Mock(AwsBatchExecutor) { getSession() >> session }
+        def handler = Spy(AwsBatchTaskHandler) { getExecutor() >> executor }
+        handler.@executor = executor
 
         when:
         def req = handler.newSubmitRequest(task)
         then:
         1 * handler.getSubmitCommand() >> ['bash', '-c', 'test']
         1 * handler.maxSpotAttempts() >> 0
-        1 * handler.getAwsOptions() >> new AwsOptions(awsConfig: new AwsConfig(batch: [sanitizeTags: true]))
+        1 * handler.getAwsOptions() >> new AwsOptions()
         1 * handler.getJobQueue(task) >> 'test-queue'
         1 * handler.getJobDefinition(task) >> 'test-job-def'
         1 * handler.getEnvironmentVars() >> []
 
-        and:
+        and: 'labels should be passed through unchanged despite validation warnings'
         def tags = req.tags()
         tags.size() == 3
         tags['validLabel'] == 'validValue'
-        tags['invalid_key'] == 'invalid_value'
-        // Check that long value was truncated
-        tags['long-key-that-might-be-truncated-if-very-very-long'].length() <= 256
-        tags['long-key-that-might-be-truncated-if-very-very-long'].startsWith('long-value-that-should-be-truncated')
-        !tags['long-key-that-might-be-truncated-if-very-very-long'].endsWith('_')
+        tags['invalid#key'] == 'invalid$value'  // Unchanged despite invalid characters
+        tags.containsKey('keyThatIsTooLongForAwsBatchWhichHas128CharacterLimit' + 'AndWillCauseValidationToFailWithASpecificErrorMessageThatTellsTheUserWhatWentWrong')
         req.propagateTags() == true
     }
 
-    def 'should not sanitize labels when sanitizeTags config is disabled'() {
+    def 'should throw exception in strict mode for invalid labels' () {
+        given:
+        def labels = [
+            'validLabel': 'validValue',
+            'invalid#key': 'invalid$value',  // Invalid characters should cause exception
+            ('keyThatIsTooLongForAwsBatchWhichHas128CharacterLimit' + 'AndWillCauseValidationToFailWithASpecificErrorMessageThatTellsTheUserWhatWentWrong'): 'value'
+        ]
+
+        def config = ['nextflow': ['enable': ['strict': true]]]
+        def session = Mock(Session) {
+            getConfig() >> config
+        }
+        def executor = Mock(AwsBatchExecutor) { getSession() >> session }
+        def handler = Spy(AwsBatchTaskHandler)
+        handler.@executor = executor
+
+        when:
+        handler.validateAwsBatchLabels(labels)
+        
+        then: 'exception should be thrown for invalid labels in strict mode'
+        thrown(ProcessUnrecoverableException)
+    }
+
+    def 'should pass through valid labels in both normal and strict mode' () {
         given:
         def task = Mock(TaskRun)
         task.getName() >> 'batch-task'
         task.getConfig() >> new TaskConfig(
             resourceLabels: [
                 'validLabel': 'validValue',
-                'invalid#key': 'invalid$value', // These should NOT be sanitized
-                'special*chars?here': 'value with spaces & symbols!'
+                'valid-key_123': 'valid-value_456',
+                'key.with:path/chars=test+more@symbol': 'value with spaces'
             ]
         )
 
-        def handler = Spy(AwsBatchTaskHandler)
+        def session = Mock(Session) {
+            getConfig() >> Mock(ConfigObject) {
+                navigate('nextflow.enable.strict', false) >> strictMode
+            }
+        }
+        def executor = Mock(AwsBatchExecutor) { getSession() >> session }
+        def handler = Spy(AwsBatchTaskHandler) { getExecutor() >> executor }
+        handler.@executor = executor
 
         when:
         def req = handler.newSubmitRequest(task)
         then:
         1 * handler.getSubmitCommand() >> ['bash', '-c', 'test']
         1 * handler.maxSpotAttempts() >> 0
-        1 * handler.getAwsOptions() >> new AwsOptions(awsConfig: new AwsConfig(batch: [sanitizeTags: false]))
+        1 * handler.getAwsOptions() >> new AwsOptions()
         1 * handler.getJobQueue(task) >> 'test-queue'
         1 * handler.getJobDefinition(task) >> 'test-job-def'
         1 * handler.getEnvironmentVars() >> []
 
-        and: 'labels should remain unchanged (not sanitized)'
+        and: 'valid labels should pass through unchanged'
         def tags = req.tags()
         tags.size() == 3
         tags['validLabel'] == 'validValue'
-        tags['invalid#key'] == 'invalid$value'  // Should still contain invalid characters
-        tags['special*chars?here'] == 'value with spaces & symbols!'  // Should still contain invalid characters
+        tags['valid-key_123'] == 'valid-value_456'
+        tags['key.with:path/chars=test+more@symbol'] == 'value with spaces'
         req.propagateTags() == true
-    }
 
-    def 'should not sanitize labels by default when no sanitizeTags config is specified'() {
-        given:
-        def task = Mock(TaskRun)
-        task.getName() >> 'batch-task'
-        task.getConfig() >> new TaskConfig(
-            resourceLabels: [
-                'validLabel': 'validValue',
-                'invalid#key': 'invalid$value', // These should NOT be sanitized by default
-                'test&symbol': 'value(with)brackets'
-            ]
-        )
-
-        def handler = Spy(AwsBatchTaskHandler)
-
-        when:
-        def req = handler.newSubmitRequest(task)
-        then:
-        1 * handler.getSubmitCommand() >> ['bash', '-c', 'test']
-        1 * handler.maxSpotAttempts() >> 0
-        1 * handler.getAwsOptions() >> new AwsOptions() // No config specified, should default to false
-        1 * handler.getJobQueue(task) >> 'test-queue'
-        1 * handler.getJobDefinition(task) >> 'test-job-def'
-        1 * handler.getEnvironmentVars() >> []
-
-        and: 'labels should remain unchanged (not sanitized by default)'
-        def tags = req.tags()
-        tags.size() == 3
-        tags['validLabel'] == 'validValue'
-        tags['invalid#key'] == 'invalid$value'  // Should still contain invalid characters
-        tags['test&symbol'] == 'value(with)brackets'  // Should still contain invalid characters
-        req.propagateTags() == true
+        where:
+        strictMode << [false, true]  // Test both normal and strict modes
     }
 
     @Unroll
     @See("https://github.com/nextflow-io/nextflow/pull/6211#discussion_r2161928856")
-    def 'should handle null values in labels with explicit logging'() {
+    def 'should handle null values in labels during validation'() {
         given:
         def handler = Spy(AwsBatchTaskHandler)
+        def session = Mock(Session) {
+            getConfig() >> Mock(ConfigObject) {
+                navigate('nextflow.enable.strict', false) >> false  // Normal mode
+            }
+        }
+        def executor = Mock(AwsBatchExecutor) { getSession() >> session }
+        handler.@executor = executor
 
         expect:
-        handler.sanitizeAwsBatchLabels(INPUT) == EXPECTED
+        handler.validateAwsBatchLabels(INPUT) == EXPECTED
 
         where:
         INPUT | EXPECTED
@@ -1380,20 +1349,27 @@ class AwsBatchTaskHandlerTest extends Specification {
         // All null values
         ['key1': null, 'key2': null] | [:]
 
-        // Mix of null and empty string (which becomes null after sanitization)
-        ['nullValue': null, 'emptyValue': '', 'validValue': 'good'] | ['validValue': 'good']
+        // Mix of null and empty string
+        ['nullValue': null, 'emptyValue': '', 'validValue': 'good'] | ['emptyValue': '', 'validValue': 'good']
     }
 
     @See("https://github.com/nextflow-io/nextflow/pull/6211#discussion_r2161928856")
-    def 'should handle null keys in labels with explicit logging'() {
+    def 'should handle null keys in labels during validation'() {
         given:
         def handler = Spy(AwsBatchTaskHandler)
+        def session = Mock(Session) {
+            getConfig() >> Mock(ConfigObject) {
+                navigate('nextflow.enable.strict', false) >> false  // Normal mode
+            }
+        }
+        def executor = Mock(AwsBatchExecutor) { getSession() >> session }
+        handler.@executor = executor
 
         when: 'creating map with actual null key'
         def labels = new HashMap<String, String>()
         labels.put(null, 'validValue')
         labels.put('validKey', 'validValue')
-        def result = handler.sanitizeAwsBatchLabels(labels)
+        def result = handler.validateAwsBatchLabels(labels)
 
         then: 'null key is dropped'
         result.size() == 1
@@ -1402,9 +1378,16 @@ class AwsBatchTaskHandlerTest extends Specification {
     }
 
     @See("https://github.com/nextflow-io/nextflow/pull/6211#discussion_r2161928856")
-    def 'should handle both null keys and values'() {
+    def 'should handle both null keys and values during validation'() {
         given:
         def handler = Spy(AwsBatchTaskHandler)
+        def session = Mock(Session) {
+            getConfig() >> Mock(ConfigObject) {
+                navigate('nextflow.enable.strict', false) >> false  // Normal mode
+            }
+        }
+        def executor = Mock(AwsBatchExecutor) { getSession() >> session }
+        handler.@executor = executor
 
         when: 'creating map with null key and null values'
         def labels = new HashMap<String, String>()
@@ -1412,7 +1395,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         labels.put('nullValue', null)    // null value
         labels.put(null, null)           // both null (overwrites previous null key)
         labels.put('validKey', 'validValue')
-        def result = handler.sanitizeAwsBatchLabels(labels)
+        def result = handler.validateAwsBatchLabels(labels)
 
         then: 'only valid entry remains'
         result.size() == 1
@@ -1422,17 +1405,24 @@ class AwsBatchTaskHandlerTest extends Specification {
     }
 
     @See("https://github.com/nextflow-io/nextflow/pull/6211#discussion_r2161928856")
-    def 'should verify logging behavior for null handling'() {
+    def 'should verify logging behavior for null handling during validation'() {
         given:
         def handler = new AwsBatchTaskHandler()
+        def config = ['nextflow': ['enable': ['strict': false]]]
+        def session = Mock(Session) {
+            getConfig() >> config
+        }
+        def executor = Mock(AwsBatchExecutor) { getSession() >> session }
+        handler.@executor = executor
+        
         def logAppender = Mock(ch.qos.logback.core.Appender)
         def logger = (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger(AwsBatchTaskHandler)
         logger.addAppender(logAppender)
         logger.setLevel(ch.qos.logback.classic.Level.WARN)
 
-        when: 'sanitizing labels with null values'
+        when: 'validating labels with null values'
         def labels = ['item': null, 'validKey': 'validValue']  // This is the exact case from PR comment
-        handler.sanitizeAwsBatchLabels(labels)
+        handler.validateAwsBatchLabels(labels)
 
         then: 'warning is logged for null value'
         1 * logAppender.doAppend(_) >> { args ->
@@ -1446,19 +1436,26 @@ class AwsBatchTaskHandlerTest extends Specification {
     }
 
     @See("https://github.com/nextflow-io/nextflow/pull/6211#discussion_r2161928856")
-    def 'should verify no silent dropping - PR comment verification'() {
+    def 'should verify no silent dropping during validation - PR comment verification'() {
         given: 'This test specifically addresses the PR comment about silent dropping'
         def handler = Spy(AwsBatchTaskHandler)
+        def session = Mock(Session) {
+            getConfig() >> Mock(ConfigObject) {
+                navigate('nextflow.enable.strict', false) >> false  // Normal mode
+            }
+        }
+        def executor = Mock(AwsBatchExecutor) { getSession() >> session }
+        handler.@executor = executor
 
         when: 'processing the exact scenario from PR comment'
         def labels = ['item': null]  // "when the item is "item": null is the aws tag silently dropped?"
-        def result = handler.sanitizeAwsBatchLabels(labels)
+        def result = handler.validateAwsBatchLabels(labels)
 
         then: 'result is empty (tag is dropped)'
         result == [:]
 
         and: 'the method properly logs the dropped label (verified by observing the actual log output in test execution)'
-        // The actual logging is verified by the "should verify logging behavior for null handling" test above
+        // The actual logging is verified by the "should verify logging behavior for null handling during validation" test above
         // This test focuses on the functional behavior: null values are correctly dropped from the result
         true  // The key point is that silent dropping has been replaced with logged dropping
     }

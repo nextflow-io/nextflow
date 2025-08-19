@@ -164,8 +164,4 @@ class AwsOptions implements CloudTransferOptions {
         return awsConfig.batchConfig.terminateUnschedulableJobs
     }
 
-    Boolean sanitizeTags() {
-        return awsConfig.batchConfig.sanitizeTags
-    }
-
 }

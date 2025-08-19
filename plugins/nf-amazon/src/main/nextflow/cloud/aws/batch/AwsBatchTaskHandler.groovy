@@ -779,7 +779,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         builder.jobQueue(getJobQueue(task))
         builder.jobDefinition(getJobDefinition(task))
         if( labels ) {
-            final tags = opts.sanitizeTags() ? sanitizeAwsBatchLabels(labels) : labels
+            final tags = validateAwsBatchLabels(labels)
             builder.tags(tags)
             builder.propagateTags(true)
         }
@@ -866,76 +866,95 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     }
 
     /**
-     * Sanitize resource labels to comply with AWS Batch tag requirements.
-     * AWS Batch tags have specific constraints:
-     * - Keys and values can contain: letters, numbers, spaces, and characters: _ . : / = + - @
-     * - Maximum key length: 128 characters
+     * Validate AWS Batch labels for compliance with AWS naming requirements.
+     * This method validates resource labels against AWS Batch tag constraints and
+     * handles violations based on the nextflow.enable.strict setting:
+     * 
+     * - When strict mode is disabled (default): logs warnings for invalid tags but allows them through
+     * - When strict mode is enabled: throws ProcessUnrecoverableException for invalid tags
+     *
+     * AWS Batch tag constraints validated:
+     * - Keys and values cannot be null
+     * - Maximum key length: 128 characters  
      * - Maximum value length: 256 characters
+     * - Allowed characters: letters, numbers, spaces, and: _ . : / = + - @
      *
      * @param labels The original resource labels map
-     * @return A new map with sanitized labels suitable for AWS Batch tags
+     * @return The labels map (unchanged in validation mode)
+     * @throws ProcessUnrecoverableException when strict mode is enabled and labels are invalid
      */
-    protected Map<String, String> sanitizeAwsBatchLabels(Map<String, String> labels) {
+    protected Map<String, String> validateAwsBatchLabels(Map<String, String> labels) {
         if (!labels) return labels
 
-        final result = new LinkedHashMap<String, String>()
+        final strictMode = executor.session.config.navigate('nextflow.enable.strict', false)
+        final violations = []
+        final result = new HashMap<String, String>()
 
         for (Map.Entry<String, String> entry : labels.entrySet()) {
             final key = entry.getKey()
             final value = entry.getValue()
 
-            // Handle null keys or values
-            if (key == null || value == null) {
-                log.warn "AWS Batch label dropped due to null ${key == null ? 'key' : 'value'}: key=${key}, value=${value}"
+            // Check for null keys or values and filter them out (not validation violations)
+            if (key == null) {
+                log.warn "AWS Batch label dropped due to null key: key=null, value=${value}"
+                continue
+            }
+            if (value == null) {
+                log.warn "AWS Batch label dropped due to null value: key=${key}, value=null"
                 continue
             }
 
-            final originalKey = key.toString()
-            final originalValue = value.toString()
-            final sanitizedKey = sanitizeAwsBatchLabel(originalKey, 128)
-            final sanitizedValue = sanitizeAwsBatchLabel(originalValue, 256)
-
-            // Check if sanitization resulted in empty strings
-            if (!sanitizedKey || !sanitizedValue) {
-                log.warn "AWS Batch label dropped after sanitization - key: '${originalKey}' -> '${sanitizedKey ?: ''}', value: '${originalValue}' -> '${sanitizedValue ?: ''}'"
-                continue
+            final keyStr = key.toString()
+            final valueStr = value.toString()
+            
+            // Validate key length
+            if (keyStr.length() > 128) {
+                violations << "Label key exceeds 128 characters: '${keyStr}' (${keyStr.length()} chars)"
+            }
+            
+            // Validate value length  
+            if (valueStr.length() > 256) {
+                violations << "Label value exceeds 256 characters: '${keyStr}' = '${valueStr}' (${valueStr.length()} chars)"
+            }
+            
+            // Validate key characters
+            if (!isValidAwsBatchTagString(keyStr)) {
+                violations << "Label key contains invalid characters: '${keyStr}' - only letters, numbers, spaces, and _ . : / = + - @ are allowed"
+            }
+            
+            // Validate value characters
+            if (!isValidAwsBatchTagString(valueStr)) {
+                violations << "Label value contains invalid characters: '${keyStr}' = '${valueStr}' - only letters, numbers, spaces, and _ . : / = + - @ are allowed"
             }
 
-            // Log if values were modified during sanitization
-            if (sanitizedKey != originalKey || sanitizedValue != originalValue) {
-                log.warn "AWS Batch label sanitized - key: '${originalKey}' -> '${sanitizedKey}', value: '${originalValue}' -> '${sanitizedValue}'"
-            }
+            // Add valid entries to result
+            result[keyStr] = valueStr
+        }
 
-            result.put(sanitizedKey, sanitizedValue)
+        // Handle violations based on strict mode (but only for constraint violations, not null filtering)
+        if (violations) {
+            final message = "AWS Batch tag validation failed:\n${violations.collect{ '  - ' + it }.join('\n')}"
+            if (strictMode) {
+                throw new ProcessUnrecoverableException(message)
+            } else {
+                log.warn "${message}\nTags will be used as-is but may cause AWS Batch submission failures"
+            }
         }
 
         return result
     }
 
     /**
-     * Sanitize a single label key or value for AWS Batch tags.
-     * Replaces invalid characters with underscores and truncates if necessary.
-     *
-     * @param input The input string to sanitize
-     * @param maxLength The maximum allowed length
-     * @return The sanitized string
+     * Check if a string contains only characters allowed in AWS Batch tags.
+     * AWS Batch allows: letters, numbers, spaces, and: _ . : / = + - @
+     * 
+     * @param input The string to validate
+     * @return true if the string contains only valid characters
      */
-    protected String sanitizeAwsBatchLabel(String input, int maxLength) {
-        if (!input) return input
-
-        // Replace invalid characters and clean up the string
-        // AWS Batch allows: letters, numbers, spaces, and: _ . : / = + - @
-        final sanitized = input
-            .replaceAll(/[^a-zA-Z0-9\s_.\:\/=+\-@]/, '_')  // Replace invalid chars with underscores
-            .replaceAll(/[_\s]{2,}/, '_')                    // Replace multiple consecutive underscores/spaces
-            .replaceAll(/^[_\s]+|[_\s]+$/, '')              // Remove leading/trailing underscores and spaces
-
-        // Truncate if necessary and clean up any trailing underscores/spaces
-        final result = sanitized.size() > maxLength
-            ? sanitized.substring(0, maxLength).replaceAll(/[_\s]+$/, '')
-            : sanitized
-
-        return result ?: null
+    protected boolean isValidAwsBatchTagString(String input, int maxLength = 128) {
+        if (!input) return false
+        if (input.length() > maxLength) return false
+        return input ==~ /^[a-zA-Z0-9\s_.\:\/=+\-@]*$/
     }
 
     /**
