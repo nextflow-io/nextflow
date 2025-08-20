@@ -39,6 +39,7 @@ dependencies {
     api 'org.yaml:snakeyaml:2.2'
     api 'io.seqera:wave-api:0.16.0'
     api 'io.seqera:wave-utils:0.15.1'
+    api 'io.seqera:lib-httpx:1.2.0'
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation "org.apache.groovy:groovy:4.0.28"
