@@ -42,6 +42,7 @@ import com.google.common.hash.Hashing;
 import com.google.common.io.ByteStreams;
 import nextflow.Global;
 import nextflow.ISession;
+import nextflow.SysEnv;
 import nextflow.extension.Bolts;
 import nextflow.extension.FilesEx;
 import nextflow.file.FileHolder;
@@ -68,6 +69,8 @@ public class HashBuilder {
     private static final int HASH_BYTES = HASH_BITS / 8;
 
     private static final Map<String,Object> FIRST_ONLY;
+
+    private static final boolean PATCH_UNORDERED_DIR = SysEnv.getBool("NXF_PATCH_UNORDERED_DIR", false);
 
     static {
         FIRST_ONLY = new HashMap<>(1);
@@ -323,6 +326,10 @@ public class HashBuilder {
     }
 
     static protected Hasher hashDirSha256( Hasher hasher, Path dir, Path base ) {
+        if( PATCH_UNORDERED_DIR ) {
+            return hashDirSha256Patched(hasher, dir, base);
+        }
+
         try {
             Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
                 public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) throws IOException {
@@ -441,6 +448,9 @@ public class HashBuilder {
     }
 
     static private Hasher hashUnorderedCollection(Hasher hasher, Collection collection, HashMode mode)  {
+        if( PATCH_UNORDERED_DIR ) {
+            return hashUnorderedCollectionPatched(hasher, collection, mode);
+        }
 
         byte[] resultBytes = new byte[HASH_BYTES];
         for (Object item : collection) {
@@ -477,4 +487,99 @@ public class HashBuilder {
         return path.startsWith(session.getBaseDir());
     }
 
+    // ------------------------------------------------------------------
+    // implement patched hashing for unordered collections and file dir
+
+    
+    static private Hasher hashUnorderedCollectionPatched(Hasher hasher, Collection collection, HashMode mode)  {
+        byte[] resultBytes = new byte[HASH_BYTES];
+        for (Object item : collection) {
+            // hash ghe collection item
+            byte[] nextBytes = hashBytes(item, mode);
+            // sum the hash bytes to the "resultBytes" accumulator
+            // since the sum is a commutative operation the order does not matter
+            sumBytes(resultBytes, nextBytes);
+        }
+        // add the result bytes and return the resulting object
+        return hasher.putBytes(resultBytes);
+    }
+
+    static protected Hasher hashDirSha256Patched( Hasher hasher, Path dir, Path base ) {
+        if( base==null )
+            throw new IllegalArgumentException("Argument 'base' cannot be null");
+        // the byte array used as "accumulator" for
+        final byte[] resultBytes = new byte[HASH_BYTES];
+        try {
+            Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
+                public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) throws IOException {
+                    log.trace("Hash sha-256 dir content [FILE] path={} - base={}", path, base);
+                    try {
+                        // the file relative base
+                        final String relPath = base.relativize(path).toString();
+                        // the file content sha-256 checksum
+                        final String sha256 = sha256Cache.get(path);
+                        // compute the file path hash and sum to the result hash
+                        // since the sum is commutative, the traverse order does not matter
+                        // compute a hash of the (file path, file hash) pair.
+                        // since the sum is commutative, the resulting hash in `resultBytes` is invariant to the file traversal order.
+                        // however, the file path and file hash do need to be processed together,
+                        // otherwise this introduces an edge case with directories with similar contents with have the same sha (see nextflow-io/nextflow#6198)
+                        sumBytes(resultBytes, hashBytes(Map.entry(relPath, sha256), HashMode.STANDARD));
+                        return FileVisitResult.CONTINUE;
+                    }
+                    catch (ExecutionException t) {
+                        throw new IOException(t);
+                    }
+                }
+
+                public FileVisitResult preVisitDirectory(Path path, BasicFileAttributes attrs) {
+                    log.trace("Hash sha-256 dir content [DIR] path={} - base={}", path, base);
+                    // the file relative base
+                    final String relPath = base.relativize(path).toString();
+                    // compute the file path hash and sum to the result hash
+                    // since the sum is commutative, the traverse order does not matter
+                    sumBytes(resultBytes, hashBytes(relPath, HashMode.STANDARD));
+                    return FileVisitResult.CONTINUE;
+                }
+            });
+            // finally put the result bytes in the hashing
+            hasher.putBytes(resultBytes);
+        }
+        catch (IOException t) {
+            Throwable err = t.getCause()!=null ? t.getCause() : t;
+            String msg = err.getMessage()!=null ? err.getMessage() : err.toString();
+            log.warn("Unable to compute sha-256 hashing for directory: {} - Cause: {}", FilesEx.toUriString(dir), msg);
+        }
+        return hasher;
+    }
+
+    static private byte[] hashBytes(Object item, HashMode mode) {
+        return hasher(defaultHasher(), item, mode).hash().asBytes();
+    }
+
+    /**
+     * Sum two arras of bytes having the same length, required to compute hash of unordered collections.
+     *
+     * - For each byte position, add the corresponding byte from nextBytes into resultBytes
+     * - Order doesn't matter: addition is commutative (a + b = b + a), so the final result is
+     *   the same no matter the order of items.
+     * - This is what makes it suitable for unordered collections
+     *
+     * @param resultBytes
+     *      The first argument to be summed. This array is used as the accumulator array (i.e. the result)
+     * @param nextBytes
+     *      The second argument to be summed.
+     * @return
+     *      The array resulting adding the bytes in the second array to the first one. Note,
+     *      the result array instance is the same object passed as first argument.
+     *
+     */
+    static private byte[] sumBytes(byte[] resultBytes, byte[] nextBytes) {
+        if( nextBytes.length != resultBytes.length )
+            throw new IllegalStateException("All hash codes must have the same bit length");
+        for (int i = 0; i < nextBytes.length; i++) {
+            resultBytes[i] += nextBytes[i];
+        }
+        return resultBytes;
+    }
 }
