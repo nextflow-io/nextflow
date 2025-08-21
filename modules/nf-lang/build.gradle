@@ -17,6 +17,10 @@ plugins {
   id 'antlr'
 }
 
+compileJava {
+  options.compilerArgs << '-parameters' 
+}
+
 dependencies {
   antlr 'me.sunlan:antlr4:4.13.2.6'
   api 'org.apache.groovy:groovy:4.0.28'
