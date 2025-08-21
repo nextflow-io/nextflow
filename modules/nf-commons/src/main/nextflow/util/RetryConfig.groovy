@@ -68,17 +68,18 @@ class RetryConfig implements Retryable.Config {
             valueOf(config, 'multiplier', ENV_PREFIX, DEFAULT_MULTIPLIER, Double)
     }
 
-    java.time.Duration getDelay() {
-        return java.time.Duration.ofMillis(delay.toMillis())
+    Duration getDelay() {
+        return delay
     }
 
-    java.time.Duration getMaxDelay() {
-        return java.time.Duration.ofMillis(maxDelay.toMillis())
+    Duration getMaxDelay() {
+        return maxDelay
     }
 
     @Override
     int getMaxAttempts() {
-        return maxAttempts }
+        return maxAttempts
+    }
 
     @Override
     double getJitter() {

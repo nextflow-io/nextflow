@@ -20,6 +20,7 @@ package io.seqera.wave.plugin.config
 import io.seqera.wave.api.BuildCompression
 import io.seqera.wave.api.ScanLevel
 import io.seqera.wave.api.ScanMode
+import nextflow.util.Duration
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -146,17 +147,17 @@ class WaveConfigTest extends Specification {
         when:
         def opts = new WaveConfig([:])
         then:
-        opts.retryOpts().delay == java.time.Duration.ofMillis(450)
+        opts.retryOpts().delay == Duration.of('450ms')
         opts.retryOpts().maxAttempts == 5
-        opts.retryOpts().maxDelay == java.time.Duration.ofSeconds(90)
+        opts.retryOpts().maxDelay == Duration.of('90s')
 
         when:
         opts = new WaveConfig([retryPolicy:[ maxAttempts: 20, jitter: 1.0, delay: '1s', maxDelay: '10s' ]])
         then:
         opts.retryOpts().maxAttempts == 20
         opts.retryOpts().jitter == 1.0d
-        opts.retryOpts().delay == java.time.Duration.ofSeconds(1)
-        opts.retryOpts().maxDelay == java.time.Duration.ofSeconds(10)
+        opts.retryOpts().delay == Duration.of('1s')
+        opts.retryOpts().maxDelay == Duration.of('10s')
 
         // legacy
         when:
@@ -164,8 +165,8 @@ class WaveConfigTest extends Specification {
         then:
         opts.retryOpts().maxAttempts == 10
         opts.retryOpts().jitter == 2.0d
-        opts.retryOpts().delay == java.time.Duration.ofSeconds(3)
-        opts.retryOpts().maxDelay == java.time.Duration.ofSeconds(40)
+        opts.retryOpts().delay == Duration.of('3s')
+        opts.retryOpts().maxDelay == Duration.of('40s')
     }
 
     def 'should get http config options' () {
@@ -184,7 +185,7 @@ class WaveConfigTest extends Specification {
         given:
         def config = new WaveConfig([enabled: true])
         expect:
-        config.toString() == 'WaveConfig(build:BuildOpts(repository:null, cacheRepository:null, conda:CondaOpts(mambaImage=mambaorg/micromamba:1.5.10-noble; basePackages=conda-forge::procps-ng, commands=null), compression:null, maxDuration:40m), enabled:true, endpoint:https://wave.seqera.io, freeze:false, httpClient:HttpOpts(), mirror:false, retryPolicy:RetryOpts(delay:PT0.45S, maxDelay:PT1M30S, maxAttempts:5, jitter:0.25, multiplier:2.0), scan:ScanOpts(allowedLevels:null, mode:null), strategy:[container, dockerfile, conda], bundleProjectResources:null, containerConfigUrl:[], preserveFileTimestamp:null, tokensCacheMaxDuration:30m)'
+        config.toString() == 'WaveConfig(build:BuildOpts(repository:null, cacheRepository:null, conda:CondaOpts(mambaImage=mambaorg/micromamba:1.5.10-noble; basePackages=conda-forge::procps-ng, commands=null), compression:null, maxDuration:40m), enabled:true, endpoint:https://wave.seqera.io, freeze:false, httpClient:HttpOpts(), mirror:false, retryPolicy:RetryOpts(delay:450ms, maxDelay:1m 30s, maxAttempts:5, jitter:0.25, multiplier:2.0), scan:ScanOpts(allowedLevels:null, mode:null), strategy:[container, dockerfile, conda], bundleProjectResources:null, containerConfigUrl:[], preserveFileTimestamp:null, tokensCacheMaxDuration:30m)'
     }
 
     def 'should not allow invalid setting' () {

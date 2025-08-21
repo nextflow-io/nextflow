@@ -62,16 +62,6 @@ class RetryOpts implements ConfigScope, Retryable.Config {
     """)
     double multiplier = 2;
 
-    @Override
-    java.time.Duration getDelay() {
-        return java.time.Duration.ofMillis(delay.toMillis())
-    }
-
-    @Override
-    java.time.Duration getMaxDelay() {
-        return java.time.Duration.ofMillis(maxDelay.toMillis())
-    }
-
     RetryOpts() {
         this(Collections.emptyMap())
     }
@@ -85,5 +75,7 @@ class RetryOpts implements ConfigScope, Retryable.Config {
             maxAttempts = config.maxAttempts as int
         if( config.jitter )
             jitter = config.jitter as double
+        if( config.multiplier )
+            multiplier = config.multiplier as double
     }
 }
