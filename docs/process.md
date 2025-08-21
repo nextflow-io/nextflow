@@ -1255,16 +1255,16 @@ To be defined dynamically, the directive's value needs to be expressed using a {
 
 ```nextflow
 process hello {
-    executor 'sge'
-    queue { entries > 100 ? 'long' : 'short' }
+  executor 'sge'
+  queue { entries > 100 ? 'long' : 'short' }
 
-    input:
-    tuple val(entries), path('data.txt')
+  input:
+  tuple val(entries), path('data.txt')
 
-    script:
-    """
-    your_command --here
-    """
+  script:
+  """
+  your_command --here
+  """
 }
 ```
 
@@ -1279,17 +1279,13 @@ All directives can be assigned a dynamic value except the following:
 :::{versionadded} 25.10
 :::
 
-Dynamic directives do not need to be wrapped in a closure when using the {ref}`strict syntax <strict-syntax-page>`:
+Dynamic directives can be specified without a closure when using the {ref}`strict syntax <strict-syntax-page>`:
 
 ```nextflow
 queue (entries > 100 ? 'long' : 'short')
 ```
 
-Nextflow will evaluate this directive dynamically if it references task inputs. Directives that use an explicit closure are still resolved dynamically.
-
-:::{note}
-Process configuration options must still be specified with a closure in order to be dynamic.
-:::
+Directives will be evaluated dynamically if they reference task inputs. Process configuration options must still be specified with a closure to be dynamic.
 
 (dynamic-task-resources)=
 
@@ -1329,9 +1325,6 @@ disk 375.GB, type: 'local-ssd'
 
 // dynamic request
 disk { [request: 375.GB * task.attempt, type: 'local-ssd'] }
-
-// dynamic request (25.10 or later, NXF_SYNTAX_PARSER=v2)
-disk request: 375.GB * task.attempt, type: 'local-ssd'
 ```
 :::
 
