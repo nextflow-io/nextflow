@@ -22,6 +22,13 @@ import groovy.util.logging.Slf4j
 import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskRun
 
+/*
+ * Implements a executor for Fujitsu Technical Computing Suite
+ *
+ * https://software.fujitsu.com/jp/manual/manualindex/p21000155e.html
+ *
+ * @author Satoshi Ohshima <ohshima@cc.kyushu-u.ac.jp>
+ */
 @Slf4j
 @CompileStatic
 class TcsExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
