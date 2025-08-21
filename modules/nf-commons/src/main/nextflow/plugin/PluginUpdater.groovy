@@ -239,10 +239,8 @@ class PluginUpdater extends UpdateManager {
         // 2. download to temporary location
         Path downloaded = safeDownloadPlugin(id, version);
 
-        // 3. rename if filename is sha digest
-        // when the plugin is downloaded from the (OCI) registry, it is named as "sha256:<CHECKSUM>"
-        // rename it to something meaningful using the target plugin path
-        if ( downloaded.getFileName().toString().startsWith("sha256:")) {
+        // 3. rename to match the expected name
+        if ( downloaded.getFileName().toString() != "${pluginPath.getFileName()}.zip" ) {
             final targetName = downloaded.resolveSibling("${pluginPath.getFileName()}.zip")
             if ( !Files.move(downloaded, targetName) ) throw new PluginRuntimeException("Failed to rename '$downloaded'")
             downloaded = targetName

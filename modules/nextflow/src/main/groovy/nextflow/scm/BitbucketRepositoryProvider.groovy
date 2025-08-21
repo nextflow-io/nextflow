@@ -19,6 +19,9 @@ package nextflow.scm
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
+import org.eclipse.jgit.transport.CredentialsProvider
+import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
+
 /**
  * Implements a repository provider for the BitBucket service
  *
@@ -41,19 +44,28 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
 
     @Override
     protected String[] getAuth() {
-        return config.token
-            ? new String[] { "Authorization", "Bearer ${config.token}" }
-            : super.getAuth()
+        if (!hasCredentials()) {
+            return null
+        }
+
+        String secret = getToken() ?: getPassword()
+        String authString = "${getUser()}:${secret}".bytes.encodeBase64().toString()
+
+        return new String[] { "Authorization", "Basic " + authString }
     }
 
     @Override
     boolean hasCredentials() {
-        return getToken()
-            ? true
-            : super.hasCredentials()
+        return getUser() && (getPassword() || getToken())
     }
 
-   /** {@inheritDoc} */
+    /** {@inheritDoc} */
+    @Override
+    CredentialsProvider getGitCredentials() {
+        return new UsernamePasswordCredentialsProvider(getUser(), getToken() ?: getPassword())
+    }
+
+    /** {@inheritDoc} */
     @Override
     String getName() { "BitBucket" }
 
@@ -163,7 +175,12 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
         if( !result )
             throw new IllegalStateException("Missing clone URL for: $project")
 
-        return result.href
+        /**
+         * The clone URL when an API token is used is of the form: https://{bitbucket_username}:{api_token}@bitbucket.org/{workspace}/{repository}.git
+         * @see <a href="https://support.atlassian.com/bitbucket-cloud/docs/using-api-tokens/">Using API tokens</a>
+         */
+        String cloneUrl = result.href
+        return getToken() ? cloneUrl.replace('@', ":${getToken()}@") : cloneUrl
     }
 
     @Override
