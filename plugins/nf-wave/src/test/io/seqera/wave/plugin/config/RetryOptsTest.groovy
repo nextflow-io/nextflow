@@ -18,7 +18,9 @@
 package io.seqera.wave.plugin.config
 
 
+import nextflow.util.Duration
 import spock.lang.Specification
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -26,17 +28,20 @@ import spock.lang.Specification
 class RetryOptsTest extends Specification {
 
     def 'should create retry config' () {
+
         expect:
-        new RetryOpts().delay == java.time.Duration.ofMillis(450)
-        new RetryOpts().maxDelay == java.time.Duration.ofSeconds(90)
+        new RetryOpts().delay == Duration.of('450ms')
+        new RetryOpts().maxDelay == Duration.of('90s')
         new RetryOpts().maxAttempts == 5
         new RetryOpts().jitter == 0.25d
+        new RetryOpts().multiplier == 2.0d
 
         and:
         new RetryOpts([maxAttempts: 20]).maxAttempts == 20
-        new RetryOpts([delay: '1s']).delay == java.time.Duration.ofSeconds(1)
-        new RetryOpts([maxDelay: '1m']).maxDelay == java.time.Duration.ofMinutes(1)
+        new RetryOpts([delay: '1s']).delay == Duration.of('1s')
+        new RetryOpts([maxDelay: '1m']).maxDelay == Duration.of('1m')
         new RetryOpts([jitter: '0.5']).jitter == 0.5d
+        new RetryOpts([multiplier: '5.0']).multiplier == 5.0d
     }
 
 }

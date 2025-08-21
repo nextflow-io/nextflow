@@ -17,7 +17,7 @@
 
 package io.seqera.tower.plugin
 
-import java.nio.file.Path
+
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
