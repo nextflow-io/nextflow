@@ -17,7 +17,8 @@
 
 package io.seqera.tower.plugin
 
-import java.nio.file.Path
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
@@ -29,14 +30,13 @@ import groovy.json.JsonGenerator
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
-import groovy.transform.Memoized
 import groovy.transform.ToString
 import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
+import io.seqera.http.HxClient
+import io.seqera.http.HxConfig
 import nextflow.Session
 import nextflow.container.resolver.ContainerMeta
-import nextflow.container.resolver.ContainerResolver
-import nextflow.container.resolver.ContainerResolverProvider
 import nextflow.exception.AbortOperationException
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskId
@@ -49,7 +49,6 @@ import nextflow.trace.event.TaskEvent
 import nextflow.util.Duration
 import nextflow.util.LoggerHelper
 import nextflow.util.ProcessHelper
-import nextflow.util.SimpleHttpClient
 import nextflow.util.TestOnly
 import nextflow.util.Threads
 /**
@@ -98,10 +97,7 @@ class TowerClient implements TraceObserverV2 {
      */
     private String runId
 
-    /**
-     * Simple http client object that will send out messages
-     */
-    private SimpleHttpClient httpClient
+    private HxClient httpClient
 
     private JsonGenerator generator
 
@@ -138,8 +134,6 @@ class TowerClient implements TraceObserverV2 {
     private boolean towerLaunch
 
     private String accessToken
-
-    private String refreshToken
 
     private String workspaceId
 
@@ -278,9 +272,7 @@ class TowerClient implements TraceObserverV2 {
         this.aggregator = new ResourcesAggregator(session)
         this.runName = session.getRunName()
         this.runId = session.getUniqueId()
-        this.httpClient = new SimpleHttpClient()
-        // set the auth token
-        setAuthToken( httpClient, getAccessToken() )
+        this.httpClient = newHttpClient()
 
         // send hello to verify auth
         final req = makeCreateReq(session)
@@ -305,10 +297,29 @@ class TowerClient implements TraceObserverV2 {
         reports.flowCreate(workflowId)
     }
 
-    protected void setAuthToken(SimpleHttpClient client, String token) {
+    protected HxClient newHttpClient() {
+        final config = new HxConfig.Builder()
+        // auth settings
+        setupClientAuth(config, getAccessToken())
+        // retry settings
+        config.withMaxAttempts(maxRetries)
+        config.withMaxDelay(java.time.Duration.ofMillis(backOffDelay))
+        config.withMultiplier(backOffBase)
+        // create the client object
+        final client = HttpClient
+                    .newBuilder()
+                    .followRedirects(HttpClient.Redirect.NORMAL)
+                    .version(HttpClient.Version.HTTP_1_1)
+                    .connectTimeout(java.time.Duration.ofSeconds(60))
+                    .build()
+        return HxClient.create(client, config.build())
+    }
+
+    protected void setupClientAuth(HxConfig.Builder config, String token) {
         // check for plain jwt token
         if( token.count('.')==2 ) {
-            client.setBearerToken(token)
+            config.withJwtToken(token)
+            config.withRefreshToken(env.get('TOWER_REFRESH_TOKEN'))
             return
         }
 
@@ -318,7 +329,9 @@ class TowerClient implements TraceObserverV2 {
             final p = plain.indexOf('.')
             if( p!=-1 && new JsonSlurper().parseText(  plain.substring(0, p) )  ) {
                 // ok this is bearer token
-                client.setBearerToken(token)
+                config.withJwtToken(token)
+                // setup the refresh
+                config.withRefreshToken(env.get('TOWER_REFRESH_TOKEN'))
                 return
             }
         }
@@ -327,7 +340,7 @@ class TowerClient implements TraceObserverV2 {
         }
 
         // fallback on simple token
-        client.setBasicToken(TOKEN_PREFIX + token)
+        config.withBasicAuth(TOKEN_PREFIX + token)
     }
 
     protected Map makeCreateReq(Session session) {
@@ -352,9 +365,6 @@ class TowerClient implements TraceObserverV2 {
     @Override
     void onFlowBegin() {
         // configure error retry
-        httpClient.maxRetries = maxRetries
-        httpClient.backOffBase = backOffBase
-        httpClient.backOffDelay = backOffDelay
 
         final req = makeBeginReq(session)
         final resp = sendHttpMessage(urlTraceBegin, req, 'PUT')
@@ -479,37 +489,6 @@ class TowerClient implements TraceObserverV2 {
         reports.filePublish(event.target)
     }
 
-    protected void refreshToken(String refresh) {
-        log.debug "Token refresh request >> $refresh"
-        final url = "$endpoint/oauth/access_token"
-        httpClient.sendHttpMessage(
-                url,
-                method: 'POST',
-                contentType: "application/x-www-form-urlencoded",
-                body: "grant_type=refresh_token&refresh_token=${URLEncoder.encode(refresh, 'UTF-8')}" )
-
-        final authCookie = httpClient.getCookie('JWT')
-        final refreshCookie = httpClient.getCookie('JWT_REFRESH_TOKEN')
-
-        // set the new bearer token
-        if( authCookie?.value ) {
-            log.trace "Updating http client bearer token=$authCookie.value"
-            httpClient.setBearerToken(authCookie.value)
-        }
-        else {
-            log.warn "Missing JWT cookie from refresh token response ~ $authCookie"
-        }
-
-        // set the new refresh token
-        if( refreshCookie?.value ) {
-            log.trace "Updating http client refresh token=$refreshCookie.value"
-            refreshToken = refreshCookie.value
-        }
-        else {
-            log.warn "Missing JWT_REFRESH_TOKEN cookie from refresh token response ~ $refreshCookie"
-        }
-    }
-
     /**
      * Little helper method that sends a HTTP POST message as JSON with
      * the current run status, ISO 8601 UTC timestamp, run name and the TraceRecord
@@ -520,49 +499,52 @@ class TowerClient implements TraceObserverV2 {
      */
     protected Response sendHttpMessage(String url, Map payload, String method='POST') {
 
-        int refreshTries=0
-        final currentRefresh = refreshToken ?: env.get('TOWER_REFRESH_TOKEN')
-
-        while ( true ) {
-            // The actual HTTP request
-            final String json = payload != null ? generator.toJson(payload) : null
-            final String debug = json != null ? JsonOutput.prettyPrint(json).indent() : '-'
-            log.trace "HTTP url=$url; payload:\n${debug}\n"
-            try {
-                if( refreshTries==1 ) {
-                    refreshToken(currentRefresh)
-                }
-
-                httpClient.sendHttpMessage(url, json, method)
-                return new Response(httpClient.responseCode, httpClient.getResponse())
+        // The actual HTTP request
+        final String json = payload != null ? generator.toJson(payload) : null
+        final String debug = json != null ? JsonOutput.prettyPrint(json).indent() : '-'
+        log.trace "HTTP url=$url; payload:\n${debug}\n"
+        try {
+            final resp = httpClient.sendAsString(makeRequest(url, json, method))
+            final status = resp.statusCode()
+            if( status == 401 ) {
+                final msg = 'Unauthorized Seqera Platform API access -- Make sure you have specified the correct access token'
+                return new Response(status, msg)
             }
-            catch( ConnectException e ) {
-                String msg = "Unable to connect to Seqera Platform API: ${getHostUrl(url)}"
-                return new Response(0, msg)
+            if( status>=400 ) {
+                final msg = parseCause(resp?.body()) ?: "Unexpected response for request $url"
+                return new Response(status, msg as String)
             }
-            catch (IOException e) {
-                int code = httpClient.responseCode
-                if( code == 401 && ++refreshTries==1 && currentRefresh ) {
-                    // when 401 Unauthorized error is returned - only the very first time -
-                    // and a refresh token is available, make another iteration trying
-                    // having refreshed the authorization token (see 'refreshToken' invocation above)
-                    log.trace "Got 401 Unauthorized response ~ tries refreshing auth token"
-                    continue
-                }
-                else {
-                    log.trace("Got HTTP code $code - refreshTries=$refreshTries - currentRefresh=$currentRefresh", e)
-                }
-
-                String msg
-                if( code == 401 ) {
-                    msg = 'Unauthorized Seqera Platform API access -- Make sure you have specified the correct access token'
-                }
-                else {
-                    msg = parseCause(httpClient.response) ?: "Unexpected response for request $url"
-                }
-                return new Response(code, msg, httpClient.response)
-            }
+            else
+                return new Response(status, resp.body())
         }
+        catch( IOException e ) {
+            String msg = "Unable to connect to Seqera Platform API: ${getHostUrl(url)}"
+            return new Response(0, msg)
+        }
+    }
+
+    protected HttpRequest makeRequest(String url, String content, String verb) {
+        if(verb == 'GET')
+            return HttpRequest.newBuilder(URI.create(url))
+                .GET()
+                .build()
+
+        if(verb == 'PUT')
+            return HttpRequest.newBuilder(URI.create(url))
+                .PUT(HttpRequest.BodyPublishers.ofString(content))
+                .build()
+
+        if(verb == 'POST')
+            return HttpRequest.newBuilder(URI.create(url))
+                .POST(HttpRequest.BodyPublishers.ofString(content))
+                .build()
+
+        if(verb == 'DELETE')
+            return HttpRequest.newBuilder(URI.create(url))
+                .DELETE()
+                .build()
+        else
+            throw new IllegalArgumentException("Unsupported HTTP verb: $verb")
     }
 
     protected boolean isCliLogsEnabled() {
@@ -847,8 +829,4 @@ class TowerClient implements TraceObserverV2 {
         }
     }
 
-    @Memoized
-    private ContainerResolver containerResolver() {
-        ContainerResolverProvider.load()
-    }
 }
