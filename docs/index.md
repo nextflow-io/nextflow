@@ -152,6 +152,7 @@ migrations/index
 
 developer/index
 developer/diagram
+developer/config-scopes
 developer/packages
 developer/plugins
 ```
@@ -161,9 +162,10 @@ developer/plugins
 :caption: Tutorials
 :maxdepth: 1
 
-data-lineage
-metrics
-flux
+tutorials/data-lineage
+tutorials/workflow-outputs
+tutorials/metrics
+tutorials/flux
 ```
 
 ```{toctree}

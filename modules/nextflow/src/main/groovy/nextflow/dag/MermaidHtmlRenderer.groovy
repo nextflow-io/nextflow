@@ -18,18 +18,28 @@ package nextflow.dag
 
 import java.nio.file.Path
 
+import groovy.transform.CompileStatic
+import nextflow.trace.config.DagConfig
+
 /**
  * Render the DAG as a Mermaid diagram embedded in an HTML document.
  * See https://mermaid.js.org/ for more info.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
+@CompileStatic
 class MermaidHtmlRenderer implements DagRenderer {
+
+    DagConfig config
+
+    MermaidHtmlRenderer(DagConfig config) {
+        this.config = config
+    }
 
     @Override
     void renderDocument(DAG dag, Path file) {
         final template = readTemplate()
-        final network = new MermaidRenderer().renderNetwork(dag)
+        final network = new MermaidRenderer(config).renderNetwork(dag)
         file.text = template.replace('REPLACE_WITH_NETWORK_DATA', network)
     }
 

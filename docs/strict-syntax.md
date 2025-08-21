@@ -368,15 +368,7 @@ def map = (Map) readJson(json)  // soft cast
 def map = readJson(json) as Map // hard cast
 ```
 
-In the strict syntax, only hard casts are supported. However, hard casts are discouraged because they can cause unexpected behavior if used improperly. Groovy-style type annotations should be used instead:
-
-```groovy
-def Map map = readJson(json)
-```
-
-Nextflow will raise an error at runtime if the `readJson()` function does not return a `Map`.
-
-When converting a value to a different type, it is better to use an explicit method rather than a cast. For example, to parse a string as a number:
+In the strict syntax, only hard casts are supported. Use an explicit method to cast a value to a different type if one is available. For example, to parse a string as a number:
 
 ```groovy
 def x = '42' as Integer

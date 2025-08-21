@@ -42,8 +42,10 @@ import nextflow.processor.TaskHandler
 import nextflow.processor.TaskId
 import nextflow.processor.TaskProcessor
 import nextflow.trace.ResourcesAggregator
-import nextflow.trace.TraceObserver
+import nextflow.trace.TraceObserverV2
 import nextflow.trace.TraceRecord
+import nextflow.trace.event.FilePublishEvent
+import nextflow.trace.event.TaskEvent
 import nextflow.util.Duration
 import nextflow.util.LoggerHelper
 import nextflow.util.ProcessHelper
@@ -58,7 +60,7 @@ import nextflow.util.Threads
  */
 @Slf4j
 @CompileStatic
-class TowerClient implements TraceObserver {
+class TowerClient implements TraceObserverV2 {
 
     static final public String DEF_ENDPOINT_URL = 'https://api.cloud.seqera.io'
 
@@ -83,7 +85,6 @@ class TowerClient implements TraceObserver {
         TraceRecord trace
         boolean completed
     }
-    
 
     private Session session
 
@@ -136,6 +137,8 @@ class TowerClient implements TraceObserver {
 
     private boolean towerLaunch
 
+    private String accessToken
+
     private String refreshToken
 
     private String workspaceId
@@ -144,14 +147,11 @@ class TowerClient implements TraceObserver {
 
     private Map<String,Boolean> allContainers = new ConcurrentHashMap<>()
 
-    /**
-     * Constructor that consumes a URL and creates
-     * a basic HTTP client.
-     * @param endpoint The target address for sending messages to
-     */
-    TowerClient(Session session, String endpoint) {
+    TowerClient(Session session, TowerConfig config) {
         this.session = session
-        this.endpoint = checkUrl(endpoint)
+        this.endpoint = checkUrl(config.endpoint)
+        this.accessToken = config.accessToken
+        this.workspaceId = config.workspaceId
         this.schema = loadSchema()
         this.generator = TowerJsonGenerator.create(schema)
         this.reports = new TowerReports(session)
@@ -167,6 +167,7 @@ class TowerClient implements TraceObserver {
         this.generator = TowerJsonGenerator.create(Collections.EMPTY_MAP)
     }
 
+    @Override
     boolean enableMetrics() { true }
 
     String getEndpoint() { endpoint }
@@ -199,10 +200,6 @@ class TowerClient implements TraceObserver {
         this.backOffDelay = value
     }
 
-    void setWorkspaceId( String workspaceId ) {
-        this.workspaceId = workspaceId
-    }
-
     String getWorkspaceId() { workspaceId }
 
     /**
@@ -214,7 +211,7 @@ class TowerClient implements TraceObserver {
      * @param url String with target URL
      * @return The requested url or the default url, if invalid
      */
-    protected String checkUrl(String url){
+    protected String checkUrl(String url) {
         // report a warning for legacy endpoint
         if( url.contains('https://api.tower.nf') ) {
             log.warn "The endpoint `https://api.tower.nf` is deprecated - Please use `https://api.cloud.seqera.io` instead"
@@ -346,7 +343,7 @@ class TowerClient implements TraceObserver {
     }
 
     @Override
-    void onProcessCreate(TaskProcessor process){
+    void onProcessCreate(TaskProcessor process) {
         log.trace "Creating process ${process.name}"
         if( !processNames.add(process.name) )
             throw new IllegalStateException("Process name `${process.name}` already used")
@@ -379,15 +376,9 @@ class TowerClient implements TraceObserver {
     }
 
     String getAccessToken() {
-        // when 'TOWER_WORKFLOW_ID' is provided in the env, it's a tower made launch
-        // therefore the access token should only be taken from the env
-        // otherwise check into the config file and fallback in the env
-        def token = env.get('TOWER_WORKFLOW_ID')
-                ? env.get('TOWER_ACCESS_TOKEN')
-                : session.config.navigate('tower.accessToken', env.get('TOWER_ACCESS_TOKEN'))
-        if( !token )
+        if( !accessToken )
             throw new AbortOperationException("Missing Seqera Platform access token -- Make sure there's a variable TOWER_ACCESS_TOKEN in your environment")
-        return token
+        return accessToken
     }
 
     /**
@@ -411,8 +402,8 @@ class TowerClient implements TraceObserver {
     }
 
     @Override
-    void onProcessPending(TaskHandler handler, TraceRecord trace) {
-        events << new ProcessEvent(trace: trace)
+    void onTaskPending(TaskEvent event) {
+        events << new ProcessEvent(trace: event.trace)
     }
 
     /**
@@ -422,8 +413,8 @@ class TowerClient implements TraceObserver {
      * @param trace A {@link TraceRecord} object holding the task metadata and runtime info
      */
     @Override
-    void onProcessSubmit(TaskHandler handler, TraceRecord trace) {
-        events << new ProcessEvent(trace: trace)
+    void onTaskSubmit(TaskEvent event) {
+        events << new ProcessEvent(trace: event.trace)
     }
 
     /**
@@ -433,8 +424,8 @@ class TowerClient implements TraceObserver {
      * @param trace A {@link TraceRecord} object holding the task metadata and runtime info
      */
     @Override
-    void onProcessStart(TaskHandler handler, TraceRecord trace) {
-        events << new ProcessEvent(trace: trace)
+    void onTaskStart(TaskEvent event) {
+        events << new ProcessEvent(trace: event.trace)
     }
 
     /**
@@ -444,27 +435,26 @@ class TowerClient implements TraceObserver {
      * @param trace A {@link TraceRecord} object holding the task metadata and runtime info
      */
     @Override
-    void onProcessComplete(TaskHandler handler, TraceRecord trace) {
-        events << new ProcessEvent(trace: trace)
+    void onTaskComplete(TaskEvent event) {
+        events << new ProcessEvent(trace: event.trace)
 
         synchronized (this) {
-            aggregator.aggregate(trace)
+            aggregator.aggregate(event.trace)
         }
-
     }
 
     @Override
-    void onProcessCached(TaskHandler handler, TraceRecord trace) {
+    void onTaskCached(TaskEvent event) {
         // event was triggered by a stored task, ignore it
-        if( trace == null )
+        if( !event.trace )
             return
 
         // add the cached task event
-        events << new ProcessEvent(trace: trace)
+        events << new ProcessEvent(trace: event.trace)
 
         // remove the record from the current records
         synchronized (this) {
-            aggregator.aggregate(trace)
+            aggregator.aggregate(event.trace)
         }
     }
 
@@ -475,8 +465,8 @@ class TowerClient implements TraceObserver {
      * @param trace A {@link TraceRecord} object holding the task metadata and runtime info (it may be null)
      */
     @Override
-    void onFlowError(TaskHandler handler, TraceRecord trace) {
-        events << new ProcessEvent(trace: trace)
+    void onFlowError(TaskEvent event) {
+        events << new ProcessEvent(trace: event.trace)
     }
 
     /**
@@ -485,8 +475,8 @@ class TowerClient implements TraceObserver {
      * @param destination File path at `publishDir` of the published file.
      */
     @Override
-    void onFilePublish(Path destination) {
-        reports.filePublish(destination)
+    void onFilePublish(FilePublishEvent event) {
+        reports.filePublish(event.target)
     }
 
     protected void refreshToken(String refresh) {
@@ -528,7 +518,7 @@ class TowerClient implements TraceObserver {
      * 'process_complete', 'error', 'completed'}
      * @param payload An additional object to send. Must be of type TraceRecord or Manifest
      */
-    protected Response sendHttpMessage(String url, Map payload, String method='POST'){
+    protected Response sendHttpMessage(String url, Map payload, String method='POST') {
 
         int refreshTries=0
         final currentRefresh = refreshToken ?: env.get('TOWER_REFRESH_TOKEN')
@@ -739,7 +729,7 @@ class TowerClient implements TraceObserver {
     /**
      * Little helper function that can be called for logging upon an incoming HTTP response
      */
-    protected void logHttpResponse(String url, Response resp){
+    protected void logHttpResponse(String url, Response resp) {
         if (resp.code >= 200 && resp.code < 300) {
             log.trace "Successfully send message to ${url} -- received status code ${resp.code}"
         }

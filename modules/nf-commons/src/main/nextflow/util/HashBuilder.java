@@ -46,6 +46,7 @@ import nextflow.extension.Bolts;
 import nextflow.extension.FilesEx;
 import nextflow.file.FileHolder;
 import nextflow.io.SerializableMarker;
+import nextflow.script.types.Bag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

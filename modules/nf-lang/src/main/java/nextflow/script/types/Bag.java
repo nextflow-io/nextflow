@@ -17,7 +17,5 @@ package nextflow.script.types;
 
 import java.util.Collection;
 
-import nextflow.script.dsl.Description;
-
 public interface Bag<E> extends Collection<E> {
 }

@@ -107,7 +107,7 @@ class TowerFusionToken implements FusionToken {
         if( !endpoint )
             throw new IllegalArgumentException("Missing Seqera Platform endpoint")
         if( !accessToken )
-            throw new IllegalArgumentException("Missing Seqera Platform access token")
+            throw new IllegalArgumentException("Seqera Platform access token is required to use Fusion -- see https://docs.seqera.io/fusion/licensing for more information")
     }
 
     /**

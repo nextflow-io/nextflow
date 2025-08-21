@@ -22,6 +22,7 @@ import nextflow.script.ast.ASTNodeMarker;
 import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.FeatureFlagNode;
 import nextflow.script.ast.FunctionNode;
+import nextflow.script.ast.ImplicitClosureParameter;
 import nextflow.script.ast.IncludeNode;
 import nextflow.script.ast.OutputNode;
 import nextflow.script.ast.ProcessNode;
@@ -183,6 +184,9 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
 
         visitWorkflowOutputs(node.emits, "emit");
         visitWorkflowOutputs(node.publishers, "output");
+
+        visit(node.onComplete);
+        visit(node.onError);
 
         currentDefinition = null;
         vsc.popScope();
@@ -621,18 +625,18 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
 
         vsc.pushScope();
         node.setVariableScope(currentScope());
-        if( node.getParameters() != null ) {
+        if( node.isParameterSpecified() ) {
             for( var parameter : node.getParameters() ) {
                 vsc.declare(parameter, parameter);
                 if( parameter.hasInitialExpression() )
-                    visit(parameter.getInitialExpression());
+                    parameter.getInitialExpression().visit(this);
             }
         }
-        super.visitClosureExpression(node);
-        for( var it = currentScope().getReferencedLocalVariablesIterator(); it.hasNext(); ) {
-            var variable = it.next();
-            variable.setClosureSharedVariable(true);
+        else if( node.getParameters() != null ) {
+            var implicit = new ImplicitClosureParameter();
+            currentScope().putDeclaredVariable(implicit);
         }
+        super.visitClosureExpression(node);
         vsc.popScope();
 
         currentClosure = cl;
@@ -643,10 +647,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         var name = node.getName();
         Variable variable = vsc.findVariableDeclaration(name, node);
         if( variable == null ) {
-            if( "it".equals(name) ) {
-                vsc.addParanoidWarning("Implicit closure parameter `it` will not be supported in a future version", node);
-            }
-            else if( "args".equals(name) ) {
+            if( "args".equals(name) ) {
                 vsc.addParanoidWarning("The use of `args` outside the entry workflow will not be supported in a future version", node);
             }
             else if( "params".equals(name) ) {
@@ -658,6 +659,9 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
             else {
                 variable = new DynamicVariable(name, false);
             }
+        }
+        if( variable instanceof ImplicitClosureParameter ) {
+            vsc.addWarning("Implicit closure parameter is deprecated, declare an explicit parameter instead", variable.getName(), node);
         }
         if( variable != null ) {
             checkGlobalVariableInProcess(variable, node);

@@ -4,3 +4,4 @@ Plugin-Id: nf-console
 Plugin-Version: 1.2.1
 Plugin-Provider: Seqera Labs
 Plugin-Requires: >=25.02.2-edge
+Plugin-Description: Provides an interactive console and GUI interface for interactive Nextflow development, testing, and workflow exploration

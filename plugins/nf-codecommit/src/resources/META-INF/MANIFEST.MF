@@ -1,6 +1,7 @@
 Manifest-Version: 1.0
 Plugin-Class: nextflow.cloud.aws.codecommit.AwsCodeCommitPlugin
 Plugin-Id: nf-codecommit
-Plugin-Version: 0.2.3
+Plugin-Version: 0.3.0
 Plugin-Provider: Seqera Labs
-Plugin-Requires: >=24.04.4
+Plugin-Requires: >=25.07.0-edge
+Plugin-Description: Provides seamless integration with AWS CodeCommit repositories for workflow source code management and version control

@@ -25,6 +25,11 @@ import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.BuildInfo
+import nextflow.config.schema.ConfigOption
+import nextflow.config.schema.ConfigScope
+import nextflow.config.schema.ScopeName
+import nextflow.container.ContainerHelper
+import nextflow.script.dsl.Description
 import nextflow.exception.AbortOperationException
 import nextflow.k8s.client.ClientConfig
 import nextflow.k8s.client.K8sClient
@@ -40,39 +45,215 @@ import nextflow.util.Duration
  * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@ScopeName("k8s")
+@Description("""
+    The `k8s` scope controls the deployment and execution of workflow applications in a Kubernetes cluster.
+""")
 @Slf4j
 @CompileStatic
-class K8sConfig implements Map<String,Object> {
+class K8sConfig implements ConfigScope {
 
     static final private Map<String,?> DEFAULT_FUSE_PLUGIN = Map.of('nextflow.io/fuse', 1)
 
-    @Delegate
-    private Map<String,Object> target
+    @ConfigOption
+    @Description("""
+        Automatically mount host paths into the task pods (default: `false`). Only intended for development purposes when using a single node.
+    """)
+    final boolean autoMountHostPaths
 
-    private PodOptions podOptions
+    @ConfigOption
+    @Description("""
+        Whether to use Kubernetes `Pod` or `Job` resource type to carry out Nextflow tasks (default: `Pod`).
+    """)
+    final String computeResourceType
 
-    K8sConfig(Map<String,Object> config) {
-        target = config ?: Collections.<String,Object>emptyMap()
+    @ConfigOption
+    @Description("""
+        When `true`, successful pods are automatically deleted (default: `true`).
+    """)
+    final private Boolean cleanup
 
-        this.podOptions = createPodOptions(target.pod)
-        if( getStorageClaimName() ) {
-            final name = getStorageClaimName()
-            final mount = getStorageMountPath()
-            final subPath = getStorageSubPath()
-            this.podOptions.volumeClaims.add(new PodVolumeClaim(name, mount, subPath))
-        }
+    @ConfigOption
+    @Description("""
+        Map of options for the K8s client.
+
+        If this option is specified, it will be used instead of `.kube/config`.
+    """)
+    final Map client
+
+    @ConfigOption
+    @Description("""
+        The Kubernetes [configuration context](https://kubernetes.io/docs/tasks/access-application-cluster/configure-access-multiple-clusters/) to use.
+    """)
+    final String context
+
+    @ConfigOption
+    @Description("""
+        When `true`, set both the pod CPUs `request` and `limit` to the value specified by the `cpus` directive, otherwise set only the `request` (default: `false`).
+    """)
+    final boolean cpuLimits
+
+    final K8sDebug debug
+
+    @ConfigOption
+    @Description("""
+        Include the hostname of each task in the execution trace (default: `false`).
+    """)
+    final boolean fetchNodeName
+
+    @ConfigOption
+    @Description("""
+        The FUSE device plugin to be used when enabling Fusion in unprivileged mode (default: `['nextflow.io/fuse': 1]`).
+    """)
+    final Map fuseDevicePlugin
+
+    @ConfigOption
+    @Description("""
+        The Kubernetes HTTP client request connection timeout e.g. `'60s'`.
+    """)
+    final Duration httpConnectTimeout
+
+    @ConfigOption
+    @Description("""
+        The Kubernetes HTTP client request connection read timeout e.g. `'60s'`.
+    """)
+    final Duration httpReadTimeout
+
+    @ConfigOption
+    @Description("""
+        The strategy for pulling container images. Can be `IfNotPresent`, `Always`, `Never`.
+
+        [Read more](https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy)
+    """)
+    final String imagePullPolicy
+
+    @ConfigOption
+    @Description("""
+        The path where the workflow is launched and the user data is stored (default: `<volume-claim-mount-path>/<user-name>`). Must be a path in a shared K8s persistent volume.
+    """)
+    final String launchDir
+
+    @ConfigOption
+    @Description("""
+        The Kubernetes namespace to use (default: `default`).
+    """)
+    final String namespace
+
+    @ConfigOption(types=[List, Map])
+    @Description("""
+        Additional pod configuration options such as environment variables, config maps, secrets, etc. Allows the same settings as the [pod](https://nextflow.io/docs/latest/process.html#pod) process directive.
+    """)
+    final PodOptions pod
+
+    @ConfigOption
+    @Description("""
+        The path where Nextflow projects are downloaded (default: `<volume-claim-mount-path>/projects`). Must be a path in a shared K8s persistent volume.
+    """)
+    final String projectDir
+
+    @Deprecated
+    @ConfigOption
+    @Description("""
+    """)
+    final String pullPolicy
+
+    final K8sRetryConfig retryPolicy
+
+    @ConfigOption(types=[Integer, String])
+    @Description("""
+        The user ID to be used to run the containers. Shortcut for the `securityContext` option.
+    """)
+    final Object runAsUser
+
+    @ConfigOption
+    @Description("""
+        The [security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) to use for all pods.
+    """)
+    final Map securityContext
+
+    @ConfigOption
+    @Description("""
+        The Kubernetes [service account name](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/) to use.
+    """)
+    final String serviceAccount
+
+    @ConfigOption
+    @Description("""
+        The name of the persistent volume claim where the shared work directory is stored.
+    """)
+    final String storageClaimName
+
+    @ConfigOption
+    @Description("""
+        The mount path for the persistent volume claim (default: `/workspace`).
+    """)
+    final String storageMountPath
+
+    @ConfigOption
+    @Description("""
+        The path in the persistent volume to be mounted (default: `/`).
+    """)
+    final String storageSubPath
+
+    @ConfigOption
+    @Description("""
+    """)
+    final String userName
+
+    @ConfigOption
+    @Description("""
+        The path of the shared work directory (default: `<user-dir>/work`). Must be a path in a shared K8s persistent volume.
+    """)
+    final String workDir
+
+    /* required by extension point -- do not remove */
+    K8sConfig() {
+        this(Collections.emptyMap())
+    }
+
+    K8sConfig(Map opts) {
+        autoMountHostPaths = opts.autoMountHostPaths as boolean
+        cleanup = opts.cleanup as Boolean
+        client = opts.client as Map
+        computeResourceType = opts.computeResourceType
+        context = opts.context
+        cpuLimits = opts.cpuLimits as boolean
+        debug = new K8sDebug(opts.debug as Map ?: Collections.emptyMap())
+        fetchNodeName = opts.fetchNodeName as boolean
+        fuseDevicePlugin = parseFuseDevicePlugin(opts.fuseDevicePlugin)
+        httpConnectTimeout = opts.httpConnectTimeout as Duration
+        httpReadTimeout = opts.httpReadTimeout as Duration
+        imagePullPolicy = opts.pullPolicy ?: opts.imagePullPolicy
+        namespace = opts.namespace
+        pod = createPodOptions(opts.pod)
+        retryPolicy = new K8sRetryConfig(opts.retryPolicy as Map ?: Collections.emptyMap())
+        runAsUser = opts.runAsUser
+        securityContext = opts.securityContext as Map
+        serviceAccount = opts.serviceAccount
+        storageClaimName = opts.storageClaimName
+        storageMountPath = opts.storageMountPath ?: '/workspace'
+        storageSubPath = opts.storageSubPath
+        userName = opts.userName
+
+        launchDir = opts.launchDir ?: "${storageMountPath}/${getUserName()}"
+        projectDir = opts.projectDir ?: "${storageMountPath}/projects"
+        workDir = opts.workDir ?: "${launchDir}/work"
 
         // -- shortcut to pod image pull-policy
-        if( target.pullPolicy )
-            podOptions.imagePullPolicy = target.pullPolicy.toString()
-        else if( target.imagePullPolicy )
-            podOptions.imagePullPolicy = target.imagePullPolicy.toString()
+        if( imagePullPolicy )
+            pod.imagePullPolicy = imagePullPolicy
+
+        // -- shortcut to pod volume claim
+        if( storageClaimName ) {
+            final volumeClaim = new PodVolumeClaim(storageClaimName, storageMountPath, storageSubPath)
+            pod.volumeClaims.add(volumeClaim)
+        }
 
         // -- shortcut to pod security context
-        if( target.runAsUser != null )
-            podOptions.securityContext = new PodSecurityContext(target.runAsUser)
-        else if( target.securityContext instanceof Map )
-            podOptions.securityContext = new PodSecurityContext(target.securityContext as Map)
+        if( runAsUser )
+            pod.securityContext = new PodSecurityContext(runAsUser)
+        else if( securityContext )
+            pod.securityContext = new PodSecurityContext(securityContext)
     }
 
     private PodOptions createPodOptions( value ) {
@@ -89,43 +270,30 @@ class K8sConfig implements Map<String,Object> {
     }
 
     Map<String,String> getLabels() {
-        podOptions.getLabels()
+        pod.getLabels()
     }
 
     Map<String,String> getAnnotations() {
-        podOptions.getAnnotations()
-    }
-
-    K8sDebug getDebug() {
-        new K8sDebug( (Map<String,Object>)get('debug') )
+        pod.getAnnotations()
     }
 
     boolean getCleanup(boolean defValue=true) {
-        target.cleanup == null ? defValue : Boolean.valueOf( target.cleanup as String )
+        cleanup == null ? defValue : cleanup
     }
 
     String getUserName() {
-        target.userName ?: System.properties.get('user.name')
-    }
-
-    String getStorageClaimName() {
-        target.storageClaimName as String
-    }
-
-    String getStorageMountPath() {
-        target.storageMountPath ?: '/workspace' as String
-    }
-
-    String getStorageSubPath() {
-        target.storageSubPath
+        userName ?: System.properties.get('user.name')
     }
 
     Map<String,?> fuseDevicePlugin() {
-        final result = target.fuseDevicePlugin
-        if( result instanceof Map && result.size()==1 )
-            return result as Map<String,?>
-        if( result )
-            log.warn1 "Setting 'fuseDevicePlugin' should be a map object providing exactly one entry - offending value: $result"
+        fuseDevicePlugin
+    }
+
+    Map<String,?> parseFuseDevicePlugin(Object value) {
+        if( value instanceof Map && value.size()==1 )
+            return value as Map<String,?>
+        if( value != null )
+            log.warn1 "Setting 'k8s.fuseDevicePlugin' should be a map containing exactly one entry - offending value: $value"
         return DEFAULT_FUSE_PLUGIN
     }
 
@@ -140,74 +308,36 @@ class K8sConfig implements Map<String,Object> {
      *
      */
     boolean entrypointOverride() {
-        def result = target.entrypointOverride
-        if( result == null )
-            result = System.getenv('NXF_CONTAINER_ENTRYPOINT_OVERRIDE')
-        return result
+        return ContainerHelper.entrypointOverride()
     }
 
-    /**
-     * @return the path where the workflow is launched and the user data is stored
-     */
-    String getLaunchDir() {
-        if( target.userDir ) {
-            log.warn "K8s `userDir` has been deprecated -- Use `launchDir` instead"
-            return target.userDir
-        }
-        target.launchDir ?: "${getStorageMountPath()}/${getUserName()}" as String
-    }
-
-    /**
-     * @return Defines the path where the workflow temporary data is stored. This must be a path in a shared K8s persistent volume (default:<user-dir>/work).
-     */
-    String getWorkDir() {
-        target.workDir ?: "${getLaunchDir()}/work" as String
-    }
-
-    /**
-     * @return Defines the path where Nextflow projects are downloaded. This must be a path in a shared K8s persistent volume (default: <volume-claim-mount-path>/projects).
-     */
-    String getProjectDir() {
-        target.projectDir ?: "${getStorageMountPath()}/projects" as String
-    }
-
-    String getNamespace() { target.namespace }
-
-    boolean useJobResource() { ResourceType.Job.name() == target.computeResourceType?.toString() }
-
-    String getServiceAccount() { target.serviceAccount }
+    boolean useJobResource() { ResourceType.Job.name() == computeResourceType }
 
     String getNextflowImageName() {
-        final defImage = "nextflow/nextflow:${BuildInfo.version}"
-        return target.navigate('nextflow.image', defImage)
-    }
-
-    boolean getAutoMountHostPaths() {
-        Boolean.valueOf( target.autoMountHostPaths as String )
+        return "nextflow/nextflow:${BuildInfo.version}"
     }
 
     PodOptions getPodOptions() {
-        podOptions
+        pod
     }
 
-    @Memoized
     boolean fetchNodeName() {
-        Boolean.valueOf( target.fetchNodeName as String )
+        fetchNodeName
     }
 
     /**
      * @return the collection of defined volume claim names
      */
     Collection<String> getClaimNames() {
-        podOptions.volumeClaims.collect { it.claimName }
+        pod.volumeClaims.collect { it.claimName }
     }
 
     Collection<String> getClaimPaths() {
-        podOptions.volumeClaims.collect { it.mountPath }
+        pod.volumeClaims.collect { it.mountPath }
     }
 
     boolean cpuLimitsEnabled() {
-        target.cpuLimits ?: false
+        cpuLimits
     }
 
     /**
@@ -217,29 +347,25 @@ class K8sConfig implements Map<String,Object> {
      * @return The volume claim name for the given mount path
      */
     String findVolumeClaimByPath(String path) {
-        def result = podOptions.volumeClaims.find { path.startsWith(it.mountPath) }
+        final result = pod.volumeClaims.find { path.startsWith(it.mountPath) }
         return result ? result.claimName : null
     }
 
     @Memoized
     ClientConfig getClient() {
 
-        final result = ( target.client instanceof Map
-                ? clientFromNextflow(target.client as Map, target.namespace as String, target.serviceAccount as String)
-                : clientDiscovery(target.context as String, target.namespace as String, target.serviceAccount as String)
-        )
+        final result = client != null
+                ? clientFromNextflow(client, namespace, serviceAccount)
+                : clientDiscovery(context, namespace, serviceAccount)
 
-        if( target.httpConnectTimeout )
-            result.httpConnectTimeout = target.httpConnectTimeout as Duration
+        if( httpConnectTimeout )
+            result.httpConnectTimeout = httpConnectTimeout
 
-        if( target.httpReadTimeout )
-            result.httpReadTimeout = target.httpReadTimeout as Duration
+        if( httpReadTimeout )
+            result.httpReadTimeout = httpReadTimeout
 
-        if( target.retryPolicy )
-            result.retryConfig = new K8sRetryConfig(target.retryPolicy as Map)
-
-        if( target.maxErrorRetry )
-            log.warn("Config setting 'k8s.maxErrorRetry' is deprecated. Change it to 'k8s.retryPolicy.maxAttempts'")
+        if( retryPolicy )
+            result.retryConfig = retryPolicy
 
         return result
     }
@@ -280,7 +406,7 @@ class K8sConfig implements Map<String,Object> {
     }
 
     void checkStorageAndPaths(K8sClient client) {
-        if( !getStorageClaimName() )
+        if( !storageClaimName )
             throw new AbortOperationException("Missing K8s storage volume claim -- The name of a persistence volume claim needs to be provided in the nextflow configuration file")
 
         log.debug "Kubernetes workDir=$workDir; projectDir=$projectDir; volumeClaims=${getClaimNames()}"
@@ -297,29 +423,28 @@ class K8sConfig implements Map<String,Object> {
             }
         }
 
-        if( !findVolumeClaimByPath(getLaunchDir()) )
+        if( !findVolumeClaimByPath(launchDir) )
             throw new AbortOperationException("Kubernetes `launchDir` must be a path mounted as a persistent volume -- launchDir=$launchDir; volumes=${getClaimPaths().join(', ')}")
 
-        if( !findVolumeClaimByPath(getWorkDir()) )
+        if( !findVolumeClaimByPath(workDir) )
             throw new AbortOperationException("Kubernetes `workDir` must be a path mounted as a persistent volume -- workDir=$workDir; volumes=${getClaimPaths().join(', ')}")
 
-        if( !findVolumeClaimByPath(getProjectDir()) )
+        if( !findVolumeClaimByPath(projectDir) )
             throw new AbortOperationException("Kubernetes `projectDir` must be a path mounted as a persistent volume -- projectDir=$projectDir; volumes=${getClaimPaths().join(', ')}")
-
 
     }
 
-    @CompileStatic
-    static class K8sDebug {
+    static class K8sDebug implements ConfigScope {
 
-        @Delegate
-        Map<String,Object> target
+        @ConfigOption
+        @Description("""
+            Save the pod spec for each task to `.command.yaml` in the task directory (default: `false`).
+        """)
+        final boolean yaml
 
-        K8sDebug(Map<String,Object> debug) {
-            this.target = debug ?: Collections.<String,Object>emptyMap()
+        K8sDebug(Map opts) {
+            yaml = opts.yaml as boolean
         }
-
-        boolean getYaml() { Boolean.valueOf( target.yaml as String ) }
     }
 }
 

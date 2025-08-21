@@ -17,13 +17,48 @@
 package nextflow.config
 
 import groovy.transform.CompileStatic
+import nextflow.config.schema.ConfigOption
+import nextflow.config.schema.ConfigScope
+import nextflow.config.schema.ScopeName
+import nextflow.script.dsl.Description
 /**
  * Represent Nextflow config as Map
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@ScopeName('')
 @CompileStatic
-class ConfigMap extends LinkedHashMap {
+class ConfigMap extends LinkedHashMap implements ConfigScope {
+
+    @ConfigOption
+    @Description("""
+        The remote work directory used by hybrid workflows. Equivalent to the `-bucket-dir` option of the `run` command.
+    """)
+    final String bucketDir
+
+    @ConfigOption
+    @Description("""
+        Delete all files associated with a run in the work directory when the run completes successfully (default: `false`).
+    """)
+    final boolean cleanup
+
+    @ConfigOption
+    @Description("""
+        The pipeline output directory. Equivalent to the `-output-dir` option of the `run` command.
+    """)
+    final String outputDir
+
+    @ConfigOption
+    @Description("""
+        Enable the use of previously cached task executions. Equivalent to the `-resume` option of the `run` command.
+    """)
+    final boolean resume
+
+    @ConfigOption
+    @Description("""
+        The pipeline work directory. Equivalent to the `-work-dir` option of the `run` command.
+    """)
+    final String workDir
 
     ConfigMap() {
     }
@@ -32,8 +67,13 @@ class ConfigMap extends LinkedHashMap {
         super(initialCapacity)
     }
 
-    ConfigMap(Map content) {
-        super(content)
+    ConfigMap(Map opts) {
+        super(opts)
+        bucketDir = opts.bucketDir
+        cleanup = opts.cleanup as boolean
+        outputDir = opts.outputDir
+        resume = opts.resume as boolean
+        workDir = opts.workDir
     }
 
 }

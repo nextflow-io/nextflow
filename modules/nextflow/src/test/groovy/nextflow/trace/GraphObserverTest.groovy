@@ -16,7 +16,7 @@
 
 package nextflow.trace
 import java.nio.file.Files
-import java.nio.file.Paths
+import java.nio.file.Path
 
 import groovyx.gpars.dataflow.DataflowQueue
 import nextflow.Session
@@ -25,6 +25,7 @@ import nextflow.dag.DAG
 import nextflow.dag.DotRenderer
 import nextflow.dag.GraphvizRenderer
 import nextflow.dag.MermaidRenderer
+import nextflow.trace.config.DagConfig
 import spock.lang.Requires
 import spock.lang.Specification
 import test.TestHelper
@@ -36,6 +37,10 @@ import test.TestHelper
 class GraphObserverTest extends Specification {
 
     DAG test_dag
+
+    def createObserver(Path file) {
+        new GraphObserver(new DagConfig(file: file.toString()))
+    }
 
     def setup() {
         new Session()
@@ -77,7 +82,7 @@ class GraphObserverTest extends Specification {
     def 'should write a dot file' () {
         given:
         def file = Files.createTempFile('nxf_','.dot')
-        def gr = new GraphObserver(file)
+        def gr = createObserver(file)
         gr.dag = test_dag
 
         when:
@@ -104,7 +109,7 @@ class GraphObserverTest extends Specification {
     def 'should write an html file' () {
         given:
         def file = Files.createTempFile('nxf-','.html')
-        def gr = new GraphObserver(file)
+        def gr = createObserver(file)
         gr.dag = test_dag
 
         when:
@@ -133,7 +138,7 @@ class GraphObserverTest extends Specification {
     def 'should write an svg file' () {
         given:
         def file = Files.createTempFile('nxf-','.svg')
-        def gr = new GraphObserver(file)
+        def gr = createObserver(file)
         gr.dag = test_dag
 
         when:
@@ -151,7 +156,7 @@ class GraphObserverTest extends Specification {
     def 'should write a png file' () {
         given:
         def file = Files.createTempFile('nxf-','.png')
-        def gr = new GraphObserver(file)
+        def gr = createObserver(file)
         gr.dag = test_dag
 
         when:
@@ -168,7 +173,7 @@ class GraphObserverTest extends Specification {
     def 'should write a pdf file' () {
         given:
         def file = Files.createTempFile('nxf-','.pdf')
-        def gr = new GraphObserver(file)
+        def gr = createObserver(file)
         gr.dag = test_dag
 
         when:
@@ -185,7 +190,7 @@ class GraphObserverTest extends Specification {
         given:
         def folder = Files.createTempDirectory('test')
         def file = folder.resolve('nope')
-        def gr = new GraphObserver(file)
+        def gr = createObserver(file)
         gr.dag = test_dag
 
         when:
@@ -215,35 +220,35 @@ class GraphObserverTest extends Specification {
         def observer
 
         when:
-        observer = new GraphObserver(Paths.get('/path/to/hello-world.dot'))
+        observer = createObserver(Path.of('/path/to/hello-world.dot'))
         then:
         observer.name == 'hello-world'
         observer.format == 'dot'
         observer.createRender() instanceof DotRenderer
 
         when:
-        observer = new GraphObserver(Paths.get('/path/to/TheGraph.html'))
+        observer = createObserver(Path.of('/path/to/TheGraph.html'))
         then:
         observer.name == 'TheGraph'
         observer.format == 'html'
         observer.createRender() instanceof MermaidHtmlRenderer
 
         when:
-        observer = new GraphObserver(Paths.get('/path/to/TheGraph.mmd'))
+        observer = createObserver(Path.of('/path/to/TheGraph.mmd'))
         then:
         observer.name == 'TheGraph'
         observer.format == 'mmd'
         observer.createRender() instanceof MermaidRenderer
 
         when:
-        observer = new GraphObserver(Paths.get('/path/to/TheGraph.SVG'))
+        observer = createObserver(Path.of('/path/to/TheGraph.SVG'))
         then:
         observer.name == 'TheGraph'
         observer.format == 'svg'
         observer.createRender() instanceof GraphvizRenderer
 
         when:
-        observer = new GraphObserver(Paths.get('/path/to/anonymous'))
+        observer = createObserver(Path.of('/path/to/anonymous'))
         then:
         observer.name == 'anonymous'
         observer.format == 'html'

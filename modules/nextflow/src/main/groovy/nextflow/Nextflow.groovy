@@ -24,8 +24,6 @@ import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
 import groovyx.gpars.dataflow.DataflowReadChannel
-import nextflow.ast.OpXform
-import nextflow.ast.OpXformImpl
 import nextflow.exception.StopSplitIterationException
 import nextflow.exception.WorkflowScriptErrorException
 import nextflow.extension.GroupKey
@@ -350,11 +348,8 @@ class Nextflow {
      *      - attach: One or more list attachment
      */
     static void sendMail( Map params ) {
-
-        new Mailer()
-            .setConfig(Global.session.config.mail as Map)
-            .send(params)
-
+        final opts = Global.session.config.mail as Map ?: Collections.emptyMap()
+        new Mailer(opts).send(params)
     }
 
     /**
@@ -376,9 +371,8 @@ class Nextflow {
      *    <code>
      */
     static void sendMail( Closure params ) {
-        new Mailer()
-                .setConfig(Global.session.config.mail as Map)
-                .send(params)
+        final opts = Global.session.config.mail as Map ?: Collections.emptyMap()
+        new Mailer(opts).send(params)
     }
 
     /**

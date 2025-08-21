@@ -44,7 +44,8 @@ class ContainerHandlerTest extends Specification {
 
     def 'test normalize docker image name' () {
         given:
-        def n = new ContainerHandler([registry: REGISTRY, registryOverride: OVERRIDE])
+        def config = new DockerConfig(registry: REGISTRY, registryOverride: OVERRIDE)
+        def n = new ContainerHandler(config)
 
         expect:
         n.normalizeDockerImageName(IMAGE) == EXPECTED
@@ -66,7 +67,7 @@ class ContainerHandlerTest extends Specification {
     def 'test normalize shifter image name' () {
 
         given:
-        def n = new ContainerHandler([:])
+        def n = new ContainerHandler(new ShifterConfig([:]))
 
         expect:
         n.normalizeShifterImageName(image) == expected
@@ -87,7 +88,8 @@ class ContainerHandlerTest extends Specification {
     def 'test normalize singularity image #image' () {
 
         given:
-        def n = new ContainerHandler([registry: registry], Paths.get('/root/dir'))
+        def config = new SingularityConfig(registry: registry)
+        def n = new ContainerHandler(config, Paths.get('/root/dir'))
 
         expect:
         n.normalizeSingularityImageName(image) == expected
@@ -124,7 +126,7 @@ class ContainerHandlerTest extends Specification {
         def foo = base.resolve('foo'); foo.mkdir()
         def bar = Files.createFile(foo.resolve('bar'))
         def img = Files.createFile(base.resolve('bar.img'))
-        def n = new ContainerHandler([:], base)
+        def n = new ContainerHandler(new SingularityConfig([:]), base)
 
         expect:
         n.normalizeSingularityImageName('foo/bar') == bar.toAbsolutePath().toString()
@@ -139,7 +141,8 @@ class ContainerHandlerTest extends Specification {
     @Unroll
     def 'test normalize method for docker' () {
         given:
-        def n = Spy(new ContainerHandler([engine: 'docker', enabled: true, registry: registry]))
+        def config = new DockerConfig(enabled: true, registry: registry)
+        def n = Spy(new ContainerHandler(config))
 
         when:
         def result = n.normalizeImageName(image)
@@ -163,7 +166,8 @@ class ContainerHandlerTest extends Specification {
     def 'test normalize method for shifter' () {
 
         given:
-        def n = Spy(new ContainerHandler([engine: 'shifter', enabled: true]))
+        def config = new ShifterConfig(enabled: true)
+        def n = Spy(new ContainerHandler(config))
 
         when:
         def result = n.normalizeImageName(image)
@@ -188,7 +192,8 @@ class ContainerHandlerTest extends Specification {
         given:
         def EXECUTOR  = Mock(Executor)
         def IMAGE = 'foo:latest'
-        def handler = Spy(new ContainerHandler([engine: 'shifter', enabled: true]))
+        def config = new ShifterConfig(enabled: true)
+        def handler = Spy(new ContainerHandler(config))
 
         when:
         def result = handler.normalizeImageName(IMAGE)
@@ -203,8 +208,9 @@ class ContainerHandlerTest extends Specification {
     @Unroll
     def 'test normalize method for charliecloud' () {
 
-       given:
-        def n = new ContainerHandler([registry: registry])
+        given:
+        def config = new CharliecloudConfig(registry: registry)
+        def n = new ContainerHandler(config)
 
         expect:
         n.normalizeCharliecloudImageName(image) == expected
@@ -233,7 +239,8 @@ class ContainerHandlerTest extends Specification {
     def 'test normalize method for singularity' () {
         given:
         def BASE = Paths.get('/abs/path/')
-        def handler = Spy(new ContainerHandler(engine: 'singularity', enabled: true, ociMode: OCI, baseDir: BASE))
+        def config = new SingularityConfig(enabled: true, ociMode: OCI)
+        def handler = Spy(new ContainerHandler(config, BASE))
 
         when:
         def result = handler.normalizeImageName(IMAGE)
@@ -265,7 +272,8 @@ class ContainerHandlerTest extends Specification {
     def 'test normalize method for OCI direct mode' () {
         given:
         def BASE = Paths.get('/abs/path/')
-        def handler = Spy(new ContainerHandler(engine: 'apptainer', enabled: true, ociAutoPull:AUTO, baseDir: BASE))
+        def config = new ApptainerConfig(enabled: true, ociAutoPull: AUTO)
+        def handler = Spy(new ContainerHandler(config, BASE))
 
         when:
         def result = handler.normalizeImageName(IMAGE)
@@ -311,19 +319,21 @@ class ContainerHandlerTest extends Specification {
 
     def 'should not invoke caching when engine is disabled' () {
         given:
-        final handler = Spy(new ContainerHandler([engine: 'singularity']))
         final IMAGE = 'docker://foo.img'
+        final config = Spy(SingularityConfig)
+        final handler = Spy(new ContainerHandler(config))
+        def result
 
         when:
-        handler.config.enabled = false
-        def result = handler.normalizeImageName(IMAGE)
+        config.enabled >> false
+        result = handler.normalizeImageName(IMAGE)
         then:
         1 * handler.normalizeSingularityImageName(IMAGE) >> IMAGE
         0 * handler.createSingularityCache(_,_) >> null
         result == IMAGE
 
         when:
-        handler.config.enabled = true
+        config.enabled >> true
         result = handler.normalizeImageName(IMAGE)
         then:
         1 * handler.normalizeSingularityImageName(IMAGE) >> IMAGE
@@ -333,7 +343,8 @@ class ContainerHandlerTest extends Specification {
 
     def 'should invoke singularity cache' () {
         given:
-        def handler = Spy(ContainerHandler,constructorArgs:[[engine: 'singularity', enabled: true]])
+        def config = new SingularityConfig(enabled: true)
+        def handler = Spy(new ContainerHandler(config))
 
         when:
         def result = handler.normalizeImageName(IMG)

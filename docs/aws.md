@@ -281,7 +281,7 @@ There are several reasons why you might need to create your own [AMI (Amazon Mac
 ### Create your custom AMI
 
 From the EC2 Dashboard, select **Launch Instance**, then select **Browse more AMIs**. In the new page, select
-**AWS Marketplace AMIs**, and then search for **Amazon ECS-Optimized Amazon Linux 2 (AL2) x86_64 AMI**. Select the AMI and continue as usual to configure and launch the instance.
+**AWS Marketplace AMIs**, and then search for `Amazon ECS-Optimized Amazon Linux 2 (AL2) x86_64 AMI`. Select the AMI and continue as usual to configure and launch the instance.
 
 :::{note}
 The selected instance has a root volume of 30GB. Make sure to increase its size or add a second EBS volume with enough storage for real genomic workloads.

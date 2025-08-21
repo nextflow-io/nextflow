@@ -132,10 +132,6 @@ class ClientConfig {
             result.clientKey = opts.clientKey.toString().decodeBase64()
         else if( opts.clientKeyFile )
             result.clientKey = Paths.get(opts.clientKeyFile.toString()).bytes
-        if( opts.retryPolicy )
-            result.retryConfig = new K8sRetryConfig(opts.retryPolicy as Map)
-        if( opts.maxErrorRetry )
-            log.warn("Config setting 'k8s.maxErrorRetry' is deprecated - change it to 'k8s.retryPolicy.maxAttempts'")
 
         return result
     }

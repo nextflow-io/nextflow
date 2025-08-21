@@ -187,7 +187,8 @@ class SpackCacheTest extends Specification {
     def 'should get options from the config' () {
 
         when:
-        def cache = new SpackCache(new SpackConfig())
+        def config = new SpackConfig()
+        def cache = new SpackCache(config)
         then:
         cache.createTimeout.minutes == 60
         cache.configCacheDir0 == null
@@ -195,7 +196,8 @@ class SpackCacheTest extends Specification {
         cache.parallelBuilds == null
 
         when:
-        cache = new SpackCache(new SpackConfig(createTimeout: '5 min', cacheDir: '/spack/cache', checksum: false, parallelBuilds: 2))
+        config = new SpackConfig([createTimeout: '5 min', cacheDir: '/spack/cache', checksum: false, parallelBuilds: 2], [:])
+        cache = new SpackCache(config)
         then:
         cache.createTimeout.minutes == 5
         cache.configCacheDir0 == Paths.get('/spack/cache')
@@ -207,7 +209,7 @@ class SpackCacheTest extends Specification {
 
         given:
         def folder = Files.createTempDirectory('test'); folder.deleteDir()
-        def config = new SpackConfig(cacheDir: folder.toString())
+        def config = new SpackConfig([cacheDir: folder.toString()], [:])
         SpackCache cache = Spy(SpackCache, constructorArgs: [config])
 
         when:
@@ -225,7 +227,7 @@ class SpackCacheTest extends Specification {
 
         given:
         def folder = Paths.get('.test-spack-cache-' + Math.random())
-        def config = new SpackConfig(cacheDir: folder.toString())
+        def config = new SpackConfig([cacheDir: folder.toString()], [:])
         SpackCache cache = Spy(SpackCache, constructorArgs: [config])
 
         when:

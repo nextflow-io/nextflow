@@ -251,6 +251,18 @@ public class RuntimeTypeAdapterFactory<T> implements TypeAdapterFactory {
         return registerSubtype(type, type.getSimpleName());
     }
 
+    protected Class<?> getSubTypeFromLabel(String label){
+        return labelToSubtype.get(label);
+    }
+
+    protected String getLabelFromSubtype(Class<?> subType){
+        return subtypeToLabel.get(subType);
+    }
+
+    protected String getTypeFieldName(){
+        return typeFieldName;
+    }
+
     @Override
     public <R> TypeAdapter<R> create(Gson gson, TypeToken<R> type) {
         if (type == null) {

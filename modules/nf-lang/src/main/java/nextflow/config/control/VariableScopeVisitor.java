@@ -29,6 +29,7 @@ import nextflow.config.ast.ConfigVisitorSupport;
 import nextflow.config.dsl.ConfigDsl;
 import nextflow.config.schema.SchemaNode;
 import nextflow.script.ast.ASTNodeMarker;
+import nextflow.script.ast.ImplicitClosureParameter;
 import nextflow.script.control.VariableScopeChecker;
 import nextflow.script.dsl.ProcessDsl;
 import nextflow.script.dsl.ScriptDsl;
@@ -288,18 +289,18 @@ class VariableScopeVisitor extends ConfigVisitorSupport {
     public void visitClosureExpression(ClosureExpression node) {
         vsc.pushScope();
         node.setVariableScope(currentScope());
-        if( node.getParameters() != null ) {
+        if( node.isParameterSpecified() ) {
             for( var parameter : node.getParameters() ) {
                 vsc.declare(parameter, parameter);
                 if( parameter.hasInitialExpression() )
-                    visit(parameter.getInitialExpression());
+                    parameter.getInitialExpression().visit(this);
             }
         }
-        super.visitClosureExpression(node);
-        for( var it = currentScope().getReferencedLocalVariablesIterator(); it.hasNext(); ) {
-            var variable = it.next();
-            variable.setClosureSharedVariable(true);
+        else if( node.getParameters() != null ) {
+            var implicit = new ImplicitClosureParameter();
+            currentScope().putDeclaredVariable(implicit);
         }
+        super.visitClosureExpression(node);
         vsc.popScope();
     }
 
@@ -308,15 +309,15 @@ class VariableScopeVisitor extends ConfigVisitorSupport {
         var name = node.getName();
         Variable variable = vsc.findVariableDeclaration(name, node);
         if( variable == null ) {
-            if( "it".equals(name) ) {
-                vsc.addParanoidWarning("Implicit closure parameter `it` will not be supported in a future version", node);
-            }
-            else if( inProcess && inClosure ) {
+            if( inProcess && inClosure ) {
                 // dynamic process directives can reference process inputs which are not known at this point
             }
             else {
                 variable = new DynamicVariable(name, false);
             }
+        }
+        if( variable instanceof ImplicitClosureParameter ) {
+            vsc.addWarning("Implicit closure parameter is deprecated, declare an explicit parameter instead", variable.getName(), node);
         }
         if( variable != null ) {
             node.setAccessedVariable(variable);

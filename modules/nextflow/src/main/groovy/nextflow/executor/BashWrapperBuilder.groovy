@@ -28,6 +28,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.SysEnv
 import nextflow.container.ContainerBuilder
+import nextflow.container.ContainerHelper
 import nextflow.container.DockerBuilder
 import nextflow.container.SingularityBuilder
 import nextflow.exception.ProcessException
@@ -160,7 +161,12 @@ class BashWrapperBuilder {
     }
 
     protected boolean fixOwnership() {
-        systemOsName == 'Linux' && containerConfig?.fixOwnership && runWithContainer && containerConfig.engine == 'docker' // <-- note: only for docker (other container runtimes are not affected)
+        // note: only for docker (other container runtimes are not affected)
+        ContainerHelper.fixOwnership(containerConfig) && isLinuxOS() && runWithContainer
+    }
+
+    protected isLinuxOS() {
+        systemOsName == 'Linux'
     }
 
     protected isMacOS() {
@@ -654,8 +660,8 @@ class BashWrapperBuilder {
     }
 
     @PackageScope
-    ContainerBuilder createContainerBuilder0(String engine) {
-        ContainerBuilder.create(engine, containerImage)
+    ContainerBuilder createContainerBuilder0() {
+        ContainerBuilder.create(containerConfig, containerImage)
     }
 
     protected boolean getAllowContainerMounts() {
@@ -672,8 +678,7 @@ class BashWrapperBuilder {
     @PackageScope
     ContainerBuilder createContainerBuilder(String changeDir) {
 
-        final engine = containerConfig.getEngine()
-        ContainerBuilder builder = createContainerBuilder0(engine)
+        final builder = createContainerBuilder0()
 
         /*
          * initialise the builder
@@ -728,22 +733,14 @@ class BashWrapperBuilder {
                 builder.addEnv(var)
         }
 
-        // set up run docker params
-        builder.params(containerConfig)
-
-        // extra rule for the 'auto' temp dir temp dir
-        def temp = containerConfig.temp?.toString()
-        if( temp == 'auto' || temp == 'true' ) {
+        // extra rule for the 'auto' temp dir
+        if( containerConfig.getTemp() == 'auto' )
             builder.setTemp( changeDir ? '$NXF_SCRATCH' : '$(nxf_mktemp)' )
-        }
 
-        if( containerConfig.containsKey('kill') )
-            builder.params(kill: containerConfig.kill)
+        if( containerConfig.getKill() != null )
+            builder.params(kill: containerConfig.getKill())
 
-        if( containerConfig.writableInputMounts==false )
-            builder.params(readOnlyInputs: true)
-
-        if( this.containerConfig.entrypointOverride() )
+        if( containerConfig.entrypointOverride() )
             builder.params(entry: '/bin/bash')
 
         // give a chance to override any option with process specific `containerOptions`

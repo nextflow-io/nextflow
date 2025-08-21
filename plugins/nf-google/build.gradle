@@ -44,8 +44,8 @@ dependencies {
     api 'com.google.cloud:google-cloud-storage:2.53.2'
 
     testImplementation(testFixtures(project(":nextflow")))
-    testImplementation "org.apache.groovy:groovy:4.0.27"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.27"
+    testImplementation "org.apache.groovy:groovy:4.0.28"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.28"
 }
 
 test {

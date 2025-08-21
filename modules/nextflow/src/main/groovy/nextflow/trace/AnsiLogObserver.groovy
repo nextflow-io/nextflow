@@ -21,11 +21,13 @@ import java.util.regex.Pattern
 import groovy.transform.CompileStatic
 import jline.TerminalFactory
 import nextflow.Session
-import nextflow.processor.TaskHandler
+import nextflow.trace.event.TaskEvent
 import nextflow.util.Duration
+import nextflow.util.SysHelper
 import nextflow.util.Threads
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
+
 import static nextflow.util.LoggerHelper.isHashLogPrefix
 import static org.fusesource.jansi.Ansi.Attribute
 import static org.fusesource.jansi.Ansi.Color
@@ -38,7 +40,7 @@ import static org.fusesource.jansi.Ansi.ansi
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-class AnsiLogObserver implements TraceObserver {
+class AnsiLogObserver implements TraceObserverV2 {
 
     static final private String NEWLINE = '\n'
 
@@ -107,7 +109,7 @@ class AnsiLogObserver implements TraceObserver {
 
     boolean getStarted() { started }
 
-    boolean  getStopped() { stopped }
+    boolean getStopped() { stopped }
 
     private boolean hasProgressChanges() {
         final long progress = statsObserver.changeTimestamp ?: 0
@@ -193,7 +195,7 @@ class AnsiLogObserver implements TraceObserver {
 
     protected void renderMessages( Ansi term, List<Event> allMessages, Color color=null )  {
         int BLANKS=0
-        def itr = allMessages.iterator()
+        final itr = allMessages.iterator()
         while( itr.hasNext() ) {
             final event = itr.next()
 
@@ -247,7 +249,7 @@ class AnsiLogObserver implements TraceObserver {
     }
 
     protected void renderProcesses(Ansi term, WorkflowStats stats) {
-        def processes = stats.getProcesses()
+        final processes = stats.getProcesses()
         if( !processes || (!session.isSuccess() && errors && !rendered) ) {
             // prevent to show a useless process progress if there's an error
             // on startup and the execution is terminated
@@ -286,7 +288,7 @@ class AnsiLogObserver implements TraceObserver {
             }
         }
         // Tell the user how many processes without active tasks were hidden
-        if( skippedLines > 0 ){
+        if( skippedLines > 0 ) {
             term.a(Attribute.ITALIC).a(Attribute.INTENSITY_FAINT).a("Plus ").bold().a(skippedLines).reset()
             term.a(Attribute.ITALIC).a(Attribute.INTENSITY_FAINT).a(" more processes waiting for tasks…").reset().newline()
         }
@@ -346,7 +348,7 @@ class AnsiLogObserver implements TraceObserver {
 
         if( session.isSuccess() && stats.progressLength>0 ) {
             def report = ""
-            report += "Completed at: ${new Date(endTimestamp).format('dd-MMM-yyyy HH:mm:ss')}\n"
+            report += "Completed at: ${SysHelper.fmtDate(new Date(endTimestamp))}\n"
             report += "Duration    : ${new Duration(delta)}\n"
             report += "CPU hours   : ${stats.getComputeTimeFmt()}\n"
             report += "Succeeded   : ${stats.succeedCountFmt}\n"
@@ -441,7 +443,7 @@ class AnsiLogObserver implements TraceObserver {
         // Final process name, regular text
         term.a(labelFinalProcess)
         // Active process with a tag, eg: (genes.gtf.gz)
-        if( labelTag ){
+        if( labelTag ) {
             // Tag in yellow, () dim but tag text regular
             term.fg(Color.YELLOW).a(Attribute.INTENSITY_FAINT).a(' (').reset()
             term.fg(Color.YELLOW).a(labelTag)
@@ -490,7 +492,7 @@ class AnsiLogObserver implements TraceObserver {
     }
 
     @Override
-    void onFlowCreate(Session session){
+    void onFlowCreate(Session session) {
         this.started = true
         this.session = session
         this.statsObserver = session.statsObserver
@@ -500,7 +502,7 @@ class AnsiLogObserver implements TraceObserver {
     }
 
     @Override
-    void onFlowComplete(){
+    void onFlowComplete() {
         stopped = true
         endTimestamp = System.currentTimeMillis()
         renderer.join()
@@ -511,9 +513,9 @@ class AnsiLogObserver implements TraceObserver {
      * @param handler
      */
     @Override
-    synchronized void onProcessSubmit(TaskHandler handler, TraceRecord trace){
+    synchronized void onTaskSubmit(TaskEvent event) {
         // executor counter
-        final exec = handler.task.processor.executor.name
+        final exec = event.handler.task.processor.executor.name
         Integer count = executors[exec] ?: 0
         executors[exec] = count+1
         markModified()

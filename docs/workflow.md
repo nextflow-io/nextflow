@@ -541,7 +541,7 @@ The `path` directive can also be a closure which defines a custom publish path f
 workflow {
     main:
     ch_samples = channel.of(
-        [id: 'SAMP1', fastq_1: file('1.fastq'), fastq_1: file('2.fastq')]
+        [id: 'SAMP1', fastq_1: file('1.fastq'), fastq_2: file('2.fastq')]
     )
 
     publish:
@@ -588,7 +588,7 @@ workflow {
     ch_samples = channel.of(
         [id: 1, name: 'sample 1', fastq_1: '1a.fastq', fastq_2: '1b.fastq'],
         [id: 2, name: 'sample 2', fastq_1: '2a.fastq', fastq_2: '2b.fastq'],
-        [id: 3, name: 'sample 3', fastq_1: '3a.fastq', fastq_2: '3b.fastq']
+        [id: 3, name: 'sample 3', fastq_1: '3a.fastq', fastq_2: null]
     )
 
     publish:
@@ -610,7 +610,7 @@ The above example will write the following CSV file to `results/samples.csv`:
 ```
 "1","sample 1","results/fastq/1a.fastq","results/fastq/1b.fastq"
 "2","sample 2","results/fastq/2a.fastq","results/fastq/2b.fastq"
-"3","sample 3","results/fastq/3a.fastq","results/fastq/3b.fastq"
+"3","sample 3","results/fastq/3a.fastq",""
 ```
 
 You can customize the index file with additional directives, for example:
@@ -629,7 +629,7 @@ This example will produce the following index file:
 "id"|"name"|"fastq_1"|"fastq_2"
 "1"|"sample 1"|"results/fastq/1a.fastq"|"results/fastq/1b.fastq"
 "2"|"sample 2"|"results/fastq/2a.fastq"|"results/fastq/2b.fastq"
-"3"|"sample 3"|"results/fastq/3a.fastq"|"results/fastq/3b.fastq"
+"3"|"sample 3"|"results/fastq/3a.fastq"|""
 ```
 
 :::{note}

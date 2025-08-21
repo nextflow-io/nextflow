@@ -22,6 +22,7 @@ import java.util.concurrent.TimeUnit
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.util.logging.Slf4j
+import nextflow.script.types.Duration as IDuration
 import org.apache.commons.lang.time.DurationFormatUtils
 /**
  * A simple time duration representation
@@ -31,7 +32,7 @@ import org.apache.commons.lang.time.DurationFormatUtils
 @Slf4j
 @CompileStatic
 @EqualsAndHashCode(includes = 'durationInMillis')
-class Duration implements Comparable<Duration>, Serializable, Cloneable {
+class Duration implements IDuration, Comparable<Duration>, Serializable, Cloneable {
 
     static private final FORMAT = ~/^(\d+\.?\d*)\s*([a-zA-Z]+)/
 
@@ -215,6 +216,7 @@ class Duration implements Comparable<Duration>, Serializable, Cloneable {
         new Duration(java.time.Duration.between(start, end).toMillis())
     }
 
+    @Override
     long toMillis() {
         durationInMillis
     }
@@ -223,6 +225,7 @@ class Duration implements Comparable<Duration>, Serializable, Cloneable {
         durationInMillis
     }
 
+    @Override
     long toSeconds() {
         TimeUnit.MILLISECONDS.toSeconds(durationInMillis)
     }
@@ -231,6 +234,7 @@ class Duration implements Comparable<Duration>, Serializable, Cloneable {
         toSeconds()
     }
 
+    @Override
     long toMinutes() {
         TimeUnit.MILLISECONDS.toMinutes(durationInMillis)
     }
@@ -239,6 +243,7 @@ class Duration implements Comparable<Duration>, Serializable, Cloneable {
         toMinutes()
     }
 
+    @Override
     long toHours() {
         TimeUnit.MILLISECONDS.toHours(durationInMillis)
     }
@@ -247,6 +252,7 @@ class Duration implements Comparable<Duration>, Serializable, Cloneable {
         toHours()
     }
 
+    @Override
     long toDays() {
         TimeUnit.MILLISECONDS.toDays(durationInMillis)
     }
