@@ -27,13 +27,15 @@ If you don't have a compatible version of Java installed, it is recommended that
 
 To install Java with SDKMAN:
 
-1. [Install SDKMAN](https://sdkman.io/install):
+1. [Install and Initialize SDKMAN](https://sdkman.io/install):
 
     ```{code-block} bash
     :class: copyable
     curl -s https://get.sdkman.io | bash
+    source "$HOME/.sdkman/bin/sdkman-init.sh"
+    sdk version
     ```
-
+    
 2. Open a new terminal.
 
 3. Install Java:
