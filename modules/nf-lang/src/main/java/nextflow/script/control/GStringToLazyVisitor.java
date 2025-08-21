@@ -30,7 +30,7 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.*;
  * from
  *   "${foo} ${bar}"
  * to
- *   "${->foo} ${->bar}
+ *   "${->foo} ${->bar}"
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
