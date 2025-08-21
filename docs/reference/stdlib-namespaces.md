@@ -80,7 +80,7 @@ The global namespace contains globally available constants and functions.
   : Type of paths returned, can be `'file'`, `'dir'` or `'any'` (default: `'file'`)
 
 : :::{note}
-  This function will return a collection if the glob pattern yields zero or multiple files. Use `files()` to get a collection of files.
+  This function returns a collection if the glob pattern yields zero or multiple files. Use `files()` to get a collection of files.
   :::
 
 `files( filePattern: String, [options] ) -> List<Path>`
