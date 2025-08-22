@@ -16,13 +16,11 @@
 
 package nextflow.processor
 
-import java.util.concurrent.atomic.LongAdder
 
 import nextflow.Session
 import nextflow.executor.ExecutorConfig
 import nextflow.util.Duration
 import nextflow.util.RateUnit
-import nextflow.util.ThrottlingExecutor
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -154,58 +152,75 @@ class TaskPollingMonitorTest extends Specification {
     }
 
     @Unroll
-    def 'should check whether job can be submitted' () {
+    def 'should throw error if job array size exceeds queue size [capacity: #CAPACITY, array: #ARRAY_SIZE]' () {
         given:
         def session = Mock(Session)
         def monitor = Spy(new TaskPollingMonitor(name: 'foo', session: session, capacity: CAPACITY, pollInterval: Duration.of('1min')))
         and:
-        def processor = Mock(TaskProcessor) {
-            getForksCount() >> new LongAdder()
-            getMaxForks() >> FORKS
-        }
-        def handler = Spy(TaskHandler)
-        handler.task = Mock(TaskRun) {
-            getProcessor() >> processor
-        }
-        def arrayHandler = Spy(TaskHandler) {
-            isReady() >> true
-        }
-        arrayHandler.task = Mock(TaskArrayRun) {
-            getArraySize() >> ARRAY
-            getProcessor() >> processor
-        }
-
-        and:
-        SUBMIT.times { monitor.runningQueue.add(handler)  }
-
-        expect:
-        monitor.runningQueue.size() == SUBMIT
-        monitor.canSubmit(arrayHandler) == EXPECTED
-        where:
-        CAPACITY | SUBMIT | FORKS | ARRAY | EXPECTED
-        0        | 0      | 0     | 2     | true
-        0        | 0      | 1     | 2     | false
-        10       | 5      | 0     | 5     | true
-        10       | 8      | 0     | 5     | false
-        10       | 0      | 1     | 5     | false
-    }
-
-    def 'should throw error if job array size exceeds queue size' () {
-        given:
-        def session = Mock(Session)
-        def monitor = Spy(new TaskPollingMonitor(name: 'foo', session: session, capacity: 2, pollInterval: Duration.of('1min')))
-        and:
-        def arrayHandler = Spy(TaskHandler)
-        arrayHandler.task = Mock(TaskArrayRun) {
-            getName() >> 'bar'
-            getArraySize() >> 4
+        def processor = Mock(TaskProcessor)
+        def arrayHandler = Mock(TaskHandler) {
+            getTask() >> Mock(TaskArrayRun) {
+                getName() >> TASK_NAME
+                getArraySize() >> ARRAY_SIZE
+                getProcessor() >> processor
+            }
         }
 
         when:
         monitor.canSubmit(arrayHandler)
         then:
         def e = thrown(IllegalArgumentException)
-        e.message == 'Job array bar exceeds the queue size (array size: 4, queue size: 2)'
+        e.message.contains("Process '$TASK_NAME' declares array size ($ARRAY_SIZE) which exceeds the executor queue size ($CAPACITY)")
+
+        where:
+        CAPACITY | ARRAY_SIZE | TASK_NAME
+        10       | 15         | 'test_array'
+        5        | 10         | 'large_array'  
+        1        | 2          | 'small_array'
+    }
+
+    @Unroll
+    def 'should validate array size accounting in queue capacity [capacity: #CAPACITY, running: #RUNNING_COUNT, array: #ARRAY_SIZE]' () {
+        given:
+        def session = Mock(Session)
+        def monitor = Spy(new TaskPollingMonitor(name: 'foo', session: session, capacity: CAPACITY, pollInterval: Duration.of('1min')))
+        and:
+        def processor = Mock(TaskProcessor)
+        def regularHandler = Mock(TaskHandler) {
+            getTask() >> Mock(TaskRun) {
+                getProcessor() >> processor
+            }
+            canForkProcess() >> CAN_FORK
+            isReady() >> IS_READY
+        }
+        def arrayHandler = Mock(TaskHandler) {
+            getTask() >> Mock(TaskArrayRun) {
+                getArraySize() >> ARRAY_SIZE
+                getProcessor() >> processor
+            }
+            canForkProcess() >> CAN_FORK
+            isReady() >> IS_READY
+        }
+
+        and:
+        RUNNING_COUNT.times { monitor.runningQueue.add(regularHandler) }
+
+        expect:
+        monitor.runningQueue.size() == RUNNING_COUNT
+        monitor.canSubmit(regularHandler) == REGULAR_EXPECTED
+        monitor.canSubmit(arrayHandler) == ARRAY_EXPECTED
+
+        where:
+        CAPACITY | RUNNING_COUNT | ARRAY_SIZE | CAN_FORK | IS_READY | REGULAR_EXPECTED | ARRAY_EXPECTED
+        10       | 6             | 5          | true     | true     | true             | false     // Array too big (6+5>10)
+        10       | 5             | 5          | true     | true     | true             | true      // Array fits exactly (5+5=10)
+        10       | 9             | 1          | true     | true     | true             | true      // Both fit (9+1=10)
+        10       | 10            | 1          | true     | true     | false            | false     // Queue full (10+1>10)
+        5        | 4             | 1          | true     | true     | true             | true      // Both fit (4+1=5)
+        5        | 4             | 2          | true     | true     | true             | false     // Array too big (4+2>5)
+        0        | 5             | 10         | true     | true     | true             | true      // Unlimited capacity
+        10       | 5             | 3          | false    | true     | false            | false     // Cannot fork
+        10       | 5             | 3          | true     | false    | false            | false     // Not ready
     }
 
 }

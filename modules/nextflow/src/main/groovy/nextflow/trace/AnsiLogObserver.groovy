@@ -23,6 +23,7 @@ import jline.TerminalFactory
 import nextflow.Session
 import nextflow.trace.event.TaskEvent
 import nextflow.util.Duration
+import nextflow.util.SysHelper
 import nextflow.util.Threads
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
@@ -347,7 +348,7 @@ class AnsiLogObserver implements TraceObserverV2 {
 
         if( session.isSuccess() && stats.progressLength>0 ) {
             def report = ""
-            report += "Completed at: ${new Date(endTimestamp).format('dd-MMM-yyyy HH:mm:ss')}\n"
+            report += "Completed at: ${SysHelper.fmtDate(new Date(endTimestamp))}\n"
             report += "Duration    : ${new Duration(delta)}\n"
             report += "CPU hours   : ${stats.getComputeTimeFmt()}\n"
             report += "Succeeded   : ${stats.succeedCountFmt}\n"

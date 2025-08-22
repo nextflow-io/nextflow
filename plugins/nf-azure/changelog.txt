@@ -1,5 +1,12 @@
 nf-azure changelog
 ===================
+1.19.0 - 15 Aug 2025
+- Fix Azure Batch startTask concatenation issue (#6300) (#6305) [ci fast] [81d5c0dc]
+- Unify nf-lang config scopes with runtime classes (#6271) [bfa67ca3]
+- Update Azure and AWS deps (#6343) [ci fast] [ff00e2de]
+- Bump groovy 4.0.28 (#6304) [ci fast] [a468f8ef]
+- Bump netty-codec-http2:4.1.124.Final [7e690b44]
+
 1.18.0 - 6 Jun 2025
 - Allow users to provide implicit managed identity to Azure Batch (#6144) [d1f70f50]
 - Minor Azure Batch disk slot calculation demoted to debug (#6234) [ci skip] [c65955ce]

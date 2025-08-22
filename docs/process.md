@@ -1276,15 +1276,16 @@ All directives can be assigned a dynamic value except the following:
 - {ref}`process-label`
 - {ref}`process-maxforks`
 
-:::{tip}
-Assigning a string value with one or more variables is always resolved in a dynamic manner, and therefore is equivalent to the above syntax. For example, the above directive can also be written as:
+:::{versionadded} 25.10
+:::
+
+Dynamic directives can be specified without a closure when using the {ref}`strict syntax <strict-syntax-page>`:
 
 ```nextflow
-queue "${ entries > 100 ? 'long' : 'short' }"
+queue (entries > 100 ? 'long' : 'short')
 ```
 
-Note, however, that the latter syntax can be used both for a directive's main argument (as in the above example) and for a directive's optional named attributes, whereas the closure syntax is only resolved dynamically for a directive's main argument.
-:::
+Directives will be evaluated dynamically if they reference task inputs. Process configuration options must still be specified with a closure to be dynamic.
 
 (dynamic-task-resources)=
 

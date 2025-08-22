@@ -30,7 +30,9 @@ class PluginRefactor {
 
     private String pluginName
 
-    private String orgName
+    private String providerName
+
+    private String packageName
 
     private File pluginDir
 
@@ -46,8 +48,12 @@ class PluginRefactor {
         return pluginName
     }
 
-    String getOrgName() {
-        return orgName
+    String getPackageName() {
+        return packageName
+    }
+
+    String getProviderName() {
+        return providerName
     }
 
     File getPluginDir() {
@@ -69,18 +75,21 @@ class PluginRefactor {
         return this
     }
 
-    PluginRefactor withOrgName(String name) {
-        this.orgName = normalizeToPackageNameSegment(name)
-        if( !orgName )
-            throw new AbortOperationException("Invalid organization name: '$name'")
+    PluginRefactor withProviderName(String name) {
+        this.providerName = name?.trim()
+        if( !providerName )
+            throw new AbortOperationException("Provider name cannot be empty or blank")
+        this.packageName = normalizeToPackageNameSegment(name)
+        if( !packageName )
+            throw new AbortOperationException("Invalid provider name: $name")
         return this
     }
 
     protected void init() {
         if( !pluginName )
             throw new IllegalStateException("Missing plugin name")
-        if( !orgName )
-            throw new IllegalStateException("Missing organization name")
+        if( !providerName )
+            throw new IllegalStateException("Missing provider name")
         // initial
         this.gradleBuildFile = new File(pluginDir, 'build.gradle')
         this.gradleSettingsFile = new File(pluginDir, 'settings.gradle')
@@ -88,18 +97,21 @@ class PluginRefactor {
             throw new AbortOperationException("Plugin file does not exist: $gradleBuildFile")
         if( !gradleSettingsFile.exists() )
             throw new AbortOperationException("Plugin file does not exist: $gradleSettingsFile")
-        if( !orgName )
-            throw new AbortOperationException("Plugin org name is missing")
+        if( !providerName )
+            throw new AbortOperationException("Plugin provider name is missing")
+        if( !packageName )
+            throw new AbortOperationException("Plugin package name is missing")
         // packages to be updates
-        tokenMapping.put('acme', orgName)
+        tokenMapping.put('acme', packageName)
+        tokenMapping.put('provider-name', providerName)
         tokenMapping.put('nf-plugin-template', pluginName)
     }
 
     void apply() {
         init()
         replacePrefixInFiles(pluginDir, pluginClassPrefix)
-        renameDirectory(new File(pluginDir, "src/main/groovy/acme"), new File(pluginDir, "src/main/groovy/${orgName}"))
-        renameDirectory(new File(pluginDir, "src/test/groovy/acme"), new File(pluginDir, "src/test/groovy/${orgName}"))
+        renameDirectory(new File(pluginDir, "src/main/groovy/acme"), new File(pluginDir, "src/main/groovy/${packageName}"))
+        renameDirectory(new File(pluginDir, "src/test/groovy/acme"), new File(pluginDir, "src/test/groovy/${packageName}"))
         updateClassNamesAndSymbols(pluginDir)
     }
 
@@ -173,7 +185,9 @@ class PluginRefactor {
             .trim()
         // Split by whitespace, capitalize each word, join them
         final parts = cleaned.split(/\s+/).collect { it.capitalize() }
-        return parts.join('').replace('Plugin','')
+        final result = parts.join('').replace('Plugin','')
+        // Remove "Nf" prefix only
+        return result.startsWith('Nf') ? result.substring(2) : result
     }
 
     static String normalizeToKebabCase(String input) {

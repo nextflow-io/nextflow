@@ -41,7 +41,6 @@ import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
 import nextflow.script.ScriptType
 import nextflow.script.bundle.ResourcesBundle
-import nextflow.script.params.CmdEvalParam
 import nextflow.script.params.FileInParam
 import nextflow.script.params.FileOutParam
 import nextflow.util.ArrayBag
@@ -1220,51 +1219,29 @@ class TaskProcessorTest extends Specification {
         1 * exec.submit(task)
     }
 
-    def 'should use eval outputs in hash' () {
-        given:
-        def session = Mock(Session) {
-            getDumpHashes() >> 'json'
-            getUniqueId() >> UUID.fromString('b69b6eeb-b332-4d2c-9957-c291b15f498c')
-            getBinEntries() >> ['foo.sh': Paths.get('/some/path/foo.sh'), 'bar.sh': Paths.get('/some/path/bar.sh')]
-        }
-        def outParam = Mock(CmdEvalParam) {
-            getTarget( _ as Map) >> 'foo --version'
-        }
-        def task1 = Spy(TaskRun) {
-            getSource() >> 'hello world'
-            lazyName() >> 'hello'
-            isContainerEnabled() >> false
-            getContainer() >> null
-            getSpackEnv() >> null
-            getCondaEnv() >> null
-            getConfig() >> Mock(TaskConfig)
-            getContext() >> [:]
-        }
-        def task2 = Spy(TaskRun) {
-            getSource() >> 'hello world'
-            lazyName() >> 'hello'
-            isContainerEnabled() >> false
-            getContainer() >> null
-            getSpackEnv() >> null
-            getCondaEnv() >> null
-            getConfig() >> Mock(TaskConfig)
-            getContext() >> [:]
-        }
-        task2.setOutput(outParam)
+    def 'should compute eval outputs content deterministically'() {
 
-        def processor = Spy(TaskProcessor){
-            getTaskGlobalVars( _ as TaskRun) >> [foo:'a', bar:'b']
-        }
-        processor.@session = session
-        processor.@config = Mock(ProcessConfig)
+        setup:
+        def session = Mock(Session)
+        def script = Mock(BaseScript)
+        def config = Mock(ProcessConfig)
+        def processor = new DummyProcessor('test', session, script, config)
 
         when:
-        def uuid1 = processor.createTaskHashKey(task1)
-        def uuid2 = processor.createTaskHashKey(task2)
+        def result1 = processor.computeEvalOutputsContent([
+            'nxf_out_eval_2': 'echo "value2"',
+            'nxf_out_eval_1': 'echo "value1"',
+            'nxf_out_eval_3': 'echo "value3"'
+        ])
+        
+        def result2 = processor.computeEvalOutputsContent([
+            'nxf_out_eval_3': 'echo "value3"',
+            'nxf_out_eval_1': 'echo "value1"',
+            'nxf_out_eval_2': 'echo "value2"'
+        ])
 
         then:
-        uuid1 != uuid2
-
+        result1 == result2
+        result1 == 'nxf_out_eval_1=echo "value1"\nnxf_out_eval_2=echo "value2"\nnxf_out_eval_3=echo "value3"'
     }
-
 }

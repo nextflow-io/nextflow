@@ -36,44 +36,53 @@ class CsvWriter {
     }
 
     void apply(List records, Path path) {
-        Collection columns
-        if( header == true ) {
-            final first = records.first()
-            if( first !instanceof Map )
-                throw new IllegalArgumentException('Records must be map objects when header=true')
-            columns = ((Map)first).keySet()
-        }
-        else if( header instanceof List ) {
-            columns = header
-        }
-        else {
-            columns = null
-        }
-
         path.delete()
 
+        final columns = columnHeaders(header, records)
         if( columns )
             path << columns.collect(column -> "\"${column}\"").join(sep) << '\n'
 
-        for( final record : records ) {
-            Collection values
-            if( record instanceof List ) {
-                values = record
-            }
-            else if( record instanceof Map ) {
-                values = columns
-                    ? record.subMap(columns).values()
-                    : record.values()
-            }
-            else if( isSerializable(record) ) {
-                values = [ record ]
-            }
-            else {
-                throw new IllegalArgumentException("Record of type `${record.class.name}` can not be serialized to CSV")
-            }
+        if( records.isEmpty() )
+            path << ''
 
+        for( final record : records ) {
+            final values = rowValues(record, columns)
             path << values.collect(v -> "\"${toCsvString(v)}\"").join(sep) << '\n'
         }
+    }
+
+    private static Collection columnHeaders(Object header, List records) {
+        if( header instanceof List ) {
+            return header
+        }
+
+        if( header == true && !records.isEmpty() ) {
+            final first = records.first()
+            if( first instanceof Map )
+                return first.keySet()
+            else
+                throw new IllegalArgumentException('Records must be map objects when header=true')
+        }
+
+        return null
+    }
+
+    private static Collection rowValues(Object record, Collection columns) {
+        if( record instanceof List ) {
+            return record
+        }
+
+        if( record instanceof Map ) {
+            return columns
+                ? record.subMap(columns).values()
+                : record.values()
+        }
+
+        if( isSerializable(record) ) {
+            return [ record ]
+        }
+
+        throw new IllegalArgumentException("Record of type `${record.class.name}` can not be serialized to CSV")
     }
 
     private static boolean isSerializable(value) {

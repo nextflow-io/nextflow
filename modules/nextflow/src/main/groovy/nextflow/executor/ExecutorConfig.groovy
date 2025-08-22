@@ -176,7 +176,7 @@ class ExecutorConfig implements ConfigScope {
         queueGlobalStatus = opts.queueGlobalStatus as boolean
         queueSize = opts.queueSize as Integer
         queueStatInterval = opts.queueStatInterval as Duration ?: Duration.of('1min')
-        retry = opts.retry as ExecutorRetryConfig
+        retry = opts.retry ? new ExecutorRetryConfig(opts.retry as Map) : new ExecutorRetryConfig(Map.of())
         submitRateLimit = opts.submitRateLimit
 
         // preserve executor-specific opts
