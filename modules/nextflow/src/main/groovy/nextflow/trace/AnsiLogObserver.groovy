@@ -99,9 +99,24 @@ class AnsiLogObserver implements TraceObserverV2 {
 
     private Boolean enableSummary = System.getenv('NXF_ANSI_SUMMARY') as Boolean
 
+    private Integer forcedTerminalWidth = getForcedTerminalWidth()
+
     private final int WARN_MESSAGE_TIMEOUT = 35_000
 
     private WorkflowStatsObserver statsObserver
+
+    private static Integer getForcedTerminalWidth() {
+        final env = System.getenv('TERMINAL_WIDTH')
+        if( env ) {
+            try {
+                return Integer.parseInt(env)
+            }
+            catch( NumberFormatException e ) {
+                // ignore invalid values
+            }
+        }
+        return null
+    }
 
     private void markModified() {
         changeTimestamp = System.currentTimeMillis()
@@ -256,7 +271,7 @@ class AnsiLogObserver implements TraceObserverV2 {
             return
         }
 
-        cols = TerminalFactory.get().getWidth()
+        cols = forcedTerminalWidth ?: TerminalFactory.get().getWidth()
         rows = TerminalFactory.get().getHeight()
 
         // calc max width
