@@ -10,11 +10,13 @@ This page describes how to develop plugins for Nextflow.
 
 The [Nextflow plugin template](https://github.com/nextflow-io/nf-plugin-template/) is a scaffold for plugin development. It uses [Gradle](https://gradle.org/), a build automation tool optimized for Java and Groovy projects, as well as the [Nextflow Gradle plugin](https://github.com/nextflow-io/nextflow-plugin-gradle).
 
-You can use the `nextflow plugin create` sub-command to create plugins from the plugin template. See {ref}`gradle-plugin-create` for more information.
+You can use the `nextflow plugin create` sub-command to create plugins using the plugin template. See {ref}`gradle-plugin-create` for more information.
 
 :::{note}
-The Nextflow Gradle plugin is currently available as a private beta. See the {ref}`migration guide <plugin-registry-page>` for more information.
+The Nextflow Gradle plugin is currently available as a public preview. See {ref}`Migrating to the Nextflow plugin registry <plugin-registry-page>` for more information.
 :::
+
+(dev-plugins-structure)=
 
 ### Structure
 
@@ -24,6 +26,7 @@ For example, a plugin created from the plugin template with the name `nf-hello` 
 
 ```console
 nf-hello
+├── .github/workflows/build.yml
 ├── COPYING
 ├── Makefile
 ├── README.md
@@ -55,7 +58,7 @@ nf-hello
 
 This structure contains the following key files and folders:
 
-- `.github/workflows`: GitHub Action which implements continuous integration for the plugin.
+- `.github/workflows/build.yml`: GitHub Action which implements continuous integration for the plugin.
 
 - `build.gradle`: The Gradle build script.
 
@@ -71,9 +74,9 @@ This structure contains the following key files and folders:
 
 - `settings.gradle`: The Gradle project configuration, which specifies project-specific settings such as the project name and included modules.
 
-- `src/main/groovy/<ORGANIZATION>/<NAME>/`: The main source directory, which contains the plugin source code and resources.​
+- `src/main/groovy/<ORGANIZATION>/`: The main source directory, which contains the plugin source code and resources.​
 
-- `src/test/groovy/<ORGANIZATION>/<NAME>/`: The test source directory, which contains the plugin unit tests.
+- `src/test/groovy/<ORGANIZATION>/`: The test source directory, which contains the plugin unit tests.
 
 - `validation`: A small Nextflow pipeline which serves as an end-to-end test for the plugin.
 
@@ -91,12 +94,12 @@ It is versioned and published to the [Gradle Plugin Portal](https://plugins.grad
 
 ```nextflow
 plugins {
-    id 'io.nextflow.nextflow-plugin' version '0.0.1-alpha4'
+    id 'io.nextflow.nextflow-plugin' version '1.0.0-beta.6'
 }
 ```
 
 :::{note}
-Nextflow plugins can be developed without the Gradle plugin. However, this approach is only suggested if you are an advanced developer and your project is incompatible with the Gradle plugin.
+You can develop Nextflow plugins without the Gradle plugin. However, this approach is only suggested if you are an advanced developer and your project is incompatible with the Gradle plugin.
 :::
 
 ### Make commands
@@ -199,7 +202,7 @@ myplugin {
 }
 ```
 
-:::{versionadded} 25.02.0-edge
+:::{versionadded} 25.04.0
 :::
 
 Plugins can declare their configuration options by implementing the `ConfigScope` interface and declaring each config option as a field with the `@ConfigOption` annotation. For example:
@@ -216,6 +219,12 @@ import nextflow.script.dsl.Description
 ''')
 class MyPluginConfig implements ConfigScope {
 
+    @ConfigOption
+    @Description('''
+        Message to print to standard output when a run is initialized.
+    ''')
+    final String createMessage
+
     // no-arg constructor is required to enable validation of config options
     MyPluginConfig() {
     }
@@ -223,10 +232,6 @@ class MyPluginConfig implements ConfigScope {
     MyPluginConfig(Map opts) {
         this.createMessage = opts.createMessage
     }
-
-    @ConfigOption
-    @Description('Message to print to standard output when a run is initialized.')
-    String createMessage
 }
 ```
 
@@ -299,7 +304,7 @@ Custom filesystems are an advanced plugin extension. Before creating a new files
 
 ### Functions
 
-:::{versionadded} 22.09.0-edge
+:::{versionadded} 22.10.0
 :::
 
 Plugins can define custom functions that can be included in Nextflow pipelines.
@@ -422,7 +427,7 @@ class MyExecutor extends Executor {
 
 ### Trace observers
 
-:::{versionchanged} 25.04
+:::{versionchanged} 25.04.0
 The `TraceObserver` interface is now deprecated. Use [TraceObserverV2](https://github.com/nextflow-io/nextflow/blob/master/modules/nextflow/src/main/groovy/nextflow/trace/TraceObserverV2.groovy) and [TraceObserverFactoryV2](https://github.com/nextflow-io/nextflow/blob/master/modules/nextflow/src/main/groovy/nextflow/trace/TraceObserverFactoryV2.groovy) instead.
 :::
 
@@ -483,7 +488,7 @@ See the [`TraceObserver` source code](https://github.com/nextflow-io/nextflow/bl
 
 ## Environment variables
 
-The following environment variables are available when developing and testing plugins:
+The following environment variables are available to develop and test plugins:
 
 `NXF_PLUGINS_MODE`
 : The plugin execution mode. Either `prod` for production or `dev` for development.
@@ -493,7 +498,6 @@ The following environment variables are available when developing and testing pl
 
 `NXF_PLUGINS_DEFAULT`
 : Whether to use the default plugins when no plugins are specified in the Nextflow configuration (default: true).
-
 
 `NXF_PLUGINS_DEV`
 : Comma-separated list of development plugin root directories.

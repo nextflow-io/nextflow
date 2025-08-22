@@ -2,10 +2,10 @@
 
 # Using the Nextflow Gradle plugin
 
-The [Nextflow Gradle plugin](https://github.com/nextflow-io/nextflow-plugin-gradle) simplifies plugin development by configuring default dependencies needed for Nextflow integration and defining Gradle tasks for building, testing, and publishing Nextflow plugins.
+The [Nextflow Gradle plugin](https://github.com/nextflow-io/nextflow-plugin-gradle) simplifies plugin development by configuring default dependencies needed for Nextflow integration and defining Gradle tasks for building, testing, and publishing Nextflow plugins. The Gradle plugin is versioned and published to the [Gradle Plugin Portal](https://plugins.gradle.org/), allowing developers to manage it like any other dependency. As the plugin ecosystem evolves, the Gradle plugin will enable easier maintenance and adoption of improvements. This page introduces [Nextflow Gradle plugin](https://github.com/nextflow-io/nextflow-plugin-gradle) and how to use it.
 
 :::{note}
-The Nextflow Gradle plugin and plugin registry are currently available as a private beta. See the {ref}`migration guide <plugin-registry-page>` for more information.
+The Nextflow Gradle plugin and plugin registry are currently available as a public preview. See the {ref}`Migrating to the Nextflow plugin registry <plugin-registry-page>` for more information.
 :::
 
 (gradle-plugin-create)=
@@ -15,17 +15,25 @@ The Nextflow Gradle plugin and plugin registry are currently available as a priv
 :::{versionadded} 25.04.0
 :::
 
-The easiest way to get started with the Nextflow Gradle plugin is to use the `nextflow plugin create` sub-command, which creates a plugin project based on the [Nextflow plugin template](https://github.com/nextflow-io/nf-plugin-template/), which in turn uses the Gradle plugin.
+The best way to create a plugin with the Nextflow Gradle plugin is to use the `nextflow plugin create` sub-command and create a plugin project based on the [Nextflow plugin template](https://github.com/nextflow-io/nf-plugin-template/). See {ref}`dev-plugins-template` for more information about the Nextflow plugin template.
 
-To create a Nextflow plugin with the Gradle plugin, run `nextflow plugin create` on the command line. It will prompt you for your plugin name, organization name, and project path.
+To create Nextflow plugins with the Gradle plugin:
 
-See {ref}`dev-plugins-template` for more information about the Nextflow plugin template. See {ref}`dev-plugins-extension-points` for more information about using plugin extension points.
+1. Run `nextflow plugin create`.
 
-## Building a plugin
+2. Follow the prompts to add your plugin name, organization name, and project path.
 
-To build a plugin, run `make assemble`.
+3. Develop your plugin extension points. See {ref}`dev-plugins-extension-points` for more information.
 
-Plugins can also be installed locally without being published. To install a plugin locally:
+4. Develop your tests. See {ref}`gradle-plugin-test` for more information.
+
+5. In the plugin root directory, run `make assemble`.
+
+## Installing a plugin
+
+Plugins can be installed locally without being published.
+
+To install plugins locally:
 
 1. In the plugin root directory, run `make install`.
 
@@ -39,13 +47,17 @@ Plugins can also be installed locally without being published. To install a plug
     nextflow run main.nf -plugins <PLUGIN_NAME>@<VERSION>
     ```
 
+    Replace `<PLUGIN_NAME>@<VERSION>` with your plugin name and version.
+
     :::{note}
-    Plugins can also be configured via nextflow configuration files. See {ref}`using-plugins-page` for more information.
+    Plugins can also be configured via Nextflow configuration files. See {ref}`using-plugins-page` for more information.
     :::
 
 (gradle-plugin-test)=
 
 ## Testing a plugin
+
+Testing your Nextflow plugin requires unit tests and end-to-end tests.
 
 <h3>Unit tests</h3>
 
@@ -59,24 +71,30 @@ To run unit tests:
 
 <h3>End-to-end tests</h3>
 
-End-to-end tests are comprehensive tests that verify the behavior of an entire plugin as it would be used in a Nextflow pipeline. End-to-end tests should be tailored to the needs of your plugin, but generally take the form of a small Nextflow pipeline. See the `validation` directory in the [plugin template](https://github.com/nextflow-io/nf-plugin-template) for an example end-to-end test.
+End-to-end tests are comprehensive tests that verify the behavior of an entire plugin as it would be used in Nextflow pipelines.
+
+End-to-end tests should be tailored to the needs of your plugin, but generally take the form of a small Nextflow pipeline. See the `validation` directory in the [plugin template](https://github.com/nextflow-io/nf-plugin-template) for an example end-to-end test.
 
 (gradle-plugin-publish)=
 
 ## Publishing a plugin
 
-The Nextflow Gradle plugin allows you to publish your plugin to the Nextflow plugin registry from the command line.
+The Nextflow Gradle plugin allows you to publish plugins to the [Nextflow plugin registry](https://registry.nextflow.io/) from the command line.
 
-To publish your plugin:
+To publish plugins to the [Nextflow plugin registry](https://registry.nextflow.io/):
 
 1. Create a file named `$HOME/.gradle/gradle.properties`, where `$HOME` is your home directory.
 
-2. Add the following properties:
+2. Add the following property:
 
     ```
-    pluginRegistry.accessToken=<REGISTRY_ACCESS_TOKEN>
+    npr.apiKey=<API_KEY>
     ```
 
-    Replace `<REGISTRY_ACCESS_TOKEN>` with your plugin registry access token.
+    Replace `<API_KEY>` with your plugin registry API key. See {ref}`plugin-registry-create` for more information about creating an API key.
 
 3. Run `make release`.
+
+## Additional resources
+
+For additional Nextflow Gradle plugin configuration options, see the [Nextflow Gradle plugin](https://github.com/nextflow-io/nextflow-plugin-gradle) repository.

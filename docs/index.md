@@ -113,6 +113,17 @@ fusion
 
 ```{toctree}
 :hidden:
+:caption: Plugins
+:maxdepth: 1
+
+plugins/plugins
+plugins/using-plugins
+plugins/developing-plugins
+plugins/plugin-registry
+```
+
+```{toctree}
+:hidden:
 :caption: Language Reference
 :maxdepth: 1
 
@@ -153,16 +164,6 @@ developer/index
 developer/diagram
 developer/config-scopes
 developer/packages
-```
-
-```{toctree}
-:hidden:
-:caption: Plugins
-:maxdepth: 1
-
-plugins/plugins
-plugins/using-plugins
-plugins/developing-plugins
 ```
 
 ```{toctree}
