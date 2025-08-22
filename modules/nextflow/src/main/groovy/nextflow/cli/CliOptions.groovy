@@ -109,6 +109,13 @@ class CliOptions {
         catch (Exception e) {
             log.warn "Invalid boolean value for variable NXF_ANSI_LOG: $env -- it must be 'true' or 'false'"
         }
+
+        // Check NO_COLOR environment variable (https://no-color.org/)
+        final noColor = System.getenv('NO_COLOR')
+        if( noColor && !noColor.isEmpty() && noColor != '0' && noColor.toLowerCase() != 'false' ) {
+            return ansiLog = false
+        }
+
         return Ansi.isEnabled()
     }
 

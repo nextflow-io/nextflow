@@ -250,6 +250,9 @@ The following environment variables control the configuration of the Nextflow ru
 : Defines the minimum size of the `.command.run` staging script for it to be written to a separate `.command.stage` file (default: `'1 MB'`).
 : This setting is useful for executors that impose a size limit on job scripts.
 
+`NO_COLOR`
+: When present and not an empty string, disables ANSI color output. Follows the [NO_COLOR standard](https://no-color.org/). The `NXF_ANSI_LOG` variable takes precedence if set.
+
 `TERMINAL_WIDTH`
 : Forces the terminal width for ANSI log output when set to an integer value. Overrides automatic terminal width detection.
 
