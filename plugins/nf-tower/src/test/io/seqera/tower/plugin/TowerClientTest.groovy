@@ -522,4 +522,16 @@ class TowerClientTest extends Specification {
         and:
         client.getNewContainers([trace1, trace2, trace3]) == [c2]
     }
+
+    def 'should handle HTTP request with content'() {
+        given: 'a TowerClient'
+        def tower = new TowerClient()
+        def content = '{"test": "data"}'
+        def request = tower.makeRequest('http://example.com/test', content, 'POST')
+
+        expect: 'the request should be created with the content'
+        request != null
+        request.method() == 'POST'
+        request.uri().toString() == 'http://example.com/test'
+    }
 }

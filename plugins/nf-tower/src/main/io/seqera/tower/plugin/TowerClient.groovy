@@ -36,6 +36,8 @@ import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
 import io.seqera.http.HxClient
 import io.seqera.http.HxConfig
+import io.seqera.util.trace.TraceUtils
+import nextflow.BuildInfo
 import nextflow.Session
 import nextflow.container.resolver.ContainerMeta
 import nextflow.exception.AbortOperationException
@@ -304,7 +306,7 @@ class TowerClient implements TraceObserverV2 {
         setupClientAuth(config, getAccessToken())
         // retry settings
         config.withMaxAttempts(maxRetries)
-        config.withMaxDelay(java.time.Duration.ofMillis(backOffDelay))
+        config.withDelay(java.time.Duration.ofMillis(backOffDelay))
         config.withMultiplier(backOffBase)
         // create the client object
         final client = HttpClient
@@ -321,6 +323,7 @@ class TowerClient implements TraceObserverV2 {
         if( token.count('.')==2 ) {
             config.withJwtToken(token)
             config.withRefreshToken(env.get('TOWER_REFRESH_TOKEN'))
+            config.withRefreshTokenUrl("$endpoint/oauth/access_token")
             return
         }
 
@@ -333,6 +336,7 @@ class TowerClient implements TraceObserverV2 {
                 config.withJwtToken(token)
                 // setup the refresh
                 config.withRefreshToken(env.get('TOWER_REFRESH_TOKEN'))
+                config.withRefreshTokenUrl("$endpoint/oauth/access_token")
                 return
             }
         }
@@ -524,26 +528,20 @@ class TowerClient implements TraceObserverV2 {
         }
     }
 
-    protected HttpRequest makeRequest(String url, String content, String verb) {
-        if(verb == 'GET')
-            return HttpRequest.newBuilder(URI.create(url))
-                .GET()
-                .build()
+    protected HttpRequest makeRequest(String url, String payload, String verb) {
+        assert payload, "Tower request cannot be empty"
+        
+        final builder = HttpRequest.newBuilder(URI.create(url))
+            .header('Content-Type', 'application/json; charset=utf-8')
+            .header('User-Agent', "Nextflow/$BuildInfo.version")
+            .header('Traceparent', TraceUtils.rndTrace())
 
         if(verb == 'PUT')
-            return HttpRequest.newBuilder(URI.create(url))
-                .PUT(HttpRequest.BodyPublishers.ofString(content))
-                .build()
-
+            return builder.PUT(HttpRequest.BodyPublishers.ofString(payload)).build()
+        
         if(verb == 'POST')
-            return HttpRequest.newBuilder(URI.create(url))
-                .POST(HttpRequest.BodyPublishers.ofString(content))
-                .build()
+            return builder.POST(HttpRequest.BodyPublishers.ofString(payload)).build()
 
-        if(verb == 'DELETE')
-            return HttpRequest.newBuilder(URI.create(url))
-                .DELETE()
-                .build()
         else
             throw new IllegalArgumentException("Unsupported HTTP verb: $verb")
     }
