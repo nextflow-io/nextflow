@@ -19,7 +19,10 @@ package nextflow.trace
 import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 import jline.TerminalFactory
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import nextflow.Session
 import nextflow.trace.event.TaskEvent
 import nextflow.util.Duration
@@ -39,10 +42,13 @@ import static org.fusesource.jansi.Ansi.ansi
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 class AnsiLogObserver implements TraceObserverV2 {
 
     static final private String NEWLINE = '\n'
+
+    static final private Logger staticLog = LoggerFactory.getLogger(AnsiLogObserver)
 
     static class Event {
         String message
@@ -112,7 +118,7 @@ class AnsiLogObserver implements TraceObserverV2 {
                 return Integer.parseInt(env)
             }
             catch( NumberFormatException e ) {
-                // ignore invalid values
+                staticLog.debug("Invalid TERMINAL_WIDTH '{}': {}", env, e.getMessage())
             }
         }
         return null
