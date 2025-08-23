@@ -34,7 +34,7 @@ dependencies {
     api 'org.pf4j:pf4j:3.12.0'
     api 'org.pf4j:pf4j-update:2.3.0'
     api 'dev.failsafe:failsafe:3.1.0'
-    api 'io.seqera:lib-httpx:1.5.0'
+    api 'io.seqera:lib-httpx:1.6.0'
     api 'io.seqera:lib-retry:2.0.0'
     // patch gson dependency required by pf4j
     api 'com.google.code.gson:gson:2.13.1'

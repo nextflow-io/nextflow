@@ -38,6 +38,8 @@ import org.apache.commons.lang.time.DurationFormatUtils
 @EqualsAndHashCode(includes = 'durationInMillis')
 class Duration implements IDuration, TemporalAmount, Comparable<Duration>, Serializable, Cloneable {
 
+    static private final List<TemporalUnit> SUPPORTED_UNITS = List.<TemporalUnit>of(ChronoUnit.DAYS, ChronoUnit.HOURS, ChronoUnit.MINUTES, ChronoUnit.SECONDS, ChronoUnit.MILLIS)
+
     static private final FORMAT = ~/^(\d+\.?\d*)\s*([a-zA-Z]+)/
 
     static private final LEGACY = ~/^(\d{1,2}):(\d{1,2}):(\d{1,2})$/
@@ -404,7 +406,7 @@ class Duration implements IDuration, TemporalAmount, Comparable<Duration>, Seria
      */
     @Override
     List<TemporalUnit> getUnits() {
-        return [ChronoUnit.DAYS, ChronoUnit.HOURS, ChronoUnit.MINUTES, ChronoUnit.SECONDS, ChronoUnit.MILLIS] as List<TemporalUnit>
+        return SUPPORTED_UNITS
     }
 
     /**
