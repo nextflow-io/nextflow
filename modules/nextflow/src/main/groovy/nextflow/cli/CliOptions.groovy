@@ -112,7 +112,7 @@ class CliOptions {
 
         // Check NO_COLOR environment variable (https://no-color.org/)
         final noColor = System.getenv('NO_COLOR')
-        if( noColor && !noColor.isEmpty() && noColor != '0' && noColor.toLowerCase() != 'false' ) {
+        if( noColor && !noColor.isEmpty() ) {
             return ansiLog = false
         }
 
