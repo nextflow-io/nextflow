@@ -142,6 +142,8 @@ class TowerClient implements TraceObserverV2 {
 
     private TowerReports reports
 
+    private TowerRetryPolicy retryPolicy
+
     private Map<String,Boolean> allContainers = new ConcurrentHashMap<>()
 
     TowerClient(Session session, TowerConfig config) {
@@ -149,6 +151,7 @@ class TowerClient implements TraceObserverV2 {
         this.endpoint = checkUrl(config.endpoint)
         this.accessToken = config.accessToken
         this.workspaceId = config.workspaceId
+        this.retryPolicy = config.retryPolicy
         this.schema = loadSchema()
         this.generator = TowerJsonGenerator.create(schema)
         this.reports = new TowerReports(session)
@@ -305,9 +308,7 @@ class TowerClient implements TraceObserverV2 {
         // auth settings
         setupClientAuth(config, getAccessToken())
         // retry settings
-        config.withMaxAttempts(maxRetries)
-        config.withDelay(java.time.Duration.ofMillis(backOffDelay))
-        config.withMultiplier(backOffBase)
+        config.withRetryConfig(this.retryPolicy)
         // create the client object
         final client = HttpClient
                     .newBuilder()
