@@ -438,7 +438,7 @@ class TowerClientTest extends Specification {
 
     def 'should set the auth token' () {
         given:
-        def http = Mock(HxConfig.Builder)
+        def http = Mock(HxClient.Builder)
         def session = Mock(Session)
         def config = new TowerConfig([:], [:])
         def client = Spy(new TowerClient(session, config))
@@ -449,17 +449,19 @@ class TowerClientTest extends Specification {
         when:
         client.setupClientAuth(http, SIMPLE)
         then:
-        http.withBasicAuth('@token:' + SIMPLE) >> null
+        1 * http.basicAuth('@token:' + SIMPLE) >> http
 
         when:
         client.setupClientAuth(http, SIMPLE)
         then:
-        http.withBasicAuth('@token:' + SIMPLE) >> null
+        1 * http.basicAuth('@token:' + SIMPLE) >> http
 
         when:
         client.setupClientAuth(http, BEARER)
         then:
-        http.withJwtToken(BEARER) >> null
+        1 * http.bearerToken(BEARER) >> http
+        1 * http.refreshToken(_) >> http
+        1 * http.refreshTokenUrl(_) >> http
     }
 
     def 'should fetch workflow meta' () {

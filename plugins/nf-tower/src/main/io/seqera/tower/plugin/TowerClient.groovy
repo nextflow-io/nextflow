@@ -19,7 +19,6 @@ package io.seqera.tower.plugin
 
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
-
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
@@ -35,7 +34,6 @@ import groovy.transform.ToString
 import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
 import io.seqera.http.HxClient
-import io.seqera.http.HxConfig
 import io.seqera.util.trace.TraceUtils
 import nextflow.BuildInfo
 import nextflow.Session
@@ -304,27 +302,24 @@ class TowerClient implements TraceObserverV2 {
     }
 
     protected HxClient newHttpClient() {
-        final config = new HxConfig.Builder()
+        final builder = HxClient.newBuilder()
         // auth settings
-        setupClientAuth(config, getAccessToken())
+        setupClientAuth(builder, getAccessToken())
         // retry settings
-        config.withRetryConfig(this.retryPolicy)
-        // create the client object
-        final client = HttpClient
-                    .newBuilder()
-                    .followRedirects(HttpClient.Redirect.NORMAL)
-                    .version(HttpClient.Version.HTTP_1_1)
-                    .connectTimeout(java.time.Duration.ofSeconds(60))
-                    .build()
-        return HxClient.create(client, config.build())
+        builder
+            .retryConfig(this.retryPolicy)
+            .followRedirects(HttpClient.Redirect.NORMAL)
+            .version(HttpClient.Version.HTTP_1_1)
+            .connectTimeout(java.time.Duration.ofSeconds(60))
+            .build()
     }
 
-    protected void setupClientAuth(HxConfig.Builder config, String token) {
+    protected void setupClientAuth(HxClient.Builder config, String token) {
         // check for plain jwt token
         if( token.count('.')==2 ) {
-            config.withJwtToken(token)
-            config.withRefreshToken(env.get('TOWER_REFRESH_TOKEN'))
-            config.withRefreshTokenUrl("$endpoint/oauth/access_token")
+            config.bearerToken(token)
+            config.refreshToken(env.get('TOWER_REFRESH_TOKEN'))
+            config.refreshTokenUrl("$endpoint/oauth/access_token")
             return
         }
 
@@ -334,10 +329,10 @@ class TowerClient implements TraceObserverV2 {
             final p = plain.indexOf('.')
             if( p!=-1 && new JsonSlurper().parseText(  plain.substring(0, p) )  ) {
                 // ok this is bearer token
-                config.withJwtToken(token)
+                config.bearerToken(token)
                 // setup the refresh
-                config.withRefreshToken(env.get('TOWER_REFRESH_TOKEN'))
-                config.withRefreshTokenUrl("$endpoint/oauth/access_token")
+                config.refreshToken(env.get('TOWER_REFRESH_TOKEN'))
+                config.refreshTokenUrl("$endpoint/oauth/access_token")
                 return
             }
         }
@@ -346,7 +341,7 @@ class TowerClient implements TraceObserverV2 {
         }
 
         // fallback on simple token
-        config.withBasicAuth(TOKEN_PREFIX + token)
+        config.basicAuth(TOKEN_PREFIX + token)
     }
 
     protected Map makeCreateReq(Session session) {

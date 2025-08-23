@@ -43,7 +43,6 @@ import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import io.seqera.http.HxClient
-import io.seqera.http.HxConfig
 import io.seqera.util.trace.TraceUtils
 import io.seqera.wave.api.BuildStatusResponse
 import io.seqera.wave.api.ContainerStatus
@@ -145,13 +144,13 @@ class WaveClient {
 
     protected HxClient newHttpClient() {
         final refreshUrl = tower.refreshToken ? "${tower.endpoint}/oauth/access_token" : null
-        final config = new HxConfig.Builder()
-                        .withRetryConfig(config.retryOpts())
-                        .withJwtToken(tower.accessToken)
-                        .withRefreshToken(tower.refreshToken)
-                        .withRefreshTokenUrl(refreshUrl)
-                        .build()
-        return HxClient.create(newHttpClient0(), config)
+        return HxClient.newBuilder()
+                .httpClient(newHttpClient0())
+                .bearerToken(tower.accessToken)
+                .refreshToken(tower.refreshToken)
+                .refreshTokenUrl(refreshUrl)
+                .retryConfig(config.retryOpts())
+                .build()
     }
 
     protected HttpClient newHttpClient0() {
