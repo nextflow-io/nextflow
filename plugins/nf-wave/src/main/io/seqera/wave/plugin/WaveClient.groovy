@@ -144,11 +144,12 @@ class WaveClient {
     protected WaveClient() { }
 
     protected HxClient newHttpClient() {
+        final refreshUrl = tower.refreshToken ? "${tower.endpoint}/oauth/access_token" : null
         final config = new HxConfig.Builder()
                         .withRetryConfig(config.retryOpts())
                         .withJwtToken(tower.accessToken)
                         .withRefreshToken(tower.refreshToken)
-                        .withRefreshTokenUrl("${tower.endpoint}/oauth/access_token")
+                        .withRefreshTokenUrl(refreshUrl)
                         .build()
         return HxClient.create(newHttpClient0(), config)
     }
