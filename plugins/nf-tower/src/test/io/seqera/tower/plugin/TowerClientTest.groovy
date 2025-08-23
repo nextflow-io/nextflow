@@ -17,11 +17,14 @@
 
 package io.seqera.tower.plugin
 
+import java.net.http.HttpResponse
 import java.nio.file.Files
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
 
+import io.seqera.http.HxClient
+import io.seqera.http.HxConfig
 import nextflow.Session
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
@@ -34,7 +37,6 @@ import nextflow.trace.TraceRecord
 import nextflow.trace.WorkflowStats
 import nextflow.trace.WorkflowStatsObserver
 import nextflow.util.ProcessHelper
-import nextflow.util.SimpleHttpClient
 import spock.lang.Specification
 /**
  *
@@ -187,7 +189,7 @@ class TowerClientTest extends Specification {
         given:
         def URL = 'http://foo.com'
         def PROGRESS = Mock(WorkflowProgress) { getRunning()>>1; getSucceeded()>>2; getFailed()>>3 }
-        def client = Mock(SimpleHttpClient)
+        def client = Mock(HxClient)
         def observer = Spy(TowerClient)
         observer.@httpClient = client
         observer.@workflowId = 'xyz-123'
@@ -236,7 +238,7 @@ class TowerClientTest extends Specification {
         when:
         observer.sendHttpMessage(URL, req)
         then:
-        1 * client.sendHttpMessage(URL, _, 'POST') >> null
+        1 * client.sendAsString(_) >> Mock(HttpResponse)
 
     }
 
@@ -264,7 +266,7 @@ class TowerClientTest extends Specification {
         given:
         def sessionId = UUID.randomUUID()
         def dir = Files.createTempDirectory('test')
-        def http = Mock(SimpleHttpClient)
+        def http = Mock(HxClient)
         TowerClient client = Spy(new TowerClient([httpClient: http, env: ENV]))
         and:
         client.getOperationId() >> 'op-112233'
@@ -436,7 +438,7 @@ class TowerClientTest extends Specification {
 
     def 'should set the auth token' () {
         given:
-        def http = Mock(SimpleHttpClient)
+        def http = Mock(HxConfig.Builder)
         def session = Mock(Session)
         def config = new TowerConfig([:], [:])
         def client = Spy(new TowerClient(session, config))
@@ -445,19 +447,19 @@ class TowerClientTest extends Specification {
         def BEARER = 'eyJ0aWQiOiA1fS5jZmM1YjVhOThjZjM2MTk1NjBjZWU1YmMwODUxYzA1ZjkzMDdmN2Iz'
 
         when:
-        client.setAuthToken(http, SIMPLE)
+        client.setupClientAuth(http, SIMPLE)
         then:
-        http.setBasicToken('@token:' + SIMPLE) >> null
+        http.withBasicAuth('@token:' + SIMPLE) >> null
 
         when:
-        client.setAuthToken(http, SIMPLE)
+        client.setupClientAuth(http, SIMPLE)
         then:
-        http.setBasicToken('@token:' + SIMPLE) >> null
+        http.withBasicAuth('@token:' + SIMPLE) >> null
 
         when:
-        client.setAuthToken(http, BEARER)
+        client.setupClientAuth(http, BEARER)
         then:
-        http.setBearerToken(BEARER) >> null
+        http.withJwtToken(BEARER) >> null
     }
 
     def 'should fetch workflow meta' () {
@@ -519,5 +521,17 @@ class TowerClientTest extends Specification {
         client.getNewContainers([trace1]) == []
         and:
         client.getNewContainers([trace1, trace2, trace3]) == [c2]
+    }
+
+    def 'should handle HTTP request with content'() {
+        given: 'a TowerClient'
+        def tower = new TowerClient()
+        def content = '{"test": "data"}'
+        def request = tower.makeRequest('http://example.com/test', content, 'POST')
+
+        expect: 'the request should be created with the content'
+        request != null
+        request.method() == 'POST'
+        request.uri().toString() == 'http://example.com/test'
     }
 }

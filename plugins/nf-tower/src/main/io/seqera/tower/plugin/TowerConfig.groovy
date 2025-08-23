@@ -60,6 +60,8 @@ class TowerConfig implements ConfigScope {
     """)
     final String workspaceId
 
+    final TowerRetryPolicy retryPolicy
+
     /* required by extension point -- do not remove */
     TowerConfig() {}
 
@@ -68,5 +70,6 @@ class TowerConfig implements ConfigScope {
         this.enabled = opts.enabled as boolean
         this.endpoint = PlatformHelper.getEndpoint(opts, env)
         this.workspaceId = PlatformHelper.getWorkspaceId(opts, env)
+        this.retryPolicy = new TowerRetryPolicy(opts.retryPolicy as Map ?: Map.of(), opts)
     }
 }
