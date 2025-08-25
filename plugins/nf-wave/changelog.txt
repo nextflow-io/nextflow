@@ -1,5 +1,11 @@
 nf-wave changelog
 ==================
+1.14.1 - 15 Aug 2025
+- Unify nf-lang config scopes with runtime classes (#6271) [bfa67ca3]
+- Update trace observers to v2 (#6257) [544b8c47]
+- Bump groovy 4.0.28 (#6304) [ci fast] [a468f8ef]
+- Bump org.apache.commons:commons-lang3 from 3.12.0 to 3.18.0 (#6272) [b8ccddb5]
+
 1.14.0 - 6 Jul 2025
 - Fix http response err message [1f05451f]
 - Unwrap Failsafe exception cause in Wave client [0cb39df5]

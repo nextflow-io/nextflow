@@ -54,6 +54,11 @@ The following environment variables control the configuration of the Nextflow ru
   :::
 : When `true`, override the container entrypoint with `/bin/bash` (default: `false`).
 
+`NXF_DATE_FORMAT`
+: :::{versionadded} 25.07.0-edge
+  :::
+: Defines the format for date and time representations in notifications and reports. Supports custom formats (e.g., `yyyy-MM-dd HH:mm:ss`) or `iso` for ISO 8601 format with timezone (default: `dd-MMM-yyyy HH:mm:ss`).
+
 `NXF_DEFAULT_DSL`
 : :::{versionadded} 22.03.0-edge
   :::
@@ -245,7 +250,7 @@ The following environment variables control the configuration of the Nextflow ru
 : Defines the minimum size of the `.command.run` staging script for it to be written to a separate `.command.stage` file (default: `'1 MB'`).
 : This setting is useful for executors that impose a size limit on job scripts.
 
-## Proxy settings
+## Other settings
 
 `FTP_PROXY`
 : :::{versionadded} 21.06.0-edge
@@ -264,5 +269,12 @@ The following environment variables control the configuration of the Nextflow ru
   Proxy authentication is supported by providing the credentials in the proxy URL, e.g. `https://user:password@proxy-host.com:port`.
   :::
 
+`NO_COLOR`
+: Disables ANSI color codes in Nextflow log output. When this variable is set, Nextflow prints plain text logs following the [NO_COLOR standard](https://no-color.org/).
+: If both `NO_COLOR` and `NXF_ANSI_LOG` are set, `NXF_ANSI_LOG` takes precedence.
+
 `NO_PROXY`
 : Defines one or more host names that should not use the proxy server. Separate multiple names using a comma character.
+
+`TERMINAL_WIDTH`
+: Forces the terminal width of ANSI-formatted log output. Overrides automatic terminal width detection and uses the specified width for line wrapping when set to an integer value.

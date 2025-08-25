@@ -255,13 +255,6 @@ abstract class TaskHandler {
     }
 
     /**
-     * Determine the number of forks consumed by the task handler.
-     */
-    int getForksCount() {
-        return task instanceof TaskArrayRun ? task.getArraySize() : 1
-    }
-
-    /**
      * Determine if a process can be forked i.e. can launch
      * a parallel task execution. This is only enforced when
      * when the `process.maxForks` directive is greater than zero.
@@ -273,7 +266,7 @@ abstract class TaskHandler {
      */
     boolean canForkProcess() {
         final max = task.processor.maxForks
-        return !max ? true : task.processor.forksCount + getForksCount() <= max
+        return !max ? true : task.processor.forksCount < max
     }
 
     /**
@@ -290,18 +283,14 @@ abstract class TaskHandler {
      * Increment the number of current forked processes
      */
     final void incProcessForks() {
-        def count = task.processor.forksCount
-        if( count != null )
-            count.add(getForksCount())
+        task.processor.forksCount?.increment()
     }
 
     /**
      * Decrement the number of current forked processes
      */
     final void decProcessForks() {
-        def count = task.processor.forksCount
-        if( count != null )
-            count.add(-getForksCount())
+        task.processor.forksCount?.decrement()
     }
 
     /**

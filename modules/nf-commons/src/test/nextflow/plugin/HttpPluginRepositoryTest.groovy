@@ -1,5 +1,6 @@
 package nextflow.plugin
 
+
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 
@@ -195,6 +196,112 @@ class HttpPluginRepositoryTest extends Specification {
         def err = thrown PluginRuntimeException
         err.message.startsWith("Invalid response while fetching plugin metadata from: http://localhost")
     }
+
+    // ------------------------------------------------------------------------
+
+    def 'test mapToPluginInfo with comprehensive date conversion validation'() {
+        given:
+        // Test the mapToPluginInfo method with real date conversion using GsonEncoder
+        def utcDateStr = "2023-12-25T14:30:45Z"
+        def estDateStr = "2023-06-15T09:15:30-05:00"
+        def cestDateStr = "2023-08-10T16:45:00+02:00"
+        
+        wm.stub {
+            request {
+                method 'GET'
+                url "/v1/plugins/dependencies?plugins=date-test-plugin&nextflowVersion=${BuildInfo.version}"
+            }
+            response {
+                status 200
+                body """{
+                  "plugins": [
+                    {
+                      "id": "date-test-plugin",
+                      "projectUrl": "https://example.com/test-plugin",
+                      "provider": "Test Provider",
+                      "releases": [
+                        {
+                          "version": "1.0.0",
+                          "url": "https://example.com/plugin-1.0.0.zip",
+                          "date": "${utcDateStr}",
+                          "sha512sum": "hash1",
+                          "requires": ">=20.0.0"
+                        },
+                        {
+                          "version": "1.1.0", 
+                          "url": "https://example.com/plugin-1.1.0.zip",
+                          "date": "${estDateStr}",
+                          "sha512sum": "hash2",
+                          "requires": ">=21.0.0"
+                        },
+                        {
+                          "version": "1.2.0",
+                          "url": "https://example.com/plugin-1.2.0.zip", 
+                          "date": "${cestDateStr}",
+                          "sha512sum": "hash3",
+                          "requires": ">=22.0.0"
+                        },
+                        {
+                          "version": "1.3.0",
+                          "url": "https://example.com/plugin-1.3.0.zip",
+                          "sha512sum": "hash4",
+                          "requires": ">=23.0.0"
+                        }
+                      ]
+                    }
+                  ]
+                }
+                """
+            }
+        }
+
+        when:
+        unit.prefetch([new PluginSpec("date-test-plugin")])
+
+        then:
+        def plugins = unit.getPlugins()
+        plugins.size() == 1
+        
+        def pluginInfo = plugins.get("date-test-plugin")
+        
+        // Verify basic plugin mapping through the mapToPluginInfo method
+        pluginInfo.id == "date-test-plugin"
+        pluginInfo.projectUrl == "https://example.com/test-plugin"
+        pluginInfo.provider == "Test Provider"
+        pluginInfo.releases.size() == 4
+        pluginInfo.releases != null // Verify never null
+        
+        // Verify UTC date conversion (Z suffix)
+        def release1 = pluginInfo.releases[0]
+        release1.version == "1.0.0"
+        release1.date == toDate(ZonedDateTime.of(2023, 12, 25, 14, 30, 45, 0, ZoneOffset.UTC))
+        release1.sha512sum == "hash1"
+        release1.requires == ">=20.0.0"
+        
+        // Verify EST date conversion (-05:00 offset)
+        def release2 = pluginInfo.releases[1]
+        release2.version == "1.1.0"
+        // 09:15 EST (-5 hours) = 14:15 UTC
+        release2.date == toDate(ZonedDateTime.of(2023, 6, 15, 14, 15, 30, 0, ZoneOffset.UTC))
+        release2.sha512sum == "hash2"
+        release2.requires == ">=21.0.0"
+        
+        // Verify CEST date conversion (+02:00 offset)
+        def release3 = pluginInfo.releases[2]
+        release3.version == "1.2.0"
+        // 16:45 CEST (+2 hours) = 14:45 UTC
+        release3.date == toDate(ZonedDateTime.of(2023, 8, 10, 14, 45, 0, 0, ZoneOffset.UTC))
+        release3.sha512sum == "hash3"
+        release3.requires == ">=22.0.0"
+        
+        // Verify null date handling (missing date field)
+        def release4 = pluginInfo.releases[3]
+        release4.version == "1.3.0"
+        release4.date == null
+        release4.sha512sum == "hash4"
+        release4.requires == ">=23.0.0"
+    }
+
 
     // ------------------------------------------------------------------------
 

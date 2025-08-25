@@ -38,4 +38,21 @@ class CsvWriterTest extends Specification {
             '''.stripIndent()
     }
 
+    def 'should write empty csv file'() {
+        given:
+        def file = TestHelper.createInMemTempFile()
+        and:
+        def records = []
+
+        when:
+        new CsvWriter([:]).apply(records, file)
+        then:
+        file.text == ''
+
+        when:
+        new CsvWriter([header: true]).apply(records, file)
+        then:
+        file.text == ''
+    }
+
 }

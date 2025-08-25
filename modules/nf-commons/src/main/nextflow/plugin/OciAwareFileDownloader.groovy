@@ -79,14 +79,14 @@ class OciAwareFileDownloader extends SimpleFileDownloader {
             .GET()
     }
     
-    private HttpResponse<String> sendRequest0(URL url, String token = null) {
-        def requestBuilder = createRequestBuilder(url)
+    private HttpResponse<InputStream> sendRequest0(URL url, String token = null) {
+        final requestBuilder = createRequestBuilder(url)
         if (token) {
             requestBuilder.header("Authorization", "Bearer $token")
         }
-        HttpRequest request = requestBuilder.build()
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
-        log.debug "HTTP response from $url: status=${response.statusCode()}"
+        final HttpRequest request = requestBuilder.build()
+        final HttpResponse<InputStream> response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream())
+        log.debug "HTTP response [${response.statusCode()}] from ${url}"
         return response
     }
     
@@ -97,19 +97,21 @@ class OciAwareFileDownloader extends SimpleFileDownloader {
 
         while (true) {
             // submit the request
-            HttpResponse<String> response = sendRequest0(currentUrl, token)
+            HttpResponse<InputStream> response = sendRequest0(currentUrl, token)
             
             // Handle redirects
             if (response.statusCode() in REDIRECT_STATUS_CODES) {
                 // Prevent infinite redirect loops
                 if (attemptedUrls.contains(currentUrl.toString())) {
+                    closeResponse(response)
                     throw new IOException("Redirect loop detected for URL: $currentUrl")
                 }
                 attemptedUrls.add(currentUrl.toString())
                 
-                String newUrl = response.headers().firstValue("Location").orElse(null)
+                final newUrl = response.headers().firstValue("Location").orElse(null)
                 if (newUrl) {
-                    log.debug "Following redirect from $currentUrl to $newUrl"
+                    log.trace "Following redirect from $currentUrl to $newUrl"
+                    closeResponse(response)
                     currentUrl = URI.create(newUrl).toURL()
                     token = null
                     continue
@@ -118,24 +120,12 @@ class OciAwareFileDownloader extends SimpleFileDownloader {
             // Handle authentication - retry once with token
             if (response.statusCode() == 401 && token == null) {
                 token = handleAuthentication(response)
-                log.debug "Retrying request with authentication token"
+                log.trace "Retrying request with authentication token"
+                closeResponse(response)
                 continue
             }
             
-            // Check if response is successful before making InputStream request
-            if (response.statusCode() >= 400) {
-                throw new IOException("HTTP error ${response.statusCode()} from $currentUrl")
-            }
-            
-            // Now make final request with InputStream handler
-            def requestBuilder = createRequestBuilder(currentUrl)
-            if (token) {
-                requestBuilder.header("Authorization", "Bearer $token")
-            }
-            HttpRequest request = requestBuilder.build()
-            HttpResponse<InputStream> streamResponse = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream())
-            log.debug "HTTP stream response from $currentUrl: status=${streamResponse.statusCode()}"
-            return streamResponse
+            return response
         }
     }
     
