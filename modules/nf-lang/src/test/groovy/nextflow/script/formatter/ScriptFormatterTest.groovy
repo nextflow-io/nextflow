@@ -37,6 +37,7 @@ class ScriptFormatterTest extends Specification {
     }
 
     String format(String contents) {
+        scriptParser.compiler().getSources().clear()
         def source = scriptParser.parse('main.nf', contents)
         new ScriptResolveVisitor(source, scriptParser.compiler().compilationUnit(), Types.DEFAULT_SCRIPT_IMPORTS, Collections.emptyList()).visit()
         assert !TestUtils.hasSyntaxErrors(source)
@@ -150,6 +151,27 @@ class ScriptFormatterTest extends Specification {
             }
             '''
         )
+
+        checkFormat(
+            '''\
+            workflow hello{
+            take: x:Integer ; y:Integer ; main: xy=x*y ; emit: result:Integer = xy
+            }
+            ''',
+            '''\
+            workflow hello {
+                take:
+                x: Integer
+                y: Integer
+
+                main:
+                xy = x * y
+
+                emit:
+                result: Integer = xy
+            }
+            '''
+        )
     }
 
     def 'should format a process definition' () {
@@ -193,6 +215,32 @@ class ScriptFormatterTest extends Specification {
             }
             '''
         )
+        checkFormat(
+            '''\
+            Integer hello(Integer x,Integer y){
+            Integer xy=x*y ; return xy
+            }
+            ''',
+            '''\
+            def hello(x: Integer, y: Integer) -> Integer {
+                def xy: Integer = x * y
+                return xy
+            }
+            '''
+        )
+        checkFormat(
+            '''\
+            def hello(x:Integer,y:Integer)->Integer{
+            def xy=x*y ; return xy
+            }
+            ''',
+            '''\
+            def hello(x: Integer, y: Integer) -> Integer {
+                def xy = x * y
+                return xy
+            }
+            '''
+        )
     }
 
     def 'should format an enum definition' () {
@@ -226,6 +274,27 @@ class ScriptFormatterTest extends Specification {
                     path 'foo'
                 }
                 bar {
+                    path 'bar'
+                    index {
+                        path 'index.csv'
+                    }
+                }
+            }
+            '''
+        )
+        checkFormat(
+            '''\
+            output{
+            foo:Path{path'foo'}
+            bar:Channel<Path>{path'bar';index{path'index.csv'}}
+            }
+            ''',
+            '''\
+            output {
+                foo: Path {
+                    path 'foo'
+                }
+                bar: Channel<Path> {
                     path 'bar'
                     index {
                         path 'index.csv'
@@ -282,11 +351,29 @@ class ScriptFormatterTest extends Specification {
         checkFormat(
             '''\
             def x=42
-            def(x,y)=[1,2]
+            def(x,y)=tuple(1,2)
             ''',
             '''\
             def x = 42
-            def (x, y) = [1, 2]
+            def (x, y) = tuple(1, 2)
+            '''
+        )
+        checkFormat(
+            '''\
+            def Integer x=42
+            ''',
+            '''\
+            def x: Integer = 42
+            '''
+        )
+        checkFormat(
+            '''\
+            def x:Integer=42
+            def(x:Integer,y:Integer)=tuple(1,2)
+            ''',
+            '''\
+            def x: Integer = 42
+            def (x: Integer, y: Integer) = tuple(1, 2)
             '''
         )
     }
@@ -298,13 +385,13 @@ class ScriptFormatterTest extends Specification {
             v=42
             list[0]='first'
             map.key='value'
-            (x,y)=[1,2]
+            (x,y)=tuple(1,2)
             ''',
             '''\
             v = 42
             list[0] = 'first'
             map.key = 'value'
-            (x, y) = [1, 2]
+            (x, y) = tuple(1, 2)
             '''
         )
     }
@@ -348,7 +435,7 @@ class ScriptFormatterTest extends Specification {
             try {
                 println(file('foo.txt').text)
             }
-            catch (IOException e) {
+            catch (e: IOException) {
                 log.warn("Could not load foo.txt")
             }
             '''
@@ -500,6 +587,22 @@ class ScriptFormatterTest extends Specification {
             ''',
             '''\
             { a, b -> a + b }
+            '''
+        )
+        checkFormat(
+            '''\
+            {Integer a,Integer b->a+b}
+            ''',
+            '''\
+            { a: Integer, b: Integer -> a + b }
+            '''
+        )
+        checkFormat(
+            '''\
+            {a:Integer,b:Integer->a+b}
+            ''',
+            '''\
+            { a: Integer, b: Integer -> a + b }
             '''
         )
         checkFormat(

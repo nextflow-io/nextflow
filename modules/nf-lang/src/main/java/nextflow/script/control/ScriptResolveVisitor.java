@@ -94,6 +94,8 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitWorkflow(WorkflowNode node) {
+        for( var take : node.getParameters() )
+            resolver.resolveOrFail(take.getType(), take);
         resolver.visit(node.main);
         resolver.visit(node.emits);
         resolver.visit(node.publishers);

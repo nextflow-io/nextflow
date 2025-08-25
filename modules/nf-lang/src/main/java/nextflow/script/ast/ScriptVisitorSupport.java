@@ -76,7 +76,6 @@ public abstract class ScriptVisitorSupport extends ClassCodeVisitorSupport imple
 
     @Override
     public void visitWorkflow(WorkflowNode node) {
-        visit(node.takes);
         visit(node.main);
         visit(node.emits);
         visit(node.publishers);
