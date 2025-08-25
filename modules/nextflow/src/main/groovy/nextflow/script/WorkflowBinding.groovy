@@ -135,6 +135,10 @@ class WorkflowBinding extends Binding  {
     @Override
     void setVariable(String name, Object value) {
         lookupTable.put(value, name)
+        setVariable0(name, value)
+    }
+
+    protected void setVariable0(String name, Object value) {
         super.setVariable(name, value)
     }
 

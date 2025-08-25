@@ -25,6 +25,7 @@ import nextflow.script.ast.FunctionNode;
 import nextflow.script.ast.ImplicitClosureParameter;
 import nextflow.script.ast.IncludeNode;
 import nextflow.script.ast.OutputNode;
+import nextflow.script.ast.ParamBlockNode;
 import nextflow.script.ast.ProcessNode;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
@@ -165,6 +166,22 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         }
         else {
             vsc.addError("Unrecognized feature flag '" + node.name + "'", node);
+        }
+    }
+
+    @Override
+    public void visitParams(ParamBlockNode node) {
+        var declaredParams = new HashMap<String,ASTNode>();
+        for( var param : node.declarations ) {
+            var name = param.getName();
+            var other = declaredParams.get(name);
+            if( other != null )
+                vsc.addError("Parameter " + name + "` is already declared", param, "First declared here", other);
+            else
+                declaredParams.put(name, param);
+
+            if( param.hasInitialExpression() )
+                visit(param.getInitialExpression());
         }
     }
 
@@ -348,7 +365,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         for( var parameter : node.getParameters() ) {
             if( parameter.hasInitialExpression() )
                 visit(parameter.getInitialExpression());
-            vsc.declare(parameter, node);
+            vsc.declare(parameter, parameter);
         }
         visit(node.getCode());
 

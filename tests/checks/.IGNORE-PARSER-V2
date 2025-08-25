@@ -1,2 +1,4 @@
 # TESTS THAT SHOULD ONLY BE RUN BY THE V2 PARSER
+chunk.nf
+params-dsl.nf
 workflow-oncomplete-v2.nf

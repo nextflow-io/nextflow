@@ -123,8 +123,13 @@ class ConfigParserV1 implements ConfigParser {
     }
 
     @Override
-    Set<String> getProfiles() {
+    Set<String> getDeclaredProfiles() {
         Collections.unmodifiableSet(conditionalNames)
+    }
+
+    @Override
+    Map<String,Object> getDeclaredParams() {
+        [:]
     }
 
     private Grengine getGrengine() {

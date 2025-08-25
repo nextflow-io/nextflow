@@ -19,15 +19,15 @@ import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.expr.Expression;
 
 /**
- * A parameter declaration.
+ * A legacy parameter declaration.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
-public class ParamNode extends ASTNode {
+public class ParamNodeV1 extends ASTNode {
     public final Expression target;
     public Expression value;
 
-    public ParamNode(Expression target, Expression value) {
+    public ParamNodeV1(Expression target, Expression value) {
         this.target = target;
         this.value = value;
     }
