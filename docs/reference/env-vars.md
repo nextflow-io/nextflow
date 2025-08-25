@@ -251,10 +251,11 @@ The following environment variables control the configuration of the Nextflow ru
 : This setting is useful for executors that impose a size limit on job scripts.
 
 `NO_COLOR`
-: When present and not an empty string, disables ANSI color output. Follows the [NO_COLOR standard](https://no-color.org/). The `NXF_ANSI_LOG` variable takes precedence if set.
+: Disables ANSI color codes in Nextflow log output. When this variable is set, Nextflow prints plain text logs following the [NO_COLOR standard](https://no-color.org/).
+: If both `NO_COLOR` and `NXF_ANSI_LOG` are set, `NXF_ANSI_LOG` takes precedence.
 
 `TERMINAL_WIDTH`
-: Forces the terminal width for ANSI log output when set to an integer value. Overrides automatic terminal width detection.
+: Forces the terminal width of ANSI-formatted log output. Overrides automatic terminal width detection and uses the specified width for line wrapping when set to an integer value.
 
 ## Proxy settings
 
