@@ -250,7 +250,7 @@ The following environment variables control the configuration of the Nextflow ru
 : Defines the minimum size of the `.command.run` staging script for it to be written to a separate `.command.stage` file (default: `'1 MB'`).
 : This setting is useful for executors that impose a size limit on job scripts.
 
-## Proxy settings
+## Other settings
 
 `FTP_PROXY`
 : :::{versionadded} 21.06.0-edge
@@ -269,5 +269,12 @@ The following environment variables control the configuration of the Nextflow ru
   Proxy authentication is supported by providing the credentials in the proxy URL, e.g. `https://user:password@proxy-host.com:port`.
   :::
 
+`NO_COLOR`
+: Disables ANSI color codes in Nextflow log output. When this variable is set, Nextflow prints plain text logs following the [NO_COLOR standard](https://no-color.org/).
+: If both `NO_COLOR` and `NXF_ANSI_LOG` are set, `NXF_ANSI_LOG` takes precedence.
+
 `NO_PROXY`
 : Defines one or more host names that should not use the proxy server. Separate multiple names using a comma character.
+
+`TERMINAL_WIDTH`
+: Forces the terminal width of ANSI-formatted log output. Overrides automatic terminal width detection and uses the specified width for line wrapping when set to an integer value.
