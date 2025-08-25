@@ -36,7 +36,8 @@ import nextflow.script.ast.IncompleteNode;
 import nextflow.script.ast.InvalidDeclaration;
 import nextflow.script.ast.OutputBlockNode;
 import nextflow.script.ast.OutputNode;
-import nextflow.script.ast.ParamNode;
+import nextflow.script.ast.ParamNodeV1;
+import nextflow.script.ast.ParamBlockNode;
 import nextflow.script.ast.ProcessNode;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.WorkflowNode;
@@ -286,10 +287,22 @@ public class ScriptAstBuilder {
             moduleNode.setOutputs(node);
         }
 
-        else if( ctx instanceof ParamDeclAltContext pac ) {
-            var node = paramDeclaration(pac.paramDeclaration());
+        else if( ctx instanceof ParamsDefAltContext pac ) {
+            var node = paramsDef(pac.paramsDef());
             saveLeadingComments(node, ctx);
-            moduleNode.addParam(node);
+            if( moduleNode.getParams() != null )
+                collectSyntaxError(new SyntaxException("Params block defined more than once", node));
+            if( !moduleNode.getParamsV1().isEmpty() )
+                collectSyntaxError(new SyntaxException("Params block cannot be mixed with legacy parameter declarations", node));
+            moduleNode.setParams(node);
+        }
+
+        else if( ctx instanceof ParamDeclV1AltContext pac ) {
+            var node = paramDeclarationV1(pac.paramDeclarationV1());
+            saveLeadingComments(node, ctx);
+            if( moduleNode.getParams() != null )
+                collectSyntaxError(new SyntaxException("Legacy parameter declarations cannot be mixed with the params block", node));
+            moduleNode.addParamV1(node);
         }
 
         else if( ctx instanceof ProcessDefAltContext pdac ) {
@@ -329,14 +342,43 @@ public class ScriptAstBuilder {
         return result;
     }
 
-    private ParamNode paramDeclaration(ParamDeclarationContext ctx) {
+    private ParamBlockNode paramsDef(ParamsDefContext ctx) {
+        var declarations = paramsBody(ctx.paramsBody());
+        return ast( new ParamBlockNode(declarations), ctx );
+    }
+
+    private Parameter[] paramsBody(ParamsBodyContext ctx) {
+        if( ctx == null )
+            return Parameter.EMPTY_ARRAY;
+        return ctx.paramDeclaration().stream()
+            .map(this::paramDeclaration)
+            .filter(param -> param != null)
+            .toArray(Parameter[]::new);
+    }
+
+    private Parameter paramDeclaration(ParamDeclarationContext ctx) {
+        if( ctx.statement() != null ) {
+            collectSyntaxError(new SyntaxException("Invalid parameter declaration", ast( new EmptyStatement(), ctx.statement() )));
+            return null;
+        }
+        var type = type(ctx.type());
+        var name = identifier(ctx.identifier());
+        var defaultValue = ctx.expression() != null ? expression(ctx.expression()) : null;
+        var result = ast( param(type, name, defaultValue), ctx );
+        checkInvalidVarName(name, result);
+        groovydocManager.handle(result, ctx);
+        saveLeadingComments(result, ctx);
+        return result;
+    }
+
+    private ParamNodeV1 paramDeclarationV1(ParamDeclarationV1Context ctx) {
         Expression target = ast( varX("params"), ctx.PARAMS() );
         for( var ident : ctx.identifier() ) {
             var name = ast( constX(identifier(ident)), ident );
             target = ast( propX(target, name), target, name );
         }
         var value = expression(ctx.expression());
-        return ast( new ParamNode(target, value), ctx );
+        return ast( new ParamNodeV1(target, value), ctx );
     }
 
     private IncludeNode includeDeclaration(IncludeDeclarationContext ctx) {
@@ -491,7 +533,7 @@ public class ScriptAstBuilder {
             return "exec";
         }
         if( ctx.SHELL() != null ) {
-            collectWarning("The `shell` block is deprecated, use `script` instead", ctx.SHELL().getText(), ast( new EmptyExpression(), ctx.SHELL() ));
+            collectWarning("The `shell` block is deprecated, use `script` instead", ctx.SHELL().getText(), ast( new EmptyStatement(), ctx.SHELL() ));
             return "shell";
         }
         return "script";
