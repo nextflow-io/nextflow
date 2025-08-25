@@ -40,7 +40,7 @@ import nextflow.util.Duration
     The `wave` scope provides advanced configuration for the use of [Wave containers](https://docs.seqera.io/wave).
 """)
 @Slf4j
-@ToString(includeNames = true, includePackage = false, includeFields = true)
+@ToString(includeNames = true, includePackage = false, includeFields = true, useGetters = false)
 @CompileStatic
 class WaveConfig implements ConfigScope {
     final private static String DEF_ENDPOINT = 'https://wave.seqera.io'
