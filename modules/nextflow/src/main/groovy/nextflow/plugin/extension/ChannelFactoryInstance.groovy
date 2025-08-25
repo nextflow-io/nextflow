@@ -25,6 +25,7 @@ import nextflow.Channel
 import nextflow.Global
 import nextflow.Session
 import nextflow.dag.NodeMarker
+import io.nextflow.gradle.extensions.PluginExtensionPoint
 
 /**
  * Object holding a set of {@link PluginExtensionPoint} instances
@@ -59,7 +60,7 @@ class ChannelFactoryInstance implements ChannelFactory {
     private Object invoke0(String methodName, Object[] args) {
         final meta = target.metaClass.getMetaMethod(methodName, args)
         if( meta && meta.isPublic() ) {
-            target.checkInit((Session)Global.session)
+            target.checkInit(Global.session as Object)
             final method = target.getClass().getMethod(methodName, meta.getNativeParameterTypes())
             // fix issue casting issue when argument is a GString but target method expects a String
             for( int i=0; i<args.length; i++ )

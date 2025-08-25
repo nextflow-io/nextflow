@@ -25,7 +25,7 @@ import nextflow.Global
 import nextflow.NextflowMeta
 import nextflow.Session
 import nextflow.extension.CH
-import nextflow.plugin.extension.PluginExtensionPoint
+import io.nextflow.gradle.extensions.PluginExtensionPoint
 import nextflow.plugin.extension.PluginExtensionProvider
 import spock.lang.Specification
 import test.MockScriptRunner
