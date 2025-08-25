@@ -1,0 +1,6 @@
+Manifest-Version: 1.0
+Plugin-Class: nextflow.pixi.PixiPlugin
+Plugin-Id: nf-pixi
+Plugin-Version: 1.0.0
+Plugin-Provider: Seqera Labs
+Plugin-Requires: >=25.04.0
