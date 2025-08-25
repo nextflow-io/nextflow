@@ -39,7 +39,7 @@ workflow {
 ```
 
 :::{note}
-As a best practice, params should be used only in the entry workflow and passed to workflows and processes as explicit inputs.
+As a best practice, `params` should be used only in the entry workflow and passed to workflows and processes as explicit inputs.
 :::
 
 The default value can be overridden by the command line, params file, or config file. Parameters from multiple sources are resolved in the order described in {ref}`cli-params`.
