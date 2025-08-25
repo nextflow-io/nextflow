@@ -20,13 +20,14 @@ import java.util.List;
 
 import nextflow.script.ast.FunctionNode;
 import nextflow.script.ast.OutputNode;
-import nextflow.script.ast.ParamNode;
+import nextflow.script.ast.ParamNodeV1;
 import nextflow.script.ast.ProcessNode;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
 import nextflow.script.ast.WorkflowNode;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.DynamicVariable;
+import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.ast.expr.VariableExpression;
 import org.codehaus.groovy.control.CompilationUnit;
 import org.codehaus.groovy.control.SourceUnit;
@@ -62,8 +63,10 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
             variableScopeVisitor.visit();
     
             // resolve type names
-            for( var paramNode : sn.getParams() )
-                visitParam(paramNode);
+            if( sn.getParams() != null )
+                visitParams(sn.getParams());
+            for( var paramNode : sn.getParamsV1() )
+                visitParamV1(paramNode);
             for( var workflowNode : sn.getWorkflows() )
                 visitWorkflow(workflowNode);
             for( var processNode : sn.getProcesses() )
@@ -79,7 +82,13 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
     }
 
     @Override
-    public void visitParam(ParamNode node) {
+    public void visitParam(Parameter node) {
+        node.setInitialExpression(resolver.transform(node.getInitialExpression()));
+        resolver.resolveOrFail(node.getType(), node);
+    }
+
+    @Override
+    public void visitParamV1(ParamNodeV1 node) {
         node.value = resolver.transform(node.value);
     }
 
