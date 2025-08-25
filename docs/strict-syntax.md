@@ -313,7 +313,7 @@ def str: String = 'hello'
 def meta: Map = [:]
 ```
 
-While Groovy-style type annotations are still supported, the linter and language server will automatically convert them to Nextflow-style type annotations when formatting code. Groovy-style type annotations will not be supported in a future version.
+Groovy-style type annotations are still supported. However, the language server and `nextflow lint` will automatically convert them to Nextflow-style type annotations when formatting code. Groovy-style type annotations will not be supported in a future version.
 
 ### Strings
 
