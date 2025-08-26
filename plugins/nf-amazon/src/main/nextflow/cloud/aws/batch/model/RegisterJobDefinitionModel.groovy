@@ -18,6 +18,7 @@ package nextflow.cloud.aws.batch.model
 
 
 import groovy.transform.CompileStatic
+import software.amazon.awssdk.services.batch.model.EcsProperties
 import software.amazon.awssdk.services.batch.model.JobDefinitionType
 import software.amazon.awssdk.services.batch.model.PlatformCapability
 import software.amazon.awssdk.services.batch.model.RegisterJobDefinitionRequest
@@ -116,7 +117,10 @@ class RegisterJobDefinitionModel {
         if (platformCapabilities)
             builder.platformCapabilities(platformCapabilities)
         if (containerProperties)
-            builder.containerProperties(containerProperties.toBatchContainerProperties())
+            builder.ecsProperties(EcsProperties.builder()
+                .taskProperties(containerProperties.toBatchContainerProperties())
+                .build()
+            )
         if (parameters)
             builder.parameters(parameters)
         if (tags)
