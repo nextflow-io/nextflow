@@ -88,6 +88,7 @@ class RepositoryFactory implements ExtensionPoint {
 
     // --==  static definitions ==--
     private static boolean codeCommitLoaded
+    private static boolean s3Loaded
     private static List<RepositoryFactory> factories0
 
     private static List<RepositoryFactory> factories() {
@@ -102,6 +103,11 @@ class RepositoryFactory implements ExtensionPoint {
 
     static RepositoryProvider newRepositoryProvider(ProviderConfig config, String project) {
         // check if it's needed to load new plugins
+        if( config.platform == 's3' && !s3Loaded){
+            Plugins.startIfMissing('nf-amazon')
+            s3Loaded=true
+            factories0=null
+        }
         if( (config.name=='codecommit' || config.platform=='codecommit') && !codeCommitLoaded ) {
             Plugins.startIfMissing('nf-codecommit')
             codeCommitLoaded=true
@@ -120,6 +126,11 @@ class RepositoryFactory implements ExtensionPoint {
 
     static ProviderConfig newProviderConfig(String name, Map<String,Object> attrs) {
         // check if it's needed to load new plugins
+        if( attrs.platform == 's3' && !s3Loaded){
+            Plugins.startIfMissing('nf-amazon')
+            s3Loaded=true
+            factories0=null
+        }
         if( (name=='codecommit' || attrs.platform=='codecommit') && !codeCommitLoaded ) {
             Plugins.startIfMissing('nf-codecommit')
             codeCommitLoaded=true
@@ -134,6 +145,11 @@ class RepositoryFactory implements ExtensionPoint {
     }
 
     static ProviderConfig getProviderConfig(List<ProviderConfig> providers, GitUrl url) {
+        if( url.protocol.equals('s3') && !s3Loaded){
+            Plugins.startIfMissing('nf-amazon')
+            s3Loaded=true
+            factories0=null
+        }
         if( url.domain.startsWith('git-codecommit.') && url.domain.endsWith('.amazonaws.com') && !codeCommitLoaded ) {
             Plugins.startIfMissing('nf-codecommit')
             codeCommitLoaded=true
