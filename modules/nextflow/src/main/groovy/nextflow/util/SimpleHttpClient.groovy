@@ -32,6 +32,7 @@ import nextflow.BuildInfo
  *  Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@Deprecated
 @CompileStatic
 class SimpleHttpClient {
 

@@ -43,7 +43,9 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
         this.url = !url.toString().endsWith("/")
             ? URI.create(url.toString() + "/")
             : url
-        this.httpClient = HxClient.create(RetryConfig.config())
+        this.httpClient = HxClient.newBuilder()
+                .retryConfig(RetryConfig.config())
+                .build()
     }
 
     // NOTE ON PREFETCHING
@@ -134,7 +136,7 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
             throw e
         }
         catch (Exception e) {
-            throw new PluginRuntimeException(e, "Unable to connect to ${uri}- cause: ${e.message}")
+            throw new PluginRuntimeException(e, "Unable to connect to ${uri} - cause: ${e.message}")
         }
     }
 

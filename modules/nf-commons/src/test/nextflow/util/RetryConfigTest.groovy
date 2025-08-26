@@ -28,16 +28,16 @@ class RetryConfigTest extends Specification {
 
     def 'should create retry config' () {
         expect:
-        new RetryConfig().delay == java.time.Duration.ofMillis(350)
-        new RetryConfig().maxDelay == java.time.Duration.ofSeconds(90)
+        new RetryConfig().delay == Duration.of('350ms')
+        new RetryConfig().maxDelay == Duration.of('90s')
         new RetryConfig().maxAttempts == 5
         new RetryConfig().jitter == 0.25d
         new RetryConfig().multiplier == 2d
 
         and:
         new RetryConfig([maxAttempts: 20]).maxAttempts == 20
-        new RetryConfig([delay: '1s']).delay == java.time.Duration.ofSeconds(1)
-        new RetryConfig([maxDelay: '1m']).maxDelay == java.time.Duration.ofMinutes(1)
+        new RetryConfig([delay: '1s']).delay == Duration.of('1s')
+        new RetryConfig([maxDelay: '1m']).maxDelay == Duration.of('1m')
         new RetryConfig([jitter: '0.5']).jitter == 0.5d
         new RetryConfig([multiplier: '5']).multiplier == 5d
     }
@@ -53,8 +53,8 @@ class RetryConfigTest extends Specification {
         ])
 
         expect:
-        new RetryConfig().getDelay() == java.time.Duration.ofSeconds(10)
-        new RetryConfig().getMaxDelay() == java.time.Duration.ofSeconds(100)
+        new RetryConfig().getDelay() == Duration.of('10s')
+        new RetryConfig().getMaxDelay() == Duration.of('100s')
         new RetryConfig().getMaxAttempts() == 1000
         new RetryConfig().getJitter() == 10_000
         new RetryConfig().getMultiplier() == 90d
