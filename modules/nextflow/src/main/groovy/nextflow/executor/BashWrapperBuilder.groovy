@@ -160,6 +160,10 @@ class BashWrapperBuilder {
         return targetDir && workDir!=targetDir
     }
 
+    protected boolean shouldUnstageControls() {
+        return false
+    }
+
     protected boolean fixOwnership() {
         // note: only for docker (other container runtimes are not affected)
         ContainerHelper.fixOwnership(containerConfig) && isLinuxOS() && runWithContainer
@@ -379,7 +383,7 @@ class BashWrapperBuilder {
         binding.launch_cmd = getLaunchCommand(interpreter,env)
         binding.stage_cmd = getStageCommand()
         binding.unstage_cmd = getUnstageCommand()
-        binding.unstage_controls = changeDir ? getUnstageControls() : null
+        binding.unstage_controls = changeDir || shouldUnstageControls() ? getUnstageControls() : null
 
         if( changeDir || shouldUnstageOutputs() ) {
             binding.unstage_outputs = copyStrategy.getUnstageOutputFilesScript(outputFiles,targetDir)
