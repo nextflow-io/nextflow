@@ -299,9 +299,21 @@ def str = 'hello'
 def meta = [:]
 ```
 
-:::{note}
-Because type annotations are useful for providing type checking at runtime, the language server will not report errors for Groovy-style type annotations at this time. Type annotations will be addressed in a future version of the Nextflow language specification.
+:::{versionadded} 25.10.0
 :::
+
+Local variables can be declared with a type annotation:
+
+```nextflow
+def a: Integer = 1
+def b: Integer = 2
+def (c: Integer, d: Integer) = [3, 4]
+def (e: Integer, f: Integer) = [5, 6]
+def str: String = 'hello'
+def meta: Map = [:]
+```
+
+Groovy-style type annotations are still supported. However, the language server and `nextflow lint` will automatically convert them to Nextflow-style type annotations when formatting code. Groovy-style type annotations will not be supported in a future version.
 
 ### Strings
 

@@ -1,5 +1,6 @@
+#!/usr/bin/env nextflow
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,25 +14,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nextflow.script.ast;
 
-import org.codehaus.groovy.ast.ASTNode;
-import org.codehaus.groovy.ast.ClassNode;
-import org.codehaus.groovy.ast.stmt.Statement;
+workflow {
+  words_ch = channel.of('one', 'two', 'three', 'four')
+  counts_ch = COUNT(words_ch)
+  counts_ch.collect().view { counts ->
+    def even = counts.findAll { n -> isEven(n) }.size()
+    println "counts: $counts ($even are even)"
+  }
+}
 
-/**
- * An output declaration.
- *
- * @author Ben Sherman <bentshermann@gmail.com>
- */
-public class OutputNode extends ASTNode {
-    public final String name;
-    public final ClassNode type;
-    public final Statement body;
+workflow COUNT {
+  take:
+  words: Channel<String>
 
-    public OutputNode(String name, ClassNode type, Statement body) {
-        this.name = name;
-        this.type = type;
-        this.body = body;
-    }
+  main:
+  counts_ch = words.map { word -> word.length() }
+
+  emit:
+  counts: Channel<Integer> = counts_ch
+}
+
+def isEven(n: Integer) -> Boolean {
+  return n % 2 == 0
 }
