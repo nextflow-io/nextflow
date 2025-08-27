@@ -16,22 +16,19 @@
 package nextflow.script.ast;
 
 import org.codehaus.groovy.ast.ASTNode;
-import org.codehaus.groovy.ast.ClassNode;
-import org.codehaus.groovy.ast.stmt.Statement;
+import org.codehaus.groovy.ast.expr.Expression;
 
 /**
- * An output declaration.
+ * A legacy parameter declaration.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
-public class OutputNode extends ASTNode {
-    public final String name;
-    public final ClassNode type;
-    public final Statement body;
+public class ParamNodeV1 extends ASTNode {
+    public final Expression target;
+    public Expression value;
 
-    public OutputNode(String name, ClassNode type, Statement body) {
-        this.name = name;
-        this.type = type;
-        this.body = body;
+    public ParamNodeV1(Expression target, Expression value) {
+        this.target = target;
+        this.value = value;
     }
 }
