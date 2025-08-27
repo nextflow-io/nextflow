@@ -24,6 +24,7 @@ import java.util.function.Function
 
 import com.google.common.hash.HashCode
 import groovy.transform.Memoized
+import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.conda.CondaCache
@@ -40,6 +41,8 @@ import nextflow.exception.ProcessUnrecoverableException
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.script.BodyDef
+import nextflow.script.ProcessConfigV1
+import nextflow.script.ProcessConfigV2
 import nextflow.script.ScriptType
 import nextflow.script.TaskClosure
 import nextflow.script.bundle.ResourcesBundle
@@ -53,6 +56,7 @@ import nextflow.script.params.OutParam
 import nextflow.script.params.StdInParam
 import nextflow.script.params.ValueOutParam
 import nextflow.spack.SpackCache
+import nextflow.util.ArrayBag
 /**
  * Models a task instance
  *
@@ -117,9 +121,24 @@ class TaskRun implements Cloneable {
         outputs[param] = value
     }
 
+    /**
+     * The map of input environment vars
+     *
+     * @see TaskProcessor#resolveTaskInputs()
+     */
+    Map<String,String> inputEnv = [:]
+
+    /**
+     * The list of input files
+     *
+     * @see TaskProcessor#resolveTaskInputs()
+     */
+    List<FileHolder> inputFiles = new ArrayBag()
 
     /**
      * The value to be piped to the process stdin
+     *
+     * @see TaskProcessor#resolveTaskInputs()
      */
     def stdin
 
@@ -137,6 +156,13 @@ class TaskRun implements Cloneable {
      * Set {@code true} when the task executed is resumed from the cache
      */
     boolean cached
+
+    /**
+     * The list of resolved output files
+     *
+     * @see TaskOutputResolver#files()
+     */
+    Set<Path> outputFiles = []
 
     /**
      * Task produced standard output
@@ -425,18 +451,11 @@ class TaskRun implements Cloneable {
         return false
     }
 
-    Map<InParam,List<FileHolder>> getInputFiles() {
-        (Map<InParam,List<FileHolder>>) getInputsByType( FileInParam )
-    }
-
     /**
      * Return the list of all input files staged as inputs by this task execution
      */
     List<String> getStagedInputs()  {
-        getInputFiles()
-                .values()
-                .flatten()
-                .collect { it.stageName }
+        return inputFiles.collect { it.stageName }
     }
 
     /**
@@ -444,12 +463,9 @@ class TaskRun implements Cloneable {
      */
     Map<String,Path> getInputFilesMap() {
 
-        final allFiles = getInputFiles().values()
-        final result = new HashMap<String,Path>(allFiles.size())
-        for( List<FileHolder> entry : allFiles ) {
-            if( entry ) for( FileHolder it : entry ) {
-                result[ it.stageName ] = it.storePath
-            }
+        final result = new HashMap<String,Path>(inputFiles.size())
+        for( final holder : inputFiles ) {
+            result[ holder.stageName ] = holder.storePath
         }
 
         return result
@@ -459,18 +475,16 @@ class TaskRun implements Cloneable {
      * Look at the {@code nextflow.script.FileOutParam} which name is the expected
      *  output name
      */
+    @Memoized
     List<String> getOutputFilesNames() {
-        // note: use an explicit function instead of a closure or lambda syntax, otherwise
-        // when calling this method from a subclass it will result into a MissingMethodExeception
-        // see  https://issues.apache.org/jira/browse/GROOVY-2433
-        cache0.computeIfAbsent('outputFileNames', new Function<String,List<String>>() {
-            @Override
-            List<String> apply(String s) {
-                return getOutputFilesNames0()
-            }})
+        if( processor.config instanceof ProcessConfigV1 )
+            return getOutputFilesNamesV1()
+        if( processor.config instanceof ProcessConfigV2 )
+            return getOutputFilesNamesV2()
+        return null
     }
 
-    private List<String> getOutputFilesNames0() {
+    private List<String> getOutputFilesNamesV1() {
         def result = []
 
         for( FileOutParam param : getOutputsByType(FileOutParam).keySet() ) {
@@ -480,20 +494,13 @@ class TaskRun implements Cloneable {
         return result.unique()
     }
 
-    /**
-     * Get the map of *input* objects by the given {@code InParam} type
-     *
-     * @param types One or more subclass of {@code InParam}
-     * @return An associative array containing all the objects for the specified type
-     */
-    def <T extends InParam> Map<T,Object> getInputsByType( Class<T>... types ) {
-
-        def result = [:]
-        for( def it : inputs ) {
-            if( types.contains(it.key.class) )
-                result << it
-        }
-        return result
+    private List<String> getOutputFilesNamesV2() {
+        final config = processor.config as ProcessConfigV2
+        final declaredOutputs = config.getOutputs()
+        final result = []
+        for( final param : declaredOutputs.files.values() )
+            result.add( param.getFilePattern(context) )
+        return result.unique()
     }
 
     /**
@@ -512,17 +519,6 @@ class TaskRun implements Cloneable {
     }
 
     /**
-     * @return A map containing the task environment defined as input declaration by this task
-     */
-    protected Map<String,String> getInputEnvironment() {
-        final Map<String,String> environment = [:]
-        getInputsByType( EnvInParam ).each { param, value ->
-            environment.put( param.name, value?.toString() )
-        }
-        return environment
-    }
-
-    /**
      * @return A map representing the task execution environment
      */
     Map<String,String> getEnvironment() {
@@ -531,7 +527,7 @@ class TaskRun implements Cloneable {
         // IMPORTANT: when copying the environment map a LinkedHashMap must be used to preserve
         // the insertion order of the env entries (ie. export FOO=1; export BAR=$FOO)
         final result = new LinkedHashMap( getProcessor().getProcessEnvironment() )
-        result.putAll( getInputEnvironment() )
+        result.putAll( inputEnv )
         return result
     }
 
@@ -603,6 +599,14 @@ class TaskRun implements Cloneable {
     }
 
     List<String> getOutputEnvNames() {
+        if( processor.config instanceof ProcessConfigV1 )
+            return getOutputEnvNamesV1()
+        if( processor.config instanceof ProcessConfigV2 )
+            return getOutputEnvNamesV2()
+        return null
+    }
+
+    private List<String> getOutputEnvNamesV1() {
         final items = getOutputsByType(EnvOutParam)
         if( !items )
             return List.<String>of()
@@ -614,17 +618,46 @@ class TaskRun implements Cloneable {
         return result
     }
 
+    private List<String> getOutputEnvNamesV2() {
+        final config = processor.config as ProcessConfigV2
+        final declaredOutputs = config.getOutputs()
+        return new ArrayList(declaredOutputs.getEnv())
+    }
+
     /**
      * @return A {@link Map} instance holding a collection of key-pairs
      * where the key represents a environment variable name holding the command
      * output and the value the command the executed.
      */
     Map<String,String> getOutputEvals() {
+        if( processor.config instanceof ProcessConfigV1 )
+            return getOutputEvalsV1()
+        if( processor.config instanceof ProcessConfigV2 )
+            return getOutputEvalsV2()
+        return null
+    }
+
+    private Map<String,String> getOutputEvalsV1() {
         final items = getOutputsByType(CmdEvalParam)
         final result = new LinkedHashMap(items.size())
         for( CmdEvalParam it : items.keySet() ) {
             if( !it.name ) throw new IllegalStateException("Missing output eval name - offending parameter: $it")
             result.put(it.name, it.getTarget(context))
+        }
+        return result
+    }
+
+    private Map<String,String> getOutputEvalsV2() {
+        final config = processor.config as ProcessConfigV2
+        final declaredOutputs = config.getOutputs()
+        final evalCmds = declaredOutputs.getEval()
+        final result = new LinkedHashMap(evalCmds.size())
+        for( String name : evalCmds.keySet() ) {
+            final target = evalCmds[name]
+            final evalCmd = target instanceof Closure
+                ? target.cloneWith(context).call()
+                : target.toString()
+            result.put(name, evalCmd)
         }
         return result
     }

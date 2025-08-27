@@ -37,6 +37,10 @@ public interface ScriptVisitor extends GroovyCodeVisitor {
 
     void visitProcess(ProcessNode node);
 
+    void visitProcessV2(ProcessNodeV2 node);
+
+    void visitProcessV1(ProcessNodeV1 node);
+
     void visitFunction(FunctionNode node);
 
     void visitEnum(ClassNode node);

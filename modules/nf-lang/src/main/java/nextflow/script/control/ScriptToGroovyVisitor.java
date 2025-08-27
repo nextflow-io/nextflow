@@ -15,7 +15,9 @@
  */
 package nextflow.script.control;
 
+import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -28,11 +30,13 @@ import nextflow.script.ast.IncludeNode;
 import nextflow.script.ast.OutputBlockNode;
 import nextflow.script.ast.ParamBlockNode;
 import nextflow.script.ast.ParamNodeV1;
-import nextflow.script.ast.ProcessNode;
+import nextflow.script.ast.ProcessNodeV1;
+import nextflow.script.ast.ProcessNodeV2;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
 import nextflow.script.ast.WorkflowNode;
 import org.codehaus.groovy.ast.ASTNode;
+import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.CodeVisitorSupport;
 import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.ast.Variable;
@@ -43,6 +47,7 @@ import org.codehaus.groovy.ast.expr.ClosureExpression;
 import org.codehaus.groovy.ast.expr.ConstructorCallExpression;
 import org.codehaus.groovy.ast.expr.EmptyExpression;
 import org.codehaus.groovy.ast.expr.Expression;
+import org.codehaus.groovy.ast.expr.MapExpression;
 import org.codehaus.groovy.ast.expr.MethodCallExpression;
 import org.codehaus.groovy.ast.expr.PropertyExpression;
 import org.codehaus.groovy.ast.expr.TupleExpression;
@@ -144,6 +149,7 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
         moduleNode.addStatement(result);
     }
 
+    // TODO: convert process v2 calls with named args to single combined arg
     @Override
     public void visitWorkflow(WorkflowNode node) {
         var main = node.main instanceof BlockStatement block ? block : new BlockStatement();
@@ -219,10 +225,228 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
     }
 
     @Override
-    public void visitProcess(ProcessNode node) {
+    public void visitProcessV2(ProcessNodeV2 node) {
         visitProcessDirectives(node.directives);
-        visitProcessInputs(node.inputs);
-        visitProcessOutputs(node.outputs);
+        visitProcessStagers(node.stagers);
+
+        var stagers = node.stagers instanceof BlockStatement block ? block : new BlockStatement();
+        visitProcessInputsV2(node.inputs, stagers);
+
+        var unstagers = new BlockStatement();
+        visitProcessOutputsV2(node.outputs, unstagers);
+
+        visit(node.exec);
+        visit(node.stub);
+
+        if( "script".equals(node.type) )
+            node.exec.visit(new TaskCmdXformVisitor(sourceUnit));
+        node.stub.visit(new TaskCmdXformVisitor(sourceUnit));
+
+        var when = processWhen(node.when);
+        var bodyDef = stmt(createX(
+            "nextflow.script.BodyDef",
+            args(
+                closureX(node.exec),
+                constX(getSourceText(node.exec)),
+                constX(node.type)
+            )
+        ));
+        var stub = processStub(node.stub);
+        var closure = closureX(block(new VariableScope(), List.of(
+            node.directives,
+            stagers,
+            unstagers,
+            processInputs(node.inputs),
+            processOutputs(node.outputs),
+            processTopics(node.topics),
+            when,
+            stub,
+            bodyDef
+        )));
+        var result = stmt(callThisX("processV2", args(constX(node.getName()), closure)));
+        moduleNode.addStatement(result);
+    }
+
+    private void visitProcessDirectives(Statement directives) {
+        asDirectives(directives).forEach((call) -> {
+            var arguments = asMethodCallArguments(call);
+            if( arguments.size() != 1 )
+                return;
+            var firstArg = arguments.get(0);
+            if( firstArg instanceof ClosureExpression )
+                return;
+            arguments.set(0, transformToLazy(firstArg));
+        });
+    }
+
+    private void visitProcessStagers(Statement directives) {
+        // TODO: wrap first arg as lazy to support dynamic env/file names?
+        asDirectives(directives).forEach((call) -> {
+            var arguments = asMethodCallArguments(call);
+            var lastArg = arguments.get(arguments.size() - 1);
+            if( lastArg instanceof ClosureExpression )
+                return;
+            arguments.set(arguments.size() - 1, transformToLazy(lastArg));
+        });
+    }
+
+    private void visitProcessInputsV2(Parameter[] inputs, BlockStatement stagers) {
+        for( var input : inputs ) {
+            if( isPathType(input.getType()) ) {
+                var ve = varX(input.getName());
+                var stager = stmt(callThisX("stageAs", args(closureX(stmt(ve)))));
+                stagers.addStatement(stager);
+            }
+        }
+    }
+
+    private static boolean isPathType(ClassNode cn) {
+        var tn = new TypeNode(cn);
+        var type = tn.type;
+        if( Path.class.isAssignableFrom(type) ) {
+            return true;
+        }
+        if( Collection.class.isAssignableFrom(type) && tn.genericTypes != null ) {
+            var genericType = tn.genericTypes.get(0);
+            return Path.class.isAssignableFrom(genericType);
+        }
+        return false;
+    }
+
+    // TODO: move to separate class
+    private static class TypeNode {
+        final Class type;
+        final List<Class> genericTypes;
+
+        public TypeNode(ClassNode cn) {
+            this.type = cn.getTypeClass();
+            if( cn.isUsingGenerics() ) {
+                this.genericTypes = Arrays.stream(cn.getGenericsTypes())
+                    .map(el -> el.getType().getTypeClass())
+                    .toList();
+            }
+            else {
+                this.genericTypes = null;
+            }
+        }
+    }
+
+    private void visitProcessOutputsV2(Statement outputs, BlockStatement unstagers) {
+        var visitor = new ProcessUnstageVisitorV2(unstagers);
+        for( var output : asBlockStatements(outputs) )
+            visitor.visit(output);
+    }
+
+    private static class ProcessUnstageVisitorV2 extends CodeVisitorSupport {
+
+        private int evalCount = 0;
+
+        private int pathCount = 0;
+
+        private BlockStatement unstagers;
+
+        public ProcessUnstageVisitorV2(BlockStatement unstagers) {
+            this.unstagers = unstagers;
+        }
+
+        @Override
+        public void visitMethodCallExpression(MethodCallExpression node) {
+            extractDirective(node);
+            super.visitMethodCallExpression(node);
+        }
+
+        private void extractDirective(MethodCallExpression node) {
+            if( !node.isImplicitThis() )
+                return;
+
+            var name = node.getMethodAsString();
+            var arguments = asMethodCallArguments(node);
+
+            // env(<name>)
+            // emit: _unstage_env(<name>)
+            if( "env".equals(name) && arguments.size() == 1 ) {
+                var key = arguments.get(0);
+                var unstager = stmt(callThisX("_unstage_env_", args(key)));
+                unstagers.addStatement(unstager);
+            }
+
+            // eval(<cmd>) -> eval(<key>)
+            // emit: _unstage_eval(<key>, { <cmd> })
+            if( "eval".equals(name) && arguments.size() == 1 ) {
+                var key = constX("nxf_out_eval_" + (evalCount++));
+                var cmd = arguments.get(0);
+                var unstager = stmt(callThisX("_unstage_eval", args(key, closureX(stmt(cmd)))));
+                unstagers.addStatement(unstager);
+                node.setArguments(args(key));
+            }
+
+            // file(<opts>, <pattern>) -> file(<key>)
+            // files(<opts>, <pattern>) -> files(<key>)
+            // emit: _unstage_files(<key>, { <pattern> })
+            if( "file".equals(name) || "files".equals(name) ) {
+                Expression pattern;
+                if( arguments.size() == 1 )
+                    pattern = arguments.get(0);
+                else if( arguments.size() == 2 )
+                    pattern = arguments.get(1);
+                else
+                    return;
+
+                var key = constX("$path" + (pathCount++));
+                var unstager = stmt(callThisX("_unstage_files", args(key, closureX(stmt(pattern)))));
+                unstagers.addStatement(unstager);
+                node.setArguments(args(key));
+            }
+        }
+    }
+
+    private Statement processInputs(Parameter[] inputs) {
+        var statements = Arrays.stream(inputs)
+            .map((input) -> (
+                stmt(callThisX("_input_", args(constX(input.getName()), classX(input.getType()))))
+            ))
+            .toList();
+        return block(null, statements);
+    }
+
+    // TODO: specify output type
+    private Statement processOutputs(Statement outputs) {
+        var statements = asBlockStatements(outputs).stream()
+            .map(stmt -> ((ExpressionStatement) stmt).getExpression())
+            .map((output) -> {
+                if( output instanceof VariableExpression ve ) {
+                    return stmt(callThisX("_output_", args(constX(ve.getName()), closureX(stmt(ve)))));
+                }
+                else if( output instanceof AssignmentExpression ae ) {
+                    var target = (VariableExpression)ae.getLeftExpression();
+                    return stmt(callThisX("_output_", args(constX(target.getName()), closureX(stmt(ae.getRightExpression())))));
+                }
+                else {
+                    return stmt(callThisX("_output_", args(constX("$out"), closureX(stmt(output)))));
+                }
+            })
+            .toList();
+        return block(null, statements);
+    }
+
+    private Statement processTopics(Statement topics) {
+        var statements = asBlockStatements(topics).stream()
+            .map((stmt) -> {
+                var es = (ExpressionStatement) stmt;
+                var be = (BinaryExpression) es.getExpression();
+                return stmt(callThisX("_topic_", args(be.getLeftExpression(), be.getRightExpression())));
+            })
+            .toList();
+        return block(null, statements);
+    }
+
+    @Override
+    public void visitProcessV1(ProcessNodeV1 node) {
+        visitProcessDirectives(node.directives);
+        visitProcessInputsV1(node.inputs);
+        visitProcessOutputsV1(node.outputs);
+        visit(node.exec);
+        visit(node.stub);
 
         if( "script".equals(node.type) )
             node.exec.visit(new TaskCmdXformVisitor(sourceUnit));
@@ -250,19 +474,7 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
         moduleNode.addStatement(result);
     }
 
-    private void visitProcessDirectives(Statement directives) {
-        asDirectives(directives).forEach((call) -> {
-            var arguments = ((TupleExpression) call.getArguments()).getExpressions();
-            if( arguments.size() != 1 )
-                return;
-            var firstArg = arguments.get(0);
-            if( firstArg instanceof ClosureExpression )
-                return;
-            arguments.set(0, transformToLazy(firstArg));
-        });
-    }
-
-    private void visitProcessInputs(Statement inputs) {
+    private void visitProcessInputsV1(Statement inputs) {
         asDirectives(inputs).forEach((call) -> {
             var name = call.getMethodAsString();
             varToConstX(call.getArguments(), "tuple".equals(name), "each".equals(name));
@@ -270,7 +482,7 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
         });
     }
 
-    private void visitProcessOutputs(Statement outputs) {
+    private void visitProcessOutputsV1(Statement outputs) {
         asDirectives(outputs).forEach((call) -> {
             var name = call.getMethodAsString();
             varToConstX(call.getArguments(), "tuple".equals(name), false);
@@ -362,7 +574,7 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
         // wrap expression in closure if it references variables
         var vars = new VariableCollector().collect(node);
         if( !vars.isEmpty() )
-            return closureX(block(stmt(node)));
+            return closureX(stmt(node));
         return node;
     }
 
