@@ -844,7 +844,23 @@ The following settings are available:
 : Enable the Fusion file system (default: `false`).
 
 `fusion.exportStorageCredentials`
-: Export the access credentials required by the underlying object storage to the task execution environment (default: `false`).
+: Export the access credentials required by the underlying object storage as environment variables to the task execution environment (default: `false`).
+
+  When enabled, this option exports cloud storage credentials as environment variables (e.g., `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN` for AWS S3) to tasks.
+
+  :::{note}
+  This option only exports environment variables. It does not mount or provide access to credential files such as `~/.aws/credentials`, `~/.aws/config`, or SSO cache files.
+
+  For users authenticated via AWS SSO (`aws sso login`), you must first export your credentials to environment variables before running Nextflow:
+  
+  ```bash
+  # Export SSO credentials to environment variables
+  eval "$(aws configure export-credentials --format env)"
+  
+  # Then run Nextflow with exportStorageCredentials enabled
+  nextflow run pipeline.nf -c config.nf
+  ```
+  :::
 
 `fusion.logLevel`
 : The log level of the Fusion client.
