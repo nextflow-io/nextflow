@@ -44,8 +44,6 @@ import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Iterable;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
 import software.amazon.awssdk.transfer.s3.model.*;
 
-import static nextflow.cloud.aws.nio.util.S3UploadHelper.*;
-
 /**
  * Client Amazon S3
  * @see software.amazon.awssdk.services.s3.S3Client
