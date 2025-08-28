@@ -62,7 +62,7 @@ class TaskFileCollecter {
             if( splitter?.isPattern() ) {
                 result = fetchResultFiles(filePattern, workDir)
                 if( result && !opts.includeInputs ) {
-                    result = excludeStagedInputs(task, result)
+                    result = excludeStagedInputs(result)
                     log.trace "Process ${task.lazyName()} > after removing staged inputs: ${result}"
                     inputsExcluded |= (result.size()==0)
                 }
@@ -99,13 +99,7 @@ class TaskFileCollecter {
      * @param workDir
      */
     protected List<Path> fetchResultFiles(String pattern, Path workDir) {
-        final opts = [
-            relative: false,
-            hidden: opts.hidden ?: pattern.startsWith('.'),
-            followLinks: opts.followLinks,
-            maxDepth: opts.maxDepth,
-            type: opts.type ? opts.type : ( pattern.contains('**') ? 'file' : 'any' )
-        ]
+        final opts = visitOptions(pattern)
 
         List<Path> files = []
         try {
@@ -118,14 +112,23 @@ class TaskFileCollecter {
         return files.sort()
     }
 
+    protected Map<String,?> visitOptions(String pattern) {
+        return [
+            relative: false,
+            hidden: opts.hidden ?: pattern.startsWith('.'),
+            followLinks: opts.followLinks,
+            maxDepth: opts.maxDepth,
+            type: opts.type ? opts.type : ( pattern.contains('**') ? 'file' : 'any' )
+        ]
+    }
+
     /**
      * Remove each path in the given list whose name matches the name of
      * an input file for the specified {@code TaskRun}
      *
-     * @param task
      * @param collectedFiles
      */
-    protected List<Path> excludeStagedInputs(TaskRun task, List<Path> collectedFiles) {
+    protected List<Path> excludeStagedInputs(List<Path> collectedFiles) {
 
         final List<String> allStagedFiles = task.getStagedInputs()
         final List<Path> result = new ArrayList<>(collectedFiles.size())

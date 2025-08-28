@@ -28,10 +28,10 @@ import groovy.transform.CompileStatic
 class ProcessFileInput {
 
     /**
-     * Optional name which, if specified, will be added to the task
-     * context as an escape-aware list of paths.
+     * File pattern which defines how the input files should be named
+     * when they are staged into a task directory.
      */
-    private String name
+    private Object filePattern
 
     /**
      * Lazy expression (e.g. closure) which defines which files
@@ -40,21 +40,9 @@ class ProcessFileInput {
      */
     private Object value
 
-    /**
-     * File pattern which defines how the input files should be named
-     * when they are staged into a task directory.
-     */
-    private Object filePattern
-
-    ProcessFileInput(Object name, Object value) {
-        if( name instanceof String )
-            this.name = name
+    ProcessFileInput(Object filePattern, Object value) {
+        this.filePattern = filePattern != null ? filePattern : '*'
         this.value = value
-        this.filePattern = name != null ? name : '*'
-    }
-
-    String getName() {
-        return name
     }
 
     String getFilePattern(Map ctx) {

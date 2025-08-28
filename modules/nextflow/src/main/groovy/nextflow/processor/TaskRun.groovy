@@ -434,6 +434,9 @@ class TaskRun implements Cloneable {
             : getScript()
     }
 
+    boolean hasTypedInputsOutputs() {
+        return processor.config instanceof ProcessConfigV2
+    }
 
     /**
      * Check whenever there are values to be cached
@@ -477,11 +480,10 @@ class TaskRun implements Cloneable {
      */
     @Memoized
     List<String> getOutputFilesNames() {
-        if( processor.config instanceof ProcessConfigV1 )
-            return getOutputFilesNamesV1()
-        if( processor.config instanceof ProcessConfigV2 )
+        if( hasTypedInputsOutputs() )
             return getOutputFilesNamesV2()
-        return null
+        else
+            return getOutputFilesNamesV1()
     }
 
     private List<String> getOutputFilesNamesV1() {
@@ -599,11 +601,10 @@ class TaskRun implements Cloneable {
     }
 
     List<String> getOutputEnvNames() {
-        if( processor.config instanceof ProcessConfigV1 )
-            return getOutputEnvNamesV1()
-        if( processor.config instanceof ProcessConfigV2 )
+        if( hasTypedInputsOutputs() )
             return getOutputEnvNamesV2()
-        return null
+        else
+            return getOutputEnvNamesV1()
     }
 
     private List<String> getOutputEnvNamesV1() {
@@ -630,11 +631,10 @@ class TaskRun implements Cloneable {
      * output and the value the command the executed.
      */
     Map<String,String> getOutputEvals() {
-        if( processor.config instanceof ProcessConfigV1 )
-            return getOutputEvalsV1()
-        if( processor.config instanceof ProcessConfigV2 )
+        if( hasTypedInputsOutputs() )
             return getOutputEvalsV2()
-        return null
+        else
+            return getOutputEvalsV1()
     }
 
     private Map<String,String> getOutputEvalsV1() {

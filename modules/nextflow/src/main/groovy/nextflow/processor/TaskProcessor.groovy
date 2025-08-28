@@ -1728,13 +1728,17 @@ class TaskProcessor {
             optional: param.optional,
             type: param.type,
         ]
-        final allFiles = new TaskFileCollecter(filePatterns, opts, task)
+        final allFiles = collectOutFiles0(task, filePatterns, opts)
 
         if( !param.isValidArity(allFiles.size()) )
             throw new IllegalArityException("Incorrect number of output files for process `${safeTaskName(task)}` -- expected ${param.arity}, found ${allFiles.size()}")
 
         task.setOutput( param, allFiles.size()==1 && param.isSingle() ? allFiles[0] : allFiles )
 
+    }
+
+    protected List<Path> collectOutFiles0(TaskRun task, List<String> filePatterns, Map opts) {
+        return new TaskFileCollecter(filePatterns, opts, task).collect()
     }
 
     protected void collectOutValues( TaskRun task, ValueOutParam param, Map ctx ) {

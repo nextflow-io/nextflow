@@ -190,9 +190,9 @@ processDef
 processBody
     // explicit script/exec body with optional stub
     :   (sep processDirectives)?
-        (sep (processInputs | processInputsV1))?
+        (sep (processInputsV1 | processInputs))?
         (sep processStage)?
-        (sep (processOutputs | processOutputsV1))?
+        (sep (processOutputsV1 | processOutputs))?
         (sep processTopics)?
         (sep processWhen)?
         sep processExec
@@ -200,19 +200,19 @@ processBody
 
     // explicit "Mahesh" form
     |   (sep processDirectives)?
-        (sep (processInputs | processInputsV1))?
+        (sep (processInputsV1 | processInputs))?
         (sep processStage)?
         (sep processWhen)?
         sep processExec
         (sep processStub)?
-        (sep (processOutputs | processOutputsV1))?
+        (sep (processOutputsV1 | processOutputs))?
         (sep processTopics)?
 
     // implicit script/exec body
     |   (sep processDirectives)?
-        (sep (processInputs | processInputsV1))?
+        (sep (processInputsV1 | processInputs))?
         (sep processStage)?
-        (sep (processOutputs | processOutputsV1))?
+        (sep (processOutputsV1 | processOutputs))?
         (sep processTopics)?
         (sep processWhen)?
         sep blockStatements

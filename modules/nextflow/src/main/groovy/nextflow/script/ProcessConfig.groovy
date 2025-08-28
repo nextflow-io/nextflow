@@ -150,6 +150,9 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
     @PackageScope
     BaseScript getOwnerScript() { ownerScript }
 
+    @PackageScope
+    String getProcessName() { processName }
+
     TaskConfig createTaskConfig() {
         return new TaskConfig(configProperties)
     }

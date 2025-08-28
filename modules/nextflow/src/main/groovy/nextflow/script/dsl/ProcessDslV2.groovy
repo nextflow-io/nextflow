@@ -33,12 +33,14 @@ import nextflow.script.params.v2.ProcessOutputs
 @CompileStatic
 class ProcessDslV2 extends ProcessBuilder {
 
-    private ProcessInputs inputs = new ProcessInputs()
+    private ProcessInputs inputs
 
-    private ProcessOutputs outputs = new ProcessOutputs()
+    private ProcessOutputs outputs
 
     ProcessDslV2(BaseScript ownerScript, String processName) {
         super(new ProcessConfigV2(ownerScript, processName))
+        inputs = ((ProcessConfigV2) config).getInputs()
+        outputs = ((ProcessConfigV2) config).getOutputs()
     }
 
     /// INPUTS
@@ -57,8 +59,8 @@ class ProcessDslV2 extends ProcessBuilder {
         inputs.addFile(new ProcessFileInput(null, value))
     }
 
-    void stageAs(Object name, Object value) {
-        inputs.addFile(new ProcessFileInput(name, value))
+    void stageAs(Object filePattern, Object value) {
+        inputs.addFile(new ProcessFileInput(filePattern, value))
     }
 
     void stdin(Object value) {
@@ -67,8 +69,8 @@ class ProcessDslV2 extends ProcessBuilder {
 
     /// OUTPUTS
 
-    void _output_(String name, Object value) {
-        outputs.addParam(name, null, value)
+    void _output_(String name, Class type, Object value) {
+        outputs.addParam(name, type, value)
     }
 
     void _topic_(Object value, String topic) {
@@ -87,14 +89,6 @@ class ProcessDslV2 extends ProcessBuilder {
 
     void _unstage_files(String key, Object pattern) {
         outputs.addFile(key, new ProcessFileOutput(pattern))
-    }
-
-    /// BUILD
-
-    ProcessDef build() {
-        ((ProcessConfigV2) config).setInputs(inputs)
-        ((ProcessConfigV2) config).setOutputs(outputs)
-        super.build()
     }
 
 }

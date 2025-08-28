@@ -95,7 +95,8 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
 
     protected void initialize() {
         // apply config settings to the process
-        new ProcessConfigBuilder(processConfig).applyConfig((Map)session.config.process, baseName, simpleName, processName)
+        final configProcessScope = (Map)session.config.process
+        new ProcessConfigBuilder(processConfig).applyConfig(configProcessScope, baseName, simpleName, processName)
     }
 
     @Override

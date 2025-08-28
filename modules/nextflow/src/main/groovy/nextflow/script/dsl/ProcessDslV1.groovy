@@ -43,12 +43,14 @@ import nextflow.script.params.ValueOutParam
 @CompileStatic
 class ProcessDslV1 extends ProcessBuilder {
 
-    private InputsList inputs = new InputsList()
+    private InputsList inputs
 
-    private OutputsList outputs = new OutputsList()
+    private OutputsList outputs
 
     ProcessDslV1(BaseScript ownerScript, String processName) {
         super(new ProcessConfigV1(ownerScript, processName))
+        inputs = ((ProcessConfigV1) config).getInputs()
+        outputs = ((ProcessConfigV1) config).getOutputs()
     }
 
     /// INPUTS
@@ -162,14 +164,6 @@ class ProcessDslV1 extends ProcessBuilder {
         new ValueOutParam(config)
                 .setOptions(opts)
                 .bind(obj)
-    }
-
-    /// BUILD
-
-    ProcessDef build() {
-        ((ProcessConfigV1) config).setInputs(inputs)
-        ((ProcessConfigV1) config).setOutputs(outputs)
-        super.build()
     }
 
 }

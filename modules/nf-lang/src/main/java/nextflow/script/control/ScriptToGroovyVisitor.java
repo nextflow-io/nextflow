@@ -36,6 +36,7 @@ import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
 import nextflow.script.ast.WorkflowNode;
 import org.codehaus.groovy.ast.ASTNode;
+import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.CodeVisitorSupport;
 import org.codehaus.groovy.ast.Parameter;
@@ -409,20 +410,19 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
         return block(null, statements);
     }
 
-    // TODO: specify output type
     private Statement processOutputs(Statement outputs) {
         var statements = asBlockStatements(outputs).stream()
             .map(stmt -> ((ExpressionStatement) stmt).getExpression())
             .map((output) -> {
-                if( output instanceof VariableExpression ve ) {
-                    return stmt(callThisX("_output_", args(constX(ve.getName()), closureX(stmt(ve)))));
+                if( output instanceof VariableExpression target ) {
+                    return stmt(callThisX("_output_", args(constX(target.getName()), classX(target.getType()), closureX(stmt(target)))));
                 }
                 else if( output instanceof AssignmentExpression ae ) {
                     var target = (VariableExpression)ae.getLeftExpression();
-                    return stmt(callThisX("_output_", args(constX(target.getName()), closureX(stmt(ae.getRightExpression())))));
+                    return stmt(callThisX("_output_", args(constX(target.getName()), classX(target.getName()), closureX(stmt(ae.getRightExpression())))));
                 }
                 else {
-                    return stmt(callThisX("_output_", args(constX("$out"), closureX(stmt(output)))));
+                    return stmt(callThisX("_output_", args(constX("$out"), classX(ClassHelper.dynamicType()), closureX(stmt(output)))));
                 }
             })
             .toList();

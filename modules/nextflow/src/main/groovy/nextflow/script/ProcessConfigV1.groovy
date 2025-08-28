@@ -44,14 +44,6 @@ class ProcessConfigV1 extends ProcessConfig {
         return copy
     }
 
-    void setInputs(InputsList inputs) {
-        this.inputs = inputs
-    }
-
-    void setOutputs(OutputsList outputs) {
-        this.outputs = outputs
-    }
-
     InputsList getInputs() {
         return inputs
     }

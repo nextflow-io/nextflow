@@ -337,12 +337,12 @@ public interface ProcessDsl extends DslScope {
         @Description("""
             Stage a file into the task directory under the given alias.
         """)
-        void stageAs(String name, Path value);
+        void stageAs(String filePattern, Path value);
 
         @Description("""
             Stage a collection of files into the task directory under the given alias.
         """)
-        void stageAs(String name, Collection<Path> value);
+        void stageAs(String filePattern, Collection<Path> value);
 
         @Description("""
             Stage the given value as the standard input (i.e. `stdin`) to the task script.

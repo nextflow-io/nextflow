@@ -117,14 +117,14 @@ class TaskInputResolver {
         return files
     }
 
-    protected Path resolvePath(Object item) {
+    protected static Path resolvePath(Object item) {
         final result = normalizeToPath(item)
         return result instanceof LogicalDataPath
             ? result.toTargetPath()
             : result
     }
 
-    protected Path normalizeToPath( obj ) {
+    protected static Path normalizeToPath( obj ) {
         if( obj instanceof Path )
             return obj
 
@@ -156,7 +156,7 @@ class TaskInputResolver {
      * @param altName The name to be used when a temporary file is created.
      * @return The {@code Path} that will be staged in the task working folder
      */
-    protected FileHolder normalizeInputToFile( Object input, String altName ) {
+    protected static FileHolder normalizeInputToFile( Object input, String altName ) {
         /*
          * when it is a local file, just return a reference holder to it
          */
@@ -187,7 +187,7 @@ class TaskInputResolver {
      *
      * @return
      */
-    protected List<FileHolder> expandWildcards( String name, List<FileHolder> files ) {
+    protected static List<FileHolder> expandWildcards( String name, List<FileHolder> files ) {
         assert files != null
 
         // use an unordered so that cache hash key is not affected by file entries order
@@ -216,7 +216,7 @@ class TaskInputResolver {
         return result
     }
 
-    protected String expandWildcards0( String path, String stageName, int index, int size ) {
+    protected static String expandWildcards0( String path, String stageName, int index, int size ) {
 
         String name
         String parent
@@ -249,13 +249,13 @@ class TaskInputResolver {
         }
     }
 
-    protected String replaceStarWildcards(String name, int index, boolean strip=false) {
+    protected static String replaceStarWildcards(String name, int index, boolean strip=false) {
         name.replaceAll(/\*/, strip ? '' : String.valueOf(index))
     }
 
     private static final Pattern QUESTION_MARK = ~/(\?+)/
 
-    protected String replaceQuestionMarkWildcards(String name, int index) {
+    protected static String replaceQuestionMarkWildcards(String name, int index) {
         def result = new StringBuffer()
 
         Matcher m = QUESTION_MARK.matcher(name)
@@ -268,7 +268,7 @@ class TaskInputResolver {
         result.toString()
     }
 
-    protected singleItemOrList( List<FileHolder> items, boolean single, ScriptType type ) {
+    protected static Object singleItemOrList( List<FileHolder> items, boolean single, ScriptType type ) {
         assert items != null
 
         if( items.size() == 1 && single ) {
@@ -282,7 +282,7 @@ class TaskInputResolver {
         return new BlankSeparatedList(result)
     }
 
-    private Path makePath( FileHolder holder, ScriptType type ) {
+    private static Path makePath( FileHolder holder, ScriptType type ) {
         if( type == ScriptType.SCRIPTLET ) {
             return new TaskPath(holder)
         }

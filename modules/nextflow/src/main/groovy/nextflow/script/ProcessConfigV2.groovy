@@ -29,12 +29,12 @@ class ProcessConfigV2 extends ProcessConfig {
     /**
      * List of process input definitions
      */
-    private ProcessInputs inputs
+    private ProcessInputs inputs = new ProcessInputs()
 
     /**
      * List of process output definitions
      */
-    private ProcessOutputs outputs
+    private ProcessOutputs outputs = new ProcessOutputs()
 
     ProcessConfigV2(BaseScript script, String name) {
         super(script, name)
@@ -46,14 +46,6 @@ class ProcessConfigV2 extends ProcessConfig {
         copy.@inputs = inputs.clone()
         copy.@outputs = outputs.clone()
         return copy
-    }
-
-    void setInputs(ProcessInputs inputs) {
-        this.inputs = inputs
-    }
-
-    void setOutputs(ProcessOutputs outputs) {
-        this.outputs = outputs
     }
 
     ProcessInputs getInputs() {

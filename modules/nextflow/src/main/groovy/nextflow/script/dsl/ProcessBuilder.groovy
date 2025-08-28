@@ -94,21 +94,6 @@ class ProcessBuilder {
         this.config = config
     }
 
-    Object invokeMethod(String name, Object args) {
-        /*
-         * This is need to patch #497 -- what is happening is that when in the config file
-         * is defined a directive like `memory`, `cpus`, etc in by using a closure,
-         * this closure is interpreted as method definition and it get invoked if a
-         * directive with the same name is defined in the process definition.
-         * To avoid that the offending property is removed from the map before the method
-         * is evaluated.
-         */
-        if( config.get(name) instanceof Closure )
-            config.remove(name)
-
-        this.metaClass.invokeMethod(this,name,args)
-    }
-
     def methodMissing( String name, def args ) {
         checkName(name)
 
@@ -279,7 +264,7 @@ class ProcessBuilder {
      *
      * @param value
      */
-    void module( String value ) {
+    void module( value ) {
         if( !value ) return
 
         def result = (List)config.module
@@ -288,7 +273,10 @@ class ProcessBuilder {
             config.put('module', result)
         }
 
-        result.add(value)
+        if( value instanceof List )
+            result.addAll(value)
+        else
+            result.add(value)
     }
 
     /**
