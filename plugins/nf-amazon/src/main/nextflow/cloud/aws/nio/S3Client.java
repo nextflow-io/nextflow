@@ -28,7 +28,14 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import nextflow.cloud.aws.nio.util.S3SyncClientConfiguration;
+import nextflow.cloud.aws.AwsClientFactory;
+import nextflow.cloud.aws.nio.util.S3AsyncClientConfiguration;
+import nextflow.cloud.aws.nio.util.S3MultipartOptions;
+import nextflow.cloud.aws.util.AwsHelper;
+import nextflow.util.ThreadPoolManager;
 import nextflow.util.Threads;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -36,13 +43,6 @@ import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Iterable;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
 import software.amazon.awssdk.transfer.s3.model.*;
-import nextflow.cloud.aws.AwsClientFactory;
-import nextflow.cloud.aws.nio.util.S3AsyncClientConfiguration;
-import nextflow.cloud.aws.nio.util.S3MultipartOptions;
-import nextflow.cloud.aws.util.AwsHelper;
-import nextflow.util.ThreadPoolManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import static nextflow.cloud.aws.nio.util.S3UploadHelper.*;
 
@@ -68,8 +68,6 @@ public class S3Client {
 	private S3TransferManager transferManager;
 
 	private ExecutorService transferPool;
-
-	private Integer transferManagerThreads = 10;
 
 	private Boolean isRequesterPaysEnabled = false;
 
@@ -135,19 +133,20 @@ public class S3Client {
 		}
 	}
 
-
 	/**
 	 * @see software.amazon.awssdk.services.s3.S3Client#listBuckets()
 	 */
 	public List<Bucket> listBuckets() {
 		return runWithPermit(() -> client.listBuckets().buckets());
 	}
+
 	/**
 	 * @see software.amazon.awssdk.services.s3.S3Client#listObjects(ListObjectsRequest)
 	 */
 	public ListObjectsResponse listObjects(ListObjectsRequest request) {
 		return runWithPermit(() -> client.listObjects(request));
 	}
+
 	/**
 	 * @see software.amazon.awssdk.services.s3.S3Client#getObject
 	 */
@@ -157,6 +156,7 @@ public class S3Client {
 			reqBuilder.requestPayer(RequestPayer.REQUESTER);
         return runWithPermit(() -> client.getObject(reqBuilder.build()));
 	}
+
 	/**
 	 * @see software.amazon.awssdk.services.s3.S3Client#putObject
 	 */
@@ -219,6 +219,7 @@ public class S3Client {
 		}
 		return runWithPermit(() -> client.putObject(req, RequestBody.fromInputStream(inputStream, contentLength)));
 	}
+
 	/**
 	 * @see software.amazon.awssdk.services.s3.S3Client#deleteObject
 	 */
@@ -295,19 +296,6 @@ public class S3Client {
 		log.debug("Setting S3 requester pays enabled={}", isRequesterPaysEnabled);
 	}
 
-	public void setTransferManagerThreads(String value) {
-		if( value==null )
-			return;
-
-		try {
-			this.transferManagerThreads = Integer.valueOf(value);
-			log.debug("Setting S3 upload max threads={}", transferManagerThreads);
-		}
-		catch( NumberFormatException e ) {
-			log.warn("Not a valid AWS S3 upload max threads: `{}` -- Using default", value);
-		}
-	}
-
 	public ObjectCannedACL getCannedAcl() {
 		return cannedAcl;
 	}
@@ -345,158 +333,11 @@ public class S3Client {
 		return runWithPermit(() ->client.listObjectsV2Paginator(request));
 	}
 
-	public void multipartCopyObject(S3Path s3Source, S3Path s3Target, Long objectSize, S3MultipartOptions opts, List<Tag> tags, String contentType, String storageClass ) {
-
-		final String sourceBucketName = s3Source.getBucket();
-		final String sourceObjectKey = s3Source.getKey();
-		final String sourceS3Path = "s3://"+sourceBucketName+'/'+sourceObjectKey;
-		final String targetBucketName = s3Target.getBucket();
-		final String targetObjectKey = s3Target.getKey();
-
-		// Step 2: Initialize
-		CreateMultipartUploadRequest.Builder reqBuilder = CreateMultipartUploadRequest.builder()
-				.bucket(targetBucketName)
-				.key(targetObjectKey);
-
-		if( cannedAcl!=null ) {
-			reqBuilder.acl(cannedAcl);
-		}
-		if( storageEncryption!=null ) {
-			reqBuilder.serverSideEncryption(storageEncryption);
-		}
-		if( kmsKeyId != null ) {
-			reqBuilder.ssekmsKeyId(kmsKeyId);
-		}
-
-		if( tags != null && tags.size()>0 ) {
-			reqBuilder.tagging( Tagging.builder().tagSet(tags).build() );
-		}
-
-		if( contentType!=null ) {
-			reqBuilder.contentType(contentType);
-		}
-
-		if( storageClass!=null ) {
-			reqBuilder.storageClass(StorageClass.fromValue(storageClass));
-		}
-
-		CreateMultipartUploadResponse initResult = runWithPermit(() ->client.createMultipartUpload(reqBuilder.build()));
-
-
-		// Step 3: Save upload Id.
-		String uploadId = initResult.uploadId();
-
-		// Multipart upload and copy allows max 10_000 parts
-		// each part can be up to 5 GB
-		// Max file size is 5 TB
-		// See https://docs.aws.amazon.com/AmazonS3/latest/userguide/qfacts.html
-		final int defChunkSize = opts.getChunkSize();
-		final long partSize = computePartSize(objectSize, defChunkSize);
-		ExecutorService executor = S3OutputStream.getOrCreateExecutor(opts.getMaxThreads());
-		List<Callable<CompletedPart>> copyPartRequests = new ArrayList<>();
-		checkPartSize(partSize);
-
-		// Step 4. create copy part requests
-		long bytePosition = 0;
-		for (int i = 1; bytePosition < objectSize; i++)
-		{
-			checkPartIndex(i, sourceS3Path, objectSize, partSize);
-
-			long lastPosition = bytePosition + partSize -1;
-			if( lastPosition >= objectSize )
-				lastPosition = objectSize - 1;
-
-			UploadPartCopyRequest copyRequest = UploadPartCopyRequest.builder()
-					.sourceBucket(sourceBucketName)
-					.sourceKey(sourceObjectKey)
-					.destinationBucket(targetBucketName)
-					.destinationKey(targetObjectKey)
-					.uploadId(uploadId)
-					.partNumber(i)
-					.copySourceRange("bytes=" + bytePosition + "-" + lastPosition) // e.g., "bytes=0-5242879"
-					.build();
-
-			copyPartRequests.add( copyPart(client, copyRequest, opts) );
-			bytePosition += partSize;
-		}
-
-		log.trace("Starting multipart copy from: {} to {} -- uploadId={}; objectSize={}; chunkSize={}; numOfChunks={}", s3Source, s3Target, uploadId, objectSize, partSize, copyPartRequests.size() );
-
-
-		List<CompletedPart> completedParts = new ArrayList<>();
-		try {
-			// Step 5. Start parallel parts copy
-			List<Future<CompletedPart>> futures = executor.invokeAll(copyPartRequests);
-			// Step 6. Fetch all results
-			for (Future<CompletedPart> future : futures) {
-				completedParts.add(future.get());
-			}
-		} catch( Exception e ) {
-			throw new IllegalStateException("Multipart copy reported an unexpected error -- uploadId=" + uploadId, e);
-		}
-
-		// Step 7. Complete copy operation
-		CompletedMultipartUpload completedUpload = CompletedMultipartUpload.builder()
-		.parts(completedParts)
-		.build();
-
-		CompleteMultipartUploadRequest completeRequest = CompleteMultipartUploadRequest.builder()
-		.bucket(targetBucketName)
-		.key(targetObjectKey)
-		.uploadId(uploadId)
-		.multipartUpload(completedUpload)
-		.build();
-
-		log.trace("Completing multipart copy uploadId={}", uploadId);
-		client.completeMultipartUpload(completeRequest);
-	}
-
-	static Callable<CompletedPart> copyPart( final software.amazon.awssdk.services.s3.S3Client client, final UploadPartCopyRequest request, final S3MultipartOptions opts ) {
-		return new Callable<CompletedPart>() {
-			@Override
-			public CompletedPart call() throws Exception {
-				return copyPart0(client,request,opts);
-			}
-		};
-	}
-
-
-	static CompletedPart copyPart0(software.amazon.awssdk.services.s3.S3Client client, UploadPartCopyRequest request, S3MultipartOptions opts) throws IOException, InterruptedException {
-
-		final String objectId = request.uploadId();
-		final int partNumber = request.partNumber();
-		final String range = request.copySourceRange();
-
-		int attempt=0;
-		CompletedPart result=null;
-		while( result == null ) {
-			attempt++;
-			try {
-				log.trace("Copying multipart {} with length {} attempt {} for {} ", partNumber, range, attempt, objectId);
-				UploadPartCopyResponse response = client.uploadPartCopy(request);
-				result = CompletedPart.builder()
-						.partNumber(partNumber)
-						.eTag(response.copyPartResult().eTag())
-						.build();
-			}
-			catch (SdkException e) {
-				if( attempt >= opts.getMaxAttempts() )
-					throw new IOException("Failed to upload multipart data to Amazon S3", e);
-
-				log.debug("Failed to upload part {} attempt {} for {} -- Caused by: {}", partNumber, attempt, objectId, e.getMessage());
-				Thread.sleep(opts.getRetrySleepWithAttempt(attempt));
-			}
-		}
-
-		return result;
-	}
-
 	// ===== transfer manager section =====
 
 	synchronized S3TransferManager transferManager() {
 		if( transferManager==null ) {
-			log.debug("Creating S3 transfer manager pool - max-treads={};", transferManagerThreads);
-			transferPool = ThreadPoolManager.create("S3TransferManager", transferManagerThreads);
+			transferPool = ThreadPoolManager.create("S3TransferManager");
 			transferManager = S3TransferManager.builder()
 					.s3Client(factory.getS3AsyncClient(S3AsyncClientConfiguration.create(props), global))
 					.executor(transferPool)

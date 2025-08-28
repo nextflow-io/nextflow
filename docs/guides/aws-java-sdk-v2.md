@@ -16,15 +16,17 @@ The HTTP client in SDK v2 does not support overriding certain advanced HTTP opti
 - `aws.client.socketSendBufferSizeHint`
 - `aws.client.userAgent`
 
-## S3 transfer manager
+## S3 concurrency
 
-The *S3 transfer manager* is a subsystem of SDK v2 that handles S3 uploads and downloads.
+You can use the `aws.client.maxConnections` config option to control the maximum number of concurrent HTTP connections to S3.
 
-You can configure the concurrency and throughput of the S3 transfer manager manually using the `aws.client.maxConcurrency` and `aws.client.maxNativeMemory` configuration options. Alternatively, you can use the `aws.client.targetThroughputInGbps` option to set both values automatically based on a target throughput.
+You can also use the `aws.client.targetThroughputInGbps` option to control the concurrency of S3 uploads and downloads specifically, based on the available network bandwidth. This setting is `10` by default, which means that Nextflow performs S3 transfers concurrently up to 10 Gbps of network throughput, regardless of the connection limit. All other S3 API calls are controlled by the connection limit.
+
+Use these settings with virtual threads to achieve optimal performance for your environment. Increasing these settings beyond their defaults may improve performance for large runs. You can enable virtual threads by setting the `NXF_ENABLE_VIRTUAL_THREADS` environment variable to `true`.
 
 ## Multi-part uploads
 
-Multi-part uploads are handled by the S3 transfer manager. You can use the `aws.client.minimumPartSize` and `aws.client.multipartThreshold` config options to control when and how multi-part uploads are performed.
+Nextflow uploads large files to S3 as multi-part uploads. You can use the `aws.client.minimumPartSize` and `aws.client.multipartThreshold` config options to control when and how multi-part uploads are performed.
 
 The following multi-part upload config options are no longer supported:
 

@@ -32,7 +32,9 @@ import java.util.Properties;
  */
 public class S3SyncClientConfiguration extends S3ClientConfiguration{
 
-    private int maxConnections = 50; //Default for Sync clients
+    // Sync client should always have a connection limit
+    private int maxConnections = 50;
+
     private ApacheHttpClient.Builder httpClientBuilder;
 
     private ApacheHttpClient.Builder httpClientBuilder(){
@@ -103,16 +105,14 @@ public class S3SyncClientConfiguration extends S3ClientConfiguration{
     }
 
     public static S3SyncClientConfiguration create(Properties props) {
-		S3SyncClientConfiguration config = new S3SyncClientConfiguration();
+        S3SyncClientConfiguration config = new S3SyncClientConfiguration();
 
-		if( props != null ) {
+        if( props != null ) {
             config.setClientOverrideConfiguration(props);
             config.setClientHttpBuilder(props);
         }
 
-		return config;
-	}
-
+        return config;
+    }
 
 }
-
