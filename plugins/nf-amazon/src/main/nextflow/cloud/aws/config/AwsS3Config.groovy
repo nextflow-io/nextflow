@@ -60,13 +60,7 @@ class AwsS3Config implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The maximum number of concurrent S3 transfers used by the S3 transfer manager. By default, this setting is determined by `aws.client.targetThroughputInGbps`. Modifying this value can affect the amount of memory used for S3 transfers.
-    """)
-    final Integer maxConcurrency
-
-    @ConfigOption
-    @Description("""
-        The maximum number of open HTTP connections used by the S3 transfer manager (default: `50`).
+        The maximum number of open HTTP connections used by the S3 client (default: `50`).
     """)
     final Integer maxConnections
 
@@ -78,19 +72,13 @@ class AwsS3Config implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The maximum native memory used by the S3 transfer manager. By default, this setting is determined by `aws.client.targetThroughputInGbps`.
-    """)
-    final MemoryUnit maxNativeMemory
-
-    @ConfigOption
-    @Description("""
-        The minimum part size used by the S3 transfer manager for multi-part uploads (default: `8 MB`).
+        The minimum part size used for multi-part uploads to S3 (default: `8 MB`).
     """)
     final MemoryUnit minimumPartSize
 
     @ConfigOption
     @Description("""
-        The object size threshold used by the S3 transfer manager for performing multi-part uploads (default: same as `aws.cllient.minimumPartSize`).
+        The object size threshold used for multi-part uploads to S3 (default: same as `aws.cllient.minimumPartSize`).
     """)
     final MemoryUnit multipartThreshold
 
@@ -168,15 +156,9 @@ class AwsS3Config implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The target network throughput (in Gbps) used by the S3 transfer manager (default: `10`). This setting is not used when `aws.client.maxConcurrency` and `aws.client.maxNativeMemory` are specified.
+        The target network throughput (in Gbps) used for S3 uploads and downloads (default: `10`).
     """)
     final Double targetThroughputInGbps
-
-    @ConfigOption
-    @Description("""
-        The number of threads used by the S3 transfer manager (default: `10`).
-    """)
-    final Integer transferManagerThreads
 
     // deprecated
 
@@ -222,10 +204,8 @@ class AwsS3Config implements ConfigScope {
         this.endpoint = opts.endpoint ?: SysEnv.get('AWS_S3_ENDPOINT')
         if( endpoint && FileHelper.getUrlProtocol(endpoint) !in ['http','https'] )
             throw new IllegalArgumentException("S3 endpoint must begin with http:// or https:// prefix - offending value: '${endpoint}'")
-        this.maxConcurrency = opts.maxConcurrency as Integer
         this.maxConnections = opts.maxConnections as Integer
         this.maxErrorRetry = opts.maxErrorRetry as Integer
-        this.maxNativeMemory = opts.maxNativeMemory as MemoryUnit
         this.minimumPartSize = opts.minimumPartSize as MemoryUnit
         this.multipartThreshold = opts.multipartThreshold as MemoryUnit
         this.proxyHost = opts.proxyHost
@@ -241,7 +221,6 @@ class AwsS3Config implements ConfigScope {
         this.storageEncryption = parseStorageEncryption(opts.storageEncryption as String)
         this.storageKmsKeyId = opts.storageKmsKeyId
         this.targetThroughputInGbps = opts.targetThroughputInGbps as Double
-        this.transferManagerThreads = opts.transferManagerThreads as Integer
         this.uploadChunkSize = opts.uploadChunkSize as MemoryUnit
         this.uploadMaxAttempts = opts.uploadMaxAttempts as Integer
         this.uploadMaxThreads = opts.uploadMaxThreads as Integer
@@ -281,10 +260,8 @@ class AwsS3Config implements ConfigScope {
     Map<String,String> getAwsClientConfig() {
         return [
             connection_timeout: connectionTimeout?.toString(),
-            max_concurrency: maxConcurrency?.toString(),
             max_connections: maxConnections?.toString(),
             max_error_retry: maxErrorRetry?.toString(),
-            max_native_memory: maxNativeMemory?.toBytes()?.toString(),
             minimum_part_size: minimumPartSize?.toBytes()?.toString(),
             multipart_threshold: multipartThreshold?.toBytes()?.toString(),
             proxy_host: proxyHost?.toString(),
@@ -298,7 +275,6 @@ class AwsS3Config implements ConfigScope {
             storage_encryption: storageEncryption?.toString(),
             storage_kms_key_id: storageKmsKeyId?.toString(),
             target_throughput_in_gbps: targetThroughputInGbps?.toString(),
-            transfer_manager_threads: transferManagerThreads?.toString(),
             upload_chunk_size: uploadChunkSize?.toBytes()?.toString(),
             upload_max_attempts: uploadMaxAttempts?.toString(),
             upload_max_threads: uploadMaxThreads?.toString(),
