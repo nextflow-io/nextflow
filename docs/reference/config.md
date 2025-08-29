@@ -847,16 +847,10 @@ The following settings are available:
 : Export access credentials required by the underlying object storage as environment variables (e.g., `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `AWS_SESSION_TOKEN` for AWS S3) to task execution environments (default: `false`).
 
   :::{note}
-  This option only exports environment variables. It does not mount or provide access to credential files such as `~/.aws/credentials`, `~/.aws/config`, or SSO cache files.
-
-  For users authenticated via AWS SSO (`aws sso login`), you must first export your credentials to environment variables before running Nextflow:
+  This configuration does not mount or provide access to credential files. For example, AWS credentials like `~/.aws/credentials`, `~/.aws/config`, and SSO cache files are not mounted. AWS SSO users must export credentials to environment variables:
   
   ```bash
-  # Export SSO credentials to environment variables
   eval "$(aws configure export-credentials --format env)"
-  
-  # Then run Nextflow with exportStorageCredentials enabled
-  nextflow run pipeline.nf -c config.nf
   ```
   :::
 
