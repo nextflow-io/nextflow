@@ -73,6 +73,7 @@ public class ScriptCompiler {
     private static final List<String> DEFAULT_IMPORT_NAMES = List.of(
         "java.nio.file.Path",
         "nextflow.Channel",
+        "nextflow.script.types.Value",
         "nextflow.util.Duration",
         "nextflow.util.MemoryUnit",
         "nextflow.util.VersionNumber"

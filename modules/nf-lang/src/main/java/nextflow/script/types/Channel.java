@@ -25,9 +25,9 @@ import nextflow.script.dsl.Description;
 import nextflow.script.dsl.Operator;
 
 @Description("""
-    A `Channel` is a special data structure used to facilitate the dataflow dependencies between each step in a Nextflow pipeline.
+    A channel is an asynchronous sequence of values. It is used to facilitate dataflow logic in a workflow.
 
-    [Read more](https://nextflow.io/docs/latest/reference/channel.html)
+    [Read more](https://nextflow.io/docs/latest/reference/stdlib-types.html#channel-e)
 """)
 public interface Channel<E> {
 
@@ -385,5 +385,6 @@ public interface Channel<E> {
         [Read more](https://nextflow.io/docs/latest/reference/operator.html#view)
     """)
     Channel view(Closure transform);
+    Channel view();
 
 }
