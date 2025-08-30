@@ -32,11 +32,7 @@ workflow COUNT {
   counts = words.map { word -> word.length() }.collect()
 
   emit:
-  counts: Value<Integer> = identity(counts)
-}
-
-def identity(v: Value) -> Value {
-  return v
+  counts: Value<Integer> = counts
 }
 
 def isEven(n: Integer) -> Boolean {
