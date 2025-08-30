@@ -238,7 +238,7 @@ class TaskProcessor {
 
     private static LockManager lockManager = new LockManager()
 
-    private List<Map<Short,List>> fairBuffers = new ArrayList<>()
+    private List<TaskRun> fairBuffers = new ArrayList<>()
 
     private int currentEmission
 
@@ -314,6 +314,10 @@ class TaskProcessor {
      * @return The {@code TaskConfig} object holding the task configuration properties
      */
     ProcessConfig getConfig() { config }
+
+    private ProcessConfigV1 configV1() { config as ProcessConfigV1 }
+
+    private ProcessConfigV2 configV2() { config as ProcessConfigV2 }
 
     /**
      * @return The current {@code Session} instance
@@ -420,11 +424,11 @@ class TaskProcessor {
      */
     def run() {
 
+        final config = configV1()
+
         // -- check that the task has a body
         if ( !taskBody )
             throw new IllegalStateException("Missing task body for process `$name`")
-
-        final config = this.config as ProcessConfigV1
 
         // -- check that input tuple defines at least two elements
         def invalidInputTuple = config.getInputs().find { it instanceof TupleInParam && it.inner.size()<2 }
@@ -493,7 +497,7 @@ class TaskProcessor {
     }
 
     protected void createOperator() {
-        final config = this.config as ProcessConfigV1
+        final config = configV1()
 
         def opInputs = new ArrayList(config.getInputs().getChannels())
 
@@ -608,7 +612,7 @@ class TaskProcessor {
         session.processRegister(this)
 
         // create the underlying dataflow operator
-        createOperator(source)
+        createOperator()
 
         // determine whether the process is executed only once
         this.singleton = !CH.isChannelQueue(source)
@@ -633,8 +637,7 @@ class TaskProcessor {
         session.allOperators << operator
 
         // notify the creation of a new vertex the execution DAG
-        final config = this.config as ProcessConfigV2
-        NodeMarker.addProcessNode(this, config.getInputs(), config.getOutputs())
+        NodeMarker.addProcessNode(this, configV2().getInputs(), configV2().getOutputs())
 
         // start the operator
         start(operator)
@@ -793,7 +796,32 @@ class TaskProcessor {
         task.config.process = task.processor.name
         task.config.executor = task.processor.executor.name
 
+        if( config instanceof ProcessConfigV1 )
+            initializeTaskRunV1(task)
+
         return task
+    }
+
+    private void initializeTaskRunV1(TaskRun task) {
+        /*
+         * initialize the inputs/outputs for this task instance
+         */
+        configV1().getInputs().each { InParam param ->
+            if( param instanceof TupleInParam )
+                param.inner.each { task.setInput(it)  }
+            else if( param instanceof EachInParam )
+                task.setInput(param.inner)
+            else
+                task.setInput(param)
+        }
+
+        configV1().getOutputs().each { OutParam param ->
+            if( param instanceof TupleOutParam ) {
+                param.inner.each { task.setOutput(it) }
+            }
+            else
+                task.setOutput(param)
+        }
     }
 
     /**
@@ -1346,7 +1374,11 @@ class TaskProcessor {
     final protected synchronized void sendPoisonPill() {
         log.trace "<$name> Sending a poison pill(s)"
 
-        for( DataflowWriteChannel channel : config.getOutputs().getChannels() ){
+        final channels = config instanceof ProcessConfigV2
+            ? configV2().getOutputs().getParams()*.getOutChannel()
+            : configV1().getOutputs().getChannels()
+
+        for( DataflowWriteChannel channel : channels ){
 
             if( channel instanceof DataflowQueue ) {
                 channel.bind( PoisonPill.instance )
@@ -1512,11 +1544,9 @@ class TaskProcessor {
 
     protected void bindOutputsV1(TaskRun task) {
 
-        final declaredOutputs = (config as ProcessConfigV1).getOutputs()
-
         // -- creates the map of all tuple values to bind
         Map<Short,List> tuples = [:]
-        for( OutParam param : declaredOutputs ) {
+        for( OutParam param : configV1().getOutputs() ) {
             tuples.put(param.index, [])
         }
 
@@ -1549,7 +1579,7 @@ class TaskProcessor {
         }
 
         // -- bind out the collected values
-        for( OutParam param : declaredOutputs ) {
+        for( OutParam param : configV1().getOutputs() ) {
             final outValue = tuples[param.index]
             if( outValue == null )
                 throw new IllegalStateException()
@@ -1580,8 +1610,7 @@ class TaskProcessor {
 
     @CompileStatic
     protected void bindOutputsV2(TaskRun task) {
-        final declaredOutputs = (config as ProcessConfigV2).getOutputs()
-        for( final param : declaredOutputs.getParams() ) {
+        for( final param : configV2().getOutputs().getParams() ) {
             final value = task.outputs[param]
 
             if( value == null ) {
@@ -1609,8 +1638,7 @@ class TaskProcessor {
 
     @CompileStatic
     protected void collectOutputsV2(TaskRun task) {
-        final declaredOutputs = (config as ProcessConfigV2).getOutputs()
-        for( final param : declaredOutputs.getParams() ) {
+        for( final param : configV2().getOutputs().getParams() ) {
             final value = param.resolve(task)
             task.setOutput(param, value)
         }
@@ -1620,14 +1648,7 @@ class TaskProcessor {
     final protected void collectOutputsV1( TaskRun task, Path workDir ) {
         log.trace "<$name> collecting output: ${task.outputs}"
 
-        final params = config.getOutputs().collectMany { OutParam param ->
-            if( param instanceof TupleOutParam )
-                return param.inner
-            else
-                return List.of(param)
-        }
-
-        for( OutParam param : params ) {
+        for( OutParam param : configV1().getOutputs() ) {
 
             switch( param ) {
                 case StdOutParam:
@@ -1860,17 +1881,9 @@ class TaskProcessor {
 
     private void resolveTaskInputsV1(TaskRun task, List values, FilePorter.Batch foreignFiles) {
 
-        final params = config.getInputs().collectMany { param ->
-            if( param instanceof TupleInParam )
-                return param.inner
-            else if( param instanceof EachInParam )
-                return List.of(param.inner)
-            else
-                return List.of(param)
-        }
-        final fileParams = [:]
+        final Map<FileInParam,?> fileParams = [:]
 
-        params.each { InParam param ->
+        configV1().getInputs().each { InParam param ->
             // add the value to the task instance
             def val = param.decodeInputs(values)
 
@@ -1888,7 +1901,7 @@ class TaskProcessor {
                     break
 
                 case EnvInParam:
-                    task.inputEnv.put(param, val?.toString())
+                    task.inputEnv.put(param.name, val?.toString())
                     break
 
                 default:
@@ -1940,7 +1953,7 @@ class TaskProcessor {
 
     @CompileStatic
     private void resolveTaskInputsV2(TaskRun task, List values, FilePorter.Batch foreignFiles) {
-        final declaredInputs = (config as ProcessConfigV2).getInputs()
+        final declaredInputs = configV2().getInputs()
         final ctx = task.context
 
         // -- add input params to task context
