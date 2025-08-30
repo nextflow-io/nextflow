@@ -18,6 +18,7 @@ package nextflow.script.dsl
 
 import java.util.regex.Pattern
 
+import groovy.transform.TypeChecked
 import groovy.util.logging.Slf4j
 import nextflow.exception.IllegalConfigException
 import nextflow.exception.IllegalDirectiveException
@@ -35,7 +36,7 @@ import nextflow.script.ProcessDef
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @Slf4j
-// NOTE: cannot be compile-static due to methodMissing()
+@TypeChecked
 class ProcessBuilder {
 
     static final List<String> DIRECTIVES = [

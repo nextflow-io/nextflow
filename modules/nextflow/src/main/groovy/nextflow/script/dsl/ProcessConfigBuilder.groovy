@@ -18,6 +18,7 @@ package nextflow.script.dsl
 
 import java.util.regex.Pattern
 
+import groovy.transform.TypeChecked
 import groovy.util.logging.Slf4j
 import nextflow.exception.ConfigParseException
 import nextflow.script.ProcessConfig
@@ -28,6 +29,7 @@ import nextflow.script.ProcessConfig
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @Slf4j
+@TypeChecked
 class ProcessConfigBuilder extends ProcessBuilder {
 
     ProcessConfigBuilder(ProcessConfig config) {

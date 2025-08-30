@@ -16,7 +16,7 @@
 
 package nextflow.script.dsl
 
-import groovy.transform.CompileStatic
+import groovy.transform.TypeChecked
 import nextflow.script.BaseScript
 import nextflow.script.ProcessConfigV1
 import nextflow.script.ProcessDef
@@ -40,72 +40,70 @@ import nextflow.script.params.ValueOutParam
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
-@CompileStatic
+@TypeChecked
 class ProcessDslV1 extends ProcessBuilder {
-
-    private InputsList inputs
-
-    private OutputsList outputs
 
     ProcessDslV1(BaseScript ownerScript, String processName) {
         super(new ProcessConfigV1(ownerScript, processName))
-        inputs = ((ProcessConfigV1) config).getInputs()
-        outputs = ((ProcessConfigV1) config).getOutputs()
+    }
+
+    private ProcessConfigV1 configV1() {
+        return (ProcessConfigV1) config
     }
 
     /// INPUTS
 
     void _in_each( obj ) {
-        new EachInParam(config).bind(obj)
+        new EachInParam(configV1()).bind(obj)
     }
 
     void _in_env( obj ) {
-        new EnvInParam(config).bind(obj)
+        new EnvInParam(configV1()).bind(obj)
     }
 
     void _in_file( obj ) {
-        new FileInParam(config).bind(obj)
+        new FileInParam(configV1()).bind(obj)
     }
 
     void _in_path( Map opts=null, obj ) {
-        new FileInParam(config)
+        new FileInParam(configV1())
                 .setPathQualifier(true)
                 .setOptions(opts)
                 .bind(obj)
     }
 
     void _in_stdin( obj = null ) {
-        final result = new StdInParam(config)
+        final result = new StdInParam(configV1())
         if( obj )
             result.bind(obj)
     }
 
     void _in_tuple( Object... obj ) {
-        new TupleInParam(config).bind(obj)
+        new TupleInParam(configV1()).bind(obj)
     }
 
     void _in_val( obj ) {
-        new ValueInParam(config).bind(obj)
+        new ValueInParam(configV1()).bind(obj)
     }
 
     /// OUTPUTS
 
     void _out_env( Object obj ) {
-        new EnvOutParam(config).bind(obj)
+        new EnvOutParam(configV1()).bind(obj)
     }
 
     void _out_env( Map opts, Object obj ) {
-        new EnvOutParam(config)
+        new EnvOutParam(configV1())
                 .setOptions(opts)
                 .bind(obj)
     }
 
     void _out_eval(Object obj ) {
-        new CmdEvalParam(config).bind(obj)
+        new CmdEvalParam(configV1()).bind(obj)
     }
 
     void _out_eval(Map opts, Object obj ) {
-        new CmdEvalParam(config)
+        new CmdEvalParam(configV1())
             .setOptions(opts)
             .bind(obj)
     }
@@ -114,22 +112,22 @@ class ProcessDslV1 extends ProcessBuilder {
         // note: check that is a String type to avoid to force
         // the evaluation of GString object to a string
         if( obj instanceof String && obj == '-' )
-            new StdOutParam(config).bind(obj)
+            new StdOutParam(configV1()).bind(obj)
 
         else
-            new FileOutParam(config).bind(obj)
+            new FileOutParam(configV1()).bind(obj)
     }
 
     void _out_path( Map opts=null, Object obj ) {
         // note: check that is a String type to avoid to force
         // the evaluation of GString object to a string
         if( obj instanceof String && obj == '-' ) {
-            new StdOutParam(config)
+            new StdOutParam(configV1())
                     .setOptions(opts)
                     .bind(obj)
         }
         else {
-            new FileOutParam(config)
+            new FileOutParam(configV1())
                     .setPathQualifier(true)
                     .setOptions(opts)
                     .bind(obj)
@@ -137,31 +135,31 @@ class ProcessDslV1 extends ProcessBuilder {
     }
 
     void _out_stdout( Map opts ) {
-        new StdOutParam(config)
+        new StdOutParam(configV1())
                 .setOptions(opts)
                 .bind('-')
     }
 
     void _out_stdout( obj = null ) {
-        new StdOutParam(config).bind('-')
+        new StdOutParam(configV1()).bind('-')
     }
 
     void _out_tuple( Object... obj ) {
-        new TupleOutParam(config) .bind(obj)
+        new TupleOutParam(configV1()) .bind(obj)
     }
 
     void _out_tuple( Map opts, Object... obj ) {
-        new TupleOutParam(config)
+        new TupleOutParam(configV1())
                 .setOptions(opts)
                 .bind(obj)
     }
 
     void _out_val( Object obj ) {
-        new ValueOutParam(config).bind(obj)
+        new ValueOutParam(configV1()).bind(obj)
     }
 
     void _out_val( Map opts, Object obj ) {
-        new ValueOutParam(config)
+        new ValueOutParam(configV1())
                 .setOptions(opts)
                 .bind(obj)
     }

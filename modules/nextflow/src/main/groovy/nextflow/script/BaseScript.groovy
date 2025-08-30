@@ -129,22 +129,22 @@ abstract class BaseScript extends Script implements ExecutionContext {
      * @param body
      */
     protected void process(String name, Closure<BodyDef> body) {
-        final builder = new ProcessDslV1(this, name)
+        final dsl = new ProcessDslV1(this, name)
         final cl = (Closure<BodyDef>)body.clone()
-        cl.setDelegate(builder)
+        cl.setDelegate(dsl)
         cl.setResolveStrategy(Closure.DELEGATE_FIRST)
         final taskBody = cl.call()
-        final process = builder.withBody(taskBody).build()
+        final process = dsl.withBody(taskBody).build()
         meta.addDefinition(process)
     }
 
     protected void processV2(String name, Closure<BodyDef> body) {
-        final builder = new ProcessDslV2(this, name)
+        final dsl = new ProcessDslV2(this, name)
         final cl = (Closure<BodyDef>)body.clone()
-        cl.setDelegate(builder)
+        cl.setDelegate(dsl)
         cl.setResolveStrategy(Closure.DELEGATE_FIRST)
         final taskBody = cl.call()
-        final process = builder.withBody(taskBody).build()
+        final process = dsl.withBody(taskBody).build()
         meta.addDefinition(process)
     }
 

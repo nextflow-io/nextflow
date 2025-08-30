@@ -16,7 +16,7 @@
 
 package nextflow.script.dsl
 
-import groovy.transform.CompileStatic
+import groovy.transform.TypeChecked
 import nextflow.script.BaseScript
 import nextflow.script.ProcessConfigV2
 import nextflow.script.ProcessDef
@@ -30,7 +30,7 @@ import nextflow.script.params.v2.ProcessOutputs
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
-@CompileStatic
+@TypeChecked
 class ProcessDslV2 extends ProcessBuilder {
 
     private ProcessInputs inputs
