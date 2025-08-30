@@ -44,7 +44,9 @@ Booleans in Nextflow can be backed by any of the following Java types: `boolean`
 
 ## Channel\<E\>
 
-See {ref}`channel-page` for an overview of channels. See {ref}`channel-factory` and {ref}`operator-page` for the available functions for creating and manipulating channels.
+A channel (also known as a *dataflow channel* or *queue channel*) is an asynchronous sequence of values. It is used to facilitate dataflow logic in a workflow.
+
+See {ref}`dataflow-page` for an overview of dataflow types. See {ref}`operator-page` for the available methods for channels.
 
 (stdlib-types-duration)=
 
@@ -170,7 +172,7 @@ The following methods are available for iterables:
 : Returns `true` if the iterable contains the given value.
 
 `each( action: (E) -> () )`
-: Invoke the given closure for each element in the iterable.
+: Invokes the given closure for each element in the iterable.
 
 `every( condition: (E) -> Boolean ) -> Boolean`
 : Returns `true` if every element in the iterable satisfies the given condition.
@@ -197,19 +199,23 @@ The following methods are available for iterables:
 `max() -> E`
 : Returns the maximum element in the iterable.
 
-**`max( comparator: (E) -> R ) -> E`**
+`max( comparator: (E) -> R ) -> E`
+: Returns the maximum element in the iterable according to the given closure.
+: The closure should follow the same semantics as the closure parameter of `toSorted()`.
 
 `max( comparator: (E,E) -> Integer ) -> E`
 : Returns the maximum element in the iterable according to the given closure.
 : The closure should follow the same semantics as the closure parameter of `toSorted()`.
 
 `min() -> E`
-: Returns the maximum element in the iterable.
+: Returns the minimum element in the iterable.
 
-**`min( comparator: (E) -> R ) -> E`**
+`min( comparator: (E) -> R ) -> E`
+: Returns the minimum element in the iterable according to the given closure.
+: The closure should follow the same semantics as the closure parameter of `toSorted()`.
 
 `min( comparator: (E,E) -> Integer ) -> E`
-: Returns the maximum element in the iterable according to the given closure.
+: Returns the minimum element in the iterable according to the given closure.
 : The closure should follow the same semantics as the closure parameter of `toSorted()`.
 
 `size() -> Integer`
@@ -368,7 +374,7 @@ The following methods are available for a map:
 : Returns `true` if the map maps one or more keys to the given value.
 
 `each( action: (K,V) -> () )`
-: Invoke the given closure for each key-value pair in the map. The closure should accept two parameters corresponding to the key and value of an entry.
+: Invokes the given closure for each key-value pair in the map. The closure should accept two parameters corresponding to the key and value of an entry.
 
 `entrySet() -> Set<(K,V)>`
 : Returns a set of the key-value pairs in the map.
@@ -889,7 +895,7 @@ The following methods are available for a string:
 : Returns `true` if the string is empty (i.e. `length()` is 0).
 
 `isDouble() -> Boolean`
-: Returns `true` if the string can be parsed as a 64-bit floating-point number.
+: Returns `true` if the string can be parsed as a 64-bit (double precision) floating-point number.
 
 `isFloat() -> Boolean`
 : Returns `true` if the string can be parsed as a 32-bit floating-point number.
@@ -898,7 +904,7 @@ The following methods are available for a string:
 : Returns `true` if the string can be parsed as a 32-bit integer.
 
 `isLong() -> Boolean`
-: Returns `true` if the string can be parsed as a 64-bit integer.
+: Returns `true` if the string can be parsed as a 64-bit (long) integer.
 
 `lastIndexOf( str: String ) -> Integer`
 : Returns the index within the string of the last occurrence of the given substring. Returns -1 if the string does not contain the substring.
@@ -950,7 +956,7 @@ The following methods are available for a string:
 : Returns `true` if the trimmed string is "true", "y", or "1" (ignoring case).
 
 `toDouble() -> Float`
-: Parses the string into a 64-bit floating-point number.
+: Parses the string into a 64-bit (double precision) floating-point number.
 
 `toFloat() -> Float`
 : Parses the string into a 32-bit floating-point number.
@@ -959,7 +965,7 @@ The following methods are available for a string:
 : Parses the string into a 32-bit integer.
 
 `toLong() -> Integer`
-: Parses the string into a 64-bit integer.
+: Parses the string into a 64-bit (long) integer.
 
 `toLowerCase() -> String`
 : Returns a copy of this string with all characters converted to lower case.
@@ -984,6 +990,31 @@ The following operations are supported for tuples:
 
 `[] : (Tuple, Integer) -> ?`
 : Given a tuple and an index, returns the tuple element at the index.
+
+(stdlib-types-value)=
+
+## Value\<V\>
+
+A dataflow value (also known as a *value channel*) is an asynchronous value. It is used to facilitate dataflow logic in a workflow.
+
+See {ref}`dataflow-page` for an overview of dataflow types.
+
+The following methods are available for a dataflow value:
+
+`flatMap( transform: (V) -> Iterable<R> ) -> Channel<R>`
+: Transforms the dataflow value into a collection with the given closure and emits the resulting values in a dataflow channel.
+
+`map( transform: (V) -> R ) -> Value<R>`
+: Transforms the dataflow value into another dataflow value with the given closure.
+
+`subscribe( action: (V) -> () )`
+: Invokes the given closure on the dataflow value.
+
+`view() -> Value<V>`
+: Prints the dataflow value to standard output.
+
+`view( transform: (V) -> String ) -> Value<V>`
+: Transforms the dataflow value using the given closure and print the result to standard output.
 
 (stdlib-types-versionnumber)=
 

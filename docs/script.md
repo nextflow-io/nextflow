@@ -161,7 +161,7 @@ See {ref}`stdlib-types-tuple` for the set of available tuple operations.
 Operators are symbols that perform specific functions on one or more values, and generally make code easier to read. This section highlights some of the most commonly used operators.
 
 :::{note}
-Operators in this context are different from *channel operators*, which are specialized functions for working with channels. See {ref}`channel-page` for more information.
+Operators in this context are different from *channel operators*, which are specialized functions for working with channels. See {ref}`dataflow-page` for more information.
 :::
 
 The `==` and `!=` operators can be used to test whether any two values are equal (or not equal):
