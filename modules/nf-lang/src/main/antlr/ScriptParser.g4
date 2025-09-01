@@ -110,7 +110,8 @@ scriptDeclaration
     :   featureFlagDeclaration      #featureFlagDeclAlt
     |   includeDeclaration          #includeDeclAlt
     |   importDeclaration           #importDeclAlt
-    |   paramDeclaration            #paramDeclAlt
+    |   paramsDef                   #paramsDefAlt
+    |   paramDeclarationV1          #paramDeclV1Alt
     |   enumDef                     #enumDefAlt
     |   processDef                  #processDefAlt
     |   workflowDef                 #workflowDefAlt
@@ -147,8 +148,24 @@ importDeclaration
     :   IMPORT qualifiedClassName
     ;
 
-// -- param declaration
+// -- params definition
+paramsDef
+    :   PARAMS nls LBRACE
+        paramsBody?
+        sep? RBRACE
+    ;
+
+paramsBody
+    :   sep? paramDeclaration (sep paramDeclaration)*
+    ;
+
 paramDeclaration
+    :   identifier (COLON type)? (ASSIGN expression)?
+    |   statement
+    ;
+
+// -- legacy parameter declaration
+paramDeclarationV1
     :   PARAMS (DOT identifier)+ nls ASSIGN nls expression
     ;
 
@@ -246,15 +263,25 @@ workflowBody
     ;
 
 workflowTakes
-    :   identifier (sep identifier)*
+    :   workflowTake (sep workflowTake)*
+    ;
+
+workflowTake
+    :   identifier (COLON type)?
+    |   statement
     ;
 
 workflowEmits
-    :   statement (sep statement)*
+    :   workflowEmit (sep workflowEmit)*
+    ;
+
+workflowEmit
+    :   nameTypePair (ASSIGN expression)?
+    |   statement
     ;
 
 workflowPublishers
-    :   statement (sep statement)*
+    :   workflowEmit (sep workflowEmit)*
     ;
 
 // -- output definition
@@ -269,14 +296,19 @@ outputBody
     ;
 
 outputDeclaration
-    :   identifier LBRACE nls blockStatements? RBRACE
+    :   identifier (COLON type)? LBRACE nls blockStatements? RBRACE
     |   statement
     ;
 
 // -- function definition
 functionDef
-    :   (DEF | legacyType | DEF legacyType) identifier LPAREN nls (formalParameterList nls)? rparen nls LBRACE
-        nls blockStatements? RBRACE
+    :   DEF
+        identifier LPAREN nls (formalParameterList nls)? rparen (ARROW type)?
+        nls LBRACE nls blockStatements? RBRACE
+
+    |   (legacyType | DEF legacyType)
+        identifier LPAREN nls (formalParameterList nls)? rparen
+        nls LBRACE nls blockStatements? RBRACE
     ;
 
 // -- incomplete script declaration
@@ -321,7 +353,12 @@ tryCatchStatement
     ;
 
 catchClause
-    :   CATCH LPAREN catchTypes? identifier rparen nls statementOrBlock
+    :   CATCH LPAREN catchVariable rparen nls statementOrBlock
+    ;
+
+catchVariable
+    :   identifier (COLON catchTypes)?
+    |   catchTypes identifier
     ;
 
 catchTypes
@@ -335,17 +372,26 @@ assertStatement
 
 // -- variable declaration
 variableDeclaration
-    :   (DEF | legacyType | DEF legacyType) identifier (nls ASSIGN nls initializer=expression)?
-    |   DEF variableNames nls ASSIGN nls initializer=expression
+    :   DEF nameTypePair (nls ASSIGN nls initializer=expression)?
+    |   DEF nameTypePairs nls ASSIGN nls initializer=expression
+    |   (legacyType | DEF legacyType) identifier (nls ASSIGN nls initializer=expression)?
     ;
 
-variableNames
-    :   LPAREN identifier (COMMA identifier)+ rparen
+nameTypePairs
+    :   LPAREN nameTypePair (COMMA nameTypePair)+ rparen
+    ;
+
+nameTypePair
+    :   identifier (COLON type)?
     ;
 
 // -- assignment statement
 multipleAssignmentStatement
     :   variableNames nls ASSIGN nls expression
+    ;
+
+variableNames
+    :   LPAREN identifier (COMMA identifier)+ rparen
     ;
 
 assignmentStatement
@@ -578,7 +624,8 @@ formalParameterList
     ;
 
 formalParameter
-    :   DEF? legacyType? identifier (nls ASSIGN nls expression)?
+    :   identifier (COLON type)? (nls ASSIGN nls expression)?
+    |   DEF? legacyType? identifier (nls ASSIGN nls expression)?
     ;
 
 closureWithLabels
@@ -650,7 +697,7 @@ namedArg
 //
 type
     :   primitiveType
-    |   qualifiedClassName typeArguments?
+    |   qualifiedClassName typeArguments? QUESTION?
     ;
 
 primitiveType

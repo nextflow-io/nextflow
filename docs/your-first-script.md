@@ -71,7 +71,7 @@ This script defines two processes:
 
 The `split` output is emitted as a single element. The `flatten` operator splits this combined element so that each file is treated as a sole element.
 
-The outputs from both processes are published in subdirectories, that is, `lower` and `upper`, in the `results` directory.
+The outputs from both processes are published in subdirectories (`lower` and `upper`) in the `results` directory.
 
 To run your pipeline:
 

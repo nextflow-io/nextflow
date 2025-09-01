@@ -4,3 +4,4 @@ Plugin-Id: nf-amazon
 Plugin-Version: 3.1.0
 Plugin-Provider: Seqera Labs
 Plugin-Requires: >=25.07.0-edge
+Plugin-Description: Provides comprehensive AWS cloud integration including Batch executor, S3 file system, and Fusion support for high-performance data operations

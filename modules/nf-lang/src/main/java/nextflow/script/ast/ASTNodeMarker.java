@@ -45,6 +45,9 @@ public enum ASTNodeMarker {
     // the MethodNode targeted by a variable expression (PropertyNode)
     METHOD_VARIABLE_TARGET,
 
+    // denotes a nullable type annotation (ClassNode)
+    NULLABLE,
+
     // the starting quote sequence of a string literal or gstring expression
     QUOTE_CHAR,
 
