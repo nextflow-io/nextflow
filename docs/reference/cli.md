@@ -960,7 +960,11 @@ Manage plugins and run plugin-specific commands.
 $ nextflow plugin <subcommand> [options]
 ```
 
-The `plugin` command provides several subcommands for managing and using plugins:
+`create`
+
+: :::{versionadded} 25.04.0
+  :::
+: Create a plugin scaffold using the [Nextflow plugin template](https://github.com/nextflow-io/nf-plugin-template/). See {ref}`gradle-plugin-create` for more information.
 
 `install <plugin[@version],..>`
 
