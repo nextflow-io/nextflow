@@ -28,9 +28,9 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import nextflow.cloud.aws.nio.util.S3SyncClientConfiguration;
+import nextflow.cloud.aws.nio.util.S3TransferManagerSync;
 import nextflow.cloud.aws.AwsClientFactory;
 import nextflow.cloud.aws.nio.util.S3AsyncClientConfiguration;
-import nextflow.cloud.aws.nio.util.S3MultipartOptions;
 import nextflow.cloud.aws.util.AwsHelper;
 import nextflow.util.ThreadPoolManager;
 import nextflow.util.Threads;
@@ -54,8 +54,8 @@ public class S3Client {
 
 	private software.amazon.awssdk.services.s3.S3Client client;
 
-    // Semaphore to limit concurrent client connections when using virtual threads.
-    private Semaphore semaphore;
+	// Semaphore to limit concurrent client connections when using virtual threads.
+	private Semaphore semaphore;
 
 	private ObjectCannedACL cannedAcl;
 
@@ -63,7 +63,7 @@ public class S3Client {
 
 	private ServerSideEncryption storageEncryption;
 
-	private S3TransferManager transferManager;
+	private S3TransferManagerSync transferManager;
 
 	private ExecutorService transferPool;
 
@@ -83,30 +83,28 @@ public class S3Client {
 		this.props = props;
 		this.global = global;
 		this.client = factory.getS3Client(clientConfig, global);
-        // Setting a semaphore when using virtual threads to limit the maximum client connections.
-        // https://github.com/nextflow-io/nextflow/issues/4995
-        this.semaphore = Threads.useVirtual() ? new Semaphore(clientConfig.getMaxConnections()) : null;
+		this.semaphore = Threads.useVirtual() ? new Semaphore(clientConfig.getMaxConnections()) : null;
 		this.callerAccount = fetchCallerAccount();
 	}
 
-    /**
-     * Run an action acquiring the S3 sync client semaphore to limit maximum connections.
-     */
-    private <T> T runWithPermit(Supplier<T> action) {
-        try {
-            if (semaphore != null)
-                semaphore.acquire();
-            try {
-                return action.get();
-            } finally {
-                if (semaphore != null)
-                    semaphore.release();
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException("Interrupted while acquiring S3 client semaphore", e);
-        }
-    }
+	/**
+	 * Perform an action that requires the S3 semaphore to limit concurrent connections.
+	 *
+	 * @param action
+	 */
+	private <T> T runWithPermit(Supplier<T> action) {
+		try {
+			if (semaphore != null) semaphore.acquire();
+			try {
+				return action.get();
+			} finally {
+				if (semaphore != null) semaphore.release();
+			}
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			throw new RuntimeException("Interrupted while acquiring S3 client semaphore", e);
+		}
+	}
 
 	/**
 	 * AmazonS3Client#getS3AccountOwner() is not available in SDK v2.
@@ -152,7 +150,7 @@ public class S3Client {
 		GetObjectRequest.Builder reqBuilder = GetObjectRequest.builder().bucket(bucketName).key(key);
 		if( this.isRequesterPaysEnabled )
 			reqBuilder.requestPayer(RequestPayer.REQUESTER);
-        return runWithPermit(() -> client.getObject(reqBuilder.build()));
+		return runWithPermit(() -> client.getObject(reqBuilder.build()));
 	}
 
 	/**
@@ -328,18 +326,19 @@ public class S3Client {
 	 * @see software.amazon.awssdk.services.s3.S3Client#listObjectsV2Paginator
 	 */
 	public ListObjectsV2Iterable listObjectsV2Paginator(ListObjectsV2Request request) {
-		return runWithPermit(() ->client.listObjectsV2Paginator(request));
+		return runWithPermit(() -> client.listObjectsV2Paginator(request));
 	}
 
 	// ===== transfer manager section =====
 
-	synchronized S3TransferManager transferManager() {
+	synchronized S3TransferManagerSync transferManager() {
 		if( transferManager==null ) {
 			transferPool = ThreadPoolManager.create("S3TransferManager");
-			transferManager = S3TransferManager.builder()
+			var delegate = S3TransferManager.builder()
 					.s3Client(factory.getS3AsyncClient(S3AsyncClientConfiguration.create(props), global))
 					.executor(transferPool)
 					.build();
+			transferManager = new S3TransferManagerSync(delegate);
 		}
 		return transferManager;
 	}
@@ -350,17 +349,21 @@ public class S3Client {
 			.destination(target)
 			.build();
 
-		FileDownload downloadFile = transferManager().downloadFile(downloadFileRequest);
-		try{
-			downloadFile.completionFuture().get();
-		} catch (InterruptedException e){
-			log.debug("S3 download file: s3://{}/{} cancelled", source.getBucket(), source.getKey());
-			Thread.currentThread().interrupt();
-		} catch (ExecutionException e) {
-			String msg = String.format("Exception thrown downloading S3 object s3://{}/{}", source.getBucket(), source.getKey());
-			throw new IOException(msg, e.getCause());
-		}
+		IOException exception = runWithPermit(() -> {
+			try {
+				transferManager().downloadFile(downloadFileRequest);
+			} catch (InterruptedException e) {
+				log.debug("S3 download file: s3://{}/{} cancelled", source.getBucket(), source.getKey());
+				Thread.currentThread().interrupt();
+			} catch (ExecutionException e) {
+				String msg = String.format("Exception thrown downloading S3 object s3://{}/{}", source.getBucket(), source.getKey());
+				return new IOException(msg, e.getCause());
+			}
+			return null;
+		});
 
+		if( exception != null )
+			throw exception;
 	}
 
 	public void downloadDirectory(S3Path source, File targetFile) throws IOException {
@@ -370,36 +373,51 @@ public class S3Client {
 				.destination(targetFile.toPath())
 				.build();
 
-		DirectoryDownload downloadDirectory = transferManager().downloadDirectory(downloadDirRequest);
-		try{
-			CompletedDirectoryDownload completed = downloadDirectory.completionFuture().get();
-            if (!completed.failedTransfers().isEmpty()){
-				log.debug("S3 download directory: s3://{}/{} failed transfers", source.getBucket(), source.getKey());
-				throw new IOException("Some transfers in S3 download directory: s3://"+ source.getBucket() +"/"+ source.getKey() +" has failed - Transfers: " +  completed.failedTransfers() );
+		IOException exception = runWithPermit(() -> {
+			try {
+				CompletedDirectoryDownload completed = transferManager().downloadDirectory(downloadDirRequest);
+				if( !completed.failedTransfers().isEmpty() ) {
+					log.debug("S3 download directory: s3://{}/{} failed transfers", source.getBucket(), source.getKey());
+					return new IOException("Some transfers in S3 download directory: s3://"+ source.getBucket() +"/"+ source.getKey() +" has failed - Transfers: " +  completed.failedTransfers() );
+				}
+			} catch (InterruptedException e){
+				log.debug("S3 download directory: s3://{}/{} interrupted", source.getBucket(), source.getKey());
+				Thread.currentThread().interrupt();
+			} catch (ExecutionException e) {
+				String msg = String.format("Exception thrown downloading S3 object s3://{}/{}", source.getBucket(), source.getKey());
+				return new IOException(msg, e.getCause());
 			}
-		} catch (InterruptedException e){
-			log.debug("S3 download directory: s3://{}/{} interrupted", source.getBucket(), source.getKey());
-			Thread.currentThread().interrupt();
-		} catch (ExecutionException e) {
-			String msg = String.format("Exception thrown downloading S3 object s3://{}/{}", source.getBucket(), source.getKey());
-			throw new IOException(msg, e.getCause());
-		}
+			return null;
+		});
+
+		if( exception != null )
+			throw exception;
 	}
 
 	public void uploadFile(File source, S3Path target) throws IOException{
 		PutObjectRequest.Builder req = PutObjectRequest.builder().bucket(target.getBucket()).key(target.getKey());
 		preparePutObjectRequest(req, target.getTagsList(), target.getContentType(), target.getStorageClass());
-		// initiate transfer
-		FileUpload upload = transferManager().uploadFile(UploadFileRequest.builder().putObjectRequest(req.build()).source(source).build());
-        try{
-		    upload.completionFuture().get();
-        } catch (InterruptedException e){
-            log.debug("S3 upload file: s3://{}/{} interrupted", target.getBucket(), target.getKey());
-            Thread.currentThread().interrupt();
-        } catch (ExecutionException e) {
-            String msg = String.format("Exception thrown uploading S3 object s3://{}/{}", target.getBucket(), target.getKey());
-            throw new IOException(msg, e.getCause());
-        }
+
+		UploadFileRequest uploadFileRequest = UploadFileRequest.builder()
+				.putObjectRequest(req.build())
+				.source(source)
+				.build();
+
+		IOException exception = runWithPermit(() -> {
+			try {
+				transferManager().uploadFile(uploadFileRequest);
+			} catch (InterruptedException e) {
+				log.debug("S3 upload file: s3://{}/{} interrupted", target.getBucket(), target.getKey());
+				Thread.currentThread().interrupt();
+			} catch (ExecutionException e) {
+				String msg = String.format("Exception thrown uploading S3 object s3://{}/{}", target.getBucket(), target.getKey());
+				return new IOException(msg, e.getCause());
+			}
+			return null;
+		});
+
+		if( exception != null )
+			throw exception;
 	}
 
 	private Consumer<UploadFileRequest.Builder> transformUploadRequest(List<Tag> tags) {
@@ -427,21 +445,25 @@ public class S3Client {
 				.uploadFileRequestTransformer(transformUploadRequest(target.getTagsList()))
 				.build();
 
-		// initiate transfer
-		DirectoryUpload upload = transferManager().uploadDirectory(request);
-		try {
-			CompletedDirectoryUpload completed = upload.completionFuture().get();
-			if (!completed.failedTransfers().isEmpty()){
-				log.debug("S3 upload directory: s3://{}/{} failed transfers", target.getBucket(), target.getKey());
-				throw new IOException("Some transfers in S3 upload directory: s3://"+ target.getBucket() +"/"+ target.getKey() +" has failed - Transfers: " +  completed.failedTransfers() );
+		IOException exception = runWithPermit(() -> {
+			try {
+				CompletedDirectoryUpload completed = transferManager().uploadDirectory(request);
+				if( !completed.failedTransfers().isEmpty() ) {
+					log.debug("S3 upload directory: s3://{}/{} failed transfers", target.getBucket(), target.getKey());
+					return new IOException("Some transfers in S3 upload directory: s3://"+ target.getBucket() +"/"+ target.getKey() +" has failed - Transfers: " +  completed.failedTransfers() );
+				}
+			} catch (InterruptedException e) {
+				log.debug("S3 upload directory: s3://{}/{} interrupted", target.getBucket(), target.getKey());
+				Thread.currentThread().interrupt();
+			} catch (ExecutionException e) {
+				String msg = String.format("Exception thrown uploading S3 object s3://{}/{}", target.getBucket(), target.getKey());
+				return new IOException(msg, e.getCause());
 			}
-		} catch (InterruptedException e){
-			log.debug("S3 upload directory: s3://{}/{} interrupted", target.getBucket(), target.getKey());
-			Thread.currentThread().interrupt();
-		} catch (ExecutionException e) {
-			String msg = String.format("Exception thrown uploading S3 object s3://{}/{}", target.getBucket(), target.getKey());
-			throw new IOException(msg, e.getCause());
-		}
+			return null;
+		});
+
+		if( exception != null )
+			throw exception;
 	}
 
     public void copyFile(CopyObjectRequest.Builder reqBuilder, List<Tag> tags, String contentType, String storageClass) throws IOException {
@@ -470,16 +492,22 @@ public class S3Client {
 		if( log.isTraceEnabled() ) {
 			log.trace("S3 CopyObject request {}", req);
 		}
-		Copy copy = transferManager().copy(CopyRequest.builder().copyObjectRequest(req).build());
-        try {
-            copy.completionFuture().get();
-        } catch (InterruptedException e){
-            log.debug("S3 copy s3://{}/{} to s3://{}/{} interrupted", req.sourceBucket(), req.sourceKey(), req.destinationBucket(), req.destinationKey());
-			Thread.currentThread().interrupt();
-        } catch (ExecutionException e) {
-            String msg = String.format("Exception thrown copying S3 object form s3://{}/{} to s3://{}/{}", req.sourceBucket(), req.sourceKey(), req.destinationBucket(), req.destinationKey());
-            throw new IOException(msg, e.getCause());
-        }
+		CopyRequest copyRequest = CopyRequest.builder().copyObjectRequest(req).build();
 
+		IOException exception = runWithPermit(() -> {
+			try {
+				transferManager().copy(copyRequest);
+			} catch (InterruptedException e) {
+				log.debug("S3 copy s3://{}/{} to s3://{}/{} interrupted", req.sourceBucket(), req.sourceKey(), req.destinationBucket(), req.destinationKey());
+				Thread.currentThread().interrupt();
+			} catch (ExecutionException e) {
+				String msg = String.format("Exception thrown copying S3 object form s3://{}/{} to s3://{}/{}", req.sourceBucket(), req.sourceKey(), req.destinationBucket(), req.destinationKey());
+				return new IOException(msg, e.getCause());
+			}
+			return null;
+		});
+
+		if( exception != null )
+			throw exception;
 	}
 }

@@ -20,7 +20,7 @@ The HTTP client in SDK v2 does not support overriding certain advanced HTTP opti
 
 You can use the `aws.client.maxConnections` config option to control the maximum number of concurrent HTTP connections to S3.
 
-You can also use the `aws.client.targetThroughputInGbps` option to control the concurrency of S3 uploads and downloads specifically, based on the available network bandwidth. This setting is `10` by default, which means that Nextflow performs S3 transfers concurrently up to 10 Gbps of network throughput, regardless of the connection limit. All other S3 API calls are controlled by the connection limit.
+You can also use the `aws.client.targetThroughputInGbps` option to control the concurrency of S3 uploads and downloads specifically, based on the available network bandwidth. This setting is `10` by default, which means that Nextflow performs S3 transfers concurrently up to 10 Gbps of network throughput, up to the maximum connection limit.
 
 Use these settings with virtual threads to achieve optimal performance for your environment. Increasing these settings beyond their defaults may improve performance for large runs. You can enable virtual threads by setting the `NXF_ENABLE_VIRTUAL_THREADS` environment variable to `true`.
 
