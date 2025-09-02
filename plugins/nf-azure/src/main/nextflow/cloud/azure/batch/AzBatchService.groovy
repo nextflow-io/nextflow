@@ -87,6 +87,7 @@ import nextflow.cloud.azure.config.AzFileShareOpts
 import nextflow.cloud.azure.config.AzPoolOpts
 import nextflow.cloud.azure.config.AzStartTaskOpts
 import nextflow.cloud.azure.config.CopyToolInstallMode
+import nextflow.cloud.azure.config.JobLimitBehaviour
 import nextflow.cloud.azure.nio.AzPath
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
@@ -458,7 +459,7 @@ class AzBatchService implements Closeable {
             content.setConstraints(createJobConstraints(config.batch().jobMaxWallClockTime))
         }
         
-        apply(() -> client.createJob(content))
+        applyWithJobQuotaHandling(() -> client.createJob(content))
         return jobId
     }
 
@@ -1163,5 +1164,88 @@ class AzBatchService implements Closeable {
         final policy = retryPolicy(cond)
         // apply the action with
         return Failsafe.with(policy).get(action)
+    }
+
+    /**
+     * Execute an action with special handling for Azure Batch job quota errors.
+     * When behaviourOnJobLimit is set to 'retry', it will wait and retry on ActiveJobAndScheduleQuotaReached errors.
+     * When behaviourOnJobLimit is set to 'error', it will behave like the standard apply method.
+     * 
+     * @param action A CheckedSupplier instance modeling the action to be performed
+     * @return The result of the supplied action
+     */
+    protected <T> T applyWithJobQuotaHandling(CheckedSupplier<T> action) {
+        if (config.batch().behaviourOnJobLimit == JobLimitBehaviour.retry) {
+            return applyWithJobQuotaRetry(action)
+        }
+        return apply(action)
+    }
+
+    /**
+     * Execute an action with retry logic specifically for job quota errors.
+     * This method will wait and retry when ActiveJobAndScheduleQuotaReached error is encountered.
+     * 
+     * @param action A CheckedSupplier instance modeling the action to be performed
+     * @return The result of the supplied action
+     */
+    protected <T> T applyWithJobQuotaRetry(CheckedSupplier<T> action) {
+        // define the retry condition for job quota errors
+        final jobQuotaCond = new Predicate<? extends Throwable>() {
+            @Override
+            boolean test(Throwable t) {
+                if (t instanceof HttpResponseException) {
+                    final response = t.response
+                    if (response.statusCode == 409) {
+                        final bodyString = toString(response.body)
+                        if (bodyString?.contains("ActiveJobAndScheduleQuotaReached")) {
+                            log.warn "Azure Batch job quota limit reached, waiting for jobs to complete before retrying..."
+                            return true
+                        }
+                    }
+                }
+                // Also retry on standard retry conditions (network issues, etc.)
+                return standardRetryCondition(t)
+            }
+        }
+        
+        // Create retry policy with potentially longer delays for quota issues
+        final cfg = config.retryConfig()
+        final quotaRetryPolicy = RetryPolicy.<T>builder()
+                .handleIf(jobQuotaCond)
+                .withBackoff(cfg.delay.toMillis(), cfg.maxDelay.toMillis(), ChronoUnit.MILLIS)
+                .withMaxAttempts(cfg.maxAttempts)
+                .withJitter(cfg.jitter)
+                .onRetry(new EventListener<ExecutionAttemptedEvent<T>>() {
+                    @Override
+                    void accept(ExecutionAttemptedEvent<T> event) throws Throwable {
+                        final t = event.lastFailure
+                        if (t instanceof HttpResponseException && t.response.statusCode == 409) {
+                            final bodyString = toString(t.response.body)
+                            if (bodyString?.contains("ActiveJobAndScheduleQuotaReached")) {
+                                log.warn "Azure Batch job quota retry attempt ${event.attemptCount}: waiting for active jobs to complete..."
+                            } else {
+                                log.debug "Azure retry attempt ${event.attemptCount}: ${t.message}"
+                            }
+                        } else {
+                            log.debug "Azure retry attempt ${event.attemptCount}: ${t.message}"
+                        }
+                    }
+                })
+                .build()
+        
+        return Failsafe.with(quotaRetryPolicy).get(action)
+    }
+
+    /**
+     * Standard retry condition used by the regular apply method
+     */
+    private boolean standardRetryCondition(Throwable t) {
+        if (t instanceof HttpResponseException && t.response.statusCode in RETRY_CODES)
+            return true
+        if (t instanceof IOException || t.cause instanceof IOException)
+            return true
+        if (t instanceof TimeoutException || t.cause instanceof TimeoutException)
+            return true
+        return false
     }
 }

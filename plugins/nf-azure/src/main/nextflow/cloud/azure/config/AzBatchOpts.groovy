@@ -129,6 +129,12 @@ class AzBatchOpts implements ConfigScope, CloudTransferOptions {
     """)
     final Boolean terminateJobsOnCompletion
 
+    @ConfigOption(types=[String])
+    @Description("""
+        The behaviour when Azure Batch active job quota is reached. When `'retry'` wait for job quota to clear before submitting new jobs; when `'error'` raise an error and fail (default: `'error'`).
+    """)
+    final JobLimitBehaviour behaviourOnJobLimit
+
     AzBatchOpts(Map config, Map<String,String> env=null) {
         assert config!=null
         sysEnv = env==null ? new HashMap<String,String>(System.getenv()) : env
@@ -149,6 +155,7 @@ class AzBatchOpts implements ConfigScope, CloudTransferOptions {
         maxTransferAttempts = config.maxTransferAttempts ? config.maxTransferAttempts as int : MAX_TRANSFER_ATTEMPTS
         delayBetweenAttempts = config.delayBetweenAttempts ? config.delayBetweenAttempts as Duration : DEFAULT_DELAY_BETWEEN_ATTEMPTS
         copyToolInstallMode = config.copyToolInstallMode as CopyToolInstallMode
+        behaviourOnJobLimit = config.behaviourOnJobLimit as JobLimitBehaviour ?: JobLimitBehaviour.error
     }
 
     static Map<String,AzPoolOpts> parsePools(Map<String,Map> pools) {

@@ -21,6 +21,7 @@ import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.config.AzManagedIdentityOpts
 import nextflow.cloud.azure.config.AzPoolOpts
 import nextflow.cloud.azure.config.AzStartTaskOpts
+import nextflow.cloud.azure.config.JobLimitBehaviour
 import nextflow.file.FileSystemPathFactory
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskConfig
@@ -1072,6 +1073,123 @@ class AzBatchServiceTest extends Specification {
         service.allJobIds[mapKey] == 'new-job-id'
         and:
         newJobId == 'new-job-id'
+    }
+
+    def 'should use standard behavior when behaviourOnJobLimit is error' () {
+        given:
+        def config = new AzConfig([batch: [behaviourOnJobLimit: 'error']])
+        def exec = createExecutor(config)
+        def service = new AzBatchService(exec)
+        def callCount = 0
+        def action = { -> 
+            callCount++
+            return 'result' 
+        }
+
+        when:
+        def result = service.applyWithJobQuotaHandling(action)
+
+        then:
+        result == 'result'
+        callCount == 1
+    }
+
+    def 'should use quota retry behavior when behaviourOnJobLimit is retry' () {
+        given:
+        def config = new AzConfig([batch: [behaviourOnJobLimit: 'retry']])
+        def exec = createExecutor(config)
+        def service = new AzBatchService(exec)
+        def callCount = 0
+        def action = { -> 
+            callCount++
+            return 'result' 
+        }
+
+        when:
+        def result = service.applyWithJobQuotaHandling(action)
+
+        then:
+        result == 'result'
+        callCount == 1
+    }
+
+    def 'should retry on ActiveJobAndScheduleQuotaReached error' () {
+        given:
+        def config = new AzConfig([batch: [behaviourOnJobLimit: 'retry']])
+        def exec = createExecutor(config)
+        def service = new AzBatchService(exec)
+        def quotaResponse = Mock(HttpResponse) {
+            statusCode >> 409
+            body >> Flux.just(ByteBuffer.wrap(
+                '{"error":{"code":"ActiveJobAndScheduleQuotaReached","message":"Active job and schedule quota for the account has been reached"}}'.getBytes(StandardCharsets.UTF_8)
+            ))
+        }
+        def quotaException = new HttpResponseException("Quota reached", quotaResponse)
+        
+        def callCount = 0
+        def action = { 
+            callCount++
+            if (callCount == 1) throw quotaException
+            return 'success'
+        }
+
+        when:
+        def result = service.applyWithJobQuotaRetry(action)
+
+        then:
+        result == 'success'
+        callCount == 2
+    }
+
+    def 'should identify quota error correctly' () {
+        given:
+        def config = new AzConfig([batch: [behaviourOnJobLimit: 'retry']])
+        def exec = createExecutor(config)  
+        def service = new AzBatchService(exec)
+        
+        and: 'create quota error response'
+        def quotaResponse = Mock(HttpResponse) {
+            statusCode >> 409
+            body >> Flux.just(ByteBuffer.wrap(RESPONSE_BODY.getBytes(StandardCharsets.UTF_8)))
+        }
+        def quotaException = new HttpResponseException("Test error", quotaResponse)
+
+        when:
+        def isQuotaError = service.standardRetryCondition(quotaException)
+        
+        then:
+        isQuotaError == EXPECTED_RETRY
+
+        where:
+        RESPONSE_BODY                                                          | EXPECTED_RETRY
+        '{"error":{"code":"ActiveJobAndScheduleQuotaReached"}}'                | false  // standardRetryCondition should NOT trigger on quota errors
+        '{"error":{"code":"TooManyRequests"}}'                                 | false  // different error, 409 is not in RETRY_CODES
+        '{"error":{"code":"SomeOtherError"}}'                                  | false  // 409 not in standard retry codes
+    }
+
+    def 'should not use quota retry when error is not quota related' () {
+        given:
+        def config = new AzConfig([batch: [behaviourOnJobLimit: 'retry']])
+        def exec = createExecutor(config)
+        def service = new AzBatchService(exec)
+        def nonQuotaResponse = Mock(HttpResponse) {
+            statusCode >> 409
+            body >> Flux.just(ByteBuffer.wrap('{"error":{"code":"SomeOtherError"}}'.getBytes(StandardCharsets.UTF_8)))
+        }
+        def nonQuotaException = new HttpResponseException("Some other error", nonQuotaResponse)
+        
+        def callCount = 0
+        def action = { 
+            callCount++
+            throw nonQuotaException  // Always fail
+        }
+
+        when:
+        service.applyWithJobQuotaRetry(action)
+
+        then:
+        thrown(HttpResponseException)
+        // Should fail after standard retry attempts (not quota-specific behavior)
     }
 
 }

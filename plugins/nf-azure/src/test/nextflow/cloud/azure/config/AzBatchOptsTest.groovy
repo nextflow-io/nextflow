@@ -105,4 +105,19 @@ class AzBatchOptsTest extends Specification {
         then:
         opts3.jobMaxWallClockTime.toString() == '12h'
     }
+
+    @Unroll
+    def 'should set behaviourOnJobLimit' () {
+        
+        expect:
+        new AzBatchOpts(CONFIG, [:]).behaviourOnJobLimit == EXPECTED
+        
+        where:
+        CONFIG                                          | EXPECTED
+        [:]                                             | JobLimitBehaviour.error
+        [behaviourOnJobLimit: 'error']                  | JobLimitBehaviour.error  
+        [behaviourOnJobLimit: 'retry']                  | JobLimitBehaviour.retry
+        [behaviourOnJobLimit: JobLimitBehaviour.error]  | JobLimitBehaviour.error
+        [behaviourOnJobLimit: JobLimitBehaviour.retry]  | JobLimitBehaviour.retry
+    }
 }
