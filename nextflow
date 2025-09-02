@@ -15,17 +15,16 @@
 #  limitations under the License.
 
 [[ "$NXF_DEBUG" == 'x' ]] && set -x
-
-home=$HOME
+NXF_VER=${NXF_VER:-'25.07.0-edge'}
+NXF_ORG=${NXF_ORG:-'nextflow-io'}
 if [[ "$HOME" == "/cygdrive/"* ]]; then
   drive_letter="${HOME:10:1}"
   replacement="$drive_letter:"
-  home="${HOME/\/cygdrive\/$drive_letter/$replacement}"
+  normalized_home="${HOME/\/cygdrive\/$drive_letter/$replacement}/.nextflow"
+  NXF_HOME=${NXF_HOME:-$normalized_home/.nextflow}
+else
+  NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
 fi
-
-NXF_VER=${NXF_VER:-'25.07.0-edge'}
-NXF_ORG=${NXF_ORG:-'nextflow-io'}
-NXF_HOME=${NXF_HOME:-$home/.nextflow}
 NXF_PROT=${NXF_PROT:-'https'}
 NXF_BASE=${NXF_BASE:-$NXF_PROT://www.nextflow.io/releases}
 NXF_TEMP=${NXF_TEMP:-$TMPDIR}
