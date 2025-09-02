@@ -20,7 +20,7 @@ The plugin version is optional. If it is not specified, Nextflow will download t
 Plugin versions are required for {ref}`offline usage <using-plugins-offline>`.
 :::
 
-:::{versionadded} 25.02.0-edge
+:::{versionadded} 25.04.0
 :::
 
 The plugin version can be prefixed with `~` to pin the major and minor versions and allow the latest patch release to be used. For example, `nf-amazon@~2.9.0` will resolve to the latest version matching `2.9.x`. When working offline, Nextflow will resolve version ranges against the local plugin cache defined by `NXF_PLUGINS_DIR`.

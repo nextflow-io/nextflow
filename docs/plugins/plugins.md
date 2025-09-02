@@ -44,17 +44,6 @@ nextflow run main.nf -plugins nf-hello@0.5.0
 
 See {ref}`using-plugins-page` for more information.
 
-## Nextflow plugin registry
-
-:::{versionadded} 25.04.0
-:::
-
-:::{note}
-The Nextflow plugin registry is currently available as a private beta. Contact [info@nextflow.io](mailto:info@nextflow.io) for more information.
-:::
-
-The Nextflow plugin registry is a central repository for publishing and discovering Nextflow plugins. Nextflow is able to use the plugin registry to automatically find and download plugins at runtime.
-
 ## Versioning
 
 Nextflow plugins are free to use any versioning convention. Many plugins, including all core plugins, use [Semantic Versioning](https://semver.org/), which helps developers communicate the kind of changes in a release.

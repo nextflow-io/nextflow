@@ -4,3 +4,4 @@ Plugin-Id: nf-cloudcache
 Plugin-Version: 0.4.3
 Plugin-Provider: Seqera Labs
 Plugin-Requires: >=24.04.4
+Plugin-Description: Implements cloud-based caching system to optimize workflow performance by reducing redundant computations and data transfers

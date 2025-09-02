@@ -26,6 +26,7 @@ For example, a plugin created from the plugin template with the name `nf-hello` 
 
 ```console
 nf-hello
+├── .github/workflows/build.yml
 ├── COPYING
 ├── Makefile
 ├── README.md
@@ -57,7 +58,7 @@ nf-hello
 
 This structure contains the following key files and folders:
 
-- `.github/workflows`: GitHub Action which implements continuous integration for the plugin.
+- `.github/workflows/build.yml`: GitHub Action which implements continuous integration for the plugin.
 
 - `build.gradle`: The Gradle build script.
 
@@ -201,7 +202,7 @@ myplugin {
 }
 ```
 
-:::{versionadded} 25.02.0-edge
+:::{versionadded} 25.04.0
 :::
 
 Plugins can declare their configuration options by implementing the `ConfigScope` interface and declaring each config option as a field with the `@ConfigOption` annotation. For example:
@@ -218,6 +219,12 @@ import nextflow.script.dsl.Description
 ''')
 class MyPluginConfig implements ConfigScope {
 
+    @ConfigOption
+    @Description('''
+        Message to print to standard output when a run is initialized.
+    ''')
+    final String createMessage
+
     // no-arg constructor is required to enable validation of config options
     MyPluginConfig() {
     }
@@ -225,10 +232,6 @@ class MyPluginConfig implements ConfigScope {
     MyPluginConfig(Map opts) {
         this.createMessage = opts.createMessage
     }
-
-    @ConfigOption
-    @Description('Message to print to standard output when a run is initialized.')
-    String createMessage
 }
 ```
 
@@ -301,7 +304,7 @@ Custom filesystems are an advanced plugin extension. Before creating a new files
 
 ### Functions
 
-:::{versionadded} 22.09.0-edge
+:::{versionadded} 22.10.0
 :::
 
 Plugins can define custom functions that can be included in Nextflow pipelines.
@@ -424,7 +427,7 @@ class MyExecutor extends Executor {
 
 ### Trace observers
 
-:::{versionchanged} 25.04
+:::{versionchanged} 25.04.0
 The `TraceObserver` interface is now deprecated. Use [TraceObserverV2](https://github.com/nextflow-io/nextflow/blob/master/modules/nextflow/src/main/groovy/nextflow/trace/TraceObserverV2.groovy) and [TraceObserverFactoryV2](https://github.com/nextflow-io/nextflow/blob/master/modules/nextflow/src/main/groovy/nextflow/trace/TraceObserverFactoryV2.groovy) instead.
 :::
 

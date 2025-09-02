@@ -2,7 +2,9 @@
 
 # Using the Nextflow Gradle plugin
 
-The [Nextflow Gradle plugin](https://github.com/nextflow-io/nextflow-plugin-gradle) simplifies plugin development by configuring default dependencies needed for Nextflow integration and defining Gradle tasks for building, testing, and publishing Nextflow plugins. The Gradle plugin is versioned and published to the [Gradle Plugin Portal](https://plugins.gradle.org/), allowing developers to manage it like any other dependency. As the plugin ecosystem evolves, the Gradle plugin will enable easier maintenance and adoption of improvements. This page introduces [Nextflow Gradle plugin](https://github.com/nextflow-io/nextflow-plugin-gradle) and how to use it.
+Nextflow provides a new `plugin create` command that simplifies the creation of Nextflow plugins. This command leverages the [nf-plugin-template](https://github.com/nextflow-io/nf-plugin-template) project, which uses the [Nextflow Gradle plugin](https://github.com/nextflow-io/nextflow-plugin-gradle) to streamline plugin development.
+
+The [Nextflow Gradle plugin](https://github.com/nextflow-io/nextflow-plugin-gradle) configures default dependencies needed for Nextflow integration and defines Gradle tasks for building, testing, and publishing Nextflow plugins. The Gradle plugin is versioned and published to the [Gradle Plugin Portal](https://plugins.gradle.org/), allowing developers to manage it like any other dependency. As the plugin ecosystem evolves, the Gradle plugin will enable easier maintenance and adoption of improvements. This page introduces [Nextflow Gradle plugin](https://github.com/nextflow-io/nextflow-plugin-gradle) and how to use it.
 
 :::{note}
 The Nextflow Gradle plugin and plugin registry are currently available as a public preview. See the {ref}`Migrating to the Nextflow plugin registry <plugin-registry-page>` for more information.

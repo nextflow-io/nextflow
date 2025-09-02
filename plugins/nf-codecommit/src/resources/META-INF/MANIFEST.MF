@@ -4,3 +4,4 @@ Plugin-Id: nf-codecommit
 Plugin-Version: 0.3.0
 Plugin-Provider: Seqera Labs
 Plugin-Requires: >=25.07.0-edge
+Plugin-Description: Provides seamless integration with AWS CodeCommit repositories for workflow source code management and version control
