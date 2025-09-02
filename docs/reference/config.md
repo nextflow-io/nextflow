@@ -854,6 +854,10 @@ The following settings are available:
   ```
   :::
 
+  :::{warn}
+  This option leaks credentials is the task launcher script. It should only be used for testing and development purposes.
+  :::
+
 `fusion.logLevel`
 : The log level of the Fusion client.
 
