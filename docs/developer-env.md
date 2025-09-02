@@ -9,7 +9,7 @@ Setting up a Nextflow development environment is a prerequisite for creating, te
 - {ref}`devenv-vscode`: A versatile code editor that enhances your Nextflow development with features like syntax highlighting and debugging.
 - {ref}`devenv-extensions`: The VS Code marketplace offers a variety of extensions to enhance development. The {ref}`Nextflow extension <devenv-nextflow>` is specifically designed to enhance Nextflow development with diagnostics, hover hints, code navigation, code completion, and more.
 - {ref}`devenv-docker`: A containerization platform that ensures your Nextflow workflows run consistently across different environments by packaging dependencies into isolated containers.
-- {ref}`devenv-git`: A version control system that helps manage and track changes in your Nextflow projects, making collaboration, and code management more efficient.
+- {ref}`devenv-git`: A version control system that helps manage and track changes in your Nextflow projects, making collaboration and code management more efficient.
 
 The sections below outline the steps for setting up these tools.
 
@@ -37,7 +37,7 @@ To install VS Code on Windows:
 
 1. Visit the [VS Code](https://code.visualstudio.com/download) website.
 1. Download VS Code for Windows.
-1. Double-click the installer executable (`.exe`) file and follow the set up steps.
+1. Double-click the installer executable (`.exe`) file and follow the setup steps.
 
 ```
 
@@ -243,7 +243,7 @@ Nextflow supports multiple container technologies (e.g., Singularity and Podman)
 
 Git provides powerful version control that helps track code changes. Git operates locally, meaning you don't need an internet connection to track changes, but it can also be used with remote platforms like GitHub, GitLab, or Bitbucket for collaborative development.
 
-Nextflow seamlessly integrates with Git for source code management providers for managing pipelines as version-controlled Git repositories.
+Nextflow seamlessly integrates with Git for source code management providers to manage pipelines as version-controlled Git repositories.
 
 ````{tabs}
 
