@@ -161,7 +161,7 @@ class ConfigValidator {
      * Determine whether a config option is a map option or a
      * property thereof.
      *
-     * @param names
+     * @param names Config option split into individual names, e.g. 'process.resourceLimits' -> [process, resourceLimits]
      */
     private boolean isMapOption(List<String> names) {
         return isMapOption0(SchemaNode.ROOT, names)
