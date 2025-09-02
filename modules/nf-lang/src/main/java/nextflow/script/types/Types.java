@@ -40,6 +40,7 @@ public class Types {
         ClassHelper.makeCached(Duration.class),
         ClassHelper.makeCached(MemoryUnit.class),
         ClassHelper.makeCached(Path.class),
+        ClassHelper.makeCached(Value.class),
         ClassHelper.makeCached(VersionNumber.class)
     );
 
