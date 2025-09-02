@@ -84,7 +84,6 @@ class BaseScriptTest extends Dsl2Spec {
         def script = Files.createTempFile('test',null)
         and:
         def session = Mock(Session) {
-            getPublishTargets() >> [:]
             getConfig() >> [:]
         }
         def binding = new ScriptBinding([:])
@@ -119,7 +118,6 @@ class BaseScriptTest extends Dsl2Spec {
         def script = folder.resolve('main.nf')
         and:
         def session = Mock(Session) {
-            getPublishTargets() >> [:]
             getConfig() >> [:]
         }
         def binding = new ScriptBinding([:])
