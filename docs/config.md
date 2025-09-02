@@ -138,6 +138,10 @@ params {
 
 See {ref}`cli-params` for information about how to specify pipeline parameters.
 
+:::{note}
+When including a config file, the included config is evaluated with the parameters that are defined before the include. Parameters defined after the include are not visible to the included config.
+:::
+
 (config-process)=
 
 ## Process configuration
