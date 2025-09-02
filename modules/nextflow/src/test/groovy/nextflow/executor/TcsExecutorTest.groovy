@@ -34,7 +34,6 @@ import spock.lang.Unroll
 class TcsExecutorTest extends Specification {
 
     def testParseJob() {
-
         given:
         def exec = [:] as TcsExecutor
 
@@ -44,12 +43,11 @@ class TcsExecutorTest extends Specification {
     }
 
     def testKill() {
-
         given:
         def exec = [:] as TcsExecutor
+
         expect:
         exec.killTaskCommand(123) == ['pjdel','123']
-
     }
 
     @Unroll
@@ -71,7 +69,6 @@ class TcsExecutorTest extends Specification {
     }
 
     def 'test job script headers' () {
-
         setup:
         // TCS executor
         def executor = [:] as TcsExecutor
@@ -141,7 +138,6 @@ class TcsExecutorTest extends Specification {
     }
 
     def testWorkDirWithBlanks() {
-
         setup:
         // LSF executor
         def executor = Spy(TcsExecutor)
@@ -169,12 +165,10 @@ class TcsExecutorTest extends Specification {
                 #PJM -S
                 '''
                 .stripIndent().leftTrim()
-
     }
 
     def testQstatCommand() {
-
-        setup:
+        given:
         def executor = [:] as TcsExecutor
         def text =
                 """
@@ -203,7 +197,6 @@ class TcsExecutorTest extends Specification {
         result['100007'] == AbstractGridExecutor.QueueStatus.DONE
         result['100008'] == AbstractGridExecutor.QueueStatus.HOLD
         result['100009'] == AbstractGridExecutor.QueueStatus.ERROR
-
     }
 
     def testQueueStatusCommand() {
