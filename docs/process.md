@@ -312,7 +312,7 @@ This feature makes it easier to quickly prototype the workflow logic without usi
 
 ## Inputs
 
-The `input` section allows you to define the input channels of a process, similar to function arguments. A process may have at most one input section, which must contain at least one input declaration.
+The `input` section defines the input of a process, similar to function arguments. A process may have at most one input section, which must contain at least one input declaration.
 
 The input section follows the syntax shown below:
 
@@ -321,9 +321,9 @@ input:
   <input qualifier> <input name>
 ```
 
-An input definition consists of a *qualifier* and a *name*. The input qualifier defines the type of data to be received. This information is used by Nextflow to apply the semantic rules associated with each qualifier, and handle it properly depending on the target execution platform (grid, cloud, etc).
+An input declaration consists of a *qualifier* and a *name*. The input qualifier defines the type of data to be received. This information is used by Nextflow to apply the semantic rules associated with each qualifier, and handle it properly depending on the target execution platform (grid, cloud, etc).
 
-When a process is invoked in a workflow, it must be provided a channel for each channel in the process input section, similar to calling a function with specific arguments. The examples provided in the following sections demonstrate how a process is invoked with input channels.
+When a process is invoked in a workflow, it must be provided a channel or dataflow value for each input in the process input section, similar to calling a function with specific arguments. The examples provided in the following sections demonstrate how a process is invoked.
 
 The following input qualifiers are available:
 
@@ -366,7 +366,7 @@ process job 2
 ```
 
 :::{note}
-While channels do emit items in the order that they are received, *processes* do not necessarily *process* items in the order that they are received. In the above example, the value `3` was processed before the others.
+Processes do not necessarily process items in the order that they are received. In the above example, the value `3` was processed before the others.
 :::
 
 :::{note}
@@ -655,16 +655,16 @@ hello
 
 ### Input tuples (`tuple`)
 
-The `tuple` qualifier groups multiple values into a single input definition. It can be useful when a channel emits {ref}`tuples <script-tuples>` of values that need to be handled separately. Each element in the tuple is associated with a corresponding element in the `tuple` definition. For example:
+The `tuple` qualifier groups multiple values into a single input definition. Each element in the tuple is associated with a corresponding element in the `tuple` definition. For example:
 
 ```nextflow
 process cat {
     input:
-    tuple val(x), path('input.txt')
+    tuple val(id), path('input.txt')
 
     script:
     """
-    echo "Processing $x"
+    echo "Processing $id"
     cat input.txt > copy
     """
 }
@@ -735,50 +735,22 @@ When multiple repeaters are defined, the process is executed for each *combinati
 :::
 
 :::{note}
-Input repeaters currently do not support tuples. However, you can emulate an input repeater on a channel of tuples by using the {ref}`operator-combine` or {ref}`operator-cross` operator with other input channels to produce all of the desired input combinations.
+Input repeaters do not support tuples. Use the {ref}`operator-combine` or {ref}`operator-cross` operator to combine the repeated input with the other inputs to produce all of the desired input combinations.
 :::
 
-(process-multiple-input-channels)=
+(process-multiple-inputs)=
 
-### Multiple input channels
+### Multiple inputs
 
-A key feature of processes is the ability to handle inputs from multiple channels.
+A process can declare multiple inputs, which allows it to accept inputs from multiple dataflow sources.
 
-When two or more channels are declared as process inputs, the process waits until there is a complete input configuration, i.e. until it receives a value from each input channel. When this condition is satisfied, the process consumes a value from each channel and launches a new task, repeating this logic until one or more channels are empty.
+:::{warning}
+Do not supply more than one channel when calling a process with multiple inputs. Invoking a process with multiple channels can lead to {ref}`non-deterministic behavior <cache-nondeterministic-inputs>`. All additional inputs should be dataflow values. 
+:::
 
-As a result, channel values are consumed sequentially and any empty channel will cause the process to wait, even if the other channels have values.
+When a process is defined with multiple inputs, it waits for a value from each input and launches a new task with the combined values. When one of the inputs is a channel, the process repeats until all values in the channel are consumed. If the channel is empty, the process will not launch any tasks.
 
 For example:
-
-```nextflow
-process echo {
-  input:
-  val x
-  val y
-
-  script:
-  """
-  echo $x and $y
-  """
-}
-
-workflow {
-  x = channel.of(1, 2)
-  y = channel.of('a', 'b', 'c')
-  echo(x, y)
-}
-```
-
-The process `echo` is executed two times because the `x` channel emits only two values, therefore the `c` element is discarded. It outputs:
-
-```
-1 and a
-2 and b
-```
-
-When a {ref}`value channel <channel-type-value>` is supplied as a process input alongside a queue channel, the process is executed for each value in the queue channel, and the value channel is re-used for each execution.
-
-For example, compare the previous example with the following:
 
 ```nextflow
 process echo {
@@ -799,7 +771,7 @@ workflow {
 }
 ```
 
-The above example executes the `echo` process three times because `x` is a value channel, therefore its value can be read as many times as needed. The process termination is determined by the contents of `y`. It outputs:
+The above example executes the `echo` process three times. The dataflow value `x` is reused for each value in `y`. It outputs:
 
 ```
 1 and a
@@ -807,17 +779,13 @@ The above example executes the `echo` process three times because `x` is a value
 1 and c
 ```
 
-:::{note}
-In general, multiple input channels should be used to process *combinations* of different inputs, using the `each` qualifier or value channels. Having multiple queue channels as inputs is equivalent to using the {ref}`operator-merge` operator, which is not recommended as it may lead to {ref}`non-deterministic process inputs <cache-nondeterministic-inputs>`.
-:::
-
 See also: {ref}`process-out-singleton`.
 
 (process-output)=
 
 ## Outputs
 
-The `output` section allows you to define the output channels of a process, similar to function outputs. A process may have at most one output section, which must contain at least one output declaration.
+The `output` section defines the outputs of a process, similar to a function return. A process may have at most one output section, which must contain at least one output declaration.
 
 The output section follows the syntax shown below:
 
@@ -826,9 +794,9 @@ output:
   <output qualifier> <output name> [, <option>: <option value>]
 ```
 
-An output definition consists of a *qualifier* and a *name*. Some optional attributes can also be specified.
+An output declaration consists of a *qualifier* and a *name*. Some optional attributes can also be specified.
 
-When a process is invoked, each process output is returned as a channel. The examples provided in the following sections demonstrate how to access the output channels of a process.
+When a process is invoked, each process output is returned as a channel (except under {ref}`certain conditions <process-out-singleton>`). The examples provided in the following sections demonstrate how to access the outputs of a process.
 
 The following output qualifiers are available:
 
@@ -917,7 +885,7 @@ workflow {
 }
 ```
 
-In the above example, the `random_number` process creates a file named `result.txt` which contains a random number. Since a `path` output with the same name is declared, that file is emitted by the corresponding output channel. A downstream process with a compatible input channel will be able to receive it.
+In the above example, the `random_number` process creates a file named `result.txt` which contains a random number. Since a `path` output with the same name is declared, that file is emitted by the corresponding process output. A downstream process or operator with a compatible input will be able to receive it.
 
 Refer to the {ref}`process reference <process-reference-outputs>` for the list of available options for `path` outputs.
 
@@ -960,7 +928,7 @@ Some caveats on glob pattern behavior:
 - Directories are included, unless the `**` pattern is used to recurse through directories
 
 :::{warning}
-Although the input files matching a glob output declaration are not included in the resulting output channel, these files may still be transferred from the task scratch directory to the original task work directory. Therefore, to avoid unnecessary file copies, avoid using loose wildcards when defining output files, e.g. `path '*'`. Instead, use a prefix or a suffix to restrict the set of matching files to only the expected ones, e.g. `path 'prefix_*.sorted.bam'`.
+Although the input files matching an output glob pattern are not included in the resulting output, these files may still be transferred from the task scratch directory to the original task work directory. Therefore, to avoid unnecessary file copies, avoid using loose wildcards when defining output files, e.g. `path '*'`. Instead, use a prefix or a suffix to restrict the set of matching files to only the expected ones, e.g. `path 'prefix_*.sorted.bam'`.
 :::
 
 Read more about glob syntax at the following link [What is a glob?][glob]
@@ -1056,7 +1024,7 @@ If the command fails, the task will also fail. In Bash, you can append `|| true`
 
 ### Output tuples (`tuple`)
 
-The `tuple` qualifier outputs multiple values in a single channel as a {ref}`tuple <script-tuples>`. It is useful when you need to associate outputs with metadata, for example:
+The `tuple` qualifier outputs multiple values in a single output as a {ref}`tuple <script-tuples>`. For example:
 
 ```nextflow
 process blast {
@@ -1122,7 +1090,7 @@ process hello {
 
 ### Naming outputs
 
-The `emit` option can be used on a process output to define a name for the corresponding output channel, which can be used to access the channel by name from the process output. For example:
+The `emit` option is used to define the name of a process output, which can be used to access the output by name in the calling workflow. For example:
 
 ```nextflow
 process hello_bye {
@@ -1147,7 +1115,7 @@ See {ref}`workflow-process-invocation` for more details.
 
 ### Optional outputs
 
-Normally, if a specified output is not produced by the task, the task will fail. Setting `optional: true` will cause the task to not fail, and instead emit nothing to the given output channel.
+Normally, if a specified output is not produced by the task, the task will fail. Setting `optional: true` will cause the task to not fail, and instead emit nothing to the corresponding output channel.
 
 ```nextflow
 output:
@@ -1164,17 +1132,17 @@ While this option can be used with any process output, it cannot be applied to i
 
 ### Singleton outputs
 
-When a process is only supplied with value channels, regular values, or no inputs, it returns outputs as value channels. For example:
+When a process is only supplied with dataflow values, regular values, or no inputs, it returns outputs as dataflow values. For example:
 
 ```{literalinclude} snippets/process-out-singleton.nf
 :language: nextflow
 ```
 
-In the above example, the `echo` process is invoked with a regular value that is wrapped in a value channel. As a result, `echo` returns a value channel and `greet` is executed three times.
+In the above example, the `echo` process is invoked with a regular value that is wrapped in a dataflow value. As a result, `echo` returns a dataflow value and `greet` is executed three times.
 
-If the call to `echo` was changed to `echo( channel.of('hello') )`, the process would instead return a queue channel, and `greet` would be executed only once.
+If the call to `echo` was changed to `echo( channel.of('hello') )`, the process would instead return a channel, and `greet` would be executed only once.
 
-See also: {ref}`process-multiple-input-channels`.
+See also: {ref}`process-multiple-inputs`.
 
 (process-when)=
 
