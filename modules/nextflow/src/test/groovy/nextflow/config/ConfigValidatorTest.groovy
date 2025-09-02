@@ -83,4 +83,22 @@ class ConfigValidatorTest extends Specification {
         !capture.toString().contains('Unrecognized config option')
     }
 
+    def 'should support map options' () {
+        given:
+        def config = new ConfigMap([
+            process: [
+                resourceLimits: [
+                    cpus: 4,
+                    memory: '10GB',
+                    time: '1.h'
+                ]
+            ]
+        ])
+
+        when:
+        new ConfigValidator().validate(config)
+        then:
+        !capture.toString().contains('Unrecognized config option')
+    }
+
 }
