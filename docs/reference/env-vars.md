@@ -174,7 +174,7 @@ The following environment variables control the configuration of the Nextflow ru
 `NXF_PLUGINS_TEST_REPOSITORY`
 : :::{versionadded} 23.04.0
   :::
-: Defines a custom plugin registry or plugin release URL for testing plugins outside of the main registry. See {ref}`testing-plugins` for more information.
+: Defines a custom plugin registry or plugin release URL for testing plugins outside of the main registry.
 
 `NXF_PUBLISH_FAIL_ON_ERROR`
 : :::{versionadded} 24.04.3
