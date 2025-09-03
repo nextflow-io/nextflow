@@ -17,7 +17,7 @@
 package nextflow.conda
 
 import groovy.transform.CompileStatic
-import nextflow.Session
+import nextflow.ISession
 import nextflow.packages.PackageProvider
 import nextflow.packages.PackageProviderExtension
 
@@ -30,8 +30,8 @@ import nextflow.packages.PackageProviderExtension
 class CondaProviderExtension implements PackageProviderExtension {
 
     @Override
-    PackageProvider createProvider(Session session) {
-        def condaConfig = new CondaConfig(session.config.navigate('conda') as Map ?: [:])
+    PackageProvider createProvider(ISession session) {
+        def condaConfig = new CondaConfig(session.config.navigate('conda') as Map ?: [:], System.getenv())
         return new CondaPackageProvider(condaConfig)
     }
 

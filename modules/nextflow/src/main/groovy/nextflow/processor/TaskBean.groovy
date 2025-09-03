@@ -52,7 +52,6 @@ class TaskBean implements Serializable, Cloneable {
 
     Path spackEnv
 
-    Path pixiEnv
 
     PackageSpec packageSpec
 
@@ -143,7 +142,6 @@ class TaskBean implements Serializable, Cloneable {
         this.condaEnv = task.getCondaEnv()
         this.useMicromamba = task.getCondaConfig()?.useMicromamba()
         this.spackEnv = task.getSpackEnv()
-        this.pixiEnv = task.getPixiEnv()
         this.packageSpec = task.getPackageSpec()
         this.moduleNames = task.config.getModule()
         this.shell = task.config.getShell() ?: BashWrapperBuilder.BASH

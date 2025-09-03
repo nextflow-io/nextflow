@@ -17,7 +17,7 @@
 package nextflow.pixi
 
 import groovy.transform.CompileStatic
-import nextflow.Session
+import nextflow.ISession
 import nextflow.packages.PackageProvider
 import nextflow.packages.PackageProviderExtension
 
@@ -30,8 +30,8 @@ import nextflow.packages.PackageProviderExtension
 class PixiProviderExtension implements PackageProviderExtension {
 
     @Override
-    PackageProvider createProvider(Session session) {
-        def pixiConfig = new PixiConfig(session.config.navigate('pixi') as Map ?: [:])
+    PackageProvider createProvider(ISession session) {
+        def pixiConfig = new PixiConfig(session.config.navigate('pixi') as Map ?: [:], System.getenv())
         return new PixiPackageProvider(pixiConfig)
     }
 

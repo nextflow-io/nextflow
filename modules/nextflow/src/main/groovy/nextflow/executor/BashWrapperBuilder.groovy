@@ -41,6 +41,8 @@ import nextflow.secret.SecretsLoader
 import nextflow.util.Escape
 import nextflow.util.MemoryUnit
 import nextflow.util.TestOnly
+import nextflow.packages.PackageManager
+import nextflow.Global
 /**
  * Builder to create the Bash script which is used to
  * wrap and launch the user task
@@ -341,7 +343,6 @@ class BashWrapperBuilder {
         binding.before_script = getBeforeScriptSnippet()
         binding.conda_activate = getCondaActivateSnippet()
         binding.spack_activate = getSpackActivateSnippet()
-        binding.pixi_activate = getPixiActivateSnippet()
         binding.package_activate = getPackageActivateSnippet()
 
         /*
@@ -562,33 +563,8 @@ class BashWrapperBuilder {
         return result
     }
 
-    private String getPixiActivateSnippet() {
-        if( !pixiEnv )
-            return null
-        def result = "# pixi environment\n"
-
-        // Check if there's a .pixi file that points to the project directory
-        final pixiFile = pixiEnv.resolve('.pixi')
-        if( pixiFile.exists() ) {
-            // Read the project directory path
-            final projectDir = pixiFile.text.trim()
-            result += "cd ${Escape.path(projectDir as String)} && "
-            result += "eval \"\$(pixi shell-hook --shell bash)\" && "
-            result += "cd \"\$OLDPWD\"\n"
-        }
-        else {
-            // Direct activation from environment directory
-            result += "cd ${Escape.path(pixiEnv)} && "
-            result += "eval \"\$(pixi shell-hook --shell bash)\" && "
-            result += "cd \"\$OLDPWD\"\n"
-        }
-        return result
-    }
 
     private String getPackageActivateSnippet() {
-        import nextflow.packages.PackageManager
-        import nextflow.Global
-        
         if (!packageSpec || !PackageManager.isEnabled(Global.session))
             return null
         

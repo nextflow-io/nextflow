@@ -52,8 +52,6 @@ import nextflow.script.params.InParam
 import nextflow.script.params.OutParam
 import nextflow.script.params.StdInParam
 import nextflow.script.params.ValueOutParam
-import nextflow.pixi.PixiCache
-import nextflow.pixi.PixiConfig
 import nextflow.packages.PackageManager
 import nextflow.packages.PackageSpec
 import nextflow.spack.SpackCache
@@ -657,29 +655,6 @@ class TaskRun implements Cloneable {
         cache.getCachePathFor(config.conda as String)
     }
 
-    Path getPixiEnv() {
-        // note: use an explicit function instead of a closure or lambda syntax, otherwise
-        // when calling this method from a subclass it will result into a MissingMethodExeception
-        // see  https://issues.apache.org/jira/browse/GROOVY-2433
-        cache0.computeIfAbsent('pixiEnv', new Function<String,Path>() {
-            @Override
-            Path apply(String it) {
-                return getPixiEnv0()
-            }})
-    }
-
-    private Path getPixiEnv0() {
-        if( !config.pixi || !processor.session.getPixiConfig().isEnabled() )
-            return null
-
-        // Show deprecation warning if new package system is enabled
-        if (PackageManager.isEnabled(processor.session)) {
-            log.warn "The 'pixi' directive is deprecated when preview.package is enabled. Use 'package \"${config.pixi}\", provider: \"pixi\"' instead"
-        }
-
-        final cache = new PixiCache(processor.session.getPixiConfig())
-        cache.getCachePathFor(config.pixi as String)
-    }
 
     Path getSpackEnv() {
         // note: use an explicit function instead of a closure or lambda syntax, otherwise
@@ -1055,9 +1030,6 @@ class TaskRun implements Cloneable {
         return processor.session.getCondaConfig()
     }
 
-    PixiConfig getPixiConfig() {
-        return processor.session.getPixiConfig()
-    }
 
     String getStubSource() {
         return config?.getStubBlock()?.source
