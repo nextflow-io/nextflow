@@ -1,5 +1,6 @@
+#!/usr/bin/env nextflow
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,22 +14,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nextflow.script.ast;
 
-import org.codehaus.groovy.ast.ASTNode;
-import org.codehaus.groovy.ast.expr.Expression;
+workflow {
+  words_ch = channel.of('one', 'two', 'three', 'four')
+  counts_vl = COUNT(words_ch)
+  counts_vl.view { counts ->
+    def even = counts.findAll { n -> isEven(n) }.size()
+    println "counts: $counts ($even are even)"
+  }
+}
 
-/**
- * A parameter declaration.
- *
- * @author Ben Sherman <bentshermann@gmail.com>
- */
-public class ParamNode extends ASTNode {
-    public final Expression target;
-    public Expression value;
+workflow COUNT {
+  take:
+  words: Channel<String>
 
-    public ParamNode(Expression target, Expression value) {
-        this.target = target;
-        this.value = value;
-    }
+  main:
+  counts = words.map { word -> word.length() }.collect()
+
+  emit:
+  counts: Value<Integer> = counts
+}
+
+def isEven(n: Integer) -> Boolean {
+  return n % 2 == 0
 }

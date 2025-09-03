@@ -4,3 +4,4 @@ Plugin-Id: nf-tower
 Plugin-Version: 1.14.0
 Plugin-Provider: Seqera Labs
 Plugin-Requires: >=25.07.0-edge
+Plugin-Description: Integrates with Seqera Platform for comprehensive workflow monitoring, resource tracking, and cache management capabilities

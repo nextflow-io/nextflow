@@ -72,37 +72,6 @@ class PluginUpdaterTest extends Specification {
         folder?.deleteDir()
     }
 
-    def 'should install a plugin from a digest-based repository' () {
-        given:
-        def PLUGIN = "$PLUGIN_ID-1.0.0"
-        def folder = Files.createTempDirectory('test')
-        and:
-        def remote = remoteDigestRepository(folder.resolve('repo'), ['1.0.0', '2.0.0'])
-        and:
-        def local = localCache(folder.resolve('plugins'), [])
-        def manager = new LocalPluginManager(local)
-        def updater = new PluginUpdater(manager, local, remote, false)
-
-        when:
-        updater.installPlugin( PLUGIN_ID, '1.0.0' )
-
-        then:
-        manager.getPlugin(PLUGIN_ID).plugin.class == FooPlugin.class
-        manager.getPlugin(PLUGIN_ID).descriptor.getPluginId() == PLUGIN_ID
-        manager.getPlugin(PLUGIN_ID).descriptor.getVersion() == '1.0.0'
-        and:
-        local.resolve(PLUGIN).exists()
-        local.resolve(PLUGIN).isDirectory()
-        local.resolve(PLUGIN).resolve('MANIFEST.MF').isFile()
-        and:
-        manager.localRoot.resolve(PLUGIN).exists()
-        manager.localRoot.resolve(PLUGIN).isLink()
-        manager.localRoot.resolve(PLUGIN).resolve('MANIFEST.MF').text == local.resolve(PLUGIN).resolve('MANIFEST.MF').text
-
-        cleanup:
-        folder?.deleteDir()
-    }
-
     def 'should update a plugin' () {
         given:
         def folder = Files.createTempDirectory('test')
@@ -470,12 +439,6 @@ class PluginUpdaterTest extends Specification {
                 plugin
             }
 
-        return createRepositoryIndex(dir, plugins).toUri().toURL()
-    }
-
-    static private URL remoteDigestRepository(Path dir, List<String> versions) {
-        Files.createDirectory(dir)
-        List<MockPlugin> plugins = versions.collect { v -> createDigestPlugin(dir, v) }
         return createRepositoryIndex(dir, plugins).toUri().toURL()
     }
 

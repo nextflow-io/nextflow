@@ -138,6 +138,10 @@ params {
 
 See {ref}`cli-params` for information about how to specify pipeline parameters.
 
+:::{note}
+When including a config file, the included config is evaluated with the parameters that are defined before the include. Parameters defined after the include are not visible to the included config.
+:::
+
 (config-process)=
 
 ## Process configuration
@@ -221,7 +225,7 @@ process {
 }
 ```
 
-The above configuration snippet sets 2 cpus for every process labeled as `hello` and 4 cpus to every process *not* label as `hello`. It also specifies the `long` queue for every process whose name does *not* start with `align`.
+The above configuration snippet sets 2 cpus for every process labeled as `hello` and 4 cpus to every process *not* labeled as `hello`. It also specifies the `long` queue for every process whose name does *not* start with `align`.
 
 (config-selector-priority)=
 
@@ -339,7 +343,7 @@ workflow.onComplete = {
 }
 
 workflow.onError = {
-    println "Error: something when wrong"
+    println "Error: something went wrong"
 }
 ```
 

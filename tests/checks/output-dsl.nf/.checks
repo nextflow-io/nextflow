@@ -21,7 +21,9 @@ $NXF_RUN --save_bam_bai | tee stdout
 [[ -L results/quant/beta ]] || false
 [[ -L results/quant/delta ]] || false
 [[ -f results/samples.csv ]] || false
-[[ -f results/summary.txt ]] || false
+[[ -f results/summary_report.html ]] || false
+[[ -f results/summary_data/data.json ]] || false
+[[ -f results/summary_data/fastqc.txt ]] || false
 
 
 #
@@ -47,7 +49,9 @@ $NXF_RUN --save_bam_bai | tee stdout
 [[ -L results/quant/beta ]] || false
 [[ -L results/quant/delta ]] || false
 [[ -f results/samples.csv ]] || false
-[[ -f results/summary.txt ]] || false
+[[ -f results/summary_report.html ]] || false
+[[ -f results/summary_data/data.json ]] || false
+[[ -f results/summary_data/fastqc.txt ]] || false
 
 
 #
@@ -75,4 +79,6 @@ $NXF_RUN --save_bam_bai -resume | tee stdout
 [[ -L results/quant/beta ]] || false
 [[ -L results/quant/delta ]] || false
 [[ -f results/samples.csv ]] || false
-[[ -f results/summary.txt ]] || false
+[[ -f results/summary_report.html ]] || false
+[[ -f results/summary_data/data.json ]] || false
+[[ -f results/summary_data/fastqc.txt ]] || false

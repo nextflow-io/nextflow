@@ -306,8 +306,10 @@ class PublishOp {
 
         // if the target resolver is a closure, use it to transform
         // the source filename to the target path
-        if( targetResolver instanceof Closure<Path> )
-            return (targetResolver.call(path.getName()) as Path).normalize()
+        if( targetResolver instanceof Closure<Path> ) {
+            final relPath = sourceDir.relativize(path).toString()
+            return (targetResolver.call(relPath) as Path).normalize()
+        }
 
         // if the target resolver is a directory, resolve the source
         // filename against it

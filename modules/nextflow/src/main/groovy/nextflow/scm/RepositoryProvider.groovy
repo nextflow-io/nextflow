@@ -416,7 +416,7 @@ abstract class RepositoryProvider {
 
         final retryOnException = ((Throwable e) -> isRetryable(e) || isRetryable(e.cause)) as Predicate<? extends Throwable>
 
-        HxConfig.builder()
+        HxConfig.newBuilder()
             .withRetryConfig(retryConfig)
             .withRetryStatusCodes(HTTP_RETRYABLE_ERRORS)
             .withRetryCondition(retryOnException)
@@ -439,15 +439,23 @@ abstract class RepositoryProvider {
 
     @Deprecated
     protected HttpResponse<String> httpSend(HttpRequest request) {
-        if( httpClient==null )
-            httpClient = HxClient.create(newHttpClient(), retryConfig0())
+        if( httpClient==null ) {
+            httpClient = HxClient.newBuilder()
+                .httpClient(newHttpClient())
+                .retryConfig(retryConfig0())
+                .build()
+        }
 
         return httpClient.send(request, HttpResponse.BodyHandlers.ofString())
     }
 
     private HttpResponse<byte[]> httpSend0(HttpRequest request) {
-        if( httpClient==null )
-            httpClient = HxClient.create(newHttpClient(), retryConfig0())
+        if( httpClient==null ) {
+            httpClient = HxClient.newBuilder()
+                .httpClient(newHttpClient())
+                .retryConfig(retryConfig0())
+                .build()
+        }
 
         return httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray())
     }

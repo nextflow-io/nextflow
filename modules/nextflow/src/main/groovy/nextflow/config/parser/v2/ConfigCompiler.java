@@ -31,6 +31,7 @@ import nextflow.config.control.StringReaderSourceWithURI;
 import nextflow.config.control.StripSecretsVisitor;
 import nextflow.config.parser.ConfigParserPluginFactory;
 import nextflow.script.control.Compiler;
+import nextflow.script.control.GStringToStringVisitor;
 import nextflow.script.control.PathCompareVisitor;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.ClassHelper;
@@ -179,6 +180,7 @@ public class ConfigCompiler {
                 new StripSecretsVisitor(source).visitClass(cn);
             if( renderClosureAsString )
                 new ClosureToStringVisitor(source).visitClass(cn);
+            new GStringToStringVisitor(source).visitClass(cn);
         }
 
         SourceUnit createSourceUnit(String source, Path path) {
