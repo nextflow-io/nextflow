@@ -17,6 +17,7 @@ import org.pf4j.update.FileDownloader
 import org.pf4j.update.FileVerifier
 import org.pf4j.update.PluginInfo
 import org.pf4j.update.PluginInfo.PluginRelease
+import org.pf4j.update.SimpleFileDownloader
 import org.pf4j.update.verifier.CompoundVerifier
 /**
  * Represents an update repository served via an HTTP api.
@@ -99,7 +100,7 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
 
     @Override
     FileDownloader getFileDownloader() {
-        return new OciAwareFileDownloader()
+        return new SimpleFileDownloader()
     }
 
     @Override
