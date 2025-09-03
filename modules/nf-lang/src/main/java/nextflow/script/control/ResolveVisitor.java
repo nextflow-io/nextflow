@@ -306,13 +306,17 @@ public class ResolveVisitor extends ClassCodeExpressionTransformer {
         }
         if( inVariableDeclaration ) {
             // resolve type of variable declaration
-            resolveOrFail(ve.getType(), ve);
-            var origin = ve.getOriginType();
-            if( origin != ve.getType() )
-                resolveOrFail(origin, ve);
+            resolveOrFail(ve);
         }
         // if the variable is still dynamic (i.e. unresolved), it will be handled by DynamicVariablesVisitor
         return ve;
+    }
+
+    public void resolveOrFail(VariableExpression ve) {
+        resolveOrFail(ve.getType(), ve);
+        var origin = ve.getOriginType();
+        if( origin != ve.getType() )
+            resolveOrFail(origin, ve);
     }
 
     protected Expression transformPropertyExpression(PropertyExpression pe) {
