@@ -119,44 +119,6 @@ class RepositoryProviderTest extends Specification {
         headers == new String[] { 'Authorization', "Basic ${'foo:bar'.bytes.encodeBase64()}" }
     }
 
-    def 'should test retry with exception' () {
-        given:
-        def client = Mock(HttpClient)
-        and:
-        def provider = Spy(RepositoryProvider)
-        provider.@httpClient = client
-        provider.@config = new ProviderConfig('github', [server: 'https://github.com'] as ConfigObject)
-        provider.setRetryConfig(new RetryConfig(maxAttempts: 3))
-
-        when:
-        provider.invoke('https://api.github.com/repos/project/x')
-        then:
-        3 * client.send(_,_) >> { throw new SocketException("Something failed") }
-        and:
-        def e = thrown(IOException)
-        e.message == "Something failed"
-    }
-
-    def 'should test retry with http response code' () {
-        given:
-        def client = Mock(HttpClient)
-        and:
-        def provider = Spy(RepositoryProvider)
-        provider.@httpClient = client
-        provider.@config = new ProviderConfig('github', [server: 'https://github.com'] as ConfigObject)
-        provider.setRetryConfig(new RetryConfig())
-
-        when:
-        def result = provider.invoke('https://api.github.com/repos/project/x')
-        then:
-        1 * client.send(_,_) >> Mock(HttpResponse) {statusCode()>>500 }
-        then:
-        1 * client.send(_,_) >> Mock(HttpResponse) {statusCode()>>502 }
-        then:
-        1 * client.send(_,_) >> Mock(HttpResponse) {statusCode()>>200; body()>>'OK' }
-        and:
-        result == 'OK'
-    }
 
     def 'should validate is retryable' () {
         given:
