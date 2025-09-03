@@ -17,8 +17,8 @@
 
 workflow {
   words_ch = channel.of('one', 'two', 'three', 'four')
-  counts_ch = COUNT(words_ch)
-  counts_ch.collect().view { counts ->
+  counts_vl = COUNT(words_ch)
+  counts_vl.view { counts ->
     def even = counts.findAll { n -> isEven(n) }.size()
     println "counts: $counts ($even are even)"
   }
@@ -29,10 +29,10 @@ workflow COUNT {
   words: Channel<String>
 
   main:
-  counts_ch = words.map { word -> word.length() }
+  counts = words.map { word -> word.length() }.collect()
 
   emit:
-  counts: Channel<Integer> = counts_ch
+  counts: Value<Integer> = counts
 }
 
 def isEven(n: Integer) -> Boolean {
