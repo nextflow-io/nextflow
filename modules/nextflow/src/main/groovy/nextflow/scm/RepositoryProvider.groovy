@@ -407,7 +407,7 @@ abstract class RepositoryProvider {
         }
     }
 
-    static private final Set<Integer> HTTP_RETRYABLE_ERRORS = [429, 500, 502, 503, 504] as Set
+    static private final Set<Integer> HTTP_RETRYABLE_ERRORS = Set.of(429, 500, 502, 503, 504)
 
     @Memoized
     private HxConfig retryConfig0() {
