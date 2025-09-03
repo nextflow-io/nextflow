@@ -179,7 +179,7 @@ class AzureRepositoryProviderTest extends Specification {
         result == [
                 new RepositoryProvider.BranchInfo('dev', 'cc0ca18640a5c995231e22d91f1527d5155d024b'),
                 new RepositoryProvider.BranchInfo('feature-x', '13456a001ba5a27d643755614ab8e814d94ef888'),
-                new RepositoryProvider.BranchInfo('master', 'f84130388714582e20f0e2ff9a44b41978ec8929'),
+                new RepositoryProvider.BranchInfo('master', 'a207636e419f18c4b8c8586b00e329ab4788a7f5'),
         ]
     }
 
