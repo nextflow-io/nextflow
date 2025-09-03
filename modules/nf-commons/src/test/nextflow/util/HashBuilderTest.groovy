@@ -22,6 +22,7 @@ import java.nio.file.Paths
 import com.google.common.hash.Hashing
 import nextflow.Global
 import nextflow.Session
+import nextflow.SysEnv
 import org.apache.commons.codec.digest.DigestUtils
 import spock.lang.Specification
 import test.TestHelper
@@ -126,5 +127,71 @@ class HashBuilderTest extends Specification {
         then:
         hash1.hash() == hash2.hash()
 
+    }
+
+    // -------------------- patched tests --------------------
+
+    def 'should hash dir content with sha256'() {
+        given:
+        SysEnv.push('NXF_PATCH_DIRECTORY_HASH': 'true')
+        and:
+        def folder = TestHelper.createInMemTempDir()
+        folder.resolve('dir1').mkdir()
+        folder.resolve('dir2').mkdir()
+        and:
+        folder.resolve('dir1/foo').text = "I'm foo"
+        folder.resolve('dir1/bar').text = "I'm bar"
+        folder.resolve('dir1/xxx/yyy').mkdirs()
+        folder.resolve('dir1/xxx/foo1').text = "I'm foo within xxx"
+        folder.resolve('dir1/xxx/yyy/bar1').text = "I'm bar 1 within yyy"
+        folder.resolve('dir1/xxx/yyy/bar2').text = "I'm bar 2 within yyy"
+        and:
+        // create the same directory structure using a different
+        // creation order, the resulting hash should be the same
+        folder.resolve('dir2/bar').text = "I'm bar"
+        folder.resolve('dir2/foo').text = "I'm foo"
+        folder.resolve('dir2/xxx').mkdirs()
+        folder.resolve('dir2/xxx/foo1').text = "I'm foo within xxx"
+        folder.resolve('dir2/xxx/yyy').mkdirs()
+        folder.resolve('dir2/xxx/yyy/bar2').text = "I'm bar 2 within yyy"
+        folder.resolve('dir2/xxx/yyy/bar1').text = "I'm bar 1 within yyy"
+
+        when:
+        def hash1 = HashBuilder.hashDirSha256(HashBuilder.defaultHasher(), folder.resolve('dir1'), folder.resolve('dir1'))
+        and:
+        def hash2 = HashBuilder.hashDirSha256(HashBuilder.defaultHasher(), folder.resolve('dir2'), folder.resolve('dir2'))
+
+        then:
+        hash1.hash() == hash2.hash()
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def 'directories with same content but different structure should yield different hashes'() {
+        given:
+        SysEnv.push('NXF_PATCH_DIRECTORY_HASH': 'true')
+        and:
+        def folder = TestHelper.createInMemTempDir()
+        folder.resolve('dir1').mkdir()
+        folder.resolve('dir2').mkdir()
+        and:
+        folder.resolve('dir1/foo').text = "I'm foo"
+        folder.resolve('dir1/bar').text = "I'm bar"
+        and:
+        // the content of these files is intentionally swapped
+        folder.resolve('dir2/foo').text = "I'm bar"
+        folder.resolve('dir2/bar').text = "I'm foo"
+
+        when:
+        def hash1 = HashBuilder.hashDirSha256(HashBuilder.defaultHasher(), folder.resolve('dir1'), folder.resolve('dir1'))
+        and:
+        def hash2 = HashBuilder.hashDirSha256(HashBuilder.defaultHasher(), folder.resolve('dir2'), folder.resolve('dir2'))
+
+        then:
+        hash1.hash() != hash2.hash()
+
+        cleanup:
+        SysEnv.pop()
     }
 }
