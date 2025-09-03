@@ -54,13 +54,13 @@ class TowerConfig implements ConfigScope {
     """)
     final String endpoint
 
+    final TowerRetryPolicy retryPolicy
+
     @ConfigOption
     @Description("""
         The workspace ID in Seqera Platform in which to save the run (default: the launching user's personal workspace).
     """)
     final String workspaceId
-
-    final TowerRetryPolicy retryPolicy
 
     /* required by extension point -- do not remove */
     TowerConfig() {}
@@ -69,7 +69,7 @@ class TowerConfig implements ConfigScope {
         this.accessToken = PlatformHelper.getAccessToken(opts, env)
         this.enabled = opts.enabled as boolean
         this.endpoint = PlatformHelper.getEndpoint(opts, env)
-        this.workspaceId = PlatformHelper.getWorkspaceId(opts, env)
         this.retryPolicy = new TowerRetryPolicy(opts.retryPolicy as Map ?: Map.of(), opts)
+        this.workspaceId = PlatformHelper.getWorkspaceId(opts, env)
     }
 }

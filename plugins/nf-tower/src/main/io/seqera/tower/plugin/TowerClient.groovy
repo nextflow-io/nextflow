@@ -271,7 +271,7 @@ class TowerClient implements TraceObserverV2 {
     @Override
     void onFlowCreate(Session session) {
         log.debug "Creating Seqera Platform observer -- endpoint=$endpoint; requestInterval=$requestInterval; aliveInterval=$aliveInterval; maxRetries=$maxRetries; backOffBase=$backOffBase; backOffDelay=$backOffDelay"
-        
+
         this.session = session
         this.aggregator = new ResourcesAggregator(session)
         this.runName = session.getRunName()
@@ -515,8 +515,9 @@ class TowerClient implements TraceObserverV2 {
                 final msg = parseCause(resp?.body()) ?: "Unexpected response for request $url"
                 return new Response(status, msg as String)
             }
-            else
+            else {
                 return new Response(status, resp.body())
+            }
         }
         catch( IOException e ) {
             String msg = "Unable to connect to Seqera Platform API: ${getHostUrl(url)}"
@@ -526,20 +527,19 @@ class TowerClient implements TraceObserverV2 {
 
     protected HttpRequest makeRequest(String url, String payload, String verb) {
         assert payload, "Tower request cannot be empty"
-        
+
         final builder = HttpRequest.newBuilder(URI.create(url))
             .header('Content-Type', 'application/json; charset=utf-8')
             .header('User-Agent', "Nextflow/$BuildInfo.version")
             .header('Traceparent', TraceUtils.rndTrace())
 
-        if(verb == 'PUT')
+        if( verb == 'PUT' )
             return builder.PUT(HttpRequest.BodyPublishers.ofString(payload)).build()
-        
-        if(verb == 'POST')
+
+        if( verb == 'POST' )
             return builder.POST(HttpRequest.BodyPublishers.ofString(payload)).build()
 
-        else
-            throw new IllegalArgumentException("Unsupported HTTP verb: $verb")
+        throw new IllegalArgumentException("Unsupported HTTP verb: $verb")
     }
 
     protected boolean isCliLogsEnabled() {
@@ -714,7 +714,7 @@ class TowerClient implements TraceObserverV2 {
             def cause = parseCause(resp.cause)
             def msg = """\
                 Unexpected HTTP response.
-                Failed to send message to ${endpoint} -- received 
+                Failed to send message to ${endpoint} -- received
                 - status code : $resp.code
                 - response msg: $resp.message
                 """.stripIndent(true)
@@ -735,7 +735,7 @@ class TowerClient implements TraceObserverV2 {
                 Unexpected Seqera Platform API response
                 - endpoint url: $endpoint
                 - status code : $resp.code
-                - response msg: ${resp.message} 
+                - response msg: ${resp.message}
                 """.stripIndent(true)
         // append separately otherwise formatting get broken
         msg += "- error cause : ${cause ?: '-'}"

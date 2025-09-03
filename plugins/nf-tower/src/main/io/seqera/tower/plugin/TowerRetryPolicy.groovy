@@ -44,31 +44,31 @@ class TowerRetryPolicy implements Retryable.Config, ConfigScope {
 
     @ConfigOption
     @Description("""
-    Initial delay before retrying a failed Tower operation (default: `350ms`).
+        Initial delay before retrying a failed Tower operation (default: `350ms`).
     """)
     Duration delay
 
     @ConfigOption
     @Description("""
-    Maximum delay between retry attempts for Tower operations (default: `90s`).
+        Maximum delay between retry attempts for Tower operations (default: `90s`).
     """)
     Duration maxDelay
 
     @ConfigOption
     @Description("""
-    Maximum number of retry attempts for Tower operations (default: `5`).
+        Maximum number of retry attempts for Tower operations (default: `5`).
     """)
     int maxAttempts
 
     @ConfigOption
     @Description("""
-    Random jitter factor applied to retry delays to avoid thundering herd issues (default: `0.25`).
+        Random jitter factor applied to retry delays to avoid thundering herd issues (default: `0.25`).
     """)
     double jitter
 
     @ConfigOption
     @Description("""
-    Multiplier factor for exponential backoff between retry attempts (default: `2.0`).
+        Multiplier factor for exponential backoff between retry attempts (default: `2.0`).
     """)
     double multiplier
 

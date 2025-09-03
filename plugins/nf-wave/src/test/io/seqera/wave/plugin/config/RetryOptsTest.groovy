@@ -17,7 +17,6 @@
 
 package io.seqera.wave.plugin.config
 
-
 import nextflow.util.Duration
 import spock.lang.Specification
 

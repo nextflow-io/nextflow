@@ -37,11 +37,11 @@ import nextflow.SysEnv
 @CompileStatic
 class RetryConfig implements Retryable.Config {
 
-    public final static Duration DEFAULT_DELAY = Duration.of('350ms')
-    public final static Duration DEFAULT_MAX_DELAY = Duration.of('90s')
-    public final static Integer DEFAULT_MAX_ATTEMPTS = 5
-    public final static Double DEFAULT_JITTER = 0.25
-    public final static double DEFAULT_MULTIPLIER = 2.0
+    public static final Duration DEFAULT_DELAY = Duration.of('350ms')
+    public static final Duration DEFAULT_MAX_DELAY = Duration.of('90s')
+    public static final Integer DEFAULT_MAX_ATTEMPTS = 5
+    public static final Double DEFAULT_JITTER = 0.25
+    public static final double DEFAULT_MULTIPLIER = 2.0
 
     private final static String ENV_PREFIX = 'NXF_RETRY_POLICY_'
 
