@@ -133,7 +133,7 @@ class HashBuilderTest extends Specification {
 
     def 'should hash dir content with sha256'() {
         given:
-        SysEnv.push('NXF_PATCH_UNORDERED_DIR': 'true')
+        SysEnv.push('NXF_PATCH_DIRECTORY_HASH': 'true')
         and:
         def folder = TestHelper.createInMemTempDir()
         folder.resolve('dir1').mkdir()
@@ -170,7 +170,7 @@ class HashBuilderTest extends Specification {
 
     def 'directories with same content but different structure should yield different hashes'() {
         given:
-        SysEnv.push('NXF_PATCH_UNORDERED_DIR': 'true')
+        SysEnv.push('NXF_PATCH_DIRECTORY_HASH': 'true')
         and:
         def folder = TestHelper.createInMemTempDir()
         folder.resolve('dir1').mkdir()

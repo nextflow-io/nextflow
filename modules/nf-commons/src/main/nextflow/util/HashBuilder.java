@@ -70,7 +70,7 @@ public class HashBuilder {
 
     private static final Map<String,Object> FIRST_ONLY;
 
-    private static final boolean PATCH_UNORDERED_DIR = SysEnv.getBool("NXF_PATCH_UNORDERED_DIR", false);
+    private static final boolean PATCH_UNORDERED_DIR = SysEnv.getBool("NXF_PATCH_DIRECTORY_HASH", false);
 
     static {
         FIRST_ONLY = new HashMap<>(1);
