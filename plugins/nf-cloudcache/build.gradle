@@ -13,7 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-apply plugin: 'groovy'
+plugins {
+    id 'io.nextflow.nextflow-plugin' version '1.0.0-beta.6'
+    id 'java-test-fixtures'
+}
+
+group = 'io.nextflow'
+version = '0.4.3'
+
+nextflowPlugin {
+    nextflowVersion = '25.07.0-edge'
+
+    provider = 'nextflow'
+    description = 'Implements cloud-based caching system to optimize workflow performance by reducing redundant computations and data transfers'
+    className = 'nextflow.CloudCachePlugin'
+    extensionPoints = [
+        'nextflow.cache.CloudCacheFactory'
+    ]
+}
 
 sourceSets {
     main.java.srcDirs = []
