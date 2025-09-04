@@ -1,0 +1,93 @@
+set -e
+
+#
+# Test that multi-process script without -entry fails with helpful error
+#
+echo ''
+echo '=== Testing multi-process error handling ==='
+set +e  # Allow command to fail
+$NXF_RUN 2>&1 | tee stdout_error
+exit_code=$?
+set -e
+
+# Should fail with exit code > 0
+[[ $exit_code -ne 0 ]] || false
+
+# Should provide helpful error message
+[[ `grep -c 'Multiple processes found' stdout_error` == 1 ]] || false
+[[ `grep -c 'Use -entry process:NAME' stdout_error` == 1 ]] || false
+# Check that all three process names are mentioned (order may vary)
+[[ `grep -c 'preprocessData' stdout_error` == 1 ]] || false
+[[ `grep -c 'analyzeResults' stdout_error` == 1 ]] || false
+[[ `grep -c 'generateReport' stdout_error` == 1 ]] || false
+
+#
+# Test preprocessData process with -entry
+#
+echo ''
+echo '=== Testing preprocessData process entry ==='
+$NXF_RUN -entry process:preprocessData --inputFile "data/sample_data.txt" --quality "high" | tee stdout1
+
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > preprocessData'` == 1 ]] || false
+[[ `grep -c 'Multi-process test: preprocessing' stdout1` == 1 ]] || false
+[[ `grep -c 'Input file: sample_data.txt' stdout1` == 1 ]] || false
+[[ `grep -c 'Quality threshold: high' stdout1` == 1 ]] || false
+[[ `grep -c 'Preprocessing sample_data.txt with quality high' stdout1` == 1 ]] || false
+[[ `grep -c 'Preprocessing completed' stdout1` == 1 ]] || false
+
+# Check that first 5 lines of file were processed (head -n 5)
+[[ `grep -c 'Line 1: Sample data' stdout1` == 1 ]] || false
+[[ `grep -c 'Line 5: End of sample data' stdout1` == 1 ]] || false
+
+#
+# Test analyzeResults process with -entry  
+#
+echo ''
+echo '=== Testing analyzeResults process entry ==='
+$NXF_RUN -entry process:analyzeResults --experimentId "EXP_042" --resultsFile "data/results_data.txt" --mode "detailed" | tee stdout2
+
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > analyzeResults'` == 1 ]] || false
+[[ `grep -c 'Multi-process test: analysis' stdout2` == 1 ]] || false
+[[ `grep -c 'Experiment ID: EXP_042' stdout2` == 1 ]] || false
+[[ `grep -c 'Results file: results_data.txt' stdout2` == 1 ]] || false
+[[ `grep -c 'Analysis mode: detailed' stdout2` == 1 ]] || false
+[[ `grep -c 'Analyzing results for experiment EXP_042 in detailed mode' stdout2` == 1 ]] || false
+[[ `grep -c 'Analysis completed for experiment EXP_042' stdout2` == 1 ]] || false
+
+# Check that last 3 lines of file were processed (tail -n 3)
+[[ `grep -c 'Summary: 3 data points processed' stdout2` == 1 ]] || false
+[[ `grep -c 'Final result: SUCCESS' stdout2` == 1 ]] || false
+
+#
+# Test generateReport process with -entry
+#
+echo ''
+echo '=== Testing generateReport process entry ==='
+$NXF_RUN -entry process:generateReport --reportTitle "Test Report 2024" --dataPath "data/results_data.txt" | tee stdout3
+
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > generateReport'` == 1 ]] || false
+[[ `grep -c 'Multi-process test: reporting' stdout3` == 1 ]] || false
+[[ `grep -c 'Report title: Test Report 2024' stdout3` == 1 ]] || false
+[[ `grep -c 'Data path: results_data.txt' stdout3` == 1 ]] || false
+[[ `grep -c 'Generating report.*Test Report 2024.*from results_data.txt' stdout3` == 1 ]] || false
+[[ `grep -c 'Report generation completed' stdout3` == 1 ]] || false
+
+# Check that file size was calculated (wc -c)
+[[ `grep -c 'Data file size:' stdout3` == 1 ]] || false
+
+#
+# Test with invalid process name
+#
+echo ''
+echo '=== Testing invalid process name error ==='
+set +e  # Allow command to fail
+$NXF_RUN -entry process:invalidProcess --param "value" 2>&1 | tee stdout_invalid
+exit_code=$?
+set -e
+
+# Should fail with exit code > 0
+[[ $exit_code -ne 0 ]] || false
+
+# Should provide helpful error message with suggestions
+[[ `grep -c 'Unknown process entry name: invalidProcess' stdout_invalid` == 1 ]] || false
+[[ `grep -c 'Did you mean' stdout_invalid` == 1 ]] || false

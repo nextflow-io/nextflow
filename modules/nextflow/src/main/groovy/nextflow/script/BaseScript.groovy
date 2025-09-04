@@ -20,7 +20,6 @@ import java.lang.reflect.InvocationTargetException
 import java.nio.file.Paths
 
 import groovy.util.logging.Slf4j
-import nextflow.Channel
 import nextflow.NF
 import nextflow.NextflowMeta
 import nextflow.Session
@@ -261,17 +260,17 @@ abstract class BaseScript extends Script implements ExecutionContext {
      * Key functionality:
      * - Single process scripts run automatically: `nextflow run script.nf --param value`
      * - Multi-process scripts use entry selection: `nextflow run script.nf -entry process:name --param value`
-     * - Command-line parameters are automatically mapped to process input channels
+     * - Command-line parameters are passed directly to processes
      * - Supports all standard Nextflow input types: val, path, env, tuple, each
      * 
      * Implementation approach:
-     * 1. Parse the process body to extract input parameter definitions
-     * 2. Map command-line arguments to the extracted parameter specifications
-     * 3. Create appropriate Nextflow channels for each mapped parameter
-     * 4. Generate synthetic workflows that execute the process with mapped inputs
+     * 1. Parse the process body to extract input parameter names
+     * 2. Look up corresponding values from command-line arguments (session.params)
+     * 3. Pass parameter values directly to the process
+     * 4. Let Nextflow handle channel creation automatically
      * 
-     * This feature bridges the gap between command-line tools and workflow orchestration,
-     * making Nextflow processes more accessible for direct execution scenarios.
+     * This simplified approach relies on Nextflow's built-in parameter handling rather
+     * than manually creating channels, making the implementation much cleaner.
      */
 
     /**
@@ -279,9 +278,9 @@ abstract class BaseScript extends Script implements ExecutionContext {
      * This allows single-process scripts to run without requiring the -entry option.
      * 
      * The method validates that exactly one process exists and creates a synthetic
-     * workflow that maps command-line parameters to the process inputs.
+     * workflow that passes command-line parameters directly to the process.
      *
-     * @return WorkflowDef that executes the single process with parameter mapping
+     * @return WorkflowDef that executes the single process with direct parameter passing
      * @throws IllegalStateException if there is not exactly one process
      */
     protected WorkflowDef createSingleProcessWorkflow() {
@@ -298,13 +297,13 @@ abstract class BaseScript extends Script implements ExecutionContext {
         def workflowLogic = { ->
             log.debug "Executing auto-generated single process workflow for: ${processName}"
             
-            // Map command-line parameters to process input channels
-            def inputChannels = createProcessInputChannelsWithMapping(processDef)
+            // Get input parameter names and pass corresponding values from session.params
+            def inputArgs = getProcessInputArguments(processDef)
             
-            log.debug "Mapped ${inputChannels.length} input channels for single process: ${processName}"
+            log.debug "Passing ${inputArgs.size()} arguments to single process: ${processName}"
             
-            // Execute the single process with the mapped input channels
-            this.invokeMethod(processName, inputChannels)
+            // Execute the single process with the parameter values
+            this.invokeMethod(processName, inputArgs as Object[])
         }
         
         // Create workflow metadata for debugging and introspection
@@ -320,29 +319,29 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
 
     /**
-     * Creates a workflow to execute a specific process with parameter mapping.
+     * Creates a workflow to execute a specific process with direct parameter passing.
      * This enables process execution via the -entry process:NAME syntax.
      * 
-     * The workflow automatically maps command-line parameters to process inputs
-     * by analyzing the process definition and creating appropriate channels.
+     * The workflow passes command-line parameters directly to the process,
+     * letting Nextflow handle the channel creation automatically.
      *
      * @param processDef The ProcessDef object for the target process
-     * @return WorkflowDef that executes the process with parameter mapping
+     * @return WorkflowDef that executes the process with direct parameter passing
      */
     protected WorkflowDef createProcessEntryWorkflow(ProcessDef processDef) {
         final processName = processDef.name
         
-        // Create the workflow execution logic that handles parameter mapping
+        // Create the workflow execution logic that handles parameter passing
         def workflowLogic = { ->
             log.debug "Executing process entry workflow for: ${processName}"
             
-            // Map command-line parameters to process input channels
-            def inputChannels = createProcessInputChannelsWithMapping(processDef)
+            // Get input parameter names and pass corresponding values from session.params
+            def inputArgs = getProcessInputArguments(processDef)
             
-            log.debug "Mapped ${inputChannels.length} input channels for process: ${processName}"
+            log.debug "Passing ${inputArgs.size()} arguments to process: ${processName}"
             
-            // Execute the process with the mapped input channels
-            this.invokeMethod(processName, inputChannels)
+            // Execute the process with the parameter values
+            this.invokeMethod(processName, inputArgs as Object[])
         }
         
         // Create workflow metadata for debugging and introspection
@@ -357,54 +356,72 @@ abstract class BaseScript extends Script implements ExecutionContext {
     }
 
     /**
-     * Creates input channels for a process by mapping command-line parameters to process inputs.
+     * Gets the input arguments for a process by extracting parameter names and looking up
+     * their values in session.params (populated from command-line arguments).
      * 
-     * This is the main parameter mapping method that:
-     * 1. Extracts input definitions from the process body by parsing Nextflow DSL
-     * 2. Maps command-line parameters to the extracted input specifications  
-     * 3. Creates appropriate Nextflow channels for each input based on its type
-     * 4. Handles missing parameters with appropriate error messages
+     * This simplified approach lets Nextflow handle channel creation automatically
+     * when the process is invoked, rather than manually creating channels.
+     * For path parameters, it uses the file() helper to convert strings to Path objects.
      *
      * @param processDef The ProcessDef object containing the process definition
-     * @return Object[] Array of channels corresponding to process inputs, empty if no inputs or error
+     * @return List of parameter values to pass to the process
      */
-    protected Object[] createProcessInputChannelsWithMapping(ProcessDef processDef) {
+    protected List getProcessInputArguments(ProcessDef processDef) {
         final processName = processDef.name
-        log.debug "Starting parameter mapping for process: ${processName}"
+        log.debug "Getting input arguments for process: ${processName}"
         
         try {
-            // Step 1: Extract input definitions from process body
-            List<Map> inputSpecs = extractProcessInputDefinitions(processDef)
+            // Extract input parameter names and types from the process body
+            List<Map> inputSpecs = extractProcessInputSpecs(processDef)
             
             if( inputSpecs.isEmpty() ) {
                 log.debug "No input parameters found for process: ${processName}"
-                return new Object[0]
+                return []
             }
             
             log.debug "Found ${inputSpecs.size()} input parameters for process ${processName}: ${inputSpecs.collect { it.name }}"
             
-            // Step 2: Map command-line parameters to channels
-            Object[] inputChannels = mapParametersToChannels(inputSpecs)
+            // Get corresponding values from session.params and apply type conversion if needed
+            List inputArgs = []
+            for( Map inputSpec : inputSpecs ) {
+                String paramName = inputSpec.name
+                String inputType = inputSpec.type
+                def paramValue = session.params.get(paramName)
+                
+                if( paramValue != null ) {
+                    log.debug "Found parameter value: ${paramName} = ${paramValue}"
+                    
+                    // Convert path parameters using file() helper
+                    if( inputType == 'path' && paramValue instanceof String ) {
+                        paramValue = nextflow.Nextflow.file(paramValue)
+                        log.debug "Converted path parameter ${paramName} to: ${paramValue}"
+                    }
+                    
+                    inputArgs.add(paramValue)
+                } else {
+                    throw new IllegalArgumentException("Missing required parameter: --${paramName}")
+                }
+            }
             
-            log.debug "Successfully mapped ${inputChannels.length} input channels for process: ${processName}"
-            return inputChannels
+            log.debug "Successfully prepared ${inputArgs.size()} arguments for process: ${processName}"
+            return inputArgs
             
         } catch (Exception e) {
-            log.warn "Failed to create input channels for process ${processName}: ${e.message}"
-            return new Object[0]
+            log.warn "Failed to get input arguments for process ${processName}: ${e.message}"
+            throw e
         }
     }
     
     /**
-     * Extracts input parameter definitions from a process body by parsing the Nextflow DSL.
+     * Extracts input parameter specifications (name and type) from a process body by parsing the Nextflow DSL.
      * 
      * This method uses a specialized delegate to intercept internal Nextflow method calls
-     * (_in_val, _in_path, etc.) that represent input declarations in the compiled process body.
+     * (_in_val, _in_path, etc.) and extracts both parameter names and types.
      * 
      * @param processDef The ProcessDef to analyze
-     * @return List of Maps containing input specifications [type: String, name: String]
+     * @return List of Maps containing [name: String, type: String] in declaration order
      */
-    private List<Map> extractProcessInputDefinitions(ProcessDef processDef) {
+    private List<Map> extractProcessInputSpecs(ProcessDef processDef) {
         // Access the raw process body closure - this contains the compiled Nextflow DSL
         def rawBody = processDef.rawBody
         if( !rawBody ) {
@@ -412,11 +429,11 @@ abstract class BaseScript extends Script implements ExecutionContext {
             return []
         }
         
-        log.debug "Analyzing process body for input definitions: ${processDef.name}"
+        log.debug "Analyzing process body for input parameter specs: ${processDef.name}"
         
         // Clone the body to avoid side effects and set up input extraction
         def bodyClone = rawBody.clone()
-        def extractionDelegate = new ProcessInputExtractionDelegate()
+        def extractionDelegate = new ProcessInputSpecExtractor()
         bodyClone.setDelegate(extractionDelegate)
         bodyClone.setResolveStrategy(Closure.DELEGATE_FIRST)
         
@@ -424,177 +441,38 @@ abstract class BaseScript extends Script implements ExecutionContext {
             // Execute the cloned body - this will trigger our delegate methods
             bodyClone.call()
             
-            // Return the collected input definitions
-            def extractedInputs = extractionDelegate.getExtractedInputs()
-            log.debug "Extracted ${extractedInputs.size()} input definitions from process ${processDef.name}"
-            return extractedInputs
+            // Return the collected parameter specifications
+            def inputSpecs = extractionDelegate.getInputSpecs()
+            log.debug "Extracted ${inputSpecs.size()} parameter specs from process ${processDef.name}"
+            return inputSpecs
             
         } catch (Exception e) {
-            log.debug "Failed to extract input definitions from process ${processDef.name}: ${e.message}"
+            log.debug "Failed to extract parameter specs from process ${processDef.name}: ${e.message}"
             return []
         }
     }
     
-    /**
-     * Maps input parameter specifications to Nextflow channels using command-line parameter values.
-     * 
-     * For each input specification, this method:
-     * 1. Looks up the parameter value in session.params (populated from command-line args)
-     * 2. Creates an appropriate Nextflow channel based on the input type (val, path, etc.)
-     * 3. Handles missing required parameters with descriptive error messages
-     *
-     * @param inputSpecs List of input specifications from process definition
-     * @return Object[] Array of Nextflow channels for process execution
-     */
-    private Object[] mapParametersToChannels(List<Map> inputSpecs) {
-        Object[] channels = new Object[inputSpecs.size()]
-        
-        log.debug "Available command-line parameters: ${session.params.keySet()}"
-        
-        // Use traditional for loop for better performance and clearer index handling
-        for( int i = 0; i < inputSpecs.size(); i++ ) {
-            Map inputSpec = inputSpecs[i]
-            String paramName = inputSpec.name
-            String inputType = inputSpec.type
-            
-            log.debug "Processing parameter '${paramName}' of type '${inputType}'"
-            
-            // Look up parameter value from command-line arguments
-            def paramValue = session.params.get(paramName)
-            
-            if( paramValue != null ) {
-                log.debug "Found parameter value: ${paramName} = ${paramValue}"
-                channels[i] = createChannelForInputType(inputType, paramValue)
-            } else {
-                log.debug "Parameter '${paramName}' not provided via command-line"
-                channels[i] = createDefaultChannelForInputType(inputType, paramName)
-            }
-        }
-        
-        return channels
-    }
 
     /**
-     * Creates a Nextflow channel for a process input parameter based on its type and value.
-     * 
-     * This method handles the conversion from command-line parameter values to the appropriate
-     * Nextflow channel types required by different input parameter declarations.
-     *
-     * @param inputType The type of input parameter (val, path, env, tuple, each)
-     * @param paramValue The parameter value from command-line arguments
-     * @return Nextflow channel containing the parameter value(s)
-     */
-    protected Object createChannelForInputType(String inputType, def paramValue) {
-        switch( inputType ) {
-            case 'val':
-                // Value parameters: direct channel creation with the parameter value
-                return Channel.of(paramValue)
-                
-            case 'path':
-                // Path parameters: convert strings to Path objects and validate existence
-                def path = (paramValue instanceof String) ? 
-                    java.nio.file.Paths.get(paramValue) : paramValue
-                    
-                // Warn if file doesn't exist (non-fatal for flexibility)
-                if( path instanceof java.nio.file.Path && !java.nio.file.Files.exists(path) ) {
-                    log.warn "Path parameter references non-existent file: ${path}"
-                }
-                return Channel.of(path)
-                
-            case 'env':
-                // Environment parameters: pass through as value channel
-                return Channel.of(paramValue)
-                
-            case 'tuple':
-                // Tuple parameters: handle composite values
-                if( paramValue instanceof Collection ) {
-                    return Channel.of(paramValue as List)
-                } else {
-                    // Wrap single values in a list for tuple consistency
-                    return Channel.of([paramValue])
-                }
-                
-            case 'each':
-                // Each parameters: create iterable channels for collection processing
-                if( paramValue instanceof Collection ) {
-                    return Channel.fromIterable(paramValue)
-                } else if( paramValue instanceof String && paramValue.contains(',') ) {
-                    // Handle comma-separated values as collections
-                    def items = paramValue.split(',').collect { it.trim() }
-                    return Channel.fromIterable(items)
-                } else {
-                    return Channel.of(paramValue)
-                }
-                
-            default:
-                // Unknown input types: default to value channel with warning
-                log.debug "Unknown input parameter type '${inputType}', using value channel"
-                return Channel.of(paramValue)
-        }
-    }
-
-    /**
-     * Creates a default channel or throws an error when a required parameter is missing.
-     * 
-     * This method handles missing command-line parameters by either providing sensible
-     * defaults (for optional parameters like env) or throwing descriptive error messages
-     * for required parameters.
-     *
-     * @param inputType The type of input parameter that is missing
-     * @param paramName The name of the missing parameter for error messages
-     * @return Default channel for optional parameters
-     * @throws IllegalArgumentException for required parameters that are missing
-     */
-    protected Object createDefaultChannelForInputType(String inputType, String paramName) {
-        switch( inputType ) {
-            case 'val':
-                // Value parameters are typically required
-                throw new IllegalArgumentException("Missing required value parameter: --${paramName}")
-                
-            case 'path':
-                // Path parameters are typically required 
-                throw new IllegalArgumentException("Missing required path parameter: --${paramName}")
-                
-            case 'env':
-                // Environment parameters may have defaults or be optional
-                // Return empty channel to allow process to handle gracefully
-                return Channel.empty()
-                
-            case 'tuple':
-                // Tuple parameters are typically required
-                throw new IllegalArgumentException("Missing required tuple parameter: --${paramName}")
-                
-            case 'each':
-                // Each parameters are typically required for iteration
-                throw new IllegalArgumentException("Missing required each parameter: --${paramName}")
-                
-            default:
-                // Unknown parameter types: assume required and provide generic error
-                throw new IllegalArgumentException("Missing required parameter: --${paramName}")
-        }
-    }
-
-    /**
-     * Specialized delegate class for extracting input parameter definitions from Nextflow process bodies.
+     * Delegate class for extracting parameter names and types from Nextflow process bodies.
      * 
      * This class intercepts method calls when a cloned process body is executed, allowing us to
-     * capture input parameter declarations without actually executing the full process logic.
+     * capture input parameter specifications including both names and types.
      * 
      * The Nextflow compiler converts input declarations like "val name" into internal method calls
-     * like "_in_val(TokenVar(name))", which this delegate captures and converts back to 
-     * structured parameter specifications.
+     * like "_in_val(TokenVar(name))", which this delegate captures.
      */
-    protected class ProcessInputExtractionDelegate {
+    protected class ProcessInputSpecExtractor {
         
-        /** List of extracted input specifications in format [type: String, name: String] */
-        private final List<Map> extractedInputs = []
+        /** List of extracted parameter specifications in declaration order */
+        private final List<Map> inputSpecs = []
         
         /**
-         * Returns the collected input parameter definitions.
-         * @return List of input specifications
+         * Returns the collected parameter specifications.
+         * @return List of Maps with [name: String, type: String]
          */
-        List<Map> getExtractedInputs() {
-            return new ArrayList<>(extractedInputs)
+        List<Map> getInputSpecs() {
+            return new ArrayList<>(inputSpecs)
         }
         
         /**
@@ -603,11 +481,11 @@ abstract class BaseScript extends Script implements ExecutionContext {
          */
         def input(Closure inputClosure) {
             log.debug "Processing traditional input block"
-            def inputDelegate = new TraditionalInputParsingDelegate()
+            def inputDelegate = new TraditionalInputSpecExtractor()
             inputClosure.setDelegate(inputDelegate)
             inputClosure.setResolveStrategy(Closure.DELEGATE_FIRST)
             inputClosure.call()
-            extractedInputs.addAll(inputDelegate.getInputs())
+            inputSpecs.addAll(inputDelegate.getInputSpecs())
         }
         
         /*
@@ -618,49 +496,49 @@ abstract class BaseScript extends Script implements ExecutionContext {
         
         /** Handles value input parameters: val paramName */
         def _in_val(Object tokenVar) {
-            addInputParameter('val', tokenVar)
+            addInputSpec('val', tokenVar)
         }
         
         /** Handles file input parameters: file paramName (legacy syntax) */
         def _in_file(Object tokenVar) {
-            addInputParameter('path', tokenVar)
+            addInputSpec('path', tokenVar)
         }
         
         /** Handles path input parameters: path paramName */
         def _in_path(Object tokenVar) {
-            addInputParameter('path', tokenVar)
+            addInputSpec('path', tokenVar)
         }
         
         /** Handles environment input parameters: env paramName */
         def _in_env(Object tokenVar) {
-            addInputParameter('env', tokenVar)
+            addInputSpec('env', tokenVar)
         }
         
         /** Handles each input parameters: each paramName */
         def _in_each(Object tokenVar) {
-            addInputParameter('each', tokenVar)
+            addInputSpec('each', tokenVar)
         }
         
         /** Handles tuple input parameters: tuple paramName1, paramName2, ... */
         def _in_tuple(Object... tokenVars) {
             log.debug "Processing tuple input with ${tokenVars.length} elements"
             
-            // Process each element of the tuple as a separate parameter
+            // Process each element of the tuple
             for( int i = 0; i < tokenVars.length; i++ ) {
-                addInputParameter('tuple', tokenVars[i])
+                addInputSpec('tuple', tokenVars[i])
             }
         }
         
         /**
-         * Common helper method to extract parameter name from TokenVar and add to collection.
+         * Common helper method to extract parameter name from TokenVar and add specification.
          * @param inputType The type of input parameter (val, path, etc.)
          * @param tokenVar The TokenVar object containing the parameter name
          */
-        private void addInputParameter(String inputType, Object tokenVar) {
+        private void addInputSpec(String inputType, Object tokenVar) {
             if( tokenVar?.hasProperty('name') ) {
                 String paramName = tokenVar.name
                 log.debug "Extracted ${inputType} parameter: ${paramName}"
-                extractedInputs.add([type: inputType, name: paramName])
+                inputSpecs.add([name: paramName, type: inputType])
             } else {
                 log.debug "Skipped ${inputType} parameter with invalid TokenVar: ${tokenVar}"
             }
@@ -682,50 +560,49 @@ abstract class BaseScript extends Script implements ExecutionContext {
      * Delegate class for parsing traditional input {} block declarations.
      * 
      * This handles the less common case where users write explicit input blocks
-     * in their process definitions. Most modern Nextflow code uses the direct
-     * syntax (e.g., "val name" instead of "input { val name }").
+     * in their process definitions. Extracts both parameter names and types.
      */
-    protected class TraditionalInputParsingDelegate {
+    protected class TraditionalInputSpecExtractor {
         
-        /** List of parsed input specifications */
-        private final List<Map> inputs = []
+        /** List of parsed parameter specifications */
+        private final List<Map> inputSpecs = []
         
         /**
-         * Returns the collected input specifications.
-         * @return List of input specifications
+         * Returns the collected parameter specifications.
+         * @return List of Maps with [name: String, type: String]
          */
-        List<Map> getInputs() {
-            return new ArrayList<>(inputs)
+        List<Map> getInputSpecs() {
+            return new ArrayList<>(inputSpecs)
         }
         
         /** Handles value input declarations: val name */
         def val(String name) {
-            inputs.add([type: 'val', name: name])
+            inputSpecs.add([name: name, type: 'val'])
         }
         
         /** Handles path input declarations: path name */
         def path(String name) {
-            inputs.add([type: 'path', name: name])
+            inputSpecs.add([name: name, type: 'path'])
         }
         
         /** Handles file input declarations: file name (legacy) */
         def file(String name) {
-            inputs.add([type: 'path', name: name])
+            inputSpecs.add([name: name, type: 'path'])
         }
         
         /** Handles environment input declarations: env name */
         def env(String name) {
-            inputs.add([type: 'env', name: name])
+            inputSpecs.add([name: name, type: 'env'])
         }
         
         /** Handles tuple input declarations: tuple name */
         def tuple(String name) {
-            inputs.add([type: 'tuple', name: name])
+            inputSpecs.add([name: name, type: 'tuple'])
         }
         
         /** Handles each input declarations: each name */
         def each(String name) {
-            inputs.add([type: 'each', name: name])
+            inputSpecs.add([name: name, type: 'each'])
         }
         
         /**
@@ -739,8 +616,8 @@ abstract class BaseScript extends Script implements ExecutionContext {
             if( args instanceof Object[] && args.length > 0 ) {
                 String name = args[0]?.toString()
                 if( name ) {
-                    log.debug "Added generic input: [type: ${inputType}, name: ${name}]"
-                    inputs.add([type: inputType, name: name])
+                    log.debug "Added generic parameter spec: [name: ${name}, type: ${inputType}]"
+                    inputSpecs.add([name: name, type: inputType])
                 } else {
                     log.debug "Skipped input with invalid name: ${inputType}"
                 }
