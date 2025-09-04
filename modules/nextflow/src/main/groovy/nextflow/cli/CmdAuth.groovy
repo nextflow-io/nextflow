@@ -121,7 +121,6 @@ class CmdAuth extends CmdBase implements UsageAware {
 
         private static final String AUTH0_DOMAIN = "seqera-development.eu.auth0.com"
         private static final String AUTH0_CLIENT_ID = "Ep2LhYiYmuV9hhz0dH6dbXVq0S7s7SWZ"
-        private static final String AUTH0_AUDIENCE = "platform"
         private static final int CALLBACK_PORT = 8085
 
         @Override
@@ -291,7 +290,7 @@ class CmdAuth extends CmdBase implements UsageAware {
                 'client_id': AUTH0_CLIENT_ID,
                 'redirect_uri': "http://localhost:${CALLBACK_PORT}/callback",
                 'scope': 'openid profile email offline_access',
-                'audience': AUTH0_AUDIENCE,
+                'audience': 'platform',
                 'code_challenge': codeChallenge,
                 'code_challenge_method': 'S256',
                 'state': state,
