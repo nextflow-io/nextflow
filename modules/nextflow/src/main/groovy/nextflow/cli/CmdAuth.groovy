@@ -36,7 +36,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 
 /**
- * Implements the {@code auth} command
+ * Implements the 'nextflow auth' commands
  *
  * @author Phil Ewels <phil.ewels@seqera.io>
  */
@@ -139,11 +139,17 @@ class CmdAuth extends CmdBase implements UsageAware {
             // Prompt user for API URL
             def apiUrl = promptForApiUrl()
 
-            try {
-                performAuth0Login(apiUrl)
-            } catch (Exception e) {
-                log.debug("Authentication failed", e)
-                throw new AbortOperationException("Authentication failed: ${e.message}")
+            // Check if this is a cloud endpoint or enterprise
+            if (isCloudEndpoint(apiUrl)) {
+                try {
+                    performAuth0Login(apiUrl)
+                } catch (Exception e) {
+                    log.debug("Authentication failed", e)
+                    throw new AbortOperationException("Authentication failed: ${e.message}")
+                }
+            } else {
+                // Enterprise endpoint - use PAT authentication
+                handleEnterpriseAuth(apiUrl)
             }
         }
 
@@ -184,7 +190,7 @@ class CmdAuth extends CmdBase implements UsageAware {
                 def tokenData = exchangeCodeForToken(authCode, codeVerifier)
 
                 // Save credentials
-                saveCredentials(tokenData, apiUrl)
+                saveCredentials('oauth', tokenData['access_token'], apiUrl)
 
                 println "Authentication successful! Credentials saved to ${getCredentialsPath()}"
 
@@ -353,14 +359,14 @@ class CmdAuth extends CmdBase implements UsageAware {
             return json as Map
         }
 
-        private void saveCredentials(Map tokenData, String apiUrl) {
+        private void saveCredentials(String type, String token, String apiUrl) {
             def xdgConfigHome = System.getenv("XDG_CONFIG_HOME")
             def credentialsDir = xdgConfigHome ?
                 Paths.get(xdgConfigHome, "seqera") :
                 Paths.get(System.getProperty("user.home"), ".config", "seqera")
             Files.createDirectories(credentialsDir)
 
-            def credentialsFile = credentialsDir.resolve("credentials")
+            def credentialsFile = credentialsDir.resolve("credentials.yml")
 
             def config = [:]
             if (Files.exists(credentialsFile)) {
@@ -374,7 +380,8 @@ class CmdAuth extends CmdBase implements UsageAware {
             }
 
             config['default'] = [
-                'token': tokenData['access_token'],
+                'type': type,
+                'token': token,
                 'endpoint': apiUrl
             ]
 
@@ -392,12 +399,41 @@ class CmdAuth extends CmdBase implements UsageAware {
             }
         }
 
+        private boolean isCloudEndpoint(String apiUrl) {
+            return apiUrl == 'https://api.cloud.seqera.io' ||
+                   apiUrl == 'https://api.cloud.stage-seqera.io'
+        }
+
+        private void handleEnterpriseAuth(String apiUrl) {
+            println ""
+            println "Please generate a Personal Access Token from your Seqera Platform instance."
+            println "You can create one at: ${apiUrl.replace('/api', '').replace('api.', '')}/tokens"
+            println ""
+
+            System.out.print("Enter your Personal Access Token: ")
+            System.out.flush()
+
+            def console = System.console()
+            def pat = console ?
+                new String(console.readPassword()) :
+                new BufferedReader(new InputStreamReader(System.in)).readLine()
+
+            if (!pat || pat.trim().isEmpty()) {
+                throw new AbortOperationException("Personal Access Token is required for Seqera Platform Enterprise authentication")
+            }
+
+            // Save PAT credentials
+            saveCredentials('pat', pat.trim(), apiUrl)
+            println "Authentication successful! Credentials saved to ${getCredentialsPath()}"
+        }
+
+
         private String getCredentialsPath() {
             def xdgConfigHome = System.getenv("XDG_CONFIG_HOME")
             def credentialsDir = xdgConfigHome ?
                 Paths.get(xdgConfigHome, "seqera") :
                 Paths.get(System.getProperty("user.home"), ".config", "seqera")
-            return credentialsDir.resolve("credentials").toString()
+            return credentialsDir.resolve("credentials.yml").toString()
         }
 
         @Override
