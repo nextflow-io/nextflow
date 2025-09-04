@@ -120,7 +120,7 @@ class CmdAuth extends CmdBase implements UsageAware {
     class LoginCmd implements SubCmd {
 
         private static final String AUTH0_DOMAIN = "seqera-development.eu.auth0.com"
-        private static final String AUTH0_CLIENT_ID = "ENTER_CLIENT_ID_HERE_WHEN_WE_HAVE_IT"
+        private static final String AUTH0_CLIENT_ID = "Ep2LhYiYmuV9hhz0dH6dbXVq0S7s7SWZ"
         private static final String AUTH0_AUDIENCE = "platform"
         private static final int CALLBACK_PORT = 8085
 
