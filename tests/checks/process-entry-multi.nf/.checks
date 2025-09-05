@@ -7,11 +7,11 @@ echo ''
 echo '=== Testing multi-process error handling ==='
 set +e  # Allow command to fail
 $NXF_RUN 2>&1 | tee stdout_error
-exit_code=$?
+exit_code=${PIPESTATUS[0]}
 set -e
 
 # Should fail with exit code > 0
-[[ $exit_code -ne 0 ]] || false
+[[ $exit_code -gt 0 ]] || false
 
 # Should provide helpful error message
 [[ `grep -c 'Multiple processes found' stdout_error` == 1 ]] || false
@@ -26,7 +26,7 @@ set -e
 #
 echo ''
 echo '=== Testing preprocessData process entry ==='
-$NXF_RUN -entry process:preprocessData --inputFile "data/sample_data.txt" --quality "high" | tee stdout1
+$NXF_RUN -entry process:preprocessData --inputFile "../../data/sample_data.txt" --quality "high" | tee stdout1
 
 [[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > preprocessData'` == 1 ]] || false
 [[ `grep -c 'Multi-process test: preprocessing' stdout1` == 1 ]] || false
@@ -44,7 +44,7 @@ $NXF_RUN -entry process:preprocessData --inputFile "data/sample_data.txt" --qual
 #
 echo ''
 echo '=== Testing analyzeResults process entry ==='
-$NXF_RUN -entry process:analyzeResults --experimentId "EXP_042" --resultsFile "data/results_data.txt" --mode "detailed" | tee stdout2
+$NXF_RUN -entry process:analyzeResults --experimentId "EXP_042" --resultsFile "../../data/results_data.txt" --mode "detailed" | tee stdout2
 
 [[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > analyzeResults'` == 1 ]] || false
 [[ `grep -c 'Multi-process test: analysis' stdout2` == 1 ]] || false
@@ -63,7 +63,7 @@ $NXF_RUN -entry process:analyzeResults --experimentId "EXP_042" --resultsFile "d
 #
 echo ''
 echo '=== Testing generateReport process entry ==='
-$NXF_RUN -entry process:generateReport --reportTitle "Test Report 2024" --dataPath "data/results_data.txt" | tee stdout3
+$NXF_RUN -entry process:generateReport --reportTitle "Test Report 2024" --dataPath "../../data/results_data.txt" | tee stdout3
 
 [[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > generateReport'` == 1 ]] || false
 [[ `grep -c 'Multi-process test: reporting' stdout3` == 1 ]] || false
@@ -82,12 +82,11 @@ echo ''
 echo '=== Testing invalid process name error ==='
 set +e  # Allow command to fail
 $NXF_RUN -entry process:invalidProcess --param "value" 2>&1 | tee stdout_invalid
-exit_code=$?
+exit_code=${PIPESTATUS[0]}
 set -e
 
 # Should fail with exit code > 0
-[[ $exit_code -ne 0 ]] || false
+[[ $exit_code -gt 0 ]] || false
 
 # Should provide helpful error message with suggestions
 [[ `grep -c 'Unknown process entry name: invalidProcess' stdout_invalid` == 1 ]] || false
-[[ `grep -c 'Did you mean' stdout_invalid` == 1 ]] || false

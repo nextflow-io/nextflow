@@ -5,7 +5,7 @@ set -e
 #
 echo ''
 echo '=== Testing single process auto-execution ==='
-$NXF_RUN --sampleId "SAMPLE_001" --dataFile "data/sample_data.txt" --threads "4" | tee stdout
+$NXF_RUN --sampleId "SAMPLE_001" --dataFile "../../data/sample_data.txt" --threads "4" | tee stdout
 
 # Check that the process executed successfully
 [[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > analyzeData'` == 1 ]] || false
@@ -26,8 +26,9 @@ $NXF_RUN --sampleId "SAMPLE_001" --dataFile "data/sample_data.txt" --threads "4"
 #
 echo ''
 echo '=== Testing single process with relative path ==='
-$NXF_RUN --sampleId "REL_TEST" --dataFile "./data/sample_data.txt" --threads "2" | tee stdout2
+rm -f .nextflow.log  # Clear log for clean test
+$NXF_RUN --sampleId "REL_TEST" --dataFile "../../data/sample_data.txt" --threads "2" | tee stdout2
 
-[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > analyzeData'` == 2 ]] || false
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > analyzeData'` == 1 ]] || false
 [[ `grep -c 'Sample ID: REL_TEST' stdout2` == 1 ]] || false
 [[ `grep -c 'Threads: 2' stdout2` == 1 ]] || false
