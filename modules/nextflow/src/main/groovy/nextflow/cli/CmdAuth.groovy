@@ -62,6 +62,7 @@ class CmdAuth extends CmdBase implements UsageAware {
 
     CmdAuth() {
         commands.add(new LoginCmd())
+        commands.add(new LogoutCmd())
     }
 
     void usage() {
@@ -113,6 +114,63 @@ class CmdAuth extends CmdBase implements UsageAware {
         if (matches)
             msg += " -- Did you mean one of these?\n" + matches.collect { "  $it" }.join('\n')
         throw new AbortOperationException(msg)
+    }
+
+    // Shared helper methods for both login and logout
+    private Map callUserInfoApi(String accessToken, String apiUrl) {
+        def userInfoUrl = "${apiUrl}/user-info"
+        def connection = new URL(userInfoUrl).openConnection() as HttpURLConnection
+        connection.requestMethod = 'GET'
+        connection.setRequestProperty('Authorization', "Bearer ${accessToken}")
+
+        if (connection.responseCode != 200) {
+            def error = connection.errorStream?.text ?: "HTTP ${connection.responseCode}"
+            throw new RuntimeException("Failed to get user info: ${error}")
+        }
+
+        def response = connection.inputStream.text
+        def json = new groovy.json.JsonSlurper().parseText(response) as Map
+        return json.user as Map
+    }
+
+    private String findTokenInShellConfig(String token) {
+        def shellConfigInfo = detectShellConfig()
+
+        if (shellConfigInfo.configFile) {
+            def content = Files.readString(Paths.get(shellConfigInfo.configFile as String))
+            if (content.contains("export TOWER_ACCESS_TOKEN=${token}") || content.contains("export TOWER_ACCESS_TOKEN=\"${token}\"")) {
+                return shellConfigInfo.configFile
+            }
+        }
+
+        return null
+    }
+
+    private Map detectShellConfig() {
+        def shell = System.getenv("SHELL")
+        def homeDir = System.getProperty("user.home")
+        def configFile
+        def shellName
+
+        if (shell?.contains("zsh")) {
+            shellName = "zsh"
+            configFile = "${homeDir}/.zshrc"
+        } else if (shell?.contains("fish")) {
+            shellName = "fish"
+            configFile = "${homeDir}/.config/fish/config.fish"
+        } else if (shell?.contains("bash")) {
+            shellName = "bash"
+            // Check for .bash_profile first, then .bashrc
+            def bashProfile = "${homeDir}/.bash_profile"
+            def bashrc = "${homeDir}/.bashrc"
+            configFile = Files.exists(Paths.get(bashProfile)) ? bashProfile : bashrc
+        } else {
+            // Unrecognized shell
+            shellName = "unknown"
+            configFile = null
+        }
+
+        return [shell: shellName, configFile: configFile]
     }
 
     class LoginCmd implements SubCmd {
@@ -441,22 +499,6 @@ class CmdAuth extends CmdBase implements UsageAware {
         }
 
 
-        private Map callUserInfoApi(String accessToken, String apiUrl) {
-            def userInfoUrl = "${apiUrl}/user-info"
-            def connection = new URL(userInfoUrl).openConnection() as HttpURLConnection
-            connection.requestMethod = 'GET'
-            connection.setRequestProperty('Authorization', "Bearer ${accessToken}")
-
-            if (connection.responseCode != 200) {
-                def error = connection.errorStream?.text ?: "HTTP ${connection.responseCode}"
-                throw new RuntimeException("Failed to get user info: ${error}")
-            }
-
-            def response = connection.inputStream.text
-            def json = new groovy.json.JsonSlurper().parseText(response) as Map
-            return json.user as Map
-        }
-
         private String generatePAT(String accessToken, String apiUrl) {
             def tokensUrl = "${apiUrl}/tokens"
             def username = System.getProperty("user.name")
@@ -513,49 +555,150 @@ class CmdAuth extends CmdBase implements UsageAware {
             Files.writeString(configFile, "\n${commentLine}\n${exportLine}\n", java.nio.file.StandardOpenOption.APPEND)
         }
 
-        private String findTokenInShellConfig(String token) {
-            def shellConfigInfo = detectShellConfig()
+        @Override
+        void usage(List<String> result) {
+            result << 'Authenticate with Seqera Platform'
+            result << "Usage: nextflow auth $name".toString()
+        }
+    }
 
-            if (shellConfigInfo.configFile) {
-                def content = Files.readString(Paths.get(shellConfigInfo.configFile as String))
-                if (content.contains("export TOWER_ACCESS_TOKEN=${token}")) {
-                    return shellConfigInfo.configFile
-                }
+    class LogoutCmd implements SubCmd {
+
+        @Override
+        String getName() { 'logout' }
+
+        @Override
+        void apply(List<String> args) {
+            if (args.size() > 0) {
+                throw new AbortOperationException("Too many arguments for logout command")
             }
 
-            return null
+            println "Nextflow authentication logout"
+            println ""
+
+            // Check if TOWER_ACCESS_TOKEN is set
+            def existingToken = System.getenv("TOWER_ACCESS_TOKEN")
+            if (!existingToken) {
+                println "No TOWER_ACCESS_TOKEN environment variable found. Already logged out."
+                return
+            }
+
+            // Find token in shell config
+            def configFilePath = findTokenInShellConfig(existingToken)
+            if (!configFilePath) {
+                println "Token found in environment but not in shell config files."
+                println "You may need to manually remove: export TOWER_ACCESS_TOKEN=${existingToken}"
+                return
+            }
+
+            println "Found token in: ${configFilePath}"
+
+            // Prompt user for API URL
+            def apiUrl = promptForApiUrl()
+
+            // Validate token by calling /user-info API
+            try {
+                def userInfo = callUserInfoApi(existingToken, apiUrl)
+                println "Token is valid for user: ${userInfo.userName}"
+
+                // Decode token to get token ID
+                def tokenId = decodeTokenId(existingToken)
+                println "Token ID: ${tokenId}"
+
+                // Delete token via API
+                deleteTokenViaApi(existingToken, apiUrl, tokenId)
+
+                // Remove from shell config
+                removeTokenFromShellConfig(existingToken, configFilePath)
+
+                println "Successfully logged out and removed token."
+
+            } catch (Exception e) {
+                println "Failed to validate or delete token: ${e.message}"
+                println "You may need to manually remove the export line from ${configFilePath}"
+            }
         }
 
-        private Map detectShellConfig() {
-            def shell = System.getenv("SHELL")
-            def homeDir = System.getProperty("user.home")
-            def configFile
-            def shellName
+        private String promptForApiUrl() {
+            System.out.print("Seqera Platform API URL [Default Seqera Cloud, https://api.cloud.seqera.io]: ")
+            System.out.flush()
 
-            if (shell?.contains("zsh")) {
-                shellName = "zsh"
-                configFile = "${homeDir}/.zshrc"
-            } else if (shell?.contains("fish")) {
-                shellName = "fish"
-                configFile = "${homeDir}/.config/fish/config.fish"
-            } else if (shell?.contains("bash")) {
-                shellName = "bash"
-                // Check for .bash_profile first, then .bashrc
-                def bashProfile = "${homeDir}/.bash_profile"
-                def bashrc = "${homeDir}/.bashrc"
-                configFile = Files.exists(Paths.get(bashProfile)) ? bashProfile : bashrc
-            } else {
-                // Unrecognized shell
-                shellName = "unknown"
-                configFile = null
+            def reader = new BufferedReader(new InputStreamReader(System.in))
+            def input = reader.readLine()?.trim()
+
+            return input?.isEmpty() || input == null ? 'https://api.cloud.seqera.io' : input
+        }
+
+        private String decodeTokenId(String token) {
+            try {
+                // Decode base64 token
+                def decoded = new String(Base64.decoder.decode(token), "UTF-8")
+
+                // Parse JSON to extract token ID
+                def json = new groovy.json.JsonSlurper().parseText(decoded) as Map
+                def tokenId = json.tid
+
+                if (!tokenId) {
+                    throw new RuntimeException("No token ID found in decoded token")
+                }
+
+                return tokenId.toString()
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to decode token ID: ${e.message}")
+            }
+        }
+
+        private void deleteTokenViaApi(String token, String apiUrl, String tokenId) {
+            def deleteUrl = "${apiUrl}/tokens/${tokenId}"
+            def connection = new URL(deleteUrl).openConnection() as HttpURLConnection
+            connection.requestMethod = 'DELETE'
+            connection.setRequestProperty('Authorization', "Bearer ${token}")
+
+            if (connection.responseCode != 200 && connection.responseCode != 204) {
+                def error = connection.errorStream?.text ?: "HTTP ${connection.responseCode}"
+                throw new RuntimeException("Failed to delete token: ${error}")
             }
 
-            return [shell: shellName, configFile: configFile]
+            println "Token successfully deleted from Seqera Platform."
+        }
+
+        private void removeTokenFromShellConfig(String token, String configFilePath) {
+            def configFile = Paths.get(configFilePath)
+            def content = Files.readString(configFile)
+
+            // Look for the export line and optional comment above it
+            def exportLine = "export TOWER_ACCESS_TOKEN=\"${token}\""
+            def commentLine = "# Seqera Platform access token"
+
+            def lines = content.split('\n').toList()
+            def newLines = []
+            def i = 0
+
+            while (i < lines.size()) {
+                def currentLine = lines[i]
+
+                // Check if this is the export line we want to remove
+                if (currentLine.trim() == exportLine.trim()) {
+                    // Check if previous line is our comment
+                    if (i > 0 && lines[i-1].trim() == commentLine.trim()) {
+                        // Remove the comment line too (it was just added)
+                        newLines.removeLast()
+                    }
+                    // Skip the export line (don't add it to newLines)
+                } else {
+                    newLines.add(currentLine)
+                }
+                i++
+            }
+
+            // Write back the modified content
+            Files.writeString(configFile, newLines.join('\n'))
+            println "Removed token export from ${configFilePath}"
         }
 
         @Override
         void usage(List<String> result) {
-            result << 'Authenticate with Seqera Platform'
+            result << 'Log out and remove Seqera Platform authentication'
             result << "Usage: nextflow auth $name".toString()
         }
     }
