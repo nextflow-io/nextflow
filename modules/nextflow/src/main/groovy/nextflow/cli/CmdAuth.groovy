@@ -567,19 +567,7 @@ class CmdAuth extends CmdBase implements UsageAware {
             def config = readConfig()
             config['tower.accessToken'] = accessToken
             config['tower.endpoint'] = apiUrl
-
-            // Ask user if they want to enable workflow monitoring by default
-            System.out.print("Enable workflow monitoring for all runs? (Y/n): ")
-            System.out.flush()
-
-            def reader = new BufferedReader(new InputStreamReader(System.in))
-            def input = reader.readLine()?.trim()?.toLowerCase()
-
-            if (input == 'n' || input == 'no') {
-                println "Workflow monitoring not enabled by default. You can enable it per-run with -with-tower."
-            } else {
-                config['tower.enabled'] = true
-            }
+            config['tower.enabled'] = true
 
             writeConfig(config)
         }
