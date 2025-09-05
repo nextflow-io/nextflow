@@ -170,6 +170,22 @@ abstract class BaseScript extends Script implements ExecutionContext {
         binding.invokeMethod(name, args)
     }
 
+    private resolveProcessEntryFlow() {
+        final processName = binding.entryName.substring(8) // Remove 'process:' prefix
+        final processDef = meta.getProcess(processName)
+        if( !processDef ) {
+            def msg = "Unknown process entry name: ${processName}"
+            final allProcessNames = meta.getProcessNames()
+            final guess = allProcessNames.closest(processName)
+            if( guess )
+                msg += " -- Did you mean?\n" + guess.collect { "  $it"}.join('\n')
+            throw new IllegalArgumentException(msg)
+        }
+        // Create a workflow to execute the specified process with parameter mapping
+        def handler = new ProcessEntryHandler(this, session, meta)
+        return handler.createProcessEntryWorkflow(processDef)
+    }
+
     private run0() {
         final result = runScript()
         if( meta.isModule() ) {
@@ -180,19 +196,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
         if( binding.entryName ) {
             // Check for process entry syntax: 'process:NAME'
             if( binding.entryName.startsWith('process:') ) {
-                final processName = binding.entryName.substring(8) // Remove 'process:' prefix
-                final processDef = meta.getProcess(processName)
-                if( !processDef ) {
-                    def msg = "Unknown process entry name: ${processName}"
-                    final allProcessNames = meta.getProcessNames()
-                    final guess = allProcessNames.closest(processName)
-                    if( guess )
-                        msg += " -- Did you mean?\n" + guess.collect { "  $it"}.join('\n')
-                    throw new IllegalArgumentException(msg)
-                }
-                // Create a workflow to execute the specified process with parameter mapping
-                def handler = new ProcessEntryHandler(this, session, meta)
-                entryFlow = handler.createProcessEntryWorkflow(processDef)
+                entryFlow = resolveProcessEntryFlow()
             }
             // Traditional workflow entry
             else if( !(entryFlow=meta.getWorkflow(binding.entryName) ) ) {
@@ -251,8 +255,6 @@ abstract class BaseScript extends Script implements ExecutionContext {
     }
 
     protected abstract Object runScript()
-
-
 
     @Override
     void print(Object object) {
