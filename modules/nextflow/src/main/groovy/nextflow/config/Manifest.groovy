@@ -208,10 +208,12 @@ class Manifest implements ConfigScope {
             affiliation = opts.affiliation as String
             email = opts.email as String
             github = opts.github as String
-            contribution = (opts.contribution as List<String>).stream()
-                .map(c -> ContributionType.valueOf(c.toUpperCase()))
-                .sorted()
-                .toList()
+            contribution = opts.contribution ? 
+                (opts.contribution as List<String>).stream()
+                    .map(c -> ContributionType.valueOf(c.toUpperCase()))
+                    .sorted()
+                    .toList() : 
+                []
             orcid = opts.orcid as String
         }
 
