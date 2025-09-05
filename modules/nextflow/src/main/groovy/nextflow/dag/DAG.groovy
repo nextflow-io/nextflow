@@ -40,6 +40,8 @@ import nextflow.script.params.OutParam
 import nextflow.script.params.OutputsList
 import nextflow.script.params.TupleInParam
 import nextflow.script.params.TupleOutParam
+import nextflow.script.params.v2.ProcessInputs
+import nextflow.script.params.v2.ProcessOutputs
 
 import java.util.concurrent.atomic.AtomicLong
 
@@ -102,6 +104,20 @@ class DAG {
         assert inputs
         assert outputs
         addVertex( Type.PROCESS, label, normalizeInputs(inputs), normalizeOutputs(outputs), process )
+    }
+
+    void addProcessNode( String label, ProcessInputs inputs, ProcessOutputs outputs, TaskProcessor process=null ) {
+        assert label
+        assert inputs!=null
+        assert outputs
+
+        final normalizedInputs = inputs.getParams().collect { p ->
+            new ChannelHandler(channel: p.getChannel(), label: p.getName())
+        }
+        final normalizedOutputs = outputs.getParams().collect { p ->
+            new ChannelHandler(channel: p.getChannel(), label: p.getName())
+        }
+        addVertex( Type.PROCESS, label, normalizedInputs, normalizedOutputs, process )
     }
 
     /**

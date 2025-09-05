@@ -4,13 +4,13 @@
 echo First run
 $NXF_RUN --save_bam_bai | tee stdout
 
-[[ `grep INFO .nextflow.log | grep -c 'Submitted process > fastqc'` == 3 ]] || false
-[[ `grep INFO .nextflow.log | grep -c 'Submitted process > align'` == 3 ]] || false
-[[ `grep INFO .nextflow.log | grep -c 'Submitted process > quant'` == 3 ]] || false
+[[ $(grep INFO .nextflow.log | grep -c 'Submitted process > fastqc') == 3 ]] || false
+[[ $(grep INFO .nextflow.log | grep -c 'Submitted process > align') == 3 ]] || false
+[[ $(grep INFO .nextflow.log | grep -c 'Submitted process > quant') == 3 ]] || false
 
-[[ -f results/fastqc/alpha.fastqc.log ]] || false
-[[ -f results/fastqc/beta.fastqc.log ]] || false
-[[ -f results/fastqc/delta.fastqc.log ]] || false
+[[ -f results/log/alpha.fastqc.log ]] || false
+[[ -f results/log/beta.fastqc.log ]] || false
+[[ -f results/log/delta.fastqc.log ]] || false
 [[ -f results/align/alpha.bai ]] || false
 [[ -f results/align/alpha.bam ]] || false
 [[ -f results/align/beta.bai ]] || false
@@ -21,6 +21,7 @@ $NXF_RUN --save_bam_bai | tee stdout
 [[ -L results/quant/beta ]] || false
 [[ -L results/quant/delta ]] || false
 [[ -f results/samples.csv ]] || false
+[[ -f results/summary.txt ]] || false
 
 
 #
@@ -29,13 +30,13 @@ $NXF_RUN --save_bam_bai | tee stdout
 echo Second run
 $NXF_RUN --save_bam_bai | tee stdout
 
-[[ `grep INFO .nextflow.log | grep -c 'Submitted process > fastqc'` == 3 ]] || false
-[[ `grep INFO .nextflow.log | grep -c 'Submitted process > align'` == 3 ]] || false
-[[ `grep INFO .nextflow.log | grep -c 'Submitted process > quant'` == 3 ]] || false
+[[ $(grep INFO .nextflow.log | grep -c 'Submitted process > fastqc') == 3 ]] || false
+[[ $(grep INFO .nextflow.log | grep -c 'Submitted process > align') == 3 ]] || false
+[[ $(grep INFO .nextflow.log | grep -c 'Submitted process > quant') == 3 ]] || false
 
-[[ -f results/fastqc/alpha.fastqc.log ]] || false
-[[ -f results/fastqc/beta.fastqc.log ]] || false
-[[ -f results/fastqc/delta.fastqc.log ]] || false
+[[ -f results/log/alpha.fastqc.log ]] || false
+[[ -f results/log/beta.fastqc.log ]] || false
+[[ -f results/log/delta.fastqc.log ]] || false
 [[ -f results/align/alpha.bai ]] || false
 [[ -f results/align/alpha.bam ]] || false
 [[ -f results/align/beta.bai ]] || false
@@ -46,6 +47,7 @@ $NXF_RUN --save_bam_bai | tee stdout
 [[ -L results/quant/beta ]] || false
 [[ -L results/quant/delta ]] || false
 [[ -f results/samples.csv ]] || false
+[[ -f results/summary.txt ]] || false
 
 
 #
@@ -56,13 +58,13 @@ rm -rf results
 
 $NXF_RUN --save_bam_bai -resume | tee stdout
 
-[[ `grep INFO .nextflow.log | grep -c 'Cached process > fastqc'` == 3 ]] || false
-[[ `grep INFO .nextflow.log | grep -c 'Cached process > align'` == 3 ]] || false
-[[ `grep INFO .nextflow.log | grep -c 'Cached process > quant'` == 3 ]] || false
+[[ $(grep INFO .nextflow.log | grep -c 'Cached process > fastqc') == 3 ]] || false
+[[ $(grep INFO .nextflow.log | grep -c 'Cached process > align') == 3 ]] || false
+[[ $(grep INFO .nextflow.log | grep -c 'Cached process > quant') == 3 ]] || false
 
-[[ -f results/fastqc/alpha.fastqc.log ]] || false
-[[ -f results/fastqc/beta.fastqc.log ]] || false
-[[ -f results/fastqc/delta.fastqc.log ]] || false
+[[ -f results/log/alpha.fastqc.log ]] || false
+[[ -f results/log/beta.fastqc.log ]] || false
+[[ -f results/log/delta.fastqc.log ]] || false
 [[ -f results/align/alpha.bai ]] || false
 [[ -f results/align/alpha.bam ]] || false
 [[ -f results/align/beta.bai ]] || false
@@ -73,3 +75,4 @@ $NXF_RUN --save_bam_bai -resume | tee stdout
 [[ -L results/quant/beta ]] || false
 [[ -L results/quant/delta ]] || false
 [[ -f results/samples.csv ]] || false
+[[ -f results/summary.txt ]] || false

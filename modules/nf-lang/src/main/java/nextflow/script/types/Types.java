@@ -74,9 +74,6 @@ public class Types {
         if( ClassHelper.isFunctionalInterface(type) )
             return closureName(type);
 
-        if( type.isDerivedFrom(ClassHelper.TUPLE_TYPE) )
-            return tupleName(type);
-
         return typeName(type);
     }
 
@@ -129,7 +126,7 @@ public class Types {
             builder.append(type.getUnresolvedName());
         else if( type.getNodeMetaData(ASTNodeMarker.FULLY_QUALIFIED) != null )
             builder.append(type.getName());
-        else if( hasTypeClass(type) )
+        else if( type.isResolved() )
             builder.append(getName(type.getTypeClass()));
         else
             builder.append(getName(type.getNameWithoutPackage()));
@@ -151,16 +148,6 @@ public class Types {
             if( i > 0 )
                 builder.append(", ");
             builder.append(getName(genericsTypes[i].getType()));
-        }
-    }
-
-    private static boolean hasTypeClass(ClassNode type) {
-        try {
-            type.getTypeClass();
-            return true;
-        }
-        catch( GroovyBugError e ) {
-            return false;
         }
     }
 
