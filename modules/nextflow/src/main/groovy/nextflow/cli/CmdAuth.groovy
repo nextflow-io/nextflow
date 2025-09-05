@@ -400,7 +400,12 @@ class CmdAuth extends CmdBase implements UsageAware {
 
         private boolean isCloudEndpoint(String apiUrl) {
             return apiUrl == 'https://api.cloud.seqera.io' ||
-                   apiUrl == 'https://api.cloud.stage-seqera.io'
+                   apiUrl == 'https://api.cloud.stage-seqera.io' ||
+                   apiUrl == 'https://api.cloud.dev-seqera.io' ||
+                   apiUrl == 'https://cloud.seqera.io/api' ||
+                   apiUrl == 'https://cloud.stage-seqera.io/api' ||
+                   apiUrl == 'https://cloud.dev-seqera.io/api'
+
         }
 
         private void handleEnterpriseAuth(String apiUrl) {
