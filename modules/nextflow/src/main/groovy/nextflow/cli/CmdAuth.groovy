@@ -33,6 +33,7 @@ import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
+import java.util.regex.Pattern
 
 /**
  * Implements the 'nextflow auth' commands
@@ -210,6 +211,11 @@ class CmdAuth extends CmdBase implements UsageAware {
         configText.append("tower {\n")
         towerConfig.each { key, value ->
             def configKey = key.toString().substring(6) // Remove "tower." prefix
+            if (configKey.endsWith('.comment')) {
+                // Skip comment keys - they're handled below
+                return
+            }
+
             if (value instanceof String) {
                 configText.append("    ${configKey} = '${value}'\n")
             } else {
@@ -218,7 +224,19 @@ class CmdAuth extends CmdBase implements UsageAware {
         }
         configText.append("}\n")
 
-        Files.writeString(configFile, configText.toString(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+        def finalConfig = configText.toString()
+
+        // Add workspace comment if available
+        if (config.containsKey('tower.workspaceId.comment')) {
+            def workspaceId = config['tower.workspaceId']
+            def comment = config['tower.workspaceId.comment']
+            finalConfig = finalConfig.replaceAll(
+                /workspaceId = '${Pattern.quote(workspaceId.toString())}'/,
+                "workspaceId = '${workspaceId}'  // ${comment}"
+            )
+        }
+
+        Files.writeString(configFile, finalConfig, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
     }
 
     //
@@ -864,6 +882,7 @@ class CmdAuth extends CmdBase implements UsageAware {
                     } else {
                         def hadWorkspaceId = config.containsKey('tower.workspaceId')
                         config.remove('tower.workspaceId')
+                        config.remove('tower.workspaceId.comment')
                         return hadWorkspaceId
                     }
                 } else if (selection > 0 && selection <= workspaces.size()) {
@@ -874,6 +893,7 @@ class CmdAuth extends CmdBase implements UsageAware {
                     } else {
                         def currentId = config.get('tower.workspaceId')
                         config['tower.workspaceId'] = selectedId
+                        config['tower.workspaceId.comment'] = "${selectedWorkspace.orgName} / ${selectedWorkspace.workspaceFullName}"
                         return currentId != selectedId
                     }
                 } else {
@@ -943,6 +963,7 @@ class CmdAuth extends CmdBase implements UsageAware {
                     } else {
                         def hadWorkspaceId = config.containsKey('tower.workspaceId')
                         config.remove('tower.workspaceId')
+                        config.remove('tower.workspaceId.comment')
                         return hadWorkspaceId
                     }
                 } else if (wsSelection > 0 && wsSelection <= orgWorkspaceList.size()) {
@@ -953,6 +974,7 @@ class CmdAuth extends CmdBase implements UsageAware {
                     } else {
                         def currentId = config.get('tower.workspaceId')
                         config['tower.workspaceId'] = selectedId
+                        config['tower.workspaceId.comment'] = "${selectedWorkspace.orgName} / ${selectedWorkspace.workspaceFullName}"
                         return currentId != selectedId
                     }
                 } else {
