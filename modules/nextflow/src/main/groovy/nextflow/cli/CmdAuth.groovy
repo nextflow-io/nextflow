@@ -20,8 +20,6 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import groovy.yaml.YamlBuilder
-import groovy.yaml.YamlSlurper
 import nextflow.exception.AbortOperationException
 
 import java.awt.Desktop
@@ -132,8 +130,40 @@ class CmdAuth extends CmdBase implements UsageAware {
                 throw new AbortOperationException("Too many arguments for login command")
             }
 
+            // Check if TOWER_ACCESS_TOKEN is already set
+            def existingToken = System.getenv("TOWER_ACCESS_TOKEN")
+            if (existingToken) {
+                println "TOWER_ACCESS_TOKEN environment variable is already set."
+
+                // Try to find the token in shell config files
+                def configFile = findTokenInShellConfig(existingToken)
+                if (configFile) {
+                    println "Token found in: ${configFile}"
+                }
+
+                println "Run `nextflow auth status` to view details."
+                return
+            }
+
             println "Nextflow authentication with Seqera Platform"
             println ""
+
+            // Detect shell and config file
+            def shellConfigInfo = detectShellConfig()
+
+            if (shellConfigInfo.shell == "unknown") {
+                println "Unrecognized shell detected. After authentication, you will need to manually add the TOWER_ACCESS_TOKEN export to your shell configuration file."
+                println ""
+            } else {
+                // Check if config file exists before proceeding
+                def configFile = Paths.get(shellConfigInfo.configFile as String)
+                if (!Files.exists(configFile)) {
+                    throw new AbortOperationException("Shell ${shellConfigInfo.shell} was detected but config file ${shellConfigInfo.configFile} was not found. Please create this file first.")
+                }
+
+                println "A Personal Access Token will be generated and saved to: ${shellConfigInfo.configFile}"
+                println ""
+            }
 
             // Prompt user for API URL
             def apiUrl = promptForApiUrl()
@@ -141,7 +171,7 @@ class CmdAuth extends CmdBase implements UsageAware {
             // Check if this is a cloud endpoint or enterprise
             if (isCloudEndpoint(apiUrl)) {
                 try {
-                    performAuth0Login(apiUrl)
+                    performAuth0Login(apiUrl, shellConfigInfo)
                 } catch (Exception e) {
                     log.debug("Authentication failed", e)
                     throw new AbortOperationException("Authentication failed: ${e.message}")
@@ -162,8 +192,8 @@ class CmdAuth extends CmdBase implements UsageAware {
             return input?.isEmpty() || input == null ? 'https://api.cloud.seqera.io' : input
         }
 
-        private void performAuth0Login(String apiUrl) {
-            println "Opening browser for authentication..."
+        private void performAuth0Login(String apiUrl, Map shellConfigInfo) {
+            println "- Opening browser for authentication..."
 
             // Generate PKCE parameters
             def codeVerifier = generateCodeVerifier()
@@ -179,7 +209,7 @@ class CmdAuth extends CmdBase implements UsageAware {
             // Open browser
             openBrowser(authUrl)
 
-            println "Waiting for authentication to complete..."
+            println "- Waiting for authentication to complete..."
 
             try {
                 // Wait for callback with timeout
@@ -187,11 +217,23 @@ class CmdAuth extends CmdBase implements UsageAware {
 
                 // Exchange code for token
                 def tokenData = exchangeCodeForToken(authCode, codeVerifier)
+                def accessToken = tokenData['access_token'] as String
 
-                // Save credentials
-                saveCredentials('oauth', tokenData['access_token'], apiUrl)
+                // Verify login by calling /user-info
+                def userInfo = callUserInfoApi(accessToken, apiUrl)
+                println "Authentication successful! Logged in as: ${userInfo.userName}"
 
-                println "Authentication successful! Credentials saved to ${getCredentialsPath()}"
+                // Generate PAT
+                def pat = generatePAT(accessToken, apiUrl)
+
+                // Add to shell config or display for manual addition
+                if (shellConfigInfo.shell == "unknown") {
+                    displayTokenForManualSetup(pat)
+                } else {
+                    addTokenToShellConfig(pat, shellConfigInfo)
+                    println "- Personal Access Token generated and added to ${shellConfigInfo.configFile}"
+                    println "Please restart your terminal or run: source ${shellConfigInfo.configFile}"
+                }
 
             } catch (Exception e) {
                 throw new RuntimeException("Authentication timeout or failed: ${e.message}", e)
@@ -358,45 +400,6 @@ class CmdAuth extends CmdBase implements UsageAware {
             return json as Map
         }
 
-        private void saveCredentials(String type, String token, String apiUrl) {
-            def xdgConfigHome = System.getenv("XDG_CONFIG_HOME")
-            def credentialsDir = xdgConfigHome ?
-                Paths.get(xdgConfigHome, "seqera") :
-                Paths.get(System.getProperty("user.home"), ".config", "seqera")
-            Files.createDirectories(credentialsDir)
-
-            def credentialsFile = credentialsDir.resolve("credentials.yml")
-
-            def config = [:]
-            if (Files.exists(credentialsFile)) {
-                try {
-                    def yaml = new YamlSlurper()
-                    config = yaml.parse(credentialsFile.toFile()) as Map ?: [:]
-                } catch (Exception e) {
-                    log.debug("Could not parse existing credentials file", e)
-                    config = [:]
-                }
-            }
-
-            config['default'] = [
-                'type': type,
-                'token': token,
-                'endpoint': apiUrl
-            ]
-
-            def yaml = new YamlBuilder()
-            yaml(config)
-
-            Files.write(credentialsFile, yaml.toString().getBytes("UTF-8"))
-
-            // Set file permissions
-            try {
-                def perms = java.nio.file.attribute.PosixFilePermissions.fromString("rw-r--r--")
-                Files.setPosixFilePermissions(credentialsFile, perms)
-            } catch (Exception e) {
-                log.debug("Could not set file permissions", e)
-            }
-        }
 
         private boolean isCloudEndpoint(String apiUrl) {
             return apiUrl == 'https://api.cloud.seqera.io' ||
@@ -426,18 +429,128 @@ class CmdAuth extends CmdBase implements UsageAware {
                 throw new AbortOperationException("Personal Access Token is required for Seqera Platform Enterprise authentication")
             }
 
-            // Save PAT credentials
-            saveCredentials('pat', pat.trim(), apiUrl)
-            println "Authentication successful! Credentials saved to ${getCredentialsPath()}"
+            // Add PAT to shell config or display for manual addition
+            def shellConfigInfo = detectShellConfig()
+            if (shellConfigInfo.shell == "unknown") {
+                displayTokenForManualSetup(pat.trim())
+            } else {
+                addTokenToShellConfig(pat.trim(), shellConfigInfo)
+                println "Personal Access Token added to ${shellConfigInfo.configFile}"
+                println "Please restart your terminal or run: source ${shellConfigInfo.configFile}"
+            }
         }
 
 
-        private String getCredentialsPath() {
-            def xdgConfigHome = System.getenv("XDG_CONFIG_HOME")
-            def credentialsDir = xdgConfigHome ?
-                Paths.get(xdgConfigHome, "seqera") :
-                Paths.get(System.getProperty("user.home"), ".config", "seqera")
-            return credentialsDir.resolve("credentials.yml").toString()
+        private Map callUserInfoApi(String accessToken, String apiUrl) {
+            def userInfoUrl = "${apiUrl}/user-info"
+            def connection = new URL(userInfoUrl).openConnection() as HttpURLConnection
+            connection.requestMethod = 'GET'
+            connection.setRequestProperty('Authorization', "Bearer ${accessToken}")
+
+            if (connection.responseCode != 200) {
+                def error = connection.errorStream?.text ?: "HTTP ${connection.responseCode}"
+                throw new RuntimeException("Failed to get user info: ${error}")
+            }
+
+            def response = connection.inputStream.text
+            def json = new groovy.json.JsonSlurper().parseText(response) as Map
+            return json.user as Map
+        }
+
+        private String generatePAT(String accessToken, String apiUrl) {
+            def tokensUrl = "${apiUrl}/tokens"
+            def username = System.getProperty("user.name")
+            def timestamp = new Date().format("yyyy-MM-dd-HH-mm")
+            def tokenName = "nextflow-${username}-${timestamp}"
+
+            def requestBody = new groovy.json.JsonBuilder([name: tokenName]).toString()
+
+            def connection = new URL(tokensUrl).openConnection() as HttpURLConnection
+            connection.requestMethod = 'POST'
+            connection.setRequestProperty('Authorization', "Bearer ${accessToken}")
+            connection.setRequestProperty('Content-Type', 'application/json')
+            connection.doOutput = true
+
+            connection.outputStream.withWriter { writer ->
+                writer.write(requestBody)
+            }
+
+            if (connection.responseCode != 200) {
+                def error = connection.errorStream?.text ?: "HTTP ${connection.responseCode}"
+                throw new RuntimeException("Failed to generate PAT: ${error}")
+            }
+
+            def response = connection.inputStream.text
+            def json = new groovy.json.JsonSlurper().parseText(response) as Map
+            return json.accessKey as String
+        }
+
+        private void displayTokenForManualSetup(String pat) {
+            println ""
+            println "=".repeat(60)
+            println "MANUAL SETUP REQUIRED"
+            println "=".repeat(60)
+            println ""
+            println "Please add the following line to your shell configuration file:"
+            println ""
+            println "export TOWER_ACCESS_TOKEN=${pat}"
+            println ""
+            println "Common shell config files:"
+            println "  ~/.bashrc (bash)"
+            println "  ~/.zshrc (zsh)"
+            println "  ~/.config/fish/config.fish (fish)"
+            println ""
+            println "After adding the export, restart your terminal or run 'source <config-file>'"
+            println "=".repeat(60)
+        }
+
+        private void addTokenToShellConfig(String pat, Map shellConfigInfo) {
+            def configFile = Paths.get(shellConfigInfo.configFile as String)
+            def commentLine = "# Seqera Platform access token"
+            def exportLine = "export TOWER_ACCESS_TOKEN=\"${pat}\""
+
+            // Append to existing file (we already checked it exists at command start)
+            Files.writeString(configFile, "\n${commentLine}\n${exportLine}\n", java.nio.file.StandardOpenOption.APPEND)
+        }
+
+        private String findTokenInShellConfig(String token) {
+            def shellConfigInfo = detectShellConfig()
+
+            if (shellConfigInfo.configFile) {
+                def content = Files.readString(Paths.get(shellConfigInfo.configFile as String))
+                if (content.contains("export TOWER_ACCESS_TOKEN=${token}")) {
+                    return shellConfigInfo.configFile
+                }
+            }
+
+            return null
+        }
+
+        private Map detectShellConfig() {
+            def shell = System.getenv("SHELL")
+            def homeDir = System.getProperty("user.home")
+            def configFile
+            def shellName
+
+            if (shell?.contains("zsh")) {
+                shellName = "zsh"
+                configFile = "${homeDir}/.zshrc"
+            } else if (shell?.contains("fish")) {
+                shellName = "fish"
+                configFile = "${homeDir}/.config/fish/config.fish"
+            } else if (shell?.contains("bash")) {
+                shellName = "bash"
+                // Check for .bash_profile first, then .bashrc
+                def bashProfile = "${homeDir}/.bash_profile"
+                def bashrc = "${homeDir}/.bashrc"
+                configFile = Files.exists(Paths.get(bashProfile)) ? bashProfile : bashrc
+            } else {
+                // Unrecognized shell
+                shellName = "unknown"
+                configFile = null
+            }
+
+            return [shell: shellName, configFile: configFile]
         }
 
         @Override
