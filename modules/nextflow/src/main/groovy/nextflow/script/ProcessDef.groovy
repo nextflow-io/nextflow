@@ -139,8 +139,7 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
     String getType() { 'process' }
 
     private String missMatchErrMessage(String name, int expected, int actual) {
-        final ch = expected == 1 ? "channel" : "channels"
-        return "Process `$name` declares ${expected} inputs ${ch} but was called with ${actual} arguments"
+        return "Process `$name` declares ${expected} ${expected == 1 ? 'input' : 'inputs'} but was called with ${actual} ${actual == 1 ? 'argument' : 'arguments'}"
     }
 
     @Override
