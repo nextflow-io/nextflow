@@ -59,7 +59,7 @@ To migrate an existing Nextflow plugin to the {ref}`Nextflow Gradle plugin<gradl
     rootProject.name = '<PLUGIN_NAME>'
     ```
 
-    Replace `PLUGIN_NAME` with your plugin name.
+    Replace `<PLUGIN_NAME>` with your plugin name.
 
 4. In the project root, create a new `build.gradle` file with the following configuration:
 
@@ -88,22 +88,17 @@ To migrate an existing Nextflow plugin to the {ref}`Nextflow Gradle plugin<gradl
             '<EXTENSION_POINT>'
         ]
 
-        publishing {
-            registry {
-                authToken = project.findProperty('npr.apiKey')
-            }
-        }
     }
     ```
 
     Replace the following:
 
-    - `DEPENDENCY`: (Optional) Your plugins dependency libraries. For example, `commons-io:commons-io:2.18.0`.
-    - `PLUGIN_VERSION:` Your plugin version. For example, `0.5.0`.
-    - `MINIMUM_NEXTFLOW_VERSION`: The minimum Nextflow version required to run your plugin. For example, `25.04.0`.
-    - `PROVIDER`: Your name or organization. For example, `acme`.
-    - `CLASS_NAME`: Your plugin class name. For example, `acme.plugin.MyPlugin`.
-    - `EXTENSION_POINT`: Your extension point identifiers that the plugin will implement or expose. For example, `acme.plugin.MyFactory`.
+    - `<DEPENDENCY>`: (Optional) Your plugins dependency libraries. For example, `commons-io:commons-io:2.18.0`.
+    - `<PLUGIN_VERSION>:` Your plugin version. For example, `0.5.0`.
+    - `<MINIMUM_NEXTFLOW_VERSION>`: The minimum Nextflow version required to run your plugin. For example, `25.04.0`.
+    - `<PROVIDER>`: Your name or organization. For example, `acme`.
+    - `<CLASS_NAME>`: Your plugin class name. For example, `acme.plugin.MyPlugin`.
+    - `<EXTENSION_POINT>`: Your extension point identifiers that the plugin will implement or expose. For example, `acme.plugin.MyFactory`.
 
 5. Replace the contents of `Makefile` with the following:
 
