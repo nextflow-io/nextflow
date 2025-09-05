@@ -20,6 +20,7 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.Const
 import nextflow.exception.AbortOperationException
 
 import java.awt.Desktop
@@ -27,7 +28,7 @@ import java.net.ServerSocket
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.Paths
+import java.nio.file.StandardOpenOption
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.concurrent.CompletableFuture
@@ -116,7 +117,27 @@ class CmdAuth extends CmdBase implements UsageAware {
         throw new AbortOperationException(msg)
     }
 
-    // Shared helper methods for both login and logout
+    // Shared methods
+    private String promptForApiUrl() {
+        System.out.print("Seqera Platform API endpoint [Default https://api.cloud.seqera.io]: ")
+        System.out.flush()
+
+        def reader = new BufferedReader(new InputStreamReader(System.in))
+        def input = reader.readLine()?.trim()
+
+        return input?.isEmpty() || input == null ? 'https://api.cloud.seqera.io' : input
+    }
+
+    private boolean isCloudEndpoint(String apiUrl) {
+        return apiUrl == 'https://api.cloud.seqera.io' ||
+               apiUrl == 'https://api.cloud.stage-seqera.io' ||
+               apiUrl == 'https://api.cloud.dev-seqera.io' ||
+               apiUrl == 'https://cloud.seqera.io/api' ||
+               apiUrl == 'https://cloud.stage-seqera.io/api' ||
+               apiUrl == 'https://cloud.dev-seqera.io/api'
+    }
+
+    // Get user info from Seqera Platform
     private Map callUserInfoApi(String accessToken, String apiUrl) {
         def userInfoUrl = "${apiUrl}/user-info"
         def connection = new URL(userInfoUrl).openConnection() as HttpURLConnection
@@ -133,46 +154,75 @@ class CmdAuth extends CmdBase implements UsageAware {
         return json.user as Map
     }
 
-    private String findTokenInShellConfig(String token) {
-        def shellConfigInfo = detectShellConfig()
+    private Path getConfigFile() {
+        return Const.APP_HOME_DIR.resolve('config')
+    }
 
-        if (shellConfigInfo.configFile) {
-            def content = Files.readString(Paths.get(shellConfigInfo.configFile as String))
-            if (content.contains("export TOWER_ACCESS_TOKEN=${token}") || content.contains("export TOWER_ACCESS_TOKEN=\"${token}\"")) {
-                return shellConfigInfo.configFile
+    private Map readConfig() {
+        def configFile = getConfigFile()
+        if (!Files.exists(configFile)) {
+            return [:]
+        }
+
+        try {
+            def configText = Files.readString(configFile)
+            def config = new ConfigSlurper().parse(configText)
+            return config.flatten()
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to read config file ${configFile}: ${e.message}")
+        }
+    }
+
+    private String cleanTowerConfig(String content) {
+        // Remove tower scoped blocks: tower { ... }
+        content = content.replaceAll(/(?ms)tower\s*\{.*?\}/, '')
+        // Remove individual tower.* lines
+        content = content.replaceAll(/(?m)^tower\..*$\n?/, '')
+        // Remove Seqera Platform configuration comment
+        content = content.replaceAll(/\/\/\s*Seqera Platform configuration\s*/, '')
+        // Clean up extra whitespace
+        return content.replaceAll(/\n\n+/, '\n\n').trim() + "\n\n"
+    }
+
+    private void writeConfig(Map config) {
+        def configFile = getConfigFile()
+
+        // Create directory if it doesn't exist
+        if (!Files.exists(configFile.parent)) {
+            Files.createDirectories(configFile.parent)
+        }
+
+        // Read existing config and clean out old tower blocks
+        def configText = new StringBuilder()
+        if (Files.exists(configFile)) {
+            def existingContent = Files.readString(configFile)
+            def cleanedContent = cleanTowerConfig(existingContent)
+            configText.append(cleanedContent)
+        }
+
+        // Write tower config block
+        def towerConfig = config.findAll { key, value ->
+            key.toString().startsWith('tower.')
+        }
+
+        configText.append("// Seqera Platform configuration\n")
+        configText.append("tower {\n")
+        towerConfig.each { key, value ->
+            def configKey = key.toString().substring(6) // Remove "tower." prefix
+            if (value instanceof String) {
+                configText.append("    ${configKey} = '${value}'\n")
+            } else {
+                configText.append("    ${configKey} = ${value}\n")
             }
         }
+        configText.append("}\n")
 
-        return null
+        Files.writeString(configFile, configText.toString(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
     }
 
-    private Map detectShellConfig() {
-        def shell = System.getenv("SHELL")
-        def homeDir = System.getProperty("user.home")
-        def configFile
-        def shellName
-
-        if (shell?.contains("zsh")) {
-            shellName = "zsh"
-            configFile = "${homeDir}/.zshrc"
-        } else if (shell?.contains("fish")) {
-            shellName = "fish"
-            configFile = "${homeDir}/.config/fish/config.fish"
-        } else if (shell?.contains("bash")) {
-            shellName = "bash"
-            // Check for .bash_profile first, then .bashrc
-            def bashProfile = "${homeDir}/.bash_profile"
-            def bashrc = "${homeDir}/.bashrc"
-            configFile = Files.exists(Paths.get(bashProfile)) ? bashProfile : bashrc
-        } else {
-            // Unrecognized shell
-            shellName = "unknown"
-            configFile = null
-        }
-
-        return [shell: shellName, configFile: configFile]
-    }
-
+    //
+    // nextflow auth login
+    //
     class LoginCmd implements SubCmd {
 
         private static final String AUTH0_DOMAIN = "seqera-development.eu.auth0.com"
@@ -188,40 +238,19 @@ class CmdAuth extends CmdBase implements UsageAware {
                 throw new AbortOperationException("Too many arguments for login command")
             }
 
-            // Check if TOWER_ACCESS_TOKEN is already set
-            def existingToken = System.getenv("TOWER_ACCESS_TOKEN")
+            // Check if tower.accessToken is already set
+            def config = readConfig()
+            def existingToken = config['tower.accessToken']
             if (existingToken) {
-                println "TOWER_ACCESS_TOKEN environment variable is already set."
-
-                // Try to find the token in shell config files
-                def configFile = findTokenInShellConfig(existingToken)
-                if (configFile) {
-                    println "Token found in: ${configFile}"
-                }
-
-                println "Run `nextflow auth status` to view details."
+                println "Authentication token is already configured in Nextflow config."
+                println "Config file: ${getConfigFile()}"
+                println "Run 'nextflow auth logout' to remove the current authentication."
                 return
             }
 
             println "Nextflow authentication with Seqera Platform"
+            println " - Authentication will be saved to: ${getConfigFile()}"
             println ""
-
-            // Detect shell and config file
-            def shellConfigInfo = detectShellConfig()
-
-            if (shellConfigInfo.shell == "unknown") {
-                println "Unrecognized shell detected. After authentication, you will need to manually add the TOWER_ACCESS_TOKEN export to your shell configuration file."
-                println ""
-            } else {
-                // Check if config file exists before proceeding
-                def configFile = Paths.get(shellConfigInfo.configFile as String)
-                if (!Files.exists(configFile)) {
-                    throw new AbortOperationException("Shell ${shellConfigInfo.shell} was detected but config file ${shellConfigInfo.configFile} was not found. Please create this file first.")
-                }
-
-                println "A Personal Access Token will be generated and saved to: ${shellConfigInfo.configFile}"
-                println ""
-            }
 
             // Prompt user for API URL
             def apiUrl = promptForApiUrl()
@@ -229,7 +258,7 @@ class CmdAuth extends CmdBase implements UsageAware {
             // Check if this is a cloud endpoint or enterprise
             if (isCloudEndpoint(apiUrl)) {
                 try {
-                    performAuth0Login(apiUrl, shellConfigInfo)
+                    performAuth0Login(apiUrl)
                 } catch (Exception e) {
                     log.debug("Authentication failed", e)
                     throw new AbortOperationException("Authentication failed: ${e.message}")
@@ -240,18 +269,8 @@ class CmdAuth extends CmdBase implements UsageAware {
             }
         }
 
-        private String promptForApiUrl() {
-            System.out.print("Seqera Platform API URL [Default Seqera Cloud, https://api.cloud.seqera.io]: ")
-            System.out.flush()
-
-            def reader = new BufferedReader(new InputStreamReader(System.in))
-            def input = reader.readLine()?.trim()
-
-            return input?.isEmpty() || input == null ? 'https://api.cloud.seqera.io' : input
-        }
-
-        private void performAuth0Login(String apiUrl, Map shellConfigInfo) {
-            println "- Opening browser for authentication..."
+        private void performAuth0Login(String apiUrl) {
+            println " - Opening browser for authentication..."
 
             // Generate PKCE parameters
             def codeVerifier = generateCodeVerifier()
@@ -267,8 +286,6 @@ class CmdAuth extends CmdBase implements UsageAware {
             // Open browser
             openBrowser(authUrl)
 
-            println "- Waiting for authentication to complete..."
-
             try {
                 // Wait for callback with timeout
                 def authCode = callbackFuture.get(5, TimeUnit.MINUTES)
@@ -279,19 +296,14 @@ class CmdAuth extends CmdBase implements UsageAware {
 
                 // Verify login by calling /user-info
                 def userInfo = callUserInfoApi(accessToken, apiUrl)
-                println "Authentication successful! Logged in as: ${userInfo.userName}"
+                println " - Authentication successful! Logged in as: ${userInfo.userName}"
 
                 // Generate PAT
                 def pat = generatePAT(accessToken, apiUrl)
 
-                // Add to shell config or display for manual addition
-                if (shellConfigInfo.shell == "unknown") {
-                    displayTokenForManualSetup(pat)
-                } else {
-                    addTokenToShellConfig(pat, shellConfigInfo)
-                    println "- Personal Access Token generated and added to ${shellConfigInfo.configFile}"
-                    println "Please restart your terminal or run: source ${shellConfigInfo.configFile}"
-                }
+                // Save to config
+                saveAuthToConfig(pat, apiUrl)
+                println " - Seqera Platform configuration saved to ${getConfigFile()}"
 
             } catch (Exception e) {
                 throw new RuntimeException("Authentication timeout or failed: ${e.message}", e)
@@ -352,7 +364,36 @@ class CmdAuth extends CmdBase implements UsageAware {
                         output.println("HTTP/1.1 200 OK")
                         output.println("Content-Type: text/html")
                         output.println()
-                        output.println("<html><body><h1>Authentication successful!</h1><p>You can close this window.</p></body></html>")
+                        output.println("""<html>
+<head>
+    <style>
+        body {
+            font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            text-align: center;
+            padding: 2rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        h1 { color: #1e293b; margin: 0 0 0.5rem; }
+        p { color: #64748b; margin: 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Nextflow authentication successful!</h1>
+        <p>You can now close this window.</p>
+    </div>
+</body>
+</html>""")
                         output.flush()
 
                         future.complete(code)
@@ -407,20 +448,32 @@ class CmdAuth extends CmdBase implements UsageAware {
         private void openBrowser(String url) {
             try {
                 if (Desktop.isDesktopSupported()) {
-                    Desktop.desktop.browse(new URI(url))
-                } else {
-                    // Fallback for systems without Desktop support
-                    def os = System.getProperty("os.name").toLowerCase()
-                    if (os.contains("win")) {
-                        Runtime.runtime.exec("rundll32 url.dll,FileProtocolHandler ${url}")
-                    } else if (os.contains("mac")) {
-                        Runtime.runtime.exec("open ${url}")
-                    } else {
-                        Runtime.runtime.exec("xdg-open ${url}")
+                    def desktop = Desktop.desktop
+                    if (desktop.isSupported(Desktop.Action.BROWSE)) {
+                        desktop.browse(new URI(url))
+                        return
                     }
                 }
-            } catch (Exception e) {
+
+                // Fallback: try OS-specific commands
+                def os = System.getProperty("os.name").toLowerCase()
+                if (os.contains("mac")) {
+                    Runtime.runtime.exec(["open", url] as String[])
+                    return
+                } else if (os.contains("linux")) {
+                    Runtime.runtime.exec(["xdg-open", url] as String[])
+                    return
+                } else if (os.contains("windows")) {
+                    Runtime.runtime.exec(["rundll32", "url.dll,FileProtocolHandler", url] as String[])
+                    return
+                }
+
+                // If all else fails, show URL
                 println "Could not open browser automatically. Please visit: ${url}"
+
+            } catch (Exception e) {
+                log.debug("Failed to open browser", e)
+                println "Failed to open browser automatically. Please visit: ${url}"
             }
         }
 
@@ -458,21 +511,10 @@ class CmdAuth extends CmdBase implements UsageAware {
             return json as Map
         }
 
-
-        private boolean isCloudEndpoint(String apiUrl) {
-            return apiUrl == 'https://api.cloud.seqera.io' ||
-                   apiUrl == 'https://api.cloud.stage-seqera.io' ||
-                   apiUrl == 'https://api.cloud.dev-seqera.io' ||
-                   apiUrl == 'https://cloud.seqera.io/api' ||
-                   apiUrl == 'https://cloud.stage-seqera.io/api' ||
-                   apiUrl == 'https://cloud.dev-seqera.io/api'
-
-        }
-
         private void handleEnterpriseAuth(String apiUrl) {
             println ""
             println "Please generate a Personal Access Token from your Seqera Platform instance."
-            println "You can create one at: ${apiUrl.replace('/api', '').replace('api.', '')}/tokens"
+            println "You can create one at: ${apiUrl.replace('/api', '').replace('://api.', '')}/tokens"
             println ""
 
             System.out.print("Enter your Personal Access Token: ")
@@ -487,17 +529,11 @@ class CmdAuth extends CmdBase implements UsageAware {
                 throw new AbortOperationException("Personal Access Token is required for Seqera Platform Enterprise authentication")
             }
 
-            // Add PAT to shell config or display for manual addition
-            def shellConfigInfo = detectShellConfig()
-            if (shellConfigInfo.shell == "unknown") {
-                displayTokenForManualSetup(pat.trim())
-            } else {
-                addTokenToShellConfig(pat.trim(), shellConfigInfo)
-                println "Personal Access Token added to ${shellConfigInfo.configFile}"
-                println "Please restart your terminal or run: source ${shellConfigInfo.configFile}"
-            }
+            // Save to config
+            saveAuthToConfig(pat.trim(), apiUrl)
+            println "Personal Access Token saved to Nextflow config"
+            println "Config file: ${getConfigFile()}"
         }
-
 
         private String generatePAT(String accessToken, String apiUrl) {
             def tokensUrl = "${apiUrl}/tokens"
@@ -527,38 +563,38 @@ class CmdAuth extends CmdBase implements UsageAware {
             return json.accessKey as String
         }
 
-        private void displayTokenForManualSetup(String pat) {
-            println ""
-            println "=".repeat(60)
-            println "MANUAL SETUP REQUIRED"
-            println "=".repeat(60)
-            println ""
-            println "Please add the following line to your shell configuration file:"
-            println ""
-            println "export TOWER_ACCESS_TOKEN=${pat}"
-            println ""
-            println "Common shell config files:"
-            println "  ~/.bashrc (bash)"
-            println "  ~/.zshrc (zsh)"
-            println "  ~/.config/fish/config.fish (fish)"
-            println ""
-            println "After adding the export, restart your terminal or run 'source <config-file>'"
-            println "=".repeat(60)
-        }
+        private void saveAuthToConfig(String accessToken, String apiUrl) {
+            def config = readConfig()
+            config['tower.accessToken'] = accessToken
+            config['tower.endpoint'] = apiUrl
 
-        private void addTokenToShellConfig(String pat, Map shellConfigInfo) {
-            def configFile = Paths.get(shellConfigInfo.configFile as String)
-            def commentLine = "# Seqera Platform access token"
-            def exportLine = "export TOWER_ACCESS_TOKEN=\"${pat}\""
+            // Ask user if they want to enable workflow monitoring by default
+            System.out.print("Enable workflow monitoring for all runs? (Y/n): ")
+            System.out.flush()
 
-            // Append to existing file (we already checked it exists at command start)
-            Files.writeString(configFile, "\n${commentLine}\n${exportLine}\n", java.nio.file.StandardOpenOption.APPEND)
+            def reader = new BufferedReader(new InputStreamReader(System.in))
+            def input = reader.readLine()?.trim()?.toLowerCase()
+
+            if (input == 'n' || input == 'no') {
+                println "Workflow monitoring not enabled by default. You can enable it per-run with -with-tower."
+            } else {
+                config['tower.enabled'] = true
+            }
+
+            writeConfig(config)
         }
 
         @Override
         void usage(List<String> result) {
             result << 'Authenticate with Seqera Platform'
             result << "Usage: nextflow auth $name".toString()
+            result << ''
+            result << 'This command will:'
+            result << '  1. Prompt for Seqera Platform API endpoint'
+            result << '  2. Open browser for OAuth2 authentication (Cloud) or prompt for PAT (Enterprise)'
+            result << '  3. Generate and save access token to home-directory Nextflow config'
+            result << '  4. Configure tower.accessToken, tower.endpoint, and tower.enabled settings'
+            result << ''
         }
     }
 
@@ -576,57 +612,50 @@ class CmdAuth extends CmdBase implements UsageAware {
             println "Nextflow authentication logout"
             println ""
 
-            // Check if TOWER_ACCESS_TOKEN is set
-            def existingToken = System.getenv("TOWER_ACCESS_TOKEN")
+            // Check if tower.accessToken is set
+            def config = readConfig()
+            def existingToken = config['tower.accessToken']
+            def endpoint = config['tower.endpoint'] ?: 'https://api.cloud.seqera.io'
+
             if (!existingToken) {
-                println "No TOWER_ACCESS_TOKEN environment variable found. Already logged out."
+                println "No authentication token found in Nextflow config. Already logged out."
+                println "Config file: ${getConfigFile()}"
                 return
             }
 
-            // Find token in shell config
-            def configFilePath = findTokenInShellConfig(existingToken)
-            if (!configFilePath) {
-                println "Token found in environment but not in shell config files."
-                println "You may need to manually remove: export TOWER_ACCESS_TOKEN=${existingToken}"
-                return
+            println " - Found authentication token in config file: ${getConfigFile()}"
+
+            // Prompt user for API URL if not already configured
+            def apiUrl = endpoint as String
+            if (!apiUrl || apiUrl.isEmpty()) {
+                apiUrl = promptForApiUrl()
+            } else {
+                println " - Using Seqera Platform endpoint: ${apiUrl}"
             }
-
-            println "Found token in: ${configFilePath}"
-
-            // Prompt user for API URL
-            def apiUrl = promptForApiUrl()
 
             // Validate token by calling /user-info API
             try {
-                def userInfo = callUserInfoApi(existingToken, apiUrl)
-                println "Token is valid for user: ${userInfo.userName}"
+                def userInfo = callUserInfoApi(existingToken as String, apiUrl)
+                println " - Token is valid for user: ${userInfo.userName}"
 
-                // Decode token to get token ID
-                def tokenId = decodeTokenId(existingToken)
-                println "Token ID: ${tokenId}"
+                // Only delete PAT from platform if this is a cloud endpoint
+                if (isCloudEndpoint(apiUrl)) {
+                    def tokenId = decodeTokenId(existingToken as String)
+                    deleteTokenViaApi(existingToken as String, apiUrl, tokenId)
+                } else {
+                    println " - Enterprise installation detected - PAT will not be deleted from platform."
+                }
 
-                // Delete token via API
-                deleteTokenViaApi(existingToken, apiUrl, tokenId)
-
-                // Remove from shell config
-                removeTokenFromShellConfig(existingToken, configFilePath)
-
-                println "Successfully logged out and removed token."
+                removeAuthFromConfig()
 
             } catch (Exception e) {
                 println "Failed to validate or delete token: ${e.message}"
-                println "You may need to manually remove the export line from ${configFilePath}"
+                println "Removing token from config anyway..."
+
+                // Remove from config even if API calls fail
+                removeAuthFromConfig()
+                println "Token removed from Nextflow config."
             }
-        }
-
-        private String promptForApiUrl() {
-            System.out.print("Seqera Platform API URL [Default Seqera Cloud, https://api.cloud.seqera.io]: ")
-            System.out.flush()
-
-            def reader = new BufferedReader(new InputStreamReader(System.in))
-            def input = reader.readLine()?.trim()
-
-            return input?.isEmpty() || input == null ? 'https://api.cloud.seqera.io' : input
         }
 
         private String decodeTokenId(String token) {
@@ -659,47 +688,32 @@ class CmdAuth extends CmdBase implements UsageAware {
                 throw new RuntimeException("Failed to delete token: ${error}")
             }
 
-            println "Token successfully deleted from Seqera Platform."
+            println " - Token successfully deleted from Seqera Platform."
         }
 
-        private void removeTokenFromShellConfig(String token, String configFilePath) {
-            def configFile = Paths.get(configFilePath)
-            def content = Files.readString(configFile)
+        private void removeAuthFromConfig() {
+            def configFile = getConfigFile()
 
-            // Look for the export line and optional comment above it
-            def exportLine = "export TOWER_ACCESS_TOKEN=\"${token}\""
-            def commentLine = "# Seqera Platform access token"
-
-            def lines = content.split('\n').toList()
-            def newLines = []
-            def i = 0
-
-            while (i < lines.size()) {
-                def currentLine = lines[i]
-
-                // Check if this is the export line we want to remove
-                if (currentLine.trim() == exportLine.trim()) {
-                    // Check if previous line is our comment
-                    if (i > 0 && lines[i-1].trim() == commentLine.trim()) {
-                        // Remove the comment line too (it was just added)
-                        newLines.removeLast()
-                    }
-                    // Skip the export line (don't add it to newLines)
-                } else {
-                    newLines.add(currentLine)
-                }
-                i++
+            if (Files.exists(configFile)) {
+                def existingContent = Files.readString(configFile)
+                def cleanedContent = cleanTowerConfig(existingContent)
+                Files.writeString(configFile, cleanedContent, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
             }
 
-            // Write back the modified content
-            Files.writeString(configFile, newLines.join('\n'))
-            println "Removed token export from ${configFilePath}"
+            println " - Authentication removed from Nextflow config."
         }
 
         @Override
         void usage(List<String> result) {
             result << 'Log out and remove Seqera Platform authentication'
             result << "Usage: nextflow auth $name".toString()
+            result << ''
+            result << 'This command will:'
+            result << '  1. Check if tower.accessToken is configured'
+            result << '  2. Validate the token with Seqera Platform'
+            result << '  3. Delete the PAT from Platform (only if Seqera Platform Cloud)'
+            result << '  4. Remove the authentication from Nextflow config'
+            result << ''
         }
     }
 }
