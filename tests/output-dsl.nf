@@ -20,10 +20,10 @@ params.save_bam_bai = false
 
 process fastqc {
   input:
-  val id
+  id: String
 
   output:
-  tuple val(id), path('*.fastqc.log')
+  tuple(id, file('*.fastqc.log'))
 
   script:
   """
@@ -33,11 +33,11 @@ process fastqc {
 
 process align {
   input:
-  val id
+  id: String
 
   output:
-  tuple val(id), path('*.bam')
-  tuple val(id), path('*.bai')
+  bam = tuple(id, file('*.bam'))
+  bai = tuple(id, file('*.bai'))
 
   script:
   """
@@ -48,10 +48,10 @@ process align {
 
 process quant {
   input:
-  val id
+  id: String
 
   output:
-  tuple val(id), path('quant')
+  tuple(id, file('quant'))
 
   script:
   '''
@@ -64,10 +64,10 @@ process quant {
 
 process summary {
   input:
-  path logs
+  logs: Bag<Path>
 
   output:
-  tuple path('summary_report.html'), path('summary_data/data.json'), path('summary_data/fastqc.txt')
+  tuple(file('summary_report.html'), file('summary_data/data.json'), file('summary_data/fastqc.txt'))
 
   script:
   '''
