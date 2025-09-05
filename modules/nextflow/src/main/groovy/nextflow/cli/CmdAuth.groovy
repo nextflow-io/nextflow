@@ -64,6 +64,7 @@ class CmdAuth extends CmdBase implements UsageAware {
     CmdAuth() {
         commands.add(new LoginCmd())
         commands.add(new LogoutCmd())
+        commands.add(new ConfigCmd())
     }
 
     void usage() {
@@ -701,6 +702,298 @@ class CmdAuth extends CmdBase implements UsageAware {
             result << '  2. Validate the token with Seqera Platform'
             result << '  3. Delete the PAT from Platform (only if Seqera Platform Cloud)'
             result << '  4. Remove the authentication from Nextflow config'
+            result << ''
+        }
+    }
+
+    //
+    // nextflow auth config
+    //
+    class ConfigCmd implements SubCmd {
+
+        @Override
+        String getName() { 'config' }
+
+        @Override
+        void apply(List<String> args) {
+            if (args.size() > 0) {
+                throw new AbortOperationException("Too many arguments for config command")
+            }
+
+            // Check if user is authenticated
+            def config = readConfig()
+            def existingToken = config['tower.accessToken'] ?: System.getenv('TOWER_ACCESS_TOKEN')
+            def endpoint = config['tower.endpoint'] ?: 'https://api.cloud.seqera.io'
+
+            if (!existingToken) {
+                println "No authentication found. Please run 'nextflow auth login' first."
+                return
+            }
+
+            println "Nextflow Seqera Platform configuration"
+            println " - Config file: ${getConfigFile()}"
+
+            try {
+                // Get user info to validate token and get user ID
+                def userInfo = callUserInfoApi(existingToken as String, endpoint as String)
+                println " - Authenticated as: ${userInfo.userName}"
+                println ""
+
+                // Track if any changes are made
+                def configChanged = false
+
+                // Configure tower.enabled
+                configChanged |= configureEnabled(config)
+
+                // Configure workspace
+                configChanged |= configureWorkspace(config, existingToken as String, endpoint as String, userInfo.id as String)
+
+                // Save updated config only if changes were made
+                if (configChanged) {
+                    writeConfig(config)
+                    println " - Configuration saved to ${getConfigFile()}"
+                }
+
+            } catch (Exception e) {
+                throw new AbortOperationException("Failed to configure settings: ${e.message}")
+            }
+        }
+
+        private boolean configureEnabled(Map config) {
+            def currentEnabled = config.get('tower.enabled', false)
+
+            println "Workflow monitoring settings:"
+            println "  Current: ${currentEnabled ? 'enabled' : 'disabled'}"
+            println "  When enabled, all workflow runs are automatically monitored by Seqera Platform"
+            println "  When disabled, you can enable per-run with the -with-tower flag"
+            println ""
+
+            System.out.print("Enable workflow monitoring for all runs? (${currentEnabled ? 'Y/n' : 'y/N'}): ")
+            System.out.flush()
+
+            def reader = new BufferedReader(new InputStreamReader(System.in))
+            def input = reader.readLine()?.trim()?.toLowerCase()
+
+            if (input.isEmpty()) {
+                // Keep current setting if user just presses enter
+                return false
+            } else if (input == 'y' || input == 'yes') {
+                if (!currentEnabled) {
+                    config['tower.enabled'] = true
+                    return true
+                } else {
+                    return false
+                }
+            } else if (input == 'n' || input == 'no') {
+                if (currentEnabled) {
+                    config.remove('tower.enabled') // Don't set it to false, just remove it
+                    return true
+                } else {
+                    return false
+                }
+            } else {
+                println "Invalid input."
+                return false
+            }
+        }
+
+        private boolean configureWorkspace(Map config, String accessToken, String endpoint, String userId) {
+            // Get all workspaces for the user
+            def workspaces = getUserWorkspaces(accessToken, endpoint, userId)
+
+            if (!workspaces) {
+                println "\nNo workspaces found for your account."
+                return false
+            }
+
+            // Show current workspace (check both config and env var)
+            def currentWorkspaceId = config.get('tower.workspaceId')
+            def envWorkspaceId = System.getenv('TOWER_WORKFLOW_ID')
+            def effectiveWorkspaceId = currentWorkspaceId ?: envWorkspaceId
+            def currentWorkspace = workspaces.find { ((Map)it).workspaceId.toString() == effectiveWorkspaceId?.toString() }
+
+            println "Default workspace settings:"
+            if (currentWorkspace) {
+                def workspace = currentWorkspace as Map
+                def source = currentWorkspaceId ? "config" : (envWorkspaceId ? "TOWER_WORKFLOW_ID env var" : "config")
+                println "  Current: ${workspace.orgName} / ${workspace.workspaceFullName} (from ${source})"
+            } else if (envWorkspaceId) {
+                println "  Current: TOWER_WORKFLOW_ID=${envWorkspaceId} (workspace not found in available workspaces)"
+            } else {
+                println "  Current: Personal workspace (default)"
+            }
+            println ""
+
+            // Group by organization
+            def orgWorkspaces = workspaces.groupBy { ((Map)it).orgName ?: 'Personal' }
+
+            // If 8 or fewer total options, show all at once
+            if (workspaces.size() <= 8) {
+                return selectWorkspaceFromAll(config, workspaces, currentWorkspaceId, envWorkspaceId)
+            } else {
+                // Two-stage selection: org first, then workspace
+                return selectWorkspaceByOrg(config, orgWorkspaces, currentWorkspaceId, envWorkspaceId)
+            }
+        }
+
+        private boolean selectWorkspaceFromAll(Map config, List workspaces, def currentWorkspaceId, def envWorkspaceId) {
+            println "Select default workspace:"
+            println "  0. Personal workspace (no organization)"
+
+            workspaces.eachWithIndex { workspace, index ->
+                def ws = workspace as Map
+                def prefix = ws.orgName ? "${ws.orgName} / " : ""
+                println "  ${index + 1}. ${prefix}${ws.workspaceFullName}"
+            }
+
+            System.out.print("Select workspace (0-${workspaces.size()}, Enter to keep current): ")
+            System.out.flush()
+
+            def reader = new BufferedReader(new InputStreamReader(System.in))
+            def input = reader.readLine()?.trim()
+
+            if (input.isEmpty()) {
+                return false
+            }
+
+            try {
+                def selection = Integer.parseInt(input)
+                if (selection == 0) {
+                    if (envWorkspaceId) {
+                        return false
+                    } else {
+                        def hadWorkspaceId = config.containsKey('tower.workspaceId')
+                        config.remove('tower.workspaceId')
+                        return hadWorkspaceId
+                    }
+                } else if (selection > 0 && selection <= workspaces.size()) {
+                    def selectedWorkspace = workspaces[selection - 1] as Map
+                    def selectedId = selectedWorkspace.workspaceId.toString()
+                    if (envWorkspaceId && selectedId == envWorkspaceId) {
+                        return false
+                    } else {
+                        def currentId = config.get('tower.workspaceId')
+                        config['tower.workspaceId'] = selectedId
+                        return currentId != selectedId
+                    }
+                } else {
+                    println "Invalid selection."
+                    return false
+                }
+            } catch (NumberFormatException e) {
+                println "Invalid input."
+                return false
+            }
+        }
+
+        private boolean selectWorkspaceByOrg(Map config, Map orgWorkspaces, def currentWorkspaceId, def envWorkspaceId) {
+            // First, select organization
+            def orgs = orgWorkspaces.keySet().toList()
+
+            println "Select organization:"
+            orgs.eachWithIndex { orgName, index ->
+                println "  ${index + 1}. ${orgName}"
+            }
+
+            System.out.print("Select organization (1-${orgs.size()}, Enter to keep current): ")
+            System.out.flush()
+
+            def reader = new BufferedReader(new InputStreamReader(System.in))
+            def orgInput = reader.readLine()?.trim()
+
+            if (orgInput.isEmpty()) {
+                return false
+            }
+
+            try {
+                def orgSelection = Integer.parseInt(orgInput)
+                if (orgSelection < 1 || orgSelection > orgs.size()) {
+                    println "Invalid selection."
+                    return false
+                }
+
+                def selectedOrgName = orgs[orgSelection - 1]
+                def orgWorkspaceList = orgWorkspaces[selectedOrgName] as List
+
+                println ""
+                println "Select workspace in ${selectedOrgName}:"
+
+                if (selectedOrgName == 'Personal') {
+                    println "  0. Personal workspace (default)"
+                }
+
+                orgWorkspaceList.eachWithIndex { workspace, index ->
+                    def ws = workspace as Map
+                    println "  ${index + 1}. ${ws.workspaceFullName}"
+                }
+
+                def maxSelection = orgWorkspaceList.size()
+                System.out.print("Select workspace (${selectedOrgName == 'Personal' ? '0-' : '1-'}${maxSelection}, Enter to keep current): ")
+                System.out.flush()
+
+                def wsInput = reader.readLine()?.trim()
+                if (wsInput.isEmpty()) {
+                    return false
+                }
+
+                def wsSelection = Integer.parseInt(wsInput)
+                if (selectedOrgName == 'Personal' && wsSelection == 0) {
+                    if (envWorkspaceId) {
+                        return false
+                    } else {
+                        def hadWorkspaceId = config.containsKey('tower.workspaceId')
+                        config.remove('tower.workspaceId')
+                        return hadWorkspaceId
+                    }
+                } else if (wsSelection > 0 && wsSelection <= orgWorkspaceList.size()) {
+                    def selectedWorkspace = orgWorkspaceList[wsSelection - 1] as Map
+                    def selectedId = selectedWorkspace.workspaceId.toString()
+                    if (envWorkspaceId && selectedId == envWorkspaceId) {
+                        return false
+                    } else {
+                        def currentId = config.get('tower.workspaceId')
+                        config['tower.workspaceId'] = selectedId
+                        return currentId != selectedId
+                    }
+                } else {
+                    println "Invalid selection."
+                    return false
+                }
+
+            } catch (NumberFormatException e) {
+                println "Invalid input."
+                return false
+            }
+        }
+
+        private List getUserWorkspaces(String accessToken, String endpoint, String userId) {
+            def workspacesUrl = "${endpoint}/user/${userId}/workspaces"
+            def connection = new URL(workspacesUrl).openConnection() as HttpURLConnection
+            connection.requestMethod = 'GET'
+            connection.setRequestProperty('Authorization', "Bearer ${accessToken}")
+
+            if (connection.responseCode != 200) {
+                def error = connection.errorStream?.text ?: "HTTP ${connection.responseCode}"
+                throw new RuntimeException("Failed to get workspaces: ${error}")
+            }
+
+            def response = connection.inputStream.text
+            def json = new groovy.json.JsonSlurper().parseText(response) as Map
+            def orgsAndWorkspaces = json.orgsAndWorkspaces as List
+
+            // Filter to only include actual workspaces (where workspaceId is not null)
+            return orgsAndWorkspaces.findAll { ((Map)it).workspaceId != null }
+        }
+
+        @Override
+        void usage(List<String> result) {
+            result << 'Configure Seqera Platform settings'
+            result << "Usage: nextflow auth $name".toString()
+            result << ''
+            result << 'This command will:'
+            result << '  1. Check authentication status'
+            result << '  2. Configure tower.enabled setting for workflow monitoring'
+            result << '  3. Configure default workspace (tower.workspaceId)'
             result << ''
         }
     }
