@@ -131,13 +131,13 @@ final class TaskPath implements Path, PathEscapeAware {
     boolean isAbsolute() { false }
 
     @Override
-    Path getRoot() { return null }
+    Path getRoot() { throw new UnsupportedOperationException("getRoot() is not implement on TaskPath") }
 
     @Override
     Path getFileName() { Paths.get(alias) }
 
     @Override
-    Path getParent() { return null }
+    Path getParent() { throw new UnsupportedOperationException("getParent() is not implement on TaskPath") }
 
     @Override
     int getNameCount() { getFileName().getNameCount() }
