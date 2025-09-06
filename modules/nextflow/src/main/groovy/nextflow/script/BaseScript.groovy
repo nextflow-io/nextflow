@@ -176,20 +176,51 @@ abstract class BaseScript extends Script implements ExecutionContext {
             return result
         }
 
-        // if an `entryName` was specified via the command line, override the `entryFlow` to be executed
-        if( binding.entryName && !(entryFlow=meta.getWorkflow(binding.entryName) ) ) {
-            def msg = "Unknown workflow entry name: ${binding.entryName}"
-            final allNames = meta.getWorkflowNames()
-            final guess = allNames.closest(binding.entryName)
-            if( guess )
-                msg += " -- Did you mean?\n" + guess.collect { "  $it"}.join('\n')
-            throw new IllegalArgumentException(msg)
+        // if an `entryName` was specified via the command line, resolve it to an entryFlow
+        if( binding.entryName ) {
+            // Check for process entry syntax: 'process:NAME'
+            if( binding.entryName.startsWith('process:') ) {
+                final processName = binding.entryName.substring(8) // Remove 'process:' prefix
+                final processDef = meta.getProcess(processName)
+                if( !processDef ) {
+                    def msg = "Unknown process entry name: ${processName}"
+                    final allProcessNames = meta.getProcessNames()
+                    final guess = allProcessNames.closest(processName)
+                    if( guess )
+                        msg += " -- Did you mean?\n" + guess.collect { "  $it"}.join('\n')
+                    throw new IllegalArgumentException(msg)
+                }
+                // Create a workflow to execute the specified process with parameter mapping
+                def handler = new ProcessEntryHandler(this, session, meta)
+                entryFlow = handler.createProcessEntryWorkflow(processDef)
+            }
+            // Traditional workflow entry
+            else if( !(entryFlow=meta.getWorkflow(binding.entryName) ) ) {
+                def msg = "Unknown workflow entry name: ${binding.entryName}"
+                final allNames = meta.getWorkflowNames()
+                final guess = allNames.closest(binding.entryName)
+                if( guess )
+                    msg += " -- Did you mean?\n" + guess.collect { "  $it"}.join('\n')
+                throw new IllegalArgumentException(msg)
+            }
         }
 
         if( !entryFlow ) {
             if( meta.getLocalWorkflowNames() )
                 throw new AbortOperationException("No entry workflow specified")
-            return result
+            // Check if we have a single standalone process that can be executed automatically
+            if( meta.hasSingleExecutableProcess() ) {
+                // Create a workflow to execute the single process
+                def handler = new ProcessEntryHandler(this, session, meta)
+                entryFlow = handler.createSingleProcessWorkflow()
+            }
+            // Check if we have multiple processes that require -entry specification
+            else if( meta.hasMultipleExecutableProcesses() ) {
+                def processNames = meta.getLocalProcessNames()
+                throw new AbortOperationException("Multiple processes found (${processNames.join(', ')}). Use -entry process:NAME to specify which process to execute.")
+            } else {
+                return result
+            }
         }
 
         // invoke the entry workflow
@@ -220,6 +251,8 @@ abstract class BaseScript extends Script implements ExecutionContext {
     }
 
     protected abstract Object runScript()
+
+
 
     @Override
     void print(Object object) {

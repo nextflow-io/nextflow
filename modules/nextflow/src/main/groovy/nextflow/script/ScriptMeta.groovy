@@ -301,6 +301,42 @@ class ScriptMeta {
         return result
     }
 
+    /**
+     * Check if this script has a single standalone process that can be executed
+     * automatically without requiring the -entry option
+     * 
+     * @return true if the script has exactly one process and no workflows
+     */
+    boolean hasSingleExecutableProcess() {
+        // Don't allow execution of true modules (those are meant for inclusion)
+        if( isModule() ) return false
+        
+        // Must have exactly one process
+        def processNames = getLocalProcessNames()
+        if( processNames.size() != 1 ) return false
+        
+        // Must not have any workflow definitions (including unnamed workflow)
+        return getLocalWorkflowNames().isEmpty()
+    }
+
+    /**
+     * Check if this script has multiple standalone processes that require
+     * the -entry process:NAME option to specify which one to execute
+     * 
+     * @return true if the script has multiple processes and no workflows
+     */
+    boolean hasMultipleExecutableProcesses() {
+        // Don't allow execution of true modules (those are meant for inclusion)
+        if( isModule() ) return false
+        
+        // Must have more than one process
+        def processNames = getLocalProcessNames()
+        if( processNames.size() <= 1 ) return false
+        
+        // Must not have any workflow definitions (including unnamed workflow)
+        return getLocalWorkflowNames().isEmpty()
+    }
+
     void addModule(BaseScript script, String name, String alias) {
        addModule(get(script), name, alias)
     }
