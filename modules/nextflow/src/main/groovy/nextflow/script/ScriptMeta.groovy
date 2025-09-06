@@ -302,36 +302,18 @@ class ScriptMeta {
     }
 
     /**
-     * Check if this script has a single standalone process that can be executed
-     * automatically without requiring the -entry option
+     * Check if this script has standalone processes that can be executed
+     * automatically without requiring workflows
      * 
-     * @return true if the script has exactly one process and no workflows
+     * @return true if the script has one or more processes and no workflows
      */
-    boolean hasSingleExecutableProcess() {
+    boolean hasExecutableProcesses() {
         // Don't allow execution of true modules (those are meant for inclusion)
         if( isModule() ) return false
         
-        // Must have exactly one process
+        // Must have at least one process
         def processNames = getLocalProcessNames()
-        if( processNames.size() != 1 ) return false
-        
-        // Must not have any workflow definitions (including unnamed workflow)
-        return getLocalWorkflowNames().isEmpty()
-    }
-
-    /**
-     * Check if this script has multiple standalone processes that require
-     * the -entry process:NAME option to specify which one to execute
-     * 
-     * @return true if the script has multiple processes and no workflows
-     */
-    boolean hasMultipleExecutableProcesses() {
-        // Don't allow execution of true modules (those are meant for inclusion)
-        if( isModule() ) return false
-        
-        // Must have more than one process
-        def processNames = getLocalProcessNames()
-        if( processNames.size() <= 1 ) return false
+        if( processNames.isEmpty() ) return false
         
         // Must not have any workflow definitions (including unnamed workflow)
         return getLocalWorkflowNames().isEmpty()
