@@ -854,7 +854,7 @@ The following settings are available:
   ```
   :::
 
-  :::{warn}
+  :::{warning}
   This option leaks credentials is the task launcher script. It should only be used for testing and development purposes.
   :::
 
