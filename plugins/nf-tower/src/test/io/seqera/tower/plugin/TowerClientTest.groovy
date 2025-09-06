@@ -24,7 +24,6 @@ import java.time.OffsetDateTime
 import java.time.ZoneId
 
 import io.seqera.http.HxClient
-import io.seqera.http.HxConfig
 import nextflow.Session
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
@@ -76,7 +75,6 @@ class TowerClientTest extends Specification {
         def tower = Spy(TowerClient)
         tower.@runName = session.runName
         tower.@workflowId = '12ef'
-        tower.@terminated = true
 
         when:
         def map = tower.makeCompleteReq(session)
