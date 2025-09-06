@@ -13,10 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-apply plugin: 'java'
-apply plugin: 'java-test-fixtures'
-apply plugin: 'idea'
-apply plugin: 'groovy'
+plugins {
+    id 'io.nextflow.nextflow-plugin' version '1.0.0-beta.6'
+    id 'java-test-fixtures'
+}
+
+group = 'io.nextflow'
+version = '0.3.0'
+
+nextflowPlugin {
+    nextflowVersion = '25.07.0-edge'
+
+    provider = 'nextflow'
+    description = 'Provides seamless integration with AWS CodeCommit repositories for workflow source code management and version control'
+    className = 'nextflow.cloud.aws.codecommit.AwsCodeCommitPlugin'
+    extensionPoints = [
+        'nextflow.cloud.aws.codecommit.AwsCodeCommitFactory'
+    ]
+}
 
 sourceSets {
     main.java.srcDirs = []

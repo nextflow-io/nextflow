@@ -1,7 +1,0 @@
-Manifest-Version: 1.0
-Plugin-Class: io.seqera.wave.plugin.WavePlugin
-Plugin-Id: nf-wave
-Plugin-Version: 1.14.1
-Plugin-Provider: Seqera Labs
-Plugin-Requires: >=25.07.0-edge
-Plugin-Description: Provides dynamic container building and augmentation capabilities with on-demand software installation and advanced container management features
