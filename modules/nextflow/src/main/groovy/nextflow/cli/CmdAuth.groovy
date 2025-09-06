@@ -66,6 +66,7 @@ class CmdAuth extends CmdBase implements UsageAware {
         commands.add(new LoginCmd())
         commands.add(new LogoutCmd())
         commands.add(new ConfigCmd())
+        commands.add(new StatusCmd())
     }
 
     void usage() {
@@ -387,7 +388,7 @@ class CmdAuth extends CmdBase implements UsageAware {
 <head>
     <style>
         body {
-            font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: Inter, sans-serif;
             margin: 0;
             padding: 0;
             display: flex;
@@ -396,13 +397,16 @@ class CmdAuth extends CmdBase implements UsageAware {
             min-height: 100vh;
         }
         .container {
-            text-align: center;
             padding: 2rem;
             background: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(69, 63, 81, .2);
         }
-        h1 { color: #1e293b; margin: 0 0 0.5rem; }
+        h1 {
+            color: #1e293b;
+            margin: 0 0 1rem;
+            font-size: 21px;
+            font-weight: 600;
+        }
         p { color: #64748b; margin: 0; }
     </style>
 </head>
@@ -412,7 +416,8 @@ class CmdAuth extends CmdBase implements UsageAware {
         <p>You can now close this window.</p>
     </div>
 </body>
-</html>""")
+</html>
+""")
                         output.flush()
 
                         future.complete(code)
@@ -1016,6 +1021,171 @@ class CmdAuth extends CmdBase implements UsageAware {
             result << '  1. Check authentication status'
             result << '  2. Configure tower.enabled setting for workflow monitoring'
             result << '  3. Configure default workspace (tower.workspaceId)'
+            result << ''
+        }
+    }
+
+    class StatusCmd implements SubCmd {
+
+        @Override
+        String getName() { 'status' }
+
+        @Override
+        void apply(List<String> args) {
+            if (args.size() > 0) {
+                throw new AbortOperationException("Too many arguments for status command")
+            }
+
+            def config = readConfig()
+
+            println "Nextflow Seqera Platform authentication status"
+            println ""
+
+            // API endpoint
+            def endpointInfo = getConfigValue(config, 'tower.endpoint', 'TOWER_API_ENDPOINT', 'https://api.cloud.seqera.io')
+            println "API endpoint: ${endpointInfo.value} (${endpointInfo.source})"
+
+            // API connection check
+            def apiConnectionOk = checkApiConnection(endpointInfo.value as String)
+            println "API connection check: ${apiConnectionOk ? 'OK' : 'ERROR'}"
+
+            // Access token status
+            def tokenInfo = getConfigValue(config, 'tower.accessToken', 'TOWER_ACCESS_TOKEN')
+            if (tokenInfo.value) {
+                println "Access token: Configured (${tokenInfo.source})"
+            } else {
+                println "Access token: Not configured"
+            }
+
+            // Authentication check
+            if (tokenInfo.value) {
+                try {
+                    def userInfo = callUserInfoApi(tokenInfo.value as String, endpointInfo.value as String)
+                    def currentUser = userInfo.userName
+                    println "Authentication: Success (${currentUser})"
+                } catch (Exception e) {
+                    println "Authentication: Error (${e})"
+                }
+            } else {
+                println "Authentication: ERROR (no token)"
+            }
+
+            // Monitoring enabled
+            def enabledInfo = getConfigValue(config, 'tower.enabled', null, 'false')
+            def enabledValue = enabledInfo.value?.toString()?.toLowerCase() in ['true', '1', 'yes'] ? 'Yes' : 'No'
+            println "Local workflow monitoring enabled: ${enabledValue} (${enabledInfo.source ?: 'default'})"
+
+            // Default workspace
+            def workspaceInfo = getConfigValue(config, 'tower.workspaceId', 'TOWER_WORKFLOW_ID')
+            if (workspaceInfo.value) {
+                // Try to get workspace name from API if we have a token
+                def workspaceName = null
+                if (tokenInfo.value) {
+                    workspaceName = getWorkspaceNameFromApi(tokenInfo.value as String, endpointInfo.value as String, workspaceInfo.value as String)
+                }
+
+                if (workspaceName) {
+                    println "Default workspace: '${workspaceName}' [${workspaceInfo.value}] (${workspaceInfo.source})"
+                } else {
+                    println "Default workspace: ${workspaceInfo.value} (${workspaceInfo.source})"
+                }
+            } else {
+                println "Default workspace: Personal workspace (default)"
+            }
+        }
+
+        private String shortenPath(String path) {
+            def userHome = System.getProperty('user.home')
+            if (path.startsWith(userHome)) {
+                return '~' + path.substring(userHome.length())
+            }
+            return path
+        }
+
+        private Map getConfigValue(Map config, String configKey, String envVarName, String defaultValue = null) {
+            def configValue = config[configKey]
+            def envValue = envVarName ? System.getenv(envVarName) : null
+            def effectiveValue = configValue ?: envValue ?: defaultValue
+
+            def source = null
+            if (configValue) {
+                source = shortenPath(getConfigFile().toString())
+            } else if (envValue) {
+                source = "env var \$${envVarName}"
+            } else if (defaultValue) {
+                source = "default"
+            }
+
+            return [
+                value: effectiveValue,
+                source: source,
+                fromConfig: configValue != null,
+                fromEnv: envValue != null,
+                isDefault: !configValue && !envValue
+            ]
+        }
+
+        private String getWorkspaceNameFromApi(String accessToken, String endpoint, String workspaceId) {
+            try {
+                // Get user info to get user ID
+                def userInfo = callUserInfoApi(accessToken, endpoint)
+                def userId = userInfo.id as String
+
+                // Get workspaces for the user
+                def workspacesUrl = "${endpoint}/user/${userId}/workspaces"
+                def connection = new URL(workspacesUrl).openConnection() as HttpURLConnection
+                connection.requestMethod = 'GET'
+                connection.connectTimeout = 10000 // 10 second timeout
+                connection.readTimeout = 10000
+                connection.setRequestProperty('Authorization', "Bearer ${accessToken}")
+
+                if (connection.responseCode != 200) {
+                    return null
+                }
+
+                def response = connection.inputStream.text
+                def json = new groovy.json.JsonSlurper().parseText(response) as Map
+                def orgsAndWorkspaces = json.orgsAndWorkspaces as List
+
+                // Find the workspace with matching ID
+                def workspace = orgsAndWorkspaces.find { ((Map)it).workspaceId?.toString() == workspaceId }
+                if (workspace) {
+                    def ws = workspace as Map
+                    return "${ws.orgName} / ${ws.workspaceFullName}"
+                }
+
+                return null
+            } catch (Exception e) {
+                return null
+            }
+        }
+
+        private boolean checkApiConnection(String endpoint) {
+            try {
+                def serviceInfoUrl = "${endpoint}/service-info"
+                def connection = new URL(serviceInfoUrl).openConnection() as HttpURLConnection
+                connection.requestMethod = 'GET'
+                connection.connectTimeout = 10000 // 10 second timeout
+                connection.readTimeout = 10000
+
+                return connection.responseCode == 200
+            } catch (Exception e) {
+                return false
+            }
+        }
+
+
+        @Override
+        void usage(List<String> result) {
+            result << 'Show authentication status and configuration'
+            result << "Usage: nextflow auth $name".toString()
+            result << ''
+            result << 'This command shows:'
+            result << '  - Authentication status (yes/no) and source'
+            result << '  - API endpoint and source'
+            result << '  - Monitoring enabled status and source'
+            result << '  - Default workspace and source'
+            result << '  - System health status (API connection and authentication)'
             result << ''
         }
     }
