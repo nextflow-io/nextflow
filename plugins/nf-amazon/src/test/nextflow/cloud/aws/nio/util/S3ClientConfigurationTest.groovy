@@ -49,9 +49,18 @@ class S3ClientConfigurationTest extends Specification{
         given:
         def props = new Properties()
         def config = new AwsConfig([client: [
-                                             maxConcurrency: 10, maxNativeMemory: '500MB', minimumPartSize: '7MB', multipartThreshold: '32MB',
-                                             targetThroughputInGbps: 15, connectionTimeout: 20000, maxConnections: 100, maxErrorRetry: 3, socketTimeout: 20000,
-                                             proxyHost: 'host.com', proxyPort: 80, proxyScheme: 'https', proxyUsername: 'user', proxyPassword: 'pass']])
+                minimumPartSize: '7MB',
+                multipartThreshold: '32MB',
+                targetThroughputInGbps: 15,
+                connectionTimeout: 20000,
+                maxConnections: 100,
+                maxErrorRetry: 3,
+                socketTimeout: 20000,
+                proxyHost: 'host.com',
+                proxyPort: 80,
+                proxyScheme: 'https',
+                proxyUsername: 'user',
+                proxyPassword: 'pass' ]])
         props.putAll(config.getS3LegacyProperties())
         when:
         def clientConfig = S3AsyncClientConfiguration.create(props)
@@ -59,8 +68,7 @@ class S3ClientConfigurationTest extends Specification{
         def overrideConfig = clientConfig.getClientOverrideConfiguration()
         overrideConfig.retryStrategy().get().maxAttempts() == 4
         // Check Crt performance settings
-        clientConfig.getMaxConcurrency() == 10
-        clientConfig.getMaxNativeMemoryInBytes() == 524288000L
+        clientConfig.getMaxConcurrency() == 100
         clientConfig.getTargetThroughputInGbps() == 15
         // Check multipartConfig
         def multipartConfig = clientConfig.getMultipartConfiguration()
