@@ -122,8 +122,6 @@ class TowerClient implements TraceObserverV2 {
 
     private LinkedHashSet<String> processNames = new LinkedHashSet<>(20)
 
-    private boolean terminated
-
     private Map<String,Integer> schema = Collections.emptyMap()
 
     private int maxRetries = 5
@@ -397,22 +395,22 @@ class TowerClient implements TraceObserverV2 {
      */
     @Override
     void onFlowComplete() {
-        // submit the record
-        events << new ProcessEvent(completed: true)
-        // publish runtime reports
-        reports.publishRuntimeReports()
-        // wait the submission of pending events
-        if( sender )
+        if( sender ) {
+            // submit the completion record
+            events << new ProcessEvent(completed: true)
+            // wait the submission of pending events
             sender.join()
-        // wait and flush reports content
-        reports.flowComplete()
+        }
         // notify the workflow completion
-        terminated = true
         if( workflowId ) {
             final req = makeCompleteReq(session)
             final resp = sendHttpMessage(urlTraceComplete, req, 'PUT')
             logHttpResponse(urlTraceComplete, resp)
         }
+        // publish runtime reports
+        reports.publishRuntimeReports()
+        // wait and flush reports content
+        reports.flowComplete()
     }
 
     @Override
