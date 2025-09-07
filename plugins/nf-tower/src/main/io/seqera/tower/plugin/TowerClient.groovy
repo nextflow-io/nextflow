@@ -402,14 +402,17 @@ class TowerClient implements TraceObserverV2 {
         // publish runtime reports
         reports.publishRuntimeReports()
         // wait the submission of pending events
-        sender.join()
+        if( sender )
+            sender.join()
         // wait and flush reports content
         reports.flowComplete()
         // notify the workflow completion
         terminated = true
-        final req = makeCompleteReq(session)
-        final resp = sendHttpMessage(urlTraceComplete, req, 'PUT')
-        logHttpResponse(urlTraceComplete, resp)
+        if( workflowId ) {
+            final req = makeCompleteReq(session)
+            final resp = sendHttpMessage(urlTraceComplete, req, 'PUT')
+            logHttpResponse(urlTraceComplete, resp)
+        }
     }
 
     @Override
