@@ -184,7 +184,6 @@ tutorials/flux
 
 guides/aws-java-sdk-v2
 guides/gradle-plugin
-guides/plugin-registry
 guides/migrate-plugin
 guides/updating-spot-retries
 ```
