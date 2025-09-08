@@ -16,6 +16,7 @@
 
 package nextflow.script.ast;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -26,6 +27,7 @@ import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.AnnotatedNode;
 import org.codehaus.groovy.ast.AnnotationNode;
 import org.codehaus.groovy.ast.MethodNode;
+import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.ast.PropertyNode;
 import org.codehaus.groovy.ast.Variable;
 import org.codehaus.groovy.ast.expr.ClosureExpression;
@@ -111,6 +113,16 @@ public class ASTUtils {
             return null;
         var closure = (ClosureExpression) lastArg;
         return (BlockStatement) closure.getCode();
+    }
+
+    public static Parameter[] asFlatParams(Parameter[] params) {
+        return Arrays.stream(params)
+            .flatMap((param) -> (
+                param instanceof TupleParameter tp
+                    ? Arrays.stream(tp.components)
+                    : Stream.of(param)
+            ))
+            .toArray(Parameter[]::new);
     }
 
     public static MethodCallExpression asMethodCallX(Statement stmt) {

@@ -18,6 +18,7 @@ package nextflow.script.formatter;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.FeatureFlagNode;
@@ -229,11 +230,7 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     private static int maxParameterWidth(Parameter[] parameters) {
         return Arrays.stream(parameters)
-            .map(param -> (
-                param instanceof TupleParameter tp
-                    ? tp.components.stream().mapToInt(p -> 2 + p.getName().length()).sum()
-                    : param.getName().length()
-            ))
+            .map(param -> parameterWidth(param))
             .max(Integer::compare).orElse(0);
     }
 
@@ -318,11 +315,11 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             fmt.appendIndent();
             if( input instanceof TupleParameter tp ) {
                 fmt.append('(');
-                fmt.append(tp.components.get(0).getName());
-                for( int i = 1; i < tp.components.size(); i++ ) {
-                    fmt.append(", ");
-                    fmt.append(tp.components.get(i).getName());
-                }
+                fmt.append(
+                    Arrays.stream(tp.components)
+                        .map(p -> p.getName())
+                        .collect(Collectors.joining(", "))
+                );
                 fmt.append(')');
             }
             else {
@@ -330,7 +327,7 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             }
             if( fmt.hasType(input) ) {
                 if( alignmentWidth > 0 ) {
-                    var padding = alignmentWidth - input.getName().length() + 1;
+                    var padding = alignmentWidth - parameterWidth(input) + 1;
                     fmt.append(" ".repeat(padding));
                 }
                 fmt.append(": ");
@@ -339,6 +336,12 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             fmt.appendTrailingComment(input);
             fmt.appendNewLine();
         }
+    }
+
+    private static int parameterWidth(Parameter param) {
+        return param instanceof TupleParameter tp
+            ? Arrays.stream(tp.components).mapToInt(p -> 2 + p.getName().length()).sum()
+            : param.getName().length();
     }
 
     private void visitTypedOutputs(List<Statement> outputs) {

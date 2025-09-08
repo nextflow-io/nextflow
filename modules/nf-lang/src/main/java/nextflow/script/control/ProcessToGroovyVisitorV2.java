@@ -19,7 +19,6 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.stream.Stream;
 
 import nextflow.script.ast.ASTNodeMarker;
 import nextflow.script.ast.AssignmentExpression;
@@ -120,18 +119,13 @@ public class ProcessToGroovyVisitorV2 {
     }
 
     private void visitProcessInputs(Parameter[] inputs, BlockStatement stagers) {
-        Arrays.stream(inputs)
-            .flatMap((input) -> (
-                input instanceof TupleParameter tp
-                    ? tp.components.stream()
-                    : Stream.of(input)
-            ))
-            .filter((input) -> isPathType(input.getType()))
-            .forEach((input) -> {
-                var ve = varX(input.getName());
+        for( var param : asFlatParams(inputs) ) {
+            if( isPathType(param.getType()) ) {
+                var ve = varX(param.getName());
                 var stager = stmt(callThisX("stageAs", args(closureX(stmt(ve)))));
                 stagers.addStatement(stager);
-            });
+            }
+        }
     }
 
     private static boolean isPathType(ClassNode cn) {
@@ -248,17 +242,8 @@ public class ProcessToGroovyVisitorV2 {
         var statements = Arrays.stream(inputs)
             .map((input) -> {
                 if( input instanceof TupleParameter tp ) {
-                    var components = tp.components.stream()
-                        .map(p -> (
-                            createX(
-                                "nextflow.script.params.v2.ProcessInput",
-                                args(
-                                    constX(p.getName()),
-                                    classX(p.getType()),
-                                    constX(p.getType().getNodeMetaData(ASTNodeMarker.NULLABLE) != null)
-                                )
-                            )
-                        ))
+                    var components = Arrays.stream(tp.components)
+                        .map(p -> processInputCtor(p))
                         .toList();
                     var type = input.getType();
                     return stmt(callThisX("_input_", args(listX(components), classX(type))));
@@ -272,6 +257,17 @@ public class ProcessToGroovyVisitorV2 {
             })
             .toList();
         return block(null, statements);
+    }
+
+    private Expression processInputCtor(Parameter param) {
+        return createX(
+            "nextflow.script.params.v2.ProcessInput",
+            args(
+                constX(param.getName()),
+                classX(param.getType()),
+                constX(param.getType().getNodeMetaData(ASTNodeMarker.NULLABLE) != null)
+            )
+        );
     }
 
     private Statement processOutputs(Statement outputs) {

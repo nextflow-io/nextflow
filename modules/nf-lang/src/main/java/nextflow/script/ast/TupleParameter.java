@@ -27,9 +27,9 @@ import org.codehaus.groovy.ast.Parameter;
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 public class TupleParameter extends Parameter {
-    public final List<Parameter> components;
+    public final Parameter[] components;
 
-    public TupleParameter(ClassNode type, List<Parameter> components) {
+    public TupleParameter(ClassNode type, Parameter[] components) {
         super(type, "");
         this.components = components;
     }

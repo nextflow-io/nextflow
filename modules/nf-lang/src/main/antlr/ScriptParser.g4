@@ -772,7 +772,12 @@ className
     ;
 
 typeArguments
-    :   LT type (COMMA type)* GT
+    :   LT typeArgument (COMMA typeArgument)* GT
+    ;
+
+typeArgument
+    :   type
+    |   QUESTION
     ;
 
 legacyType

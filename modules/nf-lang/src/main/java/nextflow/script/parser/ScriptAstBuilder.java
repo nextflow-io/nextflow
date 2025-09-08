@@ -498,10 +498,10 @@ public class ScriptAstBuilder {
 
     private TupleParameter processTupleInput(ClassNode type, List<String> names, ParserRuleContext ctx) {
         var componentTypes = tupleComponentTypes(type, names.size());
-        var components = new ArrayList<Parameter>(names.size());
+        var components = new Parameter[names.size()];
         for( int i = 0; i < names.size(); i++ ) {
             var componentType = componentTypes != null ? componentTypes.get(i) : ClassHelper.dynamicType();
-            components.add(param(componentType, names.get(i)));
+            components[i] = param(componentType, names.get(i));
         }
         var result = ast( new TupleParameter(type, components), ctx );
         if( !"Tuple".equals(type.getUnresolvedName()) )
@@ -1891,13 +1891,16 @@ public class ScriptAstBuilder {
     }
 
     private GenericsType[] typeArguments(TypeArgumentsContext ctx) {
-        return ctx.type().stream()
+        return ctx.typeArgument().stream()
             .map(this::genericsType)
             .toArray(GenericsType[]::new);
     }
 
-    private GenericsType genericsType(TypeContext ctx) {
-        return ast( new GenericsType(type(ctx)), ctx );
+    private GenericsType genericsType(TypeArgumentContext ctx) {
+        var type = ctx.QUESTION() != null
+            ? ClassHelper.dynamicType()
+            : type(ctx.type());
+        return ast( new GenericsType(type), ctx );
     }
 
     private ClassNode legacyType(ParserRuleContext ctx) {

@@ -24,11 +24,13 @@ Static type checking is currently only available through the language server as 
 
 The VS Code extension provides a command for automatically migrating Nextflow pipelines to static types. Search for and select **Convert pipeline to static types** in the command palette to migrate the current project.
 
-The language server will attempt to convert every legacy process to a typed process by migrating inputs and outputs to the new syntax. In cases where the type of an input or output cannot be inferred (e.g. `val` inputs and outputs), the type will be left unspecified, and the language server will report an error for each case.
+The language server will attempt to convert every legacy process to a typed process by migrating inputs and outputs to the new syntax.
 
-:::{tip}
-If a process has an nf-core [meta.yml](https://nf-co.re/docs/guidelines/components/modules#documentation), the language server will use it to infer the types of `val` inputs and outputs.
-:::
+- In cases where the type of an input or output cannot be inferred (e.g. `val` inputs and outputs), the type will be left unspecified, and the language server will report an error for each case. If a process has an nf-core [meta.yml](https://nf-co.re/docs/guidelines/components/modules#documentation), the language server will use it to infer the types of `val` inputs and outputs.
+
+- File inputs (`file` and `path` qualifiers) are inferred as type `Path` or `Set<Path>` based on (1) the `arity` option, if specified, or (2) the stage name, if specified. Review the converted code to ensure that the correct type is used. Use the `arity` option in the legacy syntax to ensure the most accurate results.
+
+- File outputs (`file` and `path` qualifiers) are translated to `file()` or `files()` based on (1) the `arity` option, if specified, or (2) whether the file name is a glob pattern. Review the converted code to ensure that the correct output function is used. Use the `arity` option in the legacy syntax to ensure the most accurate results.
 
 :::{tip}
 The tooling for automatic migration to static types is actively being developed. While this page shows how to perform migrations manually, some or all of these migration steps will become automatic through developer tools such as the language server.

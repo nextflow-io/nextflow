@@ -249,15 +249,8 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         currentDefinition = node;
         node.setVariableScope(currentScope());
 
-        for( var input : node.inputs ) {
-            if( input instanceof TupleParameter tp ) {
-                for( var param : tp.components )
-                    vsc.declare(param, input);
-            }
-            else {
-                vsc.declare(input, input);
-            }
-        }
+        for( var input : asFlatParams(node.inputs) )
+            vsc.declare(input, input);
 
         vsc.pushScope(ProcessDsl.StageDsl.class);
         visitDirectives(node.stagers, "stage directive", false);
