@@ -42,6 +42,14 @@ sourceSets {
 configurations {
     // see https://docs.gradle.org/4.1/userguide/dependency_management.html#sub:exclude_transitive_dependencies
     runtimeClasspath.exclude group: 'org.slf4j', module: 'slf4j-api'
+    
+    // Force lib-httpx version to resolve conflicts
+    all {
+        resolutionStrategy {
+            force 'io.seqera:lib-httpx:2.0.0'
+            force 'io.seqera:lib-retry:2.0.0'
+        }
+    }
 }
 
 dependencies {
@@ -49,6 +57,10 @@ dependencies {
     compileOnly 'org.slf4j:slf4j-api:2.0.17'
     compileOnly 'org.pf4j:pf4j:3.12.0'
     compileOnly 'io.seqera:lib-trace:0.1.0'
+    compileOnly 'io.seqera:lib-httpx:2.0.0'
+    
+    // Force lib-httpx version to avoid conflicts with older versions from nf-commons
+    testImplementation 'io.seqera:lib-httpx:2.0.0'
 
     api 'org.apache.commons:commons-compress:1.26.1'
     api 'org.apache.commons:commons-lang3:3.18.0'
@@ -56,7 +68,6 @@ dependencies {
     api 'org.yaml:snakeyaml:2.2'
     api 'io.seqera:wave-api:0.16.0'
     api 'io.seqera:wave-utils:0.15.1'
-    api('io.seqera:lib-httpx:2.0.0')
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation "org.apache.groovy:groovy:4.0.28"
