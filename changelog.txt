@@ -1,7 +1,12 @@
 NEXTFLOW CHANGE-LOG
 ===================
+25.04.7 - 8 Sep 2025
+- Add opt-in patch for unordered directory hashing (#6353) [1f1e9d42]
+- Improve Fusion license error message (#6313) [9e3fc268]
+- Bump jgit:7.1.1.202505221757-r (#6376) [e2e prod] [9fe4e258]
+
 25.04.6 - 1 Jul 2025
-- Upload Google Batch log on task exit (#6226) [ci fast] [3f2f85a8]
+- Upload Google Batch log on task exit (#6226) [3f2f85a8]
 - Bump nf-google@1.21.1 [d145d9fd]
 
 25.04.5 - 30 Jun 2025 
