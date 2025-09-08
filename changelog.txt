@@ -4,6 +4,9 @@ NEXTFLOW CHANGE-LOG
 - Add opt-in patch for unordered directory hashing (#6353) [1f1e9d42]
 - Improve Fusion license error message (#6313) [9e3fc268]
 - Bump jgit:7.1.1.202505221757-r (#6376) [e2e prod] [9fe4e258]
+- Bump nf-tower@1.11.4-patch1 [ccb7fabf]
+- Bump nf-azure@1.16.0-patch1 [6442d64d]
+- Bump nf-amazon@2.15.0-patch1 [f7aa0495]
 
 25.04.6 - 1 Jul 2025
 - Upload Google Batch log on task exit (#6226) [3f2f85a8]
