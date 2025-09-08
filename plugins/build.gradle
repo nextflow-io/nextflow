@@ -1,0 +1,53 @@
+apply plugin: 'java'
+
+ext.aws_access_key_id = project.findProperty('aws_access_key_id') ?: System.getenv('AWS_ACCESS_KEY_ID')
+ext.aws_secret_access_key = project.findProperty('aws_secret_access_key') ?: System.getenv('AWS_SECRET_ACCESS_KEY')
+ext.publishRepoUrl = project.findProperty('publish_repo_url') ?: System.getenv('PUBLISH_REPO_URL') ?: ( version.endsWith('-SNAPSHOT') ? "s3://maven.seqera.io/snapshots" : "s3://maven.seqera.io/releases" )
+
+jar.enabled = false
+
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'groovy'
+    apply plugin: 'maven-publish'
+
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
+
+    group = 'io.nextflow'
+
+    tasks.withType(GenerateModuleMetadata) {
+        enabled = false
+    }
+
+    /*
+     * publish jars maven repo on S3 
+     */
+    publishing {
+        publications {
+            maven(MavenPublication) {
+                from components.java
+                suppressPomMetadataWarningsFor('testFixturesApiElements')
+                suppressPomMetadataWarningsFor('testFixturesRuntimeElements')
+            }
+        }
+        repositories {
+            maven {
+                url = publishRepoUrl
+                credentials(AwsCredentials) {
+                    // keys are defined in the `gradle.properties` file
+                    accessKey aws_access_key_id
+                    secretKey aws_secret_access_key
+                }
+            }
+        }
+    }
+}
+
+/*
+ * "install" the plugin the project root build/plugins directory
+ */
+project.parent.tasks.getByName("assemble").dependsOn << assemble
+
