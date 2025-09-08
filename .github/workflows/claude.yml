@@ -32,5 +32,5 @@ jobs:
       - name: Run Claude PR Action
         uses: anthropics/claude-code-action@beta
         with:
-          anthropic_api_key: ${{ secrets.ENG_ANTHROPIC_API_KEY }}
+          anthropic_api_key: ${{ secrets.NEXTFLOW_ANTHROPIC_API_KEY }}
           timeout_minutes: "60"
