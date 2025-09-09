@@ -17,6 +17,7 @@ subprojects {
     }
 
     group = 'io.nextflow'
+    version = project.file('VERSION').text.trim()
 
     tasks.withType(GenerateModuleMetadata) {
         enabled = false

@@ -14,9 +14,6 @@ plugins {
     id 'java-test-fixtures'
 }
 
-group = 'io.nextflow'
-version = '1.15.0'
-
 nextflowPlugin {
     nextflowVersion = '25.07.0-edge'
 
