@@ -51,7 +51,7 @@ clean:
 # install compiled artifacts in Maven local dir
 # 
 install:
-	BUILD_PACK=1 ./gradlew installLauncher publishToMavenLocal
+	BUILD_PACK=1 ./gradlew installLauncher publishToMavenLocal installPlugin
 
 #
 # Show dependencies try `make deps config=runtime`, `make deps config=google`
@@ -124,7 +124,7 @@ dockerImage:
 # Create local docker image
 #
 dockerPack:
-	BUILD_PACK=1 ./gradlew publishToMavenLocal dockerPack -Dmaven.repo.local=${PWD}/build/docker/.nextflow/capsule/deps/
+	BUILD_PACK=1 ./gradlew publishToMavenLocal dockerPack -Dmaven.repo.local=${PWD}/build/docker/.nextflow/capsule/deps/ installPlugin
 
 
 upload-plugins:
