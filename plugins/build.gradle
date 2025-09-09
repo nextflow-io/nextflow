@@ -23,6 +23,15 @@ subprojects {
     }
 
     /*
+     * Copy the plugin dependencies in the subproject `build/target/libs` directory
+     */
+    task copyPluginLibs(type: Sync) {
+        group 'nextflow'
+        from configurations.runtimeClasspath
+        into 'build/target/libs'
+    }
+
+    /*
      * publish jars maven repo on S3 
      */
     publishing {
@@ -51,3 +60,7 @@ subprojects {
  */
 project.parent.tasks.getByName("assemble").dependsOn << assemble
 
+/*
+ * Copies the plugins required dependencies in the corresponding lib directory
+ */
+classes.dependsOn subprojects.copyPluginLibs
