@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 plugins {
-    id 'io.nextflow.nextflow-plugin' version '1.0.0-beta.7'
+    id 'io.nextflow.nextflow-plugin' version "${nextflowPluginVersion}"
     id 'java-test-fixtures'
 }
 
@@ -24,7 +24,7 @@ version = '0.5.0'
 nextflowPlugin {
     nextflowVersion = '25.08.0-edge'
 
-    provider = 'nextflow'
+    provider = "${nextflowPluginProvider}"
     description = 'Implements cloud-based caching system to optimize workflow performance by reducing redundant computations and data transfers'
     className = 'nextflow.CloudCachePlugin'
     useDefaultDependencies = false

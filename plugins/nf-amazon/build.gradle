@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 plugins {
-    id 'io.nextflow.nextflow-plugin' version '1.0.0-beta.7'
+    id 'io.nextflow.nextflow-plugin' version "${nextflowPluginVersion}"
     id 'java-test-fixtures'
 }
 
@@ -24,7 +24,7 @@ version = '3.2.0'
 nextflowPlugin {
     nextflowVersion = '25.08.0-edge'
 
-    provider = 'nextflow'
+    provider = "${nextflowPluginProvider}"
     description = 'Provides comprehensive AWS cloud integration including Batch executor, S3 file system, and Fusion support for high-performance data operations'
     className = 'nextflow.cloud.aws.AmazonPlugin'
     useDefaultDependencies = false

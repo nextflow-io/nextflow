@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 plugins {
-    id 'io.nextflow.nextflow-plugin' version '1.0.0-beta.7'
+    id 'io.nextflow.nextflow-plugin' version "${nextflowPluginVersion}"
     id 'java-test-fixtures'
 }
 
@@ -24,7 +24,7 @@ version = '1.3.0'
 nextflowPlugin {
     nextflowVersion = '25.08.0-edge'
 
-    provider = 'nextflow'
+    provider = "${nextflowPluginProvider}"
     description = 'Provides an interactive console and GUI interface for interactive Nextflow development, testing, and workflow exploration'
     className = 'nextflow.ui.console.ConsolePlugin'
     useDefaultDependencies = false
