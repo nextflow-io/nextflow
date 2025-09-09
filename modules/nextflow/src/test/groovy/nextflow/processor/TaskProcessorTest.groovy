@@ -55,13 +55,18 @@ import test.TestHelper
  */
 class TaskProcessorTest extends Specification {
 
+    def createProcessor(String name, Session session) {
+        return new DummyProcessor(name, session, Mock(BaseScript), new ProcessConfig([:]))
+    }
+
     static class DummyProcessor extends TaskProcessor {
 
-        DummyProcessor(String name, Session session, BaseScript script, ProcessConfig taskConfig) {
-            super(name, new NopeExecutor(session: session), session, script, taskConfig, new BodyDef({}, '..'))
+        DummyProcessor(String name, Session session, BaseScript script, ProcessConfig config) {
+            super(name, new NopeExecutor(session: session), session, script, config, new BodyDef({}, '..'))
         }
 
-        @Override protected void createOperator() { }
+        @Override
+        protected void createOperator() { }
     }
 
 
@@ -111,7 +116,7 @@ class TaskProcessorTest extends Specification {
         when:
         def session = new Session([env: [X:"1", Y:"2"]])
         session.setBaseDir(home)
-        def processor = new DummyProcessor('task1', session, Mock(BaseScript), Mock(ProcessConfig))
+        def processor = createProcessor('task1', session)
         def builder = new ProcessBuilder()
         builder.environment().putAll( processor.getProcessEnvironment() )
         then:
@@ -123,7 +128,7 @@ class TaskProcessorTest extends Specification {
         when:
         session = new Session([env: [X:"1", Y:"2", PATH:'/some']])
         session.setBaseDir(home)
-        processor = new DummyProcessor('task1', session,  Mock(BaseScript), Mock(ProcessConfig))
+        processor = createProcessor('task1', session)
         builder = new ProcessBuilder()
         builder.environment().putAll( processor.getProcessEnvironment() )
         then:
@@ -1222,10 +1227,7 @@ class TaskProcessorTest extends Specification {
     def 'should compute eval outputs content deterministically'() {
 
         setup:
-        def session = Mock(Session)
-        def script = Mock(BaseScript)
-        def config = Mock(ProcessConfig)
-        def processor = new DummyProcessor('test', session, script, config)
+        def processor = createProcessor('test', Mock(Session))
 
         when:
         def result1 = processor.computeEvalOutputsContent([
