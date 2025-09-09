@@ -17,7 +17,6 @@
 package nextflow.script
 
 import nextflow.Session
-import nextflow.script.params.EnvInParam
 import nextflow.script.params.FileInParam
 import nextflow.script.params.InParam
 import nextflow.script.params.TupleInParam

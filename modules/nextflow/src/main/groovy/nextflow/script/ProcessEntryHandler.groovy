@@ -23,6 +23,7 @@ import nextflow.Nextflow
 import nextflow.script.params.EnvInParam
 import nextflow.script.params.FileInParam
 import nextflow.script.params.InParam
+import nextflow.script.params.StdInParam
 import nextflow.script.params.TupleInParam
 
 /**
@@ -32,7 +33,7 @@ import nextflow.script.params.TupleInParam
  * - Single process scripts run automatically: `nextflow run script.nf --param value`
  * - Multi-process scripts run the first process automatically: `nextflow run script.nf --param value`
  * - Command-line parameters are mapped directly to process inputs
- * - Supports all standard Nextflow input types: val, path, env, tuple, each
+ * - Supports the following process input qualifiers: val, path, tuple, each
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -196,7 +197,10 @@ class ProcessEntryHandler {
                 return paramValue
 
             case EnvInParam:
-                return paramValue?.toString()
+                throw new IllegalArgumentException("Process `env` input qualifier is not supported by implicit process entry")
+
+            case StdInParam:
+                throw new IllegalArgumentException("Process `stdin` input qualifier is not supported by implicit process entry")
 
             default:
                 return paramValue
