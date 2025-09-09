@@ -17,6 +17,11 @@
 package nextflow.script
 
 import nextflow.Session
+import nextflow.script.params.EnvInParam
+import nextflow.script.params.FileInParam
+import nextflow.script.params.InParam
+import nextflow.script.params.TupleInParam
+import nextflow.script.params.ValueInParam
 import spock.lang.Specification
 
 /**
@@ -107,8 +112,8 @@ class ProcessEntryHandlerTest extends Specification {
             'meta': [id: 'SAMPLE_001', name: 'TestSample'],
             'sampleId': 'SIMPLE_001'
         ]
-        def valInput = [type: 'val', name: 'meta']
-        def simpleInput = [type: 'val', name: 'sampleId']
+        def valInput = Mock(ValueInParam) { getName() >> 'meta' }
+        def simpleInput = Mock(ValueInParam) { getName() >> 'sampleId' }
 
         then:
         handler.getValueForInput(valInput, complexParams) == [id: 'SAMPLE_001', name: 'TestSample']
@@ -127,8 +132,8 @@ class ProcessEntryHandlerTest extends Specification {
             'fasta': '/path/to/file.fa',
             'dataFile': 'data.txt'
         ]
-        def pathInput = [type: 'path', name: 'fasta']
-        def fileInput = [type: 'file', name: 'dataFile']
+        def pathInput = Mock(FileInParam) { getName() >> 'fasta' }
+        def fileInput = Mock(FileInParam) { getName() >> 'dataFile' }
 
         then:
         def fastaResult = handler.getValueForInput(pathInput, complexParams)
@@ -150,7 +155,8 @@ class ProcessEntryHandlerTest extends Specification {
         def complexParams = [
             'meta': [id: 'SAMPLE_001']
         ]
-        def missingInput = [type: 'val', name: 'missing']
+        def missingInput = Mock(ValueInParam) { getName() >> 'missing' }
+        and:
         handler.getValueForInput(missingInput, complexParams)
 
         then:
@@ -173,33 +179,29 @@ class ProcessEntryHandlerTest extends Specification {
         def handler = new ProcessEntryHandler(script, session, meta)
 
         when:
-        // Mock input structures for tuple val(meta), path(fasta)
-        def inputStructures = [
-            [
-                type: 'tuple',
-                elements: [
-                    [type: 'val', name: 'meta'],
-                    [type: 'path', name: 'fasta']
-                ]
+        // Mock input declaration for tuple val(meta), path(fasta)
+        def tupleParam = Mock(TupleInParam) {
+            getInner() >> [
+                Mock(ValueInParam) { getName() >> 'meta' },
+                Mock(FileInParam) { getName() >> 'fasta' }
             ]
-        ]
+        }
 
         // Test the parameter mapping logic manually 
-        def complexParams = handler.parseComplexParameters(session.getParams())
-        def tupleInput = inputStructures[0]
+        def namedArgs = handler.parseComplexParameters(session.getParams())
         def tupleElements = []
         
-        for( def element : tupleInput.elements ) {
-            def value = handler.getValueForInput(element, complexParams)
+        for( def innerParam : tupleParam.inner ) {
+            def value = handler.getValueForInput(innerParam, namedArgs)
             tupleElements.add(value)
         }
 
         then:
-        complexParams.meta instanceof Map
-        complexParams.meta.id == 'SAMPLE_001'
-        complexParams.meta.name == 'TestSample'
-        complexParams.meta.other == 'some-value'
-        complexParams.fasta == '/path/to/file.fa'
+        namedArgs.meta instanceof Map
+        namedArgs.meta.id == 'SAMPLE_001'
+        namedArgs.meta.name == 'TestSample'
+        namedArgs.meta.other == 'some-value'
+        namedArgs.fasta == '/path/to/file.fa'
         
         tupleElements.size() == 2
         tupleElements[0] instanceof Map  // meta as map
