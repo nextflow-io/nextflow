@@ -14,19 +14,20 @@
  * limitations under the License.
  */
 plugins {
-    id 'io.nextflow.nextflow-plugin' version '1.0.0-beta.6'
+    id 'io.nextflow.nextflow-plugin' version '1.0.0-beta.7'
     id 'java-test-fixtures'
 }
 
 group = 'io.nextflow'
-version = '1.22.2'
+version = '1.23.0'
 
 nextflowPlugin {
-    nextflowVersion = '25.07.0-edge'
+    nextflowVersion = '25.08.0-edge'
 
     provider = 'nextflow'
     description = 'Enables Google Cloud Platform execution through Batch service with native Cloud Storage access and intelligent machine type selection'
     className = 'nextflow.cloud.google.GoogleCloudPlugin'
+    useDefaultDependencies = false
     extensionPoints = [
         'nextflow.cloud.google.GoogleOpts',
         'nextflow.cloud.google.batch.GoogleBatchExecutor',

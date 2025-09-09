@@ -37,12 +37,10 @@ class TestPluginClasspath extends PluginClasspath {
         // the path where classes are resources should be found in the dev environment
         // for each plugin project directory
         addClassesDirectories('build/classes/groovy/testFixtures', 'build/resources/testFixtures')
-
         // the path where the plugin dependencies jar files are expected to be found
         // note: this path is not created automatically by Gradle, it should be created by a custom task
-        // see `targetLibs` task in the base plugins `build.gradle`
+        // see `copyPluginLibs` task in the base plugins `build.gradle`
         addJarsDirectories('build/target/libs')
-
     }
 
     @Override

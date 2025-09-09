@@ -14,19 +14,20 @@
  * limitations under the License.
  */
 plugins {
-    id 'io.nextflow.nextflow-plugin' version '1.0.0-beta.6'
+    id 'io.nextflow.nextflow-plugin' version '1.0.0-beta.7'
     id 'java-test-fixtures'
 }
 
 group = 'io.nextflow'
-version = '0.3.0'
+version = '0.4.0'
 
 nextflowPlugin {
-    nextflowVersion = '25.07.0-edge'
+    nextflowVersion = '25.08.0-edge'
 
     provider = 'nextflow'
     description = 'Provides seamless integration with AWS CodeCommit repositories for workflow source code management and version control'
     className = 'nextflow.cloud.aws.codecommit.AwsCodeCommitPlugin'
+    useDefaultDependencies = false
     extensionPoints = [
         'nextflow.cloud.aws.codecommit.AwsCodeCommitFactory'
     ]

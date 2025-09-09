@@ -14,19 +14,20 @@
  * limitations under the License.
  */
 plugins {
-    id 'io.nextflow.nextflow-plugin' version '1.0.0-beta.6'
+    id 'io.nextflow.nextflow-plugin' version '1.0.0-beta.7'
     id 'java-test-fixtures'
 }
 
 group = 'io.nextflow'
-version = '1.1.1'
+version = '1.2.0'
 
 nextflowPlugin {
-    nextflowVersion = '25.07.0-edge'
+    nextflowVersion = '25.08.0-edge'
 
     provider = 'nextflow'
     description = 'Provides native Kubernetes execution capability with advanced pod management, volume mounting, and resource allocation features'
     className = 'nextflow.k8s.K8sPlugin'
+    useDefaultDependencies = false
     extensionPoints = [
         'nextflow.k8s.K8sConfig',
         'nextflow.k8s.K8sExecutor',

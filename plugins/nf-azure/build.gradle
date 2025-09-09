@@ -14,19 +14,20 @@
  * limitations under the License.
  */
 plugins {
-    id 'io.nextflow.nextflow-plugin' version '1.0.0-beta.6'
+    id 'io.nextflow.nextflow-plugin' version '1.0.0-beta.7'
     id 'java-test-fixtures'
 }
 
 group = 'io.nextflow'
-version = '1.19.0'
+version = '1.20.0'
 
 nextflowPlugin {
-    nextflowVersion = '25.07.0-edge'
+    nextflowVersion = '25.08.0-edge'
 
     provider = 'nextflow'
     description = 'Enables Azure cloud execution through Batch service with native Blob storage access and comprehensive authentication options'
     className = 'nextflow.cloud.azure.AzurePlugin'
+    useDefaultDependencies = false
     extensionPoints = [
         'nextflow.cloud.azure.batch.AzBatchExecutor',
         'nextflow.cloud.azure.config.AzConfig',

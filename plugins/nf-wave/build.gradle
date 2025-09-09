@@ -10,19 +10,20 @@
  */
 
 plugins {
-    id 'io.nextflow.nextflow-plugin' version '1.0.0-beta.6'
+    id 'io.nextflow.nextflow-plugin' version '1.0.0-beta.7'
     id 'java-test-fixtures'
 }
 
 group = 'io.nextflow'
-version = '1.14.1'
+version = '1.15.0'
 
 nextflowPlugin {
-    nextflowVersion = '25.07.0-edge'
+    nextflowVersion = '25.08.0-edge'
 
     provider = 'nextflow'
     description = 'Provides dynamic container building and augmentation capabilities with on-demand software installation and advanced container management features'
     className = 'io.seqera.wave.plugin.WavePlugin'
+    useDefaultDependencies = false
     extensionPoints = [
         'io.seqera.wave.plugin.WaveFactory',
         'io.seqera.wave.plugin.config.WaveConfig',

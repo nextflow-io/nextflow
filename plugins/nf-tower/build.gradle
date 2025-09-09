@@ -10,12 +10,12 @@
  */
 
 plugins {
-    id 'io.nextflow.nextflow-plugin' version '1.0.0-beta.6'
+    id 'io.nextflow.nextflow-plugin' version '1.0.0-beta.7'
     id 'java-test-fixtures'
 }
 
 group = 'io.nextflow'
-version = '1.14.0'
+version = '1.15.0'
 
 nextflowPlugin {
     nextflowVersion = '25.07.0-edge'
@@ -23,6 +23,7 @@ nextflowPlugin {
     provider = 'nextflow'
     description = 'Integrates with Seqera Platform for comprehensive workflow monitoring, resource tracking, and cache management capabilities'
     className = 'io.seqera.tower.plugin.TowerPlugin'
+    useDefaultDependencies = false
     extensionPoints = [
         'io.seqera.tower.plugin.TowerConfig',
         'io.seqera.tower.plugin.TowerFactory',
