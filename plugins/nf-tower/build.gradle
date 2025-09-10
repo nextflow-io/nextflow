@@ -9,10 +9,24 @@
  * defined by the Mozilla Public License, v. 2.0.
  */
 
-apply plugin: 'java'
-apply plugin: 'java-test-fixtures'
-apply plugin: 'idea'
-apply plugin: 'groovy'
+plugins {
+    id 'io.nextflow.nextflow-plugin' version "${nextflowPluginVersion}"
+    id 'java-test-fixtures'
+}
+
+nextflowPlugin {
+    nextflowVersion = '25.07.0-edge'
+
+    provider = "${nextflowPluginProvider}"
+    description = 'Integrates with Seqera Platform for comprehensive workflow monitoring, resource tracking, and cache management capabilities'
+    className = 'io.seqera.tower.plugin.TowerPlugin'
+    useDefaultDependencies = false
+    extensionPoints = [
+        'io.seqera.tower.plugin.TowerConfig',
+        'io.seqera.tower.plugin.TowerFactory',
+        'io.seqera.tower.plugin.TowerFusionToken',
+    ]
+}
 
 sourceSets {
     main.java.srcDirs = []
