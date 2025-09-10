@@ -528,4 +528,38 @@ class PluginUpdaterTest extends Specification {
 
         return zipFilePath
     }
+
+    def 'should prefetch plugin metadata when pulling plugins' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def mockRepo = Mock(PrefetchUpdateRepository)
+        def remote = remoteRepository(folder.resolve('repo'), ['1.0.0', '2.0.0'])
+        def local = localCache(folder.resolve('plugins'), [])
+        def manager = new LocalPluginManager(local)
+        def updater = Spy(PluginUpdater, constructorArgs: [manager, local, remote, false])
+        
+        // Replace repositories with our mock repo
+        updater.@repositories = [mockRepo]
+        
+        and:
+        def pluginList = ['my-plugin@1.0.0', 'another-plugin@2.0.0']
+
+        when:
+        updater.pullPlugins(pluginList)
+        
+        then:
+        // Verify prefetch is called with the correct plugin specs
+        1 * mockRepo.prefetch({ List<PluginSpec> specs ->
+            specs.size() == 2 &&
+            specs[0].id == 'my-plugin' && specs[0].version == '1.0.0' &&
+            specs[1].id == 'another-plugin' && specs[1].version == '2.0.0'
+        })
+        
+        and:
+        // Mock pullPlugin0 to prevent real implementation calls
+        2 * updater.pullPlugin0(_, _) >> null
+
+        cleanup:
+        folder?.deleteDir()
+    }
 }
