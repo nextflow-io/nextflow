@@ -13,10 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-apply plugin: 'java'
-apply plugin: 'java-test-fixtures'
-apply plugin: 'idea'
-apply plugin: 'groovy'
+plugins {
+    id 'io.nextflow.nextflow-plugin' version "${nextflowPluginVersion}"
+    id 'java-test-fixtures'
+}
+
+nextflowPlugin {
+    nextflowVersion = '25.08.0-edge'
+
+    provider = "${nextflowPluginProvider}"
+    description = 'Provides an interactive console and GUI interface for interactive Nextflow development, testing, and workflow exploration'
+    className = 'nextflow.ui.console.ConsolePlugin'
+    useDefaultDependencies = false
+    extensionPoints = [
+        'nextflow.ui.console.ConsoleRunner',
+    ]
+}
 
 sourceSets {
     main.java.srcDirs = []

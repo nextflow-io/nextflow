@@ -28,12 +28,10 @@ import spock.lang.Specification
  */
 class S3NextflowTest extends Specification {
 
-
     def 'should return s3 uris'() {
         expect:
         Nextflow.file('s3://foo/data/file.log') == Paths.get(new URI('s3:///foo/data/file.log'))
     }
-
 
     def 'should resolve rel paths against env base' () {
         given:
