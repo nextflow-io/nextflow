@@ -267,6 +267,15 @@ class CmdAuth extends CmdBase implements UsageAware {
                 throw new AbortOperationException("Too many arguments for login command")
             }
 
+            // Check if TOWER_ACCESS_TOKEN environment variable is set
+            def envToken = System.getenv('TOWER_ACCESS_TOKEN')
+            if (envToken) {
+                println "WARNING: Authentication token is already configured via TOWER_ACCESS_TOKEN environment variable."
+                println "nextflow auth login' sets credentials using Nextflow config files, which take precedence over the environment variable."
+                println "however, caution is advised to avoid confusing behaviour."
+                println ""
+            }
+
             // Check if tower.accessToken is already set
             def config = readConfig()
             def existingToken = config['tower.accessToken']
@@ -642,13 +651,22 @@ class CmdAuth extends CmdBase implements UsageAware {
             println "Nextflow authentication logout"
             println ""
 
+            // Check if TOWER_ACCESS_TOKEN environment variable is set
+            def envToken = System.getenv('TOWER_ACCESS_TOKEN')
+            if (envToken) {
+                println "WARNING: TOWER_ACCESS_TOKEN environment variable is set."
+                println "'nextflow auth logout' only removes credentials from Nextflow config files."
+                println "The environment variable will remain unaffected."
+                println ""
+            }
+
             // Check if tower.accessToken is set
             def config = readConfig()
             def existingToken = config['tower.accessToken']
             def endpoint = config['tower.endpoint'] ?: 'https://api.cloud.seqera.io'
 
             if (!existingToken) {
-                println "No authentication token found in Nextflow config. Already logged out."
+                println "No authentication token found in Nextflow config."
                 println "Config file: ${getConfigFile()}"
                 return
             }
