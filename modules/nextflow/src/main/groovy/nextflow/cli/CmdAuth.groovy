@@ -875,7 +875,7 @@ class CmdAuth extends CmdBase implements UsageAware {
             if (currentWorkspace) {
                 def workspace = currentWorkspace as Map
                 def source = currentWorkspaceId ? "config" : (envWorkspaceId ? "TOWER_WORKFLOW_ID env var" : "config")
-                println "  Current: ${workspace.orgName} / ${workspace.workspaceFullName} (from ${source})"
+                println "  Current: ${workspace.orgName} / ${workspace.workspaceName} [${workspace.workspaceFullName}] (from ${source})"
             } else if (envWorkspaceId) {
                 println "  Current: TOWER_WORKFLOW_ID=${envWorkspaceId} (workspace not found in available workspaces)"
             } else {
@@ -902,7 +902,7 @@ class CmdAuth extends CmdBase implements UsageAware {
             workspaces.eachWithIndex { workspace, index ->
                 def ws = workspace as Map
                 def prefix = ws.orgName ? "${ws.orgName} / " : ""
-                println "  ${index + 1}. ${prefix}${ws.workspaceFullName}"
+                println "  ${index + 1}. ${prefix}${ws.workspaceName} [${ws.workspaceFullName}]"
             }
 
             System.out.print("Select workspace (0-${workspaces.size()}, Enter to keep current): ")
@@ -934,7 +934,7 @@ class CmdAuth extends CmdBase implements UsageAware {
                     } else {
                         def currentId = config.get('tower.workspaceId')
                         config['tower.workspaceId'] = selectedId
-                        config['tower.workspaceId.comment'] = "${selectedWorkspace.orgName} / ${selectedWorkspace.workspaceFullName}"
+                        config['tower.workspaceId.comment'] = "${selectedWorkspace.orgName} / ${selectedWorkspace.workspaceName} [${selectedWorkspace.workspaceFullName}]"
                         return currentId != selectedId
                     }
                 } else {
@@ -985,7 +985,7 @@ class CmdAuth extends CmdBase implements UsageAware {
 
                 orgWorkspaceList.eachWithIndex { workspace, index ->
                     def ws = workspace as Map
-                    println "  ${index + 1}. ${ws.workspaceFullName}"
+                    println "  ${index + 1}. ${ws.workspaceName} [${ws.workspaceFullName}]"
                 }
 
                 def maxSelection = orgWorkspaceList.size()
@@ -1015,7 +1015,7 @@ class CmdAuth extends CmdBase implements UsageAware {
                     } else {
                         def currentId = config.get('tower.workspaceId')
                         config['tower.workspaceId'] = selectedId
-                        config['tower.workspaceId.comment'] = "${selectedWorkspace.orgName} / ${selectedWorkspace.workspaceFullName}"
+                        config['tower.workspaceId.comment'] = "${selectedWorkspace.orgName} / ${selectedWorkspace.workspaceName} [${selectedWorkspace.workspaceFullName}]"
                         return currentId != selectedId
                     }
                 } else {
@@ -1118,7 +1118,7 @@ class CmdAuth extends CmdBase implements UsageAware {
                 }
 
                 if (workspaceName) {
-                    println "Default workspace: '${workspaceName}' [${workspaceInfo.value}] (${workspaceInfo.source})"
+                    println "Default workspace: ${workspaceInfo.value} - ${workspaceName} (${workspaceInfo.source})"
                 } else {
                     println "Default workspace: ${workspaceInfo.value} (${workspaceInfo.source})"
                 }
@@ -1184,7 +1184,7 @@ class CmdAuth extends CmdBase implements UsageAware {
                 def workspace = orgsAndWorkspaces.find { ((Map)it).workspaceId?.toString() == workspaceId }
                 if (workspace) {
                     def ws = workspace as Map
-                    return "${ws.orgName} / ${ws.workspaceFullName}"
+                    return "${ws.orgName} / ${ws.workspaceName} [${ws.workspaceFullName}]"
                 }
 
                 return null
