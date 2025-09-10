@@ -273,8 +273,8 @@ class CmdAuth extends CmdBase implements UsageAware {
             // Check if TOWER_ACCESS_TOKEN environment variable is set
             def envToken = System.getenv('TOWER_ACCESS_TOKEN')
             if (envToken) {
-                AuthColorUtil.printColored("WARNING: Authentication token is already configured via TOWER_ACCESS_TOKEN environment variable.", Color.YELLOW, true)
-                println "${AuthColorUtil.colorize('nextflow auth login', Color.CYAN)} sets credentials using Nextflow config files, which take precedence over the environment variable."
+                AuthColorUtil.printColored("WARNING: Authentication token is already configured via TOWER_ACCESS_TOKEN environment variable.", "yellow bold")
+                println "${AuthColorUtil.colorize('nextflow auth login', 'cyan')} sets credentials using Nextflow config files, which take precedence over the environment variable."
                 println "however, caution is advised to avoid confusing behaviour."
                 println ""
             }
@@ -284,13 +284,13 @@ class CmdAuth extends CmdBase implements UsageAware {
             def existingToken = config['tower.accessToken']
             if (existingToken) {
                 println "Authentication token is already configured in Nextflow config."
-                println "Config file: ${AuthColorUtil.colorize(getConfigFile().toString(), Color.MAGENTA)}"
-                println "Run ${AuthColorUtil.colorize('nextflow auth logout', Color.CYAN)} to remove the current authentication."
+                println "Config file: ${AuthColorUtil.colorize(getConfigFile().toString(), 'magenta')}"
+                println "Run ${AuthColorUtil.colorize('nextflow auth logout', 'cyan')} to remove the current authentication."
                 return
             }
 
-            println "Nextflow authentication with ${AuthColorUtil.colorize('Seqera Platform', Color.CYAN, true)}"
-            AuthColorUtil.printColored(" - Authentication will be saved to: ${AuthColorUtil.colorize(getConfigFile().toString(), Color.MAGENTA)}", null, false, true)
+            println "Nextflow authentication with ${AuthColorUtil.colorize('Seqera Platform', 'cyan bold')}"
+            AuthColorUtil.printColored(" - Authentication will be saved to: ${AuthColorUtil.colorize(getConfigFile().toString(), 'magenta')}", "dim")
 
             // Use provided URL or default
             if (!apiUrl) {
@@ -299,8 +299,8 @@ class CmdAuth extends CmdBase implements UsageAware {
                 apiUrl = 'https://' + apiUrl
             }
 
-            AuthColorUtil.printColored(" - Seqera Platform API endpoint: ${AuthColorUtil.colorize(apiUrl, Color.MAGENTA)}", null, false, true)
-            AuthColorUtil.printColored("   (can be customised with ${AuthColorUtil.colorize('-u', Color.CYAN)} option)", null, false, true)
+            AuthColorUtil.printColored(" - Seqera Platform API endpoint: ${AuthColorUtil.colorize(apiUrl, 'magenta')}", "dim")
+            AuthColorUtil.printColored("   (can be customised with ${AuthColorUtil.colorize('-u', 'cyan')} option)", "dim")
             Thread.sleep(2000)
 
             // Check if this is a cloud endpoint or enterprise
@@ -318,7 +318,7 @@ class CmdAuth extends CmdBase implements UsageAware {
         }
 
         private void performAuth0Login(String apiUrl) {
-            AuthColorUtil.printColored(" - Opening browser for authentication...", null, false, true)
+            AuthColorUtil.printColored(" - Opening browser for authentication...", "dim")
 
             // Generate PKCE parameters
             def codeVerifier = generateCodeVerifier()
@@ -344,14 +344,14 @@ class CmdAuth extends CmdBase implements UsageAware {
 
                 // Verify login by calling /user-info
                 def userInfo = callUserInfoApi(accessToken, apiUrl)
-                AuthColorUtil.printColored("\nAuthentication successful! Logged in as: ${AuthColorUtil.colorize(userInfo.userName, Color.CYAN, true)}", Color.GREEN)
+                AuthColorUtil.printColored("\nAuthentication successful! Logged in as: ${AuthColorUtil.colorize(userInfo.userName as String, 'cyan bold')}", "green")
 
                 // Generate PAT
                 def pat = generatePAT(accessToken, apiUrl)
 
                 // Save to config
                 saveAuthToConfig(pat, apiUrl)
-                AuthColorUtil.printColored("Seqera Platform configuration saved to ${AuthColorUtil.colorize(getConfigFile().toString(), Color.MAGENTA)}", Color.GREEN)
+                AuthColorUtil.printColored("Seqera Platform configuration saved to ${AuthColorUtil.colorize(getConfigFile().toString(), 'magenta')}", "green")
 
             } catch (Exception e) {
                 throw new RuntimeException("Authentication timeout or failed: ${e.message}", e)
@@ -565,8 +565,8 @@ class CmdAuth extends CmdBase implements UsageAware {
 
         private void handleEnterpriseAuth(String apiUrl) {
             println ""
-            println "Please generate a Personal Access Token from your ${AuthColorUtil.colorize('Seqera Platform', Color.CYAN, true)} instance."
-            println "You can create one at: ${AuthColorUtil.colorize(apiUrl.replace('/api', '').replace('://api.', '') + '/tokens', Color.MAGENTA)}"
+            println "Please generate a Personal Access Token from your ${AuthColorUtil.colorize('Seqera Platform', 'cyan bold')} instance."
+            println "You can create one at: ${AuthColorUtil.colorize(apiUrl.replace('/api', '').replace('://api.', '') + '/tokens', 'magenta')}"
             println ""
 
             System.out.print("Enter your Personal Access Token: ")
@@ -583,8 +583,8 @@ class CmdAuth extends CmdBase implements UsageAware {
 
             // Save to config
             saveAuthToConfig(pat.trim(), apiUrl)
-            AuthColorUtil.printColored("Personal Access Token saved to Nextflow config", Color.GREEN)
-            println "Config file: ${AuthColorUtil.colorize(getConfigFile().toString(), Color.MAGENTA)}"
+            AuthColorUtil.printColored("Personal Access Token saved to Nextflow config", "green")
+            println "Config file: ${AuthColorUtil.colorize(getConfigFile().toString(), 'magenta')}"
         }
 
         private String generatePAT(String accessToken, String apiUrl) {
@@ -654,8 +654,8 @@ class CmdAuth extends CmdBase implements UsageAware {
             // Check if TOWER_ACCESS_TOKEN environment variable is set
             def envToken = System.getenv('TOWER_ACCESS_TOKEN')
             if (envToken) {
-                AuthColorUtil.printColored("WARNING: TOWER_ACCESS_TOKEN environment variable is set.", Color.YELLOW, true)
-                println "${AuthColorUtil.colorize('nextflow auth logout', Color.CYAN)} only removes credentials from Nextflow config files."
+                AuthColorUtil.printColored("WARNING: TOWER_ACCESS_TOKEN environment variable is set.", "yellow bold")
+                println "${AuthColorUtil.colorize('nextflow auth logout', 'cyan')} only removes credentials from Nextflow config files."
                 println "The environment variable will remain unaffected."
                 println ""
             }
@@ -667,11 +667,11 @@ class CmdAuth extends CmdBase implements UsageAware {
 
             if (!existingToken) {
                 println "No authentication token found in Nextflow config."
-                println "Config file: ${AuthColorUtil.colorize(getConfigFile().toString(), Color.MAGENTA)}"
+                println "Config file: ${AuthColorUtil.colorize(getConfigFile().toString(), 'magenta')}"
                 return
             }
 
-            AuthColorUtil.printColored(" - Found authentication token in config file: ${AuthColorUtil.colorize(getConfigFile().toString(), Color.MAGENTA)}", null, false, true)
+            AuthColorUtil.printColored(" - Found authentication token in config file: ${AuthColorUtil.colorize(getConfigFile().toString(), 'magenta')}", "dim")
 
             // Prompt user for API URL if not already configured
             def apiUrl = endpoint as String
@@ -684,7 +684,7 @@ class CmdAuth extends CmdBase implements UsageAware {
             // Validate token by calling /user-info API
             try {
                 def userInfo = callUserInfoApi(existingToken as String, apiUrl)
-                AuthColorUtil.printColored(" - Token is valid for user: ${AuthColorUtil.colorize(userInfo.userName, Color.CYAN, true)}", null, false, true)
+                AuthColorUtil.printColored(" - Token is valid for user: ${AuthColorUtil.colorize(userInfo.userName as String, 'cyan bold')}", "dim")
 
                 // Only delete PAT from platform if this is a cloud endpoint
                 if (isCloudEndpoint(apiUrl)) {
@@ -702,7 +702,7 @@ class CmdAuth extends CmdBase implements UsageAware {
 
                 // Remove from config even if API calls fail
                 removeAuthFromConfig()
-                AuthColorUtil.printColored("Token removed from Nextflow config.", Color.GREEN)
+                AuthColorUtil.printColored("Token removed from Nextflow config.", "green")
             }
         }
 
@@ -736,7 +736,7 @@ class CmdAuth extends CmdBase implements UsageAware {
                 throw new RuntimeException("Failed to delete token: ${error}")
             }
 
-            AuthColorUtil.printColored("\nToken successfully deleted from Seqera Platform.", Color.GREEN)
+            AuthColorUtil.printColored("\nToken successfully deleted from Seqera Platform.", "green")
         }
 
         private void removeAuthFromConfig() {
@@ -748,7 +748,7 @@ class CmdAuth extends CmdBase implements UsageAware {
                 Files.writeString(configFile, cleanedContent, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
             }
 
-            AuthColorUtil.printColored("Authentication removed from Nextflow config.", Color.GREEN)
+            AuthColorUtil.printColored("Authentication removed from Nextflow config.", "green")
         }
 
         @Override
@@ -785,22 +785,22 @@ class CmdAuth extends CmdBase implements UsageAware {
             def endpoint = config['tower.endpoint'] ?: 'https://api.cloud.seqera.io'
 
             if (!existingToken) {
-                println "No authentication found. Please run ${AuthColorUtil.colorize('nextflow auth login', Color.CYAN)} first."
+                println "No authentication found. Please run ${AuthColorUtil.colorize('nextflow auth login', 'cyan')} first."
                 return
             }
 
-            println "Nextflow ${AuthColorUtil.colorize('Seqera Platform', Color.CYAN, true)} configuration"
-            AuthColorUtil.printColored(" - Config file: ${AuthColorUtil.colorize(getConfigFile().toString(), Color.MAGENTA)}", null, false, true)
+            println "Nextflow ${AuthColorUtil.colorize('Seqera Platform', 'cyan bold')} configuration"
+            AuthColorUtil.printColored(" - Config file: ${AuthColorUtil.colorize(getConfigFile().toString(), 'magenta')}", "dim")
 
             // Check if token is from environment variable
             if (!config['tower.accessToken'] && System.getenv('TOWER_ACCESS_TOKEN')) {
-                AuthColorUtil.printColored(" - Using access token from TOWER_ACCESS_TOKEN environment variable", null, false, true)
+                AuthColorUtil.printColored(" - Using access token from TOWER_ACCESS_TOKEN environment variable", "dim")
             }
 
             try {
                 // Get user info to validate token and get user ID
                 def userInfo = callUserInfoApi(existingToken as String, endpoint as String)
-                AuthColorUtil.printColored(" - Authenticated as: ${AuthColorUtil.colorize(userInfo.userName, Color.CYAN, true)}", null, false, true)
+                AuthColorUtil.printColored(" - Authenticated as: ${AuthColorUtil.colorize(userInfo.userName as String, 'cyan bold')}", "dim")
                 println ""
 
                 // Track if any changes are made
@@ -815,7 +815,7 @@ class CmdAuth extends CmdBase implements UsageAware {
                 // Save updated config only if changes were made
                 if (configChanged) {
                     writeConfig(config)
-                    AuthColorUtil.printColored(" - Configuration saved to ${AuthColorUtil.colorize(getConfigFile().toString(), Color.MAGENTA)}", Color.GREEN)
+                    AuthColorUtil.printColored(" - Configuration saved to ${AuthColorUtil.colorize(getConfigFile().toString(), 'magenta')}", "green")
                 }
 
             } catch (Exception e) {
@@ -1084,11 +1084,11 @@ class CmdAuth extends CmdBase implements UsageAware {
 
             // API endpoint
             def endpointInfo = getConfigValue(config, 'tower.endpoint', 'TOWER_API_ENDPOINT', 'https://api.cloud.seqera.io')
-            statusRows.add(['API endpoint', AuthColorUtil.colorize(endpointInfo.value, Color.MAGENTA), endpointInfo.source as String])
+            statusRows.add(['API endpoint', AuthColorUtil.colorize(endpointInfo.value as String, 'magenta'), endpointInfo.source as String])
 
             // API connection check
             def apiConnectionOk = checkApiConnection(endpointInfo.value as String)
-            def connectionColor = apiConnectionOk ? Color.GREEN : Color.RED
+            def connectionColor = apiConnectionOk ? 'green' : 'red'
             statusRows.add(['API connection', AuthColorUtil.colorize(apiConnectionOk ? 'OK' : 'ERROR', connectionColor), ''])
 
             // Authentication check
@@ -1097,18 +1097,18 @@ class CmdAuth extends CmdBase implements UsageAware {
                 try {
                     def userInfo = callUserInfoApi(tokenInfo.value as String, endpointInfo.value as String)
                     def currentUser = userInfo.userName as String
-                    statusRows.add(['Authentication', "${AuthColorUtil.colorize('OK', Color.GREEN)} ${AuthColorUtil.colorize('(user: ' + currentUser + ')', Color.CYAN)}".toString(), tokenInfo.source as String])
+                    statusRows.add(['Authentication', "${AuthColorUtil.colorize('OK', 'green')} ${AuthColorUtil.colorize('(user: ' + currentUser + ')', 'cyan')}".toString(), tokenInfo.source as String])
                 } catch (Exception e) {
-                    statusRows.add(['Authentication', AuthColorUtil.colorize('ERROR', Color.RED), 'failed'])
+                    statusRows.add(['Authentication', AuthColorUtil.colorize('ERROR', 'red'), 'failed'])
                 }
             } else {
-                statusRows.add(['Authentication', "${AuthColorUtil.colorize('ERROR', Color.RED)} ${AuthColorUtil.colorize('(no token)', null, false, true)}".toString(), 'not set'])
+                statusRows.add(['Authentication', "${AuthColorUtil.colorize('ERROR', 'red')} ${AuthColorUtil.colorize('(no token)', 'dim')}".toString(), 'not set'])
             }
 
             // Monitoring enabled
             def enabledInfo = getConfigValue(config, 'tower.enabled', null, 'false')
             def enabledValue = enabledInfo.value?.toString()?.toLowerCase() in ['true', '1', 'yes'] ? 'Yes' : 'No'
-            def enabledColor = enabledValue == 'Yes' ? Color.GREEN : Color.YELLOW
+            def enabledColor = enabledValue == 'Yes' ? 'green' : 'yellow'
             statusRows.add(['Workflow monitoring', AuthColorUtil.colorize(enabledValue, enabledColor), (enabledInfo.source ?: 'default') as String])
 
             // Default workspace
@@ -1122,18 +1122,18 @@ class CmdAuth extends CmdBase implements UsageAware {
 
                 if (workspaceDetails) {
                     // Add workspace ID row
-                    statusRows.add(['Default workspace ID', AuthColorUtil.colorize(workspaceInfo.value, Color.BLUE), workspaceInfo.source as String])
+                    statusRows.add(['Default workspace ID', AuthColorUtil.colorize(workspaceInfo.value as String, 'blue'), workspaceInfo.source as String])
                     // Add org/name row
-                    statusRows.add([' - workspace name', "${AuthColorUtil.colorize(workspaceDetails.orgName, Color.CYAN, true)} / ${AuthColorUtil.colorize(workspaceDetails.workspaceName, Color.CYAN)}".toString(), ''])
+                    statusRows.add([' - workspace name', "${AuthColorUtil.colorize(workspaceDetails.orgName as String, 'cyan bold')} / ${AuthColorUtil.colorize(workspaceDetails.workspaceName as String, 'cyan')}".toString(), ''])
                     // Add full name row (truncate if too long)
                     def fullName = workspaceDetails.workspaceFullName as String
                     def truncatedFullName = fullName.length() > 50 ? fullName.substring(0, 47) + '...' : fullName
-                    statusRows.add([' - workspace full name', AuthColorUtil.colorize(truncatedFullName, Color.CYAN, false, true), ''])
+                    statusRows.add([' - workspace full name', AuthColorUtil.colorize(truncatedFullName, 'cyan dim'), ''])
                 } else {
-                    statusRows.add(['Default workspace', AuthColorUtil.colorize(workspaceInfo.value, Color.BLUE), workspaceInfo.source as String])
+                    statusRows.add(['Default workspace', AuthColorUtil.colorize(workspaceInfo.value as String, 'blue'), workspaceInfo.source as String])
                 }
             } else {
-                statusRows.add(['Default workspace', AuthColorUtil.colorize('Personal workspace', Color.CYAN), 'default'])
+                statusRows.add(['Default workspace', AuthColorUtil.colorize('Personal workspace', 'cyan'), 'default'])
             }
 
             // Print table
@@ -1155,14 +1155,14 @@ class CmdAuth extends CmdBase implements UsageAware {
             col3Width = Math.max(col3Width, 10) + 2
 
             // Print table header
-            println "${AuthColorUtil.colorize('Setting'.padRight(col1Width), Color.CYAN, true)} ${AuthColorUtil.colorize('Value'.padRight(col2Width), Color.CYAN, true)} ${AuthColorUtil.colorize('Source', Color.CYAN, true)}"
+            println "${AuthColorUtil.colorize('Setting'.padRight(col1Width), 'cyan bold')} ${AuthColorUtil.colorize('Value'.padRight(col2Width), 'cyan bold')} ${AuthColorUtil.colorize('Source', 'cyan bold')}"
             println "${'-' * col1Width} ${'-' * col2Width} ${'-' * col3Width}"
 
             // Print rows
             rows.each { row ->
                 def paddedCol1 = padStringWithAnsi(row[0], col1Width)
                 def paddedCol2 = padStringWithAnsi(row[1], col2Width)
-                def paddedCol3 = AuthColorUtil.colorize(row[2], null, false, true)
+                def paddedCol3 = AuthColorUtil.colorize(row[2], 'dim')
                 println "${paddedCol1} ${paddedCol2} ${paddedCol3}"
             }
         }
