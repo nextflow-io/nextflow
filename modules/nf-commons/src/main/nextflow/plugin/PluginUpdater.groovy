@@ -186,6 +186,7 @@ class PluginUpdater extends UpdateManager {
         pullOnly=true
         try {
             final specs = plugins.collect(it -> PluginSpec.parse(it,defaultPlugins))
+            prefetchMetadata(specs)
             for( PluginSpec spec : specs ) {
                 pullPlugin0(spec.id, spec.version)
             }
