@@ -654,9 +654,10 @@ class CmdAuth extends CmdBase implements UsageAware {
             // Check if TOWER_ACCESS_TOKEN environment variable is set
             def envToken = System.getenv('TOWER_ACCESS_TOKEN')
             if (envToken) {
+                println ""
                 AuthColorUtil.printColored("WARNING: TOWER_ACCESS_TOKEN environment variable is set.", "yellow bold")
-                println "${AuthColorUtil.colorize('nextflow auth logout', 'cyan')} only removes credentials from Nextflow config files."
-                println "The environment variable will remain unaffected."
+                println "  ${AuthColorUtil.colorize('nextflow auth logout', 'dim cyan')}${AuthColorUtil.colorize(' only removes credentials from Nextflow config files.', 'dim')}"
+                AuthColorUtil.printColored("  The environment variable will remain unaffected.", "dim")
                 println ""
             }
 
@@ -666,7 +667,7 @@ class CmdAuth extends CmdBase implements UsageAware {
             def endpoint = config['tower.endpoint'] ?: 'https://api.cloud.seqera.io'
 
             if (!existingToken) {
-                println "No authentication token found in Nextflow config."
+                AuthColorUtil.printColored("Error: No authentication token found in Nextflow config.", "red")
                 println "Config file: ${AuthColorUtil.colorize(getConfigFile().toString(), 'magenta')}"
                 return
             }
