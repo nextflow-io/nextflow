@@ -37,7 +37,7 @@ class AuthColorUtil {
         if (SysEnv.get('NO_COLOR')) {
             return false
         }
-        
+
         // Check NXF_ANSI_LOG environment variable
         final env = SysEnv.get('NXF_ANSI_LOG')
         if (env) {
@@ -47,49 +47,101 @@ class AuthColorUtil {
                 // Invalid value, fall through to default
             }
         }
-        
+
         // Default to enabled if terminal supports it
         return Ansi.isEnabled()
     }
-    
+
     /**
-     * Print colored text if ANSI is enabled, otherwise plain text
+     * Print colored text using format keywords
+     * Format: colorize(text, format) - e.g. colorize('Hello', 'red bold'), colorize('World', 'cyan dim')
      */
-    static void printColored(Object text, Color color = null, boolean bold = false, boolean dim = false) {
-        def textStr = text?.toString() ?: ''
-        if (!isAnsiEnabled() || (!color && !bold && !dim)) {
-            println textStr
-            return
-        }
-        
-        def fmt = ansi()
-        if (color) fmt = fmt.fg(color)
-        if (bold) fmt = fmt.bold()
-        if (dim) fmt = fmt.a(Attribute.INTENSITY_FAINT)
-        fmt = fmt.a(textStr)
-        if (dim) fmt = fmt.a(Attribute.RESET)
-        if (bold) fmt = fmt.boldOff()
-        if (color) fmt = fmt.fg(Color.DEFAULT)
-        println fmt
+    static void printColored(String text, String format = '') {
+        println colorize(text, format)
     }
-    
+
     /**
-     * Format text with color inline
+     * Format text with color using format keywords
+     * Format: colorize(text, format) - e.g. colorize('Hello', 'red bold'), colorize('World', 'cyan on yellow')
+     * Supported colors: black, red, green, yellow, blue, magenta, cyan, white, default
+     * Supported background: on black, on red, on green, on yellow, on blue, on magenta, on cyan, on white, on default
+     * Supported formatting: bold, dim
      */
-    static String colorize(Object text, Color color = null, boolean bold = false, boolean dim = false) {
-        def textStr = text?.toString() ?: ''
-        if (!isAnsiEnabled() || (!color && !bold && !dim)) {
-            return textStr
+    static String colorize(String text, String format = '') {
+        if (!isAnsiEnabled() || !text) {
+            return text ?: ''
         }
-        
+
+        if (!format) {
+            return text
+        }
+
+        def parts = format.split(' ')
+        def foregroundColor = null
+        def backgroundColor = null
+        def bold = false
+        def dim = false
+        def onNext = false
+
+        // Parse format keywords
+        parts.each { part ->
+            def partLower = part.toLowerCase()
+
+            if (onNext) {
+                // Previous word was 'on', so this is a background color
+                backgroundColor = parseColor(partLower)
+                onNext = false
+            } else if (partLower == 'on') {
+                onNext = true
+            } else {
+                switch (partLower) {
+                    case 'black':
+                    case 'red':
+                    case 'green':
+                    case 'yellow':
+                    case 'blue':
+                    case 'magenta':
+                    case 'cyan':
+                    case 'white':
+                    case 'default':
+                        foregroundColor = parseColor(partLower)
+                        break
+                    case 'bold':
+                        bold = true
+                        break
+                    case 'dim':
+                        dim = true
+                        break
+                }
+            }
+        }
+
         def fmt = ansi()
-        if (color) fmt = fmt.fg(color)
+        if (foregroundColor) fmt = fmt.fg(foregroundColor)
+        if (backgroundColor) fmt = fmt.bg(backgroundColor)
         if (bold) fmt = fmt.bold()
         if (dim) fmt = fmt.a(Attribute.INTENSITY_FAINT)
-        fmt = fmt.a(textStr)
-        if (dim) fmt = fmt.a(Attribute.RESET)
-        if (bold) fmt = fmt.boldOff()
-        if (color) fmt = fmt.fg(Color.DEFAULT)
+        fmt = fmt.a(text)
+        fmt = fmt.a(Attribute.RESET)
         return fmt.toString()
     }
+
+    /**
+     * Parse color name to Jansi Color enum
+     */
+    private static Color parseColor(String colorName) {
+        switch (colorName) {
+            case 'black': return Color.BLACK
+            case 'red': return Color.RED
+            case 'green': return Color.GREEN
+            case 'yellow': return Color.YELLOW
+            case 'blue': return Color.BLUE
+            case 'magenta': return Color.MAGENTA
+            case 'cyan': return Color.CYAN
+            case 'white': return Color.WHITE
+            case 'default': return Color.DEFAULT
+            default: return null
+        }
+    }
+
 }
