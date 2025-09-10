@@ -52,8 +52,7 @@ clean:
 # 
 install:
 	BUILD_PACK=1 \
-	NXF_PLUGINS_DIR=$(PWD)/build/plugins \
-	./gradlew installLauncher publishToMavenLocal installPlugin --rerun-tasks
+	./gradlew installLauncher publishToMavenLocal installPlugin
 
 #
 # Show dependencies try `make deps config=runtime`, `make deps config=google`

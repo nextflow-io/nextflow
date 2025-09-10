@@ -19,6 +19,7 @@
 rm -rf .nextflow && mkdir .nextflow
 # copy nextflow dependencies
 (cd ..
+export NXF_PLUGINS_DIR=$PWD/build/plugins
 make assemble
 make install
 )
