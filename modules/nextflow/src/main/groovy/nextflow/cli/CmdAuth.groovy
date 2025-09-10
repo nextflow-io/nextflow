@@ -62,6 +62,9 @@ class CmdAuth extends CmdBase implements UsageAware {
     @Parameter(hidden = true)
     List<String> args
 
+    @Parameter(names = ['-u', '-url'], description = 'Seqera Platform API endpoint')
+    String apiUrl
+
     CmdAuth() {
         commands.add(new LoginCmd())
         commands.add(new LogoutCmd())
@@ -101,7 +104,11 @@ class CmdAuth extends CmdBase implements UsageAware {
         }
 
         try {
-            getCmd(args).apply(args.drop(1))
+            def cmd = getCmd(args)
+            if (cmd instanceof LoginCmd && apiUrl) {
+                cmd.apiUrl = apiUrl
+            }
+            cmd.apply(args.drop(1))
         } catch (Exception e) {
             throw new AbortOperationException(e.message)
         }
@@ -249,6 +256,8 @@ class CmdAuth extends CmdBase implements UsageAware {
         private static final String AUTH0_CLIENT_ID = "Ep2LhYiYmuV9hhz0dH6dbXVq0S7s7SWZ"
         private static final int CALLBACK_PORT = 8085
 
+        String apiUrl
+
         @Override
         String getName() { 'login' }
 
@@ -270,10 +279,17 @@ class CmdAuth extends CmdBase implements UsageAware {
 
             println "Nextflow authentication with Seqera Platform"
             println " - Authentication will be saved to: ${getConfigFile()}"
-            println ""
 
-            // Prompt user for API URL
-            def apiUrl = promptForApiUrl()
+            // Use provided URL or default
+            if (!apiUrl) {
+                apiUrl = 'https://api.cloud.seqera.io'
+            } else if (!apiUrl.startsWith('http://') && !apiUrl.startsWith('https://')) {
+                apiUrl = 'https://' + apiUrl
+            }
+
+            println " - Seqera Platform API endpoint: ${apiUrl}"
+            println "   (can be customised with -u option)"
+            Thread.sleep(2000)
 
             // Check if this is a cloud endpoint or enterprise
             if (isCloudEndpoint(apiUrl)) {
@@ -599,13 +615,15 @@ class CmdAuth extends CmdBase implements UsageAware {
         @Override
         void usage(List<String> result) {
             result << 'Authenticate with Seqera Platform'
-            result << "Usage: nextflow auth $name".toString()
+            result << "Usage: nextflow auth $name [-u <endpoint>]".toString()
+            result << ''
+            result << 'Options:'
+            result << '  -u, -url <endpoint>    Seqera Platform API endpoint (default: https://api.cloud.seqera.io)'
             result << ''
             result << 'This command will:'
-            result << '  1. Prompt for Seqera Platform API endpoint'
-            result << '  2. Open browser for OAuth2 authentication (Cloud) or prompt for PAT (Enterprise)'
-            result << '  3. Generate and save access token to home-directory Nextflow config'
-            result << '  4. Configure tower.accessToken, tower.endpoint, and tower.enabled settings'
+            result << '  1. Open browser for OAuth2 authentication (Cloud) or prompt for PAT (Enterprise)'
+            result << '  2. Generate and save access token to home-directory Nextflow config'
+            result << '  3. Configure tower.accessToken, tower.endpoint, and tower.enabled settings'
             result << ''
         }
     }
@@ -1037,9 +1055,6 @@ class CmdAuth extends CmdBase implements UsageAware {
             }
 
             def config = readConfig()
-
-            println "Nextflow Seqera Platform authentication status"
-            println ""
 
             // API endpoint
             def endpointInfo = getConfigValue(config, 'tower.endpoint', 'TOWER_API_ENDPOINT', 'https://api.cloud.seqera.io')
