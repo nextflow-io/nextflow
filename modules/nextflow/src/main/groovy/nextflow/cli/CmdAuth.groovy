@@ -792,6 +792,11 @@ class CmdAuth extends CmdBase implements UsageAware {
             println "Nextflow Seqera Platform configuration"
             println " - Config file: ${getConfigFile()}"
 
+            // Check if token is from environment variable
+            if (!config['tower.accessToken'] && System.getenv('TOWER_ACCESS_TOKEN')) {
+                println " - Using access token from TOWER_ACCESS_TOKEN environment variable"
+            }
+
             try {
                 // Get user info to validate token and get user ID
                 def userInfo = callUserInfoApi(existingToken as String, endpoint as String)
