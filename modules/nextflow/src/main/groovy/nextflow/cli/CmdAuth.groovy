@@ -136,13 +136,25 @@ class CmdAuth extends CmdBase implements UsageAware {
         return input?.isEmpty() || input == null ? 'https://api.cloud.seqera.io' : input
     }
 
+    private Map getCloudEndpointInfo(String apiUrl) {
+        // Check production endpoints
+        if (apiUrl == 'https://api.cloud.seqera.io' || apiUrl == 'https://cloud.seqera.io/api') {
+            return [isCloud: true, environment: 'prod']
+        }
+        // Check staging endpoints
+        if (apiUrl == 'https://api.cloud.stage-seqera.io' || apiUrl == 'https://cloud.stage-seqera.io/api') {
+            return [isCloud: true, environment: 'stage']
+        }
+        // Check development endpoints
+        if (apiUrl == 'https://api.cloud.dev-seqera.io' || apiUrl == 'https://cloud.dev-seqera.io/api') {
+            return [isCloud: true, environment: 'dev']
+        }
+        // Enterprise/other endpoints
+        return [isCloud: false, environment: null]
+    }
+
     private boolean isCloudEndpoint(String apiUrl) {
-        return apiUrl == 'https://api.cloud.seqera.io' ||
-               apiUrl == 'https://api.cloud.stage-seqera.io' ||
-               apiUrl == 'https://api.cloud.dev-seqera.io' ||
-               apiUrl == 'https://cloud.seqera.io/api' ||
-               apiUrl == 'https://cloud.stage-seqera.io/api' ||
-               apiUrl == 'https://cloud.dev-seqera.io/api'
+        return getCloudEndpointInfo(apiUrl).isCloud
     }
 
     // Get user info from Seqera Platform
@@ -250,10 +262,12 @@ class CmdAuth extends CmdBase implements UsageAware {
     //
     class LoginCmd implements SubCmd {
 
-        private static final String AUTH0_DOMAIN = "seqera-development.eu.auth0.com"
-        private static final String AUTH0_CLIENT_ID = "Ep2LhYiYmuV9hhz0dH6dbXVq0S7s7SWZ"
-        // Generate using: qrencode -t UTF8i "url" -m 2
-        private static final String AUTH0_QRCODE = """
+        // Auth0 configuration per environment
+        private static final Map AUTH0_CONFIG = [
+            'dev': [
+                domain: 'seqera-development.eu.auth0.com',
+                clientId: 'Ep2LhYiYmuV9hhz0dH6dbXVq0S7s7SWZ',
+                qrCode: '''
   █▀▀▀▀▀█ ▄ █ ▀▄ ▄▀▀▀▀▀ █▀▀▀▀▀█
   █ ███ █ ▄▄▄ █▄█ ▀▄  ▄ █ ███ █
   █ ▀▀▀ █ ▄█ ▄▄█▄▄  ▀▀█ █ ▀▀▀ █
@@ -269,9 +283,61 @@ class CmdAuth extends CmdBase implements UsageAware {
   █ ███ █ ███▄ ▀█▀▄▀ ▄▀▀▀▀▀▄█▀▄
   █ ▀▀▀ █ █ ▀ ▄ ▀▀▄  ▀▄▀▀█▀█▀█
   ▀▀▀▀▀▀▀ ▀ ▀▀▀▀▀  ▀▀▀ ▀  ▀▀▀
-"""
+'''
+            ],
+            'stage': [
+                domain: 'seqera-stage.eu.auth0.com',
+                clientId: '60cPDjI6YhoTPjyMTIBjGtxatSUwWswB',
+                qrCode: '''
+  █▀▀▀▀▀█ ▄ █ ▀ █▄█  ▀█ █▀▀▀▀▀█
+  █ ███ █ ▄▄▄ █▄▄▄ ▄▄ ▀ █ ███ █
+  █ ▀▀▀ █ ▄█ ▄▄▀ ▄██▀▀▀ █ ▀▀▀ █
+  ▀▀▀▀▀▀▀ ▀▄█▄▀ █▄▀ █▄█ ▀▀▀▀▀▀▀
+  ▀▀██▀▄▀█▀▀▄▀▄▀█▀▄▀▄█ ▀▄█▄▀ ▀▄
+  ▄  █▄▄▀▀▀ ▀ ▄▀▀▀█ ▀ ██▄██▄ ▄
+     ▄▀ ▀ █▀▀ ▀▀▀  ▀ ▄▄▄▄▄▄▀▀ ▄
+  █▀▀ ▄▄▀██ ██▀ ▄██  ▄█▀ ▀█▀▀▄
+  ▄█▄▄  ▀▀▀█ ▀▄▀█ ▄▀ ▄▄█▄█▄▀█ ▄
+  █ ▀ ▄▄▀ ▄ █ ▄ ▀▀█ ▄ ▀ ▀██ ▀▄
+  ▀ ▀▀▀ ▀ ██▄ ▀▀▀ ▄█▄ █▀▀▀█▄███
+  █▀▀▀▀▀█ ▀▄ █▀ █▀▀ ███ ▀ █▀▀▄▄
+  █ ███ █ █▀▀▀▄▄ ▀▄▀▀ ▀▀▀▀▀▄███
+  █ ▀▀▀ █ █▀  ▄█▀▀▄ ██▄▄▀█▀█▀█
+  ▀▀▀▀▀▀▀ ▀▀  ▀ ▀  ▀▀▀  ▀ ▀▀▀
+'''
+            ],
+            'prod': [
+                domain: 'seqera.eu.auth0.com',
+                clientId: 'FxCM8EJ76nNeHUDidSHkZfT8VtsrhHeL',
+                qrCode: '''
+  █▀▀▀▀▀█  ▀▄▄█▀█▄█▄ █▀ █▀▀▀▀▀█
+  █ ███ █ ▀██▄▀██▄  ▀ ▀ █ ███ █
+  █ ▀▀▀ █  ▄▀  ▄▀█ ▀██  █ ▀▀▀ █
+  ▀▀▀▀▀▀▀ █▄█ █▄█▄█▄▀▄█ ▀▀▀▀▀▀▀
+  █▀▀ ▀█▀█▀ ██  █ ▄█  ▄▀█  ▄▀ ▄
+   ▄▀▄█▀▀ ▀▀ ▄ ▀ ▄ ██▄▄▄█▀▀ ▀█▀
+  ▀▄▄▄▄█▀█   ▄█▄  █▀  ▄██  █ ▀█
+   █▀▀▀█▀▄██ ▀█▄█ ██▄▄  ▀█▀█ █▀
+   ▄ ▄▀█▀▀▀▄▀█  █ ▄▀  █▄█▀ █▄▀█
+  ▀▄▄  ▄▀  █▄▄ ▀ ▄ ▄▄ ██▄▀▀▄ █▀
+  ▀ ▀   ▀ █▄▀▄█▄ ▀█▀▀██▀▀▀█ ▄▄▄
+  █▀▀▀▀▀█ █▄▀▀█▄█▄██▄██ ▀ ██ █▀
+  █ ███ █ ▀▄▄█  █ ▄█  ▀▀▀██ ▄██
+  █ ▀▀▀ █ █▀▄▄ ▀   ▄█▀█  ▀█▀ ▄▀
+  ▀▀▀▀▀▀▀ ▀   ▀   ▀▀ ▀▀▀▀ ▀▀ ▀▀
+'''
+            ]
+        ]
 
         String apiUrl
+
+        private Map getAuth0Config(String environment) {
+            def config = AUTH0_CONFIG[environment] as Map
+            if (!config) {
+                throw new RuntimeException("Unknown environment: ${environment}")
+            }
+            return config
+        }
 
         @Override
         String getName() { 'login' }
@@ -315,9 +381,10 @@ class CmdAuth extends CmdBase implements UsageAware {
             AuthColorUtil.printColored(" - Seqera Platform API endpoint: ${AuthColorUtil.colorize(apiUrl, 'magenta')} (can be customised with ${AuthColorUtil.colorize('-url', 'cyan')})", "dim")
 
             // Check if this is a cloud endpoint or enterprise
-            if (isCloudEndpoint(apiUrl)) {
+            def endpointInfo = getCloudEndpointInfo(apiUrl)
+            if (endpointInfo.isCloud) {
                 try {
-                    performAuth0Login(apiUrl)
+                    performAuth0Login(apiUrl, endpointInfo.environment as String)
                 } catch (Exception e) {
                     log.debug("Authentication failed", e)
                     println ""
@@ -329,14 +396,17 @@ class CmdAuth extends CmdBase implements UsageAware {
             }
         }
 
-        private void performAuth0Login(String apiUrl) {
+        private void performAuth0Login(String apiUrl, String environment) {
+            // Get Auth0 configuration for this environment
+            def auth0Config = getAuth0Config(environment)
+
             // Start device authorization flow
-            def deviceAuth = requestDeviceAuthorization()
+            def deviceAuth = requestDeviceAuthorization(auth0Config)
 
             println ""
             AuthColorUtil.printColored("Please visit the following URL in your web browser:", "cyan bold")
             println "  ${AuthColorUtil.colorize(deviceAuth.verification_uri as String, 'magenta')}"
-            println AUTH0_QRCODE
+            println auth0Config.qrCode
             AuthColorUtil.printColored("Enter the following code when prompted:", "cyan bold")
             println "  ${AuthColorUtil.colorize(deviceAuth.user_code as String, 'yellow bold')}"
             println ""
@@ -344,7 +414,7 @@ class CmdAuth extends CmdBase implements UsageAware {
 
             try {
                 // Poll for device token
-                def tokenData = pollForDeviceToken(deviceAuth.device_code as String, deviceAuth.interval as Integer ?: 5)
+                def tokenData = pollForDeviceToken(deviceAuth.device_code as String, deviceAuth.interval as Integer ?: 5, auth0Config)
                 def accessToken = tokenData['access_token'] as String
 
                 // Verify login by calling /user-info
@@ -363,11 +433,11 @@ class CmdAuth extends CmdBase implements UsageAware {
             }
         }
 
-        private Map requestDeviceAuthorization() {
-            def deviceAuthUrl = "https://${AUTH0_DOMAIN}/oauth/device/code"
+        private Map requestDeviceAuthorization(Map auth0Config) {
+            def deviceAuthUrl = "https://${auth0Config.domain}/oauth/device/code"
 
             def params = [
-                'client_id': AUTH0_CLIENT_ID,
+                'client_id': auth0Config.clientId,
                 'scope': 'openid profile email offline_access',
                 'audience': 'platform'
             ]
@@ -395,8 +465,8 @@ class CmdAuth extends CmdBase implements UsageAware {
             return json as Map
         }
 
-        private Map pollForDeviceToken(String deviceCode, int intervalSeconds) {
-            def tokenUrl = "https://${AUTH0_DOMAIN}/oauth/token"
+        private Map pollForDeviceToken(String deviceCode, int intervalSeconds, Map auth0Config) {
+            def tokenUrl = "https://${auth0Config.domain}/oauth/token"
             def maxRetries = 60 // 5 minutes with 5-second intervals
             def retryCount = 0
 
@@ -404,7 +474,7 @@ class CmdAuth extends CmdBase implements UsageAware {
                 def params = [
                     'grant_type': 'urn:ietf:params:oauth:grant-type:device_code',
                     'device_code': deviceCode,
-                    'client_id': AUTH0_CLIENT_ID
+                    'client_id': auth0Config.clientId
                 ]
 
                 def postData = params.collect { k, v ->
