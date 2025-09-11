@@ -214,7 +214,7 @@ results
     └── spleen
 ```
 
-We can achieve this directory structure by customzing the `output` block.
+We can achieve this directory structure by customizing the `output` block.
 
 First, update the `FASTQC` and `QUANT` processes to also emit the sample ID alongside the output files:
 
@@ -319,6 +319,18 @@ workflow {
 ```
 
 We use maps instead of tuples so that we can access fields by name, and so that the index file can use the map keys as column names.
+
+It is also possible to use `map` in the `publish` section. Let's say you have a metadata map `meta` containing `[id: id, key: value, ...]` instead of a value `id`.
+
+```nextflow
+workflow {
+  main:
+  // ...
+
+  publish:
+  samples = my_output_ch.map { meta, fastqc, quant -> meta + [fastqc: fastqc, quant: quant]}
+}
+```
 
 Declare the `samples` output with an index file:
 
