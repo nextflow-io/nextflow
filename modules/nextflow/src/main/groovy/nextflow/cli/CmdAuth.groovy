@@ -26,14 +26,9 @@ import nextflow.exception.AbortOperationException
 import org.fusesource.jansi.Ansi
 import static org.fusesource.jansi.Ansi.*
 
-import java.awt.Desktop
-import java.net.ServerSocket
-import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
-import java.security.MessageDigest
-import java.security.SecureRandom
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 import java.util.regex.Pattern
@@ -257,7 +252,24 @@ class CmdAuth extends CmdBase implements UsageAware {
 
         private static final String AUTH0_DOMAIN = "seqera-development.eu.auth0.com"
         private static final String AUTH0_CLIENT_ID = "Ep2LhYiYmuV9hhz0dH6dbXVq0S7s7SWZ"
-        private static final int CALLBACK_PORT = 8085
+        // Generate using: qrencode -t UTF8i "url" -m 2
+        private static final String AUTH0_QRCODE = """
+  █▀▀▀▀▀█ ▄ █ ▀▄ ▄▀▀▀▀▀ █▀▀▀▀▀█
+  █ ███ █ ▄▄▄ █▄█ ▀▄  ▄ █ ███ █
+  █ ▀▀▀ █ ▄█ ▄▄█▄▄  ▀▀█ █ ▀▀▀ █
+  ▀▀▀▀▀▀▀ ▀▄█▄▀ █▄▀ ▀▄█ ▀▀▀▀▀▀▀
+  █▀▀██ ▀▀█▀▄▀██▀▀▀█▄█▄▀▄█▄▀ ▀▄
+    ▀██ ▀ ▄ ▀   ██ ▀▄ ▄█▄██▄ ▄
+   ▀███▀▀▀▄█▀▄▀█  ▄▀ █▄▄▄▄▄▀▀ ▄
+    █▀█ ▀▄▀ █ ▀▀██▄ ▄ █▀ ▀█▀▀▄
+  ▄▀ █▄▄▀ ▀ █▄ ▀▀▀███▄▄█▄█▄▀█ ▄
+  █ ▀▄ ▀▀▄▄▀▄ ▄ ▄██▀▄▄▄ ▀██ ▀▄
+  ▀ ▀  ▀▀ █▄█▄▀▀▀▀█▀▄▄█▀▀▀█▄███
+  █▀▀▀▀▀█ ▀ █▄▀▀▄█▀  ██ ▀ █▀▀▄
+  █ ███ █ ███▄ ▀█▀▄▀ ▄▀▀▀▀▀▄█▀▄
+  █ ▀▀▀ █ █ ▀ ▄ ▀▀▄  ▀▄▀▀█▀█▀█
+  ▀▀▀▀▀▀▀ ▀ ▀▀▀▀▀  ▀▀▀ ▀  ▀▀▀
+"""
 
         String apiUrl
 
@@ -273,9 +285,10 @@ class CmdAuth extends CmdBase implements UsageAware {
             // Check if TOWER_ACCESS_TOKEN environment variable is set
             def envToken = System.getenv('TOWER_ACCESS_TOKEN')
             if (envToken) {
+                println ""
                 AuthColorUtil.printColored("WARNING: Authentication token is already configured via TOWER_ACCESS_TOKEN environment variable.", "yellow bold")
-                println "${AuthColorUtil.colorize('nextflow auth login', 'cyan')} sets credentials using Nextflow config files, which take precedence over the environment variable."
-                println "however, caution is advised to avoid confusing behaviour."
+                AuthColorUtil.printColored("${AuthColorUtil.colorize('nextflow auth login', 'cyan')} sets credentials using Nextflow config files, which take precedence over the environment variable.", "dim")
+                AuthColorUtil.printColored(" however, caution is advised to avoid confusing behaviour.", "dim")
                 println ""
             }
 
@@ -283,9 +296,9 @@ class CmdAuth extends CmdBase implements UsageAware {
             def config = readConfig()
             def existingToken = config['tower.accessToken']
             if (existingToken) {
-                println "Authentication token is already configured in Nextflow config."
-                println "Config file: ${AuthColorUtil.colorize(getConfigFile().toString(), 'magenta')}"
-                println "Run ${AuthColorUtil.colorize('nextflow auth logout', 'cyan')} to remove the current authentication."
+                AuthColorUtil.printColored("Error: Authentication token is already configured in Nextflow config.", "red")
+                AuthColorUtil.printColored("Config file: ${AuthColorUtil.colorize(getConfigFile().toString(), 'magenta')}", "dim")
+                println " Run ${AuthColorUtil.colorize('nextflow auth logout', 'cyan')} to remove the current authentication."
                 return
             }
 
@@ -299,9 +312,7 @@ class CmdAuth extends CmdBase implements UsageAware {
                 apiUrl = 'https://' + apiUrl
             }
 
-            AuthColorUtil.printColored(" - Seqera Platform API endpoint: ${AuthColorUtil.colorize(apiUrl, 'magenta')}", "dim")
-            AuthColorUtil.printColored("   (can be customised with ${AuthColorUtil.colorize('-u', 'cyan')} option)", "dim")
-            Thread.sleep(2000)
+            AuthColorUtil.printColored(" - Seqera Platform API endpoint: ${AuthColorUtil.colorize(apiUrl, 'magenta')} (can be customised with ${AuthColorUtil.colorize('-url', 'cyan')})", "dim")
 
             // Check if this is a cloud endpoint or enterprise
             if (isCloudEndpoint(apiUrl)) {
@@ -309,7 +320,8 @@ class CmdAuth extends CmdBase implements UsageAware {
                     performAuth0Login(apiUrl)
                 } catch (Exception e) {
                     log.debug("Authentication failed", e)
-                    throw new AbortOperationException("Authentication failed: ${e.message}")
+                    println ""
+                    throw new AbortOperationException("${e.message}")
                 }
             } else {
                 // Enterprise endpoint - use PAT authentication
@@ -318,33 +330,26 @@ class CmdAuth extends CmdBase implements UsageAware {
         }
 
         private void performAuth0Login(String apiUrl) {
-            AuthColorUtil.printColored(" - Opening browser for authentication...", "dim")
+            // Start device authorization flow
+            def deviceAuth = requestDeviceAuthorization()
 
-            // Generate PKCE parameters
-            def codeVerifier = generateCodeVerifier()
-            def codeChallenge = generateCodeChallenge(codeVerifier)
-            def state = generateState()
-
-            // Start local server for callback
-            def callbackFuture = startCallbackServer(state)
-
-            // Build authorization URL
-            def authUrl = buildAuthUrl(codeChallenge, state)
-
-            // Open browser
-            openBrowser(authUrl)
+            println ""
+            AuthColorUtil.printColored("Please visit the following URL in your web browser:", "cyan bold")
+            println "  ${AuthColorUtil.colorize(deviceAuth.verification_uri as String, 'magenta')}"
+            println AUTH0_QRCODE
+            AuthColorUtil.printColored("Enter the following code when prompted:", "cyan bold")
+            println "  ${AuthColorUtil.colorize(deviceAuth.user_code as String, 'yellow bold')}"
+            println ""
+            AuthColorUtil.printColored("Waiting for authentication...", "dim")
 
             try {
-                // Wait for callback with timeout
-                def authCode = callbackFuture.get(5, TimeUnit.MINUTES)
-
-                // Exchange code for token
-                def tokenData = exchangeCodeForToken(authCode, codeVerifier)
+                // Poll for device token
+                def tokenData = pollForDeviceToken(deviceAuth.device_code as String, deviceAuth.interval as Integer ?: 5)
                 def accessToken = tokenData['access_token'] as String
 
                 // Verify login by calling /user-info
                 def userInfo = callUserInfoApi(accessToken, apiUrl)
-                AuthColorUtil.printColored("\nAuthentication successful! Logged in as: ${AuthColorUtil.colorize(userInfo.userName as String, 'cyan bold')}", "green")
+                AuthColorUtil.printColored("Authentication successful! Logged in as: ${AuthColorUtil.colorize(userInfo.userName as String, 'cyan bold')}", "green")
 
                 // Generate PAT
                 def pat = generatePAT(accessToken, apiUrl)
@@ -354,197 +359,24 @@ class CmdAuth extends CmdBase implements UsageAware {
                 AuthColorUtil.printColored("Seqera Platform configuration saved to ${AuthColorUtil.colorize(getConfigFile().toString(), 'magenta')}", "green")
 
             } catch (Exception e) {
-                throw new RuntimeException("Authentication timeout or failed: ${e.message}", e)
+                throw new RuntimeException("Authentication failed: ${e.message}", e)
             }
         }
 
-        private String generateCodeVerifier() {
-            def random = new SecureRandom()
-            def bytes = new byte[32]
-            random.nextBytes(bytes)
-            return Base64.urlEncoder.withoutPadding().encodeToString(bytes)
-        }
+        private Map requestDeviceAuthorization() {
+            def deviceAuthUrl = "https://${AUTH0_DOMAIN}/oauth/device/code"
 
-        private String generateCodeChallenge(String codeVerifier) {
-            def digest = MessageDigest.getInstance("SHA-256")
-            def hash = digest.digest(codeVerifier.getBytes("UTF-8"))
-            return Base64.urlEncoder.withoutPadding().encodeToString(hash)
-        }
-
-        private String generateState() {
-            def random = new SecureRandom()
-            def bytes = new byte[16]
-            random.nextBytes(bytes)
-            return Base64.urlEncoder.withoutPadding().encodeToString(bytes)
-        }
-
-        private CompletableFuture<String> startCallbackServer(String expectedState) {
-            def future = new CompletableFuture<String>()
-
-            Thread.start {
-                try {
-                    def server = new ServerSocket(CALLBACK_PORT)
-                    server.soTimeout = 300000 // 5 minutes
-
-                    def socket = server.accept()
-                    def input = new BufferedReader(new InputStreamReader(socket.inputStream))
-                    def output = new PrintWriter(socket.outputStream)
-
-                    def requestLine = input.readLine()
-                    if (requestLine?.startsWith("GET /callback")) {
-                        def query = requestLine.split("\\?")[1]?.split(" ")[0]
-                        def params = parseQueryParams(query)
-
-                        if (params['state'] != expectedState) {
-                            throw new RuntimeException("Invalid state parameter")
-                        }
-
-                        if (params['error']) {
-                            throw new RuntimeException("Auth error: ${params['error']} - ${params['error_description']}")
-                        }
-
-                        def code = params['code']
-                        if (!code) {
-                            throw new RuntimeException("No authorization code received")
-                        }
-
-                        // Send success response
-                        output.println("HTTP/1.1 200 OK")
-                        output.println("Content-Type: text/html")
-                        output.println()
-                        output.println("""<html>
-<head>
-    <style>
-        body {
-            font-family: Inter, sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-        }
-        .container {
-            padding: 2rem;
-            background: white;
-            border: 1px solid rgba(69, 63, 81, .2);
-        }
-        h1 {
-            color: #1e293b;
-            margin: 0 0 1rem;
-            font-size: 21px;
-            font-weight: 600;
-        }
-        p { color: #64748b; margin: 0; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>Nextflow authentication successful!</h1>
-        <p>You can now close this window.</p>
-    </div>
-</body>
-</html>
-""")
-                        output.flush()
-
-                        future.complete(code)
-                    } else {
-                        future.completeExceptionally(new RuntimeException("Invalid callback request"))
-                    }
-
-                    socket.close()
-                    server.close()
-
-                } catch (Exception e) {
-                    future.completeExceptionally(e)
-                }
-            }
-
-            return future
-        }
-
-        private Map<String, String> parseQueryParams(String query) {
-            Map<String, String> params = [:]
-            if (query) {
-                query.split('&').each { param ->
-                    def parts = param.split('=', 2)
-                    if (parts.length == 2) {
-                        params[URLDecoder.decode(parts[0], "UTF-8")] = URLDecoder.decode(parts[1], "UTF-8")
-                    }
-                }
-            }
-            return params
-        }
-
-        private String buildAuthUrl(String codeChallenge, String state) {
             def params = [
-                'response_type': 'code',
                 'client_id': AUTH0_CLIENT_ID,
-                'redirect_uri': "http://localhost:${CALLBACK_PORT}/callback",
                 'scope': 'openid profile email offline_access',
-                'audience': 'platform',
-                'code_challenge': codeChallenge,
-                'code_challenge_method': 'S256',
-                'state': state,
-                'prompt': 'login'
-            ]
-
-            def query = params.collect { k, v ->
-                "${URLEncoder.encode(k.toString(), 'UTF-8')}=${URLEncoder.encode(v.toString(), 'UTF-8')}"
-            }.join('&')
-
-            return "https://${AUTH0_DOMAIN}/authorize?${query}"
-        }
-
-        private void openBrowser(String url) {
-            try {
-                if (Desktop.isDesktopSupported()) {
-                    def desktop = Desktop.desktop
-                    if (desktop.isSupported(Desktop.Action.BROWSE)) {
-                        desktop.browse(new URI(url))
-                        return
-                    }
-                }
-
-                // Fallback: try OS-specific commands
-                def os = System.getProperty("os.name").toLowerCase()
-                if (os.contains("mac")) {
-                    Runtime.runtime.exec(["open", url] as String[])
-                    return
-                } else if (os.contains("linux")) {
-                    Runtime.runtime.exec(["xdg-open", url] as String[])
-                    return
-                } else if (os.contains("windows")) {
-                    Runtime.runtime.exec(["rundll32", "url.dll,FileProtocolHandler", url] as String[])
-                    return
-                }
-
-                // If all else fails, show URL
-                println "Could not open browser automatically. Please visit: ${url}"
-
-            } catch (Exception e) {
-                log.debug("Failed to open browser", e)
-                println "Failed to open browser automatically. Please visit: ${url}"
-            }
-        }
-
-        private Map exchangeCodeForToken(String authCode, String codeVerifier) {
-            def tokenUrl = "https://${AUTH0_DOMAIN}/oauth/token"
-
-            def params = [
-                'grant_type': 'authorization_code',
-                'client_id': AUTH0_CLIENT_ID,
-                'code': authCode,
-                'redirect_uri': "http://localhost:${CALLBACK_PORT}/callback",
-                'code_verifier': codeVerifier
+                'audience': 'platform'
             ]
 
             def postData = params.collect { k, v ->
                 "${URLEncoder.encode(k.toString(), 'UTF-8')}=${URLEncoder.encode(v.toString(), 'UTF-8')}"
             }.join('&')
 
-            def connection = new URL(tokenUrl).openConnection() as HttpURLConnection
+            def connection = new URL(deviceAuthUrl).openConnection() as HttpURLConnection
             connection.requestMethod = 'POST'
             connection.setRequestProperty('Content-Type', 'application/x-www-form-urlencoded')
             connection.doOutput = true
@@ -555,13 +387,78 @@ class CmdAuth extends CmdBase implements UsageAware {
 
             if (connection.responseCode != 200) {
                 def error = connection.errorStream?.text ?: "HTTP ${connection.responseCode}"
-                throw new RuntimeException("Token exchange failed: ${error}")
+                throw new RuntimeException("Device authorization request failed: ${error}")
             }
 
             def response = connection.inputStream.text
             def json = new groovy.json.JsonSlurper().parseText(response)
             return json as Map
         }
+
+        private Map pollForDeviceToken(String deviceCode, int intervalSeconds) {
+            def tokenUrl = "https://${AUTH0_DOMAIN}/oauth/token"
+            def maxRetries = 60 // 5 minutes with 5-second intervals
+            def retryCount = 0
+
+            while (retryCount < maxRetries) {
+                def params = [
+                    'grant_type': 'urn:ietf:params:oauth:grant-type:device_code',
+                    'device_code': deviceCode,
+                    'client_id': AUTH0_CLIENT_ID
+                ]
+
+                def postData = params.collect { k, v ->
+                    "${URLEncoder.encode(k.toString(), 'UTF-8')}=${URLEncoder.encode(v.toString(), 'UTF-8')}"
+                }.join('&')
+
+                def connection = new URL(tokenUrl).openConnection() as HttpURLConnection
+                connection.requestMethod = 'POST'
+                connection.setRequestProperty('Content-Type', 'application/x-www-form-urlencoded')
+                connection.doOutput = true
+
+                connection.outputStream.withWriter { writer ->
+                    writer.write(postData)
+                }
+
+                if (connection.responseCode == 200) {
+                    def response = connection.inputStream.text
+                    def json = new groovy.json.JsonSlurper().parseText(response)
+                    return json as Map
+                } else {
+                    def errorResponse = connection.errorStream?.text
+                    if (errorResponse) {
+                        def errorJson = new groovy.json.JsonSlurper().parseText(errorResponse) as Map
+                        def error = errorJson.error
+
+                        if (error == 'authorization_pending') {
+                            // User hasn't completed authorization yet, continue polling
+                            print "."
+                            System.out.flush()
+                        } else if (error == 'slow_down') {
+                            // Increase polling interval
+                            intervalSeconds += 5
+                            print "."
+                            System.out.flush()
+                        } else if (error == 'expired_token') {
+                            throw new RuntimeException("The device code has expired. Please try again.")
+                        } else if (error == 'access_denied') {
+                            throw new RuntimeException("Access denied by user")
+                        } else {
+                            throw new RuntimeException("Token request failed: ${error} - ${errorJson.error_description ?: ''}")
+                        }
+                    } else {
+                        throw new RuntimeException("Token request failed: HTTP ${connection.responseCode}")
+                    }
+                }
+
+                // Wait before next poll
+                Thread.sleep(intervalSeconds * 1000)
+                retryCount++
+            }
+
+            throw new RuntimeException("Authentication timed out. Please try again.")
+        }
+
 
         private void handleEnterpriseAuth(String apiUrl) {
             println ""
@@ -633,9 +530,10 @@ class CmdAuth extends CmdBase implements UsageAware {
             result << '  -u, -url <endpoint>    Seqera Platform API endpoint (default: https://api.cloud.seqera.io)'
             result << ''
             result << 'This command will:'
-            result << '  1. Open browser for OAuth2 authentication (Cloud) or prompt for PAT (Enterprise)'
-            result << '  2. Generate and save access token to home-directory Nextflow config'
-            result << '  3. Configure tower.accessToken, tower.endpoint, and tower.enabled settings'
+            result << '  1. Display a URL and device code for OAuth2 authentication (Cloud) or prompt for PAT (Enterprise)'
+            result << '  2. Wait for user to complete authentication in web browser'
+            result << '  3. Generate and save access token to home-directory Nextflow config'
+            result << '  4. Configure tower.accessToken, tower.endpoint, and tower.enabled settings'
             result << ''
         }
     }
@@ -656,8 +554,8 @@ class CmdAuth extends CmdBase implements UsageAware {
             if (envToken) {
                 println ""
                 AuthColorUtil.printColored("WARNING: TOWER_ACCESS_TOKEN environment variable is set.", "yellow bold")
-                println "  ${AuthColorUtil.colorize('nextflow auth logout', 'dim cyan')}${AuthColorUtil.colorize(' only removes credentials from Nextflow config files.', 'dim')}"
-                AuthColorUtil.printColored("  The environment variable will remain unaffected.", "dim")
+                println " ${AuthColorUtil.colorize('nextflow auth logout', 'dim cyan')}${AuthColorUtil.colorize(' only removes credentials from Nextflow config files.', 'dim')}"
+                AuthColorUtil.printColored(" The environment variable will remain unaffected.", "dim")
                 println ""
             }
 
@@ -679,7 +577,7 @@ class CmdAuth extends CmdBase implements UsageAware {
             if (!apiUrl || apiUrl.isEmpty()) {
                 apiUrl = promptForApiUrl()
             } else {
-                println " - Using Seqera Platform endpoint: ${apiUrl}"
+                AuthColorUtil.printColored(" - Using Seqera Platform endpoint: ${AuthColorUtil.colorize(apiUrl, 'magenta')}", "dim")
             }
 
             // Validate token by calling /user-info API
@@ -1156,7 +1054,7 @@ class CmdAuth extends CmdBase implements UsageAware {
             col3Width = Math.max(col3Width, 10) + 2
 
             // Print table header
-            println "${AuthColorUtil.colorize('Setting'.padRight(col1Width), 'cyan bold')} ${AuthColorUtil.colorize('Value'.padRight(col2Width), 'cyan bold')} ${AuthColorUtil.colorize('Source', 'cyan bold')}"
+            AuthColorUtil.printColored("${'Setting'.padRight(col1Width)} ${'Value'.padRight(col2Width)} Source", "cyan bold")
             println "${'-' * col1Width} ${'-' * col2Width} ${'-' * col3Width}"
 
             // Print rows
