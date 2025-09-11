@@ -309,11 +309,13 @@ class ScriptMeta {
      */
     boolean hasExecutableProcesses() {
         // Don't allow execution of true modules (those are meant for inclusion)
-        if( isModule() ) return false
+        if( isModule() )
+            return false
         
         // Must have at least one process
-        def processNames = getLocalProcessNames()
-        if( processNames.isEmpty() ) return false
+        final processNames = getLocalProcessNames()
+        if( processNames.isEmpty() )
+            return false
         
         // Must not have any workflow definitions (including unnamed workflow)
         return getLocalWorkflowNames().isEmpty()

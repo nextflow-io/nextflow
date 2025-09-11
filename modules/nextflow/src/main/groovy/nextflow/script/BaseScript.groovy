@@ -192,9 +192,10 @@ abstract class BaseScript extends Script implements ExecutionContext {
             // Check if we have standalone processes that can be executed automatically
             if( meta.hasExecutableProcesses() ) {
                 // Create a workflow to execute the process (single process or first of multiple)
-                def handler = new ProcessEntryHandler(this, session, meta)
+                final handler = new ProcessEntryHandler(this, session, meta)
                 entryFlow = handler.createAutoProcessWorkflow()
-            } else {
+            }
+            else {
                 return result
             }
         }
