@@ -13,10 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-apply plugin: 'java'
-apply plugin: 'java-test-fixtures'
-apply plugin: 'idea'
-apply plugin: 'groovy'
+plugins {
+    id 'io.nextflow.nextflow-plugin' version "${nextflowPluginVersion}"
+    id 'java-test-fixtures'
+}
+
+nextflowPlugin {
+    nextflowVersion = '25.08.0-edge'
+
+    provider = "${nextflowPluginProvider}"
+    description = 'Provides native Kubernetes execution capability with advanced pod management, volume mounting, and resource allocation features'
+    className = 'nextflow.k8s.K8sPlugin'
+    useDefaultDependencies = false
+    extensionPoints = [
+        'nextflow.k8s.K8sConfig',
+        'nextflow.k8s.K8sExecutor',
+        'nextflow.k8s.cli.KubeCommandImpl',
+    ]
+}
 
 sourceSets {
     main.java.srcDirs = []

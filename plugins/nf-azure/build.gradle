@@ -13,10 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-apply plugin: 'java'
-apply plugin: 'java-test-fixtures'
-apply plugin: 'idea'
-apply plugin: 'groovy'
+plugins {
+    id 'io.nextflow.nextflow-plugin' version "${nextflowPluginVersion}"
+    id 'java-test-fixtures'
+}
+
+nextflowPlugin {
+    nextflowVersion = '25.08.0-edge'
+
+    provider = "${nextflowPluginProvider}"
+    description = 'Enables Azure cloud execution through Batch service with native Blob storage access and comprehensive authentication options'
+    className = 'nextflow.cloud.azure.AzurePlugin'
+    useDefaultDependencies = false
+    extensionPoints = [
+        'nextflow.cloud.azure.batch.AzBatchExecutor',
+        'nextflow.cloud.azure.config.AzConfig',
+        'nextflow.cloud.azure.file.AzPathFactory',
+        'nextflow.cloud.azure.file.AzPathSerializer',
+        'nextflow.cloud.azure.fusion.AzFusionEnv',
+    ]
+}
 
 sourceSets {
     main.java.srcDirs = []
@@ -48,8 +64,8 @@ dependencies {
     }
 
     // address security vulnerabilities
-    implementation 'io.netty:netty-handler:4.1.124.Final'
-    implementation 'io.netty:netty-codec-http2:4.1.124.Final'
+    implementation 'io.netty:netty-handler:4.1.125.Final'
+    implementation 'io.netty:netty-codec-http2:4.1.125.Final'
     implementation 'net.minidev:json-smart:2.5.2'
 
     testImplementation(testFixtures(project(":nextflow")))

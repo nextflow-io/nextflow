@@ -43,7 +43,6 @@ clean:
 	rm -rf modules/nextflow/.nextflow*
 	rm -rf modules/nextflow/work
 	rm -rf build
-	rm -rf buildSrc/build
 	rm -rf modules/*/build
 	rm -rf plugins/*/build
 	./gradlew clean
@@ -52,7 +51,8 @@ clean:
 # install compiled artifacts in Maven local dir
 # 
 install:
-	BUILD_PACK=1 ./gradlew installLauncher publishToMavenLocal
+	BUILD_PACK=1 \
+	./gradlew installLauncher publishToMavenLocal installPlugin
 
 #
 # Show dependencies try `make deps config=runtime`, `make deps config=google`
@@ -125,8 +125,7 @@ dockerImage:
 # Create local docker image
 #
 dockerPack:
-	BUILD_PACK=1 ./gradlew publishToMavenLocal dockerPack -Dmaven.repo.local=${PWD}/build/docker/.nextflow/capsule/deps/
-
+	BUILD_PACK=1 ./gradlew publishToMavenLocal dockerPack -Dmaven.repo.local=${PWD}/build/docker/.nextflow/capsule/deps/ installPlugin
 
 upload-plugins:
 	./gradlew plugins:upload

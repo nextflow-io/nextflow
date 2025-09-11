@@ -78,4 +78,15 @@ class RetryOpts implements ConfigScope, Retryable.Config {
         if( config.multiplier )
             multiplier = config.multiplier as double
     }
+
+    // Methods required by Retryable.Config interface
+    @Override
+    java.time.Duration getDelayAsDuration() {
+        return java.time.Duration.ofMillis(delay.toMillis())
+    }
+
+    @Override
+    java.time.Duration getMaxDelayAsDuration() {
+        return java.time.Duration.ofMillis(maxDelay.toMillis())
+    }
 }
