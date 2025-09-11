@@ -21,6 +21,9 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.cloud.google.GoogleOpts
+import nextflow.config.schema.ConfigOption
+import nextflow.config.schema.ConfigScope
+import nextflow.script.dsl.Description
 import nextflow.util.MemoryUnit
 /**
  * Model Google Batch config settings
@@ -29,70 +32,127 @@ import nextflow.util.MemoryUnit
  */
 @Slf4j
 @CompileStatic
-class BatchConfig {
+class BatchConfig implements ConfigScope {
 
     static final private int DEFAULT_MAX_SPOT_ATTEMPTS = 0
     
     static final private List<Integer> DEFAULT_RETRY_LIST = List.of(50001)
 
-    private GoogleOpts googleOpts
-    private GoogleCredentials credentials
-    private List<String> allowedLocations
-    private String bootDiskImage
-    private MemoryUnit bootDiskSize
-    private String cpuPlatform
-    private int maxSpotAttempts
-    private boolean installGpuDrivers
-    private boolean preemptible
-    private boolean spot
-    private boolean usePrivateAddress
-    private String network
-    private String subnetwork
-    private String serviceAccountEmail
-    private BatchRetryConfig retryConfig
-    private List<Integer> autoRetryExitCodes
+    static final private List<String> DEFAULT_GCSFUSE_OPTS = List.<String>of('-o rw', '-implicit-dirs')
 
-    GoogleOpts getGoogleOpts() { return googleOpts }
-    GoogleCredentials getCredentials() { return credentials }
-    List<String> getAllowedLocations() { allowedLocations }
-    String getBootDiskImage() { bootDiskImage }
-    MemoryUnit getBootDiskSize() { bootDiskSize }
-    String getCpuPlatform() { cpuPlatform }
-    int getMaxSpotAttempts() { maxSpotAttempts }
-    boolean getInstallGpuDrivers() { installGpuDrivers }
-    boolean getPreemptible() { preemptible }
-    boolean getSpot() { spot }
-    boolean getUsePrivateAddress() { usePrivateAddress }
-    String getNetwork() { network }
-    String getSubnetwork() { subnetwork }
-    String getServiceAccountEmail() { serviceAccountEmail }
-    BatchRetryConfig getRetryConfig() { retryConfig }
-    List<Integer> getAutoRetryExitCodes() { autoRetryExitCodes }
+    @ConfigOption
+    @Description("""
+        The set of [allowed locations](https://cloud.google.com/batch/docs/reference/rest/v1/projects.locations.jobs#locationpolicy) for VMs to be provisioned (default: no restriction).
+    """)
+    final List<String> allowedLocations
 
-    static BatchConfig create(Session session) {
-        final result = new BatchConfig()
-        result.googleOpts = GoogleOpts.create(session)
-        result.credentials = result.googleOpts.credentials
-        result.allowedLocations = session.config.navigate('google.batch.allowedLocations', List.of()) as List<String>
-        result.bootDiskImage = session.config.navigate('google.batch.bootDiskImage')
-        result.bootDiskSize = session.config.navigate('google.batch.bootDiskSize') as MemoryUnit
-        result.cpuPlatform = session.config.navigate('google.batch.cpuPlatform')
-        result.maxSpotAttempts = session.config.navigate('google.batch.maxSpotAttempts', DEFAULT_MAX_SPOT_ATTEMPTS) as int
-        result.installGpuDrivers = session.config.navigate('google.batch.installGpuDrivers',false)
-        result.preemptible = session.config.navigate('google.batch.preemptible',false)
-        result.spot = session.config.navigate('google.batch.spot',false)
-        result.usePrivateAddress = session.config.navigate('google.batch.usePrivateAddress',false)
-        result.network = session.config.navigate('google.batch.network')
-        result.subnetwork = session.config.navigate('google.batch.subnetwork')
-        result.serviceAccountEmail = session.config.navigate('google.batch.serviceAccountEmail')
-        result.retryConfig = new BatchRetryConfig( session.config.navigate('google.batch.retryPolicy') as Map ?: Map.of() )
-        result.autoRetryExitCodes = session.config.navigate('google.batch.autoRetryExitCodes', DEFAULT_RETRY_LIST) as List<Integer>
-        return result
+    @ConfigOption
+    @Description("""
+        The list of exit codes that should be automatically retried by Google Batch when `google.batch.maxSpotAttempts` is greater than 0 (default: `[50001]`).
+
+        [Read more](https://cloud.google.com/batch/docs/troubleshooting#reserved-exit-codes)
+    """)
+    final List<Integer> autoRetryExitCodes
+
+    @ConfigOption
+    @Description("""
+        The image URI of the virtual machine boot disk, e.g `batch-debian` (default: none).
+
+        [Read more](https://cloud.google.com/batch/docs/vm-os-environment-overview#vm-os-image-options)
+    """)
+    final String bootDiskImage
+
+    @ConfigOption
+    @Description("""
+        The size of the virtual machine boot disk, e.g `50.GB` (default: none).
+    """)
+    final MemoryUnit bootDiskSize
+
+    @ConfigOption
+    @Description("""
+        The [minimum CPU Platform](https://cloud.google.com/compute/docs/instances/specify-min-cpu-platform#specifications), e.g. `'Intel Skylake'` (default: none).
+    """)
+    final String cpuPlatform
+
+    @ConfigOption
+    @Description("""
+        List of custom mount options for `gcsfuse` (default: `['-o rw', '-implicit-dirs']`).
+    """)
+    final List<String> gcsfuseOptions
+
+    @ConfigOption
+    @Description("""
+    """)
+    final boolean installGpuDrivers
+
+    @ConfigOption
+    @Description("""
+        Max number of execution attempts of a job interrupted by a Compute Engine Spot reclaim event (default: `0`).
+    """)
+    final int maxSpotAttempts
+
+    @ConfigOption
+    @Description("""
+        The URL of an existing network resource to which the VM will be attached.
+    """)
+    final String network
+
+    @ConfigOption
+    @Description("""
+        The [network tags](https://cloud.google.com/vpc/docs/add-remove-network-tags) to be applied to the instances created by Google Batch jobs (e.g., `['allow-ssh', 'allow-http']`).
+    """)
+    final List<String> networkTags
+
+    @ConfigOption
+    @Description("""
+    """)
+    final boolean preemptible
+
+    final BatchRetryConfig retry
+
+    @ConfigOption
+    @Description("""
+        The Google service account email to use for the pipeline execution. If not specified, the default Compute Engine service account for the project will be used.
+    """)
+    final String serviceAccountEmail
+
+    @ConfigOption
+    @Description("""
+        Enable the use of spot virtual machines (default: `false`).
+    """)
+    final boolean spot
+
+    @ConfigOption
+    @Description("""
+        The URL of an existing subnetwork resource in the network to which the VM will be attached.
+    """)
+    final String subnetwork
+
+    @ConfigOption
+    @Description("""
+        Do not provision public IP addresses for VMs, such that they only have an internal IP address (default: `false`).
+    """)
+    final boolean usePrivateAddress
+
+    BatchConfig(Map opts) {
+        allowedLocations = opts.allowedLocations as List<String> ?: Collections.emptyList()
+        autoRetryExitCodes = opts.autoRetryExitCodes as List<Integer> ?: DEFAULT_RETRY_LIST
+        bootDiskImage = opts.bootDiskImage
+        bootDiskSize = opts.bootDiskSize as MemoryUnit
+        cpuPlatform = opts.cpuPlatform
+        gcsfuseOptions = opts.gcsfuseOptions as List<String> ?: DEFAULT_GCSFUSE_OPTS
+        installGpuDrivers = opts.installGpuDrivers as boolean
+        maxSpotAttempts = opts.maxSpotAttempts != null ? opts.maxSpotAttempts as int : DEFAULT_MAX_SPOT_ATTEMPTS
+        network = opts.network
+        networkTags = opts.networkTags as List<String> ?: Collections.emptyList()
+        preemptible = opts.preemptible as boolean
+        retry = new BatchRetryConfig( opts.retryPolicy as Map ?: Collections.emptyMap() )
+        serviceAccountEmail = opts.serviceAccountEmail
+        spot = opts.spot as boolean
+        subnetwork = opts.subnetwork
+        usePrivateAddress = opts.usePrivateAddress as boolean
     }
 
-    @Override
-    String toString(){
-        return "BatchConfig[googleOpts=$googleOpts"
-    }
+    BatchRetryConfig getRetryConfig() { retry }
 
 }

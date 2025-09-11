@@ -1,8 +1,8 @@
-foo 2
-foo 3
-foo 4
-foo 5
-bar 1
-bar 4
-bar 9
-bar 16
+inc 2
+inc 3
+inc 4
+inc 5
+squared 1
+squared 4
+squared 9
+squared 16

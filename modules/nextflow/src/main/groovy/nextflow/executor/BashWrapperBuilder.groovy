@@ -28,6 +28,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.SysEnv
 import nextflow.container.ContainerBuilder
+import nextflow.container.ContainerHelper
 import nextflow.container.DockerBuilder
 import nextflow.container.SingularityBuilder
 import nextflow.exception.ProcessException
@@ -39,6 +40,7 @@ import nextflow.processor.TaskRun
 import nextflow.secret.SecretsLoader
 import nextflow.util.Escape
 import nextflow.util.MemoryUnit
+import nextflow.util.TestOnly
 /**
  * Builder to create the Bash script which is used to
  * wrap and launch the user task
@@ -124,8 +126,8 @@ class BashWrapperBuilder {
         this.copyStrategy = strategy ?: new SimpleFileCopyStrategy(bean)
     }
 
-    /** only for testing -- do not use */
-    protected BashWrapperBuilder() { }
+    @TestOnly
+    protected BashWrapperBuilder() {}
 
     /**
      * @return The bash script fragment to change to the 'scratch' directory if it has been specified in the task configuration
@@ -159,7 +161,12 @@ class BashWrapperBuilder {
     }
 
     protected boolean fixOwnership() {
-        systemOsName == 'Linux' && containerConfig?.fixOwnership && runWithContainer && containerConfig.engine == 'docker' // <-- note: only for docker (other container runtimes are not affected)
+        // note: only for docker (other container runtimes are not affected)
+        ContainerHelper.fixOwnership(containerConfig) && isLinuxOS() && runWithContainer
+    }
+
+    protected isLinuxOS() {
+        systemOsName == 'Linux'
     }
 
     protected isMacOS() {
@@ -470,6 +477,8 @@ class BashWrapperBuilder {
             return true
         if( e instanceof SocketException )
             return true
+        if( e instanceof SocketTimeoutException )
+            return true
         if( e instanceof RuntimeException )
             return true
         if( e.class.getSimpleName() == 'HttpResponseException' )
@@ -563,6 +572,14 @@ class BashWrapperBuilder {
         statsEnabled || fixOwnership()
     }
 
+    protected String shellPath() {
+        // keep the shell path as "/bin/bash" when a non-custom "shell" attribute is specified
+        // to not introduce unexpected changes due to the fact BASH is defined as "/bin/bash -eu" by default
+        return shell.is(BASH)
+            ? "/bin/bash"
+            : shell.join(' ')
+    }
+
     protected String getLaunchCommand(String interpreter, String env) {
         /*
         * process stats
@@ -574,7 +591,7 @@ class BashWrapperBuilder {
         final traceWrapper = isTraceRequired()
         if( traceWrapper ) {
             // executes the stub which in turn executes the target command
-            launcher = "/bin/bash ${fileStr(wrapperFile)} nxf_trace"
+            launcher = "${shellPath()} ${fileStr(wrapperFile)} nxf_trace"
         }
         else {
             launcher = "${interpreter} ${fileStr(scriptFile)}"
@@ -643,8 +660,8 @@ class BashWrapperBuilder {
     }
 
     @PackageScope
-    ContainerBuilder createContainerBuilder0(String engine) {
-        ContainerBuilder.create(engine, containerImage)
+    ContainerBuilder createContainerBuilder0() {
+        ContainerBuilder.create(containerConfig, containerImage)
     }
 
     protected boolean getAllowContainerMounts() {
@@ -661,8 +678,7 @@ class BashWrapperBuilder {
     @PackageScope
     ContainerBuilder createContainerBuilder(String changeDir) {
 
-        final engine = containerConfig.getEngine()
-        ContainerBuilder builder = createContainerBuilder0(engine)
+        final builder = createContainerBuilder0()
 
         /*
          * initialise the builder
@@ -693,6 +709,9 @@ class BashWrapperBuilder {
         if( this.containerCpuset )
             builder.addRunOptions(containerCpuset)
 
+        if( this.containerPlatform )
+            builder.setPlatform(this.containerPlatform)
+
         // export task work directory
         builder.addEnv('NXF_TASK_WORKDIR')
         // export the nextflow script debug variable
@@ -714,22 +733,14 @@ class BashWrapperBuilder {
                 builder.addEnv(var)
         }
 
-        // set up run docker params
-        builder.params(containerConfig)
-
-        // extra rule for the 'auto' temp dir temp dir
-        def temp = containerConfig.temp?.toString()
-        if( temp == 'auto' || temp == 'true' ) {
+        // extra rule for the 'auto' temp dir
+        if( containerConfig.getTemp() == 'auto' )
             builder.setTemp( changeDir ? '$NXF_SCRATCH' : '$(nxf_mktemp)' )
-        }
 
-        if( containerConfig.containsKey('kill') )
-            builder.params(kill: containerConfig.kill)
+        if( containerConfig.getKill() != null )
+            builder.params(kill: containerConfig.getKill())
 
-        if( containerConfig.writableInputMounts==false )
-            builder.params(readOnlyInputs: true)
-
-        if( this.containerConfig.entrypointOverride() )
+        if( containerConfig.entrypointOverride() )
             builder.params(entry: '/bin/bash')
 
         // give a chance to override any option with process specific `containerOptions`

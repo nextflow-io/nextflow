@@ -14,6 +14,10 @@
  * limitations under the License.
  */
 
+// pluginManagement {
+//     includeBuild '../nextflow-plugin-gradle'
+// }
+
 plugins {
     // required to download the toolchain (jdk) from a remote repository
     // https://github.com/gradle/foojay-toolchains
@@ -26,6 +30,8 @@ rootProject.name = 'nextflow-prj'
 include 'nextflow'
 include 'nf-commons'
 include 'nf-httpfs'
+include 'nf-lang'
+include 'nf-lineage'
 
 rootProject.children.each { prj ->
     prj.projectDir = new File("$rootDir/modules/$prj.name")
@@ -40,3 +46,4 @@ include 'plugins:nf-azure'
 include 'plugins:nf-codecommit'
 include 'plugins:nf-wave'
 include 'plugins:nf-cloudcache'
+include 'plugins:nf-k8s'

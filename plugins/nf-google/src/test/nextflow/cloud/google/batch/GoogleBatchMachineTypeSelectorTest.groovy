@@ -1,8 +1,8 @@
 package nextflow.cloud.google.batch
 
 import nextflow.cloud.google.batch.GoogleBatchMachineTypeSelector.MachineType
-import nextflow.cloud.types.PriceModel
 import nextflow.util.MemoryUnit
+import spock.lang.IgnoreIf
 import spock.lang.Specification
 
 class GoogleBatchMachineTypeSelectorTest extends Specification {
@@ -63,6 +63,7 @@ class GoogleBatchMachineTypeSelectorTest extends Specification {
 
     }
 
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
     def 'should parse Seqera cloud info API'() {
         when:
         GoogleBatchMachineTypeSelector.INSTANCE.getAvailableMachineTypes("europe-west2", true)
@@ -96,5 +97,19 @@ class GoogleBatchMachineTypeSelectorTest extends Specification {
         '200 GB'  | 'c2-standard-4'   | 'c2'   | 4    | '375 GB'
         '50 GB'   | 'c2d-highmem-56'  | 'c2d'  | 56   | '1500 GB'
         '750 GB'  | 'm3-megamem-64'   | 'm3'   | 64   | '1500 GB'
+    }
+
+    def 'should know when to install GPU drivers'() {
+        expect:
+        final machineType = new MachineType(type: TYPE, gpusPerVm: GPUS)
+        GoogleBatchMachineTypeSelector.INSTANCE.installGpuDrivers(machineType) == EXPECTED
+
+        where:
+        TYPE            | GPUS | EXPECTED
+        'n2-standard-4' | 0    | false
+        'n2-standard-4' | 1    | true
+        'a2-highgpu-1g' | 0    | true
+        'a3-highgpu-1g' | 0    | true
+        'g2-standard-4' | 0    | true
     }
 }

@@ -9,10 +9,24 @@
  * defined by the Mozilla Public License, v. 2.0.
  */
 
-apply plugin: 'java'
-apply plugin: 'java-test-fixtures'
-apply plugin: 'idea'
-apply plugin: 'groovy'
+plugins {
+    id 'io.nextflow.nextflow-plugin' version "${nextflowPluginVersion}"
+    id 'java-test-fixtures'
+}
+
+nextflowPlugin {
+    nextflowVersion = '25.07.0-edge'
+
+    provider = "${nextflowPluginProvider}"
+    description = 'Integrates with Seqera Platform for comprehensive workflow monitoring, resource tracking, and cache management capabilities'
+    className = 'io.seqera.tower.plugin.TowerPlugin'
+    useDefaultDependencies = false
+    extensionPoints = [
+        'io.seqera.tower.plugin.TowerConfig',
+        'io.seqera.tower.plugin.TowerFactory',
+        'io.seqera.tower.plugin.TowerFusionToken',
+    ]
+}
 
 sourceSets {
     main.java.srcDirs = []
@@ -30,13 +44,17 @@ configurations {
 
 dependencies {
     compileOnly project(':nextflow')
-    compileOnly 'org.slf4j:slf4j-api:2.0.7'
+    compileOnly 'org.slf4j:slf4j-api:2.0.17'
     compileOnly 'org.pf4j:pf4j:3.12.0'
 
+    api 'io.seqera:lib-httpx:2.0.0'
     api "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.15.0"
     api "com.fasterxml.jackson.core:jackson-databind:2.12.7.1"
 
     testImplementation(testFixtures(project(":nextflow")))
-    testImplementation "org.apache.groovy:groovy:4.0.24"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.23"
+    testImplementation "org.apache.groovy:groovy:4.0.28"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.28"
+    testImplementation "org.apache.groovy:groovy-json:4.0.28"
+    // wiremock required by TowerFusionEnvTest
+    testImplementation "org.wiremock:wiremock:3.5.4"
 }

@@ -22,8 +22,11 @@ import java.nio.file.Paths
 import ch.artecat.grengine.Grengine
 import nextflow.Session
 import nextflow.ast.TaskCmdXform
-import nextflow.container.ContainerConfig
+import nextflow.container.DockerConfig
+import nextflow.container.PodmanConfig
 import nextflow.container.resolver.ContainerInfo
+import nextflow.container.resolver.ContainerMeta
+import nextflow.container.resolver.ContainerResolver
 import nextflow.executor.Executor
 import nextflow.file.FileHolder
 import nextflow.script.BodyDef
@@ -345,7 +348,7 @@ class TaskRunTest extends Specification {
         when:
         def image = task.getContainer()
         then:
-        task.getContainerConfig() >> [docker:[enabled: true]]
+        task.getContainerConfig() >> new DockerConfig([:])
         image == EXPECTED
 
         where:
@@ -604,7 +607,7 @@ class TaskRunTest extends Specification {
         when:
         def enabled = task.isContainerEnabled()
         then:
-        1 * task.getContainerConfig() >> new ContainerConfig([enabled: false])
+        1 * task.getContainerConfig() >> new DockerConfig([enabled: false])
         0 * task.getContainer() >> null
         !enabled
 
@@ -613,7 +616,7 @@ class TaskRunTest extends Specification {
         then:
         // NO container image is specified => NOT enable even if `enabled` flag is set to true
         _ * task.getContainer() >> null
-        _ * task.getContainerConfig() >> new ContainerConfig([enabled: true])
+        _ * task.getContainerConfig() >> new DockerConfig([enabled: true])
         !enabled
 
         when:
@@ -621,7 +624,7 @@ class TaskRunTest extends Specification {
         then:
         // container is specified, not enabled
         _ * task.getContainer() >> 'foo/bar'
-        _ * task.getContainerConfig() >> new ContainerConfig([:])
+        _ * task.getContainerConfig() >> new DockerConfig([:])
         !enabled
 
         when:
@@ -629,7 +632,7 @@ class TaskRunTest extends Specification {
         then:
         // container is specified AND enabled => enabled
         _ * task.getContainer() >> 'foo/bar'
-        _ * task.getContainerConfig() >> new ContainerConfig([enabled: true])
+        _ * task.getContainerConfig() >> new DockerConfig([enabled: true])
         enabled
 
     }
@@ -842,8 +845,7 @@ class TaskRunTest extends Specification {
         and:
         session.getContainerConfig(null) >> null
         and:
-        config == new ContainerConfig(engine:'docker')
-
+        config == new DockerConfig([:])
 
         when:
         config = task.getContainerConfig()
@@ -851,23 +853,9 @@ class TaskRunTest extends Specification {
         1 * executor.containerConfigEngine() >> null
         1 * executor.isContainerNative() >> false
         and:
-        session.getContainerConfig(null) >> new ContainerConfig(engine:'podman', registry:'xyz')
+        session.getContainerConfig(null) >> new PodmanConfig(registry:'xyz')
         and:
-        config == new ContainerConfig(engine:'podman', registry:'xyz')
-
-
-        when:
-        config = task.getContainerConfig()
-        then:
-        // a container native is returned
-        1 * executor.containerConfigEngine() >> 'foo'
-        1 * executor.isContainerNative() >> true
-        and:
-        // the engine 'foo' is passed as argument
-        session.getContainerConfig('foo') >> new ContainerConfig(engine:'foo')
-        and:
-        // the engine is enabled by default
-        config == new ContainerConfig(engine:'foo', enabled: true)   // <-- 'foo' engine is enabled
+        config == new PodmanConfig(registry:'xyz')
     }
 
     def 'should get container info' () {
@@ -940,5 +928,55 @@ class TaskRunTest extends Specification {
         then:
         1 * task.resolveStub(stub) >> null
         0 * task.resolveBody(_) >> null
+    }
+
+    def 'should get container info & meta' () {
+        given:
+        def image = 'my/container:latest'
+        def meta = new ContainerMeta(sourceImage: image, targetImage: image)
+        def info = new ContainerInfo(image,image,image)
+        def resolver = Mock(ContainerResolver)
+        def config = Mock(TaskConfig) { getContainer() >> image }
+        def task = Spy(new TaskRun(config:config))
+        task.containerResolver() >> resolver
+
+        when:
+        def result1 = task.containerInfo()
+        then:
+        resolver.resolveImage(task,image) >> info
+        and:
+        result1 == info
+
+        when:
+        def result2 = task.containerMeta()
+        then:
+        resolver.getContainerMeta(image) >> meta
+        and:
+        result2 == meta
+    }
+    
+    def 'should resolve task stub from template' () {
+
+        given:
+        def task = new TaskRun()
+        task.processor = [:] as TaskProcessor
+        task.processor.grengine = new Grengine()
+
+        // create a file template
+        def file = TestHelper.createInMemTempFile('template.sh')
+        file.text = 'echo ${say_hello}'
+        // create the task context with two variables
+        // - my_file
+        // - say_hello
+        task.context = new TaskContext(Mock(Script),[say_hello: 'Ciao mondo', my_file: file],'foo')
+        task.config = new TaskConfig().setContext(task.context)
+
+        when:
+        task.resolveStub(new TaskClosure({-> template(my_file)}, 'template($file)'))
+        then:
+        task.script == 'echo Ciao mondo'
+        task.source == 'echo ${say_hello}'
+        task.template == file
+        task.traceScript == 'echo Ciao mondo'
     }
 }

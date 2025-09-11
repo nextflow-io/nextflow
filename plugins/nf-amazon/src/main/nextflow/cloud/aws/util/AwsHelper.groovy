@@ -16,7 +16,7 @@
 
 package nextflow.cloud.aws.util
 
-import com.amazonaws.services.s3.model.CannedAccessControlList
+import software.amazon.awssdk.services.s3.model.ObjectCannedACL
 import com.google.common.base.CaseFormat
 
 /**
@@ -26,13 +26,13 @@ import com.google.common.base.CaseFormat
  */
 class AwsHelper {
 
-    static CannedAccessControlList parseS3Acl(String value) {
+    static ObjectCannedACL parseS3Acl(String value) {
         if( !value )
             return null
 
         return value.contains('-')
-                ? CannedAccessControlList.valueOf(CaseFormat.LOWER_HYPHEN.to(CaseFormat.UPPER_CAMEL,value))
-                : CannedAccessControlList.valueOf(value)
+                ? ObjectCannedACL.valueOf(CaseFormat.LOWER_HYPHEN.to(CaseFormat.UPPER_UNDERSCORE, value))
+                : ObjectCannedACL.valueOf(CaseFormat.UPPER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE,value))
     }
 
 }

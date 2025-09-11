@@ -98,6 +98,21 @@ abstract class BaseScript extends Script implements ExecutionContext {
         binding.setVariable( 'secrets', SecretsLoader.secretContext() )
     }
 
+    protected void params(Closure body) {
+        if( entryFlow )
+            throw new IllegalStateException("Workflow params definition must be defined before the entry workflow")
+        if( ExecutionStack.withinWorkflow() )
+            throw new IllegalStateException("Workflow params definition is not allowed within a workflow")
+
+        final dsl = new ParamsDsl()
+        final cl = (Closure)body.clone()
+        cl.setDelegate(dsl)
+        cl.setResolveStrategy(Closure.DELEGATE_FIRST)
+        cl.call()
+
+        dsl.apply(session)
+    }
+
     protected process( String name, Closure<BodyDef> body ) {
         final process = new ProcessDef(this,body,name)
         meta.addDefinition(process)
@@ -127,7 +142,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
         if( !NF.outputDefinitionEnabled )
             throw new IllegalStateException("Workflow output definition requires the `nextflow.preview.output` feature flag")
         if( !entryFlow )
-            throw new IllegalStateException("Workflow output definition must be defined after the anonymous workflow")
+            throw new IllegalStateException("Workflow output definition must be defined after the entry workflow")
         if( ExecutionStack.withinWorkflow() )
             throw new IllegalStateException("Workflow output definition is not allowed within a workflow")
 
@@ -174,22 +189,6 @@ abstract class BaseScript extends Script implements ExecutionContext {
         if( !entryFlow ) {
             if( meta.getLocalWorkflowNames() )
                 throw new AbortOperationException("No entry workflow specified")
-            if( meta.getLocalProcessNames() ) {
-                final msg = """\
-                        =============================================================================
-                        =                                WARNING                                    =
-                        = You are running this script using DSL2 syntax, however it does not        = 
-                        = contain any 'workflow' definition so there's nothing for Nextflow to run. =
-                        =                                                                           =
-                        = If this script was written using Nextflow DSL1 syntax, please add the     = 
-                        = setting 'nextflow.enable.dsl=1' to the nextflow.config file or use the    =
-                        = command-line option '-dsl1' when running the pipeline.                    =
-                        =                                                                           =
-                        = More details at this link: https://www.nextflow.io/docs/latest/dsl2.html  =
-                        =============================================================================
-                        """.stripIndent(true)
-                throw new AbortOperationException(msg)
-            }
             return result
         }
 
@@ -197,7 +196,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
         session.notifyBeforeWorkflowExecution()
         final ret = entryFlow.invoke_a(BaseScriptConsts.EMPTY_ARGS)
         if( publisher )
-            publisher.run(session.publishTargets)
+            publisher.apply(session)
         session.notifyAfterWorkflowExecution()
         return ret
     }

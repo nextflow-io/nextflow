@@ -106,13 +106,13 @@ Once complete, you can run your local build of Nextflow using the `launch.sh` sc
 ./launch.sh run <script> ...
 ```
 
-A self-contained executable Nextflow package can be created with the following command:
+Alternatively, you can build a self-contained executable with the following command:
 
 ```bash
 make pack
 ```
 
-Again, use `launch.sh` in place of the `nextflow` command to use your local build.
+It will create a binary in the `build/releases` directory which can be used in place of `nextflow`. This approach is useful when testing a pipeline that uses third-party plugins, which is not supported by `launch.sh`.
 
 ## Testing
 
@@ -130,15 +130,21 @@ make test module=<nextflow|plugins:nf-amazon|...> class=<package>.<class>.<metho
 
 When a test fails, it will give you a report that you can open in your browser to view the reason for each failed test. The **Standard output** tab is particularly useful as it shows the console output of each test.
 
-Refer to the [build.yml](https://github.com/nextflow-io/nextflow/tree/master/.github/workflows/build.yml) configuration to see how to run integration tests locally, if you are interested.
+To run the integration tests:
 
-## Installing from source
+```bash
+cd tests/checks
+./qrun.sh
+```
 
-The `nextflow` command is just a Bash script that downloads and executes the Nextflow JAR. When you install Nextflow using `get.nextflow.io`, it only downloads this launcher script, while the Nextflow JAR is downloaded on the first Nextflow run.
+To test the documentation snippets:
 
-You can run `make install` to install a local build of the Nextflow JAR to `$NXF_HOME`. Note that this command will overwrite any existing Nextflow packages with the same version. This approach is useful for testing non-core plugins with a local build of Nextflow.
+```bash
+cd docs/snippets
+./test.sh
+```
 
-If you need to test changes to the `nextflow` launcher script, you can run it directly as `./nextflow`, or you can install it using `cp nextflow $(which nextflow)` and then run it as `nextflow`.
+Refer to the [build.yml](https://github.com/nextflow-io/nextflow/tree/master/.github/workflows/build.yml) configuration to see how to run other end-to-end tests locally.
 
 ## Debugging
 

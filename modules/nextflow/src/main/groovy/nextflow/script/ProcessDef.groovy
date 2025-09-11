@@ -23,6 +23,7 @@ import nextflow.Global
 import nextflow.Session
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
+import nextflow.processor.TaskProcessor
 import nextflow.script.params.BaseInParam
 import nextflow.script.params.BaseOutParam
 import nextflow.script.params.EachInParam
@@ -208,20 +209,23 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         // make a copy of the output list because execution can change it
         output = new ChannelOut(declaredOutputs.clone())
 
-        // create the executor
-        final executor = session
-                .executorFactory
-                .getExecutor(processName, processConfig, taskBody, session)
-
-        // create processor class
-        session
-                .newProcessFactory(owner)
-                .newTaskProcessor(processName, executor, processConfig, taskBody)
-                .run()
+        // start processor
+        createTaskProcessor().run()
 
         // the result channels
         assert declaredOutputs.size()>0, "Process output should contains at least one channel"
         return output
+    }
+
+    TaskProcessor createTaskProcessor() {
+        if( !processConfig )
+            initialize()
+        final executor = session
+            .executorFactory
+            .getExecutor(processName, processConfig, taskBody, session)
+        return session
+            .newProcessFactory(owner)
+            .newTaskProcessor(processName, executor, processConfig, taskBody)
     }
 
 }

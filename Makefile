@@ -27,17 +27,6 @@ else
 mm = 
 endif 
 
-clean:
-	rm -rf .nextflow*
-	rm -rf work 
-	rm -rf modules/nextflow/.nextflow*
-	rm -rf modules/nextflow/work
-	rm -rf build
-	rm -rf buildSrc/build
-	rm -rf modules/*/build
-	rm -rf plugins/*/build
-	./gradlew clean
-
 compile:
 	./gradlew compile exportClasspath
 	@echo "DONE `date`"
@@ -48,11 +37,22 @@ assemble:
 check:
 	./gradlew check
 
+clean:
+	rm -rf .nextflow*
+	rm -rf work 
+	rm -rf modules/nextflow/.nextflow*
+	rm -rf modules/nextflow/work
+	rm -rf build
+	rm -rf modules/*/build
+	rm -rf plugins/*/build
+	./gradlew clean
+
 #
 # install compiled artifacts in Maven local dir
 # 
 install:
-	BUILD_PACK=1 ./gradlew installLauncher publishToMavenLocal -Dmaven.repo.local=${HOME}/.nextflow/capsule/deps/
+	BUILD_PACK=1 \
+	./gradlew installLauncher publishToMavenLocal installPlugin
 
 #
 # Show dependencies try `make deps config=runtime`, `make deps config=google`
@@ -108,4 +108,10 @@ release:
 # Create local docker image
 #
 dockerPack:
-	BUILD_PACK=1 ./gradlew publishToMavenLocal dockerPack -Dmaven.repo.local=${PWD}/build/docker/.nextflow/capsule/deps/
+	BUILD_PACK=1 ./gradlew publishToMavenLocal dockerPack -Dmaven.repo.local=${PWD}/build/docker/.nextflow/capsule/deps/ installPlugin
+
+upload-plugins:
+	./gradlew plugins:upload
+
+publish-index:
+	./gradlew plugins:publishIndex

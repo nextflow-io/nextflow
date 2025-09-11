@@ -22,8 +22,10 @@ import java.nio.file.Paths
 
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.SysEnv
+import nextflow.exception.AbortOperationException
 import nextflow.extension.Bolts
 import nextflow.extension.FilesEx
 import org.pf4j.DefaultPluginManager
@@ -40,29 +42,40 @@ import org.pf4j.PluginStateListener
 @CompileStatic
 class PluginsFacade implements PluginStateListener {
 
+    @PackageScope
+    final static String LEGACY_PLUGINS_REPO = 'https://raw.githubusercontent.com/nextflow-io/plugins/main/plugins.json'
+
+    final static String NEXTFLOW_PLUGINS_REPO = 'https://registry.nextflow.io/api'
+
     private static final String DEV_MODE = 'dev'
     private static final String PROD_MODE = 'prod'
     private Map<String,String> env = SysEnv.get()
 
     private String mode
     private Path root
+    private boolean offline
     private PluginUpdater updater
     private CustomPluginManager manager
     private DefaultPlugins defaultPlugins = DefaultPlugins.INSTANCE
-    private String indexUrl = Plugins.DEFAULT_PLUGINS_REPO
+    private String indexUrl
     private boolean embedded
 
     PluginsFacade() {
         mode = getPluginsMode()
         root = getPluginsDir()
+        indexUrl = getPluginsRegistryUrl()
+        offline = env.get('NXF_OFFLINE') == 'true'
         if( mode==DEV_MODE && root.toString()=='plugins' && !isRunningFromDistArchive() )
             root = detectPluginsDevRoot()
         System.setProperty('pf4j.mode', mode)
     }
 
-    PluginsFacade(Path root, String mode=PROD_MODE) {
+    PluginsFacade(Path root, String mode=PROD_MODE, boolean offline=false,
+                  String indexUrl=LEGACY_PLUGINS_REPO) {
         this.mode = mode
         this.root = root
+        this.offline = offline
+        this.indexUrl = indexUrl
         System.setProperty('pf4j.mode', mode)
     }
 
@@ -90,6 +103,45 @@ class PluginsFacade implements PluginStateListener {
             log.trace "Using local plugins directory"
             return Paths.get('plugins')
         }
+    }
+
+    static protected boolean isSupportedIndex(String url) {
+        if( !url ) {
+            throw new IllegalArgumentException("Missing plugins registry URL")
+        }
+        if( !url.startsWith('https://') && !url.startsWith('http://') ) {
+            throw new IllegalArgumentException("Plugins registry URL must start with 'http://' or 'https://': $url")
+        }
+        if( url == LEGACY_PLUGINS_REPO ) {
+            return true
+        }
+        final hostname = URI.create(url).authority
+        return hostname.endsWith('.nextflow.io')
+            || hostname.endsWith('.nextflow.com')
+            || hostname.endsWith('.seqera.io')
+    }
+
+    protected String getPluginsRegistryUrl() {
+        final url = env.get('NXF_PLUGINS_REGISTRY_URL')
+        if( !url ) {
+            log.trace "Using default plugins url: ${NEXTFLOW_PLUGINS_REPO}"
+            return NEXTFLOW_PLUGINS_REPO
+        }
+        log.debug "Detected NXF_PLUGINS_REGISTRY_URL=$url"
+        if( !isSupportedIndex(url) ) {
+            // warn that this is experimental behaviour
+            log.warn """\
+                =======================================================================
+                =                                WARNING                                    =
+                = This workflow run us using an unofficial plugins registry.                =
+                =                                                                           =
+                = ${url}
+                =                                                                           =
+                = Its usage is unsupported and not recommended for production workloads.    =
+                =============================================================================
+                """.stripIndent(true)
+        }
+        return url
     }
 
     private boolean isNextflowDevRoot(File file) {
@@ -182,7 +234,7 @@ class PluginsFacade implements PluginStateListener {
 
     protected PluginUpdater createUpdater(Path root, CustomPluginManager manager) {
         return ( mode!=DEV_MODE
-                ? new PluginUpdater(manager, root, new URL(indexUrl))
+                ? new PluginUpdater(manager, root, new URL(indexUrl), offline)
                 : new DevPluginUpdater(manager) )
     }
 
@@ -296,10 +348,13 @@ class PluginsFacade implements PluginStateListener {
      *      The extension with higher priority appears first (lower index)
      */
     def <T> List<T> getPriorityExtensions(Class<T> type,String group=null) {
-        def result = getExtensions(type)
+        def extensions = getExtensions(type)
         if( group )
-            result = result.findAll(it -> group0(it)==group )
-        return result.sort( it -> priority0(it) )
+            extensions = extensions.findAll(it -> group0(it)==group )
+        final result = extensions.sort( it -> priority0(it) )
+        if( log.isTraceEnabled() )
+            log.trace "Discovered extensions for type ${type.getName()}: ${extensions.join(',')}"
+        return result
     }
 
     protected int priority0(Object it) {
@@ -317,27 +372,33 @@ class PluginsFacade implements PluginStateListener {
         new DefaultPluginManager()
     }
 
-    void start( String pluginId ) {
-        if( isEmbedded() && defaultPlugins.hasPlugin(pluginId) ) {
-            log.debug "Plugin 'start' is not required in embedded mode -- ignoring for plugin: $pluginId"
-            return
-        }
-
-        start(PluginSpec.parse(pluginId, defaultPlugins))
-    }
-
-    void start(PluginSpec plugin) {
-        if( isEmbedded() && defaultPlugins.hasPlugin(plugin.id) ) {
-            log.debug "Plugin 'start' is not required in embedded mode -- ignoring for plugin: $plugin.id"
-            return
-        }
-
-        updater.prepareAndStart(plugin.id, plugin.version)
+    void start(String pluginId) {
+        start(List.of(PluginSpec.parse(pluginId, defaultPlugins)))
     }
 
     void start(List<PluginSpec> specs) {
-        for( PluginSpec it : specs ) {
-            start(it)
+        // check if the plugins are allowed to start
+        final disallow = specs.find(it-> !isAllowed(it))
+        if( disallow ) {
+            throw new AbortOperationException("Refuse to use plugin '${disallow.id}' - allowed plugins are: ${allowedPluginsString()}")
+        }
+        // when running in embedded mode, default plugins should not be started
+        // the following split partition the "specs" collection in to list
+        // - the first holding the plugins for which "start" is not required
+        // - the second all remaining plugins that requires a start invocation
+        final split = specs.split(plugin -> isEmbedded() && defaultPlugins.hasPlugin(plugin.id))
+        final skippable = split[0]
+        final startable = split[1]
+        // just report a debug line for the skipped ones
+        if( skippable ) {
+            final skippedIds = skippable.collect{ plugin -> plugin.id }
+            log.debug "Plugin 'start' is not required in embedded mode -- ignoring for plugins: $skippedIds"
+        }
+        // prefetch the plugins meta
+        updater.prefetchMetadata(startable)
+        // finally start the plugins
+        for( PluginSpec plugin : startable ) {
+            updater.prepareAndStart(plugin.id, plugin.version)
         }
     }
 
@@ -371,7 +432,7 @@ class PluginsFacade implements PluginStateListener {
         }
 
         // add tower plugin when config contains tower options
-        if( (Bolts.navigate(config,'tower.enabled') || env.TOWER_ACCESS_TOKEN ) && !specs.find {it.id == 'nf-tower' } ) {
+        if( (Bolts.navigate(config,'tower.enabled') || Bolts.navigate(config,'fusion.enabled') || env.TOWER_ACCESS_TOKEN ) && !specs.find {it.id == 'nf-tower' } ) {
             specs << defaultPlugins.getPlugin('nf-tower')
         }
         if( (Bolts.navigate(config,'wave.enabled') || Bolts.navigate(config,'fusion.enabled')) && !specs.find {it.id == 'nf-wave' } ) {
@@ -412,6 +473,9 @@ class PluginsFacade implements PluginStateListener {
 
         if( executor == 'azurebatch' || workDir?.startsWith('az://') || bucketDir?.startsWith('az://') )
             plugins << defaultPlugins.getPlugin('nf-azure')
+
+        if( executor == 'k8s' )
+            plugins << defaultPlugins.getPlugin('nf-k8s')
 
         if( Bolts.navigate(config, 'weblog.enabled'))
             plugins << new PluginSpec('nf-weblog')
@@ -481,4 +545,44 @@ class PluginsFacade implements PluginStateListener {
         }
         return new ArrayList<PluginSpec>(map.values())
     }
+
+    protected List<PluginSpec> parseAllowedPlugins(Map<String,String> env) {
+        final list = env.get('NXF_PLUGINS_ALLOWED')
+        // note: empty string means no plugins is allowed
+        return list!=null
+            ? list.tokenize(',').collect(it-> PluginSpec.parse(it))
+            : null
+    }
+
+    /**
+     * The list of allowed plugins to be used defined by the variable NXF_PLUGINS_ALLOWED
+     *
+     * @return
+     *      The list of allowed plugins. {@code null} mean all. Empty list means none
+     */
+    @Memoized
+    protected List<PluginSpec> getAllowedPlugins() {
+        return parseAllowedPlugins(env)
+    }
+
+    protected boolean isAllowed(String pluginId) {
+        final list = getAllowedPlugins()
+        return list != null
+            ? list.any(it->it.id==pluginId)
+            : true
+    }
+
+    protected isAllowed(PluginSpec plugin) {
+        return isAllowed(plugin.id)
+    }
+
+    private String allowedPluginsString() {
+        final list = getAllowedPlugins()
+        if( list == null )
+            return '(all)'
+        if( list.isEmpty() )
+            return '(none)'
+        return list.collect(it->it.id).join('')
+    }
+
 }

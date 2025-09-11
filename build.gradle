@@ -66,18 +66,12 @@ allprojects {
     apply plugin: 'jacoco'
 
     java {
+        // these settings apply to all jvm tooling, including groovy
         toolchain {
             languageVersion = JavaLanguageVersion.of(21)
         }
-    }
-
-    compileJava {
-        options.release.set(17)
-    }
-
-    tasks.withType(GroovyCompile) {
-        sourceCompatibility = '17'
-        targetCompatibility = '17'
+        sourceCompatibility = 17
+        targetCompatibility = 17
     }
 
     idea {
@@ -108,8 +102,8 @@ allprojects {
 
         // Documentation required libraries
         groovyDoc 'org.fusesource.jansi:jansi:2.4.0'
-        groovyDoc "org.apache.groovy:groovy-groovydoc:4.0.23"
-        groovyDoc "org.apache.groovy:groovy-ant:4.0.23"
+        groovyDoc "org.apache.groovy:groovy-groovydoc:4.0.28"
+        groovyDoc "org.apache.groovy:groovy-ant:4.0.28"
     }
 
     test {
@@ -242,7 +236,7 @@ task compile {
 
 def getRuntimeConfigs() {
     def names = subprojects
-            .findAll { prj -> prj.name in ['nextflow','nf-commons','nf-httpfs'] }
+            .findAll { prj -> prj.name in ['nextflow','nf-commons','nf-httpfs','nf-lang','nf-lineage'] }
             .collect { it.name }
 
     FileCollection result = null
@@ -268,15 +262,20 @@ task exportClasspath {
         def home = System.getProperty('user.home')
         def all = getRuntimeConfigs()
         def libs = all.collect { File file ->  /*println file.canonicalPath.replace(home, '$HOME');*/ file.canonicalPath;  }
-        ['nextflow','nf-commons','nf-httpfs'].each {libs << file("modules/$it/build/libs/${it}-${version}.jar").canonicalPath }
+        ['nextflow','nf-commons','nf-httpfs','nf-lang','nf-lineage'].each {libs << file("modules/$it/build/libs/${it}-${version}.jar").canonicalPath }
         file('.launch.classpath').text = libs.unique().join(':')
     }
 }
 
+ext.nexusUsername = project.findProperty('nexusUsername') ?: System.getenv('AWS_ACCESS_KEY_ID')
+ext.nexusPassword = project.findProperty('nexusPassword') ?: System.getenv('AWS_SECRET_ACCESS_KEY')
+ext.nexusFullName = project.findProperty('nexusFullName')
+ext.nexusEmail = project.findProperty('nexusEmail')
+
 // `signing.keyId` property needs to be defined in the `gradle.properties` file
 ext.enableSignArchives = project.findProperty('signing.keyId')
 
-ext.coreProjects = projects( ':nextflow', ':nf-commons', ':nf-httpfs' )
+ext.coreProjects = projects( ':nextflow', ':nf-commons', ':nf-httpfs', ':nf-lang', ':nf-lineage' )
 
 /*
  * Maven deployment
@@ -342,12 +341,13 @@ configure(coreProjects) {
 
         repositories {
             maven {
-                url = System.getenv('MAVEN_PUBLISH_URL') ?: 's3://maven.seqera.io'
-                url = version.endsWith('-SNAPSHOT') ? "$url/snapshots" : "$url/releases"
-
+                // change URLs to point to your repos, e.g. http://my.org/repo
+                def releasesRepoUrl = "s3://maven.seqera.io/releases/"
+                def snapshotsRepoUrl = "s3://maven.seqera.io/snapshots/"
+                url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
                 credentials(AwsCredentials) {
-                    accessKey = System.getenv('AWS_ACCESS_KEY_ID') ?: findProperty('aws_access_key_id')
-                    secretKey = System.getenv('AWS_SECRET_ACCESS_KEY') ?: findProperty('aws_secret_access_key')
+                    accessKey nexusUsername
+                    secretKey nexusPassword
                 }
             }
         }
@@ -377,6 +377,11 @@ task makeDigest { doLast {
     file('nextflow.md5').text = digest.encodeHex().toString() + '\n'
 }}
 
+task upload {
+    dependsOn compile
+    dependsOn makeDigest
+    dependsOn coreProjects.publish
+}
 if( System.env.BUILD_PACK ) {
     apply from: 'packing.gradle'
 }

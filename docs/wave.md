@@ -68,7 +68,7 @@ When building containers, Wave currently does not support `ADD`, `COPY`, or any 
 
 ### Build Conda based containers
 
-Wave allows the provisioning of containers based on the {ref}`process-conda` directive used by the processes in your pipeline. This is a quick alternative to building Conda packages in the local computer. Moreover, this enables the use of Conda packages in your pipeline when deploying in cloud-native platforms such as AWS Batch and Kubernetes, which do not allow the (easy) use of the Conda package manager.
+Wave allows the provisioning of containers based on the {ref}`process-conda` directive used by the processes in your pipeline. This is a quick alternative to building Conda packages in the local computer. Moreover, this enables the use of Conda packages in your pipeline when deploying to cloud-native platforms such as AWS Batch and Kubernetes, which do not allow the easy use of the Conda package manager.
 
 With Wave enabled in your pipeline, simply define the `conda` requirements in the pipeline processes, provided the same process does not also specify a `container` directive or a Dockerfile.
 
@@ -104,7 +104,7 @@ Conda packages or Spack packages. The Singularity images are automatically uploa
 of your choice and stored as a [ORAS artefact](https://oras.land/).
 
 :::{note}
-This feature requires of Singularity (or Apptainer) version supporting the pull of images using the `oras:` pseudo-protocol.
+This feature requires Singularity (or Apptainer) version supporting the pull of images using the `oras:` pseudo-protocol.
 :::
 
 For example to enable the provisioning of Singularity images in your pipeline use the following configuration snippet:
@@ -165,16 +165,16 @@ tower.accessToken = '<YOUR ACCESS TOKEN>'
 
 In the above snippet, replace `<YOUR REGISTRY>` with a container registry of your choice. For example, `quay.io` (no prefix or suffix is needed).
 The container will be copied with the same name, tag, and checksum in the specified registry. For example, if the source
-container is `quay.io/biocontainers/bwa:0.7.13--1` and the build repository setting is `foo.com`, the resulting container
-name is `foo.com/biocontainers/bwa:0.7.13--1`.
+container is `quay.io/biocontainers/bwa:0.7.13--1` and the build repository setting is `example.com`, the resulting container
+name is `example.com/biocontainers/bwa:0.7.13--1`.
 
 :::{tip}
 When using a path prefix in the target registry name, it will be prepended to the resulting container name. For example,
-having `quay.io/biocontainers/bwa:0.7.13--1` as source container and `foo.com/bar` as build repository, the resulting
-container will be named `foo.com/bar/biocontainers/bwa:0.7.13--1`.
+having `quay.io/biocontainers/bwa:0.7.13--1` as source container and `example.com/library` as build repository, the resulting
+container will be named `example.com/library/biocontainers/bwa:0.7.13--1`.
 :::
 
-The credentials to allow the push of  containers in the target repository need to be provided via the Seqera Platform
+The credentials to allow the push of containers to the target repository need to be provided via the Seqera Platform
 credentials manager. The account used for this is specified by the `tower.accessToken` in the configuration above.
 
 ### Container security scanning
@@ -193,7 +193,7 @@ tower.accessToken = '<YOUR ACCESS TOKEN>'
 Nextflow will only allow the use of containers with no security
 vulnerabilities when using these settings. You can define the level of accepted vulnerabilities using `wave.scan.allowedLevels`. For example:
 
-```
+```groovy
 wave.scan.allowedLevels = 'low,medium'
 ```
 
@@ -205,11 +205,11 @@ Wave's security scanning applies to any container used in your pipeline, whether
 
 ### Run pipelines using Fusion file system
 
-Wave containers allows you to run your containerised workflow with the {ref}`fusion-page`.
+Wave containers allow you to run your containerized workflow with {ref}`fusion-page`.
 
 This enables the use of an object storage bucket such as AWS S3 or Google Cloud Storage as your pipeline work directory, simplifying and speeding up many operations on local, AWS Batch, Google Batch or Kubernetes executions.
 
-See the {ref}`Fusion documentation <fusion-page>` for more details.
+See {ref}`Fusion <fusion-page>` for more details.
 
 ## Advanced settings
 

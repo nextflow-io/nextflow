@@ -16,8 +16,16 @@
 
 package nextflow.scm
 
-import spock.lang.Specification
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.nio.channels.UnresolvedAddressException
+import javax.net.ssl.SSLSession
 
+import nextflow.SysEnv
+import nextflow.exception.HttpResponseLengthExceedException
+import nextflow.util.RetryConfig
+import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -44,7 +52,7 @@ class RepositoryProviderTest extends Specification {
         provider = RepositoryFactory.newRepositoryProvider(new ProviderConfig('bitbucket'),'project/z')
         then:
         provider instanceof BitbucketRepositoryProvider
-        provider.endpointUrl == 'https://bitbucket.org/api/2.0/repositories/project/z'
+        provider.endpointUrl == 'https://api.bitbucket.org/2.0/repositories/project/z'
 
         when:
         provider = RepositoryFactory.newRepositoryProvider(new ProviderConfig('local', [path:'/user/data']),'local/w')
@@ -93,19 +101,116 @@ class RepositoryProviderTest extends Specification {
         def conn = Mock(HttpURLConnection)
 
         when:
-        provider.auth(conn)
+        def headers = provider.getAuth()
         then:
         1 * provider.getUser() >> null
         1 * provider.hasCredentials()
         0 * conn.setRequestProperty('Authorization', _)
+        and:
+        !headers
 
         when:
-        provider.auth(conn)
+        headers = provider.getAuth()
         then:
         _ * provider.getUser() >> 'foo'
         _ * provider.getPassword() >> 'bar'
         1 * provider.hasCredentials()
         and:
-        1 * conn.setRequestProperty('Authorization', "Basic ${'foo:bar'.bytes.encodeBase64()}")
+        headers == new String[] { 'Authorization', "Basic ${'foo:bar'.bytes.encodeBase64()}" }
     }
+
+
+    def 'should validate is retryable' () {
+        given:
+        def provider = Spy(RepositoryProvider)
+        expect:
+        provider.isRetryable(ERR) == EXPECTED
+
+        where:
+        EXPECTED    | ERR
+        false       | new RuntimeException()
+        false       | new IOException()
+        true        | new SocketException()
+        false       | new SocketException(new UnresolvedAddressException())
+        false       | new SocketTimeoutException()
+    }
+
+    def 'should not validate when max length is not configured via SysEnv' () {
+        given:
+        def provider = Spy(RepositoryProvider)
+        def response = createMockResponseWithContentLength(1500)
+
+        when:
+        SysEnv.push([:])
+        provider.checkMaxLength(response)
+        then:
+        noExceptionThrown()
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def 'should validate and pass when content is within limit via SysEnv' () {
+        given:
+        def provider = Spy(RepositoryProvider)
+        def response = createMockResponseWithContentLength(1500)
+
+        when:
+        SysEnv.push(['NXF_GIT_RESPONSE_MAX_LENGTH': '2000'])
+        provider.checkMaxLength(response)
+        then:
+        noExceptionThrown()
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def 'should validate and fail when content exceeds limit via SysEnv' () {
+        given:
+        def provider = Spy(RepositoryProvider)
+        def response = createMockResponseWithContentLength(1500)
+
+        when:
+        SysEnv.push(['NXF_GIT_RESPONSE_MAX_LENGTH': '1000'])
+        provider.checkMaxLength(response)
+        then:
+        thrown(HttpResponseLengthExceedException)
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    private createMockResponseWithContentLength(long contentLength) {
+        return new HttpResponse<byte[]>() {
+            @Override
+            int statusCode() { return 200 }
+            
+            @Override
+            HttpRequest request() { return null }
+            
+            @Override
+            Optional<HttpResponse<byte[]>> previousResponse() { return Optional.empty() }
+            
+            @Override
+            java.net.http.HttpHeaders headers() {
+                return java.net.http.HttpHeaders.of(
+                    ['Content-Length': [contentLength.toString()]], 
+                    (a, b) -> true
+                )
+            }
+            
+            @Override
+            byte[] body() { return new byte[0] }
+            
+            @Override
+            Optional<SSLSession> sslSession() { return Optional.empty() }
+            
+            @Override
+            URI uri() { return new URI('https://api.github.com/repos/test/repo') }
+            
+            @Override
+            HttpClient.Version version() { return HttpClient.Version.HTTP_1_1 }
+        }
+    }
+
 }

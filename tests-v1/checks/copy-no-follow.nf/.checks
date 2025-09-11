@@ -1,0 +1,21 @@
+set -e
+
+#
+# run normal mode
+#
+echo ''
+$NXF_RUN | tee stdout
+
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process '` == 1 ]] || false
+[[ -f outputDir/testFile.txt ]] || false
+[[ -L outputDir/testFileLink.txt ]] || false
+
+#
+# run resume mode
+#
+rm -rf outputDir
+$NXF_RUN -resume | tee stdout
+
+[[ `grep 'INFO' .nextflow.log | grep -c 'Cached process '` == 1 ]] || false
+[[ -f outputDir/testFile.txt ]] || false
+[[ -L outputDir/testFileLink.txt ]] || false

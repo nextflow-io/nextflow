@@ -19,8 +19,9 @@
 rm -rf .nextflow && mkdir .nextflow
 # copy nextflow dependencies
 (cd ..
-./gradlew compile assemble
-BUILD_PACK=1 ./gradlew installScratch publishToMavenLocal
+export NXF_PLUGINS_DIR=$PWD/build/plugins
+make assemble
+make install
 )
 
 # copy nextflow plugins
@@ -40,8 +41,12 @@ if [ -z "$commitId" ]; then
     echo "Error: commitId is empty or missing"; exit 1
 fi
 
+echo "version  : $version"
+echo "build    : $build"
+echo "commit id: $commitId"
+
 #
-# build a scratch container image with assembled newxtflow runtime and plugins
+# build a scratch container image with assembled nextflow runtime and plugins
 #
 tag=${version}-${commitId}
 base=${base:-'public.cr.seqera.io/platform/nf-launcher:j17-base'}
@@ -60,7 +65,7 @@ echo "Nextflow snapshots launcher image $image"
 #
 # Create an ephemeral container with the scratch image and base Platform launcher image
 #
-launcher=$(wave -i ${base} --include ${image} --config-env NXF_HOME=/.nextflow)
+launcher=$(wave -i ${base} --include ${image} --platform linux/amd64 --config-env NXF_HOME=/.nextflow)
 echo "Running Platform tests using image launcher: $launcher"
 
 # determining the e2e test environment checking the $COMMIT_MESSAGE

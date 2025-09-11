@@ -183,7 +183,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         return """\
             IFS=\$'\\n'
             for name in \$(eval "ls -1d ${escape.join(' ')}" | sort | uniq); do
-                ${stageOutCommand('$name', targetDir, mode)} || true
+                ${stageOutCommand('$name', targetDir, mode)}
             done
             unset IFS""".stripIndent(true)
     }

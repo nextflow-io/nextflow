@@ -94,7 +94,8 @@ class DumpOpTest extends Specification {
     def 'should validate isEnabled when tag=#tag and names=#names'() {
 
         given:
-        def op = new DumpOp(tag: tag, dumpNames: names.tokenize(','))
+        new Session(dumpChannels: names.tokenize(','))
+        def op = new DumpOp(tag ? [tag: tag] : [:], null)
 
         expect:
         op.isEnabled() == expected

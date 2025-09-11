@@ -22,6 +22,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.ExecutorService
 
+import com.google.common.hash.HashCode
 import groovyx.gpars.agent.Agent
 import nextflow.Global
 import nextflow.ISession
@@ -401,9 +402,7 @@ class TaskProcessorTest extends Specification {
 
     }
 
-
     def 'should update agent state'() {
-
         when:
         def state = new Agent<StateObj>(new StateObj())
         int i = 0
@@ -1172,4 +1171,77 @@ class TaskProcessorTest extends Specification {
 
     }
 
+    def 'should submit a task' () {
+        given:
+        def exec = Mock(Executor)
+        def proc = Spy(new TaskProcessor(executor: exec))
+        and:
+        def task = Mock(TaskRun)
+        def hash = Mock(HashCode)
+        def path = Mock(Path)
+
+        when:
+        proc.submitTask(task, hash, path)
+        then:
+        1 * proc.makeTaskContextStage3(task, hash, path) >> null
+        and:
+        1 * exec.submit(task)
+    }
+
+    def 'should collect a task' () {
+        given:
+        def exec = Mock(Executor)
+        def collector = Mock(TaskArrayCollector)
+        def proc = Spy(new TaskProcessor(executor: exec, arrayCollector: collector))
+        and:
+        def task = Mock(TaskRun)
+        def hash = Mock(HashCode)
+        def path = Mock(Path)
+
+        when:
+        proc.submitTask(task, hash, path)
+        then:
+        task.getConfig()>>Mock(TaskConfig) { getAttempt()>>1 }
+        and:
+        1 * proc.makeTaskContextStage3(task, hash, path) >> null
+        and:
+        1 * collector.collect(task)
+        0 * exec.submit(task)
+
+        when:
+        proc.submitTask(task, hash, path)
+        then:
+        task.getConfig()>>Mock(TaskConfig) { getAttempt()>>2 }
+        and:
+        1 * proc.makeTaskContextStage3(task, hash, path) >> null
+        and:
+        0 * collector.collect(task)
+        1 * exec.submit(task)
+    }
+
+    def 'should compute eval outputs content deterministically'() {
+
+        setup:
+        def session = Mock(Session)
+        def script = Mock(BaseScript)
+        def config = Mock(ProcessConfig)
+        def processor = new DummyProcessor('test', session, script, config)
+
+        when:
+        def result1 = processor.computeEvalOutputsContent([
+            'nxf_out_eval_2': 'echo "value2"',
+            'nxf_out_eval_1': 'echo "value1"',
+            'nxf_out_eval_3': 'echo "value3"'
+        ])
+        
+        def result2 = processor.computeEvalOutputsContent([
+            'nxf_out_eval_3': 'echo "value3"',
+            'nxf_out_eval_1': 'echo "value1"',
+            'nxf_out_eval_2': 'echo "value2"'
+        ])
+
+        then:
+        result1 == result2
+        result1 == 'nxf_out_eval_1=echo "value1"\nnxf_out_eval_2=echo "value2"\nnxf_out_eval_3=echo "value3"'
+    }
 }

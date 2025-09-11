@@ -37,6 +37,7 @@ import nextflow.NextflowMeta
 import nextflow.SysEnv
 import nextflow.config.ConfigBuilder
 import nextflow.config.ConfigMap
+import nextflow.config.ConfigValidator
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
 import nextflow.plugin.Plugins
@@ -324,22 +325,29 @@ class CmdRun extends CmdBase implements HubOptions {
         // -- specify the arguments
         final scriptFile = getScriptFile(pipeline)
 
+        // -- load command line params
+        final baseDir = scriptFile.parent
+        final cliParams = parsedParams(ConfigBuilder.getConfigVars(baseDir))
+
         // create the config object
         final builder = new ConfigBuilder()
                 .setOptions(launcher.options)
                 .setCmdRun(this)
-                .setBaseDir(scriptFile.parent)
-        final config = builder .build()
+                .setBaseDir(baseDir)
+                .setCliParams(cliParams)
+        final config = builder.build()
+        final configParams = builder.getConfigParams()
 
         // check DSL syntax in the config
         launchInfo(config, scriptFile)
 
-        // check if NXF_ variables are set in nextflow.config
-        checkConfigEnv(config)
-
         // -- load plugins
         final cfg = plugins ? [plugins: plugins.tokenize(',')] : config
         Plugins.load(cfg)
+
+        // -- validate config options
+        if( NF.isSyntaxParserV2() )
+            new ConfigValidator().validate(config)
 
         // -- create a new runner instance
         final runner = new ScriptRunner(config)
@@ -352,7 +360,8 @@ class CmdRun extends CmdBase implements HubOptions {
         runner.session.disableJobsCancellation = getDisableJobsCancellation()
 
         final isTowerEnabled = config.navigate('tower.enabled') as Boolean
-        if( isTowerEnabled || log.isTraceEnabled() )
+        final isDataEnabled = config.navigate("lineage.enabled") as Boolean
+        if( isTowerEnabled || isDataEnabled || log.isTraceEnabled() )
             runner.session.resolvedConfig = ConfigBuilder.resolveConfig(scriptFile.parent, this)
         // note config files are collected during the build process
         // this line should be after `ConfigBuilder#build`
@@ -373,7 +382,7 @@ class CmdRun extends CmdBase implements HubOptions {
         }
 
         // -- run it!
-        runner.execute(scriptArgs, this.entryName)
+        runner.execute(scriptArgs, cliParams, configParams, this.entryName)
     }
 
     protected void printBanner() {
@@ -404,17 +413,6 @@ class CmdRun extends CmdBase implements HubOptions {
         else {
             // Plain header to the console if ANSI is disabled
             log.info "N E X T F L O W  ~  version ${BuildInfo.version}"
-        }
-    }
-
-    protected checkConfigEnv(ConfigMap config) {
-        // Warn about setting NXF_ environment variables within env config scope
-        final env = config.env as Map<String, String>
-        for( String name : env.keySet() ) {
-            if( name.startsWith('NXF_') && name!='NXF_DEBUG' ) {
-                final msg = "Nextflow variables must be defined in the launching environment - The following variable set in the config file is going to be ignored: '$name'"
-                log.warn(msg)
-            }
         }
     }
 
@@ -639,6 +637,8 @@ class CmdRun extends CmdBase implements HubOptions {
     Map parsedParams(Map configVars) {
 
         final result = [:]
+
+        // apply params file
         final file = getParamsFile()
         if( file ) {
             def path = validateParamsFile(file)
@@ -649,7 +649,7 @@ class CmdRun extends CmdBase implements HubOptions {
                 readYamlFile(path, configVars, result)
         }
 
-        // set the CLI params
+        // apply CLI params
         if( !params )
             return result
 
@@ -685,7 +685,7 @@ class CmdRun extends CmdBase implements HubOptions {
             addParam((Map)nested, key.substring(p+1), value, path, fullKey)
         }
         else {
-            params.put(key.replaceAll(DOT_ESCAPED,'.'), parseParamValue(value))
+            addParam0(params, key.replaceAll(DOT_ESCAPED,'.'), parseParamValue(value))
         }
     }
 
@@ -704,7 +704,7 @@ class CmdRun extends CmdBase implements HubOptions {
     }
 
     static protected parseParamValue(String str) {
-        if ( SysEnv.get('NXF_DISABLE_PARAMS_TYPE_DETECTION') )
+        if ( SysEnv.get('NXF_DISABLE_PARAMS_TYPE_DETECTION') || NF.isSyntaxParserV2() )
             return str
 
         if ( str == null ) return null
@@ -756,8 +756,10 @@ class CmdRun extends CmdBase implements HubOptions {
     private void readJsonFile(Path file, Map configVars, Map result) {
         try {
             def text = configVars ? replaceVars0(file.text, configVars) : file.text
-            def json = (Map)new JsonSlurper().parseText(text)
-            result.putAll(json)
+            def json = (Map<String,Object>) new JsonSlurper().parseText(text)
+            json.forEach((name, value) -> {
+                addParam0(result, name, value)
+            })
         }
         catch (NoSuchFileException | FileNotFoundException e) {
             throw new AbortOperationException("Specified params file does not exist: ${file.toUriString()}")
@@ -770,8 +772,10 @@ class CmdRun extends CmdBase implements HubOptions {
     private void readYamlFile(Path file, Map configVars, Map result) {
         try {
             def text = configVars ? replaceVars0(file.text, configVars) : file.text
-            def yaml = (Map)new Yaml().load(text)
-            result.putAll(yaml)
+            def yaml = (Map<String,Object>) new Yaml().load(text)
+            yaml.forEach((name, value) -> {
+                addParam0(result, name, value)
+            })
         }
         catch (NoSuchFileException | FileNotFoundException e) {
             throw new AbortOperationException("Specified params file does not exist: ${file.toUriString()}")

@@ -42,68 +42,76 @@ class AzureRepositoryProviderTest extends Specification {
         }
         '''
 
-    def 'should return repo url' () {
-
-        given:
-        def config = new ConfigSlurper().parse(CONFIG)
-        def obj = new ProviderConfig('azurerepos', config.providers.azurerepos as ConfigObject)
-
+    def 'should parse repo fields from path' () {
         expect:
-        new AzureRepositoryProvider('t-neumann/hello', obj).getEndpointUrl() == 'https://dev.azure.com/t-neumann/hello/_apis/git/repositories/hello'
+        AzureRepositoryProvider.getUniformPath(PATH) == EXPECTED
+
+        where:
+        PATH                                | EXPECTED
+        't-neumann/hello'                   | ['t-neumann', 'hello', 'hello']
+        'ORGANIZATION/PROJECT/hello'        | ['ORGANIZATION','PROJECT','hello']
+        'ORGANIZATION/PROJECT/_git/hello'   | ['ORGANIZATION','PROJECT','hello']
     }
 
-    def 'should return repo with organization url' () {
+    def 'should throw exception if wrong path' () {
+        when:
+        def path = AzureRepositoryProvider.getUniformPath(PATH)
 
+        then :
+        def exception = thrown(IllegalArgumentException)
+        exception?.message == EXCEPTION
+
+        where:
+        PATH                                | EXCEPTION
+        'incorrect_path_1'                  | "Unexpected Azure repository path format - offending value: 'incorrect_path_1'"
+        'ORG/PROJ/hello/incorrect'          | "Unexpected Azure repository path format - offending value: 'ORG/PROJ/hello/incorrect'"
+    }
+
+    def 'should return repo url' () {
         given:
         def config = new ConfigSlurper().parse(CONFIG)
         def obj = new ProviderConfig('azurerepos', config.providers.azurerepos as ConfigObject)
 
         expect:
-        new AzureRepositoryProvider('ORGANIZATION/PROJECT/hello', obj).getEndpointUrl() == 'https://dev.azure.com/ORGANIZATION/PROJECT/_apis/git/repositories/hello'
+        new AzureRepositoryProvider(PATH, obj).getEndpointUrl() == EXPECTED
+
+        where:
+        PATH                                | EXPECTED
+        't-neumann/hello'                   | 'https://dev.azure.com/t-neumann/hello/_apis/git/repositories/hello'
+        'ORGANIZATION/PROJECT/hello'        | 'https://dev.azure.com/ORGANIZATION/PROJECT/_apis/git/repositories/hello'
+        'ORGANIZATION/PROJECT/_git/hello'   | 'https://dev.azure.com/ORGANIZATION/PROJECT/_apis/git/repositories/hello'
     }
 
     def 'should return project URL' () {
-
         given:
         def config = new ConfigSlurper().parse(CONFIG)
         def obj = new ProviderConfig('azurerepos', config.providers.azurerepos as ConfigObject)
 
         expect:
-        new AzureRepositoryProvider('t-neumann/hello', obj).getRepositoryUrl() == 'https://dev.azure.com/t-neumann/hello'
-
-    }
-
-    def 'should return project with organization URL' () {
-
-        given:
-        def config = new ConfigSlurper().parse(CONFIG)
-        def obj = new ProviderConfig('azurerepos', config.providers.azurerepos as ConfigObject)
-
-        expect:
-        new AzureRepositoryProvider('ORGANIZATION/PROJECT/hello', obj).getRepositoryUrl() == 'https://dev.azure.com/ORGANIZATION/PROJECT'
-
+        new AzureRepositoryProvider(PATH, obj).getRepositoryUrl() == EXPECTED
+        where:
+        PATH                                | EXPECTED
+        't-neumann/hello'                   | 'https://dev.azure.com/t-neumann/hello'
+        'ORGANIZATION/PROJECT/hello'        | 'https://dev.azure.com/ORGANIZATION/PROJECT/hello'
+        'ORGANIZATION/PROJECT/_git/hello'   | 'https://dev.azure.com/ORGANIZATION/PROJECT/_git/hello'
     }
 
     def 'should return content URL' () {
-
         given:
         def config = new ConfigSlurper().parse(CONFIG)
         def obj = new ProviderConfig('azurerepos', config.providers.azurerepos as ConfigObject)
 
         expect:
         new AzureRepositoryProvider('t-neumann/hello', obj).getContentUrl('main.nf') == 'https://dev.azure.com/t-neumann/hello/_apis/git/repositories/hello/items?download=false&includeContent=true&includeContentMetadata=false&api-version=6.0&\$format=json&path=main.nf'
-
     }
 
     def 'should return content URL for revision' () {
-
         given:
         def config = new ConfigSlurper().parse(CONFIG)
         def obj = new ProviderConfig('azurerepos', config.providers.azurerepos as ConfigObject)
 
         expect:
         new AzureRepositoryProvider('t-neumann/hello', obj).setRevision("a-branch").getContentUrl('main.nf') == 'https://dev.azure.com/t-neumann/hello/_apis/git/repositories/hello/items?download=false&includeContent=true&includeContentMetadata=false&api-version=6.0&\$format=json&path=main.nf&versionDescriptor.version=a-branch'
-
     }
 
     /*
@@ -125,8 +133,25 @@ class AzureRepositoryProviderTest extends Specification {
         def result = repo.readText('main.nf')
         then:
         result == 'println "Hello from Azure repos!"'
-
     }
+
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
+    @Requires({System.getenv('NXF_AZURE_REPOS_TOKEN')})
+    def 'should read bytes file content'() {
+        given:
+        def token = System.getenv('NXF_AZURE_REPOS_TOKEN')
+        def config = new ProviderConfig('azurerepos').setAuth(token)
+
+        when:
+        // uses repo at https://pditommaso.visualstudio.com/nf-azure-repo/_git/nf-azure-repo
+        def repo = new AzureRepositoryProvider('pditommaso/nf-azure-repo', config)
+        def result = repo.readBytes('/docs/images/nf-core-rnaseq_logo_light.png')
+
+        then:
+        result.length == 22915
+        result.sha256() == '7a396344498750f614155f6e4f38b7d6ca98ced45daf0921b64acf73b18efaf4'
+    }
+
 
     @IgnoreIf({System.getenv('NXF_SMOKE')})
     @Requires({System.getenv('NXF_AZURE_REPOS_TOKEN')})
@@ -163,7 +188,7 @@ class AzureRepositoryProviderTest extends Specification {
         result == [
                 new RepositoryProvider.BranchInfo('dev', 'cc0ca18640a5c995231e22d91f1527d5155d024b'),
                 new RepositoryProvider.BranchInfo('feature-x', '13456a001ba5a27d643755614ab8e814d94ef888'),
-                new RepositoryProvider.BranchInfo('master', 'f84130388714582e20f0e2ff9a44b41978ec8929'),
+                new RepositoryProvider.BranchInfo('master', 'a207636e419f18c4b8c8586b00e329ab4788a7f5'),
         ]
     }
 

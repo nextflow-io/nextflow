@@ -18,7 +18,7 @@ The pipeline processes must specify the Docker image to use by defining the `con
 
 To enable this executor, set `process.executor = 'awsbatch'` in the `nextflow.config` file.
 
-The pipeline can be launched either in a local computer, or an EC2 instance. EC2 is suggested for heavy or long-running workloads. Additionally, an S3 bucket must be used as the pipeline work directory.
+The pipeline can be launched either on a local computer, or an EC2 instance. EC2 is suggested for heavy or long-running workloads. Additionally, an S3 bucket must be used as the pipeline work directory.
 
 Resource requests and other job characteristics can be controlled via the following process directives:
 
@@ -33,14 +33,11 @@ Resource requests and other job characteristics can be controlled via the follow
 - {ref}`process-resourcelabels`
 - {ref}`process-time`
 
-See the {ref}`AWS Batch<aws-batch>` page for further configuration details.
+See {ref}`aws-batch` for more information.
 
 (azurebatch-executor)=
 
 ## Azure Batch
-
-:::{versionadded} 21.04.0
-:::
 
 Nextflow supports the [Azure Batch](https://azure.microsoft.com/en-us/services/batch/) service that allows job submission in the cloud without having to spin out and manage a cluster of virtual machines. Azure Batch uses Docker containers to run tasks, which greatly simplifies pipeline deployment.
 
@@ -48,20 +45,21 @@ The pipeline processes must specify the Docker image to use by defining the `con
 
 To enable this executor, set `process.executor = 'azurebatch'` in the `nextflow.config` file.
 
-The pipeline can be launched either in a local computer, or a cloud virtual machine. The cloud VM is suggested for heavy or long-running workloads. Additionally, an Azure Blob storage container must be used as the pipeline work directory.
+The pipeline can be launched either on a local computer, or a cloud virtual machine. The cloud VM is suggested for heavy or long-running workloads. Additionally, an Azure Blob storage container must be used as the pipeline work directory.
 
 Resource requests and other job characteristics can be controlled via the following process directives:
 
 - {ref}`process-container`
 - {ref}`process-containerOptions`
 - {ref}`process-cpus`
+- {ref}`process-disk`
 - {ref}`process-machineType`
 - {ref}`process-memory`
 - {ref}`process-queue`
 - {ref}`process-resourcelabels`
 - {ref}`process-time`
 
-See the {ref}`Azure Batch <azure-batch>` page for further configuration details.
+See {ref}`azure-batch` for more information.
 
 (bridge-executor)=
 
@@ -123,7 +121,7 @@ By default, Flux will send all output to the `.command.log` file. To send this o
 
 [Google Cloud Batch](https://cloud.google.com/batch) is a managed computing service that allows the execution of containerized workloads in the Google Cloud Platform infrastructure.
 
-Nextflow provides built-in support for the Cloud Batch API, which allows the seamless deployment of a Nextflow pipeline in the cloud, offloading the process executions as pipelines.
+Nextflow provides built-in support for the Cloud Batch API, which allows the seamless deployment of Nextflow pipelines in the cloud, offloading the pipeline process executions.
 
 The pipeline processes must specify the Docker image to use by defining the `container` directive, either in the pipeline script or the `nextflow.config` file. Additionally, the pipeline work directory must be located in a Google Storage bucket.
 
@@ -142,33 +140,6 @@ Resource requests and other job characteristics can be controlled via the follow
 - {ref}`process-time`
 
 See the {ref}`Google Cloud Batch <google-batch>` page for further configuration details.
-
-(google-lifesciences-executor)=
-
-## Google Life Sciences
-
-:::{versionadded} 20.01.0
-:::
-
-[Google Cloud Life Sciences](https://cloud.google.com/life-sciences) is a managed computing service that allows the execution of containerized workloads in the Google Cloud Platform infrastructure.
-
-Nextflow provides built-in support for the Life Sciences API, which allows the seamless deployment of a Nextflow pipeline in the cloud, offloading the process executions as pipelines.
-
-The pipeline processes must specify the Docker image to use by defining the `container` directive, either in the pipeline script or the `nextflow.config` file. Additionally, the pipeline work directory must be located in a Google Storage bucket.
-
-To enable this executor, set `process.executor = 'google-lifesciences'` in the `nextflow.config` file.
-
-Resource requests and other job characteristics can be controlled via the following process directives:
-
-- {ref}`process-accelerator`
-- {ref}`process-cpus`
-- {ref}`process-disk`
-- {ref}`process-machineType`
-- {ref}`process-memory`
-- {ref}`process-resourcelabels`
-- {ref}`process-time`
-
-See the {ref}`Google Life Sciences <google-lifesciences>` page for further configuration details.
 
 (htcondor-executor)=
 
@@ -204,7 +175,12 @@ Resource requests and other job characteristics can be controlled via the follow
 :::{versionadded} 22.05.0-edge
 :::
 
-:::{warning} *Experimental: may change in a future release.*
+:::{versionchanged} 24.06.0-edge
+HyperQueue 0.17.0 or later is required.
+:::
+
+:::{versionchanged} 25.01.0-edge
+HyperQueue 0.20.0 or later is required.
 :::
 
 The `hyperqueue` executor allows you to run your pipeline script by using the [HyperQueue](https://github.com/It4innovations/hyperqueue) job scheduler.
@@ -222,9 +198,6 @@ Resource requests and other job characteristics can be controlled via the follow
 - {ref}`process-cpus`
 - {ref}`process-memory`
 - {ref}`process-time`
-
-:::{note} As of Nextflow version 24.06.0-edge, HyperQueue version 0.17.0 or later is required.
-:::
 
 (k8s-executor)=
 
@@ -326,7 +299,7 @@ Resource requests and other job characteristics can be controlled via the follow
 
 ## NQSII
 
-The `nsqii` executor allows you to run your pipeline script using the [NQSII](https://www.rz.uni-kiel.de/en/our-portfolio/hiperf/nec-linux-cluster) resource manager.
+The `nqsii` executor allows you to run your pipeline script using the [NQSII](https://www.rz.uni-kiel.de/en/our-portfolio/hiperf/nec-linux-cluster) resource manager.
 
 Nextflow manages each process as a separate job that is submitted to the cluster using the `qsub` command provided by the scheduler.
 
@@ -472,3 +445,35 @@ Nextflow does not provide direct support for SLURM multi-clusters. If you need t
 :::{versionadded} 23.07.0-edge
 Some SLURM clusters require memory allocations to be specified with `--mem-per-cpu` instead of `--mem`. You can specify `executor.perCpuMemAllocation = true` in the Nextflow configuration to enable this behavior. Nextflow will automatically compute the memory per CPU for each task (by default 1 CPU is used).
 :::
+
+(tcs-executor)=
+
+## TCS
+
+The `tcs` executor allows you to run your pipeline script using a [Fujitsu Technical Computing Suite (TCS)](https://software.fujitsu.com/jp/manual/manualindex/p21000155e.html).
+
+Nextflow manages each process as a separate job that is submitted to the cluster using the `pjsub` command.
+
+The pipeline must be launched from a node where the `pjsub` command is available, which is typically the login node.
+
+To enable the TCS executor, set `process.executor = 'tcs'` in the `nextflow.config` file.
+
+Resource requests and other job characteristics can be controlled via the following process directives:
+
+- {ref}`process-clusterOptions`
+- {ref}`process-time`
+
+:::{note}
+Use `clusterOptions` to specify system-dependent options such as queue (resource group), CPU, and node. These options vary across target systems and are not standardized. They correspond to `-L` options in the arguments of the `pjsub` command and should be configured according to the requirements of the specific cluster environment.
+
+For example:
+
+```groovy
+process {
+  executor = 'tcs'
+  time = '00:30:00'
+  clusterOptions = '-L rscgrp=a-batch -L vnode-core=4'
+}
+```
+:::
+

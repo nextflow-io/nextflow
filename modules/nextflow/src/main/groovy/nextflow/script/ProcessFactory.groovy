@@ -40,9 +40,6 @@ class ProcessFactory {
 
     private ExecutorFactory executorFactory
 
-    /* only for test -- do not use */
-    protected ProcessFactory() { }
-
     ProcessFactory( BaseScript ownerScript, Session session ) {
         this.owner = ownerScript
         this.session = session

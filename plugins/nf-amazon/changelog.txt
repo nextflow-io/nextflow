@@ -1,5 +1,54 @@
 nf-amazon changelog
 ===================
+3.1.0 - 15 Aug 2025
+- Fix AWS transfer manager anonymous fallback (#6296) [ci fast] [ed5c99e1]
+- Fix silent failure when downloading a directory with AWS SDK v2 (#6266) [ci fast] [2d76d8f0]
+- Unify nf-lang config scopes with runtime classes (#6271) [bfa67ca3]
+- Update Azure and AWS deps (#6343) [ci fast] [ff00e2de]
+- Bump groovy 4.0.28 (#6304) [ci fast] [a468f8ef]
+- Bump netty-codec-http2:4.1.124.Final [7e690b44]
+
+3.0.0 - 6 Jul 2025
+- Fix AWS nio tests [ci fast] [069653dd]
+- Fix replace List.getFirst with List.get(0) for compatibility [83428ee2]
+- Upgrade to AWS Java SDK v2 (#6165) [fc99b447]
+- Bump Slf4j version 2.0.17 [93199e09]
+
+2.15.0 - 8 May 2025
+- Add verbose AWS Batch job cleanup logging [504bd2df]
+- Remove test constructors or mark as TestOnly (#5216) [d4fadd42]
+
+2.14.0 - 23 Apr 2025
+- Add support for data and execution lineage  (#5715) [20e06da7]
+- Manage AWS Batch Unscheduled jobs (#5936) [44abe60c]
+- Workflow outputs (third preview) (#5909) [2e2dea42]
+- Add support for Fusion Snapshots (#5954) [d7f047f8]
+
+2.13.0 - 17 Mar 2025
+- Fix Consider AWS China as custom endpoint (#5840) [232ce9d1]
+- Fix Prevent S3 global option when using custom endpoints (#5779) [ed9da469]
+- Bump groovy 4.0.26 [f740bc56]
+
+2.12.0 - 12 Feb 2025
+- Fix bugs with workflow outputs (#5502) [ab59d30f]
+- Fail the run if publish thread pool times out (#5578) [5325e5a6]
+- Bump groovy 4.0.25 [19c40a4a]
+- Bump io.netty:netty-handler:4.1.118.Final [db4a9037]
+
+2.11.0 - 20 Jan 2025
+- Disable AWS SDK v1 warning [ci fast] [cd00a26d]
+- Ensure job is killed when exception in task status check (#5561) [9eefd207]
+- Bump logback 1.5.13 + slf4j 2.0.16 [cc0163ac]
+- Bump groovy 4.0.24 missing deps [40670f7e]
+
+2.10.0 - 3 Dec 2024
+- Detecting errors in data unstaging (#5345) [3c8e602d]
+- Prevent NPE with null AWS Batch response [12fc1d60]
+- Fix Fargate warning on memory check (#5475) [bdf0ad00]
+- Bump groovy 4.0.24 [dd71ad31]
+- Bump aws sdk 1.12.777 (#5458) [8bad0b4b]
+- Bump netty-common to version 4.1.115.Final [d1bbd3d0]
+
 2.9.0 - 2 Oct 2024
 - Add Platform workflow prefix in AWS Batch job names (#5318) [e2e test] [42dd4ba8]
 - Fix AWS spot attempts with zero value (#5331) [ci fast] [bac2da12]

@@ -6,18 +6,13 @@
 
 When a pipeline script is launched, Nextflow looks for configuration files in multiple locations. Since each configuration file may contain conflicting settings, they are applied in the following order (from lowest to highest priority):
 
-1. Parameters defined in pipeline scripts (e.g. `main.nf`)
-2. The config file `$HOME/.nextflow/config`
-3. The config file `nextflow.config` in the project directory
-4. The config file `nextflow.config` in the launch directory
-5. Config file specified using the `-c <config-file>` option
-6. Parameters specified in a params file (`-params-file` option)
-7. Parameters specified on the command line (`--something value`)
-
-When more than one of these options for specifying configurations are used, they are merged, so that the settings in the first override the same settings appearing in the second, and so on.
+1. The config file `$HOME/.nextflow/config` (or `$NXF_HOME/config` when {ref}`NXF_HOME <nxf-env-vars>` is set).
+2. The config file `nextflow.config` in the project directory
+3. The config file `nextflow.config` in the launch directory
+4. Config files specified using the `-c <config-files>` option
 
 :::{tip}
-You can use the `-C <config-file>` option to use a single configuration file and ignore all other files.
+You can alternatively use the `-C <config-file>` option to specify a fixed set of configuration files and ignore all other files.
 :::
 
 (config-syntax)=
@@ -89,7 +84,7 @@ process.executor = 'sge'
 process.queue = 'long'
 process.memory = '10G'
 
-includeConfig 'path/foo.config'
+includeConfig 'path/extra.config'
 ```
 
 Relative paths are resolved against the location of the including file.
@@ -102,22 +97,25 @@ Config includes can also be specified within config blocks. However, config file
 
 The following constants are globally available in a Nextflow configuration file:
 
-`baseDir`
+`baseDir: Path`
 : :::{deprecated} 20.04.0
   :::
 : Alias for `projectDir`.
 
-`launchDir`
+`launchDir: Path`
 : The directory where the workflow was launched.
 
-`projectDir`
+`projectDir: Path`
 : The directory where the main script is located.
+
+`secrets: Map<String,String>`
+: Map of pipeline secrets. See {ref}`secrets-page` for more information.
 
 ## Functions
 
 The following functions are globally available in a Nextflow configuration file:
 
-`env( name )`
+`env( name: String ) -> String`
 : :::{versionadded} 24.11.0-edge
   :::
 : Get the value of the environment variable with the specified name in the Nextflow launch environment.
@@ -129,16 +127,20 @@ The following functions are globally available in a Nextflow configuration file:
 Pipeline parameters can be defined in the config file using the `params` scope:
 
 ```groovy
-params.custom_param = 123
-params.another_param = 'string value .. '
+params.alpha = 123
+params.beta = 'string value .. '
 
 params {
-    alpha_1 = true
-    beta_2 = 'another string ..'
+    gamma = true
+    delta = "params.alpha is ${params.alpha}"
 }
 ```
 
-See {ref}`cli-params` for information about how to modify these on the command line.
+See {ref}`cli-params` for information about how to specify pipeline parameters.
+
+:::{note}
+When including a config file, the included config is evaluated with the parameters that are defined before the include. Parameters defined after the include are not visible to the included config.
+:::
 
 (config-process)=
 
@@ -190,7 +192,7 @@ process {
 
 The `withName` selector applies both to processes defined with the same name and processes included under the same alias. For example, `withName: hello` will apply to any process originally defined as `hello`, as well as any process included under the alias `hello`.
 
-Furthermore, selectors for the alias of an included process take priority over selectors for the original name of the process. For example, given a process defined as `foo` and included as `bar`, the selectors `withName: foo` and `withName: bar` will both be applied to the process, with the second selector taking priority over the first.
+Furthermore, selectors for the alias of an included process take priority over selectors for the original name of the process. For example, given a process defined as `hello` and included as `sayHello`, the selectors `withName: hello` and `withName: sayHello` will both be applied to the process, with the second selector taking priority over the first.
 
 :::{tip}
 Label and process names do not need to be enclosed with quotes, provided the name does not include special characters (`-`, `!`, etc) and is not a keyword or a built-in type identifier. When in doubt, you can enclose the label name or process name with single or double quotes.
@@ -204,26 +206,26 @@ Both label and process name selectors allow the use of a regular expression in o
 
 ```groovy
 process {
-    withLabel: 'foo|bar' {
+    withLabel: 'hello|bye' {
         cpus = 2
         memory = 4.GB
     }
 }
 ```
 
-The above configuration snippet sets 2 cpus and 4 GB of memory to the processes annotated with a label `foo` and `bar`.
+The above configuration snippet requests 2 cpus and 4 GB of memory for processes labeled as `hello` or `bye`.
 
 A process selector can be negated prefixing it with the special character `!`. For example:
 
 ```groovy
 process {
-    withLabel: 'foo' { cpus = 2 }
-    withLabel: '!foo' { cpus = 4 }
+    withLabel: 'hello' { cpus = 2 }
+    withLabel: '!hello' { cpus = 4 }
     withName: '!align.*' { queue = 'long' }
 }
 ```
 
-The above configuration snippet sets 2 cpus for the processes annotated with the `foo` label and 4 cpus to all processes *not* annotated with that label. Finally it sets the use of `long` queue to all process whose name does *not* start with `align`.
+The above configuration snippet sets 2 cpus for every process labeled as `hello` and 4 cpus to every process *not* labeled as `hello`. It also specifies the `long` queue for every process whose name does *not* start with `align`.
 
 (config-selector-priority)=
 
@@ -243,29 +245,28 @@ For example:
 ```groovy
 process {
     cpus = 4
-    withLabel: foo { cpus = 8 }
-    withName: bar { cpus = 16 }
-    withName: 'baz:bar' { cpus = 32 }
+    withLabel: hello { cpus = 8 }
+    withName: bye { cpus = 16 }
+    withName: 'aloha:bye' { cpus = 32 }
 }
 ```
 
 With the above configuration:
 - All processes will use 4 cpus (unless otherwise specified in their process definition).
-- Processes annotated with the `foo` label will use 8 cpus.
-- Any process named `bar` (or imported as `bar`) will use 16 cpus.
-- Any process named `bar` (or imported as `bar`) invoked by a workflow named `baz` with use 32 cpus.
+- Processes annotated with the `hello` label will use 8 cpus.
+- Any process named `bye` (or imported as `bye`) will use 16 cpus.
+- Any process named `bye` (or imported as `bye`) invoked by a workflow named `aloha` will use 32 cpus.
 
 (config-profiles)=
 
 ## Config profiles
 
-Configuration files can contain the definition of one or more *profiles*. A profile is a set of configuration attributes that can be selected during pipeline execution by using the `-profile` command line option.
+Configuration files can define one or more *profiles*. A profile is a set of configuration settings that can be selected during pipeline execution using the `-profile` command line option.
 
-Configuration profiles are defined by using the special scope `profiles`, which group the attributes that belong to the same profile using a common prefix. For example:
+Configuration profiles are defined in the `profiles` scope. For example:
 
 ```groovy
 profiles {
-
     standard {
         process.executor = 'local'
     }
@@ -281,44 +282,58 @@ profiles {
         process.container = 'cbcrg/imagex'
         docker.enabled = true
     }
-
 }
 ```
 
-This configuration defines three different profiles: `standard`, `cluster`, and `cloud`, that each set different process
-configuration strategies depending on the target runtime platform. The `standard` profile is used by default when no profile is specified.
+The above configuration defines three profiles: `standard`, `cluster`, and `cloud`. Each profile provides a different configuration for a given execution environment. The `standard` profile is used by default when no profile is specified.
 
-:::{tip}
-Multiple configuration profiles can be specified by separating the profile names with a comma, for example:
+Configuration profiles can be specified at runtime as a comma-separated list:
 
 ```bash
 nextflow run <your script> -profile standard,cloud
 ```
+
+Config profiles are applied in the order in which they were defined in the config file, regardless of the order they are specified on the command line.
+
+:::{versionadded} 25.02.0-edge
+When using the {ref}`strict config syntax <updating-config-syntax>`, profiles are applied in the order in which they are specified on the command line.
 :::
 
 :::{danger}
-When using the `profiles` feature in your config file, do NOT set attributes in the same scope both inside and outside a `profiles` context. For example:
+When defining a profile in the config file, avoid using both the dot and block syntax for the same scope. For example:
 
 ```groovy
-process.cpus = 1
-
 profiles {
-  foo {
-    process.memory = '2 GB'
-  }
-
-  bar {
-    process.memory = '4 GB'
-  }
+    cluster {
+        process.memory = '2 GB'
+        process {
+            cpus = 2
+        }
+    }
 }
 ```
 
-In the above example, the `process.cpus` attribute is not correctly applied because the `process` scope is also used in the `foo` and `bar` profiles.
+Due to a limitation of the legacy config parser, the first setting will be overwritten by the second:
+
+```console
+$ nextflow config -profile cluster
+process {
+   cpus = 2
+}
+```
+
+This limitation can be avoided by using the {ref}`strict config syntax <updating-config-syntax>`.
 :::
+
+(config-workflow-handlers)=
 
 ## Workflow handlers
 
-Workflow event handlers can be defined in the config file, which is useful for handling pipeline events without having to modify the pipeline code:
+:::{deprecated} 25.10.0
+Use a {ref}`trace observer <plugins-trace-observers>` in a plugin to add custom workflow handlers to a pipeline via configuration.
+:::
+
+You can define workflow event handlers in the config file:
 
 ```groovy
 workflow.onComplete = {
@@ -328,8 +343,8 @@ workflow.onComplete = {
 }
 
 workflow.onError = {
-    println "Error: something when wrong"
+    println "Error: something went wrong"
 }
 ```
 
-See {ref}`workflow-handlers` for more information.
+This approach is useful for handling workflow events without modifying the pipeline code. See {ref}`workflow-handlers` for more information.

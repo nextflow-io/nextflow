@@ -1,0 +1,62 @@
+name: Push release change log to Seqera Docs
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      release_name:
+        description: "Release version (e.g. 1.0.0)"
+        required: true
+      release_body:
+        description: "Release changelog content"
+        required: true
+
+jobs:
+  update-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Clone seqeralabs/docs
+        run: |
+          git clone https://github.com/seqeralabs/docs.git seqeralabs-docs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create changelog file
+        run: |
+          mkdir -p seqeralabs-docs/changelog/nextflow
+          cat << EOF > seqeralabs-docs/changelog/nextflow/${{ github.event.release.name || inputs.release_name }}.mdx
+          ---
+          title: Nextflow ${{ github.event.release.name || inputs.release_name }}
+          date: $(date +%Y-%m-%d)
+          tags: [nextflow]
+          ---
+
+          ${{ github.event.release.body || inputs.release_body }}
+          EOF
+
+      - uses: actions/create-github-app-token@v1
+        id: generate-token
+        with:
+          app-id: ${{ secrets.DOCS_BOT_APP_ID }}
+          private-key: ${{ secrets.DOCS_BOT_APP_PRIVATE_KEY }}
+          owner: seqeralabs
+          repositories: docs
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ steps.generate-token.outputs.token }}
+          branch-token: ${{ steps.generate-token.outputs.token }}
+          path: seqeralabs-docs
+          commit-message: "Changelog: Nextflow ${{ github.event.release.name || inputs.release_name }}"
+          title: "Changelog: Nextflow ${{ github.event.release.name || inputs.release_name }}"
+          body: |
+            This PR adds the changelog for Nextflow ${{ github.event.release.name || inputs.release_name }} to the Seqera documentation.
+
+            This is an automated PR created from the Nextflow repository.
+          branch: changelog-nextflow-${{ github.event.release.name || inputs.release_name }}
+          base: master
+          delete-branch: true

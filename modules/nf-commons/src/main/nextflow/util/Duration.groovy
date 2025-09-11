@@ -16,12 +16,17 @@
 
 package nextflow.util
 
+import java.time.temporal.ChronoUnit
 import java.time.temporal.Temporal
+import java.time.temporal.TemporalAmount
+import java.time.temporal.TemporalUnit
+import java.time.temporal.UnsupportedTemporalTypeException
 import java.util.concurrent.TimeUnit
 
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.util.logging.Slf4j
+import nextflow.script.types.Duration as IDuration
 import org.apache.commons.lang.time.DurationFormatUtils
 /**
  * A simple time duration representation
@@ -31,7 +36,9 @@ import org.apache.commons.lang.time.DurationFormatUtils
 @Slf4j
 @CompileStatic
 @EqualsAndHashCode(includes = 'durationInMillis')
-class Duration implements Comparable<Duration>, Serializable, Cloneable {
+class Duration implements IDuration, TemporalAmount, Comparable<Duration>, Serializable, Cloneable {
+
+    static private final List<TemporalUnit> SUPPORTED_UNITS = List.<TemporalUnit>of(ChronoUnit.DAYS, ChronoUnit.HOURS, ChronoUnit.MINUTES, ChronoUnit.SECONDS, ChronoUnit.MILLIS)
 
     static private final FORMAT = ~/^(\d+\.?\d*)\s*([a-zA-Z]+)/
 
@@ -215,6 +222,7 @@ class Duration implements Comparable<Duration>, Serializable, Cloneable {
         new Duration(java.time.Duration.between(start, end).toMillis())
     }
 
+    @Override
     long toMillis() {
         durationInMillis
     }
@@ -223,6 +231,7 @@ class Duration implements Comparable<Duration>, Serializable, Cloneable {
         durationInMillis
     }
 
+    @Override
     long toSeconds() {
         TimeUnit.MILLISECONDS.toSeconds(durationInMillis)
     }
@@ -231,6 +240,7 @@ class Duration implements Comparable<Duration>, Serializable, Cloneable {
         toSeconds()
     }
 
+    @Override
     long toMinutes() {
         TimeUnit.MILLISECONDS.toMinutes(durationInMillis)
     }
@@ -239,6 +249,7 @@ class Duration implements Comparable<Duration>, Serializable, Cloneable {
         toMinutes()
     }
 
+    @Override
     long toHours() {
         TimeUnit.MILLISECONDS.toHours(durationInMillis)
     }
@@ -247,6 +258,7 @@ class Duration implements Comparable<Duration>, Serializable, Cloneable {
         toHours()
     }
 
+    @Override
     long toDays() {
         TimeUnit.MILLISECONDS.toDays(durationInMillis)
     }
@@ -357,6 +369,66 @@ class Duration implements Comparable<Duration>, Serializable, Cloneable {
             return left <=> Duration.of(right.toString())
 
         throw new IllegalArgumentException("Not a valid duration value: $right")
+    }
+
+    // TemporalAmount interface methods
+    
+    /**
+     * Gets the value of the requested unit.
+     * 
+     * @param unit the TemporalUnit for which to return the value
+     * @return the long value of the unit
+     */
+    @Override
+    long get(TemporalUnit unit) {
+        if (unit == ChronoUnit.MILLIS) {
+            return durationInMillis
+        }
+        if (unit == ChronoUnit.SECONDS) {
+            return toSeconds()
+        }
+        if (unit == ChronoUnit.MINUTES) {
+            return toMinutes()
+        }
+        if (unit == ChronoUnit.HOURS) {
+            return toHours()
+        }
+        if (unit == ChronoUnit.DAYS) {
+            return toDays()
+        }
+        throw new UnsupportedTemporalTypeException("Unsupported unit: " + unit)
+    }
+
+    /**
+     * Returns a list of units uniquely defining the value of this TemporalAmount.
+     * 
+     * @return a list of the supported ChronoUnits, not null
+     */
+    @Override
+    List<TemporalUnit> getUnits() {
+        return SUPPORTED_UNITS
+    }
+
+    /**
+     * Adds this amount to the specified temporal object.
+     * 
+     * @param temporal the temporal object to adjust, not null
+     * @return an object of the same type with the adjustment made, not null
+     */
+    @Override
+    Temporal addTo(Temporal temporal) {
+        return temporal.plus(durationInMillis, ChronoUnit.MILLIS)
+    }
+
+    /**
+     * Subtracts this amount from the specified temporal object.
+     * 
+     * @param temporal the temporal object to adjust, not null
+     * @return an object of the same type with the adjustment made, not null
+     */
+    @Override
+    Temporal subtractFrom(Temporal temporal) {
+        return temporal.minus(durationInMillis, ChronoUnit.MILLIS)
     }
 
 }

@@ -19,6 +19,9 @@ package nextflow.scm
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
+import org.eclipse.jgit.transport.CredentialsProvider
+import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
+
 /**
  * Implements a repository provider for the BitBucket service
  *
@@ -39,23 +42,46 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
         this.config = config ?: new ProviderConfig('bitbucket')
     }
 
+    @Override
+    protected String[] getAuth() {
+        if (!hasCredentials()) {
+            return null
+        }
+
+        String secret = getToken() ?: getPassword()
+        String authString = "${getUser()}:${secret}".bytes.encodeBase64().toString()
+
+        return new String[] { "Authorization", "Basic " + authString }
+    }
+
+    @Override
+    boolean hasCredentials() {
+        return getUser() && (getPassword() || getToken())
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    CredentialsProvider getGitCredentials() {
+        return new UsernamePasswordCredentialsProvider(getUser(), getToken() ?: getPassword())
+    }
+
     /** {@inheritDoc} */
     @Override
     String getName() { "BitBucket" }
 
     @Override
     String getEndpointUrl() {
-        "${config.endpoint}/api/2.0/repositories/${project}"
+        "${config.endpoint}/2.0/repositories/${project}"
     }
 
     @Override
     String getContentUrl( String path ) {
         final ref = revision ? getRefForRevision(revision) : getMainBranch()
-        return "${config.endpoint}/api/2.0/repositories/$project/src/$ref/$path"
+        return "${config.endpoint}/2.0/repositories/$project/src/$ref/$path"
     }
 
     private String getMainBranchUrl() {
-        "${config.endpoint}/api/2.0/repositories/$project"
+        "${config.endpoint}/2.0/repositories/$project"
     }
 
     String getMainBranch() {
@@ -87,7 +113,7 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
     }
 
     private String getRefForRevision0(String revision, String type){
-        final resp = invokeAndParseResponse("${config.endpoint}/api/2.0/repositories/$project/refs/$type/$revision")
+        final resp = invokeAndParseResponse("${config.endpoint}/2.0/repositories/$project/refs/$type/$revision")
         return resp?.target?.hash
     }
 
@@ -117,7 +143,7 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
     @Override
     List<TagInfo> getTags() {
         final result = new ArrayList<TagInfo>()
-        final url = "$config.endpoint/api/2.0/repositories/$project/refs/tags"
+        final url = "$config.endpoint/2.0/repositories/$project/refs/tags"
         final mapper = { Map entry -> result.add( new TagInfo(entry.name, entry.target?.hash) ) }
         invokeAndResponseWithPaging(url, mapper)
         return result
@@ -131,7 +157,7 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
     @Override
     List<BranchInfo> getBranches() {
         final result = new ArrayList<BranchInfo>()
-        final url = "$config.endpoint/api/2.0/repositories/$project/refs/branches"
+        final url = "$config.endpoint/2.0/repositories/$project/refs/branches"
         final mapper = { Map entry -> result.add( new BranchInfo(entry.name, entry.target?.hash) ) }
         invokeAndResponseWithPaging(url, mapper)
         return result
@@ -149,7 +175,12 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
         if( !result )
             throw new IllegalStateException("Missing clone URL for: $project")
 
-        return result.href
+        /**
+         * The clone URL when an API token is used is of the form: https://{bitbucket_username}:{api_token}@bitbucket.org/{workspace}/{repository}.git
+         * @see <a href="https://support.atlassian.com/bitbucket-cloud/docs/using-api-tokens/">Using API tokens</a>
+         */
+        String cloneUrl = result.href
+        return getToken() ? cloneUrl.replace('@', ":${getToken()}@") : cloneUrl
     }
 
     @Override
@@ -159,8 +190,7 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
 
     @Override
     byte[] readBytes(String path) {
-
-        def url = getContentUrl(path)
-        invoke(url)?.getBytes()
+        final url = getContentUrl(path)
+        return invokeBytes(url)
     }
 }

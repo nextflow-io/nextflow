@@ -25,7 +25,12 @@ import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.SysEnv
+import nextflow.cloud.google.batch.client.BatchConfig
 import nextflow.cloud.google.config.GoogleStorageOpts
+import nextflow.config.schema.ConfigOption
+import nextflow.config.schema.ConfigScope
+import nextflow.config.schema.ScopeName
+import nextflow.script.dsl.Description
 import nextflow.exception.AbortOperationException
 import nextflow.util.Duration
 /**
@@ -33,38 +38,69 @@ import nextflow.util.Duration
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@ScopeName("google")
+@Description("""
+    The `google` scope allows you to configure the interactions with Google Cloud, including Google Cloud Batch and Google Cloud Storage.
+""")
 @Slf4j
 @ToString(includeNames = true, includePackage = false)
 @CompileStatic
-class GoogleOpts {
+class GoogleOpts implements ConfigScope {
 
     static final public String DEFAULT_LOCATION = 'us-central1'
 
     static Map<String,String> env = SysEnv.get()
 
-    private String projectId
-    private String location
-    private File credsFile
-    private boolean enableRequesterPaysBuckets
-    private Duration httpConnectTimeout
-    private Duration httpReadTimeout
-    private GoogleStorageOpts storageOpts
+    @ConfigOption
+    @Description("""
+        The Google Cloud project ID to use for pipeline execution.
+    """)
+    String project
 
-    String getProjectId() { projectId }
-    File getCredsFile() { credsFile }
-    String getLocation() { location ?: DEFAULT_LOCATION }
-    boolean getEnableRequesterPaysBuckets() { enableRequesterPaysBuckets }
-    Duration getHttpConnectTimeout() { httpConnectTimeout }
-    Duration getHttpReadTimeout() { httpReadTimeout }
-    GoogleStorageOpts getStorageOpts() { storageOpts }
+    @ConfigOption
+    @Description("""
+        The Google Cloud location where jobs are executed (default: `us-central1`).
+    """)
+    final String location
+
+    @ConfigOption
+    @Description("""
+        Use the given Google Cloud project ID as the billing project for storage access (default: `false`). Required when accessing data from [requester pays](https://cloud.google.com/storage/docs/requester-pays) buckets.
+    """)
+    final boolean enableRequesterPaysBuckets
+
+    @ConfigOption
+    @Description("""
+        The HTTP connection timeout for Cloud Storage API requests (default: `'60s'`).
+    """)
+    final Duration httpConnectTimeout
+
+    @ConfigOption
+    @Description("""
+        The HTTP read timeout for Cloud Storage API requests (default: `'60s'`).
+    """)
+    final Duration httpReadTimeout
+
+    final BatchConfig batch
+
+    final GoogleStorageOpts storage
+
+    private File credsFile
+
+    String getProjectId() { project }
+    GoogleStorageOpts getStorageOpts() { storage }
+
+    /* required by extension point -- do not remove */
+    GoogleOpts() {}
 
     GoogleOpts(Map opts) {
-        projectId = opts.project as String
-        location = opts.location as String
+        project = opts.project
+        location = opts.location ?: DEFAULT_LOCATION
         enableRequesterPaysBuckets = opts.enableRequesterPaysBuckets as boolean
         httpConnectTimeout = opts.httpConnectTimeout ? opts.httpConnectTimeout as Duration : Duration.of('60s')
         httpReadTimeout = opts.httpReadTimeout ? opts.httpReadTimeout as Duration : Duration.of('60s')
-        storageOpts = new GoogleStorageOpts( opts.storage as Map ?: Map.of() )
+        batch = new BatchConfig( opts.batch as Map ?: Collections.emptyMap() )
+        storage = new GoogleStorageOpts( opts.storage as Map ?: Collections.emptyMap() )
     }
 
     @Memoized
@@ -79,7 +115,7 @@ class GoogleOpts {
     }
 
     protected static GoogleOpts fromSession0(Map config) {
-        final result = new GoogleOpts( config.google as Map ?: Map.of() )
+        final result = new GoogleOpts( config.google as Map ?: Collections.emptyMap() )
 
         if( result.enableRequesterPaysBuckets && !result.projectId )
             throw new IllegalArgumentException("Config option 'google.enableRequesterPaysBuckets' cannot be honoured because the Google project Id has not been specified - Provide it by adding the option 'google.project' in the nextflow.config file")
@@ -103,7 +139,7 @@ class GoogleOpts {
             throw new AbortOperationException("Missing Google credentials file: $credsFilePath")
         }
         catch (Exception e) {
-            throw new AbortOperationException("Invalid or corrupted Gogole credentials file: $credsFilePath", e)
+            throw new AbortOperationException("Invalid or corrupted Google credentials file: $credsFilePath", e)
         }
     }
 
@@ -124,13 +160,13 @@ class GoogleOpts {
         def credsPath = env.get('GOOGLE_APPLICATION_CREDENTIALS')
         if( credsPath && (projectId = getProjectIdFromCreds(credsPath)) ) {
             config.credsFile = new File(credsPath)
-            if( !config.projectId )
-                config.projectId = projectId
-            else if( config.projectId != projectId )
-                throw new AbortOperationException("Project Id `$config.projectId` declared in the nextflow config file does not match the one expected by credentials file: $credsPath")
+            if( !config.project )
+                config.project = projectId
+            else if( config.project != projectId )
+                throw new AbortOperationException("Project Id `$config.project` declared in the nextflow config file does not match the one expected by credentials file: $credsPath")
         }
 
-        if( !config.projectId ) {
+        if( !config.project ) {
             throw new AbortOperationException("Missing Google project Id -- Specify it adding the setting `google.project='your-project-id'` in the nextflow.config file")
         }
 

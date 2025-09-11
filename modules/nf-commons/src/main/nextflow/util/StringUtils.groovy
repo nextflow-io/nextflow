@@ -87,6 +87,8 @@ class StringUtils {
 
 
     static Map stripSecrets(Map map) {
+        if( map==null )
+            return null
         final copy = new HashMap(map.size())
         for( Map.Entry entry : map.entrySet() ) {
             if( entry.value instanceof Map ) {

@@ -1,112 +1,79 @@
-(channel-page)=
+(dataflow-page)=
 
-# Channels
+# Dataflow
 
-Nextflow is based on the dataflow programming model in which processes communicate through channels.
+Nextflow uses a **dataflow** programming model to define workflows declaratively. In this model, {ref}`processes <process-page>` in a pipeline are connected to each other through *dataflow channels* and *dataflow values*.
 
-A channel has two major properties:
+(dataflow-type-channel)=
 
-1. Sending a message is an *asynchronous* (i.e. non-blocking) operation, which means the sender doesn't have to wait for the receiving process.
-2. Receiving a message is a *synchronous* (i.e. blocking) operation, which means the receiving process must wait until a message has arrived.
+## Channels
 
-(channel-types)=
+A *dataflow channel* (or simply *channel*) is an asynchronous sequence of values.
 
-## Channel types
-
-In Nextflow there are two kinds of channels: *queue channels* and *value channels*.
-
-(channel-type-queue)=
-
-### Queue channel
-
-A *queue channel* is a non-blocking unidirectional FIFO queue connecting a *producer* process (i.e. outputting a value)
-to a consumer process, or an operators.
-
-A queue channel can be created by factory methods ({ref}`channel-of`, {ref}`channel-path`, etc), operators ({ref}`operator-map`, {ref}`operator-flatmap`, etc), and processes (see {ref}`Process outputs <process-output>`).
-
-(channel-type-value)=
-
-### Value channel
-
-A *value channel* can be bound (i.e. assigned) with one and only one value, and can be consumed any number of times by
-a process or an operator.
-
-A value channel can be created with the {ref}`channel-value` factory method or by any operator that produces a single value
-({ref}`operator-first`, {ref}`operator-collect`, {ref}`operator-reduce`, etc). Additionally, a process will emit value
-channels if it is invoked with all value channels, including simple values which are implicitly wrapped in a value channel.
-
-For example:
+The values in a channel cannot be accessed directly, but only through an operator or process. For example:
 
 ```nextflow
-process foo {
-  input:
-  val x
-
-  output:
-  path 'x.txt'
-
-  script:
-  """
-  echo $x > x.txt
-  """
-}
-
-workflow {
-  result = foo(1)
-  result.view { file -> "Result: ${file}" }
-}
+channel.of(1, 2, 3).view { v -> "channel emits ${v}" }
 ```
 
-In the above example, since the `foo` process is invoked with a simple value instead of a channel, the input is implicitly
-wrapped in a value channel, and the output is also emitted as a value channel.
+```console
+channel emits 1
+channel emits 2
+channel emits 3
+```
 
-See also: {ref}`process-multiple-input-channels`.
+### Factories
 
-## Channel factories
-
-Channel factories are functions that can create channels.
-
-For example, the `Channel.of()` factory can be used to create a channel from an arbitrary list of arguments:
+A channel can be created by factories in the `channel` namespace. For example, the `channel.fromPath()` factory creates a channel from a file name or glob pattern, similar to the `files()` function:
 
 ```nextflow
-Channel.of(1, 2, 3).view()
+channel.fromPath('input/*.txt').view()
 ```
-
-:::{versionadded} 20.07.0
-`channel` was introduced as an alias of `Channel`, allowing factory methods to be specified as `channel.of()` or `Channel.of()`, and so on.
-:::
 
 See {ref}`channel-factory` for the full list of channel factories.
 
-## Operators
+### Operators
 
-Operators are methods that consume and produce channels. Because channels are asynchronous, operators are necessary to manipulate the values in a channel, without using a process. As a result, operators are useful for implementing the "glue logic" between processes.
+Channel operators, or *operators* for short, are functions that consume and produce channels. Because channels are asynchronous, operators are necessary to manipulate the values in a channel. Operators are particularly useful for implementing glue logic between processes.
 
-See {ref}`operator-page` for the full list of operators. If you are new to Nextflow, here are some commonly-used operators to learn first:
-
-Filtering:
-
-- {ref}`operator-filter`: select all values in a channel that satisfy a condition
-- {ref}`operator-first`: select the first value in a channel
-- {ref}`operator-take`: select the first *n* values in a channel
-- {ref}`operator-unique`: select the unique values in a channel (i.e. remove duplicates)
-
-Transforming:
-
-- {ref}`operator-collect`: collect the values from a channel into a list
-- {ref}`operator-grouptuple`: group the values from a channel based on a grouping key
-- {ref}`operator-map`: transform each value from a channel with a mapping function
-- {ref}`operator-reduce`: accumulate each value from a channel into a single value
-
-Combining multiple channels:
+Commonly used operators include:
 
 - {ref}`operator-combine`: emit the combinations of two channels
-- {ref}`operator-concat`: emit the values from multiple channels (in the order in which the channels were given)
+
+- {ref}`operator-collect`: collect the values from a channel into a list
+
+- {ref}`operator-filter`: select the values in a channel that satisfy a condition
+
+- {ref}`operator-flatMap`: transform each value from a channel into a list and emit each list element separately
+
+- {ref}`operator-grouptuple`: group the values from a channel based on a grouping key
+
 - {ref}`operator-join`: join the values from two channels based on a matching key
-- {ref}`operator-mix`: emit the values from multiple channels (in the order in which items arrive)
 
-Miscellaneous:
+- {ref}`operator-map`: transform each value from a channel with a mapping function
 
-- {ref}`operator-ifempty`: emit a channel, or a default value if the channel is empty
-- {ref}`operator-set`: assign a channel to a variable
+- {ref}`operator-mix`: emit the values from multiple channels
+
 - {ref}`operator-view`: print each value in a channel to standard output
+
+See {ref}`operator-page` for the full list of operators.
+
+(dataflow-type-value)=
+
+## Values
+
+A *dataflow value* is an asynchronous value.
+
+Dataflow values can be created using the {ref}`channel.value <channel-value>` factory, and they are created by processes (under {ref}`certain conditions <process-out-singleton>`).
+
+A dataflow value cannot be accessed directly, but only through an operator or process. For example:
+
+```nextflow
+channel.value(1).view { v -> "dataflow value is ${v}" }
+```
+
+```console
+dataflow value is 1
+```
+
+See {ref}`stdlib-types-value` for the set of available methods for dataflow values.

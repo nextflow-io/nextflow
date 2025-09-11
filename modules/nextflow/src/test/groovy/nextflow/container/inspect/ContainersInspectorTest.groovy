@@ -17,10 +17,12 @@
 
 package nextflow.container.inspect
 
-
-import nextflow.dag.DAG
+import nextflow.NF
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
+import nextflow.script.BaseScript
+import nextflow.script.ProcessDef
+import nextflow.script.ScriptMeta
 import spock.lang.Specification
 /**
  *
@@ -28,29 +30,33 @@ import spock.lang.Specification
  */
 class ContainersInspectorTest extends Specification {
 
-    def makeVertex(DAG dag, String name, String container) {
-        final processor = Mock(TaskProcessor)
-        processor.name >> name
-        processor.createTaskPreview() >> Mock(TaskRun) {
-            getContainer() >> container
+    def setup() {
+        ScriptMeta.reset()
+        NF.init()
+    }
+
+    def makeProcess(String name, String container) {
+        final script = new BaseScript() {
+            Object runScript() {}
         }
-
-        final vertex = new DAG.Vertex(dag, DAG.Type.PROCESS)
-        vertex.process = processor
-
-        return vertex
+        final processDef = Mock(ProcessDef) {
+            getName() >> name
+            createTaskProcessor() >> Mock(TaskProcessor) {
+                createTaskPreview() >> Mock(TaskRun) {
+                    getContainer() >> container
+                }
+            }
+        }
+        ScriptMeta.get(script).addDefinition(processDef)
     }
 
     def 'should get containers' () {
         given:
-        def dag = Mock(DAG)
-        dag.vertices >> [
-            makeVertex(dag, 'proc1', 'container1'),
-            makeVertex(dag, 'proc2', 'container2')
-        ]
+        makeProcess('proc1', 'container1')
+        makeProcess('proc2', 'container2')
 
         when:
-        def observer = new ContainersInspector(dag, false)
+        def observer = new ContainersInspector(false)
         then:
         observer.getContainers() == [
             'proc1': 'container1',
@@ -60,14 +66,11 @@ class ContainersInspectorTest extends Specification {
 
     def 'should render containers as json' () {
         given:
-        def dag = Mock(DAG)
-        dag.vertices >> [
-                makeVertex(dag, 'proc1', 'container1'),
-                makeVertex(dag, 'proc2', 'container2')
-        ]
+        makeProcess('proc1', 'container1')
+        makeProcess('proc2', 'container2')
 
         when:
-        def result = new ContainersInspector(dag, false)
+        def result = new ContainersInspector(false)
                 .withFormat('json')
                 .renderContainers()
         then:
@@ -89,14 +92,11 @@ class ContainersInspectorTest extends Specification {
 
     def 'should render containers as nextflow config' () {
         given:
-        def dag = Mock(DAG)
-        dag.vertices >> [
-                makeVertex(dag, 'proc1', 'container1'),
-                makeVertex(dag, 'proc2', 'container2')
-        ]
+        makeProcess('proc1', 'container1')
+        makeProcess('proc2', 'container2')
 
         when:
-        def result = new ContainersInspector(dag,false)
+        def result = new ContainersInspector(false)
                 .withFormat('config')
                 .renderContainers()
         then:

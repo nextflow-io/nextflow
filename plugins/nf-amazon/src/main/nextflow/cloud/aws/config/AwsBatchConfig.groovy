@@ -24,6 +24,9 @@ import groovy.util.logging.Slf4j
 import nextflow.SysEnv
 import nextflow.cloud.CloudTransferOptions
 import nextflow.cloud.aws.batch.AwsOptions
+import nextflow.config.schema.ConfigOption
+import nextflow.config.schema.ConfigScope
+import nextflow.script.dsl.Description
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.util.Duration
 
@@ -34,55 +37,93 @@ import nextflow.util.Duration
  */
 @Slf4j
 @CompileStatic
-class AwsBatchConfig implements CloudTransferOptions {
-
-    public static final int DEFAULT_MAX_SPOT_ATTEMPTS = 0
+class AwsBatchConfig implements CloudTransferOptions, ConfigScope {
 
     public static final int DEFAULT_AWS_MAX_ATTEMPTS = 5
 
-    private int maxParallelTransfers = MAX_TRANSFER
+    @ConfigOption
+    @Description("""
+        The path where the AWS command line tool is installed in the host AMI.
+    """)
+    final String cliPath
 
-    private int maxTransferAttempts = MAX_TRANSFER_ATTEMPTS
+    @ConfigOption
+    @Description("""
+        Delay between download attempts from S3 (default: `10 sec`).
+    """)
+    final Duration delayBetweenAttempts
 
-    private Duration delayBetweenAttempts = DEFAULT_DELAY_BETWEEN_ATTEMPTS
+    @ConfigOption
+    @Description("""
+        The AWS Batch [Execution Role](https://docs.aws.amazon.com/batch/latest/userguide/execution-IAM-role.html) ARN that needs to be used to execute the Batch Job. It is mandatory when using AWS Fargate.
+    """)
+    final String executionRole
 
-    private String cliPath
+    @ConfigOption
+    @Description("""
+        The AWS Batch Job Role ARN that needs to be used to execute the Batch Job.
+    """)
+    final String jobRole
 
-    private String retryMode
+    @ConfigOption
+    @Description("""
+        The name of the logs group used by Batch Jobs (default: `/aws/batch/job`).
+    """)
+    final String logsGroup
 
-    private Integer maxSpotAttempts
+    @ConfigOption
+    @Description("""
+        Max parallel upload/download transfer operations *per job* (default: `4`).
+    """)
+    final int maxParallelTransfers
 
-    private Boolean debug
+    @ConfigOption
+    @Description("""
+        Max number of execution attempts of a job interrupted by a EC2 Spot reclaim event (default: `0`)
+    """)
+    final Integer maxSpotAttempts
 
-    /**
-     * The job role ARN that should be used
-     */
-    private String jobRole
+    @ConfigOption
+    @Description("""
+        Max number of downloads attempts from S3 (default: `1`).
+    """)
+    final int maxTransferAttempts
 
-    /**
-     * The name of the logs group used by jobs
-     */
-    private String logsGroup
+    @ConfigOption
+    @Description("""
+        The compute platform type used by AWS Batch. Can be either `ec2` or `fargate`. Set to `fargate` to use [AWS Fargate](https://docs.aws.amazon.com/batch/latest/userguide/fargate.html).
+    """)
+    final String platformType
 
-    /**
-     * Volume mounts
-     */
-    private List<String> volumes
+    @ConfigOption
+    @Description("""
+        The [retry mode](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-retries.html) used to handle rate-limiting by AWS APIs. Can be one of `standard`, `legacy`, `adaptive`, or `built-in` (default: `standard`).
+    """)
+    final String retryMode
 
-    /**
-     * The share identifier for all tasks when using fair-share scheduling
-     */
-    private String shareIdentifier
+    @ConfigOption
+    @Description("""
+        The scheduling priority for all tasks when using [fair-share scheduling](https://aws.amazon.com/blogs/hpc/introducing-fair-share-scheduling-for-aws-batch/) (default: `0`).
+    """)
+    final Integer schedulingPriority
 
-    /**
-     * The scheduling priority for all tasks when using fair-share scheduling (0 to 9999)
-     */
-    private Integer schedulingPriority
+    @ConfigOption
+    @Description("""
+        The share identifier for all tasks when using [fair-share scheduling](https://aws.amazon.com/blogs/hpc/introducing-fair-share-scheduling-for-aws-batch/).
+    """)
+    final String shareIdentifier
 
-    /**
-     * The container execution role
-     */
-    String executionRole
+    @ConfigOption
+    @Description("""
+        When `true`, jobs that cannot be scheduled due to lack of resources or misconfiguration are terminated and handled as task failures (default: `false`).
+    """)
+    final boolean terminateUnschedulableJobs
+
+    @ConfigOption
+    @Description("""
+        List of container mounts. Mounts can be specified as simple e.g. `/some/path` or canonical format e.g. `/host/path:/mount/path[:ro|rw]`.
+    """)
+    final List<String> volumes
 
     /**
      * The path for the `s5cmd` tool as an alternative to `aws s3` CLI to upload/download files
@@ -94,11 +135,6 @@ class AwsBatchConfig implements CloudTransferOptions {
      */
     boolean fargateMode
 
-    /*
-     * only for testing
-     */
-    protected AwsBatchConfig() {}
-
     AwsBatchConfig(Map opts) {
         fargateMode = opts.platformType == 'fargate'
         cliPath = !fargateMode ? parseCliPath(opts.cliPath as String) : null
@@ -106,7 +142,7 @@ class AwsBatchConfig implements CloudTransferOptions {
         maxParallelTransfers = opts.maxParallelTransfers as Integer ?: MAX_TRANSFER
         maxTransferAttempts = opts.maxTransferAttempts as Integer ?: defaultMaxTransferAttempts()
         delayBetweenAttempts = opts.delayBetweenAttempts as Duration ?: DEFAULT_DELAY_BETWEEN_ATTEMPTS
-        maxSpotAttempts = opts.maxSpotAttempts!=null ? opts.maxSpotAttempts as Integer : DEFAULT_MAX_SPOT_ATTEMPTS
+        maxSpotAttempts = opts.maxSpotAttempts!=null ? opts.maxSpotAttempts as Integer : null
         volumes = makeVols(opts.volumes)
         jobRole = opts.jobRole
         logsGroup = opts.logsGroup
@@ -114,61 +150,11 @@ class AwsBatchConfig implements CloudTransferOptions {
         shareIdentifier = opts.shareIdentifier
         schedulingPriority = opts.schedulingPriority as Integer ?: 0
         executionRole = opts.executionRole
+        terminateUnschedulableJobs = opts.terminateUnschedulableJobs as boolean
         if( retryMode == 'built-in' )
             retryMode = null // this force falling back on NF built-in retry mode instead of delegating to AWS CLI tool
         if( retryMode && retryMode !in AwsOptions.VALID_RETRY_MODES )
             log.warn "Unexpected value for 'aws.batch.retryMode' config setting - offending value: $retryMode - valid values: ${AwsOptions.VALID_RETRY_MODES.join(',')}"
-
-    }
-
-    // ====  getters =====
-
-    String getCliPath() {
-        return cliPath
-    }
-
-    int getMaxParallelTransfers() {
-        return maxParallelTransfers
-    }
-
-    int getMaxTransferAttempts() {
-        return maxTransferAttempts
-    }
-
-    Duration getDelayBetweenAttempts() {
-        return delayBetweenAttempts
-    }
-
-    String getRetryMode() {
-        return retryMode
-    }
-
-    Integer getMaxSpotAttempts() {
-        return maxSpotAttempts
-    }
-
-    Boolean getDebug() {
-        return debug
-    }
-
-    String getJobRole() {
-        return jobRole
-    }
-
-    String getLogsGroup() {
-        return logsGroup
-    }
-
-    List<String> getVolumes() {
-        return volumes
-    }
-
-    String getShareIdentifier() {
-        return shareIdentifier
-    }
-
-    Integer getSchedulingPriority() {
-        return schedulingPriority
     }
 
     protected int defaultMaxTransferAttempts() {
@@ -207,8 +193,6 @@ class AwsBatchConfig implements CloudTransferOptions {
 
     AwsBatchConfig addVolume(Path path) {
         assert path.scheme == 'file'
-        if( volumes == null )
-            volumes = new ArrayList(10)
         def location = path.toString()
         if( !volumes.contains(location) )
             volumes.add(location)

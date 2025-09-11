@@ -16,12 +16,12 @@
 
 package nextflow.cloud.aws.util
 
-import com.amazonaws.services.s3.model.CannedAccessControlList
 import groovy.transform.CompileStatic
 import nextflow.Global
 import nextflow.Session
 import nextflow.cloud.aws.batch.AwsOptions
 import nextflow.executor.BashFunLib
+import software.amazon.awssdk.services.s3.model.ObjectCannedACL
 
 /**
  * AWS S3 helper class
@@ -79,7 +79,7 @@ class S3BashLib extends BashFunLib<S3BashLib> {
         return this
     }
 
-    S3BashLib withAcl(CannedAccessControlList value) {
+    S3BashLib withAcl(ObjectCannedACL value) {
         if( value )
             this.acl = "--acl $value "
         return this

@@ -1,6 +1,7 @@
 package nextflow.plugin
 
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 
 import com.sun.net.httpserver.HttpServer
@@ -124,6 +125,13 @@ class PluginsFacadeTest extends Specification {
         then:
         result == [ new PluginSpec('nf-tower', '0.1.0') ]
 
+        // fusion requires both nf-tower and nf-wave
+        when:
+        handler = new PluginsFacade(defaultPlugins: defaults, env: [NXF_PLUGINS_DEFAULT:'true'])
+        result = handler.pluginsRequirement([fusion:[enabled:true]])
+        then:
+        result == [ new PluginSpec('nf-tower', '0.1.0'), new PluginSpec('nf-wave', '0.1.0')  ]
+
         when:
         handler = new PluginsFacade(defaultPlugins: defaults, env: [:])
         result = handler.pluginsRequirement([wave:[enabled:true]])
@@ -176,7 +184,8 @@ class PluginsFacadeTest extends Specification {
                 'nf-amazon': new PluginSpec('nf-amazon', '0.1.0'),
                 'nf-google': new PluginSpec('nf-google', '0.1.0'),
                 'nf-azure': new PluginSpec('nf-azure', '0.1.0'),
-                'nf-tower': new PluginSpec('nf-tower', '0.1.0')
+                'nf-tower': new PluginSpec('nf-tower', '0.1.0'),
+                'nf-k8s': new PluginSpec('nf-k8s', '0.1.0')
         ])
         and:
         def handler = new PluginsFacade(defaultPlugins: defaults)
@@ -202,6 +211,12 @@ class PluginsFacadeTest extends Specification {
         !plugins.find { it.id == 'nf-google' }
         !plugins.find { it.id == 'nf-amazon' }
         plugins.find { it.id == 'nf-azure' }
+
+        when:
+        plugins = handler.defaultPluginsConf([process:[executor: 'k8s']])
+        then:
+        plugins.find { it.id == 'nf-k8s' }
+        !plugins.find { it.id == 'nf-amazon' }
 
         when:
         plugins = handler.defaultPluginsConf([:])
@@ -453,6 +468,73 @@ class PluginsFacadeTest extends Specification {
         then:
         result == [www]
 
+    }
+
+    def 'should prefetch plugin metadata when starting plugins'() {
+        def specs = [new PluginSpec("nf-one"), new PluginSpec("nf-two", "~1.2.0")]
+
+        given:
+        def updater = Mock(PluginUpdater)
+        def unit = new PluginsFacade() {
+            PluginUpdater createUpdater(Path root, CustomPluginManager manager) {
+                return updater
+            }
+        }
+        unit.init()
+
+        when:
+        unit.start(specs)
+        then:
+        1 * updater.prefetchMetadata(specs) // order is important!
+        then:
+        1 * updater.prepareAndStart("nf-one", null)
+        1 * updater.prepareAndStart("nf-two", "~1.2.0")
+    }
+
+    @Unroll
+    def 'check is a supported plugins index' () {
+        expect:
+        PluginsFacade.isSupportedIndex(INDEX) == EXPECTED
+
+        where:
+        INDEX                           | EXPECTED
+        'https://foo.nextflow.io'       | true
+        'https://foo.seqera.io'         | true
+        and:
+        'https://foo.nf.io'             | false
+    }
+
+    @Unroll
+    def 'should parse allowed plugins' () {
+        given:
+        def facade  = new PluginsFacade()
+
+        expect:
+        facade.parseAllowedPlugins(ENV) == EXPECTED
+
+        where:
+        ENV                             | EXPECTED
+        [:]                             | null
+        [NXF_PLUGINS_ALLOWED:'']                    | []
+        [NXF_PLUGINS_ALLOWED:'nf-amazon,nf-google'] | [PluginSpec.parse('nf-amazon'), PluginSpec.parse('nf-google')]
+    }
+
+    @Unroll
+    def 'should should validate is allowed' () {
+        given:
+        def facade  = new PluginsFacade(env:ENV)
+
+        expect:
+        facade.isAllowed(REQUEST) == EXPECTED
+        facade.isAllowed(PluginSpec.parse(REQUEST)) == EXPECTED
+
+        where:
+        ENV                                         | REQUEST       | EXPECTED
+        [:]                                         | 'nf-amz'      | true
+        [NXF_PLUGINS_ALLOWED:'']                    | 'nf-amz'      | false
+        [NXF_PLUGINS_ALLOWED:'nf-amz,nf-gcp']       | 'nf-amz'      | true
+        [NXF_PLUGINS_ALLOWED:'nf-amz,nf-gcp']       | 'nf-gcp'      | true
+        [NXF_PLUGINS_ALLOWED:'nf-amz,nf-gcp']       | 'nf-foo'      | false
     }
 
 }

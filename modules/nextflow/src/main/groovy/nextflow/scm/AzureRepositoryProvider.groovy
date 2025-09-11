@@ -16,6 +16,7 @@
 
 package nextflow.scm
 
+import java.net.http.HttpResponse
 import java.util.regex.Pattern
 
 import groovy.transform.CompileDynamic
@@ -35,22 +36,40 @@ final class AzureRepositoryProvider extends RepositoryProvider {
 
     private String user
     private String repo
+    private String urlPath;
     private String continuationToken
 
     AzureRepositoryProvider(String project, ProviderConfig config=null) {
-        /*
-        Azure repo format follows Organization/Project/Repository where Project can be optional
-        If Project is not present then Repository is used as Project (and also as Repository)
-         */
-        def tokens = project.tokenize('/')
+        this.urlPath = project
+        def tokens = getUniformPath(project)
         this.repo = tokens.removeLast()
-        if( tokens.size() == 1){
-            this.project = [tokens.first(), this.repo].join('/')
-        }else{
-            this.project = tokens.join('/')
-        }
+        this.project = tokens.join('/')
         this.config = config ?: new ProviderConfig('azurerepos')
         this.continuationToken = null
+    }
+
+    /**
+     * An Azure repo is identified with the Organization/Project/Repository parameters.
+     * This function gets these parameters for the different URL path formats supported in Nextflow for Azure repositories.
+     *
+     * @param urlPath Path of the Azure repo URL
+     * @return List with the azure repo parameters with the following order [ Organization, Project, Repository ]
+     */
+    static List<String> getUniformPath(String urlPath){
+        def tokens = urlPath.tokenize('/')
+        if( tokens.size() == 2 ){
+            // URL is just organization/project. project and repo are the same.
+            return [tokens[0], tokens[1], tokens[1]]
+        } 
+        if( tokens.size() == 3 ){
+            // URL is as expected organization/project/repository.
+            return tokens
+        }
+        if( tokens.size() == 4 && tokens[2] == '_git' ){
+            // Clone URL organization/project/_git/repository
+            return [tokens[0], tokens[1], tokens[3]]
+        } 
+        throw new IllegalArgumentException("Unexpected Azure repository path format - offending value: '$urlPath'")
     }
 
     /** {@inheritDoc} */
@@ -142,17 +161,14 @@ final class AzureRepositoryProvider extends RepositoryProvider {
      * Check for response error status. Throws a {@link nextflow.exception.AbortOperationException} exception
      * when a 401 or 403 error status is returned.
      *
-     * @param connection A {@link HttpURLConnection} connection instance
+     * @param response A {@link HttpURLConnection} connection instance
      */
-    protected checkResponse( HttpURLConnection connection ) {
-
-        if (connection.getHeaderFields().containsKey("x-ms-continuationtoken")) {
-            this.continuationToken = connection.getHeaderField("x-ms-continuationtoken");
-        } else {
-            this.continuationToken = null
-        }
-
-        super.checkResponse(connection)
+    protected checkResponse( HttpResponse<String> response) {
+        this.continuationToken = response
+                .headers()
+                .firstValue("x-ms-continuationtoken")
+                .orElse(null)
+        super.checkResponse(response)
     }
 
     /** {@inheritDoc} */
@@ -164,15 +180,38 @@ final class AzureRepositoryProvider extends RepositoryProvider {
     /** {@inheritDoc} */
     @Override
     String getRepositoryUrl() {
-        "${config.server}/$project"
+        "${config.server}/${urlPath}"
+    }
+
+    @Override
+    String readText( String path ) {
+        final url = getContentUrl(path)
+        final response = invokeAndParseResponse(url)
+        return response.get('content')?.toString()
     }
 
     /** {@inheritDoc} */
     @Override
     byte[] readBytes(String path) {
-        final url = getContentUrl(path)
-        final response = invokeAndParseResponse(url)
-        return response.get('content')?.toString()?.getBytes()
+        // For binary content, use direct download instead of JSON embedding
+        final queryParams = [
+                'download': true,
+                'includeContent': false,
+                'includeContentMetadata': false,
+                "api-version": 6.0,
+                'path': path
+        ] as Map<String,Object>
+        
+        if( revision ) {
+            queryParams['versionDescriptor.version'] = revision
+            if( COMMIT_REGEX.matcher(revision).matches() )
+                queryParams['versionDescriptor.versionType'] = 'commit'
+        }
+        
+        final queryString = queryParams.collect({ "$it.key=$it.value"}).join('&')
+        final url = "$endpointUrl/items?$queryString"
+        // Use invokeBytes for direct binary content download
+        return invokeBytes(url)
     }
 
 }

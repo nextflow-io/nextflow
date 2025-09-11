@@ -30,6 +30,7 @@ import nextflow.NF
 import nextflow.extension.CH
 import nextflow.extension.DataflowHelper
 import nextflow.processor.TaskProcessor
+import nextflow.script.ExecutionStack
 import nextflow.script.params.DefaultInParam
 import nextflow.script.params.DefaultOutParam
 import nextflow.script.params.EachInParam
@@ -113,7 +114,7 @@ class DAG {
     void addOperatorNode( String label, inputs, outputs, List<DataflowProcessor> operators=null )  {
         assert label
         assert inputs
-        addVertex(Type.OPERATOR, label, normalizeChannels(inputs), normalizeChannels(outputs), operators )
+        addVertex( Type.OPERATOR, label, normalizeChannels(inputs), normalizeChannels(outputs), operators )
     }
 
     /**
@@ -125,7 +126,7 @@ class DAG {
     void addSourceNode( String label, source )  {
         assert label
         assert source
-        addVertex(Type.ORIGIN, label, null, normalizeChannels(source) )
+        addVertex( Type.ORIGIN, label, null, normalizeChannels(source) )
     }
 
     /**
@@ -158,8 +159,9 @@ class DAG {
      * @return A {@link Vertex} object
      */
     @PackageScope
-    Vertex createVertex( Type type, String label, extra=null ) {
-        def result = new Vertex(type, label)
+    Vertex createVertex( Type type, String label, Object extra=null ) {
+        final workflow = ExecutionStack.workflow()?.name ?: ""
+        final result = new Vertex(type, label, workflow)
         if( extra instanceof TaskProcessor ) {
             result.process = extra
             result.operators = [ extra.operator ]
@@ -388,6 +390,11 @@ class DAG {
         String label
 
         /**
+         * The name of the enclosing workflow
+         */
+        String workflow
+
+        /**
          * The vertex type
          */
         Type type
@@ -409,10 +416,12 @@ class DAG {
          *
          * @param type A {@link Type} value
          * @param label A descriptive string to label this vertex
+         * @param workflow The name of the enclosing workflow
          */
-        Vertex( Type type, String label = null ) {
+        Vertex( Type type, String label = null, String workflow = null ) {
             assert type
             this.label = label
+            this.workflow = workflow
             this.type = type
         }
 

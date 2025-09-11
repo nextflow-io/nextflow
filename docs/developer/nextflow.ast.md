@@ -28,7 +28,7 @@ Here is the example from {ref}`your-first-script`:
 ```nextflow
 params.str = 'Hello world!'
 
-process splitLetters {
+process split_letters {
   output:
     path 'chunk_*'
 
@@ -38,7 +38,7 @@ process splitLetters {
   """
 }
 
-process convertToUpper {
+process convert_to_upper {
   input:
     path x
   output:
@@ -51,7 +51,7 @@ process convertToUpper {
 }
 
 workflow {
-  splitLetters | flatten | convertToUpper | view { it.trim() }
+  split_letters | flatten | convert_to_upper | view { it.trim() }
 }
 ```
 
@@ -60,7 +60,7 @@ Here it is after being parsed and de-sugared by Groovy:
 ```groovy
 params.str = 'Hello world!'
 
-process( splitLetters( {
+process( split_letters( {
   output:
     path('chunk_*')
 
@@ -70,7 +70,7 @@ process( splitLetters( {
   """
 } ))
 
-process( convertToUpper( {
+process( convert_to_upper( {
   input:
     path(x)
   output:
@@ -83,7 +83,7 @@ process( convertToUpper( {
 } ))
 
 workflow({
-  splitLetters | flatten | convertToUpper | view { it.trim() }
+  split_letters | flatten | convert_to_upper | view { it.trim() }
 })
 ```
 
@@ -105,12 +105,12 @@ import nextflow.Channel as channel
 public class script1677225313239 extends nextflow.script.BaseScript { 
 
     public script1677225313239() {
-        nextflow.script.ScriptMeta.get(this).setDsl1ProcessNames(['splitLetters', 'convertToUpper'])
+        nextflow.script.ScriptMeta.get(this).setDsl1ProcessNames(['split_letters', 'convert_to_upper'])
     }
 
     public script1677225313239(final groovy.lang.Binding context) {
         super.setBinding(context)
-        nextflow.script.ScriptMeta.get(this).setDsl1ProcessNames(['splitLetters', 'convertToUpper'])
+        nextflow.script.ScriptMeta.get(this).setDsl1ProcessNames(['split_letters', 'convert_to_upper'])
     }
 
     public static void main(final java.lang.String[] args) {
@@ -121,7 +121,7 @@ public class script1677225313239 extends nextflow.script.BaseScript {
     protected java.lang.Object runScript() {
         params.str = 'Hello world!'
 
-        this.process('splitLetters', { 
+        this.process('split_letters', { 
             this._out_path('chunk_*')
             new nextflow.script.BodyDef(
                 {
@@ -135,7 +135,7 @@ public class script1677225313239 extends nextflow.script.BaseScript {
             )
         })
 
-        this.process('convertToUpper', { 
+        this.process('convert_to_upper', { 
             this._in_path(new nextflow.script.TokenVar('x'))
             this._out_stdout()
             new nextflow.script.BodyDef(
@@ -153,16 +153,16 @@ public class script1677225313239 extends nextflow.script.BaseScript {
         this.workflow({ 
             new nextflow.script.BodyDef(
                 {
-                    splitLetters | flatten | convertToUpper | this.view({ 
+                    split_letters | flatten | convert_to_upper | this.view({ 
                         it.trim()
                     })
                 },
-                '  splitLetters | flatten | convertToUpper | view { it.trim() }\n',
+                '  split_letters | flatten | convert_to_upper | view { it.trim() }\n',
                 'workflow',
                 [
                     new nextflow.script.TokenValRef('flatten', 24, 18),
-                    new nextflow.script.TokenValRef('splitLetters', 24, 3),
-                    new nextflow.script.TokenValRef('convertToUpper', 24, 28)
+                    new nextflow.script.TokenValRef('split_letters', 24, 3),
+                    new nextflow.script.TokenValRef('convert_to_upper', 24, 28)
                 ]
             )
         })

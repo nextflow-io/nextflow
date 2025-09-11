@@ -34,7 +34,9 @@ extensions = [
   'sphinxcontrib.mermaid',
   'sphinxext.rediraffe',
   'sphinx_rtd_theme',
-  'myst_parser'
+  'myst_parser',
+  'sphinx_tabs.tabs',
+  'sphinx_copybutton'
 ]
 
 myst_enable_extensions = ['colon_fence', 'deflist', 'dollarmath']
@@ -47,7 +49,15 @@ rediraffe_redirects = {
     'tracing.md': 'reports.md',
     'mail.md': 'notifications.md',
     'operator.md': 'reference/operator.md',
-    'dsl2.md': 'dsl1.md'
+    'dsl1.md': 'migrations/dsl1.md',
+    'updating-syntax.md': 'strict-syntax.md',
+    'updating-spot-retries.md': 'guides/updating-spot-retries.md',
+    'metrics.md': 'tutorials/metrics.md',
+    'data-lineage.md' : 'tutorials/data-lineage.md',
+    'workflow-outputs.md': 'tutorials/workflow-outputs.md',
+    'flux.md': 'tutorials/flux.md',
+    'developer/plugins.md': 'plugins/developing-plugins.md',
+    'plugins.md': 'plugins/plugins.md'
 }
 
 # Add any paths that contain templates here, relative to this directory.
@@ -129,6 +139,8 @@ pygments_style = 'default'
 # A list of ignored prefixes for module index sorting.
 #modindex_common_prefix = []
 
+# Add copyable selector
+copybutton_selector = ".copyable pre"
 
 # -- Options for HTML output ---------------------------------------------------
 

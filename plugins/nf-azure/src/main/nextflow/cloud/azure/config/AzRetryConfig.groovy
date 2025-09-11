@@ -20,6 +20,9 @@ package nextflow.cloud.azure.config
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
+import nextflow.config.schema.ConfigOption
+import nextflow.config.schema.ConfigScope
+import nextflow.script.dsl.Description
 import nextflow.util.Duration
 
 /**
@@ -30,10 +33,30 @@ import nextflow.util.Duration
 @ToString(includePackage = false, includeNames = true)
 @EqualsAndHashCode
 @CompileStatic
-class AzRetryConfig {
+class AzRetryConfig implements ConfigScope {
+
+    @ConfigOption
+    @Description("""
+        Delay when retrying failed API requests (default: `250ms`).
+    """)
     Duration delay = Duration.of('250ms')
+
+    @ConfigOption
+    @Description("""
+        Max delay when retrying failed API requests (default: `90s`).
+    """)
     Duration maxDelay = Duration.of('90s')
+
+    @ConfigOption
+    @Description("""
+        Max attempts when retrying failed API requests (default: `10`).
+    """)
     int maxAttempts = 10
+
+    @ConfigOption
+    @Description("""
+        Jitter value when retrying failed API requests (default: `0.25`).
+    """)
     double jitter = 0.25
 
     AzRetryConfig() {

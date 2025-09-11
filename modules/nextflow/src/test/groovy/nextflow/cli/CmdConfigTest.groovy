@@ -24,6 +24,7 @@ import nextflow.extension.FilesEx
 import nextflow.plugin.Plugins
 import nextflow.secret.SecretsLoader
 import spock.lang.IgnoreIf
+import spock.lang.Requires
 import spock.lang.Specification
 /**
  *
@@ -384,10 +385,12 @@ class CmdConfigTest extends Specification {
 
     }
 
-
     @IgnoreIf({System.getenv('NXF_SMOKE')})
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def 'should resolve remote config' () {
         given:
+        SysEnv.push(GITHUB_TOKEN: System.getenv('NXF_GITHUB_ACCESS_TOKEN'))
+        and:
         def buffer = new ByteArrayOutputStream()
         def cmd = new CmdConfig(
                 args: ['https://github.com/nextflow-io/hello'],
@@ -404,6 +407,9 @@ class CmdConfigTest extends Specification {
             }
             '''
             .stripIndent()
+
+        cleanup:
+        SysEnv.pop()
     }
 
     @IgnoreIf({System.getenv('NXF_SMOKE')})

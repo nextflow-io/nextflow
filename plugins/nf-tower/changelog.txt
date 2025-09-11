@@ -1,5 +1,41 @@
 nf-tower changelog
 ===================
+1.14.0 - 15 Aug 2025
+- Fix bug in DefaultObserverFactory (#6259) [bec4bf7a]
+- Improve Fusion license error message (#6313) [c3f397ea]
+- Unify nf-lang config scopes with runtime classes (#6271) [bfa67ca3]
+- Update trace observers to v2 (#6257) [544b8c47]
+- Bump groovy 4.0.28 (#6304) [a468f8ef]
+
+1.13.0 - 6 Jul 2025
+- Bump Slf4j version 2.0.17 [93199e09]
+- Fix JWT token refresh to Fusion validation request (#6231) [95dfdafd]
+- Fix http response err message [1f05451f]
+- Remove deprecated GsonHelper class [700faddb]
+
+1.12.0 - 2 Jun 2025
+- Add Platform info to Fusion license (#6142) [75f1bc52]
+- Bump Groovy to version 4.0.27 (#6125) [258e1790]
+
+1.11.2 - 8 Apr 2025
+- Fix container meta deduplication [f4600d2e]
+
+1.11.1 - 5 Apr 2025
+- Fix date format in Wave containers meta (#5903) [59536c0a]
+
+1.11.0 - 17 Mar 2025
+- Add Wave container metadata to Platform traces (#5724) [b81178c5]
+- Update Platform token error message [18b69349]
+- Bump groovy 4.0.26 [f740bc56]
+
+1.10.0 - 12 Feb 2025
+- Add Fusion token validation (#5614) [1dcb18d6]
+- Bump groovy 4.0.25 [19c40a4a]
+
+1.9.4 - 20 Jan 2025
+- Bump logback 1.5.13 + slf4j 2.0.16 [cc0163ac]
+- Bump groovy 4.0.24 missing deps [40670f7e]
+
 1.9.3 - 27 Oct 2024
 - Fix nf-tower plugin to upload logs when early failures  (#5434) [4222442a]
 
@@ -34,12 +70,12 @@ nf-tower changelog
 - Add -cloudcache CLI option (#4385) [73fda582]
 
 1.6.2 - 28 Sep 2023
-- Disable Tower container field for multiple images [ci fast] [b53936b0]
+- Disable Tower container field for multiple images [b53936b0]
 - Bump Apache 2.0 license to tower client [e4a878b6]
 
 1.6.1 - 17 Aug 2023
 - Fix checkpoint thread termination (#4166) [2b449daa]
-- Fix typos in source code comments (#4173) [ci fast] [e78bc37e]
+- Fix typos in source code comments (#4173) [e78bc37e]
 
 1.6.0 - 5 Aug 2023
 - Add Tower logs checkpoint (#4132) [71dfecc2]
@@ -64,7 +100,7 @@ nf-tower changelog
 - Fix NoSuchMethodError String.stripIndent with Java 11 [308eafe6]
 
 1.5.10 - 21 Feb 2023
-- Log exception when an unexpected  occurs (#3603) [ci fast] [9aeca99f]
+- Log exception when an unexpected  occurs (#3603) [9aeca99f]
 - Bump groovy 3.0.15 [7a3ebc7d]
 
 1.5.9 - 14 Jan 2023
