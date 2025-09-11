@@ -1,5 +1,3 @@
-import io.nextflow.gradle.tasks.GithubRepositoryPublisher
-import org.apache.commons.codec.digest.DigestUtils
 apply plugin: 'java'
 
 ext.aws_access_key_id = project.findProperty('aws_access_key_id') ?: System.getenv('AWS_ACCESS_KEY_ID')
@@ -33,26 +31,6 @@ subprojects {
         into 'build/target/libs'
     }
 
-    /*
-     * Copy the plugin in the project root build/plugins directory
-     */
-    task copyPluginZip(type: Copy, dependsOn: project.tasks.findByName('makeZip')) {
-        group 'nextflow'
-        from project.tasks.findByName('makeZip')
-        into "$rootProject.buildDir/plugins"
-        outputs.file("$rootProject.buildDir/plugins/${project.name}-${project.version}.zip")
-        doLast {
-            ant.unzip(
-                    src: "$rootProject.buildDir/plugins/${project.name}-${project.version}.zip",
-                    dest: "$rootProject.buildDir/plugins/${project.name}-${project.version}"
-            )
-        }
-    }
-
-    /*
-    * "install" the plugin the project root build/plugins directory
-    */
-    project.parent.tasks.getByName("assemble").dependsOn << copyPluginZip
 
     jar {
         from sourceSets.main.allSource
@@ -106,11 +84,3 @@ project.parent.tasks.getByName("assemble").dependsOn << assemble
  */
 classes.dependsOn subprojects.copyPluginLibs
 
-task publishIndex( type: GithubRepositoryPublisher ) {
-    indexUrl = System.getenv('PLUGINS_INDEX_JSON') ?: 'https://github.com/nextflow-io/plugins/main/plugins.json'
-    repos = allPlugins()
-    owner = System.getenv('GH_ORG') ?: 'nextflow-io'
-    githubUser = System.getenv('GH_USER') ?: project.findProperty('github_username')
-    githubEmail = System.getenv('GH_USER_EMAIL') ?: project.findProperty('github_commit_email')
-    githubToken = System.getenv('GH_TOKEN') ?: project.findProperty('github_access_token')
-}
