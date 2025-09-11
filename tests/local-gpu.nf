@@ -15,7 +15,24 @@
  * limitations under the License.
  */
 
-process hello {
+process matmul1 {
+    accelerator 1
+    debug true
+
+    input:
+    val id
+
+    output:
+    val id
+
+    script:
+    '''
+    echo "matmul1: gpu $CUDA_VISIBLE_DEVICES"
+    sleep 5
+    '''
+}
+
+process matmul2 {
     accelerator 1
     debug true
 
@@ -24,11 +41,11 @@ process hello {
 
     script:
     '''
-    echo "GPU: $CUDA_VISIBLE_DEVICES"
+    echo "matmul2: gpu $CUDA_VISIBLE_DEVICES"
     sleep 5
     '''
 }
 
 workflow {
-    hello( channel.of(1..8) )
+    matmul1( channel.of(1..8) ) | matmul2
 }
