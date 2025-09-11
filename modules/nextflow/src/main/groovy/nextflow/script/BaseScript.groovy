@@ -25,7 +25,7 @@ import nextflow.NF
 import nextflow.NextflowMeta
 import nextflow.Session
 import nextflow.exception.AbortOperationException
-import nextflow.script.dsl.ProcessDsl
+import nextflow.script.dsl.ProcessDslV1
 import nextflow.secret.SecretsLoader
 
 /**
@@ -128,7 +128,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
      * @param body
      */
     protected void process(String name, Closure<BodyDef> body) {
-        final dsl = new ProcessDsl(this, name)
+        final dsl = new ProcessDslV1(this, name)
         final cl = (Closure<BodyDef>)body.clone()
         cl.setDelegate(dsl)
         cl.setResolveStrategy(Closure.DELEGATE_FIRST)

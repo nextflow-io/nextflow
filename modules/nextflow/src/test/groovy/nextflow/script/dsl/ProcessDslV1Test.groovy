@@ -28,10 +28,10 @@ import nextflow.script.TokenVar
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ProcessDslTest extends Specification {
+class ProcessDslV1Test extends Specification {
 
     def createDsl() {
-        new ProcessDsl(Mock(BaseScript), null)
+        new ProcessDslV1(Mock(BaseScript), null)
     }
 
     def 'should create input directives' () {

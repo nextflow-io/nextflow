@@ -42,9 +42,9 @@ import nextflow.script.params.ValueOutParam
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @TypeChecked
-class ProcessDsl extends ProcessBuilder {
+class ProcessDslV1 extends ProcessBuilder {
 
-    ProcessDsl(BaseScript ownerScript, String processName) {
+    ProcessDslV1(BaseScript ownerScript, String processName) {
         super(new ProcessConfig(ownerScript, processName))
     }
 
