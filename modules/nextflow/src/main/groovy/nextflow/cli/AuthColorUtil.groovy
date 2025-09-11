@@ -53,21 +53,22 @@ class AuthColorUtil {
     }
 
     /**
-     * Print colored text using format keywords
+     * Print colored text using format keywords and reset all styles when done
      * Format: colorize(text, format) - e.g. colorize('Hello', 'red bold'), colorize('World', 'cyan dim')
      */
     static void printColored(String text, String format = '') {
-        println colorize(text, format)
+        println colorize(text, format, true) // Always do full reset for printColored
     }
 
     /**
      * Format text with color using format keywords
-     * Format: colorize(text, format) - e.g. colorize('Hello', 'red bold'), colorize('World', 'cyan on yellow')
+     * Format: colorize(text, format, fullReset) - e.g. colorize('Hello', 'red bold'), colorize('World', 'cyan on yellow')
      * Supported colors: black, red, green, yellow, blue, magenta, cyan, white, default
      * Supported background: on black, on red, on green, on yellow, on blue, on magenta, on cyan, on white, on default
      * Supported formatting: bold, dim
+     * @param fullReset if true, resets all styles; if false, only resets styles that were applied
      */
-    static String colorize(String text, String format = '') {
+    static String colorize(String text, String format = '', boolean fullReset = false) {
         if (!isAnsiEnabled() || !text) {
             return text ?: ''
         }
@@ -122,7 +123,18 @@ class AuthColorUtil {
         if (bold) fmt = fmt.bold()
         if (dim) fmt = fmt.a(Attribute.INTENSITY_FAINT)
         fmt = fmt.a(text)
-        fmt = fmt.a(Attribute.RESET)
+
+        if (fullReset) {
+            // Reset all styles
+            fmt = fmt.a(Attribute.RESET)
+        } else {
+            // Reset only what was set
+            if (bold) fmt = fmt.boldOff()
+            if (dim) fmt = fmt.a(Attribute.INTENSITY_BOLD) // Reset dim
+            if (foregroundColor) fmt = fmt.fg(Color.DEFAULT)
+            if (backgroundColor) fmt = fmt.bg(Color.DEFAULT)
+        }
+
         return fmt.toString()
     }
 
