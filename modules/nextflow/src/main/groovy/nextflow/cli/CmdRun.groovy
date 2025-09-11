@@ -121,6 +121,9 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-with-cloudcache'], description = 'Enable the use of object storage bucket as storage for cache meta-data')
     String cloudCachePath
 
+    @Parameter(names=['-with-globalcache'], description = 'Enable the use of a global cache meta-data')
+    String globalCachePath
+
     /**
      * Defines the parameters to be passed to the pipeline script
      */
@@ -316,7 +319,12 @@ class CmdRun extends CmdBase implements HubOptions {
 
         if( offline && latest )
             throw new AbortOperationException("Command line options `-latest` and `-offline` cannot be specified at the same time")
-
+        if( globalCachePath && workDir )
+            throw new AbortOperationException("Command line options `-with-globalcache` and `-workdir` cannot be specified at the same time. Global cache already set the 'workDir")
+        if( globalCachePath && cloudCachePath )
+            throw new AbortOperationException("Command line options `-with-globalcache` and `-with-cloudcache` cannot be specified at the same time. Global cache already set the 'cloudcache'")
+        if( globalCachePath && resume )
+            throw new AbortOperationException("Command line options `-with-globalCache` and `-resume` cannot be specified at the same time. '-resume' is implicitly activated in global cache runs")
         checkRunName()
 
         printBanner()
