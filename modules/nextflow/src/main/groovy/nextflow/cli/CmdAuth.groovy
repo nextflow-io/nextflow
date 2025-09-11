@@ -419,14 +419,15 @@ class CmdAuth extends CmdBase implements UsageAware {
 
                 // Verify login by calling /user-info
                 def userInfo = callUserInfoApi(accessToken, apiUrl)
-                AuthColorUtil.printColored("Authentication successful! Logged in as: ${AuthColorUtil.colorize(userInfo.userName as String, 'cyan bold')}", "green")
+                AuthColorUtil.printColored("\nAuthentication successful!", "green")
+                println "Logged in to ${AuthColorUtil.colorize(apiUrl.replace('api.', '').replace('/api', ''), 'magenta')} as: ${AuthColorUtil.colorize(userInfo.userName as String, 'cyan bold')}"
 
                 // Generate PAT
                 def pat = generatePAT(accessToken, apiUrl)
 
                 // Save to config
                 saveAuthToConfig(pat, apiUrl)
-                AuthColorUtil.printColored("Seqera Platform configuration saved to ${AuthColorUtil.colorize(getConfigFile().toString(), 'magenta')}", "green")
+                println "Seqera Platform configuration saved to ${AuthColorUtil.colorize(getConfigFile().toString(), 'magenta')}"
 
             } catch (Exception e) {
                 throw new RuntimeException("Authentication failed: ${e.message}", e)
