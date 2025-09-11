@@ -56,12 +56,12 @@ subprojects {
         }
         repositories {
             maven {
-                url = System.getenv('MAVEN_PUBLISH_URL') ?: 's3://maven.seqera.io'
+                url = findProperty('maven_publish_url') ?: System.getenv('MAVEN_PUBLISH_URL') ?: 's3://maven.seqera.io'
                 url = version.endsWith('-SNAPSHOT') ? "$url/snapshots" : "$url/releases"
 
                 credentials(AwsCredentials) {
-                    accessKey = System.getenv('AWS_ACCESS_KEY_ID') ?: findProperty('aws_access_key_id')
-                    secretKey = System.getenv('AWS_SECRET_ACCESS_KEY') ?: findProperty('aws_secret_access_key')
+                    accessKey = findProperty('aws_access_key_id') ?: System.getenv('AWS_ACCESS_KEY_ID')
+                    secretKey = findProperty('aws_secret_access_key') ?: System.getenv('AWS_SECRET_ACCESS_KEY')
                 }
             }
         }

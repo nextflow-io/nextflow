@@ -341,13 +341,12 @@ configure(coreProjects) {
 
         repositories {
             maven {
-                // change URLs to point to your repos, e.g. http://my.org/repo
-                def releasesRepoUrl = "s3://maven.seqera.io/releases/"
-                def snapshotsRepoUrl = "s3://maven.seqera.io/snapshots/"
-                url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+                url = findProperty('maven_publish_url') ?: System.getenv('MAVEN_PUBLISH_URL') ?: 's3://maven.seqera.io'
+                url = version.endsWith('-SNAPSHOT') ? "$url/snapshots" : "$url/releases"
+
                 credentials(AwsCredentials) {
-                    accessKey nexusUsername
-                    secretKey nexusPassword
+                    accessKey = findProperty('aws_access_key_id') ?: System.getenv('AWS_ACCESS_KEY_ID') ?: nexusUsername
+                    secretKey = findProperty('aws_secret_access_key') ?: System.getenv('AWS_SECRET_ACCESS_KEY') ?: nexusPassword
                 }
             }
         }

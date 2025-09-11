@@ -48,9 +48,11 @@ files (without committing), then run this script again:
   ├── VERSION
   ├── nextflow
   ├── changelog.txt
-  └── plugins/nf-*/
-      ├── src/main/resources/META-INF/MANIFEST.MF
-      └── changelog.txt
+  ├── plugins/nf-*/
+  │   ├── src/main/resources/META-INF/MANIFEST.MF
+  │   └── changelog.txt
+  └── modules/nextflow/
+      └── src/main/resources/META-INF/plugins-info.txt
 "
 
 echo -n "Type 'yes' to proceed: "
