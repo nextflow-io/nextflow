@@ -19,11 +19,12 @@ package nextflow.extension
 import groovy.transform.CompileStatic
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
+import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
-
-import static DataflowHelper.eventsMap
-import static DataflowHelper.subscribeImpl
-
+import nextflow.extension.op.ContextSequential
+import nextflow.extension.op.Op
+import nextflow.extension.op.OpContext
+import nextflow.extension.op.OpDatum
 /**
  * Implements Reservoir sampling of channel content
  *
@@ -42,9 +43,11 @@ class RandomSampleOp {
 
     private Random rng
 
-    private List reservoir = []
+    private List<OpDatum> reservoir = []
 
     private int counter
+
+    private OpContext context = new ContextSequential()
 
     RandomSampleOp( DataflowReadChannel source, int N, Long seed = null) {
         this.source = source
@@ -52,35 +55,38 @@ class RandomSampleOp {
         this.rng = seed != null ? new Random(seed) : new Random()
     }
 
-
-    private void sampling(it) {
-
+    private void sampling(Object it) {
         counter++
         //Fill reservoir
         if (counter <= N){
-            reservoir << it
+            reservoir.add(OpDatum.of(it, context.getOperatorRun()))
         }
         else {
             //Pick a random number
             int i = rng.nextInt(counter)
             if (i < N)
-                reservoir[i] = it
+                reservoir[i] = OpDatum.of(it, context.getOperatorRun())
         }
-
     }
 
-    private void emit(nop) {
-
+    private void emit(DataflowProcessor dp) {
         if( counter <= N )
             Collections.shuffle(reservoir, rng)
-
-        reservoir.each { it!=null ? result.bind(it) : null }
-        result.bind(Channel.STOP)
+        for( OpDatum it : reservoir ) {
+            if( it!=null )
+            Op.bind(it.run, result, it.value)
+        }
+        Op.bind(dp, result, Channel.STOP)
     }
 
     DataflowWriteChannel apply() {
         result = CH.create()
-        subscribeImpl(source, eventsMap(this.&sampling, this.&emit))
+        new SubscribeOp()
+            .withInput(source)
+            .withContext(context)
+            .withOnNext(this.&sampling)
+            .withOnComplete(this.&emit)
+            .apply()
         return result
     }
 }

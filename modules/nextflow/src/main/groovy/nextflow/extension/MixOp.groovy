@@ -17,14 +17,16 @@
 
 package nextflow.extension
 
-import static nextflow.extension.DataflowHelper.*
-
 import java.util.concurrent.atomic.AtomicInteger
 
 import groovy.transform.CompileStatic
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
+import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
+import nextflow.extension.op.ContextRunPerThread
+import nextflow.extension.op.Op
+import nextflow.extension.op.OpContext
 
 /**
  * Implements Nextflow Mix operator
@@ -37,6 +39,7 @@ class MixOp {
     private DataflowReadChannel source
     private List<DataflowReadChannel> others
     private DataflowWriteChannel target
+    private OpContext context = new ContextRunPerThread()
 
     MixOp(DataflowReadChannel source, DataflowReadChannel other) {
         this.source = source
@@ -63,20 +66,28 @@ class MixOp {
     DataflowWriteChannel apply() {
         if( target == null )
             target = CH.create()
-        def count = new AtomicInteger( others.size()+1 )
-        def handlers = [
-                onNext: { target << it },
-                onComplete: { if(count.decrementAndGet()==0) { target << Channel.STOP } }
+        final count = new AtomicInteger( others.size()+1 )
+        final handlers = [
+                onNext: { DataflowProcessor dp, it -> Op.bind(dp, target, it) },
+                onComplete: { DataflowProcessor dp -> if(count.decrementAndGet()==0) { Op.bind(dp, target, Channel.STOP) } }
         ]
 
-        subscribeImpl(source, handlers)
+        subscribe0(source, handlers)
         for( def it : others ) {
-            subscribeImpl(it, handlers)
+            subscribe0(it, handlers)
         }
 
         final allSources = [source]
         allSources.addAll(others)
         return target
+    }
+
+    private void subscribe0(final DataflowReadChannel source, final Map<String,Closure> events ) {
+        new SubscribeOp()
+            .withInput(source)
+            .withContext(context)
+            .withEvents(events)
+            .apply()
     }
 
 }

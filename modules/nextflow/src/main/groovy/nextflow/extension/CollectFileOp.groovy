@@ -16,20 +16,25 @@
 
 package nextflow.extension
 
+import static nextflow.util.CacheHelper.*
+import static nextflow.util.CheckHelper.*
+
 import java.nio.file.Path
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
+import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
 import nextflow.Global
+import nextflow.extension.op.ContextGrouping
+import nextflow.extension.op.Op
 import nextflow.file.FileCollector
 import nextflow.file.FileHelper
 import nextflow.file.SimpleFileCollector
 import nextflow.file.SortFileCollector
 import nextflow.util.CacheHelper
-import static nextflow.util.CacheHelper.HashMode
-import static nextflow.util.CheckHelper.checkParams
 /**
  * Implements the body of {@link OperatorImpl#collectFile(groovyx.gpars.dataflow.DataflowReadChannel)} operator
  *
@@ -136,7 +141,7 @@ class CollectFileOp {
      * each time a value is received, invoke the closure and
      * append its result value to a file
      */
-    protected processItem( item ) {
+    protected processItem( DataflowProcessor dp, Object item ) {
         def value = closure ? closure.call(item) : item
 
         // when the value is a list, the first item hold the grouping key
@@ -182,13 +187,13 @@ class CollectFileOp {
      *
      * @params obj: NOT USED. It needs to be declared because this method is invoked as a closure
      */
-    protected emitItems( obj ) {
+    protected emitItems(DataflowProcessor dp) {
         // emit collected files to 'result' channel
         collector.saveTo(storeDir).each {
-            result.bind(it)
+            Op.bind(dp, result, it)
         }
         // close the channel
-        result.bind(Channel.STOP)
+        Op.bind(dp, result, Channel.STOP)
         // close the collector
         collector.safeClose()
     }
@@ -261,9 +266,15 @@ class CollectFileOp {
         return collector
     }
 
-
+    @CompileStatic
     DataflowWriteChannel apply() {
-        DataflowHelper.subscribeImpl( channel, [onNext: this.&processItem, onComplete: this.&emitItems] )
+        new SubscribeOp()
+            .withInput(channel)
+            .withOnNext(this.&processItem)
+            .withOnComplete(this.&emitItems)
+            .withContext( new ContextGrouping() )
+            .apply()
+
         return result
     }
 }

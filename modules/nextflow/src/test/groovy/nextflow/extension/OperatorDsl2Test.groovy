@@ -17,6 +17,7 @@
 
 package nextflow.extension
 
+import groovyx.gpars.dataflow.DataflowReadChannel
 import nextflow.Channel
 import spock.lang.Timeout
 import test.Dsl2Spec
@@ -30,35 +31,35 @@ class OperatorDsl2Test extends Dsl2Spec {
 
     def 'should test unique' () {
         when:
-        def channel = dsl_eval("""
+        def result = dsl_eval("""
             Channel.of(1,2,3).unique()
-        """)
+        """) as DataflowReadChannel
         then:
-        channel.val == 1
-        channel.val == 2
-        channel.val == 3
-        channel.val == Channel.STOP
+        result.unwrap() == 1
+        result.unwrap() == 2
+        result.unwrap() == 3
+        result.unwrap() == Channel.STOP
     }
 
     def 'should test unique with value' () {
         when:
-        def channel = dsl_eval("""
+        def result = dsl_eval("""
             Channel.value(1).unique()
-        """)
+        """) as DataflowReadChannel
         then:
-        channel.val == 1
+        result.unwrap() == 1
     }
 
     def 'should test unique with collect' () {
         when:
-        def ch = dsl_eval("""
+        def result = dsl_eval("""
             Channel.of( 'a', 'b', 'c')
               .collect()
               .unique()
              .view()
-            """)
+            """) as DataflowReadChannel
        then:
-       ch.val == ['a','b','c']
+       result.unwrap() == ['a','b','c']
     }
 
 }

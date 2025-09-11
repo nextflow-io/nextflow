@@ -43,8 +43,8 @@ class ScriptPipesTest extends Dsl2Spec {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result[0].val == 'olleH mundo'
-        result[1].val == 'OLLEH'
+        result[0].unwrap() == 'olleH mundo'
+        result[1].unwrap() == 'OLLEH'
     }
 
 
@@ -75,7 +75,7 @@ class ScriptPipesTest extends Dsl2Spec {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result.val == 'DLROW ALOH'
+        result.unwrap() == 'DLROW ALOH'
     }
 
     def 'should pipe multi-outputs with multi-inputs' () {
@@ -114,7 +114,7 @@ class ScriptPipesTest extends Dsl2Spec {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result.val == 'olleh + HELLO'
+        result.unwrap() == 'olleh + HELLO'
     }
 
     def 'should pipe process with operator' () {
@@ -145,9 +145,9 @@ class ScriptPipesTest extends Dsl2Spec {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result.val == 'aloh'
-        result.val == 'HOLA'
-        result.val == 'hola'
+        result.unwrap() == 'aloh'
+        result.unwrap() == 'HOLA'
+        result.unwrap() == 'hola'
     }
 
 
@@ -171,7 +171,7 @@ class ScriptPipesTest extends Dsl2Spec {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result.val == 'aloh'
+        result.unwrap() == 'aloh'
     }
 
 
@@ -201,7 +201,7 @@ class ScriptPipesTest extends Dsl2Spec {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result.val == 'HOLA'
+        result.unwrap() == 'HOLA'
     }
 
 
@@ -225,7 +225,7 @@ class ScriptPipesTest extends Dsl2Spec {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result.val.sort() == [1, 4, 9]
+        result.unwrap().sort() == [1, 4, 9]
     }
 
 
@@ -238,9 +238,9 @@ class ScriptPipesTest extends Dsl2Spec {
         when:
         def result = new MockScriptRunner().setScript(SCRIPT).execute()
         then:
-        result.val == 10
-        result.val == 20
-        result.val == 30
+        result.unwrap() == 10
+        result.unwrap() == 20
+        result.unwrap() == 30
     }
 
 
@@ -262,7 +262,7 @@ class ScriptPipesTest extends Dsl2Spec {
         when:
         def result = new MockScriptRunner().setScript(SCRIPT).execute()
         then:
-        result.val == 40
+        result.unwrap() == 40
     }
 
     def 'should compose custom funs' () {
@@ -285,7 +285,7 @@ class ScriptPipesTest extends Dsl2Spec {
         when:
         def result = new MockScriptRunner().setScript(SCRIPT).execute()
         then:
-        result.val == 22
+        result.unwrap() == 22
 
     }
 
@@ -312,7 +312,7 @@ class ScriptPipesTest extends Dsl2Spec {
         when:
         def result = new MockScriptRunner().setScript(SCRIPT).execute()
         then:
-        result.val == [1,2]
+        result.unwrap() == [1,2]
 
     }
 
@@ -340,7 +340,7 @@ class ScriptPipesTest extends Dsl2Spec {
         when:
         def result = new MockScriptRunner().setScript(SCRIPT).execute()
         then:
-        result.val == 'hi'.reverse()
+        result.unwrap() == 'hi'.reverse()
 
     }
 
@@ -368,7 +368,7 @@ class ScriptPipesTest extends Dsl2Spec {
         when:
         def result = new MockScriptRunner().setScript(SCRIPT).execute()
         then:
-        result.val == 'hello'.reverse()
+        result.unwrap() == 'hello'.reverse()
 
     }
 
@@ -400,7 +400,7 @@ class ScriptPipesTest extends Dsl2Spec {
         when:
         def result = new MockScriptRunner().setScript(SCRIPT).execute()
         then:
-        result.val == 'HI'.reverse()
+        result.unwrap() == 'HI'.reverse()
 
     }
 
@@ -430,7 +430,7 @@ class ScriptPipesTest extends Dsl2Spec {
         when:
         def result = new MockScriptRunner().setScript(SCRIPT).execute()
         then:
-        result.val == 33
+        result.unwrap() == 33
 
 
         cleanup:

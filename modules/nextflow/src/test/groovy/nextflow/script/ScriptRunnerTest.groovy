@@ -66,7 +66,7 @@ class ScriptRunnerTest extends Dsl2Spec {
         // when no outputs are specified, the 'stdout' is the default output
         then:
         result instanceof DataflowVariable
-        result.val == "echo Hello world"
+        result.unwrap() == "echo Hello world"
 
     }
 
@@ -130,7 +130,7 @@ class ScriptRunnerTest extends Dsl2Spec {
         def result = new MockScriptRunner().setScript(script).execute()
 
         then:
-        result.val == 'echo 1 - 3'
+        result.unwrap() == 'echo 1 - 3'
 
     }
 
@@ -160,7 +160,7 @@ class ScriptRunnerTest extends Dsl2Spec {
         runner.execute()
 
         then:
-        runner.result.val == 'echo 1'
+        runner.result.unwrap() == 'echo 1'
         TaskProcessor.currentProcessor().name == 'simpleTask'
 
     }
@@ -191,7 +191,7 @@ class ScriptRunnerTest extends Dsl2Spec {
         def runner = new MockScriptRunner().setScript(script)
         def result = runner.execute()
         then:
-        result.val == '1-2-3'
+        result.unwrap() == '1-2-3'
 
     }
 
@@ -221,7 +221,7 @@ class ScriptRunnerTest extends Dsl2Spec {
         def runner = new MockScriptRunner().setScript(script)
         def result = runner.execute()
         then:
-        result.val == '1-2-3'
+        result.unwrap() == '1-2-3'
 
     }
 
@@ -272,7 +272,7 @@ class ScriptRunnerTest extends Dsl2Spec {
         def config = [process: [executor: 'nope'], env: [HELLO: 'Hello world!']]
 
         expect:
-        new MockScriptRunner(config).setScript(script).execute().val == 'Hello world!'
+        new MockScriptRunner(config).setScript(script).execute().unwrap() == 'Hello world!'
 
     }
 
@@ -300,7 +300,7 @@ class ScriptRunnerTest extends Dsl2Spec {
         def config = [process: [executor: 'nope']]
 
         expect:
-        new MockScriptRunner(config).setScript(script).execute().val == 'cat filename'
+        new MockScriptRunner(config).setScript(script).execute().unwrap() == 'cat filename'
 
     }
 
@@ -535,7 +535,7 @@ class ScriptRunnerTest extends Dsl2Spec {
         def result = new MockScriptRunner(session)
                 .setScript(script)
                 .execute()
-                .getVal()
+                .unwrap()
                 .toString()
                 .stripIndent()
                 .trim()
@@ -585,7 +585,7 @@ class ScriptRunnerTest extends Dsl2Spec {
         def result = new MockScriptRunner(config)
                 .setScript(script)
                 .execute()
-                .getVal()
+                .unwrap()
                 .toString()
                 .stripIndent()
                 .trim()
@@ -691,7 +691,7 @@ class ScriptRunnerTest extends Dsl2Spec {
         // when no outputs are specified, the 'stdout' is the default output
         then:
         result instanceof DataflowVariable
-        result.val == "echo foo"
+        result.unwrap() == "echo foo"
 
     }
 
@@ -728,7 +728,7 @@ class ScriptRunnerTest extends Dsl2Spec {
         // when no outputs are specified, the 'stdout' is the default output
         then:
         result instanceof DataflowVariable
-        result.val == "echo foo"
+        result.unwrap() == "echo foo"
 
     }
 
@@ -766,7 +766,7 @@ class ScriptRunnerTest extends Dsl2Spec {
         // when no outputs are specified, the 'stdout' is the default output
         then:
         result instanceof DataflowVariable
-        result.val == "echo foo"
+        result.unwrap() == "echo foo"
 
     }
 }

@@ -41,14 +41,13 @@ class JoinOpTest extends Specification {
 
         when:
         def op = new JoinOp(ch1, ch2)
-        def result = op.apply().toList().getVal()
+        def result = op.apply().toList().unwrap()
         then:
         result.size() == 3
         result.contains( ['X', 1, 4] )
         result.contains( ['Y', 2, 5] )
         result.contains( ['Z', 3, 6] )
     }
-
 
 
     def 'should join entries by index' () {
@@ -58,7 +57,7 @@ class JoinOpTest extends Specification {
 
         when:
         def op = new JoinOp(ch1, ch2, [by:1])
-        def result = op.apply().toList().getVal()
+        def result = op.apply().toList().unwrap()
         then:
         result.size() == 3
         result.contains( ['X', 1, 4] )
@@ -73,7 +72,7 @@ class JoinOpTest extends Specification {
 
         when:
         def op = new JoinOp(ch1, ch2, [by:[1,2]])
-        def result = op.apply().toList().getVal()
+        def result = op.apply().toList().unwrap()
         then:
         result.size() == 3
         result.contains( ['a','b', 1, ['foo'], 4, [444]] )
@@ -90,7 +89,7 @@ class JoinOpTest extends Specification {
 
         when:
         def op = new JoinOp(ch1, ch2, [remainder: true])
-        def result = op.apply().toList().getVal()
+        def result = op.apply().toList().unwrap()
         then:
         result.size() == 5
         result.contains( ['X', 1, 4] )
@@ -108,7 +107,7 @@ class JoinOpTest extends Specification {
 
         when:
         def op = new JoinOp(ch1, ch2)
-        def result = op.apply().toList().getVal()
+        def result = op.apply().toList().unwrap()
         then:
         result.size() == 3
         result == [1,2,3]
@@ -122,7 +121,7 @@ class JoinOpTest extends Specification {
 
         when:
         def op = new JoinOp(ch1, ch2, [remainder: true])
-        def result = op.apply().toList().getVal()
+        def result = op.apply().toList().unwrap()
         then:
         result.size() == 8
         result == [1, 2, 3, 0, 0, 7, 8, 9]
@@ -135,28 +134,25 @@ class JoinOpTest extends Specification {
         def right = Channel.empty()
         def result = left.join(right, remainder: true)
         then:
-        result.val == 1
-        result.val == 2
-        result.val == 3
-        result.val == Channel.STOP
-
+        result.unwrap() == 1
+        result.unwrap() == 2
+        result.unwrap() == 3
+        result.unwrap() == Channel.STOP
     }
 
     def 'should join empty channel with pairs and remainder' () {
-
         when:
         def left = Channel.of(['X', 1], ['Y', 2], ['Z', 3])
         def right = Channel.empty()
         def result = left.join(right, remainder: true)
         then:
-        result.val == ['X', 1, null]
-        result.val == ['Y', 2, null]
-        result.val == ['Z', 3, null]
-        result.val == Channel.STOP
+        result.unwrap() == ['X', 1, null]
+        result.unwrap() == ['Y', 2, null]
+        result.unwrap() == ['Z', 3, null]
+        result.unwrap() == Channel.STOP
     }
 
     def 'should join a singleton value' () {
-
         when:
         given:
         def ch1 = Channel.of( 1,2,3 )
@@ -164,35 +160,32 @@ class JoinOpTest extends Specification {
 
         when:
         def op = new JoinOp(ch1, ch2)
-        def result = op.apply().toList().getVal()
+        def result = op.apply().toList().unwrap()
         then:
         result == [1]
     }
 
-
     def 'should join pair with singleton and remainder' () {
-
         when:
         def left = Channel.of(['P', 0], ['X', 1], ['Y', 2], ['Z', 3])
         def right = Channel.of('X', 'Y', 'Z', 'Q')
         def result = left.join(right)
         then:
-        result.val == ['X', 1]
-        result.val == ['Y', 2]
-        result.val == ['Z', 3]
-        result.val == Channel.STOP
+        result.unwrap() == ['X', 1]
+        result.unwrap() == ['Y', 2]
+        result.unwrap() == ['Z', 3]
+        result.unwrap() == Channel.STOP
 
         when:
         left = Channel.of(['P', 0], ['X', 1], ['Y', 2], ['Z', 3])
         right = Channel.of('X', 'Y', 'Z', 'Q')
-        result = left.join(right, remainder: true).toList().val.sort { it -> it[0] }
+        result = left.join(right, remainder: true).toList().unwrap().sort { it -> it[0] }
         then:
         result[2] == ['X', 1]
         result[3] == ['Y', 2]
         result[4] == ['Z', 3]
         result[0] == ['P', 0]
         result[1] == ['Q', null]
-
     }
 
     def 'should match gstrings' () {
@@ -201,12 +194,11 @@ class JoinOpTest extends Specification {
         def left = Channel.of(['A', 'hola'], ['B', 'hello'], ['C', 'ciao'])
         def right = Channel.of(["$A", 'mundo'], ["$B", 'world'], ["$C", 'mondo'] )
         when:
-        def result = left.join(right).toList().val.sort { it[0] }
+        def result = left.join(right).toList().unwrap().sort { it[0] }
         then:
         result[0] == ['A','hola','mundo']
         result[1] == ['B','hello','world']
         result[2] == ['C','ciao','mondo']
-
     }
 
     def 'should be able to use identical ArrayBags join key' () {
@@ -218,7 +210,7 @@ class JoinOpTest extends Specification {
 
         when:
         def op = new JoinOp(ch1 as DataflowReadChannel, ch2 as DataflowReadChannel)
-        List result = op.apply().toList().getVal()
+        List result = op.apply().toList().unwrap()
 
         then:
         !result.isEmpty()
@@ -233,7 +225,7 @@ class JoinOpTest extends Specification {
 
         when:
         def op = new JoinOp(ch1 as DataflowReadChannel, ch2 as DataflowReadChannel)
-        List result = op.apply().toList().getVal()
+        List result = op.apply().toList().unwrap()
 
         then:
         result.isEmpty()
@@ -246,7 +238,7 @@ class JoinOpTest extends Specification {
 
         when:
         def op = new JoinOp(ch1, ch2, [failOnMismatch:true])
-        def result = op.apply().toList().getVal()
+        def result = op.apply().toList().unwrap()
         then:
         result.size() == 2
         result.contains( ['X', 1, 6] )
@@ -262,7 +254,7 @@ class JoinOpTest extends Specification {
 
         when:
         def op = new JoinOp(ch1, ch2, [failOnMismatch:true])
-        def result = op.apply().toList().getVal()
+        def result = op.apply().toList().unwrap()
         and:
         await(sess)
         then:
@@ -305,7 +297,7 @@ class JoinOpTest extends Specification {
 
         when:
         def op = new JoinOp(ch1, ch2, [:])
-        def result = op.apply().toList().getVal()
+        def result = op.apply().toList().unwrap()
         then:
         result.size() == 2
         result.contains( ['X', 1, 2] )
@@ -321,7 +313,7 @@ class JoinOpTest extends Specification {
 
         when:
         def op = new JoinOp(ch1, ch2, [failOnDuplicate:true])
-        def result = op.apply().toList().getVal()
+        def result = op.apply().toList().unwrap()
         println "result=$result"
         and:
         await(sess)
@@ -340,7 +332,7 @@ class JoinOpTest extends Specification {
 
         when:
         def op = new JoinOp(ch1, ch2, [failOnDuplicate:true, remainder: true])
-        def result = op.apply().toList().getVal()
+        def result = op.apply().toList().unwrap()
         and:
         await(sess)
         then:
@@ -357,14 +349,13 @@ class JoinOpTest extends Specification {
 
         when:
         def op = new JoinOp(ch1, ch2, [failOnDuplicate:true])
-        def result = op.apply().toList().getVal()
+        def result = op.apply().toList().unwrap()
         then:
         await(sess)
         then:
         sess.isAborted()
         sess.getError().message == 'Detected join operation duplicate emission on left channel -- offending element: key=X; value=3'
     }
-
 
     protected void await(Session session) {
         def begin = System.currentTimeMillis()

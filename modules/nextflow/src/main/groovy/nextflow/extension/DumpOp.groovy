@@ -92,7 +92,11 @@ class DumpOp {
 
         events.onComplete = { CH.close0(target) }
 
-        DataflowHelper.subscribeImpl(source, events)
+        new SubscribeOp()
+            .withInput(source)
+            .withEvents(events)
+            .apply()
+
         return target
     }
 }

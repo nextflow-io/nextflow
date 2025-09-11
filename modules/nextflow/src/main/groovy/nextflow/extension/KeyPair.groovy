@@ -19,6 +19,8 @@ package nextflow.extension
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
+import nextflow.extension.op.OpDatum
+import nextflow.prov.OperatorRun
 
 /**
  * Implements an helper key-value helper object used in dataflow operators
@@ -36,8 +38,9 @@ class KeyPair {
         keys.add(safeStr(el))
     }
 
-    void addValue(el) {
-        values.add(el)
+    void addValue(el, OperatorRun run) {
+        final v = run ? OpDatum.of(el,run) : el
+        values.add(v)
     }
 
     static private safeStr(key) {

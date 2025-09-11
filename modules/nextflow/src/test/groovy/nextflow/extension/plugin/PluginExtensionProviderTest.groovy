@@ -55,8 +55,8 @@ class PluginExtensionProviderTest extends Specification {
         def result = ext.invokeExtensionMethod(ch, 'map', { it -> it * it })
         then:
         result instanceof DataflowReadChannel
-        result.val == 1
-        result.val == 4
-        result.val == 9
+        result.unwrap() == 1
+        result.unwrap() == 4
+        result.unwrap() == 9
     }
 }

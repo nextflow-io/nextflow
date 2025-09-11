@@ -20,7 +20,9 @@ import groovy.transform.CompileStatic
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
+import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
+import nextflow.extension.op.Op
 import nextflow.script.ChannelOut
 import nextflow.script.TokenMultiMapDef
 /**
@@ -48,29 +50,30 @@ class MultiMapOp {
 
     ChannelOut getOutput() { this.output }
 
-    protected void doNext(it) {
+    protected void doNext(DataflowProcessor dp, Object it) {
         final ret = (Map<String,?>)forkDef.closure.call(it)
         for( Map.Entry<String,?> entry : ret.entrySet() ) {
-            targets[entry.key].bind(entry.value)
+            Op.bind(dp, targets[entry.key], entry.value)
         }
     }
 
-    protected void doComplete(nope) {
+    protected void doComplete(DataflowProcessor dp) {
         for( DataflowWriteChannel ch : targets.values() ) {
             if( ch instanceof DataflowExpression ) {
-                if( !ch.isBound()) ch.bind(Channel.STOP)
+                if( !ch.isBound()) Op.bind(dp, ch, Channel.STOP)
             }
             else {
-                ch.bind(Channel.STOP)
+                Op.bind(dp, ch, Channel.STOP)
             }
         }
     }
 
     MultiMapOp apply() {
-        def events = new HashMap<String,Closure>(2)
-        events.put('onNext', this.&doNext)
-        events.put('onComplete', this.&doComplete)
-        DataflowHelper.subscribeImpl(source, events)
+        new SubscribeOp()
+            .withInput(source)
+            .withOnNext(this.&doNext)
+            .withOnComplete(this.&doComplete)
+            .apply()
         return this
     }
 }

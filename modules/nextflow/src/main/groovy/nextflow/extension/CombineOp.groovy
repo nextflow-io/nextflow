@@ -24,9 +24,17 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
+import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
 import static nextflow.extension.DataflowHelper.addToList
 import static nextflow.extension.DataflowHelper.makeKey
+
+import nextflow.extension.op.ContextRunPerThread
+import nextflow.extension.op.Op
+import nextflow.extension.op.OpContext
+import nextflow.extension.op.OpDatum
+import nextflow.prov.OperatorRun
+
 /**
  * Implements the {@link OperatorImpl#spread(groovyx.gpars.dataflow.DataflowReadChannel, java.lang.Object)} operator
  *
@@ -53,6 +61,8 @@ class CombineOp {
     private static final int RIGHT = 1
 
     private List<Integer> pivot = NONE
+
+    private OpContext context = new ContextRunPerThread()
 
     CombineOp(DataflowReadChannel left, Object right) {
 
@@ -89,20 +99,20 @@ class CombineOp {
 
     private Map handler(int index, DataflowWriteChannel target, AtomicInteger stopCount) {
 
-        def opts = new LinkedHashMap(2)
+        final opts = new LinkedHashMap(2)
         opts.onNext = {
             if( pivot ) {
-                def pair = makeKey(pivot, it)
+                final pair = makeKey(pivot, it, context.getOperatorRun())
                 emit(target, index, pair.keys, pair.values)
             }
             else {
-                emit(target, index, NONE, it)
+                emit(target, index, NONE, OpDatum.of(it, context.getOperatorRun()))
             }
         }
 
-        opts.onComplete = {
-            if( stopCount.decrementAndGet()==0) {
-                target << Channel.STOP
+        opts.onComplete = { DataflowProcessor dp ->
+            if( stopCount.decrementAndGet()==0 ) {
+                Op.bind(dp, target, Channel.STOP)
             }}
 
         return opts
@@ -110,7 +120,7 @@ class CombineOp {
 
     @PackageScope
     @CompileDynamic
-    def tuple( List p, a, b ) {
+    Object tuple( List p, a, b ) {
         List result = new LinkedList()
         result.addAll(p)
         addToList(result, a)
@@ -128,7 +138,7 @@ class CombineOp {
         if( index == LEFT ) {
             log.trace "combine >> left >> by=$p; val=$v; right-values: ${rightValues[p]}"
             for ( Object x : rightValues[p] ) {
-                target.bind( tuple(p, v, x) )
+                bindValues(p, v, x)
             }
             leftValues[p].add(v)
             return
@@ -137,7 +147,7 @@ class CombineOp {
         if( index == RIGHT ) {
             log.trace "combine >> right >> by=$p; val=$v; right-values: ${leftValues[p]}"
             for ( Object x : leftValues[p] ) {
-                target.bind( tuple(p, x, v) )
+                bindValues(p, x, v)
             }
             rightValues[p].add(v)
             return
@@ -146,24 +156,38 @@ class CombineOp {
         throw new IllegalArgumentException("Not a valid spread operator index: $index")
     }
 
-    DataflowWriteChannel apply() {
+    private void bindValues(List p, a, b) {
+        final i = new ArrayList<Integer>()
+        final t = tuple(p, OpDatum.unwrap(a,i), OpDatum.unwrap(b,i))
+        final r = new OperatorRun(new LinkedHashSet<Integer>(i))
+        Op.bind(r, target, t)
+    }
 
+    DataflowWriteChannel apply() {
         target = CH.create()
 
         if( rightChannel ) {
             final stopCount = new AtomicInteger(2)
-            DataflowHelper.subscribeImpl( leftChannel, handler(LEFT, target, stopCount) )
-            DataflowHelper.subscribeImpl( rightChannel, handler(RIGHT, target, stopCount) )
+            subscribe0( leftChannel, handler(LEFT, target, stopCount) )
+            subscribe0( rightChannel, handler(RIGHT, target, stopCount) )
         }
 
         else if( rightValues != null ) {
             final stopCount = new AtomicInteger(1)
-            DataflowHelper.subscribeImpl( leftChannel, handler(LEFT, target, stopCount) )
+            subscribe0( leftChannel, handler(LEFT, target, stopCount) )
         }
 
         else
             throw new IllegalArgumentException("Not a valid spread operator state -- Missing right operand")
 
         return target
+    }
+
+    private void subscribe0(final DataflowReadChannel source, final Map<String,Closure> events) {
+        new SubscribeOp()
+            .withInput(source)
+            .withEvents(events)
+            .withContext(context)
+            .apply()
     }
 }

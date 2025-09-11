@@ -46,14 +46,13 @@ class CollectFileOperatorTest extends Specification {
     }
 
     def testCollectFileString() {
-
         when:
         def result = Channel
                 .from('alpha','beta','gamma')
                 .collectFile { it == 'beta' ? ['file2', it.reverse() ] : ['file1',it] }
                 .toSortedList { it.name }
 
-        List<Path> list = result.val
+        List<Path> list = result.unwrap()
 
         then:
         list[0].name == 'file1'
@@ -61,12 +60,9 @@ class CollectFileOperatorTest extends Specification {
 
         list[1].name == 'file2'
         list[1].text == 'ateb'
-
     }
 
-
     def testCollectFileWithFiles() {
-
         given:
         def file1 = Files.createTempDirectory('temp').resolve('A')
         file1.deleteOnExit()
@@ -85,7 +81,7 @@ class CollectFileOperatorTest extends Specification {
                 .from(file1,file2,file3)
                 .collectFile(sort:'index')
                 .toSortedList { it.name }
-                .getVal() as List<Path>
+                .unwrap() as List<Path>
 
         then:
         list[0].name == 'A'
@@ -100,7 +96,7 @@ class CollectFileOperatorTest extends Specification {
                 .from(file1,file2,file3)
                 .collectFile(sort:'index', newLine:true)
                 .toSortedList { it.name }
-                .getVal() as List<Path>
+                .unwrap() as List<Path>
 
         then:
         list[0].name == 'A'
@@ -108,19 +104,15 @@ class CollectFileOperatorTest extends Specification {
 
         list[1].name == 'B'
         list[1].text == 'Hello\nworld\n'
-
-
     }
 
     def testCollectManyFiles() {
-
-
         when:
         def list = Channel
                 .from('Hola', 'Ciao', 'Hello', 'Bonjour', 'Halo')
                 .collectFile(sort:'index') { item -> [ "${item[0]}.txt", item + '\n' ] }
                 .toList()
-                .getVal()
+                .unwrap()
                 .sort { it.name }
 
         then:
@@ -130,73 +122,65 @@ class CollectFileOperatorTest extends Specification {
         list[1].name == 'C.txt'
         list[2].name == 'H.txt'
         list[2].text == 'Hola\nHello\nHalo\n'
-
     }
 
-
     def testCollectFileWithStrings() {
-
         when:
         def result = Channel
                 .from('alpha', 'beta', 'gamma')
                 .collectFile(name: 'hello.txt', newLine: true, sort:'index')
 
-        def file = result.val
+        def file = result.unwrap()
 
         then:
-        result.val == Channel.STOP
+        result.unwrap() == Channel.STOP
         file.name == 'hello.txt'
         file.text == 'alpha\nbeta\ngamma\n'
     }
 
     def testCollectFileWithDefaultName() {
-
         when:
         def result = Channel
                 .from('alpha', 'beta', 'gamma')
                 .collectFile(newLine: true, sort:'index')
 
-        def file = result.val
+        def file = result.unwrap()
 
         then:
-        result.val == Channel.STOP
+        result.unwrap() == Channel.STOP
         file.name.startsWith('collect')
         file.text == 'alpha\nbeta\ngamma\n'
     }
 
     def testCollectFileAndSortWithClosure() {
-
         when:
         def result = Channel
                 .from('delta', 'beta', 'gamma','alpha')
                 .collectFile(newLine: true, sort:{ it -> it })
 
-        def file = result.val
+        def file = result.unwrap()
 
         then:
-        result.val == Channel.STOP
+        result.unwrap() == Channel.STOP
         file.name.startsWith('collect')
         file.text == 'alpha\nbeta\ndelta\ngamma\n'
     }
 
     def testCollectFileAndSortWithComparator() {
-
         when:
         def result = Channel
                 .from('delta', 'beta', 'gamma','alpha')
                 .collectFile(newLine: true, sort:{ a,b -> b<=>a } as Comparator)
 
-        def file = result.val
+        def file = result.unwrap()
 
         then:
-        result.val == Channel.STOP
+        result.unwrap() == Channel.STOP
         file.name.startsWith('collect')
         file.text == 'gamma\ndelta\nbeta\nalpha\n'
     }
 
-
     def 'should collect file and skip header line' () {
-
         given:
         def file1 = Files.createTempDirectory('temp').resolve('A')
         file1.deleteOnExit()
@@ -210,13 +194,12 @@ class CollectFileOperatorTest extends Specification {
         file3.deleteOnExit()
         file3.text = 'HEADER\nxxx\nyyy\nzzz\n'
 
-
         when:
         def files = Channel
                 .from(file1,file2,file3)
                 .collectFile(skip:1, sort: 'index')
                 .toList()
-                .getVal()
+                .unwrap()
 
         def result = [:]; files.each{ result[it.name]=it }
         then:
@@ -226,13 +209,12 @@ class CollectFileOperatorTest extends Specification {
         result.B.name == 'B'
         result.B.text == 'Hello\nworld\n'
 
-
         when:
         files = Channel
                 .from(file1,file2,file3)
                 .collectFile(skip:2, sort: 'index')
                 .toList()
-                .getVal()
+                .unwrap()
 
         result = [:]; files.each{ result[it.name]=it }
         then:
@@ -242,13 +224,12 @@ class CollectFileOperatorTest extends Specification {
         result.B.name == 'B'
         result.B.text == 'world\n'
 
-
         when:
         files = Channel
                 .from(file1,file2,file3)
                 .collectFile(skip:3, sort: 'index')
                 .toList()
-                .getVal()
+                .unwrap()
 
         result = [:]; files.each{ result[it.name]=it }
         then:
@@ -258,13 +239,12 @@ class CollectFileOperatorTest extends Specification {
         result.B.name == 'B'
         result.B.text == ''
 
-
         when:
         files = Channel
                 .from(file1,file2,file3)
                 .collectFile(skip:10, sort: 'index')
                 .toList()
-                .getVal()
+                .unwrap()
 
         result = [:]; files.each{ result[it.name]=it }
         then:
@@ -273,11 +253,9 @@ class CollectFileOperatorTest extends Specification {
 
         result.B.name == 'B'
         result.B.text == ''
-
     }
 
     def 'should collect file and keep header line' () {
-
         given:
         def file1 = Files.createTempDirectory('temp').resolve('A')
         file1.deleteOnExit()
@@ -291,13 +269,12 @@ class CollectFileOperatorTest extends Specification {
         file3.deleteOnExit()
         file3.text = 'HEADER\nxxx\nyyy\nzzz\n'
 
-
         when:
         def files = Channel
                 .from(file1,file2,file3)
                 .collectFile(keepHeader:true, sort: 'index')
                 .toList()
-                .getVal()
+                .unwrap()
 
         def result = [:]; files.each{ result[it.name]=it }
         then:
@@ -306,7 +283,6 @@ class CollectFileOperatorTest extends Specification {
 
         result.B.name == 'B'
         result.B.text == '## HEAD ##\nHello\nworld\n'
-
     }
 
     def 'check invalid options' () {
@@ -339,6 +315,5 @@ class CollectFileOperatorTest extends Specification {
         new CollectFileOp(Mock(DataflowReadChannel), [seed: 'foo', keepHeader: true])
         then:
         thrown(IllegalArgumentException)
-
     }
 }

@@ -38,14 +38,14 @@ class CollectOpTest extends Specification {
         def source = Channel.of(1,2,3)
         def result = source.collect()
         then:
-        result.val == [1,2,3]
-        result.val instanceof ArrayBag
+        result.unwrap() == [1,2,3]
+        result.unwrap() instanceof ArrayBag
 
         when:
         source = Channel.empty()
         result = source.collect()
         then:
-        result.val == Channel.STOP
+        result.unwrap() == Channel.STOP
 
     }
 
@@ -56,64 +56,59 @@ class CollectOpTest extends Specification {
         when:
         def result = source.channel().collect { it.length() }
         then:
-        result.val == [5, 4, 7]
-        result.val instanceof ArrayBag
+        result.unwrap() == [5, 4, 7]
+        result.unwrap() instanceof ArrayBag
     }
 
     @Timeout(1)
     def 'should collect and flatten items'() {
-
         given:
         def source = [[1,['a','b']], [3,['c','d']], [5,['p','q']]]
 
         when:
         def result = source.channel().collect()
         then:
-        result.val == [1,['a','b'],3,['c','d'],5,['p','q']]
-        result.val instanceof ArrayBag
+        result.unwrap() == [1,['a','b'],3,['c','d'],5,['p','q']]
+        result.unwrap() instanceof ArrayBag
 
         when:
         result = source.channel().collect(flat: true)
         then:
-        result.val == [1,['a','b'],3,['c','d'],5,['p','q']]
-        result.val instanceof ArrayBag
+        result.unwrap() == [1,['a','b'],3,['c','d'],5,['p','q']]
+        result.unwrap() instanceof ArrayBag
 
         when:
         result = source.channel().collect(flat: false)
         then:
-        result.val == [[1,['a','b']], [3,['c','d']], [5,['p','q']]]
-        result.val instanceof ArrayBag
+        result.unwrap() == [[1,['a','b']], [3,['c','d']], [5,['p','q']]]
+        result.unwrap() instanceof ArrayBag
 
         when:
         result = source.channel().collect { it.flatten() }
         then:
-        result.val == [1,'a','b',3,'c','d',5,'p','q']
-        result.val instanceof ArrayBag
-
+        result.unwrap() == [1,'a','b',3,'c','d',5,'p','q']
+        result.unwrap() instanceof ArrayBag
     }
 
     @Timeout(1)
     def 'should collect items into a sorted list '() {
-
         when:
         def result = [3,1,4,2].channel().collect(sort: true)
         then:
-        result.val == [1,2,3,4]
-        result.val instanceof ArrayBag
+        result.unwrap() == [1,2,3,4]
+        result.unwrap() instanceof ArrayBag
 
         when:
         result = ['aaa','bb', 'c'].channel().collect(sort: {it->it.size()} as Closure)
         then:
-        result.val == ['c','bb','aaa']
-        result.val instanceof ArrayBag
+        result.unwrap() == ['c','bb','aaa']
+        result.unwrap() instanceof ArrayBag
 
         when:
         result = ['aaa','bb', 'c'].channel().collect(sort: {a,b -> a.size()<=>b.size()} as Comparator)
         then:
-        result.val == ['c','bb','aaa']
-        result.val instanceof ArrayBag
-
+        result.unwrap() == ['c','bb','aaa']
+        result.unwrap() instanceof ArrayBag
     }
-
 
 }

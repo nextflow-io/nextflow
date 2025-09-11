@@ -44,10 +44,10 @@ class ViewOperatorTest extends Specification{
         when:
         def result = Channel.of(1,2,3).view()
         then:
-        result.val == 1
-        result.val == 2
-        result.val == 3
-        result.val == Channel.STOP
+        result.unwrap() == 1
+        result.unwrap() == 2
+        result.unwrap() == 3
+        result.unwrap() == Channel.STOP
         capture.toString() == '1\n2\n3\n'
 
     }
@@ -57,10 +57,10 @@ class ViewOperatorTest extends Specification{
         when:
         def result = Channel.of(1,2,3).view { "~ $it " }
         then:
-        result.val == 1
-        result.val == 2
-        result.val == 3
-        result.val == Channel.STOP
+        result.unwrap() == 1
+        result.unwrap() == 2
+        result.unwrap() == 3
+        result.unwrap() == Channel.STOP
 
         capture.toString() == '~ 1 \n~ 2 \n~ 3 \n'
 
@@ -71,10 +71,10 @@ class ViewOperatorTest extends Specification{
         when:
         def result = Channel.of(1,2,3).view(newLine:false) { " ~ $it" }
         then:
-        result.val == 1
-        result.val == 2
-        result.val == 3
-        result.val == Channel.STOP
+        result.unwrap() == 1
+        result.unwrap() == 2
+        result.unwrap() == 3
+        result.unwrap() == Channel.STOP
 
         capture.toString() == ' ~ 1 ~ 2 ~ 3'
     }
@@ -83,7 +83,7 @@ class ViewOperatorTest extends Specification{
         when:
         def result = Channel.value(1).view { ">> $it" }
         then:
-        result.val == 1
+        result.unwrap() == 1
         capture.toString() == ">> 1\n"
     }
 
@@ -91,7 +91,7 @@ class ViewOperatorTest extends Specification{
         when:
         def result = Channel.value(Channel.STOP).view { ">> $it" }
         then:
-        result.val == Channel.STOP
+        result.unwrap() == Channel.STOP
         capture.toString() == ''
     }
 

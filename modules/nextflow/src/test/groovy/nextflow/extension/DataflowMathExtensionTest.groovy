@@ -34,52 +34,47 @@ class DataflowMathExtensionTest extends Specification {
     Comparator makeComparator(Closure c) { c as Comparator }
 
     def 'should return the min value'() {
-
         expect:
-        Channel.of(4,1,7,5).min().val == 1
-        Channel.of("hello","hi","hey").min { it.size() } .val == "hi"
-        Channel.of("hello","hi","hey").min { a,b -> a.size()<=>b.size() } .val == "hi"
-        Channel.of("hello","hi","hey").min { a,b -> a.size()<=>b.size() } .val == "hi"
-        Channel.of("hello","hi","hey").min ( makeComparator({ a,b -> a.size()<=>b.size() }) ) .val == "hi"
-
+        Channel.of(4,1,7,5).min().unwrap() == 1
+        Channel.of("hello","hi","hey").min { it.size() } .unwrap() == "hi"
+        Channel.of("hello","hi","hey").min { a,b -> a.size()<=>b.size() } .unwrap() == "hi"
+        Channel.of("hello","hi","hey").min { a,b -> a.size()<=>b.size() } .unwrap() == "hi"
+        Channel.of("hello","hi","hey").min ( makeComparator({ a,b -> a.size()<=>b.size() }) ) .unwrap() == "hi"
     }
 
     def 'should return the max value'() {
         expect:
-        Channel.of(4,1,7,5).max().val == 7
-        Channel.of("hello","hi","hey").max { it.size() } .val == "hello"
-        Channel.of("hello","hi","hey").max { a,b -> a.size()<=>b.size() } .val == "hello"
-        Channel.of("hello","hi","hey").max { a,b -> a.size()<=>b.size() } .val == "hello"
+        Channel.of(4,1,7,5).max().unwrap() == 7
+        Channel.of("hello","hi","hey").max { it.size() } .unwrap() == "hello"
+        Channel.of("hello","hi","hey").max { a,b -> a.size()<=>b.size() } .unwrap() == "hello"
+        Channel.of("hello","hi","hey").max { a,b -> a.size()<=>b.size() } .unwrap() == "hello"
         // this may fail randomly - the cause should be investigated
-        Channel.of("hello","hi","hey").max (makeComparator({ a,b -> a.size()<=>b.size() })) .val == "hello"
-
+        Channel.of("hello","hi","hey").max (makeComparator({ a,b -> a.size()<=>b.size() })) .unwrap() == "hello"
     }
 
     def 'should return the sum'() {
         expect:
-        Channel.of(4,1,7,5).sum().val == 17
-        Channel.of(4,1,7,5).sum { it * 2 } .val == 34
-        Channel.of( [1,1,1], [0,1,2], [10,20,30] ). sum() .val == [ 11, 22, 33 ]
+        Channel.of(4,1,7,5).sum().unwrap() == 17
+        Channel.of(4,1,7,5).sum { it * 2 } .unwrap() == 34
+        Channel.of( [1,1,1], [0,1,2], [10,20,30] ). sum() .unwrap() == [ 11, 22, 33 ]
     }
-
 
     def 'should return the mean'() {
         expect:
-        Channel.of(10,20,30).mean().val == 20
-        Channel.of(10,20,30).mean { it * 2 }.val == 40
-        Channel.of( [10,20,30], [10, 10, 10 ], [10, 30, 50]).mean().val == [10, 20, 30]
+        Channel.of(10,20,30).mean().unwrap() == 20
+        Channel.of(10,20,30).mean { it * 2 }.unwrap() == 40
+        Channel.of( [10,20,30], [10, 10, 10 ], [10, 30, 50]).mean().unwrap() == [10, 20, 30]
     }
 
     def 'should convert string to integers' () {
-
         expect:
-        Channel.value('11').toInteger().val == 11
+        Channel.value('11').toInteger().unwrap() == 11
 
         when:
         def list = Channel.of('1', '4\n', ' 7 ', '100' )
                 .toInteger()
                 .toList()
-                .getVal()
+                .unwrap()
 
         then:
         list.size() == 4
@@ -93,17 +88,15 @@ class DataflowMathExtensionTest extends Specification {
         list[3] instanceof Integer
     }
 
-
     def 'should convert string to long' () {
-
         expect:
-        Channel.value('33').toLong().val == 33L
+        Channel.value('33').toLong().unwrap() == 33L
 
         when:
         def list = Channel.of('1', '4\n', ' 7 ', '100' )
                 .toLong()
                 .toList()
-                .getVal()
+                .unwrap()
 
         then:
         list.size() == 4
@@ -118,16 +111,14 @@ class DataflowMathExtensionTest extends Specification {
     }
 
     def 'should convert string to float' () {
-
-
         expect:
-        Channel.value('99.1').toFloat().val == 99.1f
+        Channel.value('99.1').toFloat().unwrap() == 99.1f
 
         when:
         def list = Channel.of('1', '4\n', ' 7.5 ', '100.1' )
                 .toFloat()
                 .toList()
-                .getVal()
+                .unwrap()
 
         then:
         list.size() == 4
@@ -142,15 +133,14 @@ class DataflowMathExtensionTest extends Specification {
     }
 
     def 'should convert string to double' () {
-
         expect:
-        Channel.value('99.1').toDouble().val == 99.1d
+        Channel.value('99.1').toDouble().unwrap() == 99.1d
 
         when:
         def list = Channel.of('1', '4\n', ' 7.5 ', '100.1' )
                 .toDouble()
                 .toList()
-                .getVal()
+                .unwrap()
 
         then:
         list.size() == 4
@@ -162,17 +152,15 @@ class DataflowMathExtensionTest extends Specification {
         list[1] instanceof Double
         list[2] instanceof Double
         list[3] instanceof Double
-
     }
 
     @Retry
     def 'should return a random sample' () {
-
         when:
         def result = Channel
                 .of(0,1,2,3,4,5,6,7,8,9)
                 .randomSample(5)
-                .toList().val as List
+                .toList().unwrap() as List
 
         then:
         result.size() == 5
@@ -183,7 +171,6 @@ class DataflowMathExtensionTest extends Specification {
         result[2] in 0..9
         result[3] in 0..9
         result[4] in 0..9
-
     }
 
 }

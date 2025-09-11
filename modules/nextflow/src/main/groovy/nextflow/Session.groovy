@@ -60,6 +60,7 @@ import nextflow.processor.ErrorStrategy
 import nextflow.processor.TaskFault
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
+import nextflow.prov.Tracker
 import nextflow.script.BaseScript
 import nextflow.script.ProcessConfig
 import nextflow.script.ProcessFactory
@@ -887,6 +888,8 @@ class Session implements ISession {
     }
 
     DAG getDag() { this.dag }
+
+    Tracker getProvenance() { provenance }
 
     ExecutorService getExecService() { execService }
 

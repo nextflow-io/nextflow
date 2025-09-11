@@ -16,8 +16,11 @@
 
 package nextflow.extension
 
+
 import groovy.util.logging.Slf4j
+import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.operator.DataflowProcessor
+import nextflow.extension.op.Op
 import nextflow.splitter.FastqSplitter
 /**
  * Implements the inner merging logic for splitterXxx operator(s)
@@ -33,46 +36,49 @@ class SplitterMergeClosure extends Closure {
 
     private int emissionCount
 
-    SplitterMergeClosure(List<Integer> indexes) {
+    private DataflowWriteChannel target
+
+    SplitterMergeClosure(List<Integer> indexes, DataflowWriteChannel target) {
         super(null, null);
         this.numOfParams = indexes.size()
         this.indexes = indexes
+        this.target = target
     }
 
     @Override
-    public int getMaximumNumberOfParameters() {
+    int getMaximumNumberOfParameters() {
         numOfParams
     }
 
     @Override
-    public Class[] getParameterTypes() {
+    Class[] getParameterTypes() {
         Collections.nCopies(numOfParams, Object)
     }
 
     @Override
-    public void setDelegate(final Object delegate) {
+    void setDelegate(final Object delegate) {
         super.setDelegate(delegate);
     }
 
     @Override
-    public void setResolveStrategy(final int resolveStrategy) {
+    void setResolveStrategy(final int resolveStrategy) {
         super.setResolveStrategy(resolveStrategy);
     }
 
     @Override
-    public Object call(final Object arguments) {
+    Object call(final Object arguments) {
         throw new UnsupportedOperationException()
     }
 
     @Override
-    public Object call(final Object... args) {
+    Object call(final Object... args) {
         log.trace "merging ($emissionCount) indexes=$indexes; args=$args"
         List result = null
         boolean header = false
         for( int i=0; i<args.size(); i++ ) {
-            def item = args[i]
+            final item = args[i]
             // - When Pair-ended splitting is enabled the Fastq splitter
-            //   emits the indexes of the splitted files as first tuple
+            //   emits the indexes of the split files as first tuple
             // - Those indexes are needed to merge the final tuple in correct order
             if( emissionCount==0 && item instanceof FastqSplitter.SplitIndex ) {
                 indexes[i] = item.value
@@ -93,10 +99,10 @@ class SplitterMergeClosure extends Closure {
         }
 
         // emit the merged tuple (skipping the header)
-        def processor = (DataflowProcessor)getDelegate()
-        if( !header && processor ) {
+        final dp = getDelegate() as DataflowProcessor
+        if( !header && dp ) {
             log.trace "merging ($emissionCount) result=$result"
-            processor.bindAllOutputsAtomically(result);
+            Op.bind(dp, target, result)
         }
 
         emissionCount++
@@ -105,7 +111,7 @@ class SplitterMergeClosure extends Closure {
     }
 
     @Override
-    public Object call() {
+    Object call() {
         throw new UnsupportedOperationException()
     }
 }

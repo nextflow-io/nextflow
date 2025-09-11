@@ -24,6 +24,7 @@ import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.expression.DataflowExpression
 import nextflow.extension.CH
 import nextflow.extension.ToListOp
+import nextflow.extension.op.Op
 import nextflow.script.TokenFileCall
 import nextflow.script.TokenPathCall
 
@@ -97,7 +98,12 @@ class EachInParam extends BaseInParam {
             result.bind(value)
         }
 
-        return result.chainWith { it instanceof Collection || it == null ? it : [it] }
+        return result.chainWith(this.&normalizeValue)
+    }
+
+    private Object normalizeValue(Object obj) {
+        final value = Op.unwrap(obj)
+        return value instanceof Collection || value == null ? value : [value]
     }
 
 }

@@ -28,14 +28,11 @@ import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
 import groovyx.gpars.dataflow.operator.ChainWithClosure
-import groovyx.gpars.dataflow.operator.ControlMessage
-import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowProcessor
-import groovyx.gpars.dataflow.operator.PoisonPill
 import nextflow.Channel
-import nextflow.Global
 import nextflow.NF
-import nextflow.Session
+import nextflow.extension.op.ContextRunPerThread
+import nextflow.extension.op.Op
 import nextflow.script.ChannelOut
 import nextflow.script.TokenBranchDef
 import nextflow.script.TokenMultiMapDef
@@ -44,7 +41,6 @@ import nextflow.splitter.FastqSplitter
 import nextflow.splitter.JsonSplitter
 import nextflow.splitter.TextSplitter
 import org.codehaus.groovy.runtime.callsite.BooleanReturningMethodInvoker
-import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation
 /**
  * A set of operators inspired to RxJava extending the methods available on DataflowChannel
  * data structure
@@ -59,8 +55,6 @@ class OperatorImpl {
 
     static final public OperatorImpl instance = new OperatorImpl()
 
-    private static Session getSession() { Global.getSession() as Session }
-
     /**
      * Subscribe *onNext* event
      *
@@ -69,7 +63,10 @@ class OperatorImpl {
      * @return
      */
     DataflowReadChannel subscribe(final DataflowReadChannel source, final Closure closure) {
-        subscribeImpl( source, [onNext: closure] )
+        new SubscribeOp()
+            .withInput(source)
+            .withOnNext(closure)
+            .apply()
         return source
     }
 
@@ -81,34 +78,11 @@ class OperatorImpl {
      * @return
      */
     DataflowReadChannel subscribe(final DataflowReadChannel source, final Map<String,Closure> events ) {
-        subscribeImpl(source, events)
+        new SubscribeOp()
+            .withInput(source)
+            .withEvents(events)
+            .apply()
         return source
-    }
-
-    /**
-     * Chain operator, this is a synonym of {@code DataflowReadChannel.chainWith}
-     *
-     * @param source
-     * @param closure
-     * @return
-     */
-    DataflowWriteChannel chain(final DataflowReadChannel<?> source, final Closure closure) {
-        final target = CH.createBy(source)
-        newOperator(source, target, stopErrorListener(source,target), new ChainWithClosure(closure))
-        return target
-    }
-
-    /**
-     * Chain operator, this is a synonym of {@code DataflowReadChannel.chainWith}
-     *
-     * @param source
-     * @param closure
-     * @return
-     */
-    DataflowWriteChannel chain(final DataflowReadChannel<?> source, final Map<String, Object> params, final Closure closure) {
-        final target = CH.createBy(source)
-        chainImpl(source, target, params, closure)
-        return target;
     }
 
     /**
@@ -119,9 +93,10 @@ class OperatorImpl {
      * @return
      */
     DataflowWriteChannel map(final DataflowReadChannel source, final Closure closure) {
-        assert source != null
-        assert closure
-        return new MapOp(source, closure).apply()
+        return new MapOp()
+            .withSource(source)
+            .withMapper(closure)
+            .apply()
     }
 
     /**
@@ -133,42 +108,10 @@ class OperatorImpl {
      */
     DataflowWriteChannel flatMap(final DataflowReadChannel<?> source, final Closure closure=null) {
         assert source != null
-
-        final target = CH.create()
-        final listener = stopErrorListener(source,target)
-
-        newOperator(source, target, listener) {  item ->
-
-            def result = closure != null ? closure.call(item) : item
-            def proc = ((DataflowProcessor) getDelegate())
-
-            switch( result ) {
-                case Collection:
-                    result.each { it -> proc.bindOutput(it) }
-                    break
-
-                case (Object[]):
-                    result.each { it -> proc.bindOutput(it) }
-                    break
-
-                case Map:
-                    result.each { it -> proc.bindOutput(it) }
-                    break
-
-                case Map.Entry:
-                    proc.bindOutput( (result as Map.Entry).key )
-                    proc.bindOutput( (result as Map.Entry).value )
-                    break
-
-                case Channel.VOID:
-                    break
-
-                default:
-                    proc.bindOutput(result)
-            }
-        }
-
-        return target
+        new FlatMapOp()
+            .withSource(source)
+            .withMapper(closure)
+            .apply()
     }
 
     /**
@@ -188,9 +131,10 @@ class OperatorImpl {
         if( source instanceof DataflowExpression )
             throw new IllegalArgumentException('Operator `reduce` cannot be applied to a value channel')
 
-        final target = new DataflowVariable()
-        reduceImpl( source, target, null, closure )
-        return target
+        ReduceOp .create()
+            .withSource(source)
+            .withAction(closure)
+            .apply()
     }
 
     /**
@@ -211,9 +155,11 @@ class OperatorImpl {
         if( source instanceof DataflowExpression )
             throw new IllegalArgumentException('Operator `reduce` cannot be applied to a value channel')
 
-        final target = new DataflowVariable()
-        reduceImpl( source, target, seed, closure )
-        return target
+        ReduceOp .create()
+            .withSource(source)
+            .withSeed(seed)
+            .withAction(closure)
+            .apply()
     }
 
     DataflowWriteChannel collectFile( final DataflowReadChannel source, final Closure closure = null ) {
@@ -248,47 +194,22 @@ class OperatorImpl {
      * @return
      */
     DataflowWriteChannel filter(final DataflowReadChannel source, final Object criteria) {
-        def discriminator = new BooleanReturningMethodInvoker("isCase");
-
-        def target = CH.createBy(source)
-        if( source instanceof DataflowExpression ) {
-            source.whenBound {
-                def result = it instanceof ControlMessage ? false : discriminator.invoke(criteria, (Object)it)
-                target.bind( result ? it : Channel.STOP )
-            }
-        }
-        else {
-            newOperator(source, target, {
-                def result = discriminator.invoke(criteria, (Object)it)
-                if( result ) target.bind(it)
-            })
-        }
-
-        return target
+        return new FilterOp()
+            .withSource(source)
+            .withCriteria(criteria)
+            .apply()
     }
 
     DataflowWriteChannel filter(DataflowReadChannel source, final Closure<Boolean> closure) {
-        def target = CH.createBy(source)
-        if( source instanceof DataflowExpression ) {
-            source.whenBound {
-                def result = it instanceof ControlMessage ? false : DefaultTypeTransformation.castToBoolean(closure.call(it))
-                target.bind( result ? it : Channel.STOP )
-            }
-        }
-        else {
-            newOperator(source, target, {
-                def result = DefaultTypeTransformation.castToBoolean(closure.call(it))
-                if( result ) target.bind(it)
-            })
-        }
-
-        return target
+        return new FilterOp()
+            .withSource(source)
+            .withCriteria(closure)
+            .apply()
     }
 
     DataflowWriteChannel until(DataflowReadChannel source, final Closure<Boolean> closure) {
         return new UntilOp(source,closure).apply()
     }
-
 
     /**
      * Modifies this collection to remove all duplicated items, using the default comparator.
@@ -299,7 +220,7 @@ class OperatorImpl {
      * @return
      */
     DataflowWriteChannel unique(final DataflowReadChannel source) {
-        unique(source) { it }
+        unique(source, Closure.IDENTITY)
     }
 
     /**
@@ -311,41 +232,11 @@ class OperatorImpl {
      * @param comparator
      * @return
      */
-    DataflowWriteChannel unique(final DataflowReadChannel source, Closure comparator ) {
-
-        final history = [:]
-        final target = CH.createBy(source)
-        final stopOnFirst = source instanceof DataflowExpression
-
-        // when the operator stop clear the history map
-        final events = new DataflowEventAdapter() {
-            void afterStop(final DataflowProcessor processor) {
-                history.clear()
-            }
-        }
-
-        final filter = {
-            try {
-                final key = comparator.call(it)
-                if( history.containsKey(key) ) {
-                    return Channel.VOID
-                }
-                else {
-                    history.put(key,true)
-                    return it
-                }
-            }
-            finally {
-                if( stopOnFirst ) {
-                    ((DataflowProcessor) getDelegate()).terminate()
-                }
-            }
-        } as Closure
-
-        // filter removing all duplicates
-        chainImpl(source, target, [listeners: [events]], filter )
-
-        return target
+    DataflowWriteChannel unique(final DataflowReadChannel source, final Closure comparator) {
+        return new UniqueOp()
+            .withSource(source)
+            .withComparator(comparator)
+            .apply()
     }
 
     /**
@@ -357,7 +248,7 @@ class OperatorImpl {
      * @return
      */
     DataflowWriteChannel distinct( final DataflowReadChannel source ) {
-        distinct(source) {it}
+        distinct(source, Closure.IDENTITY)
     }
 
     /**
@@ -367,23 +258,11 @@ class OperatorImpl {
      *
      * @return
      */
-    DataflowWriteChannel distinct( final DataflowReadChannel source, Closure comparator ) {
-
-        def previous = null
-        final target = CH.createBy(source)
-        Closure filter = { it ->
-
-            def key = comparator.call(it)
-            if( key == previous ) {
-                return Channel.VOID
-            }
-            previous = key
-            return it
-        }
-
-        chainImpl(source, target, [:], filter)
-
-        return target
+    DataflowWriteChannel distinct(final DataflowReadChannel source, final Closure comparator) {
+        new DistinctOp()
+            .withSource(source)
+            .withComparator(comparator)
+            .apply()
     }
 
     /**
@@ -404,9 +283,7 @@ class OperatorImpl {
             log.warn msg
         }
 
-        def target = new DataflowVariable()
-        source.whenBound { target.bind(it) }
-        return target
+        return first(source, { true })
     }
 
     /**
@@ -418,27 +295,11 @@ class OperatorImpl {
      * @param source
      * @return
      */
-    DataflowWriteChannel first( final DataflowReadChannel source, Object criteria ) {
-
-        def target = new DataflowVariable()
-        def discriminator = new BooleanReturningMethodInvoker("isCase");
-
-        if( source instanceof DataflowExpression ) {
-            source.whenBound {
-                def result = it instanceof ControlMessage ? false : discriminator.invoke(criteria, it)
-                target.bind( result ? it : Channel.STOP )
-            }
-        }
-        else {
-            newOperator([source],[]) {
-                if( discriminator.invoke(criteria, it) ) {
-                    target.bind(it)
-                    ((DataflowProcessor) getDelegate()).terminate()
-                }
-            }
-        }
-
-        return target
+    DataflowWriteChannel first( final DataflowReadChannel source, final Object criteria ) {
+        new FirstOp()
+            .withSource(source)
+            .withCriteria(criteria)
+            .apply()
     }
 
     /**
@@ -465,11 +326,7 @@ class OperatorImpl {
      * @return A {@code DataflowVariable} emitting the `last` item in the channel
      */
     DataflowWriteChannel last( final DataflowReadChannel source ) {
-
-        def target = new DataflowVariable()
-        def last = null
-        subscribeImpl( source, [onNext: { last = it }, onComplete: {  target.bind(last) }] )
-        return target
+        new LastOp().withSource(source).apply()
     }
 
     DataflowWriteChannel collect(final DataflowReadChannel source, Closure action=null) {
@@ -477,10 +334,8 @@ class OperatorImpl {
     }
 
     DataflowWriteChannel collect(final DataflowReadChannel source, Map opts, Closure action=null) {
-        final target = new CollectOp(source,action,opts).apply()
-        return target
+        return new CollectOp(source,action,opts).apply()
     }
-
 
     /**
      * Convert a {@code DataflowQueue} alias *channel* to a Java {@code List}
@@ -489,8 +344,7 @@ class OperatorImpl {
      * @return A list holding all the items send over the channel
      */
     DataflowWriteChannel toList(final DataflowReadChannel source) {
-        final target = ToListOp.apply(source)
-        return target
+        return new ToListOp(source).apply()
     }
 
     /**
@@ -500,8 +354,7 @@ class OperatorImpl {
      * @return A list holding all the items send over the channel
      */
     DataflowWriteChannel toSortedList(final DataflowReadChannel source, Closure closure = null) {
-        final target = new ToListOp(source, closure ?: true).apply()
-        return target as DataflowVariable
+        return new ToListOp(source, closure ?: true).apply()
     }
 
     /**
@@ -512,8 +365,7 @@ class OperatorImpl {
      * @return
      */
     DataflowWriteChannel count(final DataflowReadChannel source ) {
-        final target = count0(source, null)
-        return target
+        return count0(source, null)
     }
 
     /**
@@ -524,8 +376,7 @@ class OperatorImpl {
      * @return
      */
     DataflowWriteChannel count(final DataflowReadChannel source, final Object criteria ) {
-        final target = count0(source, criteria)
-        return target
+        return count0(source, criteria)
     }
 
     private static DataflowVariable count0(DataflowReadChannel<?> source, Object criteria) {
@@ -533,17 +384,17 @@ class OperatorImpl {
         final target = new DataflowVariable()
         final discriminator = criteria != null ? new BooleanReturningMethodInvoker("isCase") : null
 
-        if( source instanceof DataflowExpression) {
-            source.whenBound { item ->
-                discriminator == null || discriminator.invoke(criteria, item) ? target.bind(1) : target.bind(0)
-            }
-        }
-        else {
-            reduceImpl(source, target, 0) { current, item ->
-                discriminator == null || discriminator.invoke(criteria, item) ? current+1 : current
-            }
+        final action = { current, item ->
+            discriminator == null || discriminator.invoke(criteria, item) ? current+1 : current
         }
 
+        ReduceOp .create()
+            .withSource(source)
+            .withTarget(target)
+            .withSeed(0)
+            .withAction(action)
+            .apply()
+        
         return target
     }
 
@@ -554,9 +405,10 @@ class OperatorImpl {
      * @return A {@code DataflowVariable} returning the minimum value
      */
     DataflowWriteChannel min(final DataflowReadChannel source) {
-        final target = new DataflowVariable()
-        reduceImpl(source, target, null) { min, val -> val<min ? val : min }
-        return target
+        ReduceOp .create()
+            .withSource(source)
+            .withAction{ min, val -> val<min ? val : min }
+            .apply()
     }
 
     /**
@@ -571,7 +423,7 @@ class OperatorImpl {
      */
     DataflowWriteChannel min(final DataflowReadChannel source, Closure comparator) {
 
-        def action
+        Closure action = null
         if( comparator.getMaximumNumberOfParameters() == 1 ) {
             action = (Closure){ min, item -> comparator.call(item) < comparator.call(min) ? item : min  }
         }
@@ -579,9 +431,10 @@ class OperatorImpl {
             action = (Closure){ a, b ->  comparator.call(a,b) < 0 ? a : b  }
         }
 
-        final target = new DataflowVariable()
-        reduceImpl(source, target, null, action)
-        return target
+        ReduceOp .create()
+            .withSource(source)
+            .withAction(action)
+            .apply()
     }
 
     /**
@@ -592,9 +445,10 @@ class OperatorImpl {
      * @return A {@code DataflowVariable} returning the minimum value
      */
     DataflowWriteChannel min(final DataflowReadChannel source, Comparator comparator) {
-        final target = new DataflowVariable()
-        reduceImpl(source, target, null) { a, b -> comparator.compare(a,b)<0 ? a : b }
-        return target
+        ReduceOp .create()
+            .withSource(source)
+            .withAction{ a, b -> comparator.compare(a,b)<0 ? a : b }
+            .apply()
     }
 
     /**
@@ -604,9 +458,10 @@ class OperatorImpl {
      * @return A {@code DataflowVariable} emitting the maximum value
      */
     DataflowWriteChannel max(final DataflowReadChannel source) {
-        final target = new DataflowVariable()
-        reduceImpl(source,target, null) { max, val -> val>max ? val : max }
-        return target
+        ReduceOp .create()
+            .withSource(source)
+            .withAction { max, val -> val>max ? val : max }
+            .apply()
     }
 
     /**
@@ -632,9 +487,10 @@ class OperatorImpl {
             throw new IllegalArgumentException("Comparator closure can accept at most 2 arguments")
         }
 
-        final target = new DataflowVariable()
-        reduceImpl(source, target, null, action)
-        return target
+        ReduceOp .create()
+            .withSource(source)
+            .withAction(action)
+            .apply()
     }
 
     /**
@@ -645,9 +501,10 @@ class OperatorImpl {
      * @return A {@code DataflowVariable} emitting the maximum value
      */
     DataflowVariable max(final DataflowReadChannel source, Comparator comparator) {
-        final target = new DataflowVariable()
-        reduceImpl(source, target, null) { a, b -> comparator.compare(a,b)>0 ? a : b }
-        return target
+        ReduceOp .create()
+            .withSource(source)
+            .withAction { a, b -> comparator.compare(a,b)>0 ? a : b }
+            .apply()
     }
 
     /**
@@ -658,61 +515,18 @@ class OperatorImpl {
      * @return A {@code DataflowVariable} emitting the final sum value
      */
     DataflowWriteChannel sum(final DataflowReadChannel source, Closure closure = null) {
-
-        def target = new DataflowVariable()
-        def aggregate = new Aggregate(name: 'sum', action: closure)
-        subscribeImpl(source, [onNext: aggregate.&process, onComplete: { target.bind( aggregate.result ) }])
-        return target
+        return MathOp.sum()
+            .withSource(source)
+            .withAction(closure)
+            .apply()
     }
 
 
     DataflowWriteChannel mean(final DataflowReadChannel source, Closure closure = null) {
-
-        def target = new DataflowVariable()
-        def aggregate = new Aggregate(name: 'mean', action: closure, mean: true)
-        subscribeImpl(source, [onNext: aggregate.&process, onComplete: { target.bind( aggregate.result ) }])
-        return target
-    }
-
-
-    private static class Aggregate {
-
-        def accum
-        long count = 0
-        boolean mean
-        Closure action
-        String name
-
-        def process(it) {
-            if( it == null || it == Channel.VOID )
-                return
-
-            count++
-
-            def item = action != null ? action.call(it) : it
-            if( accum == null )
-                accum = item
-
-            else if( accum instanceof Number )
-                accum += item
-
-            else if( accum instanceof List && item instanceof List)
-                for( int i=0; i<accum.size() && i<item.size(); i++ )
-                    accum[i] += item.get(i)
-
-            else
-                throw new IllegalArgumentException("Invalid `$name` item: $item [${item.class.simpleName}]")
-        }
-
-        def getResult() {
-            if( !mean || count == 0 )
-                return accum
-
-            if( accum instanceof List )
-                return accum.collect { it / count }
-            else
-                return accum / count
-        }
+        return MathOp.mean()
+            .withSource(source)
+            .withAction(closure)
+            .apply()
     }
 
     DataflowWriteChannel combine( DataflowReadChannel left, Object right ) {
@@ -730,51 +544,9 @@ class OperatorImpl {
     }
 
     DataflowWriteChannel flatten( final DataflowReadChannel source )  {
-
-        final listeners = []
-        final target = CH.create()
-        final stopOnFirst = source instanceof DataflowExpression
-
-        listeners << new DataflowEventAdapter() {
-            @Override
-            void afterRun(final DataflowProcessor processor, final List<Object> messages) {
-                if( stopOnFirst )
-                    processor.terminate()
-            }
-
-            @Override
-            void afterStop(final DataflowProcessor processor) {
-                processor.bindOutput(Channel.STOP)
-            }
-
-            boolean onException(final DataflowProcessor processor, final Throwable e) {
-                OperatorImpl.log.error("@unknown", e)
-                session.abort(e)
-                return true;
-            }
-        }
-
-        newOperator(inputs: [source], outputs: [target], listeners: listeners) {  item ->
-
-            def proc = ((DataflowProcessor) getDelegate())
-            switch( item ) {
-                case Collection:
-                    ((Collection)item).flatten().each { value -> proc.bindOutput(value) }
-                    break
-
-                case (Object[]):
-                    ((Collection)item).flatten().each { value -> proc.bindOutput(value) }
-                    break
-
-                case Channel.VOID:
-                    break
-
-                default:
-                    proc.bindOutput(item)
-            }
-        }
-
-        return target
+        new FlattenOp()
+            .withSource(source)
+            .apply()
     }
 
     /**
@@ -786,108 +558,47 @@ class OperatorImpl {
      * @return A newly created dataflow queue which emitted the gathered values as bundles
      */
     DataflowWriteChannel buffer( final DataflowReadChannel source, Map params=null, Object closingCriteria ) {
-
-        def target = new BufferOp(source)
+        return new BufferOp(source)
                         .setParams(params)
                         .setCloseCriteria(closingCriteria)
                         .apply()
-        return target
     }
 
     DataflowWriteChannel buffer( final DataflowReadChannel source, Object startingCriteria, Object closingCriteria ) {
         assert startingCriteria != null
         assert closingCriteria != null
 
-        def target = new BufferOp(source)
+        return new BufferOp(source)
                 .setStartCriteria(startingCriteria)
                 .setCloseCriteria(closingCriteria)
                 .apply()
-
-        return target
     }
 
     DataflowWriteChannel buffer( DataflowReadChannel source, Map<String,?> params ) {
         checkParams( 'buffer', params, 'size','skip','remainder' )
-
-        def target = new BufferOp(source)
+        return new BufferOp(source)
                         .setParams(params)
                         .apply()
-
-        return target
     }
-
 
     DataflowWriteChannel collate( DataflowReadChannel source, int size, boolean keepRemainder = true ) {
         if( size <= 0 ) {
             throw new IllegalArgumentException("Illegal argument 'size' for operator 'collate' -- it must be greater than zero: $size")
         }
 
-        def target = new BufferOp(source)
-                        .setParams( size: size, remainder: keepRemainder )
-                        .apply()
-
-        return target
+        new BufferOp(source)
+            .setParams( size: size, remainder: keepRemainder )
+            .apply()
     }
 
     DataflowWriteChannel collate( DataflowReadChannel source, int size, int step, boolean keepRemainder = true ) {
-        if( size <= 0 ) {
-            throw new IllegalArgumentException("Illegal argument 'size' for operator 'collate' -- it must be greater than zero: $size")
-        }
-
-        if( step <= 0 ) {
-            throw new IllegalArgumentException("Illegal argument 'step' for operator 'collate' -- it must be greater than zero: $step")
-        }
-
-        // the result queue
-        final target = CH.create()
-
-        // the list holding temporary collected elements
-        List<List<?>> allBuffers = []
-
-        // -- intercepts the PoisonPill and sent out the items remaining in the buffer when the 'remainder' flag is true
-        def listener = new DataflowEventAdapter() {
-
-            Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
-                if( message instanceof PoisonPill && keepRemainder && allBuffers.size() ) {
-                    allBuffers.each {
-                        target.bind( it )
-                    }
-                }
-
-                return message;
-            }
-
-            @Override
-            boolean onException(DataflowProcessor processor, Throwable e) {
-                OperatorImpl.log.error("@unknown", e)
-                session.abort(e)
-                return true
-            }
-        }
-
-
-        int index = 0
-
-        // -- the operator collecting the elements
-        newOperator( inputs: [source], outputs: [target], listeners: [listener]) {
-
-            if( index++ % step == 0 ) {
-                allBuffers.add( [] )
-            }
-
-            allBuffers.each { List list -> list.add(it) }
-
-            def buf = allBuffers.head()
-            if( buf.size() == size )  {
-                ((DataflowProcessor) getDelegate()).bindOutput(buf)
-                allBuffers = allBuffers.tail()
-            }
-
-        }
-
-        return target
+        new CollateOp()
+            .withSource(source)
+            .withSize(size)
+            .withStep(step)
+            .withRemainder(keepRemainder)
+            .apply()
     }
-
 
     /**
      * Similar to https://github.com/Netflix/RxJava/wiki/Combining-Observables#merge
@@ -910,8 +621,7 @@ class OperatorImpl {
         // therefore the channel need to be added `'manually` to the inputs list
         // fixes #1346
         OpCall.current.get().inputs.add(right)
-        def target = new JoinOp(left,right) .apply()
-        return target
+        return new JoinOp(left,right) .apply()
     }
 
     DataflowWriteChannel join( DataflowReadChannel left, Map opts, right ) {
@@ -921,8 +631,7 @@ class OperatorImpl {
         // therefore the channel need to be added `'manually` to the inputs list
         // fixes #1346
         OpCall.current.get().inputs.add(right)
-        def target = new JoinOp(left,right,opts) .apply()
-        return target
+        return new JoinOp(left,right,opts) .apply()
     }
 
     /**
@@ -976,12 +685,9 @@ class OperatorImpl {
     }
 
     DataflowWriteChannel cross( DataflowReadChannel source, DataflowReadChannel other, Closure mapper = null ) {
-
-        def target = new CrossOp(source, other)
+        return new CrossOp(source, other)
                     .setMapper(mapper)
                     .apply()
-
-        return target
     }
 
 
@@ -1018,11 +724,10 @@ class OperatorImpl {
      * @return The tap resulting dataflow channel
      */
     DataflowWriteChannel tap( final DataflowReadChannel source, final Closure holder ) {
-        def tap = new TapOp(source, holder).apply()
+        final tap = new TapOp(source, holder).apply()
         OpCall.current.get().outputs.addAll( tap.outputs )
         return tap.result
     }
-
 
     /**
      * Empty the specified value only if the source channel to which is applied is empty i.e. do not emit
@@ -1037,15 +742,20 @@ class OperatorImpl {
         boolean empty = true
         final result = CH.createBy(source)
         final singleton = result instanceof DataflowExpression
-        final next = { result.bind(it); empty=false }
-        final complete = {
-            if(empty)
-                result.bind( value instanceof Closure ? value() : value )
-            if( !singleton )
-                result.bind(Channel.STOP)
-        }
 
-        subscribeImpl(source, [onNext: next, onComplete: complete])
+        new SubscribeOp()
+            .withInput(source)
+            .withContext(new ContextRunPerThread())
+            .withOnNext { DataflowProcessor dp, Object it -> Op.bind(dp,result,it); empty=false }
+            .withOnComplete { DataflowProcessor dp ->
+                    if(empty) {
+                        final x = value instanceof Closure ? value.call() : value
+                        Op.bind(dp,result,x)
+                    }
+                    if( !singleton )
+                        result.bind(Channel.STOP)
+                }
+            .apply()
 
         return result
     }
@@ -1064,19 +774,11 @@ class OperatorImpl {
         checkParams('view', opts, PARAMS_VIEW)
         final newLine = opts.newLine != false
 
-        final target = CH.createBy(source);
-        final apply = new HashMap<String,Closure>(2)
-
-        apply.onNext  = {
-            final obj = closure != null ? closure.call(it) : it
-            session.printConsole(obj?.toString(), newLine)
-            target.bind(it)
-        }
-
-        apply. onComplete = { CH.close0(target) }
-
-        subscribeImpl(source,apply)
-        return target
+        return new ViewOp()
+            .withSource(source)
+            .withNewLine(newLine)
+            .withCode(closure)
+            .apply()
     }
 
     DataflowWriteChannel view(final DataflowReadChannel source, Closure closure = null) {
@@ -1089,8 +791,12 @@ class OperatorImpl {
         final inputs = [source, other]
         final action = closure ? new ChainWithClosure<>(closure) : new DefaultMergeClosure(inputs.size())
         final listener = stopErrorListener(source,result)
-        final params = createOpParams(inputs, result, listener)
-        newOperator(params, action)
+        new Op()
+            .withInputs(inputs)
+            .withOutput(result)
+            .withListener(listener)
+            .withCode(action)
+            .apply()
         return result;
     }
 
@@ -1108,34 +814,43 @@ class OperatorImpl {
         if( source instanceof DataflowExpression )
             throw new IllegalArgumentException("Operator `randomSample` cannot be applied to a value channel")
 
-        final result = new RandomSampleOp(source,n, seed).apply()
-        return result
+        return new RandomSampleOp(source,n, seed).apply()
     }
 
     DataflowWriteChannel toInteger(final DataflowReadChannel source) {
-        return chain(source, { it -> it as Integer })
+        return new MapOp()
+            .withSource(source)
+            .withMapper { it -> it as Integer }
+            .apply()
     }
 
     DataflowWriteChannel toLong(final DataflowReadChannel source) {
-        return chain(source, { it -> it as Long })
+        return new MapOp()
+            .withSource(source)
+            .withMapper { it -> it as Long }
+            .apply()
     }
 
     DataflowWriteChannel toFloat(final DataflowReadChannel source) {
-        return chain(source, { it -> it as Float })
+        return new MapOp()
+            .withSource(source)
+            .withMapper { it -> it as Float }
+            .apply()
     }
 
     DataflowWriteChannel toDouble(final DataflowReadChannel source) {
-        return chain(source, { it -> it as Double })
+        return new MapOp()
+            .withSource(source)
+            .withMapper { it -> it as Double }
+            .apply()
     }
 
     DataflowWriteChannel transpose( final DataflowReadChannel source, final Map params=null ) {
-        def result = new TransposeOp(source,params).apply()
-        return result
+        return new TransposeOp(source,params).apply()
     }
 
     DataflowWriteChannel splitText(DataflowReadChannel source, Map opts=null) {
-        final result = new SplitOp( source, 'splitText', opts ).apply()
-        return result
+        return new SplitOp( source, 'splitText', opts ).apply()
     }
 
     DataflowWriteChannel splitText(DataflowReadChannel source, Map opts=null, Closure action) {
@@ -1148,23 +863,19 @@ class OperatorImpl {
     }
 
     DataflowWriteChannel splitCsv(DataflowReadChannel source, Map opts=null) {
-        final result = new SplitOp( source, 'splitCsv', opts ).apply()
-        return result
+        return new SplitOp( source, 'splitCsv', opts ).apply()
     }
 
     DataflowWriteChannel splitFasta(DataflowReadChannel source, Map opts=null) {
-        final result = new SplitOp( source, 'splitFasta', opts ).apply()
-        return result
+        return new SplitOp( source, 'splitFasta', opts ).apply()
     }
 
     DataflowWriteChannel splitFastq(DataflowReadChannel source, Map opts=null) {
-        final result = new SplitOp( source, 'splitFastq', opts ).apply()
-        return result
+        return new SplitOp( source, 'splitFastq', opts ).apply()
     }
 
     DataflowWriteChannel splitJson(DataflowReadChannel source, Map opts=null) {
-        final result = new SplitOp( source, 'splitJson', opts ).apply()
-        return result
+        return new SplitOp( source, 'splitJson', opts ).apply()
     }
     
     DataflowWriteChannel countLines(DataflowReadChannel source, Map opts=null) {

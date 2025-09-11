@@ -16,6 +16,7 @@
 
 package nextflow.extension
 
+import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import org.junit.Rule
 
@@ -43,24 +44,24 @@ class MultiMapOpTest extends Dsl2Spec {
                         bar: it*it+2
                         baz: 3
                     }
-        ''')
+        ''') as List<DataflowReadChannel>
         then:
         result.size() == 3
         and:
-        result[0].val == 1
-        result[0].val == 2
-        result[0].val == 3
-        result[0].val == Channel.STOP
+        result[0].unwrap() == 1
+        result[0].unwrap() == 2
+        result[0].unwrap() == 3
+        result[0].unwrap() == Channel.STOP
         and:
-        result[1].val == 2
-        result[1].val == 3
-        result[1].val == 6
-        result[1].val == Channel.STOP
+        result[1].unwrap() == 2
+        result[1].unwrap() == 3
+        result[1].unwrap() == 6
+        result[1].unwrap() == Channel.STOP
         and:
-        result[2].val == 3
-        result[2].val == 3
-        result[2].val == 3
-        result[2].val == Channel.STOP
+        result[2].unwrap() == 3
+        result[2].unwrap() == 3
+        result[2].unwrap() == 3
+        result[2].unwrap() == Channel.STOP
 
     }
 
@@ -75,25 +76,24 @@ class MultiMapOpTest extends Dsl2Spec {
                         bar: p*p+2
                         baz: p-1
                     }
-        ''')
+        ''') as List<DataflowReadChannel>
         then:
         result.size() == 3
         and:
-        result[0].val == 1
-        result[0].val == 2
-        result[0].val == 3
-        result[0].val == Channel.STOP
+        result[0].unwrap() == 1
+        result[0].unwrap() == 2
+        result[0].unwrap() == 3
+        result[0].unwrap() == Channel.STOP
         and:
-        result[1].val == 2
-        result[1].val == 3
-        result[1].val == 6
-        result[1].val == Channel.STOP
+        result[1].unwrap() == 2
+        result[1].unwrap() == 3
+        result[1].unwrap() == 6
+        result[1].unwrap() == Channel.STOP
         and:
-        result[2].val == -1
-        result[2].val ==  0
-        result[2].val ==  1
-        result[2].val == Channel.STOP
-
+        result[2].unwrap() == -1
+        result[2].unwrap() ==  0
+        result[2].unwrap() ==  1
+        result[2].unwrap() == Channel.STOP
     }
 
     def 'should pass criteria as argument' () {
@@ -131,16 +131,15 @@ class MultiMapOpTest extends Dsl2Spec {
                         foo: p.toUpperCase()
                         bar: p.reverse()
                     }
-        ''')
+        ''') as List<DataflowReadChannel>
         then:
         result.size() == 2
         and:
         result[0] instanceof DataflowVariable
-        result[0].val == 'HELLO'
+        result[0].unwrap() == 'HELLO'
         and:
         result[1] instanceof DataflowVariable
-        result[1].val == 'olleh'
-
+        result[1].unwrap() == 'olleh'
     }
 
 }

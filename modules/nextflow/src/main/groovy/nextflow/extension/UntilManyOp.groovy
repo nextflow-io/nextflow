@@ -17,12 +17,12 @@
 
 package nextflow.extension
 
-import static nextflow.extension.DataflowHelper.*
 
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
+import nextflow.extension.op.Op
 import org.codehaus.groovy.runtime.InvokerHelper
 import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation
 /**
@@ -46,8 +46,11 @@ class UntilManyOp {
         for( DataflowReadChannel it : sources )
             targets << CH.createBy(it)
 
-        newOperator(sources, targets, new UntilCondition(len, closure))
-
+        new Op()
+            .withInputs(sources)
+            .withOutputs(targets)
+            .withCode(new UntilCondition(len, closure))
+            .apply()
         return targets
     }
 
@@ -103,7 +106,7 @@ class UntilManyOp {
 
         @Override
         Object call(final Object arguments) {
-            throw new UnsupportedOperationException()
+            call(InvokerHelper.asArray(arguments))
         }
 
         @Override

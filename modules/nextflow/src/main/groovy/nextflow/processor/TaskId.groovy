@@ -19,6 +19,8 @@ package nextflow.processor
 import java.util.concurrent.atomic.AtomicInteger
 
 import groovy.transform.CompileStatic
+import nextflow.util.TestOnly
+
 /**
  * TaskRun unique identifier
  *
@@ -32,11 +34,15 @@ class TaskId extends Number implements Comparable, Serializable, Cloneable {
      */
     static final private AtomicInteger allCount = new AtomicInteger()
 
+    @TestOnly static void clear() { allCount.set(0) }
+
     static TaskId next() {
         new TaskId(allCount.incrementAndGet())
     }
 
     private final int value
+
+    int getValue() { value }
 
     static TaskId of( value ) {
         if( value instanceof Integer )

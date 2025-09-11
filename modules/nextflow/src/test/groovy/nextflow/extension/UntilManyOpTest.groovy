@@ -19,10 +19,13 @@ package nextflow.extension
 
 import nextflow.Channel
 import spock.lang.Specification
+import spock.lang.Timeout
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Timeout(10)
 class UntilManyOpTest extends Specification {
 
     def 'should emit channel items until the condition is verified' () {
@@ -31,18 +34,18 @@ class UntilManyOpTest extends Specification {
         def source = Channel.of(1,2,3,4)
         def result = new UntilManyOp([source], { it==3 }).apply().get(0)
         then:
-        result.val == 1
-        result.val == 2
-        result.val == Channel.STOP
+        result.unwrap() == 1
+        result.unwrap() == 2
+        result.unwrap() == Channel.STOP
 
         when:
         source = Channel.of(1,2,3)
         result = new UntilManyOp([source], { it==5 }).apply().get(0)
         then:
-        result.val == 1
-        result.val == 2
-        result.val == 3
-        result.val == Channel.STOP
+        result.unwrap() == 1
+        result.unwrap() == 2
+        result.unwrap() == 3
+        result.unwrap() == Channel.STOP
 
     }
 
@@ -57,17 +60,17 @@ class UntilManyOpTest extends Specification {
         def (X,Y,Z) = new UntilManyOp([A,B,C], condition).apply()
 
         then:
-        X.val == 1
-        Y.val == 'alpha'
-        Z.val == 'foo'
+        X.unwrap() == 1
+        Y.unwrap() == 'alpha'
+        Z.unwrap() == 'foo'
         and:
-        X.val == 2
-        Y.val == 'beta'
-        Z.val == 'bar'
+        X.unwrap() == 2
+        Y.unwrap() == 'beta'
+        Z.unwrap() == 'bar'
         and:
-        X.val == Channel.STOP
-        Y.val == Channel.STOP
-        Z.val == Channel.STOP
+        X.unwrap() == Channel.STOP
+        Y.unwrap() == Channel.STOP
+        Z.unwrap() == Channel.STOP
     }
 
     def 'should emit channels until list condition is verified' () {
@@ -81,18 +84,17 @@ class UntilManyOpTest extends Specification {
         def (X,Y,Z) = new UntilManyOp([A,B,C], condition).apply()
 
         then:
-        X.val == 1
-        Y.val == 'alpha'
-        Z.val == 'foo'
+        X.unwrap() == 1
+        Y.unwrap() == 'alpha'
+        Z.unwrap() == 'foo'
         and:
-        X.val == 2
-        Y.val == 'beta'
-        Z.val == 'bar'
+        X.unwrap() == 2
+        Y.unwrap() == 'beta'
+        Z.unwrap() == 'bar'
         and:
-        X.val == Channel.STOP
-        Y.val == Channel.STOP
-        Z.val == Channel.STOP
+        X.unwrap() == Channel.STOP
+        Y.unwrap() == Channel.STOP
+        Z.unwrap() == Channel.STOP
     }
-
 
 }

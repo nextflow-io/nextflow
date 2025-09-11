@@ -19,7 +19,12 @@ package nextflow.extension
 import groovy.transform.CompileStatic
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
+import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
+import nextflow.extension.op.ContextRunPerThread
+import nextflow.extension.op.Op
+import nextflow.extension.op.OpContext
+
 /**
  * Implements the {@link OperatorImpl#concat} operator
  *
@@ -32,36 +37,34 @@ class ConcatOp {
 
     private DataflowReadChannel[] target
 
+    private OpContext context = new ContextRunPerThread()
+
     ConcatOp( DataflowReadChannel source, DataflowReadChannel... target ) {
         assert source != null
         assert target
-
         this.source = source
         this.target = target
     }
-
 
     DataflowWriteChannel apply() {
         final result = CH.create()
         final allChannels = [source]
         allChannels.addAll(target)
-
         append(result, allChannels, 0)
         return result
     }
 
-
-    private static void append( DataflowWriteChannel result, List<DataflowReadChannel> channels, int index ) {
-        def current = channels[index++]
-        def next = index < channels.size() ? channels[index] : null
-
-        def events = new HashMap<String,Closure>(2)
-        events.onNext = { result.bind(it) }
-        events.onComplete = {
-            if(next) append(result, channels, index)
-            else result.bind(Channel.STOP)
-        }
-
-        DataflowHelper.subscribeImpl(current, events)
+    private void append( DataflowWriteChannel result, List<DataflowReadChannel> channels, int index ) {
+        final current = channels[index++]
+        final next = index < channels.size() ? channels[index] : null
+        new SubscribeOp()
+            .withInput(current)
+            .withContext(context)
+            .withOnNext { DataflowProcessor dp, Object it -> Op.bind(dp, result, it) }
+            .withOnComplete { DataflowProcessor dp ->
+                if(next) append(result, channels, index)
+                else Op.bind(dp, result, Channel.STOP)
+            }
+            .apply()
     }
 }
