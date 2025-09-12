@@ -23,12 +23,6 @@ build-arm: dist/docker/arm64
 	cp ../nextflow .
 	docker buildx build --platform linux/arm64 --output=type=docker --progress=plain --tag nextflow/nextflow:${version} --build-arg TARGETPLATFORM=linux/arm64 .
 
-release: build
-	docker push nextflow/nextflow:${version}
-	#
-	docker tag nextflow/nextflow:${version} public.cr.seqera.io/nextflow/nextflow:${version}
-	docker push public.cr.seqera.io/nextflow/nextflow:${version}
-
 #Static builds can now be found at:
 #
 #  Linux:   https://download.docker.com/linux/static

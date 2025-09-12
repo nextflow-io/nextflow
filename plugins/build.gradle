@@ -3,7 +3,6 @@ apply plugin: 'java'
 ext.aws_access_key_id = project.findProperty('aws_access_key_id') ?: System.getenv('AWS_ACCESS_KEY_ID')
 ext.aws_secret_access_key = project.findProperty('aws_secret_access_key') ?: System.getenv('AWS_SECRET_ACCESS_KEY')
 ext.publishRepoUrl = project.findProperty('publish_repo_url') ?: System.getenv('PUBLISH_REPO_URL') ?: ( version.endsWith('-SNAPSHOT') ? "s3://maven.seqera.io/snapshots" : "s3://maven.seqera.io/releases" )
-
 jar.enabled = false
 
 subprojects {
@@ -32,6 +31,18 @@ subprojects {
         into 'build/target/libs'
     }
 
+
+    jar {
+        from sourceSets.main.allSource
+        doLast {
+            file("$buildDir/tmp/jar").deleteDir()
+        }
+    }
+
+    tasks.withType(GenerateModuleMetadata) {
+        enabled = false
+    }
+
     /*
      * publish jars maven repo on S3 
      */
@@ -45,17 +56,24 @@ subprojects {
         }
         repositories {
             maven {
-                url = publishRepoUrl
+                url = findProperty('maven_publish_url') ?: System.getenv('MAVEN_PUBLISH_URL') ?: 's3://maven.seqera.io'
+                url = version.endsWith('-SNAPSHOT') ? "$url/snapshots" : "$url/releases"
+
                 credentials(AwsCredentials) {
-                    // keys are defined in the `gradle.properties` file
-                    accessKey aws_access_key_id
-                    secretKey aws_secret_access_key
+                    accessKey = findProperty('aws_access_key_id') ?: System.getenv('AWS_ACCESS_KEY_ID')
+                    secretKey = findProperty('aws_secret_access_key') ?: System.getenv('AWS_SECRET_ACCESS_KEY')
                 }
             }
         }
     }
 }
 
+/**
+ * Publish jars to maven repositories
+ */
+task publishPluginsToMaven {
+    dependsOn subprojects.publish
+}
 /*
  * "install" the plugin the project root build/plugins directory
  */
@@ -65,3 +83,4 @@ project.parent.tasks.getByName("assemble").dependsOn << assemble
  * Copies the plugins required dependencies in the corresponding lib directory
  */
 classes.dependsOn subprojects.copyPluginLibs
+

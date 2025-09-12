@@ -277,18 +277,15 @@ ext.enableSignArchives = project.findProperty('signing.keyId')
 
 ext.coreProjects = projects( ':nextflow', ':nf-commons', ':nf-httpfs', ':nf-lang', ':nf-lineage' )
 
-configure(coreProjects) {
-    group = 'io.nextflow'
-    version = rootProject.file('VERSION').text.trim()
-}
-
 /*
- * Maven central deployment
- * http://central.sonatype.org/pages/gradle.html
+ * Maven deployment
  */
 configure(coreProjects) {
     apply plugin: 'maven-publish'
     apply plugin: 'signing'
+
+    group = 'io.nextflow'
+    version = rootProject.file('VERSION').text.trim()
 
     task javadocJar(type: Jar) {
         archiveClassifier = 'javadoc'
@@ -326,9 +323,8 @@ configure(coreProjects) {
                     }
                     developers {
                         developer {
-                            id = nexusUsername
-                            name = nexusFullName
-                            email = nexusEmail
+                            name = 'Paolo Di Tommaso'
+                            email = 'paolo.ditommaso@gmail.com'
                         }
                     }
                     scm {
@@ -345,13 +341,12 @@ configure(coreProjects) {
 
         repositories {
             maven {
-                // change URLs to point to your repos, e.g. http://my.org/repo
-                def releasesRepoUrl = "s3://maven.seqera.io/releases/"
-                def snapshotsRepoUrl = "s3://maven.seqera.io/snapshots/"
-                url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+                url = findProperty('maven_publish_url') ?: System.getenv('MAVEN_PUBLISH_URL') ?: 's3://maven.seqera.io'
+                url = version.endsWith('-SNAPSHOT') ? "$url/snapshots" : "$url/releases"
+
                 credentials(AwsCredentials) {
-                    accessKey nexusUsername
-                    secretKey nexusPassword
+                    accessKey = findProperty('aws_access_key_id') ?: System.getenv('AWS_ACCESS_KEY_ID') ?: nexusUsername
+                    secretKey = findProperty('aws_secret_access_key') ?: System.getenv('AWS_SECRET_ACCESS_KEY') ?: nexusPassword
                 }
             }
         }
@@ -361,14 +356,10 @@ configure(coreProjects) {
         required { enableSignArchives }
         sign publishing.publications.mavenJava
     }
-
 }
 
-
-String bytesToHex(byte[] bytes) {
-    StringBuffer result = new StringBuffer();
-    for (byte byt : bytes) result.append(Integer.toString((byt & 0xff) + 0x100, 16).substring(1));
-    return result.toString();
+task publishToMaven {
+    dependsOn coreProjects.publish
 }
 
 task makeDigest { doLast {
@@ -376,23 +367,20 @@ task makeDigest { doLast {
     String  str = file('nextflow').text
     // create sha1
     digest = java.security.MessageDigest.getInstance("SHA1").digest(str.getBytes())
-    file('nextflow.sha1').text = new BigInteger(1, digest).toString(16) + '\n'
+    file('nextflow.sha1').text = digest.encodeHex().toString() + '\n'
     // create sha-256
     digest = java.security.MessageDigest.getInstance("SHA-256").digest(str.getBytes())
-    file('nextflow.sha256').text = bytesToHex(digest) + '\n'
+    file('nextflow.sha256').text = digest.encodeHex().toString() + '\n'
     // create md5
     digest = java.security.MessageDigest.getInstance("MD5").digest(str.getBytes())
-    file('nextflow.md5').text = bytesToHex(digest) + '\n'
+    file('nextflow.md5').text = digest.encodeHex().toString() + '\n'
 }}
-
 
 task upload {
     dependsOn compile
     dependsOn makeDigest
     dependsOn coreProjects.publish
 }
-
-
 if( System.env.BUILD_PACK ) {
     apply from: 'packing.gradle'
 }
