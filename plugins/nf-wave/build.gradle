@@ -40,14 +40,6 @@ sourceSets {
 configurations {
     // see https://docs.gradle.org/4.1/userguide/dependency_management.html#sub:exclude_transitive_dependencies
     runtimeClasspath.exclude group: 'org.slf4j', module: 'slf4j-api'
-    
-    // Force lib-httpx version to resolve conflicts
-    all {
-        resolutionStrategy {
-            force 'io.seqera:lib-httpx:2.0.0'
-            force 'io.seqera:lib-retry:2.0.0'
-        }
-    }
 }
 
 dependencies {

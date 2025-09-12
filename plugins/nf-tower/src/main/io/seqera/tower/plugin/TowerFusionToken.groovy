@@ -46,12 +46,10 @@ class TowerFusionToken implements FusionToken {
     private static final String LICENSE_TOKEN_PATH = 'license/token/'
 
     // Server errors that should trigger a retry
-    private static final Set<Integer> SERVER_ERRORS = [408, 429, 500, 502, 503, 504] as Set
+    private static final Set<Integer> SERVER_ERRORS = Set.of(408, 429, 500, 502, 503, 504)
 
     // Default connection timeout for HTTP requests
     private static final Duration DEFAULT_CONNECTION_TIMEOUT = Duration.of(30, ChronoUnit.SECONDS)
-
-    private CookieManager cookieManager = new CookieManager()
 
     // The HttpClient instance used to send requests
     private HxClient httpClient
@@ -210,7 +208,6 @@ class TowerFusionToken implements FusionToken {
             .uri(URI.create("${endpoint}/${LICENSE_TOKEN_PATH}").normalize())
             .header('Content-Type', 'application/json')
             .header('Traceparent', TraceUtils.rndTrace())
-            .header('Authorization', "Bearer ${accessToken}")
             .POST(body)
             .build()
     }
@@ -235,15 +232,13 @@ class TowerFusionToken implements FusionToken {
      * @return The LicenseTokenResponse object
      */
     private GetLicenseTokenResponse sendRequest(GetLicenseTokenRequest request) {
-        return sendRequest0(request, 1)
-    }
-
-    private GetLicenseTokenResponse sendRequest0(GetLicenseTokenRequest request, int attempt) {
-
         final httpReq = makeHttpRequest(request)
-
         try {
             final resp = httpClient.sendAsString(httpReq)
+            if( log.isTraceEnabled() || resp.statusCode()!=200 )
+                log.debug "Fusion license request ${httpReq} ${request}; status=${resp.statusCode()}; body: ${resp.body()}"
+            else 
+                log.debug "Fusion license request ${httpReq}; status=${resp.statusCode()}"
             // check ok response
             if( resp.statusCode() == 200 ) {
                 final ret = parseLicenseTokenResponse(resp.body())
