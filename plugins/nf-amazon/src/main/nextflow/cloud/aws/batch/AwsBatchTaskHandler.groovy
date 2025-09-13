@@ -16,7 +16,7 @@
 
 package nextflow.cloud.aws.batch
 
-
+import static nextflow.cloud.aws.batch.AwsBatchHelper.*
 import static nextflow.cloud.aws.batch.AwsContainerOptionsMapper.*
 
 import java.nio.file.Path
@@ -51,13 +51,13 @@ import nextflow.util.TestOnly
 import software.amazon.awssdk.services.batch.BatchClient
 import software.amazon.awssdk.services.batch.model.ArrayProperties
 import software.amazon.awssdk.services.batch.model.AssignPublicIp
-import software.amazon.awssdk.services.batch.model.AttemptContainerDetail
+import software.amazon.awssdk.services.batch.model.AttemptDetail
 import software.amazon.awssdk.services.batch.model.BatchException
 import software.amazon.awssdk.services.batch.model.ClientException
-import software.amazon.awssdk.services.batch.model.ContainerOverrides
 import software.amazon.awssdk.services.batch.model.DescribeJobDefinitionsRequest
 import software.amazon.awssdk.services.batch.model.DescribeJobDefinitionsResponse
 import software.amazon.awssdk.services.batch.model.DescribeJobsRequest
+import software.amazon.awssdk.services.batch.model.EcsPropertiesOverride
 import software.amazon.awssdk.services.batch.model.EphemeralStorage
 import software.amazon.awssdk.services.batch.model.EvaluateOnExit
 import software.amazon.awssdk.services.batch.model.Host
@@ -79,6 +79,8 @@ import software.amazon.awssdk.services.batch.model.RetryStrategy
 import software.amazon.awssdk.services.batch.model.RuntimePlatform
 import software.amazon.awssdk.services.batch.model.SubmitJobRequest
 import software.amazon.awssdk.services.batch.model.SubmitJobResponse
+import software.amazon.awssdk.services.batch.model.TaskContainerOverrides
+import software.amazon.awssdk.services.batch.model.TaskPropertiesOverride
 import software.amazon.awssdk.services.batch.model.TerminateJobRequest
 import software.amazon.awssdk.services.batch.model.Volume
 /**
@@ -246,7 +248,8 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             checkIfUnschedulable(job)
         // fetch the task arn
         if( !taskArn )
-            taskArn = job?.container()?.taskArn()
+            taskArn = getTaskProperties(job)?.taskRoleArn()
+                ?: job?.container()?.taskArn()
         return result
     }
 
@@ -282,10 +285,18 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         final result = new ArrayList(2)
         if( job.statusReason() )
             result.add(job.statusReason())
-        final AttemptContainerDetail container = job.attempts() ? job.attempts()[-1].container() : null
-        if( container?.reason() )
-            result.add(container.reason())
+        final attemptDetail = job.attempts() ? job.attempts()[-1] : null
+        final reason = errReasonFromAttempt (attemptDetail)
+        if( reason )
+            result.add(reason)
         return result.join(' - ')
+    }
+
+    private String errReasonFromAttempt(AttemptDetail attempt){
+        if( !attempt )
+            return null
+        return attempt.taskProperties()?.first()?.containers()?.first()?.reason()
+            ?: attempt.container()?.reason()
     }
 
     /**
@@ -307,7 +318,9 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             // take the exit code from the `.exitcode` file create by nextflow
             // the rationale of this is that, in case of error, the exit code return
             // by the batch API is more reliable.
-            task.exitStatus = job.container().exitCode() ?: readExitFile()
+            task.exitStatus = getTaskContainer(job)?.exitCode()
+                ?: job.container()?.exitCode()
+                ?: readExitFile()
             // finalize the task
             task.stdout = outputFile
             if( job?.status() == JobStatus.FAILED || task.exitStatus==Integer.MAX_VALUE ) {
@@ -818,7 +831,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
         // set the actual command
         final resources = new ArrayList<ResourceRequirement>(5)
-        final container = ContainerOverrides.builder()
+        final container = TaskContainerOverrides.builder()
         container.command(getSubmitCommand())
         // set the task memory
         final cpus = task.config.getCpus()
@@ -849,7 +862,13 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         if( vars )
             container.environment(vars)
 
-        builder.containerOverrides(container.build())
+        builder.ecsPropertiesOverride(EcsPropertiesOverride.builder()
+            .taskProperties(TaskPropertiesOverride.builder()
+                .containers(container.build())
+                .build()
+            )
+            .build()
+        )
 
         // set the array properties
         if( task instanceof TaskArrayRun ) {

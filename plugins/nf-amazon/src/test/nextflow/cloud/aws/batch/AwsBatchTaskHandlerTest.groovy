@@ -95,6 +95,7 @@ class AwsBatchTaskHandlerTest extends Specification {
 
         when:
         def req = handler.newSubmitRequest(task)
+        def overrides = req.ecsPropertiesOverride().taskProperties()[0].containers()[0]
         then:
         1 * handler.getSubmitCommand() >> ['bash', '-c', 'something']
         1 * handler.maxSpotAttempts() >> 5
@@ -106,10 +107,10 @@ class AwsBatchTaskHandlerTest extends Specification {
         req.jobName() == 'batch-task'
         req.jobQueue() == 'queue1'
         req.jobDefinition() == 'job-def:1'
-        req.containerOverrides().resourceRequirements().find { it.type() == ResourceType.VCPU}.value() == '4'
-        req.containerOverrides().resourceRequirements().find { it.type() == ResourceType.MEMORY}.value() == '8192'
-        req.containerOverrides().environment() == [VAR_FOO, VAR_BAR]
-        req.containerOverrides().command() == ['bash', '-c', 'something']
+        overrides.resourceRequirements().find { it.type() == ResourceType.VCPU}.value() == '4'
+        overrides.resourceRequirements().find { it.type() == ResourceType.MEMORY}.value() == '8192'
+        overrides.environment() == [VAR_FOO, VAR_BAR]
+        overrides.command() == ['bash', '-c', 'something']
         req.retryStrategy() == RetryStrategy.builder()
                 .attempts(5)
                 .evaluateOnExit( EvaluateOnExit.builder().action('RETRY').onStatusReason('Host EC2*').build(), EvaluateOnExit.builder().onReason('*').action('EXIT').build() )
@@ -117,6 +118,7 @@ class AwsBatchTaskHandlerTest extends Specification {
 
         when:
         req = handler.newSubmitRequest(task)
+        overrides = req.ecsPropertiesOverride().taskProperties()[0].containers()[0]
         then:
         1 * handler.getSubmitCommand() >> ['bash', '-c', 'something']
         1 * handler.maxSpotAttempts() >> 0
@@ -128,10 +130,10 @@ class AwsBatchTaskHandlerTest extends Specification {
         req.jobName() == 'batch-task'
         req.jobQueue() == 'queue1'
         req.jobDefinition() == 'job-def:1'
-        req.containerOverrides().resourceRequirements().find { it.type() == ResourceType.VCPU}.value() == '4'
-        req.containerOverrides().resourceRequirements().find { it.type() == ResourceType.MEMORY}.value() == '8192'
-        req.containerOverrides().environment() == [VAR_FOO, VAR_BAR]
-        req.containerOverrides().command() == ['bash', '-c', 'something']
+        overrides.resourceRequirements().find { it.type() == ResourceType.VCPU}.value() == '4'
+        overrides.resourceRequirements().find { it.type() == ResourceType.MEMORY}.value() == '8192'
+        overrides.environment() == [VAR_FOO, VAR_BAR]
+        overrides.command() == ['bash', '-c', 'something']
         req.retryStrategy() == null  // <-- retry is managed by NF, hence this must be null
     }
 
@@ -145,6 +147,7 @@ class AwsBatchTaskHandlerTest extends Specification {
 
         when:
         def req = handler.newSubmitRequest(task)
+        def overrides = req.ecsPropertiesOverride().taskProperties()[0].containers()[0]
         then:
         1 * handler.getSubmitCommand() >> ['bash', '-c', 'something']
         1 * handler.maxSpotAttempts() >> 5
@@ -156,12 +159,13 @@ class AwsBatchTaskHandlerTest extends Specification {
         req.jobName() == 'batch-task'
         req.jobQueue() == 'queue1'
         req.jobDefinition() == 'job-def:1'
-        req.containerOverrides().resourceRequirements().find { it.type() == ResourceType.VCPU}.value() == '4'
-        req.containerOverrides().resourceRequirements().find { it.type() == ResourceType.MEMORY}.value() == '8192'
-        req.containerOverrides().command() == ['bash', '-c', 'something']
+        overrides.resourceRequirements().find { it.type() == ResourceType.VCPU}.value() == '4'
+        overrides.resourceRequirements().find { it.type() == ResourceType.MEMORY}.value() == '8192'
+        overrides.command() == ['bash', '-c', 'something']
 
         when:
         def req2 = handler.newSubmitRequest(task)
+        def overrides2 = req2.ecsPropertiesOverride().taskProperties()[0].containers()[0]
         then:
         1 * handler.getSubmitCommand() >> ['bash', '-c', 'something']
         1 * handler.maxSpotAttempts() >> 5
@@ -173,9 +177,9 @@ class AwsBatchTaskHandlerTest extends Specification {
         req2.jobName() == 'batch-task'
         req2.jobQueue() == 'queue1'
         req2.jobDefinition() == 'job-def:1'
-        req2.containerOverrides().resourceRequirements().find { it.type() == ResourceType.VCPU}.value() == '4'
-        req2.containerOverrides().resourceRequirements().find { it.type() == ResourceType.MEMORY}.value() == '8192'
-        req2.containerOverrides().command() ==['bash', '-c', 'something']
+        overrides2.resourceRequirements().find { it.type() == ResourceType.VCPU}.value() == '4'
+        overrides2.resourceRequirements().find { it.type() == ResourceType.MEMORY}.value() == '8192'
+        overrides2.command() ==['bash', '-c', 'something']
         req2.shareIdentifier() == 'priority/high'
         req2.schedulingPriorityOverride() == 9999
     }
@@ -193,6 +197,7 @@ class AwsBatchTaskHandlerTest extends Specification {
 
         when:
         def req = handler.newSubmitRequest(task)
+        def overrides = req.ecsPropertiesOverride().taskProperties()[0].containers()[0]
         then:
         handler.getAwsOptions() >> { new AwsOptions(awsConfig: new AwsConfig(batch:[cliPath: '/bin/aws'],region: 'eu-west-1')) }
         and:
@@ -202,12 +207,12 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.getJobQueue(task) >> 'queue1'
         1 * handler.getJobDefinition(task) >> 'job-def:1'
         and:
-        def res = req.containerOverrides().resourceRequirements()
+        def res = overrides.resourceRequirements()
         res.size()==3
         and:
-        req.containerOverrides().resourceRequirements().find { it.type() == ResourceType.VCPU}.value() == '4'
-        req.containerOverrides().resourceRequirements().find { it.type() == ResourceType.MEMORY}.value() == '2048'
-        req.containerOverrides().resourceRequirements().find { it.type() == ResourceType.GPU}.value() == '2'
+        overrides.resourceRequirements().find { it.type() == ResourceType.VCPU}.value() == '4'
+        overrides.resourceRequirements().find { it.type() == ResourceType.MEMORY}.value() == '2048'
+        overrides.resourceRequirements().find { it.type() == ResourceType.GPU}.value() == '2'
     }
 
     def 'should create an aws submit request with a timeout'() {
@@ -305,7 +310,7 @@ class AwsBatchTaskHandlerTest extends Specification {
                 .attempts(3)
                 .evaluateOnExit( EvaluateOnExit.builder().action('RETRY').onStatusReason('Host EC2*').build(),
                     EvaluateOnExit.builder().onReason('*').action('EXIT').build() ).build()
-        req.containerOverrides().environment() == [VAR_RETRY_MODE, VAR_MAX_ATTEMPTS, VAR_METADATA_ATTEMPTS]
+        req.ecsPropertiesOverride().taskProperties()[0].containers()[0].environment() == [VAR_RETRY_MODE, VAR_MAX_ATTEMPTS, VAR_METADATA_ATTEMPTS]
     }
 
     def 'should return job queue'() {
@@ -526,31 +531,32 @@ class AwsBatchTaskHandlerTest extends Specification {
         handler.addVolumeMountsToContainer(mounts, containerModel)
         
         when:
-        def container = containerModel.toBatchContainerProperties()
+        def taskProps = containerModel.toBatchContainerProperties()
+        def container = taskProps.containers()[0]
         then:
-        container.volumes().size() == 4
+        taskProps.volumes().size() == 4
         container.mountPoints().size() == 4
 
-        container.volumes()[0].name() == 'vol0'
-        container.volumes()[0].host().sourcePath() == '/foo'
+        taskProps.volumes()[0].name() == 'vol0'
+        taskProps.volumes()[0].host().sourcePath() == '/foo'
         container.mountPoints()[0].sourceVolume() == 'vol0'
         container.mountPoints()[0].containerPath() == '/foo'
         !container.mountPoints()[0].readOnly()
 
-        container.volumes()[1].name() == 'vol1'
-        container.volumes()[1].host().sourcePath() == '/foo'
+        taskProps.volumes()[1].name() == 'vol1'
+        taskProps.volumes()[1].host().sourcePath() == '/foo'
         container.mountPoints()[1].sourceVolume() == 'vol1'
         container.mountPoints()[1].containerPath() == '/bar'
         !container.mountPoints()[1].readOnly()
 
-        container.volumes()[2].name() == 'vol2'
-        container.volumes()[2].host().sourcePath() == '/here'
+        taskProps.volumes()[2].name() == 'vol2'
+        taskProps.volumes()[2].host().sourcePath() == '/here'
         container.mountPoints()[2].sourceVolume() == 'vol2'
         container.mountPoints()[2].containerPath() == '/there'
         container.mountPoints()[2].readOnly()
 
-        container.volumes()[3].name() == 'vol3'
-        container.volumes()[3].host().sourcePath() == '/this'
+        taskProps.volumes()[3].name() == 'vol3'
+        taskProps.volumes()[3].host().sourcePath() == '/this'
         container.mountPoints()[3].sourceVolume() == 'vol3'
         container.mountPoints()[3].containerPath() == '/that'
         !container.mountPoints()[3].readOnly()
@@ -986,6 +992,7 @@ class AwsBatchTaskHandlerTest extends Specification {
 
         when:
         def req = handler.newSubmitRequest(task)
+        def overrides = req.ecsPropertiesOverride().taskProperties()[0].containers()[0]
         then:
         1 * handler.getSubmitCommand() >> ['sh', '-c', 'hello']
         1 * handler.maxSpotAttempts() >> 5
@@ -997,10 +1004,10 @@ class AwsBatchTaskHandlerTest extends Specification {
         req.jobName() == 'batch-task'
         req.jobQueue() == 'queue1'
         req.jobDefinition() == 'job-def:1'
-        req.containerOverrides().resourceRequirements().find { it.type()==ResourceType.VCPU}.value() == '4'
-        req.containerOverrides().resourceRequirements().find { it.type()==ResourceType.MEMORY}.value() == '8192'
-        req.containerOverrides().environment() == [VAR_FOO, VAR_BAR]
-        req.containerOverrides().command() == ['sh', '-c','hello']
+        overrides.resourceRequirements().find { it.type()==ResourceType.VCPU}.value() == '4'
+        overrides.resourceRequirements().find { it.type()==ResourceType.MEMORY}.value() == '8192'
+        overrides.environment() == [VAR_FOO, VAR_BAR]
+        overrides.command() == ['sh', '-c','hello']
         req.retryStrategy() == RetryStrategy.builder()
                 .attempts(5)
                 .evaluateOnExit( EvaluateOnExit.builder().action('RETRY').onStatusReason('Host EC2*').build(),
