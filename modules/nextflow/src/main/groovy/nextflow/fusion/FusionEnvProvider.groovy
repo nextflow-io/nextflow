@@ -64,7 +64,7 @@ class FusionEnvProvider {
 
     protected Map<String,String> getFusionToken(String scheme, FusionConfig config) {
         final providers = Plugins.getPriorityExtensions(FusionToken)
-        log.debug "Fusion token extensions=$providers"
+        log.trace "Fusion token extensions=${providers}"
         final result = new HashMap<String,String>()
         try {
             final env = providers.first().getEnvironment(scheme,config)
