@@ -44,6 +44,8 @@ import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
 import nextflow.script.ScriptFile
 import nextflow.script.ScriptRunner
+import nextflow.secret.ConfigNullProvider
+import nextflow.secret.SecretsLoader
 import nextflow.util.CustomPoolFactory
 import nextflow.util.Duration
 import nextflow.util.HistoryFile
@@ -320,30 +322,46 @@ class CmdRun extends CmdBase implements HubOptions {
         checkRunName()
 
         printBanner()
-        Plugins.init()
 
-        // -- specify the arguments
+        // -- resolve main script
         final scriptFile = getScriptFile(pipeline)
 
         // -- load command line params
         final baseDir = scriptFile.parent
-        final cliParams = parsedParams(ConfigBuilder.getConfigVars(baseDir))
+        final cliParams = parsedParams(ConfigBuilder.getConfigVars(baseDir, null))
 
-        // create the config object
-        final builder = new ConfigBuilder()
+        // -- load config (without secrets)
+        final secretsProvider = new ConfigNullProvider()
+        ConfigBuilder builder = new ConfigBuilder()
+            .setOptions(launcher.options)
+            .setCmdRun(this)
+            .setBaseDir(scriptFile.parent)
+            .setCliParams(cliParams)
+            .setSecretsProvider(secretsProvider)
+        ConfigMap config = builder.build()
+        Map configParams = builder.getConfigParams()
+
+        // -- load plugins
+        Plugins.init()
+        Plugins.load(config)
+
+        // -- load secrets provider
+        SecretsLoader.getInstance().load()
+
+        // -- reload config if secrets were used
+        if( secretsProvider.usedSecrets() ) {
+            log.debug "Config file used secrets -- reloading config with secrets provider"
+            builder = new ConfigBuilder()
                 .setOptions(launcher.options)
                 .setCmdRun(this)
-                .setBaseDir(baseDir)
+                .setBaseDir(scriptFile.parent)
                 .setCliParams(cliParams)
-        final config = builder.build()
-        final configParams = builder.getConfigParams()
+            config = builder.build()
+            configParams = builder.getConfigParams()
+        }
 
         // check DSL syntax in the config
         launchInfo(config, scriptFile)
-
-        // -- load plugins
-        final cfg = plugins ? [plugins: plugins.tokenize(',')] : config
-        Plugins.load(cfg)
 
         // -- validate config options
         if( NF.isSyntaxParserV2() )

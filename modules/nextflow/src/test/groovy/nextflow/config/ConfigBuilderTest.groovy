@@ -52,7 +52,7 @@ class ConfigBuilderTest extends Specification {
         return new ConfigBuilder()
             .setOptions(new CliOptions())
             .setCmdRun(run)
-            .setCliParams(run.parsedParams(ConfigBuilder.getConfigVars(baseDir)))
+            .setCliParams(run.parsedParams(ConfigBuilder.getConfigVars(baseDir, null)))
             .buildGivenFiles(file)
     }
 
@@ -61,7 +61,7 @@ class ConfigBuilderTest extends Specification {
         return new ConfigBuilder(config)
             .setOptions(new CliOptions(cliOpts))
             .setCmdRun(run)
-            .setCliParams(run.parsedParams(ConfigBuilder.getConfigVars(null)))
+            .setCliParams(run.parsedParams(ConfigBuilder.getConfigVars(null, null)))
             .build()
     }
 

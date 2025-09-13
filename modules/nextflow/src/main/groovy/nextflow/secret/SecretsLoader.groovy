@@ -78,5 +78,9 @@ class SecretsLoader {
         final provider = isEnabled() ? getInstance().load() : new NullProvider()
         return makeSecretsContext(provider)
     }
-    
+
+    static Object secretContext(SecretsProvider provider) {
+        return makeSecretsContext(provider)
+    }
+
 }
