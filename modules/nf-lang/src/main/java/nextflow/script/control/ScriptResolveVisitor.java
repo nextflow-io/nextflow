@@ -22,7 +22,8 @@ import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.FunctionNode;
 import nextflow.script.ast.OutputNode;
 import nextflow.script.ast.ParamNodeV1;
-import nextflow.script.ast.ProcessNode;
+import nextflow.script.ast.ProcessNodeV1;
+import nextflow.script.ast.ProcessNodeV2;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
 import nextflow.script.ast.WorkflowNode;
@@ -124,7 +125,20 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
     }
 
     @Override
-    public void visitProcess(ProcessNode node) {
+    public void visitProcessV2(ProcessNodeV2 node) {
+        for( var input : node.inputs )
+            resolver.resolveOrFail(input.getType(), input);
+        resolver.visit(node.directives);
+        resolver.visit(node.stagers);
+        resolver.visit(node.outputs);
+        resolver.visit(node.topics);
+        resolver.visit(node.when);
+        resolver.visit(node.exec);
+        resolver.visit(node.stub);
+    }
+
+    @Override
+    public void visitProcessV1(ProcessNodeV1 node) {
         resolver.visit(node.directives);
         resolver.visit(node.inputs);
         resolver.visit(node.outputs);
