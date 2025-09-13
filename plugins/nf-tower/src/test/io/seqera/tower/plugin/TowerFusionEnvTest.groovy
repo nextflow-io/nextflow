@@ -133,6 +133,7 @@ class TowerFusionEnvTest extends Specification {
         }
 
         then: 'the endpoint has the expected value'
+        provider.endpoint == TowerClient.DEF_ENDPOINT_URL
 
         when: 'session.config.tower.endpoint is empty'
         Global.session = Mock(Session) {
@@ -142,8 +143,10 @@ class TowerFusionEnvTest extends Specification {
                 ]
             ]
         }
+        provider = new TowerFusionToken()
 
         then: 'the endpoint has the expected value'
+        provider.endpoint == TowerClient.DEF_ENDPOINT_URL
 
         when: 'session.config.tower.endpoint is defined as "-"'
         Global.session = Mock(Session) {
@@ -153,8 +156,10 @@ class TowerFusionEnvTest extends Specification {
                 ]
             ]
         }
+        provider = new TowerFusionToken()
 
         then: 'the endpoint has the expected value'
+        provider.endpoint == TowerClient.DEF_ENDPOINT_URL
     }
 
     def 'should return the access token from the config'() {
@@ -366,6 +371,7 @@ class TowerFusionEnvTest extends Specification {
         // 1️⃣ First attempt: /license/token/ fails with 401
         wireMockServer.stubFor(
             WireMock.post(urlEqualTo("/license/token/"))
+                .withHeader('Authorization', equalTo('Bearer abc-token'))
                 .inScenario("Refresh flow")
                 .whenScenarioStateIs(Scenario.STARTED)
                 .willReturn(WireMock.aResponse().withStatus(401))
@@ -375,26 +381,24 @@ class TowerFusionEnvTest extends Specification {
         // 2️⃣ Refresh token call
         wireMockServer.stubFor(
             WireMock.post(urlEqualTo("/oauth/access_token"))
-                .inScenario("Refresh flow")
-                .whenScenarioStateIs("Token Refreshed")
                 .withHeader('Content-Type', equalTo('application/x-www-form-urlencoded'))
                 .withRequestBody(containing('grant_type=refresh_token'))
-                .withRequestBody(containing(URLEncoder.encode('xyz-refresh', 'UTF-8')))
+                .withRequestBody(containing('refresh_token=xyz-refresh'))
                 .willReturn(
                     WireMock.aResponse()
                         .withStatus(200)
-                        .withHeader('Set-Cookie', 'JWT=new-abc-token')
-                        .withHeader('Set-Cookie', 'JWT_REFRESH_TOKEN=new-refresh-456')
+                        .withHeader('Set-Cookie', 'JWT=new-abc-token; Path=/; HttpOnly')
+                        .withHeader('Set-Cookie', 'JWT_REFRESH_TOKEN=new-refresh-456; Path=/; HttpOnly')
+                        .withBody('{"token_type":"Bearer"}')
                 )
-                .willSetStateTo("Retry Ready")
         )
 
         // 3️⃣ Retry: /license/token/ succeeds
         wireMockServer.stubFor(
             WireMock.post(urlEqualTo("/license/token/"))
-                .inScenario("Refresh flow")
-                .whenScenarioStateIs("Retry Ready")
                 .withHeader('Authorization', equalTo('Bearer new-abc-token'))
+                .inScenario("Refresh flow")
+                .whenScenarioStateIs("Token Refreshed")
                 .willReturn(
                     WireMock.aResponse()
                         .withStatus(200)
@@ -409,22 +413,11 @@ class TowerFusionEnvTest extends Specification {
         then:
         token == 'xyz789'
 
-        and: 'the initial request was sent with the old token'
-        wireMockServer.verify(1, WireMock.postRequestedFor(urlEqualTo("/license/token/"))
-            .withHeader('Authorization', equalTo('Bearer abc-token'))
-        )
+        and: 'verify that refresh endpoint was called'
+        wireMockServer.verify(1, WireMock.postRequestedFor(WireMock.urlEqualTo("/oauth/access_token")))
 
-        and: 'the refresh request was sent with correct form data'
-        wireMockServer.verify(1, WireMock.postRequestedFor(WireMock.urlEqualTo("/oauth/access_token"))
-            .withHeader('Content-Type', equalTo('application/x-www-form-urlencoded'))
-            .withRequestBody(containing('grant_type=refresh_token'))
-            .withRequestBody(containing(URLEncoder.encode('xyz-refresh', 'UTF-8')))
-        )
-
-        and: 'the retried request was sent with the new token'
-        wireMockServer.verify(1, WireMock.postRequestedFor(WireMock.urlEqualTo("/license/token/"))
-            .withHeader('Authorization', equalTo('Bearer new-abc-token'))
-        )
+        and: 'verify both requests to license endpoint'
+        wireMockServer.verify(2, WireMock.postRequestedFor(urlEqualTo("/license/token/")))
 
         cleanup:
         SysEnv.pop()
