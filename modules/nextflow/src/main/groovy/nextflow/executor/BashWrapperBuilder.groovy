@@ -41,6 +41,8 @@ import nextflow.secret.SecretsLoader
 import nextflow.util.Escape
 import nextflow.util.MemoryUnit
 import nextflow.util.TestOnly
+import nextflow.packages.PackageManager
+import nextflow.Global
 /**
  * Builder to create the Bash script which is used to
  * wrap and launch the user task
@@ -341,6 +343,7 @@ class BashWrapperBuilder {
         binding.before_script = getBeforeScriptSnippet()
         binding.conda_activate = getCondaActivateSnippet()
         binding.spack_activate = getSpackActivateSnippet()
+        binding.package_activate = getPackageActivateSnippet()
 
         /*
          * add the task environment
@@ -394,7 +397,7 @@ class BashWrapperBuilder {
         binding.fix_ownership = fixOwnership() ? "[ \${NXF_OWNER:=''} ] && (shopt -s extglob; GLOBIGNORE='..'; chown -fR --from root \$NXF_OWNER ${workDir}/{*,.*}) || true" : null
 
         binding.trace_script = isTraceRequired() ? getTraceScript(binding) : null
-        
+
         return binding
     }
 
@@ -560,6 +563,27 @@ class BashWrapperBuilder {
         return result
     }
 
+
+    private String getPackageActivateSnippet() {
+        if (!packageSpec || !PackageManager.isEnabled(Global.session))
+            return null
+        
+        try {
+            def packageManager = new PackageManager(Global.session)
+            def envPath = packageManager.createEnvironment(packageSpec)
+            def activationScript = packageManager.getActivationScript(packageSpec, envPath)
+            
+            return """\
+                # ${packageSpec.provider} environment
+                ${activationScript}
+                """.stripIndent()
+        }
+        catch (Exception e) {
+            log.warn "Failed to create package environment: ${e.message}"
+            return null
+        }
+    }
+
     protected String getTraceCommand(String interpreter) {
         String result = "${interpreter} ${fileStr(scriptFile)}"
         if( input != null )
@@ -628,7 +652,7 @@ class BashWrapperBuilder {
     private String copyFileToWorkDir(String fileName) {
         copyFile(fileName, workDir.resolve(fileName))
     }
-    
+
 
     String getCleanupCmd(String scratch) {
         String result = ''
