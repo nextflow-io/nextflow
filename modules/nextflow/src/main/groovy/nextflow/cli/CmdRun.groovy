@@ -44,7 +44,7 @@ import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
 import nextflow.script.ScriptFile
 import nextflow.script.ScriptRunner
-import nextflow.secret.ConfigNullProvider
+import nextflow.secret.EmptySecretProvider
 import nextflow.secret.SecretsLoader
 import nextflow.util.CustomPoolFactory
 import nextflow.util.Duration
@@ -330,25 +330,49 @@ class CmdRun extends CmdBase implements HubOptions {
         final baseDir = scriptFile.parent
         final cliParams = parsedParams(ConfigBuilder.getConfigVars(baseDir, null))
 
-        // -- load config (without secrets)
-        final secretsProvider = new ConfigNullProvider()
+        /*
+         * 2-PHASE CONFIGURATION LOADING STRATEGY
+         * 
+         * Problem: Configuration files may reference secrets provided by plugins (e.g., AWS secrets),
+         * but plugins are loaded AFTER configuration parsing. This creates a chicken-and-egg problem:
+         * - Config parsing needs secret values to complete
+         * - Plugin loading needs config to determine which plugins to load  
+         * - Secret providers are registered by plugins
+         * 
+         * Solution: Parse configuration twice when secrets are referenced
+         * 
+         * PHASE 1: Parse config with EmptySecretProvider (returns "" for all secrets)
+         * - Configuration must use defensive patterns: secrets.FOO ? "value-${secrets.FOO}" : "fallback"
+         * - Config parses successfully with fallback values
+         * - EmptySecretProvider tracks if ANY secrets were accessed
+         */
+
+        // -- PHASE 1: Load config with mock secrets provider
+        final secretsProvider = new EmptySecretProvider()
         ConfigBuilder builder = new ConfigBuilder()
             .setOptions(launcher.options)
             .setCmdRun(this)
             .setBaseDir(scriptFile.parent)
             .setCliParams(cliParams)
-            .setSecretsProvider(secretsProvider)
+            .setSecretsProvider(secretsProvider)  // Mock provider returns empty strings
         ConfigMap config = builder.build()
         Map configParams = builder.getConfigParams()
 
-        // -- load plugins
+        // -- Load plugins (may register secret providers)
         Plugins.init()
         Plugins.load(config)
 
-        // -- load secrets provider
+        // -- Initialize real secrets system
         SecretsLoader.getInstance().load()
 
-        // -- reload config if secrets were used
+        /*
+         * PHASE 2: Conditionally reload config with real secrets
+         * - Only reload if Phase 1 actually accessed any secrets
+         * - This time, real secret providers are available (including plugin-provided ones)
+         * - Same config expressions now resolve with actual secret values
+         */
+
+        // -- PHASE 2: Reload config if secrets were used in Phase 1
         if( secretsProvider.usedSecrets() ) {
             log.debug "Config file used secrets -- reloading config with secrets provider"
             builder = new ConfigBuilder()
@@ -356,6 +380,7 @@ class CmdRun extends CmdBase implements HubOptions {
                 .setCmdRun(this)
                 .setBaseDir(scriptFile.parent)
                 .setCliParams(cliParams)
+                // No .setSecretsProvider() - uses real secrets system now
             config = builder.build()
             configParams = builder.getConfigParams()
         }
