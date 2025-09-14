@@ -286,6 +286,10 @@ Or in JSON format:
 }
 ```
 
+:::{note}
+Parameter values in the params file can reference the following {ref}`built-in variables <config-constants>`: `baseDir`, `projectDir`, `launchDir`.
+:::
+
 Parameters are applied in the following order (from lowest to highest priority):
 
 1. Parameters defined in pipeline scripts (e.g. `main.nf`)

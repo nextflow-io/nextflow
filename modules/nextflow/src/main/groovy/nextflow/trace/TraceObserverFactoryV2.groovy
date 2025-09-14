@@ -21,7 +21,7 @@ import org.pf4j.ExtensionPoint
 /**
  * Factory class for creating {@link TraceObserverV2} instances
  *
- * @author Ben Shermann <bentshermann@gmail.com>
+ * @author Ben Sherman <bentshermann@gmail.com>
  */
 interface TraceObserverFactoryV2 extends ExtensionPoint {
 
