@@ -127,8 +127,7 @@ dockerImage:
 dockerPack:
 	BUILD_PACK=1 ./gradlew publishToMavenLocal dockerPack -Dmaven.repo.local=${PWD}/build/docker/.nextflow/capsule/deps/ installPlugin
 
-upload-plugins:
-	./gradlew plugins:upload
+release-plugins:
+	./gradlew releasePluginToRegistryIfNotExists
 
-publish-index:
-	./gradlew plugins:publishIndex
+
