@@ -141,6 +141,21 @@ class AwsS3ConfigTest extends Specification {
 
     }
 
+    def 'should get maxDownloadBuffer' () {
+        given:
+        SysEnv.push([:])
+
+        when:
+        def config = new AwsConfig([client:[ maxDownloadBuffer: '100 MB']])
+        def env = config.getS3Config().getAwsClientConfig()
+        then:
+        env.max_download_buffer == Long.toString( 100 * 1024 * 1024)
+
+        cleanup:
+        SysEnv.pop()
+
+    }
+
     @Unroll
     def 'should check is custom endpoint' () {
         given:
