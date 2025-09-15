@@ -30,7 +30,6 @@ import nextflow.processor.TaskHandler
 import nextflow.processor.TaskId
 import nextflow.trace.config.TraceConfig
 import nextflow.trace.event.TaskEvent
-import nextflow.util.TestOnly
 /**
  * Create a CSV file containing the processes execution information
  *
@@ -43,22 +42,7 @@ class TraceFileObserver implements TraceObserverV2 {
     /**
      * The list of fields included in the trace report
      */
-    List<String> fields = [
-            'task_id',
-            'hash',
-            'native_id',
-            'name',
-            'status',
-            'exit',
-            'submit',
-            'duration',
-            'realtime',
-            '%cpu',
-            'peak_rss',
-            'peak_vmem',
-            'rchar',
-            'wchar'
-    ]
+    List<String> fields
 
     List<String> formats
 
@@ -99,9 +83,6 @@ class TraceFileObserver implements TraceObserverV2 {
         setFieldsAndFormats(config.fields)
     }
 
-    @TestOnly
-    protected TraceFileObserver() {}
-
     void setFields( List<String> entries ) {
 
         final names = TraceRecord.FIELDS.keySet()
@@ -126,17 +107,7 @@ class TraceFileObserver implements TraceObserverV2 {
         this.fields = result
     }
 
-    TraceFileObserver setFieldsAndFormats( value ) {
-        List<String> entries
-        if( value instanceof String ) {
-            entries = value.tokenize(', ')
-        }
-        else if( value instanceof List ) {
-            entries = (List)value
-        }
-        else {
-            throw new IllegalArgumentException("Not a valid trace fields value: $value")
-        }
+    TraceFileObserver setFieldsAndFormats( List<String> entries ) {
 
         List<String> fields = new ArrayList<>(entries.size())
         List<String> formats = new ArrayList<>(entries.size())
