@@ -331,7 +331,7 @@ public class S3Client {
         // just traverse to source path a copy all files
         //
         final Path target = targetFile.toPath();
-        final List<FileDownload> allDownloads = new ArrayList<>();
+        final List<OngoingFileDownload> allDownloads = new ArrayList<>();
 
         FileVisitor<Path> visitor = new SimpleFileVisitor<Path>() {
 
@@ -341,7 +341,7 @@ public class S3Client {
                 String delta = rel != null ? rel.toString() : null;
                 Path newFolder = delta != null ? target.resolve(delta) : target;
                 if(log.isTraceEnabled())
-                    log.trace("Copy DIR: " + current + " -> " + newFolder);
+                    log.trace("Download DIR: " + current + " -> " + newFolder);
                 // this `copy` creates the new folder, but does not copy the contained files
                 Files.createDirectory(newFolder);
                 return FileVisitResult.CONTINUE;
@@ -354,15 +354,15 @@ public class S3Client {
                 String delta = rel != null ? rel.toString() : null;
                 Path newFile = delta != null ? target.resolve(delta) : target;
                 if( log.isTraceEnabled())
-                    log.trace("Copy file: " + current + " -> "+ FilesEx.toUriString(newFile));
+                    log.trace("Download file: " + current + " -> "+ FilesEx.toUriString(newFile));
                 try {
-
+                S3Path s3Path = (S3Path)current;
                     DownloadFileRequest downloadFileRequest = DownloadFileRequest.builder()
-                        .getObjectRequest(b -> b.bucket(source.getBucket()).key(source.getKey()))
-                        .destination(target)
+                        .getObjectRequest(b -> b.bucket(s3Path.getBucket()).key(s3Path.getKey()))
+                        .destination(newFile)
                         .build();
                     FileDownload it = transferManager().downloadFile(downloadFileRequest, attr.size());
-                    allDownloads.add(it);
+                    allDownloads.add(new OngoingFileDownload(s3Path.getBucket(), s3Path.getKey(), it));
                 }catch (InterruptedException e) {
                     log.debug("S3 download directory: s3://{}/{} interrupted", source.getBucket(), source.getKey());
                     Thread.currentThread().interrupt();
@@ -377,11 +377,12 @@ public class S3Client {
         try {
             Throwable cause = null;
             while(allDownloads.size()>0) {
+                OngoingFileDownload current = allDownloads.get(0);
                 try{
-                    allDownloads.get(0).completionFuture().get();
+                    current.download.completionFuture().get();
                 } catch (ExecutionException e) {
                     cause = e.getCause();
-                    log.debug("Exception thrown downloading S3 object s3://{}/{}", source.getBucket(), source.getKey(), cause);
+                    log.debug("Exception thrown downloading S3 object s3://{}/{}", current.bucket, current.key, cause);
                 }
                 allDownloads.remove(0);
             }
@@ -490,4 +491,18 @@ public class S3Client {
         }
 
 	}
+
+    class OngoingFileDownload {
+        String bucket;
+        String key;
+        FileDownload download;
+
+        public OngoingFileDownload(String bucket, String key, FileDownload download) {
+            this.bucket = bucket;
+            this.key = key;
+            this.download = download;
+        }
+
+
+    }
 }
