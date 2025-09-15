@@ -190,24 +190,44 @@ processDef
 processBody
     // explicit script/exec body with optional stub
     :   (sep processDirectives)?
+        (sep processInputsV1)?
+        (sep processOutputsV1)?
+        (sep processWhen)?
+        sep processExec
+        (sep processStub)?
+
+    |   (sep processDirectives)?
         (sep processInputs)?
+        (sep processStage)?
         (sep processOutputs)?
+        (sep processTopics)?
         (sep processWhen)?
         sep processExec
         (sep processStub)?
 
     // explicit "Mahesh" form
     |   (sep processDirectives)?
-        (sep processInputs)?
+        (sep processInputsV1)?
         (sep processWhen)?
         sep processExec
         (sep processStub)?
-        sep processOutputs
+        (sep processOutputsV1)?
+
+    |   (sep processDirectives)?
+        (sep processInputs)?
+        (sep processStage)?
+        (sep processWhen)?
+        sep processExec
+        (sep processStub)?
+        (sep processOutputs)?
+        (sep processTopics)?
 
     // implicit script/exec body
     |   (sep processDirectives)?
-        (sep processInputs)?
-        (sep processOutputs)?
+        (sep (processInputsV1 | processInputs))?
+        (sep processStage)?
+        (sep (processOutputsV1 | processOutputs))?
+        (sep processTopics)?
         (sep processWhen)?
         sep blockStatements
     ;
@@ -217,11 +237,37 @@ processDirectives
     ;
 
 processInputs
+    :   INPUT COLON nls processInput (sep processInput)*
+    ;
+
+processInput
+    :   identifier (COLON type)?
+    |   LPAREN identifier (COMMA identifier)+ rparen (COLON type)?
+    ;
+
+processInputsV1
     :   INPUT COLON nls statement (sep statement)*
     ;
 
+processStage
+    :   STAGE COLON nls statement (sep statement)*
+    ;
+
 processOutputs
+    :   OUTPUT COLON nls processOutput (sep processOutput)*
+    ;
+
+processOutput
+    :   nameTypePair (ASSIGN expression)?
+    |   statement
+    ;
+
+processOutputsV1
     :   OUTPUT COLON nls statement (sep statement)*
+    ;
+
+processTopics
+    :   TOPIC COLON nls statement (sep statement)*
     ;
 
 processWhen
@@ -557,7 +603,9 @@ identifier
     |   OUTPUT
     |   SCRIPT
     |   SHELL
+    |   STAGE
     |   STUB
+    |   TOPIC
     |   WHEN
     |   WORKFLOW
     |   EMIT
@@ -724,7 +772,12 @@ className
     ;
 
 typeArguments
-    :   LT type (COMMA type)* GT
+    :   LT typeArgument (COMMA typeArgument)* GT
+    ;
+
+typeArgument
+    :   type
+    |   QUESTION
     ;
 
 legacyType
@@ -752,7 +805,9 @@ keywords
     |   OUTPUT
     |   SCRIPT
     |   SHELL
+    |   STAGE
     |   STUB
+    |   TOPIC
     |   WHEN
     |   WORKFLOW
     |   EMIT
