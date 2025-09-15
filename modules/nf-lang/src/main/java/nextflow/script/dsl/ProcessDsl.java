@@ -18,6 +18,7 @@ package nextflow.script.dsl;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import nextflow.script.types.Duration;
 import nextflow.script.types.MemoryUnit;
@@ -325,7 +326,31 @@ public interface ProcessDsl extends DslScope {
 
     }
 
-    interface InputDsl extends DslScope {
+    interface StageDsl extends DslScope {
+
+        @Description("""
+            Declare an environment variable in the task environment with the given name and value.
+        """)
+        void env(String name, String value);
+
+        @Description("""
+            Stage a file into the task directory under the given alias.
+        """)
+        void stageAs(String filePattern, Path value);
+
+        @Description("""
+            Stage a collection of files into the task directory under the given alias.
+        """)
+        void stageAs(String filePattern, Iterable<Path> value);
+
+        @Description("""
+            Stage the given value as the standard input (i.e. `stdin`) to the task script.
+        """)
+        void stdin(String value);
+
+    }
+
+    interface InputDslV1 extends DslScope {
 
         @Description("""
             Declare a variable input. The received value can be any type, and it will be made available to the process body (i.e. `script`, `shell`, `exec`) as a variable with the given name.
@@ -369,7 +394,38 @@ public interface ProcessDsl extends DslScope {
 
     }
 
-    interface OutputDsl extends DslScope {
+    interface OutputDslV2 extends DslScope {
+
+        @Description("""
+            Get the value of an environment variable from the task environment.
+        """)
+        String env(String name);
+
+        @Description("""
+            Get the standard output of the given command, which is executed in the task environment after the task script.
+        """)
+        String eval(String command);
+
+        @Description("""
+            Get a file from the task environment that matches the given pattern.
+        """)
+        Path file(Map<String,?> opts, String name);
+        Path file(String name);
+
+        @Description("""
+            Get the files from the task environment that match the given pattern.
+        """)
+        Set<Path> files(Map<String,?> opts, String pattern);
+        Set<Path> files(String pattern);
+
+        @Description("""
+            Get the standard output of the task script.
+        """)
+        String stdout();
+
+    }
+
+    interface OutputDslV1 extends DslScope {
 
         @Description("""
             Declare a value output. The argument can be any value, and it can reference any output variables defined in the process body (i.e. variables declared without the `def` keyword).
