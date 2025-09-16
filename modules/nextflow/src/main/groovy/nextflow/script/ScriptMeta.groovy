@@ -256,12 +256,12 @@ class ScriptMeta {
         final result = new HashSet(definitions.size() + imports.size())
         // local definitions
         for( def item : definitions.values() ) {
-            if( item instanceof WorkflowDef && item.name != null )
+            if( item instanceof WorkflowDef && item.name )
                 result.add(item.name)
         }
         // processes from imports
         for( def item: imports.values() ) {
-            if( item instanceof WorkflowDef )
+            if( item instanceof WorkflowDef && item.name )
                 result.add(item.name)
         }
         return result
