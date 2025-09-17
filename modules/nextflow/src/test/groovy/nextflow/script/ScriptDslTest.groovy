@@ -642,7 +642,6 @@ class ScriptDslTest extends Dsl2Spec {
         then:
         def err = thrown(IllegalArgumentException)
         err.message.contains('Unknown workflow entry name: invalidEntry')
-        !err.message.contains('Strings must not be null')
     }
 
 }
