@@ -25,7 +25,7 @@ You can configure the concurrency and throughput of the S3 transfer manager manu
 ## Multi-part transfers
 
 Multi-part transfer are handled by the S3 transfer manager. You can use the `aws.client.minimumPartSize` and `aws.client.multipartThreshold` config options to control when and how multi-part transfers are performed. 
-Concurrent multi-part downloads can consume large heap memory space due to the buffer size created per transfer. To avoid out of memory errors the size consumed by these buffers is limited to 400 MB. You can use `aws.client.maxDownloadBuffer` to change this value.
+Concurrent multi-part downloads can consume large heap memory space due to the buffer size created per transfer. To avoid out of memory errors, the size consumed by these buffers is limited to 400 MB. You can use `aws.client.maxDownloadBuffer` to change this value.
 
 The following multi-part upload config options are no longer supported:
 
