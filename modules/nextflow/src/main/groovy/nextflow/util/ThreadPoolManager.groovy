@@ -90,7 +90,7 @@ class ThreadPoolManager {
         }
 
         return executorService = Threads.useVirtual()
-                ? Executors.newThreadPerTaskExecutor(new CustomThreadFactory(name ?: "nf-thread-pool-${poolCount.getAndIncrement()}".toString()))
+                ? Executors.newThreadPerTaskExecutor(Thread.ofVirtual().name(name ?: "nf-thread-pool-${poolCount.getAndIncrement()}".toString()).factory())
                 : legacyThreadPool()
     }
 
