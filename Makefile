@@ -86,10 +86,10 @@ smoke:
 	NXF_SMOKE=1 ./gradlew ${mm}test
 
 #
-# Upload JAR artifacts to Maven Central
+# Generate all the jars required to create a release
 #
-upload:
-	./gradlew upload
+distribution:
+	BUILD_PACK=1 ./gradlew buildInfo compile assemble pack javadocJar sourcesJar testFixturesJar
 
 #
 # Create self-contained distribution package
@@ -98,28 +98,11 @@ pack:
 	BUILD_PACK=1 ./gradlew pack
 
 #
-# Upload NF launcher to nextflow.io web site
+# Initiate the nextflow release process
 #
-deploy:
-	BUILD_PACK=1 ./gradlew deploy
-
-#
-# Close artifacts uploaded to Maven central
-#
-close:
-	./gradlew closeAndReleaseRepository
-
-#
-# Upload final package to GitHub
-#
+.PHONY: release
 release:
-	BUILD_PACK=1 ./gradlew release
-
-#
-# Create and upload docker image distribution
-#
-dockerImage:
-	BUILD_PACK=1 ./gradlew dockerImage
+	./make-release.sh
 
 #
 # Create local docker image
