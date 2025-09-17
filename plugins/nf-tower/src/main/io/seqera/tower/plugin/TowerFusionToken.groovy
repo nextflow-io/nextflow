@@ -176,11 +176,12 @@ class TowerFusionToken implements FusionToken {
         final refreshUrl = refreshToken ? "$endpoint/oauth/access_token" : null
         // the client config
         final config = HxConfig.newBuilder()
-            .withBearerToken(accessToken)
-            .withRefreshToken(refreshToken)
-            .withRefreshTokenUrl(refreshUrl)
-            .withRetryStatusCodes(SERVER_ERRORS)
-            .withRetryConfig(RetryConfig.config())
+            .bearerToken(accessToken)
+            .refreshToken(refreshToken)
+            .refreshTokenUrl(refreshUrl)
+            .refreshCookiePolicy(CookiePolicy.ACCEPT_ALL)
+            .retryStatusCodes(SERVER_ERRORS)
+            .retryConfig(RetryConfig.config())
             .build()
         // the client builder
         final builder = HxClient.newBuilder()
