@@ -220,7 +220,7 @@ public class S3Client {
 	 * @see software.amazon.awssdk.services.s3.S3Client#deleteObject
 	 */
 	public void deleteObject(String bucket, String key) {
-		client.deleteObject(DeleteObjectRequest.builder().bucket(bucket).key(key).build());
+		runWithPermit(() ->client.deleteObject(DeleteObjectRequest.builder().bucket(bucket).key(key).build()));
 	}
 
 	/**
