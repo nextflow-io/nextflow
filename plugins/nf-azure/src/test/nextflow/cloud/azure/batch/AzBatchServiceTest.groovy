@@ -504,16 +504,6 @@ class AzBatchServiceTest extends Specification {
 
     }
 
-    def 'should set jobs to automatically terminate by default' () {
-        given:
-        def CONFIG = [:]
-        def exec = createExecutor(CONFIG)
-        AzBatchService svc = Spy(AzBatchService, constructorArgs:[exec])
-        when:
-        svc.close()
-        then:
-        1 * svc.terminateJobs() >> null
-    }
 
     def 'should not cleanup jobs by default' () {
         given:
@@ -1020,6 +1010,68 @@ class AzBatchServiceTest extends Specification {
             Duration.of('30m'),
             Duration.of('2d')
         ]
+    }
+
+    def 'should handle eager auto-termination strategy after task submission' () {
+        given:
+        def CONFIG = [batch: [terminateJobsOnCompletion: true]]
+        def exec = createExecutor(CONFIG)
+        def service = Spy(new AzBatchService(exec))
+        def jobId = 'test-job'
+        def taskId = 'test-task'
+
+        when:
+        service.setAutoTerminateIfEnabled(jobId, taskId)
+
+        then:
+        1 * service.setJobTermination(jobId) >> null
+    }
+
+    def 'should skip auto-termination when terminateJobsOnCompletion is disabled' () {
+        given:
+        def CONFIG = [batch: [terminateJobsOnCompletion: false]]
+        def exec = createExecutor(CONFIG)
+        def service = Spy(new AzBatchService(exec))
+        def jobId = 'test-job'
+        def taskId = 'test-task'
+
+        when:
+        service.setAutoTerminateIfEnabled(jobId, taskId)
+
+        then:
+        0 * service.setJobTermination(_)
+    }
+
+    def 'should update job mapping when recreating job for terminated job' () {
+        given:
+        def CONFIG = [batch: [terminateJobsOnCompletion: true]]
+        def exec = createExecutor(CONFIG)
+        def service = Spy(new AzBatchService(exec))
+        def processor = Mock(TaskProcessor) {
+            getName() >> 'test-process'
+        }
+        def task = Mock(TaskRun) {
+            getProcessor() >> processor
+        }
+        def poolId = 'test-pool'
+        def oldJobId = 'old-job'
+        def taskId = 'test-task'
+
+        // Pre-populate allJobIds to simulate existing mapping
+        def mapKey = new AzJobKey(processor, poolId)
+        service.allJobIds[mapKey] = oldJobId
+
+        when:
+        def newJobId = service.recreateJobForTask(poolId, task, oldJobId, taskId)
+
+        then:
+        // Should create new job
+        1 * service.createJob0(poolId, task) >> 'new-job-id'
+        and:
+        // Should update job mapping
+        service.allJobIds[mapKey] == 'new-job-id'
+        and:
+        newJobId == 'new-job-id'
     }
 
 }
