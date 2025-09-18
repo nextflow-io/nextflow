@@ -444,7 +444,7 @@ See also: [channel.fromList](#fromlist) factory method.
 In versions of Nextflow prior to 25.04, this feature requires the `nextflow.preview.topic` feature flag to be enabled.
 :::
 
-A *topic channel* is a queue channel that can receive values from many source channels *implicitly* based on a matching *topic name*.
+A *topic channel* is a channel that can receive values from many sources *implicitly* based on a matching *topic name*.
 
 :::tip
 You can think of it as a channel that is shared across many different processes using the same topic name.
@@ -468,8 +468,7 @@ process bye {
 }
 ```
 
-The `channel.topic` method allows referencing the topic channel with the specified name, which can be used as a process
-input or operator composition as any other Nextflow channel:
+The `channel.topic` function returns the topic channel for the given name, which can be used as input to a process or operator, like any other channel:
 
 ```nextflow
 channel.topic('my-topic').view()
@@ -485,17 +484,14 @@ See also: [Options][process-additional-options] for process outputs.
 
 ## value
 
-The `channel.value` method is used to create a value channel. An optional (not `null`) argument can be specified to bind
-the channel to a specific value. For example:
+The `channel.value` function creates a dataflow value bound to the given argument. For example:
 
 ```nextflow
-expl1 = channel.value()
-expl2 = channel.value( 'Hello there' )
-expl3 = channel.value( [1,2,3,4,5] )
+v1 = channel.value( 'Hello there' )
+v2 = channel.value( [1,2,3,4,5] )
 ```
 
-The first line in the example creates an 'empty' variable. The second line creates a channel and binds a string to it.
-The third line creates a channel and binds a list object to it that will be emitted as a single value.
+The first line creates a dataflow value bound to the string `'Hello there'`. The second line creates a dataflow value bound to the list `[1,2,3,4,5]`, which is treated as a single value in dataflow logic.
 
 ## watchPath
 

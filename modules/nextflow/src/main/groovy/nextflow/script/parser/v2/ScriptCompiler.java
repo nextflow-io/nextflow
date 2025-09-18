@@ -34,6 +34,7 @@ import com.google.common.hash.Hashing;
 import nextflow.script.ast.WorkflowNode;
 import nextflow.script.control.CallSiteCollector;
 import nextflow.script.control.Compiler;
+import nextflow.script.control.GStringToStringVisitor;
 import nextflow.script.control.ModuleResolver;
 import nextflow.script.control.OpCriteriaVisitor;
 import nextflow.script.control.PathCompareVisitor;
@@ -72,6 +73,7 @@ public class ScriptCompiler {
     private static final List<String> DEFAULT_IMPORT_NAMES = List.of(
         "java.nio.file.Path",
         "nextflow.Channel",
+        "nextflow.script.types.Value",
         "nextflow.util.Duration",
         "nextflow.util.MemoryUnit",
         "nextflow.util.VersionNumber"
@@ -290,6 +292,7 @@ public class ScriptCompiler {
             new ScriptToGroovyVisitor(source).visit();
             new PathCompareVisitor(source).visitClass(cn);
             new OpCriteriaVisitor(source).visitClass(cn);
+            new GStringToStringVisitor(source).visitClass(cn);
         }
 
         SourceUnit createSourceUnit(URI uri) {

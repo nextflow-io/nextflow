@@ -64,6 +64,13 @@ Enable the use of Conda recipes defined by using the [conda][process-conda] dire
 
 When `true`, override the container entrypoint with `/bin/bash` (default: `false`).
 
+##### `NXF_DATE_FORMAT`
+
+<AddedInVersion version="25.07.0-edge">
+</AddedInVersion>
+
+Defines the format for date and time representations in notifications and reports. Supports custom formats (e.g., `yyyy-MM-dd HH:mm:ss`) or `iso` for ISO 8601 format with timezone (default: `dd-MMM-yyyy HH:mm:ss`).
+
 ##### `NXF_DEFAULT_DSL`
 
 <AddedInVersion version="22.03.0-edge" />
@@ -198,11 +205,17 @@ Whether to use the default plugins when no plugins are specified in the Nextflow
 
 The path where the plugin archives are loaded and stored (default`$NXF_HOME/plugins`).
 
+##### `NXF_PLUGINS_REGISTRY_URL`
+
+<AddedInVersion version="25.08.0-edge" />
+
+Specifies the URL of the plugin registry used to download and resolve plugins. This allows using custom or private plugin registries instead of the default public registry.
+
 ##### `NXF_PLUGINS_TEST_REPOSITORY`
 
 <AddedInVersion version="23.04.0" />
 
-Defines a custom plugin registry or plugin release URL for testing plugins outside of the main registry. See [Testing plugins][testing-plugins] for more information.
+Defines a custom plugin registry or plugin release URL for testing plugins outside of the main registry.
 
 ##### `NXF_PUBLISH_FAIL_ON_ERROR`
 
@@ -259,6 +272,12 @@ Max number of attempts used for HTTP retryable operations (default: `5`).
 
 Max delay used for HTTP retryable operations (default: `90s`).
 
+##### `NXF_RETRY_POLICY_MULTIPLIER`
+
+<AddedInVersion version="25.08.0-edge" />
+
+Delay multiplier used for HTTP retryable operations (default: `2.0`).
+
 ##### `NXF_SCM_FILE`
 
 <AddedInVersion version="20.10.0" />
@@ -314,7 +333,7 @@ Directory where working files are stored (usually your *scratch* directory)
 Defines the minimum size of the `.command.run` staging script for it to be written to a separate `.command.stage` file (default`'1 MB'`).
 This setting is useful for executors that impose a size limit on job scripts.
 
-## Proxy settings
+## Other settings
 
 ##### `FTP_PROXY`
 
@@ -330,17 +349,19 @@ Defines the HTTP proxy server.
 Proxy authentication is supported by providing the credentials in the proxy URL, e.g. `http://user:password@proxy-host.com:port`.
 </AddedInVersion>
 
-##### `HTTPS_PROXY`
+##### `NO_COLOR`
 
-Defines the HTTPS proxy server.
+Disables ANSI color codes in Nextflow log output. When this variable is set, Nextflow prints plain text logs following the [NO_COLOR standard](https://no-color.org/).
 
-<AddedInVersion version="21.06.0-edge">
-Proxy authentication is supported by providing the credentials in the proxy URL, e.g. `https://user:password@proxy-host.com:port`.
-</AddedInVersion>
+If both `NO_COLOR` and `NXF_ANSI_LOG` are set, `NXF_ANSI_LOG` takes precedence.
 
 ##### `NO_PROXY`
 
 Defines one or more host names that should not use the proxy server. Separate multiple names using a comma character.
+
+##### `TERMINAL_WIDTH`
+
+Forces the terminal width of ANSI-formatted log output. Overrides automatic terminal width detection and uses the specified width for line wrapping when set to an integer value.
 
 [process-conda]: /nextflow_docs/nextflow_repo/docs/reference/process.mdx#conda
 [process-spack]: /nextflow_docs/nextflow_repo/docs/reference/process.mdx#spack

@@ -29,6 +29,7 @@ import nextflow.processor.TaskId
 import nextflow.script.WorkflowMetadata
 import nextflow.trace.config.ReportConfig
 import nextflow.trace.event.TaskEvent
+import nextflow.util.SysHelper
 import nextflow.util.TestOnly
 /**
  * Render pipeline report processes execution.
@@ -213,6 +214,8 @@ class ReportObserver implements TraceObserverV2 {
         final tpl_fields = [
             workflow : getWorkflowMetadata(),
             payload : renderPayloadJson(),
+            // Add SysHelper to template binding so it can be used in templates
+            SysHelper : SysHelper,
             assets_css : [
                 readTemplate('assets/bootstrap.min.css'),
                 readTemplate('assets/datatables.min.css')

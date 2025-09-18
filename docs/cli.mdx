@@ -1,6 +1,6 @@
 # Command line
 
-Nextflow provides a robust command line interface (CLI) for the management and execution pipelines.
+Nextflow provides a robust command line interface (CLI) for the management and execution of pipelines.
 
 Simply run `nextflow` with no options or `nextflow -h` to see the list of available top-level options and commands. See [CLI reference][cli-reference] for the full list of subcommands with examples.
 
@@ -34,7 +34,7 @@ Set JVM properties.
 nextflow -Dkey=value COMMAND [arg...]
 ```
 
-This options allows the definition of custom Java system properties that can be used to properly configure or fine tuning the JVM instance used by the Nextflow runtime.
+This option allows the definition of custom Java system properties that can be used to properly configure or fine tuning the JVM instance used by the Nextflow runtime.
 
 For specifying other JVM level options, see the [Environment variables][config-env-vars] section.
 
@@ -94,7 +94,7 @@ Sets the path of the nextflow log file.
 nextflow -log custom.log COMMAND [arg...]
 ```
 
-The `-log` option takes a path of the new log file which to be used instead of the default `.nextflow.log` or to save logs files to another directory.
+The `-log` option takes a path of the new log file which will be used instead of the default `.nextflow.log` or to save logs files to another directory.
 
 - Save all execution logs to the custom `/var/log/nextflow.log` file:
 
@@ -142,7 +142,7 @@ Print the Nextflow version information.
 nextflow -v
 ```
 
-The `-v` option prints out information about Nextflow, such as the version and build. The `-version` option in addition prints out the citation reference and official website.
+The `-v` option prints out information about Nextflow, such as the version and build. The `-version` option, in addition, prints out the citation reference and official website.
 
 - The `-v` option prints out information about Nextflow, such as the version and build.:
 
@@ -300,6 +300,10 @@ Or in JSON format:
 }
 ```
 
+:::note
+Parameter values in the params file can reference the following [built-in variables](config-constants): `baseDir`, `projectDir`, `launchDir`.
+:::
+
 Parameters are applied in the following order (from lowest to highest priority):
 
 1. Parameters defined in pipeline scripts (e.g., `main.nf`)
@@ -402,6 +406,7 @@ nextflow drop nextflow-io/hello
 
 [cli-params]: /nextflow_docs/nextflow_repo/docs/cli.mdx#pipeline-parameters
 [cli-reference]: /nextflow_docs/nextflow_repo/docs/reference/cli.mdx
+[config-constants]: /nextflow_docs/nextflow_repo/docs/config.mdx#constants
 [config-env-vars]: /nextflow_docs/nextflow_repo/docs/reference/env-vars.mdx
 [config-params]: /nextflow_docs/nextflow_repo/docs/config.mdx#parameters
 [git-page]: /nextflow_docs/nextflow_repo/docs/cli.mdx

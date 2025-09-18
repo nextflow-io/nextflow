@@ -879,11 +879,14 @@ The project or organization account that should be charged for running the pipel
 The maximum number of CPUs made available by the underlying system.
 
 ##### `executor.dumpInterval`
-: Determines how often to log the executor status (default: `5 min`).
+
+Determines how often to log the executor status (default: `5 min`).
 
 ##### `executor.exitReadTimeout`
-: *Used only by grid executors.*
-: Determines how long to wait for the `.exitcode` file to be created after the task has completed, before returning an error status (default: `270 sec`).
+
+*Used only by grid executors.*
+
+Determines how long to wait for the `.exitcode` file to be created after the task has completed, before returning an error status (default: `270 sec`).
 
 ##### `executor.jobName`
 
@@ -1067,7 +1070,19 @@ Enable the Fusion file system (default: `false`).
 
 ##### `fusion.exportStorageCredentials`
 
-Export the access credentials required by the underlying object storage to the task execution environment (default: `false`).
+Export access credentials required by the underlying object storage as environment variables (e.g., `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `AWS_SESSION_TOKEN` for AWS S3) to task execution environments (default: `false`).
+
+:::note
+This configuration does not mount or provide access to credential files. For example, AWS credentials like `~/.aws/credentials`, `~/.aws/config`, and SSO cache files are not mounted. AWS SSO users must export credentials to environment variables:
+
+```bash
+eval "$(aws configure export-credentials --format env)"
+```
+:::
+
+:::warning
+This option leaks credentials is the task launcher script. It should only be used for testing and development purposes.
+:::
 
 ##### `fusion.logLevel`
 
@@ -1186,9 +1201,9 @@ The URL of an existing network resource to which the VM will be attached.
 
 Specify the network as a full or partial URL. For example, the following are all valid URLs:
 
-- https://www.googleapis.com/compute/v1/projects/\{project\}/global/networks/\{network\}
-- projects/\{project\}/global/networks/\{network\}
-- global/networks/\{network\}
+- `https://www.googleapis.com/compute/v1/projects/\{project\}/global/networks/\{network\}`
+- `projects/\{project\}/global/networks/\{network\}`
+- `global/networks/\{network\}`
 
 ##### `google.batch.networkTags`
 
@@ -1212,9 +1227,9 @@ The URL of an existing subnetwork resource in the network to which the VM will b
 
 You can specify the subnetwork as a full or partial URL. For example, the following are all valid URLs:
 
-- https://www.googleapis.com/compute/v1/projects/\{project\}/regions/\{region\}/subnetworks/\{subnetwork\}
-- projects/\{project\}/regions/\{region}/subnetworks/\{subnetwork\}
-- regions/\{regio\n}/subnetworks/\{subnetwork\}
+- `https://www.googleapis.com/compute/v1/projects/\{project\}/regions/\{region\}/subnetworks/\{subnetwork\}`
+- `projects/\{project\}/regions/\{region}/subnetworks/\{subnetwork\}`
+- `regions/\{regio\n}/subnetworks/\{subnetwork\}`
 
 ##### `google.batch.usePrivateAddress`
 

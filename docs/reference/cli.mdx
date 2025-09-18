@@ -200,7 +200,8 @@ The `clone` command downloads a pipeline from a Git-hosting platform into the *c
 **Options**
 
 ##### `-d, -deep`
-: Create a shallow clone of the specified depth.
+
+Create a shallow clone of the specified depth.
 
 ##### `-h, -help`
 
@@ -1040,7 +1041,11 @@ Manage plugins and run plugin-specific commands.
 $ nextflow plugin <subcommand> [options]
 ```
 
-The `plugin` command provides several subcommands for managing and using plugins:
+##### `create`
+
+<AddedInVersion version="25.04.0" />
+
+Create a plugin scaffold using the [Nextflow plugin template](https://github.com/nextflow-io/nf-plugin-template/). See [Creating a plugin][gradle-plugin-create] for more information.
 
 ##### `install <plugin[@version],..>`
 
@@ -1621,6 +1626,7 @@ workflow {
 
 [cache-compare-hashes]: /nextflow_docs/nextflow_repo/docs/cache-and-resume.mdx#comparing-the-hashes-of-two-runs
 [config-profiles]: /nextflow_docs/nextflow_repo/docs/config.mdx#config-profiles
+[gradle-plugin-create]: /nextflow_docs/nextflow_repo/docs/guides/gradle-plugin.html#creating-a-plugin
 [cli-page]: /nextflow_docs/nextflow_repo/docs/cli.mdx
 [cli-params]: /nextflow_docs/nextflow_repo/docs/cli.mdx#pipeline-parameters
 [data-lineage-page]: /nextflow_docs/nextflow_repo/docs/tutorials/data-lineage.mdx

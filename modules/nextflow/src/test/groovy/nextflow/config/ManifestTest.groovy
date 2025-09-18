@@ -119,6 +119,37 @@ class ManifestTest extends Specification {
         ]
     }
 
+    def 'should handle contributors without contribution field' () {
+        when:
+        def manifest = new Manifest([
+            contributors: [[
+                name: 'Alice',
+                affiliation: 'University',
+                orcid: 'https://orcid.org/0000-0000-0000-0000'
+            ]]
+        ])
+        then:
+        manifest.contributors.size() == 1
+        manifest.contributors[0].name == 'Alice' 
+        manifest.contributors[0].affiliation == 'University'
+        manifest.contributors[0].orcid == 'https://orcid.org/0000-0000-0000-0000'
+        manifest.contributors[0].contribution == []
+    }
+
+    def 'should handle contributors with empty contribution field' () {
+        when:
+        def manifest = new Manifest([
+            contributors: [[
+                name: 'Bob',
+                contribution: []
+            ]]
+        ])
+        then:
+        manifest.contributors.size() == 1
+        manifest.contributors[0].name == 'Bob'
+        manifest.contributors[0].contribution == []
+    }
+
     def 'should throw error on invalid manifest' () {
         when:
         def manifest = new Manifest([

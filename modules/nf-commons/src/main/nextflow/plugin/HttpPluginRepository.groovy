@@ -4,16 +4,20 @@ package nextflow.plugin
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 
-import com.google.gson.Gson
+import nextflow.serde.gson.GsonEncoder
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.seqera.http.HxClient
+import io.seqera.npr.api.schema.v1.ListDependenciesResponse
+import io.seqera.npr.api.schema.v1.Plugin
 import nextflow.BuildInfo
 import nextflow.util.RetryConfig
 import org.pf4j.PluginRuntimeException
 import org.pf4j.update.FileDownloader
 import org.pf4j.update.FileVerifier
 import org.pf4j.update.PluginInfo
+import org.pf4j.update.PluginInfo.PluginRelease
+import org.pf4j.update.SimpleFileDownloader
 import org.pf4j.update.verifier.CompoundVerifier
 /**
  * Represents an update repository served via an HTTP api.
@@ -40,7 +44,9 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
         this.url = !url.toString().endsWith("/")
             ? URI.create(url.toString() + "/")
             : url
-        this.httpClient = HxClient.create(RetryConfig.config())
+        this.httpClient = HxClient.newBuilder()
+                .retryConfig(RetryConfig.config())
+                .build()
     }
 
     // NOTE ON PREFETCHING
@@ -96,7 +102,7 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
 
     @Override
     FileDownloader getFileDownloader() {
-        return new OciAwareFileDownloader()
+        return new SimpleFileDownloader()
     }
 
     @Override
@@ -131,12 +137,12 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
             throw e
         }
         catch (Exception e) {
-            throw new PluginRuntimeException(e, "Unable to connect to ${uri}- cause: ${e.message}")
+            throw new PluginRuntimeException(e, "Unable to connect to ${uri} - cause: ${e.message}")
         }
     }
 
     private Map<String, PluginInfo> sendAndParse(HttpRequest req) {
-        final gson = new Gson()
+        final encoder = new GsonEncoder<ListDependenciesResponse>() {}
         final resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString())
         final body = resp.body()
         log.debug "Registry request: ${resp.uri()}\n- code: ${resp.statusCode()}\n- body: ${body}"
@@ -145,14 +151,16 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
             throw new PluginRuntimeException(msg)
         }
         try {
-            final FetchResponse decoded = gson.fromJson(body,FetchResponse)
+            final ListDependenciesResponse decoded = encoder.decode(body)
             if( decoded.plugins == null ) {
                 throw new PluginRuntimeException("Failed to download plugin metadata: Failed to parse response body")
             }
             final result = new HashMap<String, PluginInfo>()
-            for( PluginInfo plugin : decoded.plugins ) {
-                if( plugin.releases )
-                    result.put(plugin.id, plugin)
+            for( Plugin plugin : decoded.plugins ) {
+                if( plugin.releases ) {
+                    final pluginInfo = mapToPluginInfo(plugin)
+                    result.put(plugin.id, pluginInfo)
+                }
                 else
                     log.debug "Registry ${resp.uri().host} has no releases for plugin: ${plugin}"
             }
@@ -164,13 +172,34 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
         }
     }
 
-    // ---------------------
-
     /**
-     * Response format object expected from repository
+     * Maps a Plugin object from the repository API to a PluginInfo object for pf4j compatibility.
+     * Handles conversion of OffsetDateTime to Date and ensures the releases collection is never null.
+     *
+     * @param plugin The Plugin object from the repository API response
+     * @return A PluginInfo object compatible with pf4j's update repository interface
      */
-    private static class FetchResponse {
-        List<PluginInfo> plugins
+    static protected PluginInfo mapToPluginInfo(Plugin plugin) {
+        assert plugin.releases, "Plugin releases cannot be empty"
+
+        final pluginInfo = new PluginInfo()
+        pluginInfo.id = plugin.id
+        pluginInfo.projectUrl = plugin.projectUrl
+        pluginInfo.provider = plugin.provider
+        
+        // Map releases to PluginInfo.PluginRelease
+        pluginInfo.releases = new ArrayList<>()
+        for (def release : plugin.releases) {
+            final pluginRelease = new PluginRelease()
+            pluginRelease.version = release.version
+            pluginRelease.date = release.date ? Date.from(release.date.toInstant()) : null
+            pluginRelease.url = release.url
+            pluginRelease.sha512sum = release.sha512sum
+            pluginRelease.requires = release.requires
+            pluginInfo.releases.add(pluginRelease)
+        }
+        
+        return pluginInfo
     }
 
 }

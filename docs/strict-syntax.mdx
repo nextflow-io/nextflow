@@ -300,9 +300,20 @@ def str = 'hello'
 def meta = [:]
 ```
 
-:::note
-Because type annotations are useful for providing type checking at runtime, the language server will not report errors for Groovy-style type annotations at this time. Type annotations will be addressed in a future version of the Nextflow language specification.
-:::
+< AddedInVersion version="25.10.0" />
+
+Local variables can be declared with a type annotation:
+
+```nextflow
+def a: Integer = 1
+def b: Integer = 2
+def (c: Integer, d: Integer) = [3, 4]
+def (e: Integer, f: Integer) = [5, 6]
+def str: String = 'hello'
+def meta: Map = [:]
+```
+
+Groovy-style type annotations are still supported. However, the language server and `nextflow lint` will automatically convert them to Nextflow-style type annotations when formatting code. Groovy-style type annotations will not be supported in a future version.
 
 ### Strings
 
@@ -581,20 +592,19 @@ params.max_cpus = 32
 
 There are two ways to preserve Groovy code:
 
- - Move the code to the `lib` directory
- - Create a plugin
+- Move the code to the `lib` directory
+- Create a plugin
 
 Any Groovy code can be moved into the `lib` directory, which supports the full Groovy language. This approach is useful for temporarily preserving some Groovy code until it can be updated later and incorporated into a Nextflow script. See [The `lib` directory][lib-directory] for more information.
 
-For Groovy code that is complicated or if it depends on third-party libraries, it may be better to create a plugin. Plugins can define custom functions that can be included by Nextflow scripts like a module. Furthermore, plugins can be easily re-used across different pipelines. See [Plugins][plugins-dev-page] for more information on how to develop plugins.
-
+For Groovy code that is complicated or if it depends on third-party libraries, it may be better to create a plugin. Plugins can define custom functions that can be included by Nextflow scripts like a module. Furthermore, plugins can be easily re-used across different pipelines. See [Developing plugins][plugins-dev-page] for more information on how to develop plugins.
 
 [config-syntax]: /nextflow_docs/nextflow_repo/docs/config.mdx#syntax
 [dsl1-page]: /nextflow_docs/nextflow_repo/docs/migrations/dsl1.mdx
 [lib-directory]: /nextflow_docs/nextflow_repo/docs/sharing.mdx#the-lib-directory
 [module-params]: /nextflow_docs/nextflow_repo/docs/module.mdx#module-parameters
 [operator-filter]: /nextflow_docs/nextflow_repo/docs/reference/operator.mdx#filter
-[plugins-dev-page]: /nextflow_docs/nextflow_repo/docs/developer/plugins.mdx
+[plugins-dev-page]: /nextflow_docs/nextflow_repo/docs/plugins/developing-plugins.mdx
 [process-when]: /nextflow_docs/nextflow_repo/docs/process.mdx#when
 [syntax-page]: /nextflow_docs/nextflow_repo/docs/reference/syntax.mdx
 [workflow-handlers]: /nextflow_docs/nextflow_repo/docs/notifications.mdx#workflow-handlers

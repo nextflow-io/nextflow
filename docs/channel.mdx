@@ -1,36 +1,28 @@
-# Channels
+(dataflow-page)=
 
-In Nextflow, **channels** are the key data structures that facilitate the dataflow dependencies between each step (i.e. [Processes][process-page]) in a pipeline.
+# Dataflow
 
-There are two kinds of channels, *queue channels* and *value channels*. Channels are created using *channel factories* and transformed using *channel operators*.
+Nextflow uses a **dataflow** programming model to define workflows declaratively. In this model, [processes][process-page] in a pipeline are connected to each other through *dataflow channels* and *dataflow values*.
 
-### Queue channel
+## Channels
 
-A *queue channel* is a channel that *emits* an asynchronous sequence of values.
+A *dataflow channel* (or simply *channel*) is an asynchronous sequence of values.
 
-A queue channel can be created by channel factories (e.g., [of][channel-of] and [fromPath][channel-path]), operators (e.g., [map][operator-map] and [flatMap][operator-flatmap]), and processes (see [Process outputs][process-output]).
-
-### Value channel
-
-A *value channel* is a channel that is *bound* to an asynchronous value.
-
-A value channel can be created with the [value][channel-value] factory, certain operators (e.g., [collect][operator-collect] and [reduce][operator-reduce]), and processes (under [certain conditions][process-out-singleton]).
-
-The values in a queue channel cannot be accessed directly -- they can only be accessed by passing the channel as input to an operator or process. For example:
+The values in a channel cannot be accessed directly, but only through an operator or process. For example:
 
 ```nextflow
-channel.value(1).view { v -> "value channel is ${v}" }
+channel.of(1, 2, 3).view { v -> "channel emits ${v}" }
 ```
 
 ```console
-value channel is 1
+channel emits 1
+channel emits 2
+channel emits 3
 ```
 
-## Channel factories
+### Factories
 
-Channel factories are functions that create channels from regular values.
-
-The `channel.fromPath()` factory creates a channel from a file name or glob pattern, similar to the `files()` function:
+A channel can be created by factories in the `channel` namespace. For example, the `channel.fromPath()` factory creates a channel from a file name or glob pattern, similar to the `files()` function:
 
 ```nextflow
 channel.fromPath('input/*.txt').view()
@@ -38,7 +30,7 @@ channel.fromPath('input/*.txt').view()
 
 See [Channel factories][channel-factory] for the full list of channel factories.
 
-## Operators
+### Operators
 
 Channel operators, or *operators* for short, are functions that consume and produce channels. Because channels are asynchronous, operators are necessary to manipulate the values in a channel. Operators are particularly useful for implementing glue logic between processes.
 
@@ -55,6 +47,24 @@ Commonly used operators include:
 - [view][operator-view]: print each value in a channel to standard output
 
 See [Operators][operator-page] for the full list of operators.
+
+## Values
+
+A *dataflow value* is an asynchronous value.
+
+Dataflow values can be created using the [value][channel-value] factory, and they are created by processes (under [certain conditions][process-out-singleton]).
+
+A dataflow value cannot be accessed directly, but only through an operator or process. For example:
+
+```nextflow
+channel.value(1).view { v -> "dataflow value is ${v}" }
+```
+
+```console
+dataflow value is 1
+```
+
+See [Value][stdlib-types-value] for the set of available methods for dataflow values.
 
 [channel-of]: /nextflow_docs/nextflow_repo/docs/reference/channel.mdx#of
 [channel-path]: /nextflow_docs/nextflow_repo/docs/reference/channel.mdx#frompath
@@ -77,3 +87,4 @@ See [Operators][operator-page] for the full list of operators.
 [operator-mix]: /nextflow_docs/nextflow_repo/docs/reference/operator.mdx#mix
 [operator-view]: /nextflow_docs/nextflow_repo/docs/reference/operator.mdx#view
 [operator-page]: /nextflow_docs/nextflow_repo/docs/reference/operator.mdx
+[stdlib-types-value]: /nextflow_docs/nextflow_repo/docs/reference/stdlib-types.mdx#value

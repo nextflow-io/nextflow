@@ -29,7 +29,7 @@ To run pipelines with Azure Batch:
 
     - Set `process.executor` to `azurebatch` to make Nextflow submit tasks to Azure Batch.
 
-    - Set `workDir` to a working directory on Azure Blob Storage. For example, `az://<BLOB_STORAGE>/work`, where `BLOB_CONTAINER` is a blob container in your storage account.
+    - Set `workDir` to a working directory on Azure Blob Storage. For example, `az://<BLOB_CONTAINER>/work`, where `BLOB_CONTAINER` is a blob container in your storage account.
 
 5. Launch your pipeline with the above configuration:
 
@@ -150,7 +150,7 @@ azure {
 
 Replace the following:
 
-- `USER_ASSIGNED_MANAGED_IDENTITY_CLIENT_ID`: your user assigned managed identity object ID
+- `USER_ASSIGNED_MANAGED_IDENTITY_CLIENT_ID`: your user assigned managed identity client ID
 - `STORAGE_ACCOUNT_NAME`: your Azure Storage account name
 - `BATCH_ACCOUNT_NAME`: your Azure Batch account name
 - `BATCH_ACCOUNT_LOCATION`: your Azure Batch account location
@@ -284,7 +284,7 @@ This section describes how to configure and use Azure Batch with Nextflow for ef
 
 Nextflow integrates with Azure Batch by mapping its execution model to Azure Batch's structure. A Nextflow process corresponds to an Azure Batch job, and every execution of that process (a Nextflow task) becomes an Azure Batch task. These Azure Batch tasks are executed on compute nodes within an Azure Batch pool, which is a collection of virtual machines that can scale up or down based on an autoscale formula.
 
-Nextflow manages these pools dynamically. You can assign processes to specific, pre-existing pools using the process `queue` directive. Nextflow will create if it doesn't exist and `azure.batch.allowPoolCreation` is set to `true`. Alternatively, `autoPoolMode` enables Nextflow to automatically create multiple pools based on the CPU and memory requirements defined in your processes.
+Nextflow manages these pools dynamically. You can assign processes to specific, pre-existing pools using the process `queue` directive. Nextflow will create it if it doesn't exist and `azure.batch.allowPoolCreation` is set to `true`. Alternatively, `autoPoolMode` enables Nextflow to automatically create multiple pools based on the CPU and memory requirements defined in your processes.
 
 An Azure Batch task is created for each Nextflow task. This task first downloads the necessary input files from Azure Blob Storage to its assigned compute node. It then runs the process script. Finally, it uploads any output files back to Azure Blob Storage.
 
@@ -487,9 +487,13 @@ The `azure.batch.pools.<POOL_NAME>.scaleFormula` setting can be used to specify 
 
 ### Task authentication
 
-By default, Nextflow creates SAS tokens for specific containers and passes them to tasks to enable file operations with Azure Storage. SAS tokens expire after a set period of time. The expiration time is 48 hours by default and cat be configured using `azure.storage.tokenDuration` in your configuration.
+By default, Nextflow creates SAS tokens for specific containers and passes them to tasks to enable file operations with Azure Storage. SAS tokens expire after a set period of time. The expiration time is 48 hours by default and can be configured using `azure.storage.tokenDuration` in your configuration.
 
 <AddedInVersion version="25.05.0-edge" />
+
+:::warning
+Only available when using [Fusion filesystem](./fusion.mdx).
+:::
 
 You can also authenticate to Azure Storage using a managed identity when using Fusion.
 
@@ -497,17 +501,17 @@ To do this:
 
 1. Create a user-assigned managed identity with the Azure Storage Blob Data Contributor role for your storage account.
 2. Attach the user-assigned managed identity to the node pool manually.
-3. Set `azure.managedIdentity.clientId` to this identity in your configuration.
+3. Set `azure.batch.poolIdentityClientId` to this identity in your configuration.
 
 ```groovy
 azure {
-    managedIdentity {
-        clientId = '<MANAGED_IDENTITY_CLIENT_ID>'
+    batch {
+        poolIdentityClientId = '<MANAGED_IDENTITY_CLIENT_ID>'
     }
 }
 ```
 
-Each task authenticates as the managed identity, and downloads and uploads files to Azure Storage using these credentials. It is possible to attach more than one managed identity to a pool. Fusion uses the identity specified by `azure.managedIdentity.clientId`.
+Each task authenticates as the managed identity, and downloads and uploads files to Azure Storage using these credentials. It is possible to attach more than one managed identity to a pool. Fusion uses the identity specified by `azure.batch.poolIdentityClientId`.
 
 ### Task packing
 
@@ -519,7 +523,7 @@ For example, consider a *Standard_D4d_v5* machine with 4 vCPUs, 16 GB of memory,
 
 - If a process requests `cpus 4`, `memory 16.GB`, or `disk 150.GB`, four task slots are allocated (100% of resources), allowing one task to run on the node.
 
-Resource overprovisioning can occur if tasks consume more than their allocated share of resources. For instance, the node described above my become overloaded and fail if a task with `cpus 2` uses more than 8 GB of memory or 75 GB of disk space. Make sure to accurately specify resource requirements to ensure optimal performance and prevent task failures.
+Resource overprovisioning can occur if tasks consume more than their allocated share of resources. For instance, the node described above may become overloaded and fail if a task with `cpus 2` uses more than 8 GB of memory or 75 GB of disk space. Make sure to accurately specify resource requirements to ensure optimal performance and prevent task failures.
 
 :::warning
 Azure virtual machines come with fixed storage disks that are not expandable. Tasks will fail if the tasks running concurrently on a node use more storage than the machine has available.
@@ -529,7 +533,7 @@ Azure virtual machines come with fixed storage disks that are not expandable. Ta
 
 Every process in your pipeline must specify a container in order to be executed on Azure Batch.
 
-Nextflow supports both public and private container images. You can pull public images from repositories such as https://community.wave.seqera.io/. You must authenticate for any private images that you use. Ensure the Batch pool has access when using a private registry like Azure Container Registry (ACR). Provide ACR credentials in the `azure.registry` configuration scope:
+Nextflow supports both public and private container images. You can pull public images from repositories such as <https://community.wave.seqera.io/>. You must authenticate for any private images that you use. Ensure the Batch pool has access when using a private registry like Azure Container Registry (ACR). Provide ACR credentials in the `azure.registry` configuration scope:
 
 ```groovy
 azure {

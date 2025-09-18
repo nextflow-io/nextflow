@@ -22,7 +22,55 @@ workflow {
 }
 ```
 
-### Parameters
+## Parameters
+
+Parameters can be declared in a Nextflow script with the `params` block or with *legacy* parameter declarations.
+
+### Params block
+
+<AddedInVersion version="25.10.0" />
+
+:::note
+This feature requires the [strict syntax][strict-syntax-page] to be enabled (`NXF_SYNTAX_PARSER=v2`).
+:::
+
+A script can declare parameters using the `params` block:
+
+```nextflow
+params {
+    // Path to input data.
+    input: Path
+
+    // Whether to save intermediate files.
+    save_intermeds: Boolean = false
+}
+```
+
+The following types can be used for parameters:
+
+- [Boolean][stdlib-types-boolean]
+- [Float][stdlib-types-float]
+- [Integer][stdlib-types-integer]
+- [Path][stdlib-types-path]
+- [String][stdlib-types-string]
+
+Parameters can be used in the entry workflow:
+
+```nextflow
+workflow {
+    analyze(params.input, params.save_intermeds)
+}
+```
+
+:::note
+As a best practice, parameters should only be used directly in the entry workflow and passed to workflows and processes as explicit inputs.
+:::
+
+The default value can be overridden by the command line, params file, or config file. Parameters from multiple sources are resolved in the order described in [Pipeline parameters][cli-params]. Parameters specified on the command line are converted to the appropriate type based on the corresponding type annotation.
+
+A parameter that doesn't specify a default value is a *required* param. If a required param is not given a value at runtime, the run will fail.
+
+### Legacy parameters
 
 Parameters can be declared by assigning a `params` property to a default value:
 
@@ -37,10 +85,6 @@ workflow {
         analyze(fake_input(), params.save_intermeds)
 }
 ```
-
-:::note
-As a best practice, params should be used only in the entry workflow and passed to workflows and processes as explicit inputs.
-:::
 
 The default value can be overridden by the command line, params file, or config file. Parameters from multiple sources are resolved in the order described in [Pipeline parameters][cli-params].
 
@@ -628,25 +672,37 @@ See [Output directives](#output-directives) for the list of available index dire
 
 The following directives are available for each output in the output block:
 
-`index`
-: Create an index file which will contain a record of each published value.
+##### `index`
 
-  The following directives are available in an index definition:
+Create an index file which will contain a record of each published value.
 
-  `header`
-  : When `true`, the keys of the first record are used as the column names (default: `false`). Can also be a list of column names. Only used for CSV files.
+The following directives are available in an index definition:
 
-  `path`
-  : The name of the index file relative to the base output directory (required). Can be a CSV, JSON, or YAML file.
+######
 
-  `sep`
-  : The character used to separate values (default: `','`). Only used for CSV files.
+`header`
 
-`label`
-: Specify a label to be applied to every published file. Can be specified multiple times.
+When `true`, the keys of the first record are used as the column names (default: `false`). Can also be a list of column names. Only used for CSV files.
+
+######
 
 `path`
-: Specify the publish path relative to the output directory (default: `'.'`). Can be a path, a closure that defines a custom directory for each published value, or a closure that publishes individual files using the `>>` operator.
+
+The name of the index file relative to the base output directory (required). Can be a CSV, JSON, or YAML file.
+
+##### `sep`
+
+The character used to separate values (default: `','`). Only used for CSV files.
+
+##### `label`
+
+Specify a label to be applied to every published file. Can be specified multiple times.
+
+##### `path`
+
+Specify the publish path relative to the output directory (default: `'.'`). Can be a path, a closure that defines a custom directory for each published value, or a closure that publishes individual files using the `>>` operator.
+
+#
 
 Additionally, the following options from the [workflow][config-workflow] config scope can be specified as directives:
 
@@ -680,4 +736,10 @@ output {
 [operator-mix]: /nextflow_docs/nextflow_repo/docs/reference/operator.mdx#mix
 [operator-view]: /nextflow_docs/nextflow_repo/docs/reference/operator.mdx#view
 [process-publishdir]: /nextflow_docs/nextflow_repo/docs/reference/process.mdx#publishdir
+[stdlib-types-boolean]: /nextflow_docs/nextflow_repo/docs/reference/stdlib-types.mdx#boolean
+[stdlib-types-float]: /nextflow_docs/nextflow_repo/docs/reference/stdlib-types.mdx#float
+[stdlib-types-integer]: /nextflow_docs/nextflow_repo/docs/reference/stdlib-types.mdx#integer
+[stdlib-types-path]: /nextflow_docs/nextflow_repo/docs/reference/stdlib-types.mdx#path
+[stdlib-types-string]: /nextflow_docs/nextflow_repo/docs/reference/stdlib-types.mdx#string
+[strict-syntax-page]: /nextflow_docs/nextflow_repo/docs/strict_syntax.mdx
 [syntax-workflow]: /nextflow_docs/nextflow_repo/docs/reference/syntax.mdx#workflow
