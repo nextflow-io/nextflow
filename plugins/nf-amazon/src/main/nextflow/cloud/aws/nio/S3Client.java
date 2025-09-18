@@ -353,10 +353,10 @@ public class S3Client {
 			try {
 				transferManager().downloadFile(downloadFileRequest);
 			} catch (InterruptedException e) {
-				log.debug("S3 download file: s3://{}/{} cancelled", source.getBucket(), source.getKey());
 				Thread.currentThread().interrupt();
+                throw new RuntimeException(String.format("Interrupted while downloading file s3://%s/%s", source.getBucket(), source.getKey()));
 			} catch (ExecutionException e) {
-				String msg = String.format("Exception thrown downloading S3 object s3://{}/{}", source.getBucket(), source.getKey());
+				String msg = String.format("Exception thrown downloading S3 object s3://%s/%s", source.getBucket(), source.getKey());
 				return new IOException(msg, e.getCause());
 			}
 			return null;
@@ -381,10 +381,10 @@ public class S3Client {
 					return new IOException("Some transfers in S3 download directory: s3://"+ source.getBucket() +"/"+ source.getKey() +" has failed - Transfers: " +  completed.failedTransfers() );
 				}
 			} catch (InterruptedException e){
-				log.debug("S3 download directory: s3://{}/{} interrupted", source.getBucket(), source.getKey());
 				Thread.currentThread().interrupt();
+                throw new RuntimeException(String.format("Interrupted while downloading directory s3://%s/%s", source.getBucket(), source.getKey()));
 			} catch (ExecutionException e) {
-				String msg = String.format("Exception thrown downloading S3 object s3://{}/{}", source.getBucket(), source.getKey());
+				String msg = String.format("Exception thrown downloading S3 object s3://%s/%s", source.getBucket(), source.getKey());
 				return new IOException(msg, e.getCause());
 			}
 			return null;
@@ -407,10 +407,10 @@ public class S3Client {
 			try {
 				transferManager().uploadFile(uploadFileRequest);
 			} catch (InterruptedException e) {
-				log.debug("S3 upload file: s3://{}/{} interrupted", target.getBucket(), target.getKey());
 				Thread.currentThread().interrupt();
+                throw new RuntimeException(String.format("Interrupted while uploading file s3://%s/%s", target.getBucket(), target.getKey()));
 			} catch (ExecutionException e) {
-				String msg = String.format("Exception thrown uploading S3 object s3://{}/{}", target.getBucket(), target.getKey());
+				String msg = String.format("Exception thrown uploading S3 object s3://%s/%s", target.getBucket(), target.getKey());
 				return new IOException(msg, e.getCause());
 			}
 			return null;
@@ -453,10 +453,10 @@ public class S3Client {
 					return new IOException("Some transfers in S3 upload directory: s3://"+ target.getBucket() +"/"+ target.getKey() +" has failed - Transfers: " +  completed.failedTransfers() );
 				}
 			} catch (InterruptedException e) {
-				log.debug("S3 upload directory: s3://{}/{} interrupted", target.getBucket(), target.getKey());
 				Thread.currentThread().interrupt();
+                throw new RuntimeException(String.format("Interrupted while uploading directory s3://%s/%s", target.getBucket(), target.getKey()));
 			} catch (ExecutionException e) {
-				String msg = String.format("Exception thrown uploading S3 object s3://{}/{}", target.getBucket(), target.getKey());
+				String msg = String.format("Exception thrown uploading S3 object s3://%s/%s", target.getBucket(), target.getKey());
 				return new IOException(msg, e.getCause());
 			}
 			return null;
@@ -498,10 +498,10 @@ public class S3Client {
 			try {
 				transferManager().copy(copyRequest);
 			} catch (InterruptedException e) {
-				log.debug("S3 copy s3://{}/{} to s3://{}/{} interrupted", req.sourceBucket(), req.sourceKey(), req.destinationBucket(), req.destinationKey());
 				Thread.currentThread().interrupt();
+                throw new RuntimeException(String.format("Interrupted while copying file s3://%s/%s", req.sourceBucket(), req.sourceKey()));
 			} catch (ExecutionException e) {
-				String msg = String.format("Exception thrown copying S3 object form s3://{}/{} to s3://{}/{}", req.sourceBucket(), req.sourceKey(), req.destinationBucket(), req.destinationKey());
+				String msg = String.format("Exception thrown copying S3 object form s3://%s/%s to s3://%s/%s", req.sourceBucket(), req.sourceKey(), req.destinationBucket(), req.destinationKey());
 				return new IOException(msg, e.getCause());
 			}
 			return null;
