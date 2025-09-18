@@ -116,7 +116,8 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint, TaskArrayE
 
     @Override
     protected TaskMonitor createTaskMonitor() {
-        TaskPollingMonitor.create(session, config, name, 1000, Duration.of('10 sec'))
+        final capacity = config.getQueueSize(name, 1000)
+        TaskPollingMonitor.create(session, config, name, capacity, Duration.of('10 sec'))
     }
 
     @Override

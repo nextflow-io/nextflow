@@ -86,7 +86,8 @@ class K8sExecutor extends Executor implements ExtensionPoint {
      */
     @Override
     protected TaskMonitor createTaskMonitor() {
-        TaskPollingMonitor.create(session, config, name, 100, Duration.of('5 sec'))
+        final capacity = config.getQueueSize(name, 100)
+        TaskPollingMonitor.create(session, config, name, capacity, Duration.of('5 sec'))
     }
 
     /**
