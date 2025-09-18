@@ -110,7 +110,7 @@ The following definitions can be included:
 
 ### Params block
 
-The params block consists of one or more *parameter declarations*. A parameter declaration consists of a name and an optional default value:
+The params block consists of one or more *parameter declarations*. A parameter declaration consists of a name, type, and an optional default value:
 
 ```nextflow
 params {
@@ -261,6 +261,46 @@ process greet {
 The script and stub sections must return a string in the same manner as a [function](#function).
 
 See {ref}`process-page` for more information on the semantics of each process section.
+
+(syntax-process-typed)=
+
+### Process (typed)
+
+A typed process is a process that uses static types for inputs and/or outputs:
+
+```nextflow
+process greet {
+    input: 
+    greeting: String
+    name: String
+
+    stage:
+    env 'NAME', name
+
+    output:
+    stdout()
+
+    topic:
+    eval('bash --version') >> 'versions'
+
+    script:
+    """
+    echo "${greeting}, \${NAME}!"
+    """
+}
+```
+
+- The `input:` section, if specified, consists of one or more process inputs. A process input consists of a name and type.
+
+- The `stage:` section, if specified, consists of one or more stage directives. See {ref}`process-reference-typed` for the set of available stage directives.
+
+- The `output:` section, if specified, consists of one or more *output statements*. An output statement can be a [variable name](#variable), an [assignment](#assignment), or an [expression statement](#expression-statement). If an output statement is an expression statement, it must be the only output.  See {ref}`process-reference-typed` for the set of available output functions.
+
+- The `topic:` section, if specified, consists of one or more *topic statements*. A topic statement is a right-shift expression, where the left-hand side is an output value, and the right-hand side is a string.
+
+- Typed processes retain the behavior of legacy processes for all other sections.
+
+See {ref}`process-typed-page` for more information on the semantics of typed processes.
 
 (syntax-function)=
 

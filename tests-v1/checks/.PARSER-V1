@@ -5,6 +5,7 @@ env-out.nf
 env2.nf
 error-finish.nf
 output-globs.nf
+output-dsl.nf
 output-val.nf
 publish-saveas.nf
 singleton.nf

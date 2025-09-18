@@ -46,7 +46,9 @@ class EachInParam extends BaseInParam {
         final copy = (EachInParam)super.clone()
         copy.@inner = new ArrayList<>(inner.size())
         for( BaseInParam p : inner ) {
-            copy.@inner.add((BaseInParam)p.clone())
+            p = (BaseInParam)p.clone()
+            p.owner = copy
+            copy.@inner.add(p)
         }
         return copy
     }

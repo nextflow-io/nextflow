@@ -22,7 +22,6 @@ import java.util.Set;
 
 import groovy.lang.Tuple2;
 import nextflow.script.ast.ASTNodeMarker;
-import nextflow.script.types.Bag;
 import org.codehaus.groovy.GroovyBugError;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.ClassCodeExpressionTransformer;
@@ -62,14 +61,16 @@ import static org.codehaus.groovy.ast.tools.ClosureUtils.getParametersSafe;
 public class ResolveVisitor extends ClassCodeExpressionTransformer {
 
     public static final ClassNode[] STANDARD_TYPES = {
-        ClassHelper.makeCached(Bag.class),
+        ClassHelper.makeCached(nextflow.script.types.Bag.class),
         ClassHelper.Boolean_TYPE,
+        ClassHelper.Float_TYPE,
         ClassHelper.Integer_TYPE,
-        ClassHelper.Number_TYPE,
-        ClassHelper.STRING_TYPE,
         ClassHelper.LIST_TYPE,
         ClassHelper.MAP_TYPE,
-        ClassHelper.SET_TYPE
+        ClassHelper.makeCached(java.nio.file.Path.class),
+        ClassHelper.SET_TYPE,
+        ClassHelper.STRING_TYPE,
+        ClassHelper.makeCached(nextflow.script.types.Tuple.class)
     };
 
     private SourceUnit sourceUnit;
