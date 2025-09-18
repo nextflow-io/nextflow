@@ -150,6 +150,7 @@ class WaveClient {
                 .refreshToken(tower.refreshToken)
                 .refreshTokenUrl(refreshUrl)
                 .retryConfig(config.retryOpts())
+                .refreshCookiePolicy(CookiePolicy.ACCEPT_ALL)
                 .build()
     }
 
