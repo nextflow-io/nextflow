@@ -284,15 +284,23 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 			throw new FileAlreadyExistsException(localDestination.toString());
 
 		final Optional<S3FileAttributes> attrs = readAttr1(source);
-		final boolean isDir = attrs.isPresent() && attrs.get().isDirectory();
+		boolean isDir = false;
+        long size = 0;
+        if (attrs.isPresent()) {
+            final S3FileAttributes s3Attrs = attrs.get();
+            isDir = s3Attrs.isDirectory();
+            if (!isDir) {
+                size = s3Attrs.size();
+            }
+        }
 		final String type = isDir ? "directory": "file";
 		final S3Client s3Client = source.getFileSystem().getClient();
-		log.debug("S3 download {} from={} to={}", type, FilesEx.toUriString(source), localDestination);
+		log.debug("S3 download {} from={} to={} size={}", type, FilesEx.toUriString(source), localDestination, size);
 		if( isDir ) {
 			s3Client.downloadDirectory(source, localDestination.toFile());
 		}
 		else {
-			s3Client.downloadFile(source, localDestination.toFile());
+			s3Client.downloadFile(source, localDestination.toFile(), size);
 		}
 	}
 
