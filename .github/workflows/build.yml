@@ -229,3 +229,44 @@ jobs:
             env:
                 GITHUB_TOKEN: ${{ secrets.AUTOMATION_GITHUB_TOKEN }}
                 GRADLE_OPTS: '-Dorg.gradle.daemon=false'
+
+  release:
+    if: ${{ contains(needs.build.outputs.commit_message, '[release]') }}
+    needs: [build, test]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: write
+      contents: write
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: true
+
+      - name: Setup env
+        run: |
+          rm -f $HOME/.gitconfig;
+          mkdir -p "$HOME/.nextflow";
+          echo "providers.github.auth='$NXF_GITHUB_ACCESS_TOKEN'" > "$HOME/.nextflow/scm"
+        env:
+          NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: 'temurin'
+          architecture: x64
+          cache: gradle
+
+      - name: Run release
+        run: |
+          echo "Starting release process..."
+          bash release.sh
+        env:
+          GRADLE_OPTS: '-Dorg.gradle.daemon=false'
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Add any additional secrets needed for release
