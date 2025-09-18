@@ -1,3 +1,5 @@
+import { AddedInVersion, ChangedInVersion, DeprecatedInVersion } from '@site/src/components/VersionedAdmonitions';
+
 # Developing plugins
 
 This page describes how to develop plugins for Nextflow.
@@ -434,7 +436,7 @@ import nextflow.trace.TraceObserver
 import nextflow.trace.TraceRecord
 
 class MyObserver implements TraceObserver {
-    
+
     @Override
     void onFlowBegin() {
         println "Okay, let's begin!"
@@ -454,7 +456,7 @@ class MyObserver implements TraceObserver {
     void onFilePublish(Path destination, Path source) {
         println "I published a file! It's located at ${path.toUriString()}"
     }
-    
+
     @Override
     void onFlowError(TaskHandler handler, TraceRecord trace) {
         println "Uh oh, something went wrong..."
@@ -517,8 +519,8 @@ nextflow run main.nf -plugins nf-hello
 This variable is useful for testing a plugin release before publishing it to the main registry.
 
 [cli-plugin]: /nextflow_docs/nextflow_repo/docs/reference/cli.mdx#plugin
-[config-scopes-page]: /nextflow_docs/nextflow_repo/docs/developer/config-scopes.mdx#config-scopes-page
+[config-scopes-page]: /nextflow_docs/nextflow_repo/docs/developer/config-scopes.mdx#config-scopes
 [gradle-plugin-create]: /nextflow_docs/nextflow_repo/docs/guides/gradle-plugin.html#creating-a-plugin
-[process-directives]: /nextflow_docs/nextflow_repo/docs/process.mdx#process-directives
+[process-directives]: /nextflow_docs/nextflow_repo/docs/process.mdx#directives
 [process-ext]: /nextflow_docs/nextflow_repo/docs/reference/process.mdx#ext
 [remote-files]: /nextflow_docs/nextflow_repo/docs/working-with-files.mdx#remote-files

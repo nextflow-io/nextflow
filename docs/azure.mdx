@@ -116,7 +116,7 @@ Replace the following:
 - `BATCH_ACCOUNT_LOCATION`: your Azure Batch account location
 
 :::tip
-Nextflow uses the `AZURE_MANAGED_IDENTITY_SYSTEM` environment variable if the managed identity is not set in the Nextflow configuration file. Set this to `true` to enable a system-assigned managed identity
+Nextflow uses the `AZURE_MANAGED_IDENTITY_SYSTEM` environment variable if the managed identity is not set in the Nextflow configuration file. Set this to `true` to enable a system-assigned managed identity.
 :::
 
 **User-assigned managed identity**
@@ -369,7 +369,7 @@ You can specify multiple machine families per process using glob patterns in the
 
 ```groovy
 // D or E v5 machines with data disk
-process.machineType = "Standard_D*d_v5,Standard_E*d_v5" 
+process.machineType = "Standard_D*d_v5,Standard_E*d_v5"
 ```
 
 For example, the following process creates a pool of *Standard_E8d_v5* machines when using `autoPoolMode`:
@@ -533,7 +533,7 @@ Azure virtual machines come with fixed storage disks that are not expandable. Ta
 
 Every process in your pipeline must specify a container in order to be executed on Azure Batch.
 
-Nextflow supports both public and private container images. You can pull public images from repositories such as <https://community.wave.seqera.io/>. You must authenticate for any private images that you use. Ensure the Batch pool has access when using a private registry like Azure Container Registry (ACR). Provide ACR credentials in the `azure.registry` configuration scope:
+Nextflow supports both public and private container images. You can pull public images from repositories such as [https://community.wave.seqera.io](https://community.wave.seqera.io). You must authenticate for any private images that you use. Ensure the Batch pool has access when using a private registry like Azure Container Registry (ACR). Provide ACR credentials in the `azure.registry` configuration scope:
 
 ```groovy
 azure {
