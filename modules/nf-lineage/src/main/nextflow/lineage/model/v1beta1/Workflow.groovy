@@ -41,4 +41,16 @@ class Workflow implements LinSerializable {
      * Workflow commit identifier
      */
     String commitId
+    /**
+     * Workflow revision
+     */
+    String revision
+    /**
+     * Project name
+     */
+    String projectName
+    /**
+     * Workflow Manifest
+     */
+    Map manifest
 }
