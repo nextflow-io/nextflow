@@ -390,8 +390,8 @@ public class S3Client {
                 throw new IOException(String.format("Some transfers from S3 download directory: s3://%s/%s has failed", source.getBucket(), source.getKey() ), cause);
         }
         catch (InterruptedException e) {
-            log.debug("S3 download directory: s3://{}/{} interrupted", source.getBucket(), source.getKey());
             Thread.currentThread().interrupt();
+            throw new RuntimeException(String.format("Interrupted while download directory s3://%s/%s", source.getBucket(), source.getKey()));
         }
     }
 
