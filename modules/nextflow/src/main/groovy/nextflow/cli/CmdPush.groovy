@@ -21,9 +21,12 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
+import nextflow.scm.AssetManager
 import nextflow.util.TestOnly
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.errors.RepositoryNotFoundException
+import org.eclipse.jgit.transport.RemoteConfig
+import java.io.FileFilter
 
 /**
  * CLI sub-command Push
@@ -38,9 +41,9 @@ class CmdPush extends CmdBase implements HubOptions {
     static final public NAME = 'push'
 
     @Parameter(description = 'Path to push', arity = 1)
-    String folderPath
+    List<String> args
 
-    @Parameter(names=['-repo'], description = 'Defines the repository to push to', required = true)
+    @Parameter(names=['-repo'], description = 'Defines the repository to push to')
     String repository
 
     @Parameter(names=['-r','-revision'], description = 'Revision of the project to run (either a git branch, tag or commit SHA number)')
@@ -60,10 +63,11 @@ class CmdPush extends CmdBase implements HubOptions {
 
     @Override
     void run() {
-        if( !folderPath )
-            throw new AbortOperationException('Missing folder argument')
+        if( !args && args.size() > 1){
+            throw new AbortOperationException('Incorrect folder argument')
+        }
 
-        def folder = new File(folderPath).getAbsoluteFile()
+        def folder = new File(args[0]).getAbsoluteFile()
 
         if( !folder.exists() )
             throw new AbortOperationException("Folder does not exist: ${folder.absolutePath}")
@@ -71,13 +75,17 @@ class CmdPush extends CmdBase implements HubOptions {
         if( !folder.isDirectory() )
             throw new AbortOperationException("Path is not a directory: ${folder.absolutePath}")
 
-        log.info "Pushing folder ${folder.absolutePath} to repository ${repository}"
-
         // init plugin system
         Plugins.init()
 
         try {
-            pushFolder(folder, repository, revision)
+            def resolvedRepo = repository
+            if( !resolvedRepo ) {
+                resolvedRepo = resolveRepository(folder)
+            }
+
+            log.info "Pushing folder ${folder.absolutePath} to repository ${resolvedRepo}"
+            pushFolder(folder, resolvedRepo, revision)
         }
         catch( Exception e ) {
             throw new AbortOperationException("Failed to push folder: ${e.message}", e)
@@ -86,45 +94,67 @@ class CmdPush extends CmdBase implements HubOptions {
 
     private void pushFolder(File folder, String repo, String rev) {
         def gitDir = new File(folder, '.git')
+        def remoteName = "origin"
+        def isNewRepo = false
 
         if( gitDir.exists() ) {
             log.debug "Found existing git repository in ${folder.absolutePath}"
-            validateExistingRepo(folder, repo)
+            remoteName = validateExistingRepo(folder, repo)
+            checkCurrentBranch(folder, rev)
         } else {
             log.debug "No git repository found, initializing new one"
             initializeRepo(folder, repo, rev)
+            isNewRepo = true
         }
 
         checkFileSizes(folder)
+        manageNextflowGitignore(folder)
         stageAndCommitFiles(folder)
-        pushToRemote(folder, rev)
-
+        def manager = new AssetManager(folder, repo, this)
+        manager.upload(rev, remoteName, isNewRepo)
         log.info "Successfully pushed to ${repo} (revision: ${rev})"
     }
 
-    private void validateExistingRepo(File folder, String expectedRepo) {
+    private String validateExistingRepo(File folder, String expectedRepo) {
+        def git = Git.open(folder)
+
         try {
-            def git = Git.open(folder)
-            def config = git.getRepository().getConfig()
-            def remoteUrl = config.getString("remote", "origin", "url")
+            def remotes = git.remoteList().call()
 
-            if( remoteUrl ) {
-                def normalizedRemote = normalizeRepoUrl(remoteUrl)
-                def normalizedExpected = normalizeRepoUrl(expectedRepo)
+            // Find all remotes and check if any matches the expected repo
+            def matchingRemote = null
 
-                if( normalizedRemote != normalizedExpected ) {
-                    throw new AbortOperationException(
-                        "Repository mismatch!\n" +
-                        "  Local repository: ${remoteUrl}\n" +
-                        "  Expected repository: ${expectedRepo}\n" +
-                        "Please remove the .git directory or specify the correct repository."
-                    )
+            for( RemoteConfig remote : remotes ) {
+                if( remote.URIs ) {
+                    def remoteUrl = remote.URIs[0].toString()
+                    def normalizedRemote = normalizeRepoUrl(remoteUrl)
+                    def normalizedExpected = normalizeRepoUrl(expectedRepo)
+
+                    if( normalizedRemote == normalizedExpected ) {
+                        matchingRemote = remote.name
+                        break
+                    }
                 }
             }
-            git.close()
+
+            if( !matchingRemote ) {
+                def remotesList = remotes.collect { remote ->
+                    def url = remote.URIs ? remote.URIs[0].toString() : 'no URL'
+                    "  ${remote.name}: ${url}"
+                }.join('\n')
+
+                throw new AbortOperationException(
+                    "Repository URL not found in remotes!\n" +
+                    "  Expected repository: ${expectedRepo}\n" +
+                    "  Available remotes:\n${remotesList}\n" +
+                    "Please add the repository as a remote or specify the correct repository."
+                )
+            }
+
+            return matchingRemote
         }
-        catch( RepositoryNotFoundException e ) {
-            throw new AbortOperationException("Invalid git repository in ${folder.absolutePath}")
+        finally {
+            git.close()
         }
     }
 
@@ -132,32 +162,62 @@ class CmdPush extends CmdBase implements HubOptions {
         return url?.toLowerCase()?.replaceAll(/\.git$/, '')?.replaceAll(/\/$/, '')
     }
 
-    private void initializeRepo(File folder, String repo, String rev) {
+    private void checkCurrentBranch(File folder, String requestedBranch) {
+        def git = Git.open(folder)
+
         try {
-            log.debug "Initializing git repository in ${folder.absolutePath}"
-            def git = Git.init().setDirectory(folder).call()
+            def head = git.getRepository().findRef("HEAD")
+            if( !head ) {
+                log.debug "No HEAD found, assuming new repository"
+                git.close()
+                return
+            }
 
-            // Add remote origin
-            git.remoteAdd()
-                .setName("origin")
-                .setUri(new org.eclipse.jgit.transport.URIish(repo))
-                .call()
+            def currentBranch = null
+            if( head.isSymbolic() ) {
+                currentBranch = git.getRepository().getBranch()
+            } else {
+                log.debug "HEAD is not symbolic (detached state)"
+                git.close()
+                throw new AbortOperationException("Repository is in detached HEAD state. Please checkout to a branch before pushing.")
+            }
 
+            if( currentBranch && currentBranch != requestedBranch ) {
+                git.close()
+                throw new AbortOperationException(
+                    "Current branch '${currentBranch}' does not match requested branch '${requestedBranch}'.\n" +
+                    "Please checkout to branch '${requestedBranch}' before pushing or specify the correct branch with -r option."
+                )
+            }
+
+            log.debug "Current branch '${currentBranch}' matches requested branch '${requestedBranch}'"
+        }
+        finally {
             git.close()
         }
-        catch( Exception e ) {
-            throw new AbortOperationException("Failed to initialize git repository: ${e.message}", e)
-        }
+    }
+
+    private void initializeRepo(File folder, String repo, String rev) {
+        log.debug "Initializing git repository in ${folder.absolutePath}"
+        def git = Git.init().setDirectory(folder).call()
+
+        // Add remote origin
+        git.remoteAdd()
+            .setName("origin")
+            .setUri(new org.eclipse.jgit.transport.URIish(repo))
+            .call()
+
+        git.close()
     }
 
     private void checkFileSizes(File folder) {
         def maxSizeBytes = maxSizeMB * 1024 * 1024
-        List<Map<String,Object>> largeFiles = []
+        List<Map<String, Object>> largeFiles = []
 
         folder.eachFileRecurse { file ->
             if( file.isFile() && !file.absolutePath.contains('/.git/') ) {
                 if( file.length() > maxSizeBytes ) {
-                    Map<String,Object> fileEntry = [:]
+                    Map<String, Object> fileEntry = [:]
                     fileEntry.file = file
                     fileEntry.sizeMB = file.length() / (1024 * 1024)
                     largeFiles.add(fileEntry)
@@ -173,14 +233,14 @@ class CmdPush extends CmdBase implements HubOptions {
                 log.warn "  ${fileInfo.name}: ${String.format('%.1f', sizeMB)} MB"
             }
 
-            print "Do you want to continue and push these large files? [y/N]: "
+            print "Do you want to push these large files? [y/N]: "
             def response = System.in.newReader().readLine()?.trim()?.toLowerCase()
 
             if( response != 'y' && response != 'yes' ) {
                 // Add large files to .gitignore
                 def fileNames = largeFiles.collect { entry -> (entry.file as File).name }
                 addToGitignore(folder, fileNames)
-                throw new AbortOperationException("Push cancelled due to large files. Files have been added to .gitignore")
+                println "Files have been added to .gitignore"
             }
         }
     }
@@ -203,63 +263,193 @@ class CmdPush extends CmdBase implements HubOptions {
         log.info "Added ${filenames.size()} large files to .gitignore"
     }
 
-    private void stageAndCommitFiles(File folder) {
-        try {
-            def git = Git.open(folder)
+    private void manageNextflowGitignore(File folder) {
+        def gitignoreFile = new File(folder, '.gitignore')
+        List<String> content = []
 
-            // Add all files
-            git.add().addFilepattern(".").call()
-
-            // Check if there are any changes to commit
-            def status = git.status().call()
-            if( status.clean ) {
-                log.info "No changes to commit"
-                git.close()
-                return
-            }
-
-            // Commit changes
-            git.commit()
-                .setMessage(message)
-                .call()
-
-            log.debug "Committed changes with message: ${message}"
-            git.close()
+        if( gitignoreFile.exists() ) {
+            content = gitignoreFile.readLines()
         }
-        catch( Exception e ) {
-            throw new AbortOperationException("Failed to stage and commit files: ${e.message}", e)
+
+        // Default Nextflow entries to add
+        def nextflowEntries = [
+            '.nextflow',
+            '.nextflow.log*'
+        ]
+
+        def added = []
+        nextflowEntries.each { entry ->
+            if( !content.contains(entry) ) {
+                content.add(entry)
+                added.add(entry)
+            }
+        }
+
+        // Check for work directory
+        def workDirs = findWorkDirectories(folder)
+        if( workDirs ) {
+            def workEntriesToAdd = promptForWorkDirectories(workDirs, content)
+            workEntriesToAdd.each { workDir ->
+                if( !content.contains(workDir) ) {
+                    content.add(workDir)
+                    added.add(workDir)
+                }
+            }
+        }
+
+        if( added ) {
+            gitignoreFile.text = content.join('\n') + '\n'
+            log.info "Added ${added.size()} Nextflow entries to .gitignore: ${added.join(', ')}"
+        } else {
+            log.debug "All Nextflow entries already present in .gitignore"
         }
     }
 
-    private void pushToRemote(File folder, String rev) {
+    private List<String> findWorkDirectories(File folder) {
+        List<String> workDirs = []
+
+        // Check for the default Nextflow work directory
+        def workDir = new File(folder, 'work')
+        if( workDir.exists() && workDir.isDirectory() ) {
+            // Check if it looks like a Nextflow work directory
+            if( isNextflowWorkDirectory(workDir) ) {
+                workDirs.add('work')
+            }
+        }
+
+        return workDirs
+    }
+
+    private boolean isNextflowWorkDirectory(File dir) {
+        // Check for typical Nextflow work directory structure
+        // Work directories contain subdirectories with hexadecimal names
+        def subDirs = dir.listFiles({ File f -> f.isDirectory() } as FileFilter)
+        if( !subDirs || subDirs.length == 0 ) {
+            return false
+        }
+
+        // Check if at least some subdirectories have hex-like names (Nextflow task hashes)
+        def hexPattern = /^[0-9a-f]{2}$/
+        def hexDirs = subDirs.findAll { it.name.matches(hexPattern) }
+
+        return hexDirs.size() >= Math.min(3, (int)(subDirs.length * 0.5))
+    }
+
+    private List<String> promptForWorkDirectories(List<String> workDirs, List<String> currentGitignore) {
+        List<String> toAdd = []
+
+        workDirs.each { workDir ->
+            // Check if already in .gitignore
+            if( currentGitignore.contains(workDir) ) {
+                log.debug "Work directory '${workDir}' already in .gitignore"
+                return // Skip this directory
+            }
+
+            println "Found Nextflow work directory: ${workDir}"
+            print "Do you want to add '${workDir}' to .gitignore? [Y/n]: "
+            def response = System.in.newReader().readLine()?.trim()?.toLowerCase()
+
+            // Default to 'yes' if empty response or 'y'/'yes'
+            if( !response || response == 'y' || response == 'yes' ) {
+                toAdd.add(workDir)
+                log.info "Will add '${workDir}' to .gitignore"
+            } else {
+                log.info "Skipping '${workDir}'"
+            }
+        }
+
+        return toAdd
+    }
+
+    private void stageAndCommitFiles(File folder) {
+        def git = Git.open(folder)
+
+        // Add all files
+        git.add().addFilepattern(".").call()
+
+        // Check if there are any changes to commit
+        def status = git.status().call()
+        if( status.clean ) {
+            log.info "No changes to commit"
+            git.close()
+            return
+        }
+
+        // Commit changes
+        git.commit()
+            .setMessage(message)
+            .call()
+
+        log.debug "Committed changes with message: ${message}"
+        git.close()
+    }
+
+    private String resolveRepository(File folder) {
+        def gitDir = new File(folder, '.git')
+
+        if( !gitDir.exists() ) {
+            throw new AbortOperationException("No git repository found and no repository URL provided. Please specify a repository with -repo parameter.")
+        }
+
+        def git = Git.open(folder)
+
         try {
-            def git = Git.open(folder)
+            def remotes = git.remoteList().call()
 
-            // Create and checkout branch if it doesn't exist
-            try {
-                git.checkout().setName(rev).call()
-            }
-            catch( Exception ignored ) {
-                // Branch doesn't exist, create it
-                git.checkout()
-                    .setCreateBranch(true)
-                    .setName(rev)
-                    .call()
+            if( remotes.empty ) {
+                throw new AbortOperationException("No remotes configured in git repository. Please add a remote or specify a repository with -repo parameter.")
             }
 
-            // Push to remote
-            def refSpec = "refs/heads/${rev}:refs/heads/${rev}"
-            def pushCommand = git.push()
-                .setRemote("origin")
-                .add(refSpec)
+            if( remotes.size() == 1 ) {
+                def remote = remotes[0]
+                def remoteUrl = remote.URIs[0].toString()
+                log.info "Using remote '${remote.name}': ${remoteUrl}"
+                return remoteUrl
+            }
 
-            pushCommand.call()
-
-            log.debug "Push completed successfully"
+            // Multiple remotes - ask user to choose
+            return selectRemoteFromUser(remotes)
+        }
+        finally {
             git.close()
         }
-        catch( Exception e ) {
-            throw new AbortOperationException("Failed to push to remote repository: ${e.message}", e)
+    }
+
+    private static String selectRemoteFromUser(List<RemoteConfig> remotes) {
+        println "Multiple remotes found. Please select which remote to push to:"
+
+        def remoteOptions = [:]
+        remotes.eachWithIndex { remote, index ->
+            def remoteUrl = remote.URIs[0].toString()
+            def remoteInfo = [name: remote.name, url: remoteUrl]
+            remoteOptions[index + 1] = remoteInfo
+            println "  ${index + 1}. ${remote.name}: ${remoteUrl}"
+        }
+
+        println "  ${remotes.size() + 1}. Cancel"
+
+        while( true ) {
+            print "Enter your choice [1-${remotes.size() + 1}]: "
+            def input = System.in.newReader().readLine()?.trim()
+
+            try {
+                def choice = Integer.parseInt(input)
+
+                if( choice == remotes.size() + 1 ) {
+                    throw new AbortOperationException("Push operation cancelled by user.")
+                }
+
+                if( choice >= 1 && choice <= remotes.size() ) {
+                    def selected = remoteOptions[choice]
+                    log.info "Selected remote '${selected['name']}': ${selected['url']}"
+                    return selected['url']
+                }
+
+                println "Invalid choice. Please enter a number between 1 and ${remotes.size() + 1}."
+            }
+            catch( NumberFormatException ignored ) {
+                println "Invalid input. Please enter a number."
+            }
         }
     }
 

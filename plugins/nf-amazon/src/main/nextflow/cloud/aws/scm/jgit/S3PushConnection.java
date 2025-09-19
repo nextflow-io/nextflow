@@ -17,25 +17,21 @@
 package nextflow.cloud.aws.scm.jgit;
 
 import org.eclipse.jgit.errors.TransportException;
-import org.eclipse.jgit.lib.NullProgressMonitor;
-import org.eclipse.jgit.lib.ObjectId;
-import org.eclipse.jgit.lib.ProgressMonitor;
-import org.eclipse.jgit.lib.Ref;
+import org.eclipse.jgit.lib.*;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.transport.BundleWriter;
 import org.eclipse.jgit.transport.PushConnection;
 import org.eclipse.jgit.transport.RemoteRefUpdate;
 import org.eclipse.jgit.util.FileUtils;
-import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
-import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.model.S3Object;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.model.*;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.Field;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -74,6 +70,7 @@ public class S3PushConnection extends S3BaseConnection implements PushConnection
     }
 
     private void pushBranch(Map.Entry<String, RemoteRefUpdate> entry, Path tmpdir) throws IOException {
+        log.debug("Pushing {} reference", entry.getKey());
         final Ref ref = transport.getLocal().findRef(entry.getKey());
         if( ref == null || ref.getObjectId() == null) {
             throw new IllegalStateException("Branch ${branch} not found");
@@ -106,6 +103,25 @@ public class S3PushConnection extends S3BaseConnection implements PushConnection
             );
         }
         setUpdateStatus(entry.getValue(), RemoteRefUpdate.Status.OK);
+        if ( getRef(Constants.HEAD) == null) {
+            updateRemoteHead(entry.getKey());
+        }
+    }
+
+    private void updateRemoteHead(String ref) {
+        try {
+            s3.headObject(HeadObjectRequest.builder()
+                .bucket(bucket)
+                .key(key + "/HEAD")
+                .build());
+        } catch (NoSuchKeyException e) {
+            log.debug("No remote default branch. Setting to {}.", ref);
+            s3.putObject(PutObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(key + "/HEAD")
+                    .build(),
+                RequestBody.fromBytes(ref.getBytes(StandardCharsets.UTF_8)));
+        }
     }
 
     private boolean isSameObjectId(S3Object s3object, ObjectId commitId){
@@ -158,7 +174,7 @@ public class S3PushConnection extends S3BaseConnection implements PushConnection
 
     private Path bundle(Ref ref, Path tmpdir) throws IOException {
         final BundleWriter writer = new BundleWriter(transport.getLocal());
-        Path bundleFile = tmpdir.resolve(ref.getObjectId() +".bundle");
+        Path bundleFile = tmpdir.resolve(ref.getObjectId().name() +".bundle");
         writer.include(ref);
         try (OutputStream out = new FileOutputStream(bundleFile.toFile())) {
             writer.writeBundle(NullProgressMonitor.INSTANCE, out);

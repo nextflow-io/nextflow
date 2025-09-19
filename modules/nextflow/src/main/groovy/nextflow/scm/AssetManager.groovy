@@ -112,6 +112,14 @@ class AssetManager {
         build(pipelineName, config)
     }
 
+    AssetManager(File path, String pipelineName, HubOptions cliOpts = null ) {
+        assert path
+        assert pipelineName
+        // build the object
+        def config = ProviderConfig.getDefault()
+        build(path, pipelineName, config, cliOpts)
+    }
+
     /**
      * Build the asset manager internal data structure
      *
@@ -134,6 +142,22 @@ class AssetManager {
 
         return this
     }
+
+    @PackageScope
+    AssetManager build( File path, String pipelineName, Map config = null, HubOptions cliOpts = null ) {
+
+        this.providerConfigs = ProviderConfig.createFromMap(config)
+
+        this.project = resolveName(pipelineName)
+        this.localPath = path
+        this.hub = checkHubProvider(cliOpts)
+        this.provider = createHubProvider(hub)
+        setupCredentials(cliOpts)
+        validateProjectDir()
+
+        return this
+    }
+
 
     @PackageScope
     File getLocalGitConfig() {
@@ -684,6 +708,45 @@ class AssetManager {
         return result?.mergeResult?.mergeStatus?.toString()
 
     }
+
+    /**
+     * Upload a pipeline to a remote repository
+     *
+     * @param revision The revision/branch to upload
+     * @param remoteName The name of the remote (default: origin)
+     * @param isNewRepo Whether this is a new repository initialization
+     * @result A message representing the operation result
+     */
+    String upload(String revision, String remoteName = "origin", boolean isNewRepo = false) {
+        assert project
+        assert localPath
+
+        // Create and checkout branch if it doesn't exist
+        try {
+            git.checkout().setName(revision).call()
+        }
+        catch( Exception ignored ) {
+            // Branch doesn't exist, create it
+            git.checkout()
+                .setCreateBranch(true)
+                .setName(revision)
+                .call()
+        }
+
+
+        def pushCommand = git.push()
+            .setRemote(remoteName)
+
+        pushCommand.add(revision)
+
+        if( provider.hasCredentials() )
+            pushCommand.setCredentialsProvider( provider.getGitCredentials() )
+
+        def result = pushCommand.call()
+        return "pushed to ${remoteName} (${revision})"
+    }
+
+
 
     /**
      * Clone a pipeline from a remote pipeline repository to the specified folder

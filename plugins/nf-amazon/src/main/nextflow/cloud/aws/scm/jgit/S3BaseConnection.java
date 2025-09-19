@@ -56,16 +56,11 @@ public class S3BaseConnection implements Connection {
                 .region(credentials.getRegion())
                 .credentialsProvider(credentials.getAwsCredentialsProvider())
                 .build();
-        try {
-            loadRefsMap();
-        }catch (IOException e){
-            final String message = String.format("Unable to get refs from remote s3://%s/%s", bucket, key);
-            throw new RuntimeException(message, e);
-        }
+        loadRefsMap();
         log.trace("Created S3 Connection for  s3://{}/{}", bucket, key);
     }
 
-    private String getDefaultBranchRef() throws IOException {
+    protected String getDefaultBranchRef() throws IOException {
 
         GetObjectRequest getObjectRequest = GetObjectRequest.builder()
             .bucket(bucket)
@@ -79,13 +74,28 @@ public class S3BaseConnection implements Connection {
 
 
 
-    private void loadRefsMap() throws IOException {
-        final String defaultBranch = getDefaultBranchRef();
-        addRefs("heads");
-        addRefs("tags");
-        Ref target = advertisedRefs.get(defaultBranch);
-        if (target != null)
-            advertisedRefs.put(Constants.HEAD, new SymbolicRef(Constants.HEAD, target));
+    private void loadRefsMap() {
+        try {
+            addRefs("heads");
+        } catch (Exception e){
+            log.debug("No heads found for s3://{}/{}: {}", bucket, key, e.getMessage());
+        }
+        try {
+            addRefs("tags");
+        } catch (Exception e){
+            log.debug("No tags found for s3://{}/{}: {}", bucket, key, e.getMessage());
+        }
+        try {
+            final String defaultBranch = getDefaultBranchRef();
+            Ref target = advertisedRefs.get(defaultBranch);
+            if (target != null)
+                advertisedRefs.put(Constants.HEAD, new SymbolicRef(Constants.HEAD, target));
+        }   catch (Exception e){
+            log.debug("No default refs found for s3://{}/{}: {}", bucket, key, e.getMessage());
+        }
+
+
+
     }
 
     private void addRefs(String refType) {
