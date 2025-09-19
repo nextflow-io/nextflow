@@ -98,6 +98,21 @@ abstract class BaseScript extends Script implements ExecutionContext {
         binding.setVariable( 'secrets', SecretsLoader.secretContext() )
     }
 
+    protected void params(Closure body) {
+        if( entryFlow )
+            throw new IllegalStateException("Workflow params definition must be defined before the entry workflow")
+        if( ExecutionStack.withinWorkflow() )
+            throw new IllegalStateException("Workflow params definition is not allowed within a workflow")
+
+        final dsl = new ParamsDsl()
+        final cl = (Closure)body.clone()
+        cl.setDelegate(dsl)
+        cl.setResolveStrategy(Closure.DELEGATE_FIRST)
+        cl.call()
+
+        dsl.apply(session)
+    }
+
     protected process( String name, Closure<BodyDef> body ) {
         final process = new ProcessDef(this,body,name)
         meta.addDefinition(process)
@@ -174,7 +189,15 @@ abstract class BaseScript extends Script implements ExecutionContext {
         if( !entryFlow ) {
             if( meta.getLocalWorkflowNames() )
                 throw new AbortOperationException("No entry workflow specified")
-            return result
+            // Check if we have standalone processes that can be executed automatically
+            if( meta.hasExecutableProcesses() ) {
+                // Create a workflow to execute the process (single process or first of multiple)
+                final handler = new ProcessEntryHandler(this, session, meta)
+                entryFlow = handler.createAutoProcessWorkflow()
+            }
+            else {
+                return result
+            }
         }
 
         // invoke the entry workflow

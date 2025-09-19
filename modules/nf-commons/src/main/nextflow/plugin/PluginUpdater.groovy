@@ -186,6 +186,7 @@ class PluginUpdater extends UpdateManager {
         pullOnly=true
         try {
             final specs = plugins.collect(it -> PluginSpec.parse(it,defaultPlugins))
+            prefetchMetadata(specs)
             for( PluginSpec spec : specs ) {
                 pullPlugin0(spec.id, spec.version)
             }
@@ -239,20 +240,11 @@ class PluginUpdater extends UpdateManager {
         // 2. download to temporary location
         Path downloaded = safeDownloadPlugin(id, version);
 
-        // 3. rename if filename is sha digest
-        // when the plugin is downloaded from the (OCI) registry, it is named as "sha256:<CHECKSUM>"
-        // rename it to something meaningful using the target plugin path
-        if ( downloaded.getFileName().toString().startsWith("sha256:")) {
-            final targetName = downloaded.resolveSibling("${pluginPath.getFileName()}.zip")
-            if ( !Files.move(downloaded, targetName) ) throw new PluginRuntimeException("Failed to rename '$downloaded'")
-            downloaded = targetName
-        }
-
-        // 4. unzip the content and delete downloaded file
+        // 3. unzip the content and delete downloaded file
         Path dir = FileUtils.expandIfZip(downloaded)
         FileHelper.deletePath(downloaded)
 
-        // 5. move the final destination the plugin directory
+        // 4. move the final destination the plugin directory
         assert pluginPath.getFileName() == dir.getFileName()
         try {
             safeMove(dir, pluginPath)

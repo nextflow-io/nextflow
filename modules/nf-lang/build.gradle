@@ -17,9 +17,13 @@ plugins {
   id 'antlr'
 }
 
+compileJava {
+  options.compilerArgs << '-parameters' 
+}
+
 dependencies {
   antlr 'me.sunlan:antlr4:4.13.2.6'
-  api 'org.apache.groovy:groovy:4.0.27'
+  api 'org.apache.groovy:groovy:4.0.28'
   api 'org.pf4j:pf4j:3.12.0'
 
   testFixturesApi 'com.google.jimfs:jimfs:1.2'

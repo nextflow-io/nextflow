@@ -26,6 +26,7 @@ import nextflow.processor.TaskId
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
+import nextflow.trace.config.TraceConfig
 import nextflow.trace.event.TaskEvent
 import nextflow.util.CacheHelper
 import nextflow.util.Duration
@@ -43,16 +44,21 @@ class TraceFileObserverTest extends Specification {
         TraceRecord.TIMEZONE = TimeZone.getTimeZone('UTC') // note: set the timezone to be sure the time string does not change on CI test servers
     }
 
+    def createObserver() {
+        def config = new TraceConfig([:])
+        return new TraceFileObserver(config)
+    }
+
     def 'test set fields'() {
 
         when:
-        def trace = [:] as TraceFileObserver
+        def trace = createObserver()
         trace.fields = ['task_id','name','status']
         then:
         trace.fields ==  ['task_id','name','status']
 
         when:
-        trace = [:] as TraceFileObserver
+        trace = createObserver()
         trace.fields = ['task_id','name','status','xxx']
         then:
         thrown(IllegalArgumentException)
@@ -63,7 +69,7 @@ class TraceFileObserverTest extends Specification {
     def 'test set formats'() {
 
         when:
-        def trace = [:] as TraceFileObserver
+        def trace = createObserver()
         trace.formats = ['str','num','date']
         then:
         trace.formats == ['str','num','date']
@@ -75,14 +81,14 @@ class TraceFileObserverTest extends Specification {
         def trace
 
         when:
-        trace = [:] as TraceFileObserver
+        trace = createObserver()
         trace.setFieldsAndFormats(['task_id:str','name:str','status:num', 'start', 'duration'])
         then:
         trace.fields ==  ['task_id','name','status', 'start', 'duration']
         trace.formats == ['str','str','num', 'date', 'time']
 
         when:
-        trace = [:] as TraceFileObserver
+        trace = createObserver()
         trace.useRawNumbers(true)
         trace.setFieldsAndFormats(['task_id:str','name:str','status:num', 'start:date', 'duration:time', 'realtime'])
         then:
@@ -109,7 +115,8 @@ class TraceFileObserverTest extends Specification {
         def now = System.currentTimeMillis()
 
         // the observer class under test
-        def observer = new TraceFileObserver(file)
+        def config = new TraceConfig(file: file.toString())
+        def observer = new TraceFileObserver(config)
 
         when:
         observer.onFlowCreate(null)
@@ -190,7 +197,7 @@ class TraceFileObserverTest extends Specification {
         record.wchar = 10_000 * 1024
 
         when:
-        def trace = [:] as TraceFileObserver
+        def trace = createObserver()
         def result = trace.render(record).split('\t')
         then:
         result[0] == '30'                       // task id
@@ -221,8 +228,8 @@ class TraceFileObserverTest extends Specification {
         record.rss = 10 * MB
 
         when:
-        def trace = [:] as TraceFileObserver
-        trace.setFieldsAndFormats( 'task_id,syscr,syscw,rss,rss:num' )
+        def trace = createObserver()
+        trace.setFieldsAndFormats( ['task_id', 'syscr', 'syscw', 'rss', 'rss:num'] )
         def result = trace.render(record).split('\t')
         then:
         result[0] == '5'
@@ -261,8 +268,8 @@ class TraceFileObserverTest extends Specification {
         record.realtime = 9005022
         record.queue = 'bigjobs'
 
-        def trace = [:] as TraceFileObserver
-        trace.setFieldsAndFormats('task_id,hash,native_id,name,status,exit,submit,duration,realtime,%cpu,rss,vmem,peak_rss,peak_vmem,rchar,wchar,syscr,syscw,duration:num,realtime:num,rss:num,vmem:num,peak_rss:num,peak_vmem:num,rchar:num,wchar:num,queue')
+        def trace = createObserver()
+        trace.setFieldsAndFormats(['task_id', 'hash', 'native_id', 'name', 'status', 'exit', 'submit', 'duration', 'realtime', '%cpu', 'rss', 'vmem', 'peak_rss', 'peak_vmem', 'rchar', 'wchar', 'syscr', 'syscw', 'duration:num', 'realtime:num', 'rss:num', 'vmem:num', 'peak_rss:num', 'peak_vmem:num', 'rchar:num', 'wchar:num', 'queue'])
         def result = trace.render(record).split('\t')
 
         then:

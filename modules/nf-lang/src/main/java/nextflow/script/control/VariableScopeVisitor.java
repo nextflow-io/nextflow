@@ -22,8 +22,10 @@ import nextflow.script.ast.ASTNodeMarker;
 import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.FeatureFlagNode;
 import nextflow.script.ast.FunctionNode;
+import nextflow.script.ast.ImplicitClosureParameter;
 import nextflow.script.ast.IncludeNode;
 import nextflow.script.ast.OutputNode;
+import nextflow.script.ast.ParamBlockNode;
 import nextflow.script.ast.ProcessNode;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
@@ -167,6 +169,22 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         }
     }
 
+    @Override
+    public void visitParams(ParamBlockNode node) {
+        var declaredParams = new HashMap<String,ASTNode>();
+        for( var param : node.declarations ) {
+            var name = param.getName();
+            var other = declaredParams.get(name);
+            if( other != null )
+                vsc.addError("Parameter " + name + "` is already declared", param, "First declared here", other);
+            else
+                declaredParams.put(name, param);
+
+            if( param.hasInitialExpression() )
+                visit(param.getInitialExpression());
+        }
+    }
+
     private boolean inWorkflowEmit;
 
     @Override
@@ -175,7 +193,8 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         currentDefinition = node;
         node.setVariableScope(currentScope());
 
-        declareWorkflowInputs(node.takes);
+        for( var take : node.getParameters() )
+            vsc.declare(take, take);
 
         visit(node.main);
         if( node.main instanceof BlockStatement block )
@@ -184,17 +203,11 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         visitWorkflowOutputs(node.emits, "emit");
         visitWorkflowOutputs(node.publishers, "output");
 
+        visit(node.onComplete);
+        visit(node.onError);
+
         currentDefinition = null;
         vsc.popScope();
-    }
-
-    private void declareWorkflowInputs(Statement takes) {
-        for( var stmt : asBlockStatements(takes) ) {
-            var ve = asVarX(stmt);
-            if( ve == null )
-                continue;
-            vsc.declare(ve);
-        }
     }
 
     private void copyVariableScope(VariableScope source) {
@@ -344,7 +357,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         for( var parameter : node.getParameters() ) {
             if( parameter.hasInitialExpression() )
                 visit(parameter.getInitialExpression());
-            vsc.declare(parameter, node);
+            vsc.declare(parameter, parameter);
         }
         visit(node.getCode());
 
@@ -621,18 +634,18 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
 
         vsc.pushScope();
         node.setVariableScope(currentScope());
-        if( node.getParameters() != null ) {
+        if( node.isParameterSpecified() ) {
             for( var parameter : node.getParameters() ) {
                 vsc.declare(parameter, parameter);
                 if( parameter.hasInitialExpression() )
-                    visit(parameter.getInitialExpression());
+                    parameter.getInitialExpression().visit(this);
             }
         }
-        super.visitClosureExpression(node);
-        for( var it = currentScope().getReferencedLocalVariablesIterator(); it.hasNext(); ) {
-            var variable = it.next();
-            variable.setClosureSharedVariable(true);
+        else if( node.getParameters() != null ) {
+            var implicit = new ImplicitClosureParameter();
+            currentScope().putDeclaredVariable(implicit);
         }
+        super.visitClosureExpression(node);
         vsc.popScope();
 
         currentClosure = cl;
@@ -643,10 +656,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         var name = node.getName();
         Variable variable = vsc.findVariableDeclaration(name, node);
         if( variable == null ) {
-            if( "it".equals(name) ) {
-                vsc.addParanoidWarning("Implicit closure parameter `it` will not be supported in a future version", node);
-            }
-            else if( "args".equals(name) ) {
+            if( "args".equals(name) ) {
                 vsc.addParanoidWarning("The use of `args` outside the entry workflow will not be supported in a future version", node);
             }
             else if( "params".equals(name) ) {
@@ -658,6 +668,9 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
             else {
                 variable = new DynamicVariable(name, false);
             }
+        }
+        if( variable instanceof ImplicitClosureParameter ) {
+            vsc.addWarning("Implicit closure parameter is deprecated, declare an explicit parameter instead", variable.getName(), node);
         }
         if( variable != null ) {
             checkGlobalVariableInProcess(variable, node);

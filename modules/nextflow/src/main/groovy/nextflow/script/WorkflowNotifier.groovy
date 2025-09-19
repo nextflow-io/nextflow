@@ -22,8 +22,10 @@ import groovy.text.GStringTemplateEngine
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.mail.Attachment
+import nextflow.util.SysHelper
 import nextflow.mail.Mail
 import nextflow.mail.Mailer
+import nextflow.mail.Notification
 /**
  * Send workflow completion notification
  *
@@ -34,12 +36,7 @@ import nextflow.mail.Mailer
 class WorkflowNotifier {
 
     /**
-     * A map representing the nextflow configuration
-     */
-    private Map config
-
-    /**
-    * A map representing the variables defined in the script global scope
+     * A map representing the variables defined in the script global scope
      */
     private Map variables
 
@@ -48,16 +45,20 @@ class WorkflowNotifier {
      */
     private WorkflowMetadata workflow
 
+    WorkflowNotifier(Map variables, WorkflowMetadata workflow) {
+        this.variables = variables
+        this.workflow = workflow
+    }
+
     /**
      * Send notification email
      *
      * @param config A {@link Map} representing the nextflow configuration object
      */
-    void sendNotification() {
+    void sendNotification(Map config) {
+        final notification = new Notification( config.notification as Map ?: Collections.emptyMap() )
 
-        // fetch the `notification` configuration map defined in the config file
-        def notification = (Map)config.notification
-        if (!notification || !notification.enabled) {
+        if (!notification.enabled) {
             return
         }
 
@@ -67,7 +68,7 @@ class WorkflowNotifier {
         }
 
         def mail = createMail(notification)
-        def mailer = createMailer( (Map)config.mail )
+        def mailer = createMailer( config.mail as Map ?: Collections.emptyMap() )
         mailer.send(mail)
     }
 
@@ -78,23 +79,15 @@ class WorkflowNotifier {
      * @return A {@link Mailer} object
      */
     protected Mailer createMailer(Map config) {
-        def mailer = new Mailer()
-        mailer.config = config
-        return mailer
+        return new Mailer(config)
     }
 
     /**
      * Create notification {@link nextflow.mail.Mail} object given the user parameters
      *
      * @param notification
-     *      The user  provided notification parameters
-     *      - to: one or more comma separate notification recipient email address
-     *      - from: the sender email address
-     *      - template: template file path, multiple templates can be provided by using a list object
-     *      - binding: user provided map representing the variables used in the template
-     * @return
      */
-    protected Mail createMail(Map notification) {
+    protected Mail createMail(Notification notification) {
 
         def mail = new Mail()
         // -- the subject
@@ -222,6 +215,8 @@ class WorkflowNotifier {
             map.putAll(variables)
         if( binding )
             map.putAll(binding)
+        // Add SysHelper to template binding so it can be used in templates
+        map.put('SysHelper', SysHelper)
 
         def template = new GStringTemplateEngine().createTemplate(new InputStreamReader(source))
         template.make(map).toString()

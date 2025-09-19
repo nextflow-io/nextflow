@@ -35,15 +35,29 @@ class ConfigValidator {
     /**
      * Hidden options added by ConfigBuilder
      */
-    private static final List<String> hiddenOptions = List.of(
+    private static final List<String> HIDDEN_OPTIONS = List.of(
         'cacheable',
         'dumpChannels',
+        'dumpHashes',
         'libDir',
         'poolSize',
         'preview',
         'runName',
         'stubRun',
     );
+
+    /**
+     * Core plugin scopes which can only be validated when
+     * the plugin is loaded.
+     */
+    private static final List<String> CORE_PLUGIN_SCOPES = List.of(
+        'aws',
+        'azure',
+        'google',
+        'k8s',
+        'tower',
+        'wave'
+    )
 
     /**
      * Additional config scopes added by third-party plugins
@@ -55,20 +69,24 @@ class ConfigValidator {
     }
 
     private void loadPluginScopes() {
-        final scopes = new HashMap<String, SchemaNode>()
+        final children = new HashMap<String, SchemaNode>()
         for( final scope : Plugins.getExtensions(ConfigScope) ) {
             final clazz = scope.getClass()
             final name = clazz.getAnnotation(ScopeName)?.value()
             final description = clazz.getAnnotation(Description)?.value()
+            if( name == '' ) {
+                children.putAll(SchemaNode.Scope.of(clazz, '').children())
+                continue
+            }
             if( !name )
                 continue
-            if( name in scopes ) {
+            if( name in children ) {
                 log.warn "Plugin config scope `${clazz.name}` conflicts with existing scope: `${name}`"
                 continue
             }
-            scopes.put(name, SchemaNode.Scope.of(clazz, description))
+            children.put(name, SchemaNode.Scope.of(clazz, description))
         }
-        pluginScopes = new SchemaNode.Scope('', scopes)
+        pluginScopes = new SchemaNode.Scope('', children)
     }
 
     void validate(ConfigMap config) {
@@ -92,11 +110,14 @@ class ConfigValidator {
                 continue
             final fqName = names.join('.')
             if( fqName.startsWith('process.ext.') )
-                return
-            if( !isValid(names) ) {
-                log.warn "Unrecognized config option '${fqName}'"
                 continue
-            }
+            if( isValid(names) )
+                continue
+            if( isMissingCorePluginScope(names.first()) )
+                continue
+            if( isMapOption(names) )
+                continue
+            log.warn1 "Unrecognized config option '${fqName}'"
         }
     }
 
@@ -115,13 +136,50 @@ class ConfigValidator {
      * @param names
      */
     boolean isValid(List<String> names) {
-        if( names.size() == 1 && names.first() in hiddenOptions )
+        if( names.size() == 1 && names.first() in HIDDEN_OPTIONS )
             return true
         final child = SchemaNode.ROOT.getChild(names)
         if( child instanceof SchemaNode.Option || child instanceof SchemaNode.DslOption )
             return true
         if( pluginScopes.getOption(names) )
             return true
+        return false
+    }
+
+    /**
+     * Determine whether a config scope is from a core plugin
+     * which is not currently loaded.
+     *
+     * @param name
+     */
+    private boolean isMissingCorePluginScope(String name) {
+        return name in CORE_PLUGIN_SCOPES
+            && !pluginScopes.children().containsKey(name)
+    }
+
+    /**
+     * Determine whether a config option is a map option or a
+     * property thereof.
+     *
+     * @param names Config option split into individual names, e.g. 'process.resourceLimits' -> [process, resourceLimits]
+     */
+    private boolean isMapOption(List<String> names) {
+        return isMapOption0(SchemaNode.ROOT, names)
+            || isMapOption0(pluginScopes, names)
+    }
+
+    private static boolean isMapOption0(SchemaNode.Scope scope, List<String> names) {
+        SchemaNode node = scope
+        for( final name : names ) {
+            if( node instanceof SchemaNode.Scope )
+                node = node.children().get(name)
+            else if( node instanceof SchemaNode.Placeholder )
+                node = node.scope()
+            else if( node instanceof SchemaNode.Option )
+                return node.type() == Map.class
+            else
+                return false
+        }
         return false
     }
 

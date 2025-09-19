@@ -19,12 +19,21 @@ package nextflow.conda
 import java.nio.file.Files
 import java.nio.file.Paths
 
+import nextflow.SysEnv
 import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class CondaCacheTest extends Specification {
+
+    def setupSpec() {
+        SysEnv.push([:])
+    }
+
+    def cleanupSpec() {
+        SysEnv.pop()
+    }
 
     def 'should env file' () {
 
@@ -359,7 +368,7 @@ class CondaCacheTest extends Specification {
         def ENV = 'bwa=1.1.1'
         def PREFIX = Paths.get('/foo/bar')
         and:
-        def cache = Spy(new CondaCache(new CondaConfig([channels:['bioconda','defaults']])))
+        def cache = Spy(new CondaCache(new CondaConfig([channels:['bioconda','defaults']], [:])))
 
         when:
         def result = cache.createLocalCondaEnv0(ENV, PREFIX)
@@ -448,7 +457,8 @@ class CondaCacheTest extends Specification {
     def 'should get options from the config' () {
 
         when:
-        def cache = new CondaCache(new CondaConfig())
+        def config = new CondaConfig([:], [:])
+        def cache = new CondaCache(config)
         then:
         cache.createTimeout.minutes == 20
         cache.createOptions == null
@@ -458,7 +468,8 @@ class CondaCacheTest extends Specification {
         cache.binaryName == "conda"
 
         when:
-        cache = new CondaCache(new CondaConfig(createTimeout: '5 min', createOptions: '--foo --bar', cacheDir: '/conda/cache', useMamba: true))
+        config = new CondaConfig([createTimeout: '5 min', createOptions: '--foo --bar', cacheDir: '/conda/cache', useMamba: true], [:])
+        cache = new CondaCache(config)
         then:
         cache.createTimeout.minutes == 5
         cache.createOptions == '--foo --bar'
@@ -468,7 +479,8 @@ class CondaCacheTest extends Specification {
         cache.binaryName == "mamba"
 
         when:
-        cache = new CondaCache(new CondaConfig(createTimeout: '5 min', createOptions: '--foo --bar', cacheDir: '/conda/cache', useMicromamba: true))
+        config = new CondaConfig([createTimeout: '5 min', createOptions: '--foo --bar', cacheDir: '/conda/cache', useMicromamba: true], [:])
+        cache = new CondaCache(config)
         then:
         cache.createTimeout.minutes == 5
         cache.createOptions == '--foo --bar'
@@ -482,7 +494,7 @@ class CondaCacheTest extends Specification {
 
         given:
         def folder = Files.createTempDirectory('test'); folder.deleteDir()
-        def config = new CondaConfig(cacheDir: folder.toString())
+        def config = new CondaConfig([cacheDir: folder.toString()], [:])
         CondaCache cache = Spy(CondaCache, constructorArgs: [config])
 
         when:
@@ -500,7 +512,7 @@ class CondaCacheTest extends Specification {
 
         given:
         def folder = Paths.get('.test-conda-cache-' + Math.random())
-        def config = new CondaConfig(cacheDir: folder.toString())
+        def config = new CondaConfig([cacheDir: folder.toString()], [:])
         CondaCache cache = Spy(CondaCache, constructorArgs: [config])
 
         when:

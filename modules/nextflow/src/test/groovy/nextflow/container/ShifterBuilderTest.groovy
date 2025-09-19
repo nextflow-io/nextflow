@@ -39,8 +39,7 @@ class ShifterBuilderTest extends Specification {
                 .build()
                 .@runCommand == 'shifter --image busybox'
 
-        new ShifterBuilder('busybox')
-                .params(verbose: true)
+        new ShifterBuilder('busybox', new ShifterConfig(verbose: true))
                 .build()
                 .@runCommand == 'shifter --verbose --image busybox'
 

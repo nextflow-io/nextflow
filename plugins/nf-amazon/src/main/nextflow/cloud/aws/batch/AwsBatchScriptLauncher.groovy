@@ -17,6 +17,7 @@
 package nextflow.cloud.aws.batch
 
 import groovy.transform.CompileStatic
+import nextflow.container.ContainerHelper
 import nextflow.executor.BashWrapperBuilder
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskRun
@@ -47,6 +48,6 @@ class AwsBatchScriptLauncher extends BashWrapperBuilder {
 
     @Override
     protected boolean fixOwnership() {
-        return containerConfig?.fixOwnership
+        return ContainerHelper.fixOwnership(containerConfig)
     }
 }

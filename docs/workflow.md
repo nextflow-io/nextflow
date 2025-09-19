@@ -22,7 +22,60 @@ workflow {
 }
 ```
 
-### Parameters
+(workflow-params-def)=
+
+## Parameters
+
+Parameters can be declared in a Nextflow script with the `params` block or with *legacy* parameter declarations.
+
+### Params block
+
+:::{versionadded} 25.10.0
+:::
+
+:::{note}
+This feature requires the {ref}`strict syntax <strict-syntax-page>` to be enabled (`NXF_SYNTAX_PARSER=v2`).
+:::
+
+A script can declare parameters using the `params` block:
+
+```nextflow
+params {
+    // Path to input data.
+    input: Path
+
+    // Whether to save intermediate files.
+    save_intermeds: Boolean = false
+}
+```
+
+The following types can be used for parameters:
+
+- {ref}`stdlib-types-boolean`
+- {ref}`stdlib-types-float`
+- {ref}`stdlib-types-integer`
+- {ref}`stdlib-types-path`
+- {ref}`stdlib-types-string`
+
+Parameters can be used in the entry workflow:
+
+```nextflow
+workflow {
+    analyze(params.input, params.save_intermeds)
+}
+```
+
+:::{note}
+As a best practice, parameters should only be used directly in the entry workflow and passed to workflows and processes as explicit inputs.
+:::
+
+The default value can be overridden by the command line, params file, or config file. Parameters from multiple sources are resolved in the order described in {ref}`cli-params`. Parameters specified on the command line are converted to the appropriate type based on the corresponding type annotation.
+
+A parameter that doesn't specify a default value is a *required* param. If a required param is not given a value at runtime, the run will fail.
+
+(workflow-params-legacy)=
+
+### Legacy parameters
 
 Parameters can be declared by assigning a `params` property to a default value:
 
@@ -37,10 +90,6 @@ workflow {
         analyze(fake_input(), params.save_intermeds)
 }
 ```
-
-:::{note}
-As a best practice, params should be used only in the entry workflow and passed to workflows and processes as explicit inputs.
-:::
 
 The default value can be overridden by the command line, params file, or config file. Parameters from multiple sources are resolved in the order described in {ref}`cli-params`.
 
@@ -588,7 +637,7 @@ workflow {
     ch_samples = channel.of(
         [id: 1, name: 'sample 1', fastq_1: '1a.fastq', fastq_2: '1b.fastq'],
         [id: 2, name: 'sample 2', fastq_1: '2a.fastq', fastq_2: '2b.fastq'],
-        [id: 3, name: 'sample 3', fastq_1: '3a.fastq', fastq_2: '3b.fastq']
+        [id: 3, name: 'sample 3', fastq_1: '3a.fastq', fastq_2: null]
     )
 
     publish:
@@ -610,7 +659,7 @@ The above example will write the following CSV file to `results/samples.csv`:
 ```
 "1","sample 1","results/fastq/1a.fastq","results/fastq/1b.fastq"
 "2","sample 2","results/fastq/2a.fastq","results/fastq/2b.fastq"
-"3","sample 3","results/fastq/3a.fastq","results/fastq/3b.fastq"
+"3","sample 3","results/fastq/3a.fastq",""
 ```
 
 You can customize the index file with additional directives, for example:
@@ -629,7 +678,7 @@ This example will produce the following index file:
 "id"|"name"|"fastq_1"|"fastq_2"
 "1"|"sample 1"|"results/fastq/1a.fastq"|"results/fastq/1b.fastq"
 "2"|"sample 2"|"results/fastq/2a.fastq"|"results/fastq/2b.fastq"
-"3"|"sample 3"|"results/fastq/3a.fastq"|"results/fastq/3b.fastq"
+"3"|"sample 3"|"results/fastq/3a.fastq"|""
 ```
 
 :::{note}

@@ -16,25 +16,13 @@
 package nextflow.script.control;
 
 import nextflow.script.ast.ASTNodeMarker;
-import nextflow.script.ast.AssignmentExpression;
-import nextflow.script.ast.FeatureFlagNode;
 import nextflow.script.ast.ProcessNode;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
 import nextflow.script.ast.WorkflowNode;
-import nextflow.script.types.TypeChecker;
-import nextflow.script.types.Types;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.MethodNode;
-import org.codehaus.groovy.ast.Variable;
-import org.codehaus.groovy.ast.expr.BinaryExpression;
-import org.codehaus.groovy.ast.expr.DeclarationExpression;
-import org.codehaus.groovy.ast.expr.EmptyExpression;
-import org.codehaus.groovy.ast.expr.Expression;
 import org.codehaus.groovy.ast.expr.MethodCallExpression;
-import org.codehaus.groovy.ast.expr.PropertyExpression;
-import org.codehaus.groovy.ast.expr.VariableExpression;
-import org.codehaus.groovy.ast.stmt.ExpressionStatement;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage;
 import org.codehaus.groovy.syntax.SyntaxException;
@@ -50,11 +38,8 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
 
     private SourceUnit sourceUnit;
 
-    private boolean experimental;
-
-    public TypeCheckingVisitor(SourceUnit sourceUnit, boolean experimental) {
+    public TypeCheckingVisitor(SourceUnit sourceUnit) {
         this.sourceUnit = sourceUnit;
-        this.experimental = experimental;
     }
 
     @Override
@@ -66,33 +51,6 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         var moduleNode = sourceUnit.getAST();
         if( moduleNode instanceof ScriptNode sn )
             visit(sn);
-    }
-
-    // script declarations
-
-    @Override
-    public void visitFeatureFlag(FeatureFlagNode node) {
-        if( !experimental )
-            return;
-        var fn = node.target;
-        if( fn == null )
-            return;
-        var expectedType = fn.getType();
-        var actualType = node.value.getType();
-        if( !Types.isAssignableFrom(expectedType, actualType) )
-            addError("Type mismatch for feature flag '" + node.name + "' -- expected a " + Types.getName(expectedType) + " but received a " + Types.getName(actualType), node);
-    }
-
-    // statements
-
-    @Override
-    public void visitExpressionStatement(ExpressionStatement node) {
-        var exp = node.getExpression();
-        if( exp instanceof AssignmentExpression ae && ae.getNodeMetaData(ASTNodeMarker.IMPLICIT_DECLARATION) != null ) {
-            applyDeclaration(ae);
-            return;
-        }
-        super.visitExpressionStatement(node);
     }
 
     // expressions
@@ -110,42 +68,6 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         var paramsCount = defNode.getParameters().length;
         if( argsCount != paramsCount )
             addError(String.format("Incorrect number of call arguments, expected %d but received %d", paramsCount, argsCount), node);
-    }
-
-    @Override
-    public void visitDeclarationExpression(DeclarationExpression node) {
-        applyDeclaration(node);
-    }
-
-    private void applyDeclaration(BinaryExpression node) {
-        var target = node.getLeftExpression();
-        var source = node.getRightExpression();
-        if( source instanceof EmptyExpression )
-            return;
-        visit(target);
-        visit(source);
-        var sourceType = TypeChecker.getType(source);
-        target.putNodeMetaData(ASTNodeMarker.INFERRED_TYPE, sourceType);
-    }
-
-    @Override
-    public void visitPropertyExpression(PropertyExpression node) {
-        super.visitPropertyExpression(node);
-
-        if( TypeChecker.getType(node) == null ) {
-            var mn = asMethodNamedOutput(node);
-            var property = node.getPropertyAsString();
-            if( mn instanceof ProcessNode pn )
-                addError("Unrecognized output `" + property + "` for process `" + pn.getName() + "`", node);
-            else if( mn instanceof WorkflowNode wn )
-                addError("Unrecognized output `" + property + "` for workflow `" + wn.getName() + "`", node);
-        }
-    }
-
-    private static MethodNode asMethodNamedOutput(PropertyExpression node) {
-        if( node.getObjectExpression() instanceof PropertyExpression pe )
-            return asMethodOutput(pe);
-        return null;
     }
 
     @Override

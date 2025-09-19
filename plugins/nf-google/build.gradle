@@ -13,10 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-apply plugin: 'java'
-apply plugin: 'java-test-fixtures'
-apply plugin: 'idea'
-apply plugin: 'groovy'
+plugins {
+    id 'io.nextflow.nextflow-plugin' version "${nextflowPluginVersion}"
+    id 'java-test-fixtures'
+}
+
+nextflowPlugin {
+    nextflowVersion = '25.08.0-edge'
+
+    provider = "${nextflowPluginProvider}"
+    description = 'Enables Google Cloud Platform execution through Batch service with native Cloud Storage access and intelligent machine type selection'
+    className = 'nextflow.cloud.google.GoogleCloudPlugin'
+    useDefaultDependencies = false
+    extensionPoints = [
+        'nextflow.cloud.google.GoogleOpts',
+        'nextflow.cloud.google.batch.GoogleBatchExecutor',
+        'nextflow.cloud.google.util.GsPathFactory',
+        'nextflow.cloud.google.util.GsPathSerializer',
+    ]
+}
 
 sourceSets {
     main.java.srcDirs = []
@@ -44,8 +59,8 @@ dependencies {
     api 'com.google.cloud:google-cloud-storage:2.53.2'
 
     testImplementation(testFixtures(project(":nextflow")))
-    testImplementation "org.apache.groovy:groovy:4.0.27"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.27"
+    testImplementation "org.apache.groovy:groovy:4.0.28"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.28"
 }
 
 test {

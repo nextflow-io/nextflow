@@ -2,6 +2,8 @@
 
 # Google Cloud
 
+(google-credentials)=
+
 ## Credentials
 
 Credentials for submitting requests to the Google Cloud Batch API are picked up from your environment using [Application Default Credentials](https://github.com/googleapis/google-auth-library-java#google-auth-library-oauth2-http). Application Default Credentials are designed to use the credentials most natural to the environment in which a tool runs.
@@ -189,7 +191,7 @@ disk 375.GB, type: 'local-ssd'
 
 ### Pipeline execution
 
-The pipeline can be launched either in a local computer or a cloud instance. Pipeline input data can be stored either locally or in a Google Storage bucket.
+The pipeline can be launched either on a local computer or a cloud instance. Pipeline input data can be stored either locally or in a Google Storage bucket.
 
 The pipeline execution must specify a Google Storage bucket where the workflow's intermediate results are stored using the `-work-dir` command line options. For example:
 
@@ -202,7 +204,7 @@ Any input data **not** stored in a Google Storage bucket will automatically be t
 :::
 
 :::{warning}
-The Google Storage path needs to contain at least sub-directory. Don't use only the bucket name e.g. `gs://my-bucket`.
+The Google Storage path needs to contain at least sub-directory. Do not use only the bucket name e.g. `gs://my-bucket`.
 :::
 
 ### Spot Instances
@@ -277,7 +279,7 @@ nextflow run <script or project name> -bucket-dir gs://my-bucket/some/path
 ```
 
 :::{warning}
-The Google Storage path needs to contain at least one sub-directory (e.g. `gs://my-bucket/work` rather than `gs://my-bucket`).
+The Google Storage path needs to contain at least one subdirectory (e.g. `gs://my-bucket/work` rather than `gs://my-bucket`).
 :::
 
 :::{note}

@@ -1260,7 +1260,7 @@ process hello {
 ```
 
 :::{warning}
-Files are copied into the specified directory in an *asynchronous* manner, so they may not be immediately available in the publish directory at the end of the process execution. For this reason, downstream processes should not try to access output files through the publish directory, but through channels.
+Files are copied into the specified directory in an *asynchronous* manner, so they may not be immediately available in the publish directory at the end of the process execution. For this reason, downstream processes should not try to access output files through the publish directory, but through the outputs of the originating process.
 :::
 
 Available options:
@@ -1445,6 +1445,8 @@ process hello {
 ```
 
 By doing this, it tries to execute the script in the directory defined by the variable `$TMPDIR` in the execution node. If this variable does not exist, it will create a new temporary directory by using the Linux command `mktemp`.
+
+Nextflow creates a subdirectory within the scratch directory for each task and automatically deletes it once the task completes.
 
 :::{note}
 Cloud-based executors use `scratch = true` by default, since the work directory resides in object storage.

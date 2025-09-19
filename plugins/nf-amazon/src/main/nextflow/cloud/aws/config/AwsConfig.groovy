@@ -25,43 +25,63 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.SysEnv
+import nextflow.config.schema.ConfigOption
+import nextflow.config.schema.ConfigScope
+import nextflow.config.schema.ScopeName
+import nextflow.script.dsl.Description
 import nextflow.util.IniFile
 /**
  * Model AWS cloud configuration settings
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@ScopeName("aws")
+@Description("""
+    The `aws` scope controls the interactions with AWS, including AWS Batch and S3.
+""")
 @Slf4j
 @CompileStatic
-class AwsConfig {
+class AwsConfig implements ConfigScope {
 
-    private AwsBatchConfig batchConfig
+    final AwsBatchConfig batch
 
-    private AwsS3Config s3config
+    final AwsS3Config client
 
-    private String region
+    @ConfigOption
+    @Description("""
+        AWS region (e.g. `us-east-1`).
+    """)
+    final String region
 
-    private String accessKey
+    @ConfigOption
+    @Description("""
+        AWS account access key.
+    """)
+    final String accessKey
 
-    private String secretKey
+    @ConfigOption
+    @Description("""
+        AWS account secret key.
+    """)
+    final String secretKey
 
-    private String profile
-    
-    private AwsS3Legacy s3Legacy
+    @ConfigOption
+    @Description("""
+        AWS profile from `~/.aws/credentials`.
+    """)
+    final String profile
 
-    AwsConfig(Map config) {
-        this.accessKey = config.accessKey
-        this.secretKey = config.secretKey
-        this.profile = getAwsProfile0(SysEnv.get(), config)
-        this.region = getAwsRegion(SysEnv.get(), config)
-        this.batchConfig = new AwsBatchConfig((Map)config.batch ?: Collections.emptyMap())
-        this.s3config = new AwsS3Config((Map)config.client ?: Collections.emptyMap())
-        this.s3Legacy = new AwsS3Legacy((Map)config.client ?: Collections.emptyMap())
+    /* required by extension point -- do not remove */
+    AwsConfig() {}
+
+    AwsConfig(Map opts) {
+        this.accessKey = opts.accessKey
+        this.secretKey = opts.secretKey
+        this.profile = getAwsProfile0(SysEnv.get(), opts)
+        this.region = getAwsRegion(SysEnv.get(), opts)
+        this.batch = new AwsBatchConfig((Map)opts.batch ?: Collections.emptyMap())
+        this.client = new AwsS3Config((Map)opts.client ?: Collections.emptyMap())
     }
-
-    String getAccessKey() { accessKey }
-
-    String getSecretKey() { secretKey }
 
     List<String> getCredentials() {
         return accessKey && secretKey
@@ -69,17 +89,9 @@ class AwsConfig {
                 : Collections.<String>emptyList()
     }
 
-    String getProfile() { profile }
+    AwsS3Config getS3Config() { client }
 
-    String getRegion() { region }
-
-    AwsS3Config getS3Config() { s3config }
-
-    AwsBatchConfig getBatchConfig() { batchConfig }
-
-    Map<String,?> getS3LegacyClientConfig() {
-        return s3Legacy.getAwsClientConfig()
-    }
+    AwsBatchConfig getBatchConfig() { batch }
 
     String getS3GlobalRegion() {
         return !region || !s3Config.endpoint || s3Config.endpoint.contains(".amazonaws.com")
@@ -136,7 +148,7 @@ class AwsConfig {
         final result = new LinkedHashMap(20)
 
         // -- remaining client config options
-        def config = getS3LegacyClientConfig()
+        def config = client.getAwsClientConfig()
         config = checkDefaultErrorRetry(config, SysEnv.get())
         if( config ) {
             result.putAll(config)

@@ -30,7 +30,7 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
 
     private boolean sudo
 
-    private boolean remove = true
+    private boolean remove
 
     private String registry
 
@@ -52,34 +52,40 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
 
     private String capAdd
 
-    DockerBuilder( String name ) {
+    DockerBuilder(String name, DockerConfig config) {
         this.image = name
+
+        if( config.engineOptions )
+            addEngineOptions(config.engineOptions)
+
+        this.legacy = config.legacy
+
+        if( config.mountFlags )
+            this.mountFlags0 = config.mountFlags
+
+        this.remove = config.remove
+
+        if( config.runOptions )
+            addRunOptions(config.runOptions)
+
+        this.sudo = config.sudo
+
+        if( config.temp )
+            this.temp = config.temp
+
+        this.tty = config.tty
+
+        if( !config.writableInputMounts )
+            this.readOnlyInputs = true
+    }
+
+    DockerBuilder(String name) {
+        this(name, new DockerConfig([:]))
     }
 
     @Override
     DockerBuilder params( Map params ) {
         if( !params ) return this
-
-        if( params.containsKey('temp') )
-            this.temp = params.temp
-
-        if( params.containsKey('engineOptions') )
-            addEngineOptions(params.engineOptions.toString())
-
-        if( params.containsKey('runOptions') )
-            addRunOptions(params.runOptions.toString())
-
-        if ( params.userEmulation?.toString() == 'true' )
-            log.warn1("Undocumented setting `docker.userEmulation` is not supported any more - please remove it from your config")
-
-        if ( params.containsKey('remove') )
-            this.remove = params.remove?.toString() == 'true'
-
-        if( params.containsKey('sudo') )
-            this.sudo = params.sudo?.toString() == 'true'
-
-        if( params.containsKey('tty') )
-            this.tty = params.tty?.toString() == 'true'
 
         if( params.containsKey('entry') )
             this.entryPoint = params.entry
@@ -87,17 +93,8 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
         if( params.containsKey('kill') )
             this.kill = params.kill
 
-        if( params.containsKey('legacy') )
-            this.legacy = params.legacy?.toString() == 'true'
-
-        if( params.containsKey('readOnlyInputs') )
-            this.readOnlyInputs = params.readOnlyInputs?.toString() == 'true'
-
-        if( params.containsKey('mountFlags') )
-            this.mountFlags0 = params.mountFlags
-
         if( params.containsKey('privileged') )
-            this.privileged = params.privileged?.toString() == 'true'
+            this.privileged = params.privileged
 
         if( params.containsKey('device') )
             this.device = params.device

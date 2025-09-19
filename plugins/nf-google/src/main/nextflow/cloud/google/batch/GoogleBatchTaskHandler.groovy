@@ -37,6 +37,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.cloud.google.batch.client.BatchClient
+import nextflow.cloud.google.batch.client.BatchConfig
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
 import nextflow.exception.ProcessException
@@ -67,6 +68,8 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     private static final Pattern BATCH_ERROR_REGEX = ~/Batch Error: code/
 
     private GoogleBatchExecutor executor
+
+    private BatchConfig batchConfig
 
     private Path exitFile
 
@@ -111,6 +114,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         super(task)
         this.client = executor.getClient()
         this.executor = executor
+        this.batchConfig = executor.batchConfig
         this.jobId = customJobName(task) ?: "nf-${task.hashLog.replace('/','')}-${System.currentTimeMillis()}"
         // those files are access via NF runtime, keep based on CloudStoragePath
         this.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
@@ -129,7 +133,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
      */
     protected String customJobName(TaskRun task) {
         try {
-            final custom = (Closure)executor.session?.getExecConfigProp(executor.name, 'jobName', null)
+            final custom = (Closure) executor.config.getExecConfigProp(executor.name, 'jobName', null)
             if( !custom )
                 return null
 
@@ -149,7 +153,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         else {
             final taskBean = task.toTaskBean()
             return new GoogleBatchScriptLauncher(taskBean, executor.remoteBinDir)
-                .withConfig(executor.config)
+                .withConfig(executor.googleOpts)
                 .withIsArray(task.isArray())
         }
     }
@@ -219,8 +223,8 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         if( disk && !disk.type )
             computeResource.setBootDiskMib( disk.request.getMega() )
         // otherwise use config setting
-        else if( executor.config.bootDiskSize )
-            computeResource.setBootDiskMib( executor.config.bootDiskSize.getMega() )
+        else if( batchConfig.bootDiskSize )
+            computeResource.setBootDiskMib( batchConfig.bootDiskSize.getMega() )
 
         // container
         if( !task.container )
@@ -257,17 +261,17 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             .addAllVolumes( launcher.getVolumes() )
 
         // retry on spot reclaim
-        if( executor.config.maxSpotAttempts ) {
+        if( batchConfig.maxSpotAttempts ) {
             // Note: Google Batch uses the special exit status 50001 to signal
             // the execution was terminated due a spot reclaim. When this happens
             // The policy re-execute the jobs automatically up to `maxSpotAttempts` times
             taskSpec
-                .setMaxRetryCount( executor.config.maxSpotAttempts )
+                .setMaxRetryCount( batchConfig.maxSpotAttempts )
                 .addLifecyclePolicies(
                     LifecyclePolicy.newBuilder()
                         .setActionCondition(
                             LifecyclePolicy.ActionCondition.newBuilder()
-                                .addAllExitCodes(executor.config.autoRetryExitCodes)
+                                .addAllExitCodes(batchConfig.autoRetryExitCodes)
                         )
                         .setAction(LifecyclePolicy.Action.RETRY_TASK)
                 )
@@ -278,23 +282,23 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         final allocationPolicy = AllocationPolicy.newBuilder()
         final instancePolicyOrTemplate = AllocationPolicy.InstancePolicyOrTemplate.newBuilder()
 
-        if( executor.config.getAllowedLocations() )
+        if( batchConfig.getAllowedLocations() )
             allocationPolicy.setLocation(
                 AllocationPolicy.LocationPolicy.newBuilder()
-                    .addAllAllowedLocations( executor.config.getAllowedLocations() )
+                    .addAllAllowedLocations( batchConfig.getAllowedLocations() )
             )
 
-        if( executor.config.serviceAccountEmail )
+        if( batchConfig.serviceAccountEmail )
             allocationPolicy.setServiceAccount(
                 ServiceAccount.newBuilder()
-                    .setEmail( executor.config.serviceAccountEmail )
+                    .setEmail( batchConfig.serviceAccountEmail )
             )
 
         allocationPolicy.putAllLabels( task.config.getResourceLabels() )
 
         // Add network tags if configured
-        if( executor.config.networkTags )
-            allocationPolicy.addAllTags( executor.config.networkTags )
+        if( batchConfig.networkTags )
+            allocationPolicy.addAllTags( batchConfig.networkTags )
 
         // use instance template if specified
         if( task.config.getMachineType()?.startsWith('template://') ) {
@@ -304,23 +308,23 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             if( task.config.getDisk() )
                 log.warn1 'Process directive `disk` ignored because an instance template was specified'
 
-            if( executor.config.getBootDiskImage() )
+            if( batchConfig.getBootDiskImage() )
                 log.warn1 'Config option `google.batch.bootDiskImage` ignored because an instance template was specified'
 
-            if( executor.config.cpuPlatform )
+            if( batchConfig.cpuPlatform )
                 log.warn1 'Config option `google.batch.cpuPlatform` ignored because an instance template was specified'
 
-            if( executor.config.networkTags )
+            if( batchConfig.networkTags )
                 log.warn1 'Config option `google.batch.networkTags` ignored because an instance template was specified'
 
-            if( executor.config.preemptible )
+            if( batchConfig.preemptible )
                 log.warn1 'Config option `google.batch.premptible` ignored because an instance template was specified'
 
-            if( executor.config.spot )
+            if( batchConfig.spot )
                 log.warn1 'Config option `google.batch.spot` ignored because an instance template was specified'
 
             instancePolicyOrTemplate
-                .setInstallGpuDrivers( executor.config.getInstallGpuDrivers() )
+                .setInstallGpuDrivers( batchConfig.getInstallGpuDrivers() )
                 .setInstanceTemplate( task.config.getMachineType().minus('template://') )
         }
 
@@ -328,8 +332,8 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         else {
             final instancePolicy = AllocationPolicy.InstancePolicy.newBuilder()
 
-            if( executor.config.getBootDiskImage() )
-                instancePolicy.setBootDisk( AllocationPolicy.Disk.newBuilder().setImage( executor.config.getBootDiskImage() ) )
+            if( batchConfig.getBootDiskImage() )
+                instancePolicy.setBootDisk( AllocationPolicy.Disk.newBuilder().setImage( batchConfig.getBootDiskImage() ) )
 
             if( fusionEnabled() && !disk ) {
                 disk = new DiskResource(request: '375 GB', type: 'local-ssd')
@@ -393,13 +397,13 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                 )
             }
 
-            if( executor.config.cpuPlatform )
-                instancePolicy.setMinCpuPlatform( executor.config.cpuPlatform )
+            if( batchConfig.cpuPlatform )
+                instancePolicy.setMinCpuPlatform( batchConfig.cpuPlatform )
 
-            if( executor.config.preemptible )
+            if( batchConfig.preemptible )
                 instancePolicy.setProvisioningModel( AllocationPolicy.ProvisioningModel.PREEMPTIBLE )
 
-            if( executor.config.spot )
+            if( batchConfig.spot )
                 instancePolicy.setProvisioningModel( AllocationPolicy.ProvisioningModel.SPOT )
 
             instancePolicyOrTemplate.setPolicy( instancePolicy )
@@ -411,15 +415,15 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         final networkInterface = AllocationPolicy.NetworkInterface.newBuilder()
         def hasNetworkPolicy = false
 
-        if( executor.config.network ) {
+        if( batchConfig.network ) {
             hasNetworkPolicy = true
-            networkInterface.setNetwork( executor.config.network )
+            networkInterface.setNetwork( batchConfig.network )
         }
-        if( executor.config.subnetwork ) {
+        if( batchConfig.subnetwork ) {
             hasNetworkPolicy = true
-            networkInterface.setSubnetwork( executor.config.subnetwork )
+            networkInterface.setSubnetwork( batchConfig.subnetwork )
         }
-        if( executor.config.usePrivateAddress ) {
+        if( batchConfig.usePrivateAddress ) {
             hasNetworkPolicy = true
             networkInterface.setNoExternalIpAddress( true )
         }
@@ -625,7 +629,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         final location = client.location
         final cpus = config.getCpus()
         final memory = config.getMemory() ? config.getMemory().toMega().toInteger() : 1024
-        final spot = executor.config.spot ?: executor.config.preemptible
+        final spot = batchConfig.spot ?: batchConfig.preemptible
         final machineType = config.getMachineType()
         final families = machineType ? machineType.tokenize(',') : List.<String>of()
         final priceModel = spot ? PriceModel.spot : PriceModel.standard

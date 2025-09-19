@@ -19,26 +19,17 @@ package nextflow.scm
 import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Specification
+import spock.lang.Unroll
+
 /**
  *
  * @author Akira Sekiguchi <pachiras.yokohama@gmail.com>
  */
 class GiteaRepositoryProviderTest extends Specification {
 
-    static final String CONFIG = '''
-        providers {
-            mygitea {
-                server = 'https://gitea.com'
-                endpoint = 'https://gitea.com/api/v1'
-                platform = 'gitea'
-            }
-        }
-        '''
-
     def 'should return repo url' () {
         given:
-        def config = new ConfigSlurper().parse(CONFIG)
-        def obj = new ProviderConfig('gitea', config.providers.mygitea as ConfigObject)
+        def obj = new ProviderConfig('gitea')
 
         expect:
         new GiteaRepositoryProvider('pditommaso/hello', obj).getEndpointUrl() == 'https://gitea.com/api/v1/repos/pditommaso/hello'
@@ -46,8 +37,7 @@ class GiteaRepositoryProviderTest extends Specification {
 
     def 'should return project URL' () {
         given:
-        def config = new ConfigSlurper().parse(CONFIG)
-        def obj = new ProviderConfig('gitea', config.providers.mygitea as ConfigObject)
+        def obj = new ProviderConfig('gitea')
 
         expect:
         new GiteaRepositoryProvider('pditommaso/hello', obj).getRepositoryUrl() == 'https://gitea.com/pditommaso/hello'
@@ -55,8 +45,7 @@ class GiteaRepositoryProviderTest extends Specification {
 
     def 'should return content URL' () {
         given:
-        def config = new ConfigSlurper().parse(CONFIG)
-        def obj = new ProviderConfig('gitea', config.providers.mygitea as ConfigObject)
+        def obj = new ProviderConfig('gitea')
 
         expect:
         new GiteaRepositoryProvider('pditommaso/hello', obj)
@@ -68,12 +57,28 @@ class GiteaRepositoryProviderTest extends Specification {
 
     }
 
+    @Unroll
+    def 'should validate hasCredentials' () {
+        given:
+        def provider = new GiteaRepositoryProvider('pditommaso/tutorial', PROVIDER_CONFIG)
+
+        expect:
+        provider.hasCredentials() == EXPECTED
+
+        where:
+        EXPECTED    | PROVIDER_CONFIG
+        false       | new ProviderConfig('gitea')
+        false       | new ProviderConfig('gitea').setUser('foo')
+        true        | new ProviderConfig('gitea').setUser('foo').setPassword('bar')
+        true        | new ProviderConfig('gitea').setToken('xyz')
+    }
+
     @IgnoreIf({System.getenv('NXF_SMOKE')})
     @Requires({System.getenv('NXF_GITEA_ACCESS_TOKEN')})
     def 'should read file content'() {
         given:
         def token =  System.getenv('NXF_GITEA_ACCESS_TOKEN')
-        def config = new ProviderConfig('gitea', new ConfigSlurper().parse(CONFIG).providers.mygitea as ConfigObject) .setAuth(token)
+        def config = new ProviderConfig('gitea') .setAuth(token)
 
         when:
         def repo = new GiteaRepositoryProvider('pditommaso/test-hello', config)
@@ -94,7 +99,7 @@ class GiteaRepositoryProviderTest extends Specification {
     def 'should read bytes gitea content'() {
         given:
         def token =  System.getenv('NXF_GITEA_ACCESS_TOKEN')
-        def config = new ProviderConfig('gitea', new ConfigSlurper().parse(CONFIG).providers.mygitea as ConfigObject) .setAuth(token)
+        def config = new ProviderConfig('gitea') .setAuth(token)
         def repo = new GiteaRepositoryProvider('pditommaso/test-hello', config)
         and:
         def DATA = this.class.getResourceAsStream('/test-asset.bin').bytes
@@ -106,4 +111,19 @@ class GiteaRepositoryProviderTest extends Specification {
         result == DATA
     }
 
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
+    @Requires({System.getenv('NXF_GITEA_ACCESS_TOKEN')})
+    def 'should read bytes file content'() {
+        given:
+        def token =  System.getenv('NXF_GITEA_ACCESS_TOKEN')
+        def config = new ProviderConfig('gitea').setAuth(token)
+
+        when:
+        def repo = new GiteaRepositoryProvider('pditommaso/test-hello', config)
+        def result = repo.readBytes('docs/images/nf-core-rnaseq_logo_light.png')
+
+        then:
+        result.length == 22915
+        result.sha256() == '7a396344498750f614155f6e4f38b7d6ca98ced45daf0921b64acf73b18efaf4'
+    }
 }

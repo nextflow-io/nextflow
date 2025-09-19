@@ -13,10 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-apply plugin: 'java'
-apply plugin: 'java-test-fixtures'
-apply plugin: 'idea'
-apply plugin: 'groovy'
+plugins {
+    id 'io.nextflow.nextflow-plugin' version "${nextflowPluginVersion}"
+    id 'java-test-fixtures'
+}
+
+nextflowPlugin {
+    nextflowVersion = '25.08.0-edge'
+
+    provider = "${nextflowPluginProvider}"
+    description = 'Enables Azure cloud execution through Batch service with native Blob storage access and comprehensive authentication options'
+    className = 'nextflow.cloud.azure.AzurePlugin'
+    useDefaultDependencies = false
+    extensionPoints = [
+        'nextflow.cloud.azure.batch.AzBatchExecutor',
+        'nextflow.cloud.azure.config.AzConfig',
+        'nextflow.cloud.azure.file.AzPathFactory',
+        'nextflow.cloud.azure.file.AzPathSerializer',
+        'nextflow.cloud.azure.fusion.AzFusionEnv',
+    ]
+}
 
 sourceSets {
     main.java.srcDirs = []
@@ -36,23 +52,24 @@ dependencies {
     compileOnly project(':nextflow')
     compileOnly 'org.slf4j:slf4j-api:2.0.17'
     compileOnly 'org.pf4j:pf4j:3.12.0'
-    api('com.azure:azure-storage-blob:12.29.0') {
+    api('com.azure:azure-storage-blob:12.31.1') {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
     api('com.azure:azure-compute-batch:1.0.0-beta.3') {
         exclude group: 'org.slf4j', module: 'slf4j-api'
         exclude group: 'com.google.guava', module: 'guava'
     }
-    api('com.azure:azure-identity:1.15.1') {
+    api('com.azure:azure-identity:1.17.0') {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
 
     // address security vulnerabilities
-    runtimeOnly 'io.netty:netty-handler:4.1.118.Final'
-    runtimeOnly 'net.minidev:json-smart:2.5.2'
+    implementation 'io.netty:netty-handler:4.1.125.Final'
+    implementation 'io.netty:netty-codec-http2:4.1.125.Final'
+    implementation 'net.minidev:json-smart:2.5.2'
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
-    testImplementation "org.apache.groovy:groovy:4.0.27"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.27"
+    testImplementation "org.apache.groovy:groovy:4.0.28"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.28"
 }

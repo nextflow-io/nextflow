@@ -93,6 +93,8 @@ Relative paths are resolved against the location of the including file.
 Config includes can also be specified within config blocks. However, config files should only be included at the top level or in a [profile](#config-profiles) so that the included config file is valid on its own and in the context in which it is included.
 :::
 
+(config-constants)=
+
 ## Constants
 
 The following constants are globally available in a Nextflow configuration file:
@@ -137,6 +139,10 @@ params {
 ```
 
 See {ref}`cli-params` for information about how to specify pipeline parameters.
+
+:::{note}
+When including a config file, the included config is evaluated with the parameters that are defined before the include. Parameters defined after the include are not visible to the included config.
+:::
 
 (config-process)=
 
@@ -221,7 +227,7 @@ process {
 }
 ```
 
-The above configuration snippet sets 2 cpus for every process labeled as `hello` and 4 cpus to every process *not* label as `hello`. It also specifies the `long` queue for every process whose name does *not* start with `align`.
+The above configuration snippet sets 2 cpus for every process labeled as `hello` and 4 cpus to every process *not* labeled as `hello`. It also specifies the `long` queue for every process whose name does *not* start with `align`.
 
 (config-selector-priority)=
 
@@ -243,7 +249,7 @@ process {
     cpus = 4
     withLabel: hello { cpus = 8 }
     withName: bye { cpus = 16 }
-    withName: 'mysub:bye' { cpus = 32 }
+    withName: 'aloha:bye' { cpus = 32 }
 }
 ```
 
@@ -251,7 +257,7 @@ With the above configuration:
 - All processes will use 4 cpus (unless otherwise specified in their process definition).
 - Processes annotated with the `hello` label will use 8 cpus.
 - Any process named `bye` (or imported as `bye`) will use 16 cpus.
-- Any process named `bye` (or imported as `bye`) invoked by a workflow named `mysub` will use 32 cpus.
+- Any process named `bye` (or imported as `bye`) invoked by a workflow named `aloha` will use 32 cpus.
 
 (config-profiles)=
 
@@ -321,9 +327,15 @@ process {
 This limitation can be avoided by using the {ref}`strict config syntax <updating-config-syntax>`.
 :::
 
+(config-workflow-handlers)=
+
 ## Workflow handlers
 
-Workflow event handlers can be defined in the config file, which is useful for handling pipeline events without having to modify the pipeline code:
+:::{deprecated} 25.10.0
+Use a {ref}`trace observer <plugins-trace-observers>` in a plugin to add custom workflow handlers to a pipeline via configuration.
+:::
+
+You can define workflow event handlers in the config file:
 
 ```groovy
 workflow.onComplete = {
@@ -333,8 +345,8 @@ workflow.onComplete = {
 }
 
 workflow.onError = {
-    println "Error: something when wrong"
+    println "Error: something went wrong"
 }
 ```
 
-See {ref}`workflow-handlers` for more information.
+This approach is useful for handling workflow events without modifying the pipeline code. See {ref}`workflow-handlers` for more information.

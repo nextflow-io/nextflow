@@ -17,21 +17,14 @@ package nextflow.script.types;
 
 import java.nio.file.Path;
 import java.util.List;
-import java.util.LinkedList;
 import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 
-import groovy.lang.GString;
-import groovy.lang.Tuple2;
 import nextflow.script.ast.ASTNodeMarker;
 import nextflow.script.dsl.Namespace;
-import nextflow.script.types.shim.ShimType;
 import org.codehaus.groovy.GroovyBugError;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.GenericsType;
-import org.codehaus.groovy.ast.MethodNode;
 import org.codehaus.groovy.ast.tools.GenericsUtils;
 
 /**
@@ -42,64 +35,28 @@ import org.codehaus.groovy.ast.tools.GenericsUtils;
 public class Types {
 
     public static final List<ClassNode> DEFAULT_SCRIPT_IMPORTS = List.of(
-        new ClassNode(Channel.class),
-        new ClassNode(Duration.class),
-        new ClassNode(MemoryUnit.class),
-        new ClassNode(Path.class)
+        ClassHelper.makeCached(Bag.class),
+        ClassHelper.makeCached(Channel.class),
+        ClassHelper.makeCached(Duration.class),
+        ClassHelper.makeCached(MemoryUnit.class),
+        ClassHelper.makeCached(Path.class),
+        ClassHelper.makeCached(Value.class),
+        ClassHelper.makeCached(VersionNumber.class)
     );
 
     public static final List<ClassNode> DEFAULT_CONFIG_IMPORTS = List.of(
-        new ClassNode(Duration.class),
-        new ClassNode(MemoryUnit.class)
+        ClassHelper.makeCached(Bag.class),
+        ClassHelper.makeCached(Duration.class),
+        ClassHelper.makeCached(MemoryUnit.class)
     );
 
     /**
-     * Determine whether a method has a non-void return type.
+     * Determine whether a class is a namespace.
      *
-     * @param node
+     * @param cn
      */
-    public static boolean hasReturnType(MethodNode node) {
-        var returnType = node.getReturnType();
-        if( returnType.isGenericsPlaceHolder() )
-            return true;
-        return !ClassHelper.isObjectType(returnType) && !ClassHelper.isPrimitiveVoid(returnType);
-    }
-
-    /**
-     * Determine whether a source type can be assigned to a target type.
-     *
-     * @see StaticTypeCheckingSupport.checkCompatibleAssignmentTypes()
-     *
-     * @param target
-     * @param source
-     */
-    public static boolean isAssignableFrom(ClassNode target, ClassNode source) {
-        if( ClassHelper.isObjectType(target) )
-            return true;
-        if( target.equals(source) )
-            return true;
-        return isAssignableFrom(target.getTypeClass(), source.getTypeClass());
-    }
-
-    public static boolean isAssignableFrom(Class target, Class source) {
-        target = normalize(target);
-        source = normalize(source);
-        if( target == Integer.class && source == Number.class )
-            return false;
-        if( target == Number.class && source == Integer.class )
-            return true;
-        return target.equals(source);
-    }
-
-    /**
-     * Given a method node corresponding to a built-in constant, determine
-     * whether the constant is a namespace.
-     *
-     * @param mn
-     */
-    public static boolean isNamespace(MethodNode mn) {
-        var cn = mn.getReturnType();
-        return hasTypeClass(cn) && Namespace.class.isAssignableFrom(cn.getTypeClass());
+    public static boolean isNamespace(ClassNode cn) {
+        return cn.implementsInterface(ClassHelper.makeCached(Namespace.class));
     }
 
     /**
@@ -183,6 +140,9 @@ public class Types {
             builder.append('>');
         }
 
+        if( type.getNodeMetaData(ASTNodeMarker.NULLABLE) != null )
+            builder.append('?');
+
         return builder.toString();
     }
 
@@ -205,83 +165,13 @@ public class Types {
     }
 
     public static String getName(Class type) {
-        return getName(normalize(type).getSimpleName());
+        return getName(type.getSimpleName());
     }
 
     public static String getName(String name) {
         if( "Object".equals(name) )
             return "?";
         return name;
-    }
-
-    private static final List<Class> STANDARD_TYPES = List.of(
-        Boolean.class,
-        Duration.class,
-        Integer.class,
-        List.class,
-        Map.class,
-        MemoryUnit.class,
-        Number.class,
-        Path.class,
-        Set.class,
-        String.class,
-        Tuple2.class
-    );
-
-    private static final Map<Class,Class> PRIMITIVE_TYPES = Map.ofEntries(
-        Map.entry(boolean.class, Boolean.class),
-        Map.entry(double.class,  Number.class),
-        Map.entry(float.class,   Number.class),
-        Map.entry(int.class,     Integer.class),
-        Map.entry(long.class,    Integer.class),
-        Map.entry(GString.class, String.class)
-    );
-
-    /**
-     * Determine the canonical Nextflow type for a given class.
-     *
-     * @param type
-     */
-    private static Class normalize(Class type) {
-        if( type.isPrimitive() && PRIMITIVE_TYPES.containsKey(type) )
-            return PRIMITIVE_TYPES.get(type);
-        var queue = new LinkedList<Class>();
-        queue.add(type);
-        while( !queue.isEmpty() ) {
-            var c = queue.remove();
-            if( c == null )
-                continue;
-            if( STANDARD_TYPES.contains(c) )
-                return c;
-            queue.add(c.getSuperclass());
-            for( var ic : c.getInterfaces() )
-                queue.add(ic);
-        }
-        return type;
-    }
-
-    /**
-     * Mapping of Java standard types to "shim" types which
-     * provide method signatures and documentation.
-     */
-    public static final Map<ClassNode,ClassNode> SHIM_TYPES = shimTypes();
-
-    private static Map<ClassNode,ClassNode> shimTypes() {
-        var types = List.of(
-            nextflow.script.types.shim.Bag.class,
-            nextflow.script.types.shim.List.class,
-            nextflow.script.types.shim.Map.class,
-            nextflow.script.types.shim.Path.class,
-            nextflow.script.types.shim.Set.class,
-            nextflow.script.types.shim.String.class
-        );
-        return types.stream().collect(Collectors.toMap(
-            (clazz) -> {
-                var shim = clazz.getAnnotation(ShimType.class).value();
-                return ClassHelper.makeCached(shim);
-            },
-            (clazz) -> ClassHelper.makeCached(clazz)
-        ));
     }
 
 }

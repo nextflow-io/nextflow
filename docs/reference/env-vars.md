@@ -49,6 +49,16 @@ The following environment variables control the configuration of the Nextflow ru
   :::
 : Enable the use of Conda recipes defined by using the {ref}`process-conda` directive. (default: `false`).
 
+`NXF_CONTAINER_ENTRYPOINT_OVERRIDE`
+: :::{deprecated} 22.10.0
+  :::
+: When `true`, override the container entrypoint with `/bin/bash` (default: `false`).
+
+`NXF_DATE_FORMAT`
+: :::{versionadded} 25.07.0-edge
+  :::
+: Defines the format for date and time representations in notifications and reports. Supports custom formats (e.g., `yyyy-MM-dd HH:mm:ss`) or `iso` for ISO 8601 format with timezone (default: `dd-MMM-yyyy HH:mm:ss`).
+
 `NXF_DEFAULT_DSL`
 : :::{versionadded} 22.03.0-edge
   :::
@@ -156,10 +166,15 @@ The following environment variables control the configuration of the Nextflow ru
 `NXF_PLUGINS_DIR`
 : The path where the plugin archives are loaded and stored (default: `$NXF_HOME/plugins`).
 
+`NXF_PLUGINS_REGISTRY_URL`
+: :::{versionadded} 25.08.0-edge
+  :::
+: Specifies the URL of the plugin registry used to download and resolve plugins. This allows using custom or private plugin registries instead of the default public registry.
+
 `NXF_PLUGINS_TEST_REPOSITORY`
 : :::{versionadded} 23.04.0
   :::
-: Defines a custom plugin registry or plugin release URL for testing plugins outside of the main registry. See {ref}`testing-plugins` for more information.
+: Defines a custom plugin registry or plugin release URL for testing plugins outside of the main registry.
 
 `NXF_PUBLISH_FAIL_ON_ERROR`
 : :::{versionadded} 24.04.3
@@ -185,6 +200,11 @@ The following environment variables control the configuration of the Nextflow ru
 : :::{versionadded} 25.06.0-edge
   :::
 : Max delay used for HTTP retryable operations (default: `90s`).
+
+`NXF_RETRY_POLICY_MULTIPLIER`
+: :::{versionadded} 25.08.0-edge
+  :::
+: Delay multiplier used for HTTP retryable operations (default: `2.0`).
 
 `NXF_SCM_FILE`
 : :::{versionadded} 20.10.0
@@ -230,7 +250,7 @@ The following environment variables control the configuration of the Nextflow ru
 : Defines the minimum size of the `.command.run` staging script for it to be written to a separate `.command.stage` file (default: `'1 MB'`).
 : This setting is useful for executors that impose a size limit on job scripts.
 
-## Proxy settings
+## Other settings
 
 `FTP_PROXY`
 : :::{versionadded} 21.06.0-edge
@@ -249,5 +269,12 @@ The following environment variables control the configuration of the Nextflow ru
   Proxy authentication is supported by providing the credentials in the proxy URL, e.g. `https://user:password@proxy-host.com:port`.
   :::
 
+`NO_COLOR`
+: Disables ANSI color codes in Nextflow log output. When this variable is set, Nextflow prints plain text logs following the [NO_COLOR standard](https://no-color.org/).
+: If both `NO_COLOR` and `NXF_ANSI_LOG` are set, `NXF_ANSI_LOG` takes precedence.
+
 `NO_PROXY`
 : Defines one or more host names that should not use the proxy server. Separate multiple names using a comma character.
+
+`TERMINAL_WIDTH`
+: Forces the terminal width of ANSI-formatted log output. Overrides automatic terminal width detection and uses the specified width for line wrapping when set to an integer value.

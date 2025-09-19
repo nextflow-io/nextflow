@@ -29,6 +29,7 @@ import nextflow.Session
 import nextflow.conda.CondaCache
 import nextflow.conda.CondaConfig
 import nextflow.container.ContainerConfig
+import nextflow.container.DockerConfig
 import nextflow.container.resolver.ContainerInfo
 import nextflow.container.resolver.ContainerMeta
 import nextflow.container.resolver.ContainerResolver
@@ -640,10 +641,10 @@ class TaskRun implements Cloneable {
     }
 
     private Path getCondaEnv0() {
-        if( !config.conda || !processor.session.getCondaConfig().isEnabled() )
+        if( !config.conda || !getCondaConfig().isEnabled() )
             return null
 
-        final cache = new CondaCache(processor.session.getCondaConfig())
+        final cache = new CondaCache(getCondaConfig())
         cache.getCachePathFor(config.conda as String)
     }
 
@@ -747,7 +748,7 @@ class TaskRun implements Cloneable {
         // when 'eng' is null the setting for the current engine marked as 'enabled' will be used
         final result
                 = sess.getContainerConfig(eng)
-                ?: new ContainerConfig(engine:'docker')
+                ?: new DockerConfig([:])
         // if a configuration is found is expected to enabled by default
         if( exe.isContainerNative() ) {
             result.setEnabled(true)

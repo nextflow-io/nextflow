@@ -25,7 +25,9 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.AbortOperationException
+import nextflow.file.FileHelper
 import nextflow.processor.TaskId
+import nextflow.trace.config.TimelineConfig
 import nextflow.trace.event.TaskEvent
 import nextflow.util.Duration
 import nextflow.util.TestOnly
@@ -38,8 +40,6 @@ import org.apache.commons.lang.StringEscapeUtils
 @Slf4j
 @CompileStatic
 class TimelineObserver implements TraceObserverV2 {
-
-    public static final String DEF_FILE_NAME = "timeline-${TraceHelper.launchTimestampFmt()}.html"
 
     /**
      * Holds the the start time for tasks started/submitted but not yet completed
@@ -61,9 +61,9 @@ class TimelineObserver implements TraceObserverV2 {
 
     private boolean overwrite
 
-    TimelineObserver(Path file, Boolean overwrite=false) {
-        this.reportFile = file
-        this.overwrite = overwrite
+    TimelineObserver(TimelineConfig config) {
+        this.reportFile = FileHelper.asPath(config.file)
+        this.overwrite = config.overwrite
     }
 
     @TestOnly

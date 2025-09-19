@@ -20,7 +20,7 @@ package nextflow.executor.local
 import java.nio.file.Path
 
 import nextflow.Global
-import nextflow.container.ContainerConfig
+import nextflow.container.DockerConfig
 import nextflow.file.http.XPath
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskConfig
@@ -63,7 +63,7 @@ class LocalTaskHandlerTest extends Specification {
             getContainer() >> 'ubuntu:latest'
             getWorkDir() >> WORK_DIR
             getConfig() >> Mock(TaskConfig)
-            getContainerConfig() >> new ContainerConfig([engine:'docker',enabled:true])
+            getContainerConfig() >> new DockerConfig(enabled:true)
             toTaskBean() >> bean
         }
         def executor = Mock(LocalExecutor) 

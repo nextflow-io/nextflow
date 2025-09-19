@@ -302,7 +302,7 @@ The following table shows the fields that can be included in the execution repor
 : The value of the process `scratch` directive.
 
 `error_action`
-: The action applied on errof task failure.
+: The action applied on error for task failure.
 
 `hostname`
 : :::{versionadded} 22.05.0-edge

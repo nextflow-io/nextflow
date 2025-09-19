@@ -1,5 +1,9 @@
 nf-k8s changelog
 ===================
+1.1.1 - 15 Aug 2025
+- Unify nf-lang config scopes with runtime classes (#6271) [bfa67ca3]
+- Bump groovy 4.0.28 (#6304) [ci fast] [a468f8ef]
+
 1.1.0 - 2 Jun 2025
 - Add Failsafe retry mechanism in K8s (#6083) [ci fast] [9e675c6a]
 - Bump Groovy to version 4.0.27 (#6125) [ci fast] [258e1790]

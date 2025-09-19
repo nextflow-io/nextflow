@@ -56,8 +56,8 @@ The global namespace contains globally available constants and functions.
   :::
 : Stop the pipeline execution and return an exit code and optional error message.
 
-`file( filePattern: String, [options] ) -> Path | List<Path>`
-: Get a file from a file name or glob pattern. Returns a collection of files if the glob pattern yields zero or multiple files.
+`file( filePattern: String, [options] ) -> Path`
+: Get a file from a file name or glob pattern.
 
 : The following options are available:
 
@@ -79,10 +79,13 @@ The global namespace contains globally available constants and functions.
   `type: String`
   : Type of paths returned, can be `'file'`, `'dir'` or `'any'` (default: `'file'`)
 
-: See also: {ref}`channel.fromPath <channel-path>`.
+: :::{note}
+  This function returns a collection if the glob pattern yields zero or multiple files. Use `files()` to get a collection of files.
+  :::
 
 `files( filePattern: String, [options] ) -> List<Path>`
 : Get a collection of files from a file name or glob pattern. Supports the same options as `file()`.
+: See also: {ref}`channel.fromPath <channel-path>`.
 
 `groupKey( key, size: int ) -> GroupKey`
 : Create a grouping key to use with the {ref}`operator-grouptuple` operator.
@@ -105,10 +108,7 @@ The global namespace contains globally available constants and functions.
 `sleep( milliseconds: long )`
 : Sleep for the given number of milliseconds.
 
-`tuple( collection: List ) -> ArrayTuple`
-: Create a tuple object from the given collection.
-
-`tuple( args... ) -> ArrayTuple`
+`tuple( args... ) -> Tuple`
 : Create a tuple object from the given arguments.
 
 (stdlib-namespaces-channel)=

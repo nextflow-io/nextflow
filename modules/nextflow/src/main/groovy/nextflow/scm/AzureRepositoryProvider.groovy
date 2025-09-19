@@ -183,12 +183,35 @@ final class AzureRepositoryProvider extends RepositoryProvider {
         "${config.server}/${urlPath}"
     }
 
+    @Override
+    String readText( String path ) {
+        final url = getContentUrl(path)
+        final response = invokeAndParseResponse(url)
+        return response.get('content')?.toString()
+    }
+
     /** {@inheritDoc} */
     @Override
     byte[] readBytes(String path) {
-        final url = getContentUrl(path)
-        final response = invokeAndParseResponse(url)
-        return response.get('content')?.toString()?.getBytes()
+        // For binary content, use direct download instead of JSON embedding
+        final queryParams = [
+                'download': true,
+                'includeContent': false,
+                'includeContentMetadata': false,
+                "api-version": 6.0,
+                'path': path
+        ] as Map<String,Object>
+        
+        if( revision ) {
+            queryParams['versionDescriptor.version'] = revision
+            if( COMMIT_REGEX.matcher(revision).matches() )
+                queryParams['versionDescriptor.versionType'] = 'commit'
+        }
+        
+        final queryString = queryParams.collect({ "$it.key=$it.value"}).join('&')
+        final url = "$endpointUrl/items?$queryString"
+        // Use invokeBytes for direct binary content download
+        return invokeBytes(url)
     }
 
 }

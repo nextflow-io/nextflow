@@ -39,7 +39,7 @@ SSO credentials and instance profile credentials are the most recommended becaus
 
 ## AWS IAM policies
 
-[IAM policies](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html) are the mechanism used by AWS to defines permissions for IAM identities. In order to access certain AWS services, the proper policies must be attached to the identity associated to the AWS credentials.
+[IAM policies](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html) are the mechanism used by AWS to define permissions for IAM identities. In order to access certain AWS services, the proper policies must be attached to the identity associated to the AWS credentials.
 
 Minimal permissions policies to be attached to the AWS account used by Nextflow are:
 
@@ -281,7 +281,7 @@ There are several reasons why you might need to create your own [AMI (Amazon Mac
 ### Create your custom AMI
 
 From the EC2 Dashboard, select **Launch Instance**, then select **Browse more AMIs**. In the new page, select
-**AWS Marketplace AMIs**, and then search for **Amazon ECS-Optimized Amazon Linux 2 (AL2) x86_64 AMI**. Select the AMI and continue as usual to configure and launch the instance.
+**AWS Marketplace AMIs**, and then search for `Amazon ECS-Optimized Amazon Linux 2 (AL2) x86_64 AMI`. Select the AMI and continue as usual to configure and launch the instance.
 
 :::{note}
 The selected instance has a root volume of 30GB. Make sure to increase its size or add a second EBS volume with enough storage for real genomic workloads.
@@ -366,7 +366,7 @@ sudo service docker start
 sudo usermod -a -G docker ec2-user
 ```
 
-You must logging out and logging back in again to use the new `ec2-user` permissions.
+You must log out and log back in again to use the new `ec2-user` permissions.
 
 These steps must be done *before* creating the AMI from the current EC2 instance.
 
@@ -386,7 +386,7 @@ sudo systemctl enable --now ecs
 To test the installation:
 
 ```bash
-curl -s http://localhost:51678/v1/metadata | python -mjson.tool (test)
+curl -s http://localhost:51678/v1/metadata | python -mjson.tool
 ```
 
 :::{note}

@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.codehaus.groovy.ast.ASTNode;
+import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.ModuleNode;
 import org.codehaus.groovy.control.SourceUnit;
 
@@ -31,7 +32,8 @@ public class ScriptNode extends ModuleNode {
     private String shebang;
     private List<FeatureFlagNode> featureFlags = new ArrayList<>();
     private List<IncludeNode> includes = new ArrayList<>();
-    private List<ParamNode> params = new ArrayList<>();
+    private ParamBlockNode params;
+    private List<ParamNodeV1> paramsV1 = new ArrayList<>();
     private WorkflowNode entry;
     private OutputBlockNode outputs;
     private List<WorkflowNode> workflows = new ArrayList<>();
@@ -53,7 +55,9 @@ public class ScriptNode extends ModuleNode {
         var declarations = new ArrayList<ASTNode>();
         declarations.addAll(featureFlags);
         declarations.addAll(includes);
-        declarations.addAll(params);
+        if( params != null )
+            declarations.add(params);
+        declarations.addAll(paramsV1);
         if( entry != null )
             declarations.add(entry);
         if( outputs != null )
@@ -64,10 +68,7 @@ public class ScriptNode extends ModuleNode {
         }
         declarations.addAll(processes);
         declarations.addAll(functions);
-        for( var cn : getClasses() ) {
-            if( cn.isEnum() )
-                declarations.add(cn);
-        }
+        declarations.addAll(getTypes());
         return declarations;
     }
 
@@ -79,8 +80,12 @@ public class ScriptNode extends ModuleNode {
         return includes;
     }
 
-    public List<ParamNode> getParams() {
+    public ParamBlockNode getParams() {
         return params;
+    }
+
+    public List<ParamNodeV1> getParamsV1() {
+        return paramsV1;
     }
 
     public WorkflowNode getEntry() {
@@ -103,6 +108,12 @@ public class ScriptNode extends ModuleNode {
         return functions;
     }
 
+    public List<ClassNode> getTypes() {
+        return getClasses().stream()
+            .filter(cn -> cn.isEnum())
+            .toList();
+    }
+
     public void setShebang(String shebang) {
         this.shebang = shebang;
     }
@@ -115,8 +126,12 @@ public class ScriptNode extends ModuleNode {
         includes.add(includeNode);
     }
 
-    public void addParam(ParamNode paramNode) {
-        params.add(paramNode);
+    public void setParams(ParamBlockNode params) {
+        this.params = params;
+    }
+
+    public void addParamV1(ParamNodeV1 paramNode) {
+        paramsV1.add(paramNode);
     }
 
     public void setEntry(WorkflowNode entry) {

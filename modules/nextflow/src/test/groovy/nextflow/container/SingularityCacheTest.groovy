@@ -33,7 +33,7 @@ class SingularityCacheTest extends Specification {
     def 'should return a simple name given an image url'() {
 
         given:
-        def helper = new SingularityCache(Mock(ContainerConfig))
+        def helper = SingularityCache.create(new SingularityConfig([:]))
 
         expect:
         helper.simpleName(url) == expected
@@ -57,7 +57,7 @@ class SingularityCacheTest extends Specification {
         def dir = Files.createTempDirectory('test')
 
         when:
-        def cache = new SingularityCache([libraryDir: "$dir"] as ContainerConfig)
+        def cache = SingularityCache.create(new SingularityConfig(libraryDir: "$dir"))
         then:
         cache.getLibraryDir() == dir
 
@@ -71,7 +71,7 @@ class SingularityCacheTest extends Specification {
         def dir = Files.createTempDirectory('test')
 
         when:
-        def cache = new SingularityCache(GroovyMock(ContainerConfig), [NXF_SINGULARITY_LIBRARYDIR: "$dir"])
+        def cache = SingularityCache.create(new SingularityConfig([:]), [NXF_SINGULARITY_LIBRARYDIR: "$dir"])
         then:
         cache.getLibraryDir() == dir
 
@@ -85,7 +85,7 @@ class SingularityCacheTest extends Specification {
         def dir = Files.createTempDirectory('test')
 
         when:
-        def cache = new SingularityCache([cacheDir: "$dir"] as ContainerConfig)
+        def cache = SingularityCache.create(new SingularityConfig(cacheDir: "$dir"))
         then:
         cache.getCacheDir() == dir
 
@@ -99,7 +99,7 @@ class SingularityCacheTest extends Specification {
         def dir = Files.createTempDirectory('test')
 
         when:
-        def cache = new SingularityCache(GroovyMock(ContainerConfig), [NXF_SINGULARITY_CACHEDIR: "$dir"])
+        def cache = SingularityCache.create(new SingularityConfig([:]), [NXF_SINGULARITY_CACHEDIR: "$dir"])
         then:
         cache.getCacheDir() == dir
 
@@ -116,9 +116,9 @@ class SingularityCacheTest extends Specification {
         def LOCAL = 'foo-latest.img'
         def TARGET_FILE = dir.resolve(LOCAL)
         def TEMP_FILE = dir.resolve('foo-latest.pulling'); TEMP_FILE.text = 'foo'
-        ContainerConfig config = [noHttps: true]
+        def config = new SingularityConfig(noHttps: true)
         and:
-        def cache = Spy(new SingularityCache(config))
+        def cache = Spy(SingularityCache.create(config))
 
         when:
         def result = cache.downloadContainerImage(IMAGE)
@@ -148,7 +148,7 @@ class SingularityCacheTest extends Specification {
         def container = dir.resolve(LOCAL)
         container.text = 'dummy'
         and:
-        def cache = Spy(new SingularityCache([:] as ContainerConfig))
+        def cache = Spy(SingularityCache.create(new SingularityConfig([:])))
 
         when:
         def result = cache.downloadContainerImage(IMAGE)
@@ -172,7 +172,7 @@ class SingularityCacheTest extends Specification {
         def container = dir.resolve(LOCAL)
         container.text = 'dummy'
         and:
-        def cache = Spy(new SingularityCache([:] as ContainerConfig))
+        def cache = Spy(SingularityCache.create(new SingularityConfig([:])))
 
         when:
         def result = cache.downloadContainerImage(IMAGE)
@@ -197,7 +197,7 @@ class SingularityCacheTest extends Specification {
         def dir = Paths.get('/test/path')
         def container = dir.resolve(LOCAL)
         and:
-        def cache = Spy(new SingularityCache([:] as ContainerConfig))
+        def cache = Spy(SingularityCache.create(new SingularityConfig([:])))
 
         when:
         def file = cache.getCachePathFor(IMAGE)

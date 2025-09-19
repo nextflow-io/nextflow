@@ -16,29 +16,23 @@
 
 package nextflow.scm
 
-import java.nio.channels.UnresolvedAddressException
-import java.time.temporal.ChronoUnit
-import java.util.function.Predicate
-
 import static nextflow.util.StringUtils.*
 
-import dev.failsafe.Failsafe
-import dev.failsafe.FailsafeException
-import dev.failsafe.RetryPolicy
-import dev.failsafe.event.EventListener
-import dev.failsafe.event.ExecutionAttemptedEvent
-import dev.failsafe.function.CheckedSupplier
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.nio.channels.UnresolvedAddressException
 import java.time.Duration
 import java.util.concurrent.Executors
+import java.util.function.Predicate
 
 import groovy.json.JsonSlurper
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
+import io.seqera.http.HxClient
+import io.seqera.http.HxConfig
 import nextflow.Const
 import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
@@ -75,8 +69,8 @@ abstract class RepositoryProvider {
     /**
      * The client used to carry out http requests
      */
-    private HttpClient httpClient
-
+    private HxClient httpClient
+    
     /**
      * The retry options to be used for http requests
      */
@@ -132,6 +126,8 @@ abstract class RepositoryProvider {
     String getUser() { config?.user }
 
     String getPassword() { config?.password }
+
+    String getToken() { config?.token }
 
     /**
      * @return The name of the source hub service e.g. github or bitbucket
@@ -411,51 +407,20 @@ abstract class RepositoryProvider {
         }
     }
 
-    /**
-     * Creates a retry policy using the configuration specified by {@link RetryConfig}
-     *
-     * @param cond
-     *      A predicate that determines when a retry should be triggered
-     * @param handle
-     *
-     * @return
-     *      The {@link dev.failsafe.RetryPolicy} instance
-     */
-    protected <T> RetryPolicy<T> retryPolicy(Predicate<? extends Throwable> cond, Predicate<T> handle) {
-        final listener = new EventListener<ExecutionAttemptedEvent<?>>() {
-            @Override
-            void accept(ExecutionAttemptedEvent<?> event) throws Throwable {
-                def msg = "Git provider connection failure - attempt: ${event.attemptCount}"
-                if( event.lastResult !=null )
-                    msg += "; response: ${event.lastResult}"
-                if( event.lastFailure != null )
-                    msg += "; exception: [${event.lastFailure.class.name}] ${event.lastFailure.message}"
-                log.debug(msg)
-            }
-        }
-        return RetryPolicy.<T>builder()
-            .handleIf(cond)
-            .handleResultIf(handle)
-            .withBackoff(retryConfig.delay.toMillis(), retryConfig.maxDelay.toMillis(), ChronoUnit.MILLIS)
-            .withMaxAttempts(retryConfig.maxAttempts)
-            .withJitter(retryConfig.jitter)
-            .onRetry(listener as EventListener)
-            .build()
-    }
+    static private final Set<Integer> HTTP_RETRYABLE_ERRORS = Set.of(429, 500, 502, 503, 504)
 
-    static private final List<Integer> HTTP_RETRYABLE_ERRORS = [429, 500, 502, 503, 504]
+    @Memoized
+    private HxConfig retryConfig0() {
+        if( retryConfig==null )
+            retryConfig = new RetryConfig()
 
-    /**
-     * Carry out the invocation of the specified action using a retry policy.
-     *
-     * @param action A {@link dev.failsafe.function.CheckedSupplier} instance modeling the action to be performed in a safe manner
-     * @return The result of the supplied action
-     */
-    protected <T> HttpResponse<T> safeApply(CheckedSupplier action) {
         final retryOnException = ((Throwable e) -> isRetryable(e) || isRetryable(e.cause)) as Predicate<? extends Throwable>
-        final retryOnStatusCode = ((HttpResponse<T> resp) -> resp.statusCode() in HTTP_RETRYABLE_ERRORS) as Predicate<HttpResponse<T>>
-        final policy = retryPolicy(retryOnException, retryOnStatusCode)
-        return Failsafe.with(policy).get(action)
+
+        HxConfig.newBuilder()
+            .withRetryConfig(retryConfig)
+            .withRetryStatusCodes(HTTP_RETRYABLE_ERRORS)
+            .withRetryCondition(retryOnException)
+            .build();
     }
 
     protected boolean isRetryable(Throwable t) {
@@ -474,29 +439,25 @@ abstract class RepositoryProvider {
 
     @Deprecated
     protected HttpResponse<String> httpSend(HttpRequest request) {
-        if( httpClient==null )
-            httpClient = newHttpClient()
-        if( retryConfig==null )
-            retryConfig = new RetryConfig()
-        try {
-            safeApply(()-> httpClient.send(request, HttpResponse.BodyHandlers.ofString()))
+        if( httpClient==null ) {
+            httpClient = HxClient.newBuilder()
+                .httpClient(newHttpClient())
+                .retryConfig(retryConfig0())
+                .build()
         }
-        catch (FailsafeException e) {
-            throw e.cause
-        }
+
+        return httpClient.send(request, HttpResponse.BodyHandlers.ofString())
     }
 
     private HttpResponse<byte[]> httpSend0(HttpRequest request) {
-        if( httpClient==null )
-            httpClient = newHttpClient()
-        if( retryConfig==null )
-            retryConfig = new RetryConfig()
-        try {
-            safeApply(()-> httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray()))
+        if( httpClient==null ) {
+            httpClient = HxClient.newBuilder()
+                .httpClient(newHttpClient())
+                .retryConfig(retryConfig0())
+                .build()
         }
-        catch (FailsafeException e) {
-            throw e.cause
-        }
+
+        return httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray())
     }
 
     private HttpClient newHttpClient() {

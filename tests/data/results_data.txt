@@ -1,0 +1,6 @@
+Results header
+Data point 1: value A
+Data point 2: value B
+Data point 3: value C
+Summary: 3 data points processed
+Final result: SUCCESS

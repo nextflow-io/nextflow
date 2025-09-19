@@ -16,21 +16,21 @@
 
 package nextflow.trace
 
+import static nextflow.util.LoggerHelper.*
+import static org.fusesource.jansi.Ansi.*
+
 import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
 import jline.TerminalFactory
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.trace.event.TaskEvent
 import nextflow.util.Duration
+import nextflow.util.SysHelper
 import nextflow.util.Threads
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
-
-import static nextflow.util.LoggerHelper.isHashLogPrefix
-import static org.fusesource.jansi.Ansi.Attribute
-import static org.fusesource.jansi.Ansi.Color
-import static org.fusesource.jansi.Ansi.ansi
 /**
  * Implements an observer which display workflow
  * execution progress and notifications using
@@ -96,11 +96,24 @@ class AnsiLogObserver implements TraceObserverV2 {
 
     private long lastWidthReset
 
-    private Boolean enableSummary = System.getenv('NXF_ANSI_SUMMARY') as Boolean
+    private Boolean enableSummary = SysEnv.get('NXF_ANSI_SUMMARY') as Boolean
 
     private final int WARN_MESSAGE_TIMEOUT = 35_000
 
     private WorkflowStatsObserver statsObserver
+
+    private static Integer getEnvTerminalWidth() {
+        final env = SysEnv.get('TERMINAL_WIDTH')
+        if( !env )
+            return null
+        try {
+            return Integer.parseInt(env)
+        }
+        catch( NumberFormatException e ) {
+            // do not log error to avoid catch-22 logging event (this class renders logging events)
+            return null
+        }
+    }
 
     private void markModified() {
         changeTimestamp = System.currentTimeMillis()
@@ -255,7 +268,7 @@ class AnsiLogObserver implements TraceObserverV2 {
             return
         }
 
-        cols = TerminalFactory.get().getWidth()
+        cols = getEnvTerminalWidth() ?: TerminalFactory.get().getWidth()
         rows = TerminalFactory.get().getHeight()
 
         // calc max width
@@ -347,7 +360,7 @@ class AnsiLogObserver implements TraceObserverV2 {
 
         if( session.isSuccess() && stats.progressLength>0 ) {
             def report = ""
-            report += "Completed at: ${new Date(endTimestamp).format('dd-MMM-yyyy HH:mm:ss')}\n"
+            report += "Completed at: ${SysHelper.fmtDate(new Date(endTimestamp))}\n"
             report += "Duration    : ${new Duration(delta)}\n"
             report += "CPU hours   : ${stats.getComputeTimeFmt()}\n"
             report += "Succeeded   : ${stats.succeedCountFmt}\n"

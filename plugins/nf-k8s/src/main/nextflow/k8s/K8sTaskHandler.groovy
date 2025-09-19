@@ -25,6 +25,7 @@ import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.SysEnv
+import nextflow.container.ContainerHelper
 import nextflow.container.DockerBuilder
 import nextflow.exception.NodeTerminationException
 import nextflow.k8s.client.PodUnschedulableException
@@ -165,7 +166,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
     protected String getOwner() { OWNER }
 
     protected Boolean fixOwnership() {
-        task.containerConfig.fixOwnership
+        ContainerHelper.fixOwnership(task.containerConfig)
     }
 
     /**

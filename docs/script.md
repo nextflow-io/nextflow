@@ -111,6 +111,49 @@ Copying a map with the `+` operator is a safer way to modify maps in Nextflow, s
 
 See {ref}`stdlib-types-map` for the set of available map operations.
 
+(script-tuples)=
+
+## Tuples
+
+Tuples are used to store a fixed sequence of heterogeneous values. They are created using the `tuple` function:
+
+```nextflow
+person = tuple('Alice', 42, false)
+```
+
+Tuple elements are accessed by index:
+
+```nextflow
+name = person[0]
+age = person[1]
+is_male = person[2]
+```
+
+Tuples can be destructured in assignments:
+
+```nextflow
+(name, age, is_male) = person
+```
+
+As well as closure parameters:
+
+```nextflow
+coords = [
+    tuple(1, 2),
+    tuple(2, 4),
+    tuple(3, 6),
+    tuple(4, 8)
+]
+
+coords.each { x, y ->
+    println "x=$x, y=$y"
+}
+```
+
+Tuples are immutable -- once a tuple is created, its elements cannot be modified.
+
+See {ref}`stdlib-types-tuple` for the set of available tuple operations.
+
 (script-operators)=
 
 ## Operators
@@ -118,7 +161,7 @@ See {ref}`stdlib-types-map` for the set of available map operations.
 Operators are symbols that perform specific functions on one or more values, and generally make code easier to read. This section highlights some of the most commonly used operators.
 
 :::{note}
-Operators in this context are different from *channel operators*, which are specialized functions for working with channels. See {ref}`channel-page` for more information.
+Operators in this context are different from *channel operators*, which are specialized functions for working with channels. See {ref}`dataflow-page` for more information.
 :::
 
 The `==` and `!=` operators can be used to test whether any two values are equal (or not equal):
@@ -152,8 +195,8 @@ assert !true == false           // logical NOT
 The `in` and `!in` operators can be used to test *membership*, i.e. whether a collection contains a value:
 
 ```nextflow
-assert 'lo wo' in 'Hello world!'
 assert 2 in [1, 2, 3]
+assert 'a' in [a: 1, b: 2, c: 3]
 ```
 
 Arithmetic operators can be used to do math:

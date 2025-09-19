@@ -137,6 +137,24 @@ class AzureRepositoryProviderTest extends Specification {
 
     @IgnoreIf({System.getenv('NXF_SMOKE')})
     @Requires({System.getenv('NXF_AZURE_REPOS_TOKEN')})
+    def 'should read bytes file content'() {
+        given:
+        def token = System.getenv('NXF_AZURE_REPOS_TOKEN')
+        def config = new ProviderConfig('azurerepos').setAuth(token)
+
+        when:
+        // uses repo at https://pditommaso.visualstudio.com/nf-azure-repo/_git/nf-azure-repo
+        def repo = new AzureRepositoryProvider('pditommaso/nf-azure-repo', config)
+        def result = repo.readBytes('/docs/images/nf-core-rnaseq_logo_light.png')
+
+        then:
+        result.length == 22915
+        result.sha256() == '7a396344498750f614155f6e4f38b7d6ca98ced45daf0921b64acf73b18efaf4'
+    }
+
+
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
+    @Requires({System.getenv('NXF_AZURE_REPOS_TOKEN')})
     def 'should fetch repo tags'() {
         given:
         def token = System.getenv('NXF_AZURE_REPOS_TOKEN')
@@ -170,7 +188,7 @@ class AzureRepositoryProviderTest extends Specification {
         result == [
                 new RepositoryProvider.BranchInfo('dev', 'cc0ca18640a5c995231e22d91f1527d5155d024b'),
                 new RepositoryProvider.BranchInfo('feature-x', '13456a001ba5a27d643755614ab8e814d94ef888'),
-                new RepositoryProvider.BranchInfo('master', 'f84130388714582e20f0e2ff9a44b41978ec8929'),
+                new RepositoryProvider.BranchInfo('master', 'a207636e419f18c4b8c8586b00e329ab4788a7f5'),
         ]
     }
 

@@ -24,9 +24,12 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.AbortOperationException
+import nextflow.file.FileHelper
 import nextflow.processor.TaskId
 import nextflow.script.WorkflowMetadata
+import nextflow.trace.config.ReportConfig
 import nextflow.trace.event.TaskEvent
+import nextflow.util.SysHelper
 import nextflow.util.TestOnly
 /**
  * Render pipeline report processes execution.
@@ -38,10 +41,6 @@ import nextflow.util.TestOnly
 @Slf4j
 @CompileStatic
 class ReportObserver implements TraceObserverV2 {
-
-    static final public String DEF_FILE_NAME = "report-${TraceHelper.launchTimestampFmt()}.html"
-
-    static final public int DEF_MAX_TASKS = 10_000
 
     /**
      * Holds the the start time for tasks started/submitted but not yet completed
@@ -62,7 +61,7 @@ class ReportObserver implements TraceObserverV2 {
      * Max number of tasks allowed in the report, when they exceed this
      * number the tasks table is omitted
      */
-    private int maxTasks = DEF_MAX_TASKS
+    private int maxTasks
 
     /**
      * Compute resources usage stats
@@ -74,14 +73,10 @@ class ReportObserver implements TraceObserverV2 {
      */
     private boolean overwrite
 
-    /**
-     * Creates a report observer
-     *
-     * @param file The file path where to store the resulting HTML report document
-     */
-    ReportObserver(Path file, Boolean overwrite=false) {
-        this.reportFile = file
-        this.overwrite = overwrite
+    ReportObserver(ReportConfig config) {
+        this.reportFile = FileHelper.asPath(config.file)
+        this.maxTasks = config.maxTasks
+        this.overwrite = config.overwrite
     }
 
     @TestOnly
@@ -109,18 +104,6 @@ class ReportObserver implements TraceObserverV2 {
      */
     protected Map<TaskId,TraceRecord> getRecords() {
         records
-    }
-
-    /**
-     * Set the number max allowed tasks. If this number is exceed the the tasks
-     * json in not included in the final report
-     *
-     * @param value The number of max task record allowed to be included in the HTML report
-     * @return The {@link ReportObserver} itself
-     */
-    ReportObserver setMaxTasks( int value ) {
-        this.maxTasks = value
-        return this
     }
 
     /**
@@ -231,6 +214,8 @@ class ReportObserver implements TraceObserverV2 {
         final tpl_fields = [
             workflow : getWorkflowMetadata(),
             payload : renderPayloadJson(),
+            // Add SysHelper to template binding so it can be used in templates
+            SysHelper : SysHelper,
             assets_css : [
                 readTemplate('assets/bootstrap.min.css'),
                 readTemplate('assets/datatables.min.css')

@@ -47,6 +47,16 @@ class AzBatchServiceTest extends Specification {
         SysEnv.pop()      // <-- restore the system host env
     }
 
+    def createExecutor(config) {
+        return Mock(AzBatchExecutor) {
+            getAzConfig() >> config
+        }
+    }
+
+    def createExecutor() {
+        createExecutor(new AzConfig([:]))
+    }
+
     def 'should make job id'() {
         given:
         def task = Mock(TaskRun) {
@@ -55,9 +65,7 @@ class AzBatchServiceTest extends Specification {
             }
         }
         and:
-        def exec = Mock(AzBatchExecutor) {
-            getConfig() >> new AzConfig([:])
-        }
+        def exec = createExecutor()
         and:
         def svc = new AzBatchService(exec)
 
@@ -72,9 +80,7 @@ class AzBatchServiceTest extends Specification {
 
     def 'should list locations' () {
         given:
-        def exec = Mock(AzBatchExecutor) {
-            getConfig() >> new AzConfig([:])
-        }
+        def exec = createExecutor()
         def svc = new AzBatchService(exec)
 
         when:
@@ -86,9 +92,7 @@ class AzBatchServiceTest extends Specification {
 
     def 'should list vm names for location' () {
         given:
-        def exec = Mock(AzBatchExecutor) {
-            getConfig() >> new AzConfig([:])
-        }
+        def exec = createExecutor()
         def svc = new AzBatchService(exec)
 
         when:
@@ -100,9 +104,7 @@ class AzBatchServiceTest extends Specification {
 
     def 'should list all VMs in region' () {
         given:
-        def exec = Mock(AzBatchExecutor) {
-            getConfig() >> new AzConfig([:])
-        }
+        def exec = createExecutor()
         def svc = new AzBatchService(exec)
 
         when:
@@ -129,9 +131,7 @@ class AzBatchServiceTest extends Specification {
 
     def 'should fail to list VMs in region' () {
         given:
-        def exec = Mock(AzBatchExecutor) {
-            getConfig() >> new AzConfig([:])
-        }
+        def exec = createExecutor()
         def svc = new AzBatchService(exec)
 
         when:
@@ -144,9 +144,7 @@ class AzBatchServiceTest extends Specification {
 
     def 'should get size for vm' () {
         given:
-        def exec = Mock(AzBatchExecutor) {
-            getConfig() >> new AzConfig([:])
-        }
+        def exec = createExecutor()
         def svc = new AzBatchService(exec)
 
         when:
@@ -172,9 +170,7 @@ class AzBatchServiceTest extends Specification {
     @Unroll
     def 'should compute vm score' () {
         given:
-        def exec = Mock(AzBatchExecutor) {
-            getConfig() >> new AzConfig([:])
-        }
+        def exec = createExecutor()
         def svc = new AzBatchService(exec)
 
         expect:
@@ -194,7 +190,7 @@ class AzBatchServiceTest extends Specification {
 
     def 'should find best match for northeurope' () {
         given:
-        def exec = Mock(AzBatchExecutor) { getConfig() >> new AzConfig([:]) }
+        def exec = createExecutor()
         def svc = new AzBatchService(exec)
         
         when:
@@ -220,7 +216,7 @@ class AzBatchServiceTest extends Specification {
 
     def 'should match familty' () {
         given:
-        def exec = Mock(AzBatchExecutor) { getConfig() >> new AzConfig([:]) }
+        def exec = createExecutor()
         def svc = new AzBatchService(exec)
 
         expect:
@@ -245,7 +241,7 @@ class AzBatchServiceTest extends Specification {
     @Unroll
     def 'should compute mem slots' () {
         given:
-        def exec = Mock(AzBatchExecutor) { getConfig() >> new AzConfig([:]) }
+        def exec = createExecutor()
         def svc = new AzBatchService(exec)
 
         expect:
@@ -267,7 +263,7 @@ class AzBatchServiceTest extends Specification {
     @Unroll
     def 'should compute slots' () {
         given:
-        def exec = Mock(AzBatchExecutor) { getConfig() >> new AzConfig([:]) }
+        def exec = createExecutor()
         def svc = new AzBatchService(exec)
         
         expect:
@@ -292,7 +288,7 @@ class AzBatchServiceTest extends Specification {
     def 'should configure default startTask' () {
         given:
         def CONFIG = [batch:[copyToolInstallMode: 'node']]
-        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        def exec = createExecutor(CONFIG)
         def svc = new AzBatchService(exec)
 
         when:
@@ -306,13 +302,13 @@ class AzBatchServiceTest extends Specification {
     def 'should configure custom startTask' () {
         given:
         def CONFIG = [batch:[copyToolInstallMode: 'node']]
-        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        def exec = createExecutor(CONFIG)
         def svc = new AzBatchService(exec)
 
         when:
         def configuredStartTask = svc.createStartTask( new AzStartTaskOpts(script: 'echo hello-world') )
         then:
-        configuredStartTask.commandLine == 'bash -c "chmod +x azcopy && mkdir $AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy $AZ_BATCH_NODE_SHARED_DIR/bin/"; bash -c \'echo hello-world\''
+        configuredStartTask.commandLine == 'bash -c "chmod +x azcopy && mkdir $AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy $AZ_BATCH_NODE_SHARED_DIR/bin/" && bash -c \'echo hello-world\''
         and:
         configuredStartTask.resourceFiles.size()==1
         configuredStartTask.resourceFiles.first().filePath == 'azcopy'
@@ -321,7 +317,7 @@ class AzBatchServiceTest extends Specification {
     def 'should configure not install AzCopy because copyToolInstallMode is off' () {
         given:
         def CONFIG = [batch:[copyToolInstallMode: 'off']]
-        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        def exec = createExecutor(CONFIG)
         def svc = new AzBatchService(exec)
 
         when:
@@ -334,7 +330,7 @@ class AzBatchServiceTest extends Specification {
     def 'should configure not install AzCopy because copyToolInstallMode is task and quote command' () {
         given:
         def CONFIG = [batch:[copyToolInstallMode: 'task']]
-        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        def exec = createExecutor(CONFIG)
         def svc = new AzBatchService(exec)
 
         when:
@@ -347,7 +343,7 @@ class AzBatchServiceTest extends Specification {
     def 'should create null startTask because no options are enabled' () {
         given:
         def CONFIG = [batch:[copyToolInstallMode: 'off']]
-        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        def exec = createExecutor(CONFIG)
         def svc = new AzBatchService(exec)
 
         when:
@@ -359,7 +355,7 @@ class AzBatchServiceTest extends Specification {
     def 'should configure privileged startTask' () {
         given:
         def CONFIG = [batch:[copyToolInstallMode: 'node']]
-        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        def exec = createExecutor(CONFIG)
         def svc = new AzBatchService(exec)
         and:
 
@@ -371,7 +367,7 @@ class AzBatchServiceTest extends Specification {
 
     def 'should check scaling formula' () {
         given:
-        def exec = Mock(AzBatchExecutor) { getConfig() >> new AzConfig([:]) }
+        def exec = createExecutor()
         def svc = new AzBatchService(exec)
 
         when:
@@ -383,7 +379,7 @@ class AzBatchServiceTest extends Specification {
 
     def 'should check scaling formula for low-priority' () {
         given:
-        def exec = Mock(AzBatchExecutor) { getConfig() >> new AzConfig([:]) }
+        def exec = createExecutor()
         def svc = new AzBatchService(exec)
 
         when:
@@ -395,7 +391,7 @@ class AzBatchServiceTest extends Specification {
 
     def 'should  check formula vars' () {
         given:
-        def exec = Mock(AzBatchExecutor) { getConfig() >> new AzConfig([:]) }
+        def exec = createExecutor()
         def svc = new AzBatchService(exec)
         and:
         def opts = new AzPoolOpts(vmCount: 3, maxVmCount: 10, scaleInterval: Duration.of('5 min'))
@@ -415,7 +411,7 @@ class AzBatchServiceTest extends Specification {
         def LOC = 'europe'
         def TYPE = Mock(AzVmType)
         and:
-        def exec = Mock(AzBatchExecutor) { getConfig() >> new AzConfig([:]) }
+        def exec = createExecutor()
         AzBatchService svc = Spy(AzBatchService, constructorArgs: [exec])
 
         when:
@@ -452,7 +448,7 @@ class AzBatchServiceTest extends Specification {
 
     def 'should check poolid' () {
         given:
-        def exec = Mock(AzBatchExecutor) { getConfig() >> new AzConfig([:]) }
+        def exec = createExecutor()
         AzBatchService svc = Spy(AzBatchService, constructorArgs: [exec])
 
         when:
@@ -486,7 +482,7 @@ class AzBatchServiceTest extends Specification {
         def TYPE = 'Standard_X1'
         def VM = new AzVmType(name: TYPE, numberOfCores: CPUS)
         and:
-        def exec = Mock(AzBatchExecutor) { getConfig() >> CFG }
+        def exec = createExecutor(CFG)
         AzBatchService svc = Spy(AzBatchService, constructorArgs: [exec])
         and:
         def TASK = Mock(TaskRun) {
@@ -511,7 +507,7 @@ class AzBatchServiceTest extends Specification {
     def 'should set jobs to automatically terminate by default' () {
         given:
         def CONFIG = [:]
-        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        def exec = createExecutor(CONFIG)
         AzBatchService svc = Spy(AzBatchService, constructorArgs:[exec])
         when:
         svc.close()
@@ -522,7 +518,7 @@ class AzBatchServiceTest extends Specification {
     def 'should not cleanup jobs by default' () {
         given:
         def CONFIG = [:]
-        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        def exec = createExecutor(CONFIG)
         AzBatchService svc = Spy(AzBatchService, constructorArgs:[exec])
         when:
         svc.close()
@@ -533,7 +529,7 @@ class AzBatchServiceTest extends Specification {
     def 'should cleanup jobs if specified' () {
         given:
         def CONFIG = [batch:[deleteJobsOnCompletion: true]]
-        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        def exec = createExecutor(CONFIG)
         AzBatchService svc = Spy(AzBatchService, constructorArgs:[exec])
         when:
         svc.close()
@@ -544,7 +540,7 @@ class AzBatchServiceTest extends Specification {
     def 'should not cleanup pools by default' () {
         given:
         def CONFIG = [:]
-        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        def exec = createExecutor(CONFIG)
         AzBatchService svc = Spy(AzBatchService, constructorArgs:[exec])
         when:
         svc.close()
@@ -555,7 +551,7 @@ class AzBatchServiceTest extends Specification {
     def 'should cleanup pools with autoPoolMode' () {
         given:
         def CONFIG = [batch:[autoPoolMode: true, deletePoolsOnCompletion: true]]
-        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        def exec = createExecutor(CONFIG)
         AzBatchService svc = Spy(AzBatchService, constructorArgs:[exec])
         when:
         svc.close()
@@ -566,7 +562,7 @@ class AzBatchServiceTest extends Specification {
     def 'should cleanup pools with allowPoolCreation' () {
         given:
         def CONFIG = [batch:[allowPoolCreation: true, deletePoolsOnCompletion: true]]
-        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        def exec = createExecutor(CONFIG)
         AzBatchService svc = Spy(AzBatchService, constructorArgs:[exec])
         when:
         svc.close()
@@ -578,7 +574,7 @@ class AzBatchServiceTest extends Specification {
     def 'should not cleanup pools without autoPoolMode or allowPoolCreation' () {
         given:
         def CONFIG = [batch:[deletePoolsOnCompletion: true]]
-        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        def exec = createExecutor(CONFIG)
         AzBatchService svc = Spy(AzBatchService, constructorArgs:[exec])
         when:
         svc.close()
@@ -590,7 +586,7 @@ class AzBatchServiceTest extends Specification {
         given:
         def POOL_ID = 'foo'
         def CONFIG = [batch:[location: 'northeurope', pools: [(POOL_ID): [vmType: 'Standard_D2_v2']]]]
-        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        def exec = createExecutor(CONFIG)
         AzBatchService svc = Spy(AzBatchService, constructorArgs:[exec])
 
         when:
@@ -608,7 +604,7 @@ class AzBatchServiceTest extends Specification {
         given:
         def POOL_ID = 'foo'
         def CONFIG = [batch:[location: 'northeurope']]
-        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        def exec = createExecutor(CONFIG)
         AzBatchService svc = Spy(AzBatchService, constructorArgs:[exec])
 
         when:
@@ -626,7 +622,7 @@ class AzBatchServiceTest extends Specification {
         given:
         def retryCfg = [delay: '100ms', maxDelay: '200ms', maxAttempts: 300]
         def CONFIG = [batch:[location: 'northeurope'], retryPolicy: retryCfg]
-        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        def exec = createExecutor(CONFIG)
         AzBatchService svc = Spy(new AzBatchService(exec))
 
         when:
@@ -641,7 +637,7 @@ class AzBatchServiceTest extends Specification {
     def 'should create apply policy' () {
         given:
         def CONFIG = [batch:[location: 'northeurope']]
-        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        def exec = createExecutor(CONFIG)
         AzBatchService svc = Spy(new AzBatchService(exec))
 
         expect:
@@ -656,7 +652,7 @@ class AzBatchServiceTest extends Specification {
         def POOL_ID = 'my-pool'
         def SAS = '123'
         def CONFIG = [storage: [sasToken: SAS]]
-        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        def exec = createExecutor(CONFIG)
         AzBatchService azure = Spy(new AzBatchService(exec))
         and:
         def TASK = Mock(TaskRun) {
@@ -690,7 +686,7 @@ class AzBatchServiceTest extends Specification {
         def SAS = '123'
 
         def CONFIG = [storage: [sasToken: SAS]]
-        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        def exec = createExecutor(CONFIG)
         AzBatchService azure = Spy(new AzBatchService(exec))
         def session = Mock(Session) {
             getConfig() >>[fusion:[enabled:false]]
@@ -736,7 +732,7 @@ class AzBatchServiceTest extends Specification {
         def SAS = '123'
 
         def CONFIG = [storage: [sasToken: SAS, fileShares: [file1: [mountOptions: 'mountOptions1', mountPath: 'mountPath1']]]]
-        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        def exec = createExecutor(CONFIG)
         AzBatchService azure = Spy(new AzBatchService(exec))
         def session = Mock(Session) {
             getConfig() >>[fusion:[enabled:false]]
@@ -783,7 +779,7 @@ class AzBatchServiceTest extends Specification {
         def WORKDIR = FileSystemPathFactory.parse('az://foo/work/dir')
         and:
         def POOL_ID = 'my-pool'
-        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(AZURE) }
+        def exec = createExecutor(new AzConfig(AZURE))
         AzBatchService azure = Spy(new AzBatchService(exec))
         and:
         def TASK = Mock(TaskRun) {
@@ -820,7 +816,7 @@ class AzBatchServiceTest extends Specification {
     def 'should create user-assigned managed identity credentials token' () {
         given:
         def config = Mock(AzConfig)
-        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        def exec = createExecutor(CONFIG)
         AzBatchService service = Spy(new AzBatchService(exec))
 
         when:
@@ -840,12 +836,11 @@ class AzBatchServiceTest extends Specification {
     def 'should use pool identity client id for fusion tasks' () {
         given:
         def POOL_IDENTITY_CLIENT_ID = 'pool-identity-123'
-        def exec = Mock(AzBatchExecutor) {
-            getConfig() >> new AzConfig([
-                batch: [poolIdentityClientId: POOL_IDENTITY_CLIENT_ID],
-                storage: [sasToken: 'test-sas-token', accountName: 'testaccount']
-            ])
-        }
+        def CONFIG = new AzConfig([
+            batch: [poolIdentityClientId: POOL_IDENTITY_CLIENT_ID],
+            storage: [sasToken: 'test-sas-token', accountName: 'testaccount']
+        ])
+        def exec = createExecutor(CONFIG)
         def service = new AzBatchService(exec)
         
         and:
@@ -866,7 +861,7 @@ class AzBatchServiceTest extends Specification {
 
     def 'should cache job id' () {
         given:
-        def exec = Mock(AzBatchExecutor)
+        def exec = createExecutor()
         def service = Spy(new AzBatchService(exec))
         and:
         def p1 = Mock(TaskProcessor)
@@ -917,7 +912,7 @@ class AzBatchServiceTest extends Specification {
 
     def 'should test safeCreatePool' () {
         given:
-        def exec = Mock(AzBatchExecutor)
+        def exec = createExecutor()
         def service = Spy(new AzBatchService(exec))
         def spec = Mock(AzVmPoolSpec) {
             getPoolId() >> 'test-pool'
@@ -972,7 +967,7 @@ class AzBatchServiceTest extends Specification {
 
     def 'should test createJobConstraints method with Duration input' () {
         given:
-        def exec = Mock(AzBatchExecutor)
+        def exec = createExecutor()
         def service = new AzBatchService(exec)
         def nfDuration = TIME_STR ? nextflow.util.Duration.of(TIME_STR) : null
         
@@ -998,7 +993,7 @@ class AzBatchServiceTest extends Specification {
 
     def 'should create task constraints' () {
         given:
-        def exec = Mock(AzBatchExecutor)
+        def exec = createExecutor()
         def service = new AzBatchService(exec)
         def task = Mock(TaskRun) {
             getConfig() >> Mock(TaskConfig) {

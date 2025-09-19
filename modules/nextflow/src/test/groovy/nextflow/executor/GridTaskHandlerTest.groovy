@@ -20,7 +20,7 @@ package nextflow.executor
 import java.nio.file.Path
 import java.nio.file.Paths
 
-import nextflow.container.ContainerConfig
+import nextflow.container.DockerConfig
 import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessNonZeroExitStatusException
 import nextflow.file.FileHelper
@@ -54,7 +54,9 @@ class GridTaskHandlerTest extends Specification {
     def 'should capture error cause' () {
         given:
         def task = new TaskRun(name: 'foo', workDir: Paths.get('/some/work'))
-        def exec = Mock(AbstractGridExecutor)
+        def exec = Mock(AbstractGridExecutor) {
+            getConfig() >> new ExecutorConfig([:])
+        }
         def handler = Spy(new GridTaskHandler(task, exec))
 
         when:
@@ -83,7 +85,9 @@ class GridTaskHandlerTest extends Specification {
         def task = Mock(TaskRun) {
             getWorkDir() >> WORK_DIR
         }
-        def exec = Mock(AbstractGridExecutor)
+        def exec = Mock(AbstractGridExecutor) {
+            getConfig() >> new ExecutorConfig([:])
+        }
         def handler = Spy(new GridTaskHandler(task, exec))
 
         when:
@@ -109,11 +113,13 @@ class GridTaskHandlerTest extends Specification {
             getLogFile() >> logFile
             getContainer() >> 'ubuntu:latest'
             getProcessor() >> Mock(TaskProcessor)
-            getContainerConfig() >> Mock(ContainerConfig) { getEngine()>>'docker' }
+            getContainerConfig() >> Mock(DockerConfig)
             toTaskBean() >> Mock(TaskBean) { getWorkDir()>>WORK_DIR; getInputFiles()>>[:] }
             getConfig() >> Mock(TaskConfig) { getContainerOptions() >> '--this=that' }
         }
-        def exec = Mock(AbstractGridExecutor)
+        def exec = Mock(AbstractGridExecutor) {
+            getConfig() >> new ExecutorConfig([:])
+        }
         def handler = Spy(new GridTaskHandler(task, exec))
 
         when:

@@ -1,5 +1,10 @@
 nf-google changelog
 ===================
+1.22.2 - 15 Aug 2025
+- Fix NPE in GoogleBatchMachineTypeSelector when spotPrice is null [ci fast] [a797a795]
+- Unify nf-lang config scopes with runtime classes (#6271) [bfa67ca3]
+- Bump groovy 4.0.28 (#6304) [ci fast] [a468f8ef]
+
 1.22.1 - 6 Jul 2025
 - Fix class not found exception Google Life science executor (#6193) [7bfb9358]
 - Update Google dependencies (#6229) [8bd42acb]

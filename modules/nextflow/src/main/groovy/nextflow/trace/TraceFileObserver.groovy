@@ -25,10 +25,11 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.agent.Agent
 import nextflow.Session
+import nextflow.file.FileHelper
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskId
+import nextflow.trace.config.TraceConfig
 import nextflow.trace.event.TaskEvent
-import nextflow.util.TestOnly
 /**
  * Create a CSV file containing the processes execution information
  *
@@ -38,27 +39,10 @@ import nextflow.util.TestOnly
 @CompileStatic
 class TraceFileObserver implements TraceObserverV2 {
 
-    public static final String DEF_FILE_NAME = "trace-${TraceHelper.launchTimestampFmt()}.txt"
-
     /**
      * The list of fields included in the trace report
      */
-    List<String> fields = [
-            'task_id',
-            'hash',
-            'native_id',
-            'name',
-            'status',
-            'exit',
-            'submit',
-            'duration',
-            'realtime',
-            '%cpu',
-            'peak_rss',
-            'peak_vmem',
-            'rchar',
-            'wchar'
-    ]
+    List<String> fields
 
     List<String> formats
 
@@ -91,6 +75,14 @@ class TraceFileObserver implements TraceObserverV2 {
 
     private boolean useRawNumber
 
+    TraceFileObserver(TraceConfig config) {
+        tracePath = FileHelper.asPath(config.file)
+        overwrite = config.overwrite
+        separator = config.sep
+        useRawNumbers(config.raw)
+        setFieldsAndFormats(config.fields)
+    }
+
     void setFields( List<String> entries ) {
 
         final names = TraceRecord.FIELDS.keySet()
@@ -115,17 +107,7 @@ class TraceFileObserver implements TraceObserverV2 {
         this.fields = result
     }
 
-    TraceFileObserver setFieldsAndFormats( value ) {
-        List<String> entries
-        if( value instanceof String ) {
-            entries = value.tokenize(', ')
-        }
-        else if( value instanceof List ) {
-            entries = (List)value
-        }
-        else {
-            throw new IllegalArgumentException("Not a valid trace fields value: $value")
-        }
+    TraceFileObserver setFieldsAndFormats( List<String> entries ) {
 
         List<String> fields = new ArrayList<>(entries.size())
         List<String> formats = new ArrayList<>(entries.size())
@@ -174,20 +156,6 @@ class TraceFileObserver implements TraceObserverV2 {
         this.formats = local
         return this
     }
-
-    /**
-     * Create the trace observer
-     *
-     * @param traceFile A path to the file where save the tracing data
-     */
-    TraceFileObserver(Path traceFile, Boolean overwrite=false, String separator='\t') {
-        this.tracePath = traceFile
-        this.overwrite = overwrite
-        this.separator = separator
-    }
-
-    @TestOnly
-    protected TraceFileObserver() {}
 
     /**
      * Create the trace file, in file already existing with the same name it is

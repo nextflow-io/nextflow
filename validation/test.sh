@@ -49,6 +49,7 @@ test_e2e() {
 # Integration tests
 #
 if [[ $TEST_MODE == 'test_integration' ]]; then
+  export NXF_SYNTAX_PARSER=v1
   test_integration ../tests/
   test_integration ../tests-v1/
   test_e2e
