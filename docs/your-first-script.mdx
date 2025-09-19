@@ -6,11 +6,11 @@ This guide details fundamental skills to run a basic Nextflow pipeline. It inclu
 - Modifying and resuming a pipeline
 - Configuring a pipeline parameter
 
-<h3>Prerequisites</h3>
-
+:::info[**Prerequisites**]
 You will need the following to get started:
 
-- Nextflow: See [Installation][install-page] for more information.
+- Nextflow installed locally
+:::
 
 ## Run a pipeline
 
@@ -23,10 +23,10 @@ params.str = "Hello world!"
 // split process
 process split {
     publishDir "results/lower"
-    
+
     input:
     val x
-    
+
     output:
     path 'chunk_*'
 
@@ -63,8 +63,8 @@ workflow {
 
 This script defines two processes:
 
-- `split`: takes a string input, splits it into 6-character chunks, and writes the chunks to files with the prefix `chunk_`
-- `convert_to_upper`: takes files as input, transforms their contents to uppercase letters, and writes the uppercase strings to files with the prefix `upper_`
+- `split`: takes a string input, splits it into 6-character chunks, and writes the chunks to files with the prefix `chunk_`.
+- `convert_to_upper`: takes files as input, transforms their contents to uppercase letters, and writes the uppercase strings to files with the prefix `upper_`.
 
 The `split` output is emitted as a single element. The `flatten` operator splits this combined element so that each file is treated as a sole element.
 
@@ -72,8 +72,8 @@ The outputs from both processes are published in subdirectories (`lower` and `up
 
 To run your pipeline:
 
-1. Create a new file named `main.nf` in your current directory
-2. Copy and save the above pipeline to your new file
+1. Create a new file named `main.nf` in your current directory.
+2. Copy and save the above pipeline to your new file.
 3. Run your pipeline using the following command:
 
     ```bash
@@ -111,7 +111,7 @@ Launching `main.nf` [peaceful_watson] DSL2 - revision: 13a41a8946
 [30/ba7de0] Submitted process > convert_to_upper (chunk_aa)
 ```
 
-::: 
+:::
 
 ## Modify and resume
 
@@ -119,7 +119,7 @@ Nextflow tracks task executions in a task cache, a key-value store of previously
 
 You can enable resumability using the `-resume` flag when running a pipeline. To modify and resume your pipeline:
 
-1. Open `main.nf`
+1. Open `main.nf`.
 2. Replace the `convert_to_upper` process with the following:
 
     ```groovy
@@ -140,7 +140,7 @@ You can enable resumability using the `-resume` flag when running a pipeline. To
     }
     ```
 
-3. Save your changes
+3. Save your changes.
 4. Run your updated pipeline using the following command:
 
     ```bash
@@ -161,7 +161,7 @@ executor >  local (2)
 
 Nextflow skips the execution of the `split` process and retrieves the results from the cache. The `convert_to_upper` process is executed twice.
 
-See [Caching and resuming][cache-resume-page] for more information about Nextflow cache and resume functionality. 
+See [Caching and resuming][cache-resume-page] for more information about Nextflow cache and resume functionality.
 
 ## Pipeline parameters
 
