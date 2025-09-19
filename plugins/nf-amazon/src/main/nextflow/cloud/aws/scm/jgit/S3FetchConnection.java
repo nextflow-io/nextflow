@@ -52,7 +52,7 @@ public class S3FetchConnection extends S3BaseConnection implements FetchConnecti
         try {
             tmpdir = Files.createTempDirectory("s3-remote-git-");
             for (Ref r : want) {
-                downloadBundle(r, tmpdir, monitor);
+                downloadBundle(r, have, tmpdir, monitor);
             }
         }catch (IOException e){
             throw new TransportException(transport.getURI(), "Exception fetching branches", e);
@@ -67,7 +67,7 @@ public class S3FetchConnection extends S3BaseConnection implements FetchConnecti
 
     }
 
-    private void downloadBundle(Ref r, Path tmpdir, ProgressMonitor monitor) throws IOException{
+    private void downloadBundle(Ref r, Set<ObjectId> have, Path tmpdir, ProgressMonitor monitor) throws IOException{
         log.debug("Fetching {} in {}", r.getName(), tmpdir);
         final List<S3Object> list = s3.listObjectsV2(ListObjectsV2Request.builder()
                     .bucket(bucket)
@@ -92,16 +92,17 @@ public class S3FetchConnection extends S3BaseConnection implements FetchConnecti
                 GetObjectRequest.builder().bucket(bucket).key(key).build(),
                 localBundle
         );
-        parseBundle( localBundle, monitor);
+        parseBundle(r, have, localBundle, monitor);
 
     }
 
-    private void parseBundle( Path localBundle, ProgressMonitor monitor) throws TransportException {
-        try {
-            List<RefSpec> specs = new ArrayList<>();
-            specs.add(new RefSpec().setForceUpdate(true).setSourceDestination(Constants.R_REFS + '*', Constants.R_REFS + '*'));
-            Transport.open( transport.getLocal(), new URIish( localBundle.toUri().toString() ) ).fetch(monitor, specs);
-
+    private void parseBundle(Ref r, Set<ObjectId> have, Path localBundle, ProgressMonitor monitor) throws TransportException {
+        List<RefSpec> specs = new ArrayList<>();
+        List<Ref> refs = new ArrayList<>();
+        refs.add(r);
+        specs.add(new RefSpec().setForceUpdate(true).setSourceDestination(Constants.R_REFS + '*', Constants.R_REFS + '*'));
+        try(FetchConnection c = Transport.open(transport.getLocal(), new URIish(localBundle.toUri().toString())).openFetch(specs)){
+                c.fetch(monitor, refs, have);
         } catch (IOException | RuntimeException | URISyntaxException err) {
             close();
             throw new TransportException(transport.getURI(), err.getMessage(), err);

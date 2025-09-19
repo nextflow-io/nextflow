@@ -212,36 +212,54 @@ class CmdPush extends CmdBase implements HubOptions {
 
     private void checkFileSizes(File folder) {
         def maxSizeBytes = maxSizeMB * 1024 * 1024
-        List<Map<String, Object>> largeFiles = []
+        def git = Git.open(folder)
 
-        folder.eachFileRecurse { file ->
-            if( file.isFile() && !file.absolutePath.contains('/.git/') ) {
-                if( file.length() > maxSizeBytes ) {
-                    Map<String, Object> fileEntry = [:]
-                    fileEntry.file = file
-                    fileEntry.sizeMB = file.length() / (1024 * 1024)
+        try {
+            // Get Git status to find files that would be committed
+            def status = git.status().call()
+            def filesToBeCommitted = []
+
+            // Add untracked files
+            filesToBeCommitted.addAll(status.untracked)
+            // Add modified files
+            filesToBeCommitted.addAll(status.modified)
+            // Add added files
+            filesToBeCommitted.addAll(status.added)
+
+            def largeFiles = []
+
+            filesToBeCommitted.each { relativePath ->
+                def file = new File(folder, relativePath as String)
+                if( file.exists() && file.isFile() && file.length() > maxSizeBytes ) {
+                    def fileEntry = [
+                        file: file,
+                        relativePath: relativePath,
+                        sizeMB: file.length() / (1024 * 1024)
+                    ]
                     largeFiles.add(fileEntry)
                 }
             }
+
+            if( largeFiles ) {
+                log.warn "Found ${largeFiles.size()} large files that would be committed:"
+                largeFiles.each { entry ->
+                    def sizeMB = entry['sizeMB'] as Double
+                    log.warn "  ${entry['relativePath']}: ${String.format('%.1f', sizeMB)} MB"
+                }
+
+                print "Do you want to push these large files? [y/N]: "
+                def response = System.in.newReader().readLine()?.trim()?.toLowerCase()
+
+                if( response != 'y' && response != 'yes' ) {
+                    // Add large files to .gitignore
+                    def relativePaths = largeFiles.collect { entry -> entry['relativePath'] as String }
+                    addToGitignore(folder, relativePaths)
+                    println "Files have been added to .gitignore"
+                }
+            }
         }
-
-        if( largeFiles ) {
-            log.warn "Found ${largeFiles.size()} large files:"
-            largeFiles.each { entry ->
-                def fileInfo = entry.file as File
-                def sizeMB = entry.sizeMB as Double
-                log.warn "  ${fileInfo.name}: ${String.format('%.1f', sizeMB)} MB"
-            }
-
-            print "Do you want to push these large files? [y/N]: "
-            def response = System.in.newReader().readLine()?.trim()?.toLowerCase()
-
-            if( response != 'y' && response != 'yes' ) {
-                // Add large files to .gitignore
-                def fileNames = largeFiles.collect { entry -> (entry.file as File).name }
-                addToGitignore(folder, fileNames)
-                println "Files have been added to .gitignore"
-            }
+        finally {
+            git.close()
         }
     }
 
