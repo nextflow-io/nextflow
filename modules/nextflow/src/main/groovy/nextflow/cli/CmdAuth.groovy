@@ -354,25 +354,26 @@ class CmdAuth extends CmdBase implements UsageAware {
             def deviceAuth = requestDeviceAuthorization(auth0Config)
 
             println ""
-            AuthColorUtil.printColored("Opening authentication URL in web browser:", "cyan bold")
+            AuthColorUtil.printColored("Confirmation code: ${AuthColorUtil.colorize(deviceAuth.user_code as String, 'yellow')}", "cyan bold")
             def urlWithCode = "${deviceAuth.verification_uri}?user_code=${deviceAuth.user_code}"
-            println "  ${AuthColorUtil.colorize(urlWithCode, 'magenta')}"
+            println "${AuthColorUtil.colorize('Authentication URL:', 'cyan bold')} ${AuthColorUtil.colorize(urlWithCode, 'magenta')}"
+            AuthColorUtil.printColored("\n[ Press Enter to open in browser ]", "cyan bold")
+            System.in.read() // Wait for Enter key
 
-            // Try to open browser automatically (fail silently if not possible)
+            // Try to open browser automatically
+            def browserOpened = false
             try {
-                def opened = false
-
                 // Method 1: Java Desktop API
-                if (!opened && java.awt.Desktop.isDesktopSupported()) {
+                if (java.awt.Desktop.isDesktopSupported()) {
                     def desktop = java.awt.Desktop.getDesktop()
                     if (desktop.isSupported(java.awt.Desktop.Action.BROWSE)) {
                         desktop.browse(new URI(urlWithCode))
-                        opened = true
+                        browserOpened = true
                     }
                 }
 
                 // Method 2: Platform-specific commands
-                if (!opened) {
+                if (!browserOpened) {
                     def os = System.getProperty("os.name").toLowerCase()
                     def command = []
 
@@ -386,7 +387,7 @@ class CmdAuth extends CmdBase implements UsageAware {
                         for (browser in browsers) {
                             try {
                                 new ProcessBuilder(browser, urlWithCode).start()
-                                opened = true
+                                browserOpened = true
                                 break
                             } catch (Exception ignored) {
                                 // Try next browser
@@ -394,17 +395,19 @@ class CmdAuth extends CmdBase implements UsageAware {
                         }
                     }
 
-                    if (!opened && command) {
+                    if (!browserOpened && command) {
                         new ProcessBuilder(command as String[]).start()
+                        browserOpened = true
                     }
                 }
             } catch (Exception ignored) {
-                // Silently ignore any errors - user can open URL manually
+                // Will handle below
             }
 
-            AuthColorUtil.printColored("Confirm that the following code is shown: ${AuthColorUtil.colorize(deviceAuth.user_code as String, 'yellow')}", "cyan bold")
-            println ""
-            AuthColorUtil.printColored("Waiting for authentication...", "dim")
+            if (!browserOpened) {
+                AuthColorUtil.printColored("Could not open browser automatically. Please copy the URL above and open it manually in your browser.", "yellow")
+            }
+            print("${AuthColorUtil.colorize('Waiting for authentication...', 'dim', true)}")
 
             try {
                 // Poll for device token
@@ -413,7 +416,7 @@ class CmdAuth extends CmdBase implements UsageAware {
 
                 // Verify login by calling /user-info
                 def userInfo = callUserInfoApi(accessToken, apiUrl)
-                AuthColorUtil.printColored("\nAuthentication successful!", "green")
+                AuthColorUtil.printColored("\n\nAuthentication successful!", "green")
                 println "Logged in to ${AuthColorUtil.colorize(apiUrl.replace('api.', '').replace('/api', ''), 'magenta')} as: ${AuthColorUtil.colorize(userInfo.userName as String, 'cyan bold')}"
 
                 // Generate PAT
@@ -497,12 +500,12 @@ class CmdAuth extends CmdBase implements UsageAware {
 
                         if (error == 'authorization_pending') {
                             // User hasn't completed authorization yet, continue polling
-                            print "."
+                            print "${AuthColorUtil.colorize('.', 'dim', true)}"
                             System.out.flush()
                         } else if (error == 'slow_down') {
                             // Increase polling interval
                             intervalSeconds += 5
-                            print "."
+                            print "${AuthColorUtil.colorize('.', 'dim', true)}"
                             System.out.flush()
                         } else if (error == 'expired_token') {
                             throw new RuntimeException("The device code has expired. Please try again.")
