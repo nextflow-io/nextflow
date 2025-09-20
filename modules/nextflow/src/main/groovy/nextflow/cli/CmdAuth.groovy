@@ -318,7 +318,7 @@ class CmdAuth extends CmdBase implements UsageAware {
                 return
             }
 
-            println "Nextflow authentication with ${ColorUtil.colorize('Seqera Platform', 'cyan bold')}"
+            ColorUtil.printColored("Nextflow authentication with Seqera Platform", "cyan bold")
             ColorUtil.printColored(" - Authentication will be saved to: ${ColorUtil.colorize(getConfigFile().toString(), 'magenta')}", "dim")
 
             // Use provided URL or default
@@ -417,17 +417,29 @@ class CmdAuth extends CmdBase implements UsageAware {
                 // Verify login by calling /user-info
                 def userInfo = callUserInfoApi(accessToken, apiUrl)
                 ColorUtil.printColored("\n\nAuthentication successful!", "green")
-                println "Logged in to ${ColorUtil.colorize(apiUrl.replace('api.', '').replace('/api', ''), 'magenta')} as: ${ColorUtil.colorize(userInfo.userName as String, 'cyan bold')}"
 
                 // Generate PAT
                 def pat = generatePAT(accessToken, apiUrl)
 
                 // Save to config
                 saveAuthToConfig(pat, apiUrl)
-                println "Seqera Platform configuration saved to ${ColorUtil.colorize(getConfigFile().toString(), 'magenta')}"
+
+                // Automatically run configuration
+                runConfiguration()
 
             } catch (Exception e) {
                 throw new RuntimeException("Authentication failed: ${e.message}", e)
+            }
+        }
+
+        private void runConfiguration() {
+            try {
+                println ""
+                // Just run the existing config command
+                new ConfigCmd().apply([])
+            } catch (Exception e) {
+                ColorUtil.printColored("Configuration setup failed: ${e.message}", "red")
+                ColorUtil.printColored("You can run 'nextflow auth config' later to set up your configuration.", "dim")
             }
         }
 
@@ -530,7 +542,7 @@ class CmdAuth extends CmdBase implements UsageAware {
 
         private void handleEnterpriseAuth(String apiUrl) {
             println ""
-            println "Please generate a Personal Access Token from your ${ColorUtil.colorize('Seqera Platform', 'cyan bold')} instance."
+            ColorUtil.printColored("Please generate a Personal Access Token from your Seqera Platform instance.", "cyan bold")
             println "You can create one at: ${ColorUtil.colorize(apiUrl.replace('/api', '').replace('://api.', '') + '/tokens', 'magenta')}"
             println ""
 
@@ -549,7 +561,7 @@ class CmdAuth extends CmdBase implements UsageAware {
             // Save to config
             saveAuthToConfig(pat.trim(), apiUrl)
             ColorUtil.printColored("Personal Access Token saved to Nextflow config", "green")
-            println "Config file: ${ColorUtil.colorize(getConfigFile().toString(), 'magenta')}"
+            ColorUtil.printColored("Config file: ${getConfigFile().toString()}", "magenta")
         }
 
         private String generatePAT(String accessToken, String apiUrl) {
@@ -756,7 +768,7 @@ class CmdAuth extends CmdBase implements UsageAware {
                 return
             }
 
-            println "Nextflow ${ColorUtil.colorize('Seqera Platform', 'cyan bold')} configuration"
+            ColorUtil.printColored("Nextflow Seqera Platform configuration", "cyan bold")
             ColorUtil.printColored(" - Config file: ${ColorUtil.colorize(getConfigFile().toString(), 'magenta')}", "dim")
 
             // Check if token is from environment variable
@@ -782,12 +794,44 @@ class CmdAuth extends CmdBase implements UsageAware {
                 // Save updated config only if changes were made
                 if (configChanged) {
                     writeConfig(config)
+
+                    // Show the new configuration
+                    println "\nNew configuration:"
+                    showCurrentConfig(config, existingToken as String, endpoint as String)
+
                     ColorUtil.printColored("\nConfiguration saved to ${ColorUtil.colorize(getConfigFile().toString(), 'magenta')}", "green")
+                } else {
+                    ColorUtil.printColored("\nNo configuration changes were made.", "dim")
                 }
 
             } catch (Exception e) {
                 throw new AbortOperationException("Failed to configure settings: ${e.message}")
             }
+        }
+
+        private void showCurrentConfig(Map config, String accessToken, String endpoint) {
+            // Show workflow monitoring status
+            def monitoringEnabled = config.get('tower.enabled', false)
+            println "  ${ColorUtil.colorize('Workflow monitoring:', 'cyan')} ${monitoringEnabled ? ColorUtil.colorize('enabled', 'green') : ColorUtil.colorize('disabled', 'red')}"
+
+            // Show workspace setting
+            def workspaceId = config.get('tower.workspaceId')
+            if (workspaceId) {
+                def workspaceComment = config.get('tower.workspaceId.comment') as String
+                if (workspaceComment) {
+                    // Extract just the org/workspace part (before the square brackets)
+                    def orgWorkspace = workspaceComment.split(' \\[')[0]
+                    println "  ${ColorUtil.colorize('Default workspace:', 'cyan')} ${ColorUtil.colorize(workspaceId as String, 'magenta')} ${ColorUtil.colorize('[' + orgWorkspace + ']', 'dim', true)}"
+                } else {
+                    println "  ${ColorUtil.colorize('Default workspace:', 'cyan')} ${ColorUtil.colorize(workspaceId as String, 'magenta')}"
+                }
+            } else {
+                println "  ${ColorUtil.colorize('Default workspace:', 'cyan')} ${ColorUtil.colorize('None (Personal workspace)', 'magenta')}"
+            }
+
+            // Show API endpoint
+            def apiEndpoint = config.get('tower.endpoint') ?: endpoint
+            println "  ${ColorUtil.colorize('API endpoint:', 'cyan', true)} $apiEndpoint"
         }
 
         private boolean configureEnabled(Map config) {
@@ -798,36 +842,46 @@ class CmdAuth extends CmdBase implements UsageAware {
             ColorUtil.printColored("  When disabled, you can enable per-run with the ${ColorUtil.colorize('-with-tower', 'cyan')} flag", "dim")
             println ""
 
-            System.out.print("${ColorUtil.colorize('Enable workflow monitoring for all runs?', 'cyan bold', true)} (${currentEnabled ? ColorUtil.colorize('Y', 'green') + '/n' : 'y/' + ColorUtil.colorize('N', 'red')}): ")
-            System.out.flush()
-
             def reader = new BufferedReader(new InputStreamReader(System.in))
-            def input = reader.readLine()?.trim()?.toLowerCase()
+            def input
+            while (true) {
+                System.out.print("${ColorUtil.colorize('Enable workflow monitoring for all runs?', 'cyan bold', true)} (${currentEnabled ? ColorUtil.colorize('Y', 'green') + '/n' : 'y/' + ColorUtil.colorize('N', 'red')}): ")
+                System.out.flush()
 
-            if (input.isEmpty()) {
-                // Keep current setting if user just presses enter
-                return false
-            } else if (input == 'y' || input == 'yes') {
-                if (!currentEnabled) {
-                    config['tower.enabled'] = true
-                    return true
-                } else {
+                input = reader.readLine()?.trim()?.toLowerCase()
+
+                if (input.isEmpty()) {
+                    // Keep current setting if user just presses enter
                     return false
-                }
-            } else if (input == 'n' || input == 'no') {
-                if (currentEnabled) {
-                    config.remove('tower.enabled') // Don't set it to false, just remove it
-                    return true
+                } else if (input == 'y' || input == 'yes') {
+                    if (!currentEnabled) {
+                        config['tower.enabled'] = true
+                        return true
+                    } else {
+                        return false
+                    }
+                } else if (input == 'n' || input == 'no') {
+                    if (currentEnabled) {
+                        config.remove('tower.enabled') // Don't set it to false, just remove it
+                        return true
+                    } else {
+                        return false
+                    }
                 } else {
-                    return false
+                    ColorUtil.printColored("Invalid input. Please enter 'y', 'n', or press Enter to keep current setting.", "red")
                 }
-            } else {
-                println "Invalid input."
-                return false
             }
         }
 
         private boolean configureWorkspace(Map config, String accessToken, String endpoint, String userId) {
+            // Check if TOWER_WORKFLOW_ID environment variable is set
+            def envWorkspaceId = System.getenv('TOWER_WORKFLOW_ID')
+            if (envWorkspaceId) {
+                println "\nDefault workspace: ${ColorUtil.colorize('TOWER_WORKFLOW_ID environment variable is set', 'yellow')}"
+                ColorUtil.printColored("  Not prompting for default workspace configuration as environment variable takes precedence", "dim")
+                return false
+            }
+
             // Get all workspaces for the user
             def workspaces = getUserWorkspaces(accessToken, endpoint, userId)
 
@@ -836,26 +890,33 @@ class CmdAuth extends CmdBase implements UsageAware {
                 return false
             }
 
-            // Show current workspace (check both config and env var)
+            // Show current workspace setting
             def currentWorkspaceId = config.get('tower.workspaceId')
-            def envWorkspaceId = System.getenv('TOWER_WORKFLOW_ID')
-            def effectiveWorkspaceId = currentWorkspaceId ?: envWorkspaceId
-            def currentWorkspace = workspaces.find { ((Map)it).workspaceId.toString() == effectiveWorkspaceId?.toString() }
+            def currentWorkspace = workspaces.find { ((Map)it).workspaceId.toString() == currentWorkspaceId?.toString() }
 
+            def currentSetting
+            if (currentWorkspace) {
+                def workspace = currentWorkspace as Map
+                currentSetting = "${workspace.orgName} / ${workspace.workspaceName}"
+            } else {
+                currentSetting = "Personal workspace"
+            }
 
+            println "\nDefault workspace. Current setting: ${ColorUtil.colorize(currentSetting as String, 'cyan', true)}"
+            ColorUtil.printColored("  Workflow runs use this workspace by default", "dim")
             // Group by organization
             def orgWorkspaces = workspaces.groupBy { ((Map)it).orgName ?: 'Personal' }
 
             // If 8 or fewer total options, show all at once
             if (workspaces.size() <= 8) {
-                return selectWorkspaceFromAll(config, workspaces, currentWorkspaceId, envWorkspaceId)
+                return selectWorkspaceFromAll(config, workspaces, currentWorkspaceId)
             } else {
                 // Two-stage selection: org first, then workspace
-                return selectWorkspaceByOrg(config, orgWorkspaces, currentWorkspaceId, envWorkspaceId)
+                return selectWorkspaceByOrg(config, orgWorkspaces, currentWorkspaceId)
             }
         }
 
-        private boolean selectWorkspaceFromAll(Map config, List workspaces, def currentWorkspaceId, def envWorkspaceId) {
+        private boolean selectWorkspaceFromAll(Map config, List workspaces, def currentWorkspaceId) {
             println "\nAvailable workspaces:"
             println "  0. ${ColorUtil.colorize('Personal workspace', 'cyan', true)} ${ColorUtil.colorize('[no organization]', 'dim', true)}"
 
@@ -866,79 +927,77 @@ class CmdAuth extends CmdBase implements UsageAware {
             }
 
             // Show current workspace and prepare prompt
-            def currentWorkspace = workspaces.find { ((Map)it).workspaceId.toString() == (currentWorkspaceId ?: System.getenv('TOWER_WORKFLOW_ID'))?.toString() }
+            def currentWorkspace = workspaces.find { ((Map)it).workspaceId.toString() == currentWorkspaceId?.toString() }
             def currentWorkspaceName
             if (currentWorkspace) {
                 def workspace = currentWorkspace as Map
-                def source = currentWorkspaceId ? "config" : "TOWER_WORKFLOW_ID env var"
                 currentWorkspaceName = "${workspace.orgName} / ${workspace.workspaceName}"
-            } else if (System.getenv('TOWER_WORKFLOW_ID')) {
-                currentWorkspaceName = "TOWER_WORKFLOW_ID=${System.getenv('TOWER_WORKFLOW_ID')}"
             } else {
                 currentWorkspaceName = "Personal workspace"
             }
 
-            ColorUtil.printColored("\nSelect workspace (0-${workspaces.size()}, press Enter to keep as '${currentWorkspaceName}'): ", "bold cyan")
-            System.out.flush()
-
             def reader = new BufferedReader(new InputStreamReader(System.in))
-            def input = reader.readLine()?.trim()
+            def selection
+            while (true) {
+                ColorUtil.printColored("\nSelect workspace (0-${workspaces.size()}, press Enter to keep as '${currentWorkspaceName}'): ", "bold cyan")
+                System.out.flush()
+                def input = reader.readLine()?.trim()
 
-            if (input.isEmpty()) {
-                return false
-            }
-
-            try {
-                def selection = Integer.parseInt(input)
-                if (selection == 0) {
-                    if (envWorkspaceId) {
-                        return false
-                    } else {
-                        def hadWorkspaceId = config.containsKey('tower.workspaceId')
-                        config.remove('tower.workspaceId')
-                        config.remove('tower.workspaceId.comment')
-                        return hadWorkspaceId
+                if (input.isEmpty()) {
+                    // Ensure comment is preserved if workspace is already set
+                    if (currentWorkspaceId && currentWorkspace) {
+                        def workspace = currentWorkspace as Map
+                        def existingComment = config.get('tower.workspaceId.comment')
+                        if (!existingComment) {
+                            config['tower.workspaceId.comment'] = "${workspace.orgName} / ${workspace.workspaceName} [${workspace.workspaceFullName}]"
+                            return true  // Return true because we added the comment
+                        }
                     }
-                } else if (selection > 0 && selection <= workspaces.size()) {
-                    def selectedWorkspace = workspaces[selection - 1] as Map
-                    def selectedId = selectedWorkspace.workspaceId.toString()
-                    if (envWorkspaceId && selectedId == envWorkspaceId) {
-                        return false
-                    } else {
-                        def currentId = config.get('tower.workspaceId')
-                        config['tower.workspaceId'] = selectedId
-                        config['tower.workspaceId.comment'] = "${selectedWorkspace.orgName} / ${selectedWorkspace.workspaceName} [${selectedWorkspace.workspaceFullName}]"
-                        return currentId != selectedId
-                    }
-                } else {
-                    println "Invalid selection."
                     return false
                 }
-            } catch (NumberFormatException e) {
-                println "Invalid input."
-                return false
+
+                try {
+                    selection = Integer.parseInt(input)
+                    if (selection >= 0 && selection <= workspaces.size()) {
+                        break
+                    }
+                } catch (NumberFormatException e) {
+                    // Fall through to error message
+                }
+                ColorUtil.printColored("Invalid input. Please enter a number between 0 and ${workspaces.size()}.", "red")
+            }
+
+            if (selection == 0) {
+                def hadWorkspaceId = config.containsKey('tower.workspaceId')
+                config.remove('tower.workspaceId')
+                config.remove('tower.workspaceId.comment')
+                return hadWorkspaceId
+            } else {
+                def selectedWorkspace = workspaces[selection - 1] as Map
+                def selectedId = selectedWorkspace.workspaceId.toString()
+                def currentId = config.get('tower.workspaceId')
+                config['tower.workspaceId'] = selectedId
+                config['tower.workspaceId.comment'] = "${selectedWorkspace.orgName} / ${selectedWorkspace.workspaceName} [${selectedWorkspace.workspaceFullName}]"
+                return currentId != selectedId
             }
         }
 
-        private boolean selectWorkspaceByOrg(Map config, Map orgWorkspaces, def currentWorkspaceId, def envWorkspaceId) {
+        private boolean selectWorkspaceByOrg(Map config, Map orgWorkspaces, def currentWorkspaceId) {
             // Get current workspace info for prompts
             def allWorkspaces = []
             orgWorkspaces.values().each { workspaceList ->
                 allWorkspaces.addAll(workspaceList as List)
             }
-            def currentWorkspace = allWorkspaces.find { ((Map)it).workspaceId.toString() == (currentWorkspaceId ?: envWorkspaceId)?.toString() }
-            def currentOrgName
+            def currentWorkspace = allWorkspaces.find { ((Map)it).workspaceId.toString() == currentWorkspaceId?.toString() }
             def currentWorkspaceName
+            def currentWorkspaceDisplay
             if (currentWorkspace) {
                 def workspace = currentWorkspace as Map
-                currentOrgName = workspace.orgName as String
                 currentWorkspaceName = workspace.workspaceName as String
-            } else if (envWorkspaceId) {
-                currentOrgName = "TOWER_WORKFLOW_ID=${envWorkspaceId}"
-                currentWorkspaceName = null
+                currentWorkspaceDisplay = "${workspace.orgName} / ${workspace.workspaceName}"
             } else {
-                currentOrgName = "Personal"
                 currentWorkspaceName = null
+                currentWorkspaceDisplay = "Personal workspace"
             }
 
             // First, select organization
@@ -952,101 +1011,99 @@ class CmdAuth extends CmdBase implements UsageAware {
                 orgs.eachWithIndex { orgName, index ->
                     println "  ${index + 2}. ${ColorUtil.colorize(orgName as String, 'cyan', true)}"
                 }
-                System.out.print("${ColorUtil.colorize("Select organization (1-${orgs.size() + 1}, Enter to keep as '${currentOrgName}'): ", 'dim', true)}")
+                System.out.print("${ColorUtil.colorize("Select organization (1-${orgs.size() + 1}, leave blank to keep as '${currentWorkspaceDisplay}'): ", 'dim', true)}")
             } else {
                 orgs.eachWithIndex { orgName, index ->
                     def displayName = orgName == 'Personal' ? 'Personal [Personal workspace - no organization]' : orgName
                     println "  ${index + 1}. ${ColorUtil.colorize(displayName as String, 'cyan', true)}"
                 }
-                System.out.print("${ColorUtil.colorize("Select organization (1-${orgs.size()}, Enter to keep as '${currentOrgName}'): ", 'dim', true)}")
+                System.out.print("${ColorUtil.colorize("Select organization (1-${orgs.size()}, leave blank to keep as '${currentWorkspaceDisplay}'): ", 'dim', true)}")
             }
             System.out.flush()
 
             def reader = new BufferedReader(new InputStreamReader(System.in))
-            def orgInput = reader.readLine()?.trim()
+            def maxOrgSelection = hasPersonal ? orgs.size() : orgs.size() + 1
+            def orgSelection
+            while (true) {
+                def orgInput = reader.readLine()?.trim()
 
-            if (orgInput.isEmpty()) {
-                return false
-            }
-
-            try {
-                def orgSelection = Integer.parseInt(orgInput)
-                def maxOrgSelection = hasPersonal ? orgs.size() : orgs.size() + 1
-                if (orgSelection < 1 || orgSelection > maxOrgSelection) {
-                    println "Invalid selection."
+                if (orgInput.isEmpty()) {
+                    // Ensure comment is preserved if workspace is already set
+                    if (currentWorkspaceId && currentWorkspace) {
+                        def workspace = currentWorkspace as Map
+                        def existingComment = config.get('tower.workspaceId.comment')
+                        if (!existingComment) {
+                            config['tower.workspaceId.comment'] = "${workspace.orgName} / ${workspace.workspaceName} [${workspace.workspaceFullName}]"
+                            return true  // Return true because we added the comment
+                        }
+                    }
                     return false
                 }
 
-                def selectedOrgName
-                if (!hasPersonal && orgSelection == 1) {
-                    // Personal workspace selected
-                    if (envWorkspaceId) {
-                        return false
-                    } else {
-                        def hadWorkspaceId = config.containsKey('tower.workspaceId')
-                        config.remove('tower.workspaceId')
-                        config.remove('tower.workspaceId.comment')
-                        return hadWorkspaceId
+                try {
+                    orgSelection = Integer.parseInt(orgInput)
+                    if (orgSelection >= 1 && orgSelection <= maxOrgSelection) {
+                        break
                     }
-                } else {
-                    def orgIndex = hasPersonal ? orgSelection - 1 : orgSelection - 2
-                    selectedOrgName = orgs[orgIndex]
+                } catch (NumberFormatException e) {
+                    // Fall through to error message
                 }
+                ColorUtil.printColored("Invalid input. Please enter a number between 1 and ${maxOrgSelection}.", "red")
+                System.out.print("${ColorUtil.colorize("Select organization (1-${maxOrgSelection}, leave blank to keep as '${currentWorkspaceDisplay}'): ", 'dim', true)}")
+                System.out.flush()
+            }
 
-                def orgWorkspaceList = orgWorkspaces[selectedOrgName] as List
+            def selectedOrgName
+            if (!hasPersonal && orgSelection == 1) {
+                // Personal workspace selected
+                def hadWorkspaceId = config.containsKey('tower.workspaceId')
+                config.remove('tower.workspaceId')
+                config.remove('tower.workspaceId.comment')
+                return hadWorkspaceId
+            } else {
+                def orgIndex = hasPersonal ? orgSelection - 1 : orgSelection - 2
+                selectedOrgName = orgs[orgIndex]
+            }
 
-                println ""
-                println "Select workspace in ${selectedOrgName}:"
+            def orgWorkspaceList = orgWorkspaces[selectedOrgName] as List
 
-                if (selectedOrgName == 'Personal') {
-                    println "  0. Personal workspace (default)"
-                }
+            println ""
+            println "Select workspace in ${selectedOrgName}:"
 
-                orgWorkspaceList.eachWithIndex { workspace, index ->
-                    def ws = workspace as Map
-                    println "  ${index + 1}. ${ColorUtil.colorize(ws.workspaceName as String, 'magenta', true)} ${ColorUtil.colorize('[' + (ws.workspaceFullName as String) + ']', 'dim', true)}"
-                }
+            orgWorkspaceList.eachWithIndex { workspace, index ->
+                def ws = workspace as Map
+                println "  ${index + 1}. ${ColorUtil.colorize(ws.workspaceName as String, 'magenta', true)} ${ColorUtil.colorize('[' + (ws.workspaceFullName as String) + ']', 'dim', true)}"
+            }
 
-                def maxSelection = orgWorkspaceList.size()
-                def keepAsText = currentWorkspaceName ? "'${currentWorkspaceName}'" : "'Personal workspace'"
-                System.out.print("${ColorUtil.colorize("Select workspace (${selectedOrgName == 'Personal' ? '0-' : '1-'}${maxSelection}, Enter to keep as ${keepAsText}): ", 'dim', true)}")
+            def maxSelection = orgWorkspaceList.size()
+            def wsSelection
+            while (true) {
+                System.out.print("${ColorUtil.colorize("Select workspace (1-${maxSelection}): ", 'dim', true)}")
                 System.out.flush()
 
                 def wsInput = reader.readLine()?.trim()
                 if (wsInput.isEmpty()) {
-                    return false
+                    ColorUtil.printColored("Please enter a selection.", "red")
+                    continue
                 }
 
-                def wsSelection = Integer.parseInt(wsInput)
-                if (selectedOrgName == 'Personal' && wsSelection == 0) {
-                    if (envWorkspaceId) {
-                        return false
-                    } else {
-                        def hadWorkspaceId = config.containsKey('tower.workspaceId')
-                        config.remove('tower.workspaceId')
-                        config.remove('tower.workspaceId.comment')
-                        return hadWorkspaceId
+                try {
+                    wsSelection = Integer.parseInt(wsInput)
+                    if (wsSelection >= 1 && wsSelection <= maxSelection) {
+                        break
                     }
-                } else if (wsSelection > 0 && wsSelection <= orgWorkspaceList.size()) {
-                    def selectedWorkspace = orgWorkspaceList[wsSelection - 1] as Map
-                    def selectedId = selectedWorkspace.workspaceId.toString()
-                    if (envWorkspaceId && selectedId == envWorkspaceId) {
-                        return false
-                    } else {
-                        def currentId = config.get('tower.workspaceId')
-                        config['tower.workspaceId'] = selectedId
-                        config['tower.workspaceId.comment'] = "${selectedWorkspace.orgName} / ${selectedWorkspace.workspaceName} [${selectedWorkspace.workspaceFullName}]"
-                        return currentId != selectedId
-                    }
-                } else {
-                    println "Invalid selection."
-                    return false
+                } catch (NumberFormatException e) {
+                    // Fall through to error message
                 }
-
-            } catch (NumberFormatException e) {
-                println "Invalid input."
-                return false
+                ColorUtil.printColored("Invalid input. Please enter a number between 1 and ${maxSelection}.", "red")
             }
+
+            def selectedWorkspace = orgWorkspaceList[wsSelection - 1] as Map
+            def selectedId = selectedWorkspace.workspaceId.toString()
+            def currentId = config.get('tower.workspaceId')
+            config['tower.workspaceId'] = selectedId
+            config['tower.workspaceId.comment'] = "${selectedWorkspace.orgName} / ${selectedWorkspace.workspaceName} [${selectedWorkspace.workspaceFullName}]"
+            return currentId != selectedId
         }
 
         private List getUserWorkspaces(String accessToken, String endpoint, String userId) {
@@ -1096,6 +1153,7 @@ class CmdAuth extends CmdBase implements UsageAware {
 
             // Collect all status information
             List<List<String>> statusRows = []
+            def workspaceDisplayInfo = null
 
             // API endpoint
             def endpointInfo = getConfigValue(config, 'tower.endpoint', 'TOWER_API_ENDPOINT', 'https://api.cloud.seqera.io')
@@ -1137,13 +1195,9 @@ class CmdAuth extends CmdBase implements UsageAware {
 
                 if (workspaceDetails) {
                     // Add workspace ID row
-                    statusRows.add(['Default workspace ID', ColorUtil.colorize(workspaceInfo.value as String, 'blue'), workspaceInfo.source as String])
-                    // Add org/name row
-                    statusRows.add([' - workspace name', "${ColorUtil.colorize(workspaceDetails.orgName as String, 'cyan bold')} / ${ColorUtil.colorize(workspaceDetails.workspaceName as String, 'cyan')}".toString(), ''])
-                    // Add full name row (truncate if too long)
-                    def fullName = workspaceDetails.workspaceFullName as String
-                    def truncatedFullName = fullName.length() > 50 ? fullName.substring(0, 47) + '...' : fullName
-                    statusRows.add([' - workspace full name', ColorUtil.colorize(truncatedFullName, 'cyan dim'), ''])
+                    statusRows.add(['Default workspace', ColorUtil.colorize(workspaceInfo.value as String, 'blue'), workspaceInfo.source as String])
+                    // Store workspace details for display after the table
+                    workspaceDisplayInfo = workspaceDetails
                 } else {
                     statusRows.add(['Default workspace', ColorUtil.colorize(workspaceInfo.value as String, 'blue', true), workspaceInfo.source as String])
                 }
@@ -1154,6 +1208,11 @@ class CmdAuth extends CmdBase implements UsageAware {
             // Print table
             println ""
             printStatusTable(statusRows)
+
+            // Print workspace details if available
+            if (workspaceDisplayInfo) {
+                println "${' '*22}${ColorUtil.colorize(workspaceDisplayInfo.orgName as String, 'cyan')} / ${ColorUtil.colorize(workspaceDisplayInfo.workspaceName as String, 'cyan')} ${ColorUtil.colorize('[' + (workspaceDisplayInfo.workspaceFullName as String) + ']', 'dim')}"
+            }
         }
 
         private void printStatusTable(List<List<String>> rows) {
