@@ -266,66 +266,15 @@ class CmdAuth extends CmdBase implements UsageAware {
         private static final Map AUTH0_CONFIG = [
             'dev': [
                 domain: 'seqera-development.eu.auth0.com',
-                clientId: 'Ep2LhYiYmuV9hhz0dH6dbXVq0S7s7SWZ',
-                qrCode: '''
-  █▀▀▀▀▀█ ▄ █ ▀▄ ▄▀▀▀▀▀ █▀▀▀▀▀█
-  █ ███ █ ▄▄▄ █▄█ ▀▄  ▄ █ ███ █
-  █ ▀▀▀ █ ▄█ ▄▄█▄▄  ▀▀█ █ ▀▀▀ █
-  ▀▀▀▀▀▀▀ ▀▄█▄▀ █▄▀ ▀▄█ ▀▀▀▀▀▀▀
-  █▀▀██ ▀▀█▀▄▀██▀▀▀█▄█▄▀▄█▄▀ ▀▄
-    ▀██ ▀ ▄ ▀   ██ ▀▄ ▄█▄██▄ ▄
-   ▀███▀▀▀▄█▀▄▀█  ▄▀ █▄▄▄▄▄▀▀ ▄
-    █▀█ ▀▄▀ █ ▀▀██▄ ▄ █▀ ▀█▀▀▄
-  ▄▀ █▄▄▀ ▀ █▄ ▀▀▀███▄▄█▄█▄▀█ ▄
-  █ ▀▄ ▀▀▄▄▀▄ ▄ ▄██▀▄▄▄ ▀██ ▀▄
-  ▀ ▀  ▀▀ █▄█▄▀▀▀▀█▀▄▄█▀▀▀█▄███
-  █▀▀▀▀▀█ ▀ █▄▀▀▄█▀  ██ ▀ █▀▀▄
-  █ ███ █ ███▄ ▀█▀▄▀ ▄▀▀▀▀▀▄█▀▄
-  █ ▀▀▀ █ █ ▀ ▄ ▀▀▄  ▀▄▀▀█▀█▀█
-  ▀▀▀▀▀▀▀ ▀ ▀▀▀▀▀  ▀▀▀ ▀  ▀▀▀
-'''
+                clientId: 'Ep2LhYiYmuV9hhz0dH6dbXVq0S7s7SWZ'
             ],
             'stage': [
                 domain: 'seqera-stage.eu.auth0.com',
-                clientId: '60cPDjI6YhoTPjyMTIBjGtxatSUwWswB',
-                qrCode: '''
-  █▀▀▀▀▀█ ▄ █ ▀ █▄█  ▀█ █▀▀▀▀▀█
-  █ ███ █ ▄▄▄ █▄▄▄ ▄▄ ▀ █ ███ █
-  █ ▀▀▀ █ ▄█ ▄▄▀ ▄██▀▀▀ █ ▀▀▀ █
-  ▀▀▀▀▀▀▀ ▀▄█▄▀ █▄▀ █▄█ ▀▀▀▀▀▀▀
-  ▀▀██▀▄▀█▀▀▄▀▄▀█▀▄▀▄█ ▀▄█▄▀ ▀▄
-  ▄  █▄▄▀▀▀ ▀ ▄▀▀▀█ ▀ ██▄██▄ ▄
-     ▄▀ ▀ █▀▀ ▀▀▀  ▀ ▄▄▄▄▄▄▀▀ ▄
-  █▀▀ ▄▄▀██ ██▀ ▄██  ▄█▀ ▀█▀▀▄
-  ▄█▄▄  ▀▀▀█ ▀▄▀█ ▄▀ ▄▄█▄█▄▀█ ▄
-  █ ▀ ▄▄▀ ▄ █ ▄ ▀▀█ ▄ ▀ ▀██ ▀▄
-  ▀ ▀▀▀ ▀ ██▄ ▀▀▀ ▄█▄ █▀▀▀█▄███
-  █▀▀▀▀▀█ ▀▄ █▀ █▀▀ ███ ▀ █▀▀▄▄
-  █ ███ █ █▀▀▀▄▄ ▀▄▀▀ ▀▀▀▀▀▄███
-  █ ▀▀▀ █ █▀  ▄█▀▀▄ ██▄▄▀█▀█▀█
-  ▀▀▀▀▀▀▀ ▀▀  ▀ ▀  ▀▀▀  ▀ ▀▀▀
-'''
+                clientId: '60cPDjI6YhoTPjyMTIBjGtxatSUwWswB'
             ],
             'prod': [
                 domain: 'seqera.eu.auth0.com',
-                clientId: 'FxCM8EJ76nNeHUDidSHkZfT8VtsrhHeL',
-                qrCode: '''
-  █▀▀▀▀▀█  ▀▄▄█▀█▄█▄ █▀ █▀▀▀▀▀█
-  █ ███ █ ▀██▄▀██▄  ▀ ▀ █ ███ █
-  █ ▀▀▀ █  ▄▀  ▄▀█ ▀██  █ ▀▀▀ █
-  ▀▀▀▀▀▀▀ █▄█ █▄█▄█▄▀▄█ ▀▀▀▀▀▀▀
-  █▀▀ ▀█▀█▀ ██  █ ▄█  ▄▀█  ▄▀ ▄
-   ▄▀▄█▀▀ ▀▀ ▄ ▀ ▄ ██▄▄▄█▀▀ ▀█▀
-  ▀▄▄▄▄█▀█   ▄█▄  █▀  ▄██  █ ▀█
-   █▀▀▀█▀▄██ ▀█▄█ ██▄▄  ▀█▀█ █▀
-   ▄ ▄▀█▀▀▀▄▀█  █ ▄▀  █▄█▀ █▄▀█
-  ▀▄▄  ▄▀  █▄▄ ▀ ▄ ▄▄ ██▄▀▀▄ █▀
-  ▀ ▀   ▀ █▄▀▄█▄ ▀█▀▀██▀▀▀█ ▄▄▄
-  █▀▀▀▀▀█ █▄▀▀█▄█▄██▄██ ▀ ██ █▀
-  █ ███ █ ▀▄▄█  █ ▄█  ▀▀▀██ ▄██
-  █ ▀▀▀ █ █▀▄▄ ▀   ▄█▀█  ▀█▀ ▄▀
-  ▀▀▀▀▀▀▀ ▀   ▀   ▀▀ ▀▀▀▀ ▀▀ ▀▀
-'''
+                clientId: 'FxCM8EJ76nNeHUDidSHkZfT8VtsrhHeL'
             ]
         ]
 
@@ -338,6 +287,7 @@ class CmdAuth extends CmdBase implements UsageAware {
             }
             return config
         }
+
 
         @Override
         String getName() { 'login' }
@@ -404,11 +354,55 @@ class CmdAuth extends CmdBase implements UsageAware {
             def deviceAuth = requestDeviceAuthorization(auth0Config)
 
             println ""
-            AuthColorUtil.printColored("Please visit the following URL in your web browser:", "cyan bold")
-            println "  ${AuthColorUtil.colorize(deviceAuth.verification_uri as String, 'magenta')}"
-            println auth0Config.qrCode
-            AuthColorUtil.printColored("Enter the following code when prompted:", "cyan bold")
-            println "  ${AuthColorUtil.colorize(deviceAuth.user_code as String, 'yellow bold')}"
+            AuthColorUtil.printColored("Opening authentication URL in web browser:", "cyan bold")
+            def urlWithCode = "${deviceAuth.verification_uri}?user_code=${deviceAuth.user_code}"
+            println "  ${AuthColorUtil.colorize(urlWithCode, 'magenta')}"
+
+            // Try to open browser automatically (fail silently if not possible)
+            try {
+                def opened = false
+
+                // Method 1: Java Desktop API
+                if (!opened && java.awt.Desktop.isDesktopSupported()) {
+                    def desktop = java.awt.Desktop.getDesktop()
+                    if (desktop.isSupported(java.awt.Desktop.Action.BROWSE)) {
+                        desktop.browse(new URI(urlWithCode))
+                        opened = true
+                    }
+                }
+
+                // Method 2: Platform-specific commands
+                if (!opened) {
+                    def os = System.getProperty("os.name").toLowerCase()
+                    def command = []
+
+                    if (os.contains("mac") || os.contains("darwin")) {
+                        command = ["open", urlWithCode]
+                    } else if (os.contains("win")) {
+                        command = ["cmd", "/c", "start", urlWithCode]
+                    } else {
+                        // Linux and other Unix-like systems
+                        def browsers = ["xdg-open", "firefox", "google-chrome", "chromium", "safari"]
+                        for (browser in browsers) {
+                            try {
+                                new ProcessBuilder(browser, urlWithCode).start()
+                                opened = true
+                                break
+                            } catch (Exception ignored) {
+                                // Try next browser
+                            }
+                        }
+                    }
+
+                    if (!opened && command) {
+                        new ProcessBuilder(command as String[]).start()
+                    }
+                }
+            } catch (Exception ignored) {
+                // Silently ignore any errors - user can open URL manually
+            }
+
+            AuthColorUtil.printColored("Confirm that the following code is shown: ${AuthColorUtil.colorize(deviceAuth.user_code as String, 'yellow')}", "cyan bold")
             println ""
             AuthColorUtil.printColored("Waiting for authentication...", "dim")
 
