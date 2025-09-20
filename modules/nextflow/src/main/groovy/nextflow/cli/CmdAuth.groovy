@@ -50,6 +50,15 @@ class CmdAuth extends CmdBase implements UsageAware {
     }
 
     static public final String NAME = 'auth'
+    static final Map<String, String> SEQERA_ENDPOINTS = [
+        'prod': 'https://api.cloud.seqera.io',
+        'stage': 'https://api.cloud.stage-seqera.io',
+        'dev': 'https://api.cloud.dev-seqera.io'
+    ]
+    static final int API_TIMEOUT_MS = 10000
+    static final int AUTH_POLL_TIMEOUT_RETRIES = 60
+    static final int AUTH_POLL_INTERVAL_SECONDS = 5
+    static final int WORKSPACE_SELECTION_THRESHOLD = 8  // Max workspaces to show in single list; above this uses org-first selection
 
     private List<SubCmd> commands = []
 
@@ -127,29 +136,74 @@ class CmdAuth extends CmdBase implements UsageAware {
 
 
     private String promptForApiUrl() {
-        System.out.print("Seqera Platform API endpoint [Default https://api.cloud.seqera.io]: ")
+        System.out.print("Seqera Platform API endpoint [Default ${SEQERA_ENDPOINTS.prod}]: ")
         System.out.flush()
 
-        def reader = new BufferedReader(new InputStreamReader(System.in))
-        def input = reader.readLine()?.trim()
+        def input = readUserInput()
+        return input?.isEmpty() ? SEQERA_ENDPOINTS.prod : input
+    }
 
-        return input?.isEmpty() || input == null ? 'https://api.cloud.seqera.io' : input
+    private String readUserInput() {
+        def reader = new BufferedReader(new InputStreamReader(System.in))
+        return reader.readLine()?.trim()
+    }
+
+    private HttpURLConnection createHttpConnection(String url, String method, String authToken = null) {
+        def connection = new URL(url).openConnection() as HttpURLConnection
+        connection.requestMethod = method
+        connection.connectTimeout = API_TIMEOUT_MS
+        connection.readTimeout = API_TIMEOUT_MS
+        if (authToken) {
+            connection.setRequestProperty('Authorization', "Bearer ${authToken}")
+        }
+        return connection
+    }
+
+    private void validateArgumentCount(List<String> args, String commandName) {
+        if (args.size() > 0) {
+            throw new AbortOperationException("Too many arguments for ${commandName} command")
+        }
+    }
+
+    private Map getWorkspaceDetailsFromApi(String accessToken, String endpoint, String workspaceId) {
+        try {
+            def userInfo = callUserInfoApi(accessToken, endpoint)
+            def userId = userInfo.id as String
+
+            def connection = createHttpConnection("${endpoint}/user/${userId}/workspaces", 'GET', accessToken)
+
+            if (connection.responseCode != 200) {
+                return null
+            }
+
+            def response = connection.inputStream.text
+            def json = new groovy.json.JsonSlurper().parseText(response) as Map
+            def orgsAndWorkspaces = json.orgsAndWorkspaces as List
+
+            def workspace = orgsAndWorkspaces.find { ((Map)it).workspaceId?.toString() == workspaceId }
+            if (workspace) {
+                def ws = workspace as Map
+                return [
+                    orgName: ws.orgName,
+                    workspaceName: ws.workspaceName,
+                    workspaceFullName: ws.workspaceFullName
+                ]
+            }
+
+            return null
+        } catch (Exception e) {
+            return null
+        }
     }
 
     private Map getCloudEndpointInfo(String apiUrl) {
-        // Check production endpoints
-        if (apiUrl == 'https://api.cloud.seqera.io' || apiUrl == 'https://cloud.seqera.io/api') {
-            return [isCloud: true, environment: 'prod']
+        for (env in SEQERA_ENDPOINTS) {
+            def standardUrl = env.value
+            def legacyUrl = standardUrl.replace('://api.', '://') + '/api'
+            if (apiUrl == standardUrl || apiUrl == legacyUrl) {
+                return [isCloud: true, environment: env.key]
+            }
         }
-        // Check staging endpoints
-        if (apiUrl == 'https://api.cloud.stage-seqera.io' || apiUrl == 'https://cloud.stage-seqera.io/api') {
-            return [isCloud: true, environment: 'stage']
-        }
-        // Check development endpoints
-        if (apiUrl == 'https://api.cloud.dev-seqera.io' || apiUrl == 'https://cloud.dev-seqera.io/api') {
-            return [isCloud: true, environment: 'dev']
-        }
-        // Enterprise/other endpoints
         return [isCloud: false, environment: null]
     }
 
@@ -157,12 +211,8 @@ class CmdAuth extends CmdBase implements UsageAware {
         return getCloudEndpointInfo(apiUrl).isCloud
     }
 
-    // Get user info from Seqera Platform
     private Map callUserInfoApi(String accessToken, String apiUrl) {
-        def userInfoUrl = "${apiUrl}/user-info"
-        def connection = new URL(userInfoUrl).openConnection() as HttpURLConnection
-        connection.requestMethod = 'GET'
-        connection.setRequestProperty('Authorization', "Bearer ${accessToken}")
+        def connection = createHttpConnection("${apiUrl}/user-info", 'GET', accessToken)
 
         if (connection.responseCode != 200) {
             def error = connection.errorStream?.text ?: "HTTP ${connection.responseCode}"
@@ -204,7 +254,7 @@ class CmdAuth extends CmdBase implements UsageAware {
         return content.replaceAll(/\n\n+/, '\n\n').trim() + "\n\n"
     }
 
-    private void writeConfig(Map config) {
+    private void writeConfig(Map config, Map workspaceMetadata = null) {
         def configFile = getConfigFile()
 
         // Create directory if it doesn't exist
@@ -222,39 +272,28 @@ class CmdAuth extends CmdBase implements UsageAware {
 
         // Write tower config block
         def towerConfig = config.findAll { key, value ->
-            key.toString().startsWith('tower.')
+            key.toString().startsWith('tower.') && !key.toString().endsWith('.comment')
         }
 
         configText.append("// Seqera Platform configuration\n")
         configText.append("tower {\n")
         towerConfig.each { key, value ->
             def configKey = key.toString().substring(6) // Remove "tower." prefix
-            if (configKey.endsWith('.comment')) {
-                // Skip comment keys - they're handled below
-                return
-            }
 
             if (value instanceof String) {
-                configText.append("    ${configKey} = '${value}'\n")
+                def line = "    ${configKey} = '${value}'"
+                // Add workspace comment if this is workspaceId and we have metadata
+                if (configKey == 'workspaceId' && workspaceMetadata) {
+                    line += "  // ${workspaceMetadata.orgName} / ${workspaceMetadata.workspaceName} [${workspaceMetadata.workspaceFullName}]"
+                }
+                configText.append("${line}\n")
             } else {
                 configText.append("    ${configKey} = ${value}\n")
             }
         }
         configText.append("}\n")
 
-        def finalConfig = configText.toString()
-
-        // Add workspace comment if available
-        if (config.containsKey('tower.workspaceId.comment')) {
-            def workspaceId = config['tower.workspaceId']
-            def comment = config['tower.workspaceId.comment']
-            finalConfig = finalConfig.replaceAll(
-                /workspaceId = '${Pattern.quote(workspaceId.toString())}'/,
-                "workspaceId = '${workspaceId}'  // ${comment}"
-            )
-        }
-
-        Files.writeString(configFile, finalConfig, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+        Files.writeString(configFile, configText.toString(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
     }
 
     //
@@ -294,9 +333,7 @@ class CmdAuth extends CmdBase implements UsageAware {
 
         @Override
         void apply(List<String> args) {
-            if (args.size() > 0) {
-                throw new AbortOperationException("Too many arguments for login command")
-            }
+            validateArgumentCount(args, name)
 
             // Check if TOWER_ACCESS_TOKEN environment variable is set
             def envToken = System.getenv('TOWER_ACCESS_TOKEN')
@@ -321,13 +358,7 @@ class CmdAuth extends CmdBase implements UsageAware {
             ColorUtil.printColored("Nextflow authentication with Seqera Platform", "cyan bold")
             ColorUtil.printColored(" - Authentication will be saved to: ${ColorUtil.colorize(getConfigFile().toString(), 'magenta')}", "dim")
 
-            // Use provided URL or default
-            if (!apiUrl) {
-                apiUrl = 'https://api.cloud.seqera.io'
-            } else if (!apiUrl.startsWith('http://') && !apiUrl.startsWith('https://')) {
-                apiUrl = 'https://' + apiUrl
-            }
-
+            apiUrl = normalizeApiUrl(apiUrl)
             ColorUtil.printColored(" - Seqera Platform API endpoint: ${ColorUtil.colorize(apiUrl, 'magenta')} (can be customised with ${ColorUtil.colorize('-url', 'cyan')})", "dim")
 
             // Check if this is a cloud endpoint or enterprise
@@ -444,94 +475,46 @@ class CmdAuth extends CmdBase implements UsageAware {
         }
 
         private Map requestDeviceAuthorization(Map auth0Config) {
-            def deviceAuthUrl = "https://${auth0Config.domain}/oauth/device/code"
-
             def params = [
                 'client_id': auth0Config.clientId,
                 'scope': 'openid profile email offline_access',
                 'audience': 'platform'
             ]
-
-            def postData = params.collect { k, v ->
-                "${URLEncoder.encode(k.toString(), 'UTF-8')}=${URLEncoder.encode(v.toString(), 'UTF-8')}"
-            }.join('&')
-
-            def connection = new URL(deviceAuthUrl).openConnection() as HttpURLConnection
-            connection.requestMethod = 'POST'
-            connection.setRequestProperty('Content-Type', 'application/x-www-form-urlencoded')
-            connection.doOutput = true
-
-            connection.outputStream.withWriter { writer ->
-                writer.write(postData)
-            }
-
-            if (connection.responseCode != 200) {
-                def error = connection.errorStream?.text ?: "HTTP ${connection.responseCode}"
-                throw new RuntimeException("Device authorization request failed: ${error}")
-            }
-
-            def response = connection.inputStream.text
-            def json = new groovy.json.JsonSlurper().parseText(response)
-            return json as Map
+            return performAuth0Request("https://${auth0Config.domain}/oauth/device/code", params)
         }
 
         private Map pollForDeviceToken(String deviceCode, int intervalSeconds, Map auth0Config) {
             def tokenUrl = "https://${auth0Config.domain}/oauth/token"
-            def maxRetries = 60 // 5 minutes with 5-second intervals
             def retryCount = 0
 
-            while (retryCount < maxRetries) {
+            while (retryCount < AUTH_POLL_TIMEOUT_RETRIES) {
                 def params = [
                     'grant_type': 'urn:ietf:params:oauth:grant-type:device_code',
                     'device_code': deviceCode,
                     'client_id': auth0Config.clientId
                 ]
 
-                def postData = params.collect { k, v ->
-                    "${URLEncoder.encode(k.toString(), 'UTF-8')}=${URLEncoder.encode(v.toString(), 'UTF-8')}"
-                }.join('&')
-
-                def connection = new URL(tokenUrl).openConnection() as HttpURLConnection
-                connection.requestMethod = 'POST'
-                connection.setRequestProperty('Content-Type', 'application/x-www-form-urlencoded')
-                connection.doOutput = true
-
-                connection.outputStream.withWriter { writer ->
-                    writer.write(postData)
-                }
-
-                if (connection.responseCode == 200) {
-                    def response = connection.inputStream.text
-                    def json = new groovy.json.JsonSlurper().parseText(response)
-                    return json as Map
-                } else {
-                    def errorResponse = connection.errorStream?.text
-                    if (errorResponse) {
-                        def errorJson = new groovy.json.JsonSlurper().parseText(errorResponse) as Map
-                        def error = errorJson.error
-
-                        if (error == 'authorization_pending') {
-                            // User hasn't completed authorization yet, continue polling
-                            print "${ColorUtil.colorize('.', 'dim', true)}"
-                            System.out.flush()
-                        } else if (error == 'slow_down') {
-                            // Increase polling interval
-                            intervalSeconds += 5
-                            print "${ColorUtil.colorize('.', 'dim', true)}"
-                            System.out.flush()
-                        } else if (error == 'expired_token') {
-                            throw new RuntimeException("The device code has expired. Please try again.")
-                        } else if (error == 'access_denied') {
-                            throw new RuntimeException("Access denied by user")
-                        } else {
-                            throw new RuntimeException("Token request failed: ${error} - ${errorJson.error_description ?: ''}")
-                        }
+                try {
+                    def result = performAuth0Request(tokenUrl, params)
+                    return result
+                } catch (RuntimeException e) {
+                    def message = e.message
+                    if (message.contains('authorization_pending')) {
+                        print "${ColorUtil.colorize('.', 'dim', true)}"
+                        System.out.flush()
+                    } else if (message.contains('slow_down')) {
+                        intervalSeconds += 5
+                        print "${ColorUtil.colorize('.', 'dim', true)}"
+                        System.out.flush()
+                    } else if (message.contains('expired_token')) {
+                        throw new RuntimeException("The device code has expired. Please try again.")
+                    } else if (message.contains('access_denied')) {
+                        throw new RuntimeException("Access denied by user")
                     } else {
-                        throw new RuntimeException("Token request failed: HTTP ${connection.responseCode}")
+                        throw e
                     }
                 }
 
-                // Wait before next poll
                 Thread.sleep(intervalSeconds * 1000)
                 retryCount++
             }
@@ -572,9 +555,7 @@ class CmdAuth extends CmdBase implements UsageAware {
 
             def requestBody = new groovy.json.JsonBuilder([name: tokenName]).toString()
 
-            def connection = new URL(tokensUrl).openConnection() as HttpURLConnection
-            connection.requestMethod = 'POST'
-            connection.setRequestProperty('Authorization', "Bearer ${accessToken}")
+            def connection = createHttpConnection(tokensUrl, 'POST', accessToken)
             connection.setRequestProperty('Content-Type', 'application/json')
             connection.doOutput = true
 
@@ -592,13 +573,55 @@ class CmdAuth extends CmdBase implements UsageAware {
             return json.accessKey as String
         }
 
+        private String normalizeApiUrl(String url) {
+            if (!url) {
+                return SEQERA_ENDPOINTS.prod
+            }
+            if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                return 'https://' + url
+            }
+            return url
+        }
+
+        private Map performAuth0Request(String url, Map params) {
+            def postData = params.collect { k, v ->
+                "${URLEncoder.encode(k.toString(), 'UTF-8')}=${URLEncoder.encode(v.toString(), 'UTF-8')}"
+            }.join('&')
+
+            def connection = new URL(url).openConnection() as HttpURLConnection
+            connection.requestMethod = 'POST'
+            connection.connectTimeout = API_TIMEOUT_MS
+            connection.readTimeout = API_TIMEOUT_MS
+            connection.setRequestProperty('Content-Type', 'application/x-www-form-urlencoded')
+            connection.doOutput = true
+
+            connection.outputStream.withWriter { writer ->
+                writer.write(postData)
+            }
+
+            if (connection.responseCode == 200) {
+                def response = connection.inputStream.text
+                def json = new groovy.json.JsonSlurper().parseText(response)
+                return json as Map
+            } else {
+                def errorResponse = connection.errorStream?.text
+                if (errorResponse) {
+                    def errorJson = new groovy.json.JsonSlurper().parseText(errorResponse) as Map
+                    def error = errorJson.error
+                    throw new RuntimeException("${error}: ${errorJson.error_description ?: ''}")
+                } else {
+                    throw new RuntimeException("Request failed: HTTP ${connection.responseCode}")
+                }
+            }
+        }
+
         private void saveAuthToConfig(String accessToken, String apiUrl) {
-            def config = readConfig()
+            def config = CmdAuth.this.readConfig()
             config['tower.accessToken'] = accessToken
             config['tower.endpoint'] = apiUrl
             config['tower.enabled'] = true
 
-            writeConfig(config)
+            CmdAuth.this.writeConfig(config, null)
         }
 
         @Override
@@ -625,9 +648,7 @@ class CmdAuth extends CmdBase implements UsageAware {
 
         @Override
         void apply(List<String> args) {
-            if (args.size() > 0) {
-                throw new AbortOperationException("Too many arguments for logout command")
-            }
+            validateArgumentCount(args, name)
 
             // Check if TOWER_ACCESS_TOKEN environment variable is set
             def envToken = System.getenv('TOWER_ACCESS_TOKEN')
@@ -705,10 +726,7 @@ class CmdAuth extends CmdBase implements UsageAware {
         }
 
         private void deleteTokenViaApi(String token, String apiUrl, String tokenId) {
-            def deleteUrl = "${apiUrl}/tokens/${tokenId}"
-            def connection = new URL(deleteUrl).openConnection() as HttpURLConnection
-            connection.requestMethod = 'DELETE'
-            connection.setRequestProperty('Authorization', "Bearer ${token}")
+            def connection = createHttpConnection("${apiUrl}/tokens/${tokenId}", 'DELETE', token)
 
             if (connection.responseCode != 200 && connection.responseCode != 204) {
                 def error = connection.errorStream?.text ?: "HTTP ${connection.responseCode}"
@@ -754,9 +772,7 @@ class CmdAuth extends CmdBase implements UsageAware {
 
         @Override
         void apply(List<String> args) {
-            if (args.size() > 0) {
-                throw new AbortOperationException("Too many arguments for config command")
-            }
+            validateArgumentCount(args, name)
 
             // Check if user is authenticated
             def config = readConfig()
@@ -789,11 +805,12 @@ class CmdAuth extends CmdBase implements UsageAware {
                 configChanged |= configureEnabled(config)
 
                 // Configure workspace
-                configChanged |= configureWorkspace(config, existingToken as String, endpoint as String, userInfo.id as String)
+                def workspaceResult = configureWorkspace(config, existingToken as String, endpoint as String, userInfo.id as String)
+                configChanged = configChanged || (workspaceResult.changed as boolean)
 
                 // Save updated config only if changes were made
                 if (configChanged) {
-                    writeConfig(config)
+                    writeConfig(config, workspaceResult.metadata as Map)
 
                     // Show the new configuration
                     println "\nNew configuration:"
@@ -817,11 +834,11 @@ class CmdAuth extends CmdBase implements UsageAware {
             // Show workspace setting
             def workspaceId = config.get('tower.workspaceId')
             if (workspaceId) {
-                def workspaceComment = config.get('tower.workspaceId.comment') as String
-                if (workspaceComment) {
-                    // Extract just the org/workspace part (before the square brackets)
-                    def orgWorkspace = workspaceComment.split(' \\[')[0]
-                    println "  ${ColorUtil.colorize('Default workspace:', 'cyan')} ${ColorUtil.colorize(workspaceId as String, 'magenta')} ${ColorUtil.colorize('[' + orgWorkspace + ']', 'dim', true)}"
+                // Try to get workspace details from API for display
+                def workspaceDetails = getWorkspaceDetailsFromApi(accessToken, endpoint, workspaceId as String)
+                if (workspaceDetails) {
+                    def details = workspaceDetails as Map
+                    println "  ${ColorUtil.colorize('Default workspace:', 'cyan')} ${ColorUtil.colorize(workspaceId as String, 'magenta')} ${ColorUtil.colorize('[' + details.orgName + ' / ' + details.workspaceName + ']', 'dim', true)}"
                 } else {
                     println "  ${ColorUtil.colorize('Default workspace:', 'cyan')} ${ColorUtil.colorize(workspaceId as String, 'magenta')}"
                 }
@@ -842,44 +859,28 @@ class CmdAuth extends CmdBase implements UsageAware {
             ColorUtil.printColored("  When disabled, you can enable per-run with the ${ColorUtil.colorize('-with-tower', 'cyan')} flag", "dim")
             println ""
 
-            def reader = new BufferedReader(new InputStreamReader(System.in))
-            def input
-            while (true) {
-                System.out.print("${ColorUtil.colorize('Enable workflow monitoring for all runs?', 'cyan bold', true)} (${currentEnabled ? ColorUtil.colorize('Y', 'green') + '/n' : 'y/' + ColorUtil.colorize('N', 'red')}): ")
-                System.out.flush()
+            def promptText = "${ColorUtil.colorize('Enable workflow monitoring for all runs?', 'cyan bold', true)} (${currentEnabled ? ColorUtil.colorize('Y', 'green') + '/n' : 'y/' + ColorUtil.colorize('N', 'red')}): "
+            def input = promptForYesNo(promptText, currentEnabled)
 
-                input = reader.readLine()?.trim()?.toLowerCase()
-
-                if (input.isEmpty()) {
-                    // Keep current setting if user just presses enter
-                    return false
-                } else if (input == 'y' || input == 'yes') {
-                    if (!currentEnabled) {
-                        config['tower.enabled'] = true
-                        return true
-                    } else {
-                        return false
-                    }
-                } else if (input == 'n' || input == 'no') {
-                    if (currentEnabled) {
-                        config.remove('tower.enabled') // Don't set it to false, just remove it
-                        return true
-                    } else {
-                        return false
-                    }
-                } else {
-                    ColorUtil.printColored("Invalid input. Please enter 'y', 'n', or press Enter to keep current setting.", "red")
-                }
+            if (input == null) {
+                return false // No change
+            } else if (input && !currentEnabled) {
+                config['tower.enabled'] = true
+                return true
+            } else if (!input && currentEnabled) {
+                config.remove('tower.enabled')
+                return true
             }
+            return false
         }
 
-        private boolean configureWorkspace(Map config, String accessToken, String endpoint, String userId) {
+        private Map configureWorkspace(Map config, String accessToken, String endpoint, String userId) {
             // Check if TOWER_WORKFLOW_ID environment variable is set
             def envWorkspaceId = System.getenv('TOWER_WORKFLOW_ID')
             if (envWorkspaceId) {
                 println "\nDefault workspace: ${ColorUtil.colorize('TOWER_WORKFLOW_ID environment variable is set', 'yellow')}"
                 ColorUtil.printColored("  Not prompting for default workspace configuration as environment variable takes precedence", "dim")
-                return false
+                return [changed: false, metadata: null]
             }
 
             // Get all workspaces for the user
@@ -887,7 +888,7 @@ class CmdAuth extends CmdBase implements UsageAware {
 
             if (!workspaces) {
                 println "\nNo workspaces found for your account."
-                return false
+                return [changed: false, metadata: null]
             }
 
             // Show current workspace setting
@@ -899,7 +900,7 @@ class CmdAuth extends CmdBase implements UsageAware {
                 def workspace = currentWorkspace as Map
                 currentSetting = "${workspace.orgName} / ${workspace.workspaceName}"
             } else {
-                currentSetting = "Personal workspace"
+                currentSetting = "None (Personal workspace)"
             }
 
             println "\nDefault workspace. Current setting: ${ColorUtil.colorize(currentSetting as String, 'cyan', true)}"
@@ -907,8 +908,8 @@ class CmdAuth extends CmdBase implements UsageAware {
             // Group by organization
             def orgWorkspaces = workspaces.groupBy { ((Map)it).orgName ?: 'Personal' }
 
-            // If 8 or fewer total options, show all at once
-            if (workspaces.size() <= 8) {
+            // If threshold or fewer total options, show all at once
+            if (workspaces.size() <= WORKSPACE_SELECTION_THRESHOLD) {
                 return selectWorkspaceFromAll(config, workspaces, currentWorkspaceId)
             } else {
                 // Two-stage selection: org first, then workspace
@@ -916,9 +917,9 @@ class CmdAuth extends CmdBase implements UsageAware {
             }
         }
 
-        private boolean selectWorkspaceFromAll(Map config, List workspaces, def currentWorkspaceId) {
+        private Map selectWorkspaceFromAll(Map config, List workspaces, def currentWorkspaceId) {
             println "\nAvailable workspaces:"
-            println "  0. ${ColorUtil.colorize('Personal workspace', 'cyan', true)} ${ColorUtil.colorize('[no organization]', 'dim', true)}"
+            println "  0. ${ColorUtil.colorize('None (Personal workspace)', 'cyan', true)} ${ColorUtil.colorize('[no organization]', 'dim', true)}"
 
             workspaces.eachWithIndex { workspace, index ->
                 def ws = workspace as Map
@@ -933,56 +934,35 @@ class CmdAuth extends CmdBase implements UsageAware {
                 def workspace = currentWorkspace as Map
                 currentWorkspaceName = "${workspace.orgName} / ${workspace.workspaceName}"
             } else {
-                currentWorkspaceName = "Personal workspace"
+                currentWorkspaceName = "None (Personal workspace)"
             }
 
-            def reader = new BufferedReader(new InputStreamReader(System.in))
-            def selection
-            while (true) {
-                ColorUtil.printColored("\nSelect workspace (0-${workspaces.size()}, press Enter to keep as '${currentWorkspaceName}'): ", "bold cyan")
-                System.out.flush()
-                def input = reader.readLine()?.trim()
+            def prompt = "\nSelect workspace (0-${workspaces.size()}, press Enter to keep as '${currentWorkspaceName}'): "
+            def selection = promptForNumber(prompt, 0, workspaces.size(), true)
 
-                if (input.isEmpty()) {
-                    // Ensure comment is preserved if workspace is already set
-                    if (currentWorkspaceId && currentWorkspace) {
-                        def workspace = currentWorkspace as Map
-                        def existingComment = config.get('tower.workspaceId.comment')
-                        if (!existingComment) {
-                            config['tower.workspaceId.comment'] = "${workspace.orgName} / ${workspace.workspaceName} [${workspace.workspaceFullName}]"
-                            return true  // Return true because we added the comment
-                        }
-                    }
-                    return false
-                }
-
-                try {
-                    selection = Integer.parseInt(input)
-                    if (selection >= 0 && selection <= workspaces.size()) {
-                        break
-                    }
-                } catch (NumberFormatException e) {
-                    // Fall through to error message
-                }
-                ColorUtil.printColored("Invalid input. Please enter a number between 0 and ${workspaces.size()}.", "red")
+            if (selection == null) {
+                return [changed: false, metadata: null]
             }
 
             if (selection == 0) {
                 def hadWorkspaceId = config.containsKey('tower.workspaceId')
                 config.remove('tower.workspaceId')
-                config.remove('tower.workspaceId.comment')
-                return hadWorkspaceId
+                return [changed: hadWorkspaceId, metadata: null]
             } else {
                 def selectedWorkspace = workspaces[selection - 1] as Map
                 def selectedId = selectedWorkspace.workspaceId.toString()
                 def currentId = config.get('tower.workspaceId')
                 config['tower.workspaceId'] = selectedId
-                config['tower.workspaceId.comment'] = "${selectedWorkspace.orgName} / ${selectedWorkspace.workspaceName} [${selectedWorkspace.workspaceFullName}]"
-                return currentId != selectedId
+                def metadata = [
+                    orgName: selectedWorkspace.orgName,
+                    workspaceName: selectedWorkspace.workspaceName,
+                    workspaceFullName: selectedWorkspace.workspaceFullName
+                ]
+                return [changed: currentId != selectedId, metadata: metadata]
             }
         }
 
-        private boolean selectWorkspaceByOrg(Map config, Map orgWorkspaces, def currentWorkspaceId) {
+        private Map selectWorkspaceByOrg(Map config, Map orgWorkspaces, def currentWorkspaceId) {
             // Get current workspace info for prompts
             def allWorkspaces = []
             orgWorkspaces.values().each { workspaceList ->
@@ -997,72 +977,52 @@ class CmdAuth extends CmdBase implements UsageAware {
                 currentWorkspaceDisplay = "${workspace.orgName} / ${workspace.workspaceName}"
             } else {
                 currentWorkspaceName = null
-                currentWorkspaceDisplay = "Personal workspace"
+                currentWorkspaceDisplay = "None"
             }
 
             // First, select organization
             def orgs = orgWorkspaces.keySet().toList()
 
+            // Always add Personal as first option (it's never returned by the API but should always be available)
+            orgs.add(0, 'Personal')
+
             println "\nAvailable organizations:"
-            // Add Personal workspace option if not already in the list
-            def hasPersonal = orgs.contains('Personal')
-            if (!hasPersonal) {
-                println "  1. ${ColorUtil.colorize('Personal', 'cyan', true)} ${ColorUtil.colorize('[Personal workspace - no organization]', 'dim', true)}"
-                orgs.eachWithIndex { orgName, index ->
-                    println "  ${index + 2}. ${ColorUtil.colorize(orgName as String, 'cyan', true)}"
-                }
-                System.out.print("${ColorUtil.colorize("Select organization (1-${orgs.size() + 1}, leave blank to keep as '${currentWorkspaceDisplay}'): ", 'dim', true)}")
-            } else {
-                orgs.eachWithIndex { orgName, index ->
-                    def displayName = orgName == 'Personal' ? 'Personal [Personal workspace - no organization]' : orgName
-                    println "  ${index + 1}. ${ColorUtil.colorize(displayName as String, 'cyan', true)}"
-                }
-                System.out.print("${ColorUtil.colorize("Select organization (1-${orgs.size()}, leave blank to keep as '${currentWorkspaceDisplay}'): ", 'dim', true)}")
+            orgs.eachWithIndex { orgName, index ->
+                def displayName = orgName == 'Personal' ? 'None [Personal workspace]' : orgName
+                println "  ${index + 1}. ${ColorUtil.colorize(displayName as String, 'cyan', true)}"
             }
+            System.out.print("${ColorUtil.colorize("Select organization (1-${orgs.size()}, leave blank to keep as '${currentWorkspaceDisplay}'): ", 'dim', true)}")
             System.out.flush()
 
             def reader = new BufferedReader(new InputStreamReader(System.in))
-            def maxOrgSelection = hasPersonal ? orgs.size() : orgs.size() + 1
             def orgSelection
             while (true) {
                 def orgInput = reader.readLine()?.trim()
 
                 if (orgInput.isEmpty()) {
-                    // Ensure comment is preserved if workspace is already set
-                    if (currentWorkspaceId && currentWorkspace) {
-                        def workspace = currentWorkspace as Map
-                        def existingComment = config.get('tower.workspaceId.comment')
-                        if (!existingComment) {
-                            config['tower.workspaceId.comment'] = "${workspace.orgName} / ${workspace.workspaceName} [${workspace.workspaceFullName}]"
-                            return true  // Return true because we added the comment
-                        }
-                    }
-                    return false
+                    return [changed: false, metadata: null]
                 }
 
                 try {
                     orgSelection = Integer.parseInt(orgInput)
-                    if (orgSelection >= 1 && orgSelection <= maxOrgSelection) {
+                    if (orgSelection >= 1 && orgSelection <= orgs.size()) {
                         break
                     }
                 } catch (NumberFormatException e) {
                     // Fall through to error message
                 }
-                ColorUtil.printColored("Invalid input. Please enter a number between 1 and ${maxOrgSelection}.", "red")
-                System.out.print("${ColorUtil.colorize("Select organization (1-${maxOrgSelection}, leave blank to keep as '${currentWorkspaceDisplay}'): ", 'dim', true)}")
+                ColorUtil.printColored("Invalid input. Please enter a number between 1 and ${orgs.size()}.", "red")
+                System.out.print("${ColorUtil.colorize("Select organization (1-${orgs.size()}, leave blank to keep as '${currentWorkspaceDisplay}'): ", 'dim', true)}")
                 System.out.flush()
             }
 
-            def selectedOrgName
-            if (!hasPersonal && orgSelection == 1) {
-                // Personal workspace selected
+            def selectedOrgName = orgs[orgSelection - 1]
+
+            // If Personal was selected, remove workspace ID (use personal workspace)
+            if (selectedOrgName == 'Personal') {
                 def hadWorkspaceId = config.containsKey('tower.workspaceId')
                 config.remove('tower.workspaceId')
-                config.remove('tower.workspaceId.comment')
-                return hadWorkspaceId
-            } else {
-                def orgIndex = hasPersonal ? orgSelection - 1 : orgSelection - 2
-                selectedOrgName = orgs[orgIndex]
+                return [changed: hadWorkspaceId, metadata: null]
             }
 
             def orgWorkspaceList = orgWorkspaces[selectedOrgName] as List
@@ -1102,15 +1062,16 @@ class CmdAuth extends CmdBase implements UsageAware {
             def selectedId = selectedWorkspace.workspaceId.toString()
             def currentId = config.get('tower.workspaceId')
             config['tower.workspaceId'] = selectedId
-            config['tower.workspaceId.comment'] = "${selectedWorkspace.orgName} / ${selectedWorkspace.workspaceName} [${selectedWorkspace.workspaceFullName}]"
-            return currentId != selectedId
+            def metadata = [
+                orgName: selectedWorkspace.orgName,
+                workspaceName: selectedWorkspace.workspaceName,
+                workspaceFullName: selectedWorkspace.workspaceFullName
+            ]
+            return [changed: currentId != selectedId, metadata: metadata]
         }
 
         private List getUserWorkspaces(String accessToken, String endpoint, String userId) {
-            def workspacesUrl = "${endpoint}/user/${userId}/workspaces"
-            def connection = new URL(workspacesUrl).openConnection() as HttpURLConnection
-            connection.requestMethod = 'GET'
-            connection.setRequestProperty('Authorization', "Bearer ${accessToken}")
+            def connection = createHttpConnection("${endpoint}/user/${userId}/workspaces", 'GET', accessToken)
 
             if (connection.responseCode != 200) {
                 def error = connection.errorStream?.text ?: "HTTP ${connection.responseCode}"
@@ -1121,9 +1082,49 @@ class CmdAuth extends CmdBase implements UsageAware {
             def json = new groovy.json.JsonSlurper().parseText(response) as Map
             def orgsAndWorkspaces = json.orgsAndWorkspaces as List
 
-            // Filter to only include actual workspaces (where workspaceId is not null)
             return orgsAndWorkspaces.findAll { ((Map)it).workspaceId != null }
         }
+
+        private Boolean promptForYesNo(String prompt, Boolean defaultValue) {
+            while (true) {
+                System.out.print(prompt)
+                System.out.flush()
+                def input = readUserInput()?.toLowerCase()
+
+                if (input?.isEmpty()) {
+                    return null // Keep current setting
+                } else if (input in ['y', 'yes']) {
+                    return true
+                } else if (input in ['n', 'no']) {
+                    return false
+                } else {
+                    ColorUtil.printColored("Invalid input. Please enter 'y', 'n', or press Enter to keep current setting.", "red")
+                }
+            }
+        }
+
+        private Integer promptForNumber(String prompt, int min, int max, boolean allowEmpty = false) {
+            while (true) {
+                ColorUtil.printColored(prompt, "bold cyan")
+                System.out.flush()
+                def input = readUserInput()
+
+                if (input?.isEmpty() && allowEmpty) {
+                    return null
+                }
+
+                try {
+                    def number = Integer.parseInt(input)
+                    if (number >= min && number <= max) {
+                        return number
+                    }
+                } catch (NumberFormatException e) {
+                    // Fall through to error message
+                }
+                ColorUtil.printColored("Invalid input. Please enter a number between ${min} and ${max}.", "red")
+            }
+        }
+
 
         @Override
         void usage(List<String> result) {
@@ -1145,9 +1146,7 @@ class CmdAuth extends CmdBase implements UsageAware {
 
         @Override
         void apply(List<String> args) {
-            if (args.size() > 0) {
-                throw new AbortOperationException("Too many arguments for status command")
-            }
+            validateArgumentCount(args, name)
 
             def config = readConfig()
 
@@ -1202,7 +1201,7 @@ class CmdAuth extends CmdBase implements UsageAware {
                     statusRows.add(['Default workspace', ColorUtil.colorize(workspaceInfo.value as String, 'blue', true), workspaceInfo.source as String])
                 }
             } else {
-                statusRows.add(['Default workspace', ColorUtil.colorize('Personal workspace', 'cyan', true), 'default'])
+                statusRows.add(['Default workspace', ColorUtil.colorize('None (Personal workspace)', 'cyan', true), 'default'])
             }
 
             // Print table
@@ -1284,86 +1283,23 @@ class CmdAuth extends CmdBase implements UsageAware {
 
         private String getWorkspaceNameFromApi(String accessToken, String endpoint, String workspaceId) {
             try {
-                // Get user info to get user ID
-                def userInfo = callUserInfoApi(accessToken, endpoint)
-                def userId = userInfo.id as String
-
-                // Get workspaces for the user
-                def workspacesUrl = "${endpoint}/user/${userId}/workspaces"
-                def connection = new URL(workspacesUrl).openConnection() as HttpURLConnection
-                connection.requestMethod = 'GET'
-                connection.connectTimeout = 10000 // 10 second timeout
-                connection.readTimeout = 10000
-                connection.setRequestProperty('Authorization', "Bearer ${accessToken}")
-
-                if (connection.responseCode != 200) {
-                    return null
+                def workspaceDetails = getWorkspaceDetailsFromApi(accessToken, endpoint, workspaceId)
+                if (workspaceDetails) {
+                    return "${workspaceDetails.orgName} / ${workspaceDetails.workspaceName} [${workspaceDetails.workspaceFullName}]"
                 }
-
-                def response = connection.inputStream.text
-                def json = new groovy.json.JsonSlurper().parseText(response) as Map
-                def orgsAndWorkspaces = json.orgsAndWorkspaces as List
-
-                // Find the workspace with matching ID
-                def workspace = orgsAndWorkspaces.find { ((Map)it).workspaceId?.toString() == workspaceId }
-                if (workspace) {
-                    def ws = workspace as Map
-                    return "${ws.orgName} / ${ws.workspaceName} [${ws.workspaceFullName}]"
-                }
-
                 return null
             } catch (Exception e) {
                 return null
             }
         }
 
-        private Map getWorkspaceDetailsFromApi(String accessToken, String endpoint, String workspaceId) {
-            try {
-                // Get user info to get user ID
-                def userInfo = callUserInfoApi(accessToken, endpoint)
-                def userId = userInfo.id as String
-
-                // Get workspaces for the user
-                def workspacesUrl = "${endpoint}/user/${userId}/workspaces"
-                def connection = new URL(workspacesUrl).openConnection() as HttpURLConnection
-                connection.requestMethod = 'GET'
-                connection.connectTimeout = 10000 // 10 second timeout
-                connection.readTimeout = 10000
-                connection.setRequestProperty('Authorization', "Bearer ${accessToken}")
-
-                if (connection.responseCode != 200) {
-                    return null
-                }
-
-                def response = connection.inputStream.text
-                def json = new groovy.json.JsonSlurper().parseText(response) as Map
-                def orgsAndWorkspaces = json.orgsAndWorkspaces as List
-
-                // Find the workspace with matching ID
-                def workspace = orgsAndWorkspaces.find { ((Map)it).workspaceId?.toString() == workspaceId }
-                if (workspace) {
-                    def ws = workspace as Map
-                    return [
-                        orgName: ws.orgName,
-                        workspaceName: ws.workspaceName,
-                        workspaceFullName: ws.workspaceFullName
-                    ]
-                }
-
-                return null
-            } catch (Exception e) {
-                return null
-            }
-        }
 
         private boolean checkApiConnection(String endpoint) {
             try {
-                def serviceInfoUrl = "${endpoint}/service-info"
-                def connection = new URL(serviceInfoUrl).openConnection() as HttpURLConnection
+                def connection = new URL("${endpoint}/service-info").openConnection() as HttpURLConnection
                 connection.requestMethod = 'GET'
-                connection.connectTimeout = 10000 // 10 second timeout
-                connection.readTimeout = 10000
-
+                connection.connectTimeout = API_TIMEOUT_MS
+                connection.readTimeout = API_TIMEOUT_MS
                 return connection.responseCode == 200
             } catch (Exception e) {
                 return false
