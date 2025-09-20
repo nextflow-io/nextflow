@@ -35,7 +35,7 @@ import nextflow.util.TestOnly
  * Render pipeline report processes execution.
  * Based on original TimelineObserver code by Paolo Di Tommaso
  *
- * @author Phil Ewels <phil.ewels@scilifelab.se>
+ * @author Phil Ewels <phil.ewels@seqera.io>
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
