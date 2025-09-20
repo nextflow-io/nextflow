@@ -22,12 +22,12 @@ import org.fusesource.jansi.Ansi
 import static org.fusesource.jansi.Ansi.*
 
 /**
- * Utility class for ANSI color formatting in auth commands
+ * Utility class for ANSI color formatting
  *
  * @author Phil Ewels <phil.ewels@seqera.io>
  */
 @CompileStatic
-class AuthColorUtil {
+class ColorUtil {
 
     /**
      * Check if ANSI colors should be enabled based on Nextflow conventions
