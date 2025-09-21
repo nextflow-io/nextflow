@@ -1,5 +1,5 @@
 plugins {
-    id "com.gradleup.shadow" version "8.3.5"
+    id "com.gradleup.shadow" version "8.3.8"
 }
 apply plugin: 'groovy'
 apply plugin: 'application'
@@ -95,3 +95,4 @@ shadowJar {
         resource = 'META-INF/extensions.idx'
     }
 }
+
