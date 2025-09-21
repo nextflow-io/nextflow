@@ -87,7 +87,7 @@ shadowJar {
     configurations = [project.configurations.runtimeClasspath, project.configurations.lineageImplementation]
     archiveClassifier='one'
     manifest {
-        attributes 'Main-Class': "$mainClassName"
+        attributes 'Main-Class': application.mainClass.get()
     }
     mergeServiceFiles()
     mergeGroovyExtensionModules()

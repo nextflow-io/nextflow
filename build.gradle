@@ -250,20 +250,42 @@ def getRuntimeConfigs() {
         // note: migrating to gradle 7 does not work any more
         //result = result + cfg.getOutgoing().getArtifacts().getFiles()
     }
-    return result
+    return result?.files ?: []
 }
 
 /*
- * Save the runtime classpath
+ * Save the runtime classpath using Gradle 9.1 compatible approach
+ * Uses configuration-time resolution to avoid unsafe access
  */
 task exportClasspath {
     dependsOn allprojects.jar
+    
+    // Capture configurations at configuration time using providers
+    def configurationFiles = provider {
+        def libs = []
+        
+        // Get the resolved files from each configuration
+        ['nextflow','nf-commons','nf-httpfs','nf-lang','nf-lineage'].each { moduleName ->
+            def moduleProject = project(":$moduleName")
+            // Use the configuration directly without calling .files to avoid early resolution
+            def cfg = moduleProject.configurations.getByName('runtimeClasspath')
+            libs.addAll(cfg.files.collect { it.canonicalPath })
+        }
+        
+        // Add module jars
+        ['nextflow','nf-commons','nf-httpfs','nf-lang','nf-lineage'].each {
+            libs << file("modules/$it/build/libs/${it}-${version}.jar").canonicalPath
+        }
+        
+        return libs.unique()
+    }
+    
+    inputs.files(configurationFiles)
+    outputs.file('.launch.classpath')
+    
     doLast {
-        def home = System.getProperty('user.home')
-        def all = getRuntimeConfigs()
-        def libs = all.collect { File file ->  /*println file.canonicalPath.replace(home, '$HOME');*/ file.canonicalPath;  }
-        ['nextflow','nf-commons','nf-httpfs','nf-lang','nf-lineage'].each {libs << file("modules/$it/build/libs/${it}-${version}.jar").canonicalPath }
-        file('.launch.classpath').text = libs.unique().join(':')
+        def libs = configurationFiles.get()
+        file('.launch.classpath').text = libs.join(':')
     }
 }
 
