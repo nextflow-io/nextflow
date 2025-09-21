@@ -100,6 +100,9 @@ allprojects {
             module("commons-logging:commons-logging") { replacedBy("org.slf4j:jcl-over-slf4j") }
         }
 
+        // JUnit Platform launcher required for Gradle 9.1+ when using useJUnitPlatform()
+        testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
         // Documentation required libraries
         groovyDoc 'org.fusesource.jansi:jansi:2.4.0'
         groovyDoc "org.apache.groovy:groovy-groovydoc:4.0.28"
@@ -250,20 +253,43 @@ def getRuntimeConfigs() {
         // note: migrating to gradle 7 does not work any more
         //result = result + cfg.getOutgoing().getArtifacts().getFiles()
     }
-    return result
+    return result?.files ?: []
 }
 
 /*
  * Save the runtime classpath
+ * NOTE: This task uses a provider to delay execution, but still triggers configuration
+ * resolution when the provider is evaluated. While not ideal for Gradle 9.1's strict
+ * configuration resolution requirements, this approach works in practice for our use case.
  */
 task exportClasspath {
     dependsOn allprojects.jar
+    
+    // Use provider to delay configuration resolution until task execution
+    def configurationFiles = provider {
+        def libs = []
+        
+        // Resolve configurations during provider evaluation (not ideal but functional)
+        ['nextflow','nf-commons','nf-httpfs','nf-lang','nf-lineage'].each { moduleName ->
+            def moduleProject = project(":$moduleName")
+            def cfg = moduleProject.configurations.getByName('runtimeClasspath')
+            libs.addAll(cfg.files.collect { it.canonicalPath })
+        }
+        
+        // Add module jars
+        ['nextflow','nf-commons','nf-httpfs','nf-lang','nf-lineage'].each {
+            libs << file("modules/$it/build/libs/${it}-${version}.jar").canonicalPath
+        }
+        
+        return libs.unique()
+    }
+    
+    inputs.files(configurationFiles)
+    outputs.file('.launch.classpath')
+    
     doLast {
-        def home = System.getProperty('user.home')
-        def all = getRuntimeConfigs()
-        def libs = all.collect { File file ->  /*println file.canonicalPath.replace(home, '$HOME');*/ file.canonicalPath;  }
-        ['nextflow','nf-commons','nf-httpfs','nf-lang','nf-lineage'].each {libs << file("modules/$it/build/libs/${it}-${version}.jar").canonicalPath }
-        file('.launch.classpath').text = libs.unique().join(':')
+        def libs = configurationFiles.get()
+        file('.launch.classpath').text = libs.join(':')
     }
 }
 
