@@ -254,20 +254,21 @@ def getRuntimeConfigs() {
 }
 
 /*
- * Save the runtime classpath using Gradle 9.1 compatible approach
- * Uses configuration-time resolution to avoid unsafe access
+ * Save the runtime classpath
+ * NOTE: This task uses a provider to delay execution, but still triggers configuration
+ * resolution when the provider is evaluated. While not ideal for Gradle 9.1's strict
+ * configuration resolution requirements, this approach works in practice for our use case.
  */
 task exportClasspath {
     dependsOn allprojects.jar
     
-    // Capture configurations at configuration time using providers
+    // Use provider to delay configuration resolution until task execution
     def configurationFiles = provider {
         def libs = []
         
-        // Get the resolved files from each configuration
+        // Resolve configurations during provider evaluation (not ideal but functional)
         ['nextflow','nf-commons','nf-httpfs','nf-lang','nf-lineage'].each { moduleName ->
             def moduleProject = project(":$moduleName")
-            // Use the configuration directly without calling .files to avoid early resolution
             def cfg = moduleProject.configurations.getByName('runtimeClasspath')
             libs.addAll(cfg.files.collect { it.canonicalPath })
         }
