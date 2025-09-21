@@ -26,7 +26,7 @@ dependencies {
 }
 
 
-ext.mainClassName = 'nextflow.cli.Launcher'
+// ext.mainClassName removed - now using application.mainClass in Shadow plugin
 ext.homeDir = System.properties['user.home']
 ext.nextflowDir = "$homeDir/.nextflow/framework/$version"
 ext.releaseDir = "$buildDir/releases"
