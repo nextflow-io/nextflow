@@ -100,6 +100,9 @@ allprojects {
             module("commons-logging:commons-logging") { replacedBy("org.slf4j:jcl-over-slf4j") }
         }
 
+        // JUnit Platform launcher required for Gradle 9.1+ when using useJUnitPlatform()
+        testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
         // Documentation required libraries
         groovyDoc 'org.fusesource.jansi:jansi:2.4.0'
         groovyDoc "org.apache.groovy:groovy-groovydoc:4.0.28"
