@@ -261,7 +261,7 @@ class ScriptMeta {
         }
         // processes from imports
         for( def item: imports.values() ) {
-            if( item instanceof WorkflowDef && item.name )
+            if( item instanceof WorkflowDef )
                 result.add(item.name)
         }
         return result
