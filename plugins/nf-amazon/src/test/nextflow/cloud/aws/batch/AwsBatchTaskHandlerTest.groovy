@@ -930,7 +930,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         executor.getAwsOptions()>> Mock(AwsOptions) { getAwsCli() >> 'aws' }
         then:
-        result.join(' ') == 'bash -o pipefail -c trap "{ kill -TERM \\$pid; }" TERM; trap "{ ret=$?; aws s3 cp --only-show-errors .command.log s3://work/.command.log||true; exit $ret; }" EXIT; aws s3 cp --only-show-errors s3://work/.command.run - | bash > >(tee .command.log) 2>&1 & pid=$!; wait $pid'
+        result.join(' ') == 'bash -o pipefail -c trap "[[ -n \\$pid ]] && kill -TERM \\$pid" TERM; trap "{ ret=$?; aws s3 cp --only-show-errors .command.log s3://work/.command.log||true; exit $ret; }" EXIT; aws s3 cp --only-show-errors s3://work/.command.run - | bash > >(tee .command.log) 2>&1 & pid=$!; wait $pid'
 
         when:
         result =  handler.getSubmitCommand()
@@ -942,7 +942,7 @@ class AwsBatchTaskHandlerTest extends Specification {
             getStorageKmsKeyId() >> 'kms-key-123'
         }
         then:
-        result.join(' ') == 'bash -o pipefail -c trap "{ kill -TERM \\$pid; }" TERM; trap "{ ret=$?; aws s3 cp --only-show-errors --sse aws:kms --sse-kms-key-id kms-key-123 --debug .command.log s3://work/.command.log||true; exit $ret; }" EXIT; aws s3 cp --only-show-errors --sse aws:kms --sse-kms-key-id kms-key-123 --debug s3://work/.command.run - | bash > >(tee .command.log) 2>&1 & pid=$!; wait $pid'
+        result.join(' ') == 'bash -o pipefail -c trap "[[ -n \\$pid ]] && kill -TERM \\$pid" TERM; trap "{ ret=$?; aws s3 cp --only-show-errors --sse aws:kms --sse-kms-key-id kms-key-123 --debug .command.log s3://work/.command.log||true; exit $ret; }" EXIT; aws s3 cp --only-show-errors --sse aws:kms --sse-kms-key-id kms-key-123 --debug s3://work/.command.run - | bash > >(tee .command.log) 2>&1 & pid=$!; wait $pid'
     }
 
     def 'should render submit command with s5cmd' () {
@@ -959,7 +959,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         executor.getAwsOptions() >> Mock(AwsOptions)  { getS5cmdPath() >> 's5cmd' }
         then:
-        result.join(' ') == 'bash -o pipefail -c trap "{ kill -TERM \\$pid; }" TERM; trap "{ ret=$?; s5cmd cp .command.log s3://work/.command.log||true; exit $ret; }" EXIT; s5cmd cat s3://work/.command.run | bash > >(tee .command.log) 2>&1 & pid=$!; wait $pid'
+        result.join(' ') == 'bash -o pipefail -c trap "[[ -n \\$pid ]] && kill -TERM \\$pid" TERM; trap "{ ret=$?; s5cmd cp .command.log s3://work/.command.log||true; exit $ret; }" EXIT; s5cmd cat s3://work/.command.run | bash > >(tee .command.log) 2>&1 & pid=$!; wait $pid'
 
         when:
         result =  handler.getSubmitCommand()
@@ -970,7 +970,7 @@ class AwsBatchTaskHandlerTest extends Specification {
             getStorageKmsKeyId() >> 'kms-key-123'
         }
         then:
-        result.join(' ') == 'bash -o pipefail -c trap "{ kill -TERM \\$pid; }" TERM; trap "{ ret=$?; s5cmd --debug cp --sse aws:kms --sse-kms-key-id kms-key-123 .command.log s3://work/.command.log||true; exit $ret; }" EXIT; s5cmd --debug cat s3://work/.command.run | bash > >(tee .command.log) 2>&1 & pid=$!; wait $pid'
+        result.join(' ') == 'bash -o pipefail -c trap "[[ -n \\$pid ]] && kill -TERM \\$pid" TERM; trap "{ ret=$?; s5cmd --debug cp --sse aws:kms --sse-kms-key-id kms-key-123 .command.log s3://work/.command.log||true; exit $ret; }" EXIT; s5cmd --debug cat s3://work/.command.run | bash > >(tee .command.log) 2>&1 & pid=$!; wait $pid'
 
     }
 
