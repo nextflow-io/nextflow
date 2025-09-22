@@ -1260,7 +1260,7 @@ process hello {
 ```
 
 :::{warning}
-Files are copied into the specified directory in an *asynchronous* manner, so they may not be immediately available in the publish directory at the end of the process execution. For this reason, downstream processes should not try to access output files through the publish directory, but through channels.
+Files are copied into the specified directory in an *asynchronous* manner, so they may not be immediately available in the publish directory at the end of the process execution. For this reason, downstream processes should not try to access output files through the publish directory, but through the outputs of the originating process.
 :::
 
 Available options:

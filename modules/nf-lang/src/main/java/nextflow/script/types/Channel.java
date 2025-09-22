@@ -19,15 +19,19 @@ import java.nio.file.Path;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 import groovy.lang.Closure;
 import nextflow.script.dsl.Description;
 import nextflow.script.dsl.Operator;
 
 @Description("""
-    A `Channel` is a special data structure used to facilitate the dataflow dependencies between each step in a Nextflow pipeline.
+    A channel is an asynchronous sequence of values. It is used to facilitate dataflow logic in a workflow.
 
-    [Read more](https://nextflow.io/docs/latest/reference/channel.html)
+    [Read more](https://nextflow.io/docs/latest/reference/stdlib-types.html#channel-e)
 """)
 public interface Channel<E> {
 
@@ -37,7 +41,7 @@ public interface Channel<E> {
 
         [Read more](https://nextflow.io/docs/latest/reference/operator.html#branch)
     """)
-    Object branch(Closure closure);
+    Record branch(Closure closure);
 
     @Operator
     @Description("""
@@ -61,7 +65,7 @@ public interface Channel<E> {
 
         [Read more](https://nextflow.io/docs/latest/reference/operator.html#collect)
     """)
-    Channel collect();
+    Value<Bag<E>> collect();
 
     @Operator
     @Description("""
@@ -79,7 +83,7 @@ public interface Channel<E> {
     """)
     Channel combine(Map<String,?> opts, Channel right);
     Channel combine(Channel right);
-    Channel combine(Tuple right);
+    Channel combine(Collection right);
 
     @Operator
     @Description("""
@@ -95,7 +99,7 @@ public interface Channel<E> {
 
         [Read more](https://nextflow.io/docs/latest/reference/operator.html#count)
     """)
-    Channel count();
+    Value<Integer> count();
 
     @Operator
     @Description("""
@@ -119,7 +123,7 @@ public interface Channel<E> {
 
         [Read more](https://nextflow.io/docs/latest/reference/operator.html#dump)
     """)
-    Channel dump(Map<String,?> opts);
+    Channel<E> dump(Map<String,?> opts);
 
     @Operator
     @Description("""
@@ -127,7 +131,7 @@ public interface Channel<E> {
 
         [Read more](https://nextflow.io/docs/latest/reference/operator.html#filter)
     """)
-    Channel filter(Closure<Boolean> condition);
+    Channel<E> filter(Predicate<E> condition);
 
     @Operator
     @Description("""
@@ -135,7 +139,8 @@ public interface Channel<E> {
 
         [Read more](https://nextflow.io/docs/latest/reference/operator.html#first)
     """)
-    Channel first(Closure criteria);
+    Value<E> first(Predicate<E> criteria);
+    Value<E> first();
 
     @Operator
     @Description("""
@@ -145,7 +150,7 @@ public interface Channel<E> {
 
         [Read more](https://nextflow.io/docs/latest/reference/operator.html#flatmap)
     """)
-    Channel flatMap(Closure transform);
+    <R> Channel<R> flatMap(Function<E,Iterable<R>> transform);
 
     @Operator
     @Description("""
@@ -186,7 +191,7 @@ public interface Channel<E> {
 
         [Read more](https://nextflow.io/docs/latest/reference/operator.html#last)
     """)
-    Channel last();
+    Value<E> last();
 
     @Operator
     @Description("""
@@ -194,7 +199,7 @@ public interface Channel<E> {
 
         [Read more](https://nextflow.io/docs/latest/reference/operator.html#map)
     """)
-    Channel map(Closure transform);
+    <R> Channel<R> map(Function<E,R> transform);
 
     @Operator
     @Description("""
@@ -202,7 +207,7 @@ public interface Channel<E> {
 
         [Read more](https://nextflow.io/docs/latest/reference/operator.html#max)
     """)
-    Channel max(Closure comparator);
+    Value<E> max(Closure comparator);
 
     @Operator
     @Description("""
@@ -218,7 +223,7 @@ public interface Channel<E> {
 
         [Read more](https://nextflow.io/docs/latest/reference/operator.html#min)
     """)
-    Channel min(Closure comparator);
+    Value<E> min(Closure comparator);
 
     @Operator
     @Description("""
@@ -226,7 +231,7 @@ public interface Channel<E> {
 
         [Read more](https://nextflow.io/docs/latest/reference/operator.html#mix)
     """)
-    Channel mix(Channel... others);
+    Channel<E> mix(Channel<E>... others);
 
     @Operator
     @Description("""
@@ -234,7 +239,7 @@ public interface Channel<E> {
 
         [Read more](https://nextflow.io/docs/latest/reference/operator.html#multimap)
     """)
-    Object multiMap(Closure closure);
+    Record multiMap(Closure closure);
 
     @Operator
     @Description("""
@@ -250,7 +255,8 @@ public interface Channel<E> {
 
         [Read more](https://nextflow.io/docs/latest/reference/operator.html#reduce)
     """)
-    Channel reduce(Object seed, Closure accumulator);
+    <R> Value<R> reduce(R seed, BiFunction<R,E,R> accumulator);
+    <R> Value<R> reduce(BiFunction<R,E,R> accumulator);
 
     @Operator
     @Description("""
@@ -311,7 +317,7 @@ public interface Channel<E> {
 
         [Read more](https://nextflow.io/docs/latest/reference/operator.html#subscribe)
     """)
-    void subscribe(Closure action);
+    void subscribe(Consumer<E> action);
 
     @Operator
     @Description("""
@@ -319,7 +325,7 @@ public interface Channel<E> {
 
         [Read more](https://nextflow.io/docs/latest/reference/operator.html#sum)
     """)
-    Channel sum(Closure transform);
+    Value sum(Closure transform);
 
     @Operator
     @Description("""
@@ -343,7 +349,7 @@ public interface Channel<E> {
 
         [Read more](https://nextflow.io/docs/latest/reference/operator.html#to;ist)
     """)
-    Channel toList();
+    Value toList();
 
     @Operator
     @Description("""
@@ -351,7 +357,7 @@ public interface Channel<E> {
 
         [Read more](https://nextflow.io/docs/latest/reference/operator.html#tosortedlist)
     """)
-    Channel toSortedList();
+    Value toSortedList();
 
     @Operator
     @Description("""
@@ -376,7 +382,7 @@ public interface Channel<E> {
 
         [Read more](https://nextflow.io/docs/latest/reference/operator.html#until)
     """)
-    Channel until(Closure<Boolean> condition);
+    Channel<E> until(Predicate<E> condition);
 
     @Operator
     @Description("""
@@ -384,6 +390,7 @@ public interface Channel<E> {
 
         [Read more](https://nextflow.io/docs/latest/reference/operator.html#view)
     """)
-    Channel view(Closure transform);
+    Channel<E> view(Function<E,String> transform);
+    Channel<E> view();
 
 }
