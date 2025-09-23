@@ -606,13 +606,26 @@ class AzBatchService implements Closeable {
     /**
      * Create a new job when the original job is terminated and update job mappings.
      * The new job will also be configured for auto-termination.
+     * 
+     * This method is synchronized to prevent race conditions with getOrCreateJob
+     * and concurrent recreateJobForTask calls on the same mapKey.
      */
-    protected String recreateJobForTask(String poolId, TaskRun task, String oldJobId, String taskId) {
+    synchronized protected String recreateJobForTask(String poolId, TaskRun task, String oldJobId, String taskId) {
         log.debug "Job ${oldJobId} is in completed/terminating state, creating a new job for task ${taskId}"
         final AzJobKey mapKey = new AzJobKey(task.processor, poolId)
-        allJobIds.remove(mapKey)
+        
+        // Check if another thread already recreated the job for this mapKey
+        if (allJobIds.containsKey(mapKey) && allJobIds[mapKey] != oldJobId) {
+            log.debug "Job already recreated for mapKey ${mapKey}, returning existing job ${allJobIds[mapKey]}"
+            return allJobIds[mapKey]
+        }
+        
+        // Create new job first to ensure it succeeds before updating mapping
         final String newJobId = createJob0(poolId, task)
+        
+        // Atomically update the job mapping
         allJobIds[mapKey] = newJobId
+        
         return newJobId
     }
 

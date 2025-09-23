@@ -1074,4 +1074,44 @@ class AzBatchServiceTest extends Specification {
         newJobId == 'new-job-id'
     }
 
+    def 'should handle concurrent job recreation for same mapKey' () {
+        given:
+        def CONFIG = [batch: [terminateJobsOnCompletion: true]]
+        def exec = createExecutor(CONFIG)
+        def service = Spy(new AzBatchService(exec))
+        def processor = Mock(TaskProcessor) {
+            getName() >> 'test-process'
+        }
+        def task = Mock(TaskRun) {
+            getProcessor() >> processor
+        }
+        def poolId = 'test-pool'
+        def oldJobId = 'old-job'
+        def taskId = 'test-task'
+
+        // Pre-populate allJobIds to simulate existing mapping
+        def mapKey = new AzJobKey(processor, poolId)
+        service.allJobIds[mapKey] = oldJobId
+
+        when:
+        // Simulate concurrent recreation - first call creates new job, second call should reuse it
+        def newJobId1 = service.recreateJobForTask(poolId, task, oldJobId, taskId)
+        // Update mapping to simulate another thread already recreated the job
+        service.allJobIds[mapKey] = 'already-recreated-job'
+        def newJobId2 = service.recreateJobForTask(poolId, task, oldJobId, taskId)
+
+        then:
+        // Should create new job only once
+        1 * service.createJob0(poolId, task) >> 'new-job-id'
+        and:
+        // First call should return the newly created job
+        newJobId1 == 'new-job-id'
+        and:
+        // Second call should return the already recreated job
+        newJobId2 == 'already-recreated-job'
+        and:
+        // Mapping should remain unchanged after second call
+        service.allJobIds[mapKey] == 'already-recreated-job'
+    }
+
 }
