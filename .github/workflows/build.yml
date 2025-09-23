@@ -43,14 +43,14 @@ jobs:
                 COMMIT_MESSAGE="$(curl -s \
                   -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
                   https://api.github.com/repos/${{ github.repository }}/commits/$COMMIT_SHA | jq -r '.commit.message' | head -n 1)"
-                echo "Commit message=$(printf "%q" "$COMMIT_MESSAGE")"
-                echo "commit_message=$(printf "%q" "$COMMIT_MESSAGE")" >> $GITHUB_OUTPUT
+                echo "Commit message=$(printf "%s" "$COMMIT_MESSAGE")"
+                echo "commit_message=$(printf "%s" "$COMMIT_MESSAGE")" >> $GITHUB_OUTPUT
             else
                 echo "GitHub event=${{ github.event_name }}"
                 # Extract only the first line of the commit message
                 COMMIT_MESSAGE="$(git log -1 --pretty=format:'%s')"
-                echo "Commit message=$(printf "%q" "$COMMIT_MESSAGE")"
-                echo "commit_message=$(printf "%q" "$COMMIT_MESSAGE")" >> $GITHUB_OUTPUT
+                echo "Commit message=$(printf "%s" "$COMMIT_MESSAGE")"
+                echo "commit_message=$(printf "%s" "$COMMIT_MESSAGE")" >> $GITHUB_OUTPUT
             fi
 
       - name: Setup env
