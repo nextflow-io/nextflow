@@ -32,7 +32,10 @@ compile:
 	@echo "DONE `date`"
 
 assemble:
-	./gradlew compile assemble
+	./gradlew buildInfo compile assemble
+
+releaseInfo:
+    ./gradlew releaseInfo
 
 check:
 	./gradlew check
