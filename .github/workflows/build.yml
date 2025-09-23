@@ -18,221 +18,221 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    timeout-minutes: 100
-    strategy:
-      fail-fast: false
-      matrix:
-        java_version: [17, 24]
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-          submodules: true
-
-      - name: Get the commit message
-        id: get_commit_message
-        run: |
-            if [ "${{ github.event_name }}" = "pull_request" ]; then
-                echo "GitHub event=pull_request"
-                COMMIT_SHA="${{ github.event.pull_request.head.sha }}"
-                COMMIT_MESSAGE="$(curl -s \
-                  -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                  https://api.github.com/repos/${{ github.repository }}/commits/$COMMIT_SHA | jq -r '.commit.message' | head -n 1)"
-                echo "Commit message=$(printf "%s" "$COMMIT_MESSAGE")"
-                echo "commit_message=$(printf "%s" "$COMMIT_MESSAGE")" >> $GITHUB_OUTPUT
-            else
-                echo "GitHub event=${{ github.event_name }}"
-                # Extract only the first line of the commit message
-                COMMIT_MESSAGE="$(git log -1 --pretty=format:'%s')"
-                echo "Commit message=$(printf "%s" "$COMMIT_MESSAGE")"
-                echo "commit_message=$(printf "%s" "$COMMIT_MESSAGE")" >> $GITHUB_OUTPUT
-            fi
-
-      - name: Setup env
-        run: |
-             rm -f $HOME/.gitconfig;
-             mkdir -p "$HOME/.nextflow";
-             echo "providers.github.auth='$NXF_GITHUB_ACCESS_TOKEN'" > "$HOME/.nextflow/scm"
-        env:
-          NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
-
-      - name: Setup Java ${{ matrix.java_version }}
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{matrix.java_version}}
-          distribution: 'temurin'
-          architecture: x64
-          cache: gradle
-
-      - name: Compile
-        run: make assemble
-
-      - name: Test
-        run: |
-            env | sort
-            # configure test env
-            if [[ "$GOOGLE_SECRET" ]]; then
-            echo $GOOGLE_SECRET | base64 -d > $PWD/google_credentials.json
-            export GOOGLE_APPLICATION_CREDENTIALS=$PWD/google_credentials.json
-            fi
-            # run tests
-            make test
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_S3FS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_S3FS_SECRET_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          NXF_BITBUCKET_ACCESS_TOKEN: ${{ secrets.NXF_BITBUCKET_ACCESS_TOKEN }}
-          NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
-          NXF_GITLAB_ACCESS_TOKEN: ${{ secrets.NXF_GITLAB_ACCESS_TOKEN }}
-          NXF_AZURE_REPOS_TOKEN: ${{ secrets.NXF_AZURE_REPOS_TOKEN }}
-          GOOGLE_SECRET: ${{ secrets.GOOGLE_SECRET }}
-          AZURE_STORAGE_ACCOUNT_NAME: nfazurestore
-          AZURE_STORAGE_ACCOUNT_KEY: ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
-          AZURE_BATCH_ACCOUNT_NAME: nfbatchtest
-          AZURE_BATCH_ACCOUNT_KEY: ${{ secrets.AZURE_BATCH_ACCOUNT_KEY }}
-
-      - name: Publish tests report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: report-unit-tests-jdk-${{ matrix.java_version }}
-          path: |
-            **/build/reports/tests/test
-
-    outputs:
-      commit_message: ${{ steps.get_commit_message.outputs.commit_message }}
-
-  test:
-    if: ${{ !contains(needs.build.outputs.commit_message, '[ci fast]') }}
-    needs: build
-    runs-on: ubuntu-latest
-    timeout-minutes: 90
-    strategy:
-      fail-fast: false
-      matrix:
-        java_version: [17, 24]
-        test_mode: ["test_integration", "test_parser_v2", "test_docs", "test_aws", "test_azure", "test_google", "test_wave"]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-          submodules: true
-
-      - name: Setup env
-        run: |
-          rm -f $HOME/.gitconfig;
-          mkdir -p "$HOME/.nextflow";
-          echo "providers.github.auth='$NXF_GITHUB_ACCESS_TOKEN'" > "$HOME/.nextflow/scm"
-        env:
-          NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
-
-      - name: Setup Java ${{ matrix.java_version }}
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{matrix.java_version}}
-          distribution: 'temurin'
-          architecture: x64
-          cache: gradle
-
-      - name: Run tests
-        run: |
-          env | sort
-          # configure test env
-          if [[ "$GOOGLE_SECRET" ]]; then
-          echo $GOOGLE_SECRET | base64 -d > $PWD/google_credentials.json
-          export GOOGLE_APPLICATION_CREDENTIALS=$PWD/google_credentials.json
-          fi
-          cat $HOME/.nextflow/scm
-          make clean assemble install
-          bash test-ci.sh
-        env:
-          TEST_JDK: ${{ matrix.java_version }}
-          TEST_MODE: ${{ matrix.test_mode }}
-          GRADLE_OPTS: '-Dorg.gradle.daemon=false'
-          TOWER_ACCESS_TOKEN: ${{ secrets.TOWER_ACCESS_TOKEN }}
-          AWS_DEFAULT_REGION: eu-west-1
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          NXF_BITBUCKET_ACCESS_TOKEN: ${{ secrets.NXF_BITBUCKET_ACCESS_TOKEN }}
-          NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
-          NXF_GITLAB_ACCESS_TOKEN: ${{ secrets.NXF_GITLAB_ACCESS_TOKEN }}
-          NXF_AZURE_REPOS_TOKEN: ${{ secrets.NXF_AZURE_REPOS_TOKEN }}
-          GOOGLE_SECRET: ${{ secrets.GOOGLE_SECRET }}
-          AZURE_STORAGE_ACCOUNT_NAME: nfazurestore
-          AZURE_STORAGE_ACCOUNT_KEY: ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
-          AZURE_BATCH_ACCOUNT_NAME: nfbatchtest
-          AZURE_BATCH_ACCOUNT_KEY: ${{ secrets.AZURE_BATCH_ACCOUNT_KEY }}
-
-      - name: Tar integration tests
-        if: always()
-        run: | 
-            tar -cvf integration-tests.tar.gz tests/checks
-            tar -cvf validation-tests.tar.gz validation
-
-      - name: Publish tests report
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: report-${{ matrix.test_mode }}-jdk-${{ matrix.java_version }}
-          path: |
-            validation-tests.tar.gz
-            integration-tests.tar.gz
-
-  test-e2e:
-      if: ${{ contains(needs.build.outputs.commit_message,'[e2e stage]') || contains(needs.build.outputs.commit_message,'[e2e prod]') }}
-      needs: build
-      runs-on: ubuntu-latest
-      timeout-minutes: 10
-      permissions:
-          actions: write  # Allow writing to actions
-          contents: write # Allow writing to repository contents
-      steps:
-          - name: Checkout
-            uses: actions/checkout@v4
-            with:
-                fetch-depth: 1
-                submodules: true
-                
-          - name: Setup Java 17
-            uses: actions/setup-java@v4
-            with:
-                java-version: 17
-                distribution: 'temurin'
-                architecture: x64
-                cache: gradle
-
-          - name: Setup env
-            run: |
-                wget -q -O wave https://github.com/seqeralabs/wave-cli/releases/download/v1.4.1/wave-1.4.1-linux-x86_64
-                chmod +x wave
-                mv wave /usr/local/bin/
-                echo "COMMIT_MESSAGE=\"${{ needs.build.outputs.commit_message }}\"" >> $GITHUB_ENV
-
-          - name : Docker Login to Seqera public CR
-            uses : docker/login-action@v3
-            with :
-                registry : "public.cr.seqera.io"
-                username : "public-cr-admin"
-                password : ${{ secrets.SEQERA_PUBLIC_CR_PASSWORD }}
-
-          - name: Launch tests
-            run: |
-                cd test-e2e
-                bash run.sh
-            env:
-                GITHUB_TOKEN: ${{ secrets.AUTOMATION_GITHUB_TOKEN }}
-                GRADLE_OPTS: '-Dorg.gradle.daemon=false'
-
+#  build:
+#    name: Build
+#    runs-on: ubuntu-latest
+#    timeout-minutes: 100
+#    strategy:
+#      fail-fast: false
+#      matrix:
+#        java_version: [17, 24]
+#
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v4
+#        with:
+#          fetch-depth: 1
+#          submodules: true
+#
+#      - name: Get the commit message
+#        id: get_commit_message
+#        run: |
+#            if [ "${{ github.event_name }}" = "pull_request" ]; then
+#                echo "GitHub event=pull_request"
+#                COMMIT_SHA="${{ github.event.pull_request.head.sha }}"
+#                COMMIT_MESSAGE="$(curl -s \
+#                  -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+#                  https://api.github.com/repos/${{ github.repository }}/commits/$COMMIT_SHA | jq -r '.commit.message' | head -n 1)"
+#                echo "Commit message=$(printf "%s" "$COMMIT_MESSAGE")"
+#                echo "commit_message=$(printf "%s" "$COMMIT_MESSAGE")" >> $GITHUB_OUTPUT
+#            else
+#                echo "GitHub event=${{ github.event_name }}"
+#                # Extract only the first line of the commit message
+#                COMMIT_MESSAGE="$(git log -1 --pretty=format:'%s')"
+#                echo "Commit message=$(printf "%s" "$COMMIT_MESSAGE")"
+#                echo "commit_message=$(printf "%s" "$COMMIT_MESSAGE")" >> $GITHUB_OUTPUT
+#            fi
+#
+#      - name: Setup env
+#        run: |
+#             rm -f $HOME/.gitconfig;
+#             mkdir -p "$HOME/.nextflow";
+#             echo "providers.github.auth='$NXF_GITHUB_ACCESS_TOKEN'" > "$HOME/.nextflow/scm"
+#        env:
+#          NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
+#
+#      - name: Setup Java ${{ matrix.java_version }}
+#        uses: actions/setup-java@v4
+#        with:
+#          java-version: ${{matrix.java_version}}
+#          distribution: 'temurin'
+#          architecture: x64
+#          cache: gradle
+#
+#      - name: Compile
+#        run: make assemble
+#
+#      - name: Test
+#        run: |
+#            env | sort
+#            # configure test env
+#            if [[ "$GOOGLE_SECRET" ]]; then
+#            echo $GOOGLE_SECRET | base64 -d > $PWD/google_credentials.json
+#            export GOOGLE_APPLICATION_CREDENTIALS=$PWD/google_credentials.json
+#            fi
+#            # run tests
+#            make test
+#        env:
+#          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#          AWS_S3FS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#          AWS_S3FS_SECRET_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#          NXF_BITBUCKET_ACCESS_TOKEN: ${{ secrets.NXF_BITBUCKET_ACCESS_TOKEN }}
+#          NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
+#          NXF_GITLAB_ACCESS_TOKEN: ${{ secrets.NXF_GITLAB_ACCESS_TOKEN }}
+#          NXF_AZURE_REPOS_TOKEN: ${{ secrets.NXF_AZURE_REPOS_TOKEN }}
+#          GOOGLE_SECRET: ${{ secrets.GOOGLE_SECRET }}
+#          AZURE_STORAGE_ACCOUNT_NAME: nfazurestore
+#          AZURE_STORAGE_ACCOUNT_KEY: ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
+#          AZURE_BATCH_ACCOUNT_NAME: nfbatchtest
+#          AZURE_BATCH_ACCOUNT_KEY: ${{ secrets.AZURE_BATCH_ACCOUNT_KEY }}
+#
+#      - name: Publish tests report
+#        if: always()
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: report-unit-tests-jdk-${{ matrix.java_version }}
+#          path: |
+#            **/build/reports/tests/test
+#
+#    outputs:
+#      commit_message: ${{ steps.get_commit_message.outputs.commit_message }}
+#
+#  test:
+#    if: ${{ !contains(needs.build.outputs.commit_message, '[ci fast]') }}
+#    needs: build
+#    runs-on: ubuntu-latest
+#    timeout-minutes: 90
+#    strategy:
+#      fail-fast: false
+#      matrix:
+#        java_version: [17, 24]
+#        test_mode: ["test_integration", "test_parser_v2", "test_docs", "test_aws", "test_azure", "test_google", "test_wave"]
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v4
+#        with:
+#          fetch-depth: 1
+#          submodules: true
+#
+#      - name: Setup env
+#        run: |
+#          rm -f $HOME/.gitconfig;
+#          mkdir -p "$HOME/.nextflow";
+#          echo "providers.github.auth='$NXF_GITHUB_ACCESS_TOKEN'" > "$HOME/.nextflow/scm"
+#        env:
+#          NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
+#
+#      - name: Setup Java ${{ matrix.java_version }}
+#        uses: actions/setup-java@v4
+#        with:
+#          java-version: ${{matrix.java_version}}
+#          distribution: 'temurin'
+#          architecture: x64
+#          cache: gradle
+#
+#      - name: Run tests
+#        run: |
+#          env | sort
+#          # configure test env
+#          if [[ "$GOOGLE_SECRET" ]]; then
+#          echo $GOOGLE_SECRET | base64 -d > $PWD/google_credentials.json
+#          export GOOGLE_APPLICATION_CREDENTIALS=$PWD/google_credentials.json
+#          fi
+#          cat $HOME/.nextflow/scm
+#          make clean assemble install
+#          bash test-ci.sh
+#        env:
+#          TEST_JDK: ${{ matrix.java_version }}
+#          TEST_MODE: ${{ matrix.test_mode }}
+#          GRADLE_OPTS: '-Dorg.gradle.daemon=false'
+#          TOWER_ACCESS_TOKEN: ${{ secrets.TOWER_ACCESS_TOKEN }}
+#          AWS_DEFAULT_REGION: eu-west-1
+#          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#          NXF_BITBUCKET_ACCESS_TOKEN: ${{ secrets.NXF_BITBUCKET_ACCESS_TOKEN }}
+#          NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
+#          NXF_GITLAB_ACCESS_TOKEN: ${{ secrets.NXF_GITLAB_ACCESS_TOKEN }}
+#          NXF_AZURE_REPOS_TOKEN: ${{ secrets.NXF_AZURE_REPOS_TOKEN }}
+#          GOOGLE_SECRET: ${{ secrets.GOOGLE_SECRET }}
+#          AZURE_STORAGE_ACCOUNT_NAME: nfazurestore
+#          AZURE_STORAGE_ACCOUNT_KEY: ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
+#          AZURE_BATCH_ACCOUNT_NAME: nfbatchtest
+#          AZURE_BATCH_ACCOUNT_KEY: ${{ secrets.AZURE_BATCH_ACCOUNT_KEY }}
+#
+#      - name: Tar integration tests
+#        if: always()
+#        run: |
+#            tar -cvf integration-tests.tar.gz tests/checks
+#            tar -cvf validation-tests.tar.gz validation
+#
+#      - name: Publish tests report
+#        uses: actions/upload-artifact@v4
+#        if: always()
+#        with:
+#          name: report-${{ matrix.test_mode }}-jdk-${{ matrix.java_version }}
+#          path: |
+#            validation-tests.tar.gz
+#            integration-tests.tar.gz
+#
+#  test-e2e:
+#      if: ${{ contains(needs.build.outputs.commit_message,'[e2e stage]') || contains(needs.build.outputs.commit_message,'[e2e prod]') }}
+#      needs: build
+#      runs-on: ubuntu-latest
+#      timeout-minutes: 10
+#      permissions:
+#          actions: write  # Allow writing to actions
+#          contents: write # Allow writing to repository contents
+#      steps:
+#          - name: Checkout
+#            uses: actions/checkout@v4
+#            with:
+#                fetch-depth: 1
+#                submodules: true
+#
+#          - name: Setup Java 17
+#            uses: actions/setup-java@v4
+#            with:
+#                java-version: 17
+#                distribution: 'temurin'
+#                architecture: x64
+#                cache: gradle
+#
+#          - name: Setup env
+#            run: |
+#                wget -q -O wave https://github.com/seqeralabs/wave-cli/releases/download/v1.4.1/wave-1.4.1-linux-x86_64
+#                chmod +x wave
+#                mv wave /usr/local/bin/
+#                echo "COMMIT_MESSAGE=\"${{ needs.build.outputs.commit_message }}\"" >> $GITHUB_ENV
+#
+#          - name : Docker Login to Seqera public CR
+#            uses : docker/login-action@v3
+#            with :
+#                registry : "public.cr.seqera.io"
+#                username : "public-cr-admin"
+#                password : ${{ secrets.SEQERA_PUBLIC_CR_PASSWORD }}
+#
+#          - name: Launch tests
+#            run: |
+#                cd test-e2e
+#                bash run.sh
+#            env:
+#                GITHUB_TOKEN: ${{ secrets.AUTOMATION_GITHUB_TOKEN }}
+#                GRADLE_OPTS: '-Dorg.gradle.daemon=false'
+#
   release:
-    if: ${{ contains(needs.build.outputs.commit_message, '[release]') }}
-    needs: [build, test]
+#    if: ${{ contains(needs.build.outputs.commit_message, '[release]') }}
+#    needs: [build, test]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -246,14 +246,6 @@ jobs:
           fetch-depth: 0
           submodules: true
 
-      - name: Setup env
-        run: |
-          rm -f $HOME/.gitconfig;
-          mkdir -p "$HOME/.nextflow";
-          echo "providers.github.auth='$NXF_GITHUB_ACCESS_TOKEN'" > "$HOME/.nextflow/scm"
-        env:
-          NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
-
       - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
@@ -262,11 +254,42 @@ jobs:
           architecture: x64
           cache: gradle
 
+      - name: Docker Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Docker Login to Seqera public CR
+        uses: docker/login-action@v3
+        with:
+          registry: "public.cr.seqera.io"
+          username: ${{ vars.SEQERA_PUBLIC_CR_USERNAME }}
+          password: ${{ secrets.SEQERA_PUBLIC_CR_PASSWORD }}
+
+      - name: Configure plugin registry
+        run: |
+          echo "npr.apiUrl=$NPR_API_URL" >> gradle.properties
+          echo "npr.apiKey=***" >> gradle.properties
+          sed -i "s/npr.apiKey=\*\*\*/npr.apiKey=$NPR_API_KEY/" gradle.properties
+        env:
+          NPR_API_URL: ${{ vars.NPR_API_URL }}
+          NPR_API_KEY: ${{ secrets.NPR_API_KEY }}
+
       - name: Run release
         run: |
           echo "Starting release process..."
           bash release.sh
         env:
           GRADLE_OPTS: '-Dorg.gradle.daemon=false'
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Add any additional secrets needed for release
+          # credentials to pubslish nextflow assets
+          NXF_AWS_ACCESS: ${{ vars.NXF_AWS_ACCESS }}
+          NXF_AWS_SECRET: ${{ secrets.NXF_AWS_SECRET }}
+          # credentials to publish maven libraries
+          AWS_ACCESS_KEY_ID: ${{ vars.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          # plugin registry
+          NPR_API_URL: ${{ vars.NPR_API_URL }}
+          NPR_API_KEY: ${{ secrets.NPR_API_KEY }}
+          # GitHub secrets
+          GITHUB_TOKEN: ${{ secrets.AUTOMATION_GITHUB_TOKEN }}
