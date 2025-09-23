@@ -172,7 +172,7 @@ jobs:
 
       - name: Tar integration tests
         if: always()
-        run: |
+        run: | 
             tar -cvf integration-tests.tar.gz tests/checks
             tar -cvf validation-tests.tar.gz validation
 
@@ -199,7 +199,7 @@ jobs:
             with:
                 fetch-depth: 1
                 submodules: true
-
+                
           - name: Setup Java 17
             uses: actions/setup-java@v4
             with:
