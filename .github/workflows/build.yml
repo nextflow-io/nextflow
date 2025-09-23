@@ -255,6 +255,11 @@ jobs:
           architecture: x64
           cache: gradle
 
+      - name: Configure Git
+        run: |
+          git config --global user.name "${{ github.event.pusher.name || github.actor }}"
+          git config --global user.email "${{ github.event.pusher.email || format('{0}@users.noreply.github.com', github.actor) }}"
+
       - name: Docker Login to Docker Hub
         uses: docker/login-action@v3
         with:
