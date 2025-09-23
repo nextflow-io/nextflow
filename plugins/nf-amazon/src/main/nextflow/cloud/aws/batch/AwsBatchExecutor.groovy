@@ -366,7 +366,7 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExec
         final kms = opts.storageKmsKeyId ? " --sse-kms-key-id $opts.storageKmsKeyId" : ''
         final requesterPays = opts.requesterPays ? ' --request-payer requester' : ''
         final aws = "$cli s3 cp --only-show-errors${sse}${kms}${debug}${requesterPays}"
-        final cmd = "trap \"[[ -n \\\$pid ]] && kill -TERM \\\$pid\" TERM; trap \"{ ret=\$?; $aws ${TaskRun.CMD_LOG} ${workDir}/${TaskRun.CMD_LOG}||true; exit \$ret; }\" EXIT; $aws ${workDir}/${TaskRun.CMD_RUN} - | bash > >(tee ${TaskRun.CMD_LOG}) 2>&1 & pid=\$!; wait \$pid"
+        final cmd = "trap \"[[ -n \\\$pid ]] && { echo Terminating process \\\$pid | tee ${TaskRun.CMD_LOG}; kill -TERM \\\$pid; }\" TERM; trap \"{ ret=\$?; $aws ${TaskRun.CMD_LOG} ${workDir}/${TaskRun.CMD_LOG}||true; exit \$ret; }\" EXIT; $aws ${workDir}/${TaskRun.CMD_RUN} - | bash > >(tee ${TaskRun.CMD_LOG}) 2>&1 & pid=\$!; wait \$pid"
         return cmd
     }
 
@@ -375,7 +375,7 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExec
         final sse = opts.storageEncryption ? " --sse $opts.storageEncryption" : ''
         final kms = opts.storageKmsKeyId ? " --sse-kms-key-id $opts.storageKmsKeyId" : ''
         final requesterPays = opts.requesterPays ? ' --request-payer requester' : ''
-        final cmd = "trap \"[[ -n \\\$pid ]] && kill -TERM \\\$pid\" TERM; trap \"{ ret=\$?; $cli cp${sse}${kms}${requesterPays} ${TaskRun.CMD_LOG} ${workDir}/${TaskRun.CMD_LOG}||true; exit \$ret; }\" EXIT; $cli cat ${workDir}/${TaskRun.CMD_RUN} | bash > >(tee ${TaskRun.CMD_LOG}) 2>&1 & pid=\$!; wait \$pid"
+        final cmd = "trap \"[[ -n \\\$pid ]] && { echo Terminating process \\\$pid | tee ${TaskRun.CMD_LOG}; kill -TERM \\\$pid; }\" TERM; trap \"{ ret=\$?; $cli cp${sse}${kms}${requesterPays} ${TaskRun.CMD_LOG} ${workDir}/${TaskRun.CMD_LOG}||true; exit \$ret; }\" EXIT; $cli cat ${workDir}/${TaskRun.CMD_RUN} | bash > >(tee ${TaskRun.CMD_LOG}) 2>&1 & pid=\$!; wait \$pid"
         return cmd
     }
 
