@@ -239,6 +239,8 @@ jobs:
       actions: write
       contents: write
       packages: write
+      pull-requests: write
+      issues: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -292,4 +294,4 @@ jobs:
           NPR_API_URL: ${{ vars.NPR_API_URL }}
           NPR_API_KEY: ${{ secrets.NPR_API_KEY }}
           # GitHub secrets
-          GITHUB_TOKEN: ${{ secrets.AUTOMATION_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
