@@ -267,22 +267,11 @@ jobs:
           username: ${{ vars.SEQERA_PUBLIC_CR_USERNAME }}
           password: ${{ secrets.SEQERA_PUBLIC_CR_PASSWORD }}
 
-      - name: Configure plugin registry
-        run: |
-          echo "npr.apiUrl=$NPR_API_URL" >> gradle.properties
-          echo "npr.apiKey=***" >> gradle.properties
-          sed -i "s/npr.apiKey=\*\*\*/npr.apiKey=$NPR_API_KEY/" gradle.properties
-        env:
-          NPR_API_URL: ${{ vars.NPR_API_URL }}
-          NPR_API_KEY: ${{ secrets.NPR_API_KEY }}
-
       - name: Run release
         run: |
           echo "Starting release process..."
-          echo "AWS_ACCESS_KEY_ID is: ${AWS_ACCESS_KEY_ID:0:10}..." # Show first 10 chars
-          echo "AWS_SECRET_ACCESS_KEY is set: $([ -n "$AWS_SECRET_ACCESS_KEY" ] && echo 'yes' || echo 'no')"
-          echo "NXF_AWS_ACCESS is: ${NXF_AWS_ACCESS:0:10}..." # Show first 10 chars
-          echo "NXF_AWS_SECRET is set: $([ -n "$NXF_AWS_SECRET" ] && echo 'yes' || echo 'no')"
+          echo "npr.apiUrl=$NPR_API_URL" >> gradle.properties
+          echo "npr.apiKey=$NPR_API_KEY" >> gradle.properties
           bash release.sh
         env:
           GRADLE_OPTS: '-Dorg.gradle.daemon=false'
