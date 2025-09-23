@@ -281,6 +281,8 @@ jobs:
           echo "Starting release process..."
           echo "AWS_ACCESS_KEY_ID is: ${AWS_ACCESS_KEY_ID:0:10}..." # Show first 10 chars
           echo "AWS_SECRET_ACCESS_KEY is set: $([ -n "$AWS_SECRET_ACCESS_KEY" ] && echo 'yes' || echo 'no')"
+          echo "NXF_AWS_ACCESS is: ${NXF_AWS_ACCESS:0:10}..." # Show first 10 chars
+          echo "NXF_AWS_SECRET is set: $([ -n "$NXF_AWS_SECRET" ] && echo 'yes' || echo 'no')"
           bash release.sh
         env:
           GRADLE_OPTS: '-Dorg.gradle.daemon=false'
