@@ -279,15 +279,18 @@ jobs:
       - name: Run release
         run: |
           echo "Starting release process..."
+          echo "AWS_ACCESS_KEY_ID is: ${AWS_ACCESS_KEY_ID:0:10}..." # Show first 10 chars
+          echo "AWS_SECRET_ACCESS_KEY is set: $([ -n "$AWS_SECRET_ACCESS_KEY" ] && echo 'yes' || echo 'no')"
           bash release.sh
         env:
           GRADLE_OPTS: '-Dorg.gradle.daemon=false'
+          AWS_JAVA_V1_DISABLE_DEPRECATION_ANNOUNCEMENT: 'true'
           # credentials to pubslish nextflow assets
           NXF_AWS_ACCESS: ${{ vars.NXF_AWS_ACCESS }}
           NXF_AWS_SECRET: ${{ secrets.NXF_AWS_SECRET }}
           # credentials to publish maven libraries
-          AWS_ACCESS_KEY_ID: ${{ vars.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_ACCESS_KEY_ID: ${{ vars.SEQERA_MAVEN_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.SEQERA_MAVEN_SECRET_KEY }}
           # plugin registry
           NPR_API_URL: ${{ vars.NPR_API_URL }}
           NPR_API_KEY: ${{ secrets.NPR_API_KEY }}
