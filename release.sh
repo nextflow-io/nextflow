@@ -37,6 +37,38 @@ set -e
 echo "=== Starting Nextflow Release Process ==="
 echo "Commit message: ${GITHUB_HEAD_COMMIT_MESSAGE:-$(git log -1 --pretty=format:'%s')}"
 
+# Check required environment variables
+echo "=== Checking required environment variables ==="
+REQUIRED_VARS=(
+    "NXF_AWS_ACCESS"
+    "NXF_AWS_SECRET"
+    "AWS_ACCESS_KEY_ID"
+    "AWS_SECRET_ACCESS_KEY"
+    "GITHUB_TOKEN"
+    "NPR_API_URL"
+    "NPR_API_KEY"
+)
+
+MISSING_VARS=()
+for var in "${REQUIRED_VARS[@]}"; do
+    if [ -z "${!var}" ]; then
+        MISSING_VARS+=("$var")
+    else
+        echo "✓ $var is set"
+    fi
+done
+
+if [ ${#MISSING_VARS[@]} -ne 0 ]; then
+    echo "❌ ERROR: The following required environment variables are not set:"
+    for var in "${MISSING_VARS[@]}"; do
+        echo "  - $var"
+    done
+    echo "Please ensure all required environment variables are configured before running the release."
+    exit 1
+fi
+
+echo "✅ All required environment variables are set"
+
 ## Verify we're in release mode
 #if [[ ! "${GITHUB_HEAD_COMMIT_MESSAGE:-$(git log -1 --pretty=format:'%s')}" =~ \[release\] ]]; then
 #    echo "ERROR: This script should only be run when commit message contains '[release]'"
