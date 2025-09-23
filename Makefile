@@ -35,7 +35,7 @@ assemble:
 	./gradlew buildInfo compile assemble
 
 releaseInfo:
-    ./gradlew releaseInfo
+	./gradlew releaseInfo
 
 check:
 	./gradlew check
