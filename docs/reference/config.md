@@ -844,7 +844,19 @@ The following settings are available:
 : Enable the Fusion file system (default: `false`).
 
 `fusion.exportStorageCredentials`
-: Export the access credentials required by the underlying object storage to the task execution environment (default: `false`).
+: Export access credentials required by the underlying object storage as environment variables (e.g., `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `AWS_SESSION_TOKEN` for AWS S3) to task execution environments (default: `false`).
+
+  :::{note}
+  This configuration does not mount or provide access to credential files. For example, AWS credentials like `~/.aws/credentials`, `~/.aws/config`, and SSO cache files are not mounted. AWS SSO users must export credentials to environment variables:
+  
+  ```bash
+  eval "$(aws configure export-credentials --format env)"
+  ```
+  :::
+
+  :::{warning}
+  This option leaks credentials is the task launcher script. It should only be used for testing and development purposes.
+  :::
 
 `fusion.logLevel`
 : The log level of the Fusion client.

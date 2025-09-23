@@ -55,7 +55,9 @@ rediraffe_redirects = {
     'metrics.md': 'tutorials/metrics.md',
     'data-lineage.md' : 'tutorials/data-lineage.md',
     'workflow-outputs.md': 'tutorials/workflow-outputs.md',
-    'flux.md': 'tutorials/flux.md'
+    'flux.md': 'tutorials/flux.md',
+    'developer/plugins.md': 'plugins/developing-plugins.md',
+    'plugins.md': 'plugins/plugins.md'
 }
 
 # Add any paths that contain templates here, relative to this directory.

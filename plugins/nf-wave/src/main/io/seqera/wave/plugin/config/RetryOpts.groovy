@@ -19,6 +19,7 @@ package io.seqera.wave.plugin.config
 
 import groovy.transform.CompileStatic
 import groovy.transform.ToString
+import io.seqera.util.retry.Retryable
 import nextflow.config.schema.ConfigOption
 import nextflow.config.schema.ConfigScope
 import nextflow.script.dsl.Description
@@ -29,7 +30,7 @@ import nextflow.util.Duration
  */
 @ToString(includeNames = true, includePackage = false)
 @CompileStatic
-class RetryOpts implements ConfigScope {
+class RetryOpts implements ConfigScope, Retryable.Config {
 
     @ConfigOption
     @Description("""
@@ -55,6 +56,12 @@ class RetryOpts implements ConfigScope {
     """)
     double jitter = 0.25
 
+    @ConfigOption
+    @Description("""
+        The multiplier used for exponential backoff delay calculations (default: `2.0`)
+    """)
+    double multiplier = 2;
+
     RetryOpts() {
         this(Collections.emptyMap())
     }
@@ -68,5 +75,18 @@ class RetryOpts implements ConfigScope {
             maxAttempts = config.maxAttempts as int
         if( config.jitter )
             jitter = config.jitter as double
+        if( config.multiplier )
+            multiplier = config.multiplier as double
+    }
+
+    // Methods required by Retryable.Config interface
+    @Override
+    java.time.Duration getDelayAsDuration() {
+        return java.time.Duration.ofMillis(delay.toMillis())
+    }
+
+    @Override
+    java.time.Duration getMaxDelayAsDuration() {
+        return java.time.Duration.ofMillis(maxDelay.toMillis())
     }
 }

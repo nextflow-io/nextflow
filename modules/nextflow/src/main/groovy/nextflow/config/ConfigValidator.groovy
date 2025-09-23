@@ -115,6 +115,8 @@ class ConfigValidator {
                 continue
             if( isMissingCorePluginScope(names.first()) )
                 continue
+            if( isMapOption(names) )
+                continue
             log.warn1 "Unrecognized config option '${fqName}'"
         }
     }
@@ -153,6 +155,32 @@ class ConfigValidator {
     private boolean isMissingCorePluginScope(String name) {
         return name in CORE_PLUGIN_SCOPES
             && !pluginScopes.children().containsKey(name)
+    }
+
+    /**
+     * Determine whether a config option is a map option or a
+     * property thereof.
+     *
+     * @param names Config option split into individual names, e.g. 'process.resourceLimits' -> [process, resourceLimits]
+     */
+    private boolean isMapOption(List<String> names) {
+        return isMapOption0(SchemaNode.ROOT, names)
+            || isMapOption0(pluginScopes, names)
+    }
+
+    private static boolean isMapOption0(SchemaNode.Scope scope, List<String> names) {
+        SchemaNode node = scope
+        for( final name : names ) {
+            if( node instanceof SchemaNode.Scope )
+                node = node.children().get(name)
+            else if( node instanceof SchemaNode.Placeholder )
+                node = node.scope()
+            else if( node instanceof SchemaNode.Option )
+                return node.type() == Map.class
+            else
+                return false
+        }
+        return false
     }
 
     /**
