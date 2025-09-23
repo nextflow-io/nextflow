@@ -75,13 +75,19 @@ echo "✅ All required environment variables are set"
 #    exit 1
 #fi
 
-echo "=== Step 1: Assemble, upload, and deploy ==="
+echo "🔧 === Step 1: Assemble, upload, and deploy ==="
 make assemble upload deploy
+echo "✅ Step 1 completed successfully"
+echo ""
 
-echo "=== Step 2: Release plugins ==="
+echo "🔌 === Step 2: Release plugins ==="
 make release-plugins
+echo "✅ Step 2 completed successfully"
+echo ""
 
-echo "=== Step 3: Final release ==="
+echo "🚀 === Step 3: Final release ==="
 make release
+echo "✅ Step 3 completed successfully"
+echo ""
 
-echo "=== Release process completed successfully ==="
+echo "🎉 === Release process completed successfully ==="
