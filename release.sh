@@ -69,12 +69,6 @@ fi
 
 echo "✅ All required environment variables are set"
 
-## Verify we're in release mode
-#if [[ ! "${GITHUB_HEAD_COMMIT_MESSAGE:-$(git log -1 --pretty=format:'%s')}" =~ \[release\] ]]; then
-#    echo "ERROR: This script should only be run when commit message contains '[release]'"
-#    exit 1
-#fi
-
 echo "🔧 === Step 1: Assemble, upload, and deploy ==="
 make assemble upload deploy
 echo "✅ Step 1 completed successfully"
