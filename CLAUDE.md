@@ -108,9 +108,9 @@ The project follows a modular architecture with a plugin-based system for cloud 
 
 Follow these actions to make a new release:
 
-- Update the `changelog.txt` file in each plugin sub-project (if any change has been done)
+- Update the `changelog.txt` file in each plugin sub-project (if any change has been done).
 - Update the `VERSION` file in in each plugin sub-project.
-  Use a semantic version number number depending the impact of the change, or do not change
+  Use a semantic version number depending the impact of the change, or do not change
   if no changes have been done to the plugin.
 - Update `nextflowVersion` attribute in the `build.gradle` file for plugins requiring specific
   Nextflow versions.
