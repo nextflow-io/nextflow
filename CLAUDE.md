@@ -97,3 +97,29 @@ The project follows a modular architecture with a plugin-based system for cloud 
 - `build.gradle`: Root build configuration with multi-module setup
 - `settings.gradle`: Gradle project structure definition
 - `plugins/*/VERSION`: Define the version of the corresponding plugin sub-project.
+
+## Release process
+
+Follow these actions to make a new release:
+
+- Update the `changelog.txt` file in each plugin sub-project (if any change has been done)
+- Update the `VERSION` file in in each plugin sub-project.
+  Use a semantic version number number depending the impact of the change, or do not change
+  if no changes have been done to the plugin.
+- Update `nextflowVersion` attribute in the `build.gradle` file for plugins requiring specific
+  Nextflow versions.
+- Commit the version and changelog files changes independently for each plugin. Use as commit
+  message the template `Bump plugin-name@version` e.g. `Bump nf-amazon@2.0.0.
+- Update `VERSION` file in the project root using a calendar-like versioning scheme.
+- Update the project root `changelog.txt` with changes since the past release. Use the git log
+  command to determine what changed e.g. `git log v<PREVIOUS VERSION>..`
+- Run `make releaseInfo` to update the version number and generate checksums.
+- Run this command to stage for commit the release files:
+    ```
+    git add VERSION changelog.txt nextflow nextflow.md5 nextflow.sha1 nextflow.sha256
+    ```
+- Make a commit using the `[release]` tag in the comment and push it upstream to trigger the release automation with GitHub action:
+    ```
+    git commit -m "[release] Nextflow version 25.09.0"
+    git push origin master
+    ```
