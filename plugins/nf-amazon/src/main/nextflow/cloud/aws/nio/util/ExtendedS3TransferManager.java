@@ -77,9 +77,9 @@ public class ExtendedS3TransferManager {
 
     private void setDownloadBufferProperties(Properties props) {
         long maxBuffer = DEFAULT_MAX_DOWNLOAD_BUFFER_SIZE;
-        if( props.containsKey("max_download_buffer")) {
-            log.trace("AWS client config - max_download_buffer: {}", props.getProperty("max_download_buffer"));
-            maxBuffer = Long.parseLong(props.getProperty("max_download_buffer"));
+        if( props.containsKey("max_download_heap_memory")) {
+            log.trace("AWS client config - max_download_heap_memory: {}", props.getProperty("max_download_heap_memory"));
+            maxBuffer = Long.parseLong(props.getProperty("max_download_heap_memory"));
         }
         this.partSize = DEFAULT_PART_SIZE;
         if( props.containsKey("minimum_part_size")) {

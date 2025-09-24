@@ -319,8 +319,15 @@ public class S3Client {
 			String msg = String.format("Exception thrown downloading S3 object s3://%s/%s", source.getBucket(), source.getKey());
 			throw new IOException(msg, e.getCause());
 		}
-
 	}
+
+    private static void createDirectory(Path dir) throws IOException {
+        try {
+            Files.createDirectory(dir);
+        } catch (FileAlreadyExistsException e) {
+            log.trace("File already exists: " + dir);
+        }
+    }
 
     public void downloadDirectory(S3Path source, File targetFile) throws IOException {
         //
@@ -343,11 +350,7 @@ public class S3Client {
                 if(log.isTraceEnabled())
                     log.trace("Download DIR: " + current + " -> " + newFolder);
                 // this `copy` creates the new folder, but does not copy the contained files
-                try {
-                    Files.createDirectory(newFolder);
-                } catch (FileAlreadyExistsException e) {
-                    log.trace("File already exists: " + newFolder);
-                }
+                createDirectory(newFolder);
                 return FileVisitResult.CONTINUE;
             }
 

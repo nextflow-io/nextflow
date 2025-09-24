@@ -74,7 +74,7 @@ class AwsS3Config implements ConfigScope {
     @Description("""
         The maximum size for the heap memory buffer used by concurrent downloads (default:`400 MB`).
     """)
-    final MemoryUnit maxDownloadBuffer
+    final MemoryUnit maxDownloadHeapMemory
 
     @ConfigOption
     @Description("""
@@ -230,7 +230,7 @@ class AwsS3Config implements ConfigScope {
             throw new IllegalArgumentException("S3 endpoint must begin with http:// or https:// prefix - offending value: '${endpoint}'")
         this.maxConcurrency = opts.maxConcurrency as Integer
         this.maxConnections = opts.maxConnections as Integer
-        this.maxDownloadBuffer = opts.maxDownloadBuffer as MemoryUnit
+        this.maxDownloadHeapMemory = opts.maxDownloadHeapMemory as MemoryUnit
         this.maxErrorRetry = opts.maxErrorRetry as Integer
         this.maxNativeMemory = opts.maxNativeMemory as MemoryUnit
         this.minimumPartSize = opts.minimumPartSize as MemoryUnit
@@ -290,7 +290,7 @@ class AwsS3Config implements ConfigScope {
             connection_timeout: connectionTimeout?.toString(),
             max_concurrency: maxConcurrency?.toString(),
             max_connections: maxConnections?.toString(),
-            max_download_buffer: maxDownloadBuffer?.toBytes()?.toString(),
+            max_download_heap_memory: maxDownloadHeapMemory?.toBytes()?.toString(),
             max_error_retry: maxErrorRetry?.toString(),
             max_native_memory: maxNativeMemory?.toBytes()?.toString(),
             minimum_part_size: minimumPartSize?.toBytes()?.toString(),

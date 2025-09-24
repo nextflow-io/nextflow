@@ -46,7 +46,7 @@ class ExtendedS3TransferManagerTest extends Specification {
         given:
         def mockTransferManager = Mock(S3TransferManager)
         def props = new Properties()
-        props.setProperty('max_download_buffer', '200000000') // 200 MB
+        props.setProperty('max_download_heap_memory', '200000000') // 200 MB
         props.setProperty('minimum_part_size', '16777216')    // 16 MB
 
         when:
@@ -84,7 +84,7 @@ class ExtendedS3TransferManagerTest extends Specification {
         given:
         def mockTransferManager = Mock(S3TransferManager)
         def props = new Properties()
-        props.setProperty('max_download_buffer', maxBuffer)
+        props.setProperty('max_download_heap_memory', maxBuffer)
         props.setProperty('minimum_part_size', partSize)
         
         when:

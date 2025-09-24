@@ -141,15 +141,15 @@ class AwsS3ConfigTest extends Specification {
 
     }
 
-    def 'should get maxDownloadBuffer' () {
+    def 'should get maxDownloadHeapMemory' () {
         given:
         SysEnv.push([:])
 
         when:
-        def config = new AwsConfig([client:[ maxDownloadBuffer: '100 MB']])
+        def config = new AwsConfig([client:[ maxDownloadHeapMemory: '100 MB']])
         def env = config.getS3Config().getAwsClientConfig()
         then:
-        env.max_download_buffer == Long.toString( 100 * 1024 * 1024)
+        env.max_download_heap_memory == Long.toString( 100 * 1024 * 1024)
 
         cleanup:
         SysEnv.pop()

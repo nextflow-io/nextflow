@@ -175,7 +175,7 @@ The following settings are available:
 `aws.client.maxConnections`
 : The maximum number of open HTTP connections used by the S3 transfer manager (default: `50`).
 
-`aws.client.maxDownloadBuffer`
+`aws.client.maxDownloadHeapMemory`
 : The maximum size for the heap memory buffer used by concurrent downloads (default:`400 MB`).
 
 `aws.client.maxErrorRetry`
