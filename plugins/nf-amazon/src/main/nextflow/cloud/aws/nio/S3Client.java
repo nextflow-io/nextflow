@@ -343,7 +343,11 @@ public class S3Client {
                 if(log.isTraceEnabled())
                     log.trace("Download DIR: " + current + " -> " + newFolder);
                 // this `copy` creates the new folder, but does not copy the contained files
-                Files.createDirectory(newFolder);
+                try {
+                    Files.createDirectory(newFolder);
+                } catch (FileAlreadyExistsException e) {
+                    log.trace("File already exists: " + newFolder);
+                }
                 return FileVisitResult.CONTINUE;
             }
 
