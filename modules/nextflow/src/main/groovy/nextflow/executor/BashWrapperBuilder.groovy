@@ -160,6 +160,14 @@ class BashWrapperBuilder {
         return targetDir && workDir!=targetDir
     }
 
+    /**
+     * Template method that allows controlling if it's required to unstage
+     * task control files (.command.out, .command.err, .command.trace, .command.env)
+     *
+     * See also https://github.com/nextflow-io/nextflow/pull/6364
+     * 
+     * @return false by default; executors may override to implement their own logic
+     */
     protected boolean shouldUnstageControls() {
         return false
     }
