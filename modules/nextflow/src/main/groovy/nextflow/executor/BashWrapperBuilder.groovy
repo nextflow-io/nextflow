@@ -160,6 +160,18 @@ class BashWrapperBuilder {
         return targetDir && workDir!=targetDir
     }
 
+    /**
+     * Template method that allows controlling if it's required to unstage
+     * task control files (.command.out, .command.err, .command.trace, .command.env)
+     *
+     * See also https://github.com/nextflow-io/nextflow/pull/6364
+     * 
+     * @return false by default; executors may override to implement their own logic
+     */
+    protected boolean shouldUnstageControls() {
+        return false
+    }
+
     protected boolean fixOwnership() {
         // note: only for docker (other container runtimes are not affected)
         ContainerHelper.fixOwnership(containerConfig) && isLinuxOS() && runWithContainer
@@ -379,7 +391,7 @@ class BashWrapperBuilder {
         binding.launch_cmd = getLaunchCommand(interpreter,env)
         binding.stage_cmd = getStageCommand()
         binding.unstage_cmd = getUnstageCommand()
-        binding.unstage_controls = changeDir || shouldUnstageOutputs() ? getUnstageControls() : null
+        binding.unstage_controls = changeDir || shouldUnstageControls() ? getUnstageControls() : null
 
         if( changeDir || shouldUnstageOutputs() ) {
             binding.unstage_outputs = copyStrategy.getUnstageOutputFilesScript(outputFiles,targetDir)
