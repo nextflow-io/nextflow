@@ -1,5 +1,5 @@
 plugins {
-    id "com.gradleup.shadow" version "8.3.5"
+    id "com.gradleup.shadow" version "8.3.8"
 }
 apply plugin: 'groovy'
 apply plugin: 'application'
@@ -87,7 +87,7 @@ shadowJar {
     configurations = [project.configurations.runtimeClasspath, project.configurations.lineageImplementation]
     archiveClassifier='one'
     manifest {
-        attributes 'Main-Class': "$mainClassName"
+        attributes 'Main-Class': application.mainClass.get()
     }
     mergeServiceFiles()
     mergeGroovyExtensionModules()
@@ -95,3 +95,4 @@ shadowJar {
         resource = 'META-INF/extensions.idx'
     }
 }
+
