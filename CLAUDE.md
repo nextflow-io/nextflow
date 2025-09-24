@@ -89,6 +89,12 @@ The project follows a modular architecture with a plugin-based system for cloud 
 ### Git conventions
 
 - Commit should be signed by adding a `Signed-off-by` line to the commit message as shown below, or by using the `-s` option (see CONTRIBUTING.md for details)
+- Special commit message tags:
+  - `[ci skip]` - Skip the execution of CI tests
+  - `[ci fast]` - Run only unit tests and skip integration tests
+  - `[e2e stage]` - Run end-to-end tests vs Seqera platform stage environment
+  - `[e2e prod]` - Same but against production platform
+  - `[release]` - Trigger release process
 
 ## Important Files
 - `VERSION`: Define the current version number
