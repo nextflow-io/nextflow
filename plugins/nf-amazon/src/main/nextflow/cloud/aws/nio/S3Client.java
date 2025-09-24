@@ -20,6 +20,7 @@ package nextflow.cloud.aws.nio;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InterruptedIOException;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
@@ -302,8 +303,6 @@ public class S3Client {
 		return transferManager;
 	}
 
-
-
     public void downloadFile(S3Path source, File target, long size) throws IOException {
 		try{
             DownloadFileRequest downloadFileRequest = DownloadFileRequest.builder()
@@ -311,10 +310,9 @@ public class S3Client {
                 .destination(target)
                 .build();
 			transferManager().downloadFile(downloadFileRequest,size).completionFuture().get();
-		} catch (InterruptedException e){
-			log.debug("S3 download file: s3://{}/{} cancelled", source.getBucket(), source.getKey());
+		} catch (InterruptedException e) {
 			Thread.currentThread().interrupt();
-
+			throw new InterruptedIOException(String.format("S3 download file: s3://%s/%s cancelled", source.getBucket(), source.getKey()));
 		} catch (ExecutionException e) {
 			String msg = String.format("Exception thrown downloading S3 object s3://%s/%s", source.getBucket(), source.getKey());
 			throw new IOException(msg, e.getCause());
@@ -355,7 +353,7 @@ public class S3Client {
             }
 
             @Override
-            public FileVisitResult visitFile(Path current, BasicFileAttributes attr) {
+            public FileVisitResult visitFile(Path current, BasicFileAttributes attr) throws IOException {
                 // get the *delta* path against the source path
                 final Path rel = source.relativize(current);
                 final String delta = rel != null ? rel.toString() : null;
@@ -371,8 +369,8 @@ public class S3Client {
                     FileDownload it = transferManager().downloadFile(downloadFileRequest, attr.size());
                     allDownloads.add(new OngoingFileDownload(s3Path.getBucket(), s3Path.getKey(), it));
                 }catch (InterruptedException e) {
-                    log.debug("S3 download directory: s3://{}/{} interrupted", source.getBucket(), source.getKey());
                     Thread.currentThread().interrupt();
+                    throw new InterruptedIOException(String.format("S3 download directory: s3://%s/%s interrupted", source.getBucket(), source.getKey()));
                 }
                 return FileVisitResult.CONTINUE;
             }
@@ -397,20 +395,20 @@ public class S3Client {
         }
         catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new RuntimeException(String.format("Interrupted while download directory s3://%s/%s", source.getBucket(), source.getKey()));
+            throw new InterruptedIOException(String.format("Interrupted while download directory s3://%s/%s", source.getBucket(), source.getKey()));
         }
     }
 
-	public void uploadFile(File source, S3Path target) throws IOException{
+	public void uploadFile(File source, S3Path target) throws IOException {
 		PutObjectRequest.Builder req = PutObjectRequest.builder().bucket(target.getBucket()).key(target.getKey());
 		preparePutObjectRequest(req, target.getTagsList(), target.getContentType(), target.getStorageClass());
 		// initiate transfer
 		FileUpload upload = transferManager().uploadFile(UploadFileRequest.builder().putObjectRequest(req.build()).source(source).build());
         try{
 		    upload.completionFuture().get();
-        } catch (InterruptedException e){
-            log.debug("S3 upload file: s3://{}/{} interrupted", target.getBucket(), target.getKey());
+        } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            throw new InterruptedIOException(String.format("S3 upload file: s3://%s/%s interrupted", target.getBucket(), target.getKey()));
         } catch (ExecutionException e) {
             String msg = String.format("Exception thrown uploading S3 object s3://%s/%s", target.getBucket(), target.getKey());
             throw new IOException(msg, e.getCause());
@@ -450,9 +448,9 @@ public class S3Client {
 				log.debug("S3 upload directory: s3://{}/{} failed transfers", target.getBucket(), target.getKey());
 				throw new IOException("Some transfers in S3 upload directory: s3://"+ target.getBucket() +"/"+ target.getKey() +" has failed - Transfers: " +  completed.failedTransfers() );
 			}
-		} catch (InterruptedException e){
-			log.debug("S3 upload directory: s3://{}/{} interrupted", target.getBucket(), target.getKey());
+		} catch (InterruptedException e) {
 			Thread.currentThread().interrupt();
+			throw new InterruptedIOException(String.format("S3 upload directory: s3://%s/%s interrupted", target.getBucket(), target.getKey()));
 		} catch (ExecutionException e) {
 			String msg = String.format("Exception thrown uploading S3 object s3://%s/%s", target.getBucket(), target.getKey());
 			throw new IOException(msg, e.getCause());
@@ -488,9 +486,9 @@ public class S3Client {
 		Copy copy = transferManager().copy(CopyRequest.builder().copyObjectRequest(req).build());
         try {
             copy.completionFuture().get();
-        } catch (InterruptedException e){
-            log.debug("S3 copy s3://{}/{} to s3://{}/{} interrupted", req.sourceBucket(), req.sourceKey(), req.destinationBucket(), req.destinationKey());
-			Thread.currentThread().interrupt();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new InterruptedIOException(String.format("S3 copy s3://%s/%s to s3://%s/%s interrupted", req.sourceBucket(), req.sourceKey(), req.destinationBucket(), req.destinationKey()));
         } catch (ExecutionException e) {
             String msg = String.format("Exception thrown copying S3 object form s3://%s/%s to s3://%s/%s", req.sourceBucket(), req.sourceKey(), req.destinationBucket(), req.destinationKey());
             throw new IOException(msg, e.getCause());
