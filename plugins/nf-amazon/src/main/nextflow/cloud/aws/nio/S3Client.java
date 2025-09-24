@@ -147,7 +147,7 @@ public class S3Client {
 		if( cannedAcl != null ) {
 			reqBuilder.acl(cannedAcl);
 		}
-		if( tags != null && tags.size()>0 ) {
+		if( tags != null && !tags.isEmpty()) {
 			reqBuilder.tagging(Tagging.builder().tagSet(tags).build());
 		}
 		if( kmsKeyId != null ) {
@@ -175,7 +175,7 @@ public class S3Client {
 		if( cannedAcl != null ) {
 			reqBuilder.acl(cannedAcl);
 		}
-		if( tags != null && tags.size()>0 ) {
+		if( tags != null && !tags.isEmpty()) {
 			reqBuilder.tagging(Tagging.builder().tagSet(tags).build());
 		}
 		if( kmsKeyId != null ) {
@@ -337,9 +337,9 @@ public class S3Client {
 
             public FileVisitResult preVisitDirectory(Path current, BasicFileAttributes attr) throws IOException {
                 // get the *delta* path against the source path
-                Path rel = source.relativize(current);
-                String delta = rel != null ? rel.toString() : null;
-                Path newFolder = delta != null ? target.resolve(delta) : target;
+                final Path rel = source.relativize(current);
+                final String delta = rel != null ? rel.toString() : null;
+                final Path newFolder = delta != null ? target.resolve(delta) : target;
                 if(log.isTraceEnabled())
                     log.trace("Download DIR: " + current + " -> " + newFolder);
                 // this `copy` creates the new folder, but does not copy the contained files
@@ -350,9 +350,9 @@ public class S3Client {
             @Override
             public FileVisitResult visitFile(Path current, BasicFileAttributes attr) {
                 // get the *delta* path against the source path
-                Path rel = source.relativize(current);
-                String delta = rel != null ? rel.toString() : null;
-                Path newFile = delta != null ? target.resolve(delta) : target;
+                final Path rel = source.relativize(current);
+                final String delta = rel != null ? rel.toString() : null;
+                final Path newFile = delta != null ? target.resolve(delta) : target;
                 if( log.isTraceEnabled())
                     log.trace("Download file: " + current + " -> "+ FilesEx.toUriString(newFile));
                 try {
@@ -369,14 +369,13 @@ public class S3Client {
                 }
                 return FileVisitResult.CONTINUE;
             }
-
         };
 
         Files.walkFileTree(source, EnumSet.of(FileVisitOption.FOLLOW_LINKS), Integer.MAX_VALUE, visitor);
 
         try {
             Throwable cause = null;
-            while(allDownloads.size()>0) {
+            while(!allDownloads.isEmpty()) {
                 OngoingFileDownload current = allDownloads.get(0);
                 try{
                     current.download.completionFuture().get();
@@ -492,7 +491,7 @@ public class S3Client {
 
 	}
 
-    class OngoingFileDownload {
+    static class OngoingFileDownload {
         String bucket;
         String key;
         FileDownload download;
@@ -502,7 +501,6 @@ public class S3Client {
             this.key = key;
             this.download = download;
         }
-
 
     }
 }

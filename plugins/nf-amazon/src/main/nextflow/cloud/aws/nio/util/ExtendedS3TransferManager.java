@@ -17,14 +17,20 @@
 
 package nextflow.cloud.aws.nio.util;
 
-import nextflow.cloud.aws.nio.S3Client;
+import java.util.Properties;
+import java.util.concurrent.Semaphore;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
-import software.amazon.awssdk.transfer.s3.model.*;
-
-import java.util.Properties;
-import java.util.concurrent.Semaphore;
+import software.amazon.awssdk.transfer.s3.model.Copy;
+import software.amazon.awssdk.transfer.s3.model.CopyRequest;
+import software.amazon.awssdk.transfer.s3.model.DirectoryUpload;
+import software.amazon.awssdk.transfer.s3.model.DownloadFileRequest;
+import software.amazon.awssdk.transfer.s3.model.FileDownload;
+import software.amazon.awssdk.transfer.s3.model.FileUpload;
+import software.amazon.awssdk.transfer.s3.model.UploadDirectoryRequest;
+import software.amazon.awssdk.transfer.s3.model.UploadFileRequest;
 
 /**
  * Extends the S3 Transfer manager functionality limiting the number of concurrent downloads according to a target heap memory consumption.
@@ -35,14 +41,15 @@ import java.util.concurrent.Semaphore;
  */
 public class ExtendedS3TransferManager {
 
-    private static final Logger log = LoggerFactory.getLogger(S3Client.class);
-    private S3TransferManager transferManager;
+    private static final Logger log = LoggerFactory.getLogger(ExtendedS3TransferManager.class);
 
+    private S3TransferManager transferManager;
+    private static final long _1MB = 1024 * 1024;
     // According to CRT Async client docs https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/services/s3/S3CrtAsyncClientBuilder.html
-    private static final long DEFAULT_PART_SIZE = 8 * 1024 * 1024; // 8 MB
+    private static final long DEFAULT_PART_SIZE = 8 * _1MB;
     private static final int DEFAULT_INIT_BUFFER_PARTS = 10;
     // Maximum heap buffer size
-    private static final long DEFAULT_MAX_DOWNLOAD_BUFFER_SIZE = 400 * 1024 * 1024; // 8 MB
+    private static final long DEFAULT_MAX_DOWNLOAD_BUFFER_SIZE = 400 * _1MB;
     private Semaphore concurrentDownloadSemaphore;
     private long partSize;
     private int maxPartsTotal;
@@ -108,6 +115,5 @@ public class ExtendedS3TransferManager {
     public int getMaxPartsTotal() {
         return maxPartsTotal;
     }
-
 
 }
