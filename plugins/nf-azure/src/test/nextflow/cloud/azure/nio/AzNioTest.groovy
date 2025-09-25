@@ -937,8 +937,8 @@ class AzNioTest extends Specification implements AzBaseSpec {
         // Create a directory marker with hdi_isfolder metadata
         def containerClient = storageClient.getBlobContainerClient(bucketName)
         def blobClient = containerClient.getBlobClient("test-dir/")
-        def metadata = ['hdi_isfolder': 'true']
-        blobClient.uploadWithResponse(new ByteArrayInputStream(new byte[0]), 0, null, metadata, null, null, null, null, null)
+        blobClient.upload(new ByteArrayInputStream(new byte[0]), 0)
+        blobClient.setMetadata(['hdi_isfolder': 'true'])
         
         and:
         def path = Paths.get(new URI("az://$dirPath/"))
