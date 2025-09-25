@@ -80,6 +80,10 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
 
     private volatile TaskResult result
 
+    String acceleratorEnv
+
+    List<String> acceleratorIds
+
     LocalTaskHandler(TaskRun task, LocalExecutor executor) {
         super(task)
         // create the task handler
@@ -142,11 +146,13 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
         final workDir = task.workDir.toFile()
         final logFile = new File(workDir, TaskRun.CMD_LOG)
 
-        return new ProcessBuilder()
+        final pb = new ProcessBuilder()
                 .redirectErrorStream(true)
                 .redirectOutput(logFile)
                 .directory(workDir)
                 .command(cmd)
+        prepareAccelerators(pb)
+        return pb
     }
 
     protected ProcessBuilder fusionProcessBuilder() {
@@ -162,10 +168,18 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
 
         final logPath = Files.createTempFile('nf-task','.log')
 
-        return new ProcessBuilder()
+        final pb = new ProcessBuilder()
                 .redirectErrorStream(true)
                 .redirectOutput(logPath.toFile())
                 .command(List.of('sh','-c', cmd))
+        prepareAccelerators(pb)
+        return pb
+    }
+
+    protected void prepareAccelerators(ProcessBuilder pb) {
+        if( !acceleratorEnv )
+            return
+        pb.environment().put(acceleratorEnv, acceleratorIds.join(','))
     }
 
     protected ProcessBuilder createLaunchProcessBuilder() {
