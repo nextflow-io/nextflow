@@ -65,14 +65,19 @@ public class ExtendedS3TransferManager {
         final int parts = estimateParts(size);
 
         concurrentDownloadSemaphore.acquire(parts);
+        try {
+            FileDownload downloadFile = transferManager.downloadFile(downloadFileRequest);
 
-        FileDownload downloadFile = transferManager.downloadFile(downloadFileRequest);
-
-        // Ensure permits are always released after completion
-        downloadFile.completionFuture().whenComplete((result, error) -> {
-            concurrentDownloadSemaphore.release(parts); // release no matter what
-        });
-        return downloadFile;
+            // Ensure permits are always released after completion
+            downloadFile.completionFuture().whenComplete((result, error) -> {
+                concurrentDownloadSemaphore.release(parts); // release no matter what
+            });
+            return downloadFile;
+        }catch (RuntimeException e){
+            // Release semaphore when runtime exception during the downloadFile submission
+            concurrentDownloadSemaphore.release(parts);
+            throw e;
+        }
     }
 
     private void setDownloadBufferProperties(Properties props) {
