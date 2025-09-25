@@ -173,4 +173,24 @@ class AwsS3ConfigTest extends Specification {
         // see https://github.com/nextflow-io/nextflow/issues/5836
         true        | [endpoint: 'https://xxxx.s3.cn-north-1.vpce.amazonaws.com.cn']
     }
+
+    @Unroll
+    def 'should fail with invalid maxDownloadHeapMemory and minimumPartSize are incorrect' () {
+        when:
+        new AwsS3Config(CONFIG)
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message == EXPECTED
+
+        where:
+        CONFIG                                                      | EXPECTED
+        [ maxDownloadHeapMemory: '0MB' ]                            | "'maxDownloadHeapMemory' can't be 0"
+        [ minimumPartSize: '0MB' ]                                  | "'minimumPartSize' can't be 0"
+        [ maxDownloadHeapMemory: '50 MB', minimumPartSize: '6 MB']  | "'maxDownloadHeapMemory' must be at least 10 times 'minimumPartSize' can't be 0"
+
+    }
+
+
+
+
 }

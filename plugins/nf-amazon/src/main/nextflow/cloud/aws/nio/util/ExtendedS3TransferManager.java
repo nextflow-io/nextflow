@@ -32,6 +32,8 @@ import software.amazon.awssdk.transfer.s3.model.FileUpload;
 import software.amazon.awssdk.transfer.s3.model.UploadDirectoryRequest;
 import software.amazon.awssdk.transfer.s3.model.UploadFileRequest;
 
+import static nextflow.cloud.aws.config.AwsS3Config.*;
+
 /**
  * Extends the S3 Transfer manager functionality limiting the number of concurrent downloads according to a target heap memory consumption.
  * Implemented to fix https://github.com/aws/aws-sdk-java-v2/issues/6323 where several concurrent downloads with CRT client can consume large heap memory space.
@@ -44,12 +46,6 @@ public class ExtendedS3TransferManager {
     private static final Logger log = LoggerFactory.getLogger(ExtendedS3TransferManager.class);
 
     private S3TransferManager transferManager;
-    private static final long _1MB = 1024 * 1024;
-    // According to CRT Async client docs https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/services/s3/S3CrtAsyncClientBuilder.html
-    private static final long DEFAULT_PART_SIZE = 8 * _1MB;
-    private static final int DEFAULT_INIT_BUFFER_PARTS = 10;
-    // Maximum heap buffer size
-    private static final long DEFAULT_MAX_DOWNLOAD_BUFFER_SIZE = 400 * _1MB;
     private Semaphore concurrentDownloadSemaphore;
     private long partSize;
     private int maxPartsTotal;

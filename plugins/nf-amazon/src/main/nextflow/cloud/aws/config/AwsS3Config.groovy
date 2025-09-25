@@ -72,7 +72,7 @@ class AwsS3Config implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The maximum size for the heap memory buffer used by concurrent downloads (default:`400 MB`).
+        The maximum size for the heap memory buffer used by concurrent downloads. It must be at least 10 times the `minimumPartSize` (default:`400 MB`).
     """)
     final MemoryUnit maxDownloadHeapMemory
 
@@ -221,6 +221,13 @@ class AwsS3Config implements ConfigScope {
     """)
     final String uploadStorageClass
 
+    private static final long _1MB = 1024 * 1024;
+    // According to CRT Async client docs https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/services/s3/S3CrtAsyncClientBuilder.html
+    public static final long DEFAULT_PART_SIZE = 8 * _1MB;
+    public static final int DEFAULT_INIT_BUFFER_PARTS = 10;
+    // Maximum heap buffer size
+    public static final long DEFAULT_MAX_DOWNLOAD_BUFFER_SIZE = 400 * _1MB;
+
     AwsS3Config(Map opts) {
         this.anonymous = opts.anonymous as Boolean
         this.connectionTimeout = opts.connectionTimeout as Integer
@@ -253,6 +260,7 @@ class AwsS3Config implements ConfigScope {
         this.uploadMaxAttempts = opts.uploadMaxAttempts as Integer
         this.uploadMaxThreads = opts.uploadMaxThreads as Integer
         this.uploadRetrySleep = opts.uploadRetrySleep as Duration
+        checkDownloadBufferParams()
     }
 
     private String parseStorageClass(String value) {
@@ -313,5 +321,22 @@ class AwsS3Config implements ConfigScope {
             upload_retry_sleep: uploadRetrySleep?.toMillis()?.toString(),
             upload_storage_class: storageClass?.toString()
         ].findAll { k, v -> v != null }
+    }
+
+    void checkDownloadBufferParams() {
+        if( this.maxDownloadHeapMemory != null  && this.maxDownloadHeapMemory.toBytes() == 0L ) {
+            throw new IllegalArgumentException("'maxDownloadHeapMemory' can't be 0")
+        }
+        if( this.minimumPartSize != null && this.minimumPartSize.toBytes() == 0L ) {
+            throw new IllegalArgumentException("'minimumPartSize' can't be 0")
+        }
+        if( this.maxDownloadHeapMemory != null || this.minimumPartSize != null ) {
+            final maxBuffer = this.maxDownloadHeapMemory ? this.maxDownloadHeapMemory.toBytes() : DEFAULT_MAX_DOWNLOAD_BUFFER_SIZE
+            final partSize = this.minimumPartSize ? this.minimumPartSize.toBytes() : DEFAULT_PART_SIZE
+            if( maxBuffer < DEFAULT_INIT_BUFFER_PARTS * partSize ) {
+                throw new IllegalArgumentException("'maxDownloadHeapMemory' must be at least " + DEFAULT_INIT_BUFFER_PARTS + " times 'minimumPartSize' can't be 0")
+            }
+        }
+
     }
 }

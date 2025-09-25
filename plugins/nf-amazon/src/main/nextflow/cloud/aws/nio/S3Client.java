@@ -23,8 +23,9 @@ import java.io.InputStream;
 import java.io.InterruptedIOException;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.Queue;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.*;
@@ -336,7 +337,7 @@ public class S3Client {
         // just traverse to source path a copy all files
         //
         final Path target = targetFile.toPath();
-        final List<OngoingFileDownload> allDownloads = new ArrayList<>();
+        final Queue<OngoingFileDownload> allDownloads = new LinkedList<>();
 
         FileVisitor<Path> visitor = new SimpleFileVisitor<Path>() {
 
@@ -381,14 +382,13 @@ public class S3Client {
         try {
             Throwable cause = null;
             while(!allDownloads.isEmpty()) {
-                OngoingFileDownload current = allDownloads.get(0);
+                OngoingFileDownload current = allDownloads.poll();
                 try{
                     current.download.completionFuture().get();
                 } catch (ExecutionException e) {
                     cause = e.getCause();
                     log.debug("Exception thrown downloading S3 object s3://{}/{}", current.bucket, current.key, cause);
                 }
-                allDownloads.remove(0);
             }
             if (cause != null)
                 throw new IOException(String.format("Some transfers from S3 download directory: s3://%s/%s has failed", source.getBucket(), source.getKey() ), cause);
