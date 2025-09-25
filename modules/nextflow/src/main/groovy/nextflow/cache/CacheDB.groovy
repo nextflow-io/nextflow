@@ -51,32 +51,32 @@ class CacheDB implements Closeable {
     }
 
     /**
-     * Initialise the database structure on the underlying file system
-     *
-     * @return The {@link CacheDB} instance itself
-     */
+    * Initialise the database structure on the underlying file system
+    *
+    * @return The {@link CacheDB} instance itself
+    */
     CacheDB open() {
         store.open()
         return this
     }
 
     /**
-     * Open the database in read mode
-     *
-     * @return The {@link CacheDB} instance itself
-     */
+    * Open the database in read mode
+    *
+    * @return The {@link CacheDB} instance itself
+    */
     CacheDB openForRead() {
         store.openForRead()
         return this
     }
 
     /**
-     * Retrieve a task runtime information from the cache DB
-     *
-     * @param taskHash The {@link HashCode} of the task to retrieve
-     * @param processor The {@link TaskProcessor} instance to be assigned to the retrieved task
-     * @return A {link TaskEntry} instance or {@code null} if a task for the given hash does not exist
-     */
+    * Retrieve a task runtime information from the cache DB
+    *
+    * @param taskHash The {@link HashCode} of the task to retrieve
+    * @param processor The {@link TaskProcessor} instance to be assigned to the retrieved task
+    * @return A {link TaskEntry} instance or {@code null} if a task for the given hash does not exist
+    */
     TaskEntry getTaskEntry(HashCode taskHash, TaskProcessor processor) {
 
         final payload = store.getEntry(taskHash)
@@ -128,10 +128,10 @@ class CacheDB implements Closeable {
 
 
     /**
-     * Save task runtime information to th cache DB
-     *
-     * @param handler A {@link TaskHandler} instance
-     */
+    * Save task runtime information to th cache DB
+    *
+    * @param handler A {@link TaskHandler} instance
+    */
     @PackageScope
     void writeTaskEntry0( TaskHandler handler, TraceRecord trace ) {
 
@@ -182,10 +182,10 @@ class CacheDB implements Closeable {
     }
 
     /**
-     * Iterate the tasks cache using the index file
-     * @param closure The operation to applied
-     * @return The {@link CacheDB} instance itself
-     */
+    * Iterate the tasks cache using the index file
+    * @param closure The operation to applied
+    * @return The {@link CacheDB} instance itself
+    */
     CacheDB eachRecord( Closure closure ) {
         assert closure
 
@@ -256,8 +256,8 @@ class CacheDB implements Closeable {
     }
 
     /**
-     * Close the underlying database and index file
-     */
+    * Close the underlying database and index file
+    */
     @Override
     void close() {
         log.trace "Closing CacheDB.."
