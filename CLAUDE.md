@@ -126,6 +126,6 @@ Follow these actions to make a new release:
     ```
 - Make a commit using the `[release]` tag in the comment and push it upstream to trigger the release automation with GitHub action:
     ```
-    git commit -m "[release] Nextflow version 25.09.0"
+    git commit -m "[release] Nextflow version 25.09.0-edge"
     git push origin master
     ```
