@@ -208,17 +208,6 @@ task buildInfo { doLast {
     commitId=${project.property('commitId')}
     """.stripIndent()
 
-    // -- update 'nextflow' wrapper
-    file0 = file('nextflow')
-    src = file0.text
-    src = src.replaceAll(/NXF_VER\=\$\{NXF_VER:-'.*'\}/, 'NXF_VER=\\${NXF_VER:-\'' + version + '\'}')
-    file0.text = src
-
-    // -- update dockerfile
-    file0 = file('docker/Dockerfile')
-    src = file0.text
-    src = src.replaceAll(/releases\/v[0-9a-zA-Z_\-\.]+\//, "releases/v$version/" as String)
-    file0.text = src
 
     // -- create plugins-info file
     def plugins = []
@@ -227,6 +216,24 @@ task buildInfo { doLast {
 
     def meta = plugins .collect { "$it.name@$it.version" }
     file('modules/nextflow/src/main/resources/META-INF/plugins-info.txt').text = meta.toSorted().join('\n')
+}}
+
+/*
+ * Update release information in nextflow wrapper and dockerfile
+ */
+task releaseInfo { doLast {
+    
+    // -- update 'nextflow' wrapper
+    def file0 = file('nextflow')
+    def src = file0.text
+    src = src.replaceAll(/NXF_VER\=\$\{NXF_VER:-'.*'\}/, 'NXF_VER=\\${NXF_VER:-\'' + version + '\'}')
+    file0.text = src
+
+    // -- update dockerfile
+    file0 = file('docker/Dockerfile')
+    src = file0.text
+    src = src.replaceAll(/releases\/v[0-9a-zA-Z_\-\.]+\//, "releases/v$version/" as String)
+    file0.text = src
 }}
 
 
@@ -411,10 +418,12 @@ task makeDigest { doLast {
     file('nextflow.md5').text = bytesToHex(digest) + '\n'
 }}
 
+// Make releaseInfo task automatically run makeDigest after updating versions
+releaseInfo.finalizedBy makeDigest
+
 
 task upload {
     dependsOn compile
-    dependsOn makeDigest
     dependsOn coreProjects.publish
 }
 
