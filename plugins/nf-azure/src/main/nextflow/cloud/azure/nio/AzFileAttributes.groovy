@@ -58,23 +58,41 @@ class AzFileAttributes implements BasicFileAttributes {
         objectId = "/${client.containerName}/${client.blobName}"
         creationTime = time(props.getCreationTime())
         updateTime = time(props.getLastModified())
-        directory = client.blobName.endsWith('/')
         size = props.getBlobSize()
-
-        // Support for Azure Data Lake Storage Gen2 with hierarchical namespace enabled
+        
+        // Determine if this is a directory using metadata only (most reliable):
         final meta = props.getMetadata()
-        if( meta.containsKey("hdi_isfolder") && size == 0 ){
-            directory = meta.get("hdi_isfolder")
+        if( meta != null && meta.containsKey("hdi_isfolder") ){
+            directory = meta.get("hdi_isfolder") == "true"
+        }
+        else {
+            // Without metadata or other indicators, default to treating as file
+            // This aligns with Azure SDK's approach where explicit directory markers are required
+            directory = false
         }
     }
 
     AzFileAttributes(String containerName, BlobItem item) {
         objectId = "/${containerName}/${item.name}"
-        directory = item.name.endsWith('/')
-        if( !directory ) {
-            creationTime = time(item.properties.getCreationTime())
-            updateTime = time(item.properties.getLastModified())
-            size = item.properties.getContentLength()
+        
+        // Determine if this is a directory using reliable methods only:
+        // 1. Check if it's marked as a prefix (virtual directory) - Most reliable
+        if( item.isPrefix() != null && item.isPrefix() ) {
+            directory = true
+            // Virtual directories don't have properties like creation time
+            size = 0
+        }
+        // 2. Check metadata for hierarchical namespace (ADLS Gen2)
+        else if( item.getMetadata() != null && item.getMetadata().containsKey("hdi_isfolder") && item.getMetadata().get("hdi_isfolder") == "true" ) {
+            directory = true
+            size = 0
+        }
+        // 3. Default: treat as file
+        else {
+            directory = false
+            creationTime = time(item.getProperties().getCreationTime())
+            updateTime = time(item.getProperties().getLastModified())
+            size = item.getProperties().getContentLength()
         }
     }
 
