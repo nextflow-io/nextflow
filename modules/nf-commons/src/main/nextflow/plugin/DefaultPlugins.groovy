@@ -29,26 +29,26 @@ class DefaultPlugins {
 
     public static final DefaultPlugins INSTANCE = new DefaultPlugins()
 
-    private Map<String,PluginSpec> plugins = new HashMap<>(20)
+    private Map<String,PluginRef> plugins = new HashMap<>(20)
 
     protected DefaultPlugins() {
         final meta = this.class.getResourceAsStream('/META-INF/plugins-info.txt')?.text
         plugins = parseMeta(meta)
     }
 
-    protected Map<String,PluginSpec> parseMeta(String meta) {
+    protected Map<String,PluginRef> parseMeta(String meta) {
         if( !meta )
             return Collections.emptyMap()
 
         final result = new HashMap(20)
         for( String line : meta.readLines() ) {
-            final spec = PluginSpec.parse(line)
+            final spec = PluginRef.parse(line)
             result[spec.id] = spec
         }
         return result
     }
 
-    PluginSpec getPlugin(String pluginId) throws IllegalArgumentException {
+    PluginRef getPlugin(String pluginId) throws IllegalArgumentException {
         if( !pluginId )
             throw new IllegalArgumentException("Missing pluginId argument")
         final result = plugins.get(pluginId)
@@ -61,7 +61,7 @@ class DefaultPlugins {
         return plugins.containsKey(pluginId)
     }
 
-    List<PluginSpec> getPlugins() {
+    List<PluginRef> getPlugins() {
         return new ArrayList(plugins.values())
     }
 
