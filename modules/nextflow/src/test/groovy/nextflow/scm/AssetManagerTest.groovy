@@ -651,4 +651,39 @@ class AssetManagerTest extends Specification {
         !AssetManager.isRemoteBranch(local_master)
     }
 
+    def 'should detect archive URLs' () {
+        given:
+        def manager = new AssetManager()
+        
+        expect:
+        manager.isArchiveUrl('https://github.com/nextflow-io/rnaseq/archive/refs/tags/3.18.0.zip') == true
+        manager.isArchiveUrl('https://github.com/nextflow-io/rnaseq/archive/refs/tags/3.18.0.tar.gz') == true
+        manager.isArchiveUrl('https://github.com/nextflow-io/rnaseq.git') == false
+        manager.isArchiveUrl('nextflow-io/rnaseq') == false
+    }
+    
+    def 'should extract project name from GitHub archive URL' () {
+        given:
+        def manager = new AssetManager()
+        
+        when:
+        def result = manager.resolveNameFromGitUrl('https://github.com/nextflow-io/rnaseq/archive/refs/tags/3.18.0.zip')
+        
+        then:
+        result == 'nextflow-io/rnaseq'
+        manager.hub == 'github'
+    }
+    
+    def 'should extract project name from generic archive URL' () {
+        given:
+        def manager = new AssetManager()
+        
+        when:
+        def result = manager.resolveNameFromGitUrl('https://example.com/downloads/my-pipeline-1.0.0.zip')
+        
+        then:
+        result == 'archive/my-pipeline-1.0.0'
+        manager.hub == 'example'
+    }
+
 }
