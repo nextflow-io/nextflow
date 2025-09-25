@@ -56,19 +56,20 @@ class AzFileAttributes implements BasicFileAttributes {
     AzFileAttributes(BlobClient client) {
         final props = client.getProperties()
         objectId = "/${client.containerName}/${client.blobName}"
-        creationTime = time(props.getCreationTime())
-        updateTime = time(props.getLastModified())
-        size = props.getBlobSize()
         
         // Determine if this is a directory using metadata only (most reliable):
         final meta = props.getMetadata()
-        if( meta != null && meta.containsKey("hdi_isfolder") ){
-            directory = meta.get("hdi_isfolder") == "true"
+        if( meta != null && meta.containsKey("hdi_isfolder") && meta.get("hdi_isfolder") == "true" ){
+            directory = true
+            size = 0
         }
         else {
-            // Without metadata or other indicators, default to treating as file
+            // Without metadata, default to treating as file
             // This aligns with Azure SDK's approach where explicit directory markers are required
             directory = false
+            creationTime = time(props.getCreationTime())
+            updateTime = time(props.getLastModified())
+            size = props.getBlobSize()
         }
     }
 
