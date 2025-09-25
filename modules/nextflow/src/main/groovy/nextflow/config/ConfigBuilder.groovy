@@ -34,6 +34,7 @@ import nextflow.cli.CmdRun
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
 import nextflow.secret.SecretsLoader
+import nextflow.secret.SecretsProvider
 import nextflow.util.HistoryFile
 import nextflow.util.SecretHelper
 /**
@@ -58,6 +59,8 @@ class ConfigBuilder {
 
     Path currentDir
 
+    Map<String,?> cliParams
+
     boolean showAllProfiles
 
     String profile = DEFAULT_PROFILE
@@ -74,13 +77,17 @@ class ConfigBuilder {
 
     boolean showMissingVariables
 
+    SecretsProvider secretsProvider
+
     Map<ConfigObject, String> emptyVariables = new LinkedHashMap<>(10)
 
     Map<String,String> env = new HashMap<>(SysEnv.get())
 
-    List<String> warnings = new ArrayList<>(10);
+    List<String> warnings = new ArrayList<>(10)
 
-    {
+    Map<String,Object> declaredParams = [:]
+
+    ConfigBuilder() {
         setHomeDir(Const.APP_HOME_DIR)
         setCurrentDir(Paths.get('.'))
     }
@@ -100,6 +107,11 @@ class ConfigBuilder {
         return this
     }
 
+    ConfigBuilder setSecretsProvider(SecretsProvider value) {
+        this.secretsProvider = value
+        return this
+    }
+
     ConfigBuilder setOptions( CliOptions options ) {
         this.options = options
         return this
@@ -108,6 +120,11 @@ class ConfigBuilder {
     ConfigBuilder setCmdRun( CmdRun cmdRun ) {
         this.cmdRun = cmdRun
         setProfile(cmdRun.profile)
+        return this
+    }
+
+    ConfigBuilder setCliParams( Map<String,?> cliParams ) {
+        this.cliParams = cliParams
         return this
     }
 
@@ -157,6 +174,10 @@ class ConfigBuilder {
         if( files )
             userConfigFiles.addAll(files)
         return this
+    }
+
+    Map<String,Object> getConfigParams() {
+        return declaredParams
     }
 
     static private wrapValue( value ) {
@@ -324,17 +345,20 @@ class ConfigBuilder {
         // this is needed to make sure to reuse the same
         // instance of the config vars across different instances of the ConfigBuilder
         // and prevent multiple parsing of the same params file (which can even be remote resource)
-        return cacheableConfigVars(baseDir)
+        final secretContext = secretsProvider
+            ? SecretsLoader.secretContext(secretsProvider)
+            : SecretsLoader.secretContext()
+        return getConfigVars(baseDir, secretContext)
     }
 
     @Memoized
-    static private Map cacheableConfigVars(Path base) {
+    static Map getConfigVars(Path base, Object secretContext) {
         final binding = new HashMap(10)
         binding.put('baseDir', base)
         binding.put('projectDir', base)
         binding.put('launchDir', Paths.get('.').toRealPath())
         binding.put('outputDir', Paths.get('results').complete())
-        binding.put('secrets', SecretsLoader.secretContext())
+        binding.put('secrets', secretContext)
         return binding
     }
 
@@ -348,8 +372,8 @@ class ConfigBuilder {
                 .setIgnoreIncludes(ignoreIncludes)
         ConfigObject result = new ConfigObject()
 
-        if( cmdRun && (cmdRun.hasParams()) )
-            parser.setParams(cmdRun.parsedParams(configVars()))
+        if( cliParams )
+            parser.setParams(cliParams)
 
         // add the user specified environment to the session env
         env.sort().each { name, value -> result.env.put(name,value) }
@@ -380,7 +404,7 @@ class ConfigBuilder {
             }
 
             if( validateProfile ) {
-                checkValidProfile(parser.getProfiles())
+                checkValidProfile(parser.getDeclaredProfiles())
             }
 
         }
@@ -414,6 +438,7 @@ class ConfigBuilder {
         final config = parse0(parser, entry)
         if( NF.getSyntaxParserVersion() == 'v1' )
             validate(config, entry)
+        declaredParams.putAll(parser.getDeclaredParams())
         result.merge(config)
     }
 
@@ -545,6 +570,9 @@ class ConfigBuilder {
 
         if( cmdRun.preview )
             config.preview = cmdRun.preview
+
+        if( cmdRun.plugins )
+            config.plugins = cmdRun.plugins.tokenize(',')
 
         // -- sets the working directory
         if( cmdRun.workDir )
@@ -723,8 +751,8 @@ class ConfigBuilder {
         }
 
         // -- add the command line parameters to the 'taskConfig' object
-        if( cmdRun.hasParams() )
-            config.params = mergeMaps( (Map)config.params, cmdRun.parsedParams(configVars()), NF.strictMode )
+        if( cliParams )
+            config.params = mergeMaps( (Map)config.params, cliParams, NF.strictMode )
 
         if( cmdRun.withoutDocker && config.docker instanceof Map ) {
             // disable docker execution

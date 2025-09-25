@@ -299,9 +299,21 @@ def str = 'hello'
 def meta = [:]
 ```
 
-:::{note}
-Because type annotations are useful for providing type checking at runtime, the language server will not report errors for Groovy-style type annotations at this time. Type annotations will be addressed in a future version of the Nextflow language specification.
+:::{versionadded} 25.10.0
 :::
+
+Local variables can be declared with a type annotation:
+
+```nextflow
+def a: Integer = 1
+def b: Integer = 2
+def (c: Integer, d: Integer) = [3, 4]
+def (e: Integer, f: Integer) = [5, 6]
+def str: String = 'hello'
+def meta: Map = [:]
+```
+
+Groovy-style type annotations are still supported. However, the language server and `nextflow lint` will automatically convert them to Nextflow-style type annotations when formatting code. Groovy-style type annotations will not be supported in a future version.
 
 ### Strings
 
@@ -587,4 +599,4 @@ There are two ways to preserve Groovy code:
 
 Any Groovy code can be moved into the `lib` directory, which supports the full Groovy language. This approach is useful for temporarily preserving some Groovy code until it can be updated later and incorporated into a Nextflow script. See {ref}`lib-directory` documentation for more information.
 
-For Groovy code that is complicated or if it depends on third-party libraries, it may be better to create a plugin. Plugins can define custom functions that can be included by Nextflow scripts like a module. Furthermore, plugins can be easily re-used across different pipelines. See {ref}`plugins-dev-page` for more information on how to develop plugins.
+For Groovy code that is complicated or if it depends on third-party libraries, it may be better to create a plugin. Plugins can define custom functions that can be included by Nextflow scripts like a module. Furthermore, plugins can be easily re-used across different pipelines. See {ref}`dev-plugins-page` for more information on how to develop plugins.

@@ -36,7 +36,7 @@ class ConfigParserV2 implements ConfigParser {
 
     private Map bindingVars = [:]
 
-    private Map paramVars = [:]
+    private Map paramOverrides = [:]
 
     private boolean ignoreIncludes = false
 
@@ -48,7 +48,9 @@ class ConfigParserV2 implements ConfigParser {
 
     private List<String> appliedProfiles
 
-    private Set<String> parsedProfiles
+    private Set<String> declaredProfiles
+
+    private Map<String,Object> declaredParams
 
     private GroovyShell groovyShell
 
@@ -56,11 +58,6 @@ class ConfigParserV2 implements ConfigParser {
     ConfigParserV2 setProfiles(List<String> profiles) {
         this.appliedProfiles = profiles
         return this
-    }
-
-    @Override
-    Set<String> getProfiles() {
-        return parsedProfiles
     }
 
     @Override
@@ -97,8 +94,18 @@ class ConfigParserV2 implements ConfigParser {
     ConfigParserV2 setParams(Map vars) {
         // deep clone the map to prevent side-effect
         // see https://github.com/nextflow-io/nextflow/issues/1923
-        this.paramVars = Bolts.deepClone(vars)
+        this.paramOverrides = Bolts.deepClone(vars)
         return this
+    }
+
+    @Override
+    Set<String> getDeclaredProfiles() {
+        return declaredProfiles
+    }
+
+    @Override
+    Map<String,Object> getDeclaredParams() {
+        return declaredParams
     }
 
     /**
@@ -120,13 +127,14 @@ class ConfigParserV2 implements ConfigParser {
             if( path )
                 script.setConfigPath(path)
             script.setIgnoreIncludes(ignoreIncludes)
-            script.setParams(paramVars)
+            script.setParams(paramOverrides)
             script.setProfiles(appliedProfiles)
             script.setRenderClosureAsString(renderClosureAsString)
             script.run()
 
             final target = script.getTarget()
-            parsedProfiles = script.getParsedProfiles()
+            declaredProfiles = script.getDeclaredProfiles()
+            declaredParams = script.getDeclaredParams()
             return Bolts.toConfigObject(target)
         }
         catch( CompilationFailedException e ) {

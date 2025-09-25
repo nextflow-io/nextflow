@@ -12,7 +12,7 @@ New versions of Nextflow are released regularly. See {ref}`updating-nextflow-pag
 
 ## Requirements
 
-Nextflow requires Bash 3.2 (or later) and [Java 17 (or later, up to 24)](http://www.oracle.com/technetwork/java/javase/downloads/index.html) to be installed. To see which version of Java you have, run the following command:
+Nextflow requires Bash 3.2 (or later) and [Java 17 (or later, up to 25)](http://www.oracle.com/technetwork/java/javase/downloads/index.html) to be installed. To see which version of Java you have, run the following command:
 
 ```{code-block} bash
 :class: copyable
@@ -118,7 +118,7 @@ To install Nextflow with Conda:
 
     ```{code-block} bash
     :class: copyable
-    source activate nf_env
+    source activate nf-env
     ```
 
 3. Confirm Nextflow is installed correctly:

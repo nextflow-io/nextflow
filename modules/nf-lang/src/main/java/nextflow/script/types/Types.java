@@ -35,16 +35,19 @@ import org.codehaus.groovy.ast.tools.GenericsUtils;
 public class Types {
 
     public static final List<ClassNode> DEFAULT_SCRIPT_IMPORTS = List.of(
-        new ClassNode(Channel.class),
-        new ClassNode(Duration.class),
-        new ClassNode(MemoryUnit.class),
-        new ClassNode(Path.class),
-        new ClassNode(VersionNumber.class)
+        ClassHelper.makeCached(Bag.class),
+        ClassHelper.makeCached(Channel.class),
+        ClassHelper.makeCached(Duration.class),
+        ClassHelper.makeCached(MemoryUnit.class),
+        ClassHelper.makeCached(Path.class),
+        ClassHelper.makeCached(Value.class),
+        ClassHelper.makeCached(VersionNumber.class)
     );
 
     public static final List<ClassNode> DEFAULT_CONFIG_IMPORTS = List.of(
-        new ClassNode(Duration.class),
-        new ClassNode(MemoryUnit.class)
+        ClassHelper.makeCached(Bag.class),
+        ClassHelper.makeCached(Duration.class),
+        ClassHelper.makeCached(MemoryUnit.class)
     );
 
     /**
@@ -136,6 +139,9 @@ public class Types {
             genericsTypeNames(type.getGenericsTypes(), builder);
             builder.append('>');
         }
+
+        if( type.getNodeMetaData(ASTNodeMarker.NULLABLE) != null )
+            builder.append('?');
 
         return builder.toString();
     }

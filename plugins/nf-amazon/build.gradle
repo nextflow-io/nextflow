@@ -13,10 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-apply plugin: 'java'
-apply plugin: 'java-test-fixtures'
-apply plugin: 'idea'
-apply plugin: 'groovy'
+plugins {
+    id 'io.nextflow.nextflow-plugin' version "${nextflowPluginVersion}"
+    id 'java-test-fixtures'
+}
+
+nextflowPlugin {
+    nextflowVersion = '25.08.0-edge'
+
+    provider = "${nextflowPluginProvider}"
+    description = 'Provides comprehensive AWS cloud integration including Batch executor, S3 file system, and Fusion support for high-performance data operations'
+    className = 'nextflow.cloud.aws.AmazonPlugin'
+    useDefaultDependencies = false
+    extensionPoints = [
+        'nextflow.cloud.aws.batch.AwsBatchExecutor',
+        'nextflow.cloud.aws.config.AwsConfig',
+        'nextflow.cloud.aws.fusion.AwsFusionEnv',
+        'nextflow.cloud.aws.mail.AwsMailProvider',
+        'nextflow.cloud.aws.util.S3PathFactory',
+        'nextflow.cloud.aws.util.S3PathSerializer',
+    ]
+}
 
 sourceSets {
     main.java.srcDirs = []
@@ -58,9 +75,9 @@ dependencies {
     }
 
     // address security vulnerabilities
-    implementation 'io.netty:netty-common:4.1.124.Final'
-    implementation 'io.netty:netty-handler:4.1.124.Final'
-    implementation 'io.netty:netty-codec-http2:4.1.124.Final'
+    implementation 'io.netty:netty-common:4.1.125.Final'
+    implementation 'io.netty:netty-handler:4.1.125.Final'
+    implementation 'io.netty:netty-codec-http2:4.1.125.Final'
     
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')

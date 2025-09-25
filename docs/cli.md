@@ -2,7 +2,7 @@
 
 # Command line
 
-Nextflow provides a robust command line interface (CLI) for the management and execution pipelines.
+Nextflow provides a robust command line interface (CLI) for the management and execution of pipelines.
 
 Simply run `nextflow` with no options or `nextflow -h` to see the list of available top-level options and commands. See {ref}`cli-reference` for the full list of subcommands with examples.
 
@@ -36,7 +36,7 @@ Set JVM properties.
 $ nextflow -Dkey=value COMMAND [arg...]
 ```
 
-This options allows the definition of custom Java system properties that can be used to properly configure or fine tuning the JVM instance used by the Nextflow runtime.
+This option allows the definition of custom Java system properties that can be used to properly configure or fine tuning the JVM instance used by the Nextflow runtime.
 
 For specifying other JVM level options, please refer to the {ref}`config-env-vars` section.
 
@@ -96,7 +96,7 @@ Sets the path of the nextflow log file.
 $ nextflow -log custom.log COMMAND [arg...]
 ```
 
-The `-log` option takes a path of the new log file which to be used instead of the default `.nextflow.log` or to save logs files to another directory.
+The `-log` option takes a path of the new log file which will be used instead of the default `.nextflow.log` or to save logs files to another directory.
 
 - Save all execution logs to the custom `/var/log/nextflow.log` file:
 
@@ -144,7 +144,7 @@ Print the Nextflow version information.
 $ nextflow -v
 ```
 
-The `-v` option prints out information about Nextflow, such as the version and build. The `-version` option in addition prints out the citation reference and official website.
+The `-v` option prints out information about Nextflow, such as the version and build. The `-version` option, in addition, prints out the citation reference and official website.
 
 - The short version:
 
@@ -285,6 +285,10 @@ Or in JSON format:
   "beta": "two"
 }
 ```
+
+:::{note}
+Parameter values in the params file can reference the following {ref}`built-in variables <config-constants>`: `baseDir`, `projectDir`, `launchDir`.
+:::
 
 Parameters are applied in the following order (from lowest to highest priority):
 
