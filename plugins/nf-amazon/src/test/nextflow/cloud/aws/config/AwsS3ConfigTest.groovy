@@ -186,7 +186,7 @@ class AwsS3ConfigTest extends Specification {
         CONFIG                                                      | EXPECTED
         [ maxDownloadHeapMemory: '0MB' ]                            | "'maxDownloadHeapMemory' can't be 0"
         [ minimumPartSize: '0MB' ]                                  | "'minimumPartSize' can't be 0"
-        [ maxDownloadHeapMemory: '50 MB', minimumPartSize: '6 MB']  | "'maxDownloadHeapMemory' must be at least 10 times 'minimumPartSize' can't be 0"
+        [ maxDownloadHeapMemory: '50 MB', minimumPartSize: '6 MB']  | "'maxDownloadHeapMemory' must be at least 10 times 'minimumPartSize'"
 
     }
 

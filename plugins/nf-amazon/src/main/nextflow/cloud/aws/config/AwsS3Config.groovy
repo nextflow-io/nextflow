@@ -334,7 +334,7 @@ class AwsS3Config implements ConfigScope {
             final maxBuffer = this.maxDownloadHeapMemory ? this.maxDownloadHeapMemory.toBytes() : DEFAULT_MAX_DOWNLOAD_BUFFER_SIZE
             final partSize = this.minimumPartSize ? this.minimumPartSize.toBytes() : DEFAULT_PART_SIZE
             if( maxBuffer < DEFAULT_INIT_BUFFER_PARTS * partSize ) {
-                throw new IllegalArgumentException("'maxDownloadHeapMemory' must be at least " + DEFAULT_INIT_BUFFER_PARTS + " times 'minimumPartSize' can't be 0")
+                throw new IllegalArgumentException("'maxDownloadHeapMemory' must be at least " + DEFAULT_INIT_BUFFER_PARTS + " times 'minimumPartSize'")
             }
         }
 
