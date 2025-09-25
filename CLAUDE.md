@@ -116,7 +116,7 @@ Follow these actions to make a new release:
   Nextflow versions.
 - Commit the version and changelog files changes independently for each plugin. Use as commit
   message the template `Bump plugin-name@version` e.g. `Bump nf-amazon@2.0.0.
-- Update `VERSION` file in the project root using a calendar-like versioning scheme.
+- Update `VERSION` file in the project root using a calendar-like versioning scheme. Versions in the 4-th and 10-th month are "stable releases", e.g. `25.10.0`, while versions in all other months are "edge releases", e.g. `25.09.0-edge`.
 - Update the project root `changelog.txt` with changes since the past release. Use the git log
   command to determine what changed e.g. `git log v<PREVIOUS VERSION>..`
 - Run `make releaseInfo` to update the version number and generate checksums.
