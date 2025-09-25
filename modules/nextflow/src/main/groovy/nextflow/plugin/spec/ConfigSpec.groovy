@@ -28,11 +28,11 @@ import org.codehaus.groovy.ast.ClassNode
 @CompileStatic
 class ConfigSpec {
 
-    static Map<String,?> of(SchemaNode node, String name=null) {
+    static Map<String,?> of(SchemaNode node, String name) {
         return fromNode(node, name)
     }
 
-    private static Map<String,?> fromNode(SchemaNode node, String name=null) {
+    private static Map<String,?> fromNode(SchemaNode node, String name) {
         if( node instanceof SchemaNode.Option )
             return fromOption(node, name)
         if( node instanceof SchemaNode.Placeholder )
