@@ -136,7 +136,7 @@ class GiteaRepositoryProviderTest extends Specification {
         def repo = new GiteaRepositoryProvider('pditommaso/test-hello', config)
 
         when:
-        def entries = repo.listDirectory("", 0)
+        def entries = repo.listDirectory("", 1)
 
         then:
         entries.size() > 0
@@ -153,7 +153,7 @@ class GiteaRepositoryProviderTest extends Specification {
         def repo = new GiteaRepositoryProvider('pditommaso/test-hello', config)
 
         when:
-        def entries = repo.listDirectory("test", 0)
+        def entries = repo.listDirectory("test", 1)
 
         then:
         entries.size() > 0

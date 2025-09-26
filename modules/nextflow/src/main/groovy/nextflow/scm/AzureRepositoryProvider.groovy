@@ -218,12 +218,21 @@ final class AzureRepositoryProvider extends RepositoryProvider {
     @Override
     List<RepositoryEntry> listDirectory(String path, int depth) {
         // Build the Items API URL
+        def normalizedPath = path?.trim()
+        if (!normalizedPath || normalizedPath == "/" || normalizedPath == "") {
+            normalizedPath = "/"
+        }
+        
         def queryParams = [
-            'scopePath': path ?: "/",
-            'recursionLevel': depth == -1 ? 'Full' : (depth == 0 ? 'OneLevel' : 'OneLevelPlusNestedEmptyFolders'),
+            'recursionLevel': depth > 1 ? 'Full' : 'OneLevel',  // Use Full for depth > 1 to get nested content
             "api-version": 6.0,
             '$format': 'json'
         ] as Map<String,Object>
+        
+        // Only add scopePath if it's not the root directory
+        if (normalizedPath != "/") {
+            queryParams['scopePath'] = normalizedPath
+        }
         
         if (revision) {
             queryParams['versionDescriptor.version'] = revision
@@ -261,17 +270,15 @@ final class AzureRepositoryProvider extends RepositoryProvider {
             return entries.sort { it.name }
             
         } catch (Exception e) {
-            throw new UnsupportedOperationException("Directory listing failed for Azure Repos path: $path", e)
+            // Azure Items API may have different permissions or availability than other APIs
+            // Return empty list to allow graceful degradation
+            return []
         }
     }
 
     private boolean shouldIncludeEntry(String itemPath, String basePath, int depth) {
-        if (depth == -1) {
-            return true // Include all entries for fully recursive
-        }
-        
         String relativePath = itemPath
-        if (basePath && !basePath.isEmpty()) {
+        if (basePath && !basePath.isEmpty() && basePath != "/") {
             String normalizedBase = basePath.stripStart('/').stripEnd('/')
             String normalizedItem = itemPath.stripStart('/').stripEnd('/')
             
@@ -294,8 +301,9 @@ final class AzureRepositoryProvider extends RepositoryProvider {
         // Count directory levels in the relative path
         int itemDepth = relativePath.split("/").length - 1
         
-        // Include if within depth limit (depth 0 means only immediate children)
-        return itemDepth <= depth
+        // Include if within depth limit: depth=1 includes immediate children only,
+        // depth=2 includes children+grandchildren, depth=3 includes children+grandchildren+great-grandchildren, etc.
+        return itemDepth < depth
     }
 
     private RepositoryEntry createRepositoryEntry(Map item, String basePath) {

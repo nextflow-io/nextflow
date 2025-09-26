@@ -390,11 +390,15 @@ abstract class RepositoryProvider {
     abstract byte[] readBytes( String path )
 
     /**
-     * List directory contents in the remote repository
+     * List directory contents in the remote repository with depth control
      *
      * @param path The relative path of the directory to list (empty string or null for root)
-     * @param depth The depth of traversal (0 for single level, >0 for recursive up to depth, -1 for fully recursive)
-     * @return A list of repository entries (files and directories)
+     * @param depth The maximum depth of traversal:
+     *              - depth = 1: immediate children only
+     *              - depth = 2: children + grandchildren  
+     *              - depth = 3: children + grandchildren + great-grandchildren
+     *              - larger values: traverse deeper accordingly
+     * @return A list of repository entries (files and directories) excluding the root directory itself
      */
     abstract List<RepositoryEntry> listDirectory( String path, int depth )
 

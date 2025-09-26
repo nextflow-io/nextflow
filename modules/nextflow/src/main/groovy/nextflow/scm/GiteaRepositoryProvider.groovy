@@ -144,8 +144,8 @@ final class GiteaRepositoryProvider extends RepositoryProvider {
                 }
             }
             
-            // If depth > 0 or depth == -1, we need to recursively get subdirectory contents
-            if (depth != 0) {
+            // If depth > 1, we need to recursively get subdirectory contents
+            if (depth > 1) {
                 entries.addAll(getRecursiveEntries(path, depth, branch, 1))
             }
             
@@ -157,7 +157,7 @@ final class GiteaRepositoryProvider extends RepositoryProvider {
     }
 
     private List<RepositoryEntry> getRecursiveEntries(String basePath, int maxDepth, String branch, int currentDepth) {
-        if (maxDepth != -1 && currentDepth > maxDepth) {
+        if (currentDepth >= maxDepth) {
             return []
         }
         
@@ -175,7 +175,7 @@ final class GiteaRepositoryProvider extends RepositoryProvider {
             List<Map> contents = new groovy.json.JsonSlurper().parseText(response) as List<Map>
             
             for (Map entry : contents) {
-                if (entry.get('type') == 'dir' && (maxDepth == -1 || currentDepth < maxDepth)) {
+                if (entry.get('type') == 'dir' && currentDepth < maxDepth) {
                     String subPath = basePath ? "$basePath/${entry.get('name')}" : entry.get('name') as String
                     allEntries.addAll(getRecursiveEntries(subPath, maxDepth, branch, currentDepth + 1))
                 }

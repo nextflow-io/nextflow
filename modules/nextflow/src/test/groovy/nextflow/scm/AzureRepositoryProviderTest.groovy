@@ -253,11 +253,30 @@ class AzureRepositoryProviderTest extends Specification {
         def repo = new AzureRepositoryProvider('pditommaso/nf-azure-repo', config)
 
         when:
-        def entries = repo.listDirectory("/", 0)
+        def entries = repo.listDirectory("/", 1)
 
         then:
         entries.size() > 0
         entries.any { it.name == 'main.nf' && it.type == RepositoryProvider.EntryType.FILE }
+        entries.any { it.name == 'docs' && it.type == RepositoryProvider.EntryType.DIRECTORY }
+        entries.every { it.path && it.sha }
+    }
+
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
+    @Requires({System.getenv('NXF_AZURE_REPOS_TOKEN')})
+    def 'should list docs directory contents'() {
+        given:
+        def token = System.getenv('NXF_AZURE_REPOS_TOKEN')
+        def config = new ProviderConfig('azurerepos').setAuth(token)
+        def repo = new AzureRepositoryProvider('pditommaso/nf-azure-repo', config)
+
+        when:
+        def entries = repo.listDirectory("/docs", 1)
+
+        then:
+        entries.size() > 0
+        entries.every { it.path.startsWith('/docs/') }
+        entries.any { it.name == 'images' && it.type == RepositoryProvider.EntryType.DIRECTORY }
         entries.every { it.path && it.sha }
     }
 
@@ -275,5 +294,8 @@ class AzureRepositoryProviderTest extends Specification {
         then:
         entries.size() > 0
         entries.every { it.path.startsWith('/docs/') }
+        // Should include both the subdirectory and files within it up to depth 2
+        entries.any { it.name == 'images' && it.type == RepositoryProvider.EntryType.DIRECTORY }
+        entries.any { it.name == 'nf-core-rnaseq_logo_light.png' && it.type == RepositoryProvider.EntryType.FILE }
     }
 }

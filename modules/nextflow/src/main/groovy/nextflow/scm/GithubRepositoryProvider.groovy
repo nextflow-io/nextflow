@@ -125,7 +125,7 @@ class GithubRepositoryProvider extends RepositoryProvider {
         String treeSha = getTreeSha(path)
         
         // Build the Trees API URL
-        String url = getTreeUrl(treeSha, depth > 0 || depth == -1)
+        String url = getTreeUrl(treeSha, depth > 1)
         
         // Make the API call and parse response
         Map response = invokeAndParseResponse(url)
@@ -140,21 +140,11 @@ class GithubRepositoryProvider extends RepositoryProvider {
         for (Map entry : treeEntries) {
             String entryPath = entry.get('path') as String
             
-            // For non-recursive calls (depth 0), include only immediate children
-            if (depth == 0) {
-                // Only include entries that don't contain slashes (immediate children)
-                if (!entryPath.contains('/')) {
-                    entries.add(createRepositoryEntry(entry, path))
-                }
-            } else if (depth == -1) {
-                // Include all entries for fully recursive
+            // Include if within depth limit: depth=1 includes immediate children only,
+            // depth=2 includes children+grandchildren, depth=3 includes children+grandchildren+great-grandchildren, etc.
+            int entryDepth = entryPath.split("/").length - 1
+            if (entryDepth < depth) {
                 entries.add(createRepositoryEntry(entry, path))
-            } else {
-                // Include entries up to the specified depth
-                int entryDepth = entryPath.split("/").length - 1
-                if (entryDepth < depth) {
-                    entries.add(createRepositoryEntry(entry, path))
-                }
             }
         }
         

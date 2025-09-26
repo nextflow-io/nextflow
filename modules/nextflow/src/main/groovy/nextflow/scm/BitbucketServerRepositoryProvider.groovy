@@ -147,12 +147,12 @@ final class BitbucketServerRepositoryProvider extends RepositoryProvider {
             }
             
             // Handle recursive depth if needed and supported
-            if (depth != 0) {
+            if (depth > 1) {
                 for (Map child : children) {
-                    if (child.get('type') == 'DIRECTORY' && (depth == -1 || depth > 1)) {
+                    if (child.get('type') == 'DIRECTORY') {
                         try {
                             String childPath = dirPath ? "$dirPath/${child.get('path')?.displayName ?: child.get('displayName')}" : child.get('path')?.displayName ?: child.get('displayName')
-                            List<RepositoryEntry> childEntries = listDirectory(childPath, depth == -1 ? -1 : depth - 1)
+                            List<RepositoryEntry> childEntries = listDirectory(childPath, depth - 1)
                             entries.addAll(childEntries)
                         } catch (Exception e) {
                             // Continue with other directories if one fails

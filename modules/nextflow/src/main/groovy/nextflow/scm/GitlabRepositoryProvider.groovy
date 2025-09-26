@@ -137,8 +137,8 @@ class GitlabRepositoryProvider extends RepositoryProvider {
         if (ref) params.add("ref=${ref}")
         if (encodedPath) params.add("path=${encodedPath}")
         
-        // For GitLab, we use recursive=true for any depth > 0 or depth == -1
-        if (depth != 0) {
+        // For GitLab, we use recursive=true for any depth > 1
+        if (depth > 1) {
             params.add("recursive=true")
         }
         
@@ -168,10 +168,6 @@ class GitlabRepositoryProvider extends RepositoryProvider {
     }
 
     private boolean shouldIncludeEntry(String entryPath, String basePath, int depth) {
-        if (depth == -1) {
-            return true // Include all entries for fully recursive
-        }
-        
         String relativePath = entryPath
         if (basePath && !basePath.isEmpty()) {
             // If we have a base path, compute the relative path
@@ -188,8 +184,9 @@ class GitlabRepositoryProvider extends RepositoryProvider {
         // Count directory levels in the relative path
         int entryDepth = relativePath.split("/").length - 1
         
-        // Include if within depth limit (depth 0 means only immediate children)
-        return entryDepth <= depth
+        // Include if within depth limit: depth=1 includes immediate children only,
+        // depth=2 includes children+grandchildren, depth=3 includes children+grandchildren+great-grandchildren, etc.
+        return entryDepth < depth
     }
 
     private RepositoryEntry createRepositoryEntry(Map entry, String basePath) {

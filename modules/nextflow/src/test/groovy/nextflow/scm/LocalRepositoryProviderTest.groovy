@@ -199,7 +199,7 @@ class LocalRepositoryProviderTest extends Specification {
         def manager = new LocalRepositoryProvider('project_hello', config)
 
         when:
-        def entries = manager.listDirectory("", 0)
+        def entries = manager.listDirectory("", 1)
 
         then:
         entries.size() > 0
@@ -222,7 +222,7 @@ class LocalRepositoryProviderTest extends Specification {
         def manager = new LocalRepositoryProvider('project_hello', config)
 
         when:
-        def entries = manager.listDirectory("subdir", 0)
+        def entries = manager.listDirectory("subdir", 1)
 
         then:
         entries.size() == 2

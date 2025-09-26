@@ -231,10 +231,6 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
     }
 
     private boolean shouldIncludeEntry(Map entry, String basePath, int depth) {
-        if (depth == -1) {
-            return true // Include all entries for fully recursive
-        }
-        
         String entryPath = entry.get('path') as String
         if (!entryPath) {
             return false
@@ -257,8 +253,9 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
         // Count directory levels in the relative path
         int entryDepth = relativePath.split("/").length - 1
         
-        // Include if within depth limit (depth 0 means only immediate children)
-        return entryDepth <= depth
+        // Include if within depth limit: depth=1 includes immediate children only,
+        // depth=2 includes children+grandchildren, depth=3 includes children+grandchildren+great-grandchildren, etc.
+        return entryDepth < depth
     }
 
     private RepositoryEntry createRepositoryEntry(Map entry, String basePath) {

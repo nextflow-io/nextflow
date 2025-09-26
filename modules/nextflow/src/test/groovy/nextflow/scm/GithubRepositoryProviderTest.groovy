@@ -176,7 +176,7 @@ class GithubRepositoryProviderTest extends Specification {
         def repo = new GithubRepositoryProvider('nextflow-io/test-hello', config)
 
         when:
-        def entries = repo.listDirectory("", 0)
+        def entries = repo.listDirectory("", 1)
 
         then:
         entries.size() > 0
@@ -192,7 +192,7 @@ class GithubRepositoryProviderTest extends Specification {
         def repo = new GithubRepositoryProvider('nextflow-io/test-hello', config)
 
         when:
-        def entries = repo.listDirectory("test", 0)
+        def entries = repo.listDirectory("test", 1)
 
         then:
         entries.size() > 0
@@ -208,7 +208,7 @@ class GithubRepositoryProviderTest extends Specification {
         def repo = new GithubRepositoryProvider('nextflow-io/test-hello', config)
 
         when:
-        def entries = repo.listDirectory("", -1)
+        def entries = repo.listDirectory("", 10)
 
         then:
         entries.size() > 0
@@ -226,14 +226,34 @@ class GithubRepositoryProviderTest extends Specification {
         def repo = new GithubRepositoryProvider('nextflow-io/test-hello', config)
 
         when:
-        def depthZero = repo.listDirectory("", 0)
         def depthOne = repo.listDirectory("", 1)
+        def depthTwo = repo.listDirectory("", 2)
 
         then:
-        depthZero.size() > 0
-        depthOne.size() >= depthZero.size()
-        // Depth 0 should only include immediate children
-        depthZero.every { !it.name.contains('/') }
+        depthOne.size() > 0
+        depthTwo.size() >= depthOne.size()
+        // Depth 1 should only include immediate children
+        depthOne.every { !it.path.contains('/') }
+    }
+
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def 'should list directory contents with depth 2'() {
+        given:
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def config = new ProviderConfig('github').setAuth(token)
+        def repo = new GithubRepositoryProvider('nextflow-io/test-hello', config)
+
+        when:
+        def entries = repo.listDirectory("", 2)
+
+        then:
+        entries.size() > 0
+        // Should include immediate children (depth 1)
+        entries.any { it.name == 'main.nf' && it.type == RepositoryProvider.EntryType.FILE }
+        entries.any { it.name == 'test' && it.type == RepositoryProvider.EntryType.DIRECTORY }
+        // Should include nested files (depth 2)
+        entries.any { it.name == 'test-asset.bin' && it.path.contains('test/') }
+        entries.every { it.path && it.sha }
     }
 
     def 'should return empty list for directory with no entries'() {
