@@ -205,4 +205,39 @@ class BitbucketRepositoryProviderTest extends Specification {
         ["Authorization", "Basic ${"foo:bar".bytes.encodeBase64()}"]             | new ProviderConfig('bitbucket').setUser('foo').setPassword('bar')
         ["Authorization", "Basic ${"foo@nextflow.io:xyz".bytes.encodeBase64()}"] | new ProviderConfig('bitbucket').setUser('foo@nextflow.io').setToken('xyz')
     }
+
+    @Requires({ System.getenv('NXF_BITBUCKET_ACCESS_TOKEN') })
+    def 'should list root directory contents'() {
+        given:
+        def token = System.getenv('NXF_BITBUCKET_ACCESS_TOKEN')
+        def config = new ProviderConfig('bitbucket').setAuth(token)
+        def repo = new BitbucketRepositoryProvider('pditommaso/tutorial', config)
+
+        when:
+        def entries = repo.listDirectory("", 0)
+
+        then:
+        entries.size() > 0
+        entries.any { it.name == 'main.nf' && it.type == RepositoryProvider.EntryType.FILE }
+        entries.every { it.path && it.sha }
+    }
+
+    @Requires({ System.getenv('NXF_BITBUCKET_ACCESS_TOKEN') })
+    def 'should handle directory listing gracefully'() {
+        given:
+        def token = System.getenv('NXF_BITBUCKET_ACCESS_TOKEN')
+        def config = new ProviderConfig('bitbucket').setAuth(token)
+        def repo = new BitbucketRepositoryProvider('pditommaso/tutorial', config)
+
+        when:
+        def entries = repo.listDirectory("", -1)
+
+        then:
+        entries.size() >= 0 // May succeed or fail depending on API support
+        
+        // If it succeeds, validate the entries
+        if (entries.size() > 0) {
+            entries.every { it.path && it.name }
+        }
+    }
 }

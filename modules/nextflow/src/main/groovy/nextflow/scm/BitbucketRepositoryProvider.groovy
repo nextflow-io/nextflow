@@ -197,6 +197,87 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
     /** {@inheritDoc} */
     @Override
     List<RepositoryEntry> listDirectory(String path, int depth) {
-        throw new UnsupportedOperationException("Directory listing not yet implemented for BitBucket")
+        final ref = revision ? getRefForRevision(revision) : getMainBranch()
+        final dirPath = path ?: ""
+        
+        // Build the src API URL - BitBucket's src endpoint returns directory listings when path is a directory
+        String url = "${config.endpoint}/2.0/repositories/$project/src/$ref/$dirPath"
+        
+        try {
+            // Make the API call
+            Map response = invokeAndParseResponse(url)
+            List<Map> values = response?.values as List<Map>
+            
+            if (!values) {
+                return []
+            }
+            
+            List<RepositoryEntry> entries = []
+            
+            for (Map entry : values) {
+                // Filter entries based on depth
+                if (shouldIncludeEntry(entry, path, depth)) {
+                    entries.add(createRepositoryEntry(entry, path))
+                }
+            }
+            
+            return entries.sort { it.name }
+            
+        } catch (Exception e) {
+            // If API call fails, it might be because the path is not a directory
+            // or the API doesn't support directory listing
+            throw new UnsupportedOperationException("Directory listing not supported by BitBucket API for path: $path", e)
+        }
+    }
+
+    private boolean shouldIncludeEntry(Map entry, String basePath, int depth) {
+        if (depth == -1) {
+            return true // Include all entries for fully recursive
+        }
+        
+        String entryPath = entry.get('path') as String
+        if (!entryPath) {
+            return false
+        }
+        
+        String relativePath = entryPath
+        if (basePath && !basePath.isEmpty()) {
+            String normalizedBase = basePath.stripStart('/').stripEnd('/')
+            String normalizedEntry = entryPath.stripStart('/').stripEnd('/')
+            
+            if (normalizedEntry.startsWith(normalizedBase + "/")) {
+                relativePath = normalizedEntry.substring(normalizedBase.length() + 1)
+            } else if (normalizedEntry == normalizedBase) {
+                return false // Skip the base directory itself
+            } else {
+                return false // Entry is not under the base path
+            }
+        }
+        
+        // Count directory levels in the relative path
+        int entryDepth = relativePath.split("/").length - 1
+        
+        // Include if within depth limit (depth 0 means only immediate children)
+        return entryDepth <= depth
+    }
+
+    private RepositoryEntry createRepositoryEntry(Map entry, String basePath) {
+        String entryPath = entry.get('path') as String
+        String name = entryPath?.split('/')?.last() ?: entry.get('name') as String
+        
+        // Determine type based on BitBucket's response
+        String type = entry.get('type') as String
+        EntryType entryType = (type == 'commit_directory') ? EntryType.DIRECTORY : EntryType.FILE
+        
+        String sha = entry.get('commit')?.get('hash') as String
+        Long size = entry.get('size') as Long
+        
+        return new RepositoryEntry(
+            name: name,
+            path: entryPath,
+            type: entryType,
+            sha: sha,
+            size: size
+        )
     }
 }

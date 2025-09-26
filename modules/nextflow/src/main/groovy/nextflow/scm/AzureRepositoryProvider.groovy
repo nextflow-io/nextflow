@@ -217,7 +217,105 @@ final class AzureRepositoryProvider extends RepositoryProvider {
     /** {@inheritDoc} */
     @Override
     List<RepositoryEntry> listDirectory(String path, int depth) {
-        throw new UnsupportedOperationException("Directory listing not yet implemented for Azure Repos")
+        // Build the Items API URL
+        def queryParams = [
+            'scopePath': path ?: "/",
+            'recursionLevel': depth == -1 ? 'Full' : (depth == 0 ? 'OneLevel' : 'OneLevelPlusNestedEmptyFolders'),
+            "api-version": 6.0,
+            '$format': 'json'
+        ] as Map<String,Object>
+        
+        if (revision) {
+            queryParams['versionDescriptor.version'] = revision
+            if (COMMIT_REGEX.matcher(revision).matches()) {
+                queryParams['versionDescriptor.versionType'] = 'commit'
+            }
+        }
+        
+        def queryString = queryParams.collect({ "$it.key=$it.value"}).join('&')
+        def url = "$endpointUrl/items?$queryString"
+        
+        try {
+            Map response = invokeAndParseResponse(url)
+            List<Map> items = response?.value as List<Map>
+            
+            if (!items) {
+                return []
+            }
+            
+            List<RepositoryEntry> entries = []
+            
+            for (Map item : items) {
+                // Skip the root directory itself
+                String itemPath = item.get('path') as String
+                if (itemPath == path || (path?.isEmpty() && itemPath == "/")) {
+                    continue
+                }
+                
+                // Filter entries based on depth if needed
+                if (shouldIncludeEntry(itemPath, path, depth)) {
+                    entries.add(createRepositoryEntry(item, path))
+                }
+            }
+            
+            return entries.sort { it.name }
+            
+        } catch (Exception e) {
+            throw new UnsupportedOperationException("Directory listing failed for Azure Repos path: $path", e)
+        }
+    }
+
+    private boolean shouldIncludeEntry(String itemPath, String basePath, int depth) {
+        if (depth == -1) {
+            return true // Include all entries for fully recursive
+        }
+        
+        String relativePath = itemPath
+        if (basePath && !basePath.isEmpty()) {
+            String normalizedBase = basePath.stripStart('/').stripEnd('/')
+            String normalizedItem = itemPath.stripStart('/').stripEnd('/')
+            
+            if (normalizedItem.startsWith(normalizedBase + "/")) {
+                relativePath = normalizedItem.substring(normalizedBase.length() + 1)
+            } else if (normalizedItem == normalizedBase) {
+                return false // Skip the base directory itself
+            } else {
+                return false // Item is not under the base path
+            }
+        } else {
+            // For root directory, remove leading slash
+            relativePath = itemPath.stripStart('/')
+        }
+        
+        if (relativePath.isEmpty()) {
+            return false
+        }
+        
+        // Count directory levels in the relative path
+        int itemDepth = relativePath.split("/").length - 1
+        
+        // Include if within depth limit (depth 0 means only immediate children)
+        return itemDepth <= depth
+    }
+
+    private RepositoryEntry createRepositoryEntry(Map item, String basePath) {
+        String itemPath = item.get('path') as String
+        String name = itemPath?.split('/')?.last() ?: "unknown"
+        
+        // Determine type based on Azure's gitObjectType
+        String gitObjectType = item.get('gitObjectType') as String
+        EntryType type = (gitObjectType == 'tree') ? EntryType.DIRECTORY : EntryType.FILE
+        
+        String sha = item.get('objectId') as String
+        Long size = item.get('size') as Long
+        
+        return new RepositoryEntry(
+            name: name,
+            path: itemPath,
+            type: type,
+            sha: sha,
+            size: size
+        )
     }
 
 }

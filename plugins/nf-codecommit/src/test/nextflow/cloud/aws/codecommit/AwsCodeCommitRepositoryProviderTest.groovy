@@ -106,4 +106,18 @@ class AwsCodeCommitRepositoryProviderTest extends Specification {
 
     }
 
+    def 'should list root directory contents'() {
+        given:
+        def config = new AwsCodeCommitProviderConfig('git-codecommit.eu-west-1.amazonaws.com')
+        def provider = new AwsCodeCommitRepositoryProvider('codecommit-eu-west-1/my-repo', config)
+
+        when:
+        def entries = provider.listDirectory("/", 0)
+
+        then:
+        entries.size() > 0
+        entries.any { it.name == 'main.nf' && it.type == RepositoryProvider.EntryType.FILE }
+        entries.every { it.path && it.name }
+    }
+
 }

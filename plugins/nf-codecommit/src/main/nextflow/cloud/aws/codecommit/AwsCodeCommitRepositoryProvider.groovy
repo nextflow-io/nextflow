@@ -24,6 +24,7 @@ import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.codecommit.CodeCommitClient
 import software.amazon.awssdk.services.codecommit.model.CodeCommitException
 import software.amazon.awssdk.services.codecommit.model.GetFileRequest
+import software.amazon.awssdk.services.codecommit.model.GetFolderRequest
 import software.amazon.awssdk.services.codecommit.model.GetRepositoryRequest
 import software.amazon.awssdk.services.codecommit.model.RepositoryMetadata
 import groovy.transform.CompileStatic
@@ -158,7 +159,58 @@ class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
     /** {@inheritDoc} **/
     @Override
     List<RepositoryEntry> listDirectory(String path, int depth) {
-        throw new UnsupportedOperationException("Directory listing not yet implemented for AWS CodeCommit")
+        try {
+            // AWS CodeCommit doesn't have a dedicated directory listing API like GitHub
+            // We would need to use GetFolder API, but it has limitations
+            def request = GetFolderRequest.builder()
+                .repositoryName(repositoryName)
+                .folderPath(path ?: "/")
+                .commitSpecifier(revision ?: "HEAD")
+                .build()
+                
+            def response = client.getFolder(request)
+            
+            List<RepositoryEntry> entries = []
+            
+            // Add files
+            response.files()?.each { file ->
+                entries.add(new RepositoryEntry(
+                    name: file.relativePath().split('/').last(),
+                    path: file.relativePath(),
+                    type: RepositoryProvider.EntryType.FILE,
+                    sha: file.blobId(),
+                    size: null  // AWS CodeCommit API doesn't provide file size in folder response
+                ))
+            }
+            
+            // Add subdirectories - but CodeCommit API has limited support for deep traversal
+            response.subFolders()?.each { folder ->
+                entries.add(new RepositoryEntry(
+                    name: folder.relativePath().split('/').last(),
+                    path: folder.relativePath(),
+                    type: RepositoryProvider.EntryType.DIRECTORY,
+                    sha: null, // CodeCommit doesn't provide SHA for directories
+                    size: null
+                ))
+                
+                // For recursive listing, we would need additional API calls
+                // However, this can be expensive and slow for large repositories
+                if (depth != 0 && depth != 1) {
+                    try {
+                        def subEntries = listDirectory(folder.relativePath(), depth == -1 ? -1 : depth - 1)
+                        entries.addAll(subEntries)
+                    } catch (Exception e) {
+                        // Continue with other directories if one fails
+                    }
+                }
+            }
+            
+            return entries.sort { it.name }
+            
+        } catch (Exception e) {
+            checkMissingCredsException(e)
+            throw new UnsupportedOperationException("Directory listing failed for AWS CodeCommit path: $path - ${e.message}", e)
+        }
     }
 
     protected void checkMissingCredsException(Exception e) {

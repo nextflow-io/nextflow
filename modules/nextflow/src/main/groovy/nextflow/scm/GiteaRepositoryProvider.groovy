@@ -116,7 +116,98 @@ final class GiteaRepositoryProvider extends RepositoryProvider {
     /** {@inheritDoc} */
     @Override
     List<RepositoryEntry> listDirectory(String path, int depth) {
-        throw new UnsupportedOperationException("Directory listing not yet implemented for Gitea")
+        final branch = revision ?: "master"
+        final dirPath = path ?: ""
+        
+        // Build the contents API URL - Gitea follows GitHub-like API pattern
+        String url = "${config.endpoint}/repos/$project/contents"
+        if (dirPath) {
+            url += "/$dirPath"
+        }
+        url += "?ref=$branch"
+        
+        try {
+            // Make the API call
+            def response = invoke(url)
+            List<Map> contents = new groovy.json.JsonSlurper().parseText(response) as List<Map>
+            
+            if (!contents) {
+                return []
+            }
+            
+            List<RepositoryEntry> entries = []
+            
+            for (Map entry : contents) {
+                // For depth control, we need to filter appropriately
+                if (shouldIncludeEntry(entry, path, depth)) {
+                    entries.add(createRepositoryEntry(entry))
+                }
+            }
+            
+            // If depth > 0 or depth == -1, we need to recursively get subdirectory contents
+            if (depth != 0) {
+                entries.addAll(getRecursiveEntries(path, depth, branch, 1))
+            }
+            
+            return entries.sort { it.name }
+            
+        } catch (Exception e) {
+            throw new UnsupportedOperationException("Directory listing failed for Gitea path: $path", e)
+        }
+    }
+
+    private List<RepositoryEntry> getRecursiveEntries(String basePath, int maxDepth, String branch, int currentDepth) {
+        if (maxDepth != -1 && currentDepth > maxDepth) {
+            return []
+        }
+        
+        List<RepositoryEntry> allEntries = []
+        
+        // Get current level entries first
+        String url = "${config.endpoint}/repos/$project/contents"
+        if (basePath) {
+            url += "/$basePath"
+        }
+        url += "?ref=$branch"
+        
+        try {
+            def response = invoke(url)
+            List<Map> contents = new groovy.json.JsonSlurper().parseText(response) as List<Map>
+            
+            for (Map entry : contents) {
+                if (entry.get('type') == 'dir' && (maxDepth == -1 || currentDepth < maxDepth)) {
+                    String subPath = basePath ? "$basePath/${entry.get('name')}" : entry.get('name') as String
+                    allEntries.addAll(getRecursiveEntries(subPath, maxDepth, branch, currentDepth + 1))
+                }
+            }
+        } catch (Exception e) {
+            // Continue processing other directories if one fails
+        }
+        
+        return allEntries
+    }
+
+    private boolean shouldIncludeEntry(Map entry, String basePath, int depth) {
+        // For Gitea contents API, we get direct children, so depth 0 includes all returned items
+        return true
+    }
+
+    private RepositoryEntry createRepositoryEntry(Map entry) {
+        String name = entry.get('name') as String
+        String path = entry.get('path') as String
+        String type = entry.get('type') as String
+        
+        EntryType entryType = (type == 'dir') ? EntryType.DIRECTORY : EntryType.FILE
+        String sha = entry.get('sha') as String
+        Long size = entry.get('size') as Long
+        
+        return new RepositoryEntry(
+            name: name,
+            path: path,
+            type: entryType,
+            sha: sha,
+            size: size
+        )
     }
 
 }

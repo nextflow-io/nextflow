@@ -126,4 +126,38 @@ class GiteaRepositoryProviderTest extends Specification {
         result.length == 22915
         result.sha256() == '7a396344498750f614155f6e4f38b7d6ca98ced45daf0921b64acf73b18efaf4'
     }
+
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
+    @Requires({System.getenv('NXF_GITEA_ACCESS_TOKEN')})
+    def 'should list root directory contents'() {
+        given:
+        def token = System.getenv('NXF_GITEA_ACCESS_TOKEN')
+        def config = new ProviderConfig('gitea').setAuth(token)
+        def repo = new GiteaRepositoryProvider('pditommaso/test-hello', config)
+
+        when:
+        def entries = repo.listDirectory("", 0)
+
+        then:
+        entries.size() > 0
+        entries.any { it.name == 'README.md' && it.type == RepositoryProvider.EntryType.FILE }
+        entries.every { it.path && it.sha }
+    }
+
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
+    @Requires({System.getenv('NXF_GITEA_ACCESS_TOKEN')})
+    def 'should list subdirectory contents'() {
+        given:
+        def token = System.getenv('NXF_GITEA_ACCESS_TOKEN')
+        def config = new ProviderConfig('gitea').setAuth(token)
+        def repo = new GiteaRepositoryProvider('pditommaso/test-hello', config)
+
+        when:
+        def entries = repo.listDirectory("test", 0)
+
+        then:
+        entries.size() > 0
+        entries.any { it.name == 'test-asset.bin' && it.type == RepositoryProvider.EntryType.FILE }
+        entries.every { it.path.startsWith('test/') }
+    }
 }

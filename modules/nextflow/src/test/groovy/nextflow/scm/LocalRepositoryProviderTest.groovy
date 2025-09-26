@@ -185,4 +185,49 @@ class LocalRepositoryProviderTest extends Specification {
         and:
         branches.find { it.name == 'branch_2' }.commitId == ref2.getObjectId().name()
     }
+
+    def 'should list root directory contents'() {
+        given:
+        def dir = testFolder.resolve('project_hello').toFile()
+        new File(dir, 'test.txt').text = 'test content'
+        new File(dir, 'subdir').mkdirs()
+        new File(dir, 'subdir/nested.txt').text = 'nested content'
+        repo.add().addFilepattern('.').call()
+        repo.commit().setSign(false).setMessage('Add test files').call()
+
+        def config = new ProviderConfig('local', [path: testFolder])
+        def manager = new LocalRepositoryProvider('project_hello', config)
+
+        when:
+        def entries = manager.listDirectory("", 0)
+
+        then:
+        entries.size() > 0
+        entries.any { it.name == 'main.nf' && it.type == RepositoryProvider.EntryType.FILE }
+        entries.any { it.name == 'test.txt' && it.type == RepositoryProvider.EntryType.FILE }
+        entries.any { it.name == 'subdir' && it.type == RepositoryProvider.EntryType.DIRECTORY }
+        entries.every { it.path && it.sha }
+    }
+
+    def 'should list subdirectory contents'() {
+        given:
+        def dir = testFolder.resolve('project_hello').toFile()
+        new File(dir, 'subdir').mkdirs()
+        new File(dir, 'subdir/file1.txt').text = 'file1 content'
+        new File(dir, 'subdir/file2.txt').text = 'file2 content'
+        repo.add().addFilepattern('.').call()
+        repo.commit().setSign(false).setMessage('Add subdirectory files').call()
+
+        def config = new ProviderConfig('local', [path: testFolder])
+        def manager = new LocalRepositoryProvider('project_hello', config)
+
+        when:
+        def entries = manager.listDirectory("subdir", 0)
+
+        then:
+        entries.size() == 2
+        entries.any { it.name == 'file1.txt' && it.type == RepositoryProvider.EntryType.FILE }
+        entries.any { it.name == 'file2.txt' && it.type == RepositoryProvider.EntryType.FILE }
+        entries.every { it.path.startsWith('subdir/') }
+    }
 }

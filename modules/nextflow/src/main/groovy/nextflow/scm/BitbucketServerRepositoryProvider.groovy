@@ -114,7 +114,77 @@ final class BitbucketServerRepositoryProvider extends RepositoryProvider {
     /** {@inheritDoc} */
     @Override
     List<RepositoryEntry> listDirectory(String path, int depth) {
-        throw new UnsupportedOperationException("Directory listing not yet implemented for Bitbucket Server")
+        final dirPath = path ?: ""
+        
+        // Try to use Bitbucket Server's browse API endpoint
+        String url = "${config.endpoint}/rest/api/1.0/projects/${project}/repos/${repository}/browse"
+        if (dirPath) {
+            url += "/$dirPath"
+        }
+        
+        // Add query parameters
+        List<String> params = []
+        if (revision) {
+            params.add("at=${revision}")
+        }
+        // Bitbucket Server API typically doesn't support deep recursion via a single call
+        if (params) {
+            url += "?" + params.join("&")
+        }
+        
+        try {
+            Map response = invokeAndParseResponse(url)
+            List<Map> children = response?.children?.values as List<Map>
+            
+            if (!children) {
+                return []
+            }
+            
+            List<RepositoryEntry> entries = []
+            
+            for (Map child : children) {
+                entries.add(createRepositoryEntry(child, path))
+            }
+            
+            // Handle recursive depth if needed and supported
+            if (depth != 0) {
+                for (Map child : children) {
+                    if (child.get('type') == 'DIRECTORY' && (depth == -1 || depth > 1)) {
+                        try {
+                            String childPath = dirPath ? "$dirPath/${child.get('path')?.displayName ?: child.get('displayName')}" : child.get('path')?.displayName ?: child.get('displayName')
+                            List<RepositoryEntry> childEntries = listDirectory(childPath, depth == -1 ? -1 : depth - 1)
+                            entries.addAll(childEntries)
+                        } catch (Exception e) {
+                            // Continue with other directories if one fails
+                        }
+                    }
+                }
+            }
+            
+            return entries.sort { it.name }
+            
+        } catch (Exception e) {
+            throw new UnsupportedOperationException("Directory listing not supported by Bitbucket Server API for path: $path", e)
+        }
+    }
+
+    private RepositoryEntry createRepositoryEntry(Map child, String basePath) {
+        String name = child.get('path')?.displayName ?: child.get('displayName') ?: "unknown"
+        String childPath = basePath ? "$basePath/$name" : name
+        
+        String type = child.get('type') as String
+        EntryType entryType = (type == 'DIRECTORY') ? EntryType.DIRECTORY : EntryType.FILE
+        
+        String sha = child.get('path')?.revision ?: child.get('id') as String
+        Long size = child.get('size') as Long
+        
+        return new RepositoryEntry(
+            name: name,
+            path: childPath,
+            type: entryType,
+            sha: sha,
+            size: size
+        )
     }
 
     @Override

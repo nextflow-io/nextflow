@@ -243,4 +243,37 @@ class AzureRepositoryProviderTest extends Specification {
         then:
         result=='hello\n'
     }
+
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
+    @Requires({System.getenv('NXF_AZURE_REPOS_TOKEN')})
+    def 'should list root directory contents'() {
+        given:
+        def token = System.getenv('NXF_AZURE_REPOS_TOKEN')
+        def config = new ProviderConfig('azurerepos').setAuth(token)
+        def repo = new AzureRepositoryProvider('pditommaso/nf-azure-repo', config)
+
+        when:
+        def entries = repo.listDirectory("/", 0)
+
+        then:
+        entries.size() > 0
+        entries.any { it.name == 'main.nf' && it.type == RepositoryProvider.EntryType.FILE }
+        entries.every { it.path && it.sha }
+    }
+
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
+    @Requires({System.getenv('NXF_AZURE_REPOS_TOKEN')})
+    def 'should list subdirectory contents'() {
+        given:
+        def token = System.getenv('NXF_AZURE_REPOS_TOKEN')
+        def config = new ProviderConfig('azurerepos').setAuth(token)
+        def repo = new AzureRepositoryProvider('pditommaso/nf-azure-repo', config)
+
+        when:
+        def entries = repo.listDirectory("/docs", 2)
+
+        then:
+        entries.size() > 0
+        entries.every { it.path.startsWith('/docs/') }
+    }
 }

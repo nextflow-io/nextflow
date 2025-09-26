@@ -126,4 +126,35 @@ class BitbucketServerRepositoryProviderTest extends Specification {
         then:
         result.contains( new RepositoryProvider.TagInfo('v1.0', 'c62df3d9c2464adcaa0fb6c978c8e32e2672b191') )
     }
+
+    @Ignore
+    @Requires( { System.getenv('NXF_BITBUCKET_SERVER_ACCESS_TOKEN') } )
+    def 'should list root directory contents'() {
+        given:
+        def token = System.getenv('NXF_BITBUCKET_SERVER_ACCESS_TOKEN')
+        def config = new ProviderConfig('bbs', [server:'http://slurm.seqera.io:7990', platform:'bitbucketsever']).setAuth(token)
+        def repo = new BitbucketServerRepositoryProvider('scm/hello/hello', config)
+
+        when:
+        def entries = repo.listDirectory("", 0)
+
+        then:
+        entries.size() > 0
+        entries.every { it.path && it.name }
+    }
+
+    @Ignore
+    @Requires( { System.getenv('NXF_BITBUCKET_SERVER_ACCESS_TOKEN') } )
+    def 'should list subdirectory contents'() {
+        given:
+        def token = System.getenv('NXF_BITBUCKET_SERVER_ACCESS_TOKEN')
+        def config = new ProviderConfig('bbs', [server:'http://slurm.seqera.io:7990', platform:'bitbucketsever']).setAuth(token)
+        def repo = new BitbucketServerRepositoryProvider('scm/hello/hello', config)
+
+        when:
+        def entries = repo.listDirectory("docs", 0)
+
+        then:
+        entries.every { it.path.startsWith('docs/') }
+    }
 }

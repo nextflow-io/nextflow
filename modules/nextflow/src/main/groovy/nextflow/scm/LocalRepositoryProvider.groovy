@@ -105,7 +105,105 @@ class LocalRepositoryProvider extends RepositoryProvider {
 
     @Override
     List<RepositoryEntry> listDirectory(String path, int depth) {
-        throw new UnsupportedOperationException("Directory listing not yet implemented for Local Repository")
+        final git = Git.open(new File(this.path, project))
+        try {
+            final repo = git.getRepository()
+            def lastCommitId = repo.resolve(Constants.HEAD)
+            def revWalk = new RevWalk(repo)
+            def commit = revWalk.parseCommit(lastCommitId)
+            def tree = commit.getTree()
+            
+            def treeWalk = new TreeWalk(repo)
+            treeWalk.addTree(tree)
+            treeWalk.setRecursive(depth != 0)
+            
+            // Set path filter if specified
+            if (path && !path.isEmpty()) {
+                treeWalk.setFilter(org.eclipse.jgit.treewalk.filter.PathFilter.create(path))
+            }
+            
+            List<RepositoryEntry> entries = []
+            
+            while (treeWalk.next()) {
+                String entryPath = treeWalk.getPathString()
+                
+                // Skip the base path itself
+                if (path && entryPath == path) {
+                    continue
+                }
+                
+                // Filter by depth
+                if (shouldIncludeEntry(entryPath, path, depth)) {
+                    entries.add(createRepositoryEntry(treeWalk, entryPath))
+                }
+            }
+            
+            treeWalk.close()
+            revWalk.close()
+            
+            return entries.sort { it.name }
+            
+        } finally {
+            git.close()
+        }
+    }
+
+    private boolean shouldIncludeEntry(String entryPath, String basePath, int depth) {
+        if (depth == -1) {
+            return true // Include all entries for fully recursive
+        }
+        
+        String relativePath = entryPath
+        if (basePath && !basePath.isEmpty()) {
+            String normalizedBase = basePath.stripStart('/').stripEnd('/')
+            String normalizedEntry = entryPath.stripStart('/').stripEnd('/')
+            
+            if (normalizedEntry.startsWith(normalizedBase + "/")) {
+                relativePath = normalizedEntry.substring(normalizedBase.length() + 1)
+            } else if (normalizedEntry == normalizedBase) {
+                return false // Skip the base directory itself
+            } else {
+                return false // Entry is not under the base path
+            }
+        }
+        
+        if (relativePath.isEmpty()) {
+            return false
+        }
+        
+        // Count directory levels in the relative path
+        int entryDepth = relativePath.split("/").length - 1
+        
+        // Include if within depth limit (depth 0 means only immediate children)
+        return entryDepth <= depth
+    }
+
+    private RepositoryEntry createRepositoryEntry(TreeWalk treeWalk, String entryPath) {
+        String name = entryPath.split('/').last()
+        
+        // Determine if it's a directory or file based on file mode
+        EntryType type = treeWalk.isSubtree() ? EntryType.DIRECTORY : EntryType.FILE
+        String sha = treeWalk.getObjectId(0).name()
+        
+        // For files, try to get size
+        Long size = null
+        if (type == EntryType.FILE) {
+            try {
+                def objectId = treeWalk.getObjectId(0)
+                def loader = treeWalk.getObjectReader().open(objectId)
+                size = loader.getSize()
+            } catch (Exception e) {
+                // Size not available, leave as null
+            }
+        }
+        
+        return new RepositoryEntry(
+            name: name,
+            path: entryPath,
+            type: type,
+            sha: sha,
+            size: size
+        )
     }
 
     @Override
