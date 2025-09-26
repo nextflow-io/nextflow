@@ -231,6 +231,7 @@ class CondorExecutorTest extends Specification {
         given:
         def session = Mock(Session)
         session.getContainerConfig() >> new DockerConfig(enabled:false)
+        session.config >> [:]
         def folder = Files.createTempDirectory('test')
         def executor = [:] as CondorExecutor
         def task = new TaskRun(name: 'Hello', workDir: folder, script: 'echo Hello world!')
