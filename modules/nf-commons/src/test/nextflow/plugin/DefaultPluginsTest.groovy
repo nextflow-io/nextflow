@@ -17,9 +17,9 @@ class DefaultPluginsTest extends Specification {
 
     def 'should validate get plugins' () {
         given:
-        def AMAZON = new PluginSpec('nf-amazon', '0.1.0')
-        def GOOGLE = new PluginSpec('nf-google', '0.2.0')
-        def AZURE = new PluginSpec('nf-azure', '0.3.0')
+        def AMAZON = new PluginRef('nf-amazon', '0.1.0')
+        def GOOGLE = new PluginRef('nf-google', '0.2.0')
+        def AZURE = new PluginRef('nf-azure', '0.3.0')
         and:
         def defaults = new DefaultPlugins(plugins: [
                 'nf-amazon': AMAZON,
@@ -41,9 +41,9 @@ class DefaultPluginsTest extends Specification {
 
     def 'should get sorted string' () {
         given:
-        def DELTA = new PluginSpec('nf-delta', '1.0.0')
-        def OMEGA = new PluginSpec('nf-omega', '2.0.0')
-        def ALPHA = new PluginSpec('nf-alpha', '3.0.0')
+        def DELTA = new PluginRef('nf-delta', '1.0.0')
+        def OMEGA = new PluginRef('nf-omega', '2.0.0')
+        def ALPHA = new PluginRef('nf-alpha', '3.0.0')
         and:
         def defaults = new DefaultPlugins(plugins: [
                 'nf-delta': DELTA,

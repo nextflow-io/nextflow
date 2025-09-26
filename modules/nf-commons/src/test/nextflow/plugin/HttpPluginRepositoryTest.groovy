@@ -46,7 +46,7 @@ class HttpPluginRepositoryTest extends Specification {
         }
 
         when:
-        unit.prefetch([new PluginSpec("nf-fake")])
+        unit.prefetch([new PluginRef("nf-fake")])
 
         then:
         def plugins = unit.getPlugins()
@@ -85,7 +85,7 @@ class HttpPluginRepositoryTest extends Specification {
         }
 
         when:
-        unit.prefetch([new PluginSpec("nf-fake")])
+        unit.prefetch([new PluginRef("nf-fake")])
 
         then:
         def plugins = unit.getPlugins()
@@ -108,7 +108,7 @@ class HttpPluginRepositoryTest extends Specification {
         wiremock.stop()
 
         when:
-        unit.prefetch([new PluginSpec("nf-fake")])
+        unit.prefetch([new PluginRef("nf-fake")])
 
         then:
         def err = thrown PluginRuntimeException
@@ -131,7 +131,7 @@ class HttpPluginRepositoryTest extends Specification {
         }
 
         when:
-        unit.prefetch([new PluginSpec("nf-fake")])
+        unit.prefetch([new PluginRef("nf-fake")])
 
         then:
         def err = thrown PluginRuntimeException
@@ -164,7 +164,7 @@ class HttpPluginRepositoryTest extends Specification {
         }
 
         when:
-        unit.prefetch([new PluginSpec("nf-fake")])
+        unit.prefetch([new PluginRef("nf-fake")])
 
         then:
         def err = thrown PluginRuntimeException
@@ -190,7 +190,7 @@ class HttpPluginRepositoryTest extends Specification {
         }
 
         when:
-        unit.prefetch([new PluginSpec("nf-fake")])
+        unit.prefetch([new PluginRef("nf-fake")])
 
         then:
         def err = thrown PluginRuntimeException
@@ -256,7 +256,7 @@ class HttpPluginRepositoryTest extends Specification {
         }
 
         when:
-        unit.prefetch([new PluginSpec("date-test-plugin")])
+        unit.prefetch([new PluginRef("date-test-plugin")])
 
         then:
         def plugins = unit.getPlugins()
