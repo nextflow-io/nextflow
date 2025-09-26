@@ -190,8 +190,7 @@ class JoinOp {
         def entries = channels[index]
 
         // add the received item to the list
-        // when it is used in the gather op add always as the first item
-        entries << item0.values
+        entries << item0
         setSingleton(index, item0.values.size()==0)
 
         // now check if it has received an element matching for each channel
@@ -200,15 +199,20 @@ class JoinOp {
         }
 
         def result = []
+        
+        // Find the best key (prefer GroupKey) from all channels
+        def bestOriginalKeys = findBestOriginalKeys(channels)
+        
         // add the key
-        addToList(result, item0.keys)
+        addToList(result, bestOriginalKeys ?: item0.originalKeys)
 
         final itr = channels.iterator()
         while( itr.hasNext() ) {
             def entry = (Map.Entry<Integer,List>)itr.next()
 
             def list = entry.getValue()
-            addToList(result, list[0])
+            def keyPair = list[0] as KeyPair
+            addToList(result, keyPair.values)
 
             list.remove(0)
             if( list.size() == 0 ) {
@@ -221,6 +225,7 @@ class JoinOp {
         return result
     }
 
+
     private final void checkRemainder(Map<Object,Map<Integer,List>> buffers, int count, DataflowWriteChannel target ) {
        log.trace "Operator `join` remainder buffer: ${-> buffers}"
 
@@ -231,17 +236,24 @@ class JoinOp {
 
                 boolean fill=false
                 def result = new ArrayList(count+1)
-                addToList(result, key)
+                
+                // Find the best original key from available channels
+                def bestOriginalKey = findBestOriginalKeys(entry)
+                
+                // Use the best available original key, or fall back to the map key
+                def originalKey = bestOriginalKey ?: key
+                addToList(result, originalKey)
 
                 for( int i=0; i<count; i++ ) {
-                    List values = entry[i]
-                    if( values ) {
+                    List items = entry[i]
+                    if( items ) {
+                        def keyPair = items[0] as KeyPair
                         // track unique keys
-                        checkForDuplicate(key, values[0], i,false)
+                        checkForDuplicate(key, keyPair.values, i, false)
 
-                        addToList(result, values[0])
+                        addToList(result, keyPair.values)
                         fill |= true
-                        values.remove(0)
+                        items.remove(0)
                     }
                     else if( !singleton(i) ) {
                         addToList(result, null)
@@ -258,6 +270,38 @@ class JoinOp {
             }
 
         }
+    }
+
+    /**
+     * Finds the best original keys from a map of channel items, preferring GroupKey over plain keys
+     * 
+     * @param channelItems Map of channel index to list of items (KeyPair objects)
+     * @return The best original keys found, or null if no items available
+     */
+    private def findBestOriginalKeys(Map<Integer,List> channelItems) {
+        def bestOriginalKeys = null
+        
+        for (Map.Entry<Integer,List> entry : channelItems.entrySet()) {
+            def items = entry.getValue()
+            if (items && items.size() > 0) {
+                def keyPair = items[0] as KeyPair
+                if (bestOriginalKeys == null) {
+                    bestOriginalKeys = keyPair.originalKeys
+                } else {
+                    // Check if this channel has a GroupKey version
+                    for (int i = 0; i < keyPair.originalKeys.size(); i++) {
+                        def candidateKey = keyPair.originalKeys[i]
+                        def currentKey = bestOriginalKeys instanceof List ? bestOriginalKeys[i] : bestOriginalKeys
+                        if (candidateKey instanceof GroupKey && !(currentKey instanceof GroupKey)) {
+                            bestOriginalKeys = keyPair.originalKeys
+                            break
+                        }
+                    }
+                }
+            }
+        }
+        
+        return bestOriginalKeys
     }
 
     protected void checkForDuplicate( key, value, int dir, boolean add ) {
@@ -277,7 +321,17 @@ class JoinOp {
 
             result[key] = []
             for( Map.Entry entry : remainder0 ) {
-                result[key].add(csv0(entry.value,','))
+                def items = entry.value
+                def values = []
+                // Extract values from KeyPair objects
+                items.each { item ->
+                    if (item instanceof KeyPair) {
+                        values.add(item.values)
+                    } else {
+                        values.add(item)
+                    }
+                }
+                result[key].add(csv0(values,','))
             }
         }
 
