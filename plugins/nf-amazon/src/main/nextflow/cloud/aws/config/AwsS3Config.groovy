@@ -324,17 +324,17 @@ class AwsS3Config implements ConfigScope {
     }
 
     void checkDownloadBufferParams() {
-        if( this.maxDownloadHeapMemory != null  && this.maxDownloadHeapMemory.toBytes() == 0L ) {
-            throw new IllegalArgumentException("'maxDownloadHeapMemory' can't be 0")
+        if( maxDownloadHeapMemory != null  && maxDownloadHeapMemory.toBytes() == 0L ) {
+            throw new IllegalArgumentException("Configuration option `aws.client.maxDownloadHeapMemory` can't be 0")
         }
-        if( this.minimumPartSize != null && this.minimumPartSize.toBytes() == 0L ) {
-            throw new IllegalArgumentException("'minimumPartSize' can't be 0")
+        if( minimumPartSize != null && minimumPartSize.toBytes() == 0L ) {
+            throw new IllegalArgumentException("Configuration option `aws.client.minimumPartSize` can't be 0")
         }
-        if( this.maxDownloadHeapMemory != null || this.minimumPartSize != null ) {
-            final maxBuffer = this.maxDownloadHeapMemory ? this.maxDownloadHeapMemory.toBytes() : DEFAULT_MAX_DOWNLOAD_BUFFER_SIZE
-            final partSize = this.minimumPartSize ? this.minimumPartSize.toBytes() : DEFAULT_PART_SIZE
+        if( maxDownloadHeapMemory != null || minimumPartSize != null ) {
+            final maxBuffer = maxDownloadHeapMemory ? maxDownloadHeapMemory.toBytes() : DEFAULT_MAX_DOWNLOAD_BUFFER_SIZE
+            final partSize = minimumPartSize ? minimumPartSize.toBytes() : DEFAULT_PART_SIZE
             if( maxBuffer < DEFAULT_INIT_BUFFER_PARTS * partSize ) {
-                throw new IllegalArgumentException("'maxDownloadHeapMemory' must be at least " + DEFAULT_INIT_BUFFER_PARTS + " times 'minimumPartSize'")
+                throw new IllegalArgumentException("Configuration option `aws.client.maxDownloadHeapMemory` must be at least " + DEFAULT_INIT_BUFFER_PARTS + " times `aws.client.minimumPartSize`")
             }
         }
 
