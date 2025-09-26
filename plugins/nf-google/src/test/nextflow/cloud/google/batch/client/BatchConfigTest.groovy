@@ -67,4 +67,38 @@ class BatchConfigTest extends Specification {
         config.bootDiskSize == MemoryUnit.of('100GB')
     }
 
+    @Requires({System.getenv('GOOGLE_APPLICATION_CREDENTIALS')})
+    def 'should validate logs bucket config' () {
+        when:
+        def config = new BatchConfig([logsBucket: 'gs://my-logs-bucket/logs'])
+        then:
+        config.logsBucket == 'gs://my-logs-bucket/logs'
+
+        when:
+        config = new BatchConfig([:])
+        then:
+        config.logsBucket == null
+    }
+
+    @Requires({System.getenv('GOOGLE_APPLICATION_CREDENTIALS')})
+    def 'should reject invalid logs bucket paths' () {
+        when:
+        new BatchConfig([logsBucket: 'invalid-bucket'])
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains("Logs bucket path must start with 'gs://'")
+
+        when:
+        new BatchConfig([logsBucket: 'gs://'])
+        then:
+        e = thrown(IllegalArgumentException)
+        e.message.contains("Invalid logs bucket path")
+
+        when:
+        new BatchConfig([logsBucket: 's3://bucket'])
+        then:
+        e = thrown(IllegalArgumentException)
+        e.message.contains("Logs bucket path must start with 'gs://'")
+    }
+
 }

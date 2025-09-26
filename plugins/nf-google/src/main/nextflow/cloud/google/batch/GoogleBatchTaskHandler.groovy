@@ -447,12 +447,27 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         return Job.newBuilder()
             .addTaskGroups(taskGroup)
             .setAllocationPolicy(allocationPolicy)
-            .setLogsPolicy(
-                LogsPolicy.newBuilder()
-                    .setDestination(LogsPolicy.Destination.CLOUD_LOGGING)
-            )
+            .setLogsPolicy(createLogsPolicy())
             .putAllLabels(task.config.getResourceLabels())
             .build()
+    }
+
+    /**
+     * Create the LogsPolicy based on configuration
+     * @return LogsPolicy configured for either PATH (GCS bucket) or CLOUD_LOGGING
+     */
+    protected LogsPolicy createLogsPolicy() {
+        final logsBucket = executor.batchConfig.logsBucket
+        if( logsBucket ) {
+            return LogsPolicy.newBuilder()
+                .setDestination(LogsPolicy.Destination.PATH)
+                .setLogsPath(logsBucket)
+                .build()
+        } else {
+            return LogsPolicy.newBuilder()
+                .setDestination(LogsPolicy.Destination.CLOUD_LOGGING)
+                .build()
+        }
     }
 
     /**

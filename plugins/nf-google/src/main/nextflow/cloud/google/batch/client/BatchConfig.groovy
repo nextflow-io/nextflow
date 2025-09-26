@@ -87,6 +87,12 @@ class BatchConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
+        The Google Cloud Storage bucket path where job logs should be stored, e.g. `gs://my-logs-bucket/logs`. When specified, Google Batch will write job logs to this location instead of Cloud Logging. The bucket must be accessible and writable by the service account.
+    """)
+    final String logsBucket
+
+    @ConfigOption
+    @Description("""
         Max number of execution attempts of a job interrupted by a Compute Engine Spot reclaim event (default: `0`).
     """)
     final int maxSpotAttempts
@@ -142,6 +148,7 @@ class BatchConfig implements ConfigScope {
         cpuPlatform = opts.cpuPlatform
         gcsfuseOptions = opts.gcsfuseOptions as List<String> ?: DEFAULT_GCSFUSE_OPTS
         installGpuDrivers = opts.installGpuDrivers as boolean
+        logsBucket = validateLogsBucket(opts.logsBucket)
         maxSpotAttempts = opts.maxSpotAttempts != null ? opts.maxSpotAttempts as int : DEFAULT_MAX_SPOT_ATTEMPTS
         network = opts.network
         networkTags = opts.networkTags as List<String> ?: Collections.emptyList()
@@ -154,5 +161,18 @@ class BatchConfig implements ConfigScope {
     }
 
     BatchRetryConfig getRetryConfig() { retry }
+
+    private static String validateLogsBucket(String bucket) {
+        if( !bucket )
+            return null
+
+        if( !bucket.startsWith('gs://') )
+            throw new IllegalArgumentException("Logs bucket path must start with 'gs://' - provided: $bucket")
+
+        if( bucket.length() <= 5 || bucket == 'gs://' )
+            throw new IllegalArgumentException("Invalid logs bucket path - provided: $bucket")
+
+        return bucket
+    }
 
 }
