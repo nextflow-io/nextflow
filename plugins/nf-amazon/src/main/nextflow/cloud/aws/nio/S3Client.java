@@ -338,6 +338,7 @@ public class S3Client {
         //
         final Path target = targetFile.toPath();
         final Queue<OngoingFileDownload> allDownloads = new LinkedList<>();
+        final InterruptedIOException[] traversalInterruption = {null};
 
         FileVisitor<Path> visitor = new SimpleFileVisitor<Path>() {
 
@@ -371,31 +372,59 @@ public class S3Client {
                     allDownloads.add(new OngoingFileDownload(s3Path.getBucket(), s3Path.getKey(), it));
                 }catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
-                    throw new InterruptedIOException(String.format("S3 download directory: s3://%s/%s interrupted", source.getBucket(), source.getKey()));
+                    // Don't throw immediately - store the exception and continue to clean-up
+                    traversalInterruption[0] = new InterruptedIOException(String.format("S3 download directory: s3://%s/%s interrupted", source.getBucket(), source.getKey()));
+                    return FileVisitResult.TERMINATE;
                 }
                 return FileVisitResult.CONTINUE;
             }
         };
 
-        Files.walkFileTree(source, EnumSet.of(FileVisitOption.FOLLOW_LINKS), Integer.MAX_VALUE, visitor);
-
         try {
-            Throwable cause = null;
+            Files.walkFileTree(source, EnumSet.of(FileVisitOption.FOLLOW_LINKS), Integer.MAX_VALUE, visitor);
+        } finally {
+            cleanupQueuedDownloads(allDownloads, traversalInterruption[0], source);
+        }
+    }
+
+    private void cleanupQueuedDownloads(Queue<OngoingFileDownload> allDownloads, InterruptedIOException traversalInterruption, S3Path source) throws IOException {
+        try {
+            IOException firstException = null;
             while(!allDownloads.isEmpty()) {
                 OngoingFileDownload current = allDownloads.poll();
                 try{
                     current.download.completionFuture().get();
                 } catch (ExecutionException e) {
-                    cause = e.getCause();
+                    Throwable cause = e.getCause();
                     log.debug("Exception thrown downloading S3 object s3://{}/{}", current.bucket, current.key, cause);
+                    if (firstException == null) {
+                        firstException = new IOException(String.format("Transfer failed for s3://%s/%s", current.bucket, current.key), cause);
+                    } else {
+                        firstException.addSuppressed(cause);
+                    }
                 }
             }
-            if (cause != null)
-                throw new IOException(String.format("Some transfers from S3 download directory: s3://%s/%s has failed", source.getBucket(), source.getKey() ), cause);
+            
+            // Throw traversal interruption first if it occurred
+            if (traversalInterruption != null) {
+                if (firstException != null) {
+                    traversalInterruption.addSuppressed(firstException);
+                }
+                throw traversalInterruption;
+            }
+            
+            // Throw download failures if any occurred
+            if (firstException != null) {
+                throw new IOException(String.format("Some transfers from S3 download directory: s3://%s/%s failed", source.getBucket(), source.getKey()), firstException);
+            }
         }
         catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new InterruptedIOException(String.format("Interrupted while download directory s3://%s/%s", source.getBucket(), source.getKey()));
+            InterruptedIOException interruptedException = new InterruptedIOException(String.format("Interrupted while download directory s3://%s/%s", source.getBucket(), source.getKey()));
+            if (traversalInterruption != null) {
+                interruptedException.addSuppressed(traversalInterruption);
+            }
+            throw interruptedException;
         }
     }
 
