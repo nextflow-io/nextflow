@@ -459,9 +459,10 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     protected LogsPolicy createLogsPolicy() {
         final logsBucket = executor.batchConfig.logsBucket
         if( logsBucket ) {
+            final containerPath = executor.batchConfig.convertGcsPathToMountPath(logsBucket)
             return LogsPolicy.newBuilder()
                 .setDestination(LogsPolicy.Destination.PATH)
-                .setLogsPath(logsBucket)
+                .setLogsPath(containerPath)
                 .build()
         } else {
             return LogsPolicy.newBuilder()

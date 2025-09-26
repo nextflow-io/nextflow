@@ -702,7 +702,14 @@ class GoogleBatchTaskHandlerTest extends Specification {
 
         and:
         req.getLogsPolicy().getDestination().toString() == 'PATH'
-        req.getLogsPolicy().getLogsPath() == LOGS_BUCKET
+        req.getLogsPolicy().getLogsPath() == '/mnt/disks/my-logs-bucket/logs'
+        and:
+        def taskGroup = req.getTaskGroups(0)
+        def volumes = taskGroup.getTaskSpec().getVolumesList()
+        volumes.size() >= 2  // At least work dir volume and logs bucket volume
+        def logsBucketVolume = volumes.find { it.getGcs().getRemotePath() == 'my-logs-bucket' }
+        logsBucketVolume != null
+        logsBucketVolume.getMountPath() == '/mnt/disks/my-logs-bucket'
     }
 
     def makeTask(String name, TaskStatus.State state){

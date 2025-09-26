@@ -186,6 +186,13 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
 
     GoogleBatchScriptLauncher withConfig(GoogleOpts config) {
         this.config = config
+        // Add logs bucket to mounted volumes if configured
+        if( config?.batch?.logsBucket ) {
+            final logsBucketName = config.batch.extractBucketName(config.batch.logsBucket)
+            if( logsBucketName ) {
+                buckets.add(logsBucketName)
+            }
+        }
         return this
     }
 
