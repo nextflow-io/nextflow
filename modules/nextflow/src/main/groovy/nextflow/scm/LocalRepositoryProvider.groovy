@@ -104,6 +104,11 @@ class LocalRepositoryProvider extends RepositoryProvider {
     }
 
     @Override
+    List<RepositoryEntry> listDirectory(String path, int depth) {
+        throw new UnsupportedOperationException("Directory listing not yet implemented for Local Repository")
+    }
+
+    @Override
     List<TagInfo> getTags() {
         final String prefix = 'refs/tags/'
 

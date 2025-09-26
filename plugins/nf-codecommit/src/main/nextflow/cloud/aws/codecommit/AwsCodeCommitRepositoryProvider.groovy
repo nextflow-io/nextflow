@@ -33,6 +33,7 @@ import nextflow.exception.AbortOperationException
 import nextflow.exception.MissingCredentialsException
 import nextflow.scm.ProviderConfig
 import nextflow.scm.RepositoryProvider
+import nextflow.scm.RepositoryProvider.RepositoryEntry
 import nextflow.util.StringUtils
 import org.eclipse.jgit.api.errors.TransportException
 import org.eclipse.jgit.transport.CredentialsProvider
@@ -152,6 +153,12 @@ class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
             log.debug "AWS CodeCommit unable to retrieve file: $path from repo: $repositoryName"
             return null
         }
+    }
+
+    /** {@inheritDoc} **/
+    @Override
+    List<RepositoryEntry> listDirectory(String path, int depth) {
+        throw new UnsupportedOperationException("Directory listing not yet implemented for AWS CodeCommit")
     }
 
     protected void checkMissingCredsException(Exception e) {

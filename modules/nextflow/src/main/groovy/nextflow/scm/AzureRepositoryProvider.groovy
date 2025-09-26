@@ -214,4 +214,10 @@ final class AzureRepositoryProvider extends RepositoryProvider {
         return invokeBytes(url)
     }
 
+    /** {@inheritDoc} */
+    @Override
+    List<RepositoryEntry> listDirectory(String path, int depth) {
+        throw new UnsupportedOperationException("Directory listing not yet implemented for Azure Repos")
+    }
+
 }

@@ -66,6 +66,19 @@ abstract class RepositoryProvider {
         String commitId
     }
 
+    enum EntryType {
+        FILE, DIRECTORY
+    }
+
+    @Canonical
+    static class RepositoryEntry {
+        String name
+        String path
+        EntryType type
+        String sha
+        Long size
+    }
+
     /**
      * The client used to carry out http requests
      */
@@ -375,6 +388,15 @@ abstract class RepositoryProvider {
      * @return The file content a
      */
     abstract byte[] readBytes( String path )
+
+    /**
+     * List directory contents in the remote repository
+     *
+     * @param path The relative path of the directory to list (empty string or null for root)
+     * @param depth The depth of traversal (0 for single level, >0 for recursive up to depth, -1 for fully recursive)
+     * @return A list of repository entries (files and directories)
+     */
+    abstract List<RepositoryEntry> listDirectory( String path, int depth )
 
     String readText( String path ) {
         def bytes = readBytes(path)

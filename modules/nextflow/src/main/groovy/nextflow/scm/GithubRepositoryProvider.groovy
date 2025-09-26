@@ -117,4 +117,166 @@ class GithubRepositoryProvider extends RepositoryProvider {
         response.get('content')?.toString()?.decodeBase64()
     }
 
+    /** {@inheritDoc} */
+    @Override
+    @Memoized
+    List<RepositoryEntry> listDirectory(String path, int depth) {
+        // Get the tree SHA for the specific directory
+        String treeSha = getTreeSha(path)
+        
+        // Build the Trees API URL
+        String url = getTreeUrl(treeSha, depth > 0 || depth == -1)
+        
+        // Make the API call and parse response
+        Map response = invokeAndParseResponse(url)
+        List<Map> treeEntries = response.get('tree') as List<Map>
+        
+        if (!treeEntries) {
+            return []
+        }
+        
+        List<RepositoryEntry> entries = []
+        
+        for (Map entry : treeEntries) {
+            String entryPath = entry.get('path') as String
+            
+            // For non-recursive calls (depth 0), include only immediate children
+            if (depth == 0) {
+                // Only include entries that don't contain slashes (immediate children)
+                if (!entryPath.contains('/')) {
+                    entries.add(createRepositoryEntry(entry, path))
+                }
+            } else if (depth == -1) {
+                // Include all entries for fully recursive
+                entries.add(createRepositoryEntry(entry, path))
+            } else {
+                // Include entries up to the specified depth
+                int entryDepth = entryPath.split("/").length - 1
+                if (entryDepth < depth) {
+                    entries.add(createRepositoryEntry(entry, path))
+                }
+            }
+        }
+        
+        return entries.sort { it.name }
+    }
+
+    private String getTreeUrl(String treeSha, boolean recursive) {
+        String url = "${config.endpoint}/repos/$project/git/trees/$treeSha"
+        if (recursive) {
+            url += "?recursive=1"
+        }
+        return url
+    }
+
+    @Memoized
+    private String getTreeSha(String path) {
+        if (path && !path.isEmpty()) {
+            // For subdirectory, we need to find the tree SHA by traversing from root
+            return getTreeShaForPath(path)
+        }
+        
+        // For root directory, get the commit SHA and then the tree SHA
+        String commitSha = getCommitSha()
+        Map commit = invokeAndParseResponse("${config.endpoint}/repos/$project/git/commits/$commitSha")
+        Map tree = commit.get('tree') as Map
+        return tree.get('sha') as String
+    }
+
+    private String getTreeShaForPath(String path) {
+        // Start from root tree
+        String currentTreeSha = getTreeSha("")
+        String[] pathParts = path.split("/")
+        
+        for (String part : pathParts) {
+            String url = getTreeUrl(currentTreeSha, false)
+            Map response = invokeAndParseResponse(url)
+            List<Map> treeEntries = response.get('tree') as List<Map>
+            
+            Map foundEntry = treeEntries.find { 
+                it.get('path') == part && it.get('type') == 'tree'
+            }
+            
+            if (!foundEntry) {
+                throw new IllegalArgumentException("Directory not found: $path")
+            }
+            
+            currentTreeSha = foundEntry.get('sha') as String
+        }
+        
+        return currentTreeSha
+    }
+
+    @Memoized
+    private String getCommitSha() {
+        if (revision) {
+            // Try to resolve the revision to a commit SHA
+            try {
+                Map ref = invokeAndParseResponse("${config.endpoint}/repos/$project/git/refs/heads/$revision")
+                Map object = ref.get('object') as Map
+                return object.get('sha') as String
+            } catch (Exception e) {
+                // If it's not a branch, try as a tag or direct SHA
+                return revision
+            }
+        }
+        
+        // Default to main/master branch
+        try {
+            Map ref = invokeAndParseResponse("${config.endpoint}/repos/$project/git/refs/heads/main")
+            Map object = ref.get('object') as Map
+            return object.get('sha') as String
+        } catch (Exception e) {
+            Map ref = invokeAndParseResponse("${config.endpoint}/repos/$project/git/refs/heads/master")
+            Map object = ref.get('object') as Map
+            return object.get('sha') as String
+        }
+    }
+
+    private boolean shouldIncludeEntry(String entryPath, String pathPrefix, int depth) {
+        // If we're looking at a subdirectory, entries should be under that path
+        if (!pathPrefix.isEmpty()) {
+            if (!entryPath.startsWith(pathPrefix)) {
+                return false
+            }
+            // Remove the prefix to get relative path
+            String relativePath = entryPath.substring(pathPrefix.length())
+            
+            // Count directory levels in the remaining path
+            int entryDepth = relativePath.split("/").length - 1
+            
+            // Include if within depth limit (depth 0 means only immediate children)
+            return depth == -1 || entryDepth <= depth
+        }
+        
+        // For root directory, count directory levels in the full path
+        int entryDepth = entryPath.split("/").length - 1
+        
+        // Include if within depth limit (depth 0 means only immediate children)
+        return depth == -1 || entryDepth <= depth
+    }
+
+    private RepositoryEntry createRepositoryEntry(Map entry, String basePath) {
+        String entryPath = entry.get('path') as String
+        String fullPath = basePath && !basePath.isEmpty() ? "${basePath}/${entryPath}" : entryPath
+        
+        // For name, use just the entry path (which is relative to the directory we're listing)
+        String name = entryPath
+        if (entryPath.contains("/")) {
+            name = entryPath.substring(entryPath.lastIndexOf("/") + 1)
+        }
+        
+        EntryType type = entry.get('type') == 'tree' ? EntryType.DIRECTORY : EntryType.FILE
+        String sha = entry.get('sha') as String
+        Long size = entry.get('size') as Long
+        
+        return new RepositoryEntry(
+            name: name,
+            path: fullPath,
+            type: type,
+            sha: sha,
+            size: size
+        )
+    }
+
 }

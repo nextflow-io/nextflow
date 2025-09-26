@@ -193,4 +193,10 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
         final url = getContentUrl(path)
         return invokeBytes(url)
     }
+
+    /** {@inheritDoc} */
+    @Override
+    List<RepositoryEntry> listDirectory(String path, int depth) {
+        throw new UnsupportedOperationException("Directory listing not yet implemented for BitBucket")
+    }
 }

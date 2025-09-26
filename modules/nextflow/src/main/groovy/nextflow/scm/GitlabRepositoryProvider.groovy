@@ -124,4 +124,10 @@ class GitlabRepositoryProvider extends RepositoryProvider {
         Map response  = invokeAndParseResponse(url)
         response.get('content')?.toString()?.decodeBase64()
     }
+
+    /** {@inheritDoc} */
+    @Override
+    List<RepositoryEntry> listDirectory(String path, int depth) {
+        throw new UnsupportedOperationException("Directory listing not yet implemented for GitLab")
+    }
 }
