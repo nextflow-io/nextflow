@@ -88,8 +88,9 @@ The project follows a modular architecture with a plugin-based system for cloud 
 
 ### Git conventions
 
-- Commit should be signed by adding a `Signed-off-by` line to the commit message as shown below, or by using the `-s` option (see CONTRIBUTING.md for details)
-- Special commit message tags:
+- **DCO sign-off required**: All commits must be signed by adding a `Signed-off-by` line to the commit message or by using the `-s` option (see CONTRIBUTING.md for details).
+- **Always use sign-off**: Use `git commit -s` or `git commit --signoff` for commits to avoid DCO bot issues
+- **CI control tags**: Use special tags in commit messages to control CI behavior:
   - `[ci skip]` - Skip the execution of CI tests
   - `[ci fast]` - Run only unit tests and skip integration tests
   - `[e2e stage]` - Run end-to-end tests vs Seqera platform stage environment
