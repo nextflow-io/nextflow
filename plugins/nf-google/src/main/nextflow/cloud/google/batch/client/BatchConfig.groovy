@@ -175,4 +175,31 @@ class BatchConfig implements ConfigScope {
         return bucket
     }
 
+    /**
+     * Extract the bucket name from a GCS path
+     * @param gcsPath GCS path like "gs://bucket-name/path/to/logs"
+     * @return bucket name like "bucket-name"
+     */
+    static String extractBucketName(String gcsPath) {
+        if( !gcsPath || !gcsPath.startsWith('gs://') )
+            return null
+
+        final pathWithoutProtocol = gcsPath.substring(5) // Remove "gs://"
+        final slashIndex = pathWithoutProtocol.indexOf('/')
+        return slashIndex > 0 ? pathWithoutProtocol.substring(0, slashIndex) : pathWithoutProtocol
+    }
+
+    /**
+     * Convert a GCS path to container mount path
+     * @param gcsPath GCS path like "gs://bucket-name/path/to/logs"
+     * @return container path like "/mnt/disks/bucket-name/path/to/logs"
+     */
+    static String convertGcsPathToMountPath(String gcsPath) {
+        if( !gcsPath || !gcsPath.startsWith('gs://') )
+            return gcsPath
+
+        final pathWithoutProtocol = gcsPath.substring(5) // Remove "gs://"
+        return "/mnt/disks/${pathWithoutProtocol}"
+    }
+
 }
