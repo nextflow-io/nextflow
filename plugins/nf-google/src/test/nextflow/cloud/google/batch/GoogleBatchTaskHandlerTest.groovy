@@ -659,6 +659,52 @@ class GoogleBatchTaskHandlerTest extends Specification {
         "SUCCEEDED"  | JobStatus.State.FAILED     | makeTaskStatus(TaskStatus.State.SUCCEEDED, "") // get from task status
     }
 
+    def 'should create submit request with logs bucket PATH policy' () {
+        given:
+        def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
+        def CONTAINER_IMAGE = 'ubuntu:22.1'
+        def LOGS_BUCKET = 'gs://my-logs-bucket/logs'
+
+        def session = Mock(Session) {
+            getBucketDir() >> CloudStorageFileSystem.forBucket('foo').getPath('/')
+            getConfig() >> [google: [project: 'test-project', batch: [logsBucket: LOGS_BUCKET]]]
+        }
+
+        def exec = Mock(GoogleBatchExecutor) {
+            getSession() >> session
+            getBatchConfig() >> new BatchConfig([logsBucket: LOGS_BUCKET])
+            isFusionEnabled() >> false
+        }
+
+        def bean = new TaskBean(workDir: WORK_DIR, inputFiles: [:])
+        def task = Mock(TaskRun) {
+            toTaskBean() >> bean
+            getHashLog() >> 'abcd1234'
+            getWorkDir() >> WORK_DIR
+            getContainer() >> CONTAINER_IMAGE
+            getConfig() >> Mock(TaskConfig) {
+                getCpus() >> 2
+                getResourceLabels() >> [:]
+            }
+        }
+
+        def mounts = ['/mnt/disks/foo/scratch:/mnt/disks/foo/scratch:rw']
+        def volumes = [ GCS_VOL ]
+        def launcher = new GoogleBatchLauncherSpecMock('bash .command.run', mounts, volumes)
+
+        def handler = Spy(new GoogleBatchTaskHandler(task, exec))
+
+        when:
+        def req = handler.newSubmitRequest(task, launcher)
+        then:
+        handler.fusionEnabled() >> false
+        handler.findBestMachineType(_, false) >> null
+
+        and:
+        req.getLogsPolicy().getDestination().toString() == 'PATH'
+        req.getLogsPolicy().getLogsPath() == LOGS_BUCKET
+    }
+
     def makeTask(String name, TaskStatus.State state){
         Task.newBuilder().setName(name)
             .setStatus(TaskStatus.newBuilder().setState(state).build())
