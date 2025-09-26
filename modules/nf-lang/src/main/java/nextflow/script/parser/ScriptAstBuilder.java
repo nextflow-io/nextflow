@@ -19,6 +19,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collections;
 import java.util.List;
@@ -39,7 +40,10 @@ import nextflow.script.ast.OutputNode;
 import nextflow.script.ast.ParamNodeV1;
 import nextflow.script.ast.ParamBlockNode;
 import nextflow.script.ast.ProcessNode;
+import nextflow.script.ast.ProcessNodeV1;
+import nextflow.script.ast.ProcessNodeV2;
 import nextflow.script.ast.ScriptNode;
+import nextflow.script.ast.TupleParameter;
 import nextflow.script.ast.WorkflowNode;
 import org.antlr.v4.runtime.ANTLRErrorListener;
 import org.antlr.v4.runtime.CharStream;
@@ -414,15 +418,16 @@ public class ScriptAstBuilder {
     private ProcessNode processDef(ProcessDefContext ctx) {
         var name = ctx.name.getText();
         if( ctx.body == null ) {
-            var empty = EmptyStatement.INSTANCE;
-            var result = ast( new ProcessNode(name, empty, empty, empty, EmptyExpression.INSTANCE, null, empty, empty), ctx );
-            collectSyntaxError(new SyntaxException("Missing process script body", result));
-            return result;
+            return invalidProcess("Missing process script body", ctx);
         }
 
         var directives = processDirectives(ctx.body.processDirectives());
         var inputs = processInputs(ctx.body.processInputs());
+        var inputsV1 = processInputsV1(ctx.body.processInputsV1());
+        var stagers = processStagers(ctx.body.processStage());
         var outputs = processOutputs(ctx.body.processOutputs());
+        var outputsV1 = processOutputsV1(ctx.body.processOutputsV1());
+        var topics = processTopics(ctx.body.processTopics());
         var when = processWhen(ctx.body.processWhen());
         var type = processType(ctx.body.processExec());
         var exec = ctx.body.blockStatements() != null
@@ -430,13 +435,30 @@ public class ScriptAstBuilder {
             : blockStatements(ctx.body.processExec().blockStatements());
         var stub = processStub(ctx.body.processStub());
 
+        var isTyped = ctx.body.processInputs() != null || ctx.body.processOutputs() != null;
+        var isLegacy = ctx.body.processInputsV1() != null || ctx.body.processOutputsV1() != null;
+
+        if( isTyped && isLegacy ) {
+            return invalidProcess("Typed process inputs/outputs cannot be mixed with legacy process inputs/outputs", ctx);
+        }
+
         if( ctx.body.blockStatements() != null ) {
-            if( !(directives instanceof EmptyStatement) || !(inputs instanceof EmptyStatement) || !(outputs instanceof EmptyStatement) )
+            if( !directives.isEmpty() || isTyped || isLegacy )
                 collectSyntaxError(new SyntaxException("The `script:` or `exec:` label is required when other sections are present", exec));
         }
 
-        var result = ast( new ProcessNode(name, directives, inputs, outputs, when, type, exec, stub), ctx );
+        var result = isTyped
+            ? new ProcessNodeV2(name, directives, inputs, stagers, outputs, topics, when, type, exec, stub)
+            : new ProcessNodeV1(name, directives, inputsV1, outputsV1, when, type, exec, stub);
+        ast(result, ctx);
         groovydocManager.handle(result, ctx);
+        return result;
+    }
+
+    private ProcessNode invalidProcess(String message, ProcessDefContext ctx) {
+        var empty = EmptyStatement.INSTANCE;
+        var result = ast( new ProcessNodeV1("", empty, empty, empty, EmptyExpression.INSTANCE, null, empty, empty), ctx );
+        collectSyntaxError(new SyntaxException(message, result));
         return result;
     }
 
@@ -450,7 +472,58 @@ public class ScriptAstBuilder {
         return ast( block(null, statements), ctx );
     }
 
-    private Statement processInputs(ProcessInputsContext ctx) {
+    private Parameter[] processInputs(ProcessInputsContext ctx) {
+        if( ctx == null )
+            return Parameter.EMPTY_ARRAY;
+
+        return ctx.processInput().stream()
+            .map(this::processInput)
+            .filter(input -> input != null)
+            .toArray(Parameter[]::new);
+    }
+
+    private Parameter processInput(ProcessInputContext ctx) {
+        var type = type(ctx.type());
+        var names = ctx.identifier().stream().map(this::identifier).toList();
+        var result = names.size() == 1
+            ? ast( param(type, names.get(0)), ctx )
+            : processTupleInput(type, names, ctx);
+        for( var name : names )
+            checkInvalidVarName(name, result);
+        if( ctx.type() == null )
+            collectSyntaxError(new SyntaxException("Process input must have a type annotation", result));
+        saveTrailingComment(result, ctx);
+        return result;
+    }
+
+    private TupleParameter processTupleInput(ClassNode type, List<String> names, ParserRuleContext ctx) {
+        var componentTypes = tupleComponentTypes(type, names.size());
+        var components = new Parameter[names.size()];
+        for( int i = 0; i < names.size(); i++ ) {
+            var componentType = componentTypes != null ? componentTypes.get(i) : ClassHelper.dynamicType();
+            components[i] = param(componentType, names.get(i));
+        }
+        var result = ast( new TupleParameter(type, components), ctx );
+        if( !"Tuple".equals(type.getUnresolvedName()) )
+            collectSyntaxError(new SyntaxException("Process tuple input must have type `Tuple<...>`", result));
+        if( !type.isUsingGenerics() || type.getGenericsTypes().length != names.size() )
+            collectSyntaxError(new SyntaxException("Process tuple input type must have " + names.size() + " type arguments (one for each tuple component)", result));
+        return result;
+    }
+
+    private List<ClassNode> tupleComponentTypes(ClassNode type, int n) {
+        if( !"Tuple".equals(type.getUnresolvedName()) )
+            return null;
+        if( !type.isUsingGenerics() )
+            return null;
+        if( type.getGenericsTypes().length != n )
+            return null;
+        return Arrays.stream(type.getGenericsTypes())
+            .map(gt -> gt.getType())
+            .toList();
+    }
+
+    private Statement processInputsV1(ProcessInputsV1Context ctx) {
         if( ctx == null )
             return EmptyStatement.INSTANCE;
         var statements = ctx.statement().stream()
@@ -460,7 +533,56 @@ public class ScriptAstBuilder {
         return ast( block(null, statements), ctx );
     }
 
+    private Statement processStagers(ProcessStageContext ctx) {
+        if( ctx == null )
+            return EmptyStatement.INSTANCE;
+        var statements = ctx.statement().stream()
+            .map(this::statement)
+            .map(stmt -> checkDirective(stmt, "Invalid stage directive"))
+            .toList();
+        return ast( block(null, statements), ctx );
+    }
+
     private Statement processOutputs(ProcessOutputsContext ctx) {
+        if( ctx == null )
+            return EmptyStatement.INSTANCE;
+
+        var statements = ctx.processOutput().stream()
+            .map(this::processOutput)
+            .filter(stmt -> stmt != null)
+            .toList();
+        var result = ast( block(null, statements), ctx );
+        var hasEmitExpression = statements.stream().anyMatch(this::isEmitExpression);
+        if( hasEmitExpression && statements.size() > 1 ) {
+            collectSyntaxError(new SyntaxException("Every output must be assigned to a name when there are multiple outputs", result));
+            return null;
+        }
+        return result;
+    }
+
+    private Statement processOutput(ProcessOutputContext ctx) {
+        Statement result;
+        if( ctx.statement() != null ) {
+            result = statement(ctx.statement());
+            if( !(result instanceof ExpressionStatement) ) {
+                collectSyntaxError(new SyntaxException("Invalid process output -- must be a name, assignment, or expression", result));
+                return null;
+            }
+        }
+        else if( ctx.expression() != null ) {
+            var target = nameTypePair(ctx.nameTypePair());
+            var source = expression(ctx.expression());
+            result = stmt(ast( new AssignmentExpression(target, source), ctx ));
+        }
+        else {
+            var target = nameTypePair(ctx.nameTypePair());
+            result = stmt(target);
+        }
+        saveTrailingComment(result, ctx);
+        return result;
+    }
+
+    private Statement processOutputsV1(ProcessOutputsV1Context ctx) {
         if( ctx == null )
             return EmptyStatement.INSTANCE;
         var statements = ctx.statement().stream()
@@ -468,6 +590,31 @@ public class ScriptAstBuilder {
             .map(stmt -> checkDirective(stmt, "Invalid process output"))
             .toList();
         return ast( block(null, statements), ctx );
+    }
+
+    private Statement processTopics(ProcessTopicsContext ctx) {
+        if( ctx == null )
+            return EmptyStatement.INSTANCE;
+
+        var statements = ctx.statement().stream()
+            .map(this::statement)
+            .filter((stmt) -> {
+                if( isProcessTopic(stmt) ) {
+                    return true;
+                }
+                else {
+                    collectSyntaxError(new SyntaxException("Invalid process topic statement", stmt));
+                    return false;
+                }
+            })
+            .toList();
+        return ast( block(null, statements), ctx );
+    }
+
+    private boolean isProcessTopic(Statement stmt) {
+        return stmt instanceof ExpressionStatement es
+            && es.getExpression() instanceof BinaryExpression be
+            && be.getOperation().getType() == Types.RIGHT_SHIFT;
     }
 
     private Statement checkDirective(Statement stmt, String errorMessage) {
@@ -1744,13 +1891,16 @@ public class ScriptAstBuilder {
     }
 
     private GenericsType[] typeArguments(TypeArgumentsContext ctx) {
-        return ctx.type().stream()
+        return ctx.typeArgument().stream()
             .map(this::genericsType)
             .toArray(GenericsType[]::new);
     }
 
-    private GenericsType genericsType(TypeContext ctx) {
-        return ast( new GenericsType(type(ctx)), ctx );
+    private GenericsType genericsType(TypeArgumentContext ctx) {
+        var type = ctx.QUESTION() != null
+            ? ClassHelper.dynamicType()
+            : type(ctx.type());
+        return ast( new GenericsType(type), ctx );
     }
 
     private ClassNode legacyType(ParserRuleContext ctx) {
