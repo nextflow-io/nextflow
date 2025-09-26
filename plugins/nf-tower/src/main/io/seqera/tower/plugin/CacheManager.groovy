@@ -107,6 +107,27 @@ class CacheManager {
         if( !remoteWorkDir || !sessionUuid )
             return
 
+        if( Files.exists(localCachePath) ) {
+            // upload nextflow cache metadata
+            try {
+                log.info "Saving cache: ${localCachePath.toUriString()} => ${remoteCachePath.toUriString()}"
+                remoteCachePath.deleteDir()
+                remoteCachePath.parent.mkdirs()
+                FilesEx.copyTo(localCachePath, remoteCachePath)
+            }
+            catch( Throwable e ) {
+                log.warn "Failed to backup resume metadata to remote store path: ${remoteCachePath.toUriString()} — cause: ${e}", e
+            }
+        } else {
+            if( cloudCache ){
+                // Just log as debug message when localpath doesn't exist and cloud cache path is defined.
+                // It is likely the user has use cloud cache.
+                log.debug "Local cache path does not exist: $localCachePath — skipping cache backup"
+            } else {
+                // Print warning when localCachePath doesn't exists and cloud cache path is not defined.
+                log.warn "Local cache path does not exist: $localCachePath — skipping cache backup"
+            }
+        }
         // — upload out file
         try {
             if( localOutFile?.exists() )
@@ -146,29 +167,6 @@ class CacheManager {
         }
         catch (Throwable e) {
             log.warn "Unable to upload tower reprts file: $localTowerReports — reason: ${e.message ?: e}", e
-        }
-
-        if( !Files.exists(localCachePath) ) {
-            if( cloudCache ){
-                // Just log as debug message when localpath doesn't exist and cloud cache path is defined.
-                // It is likely the user has use cloud cache.
-                log.debug "Local cache path does not exist: $localCachePath — skipping cache backup"
-            } else {
-                // Print warning when localCachePath doesn't exists and cloud cache path is not defined.
-                log.warn "Local cache path does not exist: $localCachePath — skipping cache backup"
-            }
-            return
-        }
-
-        // upload nextflow cache metadata
-        try {
-            log.info "Saving cache: ${localCachePath.toUriString()} => ${remoteCachePath.toUriString()}"
-            remoteCachePath.deleteDir()
-            remoteCachePath.parent.mkdirs()
-            FilesEx.copyTo(localCachePath, remoteCachePath)
-        }
-        catch (Throwable e) {
-            log.warn "Failed to backup resume metadata to remote store path: ${remoteCachePath.toUriString()} — cause: ${e}", e
         }
     }
 
