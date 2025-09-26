@@ -1,0 +1,14 @@
+set -e
+
+#
+# run normal mode and check if execution has unnecesary trying to copy .command.out and .command.err in the same directory. 
+# https://github.com/nextflow-io/nextflow/issues/6311
+#
+echo ''
+rm -rf work/* || true 
+NXF_WORK=work $NXF_RUN
+
+if grep -qR  "are the same file" work/ ; then
+	echo "ERROR: Unnecessary copy of controls"
+	exit 1
+fi
