@@ -48,9 +48,9 @@ public class Log {
     static public final int LEVEL_TRACE = 1;
 
     /**
-     * The level of messages that will be logged. Compiling this and the booleans below as "final" will cause the compiler to
-     * remove all "if (Log.info) ..." type statements below the set level.
-     */
+    * The level of messages that will be logged. Compiling this and the booleans below as "final" will cause the compiler to
+    * remove all "if (Log.info) ..." type statements below the set level.
+    */
     static private int level = LEVEL_TRACE; // Log everything to delegate control to slf4j
 
     /** True when the ERROR level will be logged. */
@@ -65,8 +65,8 @@ public class Log {
     static public boolean TRACE = level <= LEVEL_TRACE;
 
     /**
-     * Sets the level to log. If a version of this class is being used that has a final log level, this has no affect.
-     */
+    * Sets the level to log. If a version of this class is being used that has a final log level, this has no affect.
+    */
     static public void set (int level) {
         // Comment out method contents when compiling fixed level JARs.
         Log.level = level;
@@ -102,8 +102,8 @@ public class Log {
     }
 
     /**
-     * Sets the logger that will write the log messages.
-     */
+    * Sets the logger that will write the log messages.
+    */
     static public void setLogger (Logger logger) {
         Log.logger = logger;
     }
@@ -194,9 +194,9 @@ public class Log {
     }
 
     /**
-     * Performs the actual logging. Default implementation logs to slf4j. Extended and use {@link Log#logger} set to handle
-     * logging differently.
-     */
+    * Performs the actual logging. Default implementation logs to slf4j. Extended and use {@link Log#logger} set to handle
+    * logging differently.
+    */
     static public class Logger {
         // Log as "com.esotericsoftware.minlog"
         public final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(Logger.class.getPackage().getName());
