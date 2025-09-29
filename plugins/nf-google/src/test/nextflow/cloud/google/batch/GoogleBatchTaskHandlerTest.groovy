@@ -661,6 +661,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
 
     def 'should create submit request with logs bucket PATH policy' () {
         given:
+        def GCS_VOL = Volume.newBuilder().setGcs(GCS.newBuilder().setRemotePath('foo').build() ).build()
         def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
         def CONTAINER_IMAGE = 'ubuntu:22.1'
         def LOGS_BUCKET = 'gs://my-logs-bucket/logs'
@@ -673,6 +674,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def exec = Mock(GoogleBatchExecutor) {
             getSession() >> session
             getBatchConfig() >> new BatchConfig([logsBucket: LOGS_BUCKET])
+            getConfig() >> Mock(ExecutorConfig)
             isFusionEnabled() >> false
         }
 
@@ -688,8 +690,9 @@ class GoogleBatchTaskHandlerTest extends Specification {
             }
         }
 
+        def LOGS_VOL = Volume.newBuilder().setGcs(GCS.newBuilder().setRemotePath('my-logs-bucket').build()).setMountPath('/mnt/disks/my-logs-bucket').build()
         def mounts = ['/mnt/disks/foo/scratch:/mnt/disks/foo/scratch:rw']
-        def volumes = [ GCS_VOL ]
+        def volumes = [ GCS_VOL, LOGS_VOL ]
         def launcher = new GoogleBatchLauncherSpecMock('bash .command.run', mounts, volumes)
 
         def handler = Spy(new GoogleBatchTaskHandler(task, exec))
@@ -705,9 +708,9 @@ class GoogleBatchTaskHandlerTest extends Specification {
         req.getLogsPolicy().getLogsPath() == '/mnt/disks/my-logs-bucket/logs'
         and:
         def taskGroup = req.getTaskGroups(0)
-        def volumes = taskGroup.getTaskSpec().getVolumesList()
-        volumes.size() >= 2  // At least work dir volume and logs bucket volume
-        def logsBucketVolume = volumes.find { it.getGcs().getRemotePath() == 'my-logs-bucket' }
+        def taskVolumes = taskGroup.getTaskSpec().getVolumesList()
+        taskVolumes.size() >= 2  // At least work dir volume and logs bucket volume
+        def logsBucketVolume = taskVolumes.find { it.getGcs().getRemotePath() == 'my-logs-bucket' }
         logsBucketVolume != null
         logsBucketVolume.getMountPath() == '/mnt/disks/my-logs-bucket'
     }

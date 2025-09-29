@@ -148,7 +148,7 @@ class BatchConfig implements ConfigScope {
         cpuPlatform = opts.cpuPlatform
         gcsfuseOptions = opts.gcsfuseOptions as List<String> ?: DEFAULT_GCSFUSE_OPTS
         installGpuDrivers = opts.installGpuDrivers as boolean
-        logsBucket = validateLogsBucket(opts.logsBucket)
+        logsBucket = validateLogsBucket(opts.logsBucket as String)
         maxSpotAttempts = opts.maxSpotAttempts != null ? opts.maxSpotAttempts as int : DEFAULT_MAX_SPOT_ATTEMPTS
         network = opts.network
         networkTags = opts.networkTags as List<String> ?: Collections.emptyList()
