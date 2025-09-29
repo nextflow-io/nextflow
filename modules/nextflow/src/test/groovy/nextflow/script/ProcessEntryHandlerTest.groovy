@@ -16,6 +16,7 @@
 
 package nextflow.script
 
+import java.nio.file.Path
 import nextflow.Session
 import spock.lang.Specification
 
@@ -208,5 +209,44 @@ class ProcessEntryHandlerTest extends Specification {
         tupleElements[0].other == 'some-value'
         // tupleElements[1] should be a Path object (mocked)
         tupleElements[1].toString().contains('file.fa')
+    }
+
+    def 'should parse file input correctly' () {
+        given:
+        def session = Mock(Session)
+        def script = Mock(BaseScript)
+        def meta = Mock(ScriptMeta)
+        def handler = new ProcessEntryHandler(script, session, meta)
+
+        expect:
+        handler.parseFileInput(INPUT) == EXPECTED_FILES
+
+        where:
+        INPUT                                                             | EXPECTED_FILES
+        '/path/to/file.txt'                                               | Path.of('/path/to/file.txt')
+        and:
+        '/path/to/file1.txt,/path/to/file2.txt,/path/to/file3.txt'        | [Path.of('/path/to/file1.txt'), Path.of('/path/to/file2.txt'), Path.of('/path/to/file3.txt')]
+        ' /path/to/file1.txt , /path/to/file2.txt , /path/to/file3.txt '  | [Path.of('/path/to/file1.txt'), Path.of('/path/to/file2.txt'), Path.of('/path/to/file3.txt')]
+        '/path/to/file1.txt,,/path/to/file2.txt, ,/path/to/file3.txt'     | [Path.of('/path/to/file1.txt'), Path.of('/path/to/file2.txt'), Path.of('/path/to/file3.txt')]
+        'file1.txt,file2.txt'                                             | [Path.of('file1.txt').toAbsolutePath(), Path.of('file2.txt').toAbsolutePath()]
+    }
+
+    def 'should handle file input with GString' () {
+        given:
+        def session = Mock(Session)
+        def script = Mock(BaseScript)
+        def meta = Mock(ScriptMeta)
+        def handler = new ProcessEntryHandler(script, session, meta)
+        def inputDef = [name: 'input', type: 'file']
+        def complexParams = [input: "${'/path/to/file1.txt'},${'/path/to/file2.txt'}"]
+
+        when:
+        def result = handler.getValueForInput(inputDef, complexParams)
+
+        then:
+        result instanceof List
+        result.size() == 2
+        result[0].toString().contains('file1.txt')
+        result[1].toString().contains('file2.txt')
     }
 }
