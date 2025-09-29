@@ -182,9 +182,12 @@ final class BitbucketServerRepositoryProvider extends RepositoryProvider {
         String sha = child.get('path')?.revision ?: child.get('id') as String
         Long size = child.get('size') as Long
         
+        // Ensure absolute path using base class helper
+        String fullPath = ensureAbsolutePath(childPath)
+        
         return new RepositoryEntry(
             name: name,
-            path: childPath,
+            path: fullPath,
             type: entryType,
             sha: sha,
             size: size

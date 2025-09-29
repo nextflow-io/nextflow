@@ -176,7 +176,7 @@ class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
             response.files()?.each { file ->
                 entries.add(new RepositoryEntry(
                     name: file.relativePath().split('/').last(),
-                    path: file.relativePath(),
+                    path: ensureAbsolutePath(file.relativePath()),
                     type: RepositoryProvider.EntryType.FILE,
                     sha: file.blobId(),
                     size: null  // AWS CodeCommit API doesn't provide file size in folder response
@@ -187,7 +187,7 @@ class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
             response.subFolders()?.each { folder ->
                 entries.add(new RepositoryEntry(
                     name: folder.relativePath().split('/').last(),
-                    path: folder.relativePath(),
+                    path: ensureAbsolutePath(folder.relativePath()),
                     type: RepositoryProvider.EntryType.DIRECTORY,
                     sha: null, // CodeCommit doesn't provide SHA for directories
                     size: null

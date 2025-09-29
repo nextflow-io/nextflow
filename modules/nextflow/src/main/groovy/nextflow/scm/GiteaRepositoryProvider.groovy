@@ -19,11 +19,13 @@ package nextflow.scm
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 /**
  * Implements a repository provider for Gitea service
  *
  * @author Akira Sekiguchi <pachiras.yokohama@gmail.com>
  */
+@Slf4j
 @CompileStatic
 final class GiteaRepositoryProvider extends RepositoryProvider {
 
@@ -158,7 +160,7 @@ final class GiteaRepositoryProvider extends RepositoryProvider {
     }
 
     private List<RepositoryEntry> getRecursiveEntries(String basePath, int maxDepth, String branch, int currentDepth) {
-        if (currentDepth >= maxDepth) {
+        if (currentDepth > maxDepth) {
             return []
         }
         
@@ -184,6 +186,7 @@ final class GiteaRepositoryProvider extends RepositoryProvider {
                 }
             }
         } catch (Exception e) {
+            log.debug("Failed to process directory during recursive listing: ${e.message}")
             // Continue processing other directories if one fails
         }
         
