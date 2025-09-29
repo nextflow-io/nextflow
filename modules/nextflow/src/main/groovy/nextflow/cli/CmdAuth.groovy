@@ -122,7 +122,7 @@ class CmdAuth extends CmdBase implements UsageAware {
         // load the command operations
         this.operation = Plugins.getExtension(AuthCommand)
         if( !operation )
-            throw new IllegalStateException("Unable to load lineage extensions.")
+            throw new IllegalStateException("Unable to load auth extensions.")
         // consume the first argument
         getCmd(args).apply(args.drop(1))
     }
