@@ -111,6 +111,12 @@ final class BitbucketServerRepositoryProvider extends RepositoryProvider {
         return invokeBytes(url)
     }
 
+    /** {@inheritDoc} */
+    @Override
+    List<RepositoryEntry> listDirectory(String path, int depth) {
+        throw new UnsupportedOperationException("BitbucketServerRepositoryProvider does not support 'listDirectory' operation")
+    }
+
     @Override
     List<TagInfo> getTags() {
         final result = new ArrayList<TagInfo>()
