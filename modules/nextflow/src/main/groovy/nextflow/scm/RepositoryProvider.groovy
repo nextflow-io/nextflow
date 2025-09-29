@@ -398,6 +398,25 @@ abstract class RepositoryProvider {
      *              - depth = 2: children + grandchildren  
      *              - depth = 3: children + grandchildren + great-grandchildren
      *              - larger values: traverse deeper accordingly
+     * 
+     * Example: Given repository structure:
+     * <pre>
+     * /
+     * ├── file-a.txt
+     * ├── file-b.txt
+     * ├── dir-a/
+     * │   ├── file-c.txt
+     * │   └── subdir/
+     * │       └── file-d.txt
+     * └── dir-b/
+     *     └── file-e.txt
+     * </pre>
+     *
+     * Results for listDirectory("/", depth):
+     * - depth = 1: [file-a.txt, file-b.txt, dir-a/, dir-b/]
+     * - depth = 2: [file-a.txt, file-b.txt, dir-a/, dir-b/, file-c.txt, file-e.txt]
+     * - depth = 3: [file-a.txt, file-b.txt, dir-a/, dir-b/, file-c.txt, file-e.txt, file-d.txt]
+     *
      * @return A list of repository entries (files and directories) excluding the root directory itself
      */
     abstract List<RepositoryEntry> listDirectory( String path, int depth )

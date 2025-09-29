@@ -180,7 +180,12 @@ class GithubRepositoryProviderTest extends Specification {
 
         then:
         entries.size() > 0
-        entries.any { it.name == 'main.nf' && it.type == RepositoryProvider.EntryType.FILE }
+        and:
+        entries.any { it.name == 'main.nf' && it.path == '/main.nf' && it.type == RepositoryProvider.EntryType.FILE }
+        entries.any { it.name == 'test' && it.path == '/test' && it.type == RepositoryProvider.EntryType.DIRECTORY }
+        and:
+        !entries.any { it.path == '/test/test-asset.bin' }
+        and:
         entries.every { it.path && it.sha }
     }
 
@@ -212,9 +217,11 @@ class GithubRepositoryProviderTest extends Specification {
 
         then:
         entries.size() > 0
+        and:
         // Should include files from root and subdirectories
-        entries.any { it.name == 'main.nf' && it.type == RepositoryProvider.EntryType.FILE }
-        entries.any { it.name == 'test-asset.bin' && it.type == RepositoryProvider.EntryType.FILE }
+        entries.any { it.path == '/main.nf' && it.type == RepositoryProvider.EntryType.FILE }
+        entries.any { it.path == '/test/test-asset.bin' && it.type == RepositoryProvider.EntryType.FILE }
+        and:
         entries.every { it.path && it.sha }
     }
 

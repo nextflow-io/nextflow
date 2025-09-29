@@ -161,7 +161,13 @@ class GitlabRepositoryProviderTest extends Specification {
 
         then:
         entries.size() > 0
+        and:
         entries.any { it.name == 'main.nf' && it.type == RepositoryProvider.EntryType.FILE }
+        entries.any { it.name == 'test' && it.type == RepositoryProvider.EntryType.DIRECTORY }
+        and:
+        // Should NOT include nested files for depth=1
+        !entries.any { it.path == '/test/test-asset.bin' }
+        and:
         entries.every { it.path && it.sha }
     }
 
@@ -177,7 +183,7 @@ class GitlabRepositoryProviderTest extends Specification {
 
         then:
         entries.size() > 0
-        entries.any { it.name == 'test-asset.bin' && it.type == RepositoryProvider.EntryType.FILE }
+        entries.any { it.name == 'test-asset.bin' && it.path=='/test/test-asset.bin' && it.type == RepositoryProvider.EntryType.FILE }
         entries.every { it.path.startsWith('/test/') }
     }
 

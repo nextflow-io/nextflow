@@ -218,12 +218,19 @@ class BitbucketRepositoryProviderTest extends Specification {
 
         then:
         entries.size() > 0
+        and:
         entries.any { it.name == 'main.nf' && it.type == RepositoryProvider.EntryType.FILE }
-        entries.every { it.path && it.sha }
+        and:
+        entries.every { it.path && it.name && it.sha }
+        // Should only include immediate children for depth=1
+        entries.every { it.path.split('/').length <= 2 }
+        and:
+        // Should NOT include any nested paths beyond immediate children  
+        !entries.any { it.path.split('/').length > 2 }
     }
 
     @Requires({ System.getenv('NXF_BITBUCKET_ACCESS_TOKEN') })
-    def 'should handle directory listing gracefully'() {
+    def 'should list directory contents recursively'() {
         given:
         def token = System.getenv('NXF_BITBUCKET_ACCESS_TOKEN')
         def config = new ProviderConfig('bitbucket').setAuth(token)
@@ -233,12 +240,12 @@ class BitbucketRepositoryProviderTest extends Specification {
         def entries = repo.listDirectory("/", 10)
 
         then:
-        entries.size() >= 0 // May succeed or fail depending on API support
-        
-        // If it succeeds, validate the entries
-        if (entries.size() > 0) {
-            entries.every { it.path && it.name }
-        }
+        entries.size() > 0
+        and:
+        // Should include files from root and potentially subdirectories
+        entries.any { it.name == 'main.nf' && it.type == RepositoryProvider.EntryType.FILE }
+        and:
+        entries.every { it.path && it.name && it.sha }
     }
 
     @Requires({ System.getenv('NXF_BITBUCKET_ACCESS_TOKEN') })
@@ -249,18 +256,18 @@ class BitbucketRepositoryProviderTest extends Specification {
         def repo = new BitbucketRepositoryProvider('pditommaso/tutorial', config)
 
         when:
-        def entries = repo.listDirectory("/", 2)
+        def depthOne = repo.listDirectory("/", 1)
+        def depthTwo = repo.listDirectory("/", 2)
 
         then:
-        entries.size() >= 0 // May succeed or fail depending on API support
-        
-        // If it succeeds, validate the entries include nested content
-        if (entries.size() > 0) {
-            entries.every { it.path && it.name }
-            // Should include files at different depths if they exist
-            if (entries.any { it.path.contains('/') }) {
-                entries.any { it.path.contains('/') } // Nested content exists
-            }
-        }
+        depthOne.size() > 0
+        depthTwo.size() >= depthOne.size()
+        and:
+        // Should include immediate children (depth 1)
+        depthOne.any { it.name == 'main.nf' && it.type == RepositoryProvider.EntryType.FILE }
+        depthTwo.any { it.name == 'main.nf' && it.type == RepositoryProvider.EntryType.FILE }
+        and:
+        depthOne.every { it.path && it.name && it.sha }
+        depthTwo.every { it.path && it.name && it.sha }
     }
 }

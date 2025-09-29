@@ -257,8 +257,13 @@ class AzureRepositoryProviderTest extends Specification {
 
         then:
         entries.size() > 0
+        and:
         entries.any { it.name == 'main.nf' && it.type == RepositoryProvider.EntryType.FILE }
         entries.any { it.name == 'docs' && it.type == RepositoryProvider.EntryType.DIRECTORY }
+        and:
+        // Should NOT include nested files for depth=1
+        !entries.any { it.path == '/docs/images/nf-core-rnaseq_logo_light.png' }
+        and:
         entries.every { it.path && it.sha }
     }
 
@@ -277,6 +282,10 @@ class AzureRepositoryProviderTest extends Specification {
         entries.size() > 0
         entries.every { it.path.startsWith('/docs/') }
         entries.any { it.name == 'images' && it.type == RepositoryProvider.EntryType.DIRECTORY }
+        and:
+        // Should NOT include nested files for depth=1
+        !entries.any { it.path == '/docs/images/nf-core-rnaseq_logo_light.png' }
+        and:
         entries.every { it.path && it.sha }
     }
 
@@ -296,6 +305,6 @@ class AzureRepositoryProviderTest extends Specification {
         entries.every { it.path.startsWith('/docs/') }
         // Should include both the subdirectory and files within it up to depth 2
         entries.any { it.name == 'images' && it.type == RepositoryProvider.EntryType.DIRECTORY }
-        entries.any { it.name == 'nf-core-rnaseq_logo_light.png' && it.type == RepositoryProvider.EntryType.FILE }
+        entries.any { it.name == 'nf-core-rnaseq_logo_light.png' && it.path == '/docs/images/nf-core-rnaseq_logo_light.png'  && it.type == RepositoryProvider.EntryType.FILE }
     }
 }
