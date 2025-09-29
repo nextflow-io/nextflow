@@ -126,28 +126,26 @@ class AzFileAttributes implements BasicFileAttributes {
             creationTime = time(props.getCreationTime())
             updateTime = time(props.getLastModified())
 
-            if (metadata != null && metadata.containsKey("hdi_isfolder") && metadata.get("hdi_isfolder") == "true") {
-                directory = true
-                size = 0
-            } else {
-                directory = false
-                size = props.getBlobSize()
-            }
-        } else {
-            def prefix = blobName.endsWith('/') ? blobName : blobName + '/'
-            def opts = new com.azure.storage.blob.models.ListBlobsOptions().setPrefix(prefix).setMaxResultsPerPage(1)
-            def hasChildren = client.listBlobs(opts, null).stream().findFirst().isPresent()
+            // Determine directory status using multiple indicators
+            def blobSize = props.getBlobSize()
+            def hasHdiFolderMetadata = metadata != null && metadata.containsKey("hdi_isfolder") && metadata.get("hdi_isfolder") == "true"
+            def isZeroByteBlob = blobSize == 0
 
-            if (hasChildren) {
-                directory = true
-                size = 0
-            } else {
-                directory = false
-                size = 0
-            }
+            // Check for directory indicators in order of reliability
+            directory = hasHdiFolderMetadata || (isZeroByteBlob && hasChildrenInStorage(client, blobName))
+            size = directory ? 0 : blobSize
+        } else {
+            // Virtual directory - check if it has children
+            directory = hasChildrenInStorage(client, blobName)
+            size = 0
         }
     }
 
+    private static boolean hasChildrenInStorage(BlobContainerClient client, String blobName) {
+        def prefix = blobName.endsWith('/') ? blobName : blobName + '/'
+        def opts = new com.azure.storage.blob.models.ListBlobsOptions().setPrefix(prefix).setMaxResultsPerPage(1)
+        return client.listBlobs(opts, null).stream().findFirst().isPresent()
+    }
 
     static protected FileTime time(Long millis) {
         millis ? FileTime.from(millis, TimeUnit.MILLISECONDS) : null

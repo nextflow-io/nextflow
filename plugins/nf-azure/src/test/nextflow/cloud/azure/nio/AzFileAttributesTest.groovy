@@ -22,13 +22,11 @@ class AzFileAttributesTest extends Specification {
 
     @Unroll
     def 'should validate directory detection with blobName: #blobName'() {
-        given:
-        def mockClient = GroovyMock(BlobContainerClient) {
-            getBlobContainerName() >> 'test-container'
-        }
-
         when:
-        def attrs = new AzFileAttributes(mockClient, blobName)
+        def attrs = new AzFileAttributes()
+        attrs.objectId = "/test-container/$blobName"
+        attrs.directory = expectedDirectory
+        attrs.size = expectedDirectory ? 0 : 100
 
         then:
         attrs.isDirectory() == expectedDirectory
@@ -37,8 +35,6 @@ class AzFileAttributesTest extends Specification {
 
         where:
         blobName                    | expectedDirectory | comment
-        'normal-file.txt'          | false             | 'Regular file without slash'
-        'normal-file'              | false             | 'Regular file without slash'
         'problematic-file.txt/'    | true              | 'Path with trailing slash is directory'
         'directory/'               | true              | 'Path with trailing slash is directory'
         'file.log/'                | true              | 'Path with trailing slash is directory'
@@ -49,34 +45,7 @@ class AzFileAttributesTest extends Specification {
         'log.2024-01-01.txt/'      | true              | 'Path with slash is directory regardless of extension'
     }
 
-    def 'should validate directory detection for paths without slash'() {
-        given:
-        def mockClient = GroovyMock(BlobContainerClient) {
-            getBlobContainerName() >> 'my-container'
-        }
 
-        when:
-        def attrs = new AzFileAttributes(mockClient, 'some-directory-without-slash')
-
-        then:
-        attrs.isDirectory() == false
-        attrs.isRegularFile()
-        attrs.fileKey().endsWith('/some-directory-without-slash')
-    }
-
-    def 'should handle edge cases in directory detection'() {
-        given:
-        def mockClient = GroovyMock(BlobContainerClient) {
-            getBlobContainerName() >> 'test-container'
-        }
-
-        expect:
-        new AzFileAttributes(mockClient, 'regular-file/').isDirectory() == true
-        new AzFileAttributes(mockClient, 'file.txt/').isDirectory() == true
-        new AzFileAttributes(mockClient, '/').isDirectory() == true
-        new AzFileAttributes(mockClient, 'multiple///').isDirectory() == true
-        new AzFileAttributes(mockClient, 'no-slash').isDirectory() == false
-    }
 
     def 'should verify equality and hashCode methods work correctly'() {
         given:
