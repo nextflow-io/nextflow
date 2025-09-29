@@ -117,7 +117,8 @@ final class GiteaRepositoryProvider extends RepositoryProvider {
     @Override
     List<RepositoryEntry> listDirectory(String path, int depth) {
         final branch = revision ?: "master"
-        final dirPath = path ?: ""
+        // Normalize path using base class helper
+        final dirPath = normalizePath(path)
         
         // Build the contents API URL - Gitea follows GitHub-like API pattern
         String url = "${config.endpoint}/repos/$project/contents"
@@ -164,9 +165,10 @@ final class GiteaRepositoryProvider extends RepositoryProvider {
         List<RepositoryEntry> allEntries = []
         
         // Get current level entries first
+        final normalizedBasePath = normalizePath(basePath)
         String url = "${config.endpoint}/repos/$project/contents"
-        if (basePath) {
-            url += "/$basePath"
+        if (normalizedBasePath) {
+            url += "/$normalizedBasePath"
         }
         url += "?ref=$branch"
         
@@ -176,7 +178,8 @@ final class GiteaRepositoryProvider extends RepositoryProvider {
             
             for (Map entry : contents) {
                 if (entry.get('type') == 'dir' && currentDepth < maxDepth) {
-                    String subPath = basePath ? "$basePath/${entry.get('name')}" : entry.get('name') as String
+                    String entryName = entry.get('name') as String
+                    String subPath = normalizedBasePath ? "$normalizedBasePath/$entryName" : entryName
                     allEntries.addAll(getRecursiveEntries(subPath, maxDepth, branch, currentDepth + 1))
                 }
             }
@@ -201,9 +204,12 @@ final class GiteaRepositoryProvider extends RepositoryProvider {
         String sha = entry.get('sha') as String
         Long size = entry.get('size') as Long
         
+        // Ensure absolute path using base class helper
+        String fullPath = ensureAbsolutePath(path)
+        
         return new RepositoryEntry(
             name: name,
-            path: path,
+            path: fullPath,
             type: entryType,
             sha: sha,
             size: size

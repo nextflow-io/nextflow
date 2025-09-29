@@ -157,7 +157,7 @@ class GitlabRepositoryProviderTest extends Specification {
         def repo = new GitlabRepositoryProvider('pditommaso/hello', config)
 
         when:
-        def entries = repo.listDirectory("", 1)
+        def entries = repo.listDirectory("/", 1)
 
         then:
         entries.size() > 0
@@ -173,12 +173,12 @@ class GitlabRepositoryProviderTest extends Specification {
         def repo = new GitlabRepositoryProvider('pditommaso/hello', config)
 
         when:
-        def entries = repo.listDirectory("test", 1)
+        def entries = repo.listDirectory("/test", 1)
 
         then:
         entries.size() > 0
         entries.any { it.name == 'test-asset.bin' && it.type == RepositoryProvider.EntryType.FILE }
-        entries.every { it.path.startsWith('test/') }
+        entries.every { it.path.startsWith('/test/') }
     }
 
     @Requires({System.getenv('NXF_GITLAB_ACCESS_TOKEN')})
@@ -189,7 +189,7 @@ class GitlabRepositoryProviderTest extends Specification {
         def repo = new GitlabRepositoryProvider('pditommaso/hello', config)
 
         when:
-        def entries = repo.listDirectory("", 10)
+        def entries = repo.listDirectory("/", 10)
 
         then:
         entries.size() > 0
@@ -206,7 +206,7 @@ class GitlabRepositoryProviderTest extends Specification {
         def repo = new GitlabRepositoryProvider('pditommaso/hello', config)
 
         when:
-        def entries = repo.listDirectory("", 2)
+        def entries = repo.listDirectory("/", 2)
 
         then:
         entries.size() > 0
@@ -214,7 +214,7 @@ class GitlabRepositoryProviderTest extends Specification {
         entries.any { it.name == 'main.nf' && it.type == RepositoryProvider.EntryType.FILE }
         entries.any { it.name == 'test' && it.type == RepositoryProvider.EntryType.DIRECTORY }
         // Should include nested files (depth 2)
-        entries.any { it.name == 'test-asset.bin' && it.path.contains('test/') }
+        entries.any { it.name == 'test-asset.bin' && it.path.contains('/test/') }
         entries.every { it.path && it.sha }
     }
 }

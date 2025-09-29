@@ -136,7 +136,7 @@ class GiteaRepositoryProviderTest extends Specification {
         def repo = new GiteaRepositoryProvider('pditommaso/test-hello', config)
 
         when:
-        def entries = repo.listDirectory("", 1)
+        def entries = repo.listDirectory("/", 1)
 
         then:
         entries.size() > 0
@@ -153,11 +153,11 @@ class GiteaRepositoryProviderTest extends Specification {
         def repo = new GiteaRepositoryProvider('pditommaso/test-hello', config)
 
         when:
-        def entries = repo.listDirectory("test", 1)
+        def entries = repo.listDirectory("/test", 1)
 
         then:
         entries.size() > 0
         entries.any { it.name == 'test-asset.bin' && it.type == RepositoryProvider.EntryType.FILE }
-        entries.every { it.path.startsWith('test/') }
+        entries.every { it.path.startsWith('/test/') }
     }
 }

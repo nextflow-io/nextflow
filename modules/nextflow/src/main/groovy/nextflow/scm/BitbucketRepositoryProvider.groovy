@@ -198,7 +198,8 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
     @Override
     List<RepositoryEntry> listDirectory(String path, int depth) {
         final ref = revision ? getRefForRevision(revision) : getMainBranch()
-        final dirPath = path ?: ""
+        // Normalize path using base class helper
+        final dirPath = normalizePath(path)
         
         // Build the src API URL - BitBucket's src endpoint returns directory listings when path is a directory
         String url = "${config.endpoint}/2.0/repositories/$project/src/$ref/$dirPath"
@@ -215,8 +216,9 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
             List<RepositoryEntry> entries = []
             
             for (Map entry : values) {
-                // Filter entries based on depth
-                if (shouldIncludeEntry(entry, path, depth)) {
+                String entryPath = entry.get('path') as String
+                // Filter entries based on depth using base class helper
+                if (shouldIncludeAtDepth(entryPath, path, depth)) {
                     entries.add(createRepositoryEntry(entry, path))
                 }
             }
@@ -230,34 +232,6 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
         }
     }
 
-    private boolean shouldIncludeEntry(Map entry, String basePath, int depth) {
-        String entryPath = entry.get('path') as String
-        if (!entryPath) {
-            return false
-        }
-        
-        String relativePath = entryPath
-        if (basePath && !basePath.isEmpty()) {
-            String normalizedBase = basePath.stripStart('/').stripEnd('/')
-            String normalizedEntry = entryPath.stripStart('/').stripEnd('/')
-            
-            if (normalizedEntry.startsWith(normalizedBase + "/")) {
-                relativePath = normalizedEntry.substring(normalizedBase.length() + 1)
-            } else if (normalizedEntry == normalizedBase) {
-                return false // Skip the base directory itself
-            } else {
-                return false // Entry is not under the base path
-            }
-        }
-        
-        // Count directory levels in the relative path
-        int entryDepth = relativePath.split("/").length - 1
-        
-        // Include if within depth limit: depth=1 includes immediate children only,
-        // depth=2 includes children+grandchildren, depth=3 includes children+grandchildren+great-grandchildren, etc.
-        return entryDepth < depth
-    }
-
     private RepositoryEntry createRepositoryEntry(Map entry, String basePath) {
         String entryPath = entry.get('path') as String
         String name = entryPath?.split('/')?.last() ?: entry.get('name') as String
@@ -269,9 +243,12 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
         String sha = entry.get('commit')?.get('hash') as String
         Long size = entry.get('size') as Long
         
+        // Ensure absolute path using base class helper
+        String fullPath = ensureAbsolutePath(entryPath)
+        
         return new RepositoryEntry(
             name: name,
-            path: entryPath,
+            path: fullPath,
             type: entryType,
             sha: sha,
             size: size

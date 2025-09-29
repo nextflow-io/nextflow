@@ -176,7 +176,7 @@ class GithubRepositoryProviderTest extends Specification {
         def repo = new GithubRepositoryProvider('nextflow-io/test-hello', config)
 
         when:
-        def entries = repo.listDirectory("", 1)
+        def entries = repo.listDirectory("/", 1)
 
         then:
         entries.size() > 0
@@ -192,12 +192,12 @@ class GithubRepositoryProviderTest extends Specification {
         def repo = new GithubRepositoryProvider('nextflow-io/test-hello', config)
 
         when:
-        def entries = repo.listDirectory("test", 1)
+        def entries = repo.listDirectory("/test", 1)
 
         then:
         entries.size() > 0
         entries.any { it.name == 'test-asset.bin' && it.type == RepositoryProvider.EntryType.FILE }
-        entries.every { it.path.startsWith('test/') }
+        entries.every { it.path.startsWith('/test/') }
     }
 
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
@@ -208,7 +208,7 @@ class GithubRepositoryProviderTest extends Specification {
         def repo = new GithubRepositoryProvider('nextflow-io/test-hello', config)
 
         when:
-        def entries = repo.listDirectory("", 10)
+        def entries = repo.listDirectory("/", 10)
 
         then:
         entries.size() > 0
@@ -226,14 +226,14 @@ class GithubRepositoryProviderTest extends Specification {
         def repo = new GithubRepositoryProvider('nextflow-io/test-hello', config)
 
         when:
-        def depthOne = repo.listDirectory("", 1)
-        def depthTwo = repo.listDirectory("", 2)
+        def depthOne = repo.listDirectory("/", 1)
+        def depthTwo = repo.listDirectory("/", 2)
 
         then:
         depthOne.size() > 0
         depthTwo.size() >= depthOne.size()
-        // Depth 1 should only include immediate children
-        depthOne.every { !it.path.contains('/') }
+        // Depth 1 should only include immediate children (no nested paths beyond root)
+        depthOne.every { it.path.split('/').length <= 2 }
     }
 
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
@@ -244,7 +244,7 @@ class GithubRepositoryProviderTest extends Specification {
         def repo = new GithubRepositoryProvider('nextflow-io/test-hello', config)
 
         when:
-        def entries = repo.listDirectory("", 2)
+        def entries = repo.listDirectory("/", 2)
 
         then:
         entries.size() > 0
@@ -252,7 +252,7 @@ class GithubRepositoryProviderTest extends Specification {
         entries.any { it.name == 'main.nf' && it.type == RepositoryProvider.EntryType.FILE }
         entries.any { it.name == 'test' && it.type == RepositoryProvider.EntryType.DIRECTORY }
         // Should include nested files (depth 2)
-        entries.any { it.name == 'test-asset.bin' && it.path.contains('test/') }
+        entries.any { it.name == 'test-asset.bin' && it.path.contains('/test/') }
         entries.every { it.path && it.sha }
     }
 

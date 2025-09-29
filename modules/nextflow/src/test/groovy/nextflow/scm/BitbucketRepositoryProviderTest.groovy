@@ -214,7 +214,7 @@ class BitbucketRepositoryProviderTest extends Specification {
         def repo = new BitbucketRepositoryProvider('pditommaso/tutorial', config)
 
         when:
-        def entries = repo.listDirectory("", 1)
+        def entries = repo.listDirectory("/", 1)
 
         then:
         entries.size() > 0
@@ -230,7 +230,7 @@ class BitbucketRepositoryProviderTest extends Specification {
         def repo = new BitbucketRepositoryProvider('pditommaso/tutorial', config)
 
         when:
-        def entries = repo.listDirectory("", 10)
+        def entries = repo.listDirectory("/", 10)
 
         then:
         entries.size() >= 0 // May succeed or fail depending on API support
@@ -249,7 +249,7 @@ class BitbucketRepositoryProviderTest extends Specification {
         def repo = new BitbucketRepositoryProvider('pditommaso/tutorial', config)
 
         when:
-        def entries = repo.listDirectory("", 2)
+        def entries = repo.listDirectory("/", 2)
 
         then:
         entries.size() >= 0 // May succeed or fail depending on API support

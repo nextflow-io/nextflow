@@ -199,7 +199,7 @@ class LocalRepositoryProviderTest extends Specification {
         def manager = new LocalRepositoryProvider('project_hello', config)
 
         when:
-        def entries = manager.listDirectory("", 1)
+        def entries = manager.listDirectory("/", 1)
 
         then:
         entries.size() > 0
@@ -222,12 +222,12 @@ class LocalRepositoryProviderTest extends Specification {
         def manager = new LocalRepositoryProvider('project_hello', config)
 
         when:
-        def entries = manager.listDirectory("subdir", 1)
+        def entries = manager.listDirectory("/subdir", 1)
 
         then:
         entries.size() == 2
         entries.any { it.name == 'file1.txt' && it.type == RepositoryProvider.EntryType.FILE }
         entries.any { it.name == 'file2.txt' && it.type == RepositoryProvider.EntryType.FILE }
-        entries.every { it.path.startsWith('subdir/') }
+        entries.every { it.path.startsWith('/subdir/') }
     }
 }

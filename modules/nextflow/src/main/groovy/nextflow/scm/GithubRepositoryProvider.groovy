@@ -161,9 +161,12 @@ class GithubRepositoryProvider extends RepositoryProvider {
 
     @Memoized
     private String getTreeSha(String path) {
-        if (path && !path.isEmpty()) {
+        // Normalize path using base class helper
+        def normalizedPath = normalizePath(path)
+        
+        if (normalizedPath && !normalizedPath.isEmpty()) {
             // For subdirectory, we need to find the tree SHA by traversing from root
-            return getTreeShaForPath(path)
+            return getTreeShaForPath(normalizedPath)
         }
         
         // For root directory, get the commit SHA and then the tree SHA
@@ -226,7 +229,10 @@ class GithubRepositoryProvider extends RepositoryProvider {
 
     private RepositoryEntry createRepositoryEntry(Map entry, String basePath) {
         String entryPath = entry.get('path') as String
-        String fullPath = basePath && !basePath.isEmpty() ? "${basePath}/${entryPath}" : entryPath
+        
+        // Create absolute path using base class helper
+        def normalizedBasePath = normalizePath(basePath)
+        String fullPath = normalizedBasePath && !normalizedBasePath.isEmpty() ? "/${normalizedBasePath}/${entryPath}" : ensureAbsolutePath(entryPath)
         
         // For name, use just the entry path (which is relative to the directory we're listing)
         String name = entryPath

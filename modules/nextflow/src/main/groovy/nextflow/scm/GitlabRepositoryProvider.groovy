@@ -129,7 +129,8 @@ class GitlabRepositoryProvider extends RepositoryProvider {
     @Override
     List<RepositoryEntry> listDirectory(String path, int depth) {
         final ref = revision ?: getDefaultBranch()
-        final encodedPath = path ? URLEncoder.encode(path.stripStart('/'), 'utf-8') : ""
+        final normalizedPath = normalizePath(path)
+        final encodedPath = normalizedPath ? URLEncoder.encode(normalizedPath, 'utf-8') : ""
         
         // Build the Tree API URL
         String url = "${config.endpoint}/api/v4/projects/${getProjectName()}/repository/tree"
@@ -159,35 +160,13 @@ class GitlabRepositoryProvider extends RepositoryProvider {
         for (Map entry : treeEntries) {
             String entryPath = entry.get('path') as String
             
-            // Filter entries based on depth
-            if (shouldIncludeEntry(entryPath, path, depth)) {
+            // Filter entries based on depth using base class helper
+            if (shouldIncludeAtDepth(entryPath, path, depth)) {
                 entries.add(createRepositoryEntry(entry, path))
             }
         }
         
         return entries.sort { it.name }
-    }
-
-    private boolean shouldIncludeEntry(String entryPath, String basePath, int depth) {
-        String relativePath = entryPath
-        if (basePath && !basePath.isEmpty()) {
-            // If we have a base path, compute the relative path
-            String normalizedBase = basePath.stripStart('/').stripEnd('/')
-            String normalizedEntry = entryPath.stripStart('/').stripEnd('/')
-            
-            if (normalizedEntry.startsWith(normalizedBase + "/")) {
-                relativePath = normalizedEntry.substring(normalizedBase.length() + 1)
-            } else if (normalizedEntry == normalizedBase) {
-                return false // Skip the base directory itself
-            }
-        }
-        
-        // Count directory levels in the relative path
-        int entryDepth = relativePath.split("/").length - 1
-        
-        // Include if within depth limit: depth=1 includes immediate children only,
-        // depth=2 includes children+grandchildren, depth=3 includes children+grandchildren+great-grandchildren, etc.
-        return entryDepth < depth
     }
 
     private RepositoryEntry createRepositoryEntry(Map entry, String basePath) {
@@ -198,9 +177,12 @@ class GitlabRepositoryProvider extends RepositoryProvider {
         String sha = entry.get('id') as String
         Long size = null // GitLab tree API doesn't provide file size
         
+        // Ensure absolute path using base class helper
+        String fullPath = ensureAbsolutePath(entryPath)
+        
         return new RepositoryEntry(
             name: name,
-            path: entryPath,
+            path: fullPath,
             type: type,
             sha: sha,
             size: size

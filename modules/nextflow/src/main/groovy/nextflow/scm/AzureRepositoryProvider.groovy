@@ -218,8 +218,9 @@ final class AzureRepositoryProvider extends RepositoryProvider {
     @Override
     List<RepositoryEntry> listDirectory(String path, int depth) {
         // Build the Items API URL
-        def normalizedPath = path?.trim()
-        if (!normalizedPath || normalizedPath == "/" || normalizedPath == "") {
+        def normalizedPath = normalizePath(path)
+        // For Azure API, root directory should be represented as "/" not empty string
+        if (!normalizedPath) {
             normalizedPath = "/"
         }
         
@@ -261,8 +262,8 @@ final class AzureRepositoryProvider extends RepositoryProvider {
                     continue
                 }
                 
-                // Filter entries based on depth if needed
-                if (shouldIncludeEntry(itemPath, path, depth)) {
+                // Filter entries based on depth using base class helper
+                if (shouldIncludeAtDepth(itemPath, path, depth)) {
                     entries.add(createRepositoryEntry(item, path))
                 }
             }
@@ -274,36 +275,6 @@ final class AzureRepositoryProvider extends RepositoryProvider {
             // Return empty list to allow graceful degradation
             return []
         }
-    }
-
-    private boolean shouldIncludeEntry(String itemPath, String basePath, int depth) {
-        String relativePath = itemPath
-        if (basePath && !basePath.isEmpty() && basePath != "/") {
-            String normalizedBase = basePath.stripStart('/').stripEnd('/')
-            String normalizedItem = itemPath.stripStart('/').stripEnd('/')
-            
-            if (normalizedItem.startsWith(normalizedBase + "/")) {
-                relativePath = normalizedItem.substring(normalizedBase.length() + 1)
-            } else if (normalizedItem == normalizedBase) {
-                return false // Skip the base directory itself
-            } else {
-                return false // Item is not under the base path
-            }
-        } else {
-            // For root directory, remove leading slash
-            relativePath = itemPath.stripStart('/')
-        }
-        
-        if (relativePath.isEmpty()) {
-            return false
-        }
-        
-        // Count directory levels in the relative path
-        int itemDepth = relativePath.split("/").length - 1
-        
-        // Include if within depth limit: depth=1 includes immediate children only,
-        // depth=2 includes children+grandchildren, depth=3 includes children+grandchildren+great-grandchildren, etc.
-        return itemDepth < depth
     }
 
     private RepositoryEntry createRepositoryEntry(Map item, String basePath) {

@@ -498,4 +498,76 @@ abstract class RepositoryProvider {
         return builder.build()
     }
 
+    /**
+     * Normalizes a path for repository operations by treating "/" as an empty path (root directory).
+     * This helper method ensures consistent path handling across all repository providers.
+     *
+     * @param path The input path to normalize
+     * @return Normalized path: null/empty/"/" becomes "", otherwise removes leading slash
+     */
+    protected static String normalizePath(String path) {
+        if (path == "/" || path == null || path.isEmpty()) {
+            return ""
+        }
+        return path.startsWith("/") ? path.substring(1) : path
+    }
+
+    /**
+     * Ensures a path starts with "/" to create an absolute path for consistent API responses.
+     * This helper method is used when creating RepositoryEntry objects.
+     *
+     * @param path The input path
+     * @return Absolute path starting with "/"
+     */
+    protected static String ensureAbsolutePath(String path) {
+        if (path == null || path.isEmpty()) {
+            return "/"
+        }
+        return path.startsWith("/") ? path : "/" + path
+    }
+
+    /**
+     * Checks if an entry should be included based on depth filtering.
+     * This helper provides consistent depth semantics across providers.
+     *
+     * @param entryPath The full path of the entry
+     * @param basePath The base directory path being listed
+     * @param depth The maximum depth (-1 for unlimited, 0 for immediate children only)
+     * @return true if the entry should be included
+     */
+    protected static boolean shouldIncludeAtDepth(String entryPath, String basePath, int depth) {
+        if (depth == -1) {
+            return true // Unlimited depth
+        }
+
+        String relativePath = entryPath
+        String normalizedBasePath = normalizePath(basePath)
+        
+        if (normalizedBasePath && !normalizedBasePath.isEmpty()) {
+            String normalizedEntry = entryPath.stripStart('/').stripEnd('/')
+            normalizedBasePath = normalizedBasePath.stripEnd('/')
+            
+            if (normalizedEntry.startsWith(normalizedBasePath + "/")) {
+                relativePath = normalizedEntry.substring(normalizedBasePath.length() + 1)
+            } else if (normalizedEntry == normalizedBasePath) {
+                return false // Skip the base directory itself
+            } else {
+                return false // Entry is not under the base path
+            }
+        } else {
+            // For root directory, use the entry path directly
+            relativePath = entryPath.stripStart('/').stripEnd('/')
+        }
+        
+        if (relativePath.isEmpty()) {
+            return false
+        }
+        
+        // Count directory levels in the relative path
+        int entryDepth = relativePath.split("/").length - 1
+        
+        // Include if within depth limit: depth=0 includes immediate children only
+        return entryDepth <= depth
+    }
+
 }

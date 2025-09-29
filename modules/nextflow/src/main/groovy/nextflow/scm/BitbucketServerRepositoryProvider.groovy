@@ -114,12 +114,14 @@ final class BitbucketServerRepositoryProvider extends RepositoryProvider {
     /** {@inheritDoc} */
     @Override
     List<RepositoryEntry> listDirectory(String path, int depth) {
-        final dirPath = path ?: ""
+        final dirPath = normalizePath(path)
+        // For Bitbucket Server API, empty path should remain empty
+        final apiPath = dirPath ?: ""
         
         // Try to use Bitbucket Server's browse API endpoint
         String url = "${config.endpoint}/rest/api/1.0/projects/${project}/repos/${repository}/browse"
-        if (dirPath) {
-            url += "/$dirPath"
+        if (apiPath) {
+            url += "/$apiPath"
         }
         
         // Add query parameters
@@ -151,7 +153,8 @@ final class BitbucketServerRepositoryProvider extends RepositoryProvider {
                 for (Map child : children) {
                     if (child.get('type') == 'DIRECTORY') {
                         try {
-                            String childPath = dirPath ? "$dirPath/${child.get('path')?.displayName ?: child.get('displayName')}" : child.get('path')?.displayName ?: child.get('displayName')
+                            String childName = child.get('path')?.displayName ?: child.get('displayName')
+                            String childPath = dirPath ? "$dirPath/$childName" : childName
                             List<RepositoryEntry> childEntries = listDirectory(childPath, depth - 1)
                             entries.addAll(childEntries)
                         } catch (Exception e) {
@@ -170,7 +173,8 @@ final class BitbucketServerRepositoryProvider extends RepositoryProvider {
 
     private RepositoryEntry createRepositoryEntry(Map child, String basePath) {
         String name = child.get('path')?.displayName ?: child.get('displayName') ?: "unknown"
-        String childPath = basePath ? "$basePath/$name" : name
+        String normalizedBase = normalizePath(basePath)
+        String childPath = normalizedBase ? "$normalizedBase/$name" : name
         
         String type = child.get('type') as String
         EntryType entryType = (type == 'DIRECTORY') ? EntryType.DIRECTORY : EntryType.FILE

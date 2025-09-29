@@ -136,7 +136,7 @@ class BitbucketServerRepositoryProviderTest extends Specification {
         def repo = new BitbucketServerRepositoryProvider('scm/hello/hello', config)
 
         when:
-        def entries = repo.listDirectory("", 1)
+        def entries = repo.listDirectory("/", 1)
 
         then:
         entries.size() > 0
@@ -152,9 +152,9 @@ class BitbucketServerRepositoryProviderTest extends Specification {
         def repo = new BitbucketServerRepositoryProvider('scm/hello/hello', config)
 
         when:
-        def entries = repo.listDirectory("docs", 1)
+        def entries = repo.listDirectory("/docs", 1)
 
         then:
-        entries.every { it.path.startsWith('docs/') }
+        entries.every { it.path.startsWith('/docs/') }
     }
 }

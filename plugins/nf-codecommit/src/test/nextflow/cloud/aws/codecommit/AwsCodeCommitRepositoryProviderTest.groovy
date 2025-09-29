@@ -112,7 +112,7 @@ class AwsCodeCommitRepositoryProviderTest extends Specification {
         def provider = new AwsCodeCommitRepositoryProvider('codecommit-eu-west-1/my-repo', config)
 
         when:
-        def entries = provider.listDirectory("/", 0)
+        def entries = provider.listDirectory("/", 1)
 
         then:
         entries.size() > 0
