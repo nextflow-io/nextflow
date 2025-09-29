@@ -41,7 +41,7 @@ class AzPathTest extends Specification {
         objectName              | expected              | dir
         '/bucket/file.txt'      | '/bucket/file.txt'    | false
         '/bucket/a/b/c'         | '/bucket/a/b/c'       | false
-        '/bucket/a/b/c/'        | '/bucket/a/b/c'       | true
+        '/bucket/a/b/c/'        | '/bucket/a/b/c'       | false
         '/bucket'               | '/bucket'             | true
         '/bucket/'              | '/bucket'             | true
 
@@ -63,7 +63,7 @@ class AzPathTest extends Specification {
         where:
         PATH                    | CONTAINER     | BLOB          | IS_DIRECTORY  | IS_CONTAINER
         '/alpha/beta/delta'     | 'alpha'       | 'beta/delta'  | false         | false
-        '/alpha/beta/delta/'    | 'alpha'       | 'beta/delta/' | true          | false
+        '/alpha/beta/delta/'    | 'alpha'       | 'beta/delta/' | false         | false
         '/alpha/'               | 'alpha'       | null          | true          | true
         '/alpha'                | 'alpha'       | null          | true          | true
 
@@ -112,6 +112,76 @@ class AzPathTest extends Specification {
         path1.root == azpath('/bucket')
         path1.root.toString() == '/bucket'
         path2.root == null
+    }
+
+    @Unroll
+    def 'should demonstrate trailing slash directory bug in AzPath constructor: #testPath'() {
+        when:
+        def path = azpath(testPath)
+
+        then:
+        path.isDirectory() == expectedDirectory
+
+        where:
+        testPath                          | expectedDirectory | comment
+        '/container/regular-file.txt'     | false             | 'File without slash is a file'
+        '/container/regular-file.txt/'    | false             | 'File with slash is a file'
+        '/container/data.log'             | false             | 'Log file without slash'
+        '/container/data.log/'            | false             | 'Log file with slash is a file'
+        '/container/important.json'       | false             | 'JSON file without slash is a file'
+        '/container/important.json/'      | false             | 'JSON file with slash is a file'
+        '/container/backup.tar.gz'        | false             | 'Archive file without slash is a file'
+        '/container/backup.tar.gz/'       | false             | 'Archive file with slash is a file'
+        '/container/script.sh'            | false             | 'Script file without slash is a file'
+        '/container/script.sh/'           | false             | 'Script file with slash is a file'
+    }
+
+    def 'should demonstrate the specific Nextflow workflow issue'() {
+        given:
+        def filePath1 = azpath('/bucket/scratch/some-file')      // File without trailing slash
+        def filePath2 = azpath('/bucket/scratch/some-file/')     // Same file with trailing slash
+
+        when:
+        def isDirectory1 = filePath1.isDirectory()
+        def isDirectory2 = filePath2.isDirectory()
+
+        then:
+        isDirectory1 == false   // File without slash is a file
+        isDirectory2 == false   // Same file with slash is a file
+
+        and:
+        def logFile1 = azpath('/bucket/data.log')
+        def logFile2 = azpath('/bucket/data.log/')
+
+        logFile1.isDirectory() == false
+        logFile2.isDirectory() == false
+    }
+
+    def 'should validate directory detection with real-world paths'() {
+        when:
+        def scratchWithoutSlash = azpath("/seqeralabs-showcase/scratch")
+        def scratchWithSlash = azpath("/seqeralabs-showcase/scratch/")
+
+        then:
+        scratchWithoutSlash.isDirectory() == false   // Queries Azure storage
+        scratchWithSlash.isDirectory() == true       // Trailing slash = directory
+    }
+
+    def 'should validate directory detection in Channel-like operations'() {
+        when:
+        def paths = [
+            azpath("/container/file1"),
+            azpath("/container/file1/"),
+            azpath("/container/file2.txt"),
+            azpath("/container/file2.txt/")
+        ]
+        def directoryResults = paths.collect { it.isDirectory() }
+
+        then:
+        directoryResults[0] == false    // file1 without slash queries Azure storage
+        directoryResults[1] == true     // file1 with slash treated as directory
+        directoryResults[2] == false    // file2.txt without slash queries Azure storage
+        directoryResults[3] == true     // file2.txt with slash treated as directory
     }
 
     @Unroll

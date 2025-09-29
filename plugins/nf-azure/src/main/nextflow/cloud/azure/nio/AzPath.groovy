@@ -94,7 +94,34 @@ class AzPath implements Path {
     }
 
     boolean isDirectory() {
-        return directory
+        if (directory) {
+            return true
+        }
+
+        def blobNameStr = blobName()
+        if (blobNameStr) {
+            def containerClient = containerClient()
+            def blobClient = containerClient.getBlobClient(blobNameStr)
+
+            if (blobClient.exists()) {
+                def props = blobClient.getProperties()
+                def metadata = props.getMetadata()
+
+                if (metadata != null && metadata.containsKey("hdi_isfolder") && metadata.get("hdi_isfolder") == "true") {
+                    return true
+                }
+            } else {
+                def prefix = blobNameStr.endsWith('/') ? blobNameStr : blobNameStr + '/'
+                def opts = new com.azure.storage.blob.models.ListBlobsOptions().setPrefix(prefix).setMaxResultsPerPage(1)
+                def hasChildren = containerClient.listBlobs(opts, null).stream().findFirst().isPresent()
+
+                if (hasChildren) {
+                    return true
+                }
+            }
+        }
+
+        return false
     }
 
     String checkContainerName() {

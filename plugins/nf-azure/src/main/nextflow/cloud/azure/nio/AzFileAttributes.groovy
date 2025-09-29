@@ -111,7 +111,41 @@ class AzFileAttributes implements BasicFileAttributes {
 
     protected AzFileAttributes(BlobContainerClient client, String blobName) {
         objectId = "/$client.blobContainerName/$blobName"
-        directory = blobName.endsWith('/')
+
+        if (blobName.endsWith('/')) {
+            directory = true
+            size = 0
+            return
+        }
+
+        def blobClient = client.getBlobClient(blobName)
+        if (blobClient.exists()) {
+            def props = blobClient.getProperties()
+            def metadata = props.getMetadata()
+
+            creationTime = time(props.getCreationTime())
+            updateTime = time(props.getLastModified())
+
+            if (metadata != null && metadata.containsKey("hdi_isfolder") && metadata.get("hdi_isfolder") == "true") {
+                directory = true
+                size = 0
+            } else {
+                directory = false
+                size = props.getBlobSize()
+            }
+        } else {
+            def prefix = blobName.endsWith('/') ? blobName : blobName + '/'
+            def opts = new com.azure.storage.blob.models.ListBlobsOptions().setPrefix(prefix).setMaxResultsPerPage(1)
+            def hasChildren = client.listBlobs(opts, null).stream().findFirst().isPresent()
+
+            if (hasChildren) {
+                directory = true
+                size = 0
+            } else {
+                directory = false
+                size = 0
+            }
+        }
     }
 
 
