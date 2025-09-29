@@ -141,15 +141,22 @@ final class GiteaRepositoryProvider extends RepositoryProvider {
             List<RepositoryEntry> entries = []
             
             for (Map entry : contents) {
-                // For depth control, we need to filter appropriately
-                if (shouldIncludeEntry(entry, path, depth)) {
+                String entryPath = entry.get('path') as String
+                // Filter entries based on depth using base class helper
+                if (shouldIncludeAtDepth(entryPath, path, depth)) {
                     entries.add(createRepositoryEntry(entry))
                 }
             }
             
             // If depth > 1, we need to recursively get subdirectory contents
             if (depth > 1) {
-                entries.addAll(getRecursiveEntries(path, depth, branch, 1))
+                for (Map entry : contents) {
+                    if (entry.get('type') == 'dir') {
+                        String entryName = entry.get('name') as String
+                        String subPath = dirPath ? "$dirPath/$entryName" : entryName
+                        entries.addAll(getRecursiveEntries(subPath, depth, branch, 2))
+                    }
+                }
             }
             
             return entries.sort { it.name }
@@ -179,6 +186,14 @@ final class GiteaRepositoryProvider extends RepositoryProvider {
             List<Map> contents = new groovy.json.JsonSlurper().parseText(response) as List<Map>
             
             for (Map entry : contents) {
+                String entryPath = entry.get('path') as String
+                
+                // Add entries from the current level that match the depth criteria
+                if (shouldIncludeAtDepth(entryPath, basePath, maxDepth)) {
+                    allEntries.add(createRepositoryEntry(entry))
+                }
+                
+                // Recurse into subdirectories if we haven't reached max depth
                 if (entry.get('type') == 'dir' && currentDepth < maxDepth) {
                     String entryName = entry.get('name') as String
                     String subPath = normalizedBasePath ? "$normalizedBasePath/$entryName" : entryName
@@ -191,11 +206,6 @@ final class GiteaRepositoryProvider extends RepositoryProvider {
         }
         
         return allEntries
-    }
-
-    private boolean shouldIncludeEntry(Map entry, String basePath, int depth) {
-        // For Gitea contents API, we get direct children, so depth 0 includes all returned items
-        return true
     }
 
     private RepositoryEntry createRepositoryEntry(Map entry) {

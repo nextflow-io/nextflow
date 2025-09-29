@@ -258,7 +258,7 @@ final class AzureRepositoryProvider extends RepositoryProvider {
             for (Map item : items) {
                 // Skip the root directory itself
                 String itemPath = item.get('path') as String
-                if (itemPath == path || (path?.isEmpty() && itemPath == "/")) {
+                if (itemPath == path || (!path && itemPath == "/")) {
                     continue
                 }
                 

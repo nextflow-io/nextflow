@@ -121,15 +121,21 @@ class LocalRepositoryProvider extends RepositoryProvider {
             if (normalizedPath && !normalizedPath.isEmpty()) {
                 // Navigate to the specific directory first
                 def dirWalk = TreeWalk.forPath(repo, normalizedPath, tree)
-                if (!dirWalk || !dirWalk.isSubtree()) {
-                    return [] // Path doesn't exist or is not a directory
+                try {
+                    if (!dirWalk || !dirWalk.isSubtree()) {
+                        return [] // Path doesn't exist or is not a directory
+                    }
+                    treeWalk.addTree(dirWalk.getObjectId(0))
+                } finally {
+                    dirWalk?.close()
                 }
-                treeWalk.addTree(dirWalk.getObjectId(0))
             } else {
                 treeWalk.addTree(tree)
             }
             
-            treeWalk.setRecursive(depth > 1)
+            // For depth filtering, we need to traverse recursively when depth > 1
+            // The shouldIncludeAtDepth filter will handle the actual depth limiting
+            treeWalk.setRecursive(depth != 1)
             
             List<RepositoryEntry> entries = []
             
