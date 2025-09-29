@@ -90,7 +90,7 @@ class ConfigSpec {
 
     private static Object fromType(ClassNode cn) {
         final name = Types.getName(cn.getTypeClass())
-        if( cn.getGenericsTypes() != null ) {
+        if( !cn.isGenericsPlaceHolder() && cn.getGenericsTypes() != null ) {
             final typeArguments = cn.getGenericsTypes().collect { gt -> fromType(gt.getType()) }
             return [ name: name, typeArguments: typeArguments ]
         }
