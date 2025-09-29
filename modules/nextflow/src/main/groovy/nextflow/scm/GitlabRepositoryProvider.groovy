@@ -16,7 +16,7 @@
 
 package nextflow.scm
 
-
+import groovy.json.JsonSlurper
 import groovy.util.logging.Slf4j
 /**
  * Implements a repository provider for GitHub service
@@ -147,7 +147,8 @@ class GitlabRepositoryProvider extends RepositoryProvider {
         }
         
         // Make the API call and parse response
-        List<Map> treeEntries = invoke(url) ? new groovy.json.JsonSlurper().parseText(invoke(url)) as List<Map> : []
+        String response = invoke(url)
+        List<Map> treeEntries = response ? new JsonSlurper().parseText(response) as List<Map> : []
         
         if (!treeEntries) {
             return []

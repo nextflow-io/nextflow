@@ -140,10 +140,10 @@ class GithubRepositoryProvider extends RepositoryProvider {
         for (Map entry : treeEntries) {
             String entryPath = entry.get('path') as String
             
-            // Include if within depth limit: depth=1 includes immediate children only,
-            // depth=2 includes children+grandchildren, depth=3 includes children+grandchildren+great-grandchildren, etc.
+            // Include if within depth limit: depth=0 includes immediate children only,
+            // depth=1 includes children+grandchildren, depth=2 includes children+grandchildren+great-grandchildren, etc.
             int entryDepth = entryPath.split("/").length - 1
-            if (entryDepth < depth) {
+            if (depth == -1 || entryDepth <= depth) {
                 entries.add(createRepositoryEntry(entry, path))
             }
         }
@@ -223,28 +223,6 @@ class GithubRepositoryProvider extends RepositoryProvider {
         }
     }
 
-    private boolean shouldIncludeEntry(String entryPath, String pathPrefix, int depth) {
-        // If we're looking at a subdirectory, entries should be under that path
-        if (!pathPrefix.isEmpty()) {
-            if (!entryPath.startsWith(pathPrefix)) {
-                return false
-            }
-            // Remove the prefix to get relative path
-            String relativePath = entryPath.substring(pathPrefix.length())
-            
-            // Count directory levels in the remaining path
-            int entryDepth = relativePath.split("/").length - 1
-            
-            // Include if within depth limit (depth 0 means only immediate children)
-            return depth == -1 || entryDepth <= depth
-        }
-        
-        // For root directory, count directory levels in the full path
-        int entryDepth = entryPath.split("/").length - 1
-        
-        // Include if within depth limit (depth 0 means only immediate children)
-        return depth == -1 || entryDepth <= depth
-    }
 
     private RepositoryEntry createRepositoryEntry(Map entry, String basePath) {
         String entryPath = entry.get('path') as String
