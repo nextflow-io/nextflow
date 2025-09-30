@@ -205,4 +205,69 @@ class BitbucketRepositoryProviderTest extends Specification {
         ["Authorization", "Basic ${"foo:bar".bytes.encodeBase64()}"]             | new ProviderConfig('bitbucket').setUser('foo').setPassword('bar')
         ["Authorization", "Basic ${"foo@nextflow.io:xyz".bytes.encodeBase64()}"] | new ProviderConfig('bitbucket').setUser('foo@nextflow.io').setToken('xyz')
     }
+
+    @Requires({ System.getenv('NXF_BITBUCKET_ACCESS_TOKEN') })
+    def 'should list root directory contents'() {
+        given:
+        def token = System.getenv('NXF_BITBUCKET_ACCESS_TOKEN')
+        def config = new ProviderConfig('bitbucket').setAuth(token)
+        def repo = new BitbucketRepositoryProvider('pditommaso/tutorial', config)
+
+        when:
+        def entries = repo.listDirectory("/", 1)
+
+        then:
+        entries.size() > 0
+        and:
+        entries.any { it.name == 'main.nf' && it.type == RepositoryProvider.EntryType.FILE }
+        and:
+        entries.every { it.path && it.name && it.sha }
+        // Should only include immediate children for depth=1
+        entries.every { it.path.split('/').length <= 2 }
+        and:
+        // Should NOT include any nested paths beyond immediate children  
+        !entries.any { it.path.split('/').length > 2 }
+    }
+
+    @Requires({ System.getenv('NXF_BITBUCKET_ACCESS_TOKEN') })
+    def 'should list directory contents recursively'() {
+        given:
+        def token = System.getenv('NXF_BITBUCKET_ACCESS_TOKEN')
+        def config = new ProviderConfig('bitbucket').setAuth(token)
+        def repo = new BitbucketRepositoryProvider('pditommaso/tutorial', config)
+
+        when:
+        def entries = repo.listDirectory("/", 10)
+
+        then:
+        entries.size() > 0
+        and:
+        // Should include files from root and potentially subdirectories
+        entries.any { it.name == 'main.nf' && it.type == RepositoryProvider.EntryType.FILE }
+        and:
+        entries.every { it.path && it.name && it.sha }
+    }
+
+    @Requires({ System.getenv('NXF_BITBUCKET_ACCESS_TOKEN') })
+    def 'should list directory contents with depth 2'() {
+        given:
+        def token = System.getenv('NXF_BITBUCKET_ACCESS_TOKEN')
+        def config = new ProviderConfig('bitbucket').setAuth(token)
+        def repo = new BitbucketRepositoryProvider('pditommaso/tutorial', config)
+
+        when:
+        def depthOne = repo.listDirectory("/", 1)
+        def depthTwo = repo.listDirectory("/", 2)
+
+        then:
+        depthOne.size() > 0
+        depthTwo.size() >= depthOne.size()
+        and:
+        // Should include immediate children (depth 1)
+        depthOne.any { it.name == 'main.nf' && it.type == RepositoryProvider.EntryType.FILE }
+        depthTwo.any { it.name == 'main.nf' && it.type == RepositoryProvider.EntryType.FILE }
+        and:
+        depthOne.every { it.path && it.name && it.sha }
+        depthTwo.every { it.path && it.name && it.sha }
+    }
 }

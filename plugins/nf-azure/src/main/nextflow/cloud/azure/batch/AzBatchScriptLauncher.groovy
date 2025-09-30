@@ -33,4 +33,9 @@ class AzBatchScriptLauncher extends BashWrapperBuilder {
     protected boolean shouldUnstageOutputs() {
         return true
     }
+
+    @Override
+    protected boolean shouldUnstageControls() {
+        return true
+    }
 }
