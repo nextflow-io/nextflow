@@ -15,7 +15,6 @@
  */
 package nextflow.plugin.spec
 
-import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import nextflow.config.schema.ConfigScope
 import nextflow.config.schema.SchemaNode
@@ -73,33 +72,8 @@ class PluginSpec {
         }
 
         return [
-            '$schema': 'https://raw.githubusercontent.com/nextflow-io/schemas/main/plugin/schema.json',
+            '$schema': 'https://raw.githubusercontent.com/nextflow-io/schemas/main/plugin/v1/schema.json',
             'definitions': definitions
         ]
-    }
-}
-
-
-@CompileStatic
-class PluginSpecWriter {
-
-    static void main(String[] args) {
-        if (args.length < 2) {
-            System.err.println("Usage: PluginSpecWriter <output-path> <class1> [class2] ...")
-            System.exit(1)
-        }
-
-        final outputPath = args[0]
-        final extensionPoints = args[1..-1]
-
-        // build plugin spec
-        final spec = new PluginSpec(extensionPoints).build()
-
-        // write plugin spec to JSON file
-        final file = new File(outputPath)
-        file.parentFile.mkdirs()
-        file.text = JsonOutput.toJson(spec)
-
-        println "Saved plugin spec to $file"
     }
 }

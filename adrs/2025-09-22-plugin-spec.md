@@ -64,7 +64,7 @@ Example:
 
 ```json
 {
-    "$schema": "https://raw.githubusercontent.com/nextflow-io/schemas/main/plugin/schema.json",
+    "$schema": "https://raw.githubusercontent.com/nextflow-io/schemas/main/plugin/v1/schema.json",
     "definitions": [
         {
             "type": "ConfigScope",
@@ -151,4 +151,4 @@ Defines a channel operator that can be included in Nextflow scripts. The spec is
 
 Now that there is a Gradle plugin for building Nextflow plugins and a registry to publish and retrieve plugins, it is possible to generate, publish, and retrieve plugin specs in a way that is transparent to plugin developers.
 
-Plugins specs adhere to a pre-defined [schema](https://raw.githubusercontent.com/nextflow-io/schemas/main/plugin/schema.json) to ensure consistency across different versions of Nextflow. In the future, new versions of the schema can be defined as needed to support new behaviors or requirements.
+Plugins specs adhere to a pre-defined [schema](https://raw.githubusercontent.com/nextflow-io/schemas/main/plugin/v1/schema.json) to ensure consistency across different versions of Nextflow. In the future, new versions of the schema can be defined as needed to support new behaviors or requirements.
