@@ -14,7 +14,7 @@ import java.nio.file.StandardOpenOption
 
 @Slf4j
 @CompileStatic
-class TowerAuthCommand implements CmdAuth.AuthCommand {
+class AuthCommandImpl implements CmdAuth.AuthCommand {
 
     static final Map<String, String> SEQERA_ENDPOINTS = [
         'prod': 'https://api.cloud.seqera.io',
