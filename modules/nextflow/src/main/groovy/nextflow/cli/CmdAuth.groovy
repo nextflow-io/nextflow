@@ -46,7 +46,7 @@ import java.util.regex.Pattern
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Manage authentication")
+@Parameters(commandDescription = "Manage Seqera Platform authentication")
 class CmdAuth extends CmdBase implements UsageAware {
 
     interface SubCmd {
@@ -115,16 +115,21 @@ class CmdAuth extends CmdBase implements UsageAware {
             usage()
             return
         }
-        // setup the plugins system and load the secrets provider
-        Plugins.init()
-        // load the config
-        Plugins.start('nf-tower')
-        // load the command operations
-        this.operation = Plugins.getExtension(AuthCommand)
+        // load the Auth command implementation
+        this.operation = loadOperation()
         if( !operation )
             throw new IllegalStateException("Unable to load auth extensions.")
         // consume the first argument
         getCmd(args).apply(args.drop(1))
+    }
+
+    protected AuthCommand loadOperation(){
+        // setup the plugins system and load the secrets provider
+        Plugins.init()
+        // load the config
+        Plugins.start('nf-tower')
+        // get Auth command operations implementation from plugins
+        return Plugins.getExtension(AuthCommand)
     }
 
     protected SubCmd getCmd(List<String> args) {

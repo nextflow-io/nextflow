@@ -22,7 +22,6 @@ import spock.lang.Specification
 import spock.lang.TempDir
 import test.OutputCapture
 
-import java.nio.file.Files
 import java.nio.file.Path
 
 /**
@@ -46,16 +45,6 @@ class CmdAuthTest extends Specification {
         cmd.getName() == 'auth'
     }
 
-    def 'should define correct constants'() {
-        expect:
-        CmdAuth.SEQERA_ENDPOINTS.prod == 'https://api.cloud.seqera.io'
-        CmdAuth.SEQERA_ENDPOINTS.stage == 'https://api.cloud.stage-seqera.io'
-        CmdAuth.SEQERA_ENDPOINTS.dev == 'https://api.cloud.dev-seqera.io'
-        CmdAuth.API_TIMEOUT_MS == 10000
-        CmdAuth.AUTH_POLL_TIMEOUT_RETRIES == 60
-        CmdAuth.AUTH_POLL_INTERVAL_SECONDS == 5
-        CmdAuth.WORKSPACE_SELECTION_THRESHOLD == 8
-    }
 
     def 'should show usage when no args provided'() {
         given:
@@ -92,13 +81,15 @@ class CmdAuthTest extends Specification {
 
     def 'should throw error for unknown command'() {
         given:
-        def cmd = new CmdAuth()
+        def cmd = Spy(CmdAuth)
         cmd.args = ['unknown']
+        def operation = Mock(CmdAuth.AuthCommand)
 
         when:
         cmd.run()
 
         then:
+        1 * cmd.loadOperation() >> operation
         def ex = thrown(AbortOperationException)
         ex.message.contains('Unknown auth sub-command: unknown')
     }
@@ -117,163 +108,70 @@ class CmdAuthTest extends Specification {
         ex.message.contains('login')
     }
 
-    def 'should identify cloud endpoints correctly'() {
-        given:
-        def cmd = new CmdAuth()
-
-        expect:
-        cmd.getCloudEndpointInfo('https://api.cloud.seqera.io').isCloud == true
-        cmd.getCloudEndpointInfo('https://api.cloud.seqera.io').environment == 'prod'
-        cmd.getCloudEndpointInfo('https://api.cloud.stage-seqera.io').isCloud == true
-        cmd.getCloudEndpointInfo('https://api.cloud.stage-seqera.io').environment == 'stage'
-        cmd.getCloudEndpointInfo('https://api.cloud.dev-seqera.io').isCloud == true
-        cmd.getCloudEndpointInfo('https://api.cloud.dev-seqera.io').environment == 'dev'
-        cmd.getCloudEndpointInfo('https://cloud.seqera.io/api').isCloud == true
-        cmd.getCloudEndpointInfo('https://cloud.seqera.io/api').environment == 'prod'
-        cmd.getCloudEndpointInfo('https://enterprise.example.com').isCloud == false
-        cmd.getCloudEndpointInfo('https://enterprise.example.com').environment == null
-    }
-
-    def 'should identify cloud endpoint from URL'() {
-        given:
-        def cmd = new CmdAuth()
-
-        expect:
-        cmd.isCloudEndpoint('https://api.cloud.seqera.io') == true
-        cmd.isCloudEndpoint('https://api.cloud.stage-seqera.io') == true
-        cmd.isCloudEndpoint('https://enterprise.example.com') == false
-    }
-
-    def 'should validate argument count correctly'() {
-        given:
-        def cmd = new CmdAuth()
-
-        when:
-        cmd.validateArgumentCount(['extra'], 'test')
-
-        then:
-        def ex = thrown(AbortOperationException)
-        ex.message == 'Too many arguments for test command'
-
-        when:
-        cmd.validateArgumentCount([], 'test')
-
-        then:
-        noExceptionThrown()
-    }
-
-    def 'should read config correctly'() {
-        given:
-        def cmd = new CmdAuth()
-
-        expect:
-        // readConfig method should return a Map
-        cmd.readConfig() instanceof Map
-    }
-
-    def 'should clean tower config from existing content'() {
-        given:
-        def cmd = new CmdAuth()
-        def content = '''
-// Some other config
-process {
-    executor = 'local'
-}
-
-// Seqera Platform configuration
-tower {
-    accessToken = 'old-token'
-    enabled = true
-}
-
-tower.endpoint = 'old-endpoint'
-
-// More config
-params.test = true
-'''
-
-        when:
-        def cleaned = cmd.cleanTowerConfig(content)
-
-        then:
-        !cleaned.contains('tower {')
-        !cleaned.contains('accessToken = \'old-token\'')
-        !cleaned.contains('tower.endpoint')
-        !cleaned.contains('Seqera Platform configuration')
-        cleaned.contains('process {')
-        cleaned.contains('params.test = true')
-    }
-
-    def 'should handle config writing'() {
-        given:
-        def cmd = new CmdAuth()
-        def config = [
-            'tower.accessToken': 'test-token',
-            'tower.enabled': true
-        ]
-
-        when:
-        cmd.writeConfig(config, null)
-
-        then:
-        noExceptionThrown()
-    }
-
     def 'login command should validate too many arguments'() {
         given:
-        def cmd = new CmdAuth()
+        def cmd = Spy(CmdAuth)
+        def operation = Mock(CmdAuth.AuthCommand)
         cmd.args = ['login', 'extra']
 
         when:
         cmd.run()
 
         then:
+        1 * cmd.loadOperation() >> operation
         def ex = thrown(AbortOperationException)
         ex.message.contains('Too many arguments for login command')
     }
 
     def 'logout command should validate too many arguments'() {
         given:
-        def cmd = new CmdAuth()
+        def cmd = Spy(CmdAuth)
+        def operation = Mock(CmdAuth.AuthCommand)
         cmd.args = ['logout', 'extra']
 
         when:
         cmd.run()
 
         then:
+        1 * cmd.loadOperation() >> operation
         def ex = thrown(AbortOperationException)
         ex.message.contains('Too many arguments for logout command')
     }
 
     def 'config command should validate too many arguments'() {
         given:
-        def cmd = new CmdAuth()
+        def cmd = Spy(CmdAuth)
+        def operation = Mock(CmdAuth.AuthCommand)
         cmd.args = ['config', 'extra']
 
         when:
         cmd.run()
 
         then:
+        1 * cmd.loadOperation() >> operation
         def ex = thrown(AbortOperationException)
         ex.message.contains('Too many arguments for config command')
     }
 
     def 'status command should validate too many arguments'() {
         given:
-        def cmd = new CmdAuth()
+        def cmd = Spy(CmdAuth)
+        def operation = Mock(CmdAuth.AuthCommand)
         cmd.args = ['status', 'extra']
 
         when:
         cmd.run()
 
         then:
+        1 * cmd.loadOperation() >> operation
         def ex = thrown(AbortOperationException)
         ex.message.contains('Too many arguments for status command')
     }
 
     def 'login command should use provided API URL'() {
         given:
-        def cmd = new CmdAuth()
+        def cmd = Spy(CmdAuth)
+        def operation = Mock(CmdAuth.AuthCommand)
         cmd.args = ['login']
         cmd.apiUrl = 'https://api.example.com'
 
@@ -287,6 +185,7 @@ params.test = true
         cmd.run()
 
         then:
+        1 * cmd.loadOperation() >> operation
         loginCmd.apiUrl == 'https://api.example.com'
     }
 
@@ -300,26 +199,5 @@ params.test = true
         cmd.commands.find { it.name == 'logout' } != null
         cmd.commands.find { it.name == 'config' } != null
         cmd.commands.find { it.name == 'status' } != null
-    }
-
-    def 'should create HTTP connection with correct properties'() {
-        given:
-        def cmd = new CmdAuth()
-
-        when:
-        def connection = cmd.createHttpConnection('https://example.com', 'GET', 'test-token')
-
-        then:
-        connection.requestMethod == 'GET'
-        connection.connectTimeout == CmdAuth.API_TIMEOUT_MS
-        connection.readTimeout == CmdAuth.API_TIMEOUT_MS
-
-        when:
-        def connectionNoAuth = cmd.createHttpConnection('https://example.com', 'POST')
-
-        then:
-        connectionNoAuth.requestMethod == 'POST'
-        connectionNoAuth.connectTimeout == CmdAuth.API_TIMEOUT_MS
-        connectionNoAuth.readTimeout == CmdAuth.API_TIMEOUT_MS
     }
 }
