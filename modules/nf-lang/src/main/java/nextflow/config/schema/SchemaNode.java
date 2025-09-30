@@ -43,9 +43,9 @@ public sealed interface SchemaNode {
     private static Scope rootScope() {
         var result = Scope.of(Config.class, "");
         // derive `nextflow` config options from feature flags.
-        result.children().put("nextflow", nextflowScope());
+        result.entries().put("nextflow", nextflowScope());
         // derive `process` config options from process directives.
-        result.children().put("process", processScope());
+        result.entries().put("process", processScope());
         return result;
     }
 
@@ -79,12 +79,12 @@ public sealed interface SchemaNode {
         
             [Read more](https://nextflow.io/docs/latest/config.html#process-configuration)
         """;
-        var children = new HashMap<String, SchemaNode>();
+        var entries = new HashMap<String, SchemaNode>();
         for( var method : ProcessDsl.DirectiveDsl.class.getDeclaredMethods() ) {
             var desc = annotatedDescription(method, "");
-            children.put(method.getName(), new Option(desc, optionType(method)));
+            entries.put(method.getName(), new Option(desc, optionType(method)));
         }
-        return new Scope(description, children);
+        return new Scope(description, entries);
     }
     
     private static String annotatedDescription(AnnotatedElement el, String defaultValue) {
@@ -141,7 +141,7 @@ public sealed interface SchemaNode {
      */
     public static record Scope(
         String description,
-        Map<String, SchemaNode> children
+        Map<String, SchemaNode> entries
     ) implements SchemaNode {
     
         /**
@@ -149,11 +149,11 @@ public sealed interface SchemaNode {
          *
          * @param names
          */
-        public SchemaNode getChild(List<String> names) {
+        public SchemaNode getEntry(List<String> names) {
             SchemaNode node = this;
             for( var name : names ) {
                 if( node instanceof Scope sn )
-                    node = sn.children().get(name);
+                    node = sn.entries().get(name);
                 else if( node instanceof Placeholder pn )
                     node = pn.scope();
                 else
@@ -168,7 +168,7 @@ public sealed interface SchemaNode {
          * @param names
          */
         public DslOption getDslOption(List<String> names) {
-            return getChild(names) instanceof DslOption option ? option : null;
+            return getEntry(names) instanceof DslOption option ? option : null;
         }
     
         /**
@@ -177,7 +177,7 @@ public sealed interface SchemaNode {
          * @param names
          */
         public Option getOption(List<String> names) {
-            return getChild(names) instanceof Option option ? option : null;
+            return getEntry(names) instanceof Option option ? option : null;
         }
 
         /**
@@ -186,7 +186,7 @@ public sealed interface SchemaNode {
          * @param names
          */
         public Scope getScope(List<String> names) {
-            return getChild(names) instanceof Scope scope ? scope : null;
+            return getEntry(names) instanceof Scope scope ? scope : null;
         }
     
         /**
@@ -196,7 +196,7 @@ public sealed interface SchemaNode {
          * @param description
          */
         public static Scope of(Class<? extends ConfigScope> scope, String description) {
-            var children = new HashMap<String, SchemaNode>();
+            var entries = new HashMap<String, SchemaNode>();
             for( var field : scope.getDeclaredFields() ) {
                 var name = field.getName();
                 var type = field.getType();
@@ -205,22 +205,22 @@ public sealed interface SchemaNode {
                 // fields annotated with @ConfigOption are config options
                 if( field.getAnnotation(ConfigOption.class) != null ) {
                     if( DslScope.class.isAssignableFrom(type) )
-                        children.put(name, new DslOption(desc, type));
+                        entries.put(name, new DslOption(desc, type));
                     else
-                        children.put(name, new Option(desc, optionType(field)));
+                        entries.put(name, new Option(desc, optionType(field)));
                 }
                 // fields of type ConfigScope are nested config scopes
                 else if( ConfigScope.class.isAssignableFrom(type) ) {
-                    children.put(name, Scope.of((Class<? extends ConfigScope>) type, desc));
+                    entries.put(name, Scope.of((Class<? extends ConfigScope>) type, desc));
                 }
                 // fields of type Map<String, ConfigScope> are placeholder scopes
                 else if( Map.class.isAssignableFrom(type) && placeholderName != null ) {
                     var pt = (ParameterizedType)field.getGenericType();
                     var valueType = (Class<? extends ConfigScope>)pt.getActualTypeArguments()[1];
-                    children.put(name, new Placeholder(desc, placeholderName.value(), Scope.of(valueType, desc)));
+                    entries.put(name, new Placeholder(desc, placeholderName.value(), Scope.of(valueType, desc)));
                 }
             }
-            return new Scope(description, children);
+            return new Scope(description, entries);
         }
     }
 

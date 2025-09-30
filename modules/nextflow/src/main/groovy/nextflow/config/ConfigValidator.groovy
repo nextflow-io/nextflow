@@ -69,24 +69,24 @@ class ConfigValidator {
     }
 
     private void loadPluginScopes() {
-        final children = new HashMap<String, SchemaNode>()
+        final entries = new HashMap<String, SchemaNode>()
         for( final scope : Plugins.getExtensions(ConfigScope) ) {
             final clazz = scope.getClass()
             final name = clazz.getAnnotation(ScopeName)?.value()
             final description = clazz.getAnnotation(Description)?.value()
             if( name == '' ) {
-                children.putAll(SchemaNode.Scope.of(clazz, '').children())
+                entries.putAll(SchemaNode.Scope.of(clazz, '').entries())
                 continue
             }
             if( !name )
                 continue
-            if( name in children ) {
+            if( name in entries ) {
                 log.warn "Plugin config scope `${clazz.name}` conflicts with existing scope: `${name}`"
                 continue
             }
-            children.put(name, SchemaNode.Scope.of(clazz, description))
+            entries.put(name, SchemaNode.Scope.of(clazz, description))
         }
-        pluginScopes = new SchemaNode.Scope('', children)
+        pluginScopes = new SchemaNode.Scope('', entries)
     }
 
     void validate(ConfigMap config) {
@@ -138,7 +138,7 @@ class ConfigValidator {
     boolean isValid(List<String> names) {
         if( names.size() == 1 && names.first() in HIDDEN_OPTIONS )
             return true
-        final child = SchemaNode.ROOT.getChild(names)
+        final child = SchemaNode.ROOT.getEntry(names)
         if( child instanceof SchemaNode.Option || child instanceof SchemaNode.DslOption )
             return true
         if( pluginScopes.getOption(names) )
@@ -154,7 +154,7 @@ class ConfigValidator {
      */
     private boolean isMissingCorePluginScope(String name) {
         return name in CORE_PLUGIN_SCOPES
-            && !pluginScopes.children().containsKey(name)
+            && !pluginScopes.entries().containsKey(name)
     }
 
     /**
@@ -172,7 +172,7 @@ class ConfigValidator {
         SchemaNode node = scope
         for( final name : names ) {
             if( node instanceof SchemaNode.Scope )
-                node = node.children().get(name)
+                node = node.entries().get(name)
             else if( node instanceof SchemaNode.Placeholder )
                 node = node.scope()
             else if( node instanceof SchemaNode.Option )
