@@ -86,9 +86,9 @@ The following types of definitions are allowed:
 
 **ConfigScope**
 
-Defines a top-level config scope. The spec consists of a *name*, an optional *description*, and *children*.
+Defines a top-level config scope. The spec consists of a *name*, an optional *description*, and *entries*.
 
-The children should be a list of definitions corresponding to nested config scopes and options. The following definitions are allowed:
+The entries should be a list of definitions corresponding to nested config scopes and options. The following definitions are allowed:
 
 - **ConfigOption**: Defines a config option. The spec consists of a *description* and *type*.
 
@@ -102,7 +102,7 @@ Example:
     "spec": {
         "name": "hello",
         "description": "The `hello` scope controls the behavior of the `nf-hello` plugin.",
-        "children": [
+        "entries": [
             {
                 "type": "ConfigOption",
                 "spec": {

@@ -74,7 +74,7 @@ class ConfigSpec {
 
     private static Map<String,?> fromScope(SchemaNode.Scope node, String scopeName=null) {
         final description = node.description().stripIndent(true).trim()
-        final children = node.children().collect { name, child ->
+        final entries = node.entries().collect { name, child ->
             fromNode(child, name)
         }
 
@@ -83,7 +83,7 @@ class ConfigSpec {
             spec: [
                 name: scopeName,
                 description: description,
-                children: children
+                entries: entries
             ]
         ]
     }

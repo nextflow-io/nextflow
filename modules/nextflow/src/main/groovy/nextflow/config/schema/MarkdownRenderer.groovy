@@ -45,10 +45,10 @@ class MarkdownRenderer {
                 result.append("\n${fromDescription(description)}\n")
             result.append("\nThe following settings are available:\n")
 
-            final options = scope.children().findAll { name, node -> node instanceof SchemaNode.Option }
+            final options = scope.entries().findAll { name, node -> node instanceof SchemaNode.Option }
             renderOptions(options, scopeName, result)
 
-            final scopes = scope.children().findAll { name, node -> node instanceof SchemaNode.Scope }
+            final scopes = scope.entries().findAll { name, node -> node instanceof SchemaNode.Scope }
             renderOptions(scopes, scopeName, result)
         }
         return result.toString()
@@ -81,9 +81,9 @@ class MarkdownRenderer {
             if( node instanceof SchemaNode.Option )
                 renderOption("${prefix}${name}", node, result)
             else if( node instanceof SchemaNode.Placeholder )
-                renderOptions(node.scope().children(), "${prefix}${name}.${node.placeholderName()}", result)
+                renderOptions(node.scope().entries(), "${prefix}${name}.${node.placeholderName()}", result)
             else if( node instanceof SchemaNode.Scope )
-                renderOptions(node.children(), "${prefix}${name}", result)
+                renderOptions(node.entries(), "${prefix}${name}", result)
             else
                 throw new IllegalStateException()
         }

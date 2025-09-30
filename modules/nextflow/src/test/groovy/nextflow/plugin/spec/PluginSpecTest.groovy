@@ -53,7 +53,7 @@ class PluginSpecTest extends Specification {
             spec: [
                 name: 'hello',
                 description: 'The `hello` scope controls the behavior of the `nf-hello` plugin.',
-                children: [
+                entries: [
                     [
                         type: 'ConfigOption',
                         spec: [
