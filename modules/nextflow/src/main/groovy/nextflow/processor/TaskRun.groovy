@@ -985,7 +985,7 @@ class TaskRun implements Cloneable {
     }
 
     TaskBean toTaskBean() {
-        return new TaskBean(this)
+        return new TaskBean(this, processor.session.stubRun)
     }
 
     CondaConfig getCondaConfig() {
