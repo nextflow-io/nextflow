@@ -1,10 +1,13 @@
 package io.seqera.tower.plugin.cli
 
+import groovy.json.JsonBuilder
+import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.cli.CmdAuth
 import nextflow.cli.ColorUtil
+import nextflow.config.ConfigBuilder
 import nextflow.exception.AbortOperationException
 
 import java.awt.Desktop
@@ -16,37 +19,26 @@ import java.nio.file.StandardOpenOption
 @CompileStatic
 class AuthCommandImpl implements CmdAuth.AuthCommand {
 
-    static final Map<String, String> SEQERA_ENDPOINTS = [
-        'prod': 'https://api.cloud.seqera.io',
-        'stage': 'https://api.cloud.stage-seqera.io',
-        'dev': 'https://api.cloud.dev-seqera.io'
-    ]
     static final int API_TIMEOUT_MS = 10000
     static final int AUTH_POLL_TIMEOUT_RETRIES = 60
     static final int AUTH_POLL_INTERVAL_SECONDS = 5
     static final int WORKSPACE_SELECTION_THRESHOLD = 8  // Max workspaces to show in single list; above this uses org-first selection
-    private static final Map AUTH0_CONFIG = [
-        'dev'  : [
+    private static final String DEFAULT_API_ENDPOINT = 'https://api.cloud.seqera.io'
+
+    private static final Map SEQERA_API_TO_AUTH0 = [
+        'https://api.cloud.dev-seqera.io'  : [
             domain  : 'seqera-development.eu.auth0.com',
             clientId: 'Ep2LhYiYmuV9hhz0dH6dbXVq0S7s7SWZ'
         ],
-        'stage': [
+        'https://api.cloud.stage-seqera.io': [
             domain  : 'seqera-stage.eu.auth0.com',
             clientId: '60cPDjI6YhoTPjyMTIBjGtxatSUwWswB'
         ],
-        'prod' : [
+        'https://api.cloud.seqera.io' : [
             domain  : 'seqera.eu.auth0.com',
             clientId: 'FxCM8EJ76nNeHUDidSHkZfT8VtsrhHeL'
         ]
     ]
-
-    private Map getAuth0Config(String environment) {
-        def config = AUTH0_CONFIG[environment] as Map
-        if( !config ) {
-            throw new RuntimeException("Unknown environment: ${environment}")
-        }
-        return config
-    }
 
     @Override
     void login(String apiUrl) {
@@ -61,18 +53,17 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
             println ""
         }
 
-        // Check if tower.accessToken is already set
-        def config = readConfig()
-        def existingToken = config['tower.accessToken']
-        if( existingToken ) {
+        // Check if .login file already exists
+        def loginFile = getLoginFile()
+        if( Files.exists(loginFile) ) {
             ColorUtil.printColored("Error: Authentication token is already configured in Nextflow config.", "red")
-            ColorUtil.printColored("Config file: ${ColorUtil.colorize(getConfigFile().toString(), 'magenta')}", "dim")
+            ColorUtil.printColored("Login file: ${ColorUtil.colorize(loginFile.toString(), 'magenta')}", "dim")
             println " Run ${ColorUtil.colorize('nextflow auth logout', 'cyan')} to remove the current authentication."
             return
         }
 
         ColorUtil.printColored("Nextflow authentication with Seqera Platform", "cyan bold")
-        ColorUtil.printColored(" - Authentication will be saved to: ${ColorUtil.colorize(getConfigFile().toString(), 'magenta')}", "dim")
+        ColorUtil.printColored(" - Authentication will be saved to: ${ColorUtil.colorize(getLoginFile().toString(), 'magenta')}", "dim")
 
         apiUrl = normalizeApiUrl(apiUrl)
         ColorUtil.printColored(" - Seqera Platform API endpoint: ${ColorUtil.colorize(apiUrl, 'magenta')} (can be customised with ${ColorUtil.colorize('-url', 'cyan')})", "dim")
@@ -81,7 +72,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         def endpointInfo = getCloudEndpointInfo(apiUrl)
         if( endpointInfo.isCloud ) {
             try {
-                performAuth0Login(apiUrl, endpointInfo.environment as String)
+                performAuth0Login(endpointInfo.endpoint as String, endpointInfo.auth as Map)
             } catch( Exception e ) {
                 log.debug("Authentication failed", e)
                 println ""
@@ -93,9 +84,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         }
     }
 
-    private void performAuth0Login(String apiUrl, String environment) {
-        // Get Auth0 configuration for this environment
-        def auth0Config = getAuth0Config(environment)
+    private void performAuth0Login(String apiUrl, Map auth0Config) {
 
         // Start device authorization flow
         def deviceAuth = requestDeviceAuthorization(auth0Config)
@@ -108,6 +97,37 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         System.in.read() // Wait for Enter key
 
         // Try to open browser automatically
+        boolean browserOpened = openBrowser(urlWithCode)
+
+        if( !browserOpened ) {
+            ColorUtil.printColored("Could not open browser automatically. Please copy the URL above and open it manually in your browser.", "yellow")
+        }
+        print("${ColorUtil.colorize('Waiting for authentication...', 'dim', true)}")
+
+        try {
+            // Poll for device token
+            def tokenData = pollForDeviceToken(deviceAuth.device_code as String, deviceAuth.interval as Integer ?: 5, auth0Config)
+            def accessToken = tokenData['access_token'] as String
+
+            // Verify login by calling /user-info
+            def userInfo = callUserInfoApi(accessToken, apiUrl)
+            ColorUtil.printColored("\n\nAuthentication successful!", "green")
+
+            // Generate PAT
+            def pat = generatePAT(accessToken, apiUrl)
+
+            // Save to config
+            saveAuthToConfig(pat, apiUrl)
+
+            // Automatically run configuration
+            runConfiguration()
+
+        } catch( Exception e ) {
+            throw new RuntimeException("Authentication failed: ${e.message}", e)
+        }
+    }
+
+    private boolean openBrowser(GString urlWithCode) {
         def browserOpened = false
         try {
             // Method 1: Java Desktop API
@@ -147,36 +167,10 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
                     browserOpened = true
                 }
             }
-        } catch( Exception ignored ) {
-            // Will handle below
-        }
-
-        if( !browserOpened ) {
-            ColorUtil.printColored("Could not open browser automatically. Please copy the URL above and open it manually in your browser.", "yellow")
-        }
-        print("${ColorUtil.colorize('Waiting for authentication...', 'dim', true)}")
-
-        try {
-            // Poll for device token
-            def tokenData = pollForDeviceToken(deviceAuth.device_code as String, deviceAuth.interval as Integer ?: 5, auth0Config)
-            def accessToken = tokenData['access_token'] as String
-
-            // Verify login by calling /user-info
-            def userInfo = callUserInfoApi(accessToken, apiUrl)
-            ColorUtil.printColored("\n\nAuthentication successful!", "green")
-
-            // Generate PAT
-            def pat = generatePAT(accessToken, apiUrl)
-
-            // Save to config
-            saveAuthToConfig(pat, apiUrl)
-
-            // Automatically run configuration
-            runConfiguration()
-
         } catch( Exception e ) {
-            throw new RuntimeException("Authentication failed: ${e.message}", e)
+            log.debug("Exception opening browser", e)
         }
+        return browserOpened
     }
 
     private void runConfiguration() {
@@ -259,17 +253,16 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
 
         // Save to config
         saveAuthToConfig(pat.trim(), apiUrl)
-        ColorUtil.printColored("Personal Access Token saved to Nextflow config", "green")
-        ColorUtil.printColored("Config file: ${getConfigFile().toString()}", "magenta")
+        ColorUtil.printColored("Personal Access Token saved to Nextflow login config (${getLoginFile().toString()})", "green")
     }
 
     private String generatePAT(String accessToken, String apiUrl) {
         def tokensUrl = "${apiUrl}/tokens"
         def username = System.getProperty("user.name")
         def timestamp = new Date().format("yyyy-MM-dd-HH-mm")
-        def tokenName = "nextflow-${username}-${timestamp}"
+        def tokenName = "nextflow-auth-${username}-${timestamp}"
 
-        def requestBody = new groovy.json.JsonBuilder([name: tokenName]).toString()
+        def requestBody = new JsonBuilder([name: tokenName]).toString()
 
         def connection = createHttpConnection(tokensUrl, 'POST', accessToken)
         connection.setRequestProperty('Content-Type', 'application/json')
@@ -285,13 +278,13 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         }
 
         def response = connection.inputStream.text
-        def json = new groovy.json.JsonSlurper().parseText(response) as Map
+        def json = new JsonSlurper().parseText(response) as Map
         return json.accessKey as String
     }
 
     private String normalizeApiUrl(String url) {
         if( !url ) {
-            return SEQERA_ENDPOINTS.prod
+            return DEFAULT_API_ENDPOINT
         }
         if( !url.startsWith('http://') && !url.startsWith('https://') ) {
             return 'https://' + url
@@ -317,12 +310,12 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
 
         if( connection.responseCode == 200 ) {
             def response = connection.inputStream.text
-            def json = new groovy.json.JsonSlurper().parseText(response)
+            def json = new JsonSlurper().parseText(response)
             return json as Map
         } else {
             def errorResponse = connection.errorStream?.text
             if( errorResponse ) {
-                def errorJson = new groovy.json.JsonSlurper().parseText(errorResponse) as Map
+                def errorJson = new JsonSlurper().parseText(errorResponse) as Map
                 def error = errorJson.error
                 throw new RuntimeException("${error}: ${errorJson.error_description ?: ''}")
             } else {
@@ -332,7 +325,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
     }
 
     private void saveAuthToConfig(String accessToken, String apiUrl) {
-        def config = readConfig()
+        def config = [:]
         config['tower.accessToken'] = accessToken
         config['tower.endpoint'] = apiUrl
         config['tower.enabled'] = true
@@ -342,6 +335,24 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
 
     @Override
     void logout() {
+        // Check if .login file exists
+        def loginFile = getLoginFile()
+        if( !Files.exists(loginFile) ) {
+            ColorUtil.printColored("No previous login found.", "green")
+            return
+        }
+        // Read token from .login file
+        def loginConfig = readLoginFile()
+        def existingToken = loginConfig['tower.accessToken']
+        def apiUrl = loginConfig['tower.endpoint'] as String ?: DEFAULT_API_ENDPOINT
+
+        if( !existingToken ) {
+            ColorUtil.printColored("WARN: No authentication token found in login file.", "yellow bold")
+            println "Removing file: ${ColorUtil.colorize(loginFile.toString(), 'magenta')}"
+            removeAuthFromConfig()
+            return
+        }
+
         // Check if TOWER_ACCESS_TOKEN environment variable is set
         def envToken = System.getenv('TOWER_ACCESS_TOKEN')
         if( envToken ) {
@@ -352,26 +363,8 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
             println ""
         }
 
-        // Check if tower.accessToken is set
-        def config = readConfig()
-        def existingToken = config['tower.accessToken']
-        def endpoint = config['tower.endpoint'] ?: 'https://api.cloud.seqera.io'
-
-        if( !existingToken ) {
-            ColorUtil.printColored("Error: No authentication token found in Nextflow config.", "red")
-            println "Config file: ${ColorUtil.colorize(getConfigFile().toString(), 'magenta')}"
-            return
-        }
-
-        ColorUtil.printColored(" - Found authentication token in config file: ${ColorUtil.colorize(getConfigFile().toString(), 'magenta')}", "dim")
-
-        // Prompt user for API URL if not already configured
-        def apiUrl = endpoint as String
-        if( !apiUrl || apiUrl.isEmpty() ) {
-            apiUrl = promptForApiUrl()
-        } else {
-            ColorUtil.printColored(" - Using Seqera Platform endpoint: ${ColorUtil.colorize(apiUrl, 'magenta')}", "dim")
-        }
+        ColorUtil.printColored(" - Found authentication token in login file: ${ColorUtil.colorize(loginFile.toString(), 'magenta')}", "dim")
+        ColorUtil.printColored(" - Using Seqera Platform endpoint: ${ColorUtil.colorize(apiUrl, 'magenta')}", "dim")
 
         // Validate token by calling /user-info API
         try {
@@ -385,7 +378,6 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
             } else {
                 println " - Enterprise installation detected - PAT will not be deleted from platform."
             }
-
             removeAuthFromConfig()
 
         } catch( Exception e ) {
@@ -394,7 +386,6 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
 
             // Remove from config even if API calls fail
             removeAuthFromConfig()
-            ColorUtil.printColored("Token removed from Nextflow config.", "green")
         }
     }
 
@@ -404,7 +395,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
             def decoded = new String(Base64.decoder.decode(token), "UTF-8")
 
             // Parse JSON to extract token ID
-            def json = new groovy.json.JsonSlurper().parseText(decoded) as Map
+            def json = new JsonSlurper().parseText(decoded) as Map
             def tokenId = json.tid
 
             if( !tokenId ) {
@@ -430,11 +421,18 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
 
     private void removeAuthFromConfig() {
         def configFile = getConfigFile()
+        def loginFile = getLoginFile()
 
+        // Remove includeConfig line from main config file
         if( Files.exists(configFile) ) {
             def existingContent = Files.readString(configFile)
-            def cleanedContent = cleanTowerConfig(existingContent)
-            Files.writeString(configFile, cleanedContent, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+            def updatedContent = removeIncludeConfigLine(existingContent)
+            Files.writeString(configFile, updatedContent.toString(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+        }
+
+        // Delete .login file
+        if( Files.exists(loginFile) ) {
+            Files.delete(loginFile)
         }
 
         ColorUtil.printColored("Authentication removed from Nextflow config.", "green")
@@ -442,9 +440,12 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
 
     @Override
     void config() {
+        // Read from both main config and .login file
         def config = readConfig()
+
+        // Token can come from .login file or environment variable
         def existingToken = config['tower.accessToken'] ?: System.getenv('TOWER_ACCESS_TOKEN')
-        def endpoint = config['tower.endpoint'] ?: 'https://api.cloud.seqera.io'
+        def endpoint = config['tower.endpoint'] ?: DEFAULT_API_ENDPOINT
 
         if( !existingToken ) {
             println "No authentication found. Please run ${ColorUtil.colorize('nextflow auth login', 'cyan')} first."
@@ -452,7 +453,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         }
 
         ColorUtil.printColored("Nextflow Seqera Platform configuration", "cyan bold")
-        ColorUtil.printColored(" - Config file: ${ColorUtil.colorize(getConfigFile().toString(), 'magenta')}", "dim")
+        ColorUtil.printColored(" - Config file: ${ColorUtil.colorize(getLoginFile().toString(), 'magenta')}", "dim")
 
         // Check if token is from environment variable
         if( !config['tower.accessToken'] && System.getenv('TOWER_ACCESS_TOKEN') ) {
@@ -483,7 +484,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
                 println "\nNew configuration:"
                 showCurrentConfig(config, existingToken as String, endpoint as String)
 
-                ColorUtil.printColored("\nConfiguration saved to ${ColorUtil.colorize(getConfigFile().toString(), 'magenta')}", "green")
+                ColorUtil.printColored("\nConfiguration saved to ${ColorUtil.colorize(getLoginFile().toString(), 'magenta')}", "green")
             } else {
                 ColorUtil.printColored("\nNo configuration changes were made.", "dim")
             }
@@ -675,7 +676,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
                 if( orgSelection >= 1 && orgSelection <= orgs.size() ) {
                     break
                 }
-            } catch( NumberFormatException e ) {
+            } catch( NumberFormatException ignored ) {
                 // Fall through to error message
             }
             ColorUtil.printColored("Invalid input. Please enter a number between 1 and ${orgs.size()}.", "red")
@@ -719,7 +720,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
                 if( wsSelection >= 1 && wsSelection <= maxSelection ) {
                     break
                 }
-            } catch( NumberFormatException e ) {
+            } catch( NumberFormatException ignored ) {
                 // Fall through to error message
             }
             ColorUtil.printColored("Invalid input. Please enter a number between 1 and ${maxSelection}.", "red")
@@ -746,7 +747,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         }
 
         def response = connection.inputStream.text
-        def json = new groovy.json.JsonSlurper().parseText(response) as Map
+        def json = new JsonSlurper().parseText(response) as Map
         def orgsAndWorkspaces = json.orgsAndWorkspaces as List
 
         return orgsAndWorkspaces.findAll { ((Map) it).workspaceId != null }
@@ -759,7 +760,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
             def input = readUserInput()?.toLowerCase()
 
             if( input?.isEmpty() ) {
-                return null // Keep current setting
+                return defaultValue
             } else if( input in ['y', 'yes'] ) {
                 return true
             } else if( input in ['n', 'no'] ) {
@@ -795,13 +796,13 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
     @Override
     void status() {
         def config = readConfig()
-
+        def loginConfig = readLoginFile()
         // Collect all status information
         List<List<String>> statusRows = []
         def workspaceDisplayInfo = null
 
         // API endpoint
-        def endpointInfo = getConfigValue(config, 'tower.endpoint', 'TOWER_API_ENDPOINT', 'https://api.cloud.seqera.io')
+        def endpointInfo = getConfigValue(config, loginConfig, 'tower.endpoint', 'TOWER_API_ENDPOINT', DEFAULT_API_ENDPOINT)
         statusRows.add(['API endpoint', ColorUtil.colorize(endpointInfo.value as String, 'magenta'), endpointInfo.source as String])
 
         // API connection check
@@ -810,7 +811,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         statusRows.add(['API connection', ColorUtil.colorize(apiConnectionOk ? 'OK' : 'ERROR', connectionColor), ''])
 
         // Authentication check
-        def tokenInfo = getConfigValue(config, 'tower.accessToken', 'TOWER_ACCESS_TOKEN')
+        def tokenInfo = getConfigValue(config, loginConfig, 'tower.accessToken', 'TOWER_ACCESS_TOKEN')
         if( tokenInfo.value ) {
             try {
                 def userInfo = callUserInfoApi(tokenInfo.value as String, endpointInfo.value as String)
@@ -824,13 +825,13 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         }
 
         // Monitoring enabled
-        def enabledInfo = getConfigValue(config, 'tower.enabled', null, 'false')
+        def enabledInfo = getConfigValue(config, loginConfig,'tower.enabled', null, 'false')
         def enabledValue = enabledInfo.value?.toString()?.toLowerCase() in ['true', '1', 'yes'] ? 'Yes' : 'No'
         def enabledColor = enabledValue == 'Yes' ? 'green' : 'yellow'
         statusRows.add(['Workflow monitoring', ColorUtil.colorize(enabledValue, enabledColor), (enabledInfo.source ?: 'default') as String])
 
         // Default workspace
-        def workspaceInfo = getConfigValue(config, 'tower.workspaceId', 'TOWER_WORKFLOW_ID')
+        def workspaceInfo = getConfigValue(config, loginConfig, 'tower.workspaceId', 'TOWER_WORKFLOW_ID')
         if( workspaceInfo.value ) {
             // Try to get workspace name from API if we have a token
             def workspaceDetails = null
@@ -904,13 +905,17 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         return path
     }
 
-    private Map getConfigValue(Map config, String configKey, String envVarName, String defaultValue = null) {
+    private Map getConfigValue(Map config, Map login, String configKey, String envVarName, String defaultValue = null) {
+        //Checks where the config value came from
+        def loginValue = login[configKey]
         def configValue = config[configKey]
         def envValue = envVarName ? System.getenv(envVarName) : null
         def effectiveValue = configValue ?: envValue ?: defaultValue
 
         def source = null
-        if( configValue ) {
+        if( loginValue ) {
+            source = shortenPath(getLoginFile().toString())
+        } else if( configValue ) {
             source = shortenPath(getConfigFile().toString())
         } else if( envValue ) {
             source = "env var \$${envVarName}"
@@ -952,14 +957,14 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
     }
 
     private String promptForApiUrl() {
-        System.out.print("Seqera Platform API endpoint [Default ${SEQERA_ENDPOINTS.prod}]: ")
+        System.out.print("Seqera Platform API endpoint [Default ${DEFAULT_API_ENDPOINT}]: ")
         System.out.flush()
 
         def input = readUserInput()
-        return input?.isEmpty() ? SEQERA_ENDPOINTS.prod : input
+        return input?.isEmpty() ? DEFAULT_API_ENDPOINT : input
     }
 
-    private String readUserInput() {
+    private static String readUserInput() {
         def reader = new BufferedReader(new InputStreamReader(System.in))
         return reader.readLine()?.trim()
     }
@@ -987,7 +992,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
             }
 
             def response = connection.inputStream.text
-            def json = new groovy.json.JsonSlurper().parseText(response) as Map
+            def json = new JsonSlurper().parseText(response) as Map
             def orgsAndWorkspaces = json.orgsAndWorkspaces as List
 
             def workspace = orgsAndWorkspaces.find { ((Map)it).workspaceId?.toString() == workspaceId }
@@ -1007,14 +1012,14 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
     }
 
     private Map getCloudEndpointInfo(String apiUrl) {
-        for (env in SEQERA_ENDPOINTS) {
-            def standardUrl = env.value
+        for (env in SEQERA_API_TO_AUTH0) {
+            def standardUrl = env.key as String
             def legacyUrl = standardUrl.replace('://api.', '://') + '/api'
             if (apiUrl == standardUrl || apiUrl == legacyUrl) {
-                return [isCloud: true, environment: env.key]
+                return [isCloud: true, endpoint: env.key, auth: env.value]
             }
         }
-        return [isCloud: false, environment: null]
+        return [isCloud: false, endpoint: apiUrl, auth: null]
     }
 
     private boolean isCloudEndpoint(String apiUrl) {
@@ -1030,7 +1035,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         }
 
         def response = connection.inputStream.text
-        def json = new groovy.json.JsonSlurper().parseText(response) as Map
+        def json = new JsonSlurper().parseText(response) as Map
         return json.user as Map
     }
 
@@ -1038,8 +1043,12 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         return Const.APP_HOME_DIR.resolve('config')
     }
 
-    private Map readConfig() {
-        def configFile = getConfigFile()
+    private Path getLoginFile() {
+        return Const.APP_HOME_DIR.resolve('.login')
+    }
+
+    private Map readLoginFile() {
+        def configFile = getLoginFile()
         if (!Files.exists(configFile)) {
             return [:]
         }
@@ -1053,40 +1062,28 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         }
     }
 
-    private String cleanTowerConfig(String content) {
-        // Remove tower scoped blocks: tower { ... }
-        content = content.replaceAll(/(?ms)tower\s*\{.*?\}/, '')
-        // Remove individual tower.* lines
-        content = content.replaceAll(/(?m)^tower\..*$\n?/, '')
-        // Remove Seqera Platform configuration comment
-        content = content.replaceAll(/\/\/\s*Seqera Platform configuration\s*/, '')
-        // Clean up extra whitespace
-        return content.replaceAll(/\n\n+/, '\n\n').trim() + "\n\n"
+    private Map readConfig() {
+        def builder = new ConfigBuilder().setHomeDir(Const.APP_HOME_DIR).setCurrentDir(Const.APP_HOME_DIR)
+        return builder.buildConfigObject().flatten()
     }
 
     private void writeConfig(Map config, Map workspaceMetadata = null) {
         def configFile = getConfigFile()
+        def loginFile = getLoginFile()
 
         // Create directory if it doesn't exist
         if (!Files.exists(configFile.parent)) {
             Files.createDirectories(configFile.parent)
         }
 
-        // Read existing config and clean out old tower blocks
-        def configText = new StringBuilder()
-        if (Files.exists(configFile)) {
-            def existingContent = Files.readString(configFile)
-            def cleanedContent = cleanTowerConfig(existingContent)
-            configText.append(cleanedContent)
-        }
-
-        // Write tower config block
+        // Write tower config to .login file
         def towerConfig = config.findAll { key, value ->
             key.toString().startsWith('tower.') && !key.toString().endsWith('.comment')
         }
 
-        configText.append("// Seqera Platform configuration\n")
-        configText.append("tower {\n")
+        def loginConfigText = new StringBuilder()
+        loginConfigText.append("// Seqera Platform configuration\n")
+        loginConfigText.append("tower {\n")
         towerConfig.each { key, value ->
             def configKey = key.toString().substring(6) // Remove "tower." prefix
 
@@ -1096,13 +1093,48 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
                 if (configKey == 'workspaceId' && workspaceMetadata) {
                     line += "  // ${workspaceMetadata.orgName} / ${workspaceMetadata.workspaceName} [${workspaceMetadata.workspaceFullName}]"
                 }
-                configText.append("${line}\n")
+                loginConfigText.append("${line}\n")
             } else {
-                configText.append("    ${configKey} = ${value}\n")
+                loginConfigText.append("    ${configKey} = ${value}\n")
             }
         }
-        configText.append("}\n")
+        loginConfigText.append("}\n")
 
-        Files.writeString(configFile, configText.toString(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+        // Write the .login file
+        Files.writeString(loginFile, loginConfigText.toString(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+
+        // Add includeConfig line to main config file if it doesn't exist
+        addIncludeConfigToMainFile(configFile)
+    }
+
+    private void addIncludeConfigToMainFile(Path configFile) {
+        def includeConfigLine = "includeConfig '.login'"
+
+        def configContent = ""
+        if (Files.exists(configFile)) {
+            configContent = Files.readString(configFile)
+            // Check if includeConfig line already exists
+            if (configContent.contains(includeConfigLine)) {
+                return // Already exists, nothing to do
+            }
+        }
+
+        // Append the includeConfig line
+        def updatedContent = configContent
+        if (!updatedContent.isEmpty() && !updatedContent.endsWith("\n")) {
+            updatedContent += "\n"
+        }
+        updatedContent += "\n${includeConfigLine}\n"
+
+        Files.writeString(configFile, updatedContent, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+    }
+
+    private String removeIncludeConfigLine(String content) {
+        // Remove the includeConfig '.login' line
+        def lines = content.split('\n')
+        def filteredLines = lines.findAll { line ->
+            !line.trim().equals("includeConfig '.login'")
+        }
+        return filteredLines.join('\n')
     }
 }

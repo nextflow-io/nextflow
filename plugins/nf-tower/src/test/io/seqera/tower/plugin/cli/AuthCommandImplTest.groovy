@@ -47,15 +47,15 @@ class AuthCommandImplTest extends Specification {
 
         expect:
         cmd.getCloudEndpointInfo('https://api.cloud.seqera.io').isCloud == true
-        cmd.getCloudEndpointInfo('https://api.cloud.seqera.io').environment == 'prod'
+        cmd.getCloudEndpointInfo('https://api.cloud.seqera.io').auth.domain == 'seqera.eu.auth0.com'
         cmd.getCloudEndpointInfo('https://api.cloud.stage-seqera.io').isCloud == true
-        cmd.getCloudEndpointInfo('https://api.cloud.stage-seqera.io').environment == 'stage'
+        cmd.getCloudEndpointInfo('https://api.cloud.stage-seqera.io').auth.domain == 'seqera-stage.eu.auth0.com'
         cmd.getCloudEndpointInfo('https://api.cloud.dev-seqera.io').isCloud == true
-        cmd.getCloudEndpointInfo('https://api.cloud.dev-seqera.io').environment == 'dev'
+        cmd.getCloudEndpointInfo('https://api.cloud.dev-seqera.io').auth.domain == 'seqera-development.eu.auth0.com'
         cmd.getCloudEndpointInfo('https://cloud.seqera.io/api').isCloud == true
-        cmd.getCloudEndpointInfo('https://cloud.seqera.io/api').environment == 'prod'
+        cmd.getCloudEndpointInfo('https://cloud.seqera.io/api').auth.domain == 'seqera.eu.auth0.com'
         cmd.getCloudEndpointInfo('https://enterprise.example.com').isCloud == false
-        cmd.getCloudEndpointInfo('https://enterprise.example.com').environment == null
+        cmd.getCloudEndpointInfo('https://enterprise.example.com').auth == null
     }
 
     def 'should identify cloud endpoint from URL'() {
@@ -75,39 +75,6 @@ class AuthCommandImplTest extends Specification {
         expect:
         // readConfig method should return a Map
         cmd.readConfig() instanceof Map
-    }
-
-    def 'should clean tower config from existing content'() {
-        given:
-        def cmd = new AuthCommandImpl()
-        def content = '''
-// Some other config
-process {
-    executor = 'local'
-}
-
-// Seqera Platform configuration
-tower {
-    accessToken = 'old-token'
-    enabled = true
-}
-
-tower.endpoint = 'old-endpoint'
-
-// More config
-params.test = true
-'''
-
-        when:
-        def cleaned = cmd.cleanTowerConfig(content)
-
-        then:
-        !cleaned.contains('tower {')
-        !cleaned.contains('accessToken = \'old-token\'')
-        !cleaned.contains('tower.endpoint')
-        !cleaned.contains('Seqera Platform configuration')
-        cleaned.contains('process {')
-        cleaned.contains('params.test = true')
     }
 
     def 'should handle config writing'() {
