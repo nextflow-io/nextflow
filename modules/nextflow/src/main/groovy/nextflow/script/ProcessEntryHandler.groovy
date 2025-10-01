@@ -341,6 +341,27 @@ class ProcessEntryHandler {
     }
     
     /**
+     * Parses file input handling comma-separated values.
+     * If the input contains commas, splits and returns a list of files.
+     * Otherwise returns a single file object.
+     * 
+     * @param fileInput String representation of file path(s)
+     * @return Single file object or List of file objects
+     */
+    protected Object parseFileInput(String fileInput) {
+        if (fileInput.contains(',')) {
+            // Split by comma, trim whitespace, and convert each to a file
+            return fileInput.tokenize(',')
+                .collect { it.trim() }
+                .findAll { !it.isEmpty() }
+                .collect { Nextflow.file(it) }
+        } else {
+            // Single file case - existing behavior
+            return Nextflow.file(fileInput)
+        }
+    }
+    
+    /**
      * Gets the appropriate value for an input definition, handling type conversion.
      * 
      * @param inputDef Input definition with type and name
@@ -360,8 +381,8 @@ class ProcessEntryHandler {
         switch( paramType ) {
             case 'path':
             case 'file':
-                if( paramValue instanceof String ) {
-                    return Nextflow.file(paramValue)
+                if( paramValue instanceof String || paramValue instanceof GString ) {
+                    return parseFileInput(paramValue.toString())
                 }
                 return paramValue
                 
