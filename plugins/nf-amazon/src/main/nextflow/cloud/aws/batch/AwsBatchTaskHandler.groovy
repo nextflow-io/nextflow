@@ -632,7 +632,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         return result
     }
 
-    @Memoized 
+    @Memoized
     LogConfiguration getLogConfiguration(String name, String region) {
         LogConfiguration.builder()
             .logDriver('awslogs')
@@ -779,7 +779,8 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         builder.jobQueue(getJobQueue(task))
         builder.jobDefinition(getJobDefinition(task))
         if( labels ) {
-            builder.tags(labels)
+            final tags = validateAwsBatchLabels(labels)
+            builder.tags(tags)
             builder.propagateTags(true)
         }
         // set the share identifier
@@ -862,6 +863,98 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         }
 
         return builder.build()
+    }
+
+    /**
+     * Validate AWS Batch labels for compliance with AWS naming requirements.
+     * This method validates resource labels against AWS Batch tag constraints and
+     * handles violations based on the nextflow.enable.strict setting:
+     * 
+     * - When strict mode is disabled (default): logs warnings for invalid tags but allows them through
+     * - When strict mode is enabled: throws ProcessUnrecoverableException for invalid tags
+     *
+     * AWS Batch tag constraints validated:
+     * - Keys and values cannot be null
+     * - Maximum key length: 128 characters  
+     * - Maximum value length: 256 characters
+     * - Allowed characters: letters, numbers, spaces, and: _ . : / = + - @
+     *
+     * @param labels The original resource labels map
+     * @return The labels map (unchanged in validation mode)
+     * @throws ProcessUnrecoverableException when strict mode is enabled and labels are invalid
+     */
+    protected Map<String, String> validateAwsBatchLabels(Map<String, String> labels) {
+        if (!labels) return labels
+
+        final strictMode = executor.session.config.navigate('nextflow.enable.strict', false)
+        final violations = []
+        final result = new HashMap<String, String>()
+
+        for (Map.Entry<String, String> entry : labels.entrySet()) {
+            final key = entry.getKey()
+            final value = entry.getValue()
+
+            // Check for null keys or values and filter them out (not validation violations)
+            if (key == null) {
+                log.warn "AWS Batch label dropped due to null key: key=null, value=${value}"
+                continue
+            }
+            if (value == null) {
+                log.warn "AWS Batch label dropped due to null value: key=${key}, value=null"
+                continue
+            }
+
+            final keyStr = key.toString()
+            final valueStr = value.toString()
+            
+            // Validate key length
+            if (keyStr.length() > 128) {
+                violations << "Label key exceeds 128 characters: '${keyStr}' (${keyStr.length()} chars)"
+            }
+            
+            // Validate value length  
+            if (valueStr.length() > 256) {
+                violations << "Label value exceeds 256 characters: '${keyStr}' = '${valueStr}' (${valueStr.length()} chars)"
+            }
+            
+            // Validate key characters
+            if (!isValidAwsBatchTagString(keyStr)) {
+                violations << "Label key contains invalid characters: '${keyStr}' - only letters, numbers, spaces, and _ . : / = + - @ are allowed"
+            }
+            
+            // Validate value characters
+            if (!isValidAwsBatchTagString(valueStr)) {
+                violations << "Label value contains invalid characters: '${keyStr}' = '${valueStr}' - only letters, numbers, spaces, and _ . : / = + - @ are allowed"
+            }
+
+            // Add valid entries to result
+            result[keyStr] = valueStr
+        }
+
+        // Handle violations based on strict mode (but only for constraint violations, not null filtering)
+        if (violations) {
+            final message = "AWS Batch tag validation failed:\n${violations.collect{ '  - ' + it }.join('\n')}"
+            if (strictMode) {
+                throw new ProcessUnrecoverableException(message)
+            } else {
+                log.warn "${message}\nTags will be used as-is but may cause AWS Batch submission failures"
+            }
+        }
+
+        return result
+    }
+
+    /**
+     * Check if a string contains only characters allowed in AWS Batch tags.
+     * AWS Batch allows: letters, numbers, spaces, and: _ . : / = + - @
+     * 
+     * @param input The string to validate
+     * @return true if the string contains only valid characters
+     */
+    protected boolean isValidAwsBatchTagString(String input, int maxLength = 128) {
+        if (!input) return false
+        if (input.length() > maxLength) return false
+        return input ==~ /^[a-zA-Z0-9\s_.\:\/=+\-@]*$/
     }
 
     /**
