@@ -2,10 +2,12 @@ package io.seqera.tower.plugin.cli
 
 import groovy.json.JsonBuilder
 import groovy.json.JsonSlurper
+import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.seqera.http.HxClient
 import nextflow.Const
+import nextflow.SysEnv
 import nextflow.cli.CmdAuth
 import nextflow.cli.ColorUtil
 import nextflow.config.ConfigBuilder
@@ -48,7 +50,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
     /**
      * Creates an HxClient instance with optional authentication token
      */
-    private HxClient createHttpClient(String authToken = null) {
+    protected HxClient createHttpClient(String authToken = null) {
         final builder = HxClient.newBuilder()
             .connectTimeout(Duration.ofMillis(API_TIMEOUT_MS))
 
@@ -63,7 +65,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
     void login(String apiUrl) {
 
         // Check if TOWER_ACCESS_TOKEN environment variable is set
-        final envToken = System.getenv('TOWER_ACCESS_TOKEN')
+        final envToken = SysEnv.get('TOWER_ACCESS_TOKEN')
         if( envToken ) {
             println ""
             ColorUtil.printColored("WARNING: Authentication token is already configured via TOWER_ACCESS_TOKEN environment variable.", "yellow bold")
@@ -102,7 +104,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         }
     }
 
-    private void performAuth0Login(String apiUrl, Map auth0Config) {
+    protected void performAuth0Login(String apiUrl, Map auth0Config) {
 
         // Start device authorization flow
         final deviceAuth = requestDeviceAuthorization(auth0Config)
@@ -172,7 +174,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         return browserOpened
     }
 
-    private boolean runBrowserCommand(GString urlWithCode) {
+    protected boolean runBrowserCommand(GString urlWithCode) {
         def command = []
         def browserOpened = false
         final os = System.getProperty("os.name").toLowerCase()
@@ -250,7 +252,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
     }
 
 
-    private void handleEnterpriseAuth(String apiUrl) {
+    protected void handleEnterpriseAuth(String apiUrl) {
         println ""
         ColorUtil.printColored("Please generate a Personal Access Token from your Seqera Platform instance.", "cyan bold")
         println "You can create one at: ${ColorUtil.colorize(apiUrl.replace('/api', '').replace('://api.', '') + '/tokens', 'magenta')}"
@@ -314,7 +316,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         return url
     }
 
-    private Map performAuth0Request(String url, Map params) {
+    protected Map performAuth0Request(String url, Map params) {
         final postData = params.collect { k, v ->
             "${URLEncoder.encode(k.toString(), 'UTF-8')}=${URLEncoder.encode(v.toString(), 'UTF-8')}"
         }.join('&')
@@ -373,7 +375,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         }
 
         // Check if TOWER_ACCESS_TOKEN environment variable is set
-        final envToken = System.getenv('TOWER_ACCESS_TOKEN')
+        final envToken = SysEnv.get('TOWER_ACCESS_TOKEN')
         if( envToken ) {
             println ""
             ColorUtil.printColored("WARNING: TOWER_ACCESS_TOKEN environment variable is set.", "yellow bold")
@@ -469,7 +471,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         final config = readConfig()
 
         // Token can come from .login file or environment variable
-        final existingToken = config['tower.accessToken'] ?: System.getenv('TOWER_ACCESS_TOKEN')
+        final existingToken = config['tower.accessToken'] ?: SysEnv.get('TOWER_ACCESS_TOKEN')
         final endpoint = config['tower.endpoint'] ?: DEFAULT_API_ENDPOINT
 
         if( !existingToken ) {
@@ -481,7 +483,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         ColorUtil.printColored(" - Config file: ${ColorUtil.colorize(getLoginFile().toString(), 'magenta')}", "dim")
 
         // Check if token is from environment variable
-        if( !config['tower.accessToken'] && System.getenv('TOWER_ACCESS_TOKEN') ) {
+        if( !config['tower.accessToken'] && SysEnv.get('TOWER_ACCESS_TOKEN') ) {
             ColorUtil.printColored(" - Using access token from TOWER_ACCESS_TOKEN environment variable", "dim")
         }
 
@@ -569,7 +571,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
 
     private Map configureWorkspace(Map config, String accessToken, String endpoint, String userId) {
         // Check if TOWER_WORKFLOW_ID environment variable is set
-        final envWorkspaceId = System.getenv('TOWER_WORKFLOW_ID')
+        final envWorkspaceId = SysEnv.get('TOWER_WORKFLOW_ID')
         if( envWorkspaceId ) {
             println "\nDefault workspace: ${ColorUtil.colorize('TOWER_WORKFLOW_ID environment variable is set', 'yellow')}"
             ColorUtil.printColored("  Not prompting for default workspace configuration as environment variable takes precedence", "dim")
@@ -763,18 +765,22 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
     void status() {
         final config = readConfig()
         final loginConfig = readLoginFile()
+
+        printStatus(collectStatus(config, loginConfig))
+    }
+
+    private ConfigStatus collectStatus(Map config, Map loginConfig) {
         // Collect all status information
-        List<List<String>> statusRows = []
-        def workspaceDisplayInfo = null
+        final status = new ConfigStatus([], null)
 
         // API endpoint
         final endpointInfo = getConfigValue(config, loginConfig, 'tower.endpoint', 'TOWER_API_ENDPOINT', DEFAULT_API_ENDPOINT)
-        statusRows.add(['API endpoint', ColorUtil.colorize(endpointInfo.value as String, 'magenta'), endpointInfo.source as String])
+        status.table.add(['API endpoint', ColorUtil.colorize(endpointInfo.value as String, 'magenta'), endpointInfo.source as String])
 
         // API connection check
         final apiConnectionOk = checkApiConnection(endpointInfo.value as String)
         final connectionColor = apiConnectionOk ? 'green' : 'red'
-        statusRows.add(['API connection', ColorUtil.colorize(apiConnectionOk ? 'OK' : 'ERROR', connectionColor), ''])
+        status.table.add(['API connection', ColorUtil.colorize(apiConnectionOk ? 'OK' : 'ERROR', connectionColor), ''])
 
         // Authentication check
         final tokenInfo = getConfigValue(config, loginConfig, 'tower.accessToken', 'TOWER_ACCESS_TOKEN')
@@ -782,19 +788,19 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
             try {
                 final userInfo = callUserInfoApi(tokenInfo.value as String, endpointInfo.value as String)
                 final currentUser = userInfo.userName as String
-                statusRows.add(['Authentication', "${ColorUtil.colorize('OK', 'green')} (user: ${ColorUtil.colorize(currentUser, 'cyan')})".toString(), tokenInfo.source as String])
+                status.table.add(['Authentication', "${ColorUtil.colorize('OK', 'green')} (user: ${ColorUtil.colorize(currentUser, 'cyan')})".toString(), tokenInfo.source as String])
             } catch( Exception e ) {
-                statusRows.add(['Authentication', ColorUtil.colorize('ERROR', 'red'), 'failed'])
+                status.table.add(['Authentication', ColorUtil.colorize('ERROR', 'red'), 'failed'])
             }
         } else {
-            statusRows.add(['Authentication', "${ColorUtil.colorize('ERROR', 'red')} ${ColorUtil.colorize('(no token)', 'dim')}".toString(), 'not set'])
+            status.table.add(['Authentication', "${ColorUtil.colorize('ERROR', 'red')} ${ColorUtil.colorize('(no token)', 'dim')}".toString(), 'not set'])
         }
 
         // Monitoring enabled
-        final enabledInfo = getConfigValue(config, loginConfig,'tower.enabled', null, 'false')
+        final enabledInfo = getConfigValue(config, loginConfig, 'tower.enabled', null, 'false')
         final enabledValue = enabledInfo.value?.toString()?.toLowerCase() in ['true', '1', 'yes'] ? 'Yes' : 'No'
         final enabledColor = enabledValue == 'Yes' ? 'green' : 'yellow'
-        statusRows.add(['Workflow monitoring', ColorUtil.colorize(enabledValue, enabledColor), (enabledInfo.source ?: 'default') as String])
+        status.table.add(['Workflow monitoring', ColorUtil.colorize(enabledValue, enabledColor), (enabledInfo.source ?: 'default') as String])
 
         // Default workspace
         final workspaceInfo = getConfigValue(config, loginConfig, 'tower.workspaceId', 'TOWER_WORKFLOW_ID')
@@ -807,23 +813,25 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
 
             if( workspaceDetails ) {
                 // Add workspace ID row
-                statusRows.add(['Default workspace', ColorUtil.colorize(workspaceInfo.value as String, 'blue'), workspaceInfo.source as String])
+                status.table.add(['Default workspace', ColorUtil.colorize(workspaceInfo.value as String, 'blue'), workspaceInfo.source as String])
                 // Store workspace details for display after the table
-                workspaceDisplayInfo = workspaceDetails
+                status.workspaceInfo = workspaceDetails
             } else {
-                statusRows.add(['Default workspace', ColorUtil.colorize(workspaceInfo.value as String, 'blue', true), workspaceInfo.source as String])
+                status.table.add(['Default workspace', ColorUtil.colorize(workspaceInfo.value as String, 'blue', true), workspaceInfo.source as String])
             }
         } else {
-            statusRows.add(['Default workspace', ColorUtil.colorize('None (Personal workspace)', 'cyan', true), 'default'])
+            status.table.add(['Default workspace', ColorUtil.colorize('None (Personal workspace)', 'cyan', true), 'default'])
         }
-
+        return status
+    }
+    private void printStatus(ConfigStatus status){
         // Print table
         println ""
-        printStatusTable(statusRows)
+        printStatusTable(status.table)
 
         // Print workspace details if available
-        if( workspaceDisplayInfo ) {
-            println "${' ' * 22}${ColorUtil.colorize(workspaceDisplayInfo.orgName as String, 'cyan')} / ${ColorUtil.colorize(workspaceDisplayInfo.workspaceName as String, 'cyan')} ${ColorUtil.colorize('[' + (workspaceDisplayInfo.workspaceFullName as String) + ']', 'dim')}"
+        if( status.workspaceInfo ) {
+            println "${' ' * 22}${ColorUtil.colorize(status.workspaceInfo.orgName as String, 'cyan')} / ${ColorUtil.colorize(status.workspaceInfo.workspaceName as String, 'cyan')} ${ColorUtil.colorize('[' + (status.workspaceInfo.workspaceFullName as String) + ']', 'dim')}"
         }
     }
 
@@ -875,8 +883,8 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         //Checks where the config value came from
         final loginValue = login[configKey]
         final configValue = config[configKey]
-        final envValue = envVarName ? System.getenv(envVarName) : null
-        final effectiveValue = configValue ?: envValue ?: defaultValue
+        final envValue = envVarName ? SysEnv.get(envVarName) : null
+        final effectiveValue = loginValue ?: configValue ?: envValue ?: defaultValue
 
         def source = null
         if( loginValue ) {
@@ -892,13 +900,13 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         return [
             value     : effectiveValue,
             source    : source,
-            fromConfig: configValue != null,
+            fromConfig: configValue != null || loginValue != null,
             fromEnv   : envValue != null,
-            isDefault : !configValue && !envValue
+            isDefault : !loginValue && !configValue && !envValue
         ]
     }
 
-    private boolean checkApiConnection(String endpoint) {
+    protected boolean checkApiConnection(String endpoint) {
         try {
             final client = createHttpClient()
             final request = HttpRequest.newBuilder()
@@ -913,7 +921,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         }
     }
 
-    private static String readUserInput(String message = null) {
+    protected static String readUserInput(String message = null) {
         if (message) {
             System.out.print(message)
             System.out.flush()
@@ -925,7 +933,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         return line?.trim()
     }
 
-    private Map getWorkspaceDetailsFromApi(String accessToken, String endpoint, String workspaceId) {
+    protected Map getWorkspaceDetailsFromApi(String accessToken, String endpoint, String workspaceId) {
         try {
             final userInfo = callUserInfoApi(accessToken, endpoint)
             final userId = userInfo.id as String
@@ -976,7 +984,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         return getCloudEndpointInfo(apiUrl).isCloud
     }
 
-    private Map callUserInfoApi(String accessToken, String apiUrl) {
+    protected Map callUserInfoApi(String accessToken, String apiUrl) {
         final client = createHttpClient(accessToken)
         final request = HttpRequest.newBuilder()
             .uri(URI.create("${apiUrl}/user-info"))
@@ -994,11 +1002,11 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         return json.user as Map
     }
 
-    private Path getConfigFile() {
+    protected Path getConfigFile() {
         return Const.APP_HOME_DIR.resolve('config')
     }
 
-    private Path getLoginFile() {
+    protected Path getLoginFile() {
         return Const.APP_HOME_DIR.resolve('.login')
     }
 
@@ -1023,6 +1031,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
     }
 
     private void writeConfig(Map config, Map workspaceMetadata = null) {
+        log.debug("Getting config ")
         final configFile = getConfigFile()
         final loginFile = getLoginFile()
 
@@ -1092,4 +1101,11 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         }
         return filteredLines.join('\n')
     }
+    @Canonical
+    static class ConfigStatus {
+        List<List<String>> table
+        Map workspaceInfo
+    }
 }
+
+
