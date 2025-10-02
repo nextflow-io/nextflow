@@ -424,7 +424,9 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
             }
             else {
                 // finalize the task
-                task.exitStatus = readExitFile()
+                // try to get exit code from K8s state
+                final k8sExitCode = (state.terminated as Map)?.exitCode as Integer
+                task.exitStatus = k8sExitCode ?: readExitFile()
                 task.stdout = outputFile
                 task.stderr = errorFile
             }
