@@ -18,6 +18,7 @@ package nextflow.script.control;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -26,6 +27,7 @@ import nextflow.script.dsl.Constant;
 import nextflow.script.dsl.Operator;
 import nextflow.script.ast.ProcessNode;
 import nextflow.script.ast.WorkflowNode;
+import nextflow.script.types.Record;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
@@ -95,14 +97,18 @@ public class VariableScopeChecker {
         }
     }
 
-    public void pushScope(Class classScope) {
+    public void pushScope(ClassNode classScope) {
         currentScope = new VariableScope(currentScope);
         if( classScope != null )
-            currentScope.setClassScope(ClassHelper.makeCached(classScope));
+            currentScope.setClassScope(classScope);
+    }
+
+    public void pushScope(Class classScope) {
+        pushScope(ClassHelper.makeCached(classScope));
     }
 
     public void pushScope() {
-        pushScope(null);
+        pushScope((ClassNode) null);
     }
 
     public void popScope() {
@@ -219,7 +225,7 @@ public class VariableScopeChecker {
 
     private static PropertyNode wrapMethodAsVariable(MethodNode mn, String name) {
         var cn = mn.getDeclaringClass();
-        var fn = new FieldNode(name, mn.getModifiers() & 0xF, mn.getReturnType(), cn, null);
+        var fn = new FieldNode(name, mn.getModifiers() & 0xF, methodOutputType(mn), cn, null);
         fn.setHasNoRealSourcePosition(true);
         fn.setDeclaringClass(cn);
         fn.setSynthetic(true);
@@ -229,28 +235,45 @@ public class VariableScopeChecker {
         return pn;
     }
 
+    private static ClassNode methodOutputType(MethodNode mn) {
+        if( !(mn instanceof ProcessNode || mn instanceof WorkflowNode) )
+            return mn.getReturnType();
+        var cn = new ClassNode(Record.class);
+        var fn = new FieldNode("out", mn.getModifiers() & 0xF, mn.getReturnType(), cn, null);
+        fn.setHasNoRealSourcePosition(true);
+        fn.setDeclaringClass(cn);
+        fn.setSynthetic(true);
+        cn.addField(fn);
+        return cn;
+    }
+
     /**
      * Find the definition of a built-in function.
      *
      * @param name
      * @param node
+     * @param directive
      */
-    public MethodNode findDslFunction(String name, ASTNode node) {
+    public List<MethodNode> findDslFunction(String name, ASTNode node, boolean directive) {
         VariableScope scope = currentScope;
         while( scope != null ) {
             ClassNode cn = scope.getClassScope();
             while( cn != null ) {
-                for( var mn : cn.getMethods() ) {
-                    // built-in functions are methods not annotated as @Constant
-                    if( findAnnotation(mn, Constant.class).isPresent() )
-                        continue;
-                    if( !name.equals(mn.getName()) )
-                        continue;
-                    if( findAnnotation(mn, Deprecated.class).isPresent() )
-                        addParanoidWarning("`" + name + "` is deprecated and will be removed in a future version", node);
-                    return mn;
-                }
-    
+                // built-in functions are methods not annotated as @Constant
+                var methods = cn.getDeclaredMethods(name).stream()
+                    .filter(mn -> !findAnnotation(mn, Constant.class).isPresent())
+                    .toList();
+
+                if( methods.size() == 1 && findAnnotation(methods.get(0), Deprecated.class).isPresent() )
+                    addParanoidWarning("`" + name + "` is deprecated and will be removed in a future version", node);
+
+                if( !methods.isEmpty() )
+                    return methods;
+
+                // directives can only come from the immediate dsl scope
+                if( directive && scope == currentScope )
+                    return Collections.emptyList();
+
                 cn = cn.getInterfaces().length > 0
                     ? cn.getInterfaces()[0]
                     : null;
@@ -258,7 +281,13 @@ public class VariableScopeChecker {
             scope = scope.getParent();
         }
 
-        return includes.get(name);
+        return includes.containsKey(name)
+            ? List.of(includes.get(name))
+            : Collections.emptyList();
+    }
+
+    public List<MethodNode> findDslFunction(String name, ASTNode node) {
+        return findDslFunction(name, node, false);
     }
 
     public void addWarning(String message, String tokenText, ASTNode node) {

@@ -239,7 +239,7 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
         var statements = node.declarations.stream()
             .map((output) -> {
                 new PublishDslVisitor().visit(output.body);
-                var name = constX(output.name);
+                var name = constX(output.getName());
                 var body = closureX(null, output.body);
                 return stmt(callThisX("declare", args(name, body)));
             })

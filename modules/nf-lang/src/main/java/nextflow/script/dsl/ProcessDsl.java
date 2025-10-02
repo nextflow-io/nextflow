@@ -16,11 +16,12 @@
 package nextflow.script.dsl;
 
 import java.nio.file.Path;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import groovy.transform.NamedParam;
+import groovy.transform.NamedParams;
 import nextflow.script.types.Duration;
 import nextflow.script.types.MemoryUnit;
 import nextflow.script.types.TaskConfig;
@@ -342,7 +343,7 @@ public interface ProcessDsl extends DslScope {
         @Description("""
             Stage a collection of files into the task directory under the given alias.
         """)
-        void stageAs(String filePattern, Collection<Path> value);
+        void stageAs(String filePattern, Iterable<Path> value);
 
         @Description("""
             Stage the given value as the standard input (i.e. `stdin`) to the task script.
@@ -410,13 +411,37 @@ public interface ProcessDsl extends DslScope {
         @Description("""
             Get a file from the task environment that matches the given pattern.
         """)
-        Path file(Map<String,?> opts, String name);
+        Path file(
+            @NamedParams({
+                @NamedParam(value = "followLinks", type = Boolean.class),
+                @NamedParam(value = "glob", type = Boolean.class),
+                @NamedParam(value = "hidden", type = Boolean.class),
+                @NamedParam(value = "includeInputs", type = Boolean.class),
+                @NamedParam(value = "maxDepth", type = Integer.class),
+                @NamedParam(value = "optional", type = Boolean.class),
+                @NamedParam(value = "type", type = String.class),
+            })
+            Map<String,?> opts,
+            String name
+        );
         Path file(String name);
 
         @Description("""
             Get the files from the task environment that match the given pattern.
         """)
-        Set<Path> files(Map<String,?> opts, String pattern);
+        Set<Path> files(
+            @NamedParams({
+                @NamedParam(value = "followLinks", type = Boolean.class),
+                @NamedParam(value = "glob", type = Boolean.class),
+                @NamedParam(value = "hidden", type = Boolean.class),
+                @NamedParam(value = "includeInputs", type = Boolean.class),
+                @NamedParam(value = "maxDepth", type = Integer.class),
+                @NamedParam(value = "optional", type = Boolean.class),
+                @NamedParam(value = "type", type = String.class),
+            })
+            Map<String,?> opts, 
+            String pattern
+        );
         Set<Path> files(String pattern);
 
         @Description("""

@@ -15,9 +15,11 @@
  */
 package nextflow.script.control;
 
+import java.lang.reflect.Modifier;
 import java.util.HashMap;
 import java.util.List;
 
+import groovy.lang.groovydoc.GroovydocHolder;
 import nextflow.script.ast.ASTNodeMarker;
 import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.FeatureFlagNode;
@@ -41,10 +43,12 @@ import nextflow.script.dsl.OutputDsl;
 import nextflow.script.dsl.ProcessDsl;
 import nextflow.script.dsl.ScriptDsl;
 import nextflow.script.dsl.WorkflowDsl;
+import nextflow.script.types.ParamsMap;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.DynamicVariable;
+import org.codehaus.groovy.ast.FieldNode;
 import org.codehaus.groovy.ast.MethodNode;
 import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.ast.Variable;
@@ -101,6 +105,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         if( moduleNode instanceof ScriptNode sn ) {
             for( var includeNode : sn.getIncludes() )
                 declareInclude(includeNode);
+            declareParams(sn);
             for( var workflowNode : sn.getWorkflows() ) {
                 if( !workflowNode.isEntry() )
                     declareMethod(workflowNode);
@@ -122,6 +127,29 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
                 vsc.addError("`" + name + "` is already included", node, "First included here", otherInclude);
             vsc.include(name, entry.getTarget());
         }
+    }
+
+    private ClassNode paramsType;
+
+    private void declareParams(ScriptNode sn) {
+        var params = sn.getParams();
+        var entry = sn.getEntry();
+        if( params == null || entry == null )
+            return;
+
+        var cn = new ClassNode(ParamsMap.class);
+        for( var param : params.declarations ) {
+            var name = param.getName();
+            var type = param.getType();
+            var fn = new FieldNode(name, Modifier.PUBLIC, type, cn, null);
+            fn.setHasNoRealSourcePosition(true);
+            fn.setDeclaringClass(cn);
+            fn.setSynthetic(true);
+            fn.putNodeMetaData(GroovydocHolder.DOC_COMMENT, param.getGroovydoc());
+            cn.addField(fn);
+        }
+
+        this.paramsType = cn;
     }
 
     private void declareMethod(MethodNode mn) {
@@ -180,7 +208,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
             var name = param.getName();
             var other = declaredParams.get(name);
             if( other != null )
-                vsc.addError("Parameter " + name + "` is already declared", param, "First declared here", other);
+                vsc.addError("Parameter `" + name + "` is already declared", param, "First declared here", other);
             else
                 declaredParams.put(name, param);
 
@@ -193,7 +221,14 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitWorkflow(WorkflowNode node) {
-        vsc.pushScope(node.isEntry() ? EntryWorkflowDsl.class : WorkflowDsl.class);
+        var classScope = ClassHelper.makeCached(node.isEntry() ? EntryWorkflowDsl.class : WorkflowDsl.class);
+        if( node.isEntry() && paramsType != null ) {
+            classScope = new ClassNode(classScope.getTypeClass());
+            var paramsMethod = classScope.getDeclaredMethods("getParams").get(0);
+            paramsMethod.setReturnType(paramsType);
+        }
+
+        vsc.pushScope(classScope);
         currentDefinition = node;
         node.setVariableScope(currentScope());
 
@@ -364,9 +399,11 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
             return null;
         }
         var name = call.getMethodAsString();
-        var mn = vsc.findDslFunction(name, call.getMethod());
-        if( mn != null )
-            call.putNodeMetaData(ASTNodeMarker.METHOD_TARGET, mn);
+        var methods = vsc.findDslFunction(name, call, true);
+        if( methods.size() == 1 )
+            call.putNodeMetaData(ASTNodeMarker.METHOD_TARGET, methods.get(0));
+        else if( !methods.isEmpty() )
+            call.putNodeMetaData(ASTNodeMarker.METHOD_OVERLOADS, methods);
         else
             vsc.addError("Unrecognized " + typeLabel + " `" + name + "`", node);
         return call;
@@ -617,11 +654,15 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         if( !node.isImplicitThis() )
             return;
         var name = node.getMethodAsString();
-        var mn = vsc.findDslFunction(name, node.getMethod());
-        if( mn != null ) {
+        var methods = vsc.findDslFunction(name, node);
+        if( methods.size() == 1 ) {
+            var mn = methods.get(0);
             if( VariableScopeChecker.isDataflowMethod(mn) )
                 checkDataflowMethod(node, mn);
             node.putNodeMetaData(ASTNodeMarker.METHOD_TARGET, mn);
+        }
+        else if( !methods.isEmpty() ) {
+            node.putNodeMetaData(ASTNodeMarker.METHOD_OVERLOADS, methods);
         }
         else if( !KEYWORDS.contains(name) ) {
             vsc.addError("`" + name + "` is not defined", node.getMethod());

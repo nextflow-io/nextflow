@@ -496,12 +496,12 @@ public class ScriptAstBuilder {
         return result;
     }
 
-    private TupleParameter processTupleInput(ClassNode type, List<String> names, ParserRuleContext ctx) {
+    private TupleParameter processTupleInput(ClassNode type, List<String> names, ProcessInputContext ctx) {
         var componentTypes = tupleComponentTypes(type, names.size());
         var components = new Parameter[names.size()];
         for( int i = 0; i < names.size(); i++ ) {
             var componentType = componentTypes != null ? componentTypes.get(i) : ClassHelper.dynamicType();
-            components[i] = param(componentType, names.get(i));
+            components[i] = ast( param(componentType, names.get(i)), ctx.identifier().get(i) );
         }
         var result = ast( new TupleParameter(type, components), ctx );
         if( !"Tuple".equals(type.getUnresolvedName()) )
