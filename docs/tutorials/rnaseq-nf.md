@@ -2,9 +2,9 @@
 
 # Getting started with rnaseq-nf
 
-`rnaseq-nf` is a basic Nextflow pipeline for RNA-Seq analysis that performs quality control, transcript quantification, and result aggregation. The pipeline processes paired-end FASTQ files, generates quality control reports with [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/), quantifies transcripts with [Salmon](https://salmon.readthedocs.io/en/latest/salmon.html), and produces a unified report with [MultiQC](https://seqera.io/multiqc/).
+[`rnaseq-nf`](https://github.com/nextflow-io/rnaseq-nf) is a basic Nextflow pipeline for RNA-Seq analysis that performs quality control, transcript quantification, and result aggregation. The pipeline processes paired-end FASTQ files, generates quality control reports with [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/), quantifies transcripts with [Salmon](https://salmon.readthedocs.io/en/latest/salmon.html), and produces a unified report with [MultiQC](https://seqera.io/multiqc/).
 
-This tutorial describes the architecture of the `rnaseq-nf` pipeline and provides instructions on how to run it.
+This tutorial describes the architecture of the [`rnaseq-nf`](https://github.com/nextflow-io/rnaseq-nf) pipeline and provides instructions on how to run it.
 
 ## Pipeline architecture
 
@@ -176,7 +176,7 @@ Use the `all-reads` profile to process all four tissue samples instead of just t
 
 ## Quick start
 
-`rnaseq-nf` is a runnable pipeline. This section provides examples for running the pipeline with different configurations.
+[`rnaseq-nf`](https://github.com/nextflow-io/rnaseq-nf) is a runnable pipeline. This section provides examples for running the pipeline with different configurations.
 
 ### Basic execution
 
@@ -219,7 +219,7 @@ See [Execution profiles](#execution-profiles) for more information about profile
 
 ## Expected outputs
 
-The `rnaseq-nf` pipeline generates the following outputs in the results directory:
+The [`rnaseq-nf`](https://github.com/nextflow-io/rnaseq-nf) pipeline generates the following outputs in the results directory:
 
 ```
 results/
