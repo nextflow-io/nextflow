@@ -12,7 +12,7 @@ The pipeline is organized into modular workflows and processes that coordinate d
 
 ### Entry workflow
 
-The entry workflow orchestrates the entire pipeline by coordinating input parameters and data flow:
+The [entry workflow](https://github.com/nextflow-io/rnaseq-nf/blob/master/main.nf) orchestrates the entire pipeline by coordinating input parameters and data flow:
 
 ```{mermaid}
 flowchart TB
@@ -40,7 +40,7 @@ flowchart TB
 
 ### `RNASEQ`
 
-The `RNASEQ` subworkflow coordinates three processes that run in parallel and sequence:
+The [`RNASEQ`](https://github.com/nextflow-io/rnaseq-nf/blob/master/modules/rnaseq.nf) subworkflow coordinates three processes that run in parallel and sequence:
 
 ```{mermaid}
 flowchart TB
@@ -71,9 +71,9 @@ flowchart TB
 
 <h3>Process execution (<code>main:</code>):</h3>
 
-- `INDEX` creates a Salmon index from the `transcriptome` (runs once)
-- `FASTQC` analyzes the `read_pairs_ch` in parallel (runs independently for each sample)
-- `QUANT` quantifies transcripts using both the index from **INDEX** and the `read_pairs_ch` (runs for each sample after INDEX completes)
+- [`INDEX`](https://github.com/nextflow-io/rnaseq-nf/blob/master/modules/index/main.nf) creates a Salmon index from the `transcriptome` (runs once)
+- [`FASTQC`](https://github.com/nextflow-io/rnaseq-nf/blob/master/modules/fastqc/main.nf) analyzes the `read_pairs_ch` in parallel (runs independently for each sample)
+- [`QUANT`](https://github.com/nextflow-io/rnaseq-nf/blob/master/modules/quant/main.nf) quantifies transcripts using both the index from **INDEX** and the `read_pairs_ch` (runs for each sample after INDEX completes)
 
 <h3>Outputs (<code>emit:</code>):</h3>
 
@@ -81,7 +81,7 @@ flowchart TB
 
 ### `MULTIQC`
 
-The `MULTIQC` module aggregates all quality control and quantification outputs into a comprehensive HTML report.
+The [`MULTIQC`](https://github.com/nextflow-io/rnaseq-nf/blob/master/modules/multiqc/main.nf) module aggregates all quality control and quantification outputs into a comprehensive HTML report.
 
 <h3>Inputs:</h3>
 
@@ -112,7 +112,7 @@ The pipeline accepts the following command-line parameters:
 
 ## Execution profiles
 
-Execution profiles allow you to customize how and where the pipeline runs by specifying the `-profile` flag. Multiple profiles can be combined by separating them with commas.
+Execution profiles allow you to customize how and where the pipeline runs by specifying the `-profile` flag. Multiple profiles can be combined by separating them with commas. Profiles are located in the [`nextflow.config`](https://github.com/nextflow-io/rnaseq-nf/blob/master/nextflow.config) file in the base directory.
 
 <h3>Container profiles</h3>
 
@@ -161,7 +161,7 @@ To use the Cloud and HPC profiles, you must configure credentials, resource pool
 
 ## Test data
 
-The pipeline includes test data located in the `data/ggal/` directory for demonstration and validation purposes:
+The pipeline includes test data located in the [`data/ggal/`](https://github.com/nextflow-io/rnaseq-nf/tree/master/data/ggal) directory for demonstration and validation purposes:
 
 - Paired-end FASTQ files: Four tissue samples (gut, liver, lung, spleen) from *Gallus gallus* (chicken)
   - `ggal_gut_{1,2}.fq` - Default sample used when running with standard parameters
@@ -231,4 +231,4 @@ results/
 └── multiqc_report.html           # Aggregated QC and Salmon report
 ```
 
-The MultiQC report (multiqc_report.html) can be viewed in a web browser.
+The MultiQC report (`multiqc_report.html`) can be viewed in a web browser.
