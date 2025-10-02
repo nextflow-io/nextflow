@@ -39,6 +39,7 @@ import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.ProcessStageException
+import nextflow.trace.event.FileStagingEvent
 import nextflow.extension.FilesEx
 import nextflow.util.CacheHelper
 import nextflow.util.Duration
@@ -100,6 +101,15 @@ class FilePorter {
         if( batch.size() ) {
             log.trace "Stage foreign files: $batch"
             submitStagingActions(batch.foreignPaths)
+            
+            // Notify observers about file staging completion events
+            for( FileCopy copy : batch.foreignPaths ) {
+                session.notifyFileStaged(new FileStagingEvent(
+                    source: copy.source,
+                    target: copy.target
+                ))
+            }
+            
             log.trace "Stage foreign files completed: $batch"
         }
     }
