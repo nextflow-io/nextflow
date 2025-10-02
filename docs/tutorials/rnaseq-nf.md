@@ -32,7 +32,7 @@ flowchart TB
     end
 ```
 
-**Data flow:**
+<h3>Data flow:</h3>
 
 1. The `transcriptome` and `reads` parameters are passed to the `RNASEQ` subworkflow, which performs indexing, quality control, and quantification
 2. The outputs from `RNASEQ` along with the `multiqc` configuration are passed to the `MULTIQC` module, which aggregates results into a unified HTML report
@@ -64,18 +64,18 @@ flowchart TB
     end
 ```
 
-**Inputs (`take:`):**
+<h3>Inputs (`take:`):</h3>
 
 - `transcriptome`: Reference transcriptome file
 - `read_pairs_ch`: Channel of paired-end read files
 
-**Process execution (`main:`):**
+<h3>Process execution (`main:`):</h3>
 
 - `INDEX` creates a Salmon index from the `transcriptome` (runs once)
 - `FASTQC` analyzes the `read_pairs_ch` in parallel (runs independently for each sample)
 - `QUANT` quantifies transcripts using both the index from **INDEX** and the `read_pairs_ch` (runs for each sample after INDEX completes)
 
-**Outputs (`emit:`):**
+<h3>Outputs (`emit:`):</h3>
 
 - All outputs from `FASTQC` and `QUANT` are collected and emitted for downstream processing
 
@@ -83,16 +83,16 @@ flowchart TB
 
 The `MULTIQC` module aggregates all quality control and quantification outputs into a comprehensive HTML report.
 
-**Inputs:**
+<h3>Inputs:</h3>
 
 - `RNASEQ` outputs: All collected outputs from the `RNASEQ` subworkflow (FastQC reports and Salmon quantification files)
 - MultiQC config: Custom configuration files and branding (logo, styling)
 
-**Process execution:**
+<h3>Process execution:</h3>
 
 - `MULTIQC` scans all input files, extracts metrics and statistics, and generates a unified report
 
-**Outputs:**
+<h3>Outputs:</h3>
 
 - `multiqc_report.html`: A single consolidated HTML report providing an overview of:
   - General stats
@@ -114,7 +114,7 @@ The pipeline accepts the following command-line parameters:
 
 Execution profiles allow you to customize how and where the pipeline runs by specifying the `-profile` flag. Multiple profiles can be combined by separating them with commas.
 
-**Container profiles**
+<h3>Container profiles</h3>
 
 Container profiles specify which containerization technology to use for running the pipeline tools:
 
@@ -128,7 +128,7 @@ Container profiles specify which containerization technology to use for running 
 The respective container tools must be installed to use these profiles.
 :::
 
-**Environment profiles**
+<h3>Environment profiles</h3>
 
 Environment profiles manage software dependencies through package managers or specify architecture requirements:
 
@@ -140,7 +140,7 @@ Environment profiles manage software dependencies through package managers or sp
 The respective environment tools must be installed to use these profiles.
 :::
 
-**Cloud and HPC profiles**
+<h3>Cloud and HPC profiles</h3>
 
 Cloud and HPC profiles enable execution on distributed computing infrastructure and cloud storage:
 
@@ -155,7 +155,7 @@ Cloud and HPC profiles enable execution on distributed computing infrastructure 
 To use the Cloud and HPC profiles, you must configure credentials, resource pools, and storage paths before execution.
 :::
 
-**Other profiles**
+<h3>Other profiles</h3>
 
 - `all-reads`: Process all FASTQ files matching `ggal_*_{1,2}.fq`
 
