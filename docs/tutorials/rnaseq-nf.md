@@ -81,14 +81,7 @@ flowchart TB
 
 ### `MULTIQC`
 
-The MULTIQC module aggregates all quality control and quantification outputs into a comprehensive HTML report:
-
-```{mermaid}
-graph LR
-    A[RNASEQ outputs] --> B[MULTIQC]
-    C[MultiQC config] --> B
-    B --> D[multiqc_report.html]
-```
+The `MULTIQC` module aggregates all quality control and quantification outputs into a comprehensive HTML report.
 
 **Inputs:**
 
