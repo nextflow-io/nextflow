@@ -4,6 +4,7 @@ import groovy.json.JsonBuilder
 import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import io.seqera.http.HxClient
 import nextflow.Const
 import nextflow.cli.CmdAuth
 import nextflow.cli.ColorUtil
@@ -11,9 +12,13 @@ import nextflow.config.ConfigBuilder
 import nextflow.exception.AbortOperationException
 
 import java.awt.Desktop
+import java.net.URI
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
+import java.time.Duration
 
 @Slf4j
 @CompileStatic
@@ -40,11 +45,25 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         ]
     ]
 
+    /**
+     * Creates an HxClient instance with optional authentication token
+     */
+    private HxClient createHttpClient(String authToken = null) {
+        final builder = HxClient.newBuilder()
+            .connectTimeout(Duration.ofMillis(API_TIMEOUT_MS))
+
+        if (authToken) {
+            builder.bearerToken(authToken)
+        }
+
+        return builder.build()
+    }
+
     @Override
     void login(String apiUrl) {
 
         // Check if TOWER_ACCESS_TOKEN environment variable is set
-        def envToken = System.getenv('TOWER_ACCESS_TOKEN')
+        final envToken = System.getenv('TOWER_ACCESS_TOKEN')
         if( envToken ) {
             println ""
             ColorUtil.printColored("WARNING: Authentication token is already configured via TOWER_ACCESS_TOKEN environment variable.", "yellow bold")
@@ -54,7 +73,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         }
 
         // Check if .login file already exists
-        def loginFile = getLoginFile()
+        final loginFile = getLoginFile()
         if( Files.exists(loginFile) ) {
             ColorUtil.printColored("Error: Authentication token is already configured in Nextflow config.", "red")
             ColorUtil.printColored("Login file: ${ColorUtil.colorize(loginFile.toString(), 'magenta')}", "dim")
@@ -69,13 +88,12 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         ColorUtil.printColored(" - Seqera Platform API endpoint: ${ColorUtil.colorize(apiUrl, 'magenta')} (can be customised with ${ColorUtil.colorize('-url', 'cyan')})", "dim")
 
         // Check if this is a cloud endpoint or enterprise
-        def endpointInfo = getCloudEndpointInfo(apiUrl)
+        final endpointInfo = getCloudEndpointInfo(apiUrl)
         if( endpointInfo.isCloud ) {
             try {
                 performAuth0Login(endpointInfo.endpoint as String, endpointInfo.auth as Map)
             } catch( Exception e ) {
                 log.debug("Authentication failed", e)
-                println ""
                 throw new AbortOperationException("${e.message}")
             }
         } else {
@@ -87,11 +105,11 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
     private void performAuth0Login(String apiUrl, Map auth0Config) {
 
         // Start device authorization flow
-        def deviceAuth = requestDeviceAuthorization(auth0Config)
+        final deviceAuth = requestDeviceAuthorization(auth0Config)
 
         println ""
         ColorUtil.printColored("Confirmation code: ${ColorUtil.colorize(deviceAuth.user_code as String, 'yellow')}", "cyan bold")
-        def urlWithCode = "${deviceAuth.verification_uri}?user_code=${deviceAuth.user_code}"
+        final urlWithCode = "${deviceAuth.verification_uri}?user_code=${deviceAuth.user_code}"
         println "${ColorUtil.colorize('Authentication URL:', 'cyan bold')} ${ColorUtil.colorize(urlWithCode, 'magenta')}"
         ColorUtil.printColored("\n[ Press Enter to open in browser ]", "cyan bold")
         System.in.read() // Wait for Enter key
@@ -106,21 +124,26 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
 
         try {
             // Poll for device token
-            def tokenData = pollForDeviceToken(deviceAuth.device_code as String, deviceAuth.interval as Integer ?: 5, auth0Config)
-            def accessToken = tokenData['access_token'] as String
+            final tokenData = pollForDeviceToken(deviceAuth.device_code as String, deviceAuth.interval as Integer ?: AUTH_POLL_INTERVAL_SECONDS, auth0Config)
+            final accessToken = tokenData['access_token'] as String
 
             // Verify login by calling /user-info
-            def userInfo = callUserInfoApi(accessToken, apiUrl)
+            final userInfo = callUserInfoApi(accessToken, apiUrl)
             ColorUtil.printColored("\n\nAuthentication successful!", "green")
 
             // Generate PAT
-            def pat = generatePAT(accessToken, apiUrl)
+            final pat = generatePAT(accessToken, apiUrl)
 
             // Save to config
             saveAuthToConfig(pat, apiUrl)
 
             // Automatically run configuration
-            runConfiguration()
+            try {
+                config()
+            } catch( Exception e ) {
+                ColorUtil.printColored("Configuration setup failed: ${e.message}", "red")
+                ColorUtil.printColored("You can run 'nextflow auth config' later to set up your configuration.", "dim")
+            }
 
         } catch( Exception e ) {
             throw new RuntimeException("Authentication failed: ${e.message}", e)
@@ -132,7 +155,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         try {
             // Method 1: Java Desktop API
             if( Desktop.isDesktopSupported() ) {
-                def desktop = Desktop.getDesktop()
+                final desktop = Desktop.getDesktop()
                 if( desktop.isSupported(Desktop.Action.BROWSE) ) {
                     desktop.browse(new URI(urlWithCode))
                     browserOpened = true
@@ -141,31 +164,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
 
             // Method 2: Platform-specific commands
             if( !browserOpened ) {
-                def os = System.getProperty("os.name").toLowerCase()
-                def command = []
-
-                if( os.contains("mac") || os.contains("darwin") ) {
-                    command = ["open", urlWithCode]
-                } else if( os.contains("win") ) {
-                    command = ["cmd", "/c", "start", urlWithCode]
-                } else {
-                    // Linux and other Unix-like systems
-                    def browsers = ["xdg-open", "firefox", "google-chrome", "chromium", "safari"]
-                    for( browser in browsers ) {
-                        try {
-                            new ProcessBuilder(browser, urlWithCode).start()
-                            browserOpened = true
-                            break
-                        } catch( Exception ignored ) {
-                            // Try next browser
-                        }
-                    }
-                }
-
-                if( !browserOpened && command ) {
-                    new ProcessBuilder(command as String[]).start()
-                    browserOpened = true
-                }
+                browserOpened = runBrowserCommand(urlWithCode)
             }
         } catch( Exception e ) {
             log.debug("Exception opening browser", e)
@@ -173,19 +172,37 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         return browserOpened
     }
 
-    private void runConfiguration() {
-        try {
-            println ""
-            // Just run the existing config command
-            config()
-        } catch( Exception e ) {
-            ColorUtil.printColored("Configuration setup failed: ${e.message}", "red")
-            ColorUtil.printColored("You can run 'nextflow auth config' later to set up your configuration.", "dim")
+    private boolean runBrowserCommand(GString urlWithCode) {
+        def command = []
+        def browserOpened = false
+        final os = System.getProperty("os.name").toLowerCase()
+        if( os.contains("mac") || os.contains("darwin") ) {
+            command = ["open", urlWithCode]
+        } else if( os.contains("win") ) {
+            command = ["cmd", "/c", "start", urlWithCode]
+        } else {
+            // Linux and other Unix-like systems
+            final browsers = ["xdg-open", "firefox", "google-chrome", "chromium", "safari"]
+            for( browser in browsers ) {
+                try {
+                    new ProcessBuilder(browser, urlWithCode).start()
+                    browserOpened = true
+                    break
+                } catch( Exception ignored ) {
+                    // Try next browser
+                }
+            }
         }
+
+        if( !browserOpened && command ) {
+            new ProcessBuilder(command as String[]).start()
+            browserOpened = true
+        }
+        return browserOpened
     }
 
     private Map requestDeviceAuthorization(Map auth0Config) {
-        def params = [
+        final params = [
             'client_id': auth0Config.clientId,
             'scope'    : 'openid profile email offline_access',
             'audience' : 'platform'
@@ -194,21 +211,21 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
     }
 
     private Map pollForDeviceToken(String deviceCode, int intervalSeconds, Map auth0Config) {
-        def tokenUrl = "https://${auth0Config.domain}/oauth/token"
+        final tokenUrl = "https://${auth0Config.domain}/oauth/token"
         def retryCount = 0
 
         while( retryCount < AUTH_POLL_TIMEOUT_RETRIES ) {
-            def params = [
+            final params = [
                 'grant_type' : 'urn:ietf:params:oauth:grant-type:device_code',
                 'device_code': deviceCode,
                 'client_id'  : auth0Config.clientId
             ]
 
             try {
-                def result = performAuth0Request(tokenUrl, params)
+                final result = performAuth0Request(tokenUrl, params)
                 return result
             } catch( RuntimeException e ) {
-                def message = e.message
+                final message = e.message
                 if( message.contains('authorization_pending') ) {
                     print "${ColorUtil.colorize('.', 'dim', true)}"
                     System.out.flush()
@@ -239,46 +256,51 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         println "You can create one at: ${ColorUtil.colorize(apiUrl.replace('/api', '').replace('://api.', '') + '/tokens', 'magenta')}"
         println ""
 
-        System.out.print("Enter your Personal Access Token: ")
-        System.out.flush()
+        final pat = promptPAT()
 
-        def console = System.console()
-        def pat = console ?
-            new String(console.readPassword()) :
-            new BufferedReader(new InputStreamReader(System.in)).readLine()
-
-        if( !pat || pat.trim().isEmpty() ) {
+        if( !pat ) {
             throw new AbortOperationException("Personal Access Token is required for Seqera Platform Enterprise authentication")
         }
 
         // Save to config
-        saveAuthToConfig(pat.trim(), apiUrl)
+        saveAuthToConfig(pat, apiUrl)
         ColorUtil.printColored("Personal Access Token saved to Nextflow login config (${getLoginFile().toString()})", "green")
     }
 
+    private String promptPAT(){
+        System.out.print("Enter your Personal Access Token: ")
+        System.out.flush()
+
+        final console = System.console()
+        final pat = console ?
+            new String(console.readPassword()) :
+            new BufferedReader(new InputStreamReader(System.in)).readLine()
+        return pat.trim()
+    }
+
     private String generatePAT(String accessToken, String apiUrl) {
-        def tokensUrl = "${apiUrl}/tokens"
-        def username = System.getProperty("user.name")
-        def timestamp = new Date().format("yyyy-MM-dd-HH-mm")
-        def tokenName = "nextflow-auth-${username}-${timestamp}"
+        final tokensUrl = "${apiUrl}/tokens"
+        final username = System.getProperty("user.name")
+        final timestamp = new Date().format("yyyy-MM-dd-HH-mm")
+        final tokenName = "nextflow-auth-${username}-${timestamp}"
 
-        def requestBody = new JsonBuilder([name: tokenName]).toString()
+        final requestBody = new JsonBuilder([name: tokenName]).toString()
 
-        def connection = createHttpConnection(tokensUrl, 'POST', accessToken)
-        connection.setRequestProperty('Content-Type', 'application/json')
-        connection.doOutput = true
+        final client = createHttpClient(accessToken)
+        final request = HttpRequest.newBuilder()
+            .uri(URI.create(tokensUrl))
+            .header('Content-Type', 'application/json')
+            .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+            .build()
 
-        connection.outputStream.withWriter { writer ->
-            writer.write(requestBody)
-        }
+        final response = client.send(request, HttpResponse.BodyHandlers.ofString())
 
-        if( connection.responseCode != 200 ) {
-            def error = connection.errorStream?.text ?: "HTTP ${connection.responseCode}"
+        if( response.statusCode() != 200 ) {
+            final error = response.body() ?: "HTTP ${response.statusCode()}"
             throw new RuntimeException("Failed to generate PAT: ${error}")
         }
 
-        def response = connection.inputStream.text
-        def json = new JsonSlurper().parseText(response) as Map
+        final json = new JsonSlurper().parseText(response.body()) as Map
         return json.accessKey as String
     }
 
@@ -293,39 +315,36 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
     }
 
     private Map performAuth0Request(String url, Map params) {
-        def postData = params.collect { k, v ->
+        final postData = params.collect { k, v ->
             "${URLEncoder.encode(k.toString(), 'UTF-8')}=${URLEncoder.encode(v.toString(), 'UTF-8')}"
         }.join('&')
 
-        def connection = new URL(url).openConnection() as HttpURLConnection
-        connection.requestMethod = 'POST'
-        connection.connectTimeout = API_TIMEOUT_MS
-        connection.readTimeout = API_TIMEOUT_MS
-        connection.setRequestProperty('Content-Type', 'application/x-www-form-urlencoded')
-        connection.doOutput = true
+        final client = createHttpClient()
+        final request = HttpRequest.newBuilder()
+            .uri(URI.create(url))
+            .header('Content-Type', 'application/x-www-form-urlencoded')
+            .POST(HttpRequest.BodyPublishers.ofString(postData))
+            .build()
 
-        connection.outputStream.withWriter { writer ->
-            writer.write(postData)
-        }
+        final response = client.send(request, HttpResponse.BodyHandlers.ofString())
 
-        if( connection.responseCode == 200 ) {
-            def response = connection.inputStream.text
-            def json = new JsonSlurper().parseText(response)
+        if( response.statusCode() == 200 ) {
+            final json = new JsonSlurper().parseText(response.body())
             return json as Map
         } else {
-            def errorResponse = connection.errorStream?.text
-            if( errorResponse ) {
-                def errorJson = new JsonSlurper().parseText(errorResponse) as Map
-                def error = errorJson.error
+            final errorBody = response.body()
+            if( errorBody ) {
+                final errorJson = new JsonSlurper().parseText(errorBody) as Map
+                final error = errorJson.error
                 throw new RuntimeException("${error}: ${errorJson.error_description ?: ''}")
             } else {
-                throw new RuntimeException("Request failed: HTTP ${connection.responseCode}")
+                throw new RuntimeException("Request failed: HTTP ${response.statusCode()}")
             }
         }
     }
 
     private void saveAuthToConfig(String accessToken, String apiUrl) {
-        def config = [:]
+        final config = [:]
         config['tower.accessToken'] = accessToken
         config['tower.endpoint'] = apiUrl
         config['tower.enabled'] = true
@@ -336,15 +355,15 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
     @Override
     void logout() {
         // Check if .login file exists
-        def loginFile = getLoginFile()
+        final loginFile = getLoginFile()
         if( !Files.exists(loginFile) ) {
             ColorUtil.printColored("No previous login found.", "green")
             return
         }
         // Read token from .login file
-        def loginConfig = readLoginFile()
-        def existingToken = loginConfig['tower.accessToken']
-        def apiUrl = loginConfig['tower.endpoint'] as String ?: DEFAULT_API_ENDPOINT
+        final loginConfig = readLoginFile()
+        final existingToken = loginConfig['tower.accessToken']
+        final apiUrl = loginConfig['tower.endpoint'] as String ?: DEFAULT_API_ENDPOINT
 
         if( !existingToken ) {
             ColorUtil.printColored("WARN: No authentication token found in login file.", "yellow bold")
@@ -354,7 +373,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         }
 
         // Check if TOWER_ACCESS_TOKEN environment variable is set
-        def envToken = System.getenv('TOWER_ACCESS_TOKEN')
+        final envToken = System.getenv('TOWER_ACCESS_TOKEN')
         if( envToken ) {
             println ""
             ColorUtil.printColored("WARNING: TOWER_ACCESS_TOKEN environment variable is set.", "yellow bold")
@@ -368,12 +387,12 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
 
         // Validate token by calling /user-info API
         try {
-            def userInfo = callUserInfoApi(existingToken as String, apiUrl)
+            final userInfo = callUserInfoApi(existingToken as String, apiUrl)
             ColorUtil.printColored(" - Token is valid for user: ${ColorUtil.colorize(userInfo.userName as String, 'cyan bold')}", "dim")
 
             // Only delete PAT from platform if this is a cloud endpoint
             if( isCloudEndpoint(apiUrl) ) {
-                def tokenId = decodeTokenId(existingToken as String)
+                final tokenId = decodeTokenId(existingToken as String)
                 deleteTokenViaApi(existingToken as String, apiUrl, tokenId)
             } else {
                 println " - Enterprise installation detected - PAT will not be deleted from platform."
@@ -392,11 +411,11 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
     private String decodeTokenId(String token) {
         try {
             // Decode base64 token
-            def decoded = new String(Base64.decoder.decode(token), "UTF-8")
+            final decoded = new String(Base64.decoder.decode(token), "UTF-8")
 
             // Parse JSON to extract token ID
-            def json = new JsonSlurper().parseText(decoded) as Map
-            def tokenId = json.tid
+            final json = new JsonSlurper().parseText(decoded) as Map
+            final tokenId = json.tid
 
             if( !tokenId ) {
                 throw new RuntimeException("No token ID found in decoded token")
@@ -409,10 +428,16 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
     }
 
     private void deleteTokenViaApi(String token, String apiUrl, String tokenId) {
-        def connection = createHttpConnection("${apiUrl}/tokens/${tokenId}", 'DELETE', token)
+        final client = createHttpClient(token)
+        final request = HttpRequest.newBuilder()
+            .uri(URI.create("${apiUrl}/tokens/${tokenId}"))
+            .DELETE()
+            .build()
 
-        if( connection.responseCode != 200 && connection.responseCode != 204 ) {
-            def error = connection.errorStream?.text ?: "HTTP ${connection.responseCode}"
+        final response = client.send(request, HttpResponse.BodyHandlers.ofString())
+
+        if( response.statusCode() != 200 && response.statusCode() != 204 ) {
+            final error = response.body() ?: "HTTP ${response.statusCode()}"
             throw new RuntimeException("Failed to delete token: ${error}")
         }
 
@@ -420,13 +445,13 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
     }
 
     private void removeAuthFromConfig() {
-        def configFile = getConfigFile()
-        def loginFile = getLoginFile()
+        final configFile = getConfigFile()
+        final loginFile = getLoginFile()
 
         // Remove includeConfig line from main config file
         if( Files.exists(configFile) ) {
-            def existingContent = Files.readString(configFile)
-            def updatedContent = removeIncludeConfigLine(existingContent)
+            final existingContent = Files.readString(configFile)
+            final updatedContent = removeIncludeConfigLine(existingContent)
             Files.writeString(configFile, updatedContent.toString(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
         }
 
@@ -441,11 +466,11 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
     @Override
     void config() {
         // Read from both main config and .login file
-        def config = readConfig()
+        final config = readConfig()
 
         // Token can come from .login file or environment variable
-        def existingToken = config['tower.accessToken'] ?: System.getenv('TOWER_ACCESS_TOKEN')
-        def endpoint = config['tower.endpoint'] ?: DEFAULT_API_ENDPOINT
+        final existingToken = config['tower.accessToken'] ?: System.getenv('TOWER_ACCESS_TOKEN')
+        final endpoint = config['tower.endpoint'] ?: DEFAULT_API_ENDPOINT
 
         if( !existingToken ) {
             println "No authentication found. Please run ${ColorUtil.colorize('nextflow auth login', 'cyan')} first."
@@ -462,7 +487,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
 
         try {
             // Get user info to validate token and get user ID
-            def userInfo = callUserInfoApi(existingToken as String, endpoint as String)
+            final userInfo = callUserInfoApi(existingToken as String, endpoint as String)
             ColorUtil.printColored(" - Authenticated as: ${ColorUtil.colorize(userInfo.userName as String, 'cyan bold')}", "dim")
             println ""
 
@@ -473,7 +498,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
             configChanged |= configureEnabled(config)
 
             // Configure workspace
-            def workspaceResult = configureWorkspace(config, existingToken as String, endpoint as String, userInfo.id as String)
+            final workspaceResult = configureWorkspace(config, existingToken as String, endpoint as String, userInfo.id as String)
             configChanged = configChanged || (workspaceResult.changed as boolean)
 
             // Save updated config only if changes were made
@@ -496,16 +521,16 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
 
     private void showCurrentConfig(Map config, String accessToken, String endpoint) {
         // Show workflow monitoring status
-        def monitoringEnabled = config.get('tower.enabled', false)
+        final monitoringEnabled = config.get('tower.enabled', false)
         println "  ${ColorUtil.colorize('Workflow monitoring:', 'cyan')} ${monitoringEnabled ? ColorUtil.colorize('enabled', 'green') : ColorUtil.colorize('disabled', 'red')}"
 
         // Show workspace setting
-        def workspaceId = config.get('tower.workspaceId')
+        final workspaceId = config.get('tower.workspaceId')
         if( workspaceId ) {
             // Try to get workspace details from API for display
-            def workspaceDetails = getWorkspaceDetailsFromApi(accessToken, endpoint, workspaceId as String)
+            final workspaceDetails = getWorkspaceDetailsFromApi(accessToken, endpoint, workspaceId as String)
             if( workspaceDetails ) {
-                def details = workspaceDetails as Map
+                final details = workspaceDetails as Map
                 println "  ${ColorUtil.colorize('Default workspace:', 'cyan')} ${ColorUtil.colorize(workspaceId as String, 'magenta')} ${ColorUtil.colorize('[' + details.orgName + ' / ' + details.workspaceName + ']', 'dim', true)}"
             } else {
                 println "  ${ColorUtil.colorize('Default workspace:', 'cyan')} ${ColorUtil.colorize(workspaceId as String, 'magenta')}"
@@ -515,20 +540,20 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         }
 
         // Show API endpoint
-        def apiEndpoint = config.get('tower.endpoint') ?: endpoint
+        final apiEndpoint = config.get('tower.endpoint') ?: endpoint
         println "  ${ColorUtil.colorize('API endpoint:', 'cyan', true)} $apiEndpoint"
     }
 
     private boolean configureEnabled(Map config) {
-        def currentEnabled = config.get('tower.enabled', false)
+        final currentEnabled = config.get('tower.enabled', false)
 
         println "Workflow monitoring settings. Current setting: ${currentEnabled ? ColorUtil.colorize('enabled', 'green') : ColorUtil.colorize('disabled', 'red')}"
         ColorUtil.printColored("  When enabled, all workflow runs are automatically monitored by Seqera Platform", "dim")
         ColorUtil.printColored("  When disabled, you can enable per-run with the ${ColorUtil.colorize('-with-tower', 'cyan')} flag", "dim")
         println ""
 
-        def promptText = "${ColorUtil.colorize('Enable workflow monitoring for all runs?', 'cyan bold', true)} (${currentEnabled ? ColorUtil.colorize('Y', 'green') + '/n' : 'y/' + ColorUtil.colorize('N', 'red')}): "
-        def input = promptForYesNo(promptText, currentEnabled)
+        final promptText = "${ColorUtil.colorize('Enable workflow monitoring for all runs?', 'cyan bold', true)} (${currentEnabled ? ColorUtil.colorize('Y', 'green') + '/n' : 'y/' + ColorUtil.colorize('N', 'red')}): "
+        final input = promptForYesNo(promptText, currentEnabled)
 
         if( input == null ) {
             return false // No change
@@ -544,7 +569,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
 
     private Map configureWorkspace(Map config, String accessToken, String endpoint, String userId) {
         // Check if TOWER_WORKFLOW_ID environment variable is set
-        def envWorkspaceId = System.getenv('TOWER_WORKFLOW_ID')
+        final envWorkspaceId = System.getenv('TOWER_WORKFLOW_ID')
         if( envWorkspaceId ) {
             println "\nDefault workspace: ${ColorUtil.colorize('TOWER_WORKFLOW_ID environment variable is set', 'yellow')}"
             ColorUtil.printColored("  Not prompting for default workspace configuration as environment variable takes precedence", "dim")
@@ -552,7 +577,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         }
 
         // Get all workspaces for the user
-        def workspaces = getUserWorkspaces(accessToken, endpoint, userId)
+        final workspaces = getUserWorkspaces(accessToken, endpoint, userId)
 
         if( !workspaces ) {
             println "\nNo workspaces found for your account."
@@ -560,21 +585,14 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         }
 
         // Show current workspace setting
-        def currentWorkspaceId = config.get('tower.workspaceId')
-        def currentWorkspace = workspaces.find { ((Map) it).workspaceId.toString() == currentWorkspaceId?.toString() }
+        final currentWorkspaceId = config.get('tower.workspaceId')
 
-        def currentSetting
-        if( currentWorkspace ) {
-            def workspace = currentWorkspace as Map
-            currentSetting = "${workspace.orgName} / ${workspace.workspaceName}"
-        } else {
-            currentSetting = "None (Personal workspace)"
-        }
+        String currentSetting = getCurrentWorkspaceName(workspaces, config.get('tower.workspaceId'))
 
-        println "\nDefault workspace. Current setting: ${ColorUtil.colorize(currentSetting as String, 'cyan', true)}"
+        println "\nDefault workspace. Current setting: ${ColorUtil.colorize(currentSetting, 'cyan', true)}"
         ColorUtil.printColored("  Workflow runs use this workspace by default", "dim")
         // Group by organization
-        def orgWorkspaces = workspaces.groupBy { ((Map) it).orgName ?: 'Personal' }
+        final orgWorkspaces = workspaces.groupBy { ((Map) it).orgName ?: 'Personal' }
 
         // If threshold or fewer total options, show all at once
         if( workspaces.size() <= WORKSPACE_SELECTION_THRESHOLD ) {
@@ -585,43 +603,41 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         }
     }
 
-    private Map selectWorkspaceFromAll(Map config, List workspaces, def currentWorkspaceId) {
+    private String getCurrentWorkspaceName(List<Object> workspaces, currentWorkspaceId) {
+        final currentWorkspace = workspaces.find { ((Map) it).workspaceId.toString() == currentWorkspaceId?.toString() } as Map
+        return currentWorkspace ? "${currentWorkspace.orgName} / ${currentWorkspace.workspaceName}" : "None (Personal workspace)"
+    }
+
+    private Map selectWorkspaceFromAll(Map config, List workspaces, final currentWorkspaceId) {
         println "\nAvailable workspaces:"
         println "  0. ${ColorUtil.colorize('None (Personal workspace)', 'cyan', true)} ${ColorUtil.colorize('[no organization]', 'dim', true)}"
 
         workspaces.eachWithIndex { workspace, index ->
-            def ws = workspace as Map
-            def prefix = ws.orgName ? "${ColorUtil.colorize(ws.orgName as String, 'cyan', true)} / " : ""
+            final ws = workspace as Map
+            final prefix = ws.orgName ? "${ColorUtil.colorize(ws.orgName as String, 'cyan', true)} / " : ""
             println "  ${index + 1}. ${prefix}${ColorUtil.colorize(ws.workspaceName as String, 'magenta', true)} ${ColorUtil.colorize('[' + (ws.workspaceFullName as String) + ']', 'dim', true)}"
         }
 
         // Show current workspace and prepare prompt
-        def currentWorkspace = workspaces.find { ((Map) it).workspaceId.toString() == currentWorkspaceId?.toString() }
-        def currentWorkspaceName
-        if( currentWorkspace ) {
-            def workspace = currentWorkspace as Map
-            currentWorkspaceName = "${workspace.orgName} / ${workspace.workspaceName}"
-        } else {
-            currentWorkspaceName = "None (Personal workspace)"
-        }
+        final currentWorkspaceName = getCurrentWorkspaceName(workspaces, currentWorkspaceId)
 
-        def prompt = "\nSelect workspace (0-${workspaces.size()}, press Enter to keep as '${currentWorkspaceName}'): "
-        def selection = promptForNumber(prompt, 0, workspaces.size(), true)
+        final prompt = ColorUtil.colorize("\nSelect workspace (0-${workspaces.size()}, press Enter to keep as '${currentWorkspaceName}'): ","bold cyan")
+        final selection = promptForNumber(prompt, 0, workspaces.size(), true)
 
         if( selection == null ) {
             return [changed: false, metadata: null]
         }
 
         if( selection == 0 ) {
-            def hadWorkspaceId = config.containsKey('tower.workspaceId')
+            final hadWorkspaceId = config.containsKey('tower.workspaceId')
             config.remove('tower.workspaceId')
             return [changed: hadWorkspaceId, metadata: null]
         } else {
-            def selectedWorkspace = workspaces[selection - 1] as Map
-            def selectedId = selectedWorkspace.workspaceId.toString()
-            def currentId = config.get('tower.workspaceId')
+            final selectedWorkspace = workspaces[selection - 1] as Map
+            final selectedId = selectedWorkspace.workspaceId.toString()
+            final currentId = config.get('tower.workspaceId')
             config['tower.workspaceId'] = selectedId
-            def metadata = [
+            final metadata = [
                 orgName          : selectedWorkspace.orgName,
                 workspaceName    : selectedWorkspace.workspaceName,
                 workspaceFullName: selectedWorkspace.workspaceFullName
@@ -630,107 +646,56 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         }
     }
 
-    private Map selectWorkspaceByOrg(Map config, Map orgWorkspaces, def currentWorkspaceId) {
+    private Map selectWorkspaceByOrg(Map config, Map orgWorkspaces, final currentWorkspaceId) {
         // Get current workspace info for prompts
-        def allWorkspaces = []
+        final allWorkspaces = []
         orgWorkspaces.values().each { workspaceList ->
             allWorkspaces.addAll(workspaceList as List)
         }
-        def currentWorkspace = allWorkspaces.find { ((Map) it).workspaceId.toString() == currentWorkspaceId?.toString() }
-        def currentWorkspaceName
-        def currentWorkspaceDisplay
-        if( currentWorkspace ) {
-            def workspace = currentWorkspace as Map
-            currentWorkspaceName = workspace.workspaceName as String
-            currentWorkspaceDisplay = "${workspace.orgName} / ${workspace.workspaceName}"
-        } else {
-            currentWorkspaceName = null
-            currentWorkspaceDisplay = "None"
-        }
+        final currentWorkspaceDisplay = getCurrentWorkspaceName(allWorkspaces, currentWorkspaceId)
 
         // First, select organization
-        def orgs = orgWorkspaces.keySet().toList()
+        final orgs = orgWorkspaces.keySet().toList()
 
         // Always add Personal as first option (it's never returned by the API but should always be available)
         orgs.add(0, 'Personal')
 
         println "\nAvailable organizations:"
         orgs.eachWithIndex { orgName, index ->
-            def displayName = orgName == 'Personal' ? 'None [Personal workspace]' : orgName
+            final displayName = orgName == 'Personal' ? 'None [Personal workspace]' : orgName
             println "  ${index + 1}. ${ColorUtil.colorize(displayName as String, 'cyan', true)}"
         }
-        System.out.print("${ColorUtil.colorize("Select organization (1-${orgs.size()}, leave blank to keep as '${currentWorkspaceDisplay}'): ", 'dim', true)}")
-        System.out.flush()
+        final orgSelection = promptForNumber(ColorUtil.colorize("Select organization (1-${orgs.size()}, leave blank to keep as '${currentWorkspaceDisplay}'): "), 1, orgs.size(),true)
+        if (!orgSelection)
+            return [changed: false, metadata: null]
 
-        def reader = new BufferedReader(new InputStreamReader(System.in))
-        def orgSelection
-        while( true ) {
-            def orgInput = reader.readLine()?.trim()
-
-            if( orgInput.isEmpty() ) {
-                return [changed: false, metadata: null]
-            }
-
-            try {
-                orgSelection = Integer.parseInt(orgInput)
-                if( orgSelection >= 1 && orgSelection <= orgs.size() ) {
-                    break
-                }
-            } catch( NumberFormatException ignored ) {
-                // Fall through to error message
-            }
-            ColorUtil.printColored("Invalid input. Please enter a number between 1 and ${orgs.size()}.", "red")
-            System.out.print("${ColorUtil.colorize("Select organization (1-${orgs.size()}, leave blank to keep as '${currentWorkspaceDisplay}'): ", 'dim', true)}")
-            System.out.flush()
-        }
-
-        def selectedOrgName = orgs[orgSelection - 1]
+        final selectedOrgName = orgs[orgSelection - 1]
 
         // If Personal was selected, remove workspace ID (use personal workspace)
         if( selectedOrgName == 'Personal' ) {
-            def hadWorkspaceId = config.containsKey('tower.workspaceId')
+            final hadWorkspaceId = config.containsKey('tower.workspaceId')
             config.remove('tower.workspaceId')
             return [changed: hadWorkspaceId, metadata: null]
         }
 
-        def orgWorkspaceList = orgWorkspaces[selectedOrgName] as List
+        final orgWorkspaceList = orgWorkspaces[selectedOrgName] as List
 
         println ""
         println "Select workspace in ${selectedOrgName}:"
 
         orgWorkspaceList.eachWithIndex { workspace, index ->
-            def ws = workspace as Map
+            final ws = workspace as Map
             println "  ${index + 1}. ${ColorUtil.colorize(ws.workspaceName as String, 'magenta', true)} ${ColorUtil.colorize('[' + (ws.workspaceFullName as String) + ']', 'dim', true)}"
         }
 
-        def maxSelection = orgWorkspaceList.size()
-        def wsSelection
-        while( true ) {
-            System.out.print("${ColorUtil.colorize("Select workspace (1-${maxSelection}): ", 'dim', true)}")
-            System.out.flush()
+        final maxSelection = orgWorkspaceList.size()
+        final wsSelection = promptForNumber(ColorUtil.colorize("Select workspace (1-${maxSelection}): ", 'dim', true),1, maxSelection,false)
 
-            def wsInput = reader.readLine()?.trim()
-            if( wsInput.isEmpty() ) {
-                ColorUtil.printColored("Please enter a selection.", "red")
-                continue
-            }
-
-            try {
-                wsSelection = Integer.parseInt(wsInput)
-                if( wsSelection >= 1 && wsSelection <= maxSelection ) {
-                    break
-                }
-            } catch( NumberFormatException ignored ) {
-                // Fall through to error message
-            }
-            ColorUtil.printColored("Invalid input. Please enter a number between 1 and ${maxSelection}.", "red")
-        }
-
-        def selectedWorkspace = orgWorkspaceList[wsSelection - 1] as Map
-        def selectedId = selectedWorkspace.workspaceId.toString()
-        def currentId = config.get('tower.workspaceId')
+        final selectedWorkspace = orgWorkspaceList[wsSelection - 1] as Map
+        final selectedId = selectedWorkspace.workspaceId.toString()
+        final currentId = config.get('tower.workspaceId')
         config['tower.workspaceId'] = selectedId
-        def metadata = [
+        final metadata = [
             orgName          : selectedWorkspace.orgName,
             workspaceName    : selectedWorkspace.workspaceName,
             workspaceFullName: selectedWorkspace.workspaceFullName
@@ -739,25 +704,28 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
     }
 
     private List getUserWorkspaces(String accessToken, String endpoint, String userId) {
-        def connection = createHttpConnection("${endpoint}/user/${userId}/workspaces", 'GET', accessToken)
+        final client = createHttpClient(accessToken)
+        final request = HttpRequest.newBuilder()
+            .uri(URI.create("${endpoint}/user/${userId}/workspaces"))
+            .GET()
+            .build()
 
-        if( connection.responseCode != 200 ) {
-            def error = connection.errorStream?.text ?: "HTTP ${connection.responseCode}"
+        final response = client.send(request, HttpResponse.BodyHandlers.ofString())
+
+        if( response.statusCode() != 200 ) {
+            final error = response.body() ?: "HTTP ${response.statusCode()}"
             throw new RuntimeException("Failed to get workspaces: ${error}")
         }
 
-        def response = connection.inputStream.text
-        def json = new JsonSlurper().parseText(response) as Map
-        def orgsAndWorkspaces = json.orgsAndWorkspaces as List
+        final json = new JsonSlurper().parseText(response.body()) as Map
+        final orgsAndWorkspaces = json.orgsAndWorkspaces as List
 
         return orgsAndWorkspaces.findAll { ((Map) it).workspaceId != null }
     }
 
     private Boolean promptForYesNo(String prompt, Boolean defaultValue) {
         while( true ) {
-            System.out.print(prompt)
-            System.out.flush()
-            def input = readUserInput()?.toLowerCase()
+            final input = readUserInput(prompt)?.toLowerCase()
 
             if( input?.isEmpty() ) {
                 return defaultValue
@@ -773,20 +741,18 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
 
     private Integer promptForNumber(String prompt, int min, int max, boolean allowEmpty = false) {
         while( true ) {
-            ColorUtil.printColored(prompt, "bold cyan")
-            System.out.flush()
-            def input = readUserInput()
+            final input = readUserInput(prompt)
 
             if( input?.isEmpty() && allowEmpty ) {
                 return null
             }
 
             try {
-                def number = Integer.parseInt(input)
+                final number = Integer.parseInt(input)
                 if( number >= min && number <= max ) {
                     return number
                 }
-            } catch( NumberFormatException e ) {
+            } catch( NumberFormatException ignored ) {
                 // Fall through to error message
             }
             ColorUtil.printColored("Invalid input. Please enter a number between ${min} and ${max}.", "red")
@@ -795,27 +761,27 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
 
     @Override
     void status() {
-        def config = readConfig()
-        def loginConfig = readLoginFile()
+        final config = readConfig()
+        final loginConfig = readLoginFile()
         // Collect all status information
         List<List<String>> statusRows = []
         def workspaceDisplayInfo = null
 
         // API endpoint
-        def endpointInfo = getConfigValue(config, loginConfig, 'tower.endpoint', 'TOWER_API_ENDPOINT', DEFAULT_API_ENDPOINT)
+        final endpointInfo = getConfigValue(config, loginConfig, 'tower.endpoint', 'TOWER_API_ENDPOINT', DEFAULT_API_ENDPOINT)
         statusRows.add(['API endpoint', ColorUtil.colorize(endpointInfo.value as String, 'magenta'), endpointInfo.source as String])
 
         // API connection check
-        def apiConnectionOk = checkApiConnection(endpointInfo.value as String)
-        def connectionColor = apiConnectionOk ? 'green' : 'red'
+        final apiConnectionOk = checkApiConnection(endpointInfo.value as String)
+        final connectionColor = apiConnectionOk ? 'green' : 'red'
         statusRows.add(['API connection', ColorUtil.colorize(apiConnectionOk ? 'OK' : 'ERROR', connectionColor), ''])
 
         // Authentication check
-        def tokenInfo = getConfigValue(config, loginConfig, 'tower.accessToken', 'TOWER_ACCESS_TOKEN')
+        final tokenInfo = getConfigValue(config, loginConfig, 'tower.accessToken', 'TOWER_ACCESS_TOKEN')
         if( tokenInfo.value ) {
             try {
-                def userInfo = callUserInfoApi(tokenInfo.value as String, endpointInfo.value as String)
-                def currentUser = userInfo.userName as String
+                final userInfo = callUserInfoApi(tokenInfo.value as String, endpointInfo.value as String)
+                final currentUser = userInfo.userName as String
                 statusRows.add(['Authentication', "${ColorUtil.colorize('OK', 'green')} (user: ${ColorUtil.colorize(currentUser, 'cyan')})".toString(), tokenInfo.source as String])
             } catch( Exception e ) {
                 statusRows.add(['Authentication', ColorUtil.colorize('ERROR', 'red'), 'failed'])
@@ -825,13 +791,13 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         }
 
         // Monitoring enabled
-        def enabledInfo = getConfigValue(config, loginConfig,'tower.enabled', null, 'false')
-        def enabledValue = enabledInfo.value?.toString()?.toLowerCase() in ['true', '1', 'yes'] ? 'Yes' : 'No'
-        def enabledColor = enabledValue == 'Yes' ? 'green' : 'yellow'
+        final enabledInfo = getConfigValue(config, loginConfig,'tower.enabled', null, 'false')
+        final enabledValue = enabledInfo.value?.toString()?.toLowerCase() in ['true', '1', 'yes'] ? 'Yes' : 'No'
+        final enabledColor = enabledValue == 'Yes' ? 'green' : 'yellow'
         statusRows.add(['Workflow monitoring', ColorUtil.colorize(enabledValue, enabledColor), (enabledInfo.source ?: 'default') as String])
 
         // Default workspace
-        def workspaceInfo = getConfigValue(config, loginConfig, 'tower.workspaceId', 'TOWER_WORKFLOW_ID')
+        final workspaceInfo = getConfigValue(config, loginConfig, 'tower.workspaceId', 'TOWER_WORKFLOW_ID')
         if( workspaceInfo.value ) {
             // Try to get workspace name from API if we have a token
             def workspaceDetails = null
@@ -880,9 +846,9 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
 
         // Print rows
         rows.each { row ->
-            def paddedCol1 = padStringWithAnsi(row[0], col1Width)
-            def paddedCol2 = padStringWithAnsi(row[1], col2Width)
-            def paddedCol3 = ColorUtil.colorize(row[2], 'dim', true)
+            final paddedCol1 = padStringWithAnsi(row[0], col1Width)
+            final paddedCol2 = padStringWithAnsi(row[1], col2Width)
+            final paddedCol3 = ColorUtil.colorize(row[2], 'dim', true)
             println "${paddedCol1} ${paddedCol2} ${paddedCol3}"
         }
     }
@@ -892,13 +858,13 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
     }
 
     private String padStringWithAnsi(String text, int width) {
-        def plainText = stripAnsiCodes(text)
-        def padding = width - plainText.length()
+        final plainText = stripAnsiCodes(text)
+        final padding = width - plainText.length()
         return padding > 0 ? text + (' ' * padding) : text
     }
 
     private String shortenPath(String path) {
-        def userHome = System.getProperty('user.home')
+        final userHome = System.getProperty('user.home')
         if( path.startsWith(userHome) ) {
             return '~' + path.substring(userHome.length())
         }
@@ -907,10 +873,10 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
 
     private Map getConfigValue(Map config, Map login, String configKey, String envVarName, String defaultValue = null) {
         //Checks where the config value came from
-        def loginValue = login[configKey]
-        def configValue = config[configKey]
-        def envValue = envVarName ? System.getenv(envVarName) : null
-        def effectiveValue = configValue ?: envValue ?: defaultValue
+        final loginValue = login[configKey]
+        final configValue = config[configKey]
+        final envValue = envVarName ? System.getenv(envVarName) : null
+        final effectiveValue = configValue ?: envValue ?: defaultValue
 
         def source = null
         if( loginValue ) {
@@ -932,72 +898,56 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         ]
     }
 
-    private String getWorkspaceNameFromApi(String accessToken, String endpoint, String workspaceId) {
-        try {
-            def workspaceDetails = getWorkspaceDetailsFromApi(accessToken, endpoint, workspaceId)
-            if( workspaceDetails ) {
-                return "${workspaceDetails.orgName} / ${workspaceDetails.workspaceName} [${workspaceDetails.workspaceFullName}]"
-            }
-            return null
-        } catch( Exception e ) {
-            return null
-        }
-    }
-
     private boolean checkApiConnection(String endpoint) {
         try {
-            def connection = new URL("${endpoint}/service-info").openConnection() as HttpURLConnection
-            connection.requestMethod = 'GET'
-            connection.connectTimeout = API_TIMEOUT_MS
-            connection.readTimeout = API_TIMEOUT_MS
-            return connection.responseCode == 200
+            final client = createHttpClient()
+            final request = HttpRequest.newBuilder()
+                .uri(URI.create("${endpoint}/service-info"))
+                .GET()
+                .build()
+
+            final response = client.send(request, HttpResponse.BodyHandlers.ofString())
+            return response.statusCode() == 200
         } catch( Exception e ) {
             return false
         }
     }
 
-    private String promptForApiUrl() {
-        System.out.print("Seqera Platform API endpoint [Default ${DEFAULT_API_ENDPOINT}]: ")
-        System.out.flush()
-
-        def input = readUserInput()
-        return input?.isEmpty() ? DEFAULT_API_ENDPOINT : input
-    }
-
-    private static String readUserInput() {
-        def reader = new BufferedReader(new InputStreamReader(System.in))
-        return reader.readLine()?.trim()
-    }
-
-    private HttpURLConnection createHttpConnection(String url, String method, String authToken = null) {
-        def connection = new URL(url).openConnection() as HttpURLConnection
-        connection.requestMethod = method
-        connection.connectTimeout = API_TIMEOUT_MS
-        connection.readTimeout = API_TIMEOUT_MS
-        if (authToken) {
-            connection.setRequestProperty('Authorization', "Bearer ${authToken}")
+    private static String readUserInput(String message = null) {
+        if (message) {
+            System.out.print(message)
+            System.out.flush()
         }
-        return connection
+        final console = System.console()
+        final line = console != null
+            ? console.readLine()
+            : new BufferedReader(new InputStreamReader(System.in)).readLine()
+        return line?.trim()
     }
 
     private Map getWorkspaceDetailsFromApi(String accessToken, String endpoint, String workspaceId) {
         try {
-            def userInfo = callUserInfoApi(accessToken, endpoint)
-            def userId = userInfo.id as String
+            final userInfo = callUserInfoApi(accessToken, endpoint)
+            final userId = userInfo.id as String
 
-            def connection = createHttpConnection("${endpoint}/user/${userId}/workspaces", 'GET', accessToken)
+            final client = createHttpClient(accessToken)
+            final request = HttpRequest.newBuilder()
+                .uri(URI.create("${endpoint}/user/${userId}/workspaces"))
+                .GET()
+                .build()
 
-            if (connection.responseCode != 200) {
+            final response = client.send(request, HttpResponse.BodyHandlers.ofString())
+
+            if (response.statusCode() != 200) {
                 return null
             }
 
-            def response = connection.inputStream.text
-            def json = new JsonSlurper().parseText(response) as Map
-            def orgsAndWorkspaces = json.orgsAndWorkspaces as List
+            final json = new JsonSlurper().parseText(response.body()) as Map
+            final orgsAndWorkspaces = json.orgsAndWorkspaces as List
 
-            def workspace = orgsAndWorkspaces.find { ((Map)it).workspaceId?.toString() == workspaceId }
+            final workspace = orgsAndWorkspaces.find { ((Map)it).workspaceId?.toString() == workspaceId }
             if (workspace) {
-                def ws = workspace as Map
+                final ws = workspace as Map
                 return [
                     orgName: ws.orgName,
                     workspaceName: ws.workspaceName,
@@ -1013,8 +963,8 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
 
     private Map getCloudEndpointInfo(String apiUrl) {
         for (env in SEQERA_API_TO_AUTH0) {
-            def standardUrl = env.key as String
-            def legacyUrl = standardUrl.replace('://api.', '://') + '/api'
+            final standardUrl = env.key as String
+            final legacyUrl = standardUrl.replace('://api.', '://') + '/api'
             if (apiUrl == standardUrl || apiUrl == legacyUrl) {
                 return [isCloud: true, endpoint: env.key, auth: env.value]
             }
@@ -1027,15 +977,20 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
     }
 
     private Map callUserInfoApi(String accessToken, String apiUrl) {
-        def connection = createHttpConnection("${apiUrl}/user-info", 'GET', accessToken)
+        final client = createHttpClient(accessToken)
+        final request = HttpRequest.newBuilder()
+            .uri(URI.create("${apiUrl}/user-info"))
+            .GET()
+            .build()
 
-        if (connection.responseCode != 200) {
-            def error = connection.errorStream?.text ?: "HTTP ${connection.responseCode}"
+        final response = client.send(request, HttpResponse.BodyHandlers.ofString())
+
+        if (response.statusCode() != 200) {
+            final error = response.body() ?: "HTTP ${response.statusCode()}"
             throw new RuntimeException("Failed to get user info: ${error}")
         }
 
-        def response = connection.inputStream.text
-        def json = new JsonSlurper().parseText(response) as Map
+        final json = new JsonSlurper().parseText(response.body()) as Map
         return json.user as Map
     }
 
@@ -1048,14 +1003,14 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
     }
 
     private Map readLoginFile() {
-        def configFile = getLoginFile()
+        final configFile = getLoginFile()
         if (!Files.exists(configFile)) {
             return [:]
         }
 
         try {
-            def configText = Files.readString(configFile)
-            def config = new ConfigSlurper().parse(configText)
+            final configText = Files.readString(configFile)
+            final config = new ConfigSlurper().parse(configText)
             return config.flatten()
         } catch (Exception e) {
             throw new RuntimeException("Failed to read config file ${configFile}: ${e.message}")
@@ -1063,13 +1018,13 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
     }
 
     private Map readConfig() {
-        def builder = new ConfigBuilder().setHomeDir(Const.APP_HOME_DIR).setCurrentDir(Const.APP_HOME_DIR)
+        final builder = new ConfigBuilder().setHomeDir(Const.APP_HOME_DIR).setCurrentDir(Const.APP_HOME_DIR)
         return builder.buildConfigObject().flatten()
     }
 
     private void writeConfig(Map config, Map workspaceMetadata = null) {
-        def configFile = getConfigFile()
-        def loginFile = getLoginFile()
+        final configFile = getConfigFile()
+        final loginFile = getLoginFile()
 
         // Create directory if it doesn't exist
         if (!Files.exists(configFile.parent)) {
@@ -1077,15 +1032,15 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         }
 
         // Write tower config to .login file
-        def towerConfig = config.findAll { key, value ->
+        final towerConfig = config.findAll { key, value ->
             key.toString().startsWith('tower.') && !key.toString().endsWith('.comment')
         }
 
-        def loginConfigText = new StringBuilder()
+        final loginConfigText = new StringBuilder()
         loginConfigText.append("// Seqera Platform configuration\n")
         loginConfigText.append("tower {\n")
         towerConfig.each { key, value ->
-            def configKey = key.toString().substring(6) // Remove "tower." prefix
+            final configKey = key.toString().substring(6) // Remove "tower." prefix
 
             if (value instanceof String) {
                 def line = "    ${configKey} = '${value}'"
@@ -1108,7 +1063,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
     }
 
     private void addIncludeConfigToMainFile(Path configFile) {
-        def includeConfigLine = "includeConfig '.login'"
+        final includeConfigLine = "includeConfig '.login'"
 
         def configContent = ""
         if (Files.exists(configFile)) {
@@ -1131,8 +1086,8 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
 
     private String removeIncludeConfigLine(String content) {
         // Remove the includeConfig '.login' line
-        def lines = content.split('\n')
-        def filteredLines = lines.findAll { line ->
+        final lines = content.split('\n')
+        final filteredLines = lines.findAll { line ->
             !line.trim().equals("includeConfig '.login'")
         }
         return filteredLines.join('\n')

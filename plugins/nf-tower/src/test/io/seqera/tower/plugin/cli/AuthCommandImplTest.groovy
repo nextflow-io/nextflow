@@ -16,7 +16,6 @@
 
 package io.seqera.tower.plugin.cli
 
-import nextflow.exception.AbortOperationException
 import org.junit.Rule
 import spock.lang.Specification
 import spock.lang.TempDir
