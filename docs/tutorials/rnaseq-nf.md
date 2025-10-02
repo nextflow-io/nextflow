@@ -2,7 +2,7 @@
 
 # Getting started with rnaseq-nf
 
-`rnaseq-nf` is a basic Nextflow pipeline for RNA-Seq analysis that performs quality control, transcript quantification, and result aggregation. The pipeline processes paired-end FASTQ files, generates quality control reports with FastQC, quantifies transcripts with Salmon, and produces a unified report with MultiQC.
+`rnaseq-nf` is a basic Nextflow pipeline for RNA-Seq analysis that performs quality control, transcript quantification, and result aggregation. The pipeline processes paired-end FASTQ files, generates quality control reports with [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/), quantifies transcripts with [Salmon](https://salmon.readthedocs.io/en/latest/salmon.html), and produces a unified report with [MultiQC](https://seqera.io/multiqc/).
 
 This tutorial describes the architecture of the `rnaseq-nf` pipeline and provides instructions on how to run it.
 
@@ -64,18 +64,18 @@ flowchart TB
     end
 ```
 
-<h3>Inputs (`take:`):</h3>
+<h3>Inputs (<code>take:</code>):</h3>
 
 - `transcriptome`: Reference transcriptome file
 - `read_pairs_ch`: Channel of paired-end read files
 
-<h3>Process execution (`main:`):</h3>
+<h3>Process execution (<code>main:</code>):</h3>
 
 - `INDEX` creates a Salmon index from the `transcriptome` (runs once)
 - `FASTQC` analyzes the `read_pairs_ch` in parallel (runs independently for each sample)
 - `QUANT` quantifies transcripts using both the index from **INDEX** and the `read_pairs_ch` (runs for each sample after INDEX completes)
 
-<h3>Outputs (`emit:`):</h3>
+<h3>Outputs (<code>emit:</code>):</h3>
 
 - All outputs from `FASTQC` and `QUANT` are collected and emitted for downstream processing
 
