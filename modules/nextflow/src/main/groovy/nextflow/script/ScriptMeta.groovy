@@ -19,6 +19,7 @@ package nextflow.script
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 import java.nio.file.Path
+import java.nio.file.Paths
 
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
@@ -50,7 +51,7 @@ class ScriptMeta {
 
     static private Map<Path,BaseScript> scriptsByPath = new HashMap<>(10)
 
-    static private Set<String> resolvedProcessNames = new HashSet<>(20)
+    static private Map<Map.Entry<Path,String>,Set<String>> resolvedProcessNames = new HashMap<>(20)
 
     @TestOnly
     static void reset() {
@@ -73,7 +74,7 @@ class ScriptMeta {
         for( ScriptMeta entry : REGISTRY.values() )
             result.addAll( entry.getProcessNames() )
         // add all resolved names
-        result.addAll(resolvedProcessNames)
+        result.addAll(resolvedProcessNames.values().flatten())
         return result
     }
 
@@ -86,8 +87,50 @@ class ScriptMeta {
         return result
     }
 
-    static void addResolvedName(String name) {
-        resolvedProcessNames.add(name)
+    /** 
+     * Returns a map of all local process definitions per script path.
+     * @return Map of script path and a list of process names
+     *         defined in that script
+     *         ie. [scriptPath -> [processName1, processName2]]
+     */
+    static Map<Path, List<String>> allProcessDefinitions() {
+        final result = new HashMap()
+         for( final entry : REGISTRY.values() ) {
+            result.put(entry.getScriptPath(), entry.getLocalProcessNames())
+        }
+        return result
+    }
+
+    /** 
+     * Returns a map of all process names and their aliases within the scripts.
+     * @return 
+     */
+     static Map<Map.Entry<Path, String>, Set<String>> allResolvedProcessNames() {
+        // Return a deep copy of the attribute, to avoid altering the static attribute.
+        def result = new HashMap(resolvedProcessNames.entrySet().size())
+        resolvedProcessNames.entrySet().each { entry ->
+            def key = Map.entry(entry.key.key, entry.key.value)
+            def value = new HashSet<String>(entry.value)
+            result.put(key, value)
+        }
+
+        return result
+    }
+
+    static void addResolvedName(String name, Path path, String baseName, String processName) {
+        def resolvedNameList = resolvedProcessNames.get(Map.entry(path, baseName))
+        if(!resolvedNameList){
+            resolvedNameList = new HashSet<String>()
+            resolvedProcessNames.put(Map.entry(path, baseName), resolvedNameList)
+        }
+
+        // If an aliased name is re-aliased, keep only the latest name.
+        // The first name is given on inclusion, the second when the
+        // actual workflow path is resolved. Only the second name appears
+        // in execution reports.
+        resolvedNameList.remove(processName)
+
+        resolvedNameList.add(name)
     }
 
     static Map<String,Path> allScriptNames() {
@@ -344,6 +387,12 @@ class ScriptMeta {
             imports.put(name, component.cloneWithName(name))
         }
         else {
+            // Keep track of the resolved process name
+            if(component instanceof ProcessDef) {
+                final path =  ScriptMeta.get(component.getOwner())?.getScriptPath()
+                final safePath = path?: Paths.get(".") // Default path for path-less scripts (for TESTING)
+                ScriptMeta.addResolvedName(name, safePath, component.getBaseName(), component.getName())
+            }
             imports.put(name, component)
         }
     }
