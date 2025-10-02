@@ -1,6 +1,6 @@
 (rnaseq-nf-page)=
 
-# rnaseq-nf
+# Getting started with rnaseq-nf
 
 `rnaseq-nf` is a basic Nextflow pipeline for RNA-Seq analysis that performs quality control, transcript quantification, and result aggregation. The pipeline processes paired-end FASTQ files, generates quality control reports with FastQC, quantifies transcripts with Salmon, and produces a unified report with MultiQC.
 
@@ -228,5 +228,7 @@ results/
 │   ├── <SAMPLE_ID>_1_fastqc.zip
 │   ├── <SAMPLE_ID>_2_fastqc.html
 │   └── <SAMPLE_ID>_2_fastqc.zip
-└── multiqc_report.html           # Aggregated QC and quantification report
+└── multiqc_report.html           # Aggregated QC and Salmon report
 ```
+
+The MultiQC report (multiqc_report.html) can be viewed in a web browser.
