@@ -866,7 +866,7 @@ class TaskProcessor {
         final ctx = task.context
         def invalid = task.getOutputs().keySet().any {
             if( it instanceof ValueOutParam ) {
-                return !ctx.containsKey(it.name)
+                return false
             }
             if( it instanceof FileOutParam ) {
                 return false
