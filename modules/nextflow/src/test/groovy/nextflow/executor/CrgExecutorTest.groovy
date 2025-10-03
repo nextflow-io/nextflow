@@ -484,6 +484,7 @@ class CrgExecutorTest extends Specification {
         task.processor = Mock(TaskProcessor)
         task.processor.getSession() >> Mock(Session) {
             getContainerConfig() >> new DockerConfig([:])
+            config >> [:]
         }
         task.processor.getProcessEnvironment() >> [:]
         task.processor.getConfig() >> [:]
@@ -511,6 +512,7 @@ class CrgExecutorTest extends Specification {
         given:
         def sess = Mock(Session) {
             getContainerConfig(null) >> new DockerConfig(enabled: true)
+            config >> [:]
         }
         and:
         def executor = Spy(new CrgExecutor(session: sess)) { isContainerNative()>>false }
@@ -550,6 +552,7 @@ class CrgExecutorTest extends Specification {
         given:
         def sess = Mock(Session) {
             getContainerConfig(null) >> new DockerConfig(enabled: true, legacy:true)
+            config >> [:]
         }
         and:
         def executor = Spy(new CrgExecutor(session: sess)) { isContainerNative()>>false }
