@@ -65,7 +65,7 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
     // the map. Once the prefetch is complete, this repository will behave
     // like any other implementation of UpdateRepository.
     @Override
-    void prefetch(List<PluginSpec> plugins) {
+    void prefetch(List<PluginRef> plugins) {
         if (plugins && !plugins.isEmpty()) {
             this.plugins = fetchMetadata(plugins)
         }
@@ -114,16 +114,16 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
     // http handling
 
     private Map<String, PluginInfo> fetchMetadataByIds(Collection<String> ids) {
-        def specs = ids.collect(id -> new PluginSpec(id, null))
+        def specs = ids.collect(id -> new PluginRef(id, null))
         return fetchMetadata(specs)
     }
 
-    private Map<String, PluginInfo> fetchMetadata(Collection<PluginSpec> specs) {
+    private Map<String, PluginInfo> fetchMetadata(Collection<PluginRef> specs) {
         final ordered = specs.sort(false)
         return fetchMetadata0(ordered)
     }
 
-    private Map<String, PluginInfo> fetchMetadata0(List<PluginSpec> specs) {
+    private Map<String, PluginInfo> fetchMetadata0(List<PluginRef> specs) {
         def pluginsParam = specs.collect { "${it.id}${it.version ? '@' + it.version : ''}" }.join(',')
         def uri = url.resolve("v1/plugins/dependencies?plugins=${URLEncoder.encode(pluginsParam, 'UTF-8')}&nextflowVersion=${URLEncoder.encode(BuildInfo.version, 'UTF-8')}")
         def req = HttpRequest.newBuilder()

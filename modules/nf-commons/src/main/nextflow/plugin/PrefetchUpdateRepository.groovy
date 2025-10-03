@@ -16,5 +16,5 @@ interface PrefetchUpdateRepository extends UpdateRepository {
      * This will be called when Nextflow starts, before
      * initialising the plugins.
      */
-    void prefetch(List<PluginSpec> plugins)
+    void prefetch(List<PluginRef> plugins)
 }
