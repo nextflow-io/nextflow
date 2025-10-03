@@ -85,6 +85,25 @@ public abstract class ScriptVisitorSupport extends ClassCodeVisitorSupport imple
 
     @Override
     public void visitProcess(ProcessNode node) {
+        if( node instanceof ProcessNodeV2 pn )
+            visitProcessV2(pn);
+        if( node instanceof ProcessNodeV1 pn )
+            visitProcessV1(pn);
+    }
+
+    @Override
+    public void visitProcessV2(ProcessNodeV2 node) {
+        visit(node.directives);
+        visit(node.stagers);
+        visit(node.outputs);
+        visit(node.topics);
+        visit(node.when);
+        visit(node.exec);
+        visit(node.stub);
+    }
+
+    @Override
+    public void visitProcessV1(ProcessNodeV1 node) {
         visit(node.directives);
         visit(node.inputs);
         visit(node.outputs);

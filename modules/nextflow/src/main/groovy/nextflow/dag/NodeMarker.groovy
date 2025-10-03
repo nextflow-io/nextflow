@@ -23,6 +23,8 @@ import nextflow.Session
 import nextflow.processor.TaskProcessor
 import nextflow.script.params.InputsList
 import nextflow.script.params.OutputsList
+import nextflow.script.params.v2.ProcessInputs
+import nextflow.script.params.v2.ProcessOutputs
 /**
  * Helper class to mark DAG node with the proper labels
  *
@@ -47,6 +49,11 @@ class NodeMarker {
      * @param outputs the list of outputs leaving the process
      */
     static void addProcessNode( TaskProcessor process, InputsList inputs, OutputsList outputs ) {
+        if( session && session.dag && !session.aborted )
+            session.dag.addProcessNode( process.name, inputs, outputs, process )
+    }
+
+    static void addProcessNode( TaskProcessor process, ProcessInputs inputs, ProcessOutputs outputs ) {
         if( session && session.dag && !session.aborted )
             session.dag.addProcessNode( process.name, inputs, outputs, process )
     }

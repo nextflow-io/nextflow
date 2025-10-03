@@ -50,9 +50,80 @@ The following task properties are defined in the process body:
 
 Additionally, the [directive values](#directives) for the given task can be accessed via `task.<directive>`.
 
+(process-reference-typed)=
+
+## Typed inputs and outputs
+
+:::{versionadded} 25.10.0
+:::
+
+### Stage directives
+
+The following directives can be used in the `stage:` section of a typed process:
+
+`env( name: String, String value )`
+: Declare an environment variable in the task environment with the given name and value.
+
+`stageAs( filePattern: String, value: Path )`
+: Stage a file into the task directory under the given alias.
+
+`stageAs( filePattern: String, value: Set<Path> )`
+: Stage a collection of files into the task directory under the given alias.
+
+`stdin( value: String )`
+: Stage the given value as the standard input (i.e. `stdin`) to the task script.
+
+### Outputs
+
+The following functions are available in the `output:` and `topic:` sections of a typed process:
+
+`env( name: String ) -> String`
+: Get the value of an environment variable from the task environment.
+
+`eval( command: String ) -> String`
+: Get the standard output of the given command, which is executed in the task environment after the task script.
+
+`file( pattern: String, [options] ) -> Path`
+: Get a file from the task environment that matches the given pattern.
+
+: Available options:
+
+  `followLinks: Boolean`
+  : When `true`, target files are returned in place of any matching symlink (default: `true`).
+
+  `glob: Boolean`
+  : When `true`, the file name is interpreted as a glob pattern (default: `true`).
+
+  `hidden: Boolean`
+  : When `true`, hidden files are included in the matching output files (default: `false`).
+
+  `includeInputs: Boolean`
+  : When `true` and the file name is a glob pattern, any input files matching the pattern are also included in the output (default: `false`).
+
+  `maxDepth: Integer`
+  : Maximum number of directory levels to visit (default: no limit).
+
+  `optional: Boolean`
+  : When `true`, the task will not fail if the given file is missing (default: `false`).
+
+  `type: String`
+  : Type of paths returned, either `file`, `dir` or `any` (default: `any`, or `file` if the given file name contains a double star (`**`)).
+
+`files( pattern: String, [options] ) -> Set<Path>`
+: Get the files from the task environment that match the given pattern.
+
+: Supports the same options as `file()` (except for `optional`).
+
+`stdout() -> String`
+: Get the standard output of the task script.
+
+(process-reference-legacy)=
+
+## Legacy inputs and outputs
+
 (process-reference-inputs)=
 
-## Inputs
+### Inputs
 
 `val( identifier )`
 
@@ -103,7 +174,7 @@ Additionally, the [directive values](#directives) for the given task can be acce
 
 (process-reference-outputs)=
 
-## Outputs
+### Outputs
 
 `val( value )`
 
