@@ -423,7 +423,15 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
             }
             else {
                 // finalize the task
-                task.exitStatus = readExitFile()
+                // read the exit code from the K8s container terminated state, if 0 (successful) or missing
+                // take the exit code from the `.exitcode` file created by nextflow
+                // the rationale is that in case of error (e.g. OOMKilled, pod eviction), the exit code from
+                // the K8s API is more reliable because the container may terminate before the exit file is written
+                // See https://github.com/nextflow-io/nextflow/issues/6436
+                // https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#containerstateterminated-v1-core
+                log.trace("[k8s] Container Terminated state ${state.terminated}")
+                final k8sExitCode = (state.terminated as Map)?.exitCode as Integer
+                task.exitStatus = k8sExitCode ?: readExitFile()
                 task.stdout = outputFile
                 task.stderr = errorFile
             }
