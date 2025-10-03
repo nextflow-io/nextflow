@@ -426,7 +426,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
                 // finalize the task
                 // try to get exit code from K8s container state.terminated.
                 // https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#containerstateterminated-v1-core
-                log.trace("Container Terminated state ${state.terminated}")
+                log.trace("[k8s] Container Terminated state ${state.terminated}")
                 final k8sExitCode = (state.terminated as Map)?.exitCode as Integer
                 task.exitStatus = k8sExitCode ?: readExitFile()
                 task.stdout = outputFile
