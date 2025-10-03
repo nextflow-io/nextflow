@@ -52,11 +52,11 @@ dependencies {
     compileOnly 'org.slf4j:slf4j-api:2.0.17'
     compileOnly 'org.pf4j:pf4j:3.12.0'
 
-    api 'com.google.auth:google-auth-library-oauth2-http:1.37.1'
-    api 'com.google.cloud:google-cloud-batch:0.67.0'
-    api 'com.google.cloud:google-cloud-logging:3.22.6'
-    api 'com.google.cloud:google-cloud-nio:0.127.37'
-    api 'com.google.cloud:google-cloud-storage:2.53.2'
+    api 'com.google.auth:google-auth-library-oauth2-http:1.39.1'
+    api 'com.google.cloud:google-cloud-batch:0.75.0'
+    api 'com.google.cloud:google-cloud-logging:3.23.5'
+    api 'com.google.cloud:google-cloud-nio:0.128.5'
+    api 'com.google.cloud:google-cloud-storage:2.58.0'
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation "org.apache.groovy:groovy:4.0.28"
