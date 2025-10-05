@@ -4,7 +4,7 @@
 
 [`rnaseq-nf`](https://github.com/nextflow-io/rnaseq-nf) is a basic Nextflow pipeline for RNA-Seq analysis that performs quality control, transcript quantification, and result aggregation. The pipeline processes paired-end FASTQ files, generates quality control reports with [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/), quantifies transcripts with [Salmon](https://salmon.readthedocs.io/en/latest/salmon.html), and produces a unified report with [MultiQC](https://seqera.io/multiqc/).
 
-This tutorial describes the architecture of the [`rnaseq-nf`](https://github.com/nextflow-io/rnaseq-nf) pipeline and provides instructions on how to run it.
+This tutorial describes the architecture of the [`rnaseq-nf`](https://github.com/nextflow-io/rnaseq-nf) pipeline and provides instructions for how to run it.
 
 ## Pipeline architecture
 
@@ -34,9 +34,9 @@ flowchart TB
 
 <h3>Data flow:</h3>
 
-1. The `transcriptome` and `reads` parameters are passed to the `RNASEQ` subworkflow, which performs indexing, quality control, and quantification
-2. The outputs from `RNASEQ` along with the `multiqc` configuration are passed to the `MULTIQC` module, which aggregates results into a unified HTML report
-3. The `outdir` parameter defines where all results are published
+- The `transcriptome` and `reads` parameters are passed to the `RNASEQ` subworkflow, which performs indexing, quality control, and quantification.
+- The outputs from `RNASEQ`, along with the MultiQC configuration (`multiqc`), are passed to the `MULTIQC` module, which aggregates results into a unified HTML report.
+- The `outdir` parameter defines where all results are published.
 
 ### `RNASEQ`
 
@@ -71,13 +71,13 @@ flowchart TB
 
 <h3>Process execution (<code>main:</code>):</h3>
 
-- [`INDEX`](https://github.com/nextflow-io/rnaseq-nf/blob/master/modules/index/main.nf) creates a Salmon index from the `transcriptome` (runs once)
-- [`FASTQC`](https://github.com/nextflow-io/rnaseq-nf/blob/master/modules/fastqc/main.nf) analyzes the `read_pairs_ch` in parallel (runs independently for each sample)
-- [`QUANT`](https://github.com/nextflow-io/rnaseq-nf/blob/master/modules/quant/main.nf) quantifies transcripts using both the index from **INDEX** and the `read_pairs_ch` (runs for each sample after INDEX completes)
+- [`INDEX`](https://github.com/nextflow-io/rnaseq-nf/blob/master/modules/index/main.nf) creates a Salmon index from the `transcriptome` (runs once).
+- [`FASTQC`](https://github.com/nextflow-io/rnaseq-nf/blob/master/modules/fastqc/main.nf) analyzes the `read_pairs_ch` in parallel (runs independently for each sample).
+- [`QUANT`](https://github.com/nextflow-io/rnaseq-nf/blob/master/modules/quant/main.nf) quantifies transcripts using both the index from `INDEX` and the `read_pairs_ch` (runs for each sample after `INDEX` completes).
 
 <h3>Outputs (<code>emit:</code>):</h3>
 
-- All outputs from `FASTQC` and `QUANT` are collected and emitted for downstream processing
+- All outputs from `FASTQC` and `QUANT` are collected and emitted for downstream processing.
 
 ### `MULTIQC`
 
@@ -85,12 +85,12 @@ The [`MULTIQC`](https://github.com/nextflow-io/rnaseq-nf/blob/master/modules/mul
 
 <h3>Inputs:</h3>
 
-- `RNASEQ` outputs: All collected outputs from the `RNASEQ` subworkflow (FastQC reports and Salmon quantification files)
-- MultiQC config: Custom configuration files and branding (logo, styling)
+- `RNASEQ` outputs: All collected outputs from the `RNASEQ` subworkflow (FastQC reports and Salmon quantification files).
+- `config`: MultiQC configuration files and branding (logo, styling).
 
 <h3>Process execution:</h3>
 
-- `MULTIQC` scans all input files, extracts metrics and statistics, and generates a unified report
+- `MULTIQC` scans all input files, extracts metrics and statistics, and generates a unified report.
 
 <h3>Outputs:</h3>
 
@@ -105,10 +105,10 @@ The pipeline behavior can be customized using command-line parameters to specify
 
 The pipeline accepts the following command-line parameters:
 
-- `--reads`: Path to paired-end FASTQ files (default: `data/ggal/ggal_gut_{1,2}.fq`)
-- `--transcriptome`: Path to reference transcriptome FASTA (default: `data/ggal/ggal_1_48850000_49020000.Ggal71.500bpflank.fa`)
-- `--outdir`: Output directory for results (default: `results`)
-- `--multiqc`: Path to MultiQC configuration directory (default: `multiqc`)
+- `--reads`: Path to paired-end FASTQ files (default: `data/ggal/ggal_gut_{1,2}.fq`).
+- `--transcriptome`: Path to reference transcriptome FASTA (default: `data/ggal/ggal_1_48850000_49020000.Ggal71.500bpflank.fa`).
+- `--outdir`: Output directory for results (default: `results`).
+- `--multiqc`: Path to MultiQC configuration directory (default: `multiqc`).
 
 ## Execution profiles
 
@@ -163,12 +163,13 @@ To use the Cloud and HPC profiles, you must configure credentials, resource pool
 
 The pipeline includes test data located in the [`data/ggal/`](https://github.com/nextflow-io/rnaseq-nf/tree/master/data/ggal) directory for demonstration and validation purposes:
 
-- Paired-end FASTQ files: Four tissue samples (gut, liver, lung, spleen) from *Gallus gallus* (chicken)
-  - `ggal_gut_{1,2}.fq` - Default sample used when running with standard parameters
+- Paired-end FASTQ files from four tissue samples (gut, liver, lung, spleen):
+  - `ggal_gut_{1,2}.fq`
   - `ggal_liver_{1,2}.fq`
   - `ggal_lung_{1,2}.fq`
   - `ggal_spleen_{1,2}.fq`
-- Reference transcriptome: `ggal_1_48850000_49020000.Ggal71.500bpflank.fa` - A subset of the chicken genome
+- Reference transcriptome:
+  - `ggal_1_48850000_49020000.Ggal71.500bpflank.fa`
 
 :::{tip}
 Use the `all-reads` profile to process all four tissue samples instead of just the default gut sample. See [Execution profiles](#execution-profiles) for more information.
