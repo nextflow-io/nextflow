@@ -1,5 +1,11 @@
 nf-amazon changelog
 ===================
+2.15.0-patch2 - 6 Oct 2025
+- Fix SIGTERM forwarding in AWS Batch jobs (#6414) [c87b7e62]
+
+2.15.0-patch1 - 8 Sep 2025
+- Bump jgit:7.1.1.202505221757-r (#6376) [9fe4e258]
+
 2.15.0 - 8 May 2025
 - Add verbose AWS Batch job cleanup logging [504bd2df]
 - Remove test constructors or mark as TestOnly (#5216) [d4fadd42]
