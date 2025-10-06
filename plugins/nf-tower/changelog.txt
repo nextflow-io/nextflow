@@ -1,5 +1,12 @@
 nf-tower changelog
 ===================
+1.11.4-patch2 - 6 Oct 2025
+- Fix cache command to check session cloudCachePath [e2964232]
+- Fix cache command to use SysEnv for cloudcache path check (#6432) [1936c601]
+
+1.11.4-patch1 - 2 Aug 2025
+- Improve Fusion license error message (#6313) [9e3fc268]
+
 1.11.4 - 30 Jun 2025
 - Fix JWT token refresh to Fusion validation request (#6231) [267ee1cf]
 
