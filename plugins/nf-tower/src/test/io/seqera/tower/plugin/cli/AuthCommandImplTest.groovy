@@ -973,8 +973,8 @@ param2 = 'value2'"""
 
         then:
         status != null
-        // Token from login file
-        status.table[2][2].endsWith('.login')
+        // Token from auth file
+        status.table[2][2].endsWith('seqera_auth.config')
         // Enabled from config file
         status.table[3][2].endsWith('config')
         // Workspace from env var
