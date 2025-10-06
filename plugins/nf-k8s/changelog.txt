@@ -1,4 +1,9 @@
 nf-k8s changelog
 ===================
+1.0.1 - 6 Oct 2025
+- Fix pod log warning with Fusion enabled (#6449) [38f685b9]
+- Get exit code from pod to manage OOM in k8s (#6442) [70f30c6c]
+- Remove test constructors or mark as TestOnly (#5216) [d4fadd42]
+
 1.0.0 - 13 Apr 2025
 - Refactor Kubernetes support as a core plugin
