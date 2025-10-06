@@ -152,7 +152,7 @@ class AuthCommandImplTest extends Specification {
 // Some config
 param1 = 'value1'
 
-includeConfig '.login'
+includeConfig 'seqera_auth.config'
 
 param2 = 'value2'
 """
@@ -161,7 +161,7 @@ param2 = 'value2'
         def result = cmd.removeIncludeConfigLine(content)
 
         then:
-        !result.contains("includeConfig '.login'")
+        !result.contains("includeConfig 'seqera_auth.config'")
         result.contains('param1 = \'value1\'')
         result.contains('param2 = \'value2\'')
     }
@@ -192,36 +192,36 @@ param2 = 'value2'"""
         configFile == Const.APP_HOME_DIR.resolve('config')
     }
 
-    def 'should get login file path'() {
+    def 'should get auth file path'() {
         given:
         def cmd = new AuthCommandImpl()
 
         when:
-        def loginFile = cmd.getLoginFile()
+        def authFile = cmd.getAuthFile()
 
         then:
-        loginFile == Const.APP_HOME_DIR.resolve('.login')
+        authFile == Const.APP_HOME_DIR.resolve('seqera_auth.config')
     }
 
-    def 'should read empty login file'() {
+    def 'should read empty auth file'() {
         given:
         def cmd = new AuthCommandImpl()
 
         when:
-        def config = cmd.readLoginFile()
+        def config = cmd.readAuthFile()
 
         then:
         config instanceof Map
         config.isEmpty() || config.size() >= 0
     }
 
-    def 'should write config to .login file'() {
+    def 'should write config to seqera_auth.config file'() {
         given:
         def cmd = Spy(AuthCommandImpl)
-        def loginFile = tempDir.resolve('.login')
+        def authFile = tempDir.resolve('seqera_auth.config')
         def configFile = tempDir.resolve('config')
 
-        cmd.getLoginFile() >> loginFile
+        cmd.getAuthFile() >> authFile
         cmd.getConfigFile() >> configFile
 
         def config = [
@@ -234,20 +234,20 @@ param2 = 'value2'"""
         cmd.writeConfig(config, null)
 
         then:
-        Files.exists(loginFile)
-        def loginContent = Files.readString(loginFile)
-        loginContent.contains('accessToken = \'test-token-123\'')
-        loginContent.contains('endpoint = \'https://api.cloud.seqera.io\'')
-        loginContent.contains('enabled = true')
+        Files.exists(authFile)
+        def authContent = Files.readString(authFile)
+        authContent.contains('accessToken = \'test-token-123\'')
+        authContent.contains('endpoint = \'https://api.cloud.seqera.io\'')
+        authContent.contains('enabled = true')
     }
 
     def 'should write config with workspace metadata'() {
         given:
         def cmd = Spy(AuthCommandImpl)
-        def loginFile = tempDir.resolve('.login')
+        def authFile = tempDir.resolve('seqera_auth.config')
         def configFile = tempDir.resolve('config')
 
-        cmd.getLoginFile() >> loginFile
+        cmd.getAuthFile() >> authFile
         cmd.getConfigFile() >> configFile
 
         def config = [
@@ -265,19 +265,19 @@ param2 = 'value2'"""
         cmd.writeConfig(config, metadata)
 
         then:
-        Files.exists(loginFile)
-        def loginContent = Files.readString(loginFile)
-        loginContent.contains('workspaceId = \'12345\'')
-        loginContent.contains('// TestOrg / TestWorkspace [test-org/test-workspace]')
+        Files.exists(authFile)
+        def authContent = Files.readString(authFile)
+        authContent.contains('workspaceId = \'12345\'')
+        authContent.contains('// TestOrg / TestWorkspace [test-org/test-workspace]')
     }
 
     def 'should add includeConfig line to main config file'() {
         given:
         def cmd = Spy(AuthCommandImpl)
-        def loginFile = tempDir.resolve('.login')
+        def authFile = tempDir.resolve('seqera_auth.config')
         def configFile = tempDir.resolve('config')
 
-        cmd.getLoginFile() >> loginFile
+        cmd.getAuthFile() >> authFile
         cmd.getConfigFile() >> configFile
 
         // Create initial config file
@@ -293,21 +293,21 @@ param2 = 'value2'"""
         then:
         Files.exists(configFile)
         def configContent = Files.readString(configFile)
-        configContent.contains("includeConfig '.login'")
+        configContent.contains("includeConfig 'seqera_auth.config'")
         configContent.contains('param1 = \'value1\'')
     }
 
     def 'should not duplicate includeConfig line'() {
         given:
         def cmd = Spy(AuthCommandImpl)
-        def loginFile = tempDir.resolve('.login')
+        def authFile = tempDir.resolve('seqera_auth.config')
         def configFile = tempDir.resolve('config')
 
-        cmd.getLoginFile() >> loginFile
+        cmd.getAuthFile() >> authFile
         cmd.getConfigFile() >> configFile
 
         // Create config file with existing includeConfig line
-        Files.writeString(configFile, "// Config\nincludeConfig '.login'\nparam1 = 'value1'\n")
+        Files.writeString(configFile, "// Config\nincludeConfig 'seqera_auth.config'\nparam1 = 'value1'\n")
 
         def config = [
             'tower.accessToken': 'test-token-123'
@@ -319,7 +319,7 @@ param2 = 'value2'"""
         then:
         Files.exists(configFile)
         def configContent = Files.readString(configFile)
-        configContent.count("includeConfig '.login'") == 1
+        configContent.count("includeConfig 'seqera_auth.config'") == 1
     }
 
     def 'should get current workspace name when workspace exists'() {
@@ -354,18 +354,18 @@ param2 = 'value2'"""
     def 'should get config value from login file'() {
         given:
         def cmd = Spy(AuthCommandImpl)
-        def loginFile = tempDir.resolve('.login')
-        cmd.getLoginFile() >> loginFile
+        def authFile = tempDir.resolve('seqera_auth.config')
+        cmd.getAuthFile() >> authFile
 
         def config = [:]
-        def login = ['tower.accessToken': 'token-from-login']
+        def auth =['tower.accessToken': 'token-from-login']
 
         when:
-        def result = cmd.getConfigValue(config, login, 'tower.accessToken', 'TOWER_ACCESS_TOKEN', null)
+        def result = cmd.getConfigValue(config, auth,'tower.accessToken', 'TOWER_ACCESS_TOKEN', null)
 
         then:
         result.value == 'token-from-login'
-        result.source.endsWith('.login')
+        result.source.endsWith('seqera_auth.config')
         result.fromConfig == true
         result.fromEnv == false
         result.isDefault == false
@@ -378,10 +378,10 @@ param2 = 'value2'"""
         cmd.getConfigFile() >> configFile
 
         def config = ['tower.endpoint': 'https://example.com']
-        def login = [:]
+        def auth =[:]
 
         when:
-        def result = cmd.getConfigValue(config, login, 'tower.endpoint', 'TOWER_API_ENDPOINT', null)
+        def result = cmd.getConfigValue(config, auth,'tower.endpoint', 'TOWER_API_ENDPOINT', null)
 
         then:
         result.value == 'https://example.com'
@@ -396,13 +396,13 @@ param2 = 'value2'"""
         def cmd = Spy(AuthCommandImpl)
 
         def config = [:]
-        def login = [:]
+        def auth =[:]
 
         and:
         SysEnv.push( ['TOWER_ACCESS_TOKEN': 'token-from-env'])
 
         when:
-        def result = cmd.getConfigValue(config, login, 'tower.accessToken', 'TOWER_ACCESS_TOKEN', null)
+        def result = cmd.getConfigValue(config, auth,'tower.accessToken', 'TOWER_ACCESS_TOKEN', null)
 
 
         then:
@@ -421,10 +421,10 @@ param2 = 'value2'"""
         def cmd = new AuthCommandImpl()
 
         def config = [:]
-        def login = [:]
+        def auth =[:]
 
         when:
-        def result = cmd.getConfigValue(config, login, 'tower.endpoint', null, 'https://default.example.com')
+        def result = cmd.getConfigValue(config, auth,'tower.endpoint', null, 'https://default.example.com')
 
         then:
         result.value == 'https://default.example.com'
@@ -437,20 +437,20 @@ param2 = 'value2'"""
     def 'should prioritize login over config and env'() {
         given:
         def cmd = Spy(AuthCommandImpl)
-        def loginFile = tempDir.resolve('.login')
-        cmd.getLoginFile() >> loginFile
+        def authFile = tempDir.resolve('seqera_auth.config')
+        cmd.getAuthFile() >> authFile
 
         def config = ['tower.accessToken': 'token-from-config']
-        def login = ['tower.accessToken': 'token-from-login']
+        def auth =['tower.accessToken': 'token-from-login']
 
         SysEnv.push(['TOWER_ACCESS_TOKEN': 'token-from-env'])
 
         when:
-        def result = cmd.getConfigValue(config, login, 'tower.accessToken', 'TOWER_ACCESS_TOKEN', 'default-token')
+        def result = cmd.getConfigValue(config, auth,'tower.accessToken', 'TOWER_ACCESS_TOKEN', 'default-token')
 
         then:
         result.value == 'token-from-login'
-        result.source.endsWith('.login')
+        result.source.endsWith('seqera_auth.config')
 
         cleanup:
         SysEnv.pop()
@@ -463,12 +463,12 @@ param2 = 'value2'"""
         cmd.getConfigFile() >> configFile
 
         def config = ['tower.endpoint': 'https://config.example.com']
-        def login = [:]
+        def auth =[:]
 
         SysEnv.push(['TOWER_API_ENDPOINT': 'https://env.example.com'])
 
         when:
-        def result = cmd.getConfigValue(config, login, 'tower.endpoint', 'TOWER_API_ENDPOINT', 'https://default.example.com')
+        def result = cmd.getConfigValue(config, auth,'tower.endpoint', 'TOWER_API_ENDPOINT', 'https://default.example.com')
 
 
         then:
@@ -484,10 +484,10 @@ param2 = 'value2'"""
         def cmd = new AuthCommandImpl()
 
         def config = ['tower.enabled': true]
-        def login = [:]
+        def auth =[:]
 
         when:
-        def result = cmd.getConfigValue(config, login, 'tower.enabled', null, 'false')
+        def result = cmd.getConfigValue(config, auth,'tower.enabled', null, 'false')
 
         then:
         result.value == true
@@ -722,7 +722,7 @@ param2 = 'value2'"""
         given:
         def cmd = Spy(AuthCommandImpl)
         def config = [:]
-        def loginConfig = [
+        def authConfig = [
             'tower.accessToken': 'test-token',
             'tower.endpoint': 'https://api.cloud.seqera.io',
             'tower.enabled': true
@@ -734,7 +734,7 @@ param2 = 'value2'"""
         cmd.getWorkspaceDetailsFromApi(_, _, _) >> null
 
         when:
-        def status = cmd.collectStatus(config, loginConfig)
+        def status = cmd.collectStatus(config, authConfig)
 
         then:
         status != null
@@ -761,12 +761,12 @@ param2 = 'value2'"""
         given:
         def cmd = Spy(AuthCommandImpl)
         def config = [:]
-        def loginConfig = [:]
+        def authConfig = [:]
 
         cmd.checkApiConnection(_) >> true
 
         when:
-        def status = cmd.collectStatus(config, loginConfig)
+        def status = cmd.collectStatus(config, authConfig)
 
         then:
         status != null
@@ -782,12 +782,12 @@ param2 = 'value2'"""
         given:
         def cmd = Spy(AuthCommandImpl)
         def config = [:]
-        def loginConfig = ['tower.endpoint': 'https://unreachable.example.com']
+        def authConfig = ['tower.endpoint': 'https://unreachable.example.com']
 
         cmd.checkApiConnection(_) >> false
 
         when:
-        def status = cmd.collectStatus(config, loginConfig)
+        def status = cmd.collectStatus(config, authConfig)
 
         then:
         status != null
@@ -799,13 +799,13 @@ param2 = 'value2'"""
         given:
         def cmd = Spy(AuthCommandImpl)
         def config = [:]
-        def loginConfig = ['tower.accessToken': 'invalid-token']
+        def authConfig = ['tower.accessToken': 'invalid-token']
 
         cmd.checkApiConnection(_) >> true
         cmd.callUserInfoApi(_, _) >> { throw new RuntimeException('Invalid token') }
 
         when:
-        def status = cmd.collectStatus(config, loginConfig)
+        def status = cmd.collectStatus(config, authConfig)
 
         then:
         status != null
@@ -818,12 +818,12 @@ param2 = 'value2'"""
         given:
         def cmd = Spy(AuthCommandImpl)
         def config = [:]
-        def loginConfig = ['tower.enabled': true]
+        def authConfig = ['tower.enabled': true]
 
         cmd.checkApiConnection(_) >> true
 
         when:
-        def status = cmd.collectStatus(config, loginConfig)
+        def status = cmd.collectStatus(config, authConfig)
 
         then:
         status != null
@@ -835,12 +835,12 @@ param2 = 'value2'"""
         given:
         def cmd = Spy(AuthCommandImpl)
         def config = [:]
-        def loginConfig = ['tower.enabled': false]
+        def authConfig = ['tower.enabled': false]
 
         cmd.checkApiConnection(_) >> true
 
         when:
-        def status = cmd.collectStatus(config, loginConfig)
+        def status = cmd.collectStatus(config, authConfig)
 
         then:
         status != null
@@ -852,7 +852,7 @@ param2 = 'value2'"""
         given:
         def cmd = Spy(AuthCommandImpl)
         def config = [:]
-        def loginConfig = [
+        def authConfig = [
             'tower.accessToken': 'test-token',
             'tower.workspaceId': '12345'
         ]
@@ -866,7 +866,7 @@ param2 = 'value2'"""
         ]
 
         when:
-        def status = cmd.collectStatus(config, loginConfig)
+        def status = cmd.collectStatus(config, authConfig)
 
         then:
         status != null
@@ -881,7 +881,7 @@ param2 = 'value2'"""
         given:
         def cmd = Spy(AuthCommandImpl)
         def config = [:]
-        def loginConfig = [
+        def authConfig = [
             'tower.accessToken': 'test-token',
             'tower.workspaceId': '12345'
         ]
@@ -891,7 +891,7 @@ param2 = 'value2'"""
         cmd.getWorkspaceDetailsFromApi(_, _, _) >> null
 
         when:
-        def status = cmd.collectStatus(config, loginConfig)
+        def status = cmd.collectStatus(config, authConfig)
 
         then:
         status != null
@@ -904,7 +904,7 @@ param2 = 'value2'"""
         given:
         def cmd = Spy(AuthCommandImpl)
         def config = [:]
-        def loginConfig = [:]
+        def authConfig = [:]
 
         cmd.checkApiConnection(_) >> true
         cmd.callUserInfoApi(_, _) >> [userName: 'envuser', id: '456']
@@ -915,7 +915,7 @@ param2 = 'value2'"""
                      'TOWER_WORKFLOW_ID': 'ws-123'] )
 
         when:
-        def status = cmd.collectStatus(config, loginConfig)
+        def status = cmd.collectStatus(config, authConfig)
 
 
         then:
@@ -934,12 +934,12 @@ param2 = 'value2'"""
         given:
         def cmd = Spy(AuthCommandImpl)
         def config = [:]
-        def loginConfig = [:]
+        def authConfig = [:]
 
         cmd.checkApiConnection(_) >> true
 
         when:
-        def status = cmd.collectStatus(config, loginConfig)
+        def status = cmd.collectStatus(config, authConfig)
 
         then:
         status != null
@@ -954,21 +954,21 @@ param2 = 'value2'"""
     def 'should collect status with mixed sources'() {
         given:
         def cmd = Spy(AuthCommandImpl)
-        def loginFile = tempDir.resolve('.login')
+        def authFile = tempDir.resolve('seqera_auth.config')
         def configFile = tempDir.resolve('config')
 
-        cmd.getLoginFile() >> loginFile
+        cmd.getAuthFile() >> authFile
         cmd.getConfigFile() >> configFile
 
         def config = ['tower.enabled': true]
-        def loginConfig = ['tower.accessToken': 'login-token']
+        def authConfig = ['tower.accessToken': 'login-token']
 
         cmd.checkApiConnection(_) >> true
         cmd.callUserInfoApi(_, _) >> [userName: 'mixeduser', id: '789']
         SysEnv.push(['TOWER_WORKFLOW_ID': 'ws-env'])
 
         when:
-        def status = cmd.collectStatus(config, loginConfig)
+        def status = cmd.collectStatus(config, authConfig)
 
 
         then:
@@ -1031,13 +1031,13 @@ param2 = 'value2'"""
         !output.contains('TestOrg')
     }
 
-    def 'should detect existing login file and prevent duplicate login'() {
+    def 'should detect existing auth file and prevent duplicate login'() {
         given:
         def cmd = Spy(AuthCommandImpl)
-        def loginFile = tempDir.resolve('.login')
-        Files.createFile(loginFile)
+        def authFile = tempDir.resolve('seqera_auth.config')
+        Files.createFile(authFile)
 
-        cmd.getLoginFile() >> loginFile
+        cmd.getAuthFile() >> authFile
 
         when:
         cmd.login('https://api.cloud.seqera.io')
@@ -1051,9 +1051,9 @@ param2 = 'value2'"""
     def 'should warn when TOWER_ACCESS_TOKEN env var is set during login'() {
         given:
         def cmd = Spy(AuthCommandImpl)
-        def loginFile = tempDir.resolve('.login-not-exists')
+        def authFile = tempDir.resolve('seqera_auth.config-not-exists')
 
-        cmd.getLoginFile() >> loginFile
+        cmd.getAuthFile() >> authFile
         cmd.performAuth0Login(_, _) >> { /* mock to prevent actual login */ }
         SysEnv.push(['TOWER_ACCESS_TOKEN': 'env-token'])
 
@@ -1071,9 +1071,9 @@ param2 = 'value2'"""
     def 'should normalize API URL during login'() {
         given:
         def cmd = Spy(AuthCommandImpl)
-        def loginFile = tempDir.resolve('.login-not-exists')
+        def authFile = tempDir.resolve('seqera_auth.config-not-exists')
 
-        cmd.getLoginFile() >> loginFile
+        cmd.getAuthFile() >> authFile
 
         when:
         cmd.login('api.cloud.seqera.io')
@@ -1085,9 +1085,9 @@ param2 = 'value2'"""
     def 'should route to enterprise auth for non-cloud endpoints'() {
         given:
         def cmd = Spy(AuthCommandImpl)
-        def loginFile = tempDir.resolve('.login-not-exists')
+        def authFile = tempDir.resolve('seqera_auth.config-not-exists')
 
-        cmd.getLoginFile() >> loginFile
+        cmd.getAuthFile() >> authFile
 
         when:
         cmd.login('https://enterprise.example.com')
@@ -1100,9 +1100,9 @@ param2 = 'value2'"""
     def 'should route to Auth0 login for cloud endpoints'() {
         given:
         def cmd = Spy(AuthCommandImpl)
-        def loginFile = tempDir.resolve('.login-not-exists')
+        def authFile = tempDir.resolve('seqera_auth.config-not-exists')
 
-        cmd.getLoginFile() >> loginFile
+        cmd.getAuthFile() >> authFile
 
         when:
         cmd.login('https://api.cloud.seqera.io')
@@ -1115,10 +1115,10 @@ param2 = 'value2'"""
     def 'should save auth to config after successful PAT generation'() {
         given:
         def cmd = Spy(AuthCommandImpl)
-        def loginFile = tempDir.resolve('.login')
+        def authFile = tempDir.resolve('seqera_auth.config')
         def configFile = tempDir.resolve('config')
 
-        cmd.getLoginFile() >> loginFile
+        cmd.getAuthFile() >> authFile
         cmd.getConfigFile() >> configFile
 
         def config = [
@@ -1131,8 +1131,8 @@ param2 = 'value2'"""
         cmd.saveAuthToConfig('generated-pat-token', 'https://api.cloud.seqera.io')
 
         then:
-        Files.exists(loginFile)
-        def content = Files.readString(loginFile)
+        Files.exists(authFile)
+        def content = Files.readString(authFile)
         content.contains('accessToken = \'generated-pat-token\'')
         content.contains('endpoint = \'https://api.cloud.seqera.io\'')
         content.contains('enabled = true')
