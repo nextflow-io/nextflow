@@ -658,8 +658,8 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         // Show current workspace and prepare prompt
         final currentWorkspaceName = getCurrentWorkspaceName(workspaces, currentWorkspaceId)
 
-        final prompt = ColorUtil.colorize("\nSelect workspace (0-${workspaces.size()}, press Enter to keep as '${currentWorkspaceName}'): ","bold cyan")
-        final selection = promptForNumber(prompt, 0, workspaces.size(), true)
+        println("\n${ColorUtil.colorize('Leave blank to keep current setting', 'bold')} (${ColorUtil.colorize(currentWorkspaceName, 'cyan')}),")
+        final selection = promptForNumber(ColorUtil.colorize("or select workspace (0-${workspaces.size()}): ", 'bold', true), 0, workspaces.size(), true)
 
         if( selection == null ) {
             return [changed: false, metadata: null]
@@ -702,7 +702,8 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
             final displayName = orgName == 'Personal' ? 'None [Personal workspace]' : orgName
             println "  ${index + 1}. ${ColorUtil.colorize(displayName as String, 'cyan', true)}"
         }
-        final orgSelection = promptForNumber(ColorUtil.colorize("Select organization (1-${orgs.size()}, leave blank to keep as '${currentWorkspaceDisplay}'): "), 1, orgs.size(),true)
+        println("\n${ColorUtil.colorize('Leave blank to keep current setting', 'bold')} (${ColorUtil.colorize(currentWorkspaceDisplay, 'cyan')}),")
+        final orgSelection = promptForNumber(ColorUtil.colorize("or select organization (1-${orgs.size()}): ", 'bold', true), 1, orgs.size(),true)
         if (!orgSelection)
             return [changed: false, metadata: null]
 
