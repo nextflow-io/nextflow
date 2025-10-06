@@ -669,7 +669,15 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         final currentIndicator = isPersonalWorkspace ? ColorUtil.colorize(' (current)', 'yellow bold') : ''
         println "  0. ${ColorUtil.colorize('None (Personal workspace)', 'cyan', true)} ${ColorUtil.colorize('[no organization]', 'dim', true)}${currentIndicator}"
 
-        workspaces.eachWithIndex { workspace, index ->
+        // Sort workspaces by org name, then workspace name
+        final sortedWorkspaces = workspaces.sort { a, b ->
+            final aMap = a as Map
+            final bMap = b as Map
+            final orgCompare = (aMap.orgName as String ?: '').compareToIgnoreCase(bMap.orgName as String ?: '')
+            orgCompare != 0 ? orgCompare : (aMap.workspaceName as String ?: '').compareToIgnoreCase(bMap.workspaceName as String ?: '')
+        }
+
+        sortedWorkspaces.eachWithIndex { workspace, index ->
             final ws = workspace as Map
             final isCurrent = ws.workspaceId.toString() == currentWorkspaceId?.toString()
             final currentInd = isCurrent ? ColorUtil.colorize(' (current)', 'yellow bold') : ''
@@ -678,10 +686,10 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         }
 
         // Show current workspace and prepare prompt
-        final currentWorkspaceName = getCurrentWorkspaceName(workspaces, currentWorkspaceId)
+        final currentWorkspaceName = getCurrentWorkspaceName(sortedWorkspaces, currentWorkspaceId)
 
         println("\n${ColorUtil.colorize('Leave blank to keep current setting', 'bold')} (${ColorUtil.colorize(currentWorkspaceName, 'cyan')}),")
-        final selection = promptForNumber(ColorUtil.colorize("or select workspace (0-${workspaces.size()}): ", 'bold', true), 0, workspaces.size(), true)
+        final selection = promptForNumber(ColorUtil.colorize("or select workspace (0-${sortedWorkspaces.size()}): ", 'bold', true), 0, sortedWorkspaces.size(), true)
 
         if( selection == null ) {
             return [changed: false, metadata: null]
@@ -692,7 +700,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
             config.remove('tower.workspaceId')
             return [changed: hadWorkspaceId, metadata: null]
         } else {
-            final selectedWorkspace = workspaces[selection - 1] as Map
+            final selectedWorkspace = sortedWorkspaces[selection - 1] as Map
             final selectedId = selectedWorkspace.workspaceId.toString()
             final currentId = config.get('tower.workspaceId')
             config['tower.workspaceId'] = selectedId
@@ -714,7 +722,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         final currentWorkspaceDisplay = getCurrentWorkspaceName(allWorkspaces, currentWorkspaceId)
 
         // First, select organization
-        final orgs = orgWorkspaces.keySet().toList()
+        final orgs = orgWorkspaces.keySet().toList().sort { (it as String).toLowerCase() }
 
         // Always add Personal as first option (it's never returned by the API but should always be available)
         orgs.add(0, 'Personal')
@@ -738,7 +746,11 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
             return [changed: hadWorkspaceId, metadata: null]
         }
 
-        final orgWorkspaceList = orgWorkspaces[selectedOrgName] as List
+        final orgWorkspaceList = (orgWorkspaces[selectedOrgName] as List).sort { a, b ->
+            final aMap = a as Map
+            final bMap = b as Map
+            (aMap.workspaceName as String ?: '').compareToIgnoreCase(bMap.workspaceName as String ?: '')
+        }
 
         println ""
         println "Select workspace in ${selectedOrgName}:"
@@ -751,7 +763,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         }
 
         final maxSelection = orgWorkspaceList.size()
-        final wsSelection = promptForNumber(ColorUtil.colorize("Select workspace (1-${maxSelection}): ", 'dim', true),1, maxSelection,false)
+        final wsSelection = promptForNumber(ColorUtil.colorize("\nSelect workspace (1-${maxSelection}): ", 'bold', true), 1, maxSelection,false)
 
         final selectedWorkspace = orgWorkspaceList[wsSelection - 1] as Map
         final selectedId = selectedWorkspace.workspaceId.toString()
@@ -861,24 +873,31 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
             println ""
             println "Available compute environments:"
 
-            computeEnvs.eachWithIndex { ce, index ->
+            // Sort compute environments by name
+            final sortedComputeEnvs = computeEnvs.sort { a, b ->
+                final aMap = a as Map
+                final bMap = b as Map
+                (aMap.name as String ?: '').compareToIgnoreCase(bMap.name as String ?: '')
+            }
+
+            sortedComputeEnvs.eachWithIndex { ce, index ->
                 final env = ce as Map
                 final name = env.name as String
                 final platform = env.platform as String
                 final isPrimary = env.primary == true
                 final currentIndicator = isPrimary ? ColorUtil.colorize(' (current)', 'yellow bold') : ''
-                println "  ${index + 1}. ${ColorUtil.colorize(name, 'cyan', true)} ${ColorUtil.colorize('[' + platform + ']', 'dim', true)}${currentIndicator}"
+                println "  ${index + 1}. ${ColorUtil.colorize(name, 'cyan', true)} ${ColorUtil.colorize('[' + platform + ']', 'dim yellow', true)}${currentIndicator}"
             }
 
             println ""
             println "${ColorUtil.colorize('Leave blank to keep current setting', 'bold')} (${ColorUtil.colorize(currentPrimaryName, 'cyan')}),".toString()
-            final selection = promptForNumber(ColorUtil.colorize("or select compute environment (1-${computeEnvs.size()}): ", 'bold', true), 1, computeEnvs.size(), true)
+            final selection = promptForNumber(ColorUtil.colorize("or select compute environment (1-${sortedComputeEnvs.size()}): ", 'bold', true), 1, sortedComputeEnvs.size(), true)
 
             if( selection == null ) {
                 return
             }
 
-            final selectedEnv = computeEnvs[selection - 1] as Map
+            final selectedEnv = sortedComputeEnvs[selection - 1] as Map
             final computeEnvId = selectedEnv.id as String
 
             // Only set if different from current primary
