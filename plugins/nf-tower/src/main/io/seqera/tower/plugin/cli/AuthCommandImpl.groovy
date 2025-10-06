@@ -275,7 +275,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
     protected void handleEnterpriseAuth(String apiUrl) {
         println ""
         ColorUtil.printColored("Please generate a Personal Access Token from your Seqera Platform instance.", "cyan bold")
-        println "You can create one at: ${ColorUtil.colorize(apiUrl.replace('/api', '').replace('://api.', '') + '/tokens', 'magenta')}"
+        println "You can create one at: ${ColorUtil.colorize(getWebUrlFromApiEndpoint(apiUrl) + '/tokens', 'magenta')}"
         println ""
 
         final pat = promptPAT()
@@ -287,6 +287,13 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         // Save to config
         saveAuthToConfig(pat, apiUrl)
         ColorUtil.printColored("Personal Access Token saved to Nextflow auth config (${getAuthFile().toString()})", "green")
+    }
+
+    private String getWebUrlFromApiEndpoint(String apiEndpoint) {
+        // Convert API endpoint to web URL
+        // e.g., https://api.cloud.seqera.io -> https://cloud.seqera.io
+        //      https://cloud.seqera.io/api -> https://cloud.seqera.io
+        return apiEndpoint.replace('://api.', '://').replace('/api', '')
     }
 
     private String promptPAT(){
@@ -551,6 +558,17 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
                 ColorUtil.printColored("\nConfiguration saved to ${ColorUtil.colorize(getAuthFile().toString(), 'magenta')}", "green")
             }
 
+            // Configure compute environment for the workspace (always run after workspace selection)
+            final currentWorkspaceId = config.get('tower.workspaceId') as String
+            if( currentWorkspaceId ) {
+                // Get workspace metadata if not already available (e.g., when user kept existing workspace)
+                def workspaceMetadata = workspaceResult.metadata as Map
+                if( !workspaceMetadata ) {
+                    workspaceMetadata = getWorkspaceDetailsFromApi(existingToken as String, endpoint as String, currentWorkspaceId)
+                }
+                configureComputeEnvironment(existingToken as String, endpoint as String, currentWorkspaceId, workspaceMetadata)
+            }
+
         } catch( Exception e ) {
             throw new AbortOperationException("Failed to configure settings: ${e.message}")
         }
@@ -647,12 +665,16 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
 
     private Map selectWorkspaceFromAll(Map config, List workspaces, final currentWorkspaceId) {
         println "\nAvailable workspaces:"
-        println "  0. ${ColorUtil.colorize('None (Personal workspace)', 'cyan', true)} ${ColorUtil.colorize('[no organization]', 'dim', true)}"
+        final isPersonalWorkspace = !currentWorkspaceId
+        final currentIndicator = isPersonalWorkspace ? ColorUtil.colorize(' (current)', 'yellow bold') : ''
+        println "  0. ${ColorUtil.colorize('None (Personal workspace)', 'cyan', true)} ${ColorUtil.colorize('[no organization]', 'dim', true)}${currentIndicator}"
 
         workspaces.eachWithIndex { workspace, index ->
             final ws = workspace as Map
+            final isCurrent = ws.workspaceId.toString() == currentWorkspaceId?.toString()
+            final currentInd = isCurrent ? ColorUtil.colorize(' (current)', 'yellow bold') : ''
             final prefix = ws.orgName ? "${ColorUtil.colorize(ws.orgName as String, 'cyan', true)} / " : ""
-            println "  ${index + 1}. ${prefix}${ColorUtil.colorize(ws.workspaceName as String, 'magenta', true)} ${ColorUtil.colorize('[' + (ws.workspaceFullName as String) + ']', 'dim', true)}"
+            println "  ${index + 1}. ${prefix}${ColorUtil.colorize(ws.workspaceName as String, 'magenta', true)} ${ColorUtil.colorize('[' + (ws.workspaceFullName as String) + ']', 'dim', true)}${currentInd}"
         }
 
         // Show current workspace and prepare prompt
@@ -723,7 +745,9 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
 
         orgWorkspaceList.eachWithIndex { workspace, index ->
             final ws = workspace as Map
-            println "  ${index + 1}. ${ColorUtil.colorize(ws.workspaceName as String, 'magenta', true)} ${ColorUtil.colorize('[' + (ws.workspaceFullName as String) + ']', 'dim', true)}"
+            final isCurrent = ws.workspaceId.toString() == currentWorkspaceId?.toString()
+            final currentInd = isCurrent ? ColorUtil.colorize(' (current)', 'yellow bold') : ''
+            println "  ${index + 1}. ${ColorUtil.colorize(ws.workspaceName as String, 'magenta', true)} ${ColorUtil.colorize('[' + (ws.workspaceFullName as String) + ']', 'dim', true)}${currentInd}"
         }
 
         final maxSelection = orgWorkspaceList.size()
@@ -759,6 +783,117 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         final orgsAndWorkspaces = json.orgsAndWorkspaces as List
 
         return orgsAndWorkspaces.findAll { ((Map) it).workspaceId != null }
+    }
+
+    private List getComputeEnvironments(String accessToken, String endpoint, String workspaceId) {
+        final client = createHttpClient(accessToken)
+        final uri = workspaceId ?
+            "${endpoint}/compute-envs?workspaceId=${workspaceId}" :
+            "${endpoint}/compute-envs"
+
+        final request = HttpRequest.newBuilder()
+            .uri(URI.create(uri))
+            .GET()
+            .build()
+
+        final response = client.send(request, HttpResponse.BodyHandlers.ofString())
+
+        if( response.statusCode() != 200 ) {
+            final error = response.body() ?: "HTTP ${response.statusCode()}"
+            throw new RuntimeException("Failed to get compute environments: ${error}")
+        }
+
+        final json = new JsonSlurper().parseText(response.body()) as Map
+        return json.computeEnvs as List ?: []
+    }
+
+    private void setPrimaryComputeEnvironment(String accessToken, String endpoint, String computeEnvId, String workspaceId) {
+        final client = createHttpClient(accessToken)
+        final uri = "${endpoint}/compute-envs/${computeEnvId}/primary?workspaceId=${workspaceId}"
+
+        final requestBody = new JsonBuilder([:]).toString()
+
+        final request = HttpRequest.newBuilder()
+            .uri(URI.create(uri))
+            .header('Content-Type', 'application/json')
+            .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+            .build()
+
+        final response = client.send(request, HttpResponse.BodyHandlers.ofString())
+
+        if( response.statusCode() != 200 && response.statusCode() != 204 ) {
+            final error = response.body() ?: "HTTP ${response.statusCode()}"
+            throw new RuntimeException("Failed to set primary compute environment: ${error}")
+        }
+    }
+
+    private void configureComputeEnvironment(String accessToken, String endpoint, String workspaceId, Map workspaceMetadata) {
+        try {
+            // Get compute environments for the workspace
+            final computeEnvs = getComputeEnvironments(accessToken, endpoint, workspaceId)
+
+            // If there are zero compute environments, log a warning and provide a link
+            if( computeEnvs.isEmpty() ) {
+                println ""
+                ColorUtil.printColored("Warning: No compute environments found in this workspace.", "red")
+                ColorUtil.printColored("  You must create a compute environment to run pipelines.", "yellow")
+
+                // Generate the web URL for creating a compute environment
+                if( workspaceMetadata ) {
+                    final orgName = workspaceMetadata.orgName as String
+                    final workspaceName = workspaceMetadata.workspaceName as String
+                    final webUrl = getWebUrlFromApiEndpoint(endpoint)
+                    final createUrl = "${webUrl}/orgs/${orgName}/workspaces/${workspaceName}/compute-envs/new"
+                    println "  Create one at: ${ColorUtil.colorize(createUrl, 'magenta')}"
+                }
+                return
+            }
+
+            // Find which compute environment is already set as primary
+            final primaryEnv = computeEnvs.find { ((Map) it).primary == true }
+            final currentPrimaryName = primaryEnv ? (primaryEnv as Map).name as String : 'None'
+
+            // Show current setting
+            println ""
+            println "Primary compute environment. Current setting: ${ColorUtil.colorize(currentPrimaryName, 'cyan', true)}"
+            ColorUtil.printColored("  Setting a primary compute environment allows you to run pipelines without", "dim")
+            ColorUtil.printColored("  explicitly specifying a compute environment every time.", "dim")
+            println ""
+            println "Available compute environments:"
+
+            computeEnvs.eachWithIndex { ce, index ->
+                final env = ce as Map
+                final name = env.name as String
+                final platform = env.platform as String
+                final isPrimary = env.primary == true
+                final currentIndicator = isPrimary ? ColorUtil.colorize(' (current)', 'yellow bold') : ''
+                println "  ${index + 1}. ${ColorUtil.colorize(name, 'cyan', true)} ${ColorUtil.colorize('[' + platform + ']', 'dim', true)}${currentIndicator}"
+            }
+
+            println ""
+            println "${ColorUtil.colorize('Leave blank to keep current setting', 'bold')} (${ColorUtil.colorize(currentPrimaryName, 'cyan')}),".toString()
+            final selection = promptForNumber(ColorUtil.colorize("or select compute environment (1-${computeEnvs.size()}): ", 'bold', true), 1, computeEnvs.size(), true)
+
+            if( selection == null ) {
+                return
+            }
+
+            final selectedEnv = computeEnvs[selection - 1] as Map
+            final computeEnvId = selectedEnv.id as String
+
+            // Only set if different from current primary
+            if( primaryEnv && (primaryEnv as Map).id == computeEnvId ) {
+                // User selected the same one that's already primary
+                return
+            }
+
+            // Set the selected compute environment as primary
+            setPrimaryComputeEnvironment(accessToken, endpoint, computeEnvId, workspaceId)
+            ColorUtil.printColored("Primary compute environment set to: ${ColorUtil.colorize(selectedEnv.name as String, 'cyan')}", "green")
+
+        } catch( Exception e ) {
+            ColorUtil.printColored("Warning: Failed to configure compute environment: ${e.message}", "yellow")
+        }
     }
 
     private Boolean promptForYesNo(String prompt, Boolean defaultValue) {
