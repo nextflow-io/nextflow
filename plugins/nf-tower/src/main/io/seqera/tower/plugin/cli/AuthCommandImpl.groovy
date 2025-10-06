@@ -942,7 +942,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
 
     private ConfigStatus collectStatus(Map config, Map authConfig) {
         // Collect all status information
-        final status = new ConfigStatus([], null)
+        final status = new ConfigStatus([], null, null)
 
         // API endpoint
         final endpointInfo = getConfigValue(config, authConfig, 'tower.endpoint', 'TOWER_API_ENDPOINT', DEFAULT_API_ENDPOINT)
@@ -983,9 +983,10 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
             }
 
             if( workspaceDetails ) {
-                // Add workspace ID row
+                // Add workspace ID row and remember its index
+                status.workspaceRowIndex = status.table.size()
                 status.table.add(['Default workspace', ColorUtil.colorize(workspaceInfo.value as String, 'cyan'), workspaceInfo.source as String])
-                // Store workspace details for display after the table
+                // Store workspace details for display after this row (outside table structure)
                 status.workspaceInfo = workspaceDetails
             } else {
                 status.table.add(['Default workspace', ColorUtil.colorize(workspaceInfo.value as String, 'cyan', true), workspaceInfo.source as String])
@@ -997,22 +998,66 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
                 status.table.add(['Default workspace', ColorUtil.colorize('None', 'cyan', true), 'default'])
             }
         }
+
+        // Primary compute environment and work directory
+        def primaryEnv = null
+        if( tokenInfo.value && workspaceInfo.value ) {
+            try {
+                final computeEnvs = getComputeEnvironments(tokenInfo.value as String, endpointInfo.value as String, workspaceInfo.value as String)
+                primaryEnv = computeEnvs.find { ((Map) it).primary == true } as Map
+            } catch( Exception e ) {
+                status.table.add(['Primary compute env', ColorUtil.colorize('Error fetching', 'red'), ''])
+                status.table.add(['Default work dir', ColorUtil.colorize('N/A', 'dim', true), ''])
+                return status
+            }
+        }
+
+        if( primaryEnv ) {
+            final envName = primaryEnv.name as String
+            final envPlatform = primaryEnv.platform as String
+            final displayValue = "${ColorUtil.colorize(envName, 'cyan')} ${ColorUtil.colorize('[' + envPlatform + ']', 'dim yellow', true)}".toString()
+            status.table.add(['Primary compute env', displayValue, 'workspace'])
+            status.table.add(['Default work dir', ColorUtil.colorize(primaryEnv.workDir as String, 'magenta'), 'compute env'])
+        } else {
+            final ceValue = (!tokenInfo.value || !workspaceInfo.value) ? 'N/A' : 'None'
+            final ceColor = ceValue == 'None' ? 'yellow' : 'dim'
+            status.table.add(['Primary compute env', ColorUtil.colorize(ceValue, ceColor, true), 'workspace'])
+            status.table.add(['Default work dir', ColorUtil.colorize(ceValue, ceColor, true), 'compute env'])
+        }
+
         return status
     }
     private void printStatus(ConfigStatus status){
-        // Print table
         println ""
-        printStatusTable(status.table)
 
-        // Print workspace details if available
-        if( status.workspaceInfo ) {
-            ColorUtil.printColored("${" " * 22}$status.workspaceInfo.orgName / $status.workspaceInfo.workspaceName", "cyan")
-            ColorUtil.printColored("${" " * 22}$status.workspaceInfo.workspaceFullName", "dim")
+        // Generate all table lines with consistent column widths
+        final tableLines = generateStatusTableLines(status.table)
+
+        if( status.workspaceInfo && status.workspaceRowIndex != null ) {
+            // Insert workspace details after the workspace row
+            // workspaceRowIndex is the row in the data array (0-indexed)
+            // In tableLines: [0]=header, [1]=separator, [2]=first data row, etc.
+            // So workspace row is at index: workspaceRowIndex + 2
+            // We want to insert AFTER it, so: workspaceRowIndex + 2 + 1 = workspaceRowIndex + 3
+            final insertAfterLine = status.workspaceRowIndex + 3
+
+            final workspaceDetails = [
+                ColorUtil.colorize("${" " * 22}$status.workspaceInfo.orgName / $status.workspaceInfo.workspaceName", "cyan", true),
+                ColorUtil.colorize("${" " * 22}$status.workspaceInfo.workspaceFullName", "dim", true)
+            ]
+
+            // Insert workspace details into the output
+            tableLines.addAll(insertAfterLine, workspaceDetails)
         }
+
+        // Print all lines
+        tableLines.each { println it }
     }
 
-    private void printStatusTable(List<List<String>> rows) {
-        if( !rows ) return
+    private List<String> generateStatusTableLines(List<List<String>> rows) {
+        if( !rows ) return []
+
+        final List<String> lines = []
 
         // Calculate column widths (accounting for ANSI codes)
         def col1Width = rows.collect { stripAnsiCodes(it[0]).length() }.max()
@@ -1024,17 +1069,19 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         col2Width = Math.max(col2Width, 15) + 2
         col3Width = Math.max(col3Width, 10) + 2
 
-        // Print table header
-        ColorUtil.printColored("${'Setting'.padRight(col1Width)} ${'Value'.padRight(col2Width)} Source", "cyan bold")
-        println "${'-' * col1Width} ${'-' * col2Width} ${'-' * col3Width}"
+        // Add table header
+        lines.add(ColorUtil.colorize("${'Setting'.padRight(col1Width)} ${'Value'.padRight(col2Width)} Source", "cyan bold"))
+        lines.add("${'-' * col1Width} ${'-' * col2Width} ${'-' * col3Width}".toString())
 
-        // Print rows
+        // Add rows
         rows.each { row ->
             final paddedCol1 = padStringWithAnsi(row[0], col1Width)
             final paddedCol2 = padStringWithAnsi(row[1], col2Width)
             final paddedCol3 = ColorUtil.colorize(row[2], 'dim', true)
-            println "${paddedCol1} ${paddedCol2} ${paddedCol3}"
+            lines.add("${paddedCol1} ${paddedCol2} ${paddedCol3}".toString())
         }
+
+        return lines
     }
 
     private String stripAnsiCodes(String text) {
@@ -1281,6 +1328,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
     static class ConfigStatus {
         List<List<String>> table
         Map workspaceInfo
+        Integer workspaceRowIndex  // Track which row has the workspace so we can insert details after it
     }
 }
 
