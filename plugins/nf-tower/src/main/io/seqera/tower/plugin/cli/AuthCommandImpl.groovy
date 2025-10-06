@@ -114,7 +114,19 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         final urlWithCode = "${deviceAuth.verification_uri}?user_code=${deviceAuth.user_code}"
         println "${ColorUtil.colorize('Authentication URL:', 'cyan bold')} ${ColorUtil.colorize(urlWithCode, 'magenta')}"
         ColorUtil.printColored("\n[ Press Enter to open in browser ]", "cyan bold")
-        System.in.read() // Wait for Enter key
+
+        // Wait for Enter key with proper interrupt handling
+        try {
+            final input = System.in.read()
+            if( input == -1 ) {
+                throw new AbortOperationException("Authentication cancelled")
+            }
+        } catch( InterruptedException e ) {
+            Thread.currentThread().interrupt()
+            throw new AbortOperationException("Authentication cancelled")
+        } catch( IOException e ) {
+            throw new AbortOperationException("Failed to read input: ${e.message}")
+        }
 
         // Try to open browser automatically
         boolean browserOpened = openBrowser(urlWithCode)
@@ -147,6 +159,9 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
                 ColorUtil.printColored("You can run 'nextflow auth config' later to set up your configuration.", "dim")
             }
 
+        } catch( InterruptedException e ) {
+            Thread.currentThread().interrupt()
+            throw new AbortOperationException("Authentication cancelled")
         } catch( Exception e ) {
             throw new RuntimeException("Authentication failed: ${e.message}", e)
         }
@@ -217,6 +232,11 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         def retryCount = 0
 
         while( retryCount < AUTH_POLL_TIMEOUT_RETRIES ) {
+            // Check for interrupt
+            if( Thread.currentThread().isInterrupted() ) {
+                throw new InterruptedException("Authentication polling interrupted")
+            }
+
             final params = [
                 'grant_type' : 'urn:ietf:params:oauth:grant-type:device_code',
                 'device_code': deviceCode,
