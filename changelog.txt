@@ -1,5 +1,11 @@
 NEXTFLOW CHANGE-LOG
 ===================
+25.04.8 - 6 Oct 2025
+- Fix SIGTERM forwarding in AWS Batch jobs (#6414) [c87b7e62]
+- Fix pod log warning with Fusion enabled (#6449) [38f685b9]
+- Fix cache command to check session cloudCachePath [e2964232] [1936c601]
+- Get exit code from pod to manage OOM in k8s (#6442) [70f30c6c]
+
 25.04.7 - 8 Sep 2025
 - Add opt-in patch for unordered directory hashing (#6353) [1f1e9d42]
 - Improve Fusion license error message (#6313) [9e3fc268]
