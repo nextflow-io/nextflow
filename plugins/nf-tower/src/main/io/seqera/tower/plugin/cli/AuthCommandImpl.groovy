@@ -411,23 +411,40 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         try {
             final userInfo = callUserInfoApi(existingToken as String, apiUrl)
             ColorUtil.printColored(" - Token is valid for user: ${ColorUtil.colorize(userInfo.userName as String, 'cyan bold')}", "dim")
+        } catch( Exception e ) {
+            ColorUtil.printColored("Failed to validate token: ${e.message}", "red")
+        }
 
-            // Only delete PAT from platform if this is a cloud endpoint
-            if( isCloudEndpoint(apiUrl) ) {
+        // Check if we need to delete from platform
+        final shouldDeleteFromPlatform = isCloudEndpoint(apiUrl)
+
+        ColorUtil.printColored("\nRunning this command will:", "yellow bold")
+        ColorUtil.printColored("  • Remove local Nextflow configuration: ${ColorUtil.colorize(loginFile.toString(), 'magenta')}", "yellow")
+        if( shouldDeleteFromPlatform ) {
+            ColorUtil.printColored("  • Delete the corresponding access token from Seqera Platform: ${ColorUtil.colorize(apiUrl, 'magenta')}", "yellow")
+        } else {
+            println ""
+            ColorUtil.printColored("Warning: Access token not deleted, as using enterprise installation: ${ColorUtil.colorize(apiUrl, 'magenta')}", "yellow")
+        }
+
+        final confirmed = promptForYesNo("\n${ColorUtil.colorize('Continue with logout?', 'cyan bold')} (${ColorUtil.colorize('Y', 'green')}/n): ", true)
+
+        if( !confirmed ) {
+            println("Logout cancelled.")
+            return
+        }
+
+        // Only delete PAT from platform if this is a cloud endpoint
+        if( shouldDeleteFromPlatform ) {
+            try {
                 final tokenId = decodeTokenId(existingToken as String)
                 deleteTokenViaApi(existingToken as String, apiUrl, tokenId)
-            } else {
-                println " - Enterprise installation detected - PAT will not be deleted from platform."
+            } catch( Exception e ) {
+                ColorUtil.printColored("Error removing token: ${e.message}", "red")
             }
-            removeAuthFromConfig()
-
-        } catch( Exception e ) {
-            println "Failed to validate or delete token: ${e.message}"
-            println "Removing token from config anyway..."
-
-            // Remove from config even if API calls fail
-            removeAuthFromConfig()
         }
+
+        removeAuthFromConfig()
     }
 
     private String decodeTokenId(String token) {
