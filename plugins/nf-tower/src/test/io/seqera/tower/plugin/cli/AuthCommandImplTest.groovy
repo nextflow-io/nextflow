@@ -505,8 +505,8 @@ param2 = 'value2'"""
         ]
 
         when:
-        cmd.printStatusTable(rows)
-        def output = capture.toString()
+        def lines = cmd.generateStatusTableLines(rows)
+        def output = lines.join('\n')
 
         then:
         output.contains('Setting')
@@ -533,8 +533,8 @@ param2 = 'value2'"""
         ]
 
         when:
-        cmd.printStatusTable(rows)
-        def output = capture.toString()
+        def lines = cmd.generateStatusTableLines(rows)
+        def output = lines.join('\n')
 
         then:
         output.contains('API endpoint')
@@ -551,11 +551,10 @@ param2 = 'value2'"""
         def rows = []
 
         when:
-        cmd.printStatusTable(rows)
-        def output = capture.toString()
+        def lines = cmd.generateStatusTableLines(rows)
 
         then:
-        output.isEmpty()
+        lines.isEmpty()
     }
 
     def 'should handle null status table'() {
@@ -563,11 +562,10 @@ param2 = 'value2'"""
         def cmd = new AuthCommandImpl()
 
         when:
-        cmd.printStatusTable(null)
-        def output = capture.toString()
+        def lines = cmd.generateStatusTableLines(null)
 
         then:
-        output.isEmpty()
+        lines.isEmpty()
     }
 
     def 'should strip ANSI codes correctly'() {
@@ -683,8 +681,8 @@ param2 = 'value2'"""
         ]
 
         when:
-        cmd.printStatusTable(rows)
-        def output = capture.toString()
+        def lines = cmd.generateStatusTableLines(rows)
+        def output = lines.join('\n')
 
         then:
         // Should handle different column widths properly
@@ -693,7 +691,6 @@ param2 = 'value2'"""
         output.contains('Very Long Value Here')
         output.contains('Very Long Source')
         // All rows should be aligned
-        def lines = output.split('\n')
         lines.size() >= 4 // Header + separator + 2 data rows
     }
 
@@ -705,8 +702,8 @@ param2 = 'value2'"""
         ]
 
         when:
-        cmd.printStatusTable(rows)
-        def output = capture.toString()
+        def lines = cmd.generateStatusTableLines(rows)
+        def output = lines.join('\n')
 
         then:
         // Even with short values, should apply minimum widths
@@ -714,7 +711,6 @@ param2 = 'value2'"""
         output.contains('Value')
         output.contains('Source')
         // Columns should be padded to at least minimum width
-        def lines = output.split('\n')
         lines.size() >= 3 // Header + separator + data row
     }
 
@@ -732,13 +728,14 @@ param2 = 'value2'"""
         cmd.checkApiConnection(_) >> true
         cmd.callUserInfoApi(_, _) >> [userName: 'testuser', id: '123']
         cmd.getWorkspaceDetailsFromApi(_, _, _) >> null
+        cmd.getComputeEnvironments(_, _, _) >> []
 
         when:
         def status = cmd.collectStatus(config, authConfig)
 
         then:
         status != null
-        status.table.size() == 5 // endpoint, connection, auth, monitoring, workspace
+        status.table.size() == 7 // endpoint, connection, auth, monitoring, workspace, compute env, work dir
         // Check API endpoint row
         status.table[0][0] == 'API endpoint'
         status.table[0][1].contains('https://api.cloud.seqera.io')
@@ -770,7 +767,7 @@ param2 = 'value2'"""
 
         then:
         status != null
-        status.table.size() == 5
+        status.table.size() == 7 // endpoint, connection, auth, monitoring, workspace, compute env, work dir
         // Authentication should show error
         status.table[2][0] == 'Authentication'
         status.table[2][1].contains('ERROR')
@@ -996,7 +993,8 @@ param2 = 'value2'"""
                 orgName: 'TestOrg',
                 workspaceName: 'TestWorkspace',
                 workspaceFullName: 'test-org/test-workspace'
-            ]
+            ],
+            1 // workspaceRowIndex
         )
 
         when:
@@ -1019,6 +1017,7 @@ param2 = 'value2'"""
             [
                 ['API endpoint', 'https://api.cloud.seqera.io', 'default']
             ],
+            null,
             null
         )
 
