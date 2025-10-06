@@ -16,6 +16,7 @@
 
 package nextflow.k8s
 
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Instant
@@ -437,8 +438,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
                 task.stderr = errorFile
             }
             status = TaskStatus.COMPLETED
-            if (!fusionEnabled())
-                savePodLogOnError(task)
+            savePodLogOnError(task)
             deletePodIfSuccessful(task)
             updateTimestamps(state.terminated as Map)
             determineNode()
@@ -464,6 +464,9 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
                     ? client.jobLog(podName)
                     : client.podLog(podName)
             Files.copy(stream, task.workDir.resolve(TaskRun.CMD_LOG))
+        }
+        catch( FileAlreadyExistsException e ) {
+            log.debug "Log file already exists for ${resourceType.lower()} $podName", e
         }
         catch( Exception e ) {
             log.warn "Failed to copy log for ${resourceType.lower()} $podName", e
