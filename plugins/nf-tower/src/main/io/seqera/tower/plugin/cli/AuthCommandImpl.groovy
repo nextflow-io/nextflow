@@ -549,8 +549,6 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
                 showCurrentConfig(config, existingToken as String, endpoint as String)
 
                 ColorUtil.printColored("\nConfiguration saved to ${ColorUtil.colorize(getAuthFile().toString(), 'magenta')}", "green")
-            } else {
-                ColorUtil.printColored("\nNo configuration changes were made.", "dim")
             }
 
         } catch( Exception e ) {
@@ -850,14 +848,18 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
 
             if( workspaceDetails ) {
                 // Add workspace ID row
-                status.table.add(['Default workspace', ColorUtil.colorize(workspaceInfo.value as String, 'blue'), workspaceInfo.source as String])
+                status.table.add(['Default workspace', ColorUtil.colorize(workspaceInfo.value as String, 'cyan'), workspaceInfo.source as String])
                 // Store workspace details for display after the table
                 status.workspaceInfo = workspaceDetails
             } else {
-                status.table.add(['Default workspace', ColorUtil.colorize(workspaceInfo.value as String, 'blue', true), workspaceInfo.source as String])
+                status.table.add(['Default workspace', ColorUtil.colorize(workspaceInfo.value as String, 'cyan', true), workspaceInfo.source as String])
             }
         } else {
-            status.table.add(['Default workspace', ColorUtil.colorize('None (Personal workspace)', 'cyan', true), 'default'])
+            if( tokenInfo.value ) {
+                status.table.add(['Default workspace', ColorUtil.colorize('None (Personal workspace)', 'cyan', true), 'default'])
+            } else {
+                status.table.add(['Default workspace', ColorUtil.colorize('None', 'cyan', true), 'default'])
+            }
         }
         return status
     }
@@ -868,7 +870,8 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
 
         // Print workspace details if available
         if( status.workspaceInfo ) {
-            println "${' ' * 22}${ColorUtil.colorize(status.workspaceInfo.orgName as String, 'cyan')} / ${ColorUtil.colorize(status.workspaceInfo.workspaceName as String, 'cyan')} ${ColorUtil.colorize('[' + (status.workspaceInfo.workspaceFullName as String) + ']', 'dim')}"
+            ColorUtil.printColored("${" " * 22}$status.workspaceInfo.orgName / $status.workspaceInfo.workspaceName", "cyan")
+            ColorUtil.printColored("${" " * 22}$status.workspaceInfo.workspaceFullName", "dim")
         }
     }
 

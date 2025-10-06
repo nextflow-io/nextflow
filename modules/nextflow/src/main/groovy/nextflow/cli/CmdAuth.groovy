@@ -96,7 +96,10 @@ class CmdAuth extends CmdBase implements UsageAware {
             result << 'Usage: nextflow auth <sub-command> [options]'
             result << ''
             result << 'Commands:'
-            commands.collect { it.name }.sort().each { result << "  $it".toString() }
+            result << '  login    Authenticate with Seqera Platform'
+            result << '  logout   Remove authentication and revoke access token'
+            result << '  status   Show current authentication status and configuration'
+            result << '  config   Configure Seqera Platform settings'
             result << ''
         } else {
             def sub = commands.find { it.name == args[0] }
