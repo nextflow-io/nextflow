@@ -104,6 +104,92 @@ class LocalRepositoryProvider extends RepositoryProvider {
     }
 
     @Override
+    List<RepositoryEntry> listDirectory(String path, int depth) {
+        final git = Git.open(new File(this.path, project))
+        try {
+            final repo = git.getRepository()
+            def lastCommitId = repo.resolve(Constants.HEAD)
+            def revWalk = new RevWalk(repo)
+            def commit = revWalk.parseCommit(lastCommitId)
+            def tree = commit.getTree()
+            
+            def treeWalk = new TreeWalk(repo)
+            
+            // Normalize path using base class helper
+            def normalizedPath = normalizePath(path)
+            
+            if (normalizedPath && !normalizedPath.isEmpty()) {
+                // Navigate to the specific directory first
+                def dirWalk = TreeWalk.forPath(repo, normalizedPath, tree)
+                try {
+                    if (!dirWalk || !dirWalk.isSubtree()) {
+                        return [] // Path doesn't exist or is not a directory
+                    }
+                    treeWalk.addTree(dirWalk.getObjectId(0))
+                } finally {
+                    dirWalk?.close()
+                }
+            } else {
+                treeWalk.addTree(tree)
+            }
+            
+            // For depth filtering, we need to traverse recursively when depth > 1
+            // The shouldIncludeAtDepth filter will handle the actual depth limiting
+            treeWalk.setRecursive(depth != 1)
+            
+            List<RepositoryEntry> entries = []
+            
+            while (treeWalk.next()) {
+                String entryPath = treeWalk.getPathString()
+                
+                // Build full path for entries (relative paths need to be prefixed with base path)
+                String fullPath = normalizedPath && !normalizedPath.isEmpty() ? "/" + normalizedPath + "/" + entryPath : "/" + entryPath
+                
+                // Filter by depth using base class helper
+                if (shouldIncludeAtDepth(fullPath, path, depth)) {
+                    entries.add(createRepositoryEntry(treeWalk, fullPath))
+                }
+            }
+            
+            treeWalk.close()
+            revWalk.close()
+            
+            return entries.sort { it.name }
+            
+        } finally {
+            git.close()
+        }
+    }
+
+    private RepositoryEntry createRepositoryEntry(TreeWalk treeWalk, String entryPath) {
+        String name = entryPath.split('/').last()
+        
+        // Determine if it's a directory or file based on file mode
+        EntryType type = treeWalk.isSubtree() ? EntryType.DIRECTORY : EntryType.FILE
+        String sha = treeWalk.getObjectId(0).name()
+        
+        // For files, try to get size
+        Long size = null
+        if (type == EntryType.FILE) {
+            try {
+                def objectId = treeWalk.getObjectId(0)
+                def loader = treeWalk.getObjectReader().open(objectId)
+                size = loader.getSize()
+            } catch (Exception e) {
+                // Size not available, leave as null
+            }
+        }
+        
+        return new RepositoryEntry(
+            name: name,
+            path: entryPath,
+            type: type,
+            sha: sha,
+            size: size
+        )
+    }
+
+    @Override
     List<TagInfo> getTags() {
         final String prefix = 'refs/tags/'
 

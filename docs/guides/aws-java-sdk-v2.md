@@ -24,9 +24,10 @@ You can also use the `aws.client.targetThroughputInGbps` option to control the c
 
 Use these settings with virtual threads to achieve optimal performance for your environment. Increasing these settings beyond their defaults may improve performance for large runs. You can enable virtual threads by setting the `NXF_ENABLE_VIRTUAL_THREADS` environment variable to `true`.
 
-## Multi-part uploads
+## Multi-part transfers
 
-Nextflow uploads large files to S3 as multi-part uploads. You can use the `aws.client.minimumPartSize` and `aws.client.multipartThreshold` config options to control when and how multi-part uploads are performed.
+Nextflow transfers large S3 files using multi-part transfers. In AWS SDK v2, these multi-part transfers are handled by the S3 transfer manager. You can use the `aws.client.minimumPartSize` and `aws.client.multipartThreshold` config options to control when and how multi-part transfers are performed. 
+Concurrent multi-part downloads can consume large heap memory space due to the buffer size created per transfer. To avoid out of memory errors, the size consumed by these buffers is limited to 400 MB. You can use `aws.client.maxDownloadHeapMemory` to change this value.
 
 The following multi-part upload config options are no longer supported:
 

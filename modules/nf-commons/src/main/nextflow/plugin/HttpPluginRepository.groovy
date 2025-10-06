@@ -17,6 +17,7 @@ import org.pf4j.update.FileDownloader
 import org.pf4j.update.FileVerifier
 import org.pf4j.update.PluginInfo
 import org.pf4j.update.PluginInfo.PluginRelease
+import org.pf4j.update.SimpleFileDownloader
 import org.pf4j.update.verifier.CompoundVerifier
 /**
  * Represents an update repository served via an HTTP api.
@@ -43,7 +44,9 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
         this.url = !url.toString().endsWith("/")
             ? URI.create(url.toString() + "/")
             : url
-        this.httpClient = HxClient.create(RetryConfig.config())
+        this.httpClient = HxClient.newBuilder()
+                .retryConfig(RetryConfig.config())
+                .build()
     }
 
     // NOTE ON PREFETCHING
@@ -99,7 +102,7 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
 
     @Override
     FileDownloader getFileDownloader() {
-        return new OciAwareFileDownloader()
+        return new SimpleFileDownloader()
     }
 
     @Override
@@ -134,7 +137,7 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
             throw e
         }
         catch (Exception e) {
-            throw new PluginRuntimeException(e, "Unable to connect to ${uri}- cause: ${e.message}")
+            throw new PluginRuntimeException(e, "Unable to connect to ${uri} - cause: ${e.message}")
         }
     }
 

@@ -26,6 +26,7 @@ import nextflow.SysEnv
 import nextflow.exception.HttpResponseLengthExceedException
 import nextflow.util.RetryConfig
 import spock.lang.Specification
+import spock.lang.Unroll
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -119,44 +120,6 @@ class RepositoryProviderTest extends Specification {
         headers == new String[] { 'Authorization', "Basic ${'foo:bar'.bytes.encodeBase64()}" }
     }
 
-    def 'should test retry with exception' () {
-        given:
-        def client = Mock(HttpClient)
-        and:
-        def provider = Spy(RepositoryProvider)
-        provider.@httpClient = client
-        provider.@config = new ProviderConfig('github', [server: 'https://github.com'] as ConfigObject)
-        provider.setRetryConfig(new RetryConfig(maxAttempts: 3))
-
-        when:
-        provider.invoke('https://api.github.com/repos/project/x')
-        then:
-        3 * client.send(_,_) >> { throw new SocketException("Something failed") }
-        and:
-        def e = thrown(IOException)
-        e.message == "Something failed"
-    }
-
-    def 'should test retry with http response code' () {
-        given:
-        def client = Mock(HttpClient)
-        and:
-        def provider = Spy(RepositoryProvider)
-        provider.@httpClient = client
-        provider.@config = new ProviderConfig('github', [server: 'https://github.com'] as ConfigObject)
-        provider.setRetryConfig(new RetryConfig())
-
-        when:
-        def result = provider.invoke('https://api.github.com/repos/project/x')
-        then:
-        1 * client.send(_,_) >> Mock(HttpResponse) {statusCode()>>500 }
-        then:
-        1 * client.send(_,_) >> Mock(HttpResponse) {statusCode()>>502 }
-        then:
-        1 * client.send(_,_) >> Mock(HttpResponse) {statusCode()>>200; body()>>'OK' }
-        and:
-        result == 'OK'
-    }
 
     def 'should validate is retryable' () {
         given:
@@ -249,6 +212,122 @@ class RepositoryProviderTest extends Specification {
             @Override
             HttpClient.Version version() { return HttpClient.Version.HTTP_1_1 }
         }
+    }
+
+    // ====== Path normalization helper method tests ======
+
+    @Unroll
+    def 'normalizePath should handle #description'() {
+        expect:
+        RepositoryProvider.normalizePath(INPUT) == EXPECTED
+
+        where:
+        INPUT           | EXPECTED      | description
+        null            | ""            | "null input"
+        ""              | ""            | "empty string"
+        "/"             | ""            | "root directory slash"
+        "/docs"         | "docs"        | "absolute path"
+        "docs"          | "docs"        | "relative path"
+        "/docs/guide"   | "docs/guide"  | "nested absolute path"
+        "docs/guide"    | "docs/guide"  | "nested relative path"
+        "//"            | "/"           | "double slash"
+        "///docs"       | "//docs"      | "multiple leading slashes"
+    }
+
+    @Unroll
+    def 'ensureAbsolutePath should handle #description'() {
+        expect:
+        RepositoryProvider.ensureAbsolutePath(INPUT) == EXPECTED
+
+        where:
+        INPUT           | EXPECTED        | description
+        null            | "/"             | "null input"
+        ""              | "/"             | "empty string"
+        "/"             | "/"             | "root directory"
+        "/docs"         | "/docs"         | "already absolute path"
+        "docs"          | "/docs"         | "relative path"
+        "/docs/guide"   | "/docs/guide"   | "nested absolute path"
+        "docs/guide"    | "/docs/guide"   | "nested relative path"
+        "main.nf"       | "/main.nf"      | "simple filename"
+    }
+
+    @Unroll
+    def 'shouldIncludeAtDepth should handle depth=#depth basePath=#basePath entryPath=#entryPath'() {
+        expect:
+        RepositoryProvider.shouldIncludeAtDepth(entryPath, basePath, depth) == expected
+
+        where:
+        entryPath           | basePath    | depth | expected | description
+        // Root directory tests (basePath = null, "", or "/")
+        "main.nf"           | null        | 0     | true     | "immediate child in root with depth 0"
+        "docs/guide.md"     | null        | 0     | false    | "nested file in root with depth 0"
+        "docs/guide.md"     | null        | 1     | true     | "nested file in root with depth 1"
+        "docs/sub/file.md"  | null        | 1     | false    | "deeply nested file with depth 1"
+        "docs/sub/file.md"  | null        | 2     | true     | "deeply nested file with depth 2"
+        "main.nf"           | ""          | 0     | true     | "immediate child with empty basePath"
+        "main.nf"           | "/"         | 0     | true     | "immediate child with root basePath"
+        
+        // Subdirectory tests  
+        "docs/guide.md"     | "docs"      | 0     | true     | "immediate child in subdirectory"
+        "docs/sub/file.md"  | "docs"      | 0     | false    | "nested file in subdirectory with depth 0"
+        "docs/sub/file.md"  | "docs"      | 1     | true     | "nested file in subdirectory with depth 1"
+        "docs/guide.md"     | "/docs"     | 0     | true     | "immediate child with absolute basePath"
+        
+        // Edge cases
+        "docs"              | "docs"      | 0     | false    | "base directory itself should be excluded"
+        "other/file.md"     | "docs"      | 0     | false    | "file outside basePath should be excluded"
+        "main.nf"           | null        | -1    | true     | "unlimited depth should include everything"
+        "docs/sub/deep.md"  | null        | -1    | true     | "unlimited depth with nested file"
+        ""                  | null        | 0     | false    | "empty entryPath should be excluded"
+        
+        // Complex path tests
+        "docs/api/index.md" | "docs"      | 1     | true     | "api subdirectory file with depth 1"
+        "docs/api/ref.md"   | "docs/api"  | 0     | true     | "immediate child of nested basePath"
+        "docs/api/v1/spec.md" | "docs"    | 2     | true     | "deeply nested with sufficient depth"
+        "docs/api/v1/spec.md" | "docs"    | 1     | false    | "deeply nested without sufficient depth"
+    }
+
+    def 'shouldIncludeAtDepth should handle realistic directory structure'() {
+        given:
+        def entries = [
+            "/main.nf",
+            "/nextflow.config", 
+            "/README.md",
+            "/docs/guide.md",
+            "/docs/api/index.md",
+            "/docs/api/reference.md",
+            "/src/process.nf",
+            "/src/utils/helper.nf",
+            "/test/test-data.csv"
+        ]
+        
+        when: "listing root with depth 0"
+        def rootDepth0 = entries.findAll { RepositoryProvider.shouldIncludeAtDepth(it, "/", 0) }
+        
+        then:
+        rootDepth0.size() == 3
+        rootDepth0.containsAll(["/main.nf", "/nextflow.config", "/README.md"])
+        
+        when: "listing root with depth 1" 
+        def rootDepth1 = entries.findAll { RepositoryProvider.shouldIncludeAtDepth(it, "/", 1) }
+        
+        then:
+        rootDepth1.size() == 6
+        rootDepth1.containsAll(["/main.nf", "/nextflow.config", "/README.md", "/docs/guide.md", "/src/process.nf", "/test/test-data.csv"])
+        
+        when: "listing docs with depth 0"
+        def docsDepth0 = entries.findAll { RepositoryProvider.shouldIncludeAtDepth(it, "/docs", 0) }
+        
+        then:
+        docsDepth0.size() == 1
+        docsDepth0.contains("/docs/guide.md")
+        
+        when: "listing docs with depth 1"
+        def docsDepth1 = entries.findAll { RepositoryProvider.shouldIncludeAtDepth(it, "/docs", 1) }
+        
+        then:
+        docsDepth1.size() == 3
+        docsDepth1.containsAll(["/docs/guide.md", "/docs/api/index.md", "/docs/api/reference.md"])
     }
 
 }

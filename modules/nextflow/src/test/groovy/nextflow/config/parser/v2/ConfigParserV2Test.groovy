@@ -722,6 +722,20 @@ class ConfigParserV2Test extends Specification {
 
     }
 
+    def 'should override config params with CLI params' () {
+        given:
+        def CONFIG = '''
+            params.outdir = 'results'
+            report.file = "${params.outdir}/report.html"
+            '''
+
+        when:
+        def config = new ConfigParserV2().setParams(outdir: 'my-results').parse(CONFIG)
+        then:
+        config.params.outdir == 'my-results'
+        config.report.file == 'my-results/report.html'
+    }
+
     static class ConfigFileHandler implements HttpHandler {
 
         Path folder

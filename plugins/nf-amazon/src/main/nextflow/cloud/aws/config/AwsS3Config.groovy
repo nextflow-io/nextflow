@@ -66,6 +66,12 @@ class AwsS3Config implements ConfigScope {
 
     @ConfigOption
     @Description("""
+        The maximum size for the heap memory buffer used by concurrent downloads. It must be at least 10 times the `minimumPartSize` (default:`400 MB`).
+    """)
+    final MemoryUnit maxDownloadHeapMemory
+
+    @ConfigOption
+    @Description("""
         The maximum number of retry attempts for failed retryable requests (default: `-1`).
     """)
     final Integer maxErrorRetry
@@ -197,6 +203,13 @@ class AwsS3Config implements ConfigScope {
     """)
     final String uploadStorageClass
 
+    private static final long _1MB = 1024 * 1024;
+    // According to CRT Async client docs https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/services/s3/S3CrtAsyncClientBuilder.html
+    public static final long DEFAULT_PART_SIZE = 8 * _1MB;
+    public static final int DEFAULT_INIT_BUFFER_PARTS = 10;
+    // Maximum heap buffer size
+    public static final long DEFAULT_MAX_DOWNLOAD_BUFFER_SIZE = 400 * _1MB;
+
     AwsS3Config(Map opts) {
         this.anonymous = opts.anonymous as Boolean
         this.connectionTimeout = opts.connectionTimeout as Integer
@@ -205,6 +218,7 @@ class AwsS3Config implements ConfigScope {
         if( endpoint && FileHelper.getUrlProtocol(endpoint) !in ['http','https'] )
             throw new IllegalArgumentException("S3 endpoint must begin with http:// or https:// prefix - offending value: '${endpoint}'")
         this.maxConnections = opts.maxConnections as Integer
+        this.maxDownloadHeapMemory = opts.maxDownloadHeapMemory as MemoryUnit
         this.maxErrorRetry = opts.maxErrorRetry as Integer
         this.minimumPartSize = opts.minimumPartSize as MemoryUnit
         this.multipartThreshold = opts.multipartThreshold as MemoryUnit
@@ -225,6 +239,7 @@ class AwsS3Config implements ConfigScope {
         this.uploadMaxAttempts = opts.uploadMaxAttempts as Integer
         this.uploadMaxThreads = opts.uploadMaxThreads as Integer
         this.uploadRetrySleep = opts.uploadRetrySleep as Duration
+        checkDownloadBufferParams()
     }
 
     private String parseStorageClass(String value) {
@@ -261,6 +276,7 @@ class AwsS3Config implements ConfigScope {
         return [
             connection_timeout: connectionTimeout?.toString(),
             max_connections: maxConnections?.toString(),
+            max_download_heap_memory: maxDownloadHeapMemory?.toBytes()?.toString(),
             max_error_retry: maxErrorRetry?.toString(),
             minimum_part_size: minimumPartSize?.toBytes()?.toString(),
             multipart_threshold: multipartThreshold?.toBytes()?.toString(),
@@ -281,5 +297,22 @@ class AwsS3Config implements ConfigScope {
             upload_retry_sleep: uploadRetrySleep?.toMillis()?.toString(),
             upload_storage_class: storageClass?.toString()
         ].findAll { k, v -> v != null }
+    }
+
+    void checkDownloadBufferParams() {
+        if( maxDownloadHeapMemory != null  && maxDownloadHeapMemory.toBytes() == 0L ) {
+            throw new IllegalArgumentException("Configuration option `aws.client.maxDownloadHeapMemory` can't be 0")
+        }
+        if( minimumPartSize != null && minimumPartSize.toBytes() == 0L ) {
+            throw new IllegalArgumentException("Configuration option `aws.client.minimumPartSize` can't be 0")
+        }
+        if( maxDownloadHeapMemory != null || minimumPartSize != null ) {
+            final maxBuffer = maxDownloadHeapMemory ? maxDownloadHeapMemory.toBytes() : DEFAULT_MAX_DOWNLOAD_BUFFER_SIZE
+            final partSize = minimumPartSize ? minimumPartSize.toBytes() : DEFAULT_PART_SIZE
+            if( maxBuffer < DEFAULT_INIT_BUFFER_PARTS * partSize ) {
+                throw new IllegalArgumentException("Configuration option `aws.client.maxDownloadHeapMemory` must be at least " + DEFAULT_INIT_BUFFER_PARTS + " times `aws.client.minimumPartSize`")
+            }
+        }
+
     }
 }

@@ -110,7 +110,7 @@ class TaskConfig extends LazyMap implements Cloneable {
         if( object instanceof LazyMap ) {
             result = ((LazyMap)object).getValue(path.first())
         }
-        else if( Object instanceof Map ) {
+        else if( object instanceof Map ) {
             result = ((Map)object).get(path.first())
         }
         else if( path.size()>1 ) {

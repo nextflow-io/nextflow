@@ -1,7 +1,0 @@
-Manifest-Version: 1.0
-Plugin-Class: nextflow.cloud.azure.AzurePlugin
-Plugin-Id: nf-azure
-Plugin-Version: 1.19.0
-Plugin-Provider: Seqera Labs
-Plugin-Requires: >=25.07.0-edge
-Plugin-Description: Enables Azure cloud execution through Batch service with native Blob storage access and comprehensive authentication options
