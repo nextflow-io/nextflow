@@ -1,9 +1,9 @@
-nf-amazon@2.15.0-patch1
+nf-amazon@2.15.0-patch2
 nf-azure@1.16.0-patch1
 nf-cloudcache@0.4.3
 nf-codecommit@0.2.3
 nf-console@1.2.1
 nf-google@1.21.1
-nf-k8s@1.0.0
-nf-tower@1.11.4-patch1
+nf-k8s@1.0.1
+nf-tower@1.11.4-patch2
 nf-wave@1.12.1
