@@ -44,11 +44,11 @@ class CacheCommand implements PluginAbstractExec {
     }
 
     protected void cacheBackup() {
-        // note: use directly NXF_CLOUDCACHE_PATH instead of `session.cloudCachePath`
+        // note: use directly NXF_CLOUDCACHE_PATH along with `session.cloudCachePath`
         // because the latter required to be initialized via the execution
-        // CmdRun. However this command is only executed to be used  via Seqera Platform
+        // CmdRun. However this command is only executed to be used via Seqera Platform
         // that's providing the cache path via the env variable
-        if( !SysEnv.get('NXF_CLOUDCACHE_PATH') ) {
+        if( !getSession().cloudCachePath && !SysEnv.get('NXF_CLOUDCACHE_PATH') ) {
             log.debug "Running Nextflow cache backup (CacheManager)"
             // legacy cache manager
             new CacheManager(System.getenv()).saveCacheFiles()
