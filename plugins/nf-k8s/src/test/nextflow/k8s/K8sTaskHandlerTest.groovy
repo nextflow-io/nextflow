@@ -498,7 +498,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * handler.updateTimestamps(termState)
         1 * handler.readExitFile() >> EXIT_STATUS
         1 * handler.deletePodIfSuccessful(task) >> null
-        1 * handler.savePodLogOnError(task) >> null
+        1 * handler.savePodLog(task) >> null
         handler.task.exitStatus == EXIT_STATUS
         handler.task.@stdout == OUT_FILE
         handler.task.@stderr == ERR_FILE
@@ -529,7 +529,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * handler.updateTimestamps(termState)
         0 * handler.readExitFile()
         1 * handler.deletePodIfSuccessful(task) >> null
-        1 * handler.savePodLogOnError(task) >> null
+        1 * handler.savePodLog(task) >> null
         handler.task.exitStatus == 137
         handler.status == TaskStatus.COMPLETED
         result == true
@@ -803,20 +803,9 @@ class K8sTaskHandlerTest extends Specification {
         def handler = Spy(new K8sTaskHandler(executor: executor, client: client, podName: POD_NAME))
 
         when:
-        handler.savePodLogOnError(task)
+        handler.savePodLog(task)
         then:
-        task.isSuccess() >> true
-        0 * client.podLog(_)
-
-        when:
-        handler.savePodLogOnError(task)
-        then:
-        task.isSuccess() >> false
         task.getWorkDir() >> folder
-        executor.getSession() >> session
-        session.isTerminated() >> false
-        session.isCancelled() >> false
-        session.isAborted() >> false
         1 * client.podLog(POD_NAME) >> POD_LOG
 
         folder.resolve( TaskRun.CMD_LOG ).text == POD_MESSAGE
