@@ -53,7 +53,9 @@ class AuthCommandImplTest extends Specification {
         cmd.getCloudEndpointInfo('https://api.cloud.stage-seqera.io').auth.domain == 'seqera-stage.eu.auth0.com'
         cmd.getCloudEndpointInfo('https://api.cloud.dev-seqera.io').isCloud == true
         cmd.getCloudEndpointInfo('https://api.cloud.dev-seqera.io').auth.domain == 'seqera-development.eu.auth0.com'
+        // Legacy URL format is normalized to standard format
         cmd.getCloudEndpointInfo('https://cloud.seqera.io/api').isCloud == true
+        cmd.getCloudEndpointInfo('https://cloud.seqera.io/api').endpoint == 'https://api.cloud.seqera.io'
         cmd.getCloudEndpointInfo('https://cloud.seqera.io/api').auth.domain == 'seqera.eu.auth0.com'
         cmd.getCloudEndpointInfo('https://enterprise.example.com').isCloud == false
         cmd.getCloudEndpointInfo('https://enterprise.example.com').auth == null

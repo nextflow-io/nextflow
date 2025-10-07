@@ -958,9 +958,9 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         status.table.add(['API connection', ColorUtil.colorize(apiConnectionOk ? 'OK' : 'ERROR', connectionColor), ''])
 
         // Authentication check
-        // Navigate to tower config section to get config without 'tower.' prefix
-        final builder = new ConfigBuilder().setHomeDir(Const.APP_HOME_DIR).setCurrentDir(Const.APP_HOME_DIR)
-        final towerConfig = builder.buildConfigObject().navigate('tower') as Map ?: [:]
+        // Extract tower config and strip prefix for PlatformHelper
+        final towerConfig = config.findAll { it.key.toString().startsWith('tower.') }
+            .collectEntries { k, v -> [(k.toString().substring(6)): v] }
         final accessToken = PlatformHelper.getAccessToken(towerConfig, SysEnv.get())
 
         // Determine source for display
@@ -1225,15 +1225,17 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         }
 
         // Check for legacy URL format (e.g., https://cloud.seqera.io/api)
-        final legacyToStandard = apiUrl.replace('://cloud.', '://api.cloud.').replace('/api', '')
-        final legacyAuthDomain = PlatformHelper.getAuthDomain(legacyToStandard)
-        if (legacyAuthDomain) {
-            final clientId = PlatformHelper.getAuthClientId(legacyToStandard)
-            return [
-                isCloud: true,
-                endpoint: legacyToStandard,
-                auth: [domain: legacyAuthDomain, clientId: clientId]
-            ]
+        if (apiUrl.contains('://cloud.') && apiUrl.endsWith('/api')) {
+            final legacyToStandard = apiUrl.replace('://cloud.', '://api.cloud.').replaceAll('/api$', '')
+            final legacyAuthDomain = PlatformHelper.getAuthDomain(legacyToStandard)
+            if (legacyAuthDomain) {
+                final clientId = PlatformHelper.getAuthClientId(legacyToStandard)
+                return [
+                    isCloud: true,
+                    endpoint: legacyToStandard,
+                    auth: [domain: legacyAuthDomain, clientId: clientId]
+                ]
+            }
         }
 
         return [isCloud: false, endpoint: apiUrl, auth: null]
