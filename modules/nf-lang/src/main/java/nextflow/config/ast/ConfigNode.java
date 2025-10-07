@@ -18,6 +18,7 @@ package nextflow.config.ast;
 import java.util.ArrayList;
 import java.util.List;
 
+import nextflow.config.schema.SchemaNode;
 import org.codehaus.groovy.ast.ModuleNode;
 import org.codehaus.groovy.control.SourceUnit;
 
@@ -30,6 +31,8 @@ public class ConfigNode extends ModuleNode {
 
     private List<ConfigStatement> configStatements = new ArrayList<>();
 
+    private SchemaNode.Scope schema;
+
     public ConfigNode(SourceUnit sourceUnit) {
         super(sourceUnit);
     }
@@ -40,5 +43,13 @@ public class ConfigNode extends ModuleNode {
 
     public void addConfigStatement(ConfigStatement statement) {
         configStatements.add(statement);
+    }
+
+    public SchemaNode.Scope getSchema() {
+        return schema;
+    }
+
+    public void setSchema(SchemaNode.Scope schema) {
+        this.schema = schema;
     }
 }
