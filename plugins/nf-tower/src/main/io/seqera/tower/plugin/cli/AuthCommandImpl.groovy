@@ -74,7 +74,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
             println ""
         }
 
-        // Check if seqera_auth.config file already exists
+        // Check if seqera-auth.config file already exists
         final authFile = getAuthFile()
         if( Files.exists(authFile) ) {
             ColorUtil.printColored("Error: Authentication token is already configured in Nextflow config.", "red")
@@ -383,13 +383,13 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
 
     @Override
     void logout() {
-        // Check if seqera_auth.config file exists
+        // Check if seqera-auth.config file exists
         final authFile = getAuthFile()
         if( !Files.exists(authFile) ) {
             ColorUtil.printColored("No previous login found.", "green")
             return
         }
-        // Read token from seqera_auth.config file
+        // Read token from seqera-auth.config file
         final authConfig = readAuthFile()
         final existingToken = authConfig['tower.accessToken']
         final apiUrl = authConfig['tower.endpoint'] as String ?: DEFAULT_API_ENDPOINT
@@ -501,7 +501,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
             Files.writeString(configFile, updatedContent.toString(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
         }
 
-        // Delete seqera_auth.config file
+        // Delete seqera-auth.config file
         if( Files.exists(authFile) ) {
             Files.delete(authFile)
         }
@@ -511,10 +511,10 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
 
     @Override
     void config() {
-        // Read from both main config and seqera_auth.config file
+        // Read from both main config and seqera-auth.config file
         final config = readConfig()
 
-        // Token can come from seqera_auth.config file or environment variable
+        // Token can come from seqera-auth.config file or environment variable
         final existingToken = config['tower.accessToken'] ?: SysEnv.get('TOWER_ACCESS_TOKEN')
         final endpoint = config['tower.endpoint'] ?: DEFAULT_API_ENDPOINT
 
@@ -1249,7 +1249,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
     }
 
     protected Path getAuthFile() {
-        return Const.APP_HOME_DIR.resolve('seqera_auth.config')
+        return Const.APP_HOME_DIR.resolve('seqera-auth.config')
     }
 
     private Map readAuthFile() {
@@ -1282,7 +1282,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
             Files.createDirectories(configFile.parent)
         }
 
-        // Write tower config to seqera_auth.config file
+        // Write tower config to seqera-auth.config file
         final towerConfig = config.findAll { key, value ->
             key.toString().startsWith('tower.') && !key.toString().endsWith('.comment')
         }
@@ -1306,7 +1306,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         }
         authConfigText.append("}\n")
 
-        // Write the seqera_auth.config file
+        // Write the seqera-auth.config file
         Files.writeString(authFile, authConfigText.toString(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
 
         // Add includeConfig line to main config file if it doesn't exist
@@ -1314,7 +1314,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
     }
 
     private void addIncludeConfigToMainFile(Path configFile) {
-        final includeConfigLine = "includeConfig 'seqera_auth.config'"
+        final includeConfigLine = "includeConfig 'seqera-auth.config'"
 
         def configContent = ""
         if (Files.exists(configFile)) {
@@ -1336,10 +1336,10 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
     }
 
     private String removeIncludeConfigLine(String content) {
-        // Remove the includeConfig 'seqera_auth.config' line
+        // Remove the includeConfig 'seqera-auth.config' line
         final lines = content.split('\n')
         final filteredLines = lines.findAll { line ->
-            !line.trim().equals("includeConfig 'seqera_auth.config'")
+            !line.trim().equals("includeConfig 'seqera-auth.config'")
         }
         return filteredLines.join('\n')
     }

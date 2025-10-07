@@ -152,7 +152,7 @@ class AuthCommandImplTest extends Specification {
 // Some config
 param1 = 'value1'
 
-includeConfig 'seqera_auth.config'
+includeConfig 'seqera-auth.config'
 
 param2 = 'value2'
 """
@@ -161,7 +161,7 @@ param2 = 'value2'
         def result = cmd.removeIncludeConfigLine(content)
 
         then:
-        !result.contains("includeConfig 'seqera_auth.config'")
+        !result.contains("includeConfig 'seqera-auth.config'")
         result.contains('param1 = \'value1\'')
         result.contains('param2 = \'value2\'')
     }
@@ -200,7 +200,7 @@ param2 = 'value2'"""
         def authFile = cmd.getAuthFile()
 
         then:
-        authFile == Const.APP_HOME_DIR.resolve('seqera_auth.config')
+        authFile == Const.APP_HOME_DIR.resolve('seqera-auth.config')
     }
 
     def 'should read empty auth file'() {
@@ -215,10 +215,10 @@ param2 = 'value2'"""
         config.isEmpty() || config.size() >= 0
     }
 
-    def 'should write config to seqera_auth.config file'() {
+    def 'should write config to seqera-auth.config file'() {
         given:
         def cmd = Spy(AuthCommandImpl)
-        def authFile = tempDir.resolve('seqera_auth.config')
+        def authFile = tempDir.resolve('seqera-auth.config')
         def configFile = tempDir.resolve('config')
 
         cmd.getAuthFile() >> authFile
@@ -244,7 +244,7 @@ param2 = 'value2'"""
     def 'should write config with workspace metadata'() {
         given:
         def cmd = Spy(AuthCommandImpl)
-        def authFile = tempDir.resolve('seqera_auth.config')
+        def authFile = tempDir.resolve('seqera-auth.config')
         def configFile = tempDir.resolve('config')
 
         cmd.getAuthFile() >> authFile
@@ -274,7 +274,7 @@ param2 = 'value2'"""
     def 'should add includeConfig line to main config file'() {
         given:
         def cmd = Spy(AuthCommandImpl)
-        def authFile = tempDir.resolve('seqera_auth.config')
+        def authFile = tempDir.resolve('seqera-auth.config')
         def configFile = tempDir.resolve('config')
 
         cmd.getAuthFile() >> authFile
@@ -293,21 +293,21 @@ param2 = 'value2'"""
         then:
         Files.exists(configFile)
         def configContent = Files.readString(configFile)
-        configContent.contains("includeConfig 'seqera_auth.config'")
+        configContent.contains("includeConfig 'seqera-auth.config'")
         configContent.contains('param1 = \'value1\'')
     }
 
     def 'should not duplicate includeConfig line'() {
         given:
         def cmd = Spy(AuthCommandImpl)
-        def authFile = tempDir.resolve('seqera_auth.config')
+        def authFile = tempDir.resolve('seqera-auth.config')
         def configFile = tempDir.resolve('config')
 
         cmd.getAuthFile() >> authFile
         cmd.getConfigFile() >> configFile
 
         // Create config file with existing includeConfig line
-        Files.writeString(configFile, "// Config\nincludeConfig 'seqera_auth.config'\nparam1 = 'value1'\n")
+        Files.writeString(configFile, "// Config\nincludeConfig 'seqera-auth.config'\nparam1 = 'value1'\n")
 
         def config = [
             'tower.accessToken': 'test-token-123'
@@ -319,7 +319,7 @@ param2 = 'value2'"""
         then:
         Files.exists(configFile)
         def configContent = Files.readString(configFile)
-        configContent.count("includeConfig 'seqera_auth.config'") == 1
+        configContent.count("includeConfig 'seqera-auth.config'") == 1
     }
 
     def 'should get current workspace name when workspace exists'() {
@@ -354,7 +354,7 @@ param2 = 'value2'"""
     def 'should get config value from login file'() {
         given:
         def cmd = Spy(AuthCommandImpl)
-        def authFile = tempDir.resolve('seqera_auth.config')
+        def authFile = tempDir.resolve('seqera-auth.config')
         cmd.getAuthFile() >> authFile
 
         def config = [:]
@@ -365,7 +365,7 @@ param2 = 'value2'"""
 
         then:
         result.value == 'token-from-login'
-        result.source.endsWith('seqera_auth.config')
+        result.source.endsWith('seqera-auth.config')
         result.fromConfig == true
         result.fromEnv == false
         result.isDefault == false
@@ -437,7 +437,7 @@ param2 = 'value2'"""
     def 'should prioritize login over config and env'() {
         given:
         def cmd = Spy(AuthCommandImpl)
-        def authFile = tempDir.resolve('seqera_auth.config')
+        def authFile = tempDir.resolve('seqera-auth.config')
         cmd.getAuthFile() >> authFile
 
         def config = ['tower.accessToken': 'token-from-config']
@@ -450,7 +450,7 @@ param2 = 'value2'"""
 
         then:
         result.value == 'token-from-login'
-        result.source.endsWith('seqera_auth.config')
+        result.source.endsWith('seqera-auth.config')
 
         cleanup:
         SysEnv.pop()
@@ -951,7 +951,7 @@ param2 = 'value2'"""
     def 'should collect status with mixed sources'() {
         given:
         def cmd = Spy(AuthCommandImpl)
-        def authFile = tempDir.resolve('seqera_auth.config')
+        def authFile = tempDir.resolve('seqera-auth.config')
         def configFile = tempDir.resolve('config')
 
         cmd.getAuthFile() >> authFile
@@ -971,7 +971,7 @@ param2 = 'value2'"""
         then:
         status != null
         // Token from auth file
-        status.table[2][2].endsWith('seqera_auth.config')
+        status.table[2][2].endsWith('seqera-auth.config')
         // Enabled from config file
         status.table[3][2].endsWith('config')
         // Workspace from env var
@@ -1033,7 +1033,7 @@ param2 = 'value2'"""
     def 'should detect existing auth file and prevent duplicate login'() {
         given:
         def cmd = Spy(AuthCommandImpl)
-        def authFile = tempDir.resolve('seqera_auth.config')
+        def authFile = tempDir.resolve('seqera-auth.config')
         Files.createFile(authFile)
 
         cmd.getAuthFile() >> authFile
@@ -1050,7 +1050,7 @@ param2 = 'value2'"""
     def 'should warn when TOWER_ACCESS_TOKEN env var is set during login'() {
         given:
         def cmd = Spy(AuthCommandImpl)
-        def authFile = tempDir.resolve('seqera_auth.config-not-exists')
+        def authFile = tempDir.resolve('seqera-auth.config-not-exists')
 
         cmd.getAuthFile() >> authFile
         cmd.performAuth0Login(_, _) >> { /* mock to prevent actual login */ }
@@ -1070,7 +1070,7 @@ param2 = 'value2'"""
     def 'should normalize API URL during login'() {
         given:
         def cmd = Spy(AuthCommandImpl)
-        def authFile = tempDir.resolve('seqera_auth.config-not-exists')
+        def authFile = tempDir.resolve('seqera-auth.config-not-exists')
 
         cmd.getAuthFile() >> authFile
 
@@ -1084,7 +1084,7 @@ param2 = 'value2'"""
     def 'should route to enterprise auth for non-cloud endpoints'() {
         given:
         def cmd = Spy(AuthCommandImpl)
-        def authFile = tempDir.resolve('seqera_auth.config-not-exists')
+        def authFile = tempDir.resolve('seqera-auth.config-not-exists')
 
         cmd.getAuthFile() >> authFile
 
@@ -1099,7 +1099,7 @@ param2 = 'value2'"""
     def 'should route to Auth0 login for cloud endpoints'() {
         given:
         def cmd = Spy(AuthCommandImpl)
-        def authFile = tempDir.resolve('seqera_auth.config-not-exists')
+        def authFile = tempDir.resolve('seqera-auth.config-not-exists')
 
         cmd.getAuthFile() >> authFile
 
@@ -1114,7 +1114,7 @@ param2 = 'value2'"""
     def 'should save auth to config after successful PAT generation'() {
         given:
         def cmd = Spy(AuthCommandImpl)
-        def authFile = tempDir.resolve('seqera_auth.config')
+        def authFile = tempDir.resolve('seqera-auth.config')
         def configFile = tempDir.resolve('config')
 
         cmd.getAuthFile() >> authFile

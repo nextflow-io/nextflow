@@ -69,7 +69,7 @@ $ nextflow auth <subcommand> [options]
 
 **Description**
 
-The `auth` command provides authentication and configuration management for Seqera. For Seqera Cloud, it uses an OAuth2 authentication flow generate and save a Personal Access Token (PAT) locally. For Seqera Enterprise installations, it uses direct PAT authentication. Credentials are saved to `~/.nextflow/seqera_auth.config`.
+The `auth` command provides authentication and configuration management for Seqera. For Seqera Cloud, it uses an OAuth2 authentication flow generate and save a Personal Access Token (PAT) locally. For Seqera Enterprise installations, it uses direct PAT authentication. Credentials are saved to `~/.nextflow/seqera-auth.config`.
 
 **Options**
 
@@ -99,7 +99,7 @@ The `auth` command provides authentication and configuration management for Seqe
 Authenticate with Seqera Cloud:
 
 ```console
-$ nextflow auth login 
+$ nextflow auth login
 ```
 
 Authenticate with an Enterprise installation:
