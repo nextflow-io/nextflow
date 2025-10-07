@@ -494,10 +494,12 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
     @Override
     void config() {
         // Read from both main config and seqera-auth.config file
-        final config = readConfig()
+        final builder = new ConfigBuilder().setHomeDir(Const.APP_HOME_DIR).setCurrentDir(Const.APP_HOME_DIR)
+        final configObject = builder.buildConfigObject()
+        final config = configObject.flatten()
 
-        // Token can come from seqera-auth.config file or environment variable
-        final towerConfig = config.findAll { it.key.toString().startsWith('tower.') }
+        // Navigate to tower config section (returns map without 'tower.' prefix)
+        final towerConfig = configObject.navigate('tower') as Map ?: [:]
         final existingToken = PlatformHelper.getAccessToken(towerConfig, SysEnv.get())
         final endpoint = config['tower.endpoint'] ?: DEFAULT_API_ENDPOINT
 
@@ -956,7 +958,9 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         status.table.add(['API connection', ColorUtil.colorize(apiConnectionOk ? 'OK' : 'ERROR', connectionColor), ''])
 
         // Authentication check
-        final towerConfig = config.findAll { it.key.toString().startsWith('tower.') }
+        // Navigate to tower config section to get config without 'tower.' prefix
+        final builder = new ConfigBuilder().setHomeDir(Const.APP_HOME_DIR).setCurrentDir(Const.APP_HOME_DIR)
+        final towerConfig = builder.buildConfigObject().navigate('tower') as Map ?: [:]
         final accessToken = PlatformHelper.getAccessToken(towerConfig, SysEnv.get())
 
         // Determine source for display
@@ -1297,7 +1301,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
 
         // Write tower config to seqera-auth.config file
         final towerConfig = config.findAll { key, value ->
-            key.toString().startsWith('tower.') && !key.toString().endsWith('.comment')
+            key.toString().startsWith('tower.')
         }
 
         final authConfigText = new StringBuilder()
