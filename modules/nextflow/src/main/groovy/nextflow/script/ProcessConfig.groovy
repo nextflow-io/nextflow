@@ -111,6 +111,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'env',
             'stdin',
             'stdout',
+            'meta',
     ]
 
     /**
@@ -1035,4 +1036,23 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         return this
     }
 
+
+    /**
+     * Implements the process {@code meta} directive.
+     *
+     *
+     * @param description
+     *      A Map with the metadatas of the process
+     * @return
+     *      The {@link ProcessConfig} instance itself.
+     */
+    ProcessConfig meta( value ) {
+        if( value instanceof String )
+            configProperties.put('meta', [description: value])
+        else if( value instanceof Map )
+            configProperties.put('meta', [description: value.description ?: '']+value)
+        else if( value != null )
+            throw new IllegalArgumentException("Not a valid `meta` directive value: $value [${value.getClass().getName()}]")
+        return this
+    }
 }

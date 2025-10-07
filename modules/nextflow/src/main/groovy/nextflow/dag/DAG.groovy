@@ -165,6 +165,7 @@ class DAG {
         if( extra instanceof TaskProcessor ) {
             result.process = extra
             result.operators = [ extra.operator ]
+            result.description = extra.config?.meta?.description
         }
         else if( extra instanceof List ) {
             result.operators = (List)extra.clone()
@@ -388,6 +389,8 @@ class DAG {
          * The vertex label
          */
         String label
+
+        String description
 
         /**
          * The name of the enclosing workflow

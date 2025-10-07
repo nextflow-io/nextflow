@@ -273,8 +273,9 @@ class MermaidRenderer implements DagRenderer {
             final vertex = node.vertex
 
             // set the process simple name
-            if( vertex.type == DAG.Type.PROCESS )
+            if( vertex.type == DAG.Type.PROCESS ) {
                 node.label = vertex.label.tokenize(':').last()
+            }
 
             // determine the vertex subgraph
             final keys = 
@@ -398,8 +399,15 @@ class MermaidRenderer implements DagRenderer {
         final id = node.vertex.name
 
         switch( node.vertex.type ) {
-            case DAG.Type.PROCESS:
-                return "${id}([\"${node.label}\"])"
+            case DAG.Type.PROCESS: {
+                String ret = "${id}([\"${node.label}\"])"
+                if( node.vertex.description ){
+                    ret +="\n    note_$id[$node.vertex.description]"
+                    ret +="\n    $id --- note_$id"
+                    ret +="\n    style note_$id fill:#ffffff,stroke:#000,stroke-width:3px,color:#000,stroke-dasharray: 5 5"
+                }
+                return ret
+            }
 
             case DAG.Type.OPERATOR:
                 return verbose

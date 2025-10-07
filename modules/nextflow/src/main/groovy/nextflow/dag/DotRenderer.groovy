@@ -102,6 +102,8 @@ class DotRenderer implements DagRenderer {
             case DAG.Type.PROCESS:
                 if( vertex.label )
                     attrs << "label=\"$vertex.label\""
+                if( vertex.description )
+                    attrs << "xlabel=\"$vertex.description\""
                 break
 
             default:

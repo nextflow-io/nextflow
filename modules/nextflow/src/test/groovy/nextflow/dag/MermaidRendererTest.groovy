@@ -16,6 +16,15 @@
 
 package nextflow.dag
 
+import nextflow.NextflowMeta
+import nextflow.processor.TaskProcessor
+import nextflow.script.BaseScript
+import nextflow.script.ProcessConfig
+import nextflow.script.params.InParam
+import nextflow.script.params.InputsList
+import nextflow.script.params.OutParam
+import nextflow.script.params.OutputsList
+
 import java.nio.file.Files
 
 import groovyx.gpars.dataflow.DataflowQueue
@@ -26,6 +35,11 @@ import spock.lang.Specification
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 class MermaidRendererTest extends Specification {
+
+    //This test requires DSL2 to be tested alone
+    void setup(){
+        NextflowMeta.instance.enableDsl2()
+    }
 
     def 'should render a graph using the `mmd` format' () {
         given:
@@ -60,6 +74,66 @@ class MermaidRendererTest extends Specification {
                 v2 --> v3
             '''
             .stripIndent().leftTrim()
+
+        cleanup:
+        file.delete()
+    }
+
+    def 'should render a graph with description using the `mmd` format' () {
+        given:
+        def file = Files.createTempFile('test', null)
+        def ch1 = new DataflowQueue()
+        def ch2 = new DataflowQueue()
+        def ch3 = new DataflowQueue()
+
+        def pInList = new InputsList()
+        def ip1 = Mock(InParam)
+        pInList.add( ip1 )
+
+        def pOutList = new OutputsList()
+        def op1 = Mock(OutParam)
+        pOutList.add( op1 )
+
+        def process = Mock(TaskProcessor){
+
+            getConfig() >> new ProcessConfig(Mock(BaseScript), "test")
+        }
+        process.config.meta([description: 'a short description of the process'])
+
+        and:
+        def dag = new DAG()
+        dag.addOperatorNode('Op1', ch1, ch2)
+        dag.addOperatorNode('Op2', ch2, ch3)
+        dag.addProcessNode('a process', pInList, pOutList, process)
+        dag.normalize()
+        and:
+        def config = new DagConfig(verbose: true)
+
+        when:
+        new MermaidRenderer(config).renderDocument(dag, file)
+        then:
+        file.text ==
+            '''
+            flowchart TB
+                subgraph " "
+                v0[" "]
+                v4[" "]
+                end
+                v1(["Op1"])
+                v2(["Op2"])
+                subgraph " "
+                v3[" "]
+                end
+                v5(["a process"])
+                note_v5[a short description of the process]
+                v5 --- note_v5
+                style note_v5 fill:#ffffff,stroke:#000,stroke-width:3px,color:#000,stroke-dasharray: 5 5
+                v0 --> v1
+                v1 --> v2
+                v2 --> v3
+                v4 --> v5
+            '''
+                .stripIndent().leftTrim()
 
         cleanup:
         file.delete()

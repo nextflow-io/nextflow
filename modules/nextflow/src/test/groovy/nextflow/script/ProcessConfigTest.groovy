@@ -50,6 +50,7 @@ class ProcessConfigTest extends Specification {
         config.maxRetries == 1
         config.maxErrors == -1
         config.errorStrategy == ErrorStrategy.TERMINATE
+        config.description == ''
     }
 
     def 'should set properties' () {
@@ -820,5 +821,20 @@ class ProcessConfigTest extends Specification {
 
         then:
         def e3 = noExceptionThrown()
+    }
+
+    def 'should apply meta directive' () {
+        when:
+        def process = new ProcessConfig(Mock(BaseScript))
+        process.meta description:'a description'
+        then:
+        process.meta == [description:'a description']
+
+        when:
+        def process2 = new ProcessConfig(Mock(BaseScript))
+        process2.meta 'a description'
+        then:
+        process2.meta == [description:'a description']
+
     }
 }

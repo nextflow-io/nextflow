@@ -15,6 +15,15 @@
  */
 
 package nextflow.dag
+
+import nextflow.processor.TaskProcessor
+import nextflow.script.BaseScript
+import nextflow.script.ProcessConfig
+import nextflow.script.params.InParam
+import nextflow.script.params.InputsList
+import nextflow.script.params.OutParam
+import nextflow.script.params.OutputsList
+
 import java.nio.file.Files
 
 import groovyx.gpars.dataflow.DataflowQueue
@@ -75,6 +84,69 @@ class DotRendererTest extends Specification {
             }
             '''
             .stripIndent().leftTrim()
+
+        cleanup:
+        file.delete()
+
+
+    }
+
+    def 'should render a graph with description using the `dot` format' () {
+
+        given:
+        def file = Files.createTempFile('test',null)
+        def ch1 = new DataflowQueue()
+        def ch2 = new DataflowQueue()
+        def ch3 = new DataflowQueue()
+
+        def dag = new DAG()
+        dag.addOperatorNode('Op1', ch1, ch2)
+        dag.addOperatorNode('Op2', ch2, ch3)
+
+        def pInList = new InputsList()
+        def ip1 = Mock(InParam)
+        pInList.add( ip1 )
+
+        def pOutList = new OutputsList()
+        def op1 = Mock(OutParam)
+        pOutList.add( op1 )
+
+        def process = Mock(TaskProcessor){
+
+            getConfig() >> new ProcessConfig(Mock(BaseScript), "test")
+        }
+        process.config.meta([description: 'a short description of the process'])
+        dag.addProcessNode('a process', pInList, pOutList, process)
+
+        dag.normalize()
+
+        when:
+        new DotRenderer('TheGraph', 'TB').renderDocument(dag, file)
+
+        then:
+        file.text ==
+            '''
+            digraph "TheGraph" {
+            rankdir=TB;
+            v0 [shape=point,label="",fixedsize=true,width=0.1];
+            v1 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="Op1"];
+            v0 -> v1;
+
+            v1 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="Op1"];
+            v2 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="Op2"];
+            v1 -> v2;
+
+            v2 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="Op2"];
+            v3 [shape=point];
+            v2 -> v3;
+
+            v4 [shape=point,label="",fixedsize=true,width=0.1];
+            v5 [label="a process",xlabel="a short description of the process"];
+            v4 -> v5;
+            
+            }
+            '''
+                .stripIndent().leftTrim()
 
         cleanup:
         file.delete()
