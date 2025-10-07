@@ -88,7 +88,6 @@ The `auth` command provides authentication and configuration management for Seqe
 `logout`
 : Removes Seqera authentication and revokes the Seqera Cloud access token (if applicable).
 
-
 `config`
 : Sets Seqera primary compute environment, monitoring, and workspace.
 
