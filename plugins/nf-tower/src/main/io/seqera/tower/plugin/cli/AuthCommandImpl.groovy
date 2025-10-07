@@ -69,7 +69,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
             return
         }
 
-        ColorUtil.printColored("Nextflow authentication with Seqera Platform", "cyan bold")
+        println("Nextflow authentication with Seqera Platform")
         ColorUtil.printColored(" - Authentication will be saved to: ${ColorUtil.colorize(getAuthFile().toString(), 'magenta')}", "dim")
 
         apiUrl = normalizeApiUrl(apiUrl)
@@ -96,10 +96,10 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         final deviceAuth = requestDeviceAuthorization(auth0Config)
 
         println ""
-        ColorUtil.printColored("Confirmation code: ${ColorUtil.colorize(deviceAuth.user_code as String, 'yellow')}", "cyan bold")
+        println "Confirmation code: ${ColorUtil.colorize(deviceAuth.user_code as String, 'yellow')}"
         final urlWithCode = "${deviceAuth.verification_uri}?user_code=${deviceAuth.user_code}"
-        println "${ColorUtil.colorize('Authentication URL:', 'cyan bold')} ${ColorUtil.colorize(urlWithCode, 'magenta')}"
-        ColorUtil.printColored("\n[ Press Enter to open in browser ]", "cyan bold")
+        println "Authentication URL: ${ColorUtil.colorize(urlWithCode, 'magenta')}"
+        ColorUtil.printColored("\n[ Press Enter to open in browser ]", "bold")
 
         // Wait for Enter key with proper interrupt handling
         try {
@@ -129,7 +129,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
 
             // Verify login by calling /user-info
             final userInfo = callUserInfoApi(accessToken, apiUrl)
-            ColorUtil.printColored("\n\nAuthentication successful!", "green")
+            println "\n\n${ColorUtil.colorize('✔', 'green', true)} Authentication successful"
 
             // Generate PAT
             final pat = generatePAT(accessToken, apiUrl)
@@ -139,7 +139,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
 
             // Automatically run configuration
             try {
-                config()
+                config(false)
             } catch( Exception e ) {
                 ColorUtil.printColored("Configuration setup failed: ${e.message}", "red")
                 ColorUtil.printColored("You can run 'nextflow auth config' later to set up your configuration.", "dim")
@@ -368,7 +368,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         // Check if seqera-auth.config file exists
         final authFile = getAuthFile()
         if( !Files.exists(authFile) ) {
-            ColorUtil.printColored("No previous login found.", "green")
+            println "No previous login found.\n"
             return
         }
         // Read token from seqera-auth.config file
@@ -399,7 +399,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         // Validate token by calling /user-info API
         try {
             final userInfo = callUserInfoApi(existingToken as String, apiUrl)
-            ColorUtil.printColored(" - Token is valid for user: ${ColorUtil.colorize(userInfo.userName as String, 'cyan bold')}", "dim")
+            ColorUtil.printColored(" - Token is valid for user: ${ColorUtil.colorize(userInfo.userName as String, 'bold')}", "dim")
         } catch( Exception e ) {
             ColorUtil.printColored("Failed to validate token: ${e.message}", "red")
         }
@@ -416,7 +416,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
             ColorUtil.printColored("Warning: Access token not deleted, as using enterprise installation: ${ColorUtil.colorize(apiUrl, 'magenta')}", "yellow")
         }
 
-        final confirmed = promptForYesNo("\n${ColorUtil.colorize('Continue with logout?', 'cyan bold')} (${ColorUtil.colorize('Y', 'green')}/n): ", true)
+        final confirmed = promptForYesNo("\n${ColorUtil.colorize('Continue with logout?', 'bold')} (${ColorUtil.colorize('Y', 'green')}/n): ", true)
 
         if( !confirmed ) {
             println("Logout cancelled.")
@@ -469,7 +469,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
             throw new RuntimeException("Failed to delete token: ${error}")
         }
 
-        ColorUtil.printColored("\nToken successfully deleted from Seqera Platform.", "green")
+        println "\n${ColorUtil.colorize('✔', 'green', true)} Token successfully deleted from Seqera Platform."
     }
 
     private void removeAuthFromConfig() {
@@ -488,11 +488,11 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
             Files.delete(authFile)
         }
 
-        ColorUtil.printColored("Authentication removed from Nextflow config.", "green")
+        println "${ColorUtil.colorize('✔', 'green', true)} Authentication removed from Nextflow config."
     }
 
     @Override
-    void config() {
+    void config(Boolean showHeader = true) {
         // Read from both main config and seqera-auth.config file
         final builder = new ConfigBuilder().setHomeDir(Const.APP_HOME_DIR).setCurrentDir(Const.APP_HOME_DIR)
         final configObject = builder.buildConfigObject()
@@ -508,12 +508,14 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
             return
         }
 
-        ColorUtil.printColored("Nextflow Seqera Platform configuration", "cyan bold")
-        ColorUtil.printColored(" - Config file: ${ColorUtil.colorize(getAuthFile().toString(), 'magenta')}", "dim")
+        if (showHeader) {
+            println "Nextflow Seqera Platform configuration"
+            ColorUtil.printColored(" - Config file: ${ColorUtil.colorize(getAuthFile().toString(), 'magenta')}", "dim")
 
-        // Check if token is from environment variable
-        if( !towerConfig['accessToken'] && SysEnv.get('TOWER_ACCESS_TOKEN') ) {
-            ColorUtil.printColored(" - Using access token from TOWER_ACCESS_TOKEN environment variable", "dim")
+            // Check if token is from environment variable
+            if( !towerConfig['accessToken'] && SysEnv.get('TOWER_ACCESS_TOKEN') ) {
+                ColorUtil.printColored(" - Using access token from TOWER_ACCESS_TOKEN environment variable", "dim")
+            }
         }
 
         try {
@@ -535,12 +537,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
             // Save updated config only if changes were made
             if( configChanged ) {
                 writeConfig(config, workspaceResult.metadata as Map)
-
-                // Show the new configuration
-                println "\nNew configuration:"
-                showCurrentConfig(config, existingToken as String, endpoint as String)
-
-                ColorUtil.printColored("\nConfiguration saved to ${ColorUtil.colorize(getAuthFile().toString(), 'magenta')}", "green")
+                println "\n${ColorUtil.colorize('✔', 'green', true)} Configuration saved to ${ColorUtil.colorize(getAuthFile().toString(), 'magenta')}"
             }
 
             // Configure compute environment for the workspace (always run after workspace selection)
@@ -559,31 +556,6 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         }
     }
 
-    private void showCurrentConfig(Map config, String accessToken, String endpoint) {
-        // Show workflow monitoring status
-        final monitoringEnabled = config.get('tower.enabled', false)
-        println "  ${ColorUtil.colorize('Workflow monitoring:', 'cyan')} ${monitoringEnabled ? ColorUtil.colorize('enabled', 'green') : ColorUtil.colorize('disabled', 'red')}"
-
-        // Show workspace setting
-        final workspaceId = config.get('tower.workspaceId')
-        if( workspaceId ) {
-            // Try to get workspace details from API for display
-            final workspaceDetails = getWorkspaceDetailsFromApi(accessToken, endpoint, workspaceId as String)
-            if( workspaceDetails ) {
-                final details = workspaceDetails as Map
-                println "  ${ColorUtil.colorize('Default workspace:', 'cyan')} ${ColorUtil.colorize(workspaceId as String, 'magenta')} ${ColorUtil.colorize('[' + details.orgName + ' / ' + details.workspaceName + ']', 'dim', true)}"
-            } else {
-                println "  ${ColorUtil.colorize('Default workspace:', 'cyan')} ${ColorUtil.colorize(workspaceId as String, 'magenta')}"
-            }
-        } else {
-            println "  ${ColorUtil.colorize('Default workspace:', 'cyan')} ${ColorUtil.colorize('None (Personal workspace)', 'magenta')}"
-        }
-
-        // Show API endpoint
-        final apiEndpoint = config.get('tower.endpoint') ?: endpoint
-        println "  ${ColorUtil.colorize('API endpoint:', 'cyan', true)} $apiEndpoint"
-    }
-
     private boolean configureEnabled(Map config) {
         final currentEnabled = config.get('tower.enabled', false)
 
@@ -592,7 +564,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         ColorUtil.printColored("  When disabled, you can enable per-run with the ${ColorUtil.colorize('-with-tower', 'cyan')} flag", "dim")
         println ""
 
-        final promptText = "${ColorUtil.colorize('Enable workflow monitoring for all runs?', 'cyan bold', true)} (${currentEnabled ? ColorUtil.colorize('Y', 'green') + '/n' : 'y/' + ColorUtil.colorize('N', 'red')}): "
+        final promptText = "${ColorUtil.colorize('Enable workflow monitoring for all runs?', 'bold', true)} (${currentEnabled ? ColorUtil.colorize('Y', 'green') + '/n' : 'y/' + ColorUtil.colorize('N', 'red')}): "
         final input = promptForYesNo(promptText, currentEnabled)
 
         if( input == null ) {
@@ -1088,7 +1060,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         col3Width = Math.max(col3Width, 10) + 2
 
         // Add table header
-        lines.add(ColorUtil.colorize("${'Setting'.padRight(col1Width)} ${'Value'.padRight(col2Width)} Source", "cyan bold"))
+        lines.add(ColorUtil.colorize("${'Setting'.padRight(col1Width)} ${'Value'.padRight(col2Width)} Source", "bold"))
         lines.add("${'-' * col1Width} ${'-' * col2Width} ${'-' * col3Width}".toString())
 
         // Add rows
