@@ -28,6 +28,44 @@ class PlatformHelper {
     }
 
     /**
+     * Get the Auth0 domain for a given Platform API endpoint
+     *
+     * @param endpoint the Platform API endpoint
+     * @return the Auth0 domain, or null if not a cloud endpoint
+     */
+    static String getAuthDomain(String endpoint) {
+        switch(endpoint) {
+            case 'https://api.cloud.dev-seqera.io':
+                return 'seqera-development.eu.auth0.com'
+            case 'https://api.cloud.stage-seqera.io':
+                return 'seqera-stage.eu.auth0.com'
+            case 'https://api.cloud.seqera.io':
+                return 'seqera.eu.auth0.com'
+            default:
+                return null
+        }
+    }
+
+    /**
+     * Get the Auth0 client ID for a given Platform API endpoint
+     *
+     * @param endpoint the Platform API endpoint
+     * @return the Auth0 client ID, or null if not a cloud endpoint
+     */
+    static String getAuthClientId(String endpoint) {
+        switch(endpoint) {
+            case 'https://api.cloud.dev-seqera.io':
+                return 'Ep2LhYiYmuV9hhz0dH6dbXVq0S7s7SWZ'
+            case 'https://api.cloud.stage-seqera.io':
+                return '60cPDjI6YhoTPjyMTIBjGtxatSUwWswB'
+            case 'https://api.cloud.seqera.io':
+                return 'FxCM8EJ76nNeHUDidSHkZfT8VtsrhHeL'
+            default:
+                return null
+        }
+    }
+
+    /**
      * Return the configured Platform access token: if `TOWER_WORKFLOW_ID` is provided in the environment, it means
      * we are running in a Platform-made run and we should ONLY retrieve the token from the environment. Otherwise,
      * check the configuration or fallback to the environment. If no token is found, return null.

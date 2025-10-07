@@ -12,6 +12,7 @@ import nextflow.cli.CmdAuth
 import nextflow.cli.ColorUtil
 import nextflow.config.ConfigBuilder
 import nextflow.exception.AbortOperationException
+import nextflow.platform.PlatformHelper
 
 import java.awt.Desktop
 import java.net.URI
@@ -31,21 +32,6 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
     static final int AUTH_POLL_INTERVAL_SECONDS = 5
     static final int WORKSPACE_SELECTION_THRESHOLD = 8  // Max workspaces to show in single list; above this uses org-first selection
     private static final String DEFAULT_API_ENDPOINT = 'https://api.cloud.seqera.io'
-
-    private static final Map SEQERA_API_TO_AUTH0 = [
-        'https://api.cloud.dev-seqera.io'  : [
-            domain  : 'seqera-development.eu.auth0.com',
-            clientId: 'Ep2LhYiYmuV9hhz0dH6dbXVq0S7s7SWZ'
-        ],
-        'https://api.cloud.stage-seqera.io': [
-            domain  : 'seqera-stage.eu.auth0.com',
-            clientId: '60cPDjI6YhoTPjyMTIBjGtxatSUwWswB'
-        ],
-        'https://api.cloud.seqera.io' : [
-            domain  : 'seqera.eu.auth0.com',
-            clientId: 'FxCM8EJ76nNeHUDidSHkZfT8VtsrhHeL'
-        ]
-    ]
 
     /**
      * Creates an HxClient instance with optional authentication token
@@ -1212,13 +1198,29 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
     }
 
     private Map getCloudEndpointInfo(String apiUrl) {
-        for (env in SEQERA_API_TO_AUTH0) {
-            final standardUrl = env.key as String
-            final legacyUrl = standardUrl.replace('://api.', '://') + '/api'
-            if (apiUrl == standardUrl || apiUrl == legacyUrl) {
-                return [isCloud: true, endpoint: env.key, auth: env.value]
-            }
+        // Check if this is a standard cloud endpoint
+        final authDomain = PlatformHelper.getAuthDomain(apiUrl)
+        if (authDomain) {
+            final clientId = PlatformHelper.getAuthClientId(apiUrl)
+            return [
+                isCloud: true,
+                endpoint: apiUrl,
+                auth: [domain: authDomain, clientId: clientId]
+            ]
         }
+
+        // Check for legacy URL format (e.g., https://cloud.seqera.io/api)
+        final legacyToStandard = apiUrl.replace('://cloud.', '://api.cloud.').replace('/api', '')
+        final legacyAuthDomain = PlatformHelper.getAuthDomain(legacyToStandard)
+        if (legacyAuthDomain) {
+            final clientId = PlatformHelper.getAuthClientId(legacyToStandard)
+            return [
+                isCloud: true,
+                endpoint: legacyToStandard,
+                auth: [domain: legacyAuthDomain, clientId: clientId]
+            ]
+        }
+
         return [isCloud: false, endpoint: apiUrl, auth: null]
     }
 
