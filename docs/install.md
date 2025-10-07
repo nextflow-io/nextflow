@@ -174,4 +174,4 @@ Launching from Seqera provides you with:
 Seqera Cloud Basic is free for small teams. Researchers at qualifying academic institutions can apply for free access to Seqera Cloud Pro.
 See [Seqera Platform Cloud](https://docs.seqera.io/platform) to get started.
 
-If you have installed Nextflow locally, you can use the {ref}`nextflow auth <cli-auth>` command to authenticate with [Seqera](https://seqera.io/platform/) and automatically configure workflow monitoring.
+If you have installed Nextflow locally, you can use the {ref}`nextflow auth <cli-auth>` command to authenticate with Seqera and automatically configure workflow monitoring.
