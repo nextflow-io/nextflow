@@ -218,11 +218,6 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         def retryCount = 0
 
         while( retryCount < AUTH_POLL_TIMEOUT_RETRIES ) {
-            // Check for interrupt
-            if( Thread.currentThread().isInterrupted() ) {
-                throw new InterruptedException("Authentication polling interrupted")
-            }
-
             final params = [
                 'grant_type' : 'urn:ietf:params:oauth:grant-type:device_code',
                 'device_code': deviceCode,
