@@ -501,7 +501,8 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         final config = readConfig()
 
         // Token can come from seqera-auth.config file or environment variable
-        final existingToken = config['tower.accessToken'] ?: SysEnv.get('TOWER_ACCESS_TOKEN')
+        final towerConfig = config.findAll { it.key.toString().startsWith('tower.') }
+        final existingToken = PlatformHelper.getAccessToken(towerConfig, SysEnv.get())
         final endpoint = config['tower.endpoint'] ?: DEFAULT_API_ENDPOINT
 
         if( !existingToken ) {
@@ -513,7 +514,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         ColorUtil.printColored(" - Config file: ${ColorUtil.colorize(getAuthFile().toString(), 'magenta')}", "dim")
 
         // Check if token is from environment variable
-        if( !config['tower.accessToken'] && SysEnv.get('TOWER_ACCESS_TOKEN') ) {
+        if( !towerConfig['accessToken'] && SysEnv.get('TOWER_ACCESS_TOKEN') ) {
             ColorUtil.printColored(" - Using access token from TOWER_ACCESS_TOKEN environment variable", "dim")
         }
 
@@ -959,12 +960,24 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         status.table.add(['API connection', ColorUtil.colorize(apiConnectionOk ? 'OK' : 'ERROR', connectionColor), ''])
 
         // Authentication check
-        final tokenInfo = getConfigValue(config, authConfig, 'tower.accessToken', 'TOWER_ACCESS_TOKEN')
-        if( tokenInfo.value ) {
+        final towerConfig = config.findAll { it.key.toString().startsWith('tower.') }
+        final accessToken = PlatformHelper.getAccessToken(towerConfig, SysEnv.get())
+
+        // Determine source for display
+        def tokenSource = 'not set'
+        if (authConfig['tower.accessToken']) {
+            tokenSource = shortenPath(getAuthFile().toString())
+        } else if (config['tower.accessToken']) {
+            tokenSource = shortenPath(getConfigFile().toString())
+        } else if (SysEnv.get('TOWER_ACCESS_TOKEN')) {
+            tokenSource = 'env var $TOWER_ACCESS_TOKEN'
+        }
+
+        if( accessToken ) {
             try {
-                final userInfo = callUserInfoApi(tokenInfo.value as String, endpointInfo.value as String)
+                final userInfo = callUserInfoApi(accessToken, endpointInfo.value as String)
                 final currentUser = userInfo.userName as String
-                status.table.add(['Authentication', "${ColorUtil.colorize('OK', 'green')} (user: ${ColorUtil.colorize(currentUser, 'cyan')})".toString(), tokenInfo.source as String])
+                status.table.add(['Authentication', "${ColorUtil.colorize('OK', 'green')} (user: ${ColorUtil.colorize(currentUser, 'cyan')})".toString(), tokenSource])
             } catch( Exception e ) {
                 status.table.add(['Authentication', ColorUtil.colorize('ERROR', 'red'), 'failed'])
             }
@@ -983,8 +996,8 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         if( workspaceInfo.value ) {
             // Try to get workspace name from API if we have a token
             def workspaceDetails = null
-            if( tokenInfo.value ) {
-                workspaceDetails = getWorkspaceDetailsFromApi(tokenInfo.value as String, endpointInfo.value as String, workspaceInfo.value as String)
+            if( accessToken ) {
+                workspaceDetails = getWorkspaceDetailsFromApi(accessToken, endpointInfo.value as String, workspaceInfo.value as String)
             }
 
             if( workspaceDetails ) {
@@ -997,7 +1010,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
                 status.table.add(['Default workspace', ColorUtil.colorize(workspaceInfo.value as String, 'cyan', true), workspaceInfo.source as String])
             }
         } else {
-            if( tokenInfo.value ) {
+            if( accessToken ) {
                 status.table.add(['Default workspace', ColorUtil.colorize('None (Personal workspace)', 'cyan', true), 'default'])
             } else {
                 status.table.add(['Default workspace', ColorUtil.colorize('None', 'cyan', true), 'default'])
@@ -1006,9 +1019,9 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
 
         // Primary compute environment and work directory
         def primaryEnv = null
-        if( tokenInfo.value && workspaceInfo.value ) {
+        if( accessToken && workspaceInfo.value ) {
             try {
-                final computeEnvs = getComputeEnvironments(tokenInfo.value as String, endpointInfo.value as String, workspaceInfo.value as String)
+                final computeEnvs = getComputeEnvironments(accessToken, endpointInfo.value as String, workspaceInfo.value as String)
                 primaryEnv = computeEnvs.find { ((Map) it).primary == true } as Map
             } catch( Exception e ) {
                 status.table.add(['Primary compute env', ColorUtil.colorize('Error fetching', 'red'), ''])
@@ -1024,7 +1037,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
             status.table.add(['Primary compute env', displayValue, 'workspace'])
             status.table.add(['Default work dir', ColorUtil.colorize(primaryEnv.workDir as String, 'magenta'), 'compute env'])
         } else {
-            final ceValue = (!tokenInfo.value || !workspaceInfo.value) ? 'N/A' : 'None'
+            final ceValue = (!accessToken || !workspaceInfo.value) ? 'N/A' : 'None'
             final ceColor = ceValue == 'None' ? 'yellow' : 'dim'
             status.table.add(['Primary compute env', ColorUtil.colorize(ceValue, ceColor, true), 'workspace'])
             status.table.add(['Default work dir', ColorUtil.colorize(ceValue, ceColor, true), 'compute env'])
