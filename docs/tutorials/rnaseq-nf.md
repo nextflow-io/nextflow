@@ -32,10 +32,12 @@ flowchart TB
     end
 ```
 
-<h3>Data flow:</h3>
+Data flow:
 
 - The `transcriptome` and `reads` parameters are passed to the `RNASEQ` subworkflow, which performs indexing, quality control, and quantification.
+
 - The outputs from `RNASEQ`, along with the MultiQC configuration (`multiqc`), are passed to the `MULTIQC` module, which aggregates results into a unified HTML report.
+
 - The `outdir` parameter defines where all results are published.
 
 ### `RNASEQ`
@@ -46,53 +48,59 @@ The [`RNASEQ`](https://github.com/nextflow-io/rnaseq-nf/blob/master/modules/rnas
 flowchart TB
     subgraph RNASEQ
     subgraph take
-    v1["read_pairs_ch"]
-    v0["transcriptome"]
+    v0["read_pairs_ch"]
+    v1["transcriptome"]
     end
     v2([INDEX])
-    v3([FASTQC])
-    v4([QUANT])
+    v4([FASTQC])
+    v6([QUANT])
     subgraph emit
-    v5["$out"]
+    v10["index"]
+    v9["samples"]
     end
-    v0 --> v2
-    v1 --> v3
-    v1 --> v4
-    v2 --> v4
-    v3 --> v5
-    v4 --> v5
+    v1 --> v2
+    v0 --> v4
+    v0 --> v6
+    v2 --> v6
+    v4 --> v9
+    v6 --> v9
+    v2 --> v10
     end
 ```
 
-<h3>Inputs (<code>take:</code>):</h3>
+Inputs (`take:`):
 
-- `transcriptome`: Reference transcriptome file
 - `read_pairs_ch`: Channel of paired-end read files
+- `transcriptome`: Reference transcriptome file
 
-<h3>Process execution (<code>main:</code>):</h3>
+Data flow (`main:`):
 
-- [`INDEX`](https://github.com/nextflow-io/rnaseq-nf/blob/master/modules/index/main.nf) creates a Salmon index from the `transcriptome` (runs once).
-- [`FASTQC`](https://github.com/nextflow-io/rnaseq-nf/blob/master/modules/fastqc/main.nf) analyzes the `read_pairs_ch` in parallel (runs independently for each sample).
-- [`QUANT`](https://github.com/nextflow-io/rnaseq-nf/blob/master/modules/quant/main.nf) quantifies transcripts using both the index from `INDEX` and the `read_pairs_ch` (runs for each sample after `INDEX` completes).
+- [`INDEX`](https://github.com/nextflow-io/rnaseq-nf/blob/master/modules/index/main.nf) creates a Salmon index from the `transcriptome` input (runs once).
 
-<h3>Outputs (<code>emit:</code>):</h3>
+- [`FASTQC`](https://github.com/nextflow-io/rnaseq-nf/blob/master/modules/fastqc/main.nf) analyzes the samples in the `read_pairs_ch` channel in parallel (runs independently for each sample).
 
-- All outputs from `FASTQC` and `QUANT` are collected and emitted for downstream processing.
+- [`QUANT`](https://github.com/nextflow-io/rnaseq-nf/blob/master/modules/quant/main.nf) quantifies transcripts using the index from `INDEX` and the samples in the `read_pairs_ch` channel (runs for each sample after `INDEX` completes).
+
+Outputs (`emit:`):
+
+- The results from `FASTQC` and `QUANT` are joined into a single channel for downstream processing.
+
+- The index from `INDEX` is also emitted as a dataflow value.
 
 ### `MULTIQC`
 
-The [`MULTIQC`](https://github.com/nextflow-io/rnaseq-nf/blob/master/modules/multiqc/main.nf) module aggregates all quality control and quantification outputs into a comprehensive HTML report.
+The [`MULTIQC`](https://github.com/nextflow-io/rnaseq-nf/blob/master/modules/multiqc/main.nf) process aggregates all quality control and quantification outputs into a comprehensive HTML report.
 
-<h3>Inputs:</h3>
+Inputs:
 
-- `RNASEQ` outputs: All collected outputs from the `RNASEQ` subworkflow (FastQC reports and Salmon quantification files).
+- Input files: All collected outputs from the `RNASEQ` subworkflow (FastQC reports and Salmon quantification files).
 - `config`: MultiQC configuration files and branding (logo, styling).
 
-<h3>Process execution:</h3>
+Process execution:
 
 - `MULTIQC` scans all input files, extracts metrics and statistics, and generates a unified report.
 
-<h3>Outputs:</h3>
+Outputs:
 
 - `multiqc_report.html`: A single consolidated HTML report providing an overview of:
   - General stats
@@ -101,90 +109,74 @@ The [`MULTIQC`](https://github.com/nextflow-io/rnaseq-nf/blob/master/modules/mul
   - Software versions
 
 ## Pipeline parameters
+
 The pipeline behavior can be customized using command-line parameters to specify input data, output locations, and configuration files.
 
 The pipeline accepts the following command-line parameters:
 
 - `--reads`: Path to paired-end FASTQ files (default: `data/ggal/ggal_gut_{1,2}.fq`).
+
 - `--transcriptome`: Path to reference transcriptome FASTA (default: `data/ggal/ggal_1_48850000_49020000.Ggal71.500bpflank.fa`).
+
 - `--outdir`: Output directory for results (default: `results`).
+
 - `--multiqc`: Path to MultiQC configuration directory (default: `multiqc`).
 
-## Execution profiles
+## Configuration profiles
 
-Execution profiles allow you to customize how and where the pipeline runs by specifying the `-profile` flag. Multiple profiles can be combined by separating them with commas. Profiles are located in the [`nextflow.config`](https://github.com/nextflow-io/rnaseq-nf/blob/master/nextflow.config) file in the base directory.
+Configuration profiles allow you to customize how and where the pipeline runs by specifying the `-profile` flag. Multiple profiles can be specified as a comma-separated list. Profiles are defined in the [`nextflow.config`](https://github.com/nextflow-io/rnaseq-nf/blob/master/nextflow.config) file in the base directory.
 
-<h3>Container profiles</h3>
+<h3>Software profiles</h3>
 
-Container profiles specify which containerization technology to use for running the pipeline tools:
+Software profiles specify how software dependencies for processes should be provisioned:
 
-- `standard`: Use default Docker container
-- `docker`: Explicitly use Docker
-- `singularity`: Use Singularity containers
-- `wave`: Use Wave container provisioning with Conda
-- `wave-mirror`: Use Wave container mirroring strategy
-
-:::{note}
-The respective container tools must be installed to use these profiles.
-:::
-
-<h3>Environment profiles</h3>
-
-Environment profiles manage software dependencies through package managers or specify architecture requirements:
-
-- `conda`: Use Conda environment management
-- `mamba`: Use Micromamba for faster dependency resolution
-- `arm64`: Use ARM64 architecture support
+- `conda`: Provision a Conda environment for each process based on its required Conda packages
+- `docker`: Use a Docker container which contains all required dependencies
+- `singularity`: Use a Singularity container which contains all required dependencies
+- `wave`: Provision a Wave container for each process based on its required Conda packages
 
 :::{note}
-The respective environment tools must be installed to use these profiles.
+The respective container runtime or package manager must be installed to use these profiles.
 :::
 
-<h3>Cloud and HPC profiles</h3>
+<h3>Execution profiles</h3>
 
-Cloud and HPC profiles enable execution on distributed computing infrastructure and cloud storage:
+Execution profiles specify the compute and storage environment used by the pipeline:
 
-- `slurm`: Run on SLURM-managed HPC clusters
-- `batch`: Run on AWS Batch compute environments
+- `slurm`: Run on a SLURM HPC cluster
+- `batch`: Run on AWS Batch
 - `google-batch`: Run on Google Cloud Batch
-- `azure-batch`: Run on Azure Batch compute pools
-- `s3-data`: Use input data stored in AWS S3
-- `gs-data`: Use input data stored in Google Cloud Storage
+- `azure-batch`: Run on Azure Batch
 
 :::{note}
-To use the Cloud and HPC profiles, you must configure credentials, resource pools, and storage paths before execution.
+Depending on your environment, you may need to configure underlying infrastructure such as resource pools, storage, and credentials.
 :::
-
-<h3>Other profiles</h3>
-
-- `all-reads`: Process all FASTQ files matching `ggal_*_{1,2}.fq`
 
 ## Test data
 
-The pipeline includes test data located in the [`data/ggal/`](https://github.com/nextflow-io/rnaseq-nf/tree/master/data/ggal) directory for demonstration and validation purposes:
+The pipeline includes test data in the [`data/ggal/`](https://github.com/nextflow-io/rnaseq-nf/tree/master/data/ggal) directory for demonstration and validation purposes:
 
 - Paired-end FASTQ files from four tissue samples (gut, liver, lung, spleen):
   - `ggal_gut_{1,2}.fq`
   - `ggal_liver_{1,2}.fq`
   - `ggal_lung_{1,2}.fq`
   - `ggal_spleen_{1,2}.fq`
+
 - Reference transcriptome:
   - `ggal_1_48850000_49020000.Ggal71.500bpflank.fa`
 
-:::{tip}
-Use the `all-reads` profile to process all four tissue samples instead of just the default gut sample. See [Execution profiles](#execution-profiles) for more information.
-:::
+By default, only the `gut` sample is processed. You can use the `all-reads` profile to process all four tissue samples.
 
 ## Quick start
 
-[`rnaseq-nf`](https://github.com/nextflow-io/rnaseq-nf) is a runnable pipeline. This section provides examples for running the pipeline with different configurations.
+The [`rnaseq-nf`](https://github.com/nextflow-io/rnaseq-nf) pipeline is executable out-of-the-box. This section provides examples for running the pipeline with different configurations.
 
 ### Basic execution
 
 Run the pipeline with default parameters using Docker:
 
 ```bash
-nextflow run nextflow-io/rnaseq-nf -with-docker
+nextflow run nextflow-io/rnaseq-nf -profile docker
 ```
 
 ### Configuring individual parameters
@@ -196,15 +188,15 @@ nextflow run nextflow-io/rnaseq-nf \
   --reads '/path/to/reads/*_{1,2}.fastq.gz' \
   --transcriptome '/path/to/transcriptome.fa' \
   --outdir 'my_results' \
-  -with-docker
+  -profile docker
 ```
 
 ### Using profiles
 
-Specify execution profiles to customize runtime environments and data sources:
+Specify configuration profiles to customize runtime environments and data sources:
 
 ```bash
-# Use Conda for dependency management
+# Use Conda to provision software dependencies
 nextflow run nextflow-io/rnaseq-nf -profile conda
 
 # Run on a SLURM cluster
@@ -215,12 +207,12 @@ nextflow run nextflow-io/rnaseq-nf -profile all-reads,docker
 ```
 
 :::{tip}
-See [Execution profiles](#execution-profiles) for more information about profiles.
+See [Configuration profiles](#configuration-profiles) for more information about profiles.
 :::
 
 ## Expected outputs
 
-The [`rnaseq-nf`](https://github.com/nextflow-io/rnaseq-nf) pipeline generates the following outputs in the results directory:
+The [`rnaseq-nf`](https://github.com/nextflow-io/rnaseq-nf) pipeline produces the following outputs in the `results` directory:
 
 ```
 results/
