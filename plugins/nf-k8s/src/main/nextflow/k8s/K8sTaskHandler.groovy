@@ -438,7 +438,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
                 task.stderr = errorFile
             }
             status = TaskStatus.COMPLETED
-            savePodLogOnError(task)
+            savePodLog(task)
             deletePodIfSuccessful(task)
             updateTimestamps(state.terminated as Map)
             determineNode()
@@ -448,17 +448,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         return false
     }
 
-    protected void savePodLogOnError(TaskRun task) {
-        if( task.isSuccess() )
-            return
-
-        if( errorFile && !errorFile.empty() )
-            return
-
-        final session = executor.getSession()
-        if( session.isAborted() || session.isCancelled() || session.isTerminated() )
-            return
-
+    protected void savePodLog(TaskRun task) {
         try {
             final stream = useJobResource()
                     ? client.jobLog(podName)
