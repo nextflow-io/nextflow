@@ -191,7 +191,8 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
                     new ProcessBuilder(browser, urlWithCode).start()
                     browserOpened = true
                     break
-                } catch( Exception ignored ) {
+                } catch( Exception e ) {
+                    log.debug("Failed to open browser ${browser}: ${e.message}")
                     // Try next browser
                 }
             }
@@ -1153,6 +1154,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
             final response = client.send(request, HttpResponse.BodyHandlers.ofString())
             return response.statusCode() == 200
         } catch( Exception e ) {
+            log.debug("Failed to connect to API endpoint ${endpoint}: ${e.message}", e)
             return false
         }
     }
@@ -1201,6 +1203,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
 
             return null
         } catch (Exception e) {
+            log.debug("Failed to get workspace details for workspace ${workspaceId}: ${e.message}", e)
             return null
         }
     }
