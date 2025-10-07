@@ -44,23 +44,31 @@ The [rnaseq-nf](https://github.com/nextflow-io/rnaseq-nf) pipeline performs a ba
 
 ```nextflow
 workflow {
-    read_pairs_ch = channel.fromFilePairs( params.reads, checkIfExists: true, flat: true ) 
-    RNASEQ( params.transcriptome, read_pairs_ch )
-    MULTIQC( RNASEQ.out, params.multiqc )
+    read_pairs_ch = channel.fromFilePairs(params.reads, checkIfExists: true, flat: true)
+
+    (samples_ch, index) = RNASEQ(read_pairs_ch, params.transcriptome)
+
+    multiqc_files_ch = samples_ch
+        .flatMap { id, fastqc, quant -> [fastqc, quant] }
+        .collect()
+
+    MULTIQC(multiqc_files_ch, params.multiqc)
 }
 
 workflow RNASEQ {
     take:
-    transcriptome
     read_pairs_ch
+    transcriptome
 
-    main: 
-    INDEX(transcriptome)
-    FASTQC(read_pairs_ch)
-    QUANT(INDEX.out, read_pairs_ch)
+    main:
+    index = INDEX(transcriptome)
+    fastqc_ch = FASTQC(read_pairs_ch)
+    quant_ch = QUANT(read_pairs_ch, index)
 
-    emit: 
-    QUANT.out | concat(FASTQC.out) | collect
+    emit:
+    fastqc = fastqc_ch
+    quant = quant_ch
+    index = index
 }
 ```
 
@@ -70,18 +78,18 @@ The `FASTQC` and `MULTIQC` processes publish output files using `publishDir`:
 params.outdir = 'results'
 
 process FASTQC {
-    publishDir params.outdir, mode:'copy'
+    publishDir params.outdir, mode: 'copy'
 
     // ...
 
     output:
-    path "fastqc_${id}_logs"
+    tuple val(id), path("fastqc_${id}_logs")
 
     // ...
 }
 
 process MULTIQC {
-    publishDir params.outdir, mode:'copy'
+    publishDir params.outdir, mode: 'copy'
 
     // ...
 
@@ -96,34 +104,22 @@ process MULTIQC {
 
 We'll start by removing each `publishDir` directive and publishing the corresponding process output channel in the entry workflow.
 
-First, emit the `QUANT` and `FASTQC` outputs separately in the `RNASEQ` workflow:
-
-```nextflow
-workflow RNASEQ {
-    // ...
-
-    emit:
-    fastqc = FASTQC.out
-    quant = QUANT.out
-}
-```
-
 Declare an output for each channel in the `output` block and publish the corresponding channel in the `publish:` section of the entry workflow:
 
 ```nextflow
 workflow {
     main:
-    read_pairs_ch = channel.fromFilePairs( params.reads, checkIfExists: true, flat: true )
-    RNASEQ( params.transcriptome, read_pairs_ch )
+    read_pairs_ch = channel.fromFilePairs(params.reads, checkIfExists: true, flat: true)
 
-    multiqc_files_ch = RNASEQ.out.fastqc
-        .concat(RNASEQ.out.quant)
-        .collect()
-    MULTIQC( multiqc_files_ch, params.multiqc )
+    (fastqc_ch, quant_ch, index) = RNASEQ(read_pairs_ch, params.transcriptome)
+
+    multiqc_files_ch = fastqc_ch.mix(quant_ch).collect()
+
+    multiqc_report = MULTIQC(multiqc_files_ch, params.multiqc)
 
     publish:
-    fastqc_logs = RNASEQ.out.fastqc
-    multiqc_report = MULTIQC.out
+    fastqc_logs = fastqc_ch
+    multiqc_report = multiqc_report
 }
 
 output {
@@ -165,9 +161,9 @@ workflow {
     // ...
 
     publish:
-    fastqc_logs = RNASEQ.out.fastqc
-    quant = RNASEQ.out.quant
-    multiqc_report = MULTIQC.out
+    fastqc_logs = fastqc_ch
+    quant = quant_ch
+    multiqc_report = multiqc_report
 }
 
 output {
@@ -215,28 +211,6 @@ results
 ```
 
 We can achieve this directory structure by customzing the `output` block.
-
-First, update the `FASTQC` and `QUANT` processes to also emit the sample ID alongside the output files:
-
-```nextflow
-process FASTQC {
-    // ...
-
-    output:
-    tuple val(id), path("fastqc_${id}")
-
-    // ...
-}
-
-process QUANT {
-    // ...
-
-    output:
-    tuple val(id), path("quant_${id}")
-
-    // ...
-}
-```
 
 Configure the `fastqc_logs` and `quant` outputs in the `output` block to use dynamic publish paths:
 
@@ -301,8 +275,8 @@ workflow {
     main:
     // ...
 
-    samples_ch = RNASEQ.out.fastqc
-        .join(RNASEQ.out.quant)
+    samples_ch = fastqc_ch
+        .join(quant_ch)
         .map { id, fastqc, quant ->
             [id: id, fastqc: fastqc, quant: quant]
         }
@@ -310,11 +284,11 @@ workflow {
     multiqc_files_ch = samples_ch
         .flatMap { sample -> [sample.fastqc, sample.quant] }
         .collect()
-    MULTIQC( multiqc_files_ch, params.multiqc )
+    multiqc_report = MULTIQC( multiqc_files_ch, params.multiqc )
 
     publish:
     samples = samples_ch
-    multiqc_report = MULTIQC.out
+    multiqc_report = multiqc_report
 }
 ```
 
