@@ -148,8 +148,11 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     protected List<String> classicSubmitCli(TaskRun task) {
+        final workDir = Escape.path(task.workDir)
+
         final result = new ArrayList(BashWrapperBuilder.BASH)
-        result.add("${Escape.path(task.workDir)}/${TaskRun.CMD_RUN}".toString())
+        result.add('-c')
+        result.add("bash ${workDir}/${TaskRun.CMD_RUN} 2>&1 | tee ${workDir}/${TaskRun.CMD_LOG}")
         return result
     }
 
@@ -438,7 +441,6 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
                 task.stderr = errorFile
             }
             status = TaskStatus.COMPLETED
-            savePodLogOnError(task)
             deletePodIfSuccessful(task)
             updateTimestamps(state.terminated as Map)
             determineNode()
@@ -446,31 +448,6 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         }
 
         return false
-    }
-
-    protected void savePodLogOnError(TaskRun task) {
-        if( task.isSuccess() )
-            return
-
-        if( errorFile && !errorFile.empty() )
-            return
-
-        final session = executor.getSession()
-        if( session.isAborted() || session.isCancelled() || session.isTerminated() )
-            return
-
-        try {
-            final stream = useJobResource()
-                    ? client.jobLog(podName)
-                    : client.podLog(podName)
-            Files.copy(stream, task.workDir.resolve(TaskRun.CMD_LOG))
-        }
-        catch( FileAlreadyExistsException e ) {
-            log.debug "Log file already exists for ${resourceType.lower()} $podName", e
-        }
-        catch( Exception e ) {
-            log.warn "Failed to copy log for ${resourceType.lower()} $podName", e
-        }
     }
 
     protected int readExitFile() {
