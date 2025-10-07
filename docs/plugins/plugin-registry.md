@@ -10,6 +10,8 @@ Nextflow 25.10 and later can use the plugin registry as a drop-in replacement fo
 The Nextflow plugin registry is currently available as a public preview. Plugin developers can access the registry by contacting [info@nextflow.io](mailto:info@nextflow.io) to obtain access to the registry.
 :::
 
+(plugin-registry-claim)=
+
 ## Claiming a plugin
 
 Ownership of a plugin is required to publish plugins to the Nextflow plugin registry.

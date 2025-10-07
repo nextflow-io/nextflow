@@ -117,4 +117,140 @@ class GithubRepositoryProvider extends RepositoryProvider {
         response.get('content')?.toString()?.decodeBase64()
     }
 
+    /** {@inheritDoc} */
+    @Override
+    @Memoized
+    List<RepositoryEntry> listDirectory(String path, int depth) {
+        // Get the tree SHA for the specific directory
+        String treeSha = getTreeSha(path)
+        
+        // Build the Trees API URL
+        String url = getTreeUrl(treeSha, depth > 1)
+        
+        // Make the API call and parse response
+        Map response = invokeAndParseResponse(url)
+        List<Map> treeEntries = response.get('tree') as List<Map>
+        
+        if (!treeEntries) {
+            return []
+        }
+        
+        List<RepositoryEntry> entries = []
+        
+        for (Map entry : treeEntries) {
+            String entryPath = entry.get('path') as String
+            
+            // Include if within depth limit: depth=0 includes immediate children only,
+            // depth=1 includes children+grandchildren, depth=2 includes children+grandchildren+great-grandchildren, etc.
+            int entryDepth = entryPath.split("/").length - 1
+            if (depth == -1 || entryDepth <= depth) {
+                entries.add(createRepositoryEntry(entry, path))
+            }
+        }
+        
+        return entries.sort { it.name }
+    }
+
+    private String getTreeUrl(String treeSha, boolean recursive) {
+        String url = "${config.endpoint}/repos/$project/git/trees/$treeSha"
+        if (recursive) {
+            url += "?recursive=1"
+        }
+        return url
+    }
+
+    @Memoized
+    private String getTreeSha(String path) {
+        // Normalize path using base class helper
+        def normalizedPath = normalizePath(path)
+        
+        if (normalizedPath && !normalizedPath.isEmpty()) {
+            // For subdirectory, we need to find the tree SHA by traversing from root
+            return getTreeShaForPath(normalizedPath)
+        }
+        
+        // For root directory, get the commit SHA and then the tree SHA
+        String commitSha = getCommitSha()
+        Map commit = invokeAndParseResponse("${config.endpoint}/repos/$project/git/commits/$commitSha")
+        Map tree = commit.get('tree') as Map
+        return tree.get('sha') as String
+    }
+
+    private String getTreeShaForPath(String path) {
+        // Start from root tree
+        String currentTreeSha = getTreeSha("")
+        String[] pathParts = path.split("/")
+        
+        for (String part : pathParts) {
+            String url = getTreeUrl(currentTreeSha, false)
+            Map response = invokeAndParseResponse(url)
+            List<Map> treeEntries = response.get('tree') as List<Map>
+            
+            Map foundEntry = treeEntries.find { 
+                it.get('path') == part && it.get('type') == 'tree'
+            }
+            
+            if (!foundEntry) {
+                throw new IllegalArgumentException("Directory not found: $path")
+            }
+            
+            currentTreeSha = foundEntry.get('sha') as String
+        }
+        
+        return currentTreeSha
+    }
+
+    @Memoized
+    private String getCommitSha() {
+        if (revision) {
+            // Try to resolve the revision to a commit SHA
+            try {
+                Map ref = invokeAndParseResponse("${config.endpoint}/repos/$project/git/refs/heads/$revision")
+                Map object = ref.get('object') as Map
+                return object.get('sha') as String
+            } catch (Exception e) {
+                // If it's not a branch, try as a tag or direct SHA
+                return revision
+            }
+        }
+        
+        // Default to main/master branch
+        try {
+            Map ref = invokeAndParseResponse("${config.endpoint}/repos/$project/git/refs/heads/main")
+            Map object = ref.get('object') as Map
+            return object.get('sha') as String
+        } catch (Exception e) {
+            Map ref = invokeAndParseResponse("${config.endpoint}/repos/$project/git/refs/heads/master")
+            Map object = ref.get('object') as Map
+            return object.get('sha') as String
+        }
+    }
+
+
+    private RepositoryEntry createRepositoryEntry(Map entry, String basePath) {
+        String entryPath = entry.get('path') as String
+        
+        // Create absolute path using base class helper
+        def normalizedBasePath = normalizePath(basePath)
+        String fullPath = normalizedBasePath && !normalizedBasePath.isEmpty() ? "/${normalizedBasePath}/${entryPath}" : ensureAbsolutePath(entryPath)
+        
+        // For name, use just the entry path (which is relative to the directory we're listing)
+        String name = entryPath
+        if (entryPath.contains("/")) {
+            name = entryPath.substring(entryPath.lastIndexOf("/") + 1)
+        }
+        
+        EntryType type = entry.get('type') == 'tree' ? EntryType.DIRECTORY : EntryType.FILE
+        String sha = entry.get('sha') as String
+        Long size = entry.get('size') as Long
+        
+        return new RepositoryEntry(
+            name: name,
+            path: fullPath,
+            type: type,
+            sha: sha,
+            size: size
+        )
+    }
+
 }
