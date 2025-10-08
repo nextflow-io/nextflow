@@ -945,7 +945,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
                 final currentUser = userInfo.userName as String
                 status.table.add(['Authentication', "${ColorUtil.colorize('✔ OK', 'green')} (user: ${ColorUtil.colorize(currentUser, 'cyan')})".toString(), tokenSource])
             } catch( Exception e ) {
-                status.table.add(['Authentication', ColorUtil.colorize('ERROR', 'red'), 'failed'])
+                status.table.add(['Authentication', ColorUtil.colorize('✘ Connection check failed', 'red'), tokenSource])
             }
         } else {
             status.table.add(['Authentication', ColorUtil.colorize('Not set', 'red'), 'not set'])
