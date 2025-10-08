@@ -4,7 +4,7 @@
 
 [`rnaseq-nf`](https://github.com/nextflow-io/rnaseq-nf) is a basic Nextflow pipeline for RNA-Seq analysis that performs quality control, transcript quantification, and result aggregation. The pipeline processes paired-end FASTQ files, generates quality control reports with [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/), quantifies transcripts with [Salmon](https://salmon.readthedocs.io/en/latest/salmon.html), and produces a unified report with [MultiQC](https://seqera.io/multiqc/).
 
-This tutorial describes the architecture of the [`rnaseq-nf`](https://github.com/nextflow-io/rnaseq-nf) pipeline and provides instructions for how to run it.
+This tutorial describes the architecture of the [`rnaseq-nf`](https://github.com/nextflow-io/rnaseq-nf) pipeline and provides instructions on how to run it.
 
 ## Pipeline architecture
 
@@ -69,8 +69,8 @@ flowchart TB
 
 Inputs (`take:`):
 
-- `read_pairs_ch`: Channel of paired-end read files
-- `transcriptome`: Reference transcriptome file
+- `read_pairs_ch`: A channel of paired-end read files
+- `transcriptome`: A reference transcriptome file
 
 Data flow (`main:`):
 
@@ -82,9 +82,9 @@ Data flow (`main:`):
 
 Outputs (`emit:`):
 
-- `fastqc`: the results from `FASTQC`
+- `fastqc`: The results from `FASTQC`
 
-- `quant`: the results from `QUANT`
+- `quant`: The results from `QUANT`
 
 ### `MULTIQC`
 
