@@ -55,16 +55,15 @@ flowchart TB
     v4([FASTQC])
     v6([QUANT])
     subgraph emit
-    v10["index"]
-    v9["samples"]
+    v8["fastqc"]
+    v9["quant"]
     end
     v1 --> v2
     v0 --> v4
     v0 --> v6
     v2 --> v6
-    v4 --> v9
+    v4 --> v8
     v6 --> v9
-    v2 --> v10
     end
 ```
 
@@ -83,9 +82,9 @@ Data flow (`main:`):
 
 Outputs (`emit:`):
 
-- The results from `FASTQC` and `QUANT` are joined into a single channel for downstream processing.
+- `fastqc`: the results from `FASTQC`
 
-- The index from `INDEX` is also emitted as a dataflow value.
+- `quant`: the results from `QUANT`
 
 ### `MULTIQC`
 

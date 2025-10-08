@@ -38,67 +38,7 @@ Workflow outputs will be finalized and brought out of preview in Nextflow 25.10.
 
 This section demonstrates how to migrate from `publishDir` to workflow outputs using the [rnaseq-nf](https://github.com/nextflow-io/rnaseq-nf) pipeline as an example. To view the completed migration, see the [`preview-25-04`](https://github.com/nextflow-io/rnaseq-nf/tree/preview-25-04) branch of the rnaseq-nf repository.
 
-### Initial version
-
-The [rnaseq-nf](https://github.com/nextflow-io/rnaseq-nf) pipeline performs a basic RNAseq analysis on a collection of FASTQ paired-end reads:
-
-```nextflow
-workflow {
-    read_pairs_ch = channel.fromFilePairs(params.reads, checkIfExists: true, flat: true)
-
-    (samples_ch, index) = RNASEQ(read_pairs_ch, params.transcriptome)
-
-    multiqc_files_ch = samples_ch
-        .flatMap { id, fastqc, quant -> [fastqc, quant] }
-        .collect()
-
-    MULTIQC(multiqc_files_ch, params.multiqc)
-}
-
-workflow RNASEQ {
-    take:
-    read_pairs_ch
-    transcriptome
-
-    main:
-    index = INDEX(transcriptome)
-    fastqc_ch = FASTQC(read_pairs_ch)
-    quant_ch = QUANT(read_pairs_ch, index)
-
-    emit:
-    fastqc = fastqc_ch
-    quant = quant_ch
-    index = index
-}
-```
-
-The `FASTQC` and `MULTIQC` processes publish output files using `publishDir`:
-
-```nextflow
-params.outdir = 'results'
-
-process FASTQC {
-    publishDir params.outdir, mode: 'copy'
-
-    // ...
-
-    output:
-    tuple val(id), path("fastqc_${id}_logs")
-
-    // ...
-}
-
-process MULTIQC {
-    publishDir params.outdir, mode: 'copy'
-
-    // ...
-
-    output:
-    path 'multiqc_report.html'
-
-    // ...
-}
-```
+See {ref}`rnaseq-nf-page` for an introduction to the rnaseq-nf pipeline.
 
 ### Replacing `publishDir` with workflow outputs
 
@@ -111,7 +51,7 @@ workflow {
     main:
     read_pairs_ch = channel.fromFilePairs(params.reads, checkIfExists: true, flat: true)
 
-    (fastqc_ch, quant_ch, index) = RNASEQ(read_pairs_ch, params.transcriptome)
+    (fastqc_ch, quant_ch) = RNASEQ(read_pairs_ch, params.transcriptome)
 
     multiqc_files_ch = fastqc_ch.mix(quant_ch).collect()
 
@@ -211,6 +151,28 @@ results
 ```
 
 We can achieve this directory structure by customzing the `output` block.
+
+First, update the `FASTQC` and `QUANT` processes to also emit the sample ID alongside the output files:
+
+```nextflow
+process FASTQC {
+    // ...
+
+    output:
+    tuple val(id), path("fastqc_${id}")
+
+    // ...
+}
+
+process QUANT {
+    // ...
+
+    output:
+    tuple val(id), path("quant_${id}")
+
+    // ...
+}
+```
 
 Configure the `fastqc_logs` and `quant` outputs in the `output` block to use dynamic publish paths:
 
