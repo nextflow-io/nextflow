@@ -31,7 +31,6 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
     static final int AUTH_POLL_TIMEOUT_RETRIES = 60
     static final int AUTH_POLL_INTERVAL_SECONDS = 5
     static final int WORKSPACE_SELECTION_THRESHOLD = 8  // Max workspaces to show in single list; above this uses org-first selection
-    private static final String DEFAULT_API_ENDPOINT = 'https://api.cloud.seqera.io'
 
     /**
      * Creates an HxClient instance with optional authentication token
@@ -317,7 +316,11 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
 
     private String normalizeApiUrl(String url) {
         if( !url ) {
-            return DEFAULT_API_ENDPOINT
+            // Read config to get the actual resolved endpoint value
+            final builder = new ConfigBuilder().setHomeDir(Const.APP_HOME_DIR).setCurrentDir(Const.APP_HOME_DIR)
+            final configObject = builder.buildConfigObject()
+            final towerConfig = configObject.navigate('tower') as Map ?: [:]
+            return PlatformHelper.getEndpoint(towerConfig, SysEnv.get())
         }
         if( !url.startsWith('http://') && !url.startsWith('https://') ) {
             return 'https://' + url
@@ -374,7 +377,10 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         // Read token from seqera-auth.config file
         final authConfig = readAuthFile()
         final existingToken = authConfig['tower.accessToken']
-        final apiUrl = authConfig['tower.endpoint'] as String ?: DEFAULT_API_ENDPOINT
+        // Extract tower config for PlatformHelper (strip 'tower.' prefix)
+        final towerConfig = authConfig.findAll { it.key.toString().startsWith('tower.') }
+            .collectEntries { k, v -> [(k.toString().substring(6)): v] }
+        final apiUrl = PlatformHelper.getEndpoint(towerConfig, SysEnv.get())
 
         if( !existingToken ) {
             ColorUtil.printColored("WARN: No authentication token found in auth file.", "yellow bold")
@@ -501,7 +507,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         // Navigate to tower config section (returns map without 'tower.' prefix)
         final towerConfig = configObject.navigate('tower') as Map ?: [:]
         final existingToken = PlatformHelper.getAccessToken(towerConfig, SysEnv.get())
-        final endpoint = config['tower.endpoint'] ?: DEFAULT_API_ENDPOINT
+        final endpoint = PlatformHelper.getEndpoint(towerConfig, SysEnv.get())
 
         if( !existingToken ) {
             println "No authentication found. Please run ${ColorUtil.colorize('nextflow auth login', 'cyan')} first."
@@ -924,8 +930,8 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
 
         // API endpoint - use PlatformHelper
         final String endpoint = PlatformHelper.getEndpoint(towerConfig, SysEnv.get())
-        final endpointInfo = getConfigValue(config, 'tower.endpoint', 'TOWER_API_ENDPOINT', DEFAULT_API_ENDPOINT)
-        status.table.add(['API endpoint', ColorUtil.colorize(endpoint, 'magenta'), endpointInfo.source as String])
+        final endpointInfo = getConfigValue(config, 'tower.endpoint', 'TOWER_API_ENDPOINT')
+        status.table.add(['API endpoint', ColorUtil.colorize(endpoint, 'magenta'), (endpointInfo.source ?: 'default') as String])
 
         // API connection check
         final apiConnectionOk = checkApiConnection(endpoint)
@@ -952,7 +958,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         }
 
         // Monitoring enabled
-        final enabledInfo = getConfigValue(config, 'tower.enabled', null, 'false')
+        final enabledInfo = getConfigValue(config, 'tower.enabled', null)
         final enabledValue = enabledInfo.value?.toString()?.toLowerCase() in ['true', '1', 'yes'] ? 'Yes' : 'No'
         final enabledColor = enabledValue == 'Yes' ? 'green' : 'yellow'
         status.table.add(['Workflow monitoring', ColorUtil.colorize(enabledValue, enabledColor), (enabledInfo.source ?: 'default') as String])
@@ -1087,19 +1093,17 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         return path
     }
 
-    private Map getConfigValue(Map config, String configKey, String envVarName, String defaultValue = null) {
+    private Map getConfigValue(Map config, String configKey, String envVarName) {
         //Checks where the config value came from
         final configValue = config[configKey]
         final envValue = envVarName ? SysEnv.get(envVarName) : null
-        final effectiveValue = configValue ?: envValue ?: defaultValue
+        final effectiveValue = configValue ?: envValue
 
         def source = null
         if( configValue ) {
             source = "nextflow config"
         } else if( envValue ) {
             source = "env var \$${envVarName}"
-        } else if( defaultValue ) {
-            source = "default"
         }
 
         return [
