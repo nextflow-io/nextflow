@@ -1,5 +1,10 @@
 nf-tower changelog
 ===================
+1.16.0 - 8 Oct 2025
+- Fix cache command to check session cloudCachePath [a88e2cdf2]
+- Fix cache command to use SysEnv for cloudcache path check (#6432) [771b8b60e]
+- Fix cookie policy for Seqera Platform JWT token refresh (#6411) [c3959cfc3]
+
 1.14.0 - 15 Aug 2025
 - Fix bug in DefaultObserverFactory (#6259) [bec4bf7a]
 - Improve Fusion license error message (#6313) [c3f397ea]
