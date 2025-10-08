@@ -27,7 +27,7 @@ import nextflow.util.CacheHelper
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Canonical
-class PluginSpec implements CacheFunnel, Comparable<PluginSpec> {
+class PluginRef implements CacheFunnel, Comparable<PluginRef> {
 
     /**
      * Plugin unique ID
@@ -43,17 +43,17 @@ class PluginSpec implements CacheFunnel, Comparable<PluginSpec> {
      * Parse a plugin fully-qualified ID eg. nf-amazon@1.2.0
      *
      * @param fqid The fully qualified plugin id
-     * @return A {@link PluginSpec} representing the plugin
+     * @return A {@link PluginRef} representing the plugin
      */
-    static PluginSpec parse(String fqid, DefaultPlugins defaultPlugins=null) {
+    static PluginRef parse(String fqid, DefaultPlugins defaultPlugins=null) {
         final tokens = fqid.tokenize('@') as List<String>
         final id = tokens[0]
         final ver = tokens[1]
         if( ver || defaultPlugins==null )
-            return new PluginSpec(id, ver)
+            return new PluginRef(id, ver)
         if( defaultPlugins.hasPlugin(id) )
             return defaultPlugins.getPlugin(id)
-        return new PluginSpec(id)
+        return new PluginRef(id)
     }
 
     @Override
@@ -70,7 +70,7 @@ class PluginSpec implements CacheFunnel, Comparable<PluginSpec> {
     }
 
     @Override
-    int compareTo(PluginSpec that) {
+    int compareTo(PluginRef that) {
         return this.toString() <=> that.toString()
     }
 }

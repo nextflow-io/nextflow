@@ -146,7 +146,7 @@ class PluginUpdater extends UpdateManager {
      * Prefetch metadata for plugins. This gives an opportunity for certain
      * repository types to perform some data-loading optimisations.
      */
-    void prefetchMetadata(List<PluginSpec> plugins) {
+    void prefetchMetadata(List<PluginRef> plugins) {
         // use direct field access to avoid the refresh() call in getRepositories()
         // which could fail anything which hasn't had a chance to prefetch yet
         for( def repo : this.@repositories ) {
@@ -185,9 +185,9 @@ class PluginUpdater extends UpdateManager {
     void pullPlugins(List<String> plugins) {
         pullOnly=true
         try {
-            final specs = plugins.collect(it -> PluginSpec.parse(it,defaultPlugins))
+            final specs = plugins.collect(it -> PluginRef.parse(it,defaultPlugins))
             prefetchMetadata(specs)
-            for( PluginSpec spec : specs ) {
+            for( PluginRef spec : specs ) {
                 pullPlugin0(spec.id, spec.version)
             }
         }
