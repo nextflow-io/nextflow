@@ -1,5 +1,9 @@
 nf-amazon changelog
 ===================
+3.3.0 - 8 Oct 2025
+- Fix SIGTERM forwarding in AWS Batch jobs (#6414) [abbef79b7]
+- Limit S3 concurrent downloads to fix Java Heap OOM (#6402) [fd71d0e8c]
+
 3.1.0 - 15 Aug 2025
 - Fix AWS transfer manager anonymous fallback (#6296) [ci fast] [ed5c99e1]
 - Fix silent failure when downloading a directory with AWS SDK v2 (#6266) [ci fast] [2d76d8f0]
