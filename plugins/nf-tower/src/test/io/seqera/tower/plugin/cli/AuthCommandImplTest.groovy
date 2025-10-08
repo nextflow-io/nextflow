@@ -744,10 +744,9 @@ param2 = 'value2'"""
         then:
         status != null
         status.table.size() == 7 // endpoint, connection, auth, monitoring, workspace, compute env, work dir
-        // Authentication should show error
+        // Authentication should show not set
         status.table[2][0] == 'Authentication'
-        status.table[2][1].contains('ERROR')
-        status.table[2][1].contains('no token')
+        status.table[2][1].contains('Not set')
         status.table[2][2] == 'not set'
     }
 
