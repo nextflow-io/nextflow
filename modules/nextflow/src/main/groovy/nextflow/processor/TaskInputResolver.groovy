@@ -112,7 +112,7 @@ class TaskInputResolver {
             if( item instanceof Path || coerceToPath ) {
                 final path = resolvePath(item)
                 final target = executor.isForeignFile(path) ? foreignFiles.addToForeign(path) : path
-                final holder = new FileHolder(target)
+                final holder = new FileHolder(path, target)
                 files << holder
             }
             else {
