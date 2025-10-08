@@ -353,41 +353,33 @@ param2 = 'value2'"""
         result == 'None (Personal workspace)'
     }
 
-    def 'should get config value from login file'() {
+    def 'should get config value from config'() {
         given:
-        def cmd = Spy(AuthCommandImpl)
-        def authFile = tempDir.resolve('seqera-auth.config')
-        cmd.getAuthFile() >> authFile
-
-        def config = [:]
-        def auth =['tower.accessToken': 'token-from-login']
+        def cmd = new AuthCommandImpl()
+        def config = ['tower.accessToken': 'token-from-config']
 
         when:
-        def result = cmd.getConfigValue(config, auth,'tower.accessToken', 'TOWER_ACCESS_TOKEN', null)
+        def result = cmd.getConfigValue(config, 'tower.accessToken', 'TOWER_ACCESS_TOKEN', null)
 
         then:
-        result.value == 'token-from-login'
-        result.source.endsWith('seqera-auth.config')
+        result.value == 'token-from-config'
+        result.source == 'nextflow config'
         result.fromConfig == true
         result.fromEnv == false
         result.isDefault == false
     }
 
-    def 'should get config value from main config file'() {
+    def 'should get config value from config for endpoint'() {
         given:
-        def cmd = Spy(AuthCommandImpl)
-        def configFile = tempDir.resolve('config')
-        cmd.getConfigFile() >> configFile
-
+        def cmd = new AuthCommandImpl()
         def config = ['tower.endpoint': 'https://example.com']
-        def auth =[:]
 
         when:
-        def result = cmd.getConfigValue(config, auth,'tower.endpoint', 'TOWER_API_ENDPOINT', null)
+        def result = cmd.getConfigValue(config, 'tower.endpoint', 'TOWER_API_ENDPOINT', null)
 
         then:
         result.value == 'https://example.com'
-        result.source.endsWith('config')
+        result.source == 'nextflow config'
         result.fromConfig == true
         result.fromEnv == false
         result.isDefault == false
@@ -395,17 +387,14 @@ param2 = 'value2'"""
 
     def 'should get config value from environment variable'() {
         given:
-        def cmd = Spy(AuthCommandImpl)
-
+        def cmd = new AuthCommandImpl()
         def config = [:]
-        def auth =[:]
 
         and:
         SysEnv.push( ['TOWER_ACCESS_TOKEN': 'token-from-env'])
 
         when:
-        def result = cmd.getConfigValue(config, auth,'tower.accessToken', 'TOWER_ACCESS_TOKEN', null)
-
+        def result = cmd.getConfigValue(config, 'tower.accessToken', 'TOWER_ACCESS_TOKEN', null)
 
         then:
         result.value == 'token-from-env'
@@ -421,12 +410,10 @@ param2 = 'value2'"""
     def 'should get config value from default'() {
         given:
         def cmd = new AuthCommandImpl()
-
         def config = [:]
-        def auth =[:]
 
         when:
-        def result = cmd.getConfigValue(config, auth,'tower.endpoint', null, 'https://default.example.com')
+        def result = cmd.getConfigValue(config, 'tower.endpoint', null, 'https://default.example.com')
 
         then:
         result.value == 'https://default.example.com'
@@ -436,46 +423,37 @@ param2 = 'value2'"""
         result.isDefault == true
     }
 
-    def 'should prioritize login over config and env'() {
+    def 'should prioritize config over env'() {
         given:
-        def cmd = Spy(AuthCommandImpl)
-        def authFile = tempDir.resolve('seqera-auth.config')
-        cmd.getAuthFile() >> authFile
-
+        def cmd = new AuthCommandImpl()
         def config = ['tower.accessToken': 'token-from-config']
-        def auth =['tower.accessToken': 'token-from-login']
 
         SysEnv.push(['TOWER_ACCESS_TOKEN': 'token-from-env'])
 
         when:
-        def result = cmd.getConfigValue(config, auth,'tower.accessToken', 'TOWER_ACCESS_TOKEN', 'default-token')
+        def result = cmd.getConfigValue(config, 'tower.accessToken', 'TOWER_ACCESS_TOKEN', 'default-token')
 
         then:
-        result.value == 'token-from-login'
-        result.source.endsWith('seqera-auth.config')
+        result.value == 'token-from-config'
+        result.source == 'nextflow config'
 
         cleanup:
         SysEnv.pop()
     }
 
-    def 'should prioritize config over env when login is empty'() {
+    def 'should prioritize config over env for endpoint'() {
         given:
-        def cmd = Spy(AuthCommandImpl)
-        def configFile = tempDir.resolve('config')
-        cmd.getConfigFile() >> configFile
-
+        def cmd = new AuthCommandImpl()
         def config = ['tower.endpoint': 'https://config.example.com']
-        def auth =[:]
 
         SysEnv.push(['TOWER_API_ENDPOINT': 'https://env.example.com'])
 
         when:
-        def result = cmd.getConfigValue(config, auth,'tower.endpoint', 'TOWER_API_ENDPOINT', 'https://default.example.com')
-
+        def result = cmd.getConfigValue(config, 'tower.endpoint', 'TOWER_API_ENDPOINT', 'https://default.example.com')
 
         then:
         result.value == 'https://config.example.com'
-        result.source.endsWith('config')
+        result.source == 'nextflow config'
 
         cleanup:
         SysEnv.pop()
@@ -484,12 +462,10 @@ param2 = 'value2'"""
     def 'should handle null environment variable name'() {
         given:
         def cmd = new AuthCommandImpl()
-
         def config = ['tower.enabled': true]
-        def auth =[:]
 
         when:
-        def result = cmd.getConfigValue(config, auth,'tower.enabled', null, 'false')
+        def result = cmd.getConfigValue(config, 'tower.enabled', null, 'false')
 
         then:
         result.value == true
@@ -719,8 +695,7 @@ param2 = 'value2'"""
     def 'should collect status with valid authentication'() {
         given:
         def cmd = Spy(AuthCommandImpl)
-        def config = [:]
-        def authConfig = [
+        def config = [
             'tower.accessToken': 'test-token',
             'tower.endpoint': 'https://api.cloud.seqera.io',
             'tower.enabled': true
@@ -733,7 +708,7 @@ param2 = 'value2'"""
         cmd.getComputeEnvironments(_, _, _) >> []
 
         when:
-        def status = cmd.collectStatus(config, authConfig)
+        def status = cmd.collectStatus(config)
 
         then:
         status != null
@@ -760,12 +735,11 @@ param2 = 'value2'"""
         given:
         def cmd = Spy(AuthCommandImpl)
         def config = [:]
-        def authConfig = [:]
 
         cmd.checkApiConnection(_) >> true
 
         when:
-        def status = cmd.collectStatus(config, authConfig)
+        def status = cmd.collectStatus(config)
 
         then:
         status != null
@@ -780,13 +754,12 @@ param2 = 'value2'"""
     def 'should collect status with failed API connection'() {
         given:
         def cmd = Spy(AuthCommandImpl)
-        def config = [:]
-        def authConfig = ['tower.endpoint': 'https://unreachable.example.com']
+        def config = ['tower.endpoint': 'https://unreachable.example.com']
 
         cmd.checkApiConnection(_) >> false
 
         when:
-        def status = cmd.collectStatus(config, authConfig)
+        def status = cmd.collectStatus(config)
 
         then:
         status != null
@@ -797,14 +770,13 @@ param2 = 'value2'"""
     def 'should collect status with failed authentication'() {
         given:
         def cmd = Spy(AuthCommandImpl)
-        def config = [:]
-        def authConfig = ['tower.accessToken': 'invalid-token']
+        def config = ['tower.accessToken': 'invalid-token']
 
         cmd.checkApiConnection(_) >> true
         cmd.callUserInfoApi(_, _) >> { throw new RuntimeException('Invalid token') }
 
         when:
-        def status = cmd.collectStatus(config, authConfig)
+        def status = cmd.collectStatus(config)
 
         then:
         status != null
@@ -816,13 +788,12 @@ param2 = 'value2'"""
     def 'should collect status with monitoring enabled'() {
         given:
         def cmd = Spy(AuthCommandImpl)
-        def config = [:]
-        def authConfig = ['tower.enabled': true]
+        def config = ['tower.enabled': true]
 
         cmd.checkApiConnection(_) >> true
 
         when:
-        def status = cmd.collectStatus(config, authConfig)
+        def status = cmd.collectStatus(config)
 
         then:
         status != null
@@ -833,13 +804,12 @@ param2 = 'value2'"""
     def 'should collect status with monitoring disabled'() {
         given:
         def cmd = Spy(AuthCommandImpl)
-        def config = [:]
-        def authConfig = ['tower.enabled': false]
+        def config = ['tower.enabled': false]
 
         cmd.checkApiConnection(_) >> true
 
         when:
-        def status = cmd.collectStatus(config, authConfig)
+        def status = cmd.collectStatus(config)
 
         then:
         status != null
@@ -850,8 +820,7 @@ param2 = 'value2'"""
     def 'should collect status with workspace details'() {
         given:
         def cmd = Spy(AuthCommandImpl)
-        def config = [:]
-        def authConfig = [
+        def config = [
             'tower.accessToken': 'test-token',
             'tower.workspaceId': '12345'
         ]
@@ -865,7 +834,7 @@ param2 = 'value2'"""
         ]
 
         when:
-        def status = cmd.collectStatus(config, authConfig)
+        def status = cmd.collectStatus(config)
 
         then:
         status != null
@@ -879,8 +848,7 @@ param2 = 'value2'"""
     def 'should collect status with workspace ID but no details'() {
         given:
         def cmd = Spy(AuthCommandImpl)
-        def config = [:]
-        def authConfig = [
+        def config = [
             'tower.accessToken': 'test-token',
             'tower.workspaceId': '12345'
         ]
@@ -890,7 +858,7 @@ param2 = 'value2'"""
         cmd.getWorkspaceDetailsFromApi(_, _, _) >> null
 
         when:
-        def status = cmd.collectStatus(config, authConfig)
+        def status = cmd.collectStatus(config)
 
         then:
         status != null
@@ -903,7 +871,6 @@ param2 = 'value2'"""
         given:
         def cmd = Spy(AuthCommandImpl)
         def config = [:]
-        def authConfig = [:]
 
         cmd.checkApiConnection(_) >> true
         cmd.callUserInfoApi(_, _) >> [userName: 'envuser', id: '456']
@@ -911,10 +878,11 @@ param2 = 'value2'"""
 
         SysEnv.push(['TOWER_ACCESS_TOKEN': 'env-token',
                      'TOWER_API_ENDPOINT': 'https://env.example.com',
-                     'TOWER_WORKFLOW_ID': 'ws-123'] )
+                     'TOWER_WORKFLOW_ID': 'workflow-123',
+                     'TOWER_WORKSPACE_ID': 'ws-123'] )
 
         when:
-        def status = cmd.collectStatus(config, authConfig)
+        def status = cmd.collectStatus(config)
 
 
         then:
@@ -923,7 +891,7 @@ param2 = 'value2'"""
         status.table[0][2] == 'env var $TOWER_API_ENDPOINT'
         status.table[2][1].contains('envuser')
         status.table[2][2].contains('env var $TOWER_ACCESS_TOKEN')
-        status.table[4][2].contains('env var $TOWER_WORKFLOW_ID')
+        status.table[4][2].contains('env var $TOWER_WORKSPACE_ID')
 
         cleanup:
         SysEnv.pop()
@@ -933,12 +901,11 @@ param2 = 'value2'"""
         given:
         def cmd = Spy(AuthCommandImpl)
         def config = [:]
-        def authConfig = [:]
 
         cmd.checkApiConnection(_) >> true
 
         when:
-        def status = cmd.collectStatus(config, authConfig)
+        def status = cmd.collectStatus(config)
 
         then:
         status != null
@@ -959,25 +926,27 @@ param2 = 'value2'"""
         cmd.getAuthFile() >> authFile
         cmd.getConfigFile() >> configFile
 
-        def config = ['tower.enabled': true]
-        def authConfig = ['tower.accessToken': 'login-token']
+        def config = [
+            'tower.enabled': true,
+            'tower.accessToken': 'login-token'
+        ]
 
         cmd.checkApiConnection(_) >> true
         cmd.callUserInfoApi(_, _) >> [userName: 'mixeduser', id: '789']
-        SysEnv.push(['TOWER_WORKFLOW_ID': 'ws-env'])
+        SysEnv.push(['TOWER_WORKSPACE_ID': '99999'])
 
         when:
-        def status = cmd.collectStatus(config, authConfig)
+        def status = cmd.collectStatus(config)
 
 
         then:
         status != null
-        // Token from auth file
-        status.table[2][2].endsWith('seqera-auth.config')
-        // Enabled from config file
-        status.table[3][2].endsWith('config')
+        // Token from nextflow config
+        status.table[2][2] == 'nextflow config'
+        // Enabled from nextflow config
+        status.table[3][2] == 'nextflow config'
         // Workspace from env var
-        status.table[4][2].contains('env var $TOWER_WORKFLOW_ID')
+        status.table[4][2].contains('env var $TOWER_WORKSPACE_ID')
 
         cleanup:
         SysEnv.pop()

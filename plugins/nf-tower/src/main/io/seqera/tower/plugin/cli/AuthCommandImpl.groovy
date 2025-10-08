@@ -911,89 +911,84 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
     @Override
     void status() {
         final config = readConfig()
-        final authConfig = readAuthFile()
-
-        printStatus(collectStatus(config, authConfig))
+        printStatus(collectStatus(config))
     }
 
-    private ConfigStatus collectStatus(Map config, Map authConfig) {
+    private ConfigStatus collectStatus(Map config) {
         // Collect all status information
         final status = new ConfigStatus([], null, null)
 
-        // API endpoint
-        final endpointInfo = getConfigValue(config, authConfig, 'tower.endpoint', 'TOWER_API_ENDPOINT', DEFAULT_API_ENDPOINT)
-        status.table.add(['API endpoint', ColorUtil.colorize(endpointInfo.value as String, 'magenta'), endpointInfo.source as String])
-
-        // API connection check
-        final apiConnectionOk = checkApiConnection(endpointInfo.value as String)
-        final connectionColor = apiConnectionOk ? 'green' : 'red'
-        status.table.add(['API connection', ColorUtil.colorize(apiConnectionOk ? 'OK' : 'ERROR', connectionColor), ''])
-
-        // Authentication check
         // Extract tower config and strip prefix for PlatformHelper
         final towerConfig = config.findAll { it.key.toString().startsWith('tower.') }
             .collectEntries { k, v -> [(k.toString().substring(6)): v] }
-        final accessToken = PlatformHelper.getAccessToken(towerConfig, SysEnv.get())
+
+        // API endpoint - use PlatformHelper
+        final String endpoint = PlatformHelper.getEndpoint(towerConfig, SysEnv.get())
+        final endpointInfo = getConfigValue(config, 'tower.endpoint', 'TOWER_API_ENDPOINT', DEFAULT_API_ENDPOINT)
+        status.table.add(['API endpoint', ColorUtil.colorize(endpoint, 'magenta'), endpointInfo.source as String])
+
+        // API connection check
+        final apiConnectionOk = checkApiConnection(endpoint)
+        final connectionColor = apiConnectionOk ? 'green' : 'red'
+        status.table.add(['API connection', ColorUtil.colorize(apiConnectionOk ? '✔ OK' : 'ERROR', connectionColor), ''])
+
+        // Authentication check - use PlatformHelper
+        final String accessToken = PlatformHelper.getAccessToken(towerConfig, SysEnv.get())
 
         // Determine source for display
-        def tokenSource = 'not set'
-        if (authConfig['tower.accessToken']) {
-            tokenSource = shortenPath(getAuthFile().toString())
-        } else if (config['tower.accessToken']) {
-            tokenSource = shortenPath(getConfigFile().toString())
-        } else if (SysEnv.get('TOWER_ACCESS_TOKEN')) {
-            tokenSource = 'env var $TOWER_ACCESS_TOKEN'
-        }
+        final tokenInfo = getConfigValue(config, 'tower.accessToken', 'TOWER_ACCESS_TOKEN')
+        final String tokenSource = tokenInfo.source ?: 'not set'
 
         if( accessToken ) {
             try {
-                final userInfo = callUserInfoApi(accessToken, endpointInfo.value as String)
+                final userInfo = callUserInfoApi(accessToken, endpoint)
                 final currentUser = userInfo.userName as String
-                status.table.add(['Authentication', "${ColorUtil.colorize('OK', 'green')} (user: ${ColorUtil.colorize(currentUser, 'cyan')})".toString(), tokenSource])
+                status.table.add(['Authentication', "${ColorUtil.colorize('✔ OK', 'green')} (user: ${ColorUtil.colorize(currentUser, 'cyan')})".toString(), tokenSource])
             } catch( Exception e ) {
                 status.table.add(['Authentication', ColorUtil.colorize('ERROR', 'red'), 'failed'])
             }
         } else {
-            status.table.add(['Authentication', "${ColorUtil.colorize('ERROR', 'red')} ${ColorUtil.colorize('(no token)', 'dim')}".toString(), 'not set'])
+            status.table.add(['Authentication', ColorUtil.colorize('Not set', 'red'), 'not set'])
         }
 
         // Monitoring enabled
-        final enabledInfo = getConfigValue(config, authConfig, 'tower.enabled', null, 'false')
+        final enabledInfo = getConfigValue(config, 'tower.enabled', null, 'false')
         final enabledValue = enabledInfo.value?.toString()?.toLowerCase() in ['true', '1', 'yes'] ? 'Yes' : 'No'
         final enabledColor = enabledValue == 'Yes' ? 'green' : 'yellow'
         status.table.add(['Workflow monitoring', ColorUtil.colorize(enabledValue, enabledColor), (enabledInfo.source ?: 'default') as String])
 
-        // Default workspace
-        final workspaceInfo = getConfigValue(config, authConfig, 'tower.workspaceId', 'TOWER_WORKFLOW_ID')
-        if( workspaceInfo.value ) {
+        // Default workspace - use PlatformHelper
+        final String workspaceId = PlatformHelper.getWorkspaceId(towerConfig, SysEnv.get())
+        final workspaceInfo = getConfigValue(config, 'tower.workspaceId', 'TOWER_WORKSPACE_ID')
+        if( workspaceId ) {
             // Try to get workspace name from API if we have a token
             def workspaceDetails = null
             if( accessToken ) {
-                workspaceDetails = getWorkspaceDetailsFromApi(accessToken, endpointInfo.value as String, workspaceInfo.value as String)
+                workspaceDetails = getWorkspaceDetailsFromApi(accessToken, endpoint, workspaceId)
             }
 
             if( workspaceDetails ) {
                 // Add workspace ID row and remember its index
                 status.workspaceRowIndex = status.table.size()
-                status.table.add(['Default workspace', ColorUtil.colorize(workspaceInfo.value as String, 'cyan'), workspaceInfo.source as String])
+                status.table.add(['Default workspace', ColorUtil.colorize(workspaceId, 'cyan'), workspaceInfo.source as String])
                 // Store workspace details for display after this row (outside table structure)
                 status.workspaceInfo = workspaceDetails
             } else {
-                status.table.add(['Default workspace', ColorUtil.colorize(workspaceInfo.value as String, 'cyan', true), workspaceInfo.source as String])
+                status.table.add(['Default workspace', ColorUtil.colorize(workspaceId, 'cyan', true), workspaceInfo.source as String])
             }
         } else {
             if( accessToken ) {
                 status.table.add(['Default workspace', ColorUtil.colorize('None (Personal workspace)', 'cyan', true), 'default'])
             } else {
-                status.table.add(['Default workspace', ColorUtil.colorize('None', 'cyan', true), 'default'])
+                status.table.add(['Default workspace', ColorUtil.colorize('N/A', 'dim', true), 'default'])
             }
         }
 
         // Primary compute environment and work directory
         def primaryEnv = null
-        if( accessToken && workspaceInfo.value ) {
+        if( accessToken && workspaceId ) {
             try {
-                final computeEnvs = getComputeEnvironments(accessToken, endpointInfo.value as String, workspaceInfo.value as String)
+                final computeEnvs = getComputeEnvironments(accessToken, endpoint, workspaceId)
                 primaryEnv = computeEnvs.find { ((Map) it).primary == true } as Map
             } catch( Exception e ) {
                 status.table.add(['Primary compute env', ColorUtil.colorize('Error fetching', 'red'), ''])
@@ -1009,7 +1004,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
             status.table.add(['Primary compute env', displayValue, 'workspace'])
             status.table.add(['Default work dir', ColorUtil.colorize(primaryEnv.workDir as String, 'magenta'), 'compute env'])
         } else {
-            final ceValue = (!accessToken || !workspaceInfo.value) ? 'N/A' : 'None'
+            final ceValue = (!accessToken || !workspaceId) ? 'N/A' : 'None'
             final ceColor = ceValue == 'None' ? 'yellow' : 'dim'
             status.table.add(['Primary compute env', ColorUtil.colorize(ceValue, ceColor, true), 'workspace'])
             status.table.add(['Default work dir', ColorUtil.colorize(ceValue, ceColor, true), 'compute env'])
@@ -1092,18 +1087,15 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         return path
     }
 
-    private Map getConfigValue(Map config, Map auth, String configKey, String envVarName, String defaultValue = null) {
+    private Map getConfigValue(Map config, String configKey, String envVarName, String defaultValue = null) {
         //Checks where the config value came from
-        final authValue = auth[configKey]
         final configValue = config[configKey]
         final envValue = envVarName ? SysEnv.get(envVarName) : null
-        final effectiveValue = authValue ?: configValue ?: envValue ?: defaultValue
+        final effectiveValue = configValue ?: envValue ?: defaultValue
 
         def source = null
-        if( authValue ) {
-            source = shortenPath(getAuthFile().toString())
-        } else if( configValue ) {
-            source = shortenPath(getConfigFile().toString())
+        if( configValue ) {
+            source = "nextflow config"
         } else if( envValue ) {
             source = "env var \$${envVarName}"
         } else if( defaultValue ) {
@@ -1113,9 +1105,9 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         return [
             value     : effectiveValue,
             source    : source,
-            fromConfig: configValue != null || authValue != null,
+            fromConfig: configValue != null,
             fromEnv   : envValue != null,
-            isDefault : !authValue && !configValue && !envValue
+            isDefault : !configValue && !envValue
         ]
     }
 
