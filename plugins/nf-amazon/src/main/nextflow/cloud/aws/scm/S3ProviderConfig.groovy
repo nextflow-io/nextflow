@@ -41,7 +41,7 @@ class S3ProviderConfig extends ProviderConfig {
     private AwsCredentialsProvider awsCredentialsProvider = DefaultCredentialsProvider.builder().build()
 
     S3ProviderConfig(String name, Map values) {
-        super(name, values)
+        super(name, [ server: "s3://$name"] + values)
         setDefaultsFromAwsConfig()
         // Override with scm repo attributes
         setValuesFromMap(values)
@@ -59,8 +59,9 @@ class S3ProviderConfig extends ProviderConfig {
         }
     }
     private void setValuesFromMap(Map values){
-        if( values.region )
+        if( values.region ) {
             region = Region.of(values.region as String)
+        }
         if( values.accessKey && values.secretKey ){
             awsCredentialsProvider = StaticCredentialsProvider.create(
                 AwsBasicCredentials.builder()

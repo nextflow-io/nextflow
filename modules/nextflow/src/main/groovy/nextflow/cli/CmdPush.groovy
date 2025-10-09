@@ -26,6 +26,8 @@ import nextflow.util.TestOnly
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.errors.RepositoryNotFoundException
 import org.eclipse.jgit.transport.RemoteConfig
+import org.eclipse.jgit.transport.URIish
+
 import java.io.FileFilter
 
 /**
@@ -63,7 +65,7 @@ class CmdPush extends CmdBase implements HubOptions {
 
     @Override
     void run() {
-        if( !args && args.size() > 1){
+        if( !args || args.size() != 1){
             throw new AbortOperationException('Incorrect folder argument')
         }
 
@@ -204,7 +206,7 @@ class CmdPush extends CmdBase implements HubOptions {
         // Add remote origin
         git.remoteAdd()
             .setName("origin")
-            .setUri(new org.eclipse.jgit.transport.URIish(repo))
+            .setUri(new URIish(repo))
             .call()
 
         git.close()
@@ -329,28 +331,10 @@ class CmdPush extends CmdBase implements HubOptions {
         // Check for the default Nextflow work directory
         def workDir = new File(folder, 'work')
         if( workDir.exists() && workDir.isDirectory() ) {
-            // Check if it looks like a Nextflow work directory
-            if( isNextflowWorkDirectory(workDir) ) {
-                workDirs.add('work')
-            }
+            workDirs.add('work')
         }
 
         return workDirs
-    }
-
-    private boolean isNextflowWorkDirectory(File dir) {
-        // Check for typical Nextflow work directory structure
-        // Work directories contain subdirectories with hexadecimal names
-        def subDirs = dir.listFiles({ File f -> f.isDirectory() } as FileFilter)
-        if( !subDirs || subDirs.length == 0 ) {
-            return false
-        }
-
-        // Check if at least some subdirectories have hex-like names (Nextflow task hashes)
-        def hexPattern = /^[0-9a-f]{2}$/
-        def hexDirs = subDirs.findAll { it.name.matches(hexPattern) }
-
-        return hexDirs.size() >= Math.min(3, (int)(subDirs.length * 0.5))
     }
 
     private List<String> promptForWorkDirectories(List<String> workDirs, List<String> currentGitignore) {
