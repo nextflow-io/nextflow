@@ -44,7 +44,9 @@ import nextflow.util.Duration
 @Slf4j
 @CompileStatic
 class TaskArrayCollector {
-
+    /**
+     * The set of directives which are used by the job array.
+     */
     private static final List<String> ARRAY_DIRECTIVES = [
             'accelerator',
             'arch',
@@ -57,8 +59,10 @@ class TaskArrayCollector {
             'resourceLabels',
             'resourceLimits',
             'time',
+            // only needed for container-native executors and/or Fusion
             'container',
             'containerOptions',
+            // only needed when using Wave
             'conda',
     ]
 
@@ -96,6 +100,8 @@ class TaskArrayCollector {
     void collect(TaskRun task) {
         sync.lock()
         try {
+            // submit task directly if the collector is closed
+            // or if the task is retried (since it might have dynamic resources)
             if( closed ) {
                 executor.submit(task)
                 return
@@ -181,10 +187,11 @@ class TaskArrayCollector {
 
     /** Create the task run for a job array. */
     protected TaskArrayRun createTaskArray(List<TaskRun> tasks) {
+        // prepare child job launcher scripts
         final handlers = tasks.collect( t -> executor.createTaskHandler(t).withArrayChild(true) )
         for( TaskHandler handler : handlers )
             handler.prepareLauncher()
-
+        // create work directory
         final hash = CacheHelper.hasher( tasks.collect( t -> t.getHash().asLong() ) ).hash()
         final workDir = FileHelper.getWorkFolder(executor.getWorkDir(), hash)
         Files.createDirectories(workDir)
@@ -224,6 +231,7 @@ class TaskArrayCollector {
      * @param array
      */
     protected String createArrayTaskScript(List<TaskHandler> array) {
+        // get work directory and launch command for each task
         final workDirs = array.collect( h -> executor.getArrayWorkDir(h) )
         """
         array=( ${workDirs.collect( p -> Escape.path(p) ).join(' ')} )
