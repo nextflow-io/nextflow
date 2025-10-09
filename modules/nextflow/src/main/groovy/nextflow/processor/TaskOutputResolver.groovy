@@ -53,9 +53,12 @@ class TaskOutputResolver implements Map<String,?> {
     /**
      * Get an environment variable from the task environment.
      *
+     * The underscore is needed to prevent calls from being dispatched
+     * to Nextflow.env().
+     *
      * @param name
      */
-    String env(String name) {
+    String _env(String name) {
         final result = env0(null).get(name)
 
         if( result == null )
@@ -87,6 +90,9 @@ class TaskOutputResolver implements Map<String,?> {
     /**
      * Get a file from the task environment.
      *
+     * The underscore is needed to prevent calls from being dispatched
+     * to Nextflow.file().
+     *
      * @param key
      */
     Path _file(Map opts=[:], String key) {
@@ -114,6 +120,9 @@ class TaskOutputResolver implements Map<String,?> {
 
     /**
      * Get a collection of files from the task environment.
+     *
+     * The underscore is needed to prevent calls from being dispatched
+     * to Nextflow.files().
      *
      * @param key
      */

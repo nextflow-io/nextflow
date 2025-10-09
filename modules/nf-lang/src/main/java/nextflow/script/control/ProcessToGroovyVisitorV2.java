@@ -197,6 +197,9 @@ public class ProcessToGroovyVisitorV2 {
                 var key = arguments.get(0);
                 var unstager = stmt(callThisX("_unstage_env", args(key)));
                 unstagers.addStatement(unstager);
+
+                // rename to _env() to prevent dispatch to equivalent ScriptDsl function
+                node.setMethod(constX("_" + name));
             }
 
             // eval(<cmd>) -> eval(<key>)
