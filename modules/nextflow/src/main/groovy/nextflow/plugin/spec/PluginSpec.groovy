@@ -46,7 +46,7 @@ class PluginSpec {
         final definitions = []
 
         for( final className : extensionPoints ) {
-            final clazz = classLoader.loadClass(className)
+            final clazz = classLoader.loadClass(className) as Class<? extends ConfigScope>
 
             if( ConfigScope.class.isAssignableFrom(clazz) ) {
                 final scopeName = clazz.getAnnotation(ScopeName)?.value()
