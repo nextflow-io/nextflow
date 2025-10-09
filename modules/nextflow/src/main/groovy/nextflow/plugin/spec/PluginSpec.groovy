@@ -46,14 +46,14 @@ class PluginSpec {
         final definitions = []
 
         for( final className : extensionPoints ) {
-            final clazz = classLoader.loadClass(className) as Class<? extends ConfigScope>
+            final clazz = classLoader.loadClass(className)
 
             if( ConfigScope.class.isAssignableFrom(clazz) ) {
                 final scopeName = clazz.getAnnotation(ScopeName)?.value()
                 final description = clazz.getAnnotation(Description)?.value()
                 if( !scopeName )
                     continue
-                final node = SchemaNode.Scope.of(clazz, description)
+                final node = SchemaNode.Scope.of((Class<? extends ConfigScope>)clazz, description)
 
                 definitions.add(ConfigSpec.of(node, scopeName))
             }
