@@ -35,6 +35,8 @@ class PlatformHelper {
      */
     static String getAuthDomain(String endpoint) {
         switch(endpoint) {
+            case SysEnv.get('TOWER_AUTH_DOMAIN'):
+                return SysEnv.get('TOWER_AUTH_DOMAIN')
             case 'https://api.cloud.dev-seqera.io':
                 return 'seqera-development.eu.auth0.com'
             case 'https://api.cloud.stage-seqera.io':
