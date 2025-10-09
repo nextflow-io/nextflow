@@ -19,7 +19,7 @@ plugins {
 }
 
 nextflowPlugin {
-    nextflowVersion = '25.08.0-edge'
+    nextflowVersion = '25.09.0-edge'
 
     provider = "${nextflowPluginProvider}"
     description = 'Provides seamless integration with AWS CodeCommit repositories for workflow source code management and version control'

@@ -56,7 +56,7 @@ fi
 #
 declare -a args=()
 DEBUG=''
-COLUMNS=${COLUMNS:-`tput cols 2> /dev/tty`}
+COLUMNS=${COLUMNS:-`tput cols 2>/dev/null || echo 80`}
 MAIN_CLASS=${MAIN_CLASS:-'nextflow.cli.Launcher'}
 JAVA_VER="$($JAVA_BIN -version 2>&1)"
 if [ $? -ne 0 ]; then

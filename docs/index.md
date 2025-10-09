@@ -171,6 +171,7 @@ developer/packages
 :caption: Tutorials
 :maxdepth: 1
 
+tutorials/rnaseq-nf
 tutorials/data-lineage
 tutorials/workflow-outputs
 tutorials/metrics

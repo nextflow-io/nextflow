@@ -283,16 +283,20 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		else if (Files.exists(localDestination))
 			throw new FileAlreadyExistsException(localDestination.toString());
 
+		// Read S3 file attributes (metadata) for the source path, returns Optional.empty() if file doesn't exist
 		final Optional<S3FileAttributes> attrs = readAttr1(source);
-		final boolean isDir = attrs.isPresent() && attrs.get().isDirectory();
+		// Extract directory status from attributes, defaulting to false if no attributes found
+		final boolean isDir = attrs.map(S3FileAttributes::isDirectory).orElse(false);
+		// Get file size only for non-directories (directories have size 0), defaulting to 0L if no attributes
+		final long size = attrs.filter(a -> !a.isDirectory()).map(S3FileAttributes::size).orElse(0L);
 		final String type = isDir ? "directory": "file";
 		final S3Client s3Client = source.getFileSystem().getClient();
-		log.debug("S3 download {} from={} to={}", type, FilesEx.toUriString(source), localDestination);
+		log.debug("S3 download {} from={} to={} size={}", type, FilesEx.toUriString(source), localDestination, size);
 		if( isDir ) {
 			s3Client.downloadDirectory(source, localDestination.toFile());
 		}
 		else {
-			s3Client.downloadFile(source, localDestination.toFile());
+			s3Client.downloadFile(source, localDestination.toFile(), size);
 		}
 	}
 
