@@ -57,6 +57,8 @@ class PlatformHelper {
      */
     static String getAuthClientId(String endpoint) {
         switch(endpoint) {
+            case SysEnv.get('TOWER_AUTH_ID'):
+                return SysEnv.get('TOWER_AUTH_ID')
             case 'https://api.cloud.dev-seqera.io':
                 return 'Ep2LhYiYmuV9hhz0dH6dbXVq0S7s7SWZ'
             case 'https://api.cloud.stage-seqera.io':
