@@ -74,6 +74,7 @@ class TaskArrayCollector {
     private boolean closed = false
 
     private long maxWaitMs
+    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor()
     private ScheduledFuture<?> pendingFlush
     private long firstTaskTime = 0L
 
