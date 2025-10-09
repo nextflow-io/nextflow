@@ -514,7 +514,7 @@ seq1 seq2 seq3
 ...
 ```
 
-The target input file name may contain the `*` and `?` wildcards, which can be used to control the name of staged files. The following table shows how the wildcards are replaced depending on the cardinality of the received input collection.
+The target input file name may contain the {index}`*` and {index}`?` wildcards, which can be used to control the name of staged files. The following table shows how the {index}`wildcards` are replaced depending on the cardinality of the received input collection.
 
 | Arity       | Name pattern | Staged file names                                                                                       |
 | ----------- | ------------ | ------------------------------------------------------------------------------------------------------- |
