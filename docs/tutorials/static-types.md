@@ -58,6 +58,8 @@ The language server uses the following rules when attempting to convert a legacy
 
 This section demonstrates how to migrate a pipeline to static types using the [rnaseq-nf](https://github.com/nextflow-io/rnaseq-nf) pipeline as an example. The completed migration is available in the [preview-25-10](https://github.com/nextflow-io/rnaseq-nf/tree/preview-25-10) branch.
 
+See {ref}`rnaseq-nf-page` for an introduction to the rnaseq-nf pipeline.
+
 :::{tip}
 While much of this migration can be performed automatically by the language server, this example is intended to provide a concrete example of a pipeline that uses static types. Always review generated code for correctness.
 :::
