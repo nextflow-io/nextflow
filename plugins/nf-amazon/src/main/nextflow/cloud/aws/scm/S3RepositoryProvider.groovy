@@ -124,7 +124,12 @@ class S3RepositoryProvider extends RepositoryProvider {
         }
     }
 
-    /** {@inheritDoc} **/
+    @Override
+    List<RepositoryEntry> listDirectory(String path, int depth) {
+        throw new UnsupportedOperationException("S3-git-remote does not support 'listDirectory' operation")
+    }
+
+/** {@inheritDoc} **/
     // called by AssetManager
     @Override
     void validateRepo() {
