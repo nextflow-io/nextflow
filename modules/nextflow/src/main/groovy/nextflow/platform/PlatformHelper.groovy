@@ -3,6 +3,7 @@ package nextflow.platform
 import groovy.transform.CompileStatic
 import nextflow.Global
 import nextflow.Session
+import nextflow.SysEnv
 
 /**
  * Helper methods for Platform-related operations
@@ -25,6 +26,46 @@ class PlatformHelper {
         if( !result || result=='-' )
             result = env.get('TOWER_API_ENDPOINT') ?: 'https://api.cloud.seqera.io'
         return result.stripEnd('/')
+    }
+
+    /**
+     * Get the Auth0 domain for a given Platform API endpoint
+     *
+     * @param endpoint the Platform API endpoint
+     * @return the Auth0 domain, or null if not a cloud endpoint
+     */
+    static String getAuthDomain(String endpoint) {
+        switch(endpoint) {
+            case SysEnv.get('TOWER_AUTH_DOMAIN'):
+                return SysEnv.get('TOWER_AUTH_DOMAIN')
+            case 'https://api.cloud.dev-seqera.io':
+                return 'seqera-development.eu.auth0.com'
+            case 'https://api.cloud.stage-seqera.io':
+                return 'seqera-stage.eu.auth0.com'
+            case 'https://api.cloud.seqera.io':
+                return 'seqera.eu.auth0.com'
+            default:
+                return null
+        }
+    }
+
+    /**
+     * Get the Auth0 client ID for a given Platform API endpoint
+     *
+     * @param endpoint the Platform API endpoint
+     * @return the Auth0 client ID, or null if not a cloud endpoint
+     */
+    static String getAuthClientId(String endpoint) {
+        switch(endpoint) {
+            case 'https://api.cloud.dev-seqera.io':
+                return 'Ep2LhYiYmuV9hhz0dH6dbXVq0S7s7SWZ'
+            case 'https://api.cloud.stage-seqera.io':
+                return '60cPDjI6YhoTPjyMTIBjGtxatSUwWswB'
+            case 'https://api.cloud.seqera.io':
+                return 'FxCM8EJ76nNeHUDidSHkZfT8VtsrhHeL'
+            default:
+                return null
+        }
     }
 
     /**
