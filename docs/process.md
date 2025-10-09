@@ -483,6 +483,8 @@ path x, name: 'my-dir/file.txt'
 In this case, `x.name` returns the file name with the parent directory (e.g. `my-dir/file.txt`), whereas normally it would return the file name (e.g. `file.txt`). You can use `x.fileName.name` to get the file name.
 :::
 
+(process-multiple-input-files)=
+
 ### Multiple input files
 
 A `path` input can also accept a collection of files instead of a single value. In this case, the input variable will be a list.
