@@ -1,22 +1,7 @@
-/*
- * Copyright 2013-2023, Seqera Labs
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package nextflow.processor
 
 import java.nio.file.Files
+import java.util.concurrent.*
 import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
 
@@ -27,19 +12,24 @@ import nextflow.executor.TaskArrayExecutor
 import nextflow.file.FileHelper
 import nextflow.util.CacheHelper
 import nextflow.util.Escape
+import nextflow.util.Duration
+
 /**
  * Task monitor that batches tasks and submits them as job arrays
  * to an underlying task monitor.
  *
- * @author Ben Sherman <bentshermann@gmail.com>
+ * Extended to also submit the array if a configurable time has elapsed
+ * since the first task was added (default 5 minutes).
+ *
+ * Example config override:
+ * process.executorSubmitTimeout = '10m'
+ *
+ * @author Ben Sherman
  */
 @Slf4j
 @CompileStatic
 class TaskArrayCollector {
 
-    /**
-     * The set of directives which are used by the job array.
-     */
     private static final List<String> ARRAY_DIRECTIVES = [
             'accelerator',
             'arch',
@@ -52,24 +42,22 @@ class TaskArrayCollector {
             'resourceLabels',
             'resourceLimits',
             'time',
-            // only needed for container-native executors and/or Fusion
             'container',
             'containerOptions',
-            // only needed when using Wave
             'conda',
     ]
 
     private TaskProcessor processor
-
     private TaskArrayExecutor executor
-
     private int arraySize
-
     private Lock sync = new ReentrantLock()
-
     private List<TaskRun> array
-
     private boolean closed = false
+
+    private long maxWaitMs
+    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor()
+    private ScheduledFuture<?> pendingFlush
+    private long firstTaskTime = 0L
 
     TaskArrayCollector(TaskProcessor processor, Executor executor, int arraySize) {
         if( executor !instanceof TaskArrayExecutor )
@@ -79,36 +67,75 @@ class TaskArrayCollector {
         this.executor = (TaskArrayExecutor)executor
         this.arraySize = arraySize
         this.array = new ArrayList<>(arraySize)
+
+        def timeoutVal = processor.config.get('executorSubmitTimeout')
+        Duration timeout = timeoutVal ? Duration.of(timeoutVal.toString()) : Duration.of('5m')
+        this.maxWaitMs = timeout.toMillis()
+        log.debug "TaskArrayCollector initialized with timeout=${timeout.toString()}"
     }
 
     /**
      * Add a task to the current array, and submit the array when it
-     * reaches the desired size.
-     *
-     * @param task
+     * reaches the desired size or after the timeout interval.
      */
     void collect(TaskRun task) {
         sync.lock()
         try {
-            // submit task directly if the collector is closed
-            // or if the task is retried (since it might have dynamic resources)
             if( closed ) {
                 executor.submit(task)
                 return
             }
 
-            // add task to the array
+            // mark first task and start background flush timer
+            if( array.isEmpty() ) {
+                firstTaskTime = System.currentTimeMillis()
+                pendingFlush = scheduler.schedule({
+                    flushArrayDueToTimeout()
+                }, maxWaitMs, TimeUnit.MILLISECONDS)
+            }
+
+            // add task
             array.add(task)
 
-            // submit job array when it is ready
+            // submit if array is full
             if( array.size() == arraySize ) {
-                executor.submit(createTaskArray(array))
-                array = new ArrayList<>(arraySize)
+                flushArrayDueToSize()
             }
         }
         finally {
             sync.unlock()
         }
+    }
+
+    /** Flush array when size limit reached */
+    private void flushArrayDueToSize() {
+        if( pendingFlush ) {
+            pendingFlush.cancel(false)
+            pendingFlush = null
+        }
+        submitAndReset()
+    }
+
+    /** Flush array when timeout has elapsed */
+    private void flushArrayDueToTimeout() {
+        sync.lock()
+        try {
+            if( !array.isEmpty() && !closed ) {
+                log.debug "Flushing task array after timeout (${array.size()} tasks)"
+                submitAndReset()
+            }
+        }
+        finally {
+            sync.unlock()
+        }
+    }
+
+    /** Submit job array and reset internal state */
+    private void submitAndReset() {
+        executor.submit(createTaskArray(array))
+        array = new ArrayList<>(arraySize)
+        firstTaskTime = 0L
+        pendingFlush = null
     }
 
     /**
@@ -117,10 +144,15 @@ class TaskArrayCollector {
     void close() {
         sync.lock()
         try {
-            if( array.size() == 1 ) {
+            if( pendingFlush ) {
+                pendingFlush.cancel(false)
+                pendingFlush = null
+            }
+
+            if( array?.size() == 1 ) {
                 executor.submit(array.first())
             }
-            else if( array.size() > 0 ) {
+            else if( array?.size() > 0 ) {
                 executor.submit(createTaskArray(array))
                 array = null
             }
@@ -128,31 +160,23 @@ class TaskArrayCollector {
         }
         finally {
             sync.unlock()
+            scheduler.shutdownNow()
         }
     }
 
-    /**
-     * Create the task run for a job array.
-     *
-     * @param tasks
-     */
+    /** Create the task run for a job array. */
     protected TaskArrayRun createTaskArray(List<TaskRun> tasks) {
-        // prepare child job launcher scripts
         final handlers = tasks.collect( t -> executor.createTaskHandler(t).withArrayChild(true) )
-        for( TaskHandler handler : handlers ) {
+        for( TaskHandler handler : handlers )
             handler.prepareLauncher()
-        }
 
-        // create work directory
         final hash = CacheHelper.hasher( tasks.collect( t -> t.getHash().asLong() ) ).hash()
         final workDir = FileHelper.getWorkFolder(executor.getWorkDir(), hash)
         Files.createDirectories(workDir)
 
-        // create wrapper script
         final script = createArrayTaskScript(handlers)
         log.debug "Creating task array run >> $workDir\n$script"
-        
-        // create config for job array
+
         final rawConfig = new HashMap<String,Object>(ARRAY_DIRECTIVES.size())
         for( final key : ARRAY_DIRECTIVES ) {
             final value = processor.config.get(key)
@@ -160,7 +184,6 @@ class TaskArrayCollector {
                 rawConfig[key] = value
         }
 
-        // create job array
         final first = tasks.min( t -> t.index )
         final taskArray = new TaskArrayRun(
             id: first.id,
@@ -177,7 +200,6 @@ class TaskArrayCollector {
         taskArray.config.context = taskArray.context
         taskArray.config.process = taskArray.processor.name
         taskArray.config.executor = taskArray.processor.executor.name
-
         return taskArray
     }
 
@@ -187,7 +209,6 @@ class TaskArrayCollector {
      * @param array
      */
     protected String createArrayTaskScript(List<TaskHandler> array) {
-        // get work directory and launch command for each task
         final workDirs = array.collect( h -> executor.getArrayWorkDir(h) )
         """
         array=( ${workDirs.collect( p -> Escape.path(p) ).join(' ')} )
@@ -202,5 +223,4 @@ class TaskArrayCollector {
         final index = start > 0 ? "${name} - ${start}" : name
         return '${array[' + index + ']}'
     }
-
 }
