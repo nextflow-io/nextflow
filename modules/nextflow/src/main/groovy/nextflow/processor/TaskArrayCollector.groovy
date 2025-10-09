@@ -36,9 +36,6 @@ import nextflow.util.Duration
  * Extended to also submit the array if a configurable time has elapsed
  * since the first task was added (default 5 minutes).
  *
- * Example config override:
- * process.executorSubmitTimeout = '10m'
- *
  * @author Ben Sherman
  */
 @Slf4j
