@@ -18,7 +18,6 @@ package nextflow.cloud.aws.scm
 
 import nextflow.Global
 import nextflow.Session
-import software.amazon.awssdk.auth.credentials.AwsBasicCredentials
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider
 import software.amazon.awssdk.regions.Region
 import spock.lang.Specification
