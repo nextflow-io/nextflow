@@ -3,6 +3,7 @@ package nextflow.platform
 import groovy.transform.CompileStatic
 import nextflow.Global
 import nextflow.Session
+import nextflow.SysEnv
 
 /**
  * Helper methods for Platform-related operations
