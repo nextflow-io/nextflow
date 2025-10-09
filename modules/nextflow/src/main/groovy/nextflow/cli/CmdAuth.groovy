@@ -24,6 +24,7 @@ import nextflow.Const
 import nextflow.SysEnv
 import nextflow.config.ConfigBuilder
 import nextflow.exception.AbortOperationException
+import nextflow.platform.PlatformHelper
 import nextflow.plugin.Plugins
 import org.fusesource.jansi.Ansi
 import org.pf4j.ExtensionPoint
@@ -168,11 +169,18 @@ class CmdAuth extends CmdBase implements UsageAware {
 
         @Override
         void usage(List<String> result) {
+            // Read config to get the actual resolved endpoint value
+            final builder = new ConfigBuilder().setHomeDir(Const.APP_HOME_DIR).setCurrentDir(Const.APP_HOME_DIR)
+            final config = builder.buildConfigObject().flatten()
+            final towerConfig = config.findAll { it.key.toString().startsWith('tower.') }
+                .collectEntries { k, v -> [(k.toString().substring(6)): v] }
+            def defaultEndpoint = PlatformHelper.getEndpoint(towerConfig, SysEnv.get())
+
             result << 'Authenticate with Seqera Platform'
             result << "Usage: nextflow auth $name [-u <endpoint>]".toString()
             result << ''
             result << 'Options:'
-            result << '  -u, -url <endpoint>    Seqera Platform API endpoint (default: https://api.cloud.seqera.io)'
+            result << "  -u, -url <endpoint>    Seqera Platform API endpoint (default: ${defaultEndpoint})".toString()
             result << ''
             result << 'This command will:'
             result << '  1. Display a URL and device code for OAuth2 authentication (Cloud) or prompt for PAT (Enterprise)'

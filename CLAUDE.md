@@ -104,6 +104,7 @@ The project follows a modular architecture with a plugin-based system for cloud 
 - `build.gradle`: Root build configuration with multi-module setup
 - `settings.gradle`: Gradle project structure definition
 - `plugins/*/VERSION`: Define the version of the corresponding plugin sub-project.
+- `adr/`: Architecture Decision Records (ADRs) documenting significant structural and technical decisions in the project
 
 ## Release process
 
