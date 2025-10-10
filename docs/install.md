@@ -164,7 +164,7 @@ The standalone distribution will still download core and third-party plugins as 
 
 You can launch workflows directly from [Seqera Platform](https://seqera.io/platform/) without installing Nextflow locally.
 
-Launching from Seqera Platform provides you with:
+Launching from Seqera provides you with:
 
 - User-friendly launch interfaces.
 - Automated cloud infrastructure creation.
@@ -172,4 +172,6 @@ Launching from Seqera Platform provides you with:
 - Advanced analytics with resource optimization.
 
 Seqera Cloud Basic is free for small teams. Researchers at qualifying academic institutions can apply for free access to Seqera Cloud Pro.
-See the [Seqera Platform documentation](https://docs.seqera.io/platform) for tutorials to get started.
+See [Seqera Platform Cloud](https://docs.seqera.io/platform) to get started.
+
+If you have installed Nextflow locally, you can use the {ref}`nextflow auth <cli-auth>` command to authenticate with Seqera and automatically configure workflow monitoring.

@@ -90,6 +90,7 @@ class Launcher {
 
     protected void init() {
         allCommands = (List<CmdBase>)[
+                new CmdAuth(),
                 new CmdClean(),
                 new CmdClone(),
                 new CmdConsole(),
