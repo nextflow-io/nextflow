@@ -18,7 +18,6 @@ package nextflow.datasource
 
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
-import java.net.http.HttpResponse
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
@@ -39,7 +38,6 @@ import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.util.CacheHelper
 import nextflow.util.Duration
-
 /**
  * Query NCBI SRA database and returns the retrieved FASTQs to the specified
  * target channel. Inspired to SRA-Explorer by Phil Ewels -- https://ewels.github.io/sra-explorer/
@@ -166,7 +164,6 @@ class SraExplorer {
     }
 
     protected void query1(String query) {
-
         def url = getSearchUrl(query)
         def result = makeSearch(url)
         int index = result.retstart ?: 0
@@ -179,7 +176,6 @@ class SraExplorer {
             parseDataResponse(data)
             index += entriesPerChunk
         }
-
     }
 
     protected String getSearchUrl(String term) {
@@ -284,8 +280,8 @@ class SraExplorer {
             retryConfig = new SraRetryConfig()
 
         final config = HxConfig.newBuilder()
-            .withRetryConfig(retryConfig)
-            .withRetryStatusCodes(RETRY_CODES)
+            .retryConfig(retryConfig)
+            .retryStatusCodes(RETRY_CODES)
             .build()
 
         httpClient = HxClient.newBuilder()
@@ -349,7 +345,6 @@ class SraExplorer {
         return result.size()==1 ? result[0] : result
     }
 
-
     protected parseXml(String str) {
         if( !str )
             return null
@@ -365,7 +360,6 @@ class SraExplorer {
      * @return
      */
     protected String getFetchUrl(String key, String webenv, int retstart, int retmax) {
-
         def url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=sra&retmode=json&query_key=${key}&WebEnv=${webenv}&retstart=$retstart&retmax=$retmax"
         if( apiKey )
             url += "&api_key=$apiKey"
