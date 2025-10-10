@@ -26,6 +26,7 @@ import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider
 import software.amazon.awssdk.regions.Region
+import software.amazon.awssdk.regions.providers.DefaultAwsRegionProviderChain
 
 /**
  * Implements a provider config for git-remote-s3 repositories
@@ -36,7 +37,7 @@ import software.amazon.awssdk.regions.Region
 @CompileStatic
 class S3ProviderConfig extends ProviderConfig {
 
-    private Region region = Region.US_EAST_1
+    private Region region = DefaultAwsRegionProviderChain.builder().build().region
 
     private AwsCredentialsProvider awsCredentialsProvider = DefaultCredentialsProvider.builder().build()
 

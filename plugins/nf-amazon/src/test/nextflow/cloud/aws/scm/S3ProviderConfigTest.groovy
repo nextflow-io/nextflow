@@ -18,6 +18,7 @@ package nextflow.cloud.aws.scm
 
 import nextflow.Global
 import nextflow.Session
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider
 import software.amazon.awssdk.regions.Region
 import spock.lang.Specification
@@ -35,6 +36,7 @@ class S3ProviderConfigTest extends Specification {
 
     def 'should create S3 provider config with name only'() {
         when:
+        System.setProperty('aws.region', 'us-east-1') // Force Default Region provider to get the us-east-1
         def config = new S3ProviderConfig('my-bucket')
 
         then:
@@ -173,7 +175,7 @@ class S3ProviderConfigTest extends Specification {
 
         then:
         config.awsCredentialsProvider != null
-        // DefaultCredentialsProvider is used by default
+        config.awsCredentialsProvider instanceof DefaultCredentialsProvider
     }
 
     def 'should handle different AWS regions'() {
@@ -202,6 +204,7 @@ class S3ProviderConfigTest extends Specification {
         then:
         // Should not set static credentials provider if secretKey is missing
         config.awsCredentialsProvider != null
+        config.awsCredentialsProvider instanceof DefaultCredentialsProvider
     }
 
     def 'should handle secretKey without accessKey'() {
@@ -217,21 +220,12 @@ class S3ProviderConfigTest extends Specification {
         then:
         // Should not set static credentials provider if accessKey is missing
         config.awsCredentialsProvider != null
-    }
-
-    def 'should handle empty config map'() {
-        when:
-        def config = new S3ProviderConfig('my-bucket')
-
-        then:
-        config.name == 'my-bucket'
-        config.platform == 's3'
-        config.server == 's3://my-bucket'
-        config.region == Region.US_EAST_1
+        config.awsCredentialsProvider instanceof DefaultCredentialsProvider
     }
 
     def 'should handle null Global session'() {
         given:
+        System.setProperty('aws.region', 'us-east-1') // Force Default Region provider to get the us-east-1
         Global.session = null
 
         when:
