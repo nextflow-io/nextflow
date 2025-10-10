@@ -128,13 +128,26 @@ public class S3PushConnection extends S3BaseConnection implements PushConnection
         return BranchData.fromKey(s3object.key()).getObjectId().name().equals(commitId.name());
     }
 
-   private void setUpdateStatus(RemoteRefUpdate update, RemoteRefUpdate.Status status) {
+    /**
+     * Sets the status on a RemoteRefUpdate using reflection.
+     * This is necessary because RemoteRefUpdate.status is package-private and JGit
+     * doesn't provide a public API to set it. It also JAR signing verification which
+     * disables the implementations of this class in the org.eclipse.jgit.transport package.
+     * The Custom transport implementations like this S3 transport need to update the
+     * RemoteRefUpdate.status to inform callers of push results.
+     */
+    private void setUpdateStatus(RemoteRefUpdate update, RemoteRefUpdate.Status status) {
         try {
             Field statusField = RemoteRefUpdate.class.getDeclaredField("status");
             statusField.setAccessible(true);
             statusField.set(update, status);
+        } catch (NoSuchFieldException e) {
+            throw new RuntimeException("JGit API changed: RemoteRefUpdate.status field not found. " +
+                "This may require updating the transport implementation.", e);
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException("Unable to access RemoteRefUpdate.status field", e);
         } catch (Exception e) {
-            throw new RuntimeException("Unable to set status on RemoteRefUpdate", e);
+            throw new RuntimeException("Unexpected error setting status on RemoteRefUpdate", e);
         }
     }
 
