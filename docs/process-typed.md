@@ -51,7 +51,7 @@ process fastqc {
 }
 ```
 
-Any of the {ref}`standard types <stdlib-types>` can be used as type annotations, except for the dataflow types (`Channel` and `Value`) which can only be used in workflows.
+All {ref}`standard types <stdlib-types>` except for the dataflow types (`Channel` and `Value`) can be used as type annotations in processes.
 
 ### File inputs
 
