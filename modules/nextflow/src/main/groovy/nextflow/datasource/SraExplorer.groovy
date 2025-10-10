@@ -16,12 +16,8 @@
 
 package nextflow.datasource
 
-import dev.failsafe.Failsafe
-import dev.failsafe.RetryPolicy
-import dev.failsafe.event.EventListener
-import dev.failsafe.event.ExecutionAttemptedEvent
-import dev.failsafe.function.CheckedSupplier
-
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
@@ -32,6 +28,8 @@ import groovy.util.logging.Slf4j
 import groovy.xml.XmlParser
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowWriteChannel
+import io.seqera.http.HxClient
+import io.seqera.http.HxConfig
 import nextflow.Channel
 import nextflow.Const
 import nextflow.Global
@@ -40,11 +38,6 @@ import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.util.CacheHelper
 import nextflow.util.Duration
-
-import java.time.temporal.ChronoUnit
-import java.util.function.Predicate
-import java.util.regex.Pattern
-
 /**
  * Query NCBI SRA database and returns the retrieved FASTQs to the specified
  * target channel. Inspired to SRA-Explorer by Phil Ewels -- https://ewels.github.io/sra-explorer/
@@ -55,8 +48,7 @@ import java.util.regex.Pattern
 class SraExplorer {
 
     static public Map PARAMS = [apiKey:[String,GString], cache: Boolean, max: Integer, protocol: ['ftp','http','https'], retryPolicy: Map]
-    final static public List<Integer> RETRY_CODES = List.of(408, 429, 500, 502, 503, 504)
-    final static private Pattern ERROR_PATTERN = ~/Server returned HTTP response code: (\d+) for URL.*/
+    final static private Set<Integer> RETRY_CODES = Set.of(408, 429, 500, 502, 503, 504)
 
     @ToString
     static class SearchRecord {
@@ -80,7 +72,8 @@ class SraExplorer {
     private List<String> missing = new ArrayList<>()
     private Path cacheFolder
     private String protocol = 'ftp'
-    private SraRetryConfig retryConfig = new SraRetryConfig()
+    private SraRetryConfig retryConfig
+    private HxClient httpClient
 
     String apiKey
     boolean useCache = true
@@ -171,7 +164,6 @@ class SraExplorer {
     }
 
     protected void query1(String query) {
-
         def url = getSearchUrl(query)
         def result = makeSearch(url)
         int index = result.retstart ?: 0
@@ -184,7 +176,6 @@ class SraExplorer {
             parseDataResponse(data)
             index += entriesPerChunk
         }
-
     }
 
     protected String getSearchUrl(String term) {
@@ -197,7 +188,7 @@ class SraExplorer {
 
     protected Map makeDataRequest(String url) {
         log.debug "SRA data request url=$url"
-        final text = runWithRetry(()->getTextFormUrl(url))
+        final text = getTextFormUrl(url)
 
         log.trace "SRA data result:\n${pretty(text)?.indent()}"
         def response = jsonSlurper.parseText(text)
@@ -236,7 +227,7 @@ class SraExplorer {
 
     protected SearchRecord makeSearch(String url) {
         log.debug "SRA search url=$url"
-        final text = runWithRetry(()-> getTextFormUrl(url))
+        final text = getTextFormUrl(url)
 
         log.trace "SRA search result:\n${pretty(text)?.indent()}"
         final response = jsonSlurper.parseText(text)
@@ -244,7 +235,7 @@ class SraExplorer {
         if( response instanceof Map && response.esearchresult instanceof Map ) {
             def search = (Map)response.esearchresult
             def result = new SearchRecord()
-            result.count = search.count as Integer 
+            result.count = search.count as Integer
             result.retmax = search.retmax as Integer
             result.retstart = search.retstart as Integer
             result.querykey = search.querykey
@@ -281,14 +272,42 @@ class SraExplorer {
         return result
     }
 
-    protected static String getTextFormUrl(String url) {
-        new URI(url).toURL().getText()
+    protected HxClient getHttpClient() {
+        if( httpClient!=null )
+            return httpClient
+
+        if( retryConfig==null )
+            retryConfig = new SraRetryConfig()
+
+        final config = HxConfig.newBuilder()
+            .retryConfig(retryConfig)
+            .retryStatusCodes(RETRY_CODES)
+            .build()
+
+        httpClient = HxClient.newBuilder()
+            .httpClient(HttpClient.newBuilder()
+                .version(HttpClient.Version.HTTP_1_1)
+                .followRedirects(HttpClient.Redirect.NORMAL)
+                .build())
+            .retryConfig(config)
+            .build()
+
+        return httpClient
+    }
+
+    protected String getTextFormUrl(String url) {
+        final request = HttpRequest.newBuilder()
+            .uri(new URI(url))
+            .GET()
+            .build()
+        final response = getHttpClient().sendAsString(request)
+        return response.body()
     }
 
     protected String readRunUrl(String acc) {
         final url = "https://www.ebi.ac.uk/ena/portal/api/filereport?result=read_run&fields=fastq_ftp&accession=$acc"
         log.debug "SRA fetch ftp fastq url=$url"
-        String result = runWithRetry(() -> getTextFormUrl(url)).trim()
+        String result = getTextFormUrl(url).trim()
         log.trace "SRA fetch ftp fastq url result:\n${result?.indent()}"
 
         if( result.indexOf('\n')==-1 ) {
@@ -326,7 +345,6 @@ class SraExplorer {
         return result.size()==1 ? result[0] : result
     }
 
-
     protected parseXml(String str) {
         if( !str )
             return null
@@ -337,77 +355,16 @@ class SraExplorer {
 
     /**
      * NCBI search https://www.ncbi.nlm.nih.gov/books/NBK25499/#chapter4.ESummary
-     * 
+     *
      * @param result
      * @return
      */
     protected String getFetchUrl(String key, String webenv, int retstart, int retmax) {
-
         def url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=sra&retmode=json&query_key=${key}&WebEnv=${webenv}&retstart=$retstart&retmax=$retmax"
         if( apiKey )
             url += "&api_key=$apiKey"
 
         return url
-    }
-
-    /**
-     * Creates a retry policy using the SRA retry configuration
-     *
-     * @param cond A predicate that determines when a retry should be triggered
-     * @return The {@link dev.failsafe.RetryPolicy} instance
-     */
-    protected <T> RetryPolicy<T> retryPolicy(Predicate<? extends Throwable> cond) {
-        final EventListener<ExecutionAttemptedEvent> listener = new EventListener<ExecutionAttemptedEvent>() {
-            @Override
-            void accept(ExecutionAttemptedEvent event) throws Throwable {
-                log.debug("Retryable response error - attempt: ${event.attemptCount}; reason: ${event.lastFailure.message}")
-            }
-        }
-        return RetryPolicy.<T>builder()
-            .handleIf(cond)
-            .withBackoff(retryConfig.delay.toMillis(), retryConfig.maxDelay.toMillis(), ChronoUnit.MILLIS)
-            .withMaxAttempts(retryConfig.maxAttempts)
-            .withJitter(retryConfig.jitter)
-            .onRetry(listener)
-            .build()
-    }
-
-    /**
-     * Carry out the invocation of the specified action using a retry policy
-     * when {@link java.io.IOException} is returned containing an error code.
-     *
-     * @param action A {@link dev.failsafe.function.CheckedSupplier} instance modeling the action to be performed in a safe manner
-     * @return The result of the supplied action
-     */
-    protected <T> T runWithRetry(CheckedSupplier<T> action) {
-        // define listener
-        final listener = new EventListener<ExecutionAttemptedEvent>() {
-            @Override
-            void accept(ExecutionAttemptedEvent event) throws Throwable {
-                log.debug("Retryable response error - attempt: ${event.attemptCount}; reason: ${event.lastFailure.message}")
-            }
-        }
-        // define the retry condition
-        final cond = new Predicate<? extends Throwable>() {
-            @Override
-            boolean test(Throwable t) {
-                if( t instanceof IOException && containsErrorCodes(t.message, RETRY_CODES))
-                    return true
-                if(t.cause instanceof IOException && containsErrorCodes(t.cause.message, RETRY_CODES))
-                    return true
-                return false
-            }
-        }
-        // create the retry policy
-        def policy = retryPolicy(cond)
-        // apply the action with
-        return Failsafe.with(policy).get(action)
-    }
-
-    static boolean containsErrorCodes(String message, List<Integer> codes){
-        def matcher = (message =~ ERROR_PATTERN)
-        def httpCode = matcher ? matcher[0][1] as Integer : null
-        return httpCode != null && codes.contains(httpCode)
     }
 
 }
