@@ -20,6 +20,7 @@ package nextflow.datasource
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
+import io.seqera.util.retry.Retryable
 import nextflow.util.Duration
 /**
  * Models retry policy configuration for Sra queries
@@ -29,11 +30,12 @@ import nextflow.util.Duration
 @ToString(includePackage = false, includeNames = true)
 @EqualsAndHashCode
 @CompileStatic
-class SraRetryConfig {
+class SraRetryConfig implements Retryable.Config {
     Duration delay = Duration.of('500ms')
     Duration maxDelay = Duration.of('30s')
     int maxAttempts = 3
     double jitter = 0.25
+    double multiplier = 2.0
 
     SraRetryConfig() {
         this(Collections.emptyMap())
@@ -48,5 +50,30 @@ class SraRetryConfig {
             maxAttempts = config.maxAttempts as int
         if( config.jitter )
             jitter = config.jitter as double
+        if( config.multiplier )
+            multiplier = config.multiplier as double
+    }
+
+    Duration getDelay() {
+        return delay
+    }
+
+    Duration getMaxDelay() {
+        return maxDelay
+    }
+
+    @Override
+    int getMaxAttempts() {
+        return maxAttempts
+    }
+
+    @Override
+    double getJitter() {
+        return jitter
+    }
+
+    @Override
+    double getMultiplier() {
+        return multiplier
     }
 }
