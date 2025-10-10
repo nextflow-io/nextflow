@@ -348,7 +348,9 @@ INPUT           : 'input';
 OUTPUT          : 'output';
 SCRIPT          : 'script';
 SHELL           : 'shell';
+STAGE           : 'stage';
 STUB            : 'stub';
+TOPIC           : 'topic';
 WHEN            : 'when';
 
 // -- workflow definition

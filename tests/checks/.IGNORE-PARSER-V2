@@ -1,5 +1,12 @@
 # TESTS THAT SHOULD ONLY BE RUN BY THE V2 PARSER
 chunk.nf
+collect-tuple-typed.nf
+dynamic-filename-typed.nf
+env-typed.nf
+eval-out-typed.nf
+nullable-path.nf
+output-dsl.nf
 params-dsl.nf
+topic-channel-typed.nf
 type-annotations.nf
 workflow-oncomplete-v2.nf

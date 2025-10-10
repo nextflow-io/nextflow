@@ -191,7 +191,9 @@ processBody
     // explicit script/exec body with optional stub
     :   (sep processDirectives)?
         (sep processInputs)?
+        (sep processStage)?
         (sep processOutputs)?
+        (sep processTopics)?
         (sep processWhen)?
         sep processExec
         (sep processStub)?
@@ -199,15 +201,19 @@ processBody
     // explicit "Mahesh" form
     |   (sep processDirectives)?
         (sep processInputs)?
+        (sep processStage)?
         (sep processWhen)?
         sep processExec
         (sep processStub)?
-        sep processOutputs
+        (sep processOutputs)?
+        (sep processTopics)?
 
     // implicit script/exec body
     |   (sep processDirectives)?
         (sep processInputs)?
+        (sep processStage)?
         (sep processOutputs)?
+        (sep processTopics)?
         (sep processWhen)?
         sep blockStatements
     ;
@@ -217,11 +223,30 @@ processDirectives
     ;
 
 processInputs
-    :   INPUT COLON nls statement (sep statement)*
+    :   INPUT COLON nls processInput (sep processInput)*
+    ;
+
+processInput
+    :   identifier (COLON type)?
+    |   LPAREN identifier (COMMA identifier)+ rparen (COLON type)?
+    |   statement
+    ;
+
+processStage
+    :   STAGE COLON nls statement (sep statement)*
     ;
 
 processOutputs
-    :   OUTPUT COLON nls statement (sep statement)*
+    :   OUTPUT COLON nls processOutput (sep processOutput)*
+    ;
+
+processOutput
+    :   nameTypePair (ASSIGN expression)?
+    |   statement
+    ;
+
+processTopics
+    :   TOPIC COLON nls statement (sep statement)*
     ;
 
 processWhen
@@ -557,7 +582,9 @@ identifier
     |   OUTPUT
     |   SCRIPT
     |   SHELL
+    |   STAGE
     |   STUB
+    |   TOPIC
     |   WHEN
     |   WORKFLOW
     |   EMIT
@@ -724,7 +751,12 @@ className
     ;
 
 typeArguments
-    :   LT type (COMMA type)* GT
+    :   LT typeArgument (COMMA typeArgument)* GT
+    ;
+
+typeArgument
+    :   type
+    |   QUESTION
     ;
 
 legacyType
@@ -752,7 +784,9 @@ keywords
     |   OUTPUT
     |   SCRIPT
     |   SHELL
+    |   STAGE
     |   STUB
+    |   TOPIC
     |   WHEN
     |   WORKFLOW
     |   EMIT
