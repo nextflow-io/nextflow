@@ -130,6 +130,9 @@ class AwsConfig implements ConfigScope {
             if( region )
                 return region.toString()
         }
+        if( env && env.AWS_REGION )  {
+            return env.AWS_REGION.toString()
+        }
 
         if( env && env.AWS_DEFAULT_REGION )  {
             return env.AWS_DEFAULT_REGION.toString()

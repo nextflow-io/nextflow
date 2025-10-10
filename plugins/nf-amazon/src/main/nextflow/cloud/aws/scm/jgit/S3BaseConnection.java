@@ -167,8 +167,7 @@ public class S3BaseConnection implements Connection {
         }
         public static BranchData fromKey(String key){
             String[] parts = key.split("/");
-            if (parts.length < 5) throw new RuntimeException("Incorrect key parts");
-            // Expect: repo-path/refs/<type>/<branch>/<hash>.bundle
+            if (parts.length < 5) throw new RuntimeException("Incorrect s3 key parts inside the S3-git-remote repository. Key should include the following parts: repo-path/refs/<type>/<branch>/<hash>.bundle");
             final String type = parts[parts.length - 3];
             final String rBranch = parts[parts.length - 2];
             final String sha = parts[parts.length - 1].replace(".bundle", "");

@@ -19,11 +19,14 @@ package nextflow.cloud.aws.scm
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Global
+import nextflow.cloud.aws.AwsClientFactory
+import nextflow.cloud.aws.config.AwsConfig
 import nextflow.exception.AbortOperationException
 import nextflow.scm.ProviderConfig
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
+import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.regions.providers.DefaultAwsRegionProviderChain
@@ -37,38 +40,44 @@ import software.amazon.awssdk.regions.providers.DefaultAwsRegionProviderChain
 @CompileStatic
 class S3ProviderConfig extends ProviderConfig {
 
-    private Region region = DefaultAwsRegionProviderChain.builder().build().region
+    private Region region
 
     private AwsCredentialsProvider awsCredentialsProvider = DefaultCredentialsProvider.builder().build()
 
     S3ProviderConfig(String name, Map values) {
         super(name, [ server: "s3://$name"] + values)
-        setDefaultsFromAwsConfig()
-        // Override with scm repo attributes
-        setValuesFromMap(values)
+        setValues(values)
     }
 
     S3ProviderConfig(String name){
         super(name,[ platform: 's3', server: "s3://$name"])
-        setDefaultsFromAwsConfig()
+        setValues()
     }
 
-    private void setDefaultsFromAwsConfig() {
-        final config = Global.session?.config?.aws as Map
-        if( config ) {
-            setValuesFromMap(config)
+    private void setValues(Map values = Map.of()) {
+        //Get sessions config if exists
+        def session = Global.session?.config?.aws as Map ?: Map.of()
+
+        //Merge with scm values and convert to AwsConfg to unify SysEnv fallback and profile management
+        final config = new AwsConfig(session + values)
+        if( config.region ) {
+            region = Region.of(config.region)
+        }else {
+            // fallback to default region provider
+            region = DefaultAwsRegionProviderChain.builder().build().region
         }
-    }
-    private void setValuesFromMap(Map values){
-        if( values.region ) {
-            region = Region.of(values.region as String)
-        }
-        if( values.accessKey && values.secretKey ){
+        if( config.accessKey && config.secretKey ){
             awsCredentialsProvider = StaticCredentialsProvider.create(
                 AwsBasicCredentials.builder()
-                    .accessKeyId(values.accessKey as String)
-                    .secretAccessKey(values.secretKey as String)
+                    .accessKeyId(config.accessKey as String)
+                    .secretAccessKey(config.secretKey as String)
                     .build())
+        } else if( config.profile ){
+            // Get credentials from profile
+            awsCredentialsProvider = ProfileCredentialsProvider.builder().profileName(config.profile).build()
+        } else {
+            // fallback to default credentials provider
+            awsCredentialsProvider = DefaultCredentialsProvider.builder().build()
         }
     }
 

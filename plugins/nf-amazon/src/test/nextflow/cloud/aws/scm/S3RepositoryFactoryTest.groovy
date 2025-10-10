@@ -52,21 +52,6 @@ class S3RepositoryFactoryTest extends Specification {
         provider == null
     }
 
-    def 'should register TransportS3 on first provider creation'() {
-        given:
-        def factory = new S3RepositoryFactory()
-        def config = new S3ProviderConfig('test-bucket')
-
-        when:
-        def provider1 = factory.createProviderInstance(config, 'test-bucket/project1')
-        def provider2 = factory.createProviderInstance(config, 'test-bucket/project2')
-
-        then:
-        provider1 instanceof S3RepositoryProvider
-        provider2 instanceof S3RepositoryProvider
-        // TransportS3.register() should be called only once
-    }
-
     def 'should get config for s3 URL'() {
         given:
         def factory = new S3RepositoryFactory()

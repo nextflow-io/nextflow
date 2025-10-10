@@ -18,7 +18,9 @@ package nextflow.cloud.aws.scm
 
 import nextflow.Global
 import nextflow.Session
+import nextflow.SysEnv
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
+import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider
 import software.amazon.awssdk.regions.Region
 import spock.lang.Specification
@@ -36,7 +38,7 @@ class S3ProviderConfigTest extends Specification {
 
     def 'should create S3 provider config with name only'() {
         when:
-        System.setProperty('aws.region', 'us-east-1') // Force Default Region provider to get the us-east-1
+        SysEnv.push(['AWS_DEFAULT_REGION': 'us-east-1']) // Force Default Region provider to get the us-east-1
         def config = new S3ProviderConfig('my-bucket')
 
         then:
@@ -45,6 +47,9 @@ class S3ProviderConfigTest extends Specification {
         config.server == 's3://my-bucket'
         config.region == Region.US_EAST_1
         config.awsCredentialsProvider != null
+
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'should create S3 provider config with values map'() {
@@ -178,6 +183,15 @@ class S3ProviderConfigTest extends Specification {
         config.awsCredentialsProvider instanceof DefaultCredentialsProvider
     }
 
+    def 'should use profile credentials provider when profile is specified'() {
+        when:
+        def config = new S3ProviderConfig('my-bucket',[platform: 's3', profile: 'profileA'])
+
+        then:
+        config.awsCredentialsProvider != null
+        config.awsCredentialsProvider instanceof ProfileCredentialsProvider
+    }
+
     def 'should handle different AWS regions'() {
         expect:
         new S3ProviderConfig('bucket', [platform: 's3', region: REGION]).region == EXPECTED
@@ -225,7 +239,7 @@ class S3ProviderConfigTest extends Specification {
 
     def 'should handle null Global session'() {
         given:
-        System.setProperty('aws.region', 'us-east-1') // Force Default Region provider to get the us-east-1
+        SysEnv.push(['AWS_DEFAULT_REGION': 'us-east-1']) // Force Default Region provider to get the us-east-1
         Global.session = null
 
         when:
@@ -234,5 +248,8 @@ class S3ProviderConfigTest extends Specification {
         then:
         noExceptionThrown()
         config.region == Region.US_EAST_1
+
+        cleanup:
+        SysEnv.pop()
     }
 }
