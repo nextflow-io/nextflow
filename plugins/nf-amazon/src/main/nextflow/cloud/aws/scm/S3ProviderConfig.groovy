@@ -40,7 +40,7 @@ import software.amazon.awssdk.regions.providers.DefaultAwsRegionProviderChain
 @CompileStatic
 class S3ProviderConfig extends ProviderConfig {
 
-    private Region region
+    private Region region = Region.US_EAST_1
 
     private AwsCredentialsProvider awsCredentialsProvider = DefaultCredentialsProvider.builder().build()
 
@@ -62,9 +62,6 @@ class S3ProviderConfig extends ProviderConfig {
         final config = new AwsConfig(session + values)
         if( config.region ) {
             region = Region.of(config.region)
-        }else {
-            // fallback to default region provider
-            region = DefaultAwsRegionProviderChain.builder().build().region
         }
         if( config.accessKey && config.secretKey ){
             awsCredentialsProvider = StaticCredentialsProvider.create(
@@ -75,9 +72,6 @@ class S3ProviderConfig extends ProviderConfig {
         } else if( config.profile ){
             // Get credentials from profile
             awsCredentialsProvider = ProfileCredentialsProvider.builder().profileName(config.profile).build()
-        } else {
-            // fallback to default credentials provider
-            awsCredentialsProvider = DefaultCredentialsProvider.builder().build()
         }
     }
 
