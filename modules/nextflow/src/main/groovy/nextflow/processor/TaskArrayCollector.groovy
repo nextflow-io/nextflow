@@ -84,8 +84,7 @@ class TaskArrayCollector {
         this.arraySize = arraySize
         this.array = new ArrayList<>(arraySize)
 
-        def timeoutVal = processor.config.get('executorSubmitTimeout')
-        Duration timeout = timeoutVal ? Duration.of(timeoutVal.toString()) : Duration.of('5m')
+        def timeout = processor.config.get('executorArrayTimeout')
         this.maxWaitMs = timeout.toMillis()
         log.debug "TaskArrayCollector initialized with timeout=${timeout.toString()}"
     }

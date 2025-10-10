@@ -141,6 +141,14 @@ class ExecutorConfig implements ConfigScope {
         Determines how often to fetch the queue status from the scheduler (default: `1 min`).
     """)
     final Duration queueStatInterval
+    
+    @ConfigOption
+    @Description("""
+        *Used only by grid executors.*
+
+        Determines how long to wait for a job array to fill to the specified array size before submitting an unfilled array (default: `60 min`).
+    """)
+    final Duration executorArrayTimeout
 
     @Description("""
         The `executor.retry` scope controls the behavior of retrying failed job submissions.
@@ -176,6 +184,7 @@ class ExecutorConfig implements ConfigScope {
         queueGlobalStatus = opts.queueGlobalStatus as boolean
         queueSize = opts.queueSize as Integer
         queueStatInterval = opts.queueStatInterval as Duration ?: Duration.of('1min')
+        executorArrayTimeout = opts.executorArrayTimeout as Duration ?: Duration.of('60min')
         retry = opts.retry ? new ExecutorRetryConfig(opts.retry as Map) : new ExecutorRetryConfig(Map.of())
         submitRateLimit = opts.submitRateLimit
 
@@ -201,6 +210,10 @@ class ExecutorConfig implements ConfigScope {
 
     Duration getQueueStatInterval(String execName) {
         getExecConfigProp(execName, 'queueStatInterval', null) as Duration
+    }
+
+    Duration getExecutorArrayTimeout(String execName) {
+        getExecConfigProp(execName, 'executorArrayTimeout', null) as Duration
     }
 
     @Memoized
