@@ -13,74 +13,58 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nextflow.config.schema
+package nextflow.plugin.spec
 
-import groovy.json.JsonOutput
-import groovy.transform.TypeChecked
-import nextflow.plugin.Plugins
-import nextflow.script.dsl.Description
+import groovy.transform.CompileStatic
+import nextflow.config.schema.SchemaNode
 import nextflow.script.types.Types
 import org.codehaus.groovy.ast.ClassNode
 
-@TypeChecked
-class JsonRenderer {
+/**
+ * Generate specs for config scopes.
+ *
+ * @author Ben Sherman <bentshermann@gmail.com>
+ */
+@CompileStatic
+class ConfigSpec {
 
-    String render() {
-        final schema = getSchema()
-        return JsonOutput.toJson(schema)
+    static Map<String,?> of(SchemaNode node, String name) {
+        return fromNode(node, name)
     }
 
-    private static Map<String,?> getSchema() {
-        final result = new HashMap<String,?>()
-        for( final scope : Plugins.getExtensions(ConfigScope) ) {
-            final clazz = scope.getClass()
-            final scopeName = clazz.getAnnotation(ScopeName)?.value()
-            final description = clazz.getAnnotation(Description)?.value()
-            if( scopeName == '' ) {
-                SchemaNode.Scope.of(clazz, '').children().each { name, node ->
-                    result.put(name, fromNode(node))
-                }
-                continue
-            }
-            if( !scopeName )
-                continue
-            final node = SchemaNode.Scope.of(clazz, description)
-            result.put(scopeName, fromNode(node, scopeName))
-        }
-        return result
-    }
-
-    private static Map<String,?> fromNode(SchemaNode node, String name=null) {
+    private static Map<String,?> fromNode(SchemaNode node, String name) {
         if( node instanceof SchemaNode.Option )
-            return fromOption(node)
+            return fromOption(node, name)
         if( node instanceof SchemaNode.Placeholder )
-            return fromPlaceholder(node)
+            return fromPlaceholder(node, name)
         if( node instanceof SchemaNode.Scope )
             return fromScope(node, name)
         throw new IllegalStateException()
     }
 
-    private static Map<String,?> fromOption(SchemaNode.Option node) {
+    private static Map<String,?> fromOption(SchemaNode.Option node, String name) {
         final description = node.description().stripIndent(true).trim()
         final type = fromType(new ClassNode(node.type()))
 
         return [
-            type: 'Option',
+            type: 'ConfigOption',
             spec: [
+                name: name,
                 description: description,
                 type: type
             ]
         ]
     }
 
-    private static Map<String,?> fromPlaceholder(SchemaNode.Placeholder node) {
+    private static Map<String,?> fromPlaceholder(SchemaNode.Placeholder node, String name) {
         final description = node.description().stripIndent(true).trim()
         final placeholderName = node.placeholderName()
         final scope = fromScope(node.scope())
 
         return [
-            type: 'Placeholder',
+            type: 'ConfigPlaceholderScope',
             spec: [
+                name: name,
                 description: description,
                 placeholderName: placeholderName,
                 scope: scope.spec
@@ -90,28 +74,23 @@ class JsonRenderer {
 
     private static Map<String,?> fromScope(SchemaNode.Scope node, String scopeName=null) {
         final description = node.description().stripIndent(true).trim()
-        final children = node.children().collectEntries { name, child ->
-            Map.entry(name, fromNode(child, name))
+        final children = node.children().collect { name, child ->
+            fromNode(child, name)
         }
 
         return [
-            type: 'Scope',
+            type: 'ConfigScope',
             spec: [
-                description: withLink(scopeName, description),
+                name: scopeName,
+                description: description,
                 children: children
             ]
         ]
     }
 
-    private static String withLink(String scopeName, String description) {
-        return scopeName
-            ? "$description\n\n[Read more](https://nextflow.io/docs/latest/reference/config.html#$scopeName)\n"
-            : description
-    }
-
     private static Object fromType(ClassNode cn) {
         final name = Types.getName(cn.getTypeClass())
-        if( cn.isUsingGenerics() ) {
+        if( !cn.isGenericsPlaceHolder() && cn.getGenericsTypes() != null ) {
             final typeArguments = cn.getGenericsTypes().collect { gt -> fromType(gt.getType()) }
             return [ name: name, typeArguments: typeArguments ]
         }
@@ -119,5 +98,4 @@ class JsonRenderer {
             return name
         }
     }
-
 }

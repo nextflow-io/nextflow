@@ -104,6 +104,7 @@ The project follows a modular architecture with a plugin-based system for cloud 
 - `build.gradle`: Root build configuration with multi-module setup
 - `settings.gradle`: Gradle project structure definition
 - `plugins/*/VERSION`: Define the version of the corresponding plugin sub-project.
+- `adr/`: Architecture Decision Records (ADRs) documenting significant structural and technical decisions in the project
 
 ## Release process
 
@@ -123,7 +124,7 @@ Follow these actions to make a new release:
 - Run `make releaseInfo` to update the version number and generate checksums.
 - Run this command to stage for commit the release files:
     ```
-    git add VERSION changelog.txt nextflow nextflow.md5 nextflow.sha1 nextflow.sha256
+    git add VERSION changelog.txt nextflow nextflow.md5 nextflow.sha1 nextflow.sha256 modules/nextflow/src/main/resources/META-INF/plugins-info.txt
     ```
 - Make a commit using the `[release]` tag in the comment and push it upstream to trigger the release automation with GitHub action:
     ```

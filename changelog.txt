@@ -1,5 +1,39 @@
 NEXTFLOW CHANGE-LOG
 ===================
+25.09.1-edge - 9 Oct 2025
+- Improve build metadata generation and validation [60225374f]
+- Fix Missing static type definition [67a532040]
+- Add rnaseq-nf tutorial (#6440) [a830125c4]
+
+25.09.0-edge - 8 Oct 2025
+- Add listDirectory traversal API to RepositoryProvider abstraction (#6430) [1449fdfec]
+- Add step to claim plugin in Gradle plugin migration docs (#6450) [3b709004b]
+- Add support for comma-separated file paths in ProcessEntryHandler (#6434) [fe627644d]
+- Add support for Java 25 (#6419) [dc8d474d6]
+- Add unit test for invalid workflow entry name error handling (#6409) [249eb1aaa]
+- Fix cache command to check session cloudCachePath [a88e2cdf2]
+- Fix cache command to use SysEnv for cloudcache path check (#6432) [771b8b60e]
+- Fix cookie policy for Seqera Platform JWT token refresh (#6411) [c3959cfc3]
+- Fix CVE-2025-55163 in nf-google plugin [7d7061797]
+- Fix default fields in trace config (#6403) [3eddfad68]
+- Fix pod log warning with Fusion enabled (#6449) [8c78b3126]
+- Fix SIGTERM forwarding in AWS Batch jobs (#6414) [abbef79b7]
+- Fix "Strings must not be null" error message (#6404) [24314b112]
+- Fix unstage controls in command.run when using storeDir (#6364) [a5756da3e]
+- Generate plugin spec (#6361) [ed6bb6037]
+- Get exit code from pod to manage OOM in k8s (#6442) [f258a758e]
+- Limit S3 concurrent downloads to fix Java Heap OOM (#6402) [fd71d0e8c]
+- Update Gradle build system to version 9.1.0 (#6418) [e2bb2f083]
+- Bump Google Cloud libraries to latest versions (#6438) [59a63f1ae]
+- Bump nextflow-gradle-plugin version 1.0.0-beta.10 [812ed7f9f]
+- Bump nf-amazon@3.3.0 [3561c26e9]
+- Bump nf-azure@1.20.1 [fae3c2d58]
+- Bump nf-codecommit@0.5.0 [91514a6f6]
+- Bump nf-google@1.23.1 [153745a16]
+- Bump nf-k8s@1.2.1 [c4f4eca9b]
+- Bump nf-tower@1.16.0 [ef9110407]
+- Bump nf-wave@1.16.0 [be01d3f96]
+
 25.08.0-edge - 14 Sep 2025
 - Add Claude Code GitHub Action integration (#6389) [1073a1da]
 - Add Value type for dataflow values (value channels) (#6372) [8de2339e]
