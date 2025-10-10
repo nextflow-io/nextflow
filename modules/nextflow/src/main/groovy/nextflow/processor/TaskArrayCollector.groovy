@@ -66,6 +66,7 @@ class TaskArrayCollector {
     private TaskProcessor processor
     private TaskArrayExecutor executor
     private int arraySize
+    private Duration timeoutVal
     private Lock sync = new ReentrantLock()
     private List<TaskRun> array
     private boolean closed = false
@@ -84,11 +85,11 @@ class TaskArrayCollector {
         this.arraySize = arraySize
         this.array = new ArrayList<>(arraySize)
 
-        def timeout = processor.config.get('executorArrayTimeout')
-        this.maxWaitMs = timeout.toMillis()
-        log.debug "TaskArrayCollector initialized with timeout=${timeout.toString()}"
+        timeoutVal = executor.config.getExecutorArrayTimeout() ?: Duration.of('60min')
+        this.maxWaitMs = timeoutVal.toMillis()
+        
+        log.debug "TaskArrayCollector initialized with timeout=${timeoutVal.toString()}"
     }
-
     /**
      * Add a task to the current array, and submit the array when it
      * reaches the desired size or after the timeout interval.
