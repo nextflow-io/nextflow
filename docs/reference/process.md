@@ -66,29 +66,29 @@ Typed processes require the `nextflow.preview.types` feature flag to be enabled 
 The following directives can be used in the `stage:` section of a typed process:
 
 `env( name: String, String value )`
-: Declare an environment variable in the task environment with the given name and value.
+: Declares an environment variable with the specified name and value in the task environment.
 
 `stageAs( filePattern: String, value: Path )`
-: Stage a file into the task directory under the given alias.
+: Stages a file into the task directory under the given alias.
 
 `stageAs( filePattern: String, value: Iterable<Path> )`
-: Stage a collection of files into the task directory under the given alias.
+: Stages a collection of files into the task directory under the given alias.
 
 `stdin( value: String )`
-: Stage the given value as the standard input (i.e. `stdin`) to the task script.
+: Stages the given value as the standard input (i.e., `stdin`) to the task script.
 
 ### Outputs
 
 The following functions are available in the `output:` and `topic:` sections of a typed process:
 
 `env( name: String ) -> String`
-: Get the value of an environment variable from the task environment.
+: Returns the value of an environment variable from the task environment.
 
 `eval( command: String ) -> String`
-: Get the standard output of the given command, which is executed in the task environment after the task script.
+: Returns the standard output of the specified command, which is executed in the task environment after the task script completes.
 
 `file( pattern: String, [options] ) -> Path`
-: Get a file from the task environment that matches the given pattern.
+: Returns a file from the task environment that matches the specified pattern.
 
 : Available options:
 
@@ -114,12 +114,12 @@ The following functions are available in the `output:` and `topic:` sections of 
   : Type of paths returned, either `file`, `dir` or `any` (default: `any`, or `file` if the given file name contains a double star (`**`)).
 
 `files( pattern: String, [options] ) -> Set<Path>`
-: Get the files from the task environment that match the given pattern.
+: Returns files from the task environment that match the given pattern.
 
 : Supports the same options as `file()` (except for `optional`).
 
 `stdout() -> String`
-: Get the standard output of the task script.
+: Returns the standard output of the task script.
 
 (process-reference-legacy)=
 

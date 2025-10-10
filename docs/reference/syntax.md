@@ -290,15 +290,23 @@ process greet {
 }
 ```
 
-- The `input:` section, if specified, consists of one or more process inputs. A process input consists of a name and type.
+Typed processes may specify the following sections:
 
-- The `stage:` section, if specified, consists of one or more stage directives. See {ref}`process-reference-typed` for the set of available stage directives.
+`input:`
+: Consists of one or more process inputs. Each input has a name and type.
 
-- The `output:` section, if specified, consists of one or more *output statements*. An output statement can be a [variable name](#variable), an [assignment](#assignment), or an [expression statement](#expression-statement). If an output statement is an expression statement, it must be the only output.  See {ref}`process-reference-typed` for the set of available output functions.
+`stage:`
+: Consists of one or more stage directives. See {ref}`process-reference-typed` for the set of available stage directives.
 
-- The `topic:` section, if specified, consists of one or more *topic statements*. A topic statement is a right-shift expression, where the left-hand side is an output value, and the right-hand side is a string.
+`output:`
+: Consists of one or more *output statements*. An output statement can be a [variable name](#variable), an [assignment](#assignment), or an [expression statement](#expression-statement). An output statement must be the only output if it is an expression statement.  See {ref}`process-reference-typed` for the set of available output functions.
 
-- Typed processes retain the behavior of legacy processes for all other sections.
+`topic:`
+: Consists of one or more *topic statements*. A topic statement is a right-shift expression with an output value on the left side and a string on the right side.
+
+:::{note}
+Typed processes use the same behavior as legacy processes for all other sections.
+:::
 
 See {ref}`process-typed-page` for more information on the semantics of typed processes.
 

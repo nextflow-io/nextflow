@@ -814,7 +814,7 @@ The following methods are available for splitting and counting the records in fi
 
 *Implements the {ref}`stdlib-types-iterable` trait.*
 
-A set is an unordered collection of values of type `E`, which cannot contain duplicates.
+A set is an unordered collection of values of type `E` which cannot contain duplicates.
 
 A set can be created from a list using the `toSet()` method:
 
