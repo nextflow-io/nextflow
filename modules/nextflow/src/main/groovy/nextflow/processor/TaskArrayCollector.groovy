@@ -64,25 +64,25 @@ class TaskArrayCollector {
     ]
 
     private TaskProcessor processor
-    
+
     private TaskArrayExecutor executor
-    
+
     private int arraySize
-    
+
     private Duration timeoutVal
-    
+
     private Lock sync = new ReentrantLock()
-    
+
     private List<TaskRun> array
-    
+
     private boolean closed = false
 
     private long maxWaitMs
-    
+
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor()
-    
+
     private ScheduledFuture<?> pendingFlush
-    
+
     private long firstTaskTime = 0L
 
     TaskArrayCollector(TaskProcessor processor, Executor executor, int arraySize) {
