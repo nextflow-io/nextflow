@@ -35,9 +35,8 @@ public class S3AsyncClientConfiguration extends S3ClientConfiguration{
     private S3CrtHttpConfiguration.Builder crtHttpConfiguration;
     private MultipartConfiguration.Builder multiPartBuilder;
     private S3CrtRetryConfiguration crtRetryConfiguration;
-    private Integer maxConcurrency ;
+    private Integer maxConcurrency;
     private Double targetThroughputInGbps;
-    private Long maxNativeMemoryInBytes;
 
     private S3CrtHttpConfiguration.Builder crtHttpConfiguration(){
         if( this.crtHttpConfiguration == null)
@@ -79,10 +78,6 @@ public class S3AsyncClientConfiguration extends S3ClientConfiguration{
         return this.targetThroughputInGbps;
     }
 
-    public Long getMaxNativeMemoryInBytes(){
-        return this.maxNativeMemoryInBytes;
-    }
-
     private void setAsyncConfiguration(Properties props){
 
         if( props.containsKey("max_error_retry")) {
@@ -90,19 +85,14 @@ public class S3AsyncClientConfiguration extends S3ClientConfiguration{
             this.crtRetryConfiguration = S3CrtRetryConfiguration.builder().numRetries(Integer.parseInt(props.getProperty("max_error_retry"))).build();
         }
 
-        if( props.containsKey("max_concurrency")) {
-            log.trace("AWS client config - max_concurrency: {}", props.getProperty("max_concurrency"));
-            this.maxConcurrency = Integer.parseInt(props.getProperty("max_concurrency"));
+        if( props.containsKey("max_connections")) {
+            log.trace("AWS client config - max_connections: {}", props.getProperty("max_connections"));
+            this.maxConcurrency = Integer.parseInt(props.getProperty("max_connections"));
         }
 
         if( props.containsKey("target_throughput_in_gbps")) {
             log.trace("AWS client config - target_throughput_in_gbps: {}", props.getProperty("target_throughput_in_gbps"));
             this.targetThroughputInGbps = Double.parseDouble(props.getProperty("target_throughput_in_gbps"));
-        }
-
-        if( props.containsKey("max_native_memory")) {
-            log.trace("AWS client config - max_native_memory: {}", props.getProperty("max_native_memory"));
-            this.maxNativeMemoryInBytes = Long.parseLong(props.getProperty("max_native_memory"));
         }
 
         if( props.containsKey("minimum_part_size")) {
@@ -152,12 +142,12 @@ public class S3AsyncClientConfiguration extends S3ClientConfiguration{
     }
 
     public static S3AsyncClientConfiguration create(Properties props) {
-		S3AsyncClientConfiguration config = new S3AsyncClientConfiguration();
-		if( props != null ){
+        S3AsyncClientConfiguration config = new S3AsyncClientConfiguration();
+        if( props != null ){
             config.setClientOverrideConfiguration(props);
             config.setAsyncConfiguration(props);
         }
-		return config;
-	}
+        return config;
+    }
 }
 
