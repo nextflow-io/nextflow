@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2025, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,6 @@ import java.nio.file.Files
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
 import org.eclipse.jgit.api.Git
-import spock.lang.IgnoreIf
 import spock.lang.Specification
 
 /**
@@ -31,7 +30,7 @@ import spock.lang.Specification
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
-@IgnoreIf({System.getenv('NXF_SMOKE')})
+
 class CmdPushTest extends Specification {
 
     def cleanup() {
@@ -51,7 +50,7 @@ class CmdPushTest extends Specification {
 
     def 'should fail when folder does not exist'() {
         given:
-        def cmd = new CmdPush(args: ['/nonexistent/folder'], repository: 'https://github.com/test/repo.git')
+        def cmd = new CmdPush(args: ['https://github.com/test/repo.git'], directory: '/nonexistent/folder')
 
         when:
         cmd.run()
@@ -64,7 +63,7 @@ class CmdPushTest extends Specification {
     def 'should fail when path is not a directory'() {
         given:
         def tempFile = Files.createTempFile('test', '.txt').toFile()
-        def cmd = new CmdPush(args: [tempFile.absolutePath], repository: 'https://github.com/test/repo.git')
+        def cmd = new CmdPush(args: ['https://github.com/test/repo.git'], directory: tempFile.absolutePath)
 
         when:
         cmd.run()
@@ -80,7 +79,7 @@ class CmdPushTest extends Specification {
     def 'should fail when no repository specified and no git repo exists'() {
         given:
         def tempDir = Files.createTempDirectory('test').toFile()
-        def cmd = new CmdPush(args: [tempDir.absolutePath])
+        def cmd = new CmdPush(directory: tempDir.absolutePath)
 
         when:
         cmd.run()
@@ -189,8 +188,8 @@ class CmdPushTest extends Specification {
         git.close()
 
         def cmd = new CmdPush(
-            args: [tempDir.absolutePath],
-            repository: 'https://github.com/correct/repo.git'
+            args: ['https://github.com/correct/repo.git'],
+            directory: tempDir.absolutePath
         )
 
         when:
@@ -225,8 +224,8 @@ class CmdPushTest extends Specification {
         git.close()
 
         def cmd = new CmdPush(
-            args: [tempDir.absolutePath],
-            repository: 'https://github.com/test/repo.git'
+            args: ['https://github.com/test/repo.git'],
+            directory: tempDir.absolutePath
         )
 
         when:
@@ -261,8 +260,8 @@ class CmdPushTest extends Specification {
         git.close()
 
         def cmd = new CmdPush(
-            args: [tempDir.absolutePath],
-            repository: 'https://github.com/test/repo.git',
+            args: ['https://github.com/test/repo.git'],
+            directory: tempDir.absolutePath,
             revision: 'main'
         )
 

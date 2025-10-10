@@ -25,9 +25,12 @@ import nextflow.scm.ProviderConfig
 import nextflow.scm.RepositoryProvider
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.errors.TransportException
+import org.eclipse.jgit.lib.Constants
+import org.eclipse.jgit.lib.Ref
 import org.eclipse.jgit.transport.CredentialsProvider
 
 import java.nio.file.Files
+import java.nio.file.Path
 
 
 /**
@@ -96,32 +99,79 @@ class S3RepositoryProvider extends RepositoryProvider {
     @Override
     String getRepositoryUrl() { getEndpointUrl() }
 
-    /** {@inheritDoc} **/
-    // called by AssetManager
-    // called by RepositoryProvider.readText()
+    /**
+     * {@inheritDoc}
+     *
+     * Note: S3 git-remote stores repositories as Git bundles in S3 (one bundle per branch).
+     * Reading a single file requires downloading and unpacking the entire bundle for that branch.
+     * When no revision is specified, we determine the default branch from the remote HEAD
+     * to avoid downloading unnecessary branches.
+     */
     @Override
     byte[] readBytes( String path ) {
-        log.debug("Reading $path")
-        //Not possible to get a single file requires to clone the branch and get the file
-        final tmpDir = Files.createTempDirectory("s3-git-remote")
-        final command = Git.cloneRepository()
-            .setURI(getEndpointUrl())
-            .setDirectory(tmpDir.toFile())
-            .setCredentialsProvider(getGitCredentials())
-        if( revision )
-            command.setBranch(revision)
+        log.debug("Reading $path from S3 git-remote")
+        Path tmpDir = null
         try {
+            tmpDir = Files.createTempDirectory("s3-git-remote-")
+
+            // Determine which branch to clone
+            def branchToClone = revision
+            if (!branchToClone) {
+                // No revision specified - fetch only the default branch
+                // This avoids downloading unnecessary branch bundles
+                branchToClone = getDefaultBranch()
+                log.debug("No revision specified, using default branch: $branchToClone")
+            }
+
+            final command = Git.cloneRepository()
+                .setURI(getEndpointUrl())
+                .setDirectory(tmpDir.toFile())
+                .setCredentialsProvider(getGitCredentials())
+                .setCloneAllBranches(false)  // Only clone the specified branch
+                .setBranch(branchToClone)
+
             command.call()
             final file = tmpDir.resolve(path)
-            return file.getBytes()
+            return Files.exists(file) ? Files.readAllBytes(file) : null
         }
         catch (Exception e) {
-            log.debug(" unable to retrieve file: $path from repo: $project", e)
+            log.debug("Unable to retrieve file: $path from repo: $project", e)
             return null
         }
-        finally{
-            tmpDir.deleteDir()
+        finally {
+            if (tmpDir != null && Files.exists(tmpDir)) {
+                tmpDir.toFile().deleteDir()
+            }
         }
+    }
+
+    /**
+     * Get the default branch from the S3 git-remote repository by querying remote refs.
+     * Uses Git's lsRemote to fetch the HEAD symbolic ref, which points to the default branch.
+     *
+     * @return The default branch name
+     */
+    @Memoized
+    String getDefaultBranch() {
+        // Fetch remote refs using Git's lsRemote
+        final refs = fetchRefs()
+        if (!refs){
+            throw new Exception("No remote references found")
+        }
+        // Find the HEAD symbolic ref
+        final headRef = refs.find { it.name == Constants.HEAD }
+
+        if (!headRef )
+            throw new Exception("No remote HEAD ref found ")
+
+        if( !headRef.isSymbolic() )
+            throw new Exception("Incorrect HEAD ref. Not a symbolic ref.")
+
+        final target = headRef.target.name
+        if( target.startsWith('refs/heads/') ) {
+            return target.substring('refs/heads/'.length())
+        }
+        return target
     }
 
     @Override
@@ -129,7 +179,7 @@ class S3RepositoryProvider extends RepositoryProvider {
         throw new UnsupportedOperationException("S3-git-remote does not support 'listDirectory' operation")
     }
 
-/** {@inheritDoc} **/
+    /** {@inheritDoc} **/
     // called by AssetManager
     @Override
     void validateRepo() {

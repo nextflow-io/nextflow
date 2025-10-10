@@ -24,11 +24,9 @@ import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
 import nextflow.util.TestOnly
 import org.eclipse.jgit.api.Git
-import org.eclipse.jgit.errors.RepositoryNotFoundException
 import org.eclipse.jgit.transport.RemoteConfig
 import org.eclipse.jgit.transport.URIish
 
-import java.io.FileFilter
 
 /**
  * CLI sub-command Push
@@ -42,11 +40,11 @@ class CmdPush extends CmdBase implements HubOptions {
 
     static final public NAME = 'push'
 
-    @Parameter(description = 'Path to push', arity = 1)
+    @Parameter(description = 'Repository URL to push to (optional if already configured as git remote)')
     List<String> args
 
-    @Parameter(names=['-repo'], description = 'Defines the repository to push to')
-    String repository
+    @Parameter(names=['-d', '-directory'], description = 'Local directory to push (default: current directory)')
+    String directory
 
     @Parameter(names=['-r','-revision'], description = 'Revision of the project to run (either a git branch, tag or commit SHA number)')
     String revision = 'main'
@@ -65,11 +63,17 @@ class CmdPush extends CmdBase implements HubOptions {
 
     @Override
     void run() {
-        if( !args || args.size() != 1){
-            throw new AbortOperationException('Incorrect folder argument')
+        if( args && args.size() > 1){
+            throw new AbortOperationException('Incorrect number of arguments')
         }
 
-        def folder = new File(args[0]).getAbsoluteFile()
+        // Get repository from args (optional)
+        def repository = args && args.size() == 1 ? args[0] : null
+
+        // Folder defaults to current working directory if not specified
+        def folder = directory
+            ? new File(directory).getAbsoluteFile()
+            : new File(System.getProperty('user.dir')).getAbsoluteFile()
 
         if( !folder.exists() )
             throw new AbortOperationException("Folder does not exist: ${folder.absolutePath}")
