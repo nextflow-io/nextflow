@@ -1,5 +1,10 @@
 NEXTFLOW CHANGE-LOG
 ===================
+25.09.1-edge - 9 Oct 2025
+- Improve build metadata generation and validation [60225374f]
+- Fix Missing static type definition [67a532040]
+- Add rnaseq-nf tutorial (#6440) [a830125c4]
+
 25.09.0-edge - 8 Oct 2025
 - Add listDirectory traversal API to RepositoryProvider abstraction (#6430) [1449fdfec]
 - Add step to claim plugin in Gradle plugin migration docs (#6450) [3b709004b]
