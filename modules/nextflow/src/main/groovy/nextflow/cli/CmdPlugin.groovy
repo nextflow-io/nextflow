@@ -127,8 +127,10 @@ class CmdPlugin extends CmdBase {
             // confirm and proceed
             print "All good, are you OK to continue [y/N]? "
             final confirm = readLine()
-            if( confirm?.toLowerCase()!='y' )
+            if( confirm?.toLowerCase()!='y' ) {
+                println "Plugin creation aborted."
                 return
+            }
         }
 
         // the final directory where the plugin is created
