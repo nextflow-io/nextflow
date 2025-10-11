@@ -19,6 +19,7 @@ package nextflow
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -1147,12 +1148,14 @@ class Session implements ISession {
     private static <T> void notifyEvent(List<T> observers, Consumer<T> action) {
         for ( int i=0; i<observers.size(); i++) {
             final observer = observers.get(i)
-            try {
-                action.accept(observer)
-            }
-            catch ( Throwable e ) {
-                log.debug(e.getMessage(), e)
-            }
+            CompletableFuture.runAsync({
+                try {
+                    action.accept(observer)
+                }
+                catch ( Throwable e ) {
+                    log.debug(e.getMessage(), e)
+                }
+            })
         }
     }
 
