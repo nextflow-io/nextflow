@@ -1118,8 +1118,11 @@ class Session implements ISession {
     }
 
     void notifyFlowComplete() {
-        notifyEvent(observersV1, ob -> ob.onFlowComplete())
-        notifyEvent(observersV2, ob -> ob.onFlowComplete())
+        final futures = []
+        futures.addAll(notifyEvent(observersV1, ob -> ob.onFlowComplete()))
+        futures.addAll(notifyEvent(observersV2, ob -> ob.onFlowComplete()))
+        // Wait for all async notifications to complete before proceeding with shutdown
+        CompletableFuture.allOf(futures as CompletableFuture[]).join()
     }
 
     /**
@@ -1131,8 +1134,11 @@ class Session implements ISession {
     void notifyError( TaskHandler handler ) {
 
         final trace = handler?.safeTraceRecord()
-        notifyEvent(observersV1, ob -> ob.onFlowError(handler, trace))
-        notifyEvent(observersV2, ob -> ob.onFlowError(new TaskEvent(handler, trace)))
+        final futures = []
+        futures.addAll(notifyEvent(observersV1, ob -> ob.onFlowError(handler, trace)))
+        futures.addAll(notifyEvent(observersV2, ob -> ob.onFlowError(new TaskEvent(handler, trace))))
+        // Wait for all async notifications to complete before proceeding
+        CompletableFuture.allOf(futures as CompletableFuture[]).join()
 
         if( !errorAction )
             return
@@ -1145,10 +1151,11 @@ class Session implements ISession {
         }
     }
 
-    private static <T> void notifyEvent(List<T> observers, Consumer<T> action) {
+    private static <T> List<CompletableFuture<Void>> notifyEvent(List<T> observers, Consumer<T> action) {
+        final futures = new ArrayList<CompletableFuture<Void>>(observers.size())
         for ( int i=0; i<observers.size(); i++) {
             final observer = observers.get(i)
-            CompletableFuture.runAsync(new Runnable() {
+            final future = CompletableFuture.runAsync(new Runnable() {
                 @Override
                 void run() {
                     try {
@@ -1159,7 +1166,9 @@ class Session implements ISession {
                     }
                 }
             })
+            futures.add(future)
         }
+        return futures
     }
 
     /**
