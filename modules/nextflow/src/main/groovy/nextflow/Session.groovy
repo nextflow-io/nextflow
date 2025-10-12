@@ -1148,12 +1148,15 @@ class Session implements ISession {
     private static <T> void notifyEvent(List<T> observers, Consumer<T> action) {
         for ( int i=0; i<observers.size(); i++) {
             final observer = observers.get(i)
-            CompletableFuture.runAsync({
-                try {
-                    action.accept(observer)
-                }
-                catch ( Throwable e ) {
-                    log.debug(e.getMessage(), e)
+            CompletableFuture.runAsync(new Runnable() {
+                @Override
+                void run() {
+                    try {
+                        action.accept(observer)
+                    }
+                    catch ( Throwable e ) {
+                        log.debug(e.getMessage(), e)
+                    }
                 }
             })
         }
