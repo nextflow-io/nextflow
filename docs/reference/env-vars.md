@@ -253,26 +253,26 @@ The following environment variables control the configuration of the Nextflow ru
 ## Seqera Platform settings
 
 `TOWER_ACCESS_TOKEN`
-: Access token for authenticating with Seqera Platform. Can also be configured via the `tower.accessToken` config option.
+: Specifies the access token for authenticating with Seqera Platform. Can also be configured using the `tower.accessToken` config option.
 
 `TOWER_API_ENDPOINT`
-: Defines the Seqera Platform API endpoint (default: `https://api.cloud.seqera.io`). Can also be configured via the `tower.endpoint` config option.
+: Specifies the Seqera Platform API endpoint (default: `https://api.cloud.seqera.io`). Can also be configured using the `tower.endpoint` config option.
 
 `TOWER_AUTH_DOMAIN`
 : :::{versionadded} 25.10.0
   :::
-: Specifies the Auth0 domain to use for authentication when connecting to a custom Platform endpoint. When set, this takes precedence over the built-in mappings for known Platform endpoints.
+: Specifies the Auth0 domain for authenticating with Seqera Platform when connecting to a custom endpoint. When specified, this value takes precedence over the built-in mappings for known Seqera endpoints. Must be used in conjunction with `TOWER_AUTH_ID`.
 
 `TOWER_AUTH_ID`
 : :::{versionadded} 25.10.0
   :::
-: Specifies the Auth0 client ID to use for authentication when connecting to a custom Platform endpoint. Must be used in conjunction with `TOWER_AUTH_DOMAIN`.
+: Specifies the Auth0 client ID for authenticating with a custom Seqera Platform endpoint. Must be used in conjunction with `TOWER_AUTH_DOMAIN`.
 
 `TOWER_REFRESH_TOKEN`
-: Refresh token for maintaining authentication with Seqera Platform. Can also be configured via the `tower.refreshToken` config option.
+: Specifies the refresh token for maintaining authentication with Seqera Platform. Can also be configured using the `tower.refreshToken` config option.
 
 `TOWER_WORKSPACE_ID`
-: Workspace ID for the Seqera Platform workspace to use. Can also be configured via the `tower.workspaceId` config option.
+: Specifies the Seqera Platform workspace ID. Can also be configured using the `tower.workspaceId` config option.
 
 ## Other settings
 
