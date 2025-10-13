@@ -688,7 +688,7 @@ param2 = 'value2'"""
 
         then:
         status != null
-        status.table.size() == 7 // endpoint, connection, auth, monitoring, workspace, compute env, work dir
+        status.table.size() == 6 // endpoint, connection, auth, monitoring, workspace, compute env (no work dir when no primary env)
         // Check API endpoint row
         status.table[0][0] == 'API endpoint'
         status.table[0][1].contains('https://api.cloud.seqera.io')
@@ -705,6 +705,8 @@ param2 = 'value2'"""
         // Check workspace row
         status.table[4][0] == 'Default workspace'
         status.table[4][1].contains('Personal workspace')
+        // Check compute env row (should show error fetching since no primary env found)
+        status.table[5][0] == 'Primary compute env'
     }
 
     def 'should collect status without authentication'() {
@@ -720,7 +722,7 @@ param2 = 'value2'"""
 
         then:
         status != null
-        status.table.size() == 7 // endpoint, connection, auth, monitoring, workspace, compute env, work dir
+        status.table.size() == 4 // endpoint, connection, auth, monitoring (no workspace/compute env/work dir without auth)
         // Authentication should show not set
         status.table[2][0] == 'Authentication'
         status.table[2][1].contains('Not set')
