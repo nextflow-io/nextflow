@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.seqera.tower.plugin.cli
+package io.seqera.tower.plugin.auth
 
 import io.seqera.http.HxClient
 import nextflow.Const
@@ -357,16 +357,19 @@ param2 = 'value2'"""
         given:
         def cmd = new AuthCommandImpl()
         def config = ['tower.accessToken': 'token-from-config']
+        SysEnv.push([:])  // Isolate from actual environment variables
 
         when:
-        def result = cmd.getConfigValue(config, 'tower.accessToken', 'TOWER_ACCESS_TOKEN', null)
+        def result = cmd.getConfigValue(config, 'tower.accessToken', 'TOWER_ACCESS_TOKEN')
 
         then:
         result.value == 'token-from-config'
         result.source == 'nextflow config'
         result.fromConfig == true
         result.fromEnv == false
-        result.isDefault == false
+
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'should get config value from config for endpoint'() {
@@ -375,14 +378,13 @@ param2 = 'value2'"""
         def config = ['tower.endpoint': 'https://example.com']
 
         when:
-        def result = cmd.getConfigValue(config, 'tower.endpoint', 'TOWER_API_ENDPOINT', null)
+        def result = cmd.getConfigValue(config, 'tower.endpoint', 'TOWER_API_ENDPOINT')
 
         then:
         result.value == 'https://example.com'
         result.source == 'nextflow config'
         result.fromConfig == true
         result.fromEnv == false
-        result.isDefault == false
     }
 
     def 'should get config value from environment variable'() {
@@ -394,33 +396,31 @@ param2 = 'value2'"""
         SysEnv.push( ['TOWER_ACCESS_TOKEN': 'token-from-env'])
 
         when:
-        def result = cmd.getConfigValue(config, 'tower.accessToken', 'TOWER_ACCESS_TOKEN', null)
+        def result = cmd.getConfigValue(config, 'tower.accessToken', 'TOWER_ACCESS_TOKEN')
 
         then:
         result.value == 'token-from-env'
         result.source == 'env var $TOWER_ACCESS_TOKEN'
         result.fromConfig == false
         result.fromEnv == true
-        result.isDefault == false
 
         cleanup:
         SysEnv.pop()
     }
 
-    def 'should get config value from default'() {
+    def 'should return null when no config or env value is set'() {
         given:
         def cmd = new AuthCommandImpl()
         def config = [:]
 
         when:
-        def result = cmd.getConfigValue(config, 'tower.endpoint', null, 'https://default.example.com')
+        def result = cmd.getConfigValue(config, 'tower.endpoint', null)
 
         then:
-        result.value == 'https://default.example.com'
-        result.source == 'default'
+        result.value == null
+        result.source == null
         result.fromConfig == false
         result.fromEnv == false
-        result.isDefault == true
     }
 
     def 'should prioritize config over env'() {
@@ -431,7 +431,7 @@ param2 = 'value2'"""
         SysEnv.push(['TOWER_ACCESS_TOKEN': 'token-from-env'])
 
         when:
-        def result = cmd.getConfigValue(config, 'tower.accessToken', 'TOWER_ACCESS_TOKEN', 'default-token')
+        def result = cmd.getConfigValue(config, 'tower.accessToken', 'TOWER_ACCESS_TOKEN')
 
         then:
         result.value == 'token-from-config'
@@ -449,7 +449,7 @@ param2 = 'value2'"""
         SysEnv.push(['TOWER_API_ENDPOINT': 'https://env.example.com'])
 
         when:
-        def result = cmd.getConfigValue(config, 'tower.endpoint', 'TOWER_API_ENDPOINT', 'https://default.example.com')
+        def result = cmd.getConfigValue(config, 'tower.endpoint', 'TOWER_API_ENDPOINT')
 
         then:
         result.value == 'https://config.example.com'
@@ -465,7 +465,7 @@ param2 = 'value2'"""
         def config = ['tower.enabled': true]
 
         when:
-        def result = cmd.getConfigValue(config, 'tower.enabled', null, 'false')
+        def result = cmd.getConfigValue(config, 'tower.enabled', null)
 
         then:
         result.value == true
@@ -625,31 +625,6 @@ param2 = 'value2'"""
         result == 'Hello World'
     }
 
-    def 'should shorten path with user home'() {
-        given:
-        def cmd = new AuthCommandImpl()
-        def userHome = System.getProperty('user.home')
-        def path = "${userHome}/some/path/config"
-
-        when:
-        def result = cmd.shortenPath(path)
-
-        then:
-        result == '~/some/path/config'
-    }
-
-    def 'should not shorten path without user home'() {
-        given:
-        def cmd = new AuthCommandImpl()
-        def path = '/etc/config'
-
-        when:
-        def result = cmd.shortenPath(path)
-
-        then:
-        result == '/etc/config'
-    }
-
     def 'should print status table with varying column widths'() {
         given:
         def cmd = new AuthCommandImpl()
@@ -735,6 +710,7 @@ param2 = 'value2'"""
         given:
         def cmd = Spy(AuthCommandImpl)
         def config = [:]
+        SysEnv.push([:])  // Isolate from actual environment variables
 
         cmd.checkApiConnection(_) >> true
 
@@ -748,6 +724,9 @@ param2 = 'value2'"""
         status.table[2][0] == 'Authentication'
         status.table[2][1].contains('Not set')
         status.table[2][2] == 'not set'
+
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'should collect status with failed API connection'() {
@@ -770,6 +749,7 @@ param2 = 'value2'"""
         given:
         def cmd = Spy(AuthCommandImpl)
         def config = ['tower.accessToken': 'invalid-token']
+        SysEnv.push([:])  // Isolate from actual environment variables
 
         cmd.checkApiConnection(_) >> true
         cmd.callUserInfoApi(_, _) >> { throw new RuntimeException('Invalid token') }
@@ -780,8 +760,11 @@ param2 = 'value2'"""
         then:
         status != null
         status.table[2][0] == 'Authentication'
-        status.table[2][1].contains('ERROR')
-        status.table[2][2] == 'failed'
+        status.table[2][1].contains('Connection check failed')
+        status.table[2][2] == 'nextflow config'
+
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'should collect status with monitoring enabled'() {

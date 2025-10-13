@@ -1,4 +1,4 @@
-package io.seqera.tower.plugin.cli
+package io.seqera.tower.plugin.auth
 
 import groovy.json.JsonBuilder
 import groovy.json.JsonSlurper
@@ -15,7 +15,6 @@ import nextflow.exception.AbortOperationException
 import nextflow.platform.PlatformHelper
 
 import java.awt.Desktop
-import java.net.URI
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.nio.file.Files
@@ -1087,14 +1086,6 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         return padding > 0 ? text + (' ' * padding) : text
     }
 
-    private String shortenPath(String path) {
-        final userHome = System.getProperty('user.home')
-        if( path.startsWith(userHome) ) {
-            return '~' + path.substring(userHome.length())
-        }
-        return path
-    }
-
     private Map getConfigValue(Map config, String configKey, String envVarName) {
         //Checks where the config value came from
         final configValue = config[configKey]
@@ -1112,8 +1103,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
             value     : effectiveValue,
             source    : source,
             fromConfig: configValue != null,
-            fromEnv   : envValue != null,
-            isDefault : !configValue && !envValue
+            fromEnv   : envValue != null
         ]
     }
 
