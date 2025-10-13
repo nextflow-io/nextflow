@@ -49,18 +49,14 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
     /**
      * Creates an HxClient instance with optional authentication token.
      *
-     * @param authToken Optional bearer token for authentication
+     * @param accessToken Optional personal access token for authentication (PAT)
      * @return Configured HxClient instance with timeout settings
      */
-    protected HxClient createHttpClient(String authToken = null) {
-        final builder = HxClient.newBuilder()
+    protected HxClient createHttpClient(String accessToken = null) {
+        return HxClient.newBuilder()
             .connectTimeout(Duration.ofMillis(API_TIMEOUT_MS))
-
-        if (authToken) {
-            builder.bearerToken(authToken)
-        }
-
-        return builder.build()
+            .bearerToken(accessToken)
+            .build()
     }
 
     /**
@@ -155,10 +151,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
             if( input == -1 ) {
                 throw new AbortOperationException("Authentication cancelled")
             }
-        } catch( InterruptedException e ) {
-            Thread.currentThread().interrupt()
-            throw new AbortOperationException("Authentication cancelled")
-        } catch( IOException e ) {
+        } catch( Exception e ) {
             throw new AbortOperationException("Failed to read input: ${e.message}")
         }
 
@@ -193,9 +186,6 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
                 printColored("You can run 'nextflow auth config' later to set up your configuration.", "dim")
             }
 
-        } catch( InterruptedException e ) {
-            Thread.currentThread().interrupt()
-            throw new AbortOperationException("Authentication cancelled")
         } catch( Exception e ) {
             throw new RuntimeException("Authentication failed: ${e.message}", e)
         }
@@ -328,11 +318,12 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         printColored("Personal Access Token saved to Nextflow auth config (${getAuthFile().toString()})", "green")
     }
 
+    /*
+     * Convert API endpoint to web URL
+     * e.g., https://api.cloud.seqera.io -> https://cloud.seqera.io
+     *      https://cloud.seqera.io/api -> https://cloud.seqera.io
+     */
     private String getWebUrlFromApiEndpoint(String apiEndpoint) {
-        /* Convert API endpoint to web URL
-         * e.g., https://api.cloud.seqera.io -> https://cloud.seqera.io
-         *      https://cloud.seqera.io/api -> https://cloud.seqera.io
-         */
         return apiEndpoint.replace('://api.', '://').replace('/api', '')
     }
 
