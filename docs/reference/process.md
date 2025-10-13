@@ -73,7 +73,7 @@ Additionally, the [directive values](#directives) for the given task can be acce
 : Declare a file input. The received value should be a file or collection of files and will be staged into the task directory.
 
 : :::{tip}
-  See {ref}`process-multiple-input-files` for more information about accepting a collection of files instead of a single value.
+  See {ref}`process-multiple-input-files` for more information about accepting collections of files.
   ::: 
 
 : The argument can be an identifier or string. If an identifier, the received value will be made available to the process body as a variable. If a string, the received value will be staged into the task directory under the given alias.
