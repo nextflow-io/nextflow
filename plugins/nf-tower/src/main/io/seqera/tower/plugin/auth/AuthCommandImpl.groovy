@@ -81,8 +81,8 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         final envToken = SysEnv.get('TOWER_ACCESS_TOKEN')
         if( envToken ) {
             println ""
-            printColored("WARNING: Authentication token is already configured via TOWER_ACCESS_TOKEN environment variable.", "yellow bold")
-            printColored("${colorize('nextflow auth login', 'cyan')} sets credentials using Nextflow config files, which take precedence over the environment variable.", "dim")
+            printColored("WARNING: Authentication token is already configured via TOWER_ACCESS_TOKEN environment variable.", "yellow")
+            printColored("'nextflow auth login' sets credentials using Nextflow config files, which take precedence over the environment variable.", "dim")
             printColored(" however, caution is advised to avoid confusing behaviour.", "dim")
             println ""
         }
@@ -91,16 +91,16 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         final authFile = getAuthFile()
         if( Files.exists(authFile) ) {
             printColored("Error: Authentication token is already configured in Nextflow config.", "red")
-            printColored("Auth file: ${colorize(authFile.toString(), 'magenta')}", "dim")
-            println " Run ${colorize('nextflow auth logout', 'cyan')} to remove the current authentication."
+            printColored("Auth file: $authFile", "dim")
+            println " Run 'nextflow auth logout' to remove the current authentication."
             return
         }
 
         println("Nextflow authentication with Seqera Platform")
-        printColored(" - Authentication will be saved to: ${colorize(getAuthFile().toString(), 'magenta')}", "dim")
+        printColored(" - Authentication will be saved to: ${getAuthFile()}", "dim")
 
         apiUrl = normalizeApiUrl(apiUrl)
-        printColored(" - Seqera Platform API endpoint: ${colorize(apiUrl, 'magenta')} (can be customised with ${colorize('-url', 'cyan')})", "dim")
+        printColored(" - Seqera Platform API endpoint: $apiUrl (can be customised with '-url')", "dim")
 
         // Check if this is a cloud endpoint or enterprise
         final endpointInfo = getCloudEndpointInfo(apiUrl)
@@ -140,10 +140,10 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         final deviceAuth = requestDeviceAuthorization(auth0Config)
 
         println ""
-        println "Confirmation code: ${colorize(deviceAuth.user_code as String, 'yellow')}"
+        println "Confirmation code: ${ColorUtil.colorize(deviceAuth.user_code as String, 'yellow')}"
         final urlWithCode = "${deviceAuth.verification_uri}?user_code=${deviceAuth.user_code}"
-        println "Authentication URL: ${colorize(urlWithCode, 'magenta')}"
-        printColored("\n[ Press Enter to open in browser ]", "bold")
+        println "Authentication URL: ${ColorUtil.colorize(urlWithCode, 'magenta')}"
+        ColorUtil.printColored("\n[ Press Enter to open in browser ]", "bold")
 
         // Wait for Enter key with proper interrupt handling
         try {
@@ -1044,7 +1044,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         // API endpoint - use PlatformHelper
         final String endpoint = PlatformHelper.getEndpoint(towerConfig, SysEnv.get())
         final endpointInfo = getConfigValue(config, 'tower.endpoint', 'TOWER_API_ENDPOINT')
-        status.table.add(['API endpoint', colorize(endpoint, 'magenta'), (endpointInfo.source ?: 'default') as String])
+        status.table.add(['API endpoint', endpoint, (endpointInfo.source ?: 'default') as String])
 
         // API connection check
         final apiConnectionOk = checkApiConnection(endpoint)
@@ -1062,7 +1062,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
             try {
                 final userInfo = callUserInfoApi(accessToken, endpoint)
                 final currentUser = userInfo.userName as String
-                status.table.add(['Authentication', "${colorize('✔ OK', 'green')} (user: ${colorize(currentUser, 'cyan')})".toString(), tokenSource])
+                status.table.add(['Authentication', "${colorize('✔ OK', 'green')} (user: $currentUser)".toString(), tokenSource])
             } catch( Exception e ) {
                 status.table.add(['Authentication', colorize('✘ Connection check failed', 'red'), tokenSource])
             }
@@ -1073,8 +1073,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         // Monitoring enabled
         final enabledInfo = getConfigValue(config, 'tower.enabled', null)
         final enabledValue = enabledInfo.value?.toString()?.toLowerCase() in ['true', '1', 'yes'] ? 'Yes' : 'No'
-        final enabledColor = enabledValue == 'Yes' ? 'green' : 'yellow'
-        status.table.add(['Workflow monitoring', colorize(enabledValue, enabledColor), (enabledInfo.source ?: 'default') as String])
+        status.table.add(['Workflow monitoring', enabledValue, (enabledInfo.source ?: 'default') as String])
 
         // Default workspace - use PlatformHelper
         final String workspaceId = PlatformHelper.getWorkspaceId(towerConfig, SysEnv.get())
@@ -1089,17 +1088,15 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
             if( workspaceDetails ) {
                 // Add workspace ID row and remember its index
                 status.workspaceRowIndex = status.table.size()
-                status.table.add(['Default workspace', colorize(workspaceId, 'cyan'), workspaceInfo.source as String])
+                status.table.add(['Default workspace', workspaceId, workspaceInfo.source as String])
                 // Store workspace details for display after this row (outside table structure)
                 status.workspaceInfo = workspaceDetails
             } else {
-                status.table.add(['Default workspace', colorize(workspaceId, 'cyan', true), workspaceInfo.source as String])
+                status.table.add(['Default workspace', workspaceId, workspaceInfo.source as String])
             }
         } else {
             if( accessToken ) {
-                status.table.add(['Default workspace', colorize('None (Personal workspace)', 'cyan', true), 'default'])
-            } else {
-                status.table.add(['Default workspace', colorize('N/A', 'dim', true), 'default'])
+                status.table.add(['Default workspace', 'None (Personal workspace)', 'default'])
             }
         }
 
@@ -1111,7 +1108,6 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
                 primaryEnv = computeEnvs.find { ((Map) it).primary == true } as Map
             } catch( Exception e ) {
                 status.table.add(['Primary compute env', colorize('Error fetching', 'red'), ''])
-                status.table.add(['Default work dir', colorize('N/A', 'dim', true), ''])
                 return status
             }
         }
@@ -1122,11 +1118,6 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
             final displayValue = "${colorize(envName, 'cyan')} ${colorize('[' + envPlatform + ']', 'dim yellow', true)}".toString()
             status.table.add(['Primary compute env', displayValue, 'workspace'])
             status.table.add(['Default work dir', colorize(primaryEnv.workDir as String, 'magenta'), 'compute env'])
-        } else {
-            final ceValue = (!accessToken || !workspaceId) ? 'N/A' : 'None'
-            final ceColor = ceValue == 'None' ? 'yellow' : 'dim'
-            status.table.add(['Primary compute env', colorize(ceValue, ceColor, true), 'workspace'])
-            status.table.add(['Default work dir', colorize(ceValue, ceColor, true), 'compute env'])
         }
 
         return status
@@ -1147,7 +1138,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
             final insertAfterLine = status.workspaceRowIndex + 3
 
             final workspaceDetails = [
-                colorize("${" " * 22}$status.workspaceInfo.orgName / $status.workspaceInfo.workspaceName", "cyan", true),
+                (" " * 22) + "$status.workspaceInfo.orgName / $status.workspaceInfo.workspaceName",
                 colorize("${" " * 22}$status.workspaceInfo.workspaceFullName", "dim", true)
             ]
 
