@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package nextflow.cli
+package nextflow.util
 
 import groovy.transform.CompileStatic
 import nextflow.SysEnv

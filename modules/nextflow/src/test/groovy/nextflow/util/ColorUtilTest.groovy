@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-package nextflow.cli
+package nextflow.util
 
 import nextflow.SysEnv
-import org.fusesource.jansi.Ansi
 import org.junit.Rule
 import spock.lang.Specification
 import test.OutputCapture

@@ -19,6 +19,7 @@ package io.seqera.tower.plugin.auth
 import io.seqera.http.HxClient
 import nextflow.Const
 import nextflow.SysEnv
+import nextflow.util.ColorUtil
 import org.junit.Rule
 import spock.lang.Specification
 import spock.lang.TempDir
@@ -506,8 +507,8 @@ param2 = 'value2'"""
         given:
         def cmd = new AuthCommandImpl()
         def rows = [
-            ['API endpoint', nextflow.cli.ColorUtil.colorize('https://api.cloud.seqera.io', 'magenta'), 'config'],
-            ['Authentication', nextflow.cli.ColorUtil.colorize('OK', 'green'), 'env var']
+            ['API endpoint', ColorUtil.colorize('https://api.cloud.seqera.io', 'magenta'), 'config'],
+            ['Authentication', ColorUtil.colorize('OK', 'green'), 'env var']
         ]
 
         when:
