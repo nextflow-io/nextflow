@@ -231,7 +231,7 @@ jobs:
                 GRADLE_OPTS: '-Dorg.gradle.daemon=false'
 
   release:
-    if: ${{ contains(needs.build.outputs.commit_message, '[release]') }}
+    if: ${{ always() && contains(needs.build.outputs.commit_message, '[release]') && needs.build.result == 'success' && (needs.test.result == 'success' || needs.test.result == 'skipped') }}
     needs: [build, test]
     runs-on: ubuntu-latest
     timeout-minutes: 10
