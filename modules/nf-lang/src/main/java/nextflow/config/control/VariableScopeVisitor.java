@@ -107,7 +107,7 @@ class VariableScopeVisitor extends ConfigVisitorSupport {
         checkMethodCall(node);
     }
 
-    private boolean inProcess;
+    private boolean inProcessScope;
 
     private boolean inClosure;
 
@@ -117,28 +117,39 @@ class VariableScopeVisitor extends ConfigVisitorSupport {
             configScopes.add(node.names.get(i));
 
         var scopes = currentConfigScopes();
-        inProcess = !scopes.isEmpty() && "process".equals(scopes.get(0));
+        inProcessScope = isProcessScope(scopes, node);
         inClosure = node.value instanceof ClosureExpression;
         if( isWorkflowHandler(scopes, node) )
             vsc.addWarning("The use of workflow handlers in the config is deprecated -- use the entry workflow or a plugin instead", String.join(".", node.names), node);
         if( inClosure ) {
             vsc.pushScope(ScriptDsl.class);
-            if( inProcess )
+            if( inProcessScope )
                 vsc.pushScope(ProcessDsl.class);
         }
 
         super.visitConfigAssign(node);
 
         if( inClosure ) {
-            if( inProcess )
+            if( inProcessScope )
                 vsc.popScope();
             vsc.popScope();
         }
         inClosure = false;
-        inProcess = false;
+        inProcessScope = false;
 
         for( int i = 0; i < node.names.size() - 1; i++ )
             configScopes.pop();
+    }
+
+    private static boolean isProcessScope(List<String> scopes, ConfigAssignNode node) {
+        if( scopes.isEmpty() )
+            return false;
+        if( "process".equals(scopes.get(0)) )
+            return true;
+        var option = node.names.get(node.names.size() - 1);
+        return scopes.size() == 1
+            && "executor".equals(scopes.get(0))
+            && "jobName".equals(option);
     }
 
     private static boolean isWorkflowHandler(List<String> scopes, ConfigAssignNode node) {
@@ -153,7 +164,7 @@ class VariableScopeVisitor extends ConfigVisitorSupport {
         node.getKeyExpression().visit(this);
 
         var ic = inClosure;
-        if( inProcess && node.getValueExpression() instanceof ClosureExpression )
+        if( inProcessScope && node.getValueExpression() instanceof ClosureExpression )
             inClosure = true;
         node.getValueExpression().visit(this);
         inClosure = ic;
@@ -309,7 +320,7 @@ class VariableScopeVisitor extends ConfigVisitorSupport {
         var name = node.getName();
         Variable variable = vsc.findVariableDeclaration(name, node);
         if( variable == null ) {
-            if( inProcess && inClosure ) {
+            if( inProcessScope && inClosure ) {
                 // dynamic process directives can reference process inputs which are not known at this point
             }
             else {

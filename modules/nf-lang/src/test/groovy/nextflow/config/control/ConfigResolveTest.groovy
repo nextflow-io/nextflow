@@ -169,6 +169,15 @@ class ConfigResolveTest extends Specification {
         errors[0].getStartLine() == 2
         errors[0].getStartColumn() == 23
         errors[0].getOriginalMessage() == '`meta` is not defined'
+
+        when:
+        errors = check(
+            '''\
+            executor.jobName = { "$task.name - $task.hash" }
+            '''
+        )
+        then:
+        errors.size() == 0
     }
 
 }
