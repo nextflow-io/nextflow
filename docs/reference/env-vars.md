@@ -261,9 +261,9 @@ The following environment variables control the configuration of the Nextflow ru
 `TOWER_AUTH_DOMAIN`
 : :::{versionadded} 25.10.0
   :::
-: Specifies the Auth0 domain for authenticating with Seqera Platform when connecting to a custom endpoint. When specified, this value takes precedence over the built-in mappings for known Seqera endpoints. Must be used in conjunction with `TOWER_AUTH_ID`.
+: Specifies the Auth0 domain for authenticating with Seqera Platform when connecting to a custom endpoint. When specified, this value takes precedence over the built-in mappings for known Seqera endpoints. Must be used in conjunction with `TOWER_AUTH_CLIENT_ID`.
 
-`TOWER_AUTH_ID`
+`TOWER_AUTH_CLIENT_ID`
 : :::{versionadded} 25.10.0
   :::
 : Specifies the Auth0 client ID for authenticating with a custom Seqera Platform endpoint. Must be used in conjunction with `TOWER_AUTH_DOMAIN`.

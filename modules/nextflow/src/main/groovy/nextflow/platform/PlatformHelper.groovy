@@ -35,9 +35,16 @@ class PlatformHelper {
      * @return the Auth0 domain, or null if not a cloud endpoint
      */
     static String getAuthDomain(String endpoint) {
+        /* Check if custom domain is set via environment variable first.
+         * Note: We cannot use the env var in a switch case statement because
+         * that would require the endpoint to match the env var value, when
+         * we actually want the env var to take precedence for ANY endpoint.
+         */
+        final customDomain = SysEnv.get('TOWER_AUTH_DOMAIN')
+        if( customDomain )
+            return customDomain
+
         switch(endpoint) {
-            case SysEnv.get('TOWER_AUTH_DOMAIN'):
-                return SysEnv.get('TOWER_AUTH_DOMAIN')
             case 'https://api.cloud.dev-seqera.io':
                 return 'seqera-development.eu.auth0.com'
             case 'https://api.cloud.stage-seqera.io':
@@ -56,9 +63,16 @@ class PlatformHelper {
      * @return the Auth0 client ID, or null if not a cloud endpoint
      */
     static String getAuthClientId(String endpoint) {
+        /* Check if custom client ID is set via environment variable first.
+         * Note: We cannot use the env var in a switch case statement because
+         * that would require the endpoint to match the env var value, when
+         * we actually want the env var to take precedence for ANY endpoint.
+         */
+        final customClientId = SysEnv.get('TOWER_AUTH_CLIENT_ID')
+        if( customClientId )
+            return customClientId
+
         switch(endpoint) {
-            case SysEnv.get('TOWER_AUTH_ID'):
-                return SysEnv.get('TOWER_AUTH_ID')
             case 'https://api.cloud.dev-seqera.io':
                 return 'Ep2LhYiYmuV9hhz0dH6dbXVq0S7s7SWZ'
             case 'https://api.cloud.stage-seqera.io':

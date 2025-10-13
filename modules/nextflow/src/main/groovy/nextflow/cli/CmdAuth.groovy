@@ -149,9 +149,9 @@ class CmdAuth extends CmdBase implements UsageAware {
         throw new AbortOperationException(msg)
     }
 
-    //
-    // nextflow auth login
-    //
+    /*
+     * nextflow auth login
+     */
     class LoginCmd implements SubCmd {
 
         @Override
@@ -219,9 +219,9 @@ class CmdAuth extends CmdBase implements UsageAware {
         }
     }
 
-    //
-    // nextflow auth config
-    //
+    /*
+     * nextflow auth config
+     */
     class ConfigCmd implements SubCmd {
 
         @Override

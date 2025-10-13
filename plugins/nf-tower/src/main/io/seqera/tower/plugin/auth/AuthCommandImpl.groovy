@@ -271,9 +271,10 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
     }
 
     private String getWebUrlFromApiEndpoint(String apiEndpoint) {
-        // Convert API endpoint to web URL
-        // e.g., https://api.cloud.seqera.io -> https://cloud.seqera.io
-        //      https://cloud.seqera.io/api -> https://cloud.seqera.io
+        /* Convert API endpoint to web URL
+         * e.g., https://api.cloud.seqera.io -> https://cloud.seqera.io
+         *      https://cloud.seqera.io/api -> https://cloud.seqera.io
+         */
         return apiEndpoint.replace('://api.', '://').replace('/api', '')
     }
 
@@ -1025,11 +1026,12 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         final tableLines = generateStatusTableLines(status.table)
 
         if( status.workspaceInfo && status.workspaceRowIndex != null ) {
-            // Insert workspace details after the workspace row
-            // workspaceRowIndex is the row in the data array (0-indexed)
-            // In tableLines: [0]=header, [1]=separator, [2]=first data row, etc.
-            // So workspace row is at index: workspaceRowIndex + 2
-            // We want to insert AFTER it, so: workspaceRowIndex + 2 + 1 = workspaceRowIndex + 3
+            /* Insert workspace details after the workspace row
+             * workspaceRowIndex is the row in the data array (0-indexed)
+             * In tableLines: [0]=header, [1]=separator, [2]=first data row, etc.
+             * So workspace row is at index: workspaceRowIndex + 2
+             * We want to insert AFTER it, so: workspaceRowIndex + 2 + 1 = workspaceRowIndex + 3
+             */
             final insertAfterLine = status.workspaceRowIndex + 3
 
             final workspaceDetails = [
