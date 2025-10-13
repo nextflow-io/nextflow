@@ -140,10 +140,10 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         final deviceAuth = requestDeviceAuthorization(auth0Config)
 
         println ""
-        println "Confirmation code: ${ColorUtil.colorize(deviceAuth.user_code as String, 'yellow')}"
+        println "Confirmation code: ${colorize(deviceAuth.user_code as String, 'yellow')}"
         final urlWithCode = "${deviceAuth.verification_uri}?user_code=${deviceAuth.user_code}"
-        println "Authentication URL: ${ColorUtil.colorize(urlWithCode, 'magenta')}"
-        ColorUtil.printColored("\n[ Press Enter to open in browser ]", "bold")
+        println "Authentication URL: ${colorize(urlWithCode, 'magenta')}"
+        printColored("\n[ Press Enter to open in browser ]", "bold")
 
         // Wait for Enter key with proper interrupt handling
         try {
@@ -1102,7 +1102,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
 
         // Primary compute environment and work directory
         def primaryEnv = null
-        if( accessToken && workspaceId ) {
+        if( accessToken ) {
             try {
                 final computeEnvs = getComputeEnvironments(accessToken, endpoint, workspaceId)
                 primaryEnv = computeEnvs.find { ((Map) it).primary == true } as Map
