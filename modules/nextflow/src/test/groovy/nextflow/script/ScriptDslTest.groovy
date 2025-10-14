@@ -626,4 +626,22 @@ class ScriptDslTest extends Dsl2Spec {
         e2.message == 'Missing process or function Channel.doesNotExist()'
     }
 
+    def 'should show proper error message for invalid entry name' () {
+        when:
+        // Use dsl_eval with an invalid entry name to trigger the error
+        dsl_eval('invalidEntry', '''
+        workflow validWorkflow {
+          /println 'valid'/
+        }
+        
+        workflow {
+          /println 'default'/
+        }
+        ''')
+        
+        then:
+        def err = thrown(IllegalArgumentException)
+        err.message.contains('Unknown workflow entry name: invalidEntry')
+    }
+
 }

@@ -147,6 +147,80 @@ class GitlabRepositoryProviderTest extends Specification {
         new GitlabRepositoryProvider('pditommaso/hello', obj)
             .getContentUrl('//conf/extra.conf') == 'https://gitlab.com/api/v4/projects/pditommaso%2Fhello/repository/files/conf%2Fextra.conf?ref=master'
 
+    }
 
+    @Requires({System.getenv('NXF_GITLAB_ACCESS_TOKEN')})
+    def 'should list root directory contents'() {
+        given:
+        def token = System.getenv('NXF_GITLAB_ACCESS_TOKEN')
+        def config = new ProviderConfig('gitlab').setAuth(token)
+        def repo = new GitlabRepositoryProvider('pditommaso/hello', config)
+
+        when:
+        def entries = repo.listDirectory("/", 1)
+
+        then:
+        entries.size() > 0
+        and:
+        entries.any { it.name == 'main.nf' && it.type == RepositoryProvider.EntryType.FILE }
+        entries.any { it.name == 'test' && it.type == RepositoryProvider.EntryType.DIRECTORY }
+        and:
+        // Should NOT include nested files for depth=1
+        !entries.any { it.path == '/test/test-asset.bin' }
+        and:
+        entries.every { it.path && it.sha }
+    }
+
+    @Requires({System.getenv('NXF_GITLAB_ACCESS_TOKEN')})
+    def 'should list subdirectory contents'() {
+        given:
+        def token = System.getenv('NXF_GITLAB_ACCESS_TOKEN')
+        def config = new ProviderConfig('gitlab').setAuth(token)
+        def repo = new GitlabRepositoryProvider('pditommaso/hello', config)
+
+        when:
+        def entries = repo.listDirectory("/test", 1)
+
+        then:
+        entries.size() > 0
+        entries.any { it.name == 'test-asset.bin' && it.path=='/test/test-asset.bin' && it.type == RepositoryProvider.EntryType.FILE }
+        entries.every { it.path.startsWith('/test/') }
+    }
+
+    @Requires({System.getenv('NXF_GITLAB_ACCESS_TOKEN')})
+    def 'should list directory contents recursively'() {
+        given:
+        def token = System.getenv('NXF_GITLAB_ACCESS_TOKEN')
+        def config = new ProviderConfig('gitlab').setAuth(token)
+        def repo = new GitlabRepositoryProvider('pditommaso/hello', config)
+
+        when:
+        def entries = repo.listDirectory("/", 10)
+
+        then:
+        entries.size() > 0
+        entries.any { it.name == 'main.nf' && it.type == RepositoryProvider.EntryType.FILE }
+        entries.any { it.name == 'test-asset.bin' && it.type == RepositoryProvider.EntryType.FILE }
+        entries.every { it.path && it.sha }
+    }
+
+    @Requires({System.getenv('NXF_GITLAB_ACCESS_TOKEN')})
+    def 'should list directory contents with depth 2'() {
+        given:
+        def token = System.getenv('NXF_GITLAB_ACCESS_TOKEN')
+        def config = new ProviderConfig('gitlab').setAuth(token)
+        def repo = new GitlabRepositoryProvider('pditommaso/hello', config)
+
+        when:
+        def entries = repo.listDirectory("/", 2)
+
+        then:
+        entries.size() > 0
+        // Should include immediate children (depth 1)
+        entries.any { it.name == 'main.nf' && it.type == RepositoryProvider.EntryType.FILE }
+        entries.any { it.name == 'test' && it.type == RepositoryProvider.EntryType.DIRECTORY }
+        // Should include nested files (depth 2)
+        entries.any { it.name == 'test-asset.bin' && it.path.contains('/test/') }
+        entries.every { it.path && it.sha }
     }
 }

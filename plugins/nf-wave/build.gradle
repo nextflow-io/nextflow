@@ -15,7 +15,7 @@ plugins {
 }
 
 nextflowPlugin {
-    nextflowVersion = '25.08.0-edge'
+    nextflowVersion = '25.09.0-edge'
 
     provider = "${nextflowPluginProvider}"
     description = 'Provides dynamic container building and augmentation capabilities with on-demand software installation and advanced container management features'
@@ -47,10 +47,10 @@ dependencies {
     compileOnly 'org.slf4j:slf4j-api:2.0.17'
     compileOnly 'org.pf4j:pf4j:3.12.0'
     compileOnly 'io.seqera:lib-trace:0.1.0'
-    compileOnly 'io.seqera:lib-httpx:2.0.0'
+    compileOnly 'io.seqera:lib-httpx:2.1.0'
     
     // Force lib-httpx version to avoid conflicts with older versions from nf-commons
-    testImplementation 'io.seqera:lib-httpx:2.0.0'
+    testImplementation 'io.seqera:lib-httpx:2.1.0'
 
     api 'org.apache.commons:commons-compress:1.26.1'
     api 'org.apache.commons:commons-lang3:3.18.0'

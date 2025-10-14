@@ -185,4 +185,114 @@ class LocalRepositoryProviderTest extends Specification {
         and:
         branches.find { it.name == 'branch_2' }.commitId == ref2.getObjectId().name()
     }
+
+    def 'should list root directory contents'() {
+        given:
+        def dir = testFolder.resolve('project_hello').toFile()
+        new File(dir, 'test.txt').text = 'test content'
+        new File(dir, 'subdir').mkdirs()
+        new File(dir, 'subdir/nested.txt').text = 'nested content'
+        repo.add().addFilepattern('.').call()
+        repo.commit().setSign(false).setMessage('Add test files').call()
+
+        def config = new ProviderConfig('local', [path: testFolder])
+        def manager = new LocalRepositoryProvider('project_hello', config)
+
+        when:
+        def entries = manager.listDirectory("/", 1)
+
+        then:
+        entries.size() > 0
+        entries.any { it.name == 'main.nf' && it.type == RepositoryProvider.EntryType.FILE }
+        entries.any { it.name == 'test.txt' && it.type == RepositoryProvider.EntryType.FILE }
+        entries.any { it.name == 'subdir' && it.type == RepositoryProvider.EntryType.DIRECTORY }
+        and:
+        // Should NOT include nested files for depth=1
+        !entries.any { it.path=='/subdir/file1.txt' }
+        !entries.any { it.path=='/subdir/file2.txt' }
+        and:
+        entries.every { it.path && it.sha }
+    }
+
+    def 'should list subdirectory contents'() {
+        given:
+        def dir = testFolder.resolve('project_hello').toFile()
+        new File(dir, 'subdir').mkdirs()
+        new File(dir, 'subdir/file1.txt').text = 'file1 content'
+        new File(dir, 'subdir/file2.txt').text = 'file2 content'
+        repo.add().addFilepattern('.').call()
+        repo.commit().setSign(false).setMessage('Add subdirectory files').call()
+
+        def config = new ProviderConfig('local', [path: testFolder])
+        def manager = new LocalRepositoryProvider('project_hello', config)
+
+        when:
+        def entries = manager.listDirectory("/subdir", 1)
+
+        then:
+        entries.size() == 2
+        entries.any { it.name == 'file1.txt' && it.path=='/subdir/file1.txt' && it.type == RepositoryProvider.EntryType.FILE }
+        entries.any { it.name == 'file2.txt' && it.path=='/subdir/file2.txt' && it.type == RepositoryProvider.EntryType.FILE }
+        entries.every { it.path.startsWith('/subdir/') }
+        and:
+        entries.every { it.path && it.name && it.sha }
+    }
+
+    def 'should list directory contents recursively'() {
+        given:
+        def dir = testFolder.resolve('project_hello').toFile()
+        new File(dir, 'deep').mkdirs()
+        new File(dir, 'deep/subdir').mkdirs()
+        new File(dir, 'deep/file1.txt').text = 'deep file content'
+        new File(dir, 'deep/subdir/file2.txt').text = 'deeply nested content'
+        repo.add().addFilepattern('.').call()
+        repo.commit().setSign(false).setMessage('Add deep directory structure').call()
+
+        def config = new ProviderConfig('local', [path: testFolder])
+        def manager = new LocalRepositoryProvider('project_hello', config)
+
+        when:
+        def entries = manager.listDirectory("/", 10)
+
+        then:
+        entries.size() > 0
+        and:
+        // Should include files from root and subdirectories
+        entries.any { it.name == 'main.nf' && it.type == RepositoryProvider.EntryType.FILE }
+        entries.any { it.name == 'file1.txt' && it.path.contains('/deep/') }
+        entries.any { it.name == 'file2.txt' && it.path.contains('/deep/subdir/') }
+        and:
+        entries.every { it.path && it.name && it.sha }
+    }
+
+    def 'should list directory contents with depth 2'() {
+        given:
+        def dir = testFolder.resolve('project_hello').toFile()
+        new File(dir, 'level1').mkdirs()
+        new File(dir, 'level1/level2').mkdirs()
+        new File(dir, 'level1/file-l1.txt').text = 'level 1 content'
+        new File(dir, 'level1/level2/file-l2.txt').text = 'level 2 content'
+        repo.add().addFilepattern('.').call()
+        repo.commit().setSign(false).setMessage('Add multi-level directory structure').call()
+
+        def config = new ProviderConfig('local', [path: testFolder])
+        def manager = new LocalRepositoryProvider('project_hello', config)
+
+        when:
+        def depthOne = manager.listDirectory("/", 1)
+        def depthTwo = manager.listDirectory("/", 2)
+
+        then:
+        depthOne.size() > 0
+        depthTwo.size() >= depthOne.size()
+        and:
+        // Should include immediate children (depth 1)
+        depthOne.any { it.name == 'main.nf' && it.type == RepositoryProvider.EntryType.FILE }
+        depthTwo.any { it.name == 'main.nf' && it.type == RepositoryProvider.EntryType.FILE }
+        // Should include nested files (depth 2)
+        depthTwo.any { it.name == 'file-l1.txt' && it.path.contains('/level1/') }
+        and:
+        depthOne.every { it.path && it.name && it.sha }
+        depthTwo.every { it.path && it.name && it.sha }
+    }
 }

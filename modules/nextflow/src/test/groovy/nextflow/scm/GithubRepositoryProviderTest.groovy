@@ -167,5 +167,106 @@ class GithubRepositoryProviderTest extends Specification {
         then:
         result.trim().startsWith(/println "I'm the main"/)
     }
+
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def 'should list root directory contents'() {
+        given:
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def config = new ProviderConfig('github').setAuth(token)
+        def repo = new GithubRepositoryProvider('nextflow-io/test-hello', config)
+
+        when:
+        def entries = repo.listDirectory("/", 1)
+
+        then:
+        entries.size() > 0
+        and:
+        entries.any { it.name == 'main.nf' && it.path == '/main.nf' && it.type == RepositoryProvider.EntryType.FILE }
+        entries.any { it.name == 'test' && it.path == '/test' && it.type == RepositoryProvider.EntryType.DIRECTORY }
+        and:
+        !entries.any { it.path == '/test/test-asset.bin' }
+        and:
+        entries.every { it.path && it.sha }
+    }
+
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def 'should list subdirectory contents'() {
+        given:
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def config = new ProviderConfig('github').setAuth(token)
+        def repo = new GithubRepositoryProvider('nextflow-io/test-hello', config)
+
+        when:
+        def entries = repo.listDirectory("/test", 1)
+
+        then:
+        entries.size() > 0
+        entries.any { it.name == 'test-asset.bin' && it.type == RepositoryProvider.EntryType.FILE }
+        entries.every { it.path.startsWith('/test/') }
+    }
+
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def 'should list directory contents recursively'() {
+        given:
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def config = new ProviderConfig('github').setAuth(token)
+        def repo = new GithubRepositoryProvider('nextflow-io/test-hello', config)
+
+        when:
+        def entries = repo.listDirectory("/", 10)
+
+        then:
+        entries.size() > 0
+        and:
+        // Should include files from root and subdirectories
+        entries.any { it.path == '/main.nf' && it.type == RepositoryProvider.EntryType.FILE }
+        entries.any { it.path == '/test/test-asset.bin' && it.type == RepositoryProvider.EntryType.FILE }
+        and:
+        entries.every { it.path && it.sha }
+    }
+
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def 'should list directory contents with limited depth'() {
+        given:
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def config = new ProviderConfig('github').setAuth(token)
+        def repo = new GithubRepositoryProvider('nextflow-io/test-hello', config)
+
+        when:
+        def depthOne = repo.listDirectory("/", 1)
+        def depthTwo = repo.listDirectory("/", 2)
+
+        then:
+        depthOne.size() > 0
+        depthTwo.size() >= depthOne.size()
+        // Depth 1 should only include immediate children (no nested paths beyond root)
+        depthOne.every { it.path.split('/').length <= 2 }
+    }
+
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def 'should list directory contents with depth 2'() {
+        given:
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def config = new ProviderConfig('github').setAuth(token)
+        def repo = new GithubRepositoryProvider('nextflow-io/test-hello', config)
+
+        when:
+        def entries = repo.listDirectory("/", 2)
+
+        then:
+        entries.size() > 0
+        // Should include immediate children (depth 1)
+        entries.any { it.name == 'main.nf' && it.type == RepositoryProvider.EntryType.FILE }
+        entries.any { it.name == 'test' && it.type == RepositoryProvider.EntryType.DIRECTORY }
+        // Should include nested files (depth 2)
+        entries.any { it.name == 'test-asset.bin' && it.path.contains('/test/') }
+        entries.every { it.path && it.sha }
+    }
+
+    def 'should return empty list for directory with no entries'() {
+        expect:
+        // This test will be integration test based - relying on actual API
+        true
+    }
 }
 

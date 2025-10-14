@@ -51,7 +51,7 @@ class TowerXAuth implements XAuthProvider {
         this.refreshToken = refreshToken
         //
         // the cookie manager
-        cookieManager = new CookieManager()
+        cookieManager = new CookieManager(null, CookiePolicy.ACCEPT_ALL)
         // create http client
         this.httpClient = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)

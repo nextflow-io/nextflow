@@ -16,7 +16,7 @@
 
 package nextflow.scm
 
-
+import groovy.json.JsonSlurper
 import groovy.util.logging.Slf4j
 /**
  * Implements a repository provider for GitHub service
@@ -123,5 +123,69 @@ class GitlabRepositoryProvider extends RepositoryProvider {
         def url = getContentUrl(path)
         Map response  = invokeAndParseResponse(url)
         response.get('content')?.toString()?.decodeBase64()
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    List<RepositoryEntry> listDirectory(String path, int depth) {
+        final ref = revision ?: getDefaultBranch()
+        final normalizedPath = normalizePath(path)
+        final encodedPath = normalizedPath ? URLEncoder.encode(normalizedPath, 'utf-8') : ""
+        
+        // Build the Tree API URL
+        String url = "${config.endpoint}/api/v4/projects/${getProjectName()}/repository/tree"
+        List<String> params = []
+        if (ref) params.add("ref=${ref}")
+        if (encodedPath) params.add("path=${encodedPath}")
+        
+        // For GitLab, we use recursive=true for any depth > 1
+        if (depth > 1) {
+            params.add("recursive=true")
+        }
+        
+        if (params) {
+            url += "?" + params.join("&")
+        }
+        
+        // Make the API call and parse response
+        String response = invoke(url)
+        List<Map> treeEntries = response ? new JsonSlurper().parseText(response) as List<Map> : []
+        
+        if (!treeEntries) {
+            return []
+        }
+        
+        List<RepositoryEntry> entries = []
+        
+        for (Map entry : treeEntries) {
+            String entryPath = entry.get('path') as String
+            
+            // Filter entries based on depth using base class helper
+            if (shouldIncludeAtDepth(entryPath, path, depth)) {
+                entries.add(createRepositoryEntry(entry, path))
+            }
+        }
+        
+        return entries.sort { it.name }
+    }
+
+    private RepositoryEntry createRepositoryEntry(Map entry, String basePath) {
+        String entryPath = entry.get('path') as String
+        String name = entry.get('name') as String
+        
+        EntryType type = entry.get('type') == 'tree' ? EntryType.DIRECTORY : EntryType.FILE
+        String sha = entry.get('id') as String
+        Long size = null // GitLab tree API doesn't provide file size
+        
+        // Ensure absolute path using base class helper
+        String fullPath = ensureAbsolutePath(entryPath)
+        
+        return new RepositoryEntry(
+            name: name,
+            path: fullPath,
+            type: type,
+            sha: sha,
+            size: size
+        )
     }
 }
