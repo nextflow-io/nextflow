@@ -146,7 +146,7 @@ class PluginUpdater extends UpdateManager {
      * Prefetch metadata for plugins. This gives an opportunity for certain
      * repository types to perform some data-loading optimisations.
      */
-    void prefetchMetadata(List<PluginSpec> plugins) {
+    void prefetchMetadata(List<PluginRef> plugins) {
         // use direct field access to avoid the refresh() call in getRepositories()
         // which could fail anything which hasn't had a chance to prefetch yet
         for( def repo : this.@repositories ) {
@@ -185,8 +185,9 @@ class PluginUpdater extends UpdateManager {
     void pullPlugins(List<String> plugins) {
         pullOnly=true
         try {
-            final specs = plugins.collect(it -> PluginSpec.parse(it,defaultPlugins))
-            for( PluginSpec spec : specs ) {
+            final specs = plugins.collect(it -> PluginRef.parse(it,defaultPlugins))
+            prefetchMetadata(specs)
+            for( PluginRef spec : specs ) {
                 pullPlugin0(spec.id, spec.version)
             }
         }
@@ -239,18 +240,11 @@ class PluginUpdater extends UpdateManager {
         // 2. download to temporary location
         Path downloaded = safeDownloadPlugin(id, version);
 
-        // 3. rename to match the expected name
-        if ( downloaded.getFileName().toString() != "${pluginPath.getFileName()}.zip" ) {
-            final targetName = downloaded.resolveSibling("${pluginPath.getFileName()}.zip")
-            if ( !Files.move(downloaded, targetName) ) throw new PluginRuntimeException("Failed to rename '$downloaded'")
-            downloaded = targetName
-        }
-
-        // 4. unzip the content and delete downloaded file
+        // 3. unzip the content and delete downloaded file
         Path dir = FileUtils.expandIfZip(downloaded)
         FileHelper.deletePath(downloaded)
 
-        // 5. move the final destination the plugin directory
+        // 4. move the final destination the plugin directory
         assert pluginPath.getFileName() == dir.getFileName()
         try {
             safeMove(dir, pluginPath)

@@ -44,6 +44,8 @@ class ConfigDsl extends Script {
 
     private Path configPath
 
+    private Map paramOverrides
+
     private List<String> profiles
 
     private Map target = [:]
@@ -68,8 +70,9 @@ class ConfigDsl extends Script {
         this.configPath = path
     }
 
-    void setParams(Map params) {
-        target.params = params
+    void setParams(Map paramOverrides) {
+        this.paramOverrides = paramOverrides
+        target.params = paramOverrides
     }
 
     void setProfiles(List<String> profiles) {
@@ -115,8 +118,11 @@ class ConfigDsl extends Script {
     }
 
     void assign(List<String> names, Object value) {
-        if( names.size() == 2 && names.first() == 'params' )
+        if( names.size() == 2 && names.first() == 'params' ) {
             declareParam(names.last(), value)
+            if( paramOverrides.containsKey(names.last()) )
+                return
+        }
         navigate(names.init()).put(names.last(), value)
     }
 

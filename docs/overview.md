@@ -10,13 +10,11 @@ The Nextflow language is inspired by [the Unix philosophy](https://en.wikipedia.
 
 The Nextflow runtime integrates with many popular execution platforms (HPC schedulers, cloud providers) and software tools (Git, Docker, Conda), allowing you to fully describe a computational pipeline with all of its dependencies and run it in nearly any environment -- write once, run anywhere.
 
-## Processes and channels
+## Processes and dataflow
 
 In practice a Nextflow pipeline script is made by joining together different processes. Each process can be written in any scripting language that can be executed by the Linux platform (Bash, Perl, Ruby, Python, etc.).
 
-Processes are executed independently and are isolated from each other, i.e. they do not share a common (writable) state. The only way they can communicate is via asynchronous FIFO queues, called *channels* in Nextflow.
-
-Any process can define one or more channels as *input* and *output*. The interaction between these processes, and ultimately the pipeline execution flow itself, is implicitly defined by these input and output declarations.
+A process can define one or more *inputs* and *outputs*. Data flows from process to process through asynchronous dataflow structures, known as *channels* and *values* in Nextflow. The data dependencies between these processes implicitly determines the flow of execution.
 
 A Nextflow script looks like this:
 
@@ -63,9 +61,9 @@ workflow {
 
 The above example defines two processes. Their execution order is not determined by the fact that the `blast_search` process comes before `extract_top_hits` in the script (it could also be written the other way around). Instead, execution order is determined by their _dependencies_ -- `extract_top_hits` depends on the output of `blast_search`, so `blast_search` will be executed first, and then `extract_top_hits`.
 
-When the workflow is started, it will create two processes and one channel (`query_ch`) and it will link all of them. Both processes will be started at the same time and they will listen to their respective input channels. Whenever `blast_search` emits a value, `extract_top_hits` will receive it (i.e. `extract_top_hits` consumes the channel in a *reactive* way).
+When the workflow is executed, it creates two processes (`blast_search` and `extract_top_hits`) connected by the channel `query_ch`. Each process executes a task and emits a value for each input that it receives. Whenever `blast_search` emits a value, `extract_top_hits` receives it through the `query_ch` channel.
 
-Read the {ref}`Channel <channel-page>` and {ref}`Process <process-page>` sections to learn more about these features.
+See {ref}`process-page`, {ref}`dataflow-page`, and {ref}`workflow-page` to learn more about these features.
 
 ## Execution abstraction
 

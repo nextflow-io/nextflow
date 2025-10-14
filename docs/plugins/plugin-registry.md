@@ -4,11 +4,13 @@
 
 The [Nextflow plugin registry](https://registry.nextflow.io/) is a central repository for Nextflow plugins. It hosts an index of plugin metadata that supports plugin discovery, accessibility, and version tracking.
 
-Nextflow 25.10 and later can use the plugin registry as a drop-in replacement for the [legacy plugin index](https://github.com/nextflow-io/plugins) hosted on GitHub. See {ref}`migrate-plugin-registry-page` for more information about migrating to the Nextflow plugin registry.
+Nextflow 25.10 and later can use the plugin registry as a drop-in replacement for the [legacy plugin index](https://github.com/nextflow-io/plugins) hosted on GitHub. See {ref}`migrate-plugin-page` for more information about migrating to the Nextflow plugin registry.
 
 :::{note}
 The Nextflow plugin registry is currently available as a public preview. Plugin developers can access the registry by contacting [info@nextflow.io](mailto:info@nextflow.io) to obtain access to the registry.
 :::
+
+(plugin-registry-claim)=
 
 ## Claiming a plugin
 
@@ -38,7 +40,7 @@ To claim ownership of a plugin:
 
 The plugin will show as **PENDING REVIEW** under **Pending Ownership Requests** until an admin approves the claim. Admin approval is required only once.
 
-(plugin-registry-create)=
+(plugin-registry-access-token)=
 
 ## Creating an access token
 

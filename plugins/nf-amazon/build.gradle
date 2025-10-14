@@ -13,10 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-apply plugin: 'java'
-apply plugin: 'java-test-fixtures'
-apply plugin: 'idea'
-apply plugin: 'groovy'
+plugins {
+    id 'io.nextflow.nextflow-plugin' version "${nextflowPluginVersion}"
+    id 'java-test-fixtures'
+}
+
+nextflowPlugin {
+    nextflowVersion = '25.08.0-edge'
+
+    provider = "${nextflowPluginProvider}"
+    description = 'Provides comprehensive AWS cloud integration including Batch executor, S3 file system, and Fusion support for high-performance data operations'
+    className = 'nextflow.cloud.aws.AmazonPlugin'
+    useDefaultDependencies = false
+    extensionPoints = [
+        'nextflow.cloud.aws.batch.AwsBatchExecutor',
+        'nextflow.cloud.aws.config.AwsConfig',
+        'nextflow.cloud.aws.fusion.AwsFusionEnv',
+        'nextflow.cloud.aws.mail.AwsMailProvider',
+        'nextflow.cloud.aws.util.S3PathFactory',
+        'nextflow.cloud.aws.util.S3PathSerializer',
+    ]
+}
 
 sourceSets {
     main.java.srcDirs = []
@@ -38,29 +55,29 @@ dependencies {
     compileOnly 'org.pf4j:pf4j:3.12.0'
 
     api ('javax.xml.bind:jaxb-api:2.4.0-b180830.0359')
-    api ('software.amazon.awssdk:s3:2.31.64')
-    api ('software.amazon.awssdk:ec2:2.31.64')
-    api ('software.amazon.awssdk:batch:2.31.64')
-    api ('software.amazon.awssdk:iam:2.31.64')
-    api ('software.amazon.awssdk:ecs:2.31.64')
-    api ('software.amazon.awssdk:cloudwatchlogs:2.31.64')
-    api ('software.amazon.awssdk:codecommit:2.31.64')
-    api ('software.amazon.awssdk:sts:2.31.64')
-    api ('software.amazon.awssdk:ses:2.31.64')
-    api ('software.amazon.awssdk:sso:2.31.64')
-    api ('software.amazon.awssdk:ssooidc:2.31.64')
-    api ('software.amazon.awssdk:s3-transfer-manager:2.31.64')
-    api ('software.amazon.awssdk:apache-client:2.31.64')
-    api ('software.amazon.awssdk:aws-crt-client:2.31.64')
+    api ('software.amazon.awssdk:s3:2.33.2')
+    api ('software.amazon.awssdk:ec2:2.33.2')
+    api ('software.amazon.awssdk:batch:2.33.2')
+    api ('software.amazon.awssdk:iam:2.33.2')
+    api ('software.amazon.awssdk:ecs:2.33.2')
+    api ('software.amazon.awssdk:cloudwatchlogs:2.33.2')
+    api ('software.amazon.awssdk:codecommit:2.33.2')
+    api ('software.amazon.awssdk:sts:2.33.2')
+    api ('software.amazon.awssdk:ses:2.33.2')
+    api ('software.amazon.awssdk:sso:2.33.2')
+    api ('software.amazon.awssdk:ssooidc:2.33.2')
+    api ('software.amazon.awssdk:s3-transfer-manager:2.33.2')
+    api ('software.amazon.awssdk:apache-client:2.33.2')
+    api ('software.amazon.awssdk:aws-crt-client:2.33.2')
 
     constraints {
         api 'com.fasterxml.jackson.core:jackson-databind:2.12.7.1'
     }
 
     // address security vulnerabilities
-    implementation 'io.netty:netty-common:4.1.124.Final'
-    implementation 'io.netty:netty-handler:4.1.124.Final'
-    implementation 'io.netty:netty-codec-http2:4.1.124.Final'
+    implementation 'io.netty:netty-common:4.1.125.Final'
+    implementation 'io.netty:netty-handler:4.1.125.Final'
+    implementation 'io.netty:netty-codec-http2:4.1.125.Final'
     
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')

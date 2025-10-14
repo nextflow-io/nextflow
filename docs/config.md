@@ -93,6 +93,8 @@ Relative paths are resolved against the location of the including file.
 Config includes can also be specified within config blocks. However, config files should only be included at the top level or in a [profile](#config-profiles) so that the included config file is valid on its own and in the context in which it is included.
 :::
 
+(config-constants)=
+
 ## Constants
 
 The following constants are globally available in a Nextflow configuration file:
@@ -137,6 +139,10 @@ params {
 ```
 
 See {ref}`cli-params` for information about how to specify pipeline parameters.
+
+:::{note}
+When including a config file, the included config is evaluated with the parameters that are defined before the include. Parameters defined after the include are not visible to the included config.
+:::
 
 (config-process)=
 

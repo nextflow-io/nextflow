@@ -25,10 +25,9 @@ import nextflow.Session
 import nextflow.SysEnv
 import nextflow.file.http.XAuthProvider
 import nextflow.file.http.XAuthRegistry
-import nextflow.trace.TraceObserverV2
 import nextflow.trace.TraceObserverFactoryV2
+import nextflow.trace.TraceObserverV2
 import nextflow.util.Duration
-import nextflow.util.SimpleHttpClient
 /**
  * Create and register the Tower observer instance
  *
@@ -70,10 +69,6 @@ class TowerFactory implements TraceObserverFactoryV2 {
             tower.aliveInterval = aliveInterval
         if( requestInterval )
             tower.requestInterval = requestInterval
-        // error handling settings
-        tower.maxRetries = opts.maxRetries != null ? opts.maxRetries as int : 5
-        tower.backOffBase = opts.backOffBase != null ? opts.backOffBase as int : SimpleHttpClient.DEFAULT_BACK_OFF_BASE
-        tower.backOffDelay = opts.backOffDelay != null ? opts.backOffDelay as int : SimpleHttpClient.DEFAULT_BACK_OFF_DELAY
 
         // register auth provider
         // note: this is needed to authorize access to resources via XFileSystemProvider used by NF

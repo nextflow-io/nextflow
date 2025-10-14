@@ -1,5 +1,8 @@
 nf-codecommit changelog
 =======================
+0.5.0 - 8 Oct 2025
+- Add listDirectory traversal API to RepositoryProvider abstraction (#6430) [1449fdfec]
+
 0.3.0 - 15 Aug 2025
 - Bump groovy 4.0.28 (#6304) [a468f8ef]
 - Revert "Update nf-codecommit to AWS SDK v2 (#6263)" [5542351c]

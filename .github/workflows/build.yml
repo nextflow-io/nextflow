@@ -42,14 +42,15 @@ jobs:
                 COMMIT_SHA="${{ github.event.pull_request.head.sha }}"
                 COMMIT_MESSAGE="$(curl -s \
                   -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                  https://api.github.com/repos/${{ github.repository }}/commits/$COMMIT_SHA | jq -r '.commit.message')"
-                echo "Commit message=$(printf "%q" "$COMMIT_MESSAGE")" | head -n 1
-                echo "commit_message=$(printf "%q" "$COMMIT_MESSAGE")" | head -n 1 >> $GITHUB_OUTPUT
+                  https://api.github.com/repos/${{ github.repository }}/commits/$COMMIT_SHA | jq -r '.commit.message' | head -n 1)"
+                echo "Commit message=$(printf "%s" "$COMMIT_MESSAGE")"
+                echo "commit_message=$(printf "%s" "$COMMIT_MESSAGE")" >> $GITHUB_OUTPUT
             else
                 echo "GitHub event=${{ github.event_name }}"
-                COMMIT_MESSAGE="${{ github.event.head_commit.message }}"
-                echo "Commit message=$(printf "%q" "$COMMIT_MESSAGE")" | head -n 1
-                echo "commit_message=$(printf "%q" "$COMMIT_MESSAGE")" | head -n 1 >> $GITHUB_OUTPUT
+                # Extract only the first line of the commit message
+                COMMIT_MESSAGE="$(git log -1 --pretty=format:'%s')"
+                echo "Commit message=$(printf "%s" "$COMMIT_MESSAGE")"
+                echo "commit_message=$(printf "%s" "$COMMIT_MESSAGE")" >> $GITHUB_OUTPUT
             fi
 
       - name: Setup env
@@ -228,3 +229,69 @@ jobs:
             env:
                 GITHUB_TOKEN: ${{ secrets.AUTOMATION_GITHUB_TOKEN }}
                 GRADLE_OPTS: '-Dorg.gradle.daemon=false'
+
+  release:
+    if: ${{ always() && contains(needs.build.outputs.commit_message, '[release]') && needs.build.result == 'success' && (needs.test.result == 'success' || needs.test.result == 'skipped') }}
+    needs: [build, test]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: write
+      contents: write
+      packages: write
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: true
+          ref: ${{ github.head_ref || github.ref_name }}
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: 'temurin'
+          architecture: x64
+          cache: gradle
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "${{ github.event.pusher.name || github.actor }}"
+          git config --global user.email "${{ github.event.pusher.email || format('{0}@users.noreply.github.com', github.actor) }}"
+
+      - name: Docker Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Docker Login to Seqera public CR
+        uses: docker/login-action@v3
+        with:
+          registry: "public.cr.seqera.io"
+          username: ${{ vars.SEQERA_PUBLIC_CR_USERNAME }}
+          password: ${{ secrets.SEQERA_PUBLIC_CR_PASSWORD }}
+
+      - name: Run release
+        run: |
+          echo "Starting release process..."
+          echo "npr.apiUrl=$NPR_API_URL" >> gradle.properties
+          echo "npr.apiKey=$NPR_API_KEY" >> gradle.properties
+          bash release.sh
+        env:
+          GRADLE_OPTS: '-Dorg.gradle.daemon=false'
+          AWS_JAVA_V1_DISABLE_DEPRECATION_ANNOUNCEMENT: 'true'
+          # credentials to pubslish nextflow assets
+          NXF_AWS_ACCESS: ${{ vars.NXF_AWS_ACCESS }}
+          NXF_AWS_SECRET: ${{ secrets.NXF_AWS_SECRET }}
+          # credentials to publish maven libraries
+          AWS_ACCESS_KEY_ID: ${{ vars.SEQERA_MAVEN_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.SEQERA_MAVEN_SECRET_KEY }}
+          # plugin registry
+          NPR_API_URL: ${{ vars.NPR_API_URL }}
+          NPR_API_KEY: ${{ secrets.NPR_API_KEY }}
+          # GitHub secrets
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

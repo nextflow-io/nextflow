@@ -72,37 +72,6 @@ class PluginUpdaterTest extends Specification {
         folder?.deleteDir()
     }
 
-    def 'should install a plugin from a digest-based repository' () {
-        given:
-        def PLUGIN = "$PLUGIN_ID-1.0.0"
-        def folder = Files.createTempDirectory('test')
-        and:
-        def remote = remoteDigestRepository(folder.resolve('repo'), ['1.0.0', '2.0.0'])
-        and:
-        def local = localCache(folder.resolve('plugins'), [])
-        def manager = new LocalPluginManager(local)
-        def updater = new PluginUpdater(manager, local, remote, false)
-
-        when:
-        updater.installPlugin( PLUGIN_ID, '1.0.0' )
-
-        then:
-        manager.getPlugin(PLUGIN_ID).plugin.class == FooPlugin.class
-        manager.getPlugin(PLUGIN_ID).descriptor.getPluginId() == PLUGIN_ID
-        manager.getPlugin(PLUGIN_ID).descriptor.getVersion() == '1.0.0'
-        and:
-        local.resolve(PLUGIN).exists()
-        local.resolve(PLUGIN).isDirectory()
-        local.resolve(PLUGIN).resolve('MANIFEST.MF').isFile()
-        and:
-        manager.localRoot.resolve(PLUGIN).exists()
-        manager.localRoot.resolve(PLUGIN).isLink()
-        manager.localRoot.resolve(PLUGIN).resolve('MANIFEST.MF').text == local.resolve(PLUGIN).resolve('MANIFEST.MF').text
-
-        cleanup:
-        folder?.deleteDir()
-    }
-
     def 'should update a plugin' () {
         given:
         def folder = Files.createTempDirectory('test')
@@ -473,12 +442,6 @@ class PluginUpdaterTest extends Specification {
         return createRepositoryIndex(dir, plugins).toUri().toURL()
     }
 
-    static private URL remoteDigestRepository(Path dir, List<String> versions) {
-        Files.createDirectory(dir)
-        List<MockPlugin> plugins = versions.collect { v -> createDigestPlugin(dir, v) }
-        return createRepositoryIndex(dir, plugins).toUri().toURL()
-    }
-
     static private Path localCache(Path dir, List<String> versions) {
         Files.createDirectory(dir)
         versions.each { version -> createPlugin(dir, version) }
@@ -564,5 +527,39 @@ class PluginUpdaterTest extends Specification {
         }
 
         return zipFilePath
+    }
+
+    def 'should prefetch plugin metadata when pulling plugins' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def mockRepo = Mock(PrefetchUpdateRepository)
+        def remote = remoteRepository(folder.resolve('repo'), ['1.0.0', '2.0.0'])
+        def local = localCache(folder.resolve('plugins'), [])
+        def manager = new LocalPluginManager(local)
+        def updater = Spy(PluginUpdater, constructorArgs: [manager, local, remote, false])
+        
+        // Replace repositories with our mock repo
+        updater.@repositories = [mockRepo]
+        
+        and:
+        def pluginList = ['my-plugin@1.0.0', 'another-plugin@2.0.0']
+
+        when:
+        updater.pullPlugins(pluginList)
+        
+        then:
+        // Verify prefetch is called with the correct plugin specs
+        1 * mockRepo.prefetch({ List<PluginRef> specs ->
+            specs.size() == 2 &&
+            specs[0].id == 'my-plugin' && specs[0].version == '1.0.0' &&
+            specs[1].id == 'another-plugin' && specs[1].version == '2.0.0'
+        })
+        
+        and:
+        // Mock pullPlugin0 to prevent real implementation calls
+        2 * updater.pullPlugin0(_, _) >> null
+
+        cleanup:
+        folder?.deleteDir()
     }
 }

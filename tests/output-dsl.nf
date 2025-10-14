@@ -67,11 +67,14 @@ process summary {
   path logs
 
   output:
-  path('summary.txt'), emit: report
+  tuple path('summary_report.html'), path('summary_data/data.json'), path('summary_data/fastqc.txt')
 
   script:
   '''
-  ls -1 *.log > summary.txt
+  touch summary_report.html
+  mkdir summary_data
+  touch summary_data/data.json
+  touch summary_data/fastqc.txt
   '''
 }
 
@@ -123,6 +126,10 @@ output {
   }
 
   summary {
-    path '.'
+    path { report, data_json, fastqc_txt ->
+      report >> './'
+      data_json >> './'
+      fastqc_txt >> './'
+    }
   }
 }

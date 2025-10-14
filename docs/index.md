@@ -171,6 +171,7 @@ developer/packages
 :caption: Tutorials
 :maxdepth: 1
 
+tutorials/rnaseq-nf
 tutorials/data-lineage
 tutorials/workflow-outputs
 tutorials/metrics
@@ -184,7 +185,6 @@ tutorials/flux
 
 guides/aws-java-sdk-v2
 guides/gradle-plugin
-guides/plugin-registry
 guides/migrate-plugin
 guides/updating-spot-retries
 ```

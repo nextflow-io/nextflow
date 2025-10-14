@@ -34,6 +34,7 @@ import nextflow.cli.CmdRun
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
 import nextflow.secret.SecretsLoader
+import nextflow.secret.SecretsProvider
 import nextflow.util.HistoryFile
 import nextflow.util.SecretHelper
 /**
@@ -76,6 +77,8 @@ class ConfigBuilder {
 
     boolean showMissingVariables
 
+    SecretsProvider secretsProvider
+
     Map<ConfigObject, String> emptyVariables = new LinkedHashMap<>(10)
 
     Map<String,String> env = new HashMap<>(SysEnv.get())
@@ -101,6 +104,11 @@ class ConfigBuilder {
 
     ConfigBuilder showMissingVariables(boolean value) {
         this.showMissingVariables = value
+        return this
+    }
+
+    ConfigBuilder setSecretsProvider(SecretsProvider value) {
+        this.secretsProvider = value
         return this
     }
 
@@ -337,17 +345,20 @@ class ConfigBuilder {
         // this is needed to make sure to reuse the same
         // instance of the config vars across different instances of the ConfigBuilder
         // and prevent multiple parsing of the same params file (which can even be remote resource)
-        return getConfigVars(baseDir)
+        final secretContext = secretsProvider
+            ? SecretsLoader.secretContext(secretsProvider)
+            : SecretsLoader.secretContext()
+        return getConfigVars(baseDir, secretContext)
     }
 
     @Memoized
-    static Map getConfigVars(Path base) {
+    static Map getConfigVars(Path base, Object secretContext) {
         final binding = new HashMap(10)
         binding.put('baseDir', base)
         binding.put('projectDir', base)
         binding.put('launchDir', Paths.get('.').toRealPath())
         binding.put('outputDir', Paths.get('results').complete())
-        binding.put('secrets', SecretsLoader.secretContext())
+        binding.put('secrets', secretContext)
         return binding
     }
 
@@ -559,6 +570,9 @@ class ConfigBuilder {
 
         if( cmdRun.preview )
             config.preview = cmdRun.preview
+
+        if( cmdRun.plugins )
+            config.plugins = cmdRun.plugins.tokenize(',')
 
         // -- sets the working directory
         if( cmdRun.workDir )
