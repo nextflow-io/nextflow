@@ -141,6 +141,15 @@ class VariableScopeVisitor extends ConfigVisitorSupport {
             configScopes.pop();
     }
 
+    /**
+     * Determine whether a config option can access the process
+     * DSL for dynamic settings.
+     *
+     * This includes options in the `process` config scope and `executor.jobName`.
+     *
+     * @param scopes
+     * @param node
+     */
     private static boolean isProcessScope(List<String> scopes, ConfigAssignNode node) {
         if( scopes.isEmpty() )
             return false;
