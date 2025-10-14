@@ -16,9 +16,9 @@
 package nextflow.plugin.spec
 
 import groovy.transform.CompileStatic
-import nextflow.config.schema.ConfigScope
-import nextflow.config.schema.SchemaNode
-import nextflow.config.schema.ScopeName
+import nextflow.config.spec.ConfigScope
+import nextflow.config.spec.SpecNode
+import nextflow.config.spec.ScopeName
 import nextflow.plugin.extension.Factory
 import nextflow.plugin.extension.Function
 import nextflow.plugin.extension.Operator
@@ -42,7 +42,7 @@ class PluginSpec {
     Map build() {
         final classLoader = Thread.currentThread().getContextClassLoader()
 
-        // extract schema for each plugin definition
+        // extract definition for each extension point
         final definitions = []
 
         for( final className : extensionPoints ) {
@@ -53,7 +53,7 @@ class PluginSpec {
                 final description = clazz.getAnnotation(Description)?.value()
                 if( !scopeName )
                     continue
-                final node = SchemaNode.Scope.of((Class<? extends ConfigScope>)clazz, description)
+                final node = SpecNode.Scope.of((Class<? extends ConfigScope>)clazz, description)
 
                 definitions.add(ConfigSpec.of(node, scopeName))
             }

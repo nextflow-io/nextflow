@@ -8,7 +8,7 @@ This page provides guidance on defining configuration scopes in the Nextflow run
 
 The Nextflow configuration is defined as a collection of *scope classes*. Each scope class defines the set of available options, including their name, type, and an optional description for a specific configuration scope.
 
-Scope classes are used to generate a configuration schema, which is in turn used for several purposes:
+Scope classes are used to generate a configuration spec, which is in turn used for several purposes:
 
 - Validating config options at runtime (`nextflow run` and `nextflow config`)
 
@@ -29,15 +29,15 @@ For example:
 ```groovy
 package nextflow.hello
 
-import nextflow.config.schema.ConfigScope
-import nextflow.config.schema.ScopeName
+import nextflow.config.spec.ConfigScope
+import nextflow.config.spec.ScopeName
 
 @ScopeName('hello')
 class HelloConfig implements ConfigScope {
 }
 ```
 
-A scope class must provide a default constructor, so that it can be instantiated as an extension point. If no such constructor is defined, the config scope will not be included in the schema. In the above example, this constructor is implicitly defined because no constructors were declared.
+A scope class must provide a default constructor, so that it can be instantiated as an extension point. If no such constructor is defined, the config scope will not be detected by Nextflow. In the above example, this constructor is implicitly defined because no constructors were declared.
 
 The fully-qualified class name (in this case, `nextflow.hello.HelloConfig`) must be included in the list of extension points.
 
@@ -59,7 +59,7 @@ The `@ConfigOption` annotation can specify an optional set of types that are val
     String tags
 ```
 
-The field type and any additional types are included in the schema, allowing them to be used for validation.
+The field type and any additional types are included in the config spec, allowing them to be used for validation.
 
 The field type can be any Java or Groovy class, but in practice it should be a class that can be constructed from primitive values (numbers, booleans, strings). For example, `Duration` and `MemoryUnit` are standard Nextflow types that can each be constructed from an integer or string.
 
@@ -83,7 +83,7 @@ See `AzBatchOpts` and `AzPoolOpts` for an example of how placeholder scopes are 
 
 ### Descriptions
 
-Top-level scope classes and config options should use the `@Description` annotation to provide a description of the scope or option. This description is included in the schema, which is in turn used by the language server to provide hover hints.
+Top-level scope classes and config options should use the `@Description` annotation to provide a description of the scope or option. This description is included in the config spec, which is in turn used by the language server to provide hover hints.
 
 For example:
 
@@ -121,9 +121,9 @@ The Nextflow runtime adheres the following best practices where appropriate:
 For example:
 
 ```groovy
-import nextflow.config.schema.ConfigOption
-import nextflow.config.schema.ConfigScope
-import nextflow.config.schema.ScopeName
+import nextflow.config.spec.ConfigOption
+import nextflow.config.spec.ConfigScope
+import nextflow.config.spec.ScopeName
 
 @ScopeName('hello')
 class HelloConfig implements ConfigScope {
@@ -147,7 +147,7 @@ class HelloConfig implements ConfigScope {
 
 ### Runtime
 
-Nextflow validates the config map after it is loaded. Top-level config scopes are loaded by the plugin system as extension points and converted into a schema, which is used to validate the config map.
+Nextflow validates the config map after it is loaded. Top-level config scopes are loaded by the plugin system as extension points and converted into a config spec, which is used to validate the config map.
 
 Plugins are loaded after the config is loaded and before it is validated, since plugins can also define config scopes. If a third-party plugin declares a config scope, it must be explicitly enabled in order to validate config options from the plugin. Otherwise, Nextflow will report these options as unrecognized.
 
@@ -167,10 +167,10 @@ In practice, it is better to avoid the use of `Global` and provide an instance o
 
 ### JSON Schema
 
-Config scope classes can be converted into a schema with the `SchemaNode` class, which uses reflection to extract metadata such as scope names, option names, types, and descriptions. This schema is rendered to JSON and used by the language server at build-time to provide code intelligence such as code completion and hover hints.
+Config scope classes can be converted into a config spec with the `SpecNode` class, which uses reflection to extract metadata such as scope names, option names, types, and descriptions. This spec is rendered to JSON and used by the language server at build-time to provide code intelligence such as code completion and hover hints.
 
 ### Documentation
 
-The schema described above can also be rendered to Markdown using the `MarkdownRenderer` class. It produces a Markdown document approximating the {ref}`config-options` page.
+The config spec described above can be rendered to Markdown using the `MarkdownRenderer` class. It produces a Markdown document approximating the {ref}`config-options` page.
 
 This approach to docs generation is not yet complete, and has not been incorporated into the build process yet. However, it can be used to check for discrepancies between the source code and docs when making changes. The documentation should match the `@Description` annotations as closely as possible, but may contain additional details such as version notes and extra paragraphs.

@@ -20,9 +20,9 @@ import java.util.stream.Collectors
 
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
-import nextflow.config.schema.ConfigOption
-import nextflow.config.schema.ConfigScope
-import nextflow.config.schema.ScopeName
+import nextflow.config.spec.ConfigOption
+import nextflow.config.spec.ConfigScope
+import nextflow.config.spec.ScopeName
 import nextflow.exception.AbortOperationException
 import nextflow.script.dsl.Description
 
