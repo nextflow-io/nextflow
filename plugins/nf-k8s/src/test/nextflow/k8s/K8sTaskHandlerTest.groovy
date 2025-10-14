@@ -498,6 +498,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * handler.updateTimestamps(termState)
         1 * handler.readExitFile() >> EXIT_STATUS
         1 * handler.deletePodIfSuccessful(task) >> null
+        1 * handler.savePodLogOnError(task) >> null
         handler.task.exitStatus == EXIT_STATUS
         handler.task.@stdout == OUT_FILE
         handler.task.@stderr == ERR_FILE
@@ -528,6 +529,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * handler.updateTimestamps(termState)
         0 * handler.readExitFile()
         1 * handler.deletePodIfSuccessful(task) >> null
+        1 * handler.savePodLogOnError(task) >> null
         handler.task.exitStatus == 137
         handler.status == TaskStatus.COMPLETED
         result == true
@@ -783,6 +785,43 @@ class K8sTaskHandlerTest extends Specification {
         then:
         1 * executor.getK8sConfig() >> new K8sConfig(cleanup: false)
         0 * client.podDelete(POD_NAME) >> null
+
+    }
+
+    def 'should save pod log' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        def POD_NAME = 'the-pod-name'
+        def POD_MESSAGE = 'Hello world!'
+        def POD_LOG = new ByteArrayInputStream(new String(POD_MESSAGE).bytes)
+        def session = Mock(Session)
+        def task = Mock(TaskRun)
+        def executor = Mock(K8sExecutor)
+        def client = Mock(K8sClient)
+        and:
+        def handler = Spy(new K8sTaskHandler(executor: executor, client: client, podName: POD_NAME))
+
+        when:
+        handler.savePodLogOnError(task)
+        then:
+        task.isSuccess() >> true
+        0 * client.podLog(_)
+
+        when:
+        handler.savePodLogOnError(task)
+        then:
+        task.isSuccess() >> false
+        task.getWorkDir() >> folder
+        executor.getSession() >> session
+        session.isTerminated() >> false
+        session.isCancelled() >> false
+        session.isAborted() >> false
+        1 * client.podLog(POD_NAME) >> POD_LOG
+
+        folder.resolve( TaskRun.CMD_LOG ).text == POD_MESSAGE
+        cleanup:
+        folder?.deleteDir()
 
     }
 
