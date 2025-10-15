@@ -202,12 +202,6 @@ task buildInfo {
     if (System.getenv('GITHUB_RUN_NUMBER')) {
         buildNum = System.getenv('GITHUB_RUN_NUMBER').toInteger()
         println "Using GitHub Actions run number: $buildNum"
-    } else {
-        def src = file0.text
-        src.find(/build *= *([0-9]*)/) { buildNum = it[1]?.toInteger()+1 }
-        if( !buildNum ) {
-            println "WARN: Unable to find current build number"
-        }
     }
 
     // -- update build-info file
@@ -230,6 +224,7 @@ task buildInfo {
  * This task always runs to ensure all release artifacts are updated with current versions.
  */
 task releaseInfo {
+    dependsOn buildInfo
     // Always run this task - never consider it up-to-date
     outputs.upToDateWhen { false }
 

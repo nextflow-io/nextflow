@@ -124,7 +124,15 @@ Follow these actions to make a new release:
 - Run `make releaseInfo` to update the version number and generate checksums.
 - Run this command to stage for commit the release files:
     ```
-    git add VERSION changelog.txt nextflow nextflow.md5 nextflow.sha1 nextflow.sha256 modules/nextflow/src/main/resources/META-INF/plugins-info.txt
+    git add \
+      VERSION \
+      changelog.txt \
+      nextflow \
+      nextflow.md5 \
+      nextflow.sha1 \
+      nextflow.sha256 \
+      modules/nextflow/src/main/resources/META-INF/plugins-info.txt \
+      modules/nextflow/src/main/resources/META-INF/build-info.properties
     ```
 - Make a commit using the `[release]` tag in the comment and push it upstream to trigger the release automation with GitHub action:
     ```
