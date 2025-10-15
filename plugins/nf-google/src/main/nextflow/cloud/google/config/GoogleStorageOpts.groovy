@@ -18,7 +18,7 @@
 package nextflow.cloud.google.config
 
 import groovy.transform.CompileStatic
-import nextflow.config.schema.ConfigScope
+import nextflow.config.spec.ConfigScope
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>

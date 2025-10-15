@@ -18,9 +18,9 @@ package nextflow.config
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.config.schema.ConfigScope
-import nextflow.config.schema.SchemaNode
-import nextflow.config.schema.ScopeName
+import nextflow.config.spec.ConfigScope
+import nextflow.config.spec.SpecNode
+import nextflow.config.spec.ScopeName
 import nextflow.plugin.Plugins
 import nextflow.script.dsl.Description
 /**
@@ -62,20 +62,20 @@ class ConfigValidator {
     /**
      * Additional config scopes added by third-party plugins
      */
-    private SchemaNode.Scope pluginScopes
+    private SpecNode.Scope pluginScopes
 
     ConfigValidator() {
         loadPluginScopes()
     }
 
     private void loadPluginScopes() {
-        final children = new HashMap<String, SchemaNode>()
+        final children = new HashMap<String, SpecNode>()
         for( final scope : Plugins.getExtensions(ConfigScope) ) {
             final clazz = scope.getClass()
             final name = clazz.getAnnotation(ScopeName)?.value()
             final description = clazz.getAnnotation(Description)?.value()
             if( name == '' ) {
-                children.putAll(SchemaNode.Scope.of(clazz, '').children())
+                children.putAll(SpecNode.Scope.of(clazz, '').children())
                 continue
             }
             if( !name )
@@ -84,9 +84,9 @@ class ConfigValidator {
                 log.warn "Plugin config scope `${clazz.name}` conflicts with existing scope: `${name}`"
                 continue
             }
-            children.put(name, SchemaNode.Scope.of(clazz, description))
+            children.put(name, SpecNode.Scope.of(clazz, description))
         }
-        pluginScopes = new SchemaNode.Scope('', children)
+        pluginScopes = new SpecNode.Scope('', children)
     }
 
     void validate(ConfigMap config) {
@@ -131,15 +131,15 @@ class ConfigValidator {
     }
 
     /**
-     * Determine whether a config option is defined in the schema.
+     * Determine whether a config option is defined in the spec.
      *
      * @param names
      */
     boolean isValid(List<String> names) {
         if( names.size() == 1 && names.first() in HIDDEN_OPTIONS )
             return true
-        final child = SchemaNode.ROOT.getChild(names)
-        if( child instanceof SchemaNode.Option || child instanceof SchemaNode.DslOption )
+        final child = SpecNode.ROOT.getChild(names)
+        if( child instanceof SpecNode.Option || child instanceof SpecNode.DslOption )
             return true
         if( pluginScopes.getOption(names) )
             return true
@@ -164,18 +164,18 @@ class ConfigValidator {
      * @param names Config option split into individual names, e.g. 'process.resourceLimits' -> [process, resourceLimits]
      */
     private boolean isMapOption(List<String> names) {
-        return isMapOption0(SchemaNode.ROOT, names)
+        return isMapOption0(SpecNode.ROOT, names)
             || isMapOption0(pluginScopes, names)
     }
 
-    private static boolean isMapOption0(SchemaNode.Scope scope, List<String> names) {
-        SchemaNode node = scope
+    private static boolean isMapOption0(SpecNode.Scope scope, List<String> names) {
+        SpecNode node = scope
         for( final name : names ) {
-            if( node instanceof SchemaNode.Scope )
+            if( node instanceof SpecNode.Scope )
                 node = node.children().get(name)
-            else if( node instanceof SchemaNode.Placeholder )
+            else if( node instanceof SpecNode.Placeholder )
                 node = node.scope()
-            else if( node instanceof SchemaNode.Option )
+            else if( node instanceof SpecNode.Option )
                 return node.type() == Map.class
             else
                 return false

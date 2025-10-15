@@ -23,8 +23,8 @@ import software.amazon.awssdk.services.s3.model.ObjectCannedACL
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.SysEnv
-import nextflow.config.schema.ConfigOption
-import nextflow.config.schema.ConfigScope
+import nextflow.config.spec.ConfigOption
+import nextflow.config.spec.ConfigScope
 import nextflow.script.dsl.Description
 import nextflow.file.FileHelper
 import nextflow.util.Duration
