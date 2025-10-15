@@ -1,0 +1,8 @@
+Plugin-Class: nextflow.conda.CondaPlugin
+Plugin-Id: nf-conda
+Plugin-Version: 1.0.0
+Plugin-Provider: Seqera Labs
+Plugin-Description: Conda package manager support for Nextflow
+Plugin-License: Apache-2.0
+Plugin-Requires: >=25.04.0
+Nextflow-Version: >=25.04.0

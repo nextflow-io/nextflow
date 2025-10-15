@@ -1207,6 +1207,7 @@ class Session implements ISession {
         return new SpackConfig(opts, getSystemEnv())
     }
 
+
     /**
      * Get the container engine configuration for the specified engine. If no engine is specified
      * if returns the one enabled in the configuration file. If no configuration is found
