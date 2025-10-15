@@ -27,7 +27,7 @@ import nextflow.config.ast.ConfigIncludeNode;
 import nextflow.config.ast.ConfigNode;
 import nextflow.config.ast.ConfigVisitorSupport;
 import nextflow.config.dsl.ConfigDsl;
-import nextflow.config.schema.SchemaNode;
+import nextflow.config.spec.SpecNode;
 import nextflow.script.ast.ASTNodeMarker;
 import nextflow.script.ast.ImplicitClosureParameter;
 import nextflow.script.control.VariableScopeChecker;
@@ -89,7 +89,7 @@ class VariableScopeVisitor extends ConfigVisitorSupport {
     public void visitConfigApplyBlock(ConfigApplyBlockNode node) {
         configScopes.add(node.name);
         var names = currentConfigScopes();
-        var option = SchemaNode.ROOT.getDslOption(names);
+        var option = SpecNode.ROOT.getDslOption(names);
         if( option != null ) {
             vsc.pushScope(option.dsl());
             super.visitConfigApplyBlock(node);

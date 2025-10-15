@@ -13,9 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nextflow.config.schema;
+package nextflow.config.spec;
 
-import org.pf4j.ExtensionPoint;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-public interface ConfigScope extends ExtensionPoint {
+/**
+ * Annotation for defining the name of a custom config scope. Used
+ * only by third-party plugins.
+ *
+ * @author Ben Sherman <bentshermann@gmail.com>
+ */
+@Retention(RetentionPolicy.RUNTIME)
+@Target({ ElementType.TYPE })
+public @interface ScopeName {
+    String value();
 }

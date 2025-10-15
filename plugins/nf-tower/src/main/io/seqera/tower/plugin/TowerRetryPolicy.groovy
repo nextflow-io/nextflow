@@ -18,8 +18,8 @@ package io.seqera.tower.plugin
 
 
 import io.seqera.util.retry.Retryable
-import nextflow.config.schema.ConfigOption
-import nextflow.config.schema.ConfigScope
+import nextflow.config.spec.ConfigOption
+import nextflow.config.spec.ConfigScope
 import nextflow.script.dsl.Description
 import nextflow.util.Duration
 import nextflow.util.RetryConfig
