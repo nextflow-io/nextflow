@@ -547,7 +547,8 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             // finalize the task
             task.exitStatus = getExitCode()
             if( state == 'FAILED' ) {
-                if( task.exitStatus == Integer.MAX_VALUE )
+                // When no exit code or 500XX codes, get the jobError reason from events
+                if( task.exitStatus == Integer.MAX_VALUE || task.exitStatus >= 50000)
                     task.error = getJobError()
                 task.stdout = executor.logging.stdout(uid, taskId) ?: outputFile
                 task.stderr = executor.logging.stderr(uid, taskId) ?: errorFile
@@ -575,12 +576,11 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     private Integer getExitCode(){
         final events = client.getTaskStatus(jobId, taskId)?.getStatusEventsList()
         if( events ) {
-            log.debug("[GOOGLE BATCH] Getting exit code from events: $events")
             final batchExitCode = events.stream().filter(ev -> ev.hasTaskExecution())
                 .max( (ev1, ev2) -> Long.compare(ev1.getEventTime().seconds, ev2.getEventTime().seconds) )
                 .map(ev -> ev.getTaskExecution().getExitCode())
                 .orElse(null)
-            if( batchExitCode != null && batchExitCode < 50000) // Ignore 500XX codes, they will be managed later.
+            if( batchExitCode != null )
                 return batchExitCode
         }
         // fallback to read
@@ -597,7 +597,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - last event: ${lastEvent}; exit code: ${lastEvent?.taskExecution?.exitCode}"
 
             final error = lastEvent?.description
-            if( error && (EXIT_CODE_REGEX.matcher(error).find() || BATCH_ERROR_REGEX.matcher(error).find()) || lastEvent?.taskExecution?.exitCode > 50000) {
+            if( error && (EXIT_CODE_REGEX.matcher(error).find() || BATCH_ERROR_REGEX.matcher(error).find())) {
                 return new ProcessException(error)
             }
         }
