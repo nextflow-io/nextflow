@@ -165,7 +165,7 @@ new ExecutorConfig( Global.session.config.executor as Map ?: Collections.emptyMa
 In practice, it is better to avoid the use of `Global` and provide an instance of `Session` to the client class instead.
 :::
 
-### JSON Schema
+### Config spec
 
 Config scope classes can be converted into a config spec with the `SpecNode` class, which uses reflection to extract metadata such as scope names, option names, types, and descriptions. This spec is rendered to JSON and used by the language server at build-time to provide code intelligence such as code completion and hover hints.
 
