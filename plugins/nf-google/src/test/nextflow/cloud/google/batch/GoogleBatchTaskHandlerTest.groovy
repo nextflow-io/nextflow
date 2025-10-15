@@ -732,13 +732,43 @@ class GoogleBatchTaskHandlerTest extends Specification {
         result == RESULT
 
         where:
-        TASK_STATE              | DESC                                                          | EXIT_CODE | ARRAY_CHILD    | TASK_STATUS                               | EXIT_STATUS       | RESULT    | TASK_ERROR
-        TaskStatus.State.FAILED | "Error"                                                       | null      | true           | nextflow.processor.TaskStatus.COMPLETED   | 0                 | true      | null
-        null                    | "Error"                                                       | null      | true           | nextflow.processor.TaskStatus.COMPLETED   | 1                 | true      | null
-        TaskStatus.State.FAILED | 'Task failed due to Spot VM preemption with exit code 50001.' | 50001     | true           | nextflow.processor.TaskStatus.COMPLETED   | Integer.MAX_VALUE | true      | 'Task failed due to Spot VM preemption with exit code 50001.'
-        TaskStatus.State.FAILED | "Error"                                                       | null      | false          | nextflow.processor.TaskStatus.COMPLETED   | 0                 | true      | null
-        null                    | "Error"                                                       | null      | false          | nextflow.processor.TaskStatus.COMPLETED   | 1                 | true      | null
-        TaskStatus.State.FAILED | 'Task failed due to Spot VM preemption with exit code 50001.' | 50001     | false          | nextflow.processor.TaskStatus.COMPLETED   | Integer.MAX_VALUE | true      | 'Task failed due to Spot VM preemption with exit code 50001.'
+        TASK_STATE              | DESC      | EXIT_CODE | ARRAY_CHILD    | TASK_STATUS                               | EXIT_STATUS       | RESULT    | TASK_ERROR
+        TaskStatus.State.FAILED | "Error"   | null      | true           | nextflow.processor.TaskStatus.COMPLETED   | 0                 | true      | null
+        null                    | "Error"   | null      | true           | nextflow.processor.TaskStatus.COMPLETED   | 1                 | true      | null
+        TaskStatus.State.FAILED | "Error"   | null      | false          | nextflow.processor.TaskStatus.COMPLETED   | 0                 | true      | null
+        null                    | "Error"   | null      | false          | nextflow.processor.TaskStatus.COMPLETED   | 1                 | true      | null
     }
+
+    def 'should check if completed when 500xx errors' () {
+        given:
+        def jobId = '1'
+        def taskId = '1'
+        def client = Mock(BatchClient){
+            getTaskInArrayStatus(jobId, taskId) >> { TASK_STATE ? makeTaskStatus(TASK_STATE, DESC, EXIT_CODE): null }
+            getTaskStatus(jobId, taskId) >> { TASK_STATE ? makeTaskStatus(TASK_STATE, DESC, EXIT_CODE): null }
+            getJobStatus(jobId ) >> makeJobStatus(JobStatus.State.FAILED,DESC)
+        }
+        def logging = Mock(BatchLogging)
+        def executor = Mock(GoogleBatchExecutor){
+            getLogging() >> logging
+        }
+        def task = new TaskRun()
+        task.name = 'hello'
+        def handler = Spy(new GoogleBatchTaskHandler(jobId: jobId, taskId: taskId, client: client, task: task, isArrayChild: ARRAY_CHILD, status: nextflow.processor.TaskStatus.RUNNING, executor: executor))
+        when:
+        def result = handler.checkIfCompleted()
+        then:
+        0 * handler.readExitFile() >> EXIT_STATUS
+        handler.status == TASK_STATUS
+        handler.task.exitStatus == EXIT_STATUS
+        handler.task.error?.message == TASK_ERROR
+        result == RESULT
+
+        where:
+        TASK_STATE              | DESC                                                          | EXIT_CODE | ARRAY_CHILD    | TASK_STATUS                               | EXIT_STATUS       | RESULT    | TASK_ERROR
+        TaskStatus.State.FAILED | 'Task failed due to Spot VM preemption with exit code 50001.' | 50001     | true           | nextflow.processor.TaskStatus.COMPLETED   | 50001             | true      | 'Task failed due to Spot VM preemption with exit code 50001.'
+        TaskStatus.State.FAILED | 'Task failed due to Spot VM preemption with exit code 50001.' | 50001     | false          | nextflow.processor.TaskStatus.COMPLETED   | 50001             | true      | 'Task failed due to Spot VM preemption with exit code 50001.'
+    }
+
 
 }
