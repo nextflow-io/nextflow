@@ -44,7 +44,6 @@ import nextflow.Global;
 import nextflow.ISession;
 import nextflow.extension.Bolts;
 import nextflow.extension.FilesEx;
-import nextflow.file.FileHolder;
 import nextflow.io.SerializableMarker;
 import nextflow.script.types.Bag;
 import org.slf4j.Logger;
@@ -162,9 +161,6 @@ public class HashBuilder {
         else if( value instanceof Collection)
             for( Object item : ((Collection)value) )
                 with(item);
-
-        else if( value instanceof FileHolder )
-            with(((FileHolder) value).getSourceObj());
 
         else if( value instanceof Path )
             hashFile(hasher, (Path)value, mode, basePath);
