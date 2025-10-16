@@ -49,7 +49,6 @@ import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Iterable;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
 import software.amazon.awssdk.transfer.s3.model.*;
 
-
 /**
  * Client Amazon S3
  * @see software.amazon.awssdk.services.s3.S3Client
@@ -320,19 +319,6 @@ public class S3Client {
 	}
 
     public void downloadFile(S3Path source, File target, long size) throws IOException {
-        IOException exception = runWithPermit(() -> {
-            try {
-                downloadFile0(source, target, size);
-            } catch (IOException e) {
-                return e;
-            }
-            return null;
-        });
-        if( exception != null )
-			throw exception;
-    }
-
-    private void downloadFile0(S3Path source, File target, long size) throws IOException {
 		try{
             DownloadFileRequest downloadFileRequest = DownloadFileRequest.builder()
                 .getObjectRequest(b -> b.bucket(source.getBucket()).key(source.getKey()))
@@ -356,20 +342,7 @@ public class S3Client {
         }
     }
 
-    public void downloadDirectory(S3Path source, File target) throws IOException {
-        IOException exception = runWithPermit(() -> {
-            try {
-                downloadDirectory0(source, target);
-            } catch (IOException e) {
-                return e;
-            }
-            return null;
-        });
-        if( exception != null )
-            throw exception;
-    }
-
-    private void downloadDirectory0(S3Path source, File targetFile) throws IOException {
+    public void downloadDirectory(S3Path source, File targetFile) throws IOException {
         //
         // the download directory method provided by the TransferManager replicates
         // the source files directory structure in the target path
@@ -469,20 +442,7 @@ public class S3Client {
         }
     }
 
-    public void uploadFile(File source, S3Path target) throws IOException{
-        IOException exception = runWithPermit(() -> {
-            try {
-                uploadFile0(source, target);
-            } catch (IOException e) {
-                return e;
-            }
-            return null;
-        });
-        if( exception != null )
-            throw exception;
-    }
-
-    private void uploadFile0(File source, S3Path target) throws IOException {
+	public void uploadFile(File source, S3Path target) throws IOException {
 		PutObjectRequest.Builder req = PutObjectRequest.builder().bucket(target.getBucket()).key(target.getKey());
 		preparePutObjectRequest(req, target.getTagsList(), target.getContentType(), target.getStorageClass());
 		// initiate transfer
@@ -516,19 +476,6 @@ public class S3Client {
 	}
 
 	public void uploadDirectory(File source, S3Path target) throws IOException {
-        IOException exception = runWithPermit(() -> {
-            try {
-                uploadDirectory0(source, target);
-            } catch (IOException e) {
-                return e;
-            }
-            return null;
-        });
-        if( exception != null )
-            throw exception;
-    }
-
-    private void uploadDirectory0(File source, S3Path target) throws IOException {
 		UploadDirectoryRequest request = UploadDirectoryRequest.builder()
 				.bucket(target.getBucket())
 				.s3Prefix(target.getKey())
@@ -554,19 +501,6 @@ public class S3Client {
 	}
 
     public void copyFile(CopyObjectRequest.Builder reqBuilder, List<Tag> tags, String contentType, String storageClass) throws IOException {
-        IOException exception = runWithPermit(() -> {
-            try {
-                copyFile0(reqBuilder,tags, contentType, storageClass);
-            } catch (IOException e) {
-                return e;
-            }
-            return null;
-        });
-        if (exception != null)
-            throw exception;
-    }
-
-    private void copyFile0(CopyObjectRequest.Builder reqBuilder, List<Tag> tags, String contentType, String storageClass) throws IOException {
 		if( tags !=null && !tags.isEmpty()) {
 			log.debug("Setting tags: {}", tags);
             reqBuilder.taggingDirective(TaggingDirective.REPLACE);

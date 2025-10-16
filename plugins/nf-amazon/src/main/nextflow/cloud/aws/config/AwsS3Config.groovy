@@ -58,6 +58,13 @@ class AwsS3Config implements ConfigScope {
     """)
     final String endpoint
 
+    /**
+     * Maximum number of concurrent transfers used by S3 transfer manager. By default,
+     * it is determined automatically by `targetThroughputInGbps`.
+     */
+    @ConfigOption
+    final Integer maxConcurrency
+
     @ConfigOption
     @Description("""
         The maximum number of open HTTP connections used by the S3 client (default: `50`).
@@ -75,6 +82,13 @@ class AwsS3Config implements ConfigScope {
         The maximum number of retry attempts for failed retryable requests (default: `-1`).
     """)
     final Integer maxErrorRetry
+
+    /**
+     * Maximum native memory used by S3 transfer manager. By default, it is
+     * determined automatically by `targetThroughputInGbps`.
+     */
+    @ConfigOption
+    final MemoryUnit maxNativeMemory
 
     @ConfigOption
     @Description("""
@@ -217,9 +231,11 @@ class AwsS3Config implements ConfigScope {
         this.endpoint = opts.endpoint ?: SysEnv.get('AWS_S3_ENDPOINT')
         if( endpoint && FileHelper.getUrlProtocol(endpoint) !in ['http','https'] )
             throw new IllegalArgumentException("S3 endpoint must begin with http:// or https:// prefix - offending value: '${endpoint}'")
+        this.maxConcurrency = opts.maxConcurrency as Integer
         this.maxConnections = opts.maxConnections as Integer
         this.maxDownloadHeapMemory = opts.maxDownloadHeapMemory as MemoryUnit
         this.maxErrorRetry = opts.maxErrorRetry as Integer
+        this.maxNativeMemory = opts.maxNativeMemory as MemoryUnit
         this.minimumPartSize = opts.minimumPartSize as MemoryUnit
         this.multipartThreshold = opts.multipartThreshold as MemoryUnit
         this.proxyHost = opts.proxyHost
@@ -275,9 +291,11 @@ class AwsS3Config implements ConfigScope {
     Map<String,String> getAwsClientConfig() {
         return [
             connection_timeout: connectionTimeout?.toString(),
+            max_concurrency: maxConcurrency?.toString(),
             max_connections: maxConnections?.toString(),
             max_download_heap_memory: maxDownloadHeapMemory?.toBytes()?.toString(),
             max_error_retry: maxErrorRetry?.toString(),
+            max_native_memory: maxNativeMemory?.toBytes()?.toString(),
             minimum_part_size: minimumPartSize?.toBytes()?.toString(),
             multipart_threshold: multipartThreshold?.toBytes()?.toString(),
             proxy_host: proxyHost?.toString(),

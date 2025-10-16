@@ -49,6 +49,8 @@ class S3ClientConfigurationTest extends Specification{
         given:
         def props = new Properties()
         def config = new AwsConfig([client: [
+                maxConcurrency: 10,
+                maxNativeMemory: '500MB',
                 minimumPartSize: '7MB',
                 multipartThreshold: '32MB',
                 targetThroughputInGbps: 15,
@@ -68,7 +70,8 @@ class S3ClientConfigurationTest extends Specification{
         def overrideConfig = clientConfig.getClientOverrideConfiguration()
         overrideConfig.retryStrategy().get().maxAttempts() == 4
         // Check Crt performance settings
-        clientConfig.getMaxConcurrency() == 100
+        clientConfig.getMaxConcurrency() == 10
+        clientConfig.getMaxNativeMemoryInBytes() == 524288000L
         clientConfig.getTargetThroughputInGbps() == 15
         // Check multipartConfig
         def multipartConfig = clientConfig.getMultipartConfiguration()

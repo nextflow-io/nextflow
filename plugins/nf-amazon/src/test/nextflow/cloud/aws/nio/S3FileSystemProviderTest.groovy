@@ -35,6 +35,8 @@ class S3FileSystemProviderTest extends Specification {
                 s3Acl: 'Private',
                 connectionTimeout: 20000,
                 endpoint: 'https://s3.eu-west-1.amazonaws.com',
+                maxConcurrency: 10,
+                maxNativeMemory: '500MB',
                 minimumPartSize: '7MB',
                 multipartThreshold: '32MB',
                 maxConnections: 100,
@@ -88,6 +90,8 @@ class S3FileSystemProviderTest extends Specification {
         fs.properties().getProperty('upload_retry_sleep') == '200'
         fs.properties().getProperty('upload_chunk_size') == '7340032' //7MB
         fs.properties().getProperty('upload_max_threads') == '15'
+        fs.properties().getProperty('max_concurrency') == '10'
+        fs.properties().getProperty('max_native_memory') == '524288000' //500MB
         fs.properties().getProperty('minimum_part_size') == '7340032' //7MB
         fs.properties().getProperty('multipart_threshold') == '33554432' //32MB
     }
