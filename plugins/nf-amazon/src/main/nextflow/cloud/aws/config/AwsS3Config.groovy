@@ -218,10 +218,10 @@ class AwsS3Config implements ConfigScope {
     final String uploadStorageClass
 
     // According to CRT Async client docs https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/services/s3/S3CrtAsyncClientBuilder.html
-    public static final long DEFAULT_PART_SIZE = Duration.of('8 MB').toBytes()
+    public static final long DEFAULT_PART_SIZE = MemoryUnit.of('8 MB').toBytes()
     public static final int DEFAULT_INIT_BUFFER_PARTS = 10
     // Maximum heap buffer size
-    public static final long DEFAULT_MAX_DOWNLOAD_BUFFER_SIZE = Duration.of('400 MB').toBytes()
+    public static final long DEFAULT_MAX_DOWNLOAD_BUFFER_SIZE = MemoryUnit.of('400 MB').toBytes()
 
     AwsS3Config(Map opts) {
         this.anonymous = opts.anonymous as Boolean
