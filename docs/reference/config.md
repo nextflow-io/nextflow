@@ -179,12 +179,12 @@ The following settings are available:
 `aws.client.minimumPartSize`
 : :::{versionadded} 25.06.0-edge
   :::
-: The minimum part size used for multi-part uploads to S3 (default: `8 MB`).
+: The minimum part size used for multipart uploads to S3 (default: `8 MB`).
 
 `aws.client.multipartThreshold`
 : :::{versionadded} 25.06.0-edge
   :::
-: The object size threshold used for multi-part uploads to S3 (default: same as `aws.cllient.minimumPartSize`).
+: The object size threshold used for multipart uploads to S3 (default: same as `aws.cllient.minimumPartSize`).
 
 `aws.client.protocol`
 : :::{deprecated} 25.06.0-edge

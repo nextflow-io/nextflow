@@ -89,9 +89,17 @@ class ThreadPoolManager {
             minThreads = maxThreads
         }
 
-        return executorService = Threads.useVirtual()
-                ? Executors.newThreadPerTaskExecutor(VirtualThreadFactoryBuilder.create(name ?: "nf-thread-pool-${poolCount.getAndIncrement()}".toString()))
-                : legacyThreadPool()
+        executorService = Threads.useVirtual()
+            ? virtualThreadService()
+            : legacyThreadPool()
+
+        return executorService
+    }
+
+    protected ExecutorService virtualThreadService() {
+        final poolName = name ?: "nf-thread-pool-${poolCount.getAndIncrement()}".toString()
+        final pool = Thread.ofVirtual().name(poolName).factory()
+        return Executors.newThreadPerTaskExecutor(pool)
     }
 
     protected ExecutorService legacyThreadPool() {

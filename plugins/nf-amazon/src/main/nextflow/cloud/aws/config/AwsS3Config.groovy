@@ -92,13 +92,13 @@ class AwsS3Config implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The minimum part size used for multi-part uploads to S3 (default: `8 MB`).
+        The minimum part size used for multipart uploads to S3 (default: `8 MB`).
     """)
     final MemoryUnit minimumPartSize
 
     @ConfigOption
     @Description("""
-        The object size threshold used for multi-part uploads to S3 (default: same as `aws.cllient.minimumPartSize`).
+        The object size threshold used for multipart uploads to S3 (default: same as `aws.cllient.minimumPartSize`).
     """)
     final MemoryUnit multipartThreshold
 
@@ -217,12 +217,11 @@ class AwsS3Config implements ConfigScope {
     """)
     final String uploadStorageClass
 
-    private static final long _1MB = 1024 * 1024;
     // According to CRT Async client docs https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/services/s3/S3CrtAsyncClientBuilder.html
-    public static final long DEFAULT_PART_SIZE = 8 * _1MB;
-    public static final int DEFAULT_INIT_BUFFER_PARTS = 10;
+    public static final long DEFAULT_PART_SIZE = Duration.of('8 MB').toBytes()
+    public static final int DEFAULT_INIT_BUFFER_PARTS = 10
     // Maximum heap buffer size
-    public static final long DEFAULT_MAX_DOWNLOAD_BUFFER_SIZE = 400 * _1MB;
+    public static final long DEFAULT_MAX_DOWNLOAD_BUFFER_SIZE = Duration.of('400 MB').toBytes()
 
     AwsS3Config(Map opts) {
         this.anonymous = opts.anonymous as Boolean
