@@ -448,7 +448,7 @@ public class ScriptAstBuilder {
             collectSyntaxError(new SyntaxException("The `stage:` section is not supported in a legacy process", stagers));
 
         if( !previewTypes && !topics.isEmpty() )
-            collectSyntaxError(new SyntaxException("The `topic:` section is not supported in a legacy process", stagers));
+            collectSyntaxError(new SyntaxException("The `topic:` section is not supported in a legacy process", topics));
 
         if( ctx.body.blockStatements() != null ) {
             if( !directives.isEmpty() || ctx.body.processInputs() != null || !outputs.isEmpty() || !topics.isEmpty() )
@@ -503,8 +503,8 @@ public class ScriptAstBuilder {
             : processTupleInput(type, names, ctx);
         for( var name : names )
             checkInvalidVarName(name, result);
-        if( ctx.type() == null )
-            collectSyntaxError(new SyntaxException("Process input must have a type annotation", result));
+        if( names.size() == 1 && ctx.type() == null )
+            collectWarning("Process input should have a type annotation", names.get(0), result);
         saveTrailingComment(result, ctx);
         return result;
     }
