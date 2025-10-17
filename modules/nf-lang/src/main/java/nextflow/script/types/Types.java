@@ -131,7 +131,7 @@ public class Types {
         else
             builder.append(getName(type.getNameWithoutPackage()));
 
-        if( !placeholder && type.isUsingGenerics() ) {
+        if( !placeholder && type.getGenericsTypes() != null ) {
             builder.append('<');
             genericsTypeNames(type.getGenericsTypes(), builder);
             builder.append('>');

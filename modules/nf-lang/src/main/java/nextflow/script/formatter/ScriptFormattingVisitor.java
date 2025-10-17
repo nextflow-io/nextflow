@@ -271,8 +271,8 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             visitTypedInputs(takes);
         }
         if( !node.main.isEmpty() ) {
-            fmt.appendNewLine();
             if( takes.length > 0 || !node.emits.isEmpty() || !node.publishers.isEmpty() ) {
+                fmt.appendNewLine();
                 fmt.appendIndent();
                 fmt.append("main:\n");
             }
@@ -607,10 +607,10 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
     public void visitOutput(OutputNode node) {
         fmt.appendLeadingComments(node);
         fmt.appendIndent();
-        fmt.append(node.name);
-        if( fmt.hasType(node.type) ) {
+        fmt.append(node.getName());
+        if( fmt.hasType(node) ) {
             fmt.append(": ");
-            fmt.visitTypeAnnotation(node.type);
+            fmt.visitTypeAnnotation(node.getType());
         }
         fmt.append(" {\n");
         fmt.incIndent();

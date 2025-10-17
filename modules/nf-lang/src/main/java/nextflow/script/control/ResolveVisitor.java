@@ -150,7 +150,7 @@ public class ResolveVisitor extends ClassCodeExpressionTransformer {
         if( genericsType.isResolved() )
             return true;
         var type = genericsType.getType();
-        resolveOrFail(type, genericsType);
+        resolve(type);
         if( resolveGenericsTypes(type.getGenericsTypes()) )
             genericsType.setResolved(genericsType.getType().isResolved());
         return genericsType.isResolved();
