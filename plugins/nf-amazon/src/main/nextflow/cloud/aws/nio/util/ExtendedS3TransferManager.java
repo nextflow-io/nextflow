@@ -54,6 +54,7 @@ public class ExtendedS3TransferManager {
     private S3TransferManager transferManager;
     private Semaphore semaphore;
     private long partSize;
+    private int downloadPermits;
     private Semaphore downloadSemaphore;
 
     public ExtendedS3TransferManager( S3TransferManager transferManager, Properties props){
@@ -83,8 +84,16 @@ public class ExtendedS3TransferManager {
             this.partSize = Long.parseLong(props.getProperty("minimum_part_size"));
         }
 
-        int downloadPermits = (int) Math.floor((double) maxBufferSize / partSize);
+        this.downloadPermits = (int) Math.floor((double) maxBufferSize / partSize);
         this.downloadSemaphore = new Semaphore(downloadPermits);
+    }
+
+    public long getPartSize() {
+        return partSize;
+    }
+
+    public int getDownloadPermits() {
+        return downloadPermits;
     }
 
     public FileDownload downloadFile(DownloadFileRequest request, long size) throws InterruptedException {
