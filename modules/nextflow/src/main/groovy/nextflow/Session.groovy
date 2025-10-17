@@ -77,6 +77,7 @@ import nextflow.trace.TraceObserverV2
 import nextflow.trace.TraceRecord
 import nextflow.trace.WorkflowStatsObserver
 import nextflow.trace.event.FilePublishEvent
+import nextflow.trace.event.FileStagingEvent
 import nextflow.trace.event.TaskEvent
 import nextflow.trace.event.WorkflowOutputEvent
 import nextflow.util.Barrier
@@ -1114,6 +1115,10 @@ class Session implements ISession {
     void notifyFilePublish(FilePublishEvent event) {
         notifyEvent(observersV1, ob -> ob.onFilePublish(event.target, event.source))
         notifyEvent(observersV2, ob -> ob.onFilePublish(event))
+    }
+
+    void notifyFileStaged(FileStagingEvent event) {
+        notifyEvent(observersV2, ob -> ob.onFileStaged(event))
     }
 
     void notifyFlowComplete() {
