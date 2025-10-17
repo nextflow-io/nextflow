@@ -681,14 +681,14 @@ param2 = 'value2'"""
         cmd.checkApiConnection(_) >> true
         cmd.getUserInfo(_, _) >> [userName: 'testuser', id: '123']
         cmd.getWorkspaceDetails(_, _, _) >> null
-        cmd.getComputeEnvironments(_, _, _) >> []
+        cmd.getComputeEnvironments(_, _, _) >> [[name: 'ce_test', platform: 'aws', workDir: 's3://test', primary: true]]
 
         when:
         def status = cmd.collectStatus(config)
 
         then:
         status != null
-        status.table.size() == 6 // endpoint, connection, auth, monitoring, workspace, compute env (no work dir when no primary env)
+        status.table.size() == 7 // endpoint, connection, auth, monitoring, workspace, compute env (no work dir when no primary env)
         // Check API endpoint row
         status.table[0][0] == 'API endpoint'
         status.table[0][1].contains('https://api.cloud.seqera.io')
@@ -705,8 +705,12 @@ param2 = 'value2'"""
         // Check workspace row
         status.table[4][0] == 'Default workspace'
         status.table[4][1].contains('Personal workspace')
-        // Check compute env row (should show error fetching since no primary env found)
+        // Check compute env row
         status.table[5][0] == 'Primary compute env'
+        status.table[5][1].contains('ce_test')
+        //Workdir
+        status.table[6][0] == 'Default work dir'
+        status.table[6][1] == 's3://test'
     }
 
     def 'should collect status without authentication'() {

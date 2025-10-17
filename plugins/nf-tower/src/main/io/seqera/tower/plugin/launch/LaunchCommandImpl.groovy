@@ -284,7 +284,7 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
     /**
      * Resolve compute environment by name or get primary
      */
-    private Map resolveComputeEnvironment(String computeEnvName, Long workspaceId, String accessToken, String apiEndpoint) {
+    protected Map resolveComputeEnvironment(String computeEnvName, Long workspaceId, String accessToken, String apiEndpoint) {
         log.debug "Looking up compute environment: ${computeEnvName ?: '(primary)'}"
 
         def computeEnvInfo = findComputeEnv(computeEnvName, workspaceId, accessToken, apiEndpoint)
@@ -905,7 +905,7 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
     /**
      * Resolve pipeline name to full repository URL using AssetManager
      */
-    private String resolvePipelineUrl(String pipelineName) {
+    protected String resolvePipelineUrl(String pipelineName) {
         try {
             log.debug "Resolving pipeline name using AssetManager: ${pipelineName}"
             def assetManager = new AssetManager(pipelineName)
@@ -980,7 +980,7 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
 
     // ===== Workspace & User Helper Methods =====
 
-    private Long resolveWorkspaceId(Map config, String workspaceName, String accessToken, String apiEndpoint) {
+    protected Long resolveWorkspaceId(Map config, String workspaceName, String accessToken, String apiEndpoint) {
         // First check config for workspace ID
         final configWorkspaceId = config['tower.workspaceId']
         if (configWorkspaceId) {
@@ -1008,7 +1008,7 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
         return null
     }
 
-    private Map findComputeEnv(String computeEnvName, Long workspaceId, String accessToken, String apiEndpoint) {
+    protected Map findComputeEnv(String computeEnvName, Long workspaceId, String accessToken, String apiEndpoint) {
         final computeEnvs = getComputeEnvironments( accessToken, apiEndpoint, workspaceId ? workspaceId.toString() : null)
 
         log.debug "Looking for ${computeEnvName ? "compute environment with name: ${computeEnvName}" : "primary compute environment"} ${workspaceId ? "in workspace ID ${workspaceId}" : "in personal workspace"}"
