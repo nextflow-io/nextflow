@@ -11,9 +11,9 @@ import java.net.http.HttpResponse
 import java.time.Duration
 
 @Slf4j
-class CommandsHelper {
+class BaseCommandImpl {
 
-    static final int API_TIMEOUT_MS = 10_000
+    private static final int API_TIMEOUT_MS = 10_000
 
     /**
      * Creates an HxClient instance with optional authentication token.
@@ -21,7 +21,7 @@ class CommandsHelper {
      * @param accessToken Optional personal access token for authentication (PAT)
      * @return Configured HxClient instance with timeout settings
      */
-    static HxClient createHttpClient(String accessToken = null) {
+    protected HxClient createHttpClient(String accessToken = null) {
         return HxClient.newBuilder()
             .connectTimeout(Duration.ofMillis(API_TIMEOUT_MS))
             .bearerToken(accessToken)
@@ -33,11 +33,11 @@ class CommandsHelper {
      * e.g., https://api.cloud.seqera.io -> https://cloud.seqera.io
      *      https://cloud.seqera.io/api -> https://cloud.seqera.io
      */
-    static String getWebUrlFromApiEndpoint(String apiEndpoint) {
+    protected String getWebUrlFromApiEndpoint(String apiEndpoint) {
         return apiEndpoint.replace('://api.', '://').replace('/api', '')
     }
 
-    static Map readConfig() {
+    protected Map readConfig() {
         final builder = new ConfigBuilder().setHomeDir(Const.APP_HOME_DIR).setCurrentDir(Const.APP_HOME_DIR)
         return builder.buildConfigObject().flatten()
     }
@@ -50,7 +50,7 @@ class CommandsHelper {
      * @return Map containing user information (id, userName, email, etc.)
      * @throws RuntimeException if the API call fails
      */
-    static Map getUserInfo(String accessToken, String apiUrl) {
+    protected Map getUserInfo(String accessToken, String apiUrl) {
         final client = createHttpClient(accessToken)
         final request = HttpRequest.newBuilder()
             .uri(URI.create("${apiUrl}/user-info"))
@@ -68,7 +68,7 @@ class CommandsHelper {
         return json.user as Map
     }
 
-    static Map getWorkspaceDetails(String accessToken, String endpoint, String workspaceId) {
+    protected Map getWorkspaceDetails(String accessToken, String endpoint, String workspaceId) {
         try {
             final userInfo = getUserInfo(accessToken, endpoint)
             final userId = userInfo.id as String
@@ -105,7 +105,7 @@ class CommandsHelper {
         }
     }
 
-    static List getUserWorkspaces(String accessToken, String endpoint, String userId) {
+    protected List getUserWorkspaces(String accessToken, String endpoint, String userId) {
         final client = createHttpClient(accessToken)
         final request = HttpRequest.newBuilder()
             .uri(URI.create("${endpoint}/user/${userId}/workspaces"))
@@ -126,7 +126,7 @@ class CommandsHelper {
     }
 
 
-    static List getComputeEnvironments(String accessToken, String endpoint, String workspaceId) {
+    protected List getComputeEnvironments(String accessToken, String endpoint, String workspaceId) {
         final client = createHttpClient(accessToken)
         final uri = workspaceId ?
             "${endpoint}/compute-envs?workspaceId=${workspaceId}" :

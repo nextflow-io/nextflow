@@ -1,5 +1,6 @@
 package io.seqera.tower.plugin.auth
 
+import io.seqera.tower.plugin.BaseCommandImpl
 import nextflow.util.SpinnerUtil
 
 import java.awt.*
@@ -24,7 +25,6 @@ import nextflow.platform.PlatformHelper
 
 import static nextflow.util.ColorUtil.printColored
 import static nextflow.util.ColorUtil.colorize
-import static io.seqera.tower.plugin.CommandsHelper.*
 
 /**
  * Implementation of Nextflow authentication commands for Seqera Platform.
@@ -40,7 +40,7 @@ import static io.seqera.tower.plugin.CommandsHelper.*
  */
 @Slf4j
 @CompileStatic
-class AuthCommandImpl implements CmdAuth.AuthCommand {
+class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
     static final int AUTH_POLL_TIMEOUT_RETRIES = 60
     static final int AUTH_POLL_INTERVAL_SECONDS = 5
     static final int WORKSPACE_SELECTION_THRESHOLD = 8  // Max workspaces to show in single list; above this uses org-first selection

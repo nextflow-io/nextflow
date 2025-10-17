@@ -21,6 +21,7 @@ import groovy.json.JsonSlurper
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import io.seqera.tower.plugin.BaseCommandImpl
 import io.seqera.tower.plugin.TowerClient
 import nextflow.BuildInfo
 import nextflow.cli.CmdLaunch
@@ -38,8 +39,6 @@ import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.regex.Pattern
 
-import static io.seqera.tower.plugin.CommandsHelper.*
-
 /**
  * CLI sub-command LAUNCH -- Launch a workflow in Seqera Platform
  *
@@ -47,7 +46,7 @@ import static io.seqera.tower.plugin.CommandsHelper.*
  */
 @Slf4j
 @CompileStatic
-class LaunchCommandImpl implements CmdLaunch.LaunchCommand {
+class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchCommand {
 
     // ===== Constants =====
 

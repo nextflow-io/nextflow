@@ -679,8 +679,8 @@ param2 = 'value2'"""
 
         // Mock API calls
         cmd.checkApiConnection(_) >> true
-        cmd.callUserInfoApi(_, _) >> [userName: 'testuser', id: '123']
-        cmd.getWorkspaceDetailsFromApi(_, _, _) >> null
+        cmd.getUserInfo(_, _) >> [userName: 'testuser', id: '123']
+        cmd.getWorkspaceDetails(_, _, _) >> null
         cmd.getComputeEnvironments(_, _, _) >> []
 
         when:
@@ -755,7 +755,7 @@ param2 = 'value2'"""
         SysEnv.push([:])  // Isolate from actual environment variables
 
         cmd.checkApiConnection(_) >> true
-        cmd.callUserInfoApi(_, _) >> { throw new RuntimeException('Invalid token') }
+        cmd.getUserInfo(_, _) >> { throw new RuntimeException('Invalid token') }
 
         when:
         def status = cmd.collectStatus(config)
@@ -811,8 +811,8 @@ param2 = 'value2'"""
         ]
 
         cmd.checkApiConnection(_) >> true
-        cmd.callUserInfoApi(_, _) >> [userName: 'testuser', id: '123']
-        cmd.getWorkspaceDetailsFromApi(_, _, _) >> [
+        cmd.getUserInfo(_, _) >> [userName: 'testuser', id: '123']
+        cmd.getWorkspaceDetails(_, _, _) >> [
             orgName: 'TestOrg',
             workspaceName: 'TestWorkspace',
             workspaceFullName: 'test-org/test-workspace'
@@ -839,8 +839,8 @@ param2 = 'value2'"""
         ]
 
         cmd.checkApiConnection(_) >> true
-        cmd.callUserInfoApi(_, _) >> [userName: 'testuser', id: '123']
-        cmd.getWorkspaceDetailsFromApi(_, _, _) >> null
+        cmd.getUserInfo(_, _) >> [userName: 'testuser', id: '123']
+        cmd.getWorkspaceDetails(_, _, _) >> null
 
         when:
         def status = cmd.collectStatus(config)
@@ -858,8 +858,8 @@ param2 = 'value2'"""
         def config = [:]
 
         cmd.checkApiConnection(_) >> true
-        cmd.callUserInfoApi(_, _) >> [userName: 'envuser', id: '456']
-        cmd.getWorkspaceDetailsFromApi(_,_,_) >> [:]
+        cmd.getUserInfo(_, _) >> [userName: 'envuser', id: '456']
+        cmd.getWorkspaceDetails(_,_,_) >> [:]
 
         SysEnv.push(['TOWER_ACCESS_TOKEN': 'env-token',
                      'TOWER_API_ENDPOINT': 'https://env.example.com',
@@ -917,7 +917,7 @@ param2 = 'value2'"""
         ]
 
         cmd.checkApiConnection(_) >> true
-        cmd.callUserInfoApi(_, _) >> [userName: 'mixeduser', id: '789']
+        cmd.getUserInfo(_, _) >> [userName: 'mixeduser', id: '789']
         SysEnv.push(['TOWER_WORKSPACE_ID': '99999'])
 
         when:
