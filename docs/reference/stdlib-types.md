@@ -10,7 +10,7 @@ This page describes the standard types in the Nextflow standard library.
 
 *Implements the {ref}`stdlib-types-iterable` trait.*
 
-A bag is an unordered collection.
+A bag is an unordered collection of values of type `E`.
 
 The following operations are supported for bags:
 
@@ -44,7 +44,7 @@ Booleans in Nextflow can be backed by any of the following Java types: `boolean`
 
 ## Channel\<E\>
 
-A channel (also known as a *dataflow channel* or *queue channel*) is an asynchronous sequence of values. It is used to facilitate dataflow logic in a workflow.
+A channel (also known as a *dataflow channel* or *queue channel*) is an asynchronous sequence of values of type `E`. It is used to facilitate dataflow logic in a workflow.
 
 See {ref}`dataflow-page` for an overview of dataflow types. See {ref}`operator-page` for the available methods for channels.
 
@@ -266,7 +266,7 @@ Iterables in Nextflow are backed by the [Java](https://docs.oracle.com/en/java/j
 
 *Implements the {ref}`stdlib-types-iterable` trait.*
 
-A list is an ordered collection of elements. See {ref}`script-list` for an overview of lists.
+A list is an ordered collection of values of type `E`. See {ref}`script-list` for an overview of lists.
 
 The following operations are supported for lists:
 
@@ -349,7 +349,7 @@ Lists in Nextflow are backed by the [Java](https://docs.oracle.com/en/java/javas
 
 ## Map\<K,V\>
 
-A map associates or "maps" keys to values. Each key can map to at most one value -- a map cannot contain duplicate keys. See {ref}`script-map` for an overview of maps.
+A map associates or "maps" keys of type `K` to values of type `V`. Each key can map to at most one value -- a map cannot contain duplicate keys. See {ref}`script-map` for an overview of maps.
 
 The following operations are supported for maps:
 
@@ -814,7 +814,7 @@ The following methods are available for splitting and counting the records in fi
 
 *Implements the {ref}`stdlib-types-iterable` trait.*
 
-A set is an unordered collection that cannot contain duplicate elements.
+A set is an unordered collection of values of type `E` which cannot contain duplicates.
 
 A set can be created from a list using the `toSet()` method:
 
@@ -995,7 +995,7 @@ The following operations are supported for tuples:
 
 ## Value\<V\>
 
-A dataflow value (also known as a *value channel*) is an asynchronous value. It is used to facilitate dataflow logic in a workflow.
+A dataflow value (also known as a *value channel*) is an asynchronous value of type `V`. It is used to facilitate dataflow logic in a workflow.
 
 See {ref}`dataflow-page` for an overview of dataflow types.
 
