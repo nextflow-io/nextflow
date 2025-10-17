@@ -167,13 +167,8 @@ The following settings are available:
 `aws.client.endpoint`
 : The AWS S3 API entry point e.g. `https://s3-us-west-1.amazonaws.com`. The endpoint must include the protocol prefix e.g. `https://`.
 
-`aws.client.maxConcurrency`
-: :::{versionadded} 25.06.0-edge
-  :::
-: The maximum number of concurrent S3 transfers used by the S3 transfer manager. By default, this setting is determined by `aws.client.targetThroughputInGbps`. Modifying this value can affect the amount of memory used for S3 transfers.
-
 `aws.client.maxConnections`
-: The maximum number of open HTTP connections used by the S3 transfer manager (default: `50`).
+: The maximum number of open HTTP connections used by the S3 client (default: `50`).
 
 `aws.client.maxDownloadHeapMemory`
 : The maximum size for the heap memory buffer used by concurrent downloads. It must be at least 10 times the `minimumPartSize` (default:`400 MB`).
@@ -181,20 +176,15 @@ The following settings are available:
 `aws.client.maxErrorRetry`
 : The maximum number of retry attempts for failed retryable requests (default: `-1`).
 
-`aws.client.maxNativeMemory`
-: :::{versionadded} 25.06.0-edge
-  :::
-: The maximum native memory used by the S3 transfer manager. By default, this setting is determined by `aws.client.targetThroughputInGbps`.
-
 `aws.client.minimumPartSize`
 : :::{versionadded} 25.06.0-edge
   :::
-: The minimum part size used by the S3 transfer manager for multi-part uploads (default: `8 MB`).
+: The minimum part size used for multipart S3 transfers (default: `8 MB`).
 
 `aws.client.multipartThreshold`
 : :::{versionadded} 25.06.0-edge
   :::
-: The object size threshold used by the S3 transfer manager for performing multi-part uploads (default: same as `aws.cllient.minimumPartSize`).
+: The object size threshold used for multipart S3 transfers (default: same as `aws.cllient.minimumPartSize`).
 
 `aws.client.protocol`
 : :::{deprecated} 25.06.0-edge
@@ -265,12 +255,7 @@ The following settings are available:
 `aws.client.targetThroughputInGbps`
 : :::{versionadded} 25.06.0-edge
   :::
-: The target network throughput (in Gbps) used by the S3 transfer manager (default: `10`). This setting is not used when `aws.client.maxConcurrency` and `aws.client.maxNativeMemory` are specified.
-
-`aws.client.transferManagerThreads`
-: :::{versionadded} 25.06.0-edge
-  :::
-: The number of threads used by the S3 transfer manager (default: `10`).
+: The target network throughput (in Gbps) used for S3 uploads and downloads (default: `10`).
 
 `aws.client.userAgent`
 : :::{deprecated} 25.06.0-edge
