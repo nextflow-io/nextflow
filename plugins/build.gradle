@@ -110,6 +110,12 @@ task copyPluginBuilds {
                 into new File("${pluginDir}/META-INF")
             }
 
+            // Copy zip archive
+            project.copy {
+                from subproject.file('build/distributions')
+                into pluginsDir
+            }
+
             println "Copied plugin: ${pluginName}-${pluginVersion}"
         }
     }
