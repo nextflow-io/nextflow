@@ -462,4 +462,42 @@ class SessionTest extends Specification {
         true  | true
 
     }
+
+    def 'test notifyEvent is asynchronous'() {
+        given:
+        def events = []
+        def latch = new java.util.concurrent.CountDownLatch(2)
+        def observer1 = new nextflow.trace.TraceObserverV2() {
+            @Override
+            void onFlowBegin() {
+                Thread.sleep(50) // Simulate slow observer
+                events << 'observer1'
+                latch.countDown()
+            }
+        }
+        def observer2 = new nextflow.trace.TraceObserverV2() {
+            @Override
+            void onFlowBegin() {
+                events << 'observer2'
+                latch.countDown()
+            }
+        }
+        
+        def session = new Session()
+        session.@observersV2 = [observer1, observer2]
+        
+        when:
+        def startTime = System.currentTimeMillis()
+        session.notifyFlowBegin()
+        def notifyTime = System.currentTimeMillis() - startTime
+        latch.await(1, java.util.concurrent.TimeUnit.SECONDS)
+        def completeTime = System.currentTimeMillis() - startTime
+        
+        then:
+        notifyTime < 50 // Should return quickly without waiting for observers
+        completeTime >= 50 // But observers should complete
+        events.size() == 2
+        events.contains('observer1')
+        events.contains('observer2')
+    }
 }
