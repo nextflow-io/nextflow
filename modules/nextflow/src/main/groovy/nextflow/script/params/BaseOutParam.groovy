@@ -21,7 +21,7 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.NF
 import nextflow.extension.CH
-import nextflow.script.ProcessConfig
+import nextflow.script.ProcessConfigV1
 import nextflow.script.TokenVar
 import nextflow.util.ConfigHelper
 /**
@@ -50,7 +50,7 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
         super(binding,list,ownerIndex)
     }
 
-    BaseOutParam( ProcessConfig config ) {
+    BaseOutParam( ProcessConfigV1 config ) {
         super(config.getOwnerScript().getBinding(), config.getOutputs())
     }
 
