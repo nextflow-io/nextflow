@@ -24,8 +24,8 @@ import groovy.util.logging.Slf4j
 import nextflow.SysEnv
 import nextflow.cloud.CloudTransferOptions
 import nextflow.cloud.aws.batch.AwsOptions
-import nextflow.config.schema.ConfigOption
-import nextflow.config.schema.ConfigScope
+import nextflow.config.spec.ConfigOption
+import nextflow.config.spec.ConfigScope
 import nextflow.script.dsl.Description
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.util.Duration
