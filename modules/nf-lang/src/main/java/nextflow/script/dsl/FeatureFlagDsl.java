@@ -51,8 +51,16 @@ public class FeatureFlagDsl {
 
     @FeatureFlag("nextflow.preview.recursion")
     @Description("""
-        When `true`, enables the use of [process and workflow recursion](https://github.com/nextflow-io/nextflow/discussions/2521).
+        When `true`, enables the use of [process and workflow recursion](https://nextflow.io/docs/latest/workflow.html#process-and-workflow-recursion).
     """)
     public boolean previewRecursion;
+
+    @FeatureFlag("nextflow.preview.types")
+    @Description("""
+        When `true`, enables the use of [typed processes](https://nextflow.io/docs/latest/process-typed.html).
+
+        This feature flag must be enabled in every script that uses typed processes. Legacy processes can not be defined in scripts that enable this feature flag.
+    """)
+    public boolean previewTypes;
 
 }

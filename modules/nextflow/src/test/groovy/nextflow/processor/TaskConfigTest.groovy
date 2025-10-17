@@ -23,6 +23,7 @@ import nextflow.exception.ProcessUnrecoverableException
 import nextflow.script.BaseScript
 import nextflow.script.ProcessConfig
 import nextflow.script.TaskClosure
+import nextflow.script.dsl.ProcessBuilder
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
@@ -96,12 +97,14 @@ class TaskConfigTest extends Specification {
     def testModules() {
         given:
         def config
+        def dsl
         def local
 
         when:
         config = new ProcessConfig([:])
-        config.module 't_coffee/10'
-        config.module( [ 'blast/2.2.1', 'clustalw/2'] )
+        dsl = new ProcessBuilder(config)
+        dsl.module 't_coffee/10'
+        dsl.module 'blast/2.2.1:clustalw/2'
         local = config.createTaskConfig()
         then:
         local.module == ['t_coffee/10', 'blast/2.2.1', 'clustalw/2']
@@ -110,8 +113,9 @@ class TaskConfigTest extends Specification {
 
         when:
         config = new ProcessConfig([:])
-        config.module 'a/1'
-        config.module 'b/2:c/3'
+        dsl = new ProcessBuilder(config)
+        dsl.module 'a/1'
+        dsl.module 'b/2:c/3'
         local = config.createTaskConfig()
         then:
         local.module == ['a/1','b/2','c/3']
@@ -119,9 +123,10 @@ class TaskConfigTest extends Specification {
 
         when:
         config = new ProcessConfig([:])
-        config.module { 'a/1' }
-        config.module { 'b/2:c/3' }
-        config.module 'd/4'
+        dsl = new ProcessBuilder(config)
+        dsl.module { 'a/1' }
+        dsl.module { 'b/2:c/3' }
+        dsl.module 'd/4'
         local = config.createTaskConfig()
         local.setContext([:])
         then:
@@ -130,7 +135,8 @@ class TaskConfigTest extends Specification {
 
         when:
         config = new ProcessConfig([:])
-        config.module = 'b/2:c/3'
+        dsl = new ProcessBuilder(config)
+        dsl.module 'b/2:c/3'
         local = config.createTaskConfig()
         then:
         local.module == ['b/2','c/3']
@@ -452,11 +458,13 @@ class TaskConfigTest extends Specification {
         setup:
         def script = Mock(BaseScript)
         ProcessConfig process
+        ProcessBuilder dsl
         PublishDir publish
 
         when:
         process = new ProcessConfig(script)
-        process.publishDir '/data'
+        dsl = new ProcessBuilder(process)
+        dsl.publishDir '/data'
         publish = process.createTaskConfig().getPublishDir()[0]
         then:
         publish.path == Paths.get('/data').complete()
@@ -466,7 +474,8 @@ class TaskConfigTest extends Specification {
 
         when:
         process = new ProcessConfig(script)
-        process.publishDir '/data', overwrite: false, mode: 'copy', pattern: '*.txt'
+        dsl = new ProcessBuilder(process)
+        dsl.publishDir '/data', overwrite: false, mode: 'copy', pattern: '*.txt'
         publish = process.createTaskConfig().getPublishDir()[0]
         then:
         publish.path == Paths.get('/data').complete()
@@ -476,7 +485,8 @@ class TaskConfigTest extends Specification {
 
         when:
         process = new ProcessConfig(script)
-        process.publishDir '/my/data', mode: 'copyNoFollow'
+        dsl = new ProcessBuilder(process)
+        dsl.publishDir '/my/data', mode: 'copyNoFollow'
         publish = process.createTaskConfig().getPublishDir()[0]
         then:
         publish.path == Paths.get('//my/data').complete()
@@ -484,8 +494,9 @@ class TaskConfigTest extends Specification {
 
         when:
         process = new ProcessConfig(script)
-        process.publishDir '/here'
-        process.publishDir '/there', pattern: '*.fq'
+        dsl = new ProcessBuilder(process)
+        dsl.publishDir '/here'
+        dsl.publishDir '/there', pattern: '*.fq'
         def dirs = process.createTaskConfig().getPublishDir()
         then:
         dirs.size() == 2 
@@ -537,8 +548,9 @@ class TaskConfigTest extends Specification {
 
         when:
         def process = new ProcessConfig(script)
-        process.pod secret: 'foo', mountPath: '/this'
-        process.pod secret: 'bar', env: 'BAR_XXX'
+        def dsl = new ProcessBuilder(process)
+        dsl.pod secret: 'foo', mountPath: '/this'
+        dsl.pod secret: 'bar', env: 'BAR_XXX'
         
         then:
         process.get('pod') == [
@@ -556,7 +568,8 @@ class TaskConfigTest extends Specification {
 
         when:
         def process = new ProcessConfig(script)
-        process.accelerator 5
+        def dsl = new ProcessBuilder(process)
+        dsl.accelerator 5
         def res = process.createTaskConfig().getAccelerator()
         then:
         res.limit == 5 
@@ -564,7 +577,8 @@ class TaskConfigTest extends Specification {
 
         when:
         process = new ProcessConfig(script)
-        process.accelerator 5, limit: 10, type: 'nvidia'
+        dsl = new ProcessBuilder(process)
+        dsl.accelerator 5, limit: 10, type: 'nvidia'
         res = process.createTaskConfig().getAccelerator()
         then:
         res.request == 5
@@ -578,8 +592,9 @@ class TaskConfigTest extends Specification {
 
         when:
         def process = new ProcessConfig(script)
-        process.secret 'alpha'
-        process.secret 'omega'
+        def dsl = new ProcessBuilder(process)
+        dsl.secret 'alpha'
+        dsl.secret 'omega'
 
         then:
         process.getSecret() == ['alpha', 'omega']
@@ -594,7 +609,8 @@ class TaskConfigTest extends Specification {
 
         when:
         def process = new ProcessConfig(script)
-        process.resourceLabels( region: 'eu-west-1', organization: 'A', user: 'this', team: 'that' )
+        def dsl = new ProcessBuilder(process)
+        dsl.resourceLabels( region: 'eu-west-1', organization: 'A', user: 'this', team: 'that' )
 
         then:
         process.get('resourceLabels') == [region: 'eu-west-1', organization: 'A', user: 'this', team: 'that']

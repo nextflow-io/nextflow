@@ -19,11 +19,14 @@ package nextflow.script
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.Paths
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.NF
 import nextflow.NextflowMeta
 import nextflow.Session
 import nextflow.exception.AbortOperationException
+import nextflow.script.dsl.ProcessDslV1
+import nextflow.script.dsl.ProcessDslV2
 import nextflow.secret.SecretsLoader
 
 /**
@@ -32,6 +35,7 @@ import nextflow.secret.SecretsLoader
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 abstract class BaseScript extends Script implements ExecutionContext {
 
     private Session session
@@ -98,6 +102,11 @@ abstract class BaseScript extends Script implements ExecutionContext {
         binding.setVariable( 'secrets', SecretsLoader.secretContext() )
     }
 
+    /**
+     * Define a params block.
+     *
+     * @param body
+     */
     protected void params(Closure body) {
         if( entryFlow )
             throw new IllegalStateException("Workflow params definition must be defined before the entry workflow")
@@ -113,18 +122,44 @@ abstract class BaseScript extends Script implements ExecutionContext {
         dsl.apply(session)
     }
 
-    protected process( String name, Closure<BodyDef> body ) {
-        final process = new ProcessDef(this,body,name)
+    /**
+     * Define a legacy process.
+     *
+     * @param name
+     * @param body
+     */
+    protected void process(String name, Closure<BodyDef> body) {
+        final dsl = new ProcessDslV1(this, name)
+        final cl = (Closure<BodyDef>)body.clone()
+        cl.setDelegate(dsl)
+        cl.setResolveStrategy(Closure.DELEGATE_FIRST)
+        final taskBody = cl.call()
+        final process = dsl.withBody(taskBody).build()
         meta.addDefinition(process)
     }
 
     /**
-     * Workflow main entry point
+     * Define a typed process.
      *
-     * @param body The implementation body of the workflow
-     * @return The result of workflow execution
+     * @param name
+     * @param body
      */
-    protected workflow(Closure<BodyDef> workflowBody) {
+    protected void processV2(String name, Closure<BodyDef> body) {
+        final dsl = new ProcessDslV2(this, name)
+        final cl = (Closure<BodyDef>)body.clone()
+        cl.setDelegate(dsl)
+        cl.setResolveStrategy(Closure.DELEGATE_FIRST)
+        final taskBody = cl.call()
+        final process = dsl.withBody(taskBody).build()
+        meta.addDefinition(process)
+    }
+
+    /**
+     * Define an entry workflow.
+     *
+     * @param workflowBody
+     */
+    protected void workflow(Closure<BodyDef> workflowBody) {
         // launch the execution
         final workflow = new WorkflowDef(this, workflowBody)
         // capture the main (unnamed) workflow definition
@@ -133,12 +168,23 @@ abstract class BaseScript extends Script implements ExecutionContext {
         meta.addDefinition(workflow)
     }
 
-    protected workflow(String name, Closure<BodyDef> workflowDef) {
-        final workflow = new WorkflowDef(this,workflowDef,name)
+    /**
+     * Define a named workflow.
+     *
+     * @param name
+     * @param workflowBody
+     */
+    protected void workflow(String name, Closure<BodyDef> workflowBody) {
+        final workflow = new WorkflowDef(this,workflowBody,name)
         meta.addDefinition(workflow)
     }
 
-    protected output(Closure closure) {
+    /**
+     * Define an output block.
+     *
+     * @param closure
+     */
+    protected void output(Closure closure) {
         if( !NF.outputDefinitionEnabled )
             throw new IllegalStateException("Workflow output definition requires the `nextflow.preview.output` feature flag")
         if( !entryFlow )
@@ -170,7 +216,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
         binding.invokeMethod(name, args)
     }
 
-    private run0() {
+    private Object run0() {
         final result = runScript()
         if( meta.isModule() ) {
             return result
@@ -193,7 +239,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
             if( meta.hasExecutableProcesses() ) {
                 // Create a workflow to execute the process (single process or first of multiple)
                 final handler = new ProcessEntryHandler(this, session, meta)
-                entryFlow = handler.createAutoProcessWorkflow()
+                entryFlow = handler.createAutoProcessEntry()
             }
             else {
                 return result
@@ -268,7 +314,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
             return
 
         if( session?.ansiLog )
-            log.info(String.printf(msg, arg))
+            log.info(String.format(msg, arg))
         else
             super.printf(msg, arg)
     }
@@ -279,7 +325,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
             return
 
         if( session?.ansiLog )
-            log.info(String.printf(msg, args))
+            log.info(String.format(msg, args))
         else
             super.printf(msg, args)
     }
