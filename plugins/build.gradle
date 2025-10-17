@@ -65,3 +65,54 @@ project.parent.tasks.getByName("assemble").dependsOn << assemble
  * Copies the plugins required dependencies in the corresponding lib directory
  */
 classes.dependsOn subprojects.copyPluginLibs
+
+/*
+ * Copy core plugin builds to the root build/plugins directory
+ */
+task copyPluginBuilds {
+    group 'nextflow'
+    description 'Copy core plugin builds to build/plugins'
+
+    dependsOn subprojects.collect { it.tasks.named('assemble') }
+
+    doLast {
+        def pluginsDir = project.parent.file("${project.parent.buildDir}/plugins")
+        pluginsDir.mkdirs()
+
+        subprojects.each { subproject ->
+            def pluginName = subproject.name
+            def pluginVersion = subproject.version
+            def pluginDir = "${pluginsDir}/${pluginName}-${pluginVersion}"
+
+            // Copy classes
+            project.copy {
+                from subproject.file('build/classes/groovy/main')
+                into new File("${pluginDir}/classes")
+            }
+            project.copy {
+                from subproject.file('build/classes/main')
+                into new File("${pluginDir}/classes")
+            }
+            project.copy {
+                from subproject.file('build/resources/main/META-INF')
+                into new File("${pluginDir}/classes/META-INF")
+            }
+
+            // Copy lib dependencies
+            project.copy {
+                from subproject.file('build/target/libs')
+                into new File("${pluginDir}/lib")
+            }
+
+            // Copy MANIFEST.MF
+            project.copy {
+                from subproject.file('build/tmp/jar/MANIFEST.MF')
+                into new File("${pluginDir}/META-INF")
+            }
+
+            println "Copied plugin: ${pluginName}-${pluginVersion}"
+        }
+    }
+}
+
+assemble.finalizedBy(copyPluginBuilds)
