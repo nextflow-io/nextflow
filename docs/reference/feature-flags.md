@@ -46,8 +46,10 @@ Feature flags are used to introduce experimental or other opt-in features. They 
 `nextflow.preview.output`
 : :::{versionadded} 24.04.0
   :::
-: *Experimental: may change in a future release.*
-: When `true`, enables the use of the {ref}`workflow output definition <workflow-output-def>`.
+: :::{deprecated} 25.10.0
+  This feature flag is no longer required to use workflow outputs.
+  :::
+: When `true`, enables the use of {ref}`workflow outputs <workflow-output-def>`.
 
 `nextflow.preview.recursion`
 : *Experimental: may change in a future release.*

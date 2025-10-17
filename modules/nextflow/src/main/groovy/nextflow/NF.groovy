@@ -76,10 +76,6 @@ class NF {
         NextflowMeta.instance.isModuleBinariesEnabled()
     }
 
-    static boolean isOutputDefinitionEnabled() {
-        NextflowMeta.instance.preview.output
-    }
-
     static boolean isRecurseEnabled() {
         NextflowMeta.instance.preview.recursion
     }
