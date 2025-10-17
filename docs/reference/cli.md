@@ -705,9 +705,9 @@ The `kuberun` command supports the following options from [`run`](#run):
 - `-with-dag`
 - `-N, -with-notification`
 - `-with-report`
+- `-with-seqera`
 - `-with-spack`
 - `-with-timeline`
-- `-with-tower`
 - `-with-trace`
 - `-with-wave`
 - `-with-weblog`
@@ -1272,6 +1272,9 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 `-with-report` (`report-<timestamp>.html`)
 : Create workflow execution HTML report.
 
+`-with-seqera`, `-with-tower` (`https://api.cloud.seqera.io`)
+: Monitor workflow execution with [Seqera Platform](https://seqera.io/) (formerly Tower Cloud).
+
 `-with-singularity`
 : Enable process execution in a Singularity container.
 
@@ -1280,9 +1283,6 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 
 `-with-timeline` (`timeline-<timestamp>.html`)
 : Create workflow execution timeline.
-
-`-with-tower` (`https://api.cloud.seqera.io`)
-: Monitor workflow execution with [Seqera Platform](https://seqera.io/) (formerly Tower Cloud).
 
 `-with-trace` (`trace-<timestamp>.txt`)
 : Create workflow execution trace file.
@@ -1349,7 +1349,7 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 - Execute a pipeline with integrated monitoring in [Seqera Platform](https://seqera.io).
 
   ```console
-  $ nextflow run nextflow-io/hello -with-tower
+  $ nextflow run nextflow-io/hello -with-seqera
   ```
 
 - Execute a pipeline with a custom parameters file (YAML or JSON).
