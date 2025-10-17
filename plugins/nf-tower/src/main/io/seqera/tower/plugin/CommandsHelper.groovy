@@ -1,0 +1,150 @@
+package io.seqera.tower.plugin
+
+import groovy.json.JsonSlurper
+import groovy.util.logging.Slf4j
+import io.seqera.http.HxClient
+import nextflow.Const
+import nextflow.config.ConfigBuilder
+
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.time.Duration
+
+@Slf4j
+class CommandsHelper {
+
+    static final int API_TIMEOUT_MS = 10_000
+
+    /**
+     * Creates an HxClient instance with optional authentication token.
+     *
+     * @param accessToken Optional personal access token for authentication (PAT)
+     * @return Configured HxClient instance with timeout settings
+     */
+    static HxClient createHttpClient(String accessToken = null) {
+        return HxClient.newBuilder()
+            .connectTimeout(Duration.ofMillis(API_TIMEOUT_MS))
+            .bearerToken(accessToken)
+            .build()
+    }
+
+    /**
+     * Convert API endpoint to web URL
+     * e.g., https://api.cloud.seqera.io -> https://cloud.seqera.io
+     *      https://cloud.seqera.io/api -> https://cloud.seqera.io
+     */
+    static String getWebUrlFromApiEndpoint(String apiEndpoint) {
+        return apiEndpoint.replace('://api.', '://').replace('/api', '')
+    }
+
+    static Map readConfig() {
+        final builder = new ConfigBuilder().setHomeDir(Const.APP_HOME_DIR).setCurrentDir(Const.APP_HOME_DIR)
+        return builder.buildConfigObject().flatten()
+    }
+
+    /**
+     * Calls the Seqera Platform user-info API to retrieve user information.
+     *
+     * @param accessToken Authentication token
+     * @param apiUrl Seqera Platform API endpoint
+     * @return Map containing user information (id, userName, email, etc.)
+     * @throws RuntimeException if the API call fails
+     */
+    static Map getUserInfo(String accessToken, String apiUrl) {
+        final client = createHttpClient(accessToken)
+        final request = HttpRequest.newBuilder()
+            .uri(URI.create("${apiUrl}/user-info"))
+            .GET()
+            .build()
+
+        final response = client.send(request, HttpResponse.BodyHandlers.ofString())
+
+        if (response.statusCode() != 200) {
+            final error = response.body() ?: "HTTP ${response.statusCode()}"
+            throw new RuntimeException("Failed to get user info: ${error}")
+        }
+
+        final json = new JsonSlurper().parseText(response.body()) as Map
+        return json.user as Map
+    }
+
+    static Map getWorkspaceDetails(String accessToken, String endpoint, String workspaceId) {
+        try {
+            final userInfo = getUserInfo(accessToken, endpoint)
+            final userId = userInfo.id as String
+
+            final client = createHttpClient(accessToken)
+            final request = HttpRequest.newBuilder()
+                .uri(URI.create("${endpoint}/user/${userId}/workspaces"))
+                .GET()
+                .build()
+
+            final response = client.send(request, HttpResponse.BodyHandlers.ofString())
+
+            if (response.statusCode() != 200) {
+                return null
+            }
+
+            final json = new JsonSlurper().parseText(response.body()) as Map
+            final orgsAndWorkspaces = json.orgsAndWorkspaces as List
+
+            final workspace = orgsAndWorkspaces.find { ((Map)it).workspaceId?.toString() == workspaceId }
+            if (workspace) {
+                final ws = workspace as Map
+                return [
+                    orgName: ws.orgName,
+                    workspaceName: ws.workspaceName,
+                    workspaceFullName: ws.workspaceFullName
+                ]
+            }
+
+            return null
+        } catch (Exception e) {
+            log.debug("Failed to get workspace details for workspace ${workspaceId}: ${e.message}", e)
+            return null
+        }
+    }
+
+    static List getUserWorkspaces(String accessToken, String endpoint, String userId) {
+        final client = createHttpClient(accessToken)
+        final request = HttpRequest.newBuilder()
+            .uri(URI.create("${endpoint}/user/${userId}/workspaces"))
+            .GET()
+            .build()
+
+        final response = client.send(request, HttpResponse.BodyHandlers.ofString())
+
+        if( response.statusCode() != 200 ) {
+            final error = response.body() ?: "HTTP ${response.statusCode()}"
+            throw new RuntimeException("Failed to get workspaces: ${error}")
+        }
+
+        final json = new JsonSlurper().parseText(response.body()) as Map
+        final orgsAndWorkspaces = json.orgsAndWorkspaces as List
+
+        return orgsAndWorkspaces.findAll { ((Map) it).workspaceId != null }
+    }
+
+
+    static List getComputeEnvironments(String accessToken, String endpoint, String workspaceId) {
+        final client = createHttpClient(accessToken)
+        final uri = workspaceId ?
+            "${endpoint}/compute-envs?workspaceId=${workspaceId}" :
+            "${endpoint}/compute-envs"
+
+        final request = HttpRequest.newBuilder()
+            .uri(URI.create(uri))
+            .GET()
+            .build()
+
+        final response = client.send(request, HttpResponse.BodyHandlers.ofString())
+
+        if( response.statusCode() != 200 ) {
+            final error = response.body() ?: "HTTP ${response.statusCode()}"
+            throw new RuntimeException("Failed to get compute environments: ${error}")
+        }
+
+        final json = new JsonSlurper().parseText(response.body()) as Map
+        return json.computeEnvs as List ?: []
+    }
+}

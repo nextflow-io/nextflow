@@ -1,12 +1,13 @@
 package io.seqera.tower.plugin.auth
 
+import nextflow.util.SpinnerUtil
+
 import java.awt.*
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
-import java.time.Duration
 import java.util.List
 
 import groovy.json.JsonBuilder
@@ -14,7 +15,6 @@ import groovy.json.JsonSlurper
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import io.seqera.http.HxClient
 import nextflow.Const
 import nextflow.SysEnv
 import nextflow.cli.CmdAuth
@@ -24,6 +24,7 @@ import nextflow.platform.PlatformHelper
 
 import static nextflow.util.ColorUtil.printColored
 import static nextflow.util.ColorUtil.colorize
+import static io.seqera.tower.plugin.CommandsHelper.*
 
 /**
  * Implementation of Nextflow authentication commands for Seqera Platform.
@@ -40,24 +41,9 @@ import static nextflow.util.ColorUtil.colorize
 @Slf4j
 @CompileStatic
 class AuthCommandImpl implements CmdAuth.AuthCommand {
-
-    static final int API_TIMEOUT_MS = 10_000
     static final int AUTH_POLL_TIMEOUT_RETRIES = 60
     static final int AUTH_POLL_INTERVAL_SECONDS = 5
     static final int WORKSPACE_SELECTION_THRESHOLD = 8  // Max workspaces to show in single list; above this uses org-first selection
-
-    /**
-     * Creates an HxClient instance with optional authentication token.
-     *
-     * @param accessToken Optional personal access token for authentication (PAT)
-     * @return Configured HxClient instance with timeout settings
-     */
-    protected HxClient createHttpClient(String accessToken = null) {
-        return HxClient.newBuilder()
-            .connectTimeout(Duration.ofMillis(API_TIMEOUT_MS))
-            .bearerToken(accessToken)
-            .build()
-    }
 
     /**
      * Authenticates with Seqera Platform and saves credentials to the Nextflow config.
@@ -169,7 +155,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
             final accessToken = tokenData['access_token'] as String
 
             // Verify login by calling /user-info
-            final userInfo = callUserInfoApi(accessToken, apiUrl)
+            final userInfo = getUserInfo(accessToken, apiUrl)
             println "\n\n${colorize('✔', 'green', true)} Authentication successful"
 
             // Generate PAT
@@ -255,40 +241,47 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
     private Map pollForDeviceToken(String deviceCode, int intervalSeconds, Map auth0Config) {
         final tokenUrl = "https://${auth0Config.domain}/oauth/token"
         def retryCount = 0
+        def spinner = new SpinnerUtil("Waiting for authentication...")
+        try {
+            spinner.start()
+            while( retryCount < AUTH_POLL_TIMEOUT_RETRIES ) {
+                final params = [
+                        'grant_type' : 'urn:ietf:params:oauth:grant-type:device_code',
+                        'device_code': deviceCode,
+                        'client_id'  : auth0Config.clientId
+                ]
 
-        while( retryCount < AUTH_POLL_TIMEOUT_RETRIES ) {
-            final params = [
-                'grant_type' : 'urn:ietf:params:oauth:grant-type:device_code',
-                'device_code': deviceCode,
-                'client_id'  : auth0Config.clientId
-            ]
-
-            try {
-                final result = performAuth0Request(tokenUrl, params)
-                return result
-            } catch( RuntimeException e ) {
-                final message = e.message
-                if( message.contains('authorization_pending') ) {
-                    print "${colorize('.', 'dim', true)}"
-                    System.out.flush()
-                } else if( message.contains('slow_down') ) {
-                    intervalSeconds += 5
-                    print "${colorize('.', 'dim', true)}"
-                    System.out.flush()
-                } else if( message.contains('expired_token') ) {
-                    throw new RuntimeException("The device code has expired. Please try again.")
-                } else if( message.contains('access_denied') ) {
-                    throw new RuntimeException("Access denied by user")
-                } else {
-                    throw e
+                try {
+                    final result = performAuth0Request(tokenUrl, params)
+                    return result
+                } catch( RuntimeException e ) {
+                    final message = e.message
+                    if( message.contains('authorization_pending') ) {
+                        // Continue waiting - spinner already shows progress
+                    } else if( message.contains('slow_down') ) {
+                        intervalSeconds += 5
+                        spinner.updateMessage("Waiting for authentication (slowing down polling)...")
+                    } else if( message.contains('expired_token') ) {
+                        spinner.stop()
+                        throw new RuntimeException("The device code has expired. Please try again.")
+                    } else if( message.contains('access_denied') ) {
+                        spinner.stop()
+                        throw new RuntimeException("Access denied by user")
+                    } else {
+                        spinner.stop()
+                        throw e
+                    }
                 }
+                Thread.sleep(intervalSeconds * 1000)
+                retryCount++
             }
-
-            Thread.sleep(intervalSeconds * 1000)
-            retryCount++
+            spinner.stop()
+            throw new RuntimeException("Authentication timed out. Please try again.")
+        } finally {
+            if( spinner.isRunning() ) {
+                spinner.stop()
+            }
         }
-
-        throw new RuntimeException("Authentication timed out. Please try again.")
     }
 
 
@@ -316,15 +309,6 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         // Save to config
         saveAuthToConfig(pat, apiUrl)
         printColored("Personal Access Token saved to Nextflow auth config (${getAuthFile().toString()})", "green")
-    }
-
-    /*
-     * Convert API endpoint to web URL
-     * e.g., https://api.cloud.seqera.io -> https://cloud.seqera.io
-     *      https://cloud.seqera.io/api -> https://cloud.seqera.io
-     */
-    private String getWebUrlFromApiEndpoint(String apiEndpoint) {
-        return apiEndpoint.replace('://api.', '://').replace('/api', '')
     }
 
     private String promptPAT(){
@@ -467,7 +451,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
 
         // Validate token by calling /user-info API
         try {
-            final userInfo = callUserInfoApi(existingToken as String, apiUrl)
+            final userInfo = getUserInfo(existingToken as String, apiUrl)
             printColored(" - Token is valid for user: $userInfo.userName", "dim")
         } catch( Exception e ) {
             printColored("Failed to validate token: ${e.message}", "red")
@@ -602,7 +586,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
 
         try {
             // Get user info to validate token and get user ID
-            final userInfo = callUserInfoApi(existingToken as String, endpoint as String)
+            final userInfo = getUserInfo(existingToken as String, endpoint as String)
             printColored(" - Authenticated as: $userInfo.userName", "dim")
             println ""
 
@@ -627,7 +611,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
                 // Get workspace metadata if not already available (e.g., when user kept existing workspace)
                 def workspaceMetadata = workspaceResult.metadata as Map
                 if( !workspaceMetadata ) {
-                    workspaceMetadata = getWorkspaceDetailsFromApi(existingToken as String, endpoint as String, currentWorkspaceId)
+                    workspaceMetadata = getWorkspaceDetails(existingToken as String, endpoint as String, currentWorkspaceId)
                 }
                 configureComputeEnvironment(existingToken as String, endpoint as String, currentWorkspaceId, workspaceMetadata)
             }
@@ -833,48 +817,6 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         return [changed: currentId != selectedId, metadata: metadata]
     }
 
-    private List getUserWorkspaces(String accessToken, String endpoint, String userId) {
-        final client = createHttpClient(accessToken)
-        final request = HttpRequest.newBuilder()
-            .uri(URI.create("${endpoint}/user/${userId}/workspaces"))
-            .GET()
-            .build()
-
-        final response = client.send(request, HttpResponse.BodyHandlers.ofString())
-
-        if( response.statusCode() != 200 ) {
-            final error = response.body() ?: "HTTP ${response.statusCode()}"
-            throw new RuntimeException("Failed to get workspaces: ${error}")
-        }
-
-        final json = new JsonSlurper().parseText(response.body()) as Map
-        final orgsAndWorkspaces = json.orgsAndWorkspaces as List
-
-        return orgsAndWorkspaces.findAll { ((Map) it).workspaceId != null }
-    }
-
-    private List getComputeEnvironments(String accessToken, String endpoint, String workspaceId) {
-        final client = createHttpClient(accessToken)
-        final uri = workspaceId ?
-            "${endpoint}/compute-envs?workspaceId=${workspaceId}" :
-            "${endpoint}/compute-envs"
-
-        final request = HttpRequest.newBuilder()
-            .uri(URI.create(uri))
-            .GET()
-            .build()
-
-        final response = client.send(request, HttpResponse.BodyHandlers.ofString())
-
-        if( response.statusCode() != 200 ) {
-            final error = response.body() ?: "HTTP ${response.statusCode()}"
-            throw new RuntimeException("Failed to get compute environments: ${error}")
-        }
-
-        final json = new JsonSlurper().parseText(response.body()) as Map
-        return json.computeEnvs as List ?: []
-    }
-
     private void setPrimaryComputeEnvironment(String accessToken, String endpoint, String computeEnvId, String workspaceId) {
         final client = createHttpClient(accessToken)
         final uri = "${endpoint}/compute-envs/${computeEnvId}/primary?workspaceId=${workspaceId}"
@@ -1064,7 +1006,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
 
         if( accessToken ) {
             try {
-                final userInfo = callUserInfoApi(accessToken, endpoint)
+                final userInfo = getUserInfo(accessToken, endpoint)
                 final currentUser = userInfo.userName as String
                 status.table.add(['Authentication', "${colorize('✔ OK', 'green')} (user: $currentUser)".toString(), tokenSource])
             } catch( Exception e ) {
@@ -1086,7 +1028,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
             // Try to get workspace name from API if we have a token
             def workspaceDetails = null
             if( accessToken ) {
-                workspaceDetails = getWorkspaceDetailsFromApi(accessToken, endpoint, workspaceId)
+                workspaceDetails = getWorkspaceDetails(accessToken, endpoint, workspaceId)
             }
 
             if( workspaceDetails ) {
@@ -1126,6 +1068,7 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
 
         return status
     }
+
     private void printStatus(ConfigStatus status){
         println ""
 
@@ -1245,43 +1188,6 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         return line?.trim()
     }
 
-    protected Map getWorkspaceDetailsFromApi(String accessToken, String endpoint, String workspaceId) {
-        try {
-            final userInfo = callUserInfoApi(accessToken, endpoint)
-            final userId = userInfo.id as String
-
-            final client = createHttpClient(accessToken)
-            final request = HttpRequest.newBuilder()
-                .uri(URI.create("${endpoint}/user/${userId}/workspaces"))
-                .GET()
-                .build()
-
-            final response = client.send(request, HttpResponse.BodyHandlers.ofString())
-
-            if (response.statusCode() != 200) {
-                return null
-            }
-
-            final json = new JsonSlurper().parseText(response.body()) as Map
-            final orgsAndWorkspaces = json.orgsAndWorkspaces as List
-
-            final workspace = orgsAndWorkspaces.find { ((Map)it).workspaceId?.toString() == workspaceId }
-            if (workspace) {
-                final ws = workspace as Map
-                return [
-                    orgName: ws.orgName,
-                    workspaceName: ws.workspaceName,
-                    workspaceFullName: ws.workspaceFullName
-                ]
-            }
-
-            return null
-        } catch (Exception e) {
-            log.debug("Failed to get workspace details for workspace ${workspaceId}: ${e.message}", e)
-            return null
-        }
-    }
-
     private Map getCloudEndpointInfo(String apiUrl) {
         // Check if this is a standard cloud endpoint
         final authDomain = PlatformHelper.getAuthDomain(apiUrl)
@@ -1315,32 +1221,6 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         return getCloudEndpointInfo(apiUrl).isCloud
     }
 
-    /**
-     * Calls the Seqera Platform user-info API to retrieve user information.
-     *
-     * @param accessToken Authentication token
-     * @param apiUrl Seqera Platform API endpoint
-     * @return Map containing user information (id, userName, email, etc.)
-     * @throws RuntimeException if the API call fails
-     */
-    protected Map callUserInfoApi(String accessToken, String apiUrl) {
-        final client = createHttpClient(accessToken)
-        final request = HttpRequest.newBuilder()
-            .uri(URI.create("${apiUrl}/user-info"))
-            .GET()
-            .build()
-
-        final response = client.send(request, HttpResponse.BodyHandlers.ofString())
-
-        if (response.statusCode() != 200) {
-            final error = response.body() ?: "HTTP ${response.statusCode()}"
-            throw new RuntimeException("Failed to get user info: ${error}")
-        }
-
-        final json = new JsonSlurper().parseText(response.body()) as Map
-        return json.user as Map
-    }
-
     protected Path getConfigFile() {
         return Const.APP_HOME_DIR.resolve('config')
     }
@@ -1361,11 +1241,6 @@ class AuthCommandImpl implements CmdAuth.AuthCommand {
         } catch (Exception e) {
             throw new RuntimeException("Failed to read config file ${configFile}: ${e.message}")
         }
-    }
-
-    private Map readConfig() {
-        final builder = new ConfigBuilder().setHomeDir(Const.APP_HOME_DIR).setCurrentDir(Const.APP_HOME_DIR)
-        return builder.buildConfigObject().flatten()
     }
 
     private void writeConfig(Map config, Map workspaceMetadata = null) {
