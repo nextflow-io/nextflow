@@ -153,4 +153,5 @@ class AwsBatchConfigTest extends Specification {
         [terminateUnschedulableJobs: false]     | false
         [terminateUnschedulableJobs: true]      | true
     }
+
 }
