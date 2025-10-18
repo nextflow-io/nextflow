@@ -382,7 +382,7 @@ class LaunchCommandImplTest extends Specification {
         cmd.getUserInfo(_, _) >> [name: 'testuser', id: '123']
         cmd.resolveWorkspaceId(_, _, _, _) >> null
         cmd.getWorkspaceDetails(_, _, _) >> null
-        cmd.resolveComputeEnvironment(_, _, _, _) >> [id: 'ce-123', name: 'test-ce', workDir: 's3://bucket/work']
+        cmd.resolveComputeEnvironment(_,_, _, _, _) >> [id: 'ce-123', name: 'test-ce', workDir: 's3://bucket/work']
 
         def options = new CmdLaunch.LaunchOptions(pipeline: 'nf-core/rnaseq')
 
@@ -406,7 +406,7 @@ class LaunchCommandImplTest extends Specification {
         cmd.getUserInfo(_, _) >> [name: 'testuser', id: '123']
         cmd.resolveWorkspaceId(_, _, _, _) >> null
         cmd.getWorkspaceDetails(_, _, _) >> null
-        cmd.resolveComputeEnvironment(_, _, _, _) >> [id: 'ce-123', name: 'test-ce', workDir: 's3://bucket/work']
+        cmd.resolveComputeEnvironment(_,_, _, _, _) >> [id: 'ce-123', name: 'test-ce', workDir: 's3://bucket/work']
 
         def options = new CmdLaunch.LaunchOptions(pipeline: 'nf-core/rnaseq')
 
@@ -425,7 +425,7 @@ class LaunchCommandImplTest extends Specification {
         cmd.getUserInfo(_, _) >> [name: 'testuser', id: '123']
         cmd.resolveWorkspaceId(_, _, _, _) >> 12345L
         cmd.getWorkspaceDetails(_, _, _) >> [orgName: 'TestOrg', workspaceName: 'TestWS']
-        cmd.resolveComputeEnvironment(_, _, _, _) >> [id: 'ce-123', name: 'test-ce', workDir: 's3://bucket/work']
+        cmd.resolveComputeEnvironment(_, _, _, _, _) >> [id: 'ce-123', name: 'test-ce', workDir: 's3://bucket/work']
 
         def options = new CmdLaunch.LaunchOptions(pipeline: 'nf-core/rnaseq')
 
@@ -494,7 +494,7 @@ class LaunchCommandImplTest extends Specification {
         cmd.findComputeEnv('nonexistent', null, 'token', 'https://api.cloud.seqera.io') >> null
 
         when:
-        cmd.resolveComputeEnvironment('nonexistent', null, 'token', 'https://api.cloud.seqera.io')
+        cmd.resolveComputeEnvironment(null, 'nonexistent', null, 'token', 'https://api.cloud.seqera.io')
 
         then:
         def ex = thrown(AbortOperationException)
@@ -508,7 +508,7 @@ class LaunchCommandImplTest extends Specification {
         cmd.findComputeEnv(null, null, 'token', 'https://api.cloud.seqera.io') >> null
 
         when:
-        cmd.resolveComputeEnvironment(null, null, 'token', 'https://api.cloud.seqera.io')
+        cmd.resolveComputeEnvironment(null, null, null, 'token', 'https://api.cloud.seqera.io')
 
         then:
         def ex = thrown(AbortOperationException)

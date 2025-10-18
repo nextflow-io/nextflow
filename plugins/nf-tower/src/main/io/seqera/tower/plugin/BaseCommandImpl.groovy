@@ -147,4 +147,33 @@ class BaseCommandImpl {
         final json = new JsonSlurper().parseText(response.body()) as Map
         return json.computeEnvs as List ?: []
     }
+
+    protected Map getComputeEnvironment(String accessToken, String endpoint, String computeEnvId) {
+        final client = createHttpClient(accessToken)
+        final uri = "${endpoint}/compute-envs/${computeEnvId}"
+
+        final request = HttpRequest.newBuilder()
+            .uri(URI.create(uri))
+            .GET()
+            .build()
+
+        final response = client.send(request, HttpResponse.BodyHandlers.ofString())
+
+        if( response.statusCode() != 200 ) {
+            final error = response.body() ?: "HTTP ${response.statusCode()}"
+            throw new RuntimeException("Failed to get compute environment: ${error}")
+        }
+
+        final json = new JsonSlurper().parseText(response.body()) as Map
+        return unifyComputeEnvDescription(json.computeEnv as Map ?: [:])
+    }
+
+    private Map unifyComputeEnvDescription(Map computeEnv) {
+        if (computeEnv && !computeEnv.workDir) {
+            final config = computeEnv?.config as Map
+            log.debug("Config $config")
+            computeEnv.workDir = config?.workDir as String
+        }
+        return computeEnv
+    }
 }

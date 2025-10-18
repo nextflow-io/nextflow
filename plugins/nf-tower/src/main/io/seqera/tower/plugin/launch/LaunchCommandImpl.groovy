@@ -165,7 +165,7 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
         }
 
         // Resolve compute environment
-        final computeEnvInfo = resolveComputeEnvironment(options.computeEnv, workspaceId, accessToken, apiEndpoint)
+        final computeEnvInfo = resolveComputeEnvironment(config, options.computeEnv, workspaceId, accessToken, apiEndpoint)
         final workDir = resolveWorkDirectory(options.workDir, computeEnvInfo)
 
         return new LaunchContext(
@@ -282,12 +282,16 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
     // ===== Configuration & Resolution Methods =====
 
     /**
-     * Resolve compute environment by name or get primary
+     * Resolve compute environment by flag name config computeEnvId or get primary
      */
-    protected Map resolveComputeEnvironment(String computeEnvName, Long workspaceId, String accessToken, String apiEndpoint) {
-        log.debug "Looking up compute environment: ${computeEnvName ?: '(primary)'}"
-
-        def computeEnvInfo = findComputeEnv(computeEnvName, workspaceId, accessToken, apiEndpoint)
+    protected Map resolveComputeEnvironment(Map config, String computeEnvName, Long workspaceId, String accessToken, String apiEndpoint) {
+        Map computeEnvInfo = null
+        if (!computeEnvName && config?.get('tower.computeEnvId')) {
+            computeEnvInfo = getComputeEnvironment(accessToken, apiEndpoint, config['tower.computeEnvId'] as String)
+        } else {
+            log.debug "Looking up compute environment: ${computeEnvName ?: '(primary)'}"
+            computeEnvInfo = findComputeEnv(computeEnvName, workspaceId, accessToken, apiEndpoint)
+        }
         if (!computeEnvInfo) {
             if (computeEnvName) {
                 throw new AbortOperationException("Compute environment '${computeEnvName}' not found")

@@ -706,7 +706,7 @@ param2 = 'value2'"""
         status.table[4][0] == 'Default workspace'
         status.table[4][1].contains('Personal workspace')
         // Check compute env row
-        status.table[5][0] == 'Primary compute env'
+        status.table[5][0] == 'Compute environment'
         status.table[5][1].contains('ce_test')
         //Workdir
         status.table[6][0] == 'Default work dir'

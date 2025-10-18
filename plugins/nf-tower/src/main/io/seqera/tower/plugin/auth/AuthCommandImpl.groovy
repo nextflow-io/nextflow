@@ -397,7 +397,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
         config['tower.endpoint'] = apiUrl
         config['tower.enabled'] = true
 
-        writeConfig(config, null)
+        writeConfig(config, null, null)
     }
 
     /**
@@ -600,24 +600,19 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
             final workspaceResult = configureWorkspace(config, existingToken as String, endpoint as String, userInfo.id as String)
             configChanged = configChanged || (workspaceResult.changed as boolean)
 
-            // Save updated config only if changes were made
-            if( configChanged ) {
-                writeConfig(config, workspaceResult.metadata as Map)
-            }
-
             // Configure compute environment for the workspace (always run after workspace selection)
             final currentWorkspaceId = config.get('tower.workspaceId') as String
-            if( currentWorkspaceId ) {
+            def workspaceMetadata = workspaceResult.metadata as Map
+            if( !workspaceMetadata && currentWorkspaceId ) {
                 // Get workspace metadata if not already available (e.g., when user kept existing workspace)
-                def workspaceMetadata = workspaceResult.metadata as Map
-                if( !workspaceMetadata ) {
-                    workspaceMetadata = getWorkspaceDetails(existingToken as String, endpoint as String, currentWorkspaceId)
-                }
-                configureComputeEnvironment(existingToken as String, endpoint as String, currentWorkspaceId, workspaceMetadata)
+                workspaceMetadata = getWorkspaceDetails(existingToken as String, endpoint as String, currentWorkspaceId)
             }
+            final computeEnvResult = configureComputeEnvironment(config as Map, existingToken as String, endpoint as String, currentWorkspaceId, workspaceMetadata)
+            configChanged = configChanged || (computeEnvResult.changed as boolean)
 
-            // Print success message at the end, even though we wrote the config earlier
-            if( configChanged ){
+            // Save updated config only if changes were made
+            if( configChanged ) {
+                writeConfig(config, workspaceResult.metadata as Map, computeEnvResult.metadata as Map)
                 println "\n${colorize('✔', 'green', true)} Configuration saved to ${getAuthFile()}"
             }
 
@@ -817,38 +812,20 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
         return [changed: currentId != selectedId, metadata: metadata]
     }
 
-    private void setPrimaryComputeEnvironment(String accessToken, String endpoint, String computeEnvId, String workspaceId) {
-        final client = createHttpClient(accessToken)
-        final uri = "${endpoint}/compute-envs/${computeEnvId}/primary?workspaceId=${workspaceId}"
-
-        final requestBody = new JsonBuilder([:]).toString()
-
-        final request = HttpRequest.newBuilder()
-            .uri(URI.create(uri))
-            .header('Content-Type', 'application/json')
-            .POST(HttpRequest.BodyPublishers.ofString(requestBody))
-            .build()
-
-        final response = client.send(request, HttpResponse.BodyHandlers.ofString())
-
-        if( response.statusCode() != 200 && response.statusCode() != 204 ) {
-            final error = response.body() ?: "HTTP ${response.statusCode()}"
-            throw new RuntimeException("Failed to set primary compute environment: ${error}")
-        }
-    }
-
     /**
-     * Configures the primary compute environment for a workspace.
+     * Configures the compute environment for a workspace.
      *
      * <p>Displays available compute environments in the selected workspace and
-     * allows the user to designate one as the primary (default) compute environment.
+     * allows the user to select the one to use for nextflow launch.
      *
+     * @param config Configuration map to update
      * @param accessToken Authentication token for API calls
      * @param endpoint Seqera Platform API endpoint
      * @param workspaceId ID of the workspace to configure
      * @param workspaceMetadata Metadata about the workspace (for URL generation)
+     * @return Map containing 'changed' (boolean) and 'metadata' (compute env info)
      */
-    private void configureComputeEnvironment(String accessToken, String endpoint, String workspaceId, Map workspaceMetadata) {
+    private Map configureComputeEnvironment(Map config, String accessToken, String endpoint, String workspaceId, Map workspaceMetadata) {
         try {
             // Get compute environments for the workspace
             final computeEnvs = getComputeEnvironments(accessToken, endpoint, workspaceId)
@@ -867,18 +844,20 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
                     final createUrl = "${webUrl}/orgs/${orgName}/workspaces/${workspaceName}/compute-envs/new"
                     println "  Create one at: ${colorize(createUrl, 'magenta')}"
                 }
-                return
+                return [changed: false, metadata: null]
             }
 
-            // Find which compute environment is already set as primary
-            final primaryEnv = computeEnvs.find { ((Map) it).primary == true }
-            final currentPrimaryName = primaryEnv ? (primaryEnv as Map).name as String : 'None'
+            // Find which is the current compute environment
+            final currentId = config['tower.computeEnvId']
+            final currentEnv = currentId ?
+                computeEnvs.find { ((Map) it).id == currentId } :
+                computeEnvs.find { ((Map) it).primary == true }
+
+            final currentEnvName = currentEnv ? (currentEnv as Map).name as String : 'None'
 
             // Show current setting
             println ""
-            println "Primary compute environment. Current setting: ${colorize(currentPrimaryName, 'cyan', true)}"
-            printColored("  Setting a primary compute environment allows you to run pipelines without", "dim")
-            printColored("  explicitly specifying a compute environment every time.", "dim")
+            println "Compute environment. Current setting: ${colorize(currentEnvName, 'cyan', true)}"
             println ""
             println "Available compute environments:"
 
@@ -895,30 +874,26 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
                 final name = env.name as String
                 final platform = env.platform as String
                 final isPrimary = env.primary == true
-                final currentIndicator = isPrimary ? colorize(' (current)', 'bold') : ''
+                final currentIndicator = name == currentEnvName ? colorize(' (current)', 'bold') : ''
                 println "  ${index + 1}. ${colorize(name, 'cyan', true)} ${colorize('[' + platform + ']', 'dim', true)}${currentIndicator}"
             }
 
             println ""
-            println "${colorize('Leave blank to keep current setting', 'bold')} (${colorize(currentPrimaryName, 'cyan')}),".toString()
+            println "${colorize('Leave blank to keep current setting', 'bold')} (${colorize(currentEnvName, 'cyan')}),".toString()
             final selection = promptForNumber(colorize("or select compute environment (1-${sortedComputeEnvs.size()}): ", 'bold', true), 1, sortedComputeEnvs.size(), true)
 
             if( selection == null ) {
-                return
+                return [changed: false, metadata: null]
             }
 
             final selectedEnv = sortedComputeEnvs[selection - 1] as Map
             final computeEnvId = selectedEnv.id as String
-
-            // Only set if different from current primary
-            if( primaryEnv && (primaryEnv as Map).id == computeEnvId ) {
-                // User selected the same one that's already primary
-                return
-            }
-
-            // Set the selected compute environment as primary
-            setPrimaryComputeEnvironment(accessToken, endpoint, computeEnvId, workspaceId)
-            printColored("Primary compute environment set to: ${colorize(selectedEnv.name as String, 'cyan')}", "green")
+            config['tower.computeEnvId'] = computeEnvId
+            final metadata = [
+                name: selectedEnv.name as String,
+                platform: selectedEnv.platform as String
+            ]
+            return [changed: true, metadata: metadata]
 
         } catch( Exception e ) {
             printColored("Warning: Failed to configure compute environment: ${e.message}", "yellow")
@@ -1046,24 +1021,28 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
             }
         }
 
-        // Primary compute environment and work directory
-        def primaryEnv = null
+        // Compute environment and work directory
+        def computeEnv = null
         if( accessToken ) {
             try {
-                final computeEnvs = getComputeEnvironments(accessToken, endpoint, workspaceId)
-                primaryEnv = computeEnvs.find { ((Map) it).primary == true } as Map
+                if( config['tower.computeEnvId'] ) {
+                    computeEnv = getComputeEnvironment(accessToken, endpoint, config['tower.computeEnvId'] as String)
+                } else {
+                    final computeEnvs = getComputeEnvironments(accessToken, endpoint, workspaceId)
+                    computeEnv = computeEnvs.find { ((Map) it).primary == true } as Map
+                }
             } catch( Exception e ) {
-                status.table.add(['Primary compute env', colorize('Error fetching', 'red'), ''])
+                status.table.add(['Compute Environment', colorize('Error fetching', 'red'), ''])
                 return status
             }
         }
 
-        if( primaryEnv ) {
-            final envName = primaryEnv.name as String
-            final envPlatform = primaryEnv.platform as String
+        if( computeEnv ) {
+            final envName = computeEnv.name as String
+            final envPlatform = computeEnv.platform as String
             final displayValue = "$envName ${colorize('[' + envPlatform + ']', 'dim', true)}".toString()
-            status.table.add(['Primary compute env', displayValue, 'workspace'])
-            status.table.add(['Default work dir', primaryEnv.workDir as String, 'compute env'])
+            status.table.add(['Compute environment', displayValue, 'workspace'])
+            status.table.add(['Default work dir', computeEnv.workDir as String, 'compute env'])
         }
 
         return status
@@ -1243,8 +1222,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
         }
     }
 
-    private void writeConfig(Map config, Map workspaceMetadata = null) {
-        log.debug("Getting config ")
+    private void writeConfig(Map config, Map workspaceMetadata = null, Map computeEnvMetadata = null) {
         final configFile = getConfigFile()
         final authFile = getAuthFile()
 
@@ -1271,6 +1249,8 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
                 // Add workspace comment if this is workspaceId and we have metadata
                 if (configKey == 'workspaceId' && workspaceMetadata) {
                     line += "  // ${workspaceMetadata.orgName} / ${workspaceMetadata.workspaceName} [${workspaceMetadata.workspaceFullName}]"
+                } else if (configKey == 'computeEnvId' && computeEnvMetadata) {
+                    line += "  // ${computeEnvMetadata.name} [${computeEnvMetadata.platform}]"
                 }
                 authConfigText.append("${line}\n")
             } else {
