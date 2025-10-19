@@ -27,9 +27,9 @@ import nextflow.Session
 import nextflow.SysEnv
 import nextflow.cloud.google.batch.client.BatchConfig
 import nextflow.cloud.google.config.GoogleStorageOpts
-import nextflow.config.schema.ConfigOption
-import nextflow.config.schema.ConfigScope
-import nextflow.config.schema.ScopeName
+import nextflow.config.spec.ConfigOption
+import nextflow.config.spec.ConfigScope
+import nextflow.config.spec.ScopeName
 import nextflow.script.dsl.Description
 import nextflow.exception.AbortOperationException
 import nextflow.util.Duration

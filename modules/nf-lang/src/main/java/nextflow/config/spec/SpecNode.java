@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nextflow.config.schema;
+package nextflow.config.spec;
 
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Field;
@@ -31,11 +31,11 @@ import nextflow.script.dsl.FeatureFlagDsl;
 import nextflow.script.dsl.ProcessDsl;
 
 /**
- * Models the config schema.
+ * Models a config spec.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
-public sealed interface SchemaNode {
+public sealed interface SpecNode {
     String description();
 
     public static final Scope ROOT = rootScope();
@@ -49,9 +49,9 @@ public sealed interface SchemaNode {
         return result;
     }
 
-    private static SchemaNode nextflowScope() {
-        var enableOpts = new HashMap<String, SchemaNode>();
-        var previewOpts = new HashMap<String, SchemaNode>();
+    private static SpecNode nextflowScope() {
+        var enableOpts = new HashMap<String, SpecNode>();
+        var previewOpts = new HashMap<String, SpecNode>();
         for( var field : FeatureFlagDsl.class.getDeclaredFields() ) {
             var fqName = field.getAnnotation(FeatureFlag.class).value();
             var names = fqName.split("\\.");
@@ -67,19 +67,19 @@ public sealed interface SchemaNode {
         return new Scope(
             "",
             Map.ofEntries(
-                Map.entry("enable", (SchemaNode) new Scope("", enableOpts)),
-                Map.entry("preview", (SchemaNode) new Scope("", previewOpts))
+                Map.entry("enable", (SpecNode) new Scope("", enableOpts)),
+                Map.entry("preview", (SpecNode) new Scope("", previewOpts))
             )
         );
     }
 
-    private static SchemaNode processScope() {
+    private static SpecNode processScope() {
         var description = """
             The `process` scope allows you to specify default directives for processes in your pipeline.
         
             [Read more](https://nextflow.io/docs/latest/config.html#process-configuration)
         """;
-        var children = new HashMap<String, SchemaNode>();
+        var children = new HashMap<String, SpecNode>();
         for( var method : ProcessDsl.DirectiveDsl.class.getDeclaredMethods() ) {
             var desc = annotatedDescription(method, "");
             children.put(method.getName(), new Option(desc, optionType(method)));
@@ -116,7 +116,7 @@ public sealed interface SchemaNode {
     public static record DslOption(
         String description,
         Class dsl
-    ) implements SchemaNode {}
+    ) implements SpecNode {}
 
     /**
      * Models a config option.
@@ -124,7 +124,7 @@ public sealed interface SchemaNode {
     public static record Option(
         String description,
         Class type
-    ) implements SchemaNode {}
+    ) implements SpecNode {}
 
     /**
      * Models a config scope that contains custom named scopes
@@ -134,23 +134,23 @@ public sealed interface SchemaNode {
         String description,
         String placeholderName,
         Scope scope
-    ) implements SchemaNode {}
+    ) implements SpecNode {}
 
     /**
      * Models a config scope.
      */
     public static record Scope(
         String description,
-        Map<String, SchemaNode> children
-    ) implements SchemaNode {
+        Map<String, SpecNode> children
+    ) implements SpecNode {
     
         /**
-         * Get the schema node at the given path.
+         * Get the spec node at the given path.
          *
          * @param names
          */
-        public SchemaNode getChild(List<String> names) {
-            SchemaNode node = this;
+        public SpecNode getChild(List<String> names) {
+            SpecNode node = this;
             for( var name : names ) {
                 if( node instanceof Scope sn )
                     node = sn.children().get(name);
@@ -196,7 +196,7 @@ public sealed interface SchemaNode {
          * @param description
          */
         public static Scope of(Class<? extends ConfigScope> scope, String description) {
-            var children = new HashMap<String, SchemaNode>();
+            var children = new HashMap<String, SpecNode>();
             for( var field : scope.getDeclaredFields() ) {
                 var name = field.getName();
                 var type = field.getType();

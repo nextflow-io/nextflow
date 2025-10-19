@@ -110,7 +110,7 @@ The following definitions can be included:
 
 ### Params block
 
-The params block consists of one or more *parameter declarations*. A parameter declaration consists of a name and an optional default value:
+The params block consists of one or more *parameter declarations*. A parameter declaration consists of a name, type, and an optional default value:
 
 ```nextflow
 params {
@@ -261,6 +261,54 @@ process greet {
 The script and stub sections must return a string in the same manner as a [function](#function).
 
 See {ref}`process-page` for more information on the semantics of each process section.
+
+(syntax-process-typed)=
+
+### Process (typed)
+
+A typed process is a process that uses static types for inputs and/or outputs:
+
+```nextflow
+process greet {
+    input: 
+    greeting: String
+    name: String
+
+    stage:
+    env 'NAME', name
+
+    output:
+    stdout()
+
+    topic:
+    eval('bash --version') >> 'versions'
+
+    script:
+    """
+    echo "${greeting}, \${NAME}!"
+    """
+}
+```
+
+Typed processes may specify the following sections:
+
+`input:`
+: Consists of one or more process inputs. Each input has a name and type.
+
+`stage:`
+: Consists of one or more stage directives. See {ref}`process-reference-typed` for the set of available stage directives.
+
+`output:`
+: Consists of one or more *output statements*. An output statement can be a [variable name](#variable), an [assignment](#assignment), or an [expression statement](#expression-statement). An output statement must be the only output if it is an expression statement.  See {ref}`process-reference-typed` for the set of available output functions.
+
+`topic:`
+: Consists of one or more *topic statements*. A topic statement is a right-shift expression with an output value on the left side and a string on the right side.
+
+:::{note}
+Typed processes use the same behavior as legacy processes for all other sections.
+:::
+
+See {ref}`process-typed-page` for more information on the semantics of typed processes.
 
 (syntax-function)=
 

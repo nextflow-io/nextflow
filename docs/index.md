@@ -77,6 +77,7 @@ reports
 script
 working-with-files
 process
+process-typed
 channel
 workflow
 module
@@ -174,6 +175,7 @@ developer/packages
 tutorials/rnaseq-nf
 tutorials/data-lineage
 tutorials/workflow-outputs
+tutorials/static-types
 tutorials/metrics
 tutorials/flux
 ```

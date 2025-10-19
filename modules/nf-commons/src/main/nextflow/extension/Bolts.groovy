@@ -960,5 +960,22 @@ class Bolts {
         else
             return new HashMap<>(map)
     }
+
+    /**
+     * Resolve a lazy expression (e.g. closure, gstring) against
+     * a delegate (i.e. binding).
+     *
+     * @param binding
+     * @param value
+     */
+    static Object resolveLazy(Object binding, Object value) {
+        if( value instanceof Closure )
+            return cloneWith(value, binding).call()
+
+        if( value instanceof GString )
+            return cloneAsLazy(value, binding).toString()
+
+        return value
+    }
     
 }

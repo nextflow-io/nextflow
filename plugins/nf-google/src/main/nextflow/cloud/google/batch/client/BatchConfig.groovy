@@ -21,8 +21,8 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.cloud.google.GoogleOpts
-import nextflow.config.schema.ConfigOption
-import nextflow.config.schema.ConfigScope
+import nextflow.config.spec.ConfigOption
+import nextflow.config.spec.ConfigScope
 import nextflow.script.dsl.Description
 import nextflow.util.MemoryUnit
 /**

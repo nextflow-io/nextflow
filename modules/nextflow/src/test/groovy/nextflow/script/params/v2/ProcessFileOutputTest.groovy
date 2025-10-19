@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2025, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,9 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nextflow.config.schema;
 
-import org.pf4j.ExtensionPoint;
+package nextflow.script.params.v2
 
-public interface ConfigScope extends ExtensionPoint {
+import spock.lang.Specification
+
+/**
+ * @author Ben Sherman <bentshermann@gmail.com>
+ */
+class ProcessFileOutputTest extends Specification {
+
+    def 'should resolve file pattern'() {
+        given:
+        def input
+
+        when:
+        input = new ProcessFileOutput('*.txt')
+        then:
+        input.getFilePattern([:]) == '*.txt'
+
+        when:
+        input = new ProcessFileOutput({ -> "${id}.txt" })
+        then:
+        input.getFilePattern([id: 'sample1']) == 'sample1.txt'
+    }
+
 }

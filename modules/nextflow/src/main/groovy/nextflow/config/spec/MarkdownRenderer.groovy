@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nextflow.config.schema
+package nextflow.config.spec
 
 import groovy.transform.TypeChecked
 import nextflow.plugin.Plugins
@@ -23,8 +23,7 @@ import nextflow.script.dsl.Description
 class MarkdownRenderer {
 
     String render() {
-        final schema = getSchema()
-        final entries = schema.entrySet().sort { entry -> entry.key }
+        final entries = getSpec().entrySet().sort { entry -> entry.key }
         final result = new StringBuilder()
         entries.each { entry ->
             final scopeName = entry.key
@@ -45,24 +44,24 @@ class MarkdownRenderer {
                 result.append("\n${fromDescription(description)}\n")
             result.append("\nThe following settings are available:\n")
 
-            final options = scope.children().findAll { name, node -> node instanceof SchemaNode.Option }
+            final options = scope.children().findAll { name, node -> node instanceof SpecNode.Option }
             renderOptions(options, scopeName, result)
 
-            final scopes = scope.children().findAll { name, node -> node instanceof SchemaNode.Scope }
+            final scopes = scope.children().findAll { name, node -> node instanceof SpecNode.Scope }
             renderOptions(scopes, scopeName, result)
         }
         return result.toString()
     }
 
-    private static Map<String,SchemaNode.Scope> getSchema() {
-        final result = new HashMap<String,SchemaNode.Scope>()
+    private static Map<String,SpecNode.Scope> getSpec() {
+        final result = new HashMap<String,SpecNode.Scope>()
         for( final scope : Plugins.getExtensions(ConfigScope) ) {
             final clazz = scope.getClass()
             final scopeName = clazz.getAnnotation(ScopeName)?.value()
             final description = clazz.getAnnotation(Description)?.value()
             if( scopeName == null )
                 continue
-            final node = SchemaNode.Scope.of(clazz, description)
+            final node = SpecNode.Scope.of(clazz, description)
             result.put(scopeName, node)
         }
         return result
@@ -72,24 +71,24 @@ class MarkdownRenderer {
         return description.stripIndent(true).trim()
     }
 
-    private static void renderOptions(Map<String,SchemaNode> nodes, String scopeName, StringBuilder result) {
+    private static void renderOptions(Map<String,SpecNode> nodes, String scopeName, StringBuilder result) {
         final prefix = scopeName ? scopeName + '.' : ''
         final entries = nodes.entrySet().sort { entry -> entry.key }
         entries.each { entry ->
             final name = entry.key
             final node = entry.value
-            if( node instanceof SchemaNode.Option )
+            if( node instanceof SpecNode.Option )
                 renderOption("${prefix}${name}", node, result)
-            else if( node instanceof SchemaNode.Placeholder )
+            else if( node instanceof SpecNode.Placeholder )
                 renderOptions(node.scope().children(), "${prefix}${name}.${node.placeholderName()}", result)
-            else if( node instanceof SchemaNode.Scope )
+            else if( node instanceof SpecNode.Scope )
                 renderOptions(node.children(), "${prefix}${name}", result)
             else
                 throw new IllegalStateException()
         }
     }
 
-    private static void renderOption(String name, SchemaNode.Option node, StringBuilder result) {
+    private static void renderOption(String name, SpecNode.Option node, StringBuilder result) {
         final description = fromDescription(node.description())
         if( !description )
             return
