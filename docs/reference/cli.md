@@ -757,6 +757,77 @@ Execute a pipeline into a Kubernetes cluster.
 $ nextflow kuberun nextflow-io/hello
 ```
 
+(cli-launch)=
+
+### `launch`
+
+:::{versionadded} 25.10.0
+:::
+
+Launch a workflow in Seqera Platform
+
+**Usage**
+
+```console
+$ nextflow launch [options] [project]
+```
+
+**Description**
+
+The `launch` command is used to run a pipeline execution in the Seqera Platform. To login and config the environment of the execution, use the [`auth`](#auth) command.
+
+**Options**
+
+`-compute-env`
+: Compute environment name
+
+`-c, -config`
+: Add the specified file to configuration set
+
+`-entry`
+: Entry workflow name to be executed
+
+`-h, -help`
+: Print the command usage.
+
+`-latest`
+: Pull latest changes before run
+
+`-name`
+: Assign a mnemonic name to the pipeline run
+
+`-main-script`
+: The script file to be executed when launching a project directory or repository
+
+`-params-file`
+: Load script parameters from a JSON/YAML file
+
+`-profile`
+: Choose a configuration profile
+
+`-resume`
+: Execute the script using the cached results
+
+`-r, -revision`
+: Revision of the project to run (either a git branch, tag or commit SHA number)')
+
+`-stub-run, -stub`
+: Execute the workflow replacing process scripts with command stubs
+
+`-w, -work-dir`
+: Directory where intermediate result files are stored
+
+`-workspace`
+: Workspace name')
+
+**Examples**
+
+Execute a pipeline into Seqera Platform.
+
+```console
+$ nextflow launch nextflow-io/hello
+```
+
 (cli-lineage)=
 
 ### `lineage`
