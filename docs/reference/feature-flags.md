@@ -46,8 +46,10 @@ Feature flags are used to introduce experimental or other opt-in features. They 
 `nextflow.preview.output`
 : :::{versionadded} 24.04.0
   :::
-: *Experimental: may change in a future release.*
-: When `true`, enables the use of the {ref}`workflow output definition <workflow-output-def>`.
+: :::{deprecated} 25.10.0
+  This feature flag is no longer required to use workflow outputs.
+  :::
+: When `true`, enables the use of {ref}`workflow outputs <workflow-output-def>`.
 
 `nextflow.preview.recursion`
 : *Experimental: may change in a future release.*
@@ -60,3 +62,9 @@ Feature flags are used to introduce experimental or other opt-in features. They 
   This feature flag is no longer required to use topic channels.
   :::
 : When `true`, enables {ref}`topic channels <channel-topic>` feature.
+
+`nextflow.preview.types`
+: :::{versionadded} 25.10.0
+  :::
+: When `true`, enables the use of {ref}`typed processes <process-typed-page>`.
+: This feature flag must be enabled in every script that uses typed processes. Legacy processes can not be defined in scripts that enable this feature flag.
