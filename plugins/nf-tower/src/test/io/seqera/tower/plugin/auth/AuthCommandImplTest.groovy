@@ -83,14 +83,17 @@ class AuthCommandImplTest extends Specification {
 
     def 'should handle config writing'() {
         given:
-        def cmd = new AuthCommandImpl()
+        def cmd = Spy(AuthCommandImpl)
         def config = [
             'tower.accessToken': 'test-token',
             'tower.enabled'    : true
         ]
-
+        def authFile = tempDir.resolve('seqera-auth.config')
+        def configFile = tempDir.resolve('config')
+        cmd.getAuthFile() >> authFile
+        cmd.getConfigFile() >> configFile
         when:
-        cmd.writeConfig(config, null)
+        cmd.writeConfig(config, null, null)
 
         then:
         noExceptionThrown()
@@ -864,6 +867,7 @@ param2 = 'value2'"""
         cmd.checkApiConnection(_) >> true
         cmd.getUserInfo(_, _) >> [userName: 'envuser', id: '456']
         cmd.getWorkspaceDetails(_,_,_) >> [:]
+        cmd.getComputeEnvironments(_,_,_) >> []
 
         SysEnv.push(['TOWER_ACCESS_TOKEN': 'env-token',
                      'TOWER_API_ENDPOINT': 'https://env.example.com',
