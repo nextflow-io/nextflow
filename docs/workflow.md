@@ -474,19 +474,8 @@ Workflows can also be invoked recursively:
 
 ## Workflow outputs
 
-:::{versionadded} 24.04.0
-:::
-
-:::{versionchanged} 24.10.0
-A second preview version was introduced. See the {ref}`migration notes <workflow-outputs-second-preview>` for details.
-:::
-
-:::{versionchanged} 25.04.0
-A third preview version was introduced. See the {ref}`migration notes <workflow-outputs-third-preview>` for details.
-:::
-
-:::{note}
-This feature requires the `nextflow.preview.output` feature flag to be enabled.
+:::{versionadded} 25.10.0
+This feature is available as a preview in Nextflow {ref}`24.04 <workflow-outputs-first-preview>`, {ref}`24.10 <workflow-outputs-second-preview>`, and {ref}`25.04 <workflow-outputs-third-preview>`.
 :::
 
 A script can define an *output block* which declares the top-level outputs of the workflow. Each output should be assigned in the `publish` section of the entry workflow. Any channel in the workflow can be assigned to an output, including process and subworkflow outputs. This approach is intended to replace the {ref}`publishDir <process-publishdir>` directive.
@@ -505,10 +494,10 @@ process fetch {
 
 workflow {
     main:
-    fetch(params.input)
+    ch_samples = fetch(params.input)
 
     publish:
-    samples = fetch.out
+    samples = ch_samples
 }
 
 output {
