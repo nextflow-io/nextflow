@@ -22,5 +22,5 @@ package nextflow.config.schema;
  *             This package was renamed from config.schema to config.spec.
  */
 @Deprecated
-public interface ConfigScope extends nextflow.config.spec.ConfigScope {
+public interface ConfigScope {
 }

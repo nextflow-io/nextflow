@@ -30,8 +30,5 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.FIELD)
 public @interface ConfigOption {
-    String description() default "";
-    String type() default "";
-    String defaultValue() default "";
-    String[] possibleValues() default {};
+    Class[] types() default {};
 }
