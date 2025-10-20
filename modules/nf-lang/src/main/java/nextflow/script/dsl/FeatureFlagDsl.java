@@ -43,12 +43,6 @@ public class FeatureFlagDsl {
     """)
     public boolean strict;
 
-    @FeatureFlag("nextflow.preview.output")
-    @Description("""
-        When `true`, enables the use of the [workflow output definition](https://nextflow.io/docs/latest/workflow.html#workflow-output-def).
-    """)
-    public boolean previewOutput;
-
     @FeatureFlag("nextflow.preview.recursion")
     @Description("""
         When `true`, enables the use of [process and workflow recursion](https://nextflow.io/docs/latest/workflow.html#process-and-workflow-recursion).
