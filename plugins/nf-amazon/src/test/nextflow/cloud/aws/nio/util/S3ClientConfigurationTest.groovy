@@ -49,20 +49,9 @@ class S3ClientConfigurationTest extends Specification{
         given:
         def props = new Properties()
         def config = new AwsConfig([client: [
-                maxConcurrency: 10,
-                maxNativeMemory: '500MB',
-                minimumPartSize: '7MB',
-                multipartThreshold: '32MB',
-                targetThroughputInGbps: 15,
-                connectionTimeout: 20000,
-                maxConnections: 100,
-                maxErrorRetry: 3,
-                socketTimeout: 20000,
-                proxyHost: 'host.com',
-                proxyPort: 80,
-                proxyScheme: 'https',
-                proxyUsername: 'user',
-                proxyPassword: 'pass' ]])
+                                             maxConcurrency: 10, maxNativeMemory: '500MB', minimumPartSize: '7MB', multipartThreshold: '32MB',
+                                             targetThroughputInGbps: 15, connectionTimeout: 20000, maxConnections: 100, maxErrorRetry: 3, socketTimeout: 20000,
+                                             proxyHost: 'host.com', proxyPort: 80, proxyScheme: 'https', proxyUsername: 'user', proxyPassword: 'pass']])
         props.putAll(config.getS3LegacyProperties())
         when:
         def clientConfig = S3AsyncClientConfiguration.create(props)

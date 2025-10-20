@@ -39,7 +39,7 @@ class ExtendedS3TransferManagerTest extends Specification {
 
         then:
         extendedManager.partSize == 8 * 1024 * 1024 // 8 MB
-        extendedManager.downloadPermits == 50 // 400MB / 8MB
+        extendedManager.maxPartsTotal == 50 // 400MB / 8MB
     }
 
     def 'should initialize with custom properties'() {
@@ -54,7 +54,7 @@ class ExtendedS3TransferManagerTest extends Specification {
 
         then:
         extendedManager.partSize == 16 * 1024 * 1024 // 16 MB
-        extendedManager.downloadPermits == 11 // 200MB / 16MB (floor) = 11.92... -> 11
+        extendedManager.maxPartsTotal == 11 // 200MB / 16MB (floor) = 11.92... -> 11
     }
 
     @Unroll
@@ -80,7 +80,7 @@ class ExtendedS3TransferManagerTest extends Specification {
     }
 
 
-    def 'should calculate downloadPermits correctly'() {
+    def 'should calculate maxPartsTotal correctly'() {
         given:
         def mockTransferManager = Mock(S3TransferManager)
         def props = new Properties()
@@ -91,7 +91,7 @@ class ExtendedS3TransferManagerTest extends Specification {
         def extendedManager = new ExtendedS3TransferManager(mockTransferManager, props)
 
         then:
-        extendedManager.downloadPermits == expectedMaxParts
+        extendedManager.maxPartsTotal == expectedMaxParts
 
         where:
         maxBuffer     | partSize     | expectedMaxParts

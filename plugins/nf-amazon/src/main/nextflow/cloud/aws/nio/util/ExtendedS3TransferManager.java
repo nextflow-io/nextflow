@@ -35,15 +35,9 @@ import software.amazon.awssdk.transfer.s3.model.UploadFileRequest;
 import static nextflow.cloud.aws.config.AwsS3Config.*;
 
 /**
- * Extends the S3 Transfer Manager with semaphores to limit concurrent
- * transfers based on available resources.
- *
- * Copies and uploads are limited based on the `maxConnections` setting.
- *
- * Downloads are limited based on the `maxDownloadHeapMemory` setting. The
- * CRT client allocates a buffer of 10 * part size for each transfer by default.
- *
- * @see https://github.com/aws/aws-sdk-java-v2/issues/6323
+ * Extends the S3 Transfer manager functionality limiting the number of concurrent downloads according to a target heap memory consumption.
+ * Implemented to fix https://github.com/aws/aws-sdk-java-v2/issues/6323 where several concurrent downloads with CRT client can consume large heap memory space.
+ * This is due to the inital download buffer allocated for each transfer that by default it is 10 * part size.
  *
  * @author Jorge Ejarque (jorge.ejarque@seqera.io)
  */
@@ -52,66 +46,47 @@ public class ExtendedS3TransferManager {
     private static final Logger log = LoggerFactory.getLogger(ExtendedS3TransferManager.class);
 
     private S3TransferManager transferManager;
-    private Semaphore semaphore;
+    private Semaphore concurrentDownloadSemaphore;
     private long partSize;
-    private int downloadPermits;
-    private Semaphore downloadSemaphore;
+    private int maxPartsTotal;
+
 
     public ExtendedS3TransferManager( S3TransferManager transferManager, Properties props){
         this.transferManager = transferManager;
-        setDefaultSemaphore(props);
-        setDownloadSemaphore(props);
+        setDownloadBufferProperties(props);
+        this.concurrentDownloadSemaphore = new Semaphore(maxPartsTotal);
     }
 
-    private void setDefaultSemaphore(Properties props) {
-        int permits = 100;
-        if( props.containsKey("max_connections")) {
-            permits = Integer.parseInt(props.getProperty("max_connections"));
+    public FileDownload downloadFile(DownloadFileRequest downloadFileRequest, long size) throws InterruptedException {
+        final int parts = estimateParts(size);
+        FileDownload downloadFile;
+        concurrentDownloadSemaphore.acquire(parts);
+        try {
+            downloadFile = transferManager.downloadFile(downloadFileRequest);
+        } catch (Throwable e) {
+            // Release semaphore when runtime exception during the downloadFile submission
+            concurrentDownloadSemaphore.release(parts);
+            throw e;
         }
-        this.semaphore = new Semaphore(permits);
+        // Ensure permits are always released after completion
+        downloadFile
+            .completionFuture()
+            .whenComplete((result, error) -> concurrentDownloadSemaphore.release(parts));
+        return downloadFile;
     }
 
-    private void setDownloadSemaphore(Properties props) {
-        long maxBufferSize = DEFAULT_MAX_DOWNLOAD_BUFFER_SIZE;
+    private void setDownloadBufferProperties(Properties props) {
+        long maxBuffer = DEFAULT_MAX_DOWNLOAD_BUFFER_SIZE;
         if( props.containsKey("max_download_heap_memory")) {
             log.trace("AWS client config - max_download_heap_memory: {}", props.getProperty("max_download_heap_memory"));
-            maxBufferSize = Long.parseLong(props.getProperty("max_download_heap_memory"));
+            maxBuffer = Long.parseLong(props.getProperty("max_download_heap_memory"));
         }
-
         this.partSize = DEFAULT_PART_SIZE;
         if( props.containsKey("minimum_part_size")) {
             log.trace("AWS client config - minimum_part_size: {}", props.getProperty("minimum_part_size"));
             this.partSize = Long.parseLong(props.getProperty("minimum_part_size"));
         }
-
-        this.downloadPermits = (int) Math.floor((double) maxBufferSize / partSize);
-        this.downloadSemaphore = new Semaphore(downloadPermits);
-    }
-
-    public long getPartSize() {
-        return partSize;
-    }
-
-    public int getDownloadPermits() {
-        return downloadPermits;
-    }
-
-    public FileDownload downloadFile(DownloadFileRequest request, long size) throws InterruptedException {
-        int parts = estimateParts(size);
-        FileDownload fileDownload;
-        downloadSemaphore.acquire(parts);
-        try {
-            fileDownload = transferManager.downloadFile(request);
-        } catch (Throwable e) {
-            // Release semaphore when runtime exception during the downloadFile submission
-            downloadSemaphore.release(parts);
-            throw e;
-        }
-        // Ensure permits are always released after completion
-        fileDownload
-            .completionFuture()
-            .whenComplete((result, error) -> downloadSemaphore.release(parts));
-        return fileDownload;
+        this.maxPartsTotal = (int) Math.floor((double) maxBuffer / partSize);
     }
 
     protected int estimateParts(long size) {
@@ -121,49 +96,24 @@ public class ExtendedS3TransferManager {
         return Math.min(parts, DEFAULT_INIT_BUFFER_PARTS);
     }
 
-    public FileUpload uploadFile(UploadFileRequest request) throws InterruptedException {
-        FileUpload fileUpload;
-        semaphore.acquire();
-        try {
-            fileUpload = transferManager.uploadFile(request);
-        } catch (Throwable e) {
-            semaphore.release();
-            throw e;
-        }
-        fileUpload
-            .completionFuture()
-            .whenComplete((result, error) -> semaphore.release());
-        return fileUpload;
+    public FileUpload uploadFile(UploadFileRequest request) {
+        return transferManager.uploadFile(request);
     }
 
-    public DirectoryUpload uploadDirectory(UploadDirectoryRequest request) throws InterruptedException {
-        DirectoryUpload directoryUpload;
-        semaphore.acquire();
-        try {
-            directoryUpload = transferManager.uploadDirectory(request);
-        } catch (Throwable e) {
-            semaphore.release();
-            throw e;
-        }
-        directoryUpload
-            .completionFuture()
-            .whenComplete((result, error) -> semaphore.release());
-        return directoryUpload;
+    public DirectoryUpload uploadDirectory(UploadDirectoryRequest request)  {
+        return transferManager.uploadDirectory(request);
     }
 
-    public Copy copy(CopyRequest request) throws InterruptedException {
-        Copy copy;
-        semaphore.acquire();
-        try {
-            copy = transferManager.copy(request);
-        } catch (Throwable e) {
-            semaphore.release();
-            throw e;
-        }
-        copy
-            .completionFuture()
-            .whenComplete((result, error) -> semaphore.release());
-        return copy;
+    public Copy copy(CopyRequest request)  {
+        return transferManager.copy(request);
+    }
+
+    public long getPartSize() {
+        return partSize;
+    }
+
+    public int getMaxPartsTotal() {
+        return maxPartsTotal;
     }
 
 }

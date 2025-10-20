@@ -109,7 +109,7 @@ class ThreadPoolManager {
         static ThreadFactory create(String name) {
             return Thread.ofVirtual().name(name).factory()
         }
-    } 
+    }
 
     protected ExecutorService legacyThreadPool() {
         new ThreadPoolBuilder()

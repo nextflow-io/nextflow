@@ -266,6 +266,19 @@ public class S3Client {
 		log.debug("Setting S3 requester pays enabled={}", isRequesterPaysEnabled);
 	}
 
+	public void setTransferManagerThreads(String value) {
+		if( value==null )
+			return;
+
+		try {
+			this.transferManagerThreads = Integer.valueOf(value);
+			log.debug("Setting S3 upload max threads={}", transferManagerThreads);
+		}
+		catch( NumberFormatException e ) {
+			log.warn("Not a valid AWS S3 upload max threads: `{}` -- Using default", value);
+		}
+	}
+
 	public ObjectCannedACL getCannedAcl() {
 		return cannedAcl;
 	}
@@ -307,7 +320,8 @@ public class S3Client {
 
 	synchronized ExtendedS3TransferManager transferManager() {
 		if( transferManager == null ) {
-			transferPool = ThreadPoolManager.create("S3TransferManager");
+			log.debug("Creating S3 transfer manager pool - max-treads={};", transferManagerThreads);
+			transferPool = ThreadPoolManager.create("S3TransferManager", transferManagerThreads);
 			var delegate = S3TransferManager.builder()
 					.s3Client(factory.getS3AsyncClient(S3AsyncClientConfiguration.create(props), global))
 					.executor(transferPool)
@@ -377,14 +391,14 @@ public class S3Client {
                 if( log.isTraceEnabled())
                     log.trace("Download file: " + current + " -> "+ FilesEx.toUriString(newFile));
                 try {
-                    S3Path s3Path = (S3Path)current;
+                S3Path s3Path = (S3Path)current;
                     DownloadFileRequest downloadFileRequest = DownloadFileRequest.builder()
                         .getObjectRequest(b -> b.bucket(s3Path.getBucket()).key(s3Path.getKey()))
                         .destination(newFile)
                         .build();
                     FileDownload it = transferManager().downloadFile(downloadFileRequest, attr.size());
                     allDownloads.add(new OngoingFileDownload(s3Path.getBucket(), s3Path.getKey(), it));
-                } catch (InterruptedException e) {
+                }catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     // Don't throw immediately - store the exception and continue to clean-up
                     traversalInterruption[0] = new InterruptedIOException(String.format("S3 download directory: s3://%s/%s interrupted", source.getBucket(), source.getKey()));
@@ -418,7 +432,7 @@ public class S3Client {
                     }
                 }
             }
-
+            
             // Throw traversal interruption first if it occurred
             if (traversalInterruption != null) {
                 if (firstException != null) {
@@ -426,7 +440,7 @@ public class S3Client {
                 }
                 throw traversalInterruption;
             }
-
+            
             // Throw download failures if any occurred
             if (firstException != null) {
                 throw new IOException(String.format("Some transfers from S3 download directory: s3://%s/%s failed", source.getBucket(), source.getKey()), firstException);
@@ -442,12 +456,13 @@ public class S3Client {
         }
     }
 
-    public void uploadFile(File source, S3Path target) throws IOException {
-        var req = PutObjectRequest.builder().bucket(target.getBucket()).key(target.getKey());
-        preparePutObjectRequest(req, target.getTagsList(), target.getContentType(), target.getStorageClass());
-        var uploadRequest = UploadFileRequest.builder().putObjectRequest(req.build()).source(source).build();
-        try {
-            transferManager().uploadFile(uploadRequest).completionFuture().get();
+	public void uploadFile(File source, S3Path target) throws IOException {
+		PutObjectRequest.Builder req = PutObjectRequest.builder().bucket(target.getBucket()).key(target.getKey());
+		preparePutObjectRequest(req, target.getTagsList(), target.getContentType(), target.getStorageClass());
+		// initiate transfer
+		FileUpload upload = transferManager().uploadFile(UploadFileRequest.builder().putObjectRequest(req.build()).source(source).build());
+        try{
+		    upload.completionFuture().get();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new InterruptedIOException(String.format("S3 upload file: s3://%s/%s interrupted", target.getBucket(), target.getKey()));
@@ -482,9 +497,11 @@ public class S3Client {
 				.uploadFileRequestTransformer(transformUploadRequest(target.getTagsList()))
 				.build();
 
+		// initiate transfer
+		DirectoryUpload upload = transferManager().uploadDirectory(request);
 		try {
-			CompletedDirectoryUpload completed = transferManager().uploadDirectory(request).completionFuture().get();
-			if (!completed.failedTransfers().isEmpty()) {
+			CompletedDirectoryUpload completed = upload.completionFuture().get();
+			if (!completed.failedTransfers().isEmpty()){
 				log.debug("S3 upload directory: s3://{}/{} failed transfers", target.getBucket(), target.getKey());
 				throw new IOException("Some transfers in S3 upload directory: s3://"+ target.getBucket() +"/"+ target.getKey() +" has failed - Transfers: " +  completed.failedTransfers() );
 			}
@@ -523,9 +540,9 @@ public class S3Client {
 		if( log.isTraceEnabled() ) {
 			log.trace("S3 CopyObject request {}", req);
 		}
-		CopyRequest copyRequest = CopyRequest.builder().copyObjectRequest(req).build();
+		Copy copy = transferManager().copy(CopyRequest.builder().copyObjectRequest(req).build());
         try {
-			transferManager().copy(copyRequest).completionFuture().get();
+            copy.completionFuture().get();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new InterruptedIOException(String.format("S3 copy s3://%s/%s to s3://%s/%s interrupted", req.sourceBucket(), req.sourceKey(), req.destinationBucket(), req.destinationKey()));

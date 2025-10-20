@@ -35,7 +35,7 @@ public class S3AsyncClientConfiguration extends S3ClientConfiguration{
     private S3CrtHttpConfiguration.Builder crtHttpConfiguration;
     private MultipartConfiguration.Builder multiPartBuilder;
     private S3CrtRetryConfiguration crtRetryConfiguration;
-    private Integer maxConcurrency;
+    private Integer maxConcurrency ;
     private Double targetThroughputInGbps;
     private Long maxNativeMemoryInBytes;
 
@@ -152,11 +152,11 @@ public class S3AsyncClientConfiguration extends S3ClientConfiguration{
     }
 
     public static S3AsyncClientConfiguration create(Properties props) {
-        S3AsyncClientConfiguration config = new S3AsyncClientConfiguration();
-        if( props != null ){
+		S3AsyncClientConfiguration config = new S3AsyncClientConfiguration();
+		if( props != null ){
             config.setClientOverrideConfiguration(props);
             config.setAsyncConfiguration(props);
         }
-        return config;
-    }
+		return config;
+	}
 }

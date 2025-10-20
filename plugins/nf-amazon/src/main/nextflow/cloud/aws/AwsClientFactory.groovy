@@ -261,7 +261,7 @@ class AwsClientFactory {
             builder.targetThroughputInGbps(throughput)
 
         final nativeMemory = s3ClientConfig.getMaxNativeMemoryInBytes()
-        if( nativeMemory != null )
+        if (nativeMemory != null )
             builder.maxNativeMemoryLimitInBytes(nativeMemory)
 
         final maxConcurrency = s3ClientConfig.getMaxConcurrency()

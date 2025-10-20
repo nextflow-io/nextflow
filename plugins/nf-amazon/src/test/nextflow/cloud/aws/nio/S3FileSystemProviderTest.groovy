@@ -51,6 +51,7 @@ class S3FileSystemProviderTest extends Specification {
                 proxyPassword: 'pass',
                 storageEncryption: 'AES256',
                 storageKmsKeyId: 'arn:key:id',
+                transferManagerThreads: 20,
                 uploadMaxThreads: 15,
                 uploadChunkSize: '7MB',
                 uploadMaxAttempts: 4,
@@ -67,6 +68,7 @@ class S3FileSystemProviderTest extends Specification {
         fs.getBucketName() == 'bucket'
         def client = fs.getClient()
         client.client != null
+        client.transferManagerThreads == 20
         client.cannedAcl == ObjectCannedACL.PRIVATE
         client.storageEncryption == ServerSideEncryption.AES256
         client.isRequesterPaysEnabled == true
