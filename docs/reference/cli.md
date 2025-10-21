@@ -818,7 +818,7 @@ The `launch` command is used to run a pipeline execution in the Seqera Platform.
 : The directory where intermediate result files are stored.
 
 `-workspace`
-: Workspace name')
+: The Seqera Platform workspace name.
 
 **Examples**
 
