@@ -1500,6 +1500,9 @@ The following settings are available:
 : The unique access token for your Seqera Platform account.
 : Your `accessToken` can be obtained from your Seqera Platform instance in the [Tokens page](https://cloud.seqera.io/tokens).
 
+`tower.computeEnvId`
+: The compute environment ID in your Seqera Platform account used to launch pipelines (default: the primary compute environment in the selected workspace).
+
 `tower.enabled`
 : Enable workflow monitoring with Seqera Platform (default: `false`).
 
