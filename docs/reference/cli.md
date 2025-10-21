@@ -791,7 +791,7 @@ The `launch` command launches a pipeline run in Seqera Platform. To log in and c
 : Prints command usage information.
 
 `-latest`
-: Pull latest changes before run
+: Whether to pull the latest changes before execution.
 
 `-name`
 : Assign a mnemonic name to the pipeline run
