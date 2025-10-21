@@ -69,30 +69,28 @@ public class ProcessNodeV2 extends ProcessNode {
         if( outputs.size() == 1 ) {
             var first = outputs.get(0);
             var output = ((ExpressionStatement) first).getExpression();
-            if( outputName(output) == null )
+            if( outputTarget(output) == null )
                 return output.getType();
         }
         var cn = new ClassNode(Record.class);
         outputs.stream()
             .map(stmt -> ((ExpressionStatement) stmt).getExpression())
-            .map(output -> outputName(output))
-            .filter(name -> name != null)
-            .forEach((name) -> {
-                var type = ClassHelper.dynamicType();
-                var fn = new FieldNode(name, Modifier.PUBLIC, type, cn, null);
+            .map(output -> outputTarget(output))
+            .filter(target -> target != null)
+            .forEach((target) -> {
+                var fn = new FieldNode(target.getName(), Modifier.PUBLIC, target.getType(), cn, null);
                 fn.setDeclaringClass(cn);
                 cn.addField(fn);
             });
         return cn;
     }
 
-    private static String outputName(Expression output) {
+    private static VariableExpression outputTarget(Expression output) {
         if( output instanceof VariableExpression ve ) {
-            return ve.getName();
+            return ve;
         }
-        else if( output instanceof AssignmentExpression ae ) {
-            var target = (VariableExpression)ae.getLeftExpression();
-            return target.getName();
+        if( output instanceof AssignmentExpression ae ) {
+            return (VariableExpression)ae.getLeftExpression();
         }
         return null;
     }
