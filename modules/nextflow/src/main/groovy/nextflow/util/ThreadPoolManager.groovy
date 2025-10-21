@@ -105,7 +105,6 @@ class ThreadPoolManager {
 
     // this class is required to avoid failures when using Java version < 21
     private static class VirtualThreadFactoryBuilder {
-
         static ThreadFactory create(String name) {
             return Thread.ofVirtual().name(name).factory()
         }
