@@ -803,7 +803,7 @@ The `launch` command is used to run a pipeline execution in the Seqera Platform.
 : Load script parameters from a JSON/YAML file
 
 `-profile`
-: Choose a configuration profile
+: A configuration profile.
 
 `-resume`
 : Whether to resume an execution using cached results from a previous run.
