@@ -785,7 +785,7 @@ The `launch` command launches a pipeline run in Seqera Platform. To log in and c
 : A configuration file to add to the configuration set.
 
 `-entry`
-: Entry workflow name to be executed
+: The entry workflow to be executed.
 
 `-h, -help`
 : Print the command usage.
