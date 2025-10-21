@@ -774,7 +774,7 @@ $ nextflow launch [options] [project]
 
 **Description**
 
-The `launch` command is used to run a pipeline execution in the Seqera Platform. To login and config the environment of the execution, use the [`auth`](#auth) command.
+The `launch` command launches a pipeline run in Seqera Platform. To log in and configure the execution environment, use the [`auth`](#auth) command.
 
 **Options**
 
