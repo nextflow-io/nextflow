@@ -53,8 +53,8 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
     static final public List<String> VALID_PARAMS_FILE = ['json', 'yml', 'yaml']
     static final private Pattern DOT_ESCAPED = ~/\\\./
     static final private Pattern DOT_NOT_ESCAPED = ~/(?<!\\)\./
-    static final int LOG_POLL_INTERVAL_MS = 2000
-    static final int LOG_GRACE_PERIOD_MS = 5000
+    static final int LOG_POLL_INTERVAL_MS = 2_000
+    static final int LOG_GRACE_PERIOD_MS = 5_000
     static final int LOG_SLEEP_INTERVAL_MS = 100
 
     // ===== Data Classes =====
@@ -496,14 +496,14 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
         def firstLogReceived = false
         def workflowFinished = false
         def workflowFinishedTime = 0L
-        final finalStatuses = ['SUCCEEDED', 'FAILED', 'CANCELLED', 'UNKNOWN', 'ABORTED'] as Set<String>
+        final finalStatuses = Set.of('SUCCEEDED', 'FAILED', 'CANCELLED', 'UNKNOWN', 'ABORTED')
         def lastStatus = null
         def finalStatus = null
 
         try {
             spinner.start()
 
-            while (!shouldExit.get()) {
+            while (!shouldExit.get() && !Thread.currentThread().isInterrupted()) {
                 try {
                     // Fetch workflow status and logs
                     final status = fetchWorkflowStatus(workflowId, queryParams, accessToken, apiEndpoint)
@@ -542,8 +542,15 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
                     // Wait before next poll
                     sleepInterruptibly(LOG_POLL_INTERVAL_MS, shouldExit)
 
-                } catch (Exception e) {
-                    if (shouldExit.get()) break
+                }
+                catch (IOException e) {
+                    log.debug "Log polling got interrupted - ${e.message}"
+                    Thread.currentThread().interrupt()
+                    break
+                }
+                catch (Exception e) {
+                    if (shouldExit.get())
+                        break
                     log.error "Error polling workflow logs: ${e.message}", e
                     sleepInterruptibly(LOG_POLL_INTERVAL_MS, shouldExit)
                 }
@@ -695,12 +702,23 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
     }
 
     /**
-     * Sleep with ability to be interrupted by exit flag
+     * Sleep with ability to be interrupted by exit flag or thread interruption.
+     *
+     * When Thread.sleep() is interrupted, it clears the interrupt status and throws InterruptedException.
+     * We catch it and restore the interrupt status by calling Thread.currentThread().interrupt().
+     * This preserved interrupt status is then detected by the outer polling loop at line 506,
+     * which checks !Thread.currentThread().isInterrupted() and breaks out gracefully.
      */
     private void sleepInterruptibly(int milliseconds, AtomicBoolean shouldExit) {
         final iterations = milliseconds / LOG_SLEEP_INTERVAL_MS
-        for (int i = 0; i < iterations && !shouldExit.get(); i++) {
-            Thread.sleep(LOG_SLEEP_INTERVAL_MS)
+        try {
+            for (int i = 0; i < iterations && !shouldExit.get(); i++) {
+                Thread.sleep(LOG_SLEEP_INTERVAL_MS)
+            }
+        } catch (InterruptedException e) {
+            // Restore interrupt status so the outer loop can detect it and exit cleanly
+            log.debug "Log sleep interrupted (restoring interrupt status) - ${e.message}"
+            Thread.currentThread().interrupt()
         }
     }
 
