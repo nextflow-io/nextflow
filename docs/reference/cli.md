@@ -809,7 +809,7 @@ The `launch` command is used to run a pipeline execution in the Seqera Platform.
 : Execute the script using the cached results
 
 `-r, -revision`
-: Revision of the project to run (either a git branch, tag or commit SHA number)')
+: The project revision to run. Can be a git branch, tag, or commit hash.
 
 `-stub-run, -stub`
 : Whether to replace scripts with command stubs when executing the run.
