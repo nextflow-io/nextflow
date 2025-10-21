@@ -806,7 +806,7 @@ The `launch` command is used to run a pipeline execution in the Seqera Platform.
 : Choose a configuration profile
 
 `-resume`
-: Execute the script using the cached results
+: Whether to resume an execution using cached results from a previous run.
 
 `-r, -revision`
 : The project revision to run. Can be a git branch, tag, or commit hash.
