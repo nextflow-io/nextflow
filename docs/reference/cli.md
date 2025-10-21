@@ -822,7 +822,7 @@ The `launch` command is used to run a pipeline execution in the Seqera Platform.
 
 **Examples**
 
-Execute a pipeline into Seqera Platform.
+Execute a pipeline in Seqera Platform.
 
 ```console
 $ nextflow launch nextflow-io/hello
