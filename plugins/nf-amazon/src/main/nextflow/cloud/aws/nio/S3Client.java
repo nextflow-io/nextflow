@@ -30,22 +30,24 @@ import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import nextflow.cloud.aws.nio.util.ExtendedS3TransferManager;
 import nextflow.cloud.aws.nio.util.S3SyncClientConfiguration;
 import nextflow.extension.FilesEx;
+import nextflow.cloud.aws.AwsClientFactory;
+import nextflow.cloud.aws.nio.util.S3AsyncClientConfiguration;
+import nextflow.cloud.aws.util.AwsHelper;
+import nextflow.util.ThreadPoolManager;
+import nextflow.util.Threads;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Iterable;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
 import software.amazon.awssdk.transfer.s3.model.*;
-import nextflow.cloud.aws.AwsClientFactory;
-import nextflow.cloud.aws.nio.util.S3AsyncClientConfiguration;
-import nextflow.cloud.aws.util.AwsHelper;
-import nextflow.util.ThreadPoolManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Client Amazon S3
@@ -56,6 +58,9 @@ public class S3Client {
 	private static final Logger log = LoggerFactory.getLogger(S3Client.class);
 
 	private software.amazon.awssdk.services.s3.S3Client client;
+
+	// Semaphore to limit concurrent client connections when using virtual threads.
+	private Semaphore semaphore;
 
 	private ObjectCannedACL cannedAcl;
 
@@ -85,7 +90,27 @@ public class S3Client {
 		this.props = props;
 		this.global = global;
 		this.client = factory.getS3Client(clientConfig, global);
+		this.semaphore = Threads.useVirtual() ? new Semaphore(clientConfig.getMaxConnections()) : null;
 		this.callerAccount = fetchCallerAccount();
+	}
+
+	/**
+	 * Perform an action that requires the S3 semaphore to limit concurrent connections.
+	 *
+	 * @param action
+	 */
+	private <T> T runWithPermit(Supplier<T> action) {
+		try {
+			if (semaphore != null) semaphore.acquire();
+			try {
+				return action.get();
+			} finally {
+				if (semaphore != null) semaphore.release();
+			}
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			throw new RuntimeException("Interrupted while acquiring S3 client semaphore", e);
+		}
 	}
 
 	/**
@@ -101,7 +126,7 @@ public class S3Client {
 
 	private String fetchCallerAccount(){
 		try {
-			List<Bucket> buckets = client.listBuckets(ListBucketsRequest.builder().maxBuckets(1).build()).buckets();
+			List<Bucket> buckets = runWithPermit(() -> client.listBuckets(ListBucketsRequest.builder().maxBuckets(1).build()).buckets());
 			if (buckets == null || buckets.isEmpty())
 				return null;
 			return getBucketAcl(buckets.get(0).name()).owner().id();
@@ -111,19 +136,20 @@ public class S3Client {
 		}
 	}
 
-
 	/**
 	 * @see software.amazon.awssdk.services.s3.S3Client#listBuckets()
 	 */
 	public List<Bucket> listBuckets() {
-		return client.listBuckets().buckets();
+		return runWithPermit(() -> client.listBuckets().buckets());
 	}
+
 	/**
 	 * @see software.amazon.awssdk.services.s3.S3Client#listObjects(ListObjectsRequest)
 	 */
 	public ListObjectsResponse listObjects(ListObjectsRequest request) {
-		return client.listObjects(request);
+		return runWithPermit(() -> client.listObjects(request));
 	}
+
 	/**
 	 * @see software.amazon.awssdk.services.s3.S3Client#getObject
 	 */
@@ -131,8 +157,9 @@ public class S3Client {
 		GetObjectRequest.Builder reqBuilder = GetObjectRequest.builder().bucket(bucketName).key(key);
 		if( this.isRequesterPaysEnabled )
 			reqBuilder.requestPayer(RequestPayer.REQUESTER);
-		return client.getObject(reqBuilder.build());
+		return runWithPermit(() -> client.getObject(reqBuilder.build()));
 	}
+
 	/**
 	 * @see software.amazon.awssdk.services.s3.S3Client#putObject
 	 */
@@ -142,7 +169,7 @@ public class S3Client {
 			log.trace("Setting canned ACL={}; bucket={}; key={}", cannedAcl, bucket, key);
 			builder.acl(cannedAcl);
 		}
-		return client.putObject(builder.build(), file.toPath());
+		return runWithPermit(() -> client.putObject(builder.build(), file.toPath()));
 	}
 
 	private PutObjectRequest preparePutObjectRequest(PutObjectRequest.Builder reqBuilder, List<Tag> tags, String contentType, String storageClass) {
@@ -193,13 +220,14 @@ public class S3Client {
 		if( log.isTraceEnabled() ) {
 			log.trace("S3 PutObject request {}", req);
 		}
-		return client.putObject(req, RequestBody.fromInputStream(inputStream, contentLength));
+		return runWithPermit(() -> client.putObject(req, RequestBody.fromInputStream(inputStream, contentLength)));
 	}
+
 	/**
 	 * @see software.amazon.awssdk.services.s3.S3Client#deleteObject
 	 */
 	public void deleteObject(String bucket, String key) {
-		client.deleteObject(DeleteObjectRequest.builder().bucket(bucket).key(key).build());
+		runWithPermit(() ->client.deleteObject(DeleteObjectRequest.builder().bucket(bucket).key(key).build()));
 	}
 
 	/**
@@ -263,18 +291,18 @@ public class S3Client {
 	 * @see software.amazon.awssdk.services.s3.S3Client#getObjectAcl
 	 */
 	public AccessControlPolicy getObjectAcl(String bucketName, String key) {
-		GetObjectAclResponse response = client.getObjectAcl(GetObjectAclRequest.builder().bucket(bucketName).key(key).build());
+		GetObjectAclResponse response = runWithPermit(() -> client.getObjectAcl(GetObjectAclRequest.builder().bucket(bucketName).key(key).build()));
 		return AccessControlPolicy.builder().grants(response.grants()).owner(response.owner()).build();
 	}
 	/**
 	 * @see software.amazon.awssdk.services.s3.S3Client#headObject
 	 */
 	public HeadObjectResponse getObjectMetadata(String bucketName, String key) {
-		return client.headObject(HeadObjectRequest.builder().bucket(bucketName).key(key).build());
+		return runWithPermit(() -> client.headObject(HeadObjectRequest.builder().bucket(bucketName).key(key).build()));
 	}
 
 	public List<Tag> getObjectTags(String bucketName, String key) {
-		return client.getObjectTagging(GetObjectTaggingRequest.builder().bucket(bucketName).key(key).build()).tagSet();
+		return runWithPermit(() -> client.getObjectTagging(GetObjectTaggingRequest.builder().bucket(bucketName).key(key).build()).tagSet());
 	}
 
 	public String getObjectKmsKeyId(String bucketName, String key) {
@@ -285,7 +313,7 @@ public class S3Client {
 	 * @see software.amazon.awssdk.services.s3.S3Client#listObjectsV2Paginator
 	 */
 	public ListObjectsV2Iterable listObjectsV2Paginator(ListObjectsV2Request request) {
-		return client.listObjectsV2Paginator(request);
+		return runWithPermit(() -> client.listObjectsV2Paginator(request));
 	}
 
 	// ===== transfer manager section =====
