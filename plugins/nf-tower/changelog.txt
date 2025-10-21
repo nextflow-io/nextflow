@@ -1,5 +1,10 @@
 nf-tower changelog
 ===================
+1.17.0 - 21 Oct 2025
+- Add nextflow auth command for Seqera Platform authentication (#6463) [bedf02a99]
+- Add nextflow launch command (#6491) [7c8fa3d9d]
+- Rename `config.schema` package to `config.spec` (#6485) [ef0d2d601]
+
 1.16.0 - 8 Oct 2025
 - Fix cache command to check session cloudCachePath [a88e2cdf2]
 - Fix cache command to use SysEnv for cloudcache path check (#6432) [771b8b60e]

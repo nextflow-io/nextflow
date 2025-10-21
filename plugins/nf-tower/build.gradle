@@ -15,7 +15,7 @@ plugins {
 }
 
 nextflowPlugin {
-    nextflowVersion = '25.09.0-edge'
+    nextflowVersion = '25.09.2-edge'
 
     provider = "${nextflowPluginProvider}"
     description = 'Integrates with Seqera Platform for comprehensive workflow monitoring, resource tracking, and cache management capabilities'

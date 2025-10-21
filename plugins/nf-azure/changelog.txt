@@ -1,5 +1,8 @@
 nf-azure changelog
 ===================
+1.20.2 - 21 Oct 2025
+- Rename `config.schema` package to `config.spec` (#6485) [ef0d2d601]
+
 1.20.1 - 8 Oct 2025
 - Fix unstage controls in command.run when using storeDir (#6364) [a5756da3e]
 
