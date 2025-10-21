@@ -98,7 +98,8 @@ class BaseCommandImpl {
                 return [
                     orgName: ws.orgName,
                     workspaceName: ws.workspaceName,
-                    workspaceFullName: ws.workspaceFullName
+                    workspaceFullName: ws.workspaceFullName,
+                    roles: ws.roles
                 ]
             }
 

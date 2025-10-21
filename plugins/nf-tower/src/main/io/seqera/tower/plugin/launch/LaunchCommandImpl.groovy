@@ -980,6 +980,9 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
         final response = client.send(request, HttpResponse.BodyHandlers.ofString())
 
         if (response.statusCode() != 200) {
+            if (response.statusCode() == 403) {
+                throw new AbortOperationException("ERROR: Unable to launch workflow.\nCheck your credentials with 'nextflow auth status' and your user role in the workspace (required: 'maintain' or higher).")
+            }
             final error = response.body() ?: "HTTP ${response.statusCode()}"
             throw new RuntimeException("Failed to launch workflow: ${error}")
         }
