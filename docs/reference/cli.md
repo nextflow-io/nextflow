@@ -764,7 +764,7 @@ $ nextflow kuberun nextflow-io/hello
 :::{versionadded} 25.10.0
 :::
 
-Launch a workflow in Seqera Platform
+Launch a workflow in [Seqera Platform](https://seqera.io/platform/).
 
 **Usage**
 
