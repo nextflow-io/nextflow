@@ -794,7 +794,7 @@ The `launch` command launches a pipeline run in Seqera Platform. To log in and c
 : Whether to pull the latest changes before execution.
 
 `-name`
-: Assign a mnemonic name to the pipeline run
+: A mnemonic name to assign to the run.
 
 `-main-script`
 : The script file to be executed when launching a project directory or repository
