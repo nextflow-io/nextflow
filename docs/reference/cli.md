@@ -812,7 +812,7 @@ The `launch` command is used to run a pipeline execution in the Seqera Platform.
 : Revision of the project to run (either a git branch, tag or commit SHA number)')
 
 `-stub-run, -stub`
-: Execute the workflow replacing process scripts with command stubs
+: Whether to replace scripts with command stubs when executing the run.
 
 `-w, -work-dir`
 : Directory where intermediate result files are stored
