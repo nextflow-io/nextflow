@@ -1,5 +1,8 @@
 nf-google changelog
 ===================
+1.23.2 - 21 Oct 2025
+- Rename `config.schema` package to `config.spec` (#6485) [ef0d2d601]
+
 1.23.1 - 8 Oct 2025
 - Fix CVE-2025-55163 in nf-google plugin [7d7061797]
 - Bump Google Cloud libraries to latest versions (#6438) [59a63f1ae]
