@@ -800,7 +800,7 @@ The `launch` command launches a pipeline run in Seqera Platform. To log in and c
 : The script file to be executed when launching a project directory or repository.
 
 `-params-file`
-: Load script parameters from a JSON/YAML file
+: A JSON or YAML file to load parameters from.
 
 `-profile`
 : A configuration profile.
