@@ -779,7 +779,7 @@ The `launch` command launches a pipeline run in Seqera Platform. To log in and c
 **Options**
 
 `-compute-env`
-: Compute environment name
+: The compute environment for workflow execution.
 
 `-c, -config`
 : A configuration file to add to the configuration set.
