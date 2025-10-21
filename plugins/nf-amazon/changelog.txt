@@ -1,5 +1,9 @@
 nf-amazon changelog
 ===================
+3.4.0 - 21 Oct 2025
+- Limit S3 client connections when using virtual threads (#6369) [295c60b5c]
+- Rename `config.schema` package to `config.spec` (#6485) [ef0d2d601]
+
 3.3.0 - 8 Oct 2025
 - Fix SIGTERM forwarding in AWS Batch jobs (#6414) [abbef79b7]
 - Limit S3 concurrent downloads to fix Java Heap OOM (#6402) [fd71d0e8c]
