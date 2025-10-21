@@ -671,7 +671,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
         }
 
         // Get all workspaces for the user
-        final workspaces = getUserWorkspaces(accessToken, endpoint, userId)
+        final workspaces = listUserWorkspaces(accessToken, endpoint, userId)
 
         if( !workspaces ) {
             println "\nNo workspaces found for your account."
@@ -832,7 +832,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
     private Map configureComputeEnvironment(Map config, String accessToken, String endpoint, String workspaceId, Map workspaceMetadata) {
         try {
             // Get compute environments for the workspace
-            final computeEnvs = getComputeEnvironments(accessToken, endpoint, workspaceId)
+            final computeEnvs = listComputeEnvironments(accessToken, endpoint, workspaceId)
 
             // If there are zero compute environments, log a warning and provide a link
             if( computeEnvs.isEmpty() ) {
@@ -1032,7 +1032,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
                 if( config['tower.computeEnvId'] ) {
                     computeEnv = getComputeEnvironment(accessToken, endpoint, config['tower.computeEnvId'] as String, workspaceId)
                 } else {
-                    final computeEnvs = getComputeEnvironments(accessToken, endpoint, workspaceId)
+                    final computeEnvs = listComputeEnvironments(accessToken, endpoint, workspaceId)
                     computeEnv = computeEnvs.find { ((Map) it).primary == true } as Map
                 }
             } catch( Exception e ) {

@@ -447,7 +447,7 @@ class LaunchCommandImplTest extends Specification {
             [id: 'ce-1', name: 'primary-ce', primary: true],
             [id: 'ce-2', name: 'secondary-ce', primary: false]
         ]
-        cmd.getComputeEnvironments(_, _, _) >> computeEnvs
+        cmd.listComputeEnvironments(_, _, _) >> computeEnvs
 
         when:
         def result = cmd.findComputeEnv('secondary-ce', null, 'token', 'endpoint')
@@ -464,7 +464,7 @@ class LaunchCommandImplTest extends Specification {
             [id: 'ce-1', name: 'primary-ce', primary: true],
             [id: 'ce-2', name: 'secondary-ce', primary: false]
         ]
-        cmd.getComputeEnvironments(_, _, _) >> computeEnvs
+        cmd.listComputeEnvironments(_, _, _) >> computeEnvs
 
         when:
         def result = cmd.findComputeEnv(null, null, 'token', 'endpoint')
@@ -478,7 +478,7 @@ class LaunchCommandImplTest extends Specification {
     def 'should return null when compute environment not found'() {
         given:
         def cmd = Spy(LaunchCommandImpl)
-        cmd.getComputeEnvironments(_, _, _) >> []
+        cmd.listComputeEnvironments(_, _, _) >> []
 
         when:
         def result = cmd.findComputeEnv('nonexistent', null, 'token', 'endpoint')
@@ -680,7 +680,7 @@ class LaunchCommandImplTest extends Specification {
             [workspaceId: 222, workspaceName: 'ws2']
         ]
         cmd.getUserInfo(_, _) >> [id: 'user-123']
-        cmd.getUserWorkspaces(_, _, _) >> workspaces
+        cmd.listUserWorkspaces(_, _, _) >> workspaces
 
         when:
         def workspaceId = cmd.resolveWorkspaceId(config, 'ws2', 'token', 'endpoint')
@@ -694,7 +694,7 @@ class LaunchCommandImplTest extends Specification {
         def cmd = Spy(LaunchCommandImpl)
         def config = [:]
         cmd.getUserInfo(_, _) >> [id: 'user-123']
-        cmd.getUserWorkspaces(_, _, _) >> []
+        cmd.listUserWorkspaces(_, _, _) >> []
 
         when:
         cmd.resolveWorkspaceId(config, 'nonexistent', 'token', 'endpoint')

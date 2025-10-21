@@ -1014,7 +1014,7 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
         // If workspace name provided, look it up
         if (workspaceName) {
             final userId = getUserInfo(accessToken, apiEndpoint).id as String
-            final workspaces = getUserWorkspaces(accessToken, apiEndpoint, userId)
+            final workspaces = listUserWorkspaces(accessToken, apiEndpoint, userId)
 
             final matchingWorkspace = workspaces.find { workspace ->
                 final ws = workspace as Map
@@ -1033,7 +1033,7 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
     }
 
     protected Map findComputeEnv(String computeEnvName, Long workspaceId, String accessToken, String apiEndpoint) {
-        final computeEnvs = getComputeEnvironments( accessToken, apiEndpoint, workspaceId ? workspaceId.toString() : null)
+        final computeEnvs = listComputeEnvironments( accessToken, apiEndpoint, workspaceId ? workspaceId.toString() : null)
 
         log.debug "Looking for ${computeEnvName ? "compute environment with name: ${computeEnvName}" : "primary compute environment"} ${workspaceId ? "in workspace ID ${workspaceId}" : "in personal workspace"}"
 

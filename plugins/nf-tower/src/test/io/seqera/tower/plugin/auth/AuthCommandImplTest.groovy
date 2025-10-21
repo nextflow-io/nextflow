@@ -684,7 +684,7 @@ param2 = 'value2'"""
         cmd.checkApiConnection(_) >> true
         cmd.getUserInfo(_, _) >> [userName: 'testuser', id: '123']
         cmd.getWorkspaceDetails(_, _, _) >> null
-        cmd.getComputeEnvironments(_, _, _) >> [[name: 'ce_test', platform: 'aws', workDir: 's3://test', primary: true]]
+        cmd.listComputeEnvironments(_, _, _) >> [[name: 'ce_test', platform: 'aws', workDir: 's3://test', primary: true]]
 
         when:
         def status = cmd.collectStatus(config)
@@ -867,7 +867,7 @@ param2 = 'value2'"""
         cmd.checkApiConnection(_) >> true
         cmd.getUserInfo(_, _) >> [userName: 'envuser', id: '456']
         cmd.getWorkspaceDetails(_,_,_) >> [:]
-        cmd.getComputeEnvironments(_,_,_) >> []
+        cmd.listComputeEnvironments(_,_,_) >> []
 
         SysEnv.push(['TOWER_ACCESS_TOKEN': 'env-token',
                      'TOWER_API_ENDPOINT': 'https://env.example.com',

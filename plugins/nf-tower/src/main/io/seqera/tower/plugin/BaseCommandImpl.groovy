@@ -109,7 +109,7 @@ class BaseCommandImpl {
         }
     }
 
-    protected List getUserWorkspaces(String accessToken, String endpoint, String userId) {
+    protected List listUserWorkspaces(String accessToken, String endpoint, String userId) {
         final client = createHttpClient(accessToken)
         final url = "${endpoint}/user/${userId}/workspaces"
         log.debug "Platform list workspaces - GET ${url}"
@@ -131,12 +131,11 @@ class BaseCommandImpl {
         return orgsAndWorkspaces.findAll { ((Map) it).workspaceId != null }
     }
 
-
-    protected List getComputeEnvironments(String accessToken, String endpoint, String workspaceId) {
+    protected List listComputeEnvironments(String accessToken, String endpoint, String workspaceId) {
         final client = createHttpClient(accessToken)
-        final uri = workspaceId ?
-            "${endpoint}/compute-envs?workspaceId=${workspaceId}" :
-            "${endpoint}/compute-envs"
+        final uri = workspaceId
+            ? "${endpoint}/compute-envs?workspaceId=${workspaceId}"
+            : "${endpoint}/compute-envs"
         log.debug "Platform list compute env - GET ${uri}"
 
         final request = HttpRequest.newBuilder()
