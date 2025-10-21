@@ -931,6 +931,7 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
 
     protected Map apiGet(String path, Map queryParams = [:], String accessToken, String apiEndpoint) {
         final url = buildUrl(apiEndpoint, path, queryParams)
+        log.debug "Platform API - GET ${url}"
         final client = createHttpClient(accessToken)
         final request = HttpRequest.newBuilder()
             .uri(URI.create(url))
@@ -949,6 +950,7 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
 
     protected Map apiPost(String path, Map body, Map queryParams = [:], String accessToken, String apiEndpoint) {
         final url = buildUrl(apiEndpoint, path, queryParams)
+        log.debug "Platform API - POST ${url}"
         final requestBody = new JsonBuilder(body).toString()
         final client = createHttpClient(accessToken)
         final request = HttpRequest.newBuilder()
@@ -1027,6 +1029,5 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
 
         return null
     }
-
 
 }

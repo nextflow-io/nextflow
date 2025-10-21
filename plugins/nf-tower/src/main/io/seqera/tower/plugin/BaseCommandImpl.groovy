@@ -52,8 +52,10 @@ class BaseCommandImpl {
      */
     protected Map getUserInfo(String accessToken, String apiUrl) {
         final client = createHttpClient(accessToken)
+        final url = "${apiUrl}/user-info"
+        log.debug "Platform get user info - GET ${url}"
         final request = HttpRequest.newBuilder()
-            .uri(URI.create("${apiUrl}/user-info"))
+            .uri(URI.create(url))
             .GET()
             .build()
 
@@ -74,8 +76,10 @@ class BaseCommandImpl {
             final userId = userInfo.id as String
 
             final client = createHttpClient(accessToken)
+            final url = "${endpoint}/user/${userId}/workspaces"
+            log.debug "Platform get workdspace - GET ${url}"
             final request = HttpRequest.newBuilder()
-                .uri(URI.create("${endpoint}/user/${userId}/workspaces"))
+                .uri(URI.create(url))
                 .GET()
                 .build()
 
@@ -107,8 +111,10 @@ class BaseCommandImpl {
 
     protected List getUserWorkspaces(String accessToken, String endpoint, String userId) {
         final client = createHttpClient(accessToken)
+        final url = "${endpoint}/user/${userId}/workspaces"
+        log.debug "Platform list workspaces - GET ${url}"
         final request = HttpRequest.newBuilder()
-            .uri(URI.create("${endpoint}/user/${userId}/workspaces"))
+            .uri(URI.create(url))
             .GET()
             .build()
 
@@ -131,6 +137,7 @@ class BaseCommandImpl {
         final uri = workspaceId ?
             "${endpoint}/compute-envs?workspaceId=${workspaceId}" :
             "${endpoint}/compute-envs"
+        log.debug "Platform list compute env - GET ${uri}"
 
         final request = HttpRequest.newBuilder()
             .uri(URI.create(uri))
@@ -153,6 +160,7 @@ class BaseCommandImpl {
         final uri = workspaceId ?
             "${endpoint}/compute-envs/${computeEnvId}?workspaceId=${workspaceId}" :
             "${endpoint}/compute-envs"
+        log.debug "Platform get compute env - GET ${uri}"
 
         final request = HttpRequest.newBuilder()
             .uri(URI.create(uri))

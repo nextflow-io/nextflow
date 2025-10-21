@@ -331,6 +331,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
         final requestBody = new JsonBuilder([name: tokenName]).toString()
 
         final client = createHttpClient(accessToken)
+        log.debug "Platform auth API - POST ${tokensUrl}"
         final request = HttpRequest.newBuilder()
             .uri(URI.create(tokensUrl))
             .header('Content-Type', 'application/json')
@@ -368,6 +369,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
         }.join('&')
 
         final client = createHttpClient()
+        log.debug "Platform auth API - POST ${url}"
         final request = HttpRequest.newBuilder()
             .uri(URI.create(url))
             .header('Content-Type', 'application/x-www-form-urlencoded')
@@ -510,8 +512,10 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
 
     private void deleteTokenViaApi(String token, String apiUrl, String tokenId) {
         final client = createHttpClient(token)
+        final url = "${apiUrl}/tokens/${tokenId}"
+        log.debug "Platform auth API - DELETE ${url}"
         final request = HttpRequest.newBuilder()
-            .uri(URI.create("${apiUrl}/tokens/${tokenId}"))
+            .uri(URI.create(url))
             .DELETE()
             .build()
 
@@ -1142,8 +1146,10 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
     protected boolean checkApiConnection(String endpoint) {
         try {
             final client = createHttpClient()
+            final url = "${endpoint}/service-info"
+            log.debug "Platform auth API - GET ${url}"
             final request = HttpRequest.newBuilder()
-                .uri(URI.create("${endpoint}/service-info"))
+                .uri(URI.create(url))
                 .GET()
                 .build()
 
