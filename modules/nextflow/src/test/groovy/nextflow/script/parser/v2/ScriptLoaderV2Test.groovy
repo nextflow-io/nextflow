@@ -232,4 +232,26 @@ class ScriptLoaderV2Test extends Dsl2Spec {
         noExceptionThrown()
     }
 
+    def 'should strip unsupported type annotations' () {
+
+        given:
+        def session = new Session()
+        def parser = new ScriptLoaderV2(session)
+
+        def TEXT = '''
+            // strip cast type
+            ['1', '1.fastq', '2.fastq'] as Tuple<String,String,String>
+
+            // strip type annotation in variable declaration
+            def ch: Channel = channel.empty()
+            '''
+
+        when:
+        parser.parse(TEXT)
+        parser.runScript()
+
+        then:
+        noExceptionThrown()
+    }
+
 }
