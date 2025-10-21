@@ -148,9 +148,11 @@ class BaseCommandImpl {
         return json.computeEnvs as List ?: []
     }
 
-    protected Map getComputeEnvironment(String accessToken, String endpoint, String computeEnvId) {
+    protected Map getComputeEnvironment(String accessToken, String endpoint, String computeEnvId, String workspaceId) {
         final client = createHttpClient(accessToken)
-        final uri = "${endpoint}/compute-envs/${computeEnvId}"
+        final uri = workspaceId ?
+            "${endpoint}/compute-envs/${computeEnvId}?workspaceId=${workspaceId}" :
+            "${endpoint}/compute-envs"
 
         final request = HttpRequest.newBuilder()
             .uri(URI.create(uri))

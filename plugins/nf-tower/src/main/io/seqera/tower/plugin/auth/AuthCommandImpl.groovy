@@ -1026,7 +1026,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
         if( accessToken ) {
             try {
                 if( config['tower.computeEnvId'] ) {
-                    computeEnv = getComputeEnvironment(accessToken, endpoint, config['tower.computeEnvId'] as String)
+                    computeEnv = getComputeEnvironment(accessToken, endpoint, config['tower.computeEnvId'] as String, workspaceId)
                 } else {
                     final computeEnvs = getComputeEnvironments(accessToken, endpoint, workspaceId)
                     computeEnv = computeEnvs.find { ((Map) it).primary == true } as Map

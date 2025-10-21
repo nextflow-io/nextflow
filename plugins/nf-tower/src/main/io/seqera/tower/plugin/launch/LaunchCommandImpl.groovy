@@ -287,7 +287,7 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
     protected Map resolveComputeEnvironment(Map config, String computeEnvName, Long workspaceId, String accessToken, String apiEndpoint) {
         Map computeEnvInfo = null
         if (!computeEnvName && config?.get('tower.computeEnvId')) {
-            computeEnvInfo = getComputeEnvironment(accessToken, apiEndpoint, config['tower.computeEnvId'] as String)
+            computeEnvInfo = getComputeEnvironment(accessToken, apiEndpoint, config['tower.computeEnvId'] as String, workspaceId?.toString())
         } else {
             log.debug "Looking up compute environment: ${computeEnvName ?: '(primary)'}"
             computeEnvInfo = findComputeEnv(computeEnvName, workspaceId, accessToken, apiEndpoint)
