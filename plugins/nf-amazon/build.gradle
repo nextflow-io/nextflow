@@ -19,7 +19,7 @@ plugins {
 }
 
 nextflowPlugin {
-    nextflowVersion = '25.08.0-edge'
+    nextflowVersion = '25.09.2-edge'
 
     provider = "${nextflowPluginProvider}"
     description = 'Provides comprehensive AWS cloud integration including Batch executor, S3 file system, and Fusion support for high-performance data operations'
