@@ -137,4 +137,6 @@ dockerPack:
 release-plugins:
 	./gradlew releasePluginToRegistryIfNotExists
 
+publish-artifacts:
+	./gradlew publishAllPublicationsToSeqeraRepository
 
