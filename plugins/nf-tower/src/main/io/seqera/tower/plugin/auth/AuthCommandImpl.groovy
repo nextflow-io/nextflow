@@ -960,7 +960,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
 
     private ConfigStatus collectStatus(Map config) {
         // Collect all status information
-        final status = new ConfigStatus([], null, null)
+        final status = new ConfigStatus([], null, null, null)
 
         // Extract tower config and strip prefix for PlatformHelper
         final towerConfig = config.findAll { it.key.toString().startsWith('tower.') }
@@ -1004,7 +1004,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
         final String workspaceId = PlatformHelper.getWorkspaceId(towerConfig, SysEnv.get())
         final workspaceInfo = getConfigValue(config, 'tower.workspaceId', 'TOWER_WORKSPACE_ID')
         if( workspaceId ) {
-            // Try to get workspace name from API if we have a token
+            // Try to get workspace name and roles from API if we have a token
             def workspaceDetails = null
             if( accessToken ) {
                 workspaceDetails = getWorkspaceDetails(accessToken, endpoint, workspaceId)
@@ -1015,7 +1015,9 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
                 status.workspaceRowIndex = status.table.size()
                 status.table.add(['Default workspace', workspaceId, workspaceInfo.source as String])
                 // Store workspace details for display after this row (outside table structure)
+                // roles are included in workspaceDetails
                 status.workspaceInfo = workspaceDetails
+                status.workspaceRoles = workspaceDetails.roles as List<String>
             } else {
                 status.table.add(['Default workspace', workspaceId, workspaceInfo.source as String])
             }
@@ -1071,6 +1073,12 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
                 "Workspace name        $status.workspaceInfo.orgName / $status.workspaceInfo.workspaceName".toString(),
                 "Workspace description $status.workspaceInfo.workspaceFullName".toString()
             ]
+
+            // Add workspace roles if available
+            if (status.workspaceRoles) {
+                final rolesStr = status.workspaceRoles.join(', ')
+                workspaceDetails.add("Workspace role(s)     ${rolesStr}".toString())
+            }
 
             // Insert workspace details into the output
             tableLines.addAll(insertAfterLine, workspaceDetails)
@@ -1317,6 +1325,8 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
         Map workspaceInfo
         /** Index of the workspace row in the table (for inserting details) */
         Integer workspaceRowIndex
+        /** Optional workspace roles list */
+        List<String> workspaceRoles
     }
 }
 
