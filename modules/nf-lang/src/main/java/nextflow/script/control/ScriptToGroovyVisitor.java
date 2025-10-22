@@ -144,8 +144,8 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
         var main = node.main instanceof BlockStatement block ? block : new BlockStatement();
         visitWorkflowEmits(node.emits, main);
         visitWorkflowPublishers(node.publishers, main);
-        visitWorkflowHandler(node.onComplete, "onComplete", main);
-        visitWorkflowHandler(node.onError, "onError", main);
+        visitWorkflowHandler(node.onComplete, "setOnComplete", main);
+        visitWorkflowHandler(node.onError, "setOnError", main);
 
         var bodyDef = stmt(createX(
             "nextflow.script.BodyDef",
@@ -239,7 +239,7 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
         var statements = node.declarations.stream()
             .map((output) -> {
                 new PublishDslVisitor().visit(output.body);
-                var name = constX(output.name);
+                var name = constX(output.getName());
                 var body = closureX(null, output.body);
                 return stmt(callThisX("declare", args(name, body)));
             })

@@ -649,7 +649,7 @@ The `disk` directive allows you to define how much local disk storage the proces
 
 ```nextflow
 process hello {
-    disk '2 GB'
+    disk 2.GB
 
     script:
     """
@@ -692,17 +692,17 @@ The `errorStrategy` directive allows you to define how the process manages an er
 
 The following error strategies are available:
 
-`terminate` (default)
+`'terminate'` (default)
 : When a task fails, terminate the pipeline immediately and report an error. Pending and running jobs are killed.
 
-`finish`
+`'finish'`
 : When a task fails, wait for submitted and running tasks to finish and then terminate the pipeline, reporting an error.
 
-`ignore`
+`'ignore'`
 : When a task fails, ignore it and continue the pipeline execution. If the `workflow.failOnIgnore` config option is set to `true`, the pipeline will report an error (i.e. return a non-zero exit code) upon completion. Otherwise, the pipeline will complete successfully.
 : See the {ref}`stdlib-namespaces-workflow` namespace for more information.
 
-`retry`
+`'retry'`
 : When a task fails, retry it.
 
 When setting the `errorStrategy` directive to `ignore` the process doesn't stop on an error condition, it just reports a message notifying you of the error event.
@@ -908,34 +908,6 @@ process hello {
 
 See also: [cpus](#cpus) and [memory](#memory).
 
-(process-maxsubmitawait)=
-
-### maxSubmitAwait
-
-The `maxSubmitAwait` directive allows you to specify how long a task can remain in submission queue without being executed.
-Elapsed this time the task execution will fail.
-
-When used along with `retry` error strategy, it can be useful to re-schedule the task to a difference queue or
-resource requirement. For example:
-
-```nextflow
-process hello {
-  errorStrategy 'retry'
-  maxSubmitAwait '10 mins'
-  maxRetries 3
-  queue "${task.submitAttempt==1 ? 'spot-compute' : 'on-demand-compute'}"
-
-  script:
-  """
-  your_command --here
-  """
-}
-```
-
-In the above example the task is submitted to the `spot-compute` on the first attempt (`task.submitAttempt==1`). If the
-task execution does not start in the 10 minutes, a failure is reported and a new submission is attempted using the
-queue named `on-demand-compute`.
-
 (process-maxerrors)=
 
 ### maxErrors
@@ -1003,6 +975,34 @@ There is a subtle but important difference between `maxRetries` and the `maxErro
 
 See also: [errorStrategy](#errorstrategy) and [maxErrors](#maxerrors).
 
+(process-maxsubmitawait)=
+
+### maxSubmitAwait
+
+The `maxSubmitAwait` directive allows you to specify how long a task can remain in submission queue without being executed.
+Elapsed this time the task execution will fail.
+
+When used along with `retry` error strategy, it can be useful to re-schedule the task to a difference queue or
+resource requirement. For example:
+
+```nextflow
+process hello {
+  errorStrategy 'retry'
+  maxSubmitAwait 10.m
+  maxRetries 3
+  queue "${task.submitAttempt==1 ? 'spot-compute' : 'on-demand-compute'}"
+
+  script:
+  """
+  your_command --here
+  """
+}
+```
+
+In the above example the task is submitted to the `spot-compute` on the first attempt (`task.submitAttempt==1`). If the
+task execution does not start in the 10 minutes, a failure is reported and a new submission is attempted using the
+queue named `on-demand-compute`.
+
 (process-memory)=
 
 ### memory
@@ -1011,7 +1011,7 @@ The `memory` directive allows you to define how much memory the process is allow
 
 ```nextflow
 process hello {
-    memory '2 GB'
+    memory 2.GB
 
     script:
     """
@@ -1746,7 +1746,7 @@ The `time` directive allows you to define how long a process is allowed to run. 
 
 ```nextflow
 process hello {
-    time '1h'
+    time 1.h
 
     script:
     """
@@ -1757,15 +1757,13 @@ process hello {
 
 The following time unit suffixes can be used when specifying the duration value:
 
-| Unit                            | Description  |
-| ------------------------------- | ------------ |
-| `ms`, `milli`, `millis`         | Milliseconds |
-| `s`, `sec`, `second`, `seconds` | Seconds      |
-| `m`, `min`, `minute`, `minutes` | Minutes      |
-| `h`, `hour`, `hours`            | Hours        |
-| `d`, `day`, `days`              | Days         |
-
-Multiple units can be used in a single declaration, for example: `'1day 6hours 3minutes 30seconds'`
+| Unit | Description  |
+| ---- | ------------ |
+| `ms` | Milliseconds |
+| `s`  | Seconds      |
+| `m`  | Minutes      |
+| `h`  | Hours        |
+| `d`  | Days         |
 
 See {ref}`stdlib-types-duration` for more information.
 
