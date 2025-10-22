@@ -1,5 +1,17 @@
 NEXTFLOW CHANGE-LOG
 ===================
+25.10.0 - 22 Oct 2025
+- Add publish-artifacts step to release process [75d8ebf9b]
+- Add type checking utils (#6482) [3e9a2c091]
+- Fix no secrets in AWS Batch jobs (#6499) [c76c32582]
+- Prioritize Google Batch API exit codes with fallback to .exitcode file (#6498) [6ac2efcba]
+- Show workspace roles in 'auth status', tweak error message on 403 (#6497) [0633d90d1]
+- Simplify S3 configuration options (#6496) [0b7f18049]
+- Track remote input files in lineage (#6490) [b0660caf3]
+- Bump nf-amazon@3.4.1 [0d5ced94a]
+- Bump nf-google@1.23.3 [e6c765217]
+- Bump nf-tower@1.17.1 [2069c9729]
+
 25.09.2-edge - 21 Oct 2025
 - Add .command.log redirection in K8s container command (#6455) [e6eed7949]
 - Add nextflow auth command for Seqera Platform authentication (#6463) [bedf02a99]

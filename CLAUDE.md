@@ -134,7 +134,7 @@ Follow these actions to make a new release:
       modules/nextflow/src/main/resources/META-INF/plugins-info.txt \
       modules/nextflow/src/main/resources/META-INF/build-info.properties
     ```
-- Make a commit using the `[release]` tag in the comment and push it upstream to trigger the release automation with GitHub action:
+- Make a commit using the `[release]` and `[e2e prod]` tags in the comment and push it upstream to trigger the release automation with GitHub action:
     ```
     git commit -m "[release] Nextflow version 25.09.0-edge"
     git push origin master
