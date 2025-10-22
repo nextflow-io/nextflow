@@ -281,6 +281,7 @@ class ContainerPropertiesModel {
             ", networkConfiguration=" + networkConfiguration +
             ", ephemeralStorage=" + ephemeralStorage +
             ", runtimePlatform=" + runtimePlatform +
+            ", secrets=" + secrets +
             '}';
     }
 }
