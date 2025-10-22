@@ -1,5 +1,8 @@
 nf-google changelog
 ===================
+1.23.3 - 22 Oct 2025
+- Prioritize Google Batch API exit codes with fallback to .exitcode file (#6498) [6ac2efcba]
+
 1.23.2 - 21 Oct 2025
 - Rename `config.schema` package to `config.spec` (#6485) [ef0d2d601]
 
