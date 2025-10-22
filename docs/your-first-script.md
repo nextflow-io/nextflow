@@ -91,8 +91,8 @@ The `output` block (outside the workflow) defines where and how each output shou
 
 To run your pipeline:
 
-1. Create a new file named `main.nf` in your current directory.
-2. Copy and save the above pipeline to your new file.
+1. Create a new file named `main.nf` in your current directory
+2. Copy and save the above pipeline to your new file
 3. Run your pipeline using the following command:
 
     ```{code-block}
@@ -151,7 +151,7 @@ Nextflow tracks task executions in a task cache, a key-value store of previously
 
 You can enable resumability using the `-resume` flag when running a pipeline. To modify and resume your pipeline:
 
-1. Open `main.nf`.
+1. Open `main.nf`
 2. Replace the `convert_to_upper` process with the following:
 
     ```{code-block} groovy
@@ -172,7 +172,7 @@ You can enable resumability using the `-resume` flag when running a pipeline. To
     }
     ```
 
-3. Save your changes.
+3. Save your changes
 4. Run your updated pipeline using the following command:
 
     ```{code-block} bash
