@@ -457,6 +457,7 @@ configure(coreProjects) {
 
         repositories {
             maven {
+                name = 'Seqera'
                 // change URLs to point to your repos, e.g. http://my.org/repo
                 def releasesRepoUrl = "s3://maven.seqera.io/releases/"
                 def snapshotsRepoUrl = "s3://maven.seqera.io/snapshots/"
