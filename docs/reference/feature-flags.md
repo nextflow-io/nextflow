@@ -59,7 +59,7 @@ Feature flags are used to introduce experimental or other opt-in features. They 
 : :::{versionadded} 24.04.0
   :::
 : :::{deprecated} 25.04.0
-  This feature flag is no longer required to use topic channels.
+  Nextflow 25.04.0 and later will fail if this flag is present. Remove this flag from your pipeline. Topic channels are now enabled by default.
   :::
 : When `true`, enables {ref}`topic channels <channel-topic>`.
 
