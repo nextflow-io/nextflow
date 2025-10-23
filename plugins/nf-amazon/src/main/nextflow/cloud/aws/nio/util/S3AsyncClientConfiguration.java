@@ -160,4 +160,3 @@ public class S3AsyncClientConfiguration extends S3ClientConfiguration{
 		return config;
 	}
 }
-

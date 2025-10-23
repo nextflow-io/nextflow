@@ -103,20 +103,20 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
         for( var take : node.getParameters() )
             resolver.resolveOrFail(take.getType(), take);
         resolver.visit(node.main);
-        resolveWorkflowEmits(node.emits);
+        resolveTypedOutputs(node.emits);
         resolver.visit(node.emits);
         resolver.visit(node.publishers);
         resolver.visit(node.onComplete);
         resolver.visit(node.onError);
     }
 
-    private void resolveWorkflowEmits(Statement emits) {
-        for( var stmt : asBlockStatements(emits) ) {
+    private void resolveTypedOutputs(Statement block) {
+        for( var stmt : asBlockStatements(block) ) {
             var stmtX = (ExpressionStatement)stmt;
-            var emit = stmtX.getExpression();
+            var output = stmtX.getExpression();
             var target =
-                emit instanceof AssignmentExpression ae ? ae.getLeftExpression() :
-                emit instanceof VariableExpression ve ? ve :
+                output instanceof AssignmentExpression ae ? ae.getLeftExpression() :
+                output instanceof VariableExpression ve ? ve :
                 null;
 
             if( target instanceof VariableExpression ve )
@@ -130,6 +130,7 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
             resolver.resolveOrFail(input.getType(), input);
         resolver.visit(node.directives);
         resolver.visit(node.stagers);
+        resolveTypedOutputs(node.outputs);
         resolver.visit(node.outputs);
         resolver.visit(node.topics);
         resolver.visit(node.when);
@@ -159,6 +160,7 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitOutput(OutputNode node) {
+        resolver.resolveOrFail(node.getType(), node.getType());
         resolver.visit(node.body);
     }
 

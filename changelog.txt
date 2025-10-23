@@ -1,5 +1,34 @@
 NEXTFLOW CHANGE-LOG
 ===================
+25.10.0 - 22 Oct 2025
+- Add publish-artifacts step to release process [75d8ebf9b]
+- Add type checking utils (#6482) [3e9a2c091]
+- Fix no secrets in AWS Batch jobs (#6499) [c76c32582]
+- Prioritize Google Batch API exit codes with fallback to .exitcode file (#6498) [6ac2efcba]
+- Show workspace roles in 'auth status', tweak error message on 403 (#6497) [0633d90d1]
+- Simplify S3 configuration options (#6496) [0b7f18049]
+- Track remote input files in lineage (#6490) [b0660caf3]
+- Bump nf-amazon@3.4.1 [0d5ced94a]
+- Bump nf-google@1.23.3 [e6c765217]
+- Bump nf-tower@1.17.1 [2069c9729]
+
+25.09.2-edge - 21 Oct 2025
+- Add .command.log redirection in K8s container command (#6455) [e6eed7949]
+- Add nextflow auth command for Seqera Platform authentication (#6463) [bedf02a99]
+- Add nextflow launch command (#6491) [7c8fa3d9d]
+- Bring workflow outputs out of preview (#6487) [c41677b40]
+- Fix e2e test infrastructure and add config.schema compatibility aliases (#6495) [d3cee2bab]
+- Fix false error for `executor.jobName` config option (#6375) [81ae62bf2]
+- Fix false error with storeDir and val outputs (#6408) [1aa8c4468]
+- Fix type casting in PluginSpec for ConfigScope (#6469) [b00644c9b]
+- Improve plugin create confirmation prompt (#6473) [215925c47]
+- Improve release script validation [3e3a938d6]
+- Limit S3 client connections when using virtual threads (#6369) [295c60b5c]
+- Migrate SraExplorer to use HxClient for HTTP operations (#6467) [84e3e7873]
+- Rename `config.schema` package to `config.spec` (#6485) [ef0d2d601]
+- Typed processes (#6368) [30f3c3c2a]
+- Update buildInfo on releaseInfo [46a8a2b53]
+
 25.09.1-edge - 9 Oct 2025
 - Improve build metadata generation and validation [60225374f]
 - Fix Missing static type definition [67a532040]
