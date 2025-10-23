@@ -4,13 +4,13 @@
 
 Feature flags introduce experimental or other opt-in features. They must be specified in the pipeline script.
 
-:::warning
+:::{warning}
 Deprecated feature flags may cause pipelines run with newer versions of Nextflow to fail.
 :::
 
 `nextflow.enable.configProcessNamesValidation`
 : :::{deprecated} 25.10.0
-  Nextflow 25.10.0 and later will fail if this flag is present. Remove this flag from your pipeline. Use the {ref}`strict syntax <strict-syntax-page>` instead for more accurate validation of process selectors.
+  Nextflow 25.10.0 and later will fail if this flag is present. Remove this flag from your pipeline. Use the {ref}`strict syntax <strict-syntax-page>` instead.
   :::
 : When `true`, prints a warning for every `withName:` process selector that doesn't match a process in the pipeline (default: `true`).
 
