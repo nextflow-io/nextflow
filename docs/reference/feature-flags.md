@@ -10,7 +10,7 @@ Deprecated feature flags may cause pipelines run with newer versions of Nextflow
 
 `nextflow.enable.configProcessNamesValidation`
 : :::{deprecated} 25.10.0
-  Nextflow 25.10.0 and later will fail if this flag is present. Remove this flag from your pipeline. Use the {ref}`strict syntax <strict-syntax-page>` instead.
+  Nextflow 25.10.0 and later will fail if this flag is present. Use the {ref}`strict syntax <strict-syntax-page>` instead.
   :::
 : When `true`, prints a warning for every `withName:` process selector that doesn't match a process in the pipeline (default: `true`).
 
@@ -51,7 +51,7 @@ Deprecated feature flags may cause pipelines run with newer versions of Nextflow
 : :::{versionadded} 24.04.0
   :::
 : :::{deprecated} 25.10.0
-  Nextflow 25.10.0 and later will fail if this flag is present. Remove this flag from your pipeline. Workflow outputs are now enabled by default.
+  Nextflow 25.10.0 and later will fail if this flag is present. Workflow outputs are now enabled by default.
   :::
 : When `true`, enables {ref}`workflow outputs <workflow-output-def>`.
 
@@ -63,7 +63,7 @@ Deprecated feature flags may cause pipelines run with newer versions of Nextflow
 : :::{versionadded} 24.04.0
   :::
 : :::{deprecated} 25.04.0
-  Nextflow 25.04.0 and later will fail if this flag is present. Remove this flag from your pipeline. Topic channels are now enabled by default.
+  Nextflow 25.04.0 and later will fail if this flag is present. Topic channels are now enabled by default.
   :::
 : When `true`, enables {ref}`topic channels <channel-topic>`.
 
