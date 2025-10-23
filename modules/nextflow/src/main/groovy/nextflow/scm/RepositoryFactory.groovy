@@ -88,6 +88,7 @@ class RepositoryFactory implements ExtensionPoint {
 
     // --==  static definitions ==--
     private static boolean codeCommitLoaded
+    private static boolean seqeraLoaded
     private static List<RepositoryFactory> factories0
 
     private static List<RepositoryFactory> factories() {
@@ -105,6 +106,11 @@ class RepositoryFactory implements ExtensionPoint {
         if( (config.name=='codecommit' || config.platform=='codecommit') && !codeCommitLoaded ) {
             Plugins.startIfMissing('nf-codecommit')
             codeCommitLoaded=true
+            factories0=null
+        }
+        if( config.name=='seqera' || config.platform == 'seqera' && !seqeraLoaded){
+            Plugins.startIfMissing('nf-tower')
+            seqeraLoaded=true
             factories0=null
         }
 
@@ -125,6 +131,11 @@ class RepositoryFactory implements ExtensionPoint {
             codeCommitLoaded=true
             factories0=null
         }
+        if( (name=='seqera' || attrs.platform=='seqera') && !seqeraLoaded ) {
+            Plugins.startIfMissing('nf-tower')
+            seqeraLoaded=true
+            factories0=null
+        }
 
         final config = factories().findResult( it -> it.createConfigInstance(name, attrs) )
         if( !config ) {
@@ -137,6 +148,11 @@ class RepositoryFactory implements ExtensionPoint {
         if( url.domain.startsWith('git-codecommit.') && url.domain.endsWith('.amazonaws.com') && !codeCommitLoaded ) {
             Plugins.startIfMissing('nf-codecommit')
             codeCommitLoaded=true
+            factories0=null
+        }
+        if( url.protocol.equals('seqera') && !seqeraLoaded){
+            Plugins.startIfMissing('nf-tower')
+            seqeraLoaded=true
             factories0=null
         }
         
