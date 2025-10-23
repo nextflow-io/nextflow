@@ -13,43 +13,43 @@ Feature flags are used to introduce experimental or other opt-in features. They 
 `nextflow.enable.dsl`
 : :::{deprecated} 25.04.0
   :::
-: Defines the DSL version to use (`1` or `2`).
+: Specifies the DSL version to use. Options: `1` or `2`.
 
 `nextflow.enable.moduleBinaries`
-: When `true`, enables the use of modules with binary scripts. See {ref}`module-binaries` for more information.
+: When `true`, enables modules with binary scripts. See {ref}`module-binaries` for more information.
 
 `nextflow.enable.strict`
-: When `true`, the pipeline is executed in "strict" mode, which introduces the following rules:
+: When `true`, enables "strict" mode. In strict mode, Nextflow:
 
-  - When reading a params file, Nextflow will fail if a dynamic param value references an undefined variable
+  - Fails when reading a params file if a dynamic param value references an undefined variable
 
-  - When merging params from a config file with params from the command line, Nextflow will fail if a param is specified from both sources but with different types
+  - Fails when merging params if the same param is specified from a config file and the command line with different types
 
-  - When using the `join` operator, the `failOnDuplicate` option is `true` regardless of any user setting
+  - Fails if an input or output tuple has only one element in a process definition
 
-  - When using the `join` operator, the `failOnMismatch` option is `true` (unless `remainder` is also `true`) regardless of any user setting
+  - Fails if an output emit name is not a valid identifier in a process definition (i.e., it should match the pattern `/[A-Za-z_][A-Za-z0-9_]*/`)
 
-  - When using the `publishDir` process directive, the `failOnError` option is `true` regardless of any user setting
+  - Fails if a the number of elements in a received input tuple does not match the number of elements that were declared
 
-  - In a process definition, Nextflow will fail if an input or output tuple has only one element
+  - Fails if the `storeDir` directive is used with non-file outputs
 
-  - In a process definition, Nextflow will fail if an output emit name is not a valid identifier (i.e. it should match the pattern `/[A-Za-z_][A-Za-z0-9_]*/`)
+  - Fails if pipeline params are referenced before they are defined
 
-  - During a process execution, Nextflow will fail if a received input tuple does not have the same number of elements as was declared
+  - Fails if multiple functions and/or processes with the same name in a module script are defined
 
-  - During a process execution, Nextflow will fail if the `storeDir` directive is used with non-file outputs
+  - Sets `failOnDuplicate` to `true` for the `join` operator, regardless of user settings
 
-  - Nextflow will fail if a pipeline param is referenced before it is defined
+  - Sets `failOnMismatch` to `true` for the `join` operator (unless `remainder` is `true`), regardless of user settings
 
-  - Nextflow will fail if multiple functions and/or processes with the same name are defined in a module script
+  - Sets `failOnError` to `true` for the `publishDir` directive, regardless of user settings
 
 `nextflow.preview.output`
 : :::{versionadded} 24.04.0
   :::
 : :::{deprecated} 25.10.0
-  This feature flag is no longer required to use workflow outputs.
+  Nextflow 25.10.0 and later will fail if this flag is present. Remove this flag from your pipeline. Workflow outputs are now enabled by default.
   :::
-: When `true`, enables the use of {ref}`workflow outputs <workflow-output-def>`.
+: When `true`, enables {ref}`workflow outputs <workflow-output-def>`.
 
 `nextflow.preview.recursion`
 : *Experimental: may change in a future release.*
@@ -61,10 +61,9 @@ Feature flags are used to introduce experimental or other opt-in features. They 
 : :::{deprecated} 25.04.0
   This feature flag is no longer required to use topic channels.
   :::
-: When `true`, enables {ref}`topic channels <channel-topic>` feature.
+: When `true`, enables {ref}`topic channels <channel-topic>`.
 
 `nextflow.preview.types`
 : :::{versionadded} 25.10.0
   :::
-: When `true`, enables the use of {ref}`typed processes <process-typed-page>`.
-: This feature flag must be enabled in every script that uses typed processes. Legacy processes can not be defined in scripts that enable this feature flag.
+: When `true`, enables {ref}`typed processes <process-typed-page>`. Must be enabled in every script that uses typed processes. Legacy processes cannot be defined in scripts with this flag enabled.
