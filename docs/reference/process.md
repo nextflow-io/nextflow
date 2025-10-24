@@ -12,7 +12,8 @@ The following task properties are defined in the process body:
 : The current task attempt.
 
 `task.exitStatus`
-: The exit code returned by the task script. Only applicable for processes with a `script:` or `shell:` block. Since the exit code is only available after the task has been executed, it can only be used by certain process directives (e.g., [errorStrategy](#errorstrategy)).
+: The exit code returned by the task script. Only applicable for processes with a `script:` or `shell:` block.
+: Since the exit code is only available after the task has been executed, it can only be used by certain process directives (e.g., [errorStrategy](#errorstrategy)).
 
 `task.hash`
 : *Available only in `exec:` blocks*
@@ -28,13 +29,14 @@ The following task properties are defined in the process body:
 `task.previousException`
 : :::{versionadded} 24.10.0
   :::
-: The exception reported by the previous task attempt. Since the exception is available after a failed task attempt, it can only be accessed when retrying a failed task execution, i.e., when `task.attempt` is greater than 1.
+: The exception reported by the previous task attempt.
+: Since the exception is available after a failed task attempt, it can only be accessed when retrying a failed task execution, i.e., when `task.attempt` is greater than 1.
 
 `task.previousTrace`
 : :::{versionadded} 24.10.0
   :::
-: The trace record associated with the previous task attempt. Since the trace record is available after a failed task attempt,
-  it can only be accessed when retrying a failed task execution, i.e., when `task.attempt` is greater than 1.
+: The trace record associated with the previous task attempt.
+: Since the trace record is available after a failed task attempt, it can only be accessed when retrying a failed task execution, i.e., when `task.attempt` is greater than 1.
 
 `task.process`
 : The name of the process that spawned the task.
