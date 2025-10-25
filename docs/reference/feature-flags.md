@@ -23,7 +23,7 @@ Feature flags with the `nextflow.preview` prefix can cause pipelines run with ne
 : When `true`, enables the use of modules with binary scripts. See {ref}`module-binaries` for more information.
 
 `nextflow.enable.strict`
-: When `true`, the pipeline is executed in "strict" mode, which introduces the following rules:
+: When `true`, executes the pipeline in "strict" mode, which introduces the following rules:
 
   - When reading a params file, Nextflow will fail if a dynamic param value references an undefined variable
 
