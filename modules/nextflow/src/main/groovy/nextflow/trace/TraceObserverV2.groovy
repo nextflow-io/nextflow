@@ -21,6 +21,7 @@ import groovy.transform.CompileStatic
 import nextflow.Session
 import nextflow.processor.TaskProcessor
 import nextflow.trace.event.FilePublishEvent
+import nextflow.trace.event.FileStagingEvent
 import nextflow.trace.event.TaskEvent
 import nextflow.trace.event.WorkflowOutputEvent
 
@@ -134,5 +135,12 @@ interface TraceObserverV2 {
      * @param event
      */
     default void onFilePublish(FilePublishEvent event) {}
+
+    /**
+     * Invoked when a file staging operation completes (after the file has been copied).
+     *
+     * @param event
+     */
+    default void onFileStaged(FileStagingEvent event) {}
 
 }
