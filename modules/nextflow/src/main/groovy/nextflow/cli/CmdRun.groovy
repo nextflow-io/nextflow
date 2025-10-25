@@ -49,7 +49,7 @@ import nextflow.secret.SecretsLoader
 import nextflow.util.CustomPoolFactory
 import nextflow.util.Duration
 import nextflow.util.HistoryFile
-import org.apache.commons.lang.StringUtils
+import org.apache.commons.lang3.StringUtils
 import org.fusesource.jansi.AnsiConsole
 import org.yaml.snakeyaml.Yaml
 /**

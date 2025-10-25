@@ -21,7 +21,6 @@ import java.nio.file.Path
 import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
-import org.apache.commons.lang.text.StrBuilder
 /**
  * Parse and merge AWS config and credentials file
  *
@@ -69,7 +68,7 @@ class ConfigParser {
     }
 
     String text() {
-        final result = new StrBuilder()
+        final result = new StringBuilder()
         for( Map.Entry<String,List<String>> entry : content ) {
             result.append('[').append(entry.key).append(']\n')
             for( String line : entry.value ) {

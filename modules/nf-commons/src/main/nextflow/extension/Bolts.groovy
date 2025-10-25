@@ -35,7 +35,7 @@ import nextflow.util.CheckHelper
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import nextflow.util.RateUnit
-import org.apache.commons.lang.StringUtils
+import org.apache.commons.lang3.StringUtils
 import org.codehaus.groovy.runtime.DefaultGroovyMethods
 import org.codehaus.groovy.runtime.GStringImpl
 import org.codehaus.groovy.runtime.ResourceGroovyMethods
