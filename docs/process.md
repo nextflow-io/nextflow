@@ -1198,6 +1198,8 @@ Software dependencies:
 - {ref}`process-conda`: list of conda packages to provision for tasks
 - {ref}`process-container`: container image to use for tasks
 
+(task-directive-values)=
+
 ### Using task directive values
 
 The `task` object also contains the values of all process directives for the given task, which allows you to access these settings at runtime. For examples:
