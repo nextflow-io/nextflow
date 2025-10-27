@@ -2,7 +2,11 @@
 
 # Feature flags
 
-Feature flags are used to introduce experimental or other opt-in features. They must be specified in the pipeline script.
+Feature flags enable experimental or other opt-in features. They must be specified in the pipeline script.
+
+:::{warning}
+Feature flags with the `nextflow.preview` prefix can cause pipelines run with newer versions of Nextflow to fail due to breaking changes. Always consult the {ref}`migration notes <migrations-page>` before updating to a new Nextflow version.
+:::
 
 `nextflow.enable.configProcessNamesValidation`
 : :::{deprecated} 25.10.0
@@ -47,7 +51,7 @@ Feature flags are used to introduce experimental or other opt-in features. They 
 : :::{versionadded} 24.04.0
   :::
 : :::{deprecated} 25.10.0
-  This feature flag is no longer required to use workflow outputs.
+  This feature flag is no longer supported. Workflow outputs are out of preview.
   :::
 : When `true`, enables the use of {ref}`workflow outputs <workflow-output-def>`.
 
@@ -59,12 +63,11 @@ Feature flags are used to introduce experimental or other opt-in features. They 
 : :::{versionadded} 24.04.0
   :::
 : :::{deprecated} 25.04.0
-  This feature flag is no longer required to use topic channels.
+  This feature flag is no longer supported. Topic channels are out of preview.
   :::
-: When `true`, enables {ref}`topic channels <channel-topic>` feature.
+: When `true`, enables the use of {ref}`topic channels <channel-topic>`.
 
 `nextflow.preview.types`
 : :::{versionadded} 25.10.0
   :::
-: When `true`, enables the use of {ref}`typed processes <process-typed-page>`.
-: This feature flag must be enabled in every script that uses typed processes. Legacy processes can not be defined in scripts that enable this feature flag.
+: When `true`, enables the use of {ref}`typed processes <process-typed-page>`. Must be enabled in every script that uses typed processes. Legacy processes cannot be defined in scripts with this flag enabled.
