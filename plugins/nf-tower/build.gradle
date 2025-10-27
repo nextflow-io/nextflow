@@ -30,6 +30,16 @@ nextflowPlugin {
     ]
 }
 
+repositories {
+    maven {
+        url = uri("https://maven.pkg.github.com/seqeralabs/tower-java-sdk")
+        credentials {
+            username = project.findProperty('github_username') ?: System.getenv("GITHUB_USERNAME")
+            password = project.findProperty('github_access_token') ?: System.getenv("GITHUB_TOKEN")
+        }
+    }
+}
+
 sourceSets {
     main.java.srcDirs = []
     main.groovy.srcDirs = ['src/main']
@@ -50,6 +60,7 @@ dependencies {
     compileOnly 'org.pf4j:pf4j:3.12.0'
     compileOnly 'io.seqera:lib-httpx:2.1.0'
 
+    api 'io.seqera.tower:tower-java-sdk:1.43.1'
     api "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.15.0"
     api "com.fasterxml.jackson.core:jackson-databind:2.12.7.1"
 

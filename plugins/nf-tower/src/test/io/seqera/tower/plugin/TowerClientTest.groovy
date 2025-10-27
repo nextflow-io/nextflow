@@ -24,6 +24,11 @@ import java.time.OffsetDateTime
 import java.time.ZoneId
 
 import io.seqera.http.HxClient
+import io.seqera.tower.ApiException
+import io.seqera.tower.api.DatasetsApi
+import io.seqera.tower.model.CreateDatasetRequest
+import io.seqera.tower.model.CreateDatasetResponse
+import io.seqera.tower.model.Dataset
 import nextflow.Session
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
@@ -35,8 +40,10 @@ import nextflow.script.WorkflowMetadata
 import nextflow.trace.TraceRecord
 import nextflow.trace.WorkflowStats
 import nextflow.trace.WorkflowStatsObserver
+import nextflow.trace.event.WorkflowOutputEvent
 import nextflow.util.ProcessHelper
 import spock.lang.Specification
+import spock.lang.IgnoreIf
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -533,5 +540,177 @@ class TowerClientTest extends Specification {
         request != null
         request.method() == 'POST'
         request.uri().toString() == 'http://example.com/test'
+    }
+
+    // Dataset upload tests
+
+    def 'should initialize DatasetsApi with config'() {
+        given: 'a TowerConfig with credentials'
+        def config = new TowerConfig([
+            accessToken: 'test-token',
+            endpoint: 'https://api.test.com',
+            datasets: [enabled: true]
+        ], [:])
+
+        when: 'creating a TowerClient'
+        def session = Mock(Session)
+        def client = new TowerClient(session, config)
+
+        then: 'DatasetsApi should be initialized'
+        client.@datasetsApi != null
+    }
+
+    def 'should not initialize DatasetsApi without credentials'() {
+        given: 'a TowerConfig without accessToken'
+        def config = new TowerConfig([
+            endpoint: 'https://api.test.com',
+            datasets: [enabled: true]
+        ], [:])
+
+        when: 'creating a TowerClient'
+        def session = Mock(Session)
+        def client = new TowerClient(session, config)
+
+        then: 'DatasetsApi should not be initialized'
+        client.@datasetsApi == null
+    }
+
+    def 'should collect workflow output events with index files'() {
+        given: 'a TowerClient'
+        def client = Spy(TowerClient)
+        def indexPath = Files.createTempFile('test', '.csv')
+        indexPath.text = "sample,file\ntest1,file1.fq\n"
+
+        and: 'a WorkflowOutputEvent with index'
+        def event = new WorkflowOutputEvent(
+            name: 'test_output',
+            index: indexPath,
+            value: null
+        )
+
+        when: 'onWorkflowOutput is called'
+        client.onWorkflowOutput(event)
+
+        then: 'event should be stored'
+        client.@workflowOutputs.size() == 1
+        client.@workflowOutputs[0].name == 'test_output'
+
+        cleanup:
+        indexPath?.toFile()?.delete()
+    }
+
+    def 'should ignore workflow outputs without index files'() {
+        given: 'a TowerClient'
+        def client = Spy(TowerClient)
+
+        and: 'a WorkflowOutputEvent without index'
+        def event = new WorkflowOutputEvent(
+            name: 'test_output',
+            value: 'some value',
+            index: null
+        )
+
+        when: 'onWorkflowOutput is called'
+        client.onWorkflowOutput(event)
+
+        then: 'event should not be stored'
+        client.@workflowOutputs.size() == 0
+    }
+
+    def 'should create dataset using SDK'() {
+        given: 'a TowerClient with mocked DatasetsApi'
+        def mockDatasetsApi = Mock(DatasetsApi)
+        def client = Spy(TowerClient)
+        client.@datasetsApi = mockDatasetsApi
+        client.@workspaceId = '123'
+        client.@datasetConfig = new DatasetConfig([enabled: true, createMode: 'auto'])
+
+        and: 'a mock response'
+        def mockDataset = new Dataset()
+        mockDataset.setId('dataset-456')
+        mockDataset.setName('test-dataset')
+        def mockResponse = new CreateDatasetResponse()
+        mockResponse.setDataset(mockDataset)
+
+        when: 'createDataset is called'
+        def result = client.createDataset('test-dataset', 'test description')
+
+        then: 'DatasetsApi.createDataset should be called'
+        1 * mockDatasetsApi.createDataset(123L, _) >> mockResponse
+        result == 'dataset-456'
+    }
+
+    def 'should upload index file using SDK'() {
+        given: 'a TowerClient with mocked DatasetsApi'
+        def mockDatasetsApi = Mock(DatasetsApi)
+        def client = Spy(TowerClient)
+        client.@datasetsApi = mockDatasetsApi
+        client.@workspaceId = '123'
+
+        and: 'a test index file'
+        def indexPath = Files.createTempFile('test', '.csv')
+        indexPath.text = "sample,file\ntest1,file1.fq\n"
+
+        when: 'uploadIndexToDataset is called'
+        client.uploadIndexToDataset('dataset-456', indexPath, 'test_output')
+
+        then: 'DatasetsApi.uploadDataset should be called'
+        1 * mockDatasetsApi.uploadDataset(123L, 'dataset-456', Boolean.TRUE, _)
+
+        cleanup:
+        indexPath?.toFile()?.delete()
+    }
+
+    def 'should handle SDK ApiException gracefully'() {
+        given: 'a TowerClient with mocked DatasetsApi that throws'
+        def mockDatasetsApi = Mock(DatasetsApi)
+        def client = Spy(TowerClient)
+        client.@datasetsApi = mockDatasetsApi
+        client.@workspaceId = '123'
+        client.@datasetConfig = new DatasetConfig([enabled: true, createMode: 'auto'])
+
+        when: 'createDataset is called and API throws'
+        def result = client.createDataset('test-dataset', 'test description')
+
+        then: 'ApiException should be caught and null returned'
+        1 * mockDatasetsApi.createDataset(123L, _) >> { throw new ApiException(404, 'Not found') }
+        result == null
+        noExceptionThrown()
+    }
+
+    @IgnoreIf({ !System.getenv('TOWER_ACCESS_TOKEN') })
+    def 'should upload to real Seqera Platform'() {
+        given: 'a real TowerClient with datasets enabled'
+        def config = new TowerConfig([
+            accessToken: System.getenv('TOWER_ACCESS_TOKEN'),
+            endpoint: 'https://api.cloud.seqera.io',
+            datasets: [enabled: true, createMode: 'auto', namePattern: 'test-${workflow.runName}']
+        ], [:])
+        def session = Mock(Session) {
+            getRunName() >> "test-run-${System.currentTimeMillis()}"
+            getUniqueId() >> UUID.randomUUID()
+        }
+
+        and: 'a temporary test index file'
+        def indexFile = Files.createTempFile('test-index', '.csv')
+        indexFile.text = "sample,fastq_1,fastq_2\ntest1,file1.fq,file2.fq\n"
+
+        and: 'a mock WorkflowOutputEvent'
+        def event = new WorkflowOutputEvent(
+            name: 'test_output',
+            index: indexFile,
+            value: null
+        )
+
+        when: 'we create client and process output'
+        def client = new TowerClient(session, config)
+        client.onWorkflowOutput(event)
+
+        then: 'no exception should be thrown'
+        noExceptionThrown()
+        client.@workflowOutputs.size() == 1
+
+        cleanup:
+        indexFile?.toFile()?.delete()
     }
 }
