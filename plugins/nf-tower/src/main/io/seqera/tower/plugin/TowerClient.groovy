@@ -35,11 +35,6 @@ import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
 import io.seqera.http.HxClient
 import io.seqera.util.trace.TraceUtils
-import io.seqera.tower.ApiClient
-import io.seqera.tower.ApiException
-import io.seqera.tower.api.DatasetsApi
-import io.seqera.tower.model.CreateDatasetRequest
-import io.seqera.tower.model.CreateDatasetResponse
 import nextflow.BuildInfo
 import nextflow.Session
 import nextflow.container.resolver.ContainerMeta
@@ -106,8 +101,6 @@ class TowerClient implements TraceObserverV2 {
 
     private HxClient httpClient
 
-    private DatasetsApi datasetsApi
-
     private JsonGenerator generator
 
     private String workflowId
@@ -164,7 +157,6 @@ class TowerClient implements TraceObserverV2 {
         this.schema = loadSchema()
         this.generator = TowerJsonGenerator.create(schema)
         this.reports = new TowerReports(session)
-        this.datasetsApi = createDatasetsApi()
     }
 
     TowerClient withEnvironment(Map env) {
@@ -175,30 +167,6 @@ class TowerClient implements TraceObserverV2 {
     @TestOnly
     protected TowerClient() {
         this.generator = TowerJsonGenerator.create(Collections.EMPTY_MAP)
-    }
-
-    /**
-     * Create and configure a DatasetsApi client for Seqera Platform
-     *
-     * @return Configured DatasetsApi instance
-     */
-    protected DatasetsApi createDatasetsApi() {
-        if( !accessToken || !endpoint ) {
-            return null
-        }
-
-        try {
-            def apiClient = new ApiClient()
-            apiClient.setBasePath(endpoint)
-            apiClient.setBearerToken(accessToken)
-            apiClient.setUserAgent("Nextflow/$BuildInfo.version")
-
-            return new DatasetsApi(apiClient)
-        }
-        catch( Exception e ) {
-            log.warn "Failed to initialize DatasetsApi: ${e.message}"
-            return null
-        }
     }
 
     @Override
@@ -296,6 +264,18 @@ class TowerClient implements TraceObserverV2 {
         if( workspaceId )
             result += "?workspaceId=$workspaceId"
         return result
+    }
+
+    protected String getUrlDatasets() {
+        if( workspaceId )
+            return "$endpoint/workspaces/$workspaceId/datasets/"
+        return "$endpoint/datasets/"
+    }
+
+    protected String getUrlDatasetUpload(String datasetId) {
+        if( workspaceId )
+            return "$endpoint/workspaces/$workspaceId/datasets/$datasetId/upload"
+        return "$endpoint/datasets/$datasetId/upload"
     }
 
     /**
@@ -979,7 +959,7 @@ class TowerClient implements TraceObserverV2 {
     }
 
     /**
-     * Create a new dataset in Seqera Platform using tower-java-sdk
+     * Create a new dataset in Seqera Platform
      *
      * @param name The name for the new dataset
      * @param description The description for the new dataset
@@ -988,30 +968,31 @@ class TowerClient implements TraceObserverV2 {
     private String createDataset(String name, String description) {
         log.info "Creating new dataset: ${name}"
 
-        if( !datasetsApi ) {
-            log.warn "DatasetsApi not initialized, cannot create dataset"
-            return null
-        }
-
         try {
-            def request = new CreateDatasetRequest()
-            request.setName(name)
-            request.setDescription("Workflow output: ${description}")
+            final payload = [
+                name: name,
+                description: "Workflow output: ${description}",
+                header: true
+            ]
 
-            def wspId = workspaceId ? Long.valueOf(workspaceId) : null
-            CreateDatasetResponse response = datasetsApi.createDataset(wspId, request)
+            final url = getUrlDatasets()
+            final resp = sendHttpMessage(url, payload, 'POST')
 
-            def datasetId = response.dataset?.id?.toString()
+            if( resp.isError() ) {
+                log.warn "Failed to create dataset '${name}': ${resp.message}"
+                return null
+            }
+
+            // Parse the response to extract dataset ID
+            final json = new JsonSlurper().parseText(resp.message) as Map
+            final dataset = json.dataset as Map
+            final datasetId = dataset?.id as String
 
             if( datasetId ) {
                 log.info "Created dataset '${name}' with ID: ${datasetId}"
             }
 
             return datasetId
-        }
-        catch( ApiException e ) {
-            log.warn "Failed to create dataset '${name}': ${e.message} (status: ${e.code})", e
-            return null
         }
         catch( Exception e ) {
             log.warn "Failed to create dataset '${name}': ${e.message}", e
@@ -1020,7 +1001,7 @@ class TowerClient implements TraceObserverV2 {
     }
 
     /**
-     * Upload an index file to a dataset using tower-java-sdk
+     * Upload an index file to a dataset
      *
      * @param datasetId The ID of the dataset
      * @param indexPath The path to the index file
@@ -1032,27 +1013,95 @@ class TowerClient implements TraceObserverV2 {
             return
         }
 
-        if( !datasetsApi ) {
-            log.warn "DatasetsApi not initialized, cannot upload index file"
-            return
-        }
-
         log.info "Uploading index file for output '${outputName}' to dataset ${datasetId}: ${indexPath}"
 
         try {
-            def wspId = workspaceId ? Long.valueOf(workspaceId) : null
-            def header = Boolean.TRUE  // Workflow output index files always have headers
+            def url = getUrlDatasetUpload(datasetId)
+            // Workflow output index files always have headers
+            url += "?header=true"
 
-            datasetsApi.uploadDataset(wspId, datasetId, header, indexPath.toFile())
+            // Upload file using multipart form data
+            final resp = uploadFile(url, indexPath.toFile())
 
-            log.info "Successfully uploaded index file for output '${outputName}' to dataset ${datasetId}"
-        }
-        catch( ApiException e ) {
-            log.warn "Failed to upload index file for output '${outputName}': ${e.message} (status: ${e.code})", e
+            if( resp.isError() ) {
+                log.warn "Failed to upload index file for output '${outputName}': ${resp.message}"
+            } else {
+                log.info "Successfully uploaded index file for output '${outputName}' to dataset ${datasetId}"
+            }
         }
         catch( Exception e ) {
             log.warn "Failed to upload index file for output '${outputName}': ${e.message}", e
         }
+    }
+
+    /**
+     * Upload a file to Seqera Platform using multipart/form-data
+     *
+     * @param url The upload URL
+     * @param file The file to upload
+     * @return Response object
+     */
+    protected Response uploadFile(String url, File file) {
+        log.trace "HTTP multipart upload: url=$url; file=${file.name}"
+
+        try {
+            // Create multipart body
+            final boundary = "----TowerNextflowBoundary" + System.currentTimeMillis()
+            final body = createMultipartBody(file, boundary)
+
+            // Build request
+            final request = HttpRequest.newBuilder(URI.create(url))
+                .header('Content-Type', "multipart/form-data; boundary=$boundary")
+                .header('User-Agent', "Nextflow/$BuildInfo.version")
+                .header('Traceparent', TraceUtils.rndTrace())
+                .POST(HttpRequest.BodyPublishers.ofByteArray(body))
+                .build()
+
+            final resp = httpClient.sendAsString(request)
+            final status = resp.statusCode()
+
+            if( status == 401 ) {
+                return new Response(status, 'Unauthorized Seqera Platform API access')
+            }
+            if( status >= 400 ) {
+                final msg = parseCause(resp?.body()) ?: "Unexpected response for request $url"
+                return new Response(status, msg as String)
+            }
+
+            return new Response(status, resp.body())
+        }
+        catch( IOException e ) {
+            return new Response(0, "Unable to connect to Seqera Platform API: ${getHostUrl(url)}")
+        }
+    }
+
+    /**
+     * Create a multipart/form-data request body
+     *
+     * @param file The file to include in the request
+     * @param boundary The multipart boundary string
+     * @return Byte array containing the multipart body
+     */
+    private byte[] createMultipartBody(File file, String boundary) {
+        final baos = new ByteArrayOutputStream()
+        final writer = new PrintWriter(new OutputStreamWriter(baos, 'UTF-8'), true)
+
+        // Write file part
+        writer.append("--${boundary}\r\n")
+        writer.append("Content-Disposition: form-data; name=\"file\"; filename=\"${file.name}\"\r\n")
+        writer.append("Content-Type: text/csv\r\n")
+        writer.append("\r\n")
+        writer.flush()
+
+        // Write file content
+        baos.write(file.bytes)
+
+        // Write closing boundary
+        writer.append("\r\n")
+        writer.append("--${boundary}--\r\n")
+        writer.flush()
+
+        return baos.toByteArray()
     }
 
 }

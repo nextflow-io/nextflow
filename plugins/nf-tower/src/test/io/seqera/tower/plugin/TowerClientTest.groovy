@@ -24,11 +24,6 @@ import java.time.OffsetDateTime
 import java.time.ZoneId
 
 import io.seqera.http.HxClient
-import io.seqera.tower.ApiException
-import io.seqera.tower.api.DatasetsApi
-import io.seqera.tower.model.CreateDatasetRequest
-import io.seqera.tower.model.CreateDatasetResponse
-import io.seqera.tower.model.Dataset
 import nextflow.Session
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
@@ -544,37 +539,6 @@ class TowerClientTest extends Specification {
 
     // Dataset upload tests
 
-    def 'should initialize DatasetsApi with config'() {
-        given: 'a TowerConfig with credentials'
-        def config = new TowerConfig([
-            accessToken: 'test-token',
-            endpoint: 'https://api.test.com',
-            datasets: [enabled: true]
-        ], [:])
-
-        when: 'creating a TowerClient'
-        def session = Mock(Session)
-        def client = new TowerClient(session, config)
-
-        then: 'DatasetsApi should be initialized'
-        client.@datasetsApi != null
-    }
-
-    def 'should not initialize DatasetsApi without credentials'() {
-        given: 'a TowerConfig without accessToken'
-        def config = new TowerConfig([
-            endpoint: 'https://api.test.com',
-            datasets: [enabled: true]
-        ], [:])
-
-        when: 'creating a TowerClient'
-        def session = Mock(Session)
-        def client = new TowerClient(session, config)
-
-        then: 'DatasetsApi should not be initialized'
-        client.@datasetsApi == null
-    }
-
     def 'should collect workflow output events with index files'() {
         given: 'a TowerClient'
         def client = Spy(TowerClient)
@@ -615,67 +579,6 @@ class TowerClientTest extends Specification {
 
         then: 'event should not be stored'
         client.@workflowOutputs.size() == 0
-    }
-
-    def 'should create dataset using SDK'() {
-        given: 'a TowerClient with mocked DatasetsApi'
-        def mockDatasetsApi = Mock(DatasetsApi)
-        def client = Spy(TowerClient)
-        client.@datasetsApi = mockDatasetsApi
-        client.@workspaceId = '123'
-        client.@datasetConfig = new DatasetConfig([enabled: true, createMode: 'auto'])
-
-        and: 'a mock response'
-        def mockDataset = new Dataset()
-        mockDataset.setId('dataset-456')
-        mockDataset.setName('test-dataset')
-        def mockResponse = new CreateDatasetResponse()
-        mockResponse.setDataset(mockDataset)
-
-        when: 'createDataset is called'
-        def result = client.createDataset('test-dataset', 'test description')
-
-        then: 'DatasetsApi.createDataset should be called'
-        1 * mockDatasetsApi.createDataset(123L, _) >> mockResponse
-        result == 'dataset-456'
-    }
-
-    def 'should upload index file using SDK'() {
-        given: 'a TowerClient with mocked DatasetsApi'
-        def mockDatasetsApi = Mock(DatasetsApi)
-        def client = Spy(TowerClient)
-        client.@datasetsApi = mockDatasetsApi
-        client.@workspaceId = '123'
-
-        and: 'a test index file'
-        def indexPath = Files.createTempFile('test', '.csv')
-        indexPath.text = "sample,file\ntest1,file1.fq\n"
-
-        when: 'uploadIndexToDataset is called'
-        client.uploadIndexToDataset('dataset-456', indexPath, 'test_output')
-
-        then: 'DatasetsApi.uploadDataset should be called'
-        1 * mockDatasetsApi.uploadDataset(123L, 'dataset-456', Boolean.TRUE, _)
-
-        cleanup:
-        indexPath?.toFile()?.delete()
-    }
-
-    def 'should handle SDK ApiException gracefully'() {
-        given: 'a TowerClient with mocked DatasetsApi that throws'
-        def mockDatasetsApi = Mock(DatasetsApi)
-        def client = Spy(TowerClient)
-        client.@datasetsApi = mockDatasetsApi
-        client.@workspaceId = '123'
-        client.@datasetConfig = new DatasetConfig([enabled: true, createMode: 'auto'])
-
-        when: 'createDataset is called and API throws'
-        def result = client.createDataset('test-dataset', 'test description')
-
-        then: 'ApiException should be caught and null returned'
-        1 * mockDatasetsApi.createDataset(123L, _) >> { throw new ApiException(404, 'Not found') }
-        result == null
-        noExceptionThrown()
     }
 
     @IgnoreIf({ !System.getenv('TOWER_ACCESS_TOKEN') })
