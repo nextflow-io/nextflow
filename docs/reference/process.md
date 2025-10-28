@@ -12,8 +12,9 @@ The following task properties are defined in the process body:
 : The current task attempt.
 
 `task.exitStatus`
+: *Available only in `script:` and `shell:` blocks*
 : The exit code returned by the task script.
-: Only applicable for processes with a `script:` or `shell:` block. The exit code is only available after the task has been executed (e.g., the [errorStrategy](#errorstrategy) directive).
+: The exit code is only available after the task has been executed (e.g., the [errorStrategy](#errorstrategy) directive).
 
 `task.hash`
 : *Available only in `exec:` blocks*
