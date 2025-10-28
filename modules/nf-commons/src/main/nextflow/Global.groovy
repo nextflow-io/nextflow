@@ -24,8 +24,8 @@ import nextflow.util.Duration
 import nextflow.util.IniFile
 import nextflow.util.MemoryUnit
 import nextflow.util.TestOnly
-import org.apache.commons.lang.StringUtils
-import org.apache.commons.lang.exception.ExceptionUtils
+import org.apache.commons.lang3.StringUtils
+import org.apache.commons.lang3.exception.ExceptionUtils
 /**
  * Hold global variables
  *
