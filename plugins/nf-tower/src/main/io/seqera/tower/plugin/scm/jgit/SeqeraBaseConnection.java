@@ -262,11 +262,12 @@ public class SeqeraBaseConnection implements Connection {
             if (dataLink.credentialsId != null) {
                 queryParams.put("credentialsId", dataLink.credentialsId);
             }
-            String url = buildDataLinkUrl("/upload", queryParams);
+            String url = buildDataLinkUrl("/upload/" + URLEncoder.encode(filePath, StandardCharsets.UTF_8), queryParams);
 
             JsonObject uploadRequest = new JsonObject();
-            uploadRequest.addProperty("fileName", filePath);
-
+            uploadRequest.addProperty("fileName", localFile.getFileName().toString());
+            uploadRequest.addProperty("contentLength", localFile.toFile().length());
+            log.debug(" POST {}", url);
             HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .header("Content-Type", "application/json")
@@ -276,34 +277,49 @@ public class SeqeraBaseConnection implements Connection {
             HttpResponse<String> response = httpClient.sendAsString(request);
 
             if (response.statusCode() >= 400) {
-                throw new IOException("Failed to get upload URL for: " + filePath + " - status: " + response.statusCode());
+                String message = response.body();
+                if (message == null) message = "";
+                message = message + " - HTTP " + response.statusCode();
+                throw new IOException("Failed to get upload URL for '" + filePath + "': " + message);
             }
-
+            log.debug(response.body());
             JsonObject responseJson = gson.fromJson(response.body(), JsonObject.class);
-            String uploadUrl = responseJson.get("uploadUrl").getAsString();
+            String uploadId = responseJson.get("uploadId").getAsString();
+            JsonArray jsonUploadUrls = responseJson.getAsJsonArray("uploadUrls").getAsJsonArray();
+            List<String> uploadUrls = StreamSupport.stream(jsonUploadUrls.spliterator(), false)
+            .map(JsonElement::getAsString)
+            .collect(java.util.stream.Collectors.toList());
 
-            // Step 2: Upload file to the provided URL
-            HttpRequest uploadFileRequest = HttpRequest.newBuilder()
-                .uri(URI.create(uploadUrl))
-                .header("Content-Type", "application/octet-stream")
-                .PUT(HttpRequest.BodyPublishers.ofFile(localFile))
-                .build();
+            for (String uploadUrl : uploadUrls) {
+                // Step 2: Upload file to the provided URL
+                HttpRequest uploadFileRequest = HttpRequest.newBuilder()
+                    .uri(URI.create(uploadUrl))
+                    .header("Content-Type", "application/octet-stream")
+                    .PUT(HttpRequest.BodyPublishers.ofFile(localFile))
+                    .build();
 
-            HttpResponse<Void> uploadResponse = httpClient.send(uploadFileRequest, HttpResponse.BodyHandlers.discarding());
+                HttpResponse<Void> uploadResponse = httpClient.send(uploadFileRequest, HttpResponse.BodyHandlers.discarding());
 
-            if (uploadResponse.statusCode() >= 400) {
-                throw new IOException("Failed to upload file: " + filePath + " - status: " + uploadResponse.statusCode());
+                if (uploadResponse.statusCode() >= 400) {
+                    String message = response.body();
+                    if (message == null) message = "";
+                    message = message + " - HTTP " + response.statusCode();
+                    throw new IOException("Failed to upload file '" + filePath + "': " + message);
+                }
             }
-
             // Step 3: Finish upload (required for some providers like AWS)
-
-            String finishUrl = buildDataLinkUrl("/upload/finish", Map.of());
+            queryParams = new HashMap<>();
             if (workspaceId != null) {
-                finishUrl += "?workspaceId=" + workspaceId;
+                queryParams.put("workspaceId", workspaceId);
             }
+            if (dataLink.credentialsId != null) {
+                queryParams.put("credentialsId", dataLink.credentialsId);
+            }
+            String finishUrl = buildDataLinkUrl("/upload/finish/"+ URLEncoder.encode(filePath, StandardCharsets.UTF_8), queryParams);
 
             JsonObject finishRequest = new JsonObject();
             finishRequest.addProperty("fileName", filePath);
+            finishRequest.addProperty("uploadId", filePath);
 
             HttpRequest finishReq = HttpRequest.newBuilder()
                 .uri(URI.create(finishUrl))
@@ -350,7 +366,7 @@ public class SeqeraBaseConnection implements Connection {
             if (message == null) message = "";
             message = message + " - HTTP " + response.statusCode();
 
-            throw new IOException("Failed to list files in: " + path + message);
+            throw new IOException("Failed to list files in '" + path + "' : " + message);
         }
         log.debug(response.body());
         JsonObject responseJson = gson.fromJson(response.body(), JsonObject.class);
