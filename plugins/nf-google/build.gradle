@@ -62,8 +62,8 @@ dependencies {
     runtimeOnly 'io.grpc:grpc-netty-shaded:1.75.0'
 
     testImplementation(testFixtures(project(":nextflow")))
-    testImplementation "org.apache.groovy:groovy:4.0.28"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.28"
+    testImplementation "org.apache.groovy:groovy:4.0.29"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.29"
 }
 
 test {
