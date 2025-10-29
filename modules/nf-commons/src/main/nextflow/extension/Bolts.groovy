@@ -35,7 +35,7 @@ import nextflow.util.CheckHelper
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import nextflow.util.RateUnit
-import org.apache.commons.lang.StringUtils
+import org.apache.commons.lang3.StringUtils
 import org.codehaus.groovy.runtime.DefaultGroovyMethods
 import org.codehaus.groovy.runtime.GStringImpl
 import org.codehaus.groovy.runtime.ResourceGroovyMethods
@@ -959,6 +959,23 @@ class Bolts {
             return new LinkedHashMap<>(map)
         else
             return new HashMap<>(map)
+    }
+
+    /**
+     * Resolve a lazy expression (e.g. closure, gstring) against
+     * a delegate (i.e. binding).
+     *
+     * @param binding
+     * @param value
+     */
+    static Object resolveLazy(Object binding, Object value) {
+        if( value instanceof Closure )
+            return cloneWith(value, binding).call()
+
+        if( value instanceof GString )
+            return cloneAsLazy(value, binding).toString()
+
+        return value
     }
     
 }

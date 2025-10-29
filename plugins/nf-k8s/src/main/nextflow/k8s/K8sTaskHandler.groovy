@@ -16,6 +16,7 @@
 
 package nextflow.k8s
 
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Instant
@@ -147,8 +148,11 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     protected List<String> classicSubmitCli(TaskRun task) {
+        final workDir = Escape.path(task.workDir)
+
         final result = new ArrayList(BashWrapperBuilder.BASH)
-        result.add("${Escape.path(task.workDir)}/${TaskRun.CMD_RUN}".toString())
+        result.add('-c')
+        result.add("bash ${workDir}/${TaskRun.CMD_RUN} 2>&1 | tee ${workDir}/${TaskRun.CMD_LOG}")
         return result
     }
 
@@ -424,7 +428,15 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
             }
             else {
                 // finalize the task
-                task.exitStatus = readExitFile()
+                // read the exit code from the K8s container terminated state, if 0 (successful) or missing
+                // take the exit code from the `.exitcode` file created by nextflow
+                // the rationale is that in case of error (e.g. OOMKilled, pod eviction), the exit code from
+                // the K8s API is more reliable because the container may terminate before the exit file is written
+                // See https://github.com/nextflow-io/nextflow/issues/6436
+                // https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#containerstateterminated-v1-core
+                log.trace("[k8s] Container Terminated state ${state.terminated}")
+                final k8sExitCode = (state.terminated as Map)?.exitCode as Integer
+                task.exitStatus = k8sExitCode ?: readExitFile()
                 task.stdout = outputFile
                 task.stderr = errorFile
             }
@@ -455,6 +467,9 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
                     ? client.jobLog(podName)
                     : client.podLog(podName)
             Files.copy(stream, task.workDir.resolve(TaskRun.CMD_LOG))
+        }
+        catch( FileAlreadyExistsException e ) {
+            log.debug "Log file already exists for ${resourceType.lower()} $podName", e
         }
         catch( Exception e ) {
             log.warn "Failed to copy log for ${resourceType.lower()} $podName", e

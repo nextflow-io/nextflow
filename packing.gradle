@@ -26,7 +26,7 @@ dependencies {
 }
 
 
-ext.mainClassName = 'nextflow.cli.Launcher'
+// ext.mainClassName removed - now using application.mainClass in Shadow plugin
 ext.homeDir = System.properties['user.home']
 ext.nextflowDir = "$homeDir/.nextflow/framework/$version"
 ext.releaseDir = "$buildDir/releases"
@@ -126,7 +126,7 @@ task pack( dependsOn: [packOne, packDist]) {
 
 }
 
-task deploy( type: Exec, dependsOn: [clean, compile, pack]) {
+task deploy( type: Exec, dependsOn: [clean, compile, pack, validatePluginVersions]) {
 
     def temp = File.createTempFile('upload',null)
     temp.deleteOnExit()
@@ -233,10 +233,10 @@ task dockerPack(type: Exec, dependsOn: ['packOne']) {
 
 /*
  * Tag and upload the release
- * 
+ *
  * https://github.com/aktau/github-release/
  */
-task release(type: Exec, dependsOn: [pack, dockerImage]) {
+task release(type: Exec, dependsOn: [pack, dockerImage, validatePluginVersions]) {
 
     def launcherFile = file('nextflow').absoluteFile
     def launcherSha1 = file('nextflow.sha1').absoluteFile

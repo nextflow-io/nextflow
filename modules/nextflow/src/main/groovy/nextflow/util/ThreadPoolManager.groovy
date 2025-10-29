@@ -19,6 +19,7 @@ package nextflow.util
 
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.ThreadFactory
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -89,9 +90,24 @@ class ThreadPoolManager {
             minThreads = maxThreads
         }
 
-        return executorService = Threads.useVirtual()
-                ? Executors.newThreadPerTaskExecutor(new CustomThreadFactory(name ?: "nf-thread-pool-${poolCount.getAndIncrement()}".toString()))
-                : legacyThreadPool()
+        executorService = Threads.useVirtual()
+            ? virtualThreadService()
+            : legacyThreadPool()
+
+        return executorService
+    }
+
+    protected ExecutorService virtualThreadService() {
+        final poolName = name ?: "nf-thread-pool-${poolCount.getAndIncrement()}".toString()
+        final pool = VirtualThreadFactoryBuilder.create(poolName)
+        return Executors.newThreadPerTaskExecutor(pool)
+    }
+
+    // this class is required to avoid failures when using Java version < 21
+    private static class VirtualThreadFactoryBuilder {
+        static ThreadFactory create(String name) {
+            return Thread.ofVirtual().name(name).factory()
+        }
     }
 
     protected ExecutorService legacyThreadPool() {

@@ -19,7 +19,7 @@ plugins {
 }
 
 nextflowPlugin {
-    nextflowVersion = '25.08.0-edge'
+    nextflowVersion = '25.09.2-edge'
 
     provider = "${nextflowPluginProvider}"
     description = 'Provides comprehensive AWS cloud integration including Batch executor, S3 file system, and Fusion support for high-performance data operations'
@@ -55,20 +55,20 @@ dependencies {
     compileOnly 'org.pf4j:pf4j:3.12.0'
 
     api ('javax.xml.bind:jaxb-api:2.4.0-b180830.0359')
-    api ('software.amazon.awssdk:s3:2.31.64')
-    api ('software.amazon.awssdk:ec2:2.31.64')
-    api ('software.amazon.awssdk:batch:2.31.64')
-    api ('software.amazon.awssdk:iam:2.31.64')
-    api ('software.amazon.awssdk:ecs:2.31.64')
-    api ('software.amazon.awssdk:cloudwatchlogs:2.31.64')
-    api ('software.amazon.awssdk:codecommit:2.31.64')
-    api ('software.amazon.awssdk:sts:2.31.64')
-    api ('software.amazon.awssdk:ses:2.31.64')
-    api ('software.amazon.awssdk:sso:2.31.64')
-    api ('software.amazon.awssdk:ssooidc:2.31.64')
-    api ('software.amazon.awssdk:s3-transfer-manager:2.31.64')
-    api ('software.amazon.awssdk:apache-client:2.31.64')
-    api ('software.amazon.awssdk:aws-crt-client:2.31.64')
+    api ('software.amazon.awssdk:s3:2.33.2')
+    api ('software.amazon.awssdk:ec2:2.33.2')
+    api ('software.amazon.awssdk:batch:2.33.2')
+    api ('software.amazon.awssdk:iam:2.33.2')
+    api ('software.amazon.awssdk:ecs:2.33.2')
+    api ('software.amazon.awssdk:cloudwatchlogs:2.33.2')
+    api ('software.amazon.awssdk:codecommit:2.33.2')
+    api ('software.amazon.awssdk:sts:2.33.2')
+    api ('software.amazon.awssdk:ses:2.33.2')
+    api ('software.amazon.awssdk:sso:2.33.2')
+    api ('software.amazon.awssdk:ssooidc:2.33.2')
+    api ('software.amazon.awssdk:s3-transfer-manager:2.33.2')
+    api ('software.amazon.awssdk:apache-client:2.33.2')
+    api ('software.amazon.awssdk:aws-crt-client:2.33.2')
 
     constraints {
         api 'com.fasterxml.jackson.core:jackson-databind:2.12.7.1'
@@ -81,6 +81,6 @@ dependencies {
     
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
-    testImplementation "org.apache.groovy:groovy:4.0.28"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.28"
+    testImplementation "org.apache.groovy:groovy:4.0.29"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.29"
 }

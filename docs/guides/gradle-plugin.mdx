@@ -78,22 +78,29 @@ The Nextflow Gradle plugin allows you to publish plugins to the [Nextflow plugin
 
 To publish plugins to the [Nextflow plugin registry](https://registry.nextflow.io/):
 
-1. Create a file named `$HOME/.gradle/gradle.properties`, where `$HOME` is your home directory.
+1. [Claim your plugin][plugin-registry-claim] in the registry.
 
-2. Add the following property:
+    :::{note}
+    You can claim a plugin even if it doesn't exist in the registry yet.
+    :::
+
+2. Create a file named `$HOME/.gradle/gradle.properties`, where `$HOME` is your home directory.
+
+3. Add your API key to the file:
 
     ```
     npr.apiKey=<API_KEY>
     ```
 
-    Replace `<API_KEY>` with your plugin registry API key. See [Creating an access token][plugin-registry-access-token] for more information about creating an API key.
+    Replace `<API_KEY>` with your plugin registry API key. See [Creating an access token][plugin-registry-access-token] for more information.
 
-3. Run `make release`.
+4. Run `make release`.
 
 ## Additional resources
 
 For additional Nextflow Gradle plugin configuration options, see the [Nextflow Gradle plugin](https://github.com/nextflow-io/nextflow-plugin-gradle) repository.
 
+[plugin-registry-claim]: /nextflow_docs/nextflow_repo/docs/plugins/plugin-registry.html#claiming-a-plugin
 [dev-plugins-extension-points]: /nextflow_docs/nextflow_repo/docs/plugins/developing-plugins.mdx#extension-points
 [dev-plugins-template]: /nextflow_docs/nextflow_repo/docs/plugins/developing-plugins.mdx#nextflow-plugin-template
 [gradle-plugin-page]: /nextflow_docs/nextflow_repo/docs/guides/gradle-plugin.mdx

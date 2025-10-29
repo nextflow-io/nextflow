@@ -34,6 +34,9 @@ compile:
 assemble:
 	./gradlew buildInfo compile assemble
 
+releaseInfo:
+	./gradlew releaseInfo
+
 check:
 	./gradlew check
 
@@ -53,6 +56,10 @@ clean:
 install:
 	BUILD_PACK=1 \
 	./gradlew installLauncher publishToMavenLocal installPlugin
+
+installScratch:
+	BUILD_PACK=1 \
+	./gradlew installScratch publishToMavenLocal installPlugin
 
 #
 # Show dependencies try `make deps config=runtime`, `make deps config=google`
@@ -130,4 +137,6 @@ dockerPack:
 release-plugins:
 	./gradlew releasePluginToRegistryIfNotExists
 
+publish-artifacts:
+	./gradlew publishAllPublicationsToSeqeraRepository
 

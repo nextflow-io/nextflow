@@ -16,9 +16,9 @@
 package nextflow.trace.config
 
 import groovy.transform.CompileStatic
-import nextflow.config.schema.ConfigOption
-import nextflow.config.schema.ConfigScope
-import nextflow.config.schema.ScopeName
+import nextflow.config.spec.ConfigOption
+import nextflow.config.spec.ConfigScope
+import nextflow.config.spec.ScopeName
 import nextflow.script.dsl.Description
 import nextflow.trace.TraceHelper
 
@@ -29,17 +29,34 @@ import nextflow.trace.TraceHelper
 @CompileStatic
 class TraceConfig implements ConfigScope {
 
+    private static final List<String> DEF_FIELDS = List.of(
+        'task_id',
+        'hash',
+        'native_id',
+        'name',
+        'status',
+        'exit',
+        'submit',
+        'duration',
+        'realtime',
+        '%cpu',
+        'peak_rss',
+        'peak_vmem',
+        'rchar',
+        'wchar'
+    )
+
     @ConfigOption
     @Description("""
         Create the execution trace file on workflow completion (default: `false`).
     """)
     final boolean enabled
 
-    @ConfigOption
+    @ConfigOption(types=[String])
     @Description("""
         Comma-separated list of [trace fields](https://nextflow.io/docs/latest/tracing.html#trace-report) to include in the report.
     """)
-    final String fields
+    final List<String> fields
 
     @ConfigOption
     @Description("""
@@ -70,11 +87,21 @@ class TraceConfig implements ConfigScope {
 
     TraceConfig(Map opts) {
         enabled = opts.enabled as boolean
-        fields = opts.fields ?: ''
+        fields = parseFields(opts.fields)
         file = opts.file ?: defaultFileName()
         overwrite = opts.overwrite as boolean
         raw = opts.raw as boolean
         sep = opts.sep ?: '\t'
+    }
+
+    private List<String> parseFields(value) {
+        if( value == null )
+            return DEF_FIELDS
+        if( value instanceof CharSequence )
+            return value.tokenize(',').collect(it -> it.trim())
+        if( value instanceof List )
+            return value
+        throw new IllegalArgumentException("Not a valid trace fields value: $value")
     }
 
     static final String defaultFileName() {

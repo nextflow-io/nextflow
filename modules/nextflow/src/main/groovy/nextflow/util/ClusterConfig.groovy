@@ -18,7 +18,7 @@ package nextflow.util
 
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import org.apache.commons.lang.StringUtils
+import org.apache.commons.lang3.StringUtils
 /**
  * Helper class retrieve cluster configuration properties
  */

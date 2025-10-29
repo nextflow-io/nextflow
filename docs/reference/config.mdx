@@ -223,7 +223,11 @@ The maximum number of concurrent S3 transfers used by the S3 transfer manager. B
 
 ##### `aws.client.maxConnections`
 
-The maximum number of open HTTP connections used by the S3 transfer manager (default: `50`).
+The maximum number of open HTTP connections used by the S3 client (default: `50`).
+
+##### `aws.client.maxDownloadHeapMemory`
+
+The maximum size for the heap memory buffer used by concurrent downloads. It must be at least 10 times the `minimumPartSize` (default:`400 MB`).
 
 ##### `aws.client.maxErrorRetry`
 
@@ -241,14 +245,14 @@ The maximum native memory used by the S3 transfer manager. By default, this sett
 <AddedInVersion version="25.06.0-edge">
 </AddedInVersion>
 
-The minimum part size used by the S3 transfer manager for multi-part uploads (default: `8 MB`).
+The minimum part size used for multipart S3 transfers (default: `8 MB`).
 
 ##### `aws.client.multipartThreshold`
 
 <AddedInVersion version="25.06.0-edge">
 </AddedInVersion>
 
-The object size threshold used by the S3 transfer manager for performing multi-part uploads (default: same as `aws.cllient.minimumPartSize`).
+The object size threshold used for multipart S3 transfers (default: same as `aws.cllient.minimumPartSize`).
 
 ##### `aws.client.protocol`
 
@@ -336,12 +340,7 @@ The AWS KMS key Id to be used to encrypt files stored in the target S3 bucket.
 <AddedInVersion version="25.06.0-edge">
 </AddedInVersion>
 
-The target network throughput (in Gbps) used by the S3 transfer manager (default: `10`). This setting is not used when `aws.client.maxConcurrency` and `aws.client.maxNativeMemory` are specified.
-
-##### `aws.client.transferManagerThreads`
-
-<AddedInVersion version="25.06.0-edge">
-</AddedInVersion>
+The target network throughput (in Gbps) used for S3 uploads and downloads (default: `10`).
 
 The number of threads used by the S3 transfer manager (default: `10`).
 
@@ -1860,6 +1859,10 @@ The following settings are available:
 The unique access token for your Seqera Platform account.
 
 Your `accessToken` can be obtained from your Seqera Platform instance in the [Tokens page](https://cloud.seqera.io/tokens).
+
+##### `tower.computeEnvId`
+
+The compute environment ID in your Seqera Platform account used to launch pipelines (default: the primary compute environment in the selected workspace).
 
 ##### `tower.enabled`
 

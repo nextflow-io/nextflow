@@ -23,8 +23,8 @@ import software.amazon.awssdk.services.s3.model.ObjectCannedACL
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.SysEnv
-import nextflow.config.schema.ConfigOption
-import nextflow.config.schema.ConfigScope
+import nextflow.config.spec.ConfigOption
+import nextflow.config.spec.ConfigScope
 import nextflow.script.dsl.Description
 import nextflow.file.FileHelper
 import nextflow.util.Duration
@@ -58,17 +58,24 @@ class AwsS3Config implements ConfigScope {
     """)
     final String endpoint
 
+    /**
+     * Maximum number of concurrent transfers used by S3 transfer manager. By default,
+     * it is determined automatically by `targetThroughputInGbps`.
+     */
     @ConfigOption
-    @Description("""
-        The maximum number of concurrent S3 transfers used by the S3 transfer manager. By default, this setting is determined by `aws.client.targetThroughputInGbps`. Modifying this value can affect the amount of memory used for S3 transfers.
-    """)
     final Integer maxConcurrency
 
     @ConfigOption
     @Description("""
-        The maximum number of open HTTP connections used by the S3 transfer manager (default: `50`).
+        The maximum number of open HTTP connections used by the S3 client (default: `50`).
     """)
     final Integer maxConnections
+
+    @ConfigOption
+    @Description("""
+        The maximum size for the heap memory buffer used by concurrent downloads. It must be at least 10 times the `minimumPartSize` (default:`400 MB`).
+    """)
+    final MemoryUnit maxDownloadHeapMemory
 
     @ConfigOption
     @Description("""
@@ -76,21 +83,22 @@ class AwsS3Config implements ConfigScope {
     """)
     final Integer maxErrorRetry
 
+    /**
+     * Maximum native memory used by S3 transfer manager. By default, it is
+     * determined automatically by `targetThroughputInGbps`.
+     */
     @ConfigOption
-    @Description("""
-        The maximum native memory used by the S3 transfer manager. By default, this setting is determined by `aws.client.targetThroughputInGbps`.
-    """)
     final MemoryUnit maxNativeMemory
 
     @ConfigOption
     @Description("""
-        The minimum part size used by the S3 transfer manager for multi-part uploads (default: `8 MB`).
+        The minimum part size used for multipart uploads to S3 (default: `8 MB`).
     """)
     final MemoryUnit minimumPartSize
 
     @ConfigOption
     @Description("""
-        The object size threshold used by the S3 transfer manager for performing multi-part uploads (default: same as `aws.cllient.minimumPartSize`).
+        The object size threshold used for multipart uploads to S3 (default: same as `aws.cllient.minimumPartSize`).
     """)
     final MemoryUnit multipartThreshold
 
@@ -168,15 +176,9 @@ class AwsS3Config implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The target network throughput (in Gbps) used by the S3 transfer manager (default: `10`). This setting is not used when `aws.client.maxConcurrency` and `aws.client.maxNativeMemory` are specified.
+        The target network throughput (in Gbps) used for S3 uploads and downloads (default: `10`).
     """)
     final Double targetThroughputInGbps
-
-    @ConfigOption
-    @Description("""
-        The number of threads used by the S3 transfer manager (default: `10`).
-    """)
-    final Integer transferManagerThreads
 
     // deprecated
 
@@ -215,6 +217,13 @@ class AwsS3Config implements ConfigScope {
     """)
     final String uploadStorageClass
 
+    private static final long _1MB = 1024 * 1024;
+    // According to CRT Async client docs https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/services/s3/S3CrtAsyncClientBuilder.html
+    public static final long DEFAULT_PART_SIZE = 8 * _1MB;
+    public static final int DEFAULT_INIT_BUFFER_PARTS = 10;
+    // Maximum heap buffer size
+    public static final long DEFAULT_MAX_DOWNLOAD_BUFFER_SIZE = 400 * _1MB;
+
     AwsS3Config(Map opts) {
         this.anonymous = opts.anonymous as Boolean
         this.connectionTimeout = opts.connectionTimeout as Integer
@@ -224,6 +233,7 @@ class AwsS3Config implements ConfigScope {
             throw new IllegalArgumentException("S3 endpoint must begin with http:// or https:// prefix - offending value: '${endpoint}'")
         this.maxConcurrency = opts.maxConcurrency as Integer
         this.maxConnections = opts.maxConnections as Integer
+        this.maxDownloadHeapMemory = opts.maxDownloadHeapMemory as MemoryUnit
         this.maxErrorRetry = opts.maxErrorRetry as Integer
         this.maxNativeMemory = opts.maxNativeMemory as MemoryUnit
         this.minimumPartSize = opts.minimumPartSize as MemoryUnit
@@ -241,11 +251,11 @@ class AwsS3Config implements ConfigScope {
         this.storageEncryption = parseStorageEncryption(opts.storageEncryption as String)
         this.storageKmsKeyId = opts.storageKmsKeyId
         this.targetThroughputInGbps = opts.targetThroughputInGbps as Double
-        this.transferManagerThreads = opts.transferManagerThreads as Integer
         this.uploadChunkSize = opts.uploadChunkSize as MemoryUnit
         this.uploadMaxAttempts = opts.uploadMaxAttempts as Integer
         this.uploadMaxThreads = opts.uploadMaxThreads as Integer
         this.uploadRetrySleep = opts.uploadRetrySleep as Duration
+        checkDownloadBufferParams()
     }
 
     private String parseStorageClass(String value) {
@@ -283,6 +293,7 @@ class AwsS3Config implements ConfigScope {
             connection_timeout: connectionTimeout?.toString(),
             max_concurrency: maxConcurrency?.toString(),
             max_connections: maxConnections?.toString(),
+            max_download_heap_memory: maxDownloadHeapMemory?.toBytes()?.toString(),
             max_error_retry: maxErrorRetry?.toString(),
             max_native_memory: maxNativeMemory?.toBytes()?.toString(),
             minimum_part_size: minimumPartSize?.toBytes()?.toString(),
@@ -298,12 +309,28 @@ class AwsS3Config implements ConfigScope {
             storage_encryption: storageEncryption?.toString(),
             storage_kms_key_id: storageKmsKeyId?.toString(),
             target_throughput_in_gbps: targetThroughputInGbps?.toString(),
-            transfer_manager_threads: transferManagerThreads?.toString(),
             upload_chunk_size: uploadChunkSize?.toBytes()?.toString(),
             upload_max_attempts: uploadMaxAttempts?.toString(),
             upload_max_threads: uploadMaxThreads?.toString(),
             upload_retry_sleep: uploadRetrySleep?.toMillis()?.toString(),
             upload_storage_class: storageClass?.toString()
         ].findAll { k, v -> v != null }
+    }
+
+    void checkDownloadBufferParams() {
+        if( maxDownloadHeapMemory != null  && maxDownloadHeapMemory.toBytes() == 0L ) {
+            throw new IllegalArgumentException("Configuration option `aws.client.maxDownloadHeapMemory` can't be 0")
+        }
+        if( minimumPartSize != null && minimumPartSize.toBytes() == 0L ) {
+            throw new IllegalArgumentException("Configuration option `aws.client.minimumPartSize` can't be 0")
+        }
+        if( maxDownloadHeapMemory != null || minimumPartSize != null ) {
+            final maxBuffer = maxDownloadHeapMemory ? maxDownloadHeapMemory.toBytes() : DEFAULT_MAX_DOWNLOAD_BUFFER_SIZE
+            final partSize = minimumPartSize ? minimumPartSize.toBytes() : DEFAULT_PART_SIZE
+            if( maxBuffer < DEFAULT_INIT_BUFFER_PARTS * partSize ) {
+                throw new IllegalArgumentException("Configuration option `aws.client.maxDownloadHeapMemory` must be at least " + DEFAULT_INIT_BUFFER_PARTS + " times `aws.client.minimumPartSize`")
+            }
+        }
+
     }
 }

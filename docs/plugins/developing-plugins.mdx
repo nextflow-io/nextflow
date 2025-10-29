@@ -202,12 +202,16 @@ myplugin {
 
 <AddedInVersion version="25.04.0" />
 
+<ChangedInVersion version="25.04.0">
+The `nextflow.config.schema` package was renamed to `nextflow.config.spec`.
+</ChangedInVersion>
+
 Plugins can declare their configuration options by implementing the `ConfigScope` interface and declaring each config option as a field with the `@ConfigOption` annotation. For example:
 
 ```groovy
-import nextflow.config.schema.ConfigOption
-import nextflow.config.schema.ConfigScope
-import nextflow.config.schema.ScopeName
+import nextflow.config.spec.ConfigOption
+import nextflow.config.spec.ConfigScope
+import nextflow.config.spec.ScopeName
 import nextflow.script.dsl.Description
 
 @ScopeName('myplugin')

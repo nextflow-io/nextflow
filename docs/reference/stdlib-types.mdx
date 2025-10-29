@@ -43,7 +43,7 @@ Booleans in Nextflow can be backed by any of the following Java types: `boolean`
 
 ## Channel\<E\>
 
-A channel (also known as a *dataflow channel* or *queue channel*) is an asynchronous sequence of values. It is used to facilitate dataflow logic in a workflow.
+A channel (also known as a *dataflow channel* or *queue channel*) is an asynchronous sequence of values of type `E`. It is used to facilitate dataflow logic in a workflow.
 
 See [Dataflow][dataflow-page] for an overview of dataflow types. See [Operators][operator-page] or the available methods for channels.
 
@@ -291,7 +291,7 @@ Iterables in Nextflow are backed by the [Java](https://docs.oracle.com/en/java/j
 
 *Implements the [Iterable\<E\>][stdlib-types-iterable] trait.*
 
-A list is an ordered collection of elements. See [Lists][script-list] for an overview.
+A list is an ordered collection of elements of type `E`. See [Lists][script-list] for an overview.
 
 The following operations are supported for lists:
 
@@ -392,7 +392,7 @@ Lists in Nextflow are backed by the [Java](https://docs.oracle.com/en/java/javas
 
 ## Map\<K,V\>
 
-A map associates or "maps" keys to values. Each key can map to at most one value -- a map cannot contain duplicate keys. See [Maps][script-map] for an overview.
+A map associates or "maps" keys of type `K` to values of type `V`. Each key can map to at most one value -- a map cannot contain duplicate keys. See [Maps][script-map] for an overview.
 
 The following operations are supported for maps:
 
@@ -941,7 +941,7 @@ Splits a text file into a list of lines. See the [splitText][operator-splittext]
 
 *Implements the [Iterable\<E\>][stdlib-types-iterable] trait.*
 
-A set is an unordered collection that cannot contain duplicate elements.
+A set is an unordered collection of values of type `E` which cannot contain duplicates.
 
 A set can be created from a list using the `toSet()` method:
 
@@ -1164,7 +1164,7 @@ Given a tuple and an index, returns the tuple element at the index.
 
 ## Value\<V\>
 
-A dataflow value (also known as a *value channel*) is an asynchronous value. It is used to facilitate dataflow logic in a workflow.
+A dataflow value (also known as a *value channel*) is an asynchronous value of type `V`. It is used to facilitate dataflow logic in a workflow.
 
 See [Dataflow][dataflow-page] for an overview of dataflow types.
 
