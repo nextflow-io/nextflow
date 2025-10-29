@@ -93,8 +93,8 @@ workflow {
       [
         id: id,
         fastqc: fastqc,
-        bam: params.save_bam_bai ? bam : null,
-        bai: params.save_bam_bai ? bai : null,
+        bam: bam,
+        bai: bai,
         quant: quant
       ]
     }
@@ -114,8 +114,8 @@ output {
   samples {
     path { sample ->
       sample.fastqc >> 'log/'
-      sample.bam >> 'align/'
-      sample.bai >> 'align/'
+      sample.bam >> (params.save_bam_bai ? 'align/' : null)
+      sample.bai >> (params.save_bam_bai ? 'align/' : null)
       sample.quant >> "quant/${sample.id}"
     }
     index {
