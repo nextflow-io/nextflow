@@ -29,7 +29,7 @@ dependencies {
     api "ch.qos.logback:logback-classic:1.5.20"
     api "org.apache.groovy:groovy:4.0.29"
     api "org.apache.groovy:groovy-nio:4.0.29"
-    api "commons-lang:commons-lang:2.6"
+    api "org.apache.commons:commons-lang3:3.18.0"
     api 'com.google.guava:guava:33.0.0-jre'
     api 'org.pf4j:pf4j:3.12.0'
     api 'org.pf4j:pf4j-update:2.3.0'
