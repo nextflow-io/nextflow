@@ -20,6 +20,13 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+/**
+ * Deprecated alias for backwards compatibility.
+ *
+ * @deprecated Use {@link nextflow.config.spec.ConfigOption} instead.
+ *             This package was renamed from config.schema to config.spec.
+ */
+@Deprecated
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.FIELD)
 public @interface ConfigOption {

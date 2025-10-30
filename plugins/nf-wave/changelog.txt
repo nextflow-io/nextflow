@@ -1,5 +1,8 @@
 nf-wave changelog
 ==================
+1.16.1 - 21 Oct 2025
+- Rename `config.schema` package to `config.spec` (#6485) [ef0d2d601]
+
 1.16.0 - 8 Oct 2025
 - Fix cookie policy for Seqera Platform JWT token refresh (#6411) [c3959cfc3]
 

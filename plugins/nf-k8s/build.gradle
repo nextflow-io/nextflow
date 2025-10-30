@@ -19,7 +19,7 @@ plugins {
 }
 
 nextflowPlugin {
-    nextflowVersion = '25.08.0-edge'
+    nextflowVersion = '25.09.2-edge'
 
     provider = "${nextflowPluginProvider}"
     description = 'Provides native Kubernetes execution capability with advanced pod management, volume mounting, and resource allocation features'
@@ -55,8 +55,8 @@ dependencies {
     api 'org.bouncycastle:bcpkix-jdk18on:1.78.1'
 
     testImplementation(testFixtures(project(":nextflow")))
-    testImplementation "org.apache.groovy:groovy:4.0.28"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.28"
+    testImplementation "org.apache.groovy:groovy:4.0.29"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.29"
 }
 
 test {

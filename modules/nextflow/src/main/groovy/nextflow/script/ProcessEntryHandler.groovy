@@ -16,22 +16,32 @@
 
 package nextflow.script
 
+import java.nio.file.Path
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.Nextflow
+import nextflow.script.params.EnvInParam
+import nextflow.script.params.FileInParam
+import nextflow.script.params.InParam
+import nextflow.script.params.StdInParam
+import nextflow.script.params.TupleInParam
+import nextflow.script.params.v2.ProcessInput
+import nextflow.script.params.v2.ProcessTupleInput
 
 /**
  * Helper class for process entry execution feature.
- * 
+ *
  * This feature enables direct execution of Nextflow processes without explicit workflows:
  * - Single process scripts run automatically: `nextflow run script.nf --param value`
  * - Multi-process scripts run the first process automatically: `nextflow run script.nf --param value`
  * - Command-line parameters are mapped directly to process inputs
- * - Supports all standard Nextflow input types: val, path, env, tuple, each
+ * - Supports the following process input qualifiers: val, path, tuple, each
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class ProcessEntryHandler {
 
     private final BaseScript script
@@ -48,277 +58,82 @@ class ProcessEntryHandler {
      * Creates a workflow to execute a standalone process automatically.
      * For single process scripts, executes that process.
      * For multi-process scripts, executes the first process.
-     * 
+     *
      * @return WorkflowDef that executes the process with parameter mapping
      */
-    WorkflowDef createAutoProcessWorkflow() {
-        def processNames = meta.getLocalProcessNames()
+    WorkflowDef createAutoProcessEntry() {
+        final processNames = meta.getLocalProcessNames()
         if( processNames.isEmpty() ) {
             throw new IllegalStateException("No processes found for auto-execution")
         }
-        
+
         // Always pick the first process (whether single or multiple processes)
         final processName = processNames.first()
         final processDef = meta.getProcess(processName)
-        
-        return createProcessWorkflow(processDef)
+
+        return createProcessEntry(processDef)
     }
 
     /**
      * Creates a workflow to execute the specified process with automatic parameter mapping.
      */
-    private WorkflowDef createProcessWorkflow(ProcessDef processDef) {
+    private WorkflowDef createProcessEntry(ProcessDef processDef) {
         final processName = processDef.name
-        
-        // Create a simple workflow body that just executes the process
-        def workflowBodyClosure = { ->
+
+        final workflowBody = { ->
             // Create the workflow execution logic
-            def workflowExecutionClosure = { ->
+            final workflowExecutionClosure = { ->
                 // Get input parameter values and execute the process
-                def inputArgs = getProcessInputArguments(processDef)
-                def processResult = script.invokeMethod(processName, inputArgs as Object[])
-                
+                final inputArgs = getProcessArguments(processDef)
+                final processResult = script.invokeMethod(processName, inputArgs as Object[])
+
                 return processResult
             }
-            
+
             // Create the body definition with execution logic
-            def sourceCode = "    // Auto-generated process workflow\n    ${processName}(...)"
+            final sourceCode = "    // Auto-generated process entry\n    ${processName}(...)"
             return new BodyDef(workflowExecutionClosure, sourceCode, 'workflow')
         }
-        
-        // Create a simple workflow definition without complex emission logic
-        return new WorkflowDef(script, workflowBodyClosure)
+
+        return new WorkflowDef(script, workflowBody)
     }
 
     /**
      * Gets the input arguments for a process by parsing input parameter structures
      * and mapping them from session.params, supporting dot notation for complex inputs.
-     * 
+     *
      * @param processDef The ProcessDef object containing the process definition
      * @return List of parameter values to pass to the process
      */
-    private List getProcessInputArguments(ProcessDef processDef) {
+    private List getProcessArguments(ProcessDef processDef) {
         try {
             log.debug "Getting input arguments for process: ${processDef.name}"
             log.debug "Session params: ${session.params}"
-            
-            def inputStructures = parseProcessInputStructures(processDef)
-            log.debug "Parsed input structures: ${inputStructures}"
-            
-            if( inputStructures.isEmpty() ) {
-                log.debug "No input structures found, returning empty list"
-                return []
-            }
-            
-            // Parse complex parameters from session.params (handles dot notation)
-            def complexParams = parseComplexParameters(session.params)
-            log.debug "Complex parameters: ${complexParams}"
-            
-            // Map input structures to actual values
-            List inputArgs = []
-            for( def inputDef : inputStructures ) {
-                log.debug "Processing input definition: ${inputDef}"
-                if( inputDef.type == 'tuple' ) {
-                    // Handle tuple inputs - construct list with proper elements
-                    List tupleElements = []
-                    for( def element : inputDef.elements ) {
-                        log.debug "Getting value for tuple element: ${element}"
-                        def value = getValueForInput(element, complexParams)
-                        tupleElements.add(value)
-                    }
-                    log.debug "Constructed tuple: ${tupleElements}"
-                    inputArgs.add(tupleElements)
-                } else {
-                    // Handle simple inputs
-                    def value = getValueForInput(inputDef, complexParams)
-                    log.debug "Got simple input value: ${value}"
-                    inputArgs.add(value)
-                }
-            }
-            
+
+            final config = processDef.getProcessConfig()
+            final inputArgs = config instanceof ProcessConfigV1
+                ? getProcessArgumentsV1(config)
+                : getProcessArgumentsV2((ProcessConfigV2) config)
+
             log.debug "Final input arguments: ${inputArgs}"
             return inputArgs
-            
+
         } catch (Exception e) {
             log.error "Failed to get input arguments for process ${processDef.name}: ${e.message}"
             throw e
         }
     }
-    
-    /**
-     * Parses the process body to extract input parameter structures by intercepting
-     * Nextflow's internal compiled method calls (_in_val, _in_path, _in_tuple, etc.).
-     *
-     * @param processDef The ProcessDef containing the raw process body
-     * @return List of input structures with type and name information
-     */
-    private List parseProcessInputStructures(ProcessDef processDef) {
-        def inputStructures = []
-        
-        // Create delegate to capture Nextflow's internal input method calls
-        def delegate = new Object() {
-            def _in_val(tokenVar) { 
-                def varName = extractVariableName(tokenVar)
-                if( varName ) inputStructures.add([type: 'val', name: varName]) 
-            }
-            def _in_path(tokenVar) { 
-                def varName = extractVariableName(tokenVar)
-                if( varName ) inputStructures.add([type: 'path', name: varName]) 
-            }
-            def _in_file(tokenVar) { 
-                def varName = extractVariableName(tokenVar)
-                if( varName ) inputStructures.add([type: 'file', name: varName]) 
-            }
-            def _in_env(tokenVar) { 
-                def varName = extractVariableName(tokenVar)
-                if( varName ) inputStructures.add([type: 'env', name: varName]) 
-            }
-            def _in_each(tokenVar) { 
-                def varName = extractVariableName(tokenVar)
-                if( varName ) inputStructures.add([type: 'each', name: varName]) 
-            }
-            
-            def extractVariableName(token) {
-                if( token?.hasProperty('name') ) {
-                    return token.name.toString()
-                } else {
-                    // Try to extract from string representation
-                    def match = token.toString() =~ /TokenVar\(([^)]+)\)/
-                    return match ? match[0][1] : null
-                }
-            }
-            
-            def _in_tuple(Object... items) {
-                def tupleElements = []
-                for( item in items ) {
-                    log.debug "Processing tuple item: ${item} of class ${item?.getClass()?.getSimpleName()}"
-                    
-                    def itemType = 'val' // default
-                    def itemName = null
-                    
-                    // Handle different token call types by checking class name
-                    def className = item.getClass().getSimpleName()
-                    if( className == 'TokenValCall' ) {
-                        itemType = 'val'
-                        itemName = extractVariableNameFromToken(item)
-                    } else if( className == 'TokenPathCall' || className == 'TokenFileCall' ) {
-                        itemType = 'path'
-                        itemName = extractVariableNameFromToken(item)
-                    } else if( className == 'TokenEnvCall' ) {
-                        itemType = 'env'
-                        itemName = extractVariableNameFromToken(item)
-                    } else if( className == 'TokenEachCall' ) {
-                        itemType = 'each'
-                        itemName = extractVariableNameFromToken(item)
-                    } else {
-                        // Fallback: try to extract from string representation
-                        if( item.toString().contains('TokenValCall') ) {
-                            itemType = 'val'
-                            def tokenVar = item.toString().find(/TokenVar\(([^)]+)\)/) { match, varName -> varName }
-                            itemName = tokenVar
-                        }
-                    }
-                    
-                    if( itemName ) {
-                        log.debug "Parsed tuple element: ${itemName} (${itemType})"
-                        tupleElements.add([type: itemType, name: itemName])
-                    } else {
-                        log.warn "Could not parse tuple element: ${item} of class ${className}"
-                    }
-                }
-                log.debug "Parsed tuple with ${tupleElements.size()} elements: ${tupleElements}"
-                inputStructures.add([type: 'tuple', elements: tupleElements])
-            }
-            
-            def extractVariableNameFromToken(token) {
-                // Try to access the variable property directly
-                try {
-                    if( token.hasProperty('variable') && token.variable?.hasProperty('name') ) {
-                        return token.variable.name.toString()
-                    }
-                    if( token.hasProperty('target') && token.target?.hasProperty('name') ) {
-                        return token.target.name.toString()
-                    }
-                    if( token.hasProperty('name') ) {
-                        return token.name.toString()
-                    }
-                    // Fallback to string parsing
-                    def match = token.toString() =~ /TokenVar\(([^)]+)\)/
-                    return match ? match[0][1] : null
-                } catch( Exception e ) {
-                    log.debug "Error extracting variable name from ${token}: ${e.message}"
-                    return null
-                }
-            }
-            
-            // Handle legacy input block syntax for backward compatibility
-            def input(Closure inputBody) {
-                def inputDelegate = new Object() {
-                    def val(name) { 
-                        inputStructures.add([type: 'val', name: name.toString()]) 
-                    }
-                    def path(name) { 
-                        inputStructures.add([type: 'path', name: name.toString()]) 
-                    }
-                    def file(name) { 
-                        inputStructures.add([type: 'file', name: name.toString()]) 
-                    }
-                    def env(name) { 
-                        inputStructures.add([type: 'env', name: name.toString()]) 
-                    }
-                    def each(name) { 
-                        inputStructures.add([type: 'each', name: name.toString()]) 
-                    }
-                    def tuple(Object... items) {
-                        def tupleElements = []
-                        for( item in items ) {
-                            if( item instanceof String || (item instanceof groovy.lang.GString) ) {
-                                tupleElements.add([type: 'val', name: item.toString()])
-                            }
-                        }
-                        inputStructures.add([type: 'tuple', elements: tupleElements])
-                    }
-                    def methodMissing(String name, args) {
-                        for( arg in args ) {
-                            if( arg instanceof String || (arg instanceof groovy.lang.GString) ) {
-                                inputStructures.add([type: name, name: arg.toString()])
-                            }
-                        }
-                    }
-                }
-                inputBody.delegate = inputDelegate
-                inputBody.resolveStrategy = Closure.DELEGATE_FIRST
-                inputBody.call()
-            }
-            
-            // Ignore all other method calls during parsing
-            def methodMissing(String name, args) { /* ignore */ }
-        }
-        
-        // Execute the process body with our capturing delegate
-        def bodyClone = processDef.rawBody.clone()
-        bodyClone.delegate = delegate
-        bodyClone.resolveStrategy = Closure.DELEGATE_FIRST
-        
-        try {
-            bodyClone.call()
-        } catch (Exception e) {
-            // Ignore exceptions during parsing - we only want to capture input structures
-        }
-        
-        return inputStructures
-    }
-    
+
     /**
      * Parses complex parameters with dot notation support.
      * Converts flat parameters like --meta.id=1 --meta.name=test to nested maps.
-     * 
+     *
      * @param params Flat parameter map from session.params
      * @return Map with nested structures for complex parameters
      */
     private Map parseComplexParameters(Map params) {
         Map complexParams = [:]
-        
+
         params.each { key, value ->
             def parts = key.toString().split('\\.')
             if( parts.length > 1 ) {
@@ -336,10 +151,134 @@ class ProcessEntryHandler {
                 complexParams[key] = value
             }
         }
-        
+
         return complexParams
     }
-    
+
+    private List getProcessArgumentsV1(ProcessConfigV1 config) {
+        final declaredInputs = config.getInputs()
+
+        if( declaredInputs.isEmpty() ) {
+            return []
+        }
+
+        // Parse complex parameters from session.params (handles dot notation)
+        final complexParams = parseComplexParameters(session.params)
+        log.debug "Complex parameters: ${complexParams}"
+
+        // Map declared inputs to command-line arguments
+        List arguments = []
+        for( final param : declaredInputs ) {
+            if( param instanceof TupleInParam ) {
+                List tupleElements = []
+                for( final innerParam : param.inner ) {
+                    final value = getValueForInput(innerParam, complexParams)
+                    tupleElements.add(value)
+                }
+                arguments.add(tupleElements)
+            }
+            else {
+                final value = getValueForInput(param, complexParams)
+                arguments.add(value)
+            }
+        }
+
+        return arguments
+    }
+
+    private List getProcessArgumentsV2(ProcessConfigV2 config) {
+        final declaredInputs = config.getInputs().getParams()
+
+        if( declaredInputs.isEmpty() ) {
+            return []
+        }
+
+        // Parse complex parameters from session.params (handles dot notation)
+        final complexParams = parseComplexParameters(session.params)
+        log.debug "Complex parameters: ${complexParams}"
+
+        // Map declared inputs to command-line arguments
+        List arguments = []
+        for( final param : declaredInputs ) {
+            if( param instanceof ProcessTupleInput ) {
+                List tupleElements = []
+                for( final innerParam : param.getComponents() ) {
+                    final value = getValueForInput(innerParam, complexParams)
+                    tupleElements.add(value)
+                }
+                arguments.add(tupleElements)
+            }
+            else {
+                final value = getValueForInput(param, complexParams)
+                arguments.add(value)
+            }
+        }
+
+        return arguments
+    }
+
+    /**
+     * Gets the appropriate value for an input definition, handling type conversion.
+     *
+     * @param param Input declaration
+     * @param namedArgs Map of command-line arguments
+     * @return Properly typed value for the input
+     */
+    private Object getValueForInput(InParam param, Map namedArgs) {
+        final paramName = param.getName()
+        final paramValue = namedArgs.get(paramName)
+
+        if( paramValue == null ) {
+            throw new IllegalArgumentException("Missing required parameter: --${paramName}")
+        }
+
+        if( param instanceof ProcessInput ) {
+            return getTypedValueForInput(param.type, paramValue)
+        }
+
+        switch( param ) {
+            case FileInParam:
+                return parseFileInput(paramValue.toString())
+
+            case EnvInParam:
+                throw new IllegalArgumentException("Process `env` input qualifier is not supported by implicit process entry")
+
+            case StdInParam:
+                throw new IllegalArgumentException("Process `stdin` input qualifier is not supported by implicit process entry")
+
+            default:
+                return paramValue
+        }
+    }
+
+    private Object getTypedValueForInput(Class type, Object value) {
+        if( value !instanceof String )
+            return value
+
+        final str = (String) value
+
+        if( type == Boolean ) {
+            if( str.toLowerCase() == 'true' ) return Boolean.TRUE
+            if( str.toLowerCase() == 'false' ) return Boolean.FALSE
+        }
+
+        if( type == Integer || type == Float ) {
+            if( str.isInteger() ) return str.toInteger()
+            if( str.isLong() ) return str.toLong()
+        }
+
+        if( type == Float ) {
+            if( str.isFloat() ) return str.toFloat()
+            if( str.isDouble() ) return str.toDouble()
+        }
+
+        if( type == Path ) {
+            return Nextflow.file(str)
+        }
+
+        return value
+    }
+
     /**
      * Parses file input handling comma-separated values.
      * If the input contains commas, splits and returns a list of files.
@@ -358,43 +297,6 @@ class ProcessEntryHandler {
         } else {
             // Single file case - existing behavior
             return Nextflow.file(fileInput)
-        }
-    }
-    
-    /**
-     * Gets the appropriate value for an input definition, handling type conversion.
-     * 
-     * @param inputDef Input definition with type and name
-     * @param complexParams Parsed parameter map with nested structures
-     * @return Properly typed value for the input
-     */
-    private Object getValueForInput(Map inputDef, Map complexParams) {
-        def paramName = inputDef.name
-        def paramType = inputDef.type
-        def paramValue = complexParams.get(paramName)
-        
-        if( paramValue == null ) {
-            throw new IllegalArgumentException("Missing required parameter: --${paramName}")
-        }
-        
-        // Type-specific conversion
-        switch( paramType ) {
-            case 'path':
-            case 'file':
-                if( paramValue instanceof String || paramValue instanceof GString ) {
-                    return parseFileInput(paramValue.toString())
-                }
-                return paramValue
-                
-            case 'val':
-                // For val inputs, return as-is (could be Map for complex structures)
-                return paramValue
-                
-            case 'env':
-                return paramValue?.toString()
-                
-            default:
-                return paramValue
         }
     }
 }

@@ -16,7 +16,7 @@
 package nextflow.plugin.spec
 
 import groovy.transform.CompileStatic
-import nextflow.config.schema.SchemaNode
+import nextflow.config.spec.SpecNode
 import nextflow.script.types.Types
 import org.codehaus.groovy.ast.ClassNode
 
@@ -28,21 +28,21 @@ import org.codehaus.groovy.ast.ClassNode
 @CompileStatic
 class ConfigSpec {
 
-    static Map<String,?> of(SchemaNode node, String name) {
+    static Map<String,?> of(SpecNode node, String name) {
         return fromNode(node, name)
     }
 
-    private static Map<String,?> fromNode(SchemaNode node, String name) {
-        if( node instanceof SchemaNode.Option )
+    private static Map<String,?> fromNode(SpecNode node, String name) {
+        if( node instanceof SpecNode.Option )
             return fromOption(node, name)
-        if( node instanceof SchemaNode.Placeholder )
+        if( node instanceof SpecNode.Placeholder )
             return fromPlaceholder(node, name)
-        if( node instanceof SchemaNode.Scope )
+        if( node instanceof SpecNode.Scope )
             return fromScope(node, name)
         throw new IllegalStateException()
     }
 
-    private static Map<String,?> fromOption(SchemaNode.Option node, String name) {
+    private static Map<String,?> fromOption(SpecNode.Option node, String name) {
         final description = node.description().stripIndent(true).trim()
         final type = fromType(new ClassNode(node.type()))
 
@@ -56,7 +56,7 @@ class ConfigSpec {
         ]
     }
 
-    private static Map<String,?> fromPlaceholder(SchemaNode.Placeholder node, String name) {
+    private static Map<String,?> fromPlaceholder(SpecNode.Placeholder node, String name) {
         final description = node.description().stripIndent(true).trim()
         final placeholderName = node.placeholderName()
         final scope = fromScope(node.scope())
@@ -72,7 +72,7 @@ class ConfigSpec {
         ]
     }
 
-    private static Map<String,?> fromScope(SchemaNode.Scope node, String scopeName=null) {
+    private static Map<String,?> fromScope(SpecNode.Scope node, String scopeName=null) {
         final description = node.description().stripIndent(true).trim()
         final children = node.children().collect { name, child ->
             fromNode(child, name)

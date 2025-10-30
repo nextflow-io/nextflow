@@ -42,9 +42,9 @@ class NextflowMeta {
     static class Preview implements Flags {
         @Deprecated volatile float dsl
         @Deprecated boolean strict
-        boolean output
         boolean recursion
         boolean moduleBinaries
+        boolean types
 
         @Deprecated
         void setDsl( float num ) {
@@ -55,12 +55,6 @@ class NextflowMeta {
             if( num == 2 && !ignoreWarnDsl2 )
                 log.warn1 "DSL 2 PREVIEW MODE IS DEPRECATED - USE THE STABLE VERSION INSTEAD. Read more at https://www.nextflow.io/docs/latest/dsl2.html#dsl2-migration-notes"
             dsl = num
-        }
-
-        void setOutput(Boolean output) {
-            if( output )
-                log.warn "WORKFLOW OUTPUT DEFINITION IS A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CHANGE IN FUTURE RELEASES"
-            this.output = output
         }
 
         void setRecursion(Boolean recursion) {
