@@ -14,37 +14,39 @@ Nextflow options use a single dash prefix, e.g. `-resume`. Do not confuse with d
 
 ### Hard configuration override
 
-Use the specified configuration file(s) overriding any defaults.
+Use the `-C` option to replace all settings in default configuration files with those from a specified file:
 
 ```console
-$ nextflow -C my.config COMMAND [arg...]
+$ nextflow -C <config_file> COMMAND [arg...]
 ```
 
-The `-C` option is used to override *all* settings specified in the default config file. For soft override, please refer the `-c` option.
+This option is useful when you require complete control over the configuration and want to override all default Nextflow configuration file settings. Unlike `-c`, which merges configurations, `-C` performs a complete override and ensures **only** your custom configuration is applied.
 
-- Override **any** default configuration with a custom configuration file:
+**Example:**
 
-  ```console
-  $ nextflow -C my.config run nextflow-io/hello
-  ```
+Override **any** default configuration with a custom configuration file:
+
+```console
+nextflow -C my.config run nextflow-io/hello
+```
 
 ### JVM properties
 
-Set JVM properties.
+Use the `-D` option to set custom Java system properties and configure or fine-tune the JVM instance used by Nextflow:
 
 ```console
-$ nextflow -Dkey=value COMMAND [arg...]
+$ nextflow -D<key>=<value> COMMAND [arg...]
 ```
 
-This option allows the definition of custom Java system properties that can be used to properly configure or fine tuning the JVM instance used by the Nextflow runtime.
+This option is useful for setting encoding, memory parameters, or other Java-level properties. You can specify multiple properties by using the `-D` option multiple times. For other JVM-level options, see {ref}`config-env-vars`.
 
-For specifying other JVM level options, please refer to the {ref}`config-env-vars` section.
+**Example:**
 
-- Add JVM properties to the invoked pipeline:
+Add JVM properties to the invoked pipeline:
 
-  ```console
-  $ nextflow -Dfile.encoding=UTF-8 run nextflow-io/hello
-  ```
+```console
+nextflow -Dfile.encoding=UTF-8 run nextflow-io/hello
+```
 
 ### Execution as a background job
 
