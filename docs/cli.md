@@ -299,53 +299,33 @@ Parameters are applied in the following order (from lowest to highest priority):
 
 ### Running pipelines in Seqera Platform
 
-Nextflow integrates with [Seqera Platform](https://seqera.io/platform/) through the `launch` and `auth` commands, enabling pipeline execution and monitoring through the platform's centralized infrastructure.
+Nextflow integrates with [Seqera Platform](https://seqera.io/platform/) through the `launch` and `auth` commands, enabling user authentication and pipeline execution through Platform infrastructure.
 
-#### Authentication mechanism
-
-Use the `auth login` command to authenticate with Seqera Platform:
+Execute the `auth login` subcommand to authenticate with Platform:
 
 ```console
 $ nextflow auth login
 ```
 
-It initiates an OAuth2 flow and persists credentials locally in `~/.nextflow/seqera-auth.config`
+The `login` subcommand initiates an OAuth2 flow and persists credentials locally in `~/.nextflow/seqera-auth.config`.
 
-For self-hosted Seqera Enterprise installations, use the `-u` option specifies a custom API endpoint:
+For self-hosted Seqera Enterprise installations, specify your API endpoint with the `-u` option:
 
 ```console
 $ nextflow auth login -u https://example.com
 ```
 
-Additional subcommands manage authentication state:
+The `auth` command also supports authentication management and configuration. See  {ref}`cli-auth` for a list of available subcommands.
 
-- `status`: Verify authentication status and credentials
-- `config`: Configure Platform settings, such as compute environments and workspaces
-- `logout`: Clear stored credentials and terminate the authenticated session
-
-For a complete list of available options, see  {ref}`cli-auth`.
-
-#### Platform-based pipeline execution
-
-Use the `launch` command to run pipelines in Seqera Platform:
+Execute the `launch` command to run pipelines in Seqera Platform:
 
 ```console
 $ nextflow launch nextflow-io/hello
 ```
 
-It submits pipeline execution requests to Seqera Platform, which orchestrates the workflow on the specified compute environment. Unlike `run`, which executes locally or on a configured executor, `launch` separates the submission interface from the execution environment.
+The `launch` command submits pipeline execution requests to Seqera Platform, which orchestrates the workflow on the specified compute environment. Unlike `run`, which executes locally or on a configured executor, `launch` separates the submission interface from the execution environment.
 
-The command supports common `run` options and Platform-specific options. For example:
-
-- `-r, -revision`: A project revision (branch, tag, or commit)
-- `-params-file`: A JSON or YAML file to load parameters from
-- `-profile`: A configuration profile
-- `-resume`: A previous execution
-- `-w, -work-dir`: The working directory
-- `-compute-env`: The compute environment for execution
-- `-workspace`: The Seqera Platform workspace
-
-For a complete list of available options, see {ref}`cli-launch`.
+The command also supports common `run` and Platform-specific options. See {ref}`cli-launch` for a list of available options.
 
 ## Managing projects
 
