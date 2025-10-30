@@ -2,12 +2,12 @@
 
 # Command line
 
-Nextflow provides a robust command line interface (CLI) for the management and execution of pipelines.
+Nextflow provides a robust command line interface (CLI) for executing and managing computational pipelines.
 
-Simply run `nextflow` with no options or `nextflow -h` to see the list of available top-level options and commands. See {ref}`cli-reference` for the full list of subcommands with examples.
+To view available options and commands, run `nextflow -h`. For complete documentation of all commands and subcommands with usage examples, see {ref}`cli-reference`.
 
 :::{note}
-Nextflow options use a single dash prefix, e.g. `-resume`. Do not confuse with double dash notation, e.g. `--resume`, which is instead used for {ref}`Pipeline parameters <cli-params>`.
+Nextflow options use a single dash prefix (e.g., `-resume`), while pipeline parameters use a double dash prefix (e.g., `--resume`). See {ref}`Pipeline parameters <cli-params>` for more information.
 :::
 
 ## Basic usage
