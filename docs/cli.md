@@ -297,6 +297,56 @@ Parameters are applied in the following order (from lowest to highest priority):
 3. Parameters specified in a params file (`-params-file`)
 4. Parameters specified on the command line (`--something value`)
 
+### Running pipelines in Seqera Platform
+
+Nextflow integrates with [Seqera Platform](https://seqera.io/platform/) through the `launch` and `auth` commands, enabling pipeline execution and monitoring through the platform's centralized infrastructure.
+
+#### Authentication mechanism
+
+Use the `auth login` command to authenticate with Seqera Platform:
+
+```console
+$ nextflow auth login
+```
+
+It initiates an OAuth2 flow and persists credentials locally in `~/.nextflow/seqera-auth.config`
+
+For self-hosted Seqera Enterprise installations, use the `-u` option specifies a custom API endpoint:
+
+```console
+$ nextflow auth login -u https://example.com
+```
+
+Additional subcommands manage authentication state:
+
+- `status`: Verify authentication status and credentials
+- `config`: Configure Platform settings, such as compute environments and workspaces
+- `logout`: Clear stored credentials and terminate the authenticated session
+
+For a complete list of available options, see  {ref}`cli-auth`.
+
+#### Platform-based pipeline execution
+
+Use the `launch` command to run pipelines in Seqera Platform:
+
+```console
+$ nextflow launch nextflow-io/hello
+```
+
+It submits pipeline execution requests to Seqera Platform, which orchestrates the workflow on the specified compute environment. Unlike `run`, which executes locally or on a configured executor, `launch` separates the submission interface from the execution environment.
+
+The command supports common `run` options and Platform-specific options. For example:
+
+- `-r, -revision`: A project revision (branch, tag, or commit)
+- `-params-file`: A JSON or YAML file to load parameters from
+- `-profile`: A configuration profile
+- `-resume`: A previous execution
+- `-w, -work-dir`: The working directory
+- `-compute-env`: The compute environment for execution
+- `-workspace`: The Seqera Platform workspace
+
+For a complete list of available options, see {ref}`cli-launch`.
+
 ## Managing projects
 
 Nextflow seamlessly integrates with popular Git providers, including [BitBucket](http://bitbucket.org/), [GitHub](http://github.com), and [GitLab](http://gitlab.com) for managing Nextflow pipelines as version-controlled Git repositories.
