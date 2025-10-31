@@ -323,7 +323,7 @@ To run pipelines in Seqera Platform, execute the `launch` command:
 $ nextflow launch nextflow-io/hello
 ```
 
-The `launch` command submits pipeline execution requests to Platform, which orchestrates the workflow on the specified compute environment. Unlike `run`, which executes locally or on a configured executor, `launch` separates the submission interface from the execution environment. 
+The `launch` command submits pipeline execution requests to Platform, which orchestrates the workflow on the specified compute environment. Unlike `run`, which executes locally or on a configured executor, `launch` submits the workflow to Platform for execution on Platform-managed infrastructure.
 
 The command also supports common `run` and Platform-specific options. See {ref}`cli-launch` for a list of available options.
 
