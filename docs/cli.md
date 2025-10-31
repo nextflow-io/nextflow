@@ -301,13 +301,13 @@ Parameters are applied in the following order (from lowest to highest priority):
 
 Nextflow integrates with [Seqera Platform](https://seqera.io/platform/) through the `launch` and `auth` commands, enabling user authentication and pipeline execution through Platform infrastructure.
 
-Execute the `auth login` subcommand to authenticate with Platform:
+To authenticate with Platform, execute the `auth login` subcommand:
 
 ```console
 $ nextflow auth login
 ```
 
-The `login` subcommand initiates an OAuth2 flow and persists credentials locally in `~/.nextflow/seqera-auth.config`.
+The `login` subcommand initiates an OAuth2 flow and stores credentials locally in `~/.nextflow/seqera-auth.config`.
 
 For self-hosted Seqera Enterprise installations, specify your API endpoint with the `-u` option:
 
@@ -317,13 +317,13 @@ $ nextflow auth login -u https://example.com
 
 The `auth` command also supports authentication management and configuration. See  {ref}`cli-auth` for a list of available subcommands.
 
-Execute the `launch` command to run pipelines in Seqera Platform:
+To run pipelines in Seqera Platform, execute the `launch` command:
 
 ```console
 $ nextflow launch nextflow-io/hello
 ```
 
-The `launch` command submits pipeline execution requests to Seqera Platform, which orchestrates the workflow on the specified compute environment. Unlike `run`, which executes locally or on a configured executor, `launch` separates the submission interface from the execution environment.
+The `launch` command submits pipeline execution requests to Platform, which orchestrates the workflow on the specified compute environment. Unlike `run`, which executes locally or on a configured executor, `launch` separates the submission interface from the execution environment. 
 
 The command also supports common `run` and Platform-specific options. See {ref}`cli-launch` for a list of available options.
 
