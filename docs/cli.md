@@ -4,7 +4,7 @@
 
 Nextflow provides a robust command line interface (CLI) for executing and managing computational pipelines.
 
-To view available options and commands, run `nextflow -h`. For complete documentation of all commands and subcommands with usage examples, see {ref}`cli-reference`.
+To view available options and commands, run `nextflow -h`. For complete documentation of all commands and subcommands, see {ref}`cli-reference`.
 
 :::{note}
 Nextflow options use a single dash prefix (e.g., `-resume`), while pipeline parameters use a double dash prefix (e.g., `--resume`). See {ref}`Pipeline parameters <cli-params>` for more information.
@@ -14,20 +14,18 @@ Nextflow options use a single dash prefix (e.g., `-resume`), while pipeline para
 
 ### Hard configuration override
 
-Use the `-C` option to replace all settings in default configuration files with those from a specified file:
+Use the `-C` option to replace all settings in default Nextflow configuration files with those from a specified file:
 
 ```console
 $ nextflow -C <config_file> COMMAND [arg...]
 ```
 
-This option is useful when you require complete control over the configuration and want to override all default Nextflow configuration file settings. Unlike `-c`, which merges configurations, `-C` performs a complete override and ensures **only** your custom configuration is applied.
+The `-C` option is useful when you require complete control over the configuration and want to override all default Nextflow configuration file settings. Unlike `-c`, which merges configurations, `-C` performs a complete override and ensures only your custom configuration is applied.
 
-**Example:**
-
-Override **any** default configuration with a custom configuration file:
+For example, to override the default configuration with a custom configuration file:
 
 ```console
-nextflow -C my.config run nextflow-io/hello
+$ nextflow -C my.config run nextflow-io/hello
 ```
 
 ### JVM properties
@@ -38,31 +36,29 @@ Use the `-D` option to set custom Java system properties and configure or fine-t
 $ nextflow -D<key>=<value> COMMAND [arg...]
 ```
 
-This option is useful for setting encoding, memory parameters, or other Java-level properties. You can specify multiple properties by using the `-D` option multiple times. For other JVM-level options, see {ref}`config-env-vars`.
+The `-D` option is useful for setting encoding, memory parameters, or other Java-level properties. You can specify multiple properties by using the `-D` option multiple times. For other JVM-level options, see {ref}`config-env-vars`.
 
-**Example:**
-
-Add JVM properties to the invoked pipeline:
+For example, to add JVM properties to the invoked pipeline:
 
 ```console
-nextflow -Dfile.encoding=UTF-8 run nextflow-io/hello
+$ nextflow -Dfile.encoding=UTF-8 run nextflow-io/hello
 ```
 
 ### Execution as a background job
 
-Execute `nextflow` in the background.
+Use the `-bg` option to execute a Nextflow run in the background:
 
 ```console
 $ nextflow -bg COMMAND [arg...]
 ```
 
-The `-bg` option is used to invoke the nextflow execution in the background and allows the user to continue interacting with the terminal. This option is similar to `nohup` in behavior.
+The `-bg` invokes the Nextflow run in the background and allows the user to continue interacting with the terminal. This option is similar to `nohup` in behavior.
 
-- Invoke any execution as a background job:
+For example, invoke a run as a background job:
 
-  ```console
-  $ nextflow -bg run nextflow-io/hello
-  ```
+```console
+$ nextflow -bg run nextflow-io/hello
+```
 
 ### Soft configuration override
 
