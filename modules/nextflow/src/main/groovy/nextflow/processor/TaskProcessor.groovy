@@ -588,7 +588,14 @@ class TaskProcessor {
 
     private start(DataflowProcessor op) {
         session.addIgniter {
-            log.debug "Starting process > $name"
+            // Closure to get the (nested) list of param_type:param_name
+            def getParamNamesAndTypes 
+            getParamNamesAndTypes = { paramList ->
+                paramList.collect{param ->
+                    "${(param instanceof InParam)? param.getTypeName() : param.class.simpleName}:${(param !instanceof TupleInParam && param !instanceof TupleOutParam)? param.name : "[${getParamNamesAndTypes(param.getInner())}]"}"}.join(', ')
+            }
+            // Print process name with associated input and outputs
+            log.debug "Starting process > $name (${getParamNamesAndTypes(getConfig().getInputs())}) -> (${getParamNamesAndTypes(getConfig().getOutputs())})"
             op.start()
         }
     }
