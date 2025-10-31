@@ -48,6 +48,8 @@ class CombineOp {
 
     private Map<Object,List> rightValues = [:]
 
+    private Map<Object,Object> originalKeyMap = [:]
+
     private static final int LEFT = 0
 
     private static final int RIGHT = 1
@@ -93,7 +95,7 @@ class CombineOp {
         opts.onNext = {
             if( pivot ) {
                 def pair = makeKey(pivot, it)
-                emit(target, index, pair.keys, pair.values)
+                emit(target, index, pair)
             }
             else {
                 emit(target, index, NONE, it)
@@ -120,7 +122,36 @@ class CombineOp {
     }
 
     @PackageScope
-    synchronized void emit( DataflowWriteChannel target, int index, List p, v ) {
+    synchronized void emit( DataflowWriteChannel target, int index, KeyPair pair ) {
+        emit(target, index, pair.originalKeys, pair.keys, pair.values)
+    }
+
+    @PackageScope
+    synchronized void emit( DataflowWriteChannel target, int index, List originalKeys, List keys, v ) {
+        def p = keys  // Use normalized keys for matching
+
+        // Store/update the mapping from normalized key to original key
+        // Prefer GroupKey over plain keys
+        def existingOriginal = originalKeyMap.get(p)
+        if (existingOriginal == null) {
+            originalKeyMap[p] = originalKeys
+        } else {
+            // Check if any of the new original keys is a GroupKey
+            for (int i = 0; i < originalKeys.size(); i++) {
+                def newKey = originalKeys[i]
+                def oldKey = existingOriginal instanceof List ? existingOriginal[i] : existingOriginal
+                if (newKey instanceof GroupKey && !(oldKey instanceof GroupKey)) {
+                    originalKeyMap[p] = originalKeys
+                    break
+                }
+            }
+        }
+
+        // Use the best available original key (preferring GroupKey)
+        def bestOriginalKeys = originalKeyMap[p]
+        
+        // Ensure bestOriginalKeys is a List for the tuple method
+        def bestKeysList = bestOriginalKeys instanceof List ? bestOriginalKeys : [bestOriginalKeys]
 
         if( leftValues[p] == null ) leftValues[p] = []
         if( rightValues[p] == null ) rightValues[p] = []
@@ -128,7 +159,7 @@ class CombineOp {
         if( index == LEFT ) {
             log.trace "combine >> left >> by=$p; val=$v; right-values: ${rightValues[p]}"
             for ( Object x : rightValues[p] ) {
-                target.bind( tuple(p, v, x) )
+                target.bind( tuple(bestKeysList, v, x) )  // Use best original keys in output
             }
             leftValues[p].add(v)
             return
@@ -137,13 +168,19 @@ class CombineOp {
         if( index == RIGHT ) {
             log.trace "combine >> right >> by=$p; val=$v; right-values: ${leftValues[p]}"
             for ( Object x : leftValues[p] ) {
-                target.bind( tuple(p, x, v) )
+                target.bind( tuple(bestKeysList, x, v) )  // Use best original keys in output
             }
             rightValues[p].add(v)
             return
         }
 
         throw new IllegalArgumentException("Not a valid spread operator index: $index")
+    }
+
+    @PackageScope
+    synchronized void emit( DataflowWriteChannel target, int index, List p, v ) {
+        // Legacy method for when pivot is NONE
+        emit(target, index, p, p, v)
     }
 
     DataflowWriteChannel apply() {
