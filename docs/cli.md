@@ -1,8 +1,8 @@
 (cli-page)=
 
-# Command line
+# Command line interface
 
-Nextflow provides a robust command line interface (CLI) for executing and managing computational pipelines.
+The Nextflow command line interface (CLI) is the main way to execute and manage pipelines.
 
 To view available options and commands, run `nextflow -h`. For complete documentation of all commands and subcommands, see {ref}`cli-reference`.
 
@@ -14,7 +14,7 @@ Nextflow options use a single dash prefix (e.g., `-resume`), while pipeline para
 
 ### Hard configuration override
 
-Use the `-C` option to replace all settings in default Nextflow configuration files with those from a specified file:
+The `-C` option replaces all default Nextflow configuration files with those from a specified configuration file:
 
 ```console
 $ nextflow -C <config_file> COMMAND [arg...]
@@ -30,15 +30,15 @@ $ nextflow -C my.config run nextflow-io/hello
 
 ### JVM properties
 
-Use the `-D` option to set custom Java system properties and configure or fine-tune the JVM instance used by Nextflow:
+The `-D` option sets Java system properties that control the JVM instance running Nextflow:
 
 ```console
 $ nextflow -D<key>=<value> COMMAND [arg...]
 ```
 
-The `-D` option is useful for setting encoding, memory parameters, or other Java-level properties. You can specify multiple properties by using the `-D` option multiple times. For other JVM-level options, see {ref}`config-env-vars`.
+JVM properties configure Java behavior such as encoding, memory parameters, and other system-level settings. Multiple properties can be specified through repeated `-D` options. See {ref}`config-env-vars` for additional JVM configuration.
 
-For example, to add JVM properties to the invoked pipeline:
+For example, to add JVM properties to a pipeline run:
 
 ```console
 $ nextflow -Dfile.encoding=UTF-8 run nextflow-io/hello
@@ -46,15 +46,15 @@ $ nextflow -Dfile.encoding=UTF-8 run nextflow-io/hello
 
 ### Execution as a background job
 
-Use the `-bg` option to execute a Nextflow run in the background:
+The `-bg` option runs Nextflow pipelines as background processes:
 
 ```console
 $ nextflow -bg COMMAND [arg...]
 ```
 
-The `-bg` invokes the Nextflow run in the background and allows the user to continue interacting with the terminal. This option is similar to `nohup` in behavior.
+Background execution detaches the pipeline from the terminal session, similar to `nohup`, allowing continued terminal interaction while the pipeline runs.
 
-For example, invoke a run as a background job:
+For example, to invoke a run as a background job:
 
 ```console
 $ nextflow -bg run nextflow-io/hello
