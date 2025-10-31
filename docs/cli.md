@@ -297,6 +297,36 @@ Parameters are applied in the following order (from lowest to highest priority):
 3. Parameters specified in a params file (`-params-file`)
 4. Parameters specified on the command line (`--something value`)
 
+### Seqera Platform integration
+
+Nextflow integrates with [Seqera Platform](https://seqera.io/platform/) through the `launch` and `auth` commands, enabling user authentication and pipeline execution through Platform infrastructure.
+
+The `auth login` subcommand authenticates with Platform:
+
+```console
+$ nextflow auth login
+```
+
+The `login` subcommand initiates an OAuth2 flow and stores credentials locally in `~/.nextflow/seqera-auth.config`.
+
+For self-hosted Seqera Enterprise installations, the `-u` option specifies the API endpoint:
+
+```console
+$ nextflow auth login -u https://example.com
+```
+
+The `auth` command provides authentication management and configuration capabilities. See {ref}`cli-auth` for a list of available subcommands.
+
+The `launch` command runs pipelines in Seqera Platform:
+
+```console
+$ nextflow launch nextflow-io/hello
+```
+
+The `launch` command submits pipeline execution requests to Platform, which orchestrates the workflow on the specified compute environment. Unlike `run`, which executes locally or on a configured executor, `launch` submits the workflow to Platform for execution on Platform-managed infrastructure.
+
+The command supports common `run` and Platform-specific options. See {ref}`cli-launch` for a list of available options.
+
 ## Managing projects
 
 Nextflow seamlessly integrates with popular Git providers, including [BitBucket](http://bitbucket.org/), [GitHub](http://github.com), and [GitLab](http://gitlab.com) for managing Nextflow pipelines as version-controlled Git repositories.
