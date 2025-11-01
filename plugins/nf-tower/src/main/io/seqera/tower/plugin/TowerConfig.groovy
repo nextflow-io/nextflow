@@ -68,6 +68,12 @@ class TowerConfig implements ConfigScope {
     """)
     final String computeEnvId
 
+    @ConfigOption
+    @Description("""
+        Configuration for automatic upload of workflow outputs to Seqera Platform datasets.
+    """)
+    final DatasetConfig datasets
+
     /* required by extension point -- do not remove */
     TowerConfig() {}
 
@@ -79,5 +85,6 @@ class TowerConfig implements ConfigScope {
         this.workspaceId = PlatformHelper.getWorkspaceId(opts, env)
         if( opts.computeEnvId )
             this.computeEnvId = opts.computeEnvId as String
+        this.datasets = new DatasetConfig(opts.datasets as Map ?: Collections.emptyMap())
     }
 }
