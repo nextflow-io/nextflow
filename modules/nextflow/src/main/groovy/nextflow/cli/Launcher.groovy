@@ -90,11 +90,13 @@ class Launcher {
 
     protected void init() {
         allCommands = (List<CmdBase>)[
+                new CmdAuth(),
                 new CmdClean(),
                 new CmdClone(),
                 new CmdConsole(),
                 new CmdFs(),
                 new CmdInfo(),
+                new CmdLaunch(),
                 new CmdList(),
                 new CmdLog(),
                 new CmdPull(),
@@ -179,7 +181,7 @@ class Launcher {
         if( !options.logFile ) {
             if( isDaemon() )
                 options.logFile = System.getenv('NXF_LOG_FILE') ?: '.node-nextflow.log'
-            else if( command instanceof CmdRun || options.debug || options.trace )
+            else if( command instanceof CmdRun || command instanceof CmdLaunch || command instanceof CmdAuth || options.debug || options.trace )
                 options.logFile = System.getenv('NXF_LOG_FILE') ?: ".nextflow.log"
         }
     }

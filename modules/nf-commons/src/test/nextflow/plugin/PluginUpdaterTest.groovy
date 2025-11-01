@@ -549,7 +549,7 @@ class PluginUpdaterTest extends Specification {
         
         then:
         // Verify prefetch is called with the correct plugin specs
-        1 * mockRepo.prefetch({ List<PluginSpec> specs ->
+        1 * mockRepo.prefetch({ List<PluginRef> specs ->
             specs.size() == 2 &&
             specs[0].id == 'my-plugin' && specs[0].version == '1.0.0' &&
             specs[1].id == 'another-plugin' && specs[1].version == '2.0.0'

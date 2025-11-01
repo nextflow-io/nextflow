@@ -248,4 +248,132 @@ class ScriptAstBuilderTest extends Specification {
         errors[0].getOriginalMessage() == "Invalid workflow emit -- must be a name, assignment, or expression"
     }
 
+    def 'should report error for defining a typed process without preview flag' () {
+        when:
+        def errors = check(
+            '''\
+            process hello {
+                input:
+                message: String
+
+                output:
+                result: String
+
+                exec:
+                result = message
+            }
+            '''
+        )
+        then:
+        errors.size() >= 2
+        errors[0].getStartLine() == 3
+        errors[0].getStartColumn() == 5
+        errors[0].getOriginalMessage() == "Typed input declaration is not allowed in legacy process -- set `nextflow.preview.types = true` to use typed processes in this script"
+        errors[1].getStartLine() == 6
+        errors[1].getStartColumn() == 5
+        errors[1].getOriginalMessage() == "Typed output declaration is not allowed in legacy process -- set `nextflow.preview.types = true` to use typed processes in this script"
+
+        when:
+        errors = check(
+            '''\
+            nextflow.preview.types = true
+
+            process hello {
+                input:
+                message: String
+
+                output:
+                result: String
+
+                exec:
+                result = message
+            }
+            '''
+        )
+        then:
+        errors.size() == 0
+    }
+
+    def 'should report error for defining a legacy process with preview flag enabled' () {
+        when:
+        def errors = check(
+            '''\
+            nextflow.preview.types = true
+
+            process hello {
+                input:
+                val message
+
+                output:
+                val result
+
+                exec:
+                result = message
+            }
+            '''
+        )
+        then:
+        errors.size() >= 1
+        errors[0].getStartLine() == 5
+        errors[0].getStartColumn() == 5
+        errors[0].getOriginalMessage() == "Invalid input declaration in typed process"
+
+        when:
+        errors = check(
+            '''\
+            process hello {
+                input:
+                val message
+
+                output:
+                val result
+
+                exec:
+                result = message
+            }
+            '''
+        )
+        then:
+        errors.size() == 0
+    }
+
+    def 'should report error for invalid topic statement' () {
+        when:
+        def errors = check(
+            '''\
+            nextflow.preview.types = true
+
+            process hello {
+                topic:
+                versions = stdout()
+
+                script:
+                ""
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 5
+        errors[0].getStartColumn() == 5
+        errors[0].getOriginalMessage() == "Invalid process topic statement"
+
+        when:
+        errors = check(
+            '''\
+            nextflow.preview.types = true
+
+            process hello {
+                topic:
+                stdout() >> 'versions'
+
+                script:
+                ""
+            }
+            '''
+        )
+        then:
+        errors.size() == 0
+    }
+
 }

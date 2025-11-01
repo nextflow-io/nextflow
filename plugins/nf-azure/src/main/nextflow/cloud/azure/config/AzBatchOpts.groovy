@@ -24,9 +24,9 @@ import groovy.transform.CompileStatic
 import nextflow.Global
 import nextflow.Session
 import nextflow.cloud.CloudTransferOptions
-import nextflow.config.schema.ConfigOption
-import nextflow.config.schema.ConfigScope
-import nextflow.config.schema.PlaceholderName
+import nextflow.config.spec.ConfigOption
+import nextflow.config.spec.ConfigScope
+import nextflow.config.spec.PlaceholderName
 import nextflow.fusion.FusionHelper
 import nextflow.script.dsl.Description
 import nextflow.util.Duration

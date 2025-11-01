@@ -42,6 +42,7 @@ import nextflow.script.control.ProcessNameResolver;
 import nextflow.script.control.ResolveIncludeVisitor;
 import nextflow.script.control.ScriptResolveVisitor;
 import nextflow.script.control.ScriptToGroovyVisitor;
+import nextflow.script.control.StripTypesVisitor;
 import nextflow.script.control.TypeCheckingVisitor;
 import nextflow.script.parser.ScriptParserPluginFactory;
 import org.codehaus.groovy.ast.ASTNode;
@@ -290,6 +291,7 @@ public class ScriptCompiler {
 
             // convert to Groovy
             new ScriptToGroovyVisitor(source).visit();
+            new StripTypesVisitor(source).visitClass(cn);
             new PathCompareVisitor(source).visitClass(cn);
             new OpCriteriaVisitor(source).visitClass(cn);
             new GStringToStringVisitor(source).visitClass(cn);
