@@ -2,330 +2,287 @@
 
 # Command line interface
 
-The Nextflow command line interface (CLI) is the main way to execute and manage pipelines.
+The Nextflow command line interface (CLI) is how you interact with Nextflow to run pipelines, manage projects, inspect configurations, and maintain your workflow environment. This page explains the key concepts and common usage patterns for the CLI.
 
-To view available options and commands, run `nextflow -h`. For complete documentation of all commands and subcommands, see {ref}`cli-reference`.
+For a complete technical reference of all options, see {ref}`cli-reference`.
 
 :::{note}
-Nextflow options use a single dash prefix (e.g., `-resume`), while pipeline parameters use a double dash prefix (e.g., `--resume`). See {ref}`Pipeline parameters <cli-params>` for more information.
+Nextflow uses two types of command-line flags:
+
+- Nextflow options use a single dash (e.g., `-log`) and modify Nextflow's behavior.
+- Pipeline parameters use a double dash (e.g., `--input`) and are passed to your pipeline script.
 :::
 
-## Basic usage
+## Options
+
+Nextflow options are modifiers that control how Nextflow itself operates. Use them to configure execution behavior, manage logging, override configurations, or get information about Nextflow.
 
 ### Hard configuration override
 
-The `-C` option replaces all default Nextflow configuration files with those from a specified configuration file:
+The `-C` option replaces all default configuration with your custom configuration file, ensuring complete control over settings.
 
-```console
-$ nextflow -C <config_file> COMMAND [arg...]
-```
-
-The `-C` option is useful when you require complete control over the configuration and want to override all default Nextflow configuration file settings. Unlike `-c`, which merges configurations, `-C` performs a complete override and ensures only your custom configuration is applied.
-
-For example, to override the default configuration with a custom configuration file:
+Use this when you need absolute control and want to ensure no default configurations interfere with your custom settings. Unlike `-c` which merges configurations, `-C` ensures only your specified file is used.
 
 ```console
 $ nextflow -C my.config run nextflow-io/hello
 ```
 
-### JVM properties
+See {ref}`config-page` for more about configuration files.
 
-The `-D` option sets Java system properties that control the JVM instance running Nextflow:
+### Soft configuration override
 
-```console
-$ nextflow -D<key>=<value> COMMAND [arg...]
-```
+The `-c` option adds your configuration on top of the defaults and merges them together.
 
-JVM properties configure Java behavior such as encoding, memory parameters, and other system-level settings. Multiple properties can be specified through repeated `-D` options. See {ref}`config-env-vars` for additional JVM configuration.
-
-For example, to add JVM properties to a pipeline run:
+Use this when you want to override specific settings while keeping other defaults intact. You can specify `-c` multiple times to layer configurations, with later files taking precedence over earlier ones.
 
 ```console
-$ nextflow -Dfile.encoding=UTF-8 run nextflow-io/hello
+$ nextflow -c my.config run nextflow-io/hello
 ```
 
-### Execution as a background job
+See {ref}`config-page` for more about configuration files.
 
-The `-bg` option runs Nextflow pipelines as background processes:
+### Background execution
 
-```console
-$ nextflow -bg COMMAND [arg...]
-```
+The `-bg` option runs Nextflow as a background process and frees your terminal for other work.
 
-Background execution detaches the pipeline from the terminal session, similar to `nohup`, allowing continued terminal interaction while the pipeline runs.
-
-For example, to invoke a run as a background job:
+Use this for long-running pipelines when you need to continue using your terminal or want to disconnect without stopping execution. It works like `nohup`, allowing you to close your terminal without stopping the pipeline. Outputs are saved to `.nextflow.log` by default.
 
 ```console
 $ nextflow -bg run nextflow-io/hello
 ```
 
-### Soft configuration override
+### Quiet mode
 
-Add the specified file to configuration set.
+The `-q` option suppresses the Nextflow banner and execution progress output.
+
+Use this to keep your terminal output clean. It hides the ASCII banner and task progress but doesn't affect pipeline `println` statements or error messages.
 
 ```console
-$ nextflow -c nxf.config COMMAND [arg...]
+$ nextflow -q run nextflow-io/hello
 ```
 
-The `-c` option is used to append a new configuration to the default configuration. The `-c` option allows us to update the config in an additive manner. For **hard override**, refer to the `-C` option.
+### Custom log file path
 
-- Update *some* fields of the default config for any pipeline:
+The `-log` option directs Nextflow logs to a specific file instead of the default `.nextflow.log`.
 
-  ```console
-  $ nextflow -c nxf.config run nextflow-io/hello
-  ```
+Use this for organizing logs by project, integrating with logging systems, or storing logs in centralized locations.
 
-### Help
+```console
+$ nextflow -log /var/log/nextflow.log run nextflow-io/hello
+```
 
-Print the help message.
+### Syslog integration
+
+The `-syslog` option sends logs to a [Syslog](https://en.wikipedia.org/wiki/Syslog) server for centralized log management.
+
+Use this to aggregate Nextflow logs with other system logs to enable centralized monitoring and analysis.
+
+```console
+$ nextflow -syslog localhost:1234 run nextflow-io/hello
+```
+
+### JVM properties
+
+The `-D` option sets Java system properties that control the JVM running Nextflow.
+
+Use this for configuring memory, encoding, or other Java-level behavior. You can specify multiple properties by using `-D` multiple times.
+
+```console
+$ nextflow -Dfile.encoding=UTF-8 run nextflow-io/hello
+```
+
+See {ref}`config-env-vars` for additional JVM configuration options.
+
+### Help display
+
+The `-h` option shows available commands and global options.
+
+Use this to discover available commands or refresh your memory about command syntax.
 
 ```console
 $ nextflow -h
 ```
 
-The `-h` option prints out the overview of the CLI interface and enumerates the top-level *options* and *commands*.
+### Version information
 
-### Execution logs
+The `-v` and `-version` options show Nextflow version details.
 
-Sets the path of the nextflow log file.
-
-```console
-$ nextflow -log custom.log COMMAND [arg...]
-```
-
-The `-log` option takes a path of the new log file which will be used instead of the default `.nextflow.log` or to save logs files to another directory.
-
-- Save all execution logs to the custom `/var/log/nextflow.log` file:
-
-  ```console
-  $ nextflow -log /var/log/nextflow.log run nextflow-io/hello
-  ```
-
-### Quiet execution
-
-Disable the printing of information to the terminal.
-
-```console
-$ nextflow -q COMMAND [arg...]
-```
-
-The `-q` option suppresses the banner and process-related info, and exits once the execution is completed. Please note that it does not affect any explicit print statement within a pipeline.
-
-- Invoke the pipeline execution without the banner and pipeline information:
-
-  ```console
-  $ nextflow -q run nextflow-io/hello
-  ```
-
-### Logging to a syslog server
-
-Send logs to [Syslog](https://en.wikipedia.org/wiki/Syslog) server endpoint.
-
-```console
-$ nextflow -syslog localhost:1234 COMMAND [arg...]
-```
-
-The `-syslog` option is used to send logs to a Syslog logging server at the specified endpoint.
-
-- Send the logs to a Syslog server at specific endpoint:
-
-  ```console
-  $ nextflow -syslog localhost:1234 run nextflow-io/hello
-  ```
-
-### Version
-
-Print the Nextflow version information.
+Use `-v` for brief output showing version and build number.
 
 ```console
 $ nextflow -v
+nextflow version 24.04.0.5917
 ```
 
-The `-v` option prints out information about Nextflow, such as the version and build. The `-version` option, in addition, prints out the citation reference and official website.
-
-- The short version:
-
-  ```console
-  $ nextflow -v
-  nextflow version 20.07.1.5412
-  ```
-
-- The full version info with citation and website link:
-
-  ```console
-  $ nextflow -version
-  N E X T F L O W
-  version 20.07.1 build 5412
-  created 24-07-2020 15:18 UTC (20:48 IDT)
-  cite doi:10.1038/nbt.3820
-  http://nextflow.io
-  ```
-
-## Running pipelines
-
-The main purpose of the Nextflow CLI is to run Nextflow pipelines with the `run` command. Nextflow can execute a local script (e.g. `./main.nf`) or a remote project (e.g. `github.com/nextflow-io/hello`).
-
-### Launching a remote project
-
-To launch the execution of a pipeline project, hosted in a remote code repository, you simply need to specify its qualified name or the repository URL after the `run` command. The qualified name is formed by two parts: the `owner` name and the `repository` name separated by a `/` character.
-
-If a Nextflow project is hosted on GitHub, for example `http://github.com/nextflow-io/hello`, it can be executed by entering the following command in your shell terminal:
-
-```bash
-nextflow run nextflow-io/hello
-```
-
-or using the project URL:
-
-```bash
-nextflow run http://github.com/nextflow-io/hello
-```
-
-If the project is found, it will be automatically downloaded to the Nextflow home directory (`$HOME/.nextflow` by default) and cached for subsequent runs.
-
-:::{note}
-You must use the `-hub` option to specify the hosting service if your project is hosted on a service other than GitHub, e.g. `-hub bitbucket`. However, the `-hub` option is not required if you use the project URL.
-:::
-
-If the `owner` is omitted, Nextflow will search your cached pipelines for a pipeline that matches the name specified. If no pipeline is found, Nextflow will try to download it using the `organization` name defined by the `NXF_ORG` environment variable (`nextflow-io` by default).
-
-:::{tip}
-To access a private repository, specify the access credentials using the `-user` command line option. Then follow the interactive prompts to enter your password. Alternatively, define your private repository access credentials using Git. See {ref}`Git configuration <git-page>` for more information.
-:::
-
-### Using a specific revision
-
-Any Git branch, tag, or commit of a project repository can be used when launching a pipeline by specifying the `-r` option:
+Use `-version` for detailed information including creation date, citation, and website.
 
 ```console
-$ nextflow run nextflow-io/hello -r mybranch
+$ nextflow -version
+N E X T F L O W
+version 24.04.0 build 5917
+created 03-05-2024 15:07 UTC
+cite doi:10.1038/nbt.3820
+http://nextflow.io
 ```
 
-or
+## Pipeline execution
+
+Pipeline execution is the core function of Nextflow. These commands run workflow scripts, either from local files or remote Git repositories. Nextflow handles downloading, caching, and executing pipelines with minimal user intervention.
+
+### Launching a project
+
+The `run` command executes pipeline scripts. This is the primary command for running Nextflow workflows. It handles both local scripts and remote repositories seamlessly.
+
+Use this command whenever you need to execute a pipeline. It automatically manages repository downloads, caching, and execution, supporting various Git providers and authentication methods.
+
+**Local execution**
+
+Run a pipeline script from your local filesystem:
+
+```console
+$ nextflow run main.nf
+```
+
+**Remote execution**
+
+Nextflow executes pipelines directly from Git repositories without manual downloading. Use the format `<owner>/<repository>`:
+
+```console
+$ nextflow run nextflow-io/hello
+```
+
+Nextflow automatically:
+
+1. Downloads the repository to `$HOME/.nextflow/assets/`
+2. Caches it for future runs
+3. Executes the main script
+
+If you omit the owner, Nextflow searches cached pipelines first, then attempts to download from the `NXF_ORG` organization (default: `nextflow-io`).
+
+You can also use full repository URLs:
+
+```console
+$ nextflow run https://github.com/nextflow-io/hello
+```
+
+**Private repositories**
+
+For private repositories, use the `-user` option to provide credentials:
+
+```console
+$ nextflow run owner/private-repo -user myusername
+```
+
+Alternatively, configure Git authentication. See {ref}`Git configuration <git-page>`.
+
+**Non-GitHub providers**
+
+Use the `-hub` option for Bitbucket, GitLab, or other Git providers:
+
+```console
+$ nextflow run owner/repo -hub bitbucket
+```
+
+**Revision selection**
+
+Execute specific Git branches, tags, or commits with the `-r` option. This is essential for running specific pipeline versions, testing development branches, and ensuring reproducibility by pinning to specific commits.
 
 ```console
 $ nextflow run nextflow-io/hello -r v1.1
+$ nextflow run nextflow-io/hello -r dev-branch
+$ nextflow run nextflow-io/hello -r a3f5c8e
 ```
-
-These commands will execute two different project revisions based on the given Git branch/tag/commit.
 
 (cli-params)=
 
-### Pipeline parameters
+**Pipeline parameters**
 
-Pipeline scripts can define *parameters* that can be overridden on the command line.
-
-Parameters can be declared in the main script:
-
-```nextflow
-params.alpha = 'default script value'
-
-workflow {
-  println "alpha = ${params.alpha}"
-}
-```
-
-Or in a config file:
-
-```groovy
-params {
-  alpha = 'default config value'
-}
-```
-
-The above parameter can be specified on the command line as `--alpha`:
+Pipeline parameters are values defined with `params` in your script. Override them on the command line using the `--` prefix to customize pipeline behavior without modifying code.
 
 ```console
-$ nextflow run main.nf --alpha Hello
+$ nextflow run main.nf --input data.csv --output results
 ```
 
-:::{note}
-Parameters that are specified on the command line without a value are set to `true`.
-:::
+Parameter names support automatic conversion between kebab-case and camelCase:
 
-:::{note}
-Parameters that are specified on the command line in kebab case (e.g., `--alpha-beta`) are automatically converted to camel case (e.g., `--alphaBeta`). Because of this, a parameter defined as `alphaBeta` in the pipeline script can be specified on the command line as `--alphaBeta` or `--alpha-beta`.
-:::
+```console
+$ nextflow run main.nf --input-file data.csv  # Becomes params.inputFile
+```
+
+Parameters without values are set to `true`:
+
+```console
+$ nextflow run main.nf --verbose  # params.verbose = true
+```
 
 :::{warning}
-When a command line parameter includes one or more glob characters, i.e. wildcards like `*` or `?`, the parameter value must be enclosed in quotes to prevent Bash expansion and preserve the glob characters. For example:
+Quote parameters containing wildcards to prevent shell expansion:
 
 ```console
-$ nextflow run <pipeline> --files "*.fasta"
+$ nextflow run main.nf --files "*.fasta"
 ```
 :::
 
-Parameters specified on the command line can be also specified in a params file using the `-params-file` option.
+**Parameter files**
 
-```console
-$ nextflow run main.nf -params-file pipeline_params.yml
-```
-
-The `-params-file` option loads parameters for your Nextflow pipeline from a JSON or YAML file. Parameters defined in the file are equivalent to specifying them directly on the command line. For example, instead of specifying parameters on the command line:
-
-```console
-$ nextflow run main.nf --alpha 1 --beta two
-```
-
-Parameters can be represented in YAML format:
+For complex parameter sets, use a YAML or JSON file with `-params-file`. This is cleaner than long command lines.
 
 ```yaml
-alpha: 1
-beta: 'two'
+# params.yml
+input: data.csv
+output: results/
+min_quality: 20
 ```
 
-Or in JSON format:
-
-```json
-{
-  "alpha": 1,
-  "beta": "two"
-}
+```console
+$ nextflow run main.nf -params-file params.yml
 ```
 
-:::{note}
-Parameter values in the params file can reference the following {ref}`built-in variables <config-constants>`: `baseDir`, `projectDir`, `launchDir`.
-:::
+**Parameter precedence**
 
-Parameters are applied in the following order (from lowest to highest priority):
+ Nextflow applies parameters defined in multiple places in the following order (lowest to highest priority):
 
-1. Parameters defined in pipeline scripts (e.g. `main.nf`)
-2. Parameters defined in {ref}`config files <config-params>`
-3. Parameters specified in a params file (`-params-file`)
-4. Parameters specified on the command line (`--something value`)
+1. Pipeline script defaults (`params.foo = 'default'`)
+2. Configuration files (see {ref}`config-params`)
+3. Parameter files (`-params-file`)
+4. Command line parameters (`--foo bar`)
 
-## Managing projects
+### Kubernetes execution
 
-Nextflow seamlessly integrates with popular Git providers, including [BitBucket](http://bitbucket.org/), [GitHub](http://github.com), and [GitLab](http://gitlab.com) for managing Nextflow pipelines as version-controlled Git repositories.
+The `kuberun` command executes pipelines entirely within a Kubernetes cluster. This experimental feature runs the Nextflow driver itself inside Kubernetes.
 
-The following commands allow you to perform basic operations to manage your projects.
+Use this when you want both the Nextflow driver and tasks running in Kubernetes. This differs from using the Kubernetes executor with `run`, where only tasks run in Kubernetes while the driver runs externally.
 
-### Listing available projects
-
-The `list` command allows you to list all the projects you have downloaded in your computer. For example:
-
-```bash
-nextflow list
+```console
+$ nextflow kuberun nextflow-io/hello
 ```
 
-This prints a list similar to the following:
+See {ref}`cli-kuberun` for configuration details.
 
-```
-cbcrg/ampa-nf
-cbcrg/piper-nf
-nextflow-io/hello
-nextflow-io/examples
+## Project management
+
+Project management commands interact with Git-hosted pipelines. Nextflow integrates with Git providers (e.g., GitHub, GitLab, and Bitbucket) to treat pipelines as versioned projects and maintains a local cache in `$HOME/.nextflow/assets/`.
+
+Use these commands to explore available pipelines, inspect their code, maintain your cache, and clone projects.
+
+### Listing downloaded projects
+
+The `list` command shows all pipelines currently downloaded to your local cache. This helps you track which projects are available offline and manage your cache directory. Pipelines are stored in `$HOME/.nextflow/assets/` by default.
+
+```console
+$ nextflow list
 ```
 
 ### Showing project information
 
-By using the `info` command you can show information from a downloaded project. For example:
+The `info` command displays detailed metadata about a downloaded project, including its repository location, local path, main script, and available revisions.
+
+Use this to understand a project's structure, see available versions, or verify which revision is currently checked out.
 
 ```console
 $ nextflow info hello
 project name: nextflow-io/hello
-repository  : http://github.com/nextflow-io/hello
+repository  : https://github.com/nextflow-io/hello
 local path  : $HOME/.nextflow/assets/nextflow-io/hello
 main script : main.nf
 revisions   :
@@ -335,50 +292,274 @@ revisions   :
   v1.2 [t]
 ```
 
-Starting from the top it shows: the project name; the Git repository URL; the local directory where the project has been downloaded; the script that is executed when launched; the list of available revisions i.e. branches and tags. Tags are marked with a `[t]` on the right and the checked-out revision is marked with a `*` on the left.
+This shows:
 
-### Pulling or updating a project
+- The full project name and repository URL
+- Where it's cached locally
+- Which script runs by default
+- Available revisions (branches and tags marked with `[t]`)
+- Which revision is currently checked out (marked with `*`)
 
-The `pull` command allows you to download a project from a GitHub repository or to update it if that repository has already been downloaded. For example:
+### Pulling or updating projects
+
+The `pull` command downloads a pipeline or updates an existing one to the latest version from its Git repository.
+
+Use this to manually download pipelines before running them, update cached pipelines, or download pipelines for offline use. You can specify a particular revision to download.
 
 ```console
 $ nextflow pull nextflow-io/hello
+$ nextflow pull nextflow-io/hello -r mybranch
 ```
 
-Alternatively, you can use the repository URL as the name of the project to pull:
+See {ref}`cli-pull` for configuration options.
 
-```console
-$ nextflow pull https://github.com/nextflow-io/hello
-```
+### Viewing project code
 
-Downloaded pipeline projects are stored in your directory `$HOME/.nextflow/assets` directory.
+The `view` command displays the contents of a pipeline's main script or lists all files in the repository.
 
-### Viewing the project code
-
-The `view` command shows the content of the pipeline script you have pulled. For example:
+Use this to quickly inspect pipeline code without opening files or explore the project structure. The `-l` option lists all repository files instead of showing script contents.
 
 ```console
 $ nextflow view nextflow-io/hello
+$ nextflow view nextflow-io/hello -l
 ```
 
-By adding the `-l` option to the example above it will list the content of the repository.
+See {ref}`cli-view` for configuration options.
 
-### Cloning a project into a directory
+### Cloning projects locally
 
-The `clone` command allows you to copy a Nextflow pipeline project to a directory of your choice. For example:
+The `clone` command copies a pipeline from the cache to a local directory and creates a full Git repository you can modify.
+
+Use this when you want to modify an existing pipeline, create a derivative pipeline, or study a pipeline's structure in detail. If you omit the target directory it uses the pipeline name.
 
 ```console
-$ nextflow clone nextflow-io/hello target-dir
+$ nextflow clone nextflow-io/hello my-hello
 ```
 
-If the destination directory is omitted the specified project is cloned to a directory with the same name as the pipeline base name (e.g. `hello`) in the current directory.
+See {ref}`cli-clone` for configuration options.
 
-The `clone` command can be used to inspect or modify the source code of a pipeline project. You can eventually commit and push back your changes by using the usual Git/GitHub workflow.
+### Deleting cached projects
 
-### Deleting a project
+The `drop` command removes a downloaded pipeline from the local cache.
 
-Downloaded pipelines can be deleted by using the `drop` command, as shown below:
+Use this to free disk space by removing pipelines you no longer need. The project is deleted from `$HOME/.nextflow/assets/`. The next `run` will download it again if needed.
 
-```bash
-nextflow drop nextflow-io/hello
+```console
+$ nextflow drop nextflow-io/hello
+```
+
+See {ref}`cli-drop` for configuration options.
+
+## Configuration and validation
+
+Configuration and validation commands help you understand and verify pipeline settings before execution. These commands inspect how Nextflow interprets your configuration files, process definitions, and scripts.
+
+Use these commands during development to debug configuration issues, verify settings, and catch potential problems early.
+
+### Configuration inspection
+
+The `config` command prints the resolved configuration for a pipeline to show how all configuration files merge together into the final effective settings.
+
+Use this to debug configuration issues, verify which settings will be applied, understand configuration precedence, or inspect specific configuration properties.
+
+```console
+$ nextflow config
+$ nextflow config nextflow-io/hello
+```
+
+See {ref}`cli-config` for configuration options.
+
+### Process inspection
+
+The `inspect` command displays detailed settings for processes in a pipeline, including directives, resources, and container images.
+
+Use this to verify process configurations before running, understand resource allocations, or check which containers will be used. This shows CPU, memory, containers, process directives, and executor settings for each process.
+
+```console
+$ nextflow inspect main.nf
+```
+
+See {ref}`cli-inspect` for configuration options.
+
+### Script validation
+
+The `lint` command checks Nextflow scripts and configuration files for common issues and syntax violations.
+
+Use this during development to maintain code quality, catch syntax errors, identify deprecated features, spot style inconsistencies, and find potential bugs before execution.
+
+```console
+$ nextflow lint main.nf
+```
+
+See {ref}`cli-lint` for configuration options.
+
+## Execution history
+
+Execution history and maintenance commands manage past runs and clean up cached files. Nextflow maintains metadata about all executions and stores intermediate files in work directories.
+
+Use these commands to review past executions, free disk space, troubleshoot failures, or explore data lineage.
+
+### Execution logs
+
+The `log` command displays execution history and details about past pipeline runs, including run names, timestamps, and customizable output fields.
+
+Use this to find run names for resuming, review execution history, or debug failed runs. The command shows recent executions by default, with options to view specific runs or customize output fields.
+
+```console
+$ nextflow log
+$ nextflow log dreamy_euler
+$ nextflow log last -f name,status,duration
+```
+
+See {ref}`cli-log` for configuration options.
+
+### Work directory cleanup
+
+The `clean` command removes work directories and cached intermediate files from past executions.
+
+Use this to free disk space, clean up failed or test runs, or maintain your work directory. Use `-n` to perform a dry run and show what would be deleted. Use `-f` to delete files.
+
+```console
+$ nextflow clean -n
+$ nextflow clean dreamy_euler -f
+```
+
+See {ref}`cli-clean` for configuration options.
+
+### Data lineage
+
+The `lineage` command explores data lineage and provenance for workflow executions and tracks relationships between inputs, outputs, and processing steps.
+
+Use this feature to understand input/output relationships between tasks, trace data flow through the pipeline, or establish file provenance. Lineage tracking must be enabled in configuration.
+
+```console
+$ nextflow lineage
+```
+
+See {ref}`data-lineage-page` to get started and {ref}`cli-lineage` for configuration options. 
+
+### Secret management
+
+The `secrets` command manages secure pipeline secrets.
+
+Use this to store credentials securely, reference them in pipelines without exposing values, and manage sensitive data centrally across your organization.
+
+```console
+$ nextflow secrets list
+$ nextflow secrets set AWS_ACCESS_KEY_ID
+$ nextflow secrets delete AWS_ACCESS_KEY_ID
+```
+
+See {ref}`cli-secrets` for configuration options. 
+
+## Platform integration
+
+Platform integration commands connect Nextflow with [Seqera Platform](https://seqera.io) for workflow management, monitoring, and collaboration. The Platform provides centralized execution management, monitoring dashboards, and secure credential storage.
+
+Use these commands when working with Seqera Platform to authenticate, launch workflows, or manage secrets.
+
+### Platform authentication
+
+The `auth` command manages authentication credentials for Seqera Platform, saving access tokens for API interactions.
+
+Use this to log in or out of the Platform, establishing or removing your authentication credentials.
+
+```console
+$ nextflow auth login
+```
+
+Additional authentication operations include checking login status, viewing configuration details, and logging out:
+
+```console
+$ nextflow auth status
+$ nextflow auth config
+$ nextflow auth logout
+```
+
+See {ref}`cli-auth` for configuration options.
+
+### Platform workflow submission
+
+The `launch` command submits a workflow to run on Seqera Platform's infrastructure instead of your local machine.
+
+Use this to leverage Platform's cloud resources, monitoring capabilities, and execution management. The Platform handles resource provisioning, execution monitoring, and result storage.
+
+```console
+$ nextflow launch nextflow-io/hello
+```
+
+See {ref}`cli-launch` for configuration options.
+
+## System utilities
+
+System utilities provide administrative and development tools for managing Nextflow itself, interacting with remote filesystems, working with plugins, and debugging.
+
+Use these commands for system administration, development, and testing.
+
+### Interactive console
+
+The `console` command launches an interactive Groovy console with Nextflow's execution context loaded.
+
+Use this development tool to test Nextflow DSL code interactively, debug expressions, explore Nextflow's APIs, or experiment with syntax. It opens a GUI or REPL depending on your environment.
+
+```console
+$ nextflow console
+```
+
+### Remote filesystem operations
+
+The `fs` command performs filesystem operations on remote storage systems supported by Nextflow, including S3, Google Cloud Storage, and Azure Blob Storage.
+
+Use this to manage remote data, test cloud storage access, or perform bulk file operations without additional tools. Operations include listing, copying, moving, and deleting files.
+
+```console
+$ nextflow fs list s3://my-bucket/data/
+$ nextflow fs cp s3://source/file.txt s3://dest/
+$ nextflow fs delete s3://bucket/old-data/
+```
+
+### Plugins
+
+The `plugin` command creates plugins, installs them, and executes plugin-specific operations.
+
+Create a new plugin scaffold for development:
+
+```console
+$ nextflow plugin create
+```
+
+Install a plugin to extend Nextflow's functionality:
+
+```console
+$ nextflow plugin install my-plugin
+```
+
+Execute plugin-specific commands using the format `plugin-name:command`:
+
+```console
+$ nextflow plugin my-plugin:hello --alpha --beta
+```
+
+See {ref}`using-plugins-page` and {ref}`cli-plugin` for more information. See individual plugin documentation for plugin specific commands.
+
+### Nextflow updates
+
+The `self-update` command updates Nextflow to a newer version.  It downloads and installs the latest release or a specific version.
+
+Use this to upgrade Nextflow, switch versions, or install edge releases. By default, it updates to the latest stable release. You can specify a particular version or use the `NXF_EDGE` environment variable for development releases.
+
+```console
+$ nextflow self-update
+$ NXF_EDGE=1 nextflow self-update
+```
+
+### Command help
+
+The `help` command displays detailed usage information for any Nextflow command.
+
+Use this to learn about command-specific options, refresh your memory about syntax, or discover available features for a particular command.
+
+```console
+$ nextflow help run
+$ nextflow help clean
 ```

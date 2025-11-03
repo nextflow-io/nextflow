@@ -233,6 +233,8 @@ Would remove temp files from work/bf/334115deec60929dc18edf0010032a
 Would remove temp files from work/a3/06521d75da296d4dd7f4f8caaddad8
 ```
 
+(cli-clone)=
+
 ### `clone`
 
 Clone a remote project into a folder.
@@ -279,6 +281,8 @@ Clone a specific revision of a pipeline.
 $ nextflow clone nextflow-io/hello -r v1.1
 nextflow-io/hello cloned to: hello
 ```
+
+(cli-config)=
 
 ### `config`
 
@@ -411,6 +415,8 @@ Launch the `console` GUI.
 ```console
 $ nextflow console
 ```
+
+(cli-drop)=
 
 ### `drop`
 
@@ -658,6 +664,8 @@ Specify parameters as with the `run` command:
 ```console
 $ nextflow inspect main.nf --alpha 1 --beta hello
 ```
+
+(cli-kuberun)=
 
 ### `kuberun`
 
@@ -934,6 +942,8 @@ Lint and format all files in the current directory (and subdirectories) and use 
 $ nextflow lint -format -spaces 2 .
 ```
 
+(cli-list)=
+
 ### `list`
 
 List all downloaded projects.
@@ -1118,6 +1128,8 @@ $ nextflow plugin <subcommand> [options]
 `<plugin>:<subcommand> [options]`
 
 : Execute a plugin-specific command.
+
+(cli-pull)=
 
 ### `pull`
 
@@ -1519,6 +1531,8 @@ $ nextflow self-update
 Nextflow installation completed. Please note:
 - the executable file `nextflow` has been created in the folder: /usr/local/bin
 ```
+
+(cli-view)=
 
 ### `view`
 
