@@ -19,6 +19,7 @@ package nextflow.cloud.aws.config
 
 import static nextflow.cloud.aws.util.AwsHelper.*
 
+import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.model.ObjectCannedACL
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -286,6 +287,35 @@ class AwsS3Config implements ConfigScope {
 
     boolean isCustomEndpoint() {
         endpoint && !endpoint.endsWith(".amazonaws.com")
+    }
+
+    /**
+     * Looks for the region defined in endpoints such as https://xxx.<region>.amazonaws.com
+     * @returns Region defined in the endpoint. Null if no endpoint or custom endpoint is defined,
+     * or when URI region subdomain doesn't match with a region (global or multi-region access point)
+     */
+    String getEndpointRegion(){
+        if( !endpoint || isCustomEndpoint() )
+            return null
+
+        try {
+            String host = URI.create(endpoint).getHost()
+            final hostDomains = host.split('\\.')
+            if (hostDomains.size() < 3) {
+                log.debug("Region subdomain doesn't exist.")
+                return null
+            }
+            final region = hostDomains[hostDomains.size()-3]
+            if (!Region.regions().contains(Region.of(region))){
+                log.debug("'${region}' is not a valid region.")
+                return null
+            }
+            return region
+
+        } catch (Exception e){
+            log.debug("Exception getting region from endpoint - ${e.message}")
+            return null
+        }
     }
 
     Map<String,String> getAwsClientConfig() {
