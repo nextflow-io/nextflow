@@ -226,7 +226,7 @@ class ReportObserver implements TraceObserverV2 {
                 readTemplate('assets/bootstrap.min.js'),
                 readTemplate('assets/datatables.min.js'),
                 readTemplate('assets/moment.min.js'),
-                readTemplate('assets/plotly.min.js'),
+                readTemplate('assets/plotly-custom-3.1.2.min.js'),
                 readTemplate('assets/ReportTemplate.js')
             ]
         ]

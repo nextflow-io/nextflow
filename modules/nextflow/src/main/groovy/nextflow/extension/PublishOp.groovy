@@ -141,7 +141,7 @@ class PublishOp {
         // the resulting mapping to create a saveAs closure
         final mapping = dsl.build()
         if( mapping instanceof Map<String,String> )
-            return { filename -> outputDir.resolve(mapping[filename]) }
+            return { filename -> filename in mapping ? outputDir.resolve(mapping[filename]) : null }
 
         // if the resolved publish path is a string, resolve it
         // against the base output directory
@@ -172,6 +172,8 @@ class PublishOp {
         }
 
         private void publish0(Path source, String target) {
+            if( source == null || target == null )
+                return
             log.trace "Publishing ${source} to ${target}"
             if( mapping == null )
                 mapping = [:]
@@ -278,11 +280,11 @@ class PublishOp {
         if( value instanceof Map ) {
             return value.collectEntries { k, v ->
                 if( v instanceof Path )
-                    return Map.entry(k, normalizePath(v, targetResolver))
+                    return [k, normalizePath(v, targetResolver)]
                 if( v instanceof Collection<Path> )
-                    return Map.entry(k, normalizePaths(v, targetResolver))
+                    return [k, normalizePaths(v, targetResolver)]
                 if( v instanceof Map )
-                    return Map.entry(k, normalizePaths(v, targetResolver))
+                    return [k, normalizePaths(v, targetResolver)]
                 return [k, v]
             }
         }
@@ -307,8 +309,11 @@ class PublishOp {
         // if the target resolver is a closure, use it to transform
         // the source filename to the target path
         if( targetResolver instanceof Closure<Path> ) {
+            // note: the closure can return null to e.g. not
+            // publish specific files
             final relPath = sourceDir.relativize(path).toString()
-            return (targetResolver.call(relPath) as Path).normalize()
+            final resolvedPath = targetResolver.call(relPath) as Path
+            return resolvedPath?.normalize()
         }
 
         // if the target resolver is a directory, resolve the source
