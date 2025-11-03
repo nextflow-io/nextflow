@@ -313,7 +313,7 @@ class AwsS3Config implements ConfigScope {
             return region
 
         } catch (Exception e){
-            log.debug("Exception getting region from endpoint - ${e.message}")
+            log.debug("Exception getting region from endpoint: '${endpoint}' - ${e.message}")
             return null
         }
     }
