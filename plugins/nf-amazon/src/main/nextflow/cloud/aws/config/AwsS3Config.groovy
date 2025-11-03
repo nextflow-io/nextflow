@@ -307,7 +307,7 @@ class AwsS3Config implements ConfigScope {
             }
             final region = hostDomains[hostDomains.size()-3]
             if (!Region.regions().contains(Region.of(region))){
-                log.debug("Region '${region}' extracted from endpoint '${endpoint}' is not a valid")
+                log.debug("Region '${region}' extracted from endpoint '${endpoint}' is not valid")
                 return null
             }
             return region
