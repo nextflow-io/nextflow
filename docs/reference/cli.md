@@ -454,6 +454,8 @@ Forcefully drop the `nextflow-io/hello` pipeline, ignoring any local changes.
 $ nextflow drop nextflow-io/hello -f
 ```
 
+(cli-fs)=
+
 ### `fs`
 
 Perform basic filesystem operations.

@@ -2,9 +2,9 @@
 
 # Command line interface
 
-The Nextflow command line interface (CLI) is how you interact with Nextflow to run pipelines, manage projects, inspect configurations, and maintain your workflow environment. This page explains the key concepts and common usage patterns for the CLI.
+The Nextflow command-line interface (CLI) is how you interact with Nextflow to run pipelines, manage projects, inspect configurations, and maintain your workflow environment. This page explains the key concepts and common usage patterns for the CLI.
 
-For a complete technical reference of all options, see {ref}`cli-reference`.
+For the complete reference of all commands, subcommands, and options, see {ref}`cli-reference`.
 
 :::{note}
 Nextflow uses two types of command-line flags:
@@ -15,37 +15,37 @@ Nextflow uses two types of command-line flags:
 
 ## Options
 
-Nextflow options are modifiers that control how Nextflow itself operates. Use them to configure execution behavior, manage logging, override configurations, or get information about Nextflow.
+Nextflow options are modifiers that control how Nextflow itself operates. Use them to configure execution behavior, manage logging, override configurations, and get information about Nextflow.
 
 ### Hard configuration override
 
 The `-C` option replaces all default configuration with your custom configuration file, ensuring complete control over settings.
 
-Use this when you need absolute control and want to ensure no default configurations interfere with your custom settings. Unlike `-c` which merges configurations, `-C` ensures only your specified file is used.
-
 ```console
 $ nextflow -C my.config run nextflow-io/hello
 ```
 
-See {ref}`config-page` for more about configuration files.
+Use this when you want to ensure no default configurations interfere with your custom settings. Unlike `-c` which merges configurations, `-C` ensures only your specified file is used.
+
+See {ref}`config-page` for more information.
 
 ### Soft configuration override
 
 The `-c` option adds your configuration on top of the defaults and merges them together.
 
-Use this when you want to override specific settings while keeping other defaults intact. You can specify `-c` multiple times to layer configurations, with later files taking precedence over earlier ones.
-
 ```console
 $ nextflow -c my.config run nextflow-io/hello
 ```
 
-See {ref}`config-page` for more about configuration files.
+Use this when you want to override specific settings while keeping other defaults intact. You can specify `-c` multiple times to layer configurations, with later files taking precedence over earlier ones.
+
+See {ref}`config-page` for more information.
 
 ### Background execution
 
-The `-bg` option runs Nextflow as a background process and frees your terminal for other work.
+The `-bg` option launches Nextflow as a background process and frees your terminal for other work.
 
-Use this for long-running pipelines when you need to continue using your terminal or want to disconnect without stopping execution. It works like `nohup`, allowing you to close your terminal without stopping the pipeline. Outputs are saved to `.nextflow.log` by default.
+Use this for long-running pipelines when you need to continue using your terminal or want to disconnect without stopping execution. It works like `nohup`, allowing you to close your terminal without stopping the pipeline.
 
 ```console
 $ nextflow -bg run nextflow-io/hello
@@ -91,7 +91,7 @@ Use this for configuring memory, encoding, or other Java-level behavior. You can
 $ nextflow -Dfile.encoding=UTF-8 run nextflow-io/hello
 ```
 
-See {ref}`config-env-vars` for additional JVM configuration options.
+See {ref}`config-env-vars` for more information.
 
 ### Help display
 
@@ -105,16 +105,16 @@ $ nextflow -h
 
 ### Version information
 
-The `-v` and `-version` options show Nextflow version details.
+The `-v` and `-version` options prints Nextflow version information.
 
-Use `-v` for brief output showing version and build number.
+Use `-v` for minimal output showing version and build number.
 
 ```console
 $ nextflow -v
 nextflow version 24.04.0.5917
 ```
 
-Use `-version` for detailed information including creation date, citation, and website.
+Use `-version` for detailed output showing creation date, citation, and website.
 
 ```console
 $ nextflow -version
@@ -127,15 +127,15 @@ http://nextflow.io
 
 ## Pipeline execution
 
-Pipeline execution is the core function of Nextflow. These commands run workflow scripts, either from local files or remote Git repositories. Nextflow handles downloading, caching, and executing pipelines with minimal user intervention.
+Pipeline execution is the core function of Nextflow. These commands run Nextflow workflows, either from local files or remote Git repositories. Nextflow handles downloading, caching, and executing pipelines with minimal user intervention.
 
 ### Launching a project
 
-The `run` command executes pipeline scripts. This is the primary command for running Nextflow workflows. It handles both local scripts and remote repositories seamlessly.
+The `run` command executes pipeline scripts. This is the primary command for running Nextflow. It handles both local scripts and remote repositories seamlessly.
 
 Use this command whenever you need to execute a pipeline. It automatically manages repository downloads, caching, and execution, supporting various Git providers and authentication methods.
 
-**Local execution**
+**Local pipelines**
 
 Run a pipeline script from your local filesystem:
 
@@ -143,7 +143,7 @@ Run a pipeline script from your local filesystem:
 $ nextflow run main.nf
 ```
 
-**Remote execution**
+**Remote pipelines**
 
 Nextflow executes pipelines directly from Git repositories without manual downloading. Use the format `<owner>/<repository>`:
 
@@ -173,7 +173,7 @@ For private repositories, use the `-user` option to provide credentials:
 $ nextflow run owner/private-repo -user myusername
 ```
 
-Alternatively, configure Git authentication. See {ref}`Git configuration <git-page>`.
+Alternatively, configure Git authentication. See {ref}`Git configuration <git-page>` for more information.
 
 **Non-GitHub providers**
 
@@ -257,7 +257,7 @@ Use this when you want both the Nextflow driver and tasks running in Kubernetes.
 $ nextflow kuberun nextflow-io/hello
 ```
 
-See {ref}`cli-kuberun` for configuration details.
+See {ref}`cli-kuberun` for more information.
 
 ## Project management
 
@@ -311,7 +311,7 @@ $ nextflow pull nextflow-io/hello
 $ nextflow pull nextflow-io/hello -r mybranch
 ```
 
-See {ref}`cli-pull` for configuration options.
+See {ref}`cli-pull` for more information.
 
 ### Viewing project code
 
@@ -324,7 +324,7 @@ $ nextflow view nextflow-io/hello
 $ nextflow view nextflow-io/hello -l
 ```
 
-See {ref}`cli-view` for configuration options.
+See {ref}`cli-view` for more information.
 
 ### Cloning projects locally
 
@@ -336,7 +336,7 @@ Use this when you want to modify an existing pipeline, create a derivative pipel
 $ nextflow clone nextflow-io/hello my-hello
 ```
 
-See {ref}`cli-clone` for configuration options.
+See {ref}`cli-clone` for more information.
 
 ### Deleting cached projects
 
@@ -348,7 +348,7 @@ Use this to free disk space by removing pipelines you no longer need. The projec
 $ nextflow drop nextflow-io/hello
 ```
 
-See {ref}`cli-drop` for configuration options.
+See {ref}`cli-drop` for more information.
 
 ## Configuration and validation
 
@@ -367,7 +367,7 @@ $ nextflow config
 $ nextflow config nextflow-io/hello
 ```
 
-See {ref}`cli-config` for configuration options.
+See {ref}`cli-config` for more information.
 
 ### Process inspection
 
@@ -379,7 +379,7 @@ Use this to verify process configurations before running, understand resource al
 $ nextflow inspect main.nf
 ```
 
-See {ref}`cli-inspect` for configuration options.
+See {ref}`cli-inspect` for more information.
 
 ### Script validation
 
@@ -391,7 +391,7 @@ Use this during development to maintain code quality, catch syntax errors, ident
 $ nextflow lint main.nf
 ```
 
-See {ref}`cli-lint` for configuration options.
+See {ref}`cli-lint` for more information.
 
 ## Execution history
 
@@ -411,7 +411,7 @@ $ nextflow log dreamy_euler
 $ nextflow log last -f name,status,duration
 ```
 
-See {ref}`cli-log` for configuration options.
+See {ref}`cli-log` for more information.
 
 ### Work directory cleanup
 
@@ -424,7 +424,7 @@ $ nextflow clean -n
 $ nextflow clean dreamy_euler -f
 ```
 
-See {ref}`cli-clean` for configuration options.
+See {ref}`cli-clean` for more information.
 
 ### Data lineage
 
@@ -436,7 +436,7 @@ Use this feature to understand input/output relationships between tasks, trace d
 $ nextflow lineage
 ```
 
-See {ref}`data-lineage-page` to get started and {ref}`cli-lineage` for configuration options. 
+See {ref}`data-lineage-page` to get started and {ref}`cli-lineage` for more information. 
 
 ### Secret management
 
@@ -450,7 +450,7 @@ $ nextflow secrets set AWS_ACCESS_KEY_ID
 $ nextflow secrets delete AWS_ACCESS_KEY_ID
 ```
 
-See {ref}`cli-secrets` for configuration options. 
+See {ref}`cli-secrets` for more information. 
 
 ## Platform integration
 
@@ -458,7 +458,7 @@ Platform integration commands connect Nextflow with [Seqera Platform](https://se
 
 Use these commands when working with Seqera Platform to authenticate, launch workflows, or manage secrets.
 
-### Platform authentication
+### Seqera Platform authentication
 
 The `auth` command manages authentication credentials for Seqera Platform, saving access tokens for API interactions.
 
@@ -476,7 +476,7 @@ $ nextflow auth config
 $ nextflow auth logout
 ```
 
-See {ref}`cli-auth` for configuration options.
+See {ref}`cli-auth` for more information.
 
 ### Platform workflow submission
 
@@ -488,7 +488,7 @@ Use this to leverage Platform's cloud resources, monitoring capabilities, and ex
 $ nextflow launch nextflow-io/hello
 ```
 
-See {ref}`cli-launch` for configuration options.
+See {ref}`cli-launch` for more information.
 
 ## System utilities
 
@@ -517,6 +517,8 @@ $ nextflow fs list s3://my-bucket/data/
 $ nextflow fs cp s3://source/file.txt s3://dest/
 $ nextflow fs delete s3://bucket/old-data/
 ```
+
+See {ref}`cli-fs` for more information.
 
 ### Plugins
 
