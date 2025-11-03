@@ -31,6 +31,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 
+import static io.seqera.tower.plugin.datalink.DataLinkUtils.downloadFile;
+import static io.seqera.tower.plugin.datalink.DataLinkUtils.listFiles;
+
 /**
  * Fetch Connection implementation for Seqera Platform data-links git-remote storage.
  *
@@ -68,7 +71,7 @@ public class SeqeraFetchConnection extends SeqeraBaseConnection implements Fetch
 
         // List bundles in the ref directory
         String refPath = repoPath + "/" + r.getName();
-        List<String> bundles = listFiles(refPath);
+        List<String> bundles = listFiles(httpClient, endpoint, dataLink, refPath, workspaceId);
 
         if (bundles == null || bundles.isEmpty()) {
             throw new TransportException(transport.getURI(), "No bundle for " + r.getName());
@@ -86,7 +89,7 @@ public class SeqeraFetchConnection extends SeqeraBaseConnection implements Fetch
         log.trace("Downloading bundle {} for branch {} to {}", bundlePath, r.getName(), localBundle);
 
         // Download the bundle
-        downloadFileToPath(bundlePath, localBundle);
+        downloadFile( httpClient, endpoint, dataLink, bundlePath, localBundle, workspaceId);
 
         parseBundle(r, have, localBundle, monitor);
     }

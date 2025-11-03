@@ -35,6 +35,8 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
+import static io.seqera.tower.plugin.datalink.DataLinkUtils.*;
+
 /**
  * Push connection implementation for Seqera Platform data-links git-remote storage.
  *
@@ -90,11 +92,11 @@ public class SeqeraPushConnection extends SeqeraBaseConnection implements PushCo
         String bundlePath = repoPath + "/" + entry.getKey() + "/" + bundleFile.getFileName().toString();
 
         log.trace("Uploading bundle {} to data-link {}", bundleFile, dataLink.getId());
-        uploadFile(bundlePath, bundleFile);
+        uploadFile(httpClient, endpoint, dataLink, bundlePath, bundleFile, workspaceId );
 
         if (oldBundlePath != null) {
             log.trace("Deleting old bundle {}", oldBundlePath);
-            deleteFile(oldBundlePath);
+            deleteFile(httpClient, endpoint, dataLink, oldBundlePath, workspaceId);
         }
 
         setUpdateStatus(entry.getValue(), RemoteRefUpdate.Status.OK);
@@ -108,14 +110,16 @@ public class SeqeraPushConnection extends SeqeraBaseConnection implements PushCo
         try {
             String headPath = repoPath + "/HEAD";
             // Try to download HEAD to check if it exists
-            byte[] existingHead = downloadFile(headPath);
+            byte[] existingHead = getFileContent( httpClient, endpoint, dataLink, headPath,
+                workspaceId
+            );
             if (existingHead == null) {
                 log.debug("No remote default branch. Setting to {}.", ref);
                 // Create a temporary file with the ref content
                 Path tempFile = Files.createTempFile("head-", ".txt");
                 try {
                     Files.write(tempFile, ref.getBytes(StandardCharsets.UTF_8));
-                    uploadFile(headPath, tempFile);
+                    uploadFile(httpClient, endpoint, dataLink, headPath, tempFile, workspaceId);
                 } finally {
                     Files.deleteIfExists(tempFile);
                 }
@@ -166,7 +170,7 @@ public class SeqeraPushConnection extends SeqeraBaseConnection implements PushCo
 
     private String checkExistingBundle(String refName) throws IOException {
         String refPath = repoPath + "/" + refName;
-        List<String> bundles = listFiles(refPath);
+        List<String> bundles = listFiles(httpClient, endpoint, dataLink, refPath, workspaceId);
 
         if (bundles == null || bundles.isEmpty()) {
             return null;

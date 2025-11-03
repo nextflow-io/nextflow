@@ -16,34 +16,23 @@
 
 package io.seqera.tower.plugin.scm.jgit;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import io.seqera.http.HxClient;
+import io.seqera.tower.plugin.TowerHxClientFactory;
+import io.seqera.tower.plugin.datalink.DataLink;
+import nextflow.SysEnv;
 import org.eclipse.jgit.lib.*;
 import org.eclipse.jgit.transport.Connection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.UnsupportedEncodingException;
-import java.net.URI;
-import java.net.URLEncoder;
 import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
+
+import static io.seqera.tower.plugin.datalink.DataLinkUtils.*;
 
 /**
  * Base class for connections with Seqera Platform data-links git-remote compatibility
@@ -61,7 +50,6 @@ public class SeqeraBaseConnection implements Connection {
     protected String endpoint;
     protected String workspaceId;
     private final Map<String, Ref> advertisedRefs = new HashMap<String, Ref>();
-    private final Gson gson = new Gson();
 
 
     public SeqeraBaseConnection(TransportSeqera transport) {
@@ -72,10 +60,10 @@ public class SeqeraBaseConnection implements Connection {
         SeqeraGitCredentialsProvider credentials = (SeqeraGitCredentialsProvider) transport.getCredentialsProvider();
         this.endpoint = credentials.getEndpoint();
         this.workspaceId = credentials.getWorkspaceId();
-        this.httpClient = createHttpClient(credentials);
-        this.dataLink = findDataLink(dataLinkName);
+        this.httpClient = TowerHxClientFactory.httpClient(credentials.getAccessToken(), SysEnv.get("TOWER_REFRESH_TOKEN"), credentials.getEndpoint(), credentials.getRetryPolicy());
+        this.dataLink = findDataLink(this.httpClient, this.endpoint, this.workspaceId, dataLinkName);
         loadRefsMap();
-        log.debug("Created Seqera Connection for dataLink={} path={}", dataLink.id, repoPath);
+        log.debug("Created Seqera Connection for dataLink={} path={}", dataLink.getId(), repoPath);
     }
 
     protected HxClient createHttpClient(SeqeraGitCredentialsProvider credentials) {
@@ -111,321 +99,11 @@ public class SeqeraBaseConnection implements Connection {
 
     protected String getDefaultBranchRef() throws IOException {
         String path = repoPath + "/HEAD";
-        byte[] content = downloadFile(path);
+        byte[] content = getFileContent(httpClient, endpoint, dataLink, path, workspaceId);;
         if (content != null) {
             return new String(content);
         }
         return null;
-    }
-
-    /**
-     * Find DatalinkId from the bucket name
-     */
-    protected DataLink findDataLink(String linkName) {
-        try {
-            String url = endpoint + "/data-links?status=AVAILABLE&search=" + linkName;
-            if (workspaceId != null) {
-                url += "&workspaceId=" + workspaceId;
-            }
-
-            HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .GET()
-                .build();
-
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-
-            if (response.statusCode() < 200 && response.statusCode() >= 300) {
-                String message = response.body();
-                if (message == null) message = "";
-                message = message + " - HTTP " + response.statusCode();
-                throw new RuntimeException("Failed to find data-link: " + linkName + message);
-            }
-
-            JsonObject responseJson = gson.fromJson(response.body(), JsonObject.class);
-            JsonArray files = responseJson.getAsJsonArray("dataLinks");
-
-            List<DataLink> dataLinks = java.util.stream.StreamSupport.stream(files.spliterator(), false)
-                .map(JsonElement::getAsJsonObject)
-                .filter(obj -> obj.get("name").getAsString().equals(linkName))
-                .map(obj -> getDataLinkFromJSONObject(obj))
-                .toList();
-
-            if (dataLinks.isEmpty()) {
-                log.debug("No datalink response: " + linkName);
-                throw new RuntimeException("No Data-link found for " + linkName);
-            }
-            return dataLinks.getFirst();
-        } catch (IOException e) {
-            throw new RuntimeException("Exception finding data-link", e);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException("Download interrupted", e);
-        }
-    }
-
-    private DataLink getDataLinkFromJSONObject(JsonObject obj) {
-        String id = obj.get("id").getAsString();
-        //Get first credential
-        String credentialsId = obj.get("credentials").getAsJsonArray().get(0).getAsJsonObject().get("id").getAsString();
-
-        return new DataLink(id, credentialsId);
-    }
-
-    /**
-     * Download a file from the data-link
-     */
-    protected byte[] downloadFile(String filePath) throws IOException {
-        try {
-            Map<String, String> queryParams = new HashMap<>();
-            if (workspaceId != null) {
-                queryParams.put("workspaceId", workspaceId);
-            }
-            if (dataLink.credentialsId != null) {
-                queryParams.put("credentialsId", dataLink.credentialsId);
-            }
-
-            String url = buildDataLinkUrl("/download/"+ URLEncoder.encode(filePath, StandardCharsets.UTF_8), queryParams);
-
-            HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .GET()
-                .build();
-
-            HttpResponse<byte[]> response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
-
-            if (response.statusCode() == 404) {
-                log.debug("File {} in data-link {} not found", filePath, dataLink.id);
-                return null;
-            }
-
-            if (response.statusCode() >= 400) {
-                throw new IOException("Failed to download file: " + filePath + " - status: " + response.statusCode());
-            }
-
-            return response.body();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IOException("Download interrupted", e);
-        }
-    }
-
-    /**
-     * Download a file from the data-link directly to a local file
-     * This is more memory-efficient for large files like bundles
-     */
-    protected void downloadFileToPath(String filePath, Path targetPath) throws IOException {
-        try {
-            Map<String, String> queryParams = new HashMap<>();
-            if (workspaceId != null) {
-                queryParams.put("workspaceId", workspaceId);
-            }
-            if (dataLink.credentialsId != null) {
-                queryParams.put("credentialsId", dataLink.credentialsId);
-            }
-
-            String url = buildDataLinkUrl("/download/"+ URLEncoder.encode(filePath, StandardCharsets.UTF_8), queryParams);
-
-            HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .GET()
-                .build();
-
-            HttpResponse<Path> response = httpClient.send(request, HttpResponse.BodyHandlers.ofFile(targetPath));
-
-            if (response.statusCode() == 404) {
-                log.debug("File {} in data-link {} not found", filePath, dataLink.id);
-                throw new IOException("File not found: " + filePath);
-            }
-
-            if (response.statusCode() >= 400) {
-                throw new IOException("Failed to download file: " + filePath + " - status: " + response.statusCode());
-            }
-
-            log.debug("Downloaded {} to {}", filePath, targetPath);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IOException("Download interrupted", e);
-        }
-    }
-
-    /**
-     * Upload a file to the data-link
-     */
-    protected void uploadFile(String filePath, Path localFile) throws IOException {
-        try {
-            // Step 1: Get upload URL
-            Map<String, String> queryParams = new HashMap<>();
-            if (workspaceId != null) {
-                queryParams.put("workspaceId", workspaceId);
-            }
-            if (dataLink.credentialsId != null) {
-                queryParams.put("credentialsId", dataLink.credentialsId);
-            }
-            String url = buildDataLinkUrl("/upload/" + URLEncoder.encode(filePath, StandardCharsets.UTF_8), queryParams);
-
-            JsonObject uploadRequest = new JsonObject();
-            uploadRequest.addProperty("fileName", localFile.getFileName().toString());
-            uploadRequest.addProperty("contentLength", localFile.toFile().length());
-            log.debug(" POST {}", url);
-            HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(uploadRequest)))
-                .build();
-
-            HttpResponse<String> response = httpClient.sendAsString(request);
-
-            if (response.statusCode() >= 400) {
-                String message = response.body();
-                if (message == null) message = "";
-                message = message + " - HTTP " + response.statusCode();
-                throw new IOException("Failed to get upload URL for '" + filePath + "': " + message);
-            }
-            log.debug(response.body());
-            JsonObject responseJson = gson.fromJson(response.body(), JsonObject.class);
-            String uploadId = responseJson.get("uploadId").getAsString();
-            JsonArray jsonUploadUrls = responseJson.getAsJsonArray("uploadUrls").getAsJsonArray();
-            List<String> uploadUrls = StreamSupport.stream(jsonUploadUrls.spliterator(), false)
-            .map(JsonElement::getAsString)
-            .collect(java.util.stream.Collectors.toList());
-
-            for (String uploadUrl : uploadUrls) {
-                // Step 2: Upload file to the provided URL
-                HttpRequest uploadFileRequest = HttpRequest.newBuilder()
-                    .uri(URI.create(uploadUrl))
-                    .header("Content-Type", "application/octet-stream")
-                    .PUT(HttpRequest.BodyPublishers.ofFile(localFile))
-                    .build();
-
-                HttpResponse<Void> uploadResponse = httpClient.send(uploadFileRequest, HttpResponse.BodyHandlers.discarding());
-
-                if (uploadResponse.statusCode() >= 400) {
-                    String message = response.body();
-                    if (message == null) message = "";
-                    message = message + " - HTTP " + response.statusCode();
-                    throw new IOException("Failed to upload file '" + filePath + "': " + message);
-                }
-            }
-            // Step 3: Finish upload (required for some providers like AWS)
-            queryParams = new HashMap<>();
-            if (workspaceId != null) {
-                queryParams.put("workspaceId", workspaceId);
-            }
-            if (dataLink.credentialsId != null) {
-                queryParams.put("credentialsId", dataLink.credentialsId);
-            }
-            String finishUrl = buildDataLinkUrl("/upload/finish/"+ URLEncoder.encode(filePath, StandardCharsets.UTF_8), queryParams);
-
-            JsonObject finishRequest = new JsonObject();
-            finishRequest.addProperty("fileName", filePath);
-            finishRequest.addProperty("uploadId", filePath);
-
-            HttpRequest finishReq = HttpRequest.newBuilder()
-                .uri(URI.create(finishUrl))
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(finishRequest)))
-                .build();
-
-            httpClient.send(finishReq, HttpResponse.BodyHandlers.discarding());
-
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IOException("Upload interrupted", e);
-        }
-    }
-
-    /**
-     * List files in a path
-     */
-    protected List<String> listFiles(String path) throws IOException {
-        Map<String, String> queryParams = new HashMap<>();
-        if (workspaceId != null) {
-            queryParams.put("workspaceId", workspaceId);
-        }
-        if (dataLink.credentialsId != null) {
-            queryParams.put("credentialsId", dataLink.credentialsId);
-        }
-        String url = buildDataLinkUrl("/browse/" + URLEncoder.encode(path, StandardCharsets.UTF_8), queryParams);
-        log.debug(" GET {}", url);
-        HttpRequest request = HttpRequest.newBuilder()
-            .uri(URI.create(url))
-            .GET()
-            .build();
-
-        HttpResponse<String> response = httpClient.sendAsString(request);
-
-        if (response.statusCode() == 404) {
-            log.debug("No files found for {}", url);
-            return List.of();
-        }
-
-        if (response.statusCode() >= 400) {
-            log.debug("Error getting files {}", url);
-            String message = response.body();
-            if (message == null) message = "";
-            message = message + " - HTTP " + response.statusCode();
-
-            throw new IOException("Failed to list files in '" + path + "' : " + message);
-        }
-        log.debug(response.body());
-        JsonObject responseJson = gson.fromJson(response.body(), JsonObject.class);
-        JsonArray files = responseJson.getAsJsonArray("objects");
-
-        return StreamSupport.stream(files.spliterator(), false)
-            .map(JsonElement::getAsJsonObject)
-            .map(obj -> obj.get("name").getAsString())
-            .collect(java.util.stream.Collectors.toList());
-    }
-
-    /**
-     * Delete a file from the data-link
-     */
-    protected void deleteFile(String filePath) throws IOException {
-        try {
-            Map<String, String> queryParams = new HashMap<>();
-
-            if (workspaceId != null) {
-                queryParams.put("workspaceId", workspaceId);
-            }
-            String url = buildDataLinkUrl("/content", queryParams);
-
-            JsonObject deleteRequest = new JsonObject();
-            deleteRequest.addProperty("path", filePath);
-
-            HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .header("Content-Type", "application/json")
-                .method("DELETE", HttpRequest.BodyPublishers.ofString(gson.toJson(deleteRequest)))
-                .build();
-
-            HttpResponse<Void> response = httpClient.send(request, HttpResponse.BodyHandlers.discarding());
-
-            if (response.statusCode() >= 400 && response.statusCode() != 404) {
-                throw new IOException("Failed to delete file: " + filePath + " - status: " + response.statusCode());
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IOException("Delete interrupted", e);
-        }
-    }
-
-    private String buildDataLinkUrl(String path, Map<String, String> queryParams) {
-        final StringBuilder url = new StringBuilder(endpoint + "/data-links/" + URLEncoder.encode(dataLink.id, StandardCharsets.UTF_8));
-        if (path != null) {
-            if (!path.startsWith("/")) url.append("/");
-            url.append(path);
-        }
-
-        if (queryParams != null && !queryParams.isEmpty()) {
-            String queryString = queryParams.entrySet().stream()
-                .map(entry -> URLEncoder.encode(entry.getKey(), StandardCharsets.UTF_8)
-                    + "="
-                    + URLEncoder.encode(entry.getValue(), StandardCharsets.UTF_8))
-                .collect(Collectors.joining("&"));
-            url.append('?').append(queryString);
-        }
-        return url.toString();
     }
 
     private void loadRefsMap() {
@@ -433,12 +111,12 @@ public class SeqeraBaseConnection implements Connection {
         try {
             addRefs("heads");
         } catch (Exception e) {
-            log.debug("No heads found for dataLink={} path={}: {}", dataLink.id, repoPath, e.getMessage());
+            log.debug("No heads found for dataLink={} path={}: {}", dataLink.getId(), repoPath, e.getMessage());
         }
         try {
             addRefs("tags");
         } catch (Exception e) {
-            log.debug("No tags found for dataLink={} path={}: {}", dataLink.id, repoPath, e.getMessage());
+            log.debug("No tags found for dataLink={} path={}: {}", dataLink.getId(), repoPath, e.getMessage());
         }
         try {
             final String defaultBranch = getDefaultBranchRef();
@@ -449,22 +127,22 @@ public class SeqeraBaseConnection implements Connection {
                 }
             }
         } catch (Exception e) {
-            log.debug("No default refs found for dataLink={} path={}: {}", dataLink.id, repoPath, e.getMessage());
+            log.debug("No default refs found for dataLink={} path={}: {}", dataLink.getId(), repoPath, e.getMessage());
         }
     }
 
     private void addRefs(String refType) throws IOException {
         String path = repoPath + "/refs/" + refType;
-        List<String> branches = listFiles(path);
+        List<String> branches = listFiles(httpClient, endpoint, dataLink, path, workspaceId);
 
         if (branches == null || branches.isEmpty()) {
-            log.debug("No {} refs found for dataLink={} path={}", refType, dataLink.id, repoPath);
+            log.debug("No {} refs found for dataLink={} path={}", refType, dataLink.getId(), repoPath);
             return;
         }
 
         for (String branch : branches) {
             String branchPath = path + "/" + branch;
-            List<String> bundles = listFiles(branchPath);
+            List<String> bundles = listFiles(httpClient, endpoint, dataLink, branchPath, workspaceId);
             if (bundles != null && !bundles.isEmpty()) {
                 // Get the first bundle (there should only be one per branch)
                 String bundleName = bundles.get(0);
@@ -555,24 +233,5 @@ public class SeqeraBaseConnection implements Connection {
         public ObjectId getObjectId() {
             return objectId;
         }
-    }
-
-    static class DataLink {
-        private String id;
-        private String credentialsId;
-
-        private DataLink(String id, String credentialsId) {
-            this.id = id;
-            this.credentialsId = credentialsId;
-        }
-
-        public String getId() {
-            return id;
-        }
-
-        public String getCredentialsId() {
-            return credentialsId;
-        }
-
     }
 }

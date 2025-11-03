@@ -63,6 +63,9 @@ class SeqeraRepositoryProvider extends RepositoryProvider {
         if (providerConfig.workspaceId) {
             credentials.setWorkspaceId(providerConfig.workspaceId)
         }
+        if (providerConfig.retryPolicy){
+            credentials.setRetryPolicy(providerConfig.retryPolicy)
+        }
         return credentials
     }
 

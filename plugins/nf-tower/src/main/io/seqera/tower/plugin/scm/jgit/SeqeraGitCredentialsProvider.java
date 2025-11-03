@@ -16,6 +16,7 @@
 
 package io.seqera.tower.plugin.scm.jgit;
 
+import io.seqera.tower.plugin.TowerRetryPolicy;
 import org.eclipse.jgit.errors.UnsupportedCredentialItem;
 import org.eclipse.jgit.transport.CredentialItem;
 import org.eclipse.jgit.transport.CredentialsProvider;
@@ -31,6 +32,7 @@ public class SeqeraGitCredentialsProvider extends CredentialsProvider {
     private String endpoint;
     private String accessToken;
     private String workspaceId;
+    private TowerRetryPolicy retryPolicy;
 
     public void setEndpoint(String endpoint) {
         this.endpoint = endpoint;
@@ -43,6 +45,8 @@ public class SeqeraGitCredentialsProvider extends CredentialsProvider {
     public void setWorkspaceId(String workspaceId) {
         this.workspaceId = workspaceId;
     }
+
+    public void setRetryPolicy(TowerRetryPolicy retryPolicy) {this.retryPolicy = retryPolicy; }
 
     public String getEndpoint() {
         return endpoint != null ? endpoint : "https://api.cloud.seqera.io";
@@ -58,6 +62,8 @@ public class SeqeraGitCredentialsProvider extends CredentialsProvider {
     public String getWorkspaceId() {
         return workspaceId;
     }
+
+    public TowerRetryPolicy getRetryPolicy() { return retryPolicy; }
 
     @Override
     public boolean isInteractive() {

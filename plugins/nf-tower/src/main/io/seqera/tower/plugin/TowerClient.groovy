@@ -70,8 +70,6 @@ class TowerClient implements TraceObserverV2 {
 
     static private final Duration ALIVE_INTERVAL = Duration.of('1 min')
 
-    static private final String TOKEN_PREFIX = '@token:'
-
     @TupleConstructor
     static class Response {
         final int code
@@ -274,8 +272,7 @@ class TowerClient implements TraceObserverV2 {
         this.aggregator = new ResourcesAggregator(session)
         this.runName = session.getRunName()
         this.runId = session.getUniqueId()
-        this.httpClient = newHttpClient()
-
+        this.httpClient = TowerHxClientFactory.httpClient(getAccessToken(), env.get('TOWER_REFRESH_TOKEN'), this.endpoint, this.retryPolicy)
         // send hello to verify auth
         final req = makeCreateReq(session)
         final resp = sendHttpMessage(urlTraceCreate, req, 'POST')
@@ -297,53 +294,6 @@ class TowerClient implements TraceObserverV2 {
 
         // Prepare to collect report paths if tower configuration has a 'reports' section
         reports.flowCreate(workflowId)
-    }
-
-    protected HxClient newHttpClient() {
-        final builder = HxClient.newBuilder()
-        // auth settings
-        setupClientAuth(builder, getAccessToken())
-        // retry settings
-        builder
-            .retryConfig(this.retryPolicy)
-            .followRedirects(HttpClient.Redirect.NORMAL)
-            .version(HttpClient.Version.HTTP_1_1)
-            .connectTimeout(java.time.Duration.ofSeconds(60))
-            .build()
-    }
-
-    protected void setupClientAuth(HxClient.Builder config, String token) {
-        // check for plain jwt token
-        final refreshToken = env.get('TOWER_REFRESH_TOKEN')
-        final refreshUrl = refreshToken ? "$endpoint/oauth/access_token" : null
-        if( token.count('.')==2 ) {
-            config.bearerToken(token)
-            config.refreshToken(refreshToken)
-            config.refreshTokenUrl(refreshUrl)
-            config.refreshCookiePolicy(CookiePolicy.ACCEPT_ALL)
-            return
-        }
-
-        // try checking personal access token
-        try {
-            final plain = new String(token.decodeBase64())
-            final p = plain.indexOf('.')
-            if( p!=-1 && new JsonSlurper().parseText(  plain.substring(0, p) )  ) {
-                // ok this is bearer token
-                config.bearerToken(token)
-                // setup the refresh
-                config.refreshToken(refreshToken)
-                config.refreshTokenUrl(refreshUrl)
-                config.refreshCookiePolicy(CookiePolicy.ACCEPT_ALL)
-                return
-            }
-        }
-        catch ( Exception e ) {
-            log.trace "Enable to set bearer token ~ Reason: $e.message"
-        }
-
-        // fallback on simple token
-        config.basicAuth(TOKEN_PREFIX + token)
     }
 
     protected Map makeCreateReq(Session session) {

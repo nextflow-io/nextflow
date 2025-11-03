@@ -23,6 +23,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.seqera.tower.plugin.BaseCommandImpl
 import io.seqera.tower.plugin.TowerClient
+import io.seqera.tower.plugin.datalink.DataLinkUtils
 import nextflow.BuildInfo
 import nextflow.cli.CmdLaunch
 import nextflow.util.ColorUtil
@@ -93,12 +94,11 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
     @Override
     void launch(CmdLaunch.LaunchOptions options) {
         printBanner(options)
-
-        // Validate and resolve pipeline
-        final resolvedPipelineUrl = validateAndResolvePipeline(options.pipeline)
-
         // Initialize launch context with auth and workspace info
         final context = initializeLaunchContext(options)
+
+        // Validate and resolve pipeline
+        final resolvedPipelineUrl = validateAndResolvePipeline(options, context)
 
         // Build and submit the launch request
         final result = submitWorkflowLaunch(options, context, resolvedPipelineUrl)
@@ -119,19 +119,48 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
     // ===== Launch Phases =====
 
     /**
-     * Validate pipeline path and resolve to full repository URL
+     * Validate pipeline path and resolve pipeline.
+     * If the pipeline is a remote URL, just resolve the URL.
+     * If the pipeline is a local path it manages it as a local git folder, pushed changes and resolve url and revision.
      */
-    private String validateAndResolvePipeline(String pipeline) {
-        log.debug "Pipeline repository: ${pipeline}"
+    private String validateAndResolvePipeline(CmdLaunch.LaunchOptions options, LaunchContext context) {
+        log.debug "Pipeline repository: ${options.pipeline}"
 
-        if (isLocalPath(pipeline)) {
-            log.debug "Rejecting local file path: ${pipeline}"
-            throw new AbortOperationException("Local file paths are not supported. Please provide a remote repository URL.")
+        if (isLocalPath(options.pipeline)) {
+            return manageLocalPipeline(options, context)
         }
 
-        final resolvedUrl = resolvePipelineUrl(pipeline)
+        final resolvedUrl = resolvePipelineUrl(options.pipeline)
         log.debug "Resolved pipeline URL: ${resolvedUrl}"
         return resolvedUrl
+    }
+    /**
+     * Resolve repo URL and branch associated to the local folder.
+     * Initialize as git folder, if it is not yet initialized, and pushes it as a 'seqera-git-remote'
+     * to the working dir specified in the launch context.
+     *
+     * @param options Launch Options where folder name and requested revision are specified
+     * @param launchContext Launch context to find
+     * @return the resolved repo URL associated to the folder
+     */
+    private String manageLocalPipeline(CmdLaunch.LaunchOptions options, LaunchContext launchContext) {
+        File dir = new File(options.pipeline)
+        if (!dir.exists())
+            throw new AbortOperationException("Directory $dir doesn't exist")
+        final manager = new PushManager(dir)
+        String resolvedUrl = manager.isLocalGit() ? manager.resolveRepository() : resolveRepositoryFormContext(launchContext)
+        String pushedBranch = manager.push(resolvedUrl, options.revision)
+        log.debug "Resolved pipeline URL: ${resolvedUrl} (revision: ${pushedBranch})"
+        options.revision = pushedBranch
+        return resolvedUrl
+    }
+
+    private String resolveRepositoryFormContext(LaunchContext launchContext) {
+        final uri = URI.create(launchContext.workDir)
+        final datalink = DataLinkUtils.findDataLink(createHttpClient(launchContext.accessToken), launchContext.apiEndpoint, launchContext.workspaceId?.toString(), uri.getHost())
+        if (datalink.provider.toLowerCase() != 'seqeracompute')
+            throw new AbortOperationException("Data link type associated to '${launchContext.workDir}' is not 'seqeracompute' - Local pipelines only available for Seqera Compute environments")
+        return new URI('seqera', uri.host, "${uri.path}/launch-repos/nf-launch-${UUID.randomUUID().toString()}" , uri.fragment).toString()
     }
 
     /**
@@ -919,6 +948,9 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
             return true
         }
         if (path.contains('\\') || path ==~ /^[A-Za-z]:.*/) {
+            return true
+        }
+        if (!AssetManager.isUrl(path) && new File(path).exists()) {
             return true
         }
         return false

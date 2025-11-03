@@ -19,6 +19,8 @@ package io.seqera.tower.plugin.scm
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.seqera.tower.plugin.BaseCommandImpl
+import io.seqera.tower.plugin.TowerConfig
+import io.seqera.tower.plugin.TowerRetryPolicy
 import nextflow.Const
 import nextflow.Global
 import nextflow.SysEnv
@@ -36,9 +38,7 @@ import nextflow.scm.ProviderConfig
 @CompileStatic
 class SeqeraProviderConfig extends ProviderConfig {
 
-    private String endpoint = 'https://api.cloud.seqera.io'
-    private String accessToken
-    private String workspaceId
+    private TowerConfig config
 
     SeqeraProviderConfig(String name, Map values) {
         super(name, [server: "seqera://$name"] + values)
@@ -56,26 +56,27 @@ class SeqeraProviderConfig extends ProviderConfig {
 
 
         // Merge with SCM values
-        final config = towerConfig + values
-        endpoint = PlatformHelper.getEndpoint(config, SysEnv.get())
-        accessToken = PlatformHelper.getAccessToken(config, SysEnv.get())
-        workspaceId = PlatformHelper.getWorkspaceId(config, SysEnv.get())
+        config = new TowerConfig(new HashMap(towerConfig + values), SysEnv.get())
 
-        if (!accessToken) {
+        if (!config.accessToken) {
             throw new AbortOperationException("Seqera Platform access token not configured. Set TOWER_ACCESS_TOKEN environment variable or configure it in nextflow.config")
         }
     }
 
     String getEndpoint() {
-        this.endpoint
+        this.config.endpoint
     }
 
     String getAccessToken() {
-        this.accessToken
+        this.config.accessToken
     }
 
     String getWorkspaceId() {
-        this.workspaceId
+        this.config.workspaceId
+    }
+
+    TowerRetryPolicy getRetryPolicy() {
+        this.config.retryPolicy
     }
 
     @Override

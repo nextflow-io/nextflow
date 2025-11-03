@@ -27,7 +27,8 @@ nextflowPlugin {
         'io.seqera.tower.plugin.TowerFusionToken',
         'io.seqera.tower.plugin.auth.AuthCommandImpl',
         'io.seqera.tower.plugin.launch.LaunchCommandImpl',
-        'io.seqera.tower.plugin.scm.SeqeraRepositoryFactory'
+        'io.seqera.tower.plugin.scm.SeqeraRepositoryFactory',
+        'io.seqera.tower.plugin.fs.SeqeraPathFactory'
     ]
 }
 

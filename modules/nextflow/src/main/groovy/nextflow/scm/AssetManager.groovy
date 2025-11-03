@@ -328,10 +328,13 @@ class AssetManager {
 
     String getHub() { hub }
 
+    static boolean isUrl(String repository){
+        return repository.startsWith('http://') || repository.startsWith('https://') || repository.startsWith('file:/') || repository.startsWith('seqera://')
+    }
+
     @PackageScope
     String resolveNameFromGitUrl( String repository ) {
-        final isUrl = repository.startsWith('http://') || repository.startsWith('https://') || repository.startsWith('file:/') || repository.startsWith('seqera://')
-        if( !isUrl )
+        if( !isUrl(repository) )
             return null
 
         try {
