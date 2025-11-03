@@ -302,12 +302,12 @@ class AwsS3Config implements ConfigScope {
             String host = URI.create(endpoint).getHost()
             final hostDomains = host.split('\\.')
             if (hostDomains.size() < 3) {
-                log.debug("Region subdomain doesn't exist.")
+                log.debug("Region subdomain doesn't exist in endpoint '${endpoint}'")
                 return null
             }
             final region = hostDomains[hostDomains.size()-3]
             if (!Region.regions().contains(Region.of(region))){
-                log.debug("'${region}' is not a valid region.")
+                log.debug("Region '${region}' extracted from endpoint '${endpoint}' is not a valid")
                 return null
             }
             return region

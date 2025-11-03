@@ -93,6 +93,13 @@ class AwsConfig implements ConfigScope {
 
     AwsBatchConfig getBatchConfig() { batch }
 
+    @Deprecated
+    String getS3GlobalRegion() {
+        return !region || !s3Config.endpoint || s3Config.endpoint.contains(".amazonaws.com")
+            ? Region.US_EAST_1.id()         // always use US_EAST_1 as global region for AWS endpoints
+            : region                        // for custom endpoint use the config provided region
+    }
+
     /**
      *  Resolves the region used for S3 evaluating the region resolved from config and a possible region defined in the endpoint.
      *  Fallback to the global region US_EAST_1 when no region is found.
