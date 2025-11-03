@@ -93,10 +93,6 @@ $ nextflow -Dfile.encoding=UTF-8 run nextflow-io/hello
 
 See {ref}`config-env-vars` for more information.
 
-### Debug
-
--remote-debug
-
 ### Help display
 
 The `-h` option shows available commands and global options.
