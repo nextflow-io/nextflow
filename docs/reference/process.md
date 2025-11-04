@@ -82,7 +82,7 @@ The following task properties are defined in the process body:
 - `scratch`: Scratch directive value
 - `error_action`: Error action applied 
 
-:::
+:::{note}
 When accessing percentage fields programmatically, `pcpu` and `pmem` are used due to Groovy syntax limitations with the `%` character. 
 :::
 
