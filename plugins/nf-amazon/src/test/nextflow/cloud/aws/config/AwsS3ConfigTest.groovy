@@ -17,6 +17,7 @@
 
 package nextflow.cloud.aws.config
 
+import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.model.ObjectCannedACL
 import nextflow.SysEnv
 import spock.lang.Specification
@@ -187,6 +188,19 @@ class AwsS3ConfigTest extends Specification {
         [ maxDownloadHeapMemory: '0MB' ]                            | "Configuration option `aws.client.maxDownloadHeapMemory` can't be 0"
         [ minimumPartSize: '0MB' ]                                  | "Configuration option `aws.client.minimumPartSize` can't be 0"
         [ maxDownloadHeapMemory: '50 MB', minimumPartSize: '6 MB']  | "Configuration option `aws.client.maxDownloadHeapMemory` must be at least 10 times `aws.client.minimumPartSize`"
+    }
+
+    @Unroll
+    def 'should get region from endpoint' () {
+        expect:
+        new AwsS3Config(CONFIG).getEndpointRegion() == REGION
+
+        where:
+        CONFIG                                                                                  | REGION
+        [:]                                                                                     | null
+        [endpoint: "http://custom.endpoint.com"]                                                | null
+        [endpoint: "https://s3.eu-west-1.amazonaws.com"]                                        | Region.EU_WEST_1.id()
+        [endpoint: "https://bucket.s3-global.amazonaws.com"]                                    | null
     }
 
 }
