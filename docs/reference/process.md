@@ -87,10 +87,6 @@ When accessing percentage fields programmatically, `pcpu` and `pmem` are used du
 :::
 
 
-
-
-
-
 `task.process`
 : The name of the process that spawned the task.
 
