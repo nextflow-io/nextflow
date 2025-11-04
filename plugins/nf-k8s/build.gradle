@@ -51,7 +51,7 @@ dependencies {
     compileOnly 'org.slf4j:slf4j-api:2.0.17'
     compileOnly 'org.pf4j:pf4j:3.12.0'
 
-    api 'org.bouncycastle:bcprov-ext-jdk18on:1.79'
+    api 'org.bouncycastle:bcprov-ext-jdk18on:1.78.1'
     api 'org.bouncycastle:bcpkix-jdk18on:1.79'
 
     testImplementation(testFixtures(project(":nextflow")))
