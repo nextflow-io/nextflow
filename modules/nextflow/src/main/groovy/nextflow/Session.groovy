@@ -61,13 +61,13 @@ import nextflow.processor.TaskFault
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
 import nextflow.script.BaseScript
-import nextflow.script.ProcessConfig
 import nextflow.script.ProcessFactory
 import nextflow.script.ScriptBinding
 import nextflow.script.ScriptFile
 import nextflow.script.ScriptMeta
 import nextflow.script.ScriptRunner
 import nextflow.script.WorkflowMetadata
+import nextflow.script.dsl.ProcessConfigBuilder
 import nextflow.spack.SpackConfig
 import nextflow.trace.AnsiLogObserver
 import nextflow.trace.TraceObserver
@@ -89,7 +89,7 @@ import nextflow.util.SysHelper
 import nextflow.util.ThreadPoolManager
 import nextflow.util.Threads
 import nextflow.util.VersionNumber
-import org.apache.commons.lang.exception.ExceptionUtils
+import org.apache.commons.lang3.exception.ExceptionUtils
 import sun.misc.Signal
 import sun.misc.SignalHandler
 /**
@@ -992,7 +992,7 @@ class Session implements ISession {
      * @return {@code true} if the name specified belongs to the list of process names or {@code false} otherwise
      */
     protected boolean checkValidProcessName(Collection<String> processNames, String selector, List<String> errorMessage)  {
-        final matches = processNames.any { name -> ProcessConfig.matchesSelector(name, selector) }
+        final matches = processNames.any { name -> ProcessConfigBuilder.matchesSelector(name, selector) }
         if( matches )
             return true
 

@@ -285,9 +285,11 @@ class VariableScopeVisitor extends ConfigVisitorSupport {
         if( !node.isImplicitThis() )
             return;
         var name = node.getMethodAsString();
-        var defNode = vsc.findDslFunction(name, node);
-        if( defNode != null )
-            node.putNodeMetaData(ASTNodeMarker.METHOD_TARGET, defNode);
+        var methods = vsc.findDslFunction(name, node);
+        if( methods.size() == 1 )
+            node.putNodeMetaData(ASTNodeMarker.METHOD_TARGET, methods.get(0));
+        else if( !methods.isEmpty() )
+            node.putNodeMetaData(ASTNodeMarker.METHOD_OVERLOADS, methods);
         else if( !KEYWORDS.contains(name) )
             vsc.addError("`" + name + "` is not defined", node.getMethod());
     }

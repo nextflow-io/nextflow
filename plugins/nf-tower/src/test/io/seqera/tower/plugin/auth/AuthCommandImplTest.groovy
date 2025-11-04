@@ -83,14 +83,17 @@ class AuthCommandImplTest extends Specification {
 
     def 'should handle config writing'() {
         given:
-        def cmd = new AuthCommandImpl()
+        def cmd = Spy(AuthCommandImpl)
         def config = [
             'tower.accessToken': 'test-token',
             'tower.enabled'    : true
         ]
-
+        def authFile = tempDir.resolve('seqera-auth.config')
+        def configFile = tempDir.resolve('config')
+        cmd.getAuthFile() >> authFile
+        cmd.getConfigFile() >> configFile
         when:
-        cmd.writeConfig(config, null)
+        cmd.writeConfig(config, null, null)
 
         then:
         noExceptionThrown()
@@ -679,16 +682,16 @@ param2 = 'value2'"""
 
         // Mock API calls
         cmd.checkApiConnection(_) >> true
-        cmd.callUserInfoApi(_, _) >> [userName: 'testuser', id: '123']
-        cmd.getWorkspaceDetailsFromApi(_, _, _) >> null
-        cmd.getComputeEnvironments(_, _, _) >> []
+        cmd.getUserInfo(_, _) >> [userName: 'testuser', id: '123']
+        cmd.getWorkspaceDetails(_, _, _) >> null
+        cmd.listComputeEnvironments(_, _, _) >> [[name: 'ce_test', platform: 'aws', workDir: 's3://test', primary: true]]
 
         when:
         def status = cmd.collectStatus(config)
 
         then:
         status != null
-        status.table.size() == 6 // endpoint, connection, auth, monitoring, workspace, compute env (no work dir when no primary env)
+        status.table.size() == 7 // endpoint, connection, auth, monitoring, workspace, compute env (no work dir when no primary env)
         // Check API endpoint row
         status.table[0][0] == 'API endpoint'
         status.table[0][1].contains('https://api.cloud.seqera.io')
@@ -705,8 +708,12 @@ param2 = 'value2'"""
         // Check workspace row
         status.table[4][0] == 'Default workspace'
         status.table[4][1].contains('Personal workspace')
-        // Check compute env row (should show error fetching since no primary env found)
-        status.table[5][0] == 'Primary compute env'
+        // Check compute env row
+        status.table[5][0] == 'Compute environment'
+        status.table[5][1].contains('ce_test')
+        //Workdir
+        status.table[6][0] == 'Default work dir'
+        status.table[6][1] == 's3://test'
     }
 
     def 'should collect status without authentication'() {
@@ -755,7 +762,7 @@ param2 = 'value2'"""
         SysEnv.push([:])  // Isolate from actual environment variables
 
         cmd.checkApiConnection(_) >> true
-        cmd.callUserInfoApi(_, _) >> { throw new RuntimeException('Invalid token') }
+        cmd.getUserInfo(_, _) >> { throw new RuntimeException('Invalid token') }
 
         when:
         def status = cmd.collectStatus(config)
@@ -811,8 +818,8 @@ param2 = 'value2'"""
         ]
 
         cmd.checkApiConnection(_) >> true
-        cmd.callUserInfoApi(_, _) >> [userName: 'testuser', id: '123']
-        cmd.getWorkspaceDetailsFromApi(_, _, _) >> [
+        cmd.getUserInfo(_, _) >> [userName: 'testuser', id: '123']
+        cmd.getWorkspaceDetails(_, _, _) >> [
             orgName: 'TestOrg',
             workspaceName: 'TestWorkspace',
             workspaceFullName: 'test-org/test-workspace'
@@ -839,8 +846,8 @@ param2 = 'value2'"""
         ]
 
         cmd.checkApiConnection(_) >> true
-        cmd.callUserInfoApi(_, _) >> [userName: 'testuser', id: '123']
-        cmd.getWorkspaceDetailsFromApi(_, _, _) >> null
+        cmd.getUserInfo(_, _) >> [userName: 'testuser', id: '123']
+        cmd.getWorkspaceDetails(_, _, _) >> null
 
         when:
         def status = cmd.collectStatus(config)
@@ -858,8 +865,9 @@ param2 = 'value2'"""
         def config = [:]
 
         cmd.checkApiConnection(_) >> true
-        cmd.callUserInfoApi(_, _) >> [userName: 'envuser', id: '456']
-        cmd.getWorkspaceDetailsFromApi(_,_,_) >> [:]
+        cmd.getUserInfo(_, _) >> [userName: 'envuser', id: '456']
+        cmd.getWorkspaceDetails(_,_,_) >> [:]
+        cmd.listComputeEnvironments(_,_,_) >> []
 
         SysEnv.push(['TOWER_ACCESS_TOKEN': 'env-token',
                      'TOWER_API_ENDPOINT': 'https://env.example.com',
@@ -917,7 +925,7 @@ param2 = 'value2'"""
         ]
 
         cmd.checkApiConnection(_) >> true
-        cmd.callUserInfoApi(_, _) >> [userName: 'mixeduser', id: '789']
+        cmd.getUserInfo(_, _) >> [userName: 'mixeduser', id: '789']
         SysEnv.push(['TOWER_WORKSPACE_ID': '99999'])
 
         when:
