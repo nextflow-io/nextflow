@@ -38,6 +38,58 @@ The following task properties are defined in the process body:
   :::
 : The trace record associated with the previous task attempt.
 : Since the trace record is available after a failed task attempt, it can only be accessed when retrying a failed task execution, i.e., when `task.attempt` is greater than 1.
+**Available Fields:** All fields documented in the {ref} `trace-report` are accessible, including:
+
+- `task_id`: Task ID
+- `hash`: Task hash code
+- `native_id`: Task ID from the executor (e.g., job ID)
+- `process`: Process name
+- `tag`: User-provided task tag
+- `name`: Task name
+- `status`: Task status (NEW,SUBMITTED,RUNNING,COMPLETED,FAILED,ABORTED)
+- `module`: Environment module used
+- `container`: Container image used
+- `env`: Environment variables
+- `workdir`: Work directory path
+- `script`: Task command script
+- `time`: Time requested
+- `disk`: Disk space requested
+- `attempt`: Attempt number at which the task completed
+- `submit`: Submit timestamp
+- `start`: Start timestamp
+- `complete`: Completion timestamp
+- `duration`: Time elapsed since submission
+- `realtime`: Task execution time in milliseconds 
+- `exit`: Exit status code
+- `status`: Task status (COMPLETED, FAILED, etc.)
+- `queue`: Queue used
+- `memory`: Memory allocated 
+- `cpus`: Number of CPUs
+- `%cpu`: CPU usage percentage (use `pcpu`)
+- `%mem`: Memory usage percentage (use `pmem`)
+- `rss`: Real memory (resident set) size
+- `peak_rss`: Peak resident set size (actual memory used)
+- `vmem`: Virtual memory size
+- `peak_vmem`: Peak virtual memory
+- `rchar`: Bytes read using read-like system calls
+- `wchar`: Bytes written using write-like system calls
+- `syscr`: Number of read-like system calls 
+- `syscw`: Number of write-like system calls 
+- `read_bytes`: Bytes read from disk
+- `write_bytes`: Bytes written to disk
+- `vol_ctxt`: Voluntary context switches
+- `inv_ctxt`: Involuntary context switches
+- `scratch`: Scratch directive value
+- `error_action`: Error action applied 
+
+:::
+When accessing percentage fields programmatically, `pcpu` and `pmem` are used due to Groovy syntax limitations with the `%` character. 
+:::
+
+
+
+
+
 
 `task.process`
 : The name of the process that spawned the task.

@@ -1338,7 +1338,10 @@ process hello {
 }
 ```
 
-In the above example, the {ref}`process-memory` is set according to previous trace record metrics. In the first attempt, when no trace metrics are available, it is set to 1 GB. In each subsequent attempt, the requested memory is doubled. See {ref}`trace-report` for more information about trace records.
+In the above example, the {ref}`process-memory` is set according to previous trace record metrics. In the first attempt, when no trace metrics are available, it is set to 1 GB. In each subsequent attempt, the requested memory is doubled. 
+
+:::{note}
+You can access many other fields relative to fields present in {ref}`trace record <trace-report>`  from the previous task attempt. See the {ref}`task.previousTrace <process-reference-task-properties>` documentation for a complete list of available fields.
 
 ### Dynamic retry with backoff
 
