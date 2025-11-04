@@ -16,6 +16,8 @@
 
 package nextflow.script
 
+import java.nio.file.Paths
+
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowBroadcast
@@ -110,7 +112,9 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
 
     @Override
     ProcessDef cloneWithName(String name) {
-        ScriptMeta.addResolvedName(name)
+        final path =  ScriptMeta.get(owner)?.getScriptPath()
+        final safePath = path?: Paths.get(".") // Default path for path-less scripts (for TESTING)
+        ScriptMeta.addResolvedName(name, safePath, this.baseName, processName)
         def result = clone()
         result.@processName = name
         result.@simpleName = stripScope(name)
