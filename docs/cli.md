@@ -8,7 +8,6 @@ For the complete reference of all commands, subcommands, and options, see {ref}`
 
 :::{note}
 Nextflow uses two types of command line flags:
-
 - Nextflow options use a single dash (e.g., `-log`) and modify Nextflow's behavior.
 - Pipeline parameters use a double dash (e.g., `--input`) and are passed to your pipeline script.
 :::
@@ -145,7 +144,7 @@ $ nextflow run main.nf
 
 **Remote pipelines**
 
-Use the format `<owner>/<repository>` to run a pipeline from directly from Git repositories:
+Use the format `<organization>/<repository>` to run a pipeline from directly from Git repositories:
 
 ```console
 $ nextflow run nextflow-io/hello
@@ -157,7 +156,7 @@ Nextflow automatically:
 2. Caches it for future runs
 3. Executes the main script
 
-If you omit the owner, Nextflow searches cached pipelines first, then attempts to download from the `NXF_ORG` organization (default: `nextflow-io`).
+If you omit the organization, Nextflow searches cached pipelines first, then attempts to download from the `NXF_ORG` organization (default: `nextflow-io`).
 
 You can also use full repository URLs:
 
@@ -170,7 +169,7 @@ $ nextflow run https://github.com/nextflow-io/hello
 Use the `-user` option to add credentials for private repositories:
 
 ```console
-$ nextflow run owner/private-repo -user my-username
+$ nextflow run organization/private-repo -user my-username
 ```
 
 Alternatively, configure Git authentication. See {ref}`Git configuration <git-page>` for more information.
@@ -180,7 +179,7 @@ Alternatively, configure Git authentication. See {ref}`Git configuration <git-pa
 Use the `-hub` option specify Bitbucket, GitLab, or other Git providers:
 
 ```console
-$ nextflow run owner/repo -hub bitbucket
+$ nextflow run organization/repo -hub bitbucket
 ```
 
 **Revision selection**
@@ -195,7 +194,7 @@ $ nextflow run nextflow-io/hello -r a3f5c8e
 
 (cli-params)=
 
-**Pipeline parameters**
+### Pipeline parameters
 
 Pipeline parameters are values defined with `params` in your script. Override them on the command line using the `--` prefix to customize pipeline behavior without modifying code.
 
@@ -468,13 +467,13 @@ $ nextflow lineage
 
 See {ref}`data-lineage-page` to get started and {ref}`cli-lineage` for more information. 
 
-## Platform integration
+## Seqera Platform
 
-Platform integration commands connect Nextflow with [Seqera Platform](https://seqera.io) for workflow management, monitoring, and collaboration. The Platform provides centralized execution management, monitoring dashboards, and secure credential storage.
+[Seqera Platform](https://seqera.io) is a comprehensive workflow orchestration platform that extends Nextflow with features for workflow management, monitoring, and collaboration.
 
-Use these commands when working with Seqera Platform to authenticate, launch workflows, or manage secrets.
+Use these commands to authenticate with Seqera Platform and launch workflows directly to the Platform's managed infrastructure.
 
-### Seqera Platform authentication
+### Platform authentication
 
 :::{versionadded} 25.10.0
 :::
