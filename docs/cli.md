@@ -145,7 +145,7 @@ $ nextflow run main.nf
 
 **Remote pipelines**
 
-Run a pipeline from directly from Git repositories without manual downloading. Use the format `<owner>/<repository>`:
+Use the format `<owner>/<repository>` to run a pipeline from directly from Git repositories:
 
 ```console
 $ nextflow run nextflow-io/hello
@@ -167,7 +167,7 @@ $ nextflow run https://github.com/nextflow-io/hello
 
 **Private repositories**
 
-Add credentials for private repositories with the `-user` option:
+Use the `-user` option to add credentials for private repositories:
 
 ```console
 $ nextflow run owner/private-repo -user my-username
@@ -177,7 +177,7 @@ Alternatively, configure Git authentication. See {ref}`Git configuration <git-pa
 
 **Non-GitHub providers**
 
-Specify Bitbucket, GitLab, or other Git providers with the `-hub` option:
+Use the `-hub` option specify Bitbucket, GitLab, or other Git providers:
 
 ```console
 $ nextflow run owner/repo -hub bitbucket
@@ -185,7 +185,7 @@ $ nextflow run owner/repo -hub bitbucket
 
 **Revision selection**
 
-Specify Git branches, tags, or commits with the `-r` option:
+Use the `-r` option to specify Git branches, tags, or commits:
 
 ```console
 $ nextflow run nextflow-io/hello -r v1.1
@@ -241,7 +241,7 @@ $ nextflow run main.nf -params-file params.yml
 
 **Parameter precedence**
 
- Nextflow applies parameters defined in multiple places in the following order (lowest to highest priority):
+Nextflow applies parameters defined in multiple places in the following order (lowest to highest priority):
 
 1. Pipeline script defaults (`params.foo = 'default'`)
 2. Configuration files (see {ref}`config-params`)
@@ -554,7 +554,7 @@ See {ref}`cli-plugin` for more information.
 :::{versionadded} 25.04.0
 :::
 
-Create a new plugin scaffold for development:
+Use the `create` subcommand to create a new plugin scaffold for development:
 
 ```console
 $ nextflow plugin create
@@ -562,7 +562,7 @@ $ nextflow plugin create
 
 **Plugin installation**
 
-Install a plugin to extend Nextflow's functionality:
+Use the `install` subcommand to install a plugin and extend Nextflow functionality:
 
 ```console
 $ nextflow plugin install my-plugin
@@ -570,7 +570,7 @@ $ nextflow plugin install my-plugin
 
 **Plugin execution**
 
-Execute plugin-specific commands using the format `plugin-name:command`:
+Use the the format `plugin-name:command` to execute plugin-specific commands:
 
 ```console
 $ nextflow plugin my-plugin:hello --alpha --beta
