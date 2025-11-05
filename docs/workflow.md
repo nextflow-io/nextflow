@@ -168,6 +168,27 @@ The result of the above workflow can be accessed using `my_workflow.out.my_data`
 Every output must be assigned to a name when multiple outputs are declared.
 :::
 
+:::{versionadded} 25.10.0
+:::
+
+When using the {ref}`strict syntax <strict-syntax-page>`, workflow takes and emits can specify a type annotation:
+
+```nextflow
+workflow my_workflow {
+    take:
+    data: Channel<Path>
+
+    main:
+    ch_hello = hello(data)
+    ch_bye = bye(ch_hello.collect())
+
+    emit:
+    my_data: Value<Path> = ch_bye
+}
+```
+
+In the above example, `my_workflow` takes a channel of files (`Channel<Path>`) and emits a dataflow value with a single file (`Value<Path>`). See {ref}`stdlib-types` for the list of available types.
+
 (workflow-process-invocation)=
 
 ## Calling processes and workflows
