@@ -12,118 +12,6 @@ Nextflow uses two types of command line flags:
 - Pipeline parameters use a double dash (e.g., `--input`) and are passed to your pipeline script.
 :::
 
-## Options
-
-Nextflow options control how Nextflow itself operates. Use them to configure execution behavior, manage logging, override configurations, and get information about Nextflow.
-
-### Soft configuration override
-
-The `-c` option adds your configuration on top of the defaults and merges them together.
-
-Use this when you want to override specific settings while keeping other defaults intact. Multiple configuration files can be specified as a comma separated list.
-
-```console
-$ nextflow -c my.config run nextflow-io/hello
-```
-
-See {ref}`config-page` for more information.
-
-### Hard configuration override
-
-The `-C` option replaces all default configuration with your custom configuration files. Multiple configuration files can be specified as a comma separated list.
-
-Use this when you want to ensure no default configurations interfere with your custom settings. Unlike `-c` which merges configurations, `-C` ensures only your specified file is used.
-
-```console
-$ nextflow -C my.config run nextflow-io/hello
-```
-
-See {ref}`config-page` for more information.
-
-### Background execution
-
-The `-bg` option launches Nextflow as a background process and frees your terminal for other work.
-
-Use this for long-running pipelines when you need to continue using your terminal or want to disconnect without stopping execution. It works like `nohup`, allowing you to close your terminal without stopping the pipeline.
-
-```console
-$ nextflow -bg run nextflow-io/hello
-```
-
-### Quiet mode
-
-The `-q` option suppresses the Nextflow banner and execution progress output.
-
-Use this to keep your terminal output clean. It hides the ASCII banner and task progress but doesn't affect pipeline `println` statements or error messages.
-
-```console
-$ nextflow -q run nextflow-io/hello
-```
-
-### Custom log file path
-
-The `-log` option directs Nextflow logs to a specific file instead of the default `.nextflow.log`.
-
-Use this for organizing logs by project, integrating with logging systems, or storing logs in centralized locations.
-
-```console
-$ nextflow -log /var/log/nextflow.log run nextflow-io/hello
-```
-
-### Syslog integration
-
-The `-syslog` option sends logs to a [Syslog](https://en.wikipedia.org/wiki/Syslog) server for centralized log management.
-
-Use this to aggregate Nextflow logs with other system logs to enable centralized monitoring and analysis.
-
-```console
-$ nextflow -syslog localhost:1234 run nextflow-io/hello
-```
-
-### JVM properties
-
-The `-D` option sets Java system properties that control the JVM running Nextflow.
-
-Use this for configuring memory, encoding, or other Java-level behavior. You can specify multiple properties by using `-D` multiple times.
-
-```console
-$ nextflow -Dfile.encoding=UTF-8 run nextflow-io/hello
-```
-
-See {ref}`config-env-vars` for more information.
-
-### Help display
-
-The `-h` option shows available commands and global options.
-
-Use this to discover available commands or refresh your memory about command syntax.
-
-```console
-$ nextflow -h
-```
-
-### Version information
-
-The `-v` and `-version` options prints Nextflow version information.
-
-Use `-v` for minimal output showing version and build number.
-
-```console
-$ nextflow -v
-nextflow version 24.04.0.5917
-```
-
-Use `-version` for detailed output showing creation date, citation, and website.
-
-```console
-$ nextflow -version
-N E X T F L O W
-version 24.04.0 build 5917
-created 03-05-2024 15:07 UTC
-cite doi:10.1038/nbt.3820
-http://nextflow.io
-```
-
 ## Pipeline execution
 
 Pipeline execution is the core function of Nextflow. These commands run Nextflow workflows, either from local files or remote Git repositories. Nextflow handles downloading, caching, and executing pipelines with minimal user intervention.
@@ -388,6 +276,30 @@ $ nextflow config nextflow-io/hello
 
 See {ref}`cli-config` for more information.
 
+### Soft configuration override
+
+The `-c` option adds your configuration on top of the defaults and merges them together.
+
+Use this when you want to override specific settings while keeping other defaults intact. Multiple configuration files can be specified as a comma separated list.
+
+```console
+$ nextflow -c my.config run nextflow-io/hello
+```
+
+See {ref}`config-page` for more information.
+
+### Hard configuration override
+
+The `-C` option replaces all default configuration with your custom configuration files. Multiple configuration files can be specified as a comma separated list.
+
+Use this when you want to ensure no default configurations interfere with your custom settings. Unlike `-c` which merges configurations, `-C` ensures only your specified file is used.
+
+```console
+$ nextflow -C my.config run nextflow-io/hello
+```
+
+See {ref}`config-page` for more information.
+
 ### Process inspection
 
 :::{versionadded} 23.09.0-edge
@@ -597,4 +509,26 @@ Use this to learn about command-specific options, refresh your memory about synt
 ```console
 $ nextflow help run
 $ nextflow help clean
+```
+
+### Version information
+
+The `-v` and `-version` options print Nextflow version information.
+
+Use `-v` for minimal output showing version and build number.
+
+```console
+$ nextflow -v
+nextflow version 24.04.0.5917
+```
+
+Use `-version` for detailed output showing creation date, citation, and website.
+
+```console
+$ nextflow -version
+N E X T F L O W
+version 24.04.0 build 5917
+created 03-05-2024 15:07 UTC
+cite doi:10.1038/nbt.3820
+http://nextflow.io
 ```

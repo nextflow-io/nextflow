@@ -16,10 +16,11 @@ Available options:
 : Comma-separated list of configuration files which are used as the configuration set. Any other default configuration files are ignored.
 
 `-D`
-: Set JVM properties.
+: Set JVM properties (e.g. `-Dfile.encoding=UTF-8`). Equivalent to the `NXF_JVM_ARGS` environment variable.
 
 `-bg`
-: Execute nextflow in background.
+: Execute Nextflow in background.
+: Allows you to close your terminal without terminating the pipeline run.
 
 `-c, -config`
 : Comma-separated list of configuration files which are added to the configuration set.
@@ -27,22 +28,23 @@ Available options:
 `-d, -dockerize`
 : :::{deprecated} 23.09.0-edge
   :::
-: Launch nextflow via Docker (experimental).
+: Launch Nextflow via Docker (experimental).
 
 `-h`
-: Print this help.
+: Print available commands and options.
 
 `-log`
-: Set nextflow log file path.
+: Set Nextflow log file path (default: `.nextflow.log`).
 
 `-q, -quiet`
-: Do not print information messages.
+: Do not print the Nextflow banner and execution progress to the console.
+: Does not affect messages printed by the pipeline or error messages.
 
 `-remote-debug`
 : Enable JVM interactive remote debugging (experimental).
 
 `-syslog`
-: Send logs to syslog server (e.g. localhost:514).
+: Send logs to a [Syslog](https://en.wikipedia.org/wiki/Syslog) server (e.g. `localhost:514`).
 
 `-trace`
 : Enable trace level logging for the specified packages. Multiple packages can be provided separating them with a comma, e.g. `-trace nextflow,io.seqera`.
@@ -56,7 +58,7 @@ Available options:
 
 ### `auth`
 
-:::{versionadded} 25.09.0-edge
+:::{versionadded} 25.10.0
 :::
 
 Manage Seqera Platform authentication.
