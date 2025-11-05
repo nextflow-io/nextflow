@@ -35,7 +35,7 @@ import org.eclipse.jgit.transport.URIish
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Pushes a local implementation to a remote repository")
+@Parameters(commandDescription = "Upload a local project to a remote Git repository")
 class CmdPush extends CmdBase implements HubOptions {
 
     static final public NAME = 'push'
