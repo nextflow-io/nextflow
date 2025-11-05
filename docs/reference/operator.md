@@ -1657,7 +1657,7 @@ An optional {ref}`closure <script-closure>` can be used to transform each item b
 ```
 
 :::{note}
-The difference between `unique` and `distinct` is that `unique` removes *all* duplicate values, whereas `distinct` removes only *consecutive* duplicate values. As a result, `unique` must process the entire source channel before it can emit anything, whereas `distinct` can emit each value immediately.
+The difference between `unique` and `distinct` is that `unique` removes *all* duplicate values, whereas `distinct` removes only *consecutive* duplicate values.
 :::
 
 See also: [distinct](#distinct)
