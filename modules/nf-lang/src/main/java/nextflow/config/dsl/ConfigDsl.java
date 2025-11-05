@@ -44,6 +44,12 @@ public interface ConfigDsl extends DslScope {
     """)
     Path getLaunchDir();
 
+    @Constant("outputDir")
+    @Description("""
+        The directory where workflow outputs are saved.
+    """)
+    Path getOutputDir();
+
     @Constant("params")
     @Description("""
         Map of workflow parameters specified in the config file or as command line options.

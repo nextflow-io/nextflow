@@ -107,6 +107,9 @@ The following constants are globally available in a Nextflow configuration file:
 `launchDir: Path`
 : The directory where the workflow was launched.
 
+`outputDir: Path`
+: The directory where workflow outputs are saved.
+
 `projectDir: Path`
 : The directory where the main script is located.
 
