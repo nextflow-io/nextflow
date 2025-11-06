@@ -303,25 +303,30 @@ class TowerClient extends TowerCommonApi implements TraceObserverV2 {
     }
 
     protected PlatformMetadata getPlatformMetadata(String workflowId) {
-        final userInfo = getUserInfo(this.httpClient, this.endpoint)
-        final queryParams = workspaceId ? [workspaceId: workspaceId.toString()] : [:]
-        final workflowDetails = getWorkflowDetails(this.httpClient, this.endpoint, workflowId, queryParams)
-        final workspaceDetails = getUserWorkspaceDetails(this.httpClient, userInfo?.id as String, this.endpoint, this.workspaceId)
+        try {
+            final userInfo = getUserInfo(this.httpClient, this.endpoint)
+            final queryParams = workspaceId ? [workspaceId: workspaceId.toString()] : [:]
+            final workflowDetails = getWorkflowDetails(this.httpClient, this.endpoint, workflowId, queryParams)
+            final workspaceDetails = getUserWorkspaceDetails(this.httpClient, userInfo?.id as String, this.endpoint, this.workspaceId)
 
-        if( workspaceDetails?.roles ) {
-            final roles = workspaceDetails.remove('roles')
-            userInfo.roles = roles
+            if( workspaceDetails?.roles ) {
+                final roles = workspaceDetails.remove('roles')
+                userInfo.roles = roles
+            }
+            final workflowLaunch = getWorkflowLaunchDetails(workflowId, queryParams)
+
+            return new PlatformMetadata(
+                workflowId,
+                userInfo ? new PlatformMetadata.User(userInfo) : null,
+                workspaceDetails ? new PlatformMetadata.Workspace(workspaceDetails) : null,
+                workflowLaunch?.computeEnv as PlatformMetadata.ComputeEnv,
+                workflowLaunch?.pipeline as PlatformMetadata.Pipeline,
+                getLabels(workflowDetails?.labels as List<Map>)
+            )
+        }catch(Throwable e){
+            log.debug("Exception getting platform metadata", e)
+            return null
         }
-        final workflowLaunch = getWorkflowLaunchDetails(workflowId, queryParams)
-
-        return new PlatformMetadata(
-            workflowId,
-            userInfo ? new PlatformMetadata.User(userInfo) : null,
-            workspaceDetails ? new PlatformMetadata.Workspace(workspaceDetails) : null,
-            workflowLaunch?.computeEnv as PlatformMetadata.ComputeEnv,
-            workflowLaunch?.pipeline as PlatformMetadata.Pipeline,
-            getLabels(workflowDetails?.labels as List<Map>)
-        )
     }
 
     private List getLabels(List<Map> labelsMap){

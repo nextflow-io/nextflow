@@ -16,6 +16,8 @@
 
 package nextflow.lineage
 
+import nextflow.NextflowMeta
+import nextflow.extension.FilesEx
 import nextflow.lineage.exception.OutputRelativePathException
 
 import static nextflow.lineage.fs.LinPath.*
@@ -71,6 +73,9 @@ import nextflow.util.TestOnly
 @Slf4j
 @CompileStatic
 class LinObserver implements TraceObserverV2 {
+    private static List<String> workflowMetadataPropertiesToRemove = [
+        "stats", "success" // End
+    ]
     private static Map<Class<? extends BaseParam>, String> taskParamToValue = [
         (StdOutParam)  : "stdout",
         (StdInParam)   : "stdin",
@@ -163,7 +168,8 @@ class LinObserver implements TraceObserverV2 {
             session.uniqueId.toString(),
             session.runName,
             getNormalizedParams(session.params, normalizer),
-            SecretHelper.hideSecrets(session.config.deepClone()) as Map
+            SecretHelper.hideSecrets(session.config.deepClone()) as Map,
+            addOtherMetadata(normalizer)
         )
         final executionHash = CacheHelper.hasher(value).hash().toString()
         store.save(executionHash, value)
@@ -473,5 +479,21 @@ class LinObserver implements TraceObserverV2 {
             )
         }
         return paths
+    }
+
+    private Map addOtherMetadata(PathNormalizer normalizer) {
+        try {
+            def metadata = session.workflowMetadata.toMap()
+                .collectEntries { it.value instanceof Path ? [it.key, FilesEx.toUriString(it.value as Path) ] : [it.key, it.value] }
+            metadata.removeAll {it.key.toString() in workflowMetadataPropertiesToRemove }
+            if( metadata.containsKey("nextflow") )
+                metadata["nextflow"] = (metadata["nextflow"] as NextflowMeta).toJsonMap()
+            if( metadata.containsKey("configFiles") )
+                metadata["configFiles"] = (metadata["configFiles"] as List<Path>).collect {normalizer.normalizePath(it)}
+            return metadata
+        }catch( Throwable e){
+            log.debug("Error creating metadata", e)
+            return [:]
+        }
     }
 }
