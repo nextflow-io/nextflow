@@ -1,0 +1,103 @@
+/*
+ * Copyright 2013-2024, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package nextflow.cli
+import com.beust.jcommander.Parameter
+import com.beust.jcommander.Parameters
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+import nextflow.exception.AbortOperationException
+import nextflow.plugin.Plugins
+import nextflow.scm.AssetManager
+import nextflow.scm.PushManager
+import nextflow.util.TestOnly
+import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.transport.RemoteConfig
+import org.eclipse.jgit.transport.URIish
+
+
+/**
+ * CLI sub-command Push
+ *
+ * @author Jorge Ejarque <jorge.ejarque@seqera.io>
+ */
+@Slf4j
+@CompileStatic
+@Parameters(commandDescription = "Pushes a local implementation to a remote repository")
+class CmdPush extends CmdBase implements HubOptions {
+
+    static final public NAME = 'push'
+
+    @Parameter(description = 'Repository URL to push to (optional if already configured as git remote)')
+    List<String> args
+
+    @Parameter(names=['-d', '-directory'], description = 'Local directory to push (default: current directory)')
+    String directory
+
+    @Parameter(names=['-r','-revision'], description = 'Revision of the project to run (either a git branch, tag or commit SHA number)')
+    String revision = 'main'
+
+    @Parameter(names=['-max-size'], description = 'Maximum file size in MB to push without confirmation (default: 10)')
+    int maxSizeMB = 10
+
+    @Parameter(names=['-message', '-m'], description = 'Commit message')
+    String message = 'Push from nextflow'
+
+    @Override
+    final String getName() { NAME }
+
+    @TestOnly
+    protected File root
+
+    @Override
+    void run() {
+        if( args && args.size() > 1){
+            throw new AbortOperationException('Incorrect number of arguments')
+        }
+
+        // Get repository from args (optional)
+        def repository = args && args.size() == 1 ? args[0] : null
+
+        // Folder defaults to current working directory if not specified
+        def folder = directory
+            ? new File(directory).getAbsoluteFile()
+            : new File(System.getProperty('user.dir')).getAbsoluteFile()
+
+        if( !folder.exists() )
+            throw new AbortOperationException("Folder does not exist: ${folder.absolutePath}")
+
+        if( !folder.isDirectory() )
+            throw new AbortOperationException("Path is not a directory: ${folder.absolutePath}")
+
+        // init plugin system
+        Plugins.init()
+
+        try {
+            final manager = new PushManager(folder)
+            def resolvedRepo = repository
+            if( !resolvedRepo ) {
+                resolvedRepo = manager.resolveRepository()
+            }
+
+            log.info "Pushing folder ${folder.absolutePath} to repository ${resolvedRepo}"
+            manager.push(resolvedRepo, revision)
+        }
+        catch( Exception e ) {
+            throw new AbortOperationException("Failed to push folder: ${e.message}", e)
+        }
+    }
+
+}

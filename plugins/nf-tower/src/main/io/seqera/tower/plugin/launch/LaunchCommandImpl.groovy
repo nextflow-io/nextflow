@@ -26,6 +26,7 @@ import io.seqera.tower.plugin.TowerClient
 import io.seqera.tower.plugin.datalink.DataLinkUtils
 import nextflow.BuildInfo
 import nextflow.cli.CmdLaunch
+import nextflow.scm.PushManager
 import nextflow.util.ColorUtil
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper

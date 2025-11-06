@@ -1,9 +1,8 @@
-package io.seqera.tower.plugin.launch
+package nextflow.scm
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
-import nextflow.scm.AssetManager
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.Status
 import org.eclipse.jgit.transport.RemoteConfig
