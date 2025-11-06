@@ -26,7 +26,7 @@ Available options:
 : Comma-separated list of configuration files which are added to the configuration set.
 
 `-d, -dockerize`
-: :::{deprecated} 23.09.0-edge
+: :::{deprecated} 23.10.0
   :::
 : Launch Nextflow via Docker (experimental).
 
@@ -321,7 +321,7 @@ The `config` command is used for printing the project's configuration i.e. the `
 : Sort config attributes.
 
 `-value`
-: :::{versionadded} 23.08.0-edge
+: :::{versionadded} 23.10.0
   :::
 : Print the value of a config option, or fail if the option is not defined.
 
@@ -620,7 +620,7 @@ $ nextflow info nextflow-io/hello
 
 ### `inspect`
 
-:::{versionadded} 23.09.0-edge
+:::{versionadded} 23.10.0
 :::
 
 Inspect process settings in a pipeline project. Currently only supports the `container` directive.
@@ -730,22 +730,18 @@ The `kuberun` command supports the following options from [`run`](#run):
 The following new options are also available:
 
 `-head-cpus`
-: :::{versionadded} 22.01.0-edge
-  :::
 : Specify number of CPUs requested for the Nextflow pod.
 
 `-head-image`
-: :::{versionadded} 22.07.1-edge
+: :::{versionadded} 22.10.0
   :::
 : Specify the container image for the Nextflow driver pod.
 
 `-head-memory`
-: :::{versionadded} 22.01.0-edge
-  :::
 : Specify amount of memory requested for the Nextflow pod.
 
 `-head-prescript`
-: :::{versionadded} 22.05.0-edge
+: :::{versionadded} 22.10.0
   :::
 : Specify script to be run before the Nextflow pod starts.
 
@@ -1238,12 +1234,12 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 : Prevent the cancellation of child jobs on execution termination
 
 `-dsl1`
-: :::{deprecated} 23.09.0-edge
+: :::{deprecated} 23.10.0
   :::
 : Execute the workflow using DSL1 syntax.
 
 `-dsl2`
-: :::{deprecated} 23.09.0-edge
+: :::{deprecated} 23.10.0
   :::
 : Execute the workflow using DSL2 syntax.
 
@@ -1278,8 +1274,6 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 : Library extension path.
 
 `-main-script` (`main.nf`)
-: :::{versionadded} 20.09.1-edge
-  :::
 : The script file to be executed when launching a project directory or repository.
 
 `-name`
@@ -1300,7 +1294,7 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 : Comma separated list of plugin ids to be applied in the pipeline execution.
 
 `-preview`
-: :::{versionadded} 22.06.0-edge
+: :::{versionadded} 22.10.0
   :::
 : Run the workflow script skipping the execution of all processes.
 

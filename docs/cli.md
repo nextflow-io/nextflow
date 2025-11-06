@@ -302,7 +302,7 @@ See {ref}`cli-config` for more information.
 
 ### Process inspection
 
-:::{versionadded} 23.09.0-edge
+:::{versionadded} 23.10.0
 :::
 
 The `inspect` command analyzes process settings in a pipeline without executing it. It outputs container information in JSON or Nextflow configuration format.
