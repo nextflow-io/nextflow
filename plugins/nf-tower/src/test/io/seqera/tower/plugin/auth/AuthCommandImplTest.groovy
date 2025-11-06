@@ -819,7 +819,7 @@ param2 = 'value2'"""
 
         cmd.checkApiConnection(_) >> true
         cmd.getUserInfo(_, _) >> [userName: 'testuser', id: '123']
-        cmd.getWorkspaceDetails(_, _, _) >> [
+        cmd.getUserWorkspaceDetails(_, _, _, _) >> [
             orgName: 'TestOrg',
             workspaceName: 'TestWorkspace',
             workspaceFullName: 'test-org/test-workspace'
@@ -847,7 +847,7 @@ param2 = 'value2'"""
 
         cmd.checkApiConnection(_) >> true
         cmd.getUserInfo(_, _) >> [userName: 'testuser', id: '123']
-        cmd.getWorkspaceDetails(_, _, _) >> null
+        cmd.getUserWorkspaceDetails(_, _, _, _) >> null
 
         when:
         def status = cmd.collectStatus(config)
@@ -866,7 +866,7 @@ param2 = 'value2'"""
 
         cmd.checkApiConnection(_) >> true
         cmd.getUserInfo(_, _) >> [userName: 'envuser', id: '456']
-        cmd.getWorkspaceDetails(_,_,_) >> [:]
+        cmd.getUserWorkspaceDetails(_,_,_,_) >> [:]
         cmd.listComputeEnvironments(_,_,_) >> []
 
         SysEnv.push(['TOWER_ACCESS_TOKEN': 'env-token',

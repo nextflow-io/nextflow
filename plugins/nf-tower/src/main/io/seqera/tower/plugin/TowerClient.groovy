@@ -42,6 +42,7 @@ import nextflow.exception.AbortOperationException
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskId
 import nextflow.processor.TaskProcessor
+import nextflow.script.PlatformMetadata
 import nextflow.trace.ResourcesAggregator
 import nextflow.trace.TraceObserverV2
 import nextflow.trace.TraceRecord
@@ -60,7 +61,7 @@ import nextflow.util.Threads
  */
 @Slf4j
 @CompileStatic
-class TowerClient implements TraceObserverV2 {
+class TowerClient extends TowerCommonApi implements TraceObserverV2 {
 
     static final public String DEF_ENDPOINT_URL = 'https://api.cloud.seqera.io'
 
@@ -295,8 +296,56 @@ class TowerClient implements TraceObserverV2 {
         if( ret.message )
             log.warn(ret.message.toString())
 
+        session.workflowMetadata.seqeraPlatform = getPlatformMetadata(workflowId)
+
         // Prepare to collect report paths if tower configuration has a 'reports' section
         reports.flowCreate(workflowId)
+    }
+
+    protected PlatformMetadata getPlatformMetadata(String workflowId) {
+        final userInfo = getUserInfo(this.httpClient, this.endpoint)
+        final queryParams = workspaceId ? [workspaceId: workspaceId.toString()] : [:]
+        final workflowDetails = getWorkflowDetails(this.httpClient, this.endpoint, workflowId, queryParams)
+        final workspaceDetails = getUserWorkspaceDetails(this.httpClient, userInfo?.id as String, this.endpoint, this.workspaceId)
+
+        if( workspaceDetails?.roles ) {
+            final roles = workspaceDetails.remove('roles')
+            userInfo.roles = roles
+        }
+        final workflowLaunch = getWorkflowLaunchDetails(workflowId, queryParams)
+
+        return new PlatformMetadata(
+            workflowId,
+            userInfo ? new PlatformMetadata.User(userInfo) : null,
+            workspaceDetails ? new PlatformMetadata.Workspace(workspaceDetails) : null,
+            workflowLaunch?.computeEnv as PlatformMetadata.ComputeEnv,
+            workflowLaunch?.pipeline as PlatformMetadata.Pipeline,
+            getLabels(workflowDetails?.labels as List<Map>)
+        )
+    }
+
+    private List getLabels(List<Map> labelsMap){
+        if( !labelsMap )
+            return []
+        final labels = []
+        for (Map label: labelsMap){
+            labels.add( label.key ? "${label.key}=${label.value}" : label.value as String )
+        }
+        return labels
+    }
+
+
+    private Map getWorkflowLaunchDetails(workflowId, Map queryParams) {
+        final launch = apiGet(this.httpClient, this.endpoint, "/workflow/${workflowId}/launch", queryParams).launch as Map
+        return [
+            computeEnv: launch.computeEnv ? new PlatformMetadata.ComputeEnv(launch.computeEnv as Map) : null,
+            pipeline : new PlatformMetadata.Pipeline(
+                id: launch.pipelineId as String,
+                name: launch.pipeline as String,
+                revision: launch.revision as String,
+                commitId: launch.commitId as String
+            )
+        ]
     }
 
     protected HxClient newHttpClient() {
@@ -598,6 +647,10 @@ class TowerClient implements TraceObserverV2 {
 
     protected Map makeCompleteReq(Session session) {
         def workflow = session.getWorkflowMetadata().toMap()
+        //Remove retrieved seqeraPlatform info
+        if( workflow.seqeraPlatform )
+            workflow.remove('seqeraPlatform')
+
         workflow.params = session.getParams()
         workflow.id = getWorkflowId()
         // render as a string

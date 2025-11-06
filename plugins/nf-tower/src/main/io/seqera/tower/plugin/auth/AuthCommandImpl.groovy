@@ -1,5 +1,22 @@
+/*
+ * Copyright 2013-2025, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
 package io.seqera.tower.plugin.auth
 
+import io.seqera.http.HxClient
 import io.seqera.tower.plugin.BaseCommandImpl
 import nextflow.util.SpinnerUtil
 
@@ -155,7 +172,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
             final accessToken = tokenData['access_token'] as String
 
             // Verify login by calling /user-info
-            final userInfo = getUserInfo(accessToken, apiUrl)
+            final userInfo = getUserInfo( createHttpClient(accessToken), apiUrl)
             println "\n\n${colorize('✔', 'green', true)} Authentication successful"
 
             // Generate PAT
@@ -453,7 +470,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
 
         // Validate token by calling /user-info API
         try {
-            final userInfo = getUserInfo(existingToken as String, apiUrl)
+            final userInfo = getUserInfo( createHttpClient(existingToken as String), apiUrl)
             printColored(" - Token is valid for user: $userInfo.userName", "dim")
         } catch( Exception e ) {
             printColored("Failed to validate token: ${e.message}", "red")
@@ -590,7 +607,8 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
 
         try {
             // Get user info to validate token and get user ID
-            final userInfo = getUserInfo(existingToken as String, endpoint as String)
+            final httpClient = createHttpClient(existingToken as String)
+            final userInfo = getUserInfo(httpClient, endpoint as String)
             printColored(" - Authenticated as: $userInfo.userName", "dim")
             println ""
 
@@ -601,7 +619,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
             configChanged |= configureEnabled(config)
 
             // Configure workspace
-            final workspaceResult = configureWorkspace(config, existingToken as String, endpoint as String, userInfo.id as String)
+            final workspaceResult = configureWorkspace(httpClient, config, endpoint as String, userInfo.id as String)
             configChanged = configChanged || (workspaceResult.changed as boolean)
 
             // Configure compute environment for the workspace (always run after workspace selection)
@@ -609,7 +627,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
             def workspaceMetadata = workspaceResult.metadata as Map
             if( !workspaceMetadata && currentWorkspaceId ) {
                 // Get workspace metadata if not already available (e.g., when user kept existing workspace)
-                workspaceMetadata = getWorkspaceDetails(existingToken as String, endpoint as String, currentWorkspaceId)
+                workspaceMetadata = getUserWorkspaceDetails(httpClient, userInfo.id as String, endpoint as String, currentWorkspaceId)
             }
             final computeEnvResult = configureComputeEnvironment(config as Map, existingToken as String, endpoint as String, currentWorkspaceId, workspaceMetadata)
             configChanged = configChanged || (computeEnvResult.changed as boolean)
@@ -655,13 +673,13 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
      * the user to select a default workspace. For large numbers of workspaces,
      * uses a two-stage selection process (organization first, then workspace).
      *
+     * @param client
      * @param config Configuration map to update
-     * @param accessToken Authentication token for API calls
      * @param endpoint Seqera Platform API endpoint
      * @param userId User ID for fetching workspaces
      * @return Map containing 'changed' (boolean) and 'metadata' (workspace info)
      */
-    private Map configureWorkspace(Map config, String accessToken, String endpoint, String userId) {
+    private Map configureWorkspace(HxClient client, Map config, String endpoint, String userId) {
         // Check if TOWER_WORKFLOW_ID environment variable is set
         final envWorkspaceId = SysEnv.get('TOWER_WORKFLOW_ID')
         if( envWorkspaceId ) {
@@ -671,7 +689,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
         }
 
         // Get all workspaces for the user
-        final workspaces = listUserWorkspaces(accessToken, endpoint, userId)
+        final workspaces = listUserWorkspaces(client, endpoint, userId)
 
         if( !workspaces ) {
             println "\nNo workspaces found for your account."
@@ -832,7 +850,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
     private Map configureComputeEnvironment(Map config, String accessToken, String endpoint, String workspaceId, Map workspaceMetadata) {
         try {
             // Get compute environments for the workspace
-            final computeEnvs = listComputeEnvironments(accessToken, endpoint, workspaceId)
+            final computeEnvs = listComputeEnvironments(createHttpClient(accessToken), endpoint, workspaceId)
 
             // If there are zero compute environments, log a warning and provide a link
             if( computeEnvs.isEmpty() ) {
@@ -985,7 +1003,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
 
         if( accessToken ) {
             try {
-                final userInfo = getUserInfo(accessToken, endpoint)
+                final userInfo = getUserInfo(createHttpClient(accessToken), endpoint)
                 final currentUser = userInfo.userName as String
                 status.table.add(['Authentication', "${colorize('✔ OK', 'green')} (user: $currentUser)".toString(), tokenSource])
             } catch( Exception e ) {
@@ -1007,7 +1025,9 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
             // Try to get workspace name and roles from API if we have a token
             def workspaceDetails = null
             if( accessToken ) {
-                workspaceDetails = getWorkspaceDetails(accessToken, endpoint, workspaceId)
+                final httpClient = createHttpClient(accessToken)
+                final userInfo = getUserInfo(httpClient, endpoint)
+                workspaceDetails = getUserWorkspaceDetails(httpClient, userInfo.id as String, endpoint, workspaceId)
             }
 
             if( workspaceDetails ) {
@@ -1030,11 +1050,12 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
         // Compute environment and work directory
         def computeEnv = null
         if( accessToken ) {
+            final httpClient = createHttpClient(accessToken)
             try {
                 if( config['tower.computeEnvId'] ) {
-                    computeEnv = getComputeEnvironment(accessToken, endpoint, config['tower.computeEnvId'] as String, workspaceId)
+                    computeEnv = getComputeEnvironment(httpClient, endpoint, config['tower.computeEnvId'] as String, workspaceId)
                 } else {
-                    final computeEnvs = listComputeEnvironments(accessToken, endpoint, workspaceId)
+                    final computeEnvs = listComputeEnvironments(httpClient, endpoint, workspaceId)
                     computeEnv = computeEnvs.find { ((Map) it).primary == true } as Map
                 }
             } catch( Exception e ) {

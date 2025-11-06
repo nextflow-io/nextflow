@@ -219,6 +219,11 @@ class WorkflowMetadata {
     FusionMetadata fusion
 
     /**
+     * Workflow metadata associated to the Seqera Platform execution.
+     */
+    PlatformMetadata seqeraPlatform
+
+    /**
      * The list of files that concurred to create the config object
      */
     List<Path> configFiles
