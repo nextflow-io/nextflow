@@ -1,0 +1,123 @@
+# Migrating to 25.04
+
+[Nextflow 25.04](https://github.com/nextflow-io/nextflow/releases/tag/v25.04.0) was released on May 8, 2025.
+
+## New features
+
+### Strict syntax
+
+The *strict syntax* is a strict parser for Nextflow DSL2 that implements the [Nextflow language specification][syntax-page]. Originally introduced by the [Nextflow language server](https://github.com/nextflow-io/language-server) alongside Nextflow 24.10, the strict syntax is now available in the Nextflow CLI.
+
+The strict syntax is disabled by default. It can be enabled by setting the environment variable `NXF_SYNTAX_PARSER=v2`. See [strict syntax][strict-syntax-page] for details.
+
+### Linting and formatting
+
+The `nextflow lint` command checks Nextflow scripts and config files for errors using the [strict syntax][strict-syntax-page]. It can also format Nextflow files using the same formatter as the Nextflow language server. See [lint][cli-lint] for details.
+
+### Workflow outputs (third preview)
+
+The third preview of workflow outputs introduces the following breaking changes from the [previous version][workflow-outputs-second-preview]:
+
+- The `publish:` section can only be specified in the entry workflow.
+
+- Workflow outputs in the `publish:` section are assigned instead of using the `>>` operator. Output names must be valid identifiers.
+
+- By default, output files are published to the base output directory, rather than a subdirectory corresponding to the output name.
+
+- The syntax for dynamic publish paths has changed. Instead of defining a closure that returns a closure with the `path` directive, the outer closure should use the `>>` operator to publish individual files. See [Publishing files][workflow-publishing-files] for details.
+
+- The `mapper` index directive has been removed. Use a `map` operator in the workflow body instead.
+
+See [Workflow outputs][workflow-output-def] to get started.
+
+### Topic channels (out of preview)
+
+[Topic channels][channel-topic], introduced in Nextflow 24.04 as a preview feature, have been brought out of preview, which means that they can be used without the `nextflow.preview.topic` feature flag.
+
+### Data lineage
+
+This release introduces built-in provenance tracking, also known as *data lineage*. When `lineage.enabled` is set to `true` in your configuration, Nextflow will record every workflow run, task execution, output file, and the links between them.
+
+You can explore this lineage from the command line using the [lineage][cli-lineage] command. Additionally, you can refer to files in the lineage store from a Nextflow script using the `lid://` path prefix as well as the [fromLineage][channel-from-lineage] channel factory.
+
+See the [Data lineage][data-lineage-page] guide to get started.
+
+<h3>Simplified plugin development</h3>
+
+The `nextflow plugin create` sub-command creates the scaffold for a Nextflow plugin using the official [Nextflow plugin template](https://github.com/nextflow-io/nf-plugin-template/). It is simpler and easier to maintain than the previous plugin boilerplate.
+
+See the [Using the Nextflow Gradle plugin][gradle-plugin-page] guide for details.
+
+## Enhancements
+
+### Improved `inspect` command
+
+Previously, the `nextflow inspect` command included all processes that were invoked in a preview run. Now, the `inspect` command includes all processes that are *included* by the entry workflow (directly or indirectly), which has several benefits:
+
+- It includes all processes that could potentially be invoked by the workflow, not just the processes that are invoked for a particular run configuration.
+
+- It's faster, as it doesn't need to evaluate the entry workflow -- only the includes.
+
+- It can be run as `nextflow inspect <PIPELINE>`, without specifying any parameters or config profiles.
+
+See [inspect][cli-inspect] to learn more about the `inspect` command.
+
+### Plugin version ranges
+
+When specifying a plugin, the plugin version can now be prefixed with `~` to pin the major and minor version while allowing the latest patch release. This syntax makes it possible to pin the plugin version while automatically using new patch releases.
+
+See [Plugins][plugins-page] for details.
+
+### Improved publish error handling
+
+Nextflow will terminate the run if the thread pool responsible for publishing files takes too long. Previously, this timeout was reported as a warning. Now, it is reported as an error.
+
+The previous behavior can be restored with the following config setting:
+
+```groovy
+workflow.output.ignoreErrors = true
+```
+
+## Breaking changes
+
+- Nextflow now requires Java 17 or newer. See [Requirements][install-requirements] for instructions to install Java 17.
+
+- The [HyperQueue][hyperqueue-executor] executor now requires HyperQueue 0.20.0 or later.
+
+## Deprecations
+
+- The process `shell` section has been deprecated. See [Shell][process-shell] for details.
+
+- Nextflow will report a warning if it encounters a process `shell` directive that contains newlines. This warning will become an error in a future release.
+
+- The `-with-weblog` CLI option has been deprecated. See [nextflow-io/nf-weblog](https://github.com/nextflow-io/nf-weblog) to learn how to use the `nf-weblog` plugin.
+
+## Miscellaneous
+
+- New config option: `aws.batch.terminateUnschedulableJobs`
+- New config option: `azure.batch.jobMaxWallClockTime`
+- New config option: `fusion.snapshots`
+- New config option: `google.batch.gcsfuseOptions`
+- New config option: `google.batch.networkTags`
+- New config option: `workflow.output.copyAttributes`
+- New environment variable: `NXF_PLUGINS_ALLOWED`
+- New plugin extension point: `TraceObserverFactoryV2`
+- New standard library function: `env()`
+- Support `disk` directive for Azure Batch
+
+[channel-from-lineage]: /nextflow_docs/nextflow_repo/docs/reference/channel.mdx#fromlineage
+[channel-topic]: /nextflow_docs/nextflow_repo/docs/reference/channel.mdx#topic
+[cli-inspect]: /nextflow_docs/nextflow_repo/docs/reference/cli.mdx#inspect
+[cli-lineage]: /nextflow_docs/nextflow_repo/docs/reference/cli.mdx#lineage
+[cli-lint]: /nextflow_docs/nextflow_repo/docs/reference/cli.mdx#lint
+[data-lineage-page]: /nextflow_docs/nextflow_repo/docs/tutorials/data-lineage.mdx
+[gradle-plugin-page]: /nextflow_docs/nextflow_repo/docs/guides/gradle-plugin.mdx
+[hyperqueue-executor]: /nextflow_docs/nextflow_repo/docs/executor.mdx#hyperqueue
+[install-requirements]: /nextflow_docs/nextflow_repo/docs/install.mdx#requirements
+[plugins-page]: /nextflow_docs/nextflow_repo/docs/plugins/plugins.mdx
+[process-shell]: /nextflow_docs/nextflow_repo/docs/process.mdx#shell
+[syntax-page]: /nextflow_docs/nextflow_repo/docs/reference/syntax.mdx
+[strict-syntax-page]: /nextflow_docs/nextflow_repo/docs/strict-syntax.mdx
+[workflow-outputs-second-preview]: /nextflow_docs/nextflow_repo/docs/migrations/24-10.mdx#workflow-outputs-second-preview
+[workflow-output-def]: /nextflow_docs/nextflow_repo/docs/workflow.mdx#workflow-outputs
+[workflow-publishing-files]: /nextflow_docs/nextflow_repo/docs/workflow.mdx#publishing-files

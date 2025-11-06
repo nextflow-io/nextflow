@@ -1,0 +1,1572 @@
+import { AddedInVersion, ChangedInVersion, DeprecatedInVersion } from '@site/src/components/VersionedAdmonitions';
+
+# Operators
+
+## branch
+
+*Returns: multiple channels*
+
+The `branch` operator forwards each item from a source channel to one of multiple output channels, based on a selection criteria.
+
+The selection criteria is a [closure][script-closure] that defines, for each output channel, a unique label followed by a boolean expression. When an item is received, it is routed to the first output channel whose expression evaluates to `true`. For example:
+
+```nextflow file=../snippets/branch.nf
+```
+
+```console file=../snippets/branch.out
+```
+
+:::note
+The above output may be printed in any order since the two `view` operations are executed asynchronously.
+:::
+
+A fallback condition can be specified using `true` as the last branch condition:
+
+```nextflow file=../snippets/branch-with-fallback.nf
+```
+
+```console file=../snippets/branch-with-fallback.out
+```
+
+The value emitted to each branch can be customized with an expression statement (or statements) after the branch condition:
+
+```nextflow file=../snippets/branch-with-mapper.nf
+```
+
+```console file=../snippets/branch-with-mapper.out
+```
+
+:::tip
+When the `return` keyword is omitted, the value of the last expression statement is implicitly returned.
+:::
+
+The `branchCriteria()` method can be used to create a branch criteria as a variable that can be passed as an argument to any number of `branch` operations, as shown below:
+
+```nextflow file=../snippets/branch-criteria.nf
+```
+
+```console file=../snippets/branch-criteria.out
+```
+
+## buffer
+
+*Returns: queue channel*
+
+The `buffer` operator collects items from a source channel into subsets and emits each subset separately.
+
+This operator has multiple variants:
+
+##### `buffer( closingCondition )`
+
+Emits each subset when `closingCondition` is satisfied. The closing condition can be a literal value, a [regular expression][script-regexp], a type qualifier (i.e. Java class), or a boolean predicate. For example:
+
+```nextflow file=../snippets/buffer-with-closing.nf
+```
+
+```console file=../snippets/buffer-with-closing.out
+```
+
+##### `buffer( openingCondition, closingCondition )`
+
+Creates a new subset when `openingCondition` is satisfied and emits the subset when is `closingCondition` is satisfied. The opening and closing conditions can each be a literal value, a [regular expression][script-regexp], a type qualifier (i.e. Java class), or a boolean predicate. For example:
+
+```nextflow file=../snippets/buffer-with-opening-closing.nf
+```
+
+```console file=../snippets/buffer-with-opening-closing.out
+```
+
+##### `buffer( size: n, remainder: true | false )`
+
+Emits a new subset for every `n` items. Remaining items are discarded. For example:
+
+```nextflow file=../snippets/buffer-with-size.nf
+```
+
+```console file=../snippets/buffer-with-size.out
+```
+
+The `remainder` option can be used to emit any remaining items as a partial subset:
+
+```nextflow file=../snippets/buffer-with-size-remainder.nf
+```
+
+```console file=../snippets/buffer-with-size-remainder.out
+```
+
+##### `buffer( size: n, skip: m, remainder: true | false )`
+
+Emits a new subset for every `n` items, skipping `m` items before collecting each subset. For example:
+
+```nextflow file=../snippets/buffer-with-size-skip.nf
+```
+
+```console file=../snippets/buffer-with-size-skip.out
+```
+
+The `remainder` option can be used to emit any remaining items as a partial subset.
+
+#
+
+See also: [collate](#collate)
+
+## collate
+
+*Returns: channel*
+
+The `collate` operator collects items from a source channel into groups of *N* items.
+
+This operator has multiple variants:
+
+##### `collate( size, remainder = true )`
+
+Collects items into groups of `size` items:
+
+```nextflow file=../snippets/collate.nf
+```
+
+```console file=../snippets/collate.out
+```
+
+By default, any remaining items are emitted as a partial group. You can specify `false` as the second parameter to discard them instead:
+
+```nextflow file=../snippets/collate-with-no-remainder.nf
+```
+
+```console file=../snippets/collate-with-no-remainder.out
+```
+
+:::note
+This version of `collate` is equivalent to `buffer( size: n, remainder: true | false )`.
+:::
+
+##### `collate( size, step, remainder = true )`
+
+Collects items into groups of `size` items using a *sliding window* that moves by `step` items at a time:
+
+```nextflow file=../snippets/collate-with-step.nf
+```
+
+```console file=../snippets/collate-with-step.out
+```
+
+You can specify `false` as the third parameter to discard any remaining items.
+
+#
+
+See also: [buffer](#buffer)
+
+## collect
+
+*Returns: dataflow value*
+
+The `collect` operator collects all items from a source channel into a list and emits it as a single item:
+
+```nextflow file=../snippets/collect.nf
+```
+
+```console file=../snippets/collect.out
+```
+
+An optional [closure][script-closure] can be used to transform each item before it is collected:
+
+```nextflow file=../snippets/collect-with-mapper.nf
+```
+
+```console file=../snippets/collect-with-mapper.out
+```
+
+Available options:
+
+##### `flat`
+
+When `true`, nested list structures are flattened and their items are collected individually (default: `true`).
+
+##### `sort`
+
+When `true`, the collected items are sorted by their natural ordering (default: `false`). Can also be a [closure][script-closure] or a [Comparator](https://docs.oracle.com/javase/8/docs/api/java/util/Comparator.html) which defines how items are compared during sorting.
+
+#
+
+See also: [toList][operator-tolist], [toSortedList][operator-tosortedlist]
+
+## collectFile
+
+*Returns: channel*
+
+The `collectFile` operator collects the items from a source channel and saves them to one or more files, emitting the collected file(s).
+
+This operator has multiple variants:
+
+##### `collectFile( name: '...', [options] )`
+
+Collects the items and saves them to a single file specified by the `name` option:
+
+```nextflow file=../snippets/collectfile.nf
+```
+
+##### `collectFile( closure, [options] )`
+
+Collects the items into groups and saves each group to a file, using a grouping criteria. The grouping criteria is a [closure][script-closure] that maps each item to a pair, where the first element is the file name for the group and the second element is the content to be appended to that file. For example:
+
+```nextflow file=../snippets/collectfile-closure.nf
+```
+
+```console file=../snippets/collectfile-closure.out
+```
+
+When the items from the source channel are files, the grouping criteria can be omitted. In this case, the items will be grouped by their source filename.
+
+The following example shows how to use a closure to collect and sort all sequences in a FASTA file from shortest to longest:
+
+```nextflow
+channel.fromPath('/data/sequences.fa')
+    .splitFasta( record: [id: true, sequence: true] )
+    .collectFile( name: 'result.fa', sort: { v -> v.size() } ) {
+        v -> v.sequence
+    }
+    .view { fa -> fa.text }
+```
+
+:::warning
+The `collectFile` operator needs to store files in a temporary directory that is automatically deleted on workflow completion. For performance reasons, this directory is located in the machine's local storage, and it should have as much free space as the data that is being collected. The `tempDir` option can be used to specify a different temporary directory.
+:::
+
+Available options:
+
+##### `cache`
+Controls the caching ability of the `collectFile` operator when using the *resume* feature. It follows the same semantic of the [cache][process-cache] directive (default: `true`).
+
+##### `keepHeader`
+Prepend the resulting file with the header fetched in the first collected file. The header size (i.e. lines) can be specified by using the `skip` option (default: `0`), to determine how many lines to remove from all collected files except for the first (where no lines will be removed).
+
+##### `name`
+Name of the file where all received values are stored.
+
+##### `newLine`
+Appends a `newline` character automatically after each entry (default: `false`).
+
+##### `seed`
+A value or a map of values used to initialize the files content.
+
+##### `skip`
+Skip the first `n` lines e.g. `skip: 1` (default: `0`).
+
+##### `sort`
+Defines sorting criteria of content in resulting file(s). Can be one of the following values:
+
+- `false`: Disable content sorting. Entries are appended as they are produced.
+- `true`: Order the content by the entry's natural ordering, i.e. numerical for number, lexicographic for string, etc. See the [Java documentation](http://docs.oracle.com/javase/tutorial/collections/interfaces/order.html) for more information.
+- `'index'`: Order the content by the incremental index number assigned to each entry while they are collected.
+- `'hash'`: (default) Order the content by the hash number associated to each entry
+- `'deep'`: Similar to the previous, but the hash number is created on actual entry content, e.g. when the entry is a file, the hash is created on the actual file content.
+- A custom sorting criteria can be specified with a [closure][script-closure] or a [Comparator](http://docs.oracle.com/javase/7/docs/api/java/util/Comparator.html) object.
+
+The file content is sorted in such a way that it does not depend on the order in which entries were added to it, which guarantees that it is consistent (i.e. does not change) across different executions with the same data.
+
+##### `storeDir`
+Folder where the resulting file(s) are stored.
+
+##### `tempDir`
+Folder where temporary files, used by the collecting process, are stored.
+
+## combine
+
+*Returns: channel*
+
+The `combine` operator produces the combinations (i.e. cross product, "Cartesian" product) of two source channels, or a channel and a list (as the right operand), emitting each combination separately.
+
+For example:
+
+```nextflow file=../snippets/combine.nf
+```
+
+```console file=../snippets/combine.out
+```
+
+The `by` option can be used to combine items that share a matching key. The value should be the zero-based index of the tuple, or a list of indices. For example:
+
+```nextflow file=../snippets/combine-by.nf
+```
+
+```console file=../snippets/combine-by.out
+```
+
+:::note
+The `combine` operator is similar to `cross` and `join`, making them easy to confuse. Their differences can be summarized as follows:
+
+- `combine` and `cross` both produce an *outer product* or *cross product*, whereas `join` produces an *inner product*.
+
+- `combine` filters pairs with a matching key only if the `by` option is used, whereas `cross` always filters pairs with a matching key.
+
+- `combine` with the `by` option merges and flattens each pair, whereas `cross` does not. Compare the examples for `combine` and `cross` to see this difference.
+:::
+
+#
+
+See also: [cross](#cross), [join](#join)
+
+## concat
+
+*Returns: channel*
+
+The `concat` operator emits the items from two or more source channels into a single output channel. Each source channel is emitted in the order in which it was specified.
+
+In other words, given *N* channels, the items from the *i+1*-th channel are emitted only after all of the items from the *i*-th channel have been emitted.
+
+For example:
+
+```nextflow file=../snippets/concat.nf
+```
+
+```console file=../snippets/concat.out
+```
+
+#
+
+See also: [mix](#mix)
+
+## count
+
+*Returns: dataflow value*
+
+The `count` operator computes the total number of items in a source channel and emits it:
+
+```nextflow file=../snippets/count.nf
+```
+
+```console file=../snippets/count.out
+```
+
+An optional filter can be provided to select which items to count. The selection criteria can be a literal value, a [regular expression][script-regexp], a type qualifier (i.e. Java class), or a boolean predicate. For example:
+
+```nextflow file=../snippets/count-with-filter-number.nf
+```
+
+```console file=../snippets/count-with-filter-number.out
+```
+
+```nextflow file=../snippets/count-with-filter-regex.nf
+```
+
+```console file=../snippets/count-with-filter-regex.out
+```
+
+```nextflow file=../snippets/count-with-filter-closure.nf
+```
+
+```console file=../snippets/count-with-filter-closure.out
+```
+
+## countFasta
+
+*Returns: dataflow value*
+
+Counts the total number of records in a channel of FASTA files, equivalent to `splitFasta | count`. See [splitFasta](#splitfasta) for the list of available options.
+
+## countFastq
+
+*Returns: dataflow value*
+
+Counts the total number of records in a channel of FASTQ files, equivalent to `splitFastq | count`. See [splitFastq](#splitfastq) for the list of available options.
+
+## countJson
+
+*Returns: dataflow value*
+
+Counts the total number of records in a channel of JSON files, equivalent to `splitJson | count`. See [splitJson](#splitjson) for the list of available options.
+
+## countLines
+
+*Returns: dataflow value*
+
+Counts the total number of lines in a channel of text files, equivalent to `splitText | count`. See [splitLines](#splittext) for the list of available options.
+
+## cross
+
+*Returns: channel*
+
+The `cross` operator emits every pairwise combination of two channels for which the pair has a matching key.
+
+By default, the key is defined as the first entry in a list or map, or the value itself for any other data type. For example:
+
+```nextflow file=../snippets/cross.nf
+```
+
+```console file=../snippets/cross.out
+```
+
+An optional [closure][script-closure] can be used to define the matching key for each item:
+
+```nextflow file=../snippets/cross-with-mapper.nf
+```
+
+```console file=../snippets/cross-with-mapper.out
+```
+
+There are two important caveats when using the `cross` operator:
+
+1. The operator is not *commutative*, i.e. `a.cross(b)` is not the same as `b.cross(a)`
+2. Each source channel should not emit any items with duplicate keys, i.e. each item should have a unique key.
+
+#
+
+See also: [combine](#combine)
+
+## distinct
+
+*Returns: channel*
+
+The `distinct` operator forwards a source channel with *consecutively* repeated items removed, such that each emitted item is different from the preceding one:
+
+```nextflow file=../snippets/distinct.nf
+```
+
+```console file=../snippets/distinct.out
+```
+
+An optional [closure][script-closure] can be used to transform each value before it is evaluated for distinct-ness:
+
+```nextflow file=../snippets/distinct-with-mapper.nf
+```
+
+```console file=../snippets/distinct-with-mapper.out
+```
+
+#
+
+See also: [unique](#unique)
+
+## dump
+
+*Returns: channel*
+
+The `dump` operator prints each item in a source channel when the pipeline is executed with the `-dump-channels` command-line option, otherwise it does nothing. It is a useful way to inspect and debug channels quickly without having to modify the pipeline script.
+
+The `tag` option can be used to select which channels to dump:
+
+```nextflow file=../snippets/dump.nf
+```
+
+Then, you can run your pipeline with `-dump-channels plus1` or `-dump-channels exp2` to dump the content of either channel. Multiple tag names can be specified as a comma-separated list.
+
+Available options:
+
+##### `pretty`
+
+<AddedInVersion version="22.10.0" />
+
+When `true`, format the output as pretty-printed JSON (default: `false`).
+
+##### `tag`
+
+Associate the channel with a tag that can be specified with the `-dump-channels` option to select which channels to dump.
+
+## filter
+
+*Returns: channel*
+
+The `filter` operator emits the items from a source channel that satisfy a condition, discarding all other items. The filter condition can be a literal value, a [regular expression][script-regexp], a type qualifier (i.e. Java class), or a boolean predicate.
+
+The following example filters a channel with a regular expression that only matches strings beginning with `a`:
+
+```nextflow file=../snippets/filter-regex.nf
+```
+
+```console file=../snippets/filter-regex.out
+```
+
+The following example filters a channel with the `Number` type qualifier so that only numbers are emitted:
+
+```nextflow file=../snippets/filter-type.nf
+```
+
+```console file=../snippets/filter-type.out
+```
+
+The following example filters a channel using a boolean predicate, which is a [closure][script-closure] that returns a boolean value. In this case, the predicate is used to select only odd numbers:
+
+```nextflow file=../snippets/filter-closure.nf
+```
+
+```console file=../snippets/filter-closure.out
+```
+
+## first
+
+*Returns: dataflow value*
+
+The `first` operator emits the first item in a source channel, or the first item that matches a condition. The condition can be a [regular expression][script-regexp], a type qualifier (i.e. Java class), or a boolean predicate. For example:
+
+```nextflow file=../snippets/first.nf
+```
+
+## flatMap
+
+*Returns: channel*
+
+The `flatMap` operator applies a *mapping function* to each item from a source channel.
+
+When the mapping function returns a list, each element in the list is emitted separately:
+
+```nextflow file=../snippets/flatmap-list.nf
+```
+
+```console file=../snippets/flatmap-list.out
+```
+
+When the mapping function returns a map, each key-value pair in the map is emitted separately:
+
+```nextflow file=../snippets/flatmap-map.nf
+```
+
+```console file=../snippets/flatmap-map.out
+```
+
+## flatten
+
+*Returns: channel*
+
+The `flatten` operator flattens each item from a source channel that is a list or other collection, such that each element in each collection is emitted separately:
+
+```nextflow file=../snippets/flatten.nf
+```
+
+```console file=../snippets/flatten.out
+```
+
+As shown in the above example, deeply nested collections are also flattened.
+
+#
+
+See also: [flatMap](#flatmap)
+
+## groupTuple
+
+*Returns: queue channel*
+
+The `groupTuple` operator collects lists (i.e. *tuples*) from a source channel into groups based on a grouping key. A new tuple is emitted for each distinct key.
+
+To be more precise, the operator transforms a sequence of tuples like *(K, V, W, ..)* into a sequence of tuples like *(K, list(V), list(W), ..)*.
+
+For example:
+
+```nextflow file=../snippets/grouptuple.nf
+```
+
+```console file=../snippets/grouptuple.out
+```
+
+By default, the first element of each tuple is used as the grouping key. The `by` option can be used to specify a different index, or list of indices. For example, to group by the second element of each tuple:
+
+```nextflow file=../snippets/grouptuple-by.nf
+```
+
+```console file=../snippets/grouptuple-by.out
+```
+
+By default, if you don't specify a size, the `groupTuple` operator will not emit any groups until *all* inputs have been received. If possible, you should always try to specify the number of expected elements in each group using the `size` option, so that each group can be emitted as soon as it's ready. In cases where the size of each group varies based on the grouping key, you can use the built-in `groupKey()` function, which allows you to define a different expected size for each group:
+
+```nextflow file=../snippets/grouptuple-groupkey.nf
+```
+
+```console file=../snippets/grouptuple-groupkey.out
+```
+
+Available options:
+
+##### `by`
+
+The zero-based index of the element to use as the grouping key. Can also be a list of indices, e.g. `by: [0,2]` (default: `[0]`).
+
+##### `remainder`
+
+When `true`, incomplete tuples (i.e. groups with less than `size` items) are emitted as partial groups, otherwise they are discarded (default: `false`). This option can only be used with `size`.
+
+##### `size`
+
+The required number of items for each group. When a group reaches the required size, it is emitted.
+
+##### `sort`
+
+Defines the sorting criteria for the grouped items. Can be one of the following values:
+
+- `false`: No sorting is applied (default).
+- `true`: Order the grouped items by the item's natural ordering, i.e. numerical for number, lexicographic for string, etc. See the [Java documentation](http://docs.oracle.com/javase/tutorial/collections/interfaces/order.html) for more information.
+- `'hash'`: Order the grouped items by the hash number associated to each entry.
+- `'deep'`: Similar to the previous, but the hash number is created on actual entry content, e.g. when the item is a file, the hash is created on the actual file content.
+- A custom sorting criteria used to order the nested list elements of each tuple. It can be a [closure][script-closure] or a [Comparator](http://docs.oracle.com/javase/7/docs/api/java/util/Comparator.html) object.
+
+## ifEmpty
+
+*Returns: channel*
+
+The `ifEmpty` operator emits a source channel, or a default value if the source channel is *empty* (doesn't emit any value):
+
+```nextflow file=../snippets/ifempty-1.nf
+```
+
+```console file=../snippets/ifempty-1.out
+```
+
+```nextflow file=../snippets/ifempty-2.nf
+```
+
+```console file=../snippets/ifempty-2.out
+```
+
+The default value can also be a [closure][script-closure], in which case the closure is evaluated and the result is emitted when the source channel is empty.
+
+#
+
+See also: [empty][operator-empty] channel factory
+
+## join
+
+*Returns: channel*
+
+The `join` operator emits the inner product of two source channels using a matching key.
+
+To be more precise, the operator transforms a sequence of tuples like *(K, V1, V2, ..)* and *(K, W1, W1, ..)* into a sequence of tuples like *(K, V1, V2, .., W1, W2, ..)*.
+
+For example:
+
+```nextflow file=../snippets/join.nf
+```
+
+```console file=../snippets/join.out
+```
+
+By default, the first element of each item is used as the key. The `by` option can be used to specify a different index, or list of indices.
+
+By default, unmatched items are discarded. The `remainder` option can be used to emit them at the end:
+
+```nextflow file=../snippets/join-with-remainder.nf
+```
+
+```console file=../snippets/join-with-remainder.out
+```
+
+:::note
+The `join` operator is similar to an SQL *inner join*, or an SQL *outer join* when `remainder` is `true`. The only difference is that `join` does not support duplicate keys, whereas an SQL join produces the cross-product of duplicate keys. The `combine` operator with the `by` option is equivalent to an SQL join.
+:::
+
+Available options:
+
+##### `by`
+
+The zero-based index of each item to use as the matching key. Can also be a list of indices, e.g. `by: [0, 2]` (default: `[0]`).
+
+##### `failOnDuplicate`
+
+When `true`, an error is reported when the operator receives multiple items from the same channel with the same key (default: `false`). Value is set to `true` if [strict mode][config-feature-flags] is enabled.
+
+##### `failOnMismatch`
+
+When `true`, an error is reported when the operator receives an item from one channel for which there no matching item from the other channel (default: `false`). Value is set to `true` if [strict mode][config-feature-flags] is enabled. This option cannot be used with `remainder`.
+
+##### `remainder`
+
+When `true`, unmatched items are emitted at the end, otherwise they are discarded (default: `false`). 
+
+#
+
+See also: [combine](#combine), [cross](#cross)
+
+## last
+
+*Returns: dataflow value*
+
+The `last` operator emits the last item from a source channel:
+
+```nextflow file=../snippets/last.nf
+```
+
+```console file=../snippets/last.out
+```
+
+## map
+
+*Returns: channel*
+
+The `map` operator applies a *mapping function* to each item from a source channel:
+
+```nextflow file=../snippets/map.nf
+```
+
+```console file=../snippets/map.out
+```
+
+:::note
+`null` values are not emitted by `map`.
+:::
+
+## max
+
+*Returns: dataflow value*
+
+The `max` operator emits the item with the greatest value from a source channel:
+
+```nextflow file=../snippets/max.nf
+```
+
+```console file=../snippets/max.out
+```
+
+An optional [closure][script-closure] can be used to control how the items are compared. The closure can be a *mapping function*, which transforms each item before it is compared, or a *comparator function*, which defines how to compare two items more generally.
+
+The following examples show how to find the longest string in a channel:
+
+```nextflow file=../snippets/max-with-mapper.nf
+```
+
+```console file=../snippets/max-with-mapper.out
+```
+
+```nextflow file=../snippets/max-with-comparator.nf
+```
+
+```console file=../snippets/max-with-comparator.out
+```
+
+## merge
+
+*Returns: channel*
+
+The `merge` operator joins the items from two or more channels into a new channel:
+
+```nextflow file=../snippets/merge.nf
+```
+
+```console file=../snippets/merge.out
+```
+
+An optional [closure][script-closure] can be used to control how two items are merged:
+
+```nextflow file=../snippets/merge-with-mapper.nf
+```
+
+```console file=../snippets/merge-with-mapper.out
+```
+
+The `merge` operator may return a channel or value depending on the inputs:
+
+- If the first argument is a channel, the `merge` operator returns a channel merging as many values as are available for all inputs. Dataflow values are re-used for each merged value.
+
+- If the first argument is a dataflow value, the `merge` operator returns a dataflow value, merging the first value from each input, regardless of whether there are channel inputs with additional values.
+
+:::danger
+In general, the use of the `merge` operator is discouraged. Processes and channel operators are not guaranteed to emit items in the order that they were received, as they are executed concurrently. Therefore, if you try to merge output channels from different processes, the resulting channel may be different on each run, which will cause resumed runs to [not work properly][cache-nondeterministic-inputs].
+
+You should always use a matching key (e.g. sample ID) to merge multiple channels, so that they are combined in a deterministic way. For this purpose, you can use the [join](#join) operator.
+:::
+
+## min
+
+*Returns: dataflow value*
+
+The `min` operator emits the item with the lowest value from a source channel:
+
+```nextflow file=../snippets/min.nf
+```
+
+```console file=../snippets/min.out
+```
+
+An optional [closure][script-closure] can be used to control how the items are compared. The closure can be a *mapping function*, which transforms each item before it is compared, or a *comparator function*, which defines how to compare two items more generally.
+
+The following examples show how to find the shortest string in a channel:
+
+```nextflow file=../snippets/min-with-mapper.nf
+```
+
+```console file=../snippets/min-with-mapper.out
+```
+
+```nextflow file=../snippets/min-with-comparator.nf
+```
+
+```console file=../snippets/min-with-comparator.out
+```
+
+## mix
+
+*Returns: channel*
+
+The `mix` operator emits the items from two or more source channels into a single output channel:
+
+```nextflow file=../snippets/mix.nf
+```
+
+```console file=../snippets/mix.out
+```
+
+The items in the mixed output channel may appear in any order, regardless of which source channel they came from. Thus, the previous example could also output the following:
+
+```console
+z
+1
+a
+2
+b
+3
+```
+
+#
+
+See also: [concat](#concat)
+
+## multiMap
+
+*Returns: multiple channels*
+
+The `multiMap` operator applies a set of mapping functions to a source channel, producing a separate output channel for each mapping function.
+
+The multi-map criteria is a [closure][script-closure] that defines, for each output channel, a label followed by a mapping expression.
+
+For example:
+
+```nextflow file=../snippets/multimap.nf
+```
+
+```console file=../snippets/multimap.out
+```
+
+Multiple labels can share the same mapping expression using the following shorthand:
+
+```nextflow file=../snippets/multimap-shared.nf
+```
+
+```console file=../snippets/multimap-shared.out
+```
+
+The above example creates two channels as before, but now they both receive the same items.
+
+You can use the `multiMapCriteria()` method to create a multi-map criteria as a variable that can be passed as an argument to any number of `multiMap` operations, as shown below:
+
+```nextflow file=../snippets/multimap-criteria.nf
+```
+
+:::note
+If you use `multiMap` to split a tuple or map into multiple channels, it is recommended that you retain a matching key (e.g. sample ID) with *each* new channel, so that you can re-combine these channels later on if needed. In general, you should not expect to be able to merge channels correctly without a matching key, due to the concurrent nature of Nextflow pipelines.
+:::
+
+## randomSample
+
+*Returns: channel*
+
+The `randomSample` operator emits a randomly-selected subset of items from a source channel:
+
+```nextflow file=../snippets/random-sample.nf
+```
+
+The above snippet will print 10 randomly-selected numbers between 1 and 100 (without replacement).
+
+An optional second parameter can be used to set the initial *seed* for the random number generator, which ensures that the `randomSample` operator produces the same pseudo-random sequence across runs:
+
+```nextflow file=../snippets/random-sample-with-seed.nf
+```
+
+The above example will print 10 randomly-selected numbers between 1 and 100 (without replacement). Each subsequent script execution will produce the same sequence.
+
+## reduce
+
+*Returns: dataflow value*
+
+The `reduce` operator applies an *accumulator function* sequentially to each item in a source channel, and emits the final accumulated value. The accumulator function takes two parameters -- the accumulated value and the *i*-th emitted item -- and it should return the accumulated result, which is passed to the next invocation with the *i+1*-th item. This process is repeated for each item in the source channel.
+
+For example:
+
+```nextflow file=../snippets/reduce.nf
+```
+
+```console file=../snippets/reduce.out
+```
+
+By default, the first item is used as the initial accumulated value. You can optionally specify a different initial value as shown below:
+
+```nextflow file=../snippets/reduce-with-initial-value.nf
+```
+
+```console file=../snippets/reduce-with-initial-value.out
+```
+
+## set
+
+*Returns: nothing*
+
+The `set` operator assigns a source channel to a variable, whose name is specified as a closure parameter:
+
+```nextflow
+channel.of(10, 20, 30).set { my_channel }
+```
+
+Using `set` is semantically equivalent to assigning a variable:
+
+```nextflow
+my_channel = channel.of(10, 20, 30)
+```
+
+#
+
+See also: [tap](#tap)
+
+## splitCsv
+
+*Returns: channel*
+
+The `splitCsv` operator parses and splits [CSV](http://en.wikipedia.org/wiki/Comma-separated_values) files or text from a source channel into records.
+
+For example:
+
+```nextflow file=../snippets/splitcsv.nf
+```
+
+```console file=../snippets/splitcsv.out
+```
+
+The above example shows hows CSV text is parsed and split into individual rows, where each row is simply a list of columns.
+
+When the CSV begins with a header line defining the column names, and the `header` option is `true`, each row is returned as a map instead:
+
+```nextflow file=../snippets/splitcsv-with-header.nf
+```
+
+```console file=../snippets/splitcsv-with-header.out
+```
+
+The `header` option can also just be a list of columns:
+
+```nextflow file=../snippets/splitcsv-with-columns.nf
+```
+
+```console file=../snippets/splitcsv-with-columns.out
+```
+
+Available options:
+
+##### `by`
+
+When specified, group rows into *chunks* with the given size (default: none).
+
+##### `charset`
+
+Parse the content with the specified charset, e.g. `UTF-8`. See the list of [standard charsets](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/charset/StandardCharsets.html) for available options.
+
+##### `decompress`
+
+When `true`, decompress the content using the GZIP format before processing it (default: `false`). Files with the `.gz` extension are decompressed automatically.
+
+##### `elem`
+
+The index of the element to split when the source items are lists or tuples (default: first file object or first element).
+
+##### `header`
+
+When `true`, the first line is used as the columns names (default: `false`). Can also be a list of columns names.
+
+##### `limit`
+
+Limits the number of records to retrieve for each source item (default: no limit).
+
+##### `quote`
+
+The character used to quote values (default: `''` or `""`).
+
+##### `sep`
+
+The character used to separate values (default: `,`)
+
+##### `skip`
+
+Number of lines to ignore from the beginning when parsing the CSV text (default: `0`).
+
+##### `strip`
+
+When `true`, remove leading and trailing blanks from values (default: `false`).
+
+## splitFasta
+
+*Returns: channel*
+
+The `splitFasta` operator splits [FASTA](http://en.wikipedia.org/wiki/FASTA_format) files or text from a source channel into individual sequences.
+
+The `by` option can be used to group sequences into chunks of a given size. The following example shows how to read a FASTA file and split it into chunks of 10 sequences each:
+
+```nextflow
+channel.fromPath('misc/sample.fa')
+    .splitFasta( by: 10 )
+    .view()
+```
+
+:::warning
+Chunks are stored in memory by default. When splitting large files, specify `file: true` to save the chunks into files in order to avoid running out of memory. See the list of options below for details.
+:::
+
+The `record` option can be used to split FASTA content into *records* instead of text chunks. Each record is a map that allows you to access the FASTA sequence data with ease. For example:
+
+```nextflow
+channel.fromPath('misc/sample.fa')
+    .splitFasta( record: [id: true, seqString: true] )
+    .filter { record -> record.id =~ /^ENST0.*/ }
+    .view { record -> record.seqString }
+```
+
+The above example loads the `misc/sample.fa` file, splits it into records containing the `id` and `seqString` fields (i.e. the sequence id and the sequence data), filters records by their ID, and finally prints the sequence string of each record.
+
+Available options:
+
+##### `by`
+
+Defines the number of sequences in each chunk (default: `1`).
+
+##### `charset`
+
+Parse the content with the specified charset, e.g. `UTF-8`. See the list of [standard charsets](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/charset/StandardCharsets.html) for available options.
+
+##### `compress`
+
+When `true`, resulting file chunks are GZIP compressed (default: `false`). The `.gz` suffix is automatically added to chunk file names.
+
+##### `decompress`
+
+When `true`, decompress the content using the GZIP format before processing it (default: `false`). Files with the `.gz` extension are decompressed automatically.
+
+##### `elem`
+
+The index of the element to split when the source items are lists or tuples (default: first file object or first element).
+
+##### `file`
+When `true`, saves each split to a file. Use a string instead of `true` value to create split files with a specific name (split index number is automatically added). Finally, set this attribute to an existing directory, in order to save the split files into the specified directory.
+
+##### `limit`
+
+Limits the number of sequences to retrieve for each source item (default: no limit).
+
+##### `record`
+
+Parse each entry in the FASTA file into a record. The following fields are available:
+- `id`: The FASTA sequence identifier, i.e. the word following the `>` symbol up to the first blank or newline character
+- `header`: The first line in a FASTA sequence without the `>` character
+- `desc`: The text in the FASTA header following the ID value
+- `text`: The complete FASTA sequence including the header
+- `seqString`: The sequence as a single-line string, i.e. containing no newline characters
+- `sequence`: The sequence as a multi-line string, i.e. always ending with a newline character
+- `width`: Define the length of a single line when the `sequence` field is used, after which the sequence continues on a new line.
+
+##### `size`
+
+Defines the size of the expected chunks as a memory unit, e.g. `1.MB`.
+
+#
+
+See also: [countFasta](#countfasta)
+
+## splitFastq
+
+*Returns: channel*
+
+The `splitFastq` operator splits [FASTQ](http://en.wikipedia.org/wiki/FASTQ_format) files or text from a source channel into individual sequences.
+
+The `by` option can be used to group sequences into chunks of a given size. The following example shows how to read a FASTQ file and split it into chunks of 10 sequences each:
+
+```nextflow
+Channel
+channel.fromPath('misc/sample.fastq')
+    .splitFastq( by: 10 )
+    .view()
+```
+
+:::warning
+Chunks are stored in memory by default. When splitting large files, specify `file: true` to save the chunks into files in order to avoid running out of memory. See the list of options below for details.
+:::
+
+The `record` option can be used to split FASTQ content into *records* instead of text chunks. Each record is a map that allows you to access the FASTQ sequence data with ease. For example:
+
+```nextflow
+channel.fromPath('misc/sample.fastq')
+    .splitFastq( record: true )
+    .view { record -> record.readHeader }
+```
+
+The `pe` option can be used to split paired-end FASTQ files. The source channel must emit tuples containing the file pairs. For example:
+
+```nextflow
+channel.fromFilePairs('/my/data/SRR*_{1,2}.fastq', flat: true)
+    .splitFastq(by: 100_000, pe: true, file: true)
+    .view()
+```
+
+:::note
+`channel.fromFilePairs()` requires the `flat: true` option in order to emit the file pairs as separate elements in the produced tuples.
+:::
+
+:::note
+This operator assumes that the order of the paired-end reads correspond with each other and that both files contain the same number of reads.
+:::
+
+Available options:
+
+##### `by`
+
+Defines the number of sequences in each chunk (default: `1`).
+
+##### `charset`
+
+Parse the content with the specified charset, e.g. `UTF-8`. See the list of [standard charsets](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/charset/StandardCharsets.html) for available options.
+
+##### `compress`
+
+When `true`, resulting file chunks are GZIP compressed (default: `false`). The `.gz` suffix is automatically added to chunk file names.
+
+##### `decompress`
+
+When `true`, decompress the content using the GZIP format before processing it (default: `false`). Files with the `.gz` extension are decompressed automatically.
+
+##### `elem`
+
+The index of the element to split when the source items are lists or tuples (default: first file object or first element).
+
+##### `file`
+
+When `true`, saves each split to a file. Use a string instead of `true` value to create split files with a specific name (split index number is automatically added). Finally, set this attribute to an existing directory, in order to save the split files into the specified directory.
+
+##### `limit`
+
+Limits the number of sequences to retrieve for each source item (default: no limit).
+
+##### `pe`
+
+When `true`, splits paired-end read files. Items emitted by the source channel must be tuples with the file pairs.
+
+##### `record`
+
+Parse each entry in the FASTQ file into a record. The following fields are available:
+- `readHeader`: Sequence header (without the `@` prefix)
+- `readString`: The raw sequence content
+- `qualityHeader`: Base quality header (it may be empty)
+- `qualityString`: Quality values for the sequence
+
+#
+
+See also: [countFastq](#countfastq)
+
+## splitJson
+
+*Returns: channel*
+
+The `splitJson` operator splits [JSON](https://en.wikipedia.org/wiki/JSON) files or text from a source channel into individual records.
+
+If the source item is a JSON array, each element of the array will be emitted:
+
+```nextflow file=../snippets/splitjson-array.nf
+```
+
+```console file=../snippets/splitjson-array.out
+```
+
+If the source item is a JSON object, each key-value pair will be emitted as a map with the properties `key`  and `value`:
+
+```nextflow file=../snippets/splitjson-object.nf
+```
+
+```console file=../snippets/splitjson-object.out
+```
+
+The `path` option can be used to query a section of the JSON document to parse and split:
+
+```nextflow file=../snippets/splitjson-with-path.nf
+```
+
+```console file=../snippets/splitjson-with-path.out
+```
+
+Available options:
+
+##### `limit`
+
+Limits the number of records to retrieve for each source item (default: no limit).
+
+##### `path`
+
+Defines a query for a section of each source item to parse and split. The expression should be a path similar to [JSONPath](https://goessner.net/articles/JsonPath/). The empty string is the document root (default). An integer in brackets is a zero-based index in a JSON array. A string preceded by a dot `.` is a key in a JSON object.
+
+#
+
+See also: [countJson](#countjson)
+
+## splitText
+
+*Returns: channel*
+
+The `splitText` operator splits multi-line text content from a source channel into chunks of *N* lines:
+
+```nextflow
+Channel
+    .fromPath('/some/path/*.txt')
+    .splitText()
+    .view()
+```
+
+The above example loads a collection of text files, splits the content of each file into individual lines, and prints each line.
+
+The `by` option can be used to emit chunks of *N* lines:
+
+```nextflow
+channel.fromPath('/some/path/*.txt')
+    .splitText( by: 10 )
+    .subscribe { chunk ->
+        print chunk
+        print "--- end of the chunk ---\n"
+    }
+```
+
+An optional [closure][script-closure] can be used to transform each text chunk produced by the operator. The following example shows how to split text files into chunks of 10 lines and transform them to uppercase letters:
+
+```nextflow
+channel.fromPath('/some/path/*.txt')
+    .splitText( by: 10 ) { v -> v.toUpperCase() }
+    .view()
+```
+
+:::note
+Text chunks returned by the `splitText` operator are always terminated by a `\n` newline character.
+:::
+
+Available options:
+
+##### `by`
+
+Defines the number of lines in each `chunk` (default: `1`).
+
+##### `charset`
+
+Parse the content with the specified charset, e.g. `UTF-8`. See the list of [standard charsets](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/charset/StandardCharsets.html) for available options.
+
+##### `compress`
+
+When `true`, resulting file chunks are GZIP compressed (default: `false`). The `.gz` suffix is automatically added to chunk file names.
+
+##### `decompress`
+
+When `true`, decompresses the content using the GZIP format before processing it (default: `false`). Files with the `.gz` extension are decompressed automatically.
+
+##### `elem`
+
+The index of the element to split when the source items are lists or tuples (default: first file object or first element).
+
+##### `file`
+
+When `true`, saves each split to a file. Use a string instead of `true` value to create split files with a specific name (split index number is automatically added). Finally, set this attribute to an existing directory, in order to save the split files into the specified directory.
+
+##### `keepHeader`
+
+Parses the first line as header and prepends it to each emitted chunk (default: `false`).
+
+##### `limit`
+
+Limits the number of lines to retrieve for each source item (default: no limit).
+
+#
+
+See also: [countLines](#countlines)
+
+## subscribe
+
+*Returns: nothing*
+
+The `subscribe` operator invokes a custom function for each item from a source channel:
+
+```nextflow file=../snippets/subscribe.nf
+```
+
+```console file=../snippets/subscribe.out
+```
+
+The `subscribe` operator supports multiple types of event handlers:
+
+```nextflow file=../snippets/subscribe-with-on-complete.nf
+```
+
+```console file=../snippets/subscribe-with-on-complete.out
+```
+
+:::note
+Unlike most operators, `subscribe` is a *terminal operator* and does not emit any values. It should only be used for *side effects*, such as printing to the console, writing to a file, or making HTTP requests.
+:::
+
+Available options:
+
+##### `onNext`
+
+Closure that is invoked when an item is emitted. Equivalent to providing a closure as the first argument.
+
+##### `onComplete`
+
+Closure that is invoked after the last item is emitted by the channel.
+
+##### `onError`
+
+Closure that is invoked when an exception is raised while handling the `onNext` event. It will not make further calls to `onNext` or `onComplete`. The `onError` method takes as its parameter the `Throwable` that caused the error.
+
+## sum
+
+*Returns: dataflow value*
+
+The `sum` operator emits the sum of all items in a source channel:
+
+```nextflow file=../snippets/sum.nf
+```
+
+```console file=../snippets/sum.out
+```
+
+An optional [closure][script-closure] can be used to transform each item before it is added to the sum:
+
+```nextflow file=../snippets/sum-with-mapper.nf
+```
+
+```console file=../snippets/sum-with-mapper.out
+```
+
+## take
+
+*Returns: channel*
+
+The `take` operator takes the first *N* items from a source channel:
+
+```nextflow file=../snippets/take.nf
+```
+
+```console file=../snippets/take.out
+```
+
+:::tip
+Specifying a size of `-1` causes the operator to take all values.
+:::
+
+#
+
+See also: [until](#until)
+
+## tap
+
+*Returns: channel*
+
+The `tap` operator assigns a source channel to a variable, and emits the source channel. It is a useful way to extract intermediate output channels from a chain of operators. For example:
+
+```nextflow file=../snippets/tap.nf
+```
+
+```console file=../snippets/tap.out
+```
+
+#
+
+See also: [set](#set)
+
+## toInteger
+
+*Returns: channel*
+
+The `toInteger` operator converts string values from a source channel to integer values:
+
+```nextflow file=../snippets/tointeger.nf
+```
+
+```console file=../snippets/tointeger.out
+```
+
+:::note
+`toInteger` is equivalent to:
+
+```nextflow
+map { v -> v as Integer }
+```
+:::
+
+:::note
+You can also use `toLong`, `toFloat`, and `toDouble` to convert to other numerical types.
+:::
+
+## toList
+
+*Returns: dataflow value*
+
+The `toList` operator collects all the items from a source channel into a list and emits the list as a single item:
+
+```nextflow file=../snippets/tolist.nf
+```
+
+```console file=../snippets/tolist.out
+```
+
+:::note
+There are two main differences between `toList` and `collect`:
+
+- When there is no input, `toList` emits an empty list whereas `collect` emits nothing.
+- By default, `collect` flattens list items by one level.
+
+In other words, `toList` is equivalent to:
+
+```nextflow
+collect(flat: false).ifEmpty([])
+```
+:::
+
+#
+
+See also: [collect](#collect)
+
+## toSortedList
+
+*Returns: dataflow value*
+
+The `toSortedList` operator collects all the items from a source channel into a sorted list and emits the list as a single item:
+
+```nextflow file=../snippets/tosortedlist.nf
+```
+
+```console file=../snippets/tosortedlist.out
+```
+
+An optional [closure][script-closure] can be used to control how items are compared when sorting. For example, to sort tuples by their second element in descending order:
+
+```nextflow file=../snippets/tosortedlist-with-comparator.nf
+```
+
+```console file=../snippets/tosortedlist-with-comparator.out
+```
+
+:::note
+`toSortedList` is equivalent to:
+
+```nextflow
+collect(flat: false, sort: true).ifEmpty([])
+```
+:::
+
+#
+
+See also: [collect](#collect)
+
+## transpose
+
+*Returns: channel*
+
+The `transpose` operator "transposes" each tuple from a source channel by flattening any nested list in each tuple, emitting each nested item separately.
+
+To be more precise, the operator transforms a sequence of tuples like *(K, list(V), list(W), ..)* into a sequence of tuples like *(K, V, W, ..)*.
+
+For example:
+
+```nextflow file=../snippets/transpose-1.nf
+```
+
+```console file=../snippets/transpose-1.out
+```
+
+If each source item has more than two elements, these will be flattened by the first element in the item, and a new item will be emitted only when it is complete:
+
+```nextflow file=../snippets/transpose-2.nf
+```
+
+```console file=../snippets/transpose-2.out
+```
+
+The `remainder` option can be used to emit any incomplete items:
+
+```nextflow file=../snippets/transpose-2-with-remainder.nf
+```
+
+```console file=../snippets/transpose-2-with-remainder.out
+```
+
+Available options:
+
+##### `by`
+
+The zero-based index of the element to be transposed. Can also be a list of indices, e.g. `by: [0,2]`. By default, every list element is transposed.
+
+##### `remainder`
+
+When `true`, incomplete tuples are emitted with `null` values for missing elements, otherwise they are discarded (default: `false`). 
+
+#
+
+See also: [groupTuple](#grouptuple)
+
+## unique
+
+*Returns: channel*
+
+The `unique` operator emits the unique items from a source channel:
+
+```nextflow file=../snippets/unique.nf
+```
+
+```console file=../snippets/unique.out
+```
+
+An optional [closure][script-closure] can be used to transform each item before it is evaluated for uniqueness:
+
+```nextflow file=../snippets/unique-with-mapper.nf
+```
+
+```console file=../snippets/unique-with-mapper.out
+```
+
+:::note
+The difference between `unique` and `distinct` is that `unique` removes *all* duplicate values, whereas `distinct` removes only *consecutive* duplicate values. As a result, `unique` must process the entire source channel before it can emit anything, whereas `distinct` can emit each value immediately.
+:::
+
+#
+
+See also: [distinct](#distinct)
+
+## until
+
+*Returns: channel*
+
+The `until` operator emits each item from a source channel until a stopping condition is satisfied:
+
+```nextflow file=../snippets/until.nf
+```
+
+```console file=../snippets/until.out
+```
+
+#
+
+See also: [take](#take)
+
+## view
+
+*Returns: channel*
+
+The `view` operator prints each item from a source channel to standard output:
+
+```nextflow file=../snippets/view.nf
+```
+
+```console file=../snippets/view.out
+```
+
+An optional [closure][script-closure] can be used to transform each item before it is printed:
+
+```nextflow file=../snippets/view-with-mapper.nf
+```
+
+```console file=../snippets/view-with-mapper.out
+```
+
+The `view` operator also emits every item that it receives, allowing it to be chained with other operators.
+
+Available options:
+
+##### `newLine`
+Print each item to a separate line (default: `true`).
+
+[cache-nondeterministic-inputs]: /nextflow_docs/nextflow_repo/docs/cache-and-resume.mdx#non-deterministic-process-inputs
+[config-feature-flags]: /nextflow_docs/nextflow_repo/docs/reference/feature-flags.mdx
+[process-cache]: /nextflow_docs/nextflow_repo/docs/reference/process.mdx#cache

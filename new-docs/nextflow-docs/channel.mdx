@@ -1,0 +1,88 @@
+# Dataflow
+
+Nextflow uses a **dataflow** programming model to define workflows declaratively. In this model, [processes][process-page] in a pipeline are connected to each other through *dataflow channels* and *dataflow values*.
+
+## Channels
+
+A *dataflow channel* (or simply *channel*) is an asynchronous sequence of values.
+
+The values in a channel cannot be accessed directly, but only through an operator or process. For example:
+
+```nextflow
+channel.of(1, 2, 3).view { v -> "channel emits ${v}" }
+```
+
+```console
+channel emits 1
+channel emits 2
+channel emits 3
+```
+
+### Factories
+
+A channel can be created by factories in the `channel` namespace. For example, the `channel.fromPath()` factory creates a channel from a file name or glob pattern, similar to the `files()` function:
+
+```nextflow
+channel.fromPath('input/*.txt').view()
+```
+
+See [Channel factories][channel-factory] for the full list of channel factories.
+
+### Operators
+
+Channel operators, or *operators* for short, are functions that consume and produce channels. Because channels are asynchronous, operators are necessary to manipulate the values in a channel. Operators are particularly useful for implementing glue logic between processes.
+
+Commonly used operators include:
+
+- [combine][operator-combine]: emit the combinations of two channels
+- [collect][operator-collect]: collect the values from a channel into a list
+- [filter][operator-filter]: select the values in a channel that satisfy a condition
+- [flatMap][operator-flatMap]: transform each value from a channel into a list and emit each list element separately
+- [groupTuple][operator-grouptuple]: group the values from a channel based on a grouping key
+- [join][operator-join]: join the values from two channels based on a matching key
+- [map][operator-map]: transform each value from a channel with a mapping function
+- [mix][operator-mix]: emit the values from multiple channels
+- [view][operator-view]: print each value in a channel to standard output
+
+See [Operators][operator-page] for the full list of operators.
+
+## Values
+
+A *dataflow value* is an asynchronous value.
+
+Dataflow values can be created using the [value][channel-value] factory, and they are created by processes (under [certain conditions][process-out-singleton]).
+
+A dataflow value cannot be accessed directly, but only through an operator or process. For example:
+
+```nextflow
+channel.value(1).view { v -> "dataflow value is ${v}" }
+```
+
+```console
+dataflow value is 1
+```
+
+See [Value][stdlib-types-value] for the set of available methods for dataflow values.
+
+[channel-of]: /nextflow_docs/nextflow_repo/docs/reference/channel.mdx#of
+[channel-path]: /nextflow_docs/nextflow_repo/docs/reference/channel.mdx#frompath
+[operator-map]: /nextflow_docs/nextflow_repo/docs/reference/operator.mdx#map
+[operator-flatmap]: /nextflow_docs/nextflow_repo/docs/reference/operator.mdx#flatmap
+[process-output]: /nextflow_docs/nextflow_repo/docs/process.mdx#outputs
+[channel-value]: /nextflow_docs/nextflow_repo/docs/reference/channel.mdx#value
+[operator-first]: /nextflow_docs/nextflow_repo/docs/reference/operator.mdx#first
+[operator-collect]: /nextflow_docs/nextflow_repo/docs/reference/operator.mdx#collect
+[operator-reduce]: /nextflow_docs/nextflow_repo/docs/reference/operator.mdx#reduce
+[process-page]: /nextflow_docs/nextflow_repo/docs/process.mdx
+[process-out-singleton]: /nextflow_docs/nextflow_repo/docs/process.mdx#singleton-outputs
+[process-multiple-input-channels]: /nextflow_docs/nextflow_repo/docs/process.mdx#multiple-input-channels
+[channel-factory]: /nextflow_docs/nextflow_repo/docs/channel.mdx
+[operator-combine]: /nextflow_docs/nextflow_repo/docs/reference/operator.mdx#combine
+[operator-filter]: /nextflow_docs/nextflow_repo/docs/reference/operator.mdx#filter
+[operator-flatMap]: /nextflow_docs/nextflow_repo/docs/reference/operator.mdx#flatmap
+[operator-grouptuple]: /nextflow_docs/nextflow_repo/docs/reference/operator.mdx#grouptuple
+[operator-join]: /nextflow_docs/nextflow_repo/docs/reference/operator.mdx#join
+[operator-mix]: /nextflow_docs/nextflow_repo/docs/reference/operator.mdx#mix
+[operator-view]: /nextflow_docs/nextflow_repo/docs/reference/operator.mdx#view
+[operator-page]: /nextflow_docs/nextflow_repo/docs/reference/operator.mdx
+[stdlib-types-value]: /nextflow_docs/nextflow_repo/docs/reference/stdlib-types.mdx#valuev
