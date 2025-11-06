@@ -210,7 +210,7 @@ See {ref}`cli-pull` for more information.
 
 The `view` command displays the contents of a pipeline's main script or lists all files in the repository.
 
-Use this to quickly inspect pipeline code without opening files or explore the project structure. The `-l` option lists all repository files instead of showing script contents.
+Use this to quickly inspect pipeline code without opening files or explore the project structure. Specify `-l` option lists all repository files instead of showing script contents.
 
 ```console
 $ nextflow view nextflow-io/hello
@@ -259,22 +259,9 @@ See {ref}`cli-secrets` for more information.
 
 ## Configuration and validation
 
-Configuration and validation commands help you understand and verify pipeline settings before execution. These commands inspect how Nextflow interprets your configuration files, process definitions, and scripts.
+Configuration and validation options and commands help you control and verify pipeline settings. Configuration options supplement pipeline configuration at runtime, while validation commands inspect how Nextflow interprets your configuration files, process definitions, and scripts.
 
-Use these commands during development to debug configuration issues, verify settings, and catch issues.
-
-### Configuration inspection
-
-The `config` command prints the resolved configuration for a pipeline.
-
-Use this to debug configuration issues, verify which settings will be applied, understand configuration precedence, or inspect specific configuration properties.
-
-```console
-$ nextflow config
-$ nextflow config nextflow-io/hello
-```
-
-See {ref}`cli-config` for more information.
+Use these to customize pipeline configuration, debug configuration issues, verify settings, and catch issues before execution.
 
 ### Soft configuration override
 
@@ -299,6 +286,19 @@ $ nextflow -C my.config run nextflow-io/hello
 ```
 
 See {ref}`config-page` for more information.
+
+### Configuration inspection
+
+The `config` command prints the resolved configuration for a pipeline.
+
+Use this to debug configuration issues, verify which settings will be applied, understand configuration precedence, or inspect specific configuration properties.
+
+```console
+$ nextflow config
+$ nextflow config nextflow-io/hello
+```
+
+See {ref}`cli-config` for more information.
 
 ### Process inspection
 
@@ -493,7 +493,7 @@ See individual plugin documentation for plugin specific commands.
 
 The `self-update` command updates Nextflow to a newer version.  It downloads and installs the latest release or a specific version.
 
-Use this to upgrade Nextflow, switch versions, or install edge releases. By default, it updates to the latest stable release. You can specify a particular version or use the `NXF_EDGE` environment variable for development releases.
+Use this to upgrade Nextflow, switch versions, or install edge releases. By default, it updates to the latest stable release. Specify a particular version or use the `NXF_EDGE` environment variable for development releases.
 
 ```console
 $ nextflow self-update
@@ -508,7 +508,6 @@ Use this to learn about command-specific options, refresh your memory about synt
 
 ```console
 $ nextflow help run
-$ nextflow help clean
 ```
 
 ### Version information
