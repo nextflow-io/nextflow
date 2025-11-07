@@ -44,7 +44,7 @@ class CmdPush extends CmdBase implements HubOptions {
     boolean commit = false
 
     @Parameter(names=['-r','-revision'], description = 'Revision of the project to run (either a git branch, tag or commit SHA number)')
-    String revision = 'main'
+    String revision
 
     @Parameter(names=['-max-size'], description = 'Maximum file size in MB to push without confirmation (default: 10)')
     int maxSizeMB = 10
@@ -56,7 +56,7 @@ class CmdPush extends CmdBase implements HubOptions {
     final String getName() { NAME }
 
     @TestOnly
-    protected File root
+    protected File rootFolder
 
     @Override
     void run() {
@@ -66,7 +66,7 @@ class CmdPush extends CmdBase implements HubOptions {
 
         // Get repository from args (optional)
         def repository = args && args.size() == 1 ? args[0] : null
-        def folder = new File(System.getProperty('user.dir')).getAbsoluteFile()
+        def folder = rootFolder ?: new File(System.getProperty('user.dir')).getAbsoluteFile()
 
         if( !folder.exists() )
             throw new AbortOperationException("Folder does not exist: ${folder.absolutePath}")
