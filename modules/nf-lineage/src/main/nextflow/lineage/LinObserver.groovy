@@ -484,7 +484,7 @@ class LinObserver implements TraceObserverV2 {
     private Map addOtherMetadata(PathNormalizer normalizer) {
         try {
             def metadata = session.workflowMetadata.toMap()
-                .collectEntries { it.value instanceof Path ? [it.key, normalizer.normalizePath(it.value as Path) ] : [it.key, it.value] }
+                .collectEntries { it.value instanceof Path ? [it.key, FilesEx.toUriString(it.value as Path) ] : [it.key, it.value] }
             metadata.removeAll {it.key.toString() in workflowMetadataPropertiesToRemove }
             if( metadata.containsKey("nextflow") )
                 metadata["nextflow"] = (metadata["nextflow"] as NextflowMeta).toJsonMap()
