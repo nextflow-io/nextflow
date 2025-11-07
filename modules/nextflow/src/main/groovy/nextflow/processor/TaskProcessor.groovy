@@ -17,9 +17,7 @@ package nextflow.processor
 
 import static nextflow.processor.ErrorStrategy.*
 
-import java.lang.reflect.InvocationTargetException
 import java.nio.file.FileSystems
-import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -62,7 +60,6 @@ import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessRetryableException
 import nextflow.exception.ProcessSubmitTimeoutException
 import nextflow.exception.ProcessUnrecoverableException
-import nextflow.exception.ShowOnlyExceptionMessage
 import nextflow.exception.UnexpectedException
 import nextflow.executor.CachedTaskHandler
 import nextflow.executor.Executor
@@ -72,8 +69,6 @@ import nextflow.extension.DataflowHelper
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.file.FilePorter
-import nextflow.plugin.Plugins
-import nextflow.processor.tip.TaskTipProvider
 import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
@@ -108,7 +103,6 @@ import nextflow.util.CacheHelper
 import nextflow.util.Escape
 import nextflow.util.HashBuilder
 import nextflow.util.LockManager
-import nextflow.util.LoggerHelper
 import nextflow.util.TestOnly
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
@@ -375,14 +369,6 @@ class TaskProcessor {
     int getMaxForks() { maxForks }
 
     boolean hasErrors() { errorCount>0 }
-
-    @Memoized
-    protected TaskTipProvider getTipProvider() {
-        final provider = Plugins.getPriorityExtensions(TaskTipProvider).find(it-> it.enabled())
-        if( !provider )
-            throw new IllegalStateException("Unable to find any tip provider")
-        return provider
-    }
 
     boolean isSingleton() { singleton }
 
@@ -1125,22 +1111,23 @@ class TaskProcessor {
             }
 
             def dumpStackTrace = log.isTraceEnabled()
+            def errorFormatter = new TaskErrorFormatter()
             message << "Error executing process > '${safeTaskName(task)}'"
             switch( error ) {
                 case ProcessException:
-                    formatTaskError( message, error, task )
+                    errorFormatter.formatTaskError( message, error, task )
                     break
 
                 case ProcessEvalException:
-                    formatCommandError( message, error, task )
+                    errorFormatter.formatCommandError( message, error, task )
                     break
 
                 case FailedGuardException:
-                    formatGuardError( message, error as FailedGuardException, task )
+                    errorFormatter.formatGuardError( message, error as FailedGuardException, task )
                     break;
 
                 default:
-                    message << formatErrorCause(error)
+                    message << errorFormatter.formatErrorCause(error)
                     dumpStackTrace = true
             }
 
@@ -1206,139 +1193,6 @@ class TaskProcessor {
         return action
     }
 
-    final protected List<String> formatCommandError(List<String> message, ProcessEvalException error, TaskRun task) {
-        // compose a readable error message
-        message << formatErrorCause(error)
-
-        // - print the executed command
-        message << "Command executed:\n"
-        error.command.stripIndent(true)?.trim()?.eachLine {
-            message << "  ${it}"
-        }
-
-        // - the exit status
-        message << "\nCommand exit status:\n  ${error.status}"
-
-        // - the tail of the process stdout
-        message << "\nCommand output:"
-        def lines = error.output.readLines()
-        if( lines.size() == 0 ) {
-            message << "  (empty)"
-        }
-        for( String it : lines ) {
-            message << "  ${stripWorkDir(it, task.workDir)}"
-        }
-
-        if( task?.workDir )
-            message << "\nWork dir:\n  ${task.workDirStr}"
-
-        return message
-    }
-
-    final protected List<String> formatGuardError( List<String> message, FailedGuardException error, TaskRun task ) {
-        // compose a readable error message
-        message << formatErrorCause(error)
-
-        if( error.source )  {
-            message << "\nWhen block:"
-            error.source.stripIndent(true).eachLine {
-                message << "  $it"
-            }
-        }
-
-        if( task?.workDir )
-            message << "\nWork dir:\n  ${task.workDirStr}"
-
-        return message
-    }
-
-    final protected List<String> formatTaskError( List<String> message, Throwable error, TaskRun task ) {
-
-        // compose a readable error message
-        message << formatErrorCause( error )
-
-        /*
-         * task executing scriptlets
-         */
-        if( task?.script ) {
-            // - print the executed command
-            message << "Command executed${task.template ? " [$task.template]": ''}:\n"
-            task.script?.stripIndent(true)?.trim()?.eachLine {
-                message << "  ${it}"
-            }
-
-            // - the exit status
-            message << "\nCommand exit status:\n  ${task.exitStatus != Integer.MAX_VALUE ? task.exitStatus : '-'}"
-
-            // - the tail of the process stdout
-            message << "\nCommand output:"
-            final max = 50
-            def lines = task.dumpStdout(max)
-            if( lines.size() == 0 ) {
-                message << "  (empty)"
-            }
-            for( String it : lines ) {
-                message << "  ${stripWorkDir(it, task.workDir)}"
-            }
-
-            // - the tail of the process stderr
-            lines = task.dumpStderr(max)
-            if( lines ) {
-                message << "\nCommand error:"
-                for( String it : lines ) {
-                    message << "  ${stripWorkDir(it, task.workDir)}"
-                }
-            }
-            // - this is likely a task wrapper issue
-            else if( task.exitStatus != 0 ) {
-                lines = task.dumpLogFile(max)
-                if( lines ) {
-                    message << "\nCommand wrapper:"
-                    for( String it : lines ) {
-                        message << "  ${stripWorkDir(it, task.workDir)}"
-                    }
-                }
-            }
-
-        }
-        else {
-            if( task?.source )  {
-                message << "Source block:"
-                task.source.stripIndent(true).eachLine {
-                    message << "  $it"
-                }
-            }
-
-        }
-
-        if( task?.workDir )
-            message << "\nWork dir:\n  ${task.workDirStr}"
-
-        if( task?.isContainerEnabled() )
-            message << "\nContainer:\n  ${task.container}".toString()
-
-        message << suggestTip(message)
-
-        return message
-    }
-
-    private String suggestTip(List<String> message) {
-        try {
-            return "\nTip: ${getTipProvider().suggestTip(message)}"
-        }
-        catch (Exception e) {
-            log.debug "Unable to get tip for task message: $message", e
-            return ''
-        }
-    }
-
-    private static String stripWorkDir(String line, Path workDir) {
-        if( workDir==null ) return line
-        if( workDir.fileSystem != FileSystems.default ) return line
-        return workDir ? line.replace(workDir.toString()+'/','') : line
-    }
-
-
     /**
      * Send a poison pill over all the outputs channel
      */
@@ -1361,49 +1215,6 @@ class TaskProcessor {
                 channel.bind( PoisonPill.instance )
             }
         }
-    }
-
-    private String formatErrorCause( Throwable error ) {
-
-        def result = new StringBuilder()
-        result << '\nCaused by:\n'
-
-        def message
-        if( error instanceof ShowOnlyExceptionMessage || !error.cause )
-            message = err0(error)
-        else
-            message = err0(error.cause)
-
-        for( String line : message.readLines() ) {
-            result << '  ' << line << '\n'
-        }
-
-        result
-            .append('\n')
-            .toString()
-    }
-
-
-    static String err0(Throwable e) {
-        final fail = e instanceof InvocationTargetException ? e.targetException : e
-
-        if( fail instanceof NoSuchFileException ) {
-            return "No such file or directory: $fail.message"
-        }
-        if( fail instanceof MissingPropertyException ) {
-            def name = fail.property ?: LoggerHelper.getDetailMessage(fail)
-            def result = "No such variable: ${name}"
-            def details = LoggerHelper.findErrorLine(fail)
-            if( details )
-                result += " -- Check script '${details[0]}' at line: ${details[1]}"
-            return result
-        }
-        def result = fail.message ?: fail.toString()
-        def details = LoggerHelper.findErrorLine(fail)
-        if( details ){
-            result += " -- Check script '${details[0]}' at line: ${details[1]}"
-        }
-        return result
     }
 
     /**
