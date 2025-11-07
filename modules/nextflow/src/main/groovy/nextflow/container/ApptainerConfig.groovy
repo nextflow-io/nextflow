@@ -107,7 +107,7 @@ class ApptainerConfig implements ConfigScope, ContainerConfig {
         libraryDir = opts.libraryDir
         noHttps = opts.noHttps as boolean
         ociAutoPull = opts.ociAutoPull as boolean
-        pullTimeout = opts.pullTimeout as Duration
+        pullTimeout = opts.pullTimeout as Duration ?: Duration.of('20min')
         registry = opts.registry
         runOptions = opts.runOptions
     }
