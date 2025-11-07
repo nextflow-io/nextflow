@@ -172,7 +172,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
             final accessToken = tokenData['access_token'] as String
 
             // Verify login by calling /user-info
-            final userInfo = getUserInfo( createHttpClient(accessToken), apiUrl)
+            final userInfo = commonApi.getUserInfo( createHttpClient(accessToken), apiUrl)
             println "\n\n${colorize('✔', 'green', true)} Authentication successful"
 
             // Generate PAT
@@ -470,7 +470,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
 
         // Validate token by calling /user-info API
         try {
-            final userInfo = getUserInfo( createHttpClient(existingToken as String), apiUrl)
+            final userInfo = commonApi.getUserInfo( createHttpClient(existingToken as String), apiUrl)
             printColored(" - Token is valid for user: $userInfo.userName", "dim")
         } catch( Exception e ) {
             printColored("Failed to validate token: ${e.message}", "red")
@@ -608,7 +608,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
         try {
             // Get user info to validate token and get user ID
             final httpClient = createHttpClient(existingToken as String)
-            final userInfo = getUserInfo(httpClient, endpoint as String)
+            final userInfo = commonApi.getUserInfo(httpClient, endpoint as String)
             printColored(" - Authenticated as: $userInfo.userName", "dim")
             println ""
 
@@ -627,7 +627,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
             def workspaceMetadata = workspaceResult.metadata as Map
             if( !workspaceMetadata && currentWorkspaceId ) {
                 // Get workspace metadata if not already available (e.g., when user kept existing workspace)
-                workspaceMetadata = getUserWorkspaceDetails(httpClient, userInfo.id as String, endpoint as String, currentWorkspaceId)
+                workspaceMetadata = commonApi.getUserWorkspaceDetails(httpClient, userInfo.id as String, endpoint as String, currentWorkspaceId)
             }
             final computeEnvResult = configureComputeEnvironment(config as Map, existingToken as String, endpoint as String, currentWorkspaceId, workspaceMetadata)
             configChanged = configChanged || (computeEnvResult.changed as boolean)
@@ -1003,7 +1003,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
 
         if( accessToken ) {
             try {
-                final userInfo = getUserInfo(createHttpClient(accessToken), endpoint)
+                final userInfo = commonApi.getUserInfo(createHttpClient(accessToken), endpoint)
                 final currentUser = userInfo.userName as String
                 status.table.add(['Authentication', "${colorize('✔ OK', 'green')} (user: $currentUser)".toString(), tokenSource])
             } catch( Exception e ) {
@@ -1026,8 +1026,8 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
             def workspaceDetails = null
             if( accessToken ) {
                 final httpClient = createHttpClient(accessToken)
-                final userInfo = getUserInfo(httpClient, endpoint)
-                workspaceDetails = getUserWorkspaceDetails(httpClient, userInfo.id as String, endpoint, workspaceId)
+                final userInfo = commonApi.getUserInfo(httpClient, endpoint)
+                workspaceDetails = commonApi.getUserWorkspaceDetails(httpClient, userInfo.id as String, endpoint, workspaceId)
             }
 
             if( workspaceDetails ) {

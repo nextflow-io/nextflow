@@ -17,6 +17,7 @@
 package io.seqera.tower.plugin.auth
 
 import io.seqera.http.HxClient
+import io.seqera.tower.plugin.TowerCommonApi
 import nextflow.Const
 import nextflow.SysEnv
 import nextflow.util.ColorUtil
@@ -682,8 +683,10 @@ param2 = 'value2'"""
 
         // Mock API calls
         cmd.checkApiConnection(_) >> true
-        cmd.getUserInfo(_, _) >> [userName: 'testuser', id: '123']
-        cmd.getWorkspaceDetails(_, _, _) >> null
+        cmd.commonApi = Mock(TowerCommonApi){
+            getUserInfo(_, _) >> [userName: 'testuser', id: '123']
+            getWorkflowDetails(_, _, _) >> null
+        }
         cmd.listComputeEnvironments(_, _, _) >> [[name: 'ce_test', platform: 'aws', workDir: 's3://test', primary: true]]
 
         when:
@@ -762,7 +765,9 @@ param2 = 'value2'"""
         SysEnv.push([:])  // Isolate from actual environment variables
 
         cmd.checkApiConnection(_) >> true
-        cmd.getUserInfo(_, _) >> { throw new RuntimeException('Invalid token') }
+        cmd.commonApi = Mock(TowerCommonApi){
+            getUserInfo(_, _) >> { throw new RuntimeException('Invalid token') }
+        }
 
         when:
         def status = cmd.collectStatus(config)
@@ -818,13 +823,14 @@ param2 = 'value2'"""
         ]
 
         cmd.checkApiConnection(_) >> true
-        cmd.getUserInfo(_, _) >> [userName: 'testuser', id: '123']
-        cmd.getUserWorkspaceDetails(_, _, _, _) >> [
-            orgName: 'TestOrg',
-            workspaceName: 'TestWorkspace',
-            workspaceFullName: 'test-org/test-workspace'
-        ]
-
+        cmd.commonApi = Mock(TowerCommonApi){
+            getUserInfo(_, _) >> [userName: 'testuser', id: '123']
+            getUserWorkspaceDetails(_, _, _, _) >> [
+                orgName: 'TestOrg',
+                workspaceName: 'TestWorkspace',
+                workspaceFullName: 'test-org/test-workspace'
+            ]
+        }
         when:
         def status = cmd.collectStatus(config)
 
@@ -840,14 +846,16 @@ param2 = 'value2'"""
     def 'should collect status with workspace ID but no details'() {
         given:
         def cmd = Spy(AuthCommandImpl)
+        cmd.commonApi = Mock(TowerCommonApi){
+            getUserInfo(_, _) >> [userName: 'testuser', id: '123']
+            getUserWorkspaceDetails(_, _, _, _) >> null
+        }
         def config = [
             'tower.accessToken': 'test-token',
             'tower.workspaceId': '12345'
         ]
 
         cmd.checkApiConnection(_) >> true
-        cmd.getUserInfo(_, _) >> [userName: 'testuser', id: '123']
-        cmd.getUserWorkspaceDetails(_, _, _, _) >> null
 
         when:
         def status = cmd.collectStatus(config)
@@ -862,11 +870,13 @@ param2 = 'value2'"""
     def 'should collect status from environment variables'() {
         given:
         def cmd = Spy(AuthCommandImpl)
+        cmd.commonApi  = Mock(TowerCommonApi){
+            getUserInfo(_, _) >> [userName: 'envuser', id: '456']
+            getUserWorkspaceDetails(_, _, _, _) >> [:]
+        }
         def config = [:]
 
         cmd.checkApiConnection(_) >> true
-        cmd.getUserInfo(_, _) >> [userName: 'envuser', id: '456']
-        cmd.getUserWorkspaceDetails(_,_,_,_) >> [:]
         cmd.listComputeEnvironments(_,_,_) >> []
 
         SysEnv.push(['TOWER_ACCESS_TOKEN': 'env-token',
@@ -925,7 +935,9 @@ param2 = 'value2'"""
         ]
 
         cmd.checkApiConnection(_) >> true
-        cmd.getUserInfo(_, _) >> [userName: 'mixeduser', id: '789']
+        cmd.commonApi = Mock(TowerCommonApi) {
+            getUserInfo(_, _) >> [userName: 'mixeduser', id: '789']
+        }
         SysEnv.push(['TOWER_WORKSPACE_ID': '99999'])
 
         when:

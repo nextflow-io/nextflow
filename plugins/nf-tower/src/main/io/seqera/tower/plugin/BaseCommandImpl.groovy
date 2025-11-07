@@ -22,16 +22,26 @@ import groovy.util.logging.Slf4j
 import io.seqera.http.HxClient
 import nextflow.Const
 import nextflow.config.ConfigBuilder
+import nextflow.util.TestOnly
 
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.Duration
 
 @Slf4j
-class BaseCommandImpl extends TowerCommonApi {
+class BaseCommandImpl {
 
     private static final int API_TIMEOUT_MS = 10_000
 
+    /**
+     * Provides common API operations for Seqera Platform
+     */
+    protected TowerCommonApi commonApi = new TowerCommonApi()
+
+    @TestOnly
+    void setCommonApi( TowerCommonApi commonApi ){
+        this.commonApi = commonApi
+    }
     /**
      * Creates an HxClient instance with optional authentication token.
      *

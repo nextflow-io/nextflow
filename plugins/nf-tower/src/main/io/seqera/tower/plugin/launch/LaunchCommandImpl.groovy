@@ -153,13 +153,13 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
         // Resolve workspace
         final workspaceId = resolveWorkspaceId(config, options.workspace, accessToken, apiEndpoint)
         final httpClient = createHttpClient(accessToken)
-        final userInfo = getUserInfo(httpClient, apiEndpoint)
+        final userInfo = commonApi.getUserInfo(httpClient, apiEndpoint)
         final userName = userInfo.name as String
         final userId = userInfo.id as String
         String orgName = null
         String workspaceName = null
         if (workspaceId) {
-            final wsDetails = getUserWorkspaceDetails(httpClient, userId, apiEndpoint, workspaceId.toString())
+            final wsDetails = commonApi.getUserWorkspaceDetails(httpClient, userId, apiEndpoint, workspaceId.toString())
             orgName = wsDetails?.orgName as String
             workspaceName = wsDetails?.workspaceName as String
             log.debug "Using workspace '${workspaceName}' (ID: ${workspaceId})"
@@ -240,7 +240,7 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
 
         log.debug "Fetching workflow details for ID: ${workflowId}"
         final queryParams = workspaceId ? [workspaceId: workspaceId.toString()] : [:]
-        return apiGet( createHttpClient(accessToken), apiEndpoint, "/workflow/${workflowId}", queryParams)
+        return commonApi.apiGet( createHttpClient(accessToken), apiEndpoint, "/workflow/${workflowId}", queryParams)
     }
 
     /**
@@ -643,7 +643,7 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
      * Fetch workflow status from API
      */
     private String fetchWorkflowStatus(HxClient client, String workflowId, Map queryParams, String apiEndpoint) {
-        final workflow = getWorkflowDetails(client, apiEndpoint, workflowId, queryParams)
+        final workflow = commonApi.getWorkflowDetails(client, apiEndpoint, workflowId, queryParams)
         final status = workflow?.status as String
         log.debug "Workflow status: ${status}"
         return status
@@ -653,7 +653,7 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
      * Fetch workflow logs from API
      */
     private List<String> fetchWorkflowLogs(HxClient client, String workflowId, Map queryParams, String apiEndpoint) {
-        final logResponse = apiGet(client, apiEndpoint,"/workflow/${workflowId}/log", queryParams)
+        final logResponse = commonApi.apiGet(client, apiEndpoint,"/workflow/${workflowId}/log", queryParams)
         final logData = logResponse.log as Map
         return logData?.entries as List<String> ?: []
     }
@@ -951,17 +951,17 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
     // ===== API Helper Methods =====
 
     protected Map apiPost(String path, Map body, Map queryParams = [:], String accessToken, String apiEndpoint) {
-        final url = buildUrl(apiEndpoint, path, queryParams)
+        final url = commonApi.buildUrl(apiEndpoint, path, queryParams)
         log.debug "Platform API - POST ${url}"
         final requestBody = new JsonBuilder(body).toString()
         final client = createHttpClient(accessToken)
-        final request = HttpRequest.newBuilder()
+        final HttpRequest request = HttpRequest.newBuilder()
             .uri(URI.create(url))
             .header('Content-Type', 'application/json')
             .POST(HttpRequest.BodyPublishers.ofString(requestBody))
             .build()
 
-        final response = client.send(request, HttpResponse.BodyHandlers.ofString())
+        final HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString())
 
         if (response.statusCode() != 200) {
             if (response.statusCode() == 403) {
@@ -986,7 +986,8 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
         // If workspace name provided, look it up
         if (workspaceName) {
             final httpClient = createHttpClient(accessToken)
-            final userId = getUserInfo(httpClient, apiEndpoint).id as String
+            final userInfo = commonApi.getUserInfo(httpClient, apiEndpoint) as Map
+            final userId = userInfo.id as String
             final workspaces = listUserWorkspaces(httpClient, apiEndpoint, userId)
 
             final matchingWorkspace = workspaces.find { workspace ->

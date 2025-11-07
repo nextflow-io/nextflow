@@ -39,7 +39,7 @@ class TowerCommonApi {
      * @return Map containing user information (id, userName, email, etc.)
      * @throws RuntimeException if the API call fails
      */
-    protected Map getUserInfo(HxClient client, String endpoint) {
+    Map getUserInfo(HxClient client, String endpoint) {
         final json = apiGet(client, endpoint, "/user-info")
         return json.user as Map
     }
@@ -55,7 +55,7 @@ class TowerCommonApi {
      * @return Map containing workspace informatiion
      * @throws RuntimeException if the API call fails
      */
-    protected Map getUserWorkspaceDetails(HxClient client, String userId, String endpoint, String workspaceId) {
+    Map getUserWorkspaceDetails(HxClient client, String userId, String endpoint, String workspaceId) {
         if( !userId || !workspaceId ) {
             return null
         }
@@ -92,12 +92,12 @@ class TowerCommonApi {
      * @return Map containing workflow information
      * @throws RuntimeException if the API call fails
      */
-    protected Map getWorkflowDetails(HxClient client, String endpoint, String workflowId, Map queryParams = [:]) {
+    Map getWorkflowDetails(HxClient client, String endpoint, String workflowId, Map queryParams = [:]) {
         final json = apiGet(client, endpoint, "/workflow/${workflowId}", queryParams)
         return json.workflow as Map
     }
 
-    protected Map apiGet(HxClient client, String apiEndpoint, String path, Map queryParams = [:]) {
+    Map apiGet(HxClient client, String apiEndpoint, String path, Map queryParams = [:]) {
         final url = buildUrl(apiEndpoint, path, queryParams)
         log.debug "Platform API - GET ${url}"
         final request = HttpRequest.newBuilder()
@@ -115,7 +115,7 @@ class TowerCommonApi {
         return new JsonSlurper().parseText(response.body()) as Map
     }
 
-    protected String buildUrl(String endpoint, String path, Map queryParams) {
+    String buildUrl(String endpoint, String path, Map queryParams) {
         def url = new StringBuilder(endpoint)
         if( !path.startsWith('/') ) {
             url.append('/')
