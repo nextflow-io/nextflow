@@ -109,13 +109,12 @@ public class S3Client {
 	private void checkAndFallbackToAnonymousIfNeeded(String bucketName, S3SyncClientConfiguration clientConfig) {
 		try {
 			// Try to access the bucket with current credentials
-			runWithPermit(() -> client.headBucket(HeadBucketRequest.builder().bucket(bucketName).build()));
+			client.headBucket(HeadBucketRequest.builder().bucket(bucketName).build());
 			log.trace("Bucket {} is accessible with current credentials", bucketName);
 		} catch (S3Exception e) {
 			// Check if it's an access denied error (403) or forbidden
 			if (e.statusCode() == 403 || e.statusCode() == 401) {
 				log.debug("Access denied to bucket {} with current credentials (status: {}), checking if bucket is public", bucketName, e.statusCode());
-
 				checkAndManagePublicBucket(bucketName, clientConfig);
 			} else {
 				// Other errors (like bucket doesn't exist) should be handled by caller
