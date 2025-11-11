@@ -84,11 +84,28 @@ class BashWrapperBuilderWithS3Test extends Specification {
                 local source=$1
                 local target=$2
                 local file_name=$(basename $1)
-                local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
+                local is_dir=$(nxf_s3_fallback s3 ls $source | grep -F "PRE ${file_name}/" -c)
+                local opts=(--only-show-errors)
                 if [[ $is_dir == 1 ]]; then
-                    aws s3 cp --only-show-errors --recursive "$source" "$target"
-                else 
-                    aws s3 cp --only-show-errors "$source" "$target"
+                    opts+=(--recursive)
+                fi
+                nxf_s3_fallback s3 cp "${opts[@]}" "$source" "$target"
+            }
+            
+            nxf_s3_fallback() {
+                local args=("$@")
+                local output
+            
+                if ! output=$(aws "${args[@]}" 2>&1); then
+                    if echo "$output" | grep -Eq "(AccessDenied|Forbidden|403)"; then
+                        echo "Access denied, retrying unsigned request..."
+                        aws --no-sign-request "${args[@]}"  
+                    else
+                        echo "$output"
+                        return 1
+                    fi
+                else
+                    echo "$output"
                 fi
             }
             
@@ -204,11 +221,28 @@ class BashWrapperBuilderWithS3Test extends Specification {
                 local source=$1
                 local target=$2
                 local file_name=$(basename $1)
-                local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
+                local is_dir=$(nxf_s3_fallback s3 ls $source | grep -F "PRE ${file_name}/" -c)
+                local opts=(--only-show-errors)
                 if [[ $is_dir == 1 ]]; then
-                    aws s3 cp --only-show-errors --recursive "$source" "$target"
-                else 
-                    aws s3 cp --only-show-errors "$source" "$target"
+                    opts+=(--recursive)
+                fi
+                nxf_s3_fallback s3 cp "${opts[@]}" "$source" "$target"
+            }
+            
+            nxf_s3_fallback() {
+                local args=("$@")
+                local output
+            
+                if ! output=$(aws "${args[@]}" 2>&1); then
+                    if echo "$output" | grep -Eq "(AccessDenied|Forbidden|403)"; then
+                        echo "Access denied, retrying unsigned request..."
+                        aws --no-sign-request "${args[@]}"  
+                    else
+                        echo "$output"
+                        return 1
+                    fi
+                else
+                    echo "$output"
                 fi
             }
             

@@ -741,7 +741,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
         // see https://github.com/nextflow-io/nextflow/pull/5779
 		final boolean global = bucketName!=null && !awsConfig.getS3Config().isCustomEndpoint();
 		final AwsClientFactory factory = new AwsClientFactory(awsConfig, awsConfig.resolveS3Region());
-		final S3Client client = new S3Client(factory, props, global);
+		final S3Client client = new S3Client(factory, props, global, bucketName);
 
 		// set the client acl
 		client.setCannedAcl(getProp(props, "s_3_acl", "s3_acl", "s3acl", "s3Acl"));

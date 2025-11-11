@@ -84,7 +84,7 @@ public class S3Client {
 
 	private boolean global;
 
-	public S3Client(AwsClientFactory factory, Properties props, boolean global) {
+	public S3Client(AwsClientFactory factory, Properties props, boolean global, String bucketName) {
 		S3SyncClientConfiguration clientConfig = S3SyncClientConfiguration.create(props);
 		this.factory = factory;
 		this.props = props;
@@ -92,7 +92,72 @@ public class S3Client {
 		this.client = factory.getS3Client(clientConfig, global);
 		this.semaphore = Threads.useVirtual() ? new Semaphore(clientConfig.getMaxConnections()) : null;
 		this.callerAccount = fetchCallerAccount();
+
+		// Check if bucket is accessible, fallback to anonymous if it's a public bucket
+		if (bucketName != null && !bucketName.isEmpty()) {
+			checkAndFallbackToAnonymousIfNeeded(bucketName, clientConfig);
+		}
 	}
+
+	/**
+	 * Checks if the bucket is accessible with current credentials.
+	 * If access is denied but the bucket is publicly accessible, recreates the client with anonymous credentials.
+	 *
+	 * @param bucketName the name of the bucket to check
+	 * @param clientConfig the S3 client configuration
+	 */
+	private void checkAndFallbackToAnonymousIfNeeded(String bucketName, S3SyncClientConfiguration clientConfig) {
+		try {
+			// Try to access the bucket with current credentials
+			runWithPermit(() -> client.headBucket(HeadBucketRequest.builder().bucket(bucketName).build()));
+			log.trace("Bucket {} is accessible with current credentials", bucketName);
+		} catch (S3Exception e) {
+			// Check if it's an access denied error (403) or forbidden
+			if (e.statusCode() == 403 || e.statusCode() == 401) {
+				log.debug("Access denied to bucket {} with current credentials (status: {}), checking if bucket is public", bucketName, e.statusCode());
+
+				checkAndManagePublicBucket(bucketName, clientConfig);
+			} else {
+				// Other errors (like bucket doesn't exist) should be handled by caller
+				log.trace("Error checking bucket {} accessibility: {}", bucketName, e.getMessage());
+			}
+		} catch (Exception e) {
+			// Non-S3 exceptions, log and continue with current credentials
+			log.trace("Unexpected error checking bucket {} accessibility: {}", bucketName, e.getMessage());
+		}
+	}
+
+	/**
+	 * Tests if a bucket is publicly accessible using anonymous credentials and update client and factory if is a public bucket.
+	 *
+	 * @param bucketName the bucket name to test
+	 * @param clientConfig the S3 client configuration
+	 */
+	private void checkAndManagePublicBucket(String bucketName, S3SyncClientConfiguration clientConfig) {
+
+        software.amazon.awssdk.services.s3.S3Client anonymousClient = null;
+        try {
+			// Create an anonymous client
+            AwsClientFactory anonymousFactory = new AwsClientFactory(factory.config(), factory.region(), true);
+			anonymousClient = anonymousFactory.getS3Client(clientConfig, global);
+
+			// Try to access the bucket anonymously
+            anonymousClient.headBucket(HeadBucketRequest.builder().bucket(bucketName).build());
+
+            // If no error update client
+            updateClient(anonymousFactory, anonymousClient);
+		} catch (Exception e) {
+			log.trace("Bucket {} is not publicly accessible: {}", bucketName, e.getMessage());
+			if(anonymousClient != null)
+                anonymousClient.close();
+		}
+	}
+
+    private void updateClient(AwsClientFactory newFactory, software.amazon.awssdk.services.s3.S3Client newClient){
+        this.client.close();
+        this.client = newClient;
+        this.factory = newFactory;
+    }
 
 	/**
 	 * Perform an action that requires the S3 semaphore to limit concurrent connections.
