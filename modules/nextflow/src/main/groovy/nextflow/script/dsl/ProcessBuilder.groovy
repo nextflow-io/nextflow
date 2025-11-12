@@ -126,41 +126,43 @@ class ProcessBuilder {
 
     /// DIRECTIVES
 
-    void accelerator( Map params, value )  {
+    void accelerator( Map params, value ) {
         if( value instanceof Number ) {
             if( params.limit==null )
                 params.limit=value
             else if( params.request==null )
                 params.request=value
         }
-        else if( value != null )
+        else if( value != null ) {
             throw new IllegalArgumentException("Not a valid `accelerator` directive value: $value [${value.getClass().getName()}]")
+        }
         accelerator(params)
     }
 
     void accelerator( value ) {
         if( value instanceof Number )
             config.put('accelerator', [limit: value])
-        else if( value instanceof Map )
+        else if( value instanceof Map || value instanceof Closure )
             config.put('accelerator', value)
         else if( value != null )
             throw new IllegalArgumentException("Not a valid `accelerator` directive value: $value [${value.getClass().getName()}]")
     }
 
-    void arch( Map params, value )  {
+    void arch( Map params, value ) {
         if( value instanceof String ) {
             if( params.name==null )
                 params.name=value
         }
-        else if( value != null )
+        else if( value != null ) {
             throw new IllegalArgumentException("Not a valid `arch` directive value: $value [${value.getClass().getName()}]")
+        }
         arch(params)
     }
 
     void arch( value ) {
         if( value instanceof String )
             config.put('arch', [name: value])
-        else if( value instanceof Map )
+        else if( value instanceof Map || value instanceof Closure )
             config.put('arch', value)
         else if( value != null )
             throw new IllegalArgumentException("Not a valid `arch` directive value: $value [${value.getClass().getName()}]")
@@ -178,7 +180,7 @@ class ProcessBuilder {
      * @param opts
      * @param value
      */
-    void disk( Map opts, value )  {
+    void disk( Map opts, value ) {
         opts.request = value
         disk(opts)
     }
@@ -327,10 +329,10 @@ class ProcessBuilder {
      *
      *     publishDir '/some/dir', mode: 'copy'
      *
-     * @param params
-     * @param path
+     * @param params map of publish options
+     * @param path   String | Closure<String>
      */
-    void publishDir(Map params, CharSequence path) {
+    void publishDir(Map params, path) {
         params.put('path', path)
         publishDir( params )
     }
