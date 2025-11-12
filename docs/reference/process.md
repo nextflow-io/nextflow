@@ -40,7 +40,7 @@ The following task properties are defined in the process body:
 : Since the trace record is available after a failed task attempt, it can only be accessed when retrying a failed task execution, i.e., when `task.attempt` is greater than 1. See {ref}`trace-report` for a list of available fields.
 
 : :::{note}
-  Groovy doesn't support `%` in identifiers. Use `pcpu` and `pmem` to access percentage fields programmatically.
+  The trace fields `%cpu` and `%mem` can be accessed as `pcpu` and `pmem`, respectively.
   :::
 
 
