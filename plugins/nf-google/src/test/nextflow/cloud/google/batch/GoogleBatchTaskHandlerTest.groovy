@@ -142,6 +142,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def MACHINE_TYPE = 'vm-type-2'
         def MEM = MemoryUnit.of('8 GB')
         def TIMEOUT = Duration.of('1 hour')
+        def LOGS_PATH = CloudStorageFileSystem.forBucket('my-logs-bucket').getPath('/logs')
         and:
         def exec = Mock(GoogleBatchExecutor) {
             getBatchConfig() >> Mock(BatchConfig) {
@@ -157,6 +158,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
                 getServiceAccountEmail() >> 'foo@bar.baz'
                 getSubnetwork() >> 'subnet-1'
                 usePrivateAddress >> true
+                logsPath() >> LOGS_PATH
             }
         }
         and:
@@ -239,7 +241,8 @@ class GoogleBatchTaskHandlerTest extends Specification {
         networkInterface.getSubnetwork() == 'subnet-1'
         networkInterface.getNoExternalIpAddress() == true
         and:
-        req.getLogsPolicy().getDestination().toString() == 'CLOUD_LOGGING'
+        req.getLogsPolicy().getDestination().toString() == 'PATH'
+        req.getLogsPolicy().getLogsPath() == '/mnt/disks/my-logs-bucket/logs'
         and:
         req.getLabelsMap() == [foo: 'bar']
 
@@ -663,62 +666,6 @@ class GoogleBatchTaskHandlerTest extends Specification {
         EXPECTED     | JOB_STATUS                 | TASK_STATUS
         "FAILED"     | JobStatus.State.FAILED     | null // Task not in the list, get from job
         "SUCCEEDED"  | JobStatus.State.FAILED     | makeTaskStatus(TaskStatus.State.SUCCEEDED, "") // get from task status
-    }
-
-    def 'should create submit request with logs bucket PATH policy' () {
-        given:
-        def GCS_VOL = Volume.newBuilder().setGcs(GCS.newBuilder().setRemotePath('foo').build() ).build()
-        def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
-        def CONTAINER_IMAGE = 'ubuntu:22.1'
-        def LOGS_BUCKET = 'gs://my-logs-bucket/logs'
-
-        def session = Mock(Session) {
-            getBucketDir() >> CloudStorageFileSystem.forBucket('foo').getPath('/')
-            getConfig() >> [google: [project: 'test-project', batch: [logsBucket: LOGS_BUCKET]]]
-        }
-
-        def exec = Mock(GoogleBatchExecutor) {
-            getSession() >> session
-            getBatchConfig() >> new BatchConfig([logsBucket: LOGS_BUCKET])
-            getConfig() >> Mock(ExecutorConfig)
-            isFusionEnabled() >> false
-        }
-
-        def bean = new TaskBean(workDir: WORK_DIR, inputFiles: [:])
-        def task = Mock(TaskRun) {
-            toTaskBean() >> bean
-            getHashLog() >> 'abcd1234'
-            getWorkDir() >> WORK_DIR
-            getContainer() >> CONTAINER_IMAGE
-            getConfig() >> Mock(TaskConfig) {
-                getCpus() >> 2
-                getResourceLabels() >> [:]
-            }
-        }
-
-        def LOGS_VOL = Volume.newBuilder().setGcs(GCS.newBuilder().setRemotePath('my-logs-bucket').build()).setMountPath('/mnt/disks/my-logs-bucket').build()
-        def mounts = ['/mnt/disks/foo/scratch:/mnt/disks/foo/scratch:rw']
-        def volumes = [ GCS_VOL, LOGS_VOL ]
-        def launcher = new GoogleBatchLauncherSpecMock('bash .command.run', mounts, volumes)
-
-        def handler = Spy(new GoogleBatchTaskHandler(task, exec))
-
-        when:
-        def req = handler.newSubmitRequest(task, launcher)
-        then:
-        handler.fusionEnabled() >> false
-        handler.findBestMachineType(_, false) >> null
-
-        and:
-        req.getLogsPolicy().getDestination().toString() == 'PATH'
-        req.getLogsPolicy().getLogsPath() == '/mnt/disks/my-logs-bucket/logs'
-        and:
-        def taskGroup = req.getTaskGroups(0)
-        def taskVolumes = taskGroup.getTaskSpec().getVolumesList()
-        taskVolumes.size() >= 2  // At least work dir volume and logs bucket volume
-        def logsBucketVolume = taskVolumes.find { it.getGcs().getRemotePath() == 'my-logs-bucket' }
-        logsBucketVolume != null
-        logsBucketVolume.getMountPath() == '/mnt/disks/my-logs-bucket'
     }
 
     def makeTask(String name, TaskStatus.State state){

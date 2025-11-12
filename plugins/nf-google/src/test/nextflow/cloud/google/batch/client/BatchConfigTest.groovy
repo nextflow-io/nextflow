@@ -17,9 +17,7 @@
 
 package nextflow.cloud.google.batch.client
 
-import nextflow.Session
 import nextflow.util.MemoryUnit
-import spock.lang.Requires
 import spock.lang.Specification
 /**
  *
@@ -27,7 +25,6 @@ import spock.lang.Specification
  */
 class BatchConfigTest extends Specification {
 
-    @Requires({System.getenv('GOOGLE_APPLICATION_CREDENTIALS')})
     def 'should create batch config' () {
         when:
         def config = new BatchConfig([:])
@@ -40,9 +37,9 @@ class BatchConfigTest extends Specification {
         and:
         !config.bootDiskImage
         !config.bootDiskSize
+        !config.logsPath
     }
 
-    @Requires({System.getenv('GOOGLE_APPLICATION_CREDENTIALS')})
     def 'should create batch config with custom settings' () {
         given:
         def opts = [
@@ -51,7 +48,8 @@ class BatchConfigTest extends Specification {
             autoRetryExitCodes: [50001, 50003, 50005],
             retryPolicy: [maxAttempts: 10],
             bootDiskImage: 'batch-foo',
-            bootDiskSize: '100GB'
+            bootDiskSize: '100GB',
+            logsPath: 'gs://my-logs-bucket/logs'
         ]
 
         when:
@@ -65,59 +63,8 @@ class BatchConfigTest extends Specification {
         and:
         config.bootDiskImage == 'batch-foo'
         config.bootDiskSize == MemoryUnit.of('100GB')
-    }
-
-    @Requires({System.getenv('GOOGLE_APPLICATION_CREDENTIALS')})
-    def 'should validate logs bucket config' () {
-        when:
-        def config = new BatchConfig([logsBucket: 'gs://my-logs-bucket/logs'])
-        then:
-        config.logsBucket == 'gs://my-logs-bucket/logs'
-
-        when:
-        config = new BatchConfig([:])
-        then:
-        config.logsBucket == null
-    }
-
-    @Requires({System.getenv('GOOGLE_APPLICATION_CREDENTIALS')})
-    def 'should reject invalid logs bucket paths' () {
-        when:
-        new BatchConfig([logsBucket: 'invalid-bucket'])
-        then:
-        def e = thrown(IllegalArgumentException)
-        e.message.contains("Logs bucket path must start with 'gs://'")
-
-        when:
-        new BatchConfig([logsBucket: 'gs://'])
-        then:
-        e = thrown(IllegalArgumentException)
-        e.message.contains("Invalid logs bucket path")
-
-        when:
-        new BatchConfig([logsBucket: 's3://bucket'])
-        then:
-        e = thrown(IllegalArgumentException)
-        e.message.contains("Logs bucket path must start with 'gs://'")
-    }
-
-    def 'should extract bucket name from GCS path' () {
-        expect:
-        BatchConfig.extractBucketName('gs://my-bucket') == 'my-bucket'
-        BatchConfig.extractBucketName('gs://my-bucket/logs') == 'my-bucket'
-        BatchConfig.extractBucketName('gs://my-bucket/path/to/logs') == 'my-bucket'
-        BatchConfig.extractBucketName('gs://') == ''
-        BatchConfig.extractBucketName('invalid-path') == null
-        BatchConfig.extractBucketName(null) == null
-    }
-
-    def 'should convert GCS path to mount path' () {
-        expect:
-        BatchConfig.convertGcsPathToMountPath('gs://my-bucket') == '/mnt/disks/my-bucket'
-        BatchConfig.convertGcsPathToMountPath('gs://my-bucket/logs') == '/mnt/disks/my-bucket/logs'
-        BatchConfig.convertGcsPathToMountPath('gs://my-bucket/path/to/logs') == '/mnt/disks/my-bucket/path/to/logs'
-        BatchConfig.convertGcsPathToMountPath('invalid-path') == 'invalid-path'
-        BatchConfig.convertGcsPathToMountPath(null) == null
+        and:
+        config.logsPath == 'gs://my-logs-bucket/logs'
     }
 
 }

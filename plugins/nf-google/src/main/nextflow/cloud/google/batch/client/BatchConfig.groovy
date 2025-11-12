@@ -16,11 +16,10 @@
 
 package nextflow.cloud.google.batch.client
 
-import com.google.auth.oauth2.GoogleCredentials
+import java.nio.file.Path
+
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.Session
-import nextflow.cloud.google.GoogleOpts
 import nextflow.config.spec.ConfigOption
 import nextflow.config.spec.ConfigScope
 import nextflow.script.dsl.Description
@@ -87,9 +86,9 @@ class BatchConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The Google Cloud Storage bucket path where job logs should be stored, e.g. `gs://my-logs-bucket/logs`. When specified, Google Batch will write job logs to this location instead of Cloud Logging. The bucket must be accessible and writable by the service account.
+        The Google Cloud Storage path where job logs should be stored, e.g. `gs://my-logs-bucket/logs`.
     """)
-    final String logsBucket
+    final String logsPath
 
     @ConfigOption
     @Description("""
@@ -148,7 +147,7 @@ class BatchConfig implements ConfigScope {
         cpuPlatform = opts.cpuPlatform
         gcsfuseOptions = opts.gcsfuseOptions as List<String> ?: DEFAULT_GCSFUSE_OPTS
         installGpuDrivers = opts.installGpuDrivers as boolean
-        logsBucket = validateLogsBucket(opts.logsBucket as String)
+        logsPath = opts.logsPath
         maxSpotAttempts = opts.maxSpotAttempts != null ? opts.maxSpotAttempts as int : DEFAULT_MAX_SPOT_ATTEMPTS
         network = opts.network
         networkTags = opts.networkTags as List<String> ?: Collections.emptyList()
@@ -162,44 +161,8 @@ class BatchConfig implements ConfigScope {
 
     BatchRetryConfig getRetryConfig() { retry }
 
-    private static String validateLogsBucket(String bucket) {
-        if( !bucket )
-            return null
-
-        if( !bucket.startsWith('gs://') )
-            throw new IllegalArgumentException("Logs bucket path must start with 'gs://' - provided: $bucket")
-
-        if( bucket.length() <= 5 || bucket == 'gs://' )
-            throw new IllegalArgumentException("Invalid logs bucket path - provided: $bucket")
-
-        return bucket
-    }
-
-    /**
-     * Extract the bucket name from a GCS path
-     * @param gcsPath GCS path like "gs://bucket-name/path/to/logs"
-     * @return bucket name like "bucket-name"
-     */
-    static String extractBucketName(String gcsPath) {
-        if( !gcsPath || !gcsPath.startsWith('gs://') )
-            return null
-
-        final pathWithoutProtocol = gcsPath.substring(5) // Remove "gs://"
-        final slashIndex = pathWithoutProtocol.indexOf('/')
-        return slashIndex > 0 ? pathWithoutProtocol.substring(0, slashIndex) : pathWithoutProtocol
-    }
-
-    /**
-     * Convert a GCS path to container mount path
-     * @param gcsPath GCS path like "gs://bucket-name/path/to/logs"
-     * @return container path like "/mnt/disks/bucket-name/path/to/logs"
-     */
-    static String convertGcsPathToMountPath(String gcsPath) {
-        if( !gcsPath || !gcsPath.startsWith('gs://') )
-            return gcsPath
-
-        final pathWithoutProtocol = gcsPath.substring(5) // Remove "gs://"
-        return "/mnt/disks/${pathWithoutProtocol}"
+    Path logsPath() {
+        return logsPath as Path
     }
 
 }
