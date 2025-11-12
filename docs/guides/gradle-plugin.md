@@ -23,7 +23,11 @@ To create Nextflow plugins with the Gradle plugin:
 
 1. Run `nextflow plugin create`.
 
-2. Follow the prompts to add your plugin name, organization name, and project path.
+2. Follow the prompts to add your plugin name, plugin provider, and project path.
+
+    :::{note}
+    Your plugin provider is usually your organization. This must match the provider specified when claiming your plugin.
+    :::
 
 3. Develop your plugin extension points. See {ref}`dev-plugins-extension-points` for more information.
 
