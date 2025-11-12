@@ -1012,7 +1012,7 @@ class AzBatchServiceTest extends Specification {
         ]
     }
 
-    def 'should call setJobTermination when eager termination is enabled' () {
+    def 'should set auto-termination when enabled and job has tasks' () {
         given:
         def CONFIG = [batch: [terminateJobsOnCompletion: true]]
         def exec = createExecutor(CONFIG)
@@ -1024,10 +1024,27 @@ class AzBatchServiceTest extends Specification {
         service.setAutoTerminateIfEnabled(jobId, taskId)
 
         then:
-        // Should attempt to call apply (which would list tasks)
-        // The actual logic will call setJobTermination if there are running tasks
-        1 * service.apply(_) >> { throw new RuntimeException("Test exception") }
-        0 * service.setJobTermination(_) // Not called due to exception in apply
+        // Should query for tasks and find at least one
+        1 * service.apply(_) >> [[state: 'ACTIVE']]
+        noExceptionThrown()
+    }
+
+    def 'should defer auto-termination when job has no tasks' () {
+        given:
+        def CONFIG = [batch: [terminateJobsOnCompletion: true]]
+        def exec = createExecutor(CONFIG)
+        def service = Spy(new AzBatchService(exec))
+        def jobId = 'test-job'
+        def taskId = 'test-task'
+
+        when:
+        service.setAutoTerminateIfEnabled(jobId, taskId)
+
+        then:
+        // apply returns empty list - no tasks
+        1 * service.apply(_) >> []
+        // setJobTermination should NOT be called
+        0 * service.setJobTermination(_)
     }
 
     def 'should skip auto-termination when terminateJobsOnCompletion is disabled' () {

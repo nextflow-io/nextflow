@@ -633,9 +633,9 @@ class AzBatchService implements Closeable {
      * Configure job for auto-termination after task submission if enabled.
      * Sets job to terminate when all tasks complete, freeing quota immediately.
      *
-     * IMPORTANT: Only sets auto-terminate if the job already has running tasks.
-     * If tasks are still in Active state (waiting for compute resources), we defer
-     * setting auto-terminate to avoid orphaning those tasks when other tasks complete.
+     * This method is called after task submission, so the job should have at least
+     * one task. We verify this to ensure the job won't terminate immediately upon
+     * creation due to having no tasks.
      *
      * Errors are logged but don't fail the task submission.
      */
@@ -644,16 +644,16 @@ class AzBatchService implements Closeable {
             return
 
         try {
-            // Check if job has any running tasks before setting auto-terminate
-            // to avoid orphaning tasks that are in Active state waiting for resources
+            // Verify job has tasks before setting auto-terminate
+            // Since this is called after task submission, there should be at least one task
             final tasks = apply(() -> client.listTasks(jobId))
-            final hasRunningTasks = tasks.any { it.state?.toString() == 'RUNNING' }
+            final taskCount = tasks.size()
 
-            if( hasRunningTasks ) {
-                log.trace "Setting job ${jobId} to auto-terminate (has running tasks)"
+            if( taskCount > 0 ) {
+                log.trace "Setting job ${jobId} to auto-terminate (${taskCount} task(s) in job)"
                 setJobTermination(jobId)
             } else {
-                log.trace "Deferring auto-terminate for job ${jobId} - no running tasks yet (tasks may be waiting for resources)"
+                log.trace "Deferring auto-terminate for job ${jobId} - no tasks found yet"
             }
         }
         catch( Exception e ) {
