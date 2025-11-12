@@ -1130,6 +1130,12 @@ class AzBatchService implements Closeable {
 
     @Override
     void close() {
+        // terminate jobs that weren't eagerly terminated
+        // This catches jobs where eager termination was deferred due to tasks waiting for resources
+        if( config.batch().terminateJobsOnCompletion ) {
+            terminateAllJobs()
+        }
+
         // delete all jobs
         if( config.batch().deleteJobsOnCompletion ) {
             cleanupJobs()
@@ -1138,6 +1144,18 @@ class AzBatchService implements Closeable {
         // delete all autopools
         if( config.batch().canCreatePool() && config.batch().deletePoolsOnCompletion ) {
             cleanupPools()
+        }
+    }
+
+    protected void terminateAllJobs() {
+        for( String jobId : allJobIds.values() ) {
+            try {
+                log.trace "Setting Azure job ${jobId} to terminate on task completion"
+                setJobTermination(jobId)
+            }
+            catch (Exception e) {
+                log.debug "Unable to set termination for Azure Batch job ${jobId} - ${e.message ?: e}"
+            }
         }
     }
 
