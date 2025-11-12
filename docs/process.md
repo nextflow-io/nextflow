@@ -678,6 +678,8 @@ In the above example, the `tuple` input consists of the value `x` and the file `
 
 A `tuple` definition may contain any of the following qualifiers, as previously described: `val`, `env`, `path` and `stdin`. Files specified with the `path` qualifier are treated exactly the same as standalone `path` inputs.
 
+(process-input-each)=
+
 ### Input repeaters (`each`)
 
 The `each` qualifier allows you to repeat the execution of a process for each item in a collection, each time a new value is received. For example:
@@ -735,7 +737,7 @@ When multiple repeaters are defined, the process is executed for each *combinati
 :::
 
 :::{note}
-Input repeaters do not support tuples. Use the {ref}`operator-combine` or {ref}`operator-cross` operator to combine the repeated input with the other inputs to produce all of the desired input combinations.
+Input repeaters do not support tuples. Use the {ref}`operator-combine` operator to combine the repeated input with the other inputs to produce all of the desired input combinations.
 :::
 
 (process-multiple-inputs)=
