@@ -942,6 +942,14 @@ Lint and format all files in the current directory (and subdirectories) and use 
 $ nextflow lint -format -spaces 2 .
 ```
 
+:::{note}
+Formatting code with the `lint` command in Nextflow 25.10 or later may make your code incompatible with previous versions of Nextflow. If you need your code to remain compatible with versions prior to 25.10, run the formatter with Nextflow 25.04:
+
+```bash
+NXF_VER=25.04.8 nextflow lint -format .
+```
+:::
+
 (cli-list)=
 
 ### `list`
