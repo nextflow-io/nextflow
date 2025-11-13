@@ -2,33 +2,11 @@
 
 # Migrating to the Nextflow plugin registry
 
-The [Nextflow plugin registry](https://registry.nextflow.io/) is a central repository for Nextflow plugins. It hosts an index of plugin metadata that supports plugin discovery, accessibility, and version tracking. The [legacy plugin index](https://github.com/nextflow-io/plugins) will be deprecated in favor of the Nextflow plugin registry.
+The [Nextflow plugin registry](https://registry.nextflow.io/) is a central repository for Nextflow plugins. It hosts an index of plugin metadata that supports plugin discovery, accessibility, and version tracking.
 
-Starting with Nextflow 25.04, the plugin registry can be used as a direct replacement for the legacy plugin index. This page describes the migration timeline, it's impact on users and developers, and how to migrate existing plugins.
+The [legacy plugin index](https://github.com/nextflow-io/plugins) is deprecated in favor of the Nextflow plugin registry. Starting with Nextflow 25.10, the plugin registry is the only method for downloading plugins, replacing the legacy plugin index.
 
-(migrate-plugin-timeline)=
-
-## Migration timeline
-
-The migration timeline is tentative and subject to modification.
-
-<h3>Nextflow 25.04</h3>
-
-The Nextflow plugin registry is available as a private beta. Nextflow 25.04 can use the Nextflow plugin registry as an opt-in feature. The Nextflow plugin registry will be automatically kept up-to-date with the [legacy plugin index](https://github.com/nextflow-io/plugins).
-
-During this time, plugin developers are encouraged to experiment with the Gradle plugin and plugin registry.
-
-<h3>Nextflow 25.10</h3>
-
-The Nextflow plugin registry will be generally available. Nextflow 25.10 will use the plugin registry by default. The legacy plugin index will be **closed to new pull requests**.
-
-Developers will be required to publish to the Nextflow plugin registry. To ensure continued support for older versions of Nextflow, the legacy plugin index will be automatically kept up-to-date with the Nextflow plugin registry.
-
-<h3>Nextflow 26.04</h3>
-
-Nextflow 26.04 will only be able to use the Nextflow plugin registry.
-
-At some point in the future, the legacy plugin index will be **frozen** -- it will no longer receives updates from the Nextflow plugin registry. To ensure continued support for older versions of Nextflow, the legacy plugin index will remain available indefinitely.
+This page describes the registry's impact on users and developers, and how to migrate existing plugins.
 
 ## Migration impact on plugin users
 
@@ -136,6 +114,4 @@ Alternatively, use the `nextflow plugin create` command to re-create your plugin
 
 The Nextflow Gradle plugin supports publishing plugins from the command line. See {ref}`gradle-plugin-publish` for more information.
 
-:::{warning}
-Once you migrate to the Gradle plugin, you will no longer be able to publish to the legacy plugin index. See the [Migration timeline](#migration-timeline) for more information.
-:::
+The legacy plugin index is **closed to new pull requests**. It will be kept up-to-date with the plugin registry and will remain available indefinitely to ensure continued support for older versions of Nextflow.

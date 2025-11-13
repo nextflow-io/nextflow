@@ -17,6 +17,8 @@
 
 package nextflow.cloud.aws.config
 
+import software.amazon.awssdk.regions.Region
+
 import java.nio.file.Files
 
 import nextflow.SysEnv
@@ -114,5 +116,19 @@ class AwsConfigTest extends Specification {
         [foo: 1]                        | [AWS_MAX_ATTEMPTS:'3']| [max_error_retry: '3', foo: 1]
         [max_error_retry: '2', foo: 1]  | [:]                   | [max_error_retry: '2', foo: 1]
         [:]                             | [:]                   | [max_error_retry: '5']
+    }
+
+    @Unroll
+    def 'should resolve S3 region' () {
+        expect:
+        new AwsConfig(CONFIG).resolveS3Region() == REGION
+
+        where:
+        CONFIG                                                                                  | REGION
+        [:]                                                                                     | Region.US_EAST_1.id()
+        [client: [endpoint: "http://custom.endpoint.com"]]                                      | Region.US_EAST_1.id()
+        [region: "eu-south-1", client: [endpoint: "http://custom.endpoint.com"]]                | Region.EU_SOUTH_1.id()
+        [region: "eu-south-1", client: [endpoint: "https://s3.eu-west-1.amazonaws.com"]]        | Region.EU_WEST_1.id()
+        [region: "eu-south-1", client: [endpoint: "https://bucket.s3-global.amazonaws.com"]]    | Region.EU_SOUTH_1.id()
     }
 }

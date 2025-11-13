@@ -105,8 +105,8 @@ allprojects {
 
         // Documentation required libraries
         groovyDoc 'org.fusesource.jansi:jansi:2.4.0'
-        groovyDoc "org.apache.groovy:groovy-groovydoc:4.0.28"
-        groovyDoc "org.apache.groovy:groovy-ant:4.0.28"
+        groovyDoc "org.apache.groovy:groovy-groovydoc:4.0.29"
+        groovyDoc "org.apache.groovy:groovy-ant:4.0.29"
     }
 
     test {
@@ -457,6 +457,7 @@ configure(coreProjects) {
 
         repositories {
             maven {
+                name = 'Seqera'
                 // change URLs to point to your repos, e.g. http://my.org/repo
                 def releasesRepoUrl = "s3://maven.seqera.io/releases/"
                 def snapshotsRepoUrl = "s3://maven.seqera.io/snapshots/"

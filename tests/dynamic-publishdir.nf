@@ -1,5 +1,6 @@
+#!/usr/bin/env nextflow
 /*
- * Copyright 2025, Seqera Labs
+ * Copyright 2013-2025, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,27 +14,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-plugins {
-  id 'antlr'
+
+params.prefix = 'my'
+
+process TEST {
+    publishDir { "${prefix}/reads" }, mode: 'link'
+
+    input:
+    val(prefix)
+
+    script:
+    """
+    """
 }
 
-compileJava {
-  options.compilerArgs << '-parameters' 
-}
-
-dependencies {
-  antlr 'me.sunlan:antlr4:4.13.2.6'
-  api 'org.apache.groovy:groovy:4.0.29'
-  api 'org.pf4j:pf4j:3.12.0'
-
-  testFixturesApi 'com.google.jimfs:jimfs:1.2'
-  testImplementation(testFixtures(project(":nextflow")))
-}
-
-generateGrammarSource {
-  arguments += ['-no-listener', '-no-visitor']
-}
-
-tasks.named('sourcesJar') {
-    dependsOn tasks.named('generateGrammarSource')
+workflow {
+    TEST(params.prefix)
 }

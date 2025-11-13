@@ -1,5 +1,8 @@
 nf-tower changelog
 ===================
+1.17.1 - 22 Oct 2025
+- Show workspace roles in 'auth status', tweak error message on 403 (#6497) [0633d90d1]
+
 1.17.0 - 21 Oct 2025
 - Add nextflow auth command for Seqera Platform authentication (#6463) [bedf02a99]
 - Add nextflow launch command (#6491) [7c8fa3d9d]

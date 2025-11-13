@@ -12,8 +12,9 @@ The following task properties are defined in the process body:
 : The current task attempt.
 
 `task.exitStatus`
-: The exit code of the task script. Only applicable for processes with a `script:` or `shell:` block.
-: Since the exit code is only available after the task has been executed, it can only be used by certain process directives such as [errorStrategy](#errorstrategy).
+: *Available only in `script:` and `shell:` blocks*
+: The exit code returned by the task script.
+: The exit code is only available after the task has been executed (e.g., the [errorStrategy](#errorstrategy) directive).
 
 `task.hash`
 : *Available only in `exec:` blocks*
@@ -30,25 +31,29 @@ The following task properties are defined in the process body:
 : :::{versionadded} 24.10.0
   :::
 : The exception reported by the previous task attempt.
-: Since the exception is available after a failed task attempt,
-  it can only be accessed when retrying a failed task execution, and therefore when `task.attempt` is greater than 1.
+: Since the exception is available after a failed task attempt, it can only be accessed when retrying a failed task execution, i.e., when `task.attempt` is greater than 1.
 
 `task.previousTrace`
 : :::{versionadded} 24.10.0
   :::
 : The trace record associated with the previous task attempt.
-: Since the trace record is available after a failed task attempt,
-  it can only be accessed when retrying a failed task execution, and therefore when `task.attempt` is greater than 1.
-: This is useful when retrying a task execution to access the previous task attempt runtime metrics e.g. used memory and CPUs.
+: Since the trace record is available after a failed task attempt, it can only be accessed when retrying a failed task execution, i.e., when `task.attempt` is greater than 1. See {ref}`trace-report` for a list of available fields.
+
+: :::{note}
+  The trace fields `%cpu` and `%mem` can be accessed as `pcpu` and `pmem`, respectively.
+  :::
+
 
 `task.process`
-: The process name.
+: The name of the process that spawned the task.
 
 `task.workDir`
 : *Available only in `exec:` blocks*
-: The task unique directory.
+: The unique directory path for the task.
 
-Additionally, the [directive values](#directives) for the given task can be accessed via `task.<directive>`.
+:::{note}
+[Directive values](#directives) for a task can be accessed via `task.<directive>`. See {ref}`task-directive-values` for more information.
+:::
 
 (process-reference-typed)=
 

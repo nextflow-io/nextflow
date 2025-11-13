@@ -45,6 +45,7 @@ subprojects {
         }
         repositories {
             maven {
+                name = 'Seqera'
                 url = publishRepoUrl
                 credentials(AwsCredentials) {
                     // keys are defined in the `gradle.properties` file

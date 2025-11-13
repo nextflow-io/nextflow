@@ -54,9 +54,11 @@ dependencies {
     api "com.fasterxml.jackson.core:jackson-databind:2.12.7.1"
 
     testImplementation(testFixtures(project(":nextflow")))
-    testImplementation "org.apache.groovy:groovy:4.0.28"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.28"
-    testImplementation "org.apache.groovy:groovy-json:4.0.28"
+    testImplementation "org.apache.groovy:groovy:4.0.29"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.29"
+    testImplementation "org.apache.groovy:groovy-json:4.0.29"
     // wiremock required by TowerFusionEnvTest
-    testImplementation "org.wiremock:wiremock:3.5.4"
+    testImplementation "org.wiremock:wiremock:3.13.1"
+    // Address security vulnerabilities CVE-2022-45688 and CVE-2023-5072
+    testImplementation 'org.json:json:20240303'
 }
