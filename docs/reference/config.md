@@ -922,6 +922,12 @@ The following settings are available:
   :::
 : List of custom mount options for `gcsfuse` (default: `['-o rw', '-implicit-dirs']`).
 
+`google.batch.logsPath`
+: :::{versionadded} 25.11.0-edge
+  :::
+: The Google Cloud Storage path where job logs should be stored, e.g. `gs://my-logs-bucket/logs`.
+: When specified, Google Batch will write job logs to this location instead of [Cloud Logging](https://cloud.google.com/logging/docs). The bucket must be accessible and writable by the service account.
+
 `google.batch.maxSpotAttempts`
 : :::{versionadded} 23.11.0-edge
   :::
