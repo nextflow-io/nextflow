@@ -16,11 +16,10 @@
 
 package nextflow.cloud.google.batch.client
 
-import com.google.auth.oauth2.GoogleCredentials
+import java.nio.file.Path
+
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.Session
-import nextflow.cloud.google.GoogleOpts
 import nextflow.config.spec.ConfigOption
 import nextflow.config.spec.ConfigScope
 import nextflow.script.dsl.Description
@@ -87,6 +86,12 @@ class BatchConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
+        The Google Cloud Storage path where job logs should be stored, e.g. `gs://my-logs-bucket/logs`.
+    """)
+    final String logsPath
+
+    @ConfigOption
+    @Description("""
         Max number of execution attempts of a job interrupted by a Compute Engine Spot reclaim event (default: `0`).
     """)
     final int maxSpotAttempts
@@ -142,6 +147,7 @@ class BatchConfig implements ConfigScope {
         cpuPlatform = opts.cpuPlatform
         gcsfuseOptions = opts.gcsfuseOptions as List<String> ?: DEFAULT_GCSFUSE_OPTS
         installGpuDrivers = opts.installGpuDrivers as boolean
+        logsPath = opts.logsPath
         maxSpotAttempts = opts.maxSpotAttempts != null ? opts.maxSpotAttempts as int : DEFAULT_MAX_SPOT_ATTEMPTS
         network = opts.network
         networkTags = opts.networkTags as List<String> ?: Collections.emptyList()
@@ -154,5 +160,9 @@ class BatchConfig implements ConfigScope {
     }
 
     BatchRetryConfig getRetryConfig() { retry }
+
+    Path logsPath() {
+        return logsPath as Path
+    }
 
 }
