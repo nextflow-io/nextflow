@@ -51,7 +51,7 @@ class TaskErrorFormatter {
 
         // - print the executed command
         message << "Command executed:\n"
-        for( final line : error.command.stripIndent(true)?.trim()?.readLines() )
+        for( final line : error.command.stripIndent(true).trim().readLines() )
             message << "  ${line}".toString()
 
         // - the exit status
@@ -66,7 +66,7 @@ class TaskErrorFormatter {
         for( final line : lines )
             message << "  ${stripWorkDir(line, task.workDir)}".toString()
 
-        if( task?.workDir )
+        if( task.workDir )
             message << "\nWork dir:\n  ${task.workDirStr}".toString()
 
         return message
@@ -89,7 +89,7 @@ class TaskErrorFormatter {
                 message << "  ${line}".toString()
         }
 
-        if( task?.workDir )
+        if( task.workDir )
             message << "\nWork dir:\n  ${task.workDirStr}".toString()
 
         return message
@@ -108,10 +108,10 @@ class TaskErrorFormatter {
         message << formatErrorCause( error )
 
         // task with `script:` block
-        if( task?.script ) {
+        if( task.script ) {
             // -- print the executed command
             message << "Command executed${task.template ? " [$task.template]": ''}:\n".toString()
-            for( final line : task.script?.stripIndent(true)?.trim()?.readLines() )
+            for( final line : task.script.stripIndent(true).trim().readLines() )
                 message << "  ${line}".toString()
 
             // -- the exit status
@@ -146,18 +146,18 @@ class TaskErrorFormatter {
         }
 
         // task with `exec:` block
-        else if( task?.source ) {
+        else if( task.source ) {
             message << "Source block:"
             for( final line : task.source.stripIndent(true).readLines() )
                 message << "  ${line}".toString()
         }
 
         // append work dir if present
-        if( task?.workDir )
+        if( task.workDir )
             message << "\nWork dir:\n  ${task.workDirStr}".toString()
 
         // append container image if present
-        if( task?.isContainerEnabled() )
+        if( task.isContainerEnabled() )
             message << "\nContainer:\n  ${task.container}".toString()
 
         // append tip
