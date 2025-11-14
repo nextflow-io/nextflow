@@ -354,9 +354,15 @@ The same process can be called in different workflows without using an alias, li
 The fully qualified process name can be used as a {ref}`process selector <config-process-selectors>` in a Nextflow configuration file, and it takes priority over the simple process name.
 :::
 
+(workflow-special-operators)=
+
 ## Special operators
 
 The following operators have a special meaning when used in a workflow with process and workflow calls.
+
+:::{note}
+As a best practice, these operators should be avoided when {ref}`type checking <preparing-static-types>` is enabled. Using these operators will prevent the type checker from validating your code.
+:::
 
 ### Pipe `|`
 
@@ -375,7 +381,7 @@ process greet {
 }
 
 workflow {
-    channel.of('Hello','Hola','Ciao')
+    channel.of('Hello', 'Hola', 'Ciao')
         | greet
         | map { v -> v.toUpperCase() }
         | view
@@ -388,9 +394,11 @@ The same code can also be written as:
 
 ```nextflow
 workflow {
-    ch1 = channel.of('Hello','Hola','Ciao')
-    ch2 = greet( ch1 )
-    ch2.map { v -> v.toUpperCase() }.view()
+    ch_input = channel.of('Hello', 'Hola', 'Ciao')
+    ch_greet = greet(ch_input)
+    ch_greet
+        .map { v -> v.toUpperCase() }
+        .view()
 }
 ```
 
