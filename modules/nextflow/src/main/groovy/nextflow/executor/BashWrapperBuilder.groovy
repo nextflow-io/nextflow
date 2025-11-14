@@ -117,6 +117,14 @@ class BashWrapperBuilder {
 
     private BashTemplateEngine engine = new BashTemplateEngine()
 
+    // Flag to enable .command.stage file. False by default and enabled for Grid executors
+    // see https://github.com/nextflow-io/nextflow/issues/4279  and https://github.com/nextflow-io/nextflow/issues/5888
+    private Boolean stageFileEnabled = false
+
+    void enableStageFile(){
+        stageFileEnabled = true
+    }
+
     BashWrapperBuilder( TaskRun task ) {
         this(new TaskBean(task))
     }
@@ -272,9 +280,7 @@ class BashWrapperBuilder {
             return null
 
         final header = "# stage input files\n"
-        // enable only when the stage uses the default file system, i.e. it's not a remote object storage file
-        // see https://github.com/nextflow-io/nextflow/issues/4279
-        if( stageFile.fileSystem == FileSystems.default && stagingScript.size() >= stageFileThreshold.bytes ) {
+        if( stageFileEnabled && stagingScript.size() >= stageFileThreshold.bytes ) {
             stageScript = stagingScript
             return header + "bash ${stageFile}"
         }
