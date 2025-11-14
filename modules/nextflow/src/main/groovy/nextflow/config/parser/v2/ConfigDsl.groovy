@@ -152,7 +152,11 @@ class ConfigDsl extends Script {
         if( names.size() == 1 && names.first() == 'plugins' )
             return new PluginsDsl(this)
 
-        if( names.size() == 1 && names.first() == 'process' )
+        final relativeNames = names.size() == 3 && names.first() == 'profiles'
+            ? List.of(names.last())
+            : names
+
+        if( relativeNames.size() == 1 && relativeNames.last() == 'process' )
             return new ProcessDsl(this, names)
 
         if( names.size() == 1 && names.first() == 'profiles' )
