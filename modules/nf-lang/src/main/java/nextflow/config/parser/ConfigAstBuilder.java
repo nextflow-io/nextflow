@@ -314,8 +314,8 @@ public class ConfigAstBuilder {
     private ConfigStatement configSelector(ConfigSelectorContext ctx) {
         var kind = ctx.kind.getText();
         var target = configPrimary(ctx.target);
-        var statements = ctx.configAssign().stream()
-            .map(this::configAssign)
+        var statements = ctx.configBlockStatement().stream()
+            .map(this::configBlockStatement)
             .toList();
         return new ConfigBlockNode(kind, target, statements);
     }

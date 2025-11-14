@@ -1,0 +1,7 @@
+set -e
+
+echo ''
+$NXF_RUN -c ../../task-ext-block.config -profile test | tee stdout
+
+grep 'FOO: \[foo:foo\]' stdout
+grep 'BAR: \[bar:bar\]' stdout
