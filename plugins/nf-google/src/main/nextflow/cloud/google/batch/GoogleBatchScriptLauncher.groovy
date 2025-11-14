@@ -184,11 +184,6 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
         return remoteWorkDir.resolve(TaskRun.CMD_INFILE)
     }
 
-    @Override
-    protected Path targetStageFile() {
-        return remoteWorkDir.resolve(TaskRun.CMD_STAGE)
-    }
-
     GoogleBatchScriptLauncher withConfig(GoogleOpts config) {
         this.config = config
         return this

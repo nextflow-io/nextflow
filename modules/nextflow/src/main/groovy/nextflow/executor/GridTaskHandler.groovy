@@ -103,7 +103,10 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
     @Override
     void prepareLauncher() {
         // -- create the wrapper script
-        createTaskWrapper(task).build()
+        final builder = createTaskWrapper(task)
+        // Enable stageFile to avoid problems with submission script limitations
+        builder.enableStageFile()
+        builder.build()
     }
 
     protected ProcessBuilder createProcessBuilder() {
