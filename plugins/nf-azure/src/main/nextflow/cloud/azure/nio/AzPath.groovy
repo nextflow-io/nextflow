@@ -26,6 +26,7 @@ import java.nio.file.WatchService
 import com.azure.storage.blob.BlobClient
 import com.azure.storage.blob.BlobContainerClient
 import com.azure.storage.blob.models.BlobItem
+import com.azure.storage.blob.models.ListBlobsOptions
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.PackageScope
@@ -94,7 +95,34 @@ class AzPath implements Path {
     }
 
     boolean isDirectory() {
-        return directory
+        if (directory) {
+            return true
+        }
+
+        def blobNameStr = blobName()
+        if (blobNameStr) {
+            def containerClient = containerClient()
+            def blobClient = containerClient.getBlobClient(blobNameStr)
+
+            if (blobClient.exists()) {
+                def props = blobClient.getProperties()
+                def metadata = props.getMetadata()
+                def hasHdiFolderMetadata = metadata != null && metadata.containsKey("hdi_isfolder") && metadata.get("hdi_isfolder") == "true"
+                def isZeroByteBlob = props.getBlobSize() == 0
+
+                return hasHdiFolderMetadata || (isZeroByteBlob && hasChildrenInStorage(containerClient, blobNameStr))
+            } else {
+                return hasChildrenInStorage(containerClient, blobNameStr)
+            }
+        }
+
+        return false
+    }
+
+    private boolean hasChildrenInStorage(BlobContainerClient containerClient, String blobNameStr) {
+        def prefix = blobNameStr.endsWith('/') ? blobNameStr : blobNameStr + '/'
+        def opts = new com.azure.storage.blob.models.ListBlobsOptions().setPrefix(prefix).setMaxResultsPerPage(1)
+        return containerClient.listBlobs(opts, null).stream().findFirst().isPresent()
     }
 
     String checkContainerName() {
@@ -214,8 +242,17 @@ class AzPath implements Path {
 
     @Override
     AzPath resolve(String other) {
-        if( other.startsWith('/') )
-            return (AzPath)fs.provider().getPath(new URI("$AzFileSystemProvider.SCHEME:/$other"))
+        if( other.startsWith('/') ) {
+            // For absolute paths, throw exception if cross-container rather than creating invalid paths
+            def otherPath = Paths.get(other)
+            if( otherPath.isAbsolute() && otherPath.nameCount > 0 ) {
+                def otherContainer = otherPath.getName(0).toString()
+                if( otherContainer != fs.containerName ) {
+                    throw new IllegalArgumentException("Cannot resolve cross-container path `$other` from container `${fs.containerName}`")
+                }
+            }
+            return new AzPath(fs, other)
+        }
 
         def dir = other.endsWith('/')
         def newPath = path.resolve(other)
@@ -229,19 +266,35 @@ class AzPath implements Path {
 
         final that = (AzPath)other
         def newPath = path.resolveSibling(that.path)
-        if( newPath.isAbsolute() )
-            fs.getPath(newPath.toString())
-        else
-            new AzPath(fs, newPath, false)
+        if( newPath.isAbsolute() ) {
+            // Check for cross-container paths and throw exception instead of session context error
+            if( newPath.nameCount > 0 ) {
+                def otherContainer = newPath.getName(0).toString()
+                if( otherContainer != fs.containerName ) {
+                    throw new IllegalArgumentException("Cannot resolve cross-container path `${newPath}` from container `${fs.containerName}`")
+                }
+            }
+            return new AzPath(fs, newPath.toString())
+        } else {
+            return new AzPath(fs, newPath, false)
+        }
     }
 
     @Override
     Path resolveSibling(String other) {
         def newPath = path.resolveSibling(other)
-        if( newPath.isAbsolute() )
-            fs.getPath(newPath.toString())
-        else
-            new AzPath(fs, newPath, false)
+        if( newPath.isAbsolute() ) {
+            // Check for cross-container paths and throw exception instead of session context error
+            if( newPath.nameCount > 0 ) {
+                def otherContainer = newPath.getName(0).toString()
+                if( otherContainer != fs.containerName ) {
+                    throw new IllegalArgumentException("Cannot resolve cross-container path `${newPath}` from container `${fs.containerName}`")
+                }
+            }
+            return new AzPath(fs, newPath.toString())
+        } else {
+            return new AzPath(fs, newPath, false)
+        }
     }
 
     @Override
