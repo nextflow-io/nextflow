@@ -35,8 +35,10 @@ import nextflow.script.WorkflowMetadata
 import nextflow.trace.TraceRecord
 import nextflow.trace.WorkflowStats
 import nextflow.trace.WorkflowStatsObserver
+import nextflow.trace.event.WorkflowOutputEvent
 import nextflow.util.ProcessHelper
 import spock.lang.Specification
+import spock.lang.IgnoreIf
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -533,5 +535,85 @@ class TowerClientTest extends Specification {
         request != null
         request.method() == 'POST'
         request.uri().toString() == 'http://example.com/test'
+    }
+
+    // Dataset upload tests
+
+    def 'should collect workflow output events with index files'() {
+        given: 'a TowerClient'
+        def client = Spy(TowerClient)
+        def indexPath = Files.createTempFile('test', '.csv')
+        indexPath.text = "sample,file\ntest1,file1.fq\n"
+
+        and: 'a WorkflowOutputEvent with index'
+        def event = new WorkflowOutputEvent(
+            name: 'test_output',
+            index: indexPath,
+            value: null
+        )
+
+        when: 'onWorkflowOutput is called'
+        client.onWorkflowOutput(event)
+
+        then: 'event should be stored'
+        client.@workflowOutputs.size() == 1
+        client.@workflowOutputs[0].name == 'test_output'
+
+        cleanup:
+        indexPath?.toFile()?.delete()
+    }
+
+    def 'should ignore workflow outputs without index files'() {
+        given: 'a TowerClient'
+        def client = Spy(TowerClient)
+
+        and: 'a WorkflowOutputEvent without index'
+        def event = new WorkflowOutputEvent(
+            name: 'test_output',
+            value: 'some value',
+            index: null
+        )
+
+        when: 'onWorkflowOutput is called'
+        client.onWorkflowOutput(event)
+
+        then: 'event should not be stored'
+        client.@workflowOutputs.size() == 0
+    }
+
+    @IgnoreIf({ !System.getenv('TOWER_ACCESS_TOKEN') })
+    def 'should upload to real Seqera Platform'() {
+        given: 'a real TowerClient with datasets enabled'
+        def config = new TowerConfig([
+            accessToken: System.getenv('TOWER_ACCESS_TOKEN'),
+            endpoint: 'https://api.cloud.seqera.io',
+            datasets: [enabled: true, createMode: 'auto', namePattern: 'test-${workflow.runName}']
+        ], [:])
+        def session = Mock(Session) {
+            getRunName() >> "test-run-${System.currentTimeMillis()}"
+            getUniqueId() >> UUID.randomUUID()
+        }
+
+        and: 'a temporary test index file'
+        def indexFile = Files.createTempFile('test-index', '.csv')
+        indexFile.text = "sample,fastq_1,fastq_2\ntest1,file1.fq,file2.fq\n"
+
+        and: 'a mock WorkflowOutputEvent'
+        def event = new WorkflowOutputEvent(
+            name: 'test_output',
+            index: indexFile,
+            value: null
+        )
+
+        when: 'we create client and process output'
+        def client = new TowerClient(session, config)
+        client.onWorkflowOutput(event)
+
+        then: 'no exception should be thrown'
+        noExceptionThrown()
+        client.@workflowOutputs.size() == 1
+
+        cleanup:
+        indexFile?.toFile()?.delete()
     }
 }
