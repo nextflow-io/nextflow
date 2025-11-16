@@ -88,7 +88,7 @@ class CmdKubeRun extends CmdRun {
     @Override
     void run() {
         final scriptArgs = (args?.size()>1 ? args[1..-1] : []) as List<String>
-        final pipeline = stdin ? '-' : ( args ? args[0] : null )
+        final pipeline = args ? args[0] : null
         if( !pipeline )
             throw new AbortOperationException("No project name was specified")
         if( hasAnsiLogFlag() )

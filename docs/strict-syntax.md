@@ -534,7 +534,7 @@ To enable these checks, set **Nextflow > Error reporting mode** to **paranoid** 
 
 ### Using params outside the entry workflow
 
-While params can be used anywhere in the pipeline code, they are only intended to be used in the entry workflow.
+While params can be used anywhere in the pipeline code, they are only intended to be used in the entry workflow and the `output` block.
 
 As a best practice, processes and workflows should receive params as explicit inputs:
 
