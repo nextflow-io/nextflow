@@ -20,11 +20,15 @@ class PushManager {
     File folder
     boolean commit
     int maxSizeMB
+    boolean autoAccept
+    boolean checkConfigExist
 
-    PushManager(File folder, boolean commit, int maxSizeMB){
+    PushManager(File folder, boolean commit, int maxSizeMB, boolean autoAccept, boolean checkConfigExist = true){
         this.folder = folder
         this.commit = commit
         this.maxSizeMB = maxSizeMB
+        this.autoAccept = autoAccept
+        this.checkConfigExist = checkConfigExist
     }
 
     boolean isLocalGit(){
@@ -32,13 +36,13 @@ class PushManager {
         return gitDir.exists()
     }
 
-    String push(String repo, String requestedBranch){
+    String push(String repo, String requestedBranch) {
         def remoteName = "origin"
         def isNewRepo = false
         def revision = DEFAULT_BRANCH
         if( isLocalGit() ) {
             log.debug "Found existing git repository in ${folder.absolutePath}"
-            remoteName = validateExistingRepo(repo)
+            remoteName = validateLocalGit(repo)
             def currentBranch = getCurrentBranch()
             if( requestedBranch && currentBranch && currentBranch != requestedBranch ) {
                 throw new AbortOperationException(
@@ -47,15 +51,17 @@ class PushManager {
                 )
             }
             revision = requestedBranch ?: currentBranch ?: revision
-        } else if (commit){
+        } else if( commit ) {
+            if( !folder.toPath().resolve("nextflow.config").exists() )
+                throw new AbortOperationException("Not a valid Nextflow repository - 'nextflow.config' file not found")
             revision = requestedBranch ?: revision
             log.debug "No git repository found in ${folder.absolutePath}, initializing a git repo with remote $repo and branch ${revision}"
             initializeRepo(repo)
             isNewRepo = true
         } else {
-            throw new AbortOperationException( "No git repository found in ${folder.absolutePath} - Select the 'commit' option initialize and commit current files")
+            throw new AbortOperationException("No git repository found in ${folder.absolutePath} - Select the 'commit' option initialize and commit current files")
         }
-        if (commit) {
+        if( commit ) {
             checkFileSizes()
             manageNextflowGitignore()
             stageAndCommitFiles()
@@ -66,47 +72,53 @@ class PushManager {
         return revision
     }
 
-    private String validateExistingRepo(String expectedRepo) {
+    private String validateLocalGit(String expectedRepo) {
         def git = Git.open(folder)
 
         try {
-            def remotes = git.remoteList().call()
-
-            // Find all remotes and check if any matches the expected repo
-            def matchingRemote = null
-
-            for( RemoteConfig remote : remotes ) {
-                if( remote.URIs ) {
-                    def remoteUrl = remote.URIs[0].toString()
-                    def normalizedRemote = normalizeRepoUrl(remoteUrl)
-                    def normalizedExpected = normalizeRepoUrl(expectedRepo)
-
-                    if( normalizedRemote == normalizedExpected ) {
-                        matchingRemote = remote.name
-                        break
-                    }
-                }
-            }
-
-            if( !matchingRemote ) {
-                def remotesList = remotes.collect { remote ->
-                    def url = remote.URIs ? remote.URIs[0].toString() : 'no URL'
-                    "  ${remote.name}: ${url}"
-                }.join('\n')
-
-                throw new AbortOperationException(
-                    "Repository URL not found in remotes!\n" +
-                        "  Expected repository: ${expectedRepo}\n" +
-                        "  Available remotes:\n${remotesList}\n" +
-                        "Please add the repository as a remote or specify the correct repository."
-                )
-            }
-
-            return matchingRemote
+            if( checkConfigExist )
+                checkNextflowConfig(git)
+            return checkRemoteRepo(git, expectedRepo)
         }
         finally {
             git.close()
         }
+    }
+
+    private String checkRemoteRepo(Git git, String expectedRepo) {
+        def remotes = git.remoteList().call()
+
+        // Find all remotes and check if any matches the expected repo
+        def matchingRemote = null
+
+        for( RemoteConfig remote : remotes ) {
+            if( remote.URIs ) {
+                def remoteUrl = remote.URIs[0].toString()
+                def normalizedRemote = normalizeRepoUrl(remoteUrl)
+                def normalizedExpected = normalizeRepoUrl(expectedRepo)
+
+                if( normalizedRemote == normalizedExpected ) {
+                    matchingRemote = remote.name
+                    break
+                }
+            }
+        }
+
+        if( !matchingRemote ) {
+            def remotesList = remotes.collect { remote ->
+                def url = remote.URIs ? remote.URIs[0].toString() : 'no URL'
+                "  ${remote.name}: ${url}"
+            }.join('\n')
+
+            throw new AbortOperationException(
+                "Repository URL not found in remotes!\n" +
+                    "  Expected repository: ${expectedRepo}\n" +
+                    "  Available remotes:\n${remotesList}\n" +
+                    "Please add the repository as a remote or specify the correct repository."
+            )
+        }
+
+        return matchingRemote
     }
 
     private String normalizeRepoUrl(String url) {
@@ -182,9 +194,13 @@ class PushManager {
                     def sizeMB = entry['sizeMB'] as Double
                     log.warn "  ${entry['relativePath']}: ${String.format('%.1f', sizeMB)} MB"
                 }
-
-                print "Do you want to push these large files? [y/N]: "
-                def response = System.in.newReader().readLine()?.trim()?.toLowerCase()
+                def response = 'N'
+                if( autoAccept ){
+                    response = 'y'
+                } else {
+                    print "Do you want to push these large files? [y/N]: "
+                    response = System.in.newReader().readLine()?.trim()?.toLowerCase()
+                }
 
                 if( response != 'y' && response != 'yes' ) {
                     // Add large files to .gitignore
@@ -285,10 +301,11 @@ class PushManager {
             stagedFiles.each { file ->
                 println "  ${file}"
             }
-
-            print "\nDo you want to commit these files? [Y/n]: "
-            def response = System.in.newReader().readLine()?.trim()?.toLowerCase()
-
+            def response = 'yes'
+            if(! autoAccept ){
+                print "\nDo you want to commit these files? [Y/n]: "
+                response = System.in.newReader().readLine()?.trim()?.toLowerCase()
+            }
             // Default to 'yes' if empty response or 'y'/'yes'
             if( response && response != 'y' && response != 'yes' ) {
                 log.info "Commit cancelled by user"
@@ -369,5 +386,15 @@ class PushManager {
                 println "Invalid input. Please enter a number."
             }
         }
+    }
+
+    private void checkNextflowConfig(Git git) {
+        Status status = git.status().addPath("nextflow.config").call();
+
+        if( status.getUntracked().size() > 0 && !commit )
+            throw new AbortOperationException("Nextflow repositories require a 'nextflow.config' file and it is untracked. Commit the file before pushing or use the 'commit' option")
+
+        if( status.getIgnoredNotInIndex().size() > 0 )
+            throw new AbortOperationException("Nextflow repositories require a 'nextflow.config' file and it is ignored and not in the index. Remove it from .gitignore")
     }
 }

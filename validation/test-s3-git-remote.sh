@@ -37,9 +37,9 @@ cp awsbatch.config "${TEMP_DIR}/nextflow.config"
 # define trap to remove when exit
 trap remove EXIT
 
-cd ${TEMP_DIR}
+cd ${TEMP_DIR}/s3-remote-test-repo
 echo "Pushing pipeline to ${S3_REPO} (with explicit repo URL)"
-$NXF_CMD push "${S3_REPO}" -d s3-remote-test-repo -r main
+$NXF_CMD push "${S3_REPO}" -r main -c -y
 
 echo "Running pipeline from S3 remote"
 $NXF_CMD -q run "${S3_REPO}" -r main | tee stdout1
@@ -52,9 +52,7 @@ echo "Modifying pipeline message"
 sed -i "s/Hey!/Hey there!/g" s3-remote-test-repo/main.nf
 
 echo "Pushing modified pipeline to ${S3_REPO} (auto-detect from git remote)"
-cd s3-remote-test-repo
-$NXF_CMD push -m "Update greeting message"
-cd ..
+$NXF_CMD push -m "Update greeting message" -c -y
 
 echo "Running modified pipeline from S3 remote"
 $NXF_CMD -q run "${S3_REPO}" -r main -latest | tee stdout2

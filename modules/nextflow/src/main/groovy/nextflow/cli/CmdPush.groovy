@@ -52,6 +52,9 @@ class CmdPush extends CmdBase implements HubOptions {
     @Parameter(names=['-message', '-m'], description = 'Commit message')
     String message = 'Push from nextflow'
 
+    @Parameter(names=['-y', '-yes'], description = "Automatically reply 'yes' to commit prompts")
+    boolean autoAccept = false
+
     @Override
     final String getName() { NAME }
 
@@ -78,7 +81,7 @@ class CmdPush extends CmdBase implements HubOptions {
         Plugins.init()
 
         try {
-            final manager = new PushManager(folder, commit, maxSizeMB)
+            final manager = new PushManager(folder, commit, maxSizeMB, autoAccept, true)
             def resolvedRepo = repository
             if( !resolvedRepo ) {
                 resolvedRepo = manager.resolveRepository()
