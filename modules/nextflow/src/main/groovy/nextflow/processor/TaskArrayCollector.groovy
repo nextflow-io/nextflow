@@ -162,7 +162,8 @@ class TaskArrayCollector {
 
     /** Submit job array and reset internal state */
     private void submitAndReset() {
-        executor.submit(createTaskArray(array))
+        def tasksCopy = new ArrayList<TaskRun>(array)  // Create defensive copy to avoid ConcurrentModificationException
+        executor.submit(createTaskArray(tasksCopy))
         array = new ArrayList<>(arraySize)
         firstTaskTime = 0L
         pendingFlush = null
