@@ -967,14 +967,14 @@ class WaveClientTest extends Specification {
         
         where:
         ARCH                | SNAP  | EXPECTED
-        'linux/amd64'       | null  | 'https://fusionfs.seqera.io/releases/v2.4-amd64.json'
-        'linux/x86_64'      | null  | 'https://fusionfs.seqera.io/releases/v2.4-amd64.json'
-        'arm64'             | null  | 'https://fusionfs.seqera.io/releases/v2.4-arm64.json'
-        'linux/arm64'       | null  | 'https://fusionfs.seqera.io/releases/v2.4-arm64.json'
-        'linux/arm64/v8'    | null  | 'https://fusionfs.seqera.io/releases/v2.4-arm64.json'
+        'linux/amd64'       | null  | 'https://fusionfs.seqera.io/releases/v2.5-amd64.json'
+        'linux/x86_64'      | null  | 'https://fusionfs.seqera.io/releases/v2.5-amd64.json'
+        'arm64'             | null  | 'https://fusionfs.seqera.io/releases/v2.5-arm64.json'
+        'linux/arm64'       | null  | 'https://fusionfs.seqera.io/releases/v2.5-arm64.json'
+        'linux/arm64/v8'    | null  | 'https://fusionfs.seqera.io/releases/v2.5-arm64.json'
         and:
-        'linux/amd64'       | true  | 'https://fusionfs.seqera.io/releases/v2.4-snap_amd64.json'
-        'linux/arm64'       | true  | 'https://fusionfs.seqera.io/releases/v2.4-snap_arm64.json'
+        'linux/amd64'       | true  | 'https://fusionfs.seqera.io/releases/v2.5-snap_amd64.json'
+        'linux/arm64'       | true  | 'https://fusionfs.seqera.io/releases/v2.5-snap_arm64.json'
     }
 
     @Unroll
