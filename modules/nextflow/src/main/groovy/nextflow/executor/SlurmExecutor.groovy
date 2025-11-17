@@ -160,7 +160,7 @@ class SlurmExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
 
         final result = ['squeue','--noheader', '-o','%i %t', '-t', 'all']
 
-        if (onlyJobState) {
+        if( onlyJobState ) {
             result << '--only-job-state'
             // -p and -u cannot be used with --only-job-state
             return result
