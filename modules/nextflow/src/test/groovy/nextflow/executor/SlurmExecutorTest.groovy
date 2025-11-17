@@ -312,6 +312,54 @@ class SlurmExecutorTest extends Specification {
         exec.queueStatusCommand('xxx') == ['squeue','--noheader','-o','%i %t','-t','all','-p','xxx','-u', usr]
     }
 
+    def 'should use onlyJobState option and omit queue and user' () {
+        given:
+        def exec = createExecutor()
+        exec.@onlyJobState = true
+
+        when:
+        def result = exec.queueStatusCommand(null)
+
+        then:
+        result == ['squeue','--noheader','-o','%i %t','-t','all','--only-job-state']
+        !result.contains('-u')
+        !result.contains('-p')
+    }
+
+    def 'should use onlyJobState option and ignore queue parameter' () {
+        given:
+        def exec = createExecutor()
+        exec.@onlyJobState = true
+
+        when:
+        def result = exec.queueStatusCommand('myqueue')
+
+        then:
+        result == ['squeue','--noheader','-o','%i %t','-t','all','--only-job-state']
+        !result.contains('-p')
+        !result.contains('myqueue')
+        !result.contains('-u')
+    }
+
+    def 'should include queue and user when onlyJobState is disabled' () {
+        given:
+        def exec = createExecutor()
+        exec.@onlyJobState = false
+
+        when:
+        def usr = System.getProperty('user.name')
+        def resultNoQueue = exec.queueStatusCommand(null)
+        def resultWithQueue = exec.queueStatusCommand('myqueue')
+
+        then:
+        resultNoQueue == ['squeue','--noheader','-o','%i %t','-t','all','-u', usr]
+        !resultNoQueue.contains('--only-job-state')
+        
+        and:
+        resultWithQueue == ['squeue','--noheader','-o','%i %t','-t','all','-p','myqueue','-u', usr]
+        !resultWithQueue.contains('--only-job-state')
+    }
+
     def 'should get array index name and start' () {
         given:
         def executor = createExecutor()
