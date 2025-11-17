@@ -354,7 +354,7 @@ class SlurmExecutorTest extends Specification {
         then:
         resultNoQueue == ['squeue','--noheader','-o','%i %t','-t','all','-u', usr]
         !resultNoQueue.contains('--only-job-state')
-        
+
         and:
         resultWithQueue == ['squeue','--noheader','-o','%i %t','-t','all','-p','myqueue','-u', usr]
         !resultWithQueue.contains('--only-job-state')
