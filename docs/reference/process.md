@@ -37,7 +37,12 @@ The following task properties are defined in the process body:
 : :::{versionadded} 24.10.0
   :::
 : The trace record associated with the previous task attempt.
-: Since the trace record is available after a failed task attempt, it can only be accessed when retrying a failed task execution, i.e., when `task.attempt` is greater than 1.
+: Since the trace record is available after a failed task attempt, it can only be accessed when retrying a failed task execution, i.e., when `task.attempt` is greater than 1. See {ref}`trace-report` for a list of available fields.
+
+: :::{note}
+  The trace fields `%cpu` and `%mem` can be accessed as `pcpu` and `pmem`, respectively.
+  :::
+
 
 `task.process`
 : The name of the process that spawned the task.

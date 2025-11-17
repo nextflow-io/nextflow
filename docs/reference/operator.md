@@ -6,9 +6,6 @@
 
 ## branch
 
-:::{versionadded} 19.08.0-edge
-:::
-
 *Returns: multiple channels*
 
 The `branch` operator forwards each item from a source channel to one of multiple output channels, based on a selection criteria.
@@ -62,6 +59,10 @@ The `branchCriteria()` method can be used to create a branch criteria as a varia
 ```
 
 ## buffer
+
+:::{warning}
+This operator depends on the ordering of values in the source channel. It can lead to {ref}`non-deterministic behavior <cache-nondeterministic-inputs>` if used improperly.
+:::
 
 *Returns: channel*
 
@@ -132,6 +133,10 @@ This operator has multiple variants:
 See also: [collate](#collate)
 
 ## collate
+
+:::{warning}
+This operator depends on the ordering of values in the source channel. It can lead to {ref}`non-deterministic behavior <cache-nondeterministic-inputs>` if used improperly.
+:::
 
 *Returns: channel*
 
@@ -360,7 +365,9 @@ For example:
 :language: console
 ```
 
-See also: [mix](#mix)
+:::{tip}
+As a best practice, use [`mix`](#mix) instead of `concat`. The `mix` operator does not wait for each source channel to emit all values before processing the next one.
+:::
 
 (operator-count)=
 
@@ -473,6 +480,10 @@ See also: [combine](#combine)
 
 ## distinct
 
+:::{warning}
+This operator depends on the ordering of values in the source channel. It can lead to {ref}`non-deterministic behavior <cache-nondeterministic-inputs>` if used improperly.
+:::
+
 *Returns: channel*
 
 The `distinct` operator forwards a source channel with *consecutively* repeated items removed, such that each emitted item is different from the preceding one:
@@ -565,6 +576,10 @@ The following example filters a channel using a boolean predicate, which is a {r
 
 ## first
 
+:::{warning}
+This operator depends on the ordering of values in the source channel. It can lead to {ref}`non-deterministic behavior <cache-nondeterministic-inputs>` if used improperly.
+:::
+
 *Returns: dataflow value*
 
 The `first` operator emits the first item in a source channel, or the first item that matches a condition. The condition can be a {ref}`regular expression<script-regexp>`, a type qualifier (i.e. Java class), or a boolean predicate. For example:
@@ -619,7 +634,9 @@ The `flatten` operator flattens each item from a source channel that is a list o
 
 As shown in the above example, deeply nested collections are also flattened.
 
-See also: [flatMap](#flatmap)
+:::{tip}
+As a best practice, use [`flatMap`](#flatmap) instead of `flatten`. The `flatMap` operator only flattens one level and has a well-defined return type.
+:::
 
 (operator-grouptuple)=
 
@@ -629,7 +646,7 @@ See also: [flatMap](#flatmap)
 
 The `groupTuple` operator collects lists (i.e. *tuples*) from a source channel into groups based on a grouping key. A new tuple is emitted for each distinct key.
 
-To be more precise, the operator transforms a sequence of tuples like *(K, V, W, ..)* into a sequence of tuples like *(K, list(V), list(W), ..)*.
+To be more precise, the operator transforms a sequence of tuples like *(K, V1, V2, ..)* into a sequence of tuples like *(K, list(V1), list(V2), ..)*.
 
 For example:
 
@@ -673,13 +690,10 @@ Available options:
 : The required number of items for each group. When a group reaches the required size, it is emitted.
 
 `sort`
-: Defines the sorting criteria for the grouped items. Can be one of the following values:
-
-  - `false`: No sorting is applied (default).
-  - `true`: Order the grouped items by the item's natural ordering i.e. numerical for number, lexicographic for string, etc. See the [Java documentation](http://docs.oracle.com/javase/tutorial/collections/interfaces/order.html) for more information.
-  - `'hash'`: Order the grouped items by the hash number associated to each entry.
-  - `'deep'`: Similar to the previous, but the hash number is created on actual entries content e.g. when the item is a file, the hash is created on the actual file content.
-  - A custom sorting criteria used to order the nested list elements of each tuple. It can be a {ref}`Closure <script-closure>` or a [Comparator](http://docs.oracle.com/javase/7/docs/api/java/util/Comparator.html) object.
+: Defines the sorting criteria for the grouped items.
+: :::{warning}
+  The `sort` option is discouraged because it can lead to inconsistent sorting when there are multiple groups. Perform sorting separately (e.g., in a subsequent `map` operation) to ensure correct results.
+  :::
 
 (operator-ifempty)=
 
@@ -717,7 +731,7 @@ See also: {ref}`channel-empty` channel factory
 
 The `join` operator emits the inner product of two source channels using a matching key.
 
-To be more precise, the operator transforms a sequence of tuples like *(K, V1, V2, ..)* and *(K, W1, W1, ..)* into a sequence of tuples like *(K, V1, V2, .., W1, W2, ..)*.
+To be more precise, the operator transforms a sequence of tuples like *(K, V1, V2, ..)* and *(K, W1, W2, ..)* into a sequence of tuples like *(K, V1, V2, .., W1, W2, ..)*.
 
 For example:
 
@@ -764,6 +778,10 @@ See also: [combine](#combine), [cross](#cross)
 (operator-last)=
 
 ## last
+
+:::{warning}
+This operator depends on the ordering of values in the source channel. It can lead to {ref}`non-deterministic behavior <cache-nondeterministic-inputs>` if used improperly.
+:::
 
 *Returns: dataflow value*
 
@@ -837,6 +855,12 @@ The following examples show how to find the longest string in a channel:
 
 ## merge
 
+:::{warning}
+This operator depends on the ordering of values in the source channel. It can lead to {ref}`non-deterministic behavior <cache-nondeterministic-inputs>` if used improperly.
+
+Use [combine](#combine) or [join](#join) instead to combine multiple channels in a deterministic way, such as a matching key.
+:::
+
 *Returns: channel*
 
 The `merge` operator joins the items from two or more channels into a new channel:
@@ -864,12 +888,6 @@ The `merge` operator may return a channel or value depending on the inputs:
 - If the first argument is a channel, the `merge` operator returns a channel merging as many values as are available for all inputs. Dataflow values are re-used for each merged value.
 
 - If the first argument is a dataflow value, the `merge` operator returns a dataflow value, merging the first value from each input, regardless of whether there are channel inputs with additional values.
-
-:::{danger}
-In general, the use of the `merge` operator is discouraged. Processes and channel operators are not guaranteed to emit items in the order that they were received, as they are executed concurrently. Therefore, if you try to merge output channels from different processes, the resulting channel may be different on each run, which will cause resumed runs to {ref}`not work properly <cache-nondeterministic-inputs>`.
-
-You should always use a matching key (e.g. sample ID) to merge multiple channels, so that they are combined in a deterministic way. For this purpose, you can use the [join](#join) operator.
-:::
 
 (operator-min)=
 
@@ -940,9 +958,6 @@ See also: [concat](#concat)
 
 ## multiMap
 
-:::{versionadded} 19.11.0-edge
-:::
-
 *Returns: multiple channels*
 
 The `multiMap` operator applies a set of mapping functions to a source channel, producing a separate output channel for each mapping function.
@@ -984,6 +999,10 @@ If you use `multiMap` to split a tuple or map into multiple channels, it is reco
 (operator-randomsample)=
 
 ## randomSample
+
+:::{warning}
+This operator depends on the ordering of values in the source channel. It can lead to {ref}`non-deterministic behavior <cache-nondeterministic-inputs>` if used improperly.
+:::
 
 *Returns: channel*
 
@@ -1049,6 +1068,10 @@ Using `set` is semantically equivalent to assigning a variable:
 my_channel = channel.of(10, 20, 30)
 ```
 
+:::{tip}
+As a best practice, use a standard assignment (`=`) instead of `set`. Standard assignments enable more effective {ref}`type checking <preparing-static-types>`.
+:::
+
 See also: [tap](#tap)
 
 (operator-splitcsv)=
@@ -1101,9 +1124,6 @@ Available options:
 
 `decompress`
 : When `true`, decompress the content using the GZIP format before processing it (default: `false`). Files with the `.gz` extension are decompressed automatically.
-
-`elem`
-: The index of the element to split when the source items are lists or tuples (default: first file object or first element).
 
 `header`
 : When `true`, the first line is used as the columns names (default: `false`). Can also be a list of columns names.
@@ -1459,6 +1479,10 @@ An optional {ref}`closure <script-closure>` can be used to transform each item b
 
 ## take
 
+:::{warning}
+This operator depends on the ordering of values in the source channel. It can lead to {ref}`non-deterministic behavior <cache-nondeterministic-inputs>` if used improperly.
+:::
+
 *Returns: channel*
 
 The `take` operator takes the first *N* items from a source channel:
@@ -1491,7 +1515,9 @@ The `tap` operator assigns a source channel to a variable, and emits the source 
 :language: console
 ```
 
-See also: [set](#set)
+:::{tip}
+As a best practice, use a standard assignment (`=`) instead of `tap`. Standard assignments enable more effective {ref}`type checking <preparing-static-types>`.
+:::
 
 ## toInteger
 
@@ -1588,7 +1614,7 @@ See also: [collect](#collect)
 
 The `transpose` operator "transposes" each tuple from a source channel by flattening any nested list in each tuple, emitting each nested item separately.
 
-To be more precise, the operator transforms a sequence of tuples like *(K, list(V), list(W), ..)* into a sequence of tuples like *(K, V, W, ..)*.
+To be more precise, the operator transforms a sequence of tuples like *(K, list(V1), list(V2), ..)* into a sequence of tuples like *(K, V1, V2, ..)*.
 
 For example:
 
@@ -1628,7 +1654,9 @@ Available options:
 `remainder`
 : When `true`, incomplete tuples are emitted with `null` values for missing elements, otherwise they are discarded (default: `false`). 
 
-See also: [groupTuple](#grouptuple)
+:::{tip}
+As a best practice, use [`flatMap`](#flatmap) instead of `transpose`, since `flatMap` has a well-defined return type.
+:::
 
 (operator-unique)=
 

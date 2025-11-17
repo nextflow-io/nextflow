@@ -142,6 +142,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def MACHINE_TYPE = 'vm-type-2'
         def MEM = MemoryUnit.of('8 GB')
         def TIMEOUT = Duration.of('1 hour')
+        def LOGS_PATH = CloudStorageFileSystem.forBucket('my-logs-bucket').getPath('/logs')
         and:
         def exec = Mock(GoogleBatchExecutor) {
             getBatchConfig() >> Mock(BatchConfig) {
@@ -157,6 +158,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
                 getServiceAccountEmail() >> 'foo@bar.baz'
                 getSubnetwork() >> 'subnet-1'
                 usePrivateAddress >> true
+                logsPath() >> LOGS_PATH
             }
         }
         and:
@@ -239,7 +241,8 @@ class GoogleBatchTaskHandlerTest extends Specification {
         networkInterface.getSubnetwork() == 'subnet-1'
         networkInterface.getNoExternalIpAddress() == true
         and:
-        req.getLogsPolicy().getDestination().toString() == 'CLOUD_LOGGING'
+        req.getLogsPolicy().getDestination().toString() == 'PATH'
+        req.getLogsPolicy().getLogsPath() == '/mnt/disks/my-logs-bucket/logs'
         and:
         req.getLabelsMap() == [foo: 'bar']
 

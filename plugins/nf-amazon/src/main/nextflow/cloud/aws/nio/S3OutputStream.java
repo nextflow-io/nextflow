@@ -27,6 +27,7 @@ import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -548,9 +549,13 @@ public final class S3OutputStream extends OutputStream {
         final int partCount = completedParts.size();
         log.trace("Completing upload to {} consisting of {} parts", objectId, partCount);
 
+        //Ensure parts are sorted by partNumber
+        CompletedPart[] parts = completedParts.stream()
+            .sorted(Comparator.comparingInt(CompletedPart::partNumber))
+            .toArray(CompletedPart[]::new);
         try {
             final CompletedMultipartUpload completedUpload = CompletedMultipartUpload.builder()
-            .parts(completedParts)
+            .parts(parts)
             .build();
 
             s3.completeMultipartUpload(CompleteMultipartUploadRequest.builder()
