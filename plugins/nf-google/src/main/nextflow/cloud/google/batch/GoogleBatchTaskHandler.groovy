@@ -32,6 +32,7 @@ import com.google.cloud.batch.v1.ServiceAccount
 import com.google.cloud.batch.v1.TaskGroup
 import com.google.cloud.batch.v1.TaskSpec
 import com.google.cloud.batch.v1.Volume
+import com.google.cloud.storage.contrib.nio.CloudStoragePath
 import com.google.protobuf.Duration
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
@@ -447,12 +448,24 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         return Job.newBuilder()
             .addTaskGroups(taskGroup)
             .setAllocationPolicy(allocationPolicy)
-            .setLogsPolicy(
-                LogsPolicy.newBuilder()
-                    .setDestination(LogsPolicy.Destination.CLOUD_LOGGING)
-            )
+            .setLogsPolicy(createLogsPolicy())
             .putAllLabels(task.config.getResourceLabels())
             .build()
+    }
+
+    protected LogsPolicy createLogsPolicy() {
+        final logsPath = executor.batchConfig.logsPath()
+        if( logsPath instanceof CloudStoragePath ) {
+            return LogsPolicy.newBuilder()
+                .setDestination(LogsPolicy.Destination.PATH)
+                .setLogsPath(GoogleBatchScriptLauncher.containerMountPath(logsPath))
+                .build()
+        }
+        else {
+            return LogsPolicy.newBuilder()
+                .setDestination(LogsPolicy.Destination.CLOUD_LOGGING)
+                .build()
+        }
     }
 
     /**

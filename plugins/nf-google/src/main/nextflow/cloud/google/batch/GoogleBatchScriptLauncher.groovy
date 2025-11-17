@@ -186,7 +186,15 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
 
     GoogleBatchScriptLauncher withConfig(GoogleOpts config) {
         this.config = config
+        addLogsBucket(config.batch.logsPath())
         return this
+    }
+
+    protected void addLogsBucket(Path path) {
+        if( path instanceof CloudStoragePath )
+            buckets.add(path.bucket())
+        else if( path != null )
+            throw new IllegalArgumentException("Unexpected value for Google Batch logs path: ${path.toUriString()}")
     }
 
     GoogleBatchScriptLauncher withIsArray(boolean value) {
