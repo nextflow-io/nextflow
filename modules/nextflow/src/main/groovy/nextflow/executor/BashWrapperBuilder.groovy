@@ -111,6 +111,8 @@ class BashWrapperBuilder {
 
     private Path wrapperFile
 
+    private boolean stageFileEnabled
+
     private Path stageFile
 
     private String stageScript
@@ -128,6 +130,10 @@ class BashWrapperBuilder {
 
     @TestOnly
     protected BashWrapperBuilder() {}
+
+    void withStageFile(boolean value) {
+        stageFileEnabled = value
+    }
 
     /**
      * @return The bash script fragment to change to the 'scratch' directory if it has been specified in the task configuration
@@ -272,14 +278,13 @@ class BashWrapperBuilder {
             return null
 
         final header = "# stage input files\n"
-        // enable only when the stage uses the default file system, i.e. it's not a remote object storage file
-        // see https://github.com/nextflow-io/nextflow/issues/4279
-        if( stageFile.fileSystem == FileSystems.default && stagingScript.size() >= stageFileThreshold.bytes ) {
+        if( stageFileEnabled && stagingScript.size() >= stageFileThreshold.bytes ) {
             stageScript = stagingScript
             return header + "bash ${stageFile}"
         }
-        else
+        else {
             return header + stagingScript
+        }
     }
 
     protected Map<String,String> makeBinding() {
