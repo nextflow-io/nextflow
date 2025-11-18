@@ -28,7 +28,7 @@ workflow {
 
 Parameters can be declared in a Nextflow script with the `params` block or with *legacy* parameter declarations.
 
-### Params block
+### Typed parameters
 
 :::{versionadded} 25.10.0
 :::
@@ -66,7 +66,7 @@ workflow {
 ```
 
 :::{note}
-As a best practice, parameters should only be used directly in the entry workflow and passed to workflows and processes as explicit inputs.
+As a best practice, parameters should only be referenced in the entry workflow or `output` block. Parameters can be passed to workflows and processes as explicit inputs.
 :::
 
 The default value can be overridden by the command line, params file, or config file. Parameters from multiple sources are resolved in the order described in {ref}`cli-params`. Parameters specified on the command line are converted to the appropriate type based on the corresponding type annotation.
