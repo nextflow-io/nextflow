@@ -344,6 +344,167 @@ While `List<Path>` and `Bag<Path>` are also valid path collection types, `Set<Pa
 
 Apply the same migration principles from the previous processes to migrate `INDEX`.
 
+(preparing-static-types)=
+
+## Preparing for static types
+
+While static types can be adopted progressively with existing code, some coding patterns cannot be statically typed and will prevent the type checker from validating your entire pipeline.
+
+This section provides best practices for writing Nextflow code that works well with static types.
+
+### Use the strict syntax
+
+The {ref}`strict syntax <strict-syntax-page>` remains optional in Nextflow 25.10. However, it is required to use type annotations.
+
+Before you migrate to static types, ensure your code adheres to the strict syntax using `nextflow lint` or the language server.
+
+### Avoid deprecated patterns
+
+When preparing for the strict syntax, try to address {ref}`deprecation warnings <strict-syntax-deprecated>` as much as possible. For example:
+
+```nextflow
+Channel.from(1, 2, 3).map { it * 2 }    // deprecated
+channel.of(1, 2, 3).map { v -> v * 2 }  // best practice
+```
+
+The above example shows how to avoid three deprecated patterns:
+
+1. Using `Channel` to access channel factories (use `channel` instead)
+2. Using the deprecated `channel.from` factory (use `channel.of` or `channel.fromList` instead)
+3. Using the implicit `it` closure parameter (declare the parameter explicitly instead) 
+
+### Avoid `set` and `tap` operators
+
+Nextflow provides three ways to assign a channel: a standard assignment, the `set` operator, and the `tap` operator:
+
+```nextflow
+ch = channel.of(1, 2, 3)            // standard assignment
+channel.of(10, 20, 30).set { ch }   // set
+channel.of(10, 20, 30).tap { ch }   // tap
+```
+
+However, the type checker cannot validate code that uses `set` or `tap`. Use standard assignments in your dataflow logic to enable full type checking.
+
+### Avoid `|` and `&` operators
+
+The {ref}`special operators <workflow-special-operators>` `|` and `&` provide shorthands for writing dataflow logic:
+
+```nextflow
+channel.of('Hello', 'Hola', 'Ciao')
+    | greet
+    | map { v -> v.toUpperCase() }
+    | view
+```
+
+However, the type checker cannot validate code that uses these special operators. Use standard assignments and method calls instead:
+
+```nextflow
+ch_input = channel.of('Hello', 'Hola', 'Ciao')
+ch_greet = greet(ch_input)
+ch_greet
+    .map { v -> v.toUpperCase() }
+    .view()
+```
+
+### Avoid `each` input qualifier
+
+The {ref}`each <process-input-each>` input qualifier is not supported by typed processes. Use the {ref}`operator-combine` operator to create a single tuple channel instead.
+
+For example:
+
+```nextflow
+process align {
+    input:
+    path seq
+    each mode
+
+    script:
+    """
+    t_coffee -in $seq -mode $mode > result
+    """
+}
+
+workflow {
+    sequences = channel.fromPath('*.fa')
+    methods = ['regular', 'espresso', 'psicoffee']
+
+    align(sequences, methods)
+}
+```
+
+Rewrite the script to use the `combine` operator. It becomes:
+
+```nextflow
+process align {
+    input:
+    tuple path(seq), val(mode)
+
+    script:
+    """
+    t_coffee -in $seq -mode $mode > result
+    """
+}
+
+workflow {
+    sequences = channel.fromPath('*.fa')
+    methods = ['regular', 'espresso', 'psicoffee']
+
+    align(sequences.combine(methods))
+}
+```
+
+:::{tip}
+The `each` qualifier is discouraged in modern Nextflow code. While it provides a convenient shorthand for combining multiple inputs, it couples the process definition with external workflow logic. Since the introduction of DSL2, Nextflow aims to treat processes as standalone modules that are decoupled from workflow logic.
+:::
+
+### Avoid functions with ambiguous return types
+
+Some {ref}`standard library <stdlib-types>` functions and {ref}`operators <operator-page>` have ambiguous return types. While you can still use them with static types, the type checker will not be able to fully validate your code.
+
+You can tell whether a function has an ambiguous return type by inspecting the function signature. The return type is ambiguous if it is `?` or contains `?` as a type argument.
+
+For example, the `flatten` operator has the following signature:
+
+```nextflow
+def flatten() -> Channel<?>
+```
+
+Use alternatives that have well-defined return types. For example, use `flatMap` instead of `flatten`.
+
+:::{tip}
+The commonly-used operators listed under {ref}`dataflow-type-channel` have well-defined return types and are recommended for use with static types.
+:::
+
+If you cannot avoid an ambiguously-typed function, you can use a *hard cast* to specify the expected type, provided you know what the type will be at runtime.
+
+For example:
+
+```nextflow
+channel.fromPath('samplesheet.csv')
+    .splitCsv()
+    .view()
+```
+
+The `splitCsv` operator has an ambiguous return type (`Channel<?>`).  It emits lists by default but emits maps when `header` is enabled, making the return type dependent on runtime conditions.
+
+
+To address this issue:
+
+1. Replace the `splitCsv` operation with a `flatMap` operation that calls the `splitCsv` method (defined for `Path`).
+
+2. Add a `map` operation that casts the emitted rows as `List<String>`.
+
+It becomes:
+
+```nextflow
+channel.fromPath('samplesheet.csv')
+    .flatMap { csv -> csv.splitCsv() }
+    .map { row -> row as List<String> }
+    .view()
+```
+
+The resulting channel has type `Channel<List<String>>`, and the type checker can validate any downstream code that uses this channel.
+
 ## Additional resources
 
 See the following links to learn more about static types:

@@ -16,33 +16,35 @@ Available options:
 : Comma-separated list of configuration files which are used as the configuration set. Any other default configuration files are ignored.
 
 `-D`
-: Set JVM properties.
+: Set JVM properties (e.g. `-Dfile.encoding=UTF-8`). Equivalent to the `NXF_JVM_ARGS` environment variable.
 
 `-bg`
-: Execute nextflow in background.
+: Execute Nextflow in background.
+: Allows you to close your terminal without terminating the pipeline run.
 
 `-c, -config`
 : Comma-separated list of configuration files which are added to the configuration set.
 
 `-d, -dockerize`
-: :::{deprecated} 23.09.0-edge
+: :::{deprecated} 23.10.0
   :::
-: Launch nextflow via Docker (experimental).
+: Launch Nextflow via Docker (experimental).
 
 `-h`
-: Print this help.
+: Print available commands and options.
 
 `-log`
-: Set nextflow log file path.
+: Set Nextflow log file path (default: `.nextflow.log`).
 
 `-q, -quiet`
-: Do not print information messages.
+: Do not print the Nextflow banner and execution progress to the console.
+: Does not affect error messages.
 
 `-remote-debug`
 : Enable JVM interactive remote debugging (experimental).
 
 `-syslog`
-: Send logs to syslog server (e.g. localhost:514).
+: Send logs to a [Syslog](https://en.wikipedia.org/wiki/Syslog) server (e.g. `localhost:514`).
 
 `-trace`
 : Enable trace level logging for the specified packages. Multiple packages can be provided separating them with a comma, e.g. `-trace nextflow,io.seqera`.
@@ -56,7 +58,7 @@ Available options:
 
 ### `auth`
 
-:::{versionadded} 25.09.0-edge
+:::{versionadded} 25.10.0
 :::
 
 Manage Seqera Platform authentication.
@@ -233,6 +235,8 @@ Would remove temp files from work/bf/334115deec60929dc18edf0010032a
 Would remove temp files from work/a3/06521d75da296d4dd7f4f8caaddad8
 ```
 
+(cli-clone)=
+
 ### `clone`
 
 Clone a remote project into a folder.
@@ -280,6 +284,8 @@ $ nextflow clone nextflow-io/hello -r v1.1
 nextflow-io/hello cloned to: hello
 ```
 
+(cli-config)=
+
 ### `config`
 
 Print the resolved pipeline configuration.
@@ -315,7 +321,7 @@ The `config` command is used for printing the project's configuration i.e. the `
 : Sort config attributes.
 
 `-value`
-: :::{versionadded} 23.08.0-edge
+: :::{versionadded} 23.10.0
   :::
 : Print the value of a config option, or fail if the option is not defined.
 
@@ -412,6 +418,8 @@ Launch the `console` GUI.
 $ nextflow console
 ```
 
+(cli-drop)=
+
 ### `drop`
 
 Delete the local copy of a project.
@@ -447,6 +455,8 @@ Forcefully drop the `nextflow-io/hello` pipeline, ignoring any local changes.
 ```console
 $ nextflow drop nextflow-io/hello -f
 ```
+
+(cli-fs)=
 
 ### `fs`
 
@@ -610,7 +620,7 @@ $ nextflow info nextflow-io/hello
 
 ### `inspect`
 
-:::{versionadded} 23.09.0-edge
+:::{versionadded} 23.10.0
 :::
 
 Inspect process settings in a pipeline project. Currently only supports the `container` directive.
@@ -658,6 +668,8 @@ Specify parameters as with the `run` command:
 ```console
 $ nextflow inspect main.nf --alpha 1 --beta hello
 ```
+
+(cli-kuberun)=
 
 ### `kuberun`
 
@@ -718,22 +730,18 @@ The `kuberun` command supports the following options from [`run`](#run):
 The following new options are also available:
 
 `-head-cpus`
-: :::{versionadded} 22.01.0-edge
-  :::
 : Specify number of CPUs requested for the Nextflow pod.
 
 `-head-image`
-: :::{versionadded} 22.07.1-edge
+: :::{versionadded} 22.10.0
   :::
 : Specify the container image for the Nextflow driver pod.
 
 `-head-memory`
-: :::{versionadded} 22.01.0-edge
-  :::
 : Specify amount of memory requested for the Nextflow pod.
 
 `-head-prescript`
-: :::{versionadded} 22.05.0-edge
+: :::{versionadded} 22.10.0
   :::
 : Specify script to be run before the Nextflow pod starts.
 
@@ -934,6 +942,16 @@ Lint and format all files in the current directory (and subdirectories) and use 
 $ nextflow lint -format -spaces 2 .
 ```
 
+:::{note}
+Formatting code with the `lint` command in Nextflow 25.10 or later may make your code incompatible with previous versions of Nextflow. If you need your code to remain compatible with versions prior to 25.10, run the formatter with Nextflow 25.04:
+
+```bash
+NXF_VER=25.04.8 nextflow lint -format .
+```
+:::
+
+(cli-list)=
+
 ### `list`
 
 List all downloaded projects.
@@ -1119,6 +1137,8 @@ $ nextflow plugin <subcommand> [options]
 
 : Execute a plugin-specific command.
 
+(cli-pull)=
+
 ### `pull`
 
 Download or update a project.
@@ -1222,12 +1242,12 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 : Prevent the cancellation of child jobs on execution termination
 
 `-dsl1`
-: :::{deprecated} 23.09.0-edge
+: :::{deprecated} 23.10.0
   :::
 : Execute the workflow using DSL1 syntax.
 
 `-dsl2`
-: :::{deprecated} 23.09.0-edge
+: :::{deprecated} 23.10.0
   :::
 : Execute the workflow using DSL2 syntax.
 
@@ -1262,8 +1282,6 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 : Library extension path.
 
 `-main-script` (`main.nf`)
-: :::{versionadded} 20.09.1-edge
-  :::
 : The script file to be executed when launching a project directory or repository.
 
 `-name`
@@ -1284,7 +1302,7 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 : Comma separated list of plugin ids to be applied in the pipeline execution.
 
 `-preview`
-: :::{versionadded} 22.06.0-edge
+: :::{versionadded} 22.10.0
   :::
 : Run the workflow script skipping the execution of all processes.
 
@@ -1519,6 +1537,8 @@ $ nextflow self-update
 Nextflow installation completed. Please note:
 - the executable file `nextflow` has been created in the folder: /usr/local/bin
 ```
+
+(cli-view)=
 
 ### `view`
 
