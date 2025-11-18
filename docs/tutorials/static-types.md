@@ -352,13 +352,13 @@ While static types can be adopted progressively with existing code, some coding 
 
 This section provides best practices for writing Nextflow code that works well with static types.
 
-<h3>Use the strict syntax</h3>
+### Use the strict syntax
 
 The {ref}`strict syntax <strict-syntax-page>` remains optional in Nextflow 25.10. However, it is required to use type annotations.
 
 Before you migrate to static types, ensure your code adheres to the strict syntax using `nextflow lint` or the language server.
 
-<h3>Avoid deprecated patterns</h3>
+### Avoid deprecated patterns
 
 When preparing for the strict syntax, try to address {ref}`deprecation warnings <strict-syntax-deprecated>` as much as possible. For example:
 
@@ -373,7 +373,7 @@ The above example shows how to avoid three deprecated patterns:
 2. Using the deprecated `channel.from` factory (use `channel.of` or `channel.fromList` instead)
 3. Using the implicit `it` closure parameter (declare the parameter explicitly instead) 
 
-<h3>Avoid <code>set</code> and <code>tap</code> operators</h3>
+### Avoid `set` and `tap` operators
 
 Nextflow provides three ways to assign a channel: a standard assignment, the `set` operator, and the `tap` operator:
 
@@ -385,7 +385,28 @@ channel.of(10, 20, 30).tap { ch }   // tap
 
 However, the type checker cannot validate code that uses `set` or `tap`. Use standard assignments in your dataflow logic to enable full type checking.
 
-<h3>Avoid <code>each</code> input qualifier</h3>
+### Avoid `|` and `&` operators
+
+The {ref}`special operators <workflow-special-operators>` `|` and `&` provide shorthands for writing dataflow logic:
+
+```nextflow
+channel.of('Hello', 'Hola', 'Ciao')
+    | greet
+    | map { v -> v.toUpperCase() }
+    | view
+```
+
+However, the type checker cannot validate code that uses these special operators. Use standard assignments and method calls instead:
+
+```nextflow
+ch_input = channel.of('Hello', 'Hola', 'Ciao')
+ch_greet = greet(ch_input)
+ch_greet
+    .map { v -> v.toUpperCase() }
+    .view()
+```
+
+### Avoid `each` input qualifier
 
 The {ref}`each <process-input-each>` input qualifier is not supported by typed processes. Use the {ref}`operator-combine` operator to create a single tuple channel instead.
 
@@ -436,7 +457,7 @@ workflow {
 The `each` qualifier is discouraged in modern Nextflow code. While it provides a convenient shorthand for combining multiple inputs, it couples the process definition with external workflow logic. Since the introduction of DSL2, Nextflow aims to treat processes as standalone modules that are decoupled from workflow logic.
 :::
 
-<h3>Aviod functions with ambiguous return types</h3>
+### Avoid functions with ambiguous return types
 
 Some {ref}`standard library <stdlib-types>` functions and {ref}`operators <operator-page>` have ambiguous return types. While you can still use them with static types, the type checker will not be able to fully validate your code.
 
