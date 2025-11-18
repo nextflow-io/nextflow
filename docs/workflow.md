@@ -361,7 +361,7 @@ The fully qualified process name can be used as a {ref}`process selector <config
 The following operators have a special meaning when used in a workflow with process and workflow calls.
 
 :::{note}
-As a best practice, these operators should be avoided when {ref}`type checking <preparing-static-types>` is enabled. Using these operators will prevent the type checker from validating your code.
+As a best practice, avoid these operators when {ref}`type checking <preparing-static-types>` is enabled. Using these operators will prevent the type checker from validating your code.
 :::
 
 ### Pipe `|`
