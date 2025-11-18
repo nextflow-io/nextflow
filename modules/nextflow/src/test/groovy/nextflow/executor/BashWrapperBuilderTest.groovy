@@ -489,59 +489,29 @@ class BashWrapperBuilderTest extends Specification {
                 ln -s /some/data/sample_1.fq sample_1.fq
                 ln -s /some/data/sample_2.fq sample_2.fq
                 '''.stripIndent().rightTrim()
-        and:
+
+        when:
         def builder = newBashWrapperBuilder([
                 workDir: folder,
                 targetDir: folder,
                 inputFiles: inputs ])
-        builder.enableStageFile()
-
-        when:
-        def binding = builder.makeBinding()
-        then:
-        binding.stage_inputs == "# stage input files\nbash ${folder}/.command.stage"
-
-        when:
         builder.build()
         then:
+        builder.makeBinding().stage_inputs == "# stage input files\n${stageScript}"
+        and:
+        !folder.resolve('.command.stage').exists()
+
+        when:
+        builder = newBashWrapperBuilder([
+                workDir: folder,
+                targetDir: folder,
+                inputFiles: inputs ])
+        builder.withStageFile(true)
+        builder.build()
+        then:
+        builder.makeBinding().stage_inputs == "# stage input files\nbash ${folder}/.command.stage"
+        and:
         folder.resolve('.command.stage').text == stageScript
-
-        cleanup:
-        SysEnv.pop()
-        folder?.deleteDir()
-    }
-
-    def 'should not stage inputs to external file when not enabled' () {
-        given:
-        SysEnv.push([NXF_WRAPPER_STAGE_FILE_THRESHOLD: '100'])
-        and:
-        def folder = Files.createTempDirectory('test')
-        and:
-        def inputs = [
-            'sample_1.fq': Paths.get('/some/data/sample_1.fq'),
-            'sample_2.fq': Paths.get('/some/data/sample_2.fq'),
-        ]
-        def stageScript = '''\
-                rm -f sample_1.fq
-                rm -f sample_2.fq
-                ln -s /some/data/sample_1.fq sample_1.fq
-                ln -s /some/data/sample_2.fq sample_2.fq
-                '''.stripIndent().rightTrim()
-        and:
-        def builder = newBashWrapperBuilder([
-            workDir: folder,
-            targetDir: folder,
-            inputFiles: inputs ])
-
-        when:
-        def binding = builder.makeBinding()
-        then:
-        binding.stage_inputs == "# stage input files\n"+stageScript
-
-        when:
-        builder.build()
-        then:
-        folder.resolve('.command.stage').exists() == false
 
         cleanup:
         SysEnv.pop()

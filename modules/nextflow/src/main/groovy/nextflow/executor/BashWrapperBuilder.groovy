@@ -111,19 +111,13 @@ class BashWrapperBuilder {
 
     private Path wrapperFile
 
+    private boolean stageFileEnabled
+
     private Path stageFile
 
     private String stageScript
 
     private BashTemplateEngine engine = new BashTemplateEngine()
-
-    // Flag to enable .command.stage file. False by default and enabled for Grid executors
-    // see https://github.com/nextflow-io/nextflow/issues/4279  and https://github.com/nextflow-io/nextflow/issues/5888
-    private Boolean stageFileEnabled = false
-
-    void enableStageFile(){
-        stageFileEnabled = true
-    }
 
     BashWrapperBuilder( TaskRun task ) {
         this(new TaskBean(task))
@@ -136,6 +130,10 @@ class BashWrapperBuilder {
 
     @TestOnly
     protected BashWrapperBuilder() {}
+
+    void withStageFile(boolean value) {
+        stageFileEnabled = value
+    }
 
     /**
      * @return The bash script fragment to change to the 'scratch' directory if it has been specified in the task configuration
@@ -284,8 +282,9 @@ class BashWrapperBuilder {
             stageScript = stagingScript
             return header + "bash ${stageFile}"
         }
-        else
+        else {
             return header + stagingScript
+        }
     }
 
     protected Map<String,String> makeBinding() {
