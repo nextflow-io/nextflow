@@ -290,9 +290,6 @@ The following options are available for all process outputs:
 
 ### accelerator
 
-:::{versionadded} 19.09.0-edge
-:::
-
 The `accelerator` directive allows you to request hardware accelerators (e.g. GPUs) for the task execution. For example:
 
 ```nextflow
@@ -313,17 +310,23 @@ This directive is only used by certain executors. Refer to the {ref}`executor-pa
 :::
 
 :::{note}
-Additional options may be required to fully enable the use of accelerators. When using containers with GPUs, you must pass the GPU drivers through to the container. For Docker, this requires the option `--gpus all` in the docker run command. For Apptainer/Singularity, this requires the option `--nv`. The specific implementation details depend on the accelerator and container type being used.
+Additional options may be required to fully enable the use of accelerators. When using containers with GPUs, you must pass the GPU drivers through to the container. For Docker, this requires the option `--gpus all` in the `docker run` command. For Apptainer/Singularity, this requires the option `--nv`. The specific implementation details depend on the accelerator and container type being used.
 :::
 
-:::{note}
-The accelerator `type` option depends on the target execution platform. Refer to the platform-specific documentation for details on the available accelerators:
+The following options are available:
 
-- [Google Cloud](https://cloud.google.com/compute/docs/gpus/)
-- [Kubernetes](https://kubernetes.io/docs/tasks/manage-gpus/scheduling-gpus/#clusters-containing-different-types-of-gpus)
+`request: Integer`
+: The number of requested accelerators.
+: Specifying this directive with a number (e.g. `accelerator 4`) is equivalent to the `request` option (e.g. `accelerator request: 4`).
 
-The accelerator `type` option is not supported for AWS Batch. You can control the accelerator type indirectly through the allowed instance types in your Compute Environment. See the [AWS Batch FAQs](https://aws.amazon.com/batch/faqs/?#GPU_Scheduling_) for more information.
-:::
+`type: String`
+: The accelerator type.
+: The meaning of this option depends on the target execution platform. Refer to the platform-specific documentation for details on the available accelerators:
+
+  - [Google Cloud](https://cloud.google.com/compute/docs/gpus/)
+  - [Kubernetes](https://kubernetes.io/docs/tasks/manage-gpus/scheduling-gpus/#clusters-containing-different-types-of-gpus)
+
+: This option is not supported for AWS Batch. You can control the accelerator type indirectly through the allowed instance types in your Compute Environment. See the [AWS Batch FAQs](https://aws.amazon.com/batch/faqs/?#GPU_Scheduling_) for more information.
 
 (process-afterscript)=
 
