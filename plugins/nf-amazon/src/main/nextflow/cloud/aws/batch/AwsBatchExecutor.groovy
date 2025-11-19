@@ -30,6 +30,7 @@ import groovy.util.logging.Slf4j
 import nextflow.cloud.aws.AwsClientFactory
 import nextflow.cloud.aws.config.AwsConfig
 import nextflow.cloud.aws.nio.S3Path
+import nextflow.cloud.aws.util.S3PathFactory
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.exception.AbortOperationException
 import nextflow.executor.Executor
@@ -360,12 +361,12 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExec
     }
 
     static String s3Cmd(String workDir, AwsOptions opts) {
+        final bucket = (S3PathFactory.parse(workDir) as S3Path).bucket
+        def args = opts.generateUploadCliArgs(bucket)
+        args = args ? " $args" : ''
         final cli = opts.getAwsCli()
         final debug = opts.debug ? ' --debug' : ''
-        final sse = opts.storageEncryption ? " --sse $opts.storageEncryption" : ''
-        final kms = opts.storageKmsKeyId ? " --sse-kms-key-id $opts.storageKmsKeyId" : ''
-        final requesterPays = opts.requesterPays ? ' --request-payer requester' : ''
-        final aws = "$cli s3 cp --only-show-errors${sse}${kms}${debug}${requesterPays}"
+        final aws = "$cli s3 cp --only-show-errors${debug}${args}"
         
         /*
          * Enhanced signal handling for AWS Batch tasks to fix nested Nextflow execution issues.
@@ -404,10 +405,9 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExec
 
     static String s5Cmd(String workDir, AwsOptions opts) {
         final cli = opts.getS5cmdPath()
-        final sse = opts.storageEncryption ? " --sse $opts.storageEncryption" : ''
-        final kms = opts.storageKmsKeyId ? " --sse-kms-key-id $opts.storageKmsKeyId" : ''
-        final requesterPays = opts.requesterPays ? ' --request-payer requester' : ''
-        
+        final bucket = (S3PathFactory.parse(workDir) as S3Path).bucket
+        def args = opts.generateUploadCliArgs(bucket)
+        args = args ? " $args" :''
         /*
          * Enhanced signal handling for AWS Batch tasks using s5cmd (high-performance S3 client).
          * This implementation mirrors the s3Cmd method but uses s5cmd instead of aws-cli for 
@@ -430,7 +430,7 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExec
          *    - Maintains the same signal-responsive background execution pattern
          *    - Provides real-time logging while allowing proper signal handling
          */
-        final cmd = "trap \"[[ -n \\\$pid ]] && kill -TERM \\\$pid\" TERM; trap \"{ ret=\$?; $cli cp${sse}${kms}${requesterPays} ${TaskRun.CMD_LOG} ${workDir}/${TaskRun.CMD_LOG}||true; exit \$ret; }\" EXIT; $cli cat ${workDir}/${TaskRun.CMD_RUN} | bash > >(tee ${TaskRun.CMD_LOG}) 2>&1 & pid=\$!; wait \$pid"
+        final cmd = "trap \"[[ -n \\\$pid ]] && kill -TERM \\\$pid\" TERM; trap \"{ ret=\$?; $cli cp${args} ${TaskRun.CMD_LOG} ${workDir}/${TaskRun.CMD_LOG}||true; exit \$ret; }\" EXIT; $cli cat ${workDir}/${TaskRun.CMD_RUN} | bash > >(tee ${TaskRun.CMD_LOG}) 2>&1 & pid=\$!; wait \$pid"
         return cmd
     }
 

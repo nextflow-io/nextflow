@@ -84,12 +84,15 @@ public class S3Client {
 
 	private boolean global;
 
-	public S3Client(AwsClientFactory factory, Properties props, boolean global) {
+    private String bucketName;
+
+	public S3Client(AwsClientFactory factory, Properties props, String bucketName, boolean global) {
 		S3SyncClientConfiguration clientConfig = S3SyncClientConfiguration.create(props);
 		this.factory = factory;
 		this.props = props;
 		this.global = global;
-		this.client = factory.getS3Client(clientConfig, global);
+        this.bucketName = bucketName;
+		this.client = factory.getS3Client(clientConfig, bucketName, global);
 		this.semaphore = Threads.useVirtual() ? new Semaphore(clientConfig.getMaxConnections()) : null;
 		this.callerAccount = fetchCallerAccount();
 	}
@@ -309,7 +312,7 @@ public class S3Client {
 		if( transferManager == null ) {
 			transferPool = ThreadPoolManager.create("S3TransferManager");
 			var delegate = S3TransferManager.builder()
-					.s3Client(factory.getS3AsyncClient(S3AsyncClientConfiguration.create(props), global))
+					.s3Client(factory.getS3AsyncClient(S3AsyncClientConfiguration.create(props), bucketName, global))
 					.executor(transferPool)
 					.build();
             transferManager = new ExtendedS3TransferManager(delegate, props);
