@@ -317,11 +317,11 @@ The following options are available:
 
 `request: Integer`
 : The number of requested accelerators.
-: Specifying this directive with a number (e.g. `accelerator 4`) is equivalent to the `request` option (e.g. `accelerator request: 4`).
+: Specifying this directive with a number (e.g., `accelerator 4`) is equivalent to the `request` option (e.g., `accelerator request: 4`).
 
 `type: String`
 : The accelerator type.
-: The meaning of this option depends on the target execution platform. Refer to the platform-specific documentation for details on the available accelerators:
+: The meaning of this option depends on the target execution platform. See the platform-specific documentation for more information about the available accelerators:
 
   - [Google Cloud](https://cloud.google.com/compute/docs/gpus/)
   - [Kubernetes](https://kubernetes.io/docs/tasks/manage-gpus/scheduling-gpus/#clusters-containing-different-types-of-gpus)
