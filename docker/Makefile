@@ -25,9 +25,13 @@ build-arm: dist/docker/arm64
 
 release: build
 	docker push nextflow/nextflow:${version}
+	docker tag nextflow/nextflow:${version} nextflow/nextflow:latest
+	docker push nextflow/nextflow:latest
 	#
 	docker tag nextflow/nextflow:${version} public.cr.seqera.io/nextflow/nextflow:${version}
 	docker push public.cr.seqera.io/nextflow/nextflow:${version}
+	docker tag nextflow/nextflow:${version} public.cr.seqera.io/nextflow/nextflow:latest
+	docker push public.cr.seqera.io/nextflow/nextflow:latest
 
 #Static builds can now be found at:
 #
