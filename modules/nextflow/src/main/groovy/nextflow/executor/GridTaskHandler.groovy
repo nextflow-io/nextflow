@@ -103,7 +103,11 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
     @Override
     void prepareLauncher() {
         // -- create the wrapper script
-        createTaskWrapper(task).build()
+        final builder = createTaskWrapper(task)
+        // enable stage file to avoid limitations with job script
+        // see https://github.com/nextflow-io/nextflow/issues/4279
+        builder.withStageFile(true)
+        builder.build()
     }
 
     protected ProcessBuilder createProcessBuilder() {

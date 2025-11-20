@@ -28,7 +28,7 @@ workflow {
 
 Parameters can be declared in a Nextflow script with the `params` block or with *legacy* parameter declarations.
 
-### Params block
+### Typed parameters
 
 :::{versionadded} 25.10.0
 :::
@@ -66,7 +66,7 @@ workflow {
 ```
 
 :::{note}
-As a best practice, parameters should only be used directly in the entry workflow and passed to workflows and processes as explicit inputs.
+As a best practice, parameters should only be referenced in the entry workflow or `output` block. Parameters can be passed to workflows and processes as explicit inputs.
 :::
 
 The default value can be overridden by the command line, params file, or config file. Parameters from multiple sources are resolved in the order described in {ref}`cli-params`. Parameters specified on the command line are converted to the appropriate type based on the corresponding type annotation.
@@ -354,9 +354,15 @@ The same process can be called in different workflows without using an alias, li
 The fully qualified process name can be used as a {ref}`process selector <config-process-selectors>` in a Nextflow configuration file, and it takes priority over the simple process name.
 :::
 
+(workflow-special-operators)=
+
 ## Special operators
 
 The following operators have a special meaning when used in a workflow with process and workflow calls.
+
+:::{note}
+As a best practice, avoid these operators when {ref}`type checking <preparing-static-types>` is enabled. Using these operators will prevent the type checker from validating your code.
+:::
 
 ### Pipe `|`
 
@@ -375,7 +381,7 @@ process greet {
 }
 
 workflow {
-    channel.of('Hello','Hola','Ciao')
+    channel.of('Hello', 'Hola', 'Ciao')
         | greet
         | map { v -> v.toUpperCase() }
         | view
@@ -388,9 +394,11 @@ The same code can also be written as:
 
 ```nextflow
 workflow {
-    ch1 = channel.of('Hello','Hola','Ciao')
-    ch2 = greet( ch1 )
-    ch2.map { v -> v.toUpperCase() }.view()
+    ch_input = channel.of('Hello', 'Hola', 'Ciao')
+    ch_greet = greet(ch_input)
+    ch_greet
+        .map { v -> v.toUpperCase() }
+        .view()
 }
 ```
 
