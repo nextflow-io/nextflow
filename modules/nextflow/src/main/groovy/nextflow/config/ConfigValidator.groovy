@@ -106,16 +106,13 @@ class ConfigValidator {
                 names.clear()
 
             if( value instanceof Map ) {
-                log.debug "validate config block ${names}"
                 if( isSelector(key) )
                     names.removeLast()
-                log.debug "  is map option ${isMapOption(names)}"
                 if( isMapOption(names) )
                     continue
                 validate(value, names)
             }
             else {
-                log.debug "validate config option ${names}"
                 validateOption(names)
             }
         }

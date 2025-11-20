@@ -1,1 +1,1 @@
-Channel .empty() .ifEmpty('Hello') .view()
+channel.empty().ifEmpty('Hello').view()

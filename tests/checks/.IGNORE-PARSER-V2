@@ -7,6 +7,7 @@ eval-out-typed.nf
 nullable-path.nf
 output-dsl.nf
 params-dsl.nf
+task-ext-block.nf
 topic-channel-typed.nf
 type-annotations.nf
 workflow-oncomplete-v2.nf

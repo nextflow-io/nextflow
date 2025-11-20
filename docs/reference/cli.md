@@ -38,7 +38,7 @@ Available options:
 
 `-q, -quiet`
 : Do not print the Nextflow banner and execution progress to the console.
-: Does not affect messages printed by the pipeline or error messages.
+: Does not affect error messages.
 
 `-remote-debug`
 : Enable JVM interactive remote debugging (experimental).
