@@ -30,7 +30,6 @@ import groovy.util.logging.Slf4j
 import nextflow.cloud.aws.AwsClientFactory
 import nextflow.cloud.aws.config.AwsConfig
 import nextflow.cloud.aws.nio.S3Path
-import nextflow.cloud.aws.util.S3PathFactory
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.exception.AbortOperationException
 import nextflow.executor.Executor
@@ -354,16 +353,21 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExec
     List<String> getLaunchCommand(String s3WorkDir) {
         // the cmd list to launch it
         final opts = getAwsOptions()
+
+        // We cannot use 's3WorkDir' to extract the bucket-specific CLI arguments. Depending on the Task type (Array or Single),
+        // it could be an environment variable reference or a real path. In both cases, these argument will be used to upload
+        // the '.command.log' file to the workingDir bucket.
+        final bucket = (getWorkDir() as S3Path).bucket
+        String args = opts.generateUploadCliArgs(bucket)
+        args = args ? " $args" : ''
+
         final cmd = opts.s5cmdPath
-            ? s5Cmd(s3WorkDir, opts)
-            : s3Cmd(s3WorkDir, opts)
+            ? s5Cmd(s3WorkDir, opts, args)
+            : s3Cmd(s3WorkDir, opts, args)
         return ['bash','-o','pipefail','-c', cmd.toString()]
     }
 
-    static String s3Cmd(String workDir, AwsOptions opts) {
-        final bucket = (S3PathFactory.parse(workDir) as S3Path).bucket
-        def args = opts.generateUploadCliArgs(bucket)
-        args = args ? " $args" : ''
+    static String s3Cmd(String workDir, AwsOptions opts, String args) {
         final cli = opts.getAwsCli()
         final debug = opts.debug ? ' --debug' : ''
         final aws = "$cli s3 cp --only-show-errors${debug}${args}"
@@ -403,11 +407,8 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExec
         return cmd
     }
 
-    static String s5Cmd(String workDir, AwsOptions opts) {
+    static String s5Cmd(String workDir, AwsOptions opts, String args) {
         final cli = opts.getS5cmdPath()
-        final bucket = (S3PathFactory.parse(workDir) as S3Path).bucket
-        def args = opts.generateUploadCliArgs(bucket)
-        args = args ? " $args" :''
         /*
          * Enhanced signal handling for AWS Batch tasks using s5cmd (high-performance S3 client).
          * This implementation mirrors the s3Cmd method but uses s5cmd instead of aws-cli for 
