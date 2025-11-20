@@ -187,7 +187,10 @@ class AwsBatchTaskHandlerTest extends Specification {
         task.getConfig() >> new TaskConfig(memory: '2GB', cpus: 4, accelerator: 2)
         task.getWorkDirStr() >> 's3://my-bucket/work/dir'
         and:
-        def executor = Spy(AwsBatchExecutor) { getAwsOptions()>> new AwsOptions() }
+        def executor = Spy(AwsBatchExecutor) {
+            getAwsOptions()>> new AwsOptions()
+            getWorkDir()>>S3PathFactory.create('s3:///my-bucket/work/dir')
+        }
         and:
         def handler = Spy(new AwsBatchTaskHandler(executor: executor))
 
@@ -217,6 +220,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         and:
         def executor = Spy(AwsBatchExecutor) {
             getAwsOptions() >> { new AwsOptions(awsConfig: new AwsConfig(batch:[cliPath: '/bin/aws'])) }
+            getWorkDir() >> S3PathFactory.create('s3:///my-bucket/work/dir')
         }
         and:
         def handler = Spy(new AwsBatchTaskHandler(executor: executor))
@@ -918,7 +922,9 @@ class AwsBatchTaskHandlerTest extends Specification {
 
     def 'should render submit command' () {
         given:
-        def executor = Spy(AwsBatchExecutor)
+        def executor = Spy(AwsBatchExecutor){
+            getWorkDir() >> S3PathFactory.create('s3:///work')
+        }
         and:
         def handler = Spy(new AwsBatchTaskHandler(executor: executor)) {
             fusionEnabled() >> false
@@ -945,7 +951,9 @@ class AwsBatchTaskHandlerTest extends Specification {
 
     def 'should render submit command with s5cmd' () {
         given:
-        def executor = Spy(AwsBatchExecutor)
+        def executor = Spy(AwsBatchExecutor){
+            getWorkDir() >> S3PathFactory.create('s3:///work')
+        }
         and:
         def handler = Spy(new AwsBatchTaskHandler(executor: executor)) {
             fusionEnabled() >> false
