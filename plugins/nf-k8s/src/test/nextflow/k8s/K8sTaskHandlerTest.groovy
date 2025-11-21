@@ -764,6 +764,7 @@ class K8sTaskHandlerTest extends Specification {
         def executor = Mock(K8sExecutor)
         def client = Mock(K8sClient)
         def handler = Spy(new K8sTaskHandler(podName: POD_NAME, executor:executor, client:client))
+        handler.useJobResource() >> false
         and:
         def TASK_OK = Mock(TaskRun); TASK_OK.isSuccess() >> true
         def TASK_FAIL = Mock(TaskRun); TASK_FAIL.isSuccess() >> false
@@ -786,6 +787,32 @@ class K8sTaskHandlerTest extends Specification {
         1 * executor.getK8sConfig() >> new K8sConfig(cleanup: false)
         0 * client.podDelete(POD_NAME) >> null
 
+    }
+
+    def 'should not delete job if ttlSecondsAfterFinished is set' () {
+
+        given:
+        def POD_NAME = 'the-job-name'
+        def executor = Mock(K8sExecutor)
+        def client = Mock(K8sClient)
+        def handler = Spy(new K8sTaskHandler(podName: POD_NAME, executor:executor, client:client))
+        handler.useJobResource() >> true
+        and:
+        def TASK_OK = Mock(TaskRun); TASK_OK.isSuccess() >> true
+
+        when: 'job with ttlSecondsAfterFinished should not be deleted'
+        handler.deletePodIfSuccessful(TASK_OK)
+        then:
+        1 * executor.getK8sConfig() >> new K8sConfig()
+        1 * handler.getPodOptions() >> new PodOptions([[ttlSecondsAfterFinished: 100]])
+        0 * client.jobDelete(POD_NAME)
+
+        when: 'job without ttlSecondsAfterFinished should be deleted'
+        handler.deletePodIfSuccessful(TASK_OK)
+        then:
+        1 * executor.getK8sConfig() >> new K8sConfig()
+        1 * handler.getPodOptions() >> new PodOptions()
+        1 * client.jobDelete(POD_NAME) >> null
     }
 
     def 'should save pod log' () {

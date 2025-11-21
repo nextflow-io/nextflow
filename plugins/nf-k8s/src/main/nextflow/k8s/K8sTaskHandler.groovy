@@ -517,10 +517,13 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         if( cleanupDisabled() )
             return
 
-        if( !task.isSuccess() ) {
-            // do not delete successfully executed pods for debugging purpose
+        // preserve failed pods for debugging purposes
+        if( !task.isSuccess() )
             return
-        }
+
+        // k8s cluster will cleanup job on its own if ttl is set
+        if( useJobResource() && getPodOptions().getTtlSecondsAfterFinished() != null )
+            return
 
         try {
             if ( useJobResource() )
