@@ -256,6 +256,7 @@ class ContainerPropertiesModel {
         if (networkConfiguration) builder.networkConfiguration(networkConfiguration)
         if (ephemeralStorage) builder.ephemeralStorage(ephemeralStorage)
         if (runtimePlatform) builder.runtimePlatform(runtimePlatform)
+        if (secrets) builder.secrets(secrets)
         
         return builder.build()
     }
@@ -280,6 +281,7 @@ class ContainerPropertiesModel {
             ", networkConfiguration=" + networkConfiguration +
             ", ephemeralStorage=" + ephemeralStorage +
             ", runtimePlatform=" + runtimePlatform +
+            ", secrets=" + secrets +
             '}';
     }
 }

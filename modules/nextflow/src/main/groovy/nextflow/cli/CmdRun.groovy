@@ -49,7 +49,7 @@ import nextflow.secret.SecretsLoader
 import nextflow.util.CustomPoolFactory
 import nextflow.util.Duration
 import nextflow.util.HistoryFile
-import org.apache.commons.lang.StringUtils
+import org.apache.commons.lang3.StringUtils
 import org.fusesource.jansi.AnsiConsole
 import org.yaml.snakeyaml.Yaml
 /**
@@ -323,6 +323,8 @@ class CmdRun extends CmdBase implements HubOptions {
 
         printBanner()
 
+        Plugins.init()
+
         // -- resolve main script
         final scriptFile = getScriptFile(pipeline)
 
@@ -359,7 +361,6 @@ class CmdRun extends CmdBase implements HubOptions {
         Map configParams = builder.getConfigParams()
 
         // -- Load plugins (may register secret providers)
-        Plugins.init()
         Plugins.load(config)
 
         // -- Initialize real secrets system

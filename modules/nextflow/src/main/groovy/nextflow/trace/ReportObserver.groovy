@@ -35,7 +35,7 @@ import nextflow.util.TestOnly
  * Render pipeline report processes execution.
  * Based on original TimelineObserver code by Paolo Di Tommaso
  *
- * @author Phil Ewels <phil.ewels@scilifelab.se>
+ * @author Phil Ewels <phil.ewels@seqera.io>
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
@@ -226,7 +226,7 @@ class ReportObserver implements TraceObserverV2 {
                 readTemplate('assets/bootstrap.min.js'),
                 readTemplate('assets/datatables.min.js'),
                 readTemplate('assets/moment.min.js'),
-                readTemplate('assets/plotly.min.js'),
+                readTemplate('assets/plotly-custom-3.1.2.min.js'),
                 readTemplate('assets/ReportTemplate.js')
             ]
         ]

@@ -45,6 +45,8 @@ REQUIRED_VARS=(
     "AWS_ACCESS_KEY_ID"
     "AWS_SECRET_ACCESS_KEY"
     "GITHUB_TOKEN"
+    "GITHUB_RUN_NUMBER"
+    "GITHUB_SHA"
     "NPR_API_URL"
     "NPR_API_KEY"
 )
@@ -74,14 +76,19 @@ make assemble upload deploy
 echo "✅ Step 1 completed successfully"
 echo ""
 
-echo "🔌 === Step 2: Release plugins ==="
-make release-plugins
+echo "📦 === Step 2: Publish artifacts ==="
+make publish-artifacts
 echo "✅ Step 2 completed successfully"
 echo ""
 
-echo "🚀 === Step 3: Final release ==="
-make release
+echo "🔌 === Step 3: Release plugins ==="
+make release-plugins
 echo "✅ Step 3 completed successfully"
+echo ""
+
+echo "🚀 === Step 4: Final release ==="
+make release
+echo "✅ Step 4 completed successfully"
 echo ""
 
 echo "🎉 === Release process completed successfully ==="

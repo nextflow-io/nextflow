@@ -110,7 +110,7 @@ class AwsBatchHelper {
         final describeTaskReq = DescribeTasksRequest.builder()
             .cluster(clusterArn)
             .tasks(taskArn)
-            .build()
+            .build() as DescribeTasksRequest
         try {
             final describeTasksResult = ecsClient.describeTasks(describeTaskReq)
             final containers =
@@ -136,7 +136,7 @@ class AwsBatchHelper {
         final describeContainerReq = DescribeContainerInstancesRequest.builder()
                 .cluster(clusterArn)
                 .containerInstances(containerId)
-                .build()
+                .build() as DescribeContainerInstancesRequest
         final instanceIds = ecsClient
                 .describeContainerInstances(describeContainerReq)
                 .containerInstances()
@@ -156,7 +156,7 @@ class AwsBatchHelper {
         assert instanceId
         final req = DescribeInstancesRequest.builder()
             .instanceIds(instanceId)
-            .build()
+            .build() as DescribeInstancesRequest
         final res = ec2Client.describeInstances(req).reservations() [0]
         final Instance instance = res ? res.instances() [0] : null
         if( !instance ) {
@@ -189,7 +189,7 @@ class AwsBatchHelper {
     protected String getLogStreamId(String jobId) {
         final request = DescribeJobsRequest.builder()
             .jobs(jobId)
-            .build()
+            .build() as DescribeJobsRequest
         final response = batchClient.describeJobs(request)
         if( response.jobs() ) {
             final detail = response.jobs()[0]
@@ -220,7 +220,7 @@ class AwsBatchHelper {
         final logRequest = GetLogEventsRequest.builder()
                 .logGroupName(groupName ?: "/aws/batch/job")
                 .logStreamName(streamId)
-                .build()
+                .build() as GetLogEventsRequest
 
         final result = new StringBuilder()
         final resp = logsClient.getLogEvents(logRequest)

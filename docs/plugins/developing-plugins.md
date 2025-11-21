@@ -170,6 +170,8 @@ nextflow plugin my-plugin:hello --alpha --beta
 
 See the {ref}`cli-plugin` for usage information.
 
+(dev-plugins-extension-points-config)=
+
 ### Configuration
 
 Plugins can access the resolved Nextflow configuration through the session object using `session.config.navigate()`. Several extension points provide the session object for this reason. This method allows you to query any configuration option safely. If the option isn’t defined, it will return null.
@@ -205,12 +207,16 @@ myplugin {
 :::{versionadded} 25.04.0
 :::
 
+:::{versionchanged} 25.10.0
+The `nextflow.config.schema` package was renamed to `nextflow.config.spec`.
+:::
+
 Plugins can declare their configuration options by implementing the `ConfigScope` interface and declaring each config option as a field with the `@ConfigOption` annotation. For example:
 
 ```groovy
-import nextflow.config.schema.ConfigOption
-import nextflow.config.schema.ConfigScope
-import nextflow.config.schema.ScopeName
+import nextflow.config.spec.ConfigOption
+import nextflow.config.spec.ConfigScope
+import nextflow.config.spec.ScopeName
 import nextflow.script.dsl.Description
 
 @ScopeName('myplugin')

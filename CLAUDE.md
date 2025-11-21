@@ -50,7 +50,7 @@ The project follows a modular architecture with a plugin-based system for cloud 
 - **Other**: nf-console (interactive interface), nf-cloudcache (cloud caching)
 
 ### Key Technologies
-- **Language**: Groovy 4.0.28 (Java-compatible, targeting Java 17)
+- **Language**: Groovy 4.0.29 (Java-compatible, targeting Java 17)
 - **Concurrency**: GPars 1.2.1 (Actor model, parallel/concurrent programming)
 - **Build**: Gradle with Java 21 toolchain
 - **Parsing**: ANTLR for Nextflow DSL
@@ -104,6 +104,7 @@ The project follows a modular architecture with a plugin-based system for cloud 
 - `build.gradle`: Root build configuration with multi-module setup
 - `settings.gradle`: Gradle project structure definition
 - `plugins/*/VERSION`: Define the version of the corresponding plugin sub-project.
+- `adr/`: Architecture Decision Records (ADRs) documenting significant structural and technical decisions in the project
 
 ## Release process
 
@@ -123,9 +124,17 @@ Follow these actions to make a new release:
 - Run `make releaseInfo` to update the version number and generate checksums.
 - Run this command to stage for commit the release files:
     ```
-    git add VERSION changelog.txt nextflow nextflow.md5 nextflow.sha1 nextflow.sha256
+    git add \
+      VERSION \
+      changelog.txt \
+      nextflow \
+      nextflow.md5 \
+      nextflow.sha1 \
+      nextflow.sha256 \
+      modules/nextflow/src/main/resources/META-INF/plugins-info.txt \
+      modules/nextflow/src/main/resources/META-INF/build-info.properties
     ```
-- Make a commit using the `[release]` tag in the comment and push it upstream to trigger the release automation with GitHub action:
+- Make a commit using the `[release]` and `[e2e prod]` tags in the comment and push it upstream to trigger the release automation with GitHub action:
     ```
     git commit -m "[release] Nextflow version 25.09.0-edge"
     git push origin master

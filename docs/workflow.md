@@ -28,7 +28,7 @@ workflow {
 
 Parameters can be declared in a Nextflow script with the `params` block or with *legacy* parameter declarations.
 
-### Params block
+### Typed parameters
 
 :::{versionadded} 25.10.0
 :::
@@ -66,7 +66,7 @@ workflow {
 ```
 
 :::{note}
-As a best practice, parameters should only be used directly in the entry workflow and passed to workflows and processes as explicit inputs.
+As a best practice, parameters should only be referenced in the entry workflow or `output` block. Parameters can be passed to workflows and processes as explicit inputs.
 :::
 
 The default value can be overridden by the command line, params file, or config file. Parameters from multiple sources are resolved in the order described in {ref}`cli-params`. Parameters specified on the command line are converted to the appropriate type based on the corresponding type annotation.
@@ -167,6 +167,27 @@ The result of the above workflow can be accessed using `my_workflow.out.my_data`
 :::{note}
 Every output must be assigned to a name when multiple outputs are declared.
 :::
+
+:::{versionadded} 25.10.0
+:::
+
+When using the {ref}`strict syntax <strict-syntax-page>`, workflow takes and emits can specify a type annotation:
+
+```nextflow
+workflow my_workflow {
+    take:
+    data: Channel<Path>
+
+    main:
+    ch_hello = hello(data)
+    ch_bye = bye(ch_hello.collect())
+
+    emit:
+    my_data: Value<Path> = ch_bye
+}
+```
+
+In the above example, `my_workflow` takes a channel of files (`Channel<Path>`) and emits a dataflow value with a single file (`Value<Path>`). See {ref}`stdlib-types` for the list of available types.
 
 (workflow-process-invocation)=
 
@@ -333,9 +354,15 @@ The same process can be called in different workflows without using an alias, li
 The fully qualified process name can be used as a {ref}`process selector <config-process-selectors>` in a Nextflow configuration file, and it takes priority over the simple process name.
 :::
 
+(workflow-special-operators)=
+
 ## Special operators
 
 The following operators have a special meaning when used in a workflow with process and workflow calls.
+
+:::{note}
+As a best practice, avoid these operators when {ref}`type checking <preparing-static-types>` is enabled. Using these operators will prevent the type checker from validating your code.
+:::
 
 ### Pipe `|`
 
@@ -354,7 +381,7 @@ process greet {
 }
 
 workflow {
-    channel.of('Hello','Hola','Ciao')
+    channel.of('Hello', 'Hola', 'Ciao')
         | greet
         | map { v -> v.toUpperCase() }
         | view
@@ -367,9 +394,11 @@ The same code can also be written as:
 
 ```nextflow
 workflow {
-    ch1 = channel.of('Hello','Hola','Ciao')
-    ch2 = greet( ch1 )
-    ch2.map { v -> v.toUpperCase() }.view()
+    ch_input = channel.of('Hello', 'Hola', 'Ciao')
+    ch_greet = greet(ch_input)
+    ch_greet
+        .map { v -> v.toUpperCase() }
+        .view()
 }
 ```
 
@@ -474,19 +503,8 @@ Workflows can also be invoked recursively:
 
 ## Workflow outputs
 
-:::{versionadded} 24.04.0
-:::
-
-:::{versionchanged} 24.10.0
-A second preview version was introduced. See the {ref}`migration notes <workflow-outputs-second-preview>` for details.
-:::
-
-:::{versionchanged} 25.04.0
-A third preview version was introduced. See the {ref}`migration notes <workflow-outputs-third-preview>` for details.
-:::
-
-:::{note}
-This feature requires the `nextflow.preview.output` feature flag to be enabled.
+:::{versionadded} 25.10.0
+This feature is available as a preview in Nextflow {ref}`24.04 <workflow-outputs-first-preview>`, {ref}`24.10 <workflow-outputs-second-preview>`, and {ref}`25.04 <workflow-outputs-third-preview>`.
 :::
 
 A script can define an *output block* which declares the top-level outputs of the workflow. Each output should be assigned in the `publish` section of the entry workflow. Any channel in the workflow can be assigned to an output, including process and subworkflow outputs. This approach is intended to replace the {ref}`publishDir <process-publishdir>` directive.
@@ -505,10 +523,10 @@ process fetch {
 
 workflow {
     main:
-    fetch(params.input)
+    ch_samples = fetch(params.input)
 
     publish:
-    samples = fetch.out
+    samples = ch_samples
 }
 
 output {

@@ -8,7 +8,7 @@ This page explains how to update Nextflow scripts and config files to adhere to 
 If you are still using DSL1, see {ref}`dsl1-page` to learn how to migrate your Nextflow pipelines to DSL2 before consulting this guide.
 :::
 
-:::{versionadded} 25.02.0-edge
+:::{versionadded} 25.04.0
 The strict syntax can be enabled in Nextflow by setting the environment variable `NXF_SYNTAX_PARSER=v2`.
 :::
 
@@ -222,7 +222,7 @@ In the strict syntax, use `System.getenv()` instead:
 println "PWD = ${System.getenv('PWD')}"
 ```
 
-:::{versionadded} 24.11.0-edge
+:::{versionadded} 24.04.0
 The `env()` function should be used instead of `System.getenv()`:
 
 ```nextflow
@@ -472,21 +472,40 @@ workflow {
 }
 ```
 
-:::{note}
-A more concise syntax for workflow handlers will be addressed in a future version of the Nextflow language specification.
+:::{versionadded} 25.10.0
 :::
+
+Workflow handlers can be specified as sections in the entry workflow:
+
+```nextflow
+workflow {
+    main:
+    // ...
+
+    onComplete:
+    println "Pipeline completed at: $workflow.complete"
+    println "Execution status: ${ workflow.success ? 'OK' : 'failed' }"
+}
+```
+
+See {ref}`workflow-handlers` for details.
+
+(strict-syntax-deprecated)=
 
 ## Deprecated syntax
 
 The following patterns are deprecated, and the strict syntax reports warnings for them. These warnings will become errors in the future.
 
-### Process shell section
+### `channel` vs `Channel`
 
-The process `shell` section is deprecated. Use the `script` section instead. The strict syntax provides error checking to help distinguish between Nextflow variables and Bash variables.
+Channel factories should be accessed using the `channel` namespace instead of the `Channel` type:
 
-## Best practices
+```nextflow
+Channel.of(1, 2, 3) // incorrect
+channel.of(1, 2, 3) // correct
+```
 
-The following patterns are discouraged. The language server reports informative messages for these patterns, which are disabled by default. Enable them by setting the error reporiting mode (**Nextflow > Error reporting mode** in the extension settings) to `paranoid`. These messages may become warnings or errors in the future.
+See {ref}`stdlib-namespaces-channel` and {ref}`stdlib-types-channel` for more information.
 
 ### Implicit closure parameter
 
@@ -496,16 +515,26 @@ In Groovy, a closure with no parameters is assumed to have a single parameter na
 ch.map { it * 2 }
 ```
 
-As a best practice, the closure parameter should be explicitly declared:
+In the strict syntax, the closure parameter should be explicitly declared:
 
 ```nextflow
 ch.map { v -> v * 2 }   // correct
 ch.map { it -> it * 2 } // also correct
 ```
 
+### Process shell section
+
+The process `shell` section is deprecated. Use the `script` section instead. The strict syntax provides error checking to help distinguish between Nextflow variables and Bash variables.
+
+## Best practices
+
+The following patterns are discouraged and may become warnings or errors in future Nextflow versions. The language server can detect these patterns, but does not report them by default.
+
+To enable these checks, set **Nextflow > Error reporting mode** to **paranoid** in the extension settings.
+
 ### Using params outside the entry workflow
 
-While params can be used anywhere in the pipeline code, they are only intended to be used in the entry workflow.
+While params can be used anywhere in the pipeline code, they are only intended to be used in the entry workflow and the `output` block.
 
 As a best practice, processes and workflows should receive params as explicit inputs:
 
@@ -538,7 +567,7 @@ The process {ref}`process-when` section is discouraged. As a best practice, cond
 
 ## Configuration syntax
 
-:::{versionadded} 25.02.0-edge
+:::{versionadded} 25.04.0
 The strict config syntax can be enabled in Nextflow by setting the environment variable `NXF_SYNTAX_PARSER=v2`.
 :::
 

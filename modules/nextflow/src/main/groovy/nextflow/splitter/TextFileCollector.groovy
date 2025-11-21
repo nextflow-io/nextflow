@@ -79,6 +79,7 @@ class TextFileCollector implements CollectorStrategy, CacheableCollector, Header
         return file.resolveSibling( fileName )
     }
 
+    @Override
     void setHeader(String value) {
         this.header = value
     }
@@ -139,8 +140,6 @@ class TextFileCollector implements CollectorStrategy, CacheableCollector, Header
     @Override
     void close() throws IOException {
         closeWriter()
-        markComplete()
     }
-
 
 }

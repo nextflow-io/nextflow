@@ -19,8 +19,8 @@ package nextflow.cloud.azure.config
 import groovy.transform.CompileStatic
 import nextflow.Global
 import nextflow.Session
-import nextflow.config.schema.ConfigScope
-import nextflow.config.schema.ScopeName
+import nextflow.config.spec.ConfigScope
+import nextflow.config.spec.ScopeName
 import nextflow.script.dsl.Description
 
 /**

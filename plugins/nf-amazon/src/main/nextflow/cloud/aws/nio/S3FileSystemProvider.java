@@ -283,16 +283,20 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		else if (Files.exists(localDestination))
 			throw new FileAlreadyExistsException(localDestination.toString());
 
+		// Read S3 file attributes (metadata) for the source path, returns Optional.empty() if file doesn't exist
 		final Optional<S3FileAttributes> attrs = readAttr1(source);
-		final boolean isDir = attrs.isPresent() && attrs.get().isDirectory();
+		// Extract directory status from attributes, defaulting to false if no attributes found
+		final boolean isDir = attrs.map(S3FileAttributes::isDirectory).orElse(false);
+		// Get file size only for non-directories (directories have size 0), defaulting to 0L if no attributes
+		final long size = attrs.filter(a -> !a.isDirectory()).map(S3FileAttributes::size).orElse(0L);
 		final String type = isDir ? "directory": "file";
 		final S3Client s3Client = source.getFileSystem().getClient();
-		log.debug("S3 download {} from={} to={}", type, FilesEx.toUriString(source), localDestination);
+		log.debug("S3 download {} from={} to={} size={}", type, FilesEx.toUriString(source), localDestination, size);
 		if( isDir ) {
 			s3Client.downloadDirectory(source, localDestination.toFile());
 		}
 		else {
-			s3Client.downloadFile(source, localDestination.toFile());
+			s3Client.downloadFile(source, localDestination.toFile(), size);
 		}
 	}
 
@@ -736,14 +740,13 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
         // when enabling that flag, it overrides S3 endpoints with AWS global endpoint
         // see https://github.com/nextflow-io/nextflow/pull/5779
 		final boolean global = bucketName!=null && !awsConfig.getS3Config().isCustomEndpoint();
-		final AwsClientFactory factory = new AwsClientFactory(awsConfig, awsConfig.getS3GlobalRegion());
+		final AwsClientFactory factory = new AwsClientFactory(awsConfig, awsConfig.resolveS3Region());
 		final S3Client client = new S3Client(factory, props, global);
 
 		// set the client acl
 		client.setCannedAcl(getProp(props, "s_3_acl", "s3_acl", "s3acl", "s3Acl"));
 		client.setStorageEncryption(props.getProperty("storage_encryption"));
 		client.setKmsKeyId(props.getProperty("storage_kms_key_id"));
-		client.setTransferManagerThreads(props.getProperty("transfer_manager_threads"));
         client.setRequesterPaysEnabled(props.getProperty("requester_pays"));
 
 		if( props.getProperty("glacier_auto_retrieval") != null )

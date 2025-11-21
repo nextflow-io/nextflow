@@ -12,8 +12,9 @@ The following task properties are defined in the process body:
 : The current task attempt.
 
 `task.exitStatus`
-: The exit code of the task script. Only applicable for processes with a `script:` or `shell:` block.
-: Since the exit code is only available after the task has been executed, it can only be used by certain process directives such as [errorStrategy](#errorstrategy).
+: *Available only in `script:` and `shell:` blocks*
+: The exit code returned by the task script.
+: The exit code is only available after the task has been executed (e.g., the [errorStrategy](#errorstrategy) directive).
 
 `task.hash`
 : *Available only in `exec:` blocks*
@@ -30,29 +31,108 @@ The following task properties are defined in the process body:
 : :::{versionadded} 24.10.0
   :::
 : The exception reported by the previous task attempt.
-: Since the exception is available after a failed task attempt,
-  it can only be accessed when retrying a failed task execution, and therefore when `task.attempt` is greater than 1.
+: Since the exception is available after a failed task attempt, it can only be accessed when retrying a failed task execution, i.e., when `task.attempt` is greater than 1.
 
 `task.previousTrace`
 : :::{versionadded} 24.10.0
   :::
 : The trace record associated with the previous task attempt.
-: Since the trace record is available after a failed task attempt,
-  it can only be accessed when retrying a failed task execution, and therefore when `task.attempt` is greater than 1.
-: This is useful when retrying a task execution to access the previous task attempt runtime metrics e.g. used memory and CPUs.
+: Since the trace record is available after a failed task attempt, it can only be accessed when retrying a failed task execution, i.e., when `task.attempt` is greater than 1. See {ref}`trace-report` for a list of available fields.
+
+: :::{note}
+  The trace fields `%cpu` and `%mem` can be accessed as `pcpu` and `pmem`, respectively.
+  :::
+
 
 `task.process`
-: The process name.
+: The name of the process that spawned the task.
 
 `task.workDir`
 : *Available only in `exec:` blocks*
-: The task unique directory.
+: The unique directory path for the task.
 
-Additionally, the [directive values](#directives) for the given task can be accessed via `task.<directive>`.
+:::{note}
+[Directive values](#directives) for a task can be accessed via `task.<directive>`. See {ref}`task-directive-values` for more information.
+:::
+
+(process-reference-typed)=
+
+## Inputs and outputs (typed)
+
+:::{versionadded} 25.10.0
+:::
+
+:::{note}
+Typed processes require the `nextflow.preview.types` feature flag to be enabled in every script that uses them.
+:::
+
+### Stage directives
+
+The following directives can be used in the `stage:` section of a typed process:
+
+`env( name: String, String value )`
+: Declares an environment variable with the specified name and value in the task environment.
+
+`stageAs( filePattern: String, value: Path )`
+: Stages a file into the task directory under the given alias.
+
+`stageAs( filePattern: String, value: Iterable<Path> )`
+: Stages a collection of files into the task directory under the given alias.
+
+`stdin( value: String )`
+: Stages the given value as the standard input (i.e., `stdin`) to the task script.
+
+### Outputs
+
+The following functions are available in the `output:` and `topic:` sections of a typed process:
+
+`env( name: String ) -> String`
+: Returns the value of an environment variable from the task environment.
+
+`eval( command: String ) -> String`
+: Returns the standard output of the specified command, which is executed in the task environment after the task script completes.
+
+`file( pattern: String, [options] ) -> Path`
+: Returns a file from the task environment that matches the specified pattern.
+
+: Available options:
+
+  `followLinks: Boolean`
+  : When `true`, target files are returned in place of any matching symlink (default: `true`).
+
+  `glob: Boolean`
+  : When `true`, the file name is interpreted as a glob pattern (default: `true`).
+
+  `hidden: Boolean`
+  : When `true`, hidden files are included in the matching output files (default: `false`).
+
+  `includeInputs: Boolean`
+  : When `true` and the file name is a glob pattern, any input files matching the pattern are also included in the output (default: `false`).
+
+  `maxDepth: Integer`
+  : Maximum number of directory levels to visit (default: no limit).
+
+  `optional: Boolean`
+  : When `true`, the task will not fail if the given file is missing (default: `false`).
+
+  `type: String`
+  : Type of paths returned, either `file`, `dir` or `any` (default: `any`, or `file` if the given file name contains a double star (`**`)).
+
+`files( pattern: String, [options] ) -> Set<Path>`
+: Returns files from the task environment that match the given pattern.
+
+: Supports the same options as `file()` (except for `optional`).
+
+`stdout() -> String`
+: Returns the standard output of the task script.
+
+(process-reference-legacy)=
+
+## Inputs and outputs (legacy)
 
 (process-reference-inputs)=
 
-## Inputs
+### Inputs
 
 `val( identifier )`
 
@@ -103,7 +183,7 @@ Additionally, the [directive values](#directives) for the given task can be acce
 
 (process-reference-outputs)=
 
-## Outputs
+### Outputs
 
 `val( value )`
 
@@ -210,9 +290,6 @@ The following options are available for all process outputs:
 
 ### accelerator
 
-:::{versionadded} 19.09.0-edge
-:::
-
 The `accelerator` directive allows you to request hardware accelerators (e.g. GPUs) for the task execution. For example:
 
 ```nextflow
@@ -233,17 +310,23 @@ This directive is only used by certain executors. Refer to the {ref}`executor-pa
 :::
 
 :::{note}
-Additional options may be required to fully enable the use of accelerators. When using containers with GPUs, you must pass the GPU drivers through to the container. For Docker, this requires the option `--gpus all` in the docker run command. For Apptainer/Singularity, this requires the option `--nv`. The specific implementation details depend on the accelerator and container type being used.
+Additional options may be required to fully enable the use of accelerators. When using containers with GPUs, you must pass the GPU drivers through to the container. For Docker, this requires the option `--gpus all` in the `docker run` command. For Apptainer/Singularity, this requires the option `--nv`. The specific implementation details depend on the accelerator and container type being used.
 :::
 
-:::{note}
-The accelerator `type` option depends on the target execution platform. Refer to the platform-specific documentation for details on the available accelerators:
+The following options are available:
 
-- [Google Cloud](https://cloud.google.com/compute/docs/gpus/)
-- [Kubernetes](https://kubernetes.io/docs/tasks/manage-gpus/scheduling-gpus/#clusters-containing-different-types-of-gpus)
+`request: Integer`
+: The number of requested accelerators.
+: Specifying this directive with a number (e.g., `accelerator 4`) is equivalent to the `request` option (e.g., `accelerator request: 4`).
 
-The accelerator `type` option is not supported for AWS Batch. You can control the accelerator type indirectly through the allowed instance types in your Compute Environment. See the [AWS Batch FAQs](https://aws.amazon.com/batch/faqs/?#GPU_Scheduling_) for more information.
-:::
+`type: String`
+: The accelerator type.
+: The meaning of this option depends on the target execution platform. See the platform-specific documentation for more information about the available accelerators:
+
+  - [Google Cloud](https://cloud.google.com/compute/docs/gpus/)
+  - [Kubernetes](https://kubernetes.io/docs/tasks/manage-gpus/scheduling-gpus/#clusters-containing-different-types-of-gpus)
+
+: This option is not supported for AWS Batch. You can control the accelerator type indirectly through the allowed instance types in your Compute Environment. See the [AWS Batch FAQs](https://aws.amazon.com/batch/faqs/?#GPU_Scheduling_) for more information.
 
 (process-afterscript)=
 
@@ -574,7 +657,7 @@ The `disk` directive allows you to define how much local disk storage the proces
 
 ```nextflow
 process hello {
-    disk '2 GB'
+    disk 2.GB
 
     script:
     """
@@ -617,17 +700,17 @@ The `errorStrategy` directive allows you to define how the process manages an er
 
 The following error strategies are available:
 
-`terminate` (default)
+`'terminate'` (default)
 : When a task fails, terminate the pipeline immediately and report an error. Pending and running jobs are killed.
 
-`finish`
+`'finish'`
 : When a task fails, wait for submitted and running tasks to finish and then terminate the pipeline, reporting an error.
 
-`ignore`
+`'ignore'`
 : When a task fails, ignore it and continue the pipeline execution. If the `workflow.failOnIgnore` config option is set to `true`, the pipeline will report an error (i.e. return a non-zero exit code) upon completion. Otherwise, the pipeline will complete successfully.
 : See the {ref}`stdlib-namespaces-workflow` namespace for more information.
 
-`retry`
+`'retry'`
 : When a task fails, retry it.
 
 When setting the `errorStrategy` directive to `ignore` the process doesn't stop on an error condition, it just reports a message notifying you of the error event.
@@ -833,34 +916,6 @@ process hello {
 
 See also: [cpus](#cpus) and [memory](#memory).
 
-(process-maxsubmitawait)=
-
-### maxSubmitAwait
-
-The `maxSubmitAwait` directive allows you to specify how long a task can remain in submission queue without being executed.
-Elapsed this time the task execution will fail.
-
-When used along with `retry` error strategy, it can be useful to re-schedule the task to a difference queue or
-resource requirement. For example:
-
-```nextflow
-process hello {
-  errorStrategy 'retry'
-  maxSubmitAwait '10 mins'
-  maxRetries 3
-  queue "${task.submitAttempt==1 ? 'spot-compute' : 'on-demand-compute'}"
-
-  script:
-  """
-  your_command --here
-  """
-}
-```
-
-In the above example the task is submitted to the `spot-compute` on the first attempt (`task.submitAttempt==1`). If the
-task execution does not start in the 10 minutes, a failure is reported and a new submission is attempted using the
-queue named `on-demand-compute`.
-
 (process-maxerrors)=
 
 ### maxErrors
@@ -928,6 +983,34 @@ There is a subtle but important difference between `maxRetries` and the `maxErro
 
 See also: [errorStrategy](#errorstrategy) and [maxErrors](#maxerrors).
 
+(process-maxsubmitawait)=
+
+### maxSubmitAwait
+
+The `maxSubmitAwait` directive allows you to specify how long a task can remain in submission queue without being executed.
+Elapsed this time the task execution will fail.
+
+When used along with `retry` error strategy, it can be useful to re-schedule the task to a difference queue or
+resource requirement. For example:
+
+```nextflow
+process hello {
+  errorStrategy 'retry'
+  maxSubmitAwait 10.m
+  maxRetries 3
+  queue "${task.submitAttempt==1 ? 'spot-compute' : 'on-demand-compute'}"
+
+  script:
+  """
+  your_command --here
+  """
+}
+```
+
+In the above example the task is submitted to the `spot-compute` on the first attempt (`task.submitAttempt==1`). If the
+task execution does not start in the 10 minutes, a failure is reported and a new submission is attempted using the
+queue named `on-demand-compute`.
+
 (process-memory)=
 
 ### memory
@@ -936,7 +1019,7 @@ The `memory` directive allows you to define how much memory the process is allow
 
 ```nextflow
 process hello {
-    memory '2 GB'
+    memory 2.GB
 
     script:
     """
@@ -1671,7 +1754,7 @@ The `time` directive allows you to define how long a process is allowed to run. 
 
 ```nextflow
 process hello {
-    time '1h'
+    time 1.h
 
     script:
     """
@@ -1682,15 +1765,13 @@ process hello {
 
 The following time unit suffixes can be used when specifying the duration value:
 
-| Unit                            | Description  |
-| ------------------------------- | ------------ |
-| `ms`, `milli`, `millis`         | Milliseconds |
-| `s`, `sec`, `second`, `seconds` | Seconds      |
-| `m`, `min`, `minute`, `minutes` | Minutes      |
-| `h`, `hour`, `hours`            | Hours        |
-| `d`, `day`, `days`              | Days         |
-
-Multiple units can be used in a single declaration, for example: `'1day 6hours 3minutes 30seconds'`
+| Unit | Description  |
+| ---- | ------------ |
+| `ms` | Milliseconds |
+| `s`  | Seconds      |
+| `m`  | Minutes      |
+| `h`  | Hours        |
+| `d`  | Days         |
 
 See {ref}`stdlib-types-duration` for more information.
 
