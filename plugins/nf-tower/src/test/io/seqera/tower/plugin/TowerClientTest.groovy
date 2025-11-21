@@ -110,10 +110,11 @@ class TowerClientTest extends Specification {
         expect:
         tower.underscoreToCamelCase(STR) == EXPECTED
         where:
-        STR         | EXPECTED
-        'abc'       | 'abc'
-        'a_b_c'     | 'aBC'
-        'foo__bar'  | 'fooBar'
+        STR                 | EXPECTED
+        'abc'               | 'abc'
+        'a_b_c'             | 'aBC'
+        'foo__bar'          | 'fooBar'
+        'num_reclamations'  | 'numReclamations'
     }
     
 
