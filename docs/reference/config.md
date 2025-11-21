@@ -473,6 +473,11 @@ The following settings are available:
 `azure.storage.accountName`
 : The blob storage account name. Defaults to environment variable `AZURE_STORAGE_ACCOUNT_NAME`.
 
+`azure.storage.endpoint`
+: :::{versionadded} 25.11.0-edge
+  :::
+: The blob storage service endpoint e.g. `https://nfbatch1.blob.core.windows.net`.
+
 `azure.storage.fileShares.<name>.mountOptions`
 : The file share mount options.
 
