@@ -50,6 +50,7 @@ class ProcessBuilder {
             'cache',
             'clusterOptions',
             'conda',
+            'consumableResources',
             'container',
             'containerOptions',
             'cpus',
@@ -166,6 +167,13 @@ class ProcessBuilder {
             config.put('arch', value)
         else if( value != null )
             throw new IllegalArgumentException("Not a valid `arch` directive value: $value [${value.getClass().getName()}]")
+    }
+
+    void consumableResources( value ) {
+        if( value instanceof List || value instanceof Closure )
+            config.put('consumableResources', value)
+        else if( value != null )
+            throw new IllegalArgumentException("Not a valid `consumableResources` directive value: $value [${value.getClass().getName()}] - expected a list of maps with 'type' and 'value' keys")
     }
 
     void debug(boolean value) {

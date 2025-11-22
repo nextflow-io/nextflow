@@ -210,6 +210,44 @@ class AwsBatchTaskHandlerTest extends Specification {
         req.containerOverrides().resourceRequirements().find { it.type() == ResourceType.GPU}.value() == '2'
     }
 
+    def 'should set consumable resources' () {
+        given:
+        def task = Mock(TaskRun)
+        task.getName() >> 'batch-task'
+        task.getConfig() >> new TaskConfig(
+            memory: '2GB',
+            cpus: 2,
+            consumableResources: [
+                [type: 'FOO_LICENSES', value: 1],
+                [type: 'OTHER_LICENSE', value: 3]
+            ]
+        )
+        task.getWorkDirStr() >> 's3://my-bucket/work/dir'
+        and:
+        def executor = Spy(AwsBatchExecutor) { getAwsOptions()>> new AwsOptions() }
+        and:
+        def handler = Spy(new AwsBatchTaskHandler(executor: executor))
+
+        when:
+        def req = handler.newSubmitRequest(task)
+        then:
+        handler.getAwsOptions() >> { new AwsOptions(awsConfig: new AwsConfig(batch:[cliPath: '/bin/aws'],region: 'eu-west-1')) }
+        and:
+        _ * handler.getTask() >> task
+        _ * handler.fusionEnabled() >> false
+        1 * handler.maxSpotAttempts() >> 0
+        1 * handler.getJobQueue(task) >> 'queue1'
+        1 * handler.getJobDefinition(task) >> 'job-def:1'
+        and:
+        def res = req.containerOverrides().resourceRequirements()
+        res.size()==4  // VCPU, MEMORY, and 2 consumable resources
+        and:
+        req.containerOverrides().resourceRequirements().find { it.type() == ResourceType.VCPU}.value() == '2'
+        req.containerOverrides().resourceRequirements().find { it.type() == ResourceType.MEMORY}.value() == '2048'
+        req.containerOverrides().resourceRequirements().find { it.typeAsString() == 'FOO_LICENSES'}.value() == '1'
+        req.containerOverrides().resourceRequirements().find { it.typeAsString() == 'OTHER_LICENSE'}.value() == '3'
+    }
+
     def 'should create an aws submit request with a timeout'() {
         given:
         def task = Mock(TaskRun)

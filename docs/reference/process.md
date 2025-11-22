@@ -603,6 +603,58 @@ process hello_docker {
 This feature is not supported by the {ref}`k8s-executor` executor.
 :::
 
+(process-consumableresources)=
+
+### consumableResources
+
+:::{versionadded} 25.04.0-edge
+:::
+
+The `consumableResources` directive allows you to specify custom consumable resources for AWS Batch jobs. Consumable resources enable resource-aware scheduling for rate-limited resources such as software licenses or other constrained resources.
+
+This directive is only supported when using the {ref}`awsbatch-executor` executor.
+
+For example:
+
+```nextflow
+process licensed_software {
+    consumableResources [
+        [type: 'my-software-license', value: 1]
+    ]
+
+    script:
+    """
+    run_licensed_software
+    """
+}
+```
+
+Multiple consumable resources can be specified:
+
+```nextflow
+process multi_resource {
+    consumableResources [
+        [type: 'license-type-a', value: 2],
+        [type: 'license-type-b', value: 1]
+    ]
+
+    script:
+    """
+    your_command_here
+    """
+}
+```
+
+Each consumable resource must be defined as a map with:
+- `type`: The name of the consumable resource (must match a resource configured in your AWS Batch job queue)
+- `value`: The quantity of the resource required by the task
+
+:::{note}
+Consumable resources must be configured in your AWS Batch compute environment before they can be used. See the [AWS Batch documentation](https://docs.aws.amazon.com/batch/latest/userguide/consumable-resources.html) for more information on setting up consumable resources.
+:::
+
+See also: [AWS Batch Consumable Resources](https://aws.amazon.com/blogs/hpc/how-to-use-rate-limited-resources-in-aws-batch-jobs-with-resource-aware-scheduling/)
+
 (process-cpus)=
 
 ### cpus

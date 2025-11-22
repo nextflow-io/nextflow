@@ -509,6 +509,28 @@ class TaskConfig extends LazyMap implements Cloneable {
         return null
     }
 
+    List<Map<String,Object>> getConsumableResources() {
+        final value = get('consumableResources')
+        if( value == null )
+            return null
+        if( value instanceof List ) {
+            // Validate the list contains maps with 'type' and 'value'
+            final result = new ArrayList<Map<String,Object>>()
+            value.each { item ->
+                if( !(item instanceof Map) )
+                    throw new IllegalArgumentException("Invalid `consumableResources` item: $item [${item.getClass().getName()}] - each item must be a map with 'type' and 'value' keys")
+                final map = item as Map
+                if( !map.containsKey('type') )
+                    throw new IllegalArgumentException("Invalid `consumableResources` item: missing 'type' key")
+                if( !map.containsKey('value') )
+                    throw new IllegalArgumentException("Invalid `consumableResources` item: missing 'value' key")
+                result.add(map)
+            }
+            return result
+        }
+        throw new IllegalArgumentException("Invalid `consumableResources` directive value: $value [${value.getClass().getName()}] - must be a list of maps")
+    }
+
     String getMachineType() {
         return get('machineType')
     }
