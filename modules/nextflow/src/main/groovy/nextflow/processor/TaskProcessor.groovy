@@ -1648,8 +1648,8 @@ class TaskProcessor {
                 script << /export $name="$value"/
             }
             else {
-                // escape both wrapping double quotes and the dollar var placeholder
-                script << /export $name="${Escape.variable(value)}"/
+                // add double quotes and path/variable escapes as quotes might be lost
+                script << /export $name="${Escape.path(Escape.variable(value))}"/
             }
         }
         script << ''
