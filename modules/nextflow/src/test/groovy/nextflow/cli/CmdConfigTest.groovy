@@ -215,55 +215,15 @@ class CmdConfigTest extends Specification {
         folder.deleteDir()
     }
 
-    def 'should parse config file with method' () {
+    def 'should parse config file with nested configs' () {
         given:
         def folder = Files.createTempDirectory('test')
         def CONFIG = folder.resolve('nextflow.config')
-
-        CONFIG.text = '''
-        process {
-          cpus = { getCpuValue() }
-        }
-        
-        def getCpuValue() {
-          4
-        }
-        '''
-        def buffer = new ByteArrayOutputStream()
-        // command definition
-        def cmd = new CmdConfig()
-        cmd.launcher = new Launcher(options: new CliOptions(config: [CONFIG.toString()]))
-        cmd.stdout = buffer
-        cmd.args = [ '.' ]
-
-        when:
-        cmd.run()
-
-        then:
-        buffer.toString() == '''
-        process {
-           cpus = { getCpuValue() }
-        }
-        
-        def getCpuValue() {
-          4
-        }
-        '''
-                .stripIndent().leftTrim()
-
-        cleanup:
-        folder.deleteDir()
-    }
-
-    def 'should parse config file with nested configs' () {
-        given:
-        def folder  = Files.createTempDirectory('test')
-        def CONFIG  = folder.resolve('nextflow.config')
         def CONFIG2 = folder.resolve('nextflow2.config')
         def CONFIG3 = folder.resolve('nextflow3.config')
         CONFIG.text  = '''
         profiles {
-          test { includeConfig 'nextflow2.config'}
+            test { includeConfig 'nextflow2.config' }
         }
         '''
         CONFIG2.text = '''
@@ -271,11 +231,11 @@ class CmdConfigTest extends Specification {
         '''
         CONFIG3.text = '''
         params {
-          x = { 1 + 2 }
+            x = { 1 + 2 }
         }
         '''
+        and:
         def buffer = new ByteArrayOutputStream()
-        // command definition
         def cmd = new CmdConfig()
         cmd.launcher = new Launcher(options: new CliOptions(config: [CONFIG.toString()]))
         cmd.profile = 'test'
@@ -291,8 +251,7 @@ class CmdConfigTest extends Specification {
         params {
            x = { 1 + 2 }
         }
-        '''
-                .stripIndent().leftTrim()
+        '''.stripIndent().leftTrim()
 
         cleanup:
         folder.deleteDir()
