@@ -965,6 +965,9 @@ The following settings are available:
   :::
 : List of custom mount options for `gcsfuse` (default: `['-o rw', '-implicit-dirs']`).
 
+`google.batch.installOpsAgent`
+: Enable the installation of the Ops Agent on Google Batch instances for enhanced monitoring and logging (default: `false`).
+
 `google.batch.logsPath`
 : :::{versionadded} 25.11.0-edge
   :::
