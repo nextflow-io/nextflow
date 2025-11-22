@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,37 +36,38 @@ class DataflowMathExtensionTest extends Specification {
     def 'should return the min value'() {
 
         expect:
-        Channel.from(4,1,7,5).min().val == 1
-        Channel.from("hello","hi","hey").min { it.size() } .val == "hi"
-        Channel.from("hello","hi","hey").min { a,b -> a.size()<=>b.size() } .val == "hi"
-        Channel.from("hello","hi","hey").min { a,b -> a.size()<=>b.size() } .val == "hi"
-        Channel.from("hello","hi","hey").min ( makeComparator({ a,b -> a.size()<=>b.size() }) ) .val == "hi"
+        Channel.of(4,1,7,5).min().val == 1
+        Channel.of("hello","hi","hey").min { it.size() } .val == "hi"
+        Channel.of("hello","hi","hey").min { a,b -> a.size()<=>b.size() } .val == "hi"
+        Channel.of("hello","hi","hey").min { a,b -> a.size()<=>b.size() } .val == "hi"
+        Channel.of("hello","hi","hey").min ( makeComparator({ a,b -> a.size()<=>b.size() }) ) .val == "hi"
 
     }
 
     def 'should return the max value'() {
         expect:
-        Channel.from(4,1,7,5).max().val == 7
-        Channel.from("hello","hi","hey").max { it.size() } .val == "hello"
-        Channel.from("hello","hi","hey").max { a,b -> a.size()<=>b.size() } .val == "hello"
-        Channel.from("hello","hi","hey").max { a,b -> a.size()<=>b.size() } .val == "hello"
-        Channel.from("hello","hi","hey").max (makeComparator {{ a,b -> a.size()<=>b.size() }}) .val == "hello"
+        Channel.of(4,1,7,5).max().val == 7
+        Channel.of("hello","hi","hey").max { it.size() } .val == "hello"
+        Channel.of("hello","hi","hey").max { a,b -> a.size()<=>b.size() } .val == "hello"
+        Channel.of("hello","hi","hey").max { a,b -> a.size()<=>b.size() } .val == "hello"
+        // this may fail randomly - the cause should be investigated
+        Channel.of("hello","hi","hey").max (makeComparator({ a,b -> a.size()<=>b.size() })) .val == "hello"
 
     }
 
     def 'should return the sum'() {
         expect:
-        Channel.from(4,1,7,5).sum().val == 17
-        Channel.from(4,1,7,5).sum { it * 2 } .val == 34
-        Channel.from( [1,1,1], [0,1,2], [10,20,30] ). sum() .val == [ 11, 22, 33 ]
+        Channel.of(4,1,7,5).sum().val == 17
+        Channel.of(4,1,7,5).sum { it * 2 } .val == 34
+        Channel.of( [1,1,1], [0,1,2], [10,20,30] ). sum() .val == [ 11, 22, 33 ]
     }
 
 
     def 'should return the mean'() {
         expect:
-        Channel.from(10,20,30).mean().val == 20
-        Channel.from(10,20,30).mean { it * 2 }.val == 40
-        Channel.from( [10,20,30], [10, 10, 10 ], [10, 30, 50]).mean().val == [10, 20, 30]
+        Channel.of(10,20,30).mean().val == 20
+        Channel.of(10,20,30).mean { it * 2 }.val == 40
+        Channel.of( [10,20,30], [10, 10, 10 ], [10, 30, 50]).mean().val == [10, 20, 30]
     }
 
     def 'should convert string to integers' () {
@@ -76,7 +76,7 @@ class DataflowMathExtensionTest extends Specification {
         Channel.value('11').toInteger().val == 11
 
         when:
-        def list = Channel.from('1', '4\n', ' 7 ', '100' )
+        def list = Channel.of('1', '4\n', ' 7 ', '100' )
                 .toInteger()
                 .toList()
                 .getVal()
@@ -100,7 +100,7 @@ class DataflowMathExtensionTest extends Specification {
         Channel.value('33').toLong().val == 33L
 
         when:
-        def list = Channel.from('1', '4\n', ' 7 ', '100' )
+        def list = Channel.of('1', '4\n', ' 7 ', '100' )
                 .toLong()
                 .toList()
                 .getVal()
@@ -124,7 +124,7 @@ class DataflowMathExtensionTest extends Specification {
         Channel.value('99.1').toFloat().val == 99.1f
 
         when:
-        def list = Channel.from('1', '4\n', ' 7.5 ', '100.1' )
+        def list = Channel.of('1', '4\n', ' 7.5 ', '100.1' )
                 .toFloat()
                 .toList()
                 .getVal()
@@ -147,7 +147,7 @@ class DataflowMathExtensionTest extends Specification {
         Channel.value('99.1').toDouble().val == 99.1d
 
         when:
-        def list = Channel.from('1', '4\n', ' 7.5 ', '100.1' )
+        def list = Channel.of('1', '4\n', ' 7.5 ', '100.1' )
                 .toDouble()
                 .toList()
                 .getVal()
@@ -170,7 +170,7 @@ class DataflowMathExtensionTest extends Specification {
 
         when:
         def result = Channel
-                .from(0,1,2,3,4,5,6,7,8,9)
+                .of(0,1,2,3,4,5,6,7,8,9)
                 .randomSample(5)
                 .toList().val as List
 

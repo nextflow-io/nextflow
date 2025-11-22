@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,9 +23,12 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.Global
 import nextflow.Session
+import nextflow.container.inspect.ContainerInspectMode
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortRunException
+import nextflow.plugin.Plugins
 import nextflow.util.HistoryFile
 /**
  * Run a nextflow script file
@@ -45,7 +47,7 @@ class ScriptRunner {
     /**
      * The script interpreter
      */
-    private ScriptParser scriptParser
+    private ScriptLoader scriptLoader
 
     /**
      * The pipeline file (it may be null when it's provided as string)
@@ -56,6 +58,16 @@ class ScriptRunner {
      * The script result
      */
     private def result
+
+    /**
+     * Simulate execution and exit
+     */
+    private boolean preview
+
+    /**
+     * Optional callback to perform a custom action on a preview event
+     */
+    private Closure previewAction
 
     /**
      * Instantiate the runner object creating a new session
@@ -81,12 +93,18 @@ class ScriptRunner {
         return this
     }
 
+    ScriptRunner setPreview(boolean value, Closure<Void> action) {
+        this.preview = value
+        this.previewAction = action
+        return this
+    }
+
     Session getSession() { session }
 
     /**
      * @return The interpreted script object
      */
-    @Deprecated BaseScript getScriptObj() { scriptParser.script }
+    @Deprecated BaseScript getScriptObj() { scriptLoader.getScript() }
 
     /**
      * @return The result produced by the script execution
@@ -95,31 +113,38 @@ class ScriptRunner {
 
 
     /**
-     * Execute a Nextflow script, it does the following:
-     * <li>parse the script
-     * <li>launch script execution
-     * <li>await for all tasks completion
+     * Execute a Nextflow script:
+     * 1. compile and load the script
+     * 2. execute the script
+     * 3. await for all tasks to complete
      *
-     * @param scriptFile The file containing the script to be executed
-     * @param args The arguments to be passed to the script
-     * @return The result as returned by the {@code #run} method
+     * @param args command-line positional arguments
+     * @param cliParams parameters specified on the command-line
+     * @param configParams parameters specified in the config
+     * @param entryName named workflow entrypoint
      */
-
-    def execute( List<String> args = null, String entryName=null ) {
+    def execute( List<String> args=null, Map<String,?> cliParams=null, Map<String,?> configParams=null, String entryName=null ) {
         assert scriptFile
 
         // init session
-        session.init(scriptFile, args)
+        session.init(scriptFile, args, cliParams, configParams)
 
         // start session
         session.start()
         try {
             // parse the script
-            parseScript(scriptFile, entryName)
-            // run the code
-            run()
-            // await termination
-            terminate()
+            try {
+                parseScript(scriptFile, entryName)
+                // run the code
+                run()
+            }
+            finally {
+                log.debug "Parsed script files:${scriptFiles0()}"
+            }
+            // await completion
+            await()
+            // shutdown session
+            shutdown()
         }
         catch (Throwable e) {
             session.abort(e)
@@ -130,6 +155,13 @@ class ScriptRunner {
             throw new AbortRunException()
         }
 
+        return result
+    }
+
+    protected String scriptFiles0() {
+        def result = ''
+        for( Map.Entry<String,Path> it : ScriptMeta.allScriptNames() )
+            result += "\n  ${it.key}: ${it.value.toUriString()}"
         return result
     }
 
@@ -193,10 +225,12 @@ class ScriptRunner {
     }
 
     protected void parseScript( ScriptFile scriptFile, String entryName ) {
-        scriptParser = new ScriptParser(session)
+        scriptLoader = ScriptLoaderFactory.create(session)
                             .setEntryName(entryName)
+                            // setting module true when running in "inspect" mode to prevent the running the entry workflow
+                            .setModule(ContainerInspectMode.active())
                             .parse(scriptFile.main)
-        session.script = scriptParser.script
+        session.script = scriptLoader.getScript()
     }
 
 
@@ -207,20 +241,29 @@ class ScriptRunner {
      */
     protected run() {
         log.debug "> Launching execution"
-        assert scriptParser, "Missing script instance to run"
+        assert scriptLoader, "Missing script instance to run"
         // -- launch the script execution
-        scriptParser.runScript()
+        scriptLoader.runScript()
         // -- normalise output
-        result = normalizeOutput(scriptParser.getResult())
+        result = normalizeOutput(scriptLoader.getResult())
         // -- ignite dataflow network
-        session.fireDataflowNetwork()
+        session.fireDataflowNetwork(preview)
     }
 
-    protected terminate() {
-        log.debug "> Await termination "
+    protected await() {
+        if( preview ) {
+            previewAction?.call(session)
+            return
+        }
+        log.debug "> Awaiting termination "
         session.await()
+    }
+
+    protected shutdown() {
         session.destroy()
+        Plugins.stop()
         session.cleanup()
+        Global.cleanUp()
         log.debug "> Execution complete -- Goodbye"
     }
 
@@ -230,9 +273,13 @@ class ScriptRunner {
     void verifyAndTrackHistory(String cli, String name) {
         assert cli, 'Missing launch command line'
 
-        final ignore = System.getenv('NXF_IGNORE_RESUME_HISTORY') as Boolean
+        if( HistoryFile.disabled() ) {
+            log.debug "Nextflow history file tracking disabled"
+            return
+        }
+
         // -- when resume, make sure the session id exists in the executions history
-        if( session.resumeMode && !ignore && !HistoryFile.DEFAULT.checkExistsById(session.uniqueId.toString()) ) {
+        if( session.resumeMode && !HistoryFile.DEFAULT.checkExistsById(session.uniqueId.toString()) ) {
             throw new AbortOperationException("Can't find a run with the specified id: ${session.uniqueId} -- Execution can't be resumed")
         }
 
@@ -260,7 +307,7 @@ class ScriptRunner {
             }
 
             if( pos >= size() ) {
-                throw new AbortOperationException("Arguments index out of range: $pos -- You may have not entered all arguments required by the pipeline")
+                throw new AbortOperationException("Arguments index out of range: $pos -- You may not have entered all arguments required by the pipeline")
             }
 
             super.get(pos)

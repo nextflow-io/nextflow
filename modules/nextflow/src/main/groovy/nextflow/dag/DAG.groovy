@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,6 +30,7 @@ import nextflow.NF
 import nextflow.extension.CH
 import nextflow.extension.DataflowHelper
 import nextflow.processor.TaskProcessor
+import nextflow.script.ExecutionStack
 import nextflow.script.params.DefaultInParam
 import nextflow.script.params.DefaultOutParam
 import nextflow.script.params.EachInParam
@@ -40,6 +40,11 @@ import nextflow.script.params.OutParam
 import nextflow.script.params.OutputsList
 import nextflow.script.params.TupleInParam
 import nextflow.script.params.TupleOutParam
+import nextflow.script.params.v2.ProcessInputsDef
+import nextflow.script.params.v2.ProcessOutputsDef
+
+import java.util.concurrent.atomic.AtomicLong
+
 /**
  * Model a direct acyclic graph of the pipeline execution.
  *
@@ -81,10 +86,8 @@ class DAG {
         dataflowBroadcastLookup.put(readChannel, broadcastChannel)
     }
 
-    @PackageScope
     List<Vertex> getVertices() { vertices }
 
-    @PackageScope
     List<Edge> getEdges() { edges }
 
     boolean isEmpty() { edges.size()==0 && vertices.size()==0 }
@@ -103,6 +106,19 @@ class DAG {
         addVertex( Type.PROCESS, label, normalizeInputs(inputs), normalizeOutputs(outputs), process )
     }
 
+    void addProcessNode( String label, ProcessInputsDef inputs, ProcessOutputsDef outputs, TaskProcessor process=null ) {
+        assert label
+        assert inputs
+        assert outputs
+        final normalizedInputs = inputs.getParams().collect { p ->
+            new ChannelHandler(channel: p.getChannel(), label: p.getName())
+        }
+        final normalizedOutputs = outputs.getParams().collect { p ->
+            new ChannelHandler(channel: p.getChannel(), label: p.getName())
+        }
+        addVertex( Type.PROCESS, label, normalizedInputs, normalizedOutputs, process )
+    }
+
     /**
      * Creates a new DAG vertex representing a dataflow operator
      *
@@ -113,7 +129,7 @@ class DAG {
     void addOperatorNode( String label, inputs, outputs, List<DataflowProcessor> operators=null )  {
         assert label
         assert inputs
-        addVertex(Type.OPERATOR, label, normalizeChannels(inputs), normalizeChannels(outputs), operators )
+        addVertex( Type.OPERATOR, label, normalizeChannels(inputs), normalizeChannels(outputs), operators )
     }
 
     /**
@@ -125,7 +141,7 @@ class DAG {
     void addSourceNode( String label, source )  {
         assert label
         assert source
-        addVertex(Type.ORIGIN, label, null, normalizeChannels(source) )
+        addVertex( Type.ORIGIN, label, null, normalizeChannels(source) )
     }
 
     /**
@@ -158,8 +174,9 @@ class DAG {
      * @return A {@link Vertex} object
      */
     @PackageScope
-    Vertex createVertex( Type type, String label, extra=null ) {
-        def result = new Vertex(type, label)
+    Vertex createVertex( Type type, String label, Object extra=null ) {
+        final workflow = ExecutionStack.workflow()?.name ?: ""
+        final result = new Vertex(type, label, workflow)
         if( extra instanceof TaskProcessor ) {
             result.process = extra
             result.operators = [ extra.operator ]
@@ -253,10 +270,11 @@ class DAG {
 
         def result = []
         for(OutParam p :outputs) {
-            if( p instanceof DefaultOutParam ) break
-            for(Object it : p.outChannels) {
+            if( p instanceof DefaultOutParam )
+                break
+            final it = p.getOutChannel()
+            if( it!=null )
                 result << new ChannelHandler(channel: it, label: p instanceof TupleOutParam ? null : p.name)
-            }
         }
 
         return result
@@ -377,13 +395,19 @@ class DAG {
      * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
      */
     @ToString(includeNames = true, includes = 'label,type', includePackage=false)
-    @PackageScope
     class Vertex {
+
+        static private AtomicLong nextID = new AtomicLong()
 
         /**
          * The vertex label
          */
         String label
+
+        /**
+         * The name of the enclosing workflow
+         */
+        String workflow
 
         /**
          * The vertex type
@@ -398,14 +422,21 @@ class DAG {
         TaskProcessor process
 
         /**
-         * Create an DGA vertex instance
+         * unique Id
+         */
+        final long id = nextID.getAndIncrement()
+
+        /**
+         * Create a DAG vertex instance
          *
          * @param type A {@link Type} value
          * @param label A descriptive string to label this vertex
+         * @param workflow The name of the enclosing workflow
          */
-        Vertex( Type type, String label = null ) {
+        Vertex( Type type, String label = null, String workflow = null ) {
             assert type
             this.label = label
+            this.workflow = workflow
             this.type = type
         }
 
@@ -419,7 +450,7 @@ class DAG {
         /**
          * @return The unique name for this node
          */
-        String getName() { "p${getOrder()}" }
+        String getName() { "v${getOrder()}" }
 
         boolean isActive() {
             operators?.any { DataflowHelper.isProcessorActive(it) }
@@ -432,10 +463,11 @@ class DAG {
      *
      * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
      */
-    @PackageScope
     @ToString(includeNames = true, includes = 'label,from,to', includePackage=false)
     @MapConstructor
     class Edge {
+
+        static private AtomicLong nextID = new AtomicLong()
 
         /**
          * The Dataflow channel that originated this graph edge
@@ -456,6 +488,11 @@ class DAG {
          * A descriptive label
          */
         String label
+
+        /**
+         * unique Id
+         */
+        final long id = nextID.getAndIncrement()
 
     }
 

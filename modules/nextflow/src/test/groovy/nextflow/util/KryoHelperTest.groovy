@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +17,7 @@
 package nextflow.util
 
 import groovy.transform.EqualsAndHashCode
-import nextflow.container.ContainerConfig
+import nextflow.container.DockerConfig
 import nextflow.file.FileHelper
 import nextflow.io.SerializableMarker
 import spock.lang.Specification
@@ -119,15 +118,15 @@ class KryoHelperTest extends  Specification {
     def testSerializeContainerConfig() {
 
         given:
-        def cfg = new ContainerConfig([enabled: true, engine: 'docker', xxx: 'hello'])
+        def cfg = new DockerConfig([enabled: true, runOptions: 'hello'])
         when:
         def copy = KryoHelper.deserialize(KryoHelper.serialize(cfg))
         then:
         copy == cfg
-        copy instanceof ContainerConfig
+        copy instanceof DockerConfig
         copy.engine == 'docker'
         copy.enabled == true
-        copy.xxx == 'hello'
+        copy.runOptions == 'hello'
 
     }
 
@@ -164,6 +163,16 @@ class KryoHelperTest extends  Specification {
         then:
         KryoHelper.deserialize(buffer).getClass().getName() == 'nextflow.file.http.XPath'
         KryoHelper.deserialize(buffer).toUri() == new URI('http://host.com/foo.txt')
+    }
+
+    def 'should serialise xfilesystem' () {
+        when:
+        def uri = new URI('https://host.com/path/foo.txt')
+        def fs = FileHelper.getOrCreateFileSystemFor(new URI('https://host.com/path/foo.txt'))
+        def fsBuffer = KryoHelper.serialize(fs)
+        then:
+        KryoHelper.deserialize(fsBuffer).getClass().getName() == 'nextflow.file.http.XFileSystem'
+        KryoHelper.deserialize(fsBuffer).getPath("/path/foo.txt").toUri() == uri
     }
 
     @EqualsAndHashCode

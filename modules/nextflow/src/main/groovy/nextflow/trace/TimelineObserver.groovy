@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,21 +16,22 @@
 
 package nextflow.trace
 
-import groovy.text.GStringTemplateEngine
-
-import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 
+import groovy.text.GStringTemplateEngine
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
-import nextflow.processor.TaskHandler
+import nextflow.exception.AbortOperationException
+import nextflow.file.FileHelper
 import nextflow.processor.TaskId
-import nextflow.processor.TaskProcessor
+import nextflow.trace.config.TimelineConfig
+import nextflow.trace.event.TaskEvent
 import nextflow.util.Duration
-import org.apache.commons.lang.StringEscapeUtils
+import nextflow.util.TestOnly
+import org.apache.commons.lang3.StringEscapeUtils
 /**
  * Render pipeline timeline processes execution
  *
@@ -39,9 +39,7 @@ import org.apache.commons.lang.StringEscapeUtils
  */
 @Slf4j
 @CompileStatic
-class TimelineObserver implements TraceObserver {
-
-    public static final String DEF_FILE_NAME = 'timeline.html'
+class TimelineObserver implements TraceObserverV2 {
 
     /**
      * Holds the the start time for tasks started/submitted but not yet completed
@@ -61,11 +59,15 @@ class TimelineObserver implements TraceObserver {
 
     private long endMillis
 
-    boolean overwrite
+    private boolean overwrite
 
-    TimelineObserver( Path file ) {
-        this.reportFile = file
+    TimelineObserver(TimelineConfig config) {
+        this.reportFile = FileHelper.asPath(config.file)
+        this.overwrite = config.overwrite
     }
+
+    @TestOnly
+    protected TimelineObserver() {}
 
     /**
      * Create the trace file, in file already existing with the same name it is
@@ -74,6 +76,8 @@ class TimelineObserver implements TraceObserver {
     @Override
     void onFlowCreate(Session session) {
         beginMillis = startMillis = System.currentTimeMillis()
+        if( Files.exists(reportFile) && !overwrite )
+            throw new AbortOperationException("Timeline file already exists: ${reportFile.toUriString()} -- enable the 'timeline.overwrite' option in your config file to overwrite existing files")
     }
 
     /**
@@ -81,77 +85,59 @@ class TimelineObserver implements TraceObserver {
      */
     @Override
     void onFlowComplete() {
-        log.debug "Flow completing -- rendering html timeline"
+        log.debug "Workflow completed -- rendering execution timeline"
         endMillis = System.currentTimeMillis()
         try {
             renderHtml()
         }
         catch (Exception e) {
-            log.warn "Failed to render execution report -- see the log file for details", e
+            log.warn "Failed to render execution timeline -- see the log file for details", e
         }
     }
 
-
     @Override
-    void onProcessCreate(TaskProcessor process) { }
-
-
-    /**
-     * This method is invoked before a process run is going to be submitted
-     * @param handler
-     */
-    @Override
-    void onProcessSubmit(TaskHandler handler, TraceRecord trace) {
+    void onTaskSubmit(TaskEvent event) {
         synchronized (records) {
-            records[ trace.taskId ] = trace
+            records[ event.trace.taskId ] = event.trace
         }
     }
 
-    /**
-     * This method is invoked when a process run is going to start
-     * @param handler
-     */
     @Override
-    void onProcessStart(TaskHandler handler, TraceRecord trace) {
+    void onTaskStart(TaskEvent event) {
         synchronized (records) {
-            records[ trace.taskId ] = trace
+            records[ event.trace.taskId ] = event.trace
         }
     }
 
-    /**
-     * This method is invoked when a process run completes
-     * @param handler
-     */
     @Override
-    void onProcessComplete(TaskHandler handler, TraceRecord trace) {
-        final taskId = handler.task.id
-        if( !trace ) {
+    void onTaskComplete(TaskEvent event) {
+        final taskId = event.handler.task.id
+        if( !event.trace ) {
             log.debug "Profile warn: Unable to find record for task_run with id: ${taskId}"
             return
         }
 
         // remove the record from the current records
         synchronized (records) {
-            records[ trace.taskId ] = trace
+            records[ event.trace.taskId ] = event.trace
         }
     }
 
     @Override
-    void onProcessCached(TaskHandler handler, TraceRecord trace) {
+    void onTaskCached(TaskEvent event) {
 
         // event was triggered by a stored task, ignore it
-        if( trace == null ) {
+        if( !event.trace ) {
             return
         }
 
         // remove the record from the current records
         synchronized (records) {
-            records[ trace.taskId ] = trace
+            records[ event.trace.taskId ] = event.trace
         }
 
-        beginMillis = Math.min( beginMillis, trace.get('submit') as long )
+        beginMillis = Math.min( beginMillis, event.trace.get('submit') as long )
     }
-
 
     protected void renderHtml() {
         // render HTML timeline template
@@ -166,22 +152,16 @@ class TimelineObserver implements TraceObserver {
         ]
 
         final tpl = readTemplate('TimelineTemplate.html')
-        def engine = new GStringTemplateEngine()
-        def html_template = engine.createTemplate(tpl)
-        def html_output = html_template.make(tpl_fields).toString()
+        final engine = new GStringTemplateEngine()
+        final html_template = engine.createTemplate(tpl)
+        final html_output = html_template.make(tpl_fields).toString()
 
         // make sure the parent path exists
-        def parent = reportFile.getParent()
+        final parent = reportFile.getParent()
         if( parent )
             Files.createDirectories(parent)
 
-        if( overwrite )
-            Files.deleteIfExists(reportFile)
-        else
-            // roll any trace files that may exist
-            reportFile.rollFile()
-
-        def writer = Files.newBufferedWriter(reportFile, Charset.defaultCharset())
+        final writer = TraceHelper.newFileWriter(reportFile, overwrite, 'Timeline')
         writer.withWriter { w -> w << html_output }
         writer.close()
     }
@@ -215,7 +195,7 @@ class TimelineObserver implements TraceObserver {
         final indent = "    ";
 
         template << indent << indent << '{'
-        template << "\"label\": \"${StringEscapeUtils.escapeJavaScript(name)}\", "
+        template << "\"label\": \"${StringEscapeUtils.escapeEcmaScript(name)}\", "
         template << "\"cached\": ${record.cached}, "
         template << "\"index\": $index, "
         template << "\"times\": ["
@@ -224,8 +204,8 @@ class TimelineObserver implements TraceObserver {
             template << "{\"starting_time\": $submit, \"ending_time\": $start}"
 
             if( start && realtime ) {
-                def label = StringEscapeUtils.escapeJavaScript(labelString(record))
-                def ending = start+realtime
+                final label = StringEscapeUtils.escapeEcmaScript(labelString(record))
+                final ending = start+realtime
                 template << ", {\"starting_time\": $start, \"ending_time\": $ending, \"label\": \"$label\"}"
 
                 if( complete && ending < complete ) {
@@ -238,9 +218,9 @@ class TimelineObserver implements TraceObserver {
     }
 
     protected String labelString( TraceRecord record ) {
-        def result = []
-        def duration = record.getFmtStr('duration')
-        def mem = record.getFmtStr('peak_rss')
+        final result = []
+        final duration = record.getFmtStr('duration')
+        final mem = record.getFmtStr('peak_rss')
 
         if( duration )
             result << duration.toString()
@@ -261,13 +241,13 @@ class TimelineObserver implements TraceObserver {
      * @return The loaded template as a string
      */
     private String readTemplate( String path ) {
-        StringWriter writer = new StringWriter();
-        def res =  this.class.getResourceAsStream( path )
+        final writer = new StringWriter()
+        final res = this.class.getResourceAsStream( path )
         int ch
         while( (ch=res.read()) != -1 ) {
-            writer.append(ch as char);
+            writer.append(ch as char)
         }
-        writer.toString();
+        writer.toString()
     }
 
     @Override

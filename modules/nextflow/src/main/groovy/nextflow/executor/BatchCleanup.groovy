@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,16 +27,6 @@ import nextflow.Session
  */
 @CompileStatic
 class BatchCleanup {
-
-    /**
-     * Default kill batch size
-     */
-    int size = 100
-
-    /**
-     * The current session object
-     */
-    Session session
 
     /*
      * helper class
@@ -68,9 +57,6 @@ class BatchCleanup {
         def pair = aggregate.get(name)
         if( !pair ) {
             aggregate.put(name, pair = new ExecutorJobsPair(executor))
-            if( !session ) {
-                session = executor.session
-            }
         }
         pair.jobIds.add(jobId)
     }
@@ -81,10 +67,9 @@ class BatchCleanup {
      */
     void kill() {
         aggregate.values().each { pair ->
-
-            int batchSize =  session ? session.getExecConfigProp(pair.executor.name, 'killBatchSize', size) as int: size
+            final executor = pair.executor
+            final batchSize = executor.config.getExecConfigProp(executor.name, 'killBatchSize', 100) as int
             kill0(pair.executor, pair.jobIds, batchSize)
-
         }
     }
 

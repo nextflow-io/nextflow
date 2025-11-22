@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@
 
 package nextflow.plugin
 
+import java.nio.file.Path
+
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import org.pf4j.PluginManager
@@ -29,14 +31,23 @@ import org.pf4j.PluginManager
 @CompileStatic
 class Plugins {
 
-    public static final String DEFAULT_PLUGINS_REPO = 'https://raw.githubusercontent.com/nextflow-io/plugins/main/plugins.json'
-
     private final static PluginsFacade INSTANCE = new PluginsFacade()
 
     static PluginManager getManager() { INSTANCE.manager }
 
-    static synchronized void setup(Map config = Collections.emptyMap()) {
-        INSTANCE.setup(config)
+    static synchronized void init(boolean embeddedMode=false) {
+        INSTANCE.init(embeddedMode)
+    }
+
+    static synchronized void init(Path root, String mode, CustomPluginManager pluginManager) {
+        INSTANCE.init(root, mode, pluginManager)
+    }
+
+    /**
+     * @param config
+     */
+    static void load(Map config) {
+        INSTANCE.load(config)
     }
 
     static void start(String pluginId) {
@@ -55,13 +66,14 @@ class Plugins {
         INSTANCE.getPriorityExtensions(type,group)
     }
 
-    static <T> Set<T> getScopedExtensions(Class<T> type, String scope=null) {
-        INSTANCE.getScopedExtensions(type,scope)
-    }
-
     static <T> T getExtension(Class<T> type) {
         final allExtensions = INSTANCE.getExtensions(type)
         return allExtensions ? allExtensions.first() : null
+    }
+
+    static <T> List<T> getExtensionsInPluginId(Class<T> type, String pluginId) {
+        final allExtensions = INSTANCE.getExtensions(type, pluginId)
+        return allExtensions
     }
 
     static void pull(List<String> ids) {
@@ -75,5 +87,9 @@ class Plugins {
             log.debug "Plugins subsystem not available - Ignoring installIfMissing('$pluginId')"
             return false
         }
+    }
+
+    static boolean isStarted(String pluginId) {
+        INSTANCE.isStarted(pluginId)
     }
 }

@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,12 +16,16 @@
 
 package nextflow.executor
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.container.DockerConfig
+import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskRun
 /**
  * An executor specialised for CRG cluster
  */
 @Slf4j
+@CompileStatic
 class CrgExecutor extends SgeExecutor {
 
     /**
@@ -35,15 +38,21 @@ class CrgExecutor extends SgeExecutor {
     @Override
     List<String> getDirectives(TaskRun task, List<String> result) {
 
-        if( task.config.cpus>1 && !task.config.penv ) {
+        if( task.config.getCpus()>1 && !task.config.penv ) {
             log.debug 'Parallel environment not specified -- Using default value: `smp`'
             task.config.penv = 'smp'
         }
 
-        result << '-wd' << quote(task.workDir)
+        if( task instanceof TaskArrayRun ) {
+            final arraySize = task.getArraySize()
+            result << '-t' << "1-${arraySize}".toString()
+        }
+
         result << '-N' << getJobNameFor(task)
-        result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
+
+        result << '-o' << (task.isArray() ? '/dev/null' : quote(task.workDir.resolve(TaskRun.CMD_LOG)))
         result << '-j' << 'y'
+
         result << '-terse' << ''    // note: directive need to be returned as pairs
 
         /*
@@ -59,45 +68,43 @@ class CrgExecutor extends SgeExecutor {
 
         //number of cpus for multiprocessing/multi-threading
         if ( task.config.penv ) {
-            result << "-pe" << "${task.config.penv} ${task.config.cpus}"
+            result << "-pe" << "${task.config.penv} ${task.config.getCpus()}".toString()
         }
-        else if( task.config.cpus>1 ) {
-            result << "-l" << "slots=${task.config.cpus}"
+        else if( task.config.getCpus()>1 ) {
+            result << "-l" << "slots=${task.config.getCpus()}".toString()
         }
 
         // max task duration
-        if( task.config.time ) {
+        if( task.config.getTime() ) {
             final time = task.config.getTime()
-            result << "-l" << "h_rt=${time.format('HH:mm:ss')}"
+            result << "-l" << "h_rt=${time.format('HH:mm:ss')}".toString()
         }
 
         // task max memory
         if( task.config.getMemory() ) {
-            final mem = "${task.config.getMemory().mega}M"
-            result << "-l" << "h_vmem=$mem,virtual_free=$mem"
+            final mem = "${task.config.getMemory().mega}M".toString()
+            result << "-l" << "h_vmem=$mem,virtual_free=$mem".toString()
         }
 
         if( task.config.getDisk() ) {
-            result << "-l" << "disk=${task.config.getDisk().toMega()}M"
+            result << "-l" << "disk=${task.config.getDisk().toMega()}M".toString()
         }
 
         if( task.container && task.isDockerEnabled() ) {
             //  this will export the SGE_BINDING environment variable used to set Docker cpuset
-            result << '-binding' << "env linear:${task.config.cpus}"
+            result << '-binding' << "env linear:${task.config.getCpus()}".toString()
 
             // when it is a parallel job add 'reserve' flag
-            if( task.config.cpus>1 ) {
+            if( task.config.getCpus()>1 ) {
                 result << '-R' << 'y'
             }
 
             // request the docker image as a soft resource
-            result << '-soft' << "-l docker_images=*;${task.container};*"
+            result << '-soft' << "-l docker_images=*;${task.container};*".toString()
         }
 
         // -- at the end append the command script wrapped file name
-        if( task.config.clusterOptions ) {
-            result << task.config.clusterOptions.toString() << ''
-        }
+        addClusterOptionsDirective(task.config, result)
 
         return result
     }
@@ -112,7 +119,7 @@ class CrgExecutor extends SgeExecutor {
         // The Univa scheduler must allocate the required cores for the job execution
         // The variable '$SGE_BINDING' must contain the cores to be used
         if( task.container && task.isDockerEnabled() ) {
-            def opt = task.containerConfig.legacy ? '--cpuset' : '--cpuset-cpus'
+            def opt = legacyCpuOpts(task) ? '--cpuset' : '--cpuset-cpus'
             def str = "\n"
             str += "cpuset=\${cpuset:=''}\n"
             str += "[[ \$SGE_BINDING ]] && cpuset=\"$opt \$(echo \$SGE_BINDING | sed 's/ /,/g')\"\n"
@@ -121,6 +128,10 @@ class CrgExecutor extends SgeExecutor {
         }
 
         return builder
+    }
+
+    private boolean legacyCpuOpts(TaskRun task) {
+        return task.containerConfig instanceof DockerConfig && ((DockerConfig) task.containerConfig).legacy
     }
 
 }

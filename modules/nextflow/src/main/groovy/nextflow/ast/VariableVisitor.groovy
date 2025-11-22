@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -73,11 +72,13 @@ class VariableVisitor extends ClassCodeVisitorSupport {
     void visitDeclarationExpression(DeclarationExpression expr) {
         declaration = true
         try {
-            super.visitDeclarationExpression(expr)
+            visit(expr.getLeftExpression())
         }
         finally {
             declaration = false
         }
+
+        visit(expr.getRightExpression())
     }
 
     @Override
@@ -108,7 +109,7 @@ class VariableVisitor extends ClassCodeVisitorSupport {
 
         if( declaration ) {
             if( fAllVariables.containsKey(name) )
-                sourceUnit.addError( new SyntaxException("Variable `$name` already defined in the process scope", line, coln))
+                sourceUnit.addError( new SyntaxException("Variable `$name` already declared in the process scope", line, coln))
             else
                 localDef.add(name)
         }

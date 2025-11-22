@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,6 +34,7 @@ import nextflow.Global
 import nextflow.exception.ProcessException
 import nextflow.script.ScriptBinding
 import nextflow.util.KryoHelper
+import nextflow.util.TestOnly
 /**
  * Map used to delegate variable resolution to script scope
  *
@@ -92,7 +92,7 @@ class TaskContext implements Map<String,Object>, Cloneable {
         log.trace "Binding names for '$name' > $variableNames"
     }
 
-    /** ONLY FOR TEST PURPOSE -- do not use */
+    @TestOnly
     protected TaskContext() { }
 
     TaskContext clone() {
@@ -129,8 +129,7 @@ class TaskContext implements Map<String,Object>, Cloneable {
         "DelegateMap[process: $name; script: ${script?.class?.name}; holder: ${holder}]"
     }
 
-    @Override
-    Object get(Object property) {
+    private Object get0(Object property, boolean throwMissingProperty) {
         assert property
 
         if( holder.containsKey(property) ) {
@@ -141,9 +140,25 @@ class TaskContext implements Map<String,Object>, Cloneable {
             return script.getBinding().getVariable(property.toString())
         }
 
-        throw new MissingPropertyException("Unknown variable '$property' -- Make sure it is not misspelt and defined somewhere in the script before using it", property as String, null)
+        if( throwMissingProperty )
+            throw new MissingPropertyException("Unknown variable '$property' -- Make sure it is not misspelled or defined later in the script", property as String, null)
+        return null
     }
 
+    @Override
+    Object get(Object property) {
+        return get0(property, false)
+    }
+
+    /**
+     * Invokes custom methods in the task execution context
+     *
+     * @see nextflow.script.BaseScript#invokeMethod(java.lang.String, java.lang.Object)
+     *
+     * @param name the name of the method to call
+     * @param args the arguments to use for the method call
+     * @return The result of the custom method execution
+     */
     @Override
     Object invokeMethod(String name, Object args) {
         if( name == 'template' )
@@ -154,7 +169,7 @@ class TaskContext implements Map<String,Object>, Cloneable {
 
     @Override
     def getProperty( String name ) {
-        get((String)name)
+        get0((String)name, true)
     }
 
     @Override
@@ -163,7 +178,7 @@ class TaskContext implements Map<String,Object>, Cloneable {
     }
 
     @Override
-    put(String property, Object newValue) {
+    Object put(String property, Object newValue) {
 
         if( property == 'task' && !(newValue instanceof TaskConfig ) && !overrideWarnShown.getAndSet(true) ) {
             log.warn "Process $name overrides reserved variable `task`"
@@ -315,7 +330,7 @@ class TaskContext implements Map<String,Object>, Cloneable {
             return path
 
         // make from the module dir
-        def module = NF.isDsl2Final() ? ScriptMeta.get(this.script)?.getModuleDir() : null
+        def module = NF.isDsl2() ? ScriptMeta.get(this.script)?.getModuleDir() : null
         if( module ) {
             def target = module.resolve('templates').resolve(path)
             if (Files.exists(target))

@@ -1,7 +1,6 @@
 #!/usr/bin/env nextflow
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,16 +22,19 @@
   * See file `$PWD/checks/workflow-oncomplete.nf/.config` for details
   */
 
-echo true
-
 params.command = 'echo'
-cheers = Channel.from 'Bojour', 'Ciao', 'Hello', 'Hola', 'Γεια σου'
 
 process sayHello {
-  input: 
-  val x from cheers
+  debug true
+  input:
+  val x
   
+  script:
   """
   ${params.command} '$x world!'
   """
+}
+
+workflow {
+   channel.of('Bojour', 'Ciao', 'Hello', 'Hola', 'Γεια σου') | sayHello
 }

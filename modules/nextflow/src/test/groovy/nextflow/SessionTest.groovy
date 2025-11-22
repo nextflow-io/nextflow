@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,11 +22,16 @@ import java.nio.file.attribute.PosixFilePermission
 
 import nextflow.config.Manifest
 import nextflow.container.ContainerConfig
+import nextflow.container.DockerConfig
+import nextflow.container.PodmanConfig
+import nextflow.container.SarusConfig
 import nextflow.exception.AbortOperationException
+import nextflow.file.FileHelper
 import nextflow.script.ScriptFile
 import nextflow.script.WorkflowMetadata
-import nextflow.trace.WorkflowStatsObserver
 import nextflow.trace.TraceFileObserver
+import nextflow.trace.TraceHelper
+import nextflow.trace.WorkflowStatsObserver
 import nextflow.util.Duration
 import nextflow.util.VersionNumber
 import spock.lang.Specification
@@ -70,120 +74,6 @@ class SessionTest extends Specification {
         base.deleteDir()
 
     }
-
-
-    def 'test get queue size'() {
-
-        when:
-        def session = [:] as Session
-        session.config = [ executor:['$sge':[queueSize: 123] ] ]
-        then:
-        session.getQueueSize('sge', 1) == 123
-        session.getQueueSize('xxx', 1) == 1
-        session.getQueueSize(null, 1) == 1
-
-        when:
-        def session2 = [:] as Session
-        session2.config = [ executor:[ queueSize: 321, '$sge':[queueSize:789] ] ]
-        then:
-        session2.getQueueSize('sge', 2) == 789
-        session2.getQueueSize('xxx', 2) == 321
-        session2.getQueueSize(null, 2) == 321
-
-
-        when:
-        def session3 = [:] as Session
-        session3.config = [ executor: 'sge' ]
-        then:
-        session3.getQueueSize('sge', 1) == 1
-        session3.getQueueSize('xxx', 2) == 2
-        session3.getQueueSize(null, 3) == 3
-
-
-    }
-
-    def 'test get poll interval'() {
-
-        when:
-        def session1 = [:] as Session
-        session1.config = [ executor:['$sge':[pollInterval: 345] ] ]
-        then:
-        session1.getPollInterval('sge').toMillis() == 345
-        session1.getPollInterval('xxx').toMillis() == 1_000
-        session1.getPollInterval(null).toMillis() == 1_000
-        session1.getPollInterval(null, 2_000 as Duration).toMillis() == 2_000
-
-        when:
-        def session2 = [:] as Session
-        session2.config = [ executor:[ pollInterval: 321, '$sge':[pollInterval:789] ] ]
-        then:
-        session2.getPollInterval('sge').toMillis() == 789
-        session2.getPollInterval('xxx').toMillis() == 321
-        session2.getPollInterval(null).toMillis() == 321
-
-        when:
-        def session3 = [:] as Session
-        session3.config = [ executor: 'lsf' ]
-        then:
-        session3.getPollInterval('sge', 33 as Duration ).toMillis() == 33
-        session3.getPollInterval('xxx', 44 as Duration ).toMillis() == 44
-        session3.getPollInterval(null, 55 as Duration).toMillis() == 55
-
-    }
-
-    def 'test get exit read timeout'() {
-
-        setup:
-        def session1 = [:] as Session
-        session1.config = [ executor:['$sge':[exitReadTimeout: '5s'] ] ]
-
-        expect:
-        session1.getExitReadTimeout('sge') == '5sec' as Duration
-        session1.getExitReadTimeout('lsf', '3sec' as Duration) == '3sec' as Duration
-
-    }
-
-    def 'test get queue stat interval'() {
-
-        setup:
-        def session1 = [:] as Session
-        session1.config = [ executor:['$sge':[queueStatInterval: '4sec'] ] ]
-
-        expect:
-        session1.getQueueStatInterval('sge') == '4sec' as Duration
-        session1.getQueueStatInterval('lsf', '1sec' as Duration) == '1sec' as Duration
-
-    }
-
-    def 'test monitor dump interval'() {
-
-        setup:
-        def session1 = [:] as Session
-        session1.config = [ executor:['$sge':[dumpInterval: '6sec'] ] ]
-
-        expect:
-        session1.getMonitorDumpInterval('sge') == '6sec' as Duration
-        session1.getMonitorDumpInterval('lsf', '2sec' as Duration) == '2sec' as Duration
-
-    }
-
-    def 'test get exec config prop'() {
-
-        when:
-        def session = [:] as Session
-        session.config = [ executor: [x:123, y:222, '$hazelcast': [y:333] ] ]
-        then:
-        session.getExecConfigProp( 'hazelcast', 'x', null ) == 123
-        session.getExecConfigProp( 'hazelcast', 'y', null ) == 333
-        session.getExecConfigProp( 'local', 'y', null ) == 222
-        session.getExecConfigProp( 'local', 'y', 'beta') == 222
-        session.getExecConfigProp( 'hazelcast', 'z', null ) ==  null
-        session.getExecConfigProp( 'hazelcast', 'z', 'alpha') == 'alpha'
-        session.getExecConfigProp( 'hazelcast', 'z', 'alpha', [NXF_EXECUTOR_Z:'hola']) == 'hola'
-        session.getExecConfigProp( 'hazelcast', 'p.q.z', null, [NXF_EXECUTOR_P_Q_Z:'hello']) == 'hello'
-    }
-
-
 
     def 'test add lib path'() {
 
@@ -238,14 +128,15 @@ class SessionTest extends Specification {
     }
 
     def 'test create observers'() {
-
+        given:
+        TraceHelper.testTimestampFmt = '20221001'
         def session
         def result
         def observer
 
         when:
         session = [:] as Session
-        result = session.createObservers()
+        result = session.createObserversV2()
         then:
         result.size()==1
         result.any { it instanceof WorkflowStatsObserver }
@@ -253,42 +144,41 @@ class SessionTest extends Specification {
         when:
         session = [:] as Session
         session.config = [trace: [enabled: true, file:'name.txt']]
-        result = session.createObservers()
+        result = session.createObserversV2()
         observer = result[1] as TraceFileObserver
         then:
         result.size() == 2
-        observer.tracePath == Paths.get('name.txt').complete()
+        observer.tracePath == FileHelper.asPath('name.txt')
         observer.separator == '\t'
 
         when:
         session = [:] as Session
         session.config = [trace: [enabled: true, sep: 'x', fields: 'task_id,name,exit', file: 'alpha.txt']]
-        result = session.createObservers()
+        result = session.createObserversV2()
         observer = result[1] as TraceFileObserver
         then:
         result.size() == 2
-        observer.tracePath == Paths.get('alpha.txt').complete()
+        observer.tracePath == FileHelper.asPath('alpha.txt')
         observer.separator == 'x'
         observer.fields == ['task_id','name','exit']
 
         when:
         session = [:] as Session
         session.config = [trace: [sep: 'x', fields: 'task_id,name,exit']]
-        result = session.createObservers()
+        result = session.createObserversV2()
         then:
         !result.any { it instanceof TraceFileObserver }
 
         when:
         session = [:] as Session
         session.config = [trace: [enabled: true, fields: 'task_id,name,exit,vmem']]
-        result = session.createObservers()
+        result = session.createObserversV2()
         observer = result[1] as TraceFileObserver
         then:
         result.size() == 2
-        observer.tracePath == Paths.get('trace.txt').complete()
+        observer.tracePath == FileHelper.asPath('trace-20221001.txt')
         observer.separator == '\t'
         observer.fields == ['task_id','name','exit','vmem']
-
 
     }
 
@@ -304,15 +194,16 @@ class SessionTest extends Specification {
         session.init(script)
 
         then:
-        session.binding != null 
+        session.binding != null
         session.baseDir == folder
         session.workDir.isAbsolute()
         !session.workDir.toString().contains('..')
         session.scriptName == 'pipeline.nf'
         session.classesDir.exists()
-        session.observers != null
+        session.observersV1 != null
+        session.observersV2 != null
         session.workflowMetadata != null
-        
+
         cleanup:
         session.classesDir?.deleteDir()
 
@@ -354,23 +245,68 @@ class SessionTest extends Specification {
     @Unroll
     def 'should return engine type' () {
         given:
-        def session =  new Session([(engine): config])
+        def session =  new Session([(ENGINE): CONFIG])
 
         expect:
-        session.containerConfig == config as ContainerConfig
+        session.containerConfig instanceof ContainerConfig
         session.containerConfig.enabled
-        session.containerConfig.engine == engine
+        session.containerConfig.engine == ENGINE
 
         where:
-        engine         | config
+        ENGINE         | CONFIG
         'docker'       | [enabled: true, x:'alpha', y: 'beta']
         'docker'       | [enabled: true, x:'alpha', y: 'beta', registry: 'd.reg']
         'podman'       | [enabled: true, x:'alpha', y: 'beta']
         'podman'       | [enabled: true, x:'alpha', y: 'beta', registry: 'd.reg']
-        'udocker'      | [enabled: true, x:'alpha', y: 'beta']
+        'sarus'        | [enabled: true, x:'delta', y: 'gamma']
         'shifter'      | [enabled: true, x:'delta', y: 'gamma']
         'singularity'  | [enabled: true, x:'delta', y: 'gamma']
         'charliecloud' | [enabled: true, x:'delta', y: 'gamma']
+    }
+
+    def 'should get config for specific engine' () {
+        given:
+        def config = [docker:[registry:'docker.io'], podman: [registry:'quay.io']]
+        def session = new Session(config)
+
+        expect:
+        session.getContainerConfig(null) == new DockerConfig(registry:'docker.io')
+        and:
+        session.getContainerConfig('docker') == new DockerConfig(registry:'docker.io')
+        and:
+        session.getContainerConfig('podman') == new PodmanConfig(registry:'quay.io')
+        and:
+        session.getContainerConfig('sarus') == new SarusConfig([:])
+    }
+
+    @Unroll
+    def 'should get config for conda environments' () {
+        given:
+        def session =  Spy(new Session([conda: CONFIG]))
+        expect:
+        session.condaConfig.isEnabled() == EXPECTED
+
+        where:
+        EXPECTED    | CONFIG            | ENV
+        false       | [:]               | [:]
+        false       | [enabled: false]  | [:]
+        true        | [enabled: true]   | [:]
+
+    }
+
+    @Unroll
+    def 'should get config for spack environments' () {
+        given:
+        def session =  Spy(new Session([spack: CONFIG]))
+        expect:
+        session.spackConfig.isEnabled() == EXPECTED
+
+        where:
+        EXPECTED    | CONFIG            | ENV
+        false       | [:]               | [:]
+        false       | [enabled: false]  | [:]
+        true        | [enabled: true]   | [:]
+
     }
 
     def 'should get manifest object' () {
@@ -389,53 +325,6 @@ class SessionTest extends Specification {
         }
     }
 
-    def 'should get config attribute' () {
-
-        given:
-        def session = Spy(Session)
-
-        when:
-        def result = session.getConfigAttribute('alpha', 'hello')
-        then:
-        result == 'hello'
-
-        when:
-        result = session.getConfigAttribute('delta', 'hello')
-        then:
-        session.getConfig() >> [delta: '1234']
-        result == '1234'
-
-        when:
-        result = session.getConfigAttribute('omega', 'hello')
-        then:
-        session.getSystemEnv() >> [NXF_OMEGA: '6789']
-        result == '6789'
-    }
-
-    def 'should get config nested attribute' () {
-
-        given:
-        def session = Spy(Session)
-
-        when:
-        def result = session.getConfigAttribute('alpha.beta.delta', 'hello')
-        then:
-        result == 'hello'
-
-        when:
-        result = session.getConfigAttribute('alpha.beta.gamma', 'hello')
-        then:
-        session.getConfig() >> [alpha: [beta: [gamma: 'abc']]]
-        result == 'abc'
-
-        when:
-        result = session.getConfigAttribute('alpha.beta.omega', 'hello')
-        then:
-        session.getSystemEnv() >> [NXF_ALPHA_BETA_OMEGA: 'OK']
-        result == 'OK'
-
-    }
-
     @Unroll
     def 'should check valid process name with selector=#SELECTOR' () {
 
@@ -447,7 +336,7 @@ class SessionTest extends Specification {
         session.checkValidProcessName(NAMES, SELECTOR, error)
         then:
         error[0] == MSG
-        
+
         where:
         SELECTOR    | NAMES         | MSG
         'foo'       | ['foo','bar'] | null
@@ -479,25 +368,25 @@ class SessionTest extends Specification {
         when:
         text = '''
                 process {
-                    $proc1 { container = 'alpha' }
-                    $proc2 { container ='beta' }
+                    withName:'proc1' { container = 'alpha' }
+                    withName:'proc2' { container = 'beta' }
                 }
                 '''
         then:
-        new Session(cfg(text)).fetchContainers() == ['$proc1': 'alpha', '$proc2': 'beta']
+        new Session(cfg(text)).fetchContainers() == ['proc1': 'alpha', 'proc2': 'beta']
 
 
         when:
         text = '''
                 process {
-                    $proc1 { container = 'alpha' }
-                    $proc2 { container ='beta' }
+                    withName:'proc1' { container = 'alpha' }
+                    withName:'proc2' { container = 'beta' }
                 }
 
                 process.container = 'gamma'
                 '''
         then:
-        new Session(cfg(text)).fetchContainers() == ['$proc1': 'alpha', '$proc2': 'beta', default: 'gamma']
+        new Session(cfg(text)).fetchContainers() == ['proc1': 'alpha', 'proc2': 'beta', 'default': 'gamma']
 
 
         when:
@@ -552,6 +441,25 @@ class SessionTest extends Specification {
         0 * session.getCurrentVersion() >> null
         0 * session.showVersionWarning(_)
         0 * session.showVersionError(_)
+
+    }
+
+    @Unroll
+    def 'should get module binaries status'() {
+        given:
+        def session = new Session()
+        NextflowMeta.instance.moduleBinaries(MODE)
+
+        expect:
+        session.enableModuleBinaries() == EXPECTED
+
+        cleanup:
+        NextflowMeta.instance.moduleBinaries(false)
+
+        where:
+        MODE  | EXPECTED
+        false | false
+        true  | true
 
     }
 }

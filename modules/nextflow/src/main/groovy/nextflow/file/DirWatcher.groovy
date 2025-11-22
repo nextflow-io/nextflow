@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +16,7 @@
 
 package nextflow.file
 
-import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE
-import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE
-import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY
-import static java.nio.file.StandardWatchEventKinds.OVERFLOW
+import static java.nio.file.StandardWatchEventKinds.*
 
 import java.nio.file.ClosedWatchServiceException
 import java.nio.file.FileSystem
@@ -36,8 +32,9 @@ import java.nio.file.WatchService
 import java.nio.file.attribute.BasicFileAttributes
 
 import groovy.transform.CompileStatic
-import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.util.TestOnly
+import nextflow.util.Threads
 
 /**
  * Watch the content of a directory for file system events
@@ -45,14 +42,9 @@ import groovy.util.logging.Slf4j
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@Deprecated
 @CompileStatic
-class DirWatcher {
-
-    static private Map<String,WatchEvent.Kind<Path>> EVENT_MAP = [
-            'create':ENTRY_CREATE,
-            'delete':ENTRY_DELETE,
-            'modify':ENTRY_MODIFY
-    ]
+class DirWatcher implements DirListener {
 
     private Path base
 
@@ -88,6 +80,9 @@ class DirWatcher {
 
     private volatile boolean terminated
 
+    @TestOnly
+    protected DirWatcher() {}
+
     DirWatcher(String syntax, String folder, String pattern, boolean skipHidden, String events, FileSystem fs) {
         assert syntax in ['regex','glob']
         assert folder.endsWith("/")
@@ -116,22 +111,24 @@ class DirWatcher {
 
     }
 
-    DirWatcher setOnComplete(Closure action) {
+    @Override
+    void onComplete(Closure action) {
         this.onComplete = action
-        return this
     }
 
+    @Override
     void terminate() {
         terminated = true
         watcher?.close()
         thread?.join()
     }
 
+    @Override
     void apply( Closure onNext ) {
         this.onNext = onNext
 
         if( !base.isDirectory() ) {
-            log.warn "Cannot watch a not existing directory: $base -- Make sure that path exists and it is a directory"
+            log.warn "Cannot watch a non-existent directory: $base -- Make sure that the path exists and is a directory"
             onComplete?.call()
             return
         }
@@ -139,7 +136,7 @@ class DirWatcher {
         this.watcher = base.getFileSystem().newWatchService()
         this.watchedPaths = new HashMap<WatchKey,Path>()
 
-        thread = Thread.startDaemon {
+        thread = Threads.start {
             try {
                 apply0()
             }
@@ -241,30 +238,5 @@ class DirWatcher {
         }
     }
 
-
-    /**
-     * Converts a comma separated events string to the corresponding {@code WatchEvent.Kind} instances
-     *
-     * @param events the list of events to watch
-     * @return
-     */
-    @PackageScope
-    static WatchEvent.Kind<Path>[] stringToWatchEvents(String events = null){
-        def result = []
-        if( !events )
-            result << ENTRY_CREATE
-
-        else {
-            events.split(',').each { String it ->
-                def ev = it.trim().toLowerCase()
-                def val = EVENT_MAP[ev]
-                if( !val )
-                    throw new IllegalArgumentException("Invalid watch event: $it -- Valid values are: ${EVENT_MAP.keySet().join(', ')}")
-                result << val
-            }
-        }
-
-        result as WatchEvent.Kind<Path>[]
-    }
 
 }

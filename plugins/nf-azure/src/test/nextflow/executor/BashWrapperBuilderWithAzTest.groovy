@@ -47,20 +47,30 @@ class BashWrapperBuilderWithAzTest extends Specification {
         binding.unstage_outputs == """\
                     IFS=\$'\\n'
                     for name in \$(eval "ls -1d test.bam test.bai" | sort | uniq); do
-                        nxf_az_upload '\$name' '${AzHelper.toHttpUrl(target)}' || true
+                        nxf_az_upload \$name '${AzHelper.toHttpUrl(target)}'
                     done
                     unset IFS
                     """.stripIndent().rightTrim()
 
         binding.helpers_script == '''\
+            # custom env variables used for azcopy opts
+            export AZCOPY_BLOCK_SIZE_MB=4
+            export AZCOPY_BLOCK_BLOB_TIER=None
+            
             nxf_az_upload() {
                 local name=$1
                 local target=${2%/} ## remove ending slash
+                local base_name="$(basename "$name")"
+                local dir_name="$(dirname "$name")"
             
                 if [[ -d $name ]]; then
-                  azcopy cp "$name" "$target?$AZ_SAS" --recursive
+                  if [[ "$base_name" == "$name" ]]; then
+                    azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                  else
+                    azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                  fi
                 else
-                  azcopy cp "$name" "$target/$name?$AZ_SAS"
+                  azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                 fi
             }
             
@@ -103,7 +113,7 @@ class BashWrapperBuilderWithAzTest extends Specification {
         ])
 
         def exec = Mock(AzBatchExecutor) {
-            getConfig() >> new AzConfig([:])
+            getAzConfig() >> new AzConfig([:])
         }
         and:
         def copy = new AzFileCopyStrategy(bean, exec)
@@ -161,7 +171,9 @@ class BashWrapperBuilderWithAzTest extends Specification {
                 while ((i<${#cmd[@]})); do
                     local copy=()
                     for x in "${pid[@]}"; do
-                      [[ -e /proc/$x ]] && copy+=($x)
+                      # if the process exist, keep in the 'copy' array, otherwise wait on it to capture the exit code
+                      # see https://github.com/nextflow-io/nextflow/pull/4050
+                      [[ -e /proc/$x ]] && copy+=($x) || wait $x
                     done
                     pid=("${copy[@]}")
             
@@ -180,14 +192,24 @@ class BashWrapperBuilderWithAzTest extends Specification {
                 unset IFS
             }
             
+            # custom env variables used for azcopy opts
+            export AZCOPY_BLOCK_SIZE_MB=4
+            export AZCOPY_BLOCK_BLOB_TIER=None
+            
             nxf_az_upload() {
                 local name=$1
                 local target=${2%/} ## remove ending slash
+                local base_name="$(basename "$name")"
+                local dir_name="$(dirname "$name")"
             
                 if [[ -d $name ]]; then
-                  azcopy cp "$name" "$target?$AZ_SAS" --recursive
+                  if [[ "$base_name" == "$name" ]]; then
+                    azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                  else
+                    azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                  fi
                 else
-                  azcopy cp "$name" "$target/$name?$AZ_SAS"
+                  azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                 fi
             }
             

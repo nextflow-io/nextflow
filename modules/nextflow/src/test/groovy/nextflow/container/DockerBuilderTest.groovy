@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,16 +32,16 @@ class DockerBuilderTest extends Specification {
     def 'test docker mounts'() {
 
         given:
-        def builder = Spy(DockerBuilder)
+        def builder = new DockerBuilder('busybox')
         def files =  [Paths.get('/folder/data'),  Paths.get('/folder/db'), Paths.get('/folder/db') ]
         def real = [ Paths.get('/user/yo/nextflow/bin'), Paths.get('/user/yo/nextflow/work'), Paths.get('/db/pdb/local/data') ]
         def quotes =  [ Paths.get('/folder with blanks/A'), Paths.get('/folder with blanks/B') ]
 
         expect:
-        builder.makeVolumes([]).toString() == '-v "$PWD":"$PWD" '
-        builder.makeVolumes(files).toString() == '-v /folder:/folder -v "$PWD":"$PWD" '
-        builder.makeVolumes(real).toString()  == '-v /user/yo/nextflow:/user/yo/nextflow -v /db/pdb/local/data:/db/pdb/local/data -v "$PWD":"$PWD" '
-        builder.makeVolumes(quotes).toString() == '-v /folder\\ with\\ blanks:/folder\\ with\\ blanks -v "$PWD":"$PWD" '
+        builder.makeVolumes([]).toString() == '-v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" '
+        builder.makeVolumes(files).toString() == '-v /folder:/folder -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" '
+        builder.makeVolumes(real).toString()  == '-v /user/yo/nextflow:/user/yo/nextflow -v /db/pdb/local/data:/db/pdb/local/data -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" '
+        builder.makeVolumes(quotes).toString() == '-v /folder\\ with\\ blanks:/folder\\ with\\ blanks -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" '
 
     }
 
@@ -50,7 +49,7 @@ class DockerBuilderTest extends Specification {
     def 'test docker env'() {
 
         given:
-        def builder = Spy(DockerBuilder)
+        def builder = new DockerBuilder('busybox')
 
         expect:
         builder.makeEnv(ENV).toString() == EXPECT
@@ -59,7 +58,7 @@ class DockerBuilderTest extends Specification {
         ENV                 | EXPECT
         'X=1'               | '-e "X=1"'
         [VAR_X:1, VAR_Y: 2] | '-e "VAR_X=1" -e "VAR_Y=2"'
-        'BAR'               | '${BAR:+-e "BAR=$BAR"}'
+        'BAR'               | '-e "BAR"'
     }
 
     def 'test docker create command line'() {
@@ -71,67 +70,55 @@ class DockerBuilderTest extends Specification {
         expect:
         new DockerBuilder('fedora')
                 .build()
-                .runCommand == 'docker run -i -v "$PWD":"$PWD" -w "$PWD" fedora'
+                .runCommand == 'docker run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
 
         new DockerBuilder('fedora')
                 .addEnv(env)
                 .build()
-                .runCommand == 'docker run -i -e "FOO=1" -e "BAR=hello world" -v "$PWD":"$PWD" -w "$PWD" fedora'
+                .runCommand == 'docker run -i -e "FOO=1" -e "BAR=hello world" -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
 
-        new DockerBuilder('ubuntu')
-                .params(temp:'/hola')
+        new DockerBuilder('ubuntu', new DockerConfig(temp:'/hola'))
                 .build()
-                .runCommand == 'docker run -i -v /hola:/tmp -v "$PWD":"$PWD" -w "$PWD" ubuntu'
+                .runCommand == 'docker run -i -v /hola:/tmp -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" ubuntu'
 
-        new DockerBuilder('busybox')
-                .params(sudo: true)
+        new DockerBuilder('busybox', new DockerConfig(sudo: true))
                 .build()
-                .runCommand == 'sudo docker run -i -v "$PWD":"$PWD" -w "$PWD" busybox'
+                .runCommand == 'sudo docker run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" busybox'
 
         new DockerBuilder('busybox')
                 .params(entry: '/bin/bash')
                 .build()
-                .runCommand == 'docker run -i -v "$PWD":"$PWD" -w "$PWD" --entrypoint /bin/bash busybox'
+                .runCommand == 'docker run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --entrypoint /bin/bash busybox'
 
-        new DockerBuilder('busybox')
-                .params(runOptions: '-x --zeta')
+        new DockerBuilder('busybox', new DockerConfig(runOptions: '-x --zeta'))
                 .build()
-                .runCommand == 'docker run -i -v "$PWD":"$PWD" -w "$PWD" -x --zeta busybox'
-
-        new DockerBuilder('busybox')
-                .params(userEmulation:true)
-                .build()
-                .runCommand == 'docker run -i -u $(id -u) -e "HOME=${HOME}" -v /etc/passwd:/etc/passwd:ro -v /etc/shadow:/etc/shadow:ro -v /etc/group:/etc/group:ro -v $HOME:$HOME -v "$PWD":"$PWD" -w "$PWD" busybox'
+                .runCommand == 'docker run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" -x --zeta busybox'
 
         new DockerBuilder('busybox')
                 .setName('hola')
                 .build()
-                .runCommand == 'docker run -i -v "$PWD":"$PWD" -w "$PWD" --name hola busybox'
+                .runCommand == 'docker run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --name hola busybox'
 
-        new DockerBuilder('busybox')
-                .params(engineOptions: '--tlsverify --tlscert="/path/to/my/cert"')
+        new DockerBuilder('busybox', new DockerConfig(engineOptions: '--tlsverify --tlscert="/path/to/my/cert"'))
                 .build()
-                .runCommand == 'docker --tlsverify --tlscert="/path/to/my/cert" run -i -v "$PWD":"$PWD" -w "$PWD" busybox'
+                .runCommand == 'docker --tlsverify --tlscert="/path/to/my/cert" run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" busybox'
 
         new DockerBuilder('fedora')
                 .addEnv(env)
                 .addMount(db_file)
                 .addMount(db_file)  // <-- add twice the same to prove that the final string won't contain duplicates
                 .build()
-                .runCommand == 'docker run -i -e "FOO=1" -e "BAR=hello world" -v /home/db:/home/db -v "$PWD":"$PWD" -w "$PWD" fedora'
+                .runCommand == 'docker run -i -e "FOO=1" -e "BAR=hello world" -v /home/db:/home/db -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
 
-        new DockerBuilder('fedora')
-                .params(readOnlyInputs: true)
+        new DockerBuilder('fedora', new DockerConfig(writableInputMounts: false))
                 .addMount(db_file)
                 .build()
-                .runCommand == 'docker run -i -v /home/db:/home/db:ro -v "$PWD":"$PWD" -w "$PWD" fedora'
+                .runCommand == 'docker run -i -v /home/db:/home/db:ro -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
 
-
-        new DockerBuilder('fedora')
-                .params(mountFlags: 'Z')
+        new DockerBuilder('fedora', new DockerConfig(mountFlags: 'Z'))
                 .addMount(db_file)
                 .build()
-                .runCommand == 'docker run -i -v /home/db:/home/db:Z -v "$PWD":"$PWD":Z -w "$PWD" fedora'
+                .runCommand == 'docker run -i -v /home/db:/home/db:Z -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR":Z -w "$NXF_TASK_WORKDIR" fedora'
     }
 
     def 'test memory and cpuset' () {
@@ -140,48 +127,73 @@ class DockerBuilderTest extends Specification {
         new DockerBuilder('fedora')
                 .setCpus(2)
                 .build()
-                .runCommand == 'docker run -i --cpus 2.0 -v "$PWD":"$PWD" -w "$PWD" fedora'
+                .runCommand == 'docker run -i --cpu-shares 2048 -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
 
         new DockerBuilder('fedora')
-                .setCpus(1.414)
-                .build()
-                .runCommand == 'docker run -i --cpus 1.4 -v "$PWD":"$PWD" -w "$PWD" fedora'
-
-        new DockerBuilder('fedora')
-                .setCpus(2.5)
-                .setCpuset('1,2')
-                .build()
-                .runCommand == 'docker run -i --cpus 2.5 --cpuset-cpus 1,2 -v "$PWD":"$PWD" -w "$PWD" fedora'
-
-        new DockerBuilder('fedora')
-                .params(legacy: true)
-                .setCpuset('1,2')
-                .build()
-                .runCommand == 'docker run -i --cpuset 1,2 -v "$PWD":"$PWD" -w "$PWD" fedora'
-
-
-        new DockerBuilder('fedora')
-                .params(legacy: true)
                 .setCpus(1)
                 .build()
-                .runCommand == 'docker run -i -v "$PWD":"$PWD" -w "$PWD" fedora'
+                .runCommand == 'docker run -i --cpu-shares 1024 -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
+
+        new DockerBuilder('fedora')
+                .setCpus(8)
+                .setCpuset('1,2')
+                .build()
+                .runCommand == 'docker run -i --cpu-shares 8192 --cpuset-cpus 1,2 -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
+
+        new DockerBuilder('fedora', new DockerConfig(legacy: true))
+                .setCpuset('1,2')
+                .build()
+                .runCommand == 'docker run -i --cpuset 1,2 -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
+
+
+        new DockerBuilder('fedora', new DockerConfig(legacy: true))
+                .setCpus(1)
+                .build()
+                .runCommand == 'docker run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
 
         new DockerBuilder('fedora')
                 .setMemory('10g')
                 .build()
-                .runCommand == 'docker run -i --memory 10g -v "$PWD":"$PWD" -w "$PWD" fedora'
+                .runCommand == 'docker run -i --memory 10g -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
 
         new DockerBuilder('fedora')
                 .setMemory(new MemoryUnit('100M'))
                 .build()
-                .runCommand == 'docker run -i --memory 100m -v "$PWD":"$PWD" -w "$PWD" fedora'
+                .runCommand == 'docker run -i --memory 100m -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
 
         new DockerBuilder('fedora')
                 .setCpuset('1-3')
                 .setMemory(new MemoryUnit('100M'))
                 .build()
-                .runCommand == 'docker run -i --cpuset-cpus 1-3 --memory 100m -v "$PWD":"$PWD" -w "$PWD" fedora'
+                .runCommand == 'docker run -i --cpuset-cpus 1-3 --memory 100m -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
 
+        new DockerBuilder('fedora')
+                .params(privileged: true)
+                .build()
+                .runCommand == 'docker run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --privileged fedora'
+
+        new DockerBuilder('fedora')
+                .params(device: '/dev/fuse')
+                .params(capAdd: 'SYS_ADMIN')
+                .build()
+                .runCommand == 'docker run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --device /dev/fuse --cap-add SYS_ADMIN fedora'
+    }
+
+    def 'test container platform' () {
+        expect:
+        new DockerBuilder('fedora')
+            .build()
+            .runCommand == 'docker run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
+
+        new DockerBuilder('fedora')
+            .setPlatform('amd64')
+            .build()
+            .runCommand == 'docker run -i --platform amd64 -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
+
+        new DockerBuilder('fedora')
+            .setPlatform('linux/arm64')
+            .build()
+            .runCommand == 'docker run -i --platform linux/arm64 -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
     }
 
     def 'test add mount'() {
@@ -203,26 +215,29 @@ class DockerBuilderTest extends Specification {
     def 'test get commands'() {
 
         when:
+        def config
         def docker =  new DockerBuilder('busybox').setName('c1').build()
         then:
-        docker.runCommand == 'docker run -i -v "$PWD":"$PWD" -w "$PWD" --name c1 busybox'
+        docker.runCommand == 'docker run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --name c1 busybox'
         docker.removeCommand == 'docker rm c1'
-        docker.killCommand == 'docker kill c1'
+        docker.killCommand == 'docker stop c1'
 
         when:
-        docker =  new DockerBuilder('busybox').setName('c2').params(sudo: true, remove: true).build()
+        config = new DockerConfig(sudo: true, remove: true)
+        docker = new DockerBuilder('busybox', config).setName('c2').build()
         then:
-        docker.runCommand == 'sudo docker run -i -v "$PWD":"$PWD" -w "$PWD" --name c2 busybox'
+        docker.runCommand == 'sudo docker run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --name c2 busybox'
         docker.removeCommand == 'sudo docker rm c2'
-        docker.killCommand == 'sudo docker kill c2'
+        docker.killCommand == 'sudo docker stop c2'
 
 
         when:
-        docker =  new DockerBuilder('busybox').setName('c3').params(remove: true).build()
+        config = new DockerConfig(remove: true)
+        docker = new DockerBuilder('busybox', config).setName('c3').build()
         then:
-        docker.runCommand == 'docker run -i -v "$PWD":"$PWD" -w "$PWD" --name c3 busybox'
+        docker.runCommand == 'docker run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --name c3 busybox'
         docker.removeCommand == 'docker rm c3'
-        docker.killCommand == 'docker kill c3'
+        docker.killCommand == 'docker stop c3'
 
         when:
         docker =  new DockerBuilder('busybox').setName('c4').params(kill: 'SIGKILL').build()
@@ -230,7 +245,8 @@ class DockerBuilderTest extends Specification {
         docker.killCommand == 'docker kill -s SIGKILL c4'
 
         when:
-        docker =  new DockerBuilder('busybox').setName('c5').params(kill: false,remove: false).build()
+        config = new DockerConfig(remove: false)
+        docker = new DockerBuilder('busybox', config).setName('c5').params(kill: false).build()
         then:
         docker.killCommand == null
         docker.removeCommand == null
@@ -243,24 +259,25 @@ class DockerBuilderTest extends Specification {
         when:
         def cli = new DockerBuilder('ubuntu:14').build().getRunCommand()
         then:
-        cli ==  'docker run -i -v "$PWD":"$PWD" -w "$PWD" ubuntu:14'
+        cli ==  'docker run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" ubuntu:14'
 
         when:
         cli = new DockerBuilder('ubuntu:14').build().getRunCommand('bwa --this --that file.fasta')
         then:
-        cli ==  'docker run -i -v "$PWD":"$PWD" -w "$PWD" ubuntu:14 bwa --this --that file.fasta'
+        cli ==  'docker run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" ubuntu:14 bwa --this --that file.fasta'
 
         when:
         cli = new DockerBuilder('ubuntu:14').params(entry:'/bin/bash').build().getRunCommand('bwa --this --that file.fasta')
         then:
-        cli ==  'docker run -i -v "$PWD":"$PWD" -w "$PWD" --entrypoint /bin/bash ubuntu:14 -c "bwa --this --that file.fasta"'
+        cli ==  'docker run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --entrypoint /bin/bash ubuntu:14 -c "bwa --this --that file.fasta"'
 
     }
 
     def 'should return mount flags'() {
 
         given:
-        def builder = new DockerBuilder().params(mountFlags: flags)
+        def config = new DockerConfig(mountFlags: flags)
+        def builder = new DockerBuilder('busybox', config)
 
         expect:
         builder.mountFlags(readOnly) == expected

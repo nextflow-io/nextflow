@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +17,10 @@
 package nextflow.cli
 import java.nio.file.Files
 
-import nextflow.CacheDB
+import nextflow.cache.CacheDB
+import nextflow.cache.DefaultCacheStore
 import nextflow.executor.CachedTaskHandler
+import nextflow.plugin.Plugins
 import nextflow.script.ProcessConfig
 import nextflow.processor.TaskContext
 import nextflow.processor.TaskProcessor
@@ -37,6 +38,10 @@ import test.OutputCapture
  */
 class CmdLogTest extends Specification {
 
+    def cleanup() {
+        Plugins.stop()
+    }
+    
     /*
      * Read more http://mrhaki.blogspot.com.es/2015/02/spocklight-capture-and-assert-system.html
      */
@@ -52,7 +57,8 @@ class CmdLogTest extends Specification {
         final runName = 'test_1'
 
         // -- the session object
-        def cache = new CacheDB(uuid, runName, folder)
+        def store = new DefaultCacheStore(uuid, runName, folder)
+        def cache = new CacheDB(store)
 
         // -- the processor mock
         def proc = Mock(TaskProcessor)
@@ -90,7 +96,7 @@ class CmdLogTest extends Specification {
         cache.writeTaskEntry0(h3, h3.getTraceRecord())
         cache.close()
 
-        def history = new HistoryFile(folder.resolve(HistoryFile.FILE_NAME))
+        def history = new HistoryFile(folder.resolve(HistoryFile.defaultFileName()))
         history.write(runName,uuid,'b3d3aca8eb','run')
 
         when:
@@ -102,6 +108,7 @@ class CmdLogTest extends Specification {
                 // remove the log part
                 .findResults { line -> !line.contains('DEBUG') ? line : null }
                 .findResults { line -> !line.contains('INFO') ? line : null }
+                .findResults { line -> !line.contains('plugin') ? line : null }
                 .join('\n')
         then:
         stdout.readLines().size() == 3
@@ -120,7 +127,8 @@ class CmdLogTest extends Specification {
         final runName = 'test_1'
 
         // -- the session object
-        def cache = new CacheDB(uuid, runName, folder)
+        def store = new DefaultCacheStore(uuid, runName, folder)
+        def cache = new CacheDB(store)
 
         // -- the processor mock
         def proc = Mock(TaskProcessor)
@@ -158,7 +166,7 @@ class CmdLogTest extends Specification {
         cache.writeTaskEntry0(h3, h3.getTraceRecord())
         cache.close()
 
-        def history = new HistoryFile(folder.resolve(HistoryFile.FILE_NAME))
+        def history = new HistoryFile(folder.resolve(HistoryFile.defaultFileName()))
         history.write(runName,uuid,'b3d3aca8eb','run')
 
 
@@ -173,7 +181,6 @@ class CmdLogTest extends Specification {
                 .findResults { line -> !line.contains('DEBUG') ? line : null }
                 .join('\n')
         then:
-        stdout.readLines().size() == 2
         stdout.readLines().contains( "$folder/aaa" .toString())
         stdout.readLines().contains( "$folder/ccc" .toString())
 

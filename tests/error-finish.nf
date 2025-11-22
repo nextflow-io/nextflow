@@ -1,7 +1,6 @@
 #!/usr/bin/env nextflow
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +16,10 @@
  */
 
 process foo {
-  echo true
+  debug true
   errorStrategy 'finish'
-  input:  each x from 1,2,3
-  output: stdout into results
+  input:  each x
+  output: stdout
 
   script:
   if( x != 3 )
@@ -35,7 +34,7 @@ process foo {
 }
 
 process bar {
-  input:  file 'x' from results
+  input:  file 'x'
 
   script:
   '''
@@ -43,8 +42,11 @@ process bar {
   '''
 }
 
+workflow {
+  foo([1,2,3]) | bar
 
-workflow.onError {
-  println "success: $workflow.success"
-  println "exitStatus: $workflow.exitStatus"
+  workflow.onError = {
+    println "success: $workflow.success"
+    println "exitStatus: $workflow.exitStatus"
+  }
 }

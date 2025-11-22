@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,11 +28,12 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.LazyDataflowVariable
 import nextflow.Global
+import nextflow.SysEnv
 import nextflow.file.FileMutex
 import nextflow.util.CacheHelper
 import nextflow.util.Duration
 import nextflow.util.Escape
-import org.yaml.snakeyaml.Yaml
+import nextflow.util.TestOnly
 /**
  * Handle Conda environment creation and caching
  *
@@ -42,7 +42,8 @@ import org.yaml.snakeyaml.Yaml
 @Slf4j
 @CompileStatic
 class CondaCache {
-
+    static final private Object condaLock = new Object()
+    
     /**
      * Cache the prefix path for each Conda environment
      */
@@ -56,29 +57,38 @@ class CondaCache {
     /**
      * Timeout after which the environment creation is aborted
      */
-    private Duration createTimeout = Duration.of('20min')
+    private Duration createTimeout
 
     private String createOptions
 
-    private boolean useMamba 
+    private boolean useMamba
+
+    private boolean useMicromamba 
 
     private Path configCacheDir0
+
+    private List<String> channels = Collections.emptyList()
 
     @PackageScope String getCreateOptions() { createOptions }
 
     @PackageScope Duration getCreateTimeout() { createTimeout }
 
-    @PackageScope Map<String,String> getEnv() { System.getenv() }
+    @PackageScope Map<String,String> getEnv() { SysEnv.get() }
 
     @PackageScope Path getConfigCacheDir0() { configCacheDir0 }
 
+    @PackageScope List<String> getChannels() { channels }
+
     @PackageScope String getBinaryName() {
-        useMamba ? "mamba" : "conda"
+        if (useMamba)
+            return "mamba"
+        if (useMicromamba) 
+            return "micromamba"
+        return "conda"
     }
 
-    /** Only for debugging purpose - do not use */
-    @PackageScope
-    CondaCache() {}
+    @TestOnly
+    protected CondaCache() {}
 
     /**
      * Create a Conda env cache object
@@ -88,18 +98,27 @@ class CondaCache {
     CondaCache(CondaConfig config) {
         this.config = config
 
-        if( config.createTimeout )
-            createTimeout = config.createTimeout as Duration
+        if( config.createTimeout() )
+            createTimeout = config.createTimeout()
 
-        if( config.createOptions )
-            createOptions = config.createOptions
+        if( config.createOptions() )
+            createOptions = config.createOptions()
 
-        if( config.cacheDir )
-            configCacheDir0 = (config.cacheDir as Path).toAbsolutePath()
+        if( config.cacheDir() )
+            configCacheDir0 = config.cacheDir().toAbsolutePath()
 
-        if( config.useMamba )
-            useMamba = config.useMamba as boolean
+        if( config.useMamba() && config.useMicromamba() )
+            throw new IllegalArgumentException("Both conda.useMamba and conda.useMicromamba were enabled -- Please choose only one")
+        
+        if( config.useMamba() ) {
+            useMamba = config.useMamba()
+        }
 
+        if( config.useMicromamba() )
+            useMicromamba = config.useMicromamba()
+
+        if( config.getChannels() )
+            channels = config.getChannels()
     }
 
     /**
@@ -128,7 +147,7 @@ class CondaCache {
         }
 
         if( !cacheDir.exists() && !cacheDir.mkdirs() ) {
-            throw new IOException("Failed to create Conda cache directory: $cacheDir -- Make sure a file with the same does not exist and you have write permission")
+            throw new IOException("Failed to create Conda cache directory: $cacheDir -- Make sure a file with the same name does not exist and you have write permission")
         }
 
         return cacheDir
@@ -147,7 +166,6 @@ class CondaCache {
         str.endsWith('.txt') && !str.contains('\n')
     }
 
-
     /**
      * Get the path on the file system where store a Conda environment
      *
@@ -160,42 +178,41 @@ class CondaCache {
 
         String content
         String name = 'env'
+        // check if it's a remote uri
+        if( isYamlUriPath(condaEnv) ) {
+            content = condaEnv
+        }
         // check if it's a YAML file
-        if( isYamlFilePath(condaEnv) ) {
+        else if( isYamlFilePath(condaEnv) ) {
             try {
                 final path = condaEnv as Path
                 content = path.text
-                final yaml = (Map)new Yaml().load(content)
-                if( yaml.name )
-                    name = yaml.name
-                else
-                    name = path.baseName
+
             }
             catch( NoSuchFileException e ) {
                 throw new IllegalArgumentException("Conda environment file does not exist: $condaEnv")
             }
             catch( Exception e ) {
-                throw new IllegalArgumentException("Error parsing Conda environment YAML file: $condaEnv -- Chech the log file for details", e)
+                throw new IllegalArgumentException("Error parsing Conda environment YAML file: $condaEnv -- Check the log file for details", e)
             }
         }
         else if( isTextFilePath(condaEnv) )  {
             try {
                 final path = condaEnv as Path
                 content = path.text
-                name = path.baseName
             }
             catch( NoSuchFileException e ) {
                 throw new IllegalArgumentException("Conda environment file does not exist: $condaEnv")
             }
             catch( Exception e ) {
-                throw new IllegalArgumentException("Error parsing Conda environment text file: $condaEnv -- Chech the log file for details", e)
+                throw new IllegalArgumentException("Error parsing Conda environment text file: $condaEnv -- Check the log file for details", e)
             }
         }
         // it's interpreted as user provided prefix directory
         else if( condaEnv.contains('/') ) {
             final prefix = condaEnv as Path
             if( !prefix.isDirectory() )
-                throw new IllegalArgumentException("Conda prefix path does not exist or it's not a directory: $prefix")
+                throw new IllegalArgumentException("Conda prefix path does not exist or is not a directory: $prefix")
             if( prefix.fileSystem != FileSystems.default )
                 throw new IllegalArgumentException("Conda prefix path must be a POSIX file path: $prefix")
 
@@ -219,8 +236,8 @@ class CondaCache {
      * @return the conda environment prefix {@link Path}
      */
     @PackageScope
-    Path createLocalCondaEnv(String condaEnv) {
-        final prefixPath = condaPrefixPath(condaEnv)
+    Path createLocalCondaEnv(String condaEnv, Path prefixPath) {
+
         if( prefixPath.isDirectory() ) {
             log.debug "${binaryName} found local env for environment=$condaEnv; path=$prefixPath"
             return prefixPath
@@ -246,27 +263,44 @@ class CondaCache {
         Paths.get(envFile).toAbsolutePath()
     }
 
+    @PackageScope boolean isYamlUriPath(String env) {
+        env.startsWith('http://') || env.startsWith('https://')
+    }
+
     @PackageScope
     Path createLocalCondaEnv0(String condaEnv, Path prefixPath) {
+        if( prefixPath.isDirectory() ) {
+            log.debug "${binaryName} found local env for environment=$condaEnv; path=$prefixPath"
+            return prefixPath
+        }
 
         log.info "Creating env using ${binaryName}: $condaEnv [cache $prefixPath]"
 
-        final opts = createOptions ? "$createOptions " : ''
+        String opts = createOptions ? "$createOptions " : ''
+
         def cmd
         if( isYamlFilePath(condaEnv) ) {
-            cmd = "${binaryName} env create --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
+            final target = isYamlUriPath(condaEnv) ? condaEnv : Escape.path(makeAbsolute(condaEnv))
+            final yesOpt = binaryName=="mamba" || binaryName == "micromamba"  ? '--yes ' : ''
+            cmd = "${binaryName} env create ${yesOpt}--prefix ${Escape.path(prefixPath)} --file ${target}"
         }
         else if( isTextFilePath(condaEnv) ) {
-
-            cmd = "${binaryName} create $opts--mkdir --yes --quiet --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
+            cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
         }
 
         else {
-            cmd = "${binaryName} create $opts--mkdir --yes --quiet --prefix ${Escape.path(prefixPath)} $condaEnv"
+            final channelsOpt = channels.collect(it -> "-c $it ").join('')
+            cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} ${channelsOpt}$condaEnv"
         }
 
         try {
-            runCommand( cmd )
+            // Parallel execution of conda causes data and package corruption.
+            // https://github.com/nextflow-io/nextflow/issues/4233
+            // https://github.com/conda/conda/issues/13037
+            // Should be removed as soon as the upstream bug is fixed and released.
+            synchronized(condaLock) {
+                runCommand( cmd )
+            }
             log.debug "'${binaryName}' create complete env=$condaEnv path=$prefixPath"
         }
         catch( Exception e ){
@@ -281,13 +315,13 @@ class CondaCache {
     int runCommand( String cmd ) {
         log.trace """${binaryName} create
                      command: $cmd
-                     timeout: $createTimeout""".stripIndent()
+                     timeout: $createTimeout""".stripIndent(true)
 
         final max = createTimeout.toMillis()
         final builder = new ProcessBuilder(['bash','-c',cmd])
-        final proc = builder.start()
+        final proc = builder.redirectErrorStream(true).start()
         final err = new StringBuilder()
-        final consumer = proc.consumeProcessErrorStream(err)
+        final consumer = proc.consumeProcessOutputStream(err)
         proc.waitForOrKill(max)
         def status = proc.exitValue()
         if( status != 0 ) {
@@ -313,17 +347,18 @@ class CondaCache {
      */
     @PackageScope
     DataflowVariable<Path> getLazyImagePath(String condaEnv) {
-
-        if( condaEnv in condaPrefixPaths ) {
+        final prefixPath = condaPrefixPath(condaEnv)
+        final condaEnvPath = prefixPath.toString()
+        if( condaEnvPath in condaPrefixPaths ) {
             log.trace "${binaryName} found local environment `$condaEnv`"
-            return condaPrefixPaths[condaEnv]
+            return condaPrefixPaths[condaEnvPath]
         }
 
         synchronized (condaPrefixPaths) {
-            def result = condaPrefixPaths[condaEnv]
+            def result = condaPrefixPaths[condaEnvPath]
             if( result == null ) {
-                result = new LazyDataflowVariable<Path>({ createLocalCondaEnv(condaEnv) })
-                condaPrefixPaths[condaEnv] = result
+                result = new LazyDataflowVariable<Path>({ createLocalCondaEnv(condaEnv, prefixPath) })
+                condaPrefixPaths[condaEnvPath] = result
             }
             else {
                 log.trace "${binaryName} found local cache for environment `$condaEnv` (2)"

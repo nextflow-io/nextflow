@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,10 +23,10 @@ package nextflow.processor
  */
 enum ErrorStrategy {
 
-    TERMINATE(false),    // on error, terminate the pipeline execution killing all pending and running tasks
-    FINISH(false),       // on error, terminate the pipeline execution awaiting for previously submitted task to complete
-    IGNORE(true),       // on error, ignore it an go-on
-    RETRY(true);        // on error, retry
+    TERMINATE(false),       // on error, terminate the pipeline execution, killing all pending and running tasks
+    FINISH(false),          // on error, terminate the pipeline execution, waiting for pending and running tasks to complete
+    IGNORE(true),           // on error, ignore it and continue
+    RETRY(true);            // on error, retry
 
     final boolean soft
 
@@ -35,4 +34,15 @@ enum ErrorStrategy {
         this.soft = soft
     }
 
+    static boolean isValid(CharSequence name) {
+        if( !name )
+            return false
+        try {
+            valueOf(name.toString().toUpperCase())
+            return true
+        }
+        catch (IllegalArgumentException e) {
+            return false
+        }
+    }
 }

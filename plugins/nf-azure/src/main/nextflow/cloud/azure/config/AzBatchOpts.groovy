@@ -21,15 +21,24 @@ import java.util.regex.Matcher
 import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
+import nextflow.Global
+import nextflow.Session
 import nextflow.cloud.CloudTransferOptions
+import nextflow.config.spec.ConfigOption
+import nextflow.config.spec.ConfigScope
+import nextflow.config.spec.PlaceholderName
+import nextflow.fusion.FusionHelper
+import nextflow.script.dsl.Description
 import nextflow.util.Duration
+import nextflow.util.StringUtils
+
 /**
  * Model Azure Batch pool config settings
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-class AzBatchOpts implements CloudTransferOptions {
+class AzBatchOpts implements ConfigScope, CloudTransferOptions {
 
     static final private Pattern ENDPOINT_PATTERN = ~/https:\/\/(\w+)\.(\w+)\.batch\.azure\.com/
 
@@ -39,17 +48,86 @@ class AzBatchOpts implements CloudTransferOptions {
     int maxTransferAttempts
     Duration delayBetweenAttempts
 
-    String accountName
-    String accountKey
-    String endpoint
-    String location
-    Boolean autoPoolMode
-    Boolean allowPoolCreation
-    Boolean deleteJobsOnCompletion
-    Boolean deletePoolsOnCompletion
-    CopyToolInstallMode copyToolInstallMode
+    @ConfigOption
+    @Description("""
+        The batch service account name. Defaults to environment variable `AZURE_BATCH_ACCOUNT_NAME`.
+    """)
+    final String accountName
 
-    Map<String,AzPoolOpts> pools
+    @ConfigOption
+    @Description("""
+        The batch service account key. Defaults to environment variable `AZURE_BATCH_ACCOUNT_KEY`.
+    """)
+    final String accountKey
+
+    @ConfigOption
+    @Description("""
+        Enable the automatic creation of batch pools specified in the Nextflow configuration file (default: `false`).
+    """)
+    final Boolean allowPoolCreation
+
+    @ConfigOption
+    @Description("""
+        Enable the automatic creation of batch pools depending on the pipeline resources demand (default: `true`).
+    """)
+    final Boolean autoPoolMode
+
+    @ConfigOption(types=[String])
+    @Description("""
+        The mode in which the `azcopy` tool is installed by Nextflow (default: `'node'`).
+    """)
+    final CopyToolInstallMode copyToolInstallMode
+
+    @ConfigOption
+    @Description("""
+        Delete all jobs when the workflow completes (default: `false`).
+    """)
+    final Boolean deleteJobsOnCompletion
+
+    @ConfigOption
+    @Description("""
+        Delete all compute node pools when the workflow completes (default: `false`).
+    """)
+    final Boolean deletePoolsOnCompletion
+
+    @ConfigOption
+    @Description("""
+        Delete each task when it completes (default: `true`).
+    """)
+    final Boolean deleteTasksOnCompletion
+
+    @ConfigOption
+    @Description("""
+        The batch service endpoint e.g. `https://nfbatch1.westeurope.batch.azure.com`.
+    """)
+    final String endpoint
+
+    @ConfigOption
+    @Description("""
+        The maximum elapsed time that jobs may run, measured from the time they are created (default: `30d`).
+    """)
+    final Duration jobMaxWallClockTime
+
+    @ConfigOption
+    @Description("""
+        The name of the batch service region, e.g. `westeurope` or `eastus2`. Not needed when the endpoint is specified.
+    """)
+    final String location
+
+    @ConfigOption
+    @Description("""
+        The client ID for an Azure [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview) that is available on all Azure Batch node pools. This identity is used by Fusion to authenticate to Azure storage. If set to `'auto'`, Fusion will use the first available managed identity.
+    """)
+    final String poolIdentityClientId
+
+    @PlaceholderName("<name>")
+    final Map<String, AzPoolOpts> pools
+
+    @ConfigOption
+    @Description("""
+        When the workflow completes, set all jobs to terminate on task completion (default: `true`).
+    """)
+    final Boolean terminateJobsOnCompletion
 
     AzBatchOpts(Map config, Map<String,String> env=null) {
         assert config!=null
@@ -58,10 +136,14 @@ class AzBatchOpts implements CloudTransferOptions {
         accountKey = config.accountKey ?: sysEnv.get('AZURE_BATCH_ACCOUNT_KEY')
         endpoint = config.endpoint
         location = config.location
-        autoPoolMode = config.autoPoolMode
-        allowPoolCreation = config.allowPoolCreation
-        deleteJobsOnCompletion = config.deleteJobsOnCompletion
-        deletePoolsOnCompletion = config.deletePoolsOnCompletion
+        autoPoolMode = config.autoPoolMode as Boolean
+        allowPoolCreation = config.allowPoolCreation as Boolean
+        terminateJobsOnCompletion = config.terminateJobsOnCompletion != Boolean.FALSE
+        deleteJobsOnCompletion = config.deleteJobsOnCompletion as Boolean
+        deletePoolsOnCompletion = config.deletePoolsOnCompletion as Boolean
+        deleteTasksOnCompletion = config.deleteTasksOnCompletion as Boolean
+        jobMaxWallClockTime = config.jobMaxWallClockTime ? config.jobMaxWallClockTime as Duration : Duration.of('30d')
+        poolIdentityClientId = config.poolIdentityClientId
         pools = parsePools(config.pools instanceof Map ? config.pools as Map<String,Map> : Collections.<String,Map>emptyMap())
         maxParallelTransfers = config.maxParallelTransfers ? config.maxParallelTransfers as int : MAX_TRANSFER
         maxTransferAttempts = config.maxTransferAttempts ? config.maxTransferAttempts as int : MAX_TRANSFER_ATTEMPTS
@@ -88,7 +170,7 @@ class AzBatchOpts implements CloudTransferOptions {
     }
 
     String toString() {
-        "endpoint=$endpoint; account-name=$accountName; account-key=${accountKey?.redact()}"
+        "endpoint=$endpoint; account-name=$accountName; account-key=${StringUtils.redact(accountKey)}"
     }
 
     private List<String> endpointParts() {
@@ -130,10 +212,12 @@ class AzBatchOpts implements CloudTransferOptions {
     CopyToolInstallMode getCopyToolInstallMode() {
         // if the `installAzCopy` is not specified
         // `true` is returned when the pool is not create by Nextflow
-        // since it can be a pol provided by the user which does not
+        // since it can be a pool provided by the user which does not
         // provide the required `azcopy` tool
         if( copyToolInstallMode )
             return copyToolInstallMode
+        if( FusionHelper.isFusionEnabled((Session) Global.session) )
+            return CopyToolInstallMode.off
         canCreatePool() ? CopyToolInstallMode.node : CopyToolInstallMode.task
     }
 }

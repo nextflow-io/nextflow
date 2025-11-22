@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,16 +40,19 @@ class AcceleratorResource {
     }
 
     AcceleratorResource( Map res ) {
-        if( res.limit!=null && res.request!=null ) {
+        if( res.limit != null && res.request != null ) {
             this.limit = res.limit as int
             this.request = res.request as int
         }
-        else if( res.limit!=null ) {
+        else if( res.limit != null ) {
             this.limit = res.limit as int
             this.request = res.limit as int
         }
         else if( res.request != null ) {
             this.request = res.request as int
+        }
+        else {
+            throw new IllegalArgumentException("Invalid `accelerator` directive value -- `request` or `limit` is required: $res")
         }
 
         if( res.type )

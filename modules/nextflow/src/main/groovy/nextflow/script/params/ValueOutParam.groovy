@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +18,7 @@ package nextflow.script.params
 
 import groovy.transform.InheritConstructors
 import nextflow.script.TokenVar
+import org.codehaus.groovy.runtime.InvokerHelper
 
 
 /**
@@ -58,7 +58,7 @@ class ValueOutParam extends BaseOutParam {
 
         switch( target ) {
             case TokenVar:
-                return context.get(target.name)
+                return InvokerHelper.getProperty(context,target.name)
 
             case Closure:
                 return target.cloneWith(context).call()

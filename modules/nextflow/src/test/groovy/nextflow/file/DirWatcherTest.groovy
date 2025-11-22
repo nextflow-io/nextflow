@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -209,16 +208,17 @@ class DirWatcherTest extends Specification {
 
 
     def 'should convert string events'() {
-
+        given:
+        def watcher = Spy(DirWatcher)
         when:
-        DirWatcher.stringToWatchEvents('xxx')
+        watcher.stringToWatchEvents('xxx')
         then:
         thrown(IllegalArgumentException)
 
         expect:
-        DirWatcher.stringToWatchEvents() == [ ENTRY_CREATE ]
-        DirWatcher.stringToWatchEvents('create,delete') == [ENTRY_CREATE, ENTRY_DELETE]
-        DirWatcher.stringToWatchEvents('Create , MODIFY ') == [ENTRY_CREATE, ENTRY_MODIFY]
+        watcher.stringToWatchEvents() == [ ENTRY_CREATE ]
+        watcher.stringToWatchEvents('create,delete') == [ENTRY_CREATE, ENTRY_DELETE]
+        watcher.stringToWatchEvents('Create , MODIFY ') == [ENTRY_CREATE, ENTRY_MODIFY]
 
     }
 

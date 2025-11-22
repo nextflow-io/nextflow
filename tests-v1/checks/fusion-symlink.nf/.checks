@@ -1,0 +1,27 @@
+#!/bin/bash
+
+# Skip test if AWS keys are missing
+if [ -z "$AWS_ACCESS_KEY_ID" ]; then 
+  echo "Missing AWS credentials -- Skipping test"
+  exit 0
+fi
+
+OUTDIR="s3://nextflow-ci/work/ci-test/fusion-symlink/$(uuidgen)"
+
+#
+# normal run
+#
+echo initial run
+$NXF_RUN -c .config --outdir "$OUTDIR"
+
+$NXF_CMD fs cp "$OUTDIR/data.txt" data.txt
+cmp data.txt .expected || false
+
+#
+# resume run
+#
+echo resumed run
+$NXF_RUN -c .config --outdir "$OUTDIR" -resume
+
+$NXF_CMD fs cp "$OUTDIR/data.txt" data.txt
+cmp data.txt .expected || false

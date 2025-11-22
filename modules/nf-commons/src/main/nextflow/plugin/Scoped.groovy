@@ -18,6 +18,7 @@ import java.lang.annotation.Target
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 
+@Deprecated
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 @interface Scoped {

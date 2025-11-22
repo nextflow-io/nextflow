@@ -18,7 +18,9 @@ package nextflow.script
 
 import java.nio.file.Files
 
-import nextflow.exception.DuplicateModuleIncludeException
+import nextflow.NextflowMeta
+import nextflow.exception.MissingProcessException
+import nextflow.exception.ScriptCompilationException
 import spock.lang.Timeout
 import test.Dsl2Spec
 import test.MockScriptRunner
@@ -29,6 +31,48 @@ import test.TestHelper
  */
 @Timeout(10)
 class ScriptIncludesTest extends Dsl2Spec {
+
+    def 'should catch wrong script' () {
+        given:
+        def test = Files.createTempDirectory('test')
+        def lib = Files.createDirectory(test.toAbsolutePath()+"/lib")
+        def MODULE = lib.resolve('Foo.groovy')
+        def SCRIPT = test.resolve('main.nf')
+
+        MODULE.text = '''
+        class Foo {
+            String id
+        }
+        '''
+
+        SCRIPT.text = """
+        include { Foo } from "$MODULE" 
+        
+        process foo {
+            input:
+                val value
+        
+            output:
+                path '*.txt'
+        
+            script:
+                "echo 'hello'"
+        }
+        workflow {
+            foo(Channel.of(new Foo(id: "hello_world")))
+        }
+        """
+
+        when:
+        new MockScriptRunner().setScript(SCRIPT).execute()
+
+        then:
+        def err = thrown(ScriptCompilationException)
+        err.message == """\
+                Module compilation error
+                - file : $MODULE
+                """.stripIndent().rightTrim()
+    }
 
     def 'should invoke foreign functions' () {
         given:
@@ -102,6 +146,114 @@ class ScriptIncludesTest extends Dsl2Spec {
 
         then:
         result.val == 'dlrow olleh'
+    }
+
+    def 'should allow duplicate functions' () {
+        given:
+        NextflowMeta.instance.strictMode(true)
+        and:
+        def folder = Files.createTempDirectory('test')
+        def MODULE = folder.resolve('module.nf')
+        def SCRIPT = folder.resolve('main.nf')
+
+        MODULE.text = '''
+        def foo(str='foo') {
+          return str.reverse()
+        }
+        '''
+
+        SCRIPT.text = """  
+        include { foo } from "$MODULE" 
+        workflow {
+           emit:
+           channel.of('hello world').map { 
+            [ witharg : foo(it), withdefault : foo() ] 
+           }
+        }
+        """
+
+        when:
+        def result = new MockScriptRunner() .setScript(SCRIPT).execute()
+        def map = result.val
+        then:
+        map
+        map.witharg == 'hello world'.reverse()
+        map.withdefault == 'foo'.reverse()
+        
+        cleanup:
+        NextflowMeta.instance.strictMode(false)
+    }
+
+    def 'should allow multiple signatures of function' () {
+        given:
+        NextflowMeta.instance.strictMode(true)
+        and:
+        def folder = Files.createTempDirectory('test')
+        def MODULE = folder.resolve('module.nf')
+        def SCRIPT = folder.resolve('main.nf')
+
+        MODULE.text = '''
+        def foo( list=[1,2,3] ) {
+          return list
+        }
+        def foo(c1, c2){
+            return c1+"-"+c2
+        }   
+        '''
+
+        SCRIPT.text = """  
+        include { foo } from "$MODULE" 
+        workflow {
+           emit:
+           channel.fromList( foo() ).flatMap { foo(it, it*2) } 
+        }
+        """
+
+        when:
+        def result = new MockScriptRunner() .setScript(SCRIPT).execute()
+
+        then:
+        result.val == '1-2'
+        result.val == '2-4'
+        result.val == '3-6'
+
+        cleanup:
+        NextflowMeta.instance.strictMode(false)
+    }
+
+    def 'should fail if no signatures of function founded' () {
+        given:
+        NextflowMeta.instance.strictMode(true)
+        and:
+        def folder = Files.createTempDirectory('test')
+        def MODULE = folder.resolve('module.nf')
+        def SCRIPT = folder.resolve('main.nf')
+
+        MODULE.text = '''
+        def foo( list=[1,2,3] ) {
+          return list
+        }
+        def foo(c1, c2){
+            return c1+"-"+c2
+        }   
+        '''
+
+        SCRIPT.text = """  
+        include { foo } from "$MODULE" 
+        workflow {
+           emit:
+           channel.of( foo(1, 2, 3) ) 
+        }
+        """
+
+        when:
+        def result = new MockScriptRunner() .setScript(SCRIPT).execute()
+
+        then:
+        thrown(MissingProcessException)
+
+        cleanup:
+        NextflowMeta.instance.strictMode(false)
     }
 
     def 'should invoke a workflow from include' () {
@@ -311,7 +463,7 @@ class ScriptIncludesTest extends Dsl2Spec {
 
         SCRIPT.text = """
         include { foo } from "$MODULE" 
-        hello_ch = Channel.from('world')
+        hello_ch = Channel.of('world')
         
         workflow {
             main: foo(hello_ch)
@@ -352,7 +504,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         include { foo } from './module.nf'
 
         workflow {
-          main: ch1 = Channel.from('world')
+          main: ch1 = Channel.of('world')
                 ch2 = Channel.value(['x', '/some/file'])
                 foo(ch1, ch2)
           emit: foo.out  
@@ -525,8 +677,9 @@ class ScriptIncludesTest extends Dsl2Spec {
         """
 
         when:
-        def runner = new TestScriptRunner()
-        def result = runner.setScript(SCRIPT).execute()
+        def result = new MockScriptRunner()
+                .setScript(SCRIPT)
+                .execute()
         then:
         noExceptionThrown()
         result == 'Hello world!'
@@ -618,33 +771,6 @@ class ScriptIncludesTest extends Dsl2Spec {
         runner.setScript(SCRIPT).execute()
         then:
         noExceptionThrown()
-    }
-
-    def 'should error on duplicate import' () {
-        given:
-        def folder = TestHelper.createInMemTempDir();
-        def MOD1 = folder.resolve('mod1.nf')
-        def MOD2 = folder.resolve('mod2.nf')
-        def SCRIPT = folder.resolve('main.nf')
-
-        MOD1.text = MOD2.text = '''     
-        process foo {
-            /hello/ 
-        }      
-        '''
-
-        SCRIPT.text = """ 
-        include { foo } from './mod1' 
-        include { foo } from './mod2' 
-        println 'x'
-        """
-
-        when:
-        def runner = new MockScriptRunner()
-        runner.setScript(SCRIPT).execute()
-        then:
-        def err = thrown(DuplicateModuleIncludeException)
-        err.message == "A process with name 'foo' is already defined in the current context"
     }
 
     def 'should include only named component' () {
@@ -1037,6 +1163,31 @@ class ScriptIncludesTest extends Dsl2Spec {
         def e = thrown(IllegalStateException)
         e.message == "Include statement is not allowed within a workflow definition"
 
+    }
 
+    def 'should should allow invoking function passing gstring' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def MODULE = folder.resolve('module.nf')
+
+        MODULE.text = '''
+        def alpha(String str) {
+            return str.reverse()
+        }   
+        '''
+
+        when:
+        def SCRIPT = """
+        include { alpha } from "$MODULE"
+        
+        def x = "world"
+        def y = "Hello \$x"
+        
+        return alpha(y)
+        """
+        def runner = new MockScriptRunner()
+        def result = runner.setScript(SCRIPT).execute()
+        then:
+        result == 'dlrow olleH'
     }
 }

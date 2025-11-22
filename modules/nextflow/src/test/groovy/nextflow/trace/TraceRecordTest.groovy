@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +16,12 @@
 
 package nextflow.trace
 
+import java.nio.file.NoSuchFileException
+import java.nio.file.Path
+
 import groovy.json.JsonSlurper
 import spock.lang.Specification
+import spock.lang.Unroll
 import test.TestHelper
 
 /**
@@ -301,4 +304,44 @@ class TraceRecordTest extends Specification {
         rec.env == 'aws_key=[secure]'
     }
 
+    @Unroll
+    def 'should validate cached status' () {
+        given:
+        def rec = new TraceRecord([status:STATUS])
+
+        expect:
+        rec.isCached() == EXPECTED
+
+        where:
+        STATUS      | EXPECTED
+        null        | false
+        'NEW'       | false
+        'ABORTED'   | false
+        'CACHED'    | true
+    }
+
+    @Unroll
+    def 'should validate completed status' () {
+        given:
+        def rec = new TraceRecord([status:STATUS])
+
+        expect:
+        rec.isCompleted() == EXPECTED
+
+        where:
+        STATUS      | EXPECTED
+        null        | false
+        'NEW'       | false
+        'ABORTED'   | false
+        'COMPLETED' | true
+    }
+
+    def 'should throw file not found exception' () {
+        given:
+        def rec = new TraceRecord([:])
+        when:
+        rec.parseTraceFile(Path.of('unknown'))
+        then:
+        thrown(NoSuchFileException)
+    }
 }

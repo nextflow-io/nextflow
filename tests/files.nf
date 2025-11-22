@@ -1,7 +1,6 @@
 #!/usr/bin/env nextflow
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +16,16 @@
  */
 
 params.in = "$baseDir/data/sample.fa"
-SPLIT = (System.properties['os.name'] == 'Mac OS X' ? 'gcsplit' : 'csplit')
 
 process split {
     input:
-    file 'query.fa' from file(params.in)
+    path 'query.fa'
 
     output:
-    file 'seq_*' into splits
+    path 'seq_*'
 
+    script:
+    SPLIT = (System.properties['os.name'] == 'Mac OS X' ? 'gcsplit' : 'csplit')
     """
     $SPLIT query.fa '%^>%' '/^>/' '{*}' -f seq_
     """
@@ -33,14 +33,15 @@ process split {
 
 
 process printTwo {
-    echo true
+    debug true
 
     input:
-    file 'chunk' from splits
+    path 'chunk'
 
     output:
-    file 'chunk1:chunk3' into two_chunks mode flatten
+    file 'chunk1:chunk3'
 
+    script:
     """
     cat chunk* | rev
     """
@@ -48,15 +49,20 @@ process printTwo {
 }
 
 process printLast {
-    echo true
+    debug true
 
     input:
-    file 'chunk' from two_chunks
+    file 'chunk'
 
     output:
-    file 'chunk' into result
+    file 'chunk'
 
+    script:
     """
     cat chunk
     """
+}
+
+workflow {
+  split(params.in) | printTwo | flatten | printLast
 }

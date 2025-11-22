@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -269,6 +268,35 @@ class ChannelTest extends Specification {
         result == ['alpha.txt']
     }
 
+    def testRelative() {
+
+        setup:
+        def file1 = new File('alpha.txt')
+
+        when:
+        def result = Channel
+                .fromPath([relative:false], 'alpha.txt')
+                .toSortedList().getVal()
+        then:
+        result*.toString() == [ file1.absolutePath ]
+
+        when:
+        result = Channel
+                .fromPath([relative:true], 'alpha.txt')
+                .toSortedList().getVal()
+        then:
+        result*.toString() == [ 'alpha.txt' ]
+
+        when:
+        result = Channel
+                .fromPath([:], 'alpha.txt') //no relative option set
+                .toSortedList().getVal()
+        then:
+        result*.toString() == [ file1.absolutePath ]
+
+        cleanup:
+        file1.delete()
+    }
 
     def testGlobHiddenFiles() {
 
@@ -432,6 +460,59 @@ class ChannelTest extends Specification {
 
     }
 
+    def testFromRelativePathWithGlob() {
+        given:
+        def folder = tempDir.root
+        def file1 = Files.createFile(folder.resolve('file1.txt'))
+        def file2 = Files.createFile(folder.resolve('file2.txt'))
+        def file3 = Files.createFile(folder.resolve('file3.log'))
+        and:
+        SysEnv.push(NXF_FILE_ROOT: folder.toString())
+        
+        when:
+        List<Path> result = Channel
+                .fromPath( '*.txt' )
+                .toSortedList().getVal().collect { it.toString() }
+        then:
+        result == [ file1.toString(), file2.toString() ]
+
+        when:
+        result = Channel
+                .fromPath( '*.txt', relative: true )
+                .toSortedList().getVal().collect { it.toString() }
+        then:
+        result == [ file1.name, file2.name ]
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def testFromRelativePathWithFileName() {
+        given:
+        def folder = tempDir.root
+        def file1 = Files.createFile(folder.resolve('file1.txt'))
+        def file2 = Files.createFile(folder.resolve('file2.txt'))
+        def file3 = Files.createFile(folder.resolve('file3.log'))
+        and:
+        SysEnv.push(NXF_FILE_ROOT: folder.toString())
+
+        when:
+        List<Path> result = Channel
+                .fromPath( 'file3.log' )
+                .toSortedList().getVal().collect { it.toString() }
+        then:
+        result == [ file3.toString() ]
+
+        when:
+        result = Channel
+                .fromPath( 'file3.log', relative: true )
+                .toSortedList().getVal().collect { it.toString() }
+        then:
+        result == [ file3.name ]
+
+        cleanup:
+        SysEnv.pop()
+    }
 
     def testFromPathWithLinks() {
 
@@ -676,6 +757,31 @@ class ChannelTest extends Specification {
         pairs.val == Channel.STOP
     }
 
+    def 'should group files with the same prefix and root path' () {
+
+        setup:
+        def folder = tempDir.root.toAbsolutePath()
+        def a1 = Files.createFile(folder.resolve('aa_1.fa'))
+        def a2 = Files.createFile(folder.resolve('aa_2.fa'))
+        def x1 = Files.createFile(folder.resolve('xx_1.fa'))
+        def x2 = Files.createFile(folder.resolve('xx_2.fa'))
+        def z1 = Files.createFile(folder.resolve('zz_1.fa'))
+        def z2 = Files.createFile(folder.resolve('zz_2.fa'))
+        and:
+        SysEnv.push(NXF_FILE_ROOT: folder.toString())
+
+        when:
+        def pairs = Channel .fromFilePairs("*_{1,2}.*") .toList(). getVal() .sort { it[0] }
+        then:
+        pairs == [
+                ['aa', [a1, a2]],
+                ['xx', [x1, x2]],
+                ['zz', [z1, z2]] ]
+
+        cleanup:
+        SysEnv.pop()
+    }
+
     def 'should group files with the same prefix using a custom grouping' () {
 
         setup:
@@ -882,6 +988,25 @@ class ChannelTest extends Specification {
         result.val == ['SRR389222_sub2', [ftp2]]
         result.val == Channel.STOP
 
+    }
+
+    def 'should not fail when setting SRA correct properties' () {
+        given:
+        def id = 'SRR389222'
+        def retryPolicy = [maxAttempts: 2]
+
+        when:
+        def result = Channel.fromSRA(id, apiKey: '1234', retryPolicy: retryPolicy, cache: false, max: 10, protocol: 'http')
+        then:
+        result != null
+
+    }
+
+    def 'should fail when SRA incorrect property' () {
+        when:
+        def result = Channel.fromSRA('SRR389222', incorrectKey: '1234')
+        then:
+        thrown(IllegalArgumentException)
     }
 
 }

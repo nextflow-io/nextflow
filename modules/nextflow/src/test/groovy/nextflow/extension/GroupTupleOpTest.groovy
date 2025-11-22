@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -139,6 +138,44 @@ class GroupTupleOpTest extends Specification {
         result.val == [k2, ['x', 'y', 'z'] ]
         result.val == [k3, ['q']]
         result.val == [k1, ['f']]
+        result.val == Channel.STOP
+    }
+
+    def 'should handle GString vs String keys correctly' () {
+        given:
+        def sampleName = "sample1"
+        def gstringKey = "${sampleName}"  // GStringImpl
+        def stringKey = "sample1"         // String
+        
+        def tuples = [
+                [gstringKey, 'file1.txt'],
+                [stringKey, 'file2.txt'],
+                [gstringKey, 'file3.txt']
+        ]
+
+        when:
+        def result = tuples.channel().groupTuple()
+        then:
+        // Without fix, this would create separate groups for GString and String keys
+        // With fix, they should be grouped together
+        result.val == [gstringKey, ['file1.txt', 'file2.txt', 'file3.txt']]
+        result.val == Channel.STOP
+    }
+
+    def 'should preserve non-string key types' () {
+        given:
+        def tuples = [
+                [1, 'file1.txt'],           // Integer key
+                [new File('/tmp'), 'file2.txt'],  // File key
+                [[a: 1], 'file3.txt']       // Map key
+        ]
+
+        when:
+        def result = tuples.channel().groupTuple()
+        then:
+        result.val == [1, ['file1.txt']]
+        result.val == [new File('/tmp'), ['file2.txt']]
+        result.val == [[a: 1], ['file3.txt']]
         result.val == Channel.STOP
     }
 }

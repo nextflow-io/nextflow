@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,8 +22,8 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import nextflow.container.ContainerConfig
 import nextflow.executor.BashWrapperBuilder
+import nextflow.executor.TaskArrayExecutor
 import nextflow.util.MemoryUnit
-
 /**
  * Serializable task value object. Holds configuration values required to
  * launch the task execution
@@ -48,6 +47,10 @@ class TaskBean implements Serializable, Cloneable {
 
     Path condaEnv
 
+    Boolean useMicromamba
+
+    Path spackEnv
+
     List<String> moduleNames
 
     Path workDir
@@ -62,7 +65,7 @@ class TaskBean implements Serializable, Cloneable {
 
     String containerCpuset
 
-    Float containerCpus
+    Integer containerCpus
 
     MemoryUnit containerMemory
 
@@ -72,18 +75,19 @@ class TaskBean implements Serializable, Cloneable {
 
     List<String> outputEnvNames
 
+    Map<String,String> outputEvals
+
     String beforeScript
 
     String afterScript
-
-    @Deprecated
-    boolean containerExecutable
 
     boolean containerNative
 
     boolean containerEnabled
 
     String containerOptions
+
+    String containerPlatform
 
     Map<String,Path> inputFiles
 
@@ -93,13 +97,23 @@ class TaskBean implements Serializable, Cloneable {
 
     String stageOutMode
 
-    Path binDir
+    List<Path> binDirs
 
     def cleanup
 
     boolean secretNative
 
     List<String> secretNames
+
+    Map<String,String> resourceLabels
+
+    String arrayIndexName
+
+    Integer arrayIndexStart
+
+    List<Path> arrayWorkDirs
+
+    List<Path> arrayInputFiles
 
     @PackageScope
     TaskBean() {
@@ -122,12 +136,14 @@ class TaskBean implements Serializable, Cloneable {
         this.environment = task.getEnvironment()
 
         this.condaEnv = task.getCondaEnv()
+        this.useMicromamba = task.getCondaConfig()?.useMicromamba()
+        this.spackEnv = task.getSpackEnv()
         this.moduleNames = task.config.getModule()
         this.shell = task.config.getShell() ?: BashWrapperBuilder.BASH
         this.script = task.getScript()
-        this.beforeScript = task.config.beforeScript
-        this.afterScript = task.config.afterScript
-        this.cleanup = task.config.cleanup
+        this.beforeScript = task.config.getBeforeScript()
+        this.afterScript = task.config.getAfterScript()
+        this.cleanup = task.config.getCleanup()
 
         // container config
         this.containerImage = task.getContainer()
@@ -137,20 +153,32 @@ class TaskBean implements Serializable, Cloneable {
         this.containerNative = task.isContainerNative()
         this.containerEnabled = task.isContainerEnabled()
         this.containerOptions = task.config.getContainerOptions()
+        this.containerPlatform = task.getContainerPlatform()
         // secret management
         this.secretNative = task.isSecretNative()
         this.secretNames = task.config.getSecret()
 
         // stats
         this.outputEnvNames = task.getOutputEnvNames()
+        this.outputEvals = task.getOutputEvals()
         this.statsEnabled = task.getProcessor().getSession().statsEnabled
 
         this.inputFiles = task.getInputFilesMap()
         this.outputFiles = task.getOutputFilesNames()
-        this.binDir = task.getProcessor().getExecutor().getBinDir()
-        this.stageInMode = task.config.stageInMode
-        this.stageOutMode = task.config.stageOutMode
+        this.binDirs = task.getProcessor().getBinDirs()
+        this.stageInMode = task.config.getStageInMode()
+        this.stageOutMode = task.config.getStageOutMode()
 
+        this.resourceLabels = task.config.getResourceLabels()
+
+        // job array
+        if( task instanceof TaskArrayRun ) {
+            final executor = (TaskArrayExecutor)task.getProcessor().getExecutor()
+            this.arrayIndexName = executor.getArrayIndexName()
+            this.arrayIndexStart = executor.getArrayIndexStart()
+            this.arrayWorkDirs = task.children.collect( h -> h.task.workDir )
+            this.arrayInputFiles = task.children.collectMany { h -> h.task.getInputFilesMap().values() }
+        }
     }
 
     @Override

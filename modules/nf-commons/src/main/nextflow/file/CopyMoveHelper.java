@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,6 +32,7 @@ import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.EnumSet;
 
+import nextflow.extension.FilesEx;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,45 +40,16 @@ import org.slf4j.LoggerFactory;
 /**
  * Helper class to handle copy/move files and directories
  */
-class CopyMoveHelper {
+public class CopyMoveHelper {
+    /**
+     * True if currently performing a copy of a foreign file.
+     */
+    public static final ThreadLocal<Boolean> IN_FOREIGN_COPY = new ThreadLocal<>();
 
     private static Logger log = LoggerFactory.getLogger(CopyMoveHelper.class);
 
     private CopyMoveHelper() { }
 
-    /**
-     * Parses the arguments for a file copy operation.
-     */
-    private static class CopyOptions {
-        boolean replaceExisting = false;
-        boolean copyAttributes = false;
-        boolean followLinks = true;
-
-        private CopyOptions() { }
-
-        static CopyOptions parse(CopyOption... options) {
-            CopyOptions result = new CopyOptions();
-            for (CopyOption option: options) {
-                if (option == StandardCopyOption.REPLACE_EXISTING) {
-                    result.replaceExisting = true;
-                    continue;
-                }
-                if (option == LinkOption.NOFOLLOW_LINKS) {
-                    result.followLinks = false;
-                    continue;
-                }
-                if (option == StandardCopyOption.COPY_ATTRIBUTES) {
-                    result.copyAttributes = true;
-                    continue;
-                }
-                if (option == null)
-                    throw new NullPointerException();
-                throw new UnsupportedOperationException("'" + option +
-                        "' is not a recognized copy option");
-            }
-            return result;
-        }
-    }
 
     /**
      * Converts the given array of options for moving a file to options suitable
@@ -114,14 +85,16 @@ class CopyMoveHelper {
     private static void copyFile(Path source, Path target, boolean foreign, CopyOption... options)
             throws IOException
     {
-
         if( !foreign ) {
             source.getFileSystem().provider().copy(source, target, options);
             return;
         }
 
+        IN_FOREIGN_COPY.set(true);
         try (InputStream in = Files.newInputStream(source)) {
             Files.copy(in, target);
+        } finally {
+            IN_FOREIGN_COPY.set(false);
         }
     }
 
@@ -149,7 +122,7 @@ class CopyMoveHelper {
                 String delta = rel != null ? rel.toString() : null;
                 Path newFolder = delta != null ? target.resolve(delta) : target;
                 if(log.isTraceEnabled())
-                log.trace("Copy DIR: $current -> " + newFolder);
+                    log.trace("Copy DIR: " + current + " -> " + newFolder);
                 // this `copy` creates the new folder, but does not copy the contained files
                 Files.createDirectory(newFolder);
                 return FileVisitResult.CONTINUE;
@@ -164,7 +137,7 @@ class CopyMoveHelper {
                 String delta = rel != null ? rel.toString() : null;
                 Path newFile = delta != null ? target.resolve(delta) : target;
                 if( log.isTraceEnabled())
-                    log.trace("Copy file: " + current + " -> "+newFile.toUri());
+                    log.trace("Copy file: " + current + " -> "+ FilesEx.toUriString(newFile));
                 copyFile(current, newFile, foreign, options);
                 return FileVisitResult.CONTINUE;
             }
@@ -183,7 +156,7 @@ class CopyMoveHelper {
             throws IOException
     {
         CopyOptions opts = CopyOptions.parse(options);
-        LinkOption[] linkOptions = (opts.followLinks) ? new LinkOption[0] : new LinkOption[] { LinkOption.NOFOLLOW_LINKS };
+        LinkOption[] linkOptions = (opts.followLinks()) ? new LinkOption[0] : new LinkOption[] { LinkOption.NOFOLLOW_LINKS };
 
         // attributes of source file
         BasicFileAttributes attrs = Files.readAttributes(source, BasicFileAttributes.class, linkOptions);
@@ -191,7 +164,7 @@ class CopyMoveHelper {
             throw new IOException("Copying of symbolic links not supported");
 
         // delete target if it exists and REPLACE_EXISTING is specified
-        if (opts.replaceExisting) {
+        if (opts.replaceExisting()) {
             FileHelper.deletePath(target);
         }
         else if (Files.exists(target))

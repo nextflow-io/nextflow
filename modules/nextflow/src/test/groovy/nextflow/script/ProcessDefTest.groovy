@@ -1,60 +1,20 @@
 package nextflow.script
 
-import spock.lang.Specification
-
 import nextflow.Session
-import nextflow.ast.NextflowDSL
-import org.codehaus.groovy.control.CompilerConfiguration
-import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
-import test.MockSession
+import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class ProcessDefTest extends Specification {
 
-    def 'should define processes' () {
-
-        given:
-        def session = new MockSession()
-        def binding = new ScriptBinding(session)
-        def config = new CompilerConfiguration()
-        config.setScriptBaseClass(BaseScript.class.name)
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
-
-        def SCRIPT = '''
-            
-            process foo {
-              input: val data 
-              output: val result
-              exec:
-                result = "$data mundo"
-            }     
-            
-            process bar {
-                input: val data 
-                output: val result
-                exec: 
-                  result = data.toUpperCase()
-            }   
-            
-        '''
-
-        when:
-        def script = (BaseScript)new GroovyShell(binding,config).parse(SCRIPT)
-
-        then:
-        true
-
-    }
-
-
     def 'should clone a process with a new name '() {
 
         given:
         def OWNER = Mock(BaseScript)
-        def BODY = { -> null }
-        def proc = new ProcessDef(OWNER, BODY, 'foo')
+        def BODY = new BodyDef({->}, '')
+        def CONFIG = new ProcessConfig(OWNER, 'foo')
+        def proc = new ProcessDef(OWNER, 'foo', CONFIG, BODY)
 
         when:
         def copy = proc.cloneWithName('foo_alias')
@@ -63,8 +23,8 @@ class ProcessDefTest extends Specification {
         copy.getSimpleName() == 'foo_alias'
         copy.getBaseName() == 'foo'
         copy.getOwner() == OWNER
-        copy.rawBody.class == BODY.class
-        !copy.rawBody.is(BODY)
+        copy.taskBody.class == BODY.class
+        !copy.taskBody.is(BODY)
 
         when:
         copy = proc.cloneWithName('flow1:flow2:foo')
@@ -73,26 +33,28 @@ class ProcessDefTest extends Specification {
         copy.getSimpleName() == 'foo'
         copy.getBaseName() == 'foo'
         copy.getOwner() == OWNER
-        copy.rawBody.class == BODY.class
-        !copy.rawBody.is(BODY)
+        copy.taskBody.class == BODY.class
+        !copy.taskBody.is(BODY)
     }
 
     def 'should apply process config' () {
         given:
         def OWNER = Mock(BaseScript)
-        def CONFIG = [
-                process:[
-                        cpus:2, memory: '1GB',
-                        'withName:foo': [memory: '3GB'],
-                        'withName:bar': [cpus:4, memory: '4GB'],
-                        'withName:flow1:flow2:flow3:bar': [memory: '8GB']
+        def CONFIG = new ProcessConfig(OWNER, 'foo')
+        def BODY = new BodyDef({->}, 'echo hello')
+        def proc = new ProcessDef(OWNER, 'foo', CONFIG, BODY)
+        and:
+        proc.session = Mock(Session) {
+            getConfig() >> [
+                process: [
+                    cpus: 2,
+                    memory: '1GB',
+                    'withName:foo': [memory: '3GB'],
+                    'withName:bar': [cpus: 4, memory: '4GB'],
+                    'withName:flow1:flow2:flow3:bar': [memory: '8GB']
                 ]
-        ]
-        def BODY = {->
-            return new BodyDef({->}, 'echo hello')
+            ]
         }
-        def proc = new ProcessDef(OWNER, BODY, 'foo')
-        proc.session = Mock(Session) { getConfig() >> CONFIG }
 
         when:
         def copy = proc.clone()

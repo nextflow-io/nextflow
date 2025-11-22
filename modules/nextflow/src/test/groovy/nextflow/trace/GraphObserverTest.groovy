@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,14 +16,16 @@
 
 package nextflow.trace
 import java.nio.file.Files
-import java.nio.file.Paths
+import java.nio.file.Path
 
 import groovyx.gpars.dataflow.DataflowQueue
 import nextflow.Session
-import nextflow.dag.CytoscapeHtmlRenderer
+import nextflow.dag.MermaidHtmlRenderer
 import nextflow.dag.DAG
 import nextflow.dag.DotRenderer
 import nextflow.dag.GraphvizRenderer
+import nextflow.dag.MermaidRenderer
+import nextflow.trace.config.DagConfig
 import spock.lang.Requires
 import spock.lang.Specification
 import test.TestHelper
@@ -36,6 +37,10 @@ import test.TestHelper
 class GraphObserverTest extends Specification {
 
     DAG test_dag
+
+    def createObserver(Path file) {
+        new GraphObserver(new DagConfig(file: file.toString()))
+    }
 
     def setup() {
         new Session()
@@ -77,7 +82,7 @@ class GraphObserverTest extends Specification {
     def 'should write a dot file' () {
         given:
         def file = Files.createTempFile('nxf_','.dot')
-        def gr = new GraphObserver(file)
+        def gr = createObserver(file)
         gr.dag = test_dag
 
         when:
@@ -104,7 +109,7 @@ class GraphObserverTest extends Specification {
     def 'should write an html file' () {
         given:
         def file = Files.createTempFile('nxf-','.html')
-        def gr = new GraphObserver(file)
+        def gr = createObserver(file)
         gr.dag = test_dag
 
         when:
@@ -112,16 +117,17 @@ class GraphObserverTest extends Specification {
 
         then:
         def result = file.text
-
         // is html
         result.contains('<html>')
         result.contains('</html>')
-
-        // contains some of the expected json
-        result.contains("label: 'Source'")
-        result.contains("label: 'Process 1'")
-        result.contains("label: 'Filter'")
-        result.contains("label: 'Process 2'")
+        // is mermaid
+        result.contains('flowchart')
+        // contains expected nodes
+        result.contains('Source')
+        result.contains('Process 1')
+        result.contains('Process 2')
+        // contains at least one edge
+        result.contains('-->')
 
         cleanup:
         file.delete()
@@ -132,7 +138,7 @@ class GraphObserverTest extends Specification {
     def 'should write an svg file' () {
         given:
         def file = Files.createTempFile('nxf-','.svg')
-        def gr = new GraphObserver(file)
+        def gr = createObserver(file)
         gr.dag = test_dag
 
         when:
@@ -150,7 +156,7 @@ class GraphObserverTest extends Specification {
     def 'should write a png file' () {
         given:
         def file = Files.createTempFile('nxf-','.png')
-        def gr = new GraphObserver(file)
+        def gr = createObserver(file)
         gr.dag = test_dag
 
         when:
@@ -167,7 +173,7 @@ class GraphObserverTest extends Specification {
     def 'should write a pdf file' () {
         given:
         def file = Files.createTempFile('nxf-','.pdf')
-        def gr = new GraphObserver(file)
+        def gr = createObserver(file)
         gr.dag = test_dag
 
         when:
@@ -180,11 +186,11 @@ class GraphObserverTest extends Specification {
         file.delete()
     }
 
-    def 'should output a dot file when no extension is specified' () {
+    def 'should output an html file when no extension is specified' () {
         given:
         def folder = Files.createTempDirectory('test')
         def file = folder.resolve('nope')
-        def gr = new GraphObserver(file)
+        def gr = createObserver(file)
         gr.dag = test_dag
 
         when:
@@ -192,15 +198,17 @@ class GraphObserverTest extends Specification {
 
         then:
         def result = file.text
-        // is dot
-        result.contains("digraph \"${file.baseName}\" {")
+        // is html
+        result.contains('<html>')
+        result.contains('</html>')
+        // is mermaid
+        result.contains('flowchart')
         // contains expected nodes
-        result.contains('label="Source"')
-        result.contains('label="Process 1"')
-        result.contains('label="Filter"')
-        result.contains('label="Process 2"')
+        result.contains('Source')
+        result.contains('Process 1')
+        result.contains('Process 2')
         // contains at least one edge
-        result.contains('->')
+        result.contains('-->')
 
         cleanup:
         folder.deleteDir()
@@ -212,31 +220,38 @@ class GraphObserverTest extends Specification {
         def observer
 
         when:
-        observer = new GraphObserver(Paths.get('/path/to/hello-world.dot'))
+        observer = createObserver(Path.of('/path/to/hello-world.dot'))
         then:
         observer.name == 'hello-world'
         observer.format == 'dot'
         observer.createRender() instanceof DotRenderer
 
         when:
-        observer = new GraphObserver(Paths.get('/path/to/TheGraph.html'))
+        observer = createObserver(Path.of('/path/to/TheGraph.html'))
         then:
         observer.name == 'TheGraph'
         observer.format == 'html'
-        observer.createRender() instanceof CytoscapeHtmlRenderer
+        observer.createRender() instanceof MermaidHtmlRenderer
 
         when:
-        observer = new GraphObserver(Paths.get('/path/to/TheGraph.SVG'))
+        observer = createObserver(Path.of('/path/to/TheGraph.mmd'))
+        then:
+        observer.name == 'TheGraph'
+        observer.format == 'mmd'
+        observer.createRender() instanceof MermaidRenderer
+
+        when:
+        observer = createObserver(Path.of('/path/to/TheGraph.SVG'))
         then:
         observer.name == 'TheGraph'
         observer.format == 'svg'
         observer.createRender() instanceof GraphvizRenderer
 
         when:
-        observer = new GraphObserver(Paths.get('/path/to/anonymous'))
+        observer = createObserver(Path.of('/path/to/anonymous'))
         then:
         observer.name == 'anonymous'
-        observer.format == 'dot'
-        observer.createRender() instanceof DotRenderer
+        observer.format == 'html'
+        observer.createRender() instanceof MermaidHtmlRenderer
     }
 }

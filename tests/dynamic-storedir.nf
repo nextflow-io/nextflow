@@ -1,7 +1,6 @@
 #!/usr/bin/env nextflow
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,26 +17,29 @@
 
 params.prefix = 'my'
 
-data = 'Hello\n'
-
 process foo {
-
   storeDir "cache/$x"
 
   input:
-  each x from 'alpha', 'delta', 'gamma', 'omega'
-  file 'result.txt' from data
+  each x
+  file 'result.txt'
 
   output:
-  set x, file('result.txt') into result
+  tuple val(task.process), val(x), file('result.txt')
 
+  script:
   """
   echo World >> result.txt
   """
 
 }
 
-result.subscribe { code, file ->
-  println "~ Result ${file}"
-  file.copyTo("my_${code}.txt")
+workflow {
+  def data = 'Hello\n'
+  def list = ['alpha', 'delta', 'gamma', 'omega']
+  foo(list, data).subscribe { process, code, file ->
+    println "~ Result ${file} from process ${process}"
+    file.copyTo("my_${code}.txt")
+  }
+
 }

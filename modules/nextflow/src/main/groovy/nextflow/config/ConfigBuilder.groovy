@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,24 +21,20 @@ import static nextflow.util.ConfigHelper.*
 import java.nio.file.Path
 import java.nio.file.Paths
 
+import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.NF
+import nextflow.SysEnv
 import nextflow.cli.CliOptions
 import nextflow.cli.CmdConfig
 import nextflow.cli.CmdNode
 import nextflow.cli.CmdRun
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
-import nextflow.secret.SecretHolder
-import nextflow.secret.SecretsContext
 import nextflow.secret.SecretsLoader
-import nextflow.trace.GraphObserver
-import nextflow.trace.ReportObserver
-import nextflow.trace.TimelineObserver
-import nextflow.trace.TraceFileObserver
-import nextflow.trace.WebLogObserver
+import nextflow.secret.SecretsProvider
 import nextflow.util.HistoryFile
 import nextflow.util.SecretHelper
 /**
@@ -64,6 +59,8 @@ class ConfigBuilder {
 
     Path currentDir
 
+    Map<String,?> cliParams
+
     boolean showAllProfiles
 
     String profile = DEFAULT_PROFILE
@@ -74,19 +71,23 @@ class ConfigBuilder {
 
     List<Path> parsedConfigFiles = []
 
-    List<String> parsedProfileNames
-
     boolean showClosures
+
+    boolean stripSecrets
 
     boolean showMissingVariables
 
+    SecretsProvider secretsProvider
+
     Map<ConfigObject, String> emptyVariables = new LinkedHashMap<>(10)
 
-    Map<String,String> env = new HashMap<>(System.getenv())
+    Map<String,String> env = new HashMap<>(SysEnv.get())
 
-    List<String> warnings = new ArrayList<>(10);
+    List<String> warnings = new ArrayList<>(10)
 
-    {
+    Map<String,Object> declaredParams = [:]
+
+    ConfigBuilder() {
         setHomeDir(Const.APP_HOME_DIR)
         setCurrentDir(Paths.get('.'))
     }
@@ -96,8 +97,18 @@ class ConfigBuilder {
         return this
     }
 
+    ConfigBuilder setStripSecrets(boolean value) {
+        this.stripSecrets = value
+        return this
+    }
+
     ConfigBuilder showMissingVariables(boolean value) {
         this.showMissingVariables = value
+        return this
+    }
+
+    ConfigBuilder setSecretsProvider(SecretsProvider value) {
+        this.secretsProvider = value
         return this
     }
 
@@ -109,6 +120,11 @@ class ConfigBuilder {
     ConfigBuilder setCmdRun( CmdRun cmdRun ) {
         this.cmdRun = cmdRun
         setProfile(cmdRun.profile)
+        return this
+    }
+
+    ConfigBuilder setCliParams( Map<String,?> cliParams ) {
+        this.cliParams = cliParams
         return this
     }
 
@@ -158,6 +174,10 @@ class ConfigBuilder {
         if( files )
             userConfigFiles.addAll(files)
         return this
+    }
+
+    Map<String,Object> getConfigParams() {
+        return declaredParams
     }
 
     static private wrapValue( value ) {
@@ -280,10 +300,10 @@ class ConfigBuilder {
         Map env = [:]
         if( exportSysEnv ) {
             log.debug "Adding current system environment to session environment"
-            env.putAll(System.getenv())
+            env.putAll(SysEnv.get())
         }
         if( vars ) {
-            log.debug "Adding following variables to session environment: $vars"
+            log.debug "Adding the following variables to session environment: $vars"
             env.putAll(vars)
         }
 
@@ -322,23 +342,38 @@ class ConfigBuilder {
     }
 
     protected Map configVars() {
+        // this is needed to make sure to reuse the same
+        // instance of the config vars across different instances of the ConfigBuilder
+        // and prevent multiple parsing of the same params file (which can even be remote resource)
+        final secretContext = secretsProvider
+            ? SecretsLoader.secretContext(secretsProvider)
+            : SecretsLoader.secretContext()
+        return getConfigVars(baseDir, secretContext)
+    }
+
+    @Memoized
+    static Map getConfigVars(Path base, Object secretContext) {
         final binding = new HashMap(10)
-        binding.put('baseDir', baseDir)
-        binding.put('projectDir', baseDir)
+        binding.put('baseDir', base)
+        binding.put('projectDir', base)
         binding.put('launchDir', Paths.get('.').toRealPath())
-        if( SecretsLoader.isEnabled() )
-            binding.put('secrets', new SecretsContext())
+        binding.put('outputDir', Paths.get('results').complete())
+        binding.put('secrets', secretContext)
         return binding
     }
 
     protected ConfigObject buildConfig0( Map env, List configEntries )  {
         assert env != null
 
-        final slurper = new ConfigParser().setRenderClosureAsString(showClosures)
+        final ignoreIncludes = options ? options.ignoreConfigIncludes : false
+        final parser = ConfigParserFactory.create()
+                .setRenderClosureAsString(showClosures)
+                .setStripSecrets(stripSecrets)
+                .setIgnoreIncludes(ignoreIncludes)
         ConfigObject result = new ConfigObject()
 
-        if( cmdRun && (cmdRun.hasParams()) )
-            slurper.setParams(cmdRun.parsedParams(configVars()))
+        if( cliParams )
+            parser.setParams(cliParams)
 
         // add the user specified environment to the session env
         env.sort().each { name, value -> result.env.put(name,value) }
@@ -347,17 +382,17 @@ class ConfigBuilder {
             // the configuration object binds always the current environment
             // so that in the configuration file may be referenced any variable
             // in the current environment
-            final binding = new HashMap(System.getenv())
+            final binding = new HashMap(SysEnv.get())
             binding.putAll(env)
             binding.putAll(configVars())
 
-            slurper.setBinding(binding)
+            parser.setBinding(binding)
 
             // merge of the provided configuration files
             for( def entry : configEntries ) {
 
                 try {
-                    merge0(result, slurper, entry)
+                    merge0(result, parser, entry)
                 }
                 catch( ConfigParseException e ) {
                     throw e
@@ -368,9 +403,8 @@ class ConfigBuilder {
                 }
             }
 
-            this.parsedProfileNames = new ArrayList<>(slurper.getProfileNames())
             if( validateProfile ) {
-                checkValidProfile(slurper.getConditionalBlockNames())
+                checkValidProfile(parser.getDeclaredProfiles())
             }
 
         }
@@ -387,44 +421,44 @@ class ConfigBuilder {
      * Merge the main config with a separate config file
      *
      * @param result The main {@link ConfigObject}
-     * @param slurper The {@ComposedConfigSlurper} parsed instance
+     * @param parser The {@ConfigParser} instance
      * @param entry The next config snippet/file to be parsed
      * @return
      */
-    protected void merge0(ConfigObject result, ConfigParser slurper, entry) {
+    protected void merge0(ConfigObject result, ConfigParser parser, entry) {
         if( !entry )
             return
 
         // select the profile
-        if( showAllProfiles ) {
-            def config = parse0(slurper,entry)
-            validate(config,entry)
-            result.merge(config)
-            return
+        if( !showAllProfiles ) {
+            log.debug "Applying config profile: `${profile}`"
+            parser.setProfiles(profile.tokenize(','))
         }
 
-        log.debug "Applying config profile: `${profile}`"
-        def allNames = profile.tokenize(',')
-        slurper.registerConditionalBlock('profiles', allNames)
-
-        def config = parse0(slurper,entry)
-        validate(config,entry)
+        final config = parse0(parser, entry)
+        if( NF.getSyntaxParserVersion() == 'v1' )
+            validate(config, entry)
+        declaredParams.putAll(parser.getDeclaredParams())
         result.merge(config)
     }
 
-    protected ConfigObject parse0(ConfigParser slurper, entry) {
+    protected ConfigObject parse0(ConfigParser parser, entry) {
         if( entry instanceof File ) {
             final path = entry.toPath()
             parsedConfigFiles << path
-            return slurper.parse(path)
+            return parser.parse(path)
         }
 
         if( entry instanceof Path ) {
             parsedConfigFiles << entry
-            return slurper.parse(entry)
+            return parser.parse(entry)
         }
 
-        return slurper.parse(entry.toString())
+        if( entry instanceof CharSequence ) {
+            return parser.parse(entry.toString())
+        }
+
+        throw new IllegalStateException("Unexpected config entry: ${entry}")
     }
 
     /**
@@ -434,7 +468,7 @@ class ConfigBuilder {
      * @param file The source config file/snippet
      * @return
      */
-    protected validate(ConfigObject config, file, String parent=null, List stack = new ArrayList()) {
+    protected void validate(ConfigObject config, file, String parent=null, List stack = new ArrayList()) {
         for( String key : new ArrayList<>(config.keySet()) ) {
             final value = config.get(key)
             if( value instanceof ConfigObject ) {
@@ -503,8 +537,9 @@ class ConfigBuilder {
     private String normalizeResumeId( String uniqueId ) {
         if( !uniqueId )
             return null
-
         if( uniqueId == 'last' || uniqueId == 'true' ) {
+            if( HistoryFile.disabled() )
+                throw new AbortOperationException("The resume session id should be specified via `-resume` option when history file tracking is disabled")
             uniqueId = HistoryFile.DEFAULT.getLast()?.sessionId
 
             if( !uniqueId ) {
@@ -529,6 +564,16 @@ class ConfigBuilder {
         if( cmdRun.stubRun )
             config.stubRun = cmdRun.stubRun
 
+        // -- set the output directory
+        if( cmdRun.outputDir )
+            config.outputDir = cmdRun.outputDir
+
+        if( cmdRun.preview )
+            config.preview = cmdRun.preview
+
+        if( cmdRun.plugins )
+            config.plugins = cmdRun.plugins.tokenize(',')
+
         // -- sets the working directory
         if( cmdRun.workDir )
             config.workDir = cmdRun.workDir
@@ -551,9 +596,30 @@ class ConfigBuilder {
             config.process[name] = parseValue(value)
         }
 
+        if( cmdRun.withoutConda && config.conda instanceof Map ) {
+            // disable conda execution
+            log.debug "Disabling execution with Conda as requested by command-line option `-without-conda`"
+            config.conda.enabled = false
+        }
+
         // -- apply the conda environment
         if( cmdRun.withConda ) {
-            config.process.conda = cmdRun.withConda
+            if( cmdRun.withConda != '-' )
+                config.process.conda = cmdRun.withConda
+            config.conda.enabled = true
+        }
+
+        if( cmdRun.withoutSpack && config.spack instanceof Map ) {
+            // disable spack execution
+            log.debug "Disabling execution with Spack as requested by command-line option `-without-spack`"
+            config.spack.enabled = false
+        }
+
+        // -- apply the spack environment
+        if( cmdRun.withSpack ) {
+            if( cmdRun.withSpack != '-' )
+                config.process.spack = cmdRun.withSpack
+            config.spack.enabled = true
         }
 
         // -- sets the resume option
@@ -563,9 +629,10 @@ class ConfigBuilder {
         if( config.isSet('resume') )
             config.resume = normalizeResumeId(config.resume as String)
 
-        // -- sets `dumpKeys` option
-        if( cmdRun.dumpHashes )
-            config.dumpHashes = cmdRun.dumpHashes
+        // -- sets `dumpHashes` option
+        if( cmdRun.dumpHashes ) {
+            config.dumpHashes = cmdRun.dumpHashes != '-' ? cmdRun.dumpHashes : 'default'
+        }
 
         if( cmdRun.dumpChannels )
             config.dumpChannels = cmdRun.dumpChannels.tokenize(',')
@@ -588,8 +655,6 @@ class ConfigBuilder {
             config.trace.enabled = true
             if( cmdRun.withTrace != '-' )
                 config.trace.file = cmdRun.withTrace
-            else if( !config.trace.file )
-                config.trace.file = TraceFileObserver.DEF_FILE_NAME
         }
 
         // -- sets report report options
@@ -599,8 +664,6 @@ class ConfigBuilder {
             config.report.enabled = true
             if( cmdRun.withReport != '-' )
                 config.report.file = cmdRun.withReport
-            else if( !config.report.file )
-                config.report.file = ReportObserver.DEF_FILE_NAME
         }
 
         // -- sets timeline report options
@@ -610,8 +673,6 @@ class ConfigBuilder {
             config.timeline.enabled = true
             if( cmdRun.withTimeline != '-' )
                 config.timeline.file = cmdRun.withTimeline
-            else if( !config.timeline.file )
-                config.timeline.file = TimelineObserver.DEF_FILE_NAME
         }
 
         // -- sets DAG report options
@@ -621,8 +682,6 @@ class ConfigBuilder {
             config.dag.enabled = true
             if( cmdRun.withDag != '-' )
                 config.dag.file = cmdRun.withDag
-            else if( !config.dag.file )
-                config.dag.file = GraphObserver.DEF_FILE_NAME
         }
 
         if( cmdRun.withNotification ) {
@@ -639,13 +698,14 @@ class ConfigBuilder {
 
         // -- sets the messages options
         if( cmdRun.withWebLog ) {
+            log.warn "The command line option '-with-weblog' is deprecated - consider enabling this feature by setting 'weblog.enabled=true' in your configuration file"
             if( !(config.weblog instanceof Map) )
                 config.weblog = [:]
             config.weblog.enabled = true
             if( cmdRun.withWebLog != '-' )
                 config.weblog.url = cmdRun.withWebLog
             else if( !config.weblog.url )
-                config.weblog.url = WebLogObserver.DEF_URL
+                config.weblog.url = 'http://localhost'
         }
 
         // -- sets tower options
@@ -653,16 +713,50 @@ class ConfigBuilder {
             if( !(config.tower instanceof Map) )
                 config.tower = [:]
             config.tower.enabled = true
-            config.tower.endpoint = cmdRun.withTower
+            if( cmdRun.withTower != '-' )
+                config.tower.endpoint = cmdRun.withTower
+            else if( !config.tower.endpoint )
+                config.tower.endpoint = 'https://api.cloud.seqera.io'
+        }
+
+        // -- set wave options
+        if( cmdRun.withWave ) {
+            if( !(config.wave instanceof Map) )
+                config.wave = [:]
+            config.wave.enabled = true
+            if( cmdRun.withWave != '-' )
+                config.wave.endpoint = cmdRun.withWave
+            else if( !config.wave.endpoint )
+                config.wave.endpoint = 'https://wave.seqera.io'
+        }
+
+        // -- set fusion options
+        if( cmdRun.withFusion ) {
+            if( !(config.fusion instanceof Map) )
+                config.fusion = [:]
+            config.fusion.enabled = cmdRun.withFusion == 'true'
+        }
+
+        // -- set cloudcache options
+        final envCloudPath = env.get('NXF_CLOUDCACHE_PATH')
+        if( cmdRun.cloudCachePath || envCloudPath ) {
+            if( !(config.cloudcache instanceof Map) )
+                config.cloudcache = [:]
+            if( !config.cloudcache.isSet('enabled') )
+                config.cloudcache.enabled = true
+            if( cmdRun.cloudCachePath && cmdRun.cloudCachePath != '-' )
+                config.cloudcache.path = cmdRun.cloudCachePath
+            else if( !config.cloudcache.isSet('path') && envCloudPath )
+                config.cloudcache.path = envCloudPath
         }
 
         // -- add the command line parameters to the 'taskConfig' object
-        if( cmdRun.hasParams() )
-            config.params = mergeMaps( (Map)config.params, cmdRun.parsedParams(configVars()), NF.strictMode )
+        if( cliParams )
+            config.params = mergeMaps( (Map)config.params, cliParams, NF.strictMode )
 
         if( cmdRun.withoutDocker && config.docker instanceof Map ) {
             // disable docker execution
-            log.debug "Disabling execution in Docker contained as requested by cli option `-without-docker`"
+            log.debug "Disabling execution in Docker container as requested by command-line option `-without-docker`"
             config.docker.enabled = false
         }
 
@@ -678,13 +772,17 @@ class ConfigBuilder {
             configContainer(config, 'singularity', cmdRun.withSingularity)
         }
 
+        if( cmdRun.withApptainer ) {
+            configContainer(config, 'apptainer', cmdRun.withApptainer)
+        }
+
         if( cmdRun.withCharliecloud ) {
             configContainer(config, 'charliecloud', cmdRun.withCharliecloud)
         }
     }
 
     private void configContainer(ConfigObject config, String engine, def cli) {
-        log.debug "Enabling execution in ${engine.capitalize()} container as requested by cli option `-with-$engine ${cmdRun.withDocker}`"
+        log.debug "Enabling execution in ${engine.capitalize()} container as requested by command-line option `-with-$engine ${cmdRun.withDocker}`"
 
         if( !config.containsKey(engine) )
             config.put(engine, [:])
@@ -703,7 +801,7 @@ class ConfigBuilder {
         }
 
         if( !hasContainerDirective(config.process) )
-            throw new AbortOperationException("You have requested to run with ${engine.capitalize()} but no image were specified")
+            throw new AbortOperationException("You have requested to run with ${engine.capitalize()} but no image was specified")
 
     }
 
@@ -720,8 +818,8 @@ class ConfigBuilder {
                 return true
 
             def result = process
-                            .findAll { String name, value -> name.startsWith('$') && value instanceof Map }
-                            .find { String name, Map value -> value.container as boolean }  // the first non-empty `container` string
+                    .findAll { String name, value -> (name.startsWith('withName:') || name.startsWith('$')) && value instanceof Map }
+                    .find { String name, Map value -> value.container as boolean }  // the first non-empty `container` string
 
             return result as boolean
         }
@@ -735,7 +833,7 @@ class ConfigBuilder {
         def config = buildGivenFiles(configFiles)
 
         if( cmdRun )
-            configRunOptions(config, System.getenv(), cmdRun)
+            configRunOptions(config, SysEnv.get(), cmdRun)
 
         return config
     }
@@ -769,10 +867,6 @@ class ConfigBuilder {
                 result << normalize0(entry)
             }
             return result
-        }
-        else if( config instanceof GString ) {
-            final holdSecrets = config.values.any { it instanceof SecretHolder }
-            return holdSecrets ? config : config.toString()
         }
         else {
             return config
@@ -829,6 +923,7 @@ class ConfigBuilder {
 
         final config = new ConfigBuilder()
                 .setShowClosures(true)
+                .setStripSecrets(true)
                 .setOptions(cmdRun.launcher.options)
                 .setCmdRun(cmdRun)
                 .setBaseDir(baseDir)

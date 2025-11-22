@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +16,13 @@
 
 package nextflow.file.http
 
+import java.nio.file.Files
 import java.nio.file.Path
 
+import com.github.tomakehurst.wiremock.junit.WireMockRule
+import com.github.tomjankes.wiremock.WireMockGroovy
+import org.junit.Rule
+import spock.lang.IgnoreIf
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -26,6 +30,7 @@ import spock.lang.Unroll
  */
 class XFileSystemProviderTest extends Specification {
 
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
     def "should return input stream"() {
         given:
         def fsp = new HttpFileSystemProvider()
@@ -38,6 +43,7 @@ class XFileSystemProviderTest extends Specification {
 
     def "should return input stream from path"() {
         given:
+        def DATA = 'Hello world'
         def fsp = Spy(new HttpFileSystemProvider())
         def path = fsp.getPath(new URI('http://host.com/index.html?query=123'))
         def connection = Mock(URLConnection)
@@ -50,16 +56,16 @@ class XFileSystemProviderTest extends Specification {
             return connection
         }
         and:
-        connection.getInputStream() >> new ByteArrayInputStream('Hello world'.bytes)
+        connection.getInputStream() >> new ByteArrayInputStream(DATA.bytes)
+        connection.getContentLengthLong() >> DATA.size()
         and:
         stream.text == 'Hello world'
     }
 
-
     def "should read file attributes from map"() {
         given:
         def fs = new HttpFileSystemProvider()
-        def attrMap = ['Last-Modified': ['Fri, 04 Nov 2016 21:50:34 GMT'], 'Content-Length': ['21729'] ]
+        def attrMap = ['last-modified': ['Fri, 04 Nov 2016 21:50:34 GMT'], 'content-length': ['21729']]
 
         when:
         def attrs = fs.readHttpAttributes(attrMap)
@@ -81,7 +87,7 @@ class XFileSystemProviderTest extends Specification {
         def GERMAN = new Locale.Builder().setLanguage("de").setRegion("DE").build()
         Locale.setDefault(Locale.Category.FORMAT, GERMAN)
         def fs = new HttpFileSystemProvider()
-        def attrMap = ['Last-Modified': ['Fri, 04 Nov 2016 21:50:34 GMT'], 'Content-Length': ['21729'] ]
+        def attrMap = ['last-modified': ['Fri, 04 Nov 2016 21:50:34 GMT'], 'content-length': ['21729']]
 
         when:
         def attrs = fs.readHttpAttributes(attrMap)
@@ -93,23 +99,24 @@ class XFileSystemProviderTest extends Specification {
         Locale.setDefault(Locale.Category.FORMAT, defLocale)
     }
 
-
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
     def "should read file attributes from HttpPath"() {
         given:
         def fsp = new HttpFileSystemProvider()
-        def path = (XPath)fsp.getPath(new URI('http://www.nextflow.io/index.html'))
+        def path = (XPath) fsp.getPath(new URI('http://www.nextflow.io/index.html'))
 
         when:
         def attrs = fsp.readHttpAttributes(path)
         then:
-        attrs.lastModifiedTime() == null
+        attrs.lastModifiedTime()
         attrs.size() > 0
     }
 
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
     def "should read file attributes from FtpPath"() {
         given:
         def fsp = new FtpFileSystemProvider()
-        def path = (XPath)fsp.getPath(new URI('ftp://ftp.ebi.ac.uk/robots.txt'))
+        def path = (XPath) fsp.getPath(new URI('ftp://ftp.ebi.ac.uk/robots.txt'))
 
         when:
         def attrs = fsp.readHttpAttributes(path)
@@ -119,35 +126,127 @@ class XFileSystemProviderTest extends Specification {
     }
 
     @Unroll
-    def 'should get uri path' () {
+    def 'should get uri path'() {
         given:
         def provider = new HttpFileSystemProvider()
 
         when:
-        def path = provider.getPath( new URI(PATH) )
+        def path = provider.getPath(new URI(PATH))
         then:
         path.toUri().toString() == EXPECTED
 
         where:
-        PATH                                | EXPECTED
-        'http://foo.com/this/that'          | 'http://foo.com/this/that'
-        'http://FOO.com/this/that'          | 'http://foo.com/this/that'
-        'http://MrXYZ@foo.com/this/that'    | 'http://MrXYZ@foo.com/this/that'
-        'http://MrXYZ@FOO.com/this/that'    | 'http://MrXYZ@foo.com/this/that'
-        'http://@FOO.com/this/that'         | 'http://@foo.com/this/that'
-        'http://foo.com/this/that?foo=1'    | 'http://foo.com/this/that?foo=1'
+        PATH                             | EXPECTED
+        'http://foo.com/this/that'       | 'http://foo.com/this/that'
+        'http://FOO.com/this/that'       | 'http://foo.com/this/that'
+        'http://MrXYZ@foo.com/this/that' | 'http://MrXYZ@foo.com/this/that'
+        'http://MrXYZ@FOO.com/this/that' | 'http://MrXYZ@foo.com/this/that'
+        'http://@FOO.com/this/that'      | 'http://@foo.com/this/that'
+        'http://foo.com/this/that?foo=1' | 'http://foo.com/this/that?foo=1'
     }
 
     @Unroll
-    def 'should encode user info' () {
+    def 'should encode user info'() {
         given:
         def provider = new HttpFileSystemProvider()
         expect:
         provider.auth(USER_INFO) == EXPECTED
         where:
-        USER_INFO               | EXPECTED
-        "foo:bar"               | "Basic ${'foo:bar'.bytes.encodeBase64()}"
-        "x-oauth-bearer:12345"  | "Bearer 12345"
+        USER_INFO              | EXPECTED
+        "foo:bar"              | "Basic ${'foo:bar'.bytes.encodeBase64()}"
+        "x-oauth-bearer:12345" | "Bearer 12345"
     }
 
+    @Rule
+    WireMockRule wireMockRule = new WireMockRule(0)
+
+    @Unroll
+    def 'should follow a redirect when read a http file '() {
+        given:
+        def wireMock = new WireMockGroovy(wireMockRule.port())
+        def localhost = "http://localhost:${wireMockRule.port()}"
+        wireMock.stub {
+            request {
+                method "GET"
+                url "/index.html"
+            }
+            response {
+                status HTTP_CODE
+                headers {
+                    "Location" "${localhost}${REDIRECT_TO}"
+                }
+            }
+        }
+        wireMock.stub {
+            request {
+                method "GET"
+                url "/index2.html"
+            }
+            response {
+                status HTTP_CODE
+                headers {
+                    "Location" "${localhost}/target.html"
+                }
+            }
+        }
+        wireMock.stub {
+            request {
+                method "GET"
+                url "/target.html"
+            }
+            response {
+                status 200
+                body """a
+                 b
+                 c
+                 d
+                 """
+                headers {
+                    "Content-Type" "text/html"
+                    "Content-Length" "10"
+                    "Last-Modified" "Fri, 04 Nov 2016 21:50:34 GMT"
+                }
+            }
+        }
+        and:
+        def provider = new HttpFileSystemProvider()
+        when:
+        def path = provider.getPath(new URI("${localhost}/index.html"))
+        then:
+        path
+        Files.size(path) == EXPECTED
+
+        where:
+        HTTP_CODE | REDIRECT_TO         | EXPECTED
+        301       | "/target.html"      | 10
+        301       | "/index2.html"      | 10
+
+        302       | "/target.html"      | 10
+        302       | "/index2.html"      | 10
+
+        307       | "/target.html"      | 10
+        307       | "/index2.html"      | 10
+
+        308       | "/target.html"      | 10
+        308       | "/index2.html"      | 10
+        //infinite redirect to himself
+        308       | "/index.html"       | -1
+    }
+
+    def 'should normalize location' () {
+        given:
+        def provider = Spy(XFileSystemProvider)
+
+        expect:
+        provider.absLocation(LOCATION, new URL(TARGET)) == EXPECTED
+
+        where:
+        LOCATION                | TARGET                    | EXPECTED
+        'https://this/that'     | 'http://foo.com:123'      | 'https://this/that'
+        '/'                     | 'http://foo.com:123'      | 'http://foo.com:123/'
+        '/this/that'            | 'http://foo.com:123'      | 'http://foo.com:123/this/that'
+        '/this/that'            | 'http://foo.com:123/abc'  | 'http://foo.com:123/this/that'
+        'this/that'             | 'http://foo.com:123/abc'  | 'http://foo.com:123/this/that'
+
+    }
 }

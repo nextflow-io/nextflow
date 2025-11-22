@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +16,6 @@
 
 package nextflow.mail
 
-import spock.lang.IgnoreIf
-import spock.lang.Specification
-import spock.lang.Unroll
-
 import java.nio.file.Files
 import java.nio.file.Path
 import javax.mail.Message
@@ -28,7 +23,11 @@ import javax.mail.internet.InternetAddress
 import javax.mail.internet.MimeMessage
 import javax.mail.internet.MimeMultipart
 
+import nextflow.SysEnv
 import org.subethamail.wiser.Wiser
+import spock.lang.IgnoreIf
+import spock.lang.Specification
+import spock.lang.Unroll
 import spock.util.environment.RestoreSystemProperties
 
 @IgnoreIf({System.getenv('NXF_SMOKE')})
@@ -38,7 +37,7 @@ class MailerTest extends Specification {
     def 'should return config properties'() {
         when:
         def SMTP = [host: 'google.com', port: '808', user: 'foo', password: 'bar']
-        def mailer = new Mailer( config: [smtp: SMTP, other: 1]  )
+        def mailer = new Mailer( [smtp: SMTP, other: 1] )
         def props = mailer.createProps()
 
         then:
@@ -57,7 +56,7 @@ class MailerTest extends Specification {
         System.setProperty('http.proxyHost', 'foo.com')
         System.setProperty('http.proxyPort', '8000')
 
-        def mailer = new Mailer( config: [smtp: [host: 'gmail.com', port: 25, user:'yo']]  )
+        def mailer = new Mailer( [smtp: [host: 'gmail.com', port: 25, user:'yo']] )
 
         when:
         def props = mailer.createProps()
@@ -81,7 +80,7 @@ class MailerTest extends Specification {
         server.start()
 
         def SMTP = [ host: 'localhost', port: PORT, user: USER, password: PASSWORD]
-        def mailer = new Mailer( config: [smtp: SMTP])
+        def mailer = new Mailer([smtp: SMTP])
 
         String TO = "receiver@nextflow.io"
         String FROM = 'paolo@gmail.com'
@@ -121,7 +120,7 @@ class MailerTest extends Specification {
         server.start()
 
         def SMTP = [ host: '127.0.0.1', port: PORT, user: USER, password: PASSWORD]
-        def mailer = new Mailer( config: [smtp: SMTP])
+        def mailer = new Mailer([smtp: SMTP])
 
         String TO = "receiver@gmail.com"
         String FROM = 'paolo@nextflow.io'
@@ -158,17 +157,18 @@ class MailerTest extends Specification {
     def 'should send with java' () {
 
         given:
-        def mailer = Spy(Mailer)
+        def mailer = Spy(new Mailer([smtp: [host:'foo.com'] ]))
         def MSG = Mock(MimeMessage)
         def mail = new Mail()
+        def provider = Spy(new JavaMailProvider())
 
         when:
-        mailer.config = [smtp: [host:'foo.com'] ]
         mailer.send(mail)
         then:
         0 * mailer.getSysMailer() >> null
+        1 * mailer.provider() >> provider
         1 * mailer.createMimeMessage(mail) >> MSG
-        1 * mailer.sendViaJavaMail(MSG) >> null
+        1 * provider.send(MSG, mailer) >> null
 
     }
 
@@ -177,13 +177,15 @@ class MailerTest extends Specification {
         def mailer = Spy(Mailer)
         def MSG = Mock(MimeMessage)
         def mail = new Mail()
+        and:
+        def provider = Spy(new SendMailProvider())
 
         when:
         mailer.send(mail)
         then:
-        1 * mailer.getSysMailer() >> 'sendmail'
+        1 * mailer.provider() >> provider
         1 * mailer.createMimeMessage(mail) >> MSG
-        1 * mailer.sendViaSysMail(MSG) >> null
+        1 * provider.send(MSG, mailer) >> null
     }
 
     def 'should throw an exception' () {
@@ -202,12 +204,14 @@ class MailerTest extends Specification {
         def mailer = Spy(Mailer)
         def MSG = Mock(MimeMessage)
         def mail = new Mail()
+        and:
+        def provider = Spy(new SimpleMailProvider())
         when:
         mailer.send(mail)
         then:
-        1 * mailer.getSysMailer() >> 'mail'
+        1 * mailer.provider() >> provider
         1 * mailer.createTextMessage(mail) >> MSG
-        1 * mailer.sendViaSysMail(MSG) >> null
+        1 * provider.send(MSG, mailer) >> null
     }
 
 
@@ -219,14 +223,14 @@ class MailerTest extends Specification {
 
         when:
         mail = new Mail(from:'foo@gmail.com')
-        msg = new Mailer(config: [from:'fallback@hotmail.com']).createMimeMessage(mail)
+        msg = new Mailer([from:'fallback@hotmail.com']).createMimeMessage(mail)
         then:
         msg.getFrom().size()==1
         msg.getFrom()[0].toString() == 'foo@gmail.com'
 
         when:
         mail = new Mail()
-        msg = new Mailer(config: [from:'fallback@hotmail.com']).createMimeMessage(mail)
+        msg = new Mailer([from:'fallback@hotmail.com']).createMimeMessage(mail)
         then:
         msg.getFrom().size()==1
         msg.getFrom()[0].toString() == 'fallback@hotmail.com'
@@ -280,33 +284,37 @@ class MailerTest extends Specification {
     def 'should fetch config properties' () {
 
         given:
-        def ENV = [NXF_SMTP_USER: 'jim', NXF_SMTP_PASSWORD: 'secret', NXF_SMTP_HOST: 'g.com', NXF_SMTP_PORT: '864']
+        SysEnv.push(NXF_SMTP_USER: 'jim', NXF_SMTP_PASSWORD: 'secret', NXF_SMTP_HOST: 'g.com', NXF_SMTP_PORT: '864')
+        and:
         def SMTP = [host:'hola.com', user:'foo', password: 'bar', port: 234]
-        Mailer mail
+        Mailer mailer
 
         when:
-        mail = new Mailer(config: [smtp: SMTP])
+        mailer = new Mailer([smtp: SMTP])
         then:
-        mail.host == 'hola.com'
-        mail.user == 'foo'
-        mail.password == 'bar'
-        mail.port == 234
+        mailer.host == 'hola.com'
+        mailer.user == 'foo'
+        mailer.password == 'bar'
+        mailer.port == 234
 
         when:
-        mail = new Mailer(config: [smtp: [host: 'local', port: '999']], env: ENV)
+        mailer = new Mailer([smtp: [host: 'local', port: '999']])
         then:
-        mail.host == 'local'
-        mail.port == 999
-        mail.user == 'jim'
-        mail.password == 'secret'
+        mailer.host == 'local'
+        mailer.port == 999
+        mailer.user == 'jim'
+        mailer.password == 'secret'
 
         when:
-        mail = new Mailer(env: ENV)
+        mailer = new Mailer([:])
         then:
-        mail.host == 'g.com'
-        mail.port == 864
-        mail.user == 'jim'
-        mail.password == 'secret'
+        mailer.host == 'g.com'
+        mailer.port == 864
+        mailer.user == 'jim'
+        mailer.password == 'secret'
+
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'should config the mailer' () {

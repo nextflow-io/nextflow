@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,47 +36,48 @@ class TextFileCollectorTest extends Specification {
 
         given:
         def base = new TextFileCollector.CachePath(Paths.get('.'))
-        def buffer = new TextFileCollector(base)
+        def collector = new TextFileCollector(base)
 
         expect:
-        buffer.getNextNameFor(Paths.get('/some/file.fa'),1) == Paths.get('/some/file.1.fa')
-        buffer.getNextNameFor(Paths.get('/some/file.fa'),2) == Paths.get('/some/file.2.fa')
-        buffer.getNextNameFor(Paths.get('/some/file.fa'),3) == Paths.get('/some/file.3.fa')
+        collector.getNextNameFor(Paths.get('/some/file.fa'),1) == Paths.get('/some/file.1.fa')
+        collector.getNextNameFor(Paths.get('/some/file.fa'),2) == Paths.get('/some/file.2.fa')
+        collector.getNextNameFor(Paths.get('/some/file.fa'),3) == Paths.get('/some/file.3.fa')
     }
 
     def 'test add text' () {
 
         given:
         def base = Files.createTempDirectory('test').resolve('sample.fasta')
-        def buffer = new TextFileCollector(new CachePath(base))
+        def collector = new TextFileCollector(new CachePath(base))
 
         when:
-        buffer.add('>seq1\n')
-        buffer.add('alpha\n')
-        assert buffer.nextChunk() == base.resolveSibling('sample.1.fasta')
+        collector.add('>seq1\n')
+        collector.add('alpha\n')
+        assert collector.nextChunk() == base.resolveSibling('sample.1.fasta')
 
-        buffer.add('>seq2\n')
-        buffer.add('gamma\n')
-        buffer.add('>seq3\n')
-        buffer.add('beta\n')
-        assert buffer.nextChunk() == base.resolveSibling('sample.2.fasta')
+        collector.add('>seq2\n')
+        collector.add('gamma\n')
+        collector.add('>seq3\n')
+        collector.add('beta\n')
+        assert collector.nextChunk() == base.resolveSibling('sample.2.fasta')
 
-        buffer.add('>seq4\n')
-        buffer.add('kappa\n')
-        buffer.add('>seq5\n')
-        buffer.add('iota\n')
-        buffer.add('delta\n')
-        assert buffer.nextChunk() == base.resolveSibling('sample.3.fasta')
+        collector.add('>seq4\n')
+        collector.add('kappa\n')
+        collector.add('>seq5\n')
+        collector.add('iota\n')
+        collector.add('delta\n')
+        assert collector.nextChunk() == base.resolveSibling('sample.3.fasta')
 
-        buffer.close()
+        collector.markComplete()
+        collector.close()
 
         then:
         base.resolveSibling('sample.1.fasta').text == '>seq1\nalpha\n'
         base.resolveSibling('sample.2.fasta').text == '>seq2\ngamma\n>seq3\nbeta\n'
         base.resolveSibling('sample.3.fasta').text == '>seq4\nkappa\n>seq5\niota\ndelta\n'
         base.resolveSibling('.chunks.sample.fasta').exists()
-        buffer.checkCached()
-        buffer.getAllChunks()*.name == ['sample.1.fasta','sample.2.fasta','sample.3.fasta']
+        collector.checkCached()
+        collector.getAllChunks()*.name == ['sample.1.fasta','sample.2.fasta','sample.3.fasta']
 
         cleanup:
         base?.parent?.deleteDir()
@@ -90,29 +90,29 @@ class TextFileCollectorTest extends Specification {
         def base = Files.createTempDirectory('test').resolve('chunk.fasta')
 
         when:
-        def buffer = new TextFileCollector(new CachePath(base))
+        def collector = new TextFileCollector(new CachePath(base))
         then:
-        !buffer.hasChunk()
+        !collector.hasChunk()
 
         when:
-        buffer.add('>seq1\n')
-        buffer.add('alpha\n')
+        collector.add('>seq1\n')
+        collector.add('alpha\n')
         then:
-        buffer.hasChunk()
+        collector.hasChunk()
 
         when:
-        buffer.nextChunk()
-        buffer.add('>seq2\n')
-        buffer.add('gamma\n')
-        buffer.add('>seq3\n')
-        buffer.add('beta\n')
+        collector.nextChunk()
+        collector.add('>seq2\n')
+        collector.add('gamma\n')
+        collector.add('>seq3\n')
+        collector.add('beta\n')
         then:
-        buffer.hasChunk()
+        collector.hasChunk()
 
         when:
-        buffer.nextChunk()
+        collector.nextChunk()
         then:
-        !buffer.hasChunk()
+        !collector.hasChunk()
 
         cleanup:
         base?.parent?.deleteDir()
@@ -142,6 +142,7 @@ class TextFileCollectorTest extends Specification {
         collector.add('delta\n')
         assert collector.nextChunk() == base.resolveSibling('sample.3.fasta.gz')
 
+        collector.markComplete()
         collector.close()
 
         then:
@@ -172,6 +173,7 @@ class TextFileCollectorTest extends Specification {
         collector.add('zzz')
         assert collector.nextChunk() == base.resolveSibling('sample.3.fasta')
 
+        collector.markComplete()
         collector.close()
 
         then:

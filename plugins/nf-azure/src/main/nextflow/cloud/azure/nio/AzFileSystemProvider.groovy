@@ -39,12 +39,10 @@ import java.nio.file.attribute.FileAttributeView
 import java.nio.file.spi.FileSystemProvider
 
 import com.azure.storage.blob.BlobServiceClient
-import com.azure.storage.blob.BlobServiceClientBuilder
 import com.azure.storage.blob.models.BlobStorageException
-import com.azure.storage.common.StorageSharedKeyCredential
 import groovy.transform.CompileStatic
-import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
+import nextflow.cloud.azure.batch.AzHelper
 /**
  * Implements NIO File system provider for Azure Blob Storage
  *
@@ -58,10 +56,19 @@ class AzFileSystemProvider extends FileSystemProvider {
     public static final String AZURE_STORAGE_ACCOUNT_KEY = 'AZURE_STORAGE_ACCOUNT_KEY'
     public static final String AZURE_STORAGE_SAS_TOKEN = 'AZURE_STORAGE_SAS_TOKEN'
 
+    public static final String AZURE_CLIENT_ID = 'AZURE_CLIENT_ID'
+    public static final String AZURE_CLIENT_SECRET = 'AZURE_CLIENT_SECRET'
+    public static final String AZURE_TENANT_ID = 'AZURE_TENANT_ID'
+
+    public static final String AZURE_MANAGED_IDENTITY_USER = 'AZURE_MANAGED_IDENTITY_USER'
+    public static final String AZURE_MANAGED_IDENTITY_SYSTEM = 'AZURE_MANAGED_IDENTITY_SYSTEM'
+
     public static final String SCHEME = 'az'
 
     private Map<String,String> env = new HashMap<>(System.getenv())
     private Map<String,AzFileSystem> fileSystems = [:]
+    private String sasToken = null
+    private String accountKey = null
 
     /**
      * @inheritDoc
@@ -71,7 +78,15 @@ class AzFileSystemProvider extends FileSystemProvider {
         return SCHEME
     }
 
-    static private AzPath asAzPath(Path path ) {
+    String getSasToken() {
+        return this.sasToken
+    }
+
+    String getAccountKey() {
+        return this.accountKey
+    }
+
+    static private AzPath asAzPath(Path path) {
         if( path !instanceof AzPath )
             throw new IllegalArgumentException("Not a valid Azure blob storage path object: `$path` [${path?.class?.name?:'-'}]" )
         return (AzPath)path
@@ -95,34 +110,25 @@ class AzFileSystemProvider extends FileSystemProvider {
         return uri.authority.toLowerCase()
     }
 
-    @Memoized
     protected BlobServiceClient createBlobServiceWithKey(String accountName, String accountKey) {
-        log.debug "Creating Azure blob storage client -- accountName=$accountName; accountKey=${accountKey?.substring(0,5)}.."
-
-        final credential = new StorageSharedKeyCredential(accountName, accountKey);
-        final endpoint = String.format(Locale.ROOT, "https://%s.blob.core.windows.net", accountName);
-
-        return new BlobServiceClientBuilder()
-                .endpoint(endpoint)
-                .credential(credential)
-                .buildClient()
+        AzHelper.getOrCreateBlobServiceWithKey(accountName, accountKey)
     }
 
-    @Memoized
     protected BlobServiceClient createBlobServiceWithToken(String accountName, String sasToken) {
-        log.debug "Creating Azure blob storage client -- accountName: $accountName; sasToken: ${sasToken?.substring(0,10)}.."
+        AzHelper.getOrCreateBlobServiceWithToken(accountName, sasToken)
+    }
 
-        final endpoint = String.format(Locale.ROOT, "https://%s.blob.core.windows.net", accountName);
+    protected BlobServiceClient createBlobServiceWithServicePrincipal(String accountName, String clientId, String clientSecret, String tenantId) {
+        AzHelper.getOrCreateBlobServiceWithServicePrincipal(accountName, clientId, clientSecret, tenantId)
+    }
 
-        return new BlobServiceClientBuilder()
-                .endpoint(endpoint)
-                .sasToken(sasToken)
-                .buildClient()
+    protected BlobServiceClient createBlobServiceWithManagedIdentity(String accountName, String clientId) {
+        AzHelper.getOrCreateBlobServiceWithManagedIdentity(accountName, clientId)
     }
 
     /**
      * Constructs a new {@code FileSystem} object identified by a URI. This
-     * method is invoked by the {@link java.nio.file.FileSystems#newFileSystem(URI,Map)}
+     * method is invoked by the {@link java.nio.file.FileSystems#newFileSystem(URI, Map)}
      * method to open a new file system identified by a URI.
      *
      * <p> The {@code uri} parameter is an absolute, hierarchical URI, with a
@@ -186,15 +192,36 @@ class AzFileSystemProvider extends FileSystemProvider {
         final accountKey = config.get(AZURE_STORAGE_ACCOUNT_KEY) as String
         final sasToken = config.get(AZURE_STORAGE_SAS_TOKEN) as String
 
+        final servicePrincipalId = config.get(AZURE_CLIENT_ID) as String
+        final servicePrincipalSecret = config.get(AZURE_CLIENT_SECRET) as String
+        final tenantId = config.get(AZURE_TENANT_ID) as String
+
+        final managedIdentityUser = config.get(AZURE_MANAGED_IDENTITY_USER) as String
+        final managedIdentitySystem = config.get(AZURE_MANAGED_IDENTITY_SYSTEM) as Boolean
+
         if( !accountName )
             throw new IllegalArgumentException("Missing AZURE_STORAGE_ACCOUNT_NAME")
 
-        if( !accountKey && !sasToken )
-            throw new IllegalArgumentException("Missing AZURE_STORAGE_ACCOUNT_KEY or AZURE_STORAGE_SAS_TOKEN")
+        BlobServiceClient client
 
-        final client = sasToken
-                ? createBlobServiceWithToken(accountName, sasToken)
-                : createBlobServiceWithKey(accountName, accountKey)
+        if( managedIdentityUser || managedIdentitySystem ) {
+            client = createBlobServiceWithManagedIdentity(accountName, managedIdentityUser)
+        }
+        else if( servicePrincipalSecret && servicePrincipalId && tenantId ) {
+            client = createBlobServiceWithServicePrincipal(accountName, servicePrincipalId, servicePrincipalSecret, tenantId)
+        }
+        else if( sasToken ) {
+            client = createBlobServiceWithToken(accountName, sasToken)
+            this.sasToken = sasToken
+        }
+        else if( accountKey ) {
+            client = createBlobServiceWithKey(accountName, accountKey)
+            this.accountKey = accountKey
+        }
+        else {
+            throw new IllegalArgumentException("Missing Azure storage credentials: please specify a managed identity, service principal, or storage account key")
+        }
+
         final result = createFileSystem(client, bucket, config)
         fileSystems[bucket] = result
         return result
@@ -339,7 +366,7 @@ class AzFileSystemProvider extends FileSystemProvider {
 
     private void checkRoot(Path path) {
         if( path.toString() == '/' )
-            throw new UnsupportedOperationException('Operation not supported on root path')
+            throw new UnsupportedOperationException("Operation 'checkRoot' not supported on root path")
     }
 
     @Override
@@ -401,7 +428,7 @@ class AzFileSystemProvider extends FileSystemProvider {
             // 409 (CONFLICT) is returned when the path already
             // exists, ignore it
             if( e.statusCode!=409 )
-                throw e
+                throw new IOException("Unable to create Azure blob directory: ${dir.toUriString()} - cause: ${e.message}", e)
         }
     }
 
@@ -449,7 +476,7 @@ class AzFileSystemProvider extends FileSystemProvider {
 
     @Override
     FileStore getFileStore(Path path) throws IOException {
-        throw new UnsupportedOperationException()
+        throw new UnsupportedOperationException("Operation 'getFileStore' is not supported by AzFileSystem")
     }
 
     @Override
@@ -485,12 +512,12 @@ class AzFileSystemProvider extends FileSystemProvider {
 
     @Override
     Map<String, Object> readAttributes(Path path, String attributes, LinkOption... options) throws IOException {
-        throw new UnsupportedOperationException()
+        throw new UnsupportedOperationException("Operation 'readAttributes' is not supported by AzFileSystem")
     }
 
     @Override
     void setAttribute(Path path, String attribute, Object value, LinkOption... options) throws IOException {
-        throw new UnsupportedOperationException()
+        throw new UnsupportedOperationException("Operation 'setAttribute' is not supported by AzFileSystem")
     }
 
 }

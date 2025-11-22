@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -65,8 +64,6 @@ class ReportSummary {
         }
     }
 
-
-
     /**
      * Hold the summary for each series ie. cpu, memory, time, disk reads, disk writes
      */
@@ -114,15 +111,15 @@ class ReportSummary {
      *      - q3: third quartile
      *      - max: maximum value
      *      - mean: average value
-     *      - minLabel: label fot the task reporting the min value
-     *      - q1Label: label fot the task reporting the q1 value
-     *      - q2Label: label fot the task reporting the q2 value
-     *      - q3Label: label fot the task reporting the q3 value
-     *      - maxLabel: label fot the task reporting the max value
+     *      - minLabel: label for the task reporting the min value
+     *      - q1Label: label for the task reporting the q1 value
+     *      - q2Label: label for the task reporting the q2 value
+     *      - q3Label: label for the task reporting the q3 value
+     *      - maxLabel: label for the task reporting the max value
      */
     Map<String,?> compute(String name) {
         if( !names.contains(name) )
-            throw new IllegalArgumentException("Invalid status status field name: $name -- it must be one of the following: ${names.join(',')}")
+            throw new IllegalArgumentException("Invalid status field name: $name -- it must be one of the following: ${names.join(',')}")
 
         return series[name].compute()
     }
@@ -208,11 +205,11 @@ class ReportSummary {
          *      - q3: third quartile
          *      - max: maximum value
          *      - mean: average value
-         *      - minLabel: label fot the task reporting the min value
-         *      - q1Label: label fot the task reporting the q1 value
-         *      - q2Label: label fot the task reporting the q2 value
-         *      - q3Label: label fot the task reporting the q3 value
-         *      - maxLabel: label fot the task reporting the max value
+         *      - minLabel: label for the task reporting the min value
+         *      - q1Label: label for the task reporting the q1 value
+         *      - q2Label: label for the task reporting the q2 value
+         *      - q3Label: label for the task reporting the q3 value
+         *      - maxLabel: label for the task reporting the max value
          */
         Map<String,?> compute() {
             if( count==0 )

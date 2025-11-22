@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +16,6 @@
 
 package nextflow.trace
 
-import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -25,24 +23,24 @@ import groovy.text.GStringTemplateEngine
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
-import nextflow.processor.TaskHandler
+import nextflow.exception.AbortOperationException
+import nextflow.file.FileHelper
 import nextflow.processor.TaskId
-import nextflow.processor.TaskProcessor
 import nextflow.script.WorkflowMetadata
+import nextflow.trace.config.ReportConfig
+import nextflow.trace.event.TaskEvent
+import nextflow.util.SysHelper
+import nextflow.util.TestOnly
 /**
  * Render pipeline report processes execution.
  * Based on original TimelineObserver code by Paolo Di Tommaso
  *
- * @author Phil Ewels <phil.ewels@scilifelab.se>
+ * @author Phil Ewels <phil.ewels@seqera.io>
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 @CompileStatic
-class ReportObserver implements TraceObserver {
-
-    static final public String DEF_FILE_NAME = 'report.html'
-
-    static final public int DEF_MAX_TASKS = 10_000
+class ReportObserver implements TraceObserverV2 {
 
     /**
      * Holds the the start time for tasks started/submitted but not yet completed
@@ -63,7 +61,7 @@ class ReportObserver implements TraceObserver {
      * Max number of tasks allowed in the report, when they exceed this
      * number the tasks table is omitted
      */
-    private int maxTasks = DEF_MAX_TASKS
+    private int maxTasks
 
     /**
      * Compute resources usage stats
@@ -71,18 +69,18 @@ class ReportObserver implements TraceObserver {
     private ResourcesAggregator aggregator
 
     /**
-     * Overwrite existing trace file instead of rolling it
+     * Overwrite existing trace file (required in some cases, as rolling filename has been deprecated)
      */
-    boolean overwrite
+    private boolean overwrite
 
-    /**
-     * Creates a report observer
-     *
-     * @param file The file path where to store the resulting HTML report document
-     */
-    ReportObserver( Path file ) {
-        this.reportFile = file
+    ReportObserver(ReportConfig config) {
+        this.reportFile = FileHelper.asPath(config.file)
+        this.maxTasks = config.maxTasks
+        this.overwrite = config.overwrite
     }
+
+    @TestOnly
+    protected ReportObserver() {}
 
     /**
      * Enables the collection of the task executions metrics in order to be reported in the HTML report
@@ -109,18 +107,6 @@ class ReportObserver implements TraceObserver {
     }
 
     /**
-     * Set the number max allowed tasks. If this number is exceed the the tasks
-     * json in not included in the final report
-     *
-     * @param value The number of max task record allowed to be included in the HTML report
-     * @return The {@link ReportObserver} itself
-     */
-    ReportObserver setMaxTasks( int value ) {
-        this.maxTasks = value
-        return this
-    }
-
-    /**
      * Create the trace file, in file already existing with the same name it is
      * "rolled" to a new file
      */
@@ -128,6 +114,9 @@ class ReportObserver implements TraceObserver {
     void onFlowCreate(Session session) {
         this.session = session
         this.aggregator = new ResourcesAggregator(session)
+        // check if the process exists
+        if( Files.exists(reportFile) && !overwrite )
+            throw new AbortOperationException("Report file already exists: ${reportFile.toUriString()} -- enable the 'report.overwrite' option in your config file to overwrite existing files")
     }
 
     /**
@@ -135,7 +124,7 @@ class ReportObserver implements TraceObserver {
      */
     @Override
     void onFlowComplete() {
-        log.debug "Flow completing -- rendering html report"
+        log.debug "Workflow completed -- rendering execution report"
         try {
             renderHtml()
         }
@@ -144,78 +133,49 @@ class ReportObserver implements TraceObserver {
         }
     }
 
-    /**
-     * This method is invoked when a process is created
-     *
-     * @param process A {@link TaskProcessor} object representing the process created
-     */
     @Override
-    void onProcessCreate(TaskProcessor process) { }
-
-
-    /**
-     * This method is invoked before a process run is going to be submitted
-     *
-     * @param handler A {@link TaskHandler} object representing the task submitted
-     */
-    @Override
-    void onProcessSubmit(TaskHandler handler, TraceRecord trace) {
-        log.trace "Trace report - submit process > $handler"
+    void onTaskSubmit(TaskEvent event) {
+        log.trace "Trace report - submit process > $event.handler"
         synchronized (records) {
-            records[ trace.taskId ] = trace
+            records[ event.trace.taskId ] = event.trace
         }
     }
 
-    /**
-     * This method is invoked when a process run is going to start
-     *
-     * @param handler  A {@link TaskHandler} object representing the task started
-     */
     @Override
-    void onProcessStart(TaskHandler handler, TraceRecord trace) {
-        log.trace "Trace report - start process > $handler"
+    void onTaskStart(TaskEvent event) {
+        log.trace "Trace report - start process > $event.handler"
         synchronized (records) {
-            records[ trace.taskId ] = trace
+            records[ event.trace.taskId ] = event.trace
         }
     }
 
-    /**
-     * This method is invoked when a process run completes
-     *
-     * @param handler A {@link TaskHandler} object representing the task completed
-     */
     @Override
-    void onProcessComplete(TaskHandler handler, TraceRecord trace) {
-        log.trace "Trace report - complete process > $handler"
-        if( !trace ) {
-            log.debug "WARN: Unable to find trace record for task id=${handler.task?.id}"
+    void onTaskComplete(TaskEvent event) {
+        log.trace "Trace report - complete process > $event.handler"
+        if( !event.trace ) {
+            log.debug "WARN: Unable to find trace record for task id=${event.handler.task?.id}"
             return
         }
 
         synchronized (records) {
-            records[ trace.taskId ] = trace
-            aggregate(trace)
+            records[ event.trace.taskId ] = event.trace
+            aggregate(event.trace)
         }
     }
 
-    /**
-     * This method is invoked when a process run cache is hit
-     *
-     * @param handler A {@link TaskHandler} object representing the task cached
-     */
     @Override
-    void onProcessCached(TaskHandler handler, TraceRecord trace) {
-        log.trace "Trace report - cached process > $handler"
+    void onTaskCached(TaskEvent event) {
+        log.trace "Trace report - cached process > $event.handler"
 
         // event was triggered by a stored task, ignore it
-        if( trace == null ) {
+        if( !event.trace ) {
             return
         }
 
         // remove the record from the current records
         synchronized (records) {
-            records[ trace.taskId ] = trace
-            aggregate(trace)
+            records[ event.trace.taskId ] = event.trace
+            aggregate(event.trace)
         }
     }
 
@@ -238,9 +198,7 @@ class ReportObserver implements TraceObserver {
     }
 
     protected String renderSummaryJson() {
-        final result = aggregator.renderSummaryJson()
-        log.debug "Execution report summary data:\n  ${result}"
-        return result
+        aggregator.renderSummaryJson()
     }
 
     protected String renderPayloadJson() {
@@ -256,6 +214,8 @@ class ReportObserver implements TraceObserver {
         final tpl_fields = [
             workflow : getWorkflowMetadata(),
             payload : renderPayloadJson(),
+            // Add SysHelper to template binding so it can be used in templates
+            SysHelper : SysHelper,
             assets_css : [
                 readTemplate('assets/bootstrap.min.css'),
                 readTemplate('assets/datatables.min.css')
@@ -266,27 +226,21 @@ class ReportObserver implements TraceObserver {
                 readTemplate('assets/bootstrap.min.js'),
                 readTemplate('assets/datatables.min.js'),
                 readTemplate('assets/moment.min.js'),
-                readTemplate('assets/plotly.min.js'),
+                readTemplate('assets/plotly-custom-3.1.2.min.js'),
                 readTemplate('assets/ReportTemplate.js')
             ]
         ]
         final tpl = readTemplate('ReportTemplate.html')
-        def engine = new GStringTemplateEngine()
-        def html_template = engine.createTemplate(tpl)
-        def html_output = html_template.make(tpl_fields).toString()
+        final engine = new GStringTemplateEngine()
+        final html_template = engine.createTemplate(tpl)
+        final html_output = html_template.make(tpl_fields).toString()
 
         // make sure the parent path exists
-        def parent = reportFile.getParent()
+        final parent = reportFile.getParent()
         if( parent )
             Files.createDirectories(parent)
 
-        if( overwrite )
-            Files.deleteIfExists(reportFile)
-        else
-            // roll the any trace files that may exist
-            reportFile.rollFile()
-
-        def writer = Files.newBufferedWriter(reportFile, Charset.defaultCharset())
+        final writer = TraceHelper.newFileWriter(reportFile, overwrite, 'Report')
         writer.withWriter { w -> w << html_output }
         writer.close()
     }
@@ -298,9 +252,9 @@ class ReportObserver implements TraceObserver {
      * @return The rendered json payload
      */
     protected String renderJsonData(Collection<TraceRecord> data) {
-        def List<String> formats = null
-        def List<String> fields = null
-        def result = new StringBuilder()
+        List<String> formats = null
+        List<String> fields = null
+        final result = new StringBuilder()
         result << '[\n'
         int i=0
         for( TraceRecord record : data ) {
@@ -320,13 +274,13 @@ class ReportObserver implements TraceObserver {
      * @return The loaded template as a string
      */
     private String readTemplate( String path ) {
-        StringWriter writer = new StringWriter();
-        def res =  this.class.getResourceAsStream( path )
+        final writer = new StringWriter()
+        final res = this.class.getResourceAsStream( path )
         int ch
         while( (ch=res.read()) != -1 ) {
-            writer.append(ch as char);
+            writer.append(ch as char)
         }
-        writer.toString();
+        writer.toString()
     }
 
 }

@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +18,7 @@ package nextflow.executor
 import java.nio.file.Files
 
 import nextflow.Session
-import nextflow.container.ContainerConfig
+import nextflow.container.DockerConfig
 import nextflow.script.ProcessConfig
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
@@ -231,7 +230,7 @@ class CondorExecutorTest extends Specification {
 
         given:
         def session = Mock(Session)
-        session.getContainerConfig() >> new ContainerConfig(enabled:false)
+        session.getContainerConfig() >> new DockerConfig(enabled:false)
         def folder = Files.createTempDirectory('test')
         def executor = [:] as CondorExecutor
         def task = new TaskRun(name: 'Hello', workDir: folder, script: 'echo Hello world!')

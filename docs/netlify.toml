@@ -1,0 +1,10 @@
+# No deployment previews unless the docs are edited
+[build]
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF ."
+
+# Tell Google not to spider the Netlify staging site
+[[headers]]
+for = "/*"
+
+[headers.values]
+    X-Robots-Tag = "noindex"

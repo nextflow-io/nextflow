@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +27,7 @@ import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.IncludeDef
 import nextflow.script.TaskClosure
+import nextflow.script.TokenEvalCall
 import nextflow.script.TokenEnvCall
 import nextflow.script.TokenFileCall
 import nextflow.script.TokenPathCall
@@ -36,10 +36,12 @@ import nextflow.script.TokenStdoutCall
 import nextflow.script.TokenValCall
 import nextflow.script.TokenValRef
 import nextflow.script.TokenVar
+import nextflow.script.control.GStringToLazyVisitor
+import nextflow.script.control.TaskCmdXformVisitor
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport
 import org.codehaus.groovy.ast.ClassNode
-import org.codehaus.groovy.ast.ConstructorNode
+import org.codehaus.groovy.ast.CodeVisitorSupport
 import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.Parameter
 import org.codehaus.groovy.ast.VariableScope
@@ -80,12 +82,11 @@ import org.codehaus.groovy.transform.GroovyASTTransformation
 @GroovyASTTransformation(phase = CompilePhase.CONVERSION)
 class NextflowDSLImpl implements ASTTransformation {
 
-    @Deprecated final static private String WORKFLOW_GET = 'get'
-    @Deprecated final static private String WORKFLOW_PUBLISH = 'publish'
     final static private String WORKFLOW_TAKE = 'take'
     final static private String WORKFLOW_EMIT = 'emit'
     final static private String WORKFLOW_MAIN = 'main'
-    final static private List<String> SCOPES = [WORKFLOW_TAKE, WORKFLOW_EMIT, WORKFLOW_MAIN]
+    final static private String WORKFLOW_PUBLISH = 'publish'
+    final static private List<String> SCOPES = [WORKFLOW_TAKE, WORKFLOW_EMIT, WORKFLOW_MAIN, WORKFLOW_PUBLISH]
 
     final static public String PROCESS_WHEN = 'when'
     final static public String PROCESS_STUB = 'stub'
@@ -152,63 +153,6 @@ class NextflowDSLImpl implements ASTTransformation {
             super.visitMethod(node)
         }
 
-        protected Statement makeSetProcessNamesStm() {
-            final names = new ListExpression()
-            for( String it: processNames ) {
-                names.addExpression(new ConstantExpression(it.toString()))
-            }
-
-            // the method list argument
-            final args = new ArgumentListExpression()
-            args.addExpression(names)
-
-            // some magic code
-            // this generates the invocation of the method:
-            //   nextflow.script.ScriptMeta.get(this).setProcessNames(<list of process names>)
-            final scriptMeta = new PropertyExpression( new PropertyExpression(new VariableExpression('nextflow'),'script'), 'ScriptMeta')
-            final thiz = new ArgumentListExpression(); thiz.addExpression( new VariableExpression('this') )
-            final meta = new MethodCallExpression( scriptMeta, 'get', thiz )
-            final call = new MethodCallExpression( meta, 'setDsl1ProcessNames', args)
-            final stm = new ExpressionStatement(call)
-            return stm
-        }
-
-        /**
-         * Add to constructor a method call to inject parsed metadata.
-         * Only needed by DSL1.
-         *
-         * @param node The node representing the class to be invoked
-         */
-        protected void injectMetadata(ClassNode node) {
-            for( ConstructorNode constructor : node.getDeclaredConstructors() ) {
-                def code = constructor.getCode()
-                if( code instanceof BlockStatement ) {
-                    code.addStatement(makeSetProcessNamesStm())
-                }
-                else if( code instanceof ExpressionStatement ) {
-                    def expr = code
-                    def block = new BlockStatement()
-                    block.addStatement(expr)
-                    block.addStatement(makeSetProcessNamesStm())
-                    constructor.setCode(block)
-                }
-                else
-                    throw new IllegalStateException("Invalid constructor expression: $code")
-            }
-        }
-
-        /**
-         * Only needed by DSL1 to inject process names declared in the script
-         *
-         * @param node The node representing the class to be invoked
-         */
-        @Override
-        protected void visitObjectInitializerStatements(ClassNode node) {
-            if( node.getSuperClass().getName() == BaseScript.getName() )
-                injectMetadata(node)
-            super.visitObjectInitializerStatements(node)
-        }
-
         @Override
         void visitMethodCallExpression(MethodCallExpression methodCall) {
             // pre-condition to be verified to apply the transformation
@@ -232,8 +176,14 @@ class NextflowDSLImpl implements ASTTransformation {
                     currentTaskName = null
                 }
             }
+
             else if( methodName == 'workflow' && preCondition ) {
                 convertWorkflowDef(methodCall,sourceUnit)
+                super.visitMethodCallExpression(methodCall)
+            }
+
+            else if( methodName == 'output' && preCondition ) {
+                convertOutputDef(methodCall,sourceUnit)
                 super.visitMethodCallExpression(methodCall)
             }
 
@@ -409,44 +359,27 @@ class NextflowDSLImpl implements ASTTransformation {
             MethodCallExpression callx
             VariableExpression varx
 
-            if( (callx=isMethodCallX(stat.expression)) && isThisX(callx.objectExpression) ) {
-                final name = "_${type}_${callx.methodAsString}"
-                return stmt( callThisX(name, callx.arguments) )
-            }
-
             if( (varx=isVariableX(stat.expression)) ) {
-                final name = "_${type}_${varx.name}"
-                return stmt( callThisX(name) )
+                return stmt( callThisX("_${type}_", args(constX(varx.name))) )
             }
 
             if( type == WORKFLOW_EMIT ) {
                 return createAssignX(stat, body, type, uniqueNames)
             }
 
-            syntaxError(stat, "Workflow malformed parameter definition")
+            syntaxError(stat, "Invalid workflow ${type}")
             return stat
         }
 
         protected Statement createAssignX(ExpressionStatement stat, List<Statement> body, String type, Set<String> uniqueNames) {
             BinaryExpression binx
-            MethodCallExpression callx
-            Expression args=null
 
             if( (binx=isAssignX(stat.expression)) ) {
                 // keep the statement in body to allow it to be evaluated
                 body.add(stat)
                 // and create method call expr to capture the var name in the emission
                 final left = (VariableExpression)binx.leftExpression
-                final name = "_${type}_${left.name}"
-                return stmt( callThisX(name) )
-            }
-
-            if( (callx=isMethodCallX(stat.expression)) && callx.objectExpression.text!='this' && hasTo(callx)) {
-                // keep the args
-                args = callx.arguments
-                // replace the method call expression with a property
-                stat.expression = new PropertyExpression(callx.objectExpression, callx.method)
-                // then, fallback to default case
+                return stmt( callThisX("_${type}_", args(constX(left.name))) )
             }
 
             // wrap the expression into a assignment expression
@@ -458,19 +391,7 @@ class NextflowDSLImpl implements ASTTransformation {
             body.add(stmt(assign))
 
             // the call method statement for the emit declaration
-            final name="_${type}_${var}"
-            callx =  args ? callThisX(name, args) : callThisX(name)
-            return stmt(callx)
-        }
-
-        protected boolean hasTo(MethodCallExpression callX) {
-            def tupleX = isTupleX(callX.arguments)
-            if( !tupleX ) return false
-            if( !tupleX.expressions ) return false
-            def mapX = isMapX(tupleX.expressions[0])
-            if( !mapX ) return false
-            def entry = mapX.getMapEntryExpressions().find { isConstX(it.keyExpression).text=='to' }
-            return entry != null
+            return stmt( callThisX("_${type}_", args(constX(var))) )
         }
 
         protected String getNextName(Set<String> allNames) {
@@ -481,6 +402,22 @@ class NextflowDSLImpl implements ASTTransformation {
                     break
             }
             return result
+        }
+
+        protected Statement normWorkflowPublish(ExpressionStatement stm) {
+            if( stm.expression !instanceof BinaryExpression ) {
+                syntaxError(stm, "Invalid workflow publish statement")
+                return stm
+            }
+
+            final binaryX = (BinaryExpression)stm.expression
+            final target = isVariableX(binaryX.leftExpression)
+            if( !target || binaryX.operation.type != Types.ASSIGN ) {
+                syntaxError(stm, "Invalid workflow publish statement")
+                return stm
+            }
+
+            return stmt( callThisX('_publish_', args(constX(target.name), binaryX.rightExpression)) )
         }
 
         protected Expression makeWorkflowDefWrapper( ClosureExpression closure, boolean anonymous ) {
@@ -509,12 +446,6 @@ class NextflowDSLImpl implements ASTTransformation {
                 visited[context] = true
 
                 switch (context) {
-                    case WORKFLOW_GET:
-                        syntaxError(stm, "Workflow 'get' is not supported anymore use 'take' instead")
-
-                    case WORKFLOW_PUBLISH:
-                        syntaxError(stm, "Workflow 'publish' is not supported anymore use process 'publishDir' instead")
-
                     case WORKFLOW_TAKE:
                     case WORKFLOW_EMIT:
                         if( !(stm instanceof ExpressionStatement) ) {
@@ -528,6 +459,18 @@ class NextflowDSLImpl implements ASTTransformation {
                         body.add(stm)
                         break
 
+                    case WORKFLOW_PUBLISH:
+                        if( !anonymous ) {
+                            syntaxError(stm, "The `publish` section is only allowed in the entry workflow")
+                            break
+                        }
+                        if( !(stm instanceof ExpressionStatement) ) {
+                            syntaxError(stm, "Invalid workflow publish statement")
+                            break
+                        }
+                        body.add(normWorkflowPublish(stm as ExpressionStatement))
+                        break
+
                     default:
                         if( context ) {
                             def opts = SCOPES.closest(context)
@@ -539,7 +482,7 @@ class NextflowDSLImpl implements ASTTransformation {
                 }
             }
             // read the closure source
-            readSource(closure, source, unit, true)
+            readSource(closure, source, unit)
 
             final bodyClosure = closureX(null, block(scope, body))
             final invokeBody = makeScriptWrapper(bodyClosure, source.toString(), 'workflow', unit)
@@ -552,6 +495,111 @@ class NextflowDSLImpl implements ASTTransformation {
             int line = node.lineNumber
             int coln = node.columnNumber
             unit.addError( new SyntaxException(message,line,coln))
+        }
+
+        /**
+         * Transform outputs in the workflow output definition:
+         *
+         *   output {
+         *     samples { ... }
+         *   }
+         *
+         * becomes:
+         *
+         *   output {
+         *     declare('samples') { ... }
+         *   }
+         *
+         * @param methodCall
+         * @param unit
+         */
+        protected void convertOutputDef(MethodCallExpression methodCall, SourceUnit unit) {
+            log.trace "Convert 'output' ${methodCall.arguments}"
+
+            assert methodCall.arguments instanceof ArgumentListExpression
+            final arguments = (ArgumentListExpression)methodCall.arguments
+
+            if( arguments.size() != 1 || arguments[0] !instanceof ClosureExpression ) {
+                syntaxError(methodCall, "Invalid workflow output block")
+                return
+            }
+
+            final closure = (ClosureExpression)arguments[0]
+            final block = (BlockStatement)closure.code
+            for( Statement stmt : block.statements ) {
+                if( stmt !instanceof ExpressionStatement ) {
+                    syntaxError(stmt, "Invalid workflow output declaration")
+                    return
+                }
+
+                final stmtX = (ExpressionStatement)stmt
+                if( stmtX.expression !instanceof MethodCallExpression ) {
+                    syntaxError(stmt, "Invalid workflow output declaration")
+                    return
+                }
+
+                final call = (MethodCallExpression)stmtX.expression
+                assert call.arguments instanceof ArgumentListExpression
+
+                final callArgs = (ArgumentListExpression)call.arguments
+                if( callArgs.size() != 1 || callArgs[0] !instanceof ClosureExpression ) {
+                    syntaxError(stmt, "Invalid workflow output declaration")
+                    return
+                }
+
+                final outputName = call.method
+                final outputBody = (ClosureExpression)callArgs[0]
+                new PublishDslVisitor().visit(outputBody)
+                stmtX.expression = callThisX('declare', args(outputName, outputBody))
+            }
+        }
+
+        /**
+         * Transform dynamic publish paths in the workflow output definition:
+         *
+         *   path { sample ->
+         *     sample.foo >> 'foo/'
+         *     sample.bar >> 'bar/'
+         *   }
+         *
+         * becomes:
+         *
+         *   path { sample ->
+         *     publish(sample.foo, 'foo/')
+         *     publish(sample.bar, 'bar/')
+         *   }
+         */
+        protected class PublishDslVisitor extends CodeVisitorSupport {
+
+            private boolean inPathDirective
+
+            @Override
+            void visitMethodCallExpression(MethodCallExpression node) {
+                if( node.getMethodAsString() == 'path' )
+                    inPathDirective = true
+                super.visitMethodCallExpression(node)
+                inPathDirective = false
+            }
+
+            @Override
+            void visitExpressionStatement(ExpressionStatement node) {
+                if( !visitPublishStatement(node) )
+                    super.visitExpressionStatement(node)
+            }
+
+            private boolean visitPublishStatement(ExpressionStatement node) {
+                if( !inPathDirective )
+                    return false
+                if( node.expression !instanceof BinaryExpression )
+                    return false
+                final binaryX = (BinaryExpression) node.expression
+                if( binaryX.operation.type != Types.RIGHT_SHIFT )
+                    return false
+                final source = binaryX.leftExpression
+                final target = binaryX.rightExpression
+                node.expression = callThisX('publish', args(source, target))
+                return true
+            }
         }
 
         /**
@@ -749,7 +797,7 @@ class NextflowDSLImpl implements ASTTransformation {
          * closure expression and set a `when` directive in the process configuration properties.
          *
          * See {@link nextflow.script.ProcessConfig#configProperties}
-         * See {@link nextflow.processor.TaskConfig#getGuard(java.lang.String)}
+         * See {@link nextflow.processor.TaskConfig#getWhenGuard()}
          */
         protected BlockStatement addWhenGuardCall( List<Statement> statements, StringBuilder source, BlockStatement parent ) {
             createBlock0(PROCESS_WHEN, statements, source, parent)
@@ -816,7 +864,29 @@ class NextflowDSLImpl implements ASTTransformation {
          * @param buffer
          * @param unit
          */
-        private void readSource( ASTNode node, StringBuilder buffer, SourceUnit unit, stripBrackets=false ) {
+        private void readSource( Statement node, StringBuilder buffer, SourceUnit unit ) {
+            final colx = node.getColumnNumber()
+            final colz = node.getLastColumnNumber()
+            final first = node.getLineNumber()
+            final last = node.getLastLineNumber()
+            for( int i = first; i <= last; i++ ) {
+                final line = unit.source.getLine(i, null)
+
+                // prepend first-line indent
+                if( i == first ) {
+                    int k = 0
+                    while( k < line.size() && line[k] == ' ' )
+                        k++
+                    buffer.append( line.substring(0, k) )
+                }
+
+                final begin = (i == first) ? colx - 1 : 0
+                final end = (i == last) ? colz - 1 : line.size()
+                buffer.append( line.substring(begin, end) ).append('\n')
+            }
+        }
+
+        private void readSource( ClosureExpression node, StringBuilder buffer, SourceUnit unit ) {
             final colx = node.getColumnNumber()
             final colz = node.getLastColumnNumber()
             final first = node.getLineNumber()
@@ -824,18 +894,12 @@ class NextflowDSLImpl implements ASTTransformation {
             for( int i=first; i<=last; i++ ) {
                 def line = unit.source.getLine(i, null)
                 if( i==last ) {
-                    line = line.substring(0,colz-1)
-                    if( stripBrackets ) {
-                        line = line.replaceFirst(/}.*$/,'')
-                        if( !line.trim() ) continue
-                    }
+                    line = line.substring(0,colz-1).replaceFirst(/}.*$/,'')
+                    if( !line.trim() ) continue
                 }
                 if( i==first ) {
-                    line = line.substring(colx-1)
-                    if( stripBrackets ) {
-                        line = line.replaceFirst(/^.*\{/,'').trim()
-                        if( !line.trim() ) continue
-                    }
+                    line = line.substring(colx-1).replaceFirst(/^.*\{/,'').trim()
+                    if( !line ) continue
                 }
                 buffer.append(line) .append('\n')
             }
@@ -917,7 +981,7 @@ class NextflowDSLImpl implements ASTTransformation {
                     }
                 }
             }
-            else if( (varX=isVariableX(stm.expression)) && (varX.name=='stdin' || varX.name=='stdout') && NF.isDsl2Final() ) {
+            else if( (varX=isVariableX(stm.expression)) && (varX.name=='stdin' || varX.name=='stdout') && NF.isDsl2() ) {
                 final name = varX.name=='stdin' ? '_in_stdin' : '_out_stdout'
                 final call = new MethodCallExpression( new VariableExpression('this'), name, new ArgumentListExpression()  )
                 // remove replace the old one with the new one
@@ -982,15 +1046,16 @@ class NextflowDSLImpl implements ASTTransformation {
 
         /**
          * Transform a map entry `emit: something` into `emit: 'something'
+         * and `topic: something` into `topic: 'something'
          * (ie. as a constant) in a map expression passed as argument to
          * a method call. This allow the syntax
          *
          *   output:
-         *   path 'foo', emit: bar
+         *   path 'foo', emit: bar, topic: baz
          *
          * @param call
          */
-        protected void fixOutEmitOption(MethodCallExpression call) {
+        protected void fixOutEmitAndTopicOptions(MethodCallExpression call) {
             List<Expression> args = isTupleX(call.arguments)?.expressions
             if( !args ) return
             if( args.size()<2 && (args.size()!=1 || call.methodAsString!='_out_stdout')) return
@@ -1001,6 +1066,9 @@ class NextflowDSLImpl implements ASTTransformation {
                 final key = isConstX(entry.keyExpression)
                 final val = isVariableX(entry.valueExpression)
                 if( key?.text == 'emit' && val ) {
+                    map.mapEntryExpressions[i] = new MapEntryExpression(key, constX(val.text))
+                }
+                else if( key?.text == 'topic' && val ) {
                     map.mapEntryExpressions[i] = new MapEntryExpression(key, constX(val.text))
                 }
             }
@@ -1018,11 +1086,11 @@ class NextflowDSLImpl implements ASTTransformation {
             def nested = methodCall.objectExpression instanceof MethodCallExpression
             log.trace "convert > output method: $methodName"
 
-            if( methodName in ['val','env','file','set','stdout','path','tuple'] && !nested ) {
+            if( methodName in ['val','env','eval','file','set','stdout','path','tuple'] && !nested ) {
                 // prefix the method name with the string '_out_'
                 methodCall.setMethod( new ConstantExpression('_out_' + methodName) )
                 fixMethodCall(methodCall)
-                fixOutEmitOption(methodCall)
+                fixOutEmitAndTopicOptions(methodCall)
             }
 
             else if( methodName in ['into','mode'] ) {
@@ -1056,7 +1124,7 @@ class NextflowDSLImpl implements ASTTransformation {
             withinEachMethod = name == '_in_each'
 
             try {
-                if( isOutputValWithPropertyExpression(methodCall) ) {
+                if( isOutputWithPropertyExpression(methodCall) ) {
                     // transform an output value declaration such
                     //   output: val( obj.foo )
                     // to
@@ -1072,8 +1140,10 @@ class NextflowDSLImpl implements ASTTransformation {
             }
         }
 
-        protected boolean isOutputValWithPropertyExpression(MethodCallExpression methodCall) {
-            if( methodCall.methodAsString != '_out_val' )
+        static final private List<String> OUT_PROPERTY_VALID_TYPES = ['_out_val', '_out_env', '_out_file', '_out_path']
+
+        protected boolean isOutputWithPropertyExpression(MethodCallExpression methodCall) {
+            if( methodCall.methodAsString !in OUT_PROPERTY_VALID_TYPES  )
                 return false
             if( methodCall.getArguments() instanceof ArgumentListExpression ) {
                 def args = (ArgumentListExpression)methodCall.getArguments()
@@ -1184,6 +1254,11 @@ class NextflowDSLImpl implements ASTTransformation {
                     return createX( TokenEnvCall, args )
                 }
 
+                if( methodCall.methodAsString == 'eval' && withinTupleMethod ) {
+                    def args = (TupleExpression) varToStrX(methodCall.arguments)
+                    return createX( TokenEvalCall, args )
+                }
+
                 /*
                  * input:
                  *   tuple val(x), .. from q
@@ -1217,7 +1292,7 @@ class NextflowDSLImpl implements ASTTransformation {
          * @return A tuple in which:
          *      <li>1st item: {@code true} if successful or {@code false} otherwise
          *      <li>2nd item: on error condition the line containing the error in the source script, zero otherwise
-         *      <li>3nd item: on error condition the column containing the error in the source script, zero otherwise
+         *      <li>3rd item: on error condition the column containing the error in the source script, zero otherwise
          *
          */
         protected boolean wrapExpressionWithClosure( BlockStatement block, Expression expr, int len, CharSequence source, SourceUnit unit ) {
@@ -1252,7 +1327,7 @@ class NextflowDSLImpl implements ASTTransformation {
                 unit.addError( new SyntaxException("Identifier `$name` is reserved for internal use", node.lineNumber, node.columnNumber+8) )
                 return true
             }
-            if( name in functionNames || name in workflowNames || name in processNames ) {
+            if( name in workflowNames || name in processNames ) {
                 unit.addError( new SyntaxException("Identifier `$name` is already used by another definition", node.lineNumber, node.columnNumber+8) )
                 return true
             }

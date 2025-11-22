@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,8 +24,11 @@ import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.NF
 import nextflow.config.ConfigBuilder
+import nextflow.config.ConfigValidator
 import nextflow.exception.AbortOperationException
+import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
 import nextflow.util.ConfigHelper
 /**
@@ -41,6 +43,8 @@ class CmdConfig extends CmdBase {
 
     static final public NAME = 'config'
 
+    static final List<String> FORMATS = ['flat','properties','canonical','json','yaml']
+
     @Parameter(description = 'project name')
     List<String> args = []
 
@@ -50,15 +54,22 @@ class CmdConfig extends CmdBase {
     @Parameter(names=['-profile'], description = 'Choose a configuration profile')
     String profile
 
-    @Parameter(names = '-properties', description = 'Prints config using Java properties notation')
+    @Deprecated
+    @Parameter(names = '-properties', description = 'Prints config using Java properties notation (deprecated: use `-o properties` instead)')
     boolean printProperties
 
-    @Parameter(names = '-flat', description = 'Print config using flat notation')
+    @Deprecated
+    @Parameter(names = '-flat', description = 'Print config using flat notation (deprecated: use `-o flat` instead)')
     boolean printFlatten
 
     @Parameter(names = '-sort', description = 'Sort config attributes')
     boolean sort
 
+    @Parameter(names = '-value', description = 'Print the value of a config option, or fail if the option is not defined')
+    String printValue
+
+    @Parameter(names = ['-o','-output'], description = 'Print the config using the specified format: canonical,properties,flat,json,yaml')
+    String outputFormat
 
     @Override
     String getName() { NAME }
@@ -67,19 +78,38 @@ class CmdConfig extends CmdBase {
 
     @Override
     void run() {
+        Plugins.init()
         Path base = null
         if( args ) base = getBaseDir(args[0])
         if( !base ) base = Paths.get('.')
 
+        // -- validate command line options
         if( profile && showAllProfiles ) {
             throw new AbortOperationException("Option `-profile` conflicts with option `-show-profiles`")
         }
 
         if( printProperties && printFlatten )
-            throw new AbortOperationException("Option `-flat` and `-properties` conflicts")
+            throw new AbortOperationException("Option `-flat` and `-properties` conflicts each other")
 
+        if ( printValue && printFlatten )
+            throw new AbortOperationException("Option `-value` and `-flat` conflicts each other")
+
+        if ( printValue && printProperties )
+            throw new AbortOperationException("Option `-value` and `-properties` conflicts each other")
+
+        if( printValue && outputFormat )
+            throw new AbortOperationException("Option `-value` and `-output` conflicts each other")
+
+        if( printFlatten )
+            outputFormat = 'flat'
+
+        if( printProperties )
+            outputFormat = 'properties'
+
+        // -- build the config
         final builder = new ConfigBuilder()
                 .setShowClosures(true)
+                .setStripSecrets(true)
                 .showMissingVariables(true)
                 .setOptions(launcher.options)
                 .setBaseDir(base)
@@ -87,14 +117,37 @@ class CmdConfig extends CmdBase {
 
         final config = builder.buildConfigObject()
 
-        if( printProperties ) {
+        // -- validate config options
+        if( NF.isSyntaxParserV2() ) {
+            Plugins.load(config)
+            new ConfigValidator().validate(config)
+        }
+
+        // -- print config options
+        if( printValue ) {
+            printValue0(config, printValue, stdout)
+        }
+        else if( outputFormat=='properties' ) {
             printProperties0(config, stdout)
         }
-        else if( printFlatten ) {
+        else if( outputFormat=='flat' ) {
             printFlatten0(config, stdout)
         }
-        else {
+        else if( outputFormat=='yaml' ) {
+            printYaml0(config, stdout)
+        }
+        else if( outputFormat=='json') {
+            printJson0(config, stdout)
+        }
+        else if( !outputFormat || outputFormat=='canonical' ) {
             printCanonical0(config, stdout)
+        }
+        else {
+            def msg = "Unknown output format: $outputFormat"
+            def suggest = FORMATS.closest(outputFormat)
+            if( suggest )
+                msg += " - did you mean '${suggest.first()}' instead?"
+            throw new AbortOperationException(msg)
         }
 
         for( String msg : builder.warnings )
@@ -103,7 +156,7 @@ class CmdConfig extends CmdBase {
 
     /**
      * Prints a {@link ConfigObject} using Java {@link Properties} in canonical format
-     * ie. any nested config object is printed withing curly brackets
+     * ie. any nested config object is printed within curly brackets
      *
      * @param config The {@link ConfigObject} representing the parsed workflow configuration
      * @param output The stream where output the formatted configuration notation
@@ -120,6 +173,21 @@ class CmdConfig extends CmdBase {
      */
     @PackageScope void printProperties0(ConfigObject config, OutputStream output) {
         output << ConfigHelper.toPropertiesString(config, sort)
+    }
+
+    /**
+     * Prints a property of a {@link ConfigObject}.
+     *
+     * @param config The {@link ConfigObject} representing the parsed workflow configuration
+     * @param name The {@link String} representing the property name using dot notation
+     * @param output The stream where output the formatted configuration notation
+     */
+    @PackageScope void printValue0(ConfigObject config, String name, OutputStream output) {
+        final map = config.flatten()
+        if( !map.containsKey(name) )
+            throw new AbortOperationException("Configuration option '$name' not found")
+
+        output << map.get(name).toString() << '\n'
     }
 
     /**
@@ -144,6 +212,13 @@ class CmdConfig extends CmdBase {
         config.writeTo( writer )
     }
 
+    @PackageScope void printJson0(ConfigObject config, OutputStream output) {
+        output << ConfigHelper.toJsonString(config, sort) << '\n'
+    }
+
+    @PackageScope void printYaml0(ConfigObject config, OutputStream output) {
+        output << ConfigHelper.toYamlString(config, sort)
+    }
 
     Path getBaseDir(String path) {
 

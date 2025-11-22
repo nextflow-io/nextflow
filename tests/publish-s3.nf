@@ -1,14 +1,19 @@
+
 process my_process {
     publishDir "s3://nextflow-ci/work/ci-test/publish-s3"
 
     input:
-    val(param) from Channel.from(1)
+    val(param)
 
     output:
-    file("HELLO.tsv") into output_ch
+    file("HELLO.tsv")
 
     script:
     """
     echo "Hello, world" > HELLO.tsv
     """
+}
+
+workflow {
+  channel.of(1) | my_process
 }

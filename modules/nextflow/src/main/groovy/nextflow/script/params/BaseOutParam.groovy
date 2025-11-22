@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,11 +20,10 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.NF
-import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
-import nextflow.script.ProcessConfig
+import nextflow.script.ProcessConfigV1
 import nextflow.script.TokenVar
-
+import nextflow.util.ConfigHelper
 /**
  * Model a process generic output parameter
  *
@@ -41,18 +39,18 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
 
     protected List<DataflowWriteChannel> outChannels = new ArrayList<>(10)
 
-    protected OutParam.Mode mode = BasicMode.standard
-
     @PackageScope
     boolean singleton
 
     String channelEmitName
 
+    String channelTopicName
+
     BaseOutParam( Binding binding, List list, short ownerIndex = -1) {
         super(binding,list,ownerIndex)
     }
 
-    BaseOutParam( ProcessConfig config ) {
+    BaseOutParam( ProcessConfigV1 config ) {
         super(config.getOwnerScript().getBinding(), config.getOutputs())
     }
 
@@ -64,10 +62,8 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
 
     void lazyInit() {
 
-        if( intoObj instanceof TokenVar[] ) {
-            if( NF.dsl2 )
-                throw new IllegalArgumentException("Not a valid output channel argument: $intoObj")
-            for( def it : intoObj ) { lazyInitImpl(it) }
+        if( intoObj instanceof TokenVar || intoObj instanceof TokenVar[] ) {
+            throw new IllegalArgumentException("Not a valid output channel argument: $intoObj")
         }
         else if( intoObj != null ) {
             lazyInitImpl(intoObj)
@@ -85,14 +81,9 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
 
     @PackageScope
     void lazyInitImpl( def target ) {
-        def channel = null
-        if( target instanceof TokenVar ) {
-            assert !NF.dsl2
-            channel = outputValToChannel(target.name)
-        }
-        else if( target != null ) {
-            channel = outputValToChannel(target)
-        }
+        final channel = (target != null)
+            ? outputValToChannel(target)
+            : null
 
         if( channel ) {
             outChannels.add(channel)
@@ -130,7 +121,7 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
                 }
 
                 // instantiate the new channel
-                channel = CH.create( singleton && mode==BasicMode.standard )
+                channel = CH.create( singleton )
 
                 // bind it to the script on-fly
                 if( local != '-' && binding ) {
@@ -158,20 +149,6 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
         return this
     }
 
-    BaseOutParam into( def value ) {
-        if( NF.dsl2 )
-            throw new ScriptRuntimeException("Process clause `into` should not be provided when using DSL 2")
-        this.intoObj = value
-        return this
-    }
-
-    BaseOutParam into( TokenVar... vars ) {
-        if( NF.dsl2 )
-            throw new ScriptRuntimeException("Process clause `into` should not be provided when using DSL 2")
-        intoObj = vars
-        return this
-    }
-
     void setInto( Object obj ) {
         intoObj = obj
     }
@@ -181,30 +158,11 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
         return outChannels ? outChannels.get(0) : null
     }
 
-    @Deprecated
-    List<DataflowWriteChannel> getOutChannels() {
-        init()
-        return outChannels
-    }
-
     String getName() {
         if( nameObj != null )
             return nameObj.toString()
         throw new IllegalStateException("Missing 'name' property in output parameter")
     }
-
-
-    BaseOutParam mode( def mode ) {
-        final msg = "Process output `mode` is not supported any more"
-        if( NF.isDsl2Final() )
-            throw new DeprecationException(msg)
-        else if( NF.isDsl2() )
-            log.warn(msg)
-        this.mode = BasicMode.parseValue(mode)
-        return this
-    }
-
-    OutParam.Mode getMode() { mode }
 
     @Override
     BaseOutParam setOptions(Map<String,?> opts) {
@@ -214,8 +172,30 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
 
     BaseOutParam setEmit( value ) {
         if( isNestedParam() )
-            throw new IllegalArgumentException("Output `emit` option it not allowed in tuple components")
+            throw new IllegalArgumentException("Output `emit` option is not allowed in tuple components")
+        if( !value )
+            throw new IllegalArgumentException("Missing output `emit` name")
+        if( !ConfigHelper.isValidIdentifier(value) ) {
+            final msg = "Output emit '$value' is not a valid name -- Make sure it starts with an alphabetic or underscore character and it does not contain any blank, dot or other special characters"
+            if( NF.strictMode )
+                throw new IllegalArgumentException(msg)
+            log.warn(msg)
+        }
         this.channelEmitName = value
+        return this
+    }
+
+    BaseOutParam setTopic( String name ) {
+        if( isNestedParam() )
+            throw new IllegalArgumentException("Output `topic` option it not allowed in tuple components")
+        if( !name )
+            throw new IllegalArgumentException("Missing output `topic` name")
+        if( !ConfigHelper.isValidIdentifier(name) ) {
+            final msg = "Output topic '$name' is not a valid name -- Make sure it starts with an alphabetic or underscore character and it does not contain any blank, dot or other special characters"
+            throw new IllegalArgumentException(msg)
+        }
+
+        this.channelTopicName = name
         return this
     }
 }

@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,11 +43,13 @@ import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Global
+import nextflow.SysEnv
 import nextflow.extension.Bolts
 import nextflow.extension.FilesEx
 import nextflow.plugin.Plugins
 import nextflow.util.CacheHelper
 import nextflow.util.Escape
+import nextflow.util.StringUtils
 /**
  * Provides some helper method handling files
  *
@@ -58,7 +59,11 @@ import nextflow.util.Escape
 @CompileStatic
 class FileHelper {
 
-    static final public Pattern URL_PROTOCOL = ~/^([a-zA-Z][a-zA-Z0-9]*)\:\\/\\/.+/
+    static final public Pattern URL_PROTOCOL = ~/^([a-zA-Z][a-zA-Z0-9]*):\\/\\/.+/
+
+    static final public Pattern INVALID_URL_PREFIX = ~/^(?!file)([a-zA-Z][a-zA-Z0-9]*):\\/[^\\/].+/
+
+    static final private Pattern BASE_URL = ~/(?i)((?:[a-z][a-zA-Z0-9]*)?:\/\/[^:|\/]+(?::\d*)?)(?:$|\/.*)/
 
     static final private Path localTempBasePath
 
@@ -214,7 +219,7 @@ class FileHelper {
                 continue
             }
             if( !FilesEx.mkdirs(result) ) {
-                throw new IOException("Unable to create temporary part: $result -- Verify file system access permissions or if a file having the same name exists")
+                throw new IOException("Unable to create temporary directory: $result -- Make sure a file with the same name doesn't already exist and you have write permissions")
             }
 
             return result.toAbsolutePath()
@@ -234,6 +239,81 @@ class FileHelper {
         return !(path.getFileSystem().provider().scheme in UNSUPPORTED_GLOB_WILDCARDS)
     }
 
+    static Path toPath(value) {
+        if( value==null )
+            return null
+
+        Path result = null
+        if( value instanceof String || value instanceof GString ) {
+            result = asPath(value.toString())
+        }
+        else if( value instanceof Path ) {
+            result = (Path)value
+        }
+        else {
+            throw new IllegalArgumentException("Unexpected path value: '$value' [${value.getClass().getName()}]")
+        }
+        return result
+    }
+
+    static Path toCanonicalPath(value) {
+        if( value==null )
+            return null
+
+        Path result = toPath(value)
+
+        if( result.fileSystem != FileSystems.default ) {
+            // remote file paths are expected to be absolute by definition
+            return result
+        }
+
+        Path base
+        if( !result.isAbsolute() && (base=fileRootDir()) ) {
+            result = base.resolve(result.toString())
+        }
+
+        return result.toAbsolutePath().normalize()
+    }
+
+    /**
+     * Remove consecutive slashes in a URI path. Ignore by design any slash in the hostname and after the `?`
+     *
+     * @param uri The input URI as string
+     * @return The normalised URI string
+     */
+    protected static String normalisePathSlashes0(String uri) {
+       if( !uri )
+           return uri
+        final SLASH = '/' as char
+        final QMARK = '?' as char
+        final scheme = getUrlProtocol(uri)
+        if( scheme==null || scheme=='file') {
+            // ignore for local files
+            return uri
+        }
+
+        // find first non-slash
+        final clean = scheme ? uri.substring(scheme.size()+1) : uri
+        final start = clean.findIndexOf(it->it!='/')
+        final result = new StringBuilder()
+        if( scheme )
+            result.append(scheme+':')
+        if( start )
+            result.append(clean.substring(0,start))
+        for( int i=start; i<clean.size(); i++ ) {
+            final ch = clean.charAt(i)
+            if( (ch!=SLASH) || i+1==clean.size() || (clean.charAt(i+1)!=SLASH)) {
+                if( ch==QMARK ) {
+                    result.append(clean.substring(i))
+                    break
+                }
+                else
+                    result.append(clean.charAt(i))
+            }
+        }
+        return result.toString()
+    }
+
     /**
      * Given an hierarchical file URI path returns a {@link Path} object
      * eventually creating the associated file system if required.
@@ -250,14 +330,22 @@ class FileHelper {
         if( !str )
             throw new IllegalArgumentException("Path string cannot be empty")
         if( str != Bolts.leftTrim(str) )
-            throw new IllegalArgumentException("Path string cannot start with blank or a special characters -- Offending path: '${Escape.blanks(str)}'")
+            throw new IllegalArgumentException("Path string cannot start with a blank or special characters -- Offending path: '${Escape.blanks(str)}'")
         if( str != Bolts.rightTrim(str) )
-            throw new IllegalArgumentException("Path string cannot ends with blank or a special characters -- Offending path: '${Escape.blanks(str)}'")
+            throw new IllegalArgumentException("Path string cannot ends with a blank or special characters -- Offending path: '${Escape.blanks(str)}'")
 
         if( !str.contains(':/') ) {
             return Paths.get(str)
         }
 
+        // check for valid the url scheme
+        if( INVALID_URL_PREFIX.matcher(str).matches() )
+            throw new IllegalArgumentException("File path is prefixed with an invalid URL scheme - Offending path: '${Escape.blanks(str)}'")
+
+        return asPath0(str)
+    }
+
+    static private Path asPath0(String str) {
         def result = FileSystemPathFactory.parse(str)
         if( result )
             return result
@@ -274,7 +362,7 @@ class FileHelper {
         return asPath(toPathURI(str))
     }
 
-    static private Map<String,String> PLUGINS_MAP = [s3:'nf-amazon', gs:'nf-google', az:'nf-azure']
+    static final private Map<String,String> PLUGINS_MAP = [s3:'nf-amazon', gs:'nf-google', az:'nf-azure']
 
     static final private Map<String,Boolean> SCHEME_CHECKED = new HashMap<>()
 
@@ -331,7 +419,7 @@ class FileHelper {
                 throw new IllegalArgumentException("Malformed file URI: $uri -- It must start either with a `file:/` or `file:///` prefix")
 
             if( !uri.path )
-                throw new IllegalArgumentException("Malformed file URI: $uri -- Make sure it starts with an absolue path prefix i.e. `file:/`")
+                throw new IllegalArgumentException("Malformed file URI: $uri -- Make sure it starts with an absolute path prefix i.e. `file:/`")
         }
         else if( !uri.path ) {
             throw new IllegalArgumentException("URI path cannot be empty")
@@ -376,7 +464,7 @@ class FileHelper {
     static FileSystem getWorkDirFileSystem() {
         def result = Global.session?.workDir?.getFileSystem()
         if( !result ) {
-            log.warn "Session working file system not defined -- fallback on JVM default file system"
+            log.warn "Session working directory file system not defined -- fallback on JVM default file system"
             result = FileSystems.getDefault()
         }
         result
@@ -389,14 +477,14 @@ class FileHelper {
      * @return The {@code true} when the path is a NFS mount {@code false} otherwise
      */
     @Memoized
-    static boolean isPathNFS(Path path) {
+    static boolean isPathSharedFS(Path path) {
         assert path
         if( path.getFileSystem() != FileSystems.getDefault() )
             return false
 
         final type = getPathFsType(path)
-        def result = type == 'nfs'
-        log.debug "NFS path ($result): $path"
+        final result = type == 'nfs' || type == 'lustre'
+        log.debug "FS path type ($result): $path"
         return result
     }
 
@@ -412,7 +500,7 @@ class FileHelper {
         process.destroy()
 
         if( status ) {
-            log.debug "Can't check if specified path is NFS ($status): $path\n${Bolts.indent(text,'  ')}"
+            log.debug "Unable to determine FS type ($status): ${FilesEx.toUriString(path)}\n${Bolts.indent(text,'  ')}"
             return null
         }
 
@@ -424,8 +512,33 @@ class FileHelper {
      *      {@code true} when the current session working directory is a NFS mounted path
      *      {@code false otherwise}
      */
-    static boolean getWorkDirIsNFS() {
-        isPathNFS(Global.session.workDir)
+    static boolean getWorkDirIsSharedFS() {
+        isPathSharedFS(Global.session.workDir)
+    }
+
+    /**
+     * @return
+     *      {@code true} when the current session working directory is a symlink path
+     *      {@code false otherwise}
+     */
+    static boolean getWorkDirIsSymlink() {
+        isPathSymlink(Global.session.workDir)
+    }
+
+    @Memoized
+    static boolean isPathSymlink(Path path) {
+        if( path.fileSystem!=FileSystems.default )
+            return false
+        try {
+            return path != path.toRealPath()
+        }
+        catch (NoSuchFileException e) {
+            return false
+        }
+        catch (IOException e) {
+            log.debug "Unable to determine symlink status for path: $path - cause: ${e.message}"
+            return false
+        }
     }
 
     /**
@@ -442,7 +555,7 @@ class FileHelper {
         if( Files.exists(self) )
             return true
 
-        if( !workDirIsNFS )
+        if( !workDirIsSharedFS )
             return false
 
 
@@ -474,7 +587,7 @@ class FileHelper {
             return true
         }
         catch( IOException e ) {
-            log.trace "Cant read file attributes: $self -- Cause: [${e.class.simpleName}] ${e.message}"
+            log.trace "Can't read file attributes: $self -- Cause: [${e.class.simpleName}] ${e.message}"
             return false
         }
 
@@ -485,38 +598,17 @@ class FileHelper {
      * @return A map holding the current session
      */
     @Memoized
+    @Deprecated
     static protected Map envFor(String scheme) {
         envFor0(scheme, System.getenv())
     }
 
     @PackageScope
+    @Deprecated
     static Map envFor0(String scheme, Map env) {
         def result = new LinkedHashMap(10)
         if( scheme?.toLowerCase() == 's3' ) {
-
-            List credentials = Global.getAwsCredentials(env)
-            if( credentials ) {
-                // S3FS expect the access - secret keys pair in lower notation
-                result.access_key = credentials[0]
-                result.secret_key = credentials[1]
-                if (credentials.size() == 3) {
-                    result.session_token = credentials[2]
-                    log.debug "Using AWS temporary session token for S3FS."
-                }
-            }
-
-            // AWS region
-            final region = Global.getAwsRegion()
-            if( region ) result.region = region
-
-            // -- remaining client config options
-            def config = Global.getAwsClientConfig() ?: new HashMap<>(10)
-            config = checkDefaultErrorRetry(config, env)
-            if( config ) {
-                result.putAll(config)
-            }
-
-            log.debug "AWS S3 config details: ${dumpAwsConfig(result)}"
+            throw new UnsupportedOperationException()
         }
         else {
             if( !Global.session )
@@ -526,42 +618,8 @@ class FileHelper {
         return result
     }
 
-    @PackageScope
-    static Map checkDefaultErrorRetry(Map result, Map env) {
-        if( result == null )
-            result = new HashMap(10)
-
-        if( result.max_error_retry==null ) {
-            result.max_error_retry = env?.AWS_MAX_ATTEMPTS
-        }
-        // fallback to default
-        if( result.max_error_retry==null ) {
-            result.max_error_retry = '5'
-        }
-        // make sure that's a string value as it's expected by the client
-        else {
-            result.max_error_retry = result.max_error_retry.toString()
-        }
-
-        return result
-    }
-
-    static private String dumpAwsConfig( Map<String,String> config ) {
-        def result = new HashMap(config)
-        if( config.access_key && config.access_key.size()>6 )
-            result.access_key = "${config.access_key.substring(0,6)}.."
-
-        if( config.secret_key && config.secret_key.size()>6 )
-            result.secret_key = "${config.secret_key.substring(0,6)}.."
-
-        if( config.session_token && config.session_token.size()>6 )
-            result.session_token = "${config.session_token.substring(0,6)}.."
-
-        return result.toString()
-    }
-
     /**
-     *  Caches File system providers
+     * Caches File system providers
      */
     @PackageScope
     static final Map<String, FileSystemProvider> providersMap = [:]
@@ -625,13 +683,17 @@ class FileHelper {
     /**
      * Acquire or create the file system for the given {@link URI}
      *
-     * @param uri A {@link URI} locating a file into a file system
-     * @param env An option environment specification that may be used to instantiate the underlying file system.
-     *          As defined by {@link FileSystemProvider#newFileSystem(java.net.URI, java.util.Map)}
-     * @return The corresponding {@link FileSystem} object
-     * @throws IllegalArgumentException if does not exist a valid provider for the given URI scheme
+     * @param uri
+     *      A {@link URI} locating a file into a file system
+     * @param config
+     *      A {@link Map} object representing the file system configuration. The structure of this object is entirely
+     *      delegate to the file system implementation
+     * @return
+     *      The corresponding {@link FileSystem} object
+     * @throws
+     *      IllegalArgumentException if does not exist a valid provider for the given URI scheme
      */
-    static FileSystem getOrCreateFileSystemFor( URI uri, Map env = null ) {
+    static FileSystem getOrCreateFileSystemFor( URI uri, Map config = null ) {
         assert uri
 
         /*
@@ -644,27 +706,28 @@ class FileHelper {
         /*
          * check if already exists a file system for it
          */
-        FileSystem fs
-        try { fs = provider.getFileSystem(uri) }
-        catch( FileSystemNotFoundException e ) { fs=null }
-        if( fs )
-            return fs
+        try {
+            final fs = provider.getFileSystem(uri)
+            if( fs )
+                return fs
+        }
+        catch( FileSystemNotFoundException e ) {
+            // fallback in following synchronised block
+        }
 
         /*
          * since the file system does not exist, create it a protected block
          */
-        Bolts.withLock(_fs_lock) {
-
+        return Bolts.withLock(_fs_lock) {
+            FileSystem fs
             try { fs = provider.getFileSystem(uri) }
             catch( FileSystemNotFoundException e ) { fs=null }
             if( !fs ) {
-                log.debug "Creating a file system instance for provider: ${provider.class.simpleName}"
-                fs = provider.newFileSystem(uri, env ?: envFor(uri.scheme))
+                log.debug "Creating a file system instance for provider: ${provider.class.simpleName}; config=${StringUtils.stripSecrets(config)}"
+                fs = provider.newFileSystem(uri, config!=null ? config : envFor(uri.scheme))
             }
-            fs
+            return fs
         }
-
-        return fs
     }
 
     static FileSystem getOrCreateFileSystemFor( String scheme, Map env = null ) {
@@ -764,7 +827,7 @@ class FileHelper {
         }
 
         if( !matcher ) {
-            Bolts.debug1(log, "Path matcher not defined by '${fileSystem.class.simpleName}' file system -- using default default strategy")
+            log.trace("Path matcher not defined by '${fileSystem.class.simpleName}' file system -- using default default strategy")
             matcher = getDefaultPathMatcher(syntaxAndPattern)
         }
 
@@ -786,14 +849,15 @@ class FileHelper {
         assert filePattern
         assert action
 
-        final type = options?.type ?: 'any'
-        final walkOptions = options?.followLinks == false ? EnumSet.noneOf(FileVisitOption.class) : EnumSet.of(FileVisitOption.FOLLOW_LINKS)
-        final int maxDepth = getMaxDepth(options?.maxDepth, filePattern)
-        final includeHidden = options?.hidden as Boolean ?: filePattern.startsWith('.')
+        if( options==null ) options = Map.of()
+        final type = options.type ?: 'any'
+        final walkOptions = options.followLinks == false ? EnumSet.noneOf(FileVisitOption.class) : EnumSet.of(FileVisitOption.FOLLOW_LINKS)
+        final int maxDepth = getMaxDepth(options.maxDepth, filePattern)
+        final includeHidden = options.hidden as Boolean ?: filePattern.startsWith('.')
         final includeDir = type in ['dir','any']
         final includeFile = type in ['file','any']
-        final syntax = options?.syntax ?: 'glob'
-        final relative = options?.relative == true
+        final syntax = options.syntax ?: 'glob'
+        final relative = options.relative == true
 
         final matcher = getPathMatcherFor("$syntax:${filePattern}", folder.fileSystem)
         final singleParam = action.getMaximumNumberOfParameters() == 1
@@ -816,10 +880,12 @@ class FileHelper {
 
             @Override
             FileVisitResult visitFile(Path fullPath, BasicFileAttributes attrs) throws IOException {
-                final path = folder.relativize(fullPath)
+                final path = fullPath.isAbsolute()
+                    ? folder.relativize(fullPath)
+                    : fullPath
                 log.trace "visitFiles > file=$path; includeFile=$includeFile; matches=${matcher.matches(path)}; isRegularFile=${attrs.isRegularFile()}"
 
-                if (includeFile && matcher.matches(path) && attrs.isRegularFile() && (includeHidden || !isHidden(fullPath))) {
+                if (includeFile && matcher.matches(path) && (attrs.isRegularFile() || (options.followLinks == false && attrs.isSymbolicLink())) && (includeHidden || !isHidden(fullPath))) {
                     def result = relative ? path : fullPath
                     singleParam ? action.call(result) : action.call(result,attrs)
                 }
@@ -848,7 +914,9 @@ class FileHelper {
     }
 
     static protected Path relativize0(Path folder, Path fullPath) {
-        def result = folder.relativize(fullPath)
+        final result = fullPath.isAbsolute()
+            ? folder.relativize(fullPath)
+            : fullPath
         String str
         if( folder.is(FileSystems.default) || !(str=result.toString()).endsWith('/') )
             return result
@@ -923,20 +991,28 @@ class FileHelper {
     static Path copyPath(Path source, Path target, CopyOption... options)
             throws IOException
     {
-        FileSystemProvider provider = source.fileSystem.provider()
-        if (target.fileSystem.provider().is(provider)) {
+        final FileSystemProvider sourceProvider = source.fileSystem.provider()
+        final FileSystemProvider targetProvider = target.fileSystem.provider()
+        if (targetProvider.is(sourceProvider)) {
             final linkOpts = options.contains(LinkOption.NOFOLLOW_LINKS) ? NO_FOLLOW_LINKS : FOLLOW_LINKS
             // same provider
             if( Files.isDirectory(source, linkOpts) ) {
                 CopyMoveHelper.copyDirectory(source, target, options)
             }
             else {
-                provider.copy(source, target, options);
+                sourceProvider.copy(source, target, options);
             }
         }
         else {
-            // different providers
-            CopyMoveHelper.copyToForeignTarget(source, target, options);
+            if( sourceProvider instanceof FileSystemTransferAware && sourceProvider.canDownload(source, target)){
+                sourceProvider.download(source, target, options)
+            }
+            else if( targetProvider instanceof FileSystemTransferAware && targetProvider.canUpload(source, target)) {
+                targetProvider.upload(source, target, options)
+            }
+            else {
+                CopyMoveHelper.copyToForeignTarget(source, target, options)
+            }
         }
         return target;
     }
@@ -1018,22 +1094,22 @@ class FileHelper {
         try {
             Files.readAttributes(path,BasicFileAttributes,options)
         }
-        catch( IOException e ) {
-            log.trace "Unable to read attributes for file: $path"
+        catch( IOException|UnsupportedOperationException|SecurityException e ) {
+            log.trace "Unable to read attributes for file: $path - cause: ${e.message}"
             return null
         }
     }
 
     static Path checkIfExists(Path path, Map opts) throws NoSuchFileException {
 
-        final result = FilesEx.complete(path)
+        final result = toCanonicalPath(path)
         final checkIfExists = opts?.checkIfExists as boolean
         final followLinks = opts?.followLinks == false ? [LinkOption.NOFOLLOW_LINKS] : Collections.emptyList()
         if( !checkIfExists || FilesEx.exists(result, followLinks as LinkOption[]) ) {
-            return result
+            return opts?.relative ? path : result
         }
 
-        throw new NoSuchFileException(FilesEx.toUriString(result))
+        throw new NoSuchFileException(opts?.relative ? path.toString() : FilesEx.toUriString(result))
     }
 
 
@@ -1060,8 +1136,63 @@ class FileHelper {
     }
 
     static String getUrlProtocol(String str) {
+        if( !str )
+            return null
+        // note: `file:/foo` is a valid file pseudo-protocol, and represents absolute
+        // `/foo` path with no remote hostname specified
+        if( str.startsWith('file:/'))
+            return 'file'
         final m = URL_PROTOCOL.matcher(str)
         return m.matches() ? m.group(1) : null
     }
 
+    static Path fileRootDir() {
+        if( !SysEnv.get('NXF_FILE_ROOT') )
+            return null
+        final base = SysEnv.get('NXF_FILE_ROOT')
+        if( base.startsWith('/') )
+            return Paths.get(base)
+        final scheme = getUrlProtocol(base)
+        if( !scheme )
+            throw new IllegalArgumentException("Invalid NXF_FILE_ROOT environment value - It must be an absolute path or a valid path URI - Offending value: '$base'")
+        return asPath0(base)
+    }
+
+    static String baseUrl(String url) {
+        if( !url )
+            return null
+        final m = BASE_URL.matcher(url)
+        if( m.matches() )
+            return m.group(1).toLowerCase()
+        if( url.startsWith('file:///')) {
+            return 'file:///'
+        }
+        if( url.startsWith('file://')) {
+            return url.length()>7 ? url.substring(7).tokenize('/')[0] : null
+        }
+        if( url.startsWith('file:/')) {
+            return 'file:/'
+        }
+        return null
+    }
+
+    public static HashCode getTaskHashFromPath(Path sourcePath, Path workPath) {
+        assert sourcePath
+        assert workPath
+        if( !sourcePath.startsWith(workPath) )
+            return null
+        final relativePath = workPath.relativize(sourcePath)
+        if( relativePath.getNameCount() < 2 )
+            return null
+        final bucket = relativePath.getName(0).toString()
+        if( bucket.size() != 2 )
+            return null
+        final strHash = bucket + relativePath.getName(1).toString()
+        try {
+            return HashCode.fromString(strHash)
+        } catch (Throwable e) {
+            log.debug("String '${strHash}' is not a valid hash", e)
+            return null
+        }
+    }
 }

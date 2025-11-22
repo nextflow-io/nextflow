@@ -1,5 +1,2256 @@
 NEXTFLOW CHANGE-LOG
 ===================
+25.10.0 - 22 Oct 2025
+- Add publish-artifacts step to release process [75d8ebf9b]
+- Add type checking utils (#6482) [3e9a2c091]
+- Fix no secrets in AWS Batch jobs (#6499) [c76c32582]
+- Prioritize Google Batch API exit codes with fallback to .exitcode file (#6498) [6ac2efcba]
+- Show workspace roles in 'auth status', tweak error message on 403 (#6497) [0633d90d1]
+- Simplify S3 configuration options (#6496) [0b7f18049]
+- Track remote input files in lineage (#6490) [b0660caf3]
+- Bump nf-amazon@3.4.1 [0d5ced94a]
+- Bump nf-google@1.23.3 [e6c765217]
+- Bump nf-tower@1.17.1 [2069c9729]
+
+25.09.2-edge - 21 Oct 2025
+- Add .command.log redirection in K8s container command (#6455) [e6eed7949]
+- Add nextflow auth command for Seqera Platform authentication (#6463) [bedf02a99]
+- Add nextflow launch command (#6491) [7c8fa3d9d]
+- Bring workflow outputs out of preview (#6487) [c41677b40]
+- Fix e2e test infrastructure and add config.schema compatibility aliases (#6495) [d3cee2bab]
+- Fix false error for `executor.jobName` config option (#6375) [81ae62bf2]
+- Fix false error with storeDir and val outputs (#6408) [1aa8c4468]
+- Fix type casting in PluginSpec for ConfigScope (#6469) [b00644c9b]
+- Improve plugin create confirmation prompt (#6473) [215925c47]
+- Improve release script validation [3e3a938d6]
+- Limit S3 client connections when using virtual threads (#6369) [295c60b5c]
+- Migrate SraExplorer to use HxClient for HTTP operations (#6467) [84e3e7873]
+- Rename `config.schema` package to `config.spec` (#6485) [ef0d2d601]
+- Typed processes (#6368) [30f3c3c2a]
+- Update buildInfo on releaseInfo [46a8a2b53]
+
+25.09.1-edge - 9 Oct 2025
+- Improve build metadata generation and validation [60225374f]
+- Fix Missing static type definition [67a532040]
+- Add rnaseq-nf tutorial (#6440) [a830125c4]
+
+25.09.0-edge - 8 Oct 2025
+- Add listDirectory traversal API to RepositoryProvider abstraction (#6430) [1449fdfec]
+- Add step to claim plugin in Gradle plugin migration docs (#6450) [3b709004b]
+- Add support for comma-separated file paths in ProcessEntryHandler (#6434) [fe627644d]
+- Add support for Java 25 (#6419) [dc8d474d6]
+- Add unit test for invalid workflow entry name error handling (#6409) [249eb1aaa]
+- Fix cache command to check session cloudCachePath [a88e2cdf2]
+- Fix cache command to use SysEnv for cloudcache path check (#6432) [771b8b60e]
+- Fix cookie policy for Seqera Platform JWT token refresh (#6411) [c3959cfc3]
+- Fix CVE-2025-55163 in nf-google plugin [7d7061797]
+- Fix default fields in trace config (#6403) [3eddfad68]
+- Fix pod log warning with Fusion enabled (#6449) [8c78b3126]
+- Fix SIGTERM forwarding in AWS Batch jobs (#6414) [abbef79b7]
+- Fix "Strings must not be null" error message (#6404) [24314b112]
+- Fix unstage controls in command.run when using storeDir (#6364) [a5756da3e]
+- Generate plugin spec (#6361) [ed6bb6037]
+- Get exit code from pod to manage OOM in k8s (#6442) [f258a758e]
+- Limit S3 concurrent downloads to fix Java Heap OOM (#6402) [fd71d0e8c]
+- Update Gradle build system to version 9.1.0 (#6418) [e2bb2f083]
+- Bump Google Cloud libraries to latest versions (#6438) [59a63f1ae]
+- Bump nextflow-gradle-plugin version 1.0.0-beta.10 [812ed7f9f]
+- Bump nf-amazon@3.3.0 [3561c26e9]
+- Bump nf-azure@1.20.1 [fae3c2d58]
+- Bump nf-codecommit@0.5.0 [91514a6f6]
+- Bump nf-google@1.23.1 [153745a16]
+- Bump nf-k8s@1.2.1 [c4f4eca9b]
+- Bump nf-tower@1.16.0 [ef9110407]
+- Bump nf-wave@1.16.0 [be01d3f96]
+
+25.08.0-edge - 14 Sep 2025
+- Add Claude Code GitHub Action integration (#6389) [1073a1da]
+- Add Value type for dataflow values (value channels) (#6372) [8de2339e]
+- Add descriptions to plugin MANIFEST.MF files (#6348) [d558ee33]
+- Add null checks in TowerClient onFlowComplete method (#6384) [de968f03]
+- Add plugins redirects (#6385) [3fb8a586]
+- Add test for prefetchMetadata call in pullPlugins method (#6396) [a5c19b89]
+- Add Type annotations (#6278) [0008707e]
+- Fix CLI param override in strict config parser (#6377) [e146b412]
+- Fix GString equality checks with String (#6330) [01e18883]
+- Fix GitHub Actions commit message parsing to use only first line [5bc91622]
+- Fix NPE when contributors omit contribution field in manifest (#6383) [dd2154ca]
+- Fix Platorm refresh token handling [ba78ef74]
+- Fix duplicate page and redirects in docs (#6386) [efba138f]
+- Fix false warning for map config options (#6359) [872d124c]
+- Fix groupTuple operator to handle GString vs String keys consistently (#6400) [206cc015]
+- Fix incorrect spelling in docs (#6336) [00150f2a]
+- Fix null reference error in workflow output (#6374) [d1f43c5d]
+- Fix typo in task config eval (#6392) [e60978f4]
+- Implement Process Execution with Command-Line Parameter Mapping (#6381) [experimental] [6d5a0bd0]
+- Improve secret loading documentation and rename ConfigNullProvider to EmptySecretProvider [9e4c975a]
+- Minor TowerClient improment (#6387) [d7436674]
+- New executor for Fujitsu Technical Computing Suite (TCS) (#5928) [dd87b2fb]
+- Preserve method parameter names in nf-lang JAR (#6355) [83160d66]
+- Refactor Wave and Tower client to use lib-httpx library (#6354) [148a8a13]
+- Replace custom JWT refresh logic with standardized HxClient (#6398) [c68c1e9e]
+- Replace custom retry strategy with HxClient in RepositoryProvider (#6351) [af8ba8c8]
+- Simplify plugin download implementation (#6349) [a3db0f88]
+- Support standard environment variables for ANSI terminal output (#6362) [ede13441]
+- Update core plugins to use Nextflow Gradle plugin (#6379) [a7e4ea86]
+- Warn when file() matches a collection of files (#5507) [726bf484]
+- Workflow params (#5929) [876d8052]
+- Bump netty deps to version 4.1.124.Final [9e8d5969]
+
+25.07.0-edge - 15 Aug 2025
+- Add `-template` option to plugin create command and improve class name normalization (#6334) [c2c879d7]
+- Add read permissions to nextflow launcher (#6288) [3614aea1]
+- Add support for Bitbucket API tokens instead of access tokens (#6337) [1d73b87f]
+- Add token support for BitBucket, Gitea and Gitlab repository providers (#6212) [9d8943e1]
+- Add version, kind, and spec to lineage schema (#6075) [63286135]
+- Add warning for Azure Batch lowPriority pools (#6261) [a32fd50c]
+- Add Workflow onComplete and onError sections (#6275) [4fd97b9e]
+- Add custom date time format support with configurable NXF_DATE_FORMAT (#6013) [163cd37b]
+- BREAKING: Improve eval output hash with semantic names instead of raw commands (#6346) [d86be1a1]
+- Fix Fail if splitFastq receives incomplete record (#6268) [0869a34a]
+- Fix AWS transfer manager anonymous fallback (#6296) [ed5c99e1]
+- Fix Azure Batch startTask concatenation issue (#6300) (#6305) [81d5c0dc]
+- Fix AzureRepositoryProvider readBytes operation (#6286) [f6eb2f71]
+- Fix CSV writer with empty list (#6333) [46ae10df]
+- Fix ExecutorRetryConfig null pointer exception [ae661026]
+- Fix Job arrays exceeding queue size limit (#5920) (#6345) [66abf249]
+- Fix NPE in GoogleBatchMachineTypeSelector when spotPrice is null [a797a795]
+- Fix Reset terminal color after lint success/failure message (#6323) [17b05bae]
+- Fix bug in DefaultObserverFactory (#6259) [bec4bf7a]
+- Fix bug with workflow output index file (#6328) [fa972305]
+- Fix bugs with workflow output and lineage (#6254) [21a64705]
+- Fix explicit `it` closure parameter (#6276) [99f9edf1]
+- Fix formatting of channel factories (#6282) [f73f87b2]
+- Fix new plugins registry download when OCI repositories require tokens (#6303) [12fbef34]
+- Fix silent failure when downloading a directory with AWS SDK v2 (#6266) [2d76d8f0]
+- Fix submitted count when aborting submitted tasks (#6281) [d0d3e100]
+- Fix typos (#6291) [18c278b9]
+- Fix error_action typo (#6283) [cc5a9c98]
+- Fix GitlabRepositoryProvider now handles leading slashes for content URLs (#6284) [b7fa6f4e]
+- Fix Invoke workflow complete handler on all workflow errors (#4299) [9d246154]
+- Fix Improve Fusion license error message (#6313) [c3f397ea]
+- Migration guide for workflow outputs (#6162) [9a4f79d5]
+- Move AST transforms to nf-lang (#6247) [824dabbb]
+- Register fully-qualified process names at compile-time (#6312) [9a70cdbb]
+- Remove warning on missing config [14be407a]
+- Rephrase nf-core extension pack description (#6273) [1446e542]
+- Unify nf-lang config scopes with runtime classes (#6271) [bfa67ca3]
+- Update AWS Java SDK v2 guide #6269 [4a61e283]
+- Update Azure and AWS deps (#6343) [ff00e2de]
+- Update Gitea provider to gitea.com as default server (#6285) [cbfa2323]
+- Update changelog [e2e prod] [b48c0698]
+- Update nf-codecommit to AWS SDK v2 with corrected test  (#6293) [1557a91a]
+- Update standard types docs (#6329) [a76b7604]
+- Update to plugin registry V1  (#6316) [9b1d1b6d]
+- Update trace observers to V2 (#6257) [544b8c47]
+- Bump groovy 4.0.28 (#6304) [a468f8ef]
+- Bump netty-codec-http2:4.1.124.Final [7e690b44]
+- Bump nextflow registry as default (#6339) [eaf1048f]
+- Bump org.apache.commons:commons-lang3 from 3.12.0 to 3.18.0 (#6272) [b8ccddb5]
+- Bump nf-wave@1.14.1 [5ee40f0e]
+- Bump nf-tower@1.14.0 [fe399deb]
+- Bump nf-k8s@1.1.1 [821f6996]
+- Bump nf-google@1.22.2 [9a4e5795]
+- Bump nf-codecommit@0.3.0 [3ec9e583]
+- Bump nf-azure@1.19.0 [8a7e0507]
+- Bump nf-amazon@3.1.0 [2fb0f136]
+
+25.06.0-edge - 6 Jul 2025
+- Add Git response max length check (#6190) [098fe84f]
+- Add docker.registryOverride option (#6205) [e26abe4f]
+- Add namespaces to nf-lang (#6176) [c839799b]
+- Add support for Bitbucket API token (#6209) [f711f24e]
+- Fix AWS NIO tests [069653dd]
+- Fix JWT token refresh to Fusion validation request (#6231) [95dfdafd]
+- Fix Apptainer and singularity --no-https option (#6216) [66ead2c6]
+- Fix class not found exception Google Life science executor (#6193) [7bfb9358]
+- Fix false error on nested closure in config process directive (#6203) [481c773b]
+- Fix false error when using stdin/stdout in a tuple (#6219) [5d7f12ce]
+- Fix false warning in config schema validator (#6240) [4e55ceeb]
+- Fix http response err message [1f05451f]
+- Fix mamba env create stalls at prompt [e7c93791]
+- Fix null reference error in lint command (#6202) [3e1837e6]
+- Fix readBytes for non-GitHub providers (#6243) [fa79c12c]
+- Fix replace List.getFirst with List.get(0) for compatibility [83428ee2]
+- Fix same Conda env is re-created for same module (#6166) [b46f01f9]
+- Fix stack overflow error with workflow metadata (#5988) [9d50c495]
+- Fix Maven publish with aws credentials [34d64ab3]
+- Implement retry strategy for Git repository provider (#6195) [0f922826]
+- Implement unordered directory hash (#6197) [a0eeed8d]
+- Minor Azure Batch disk slot calculation demoted to debug (#6234) [c65955ce]
+- Remove deprecated GsonHelper class [700faddb]
+- Remove deprecated nexus-staging plugin [68b449bb]
+- Rename IncludeModuleNode to IncludeEntryNode (#6217) [1f456d9c]
+- Replace URLConnection with HttpClient (#6188) [d1e6836e]
+- Return null result when repository provider has not auth [9d7fd9fc]
+- Unwrap Failsafe exception cause in Wave client [0cb39df5]
+- Update Google dependencies (#6229) [8bd42acb]
+- Update stalebot (#6228) [27174df3]
+- Update Wave retryPolicy default values (#6222) [b8069a58]
+- Upgrade AWS instructions to AL2023 (#6183) [ed407095]
+- Upgrade to AWS Java SDK v2 (#6165) [fc99b447]
+- Upload Google Batch log on task exit (#6226) [78d9f473]
+- Bump Google instance type for testing [bde9ef1b]
+- Bump Logback version 1.5.18 [e3d5cedd]
+- Bump Slf4j version 2.0.17 [93199e09]
+- Bump gson version 2.13.1 [ab8e36a2]
+- Bump nf-wave@1.14.0 [71ecf264]
+- Bump nf-tower@1.13.0 [53d1bfb4]
+- Bump nf-google@1.22.1 [cdf56d14]
+- Bump nf-azure@1.18.0 [fc514062]
+- Bump nf-amazon@3.0.0 [ffe699bd]
+
+25.04.4 - 16 Jun 2024
+- Fix bug in generated Groovy code (#6082) [ead2f320]
+- Fix default imports in included configs (#6096) [831a577b]
+- Fix variable checking in v2 config parser (#6097) [686ff608]
+- Sort linter errors/warnings by source location (#6098) [f51f339c]
+
+24.10.8 - 6 Jun 2025
+- Add Fusion license validation [02b4dd74]
+- Bump nf-wave@1.7.5-patch1 [cf6af9c5]
+- Bump nf-tower@1.9.3-patch1 [bdef2177]
+
+24.04.5 - 6 Jun 2025
+- Add Fusion license validation [cb7210b9]
+- Bump nf-wave@1.4.2-patch2 [69b63342]
+- Bump nf-tower@1.9.1-patch1 [8bfdc673]
+
+25.05.0-edge - 2 Jun 2025
+- Add Failsafe retry mechanism in K8s (#6083) [9e675c6a]
+- Add Platform info to Fusion license (#6142) [75f1bc52]
+- Add support for Azure Managed identities on Azure worker nodes with Fusion (#6118) [37981a5f]
+- Add support for container build compression (#5964) [daeefa0c]
+- Deprecated condaFile attribute [9e52b2ad]
+- Fix bug in generated Groovy code (#6082) [f0620656]
+- Fix default imports in included configs (#6096) [8f790615]
+- Fix variable checking in v2 config parser (#6097) [c3e9367b]
+- Force overwritting to trace file (#6105) [b9dace93]
+- Improve documentation of splitCsv operator (#6131) [f09ae8d7]
+- Make RepositoryProvider readBytes public (#6138) [9221b112]
+- Remove Az Fusion environment variable (#6143) [6c595eac]
+- Remove deprecated spack options [4e5d32a3]
+- Remove task attempt from hash list and add note (#6123) [9b48df4c]
+- Return streams in Lineage search and subkeys methods (#6067) [e4af2308]
+- Sort linter errors/warnings by source location (#6098) [7c52fafb]
+- Sunset the Google LS executor (#6070) [06e0d426]
+- Bump Groovy to version 4.0.27 (#6125) [258e1790]
+- Bump jgit:7.1.1.202505221757-r [16b88aca]
+- Bump nf-wave@1.13.0 [ab1d2dfe]
+- Bump nf-tower@1.12.0 [d4d97dfc]
+- Bump nf-k8s@1.1.0 [14eb7892]
+- Bump nf-google@1.22.0 [0f6498f1]
+- Bump nf-azure@1.17.0 [0b491840]
+
+25.04.3 - 2 Jun 2025
+- Add Platform info to Fusion license (#6142) [375db65a]
+- Force overwritting to trace file (#6105) [59e9d88d]
+- Bump nf-tower@1.11.3 [f7509bce] 
+
+25.04.2 - 13 May 2025
+- Add check subcommand in lineage (#6074) [5ba67bca]
+- Fix issues with `lint` console output (#6064) [7405f513]
+- Remove obsolete conda create --mkdir option (#6010) [9fc44f76]
+
+25.04.1 - 12 May 2025
+- Add Beta annotation to LinStore [3bd0d731]
+- Add data lineage guide (#6044) [7f7fb631]
+- Add more excludes to cmd lint [fc52c843]
+- Add support for ARM and Snapshots (#6057) [ef4c3865]
+- Add version to Lineage data model  (#6037) [5c2c2834]
+- Fix IllegalArgumentException on publish operator [ecdbe21b]
+- Fix linting of output `label` directive (#6065) [74bf33a2]
+- Fix selector expression documentation (#6050) [548c87bd]
+- Improve lineage checksum validation [d708bf09]
+- Improve not found error in lineage `render` (#6061) [e55419ad]
+- Make config parser v2 compatible with AssetManager (#6042) [aab5574b]
+- Refactor lineage model using v1beta1 package name [63d59154]
+- Support fromPath with pattern in Lineage Pseudo-FS (#6054) [ce165c0e]
+- Bump plugin template to v0.2.0 (#6062) [96c88931]
+- Bump nf-wave@1.12.1 [8cabfd74]
+
+25.04.0 - 8 May 2025
+- Add Support for Google Batch network tags (#5951) [d6e4d6c2]
+- Add Trace observer v2 (#6014) [c4437c1a]
+- Add allowed plugins list (#6049) [e22882e3]
+- Add azure.batch.jobMaxWallClockTime config option (#5996) [74963fdc]
+- Add config error checking to `run` command (#5998) [b0191fa4]
+- Add lineage to gitignore [02e1a542]
+- Add plugin create command (#6032) [68865f7f]
+- Add socketTimeoutException to retryable condition [b676e996]
+- Add support for Java 24 [a47ceefe]
+- Add timezone to lineage list timestamp [77736b55]
+- Add verbose AWS Batch job cleanup logging [504bd2df]
+- Add Support downloading plugins from OCI registries (#6016) [b41c65d5]
+- Add Support prefetching plugins metadata from plugins registry (#5887) [37d433d8]
+- Bring topic channels out of preview (#6030) [4b1b008b]
+- Data Lineage quick fixes (#6045) [f3cee76b]
+- Data Lineage workflow outputs fixes (#6041) [2cb49d08]
+- Data Lineage documentation (#5999) [c0bfc092]
+- Data Lineage programmatic API (#6003) [85b9d00d]
+- Fix NPE when params value is null [c7316eaf]
+- Fix `lineage find` command arguments validation (#6034) [375dc17c]
+- Fix concurrent modification error in `lint` command (#6053) [ccf5705e]
+- Fix errors in output fragment (#6020) [f947c9b4]
+- Fix false error in workflow output (#5982) [039ad401]
+- Fix small formatting inconsistencies  (#6024) [c3a47605]
+- Fix task progress percentage with failed tasks (#5868) [7e931e83]
+- Fix timeout in failing test [cf3e1661]
+- Improve plugin template update [d33c5063]
+- Improve process creation logging [0121670c]
+- Make plugins log less verbose [38410fd0]
+- Minor allow null output params and values [53824bb0]
+- Refactor lineage annotations as list (#6022) [9280b59e]
+- Remove test constructors or mark as TestOnly (#5216) [d4fadd42]
+- Replace output `labels` with `label` directive (#6035) [f99bcd33]
+- Separate language and runtime reference docs (#6018) [75ad21d0]
+- Split standard library docs into multiple pages (#5993) [2f82d236]
+- Store lineage meta in root location and default to .lineage path [d1cae3be]
+- Use `channel` namespace to access channel factories (#6029) [26557f0c]
+- Use the same antlr4 dep as Groovy 4 (#5990) [bd33a76e]
+- Bump plugin template v0.1.0 [b54e78f3]
+- Bump repository provider connection timeout to 60 secs [39aaa831]
+- Bump nf-google@1.21.0 [b7aba74d]
+- Bump nf-azure@1.16.0 [e8304c1e]
+- Bump nf-amazon@2.15.0 [c5100f6d]
+
+24.10.6 - 24 Apr 2025
+- Add support for Fusion Snapshots (#5954) [76a997a3]
+- Bump nf-wave@1.7.5 [3ddf16fb]
+- Bump nf-amazon@2.9.3 [ccf672fb]
+
+25.03.1-edge - 24 Apr 2025
+- Fix lineage packaging (#6001) [c3bb7a51]
+
+25.03.0-edge - 23 Apr 2025
+- Add Google Batch gcsfuseOptions (#5991) [1d4dd574]
+- Add `fs` command to CLI help (#5967) [c0566aad]
+- Add lint command (#5908) [8699cc6b]
+- Add support for Fusion Snapshots (#5954) [d7f047f8]
+- Add support for data and execution lineage  (#5715) [20e06da7]
+- Add Workflow outputs (third preview) (#5909) [2e2dea42]
+- Add Manage AWS Batch Unscheduled jobs (#5936) [44abe60c]
+- Document process/workflow recursion (#5974) [72bc4c22]
+- Document release notes (#5975) [368db5c4]
+- Fix Bash escape in build script [c8750a04]
+- Fix bugs in workflow outputs (#5978) [c7536c9a]
+- Fix kebab-case normalization for params file (#5989) [9a045f80]
+- Fix possible syntax error in Mermaid DAG renderer (#5935) [e3b8ca42]
+- Fix race condition in unit tests (#5955) [cff7bf8c]
+- Fix recursion snippets in workflow docs (#5979) [ac71280e]
+- Fix repeated warning for local executor (#5961) [11999659]
+- Fix validation of plugin config options (#5952) [60f1d1f6]
+- Refactor K8s support as core plug-in (#5965) [27ecb89d]
+- Refactor TraceObserver as interface (#5963) [8826134a]
+- Removed unused thread pool factory [fac2e4b7]
+- Revert Bump Fusion to version 2.5 [49b58d2d]
+- Support `dag.direction` for `dot` DAG format (#5941) [834cee48]
+- Update Azure Batch VM sizes and regions (#5985) [297150b8]
+- Update shell block deprecation notice (#5972) [fea67859]
+- Bump Gradle 8.13 [e19aeedb]
+- Bump nf-wave@1.12.0 [1ec04db5]
+- Bump nf-googlee@1.20.0 [5fce5092]
+- Bump nf-azure@1.15.0 [45e76d7d]
+- Bump nf-amazon@2.14.0 [8615aecb]
+
+25.02.3-edge - 8 Apr 2025
+- Fix container meta deduplication [f4600d2e]
+- Bump nf-tower@1.11.2 [220e429a]
+
+25.02.2-edge - 5 Apr 2025
+- Add nf-lang module from language-server (#5876) [36153c68]
+- Add section about include addParams to syntax guide (#5946) [d0842992]
+- Add tower plugin when fusion is enabled [579873bc]
+- Fix Nextflow console (#5937) [0206d1f2]
+- Fix console with v1 parser only [c733b371]
+- Fix date format in Wave containers meta (#5903) [59536c0a]
+- Fix grammar for reference to an operator (#5914) [7d3cb2b7]
+- Fix typo in comments (#5891) [47a0cc1e]
+- Fix Preserve workflow context in DAG for Mermaid renderer (#5918) [6da5496b]
+- Chore Improve deprecation warnings (#5939) [ea60dfb4]
+- Chore Move compile-to-groovy visitors into nf-lang (#5910) [0f588576]
+- Chore Move foreign file staging after storeDir evaluation (#5759) [2c53d9bd]
+- Chore Add nf-lang type checking utils (#5913) [4be204fb]
+- Bump nf-console@1.2.1 [cd3b1f93]
+- Bump nf-tower@1.11.1 [587d6274]
+- Bump nf-wave@1.11.1 [e5fb7694]
+
+25.02.1-edge - 19 Mar 2025
+- Fix handling of exit status with Azure Batch and Fusion Fusion (#5806) [7085862d]
+- Fix false positive Process already defined error (#5894) [4bd0b619]
+- Fix Specify container platform when creating test deployment [d27df801]
+- Removing Azure vmList from log [67ffc8ab]
+- Bump nf-azure@1.14.1 [87ef472a]
+
+25.02.0-edge - 17 Mar 2025
+- Add cpu-shares and memory limits to Azure Batch tasks (#5799) [f9c0cbfd]
+- Add Config parser v2 (and loader) (#4744) [b019b0bb]
+- Add Wave container metadata to Platform traces (#5724) [b81178c5]
+- Add disk directive support in Azure Batch (#5784) [113d7250]
+- Add example of dynamic directive with input file (#4545) [2ebeb346]
+- Add static config schema checking (#5816) [2430ea64]
+- Add update guide for spot retry strategy (#5872) [f053b815]
+- Add Script parser v2 (#4613) [7e3868df]
+- Fix Align container platform with `arch` directive when using Wave (#5847) [b9d23e22]
+- Fix Fail if glob does not exist with `checkIfExists: true` (#4224) [ab358dc9]
+- Fix Consider AWS China as custom endpoint (#5840) [232ce9d1]
+- Fix Flaky tests using random server port [e25d3092]
+- Fix Google Batch autoRetryExitCodes bug (#5828) [cfeedd6f]
+- Fix Ignore Azure pool already exists error (#5721) [e267961b]
+- Fix Prevent S3 global option when using custom endpoints (#5779) [ed9da469]
+- Fix bugs with strict config parser (#5854) [8f9fe0a6]
+- Fix dynamic publish path (#5809) [6a81c015]
+- Fix false error in variable visitor (#5765) [c3f67db2]
+- Fix race conditions in e2e tests (#5859) [50812746]
+- Fix subgraph name collisions in Mermaid DAG (#5843) (#5860) [1d2e7bf7]
+- Improve GH warning reporting [5ead5ba2]
+- Improve Google Batch support for GPUs (#5406) [420fb17e]
+- Improve docs for process path input/output arity (#5842) [15c6f3cf]
+- Improve fusion-symlink.nf test (#5819) [138a1ff7]
+- Improve operator summary (#5880) [a5f13799]
+- Improve params documentation (#5800) [976e0020]
+- Improve storeDir error message (#5791) [da5f7592]
+- Remove Spack from Wave (2nd) [076c8237]
+- Remove Spack from Wave assets [9c554de9]
+- Remove changed-files GH action due to sec vulnerability [00a53b97]
+- Remove invalid config option `azure.managedIdentity.tenantId` (#5846) [6ce8d648]
+- Remove stack trace from fusion license warn [3e7670f5]
+- Remove unused DSL1 warning (#3671) [bf18ee82]
+- Skip wave tests when tower access token is not available [6d2dafc0]
+- Update Platform token error message [18b69349]
+- Update config-to-groovy visitor (#5867) [a23f6840]
+- Update issue and PR templates (#5805) [d8c8151b]
+- Update metrics tutorial (#5853) [130a9c81]
+- Use parallelization in Gradle build (#5830) [c02fe91f]
+- Use semver to pin only major/minor plugin versions (#5435) [80dec141]
+- Validates Azure region before checking available VMs (#5108) [080893a2]
+- Bump Ubuntu 22.04 as default SKU for Azure Batch (#5804) [e0ba536d]
+- Bump groovy 4.0.26 [f740bc56]
+- Bump nf-amazon@2.13.0 [cca97256]
+- Bump nf-azure@1.14.0 [38e04354]
+- Bump nf-console@1.2.0 [98da8413]
+- Bump nf-google@1.19.0 [b0fc9de6]
+- Bump nf-tower@1.11.0 [d003e2f2]
+- Bump nf-wave@1.11.0 [b1df8344]
+
+24.10.5 - 4 Mar 2025
+- Improve Google Batch executor stability and error handling (#5690) [1a9e8bf5]
+- Fix Mount input file buckets in task arrays for Google Batch (#5739) [0d98442d]
+- Fix Google Batch task array causes process to fail (#5780) [d4c1ba12]
+- Fixing bug when execution with stub and no stub defined (#5473) [ba5ab069]
+- Fix Conda directive is not honoured by task array (#5704) [63124eb8]
+- Fix Use unbound queue for transfer thread pool (#5700) [d57a85d0]
+- Bump nf-google@1.15.4 [ee9c1fd4]
+
+25.01.0-edge - 12 Feb 2025
+- Add DeadlineExceededException to Google Batch retryable exceptions [944f48f9]
+- Add Fusion token validation (#5614) [1dcb18d6]
+- Add stub flag to task hash only if task has a stub (#5750) [deec443d]
+- Add traceparent header to wave & tower clients (#5725) [7eea9f2d]
+- Allow Azure Batch tasks to be submitted to different pools  (#5766) [76790d2a]
+- Configure target java version alongside gradle toolchain (#5676) [2153abb1]
+- Disable cleanup on remote work dir (#5742) [ef67b81e]
+- Do not skip integration tests on PRs [4caf6ef8]
+- Fail the run if publish thread pool times out (#5578) [5325e5a6]
+- Fix Check for number of low priority nodes in Azure Batch before raising a pool resize error (#5576) [9b528c11]
+- Fix Conda directive is not honoured by task array (#5704) [f8c3b63c]
+- Fix Create parent directory for DAG report (#5752) [62263a35]
+- Fix Google Batch task array causes process to fail (#5780) [7ad7a237]
+- Fix Mount input file buckets in task arrays for Google Batch (#5739) [ba171fd1]
+- Fix bugs with workflow outputs (#5502) [ab59d30f]
+- Fix first collection method [a0ca6e4f]
+- Fix stub templates (#5751) [13072d64]
+- Ignore tests when smoke mode is enabled [3eb6efad]
+- Improve Google Batch executor stability and error handling (#5690) [b64087fc]
+- Preserve attributes of published files (take 2) (#5660) [422f2898]
+- Remove compileJava options [28e03a21]
+- Remove redundant exception handling [00376aa3]
+- Revert "Fix the cleanup of local secret file" (#5697) [55f25b34]
+- Strengthen shell directive validation (#5689) [039c8f30]
+- Update HyperQueue CLI option (#5730) [BREAKING] [b582cb57]
+- Update azure deps [b163da95]
+- Use unbound queue for transfer thread pool (#5700) [90319681]
+- Bump Fusion to version 2.5 (2nd attempt) [a7f09ae4]
+- Bump gradle 8.12.1 [1fffb85c]
+- Bump groovy 4.0.25 [19c40a4a]
+- Bump io.netty:netty-handler:4.1.118.Final [db4a9037]
+- Bump net.minidev:json-smart:2.5.2 [b5c4faf4]
+- Bump netty-common:4.1.118.Final [8574e243]
+
+24.10.4 - 20 Jan 2025
+- Fix CLI params normalization (#5661) [42a9d8a0]
+- Fix azure repos when clone URL is used (#5667) [eb092c9f]
+- Fix Prevent the use existing work dir (#5682) [7ed233ea]
+
+24.12.0-edge - 20 Jan 2025
+- Add Warning when Cloudinfo fails in Google Batch machine type selection (#5649) [5aef532f]
+- Add rate limiter to wave requests (#5608) [ecf68294]
+- Allow named parameters with plugin subcommand (#5643) [f81da8cf]
+- Customise mermaid diagram theme in DAG template (#5553) [54713a16]
+- Deprecate -with-weblog CLI opt [aa258b4a]
+- Disable AWS SDK v1 warning [cd00a26d]
+- Dump threads only with trace log level [87df7cd4]
+- Ensure job is killed when exception in task status check (#5561) [9eefd207]
+- Fix CLI params normalization (#5661) [e2e prod] [b5d43adc]
+- Fix Execution may hang reading trace file (#5683) [17d7a083]
+- Fix Google Batch hang when internal error during scheduling (#5567) [18f7de13]
+- Fix GroovyCompiler source and target compability [6dd92e3a]
+- Fix Only close the cache db if it is not null (#5631) [93860828]
+- Fix Azure repos when clone URL is used (#5667) [dc6cc414]
+- Fix shell directive with trace command in wrapper script (#4292) [8342889e]
+- Fixing getRepositoryUrl when project name is not provided (#5560) [335701e3]
+- Handle attribute caching with Lustre filesystem (#5650) [61674d2b]
+- Improve Fargate + Wave docs (#5562) [12be47ef]
+- Improve inspect mode (#5605) [8e2056e7]
+- Include all processes in inspect command (#5580) [0aa76aff]
+- Prevent the use existing work dir (#5682) [e14fc998]
+- Remove 'defaults' conda channel from docs (#5607) [8b541814]
+- Update Google Batch docs to clarify spot retry behaviour (#5644) [18788361]
+- Update flux job id regular expression (#5662) [58a0b344]
+- Use printf instead of echo to write trace file (#5397) [c6434d46]
+- Bump groovy 4.0.24 missing deps [40670f7e]
+- Bump jgit to version 7.1.0 (#5587) [3d714683]
+- Bump logback 1.5.13 + slf4j 2.0.16 [cc0163ac]
+- Bump logback 1.5.16 [5ac91f00]
+- Bump nf-wave@1.9.0 [182ddd46]
+- Bump nf-tower@1.9.4 [4d949d16]
+- Bump nf-google@1.17.0 [741d0f38]
+- Bump nf-console@1.1.5 [958820fd]
+- Bump nf-codecommit@0.2.3 [fdc32c71]
+- Bump nf-cloudcache@0.4.3 [c173c535]
+- Bump nf-azure@1.12.0 [b747dcfa]
+- Bump nf-amazon@2.11.0 [2650f07a]
+
+24.11.0-edge - 3 Dec 2024
+- Add GHA to submit dependencies to dependabot (#5440) [80395a6d]
+- Add NotFoundException to retry condition for Google Batch [aa4d19cc]
+- Add Rahel Hirsch to run name generator (#5442) [ff2bc6ae]
+- Add `env()` function (#5506) [fa0e8e0f]
+- Add more scientists to run name generator (#5447) [38d9eda0]
+- Add `singularity.libraryDir` to config page (#5498) [b5e31bb0]
+- Add RepositoryProvider.revision now public property (#5500) [f0a4c526]
+- Deprecate process `shell` block (#5508) [6f527551]
+- Detecting errors in data unstaging (#5345) [3c8e602d]
+- Disable virtual threads on CI tests [ci slip] [69d07dbc]
+- Fix Fargate warning on memory check (#5475) [bdf0ad00]
+- Fix `isContainerReady` when wave is disabled (#5509) [3215afa8]
+- Fix missing wave response (#5547) [ee252173]
+- Fix overlapping conda lock file (#5540) [9248c04d]
+- Fix overlapping conda lock exception (#5489) [eaaeb3de]
+- Fix possible deadlock in dynamic `maxRetry` resolution (#5474) [25bbb621]
+- Fix Wave GCP integration test (#5490) [ad56c89b]
+- Fixing bug when execution with stub and no stub defined (#5473) [f7fd56db]
+- Fix Incorrect CPU value in Azure example (#5549) [fc5e2c2a]
+- Improve docs for using the GPU accelerator directive (#5488) [4b908524]
+- Improve groupTuple docs with scatter/gather example (#5520) [b5c63a9f]
+- Prevent NPE with null AWS Batch response [12fc1d60]
+- Target Java 17 as minimal Java version (#5045) [0140f954]
+- Update 'nexus-staging' plugin to latest version (#5462) [07934513]
+- Update gradle 'shadow' plugin version to 8.3.5 (#5463) [2a5f15f0]
+- Update install docs to reflect change from 'all' to 'dist' (#5496) [c9115659]
+- Update process snippets to comply with strict syntax (#5526) [be1694bf]
+- Update Wave dependencies [09ccd295]
+- Bump aws sdk 1.12.777 (#5458) [8bad0b4b]
+- Bump bouncycastle to jdk18on:1.78.1  (#5467) [cd8c385f]
+- Bump com.azure:azure-identity from 1.11.3 to 1.12.2 (#5449) [cb70f1df]
+- Bump commons-io:2.15.1 [767e4a0a]
+- Bump groovy 4.0.24 [dd71ad31]
+- Bump netty-common to version 4.1.115.Final [d1bbd3d0]
+- Bump nf-amazon@2.10.0 [2b653b07]
+- Bump nf-azure@1.11.0 [6af7198d]
+- Bump nf-google@1.16.0 [9494f970]
+- Bump nf-google@1.8.0 [7e2c8d82]
+- Bump protobuf-java:3.25.5 to nf-google [488b7906]
+
+24.10.2 - 27 Nov 2024
+- Prevent NPE with null AWS Batch response [3d491934]
+- Fix overlapping conda lock file (#5540) [df66deaa]
+- Fix missing wave response (#5547) [eb85cda8]
+- Bump nf-wave@1.7.4 [93d09404]
+- Bump nf-amazon@2.9.2 [469a35dd]
+
+24.10.1 - 18 Nov 2024
+- Fix overlapping file lock exception (#5489) [a2566d54]
+- Fix isContainerReady when wave is disabled (#5509) [c69e3711]
+- Bump nf-wave@1.7.3 [e7709a0f]
+- Bump nf-azure@1.10.2 [54496ac4]
+- Bump nf-amazon@2.9.1 [fa227933]
+- Bump netty-common to version 4.1.115.Final [90623c1e]
+
+24.10.0 - 27 Oct 2024
+- Add `manifest.contributors` config option (#5322) [cf0f9690]
+- Add wave mirror and scan config [92e69776]
+- Add wave mirror vs module bundles conflicst warning [b37a8a5b]
+- Add Workflow output definition (second preview) (#5185) [ea128463]
+- Demote azure batch task status log level to trace (#5416) [d6c684bb]
+- Document formal script syntax (#5336) [a48ac589]
+- Add Expose trace record meta info in the task context (#5402) [ffdd3819]
+- Fix NextflowMeta compilation error [500f49c0]
+- Fix XFileSystem serialization issue (#5411) [711864fd]
+- Fix closure rendering in yaml and json config (#5408) [d3a85ceb]
+- Fix failing docs snippet (#5430) [a818f4b8]
+- Fix http files stream  (#5405) [e2e stage] [718dcbe6]
+- Fix nf-tower plugin to upload logs when early failures  (#5434) [4222442a]
+- Fix support for micromamba (#4302) [12431302]
+- Harmonise documentation for hybrid cloud execution (#5362) [a69407d2]
+- Prevent NPE when containerInfo is null [368a266a]
+- Remove invalid equals char (#5414) [7f39e6ed]
+- Bump nf-azure@1.10.1 [f67e157a]
+- Bump nf-tower@1.9.3 [7a572a12]
+- Bump nf-wave@1.7.2 [6524d8dc]
+
+24.09.2-edge - 14 Oct 2024
+- Add Google LS deprecation notice (#5400) [0ee1d9bc]
+- Add hybrid workflow documentation for Azure (#5361) [f81f27de]
+- Add more out formats to config command (#5399) [8acdb6e8]
+- Change to scan.levels to scan.allowedLevels (#5401) [88a1b1b5]
+- Fix inspect concretize option [0ee29a87]
+- Manage moduleBinaries feature flag in the pipeline script (#5348) [dd5fd20f]
+- Bump nf-wave@1.7.1 [94273967]
+- Bump nf-google@1.15.2 [fab01d58]
+
+24.09.1-edge - 13 Oct 2024
+- Add retry policy in Channel.fromSRA factory (#5389) [fb1c8b2e]
+- Add retry policy to Google batch describe task (#5356) [64bb5a92]
+- Add support for Wave  container status API  (#5384) [873703ad] [9ed18a88]
+- Fix Identify default git branch when downloading pipelines (#3593) (#5375) [4f74fc37]
+- Fix issue when retrying with stub (#5359) [324b611f]
+- Fix include aborted in the ProgressRecord total count (#5365) [8eb0c393]
+- Redirect logs to stderr during app bootstrap (#5206) [94918105]
+- Remove unused reportsOpts (#5379) [e794e868]
+- Sunsetting Spack support in Wave [3a54cb3b] [7bbba67b]
+- Bump nf-google@1.15.1 [4204435e]
+- Bump nf-wave@1.7.0 [cdecb3f5]
+
+24.09.0-edge - 2 Oct 2024
+- Add Fusion version pinning info to Fusion config scope (#5294) [be1cac37]
+- Add container tip in the task error report (#5299) [62e26043]
+- Add support for Java 23 (#5329) [6e10c372]
+- Add Platform workflow prefix in AWS Batch job names (#5318) [42dd4ba8]
+- Fix AWS spot attempts with zero value (#5331) [bac2da12]
+- Fix Azure Fusion env misses credentials when no key or SAS provided (#5328) [e11382c8]
+- Fix CI build taking only the commit msg header [9e702c4d]
+- Fix Inconsistency with camelCase and kebab-case config params #4702 (solve #4033) [349f4f6f]
+- Fix XPath default de-serializer issue (#5339) [290f2d07]
+- Fix failOnIgnore causes task monitor to stop submitting tasks (#5293) [d6870335]
+- Fix large mermaid diagrams (#5302) [a46edfa0]
+- Improve Wave build timeout handling (#5304) [05bef7e4]
+- Include additional fields to manifest (#5314) [33fab52d]
+- Remove `mini` from Flux submit command (#5229) [a0f69025]
+- Update container handling with charliecloud (#5300) [8e6068db]
+- Update Documentation structure (#4766) [25e5eba0]
+- Update nextflow install docs (#5198) [7c453815]
+- Bump groovy 4.0.23 (#5303) [fe3e3ac7]
+- Bump nf-wave@1.6.0 [179093dc]
+- Bump nf-azure@1.10.0 [41d37fa8]
+- Bump nf-amazon@2.9.0 [e38980fb]
+
+24.08.0-edge - 4 Sep 2024
+- Add Google Batch warning when for conflicting disk image config (#5279) [96cb57cb]
+- Add support for Google Batch used specified boot images  (#5268) [0aaa6482]
+- Disable AWS spot retry (#5215) [f28fcb25]
+- Disable Google Batch automatic spot retries (#5223) [aad21533]
+- Disable automatic detection of virtual threads (#5270) [b3ba2c2d]
+- Fix  missing .command.env when eval is used and task runs on a cloud env [4a6b54aa]
+- Fix job array syntax for PBS/Torque executor (#5281) [d59f5fae]
+- Fix k8s client status cond is possible null in podState (#5264) [46672415]
+- Fix non-determinist behaviour of join operator with bag array as key (#5189) [e7dc0d69]
+- Fix stage retry on corrupted HTTP downloads  (#5275) [bf0cd326]
+- Support Azure Managed Identities in Fusion configuration logic (#5278) [a0bf8b40]
+- Use public.cr.seqera.io in place of AWS ECR [5a01f277]
+- Wave client logs improvement [5a37e617]
+- Bump amazoncorretto:21-al2023 [59aed581]
+- Bump nf-wave@1.5.1 [97c4e08f]
+- Bump nf-google@1.15.0 [24133f2a]
+- Bump nf-azure@1.9.0 [29f49ba7]
+- Bump nf-amazon@2.8.0 [bbc3adca]
+
+24.07.0-edge - 8 Aug 2024
+- Add runtime error for missing channel factory (#5170) [1f9210ab]
+- Apply k8s.cpuLimits to kuberun driver pod (#5160) [4300adf1]
+- Await build completion for all Wave containers [2b8117e9]
+- Deprecate module addParams() and params() (#5200) [82c97f8c]
+- Remove capsule launcher dependencies (#3395) [f15e4246]
+- Fix AWS Cloudwatch access when using custom log group name [30195838]
+- Fix Invalid AWS Fargate CPUs usage error reporting [d9c50e59]
+- Fix Prevent AwS Batch retry the job execution when the container does not exist [4e218f22]
+- Fix Prevent negative cpus values [af2e4ef7]
+- Fix ProcessUnrecoverableException detection [17ec6c96]
+- Fix aws logs group name (#5146) [643b16b0]
+- Fix readAllBytes with http files (#5202) [7e90ce62]
+- Improve Google Batch 5000x error class handling (#5141) [61b2205f]
+- Improve docs [7703f0d0]
+- Improve error message for topic channel feature flag (#5161) [c4d407fb]
+- Improve fusion docs (#5166) [abdd78f1]
+- Improve queue docs (#5154) [bc2fb409]
+- Improve version checking [e7a879de]
+- Link to other docs on the failOnIgnore option (#5122) [572f2116]
+- Make Google Batch auto retry codes configurable (#5148) [e562ce06]
+- More robust parsing of shm-size containerOptions (#5177) [b56802a3]
+- Prevent default output/error logs for job arrays (#5152) [71f6ed0b]
+- Bump amazon sdk to version 1.12.766 [cc6ec314]
+- Bump gradle 8.9 [a437e97f]
+- Bump jgit 6.10.0 [177dc474]
+- Bump nf-amazon@2.7.0 [46c69d77]
+- Bump nf-azure@1.8.1 [26dcb604]
+- Bump nf-cloudchare@0.4.2 [c171b601]
+- Bump nf-codecommit@0.2.2 [d7dd4611]
+- Bump nf-console@1.1.4 [c1175157]
+- Bump nf-google@1.14.0 [1eda221a]
+- Bump nf-tower@1.9.2 [257bebfd]
+- Bump nf-wave@1.5.0 [e8d643c2]
+- Bump pf4j to version 3.12.0 [96117b9a]
+- Bump wave-api to 0.11.1 [96ec4ded]
+
+24.04.4 - 1 Aug 2024
+- Fix parsing of shm-size containerOptions (#5177) [98cf0068]
+- Fix aws logs group name (#5146) [b2ab651c]
+- Update Azure batch deps [72576648]
+- Bump nf-wave@1.4.2-patch1 [19a7272f]
+- Bump nf-codecommit@0.2.1 [f2bcce99]
+- Bump nf-azure@1.6.1 [0ea1f102]
+- Bump nf-amazon@2.5.3 [b13b5548]
+- Bump wave-api to 0.11.1 [87828afd]
+- Bump amazon sdk to version 1.12.766 [5ce42b79]
+- Bump pf4j to version 3.12.0 [1a8f086a]
+- Bump jgit 6.10.0 [cc2ccd81]
+
+23.10.4 - 31 Jul 2024
+- Add docker launcher [474427a5]
+- Update Azure batch deps [e0c6d77d]
+- Bump nf-azure@1.3.3-patch3 [54683615]
+- Bump nf-amazon@2.1.4-patch3 [084092f1]
+- Bump nf-codecommit@0.1.5-patch2 [de43b17e]
+- Bump amazon sdk to version 1.12.766 [189f58ed]
+- Bump pf4j to version 3.12.0 [8dfa4076]
+- Bump jgit 6.10.0 [4cf6b9f7]
+
+24.04.3 - 9 Jul 2024
+- Add ability to override failOnError setting default via env variable (#5117) [6852429c]
+- Fix normalization of consecutive slashes in uri path (#5114) [3f366b7e]
+- Fix executions hangs on finalisation exception (#5070) [4c207c23]
+- Bump nf-google@1.13.2-patch1 [55ec5ec5]
+
+24.06.0-edge - 8 Jul 2024
+- Add ability to override failOnError setting default via env variable (#5117) [72d78425]
+- Add retry options to Azure Blob client (#5098) [7d5e5d2b]
+- Add support for HyperQueue 0.17.0 or later [BREAKING] [b45f7c48]
+- Adds example of error strategies to documentation (#5121) [e82b0dee]
+- Fix docs for `failOnDuplicate` and `failOnMismatch` (#5113) [7d5c4824]
+- Fix normalization of consecutive slashes in uri path (#5114) [18ec484f]
+- Update Azure VMs and regions for 2024-07-01 (#5100) [12b027ee]
+- Bump Fusion 2.4 (#5080) [0a8a484e]
+- Bump Groovy 4.0.22 [284a6606]
+- Bump nf-azure@1.8.0 [28122b70]
+- Bump nf-google@1.13.4 [a1c2a814]
+- Bump nf-wave@1.4.4 [a3dfba54]
+- Bump amazoncorretto:17-al2023 to Dockerfile [5e03a7b7]
+
+24.05.0-edge - 17 Jun 2024
+- Add Managed Identity to Azure authentication documentation (#5062) [ab5b3eb2]
+- Add support for Azure managed identity (#4897) [21ca16e6]
+- Add support for EC-encrypted private keys for K8s executor [4dbb5193]
+- Add workflow.failOnIgnore config option (#4686) [172edc38]
+- Allow requester pays for S3 buckets (#5027) [0070c1b0]
+- Dump threads on abort condition [e3740977]
+- Enable build with Java 21 (#5030) [4c54db6a]
+- Fix Azure system-assigned managed identity [a639a17d]
+- Fix Java 22 version in launcher [29d6f1df]
+- Fix executions hangs on finalisation exception (#5070) [38434b82]
+- Fix support for Azure managed identity clientId [306814e7]
+- Fix support for s5cmd 2.2.2 (#5069) [7e78bd4d]
+- Fix the cleanup of local secret file (#5061) [e28537ca]
+- Fix typo in error message [f5c2355b]
+- Fix unique operator hangs when applied to value (#5053) [88b8ab0c]
+- Improve retry strategy for Google cloud errors when writing task helper files (#5037) [f8b324ab]
+- Remove GA4GH plugin (#5056) [0471b2e1]
+- Remove ending slashes for publish targets [891ed117]
+- Bump Gradle 8.8 final [ee54606c]
+- Bump aws-sdk 1.12.740 [acad2a1f]
+- Bump azure-compute-batch:1.0.0-beta.2 [c08dc49b]
+- Bump azure-storage-blob 12.26.1 [c76ff5e7]
+- Bump nf-wave@1.4.3 [01922f13]
+- Bump nf-google@1.13.3 [c064d209]
+- Bump nf-azure@1.7.0 [eeca7d67]
+- Bump nf-amazon@2.6.0 [d3f53c19]
+
+23.10.3 - 11 Jun 2024
+- Bump nf-google@1.8.3-patch2 [6960daab]
+- Bump nf-azure@1.3.3-patch2 [fbd3c1b4]
+- Bump nf-amazon@2.1.4-patch2 [f5b95820]
+- Fix security vulnerabilities (#5057) [6d8765b8]
+
+24.04.2 - 29 May 2024
+- Fix handling of tags with slash on Bitbucket (#5031) [76cd305f]
+- Fix the default for async finalizer (#5013) [f5fba709]
+- Fix the invocation of function with gstring (#5020) [04317f0d]
+- Fix escapes dollar char in local secret provider (#5021) [d8f8bf56]
+- Improve Charliecloud registry handling (#5018) [42496dbc]
+- Enable the use of Java 22  (#4970) [cbf24f9b]
+
+23.10.2 - 28 May 2024
+- Update Platform API endpoint (#4855) [04cedce0]
+- Fix semaphore in parallel polling monitor (#4927) [d173ceab]
+- Fix security vulnerabilities (#5014) [a28b404c]
+- Bump nf-wave@1.0.1-patch1 [3852dd1e]
+- Bump nf-tower@1.6.3-patch1 [d692711b]
+- Bump nf-google@1.8.3-patch1 [b48a1423]
+- Bump nf-ga4gh@1.1.0-patch1 [911c1624]
+- Bump nf-console@1.0.6-patch1 [9d6b64c3]
+- Bump nf-codecommit@0.1.5-patch1 [f43964f8]
+- Bump nf-cloudcache@0.3.3-patch1 [fb9059c7]
+- Bump nf-azure@1.3.3-patch1 [8c398620]
+- Bump nf-amazon@2.1.4-patch1 [1d3726db]
+
+24.04.1 - 20 May 2024 
+- Fix nf-google plugin dependency [725e2860]
+- Fix nf-amazon plugin dependency [c234b09f]
+- Bump nf-google@1.13.2 [633989a6]
+- Bump nf-amazon@2.5.2 [e31f70e0]
+
+24.04.0 - 20 May 2024
+- Add 'preview' to workflow runtime metadata (#4985) [935bb1e5]
+- Add enabled property to output dsl (#5008) [284415b1]
+- Fix Taskbar API is not supported error [0ea09ccc]
+- Fix inspect should not write history entry [c713ad51]
+- Fix unexpected container resolution [a5ecf8a4]
+- Improve icon loading error handling [c72e16f8]
+- Remove Fusion symlink resolution (#5004) [071ea74c]
+- Remove `seqera` and `defaults` from Conda default channels (#5003) [ec5ebd0b]
+- Use protected visibility for updateStatus method [6871ba06]
+- Workflow output definition (#4784) [cf0546b1]
+- Bump Fusion 2.3 (#5005) [7176c113]
+- Bump groovy-console 4.0.21-patch.2 [eb97831f]
+- Bump nf-amazon@2.5.1 [96ee633d]
+- Bump nf-console@1.1.3 [e8359042]
+- Bump nf-google@1.13.1 [5dcb4c7a]
+- Bump nf-wave@1.4.2 [73c668a6]
+
+24.04.0-edge - 13 May 2024
+- Add Wave and Fusion info to workflow metadata (#4945) [bb7e1c8e]
+- Add `k8s.cpuLimits` config option (#3027) [3c6e96d0]
+- Add account config option for grid executors (#4975) [a09e37dd]
+- Add git to docs deps [aa9e1273]
+- Add resourceLimits directive (#2911) [7c9d965e]
+- Add support for Job arrays (#3892) [ca9bc9d4]
+- Add support for clusterOptions as a list of values (#4993) [dd173e33]
+- Add threads dump for troubleshooting purposes [8992ebde]
+- Fix Gstring casting exception when clusterOptions is a closure [74004fbd]
+- Fix Missing error code when no entry is specified [f507e9a4]
+- Fix NPE in LogsCheckpoint class [deb3076d]
+- Fix Prevent maxForks less than zero [7676dd9c]
+- Fix Use fully qualified S3 uris in error message (#4923) [f1cffd1b]
+- Fix Wave container resolution with singularity and ociMode [54ad6241]
+- Fix collectFile saving to GCS with sort: false (#4965) [1418553a]
+- Fix console "Plugin manager not initialised" warn (#4989) [5ff44538]
+- Fix console icon (#4991) [b8a23706]
+- Fix docs formatting [c02e58c7]
+- Fix docs snippet [6499649d]
+- Fix flaky docs test (#4957) [ea8246f6]
+- Fix groovy console issue (#4988) [b9bf6410]
+- Fix job array docs (#4984) [6a3347ee]
+- Fix missing include error message (#4981) [aad100e1]
+- Fix script error text alignment (#4681) [1dc4e4e4]
+- Fix security vulnerability in logback (#4947) [0ffcc4ca]
+- Fix semaphore in parallel polling monitor (#4927) [5c37fcc2]
+- Fix remove commented out test lines in Azure Batch Pool opts tests. (#4914) [cb607f07]
+- Guarantees K8s pod name is unique on resume (#4959) [361cef84]
+- Improve config resolution docs (#4950) [019eb86c]
+- Improve documentation about azcopy installation requirements for custom Azure Batch worker pools (#4911) [5c410db8]
+- Improve error message for image pull time-out for Singularity/Apptainer/Charliecloud (#4974) [73015fbd]
+- Remove unused const [6e91285d]
+- Run task finalisation asynchronously (#4890) [e0e94227]
+- Strip auth secret from logs [acf63e0e]
+- Update TES executor to TES API v1.1 (#4195) [7b32c2d6]
+- Update aws.md to include Cluster access (#4951) [459d725b]
+- Update developer diagrams (#4922) [dcff41a5]
+- Update operator return types (#4976) [a614fbe7]
+- Update stale documentation in overview.md (#4968) [6a58c6d7]
+- Use for instead eachLine in error formatting [4a821f46]
+- azure batch autopool feature more comprehensive documentation (#4941) [adbd8903]
+- Bump Gradle 8.7 [8b5cf3cc]
+- Bump nf-wave@1.4.1 [830b032c]
+- Bump nf-tower@1.9.1 [163683c2]
+- Bump nf-google@1.13.0 [6d99a22a]
+- Bump nf-ga4gh@1.3.0 [89695ed3]
+- Bump nf-console@1.1.2 [357b143a]
+- Bump nf-amazon@2.5.0 [6c62a60a]
+
+24.03.0-edge - 15 Apr 2024
+- Add custom jobName for Google Batch [df40d55f]
+- Add escher to name generator class [2e6496e2]
+- Add retry policy to Google Batch client [c4981dcc]
+- Add retry strategy for publishing (#4839) [c9c7032c]
+- Add support for Azure custom startTask (#4913) [27d01e3a]
+- Add task tip extension point [eadad5b8]
+- Allow secrets to be used in pipeline script (#4171) [df866a24]
+- Do not print a new line when stdout is empty (#4892) [658a5ec8]
+- Fix Azure pool creation [2ee4d11e]
+- Fix Use of secrets in the includeConfig path [00c9f226]
+- Fix coloured ANSI log bug (#4898) [a04d6983]
+- Fix eval output type via bash -c wrapping (#4887) [2165a14d]
+- Fix exception handling in local executor [74d7d7a8]
+- Fix support for GCS requester pays bucket option [d9d61cff]
+- Fix test when missing Google secret [33dc3ce0]
+- Improve Charliecloud support (#4879) [287471c0]
+- Improve control on azcopy install (#4883) [01447d5c]
+- Improve error message when Google creds file is corrupted [a550e52f]
+- Improve getting started docs (#4764) [b59111b3]
+- Improve retry logic for AWS Batch executor [62926c28]
+- Nextflow launch script: improving search for JAVA_CMD (#4830) [ebbbe9e7]
+- Publish built-in reports as Tower reports (#4760) [b710d923]
+- Remove not needed dsl=2 + error in example (#4812) [7c5779d7]
+- Remove unused code from AssetManager [77365165]
+- Revert "Fix failing CI tests (#4861)" [7ba2e253]
+- Update NameGenerator (#4907) [248201af]
+- Update Platform API endpoint (#4855) [4842423a]
+- Update Wave to API v1alpha2 (#4906) [9c350872]
+- Update docs (#4852) [6e2d1a94]
+- Updated docs on Google Cloud setup and credentials (#4896) [7e8b5e26]
+- Updated dodcs note on singularity default command (#4825) [567f5334]
+- Bump groovy 4.0.20 [66c1a164]
+- Bump groovy 4.0.21 [9e08390b]
+- Bump nf-wave@1.4.0 [fc70dc8c]
+- Bump nf-tower@1.9.0 [b0c4e2c5]
+- Bump nf-google@1.12.0 [6ae25fad]
+- Bump nf-azure@1.6.0 [967c2ac8]
+- Bump nf-amazon@2.4.2 [ddda969e]
+
+24.02.0-edge - 10 Mar 2024
+- Add K8s job ttlSecondsAfterFinished option (#4434) [93627be6]
+- Add NXF_CACHE_DIR environment var (#4655) [4b00170a]
+- Add colours to ansi logs  (#4573) [5e2ce9ed]
+- Add eval output type (#4493) [df978113]
+- Fix Always emit publish event for symlinks on resume (#4790) [bb5c4f9d]
+- Fix Do not create local plugin path in embedded mode [9d6dd6a0]
+- Fix Error while publishing S3 file with blanks [b74c0227]
+- Fix Missing dependency for console command [baf29110]
+- Fix typo in Azure Batch docs ('Azore') (#4735) [192bf8df]
+- Fix typo in error message [a7f23305]
+- Remove experimental admonition for podman [17d0dced]
+- Remove square brackets from job name in LSF executor (#4799) [6e0ac72d]
+- Remove unneeded const [09c957fb]
+- Rename Tower -> Seqera Platform in docs and log messages (#4727) [7caffef9]
+- Update Azure dependencies [1bcbaf0d]
+- Update copyright info [e3089f0e]
+- Use alias for HistoryFile.Record [17217a1c]
+- minor cli docstring fix (#4759) [ee4b4a25]
+- Bump Grengine 3.0.2 [42ca2b6f]
+- Bump groovy 4.0.19 [854dc1f0]
+- Bump snakeyaml 2.2 [07480779]
+- Bump nf-amazon@2.4.1 [0eb84071]
+- Bump nf-azure@1.5.1 [d63be8c0]
+- Bump nf-cloudcache@0.4.1 [57b7004e]
+- Bump nf-console@1.1.1 [b7f703f5]
+- Bump nf-tower@1.8.1 [b8ffb180]
+- Bump nf-wave@1.3.1 [0c542eda]
+- Bump amazoncorretto 17.0.10-al2023 [3e695ad9]
+
+24.01.0-edge - 5 Feb 2024
+- Add support for custom fuse device plugin (#4612) [a1e33193]
+- Fix Ignore stored process message when ansi log is enabled (#4645) [f9ba47ef]
+- Fix Wave container replicable checksum [da382ddf]
+- Fix azure retry policy (#4638) [85bab699]
+- Fix handling of wave.s5cmdConfigUrl setting (#4707) [3a19386d]
+- Fix typo in Hyperqueue section (#4635) [d5a6a963]
+- Fix typo in OCI mode warning message (#4633) [e216a876]
+- Fix typo in the docs (#4636) [ci-skip] [4727f174]
+- Improve detection of sys home variable [8812138f]
+- Improve handling of publish error (#4703) [fc9f7685]
+- LocalSecretsProvider: invalid permissions tests made more robust (#4663) [682a6806]
+- Remove Glacier auto-retrieval (#4705) [5f0ec50d]
+- Remove preview from cmd secret [dc040226]
+- Set scratch default to false when using Fusion (#4675) [9d17e407]
+- Slight change in wording for error message about userEmulation (#4680) [a9c8a841]
+- Truncate max size exceeded error message (#4644) [36090b70]
+- Use AZURE_STORAGE_SAS_TOKEN environment variable (#4627) [2e02afbf]
+- Use canonical init method for plugins initialization [e7a20aff]
+- Bump nf-wave@1.3.0 [8b9905c7]
+- Bump nf-tower@1.8.0 [bfc94e46]
+- Bump nf-google@1.11.0 [01ff0353]
+- Bump nf-ga4gh@1.2.0 [3df34188]
+- Bump nf-console@1.1.0 [e90d73a7]
+- Bump nf-codecommit@0.2.0 [4379c941]
+- Bump nf-cloudcache@0.4.0 [2bc698c7]
+- Bump nf-azure@1.5.0 [07415ce1]
+- Bump nf-amazon@2.4.0 [b991e14b]
+- Bump Groovy 4 (#4443) [9d32503b]
+- Bump actions/checkout@v4 [d1b3195e]
+- Bump logback@1.4.12 + guava@33.0.0-jre [331ff425]
+- Bump nextflow 23.12.0-edge as min version [63e83702]
+- Bump tj-actions/changed-files from 35 to 41 in /.github/workflows (#4622) [d67aef5f]
+
+23.10.1 - 12 Jan 2023 
+- Fix bug with Fusion symlink resolution (#4593) [f28c9e48]
+- Fix Fusion symlinks when publishing files (#4348) [1fa5878a]
+- Fix Inspect command fails with Singularity [25883df3]
+- Fix Allow the use of error built-in function in onComplete handler (#4458) [4be10cd3]
+- Fix Harden regular expression to used to strip secrets in logs (#4563) [0102d4d6]
+- Fix custom notification template [40980bcb]
+- Fix container environment with special chars (#4594) [f4e00601]
+- Fix AZURE_STORAGE_SAS_TOKEN environment variable (#4627) [2e1cb413]
+- Fix azure retry policy (#4638) [2bc3cf0e]
+- Fix BitBucket get source API with custom branch [5ef75e32]
+- Improve error details for AbortOperationException [9e795a62]
+- Bump nf-wave@1.0.1 [206f2614]
+- Bump nf-azure@1.3.3 [50bcad59]
+
+23.04.5 - 12 Jan 2023
+- Fix container environment with special chars (#4594) [663b2936]
+
+23.12.0-edge - 20 Dec 2023 
+- Add AWS_SESSION_TOKEN to Fusion environment (#4581) [552f29b0]
+- Add ability to disable Cloudinfo service (#4606) [f7251895]
+- Add experimental support for Fargate compute type for AWS Batch  (#3474) [47cf335b]
+- Add support for Instance template to Google Batch [df7ed294]
+- Add support for Singularity/Apptainer auto pull mode for OCI containers [b7f1a192]
+- Fix BitBucket get source API with custom branch [58937831]
+- Fix Fusion tags documentation (#4551) [687e2e96]
+- Fix Harden regular expression to used to strip secrets in logs (#4563) [832bff24]
+- Fix bug with Fusion symlink resolution (#4593) [09e85582]
+- Fix container environment with special chars (#4594) [e0fe952f]
+- Fix custom notification template [ccf4f59e]
+- Fix fusion symlink test (#4604) [681ace86]
+- Fix smoke tests [d3c2f330]
+- Improve GLS tests [58590b1c]
+- Load nf-amazon when AWS SES is enabled [887f06f4]
+- Move build num & timestamp to BuildInfo class [ec8083d4]
+- Move app version to BuildInfo class [c7d749e8]
+- Remove deprecated Wave observer [0e009ef7]
+- Remove undocumented userEmulation mode (#4596) [f6c79788]
+- Remove unused DSL2 check [e9ee3b2c]
+- Replace each iterator with class for [f7662e68]
+- Bump nf-amazon@2.3.0 [0b40b7b9]
+- Bump nf-google@1.10.0 [bcb20fcf]
+- Bump nf-wave@1.2.0 [aa981814]
+- Bump wave-utils@0.8.1 and micromamba@1.5.5 [9cb50035]
+- Build optimizations (#4579) [5ad41e44]
+
+23.11.0-edge - 24 Nov 2023
+- Add `fusion.cacheSize` config option (#4518) [2faadc22]
+- Add Topic channel type (experimental) (#4459) [921313d1]
+- Add Google Batch native retry on spot termination (#4500) [ea1c1b70]
+- Add Retry policy to Google Storage (#4524) [c271bb18]
+- Add ability detect Google Batch spot interruption (#4462) [d49f02ae]
+- Add doc tests, move some snippets to separate files (#3959) [0ff3b305]
+- Add docs section on container requirements (#4501) [3fb29f78]
+- Add labels field in Job request for Google Batch (#4538) [627c595e]
+- Add note about limitations of glacier auto retrieval (#4514) [82e56799]
+- Add note about local executor and enforcing resource limits (#4468) [6a0626f7]
+- Add section about sharing modules (#4482) [3e66fba4]
+- Add section on process directives to plugin docs (#4477) [d9ee9870]
+- Add support for Azure low-priority pool (#4527) [8320ea10]
+- Add support for FUSION_AWS_REGION (#4481) [8f8b09fa]
+- Add support for Fusion when using Singularity OCI mode (#4508) [4f3aa631]
+- Add support for K8s schedulerName pod spec (#4485) [dfc7b7c8]
+- Add support for Singularity OCI mode (#4440) [f5362a7b]
+- Allow the use of error built-in function in onComplete handler (#4458) [35a4424b]
+- Fix Bug in JsonSplitter ordering [8ec14dd2]
+- Fix Bypass Google Batch Price query if task cpus and memory are defined (#4521) [7f8f20d3]
+- Fix Checkout remote tag if checkout remote branch fails (#4247) [b8907ccb]
+- Fix Fusion symlinks when publishing files (#4348) [89f09fe0]
+- Fix Inspect command fails with Singularity [f5bb829f]
+- Fix ParamsMap copyWith param aliases (#4188) [b480ee0e]
+- Fix Singularity docs [e952299f]
+- Fix container hashing for Singularity + Wave containers [4c6f2e85]
+- Fix detection of Conda local path made by Wave client (#4532) [4d5bc216]
+- Fix doc tests to fail on test failure (#4505) [4d326551]
+- Fix errors when NXF_HOME contains spaces (#4456) [fe5bea99]
+- Fix Google Batch network/subnetwork docs (#4475) [27d132f3]
+- Fix rounding error with long durations (#4496) [0356178b]
+- Fix security vulnerabilities (#4513) [a310c777]
+- Fix Use consistently NXF_TASK_WORKDIR (#4484) [48ee3c64]
+- Improve error details for AbortOperationException [35609cb0]
+- Improve operator docs (#4502) [38210e11]
+- Makefile clean to also remove buildSrc/build (#4517) [2ccb05d0]
+- Minor test improvements [171831ea]
+- Minor types improvement for mix operator [91c1ab15]
+- Normalise channel docs [b641d677]
+- Remove deprecated TowerArchiver feature [ff8e06a3]
+- Remove dsl1 deprecated code (part 2) [159effb1]
+- Remove dsl1 deprecated code [2b433a52]
+- Remove incorrect note about workflow inputs (#4509) [54bc0b7d]
+- Return error if plugin version is not specified in offline mode (#4487) [f5d7246e]
+- Update README.md with new branding color for Nextflow (#4412) [7a13b18b]
+- Update background color of docs status badges (#4411) [3cb1c53c]
+- Update logging filter for Google Batch provider. (#4488) [66a3ed19]
+- Bump Gradle 8.4 and test vs Java 21 (#4450) [8cb2702c]
+- Bump nf-amazon@2.2.0 [8e2d7879]
+- Bump nf-azure@1.4.0 [7c47d090]
+- Bump nf-cloudcache@0.3.1 [65240b75]
+- Bump nf-codecommit@0.1.6 [725f0510]
+- Bump nf-console@1.0.7 [a307686c]
+- Bump nf-ga4gh@1.1.1 [e54ea007]
+- Bump nf-google@1.9.0 [033ec92c]
+- Bump nf-tower@1.7.0 [836a44a5]
+- Bump nf-wave@1.1.0 [620523ef]
+
+23.10.0 - 15 Oct 2023
+- Add support for K8s hostPath [10c32325]
+- Add AWS SES docs [b83e7148]
+- Add -with-cloudcache instead of -cloudcache [ef530263]
+- Add inspect command validation tests [882f369e]
+- Improve warning complaining about tuple but mentioning set (#4400) [0ef48735]
+- Improve `-dump-hashes` output adding json format (#4369) [5bdaac94]
+- Improve error message on invalid file url prefix [82a3f405]
+- Fix conda channels order [6672c6d7]
+- Docs: Incorporate DSL2 features (#3793) [efd041cb]
+- Docs: aws.batch.retrymode = 'built-in' (#4229) [d5a8098f]
+- Docs: Update logos, fonts, and colors (#4407) [7814822c]
+- Changelog minor changes [dfb5bf09]
+- Bump nf-wave@1.0.0 [795849d7]
+
+23.09.3-edge - 10 Oct 2023
+- Add -cloudcache CLI option (#4385) [73fda582]
+- Add bioconda and seqera Conda default channels (#4359) [ff012dcd]
+- Add codespell: config, workflow and have typos fixed (#4324) [e044b7a5]
+- Add docs page on caching and resuming (#4371) [21190a3c]
+- Add example of using the transpose operator with multiple items in element (#4364) [0bce2be0]
+- Add setting to enable the use of sync command [f0d5cc5c]
+- Improve S3 endpoint validation [2b9ae6aa]
+- Improve Wave config validation [7d5a21b0]
+- Improve Wave error handling [d47e8b07]
+- Fix Google Batch do not stop running jobs (#4381) [3d6b7358]
+- Incorporate README content into Nextflow docs (#4263) [74a0f998]
+- Never say (nearly) Oops again (#4356) [4a39542b]
+- Remove unsupported K8s device capability [be0cf0c2]
+- Remove unused -dsl2 option [3cb91a15]
+- Rename Microsoft AAD to Microsoft Entra (#4362) [5e3f2c0a]
+- Return -1 when exitcode file is empty (#4354) [d26c42be]
+- Support for Fusion unprivileged execution (#4387) [035e6e7b]
+- Use HistoryFile.Record instead of Record type conflict [11c3aac5]
+- Bump nf-amazon@2.1.4 [a84208a8]
+- Bump nf-cloudcache@0.3.0 [b37b4014]
+- Bump nf-google@1.8.3 [b4eb8b96]
+- Bump nf-tower@1.6.3 [5681ab13]
+- Bump nf-wave@0.14.0 [de1de6c7]
+
+23.09.2-edge - 28 Sep 2023
+- Add conda.enabled to conda config scope docs (#4320) [0b74c4e2]
+- Add developer docs (#4065) [06843d87]
+- Add fs stat command [a79056b7]
+- Add more tests to container name [da7a1942]
+- Add procps by default to Conda-based Wave builds [66b2d2d2]
+- Add support for Java 21 (#4338) [ac1fc9ee]
+- Add Mermaid diagram in HTML DAG (#4337) [0f3e263f]
+- Default Conda basePackages to "conda-forge::procps-ng" [367af52f]
+- Disable Tower container field for multiple images [b53936b0]
+- Document `NXF_DISABLE_CHECK_LATEST` environment var (#4327) [4e3e9aca]
+- Document `fs` CLI command (#4328) [1a680495]
+- Document source of `vol_ctxt` and `inv_ctxt` trace metrics (#4333) [6525b0a1]
+- Document when process directives are evaluated (#4217) [731a29a2]
+- Fix List of S3 bucket for custom endpoint [4327fa58]
+- Fix Prevent false positive resumable task [144e0a8a]
+- Fix Prevent multi attempts to retrieve AWS creds [b30efe36]
+- Fix allow_other vulnerability preventing google-batch submissions (#4332) [9b3741e3]
+- Fix fs list command [29ab2f24]
+- Fix minor typos in changelogs/source code (#4319) [4ce9f1df]
+- Fix support for S3 custom endpoint with anonymous access [03752815]
+- Fix use of GITHUB_TOKEN variable to access GitHub repo [afe3dc4f]
+- Fix Wave does not support 'null' container engine [f3eba3d7]
+- Fix Retry TimeoutException in azure file system (#4295) [79248355]
+- Improve K8s unit tests (#4196) [5a43a32b]
+- Improve Mermaid DAG rendering (#4070) [19587f40]
+- Improve error report when exception is thrown in operator ctx [16f54a9c]
+- Improve wave container name validation [73eb5a02]
+- Minor improvements [fff3d7bd]
+- Prevent cache invalidation for task directives (#4339) [aabb6c19]
+- Remove line endings from container box id (#4334) [df41e54a]
+- Bump Apache 2.0 license to tower client [e4a878b6]
+- Bump nf-amazon@2.1.3 [3311172f]
+- Bump nf-azure@1.3.2 [a9b735ce]
+- Bump nf-google@1.8.2 [7219d7f2]
+- Bump nf-tower@1.6.2 [91a935f9]
+- Bump nf-wave@0.13.0 [0cf2476c]
+- Bump wave-utils@0.7.8 [d0c47d49]
+
+23.04.4 - 25 Sep 2023
+- Fix use of GITHUB_TOKEN variable to access GitHub repo [108c6b55]
+- Fix allow_other vulnerability preventing google-batch submissions (#4332) [4895d547]
+- Fix Prevent false positive resumable task [aae87715]
+- Fix Always emit publish event for cached task outputs (#4227) [c4cd53c2]
+- Fix Too long Http connection pool timeout [ce5e9930]
+- Bump nf-google@1.7.3-patch1 [d881728c]
+
+23.09.1-edge - 11 Sep 2023
+- Revert "Allow setting shell directive when using the trace file (#4210)" [9f9edcdc]
+
+23.09.0-edge - 10 Sep 2023
+- Add check for latest version (#4194) [3e8cd488]
+- Add inspect command (#4069) [090c31ce]
+- Add maxSubmitAwait (#3736) [5686bf1d]
+- Add scripts logging for troubleshooting [c056a74e]
+- Add support for Spack to Singularity builds [23c4ec1d]
+- Add support for Wave native build for Singularity [8a434893]
+- Add support for inputs and outputs arity [42504d3c]
+- Add support for remote debug (#4266) [87e0648a]
+- Add warning about using clusterOptions with process directives (#4248) [a68c1a3e]
+- Add which to dockerfile build [817aa05b]
+- Align Singularity experience with Docker (#4230) [a1e1d3ca] [c1cc60dd]
+- Allow setting shell directive when using the trace file (#4210) [7d6ad624]
+- Always emit publish event for cached task outputs (#4227) [62686ce8]
+- Deprecated Wave report feature [80c5cb27]
+- Disable staging script for remote work dir (#4282) [80f7cd46]
+- Disable version check on CI tests [db79e13f]
+- Docs improvement to clarify the usage of the bin dir (#4121) [2daa4172]
+- Document API differences of process path inputs (#4189) [c37e00bc]
+- Document use of local variables in closures (#4251) [05ff784a]
+- Fix IOException should be thrown when failing to creare Azure directory [b0bdfd79]
+- Fix Parallel execution of Conda corrupts data and packages (#4253) [976c282c]
+- Fix Parse negative CLI params as numbers (#4238) [1ae70d5d]
+- Fix Too long Http connection pool timeout [fa961e7f]
+- Fix Wave build for Singularity files [a60ef72b]
+- Fix Wave build when Conda package name is quoted [d19cb0b7]
+- Fix failing test [2785ffe9]
+- Fix fs cp command with remote file [366eedec]
+- Fix printf command with negative exit code (#4213) [465468b0]
+- Fix security deps in nf-azure plugin [c30d5211]
+- Fix setting `executor.queueSize = 0` is ignored (#4228) [6664b578]
+- Improve Wave handing of Conda envs [736ab9bb]
+- Improve pod options documentation (#4274) [c3aa26e1]
+- Make TraceRecord@store field public accessible [07582f0b]
+- Remove -dsl1 and -dsl1 rub cli options [b6721b71]
+- Remove experimental -dockerize option /2 [7def5542]
+- Remove experimental -dockerize option [937c8fb7]
+- Report an error on duplicate workflow name definitions (#4088) [fce9702e]
+- Undocument internal NXF_DEBUG variable [7955db8d]
+- Update AZ File share doc (#4235) [69d317b6]
+- Update docs about splitCsv() operator (#4163) [1dfb621c]
+- Update documentation of NXF_DEBUG (#4187) [a88a4245]
+- Use sipHash24 in place of deprecated murmur32 for script aliasing [bb96763f]
+- Bump groovy 3.0.19 [cb411208]
+- Bump nf-amazon@2.1.2 [7e5d414e]
+- Bump nf-azure@1.3.1 [83410f39]
+- Bump nf-wave@0.12.0 [a9f6dd65]
+
+23.08.1-edge - 17 Aug 2023
+- Add 429 http status code to Wave retriable errors [8eb5f305]
+- Add resource labels support for Azure Batch (#4178) [7b5e50a1]
+- Apply K8s Pod metadata to Job (#4057) [4d918627]
+- Document error about trailing backslash with space (#4180) [245afa5d]
+- Enable cloud cache based on environment variable (#4160) [a66b0e63]
+- Escape semicolons in paths (#4193) [552501ce]
+- FIx nested InvocationTargetException (#4192) [67980f19]
+- Fix Execution should fail if report or timeline file already exists [b238d7e2]
+- Fix Process hangs when using flatten and finish errorStrategy [d99b3432]
+- Fix `workflow.container` map resolution (#4190) [96ab8a69]
+- Fix checkpoint thread termination (#4166) [2b449daa]
+- Fix env output when changing task workdir [8e4d7fed]
+- Fix if-guard on log.trace in trask processor inner class [50f6f6d5]
+- Fix typos in source code comments (#4173) [e78bc37e]
+- Improve Conda build error report [7b19fb03]
+- Improve handling of name-only container env variables [3051cd13]
+- Minor changes [7e58c945]
+- Remove dockerize launcher classpath file (#4191) [2bae5198]
+- Remove lock file from cloudcache (#4167) [6e6ea579]
+- Update AWS instructions for creating a custom AMI (#4174) [563bff13]
+- Update changelog [98f88a50]
+- Update tip about modifying maps (#4153) [30036dbf]
+- Use root user in Wave container based on micromamba (#4038) [a3a75ea2]
+- Bump nf-azure@1.3.0 [6670bb06]
+- Bump nf-cloudcache@0.2.0 [fb8f6681]
+- Bump nf-tower@1.6.1 [d06b8365]
+- Bump nf-wave@0.11.2 [7555b17d]
+
+23.04.3 - 11 Aug 2023
+- Increase Wave client max attempts [8c67610a]
+- Fix log typo [03e19ea2]
+- Add 429 http status code to Wave retriable errors [a8b8c6c5]
+- Improve handling Wave server errors [621c9665]
+- Bump nf-wave@0.8.4 [d7fa3f26]
+- Bump corretto 17.0.8 [7a73a78f]
+
+23.08.0-edge - 5 Aug 2023 
+- Add `-value` option to `config` command (#4142) [57e3100b]
+- Add `deleteTasksOnCompletion` to Azure Batch configuration (#4114) [b14674dc]
+- Add Tower logs checkpoint (#4132) [71dfecc2]
+- Allow use virtual threads in Wave client [dd32f80a]
+- Allow workflow entry from module import (#4128) [51f5c842]
+- Disable cache backup/restore if cloudcache is used (#4125) [46e828e1]
+- Document behavior of withName selector with included aliases (#4129) [8b7e3d48]
+- Fix Option fixOwnership traverse parent directories [f2a2ea35]
+- Fix Redirection http redirection across different hosts [fcdeec02]
+- Fix Wave disable flag [8579e7a4]
+- Fix bug with K8s resource labels (#4147) eu-west-1[3f4b8557]
+- Fix glob resolution for remove files [19a72c40]
+- Fix incorrect error message on missing comma (#4085) eu-west-1[a59af39f]
+- Fix missing changelog for version 23.07.0-edge eu-west-1[9a33e936]
+- Fix strict mode docs (#4150) [6b46b507]
+- Improve plugin docs (#3957) [22638d46]
+- Improve Wave config logging [547fad62]
+- Improve TaskPollingMonitor logging [077ed5dd]
+- Improve Wave and Fusion docs (#4149) [d2229bde]
+- Increase Wave client max attempts [fe5dd497]
+- Remove module all components import [a6d08c04]
+- Restore Tower CacheManager for backward compatibility [6d269070]
+- Bump amazoncorretto:17.0.8 [00eb145c]
+- Bump nf-wave@0.11.1 [78e4b278]
+- Bump nf-tower@1.6.0 [41c8c164]
+- Bump nf-azure@1.2.0 [5f33ac17]
+- Bump nf-amazon@2.1.1 [981315ad]
+
+23.07.0-edge - 23 Jul 2023
+- Add CPU model name to trace files and traceRecord (#3946) [e0d91bf7]
+- Add ability to disable CLI params type detection [9a1c584d]
+- Add cloudcache plugin (#4097) [ac90cc26]
+- Add missing header to Wave container await [d39866e6]
+- Add remote bin support for TES in a workdir (#3990) [8a22168a]
+- Add retry logic to wave image await [9fc1d3bd]
+- Add rule to build Nextflow docker image for ARM (#4020) [705d55f5]
+- Add support for AWS SSO credentials provider (#4045) [53e33cde]
+- Add support for Wave container freeze [9a5903e6]
+- Add support legacy Wave retry [73a1e7d4]
+- Allow SLURM executor option `--mem-per-cpu` (#4023) [96c04e3b]
+- Allow disabling the Wave requirement when Fusion is enabled [9180d633]
+- Disable Singularity and Apptainer home mount by default (#4056) [a0ee4657]
+- Document `NXF_WRAPPER_STAGE_FILE_THRESHOLD` environment variable (#4113) [bda47567]
+- Fix AzFileSystem retry policy [ba9b6d18] [c2f3cc96]
+- Fix Improve error message for invalid Azure URI [0f4d8867]
+- Fix Treat HTTP headers as case insensitive (#4116) [97fd3358]
+- Fix invalid detection of hierarchical namespace stub blobs as files (#4046) [ce06c877]
+- Fix stage script in Fusion script launcher (#4109) [0933f47e]
+- Ignore accelerator type for AWS Batch (#4043) [263ecca8]
+- Implement Weblog feature as an external plugin [f9f2c338]
+- Improve "Unexpected input: '{'" error message (#4122) [ef9d3cf0]
+- Improve Azure retry logging [de58697a]
+- Improve description of channels and channel types (#4120) [8975734d]
+- Improve handling Wave server errors [84f7a61a]
+- Increase Azure min retry delay to 250ms [2e77e5e4]
+- Remove default arch from wave request [f0e5c0c1]
+- Remove logging of report JSON data (#4098) [099e5039]
+- Wait for all child processes in nxf_parallel (#4050) [60a5f1a7]
+- Bump Groovy 3.0.18 [207eb535]
+- Bump micromamba 1.4.9 [6307f9b5]
+- Bump nf-amazon@2.1.0 [57464746]
+- Bump nf-azure@1.1.2 [e1512f6a]
+- Bump nf-azure@1.1.3 [27e7f663]
+- Bump nf-azure@1.1.4 [1895efc4]
+- Bump nf-cloudcache@0.1.0 [cb6242c4]
+- Bump nf-ga4gh@1.1.0 [f98feb77]
+- Bump nf-google@1.8.1 [6aede7c0]
+- Bump nf-tower@1.5.15 [3278d798]
+- Bump nf-wave@0.11.0 [2998db5d]
+
+23.06.0-edge - 14 Jun 2023
+- Add AWS Kms integration test [19449bf4]
+- Add Wave containers reports (preview) [9d9e2758]
+- Add disk resource with type option for google batch (#3861) [166b3638]
+- Add httpConnectTimeout and httpReadTimeout to Google options (#3974) [49fa15f7]
+- Add plugin cmd help description [d3788f9f]
+- Add retry policy on Az blob operations [295bc1ff]
+- Add retry policy to Wave http client [1daebeef]
+- Add support for AWS SES as mail sending provider [df85d443]
+- Add support for arch auto-detection to Wave [7b5fdaf0]
+- Add wave.httpClient.connectTimeout config option [dd999a3c]
+- Clarify tip about groupTuple size and groupKey (#3949) [e60d327f]
+- Consolidate Wave retryPolicy options [7d7464fe]
+- Enhanced support for Spack + Wave (#3998) [63ac03b3]
+- Fix Google Batch default instance family types (#3960) [b5257cd7]
+- Fix S3 path normalization [b75ec444]
+- Fix access to public S3 bucket when no creds are provided (#3992) [cf8ba466] [680f0a90]
+- Fix containerOptions when using Fusion [dcde7b7f]
+- Fix dump pretty print to not modify input (#3955) [46c17ee3]
+- Fix invalid machine type setting when no valid machine type is found (#3961) [5eb93971]
+- Fix matching symlink files [d63af784]
+- Fix missing options for JsonSplitter creation (#3958) [f991fe9e]
+- Fix non-deterministic null container engine error [f227f2e5]
+- Fix packing all including Wave [735b8d9c]
+- Fix static compiler errors [f48a473c]
+- Improve documentation on Nextflow scripts (#3953) [80050c03]
+- Improve description of channels and channel types (#4120) [8975734d]
+- Improve "Unexpected input: '{'" error message (#4122) [ef9d3cf0]
+- Minor change in Wave config [4da0442a]
+- Prevent null exit code when Google batch is unable to access exit status [f68a39ec]
+- Refactor Conda and Spack support for Wave to Java [36b9e226]
+- Remove `--no-home` default option from charliecloud builder (#3956) [915074a4]
+- Update workflow.revision max length to match the one in Tower (#4010) [1433a903]
+- Bump amazocorretto:17.0.7 [c8aa1214]
+- Bump azure-storage-blob:12.22.1 [2a36fa77]
+- Bump nf-wave@0.11.0 [2998db5d]
+- Bump nf-tower@1.5.15 [3278d798]
+- Bump nf-google@1.8.1 [6aede7c0]
+- Bump nf-ga4gh@1.1.0 [f98feb77]
+- Bump nf-azure@1.1.4 [1895efc4]
+- Bump nf-amazon@2.1.0 [57464746]
+- Bump nf-cloudcache@0.1.0 [cb6242c4]
+
+23.04.2 - 8 Jun 2023
+- Fix non-deterministic null container engine error [f93221ab]
+- Add retry policy to Wave client [2f1532f6]
+- Fix wave build docs [34a73022]
+- Bump nf-wave@0.8.3 [350201b5]
+
+23.05.0-edge - 15 May 2023
+- Add support for custom custom root directory to resolve relative paths (#3942) [f06bb1f7]
+- Add `arch` directive support for Spack (#3786) [62dfc482]
+- Add clone deep option to run and pull commands [b44b6453]
+- Add fusion.exportStorageCredentials option [acb6aedf]
+- Add groovy-yaml to core runtime [003e1f70]
+- Add missing test env variables to CI build [a0e501bf]
+- Add splitJson Operator (#3830) [4f58f695]
+- Add support for Java 20 [3788a689]
+- Add support for `time` directive in Azure Batch (#3869) [5c11a0d4]
+- Add support for the Spack recipes to Wave build (#3636) [b03cbe70]
+- Add Preview support for virtual threads (#3871) [5c429046]
+- Convert docs to Markdown (#3196) [3cad402f]
+- Deprecate DSL1 syntax for tap operator (#3004) [2be0edfe]
+- Enable static compilation to missing classes (#3906) [c3c4b2f0]
+- Fix -with-conda option in the docs (#3867) [9b350ba8]
+- Fix AWS SSE env propagation to Fusion [e24608c3]
+- Fix Apptainer rendering by removing superfluous space [36607ed1]
+- Fix Azure jobs correctly deleted after completion (#3927) [b173a983]
+- Fix Azure pool creation when using scaling formula (#3868) [79984a87]
+- Fix DSL2 support in nextflow console (#3864) [0253f8d7]
+- Fix K8s handling PodUnschedulableException (#3938) [5b756c63]
+- Fix `interval` channel factory (#3848) [d001e4c7]
+- Fix invalid warning on func import (#3807) [bb836960]
+- Fix minor typo in nextflow subcommand (#3853) [dd3be3d1]
+- Fix misleading error message on NoSuchFileException [f3dceba6]
+- Fix missing SAS token fusion env for Azure [43015029]
+- Fix problem args were not correctly represented in debug yaml (#3904) [eeb4b5c8]
+- Fix string comparison in S3 client (#3875) [9344d294]
+- Fix use of remote dir with local exec statement [850bc3d9]
+- Fix Quote Singularity/Apptainer env values [586417ac]
+- Improve handling default out param [91471970]
+- Improve plugin test detection [29794bf4]
+- Improve plugin updater err handling [f3d72f22]
+- Improve task out redirect remove the use of mkfifo (#3863) [efedec74]
+- Improve Use Docker stop instead of docker kill [32e6fd85]
+- Improve Use separate script for long stage/unstage commands (#3851) [4343e333]
+- Increase Azure default maxRetries to 10 [a017139f]
+- Keep plugins-info content sorted [d5552ee6]
+- Minor change on Docker-spack templates [e0e24bda]
+- Refactor the AWS configuration (#3498) [a74e42d9]
+- Remove `Channel.from` in favor of `Channel.of` from tests and docs (#3670) [aa8b72fa]
+- Rename AmazonS3Client to S3Client [cc59596a]
+- Rename com.upplication.s3fs package to nextflow.cloud.aws.nio [a2f3bb24]
+- Run build CI tests on push to branches starting with `test*` or `dev*` (#3852) [7032e17c]
+- Security fixes [973b7bea]
+- Support enums in cache helper (#3901) [e4b977a4]
+- Bump slf4j 2.0.7 and logback 1.4.6 [d7eae86e]
+- Bump JGit 6.5 and use depth 1 when cloning repos [eda0845c]
+- Bump aws-java-sdk-s3:1.12.429 [465171f5]
+- Bump fusion 2.2 [f1ebe29a]
+- Bump groovy 3.0.17 [cfe4ba56]
+- Bump gson:2.10.1 [be555683]
+- Bump micromamba:1.4.2 [334df1e0]
+- Bump nf-wave@0.9.0 [7d6d0108]
+- Bump nf-tower@1.5.13 [b06ffd0c]
+- Bump nf-google@1.7.4 [2e0a15cd]
+- Bump nf-ga4gh@1.0.6 [0c8fd7df]
+- Bump nf-console@1.0.6 [a733b818]
+- Bump nf-codecommit@0.1.5 [12edf0e6]
+- Bump nf-amazon@2.0.0 [69b6edde]
+- Bump nf-azure@1.1.0 [d05d51b4]
+
+23.04.1 - 15 Apr 2023
+- Add support for Java 20 [f6933db7]
+- Fix use of remote dir with local exec statement [6ea1f68c]
+- Fix Azure pool creation when using scaling formula (#3868) [84a808a5]
+- Fix interval channel factory (#3848) [82ccf6ad]
+- Fix invalid warning on func import (#3807) [4678ffe3]
+- Improve plugin test detection [57cfb0d9]
+- Improve plugin updater err handling [5627c69a]
+- Security fixes [83e8fd6a]
+- Bump nf-wave@0.8.2 [d8cb763c]
+- Bump nf-tower@1.5.12 [b2354380]
+- Bump nf-google@1.7.3 [22a68cfe]
+- Bump gson:2.10.1 [83ca1e32]
+- Bump nf-ga4gh@1.0.5 [b40b5165]
+- Bump nf-codecommit@0.1.4 [98a89154]
+- Bump aws-java-sdk-s3:1.12.429 [b71ee0a3]
+- Bump nf-azure@1.0.1 [a5da54d3]
+- Bump nf-amazon@1.16.2 [c90553c9]
+
+22.10.8 - 15 Apr 2023
+- Security fixes [fc2627bb]
+- Add support for testing custom plugin uri [718d4562]
+- Improve plugin updater err handling [84042082]
+- Improve plugin test detection [e6c60a6c]
+- Bump nf-google@1.4.6 [26b01b83]
+- Bump nf-wave@0.5.5 [2a886fe0]
+- Bump nf-ga4gh@1.0.5 [b8769f1a]
+- Bump nf-tower@1.5.7-patch0 [89d902ec]
+- Bump nf-azure@0.14.3 [9b0f4bfb]
+- Bump nf-amazon@1.11.5 [f7aaddc6]
+- Bump amazoncorretto@17.0.6 [7898cc04]
+
+23.04.0 - 1 Apr 2023
+- Add several names to the name generator feat:(#3790) [dfa2f6ca]
+- Add support for Fusion to Azure Batch executor (#3209) [3d3cbfa2]
+- Add support for testing custom plugin uri [227910ab]
+- Add warnings for Azure named pools (#3819) [a2c71acf]
+- Enable new pid namespace with Singularity & Apptainer [3601b014]
+- Fix NoSuchMethodError String.stripIndent with Java 11 [308eafe6]
+- Fix issue checking Google Batch script launcher type [39c3a517]
+- Fix resolution of module resources [2c5a6878]
+- Fix Relax caching across task retries [840e8432]
+- Fix Java version for tests [7ce05c15]
+- Remove extra context from workflow error message [38c8bd33]
+- Revert "Enable Fusion on Google Batch tests" [2ba7ea54]
+- Bump micromamba 1.4.1 [ec1439e6]
+- Bump nf-amazon@1.16.1 [0f98b245]
+- Bump nf-azure@1.0.0 [e1732be9]
+- Bump nf-google@1.7.2 [99477f79]
+- Bump nf-wave@0.8.1 [939195b5]
+- Bump nf-tower@1.5.11 [b7b5d4c9]
+
+23.03.0-edge - 19 Mar 2023 
+- Add Azure batch pool virtualNetwork option (#3723) [e3917b8e]
+- Add basePackages option to Wave config [7e827810]
+- Add error message for missing container image with Google Batch (#3747) [6419e68f]
+- Add notifyFilePublish optional source argument (#3737) [a65a9ff7]
+- Add retry strategy on Bash wrapper write logic [1e38274a]
+- Add support for AWS S3 Glacier Retrieval Tier (#3680) [fab6bd5e]
+- Add sync invocation on job completion (#3678) [e29c4e4b]
+- Add workflowId to Wave request [025ff9d0]
+- Add Clone result list objects before output binding [38762080]
+- Add plugins option to kuberun command (#3766) [6515294f]
+- Fix Google Batch logging exception [d7e38e9e]
+- Fix Java Matcher serialization [6aecc4ed]
+- Fix Logger failure type detection [f1b89c1f]
+- Fix Orphaned processes when using Singularity [7236f830]
+- Fix groupTuple with mismatching tuple cardinality [1d32e2c2]
+- Fix special chars escaping in container env [b93634e9]
+- Fix commit revision type for Azure DevOps repos (#3721) [fb71767e]
+- Improve DAG API (#3703) [21afb358]
+- Improve Wave docs [7299dac9]
+- Improve `fair` directive docs (#3677) [7ca7520f]
+- Improve transpose and groupTuple examples in the docs (#3685) [7870dfc8]
+- Increase pwd obfuscation min length [ba23d036]
+- Make GroupKey cloneable (#3738) [0760b0fd]
+- Prepare Nextflow for the CWS Plugin (#3727) [fd8bf709]
+- Remove DNAnexus page from docs (#3695) [fa58c18c]
+- Remove outdated FAQ page from docs (#3683) [e59c7fbb]
+- Remove unused classes [9fa8d75b]
+- Update Azure VM sizes (#3751) [1d06e9a6]
+- Enable Fusion on Google Batch tests [2f1b1094]
+- Bump groovy 3.0.16 [d3ff5dcb]
+- Bump nf-wave@0.8.0 [aa1b065d]
+- Bump nf-google@1.7.1 [2aaaf2a7]
+- Bump nf-azure@0.16.0 [f358b008]
+- Bump nf-amazon@1.16.0 [2395187d]
+
+23.02.1-edge - 26 Feb 2023
+- Add Fusion logs and tags config [09192078]
+- Add support for NXF_DEBUG to K8s task handler [828583dc]
+- Add support for Mamba HTTP based lock files [7fe88c84]
+- Add container name validation [c3b6d9ab]
+- Add Fusion for Google storage docs [34fcfe06]
+- Improve K8s auth token discovery [44f8cc07]
+- Bump nf-wave@0.7.2 [1c697ab5]
+- Bump amazoncorretto:17.0.6 [a33a6f47]
+
+23.02.0-edge - 21 Feb 2023
+- Add Fusion support for Google Batch (#3577) [d5fbab4f]
+- Add Header provider to Google Batch client [20979929]
+- Add Wave integration tests [c5faf971]
+- Add errorStrategy validation [954cd921]
+- Add Java install recommendations to docs (#3617) [7e9bee1e]
+- Add nextflow tags to AWS Batch job def [b465ac52] [BREAKING]
+- Add readOnlyInputs option for CharliecloudBuilder (#3590) [8ae001fc]
+- Add refresh token to Wave request [41510e87]
+- Add requirements for container images to run with Nextflow (#3586) [7af1cb66]
+- Add support for Fusion to Slurm and LSF executors (#3516) [fbc95e6b]
+- Add support for Fusion tags (#3609) [8385ec22] [BREAKING]
+- Add support for the Spack package manager (#3580) [a5df62f6]
+- Add the fcp tool option to file copy strategy (#3556) [2a224258]
+- Add Fusion integration test 
+- Add Wave + Fusion test with Google Batch [b541c061]
+- Add support for entryless Fusion configuration and Singularity support (#3584) [34a27733]
+- Improve Fusion config [a1d08463]
+- Ignore resource directives if -l option is specified in PBS executor (#3015) [28a67969]
+- Improve K8s securityContext support [3f76240b]
+- Improve AWS Batch error logging [8f4884c1]
+- Improve secrets docs [9a3b4214]
+- Improve Wave debug-task plugin command [cf3fd747]
+- Improve Wave logging [fced3761]
+- Increase Wave token duration to 30 mins [e1a712c2]
+- Fix -with-apptainer cli option (#3621) [8c9588fe]
+- Fix GH action tests step [bb890d9a]
+- Fix Spack failing test [868374d3]
+- Fix Tower doc links, fix typos (#3647) [1278e1a5]
+- Fix Wave cli messages [10cf414b]
+- Fix collectFile cache over remote storage [762ba19c]
+- Fix output env var tokenize [40d56735]
+- Fix plugin install version [59e9a91b]
+- Fix race condition on Wave requests [f57fae2c]
+- Fix serialization of S3 paths with spaces (#3565) [ce487624]
+- Fix string literal method names with parens (#3604) [8278078a]
+- Fix submit command in error message for grid executors that pipe wrapper script (#3548) [40ebd308]
+- Fix typos in the documentation (#3640) [eccc1130]
+- Fix unique fingerprint for Wave bundle resources [b59fa728]
+- Log exception when an unexpected  occurs (#3603) [9aeca99f]
+- Minor change on container resolution [23d47ded]
+- Refactor httpfs configuration [445218a8]
+- Remove deprecated buckets field [0a355ac3]
+- Remove leading/trailing special chars from tag [7d3cc707]
+- Remove unused `-with-k8s` CLI option (#3624) [85b6e7d3]
+- Update config.rst (#3655) [1555e188]
+- Update Fusion docs [12782eeb]
+- Bump Fusion 2.1 [f48ef5b3]
+- Bump Groovy 3.0.15 [7a3ebc7d]
+- Bump Micromamba 1.3.1 [aa2bf37e]
+- Bump Spock 2.3 [9f0dac31]
+- Bump nf-wave@0.7.1 [b797fac2]
+- Bump nf-tower@1.5.10 [dd2f69dd]
+- Bump nf-google@1.7.0 [8cb9fa35]
+- Bump nf-amazon@1.15.0 [7ccca430]
+
+22.10.7 - 18 Feb 2023
+- Fix plugin install version [895e4f34]
+- Fix unique fingerprint for wave bundle resources [7c55aa37]
+- Fix race condition on wave requests [7f76d19b]
+- Fix serialization of S3 paths with spaces (#3565) [935df949]
+- Improve aws batch error logging [1eddeea7]
+- Improve wave logging [94415914]
+- Increase Wave token duration to 30 mins [8d5fbefe]
+- Update fusion docs [b24ee138]
+- Bump nf-wave@0.5.4 [f466b266]
+- Bump nf-amazon@1.11.4 [d5f6c125]
+
+22.10.6 - 24 Jan 2023
+- backport: Add refresh token to wave request [47a7408b]
+- backport:Add tower endpoint to wave [fe24b422]
+- backport:Fix Wave layer invalid checksum due to not closed stream [20df6400]
+- Bump nf-wave@0.5.3 [c1ec759f]
+
+23.01.0-edge - 14 Jan 2023 
+- Add support for rclone as stageOutMode option [fde2ac27]
+- Add queueGlobalStatus config setting [f3339541]
+- Add support for bearer token to GithubRepositoryProvider [c4d39384] [a2d2cbf60]
+- Add -with-fusion cli option [d22337cd]
+- Add support for Fusion container custom options [56e29d35]
+- Add `schedulingPriority` option to AWS Batch (use with `shareIdentifier`) (#3505) [06960bb2]
+- Fix support for AWS ACL for Batch #2671 [a9644919]
+- Fix Java options.release in Gradle build [b362d6f6]
+- Fix nf-httpfs module name in build file [568e47f6]
+- Fix GitHub creds in CI build [4c4d3f81]
+- Fix FilePorter concurrency issue (#3511) [11ccfa26]
+- Fix watchPath hang shutdown execution [bac0cedf]
+- Fix "no such file" error message to "no such file or directory" (#3547) [c292d84e]
+- Improve local exec workdir validation [4a3a2720]
+- Improve container native executor configuration [03126371]
+- Improve AWS batch exit code reporting [d1bb2fe2]
+- Improve channel factories error message [0215b9fc]
+- Improve Google Batch executor [c0a25fc2]
+- Improve Fusion config [902e5b34] [52f4c5d5]
+- Improve redirection on Wave client [124cfb3e]
+- Remove unnecessary Fusion env var [dfa47556]
+- Remove deprecated method 'just' [d17b3c46]
+- Remove deprecated methods [75e65035]
+- Remove DSL1 deprecated code [5d290a47]
+- Cleanup build from tmp manifests [326b3839]
+- Minor compilation improvements [4188a6ac]
+- Migrate all tests to DSL2 [14257d49]
+- Bump 23.01.0-edge version [9ec31444]
+- Bump groovy 3.0.14 [7c204236] [6f3ed6e8]
+- Bump Grengine 3.0 [c0b1a7a6]
+- Bump nf-wave@0.7.0 [45d274e3]
+- Bump nf-tower@1.5.9 [db0ebe72]
+- Bump nf-google@1.6.0 [a663fe16]
+- Bump nf-console@1.0.5 [45fd53ad]
+- Bump nf-codecommit@0.1.3 [cf39ef8f]
+- Bump nf-azure@0.15.1 [7a6a78aa]
+- Bump nf-amazon@1.14.0 [41fdcc72]
+
+22.10.5 - 14 Jan 2023
+- Fix FilePorter concurrency issue (#3511) [0f757156]
+- Fix watchPath hang shutdown execution [e03d9ca6]
+- Add `schedulingPriority` option to AWS Batch (use with `shareIdentifier`) (#3505) [543ee7b1]
+
+22.12.0-edge - 13 Dec 2022
+- Add `fair` process directive [60d34cfd]
+- Add support for singularity registry setting [37c1aeb9]
+- Add AWS profile config setting [66f4669f]
+- Add support for AWS profile when resolving region [d8947707]
+- Add support for Sarus container engine (#3470) [54673f18]
+- Add support for Fusion ARM64 client [d073c538]
+- Add allowedLocations option to google batch (#3453) [c619eb81]
+- Add support for AWS config profile in NF config [37112672]
+- Add warning on Google Logs failure [bdbcdde9]
+- Add possible values of `status` in `trace.txt` to the documentation (#3451) [2425fcfb]
+- Add support for AWS Glacier restore [b6110766]
+- Add support for S3 storageClass to publishDir [066f9203]
+- Add MathHelper utility class [7eecb266]
+- Fix Wave layer invalid checksum due to not closed stream [e188bbf9]
+- Fix Fusion test [2245a1c7]
+- Fix Run fails when home is a symlink [9ff820f4]
+- Fix math overflow when copying large AWS S3 files [f32ea0ba]
+- Fix Quote the logName in the Cloud Logging filter (#3464) [b3975063]
+- Fix Google Batch cloud logging (#3443) [e2bbcf15]
+- Fix Tower plugin min nextflow requirement [1713a1cd]
+- Fix TowerArchiver resolve envar paths relative to baseDir (#3438) [46af18e5]
+- Error & info messages, code comments language fixes (#3475) [29ae36ca]
+- Replace `egrep` with `grep -E` (#3485) [ac0c3035]
+- Gradle build optimizations (#3483) [19182a57]
+- Refactor virtual FS schemes to XPath class [fd59b943]
+- Update concat operator description (#3426) [e8d8c3b5]
+- Clarify usage of additional options for path qualifier (#3405) [0b70acb1]
+- Clarify limitation of `-with-docker` in the docs (#3408) [79afc85d]
+- Expose process queue as K8s pod label [4df8c8d2]
+- Prefix nextflow K8s labels with `nextflow.io` prefix [9951fcd9]
+- Remove deprecated code [c0b164f2]
+- Rewrite fetchIamRole and fetchRegion to use AWS SDK (#3425) [e350f319]
+- Improve Wave config error reporting [ae502668]
+- Improve K8s retry on transient failures [d86ddc36]
+- Remove DSL1 output mode [fa400d5f]
+- Remove support for DSL1 multi into [f664af45]
+- Bump nf-amazon@1.13.0 [ccaab713]
+- Bump nf-google@1.5.0 [c07dcec2]
+- Bump nf-wave@0.6.3
+- Bump nf-tower@1.5.8 [652d0880]
+- Bump fusion version URLs 0.6 [a160a8b1]
+- Bump AWS sdk version 1.12.351 [4dd82b66]
+
+22.10.4 - 9 Dec 2022
+- Fix math overflow when copying large AWS S3 files [07f7cb72]
+- Bump nf-amazon@1.11.2 [d96ca4c3]
+
+22.11.1-edge - 29 Nov 2022
+- Fix TowerArchiver resolve envar paths relative to baseDir (#3438) [53e6348c]
+- Fix tower plugin min nextflow requirement [103dbf74]
+- Fix typos in the documentation (#3441) [ae95d90d]
+- Add support for Java 19 [811e7ca8]
+- Add support for custom conda channels (#3435) [0884e80e]
+- Add time directive to AWS Batch, clean language (#3436) [1ed2640a]
+- Update err message [ab5bd81b]
+- Fix Flux executor config (#3432) [68b45c92]
+- Bump nf-wave@0.6.1 [fe669152]
+- Bump nf-tower@1.5.7 [2dbf9906]
+
+22.11.0-edge - 23 Nov 2022
+- Add support for Apptainer container engine (#3345) [29f98975]
+- Add Flux executor to nextflow (#3412) [cc9fc3f0] [3711cef0]
+- Add support for Wave containerPlatform [10d56ca1]
+- Add CSI ephemeral volume for K8s (#2988) [f18f6e81]
+- Add support for disk directive and emptyDir to K8s (#2998) [b548e1c7]
+- Add Fusion support for custom S3 endpoints [fba9b649]
+- Add support for Tower refresh token for dataset (#3366) [a19e055a]
+- Prevent infinite loop while fetching git tags and branches [aa974d44]
+- Improve file porter logging [626420b6]
+- Improve script err logging [2714770e]
+- Extend onFilePublish notification adding source path (#3284) [81acc3ef]
+- Remove cpu limits from K8s pod spec builder (#3338) [dc7f78bf]
+- Improve task name logging [5ddb7e3f]
+- Add tower endpoint to wave [b725ddc4]
+- Add Azure SAS token validation [e2244b48]
+- Use cpus-shares for container resources (#3383) [b38c3880]
+- Report full path scheme on error [4089ba65]
+- Allow identity based authentication on Azure Batch (#3132) [a08611be]
+- Fix support for remote file mail attachment (#3384) [6b496bb9]
+- Fix task cache logging [ed37c4fd]
+- Fix unexpected error on task resume [1c3f4685]
+- Fix stripIndent failure with java 17 (#3377) [2b115c50]
+- Fix -dockerized execution #3137 (#3148) [64a81a58]
+- Improve default value in cli help of `nextflow log -s` (#3371) [2141f96e]
+- upgrade jsoup and snakeyaml version (#3374) [6e2ca454]
+- Bump Java 17 lang version + Java 11 as target [34f133e2]
+- Bump nf-amazon@1.12.0 [e307912e]
+- Bump nf-azure@0.15.0 [07391d96]
+- Bump nf-wave@0.6.0 [4d787561]
+
+22.10.3 - 21 Nov 2022
+- Prevent infinite loop while fetching git tags/branches [73a59d33]
+- Bump nf-amazon@1.11.1 [f9b54ce3]
+- Improve S3 thread pool config [01541b0a]
+
+22.10.2 - 13 Nov 2022
+- Fix initialize the plugin once it's defined (#3360) [dd150b92]
+- Fix tags typo in docs (#3355) [b82df4e0]
+- Fix unexpected error on task resume [e02e8c27]
+- Fix template script in trace record [cf828a68]
+- Fix ip v6 support for K8s executor [53af5a7c]
+- Fix refresh token for tower served resources [9dec2b66] #3366
+- Fix full path scheme on error [1399f451]
+- Add note to some process implicit variables (#3373) [0374f63a]
+- Add retry policy on plugin download failure [e8dbec3f]
+- Add examples of when dynamic output filenames are important (#3275) [72a17306]
+- Update google batch java sdk, add serviceAccountEmail and installGpuDrivers (#3324) [7f7007a8]
+- Update github actions to v3 (#3376) [d3b4a837]
+- Update error messages and docs with new report filename behavior [f5725480]
+- Bump nf-tower@1.5.6 [164edf7c]
+- Bump nf-google@1.4.5 [30cb118d]
+
+22.10.1 - 27 Oct 2022
+- Fix mount pwd in the container when work dir is a symlink [ca397181] [b5b7d3cd] <Paolo Di Tommaso>
+- Fix secrets command name in the CLI (#3320) [321486df] <Marcel Ribeiro Dantas>
+- Fix ver num rendering #3226 [5312a25e] <Paolo Di Tommaso>
+- Fix K8s config namespace is not applied [b3d33e3b] <Paolo Di Tommaso>
+- Fix log fetching from remote storage [be356939] [3efa1a20] <Paolo Di Tommaso>
+- Update docs about default mail ssl protocol (#3299) [15ffffc1] <Ben Sherman>
+- Update docs repeated words from documentation (#3311) [d59ea186] <Marcel Ribeiro Dantas>
+- Update docs to clarify the difference between collect and toList (#3276) [7ee2b008] <Marcel Ribeiro Dantas>
+- Update docs [516a7441] <Paolo Di Tommaso>
+- Update docs adding Fusion [11eac707] <Paolo Di Tommaso>
+
+22.10.0 - 13 Oct 2022
+- Fix timestamp encoding [47a3a3c4]
+- Minor type change in Bridge executor [1f446ee1]
+- Bump nf-wave@0.5.2 [326803ff]
+
+22.10.0-RC3 - 7 Oct 2022 
+- Fix K8s context selection [58b354e6]
+
+22.10.0-RC2 - 7 Oct 2022 
+- Improve K8s labels/annotation validation [a569afdf]
+- Bump fusion final url [80398880]
+- Bump nf-wave@0.5.1 [a2b44c4d]
+- Update docs 
+
+22.10.0-RC1 - 3 Oct 2022
+- Add module binaries enabling flag + docs [c50e178f] <Paolo Di Tommaso>
+- Add timestamp and fingerprint to wave request [a5a7e138] <Paolo Di Tommaso>
+- Add missing inputs to the incremental task "test" (#1442) [f85d59a6] <Thodoris Sotiropoulos>
+- Add support for refresh token to Wave [ed9f25f1] <Paolo Di Tommaso>
+- Add pretty option to dump operator [4218b299] <Paolo Di Tommaso>
+- Add support for custom S3 content type [02afa332] <Paolo Di Tommaso>
+- Get rid of file name rolling for report files [a762ed59] <Paolo Di Tommaso>
+- Ignore JGit warning when missing git tool [a94fa9c1] <Paolo Di Tommaso>
+- Remove jobname limit to HyperQueue executor (#3251) [99604ccb] <Henrik Nortamo>
+- Rename baseImage to mambaImage [50086028] <Paolo Di Tommaso>
+- Fix failing test [e6790003] <Paolo Di Tommaso>
+- Fix K8s cluster token when using serviceAccount [c3364d0f] <Paolo Di Tommaso>
+- Fix hanging test [44c04874] <Paolo Di Tommaso>
+- Improve docs (#3212) [5d80388c] <Marcel Ribeiro Dantas>
+- Bump fusion snapshot [8e03f655] <Paolo Di Tommaso>
+- Bump wave endpoint [a044cc6a] <Paolo Di Tommaso>
+- Bump nf-wave@0.4.5 [7424dc4b] <Paolo Di Tommaso>
+- Bump fusion config v0.5.1 [4dbdf112] <Paolo Di Tommaso>
+- Bump nf-wave@0.5.0
+- Bump nf-tower@1.5.5
+- Bump nf-amazon@1.11.0
+
+22.09.7-edge - 28 Sep 2022
+- Fix Issue copying file bigger than 5gb to S3 [18fd9a44]
+- Fix chmod command to accommodate hidden files in bindir (or empty bindir) (#3247) [a0fcc7b0] <Abhinav Sharma>
+- Bump nf-amazon@1.10.7 [f7f96e6f] 
+
+22.09.6-edge - 26 Sep 2022
+- Add SocketTimeoutException to k8s client request retry [527e0d5d]
+- Add MaxErrorRetry to K8s config [58be2128]
+- Add tags propagation to AWS Batch [d64eeffc]
+- Fix task resume when updating fusion layer [f38fd2db]
+- Fix Channel merge still deprecated for DSL2 (#3220) [d27384d2] <Kibubu>
+- Apply GCP resourceLabels to the VirtualMachine (#3234) [2275c03c] <Doug Daniels>
+- Update Google Batch mount point with the requirements [5aec28ac]
+- Improve wave error reporting [73842215]
+- Bump fusion 0.4.x [26f1f896]
+
+22.09.5-edge - 21 Sep 2022
+- Use default wave strategy [abbfa7f4]
+- Handle errors reported by tower report writer [0e814647]
+- Fix AWS S3 copy object [b3b90d23]
+
+22.09.4-edge - 19 Sep 2022
+- Add Fusion display name [f789d457]
+- Add container cleanup [cd2ae7dc]
+- Add Wave interactive debug session [ce7fa651]
+- Add support for wave build and cache repositories[692043ff]
+- Add shutdown to Google Batch client [8f413cf7]
+- Add native_id to Google Batch handler [352b4239]
+- Add java sts library to enable use of IRSA in k8s (#3207) [62df42c3] <Vishwas>
+- Add support for module custom bin dirs [77f55262]
+- Add support for tower token to wave client [928d5b04]
+- Update CLI docs (#3200) [8acebee6] <Marcel Ribeiro Dantas>
+- Fix issue with empty report file [9cc4f079]
+- Do not return resource bundle for root module [775c7ed9]
+- Improve tower config [ee03c243]
+- Bump groovy 3.0.13 [4a17e198]
+
+22.09.3-edge - 10 Sep 2022
+- Add fusion support to K8s executor (#3142) [6bb27b32]
+- Fix shutdown/cleanup hooks invocation [f4185070]
+- Fix Use smaller buffer size for S3 stream uploader [8c643074] [9926d15d]
+- Fix Azure NPE on missing pool opts [d5c0aabd]
+- Fix handling of targetDir when using Fusion fs [2091b272]
+- Document aws.batch.retryMode config (#3195) [56f75e0c] <Abhinav Sharma>
+
+22.09.2-edge - 7 Sep 2022
+- Fix thread pool race condition on shutdown [8d2b0587]
+- Fix Intermediate multipart upload requires a minimum size (#3193) [0b66aed6] <Jorge Aguilera>
+- Fix fusion enable detection [3ef91512]
+- Add before-afterScript warning to docs (#3167) [09464590] <Kibubu>
+- Add httpReadTimeout and httpConnectTimeout config to K8s client [064f9bc4]
+- Add support for Wave build & cache repos [98a275ba]
+- Finalise secrets feature (#3161) [49021b82]
+- Update executor retry config docs (#3001) [aed6c234]
+- Change Azure test pool name [0c724504]
+- Improve Wave error reporting [b11d0f11]
+- Remove unneeded launcher file remapping [a255118d] <Paolo Di Tommaso>
+- Update Azure vm types [80f5fbe4]
+- Update docs logos (#3174) [529bad81] <Phil Ewels>
+
+22.09.1-edge - 1 Sep 2022 
+- Add support for Charliecloud v0.28 (#3116) [84f43a33] <Patrick Hüther>
+- Add Support for EC-encrypted keys for K8s client [fd759d09]
+- Add support for Bridge batch scheduler (#3106) [343c17e6] <Eric Bonnet>
+- Add fusion support to local executor [17160bb0] [6cfb51e7]
+- Add getTags and getBranches to BitBucketServer [53bd89cd]
+- Add retry strategy to httpfs client [55f9c87b]
+- Add support for project resources [c2ad6566]
+- Add mamba build options [987a13cb] <Paolo Di Tommaso>
+- Fix Do not override tower endpoint in the config [41fb1ad0]
+- Fix Hyperqueue job names must be less than 40 chars #3151 [8e43670b]
+- Fix typo in ConfigBuilder.groovy (#3143) [659e6108] <Mike Lee>
+- Fix Resume for dynamic resolved containers [13483ff2]
+- Improve fusion env handling [10f35b60]
+- Improve foreign file(s) cache detection logic [3a9352c8]
+- Rename ModuleBundle to ResourcesBundle [0e51dc0f]
+- Use quiet output mode for hyperqueue executor (#3103) [70a91fdf] <Ben Sherman>
+- Wave improve conda settings [6f087fec]
+- Improve secrets cmd (#3158) [115b2f3d] <Jorge Aguilera>
+- Improve Wave resolution strategy [2eb700c6]
+- Improve Az Batch err handling and testing [85d31e8d] <Paolo Di Tommaso>
+- Bump google-cloud-batch 0.2.2 
+- Bump spock 2.2 
+
+22.09.0-edge - [SKIPPED]
+
+22.08.2-edge - 16 Aug 2022
+- Fix queueSize setting is not honoured by AWS Batch executor (again) #3117 [1733bb2e]
+- Add `files()` method to docs (#3123) [00bb8896] <Ben Sherman>
+- Refactor wave packing [bc876986]
+- Improve logging [aa380d5f]
+- Update dockerfile [e6329282]
+
+22.08.1-edge - 11 Aug 2022
+- Add support for disabling config include [e0859a12]
+- Add experimental fusion support [1854f1f2]
+- Add support for plugin provided function extension (#3079) [16230c2b] <Jorge Aguilera>
+- Add support for AWS Batch logs group (#3092) [4ef043ac] <Ben Sherman>
+- Add share identifier to Aws Batch (#3089) [c0253aba] <Ben Sherman>
+- Improve Tower cache manager [0091afc5]
+- Improve S3 copy via xfer manager [02d2beae]
+- Reports a warning when using NXF vars in the config [009ec256] <Marcel Ribeiro Dantas>
+- Make wake token cache duration config [5f955fc9]
+- Patch unable to start non-core plugin [a55f58ff]
+- Increase S3 upload chunk size to 100 MB [9c94a080]
+- Change Google Batch disk directive to override boot disk size (#3097) [7e1c0686] <Ben Sherman>
+- Fix queueSize setting is not honoured by AWS Batch executor (#3093) [d07bb52b] <Ben Sherman>
+- Fix Allow disabling scratch with Google Batch [e8e5c721]
+- Fix Emit relative path when relative parameter is set (#3072) [39797759] <Jorge Aguilera>
+- Bump nf-wave@0.3.0 [e46d341d]
+- Bump nf-tower@1.5.1 [cdc2be53]
+- Bump nf-google@1.4.1 [c39935a5]
+- Bump nf-amazon@1.10.0 [ccdf62d0]
+
+22.08.0-edge - 1 Aug 2022
+- Add warning to env config docs (#3083) [ca933c16] <Ben Sherman>
+- Add -with-conda CLI option (#3073) [98b2ac80]
+- Add simple wave plugin cli commands [8888b866]
+- Add default wave plugin [7793a0ec]
+- Add boot disk, cpu platform to google batch (#3058) [17a8483d] <Ben Sherman>
+- Add support for GPU accelerator to Google Batch (#3056) [f34ad7f6] <Ben Sherman>
+- Add support for archive dir to tower plugin [c234681a]
+- Add support tower cache backup/restore [bc2f9d13]
+- Add disk directive to google batch (#3057) [ec6e290c] <Ben Sherman>
+- Add retry when Azure submit fails with OperationTimedOut [6a3f9742]
+- Add warning when Google Batch quota is exceeded (#3066) [6b9c52ad] <Ben Sherman>
+- Allow fully disabling history file [0a45f858]
+- Allow the support function overloading and default parameters (#3011) [042d3857] <Jorge Aguilera>
+- Improve S3 file upload/download via Transfer manager [7e8d2a5a] <Jorge Aguilera>
+- Prevent overriding container entrypoint [b3a4bf85]
+- Update FileTransfer pool settings [503aafce]
+- Remove deprecated commands [93228b4b]
+- Prevent nextflow config to break tower launch [e059a724]
+- Refactor Google Batch executor to use Java API (#3044) [31a6e85c] <Ben Sherman>
+- Fix Unable to disable scratch attribute with AWS Batch [1770f73a]
+- Fix unit test setting explicit permissions for test files [1c821139] <Jorge Aguilera>
+- Fix Default plugins are overridden by config plugins [46cf3bfa] <Paolo Di Tommaso>
+- Fix S3 transfer download directory [b7bf9fe5]
+- Fix NPE while setting S3 ObjectMetadata #3031 [d6163431] <Jorge Aguilera>
+- Fix Unable to retrieve AWS batch instance type #1658 [3c4d4d3b]
+- Fix AWS Batch job definition conflict (#3048) [e5084418]
+- Fix JAVA_TOOL_OPTIONS breaking launch #1716 [0e7b416d]
+- Fix add ps shared objects to Dockerfile (#3033) [1c23b40a] <Ben Sherman>
+- Parallelize build integration tests [807800a3]
+- Bump google-cloud-nio:0.124.8 [dfaa9d19]
+- Bump groovy 3.0.12 [5c900b91]
+- Bump Moment.js 2.29.4 [a9ced868]
+- Bump gson@2.9.0 [12f17176]
+- Bump nf-azure@0.13.4 
+- Bump nf-google@1.4.0
+- Bump nf-tower@1.5.0
+- Bump nf-wave@0.2.1
+- Bump nf-amazon@1.9.0
+
+22.04.5 - 15 Jul 2022
+- Allow fully disabling history file [1a36c9bc]
+
+22.07.1-edge - 13 Jul 2022
+- Add support for Google Batch API v1 [4c116d58] [e85d87ee]
+- Add time directive support for K8s executor (#2948) [2b6f70a8] <romanaduraciova>
+- Add docs aws.client.s3PathStyleAccess config (#3000) [20005500] <Abhinav Sharma>
+- Allow to override lsf.conf settings with nextflow config #2862 [dae191a1] <Paolo Di Tommaso>
+- Allow hybrid containers execution [0af1bcb3]
+- Improve error msg when script file cannot be read [52c2780e]
+- Improve error reporting for custom function [877c7931] <Jorge Aguilera>
+- Improve error message for missing plugin extension [4a43db84]
+- Improve test #3019 [7c37e0be] <Paolo Di Tommaso>
+- Rename kuberun -pod-image to -head-image [2576ba62] <Ben Sherman>
+- Externalise sqldb plugin source code [17e80b4f] <Paolo Di Tommaso>
+- Fix escape unstage outputs with double quotes #2912 #2904 #2790 [49ff02a6] <Ben Sherman>
+- Fix Exception when settings AWS Batch containerOptions #3019 [89312ad8] <Paolo Di Tommaso>
+- Fix Missing query param in http file (#2918) [43cc8511] <Paolo Di Tommaso>
+- Fix Publish copy mode for S3 based path [085f6b2b]
+- Fix Fail fast uploads to S3 (#2969) [7fd1a6e1] <Jorge Aguilera>
+- Fix null script name in launch info [7118849f]
+- Bump commons-code@1.15 [a06b4442]
+- Bump jgit@6.2.0 [3331826f]
+- Bump snakeyaml@1.30 [de62fd3f]
+- Bump gson@2.8.9 [3234ddd5]
+
+22.07.0-edge - [SKIPPED]
+
+22.04.4 - 19 Jun 2022
+- Fix Publish copy mode for s3 based path [bb510ce6]
+- Add strict mode config setting [b0567e62]
+- Update docker base image [b00c1418]
+
+22.06.1-edge - 17 Jun 2022
+- Fix CodeCommit creds handling + nf-codecommit@0.1.2 [70fc0745]
+- Fix typo in log message [a8f8529d]
+- Add more scientists to the list of random names [8d5b36a2] <Marcel Ribeiro Dantas>
+
+22.06.0-edge - 9 Jun 2022
+- Add AWS CodeCommit initial support [80fba6e9]
+- Add support for 307 and 308 HTTP redirection [92382012]
+- Add DirWatcher v2 [209c82cd]
+- Add Moriondo in the list of random names [e0abca58]
+- Add preview CLI option (#2914) [aa8f1aa4]
+- Fix Git config resolution error [64436697]
+- Fix StackOverflowError when dump all profiles (#2922) [28cd11a2] <Jorge Aguilera>
+- Fix gradle warning message in nf-sqldb (#2921) [b09ceabe] <Jorge Aguilera>
+- Fix log for LsfExecutror perTaskReserve attribute [7c3ec874] <Prete>
+- Fix external pod deletion for jobs (#2915) [4dd1af7a] <xhejtman>
+- Prevent function overloading in module definition [c0b522ab]
+- Improve error message of non sensical include (#2623) [285fe49c] <Jorge Aguilera>
+- Mount PWD path only when scratch is used [9b3c6e31] 
+- Stripe sensitive data into strings (#2908) [7fa4c86c] <Jorge Aguilera>
+- Dump scm content when trace is enabled [c3117ada]
+
+22.05.0-edge 25 May 2022
+- Add Hyperqueue executor (#2896) [ffa5712e] <Henrik Nortamo>
+- Add support for K8s Job resource [c70eb12d] <xhejtman>
+- Add support for time process directive in GLS executor (#2880) [1402e183] <Florian De Temmerman>
+- Add support for privilege option for K8s containers [7ffe3a02]
+- Add DSL1 option to docs (#2836) [d30841a5] <Jose Espinosa-Carrasco>
+- Add support for container options to Azure Batch [3f4f00f9] 
+- Add support for move operation to AWS S3 [8c0ddfd5] 
+- Add K8s execution hostname in the trace file (#2828) [ebaef92a] <Fabian Lehmann>
+- Add support for AWS S3 encryption using a custom KMS key [c1e45aa9] <Paolo Di Tommaso>
+- Add support for Micromamba [383e023f]
+- Add jaxb-api dependency to nf-amazon [c1a09f87]
+- Add strict mode config setting [696e70b5]
+- Add -head-prescript option to kuberun (#2830) [9e387055] 
+- Fix missing err message on submit failure [233e67f0] (#2899)
+- Fix resolve azure devops repositories when projectId is present [2500ff01] <Jorge Aguilera>
+- Fix AthenaJdbc into distribution zip [853a1f2a] [4b3579d5] [70ef7ee3] <Jorge Aguilera>
+- Fix Inconsistent bool parsing #2881 [40bf2b2a]
+- Fix Unable to pull pipeline if config file is not in default branch (#2876) [4ee5b04f] <Jorge Aguilera>
+- Fix Prevent crash when scratch dir does not exist (#2888) [9ef44ae5] <Fabian Lehmann>
+- Fix DSL1 detection to invalid workflow keyword matching [fe0700b0] (#2879) <Jose Espinosa-Carrasco>
+- Fix Aws Batch retry policy on spot reclaim [6e029b79]
+- Fix 'false' string in config interpreted as true (#2865) [079a18ce] <Fabian Lehmann>
+- Improve Git Provider config logging [d7dbca8ec]
+- Improve K8s task handler [1822b2ca]
+- Improve missing workflow err message [da101e8f] (#2871)
+- Include revision in the Azure Repos provider when specified (#2861) [3342c767] <Jorge Aguilera>
+- Remove unnecessary change dir echo [372d1f47]
+- Abort execution when accessing undefined params with strict mode [93836081]
+- Update docker base image [50cd7956]
+- Update default SKU for Azure Batch (#2868) [9ea09dba] <Abhinav Sharma>]
+- Update dependencies [405d9545]
+- Refactoring to prevent name conflict [aba2671b]
+- Few DSL syntax to explicit declaration of plugin extensions (#2820) [bfc4a067] <Jorge Aguilera>
+- Sanitize k8s label and annotation keys, don't sanitize annotation value (#2843) [5287a984] <Ben Sherman>
+- Docs improvement (#2835) [09e5bca3] <Ben Sherman>
+- Bump Jgit 6.1 [7186348c]
+- Bump Spock 2.1 [51100d16]
+- Bump capsule 1.1.1 [20ec1697]
+
+22.04.3 - 18 May 2022
+- Fix dsl1 detection (#2879) [1a7ea0d1] <Jose Espinosa-Carrasco
+
+22.04.2 - 16 May 2022
+- Fix stackoverflow error when probe dsl [a05fcbea]
+
+22.04.1 - 15 May 2022
+- Improve dsl detection [739b959f]
+- Improve missing workflow err message [f3fc081b] (#2871)
+- Fix Aws Batch retry policy on spot reclaim [d855f0d9]
+- Update default SKU for Azure Batch (#2868) [be60fc14]
+- Bump nf-amazon 1.7.2
+- Bump nf-azure 0.13.2
+
+22.04.0 - 23 Apr 2022
+- Improve error reporting (#2658) [e6ef017d] <Jorge Aguilera>
+- Document params-file and improve self-update (#2673) [1e008f47] <Abhinav Sharma>
+- Add support for AWS S3 anonymous credentials (#2810) [ae7ba35a]
+- Add tolerations K8s pod option (#2763) [7f7cdadc] <Ben Sherman>
+- Add support for batched queries to nf-sqldb plugin [3a9dad8b]
+- Add `emitColumns` option fromQuery operator [6a6a6eac]
+- Add mermaid DAG renderer [653f1e57]
+- Fix missing SSE flag on AWS Batch job submit (#2809) [4b3e946d]
+- Fix Task execution is not evicted on unexpected execution error (#2787) [05ea0c86] <Fabian Lehmann>
+- Document params-file and improve self-update (#2673) [1e008f47] <Abhinav Sharma>
+- Improve deprecation message (#2788) [720a84d7] <Fabian Lehmann>
+- General docs improvements (#2800) [88acd26b] <Ben Sherman>
+- Decrease Aws upload chunk size to 20 MB [086138fb]
+- Improve error reporting (#2658) [e6ef017d] <Jorge Aguilera>
+- Improve err reporting for Azure Batch [798bae1f]
+- Rename echo directive to debug (#2776) [8f906aa5] <Ben Sherman>
+- Remove embedded Read The Docs theme [728d545f] <Paolo Di Tommaso>
+- Use a remote config in kuberun (#2781) [5485b699] <Fabian Lehmann>
+- Start Github Actions also for edited PRs (#2796) [78f5c10f] <Fabian Lehmann>
+- Deprecate isDsl2Final method [0f63f1a7]
+- Document task object [1c83e21e] <Ben Sherman>
+- Bump nf-sqldb@0.4.0 [a137e93a]
+- Bump nf-amazon@1.7.1 [912b9bb2]
+- Bump moment.js version2.29.2 [a229c1ed]
+
+22.03.1-edge - 6 Apr 2022 
+- Fix default dsl env detection [b9a09bf6]
+- Handle K8s timeout error - 500 status code (#2756) [89a1a46b] <xhejtman>
+- Honour background option for kuberun command [b1b0ddd9] <kfrancisdev>
+- Add Aws Batch native retry on spot reclaim [cd95e297]
+- Improve Aws Batch error reporting [00443510]
+- Add missing workflow err report [fa687789]
+- Use local nextflow when packing docker image (#2757) [40271b08] <xhejtman>
+- Add retry policy Azure create job [792820a2]
+- Fix log message in nf-azure [80a0e937] <Manuele Simi>
+- Prevent build on tag [5b660c73]
+- Fix missing linux/amd64 platform on docker build [05f117d7]
+
+22.03.0-edge - 27 Mar 2022
+- Add experimental proxy reg [b3836691]
+- Add api to access config raw value [977f6305]
+- Add warning for invalid emit names [0045834c]
+- Add retry policy on grid submit failure #2696 [673f560c]
+- Add config tests #2422 [885993b1]
+- Add ability to disable config names check [814a2605]
+- Add azcopy fine grain config settings [3998a56b]
+- Add binary compatibility with Java 8 [763ec999]
+- Add retry policy to Az Batch operations [991c6175]
+- Make DSL2 default syntax [4e9189ac] [0c80784a]
+- Fix Reduce task command runner script size [6930408b]
+- Fix K8s task retry strategy on node termination [bd093081]
+- Fix use first config in stack when is into profile #2701 [44bdde8d] <Jorge Aguilera>
+- Fix Allow comments after nextflow.enable.dsl (#2746) [6988638b] <Jorge Aguilera>
+- Fix allow blank spaces in java path (#2690) [a966020e] <Jorge Aguilera>
+- Improve AWS Batch job retry on spot termination [bd8f2e26] [72fbda848]
+- Improve error reporting [55466be7]
+- Undeprecate merge operation [1649944b]
+- Bump support for Java 18 [f3a11e4c]
+- Prevent invalid use of large maxForks values [5de0c200]
+- Prevent race condition on thread pool creation [3e707a1d]
+- Refactor AWS batch job unique token generation [d64f5a21]
+- Decrease log verbosity [9237d587] [d1a5e5a8]
+- Throw an error if a required secret is missing [8e5129d6]
+- Wait for pod to stop running before shutdown (#2667) [505c5ad6]) <kfrancisdev>
+- Restore AZ tests [858a4568]
+
+22.02.1-edge - 3 Mar 2022
+- Prevent multiple parsing of params file [38bb1f71]
+
+22.02.0-edge - 25 Feb 2022
+- Fix Prevent S3 tagging with empty list [ae7db466]
+- Fix Azure repos tests [856aacf0]
+- Fix issue on includeConfig resolution #2675 [6591a9e1]
+- Fix NPE when accessing not existing Git file [6c79f8fd]
+- Fix Batch Job name exceed max allowed size [e8b70ca3]
+- Fix detect and skip bom mark in files (#2645) [02b06ba3] <Jorge Aguilera>
+- Feature: Abort session if publish fails (#2643) [79b3836b] <Jorge Aguilera>
+- Fix report overwrite cannot be disabled [202b5c9c] #2647 
+- Fix match bash interpreter irrespective the path [c2d2b9b2]
+- Fix build warning + plugins assemble (#2634) [00dd143a] <Jorge Aguilera>
+- Fix CITATION.cff and add automatic validation of your citation metadata [15698a45] <Faruk D>
+- Bump nf-amazon@1.5.1 [a4496bb2]
+- Bump nf-amazon@1.5.2 [e51139bb]
+
+22.01.0-edge - 7 Feb 2022
+- Add support for Tower reports (#2523) [de3d76349] <Jordi Deu-Pons>
+- Add RateLimitExceededException when GitHub api limit is reached [ff123c605]
+- Add fetch tags and branches to local git provider [e1de8e0ac]
+- Add K8s priorityClassName pod option, updated tests (#2585) [51650f8c4] <Ben Sherman>
+- Add securityContext pod option to docs (#2584) [19f16f0da] <Ben Sherman>
+- Add automountServiceAccountToken option for k8s executor (#2562) [1b5908e4c] <xhejtman>
+- Add warn about AWS CLI grandparent path in container (#2565) [67073b0c5] <Simon Li>
+- Add affinity option to pod directive (#2522) [640cbed48](3 weeks ago) <Ben Sherman>
+- Add ability to specify memory/cpu resources for the control pod (#2559) [13f3e036d] <xhejtman>
+- Add `-entry` parameter to pass in k8s executor (#2525) [a96233af6] <xhejtman>
+- Add AWS Athena JDBC driver for nf-sqldb plugin (#2500) [462575f05] <Abhinav Sharma>
+- Fix process output 'env' as array (#2624) [0a246dc2c] <Jorge Aguilera>
+- Fix make date format to change independent from system locale [d1e5f6e76] <Jorge Aguilera>
+- Fix double access of params file [459ebab7b] <Paolo Di Tommaso>
+- Fix Use account SAS token instead of service SAS token (#2576) [d5125975d] <Florian De Temmerman>
+- Fix upload of nested directory outputs on azure (#2578) [85ad55225] [744447155] <Florian De Temmerman>
+- Fix Docs Typo (#2556) [942be46f6] <Kibubu>
+- Fix NXF_PARAMS_FILE is not recognised #2549 [62f5fe1d9]
+- Fix failing tests (4 weeks ago) <Paolo Di Tommaso>
+- Fix Unable to use output path with nested properties [ceceb0784]
+- Fix Nextflow couldn't parse generated nextflow.config under some circumstances (#2496) [2dfbbc63c] <Fabian Lehmann>
+- Fix invalid use of `var` keyword [8418cc8d6]
+- Improve k8s executor throwing NodeTerminationException on node shutdown (#2590) [084c8d6ca] <Patrick Hüther>
+- Improve docs on `include` statements (#2520) [9c140cee3] <Alexander Toenges>
+- Improve core plugins info & logging [dfa544ac9]
+- Improve Secrets handling [1c0ad4679] [329502d19] [[26b4be906]]
+- Improve DSL2 documentation [048b026f2] [e2e8b5557] <Manuele Simi>
+- Improve documentation (#2600) [787a1fd84] <Ben Sherman>
+- Allow disabling history file unique check [c3677c311]
+- Make S3 parallel download as default [b490f146d] [03dae9d6e]
+- Run Azure integration tests only with Java 11 [0890ceeb3]
+- Prepare for Java >= 11 build [8c0566fc3] [5ba16dd18] [405b67365]
+- Use Standard_A3 instance type for Azure tests [67e7d3ab3] [b97b0010c]
+- Refactor cache store using plugins [54bf7a61d]
+- Update google cloud docs (#2594) [dfa867953] <Ben Sherman>
+- Update the azure docs for registry [96baf288e] <Abhinav Sharma>
+- Update copyright info [807a816a5]
+- Remove gradle logs about tasks dependencies (#2618) [cae44e00b] <Jorge Aguilera>
+- Remove Tika deps for nf-amazon module [95620d42b]
+- Remove deprecated validExitStatuas directive [b3117e789] [2188d51a0]
+- Remove support for Apache Ignite [d4dc1cfe1] [64d2773fd]
+- Bump nf-amazon@1.5.0 as default plugin
+- Bump Gradle 7.3.3 [f00bfb0d3]
+- Bump nf-amazon@1.5.0 [40f90aa92] [[2bc16732e]]
+
+21.12.1-edge - 22 Dec 2021
+- Add tags attribute to publishDir directive [e78a997b5]
+- Add ability to disable running jobs cancellation [a13af9a3c]
+- Add ability to define containerProperties with using AWS Batch #2471 [ac7f1e71e] <Manuele Simi>
+- Add NXF_JVM_ARGS env variable [7afb2deed]
+- Improve paths validation [0849d583f]
+- Include S3FS provider into nf-amazon plugin [3a7bf8c7a]
+- Fix error reporting on missing script file #1951 [e1a0b240a]
+- Fix singularity docs #2493 [c66cb3ba7] <Jose Espinosa-Carrasco>
+- Fix cross compilation error cause by ByteBuffer [74916100f]
+- Fix File staging race condition + beta AWS parallel downloader [b7c262de3]
+- Fix enableAIAcaIssuers launcher flag [cd780aabd]
+- Fix task index sequence generation [3447e735b]
+- Fix Changes process directives invalidates tasks cache [967c1adff]
+- Fix Interrupted download of staged files cause execution to fail #1552 [847789fad]
+- Fix plugins start/stop for fs command [88d8be1f4]
+- Fix for nested params with the same name #2485 [02de4147c] <Jay Carey>
+- Fix race condition on plugin autoload status [ab00a50f5]
+- Fix failing test with Java 17 [1c6183c92] [4daf8d0a1]
+- Note on Azure Batch inactive pools #2483 [7fc116067] <Manuele Simi>
+- Remove drip launcher [909f95279]
+- Update azure test image [de9d5ee8c]
+- Update logging library [a957db646]
+- Bump nf-google@1.1.4 [93193a3f3]
+- Bump version 21.12.0-edge [9cb7ee81f]
+- Bump AWS sdk 1.12.129 [bd7ba1706]
+- Bump logback 1.2.9 [29f260717]
+- Bump Jsoup 1.14.3 [5776c0391]
+- Bump corretto:17.0.1 [f7e047ea4]
+
+21.12.0-edge - 22 Dec 2021 [SKIPPED]
+
+21.10.6 - 21 Dec 2021 
+- Bump Slf4j 1.7.32
+- Bump Logback 1.2.9
+
 21.10.5 - 8 Dec 2021
 - Fix race condition on plugin autoload status [73a0893ce]
 
@@ -50,7 +2301,7 @@ NEXTFLOW CHANGE-LOG
 - Add support for Java 17 [cb207cd64]
 - Allow override Bash wrapper template files [e6e25ed7c]
 - Fix issue with plugins local root sync [1d974a4eb]
-- Fix Nextflow does not recognised Failed pod  (#2430) [9c80cdea0] (3 days ago) <Mike Smoot>
+- Fix Nextflow does not recognised Failed pod (#2430) [9c80cdea0] <Mike Smoot>
 - Fix Error reporting on Bash launcher creation failure [63e01c324]
 - Fix Channel.fromSRA error one some project ids #2156 [dbcbac139]
 - Fix Task completion percentage #2440
@@ -66,7 +2317,7 @@ NEXTFLOW CHANGE-LOG
 - Fix verbose logging [92b113134]
 - Fix docker image url [ed24a475d]
 - Fix Temporary directories not deleted in on_exit #2406 [181bdf528] <Lukas Jelonek>
-- Fix implict authentication for resources served by Tower [e30310b4f]
+- Fix implicit authentication for resources served by Tower [e30310b4f]
 - Fix No more of 255 channels can be defined into a workflow context #2417 [7f91ecb39]
 - Add tip about escaping variables in env scope #2366 <Ben Shealy>
 - Add K8s env fieldPath option to pod directive #2363 <Ben Shealy>
@@ -154,7 +2405,7 @@ NEXTFLOW CHANGE-LOG
 21.06.0-edge - 3 Jul 2021
 - Add Keep alive option to Google LS executor [994222074]
 - Add support for FTP proxy and proxy servers authentication [8ec33b04d]
-- Add support for plugins groupping [aa5bc7d34]
+- Add support for plugins grouping [aa5bc7d34]
 - Add More details about the reason why a AWS Batch job has failed #2146 [27a4e88b2]
 - Add support for extensions priority [ae083f1aa]
 - Add stubRun attribute to workflow metadata #2164 [86cfc66fd]
@@ -184,7 +2435,7 @@ NEXTFLOW CHANGE-LOG
 - Add support for using mamba with conda (#2030) [10c8385b]
 - Add AWS cli native error fail-over [fd7670ef]
 - Add support for Container Registry to Az Batch executor (#2078) [12bf2da6]
-- Add support for Tower workspace  (#2097) [8a4dd3ab]
+- Add support for Tower workspace (#2097) [8a4dd3ab]
 - Add support custom service account email in Google Cloud LifeSciences executor (#2044) [a642c9ea]
 - Add support for Java 16 + Gradle 7 [caace1c5] [e2dd4510] [74e466e0] [1245ab1c] [bfc69fb6]
 - Improve tower client error reporting [4efb6bf6]
@@ -219,16 +2470,16 @@ NEXTFLOW CHANGE-LOG
 - Add readOnly flag to k8s volume mounts (#2013) [33bd24ac]
 - Add Start default plugins on-demand #1964 [cf2a9d73]
 - Add support for tower workspaceId [e2977688]
-- Improve suppor for BitBucket server repos [eb946e27]
+- Improve support for BitBucket server repos [eb946e27]
 - Fix toInt/Long/Float/Double operator hangs with value channel [7c35d985]
 - Fix regression caused by nested params handling #1923 [b25af49b]
 - Fix Cache invalidation when repo is cloned between runs #1989 [ac526f38]
 - Fix Invalid setting of TMP var with singularity #1997 [23f80121] [472cfbdd]
-- Fix issue overriding nested params from cli #1923  [cfe6b1d1]
+- Fix issue overriding nested params from cli #1923 [cfe6b1d1]
 - Fix az path handling curly brackets globs #1969 [c78a1bbf]
 - Fix Missing git credentials when checking last commit id [f101308e]
 - Fix plugins version check against local installation [535c2bb5]
-- Fix local dependant formatting #1962 [2a5cbac1]
+- Fix local dependent formatting #1962 [2a5cbac1]
 - Fix Encode path parameter at GitLab getContentUrl [6f80f651]
 - Fix Only use sudo rm with docker #1956 [f9490423]
 - Prevent AZ NPE when missing vmtype + better logging #1992 [711362ca]
@@ -264,7 +2515,7 @@ NEXTFLOW CHANGE-LOG
 - Fix sort human-readable tasks in report [6d68f28d]
 
 21.02.0-edge - 1 Feb 2021
-- Fix Issue when merging nested cli params  #1856 [275e54c4] [fe37da6d]
+- Fix Issue when merging nested cli params #1856 [275e54c4] [fe37da6d]
 - Fix job status detection on PBS pro #1840 [c1598908]
 - Fix Issue when merging nested cli params #1856 (19 hours ago) <Paolo Di Tommaso>
 - Revert the CPU/memory options being passed to singularity VM instead of singularity container [0d04e0f9]
@@ -296,7 +2547,7 @@ NEXTFLOW CHANGE-LOG
 - Add support for basic auth for http/s file provider [6027fcba]
 - Add User-Agent info to httpfs requests [222637de]
 - Update CPU and RAM for containers (#1833) [ccf5c8ba]
-- Move test containes to quay.io [7db053eb] [773be707] [c10a7f53]
+- Move test contains to quay.io [7db053eb] [773be707] [c10a7f53]
 
 20.12.0-edge - 12 Dec 2020 
 - Add support for charliecloud container engine #1809
@@ -365,7 +2616,7 @@ NEXTFLOW CHANGE-LOG
 - Remove unneeded parentheses from stdout declaration [dc029c04]
 - Merge execution logs command docs [577ec744]
 - Passing exact memory to TES executor in GiB #1696 [c8a15545]
-- Improve docs replacing suscribe{println it} with view() [f84ccb6f] [cb2d607d]
+- Improve docs replacing subscribe{println it} with view() [f84ccb6f] [cb2d607d]
 - Use current environment Bash #1598 #1614 [e70ef87a]
 - Include GA4GH support into the standalone binary (make pack) #1666 [e2175d45]
 - Update Bitbucket docs [b9b57f83]
@@ -376,7 +2627,7 @@ NEXTFLOW CHANGE-LOG
 - see 20.07.0 and 20.07.0-RC1
 
 20.07.0 - (skipped)
-- Allow unqualified stdin/stdout defintions with DSL2 [bcdcaab6]
+- Allow unqualified stdin/stdout definitions with DSL2 [bcdcaab6]
 
 20.07.0-RC1 - 21 Jul 2020 
 - Add Dsl2 enable flag [08238109]
@@ -555,7 +2806,7 @@ NEXTFLOW CHANGE-LOG
 - Fix Invalid dynamic resolution of stageIn/OutMode directive #1374
 - Fix No such property stackTraceDepth error #1387 [49450f67] [f5342e71]
 - Fix Singularity env variables are not accessible #1386 [036af4a6]
-- Fix PublishDir should not create dir when disabled  #1381
+- Fix PublishDir should not create dir when disabled #1381
 - Fix Process hangs for non zero exit status #1344
 - Fix Output stdout does not support emit attribute #1373
 - Fix False positive warning when importing module #1349
@@ -621,7 +2872,7 @@ NEXTFLOW CHANGE-LOG
 - Add fork operator #1281 [DSL2] [6f89833a]
 - Add branch operator #1202 [706a182a] [DSL2]
 - Add workflow definition and composition #1276 [13f43291] [DSL2]
-- Add projectName to workflow metadata  [55be0762]
+- Add projectName to workflow metadata [55be0762]
 - Add support for tower [1255f702]
 - Add support for timezoned timestamp to metadata [6f4a2e28]
 - Add task pending event [d2d66698]]
@@ -670,7 +2921,7 @@ NEXTFLOW CHANGE-LOG
 - Add Pbs Pro execution documentation [1d39ab31]
 - Add code of conduct document
 - Fix missing LFS executor register invocation #1234 [b1b7ab1]
-- Fix "invalid pod status" when running scrips with the kubernetes executor #1242 [11caac68]
+- Fix "invalid pod status" when running scripts with the kubernetes executor #1242 [11caac68]
 - Revert Fix Environment activation fails with recent versions of Conda #1195 [98c0d1f8]
 - (includes changes from `19.07.0-edge`, `19.05.0-edge` and `19.05.0-edge`)
 
@@ -805,7 +3056,7 @@ NEXTFLOW CHANGE-LOG
 - Fixed remote bin directory when using bucketDir option [6d796783]
 - Fixed foreign file system detection [1489cc72]
 - Fixed Ansi logger division by zero [ae2b1380]
-- Fixed Unparseable Data format on http file #962
+- Fixed Unparsable Data format on http file #962
 - Fixed Log command history #405
 - Fixed Too long process tag name can cause SLURM failure #941
 - Fixed LSF can return an inconsistent jobs status #927
@@ -857,7 +3108,7 @@ NEXTFLOW CHANGE-LOG
 - Fixed remote bin directory when using buckerDir option [6d796783]
 - Fixed foreign file system detection [1489cc72]
 - Fixed Ansi logger division by zero [ae2b1380]
-- Fixed Unparseable Data format on http file #962
+- Fixed Unparsable Data format on http file #962
 - Fixed Log command history #405
 - Fixed Too long process tag name can cause SLURM failure #941
 - Fixed LSF can return an inconsistent jobs status #927
@@ -1035,7 +3286,7 @@ NEXTFLOW CHANGE-LOG
 - Fixed K8s executor hang on pod creation failure
 - Added select in -R for memory for LSF executor #683
 
-0.29.0  - 24 Apr 2018
+0.29.0 - 24 Apr 2018
 - Fixed Buffer operator fails to recognise optional parameter when a closing condition is specified #652
 - Fixed PublishDir mode "copyNoFollow" does not work for directories #658
 - Update NameGenerator adjectives #656
@@ -1359,7 +3610,7 @@ NEXTFLOW CHANGE-LOG
 0.23.3 - 9 Feb 2017
 - Fixed Job termination is not recognised if the starter file is not created #268
 - Fixed Allow NF console to resume process executions (second take) #280
-- Fixed PublishDir may throw a FileAlredyExistsException #283
+- Fixed PublishDir may throw a FileAlreadyExistsException #283
 - Increased logger file appender buffer size to 64kb
 - Updated Logback to version 1.1.10
 - Updated copyright info
@@ -1650,7 +3901,7 @@ NEXTFLOW CHANGE-LOG
 0.16.1 - 7 Nov 2015
 - Fixed issue #85. Directive `publishDir` can't access process local variables.
 - Fixed wrong error message when trying to run a project sticked on a specific revision.
-- Fixed `IllegalArgumentException: other must be an instance of com.upplication.s3fs.S3Path` exception when publishing to a S3 path.
+- Fixed `IllegalArgumentException: other must be an instance of nextflow.cloud.aws.nio.S3Path` exception when publishing to a S3 path.
 - Fixed indentation in repo info command.
 
 0.16.0 - 4 Nov 2015

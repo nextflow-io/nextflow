@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,30 +17,34 @@
 package nextflow.cloud.aws.batch
 
 import java.nio.file.Path
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 
-import com.amazonaws.services.batch.AWSBatch
-import com.amazonaws.services.batch.model.AWSBatchException
-import com.amazonaws.services.ecs.model.AccessDeniedException
-import com.upplication.s3fs.S3Path
-import groovy.transform.CompileDynamic
+import software.amazon.awssdk.services.batch.BatchClient
+import software.amazon.awssdk.services.batch.model.BatchException
+import software.amazon.awssdk.services.ecs.model.AccessDeniedException
+import software.amazon.awssdk.services.cloudwatchlogs.model.ResourceNotFoundException
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import nextflow.cloud.aws.AmazonClientFactory
+import nextflow.cloud.aws.AwsClientFactory
+import nextflow.cloud.aws.config.AwsConfig
+import nextflow.cloud.aws.nio.S3Path
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.exception.AbortOperationException
 import nextflow.executor.Executor
+import nextflow.executor.TaskArrayExecutor
 import nextflow.extension.FilesEx
+import nextflow.fusion.FusionHelper
 import nextflow.processor.ParallelPollingMonitor
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskRun
 import nextflow.util.Duration
+import nextflow.util.Escape
 import nextflow.util.RateUnit
 import nextflow.util.ServiceName
+import nextflow.util.ThreadPoolHelper
 import nextflow.util.ThrottlingExecutor
 import org.pf4j.ExtensionPoint
 /**
@@ -53,7 +56,7 @@ import org.pf4j.ExtensionPoint
 @Slf4j
 @ServiceName('awsbatch')
 @CompileStatic
-class AwsBatchExecutor extends Executor implements ExtensionPoint {
+class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExecutor {
 
     /**
      * Proxy to throttle AWS batch client requests
@@ -81,12 +84,28 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
 
     private AwsOptions awsOptions
 
+    private final Set<String> deletedJobs = new HashSet<>()
+
     AwsOptions getAwsOptions() {  awsOptions  }
 
     /**
      * @return {@code true} to signal containers are managed directly the AWS Batch service
      */
+    @Override
     final boolean isContainerNative() {
+        return true
+    }
+
+    @Override
+    String containerConfigEngine() {
+        return 'docker'
+    }
+
+    /**
+     * @return {@code true} whenever the secrets handling is managed by the executing platform itself
+     */
+    @Override
+    final boolean isSecretNative() {
         return true
     }
 
@@ -101,7 +120,7 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
          */
         if( !(workDir instanceof S3Path) ) {
             session.abort()
-            throw new AbortOperationException("When using `$name` executor a S3 bucket must be provided as working directory either using -bucket-dir or -work-dir command line option")
+            throw new AbortOperationException("When using `$name` executor an S3 bucket must be provided as working directory using either the `-bucket-dir` or `-work-dir` command line option")
         }
     }
 
@@ -116,8 +135,7 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
         /*
          * upload local binaries
          */
-        def disableBinDir = session.getExecConfigProp(name, 'disableRemoteBinDir', false)
-        if( session.binDir && !session.binDir.empty() && !disableBinDir ) {
+        if( session.binDir && !session.binDir.empty() && !session.disableRemoteBinDir ) {
             def s3 = getTempDir()
             log.info "Uploading local `bin` scripts folder to ${s3.toUriString()}/bin"
             remoteBinDir = FilesEx.copyTo(session.binDir, s3)
@@ -128,7 +146,7 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
         /*
          * retrieve config and credentials and create AWS client
          */
-        final driver = new AmazonClientFactory(session.config)
+        final driver = new AwsClientFactory(new AwsConfig(session.config.aws as Map))
 
         /*
          * create a proxy for the aws batch client that manages the request throttling
@@ -137,7 +155,7 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
         helper = new AwsBatchHelper(client, driver)
         // create the options object
         awsOptions = new AwsOptions(this)
-        log.debug "[AWS BATCH] Executor options=$awsOptions"
+        log.debug "[AWS BATCH] Executor ${awsOptions.fargateMode ? '(FARGATE mode) ' : ''}options=$awsOptions"
     }
 
     /**
@@ -158,7 +176,7 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
     }
 
     @PackageScope
-    AWSBatch getClient() {
+    BatchClient getClient() {
         client
     }
 
@@ -175,14 +193,17 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
 
         reaper = createExecutorService('AWSBatch-reaper')
 
-        final pollInterval = session.getPollInterval(name, Duration.of('10 sec'))
-        final dumpInterval = session.getMonitorDumpInterval(name)
+        final pollInterval = config.getPollInterval(name, Duration.of('10 sec'))
+        final dumpInterval = config.getMonitorDumpInterval(name)
+        final capacity = config.getQueueSize(name, 1000)
 
         final def params = [
                 name: name,
                 session: session,
+                config: config,
                 pollInterval: pollInterval,
-                dumpInterval: dumpInterval
+                dumpInterval: dumpInterval,
+                capacity: capacity
         ]
 
         log.debug "Creating parallel monitor for executor '$name' > pollInterval=$pollInterval; dumpInterval=$dumpInterval"
@@ -203,18 +224,21 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
         new AwsBatchTaskHandler(task, this)
     }
 
+    private static final List<Integer> RETRYABLE_STATUS = [429, 500, 502, 503, 504]
+
     /**
      * @return Creates a {@link ThrottlingExecutor} service to throttle
      * the API requests to the AWS Batch service.
      */
     private ThrottlingExecutor createExecutorService(String name) {
 
-        final qs = session.getQueueSize(name, 5_000)
-        final limit = session.getExecConfigProp(name,'submitRateLimit','50/s') as String
+        // queue size can be overridden by submitter options below
+        final qs = 5_000
+        final limit = config.getExecConfigProp(name, 'submitRateLimit', '50/s') as String
         final size = Runtime.runtime.availableProcessors() * 5
 
         final opts = new ThrottlingExecutor.Options()
-                .retryOn { Throwable t -> t instanceof AWSBatchException && t.errorCode=='TooManyRequestsException' }
+                .retryOn { Throwable t -> t instanceof BatchException && (t.awsErrorDetails().errorCode() == 'TooManyRequestsException' || t.statusCode() in RETRYABLE_STATUS) }
                 .onFailure { Throwable t -> session?.abort(t) }
                 .onRateLimitChange { RateUnit rate -> logRateLimitChange(rate) }
                 .withRateLimit(limit)
@@ -223,15 +247,14 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
                 .withKeepAlive(Duration.of('1 min'))
                 .withAutoThrottle(true)
                 .withMaxRetries(10)
-                .withOptions( getConfigOpts() )
                 .withPoolName(name)
 
         ThrottlingExecutor.create(opts)
     }
 
-    @CompileDynamic
-    protected Map getConfigOpts() {
-        session.config?.executor?.submitter as Map
+    @Override
+    boolean isFusionEnabled() {
+        return FusionHelper.isFusionEnabled(session)
     }
 
     protected void logRateLimitChange(RateUnit rate) {
@@ -241,6 +264,20 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
     @PackageScope
     ThrottlingExecutor getReaper() { reaper }
 
+    boolean shouldDeleteJob(String jobId) {
+        if( jobId in deletedJobs ) {
+            // if the job is already in the list if has been already deleted
+            log.debug "[AWS BATCH] cleanup = already deleted job $jobId"
+            return false
+        }
+        synchronized (deletedJobs) {
+            // add the job id to the set of deleted jobs, if it's a new id, the `add` method
+            // returns true therefore the job should be deleted
+            final result = deletedJobs.add(jobId)
+            log.debug "[AWS BATCH] cleanup = should delete job $jobId: $result"
+            return result
+        }
+    }
 
     CloudMachineInfo getMachineInfoByQueueAndTaskArn(String queue, String taskArn) {
         try {
@@ -260,12 +297,15 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
 
     String getJobOutputStream(String jobId) {
         try {
-            return helper.getTaskLogStream(jobId)
+            return helper.getTaskLogStream(jobId, awsOptions.getLogsGroup())
+        }
+        catch (ResourceNotFoundException e) {
+            log.debug "Unable to find AWS Cloudwatch logs for Batch Job id=$jobId - ${e.message}"
         }
         catch (Exception e) {
             log.debug "Unable to retrieve AWS Cloudwatch logs for Batch Job id=$jobId | ${e.message}", e
-            return null
         }
+        return null
     }
 
     @Override
@@ -276,47 +316,122 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
         // -- finally delete cleanup executor
         // start shutdown process
         reaper.shutdown()
-        await0(reaper, Duration.of('60min'))
+        final waitMsg = "[AWS BATCH] Waiting jobs reaper to complete (%d jobs to be terminated)"
+        final exitMsg = "[AWS BATCH] Exiting before jobs reaper thread pool complete -- Some jobs may not be terminated"
+        awaitCompletion(reaper, Duration.of('60min'), waitMsg, exitMsg)
+
     }
 
-    private await0(ExecutorService pool, Duration maxAwait) {
-        final max = maxAwait.millis
-        final t0 = System.currentTimeMillis()
-        // wait for ongoing file transfer to complete
-        int count=0
-        while( true ) {
-            final terminated = pool.awaitTermination(5, TimeUnit.SECONDS)
-            if( terminated )
-                break
-
-            final delta = System.currentTimeMillis()-t0
-            if( delta > max ) {
-                log.warn "[AWS BATCH] Exiting before jobs reaper thread pool complete -- Some jobs may not be terminated"
-                break
-            }
-
-            final p1 = ((ThreadPoolExecutor)pool)
-            final pending = p1.getTaskCount() - p1.getCompletedTaskCount()
-            // log to console every 10 minutes (120 * 5 sec)
-            if( count % 120 == 0 ) {
-                log.info1 "[AWS BATCH] Waiting jobs reaper to complete (${pending} jobs to be terminated)"
-            }
-            // log to the debug file every minute (12 * 5 sec)
-            else if( count % 12 == 0 ) {
-                log.debug "[AWS BATCH] Waiting jobs reaper to complete (${pending} jobs to be terminated)"
-            }
-            // increment the count
-            count++
+    protected void awaitCompletion(ThrottlingExecutor executor, Duration duration, String waitMsg, String exitMsg) {
+        try {
+            ThreadPoolHelper.await(executor, duration, waitMsg, exitMsg)
+        }
+        catch( TimeoutException e ) {
+            log.warn(e.message, e)
         }
     }
 
+    @Override
+    String getArrayIndexName() { 'AWS_BATCH_JOB_ARRAY_INDEX' }
+
+    @Override
+    int getArrayIndexStart() { 0 }
+
+    @Override
+    String getArrayTaskId(String jobId, int index) {
+        return "${jobId}:${index}"
+    }
+
+    @Override
+    String getArrayLaunchCommand(String taskDir) {
+        if( isFusionEnabled() || isWorkDirDefaultFS() )
+            return TaskArrayExecutor.super.getArrayLaunchCommand(taskDir)
+        else
+            return Escape.cli(getLaunchCommand(taskDir) as String[])
+    }
+
+    List<String> getLaunchCommand(String s3WorkDir) {
+        // the cmd list to launch it
+        final opts = getAwsOptions()
+        final cmd = opts.s5cmdPath
+            ? s5Cmd(s3WorkDir, opts)
+            : s3Cmd(s3WorkDir, opts)
+        return ['bash','-o','pipefail','-c', cmd.toString()]
+    }
+
+    static String s3Cmd(String workDir, AwsOptions opts) {
+        final cli = opts.getAwsCli()
+        final debug = opts.debug ? ' --debug' : ''
+        final sse = opts.storageEncryption ? " --sse $opts.storageEncryption" : ''
+        final kms = opts.storageKmsKeyId ? " --sse-kms-key-id $opts.storageKmsKeyId" : ''
+        final requesterPays = opts.requesterPays ? ' --request-payer requester' : ''
+        final aws = "$cli s3 cp --only-show-errors${sse}${kms}${debug}${requesterPays}"
+        
+        /*
+         * Enhanced signal handling for AWS Batch tasks to fix nested Nextflow execution issues.
+         * This implementation addresses the problem of proper signal forwarding when Nextflow
+         * processes are executed within AWS Batch containers.
+         * 
+         * References: https://github.com/nextflow-io/nextflow/pull/6414
+         * 
+         * Trap command breakdown:
+         * 
+         * 1. TERM signal trap: `trap \"[[ -n \\\$pid ]] && kill -TERM \\\$pid\" TERM`
+         *    - Captures SIGTERM signals sent to the parent shell process
+         *    - Conditionally forwards the TERM signal to the background bash process (stored in $pid)
+         *    - The `[[ -n \\\$pid ]]` test ensures we only attempt to kill if $pid is set and non-empty
+         *    - This prevents attempts to kill process ID 0 or empty values, which could cause unintended behavior
+         *    - Essential for proper cleanup when AWS Batch terminates jobs or when users cancel workflows
+         * 
+         * 2. EXIT signal trap: `trap \"{ ret=\$?; $aws ${TaskRun.CMD_LOG} ${workDir}/${TaskRun.CMD_LOG}||true; exit \$ret; }\" EXIT`
+         *    - Executes cleanup actions when the shell process exits (normal or abnormal termination)
+         *    - Captures the exit status ($?) of the last executed command before cleanup
+         *    - Uploads the command log file to S3 for debugging and monitoring purposes
+         *    - Uses `||true` to prevent the trap from failing if S3 upload fails (ensures exit code preservation)
+         *    - Preserves and returns the original exit status to maintain proper error propagation
+         * 
+         * 3. Background execution pattern: `bash > >(tee ${TaskRun.CMD_LOG}) 2>&1 & pid=\$!; wait \$pid`
+         *    - Runs the actual task command in background (&) to allow signal handling
+         *    - Redirects both stdout and stderr (2>&1) to process substitution for real-time logging
+         *    - Uses `tee` to simultaneously write logs to file and display to console
+         *    - Stores the background process ID in $pid for signal forwarding
+         *    - `wait $pid` ensures the parent shell waits for task completion and returns proper exit code
+         *    - This pattern allows the parent shell to remain responsive to signals while task executes
+         */
+        final cmd = "trap \"[[ -n \\\$pid ]] && kill -TERM \\\$pid\" TERM; trap \"{ ret=\$?; $aws ${TaskRun.CMD_LOG} ${workDir}/${TaskRun.CMD_LOG}||true; exit \$ret; }\" EXIT; $aws ${workDir}/${TaskRun.CMD_RUN} - | bash > >(tee ${TaskRun.CMD_LOG}) 2>&1 & pid=\$!; wait \$pid"
+        return cmd
+    }
+
+    static String s5Cmd(String workDir, AwsOptions opts) {
+        final cli = opts.getS5cmdPath()
+        final sse = opts.storageEncryption ? " --sse $opts.storageEncryption" : ''
+        final kms = opts.storageKmsKeyId ? " --sse-kms-key-id $opts.storageKmsKeyId" : ''
+        final requesterPays = opts.requesterPays ? ' --request-payer requester' : ''
+        
+        /*
+         * Enhanced signal handling for AWS Batch tasks using s5cmd (high-performance S3 client).
+         * This implementation mirrors the s3Cmd method but uses s5cmd instead of aws-cli for 
+         * improved S3 transfer performance.
+         * 
+         * References: https://github.com/nextflow-io/nextflow/pull/6414
+         * 
+         * The trap commands follow the same pattern as s3Cmd method:
+         * 
+         * 1. TERM signal trap: `trap \"[[ -n \\\$pid ]] && kill -TERM \\\$pid\" TERM`
+         *    - Ensures proper signal forwarding to background processes when SIGTERM is received
+         *    - Critical for handling AWS Batch job termination and user-initiated cancellations
+         * 
+         * 2. EXIT signal trap: `trap \"{ ret=\$?; $cli cp${sse}${kms}${requesterPays} ${TaskRun.CMD_LOG} ${workDir}/${TaskRun.CMD_LOG}||true; exit \$ret; }\" EXIT`
+         *    - Performs cleanup by uploading task logs using s5cmd instead of aws-cli
+         *    - Maintains exit status preservation for proper error reporting
+         * 
+         * 3. Background execution with s5cmd: `$cli cat ${workDir}/${TaskRun.CMD_RUN} | bash > >(tee ${TaskRun.CMD_LOG}) 2>&1 & pid=\$!; wait \$pid`
+         *    - Uses s5cmd to stream the task script directly into bash execution
+         *    - Maintains the same signal-responsive background execution pattern
+         *    - Provides real-time logging while allowing proper signal handling
+         */
+        final cmd = "trap \"[[ -n \\\$pid ]] && kill -TERM \\\$pid\" TERM; trap \"{ ret=\$?; $cli cp${sse}${kms}${requesterPays} ${TaskRun.CMD_LOG} ${workDir}/${TaskRun.CMD_LOG}||true; exit \$ret; }\" EXIT; $cli cat ${workDir}/${TaskRun.CMD_RUN} | bash > >(tee ${TaskRun.CMD_LOG}) 2>&1 & pid=\$!; wait \$pid"
+        return cmd
+    }
+
 }
-
-
-
-
-
-
-
-
-

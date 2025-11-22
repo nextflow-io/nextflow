@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,7 +38,7 @@ class ProgressRecord implements Cloneable {
     int running     // number of tasks whose execution started
     int succeeded   // number of tasks whose execution completed successfully
     int cached      // number of tasks whose execution
-    int failed
+    int failed      // number of failed tasks -- includes ignored and retried
     int aborted
     int stored
     int ignored
@@ -62,13 +61,15 @@ class ProgressRecord implements Cloneable {
         this.taskName = processName
     }
 
+    // failed tasks that were not retried are included in the total count
     int getTotalCount() {
-        pending+ submitted+ running+
-           succeeded+ failed+ cached+ stored
+        pending + submitted + running +
+           succeeded + failed - retries + cached + stored + aborted
     }
 
+    // only failed tasks that were ignored are included in the completed count
     int getCompletedCount() {
-        succeeded+ failed+ cached+ stored
+        succeeded + ignored + cached + stored
     }
 
     @Override

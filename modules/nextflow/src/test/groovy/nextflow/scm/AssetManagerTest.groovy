@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,10 +20,13 @@ import spock.lang.IgnoreIf
 
 import nextflow.exception.AbortOperationException
 import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.lib.Config
 import org.junit.Rule
 import spock.lang.Requires
 import spock.lang.Specification
 import test.TemporaryPath
+import java.nio.file.Path
+import java.nio.file.Paths
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -67,6 +69,18 @@ class AssetManagerTest extends Specification {
 
     def setup() {
         AssetManager.root = tempDir.root.toFile()
+    }
+
+    // Helper method to grab the default brasnch if set in ~/.gitconfig
+    String getLocalDefaultBranch() {
+        def defaultBranch = 'master'
+        def gitconfig = Paths.get(System.getProperty('user.home'),'.gitconfig');
+        if(gitconfig.exists()) {
+            def config = new Config()
+            config.fromText(gitconfig.text)
+            defaultBranch = config.getString('init', null, 'defaultBranch') ?: 'master'
+        }
+        return defaultBranch
     }
 
     def testList() {
@@ -127,6 +141,16 @@ class AssetManagerTest extends Specification {
 
         when:
         manager.resolveName('pipe/alpha/beta')
+        then:
+        thrown(AbortOperationException)
+
+        when:
+        result = manager.resolveName('../blast/script.nf')
+        then:
+        thrown(AbortOperationException)
+
+        when:
+        result = manager.resolveName('./blast/script.nf')
         then:
         thrown(AbortOperationException)
 
@@ -390,7 +414,7 @@ class AssetManagerTest extends Specification {
         then:
         holder.getMainScriptName() == 'main.nf'
         holder.getHomePage() == 'https://github.com/foo/bar'
-        holder.manifest.getDefaultBranch() == 'master'
+        holder.manifest.getDefaultBranch() == null
         holder.manifest.getDescription() == null
 
     }
@@ -435,7 +459,7 @@ class AssetManagerTest extends Specification {
         def init = Git.init()
         def repo = init.setDirectory( dir.toFile() ).call()
         repo.add().addFilepattern('.').call()
-        def commit = repo.commit().setAll(true).setMessage('First commit').call()
+        def commit = repo.commit().setSign(false).setAll(true).setMessage('First commit').call()
         repo.close()
 
         // append fake remote data
@@ -452,7 +476,7 @@ class AssetManagerTest extends Specification {
         then:
         script.localPath == dir
         script.commitId == commit.name()
-        script.revision == 'master'
+        script.revision == getLocalDefaultBranch()
         script.parent == dir
         script.text == "println 'Hello world'"
         script.repository == 'https://github.com/nextflow-io/nextflow'
@@ -469,7 +493,7 @@ class AssetManagerTest extends Specification {
         then:
         script.localPath == dir
         script.commitId == commit.name()
-        script.revision == 'master'
+        script.revision == getLocalDefaultBranch()
         script.parent == dir
         script.text == "this is foo content"
         script.repository == 'https://github.com/nextflow-io/nextflow'
@@ -521,23 +545,110 @@ class AssetManagerTest extends Specification {
 
     }
 
-    def 'should resolve project name' () {
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def 'should download branch specified'() {
+
         given:
-        def manager = new AssetManager()
+        def folder = tempDir.getRoot()
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def manager = new AssetManager().build('nextflow-io/nf-test-branch', [providers: [github: [auth: token]]])
+
+        when:
+        manager.download("dev")
+        then:
+        folder.resolve('nextflow-io/nf-test-branch/.git').isDirectory()
+        and:
+        folder.resolve('nextflow-io/nf-test-branch/workflow.nf').text == "println 'Hello'\n"
+
+        when:
+        manager.download()
+        then:
+        noExceptionThrown()
+    }
+
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def 'should fetch main script from branch specified'() {
+
+        given:
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def manager = new AssetManager().build('nextflow-io/nf-test-branch', [providers: [github: [auth: token]]])
 
         expect:
-        manager.resolveProjectName0(PATH,SERVER) == EXPECTED
-
-        where:
-        PATH          | SERVER                  | EXPECTED
-        'a/b/c'       | null                    | 'a/b/c'
-        'a/b/c'       | 'http://dot.com'        | 'a/b/c'
-        'a/b/c'       | 'http://dot.com/'       | 'a/b/c'
-        'a/b/c'       | 'http://dot.com/a'      | 'b/c'
-        'a/b/c'       | 'http://dot.com/a/'     | 'b/c'
+        manager.checkValidRemoteRepo('dev')
         and:
-        'paolo0758/nf-azure-repo'                    | 'https://dev.azure.com' | 'paolo0758/nf-azure-repo'
-        'paolo0758/nf-azure-repo/_git/nf-azure-repo' | 'https://dev.azure.com' | 'paolo0758/nf-azure-repo'
+        manager.getMainScriptName() == 'workflow.nf'
+
+    }
+
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def 'should download tag specified'() {
+
+        given:
+        def folder = tempDir.getRoot()
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def manager = new AssetManager().build('nextflow-io/nf-test-branch', [providers: [github: [auth: token]]])
+
+        when:
+        manager.download("v0.1")
+        then:
+        folder.resolve('nextflow-io/nf-test-branch/.git').isDirectory()
+        and:
+        folder.resolve('nextflow-io/nf-test-branch/workflow.nf').text == "println 'Hello'\n"
+
+        when:
+        manager.download()
+        then:
+        noExceptionThrown()
+    }
+
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def 'should identify default branch when downloading repo'() {
+
+        given:
+        def folder = tempDir.getRoot()
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def manager = new AssetManager().build('nextflow-io/socks', [providers: [github: [auth: token]]])
+
+        when:
+        // simulate calling `nextflow run nextflow-io/socks` without specifying a revision
+        manager.download()
+        manager.checkout(null)
+        then:
+        folder.resolve('nextflow-io/socks/.git').isDirectory()
+        manager.getCurrentRevision() == 'main'
+
+        when:
+        manager.download()
+        then:
+        noExceptionThrown()
+    }
+
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def 'can filter remote branches'() {
+        given:
+        def folder = tempDir.getRoot()
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
+        manager.download()
+        def branches = manager.getBranchList()
+
+        when:
+        def remote_head = branches.find { it.name == 'refs/remotes/origin/HEAD' }
+        then:
+        remote_head != null
+        !AssetManager.isRemoteBranch(remote_head)
+
+        when:
+        def remote_master = branches.find { it.name == 'refs/remotes/origin/master' }
+        then:
+        remote_master != null
+        AssetManager.isRemoteBranch(remote_master)
+
+        when:
+        def local_master = branches.find { it.name == 'refs/heads/master' }
+        then:
+        local_master != null
+        !AssetManager.isRemoteBranch(local_master)
     }
 
 }

@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,10 +19,14 @@ package nextflow.processor
 import java.nio.file.Files
 import java.nio.file.Paths
 
-import ch.grengine.Grengine
+import ch.artecat.grengine.Grengine
 import nextflow.Session
 import nextflow.ast.TaskCmdXform
-import nextflow.container.ContainerConfig
+import nextflow.container.DockerConfig
+import nextflow.container.PodmanConfig
+import nextflow.container.resolver.ContainerInfo
+import nextflow.container.resolver.ContainerMeta
+import nextflow.container.resolver.ContainerResolver
 import nextflow.executor.Executor
 import nextflow.file.FileHolder
 import nextflow.script.BodyDef
@@ -53,35 +56,6 @@ class TaskRunTest extends Specification {
 
     def setupSpec() {
         new Session()
-    }
-
-    def testGetInputsByType() {
-
-        setup:
-        def binding = new Binding('x': 1, 'y': 2)
-        def task = new TaskRun()
-        def list = []
-
-        task.setInput( new StdInParam(binding,list) )
-        task.setInput( new FileInParam(binding, list).bind(new TokenVar('x')), 'file1' )
-        task.setInput( new FileInParam(binding, list).bind(new TokenVar('y')), 'file2' )
-        task.setInput( new EnvInParam(binding, list).bind('z'), 'env' )
-
-
-        when:
-        def files = task.getInputsByType(FileInParam)
-        then:
-        files.size() == 2
-
-        files.keySet()[0] instanceof FileInParam
-        files.keySet()[1] instanceof FileInParam
-
-        files.keySet()[0].name == 'x'
-        files.keySet()[1].name == 'y'
-
-        files.values()[0] == 'file1'
-        files.values()[1] == 'file2'
-
     }
 
     def testGetOutputsByType() {
@@ -121,9 +95,11 @@ class TaskRunTest extends Specification {
 
         def x = new ValueInParam(binding, list).bind( new TokenVar('x') )
         def y = new FileInParam(binding, list).bind('y')
+        def y_files = [ new FileHolder(Paths.get('file_y_1')) ]
 
         task.setInput(x, 1)
-        task.setInput(y, [ new FileHolder(Paths.get('file_y_1')) ])
+        task.setInput(y, y_files)
+        task.inputFiles.addAll(y_files)
 
         expect:
         task.getInputFiles().size() == 1
@@ -141,9 +117,15 @@ class TaskRunTest extends Specification {
         def y = new FileInParam(binding, list).bind('y')
         def z = new FileInParam(binding, list).bind('z')
 
+        def y_files = [ new FileHolder(Paths.get('file_y_1')).withName('foo.txt') ]
+        def z_files = [ new FileHolder(Paths.get('file_y_2')).withName('bar.txt') ]
+
         task.setInput(x, 1)
-        task.setInput(y, [ new FileHolder(Paths.get('file_y_1')).withName('foo.txt') ])
-        task.setInput(z, [ new FileHolder(Paths.get('file_y_2')).withName('bar.txt') ])
+        task.setInput(y, y_files)
+        task.setInput(z, z_files)
+
+        task.inputFiles.addAll(y_files)
+        task.inputFiles.addAll(z_files)
 
         expect:
         task.getInputFilesMap() == ['foo.txt': Paths.get('file_y_1'), 'bar.txt': Paths.get('file_y_2')]
@@ -156,6 +138,7 @@ class TaskRunTest extends Specification {
         setup:
         def binding = new Binding()
         def task = new TaskRun()
+        task.processor = Mock(TaskProcessor)
         def list = []
 
         when:
@@ -282,7 +265,7 @@ class TaskRunTest extends Specification {
     def testIsSuccess() {
 
         when:
-        def task = new TaskRun(config: [validExitStatus: [0]])
+        def task = new TaskRun()
         then:
         task.isSuccess(0) == true
         task.isSuccess('0') == true
@@ -292,41 +275,6 @@ class TaskRunTest extends Specification {
         task.isSuccess('1') == false
         task.isSuccess(Integer.MAX_VALUE) == false
 
-
-        when:
-        task = new TaskRun(config: [validExitStatus: 0])
-        then:
-        task.isSuccess(0) == true
-        task.isSuccess('0') == true
-
-        task.isSuccess(1) == false
-        task.isSuccess(null) == false
-        task.isSuccess('1') == false
-        task.isSuccess(Integer.MAX_VALUE) == false
-
-        when:
-        task = new TaskRun(config: [validExitStatus: [0,1]])
-        then:
-        task.isSuccess(0) == true
-        task.isSuccess(1) == true
-        task.isSuccess(2) == false
-
-        when:
-        task = new TaskRun(config: [validExitStatus: [0]])
-        task.exitStatus = 0
-        then:
-        task.isSuccess() == true
-
-        when:
-        task = new TaskRun(config: [validExitStatus: [0]])
-        task.exitStatus = 1
-        then:
-        task.isSuccess() == false
-
-        when:
-        task = new TaskRun(config: [validExitStatus: [0]])
-        then:
-        task.isSuccess() == false
     }
 
     def 'should return the specified container name' () {
@@ -337,6 +285,7 @@ class TaskRunTest extends Specification {
         when:
         task.config = [container:'foo/bar']
         task.processor.getSession() >> sess
+        task.processor.getExecutor() >> Mock(Executor) { containerConfigEngine()>>null }
         then:
         task.getContainer() == expected
 
@@ -354,10 +303,8 @@ class TaskRunTest extends Specification {
         task.processor = Mock(TaskProcessor)
         task.config = new TaskConfig( [container: 'busybox'] )
         task.processor.getSession() >> new Session([(engine): config])
-
-        expect:
+        task.processor.getExecutor() >> Mock(Executor) { containerConfigEngine()>>null }
         task.container == contnr
-        task.containerConfig == config as ContainerConfig
         task.containerConfig.enabled
         task.containerConfig.engine == engine
 
@@ -366,21 +313,22 @@ class TaskRunTest extends Specification {
         'docker'    | 'busybox'                 | [enabled: true, x:'alpha', y: 'beta']
         'docker'    | 'd.reg/busybox'           | [enabled: true, x:'alpha', y: 'beta', registry: 'd.reg']
         'udocker'   | 'busybox:latest'          | [enabled: true, x:'alpha', y: 'beta']
+        'sarus'     | 'busybox'                 | [enabled: true, x:'delta', y: 'gamma']
         'shifter'   | 'docker:busybox:latest'   | [enabled: true, x:'delta', y: 'gamma']
     }
 
     def 'should return container image name' () {
-
         given:
         def task = Spy(TaskRun)
         task.processor = Mock(TaskProcessor)
-
-        when:
+        and:
         task.script = 'bwa-mem --this'
         task.config = new TaskConfig([container: CONTAINER])
+
+        when:
         def image = task.getContainer()
         then:
-        task.getContainerConfig() >> [docker:[enabled: true]]
+        task.getContainerConfig() >> new DockerConfig([:])
         image == EXPECTED
 
         where:
@@ -391,6 +339,18 @@ class TaskRunTest extends Specification {
 
     }
 
+    def 'should return container fingerprint' () {
+        given:
+        def HASH = '12345'
+        def task = Spy(TaskRun)
+
+        when:
+        def result = task.getContainerFingerprint()
+        then:
+        task.containerInfo() >> new ContainerInfo('a','b',HASH)
+        and:
+        result == '12345'
+    }
 
 
     def 'should render template and set task attributes'() {
@@ -425,7 +385,6 @@ class TaskRunTest extends Specification {
     }
 
     def 'should resolve the task body script' () {
-
         given:
         def task = new TaskRun()
         task.processor = [:] as TaskProcessor
@@ -435,7 +394,7 @@ class TaskRunTest extends Specification {
          * plain task script
          */
         when:
-        task.resolve(new BodyDef({-> 'Hello'}, 'Hello', 'script'))
+        task.resolveBody(new BodyDef({-> 'Hello'}, 'Hello', 'script'))
         then:
         task.script == 'Hello'
         task.source == 'Hello'
@@ -445,7 +404,7 @@ class TaskRunTest extends Specification {
          */
         when:
         task.context = new TaskContext(Mock(Script),[x: 'world'],'foo')
-        task.resolve(new BodyDef({-> "Hello ${x}"}, 'Hello ${x}', 'script'))
+        task.resolveBody(new BodyDef({-> "Hello ${x}"}, 'Hello ${x}', 'script'))
         then:
         task.script == 'Hello world'
         task.source == 'Hello ${x}'
@@ -471,7 +430,7 @@ class TaskRunTest extends Specification {
          */
         when:
         task.context = new TaskContext(Mock(Script),VARS,'foo')
-        task.resolve(new BodyDef(body, 'cat ${one}\nhead ${many}', 'script'))
+        task.resolveBody(new BodyDef(body, 'cat ${one}\nhead ${many}', 'script'))
         then:
         task.script == '''
                     cat a\\ b.txt
@@ -504,7 +463,7 @@ class TaskRunTest extends Specification {
         when:
         task.context = new TaskContext(script,local,'foo')
         task.config = new TaskConfig().setContext(task.context)
-        task.resolve(new BodyDef({-> '$BASH_VAR !{nxf_var} - !{params.var_no}'}, '<the source script>', 'shell'))  // <-- note: 'shell' type
+        task.resolveBody(new BodyDef({-> '$BASH_VAR !{nxf_var} - !{params.var_no}'}, '<the source script>', 'shell'))  // <-- note: 'shell' type
         then:
         task.script == '$BASH_VAR YES - NO'
         task.source == '<the source script>'
@@ -516,11 +475,11 @@ class TaskRunTest extends Specification {
         task.context = new TaskContext(Mock(Script),[nxf_var: '>interpolated value<'],'foo')
         task.config = new TaskConfig().setContext(task.context)
         task.config.placeholder = '#' as char
-        task.resolve(new BodyDef({-> '$BASH_VAR #{nxf_var}'}, '$BASH_VAR #{nxf_var}', 'shell'))  // <-- note: 'shell' type
+        task.resolveBody(new BodyDef({-> '$BASH_VAR #{nxf_var}'}, '$BASH_VAR #{nxf_var}', 'shell'))  // <-- note: 'shell' type
         then:
         task.script == '$BASH_VAR >interpolated value<'
         task.source == '$BASH_VAR #{nxf_var}'
-
+        task.traceScript == '$BASH_VAR >interpolated value<'
     }
 
     def 'should resolve a task template file' () {
@@ -540,12 +499,12 @@ class TaskRunTest extends Specification {
         task.config = new TaskConfig().setContext(task.context)
 
         when:
-        task.resolve( new BodyDef({-> template(my_file)}, 'template($file)', 'script'))
+        task.resolveBody( new BodyDef({-> template(my_file)}, 'template($file)', 'script'))
         then:
         task.script == 'echo Ciao mondo'
         task.source == 'echo ${say_hello}'
         task.template == file
-
+        task.traceScript == 'template($file)'
     }
 
     def 'should resolve a shell template file, ignore BASH variables and parse !{xxx} ones' () {
@@ -565,12 +524,12 @@ class TaskRunTest extends Specification {
         task.config = new TaskConfig().setContext(task.context)
 
         when:
-        task.resolve( new BodyDef({-> template(my_file)}, 'template($file)', 'shell'))
+        task.resolveBody( new BodyDef({-> template(my_file)}, 'template($file)', 'shell'))
         then:
         task.script == 'echo $HOME ~ Foo bar'
         task.source == 'echo $HOME ~ !{user_name}'
         task.template == file
-
+        task.traceScript == 'template($file)'
     }
 
     def 'should resolve a shell template file, ignore BASH variables and parse #{xxx} ones' () {
@@ -591,12 +550,12 @@ class TaskRunTest extends Specification {
         task.config.placeholder = '#' as char
 
         when:
-        task.resolve( new BodyDef({-> template(my_file)}, 'template($file)', 'shell'))
+        task.resolveBody( new BodyDef({-> template(my_file)}, 'template($file)', 'shell'))
         then:
         task.script == 'echo $HOME ~ Foo bar'
         task.source == 'echo $HOME ~ #{user_name}'
         task.template == file
-
+        task.traceScript == 'template($file)'
     }
 
     def 'should check container native flag' () {
@@ -607,64 +566,53 @@ class TaskRunTest extends Specification {
         task.processor = Mock(TaskProcessor)
 
         when:
-        def result = task.isContainerNative()
+        def isNative = task.isContainerNative()
         then:
         1 * task.processor.getExecutor() >> executor
-        result == false
+        !isNative
 
         when:
-        result = task.isContainerNative()
+        isNative = task.isContainerNative()
         then:
         1 * task.processor.getExecutor() >> executor
         1 * executor.isContainerNative() >> true
-        result == true
+        isNative
     }
 
     def 'should check container enabled flag' () {
 
         given:
-        def task = Spy(TaskRun);
+        def task = Spy(TaskRun)
 
         when:
         def enabled = task.isContainerEnabled()
         then:
-        1 * task.getConfig() >> new TaskConfig()
+        1 * task.getContainerConfig() >> new DockerConfig([enabled: false])
+        0 * task.getContainer() >> null
         !enabled
 
         when:
         enabled = task.isContainerEnabled()
         then:
         // NO container image is specified => NOT enable even if `enabled` flag is set to true
-        _ * task.getConfig() >> new TaskConfig()
-        _ * task.getContainerConfig() >> new ContainerConfig([enabled: true])
-        _ * task.isContainerNative() >> false
+        _ * task.getContainer() >> null
+        _ * task.getContainerConfig() >> new DockerConfig([enabled: true])
         !enabled
 
         when:
         enabled = task.isContainerEnabled()
         then:
         // container is specified, not enabled
-        _ * task.getConfig() >> new TaskConfig(container:'foo/bar')
-        _ * task.getContainerConfig() >> new ContainerConfig([:])
-        _ * task.isContainerNative() >> false
+        _ * task.getContainer() >> 'foo/bar'
+        _ * task.getContainerConfig() >> new DockerConfig([:])
         !enabled
 
         when:
         enabled = task.isContainerEnabled()
         then:
-        // container is specified AND native executor (eg kubernetes) => enabled
-        _ * task.getConfig() >> new TaskConfig(container:'foo/bar')
-        _ * task.getContainerConfig() >> new ContainerConfig([:])
-        _ * task.isContainerNative() >> true
-        enabled
-
-        when:
-        enabled = task.isContainerEnabled()
-        then:
         // container is specified AND enabled => enabled
-        _ * task.getConfig() >> new TaskConfig(container:'foo/bar')
-        _ * task.getContainerConfig() >> new ContainerConfig([enabled: true])
-        _ * task.isContainerNative() >> false
+        _ * task.getContainer() >> 'foo/bar'
+        _ * task.getContainerConfig() >> new DockerConfig([enabled: true])
         enabled
 
     }
@@ -673,7 +621,8 @@ class TaskRunTest extends Specification {
 
         given:
         def EXPECT = [FOO: 'hola', BAR: 'mundo', OMEGA: 'ooo',_OPTS:'any']
-        def task = Spy(TaskRun);
+        def task = Spy(TaskRun)
+        task.inputEnv = [BAR: 'mundo', OMEGA: 'ooo', _OPTS: 'any']
         def proc = Mock(TaskProcessor)
 
         when:
@@ -681,7 +630,6 @@ class TaskRunTest extends Specification {
         then:
         1 * task.getProcessor() >> proc
         1 * proc.getProcessEnvironment() >> [FOO: 'hola', BAR: 'world']
-        1 * task.getInputEnvironment() >> [BAR: 'mundo', OMEGA: 'ooo', _OPTS: 'any']
         env ==  EXPECT   // note: `BAR` in the process config should be overridden by `BAR` in the task input
         str(env) == str(EXPECT)
     }
@@ -724,6 +672,7 @@ class TaskRunTest extends Specification {
         def env1 = new EnvOutParam(new Binding(),[]).bind(new TokenVar('FOO'))
         def env2 = new EnvOutParam(new Binding(),[]).bind(new TokenVar('BAR'))
         def task = new TaskRun()
+        task.processor = Mock(TaskProcessor)
         task.outputs.put(env1, null)
         task.outputs.put(env2, null)
 
@@ -784,7 +733,7 @@ class TaskRunTest extends Specification {
         task.context = GroovyMock(TaskContext)
 
         when:
-        task.resolve(new BodyDef({-> "Hello ${x}"}, 'Hello ${x}', 'script'))
+        task.resolveBody(new BodyDef({-> "Hello ${x}"}, 'Hello ${x}', 'script'))
         and:
         def vars = task.getVariableNames()
         then:
@@ -803,7 +752,7 @@ class TaskRunTest extends Specification {
         task.config = new TaskConfig()
 
         when:
-        task.resolve(new BodyDef({-> 'Hello !{foo} !{bar} !{input_x}'}, 'Hello..', 'shell'))
+        task.resolveBody(new BodyDef({-> 'Hello !{foo} !{bar} !{input_x}'}, 'Hello..', 'shell'))
         and:
         def vars = task.getVariableNames()
         then:
@@ -827,7 +776,7 @@ class TaskRunTest extends Specification {
         task.config = new TaskConfig()
 
         when:
-        task.resolve(new BodyDef({-> template }, 'Hello..', 'script'))
+        task.resolveBody(new BodyDef({-> template }, 'Hello..', 'script'))
         and:
         def vars = task.getVariableNames()
         then:
@@ -856,9 +805,159 @@ class TaskRunTest extends Specification {
          * plain task script
          */
         when:
-        task.resolve(dryRun)
+        task.resolveStub(dryRun)
         then:
         task.script == 'echo Hello world'
         task.source == 'command source'
+    }
+
+    def 'should get container config' () {
+        given:
+        def session = Mock(Session)
+        def executor = Mock(Executor) { getSession()>>session }
+        def processor = Mock(TaskProcessor) { getExecutor()>>executor; getSession()>>session }
+        def task = Spy(TaskRun) { getProcessor()>>processor }
+
+        when:
+        def config = task.getContainerConfig()
+        then:
+        1 * executor.containerConfigEngine() >> null
+        1 * executor.isContainerNative() >> false
+        and:
+        session.getContainerConfig(null) >> null
+        and:
+        config == new DockerConfig([:])
+
+        when:
+        config = task.getContainerConfig()
+        then:
+        1 * executor.containerConfigEngine() >> null
+        1 * executor.isContainerNative() >> false
+        and:
+        session.getContainerConfig(null) >> new PodmanConfig(registry:'xyz')
+        and:
+        config == new PodmanConfig(registry:'xyz')
+    }
+
+    def 'should get container info' () {
+        given:
+        def session = Mock(Session)
+        def executor = Mock(Executor) { getSession()>>session }
+        def processor = Mock(TaskProcessor) { getExecutor()>>executor; getSession()>>session }
+        and:
+        def config = new TaskConfig([container:'ubuntu'])
+        def task = new TaskRun(config: config, processor: processor)
+        when:
+        def info = task.containerInfo()
+        then:
+        info == new ContainerInfo('ubuntu','ubuntu','ubuntu')
+    }
+
+    def 'should not be an array' () {
+        given:
+        def task = new TaskRun()
+        expect:
+        !task.isArray()
+    }
+
+    def 'should resolve task body' () {
+        given:
+        def task = Spy(TaskRun)
+        task.processor = Mock(TaskProcessor) {
+            getSession()>>Mock(Session) { getStubRun() >> false}
+        }
+        and:
+        def body = Mock(BodyDef)
+
+        when:
+        task.resolve(body)
+        then:
+        1 * task.resolveBody(body) >> null
+        0 * task.resolveStub(_) >> null
+    }
+
+    def 'should resolve task body when no stub' () {
+        given:
+        def task = Spy(TaskRun)
+        task.processor = Mock(TaskProcessor) {
+            getSession()>>Mock(Session) { getStubRun() >> true}
+        }
+        task.config = Mock(TaskConfig) { getStubBlock()>> null }
+        and:
+        def body = Mock(BodyDef)
+
+        when:
+        task.resolve(body)
+        then:
+        1 * task.resolveBody(body) >> null
+        0 * task.resolveStub(_) >> null
+    }
+
+    def 'should resolve task stub' () {
+        given:
+        def body = Mock(BodyDef)
+        def stub = Mock(TaskClosure)
+        and:
+        def task = Spy(TaskRun)
+        task.config = Mock(TaskConfig) { getStubBlock()>>stub }
+        task.processor = Mock(TaskProcessor) {
+            getSession()>>Mock(Session) { getStubRun() >> true}
+        }
+
+        when:
+        task.resolve(body)
+        then:
+        1 * task.resolveStub(stub) >> null
+        0 * task.resolveBody(_) >> null
+    }
+
+    def 'should get container info & meta' () {
+        given:
+        def image = 'my/container:latest'
+        def meta = new ContainerMeta(sourceImage: image, targetImage: image)
+        def info = new ContainerInfo(image,image,image)
+        def resolver = Mock(ContainerResolver)
+        def config = Mock(TaskConfig) { getContainer() >> image }
+        def task = Spy(new TaskRun(config:config))
+        task.containerResolver() >> resolver
+
+        when:
+        def result1 = task.containerInfo()
+        then:
+        resolver.resolveImage(task,image) >> info
+        and:
+        result1 == info
+
+        when:
+        def result2 = task.containerMeta()
+        then:
+        resolver.getContainerMeta(image) >> meta
+        and:
+        result2 == meta
+    }
+    
+    def 'should resolve task stub from template' () {
+
+        given:
+        def task = new TaskRun()
+        task.processor = [:] as TaskProcessor
+        task.processor.grengine = new Grengine()
+
+        // create a file template
+        def file = TestHelper.createInMemTempFile('template.sh')
+        file.text = 'echo ${say_hello}'
+        // create the task context with two variables
+        // - my_file
+        // - say_hello
+        task.context = new TaskContext(Mock(Script),[say_hello: 'Ciao mondo', my_file: file],'foo')
+        task.config = new TaskConfig().setContext(task.context)
+
+        when:
+        task.resolveStub(new TaskClosure({-> template(my_file)}, 'template($file)'))
+        then:
+        task.script == 'echo Ciao mondo'
+        task.source == 'echo ${say_hello}'
+        task.template == file
+        task.traceScript == 'echo Ciao mondo'
     }
 }

@@ -12,7 +12,7 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
  */
 class OpCallTest extends Specification {
 
-    static class MyExt extends OperatorEx{
+    static class MyExt extends OperatorImpl{
 
         DataflowWriteChannel foo1(DataflowReadChannel source) {
             new DataflowQueue() << 1 << 2
@@ -191,7 +191,7 @@ class OpCallTest extends Specification {
     def 'should get param type' () {
 
         given:
-        def ext = new OperatorEx()
+        def ext = new OperatorImpl()
         def op = new OpCall(ext, Mock(DataflowReadChannel), 'foo', Object[])
 
         expect:
@@ -207,7 +207,7 @@ class OpCallTest extends Specification {
     def 'should get return type' () {
 
         given:
-        def ext = new OperatorEx()
+        def ext = new OperatorImpl()
         def op = new OpCall(ext, Mock(DataflowReadChannel), 'foo', Object[])
 
         expect:

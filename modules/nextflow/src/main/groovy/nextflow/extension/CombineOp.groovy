@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +28,7 @@ import nextflow.Channel
 import static nextflow.extension.DataflowHelper.addToList
 import static nextflow.extension.DataflowHelper.makeKey
 /**
- * Implements the {@link OperatorEx#spread(groovyx.gpars.dataflow.DataflowReadChannel, java.lang.Object)} operator
+ * Implements the {@link OperatorImpl#spread(groovyx.gpars.dataflow.DataflowReadChannel, java.lang.Object)} operator
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -76,7 +75,7 @@ class CombineOp {
     }
 
     CombineOp setPivot( pivot ) {
-        this.pivot = pivot instanceof List ? (List)pivot : [pivot]
+        this.pivot = (List<Integer>)(pivot instanceof List<Integer> ? pivot : [pivot])
         return this
     }
 

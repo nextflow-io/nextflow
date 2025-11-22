@@ -1,19 +1,28 @@
 /*
- * Copyright (c) 2019, Seqera Labs.
+ * Copyright 2013-2024, Seqera Labs
  *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This Source Code Form is "Incompatible With Secondary Licenses", as
- * defined by the Mozilla Public License, v. 2.0.
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
  */
 
 package io.seqera.tower.plugin
 
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 
@@ -24,18 +33,25 @@ import groovy.transform.CompileStatic
 import groovy.transform.ToString
 import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
+import io.seqera.http.HxClient
+import io.seqera.util.trace.TraceUtils
+import nextflow.BuildInfo
 import nextflow.Session
+import nextflow.container.resolver.ContainerMeta
 import nextflow.exception.AbortOperationException
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskId
 import nextflow.processor.TaskProcessor
 import nextflow.trace.ResourcesAggregator
-import nextflow.trace.TraceObserver
+import nextflow.trace.TraceObserverV2
 import nextflow.trace.TraceRecord
+import nextflow.trace.event.FilePublishEvent
+import nextflow.trace.event.TaskEvent
 import nextflow.util.Duration
 import nextflow.util.LoggerHelper
 import nextflow.util.ProcessHelper
-import nextflow.util.SimpleHttpClient
+import nextflow.util.TestOnly
+import nextflow.util.Threads
 /**
  * Send out messages via HTTP to a configured URL on different workflow
  * execution events.
@@ -44,9 +60,9 @@ import nextflow.util.SimpleHttpClient
  */
 @Slf4j
 @CompileStatic
-class TowerClient implements TraceObserver {
+class TowerClient implements TraceObserverV2 {
 
-    static final public String DEF_ENDPOINT_URL = 'https://api.tower.nf'
+    static final public String DEF_ENDPOINT_URL = 'https://api.cloud.seqera.io'
 
     static private final int TASKS_PER_REQUEST = 100
 
@@ -69,7 +85,6 @@ class TowerClient implements TraceObserver {
         TraceRecord trace
         boolean completed
     }
-    
 
     private Session session
 
@@ -83,10 +98,7 @@ class TowerClient implements TraceObserver {
      */
     private String runId
 
-    /**
-     * Simple http client object that will send out messages
-     */
-    protected SimpleHttpClient httpClient
+    private HxClient httpClient
 
     private JsonGenerator generator
 
@@ -110,8 +122,6 @@ class TowerClient implements TraceObserver {
 
     private LinkedHashSet<String> processNames = new LinkedHashSet<>(20)
 
-    private boolean terminated
-
     private Map<String,Integer> schema = Collections.emptyMap()
 
     private int maxRetries = 5
@@ -122,20 +132,25 @@ class TowerClient implements TraceObserver {
 
     private boolean towerLaunch
 
-    private String refreshToken
+    private String accessToken
 
-    private String workspaceId 
+    private String workspaceId
 
-    /**
-     * Constructor that consumes a URL and creates
-     * a basic HTTP client.
-     * @param endpoint The target address for sending messages to
-     */
-    TowerClient(Session session, String endpoint) {
+    private TowerReports reports
+
+    private TowerRetryPolicy retryPolicy
+
+    private Map<String,Boolean> allContainers = new ConcurrentHashMap<>()
+
+    TowerClient(Session session, TowerConfig config) {
         this.session = session
-        this.endpoint = checkUrl(endpoint)
+        this.endpoint = checkUrl(config.endpoint)
+        this.accessToken = config.accessToken
+        this.workspaceId = config.workspaceId
+        this.retryPolicy = config.retryPolicy
         this.schema = loadSchema()
         this.generator = TowerJsonGenerator.create(schema)
+        this.reports = new TowerReports(session)
     }
 
     TowerClient withEnvironment(Map env) {
@@ -143,13 +158,12 @@ class TowerClient implements TraceObserver {
         return this
     }
 
-    /**
-     * only for testing purpose -- do not use
-     */
+    @TestOnly
     protected TowerClient() {
         this.generator = TowerJsonGenerator.create(Collections.EMPTY_MAP)
     }
 
+    @Override
     boolean enableMetrics() { true }
 
     String getEndpoint() { endpoint }
@@ -182,10 +196,6 @@ class TowerClient implements TraceObserver {
         this.backOffDelay = value
     }
 
-    void setWorkspaceId( String workspaceId ) {
-        this.workspaceId = workspaceId
-    }
-
     String getWorkspaceId() { workspaceId }
 
     /**
@@ -197,13 +207,17 @@ class TowerClient implements TraceObserver {
      * @param url String with target URL
      * @return The requested url or the default url, if invalid
      */
-    protected String checkUrl(String url){
+    protected String checkUrl(String url) {
+        // report a warning for legacy endpoint
+        if( url.contains('https://api.tower.nf') ) {
+            log.warn "The endpoint `https://api.tower.nf` is deprecated - Please use `https://api.cloud.seqera.io` instead"
+        }
         if( url =~ "^(https|http)://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]" ) {
             while( url.endsWith('/') )
                 url = url[0..-2]
             return url
         }
-        throw new IllegalArgumentException("Only http or https are supported protocols -- The given URL was: ${url}")
+        throw new IllegalArgumentException("Only http and https are supported -- The given URL was: ${url}")
     }
 
     protected String getHostUrl(String endpoint) {
@@ -254,15 +268,13 @@ class TowerClient implements TraceObserver {
      */
     @Override
     void onFlowCreate(Session session) {
-        log.debug "Creating Tower observer -- endpoint=$endpoint; requestInterval=$requestInterval; aliveInterval=$aliveInterval; maxRetries=$maxRetries; backOffBase=$backOffBase; backOffDelay=$backOffDelay"
-        
+        log.debug "Creating Seqera Platform observer -- endpoint=$endpoint; requestInterval=$requestInterval; aliveInterval=$aliveInterval; maxRetries=$maxRetries; backOffBase=$backOffBase; backOffDelay=$backOffDelay"
+
         this.session = session
         this.aggregator = new ResourcesAggregator(session)
         this.runName = session.getRunName()
         this.runId = session.getUniqueId()
-        this.httpClient = new SimpleHttpClient()
-        // set the auth token
-        setAuthToken( httpClient, getAccessToken() )
+        this.httpClient = newHttpClient()
 
         // send hello to verify auth
         final req = makeCreateReq(session)
@@ -273,21 +285,42 @@ class TowerClient implements TraceObserver {
                 - endpoint    : $urlTraceCreate
                 - status code : $resp.code
                 - response msg: $resp.cause
-                """.stripIndent()
+                """.stripIndent(true)
             throw new AbortOperationException(resp.message)
         }
         final ret = parseTowerResponse(resp)
         this.workflowId = ret.workflowId
         if( !workflowId )
-            throw new AbortOperationException("Invalid Tower response - Missing workflow Id")
+            throw new AbortOperationException("Invalid Seqera Platform API response - Missing workflow Id")
         if( ret.message )
             log.warn(ret.message.toString())
+
+        // Prepare to collect report paths if tower configuration has a 'reports' section
+        reports.flowCreate(workflowId)
     }
 
-    protected void setAuthToken(SimpleHttpClient client, String token) {
+    protected HxClient newHttpClient() {
+        final builder = HxClient.newBuilder()
+        // auth settings
+        setupClientAuth(builder, getAccessToken())
+        // retry settings
+        builder
+            .retryConfig(this.retryPolicy)
+            .followRedirects(HttpClient.Redirect.NORMAL)
+            .version(HttpClient.Version.HTTP_1_1)
+            .connectTimeout(java.time.Duration.ofSeconds(60))
+            .build()
+    }
+
+    protected void setupClientAuth(HxClient.Builder config, String token) {
         // check for plain jwt token
+        final refreshToken = env.get('TOWER_REFRESH_TOKEN')
+        final refreshUrl = refreshToken ? "$endpoint/oauth/access_token" : null
         if( token.count('.')==2 ) {
-            client.setBearerToken(token)
+            config.bearerToken(token)
+            config.refreshToken(refreshToken)
+            config.refreshTokenUrl(refreshUrl)
+            config.refreshCookiePolicy(CookiePolicy.ACCEPT_ALL)
             return
         }
 
@@ -297,7 +330,11 @@ class TowerClient implements TraceObserver {
             final p = plain.indexOf('.')
             if( p!=-1 && new JsonSlurper().parseText(  plain.substring(0, p) )  ) {
                 // ok this is bearer token
-                client.setBearerToken(token)
+                config.bearerToken(token)
+                // setup the refresh
+                config.refreshToken(refreshToken)
+                config.refreshTokenUrl(refreshUrl)
+                config.refreshCookiePolicy(CookiePolicy.ACCEPT_ALL)
                 return
             }
         }
@@ -306,7 +343,7 @@ class TowerClient implements TraceObserver {
         }
 
         // fallback on simple token
-        client.setBasicToken(TOKEN_PREFIX + token)
+        config.basicAuth(TOKEN_PREFIX + token)
     }
 
     protected Map makeCreateReq(Session session) {
@@ -322,7 +359,7 @@ class TowerClient implements TraceObserver {
     }
 
     @Override
-    void onProcessCreate(TaskProcessor process){
+    void onProcessCreate(TaskProcessor process) {
         log.trace "Creating process ${process.name}"
         if( !processNames.add(process.name) )
             throw new IllegalStateException("Process name `${process.name}` already used")
@@ -331,9 +368,6 @@ class TowerClient implements TraceObserver {
     @Override
     void onFlowBegin() {
         // configure error retry
-        httpClient.maxRetries = maxRetries
-        httpClient.backOffBase = backOffBase
-        httpClient.backOffDelay = backOffDelay
 
         final req = makeBeginReq(session)
         final resp = sendHttpMessage(urlTraceBegin, req, 'PUT')
@@ -343,25 +377,21 @@ class TowerClient implements TraceObserver {
                 - endpoint    : $urlTraceBegin
                 - status code : $resp.code
                 - response msg: $resp.cause
-                """.stripIndent()
+                """.stripIndent(true)
             throw new AbortOperationException(resp.message)
         }
 
         final payload = parseTowerResponse(resp)
         this.watchUrl = payload.watchUrl
-        this.sender = Thread.start('Tower-thread', this.&sendTasks0)
-        final msg = "Monitor the execution with Nextflow Tower using this url ${watchUrl}"
+        this.sender = Threads.start('Tower-thread', this.&sendTasks0)
+        final msg = "Monitor the execution with Seqera Platform using this URL: ${watchUrl}"
         log.info(LoggerHelper.STICKY, msg)
     }
 
     String getAccessToken() {
-        // access token
-        def token = session.config.navigate('tower.accessToken')
-        if( !token )
-            token = env.get('TOWER_ACCESS_TOKEN')
-        if( !token )
-            throw new AbortOperationException("Missing Nextflow Tower access token -- Make sure there's a variable TOWER_ACCESS_TOKEN in your environment")
-        return token
+        if( !accessToken )
+            throw new AbortOperationException("Missing Seqera Platform access token -- Make sure there's a variable TOWER_ACCESS_TOKEN in your environment")
+        return accessToken
     }
 
     /**
@@ -369,20 +399,27 @@ class TowerClient implements TraceObserver {
      */
     @Override
     void onFlowComplete() {
-        // submit the record
-        events << new ProcessEvent(completed: true)
-        // wait the submission of pending events
-        sender.join()
+        // publish runtime reports
+        reports.publishRuntimeReports()
+        // submit the completion record
+        if( sender ) {
+            events << new ProcessEvent(completed: true)
+            // wait the submission of pending events
+            sender.join()
+        }
+        // wait and flush reports content
+        reports.flowComplete()
         // notify the workflow completion
-        terminated = true
-        final req = makeCompleteReq(session)
-        final resp = sendHttpMessage(urlTraceComplete, req, 'PUT')
-        logHttpResponse(urlTraceComplete, resp)
+        if( workflowId ) {
+            final req = makeCompleteReq(session)
+            final resp = sendHttpMessage(urlTraceComplete, req, 'PUT')
+            logHttpResponse(urlTraceComplete, resp)
+        }
     }
 
     @Override
-    void onProcessPending(TaskHandler handler, TraceRecord trace) {
-        events << new ProcessEvent(trace: trace)
+    void onTaskPending(TaskEvent event) {
+        events << new ProcessEvent(trace: event.trace)
     }
 
     /**
@@ -392,8 +429,8 @@ class TowerClient implements TraceObserver {
      * @param trace A {@link TraceRecord} object holding the task metadata and runtime info
      */
     @Override
-    void onProcessSubmit(TaskHandler handler, TraceRecord trace) {
-        events << new ProcessEvent(trace: trace)
+    void onTaskSubmit(TaskEvent event) {
+        events << new ProcessEvent(trace: event.trace)
     }
 
     /**
@@ -403,8 +440,8 @@ class TowerClient implements TraceObserver {
      * @param trace A {@link TraceRecord} object holding the task metadata and runtime info
      */
     @Override
-    void onProcessStart(TaskHandler handler, TraceRecord trace) {
-        events << new ProcessEvent(trace: trace)
+    void onTaskStart(TaskEvent event) {
+        events << new ProcessEvent(trace: event.trace)
     }
 
     /**
@@ -414,26 +451,26 @@ class TowerClient implements TraceObserver {
      * @param trace A {@link TraceRecord} object holding the task metadata and runtime info
      */
     @Override
-    void onProcessComplete(TaskHandler handler, TraceRecord trace) {
-        events << new ProcessEvent(trace: trace)
+    void onTaskComplete(TaskEvent event) {
+        events << new ProcessEvent(trace: event.trace)
 
         synchronized (this) {
-            aggregator.aggregate(trace)
+            aggregator.aggregate(event.trace)
         }
     }
 
     @Override
-    void onProcessCached(TaskHandler handler, TraceRecord trace) {
+    void onTaskCached(TaskEvent event) {
         // event was triggered by a stored task, ignore it
-        if( trace == null )
+        if( !event.trace )
             return
 
         // add the cached task event
-        events << new ProcessEvent(trace: trace)
+        events << new ProcessEvent(trace: event.trace)
 
         // remove the record from the current records
         synchronized (this) {
-            aggregator.aggregate(trace)
+            aggregator.aggregate(event.trace)
         }
     }
 
@@ -444,39 +481,18 @@ class TowerClient implements TraceObserver {
      * @param trace A {@link TraceRecord} object holding the task metadata and runtime info (it may be null)
      */
     @Override
-    void onFlowError(TaskHandler handler, TraceRecord trace) {
-        events << new ProcessEvent(trace: trace)
+    void onFlowError(TaskEvent event) {
+        events << new ProcessEvent(trace: event.trace)
     }
 
-    protected void refreshToken(String refresh) {
-        log.debug "Token refresh request >> $refresh"
-        final url = "$endpoint/oauth/access_token"
-        httpClient.sendHttpMessage(
-                url,
-                method: 'POST',
-                contentType: "application/x-www-form-urlencoded",
-                body: "grant_type=refresh_token&refresh_token=${URLEncoder.encode(refresh, 'UTF-8')}" )
-
-        final authCookie = httpClient.getCookie('JWT')
-        final refreshCookie = httpClient.getCookie('JWT_REFRESH_TOKEN')
-
-        // set the new bearer token
-        if( authCookie?.value ) {
-            log.trace "Updating http client bearer token=$authCookie.value"
-            httpClient.setBearerToken(authCookie.value)
-        }
-        else {
-            log.warn "Missing JWT cookie from refresh token response ~ $authCookie"
-        }
-
-        // set the new refresh token
-        if( refreshCookie?.value ) {
-            log.trace "Updating http client refresh token=$refreshCookie.value"
-            refreshToken = refreshCookie.value
-        }
-        else {
-            log.warn "Missing JWT_REFRESH_TOKEN cookie from refresh token response ~ $refreshCookie"
-        }
+    /**
+     * Update reports file when a file is published
+     *
+     * @param destination File path at `publishDir` of the published file.
+     */
+    @Override
+    void onFilePublish(FilePublishEvent event) {
+        reports.filePublish(event.target)
     }
 
     /**
@@ -487,51 +503,48 @@ class TowerClient implements TraceObserver {
      * 'process_complete', 'error', 'completed'}
      * @param payload An additional object to send. Must be of type TraceRecord or Manifest
      */
-    protected Response sendHttpMessage(String url, Map payload, String method='POST'){
+    protected Response sendHttpMessage(String url, Map payload, String method='POST') {
 
-        int refreshTries=0
-        final currentRefresh = refreshToken ?: env.get('TOWER_REFRESH_TOKEN')
-
-        while ( true ) {
-            // The actual HTTP request
-            final String json = payload != null ? generator.toJson(payload) : null
-            final String debug = json != null ? JsonOutput.prettyPrint(json).indent() : '-'
-            log.trace "HTTP url=$url; payload:\n${debug}\n"
-            try {
-                if( refreshTries==1 ) {
-                    refreshToken(currentRefresh)
-                }
-
-                httpClient.sendHttpMessage(url, json, method)
-                return new Response(httpClient.responseCode, httpClient.getResponse())
+        // The actual HTTP request
+        final String json = payload != null ? generator.toJson(payload) : null
+        final String debug = json != null ? JsonOutput.prettyPrint(json).indent() : '-'
+        log.trace "HTTP url=$url; payload:\n${debug}\n"
+        try {
+            final resp = httpClient.sendAsString(makeRequest(url, json, method))
+            final status = resp.statusCode()
+            if( status == 401 ) {
+                final msg = 'Unauthorized Seqera Platform API access -- Make sure you have specified the correct access token'
+                return new Response(status, msg)
             }
-            catch( ConnectException e ) {
-                String msg = "Unable to connect Tower host: ${getHostUrl(url)}"
-                return new Response(0, msg)
+            if( status>=400 ) {
+                final msg = parseCause(resp?.body()) ?: "Unexpected response for request $url"
+                return new Response(status, msg as String)
             }
-            catch (IOException e) {
-                int code = httpClient.responseCode
-                if( code == 401 && ++refreshTries==1 && currentRefresh ) {
-                    // when 401 Unauthorized error is returned - only the very first time -
-                    // and a refresh token is available, make another iteration trying
-                    // having refreshed the authorization token (see 'refreshToken' invocation above)
-                    log.trace "Got 401 Unauthorized response ~ tries refreshing auth token"
-                    continue
-                }
-                else {
-                    log.trace("Got error $code - refreshTries=$refreshTries - currentRefresh=$currentRefresh")
-                }
-
-                String msg
-                if( code == 401 ) {
-                    msg = 'Unauthorized Tower access -- Make sure you have specified the correct access token'
-                }
-                else {
-                    msg = parseCause(httpClient.response) ?: "Unexpected response for request $url"
-                }
-                return new Response(code, msg, httpClient.response)
+            else {
+                return new Response(status, resp.body())
             }
         }
+        catch( IOException e ) {
+            String msg = "Unable to connect to Seqera Platform API: ${getHostUrl(url)}"
+            return new Response(0, msg)
+        }
+    }
+
+    protected HttpRequest makeRequest(String url, String payload, String verb) {
+        assert payload, "Tower request cannot be empty"
+
+        final builder = HttpRequest.newBuilder(URI.create(url))
+            .header('Content-Type', 'application/json; charset=utf-8')
+            .header('User-Agent', "Nextflow/$BuildInfo.version")
+            .header('Traceparent', TraceUtils.rndTrace())
+
+        if( verb == 'PUT' )
+            return builder.PUT(HttpRequest.BodyPublishers.ofString(payload)).build()
+
+        if( verb == 'POST' )
+            return builder.POST(HttpRequest.BodyPublishers.ofString(payload)).build()
+
+        throw new IllegalArgumentException("Unsupported HTTP verb: $verb")
     }
 
     protected boolean isCliLogsEnabled() {
@@ -616,10 +629,10 @@ class TowerClient implements TraceObserver {
         if( obj instanceof CharSequence )
             return obj.toString()
         if( obj instanceof Map ) {
-            def map = obj as Map
-            return map.collect { k,v -> "$k:$v" }.join(',')
+            // turn this off for multiple containers because the string representation is broken
+            return null
         }
-        throw new IllegalArgumentException("Illegal container attribut type: ${obj.getClass().getName()} = ${obj}" )
+        throw new IllegalArgumentException("Illegal container attribute type: ${obj.getClass().getName()} = ${obj}" )
     }
 
     protected Map makeTaskMap0(TraceRecord trace) {
@@ -669,7 +682,20 @@ class TowerClient implements TraceObserver {
         final result = new LinkedHashMap(5)
         result.put('tasks', payload)
         result.put('progress', getWorkflowProgress(true))
+        result.put('containers', getNewContainers(tasks))
         result.instant = Instant.now().toEpochMilli()
+        return result
+    }
+
+    protected List<ContainerMeta> getNewContainers(Collection<TraceRecord> tasks) {
+        final result = new ArrayList<ContainerMeta>()
+        for( TraceRecord it : tasks ) {
+            final meta = it.getContainerMeta()
+            if( meta && !allContainers.get(meta.targetImage) ) {
+                allContainers.put(meta.targetImage, Boolean.TRUE)
+                result.add(meta)
+            }
+        }
         return result
     }
 
@@ -685,7 +711,7 @@ class TowerClient implements TraceObserver {
     /**
      * Little helper function that can be called for logging upon an incoming HTTP response
      */
-    protected void logHttpResponse(String url, Response resp){
+    protected void logHttpResponse(String url, Response resp) {
         if (resp.code >= 200 && resp.code < 300) {
             log.trace "Successfully send message to ${url} -- received status code ${resp.code}"
         }
@@ -693,10 +719,10 @@ class TowerClient implements TraceObserver {
             def cause = parseCause(resp.cause)
             def msg = """\
                 Unexpected HTTP response.
-                Failed to send message to ${endpoint} -- received 
+                Failed to send message to ${endpoint} -- received
                 - status code : $resp.code
                 - response msg: $resp.message
-                """.stripIndent()
+                """.stripIndent(true)
             // append separately otherwise formatting get broken
             msg += "- error cause : ${cause ?: '-'}"
             log.warn(msg)
@@ -711,11 +737,11 @@ class TowerClient implements TraceObserver {
         def cause = parseCause(resp.cause)
 
         def msg = """\
-                Unexpected Tower response
+                Unexpected Seqera Platform API response
                 - endpoint url: $endpoint
                 - status code : $resp.code
-                - response msg: ${resp.message} 
-                """.stripIndent()
+                - response msg: ${resp.message}
+                """.stripIndent(true)
         // append separately otherwise formatting get broken
         msg += "- error cause : ${cause ?: '-'}"
         throw new Exception(msg)

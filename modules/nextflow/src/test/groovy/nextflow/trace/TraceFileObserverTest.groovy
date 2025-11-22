@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +15,7 @@
  */
 
 package nextflow.trace
+
 import java.nio.file.Files
 
 import nextflow.Session
@@ -26,6 +26,8 @@ import nextflow.processor.TaskId
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
+import nextflow.trace.config.TraceConfig
+import nextflow.trace.event.TaskEvent
 import nextflow.util.CacheHelper
 import nextflow.util.Duration
 import spock.lang.Specification
@@ -42,16 +44,21 @@ class TraceFileObserverTest extends Specification {
         TraceRecord.TIMEZONE = TimeZone.getTimeZone('UTC') // note: set the timezone to be sure the time string does not change on CI test servers
     }
 
+    def createObserver() {
+        def config = new TraceConfig([:])
+        return new TraceFileObserver(config)
+    }
+
     def 'test set fields'() {
 
         when:
-        def trace = [:] as TraceFileObserver
+        def trace = createObserver()
         trace.fields = ['task_id','name','status']
         then:
         trace.fields ==  ['task_id','name','status']
 
         when:
-        trace = [:] as TraceFileObserver
+        trace = createObserver()
         trace.fields = ['task_id','name','status','xxx']
         then:
         thrown(IllegalArgumentException)
@@ -62,7 +69,7 @@ class TraceFileObserverTest extends Specification {
     def 'test set formats'() {
 
         when:
-        def trace = [:] as TraceFileObserver
+        def trace = createObserver()
         trace.formats = ['str','num','date']
         then:
         trace.formats == ['str','num','date']
@@ -74,14 +81,14 @@ class TraceFileObserverTest extends Specification {
         def trace
 
         when:
-        trace = [:] as TraceFileObserver
+        trace = createObserver()
         trace.setFieldsAndFormats(['task_id:str','name:str','status:num', 'start', 'duration'])
         then:
         trace.fields ==  ['task_id','name','status', 'start', 'duration']
         trace.formats == ['str','str','num', 'date', 'time']
 
         when:
-        trace = [:] as TraceFileObserver
+        trace = createObserver()
         trace.useRawNumbers(true)
         trace.setFieldsAndFormats(['task_id:str','name:str','status:num', 'start:date', 'duration:time', 'realtime'])
         then:
@@ -108,7 +115,8 @@ class TraceFileObserverTest extends Specification {
         def now = System.currentTimeMillis()
 
         // the observer class under test
-        def observer = new TraceFileObserver(file)
+        def config = new TraceConfig(file: file.toString())
+        def observer = new TraceFileObserver(config)
 
         when:
         observer.onFlowCreate(null)
@@ -117,7 +125,7 @@ class TraceFileObserverTest extends Specification {
 
         when:
         handler.status = TaskStatus.SUBMITTED
-        observer.onProcessSubmit( handler, handler.getTraceRecord() )
+        observer.onTaskSubmit( new TaskEvent(handler, handler.getTraceRecord()) )
         def record = observer.current.get(TaskId.of(111))
         then:
         observer.separator == '\t'
@@ -130,7 +138,7 @@ class TraceFileObserverTest extends Specification {
         when:
         sleep 50
         handler.status = TaskStatus.RUNNING
-        observer.onProcessStart( handler, handler.getTraceRecord() )
+        observer.onTaskStart( new TaskEvent(handler, handler.getTraceRecord()) )
         record = observer.current.get(TaskId.of(111))
         then:
         record.start >= record.submit
@@ -140,7 +148,7 @@ class TraceFileObserverTest extends Specification {
         sleep 50
         handler.status = TaskStatus.COMPLETED
         handler.task.exitStatus = 127
-        observer.onProcessComplete(handler, handler.getTraceRecord())
+        observer.onTaskComplete( new TaskEvent(handler, handler.getTraceRecord()) )
         then:
         !(observer.current.containsKey(TaskId.of(111)))
 
@@ -189,7 +197,7 @@ class TraceFileObserverTest extends Specification {
         record.wchar = 10_000 * 1024
 
         when:
-        def trace = [:] as TraceFileObserver
+        def trace = createObserver()
         def result = trace.render(record).split('\t')
         then:
         result[0] == '30'                       // task id
@@ -220,8 +228,8 @@ class TraceFileObserverTest extends Specification {
         record.rss = 10 * MB
 
         when:
-        def trace = [:] as TraceFileObserver
-        trace.setFieldsAndFormats( 'task_id,syscr,syscw,rss,rss:num' )
+        def trace = createObserver()
+        trace.setFieldsAndFormats( ['task_id', 'syscr', 'syscw', 'rss', 'rss:num'] )
         def result = trace.render(record).split('\t')
         then:
         result[0] == '5'
@@ -260,8 +268,8 @@ class TraceFileObserverTest extends Specification {
         record.realtime = 9005022
         record.queue = 'bigjobs'
 
-        def trace = [:] as TraceFileObserver
-        trace.setFieldsAndFormats('task_id,hash,native_id,name,status,exit,submit,duration,realtime,%cpu,rss,vmem,peak_rss,peak_vmem,rchar,wchar,syscr,syscw,duration:num,realtime:num,rss:num,vmem:num,peak_rss:num,peak_vmem:num,rchar:num,wchar:num,queue')
+        def trace = createObserver()
+        trace.setFieldsAndFormats(['task_id', 'hash', 'native_id', 'name', 'status', 'exit', 'submit', 'duration', 'realtime', '%cpu', 'rss', 'vmem', 'peak_rss', 'peak_vmem', 'rchar', 'wchar', 'syscr', 'syscw', 'duration:num', 'realtime:num', 'rss:num', 'vmem:num', 'peak_rss:num', 'peak_vmem:num', 'rchar:num', 'wchar:num', 'queue'])
         def result = trace.render(record).split('\t')
 
         then:

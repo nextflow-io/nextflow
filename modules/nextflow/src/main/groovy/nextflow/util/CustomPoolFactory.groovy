@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +15,10 @@
  */
 
 package nextflow.util
+
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
+import groovy.util.logging.Slf4j
 import groovyx.gpars.scheduler.Pool
 import groovyx.gpars.scheduler.ResizeablePool
 import groovyx.gpars.util.PoolFactory
@@ -27,6 +29,7 @@ import groovyx.gpars.util.PoolFactory
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 class CustomPoolFactory implements PoolFactory {
 
@@ -36,10 +39,12 @@ class CustomPoolFactory implements PoolFactory {
 
     public final String NXF_QUEUE_SIZE = 'nxf.pool.queueSize'
 
+    @Memoized
     @Override
-    Pool createPool() {
+    synchronized Pool createPool() {
 
-        def type = property(NXF_POOL_TYPE, 'default')
+        final defType = Threads.useVirtual() ? 'virtual' : 'default'
+        final type = property(NXF_POOL_TYPE, defType)
         switch (type) {
             case 'default':
                 int poolSize = Runtime.runtime.availableProcessors() +1
@@ -64,6 +69,10 @@ class CustomPoolFactory implements PoolFactory {
                 int cpus = Runtime.runtime.availableProcessors()
                 int size = property(NXF_MAX_THREADS, cpus+1) as int
                 return CustomThreadPool.unboundedPool(size)
+
+            case 'virtual':
+                log.debug "Creating virtual thread pool"
+                return CustomThreadPool.virtualPool()
 
             default:
                 throw new IllegalAccessException("Unknown thread pool type: `$type`")

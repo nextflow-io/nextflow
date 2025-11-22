@@ -30,7 +30,7 @@ class ScriptPipesTest extends Dsl2Spec {
         } 
 
         workflow {
-            main: Channel.from('Hello') | map { it.reverse() } | (foo & bar)
+            main: Channel.of('Hello') | map { it.reverse() } | (foo & bar)
             emit:
                 foo.out
                 bar.out
@@ -66,7 +66,7 @@ class ScriptPipesTest extends Dsl2Spec {
         } 
 
         workflow {
-            emit: Channel.from('Hola') | foo | map { it.reverse() } | bar
+            emit: Channel.of('Hola') | foo | map { it.reverse() } | bar
         }
         '''
 
@@ -105,7 +105,7 @@ class ScriptPipesTest extends Dsl2Spec {
         // the multiple output channels 
         // to the `bar` process receiving multiple inputs
         workflow {
-            emit: Channel.from('hello') | foo | bar 
+            emit: Channel.of('hello') | foo | bar 
         }
         '''
 
@@ -136,7 +136,7 @@ class ScriptPipesTest extends Dsl2Spec {
         // pipe the multiple output channels 
         // to the `concat` operator
         workflow {
-            emit: Channel.from('hola') | foo | concat 
+            emit: Channel.of('hola') | foo | concat 
         }
         '''
 
@@ -216,7 +216,7 @@ class ScriptPipesTest extends Dsl2Spec {
         }     
         
         workflow {
-            emit: Channel.from(1,2,3) | square | collect 
+            emit: Channel.of(1,2,3) | square | collect 
         }
         '''
 
@@ -232,7 +232,7 @@ class ScriptPipesTest extends Dsl2Spec {
     def 'should pipe branch output to concat operator' () {
         given:
         def SCRIPT ='''   
-        Channel.from(10,20,30) | branch { foo: it <=10; bar: true } | concat 
+        Channel.of(10,20,30) | branch { foo: it <=10; bar: true } | concat 
         '''
 
         when:
@@ -255,7 +255,7 @@ class ScriptPipesTest extends Dsl2Spec {
         }
 
         workflow {
-           emit: Channel.from(10,20) | branch { foo: it <=10; bar: true } | foo 
+           emit: Channel.of(10,20) | branch { foo: it <=10; bar: true } | foo 
         }
         '''
 
@@ -313,6 +313,94 @@ class ScriptPipesTest extends Dsl2Spec {
         def result = new MockScriptRunner().setScript(SCRIPT).execute()
         then:
         result.val == [1,2]
+
+    }
+
+    def 'should compose custom funs/3' () {
+        given:
+        def SCRIPT = """
+        process foo {
+          input:
+            val str
+          output: 
+            val x
+          exec: 
+            x=str.reverse()
+        }
+        
+        def init(str='hi'){
+            Channel.of(str)
+        }
+        
+        workflow {
+            emit: init | foo | view
+        }
+        """
+
+        when:
+        def result = new MockScriptRunner().setScript(SCRIPT).execute()
+        then:
+        result.val == 'hi'.reverse()
+
+    }
+
+    def 'should compose custom funs/4' () {
+        given:
+        def SCRIPT = """
+        process foo {
+          input:
+            val str
+          output: 
+            val x
+          exec: 
+            x=str.reverse()
+        }
+        
+        def init(str='hi'){
+            Channel.of(str)
+        }
+        
+        workflow {
+            emit: init('hello') | foo | view
+        }
+        """
+
+        when:
+        def result = new MockScriptRunner().setScript(SCRIPT).execute()
+        then:
+        result.val == 'hello'.reverse()
+
+    }
+
+    def 'should compose custom funs/5' () {
+        given:
+        def SCRIPT = """
+        process foo {
+          input:
+            val str
+          output: 
+            val x
+          exec: 
+            x=str.reverse()
+        }
+        
+        def init(str='hi'){
+            Channel.of(str)
+        }
+
+        def bar(ch1=null) {            
+          ch1.map{ it.toUpperCase() }
+        }
+
+        workflow {
+            emit: init | foo | bar | view
+        }
+        """
+
+        when:
+        def result = new MockScriptRunner().setScript(SCRIPT).execute()
+        then:
+        result.val == 'HI'.reverse()
 
     }
 

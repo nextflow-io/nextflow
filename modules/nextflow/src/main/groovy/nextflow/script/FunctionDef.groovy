@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,11 +16,8 @@
 
 package nextflow.script
 
-import java.lang.reflect.Method
 
 import groovy.transform.CompileStatic
-import static ChannelOut.spreadToArray
-
 /**
  * Models a function component that can be included from a module script
  *
@@ -31,39 +27,63 @@ import static ChannelOut.spreadToArray
 @CompileStatic
 class FunctionDef extends ComponentDef implements ChainableDef {
 
-    private BaseScript owner
-
-    private Method method
+    private Object target
 
     private String name
 
-    FunctionDef(BaseScript owner, Method method) {
-        this.owner = owner
-        this.method = method
-        this.name = method.name
+    private String alias
+
+    FunctionDef(Object target, String name) {
+        this(target, name, name)
+    }
+
+    FunctionDef(Object target, String name, String alias) {
+        this.target = target
+        this.name = name
+        this.alias = alias
     }
 
     protected FunctionDef() { }
 
+    @Override
     String getType() { 'function' }
 
-    Method getMethod() { method }
+    @Override
+    String getName() { alias }
 
-    String getName() { name }
-
-    BaseScript getOwner() { owner }
-
+    @Override
     Object invoke_a(Object[] args) {
-        method.invoke(owner, spreadToArray(args))
+        final arr = ChannelOut.spread(args).toArray()
+        final meta = target.metaClass.getMetaMethod(name, arr)
+        if( meta == null )
+            throw new MissingMethodException(name, target.getClass(), arr)
+        final types = meta.getNativeParameterTypes()
+        final callMethod = target.getClass().getMethod(name, types)
+        if( callMethod == null )
+            throw new MissingMethodException(name, target.getClass(), arr)
+        return callMethod.invoke(target, coerce0(arr,types))
     }
 
+    static protected Object[] coerce0(Object[] arr, Class[] types) {
+        assert arr.length==types.length
+        // when the argument is a GString and type declared is a String
+        // force the evaluation of the string to invoke the target function
+        for( int i=0; i<arr.length; i++ ){
+            if( arr[i] instanceof GString && types[i]==String.class )
+                arr[i] = ((GString)arr[i]).toString()
+        }
+        return arr
+    }
+
+    @Override
     FunctionDef clone() {
-      return (FunctionDef)super.clone()
+        return (FunctionDef)super.clone()
     }
 
+    @Override
     FunctionDef cloneWithName(String name) {
         def result = clone()
-        result.@name = name
+        result.@alias = name
         return result
     }
 }

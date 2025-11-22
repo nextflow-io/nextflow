@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +19,8 @@ package nextflow.processor
 import java.nio.file.Paths
 
 import nextflow.Session
-import nextflow.container.ContainerConfig
+import nextflow.conda.CondaConfig
+import nextflow.container.DockerConfig
 import nextflow.executor.Executor
 import nextflow.script.ProcessConfig
 import nextflow.util.MemoryUnit
@@ -37,12 +37,12 @@ class TaskBeanTest extends Specification {
         def session = Mock(Session)
         session.getStatsEnabled() >> true
 
-        def process = Mock(TaskProcessor)
+        def process = Mock(TaskProcessor) {
+            getBinDirs() >> [Paths.get('/bin/dir') ]
+        }
         process.getConfig() >> Mock(ProcessConfig)
         process.getSession() >> session
-        process.getExecutor() >> Mock(Executor) {
-            getBinDir() >> Paths.get('/bin/dir')
-        }
+        process.getExecutor() >> Mock(Executor)
 
         def config = new TaskConfig()
         config.module = ['blast/1.1']
@@ -69,7 +69,8 @@ class TaskBeanTest extends Specification {
         task.getTargetDir() >> Paths.get('/target/work/dir')
         task.getEnvironment() >> [alpha: 'one', beta: 'xxx', gamma: 'yyy']
         task.getContainer() >> 'busybox:latest'
-        task.getContainerConfig() >> [docker: true, registry: 'x']
+        task.getContainerConfig() >> new DockerConfig(registry: 'x')
+        task.getCondaConfig() >> new CondaConfig([useMicromamba:true], [:])
 
         when:
         def bean = new TaskBean(task)
@@ -89,16 +90,18 @@ class TaskBeanTest extends Specification {
         bean.afterScript == 'after do that'
 
         bean.containerImage == 'busybox:latest'
-        bean.containerConfig == [docker: true, registry: 'x'] as ContainerConfig
+        bean.containerConfig == new DockerConfig(registry: 'x')
         bean.containerMemory == new MemoryUnit('1GB')
         bean.statsEnabled
 
         bean.inputFiles == [file_1: Paths.get('/file/one'), file_2: Paths.get('/file/two')]
         bean.outputFiles ==  [ 'simple.txt', 'my/path/file.bam' ]
         bean.workDir == Paths.get('/work/dir')
-        bean.binDir == Paths.get('/bin/dir')
+        bean.binDirs == [Paths.get('/bin/dir')]
         bean.stageInMode == 'link'
         bean.stageOutMode == 'rsync'
+
+        bean.useMicromamba == true
 
     }
 

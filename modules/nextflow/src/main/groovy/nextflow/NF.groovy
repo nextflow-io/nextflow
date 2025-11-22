@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +18,7 @@ package nextflow
 
 import groovy.runtime.metaclass.NextflowDelegatingMetaClass
 import nextflow.extension.CH
-import nextflow.extension.ChannelExtensionDelegate
+import nextflow.plugin.extension.PluginExtensionProvider
 import nextflow.script.ExecutionStack
 import nextflow.script.WorkflowBinding
 /**
@@ -33,14 +32,22 @@ class NF {
         return (Session)Global.session
     }
 
+    static String getSyntaxParserVersion() {
+        return SysEnv.get('NXF_SYNTAX_PARSER', 'v1')
+    }
+
+    static boolean isSyntaxParserV2() {
+        return getSyntaxParserVersion() == 'v2'
+    }
+
     static void init() {
-        NextflowDelegatingMetaClass.plugin = ChannelExtensionDelegate.INSTANCE()
+        NextflowDelegatingMetaClass.provider = PluginExtensionProvider.INSTANCE()
         CH.init()
         WorkflowBinding.init()
     }
 
     static boolean hasOperator(String name) {
-        NextflowDelegatingMetaClass.plugin.operatorNames().contains(name)
+        NextflowDelegatingMetaClass.provider.operatorNames().contains(name)
     }
 
     static boolean isDsl1() {
@@ -49,10 +56,6 @@ class NF {
 
     static boolean isDsl2() {
         NextflowMeta.instance.isDsl2()
-    }
-
-    static boolean isDsl2Final() {
-        NextflowMeta.instance.isDsl2Final()
     }
 
     static Binding getBinding() {
@@ -67,6 +70,10 @@ class NF {
 
     static boolean isStrictMode() {
         NextflowMeta.instance.isStrictModeEnabled()
+    }
+
+    static boolean isModuleBinariesEnabled() {
+        NextflowMeta.instance.isModuleBinariesEnabled()
     }
 
     static boolean isRecurseEnabled() {

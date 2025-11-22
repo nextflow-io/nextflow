@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,19 +16,18 @@
 
 package nextflow.extension
 
+import java.nio.file.Path
+import java.nio.file.Paths
+import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
 
-import spock.lang.Specification
-import spock.lang.Unroll
-
-import java.nio.file.Path
-import java.nio.file.Paths
-import java.text.SimpleDateFormat
-
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
+import spock.lang.Ignore
+import spock.lang.Specification
+import spock.lang.Unroll
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -41,24 +39,32 @@ class BoltsTest extends Specification {
 
         given:
         def now = new Date(1513285947928)
+        def defLocale = Locale.getDefault(Locale.Category.FORMAT)
+        def useLocale = new Locale.Builder().setLanguage(locale).build()
+        Locale.setDefault(Locale.Category.FORMAT, useLocale)
 
         when:
-        def formatter = new SimpleDateFormat(fmt)
+        def formatter = new SimpleDateFormat(fmt, Locale.ENGLISH)
         formatter.setTimeZone(TimeZone.getTimeZone(tz))
         then:
         Bolts.format(now, fmt, tz) == expected
         formatter.format(now) == expected
 
-        where:
-        tz      | fmt                       | expected
-        'UTC'   | 'dd-MM-yyyy HH:mm'        | '14-12-2017 21:12'
-        'CET'   | 'dd-MM-yyyy HH:mm'        | '14-12-2017 22:12'
-        'UTC'   | 'dd-MMM-yyyy HH:mm:ss'    | '14-Dec-2017 21:12:27'
-        'CST'   | 'dd-MM-yyyy HH:mm'        | '14-12-2017 15:12'
-        'CST'   | 'dd-MMM-yyyy HH:mm:ss'    | '14-Dec-2017 15:12:27'
+        cleanup:
+        Locale.setDefault(Locale.Category.FORMAT, defLocale)
 
+        where:
+        tz      | fmt                       | locale  | expected
+        'UTC'   | 'dd-MM-yyyy HH:mm'        | 'en'    | '14-12-2017 21:12'
+        'CET'   | 'dd-MM-yyyy HH:mm'        | 'en'    | '14-12-2017 22:12'
+        'UTC'   | 'dd-MMM-yyyy HH:mm:ss'    | 'en'    | '14-Dec-2017 21:12:27'
+        'CST'   | 'dd-MM-yyyy HH:mm'        | 'en'    | '14-12-2017 15:12'
+        'CST'   | 'dd-MMM-yyyy HH:mm:ss'    | 'en'    | '14-Dec-2017 15:12:27'
+        'UTC'   | 'dd-MMM-yyyy HH:mm:ss'    | 'es'    | '14-Dec-2017 21:12:27'
+        'CST'   | 'dd-MMM-yyyy HH:mm:ss'    | 'es'    | '14-Dec-2017 15:12:27'
     }
 
+    @Ignore("we dont need to test java functionalities")
     def 'should format offset datetime' () {
         given:
         def now = OffsetDateTime.ofInstant(Instant.ofEpochMilli(1513285947928), ZoneId.of('CET'))
@@ -137,6 +143,18 @@ class BoltsTest extends Specification {
         1024 as MemoryUnit == MemoryUnit.of('1 KB')
         '10 GB' as MemoryUnit == MemoryUnit.of('10 GB')
         "$x MB" as MemoryUnit == MemoryUnit.of('5 MB')
+    }
+
+    def testAsURL() {
+        expect: 
+        'http://foo.com' as URL == new URL('http://foo.com')
+        'http://foo.com/some/file.txt' as URL == new URL('http://foo.com/some/file.txt')
+    }
+
+    def testAsURI() {
+        expect:
+        'http://foo.com' as URI == URI.create('http://foo.com')
+        'http://foo.com/some/file.txt' as URI == URI.create('http://foo.com/some/file.txt')
     }
 
     def testConfigToMap  () {
@@ -365,31 +383,42 @@ class BoltsTest extends Specification {
         map.bar.x == 2
     }
 
-    def 'should deep merge map and overwrite values when `replaceValues` is true'() {
+    def 'should deep merge map and overwrite values'() {
         given:
-        Map origMap = [foo: 1, bar: [x: 2, y: 3]]
-        Map newMap = [bar: [x: 4, z: 5]]
+        def origMap = [foo: 1, bar: [x: 2, y: 3]]
+        and:
+        def newMap = [bar: [x: 4, z: 5]]
 
         when:
-        def merge = Bolts.deepMerge(origMap, newMap, true)
+        def merge = Bolts.deepMerge(origMap, newMap)
 
         then:
+        merge.foo == 1 
         merge.bar.x == 4
         merge.bar.y == 3
         merge.bar.z == 5
     }
 
-    def 'should deep merge map and not overwrite values when `replaceValues` is false'() {
+    def 'should deep merge config object and overwrite values'() {
         given:
-        Map origMap = [foo: 1, bar: [x: 2, y: 3]]
-        Map newMap = [bar: [x: 4, z: 5]]
+        def bar = new ConfigObject(); bar.putAll([x: 2, y: 3])
+        def cfg = new ConfigObject(); cfg.putAll( [foo: 1, bar: bar] )
+        and:
+        def map = [bar: [x: 4, z: 5]]
 
         when:
-        def merge = Bolts.deepMerge(origMap, newMap, false)
+        def result = Bolts.deepMerge(cfg, map)
 
         then:
-        merge.bar.x == 2
-        merge.bar.y == 3
-        merge.bar.z == 5
+        result.foo == 1
+        result.bar.x == 4
+        result.bar.y == 3
+        result.bar.z == 5
+        and:
+        result instanceof ConfigObject
+        result.bar instanceof ConfigObject
+        and:
+        !result.is( cfg )
     }
+
 }

@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +24,7 @@ import spock.lang.Specification
  */
 class AcceleratorResourceTest extends Specification {
 
-    def 'should create a gpu resource' () {
+    def 'should create an accelerator resource' () {
 
         when:
         def acc = new AcceleratorResource(VALUE)
@@ -46,5 +45,13 @@ class AcceleratorResourceTest extends Specification {
         [request: 2, limit: 4]      | 2     | 4     | null  | null
         [limit: 3, type: 'nvidia']  | 3     | 3     | 'nvidia' | null
         [limit: 3, runtime: 'foo']  | 3     | 3     | null  | 'foo'
+    }
+
+    def 'should throw error for invalid resource' () {
+        when:
+        def acc = new AcceleratorResource([count: 1, type: 'nvidia-tesla-t4'])
+        then:
+        def err = thrown(IllegalArgumentException)
+        err.message.contains('Invalid `accelerator` directive value -- `request` or `limit` is required')
     }
 }

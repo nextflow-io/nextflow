@@ -1,7 +1,6 @@
 #!/usr/bin/env nextflow
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,25 +16,25 @@
  */
 
 params.prefix = 'my'
-
-data = 'Hello\n'
+params.data = 'Hello\n'
+params.list = ['alpha', 'delta', 'gamma', 'omega']
 
 process foo {
 
   input:
-  each x from 'alpha', 'delta', 'gamma', 'omega'
-  file "${params.prefix}_${x}.txt" from data
+  each x
+  file "${params.prefix}_${x}.txt"
 
   output:
-  file "${params.prefix}_${x}.txt" into result
+  file "${params.prefix}_${x}.txt"
 
+  script:
   """
   echo World >>  ${params.prefix}_${x}.txt
   """
 
 }
 
-result.subscribe {
-  println "~ Saving ${it.name}"
-  it.copyTo('.')
+workflow {
+  foo(params.list, params.data) | subscribe { println "~ Saving ${it.name}"; it.copyTo('.') }
 }

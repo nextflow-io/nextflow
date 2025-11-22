@@ -1,7 +1,6 @@
 #!/usr/bin/env nextflow
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +15,6 @@
  * limitations under the License.
  */
 
-
 params.range = 100
 
 /*
@@ -24,7 +22,7 @@ params.range = 100
  */
 process perlTask {
     output:
-    stdout randNums
+    stdout
 
 	shell:
     '''
@@ -40,16 +38,16 @@ process perlTask {
 	'''
 }
 
-
 /*
  * A Python script task which parses the output of the previous script
  */
 process pyTask {
-    echo true
+    debug true
 
     input:
-    stdin randNums
+    stdin
 
+    script:
     '''
     #!/usr/bin/env python3
     import sys
@@ -65,5 +63,8 @@ process pyTask {
 
     print("avg: %s - %s" % ( x/lines, y/lines ))
 	'''
+}
 
+workflow {
+  perlTask | pyTask
 }

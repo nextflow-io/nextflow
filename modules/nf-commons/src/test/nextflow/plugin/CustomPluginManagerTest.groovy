@@ -1,8 +1,7 @@
 package nextflow.plugin
 
-import nextflow.Const
+import nextflow.BuildInfo
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -13,7 +12,7 @@ class CustomPluginManagerTest extends Specification {
         given:
         def manager = Spy(CustomPluginManager)
         expect:
-        manager.getSystemVersion() == Const.APP_VER
+        manager.getSystemVersion() == BuildInfo.version
     }
 
     def 'should create ver manager' () {

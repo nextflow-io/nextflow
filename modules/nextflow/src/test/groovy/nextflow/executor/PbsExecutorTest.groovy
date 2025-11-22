@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +18,7 @@ package nextflow.executor
 
 import java.nio.file.Paths
 
+import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
@@ -31,10 +31,20 @@ import spock.lang.Unroll
  */
 class PbsExecutorTest extends Specification {
 
+    def createExecutor(config) {
+        Spy(PbsExecutor) {
+            getConfig() >> config
+        }
+    }
+
+    def createExecutor() {
+        createExecutor(new ExecutorConfig([:]))
+    }
+
     def testGetCommandLine() {
 
         given:
-        def executor = [:] as PbsExecutor
+        def executor = createExecutor()
         def task = Mock(TaskRun); task.getName() >> 'hello world'
 
         expect:
@@ -42,15 +52,13 @@ class PbsExecutorTest extends Specification {
 
     }
 
-    def testHeaders() {
+    def 'test job script headers'() {
 
         setup:
-        def executor = [:] as PbsExecutor
+        def executor = createExecutor()
 
         // mock process
         def proc = Mock(TaskProcessor)
-
-        // task object
         def task = new TaskRun()
         task.processor = proc
         task.workDir = Paths.get('/work/dir')
@@ -63,10 +71,8 @@ class PbsExecutorTest extends Specification {
                 #PBS -N nf-task_name
                 #PBS -o /work/dir/.command.log
                 #PBS -j oe
-                NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
-
 
         when:
         task.config = new TaskConfig()
@@ -79,10 +85,8 @@ class PbsExecutorTest extends Specification {
                 #PBS -j oe
                 #PBS -q alpha
                 #PBS -l walltime=00:01:00
-                NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
-
 
         when:
         task.config = new TaskConfig()
@@ -97,11 +101,8 @@ class PbsExecutorTest extends Specification {
                 #PBS -q alpha
                 #PBS -l walltime=00:01:00
                 #PBS -l mem=1mb
-                NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
-
-
 
         when:
         task.config = new TaskConfig()
@@ -118,7 +119,6 @@ class PbsExecutorTest extends Specification {
                 #PBS -l nodes=1:ppn=2
                 #PBS -l walltime=00:10:00
                 #PBS -l mem=5mb
-                NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
 
@@ -137,7 +137,6 @@ class PbsExecutorTest extends Specification {
                 #PBS -l nodes=1:ppn=8
                 #PBS -l walltime=24:00:00
                 #PBS -l mem=1gb
-                NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
 
@@ -154,16 +153,45 @@ class PbsExecutorTest extends Specification {
                 #PBS -q delta
                 #PBS -l walltime=54:10:00
                 #PBS -l mem=2gb
-                NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
 
+        when:
+        task.config = new TaskConfig()
+        task.config.clusterOptions = '-l nodes=1:x86:ppn=4'
+        task.config.cpus = 2
+        task.config.memory = '8g'
+        then:
+        executor.getHeaders(task) == '''
+                #PBS -N nf-task_name
+                #PBS -o /work/dir/.command.log
+                #PBS -j oe
+                #PBS -l mem=8gb
+                #PBS -l nodes=1:x86:ppn=4
+                '''
+                .stripIndent().leftTrim()
+
+        when: 'with job array'
+        def taskArray = Mock(TaskArrayRun) {
+            config >> new TaskConfig()
+            name >> task.name
+            workDir >> task.workDir
+            getArraySize() >> 5
+        }
+        then:
+        executor.getHeaders(taskArray) == '''
+                #PBS -t 0-4
+                #PBS -N nf-task_name
+                #PBS -o /dev/null
+                #PBS -j oe
+                '''
+                .stripIndent().leftTrim()
     }
 
     def WorkDirWithBlanks() {
 
         setup:
-        def executor = Spy(PbsExecutor)
+        def executor = createExecutor()
 
         // mock process
         def proc = Mock(TaskProcessor)
@@ -181,7 +209,6 @@ class PbsExecutorTest extends Specification {
                 #PBS -N nf-task_name
                 #PBS -o "/work/dir\\ 1/.command.log"
                 #PBS -j oe
-                NXF_CHDIR=/work/dir\\ 1
                 '''
                 .stripIndent().leftTrim()
 
@@ -190,7 +217,7 @@ class PbsExecutorTest extends Specification {
     @Unroll
     def 'should return valid job name given #name'() {
         given:
-        def executor = [:] as PbsExecutor
+        def executor = createExecutor()
         def task = Mock(TaskRun)
         task.getName() >> name
 
@@ -210,7 +237,7 @@ class PbsExecutorTest extends Specification {
     def testParseJobId() {
 
         given:
-        def executor = [:] as PbsExecutor
+        def executor = createExecutor()
 
         expect:
         executor.parseJobId('\n10.localhost\n') == '10.localhost'
@@ -228,7 +255,7 @@ class PbsExecutorTest extends Specification {
     def testKillTaskCommand() {
 
         given:
-        def executor = [:] as PbsExecutor
+        def executor = createExecutor()
         expect:
         executor.killTaskCommand('100.localhost') == ['qdel', '100.localhost']
 
@@ -237,7 +264,7 @@ class PbsExecutorTest extends Specification {
     def testParseQueueStatus() {
 
         setup:
-        def executor = [:] as PbsExecutor
+        def executor = createExecutor()
         def text =
                 """
                 Job Id: 12.localhost
@@ -277,12 +304,68 @@ class PbsExecutorTest extends Specification {
 
     def 'should return qstat command line' () {
         given:
-        def executor = [:] as PbsExecutor
+        def executor = createExecutor()
 
         expect:
-        executor.queueStatusCommand(null) == ['bash','-c', "set -o pipefail; qstat -f -1 | { egrep '(Job Id:|job_state =)' || true; }"]
-        executor.queueStatusCommand('xxx') == ['bash','-c', "set -o pipefail; qstat -f -1 xxx | { egrep '(Job Id:|job_state =)' || true; }"]
+        executor.queueStatusCommand(null) == ['bash','-c', "set -o pipefail; qstat -f -1 | { grep -E '(Job Id:|job_state =)' || true; }"]
+        executor.queueStatusCommand('xxx') == ['bash','-c', "set -o pipefail; qstat -f -1 xxx | { grep -E '(Job Id:|job_state =)' || true; }"]
         executor.queueStatusCommand('xxx').each { assert it instanceof String }
     }
 
+    def 'should match cluster options' () {
+        expect:
+        PbsExecutor.matchOptions('-l foo')
+        PbsExecutor.matchOptions('-lfoo')
+        PbsExecutor.matchOptions('-x -l foo')
+        PbsExecutor.matchOptions('-x -lfoo')
+        and:
+        !PbsExecutor.matchOptions(null)
+        !PbsExecutor.matchOptions('')
+        !PbsExecutor.matchOptions('-x-l foo')
+    }
+
+    def 'should get array index name and start' () {
+        given:
+        def executor = createExecutor()
+        expect:
+        executor.getArrayIndexName() == 'PBS_ARRAYID'
+        executor.getArrayIndexStart() == 0
+    }
+
+    @Unroll
+    def 'should get array task id' () {
+        given:
+        def executor = createExecutor()
+        expect:
+        executor.getArrayTaskId(JOB_ID, TASK_INDEX) == EXPECTED
+
+        where:
+        JOB_ID      | TASK_INDEX    | EXPECTED
+        'foo[]'     | 1             | 'foo[1]'
+        'bar[]'     | 2             | 'bar[2]'
+    }
+    
+    def 'should set pbs account' () {
+        given:
+        // task
+        def task = new TaskRun()
+        task.workDir = Paths.get('/work/dir')
+        task.processor = Mock(TaskProcessor)
+        task.config = Mock(TaskConfig)  { getClusterOptionsAsList()>>[] }
+        and:
+        def config = new ExecutorConfig(account: ACCOUNT)
+        def executor = createExecutor(config)
+        executor.getJobNameFor(_) >> 'foo'
+        executor.getName() >> 'pbs'
+
+        when:
+        def result = executor.getDirectives(task, [])
+        then:
+        result == EXPECTED
+
+        where:
+        ACCOUNT             | EXPECTED
+        null                | ['-N', 'foo', '-o', '/work/dir/.command.log', '-j', 'oe']
+        'project-123'       | ['-N', 'foo', '-o', '/work/dir/.command.log', '-j', 'oe', '-P', 'project-123']
+    }
 }

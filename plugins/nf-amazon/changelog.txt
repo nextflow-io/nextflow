@@ -1,5 +1,309 @@
 nf-amazon changelog
 ===================
+3.4.1 - 22 Oct 2025
+- Fix no secrets in AWS Batch jobs (#6499) [c76c32582]
+- Simplify S3 configuration options (#6496) [0b7f18049]
+
+3.4.0 - 21 Oct 2025
+- Limit S3 client connections when using virtual threads (#6369) [295c60b5c]
+- Rename `config.schema` package to `config.spec` (#6485) [ef0d2d601]
+
+3.3.0 - 8 Oct 2025
+- Fix SIGTERM forwarding in AWS Batch jobs (#6414) [abbef79b7]
+- Limit S3 concurrent downloads to fix Java Heap OOM (#6402) [fd71d0e8c]
+
+3.1.0 - 15 Aug 2025
+- Fix AWS transfer manager anonymous fallback (#6296) [ci fast] [ed5c99e1]
+- Fix silent failure when downloading a directory with AWS SDK v2 (#6266) [ci fast] [2d76d8f0]
+- Unify nf-lang config scopes with runtime classes (#6271) [bfa67ca3]
+- Update Azure and AWS deps (#6343) [ci fast] [ff00e2de]
+- Bump groovy 4.0.28 (#6304) [ci fast] [a468f8ef]
+- Bump netty-codec-http2:4.1.124.Final [7e690b44]
+
+3.0.0 - 6 Jul 2025
+- Fix AWS nio tests [ci fast] [069653dd]
+- Fix replace List.getFirst with List.get(0) for compatibility [83428ee2]
+- Upgrade to AWS Java SDK v2 (#6165) [fc99b447]
+- Bump Slf4j version 2.0.17 [93199e09]
+
+2.15.0 - 8 May 2025
+- Add verbose AWS Batch job cleanup logging [504bd2df]
+- Remove test constructors or mark as TestOnly (#5216) [d4fadd42]
+
+2.14.0 - 23 Apr 2025
+- Add support for data and execution lineage  (#5715) [20e06da7]
+- Manage AWS Batch Unscheduled jobs (#5936) [44abe60c]
+- Workflow outputs (third preview) (#5909) [2e2dea42]
+- Add support for Fusion Snapshots (#5954) [d7f047f8]
+
+2.13.0 - 17 Mar 2025
+- Fix Consider AWS China as custom endpoint (#5840) [232ce9d1]
+- Fix Prevent S3 global option when using custom endpoints (#5779) [ed9da469]
+- Bump groovy 4.0.26 [f740bc56]
+
+2.12.0 - 12 Feb 2025
+- Fix bugs with workflow outputs (#5502) [ab59d30f]
+- Fail the run if publish thread pool times out (#5578) [5325e5a6]
+- Bump groovy 4.0.25 [19c40a4a]
+- Bump io.netty:netty-handler:4.1.118.Final [db4a9037]
+
+2.11.0 - 20 Jan 2025
+- Disable AWS SDK v1 warning [ci fast] [cd00a26d]
+- Ensure job is killed when exception in task status check (#5561) [9eefd207]
+- Bump logback 1.5.13 + slf4j 2.0.16 [cc0163ac]
+- Bump groovy 4.0.24 missing deps [40670f7e]
+
+2.10.0 - 3 Dec 2024
+- Detecting errors in data unstaging (#5345) [3c8e602d]
+- Prevent NPE with null AWS Batch response [12fc1d60]
+- Fix Fargate warning on memory check (#5475) [bdf0ad00]
+- Bump groovy 4.0.24 [dd71ad31]
+- Bump aws sdk 1.12.777 (#5458) [8bad0b4b]
+- Bump netty-common to version 4.1.115.Final [d1bbd3d0]
+
+2.9.0 - 2 Oct 2024
+- Add Platform workflow prefix in AWS Batch job names (#5318) [e2e test] [42dd4ba8]
+- Fix AWS spot attempts with zero value (#5331) [ci fast] [bac2da12]
+- Bump groovy 4.0.23 (#5303) [ci fast] [fe3e3ac7]
+
+2.8.0 - 4 Sep 2024
+- Disable AWS spot retry (#5215) [f28fcb25]
+
+2.7.0 - 5 Aug 2024
+- More robust parsing of shm-size containerOptions (#5177) [b56802a3]
+- Fix AWS Cloudwatch access when using custom log group name [30195838]
+- Fix Prevent AWS Batch retry the job execution when the container does not exist [4e218f22]
+- Fix Invalid AWS Fargate CPUs usage error reporting [d9c50e59]
+- Bump amazon sdk to version 1.12.766 [cc6ec314]
+- Bump pf4j to version 3.12.0 [96117b9a]
+
+2.6.0 - 17 Jun 2024
+- Allow requester pays for S3 buckets (#5027) [0070c1b0]
+- Fix support for s5cmd 2.2.2 (#5069) [7e78bd4d]
+- Bump aws-sdk 1.12.740 [acad2a1f]
+
+2.5.3 - 1 Aug 2024
+- More robust parsing of shm-size containerOptions (#5177) [98cf0068]
+- Bump amazon sdk to version 1.12.766 [5ce42b79]
+- Bump pf4j to version 3.12.0 [1a8f086a]
+
+2.5.2 - 20 May 2024
+- Fix nf-amazon plugin dependency [c234b09f]
+
+2.5.1 - 14 May 2024
+- Use protected visibility for updateStatus method [6871ba06]
+
+2.5.0 - 13 May 2024
+- Add support for Job arrays (#3892) [ca9bc9d4]
+- Fix Use fully qualified S3 uris in error message (#4923) [f1cffd1b]
+
+2.4.2 - 15 Apr 2024
+- Improve retry logic for AWS Batch executor [62926c28]
+- Bump groovy 4.0.21 [9e08390b]
+
+2.4.1 - 10 Mar 2024
+- Fix Error while publishing S3 file with blanks [b74c0227]
+- Update copyright info [e3089f0e]
+- Bump groovy 4.0.19 [854dc1f0]
+
+2.4.0 - 5 Feb 2024
+- Remove Glacier auto-retrieval (#4705) [5f0ec50d]
+- Bump nextflow 23.12.0-edge as min version [63e83702]
+- Bump Groovy 4 (#4443) [9d32503b]
+
+2.3.0 - 20 Dec 2023
+- Add AWS_SESSION_TOKEN to Fusion environment (#4581) [552f29b0]
+- Add experimental support for Fargate compute type for AWS Batch (#3474) [47cf335b]
+
+2.2.0 - 24 Nov 2023
+- Add support for FUSION_AWS_REGION (#4481) [8f8b09fa]
+- Fix security vulnerabilities (#4513) [a310c777]
+- Fix typos (#4519) [ci fast] [6b1ea726]
+- Fix Fusion symlinks when publishing files (#4348) [89f09fe0]
+- Bump javax.xml.bind:jaxb-api:2.4.0-b180830.0359
+
+2.1.4-patch3 - 30 Jul 2024
+- Bump amazon sdk to version 1.12.766 [189f58ed]
+- Bump pf4j to version 3.12.0 [8dfa4076]
+
+2.1.4-patch2 - 11 Jun 2024
+- Fix security vulnerabilities (#5057) [6d8765b8]
+
+2.1.4-patch1 - 28 May 2024
+- Bump dependency with Nextflow 23.10.2
+
+2.1.4 - 10 Oct 2023
+- Improve S3 endpoint validation [2b9ae6aa]
+- Add -cloudcache CLI option (#4385) [73fda582]
+
+2.1.3 - 28 Sep 2023
+- Fix minor typos in changelogs/source code (#4319) [4ce9f1df]
+- Fix List of S3 bucket for custom endpoint [4327fa58]
+- Fix support for S3 custom endpoint with anonymous access [03752815]
+- Fix Prevent multi attempts to retrieve AWS creds [b30efe36]
+
+2.1.2 - 10 Sep 2023
+- Disable staging script for remote work dir (#4282) [80f7cd46]
+- Allow setting shell directive when using the trace file. (#4210) [7d6ad624]
+- Bump groovy 3.0.19 [cb411208]
+
+2.1.1 - 5 Aug 2023
+- Fix glob resolution for remove files [19a72c40]
+- Fix Option fixOwnership traverse parent directories [f2a2ea35]
+
+2.1.0 - 22 Jul 2023
+- Add support for AWS SSO credentials provider (#4045) [53e33cde]
+- Wait for all child processes in nxf_parallel (#4050) [60a5f1a7]
+- Ignore accelerator type for AWS Batch (#4043) [263ecca8]
+- Bump Groovy 3.0.18 [207eb535]
+
+2.0.1 - 14 Jun 2023
+- Add support for AWS SES as mail sending provider [df85d443]
+- Fix access to public S3 bucket when no creds are provided (#3992) [cf8ba466]
+- Fix S3 path normalization [b75ec444]
+
+2.0.0 - 15 May 2023
+- Add fusion.exportStorageCredentials option [ci fast] [acb6aedf]
+- Fix AWS SSE env propagation to Fusion [e24608c3]
+- Fix string comparison in S3 client (#3875) [ci fast] [9344d294]
+- Preview support for virtual threads (#3871) [5c429046]
+- Refactor the AWS configuration  (#3498) [a74e42d9]
+- Rename AmazonS3Client to S3Client [cc59596a]
+- Rename com.upplication.s3fs package to nextflow.cloud.aws.nio [a2f3bb24]
+- Security fixes [973b7bea]
+- Update logging libraries [d7eae86e]
+- Bump groovy 3.0.17 [cfe4ba56]
+
+1.16.2 - 15 Apr 2023
+- Update plugin deps [83e8fd6a]
+
+1.16.1 - 1 Apr 2023
+- Fix NoSuchMethodError String.stripIndent with Java 11 [308eafe6]
+
+1.16.0 - 19 Mar 2023
+- Remove unused classes [9fa8d75b]
+- Add support for AWS S3 Glacier Retrieval Tier (#3680) [fab6bd5e]
+- Bump groovy 3.0.16 [d3ff5dcb]
+
+1.15.0 - 21 Feb 2023
+- Improve AWS batch error logging [8f4884c1]
+- Remove deprecated buckets field [0a355ac3]
+- Add support for fusion tags (#3609) [ci fast] [8385ec22]
+- Add nextflow tags to AWS Batch job def [b465ac52]
+- Use Fusion as launcher (#3584) [34a27733]
+- Bump FUSION_ prefix variables [ci fast] [a7282d64]
+- Fix serialization of S3 paths with spaces (#3565) [ce487624]
+- Bump groovy 3.0.15 [7a3ebc7d]
+
+1.14.0 - 14 Jan 2023
+- Add `schedulingPriority` option to AWS Batch (use with `shareIdentifier`) (#3505) [06960bb2]
+- Fix FilePorter concurrency issue (#3511) [11ccfa26]
+- Fix support for AWS ACL for Batch #2671 [a9644919]
+- Improve container native executor configuration [03126371]
+- Improve AWS batch exit code reporting [d1bb2fe2]
+- Refactor Fusion config [902e5b34]
+- Refactor Fusion package [52f4c5d5]
+- Remove unnecessary Fusion env var [dfa47556]
+- Bump groovy 3.0.14 [7c204236]
+
+1.13.0 - 13 Dec 2022
+- Add support for AWS Glacier restore [b6110766]
+- Add support for S3 storageClass to publishDir [066f9203]
+- Fix math overflow when copying large AWS S3 files [f32ea0ba]
+- Bump AWS sdk version 1.12.351 [4dd82b66]
+- Rewrite fetchIamRole and fetchRegion to use AWS SDK (#3425) [ci skip] [e350f319]
+- Bump nf-amazon@1.13.0 [ccaab713]
+
+1.12.0 - 21 Nov 2022
+- Improve S3 thread pool config [41021cbc]
+
+1.11.0 - 3 Oct 2022
+- Add support for custom S3 content type [02afa332] <Paolo Di Tommaso>
+- Get rid of  file name rolling for report files [a762ed59] <Paolo Di Tommaso>
+
+1.10.7 - 28 Sep 2022
+- Fix Issue copying file bigger than 5gb to S3 [18fd9a44]
+
+1.10.6 - 26 Sep 2022
+- Add tags propagation to AWS Batch [d64eeffc]
+
+1.10.5 - 20 Sep 2022
+- Fix AWS S3 copy object [b3b90d23]
+
+1.10.4 - 13 Sep 2020
+- Add STS library to enable use of IRSA in EKS cluster [62df42c3]
+
+1.10.3 - 10 Sep 2022
+- S3 min upload size 5MB [9926d15d]
+- Use smaller buffer size for s3 stream uploader [8c643074]
+
+1.10.2 - 7 Sep 2022
+- Fix thread pool race condition on shutdown [8d2b0587]
+- Fix Intermediate multipart upload requires a minimum size (#3193) [0b66aed6]
+
+1.10.1 - 1 Sep
+- Add support for label/tags (#2853) [5d0b7c35]
+- Add fusion support to local executor [17160bb0]
+- Improve fusion env handling [10f35b60]
+- Get rid of remote bin dir [6cfb51e7]
+
+1.10.0 - 11 Aug
+- Improve S3 copy via xfer manager [02d2beae]
+- Add experimental fusion support [1854f1f2]
+- Increase S3 upload chunk size to 100 MB [9c94a080]
+- Add support for AWS Batch logs group (#3092) [4ef043ac]
+- Fix queueSize setting is not honoured by AWS Batch executor (#3093) [d07bb52b]
+- Add share identifier to Aws Batch (#3089) [c0253aba]
+
+1.9.0 - 1 Aug 2022
+- Fix Unable to disable scratch attribute with AWS Batch [1770f73a]
+- Fix NPE while setting S3 ObjectMetadata #3031 [d6163431] <Jorge Aguilera>
+- Fix Unable to retrieve AWS batch instance type #1658 [3c4d4d3b] <Paolo Di Tommaso>
+- Fix AWS Batch job definition conflict (#3048) [e5084418] <Paolo Di Tommaso>
+- Improve S3 file upload/download via Transfer manager [7e8d2a5a] [b7bf9fe5] <Jorge Aguilera>
+
+1.8.1 - 13 Jul 2022
+- Fix Exception when settings AWS Batch containerOptions #3019 [89312ad8] <Paolo Di Tommaso>
+- Add docs aws.client.s3PathStyleAccess config (#3000) [20005500] <Abhinav Sharma>
+
+1.8.0 - 25 May 2022
+- Add support for custom KMS keys
+- Add support for virtual file system move operation [8c0ddfd5]
+
+1.7.2 - 15 Apr 2022
+- Fix Aws Batch retry policy on spot reclaim [d855f0d9]
+
+1.7.1 - 23 Apr 2022
+- Add config option `aws.client.anonymous` to allow the access of public buckets
+- Add config option `aws.client.debug`
+- Fix SS3 storage encryption flag for Batch submit job
+- Change upload default chunk size to 20MB
+
+1.7.0 - 6 Apr 2022
+- Add native handling for spot instance interruptions
+- Add config option `aws.batch.maxSpotAttempts`
+- Add fetching container reason attribute on Batch job failure
+
+1.6.0 - 27 Mar 2022
+- Handle AWS Spot interruption automatically job retry
+- Refactor AWS Batch job unique token generation to prevent
+  "vCPUs and Memory Values Not Overridden" error see
+  https://github.com/nextflow-io/nextflow/issues/2561
+
+1.5.2 - 25 Feb 2022
+- Prevent S3 tagging with empty list
+
+1.5.1 - 19 Feb 2022
+- Fix Batch Job name exceed max allowed size
+
+1.5.0 - 21 Jan 2022
+- Add support for secrets management to AWS Batch executor
+- Enable parallel s3 downloads by default
+
+1.4.0 - 20 Dec 2021
+- Move s3fs client implementation into nf-amazon module
+- Bump AWS sdk 1.12.129
+
 1.3.4 - 29 Nov 2021
 - Bump s3fs version 1.1.3
 - Fix S3 file exists check on provider not supporting Get object ACL

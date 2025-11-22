@@ -33,7 +33,7 @@ class WorkflowDefTest extends Dsl2Spec {
                 f.set(this, sess)
             }
             catch (GroovyCastException e) {
-                log.warn "Cant inject session - not a ScriptBinding context object"
+                log.warn "Can't inject session -- not a ScriptBinding context object"
             }
         }
 
@@ -159,54 +159,6 @@ class WorkflowDefTest extends Dsl2Spec {
         workflow.declaredInputs == ['foo']
         workflow.declaredOutputs == ['bar', 'baz']
 
-    }
-
-
-    def 'should capture publish defs' () {
-
-        given:
-        def config = new CompilerConfiguration()
-        config.setScriptBaseClass(TestScript.class.name)
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
-
-        def SCRIPT = '''
-                    
-            workflow {
-              publish: 
-                foo
-                bar to: 'some/path'
-                baz.out to: 'other/path'
-              main:   
-                x = 1 
-            }
-        '''
-
-        when:
-        def script = (TestScript)new GroovyShell(new ScriptBinding(), config).parse(SCRIPT).run()
-        then:
-        thrown(MultipleCompilationErrorsException)
-    }
-
-    def 'should not allow publish is sub-workflow' () {
-
-        given:
-        def config = new CompilerConfiguration()
-        config.setScriptBaseClass(TestScript.class.name)
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
-
-        def SCRIPT = '''
-                    
-            workflow alpha {
-              publish: foo
-              main:   
-                x = 1 
-            }
-        '''
-
-        when:
-        new GroovyShell(config).parse(SCRIPT)
-        then:
-        thrown(MultipleCompilationErrorsException)
     }
 
     def 'should report malformed workflow block' () {

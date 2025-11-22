@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +17,12 @@
 package nextflow.util
 
 import java.time.Instant
+import java.time.LocalDateTime
+import java.time.temporal.ChronoUnit
+import java.time.temporal.UnsupportedTemporalTypeException
 
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  *
@@ -27,10 +30,10 @@ import spock.lang.Specification
  */
 class DurationTest extends Specification {
 
-    final long SEC = 1000
-    final long MIN = 60 * SEC
-    final long HOUR = 60 * MIN
-    final long DAY = 24 * HOUR
+    long SEC = 1000
+    long MIN = 60 * SEC
+    long HOUR = 60 * MIN
+    long DAY = 24 * HOUR
 
     def 'test create by string' () {
 
@@ -62,6 +65,8 @@ class DurationTest extends Specification {
         Duration.of('1days').toHours() == 24
         Duration.of('1day').toHours() == 24
         Duration.of('1d').toHours() == 24
+
+        Duration.of('30d').toMillis() == 30 * DAY
 
     }
 
@@ -192,6 +197,98 @@ class DurationTest extends Specification {
 
         expect:
         Duration.between(start, end) == Duration.of('1sec')
+    }
+
+    // TemporalAmount interface tests
+
+    def 'should get value for supported temporal units' () {
+        given:
+        def duration = new Duration('2d 3h 4m 5s 123ms')
+
+        expect:
+        duration.get(ChronoUnit.MILLIS) == duration.toMillis()
+        duration.get(ChronoUnit.SECONDS) == duration.toSeconds()
+        duration.get(ChronoUnit.MINUTES) == duration.toMinutes()
+        duration.get(ChronoUnit.HOURS) == duration.toHours()
+        duration.get(ChronoUnit.DAYS) == duration.toDays()
+    }
+
+    def 'should throw exception for unsupported temporal unit' () {
+        given:
+        def duration = new Duration('1h')
+
+        when:
+        duration.get(ChronoUnit.WEEKS)
+
+        then:
+        thrown(UnsupportedTemporalTypeException)
+    }
+
+    def 'should return list of supported units' () {
+        given:
+        def duration = new Duration('1h')
+
+        when:
+        def units = duration.getUnits()
+
+        then:
+        units.size() == 5
+        units.contains(ChronoUnit.DAYS)
+        units.contains(ChronoUnit.HOURS)
+        units.contains(ChronoUnit.MINUTES)
+        units.contains(ChronoUnit.SECONDS)
+        units.contains(ChronoUnit.MILLIS)
+        // Should be ordered from longest to shortest
+        units[0] == ChronoUnit.DAYS
+        units[4] == ChronoUnit.MILLIS
+    }
+
+    def 'should add duration to temporal' () {
+        given:
+        def duration = new Duration('2h 30m')
+        def dateTime = LocalDateTime.of(2023, 1, 1, 10, 0, 0)
+
+        when:
+        def result = duration.addTo(dateTime)
+
+        then:
+        result == LocalDateTime.of(2023, 1, 1, 12, 30, 0)
+    }
+
+    def 'should subtract duration from temporal' () {
+        given:
+        def duration = new Duration('1h 15m')
+        def dateTime = LocalDateTime.of(2023, 1, 1, 12, 30, 0)
+
+        when:
+        def result = duration.subtractFrom(dateTime)
+
+        then:
+        result == LocalDateTime.of(2023, 1, 1, 11, 15, 0)
+    }
+
+    def 'should add duration to instant' () {
+        given:
+        def duration = new Duration('5s')
+        def instant = Instant.ofEpochMilli(1000)
+
+        when:
+        def result = duration.addTo(instant)
+
+        then:
+        result == Instant.ofEpochMilli(6000)
+    }
+
+    def 'should subtract duration from instant' () {
+        given:
+        def duration = new Duration('2s')
+        def instant = Instant.ofEpochMilli(5000)
+
+        when:
+        def result = duration.subtractFrom(instant)
+
+        then:
+        result == Instant.ofEpochMilli(3000)
     }
 
 

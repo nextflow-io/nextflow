@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -95,9 +94,8 @@ class GitUrl {
             return
         }
 
-        throw new IllegalArgumentException("Malformed repository url: $url")
+        throw new IllegalArgumentException("Malformed repository URL: $url")
     }
-
 
     private parse0( String url, int p ) {
         // split protocol and url
@@ -145,7 +143,6 @@ class GitUrl {
 
     }
 
-
     private parseFile( String str ) {
         if( str.endsWith('.git') ) {
             str = str.substring(0, str.size()-4)
@@ -175,7 +172,7 @@ class GitUrl {
     /**
      * @return
      *      The URL domain e.g. given the URL {@code https://gitlab.com/pditommaso/hello.git} the string {@code gitlab.com}
-     *      is return. When the url is file system path the path withoit the last component is returned
+     *      is return. When the url is file system path the path without the last component is returned
      *      e.g. given {@code file:///opt/git/project.git} the following string is returned {@code /opt/git/}
      */
     String getDomain() { this.domain }

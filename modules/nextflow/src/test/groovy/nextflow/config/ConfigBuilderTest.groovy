@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +17,9 @@
 package nextflow.config
 
 import java.nio.file.Files
-import java.nio.file.Paths
+import java.nio.file.Path
 
+import nextflow.SysEnv
 import nextflow.cli.CliOptions
 import nextflow.cli.CmdConfig
 import nextflow.cli.CmdNode
@@ -27,8 +27,10 @@ import nextflow.cli.CmdRun
 import nextflow.cli.Launcher
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
-import nextflow.trace.WebLogObserver
+import nextflow.extension.FilesEx
+import nextflow.secret.SecretsLoader
 import nextflow.util.ConfigHelper
+import spock.lang.Ignore
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -37,6 +39,31 @@ import spock.lang.Unroll
  */
 class ConfigBuilderTest extends Specification {
 
+    def setupSpec() {
+        SysEnv.push([:])
+    }
+
+    def cleanupSpec() {
+        SysEnv.pop()
+    }
+
+    ConfigObject configWithParams(Path file, Map runOpts, Path baseDir=null) {
+        def run = new CmdRun(runOpts)
+        return new ConfigBuilder()
+            .setOptions(new CliOptions())
+            .setCmdRun(run)
+            .setCliParams(run.parsedParams(ConfigBuilder.getConfigVars(baseDir, null)))
+            .buildGivenFiles(file)
+    }
+
+    ConfigObject configWithParams(Map config, Map runOpts, Map cliOpts=[:]) {
+        def run = new CmdRun(runOpts)
+        return new ConfigBuilder(config)
+            .setOptions(new CliOptions(cliOpts))
+            .setCmdRun(run)
+            .setCliParams(run.parsedParams(ConfigBuilder.getConfigVars(null, null)))
+            .build()
+    }
 
     def 'build config object' () {
 
@@ -134,7 +161,7 @@ class ConfigBuilderTest extends Specification {
 
         setup:
         def builder = [:] as ConfigBuilder
-        builder.baseDir = Paths.get('/base/path')
+        builder.baseDir = Path.of('/base/path')
 
         def text = '''
         params.p = "$baseDir/1"
@@ -142,6 +169,7 @@ class ConfigBuilderTest extends Specification {
             q = "$baseDir/2"
             x = "$projectDir/3"
             y = "$launchDir/4"
+            z = "$outputDir/5"
         }
         '''
 
@@ -151,7 +179,8 @@ class ConfigBuilderTest extends Specification {
         cfg.params.p == '/base/path/1'
         cfg.params.q == '/base/path/2'
         cfg.params.x == '/base/path/3'
-        cfg.params.y == "${Paths.get('.').toRealPath()}/4"
+        cfg.params.y == "${Path.of('.').toRealPath()}/4"
+        cfg.params.z == "${Path.of('results').complete()}/5"
 
     }
 
@@ -174,9 +203,7 @@ class ConfigBuilderTest extends Specification {
         }
         '''
         when:
-        def opt = new CliOptions()
-        def run = new CmdRun(params: [alpha: 'Hello', beta: 'World', omega: 'Last'])
-        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(file)
+        def result = configWithParams(file, [params: [alpha: 'Hello', beta: 'World', omega: 'Last']])
 
         then:
         result.params.alpha == 'Hello'  // <-- params defined as CLI options override the ones in the config file
@@ -190,7 +217,7 @@ class ConfigBuilderTest extends Specification {
         file?.delete()
     }
 
-    def 'CLI params should override the ones defined in the config file (2)' () {
+    def 'CLI params should override the ones defined in the config file [2]' () {
         setup:
         def file = Files.createTempFile('test',null)
         file.text = '''
@@ -207,9 +234,7 @@ class ConfigBuilderTest extends Specification {
         }
         '''
         when:
-        def opt = new CliOptions()
-        def run = new CmdRun(params: [alpha: 'Hello', beta: 'World', omega: 'Last'])
-        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(file)
+        def result = configWithParams(file, [params: [alpha: 'Hello', beta: 'World', omega: 'Last']])
 
         then:
         result.params.alpha == 'Hello'  // <-- params defined as CLI options override the ones in the config file
@@ -259,9 +284,7 @@ class ConfigBuilderTest extends Specification {
         '''
 
         when:
-        def opt = new CliOptions()
-        def run = new CmdRun(params: [one: '1', two: 'dos', three: 'tres'])
-        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(configMain.toPath())
+        def config = configWithParams(configMain.toPath(), [params: [one: '1', two: 'dos', three: 'tres']])
 
         then:
         config.params.one == 1
@@ -282,12 +305,43 @@ class ConfigBuilderTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'should include config with params' () {
+        given:
+        def folder = File.createTempDir()
+        def configMain = new File(folder,'nextflow.config').absoluteFile
+        def snippet1 = new File(folder,'igenomes.config').absoluteFile
+
+
+        configMain.text = '''
+        includeConfig 'igenomes.config'
+        '''
+
+        snippet1.text = '''
+        params {
+          genomes {
+            'GRCh37' {
+              fasta = "${params.igenomes_base}/genome.fa"
+              bwa   = "${params.igenomes_base}/BWAIndex/genome.fa"
+            }
+          }
+        }
+        '''
+
+        when:
+        def config = configWithParams(configMain.toPath(), [params: [igenomes_base: 'test']])
+
+        then:
+        config.params.genomes.GRCh37 == [fasta:'test/genome.fa', bwa:'test/BWAIndex/genome.fa']
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
 
     def 'should fetch the config path from env var' () {
         given:
         def folder = File.createTempDir()
         def configMain = new File(folder,'my.config').absoluteFile
-
 
         configMain.text = """
         process.name = 'alpha'
@@ -356,44 +410,34 @@ class ConfigBuilderTest extends Specification {
                 publishDir = [path: params.alpha]
             }
           }
-
         }
-
         '''
 
-
         when:
-        def opt = new CliOptions()
-        def run = new CmdRun(params: [alpha: 'AAA', beta: 'BBB'])
-        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(file)
+        def config = configWithParams(file, [params: [alpha: 'AAA', beta: 'BBB']])
         then:
         config.params.alpha == 'AAA'
         config.params.beta == 'BBB'
         config.params.delta == 'Foo'
         config.params.gamma == 'AAA'
-        config.params.genomes.GRCh37.bed12 == '/data/genes.bed'
-        config.params.genomes.GRCh37.bismark == '/data/BismarkIndex'
-        config.params.genomes.GRCh37.bowtie  == '/data/genome'
+        config.params.genomes.'GRCh37'.bed12 == '/data/genes.bed'
+        config.params.genomes.'GRCh37'.bismark == '/data/BismarkIndex'
+        config.params.genomes.'GRCh37'.bowtie  == '/data/genome'
 
         when:
-        opt = new CliOptions()
-        run = new CmdRun(params: [alpha: 'AAA', beta: 'BBB'], profile: 'first')
-        config = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(file)
+        config = configWithParams(file, [params: [alpha: 'AAA', beta: 'BBB'], profile: 'first'])
         then:
         config.params.alpha == 'AAA'
         config.params.beta == 'BBB'
         config.params.delta == 'Foo'
         config.params.gamma == 'First'
         config.process.name == 'Bar'
-        config.params.genomes.GRCh37.bed12 == '/data/genes.bed'
-        config.params.genomes.GRCh37.bismark == '/data/BismarkIndex'
-        config.params.genomes.GRCh37.bowtie  == '/data/genome'
-
+        config.params.genomes.'GRCh37'.bed12 == '/data/genes.bed'
+        config.params.genomes.'GRCh37'.bismark == '/data/BismarkIndex'
+        config.params.genomes.'GRCh37'.bowtie  == '/data/genome'
 
         when:
-        opt = new CliOptions()
-        run = new CmdRun(params: [alpha: 'AAA', beta: 'BBB', genomes: 'xxx'], profile: 'second')
-        config = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(file)
+        config = configWithParams(file, [params: [alpha: 'AAA', beta: 'BBB', genomes: 'xxx'], profile: 'second'])
         then:
         config.params.alpha == 'AAA'
         config.params.beta == 'BBB'
@@ -408,10 +452,10 @@ class ConfigBuilderTest extends Specification {
 
     def 'params-file should override params in the config file' () {
         setup:
-        def baseDir = Paths.get('/my/base/dir')
+        def baseDir = Path.of('/my/base/dir')
         and:
-        def params = Files.createTempFile('test', '.yml')
-        params.text = '''
+        def paramsFile = Files.createTempFile('test', '.yml')
+        paramsFile.text = '''
             alpha: "Hello" 
             beta: "World" 
             omega: "Last"
@@ -435,9 +479,7 @@ class ConfigBuilderTest extends Specification {
         }
         '''
         when:
-        def opt = new CliOptions()
-        def run = new CmdRun(paramsFile: params)
-        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).setBaseDir(baseDir).buildGivenFiles(file)
+        def result = configWithParams(file, [paramsFile: paramsFile], baseDir)
 
         then:
         result.params.alpha == 'Hello'  // <-- params defined in the params-file overrides the ones in the config file
@@ -450,7 +492,7 @@ class ConfigBuilderTest extends Specification {
 
         cleanup:
         file?.delete()
-        params?.delete()
+        paramsFile?.delete()
     }
 
     def 'params should override params-file and override params in the config file' () {
@@ -477,9 +519,7 @@ class ConfigBuilderTest extends Specification {
         }
         '''
         when:
-        def opt = new CliOptions()
-        def run = new CmdRun(paramsFile: params, params: [alpha: 'Hola', beta: 'Mundo'])
-        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(file)
+        def result = configWithParams(file, [paramsFile: params, params: [alpha: 'Hola', beta: 'Mundo']])
 
         then:
         result.params.alpha == 'Hola'   // <-- this comes from the CLI
@@ -640,14 +680,14 @@ class ConfigBuilderTest extends Specification {
         when:
         file.text =
                 '''
-                process.$test.container = 'busybox'
+                process.'withName:test'.container = 'busybox'
                 '''
         def opt = new CliOptions(config: [file.toFile().canonicalPath])
         def run = new CmdRun(withDocker: '-')
         def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
         then:
         config.docker.enabled
-        config.process.$test.container == 'busybox'
+        config.process.'withName:test'.container == 'busybox'
 
         when:
         file.text =
@@ -667,19 +707,19 @@ class ConfigBuilderTest extends Specification {
         new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
         then:
         def e = thrown(AbortOperationException)
-        e.message == 'You have requested to run with Docker but no image were specified'
+        e.message == 'You have requested to run with Docker but no image was specified'
 
         when:
         file.text =
                 '''
-                process.$test.tag = 'tag'
+                process.'withName:test'.tag = 'tag'
                 '''
         opt = new CliOptions(config: [file.toFile().canonicalPath])
         run = new CmdRun(withDocker: '-')
         new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
         then:
         e = thrown(AbortOperationException)
-        e.message == 'You have requested to run with Docker but no image were specified'
+        e.message == 'You have requested to run with Docker but no image was specified'
 
     }
 
@@ -740,6 +780,7 @@ class ConfigBuilderTest extends Specification {
         !config.hasContainerDirective([foo: 1, bar: 2])
         !config.hasContainerDirective([foo: 1, bar: 2, baz: [container: 'user/repo']])
         config.hasContainerDirective([foo: 1, bar: 2, $baz: [container: 'user/repo']])
+        config.hasContainerDirective([foo: 1, bar: 2, 'withName:baz': [container: 'user/repo']])
 
     }
 
@@ -790,7 +831,6 @@ class ConfigBuilderTest extends Specification {
         then: // command line should override the config file
         config.trace instanceof Map
         config.trace.enabled
-        config.trace.file == 'trace.txt'
     }
 
     def 'should set session report options' () {
@@ -846,7 +886,6 @@ class ConfigBuilderTest extends Specification {
         then:
         config.report instanceof Map
         config.report.enabled
-        config.report.file == 'report.html'
     }
 
 
@@ -903,7 +942,6 @@ class ConfigBuilderTest extends Specification {
         then:
         config.dag instanceof Map
         config.dag.enabled
-        config.dag.file == 'dag.dot'
     }
 
     def 'should set session weblog options' () {
@@ -962,7 +1000,7 @@ class ConfigBuilderTest extends Specification {
         then:
         config.weblog instanceof Map
         config.weblog.enabled
-        config.weblog.url == WebLogObserver.DEF_URL
+        config.weblog.url == 'http://localhost'
 
     }
 
@@ -1022,7 +1060,6 @@ class ConfigBuilderTest extends Specification {
         then:
         config.timeline instanceof Map
         config.timeline.enabled
-        config.timeline.file == 'timeline.html'
     }
 
     def 'should set tower options' () {
@@ -1054,6 +1091,297 @@ class ConfigBuilderTest extends Specification {
         config.tower.enabled
         config.tower.endpoint == 'http://bar.com'
 
+        when:
+        config = new ConfigObject()
+        config.tower.endpoint = 'http://foo.com'
+        builder.configRunOptions(config, env, new CmdRun(withTower: '-'))
+        then:
+        config.tower instanceof Map
+        config.tower.enabled
+        config.tower.endpoint == 'http://foo.com'
+
+        when:
+        config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun(withTower: '-'))
+        then:
+        config.tower instanceof Map
+        config.tower.enabled
+        config.tower.endpoint == 'https://api.cloud.seqera.io'
+    }
+
+    def 'should set wave options' () {
+
+        given:
+        def env = [:]
+        def builder = [:] as ConfigBuilder
+
+        when:
+        def config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun())
+        then:
+        !config.wave
+
+        when:
+        config = new ConfigObject()
+        config.wave.endpoint = 'http://foo.com'
+        builder.configRunOptions(config, env, new CmdRun())
+        then:
+        config.wave instanceof Map
+        !config.wave.enabled
+        config.wave.endpoint == 'http://foo.com'
+
+        when:
+        config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun(withWave: 'http://bar.com'))
+        then:
+        config.wave instanceof Map
+        config.wave.enabled
+        config.wave.endpoint == 'http://bar.com'
+
+        when:
+        config = new ConfigObject()
+        config.wave.endpoint = 'http://foo.com'
+        builder.configRunOptions(config, env, new CmdRun(withWave: '-'))
+        then:
+        config.wave instanceof Map
+        config.wave.enabled
+        config.wave.endpoint == 'http://foo.com'
+
+        when:
+        config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun(withWave: '-'))
+        then:
+        config.wave instanceof Map
+        config.wave.enabled
+        config.wave.endpoint == 'https://wave.seqera.io'
+    }
+
+    def 'should set cloudcache options' () {
+
+        given:
+        def env = [:]
+        def builder = [:] as ConfigBuilder
+
+        when:
+        def config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun())
+        then:
+        !config.cloudcache
+
+        when:
+        config = new ConfigObject()
+        config.cloudcache.path = 's3://foo/bar'
+        builder.configRunOptions(config, env, new CmdRun())
+        then:
+        config.cloudcache instanceof Map
+        !config.cloudcache.enabled
+        config.cloudcache.path == 's3://foo/bar'
+
+        when:
+        config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun(cloudCachePath: 's3://this/that'))
+        then:
+        config.cloudcache instanceof Map
+        config.cloudcache.enabled
+        config.cloudcache.path == 's3://this/that'
+
+        when:
+        config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun(cloudCachePath: '-'))
+        then:
+        config.cloudcache instanceof Map
+        config.cloudcache.enabled
+        !config.cloudcache.path
+
+        when:
+        config = new ConfigObject()
+        config.cloudcache.path = 's3://alpha/delta'
+        builder.configRunOptions(config, env, new CmdRun(cloudCachePath: '-'))
+        then:
+        config.cloudcache instanceof Map
+        config.cloudcache.enabled
+        config.cloudcache.path == 's3://alpha/delta'
+
+        when:
+        config = new ConfigObject()
+        config.cloudcache.path = 's3://alpha/delta'
+        builder.configRunOptions(config, env, new CmdRun(cloudCachePath: 's3://should/override/config'))
+        then:
+        config.cloudcache instanceof Map
+        config.cloudcache.enabled
+        config.cloudcache.path == 's3://should/override/config'
+
+        when:
+        config = new ConfigObject()
+        config.cloudcache.enabled = false
+        builder.configRunOptions(config, env, new CmdRun(cloudCachePath: 's3://should/override/config'))
+        then:
+        config.cloudcache instanceof Map
+        !config.cloudcache.enabled
+        config.cloudcache.path == 's3://should/override/config'
+
+        when:
+        config = new ConfigObject()
+        builder.configRunOptions(config, [NXF_CLOUDCACHE_PATH:'s3://foo'], new CmdRun(cloudCachePath: 's3://should/override/env'))
+        then:
+        config.cloudcache instanceof Map
+        config.cloudcache.enabled
+        config.cloudcache.path == 's3://should/override/env'
+
+        when:
+        config = new ConfigObject()
+        config.cloudcache.path = 's3://config/path'
+        builder.configRunOptions(config, [NXF_CLOUDCACHE_PATH:'s3://foo'], new CmdRun())
+        then:
+        config.cloudcache instanceof Map
+        config.cloudcache.enabled
+        config.cloudcache.path == 's3://config/path'
+
+        when:
+        config = new ConfigObject()
+        config.cloudcache.path = 's3://config/path'
+        builder.configRunOptions(config, [NXF_CLOUDCACHE_PATH:'s3://foo'], new CmdRun(cloudCachePath: 's3://should/override/config'))
+        then:
+        config.cloudcache instanceof Map
+        config.cloudcache.enabled
+        config.cloudcache.path == 's3://should/override/config'
+
+    }
+
+    def 'should enable conda env' () {
+
+        given:
+        def env = [:]
+        def builder = [:] as ConfigBuilder
+
+        when:
+        def config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun())
+        then:
+        !config.conda
+
+        when:
+        config = new ConfigObject()
+        config.conda.createOptions = 'something'
+        builder.configRunOptions(config, env, new CmdRun())
+        then:
+        config.conda instanceof Map
+        !config.conda.enabled
+        config.conda.createOptions == 'something'
+
+        when:
+        config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun(withConda: 'my-recipe.yml'))
+        then:
+        config.conda instanceof Map
+        config.conda.enabled
+        config.process.conda == 'my-recipe.yml'
+
+        when:
+        config = new ConfigObject()
+        config.conda.enabled = true
+        builder.configRunOptions(config, env, new CmdRun(withConda: 'my-recipe.yml'))
+        then:
+        config.conda instanceof Map
+        config.conda.enabled
+        config.process.conda == 'my-recipe.yml'
+
+        when:
+        config = new ConfigObject()
+        config.process.conda = 'my-recipe.yml'
+        builder.configRunOptions(config, env, new CmdRun(withConda: '-'))
+        then:
+        config.conda instanceof Map
+        config.conda.enabled
+        config.process.conda == 'my-recipe.yml'
+    }
+
+    def 'should disable conda env' () {
+        given:
+        def file = Files.createTempFile('test','config')
+        file.deleteOnExit()
+        file.text =
+                '''
+                conda {
+                    enabled = true
+                }
+                '''
+
+        when:
+        def opt = new CliOptions(config: [file.toFile().canonicalPath] )
+        def run = new CmdRun(withoutConda: true)
+        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
+        then:
+        !config.conda.enabled
+        !config.process.conda
+    }
+
+    def 'should enable spack env' () {
+
+        given:
+        def env = [:]
+        def builder = [:] as ConfigBuilder
+
+        when:
+        def config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun())
+        then:
+        !config.spack
+
+        when:
+        config = new ConfigObject()
+        config.spack.createOptions = 'something'
+        builder.configRunOptions(config, env, new CmdRun())
+        then:
+        config.spack instanceof Map
+        !config.spack.enabled
+        config.spack.createOptions == 'something'
+
+        when:
+        config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun(withSpack: 'my-recipe.yaml'))
+        then:
+        config.spack instanceof Map
+        config.spack.enabled
+        config.process.spack == 'my-recipe.yaml'
+
+        when:
+        config = new ConfigObject()
+        config.spack.enabled = true
+        builder.configRunOptions(config, env, new CmdRun(withSpack: 'my-recipe.yaml'))
+        then:
+        config.spack instanceof Map
+        config.spack.enabled
+        config.process.spack == 'my-recipe.yaml'
+
+        when:
+        config = new ConfigObject()
+        config.process.spack = 'my-recipe.yaml'
+        builder.configRunOptions(config, env, new CmdRun(withSpack: '-'))
+        then:
+        config.spack instanceof Map
+        config.spack.enabled
+        config.process.spack == 'my-recipe.yaml'
+    }
+
+    def 'should disable spack env' () {
+        given:
+        def file = Files.createTempFile('test','config')
+        file.deleteOnExit()
+        file.text =
+                '''
+                spack {
+                    enabled = true
+                }
+                '''
+
+        when:
+        def opt = new CliOptions(config: [file.toFile().canonicalPath] )
+        def run = new CmdRun(withoutSpack: true)
+        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
+        then:
+        !config.spack.enabled
+        !config.process.spack
     }
 
     def 'SHOULD SET `RESUME` OPTION'() {
@@ -1296,56 +1624,56 @@ class ConfigBuilderTest extends Specification {
         def config
 
         when:
-        config = new ConfigBuilder().setOptions(new CliOptions(config: EMPTY)).setCmdRun(new CmdRun()).build()
+        config = configWithParams([:], [:], [config: EMPTY])
         then:
         config.params == [:]
 
         // get params for the CLI
         when:
-        config = new ConfigBuilder().setOptions(new CliOptions(config: EMPTY)).setCmdRun(new CmdRun(params: [foo:'one', bar:'two'])).build()
+        config = configWithParams([:], [params: [foo:'one', bar:'two']], [config: EMPTY])
         then:
         config.params == [foo:'one', bar:'two']
 
         // get params from config file
         when:
-        config = new ConfigBuilder().setOptions(new CliOptions(config: [configFile])).setCmdRun(new CmdRun()).build()
+        config = configWithParams([:], [:], [config: [configFile]])
         then:
         config.params == [foo:1, bar:2, data: '/some/path']
 
         // get params form JSON file
         when:
-        config = new ConfigBuilder().setOptions(new CliOptions(config: EMPTY)).setCmdRun(new CmdRun(paramsFile: jsonFile)).build()
+        config = configWithParams([:], [paramsFile: jsonFile], [config: EMPTY])
         then:
         config.params == [foo:10, bar:20]
 
         // get params from YAML file
         when:
-        config = new ConfigBuilder().setOptions(new CliOptions(config: EMPTY)).setCmdRun(new CmdRun(paramsFile: yamlFile)).build()
+        config = configWithParams([:], [paramsFile: yamlFile], [config: EMPTY])
         then:
         config.params == [foo:100, bar:200]
 
         // cli override config
         when:
-        config = new ConfigBuilder().setOptions(new CliOptions(config: [configFile])).setCmdRun(new CmdRun(params:[foo:'hello', baz:'world'])).build()
+        config = configWithParams([:], [params: [foo:'hello', baz:'world']], [config: [configFile]])
         then:
         config.params == [foo:'hello', bar:2, baz: 'world', data: '/some/path']
 
         // CLI override JSON
         when:
-        config = new ConfigBuilder().setOptions(new CliOptions(config: EMPTY)).setCmdRun(new CmdRun(params:[foo:'hello', baz:'world'], paramsFile: jsonFile)).build()
+        config = configWithParams([:], [params: [foo:'hello', baz:'world'], paramsFile: jsonFile], [config: EMPTY])
         then:
         config.params == [foo:'hello', bar:20, baz: 'world']
 
         // JSON override config
         when:
-        config = new ConfigBuilder().setOptions(new CliOptions(config: [configFile])).setCmdRun(new CmdRun(paramsFile: jsonFile)).build()
+        config = configWithParams([:], [paramsFile: jsonFile], [config: [configFile]])
         then:
         config.params == [foo:10, bar:20, data: '/some/path']
 
 
         // CLI override JSON that override config
         when:
-        config = new ConfigBuilder().setOptions(new CliOptions(config: [configFile])).setCmdRun(new CmdRun(paramsFile: jsonFile, params: [foo:'Ciao'])).build()
+        config = configWithParams([:], [paramsFile: jsonFile, params: [foo:'Ciao']], [config: [configFile]])
         then:
         config.params == [foo:'Ciao', bar:20, data: '/some/path']
     }
@@ -1356,6 +1684,15 @@ class ConfigBuilderTest extends Specification {
         def config = new ConfigBuilder().setCmdRun(new CmdRun(withConda: '/some/path/env.yml')).build()
         then:
         config.process.conda == '/some/path/env.yml'
+
+    }
+
+    def 'should run with spack' () {
+
+        when:
+        def config = new ConfigBuilder().setCmdRun(new CmdRun(withSpack: '/some/path/env.yaml')).build()
+        then:
+        config.process.spack == '/some/path/env.yaml'
 
     }
 
@@ -1371,10 +1708,12 @@ class ConfigBuilderTest extends Specification {
 
 
         when:
+        SysEnv.push(HOME: '/home/user')
         def opt = new CliOptions(config: [file.toFile().canonicalPath] )
         def cfg = new ConfigBuilder().setOptions(opt).build()
+        SysEnv.pop()
         then:
-        cfg.params.foo == System.getenv('HOME')
+        cfg.params.foo == '/home/user'
 
         when:
         file.text =
@@ -1441,7 +1780,7 @@ class ConfigBuilderTest extends Specification {
     def 'should collect config files' () {
 
         given:
-        def slurper = new ConfigParser()
+        def slurper = ConfigParserFactory.create()
         def file1 = Files.createTempFile('test1', null)
         def file2 = Files.createTempFile('test2', null)
         def result = new ConfigObject()
@@ -1492,6 +1831,32 @@ class ConfigBuilderTest extends Specification {
         config.notification.to == 'yo@nextflow.com'
     }
 
+    def 'should configure fusion' () {
+
+        given:
+        Map config
+
+        when:
+        config = new ConfigBuilder().setCmdRun(new CmdRun()).build()
+        then:
+        !config.fusion
+
+        when:
+        config = new ConfigBuilder().setCmdRun(new CmdRun(withFusion: true)).build()
+        then:
+        config.fusion.enabled == true
+
+        when:
+        config = new ConfigBuilder().setCmdRun(new CmdRun(withFusion: false)).build()
+        then:
+        config.fusion == [enabled: false]
+
+        when:
+        config = new ConfigBuilder().setCmdRun(new CmdRun(withFusion: true)).build()
+        then:
+        config.fusion == [enabled: true]
+    }
+
     def 'should configure stub run mode' () {
         given:
         Map config
@@ -1506,7 +1871,22 @@ class ConfigBuilderTest extends Specification {
         then:
         config.stubRun == true
     }
-    
+
+    def 'should configure preview mode' () {
+        given:
+        Map config
+
+        when:
+        config = new ConfigBuilder().setCmdRun(new CmdRun()).build()
+        then:
+        !config.preview
+
+        when:
+        config = new ConfigBuilder().setCmdRun(new CmdRun(preview: true)).build()
+        then:
+        config.preview == true
+    }
+
     def 'should merge profiles' () {
         given:
         def ENV = [:]
@@ -1684,6 +2064,65 @@ class ConfigBuilderTest extends Specification {
 
     }
 
+    def 'should resolve ext config' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        def file1 = folder.resolve('test.conf')
+        file1.text = '''
+            process {
+                ext { args = "Hello World!" } 
+                cpus = 1 
+                withName:BAR {
+                    ext { args = "Ciao mondo!" } 
+                    cpus = 2
+                }
+            }
+            '''
+
+        when:
+        def cfg1 = new ConfigBuilder().buildConfig0([:], [file1])
+        then:
+        cfg1.process.cpus == 1
+        cfg1.process.ext.args == 'Hello World!'
+        cfg1.process.'withName:BAR'.cpus == 2
+        cfg1.process.'withName:BAR'.ext.args == "Ciao mondo!"
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    // issue 2422 - https://github.com/nextflow-io/nextflow/issues/2422
+    // ideally this should behave as the previous test
+    @Ignore
+    def 'should resolve ext config with properties' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        def file1 = folder.resolve('test.conf')
+        file1.text = '''
+            process {
+                ext.args = "Hello World!" 
+                cpus = 1 
+                withName:BAR {
+                    ext.args = "Ciao mondo!"
+                    cpus = 2
+                }
+            }
+            '''
+
+        when:
+        def cfg1 = new ConfigBuilder().buildConfig0([:], [file1])
+        then:
+        cfg1.process.cpus == 1
+        cfg1.process.ext.args == 'Hello World!'
+        cfg1.process.'withName:BAR'.cpus == 2
+        cfg1.process.'withName:BAR'.ext.args == "Ciao mondo!"
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
     def 'should access top params from profile' () {
         given:
         def folder = Files.createTempDirectory('test')
@@ -1715,7 +2154,7 @@ class ConfigBuilderTest extends Specification {
         folder?.deleteDir()
     }
 
-    def 'should access top params from profile (2)' () {
+    def 'should access top params from profile [2]' () {
         given:
         def folder = Files.createTempDirectory('test')
         def file1 = folder.resolve('file1.conf')
@@ -1813,9 +2252,9 @@ class ConfigBuilderTest extends Specification {
         """
 
         when:
-        def opt = new CliOptions()
-        def run = new CmdRun(params: [bar: "world", 'baz.y': "mondo", 'baz.z.beta': "Welt"])
-        def config = new ConfigBuilder(env: [NXF_CONFIG_FILE: configMain.toString()]).setOptions(opt).setCmdRun(run).build()
+        def config = configWithParams(
+            [env: [NXF_CONFIG_FILE: configMain.toString()]],
+            [params: [bar: "world", 'baz.y': "mondo", 'baz.z.beta': "Welt"]] )
 
         then:
         config.params.foo == 'Hello'
@@ -1898,10 +2337,7 @@ class ConfigBuilderTest extends Specification {
 
         
         when:
-        def cfg2 = new ConfigBuilder()
-                .setOptions( new CliOptions(userConfig: [config.toString()]))
-                .setCmdRun( new CmdRun(params: ['test.foo': 'CLI_FOO'] ))
-                .build()
+        def cfg2 = configWithParams([:], [params: ['test.foo': 'CLI_FOO']], [userConfig: [config.toString()]])
         then:
         cfg2.params.test.foo == "CLI_FOO"
         cfg2.params.test.bar == "bar_def"
@@ -1931,7 +2367,7 @@ class ConfigBuilderTest extends Specification {
         '''.stripIndent()
 
         when:
-        def cfg1 = new ConfigBuilder().setCmdRun(new CmdRun(paramsFile: config.toString())).build()
+        def cfg1 = configWithParams([:], [paramsFile: config.toString()])
 
         then:
         cfg1.params.title == "something"
@@ -1959,7 +2395,7 @@ class ConfigBuilderTest extends Specification {
         '''.stripIndent()
 
         when:
-        def cfg1 = new ConfigBuilder().setCmdRun(new CmdRun(paramsFile: config.toString())).build()
+        def cfg1 = configWithParams([:], [paramsFile: config.toString()])
 
         then:
         cfg1.params.title == "something"
@@ -2016,5 +2452,301 @@ class ConfigBuilderTest extends Specification {
         cleanup:
         base?.deleteDir()
     }
+
+    def 'should merge profiles with conditions' () {
+        given:
+        def folder = Files.createTempDirectory("mergeprofiles")
+        def main = folder.resolve('main.conf')
+        def test = folder.resolve('test.conf')
+        def process = folder.resolve('process.conf')
+
+        main.text = '''
+        params {
+            load_config = null
+            present = true
+        }
+        
+        profiles {
+            test { includeConfig 'test.conf' }
+        }
+        
+        if (params.load_config) {
+            includeConfig 'process.conf'
+        }        
+        '''
+        test.text = '''
+        params {
+            load_config = true
+        }    
+        '''
+
+        process.text = '''
+        process {
+            withName: FOO {
+                ext.args = '--quiet'
+            }
+        }        
+        params{
+            another = true
+        }
+        '''
+
+        when:
+        def cfg = new ConfigBuilder().setProfile('test').buildConfig0([:], [main])
+        then:
+        cfg.process.'withName:FOO'
+        cfg.params.load_config == true
+        cfg.params.present == true
+        cfg.params.another == true
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+
+    def 'should build config object with secrets' () {
+        given:
+        SecretsLoader.instance.reset()
+        and:
+        def folder = Files.createTempDirectory('test')
+        def secrets  = folder.resolve('store.json')
+        and:
+        secrets.text = '''
+            [
+              {
+                "name": "FOO",
+                "value": "ciao"
+              }
+            ]
+            '''
+        and:
+        FilesEx.setPermissions(secrets, 'rw-------')
+        SysEnv.push(NXF_SECRETS_FILE:secrets.toAbsolutePath().toString())
+        and:
+        def text = '''
+        params.p = "$baseDir/1"
+        params.s = "$secrets.FOO/2"
+        '''
+
+        when:
+        def cfg = new ConfigBuilder().setBaseDir(folder).buildConfig0([:], [text])
+        then:
+        cfg.params.p == "$folder/1"
+        cfg.params.s == 'ciao/2'
+
+        cleanup:
+        folder?.deleteDir()
+        SysEnv.pop()
+    }
+
+    def 'should build include config with secrets' () {
+        given:
+        SecretsLoader.instance.reset()
+        and:
+        def folder = Files.createTempDirectory('test')
+        def secrets  = folder.resolve('store.json')
+        and:
+        secrets.text = '''
+            [
+              {
+                "name": "ALPHA",
+                "value": "one"
+              },
+              {
+                "name": "DELTA",
+                "value": "two"
+              },
+              {
+                "name": "GAMMA",
+                "value": "three"
+              }
+            ]
+            '''
+        FilesEx.setPermissions(secrets, 'rw-------')
+        SysEnv.push(NXF_SECRETS_FILE:secrets.toAbsolutePath().toString())
+        and:
+
+        def configMain = folder.resolve('nextflow.config')
+        def snippet1 = folder.resolve('config1.txt')
+        def snippet2 = folder.resolve('config2.txt')
+        and:
+
+        configMain.text = """
+        p1 = secrets.ALPHA
+        includeConfig "$snippet1"
+        """
+
+        snippet1.text = """
+        p2 = secrets.DELTA
+        includeConfig "$snippet2" 
+        """
+
+        snippet2.text = '''
+        p3 = secrets.GAMMA
+        p4 = 'some value'
+        '''
+
+        when:
+        def opt = new CliOptions()
+        def config = new ConfigBuilder().setBaseDir(folder).setOptions(opt).buildGivenFiles(configMain)
+        then:
+        config.p1 == 'one'
+        config.p2 == 'two'
+        config.p3 == 'three'
+        config.p4 == 'some value'
+
+        cleanup:
+        folder?.deleteDir()
+        SysEnv.pop()
+    }
+
+    def 'should build config with secrets in the include path' () {
+        given:
+        SecretsLoader.instance.reset()
+        and:
+        def folder = Files.createTempDirectory('test')
+        def configMain = folder.resolve('nextflow.config')
+        def snippet1 = folder.resolve('config1.txt')
+        def snippet2 = folder.resolve('config2.txt')
+
+        and:
+        def secrets  = folder.resolve('store.json')
+        and:
+        secrets.text = """
+            [
+              {
+                "name": "SECRET_FILE1",
+                "value": "${snippet1.toAbsolutePath()}"
+              },
+              {
+                "name": "SECRET_FILE2",
+                "value": "${snippet2.toAbsolutePath()}"
+              }
+            ]
+            """
+        FilesEx.setPermissions(secrets, 'rw-------')
+        SysEnv.push(NXF_SECRETS_FILE:secrets.toAbsolutePath().toString())
+        and:
+        configMain.text = '''
+        p1 = 'one'
+        // include config via a secret property
+        includeConfig secrets.SECRET_FILE1
+        '''
+
+        snippet1.text = '''
+        p2 = 'two'
+        // include config via string interpolation using a secret 
+        includeConfig "$secrets.SECRET_FILE2"
+        '''
+
+        snippet2.text = '''
+        p3 = 'three'
+        '''
+
+        when:
+        def opt = new CliOptions()
+        def config = new ConfigBuilder().setBaseDir(folder).setOptions(opt).buildGivenFiles(configMain)
+        then:
+        config.p1 == 'one'
+        config.p2 == 'two'
+        config.p3 == 'three'
+
+        cleanup:
+        folder?.deleteDir()
+        SysEnv.pop()
+    }
+
+    def 'should not render secret values' () {
+        given:
+        SecretsLoader.instance.reset()
+        and:
+        def folder = Files.createTempDirectory('test')
+        def configMain = folder.resolve('nextflow.config')
+        def snippet1 = folder.resolve('config1.txt')
+        def snippet2 = folder.resolve('config2.txt')
+
+        and:
+        def secrets  = folder.resolve('store.json')
+        and:
+        secrets.text = """
+            [
+              {
+                "name": "SECRET_FILE1",
+                "value": "${snippet1.toAbsolutePath()}"
+              },
+              {
+                "name": "SECRET_FILE2",
+                "value": "${snippet2.toAbsolutePath()}"
+              },
+              {
+                "name": "ALPHA",
+                "value": "one"
+              },
+              {
+                "name": "DELTA",
+                "value": "two"
+              },
+              {
+                "name": "GAMMA",
+                "value": "three"
+              }
+            ]
+            """
+        FilesEx.setPermissions(secrets, 'rw-------')
+        SysEnv.push(NXF_SECRETS_FILE:secrets.toAbsolutePath().toString())
+        and:
+        configMain.text = '''
+        p1 = secrets.ALPHA
+        foo.p1 = secrets.ALPHA 
+        bar {
+          p1 = secrets.ALPHA 
+        }
+        // include config via a secret property
+        includeConfig secrets.SECRET_FILE1
+        '''
+
+        snippet1.text = '''
+        p2 = "$secrets.DELTA"
+        foo.p2 = "$secrets.DELTA"
+        bar {
+          p2 = "$secrets.DELTA"
+        }
+        // include config via string interpolation using a secret 
+        includeConfig "$secrets.SECRET_FILE2"
+        '''
+
+        snippet2.text = '''
+        p3 = "$secrets.GAMMA"
+        foo.p3 = "$secrets.GAMMA"
+        bar {
+          p3 = "$secrets.GAMMA"
+        }
+        '''
+
+        when:
+        def opt = new CliOptions()
+        def config = new ConfigBuilder()
+                            .setBaseDir(folder)
+                            .setOptions(opt)
+                            .setStripSecrets(true)
+                            .buildGivenFiles(configMain)
+        then:
+        config.p1 == 'secrets.ALPHA'
+        config.p2 == 'secrets.DELTA'
+        config.p3 == 'secrets.GAMMA'
+        and:
+        config.foo.p1 == 'secrets.ALPHA'
+        config.foo.p2 == 'secrets.DELTA'
+        config.foo.p3 == 'secrets.GAMMA'
+        and:
+        config.bar.p1 == 'secrets.ALPHA'
+        config.bar.p2 == 'secrets.DELTA'
+        config.bar.p3 == 'secrets.GAMMA'
+
+        cleanup:
+        folder?.deleteDir()
+        SysEnv.pop()
+    }
+
 }
 

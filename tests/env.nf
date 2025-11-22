@@ -1,7 +1,6 @@
 #!/usr/bin/env nextflow
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +15,22 @@
  * limitations under the License.
  */
 
-/*
- * Shows how manipulate the script execution environment
- */
+process foo {
+    output:
+    env 'FOO'
+    script:
+    /FOO=Hello/
+}
 
-
-config.env [ 'HELLO_1' ]  = '1'
-
-process printEnv {
-    echo true
-
+process bar {
+    debug true
     input:
-    env HELLO_2 from '2'
-    env HELLO_X from ('a','b','c')
+    env 'FOO'
+    script:
+    'echo "bar says $FOO"'
+}
 
-    "env | grep HELLO | sort"
+
+workflow {
+  foo | bar
 }

@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,12 +22,12 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
-import spock.lang.Ignore
-import spock.lang.Specification
-
 import nextflow.Global
 import nextflow.Session
-
+import nextflow.SysEnv
+import spock.lang.Ignore
+import spock.lang.Specification
+import spock.lang.Unroll
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -98,4 +97,60 @@ class FileHelperGsTest extends Specification {
         then:
         thrown(FileAlreadyExistsException)
     }
+
+    @Unroll
+    def 'should convert to canonical path with base' () {
+        given:
+        Global.session = Mock(Session) { getConfig() >> [google:[project:'foo', region:'x']] }
+        and:
+        SysEnv.push(NXF_FILE_ROOT: 'gs://host.com/work')
+
+        expect:
+        FileHelper.toCanonicalPath(VALUE) == (EXPECTED ? FileHelper.asPath(EXPECTED) : null)
+
+        cleanup:
+        SysEnv.pop()
+        Global.session = null
+
+        where:
+        VALUE                       | EXPECTED
+        null                        | null
+        'file.txt'                  | 'gs://host.com/work/file.txt'
+        Path.of('file.txt')         | 'gs://host.com/work/file.txt'
+        and:
+        './file.txt'                | 'gs://host.com/work/file.txt'
+        '.'                         | 'gs://host.com/work'
+        './'                        | 'gs://host.com/work'
+        '../file.txt'               | 'gs://host.com/file.txt'
+        and:
+        '/file.txt'                 | '/file.txt'
+        Path.of('/file.txt')        | '/file.txt'
+    }
+
+    def 'should convert to a canonical path' () {
+        given:
+        Global.session = Mock(Session) { getConfig() >> [google:[project:'foo', region:'x']] }
+
+        expect:
+        FileHelper.toCanonicalPath(VALUE).toUri() == EXPECTED
+
+        where:
+        VALUE                       | EXPECTED
+        'gs://foo/some/file.txt'    | new URI('gs://foo/some/file.txt')
+        'gs://foo/some///file.txt'  | new URI('gs://foo/some/file.txt')
+    }
+
+    @Unroll
+    def 'should remove consecutive slashes in the path' () {
+        given:
+        Global.session = Mock(Session) { getConfig() >> [google:[project:'foo', region:'x']] }
+
+        expect:
+        FileHelper.asPath(STR).toUri() == EXPECTED
+        where:
+        STR                         | EXPECTED
+        'gs://foo//this/that'       | new URI('gs://foo/this/that')
+        'gs://foo//this///that'     | new URI('gs://foo/this/that')
+    }
+
 }

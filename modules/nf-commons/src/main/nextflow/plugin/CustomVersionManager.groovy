@@ -27,7 +27,7 @@ class CustomVersionManager extends DefaultVersionManager {
             return safeCheck0(version, constraint)
         }
         catch (Throwable e) {
-            log.debug "Failed check version constraint - version: $version; constraint: $constraint"
+            log.debug "Failed to check version constraint - version: $version; constraint: $constraint"
             return false
         }
     }

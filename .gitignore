@@ -6,6 +6,10 @@
 .cache/*
 .nextflow*
 .node-nextflow*
+.devcontainer
+.vscode/*
+.lineage/
+*/*/bin/*
 **/build/**
 build/**
 modules/**/build/
@@ -24,7 +28,6 @@ tests_other
 other
 docs/_build/
 ./*.txt
-cache/
 errors/
 misc/
 cloud/my-*
@@ -32,7 +35,9 @@ docker-test
 docker/dist
 docker/nextflow
 temp
-gradle.properties
 .dockerignore
 .launch.classpath
 plugins-prod
+sandbox
+wave-tests
+x/*

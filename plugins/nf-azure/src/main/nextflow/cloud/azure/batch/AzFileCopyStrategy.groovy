@@ -46,7 +46,7 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
 
     AzFileCopyStrategy(TaskBean bean, AzBatchExecutor executor) {
         super(bean)
-        this.config = executor.config
+        this.config = executor.azConfig
         this.remoteBinDir = executor.remoteBinDir
         this.sasToken = config.storage().sasToken
         this.maxParallelTransfers = config.batch().maxParallelTransfers
@@ -75,20 +75,20 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
     }
 
     static String uploadCmd(String source, Path targetDir) {
-        "nxf_az_upload '$source' '${AzHelper.toHttpUrl(targetDir)}'"
+        "nxf_az_upload ${Escape.path(source)} '${AzHelper.toHttpUrl(targetDir)}'"
     }
 
     @Override
     String getBeforeStartScript() {
-        AzBashLib.script(maxParallelTransfers, maxTransferAttempts, delayBetweenAttempts)
+        AzBashLib.script(config.azcopy(), maxParallelTransfers, maxTransferAttempts, delayBetweenAttempts)
     }
 
     @Override
     String getStageInputFilesScript(Map<String, Path> inputFiles) {
         String result = ( remoteBinDir ? """\
             nxf_az_download '${AzHelper.toHttpUrl(remoteBinDir)}' \$PWD/.nextflow-bin
-            chmod +x \$PWD/.nextflow-bin/*
-            """.stripIndent() : '' )
+            chmod +x \$PWD/.nextflow-bin/* || true
+            """.stripIndent(true) : '' )
 
         result += 'downloads=(true)\n'
         result += super.getStageInputFilesScript(inputFiles) + '\n'

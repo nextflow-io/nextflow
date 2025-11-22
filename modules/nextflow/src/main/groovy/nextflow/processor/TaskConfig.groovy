@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,22 +16,23 @@
 
 package nextflow.processor
 
-import nextflow.util.CmdLineOptionMap
-
 import static nextflow.processor.TaskProcessor.*
 
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.ast.NextflowDSLImpl
 import nextflow.exception.AbortOperationException
 import nextflow.exception.FailedGuardException
+import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.executor.res.AcceleratorResource
-import nextflow.k8s.model.PodOptions
+import nextflow.executor.res.DiskResource
 import nextflow.script.TaskClosure
 import nextflow.util.CmdLineHelper
+import nextflow.util.CmdLineOptionMap
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 /**
@@ -40,10 +40,11 @@ import nextflow.util.MemoryUnit
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 class TaskConfig extends LazyMap implements Cloneable {
 
-    static private final List<Integer> EXIT_ZERO = [0]
+    static public final int EXIT_ZERO = 0
 
     private transient Map cache = new LinkedHashMap(20)
 
@@ -103,13 +104,13 @@ class TaskConfig extends LazyMap implements Cloneable {
         return eval0(this, path.tokenize('.'), path)
     }
 
-    private Object eval0(Object object, List<String> path, String key ) {
+    private Object eval0(Object object, List<String> path, String key) {
         assert path, "Missing task attribute name"
         def result = null
         if( object instanceof LazyMap ) {
             result = ((LazyMap)object).getValue(path.first())
         }
-        else if( Object instanceof Map ) {
+        else if( object instanceof Map ) {
             result = ((Map)object).get(path.first())
         }
         else if( path.size()>1 ) {
@@ -129,6 +130,10 @@ class TaskConfig extends LazyMap implements Cloneable {
             return meta.getProperty(this)
 
         return get(name)
+    }
+
+    final getRawValue(String key) {
+        return target.get(key)
     }
 
     def get( String key ) {
@@ -182,9 +187,35 @@ class TaskConfig extends LazyMap implements Cloneable {
         return false
     }
 
-    boolean getEcho() {
-        def value = get('echo')
-        toBool(value)
+    int getArray() {
+        get('array') as Integer ?: 0
+    }
+
+    String getBeforeScript() {
+        return get('beforeScript')
+    }
+
+    String getAfterScript() {
+        return get('afterScript')
+    }
+
+    def getCleanup() {
+        return get('cleanup')
+    }
+
+    String getStageInMode() {
+        return get('stageInMode')
+    }
+
+    String getStageOutMode() {
+        return get('stageOutMode')
+    }
+
+    boolean getDebug() {
+        // check both `debug` and `echo` for backward
+        // compatibility until `echo` is not removed
+        def value = get('debug') || get('echo')
+        return toBool(value)
     }
 
     private static boolean toBool( value )  {
@@ -193,17 +224,6 @@ class TaskConfig extends LazyMap implements Cloneable {
         }
 
         return value != null && value.toString().toLowerCase() in Const.BOOL_YES
-    }
-
-    List<Integer> getValidExitStatus() {
-        def result = get('validExitStatus')
-        if( result instanceof List<Integer> )
-            return result as List<Integer>
-
-        if( result != null )
-            return [result as Integer]
-
-        return EXIT_ZERO
     }
 
     ErrorStrategy getErrorStrategy() {
@@ -220,8 +240,12 @@ class TaskConfig extends LazyMap implements Cloneable {
         throw new IllegalArgumentException("Not a valid `ErrorStrategy` value: ${strategy}")
     }
 
+    def getResourceLimit(String directive) {
+        final limits = get('resourceLimits') as Map
+        return limits?.get(directive)
+    }
 
-    MemoryUnit getMemory() {
+    private MemoryUnit getMemory0() {
         def value = get('memory')
 
         if( !value )
@@ -234,29 +258,40 @@ class TaskConfig extends LazyMap implements Cloneable {
             new MemoryUnit(value.toString().trim())
         }
         catch( Exception e ) {
-            throw new AbortOperationException("Not a valid 'memory' value in process definition: $value")
+            throw new ProcessUnrecoverableException("Not a valid 'memory' value in process definition: $value")
         }
+    }
+
+    MemoryUnit getMemory() {
+        final val = getMemory0()
+        final lim = getResourceLimit('memory') as MemoryUnit
+        return val && lim && val > lim ? lim : val
+    }
+
+    private DiskResource getDiskResource0() {
+        def value = get('disk')
+
+        if( value instanceof Map )
+            return new DiskResource((Map)value)
+
+        if( value != null )
+            return new DiskResource(value)
+
+        return null
+    }
+
+    DiskResource getDiskResource() {
+        final val = getDiskResource0()
+        final lim = getResourceLimit('disk') as MemoryUnit
+        return val && lim && val.request > lim ? val.withRequest(lim) : val
     }
 
     MemoryUnit getDisk() {
-        def value = get('disk')
-
-        if( !value )
-            return null
-
-        if( value instanceof MemoryUnit )
-            return (MemoryUnit)value
-
-        try {
-            new MemoryUnit(value.toString().trim())
-        }
-        catch( Exception e ) {
-            throw new AbortOperationException("Not a valid 'disk' value in process definition: $value")
-        }
+        getDiskResource()?.getRequest()
     }
 
-    Duration getTime() {
-        def value = get('time')
+    private Duration getDuration0(String key) {
+        def value = get(key)
 
         if( !value )
             return null
@@ -271,23 +306,47 @@ class TaskConfig extends LazyMap implements Cloneable {
             new Duration(value.toString().trim())
         }
         catch( Exception e ) {
-            throw new AbortOperationException("Not a valid `time` value in process definition: $value")
+            throw new AbortOperationException("Not a valid `$key` value in process definition: $value")
         }
+
+    }
+
+    private Duration getTime0() {
+        return getDuration0('time')
+    }
+
+    Duration getTime() {
+        final val = getTime0()
+        final lim = getResourceLimit('time') as Duration
+        return val && lim && val > lim ? lim : val
+    }
+
+    Duration getMaxSubmitAwait() {
+        return getDuration0('maxSubmitAwait')
     }
 
     boolean hasCpus() {
         get('cpus') != null
     }
 
-    int getCpus() {
+    private int getCpus0() {
         final value = get('cpus')
         value ? value as int : 1  // note: always return at least 1 cpus
     }
 
+    int getCpus() {
+        final val = getCpus0()
+        if( val<0 )
+            throw new ProcessUnrecoverableException("Directive 'cpus' cannot be a negative value - offending value: $val")
+        final lim = getResourceLimit('cpus') as Integer
+        if( lim!=null && lim<1 )
+            throw new ProcessUnrecoverableException("Directive 'resourceLimits.cpus' cannot be a negative value - offending value: $lim")
+        return val && lim && val > lim ? lim : val
+    }
+
     int getMaxRetries() {
         def result = get('maxRetries')
-        def defResult = getErrorStrategy() == ErrorStrategy.RETRY ? 1 : 0
-        result ? result as int : defResult
+        result ? result as int : 1
     }
 
     int getMaxErrors() {
@@ -299,7 +358,7 @@ class TaskConfig extends LazyMap implements Cloneable {
         def value = get('module')
 
         if( value instanceof List ) {
-            def result = []
+            List<String> result = []
             for( String name : value ) {
                 result.addAll( name.tokenize(':') )
             }
@@ -322,12 +381,28 @@ class TaskConfig extends LazyMap implements Cloneable {
             return BashWrapperBuilder.BASH
 
         if( value instanceof List )
-            return (List)value
+            return validateShell(value as List)
 
         if( value instanceof CharSequence )
-            return [ value.toString() ]
+            return validateShell(List.of(value.toString()))
 
         throw new IllegalArgumentException("Not a valid `shell` configuration value: ${value}")
+    }
+
+    protected List<String> validateShell(List<String> shell) {
+        for( String it : shell ) {
+            if( !it )
+                throw new IllegalArgumentException("Directive `process.shell` cannot contain empty values - offending value: ${shell}")
+            if( !it || it.contains('\n') || it.contains('\r') ) {
+                log.warn1 "Directive `process.shell` cannot contain new-line characters - offending value: ${shell}"
+                break
+            }
+            if( it.startsWith(' ') || it.endsWith(' ')) {
+                log.warn "Directive `process.shell` cannot contain leading or tralining blanks - offending value: ${shell}"
+                break
+            }
+        }
+        return shell
     }
 
     Path getStoreDir() {
@@ -359,7 +434,36 @@ class TaskConfig extends LazyMap implements Cloneable {
         throw new IllegalArgumentException("Not a valid PublishDir collection [${dirs.getClass().getName()}] $dirs")
     }
 
+    def getContainer() {
+        return get('container')
+    }
 
+    Architecture getArchitecture() {
+        final value = get('arch')
+        if( value instanceof CharSequence )
+            return new Architecture(value.toString())
+        if( value instanceof Map )
+            return new Architecture(value)
+        if( value != null )
+            throw new IllegalArgumentException("Invalid `arch` directive value: $value [${value.getClass().getName()}]")
+        return null
+    }
+
+    def getClusterOptions() {
+        return get('clusterOptions')
+    }
+
+    String getClusterOptionsAsString() {
+        final opts = getClusterOptions()
+        if( opts instanceof CharSequence )
+            return opts.toString()
+        if( opts instanceof Collection )
+            return CmdLineHelper.toLine(opts as List<String>)
+        if( opts != null )
+            throw new IllegalArgumentException("Unexpected value for clusterOptions process directive - offending value: $opts")
+        return null
+    }
+    
     /**
      * @return Parse the {@code clusterOptions} configuration option and return the entries as a list of values
      */
@@ -378,6 +482,10 @@ class TaskConfig extends LazyMap implements Cloneable {
         }
     }
 
+    Integer getSubmitAttempt() {
+        get('submitAttempt') as Integer ?: 1
+    }
+
     Integer getAttempt() {
         get('attempt') as Integer ?: 1
     }
@@ -388,10 +496,6 @@ class TaskConfig extends LazyMap implements Cloneable {
 
     Integer getRetryCount() {
         get('retryCount') as Integer ?: 0
-    }
-
-    PodOptions getPodOptions() {
-        new PodOptions((List)get('pod'))
     }
 
     AcceleratorResource getAccelerator() {
@@ -425,15 +529,29 @@ class TaskConfig extends LazyMap implements Cloneable {
         return CmdLineOptionMap.emptyOption()
     }
 
+    Map<String, String> getResourceLabels() {
+        return get('resourceLabels') as Map<String, String> ?: Collections.<String,String>emptyMap()
+    }
+
+    String getResourceLabelsAsString() {
+        final res = getResourceLabels()
+        final result = new StringBuilder()
+        int c=0
+        for( Map.Entry<String,String> it : res ) {
+            if(c++>0) result.append(',')
+            result.append(it.key).append('=').append(it.value)
+        }
+        return result
+    }
+
     /**
-     * Get a closure guard condition and evaluate to a boolean result
+     * Get the when guard condition if present and evaluate it
      *
-     * @param name The name of the guard to test e.g. {@code when}
      * @return {@code true} when the condition is verified
      */
-    protected boolean getGuard( String name, boolean defValue=true ) throws FailedGuardException {
+    protected boolean getWhenGuard(boolean defValue=true) throws FailedGuardException {
 
-        final code = target.get(name)
+        final code = target.get(NextflowDSLImpl.PROCESS_WHEN)
         if( code == null )
             return defValue
 
@@ -447,7 +565,7 @@ class TaskConfig extends LazyMap implements Cloneable {
             return code as Boolean
         }
         catch( Throwable e ) {
-            throw new FailedGuardException("Cannot evaluate `$name` expression", source, e)
+            throw new FailedGuardException("Cannot evaluate `when` expression", source, e)
         }
     }
 
@@ -638,7 +756,10 @@ class LazyMap implements Map<String,Object> {
 @CompileStatic
 class ConfigList implements List {
 
-    @Delegate
+    // note: excludes 'reversed' to prevent issues caused by the introduction
+    // of SequenceCollection by Java 21 when running on Java 20 or earlier
+    // see: https://github.com/nextflow-io/nextflow/issues/5029
+    @Delegate(excludes = ['reversed','addFirst','addLast','getFirst','getLast','removeFirst','removeLast'])
     private List target
 
     ConfigList() {

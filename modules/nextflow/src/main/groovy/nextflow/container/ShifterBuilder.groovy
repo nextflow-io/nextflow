@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,14 +26,24 @@ class ShifterBuilder extends ContainerBuilder<ShifterBuilder> {
 
     private boolean verbose
 
-    ShifterBuilder( String image ) {
-        assert image
+    ShifterBuilder(String image, ShifterConfig config) {
         this.image = image
+        this.verbose = config.verbose
+    }
+
+    ShifterBuilder(String image) {
+        this(image, new ShifterConfig([:]))
+    }
+
+    ShifterBuilder params( Map params ) {
+        if( params.containsKey('entry') )
+            this.entryPoint = params.entry
+
+        return this
     }
 
     @Override
     ShifterBuilder build(StringBuilder result) {
-        assert image
 
         appendEnv(result)
 
@@ -49,17 +58,6 @@ class ShifterBuilder extends ContainerBuilder<ShifterBuilder> {
         return this
     }
 
-    ShifterBuilder params( Map params ) {
-
-        if( params.containsKey('verbose') )
-            this.verbose = params.verbose.toString() == 'true'
-
-        if( params.containsKey('entry') )
-            this.entryPoint = params.entry
-
-        return this
-    }
-
     @Override
     String getRunCommand() {
         def run = super.getRunCommand()
@@ -71,7 +69,7 @@ class ShifterBuilder extends ContainerBuilder<ShifterBuilder> {
             STATUS=\$(shifterimg -v pull $image | tail -n2 | head -n1 | awk \'{print \$6}\')
             [[ \$STATUS == "FAILURE" || -z \$STATUS ]] && echo "Shifter failed to pull image \'$image\'" >&2  && exit 1
         done
-        """.stripIndent()
+        """.stripIndent(true)
         result += run
         return result
     }
@@ -95,6 +93,9 @@ class ShifterBuilder extends ContainerBuilder<ShifterBuilder> {
         }
         else if( env instanceof String && env.contains('=') ) {
             result << env
+        }
+        else if( env instanceof String ) {
+            result << "\${$env:+\"$env=\$$env\"}"
         }
         else if( env ) {
             throw new IllegalArgumentException("Not a valid environment value: $env [${env.class.name}]")

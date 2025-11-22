@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,12 +36,9 @@ class DevPluginClasspath extends PluginClasspath {
         // the path where classes are resources should be found in the dev environment
         // for each plugin project directory
         addClassesDirectories("build/classes/groovy/main", "build/resources/main", 'build/classes/main')
-
-        // the path where the plugin dependencies jar files are expected to be found
         // note: this path is not created automatically by Gradle, it should be created by a custom task
-        // see `targetLibs` task in the base plugins `build.gradle`
+        // see `copyPluginLibs` task in the base plugins `build.gradle`
         addJarsDirectories('build/target/libs')
-
     }
 
     @Override

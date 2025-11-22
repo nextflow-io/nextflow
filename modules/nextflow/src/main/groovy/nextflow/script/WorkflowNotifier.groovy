@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +15,17 @@
  */
 
 package nextflow.script
+
 import java.nio.file.Path
 
 import groovy.text.GStringTemplateEngine
 import groovy.transform.CompileStatic
-import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.mail.Attachment
+import nextflow.util.SysHelper
 import nextflow.mail.Mail
 import nextflow.mail.Mailer
+import nextflow.mail.Notification
 /**
  * Send workflow completion notification
  *
@@ -35,30 +36,29 @@ import nextflow.mail.Mailer
 class WorkflowNotifier {
 
     /**
-     * A map representing the nextflow configuration
+     * A map representing the variables defined in the script global scope
      */
-    @PackageScope Map config
-
-    /**
-    * A map representing the variables defined in the script golab scope
-     */
-    @PackageScope Map variables
+    private Map variables
 
     /**
      * The {@link WorkflowMetadata} object
      */
-    @PackageScope WorkflowMetadata workflow
+    private WorkflowMetadata workflow
+
+    WorkflowNotifier(Map variables, WorkflowMetadata workflow) {
+        this.variables = variables
+        this.workflow = workflow
+    }
 
     /**
      * Send notification email
      *
      * @param config A {@link Map} representing the nextflow configuration object
      */
-    void sendNotification() {
+    void sendNotification(Map config) {
+        final notification = new Notification( config.notification as Map ?: Collections.emptyMap() )
 
-        // fetch the `notification` configuration map defined in the config file
-        def notification = (Map)config.notification
-        if (!notification || !notification.enabled) {
+        if (!notification.enabled) {
             return
         }
 
@@ -68,34 +68,26 @@ class WorkflowNotifier {
         }
 
         def mail = createMail(notification)
-        def mailer = createMailer( (Map)config.mail )
+        def mailer = createMailer( config.mail as Map ?: Collections.emptyMap() )
         mailer.send(mail)
     }
 
     /**
      * Creates {@link Mailer} object that sends the actual email message
      *
-     * @param config The {@link Mailer} settings correspoding to the content of the {@code mail} configuration file scope
+     * @param config The {@link Mailer} settings corresponding to the content of the {@code mail} configuration file scope
      * @return A {@link Mailer} object
      */
     protected Mailer createMailer(Map config) {
-        def mailer = new Mailer()
-        mailer.config = config
-        return mailer
+        return new Mailer(config)
     }
 
     /**
      * Create notification {@link nextflow.mail.Mail} object given the user parameters
      *
      * @param notification
-     *      The user  provided notification parameters
-     *      - to: one or more comma separate notification recipient email address
-     *      - from: the sender email address
-     *      - template: template file path, multiple templates can be provided by using a list object
-     *      - binding: user provided map representing the variables used in the template
-     * @return
      */
-    protected Mail createMail(Map notification) {
+    protected Mail createMail(Notification notification) {
 
         def mail = new Mail()
         // -- the subject
@@ -111,9 +103,9 @@ class WorkflowNotifier {
         List<File> templates = []
         normaliseTemplate0(notification.template, templates)
         if (templates) {
-            final binding = normaliseBindings0(notification.binding)
+            final binding = normaliseBindings0(notification.attributes)
 
-            templates.each { file ->
+            for( File file : templates ) {
                 def content = loadMailTemplate(file, binding)
                 def plain = file.extension == 'txt'
                 if (plain) {
@@ -136,7 +128,7 @@ class WorkflowNotifier {
     protected Map normaliseBindings0(binding) {
 
         if (binding == null)
-            return null
+            return Map.of()
 
         if (binding instanceof Map)
             return binding
@@ -207,7 +199,7 @@ class WorkflowNotifier {
      * @return A {@link Attachment} object representing the image logo to be included in the HTML email
      */
     protected Attachment loadDefaultLogo() {
-        Attachment.resource('/nextflow/mail/nextflow200x40.png', contentId: '<nxf-logo>', disposition: 'inline')
+        Attachment.resource('/nextflow/mail/nextflow-logo-v2-min.png', contentId: '<nxf-logo>', disposition: 'inline')
     }
 
     private String loadDefaultTemplate0(String classpathResource) {
@@ -219,8 +211,12 @@ class WorkflowNotifier {
 
     private String loadMailTemplate0(InputStream source, Map binding) {
         def map = new HashMap()
-        map.putAll(variables)
-        map.putAll(binding)
+        if( variables )
+            map.putAll(variables)
+        if( binding )
+            map.putAll(binding)
+        // Add SysHelper to template binding so it can be used in templates
+        map.put('SysHelper', SysHelper)
 
         def template = new GStringTemplateEngine().createTemplate(new InputStreamReader(source))
         template.make(map).toString()

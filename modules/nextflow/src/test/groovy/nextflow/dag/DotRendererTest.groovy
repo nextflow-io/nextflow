@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,22 +54,23 @@ class DotRendererTest extends Specification {
         dag.normalize()
 
         when:
-        new DotRenderer('TheGraph').renderDocument(dag, file)
+        new DotRenderer('TheGraph', 'TB').renderDocument(dag, file)
         then:
         file.text ==
             '''
             digraph "TheGraph" {
-            p0 [shape=point,label="",fixedsize=true,width=0.1];
-            p1 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="Op1"];
-            p0 -> p1;
+            rankdir=TB;
+            v0 [shape=point,label="",fixedsize=true,width=0.1];
+            v1 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="Op1"];
+            v0 -> v1;
 
-            p1 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="Op1"];
-            p2 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="Op2"];
-            p1 -> p2;
+            v1 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="Op1"];
+            v2 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="Op2"];
+            v1 -> v2;
 
-            p2 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="Op2"];
-            p3 [shape=point];
-            p2 -> p3;
+            v2 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="Op2"];
+            v3 [shape=point];
+            v2 -> v3;
 
             }
             '''

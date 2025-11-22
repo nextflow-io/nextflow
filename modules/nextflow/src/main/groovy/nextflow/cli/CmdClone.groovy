@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +20,7 @@ import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
+import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
 /**
  * CLI sub-command clone
@@ -40,11 +40,16 @@ class CmdClone extends CmdBase implements HubOptions {
     @Parameter(names='-r', description = 'Revision to clone - It can be a git branch, tag or revision number')
     String revision
 
+    @Parameter(names=['-d','-deep'], description = 'Create a shallow clone of the specified depth')
+    Integer deep
+
     @Override
     final String getName() { NAME }
 
     @Override
     void run() {
+        // init plugin system
+        Plugins.init()
         // the pipeline name
         String pipeline = args[0]
         final manager = new AssetManager(pipeline, this)
@@ -64,7 +69,7 @@ class CmdClone extends CmdBase implements HubOptions {
 
         manager.checkValidRemoteRepo()
         print "Cloning ${manager.project}${revision ? ':'+revision:''} ..."
-        manager.clone(target, revision)
+        manager.clone(target, revision, deep)
         print "\r"
         println "${manager.project} cloned to: $target"
     }

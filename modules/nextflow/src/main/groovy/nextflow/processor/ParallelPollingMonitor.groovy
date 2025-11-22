@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +17,7 @@
 package nextflow.processor
 
 import java.util.concurrent.Callable
+import java.util.concurrent.Semaphore
 
 import com.google.common.util.concurrent.RateLimiter
 import groovy.transform.CompileStatic
@@ -33,13 +33,15 @@ import nextflow.util.ThrottlingExecutor
 class ParallelPollingMonitor extends TaskPollingMonitor {
 
     private ThrottlingExecutor submitter
-
+    private Semaphore semaphore
+    
     /**
      * Create the task polling monitor with the provided named parameters object.
      * <p>
      * Valid parameters are:
      * <li>name: The name of the executor for which the polling monitor is created
      * <li>session: The current {@code Session}
+     * <li>config: The `executor` configuration settings
      * <li>capacity: The maximum number of this monitoring queue
      * <li>pollInterval: Determines how often a poll occurs to check for a process termination
      * <li>dumpInterval: Determines how often the executor status is written in the application log file
@@ -49,6 +51,12 @@ class ParallelPollingMonitor extends TaskPollingMonitor {
     ParallelPollingMonitor(ThrottlingExecutor executor, Map params) {
         super(params)
         this.submitter = executor
+        this.semaphore = capacity>0 ? new Semaphore(capacity) : null
+    }
+
+    @Override
+    protected boolean canSubmit(TaskHandler handler) {
+        return super.canSubmit(handler) && (semaphore == null || semaphore.tryAcquire())
     }
 
     protected RateLimiter createSubmitRateLimit() {
@@ -79,11 +87,16 @@ class ParallelPollingMonitor extends TaskPollingMonitor {
                 if( !session.success )
                     return // ignore error when the session has been interrupted 
                 handleException(handler, e)
-                session.notifyTaskComplete(handler)
+                notifyTaskComplete(handler)
             }
         }
 
         submitter.submit(wrapper)
     }
 
+    @Override
+    boolean evict(TaskHandler handler) {
+        semaphore?.release()
+        return super.evict(handler)
+    }
 }

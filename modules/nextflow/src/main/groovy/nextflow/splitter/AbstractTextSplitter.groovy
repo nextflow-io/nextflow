@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,8 +19,6 @@ import java.nio.charset.Charset
 import java.nio.charset.CharsetDecoder
 import java.nio.file.Path
 
-import com.google.common.hash.HashCode
-import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
 import groovy.transform.PackageScope
@@ -59,6 +56,7 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
 
     private long itemsCount
 
+    @Override
     AbstractTextSplitter options(Map options) {
         super.options(options)
 
@@ -111,8 +109,19 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
      * @return  A  {@link Reader} for the given object.
      * @throws IllegalArgumentException if the object specified is of a type not supported
      */
+    @Override
     protected Reader normalizeSource( obj ) {
+        Reader reader = normalizeSource0( obj )
+        // detect if starts with bom and position after it
+        int consume = positionAfterBOM(reader)
+        if( consume ){
+            char[]tmp = new char[consume]
+            reader.read(tmp)
+        }
+        reader
+    }
 
+    protected Reader normalizeSource0( obj ) {
         if( obj instanceof Reader )
             return (Reader)obj
 
@@ -171,6 +180,7 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
      * @param offset
      * @return
      */
+    @Override
     protected process( Reader targetObject ) {
 
         def result = null
@@ -237,6 +247,7 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
      * @return A {@link CollectorStrategy} object implementing a concrete
      * strategy according the user provided options
      */
+    @Override
     protected CollectorStrategy createCollector() {
 
         if( !isCollectorEnabled() )
@@ -318,5 +329,21 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
      * @return A logical record read from underlying stream
      */
     abstract protected fetchRecord( BufferedReader reader )
+
+    protected int positionAfterBOM(Reader reader ){
+        if( !reader.markSupported() )
+            return 0
+        char[] beginner = new char[3];
+        reader.mark(beginner.length)
+        int read = reader.read(beginner)
+        reader.reset()
+        if( read ){
+            if( beginner[0] == '\ufeff' || beginner[0] == '\ufffe') {
+                return 1
+            }
+            //include more BOM types if required
+        }
+        return 0
+    }
 
 }

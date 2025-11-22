@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -63,7 +62,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
             throw new IllegalArgumentException("Parameter `container` not supported by ${this.class.simpleName}")
 
         final result = new StringBuilder()
-        final copy = environment ? new HashMap<String,String>(environment) : Collections.<String,String>emptyMap()
+        final copy = environment ? new LinkedHashMap<String,String>(environment) : Collections.<String,String>emptyMap()
         final path = copy.containsKey('PATH')
         // remove any external PATH
         if( path )
@@ -71,7 +70,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
         // when a remote bin directory is provide managed it properly
         if( opts.remoteBinDir ) {
             result << "${opts.getAwsCli()} s3 cp --recursive --only-show-errors s3:/${opts.remoteBinDir} \$PWD/nextflow-bin\n"
-            result << "chmod +x \$PWD/nextflow-bin/*\n"
+            result << "chmod +x \$PWD/nextflow-bin/* || true\n"
             result << "export PATH=\$PWD/nextflow-bin:\$PATH\n"
         }
         // finally render the environment
@@ -154,7 +153,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
     }
 
     static String uploadCmd( String source, Path target ) {
-        "nxf_s3_upload '$source' s3:/$target"
+        "nxf_s3_upload ${Escape.path(source)} s3:/${Escape.path(target)}"
     }
 
     /**

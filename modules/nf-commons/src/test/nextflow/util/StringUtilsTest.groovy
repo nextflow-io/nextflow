@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -74,5 +74,101 @@ class StringUtilsTest extends Specification {
         null                 | 'http:/xyz.com'
         null                 | '1234://xyz'
         null                 | '1234://xyz.com/abc'
+    }
+
+    @Unroll
+    def 'should strip passwords' () {
+        expect:
+        StringUtils.stripSecrets(SECRET) == EXPECTED
+
+        where:
+        SECRET                                  | EXPECTED
+        null                                    | null
+        [foo:'Hello']                           | [foo:'Hello']
+        [foo: [bar: 'World']]                   | [foo: [bar: 'World']]
+        [foo: [password:'hola', token:'hi']]    | [foo: [password:'****', token:'****']]
+        [foo: [password:'1234567890']]          | [foo: [password:'123****']]
+        [foo: [customPassword:'hola']]          | [foo: [customPassword:'****']]
+        [foo: [towerLicense:'hola']]            | [foo: [towerLicense:'****']]
+        [url: 'redis://host:port']              | [url: 'redis://host:port']
+        [url: 'redis://secret@host:port']       | [url: 'redis://****@host:port']
+        [url: 'ftp://secretlong@host:port/x/y'] | [url: 'ftp://sec****@host:port/x/y']
+        [providers:[github:[auth:'12345']]]     | [providers:[github:[auth:'****']]]
+    }
+
+    @Unroll
+    def 'should strip sensitive strings' () {
+        expect:
+        StringUtils.stripSecrets(SECRET) == EXPECTED
+
+        where:
+        SECRET                                          | EXPECTED
+        'Hi\n here is the "password" : "1234"'          | 'Hi\n here is the "password" : "********"'
+        'Hi\n here is the password : "1"'               | 'Hi\n here is the password : "********"'
+        'Hi\n here is the password : \'1\''             | 'Hi\n here is the password : \'********\''
+        'Hi\n "password" :"1" \n "token": "123"'        | 'Hi\n "password" :"********" \n "token": "********"'
+        'Hi\n "password" :\'1\' \n "token": "123"'      | 'Hi\n "password" :\'********\' \n "token": "********"'
+        'Hi\n \'password\' :\'1\' \n \'token\': \'123\''| 'Hi\n \'password\' :\'********\' \n \'token\': \'********\''
+        'Hi\n password :"1"\nsecret: "345"'             | 'Hi\n password :"********"\nsecret: "********"'
+        'secret="abc" password:"1" more text'           | 'secret="********" password:"********" more text'
+    }
+
+    @Unroll
+    def 'should strip secret' () {
+        expect:
+        StringUtils.redact(SECRET) == EXPECTED
+
+        where:
+        SECRET          | EXPECTED
+        'hi'            | '****'
+        'Hello'         | '****'
+        'World'         | '****'
+        '1234567890'    | '123****'
+        'hola'          | '****'
+        null            | '(null)'
+        ''              | '(empty)'
+    }
+
+    @Unroll
+    def 'should strip url password' () {
+        expect:
+        StringUtils.redactUrlPassword(SECRET) == EXPECTED
+
+        where:
+        SECRET                  | EXPECTED
+        'hi'                    | 'hi'
+        'http://foo/bar'        | 'http://foo/bar'
+        'http://secret@foo/bar' | 'http://****@foo/bar'
+    }
+
+    def 'should check ipv6' () {
+        expect:
+        StringUtils.isIpV6String('2001:db8:42:1:2:3:1:443')
+    }
+
+    @Unroll
+    def 'should check is ipv6'  () {
+        expect:
+        StringUtils.isIpV6String(ADDR) == EXPECTED
+        where:
+        ADDR                    | EXPECTED
+        null                    | false
+        'foo.com'               | false
+        'foo.com'               | false
+        '127.0.0.0'             | false
+        '2001:db8:42:1::1:443'  | true
+    }
+
+    @Unroll
+    def 'should format host name'  () {
+        expect:
+        StringUtils.formatHostName(HOST, PORT) == EXPECTED
+        where:
+        HOST                    | PORT      | EXPECTED
+        'foo.com'               | null      | 'foo.com'
+        'foo.com'               | '80'      | 'foo.com:80'
+        '127.0.0.0'             | '8000'    | '127.0.0.0:8000'
+        '2001:db8:42:1::1:443'  | null      | '2001:db8:42:1::1:443'
+        '2001:db8:42:1::1:443'  | '8000'    | '[2001:db8:42:1::1:443]:8000'
     }
 }

@@ -1,7 +1,6 @@
 #!/usr/bin/env nextflow
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,20 +15,25 @@
  * limitations under the License.
  */
 
-/*
- * @author Simon Ye
- */
-
-seqs = file("$baseDir/data/seqs/*.fastq")
+workflow {
+  seqs = channel.fromList(file("$baseDir/data/seqs/*.fastq"))
+  seqs | proc1
+  seqs | proc2
+  seqs | proc3
+  seqs | proc4
+  seqs | proc5
+  seqs | proc6
+  seqs | proc7
+}
 
 process proc1 {
   storeDir 'results'
 
   input:
-  file fastq from seqs
+  file fastq
 
   output:
-  set val(baseName), file(outName) into proc1
+  tuple val(baseName), file(outName) 
 
   script:
   baseName = fastq.baseName
@@ -43,10 +47,10 @@ process proc2 {
   storeDir 'results'
 
   input:
-  file fastq from seqs
+  file fastq
 
   output:
-  set val(baseName), file(outName) into proc2
+  tuple val(baseName), file(outName)
 
   script:
   baseName = fastq.baseName
@@ -60,10 +64,10 @@ process proc3 {
   storeDir 'results'
 
   input:
-  file fastq from seqs
+  file fastq
 
   output:
-  set val(baseName), file(outName) into proc3
+  tuple val(baseName), file(outName)
 
   script:
   baseName = fastq.baseName
@@ -77,10 +81,10 @@ process proc4 {
   storeDir 'results'
 
   input:
-  file fastq from seqs
+  file fastq
 
   output:
-  set val(baseName), file(outName) into proc4
+  tuple val(baseName), file(outName)
 
   script:
   baseName = fastq.baseName
@@ -95,10 +99,10 @@ process proc5 {
   storeDir 'results'
 
   input:
-  file fastq from seqs
+  file fastq
 
   output:
-  set val(baseName), file(outName) into proc5
+  tuple val(baseName), file(outName)
 
   script:
   baseName = fastq.baseName
@@ -112,10 +116,10 @@ process proc6 {
   storeDir 'results'
 
   input:
-  file fastq from seqs
+  file fastq
 
   output:
-  set val(baseName), file(outName) into proc6
+  tuple val(baseName), file(outName)
 
   script:
   baseName = fastq.baseName
@@ -129,10 +133,10 @@ process proc7 {
   storeDir 'results'
 
   input:
-  file fastq from seqs
+  file fastq
 
   output:
-  set val(baseName), file(outName) into proc7
+  tuple val(baseName), file(outName)
 
   script:
   baseName = fastq.baseName

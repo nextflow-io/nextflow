@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +18,9 @@ package nextflow.cli
 
 import com.beust.jcommander.DynamicParameter
 import com.beust.jcommander.Parameter
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 import org.fusesource.jansi.Ansi
 
@@ -29,6 +30,7 @@ import org.fusesource.jansi.Ansi
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class CliOptions {
 
     /**
@@ -43,13 +45,16 @@ class CliOptions {
     @Parameter(names=['-c','-config'], description = 'Add the specified file to configuration set')
     List<String> userConfig
 
+    @Parameter(names=['-config-ignore-includes'], description = 'Disable the parsing of config includes')
+    boolean ignoreConfigIncludes
+
     @Parameter(names=['-C'], description = 'Use the specified configuration file(s) overriding any defaults')
     List<String> config
 
     /**
      * the packages to trace
      */
-    @Parameter(names='-trace', hidden = true)
+    @Parameter(names='-trace', description = 'Enable trace level logging for the specified package name - multiple packages can be provided separating them with a comma e.g. \'-trace nextflow,io.seqera\'')
     List<String> trace
 
     /**
@@ -82,8 +87,8 @@ class CliOptions {
     @Parameter(names = ['-self-update'], description = 'Update nextflow to the latest version', arity = 0, hidden = true)
     boolean selfUpdate
 
-    @Parameter(names = ['-d','-dockerize'], description = 'Launch nextflow via Docker (experimental)', arity = 0)
-    boolean dockerize
+    @Parameter(names=['-remote-debug'], description = "Enable JVM interactive remote debugging (experimental)")
+    boolean remoteDebug
 
     Boolean ansiLog
 
@@ -100,18 +105,24 @@ class CliOptions {
         if( quiet )
             return ansiLog = false
 
-        final env = System.getenv('NXF_ANSI_LOG')
+        final env = SysEnv.get('NXF_ANSI_LOG')
         if( env ) try {
             return Boolean.parseBoolean(env)
         }
         catch (Exception e) {
             log.warn "Invalid boolean value for variable NXF_ANSI_LOG: $env -- it must be 'true' or 'false'"
         }
+
+        // Check NO_COLOR environment variable (https://no-color.org/)
+        final noColor = SysEnv.get('NO_COLOR')
+        if( noColor ) {
+            return ansiLog = false
+        }
         return Ansi.isEnabled()
     }
 
     boolean hasAnsiLogFlag() {
-        ansiLog==true || System.getenv('NXF_ANSI_LOG')=='true'
+        ansiLog==true || SysEnv.get('NXF_ANSI_LOG')=='true'
     }
 
 }

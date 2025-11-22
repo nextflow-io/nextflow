@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +17,7 @@
 package nextflow.script.params
 
 import groovy.transform.InheritConstructors
-import nextflow.NF
+import nextflow.script.TokenEvalCall
 import nextflow.script.TokenEnvCall
 import nextflow.script.TokenFileCall
 import nextflow.script.TokenPathCall
@@ -36,7 +35,9 @@ class TupleInParam extends BaseInParam {
 
     protected List<BaseInParam> inner = []
 
-    @Override String getTypeName() { 'set' }
+    @Override String getTypeName() { 'tuple' }
+
+    List<BaseInParam> getInner() { inner }
 
     @Override
     TupleInParam clone() {
@@ -55,11 +56,7 @@ class TupleInParam extends BaseInParam {
         for( def item : obj ) {
 
             if( item instanceof TokenVar ) {
-                if( NF.dsl2Final ) {
-                    final msg = "Unqualified input value declaration has been deprecated - replace `tuple ${item.name},..` with `tuple val(${item.name}),..`"
-                    throw new DeprecationException(msg)
-                }
-                newItem(ValueInParam).bind(item)
+                throw new IllegalArgumentException("Unqualified input value declaration is not allowed - replace `tuple ${item.name},..` with `tuple val(${item.name}),..`")
             }
             else if( item instanceof TokenFileCall ) {
                 newItem(FileInParam).bind( item.target )
@@ -71,11 +68,7 @@ class TupleInParam extends BaseInParam {
                         .bind( item.target )
             }
             else if( item instanceof Map ) {
-                if( NF.dsl2Final ) {
-                    final msg = "Unqualified input file declaration has been deprecated - replace `tuple $item,..` with `tuple path(${item.key}, stageAs:'${item.value}'),..`"
-                    throw new DeprecationException(msg)
-                }
-                newItem(FileInParam).bind(item)
+                throw new IllegalArgumentException("Unqualified input file declaration is not allowed - replace `tuple $item,..` with `tuple path(${item.key}, stageAs:'${item.value}'),..`")
             }
             else if( item instanceof TokenValCall ) {
                 newItem(ValueInParam).bind(item.val)
@@ -83,21 +76,20 @@ class TupleInParam extends BaseInParam {
             else if( item instanceof TokenEnvCall ) {
                 newItem(EnvInParam).bind(item.val)
             }
+            else if( item instanceof TokenEvalCall ) {
+                throw new IllegalArgumentException('Command input declaration is not supported')
+            }
             else if( item instanceof TokenStdinCall ) {
                 newItem(StdInParam)
             }
             else if( item instanceof GString ) {
-                if( NF.dsl2Final )
-                    throw new DeprecationException("Unqualified input file declaration has been deprecated - replace `tuple \"$item\".. with `tuple path(\"$item\")..`")
-                newItem(FileInParam).bind(item)
+                throw new IllegalArgumentException("Unqualified input file declaration is not allowed - replace `tuple \"$item\".. with `tuple path(\"$item\")..`")
             }
             else if( item == '-' ) {
                 newItem(StdInParam)
             }
             else if( item instanceof String ) {
-                if( NF.dsl2Final )
-                    throw new DeprecationException("Unqualified input file declaration has been deprecated - replace `tuple '$item',..` with `tuple path('$item'),..`")
-                newItem(FileInParam).bind(item)
+                throw new IllegalArgumentException("Unqualified input file declaration is not allowed - replace `tuple '$item',..` with `tuple path('$item'),..`")
             }
             else
                 throw new IllegalArgumentException()

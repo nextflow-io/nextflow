@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +16,7 @@
 
 package nextflow.processor
 
+
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -24,6 +24,7 @@ import nextflow.Session
 import nextflow.util.Duration
 import nextflow.util.ThrottlingExecutor
 import spock.lang.Specification
+import spock.lang.Unroll
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -70,6 +71,73 @@ class ParallelPollingMonitorTest extends Specification {
         failure.get() == 0
         change.get() == 1
 
+    }
+
+    @Unroll
+    def 'should validate can submit method' () {
+        given:
+        def success = new AtomicInteger()
+        def failure = new AtomicInteger()
+        def count = new AtomicInteger()
+        def change = new AtomicInteger()
+        def retry = new AtomicInteger()
+
+        def session = Mock(Session)
+        def handler = Mock(TaskHandler)
+
+        def opts = new ThrottlingExecutor.Options()
+            .retryOn(IllegalArgumentException)
+            .withRateLimit('10/sec')
+            .withErrorBurstDelay(Duration.of('5sec'))
+            .withAutoThrottle()
+            .onSuccess { success.incrementAndGet() }
+            .onRetry { retry.incrementAndGet() }
+            .onFailure { failure.incrementAndGet() }
+            .onRateLimitChange { change.incrementAndGet() }
+
+        def exec = ThrottlingExecutor.create(opts)
+        def mon = Spy(new ParallelPollingMonitor(exec, [capacity:CAPACITY, session:session, name:'foo', pollInterval:'1sec']))
+        and:
+        SUBMIT.times { mon.runningQueue.add(Mock(TaskHandler))  }
+
+        when:
+        def result = mon.canSubmit(handler)
+        then:
+        handler.canForkProcess() >> FORK
+        handler.isReady() >> true
+        and:
+        result == EXPECTED
+
+        where:
+        CAPACITY    | SUBMIT | FORK  | EXPECTED
+        0           |   5    | true  | true
+        10          |   5    | true  | true
+        10          |   10   | true  | false
+        and:
+        0           |   1    | false | false
+        10          |   1    | false | false
+    }
+
+    def 'should inherit array size validation from parent TaskPollingMonitor' () {
+        given:
+        def session = Mock(Session)
+        def throttlingExecutor = Mock(ThrottlingExecutor)
+        def monitor = new ParallelPollingMonitor(throttlingExecutor, [name: 'foo', session: session, capacity: 5, pollInterval: Duration.of('1min')])
+        and:
+        def processor = Mock(TaskProcessor)
+        def arrayHandler = Mock(TaskHandler) {
+            getTask() >> Mock(TaskArrayRun) {
+                getName() >> 'oversized_array'
+                getArraySize() >> 10
+                getProcessor() >> processor
+            }
+        }
+
+        when:
+        monitor.canSubmit(arrayHandler)
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains("Process 'oversized_array' declares array size (10) which exceeds the executor queue size (5)")
     }
 
 }

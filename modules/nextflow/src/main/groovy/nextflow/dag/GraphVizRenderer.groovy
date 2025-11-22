@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,21 +18,26 @@ package nextflow.dag
 import java.nio.file.Files
 import java.nio.file.Path
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 /**
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  * @author Mike Smoot <mes@aescon.com>
  */
 @Slf4j
+@CompileStatic
 class GraphvizRenderer implements DagRenderer {
-
-    private String format
 
     private String name
 
-    GraphvizRenderer(String name, String format) {
+    private String format
+
+    private String direction
+
+    GraphvizRenderer(String name, String format, String direction) {
         this.name = name
         this.format = format
+        this.direction = direction
     }
 
     /**
@@ -46,7 +50,7 @@ class GraphvizRenderer implements DagRenderer {
         def result = Files.createTempFile('nxf-',".$format")
         def temp = Files.createTempFile('nxf-','.dot')
         // save the DAG as `dot` to a temp file
-        temp.text = new DotRenderer(name).renderNetwork(dag)
+        temp.text = new DotRenderer(name, direction).renderNetwork(dag)
 
         final cmd = "command -v dot &>/dev/null || exit 128 && dot -T${format} ${temp} > ${result}"
         final process = new ProcessBuilder().command("bash","-c", cmd).redirectErrorStream(true).start()
@@ -54,7 +58,7 @@ class GraphvizRenderer implements DagRenderer {
         if( exitStatus == 128 ) {
             target = target.resolveSibling( "${target.baseName}.dot" )
             temp.copyTo(target)
-            log.warn "To render the execution DAG in the required format it is required to install Graphviz -- See http://www.graphviz.org for more info."
+            log.warn "Graphviz is required to render the execution DAG in the given format -- See http://www.graphviz.org for more info."
         }
         else if( exitStatus>0 ) {
             log.debug("Graphviz error -- command `$cmd` -- exit status: $exitStatus\n${process.text?.indent()}")

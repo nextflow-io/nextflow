@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +16,7 @@
 
 package nextflow.cli
 
+import nextflow.plugin.Plugins
 import spock.lang.IgnoreIf
 
 import java.nio.file.Files
@@ -30,6 +30,10 @@ import spock.lang.Specification
 @IgnoreIf({System.getenv('NXF_SMOKE')})
 class CmdPullTest extends Specification {
 
+    def cleanup() {
+        Plugins.stop()
+    }
+    
     @Requires({ System.getenv('NXF_GITHUB_ACCESS_TOKEN') })
     def 'should pull the github repository in the local folder'() {
 
@@ -46,7 +50,7 @@ class CmdPullTest extends Specification {
 
         cleanup:
         dir?.deleteDir()
-
+        Plugins.stop()
     }
 
 }

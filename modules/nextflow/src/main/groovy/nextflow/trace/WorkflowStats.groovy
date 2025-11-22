@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +26,7 @@ import groovy.util.logging.Slf4j
 import nextflow.processor.ErrorStrategy
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
+import nextflow.processor.TaskStatus
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 /**
@@ -98,6 +98,10 @@ class WorkflowStats implements Cloneable {
         x >= 0 ? x : 0
     }
 
+    int getTotalCount() {
+        gtz(succeededCount + cachedCount + ignoredCount + effectiveFailedCount + abortedCount)
+    }
+
     String getSucceedCountFmt() {
         INTEGER_FMT.format(gtz(succeededCount))
     }
@@ -115,23 +119,23 @@ class WorkflowStats implements Cloneable {
     }
 
     float getSucceedPct() {
-        int tot = gtz(succeededCount + cachedCount + ignoredCount + failedCount)
+        int tot = getTotalCount()
         tot ? Math.round(succeededCount / tot * 10000.0 as float) / 100.0 as float : 0
     }
 
     float getCachedPct() {
-        def tot = gtz(succeededCount + cachedCount + ignoredCount + failedCount)
+        int tot = getTotalCount()
         tot ? Math.round(gtz(cachedCount) / tot * 10000.0 as float) / 100.0 as float : 0
     }
 
     float getIgnoredPct() {
-        def tot = gtz(succeededCount + cachedCount + ignoredCount + failedCount)
+        int tot = getTotalCount()
         tot ? Math.round(gtz(ignoredCount) / tot * 10000.0 as float) / 100.0 as float : 0
     }
 
-    float getFailedPct() {
-        def tot = gtz(succeededCount + cachedCount + ignoredCount + failedCount)
-        tot ? Math.round(gtz(failedCount) / tot * 10000.0 as float) / 100.0 as float : 0
+    float getEffectiveFailedPct() {
+        int tot = getTotalCount()
+        tot ? Math.round(gtz(effectiveFailedCount) / tot * 10000.0 as float) / 100.0 as float : 0
     }
 
     protected Duration makeDuration(long value) {
@@ -165,9 +169,14 @@ class WorkflowStats implements Cloneable {
     int getSucceededCount() { gtz(succeededCount) }
 
     /**
-     * @return Failed tasks count
+     * @return Failed tasks count (includes ignored and retried)
      */
     int getFailedCount() { gtz(failedCount) }
+
+    /**
+     * @return "Effective" failed tasks count (excludes ignored and retried)
+     */
+    int getEffectiveFailedCount() { gtz(failedCount - ignoredCount - retriesCount) }
 
     /**
      * @return Ignored tasks count
@@ -337,17 +346,24 @@ class WorkflowStats implements Cloneable {
 
     }
 
-    void markCompleted(TaskRun task, TraceRecord trace) {
+    void markCompleted(TaskRun task, TraceRecord trace, TaskStatus status) {
         ProgressRecord state = getOrCreateRecord(task.processor)
         state.taskName = task.name
         state.hash = task.hashLog
-        state.running --
-        state.loadCpus -= task.getConfig().getCpus()
-        state.loadMemory -= (task.getConfig().getMemory()?.toBytes() ?: 0)
 
-        this.runningCount --
-        this.loadCpus -= task.getConfig().getCpus()
-        this.loadMemory -= (task.getConfig().getMemory()?.toBytes() ?: 0)
+        if( status == TaskStatus.SUBMITTED ) {
+            state.submitted --
+            this.submittedCount --
+        }
+        else {
+            state.running --
+            state.loadCpus -= task.getConfig().getCpus()
+            state.loadMemory -= (task.getConfig().getMemory()?.toBytes() ?: 0)
+
+            this.runningCount --
+            this.loadCpus -= task.getConfig().getCpus()
+            this.loadMemory -= (task.getConfig().getMemory()?.toBytes() ?: 0)
+        }
 
         if( task.failed ) {
             state.failed ++

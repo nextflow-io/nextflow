@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,43 +19,45 @@ package nextflow.container
 import groovy.transform.CompileStatic
 
 /**
- * Models container engine configuration
+ * Models generic container configuration
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-class ContainerConfig extends LinkedHashMap {
+interface ContainerConfig {
 
-    /* required by Kryo deserialization -- do not remove */
-    private ContainerConfig() { }
-
-    ContainerConfig(Map config) {
-        super(config)
+    default boolean canRunOciImage() {
+        return false
     }
 
-    boolean isEnabled() {
-        get('enabled')?.toString() == 'true'
+    default boolean entrypointOverride() {
+        return ContainerHelper.entrypointOverride()
     }
 
-    boolean isLegacy() {
-        get(legacy)?.toString() == 'true'
+    default String getFusionOptions() {
+        return null
     }
 
-    String getEngine() {
-        get('engine')
+    default Object getKill() {
+        return null
     }
 
-    List<String> getEnvWhitelist() {
-        def result = get('envWhitelist')
-        if( !result )
-            return Collections.emptyList()
-
-        if( result instanceof CharSequence )
-            return result.tokenize(',').collect { it.trim() }
-
-        if( result instanceof List )
-            return result
-
-        throw new IllegalArgumentException("Not a valid `envWhitelist` argument")
+    default String getRegistry() {
+        return null
     }
+
+    default boolean getRegistryOverride() {
+        return false
+    }
+
+    default String getTemp() {
+        return null
+    }
+
+    String getEngine()
+
+    List<String> getEnvWhitelist()
+
+    boolean isEnabled()
+
 }

@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +18,7 @@ package nextflow.executor
 
 import java.nio.file.Paths
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
@@ -33,11 +33,12 @@ import nextflow.util.Duration
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class NopeExecutor extends Executor {
 
     @Override
     protected TaskMonitor createTaskMonitor() {
-        return TaskPollingMonitor.create(session, name, 5, Duration.of('50ms'))
+        return TaskPollingMonitor.create(session, config, name, 5, Duration.of('50ms'))
     }
 
     @Override
@@ -49,6 +50,7 @@ class NopeExecutor extends Executor {
 
 
 @Slf4j
+@CompileStatic
 class NopeTaskHandler extends TaskHandler {
 
     protected NopeTaskHandler(TaskRun task) {
@@ -85,7 +87,7 @@ class NopeTaskHandler extends TaskHandler {
     }
 
     @Override
-    void kill() { }
+    protected void killTask() { }
 
 }
 

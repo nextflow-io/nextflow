@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,12 +19,21 @@ package nextflow.conda
 import java.nio.file.Files
 import java.nio.file.Paths
 
+import nextflow.SysEnv
 import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class CondaCacheTest extends Specification {
+
+    def setupSpec() {
+        SysEnv.push([:])
+    }
+
+    def cleanupSpec() {
+        SysEnv.pop()
+    }
 
     def 'should env file' () {
 
@@ -67,6 +75,21 @@ class CondaCacheTest extends Specification {
         prefix.toString() == '/conda/envs/env-eaeb133f4ca62c95e9c0eec7ef8d553b'
     }
 
+    def 'should create conda env prefix path for remote uri' () {
+
+        given:
+        def ENV = 'https://foo.com/lock-file.yml'
+        def cache = Spy(CondaCache)
+        def BASE = Paths.get('/conda/envs')
+
+        when:
+        def prefix = cache.condaPrefixPath(ENV)
+        then:
+        0 * cache.isYamlFilePath(ENV)
+        1 * cache.isYamlUriPath(ENV)
+        1 * cache.getCacheDir() >> BASE
+        prefix.toString() == '/conda/envs/env-12c863103deed9425ce8012323f948fc'
+    }
 
     def 'should create conda env prefix path for a yaml env file' () {
 
@@ -77,21 +100,20 @@ class CondaCacheTest extends Specification {
         def ENV = folder.resolve('foo.yml')
         ENV.text = '''
             channels:
+              - conda-forge
               - bioconda
-              - defaults
             dependencies:
               # Default bismark
               - star=2.5.4a
-              - bwa=0.7.15        
+              - bwa=0.7.15
             '''
             .stripIndent(true)  // https://issues.apache.org/jira/browse/GROOVY-9423
-
         when:
         def prefix = cache.condaPrefixPath(ENV.toString())
         then:
         1 * cache.isYamlFilePath(ENV.toString())
         1 * cache.getCacheDir() >> BASE
-        prefix.toString() == '/conda/envs/foo-9416240708c49c4e627414b46a743664'
+        prefix.toString() == "/conda/envs/env-64874f9dc9e7be788384bccef357a4f4"
 
         cleanup:
         folder?.deleteDir()
@@ -104,15 +126,15 @@ class CondaCacheTest extends Specification {
         def cache = Spy(CondaCache)
         def BASE = Paths.get('/conda/envs')
         def ENV = Files.createTempFile('test','.yml')
-        ENV.text = '''  
+        ENV.text = '''
             name: my-env-1.1
             channels:
+              - conda-forge
               - bioconda
-              - defaults
             dependencies:
               # Default bismark
               - star=2.5.4a
-              - bwa=0.7.15        
+              - bwa=0.7.15
             '''
                 .stripIndent(true)
 
@@ -121,7 +143,7 @@ class CondaCacheTest extends Specification {
         then:
         1 * cache.isYamlFilePath(ENV.toString())
         1 * cache.getCacheDir() >> BASE
-        prefix.toString() == '/conda/envs/my-env-1.1-e7fafe40ca966397a2c0d9bed7181aa7'
+        prefix.toString() == "/conda/envs/env-5b5c72e839d0c7dcabb5d06607c205fc"
 
     }
 
@@ -134,7 +156,7 @@ class CondaCacheTest extends Specification {
         def ENV = folder.resolve('bar.txt')
         ENV.text = '''
                 star=2.5.4a
-                bwa=0.7.15   
+                bwa=0.7.15
                 multiqc=1.2.3
                 '''
                 .stripIndent(true)  // https://issues.apache.org/jira/browse/GROOVY-9423
@@ -145,7 +167,7 @@ class CondaCacheTest extends Specification {
         1 * cache.isYamlFilePath(ENV.toString())
         1 * cache.isTextFilePath(ENV.toString())
         1 * cache.getCacheDir() >> BASE
-        prefix.toString() == '/conda/envs/bar-8a4aa7db8ddb8ce4eb4d450d4814a437'
+        prefix.toString() == "/conda/envs/env-85371202d8820331ff19ae89c0595497"
 
         cleanup:
         folder?.deleteDir()
@@ -168,12 +190,9 @@ class CondaCacheTest extends Specification {
 
         cleanup:
         folder?.deleteDir()
-
     }
 
-
     def 'should create a conda environment' () {
-
         given:
         def ENV = 'bwa=1.1.1'
         def PREFIX = Files.createTempDirectory('foo')
@@ -181,9 +200,8 @@ class CondaCacheTest extends Specification {
 
         when:
         // the prefix directory exists ==> no conda command is executed
-        def result = cache.createLocalCondaEnv(ENV)
+        def result = cache.createLocalCondaEnv(ENV, PREFIX)
         then:
-        1 * cache.condaPrefixPath(ENV) >> PREFIX
         0 * cache.isYamlFilePath(ENV)
         0 * cache.runCommand(_)
         result == PREFIX
@@ -194,72 +212,171 @@ class CondaCacheTest extends Specification {
         then:
         1 * cache.isYamlFilePath(ENV)
         0 * cache.makeAbsolute(_)
-        1 * cache.runCommand( "conda create --mkdir --yes --quiet --prefix $PREFIX $ENV" ) >> null
+        1 * cache.runCommand( "conda create --yes --quiet --prefix $PREFIX $ENV" ) >> null
         result == PREFIX
-
     }
 
     def 'should create a conda environment - using mamba' () {
-
         given:
         def ENV = 'bwa=1.1.1'
         def PREFIX = Files.createTempDirectory('foo')
-        def cache = Spy(CondaCache)
+        def cache = Spy(new CondaCache(useMamba: true))
 
         when:
-        cache.useMamba = true
         // the prefix directory exists ==> no mamba command is executed
-        def result = cache.createLocalCondaEnv(ENV)
+        def result = cache.createLocalCondaEnv(ENV, PREFIX)
         then:
-        1 * cache.condaPrefixPath(ENV) >> PREFIX
         0 * cache.isYamlFilePath(ENV)
         0 * cache.runCommand(_)
         result == PREFIX
 
         when:
         PREFIX.deleteDir()
-        cache.useMamba = true
         result = cache.createLocalCondaEnv0(ENV, PREFIX)
         then:
         1 * cache.isYamlFilePath(ENV)
         0 * cache.makeAbsolute(_)
-        1 * cache.runCommand("mamba create --mkdir --yes --quiet --prefix $PREFIX $ENV") >> null
+        1 * cache.runCommand("mamba create --yes --quiet --prefix $PREFIX $ENV") >> null
+        result == PREFIX
+    }
+
+    def 'should create a conda environment - using micromamba' () {
+        given:
+        def ENV = 'bwa=1.1.1'
+        def PREFIX = Files.createTempDirectory('foo')
+        def cache = Spy(new CondaCache(useMicromamba: true))
+
+        when:
+        // the prefix directory exists ==> no mamba command is executed
+        def result = cache.createLocalCondaEnv(ENV, PREFIX)
+        then:
+        0 * cache.isYamlFilePath(ENV)
+        0 * cache.runCommand(_)
         result == PREFIX
 
+        when:
+        PREFIX.deleteDir()
+        result = cache.createLocalCondaEnv0(ENV, PREFIX)
+        then:
+        1 * cache.isYamlFilePath(ENV)
+        0 * cache.makeAbsolute(_)
+        1 * cache.runCommand("micromamba create --yes --quiet --prefix $PREFIX $ENV") >> null
+        result == PREFIX
+    }
+
+    def 'should create a conda environment using mamba and remote lock file' () {
+        given:
+        def ENV = 'http://foo.com/some/file-lock.yml'
+        def PREFIX = Files.createTempDirectory('foo')
+        def cache = Spy(new CondaCache(useMamba: true))
+
+        when:
+        // the prefix directory exists ==> no mamba command is executed
+        def result = cache.createLocalCondaEnv(ENV, PREFIX)
+        then:
+        0 * cache.isYamlFilePath(ENV)
+        0 * cache.runCommand(_)
+        result == PREFIX
+
+        when:
+        PREFIX.deleteDir()
+        result = cache.createLocalCondaEnv0(ENV, PREFIX)
+        then:
+        1 * cache.isYamlFilePath(ENV)
+        0 * cache.makeAbsolute(_)
+        1 * cache.runCommand("mamba env create --yes --prefix $PREFIX --file $ENV") >> null
+        result == PREFIX
+    }
+
+    def 'should create a conda environment using micromamba and remote lock file' () {
+        given:
+        def ENV = 'http://foo.com/some/file-lock.yml'
+        def PREFIX = Files.createTempDirectory('foo')
+        def cache = Spy(new CondaCache(useMicromamba: true))
+
+        when:
+        // the prefix directory exists ==> no mamba command is executed
+        def result = cache.createLocalCondaEnv(ENV, PREFIX)
+        then:
+        0 * cache.isYamlFilePath(ENV)
+        0 * cache.runCommand(_)
+        result == PREFIX
+
+        when:
+        PREFIX.deleteDir()
+        result = cache.createLocalCondaEnv0(ENV, PREFIX)
+        then:
+        1 * cache.isYamlFilePath(ENV)
+        0 * cache.makeAbsolute(_)
+        1 * cache.runCommand("micromamba env create --yes --prefix $PREFIX --file $ENV") >> null
+        result == PREFIX
     }
 
     def 'should create conda env with options' () {
         given:
         def ENV = 'bwa=1.1.1'
         def PREFIX = Paths.get('/foo/bar')
-        def cache = Spy(CondaCache)
+        and:
+        def cache = Spy(new CondaCache(createOptions: '--this --that'))
 
         when:
-        cache.createOptions = '--this --that'
         def result = cache.createLocalCondaEnv0(ENV,PREFIX)
         then:
         1 * cache.isYamlFilePath(ENV)
         1 * cache.isTextFilePath(ENV)
         0 * cache.makeAbsolute(_)
-        1 * cache.runCommand( "conda create --this --that --mkdir --yes --quiet --prefix $PREFIX $ENV" ) >> null
+        1 * cache.runCommand( "conda create --this --that --yes --quiet --prefix $PREFIX $ENV" ) >> null
         result == PREFIX
     }
 
-def 'should create conda env with options - using mamba' () {
+    def 'should create conda env with options - using mamba' () {
         given:
         def ENV = 'bwa=1.1.1'
         def PREFIX = Paths.get('/foo/bar')
-        def cache = Spy(CondaCache)
+        and:
+        def cache = Spy(new CondaCache(useMamba: true, createOptions: '--this --that'))
 
         when:
-        cache.createOptions = '--this --that'
-        cache.useMamba = true
         def result = cache.createLocalCondaEnv0(ENV, PREFIX)
         then:
         1 * cache.isYamlFilePath(ENV)
         1 * cache.isTextFilePath(ENV)
         0 * cache.makeAbsolute(_)
-        1 * cache.runCommand("mamba create --this --that --mkdir --yes --quiet --prefix $PREFIX $ENV") >> null
+        1 * cache.runCommand("mamba create --this --that --yes --quiet --prefix $PREFIX $ENV") >> null
+        result == PREFIX
+    }
+
+    def 'should create conda env with options - using micromamba' () {
+        given:
+        def ENV = 'bwa=1.1.1'
+        def PREFIX = Paths.get('/foo/bar')
+        and:
+        def cache = Spy(new CondaCache(useMicromamba: true, createOptions: '--this --that'))
+
+        when:
+        def result = cache.createLocalCondaEnv0(ENV, PREFIX)
+        then:
+        1 * cache.isYamlFilePath(ENV)
+        1 * cache.isTextFilePath(ENV)
+        0 * cache.makeAbsolute(_)
+        1 * cache.runCommand("micromamba create --this --that --yes --quiet --prefix $PREFIX $ENV") >> null
+        result == PREFIX
+    }
+
+    def 'should create conda env with channels' () {
+        given:
+        def ENV = 'bwa=1.1.1'
+        def PREFIX = Paths.get('/foo/bar')
+        and:
+        def cache = Spy(new CondaCache(new CondaConfig([channels:['bioconda','defaults']], [:])))
+
+        when:
+        def result = cache.createLocalCondaEnv0(ENV, PREFIX)
+        then:
+        1 * cache.isYamlFilePath(ENV)
+        1 * cache.isTextFilePath(ENV)
+        0 * cache.makeAbsolute(_)
+        1 * cache.runCommand("conda create --yes --quiet --prefix /foo/bar -c bioconda -c defaults bwa=1.1.1") >> null
         result == PREFIX
     }
 
@@ -281,21 +398,58 @@ def 'should create conda env with options - using mamba' () {
 
     }
 
+    def 'should create a conda env with a yaml file - using micromamba' () {
+
+        given:
+        def ENV = 'foo.yml'
+        def PREFIX = Paths.get('/conda/envs/my-env')
+        def cache = Spy(new CondaCache(useMicromamba: true))
+
+        when:
+        def result = cache.createLocalCondaEnv0(ENV, PREFIX)
+        then:
+        1 * cache.isYamlFilePath(ENV)
+        0 * cache.isTextFilePath(ENV)
+        1 * cache.makeAbsolute(ENV) >> Paths.get('/usr/base').resolve(ENV)
+        1 * cache.runCommand( "micromamba env create --yes --prefix $PREFIX --file /usr/base/foo.yml" ) >> null
+        result == PREFIX
+
+    }
+
     def 'should create a conda env with a text file' () {
 
         given:
         def ENV = 'foo.txt'
         def PREFIX = Paths.get('/conda/envs/my-env')
-        def cache = Spy(CondaCache)
+        and:
+        def cache = Spy(new CondaCache(createOptions: '--this --that'))
 
         when:
-        cache.createOptions = '--this --that'
         def result = cache.createLocalCondaEnv0(ENV, PREFIX)
         then:
         1 * cache.isYamlFilePath(ENV)
         1 * cache.isTextFilePath(ENV)
         1 * cache.makeAbsolute(ENV) >> Paths.get('/usr/base').resolve(ENV)
-        1 * cache.runCommand( "conda create --this --that --mkdir --yes --quiet --prefix $PREFIX --file /usr/base/foo.txt" ) >> null
+        1 * cache.runCommand( "conda create --this --that --yes --quiet --prefix $PREFIX --file /usr/base/foo.txt" ) >> null
+        result == PREFIX
+
+    }
+
+    def 'should create a conda env with a text file - using micromamba' () {
+
+        given:
+        def ENV = 'foo.txt'
+        def PREFIX = Paths.get('/conda/envs/my-env')
+        and:
+        def cache = Spy(new CondaCache(useMicromamba: true, createOptions: '--this --that'))
+
+        when:
+        def result = cache.createLocalCondaEnv0(ENV, PREFIX)
+        then:
+        1 * cache.isYamlFilePath(ENV)
+        1 * cache.isTextFilePath(ENV)
+        1 * cache.makeAbsolute(ENV) >> Paths.get('/usr/base').resolve(ENV)
+        1 * cache.runCommand( "micromamba create --this --that --yes --quiet --prefix $PREFIX --file /usr/base/foo.txt" ) >> null
         result == PREFIX
 
     }
@@ -303,28 +457,44 @@ def 'should create conda env with options - using mamba' () {
     def 'should get options from the config' () {
 
         when:
-        def cache = new CondaCache(new CondaConfig())
+        def config = new CondaConfig([:], [:])
+        def cache = new CondaCache(config)
         then:
         cache.createTimeout.minutes == 20
         cache.createOptions == null
         cache.configCacheDir0 == null
-        cache.useMamba == false
+        !cache.@useMamba
+        !cache.@useMicromamba
         cache.binaryName == "conda"
+
         when:
-        cache = new CondaCache(new CondaConfig(createTimeout: '5 min', createOptions: '--foo --bar', cacheDir: '/conda/cache', useMamba: true))
+        config = new CondaConfig([createTimeout: '5 min', createOptions: '--foo --bar', cacheDir: '/conda/cache', useMamba: true], [:])
+        cache = new CondaCache(config)
         then:
         cache.createTimeout.minutes == 5
         cache.createOptions == '--foo --bar'
         cache.configCacheDir0 == Paths.get('/conda/cache')
-        cache.useMamba == true
+        cache.@useMamba
+        !cache.@useMicromamba
         cache.binaryName == "mamba"
+
+        when:
+        config = new CondaConfig([createTimeout: '5 min', createOptions: '--foo --bar', cacheDir: '/conda/cache', useMicromamba: true], [:])
+        cache = new CondaCache(config)
+        then:
+        cache.createTimeout.minutes == 5
+        cache.createOptions == '--foo --bar'
+        cache.configCacheDir0 == Paths.get('/conda/cache')
+        !cache.@useMamba
+        cache.@useMicromamba
+        cache.binaryName == "micromamba"
     }
 
     def 'should define cache dir from config' () {
 
         given:
         def folder = Files.createTempDirectory('test'); folder.deleteDir()
-        def config = new CondaConfig(cacheDir: folder.toString())
+        def config = new CondaConfig([cacheDir: folder.toString()], [:])
         CondaCache cache = Spy(CondaCache, constructorArgs: [config])
 
         when:
@@ -342,7 +512,7 @@ def 'should create conda env with options - using mamba' () {
 
         given:
         def folder = Paths.get('.test-conda-cache-' + Math.random())
-        def config = new CondaConfig(cacheDir: folder.toString())
+        def config = new CondaConfig([cacheDir: folder.toString()], [:])
         CondaCache cache = Spy(CondaCache, constructorArgs: [config])
 
         when:

@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,9 +19,9 @@ package nextflow.util
 import java.nio.file.Files
 import java.nio.file.Paths
 
+import nextflow.config.ConfigClosurePlaceholder
 import spock.lang.Specification
 import spock.lang.Unroll
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -231,6 +230,100 @@ class ConfigHelperTest extends Specification {
 
     }
 
+    def 'should render config as json' () {
+        given:
+        def config = new ConfigObject()
+        config.process.queue = 'long'
+        config.process.executor = 'slurm'
+        config.process.memory = new ConfigClosurePlaceholder('{ 1.GB }')
+        config.docker.enabled = true
+        config.zeta.'quoted-attribute'.foo = 1
+
+        when:
+        def result = ConfigHelper.toJsonString(config, true)
+        then:
+        result == '''
+            {
+                "docker": {
+                    "enabled": true
+                },
+                "process": {
+                    "executor": "slurm",
+                    "memory": "{ 1.GB }",
+                    "queue": "long"
+                },
+                "zeta": {
+                    "quoted-attribute": {
+                        "foo": 1
+                    }
+                }
+            }
+            '''.stripIndent().trim()
+
+
+        when:
+        result = ConfigHelper.toJsonString(config, false)
+        then:
+        result == '''
+            {
+                "process": {
+                    "queue": "long",
+                    "executor": "slurm",
+                    "memory": "{ 1.GB }"
+                },
+                "docker": {
+                    "enabled": true
+                },
+                "zeta": {
+                    "quoted-attribute": {
+                        "foo": 1
+                    }
+                }
+            }
+            '''.stripIndent().trim()
+    }
+
+    def 'should render config as yaml' () {
+        given:
+        def config = new ConfigObject()
+        config.process.queue = 'long'
+        config.process.executor = 'slurm'
+        config.process.memory = new ConfigClosurePlaceholder('{ 1.GB }')
+        config.docker.enabled = true
+        config.zeta.'quoted-attribute'.foo = 1
+
+        when:
+        def result = ConfigHelper.toYamlString(config, true)
+        then:
+        result == '''\
+            docker:
+              enabled: true
+            process:
+              executor: slurm
+              memory: '{ 1.GB }'
+              queue: long
+            zeta:
+              quoted-attribute:
+                foo: 1
+            '''.stripIndent()
+
+
+        when:
+        result = ConfigHelper.toYamlString(config, false)
+        then:
+        result == '''\
+            process:
+              queue: long
+              executor: slurm
+              memory: '{ 1.GB }'
+            docker:
+              enabled: true
+            zeta:
+              quoted-attribute:
+                foo: 1
+            '''.stripIndent()
+    }
+
     def 'should verify valid identifiers' () {
 
         expect:
@@ -258,7 +351,6 @@ class ConfigHelperTest extends Specification {
         "withName:foo"      | "'withName:foo'"      | "withName:foo"
         "withName:2foo"     | "'withName:2foo'"     | "withName:'2foo'"
     }
-
 
 
 }

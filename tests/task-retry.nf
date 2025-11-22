@@ -1,7 +1,6 @@
 #!/usr/bin/env nextflow
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +15,12 @@
  * limitations under the License.
  */
 
-echo true
+workflow {
+  foo()
+}
 
 process foo {
+    debug true
     time { 1.h * task.attempt }
     memory { 1.GB * task.attempt }
     errorStrategy { task.exitStatus == 5 && task.attempt<3 ? 'retry' : 'terminate' }
@@ -27,12 +29,12 @@ process foo {
 
     script:
     """
-    if [[ -f $PWD/marker ]]; then
+    if [[ -f $launchDir/marker ]]; then
     	echo DONE - mem: $task.memory - time: $task.time
     	exit 0
     else
     	echo FAIL
-    	touch $PWD/marker
+    	touch $launchDir/marker
     	exit 5;
     fi
     """

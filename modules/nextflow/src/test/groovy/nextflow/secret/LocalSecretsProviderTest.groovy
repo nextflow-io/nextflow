@@ -106,6 +106,8 @@ class LocalSecretsProviderTest extends Specification {
         and:
         Files.write(secretFile, json.getBytes('utf-8'), StandardOpenOption.CREATE_NEW)
         and:
+        secretFile.setPermissions('rw-r-----')
+        and:
         def provider = new LocalSecretsProvider(storeFile: secretFile)
 
         when:
@@ -138,7 +140,7 @@ class LocalSecretsProviderTest extends Specification {
         and:
         provider.getSecret('other') == null
         and:
-        provider.listSecretNames() == ['bar','foo'] as Set
+        provider.listSecretsNames() == ['bar', 'foo'] as Set
 
         cleanup:
         folder.deleteDir()
@@ -196,12 +198,17 @@ class LocalSecretsProviderTest extends Specification {
         def folder = Files.createTempDirectory('test')
         def secretFile = folder.resolve('secrets.json');
         and:
-        def FOO = new SecretImpl('foo','x')
-        def BAR = new SecretImpl('bar', 'y')
+        def ALPHA = new SecretImpl('alpha','a')
+        def AALPHA = new SecretImpl('aalpha', 'b')
+        def DELTA = new SecretImpl('delta', 'd')
+        def OMEGA = new SecretImpl('omega', 'o')
+
         def provider = new LocalSecretsProvider(storeFile: secretFile)
         and:
-        provider.putSecret(FOO)
-        provider.putSecret(BAR)
+        provider.putSecret(ALPHA)
+        provider.putSecret(AALPHA)
+        provider.putSecret(DELTA)
+        provider.putSecret(OMEGA)
 
         when:
         def file = provider.makeTempSecretsFile()
@@ -209,14 +216,49 @@ class LocalSecretsProviderTest extends Specification {
         file.permissions == 'rw-------'
         and:
         file.text == '''\
-                     export bar="y"
-                     export foo="x"
+                     export aalpha="b"
+                     export alpha="a"
+                     export delta="d"
+                     export omega="o"
                      '''.stripIndent()
 
         when:
-        def env = provider.getSecretEnv()
+        def env = provider.getSecretsEnv(['alpha','omega'])
         then:
-        env == "source $file"
+        env == "source /dev/stdin <<<\"\$(cat <(grep -w -e 'alpha=.*' -e 'omega=.*' $file))\""
+
+        when:
+        def result = ['env', '-i', 'bash', '-c', "$env; env|sort"].execute().text
+        then:
+        result.count('alpha=a')==1
+        result.count('omega=o')==1
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should handle dollar in secrets' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def secretFile = folder.resolve('secrets.json');
+        and:
+        def DOLLAR1 = new SecretImpl('dollar', '$foo')
+        def DOLLAR2 = new SecretImpl('dollar2', "\$foo")
+
+        def provider = new LocalSecretsProvider(storeFile: secretFile)
+        and:
+        provider.putSecret(DOLLAR1)
+        provider.putSecret(DOLLAR2)
+
+        when:
+        def file = provider.makeTempSecretsFile()
+        then:
+        file.permissions == 'rw-------'
+        and:
+        file.text == '''\
+                     export dollar="\\\$foo"
+                     export dollar2="\\\$foo"
+                     '''.stripIndent()
 
         cleanup:
         folder?.deleteDir()

@@ -1,6 +1,5 @@
 #
-# Copyright 2020-2021, Seqera Labs
-# Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+# Copyright 2013-2024, Seqera Labs
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,6 +14,34 @@
 # limitations under the License.
 #
 
-nextflow.trace.DefaultObserverFactory
-nextflow.util.DefaultSerializers
+nextflow.cache.DefaultCacheFactory
+nextflow.conda.CondaConfig
+nextflow.config.ConfigMap
+nextflow.config.Manifest
+nextflow.config.WorkflowConfig
+nextflow.container.ApptainerConfig
+nextflow.container.CharliecloudConfig
+nextflow.container.DockerConfig
+nextflow.container.PodmanConfig
+nextflow.container.SarusConfig
+nextflow.container.ShifterConfig
+nextflow.container.SingularityConfig
+nextflow.container.resolver.DefaultContainerResolver
+nextflow.executor.ExecutorConfig
+nextflow.fusion.FusionConfig
+nextflow.fusion.FusionTokenDefault
+nextflow.mail.JavaMailProvider
+nextflow.mail.MailConfig
+nextflow.mail.Notification
+nextflow.mail.SendMailProvider
+nextflow.mail.SimpleMailProvider
+nextflow.processor.tip.DefaultTaskTipProvider
+nextflow.scm.RepositoryFactory
 nextflow.secret.LocalSecretsProvider
+nextflow.spack.SpackConfig
+nextflow.trace.DefaultObserverFactory
+nextflow.trace.config.DagConfig
+nextflow.trace.config.ReportConfig
+nextflow.trace.config.TimelineConfig
+nextflow.trace.config.TraceConfig
+nextflow.util.DefaultSerializers

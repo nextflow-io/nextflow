@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +28,10 @@ import groovy.util.logging.Slf4j
 import nextflow.NF
 import nextflow.Session
 import nextflow.exception.IllegalModulePath
+import nextflow.exception.ScriptCompilationException
+import nextflow.plugin.Plugins
+import nextflow.plugin.extension.PluginExtensionProvider
+import nextflow.script.parser.v1.ScriptLoaderV1
 /**
  * Implements a script inclusion
  *
@@ -38,6 +41,8 @@ import nextflow.exception.IllegalModulePath
 @CompileStatic
 @EqualsAndHashCode
 class IncludeDef {
+
+    static final private String PLUGIN_PREFIX = 'plugin/'
 
     @Canonical
     static class Module {
@@ -51,21 +56,10 @@ class IncludeDef {
     @PackageScope Map addedParams
     private Session session
 
-    @Deprecated
-    IncludeDef( String module ) {
-        final msg = "Anonymous module inclusion is deprecated -- Replace `include '${module}'` with `include { MODULE_NAME } from '${module}'`"
-        if( NF.isDsl2Final() )
-            throw new DeprecationException(msg)
-        log.warn msg
-        this.path = module
-        this.modules = new ArrayList<>(1)
-        this.modules << new Module(null,null)
-    }
-
     IncludeDef(TokenVar token, String alias=null) {
         def component = token.name; if(alias) component += " as $alias"
         def msg = "Unwrapped module inclusion is deprecated -- Replace `include $component from './MODULE/PATH'` with `include { $component } from './MODULE/PATH'`"
-        if( NF.isDsl2Final() )
+        if( NF.isDsl2() )
             throw new DeprecationException(msg)
         log.warn msg
 
@@ -77,20 +71,19 @@ class IncludeDef {
         this.modules = new ArrayList<>(modules)
     }
 
-    /** only for testing purpose -- do not use */
-    protected IncludeDef() { }
-
     IncludeDef from(Object path) {
         this.path = path
         return this
     }
 
     IncludeDef params(Map args) {
+        log.warn1 "Include with `params()` is deprecated -- pass params as a workflow or process input instead"
         this.params = args != null ? new HashMap(args) : null
         return this
     }
 
     IncludeDef addParams(Map args) {
+        log.warn1 "Include with `addParams()` is deprecated -- pass params as a workflow or process input instead"
         this.addedParams = args
         return this
     }
@@ -100,18 +93,24 @@ class IncludeDef {
         return this
     }
 
-    /*
-     * Note: this method invocation is injected during the Nextflow AST manipulation.
-     * Do not use it explicitly.
+    /**
+     * Used internally by the script DSL to include modules
+     * into a script.
      *
-     * @param ownerParams The params in the owner context
+     * @param ownerParams The params in the including script context
      */
     void load0(ScriptBinding.ParamsMap ownerParams) {
         checkValidPath(path)
+        if( path.toString().startsWith(PLUGIN_PREFIX) ) {
+            loadPlugin0(path.toString().substring(PLUGIN_PREFIX.length()))
+            return
+        }
         // -- resolve the concrete against the current script
-        final moduleFile = realModulePath(path)
+        final moduleFile = realModulePath(path).normalize()
         // -- load the module
-        final moduleScript = loadModule0(moduleFile, resolveParams(ownerParams), session)
+        final moduleScript = NF.isSyntaxParserV2()
+            ? loadModuleV2(moduleFile, ownerParams, session)
+            : loadModuleV1(moduleFile, resolveParams(ownerParams), session)
         // -- add it to the inclusions
         for( Module module : modules ) {
             meta.addModule(moduleScript, module.name, module.alias)
@@ -133,13 +132,38 @@ class IncludeDef {
     @PackageScope
     Path getOwnerPath() { getMeta().getScriptPath() }
 
+    /**
+     * When using the strict syntax, the included script will already
+     * have been compiled, so simply execute it to load its definitions.
+     *
+     * @param path    The included script path
+     * @param params  The params of the including script
+     * @param session The current workflow run
+     */
     @PackageScope
     @Memoized
-    static BaseScript loadModule0(Path path, Map params, Session session) {
-        final binding = new ScriptBinding() .setParams(params)
+    static BaseScript loadModuleV2(Path path, Map params, Session session) {
+        final script = ScriptMeta.getScriptByPath(path)
+        if( !script )
+            throw new IllegalStateException()
+        script.getBinding().setParams(params)
+        script.run()
+        return script
+    }
 
-        // the execution of a library file has as side effect the registration of declared processes
-        new ScriptParser(session)
+    /**
+     * When not using the strict syntax, compile and execute the
+     * included script to load its definitions.
+     *
+     * @param path    The included script path
+     * @param params  The params of the including script
+     * @param session The current workflow run
+     */
+    @PackageScope
+    @Memoized
+    static BaseScript loadModuleV1(Path path, Map params, Session session) {
+        final binding = new ScriptBinding() .setParams(params)
+        new ScriptLoaderV1(session)
                 .setModule(true)
                 .setBinding(binding)
                 .runScript(path)
@@ -165,9 +189,16 @@ class IncludeDef {
 
         // check if exists a file with `.nf` extension
         if( !module.name.endsWith('.nf') ) {
-            def extendedName = module.resolveSibling( "${module.name}.nf" )
+            final extendedName = module.resolveSibling( "${module.name}.nf" )
             if( extendedName.exists() )
                 return extendedName
+        }
+        if( module.isDirectory() ) {
+            final target = module.resolve('main.nf')
+            if( target.exists() ) {
+                return target
+            }
+            throw new ScriptCompilationException("Include '$include' does not provide any module script -- the following path should contain a 'main.nf' script: '$module'" )
         }
 
         // check the file exists
@@ -186,10 +217,23 @@ class IncludeDef {
             throw new IllegalModulePath("Remote modules are not allowed -- Offending module: ${path.toUriString()}")
 
         final str = path.toString()
-        if( !str.startsWith('/') && !str.startsWith('./') && !str.startsWith('../') )
+        if( !str.startsWith('/') && !str.startsWith('./') && !str.startsWith('../') && !str.startsWith('plugin/') )
             throw new IllegalModulePath("Module path must start with / or ./ prefix -- Offending module: $str")
 
     }
 
+    @PackageScope
+    void loadPlugin0(String pluginId){
+        if( pluginId.startsWith('/') )
+            throw new IllegalArgumentException("Plugin Id in the 'include' declaration cannot start with a slash character - offending value: '$pluginId'")
+        if( pluginId.contains('@') )
+            throw new IllegalArgumentException("Plugin Id in the 'include' declaration cannot contain a specific version requirement - offending value: '$pluginId'")
+        Plugins.startIfMissing(pluginId)
+        if( !Plugins.isStarted(pluginId) )
+            throw new IllegalArgumentException("Unable start plugin with Id '$pluginId'")
+        final Map<String,String> declaredNames = this.modules.collectEntries {[it.name, it.alias ?: it.name]}
+        log.debug "Loading included plugin extensions with names: $declaredNames; plugin Id: $pluginId"
+        PluginExtensionProvider.INSTANCE().loadPluginExtensionMethods(pluginId, declaredNames)
+    }
 
 }

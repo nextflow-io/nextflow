@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +16,10 @@
 
 package nextflow.container
 
+import java.nio.file.Path
+
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  *
@@ -54,7 +56,7 @@ class ContainerBuilderTest extends Specification {
         when:
         result = builder.makeEnv( 'FOO' )
         then:
-        result.toString() == '${FOO:+-e "FOO=$FOO"}'
+        result.toString() == '-e "FOO"'
 
         when:
         builder.makeEnv( 1 )
@@ -63,4 +65,51 @@ class ContainerBuilderTest extends Specification {
 
     }
 
+    @Unroll
+    def 'should create builder for given engine' () {
+        given:
+        def IMAGE = 'foo:latest'
+
+        when:
+        def builder = ContainerBuilder.create(CONFIG,IMAGE)
+        then:
+        builder.class == CLAZZ
+        builder.getImage() == IMAGE
+
+        where:
+        CONFIG                      | CLAZZ
+        new DockerConfig()          | DockerBuilder
+        new PodmanConfig()          | PodmanBuilder
+        new SingularityConfig()     | SingularityBuilder
+        new ApptainerConfig()       | ApptainerBuilder
+        new SarusConfig()           | SarusBuilder
+        new ShifterConfig()         | ShifterBuilder
+        new CharliecloudConfig()    | CharliecloudBuilder
+
+    }
+
+    def 'should add mount'() {
+        given:
+        def builder = Spy(ContainerBuilder)
+
+        when:
+        builder.addMount(null)
+        builder.addMount(Path.of('/this'))
+        builder.addMount(Path.of('/that'))
+        then:
+        builder.@mounts == [Path.of('/this'), Path.of('/that')]
+    }
+
+    def 'should add mounts'() {
+        given:
+        def builder = Spy(ContainerBuilder)
+
+        when:
+        builder.addMounts(null)
+        builder.addMounts([Path.of('/this'), Path.of('/that')])
+        builder.addMounts([Path.of('/another'), Path.of('/one')])
+        then:
+        builder.@mounts == [Path.of('/this'), Path.of('/that'), Path.of('/another'), Path.of('/one')]
+
+    }
 }

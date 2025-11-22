@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,15 +32,17 @@ class PublishOpS3Test extends BaseSpec {
 
     def 'should infer task dir' () {
         given:
+        Global.config = Collections.emptyMap()
+        and:
         def BASE = '/some/work/dir' as Path
         def BUCKET_DIR = 's3://other/bucket/dir' as Path
         def sess = Mock(Session) {
             getWorkDir() >> BASE
             getBucketDir() >> BUCKET_DIR
         }
-        Global.session = sess
 
-        def op = new PublishOp(Mock(DataflowReadChannel), [to:'/target'])
+
+        def op = new PublishOp(sess, 'foo', Mock(DataflowReadChannel), [to:'/target'])
 
         when:
         def result = op.getTaskDir( BASE.resolve('xx/yyyy/this/and/that.txt') )

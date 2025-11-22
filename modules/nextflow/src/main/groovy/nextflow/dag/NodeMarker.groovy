@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +23,8 @@ import nextflow.Session
 import nextflow.processor.TaskProcessor
 import nextflow.script.params.InputsList
 import nextflow.script.params.OutputsList
+import nextflow.script.params.v2.ProcessInputsDef
+import nextflow.script.params.v2.ProcessOutputsDef
 /**
  * Helper class to mark DAG node with the proper labels
  *
@@ -48,6 +49,11 @@ class NodeMarker {
      * @param outputs the list of outputs leaving the process
      */
     static void addProcessNode( TaskProcessor process, InputsList inputs, OutputsList outputs ) {
+        if( session && session.dag && !session.aborted )
+            session.dag.addProcessNode( process.name, inputs, outputs, process )
+    }
+
+    static void addProcessNode( TaskProcessor process, ProcessInputsDef inputs, ProcessOutputsDef outputs ) {
         if( session && session.dag && !session.aborted )
             session.dag.addProcessNode( process.name, inputs, outputs, process )
     }

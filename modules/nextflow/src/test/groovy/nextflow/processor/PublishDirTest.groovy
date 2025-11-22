@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,13 +16,16 @@
 
 package nextflow.processor
 
-
+import java.nio.file.CopyOption
 import java.nio.file.FileSystems
 import java.nio.file.Files
+import java.nio.file.LinkOption
 import java.nio.file.Paths
-import java.util.concurrent.TimeUnit
+import java.nio.file.StandardCopyOption
 
+import nextflow.Global
 import nextflow.Session
+import nextflow.SysEnv
 import spock.lang.Specification
 import test.TestHelper
 /**
@@ -32,9 +34,13 @@ import test.TestHelper
  */
 class PublishDirTest extends Specification {
 
-    def 'should create a publish dir obj'() {
+    def setup() {
+        Global.session = Mock(Session) { getConfig()>>[:] }
+    }
 
-        PublishDir publish
+    def 'should create a publish dir obj'() {
+        given:
+        def publish
 
         when:
         publish = PublishDir.create(path: '/data')
@@ -42,17 +48,17 @@ class PublishDirTest extends Specification {
         publish.path == Paths.get('/data')
 
         when:
-        publish =  PublishDir.create(path: 'data')
+        publish = PublishDir.create(path: 'data')
         then:
         publish.path == Paths.get('data').complete()
 
         when:
-        publish =  PublishDir.create( path: Paths.get('data') )
+        publish = PublishDir.create( path: Paths.get('data') )
         then:
         publish.path == Paths.get('data').complete()
 
         when:
-        publish =  PublishDir.create( [path: '/some/dir', overwrite: true, pattern: '*.bam', mode: 'link'] )
+        publish = PublishDir.create( [path: '/some/dir', overwrite: true, pattern: '*.bam', mode: 'link'] )
         then:
         publish.path == Paths.get('/some/dir')
         publish.mode == PublishDir.Mode.LINK
@@ -61,7 +67,7 @@ class PublishDirTest extends Specification {
         publish.enabled
 
         when:
-        publish =  PublishDir.create( [path: '/some/data', mode: 'copy', enabled: false] )
+        publish = PublishDir.create( [path: '/some/data', mode: 'copy', enabled: false] )
         then:
         publish.path == Paths.get('/some/data')
         publish.mode == PublishDir.Mode.COPY
@@ -70,7 +76,7 @@ class PublishDirTest extends Specification {
         !publish.enabled
 
         when:
-        publish =  PublishDir.create( [path: '/some/data', mode: 'copy', enabled: 'false'] )
+        publish = PublishDir.create( [path: '/some/data', mode: 'copy', enabled: 'false'] )
         then:
         publish.path == Paths.get('/some/data')
         publish.mode == PublishDir.Mode.COPY
@@ -79,15 +85,7 @@ class PublishDirTest extends Specification {
         !publish.enabled
 
         when:
-        publish =  PublishDir.create( [path:'this/folder', overwrite: false, pattern: '*.txt', mode: 'copy'] )
-        then:
-        publish.path == Paths.get('this/folder').complete()
-        publish.mode == PublishDir.Mode.COPY
-        publish.pattern == '*.txt'
-        publish.overwrite == false
-
-        when:
-        publish =  PublishDir.create( [path:'this/folder', overwrite: 'false', pattern: '*.txt', mode: 'copy'] )
+        publish = PublishDir.create( [path:'this/folder', overwrite: false, pattern: '*.txt', mode: 'copy'] )
         then:
         publish.path == Paths.get('this/folder').complete()
         publish.mode == PublishDir.Mode.COPY
@@ -96,8 +94,27 @@ class PublishDirTest extends Specification {
 
     }
 
-    def 'should create symlinks for output files' () {
+    def 'should create publish dir with extended params' () {
+        given:
+        def publish
 
+        when:
+        publish = PublishDir.create(tags: ['foo','bar'])
+        then:
+        publish.@tags == ['foo','bar']
+
+        when:
+        publish = PublishDir.create(contentType: 'text/json')
+        then:
+        publish.@contentType == 'text/json'
+
+        when:
+        publish = PublishDir.create(storageClass: 'xyz')
+        then:
+        publish.@storageClass == 'xyz'
+    }
+
+    def 'should create symlinks for output files' () {
         given:
         def folder = Files.createTempDirectory('nxf')
         folder.resolve('work-dir').mkdir()
@@ -111,7 +128,7 @@ class PublishDirTest extends Specification {
         def task = new TaskRun(workDir: workDir, config: new TaskConfig(), name: 'foo')
 
         when:
-        def outputs =  [
+        def outputs = [
                 workDir.resolve('file1.txt'),
                 workDir.resolve('file2.bam'),
                 workDir.resolve('file3.fastq')
@@ -180,9 +197,8 @@ class PublishDirTest extends Specification {
         ] as Set
         def publisher = new PublishDir(path: publishDir, mode: 'copy')
         publisher.apply( outputs, task )
-
-        session.fileTransferThreadPool.shutdown()
-        session.fileTransferThreadPool.awaitTermination(5, TimeUnit.SECONDS)
+        and:
+        session.@publishPoolManager.shutdown(false)
 
         then:
         publishDir.resolve('file1.txt').text == 'aaa'
@@ -254,9 +270,6 @@ class PublishDirTest extends Specification {
     def 'should default mode to `symlink`' () {
 
         given:
-        def processor = [:] as TaskProcessor
-        processor.name = 'foo'
-
         def targetDir = Paths.get('/scratch/dir')
         def publisher = new PublishDir(path: targetDir, sourceFileSystem: FileSystems.default)
 
@@ -271,9 +284,6 @@ class PublishDirTest extends Specification {
 
         given:
         def workDirFileSystem = TestHelper.createInMemTempDir().fileSystem
-        def processor = [:] as TaskProcessor
-        processor.name = 'foo'
-
         def targetDir = TestHelper.createInMemTempDir()
         def publisher = new PublishDir(mode:'symlink', path: targetDir, sourceFileSystem: workDirFileSystem)
 
@@ -306,7 +316,7 @@ class PublishDirTest extends Specification {
         def task = new TaskRun(workDir: workDir, config: Mock(TaskConfig))
 
         when:
-        def outputs =  [
+        def outputs = [
                 workDir.resolve('file1.txt'),
         ] as Set
         def publisher = new PublishDir(path: publishDir, enabled: false)
@@ -386,4 +396,40 @@ class PublishDirTest extends Specification {
         cleanup:
         folder?.deleteDir()
     }
+
+    def 'should set failOnError via env variable' () {
+        given:
+        SysEnv.push(ENV)
+
+        when:
+        def publish = new PublishDir()
+        then:
+        publish.failOnError == EXPECTED
+        cleanup:
+        SysEnv.pop()
+
+        where:
+        ENV                                         | EXPECTED
+        [:]                                         | true
+        [NXF_PUBLISH_FAIL_ON_ERROR: 'true']         | true
+        [NXF_PUBLISH_FAIL_ON_ERROR: 'false']        | false
+    }
+
+    def 'should return copy attributes' () {
+        expect:
+        new PublishDir().copyOpts() == [] as CopyOption[]
+        and:
+        new PublishDir().copyOpts(LinkOption.NOFOLLOW_LINKS) == [LinkOption.NOFOLLOW_LINKS] as CopyOption[]
+
+        when:
+        Global.session = Mock(Session) { getConfig()>>[workflow:[output:[copyAttributes: true]]] }
+        then:
+        new PublishDir().copyOpts() == [StandardCopyOption.COPY_ATTRIBUTES] as CopyOption[]
+        and:
+        new PublishDir().copyOpts(LinkOption.NOFOLLOW_LINKS) == [LinkOption.NOFOLLOW_LINKS,StandardCopyOption.COPY_ATTRIBUTES] as CopyOption[]
+
+        cleanup:
+        Global.session = null
+    }
+
 }

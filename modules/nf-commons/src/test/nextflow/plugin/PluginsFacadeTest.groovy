@@ -1,9 +1,11 @@
 package nextflow.plugin
 
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 
 import com.sun.net.httpserver.HttpServer
+import nextflow.SysEnv
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -24,7 +26,8 @@ class PluginsFacadeTest extends Specification {
         plugins.indexUrl = 'http://localhost:9900/plugins.json'
 
         when:
-        plugins.setup([plugins: [ 'nf-console@1.0.0' ]])
+        plugins.init()
+        plugins.load([plugins: [ 'nf-console@1.0.0' ]])
         then:
         folder.resolve('nf-console-1.0.0').exists()
 
@@ -33,11 +36,30 @@ class PluginsFacadeTest extends Specification {
         server?.stop(0)
     }
 
+    def 'should create plugin manager' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def plugins = new PluginsFacade(folder,MODE)
+        expect:
+        plugins.createManager(folder,EMBEDDED).class == EXPECTED
+
+        cleanup:
+        folder?.deleteDir()
+
+        where:
+        MODE    | EMBEDDED      | EXPECTED
+        'dev'   | false         | DevPluginManager
+        'dev'   | true          | DevPluginManager
+        and:
+        'prod'  | false         | LocalPluginManager
+        'prod'  | true          | EmbeddedPluginManager
+    }
+
 
     def 'should parse plugins config' () {
         given:
         def defaults = new DefaultPlugins(plugins: [
-                'delta': new PluginSpec('delta', '0.1.0'),
+                'delta': new PluginRef('delta', '0.1.0'),
         ])
 
         def handler = new PluginsFacade(defaultPlugins: defaults)
@@ -65,10 +87,11 @@ class PluginsFacadeTest extends Specification {
     def 'should return plugin requirements' () {
         given:
         def defaults = new DefaultPlugins(plugins: [
-                'nf-amazon': new PluginSpec('nf-amazon', '0.1.0'),
-                'nf-google': new PluginSpec('nf-google', '0.1.0'),
-                'nf-ignite': new PluginSpec('nf-ignite', '0.1.0'),
-                'nf-tower': new PluginSpec('nf-tower', '0.1.0')
+                'nf-amazon': new PluginRef('nf-amazon', '0.1.0'),
+                'nf-cloudcache': new PluginRef('nf-cloudcache', '0.1.0'),
+                'nf-google': new PluginRef('nf-google', '0.1.0'),
+                'nf-tower': new PluginRef('nf-tower', '0.1.0'),
+                'nf-wave': new PluginRef('nf-wave', '0.1.0')
         ])
         and:
         def handler = new PluginsFacade(defaultPlugins: defaults, env: [:])
@@ -86,25 +109,83 @@ class PluginsFacadeTest extends Specification {
 
         when:
         handler = new PluginsFacade(defaultPlugins: defaults, env: [NXF_PLUGINS_DEFAULT:'true'])
+        result = handler.pluginsRequirement([tower:[enabled:false]])
+        then:
+        result == []
+
+        when:
+        handler = new PluginsFacade(defaultPlugins: defaults, env: [NXF_PLUGINS_DEFAULT:'true'])
         result = handler.pluginsRequirement([tower:[enabled:true]])
         then:
-        result == [ new PluginSpec('nf-tower', '0.1.0') ]
+        result == [ new PluginRef('nf-tower', '0.1.0') ]
 
         when:
         handler = new PluginsFacade(defaultPlugins: defaults, env: [TOWER_ACCESS_TOKEN:'xyz'])
         result = handler.pluginsRequirement([:])
         then:
-        result == [ new PluginSpec('nf-tower', '0.1.0') ]
+        result == [ new PluginRef('nf-tower', '0.1.0') ]
+
+        // fusion requires both nf-tower and nf-wave
+        when:
+        handler = new PluginsFacade(defaultPlugins: defaults, env: [NXF_PLUGINS_DEFAULT:'true'])
+        result = handler.pluginsRequirement([fusion:[enabled:true]])
+        then:
+        result == [ new PluginRef('nf-tower', '0.1.0'), new PluginRef('nf-wave', '0.1.0')  ]
+
+        when:
+        handler = new PluginsFacade(defaultPlugins: defaults, env: [:])
+        result = handler.pluginsRequirement([wave:[enabled:true]])
+        then:
+        result == [ new PluginRef('nf-wave', '0.1.0') ]
+
+        when:
+        handler = new PluginsFacade(defaultPlugins: defaults, env: [:])
+        result = handler.pluginsRequirement([plugins: [ 'foo@1.2.3']])
+        then:
+        result == [ new PluginRef('foo', '1.2.3') ]
+
+        when:
+        handler = new PluginsFacade(defaultPlugins: defaults, env: [:])
+        result = handler.pluginsRequirement([plugins: [ 'nf-amazon@1.2.3']])
+        then:
+        result == [ new PluginRef('nf-amazon', '1.2.3') ]
+
+        when:
+        handler = new PluginsFacade(defaultPlugins: defaults, env: [:])
+        result = handler.pluginsRequirement([plugins: [ 'nf-amazon']])
+        then:
+        result == [ new PluginRef('nf-amazon', '0.1.0') ] // <-- config is taken from the default config
+
+        when:
+        handler = new PluginsFacade(defaultPlugins: defaults, env: [NXF_PLUGINS_DEFAULT:'nf-google@2.0.0'])
+        result = handler.pluginsRequirement([plugins: [ 'nf-amazon@1.2.3']])
+        then:
+        result == [ new PluginRef('nf-amazon', '1.2.3'), new PluginRef('nf-google','2.0.0') ]
+
+        when:
+        handler = new PluginsFacade(defaultPlugins: defaults, env: [NXF_PLUGINS_DEFAULT:'nf-google@2.0.0'])
+        result = handler.pluginsRequirement([:])
+        then:
+        result == [ new PluginRef('nf-google','2.0.0') ]
+
+        when:
+        handler = new PluginsFacade(defaultPlugins: defaults, env: [:])
+        result = handler.pluginsRequirement([cloudcache:[enabled:true]])
+        then:
+        result == [ new PluginRef('nf-cloudcache', '0.1.0') ]
+
     }
 
     def 'should return default plugins given config' () {
         given:
+        SysEnv.push([:])
+        and:
         def defaults = new DefaultPlugins(plugins: [
-                'nf-amazon': new PluginSpec('nf-amazon', '0.1.0'),
-                'nf-google': new PluginSpec('nf-google', '0.1.0'),
-                'nf-azure': new PluginSpec('nf-azure', '0.1.0'),
-                'nf-ignite': new PluginSpec('nf-ignite', '0.1.0'),
-                'nf-tower': new PluginSpec('nf-tower', '0.1.0')
+                'nf-amazon': new PluginRef('nf-amazon', '0.1.0'),
+                'nf-google': new PluginRef('nf-google', '0.1.0'),
+                'nf-azure': new PluginRef('nf-azure', '0.1.0'),
+                'nf-tower': new PluginRef('nf-tower', '0.1.0'),
+                'nf-k8s': new PluginRef('nf-k8s', '0.1.0')
         ])
         and:
         def handler = new PluginsFacade(defaultPlugins: defaults)
@@ -115,15 +196,13 @@ class PluginsFacadeTest extends Specification {
         plugins.find { it.id == 'nf-amazon' }
         !plugins.find { it.id == 'nf-google' }
         !plugins.find { it.id == 'nf-azure' }
-        !plugins.find { it.id == 'nf-ignite' }
-        
+
         when:
         plugins = handler.defaultPluginsConf([process:[executor: 'google-lifesciences']])
         then:
         plugins.find { it.id == 'nf-google' }
         !plugins.find { it.id == 'nf-amazon' }
         !plugins.find { it.id == 'nf-azure' }
-        !plugins.find { it.id == 'nf-ignite' }
 
         when:
         plugins = handler.defaultPluginsConf([process:[executor: 'azurebatch']])
@@ -132,34 +211,33 @@ class PluginsFacadeTest extends Specification {
         !plugins.find { it.id == 'nf-google' }
         !plugins.find { it.id == 'nf-amazon' }
         plugins.find { it.id == 'nf-azure' }
-        !plugins.find { it.id == 'nf-ignite' }
 
         when:
-        plugins = handler.defaultPluginsConf([process:[executor: 'ignite']])
+        plugins = handler.defaultPluginsConf([process:[executor: 'k8s']])
         then:
-        plugins.find { it.id == 'nf-ignite' }
-        plugins.find { it.id == 'nf-amazon' }
-        !plugins.find { it.id == 'nf-google' }
-        !plugins.find { it.id == 'nf-azure' }
+        plugins.find { it.id == 'nf-k8s' }
+        !plugins.find { it.id == 'nf-amazon' }
 
         when:
         plugins = handler.defaultPluginsConf([:])
         then:
         !plugins.find { it.id == 'nf-amazon' }
-        !plugins.find { it.id == 'nf-ignite' }
         !plugins.find { it.id == 'nf-google' }
         !plugins.find { it.id == 'nf-azure' }
 
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'should return default plugins given workdir' () {
         given:
+        SysEnv.push([:])
+        and:
         def defaults = new DefaultPlugins(plugins: [
-                'nf-amazon': new PluginSpec('nf-amazon', '0.1.0'),
-                'nf-google': new PluginSpec('nf-google', '0.1.0'),
-                'nf-azure': new PluginSpec('nf-azure', '0.1.0'),
-                'nf-ignite': new PluginSpec('nf-ignite', '0.1.0'),
-                'nf-tower': new PluginSpec('nf-tower', '0.1.0')
+                'nf-amazon': new PluginRef('nf-amazon', '0.1.0'),
+                'nf-google': new PluginRef('nf-google', '0.1.0'),
+                'nf-azure': new PluginRef('nf-azure', '0.1.0'),
+                'nf-tower': new PluginRef('nf-tower', '0.1.0')
         ])
         and:
         def handler = new PluginsFacade(defaultPlugins: defaults)
@@ -189,20 +267,22 @@ class PluginsFacadeTest extends Specification {
         plugins = handler.defaultPluginsConf([:])
         then:
         !plugins.find { it.id == 'nf-amazon' }
-        !plugins.find { it.id == 'nf-ignite' }
         !plugins.find { it.id == 'nf-google' }
         !plugins.find { it.id == 'nf-azure' }
 
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'should return default plugins given bucket dir' () {
         given:
+        SysEnv.push([:])
+        and:
         def defaults = new DefaultPlugins(plugins: [
-                'nf-amazon': new PluginSpec('nf-amazon', '0.1.0'),
-                'nf-google': new PluginSpec('nf-google', '0.1.0'),
-                'nf-azure': new PluginSpec('nf-azure', '0.1.0'),
-                'nf-ignite': new PluginSpec('nf-ignite', '0.1.0'),
-                'nf-tower': new PluginSpec('nf-tower', '0.1.0')
+                'nf-amazon': new PluginRef('nf-amazon', '0.1.0'),
+                'nf-google': new PluginRef('nf-google', '0.1.0'),
+                'nf-azure': new PluginRef('nf-azure', '0.1.0'),
+                'nf-tower': new PluginRef('nf-tower', '0.1.0')
         ])
         and:
         def handler = new PluginsFacade(defaultPlugins: defaults)
@@ -232,20 +312,20 @@ class PluginsFacadeTest extends Specification {
         plugins = handler.defaultPluginsConf([:])
         then:
         !plugins.find { it.id == 'nf-amazon' }
-        !plugins.find { it.id == 'nf-ignite' }
         !plugins.find { it.id == 'nf-google' }
         !plugins.find { it.id == 'nf-azure' }
 
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'should get plugins list from env' () {
 
         given:
         def defaults = new DefaultPlugins(plugins: [
-                'nf-amazon': new PluginSpec('nf-amazon', '0.1.0'),
-                'nf-google': new PluginSpec('nf-google', '0.1.0'),
-                'nf-ignite': new PluginSpec('nf-ignite', '0.1.0'),
-                'nf-tower': new PluginSpec('nf-tower', '0.1.0')
+                'nf-amazon': new PluginRef('nf-amazon', '0.1.0'),
+                'nf-google': new PluginRef('nf-google', '0.1.0'),
+                'nf-tower': new PluginRef('nf-tower', '0.1.0')
         ])
         and:
         def handler = new PluginsFacade(defaultPlugins: defaults, env: [NXF_PLUGINS_DEFAULT: 'nf-amazon,nf-tower@1.0.1,nf-foo@2.2.0,nf-bar'])
@@ -256,7 +336,7 @@ class PluginsFacadeTest extends Specification {
         plugins.size()==4
         plugins.find { it.id == 'nf-amazon' && it.version=='0.1.0' }    // <-- version from default
         plugins.find { it.id == 'nf-tower' && it.version=='1.0.1' }     // <-- version from the env var
-        plugins.find { it.id == 'nf-foo' && it.version=='2.2.0' }       // <-- version from tne env var
+        plugins.find { it.id == 'nf-foo' && it.version=='2.2.0' }       // <-- version from the env var
         plugins.find { it.id == 'nf-bar' && it.version==null }          // <-- no version 
     }
 
@@ -301,6 +381,31 @@ class PluginsFacadeTest extends Specification {
         [:]                                 | Paths.get('plugins')
     }
 
+    @Unroll
+    def 'should merge plugins' () {
+        given:
+        def facade = new PluginsFacade()
+        def configPlugins = CONFIG.tokenize(',').collect { PluginRef.parse(it) }
+        def defaultPlugins = DEFAULT.tokenize(',').collect { PluginRef.parse(it) }
+        def expectedPlugins = EXPECTED.tokenize(',').collect { PluginRef.parse(it) }
+
+        expect:
+        facade.mergePluginSpecs(configPlugins, defaultPlugins) == expectedPlugins
+
+        where:
+        CONFIG                  | DEFAULT               | EXPECTED
+        ''                      | ''                    | ''
+        'alpha,delta'           | ''                    | 'alpha,delta'
+        ''                      | 'alpha,delta'         | 'alpha,delta'
+        'alpha'                 | 'delta'               | 'alpha,delta'
+        'delta'                 | 'alpha'               | 'delta,alpha'
+        'delta'                 | 'delta'               | 'delta'
+        'delta@1.0.0'           | 'delta'               | 'delta@1.0.0'
+        'delta'                 | 'delta@2.0.0'         | 'delta@2.0.0'
+        'delta@1.0.0'           | 'delta@2.0.0'         | 'delta@1.0.0'     // <-- config has priority
+        'alpha,beta@1.0.0'      | 'delta@2.0.0'         | 'alpha,beta@1.0.0,delta@2.0.0'
+
+    }
 
     // -- check Priority annotation
 
@@ -365,52 +470,71 @@ class PluginsFacadeTest extends Specification {
 
     }
 
-    // -- check scoped exceptions
+    def 'should prefetch plugin metadata when starting plugins'() {
+        def specs = [new PluginRef("nf-one"), new PluginRef("nf-two", "~1.2.0")]
 
-    @Scoped(priority = 10, value = 'alpha')
-    static class EXT1 implements Bar {}
-
-    @Scoped(priority  = 20, value = 'alpha')
-    static class EXT2 implements Bar {}
-
-    @Scoped(priority  = 30, value = 'beta')
-    static class EXT3 implements Bar {}
-
-    @Scoped(priority  = -1, value = 'beta')
-    static class EXT4 implements Bar {}
-
-    @Scoped('')
-    static class EXT5 implements Bar {}
-
-    def 'should get scoped extensions' () {
         given:
-        def ext1 = new EXT1()
-        def ext2 = new EXT2()
-        def ext3 = new EXT3()
-        def ext4 = new EXT4()
-        def ext5 = new EXT5()
-        and:
-        def THE_LIST = [ext1, ext2, ext3, ext4, ext5]; THE_LIST.shuffle()
-        and:
-        def facade = Spy( new PluginsFacade() ) {
-            getExtensions(Foo) >> THE_LIST
+        def updater = Mock(PluginUpdater)
+        def unit = new PluginsFacade() {
+            PluginUpdater createUpdater(Path root, CustomPluginManager manager) {
+                return updater
+            }
         }
+        unit.init()
 
         when:
-        def result = facade.getScopedExtensions(Foo)
+        unit.start(specs)
         then:
-        // items are returned ordered by priority
-        result == [ ext1, ext4 ] as Set
-
-        when:
-        result = facade.getScopedExtensions(Foo, 'alpha')
+        1 * updater.prefetchMetadata(specs) // order is important!
         then:
-        result == [ ext1 ] as Set
-
-        when:
-        result = facade.getScopedExtensions(Foo, 'beta')
-        then:
-        result == [ ext4 ] as Set
-
+        1 * updater.prepareAndStart("nf-one", null)
+        1 * updater.prepareAndStart("nf-two", "~1.2.0")
     }
+
+    @Unroll
+    def 'check is a supported plugins index' () {
+        expect:
+        PluginsFacade.isSupportedIndex(INDEX) == EXPECTED
+
+        where:
+        INDEX                           | EXPECTED
+        'https://foo.nextflow.io'       | true
+        'https://foo.seqera.io'         | true
+        and:
+        'https://foo.nf.io'             | false
+    }
+
+    @Unroll
+    def 'should parse allowed plugins' () {
+        given:
+        def facade  = new PluginsFacade()
+
+        expect:
+        facade.parseAllowedPlugins(ENV) == EXPECTED
+
+        where:
+        ENV                             | EXPECTED
+        [:]                             | null
+        [NXF_PLUGINS_ALLOWED:'']                    | []
+        [NXF_PLUGINS_ALLOWED:'nf-amazon,nf-google'] | [PluginRef.parse('nf-amazon'), PluginRef.parse('nf-google')]
+    }
+
+    @Unroll
+    def 'should should validate is allowed' () {
+        given:
+        def facade  = new PluginsFacade(env:ENV)
+
+        expect:
+        facade.isAllowed(REQUEST) == EXPECTED
+        facade.isAllowed(PluginRef.parse(REQUEST)) == EXPECTED
+
+        where:
+        ENV                                         | REQUEST       | EXPECTED
+        [:]                                         | 'nf-amz'      | true
+        [NXF_PLUGINS_ALLOWED:'']                    | 'nf-amz'      | false
+        [NXF_PLUGINS_ALLOWED:'nf-amz,nf-gcp']       | 'nf-amz'      | true
+        [NXF_PLUGINS_ALLOWED:'nf-amz,nf-gcp']       | 'nf-gcp'      | true
+        [NXF_PLUGINS_ALLOWED:'nf-amz,nf-gcp']       | 'nf-foo'      | false
+    }
+
 }

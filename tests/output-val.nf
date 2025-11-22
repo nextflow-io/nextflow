@@ -1,42 +1,28 @@
 #!/usr/bin/env nextflow
-/*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-x = 100
-y = 200
 
 process foo {
   input:
-  file fastq from 'dummy'
+  path fastq
 
   output:
-  val 'Hello' into str_channel
-  val "${fastq.baseName}-${x}.out" into exp_channel
-  val x into x_channel
-  val y into y_channel
+  val 'Hello'
+  val "${fastq.baseName}-${x}.out"
+  val x
+  val y
 
   script:
+  x = 100
   y = 'two hundred'
   """
   echo bar
   """
 }
 
-x_channel.view { "x: $it" }
-y_channel.view { "y: $it" }
-str_channel.view { "str: $it" }
-exp_channel.view { "exp: $it" }
+workflow {
+    foo("$baseDir/data/prot.fa")
+
+    foo.out[0].view { "str: $it" }
+    foo.out[1].view { "exp: $it" }
+    foo.out[2].view { "x: $it" }
+    foo.out[3].view { "y: $it" }
+}

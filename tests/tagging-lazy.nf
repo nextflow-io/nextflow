@@ -1,7 +1,6 @@
 #!/usr/bin/env nextflow
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,14 +18,18 @@
 params.ext = 'fastq'
 
 process foo {
-  echo true
+  debug true
   tag "${barcode}.${params.ext}"
 
   input:
-  each barcode from 'alpha', 'delta', 'gamma', 'omega'
+  each barcode
 
+  script:
   """
   echo $barcode
   """
+}
 
+workflow {
+  channel.of('alpha', 'delta', 'gamma', 'omega') | foo
 }

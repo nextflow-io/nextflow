@@ -18,11 +18,27 @@ package nextflow.cloud.azure.batch
 import java.nio.file.Path
 import java.time.OffsetDateTime
 
+import com.azure.identity.ClientSecretCredentialBuilder
+import com.azure.identity.ManagedIdentityCredentialBuilder
 import com.azure.storage.blob.BlobContainerClient
+import com.azure.storage.blob.BlobServiceClient
+import com.azure.storage.blob.BlobServiceClientBuilder
+import com.azure.storage.blob.models.UserDelegationKey
 import com.azure.storage.blob.sas.BlobContainerSasPermission
 import com.azure.storage.blob.sas.BlobSasPermission
 import com.azure.storage.blob.sas.BlobServiceSasSignatureValues
+import com.azure.storage.common.StorageSharedKeyCredential
+import com.azure.storage.common.policy.RequestRetryOptions
+import com.azure.storage.common.policy.RetryPolicyType
+import com.azure.storage.common.sas.AccountSasPermission
+import com.azure.storage.common.sas.AccountSasResourceType
+import com.azure.storage.common.sas.AccountSasService
+import com.azure.storage.common.sas.AccountSasSignatureValues
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
+import groovy.util.logging.Slf4j
+import nextflow.cloud.azure.config.AzConfig
+import nextflow.cloud.azure.config.AzRetryConfig
 import nextflow.cloud.azure.nio.AzPath
 import nextflow.util.Duration
 /**
@@ -30,6 +46,7 @@ import nextflow.util.Duration
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 class AzHelper {
 
@@ -49,10 +66,6 @@ class AzHelper {
         def url = az0(path).containerClient().getBlobContainerUrl()
         url = URLDecoder.decode(url, 'UTF-8').stripEnd('/')
         return !sas ? url : "${url}?${sas}"
-    }
-
-    static String generateContainerSas(Path path, Duration duration) {
-        generateSas(az0(path).containerClient(), duration)
     }
 
     static BlobContainerSasPermission CONTAINER_PERMS = new BlobContainerSasPermission()
@@ -75,17 +88,176 @@ class AzHelper {
             .setTagsPermission(true)
             .setWritePermission(true)
 
+    static AccountSasPermission ACCOUNT_PERMS = new AccountSasPermission()
+            .setAddPermission(true)
+            .setCreatePermission(true)
+            .setDeletePermission(true)
+            .setListPermission(true)
+            .setReadPermission(true)
+            .setTagsPermission(true)
+            .setWritePermission(true)
+            .setUpdatePermission(true)
 
-    static String generateSas(BlobContainerClient client, Duration duration) {
-        final now = OffsetDateTime .now()
+    static AccountSasService ACCOUNT_SERVICES = new AccountSasService()
+            .setBlobAccess(true)
+            .setFileAccess(true)
+
+    static AccountSasResourceType ACCOUNT_RESOURCES = new AccountSasResourceType()
+            .setContainer(true)
+            .setObject(true)
+            .setService(true)
+
+
+    static String generateContainerSasWithActiveDirectory(Path path, Duration duration) {
+        final key = generateUserDelegationKey(az0(path), duration)
+
+        return generateContainerUserDelegationSas(az0(path).containerClient(), duration, key)
+    }
+
+    static String generateAccountSasWithAccountKey(Path path, Duration duration) {
+        generateAccountSas(az0(path).getFileSystem().getBlobServiceClient(), duration)
+    }
+
+    static UserDelegationKey generateUserDelegationKey(Path path, Duration duration) {
+
+        final client = az0(path).getFileSystem().getBlobServiceClient()
+
+        final startTime = OffsetDateTime.now()
+        final indicatedExpiryTime = startTime.plusHours(duration.toHours())
+
+        // The maximum lifetime for user delegation key (and therefore delegation SAS) is 7 days
+        // Reference https://docs.microsoft.com/en-us/azure/storage/blobs/storage-blob-user-delegation-sas-create-cli
+        final maxExpiryTime = startTime.plusDays(7)
+
+        final expiryTime = (indicatedExpiryTime.toEpochSecond() <= maxExpiryTime.toEpochSecond()) ? indicatedExpiryTime : maxExpiryTime
+
+        final delegationKey = client.getUserDelegationKey(startTime, expiryTime)
+
+        return delegationKey
+    }
+
+    static String generateContainerUserDelegationSas(BlobContainerClient client, Duration duration, UserDelegationKey key) {
+       
+        final startTime = OffsetDateTime.now()
+        final indicatedExpiryTime = startTime.plusHours(duration.toHours())
+
+        // The maximum lifetime for user delegation key (and therefore delegation SAS) is 7 days
+        // Reference https://docs.microsoft.com/en-us/azure/storage/blobs/storage-blob-user-delegation-sas-create-cli
+        final maxExpiryTime = startTime.plusDays(7)
+
+        final expiryTime = (indicatedExpiryTime.toEpochSecond() <= maxExpiryTime.toEpochSecond()) ? indicatedExpiryTime : maxExpiryTime
 
         final signature = new BlobServiceSasSignatureValues()
                 .setPermissions(BLOB_PERMS)
                 .setPermissions(CONTAINER_PERMS)
-                .setStartTime(now)
-                .setExpiryTime( now.plusSeconds(duration.toSeconds()) )
+                .setStartTime(startTime)
+                .setExpiryTime(expiryTime)
 
-        return client .generateSas(signature)
+        final generatedSas = client.generateUserDelegationSas(signature, key)
+
+        return generatedSas
+    }
+
+    static String generateAccountSas(BlobServiceClient client, Duration duration) {
+        final expiryTime = OffsetDateTime.now().plusSeconds(duration.toSeconds())
+        final signature = new AccountSasSignatureValues(
+                expiryTime,
+                ACCOUNT_PERMS,
+                ACCOUNT_SERVICES,
+                ACCOUNT_RESOURCES)
+
+        return client.generateAccountSas(signature)
+    }
+
+    static String generateAccountSas(String accountName, String accountKey, Duration duration) {
+        final client = getOrCreateBlobServiceWithKey(accountName, accountKey)
+        return generateAccountSas(client, duration)
+    }
+
+    @Memoized
+    static synchronized BlobServiceClient getOrCreateBlobServiceWithKey(String accountName, String accountKey) {
+        log.debug "Creating Azure blob storage client -- accountName=$accountName; accountKey=${accountKey?.substring(0,5)}.."
+
+        final credential = new StorageSharedKeyCredential(accountName, accountKey)
+        final endpoint = String.format(Locale.ROOT, "https://%s.blob.core.windows.net", accountName)
+
+        return new BlobServiceClientBuilder()
+                .endpoint(endpoint)
+                .credential(credential)
+                .retryOptions(requestRetryOptions())
+                .buildClient()
+    }
+
+    @Memoized
+    static synchronized BlobServiceClient getOrCreateBlobServiceWithToken(String accountName, String sasToken) {
+        if( !sasToken )
+            throw new IllegalArgumentException("Missing Azure blob SAS token")
+        if( sasToken.length()<100 )
+            throw new IllegalArgumentException("Invalid Azure blob SAS token -- offending value: $sasToken")
+
+        log.debug "Creating Azure blob storage client -- accountName: $accountName; sasToken: ${sasToken?.substring(0,10)}.."
+
+        final endpoint = String.format(Locale.ROOT, "https://%s.blob.core.windows.net", accountName)
+
+        return new BlobServiceClientBuilder()
+                .endpoint(endpoint)
+                .sasToken(sasToken)
+                .retryOptions(requestRetryOptions())
+                .buildClient()
+    }
+
+    @Memoized
+    static synchronized BlobServiceClient getOrCreateBlobServiceWithServicePrincipal(String accountName, String clientId, String clientSecret, String tenantId) {
+        log.debug "Creating Azure Blob storage client using Service Principal credentials"
+
+        final endpoint = String.format(Locale.ROOT, "https://%s.blob.core.windows.net", accountName)
+
+        final credential = new ClientSecretCredentialBuilder()
+                .clientId(clientId)
+                .clientSecret(clientSecret)
+                .tenantId(tenantId)
+                .build()
+
+        return new BlobServiceClientBuilder()
+                .credential(credential)
+                .endpoint(endpoint)
+                .retryOptions(requestRetryOptions())
+                .buildClient()
+    }
+
+    @Memoized
+    static synchronized BlobServiceClient getOrCreateBlobServiceWithManagedIdentity(String accountName, String clientId) {
+        log.debug "Creating Azure blob storage client using Managed Identity ${clientId ?: '<system-assigned identity>'}"
+
+        final endpoint = String.format(Locale.ROOT, "https://%s.blob.core.windows.net", accountName)
+
+        final credentialBuilder = new ManagedIdentityCredentialBuilder()
+        if( clientId )
+            credentialBuilder.clientId(clientId)
+
+        return new BlobServiceClientBuilder()
+                .credential(credentialBuilder.build())
+                .endpoint(endpoint)
+                .retryOptions(requestRetryOptions())
+                .buildClient()
+    }
+
+    @Memoized
+    static protected RequestRetryOptions requestRetryOptions() {
+        final cfg = AzConfig.getConfig().retryConfig()
+        return requestRetryOptions0(cfg)
+    }
+
+    static protected RequestRetryOptions requestRetryOptions0(AzRetryConfig cfg) {
+        final retryDelay = java.time.Duration.ofMillis(cfg.getDelay().millis)
+        final maxRetryDelay = java.time.Duration.ofMillis(cfg.getMaxDelay().millis)
+        new RequestRetryOptions(
+            RetryPolicyType.EXPONENTIAL,
+            cfg.maxAttempts,
+            null,
+            retryDelay,
+            maxRetryDelay,
+            null)
     }
 
 }

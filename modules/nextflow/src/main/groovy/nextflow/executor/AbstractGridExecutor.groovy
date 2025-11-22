@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +15,13 @@
  */
 
 package nextflow.executor
+
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.processor.TaskConfig
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskProcessor
@@ -28,7 +29,7 @@ import nextflow.processor.TaskRun
 import nextflow.util.Duration
 import nextflow.util.Escape
 import nextflow.util.Throttle
-import org.apache.commons.lang.StringUtils
+import org.apache.commons.lang3.StringUtils
 /**
  * Generic task processor executing a task through a grid facility
  *
@@ -40,7 +41,7 @@ abstract class AbstractGridExecutor extends Executor {
 
     protected Duration queueInterval
 
-    private final static List<String> INVALID_NAME_CHARS = [ " ", "/", ":", "@", "*", "?", "\\n", "\\t", "\\r" ]
+    private final static List<String> INVALID_NAME_CHARS = [ " ", "/", ":", "@", "*", "?", "\\n", "\\t", "\\r", "=" ]
 
     private Map lastQueueStatus
 
@@ -50,7 +51,7 @@ abstract class AbstractGridExecutor extends Executor {
     @Override
     protected void register () {
         super.register()
-        queueInterval = session.getQueueStatInterval(name)
+        queueInterval = config.getQueueStatInterval(name)
         log.debug "Creating executor '$name' > queue-stat-interval: ${queueInterval}"
     }
 
@@ -59,7 +60,7 @@ abstract class AbstractGridExecutor extends Executor {
      * @return
      */
     TaskMonitor createTaskMonitor() {
-        return TaskPollingMonitor.create(session, name, 100, Duration.of('5 sec'))
+        return TaskPollingMonitor.create(session, config, name, 100, Duration.of('5 sec'))
     }
 
     /*
@@ -76,8 +77,14 @@ abstract class AbstractGridExecutor extends Executor {
         // creates the wrapper script
         final builder = new BashWrapperBuilder(task)
         // job directives headers
-        builder.headerScript = getHeaders(task)
+        builder.headerScript = getHeaderScript(task)
         return builder
+    }
+
+    protected String getHeaderScript(TaskRun task) {
+        def result = getHeaders(task)
+        result += "NXF_CHDIR=${Escape.path(task.workDir)}\n"
+        return result
     }
 
     /**
@@ -129,6 +136,23 @@ abstract class AbstractGridExecutor extends Executor {
      */
     abstract protected List<String> getDirectives(TaskRun task, List<String> initial)
 
+    protected void addClusterOptionsDirective(TaskConfig config, List<String> result) {
+        final opts = config.getClusterOptions()
+        if( opts instanceof Collection ) {
+            for( String it : opts ) {
+                result.add(it)
+                result.add('')
+            }
+        }
+        else if( opts instanceof CharSequence ) {
+            result.add(opts.toString())
+            result.add('')
+        }
+        else if( opts != null ) {
+            throw new IllegalArgumentException("Unexpected value for clusterOptions process directive - offending value: $opts")
+        }
+    }
+
     /**
      * Given a task returns a *clean* name used to submit the job to the grid engine.
      * That string must not contain blank or special shell characters e.g. parenthesis, etc
@@ -167,11 +191,11 @@ abstract class AbstractGridExecutor extends Executor {
     @PackageScope
     String resolveCustomJobName(TaskRun task) {
         try {
-            def custom = (Closure)session?.getExecConfigProp(name, 'jobName', null)
+            final custom = (Closure)config.getExecConfigProp(name, 'jobName', null)
             if( !custom )
                 return null
 
-            def ctx = [ (TaskProcessor.TASK_CONTEXT_PROPERTY_NAME): task.config ]
+            final ctx = [ (TaskProcessor.TASK_CONTEXT_PROPERTY_NAME): task.config ]
             custom.cloneWith(ctx).call()?.toString()
         }
         catch( Exception e ) {
@@ -220,7 +244,7 @@ abstract class AbstractGridExecutor extends Executor {
                 - exit status : $ret
                 - output      :
                 """
-                .stripIndent()
+                .stripIndent(true)
         m += proc.text.indent('  ')
         log.debug(m)
     }
@@ -283,7 +307,7 @@ abstract class AbstractGridExecutor extends Executor {
                 - cmd executed: ${cmd.join(' ')}
                 - exit status : $exit
                 - output      :
-                """.stripIndent()
+                """.stripIndent(true)
                 m += result.indent('  ')
                 log.warn1(m, firstOnly: true)
                 return null
@@ -297,6 +321,11 @@ abstract class AbstractGridExecutor extends Executor {
     }
 
     Map<String,QueueStatus> getQueueStatus(queue) {
+        final global = config.getExecConfigProp(name, 'queueGlobalStatus', false)
+        if( global ) {
+            log.debug1("Executor '$name' fetching queue global status")
+            queue = null
+        }
         Map<String,QueueStatus> status = Throttle.cache("${name}_${queue}", queueInterval) {
             final result = getQueueStatus0(queue)
             log.trace "[${name.toUpperCase()}] queue ${queue?"($queue) ":''}status >\n" + dumpQueueStatus(result)
@@ -339,7 +368,7 @@ abstract class AbstractGridExecutor extends Executor {
      */
     protected abstract Map<String,QueueStatus> parseQueueStatus( String text )
 
-    boolean checkStartedStatus(jobId, queueName ) {
+    boolean checkStartedStatus(jobId, queueName) {
         assert jobId
 
         // -- fetch the queue status
@@ -387,6 +416,14 @@ abstract class AbstractGridExecutor extends Executor {
     protected String quote(Path path) {
         def str = Escape.path(path)
         path.toString() != str ? "\"$str\"" : str
+    }
+
+    @Override
+    boolean isContainerNative() {
+        // when fusion is enabled it behaves as a native container environment
+        // because the command wrapper script should not manage the container execution.
+        // Instead, it is the command wrapper script that is launched run within a container process.
+        return isFusionEnabled()
     }
 }
 

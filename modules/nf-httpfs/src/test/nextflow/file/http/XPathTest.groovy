@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,6 +58,21 @@ class XPathTest extends Specification {
         XPath.get('http://www.nextflow.io/abc/d.txt?q=1').toUri().toString() == 'http://www.nextflow.io/abc/d.txt?q=1'
         and:
         XPath.get('http://www.nextflow.io/abc/d.txt?').toUri().toString() == 'http://www.nextflow.io/abc/d.txt'
+    }
+
+    def 'should validate uri' () {
+        when:
+        def uri = XPath.get(LOCATION).toUri()
+        then:
+        uri.authority == AUTH
+        uri.path == PATH
+        uri.query == QUERY
+        uri.scheme == SCHEME
+        
+        where:
+        LOCATION                                | SCHEME    |  AUTH             | PATH          | QUERY
+        'http://www.nextflow.io/abc/d.txt'      | 'http'    | 'www.nextflow.io' | '/abc/d.txt'  | null
+        'http://www.nextflow.io/abc/d.txt?q=1'  | 'http'    | 'www.nextflow.io' | '/abc/d.txt'  | 'q=1'
     }
 
     def "should return url root"() {
@@ -209,6 +223,7 @@ class XPathTest extends Specification {
         'http://nextflow.io/ab/c.txt'       | 'http://nextflow.io/ab/c.txt'
         'http://nextflow.io/ab/c/../d.txt'  | 'http://nextflow.io/ab/d.txt'
         'ab/c/../d.txt'                     | 'ab/d.txt'
+        'http://nextflow.io/ab/c.txt?q=1'   | 'http://nextflow.io/ab/c.txt?q=1'
 
     }
 

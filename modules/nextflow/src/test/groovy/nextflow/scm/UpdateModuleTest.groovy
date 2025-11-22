@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,12 +22,19 @@ import java.nio.file.Path
 import org.eclipse.jgit.api.Git
 import spock.lang.Shared
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class UpdateModuleTest extends Specification {
+
+//    def setup() {
+//        Plugins.init()
+//    }
+//
+//    def cleanup() {
+//        Plugins.stop()
+//    }
 
     @Shared
     Path baseFolder
@@ -44,7 +50,7 @@ class UpdateModuleTest extends Specification {
         new File(dir, 'file1.txt').text = 'Hello'
         new File(dir, 'file2.log').text = 'World'
         repo.add().addFilepattern('.').call()
-        repo.commit().setAll(true).setMessage('First commit').call()
+        repo.commit().setSign(false).setAll(true).setMessage('First commit').call()
         repo.close()
 
         // create module b
@@ -55,7 +61,7 @@ class UpdateModuleTest extends Specification {
         new File(dir, 'file1.txt').text = 'Ciao'
         new File(dir, 'file2.log').text = 'Mondo'
         repo.add().addFilepattern('.').call()
-        repo.commit().setAll(true).setMessage('First commit').call()
+        repo.commit().setSign(false).setAll(true).setMessage('First commit').call()
         repo.close()
 
         // create module c
@@ -66,7 +72,7 @@ class UpdateModuleTest extends Specification {
         new File(dir, 'file-x.txt').text = 'x'
         new File(dir, 'file-y.txt').text = 'y'
         repo.add().addFilepattern('.').call()
-        repo.commit().setAll(true).setMessage('First commit').call()
+        repo.commit().setSign(false).setAll(true).setMessage('First commit').call()
         repo.close()
 
     }
@@ -89,7 +95,7 @@ class UpdateModuleTest extends Specification {
         // add the main file and commit all
         new File(dir, 'main.nf').text = 'main script'
         repo.add().addFilepattern('.').call()
-        repo.commit().setAll(true).setMessage('First commit').call()
+        repo.commit().setSign(false).setAll(true).setMessage('First commit').call()
 
         // set the root folder for the asset manager
         def target = baseFolder.resolve('target')
@@ -128,7 +134,7 @@ class UpdateModuleTest extends Specification {
         new File(dir, 'main.nf').text = 'main script'
         new File(dir, 'nextflow.config').text = 'manifest.gitmodules = false'  // note: <-- this setting switch-off the submodule update
         repo.add().addFilepattern('.').call()
-        repo.commit().setAll(true).setMessage('First commit').call()
+        repo.commit().setSign(false).setAll(true).setMessage('First commit').call()
 
         def target = baseFolder.resolve('target2')
         AssetManager.root = target.toFile()
@@ -161,7 +167,7 @@ class UpdateModuleTest extends Specification {
         new File(dir, 'main.nf').text = 'main script'
         new File(dir, 'nextflow.config').text = "manifest.gitmodules = 'prj_bbb,prj_ccc'"  // note: <-- this setting switch-off the submodule update
         repo.add().addFilepattern('.').call()
-        repo.commit().setAll(true).setMessage('First commit').call()
+        repo.commit().setSign(false).setAll(true).setMessage('First commit').call()
 
         def target = baseFolder.resolve('target3')
         AssetManager.root = target.toFile()

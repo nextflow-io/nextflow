@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +20,7 @@ import nextflow.processor.ErrorStrategy
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
+import nextflow.processor.TaskStatus
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
@@ -167,13 +167,13 @@ class WorkflowStatsTest extends Specification {
 
     def 'should return task percents' () {
         given:
-        def stats = new WorkflowStats(succeededCount: 20, cachedCount: 40, ignoredCount: 60, failedCount: 80)
+        def stats = new WorkflowStats(succeededCount: 20, cachedCount: 40, ignoredCount: 60, failedCount: 140)
 
         expect: 
         stats.getSucceedPct() == 10.0f
         stats.getCachedPct() == 20.0f
         stats.getIgnoredPct() == 30.0f
-        stats.getFailedPct() == 40.0f
+        stats.getEffectiveFailedPct() == 40.0f
 
     }
 
@@ -340,7 +340,7 @@ class WorkflowStatsTest extends Specification {
         def trace = Mock(TraceRecord)
 
         when:
-        stats.markCompleted(task, trace)
+        stats.markCompleted(task, trace, TaskStatus.COMPLETED)
 
         then:
         1 * trace.get('realtime')  >> DURATION.millis
@@ -407,7 +407,7 @@ class WorkflowStatsTest extends Specification {
         def trace = Mock(TraceRecord)
 
         when:
-        stats.markCompleted(task, trace)
+        stats.markCompleted(task, trace, TaskStatus.COMPLETED)
         then:
         task.failed >> true
         task.getHashLog() >> HASH
@@ -475,7 +475,7 @@ class WorkflowStatsTest extends Specification {
         def trace = Mock(TraceRecord)
 
         when:
-        stats.markCompleted(task, trace)
+        stats.markCompleted(task, trace, TaskStatus.COMPLETED)
         then:
         task.failed >> true
         task.getHashLog() >> HASH
@@ -502,11 +502,12 @@ class WorkflowStatsTest extends Specification {
         !rec.errored
     }
 
-    def 'should mark aborted' () {
+    def 'should mark aborted from running' () {
         given:
         def FAILED = 10
         def RETRIES = 2
         def IGNORED = 3
+        def SUBMITTED = 0
         def RUNNING = 4
         def ABORTED = 5
         def SUCCEEDED = 6
@@ -521,6 +522,7 @@ class WorkflowStatsTest extends Specification {
             getConfig() >> Mock(TaskConfig) { getCpus() >> CPUS; getMemory() >> MEM } }
         and:
         def rec = new ProgressRecord(0, 'foo')
+        rec.submitted = SUBMITTED
         rec.running = RUNNING
         rec.failed = FAILED
         rec.retries = RETRIES
@@ -532,6 +534,7 @@ class WorkflowStatsTest extends Specification {
         and:
         def stats = new WorkflowStats(
                 records: [0:rec],
+                submittedCount: SUBMITTED,
                 runningCount: RUNNING,
                 failedCount: FAILED,
                 retriesCount: RETRIES,
@@ -544,20 +547,91 @@ class WorkflowStatsTest extends Specification {
         def trace = Mock(TraceRecord)
 
         when:
-        stats.markCompleted(task,trace)
+        stats.markCompleted(task, trace, TaskStatus.RUNNING)
 
         then:
         task.aborted >> true
         task.getHashLog() >> HASH
         and:
+        stats.submittedCount == SUBMITTED
         stats.runningCount == RUNNING -1
         stats.loadCpus == LOAD_CPUS - CPUS
         stats.loadMemory == (LOAD_MEM - MEM).bytes
         stats.abortedCount == ABORTED +1
         and:
+        rec.submitted == SUBMITTED
         rec.running == RUNNING -1
         rec.loadCpus == LOAD_CPUS - CPUS
         rec.loadMemory == (LOAD_MEM - MEM).bytes
+        and:
+        rec.aborted == ABORTED +1
+        rec.failed == FAILED
+        rec.retries == RETRIES
+        rec.ignored == IGNORED
+        rec.succeeded == SUCCEEDED
+    }
+
+    def 'should mark aborted from submitted' () {
+        given:
+        def FAILED = 10
+        def RETRIES = 2
+        def IGNORED = 3
+        def SUBMITTED = 4
+        def RUNNING = 0
+        def ABORTED = 5
+        def SUCCEEDED = 6
+        def CPUS = 2
+        def MEM = 4.GB
+        def LOAD_CPUS = 0
+        def LOAD_MEM = 0.GB
+        def HASH = 'xyz'
+        and:
+        def task = Mock(TaskRun) {
+            getProcessor() >> Mock(TaskProcessor) { getId() >> 0 }
+            getConfig() >> Mock(TaskConfig) { getCpus() >> CPUS; getMemory() >> MEM } }
+        and:
+        def rec = new ProgressRecord(0, 'foo')
+        rec.submitted = SUBMITTED
+        rec.running = RUNNING
+        rec.failed = FAILED
+        rec.retries = RETRIES
+        rec.ignored = IGNORED
+        rec.aborted = ABORTED
+        rec.succeeded = SUCCEEDED
+        rec.loadCpus = LOAD_CPUS
+        rec.loadMemory = LOAD_MEM.bytes
+        and:
+        def stats = new WorkflowStats(
+                records: [0:rec],
+                submittedCount: SUBMITTED,
+                runningCount: RUNNING,
+                failedCount: FAILED,
+                retriesCount: RETRIES,
+                ignoredCount: IGNORED,
+                succeededCount: SUCCEEDED,
+                abortedCount: ABORTED,
+                loadCpus: LOAD_CPUS,
+                loadMemory: LOAD_MEM.bytes)
+        and:
+        def trace = Mock(TraceRecord)
+
+        when:
+        stats.markCompleted(task, trace, TaskStatus.SUBMITTED)
+
+        then:
+        task.aborted >> true
+        task.getHashLog() >> HASH
+        and:
+        stats.submittedCount == SUBMITTED -1
+        stats.runningCount == RUNNING
+        stats.loadCpus == LOAD_CPUS
+        stats.loadMemory == LOAD_MEM.bytes
+        stats.abortedCount == ABORTED +1
+        and:
+        rec.submitted == SUBMITTED -1
+        rec.running == RUNNING
+        rec.loadCpus == LOAD_CPUS
+        rec.loadMemory == LOAD_MEM.bytes
         and:
         rec.aborted == ABORTED +1
         rec.failed == FAILED
@@ -608,7 +682,7 @@ class WorkflowStatsTest extends Specification {
         def trace = Mock(TraceRecord)
 
         when:
-        stats.markCompleted(task,trace)
+        stats.markCompleted(task, trace, TaskStatus.COMPLETED)
 
         then:
         task.aborted >> false

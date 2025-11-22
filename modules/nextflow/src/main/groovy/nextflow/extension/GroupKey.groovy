@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,11 +26,11 @@ import org.codehaus.groovy.runtime.InvokerHelper
  * Helper class used to wrap a generic key object and to attach it
  * a size attribute to implement a dynamic `groupTuple` size rule
  *
- * See {@link nextflow.Nextflow#groupKey(java.lang.Object)}
+ * See {@link nextflow.Nextflow#groupKey(java.lang.Object, int i)}
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class GroupKey implements CacheFunnel {
+class GroupKey implements CacheFunnel, Cloneable {
 
     private final Object target
 
@@ -52,6 +51,8 @@ class GroupKey implements CacheFunnel {
     }
 
     int getGroupSize() { size }
+
+    Object getGroupTarget() { target }
 
     /**
      * Delegate any method invocation to the target key object

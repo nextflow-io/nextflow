@@ -1,6 +1,6 @@
 package nextflow.cloud.azure.batch
 
-import java.nio.file.FileSystem
+
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.attribute.BasicFileAttributes
@@ -9,6 +9,7 @@ import java.nio.file.spi.FileSystemProvider
 import com.azure.storage.blob.BlobClient
 import nextflow.Session
 import nextflow.cloud.azure.config.AzConfig
+import nextflow.cloud.azure.nio.AzFileSystem
 import nextflow.cloud.azure.nio.AzPath
 import nextflow.processor.TaskBean
 import spock.lang.Specification
@@ -34,7 +35,7 @@ class AzFileCopyStrategyTest extends Specification {
         provider.getScheme() >> 'az'
         provider.readAttributes(_, _, _) >> attr
 
-        def fs = Mock(FileSystem)
+        def fs = Mock(AzFileSystem)
         fs.provider() >> provider
         fs.toString() >> ('az://' + bucket)
         def uri = GroovyMock(URI)
@@ -69,7 +70,7 @@ class AzFileCopyStrategyTest extends Specification {
         def workDir = mockAzPath( 'az://my-data/work/dir' )
         def token = '12345'
         def config = new AzConfig([storage:[sasToken: token]])
-        def executor = Mock(AzBatchExecutor) { getConfig() >> config }
+        def executor = Mock(AzBatchExecutor) { getAzConfig() >> config }
 
         when:
         def binding = new AzBatchScriptLauncher([
@@ -132,7 +133,9 @@ class AzFileCopyStrategyTest extends Specification {
                     while ((i<${#cmd[@]})); do
                         local copy=()
                         for x in "${pid[@]}"; do
-                          [[ -e /proc/$x ]] && copy+=($x)
+                          # if the process exist, keep in the 'copy' array, otherwise wait on it to capture the exit code
+                          # see https://github.com/nextflow-io/nextflow/pull/4050
+                          [[ -e /proc/$x ]] && copy+=($x) || wait $x
                         done
                         pid=("${copy[@]}")
                 
@@ -151,14 +154,24 @@ class AzFileCopyStrategyTest extends Specification {
                     unset IFS
                 }
                 
+                # custom env variables used for azcopy opts
+                export AZCOPY_BLOCK_SIZE_MB=4
+                export AZCOPY_BLOCK_BLOB_TIER=None
+                
                 nxf_az_upload() {
                     local name=$1
                     local target=${2%/} ## remove ending slash
-                
+                    local base_name="$(basename "$name")"
+                    local dir_name="$(dirname "$name")"
+        
                     if [[ -d $name ]]; then
-                      azcopy cp "$name" "$target?$AZ_SAS" --recursive
+                      if [[ "$base_name" == "$name" ]]; then
+                        azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                      else
+                        azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                      fi
                     else
-                      azcopy cp "$name" "$target/$name?$AZ_SAS"
+                      azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                     fi
                 }
                 
@@ -190,7 +203,7 @@ class AzFileCopyStrategyTest extends Specification {
         def token = '12345'
         def config = new AzConfig([storage:[sasToken: token]])
         def executor = Mock(AzBatchExecutor) {
-            getConfig() >> config
+            getAzConfig() >> config
             getRemoteBinDir() >> remoteBin
         }
 
@@ -206,7 +219,7 @@ class AzFileCopyStrategyTest extends Specification {
         binding.stage_inputs == '''\
                 # stage input files
                 nxf_az_download 'http://account.blob.core.windows.net/my-data/work/remote/bin' $PWD/.nextflow-bin
-                chmod +x $PWD/.nextflow-bin/*
+                chmod +x $PWD/.nextflow-bin/* || true
                 downloads=(true)
                 
                 nxf_parallel "${downloads[@]}"
@@ -257,7 +270,9 @@ class AzFileCopyStrategyTest extends Specification {
                     while ((i<${#cmd[@]})); do
                         local copy=()
                         for x in "${pid[@]}"; do
-                          [[ -e /proc/$x ]] && copy+=($x)
+                          # if the process exist, keep in the 'copy' array, otherwise wait on it to capture the exit code
+                          # see https://github.com/nextflow-io/nextflow/pull/4050
+                          [[ -e /proc/$x ]] && copy+=($x) || wait $x
                         done
                         pid=("${copy[@]}")
                 
@@ -276,14 +291,24 @@ class AzFileCopyStrategyTest extends Specification {
                     unset IFS
                 }
                 
+                # custom env variables used for azcopy opts
+                export AZCOPY_BLOCK_SIZE_MB=4
+                export AZCOPY_BLOCK_BLOB_TIER=None
+                
                 nxf_az_upload() {
                     local name=$1
                     local target=${2%/} ## remove ending slash
-                
+                    local base_name="$(basename "$name")"
+                    local dir_name="$(dirname "$name")"
+        
                     if [[ -d $name ]]; then
-                      azcopy cp "$name" "$target?$AZ_SAS" --recursive
+                      if [[ "$base_name" == "$name" ]]; then
+                        azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                      else
+                        azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                      fi
                     else
-                      azcopy cp "$name" "$target/$name?$AZ_SAS"
+                      azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                     fi
                 }
                 
@@ -320,7 +345,7 @@ class AzFileCopyStrategyTest extends Specification {
         def input2 = mockAzPath('az://my-data/work/dir/file2.txt')
         def token = '12345'
         def config = new AzConfig([storage:[sasToken: token]])
-        def executor = Mock(AzBatchExecutor) { getConfig() >> config }
+        def executor = Mock(AzBatchExecutor) { getAzConfig() >> config }
 
         when:
         def binding = new AzBatchScriptLauncher([
@@ -406,7 +431,9 @@ class AzFileCopyStrategyTest extends Specification {
                         while ((i<${#cmd[@]})); do
                             local copy=()
                             for x in "${pid[@]}"; do
-                              [[ -e /proc/$x ]] && copy+=($x)
+                              # if the process exist, keep in the 'copy' array, otherwise wait on it to capture the exit code
+                              # see https://github.com/nextflow-io/nextflow/pull/4050
+                              [[ -e /proc/$x ]] && copy+=($x) || wait $x
                             done
                             pid=("${copy[@]}")
 
@@ -425,14 +452,24 @@ class AzFileCopyStrategyTest extends Specification {
                         unset IFS
                     }
 
+                    # custom env variables used for azcopy opts
+                    export AZCOPY_BLOCK_SIZE_MB=4
+                    export AZCOPY_BLOCK_BLOB_TIER=None
+                    
                     nxf_az_upload() {
                         local name=$1
                         local target=${2%/} ## remove ending slash
-                    
+                        local base_name="$(basename "$name")"
+                        local dir_name="$(dirname "$name")"
+            
                         if [[ -d $name ]]; then
-                          azcopy cp "$name" "$target?$AZ_SAS" --recursive
+                          if [[ "$base_name" == "$name" ]]; then
+                            azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                          else
+                            azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                          fi
                         else
-                          azcopy cp "$name" "$target/$name?$AZ_SAS"
+                          azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                         fi
                     }
                     

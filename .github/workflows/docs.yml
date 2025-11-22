@@ -1,0 +1,22 @@
+name: Docs CI
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    paths:
+      - 'docs/**'
+  workflow_dispatch:
+jobs:
+  docs-build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Test docs build
+        run: |
+          cd docs/
+          pip install -r requirements.txt
+          make clean html

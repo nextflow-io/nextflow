@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -114,14 +113,24 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
     String getStageInputFilesScript(Map<String,Path> inputFiles) {
         assert inputFiles != null
 
+        def len = inputFiles.size()
         def delete = []
         def links = []
         for( Map.Entry<String,Path> entry : inputFiles ) {
             final stageName = entry.key
             final storePath = entry.value
 
-            // delete all previous files with the same name
-            delete << "rm -f ${Escape.path(stageName)}"
+            // Delete all previous files with the same name
+            // Note: the file deletion is only needed to prevent
+            // file name collisions when re-running the runner script
+            // for debugging purpose. However, this can cause the creation
+            // of a very big runner script when a large number of files is
+            // given due to the file name duplication. Therefore the rationale
+            // here is to keep the deletion only when a file input number is
+            // given (which is more likely during pipeline development) and
+            // drop in any case  when they are more than 100
+            if( len<100 )
+                delete << "rm -f ${Escape.path(stageName)}"
 
             // link them
             links << stageInputFile( storePath, stageName )
@@ -174,7 +183,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         return """\
             IFS=\$'\\n'
             for name in \$(eval "ls -1d ${escape.join(' ')}" | sort | uniq); do
-                ${stageOutCommand('$name', targetDir, mode)} || true
+                ${stageOutCommand('$name', targetDir, mode)}
             done
             unset IFS""".stripIndent(true)
     }
@@ -249,7 +258,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      * @return A shell copy or move command string
      */
 
-    static final List<String> VALID_STAGE_OUT_MODES = ['copy', 'move', 'rsync']
+    static final List<String> VALID_STAGE_OUT_MODES = ['copy', 'move', 'rsync', 'rclone', 'fcp']
 
     protected String stageOutCommand( String source, Path targetDir, String mode ) {
         def scheme = getPathScheme(targetDir)

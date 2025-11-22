@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,11 +19,12 @@ package nextflow.executor
 import java.nio.file.Paths
 
 import nextflow.Session
+import nextflow.container.DockerConfig
+import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -34,35 +34,30 @@ class CrgExecutorTest extends Specification {
     def testQsubCliCommand () {
 
         given:
-        def executor = [:] as CrgExecutor
+        def executor = Spy(CrgExecutor) { pipeLauncherScript()>>false }
 
         expect:
         executor.getSubmitCommandLine( Mock(TaskRun), Paths.get('/some/file/name.sh')) == ['qsub', '-terse','name.sh']
 
     }
 
-    def testGetDirectives() {
-
+    def 'should get directives/1'() {
         setup:
-        def result
-        def config
         // task
         def task = new TaskRun()
         task.workDir = Paths.get('/work/dir')
         task.metaClass.getHashLog = { 'a6f6aa6' }
         task.processor = Mock(TaskProcessor)
-        task.processor.getSession() >> new Session()
+        task.processor.getSession() >> Mock(Session)
         task.name = 'task this and that'
         // executor
-        def executor = [:] as CrgExecutor
+        def executor = new CrgExecutor()
 
         when:
-        config = task.config = new TaskConfig()
-        result = executor.getDirectives(task, [])
+        def config = task.config = new TaskConfig()
+        def result = executor.getDirectives(task, [])
         then:
         result == [
-                '-wd',
-                '/work/dir',
                 '-N',
                 'nf-task_this_and_that',
                 '-o',
@@ -74,15 +69,27 @@ class CrgExecutorTest extends Specification {
                 '-notify',
                 ''
         ]
+    }
+
+    def 'should get directives/2' () {
+        setup:
+        // task
+        def task = new TaskRun()
+        task.workDir = Paths.get('/work/dir')
+        task.metaClass.getHashLog = { 'a6f6aa6' }
+        task.processor = Mock(TaskProcessor)
+        task.processor.getSession() >> Mock(Session)
+        task.name = 'task this and that'
+        // executor
+        def executor = new CrgExecutor()
 
         when:
-        config = task.config = new TaskConfig()
+        def config = task.config = new TaskConfig()
         config.cpus = 4
-        result = executor.getDirectives(task, [])
+        and:
+        def result = executor.getDirectives(task, [])
         then:
         result == [
-                '-wd',
-                '/work/dir',
                 '-N',
                 'nf-task_this_and_that',
                 '-o',
@@ -96,16 +103,27 @@ class CrgExecutorTest extends Specification {
                 '-pe',
                 'smp 4'
         ]
+    }
+
+    def 'should get directives/3' () {
+        setup:
+        // task
+        def task = new TaskRun()
+        task.workDir = Paths.get('/work/dir')
+        task.metaClass.getHashLog = { 'a6f6aa6' }
+        task.processor = Mock(TaskProcessor)
+        task.processor.getSession() >> Mock(Session)
+        task.name = 'task this and that'
+        // executor
+        def executor = new CrgExecutor()
 
         when:
-        config = task.config = new TaskConfig()
+        def config = task.config = new TaskConfig()
         config.cpus = 8
         config.penv = 'orte'
-        result = executor.getDirectives(task, [])
+        def result = executor.getDirectives(task, [])
         then:
         result == [
-                '-wd',
-                '/work/dir',
                 '-N',
                 'nf-task_this_and_that',
                 '-o',
@@ -119,18 +137,33 @@ class CrgExecutorTest extends Specification {
                 '-pe',
                 'orte 8'
         ]
+    }
+
+    def 'should get directives/4' () {
+        setup:
+        def session = new Session(docker: [enabled: true])
+        // task
+        def task = new TaskRun()
+        task.workDir = Paths.get('/work/dir')
+        task.metaClass.getHashLog = { 'a6f6aa6' }
+        task.processor = Mock(TaskProcessor)
+        task.processor.getSession() >> session
+        task.name = 'task this and that'
+        // executor
+        def executor = new CrgExecutor(session: session)
 
         when:
         task.processor = Mock(TaskProcessor)
-        task.processor.getSession() >> new Session(docker: [enabled: true])
-        config = task.config = new TaskConfig()
+        task.processor.getExecutor() >> executor
+        task.processor.getSession() >> session
+        task.isDockerEnabled() >> true
+        def config = task.config = new TaskConfig()
         config.container = 'busybox'
-
-        result = executor.getDirectives(task, [])
+        and:
+        
+        def result = executor.getDirectives(task, [])
         then:
         result == [
-                '-wd',
-                '/work/dir',
                 '-N',
                 'nf-task_this_and_that',
                 '-o',
@@ -146,19 +179,16 @@ class CrgExecutorTest extends Specification {
                 '-soft',
                 '-l docker_images=*;busybox;*'
         ]
-
     }
 
-    def testGetHeaders () {
-
+    def 'should get headers/1' () {
         given:
-        // LSF executor
-        def executor = [:] as CrgExecutor
-        executor.session = new Session()
+        def executor = new CrgExecutor()
+        executor.session = Mock(Session)
 
         def task = new TaskRun()
         task.processor = Mock(TaskProcessor)
-        task.processor.getSession() >> new Session()
+        task.processor.getSession() >> Mock(Session)
         task.processor.getName() >> 'task_x'
         task.workDir = Paths.get('/abc')
         task.name = 'mapping tag'
@@ -174,7 +204,6 @@ class CrgExecutorTest extends Specification {
 
         then:
         executor.getHeaders(task) == '''
-                    #$ -wd /abc
                     #$ -N nf-mapping_tag
                     #$ -o /abc/.command.log
                     #$ -j y
@@ -186,9 +215,26 @@ class CrgExecutorTest extends Specification {
                     #$ -l disk=2048M
                     '''
                     .stripIndent().leftTrim()
+    }
+
+    def 'should get headers/2' () {
+        given:
+        def sess = Mock(Session)  {
+            getContainerConfig() >> new DockerConfig(enabled: false)
+        }
+        and:
+        def executor = Spy(new CrgExecutor()) { isContainerNative()>>false }
+        executor.session = sess
+        and:
+        def task = new TaskRun()
+        task.processor = Mock(TaskProcessor)
+        task.processor.getExecutor() >> executor
+        task.processor.getSession() >> sess
+        task.processor.getName() >> 'task_x'
+        task.workDir = Paths.get('/abc')
+        task.name = 'mapping tag'
 
         when:
-        executor.session.config.docker = [enabled: false]
         task.config = new TaskConfig(
                 queue: 'short',
                 memory: '4 GB',
@@ -198,7 +244,6 @@ class CrgExecutorTest extends Specification {
 
         then:
         executor.getHeaders(task) == '''
-                    #$ -wd /abc
                     #$ -N nf-mapping_tag
                     #$ -o /abc/.command.log
                     #$ -j y
@@ -209,10 +254,23 @@ class CrgExecutorTest extends Specification {
                     #$ -l h_vmem=4096M,virtual_free=4096M
                     '''
                 .stripIndent().leftTrim()
+    }
 
+    def 'should get headers/3' () {
+        given:
+        def executor = Spy(new CrgExecutor()) { isContainerNative()>>false }
+        executor.session = Mock(Session)
+        and:
+        def task = new TaskRun()
+        task.processor = Mock(TaskProcessor)
+        task.processor.getSession() >> Mock(Session)
+        task.processor.getName() >> 'task_x'
+        task.workDir = Paths.get('/abc')
+        task.name = 'mapping tag'
 
         when:
         task.processor = Mock(TaskProcessor)
+        task.processor.getExecutor() >> executor
         task.processor.getSession() >> new Session(docker: [enabled: true])
         task.config = new TaskConfig(
                 queue: 'short',
@@ -223,7 +281,6 @@ class CrgExecutorTest extends Specification {
 
         then:
         executor.getHeaders(task) == '''
-                    #$ -wd /abc
                     #$ -N nf-mapping_tag
                     #$ -o /abc/.command.log
                     #$ -j y
@@ -236,9 +293,23 @@ class CrgExecutorTest extends Specification {
                     #$ -soft -l docker_images=*;ubuntu;*
                     '''
                 .stripIndent().leftTrim()
+    }
+
+    def 'should get headers /4' () {
+        given:
+        def executor = Spy(new CrgExecutor()) { isContainerNative()>>false }
+        executor.session = Mock(Session)
+        and:
+        def task = new TaskRun()
+        task.processor = Mock(TaskProcessor)
+        task.processor.getSession() >> Mock(Session)
+        task.processor.getName() >> 'task_x'
+        task.workDir = Paths.get('/abc')
+        task.name = 'mapping tag'
 
         when:
         task.processor = Mock(TaskProcessor)
+        task.processor.getExecutor() >> executor
         task.processor.getSession() >> new Session(docker: [enabled: true])
         task.config = new TaskConfig(
                 memory: '3 g',
@@ -251,7 +322,6 @@ class CrgExecutorTest extends Specification {
 
         then:
         executor.getHeaders(task) == '''
-                    #$ -wd /abc
                     #$ -N nf-mapping_tag
                     #$ -o /abc/.command.log
                     #$ -j y
@@ -266,43 +336,28 @@ class CrgExecutorTest extends Specification {
                     #$ -soft -l docker_images=*;busybox;*
                     '''
                 .stripIndent().leftTrim()
+    }
 
-        /*
-         * repeat the same test to make sure it returns the same result
-         * i.e. check it is idempotent
-         */
+    def 'should get headers with job array' () {
         when:
-        executor.session.config.docker = [enabled: true]
-        task.config = new TaskConfig(
-                memory: '3 g',
-                time: '3 d',
-                cpus: '4',
-                penv: 'mpi',
-                queue: 'long',
-                container: 'busybox',
-        )
-
+        def executor = Spy(new CrgExecutor())
+        def task = Mock(TaskArrayRun) {
+            config >> new TaskConfig()
+            name >> 'mapping tag'
+            workDir >> Paths.get('/abc')
+            getArraySize() >> 5
+        }
         then:
         executor.getHeaders(task) == '''
-                    #$ -wd /abc
+                    #$ -t 1-5
                     #$ -N nf-mapping_tag
-                    #$ -o /abc/.command.log
+                    #$ -o /dev/null
                     #$ -j y
                     #$ -terse
                     #$ -notify
-                    #$ -q long
-                    #$ -pe mpi 4
-                    #$ -l h_rt=72:00:00
-                    #$ -l h_vmem=3072M,virtual_free=3072M
-                    #$ -binding env linear:4
-                    #$ -R y
-                    #$ -soft -l docker_images=*;busybox;*
                     '''
-                    .stripIndent().leftTrim()
-
-
+                .stripIndent().leftTrim()
     }
-
 
     def testParseJobId() {
 
@@ -420,14 +475,16 @@ class CrgExecutorTest extends Specification {
 
     }
 
-    def 'executor should inject `cpuset` option on docker run command' () {
+    def 'should add cpuset option to docker command /1' () {
         given:
         // task
         def task = new TaskRun()
         task.workDir = Paths.get('/some/dir')
         task.script = 'echo hello'
         task.processor = Mock(TaskProcessor)
-        task.processor.getSession() >> new Session()
+        task.processor.getSession() >> Mock(Session) {
+            getContainerConfig() >> new DockerConfig([:])
+        }
         task.processor.getProcessEnvironment() >> [:]
         task.processor.getConfig() >> [:]
         task.processor.getExecutor() >> Mock(Executor)
@@ -439,28 +496,41 @@ class CrgExecutorTest extends Specification {
         def builder = executor.createBashWrapperBuilder(task)
         then:
         builder.headerScript == '''
-            #$ -wd /some/dir
             #$ -N nf-the-name
             #$ -o /some/dir/.command.log
             #$ -j y
             #$ -terse
             #$ -notify
+            NXF_CHDIR=/some/dir
             '''
             .stripIndent().leftTrim()
 
+    }
 
-        when:
-        task.config.container = 'foo'
+    def 'should add cpuset option to docker command /2' () {
+        given:
+        def sess = Mock(Session) {
+            getContainerConfig(null) >> new DockerConfig(enabled: true)
+        }
+        and:
+        def executor = Spy(new CrgExecutor(session: sess)) { isContainerNative()>>false }
+        // task
+        def task = new TaskRun()
+        task.workDir = Paths.get('/some/dir')
+        task.script = 'echo hello'
         task.processor = Mock(TaskProcessor)
+        task.processor.getExecutor() >> executor
+        task.processor.getSession() >> sess
         task.processor.getProcessEnvironment() >> [:]
-        task.processor.getSession() >> new Session(docker: [enabled: true])
         task.processor.getConfig() >> [:]
         task.processor.getExecutor() >> Mock(Executor)
-        
-        builder = executor.createBashWrapperBuilder(task)
+        task.name = 'the-name'
+        task.config = new TaskConfig(container: 'foo')
+
+        when:
+        def builder = executor.createBashWrapperBuilder(task)
         then:
         builder.headerScript == '''
-            #$ -wd /some/dir
             #$ -N nf-the-name
             #$ -o /some/dir/.command.log
             #$ -j y
@@ -468,25 +538,37 @@ class CrgExecutorTest extends Specification {
             #$ -notify
             #$ -binding env linear:1
             #$ -soft -l docker_images=*;foo;*
-
+            NXF_CHDIR=/some/dir
+            
             cpuset=${cpuset:=''}
             [[ $SGE_BINDING ]] && cpuset="--cpuset-cpus $(echo $SGE_BINDING | sed 's/ /,/g')"
             '''
                 .stripIndent().leftTrim()
+    }
 
+    def 'should add cpuset option to docker command /3' () {
+        given:
+        def sess = Mock(Session) {
+            getContainerConfig(null) >> new DockerConfig(enabled: true, legacy:true)
+        }
+        and:
+        def executor = Spy(new CrgExecutor(session: sess)) { isContainerNative()>>false }
+        // task
+        def task = new TaskRun()
+        task.workDir = Paths.get('/some/dir')
+        task.script = 'echo hello'
+        task.processor = Mock(TaskProcessor)
+        task.processor.getSession() >> sess
+        task.processor.getProcessEnvironment() >> [:]
+        task.processor.getConfig() >> [:]
+        task.processor.getExecutor() >> executor
+        task.name = 'the-name'
+        task.config = new TaskConfig(container: 'foo')
 
         when:
-        task.config.container = 'foo'
-        task.processor = Mock(TaskProcessor)
-        task.processor.getProcessEnvironment() >> [:]
-        task.processor.getSession() >> new Session(docker: [enabled: true, legacy: true])
-        task.processor.getConfig() >> [:]
-        task.processor.getExecutor() >> Mock(Executor)
-
-        builder = executor.createBashWrapperBuilder(task)
+        def builder = executor.createBashWrapperBuilder(task)
         then:
         builder.headerScript == '''
-            #$ -wd /some/dir
             #$ -N nf-the-name
             #$ -o /some/dir/.command.log
             #$ -j y
@@ -494,7 +576,8 @@ class CrgExecutorTest extends Specification {
             #$ -notify
             #$ -binding env linear:1
             #$ -soft -l docker_images=*;foo;*
-
+            NXF_CHDIR=/some/dir
+            
             cpuset=${cpuset:=''}
             [[ $SGE_BINDING ]] && cpuset="--cpuset $(echo $SGE_BINDING | sed 's/ /,/g')"
             '''

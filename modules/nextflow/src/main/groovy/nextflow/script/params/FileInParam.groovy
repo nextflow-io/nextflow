@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +28,7 @@ import nextflow.script.TokenVar
  */
 @Slf4j
 @InheritConstructors
-class FileInParam extends BaseInParam implements PathQualifier {
+class FileInParam extends BaseInParam implements ArityParam, PathQualifier {
 
     protected filePattern
 
@@ -56,13 +55,6 @@ class FileInParam extends BaseInParam implements PathQualifier {
             return this
         }
 
-        // the ability to pass a closure as file name has been replaced by
-        // lazy gstring -- this should be deprecated
-        if( obj instanceof Closure && !NF.dsl2Final ) {
-            filePattern = obj
-            return this
-        }
-
         throw new IllegalArgumentException()
     }
 
@@ -83,7 +75,7 @@ class FileInParam extends BaseInParam implements PathQualifier {
     @Override
     BaseInParam bind( obj ) {
         if( pathQualifier && obj instanceof Map )
-            throw new IllegalArgumentException("Input `path` does not allow such argument: ${obj.entrySet().collect{"${it.key}:${it.value}"}.join(',')}")
+            throw new IllegalArgumentException("Input `path` does not allow such arguments: ${obj.entrySet().collect{"${it.key}:${it.value}"}.join(',')}")
         super.bind(obj)
         return this
     }

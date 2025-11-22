@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +24,7 @@ import nextflow.exception.MissingProcessException
 import nextflow.exception.MissingValueException
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
+import nextflow.util.TestOnly
 /**
  * Models a script workflow component
  *
@@ -46,7 +46,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
 
     private BaseScript owner
 
-    // -- following attributes are mutable and instance dependant
+    // -- following attributes are mutable and instance dependent
     // -- therefore should not be cloned
 
     private ChannelOut output
@@ -58,17 +58,17 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
         this.name = name
         // invoke the body resolving in/out params
         final copy = (Closure<BodyDef>)rawBody.clone()
-        final resolver = new WorkflowParamsResolver()
+        final resolver = new WorkflowParamsDsl()
         copy.setResolveStrategy(Closure.DELEGATE_FIRST)
         copy.setDelegate(resolver)
         this.body = copy.call()
         // now it can access the parameters
-        this.declaredInputs = new ArrayList<>(resolver.getTakes().keySet())
-        this.declaredOutputs = new ArrayList<>(resolver.getEmits().keySet())
+        this.declaredInputs = new ArrayList<>(resolver.getTakes())
+        this.declaredOutputs = new ArrayList<>(resolver.getEmits())
         this.variableNames = getVarNames0()
     }
 
-    /* ONLY FOR TESTING PURPOSE */
+    @TestOnly
     protected WorkflowDef() {}
 
     WorkflowDef clone() {
@@ -90,7 +90,11 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
     WorkflowBinding getBinding() { binding }
 
     ChannelOut getOut() {
-        if(!output) throw new ScriptRuntimeException("Access to '${name}.out' is undefined since workflow doesn't declare any output")
+        if( output==null )
+            throw new ScriptRuntimeException("Access to '${name}.out' is undefined since the workflow '$name' has not been invoked before accessing the output attribute")
+        if( output.size()==0 )
+            throw new ScriptRuntimeException("Access to '${name}.out' is undefined since the workflow '$name' doesn't declare any output")
+
         return output
     }
 
@@ -124,7 +128,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
         final params = ChannelOut.spread(args)
         if( params.size() != declaredInputs.size() ) {
             final prefix = name ? "Workflow `$name`" : "Main workflow"
-            throw new IllegalArgumentException("$prefix declares ${declaredInputs.size()} input channels but ${params.size()} were specified")
+            throw new IllegalArgumentException("$prefix declares ${declaredInputs.size()} input channels but ${params.size()} were given")
         }
 
         // attach declared inputs with the invocation arguments
@@ -137,7 +141,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
     protected ChannelOut collectOutputs(List<String> emissions) {
         // make sure feedback channel cardinality matches
         if( feedbackChannels && feedbackChannels.size() != emissions.size() )
-            throw new ScriptRuntimeException("Workflow `$name` inputs and outputs cardinality does not match - Feedback loop is not supported"  )
+            throw new ScriptRuntimeException("Workflow `$name` inputs and outputs do not have the same cardinality - Feedback loop is not supported"  )
 
         final channels = new LinkedHashMap<String, DataflowWriteChannel>(emissions.size())
         for( int i=0; i<emissions.size(); i++ ) {
@@ -160,7 +164,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
 
             else {
                 if( feedbackChannels!=null )
-                    throw new ScriptRuntimeException("Workflow `$name` static outout is not allowed when using recursion - Check output: $targetName")
+                    throw new ScriptRuntimeException("Workflow `$name` static output is not allowed when using recursion - Check output: $targetName")
                 final value = CH.create(true)
                 value.bind(obj)
                 channels.put(targetName, value)
@@ -196,7 +200,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
         collectInputs(binding, args)
         // invoke the workflow execution
         final closure = body.closure
-        closure.delegate = binding
+        closure.setDelegate(binding)
         closure.setResolveStrategy(Closure.DELEGATE_FIRST)
         closure.call()
         // collect the workflow outputs
@@ -207,47 +211,24 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
 }
 
 /**
- * Hold workflow parameters
+ * Implements the DSL for defining workflow takes and emits
  */
 @Slf4j
 @CompileStatic
-class WorkflowParamsResolver {
+class WorkflowParamsDsl {
 
-    static final private String TAKE_PREFIX = '_take_'
-    static final private String EMIT_PREFIX = '_emit_'
+    private static final String TAKE = '_take_'
+    private static final String EMIT = '_emit_'
 
+    List<String> takes = new ArrayList<>(10)
+    List<String> emits = new ArrayList<>(10)
 
-    Map<String,Object> takes = new LinkedHashMap<>(10)
-    Map<String,Object> emits = new LinkedHashMap<>(10)
-
-    @Override
-    def invokeMethod(String name, Object args) {
-        if( name.startsWith(TAKE_PREFIX) )
-            takes.put(name.substring(TAKE_PREFIX.size()), args)
-
-        else if( name.startsWith(EMIT_PREFIX) )
-            emits.put(name.substring(EMIT_PREFIX.size()), args)
-
-        else
-            throw new MissingMethodException(name, WorkflowDef, args)
+    void _take_(String name) {
+        takes.add(name)
     }
 
-    private Map argsToMap(Object args) {
-        if( args && args.getClass().isArray() ) {
-            if( ((Object[])args)[0] instanceof Map ) {
-                def map = (Map)((Object[])args)[0]
-                return new HashMap(map)
-            }
-        }
-        Collections.emptyMap()
+    void _emit_(String name) {
+        emits.add(name)
     }
 
-    private Map argToPublishOpts(Object args) {
-        final opts = argsToMap(args)
-        if( opts.containsKey('saveAs')) {
-            log.warn "Workflow publish does not support `saveAs` option"
-            opts.remove('saveAs')
-        }
-        return opts
-    }
 }

@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +16,7 @@
 
 package nextflow.script
 
+import java.nio.file.Files
 import java.nio.file.Paths
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -26,6 +26,9 @@ import nextflow.NextflowMeta
 import nextflow.mail.Attachment
 import nextflow.mail.Mail
 import nextflow.mail.Mailer
+import nextflow.mail.Notification
+import nextflow.script.FusionMetadata
+import nextflow.script.WaveMetadata
 import nextflow.trace.WorkflowStats
 import nextflow.util.Duration
 import spock.lang.Specification
@@ -64,11 +67,13 @@ class WorkflowNotifierTest extends Specification {
                 profile: 'my-cluster',
                 container: 'image/foo:tag',
                 containerEngine: 'docker',
+                wave: new WaveMetadata(true),
+                fusion: new FusionMetadata(true, '1.2.3'),
                 nextflow: new NextflowMeta('0.27.0', 333, '2017-12-12'),
                 stats: new WorkflowStats(succeedMillis: 4_000_000, succeededCount: 10, failedCount: 20, cachedCount: 30, ignoredCount: 0)
         )
 
-        def notifier = new WorkflowNotifier(variables: [workflow:meta], config: [:])
+        def notifier = new WorkflowNotifier([workflow: meta], meta)
 
         when:
         meta.success = true
@@ -103,6 +108,8 @@ class WorkflowNotifierTest extends Specification {
                   Workflow profile  : my-cluster
                   Workflow container: image/foo:tag
                   Container engine  : docker
+                  Wave enabled      : true
+                  Fusion enabled    : true, version 1.2.3
                   Nextflow version  : 0.27.0, build 333 (2017-12-12)
 
                 --
@@ -152,6 +159,8 @@ class WorkflowNotifierTest extends Specification {
                   Workflow profile  : my-cluster
                   Workflow container: image/foo:tag
                   Container engine  : docker
+                  Wave enabled      : true
+                  Fusion enabled    : true, version 1.2.3
                   Nextflow version  : 0.27.0, build 333 (2017-12-12)
 
                 --
@@ -191,11 +200,14 @@ class WorkflowNotifierTest extends Specification {
                 profile: 'my-cluster',
                 container: 'image/foo:tag',
                 containerEngine: 'docker',
+                wave: new WaveMetadata(true),
+                fusion: new FusionMetadata(true, '1.2.3'),
+
                 nextflow: new NextflowMeta('0.27.0', 333, '2017-12-12'),
                 stats: new WorkflowStats(succeedMillis: 4000)
         )
 
-        def notifier = new WorkflowNotifier(workflow: meta, config: [:], variables: [workflow:meta])
+        def notifier = new WorkflowNotifier([workflow: meta], meta)
 
         when:
         meta.success = true
@@ -217,7 +229,7 @@ class WorkflowNotifierTest extends Specification {
 
     def 'should normalise template list' () {
         given:
-        def notifier = new WorkflowNotifier()
+        def notifier = new WorkflowNotifier([:], null)
 
         expect:
         notifier.normaliseTemplate0('foo', []) == [new File('foo')]
@@ -229,8 +241,7 @@ class WorkflowNotifierTest extends Specification {
         given:
         Mail mail
         def workflow = new WorkflowMetadata()
-        def notifier = Spy(WorkflowNotifier)
-        notifier.workflow = workflow
+        def notifier = Spy(new WorkflowNotifier([:], workflow))
         def attach = Mock(Attachment)
 
         /*
@@ -239,7 +250,7 @@ class WorkflowNotifierTest extends Specification {
         when:
         workflow.success = true
         workflow.runName = 'foo'
-        mail = notifier.createMail([to:'paolo@yo.com', from:'bot@nextflow.com'])
+        mail = notifier.createMail(new Notification(to:'paolo@yo.com', from:'bot@nextflow.com'))
         then:
         1 * notifier.loadDefaultTextTemplate() >> 'TEXT template'
         1 * notifier.loadDefaultHtmlTemplate() >> 'HTML template'
@@ -257,7 +268,7 @@ class WorkflowNotifierTest extends Specification {
         when:
         workflow.success = false
         workflow.runName = 'bar'
-        mail = notifier.createMail([to:'alpha@dot.com', from:'beta@dot.com', template: ['/some/file.txt', '/other/file.html'], binding: [one:1, two:2]])
+        mail = notifier.createMail(new Notification(to:'alpha@dot.com', from:'beta@dot.com', template: ['/some/file.txt', '/other/file.html'], attributes: [one:1, two:2]))
         then:
         1 * notifier.loadMailTemplate(new File('/some/file.txt'), [one:1, two:2]) >> 'TEXT template'
         1 * notifier.loadMailTemplate(new File('/other/file.html'), [one:1, two:2]) >> 'HTML template'
@@ -269,12 +280,45 @@ class WorkflowNotifierTest extends Specification {
 
     }
 
+    def 'should create notification mail with custom template' () {
+        given:
+        def folder  = Files.createTempDirectory('test')
+        def template = folder.resolve('template.txt').toFile(); template.text = 'Hello world!'
+
+        and:
+        Mail mail
+        def workflow = new WorkflowMetadata()
+        def notifier = Spy(new WorkflowNotifier([:], workflow))
+
+        /*
+         * create success completion  *default* notification email
+         */
+        when:
+        workflow.success = true
+        workflow.runName = 'foo'
+        mail = notifier.createMail(new Notification(to:'paolo@yo.com', from:'bot@nextflow.com', template: template))
+        then:
+        0 * notifier.loadDefaultTextTemplate()
+        0 * notifier.loadDefaultHtmlTemplate()
+        1 * notifier.loadMailTemplate(template, [:])
+        and:
+        mail.to == 'paolo@yo.com'
+        mail.from == 'bot@nextflow.com'
+        mail.subject == 'Workflow completion [foo] - SUCCEED'
+        mail.text == 'Hello world!'
+        !mail.body 
+        !mail.attachments
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
 
     def 'should send notification email' () {
 
         given:
         def workflow = Mock(WorkflowMetadata)
-        def notifier = Spy(WorkflowNotifier)
+        def notifier = Spy(new WorkflowNotifier([:], workflow))
         def CONFIG_NOTIFIER = [
             enabled: true,
             from: 'me@nextflow.io',
@@ -288,19 +332,16 @@ class WorkflowNotifierTest extends Specification {
         def MAILER = Mock(Mailer)
 
         when:
-        notifier.workflow = workflow
-        notifier.config = [notification: CONFIG_NOTIFIER, mail: CONFIG_MAIL]
-        notifier.sendNotification()
+        notifier.sendNotification(notification: CONFIG_NOTIFIER, mail: CONFIG_MAIL)
         then:
-        1 * notifier.createMail(CONFIG_NOTIFIER) >> MAIL
-        1 * notifier.createMailer(CONFIG_MAIL) >> MAILER
+        1 * notifier.createMail(_) >> MAIL
+        1 * notifier.createMailer(_) >> MAILER
         1 * MAILER.send(MAIL)
 
         when: '''
         `enabled` flag is false, notification is NOT sent
         '''
-        notifier.config = [notification: [enabled: false, to:'you@dot.com']]
-        notifier.sendNotification()
+        notifier.sendNotification(notification: [enabled: false, to:'you@dot.com'])
         then:
         0 * notifier.createMail(_) >> null
         0 * notifier.createMailer(_) >> MAILER
@@ -309,8 +350,7 @@ class WorkflowNotifierTest extends Specification {
         when: '''
         notification is implicitly enabled if recipient field is provided
         '''
-        notifier.config = [notification: [to:'you@dot.com']]
-        notifier.sendNotification()
+        notifier.sendNotification(notification: [to:'you@dot.com'])
         then:
         0 * notifier.createMail(_) >> null
         0 * notifier.createMailer(_) >> MAILER

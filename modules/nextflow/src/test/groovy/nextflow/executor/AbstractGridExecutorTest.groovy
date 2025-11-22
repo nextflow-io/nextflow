@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +16,12 @@
 
 package nextflow.executor
 
+import java.nio.file.Path
+
 import nextflow.Session
+import nextflow.processor.TaskConfig
 import nextflow.processor.TaskRun
+import nextflow.util.Duration
 import spock.lang.Specification
 /**
  *
@@ -29,11 +32,11 @@ class AbstractGridExecutorTest extends Specification {
     def 'should remove invalid chars from name' () {
 
         given:
-        def task = new TaskRun(name: 'task 90 (foo:bar/baz)')
+        def task = new TaskRun(name: 'task 90 = (foo:bar/baz)')
         def exec = [:] as AbstractGridExecutor
 
         expect:
-        exec.getJobNameFor(task) == 'nf-task_90_(foo_bar_baz)'
+        exec.getJobNameFor(task) == 'nf-task_90___(foo_bar_baz)'
 
     }
 
@@ -52,16 +55,15 @@ class AbstractGridExecutorTest extends Specification {
     def 'should return a custom job name'() {
 
         given:
-        def exec = [:] as AbstractGridExecutor
-        exec.session = [:] as Session
-        exec.session.config = [:]
+        def exec = Spy(AbstractGridExecutor)
 
-        expect:
+        when:
+        exec.config = new ExecutorConfig([:])
+        then:
         exec.resolveCustomJobName(Mock(TaskRun)) == null
 
         when:
-        exec.session = [:] as Session
-        exec.session.config = [ executor: [jobName: { task.name.replace(' ','_') }  ] ]
+        exec.config = new ExecutorConfig(jobName: { task.name.replace(' ','_') })
         then:
         exec.resolveCustomJobName(new TaskRun(config: [name: 'hello world'])) == 'hello_world'
 
@@ -70,19 +72,18 @@ class AbstractGridExecutorTest extends Specification {
     def 'should return job submit name' () {
 
         given:
-        def exec = [:] as AbstractGridExecutor
-        exec.session = [:] as Session
-        exec.session.config = [:]
+        def exec = Spy(AbstractGridExecutor)
 
         final taskName = 'Hello world'
         final taskRun = new TaskRun(name: taskName, config: [name: taskName])
 
-        expect:
+        when:
+        exec.config = new ExecutorConfig([:])
+        then:
         exec.getJobNameFor(taskRun) == 'nf-Hello_world'
 
         when:
-        exec.session = [:] as Session
-        exec.session.config = [ executor: [jobName: { task.name.replace(' ','_') }  ] ]
+        exec.config = new ExecutorConfig(jobName: { task.name.replace(' ','_') })
         then:
         exec.getJobNameFor(taskRun) == 'Hello_world'
 
@@ -112,4 +113,69 @@ class AbstractGridExecutorTest extends Specification {
         exec.sanitizeJobName('foo') == 'foo'
         exec.sanitizeJobName(LONG) == LONG.substring(0,256)
     }
+
+    def 'should add change dir variable' () {
+        given:
+        def work = Path.of('/some/dir')
+        def exec = Spy(AbstractGridExecutor)
+        def task = Mock(TaskRun) { getWorkDir() >> work}
+        when:
+        def result = exec.getHeaderScript(task)
+        then:
+        1 * exec.getHeaders(task) >> '#$ one\n#$ two\n'
+        result == '''\
+                #$ one
+                #$ two
+                NXF_CHDIR=/some/dir
+                '''.stripIndent()
+    }
+    
+    def 'should fetch queue status'() {
+        given:
+        def STATUS = ['123': AbstractGridExecutor.QueueStatus.RUNNING]
+        def NAME = 'TheExecutorName'
+        and:
+        def config = Spy(new ExecutorConfig([:]))
+        and:
+        def exec = Spy(AbstractGridExecutor) { getConfig() >> config }
+        exec.@queueInterval = Duration.of('1m')
+        exec.name = NAME
+
+
+        when:
+        def result = exec.getQueueStatus('foo')
+        then:
+        1 * config.getExecConfigProp(NAME,'queueGlobalStatus',false)>>false
+        1 * exec.getQueueStatus0('foo') >> STATUS
+        and:
+        result == STATUS
+
+
+        when:
+        result = exec.getQueueStatus('foo')
+        then:
+        1 * config.getExecConfigProp(NAME,'queueGlobalStatus',false)>>true
+        1 * exec.getQueueStatus0(null) >> STATUS
+        and:
+        result == STATUS
+    }
+
+    def 'should add cluster options' () {
+        given:
+        def exec = Spy(AbstractGridExecutor)
+
+        when:
+        def result = []
+        exec.addClusterOptionsDirective(new TaskConfig(clusterOptions: OPTS), result)
+        then:
+        result == EXPECTED
+
+        where:
+        OPTS                    | EXPECTED
+        null                    | []
+        '-foo 1'                | ['-foo 1', '']
+        '-foo 1 --bar 2'        | ['-foo 1 --bar 2', '']
+        ['-foo 1','--bar 2']    | ['-foo 1', '', '--bar 2', '']
+    }
+
 }

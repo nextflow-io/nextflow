@@ -1,6 +1,5 @@
 ##
-##  Copyright 2020-2021, Seqera Labs
-##  Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+##  Copyright 2013-2024, Seqera Labs
 ##
 ##  Licensed under the Apache License, Version 2.0 (the "License");
 ##  you may not use this file except in compliance with the License.
@@ -15,7 +14,7 @@
 ##  limitations under the License.
 #!/bin/bash
 {{header_script}}
-# NEXTFLOW TASK: {{task_name}}
+{{task_metadata}}
 set -e
 set -u
 NXF_DEBUG=${NXF_DEBUG:=0}; [[ $NXF_DEBUG > 1 ]] && set -x
@@ -65,6 +64,7 @@ nxf_kill() {
 
 nxf_mktemp() {
     local base=${1:-/tmp}
+    mkdir -p "$base"
     if [[ $(uname) = Darwin ]]; then mktemp -d $base/nxf.XXXXXXXXXX
     else TMPDIR="$base" mktemp -d -t nxf.XXXXXXXXXX
     fi
@@ -90,14 +90,26 @@ nxf_fs_rsync() {
   rsync -rRl $1 $2
 }
 
+nxf_fs_rclone() {
+  rclone copyto $1 $2/$1
+}
+
+nxf_fs_fcp() {
+  fcp $1 $2/$1
+}
+
 on_exit() {
-    exit_status=${nxf_main_ret:=$?}
-    printf $exit_status {{exit_file}}
+    ## Capture possible errors.
+    ## Can be caused either by the task script, unstage script or after script if defined
+    local last_err=$?
+    ## capture the task error first or fallback to unstage error
+    local exit_status=${nxf_main_ret:=0}
+    [[ ${exit_status} -eq 0 && ${nxf_unstage_ret:=0} -ne 0 ]] && exit_status=${nxf_unstage_ret:=0}
+    [[ ${exit_status} -eq 0 && ${last_err} -ne 0 ]] && exit_status=${last_err}
+    printf -- $exit_status {{exit_file}}
     set +u
-    [[ "$tee1" ]] && kill $tee1 2>/dev/null
-    [[ "$tee2" ]] && kill $tee2 2>/dev/null
-    [[ "$ctmp" ]] && rm -rf $ctmp || true
     {{cleanup_cmd}}
+    {{sync_cmd}}
     exit $exit_status
 }
 
@@ -115,11 +127,24 @@ nxf_stage() {
     {{stage_inputs}}
 }
 
-nxf_unstage() {
+nxf_unstage_outputs() {
+    true
+    {{unstage_outputs}}
+}
+
+nxf_unstage_controls() {
     true
     {{unstage_controls}}
-    [[ ${nxf_main_ret:=0} != 0 ]] && return
-    {{unstage_outputs}}
+}
+
+nxf_unstage() {
+    ## Deactivate fast failure to allow uploading stdout and stderr files later
+    if [[ ${nxf_main_ret:=0} == 0 ]]; then
+        ## Data unstaging redirecting stdout and stderr with append mode
+        (set -e -o pipefail; (nxf_unstage_outputs | tee -a {{stdout_file}}) 3>&1 1>&2 2>&3 | tee -a {{stderr_file}})
+        nxf_unstage_ret=$?
+    fi
+    nxf_unstage_controls
 }
 
 nxf_main() {
@@ -136,24 +161,18 @@ nxf_main() {
     {{before_script}}
     {{module_load}}
     {{conda_activate}}
+    {{spack_activate}}
     set -u
     {{task_env}}
     {{secrets_env}}
-    [[ $NXF_SCRATCH ]] && echo "nxf-scratch-dir $HOSTNAME:$NXF_SCRATCH" && cd $NXF_SCRATCH
+    [[ $NXF_SCRATCH ]] && cd $NXF_SCRATCH
+    export NXF_TASK_WORKDIR="$PWD"
     {{stage_cmd}}
 
     set +e
-    ctmp=$(set +u; nxf_mktemp /dev/shm 2>/dev/null || nxf_mktemp $TMPDIR)
-    local cout=$ctmp/.command.out; mkfifo $cout
-    local cerr=$ctmp/.command.err; mkfifo $cerr
-    tee {{stdout_file}} < $cout &
-    tee1=$!
-    tee {{stderr_file}} < $cerr >&2 &
-    tee2=$!
-    ( nxf_launch ) >$cout 2>$cerr &
+    (set -o pipefail; (nxf_launch | tee {{stdout_file}}) 3>&1 1>&2 2>&3 | tee {{stderr_file}}) &
     pid=$!
     wait $pid || nxf_main_ret=$?
-    wait $tee1 $tee2
     {{unstage_cmd}}
     {{after_script}}
 }

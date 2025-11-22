@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,9 +29,11 @@ import nextflow.extension.FilesEx
 @CompileStatic
 class Escape {
 
-    private static List<String> SPECIAL_CHARS = ["'", '"', ' ', '(', ')', '\\', '!', '&', '|', '<', '>', '`', ':']
+    final private static List<String> SPECIAL_CHARS = ["'", '"', ' ', '(', ')', '\\', '!', '&', '|', '<', '>', '`', ':', ';']
 
-    private static List<String> WILDCARDS = ["*", "?", "{", "}", "[", "]", "'", '"', ' ', '(', ')', '\\', '!', '&', '|', '<', '>', '`', ':']
+    final private static List<String> VAR_CHARS = ['$']
+
+    final private static List<String> WILDCARDS = ["*", "?", "{", "}", "[", "]", "'", '"', ' ', '(', ')', '\\', '!', '&', '|', '<', '>', '`', ':']
 
     private static String replace(List<String> special, String str, boolean doNotEscapeComplement=false) {
         def copy = new StringBuilder(str.size() +10)
@@ -103,5 +104,9 @@ class Escape {
                 .replaceAll('\r',/\\r/)
                 .replaceAll('\f',/\\f/)
 
+    }
+
+    static String variable(String val) {
+        replace(VAR_CHARS, val, false)
     }
 }

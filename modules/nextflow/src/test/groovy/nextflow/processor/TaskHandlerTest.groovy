@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -64,7 +63,7 @@ class TaskHandlerTest extends Specification {
         task.processor.getProcessEnvironment() >> [FOO:'hola', BAR: 'mundo', AWS_SECRET: '12345']
         task.context = new TaskContext(Mock(Script), [:], 'none')
 
-        def handler = [:] as TaskHandler
+        def handler = Spy(TaskHandler)
         handler.task = task
         handler.status = TaskStatus.COMPLETED
         handler.submitTimeMillis = 1000
@@ -114,7 +113,7 @@ class TaskHandlerTest extends Specification {
         trace.getFmtStr('disk') == '100 GB'
 
         when:
-        handler = [:] as TaskHandler
+        handler = Spy(TaskHandler)
         handler.status = TaskStatus.COMPLETED
         handler.submitTimeMillis = 1000
         handler.startTimeMillis = 1500
@@ -125,7 +124,7 @@ class TaskHandlerTest extends Specification {
 
 
         when:
-        handler = [:] as TaskHandler
+        handler = Spy(TaskHandler)
         handler.status = TaskStatus.COMPLETED
         handler.submitTimeMillis = 1000
         handler.startTimeMillis = 1500
@@ -208,4 +207,90 @@ class TaskHandlerTest extends Specification {
         handler.task.processor.getForksCount().intValue() == COUNTER -1
     }
 
+    def 'should validate is submit timeout' () {
+        given:
+        def handler = Spy(TaskHandler)
+        handler.status = TaskStatus.SUBMITTED
+        handler.task = Mock(TaskRun) {
+            getConfig() >> Mock(TaskConfig) { getMaxSubmitAwait() >> Duration.of('500ms') }
+        }
+
+        when:
+        def timeout = handler.isSubmitTimeout()
+        then:
+        !timeout
+
+        when:
+        sleep 1_000
+        and:
+        timeout = handler.isSubmitTimeout()
+        then:
+        timeout
+
+    }
+
+    @Unroll
+    def 'should validate status' () {
+        given:
+        def handler = Spy(TaskHandler)
+        handler.status = STATUS
+
+        expect:
+        handler.isNew() == EXPECT_NEW
+        handler.isRunning() == EXPECT_RUNNING
+        handler.isSubmitted() == EXPECT_SUBMITTED
+        handler.isActive() == EXPECTED_ACTIVE
+        handler.isCompleted() == EXPECT_COMPLETE
+        
+        where:
+        STATUS              | EXPECT_NEW  | EXPECT_SUBMITTED | EXPECT_RUNNING | EXPECTED_ACTIVE | EXPECT_COMPLETE
+        TaskStatus.NEW      | true        | false            | false          | false           | false
+        TaskStatus.SUBMITTED| false       | true             | false          | true            | false
+        TaskStatus.RUNNING  | false       | false            | true           | true            | false
+        TaskStatus.COMPLETED| false       | false            | false          | false           | true
+    }
+
+    @Unroll
+    def 'should include the tower prefix'() {
+        given:
+        def name = 'job_1'
+
+        expect:
+        TaskHandler.prependWorkflowPrefix(name, ENV) == EXPECTED
+
+        where:
+        ENV                         | EXPECTED
+        [:]                         | "job_1"
+        [TOWER_WORKFLOW_ID: '1234'] | "tw-1234-job_1"
+    }
+
+    def 'should not kill task twice'() {
+        given:
+        def handler = Spy(TaskHandler)
+        when:
+        handler.kill()
+        then:
+        1 * handler.killTask() >> {}
+
+        when:
+        handler.kill()
+        then:
+        0 * handler.killTask()
+    }
+
+    @Unroll
+    def 'should set isChildArray flag'() {
+        given:
+        def handler = Spy(TaskHandler)
+
+        expect:
+        !handler.isArrayChild
+        and:
+        handler.withArrayChild(VALUE).isArrayChild == VALUE
+
+        where:
+        VALUE   | _
+        false   | _
+        true    | _
+    }
 }

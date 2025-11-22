@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -270,8 +269,8 @@ class BranchOpTest extends Dsl2Spec  {
                 bar: it>=5
             }
 
-            bra1 = Channel.from(1,2,3).branch(criteria)  
-            bra2 = Channel.from(6,7,8).branch(criteria)  
+            bra1 = Channel.of(1,2,3).branch(criteria)  
+            bra2 = Channel.of(6,7,8).branch(criteria)  
             
             bra1.foo.view { "foo:$it" }
             bra2.bar.view { "bar:$it" }
@@ -294,7 +293,7 @@ class BranchOpTest extends Dsl2Spec  {
         ''')
         then:
         def e = thrown(ScriptCompilationException)
-        e.message.contains 'Branch evaluation closure should declare at least one parameter or use the implicit `it` parameter'
+        e.message.contains 'Branch criteria should declare at least one parameter or use the implicit `it` parameter'
     }
 
     def 'should error due to dup label' () {
@@ -304,7 +303,7 @@ class BranchOpTest extends Dsl2Spec  {
         ''')
         then:
         def e = thrown(ScriptCompilationException)
-        e.message.contains 'Branch label already used: foo'
+        e.message.contains 'Branch label already declared: foo'
     }
 
     def 'should error due to invalid bool expr' () {
@@ -324,7 +323,7 @@ class BranchOpTest extends Dsl2Spec  {
         ''')
         then:
         def e = thrown(ScriptCompilationException)
-        e.message.contains 'Branch evaluation closure should contain at least one branch expression'
+        e.message.contains 'Branch criteria should declare at least one branch'
 
         when:
         dsl_eval('''   
@@ -332,7 +331,7 @@ class BranchOpTest extends Dsl2Spec  {
         ''')
         then:
         def e2 = thrown(ScriptCompilationException)
-        e2.message.contains 'Branch evaluation closure should contain at least one branch expression'
+        e2.message.contains 'Branch criteria should declare at least one branch'
     }
 
 

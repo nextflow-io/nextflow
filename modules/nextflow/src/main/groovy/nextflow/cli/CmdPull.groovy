@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +20,9 @@ import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
+import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
+import nextflow.util.TestOnly
 /**
  * CLI sub-command PULL
  *
@@ -43,12 +44,13 @@ class CmdPull extends CmdBase implements HubOptions {
     @Parameter(names=['-r','-revision'], description = 'Revision of the project to run (either a git branch, tag or commit SHA number)')
     String revision
 
-
+    @Parameter(names=['-d','-deep'], description = 'Create a shallow clone of the specified depth')
+    Integer deep
 
     @Override
     final String getName() { NAME }
 
-    /* only for testing purpose */
+    @TestOnly
     protected File root
 
     @Override
@@ -63,16 +65,18 @@ class CmdPull extends CmdBase implements HubOptions {
             return
         }
 
-        /* only for testing purpose */
         if( root ) {
             AssetManager.root = root
         }
 
+        // init plugin system
+        Plugins.init()
+        
         list.each {
             log.info "Checking $it ..."
             def manager = new AssetManager(it, this)
 
-            def result = manager.download(revision)
+            def result = manager.download(revision,deep)
             manager.updateModules()
 
             def scriptFile = manager.getScriptFile()

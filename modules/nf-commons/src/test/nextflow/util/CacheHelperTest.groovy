@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +17,6 @@
 package nextflow.util
 
 import java.nio.file.Files
-import java.nio.file.Paths
 import java.nio.file.attribute.FileTime
 
 import com.google.common.hash.Hashing
@@ -33,6 +31,8 @@ import test.TestHelper
  */
 class CacheHelperTest extends Specification {
 
+    enum TestEnum { TEST_A, TEST_B, TEST_C }
+
     def 'test hashCode' () {
 
         setup:
@@ -45,6 +45,7 @@ class CacheHelperTest extends Specification {
         def anObjectArray = Hashing.murmur3_128().newHasher().putInt(1).putInt(2).putInt(3).hash()
         def aMap =  Hashing.murmur3_128().newHasher().putInt(1).putUnencodedChars('String1').putBoolean(true).hash()
         def aList = Hashing.murmur3_128().newHasher().putUnencodedChars('A').putUnencodedChars('B').putUnencodedChars('C').hash()
+        def anEnum = Hashing.murmur3_128().newHasher().putUnencodedChars('nextflow.util.CacheHelperTest$TestEnum.TEST_A').hash()
 
         def file = Files.createTempFile('test', null)
         file.deleteOnExit()
@@ -67,6 +68,7 @@ class CacheHelperTest extends Specification {
         CacheHelper.hasher([1,2,3] as Object[]).hash() == anObjectArray
         CacheHelper.hasher( [f1: 1, f2: 'String1', f3: true] ) .hash() == aMap
         CacheHelper.hasher( ['A','B','C'] ).hash() == aList
+        CacheHelper.hasher(TestEnum.TEST_A).hash() == anEnum
         CacheHelper.hasher(file).hash() == aFile
 
         CacheHelper.hasher(['abc',123]).hash() == CacheHelper.hasher(['abc',123]).hash()
@@ -78,45 +80,6 @@ class CacheHelperTest extends Specification {
 
         CacheHelper.hasher(['abc',123] as Set ).hash() == CacheHelper.hasher([123,'abc'] as Set ).hash()
 
-
-    }
-
-
-    def testHashContent() {
-        setup:
-        def path1 = Files.createTempFile('test-hash-content',null)
-        def path2 = Files.createTempFile('test-hash-content',null)
-        def path3 = Files.createTempFile('test-hash-content',null)
-
-        path1.text = '''
-            line 1
-            line 2
-            line 3 the file content
-            '''
-
-
-        path2.text = '''
-            line 1
-            line 2
-            line 3 the file content
-            '''
-
-        path3.text = '''
-            line 1
-            line 1
-            line 1 the file content
-            '''
-
-        expect:
-        CacheHelper.hashContent(path1) == CacheHelper.hashContent(path2)
-        CacheHelper.hashContent(path1) != CacheHelper.hashContent(path3)
-        CacheHelper.hashContent(path1, Hashing.md5()) == CacheHelper.hashContent(path2,Hashing.md5())
-        CacheHelper.hashContent(path1, Hashing.md5()) != CacheHelper.hashContent(path3,Hashing.md5())
-
-        cleanup:
-        path1.delete()
-        path2.delete()
-        path3.delete()
 
     }
 
@@ -233,37 +196,6 @@ class CacheHelperTest extends Specification {
         'lenient'  | CacheHelper.HashMode.LENIENT
         'sha256'   | CacheHelper.HashMode.SHA256
     }
-    
-    def 'should validate is asset file'() {
-        when:
-        def BASE = Paths.get("/some/pipeline/dir")
-        and:
-        Global.session = Mock(Session) { getBaseDir() >> BASE }
-        then:
-        !CacheHelper.isAssetFile(BASE.resolve('foo'))
-
-
-        when:
-        Global.session = Mock(Session) {
-            getBaseDir() >> BASE
-            getCommitId() >> '123456'
-        }
-        then:
-        CacheHelper.isAssetFile(BASE.resolve('foo'))
-        and:
-        !CacheHelper.isAssetFile(Paths.get('/other/dir'))
-    }
-
-
-    def 'should hash file content'() {
-        given:
-        def EXPECTED = '64ec88ca00b268e5ba1a35678a1b5316d212f4f366b2477232534a8aeca37f3c'
-        def file = TestHelper.createInMemTempFile('foo', 'Hello world')
-        expect:
-        CacheHelper.hashFileSha256Impl0(file) == EXPECTED
-        and:
-        CacheHelper.hashFileSha256Impl0(file) == DigestUtils.sha256Hex(file.bytes)
-    }
 
     def 'should hash content with sha256' () {
         given:
@@ -280,31 +212,4 @@ class CacheHelperTest extends Specification {
         CacheHelper.hasher(file, CacheHelper.HashMode.SHA256).hash().toString() == 'd29e7ba0fbcc617ab8e1e44e81381aed'
     }
 
-    def 'should hash dir content with sha256'() {
-        given:
-        def folder = TestHelper.createInMemTempDir()
-        folder.resolve('dir1').mkdir()
-        folder.resolve('dir2').mkdir()
-        and:
-        folder.resolve('dir1/foo').text = "I'm foo"
-        folder.resolve('dir1/bar').text = "I'm bar"
-        folder.resolve('dir1/xxx/yyy').mkdirs()
-        folder.resolve('dir1/xxx/foo1').text = "I'm foo within xxx"
-        folder.resolve('dir1/xxx/yyy/bar1').text = "I'm bar within yyy"
-        and:
-        folder.resolve('dir2/foo').text = "I'm foo"
-        folder.resolve('dir2/bar').text = "I'm bar"
-        folder.resolve('dir2/xxx/yyy').mkdirs()
-        folder.resolve('dir2/xxx/foo1').text = "I'm foo within xxx"
-        folder.resolve('dir2/xxx/yyy/bar1').text = "I'm bar within yyy"
-
-        when:
-        def hash1 = CacheHelper.hashDirSha256(CacheHelper.defaultHasher().newHasher(), folder.resolve('dir1'), folder.resolve('dir1'))
-        and:
-        def hash2 = CacheHelper.hashDirSha256(CacheHelper.defaultHasher().newHasher(), folder.resolve('dir2'), folder.resolve('dir2'))
-
-        then:
-        hash1.hash() == hash2.hash()
-
-    }
 }

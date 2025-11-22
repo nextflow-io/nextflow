@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,16 +17,48 @@
 package nextflow.config
 
 import groovy.transform.CompileStatic
-import nextflow.secret.SecretHolder
-import nextflow.secret.SecretsProvider
-
+import nextflow.config.spec.ConfigOption
+import nextflow.config.spec.ConfigScope
+import nextflow.config.spec.ScopeName
+import nextflow.script.dsl.Description
 /**
  * Represent Nextflow config as Map
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@ScopeName('')
 @CompileStatic
-class ConfigMap extends LinkedHashMap {
+class ConfigMap extends LinkedHashMap implements ConfigScope {
+
+    @ConfigOption
+    @Description("""
+        The remote work directory used by hybrid workflows. Equivalent to the `-bucket-dir` option of the `run` command.
+    """)
+    final String bucketDir
+
+    @ConfigOption
+    @Description("""
+        Delete all files associated with a run in the work directory when the run completes successfully (default: `false`).
+    """)
+    final boolean cleanup
+
+    @ConfigOption
+    @Description("""
+        The pipeline output directory. Equivalent to the `-output-dir` option of the `run` command.
+    """)
+    final String outputDir
+
+    @ConfigOption
+    @Description("""
+        Enable the use of previously cached task executions. Equivalent to the `-resume` option of the `run` command.
+    """)
+    final boolean resume
+
+    @ConfigOption
+    @Description("""
+        The pipeline work directory. Equivalent to the `-work-dir` option of the `run` command.
+    """)
+    final String workDir
 
     ConfigMap() {
     }
@@ -36,46 +67,13 @@ class ConfigMap extends LinkedHashMap {
         super(initialCapacity)
     }
 
-    ConfigMap(Map content) {
-        super(content)
+    ConfigMap(Map opts) {
+        super(opts)
+        bucketDir = opts.bucketDir
+        cleanup = opts.cleanup as boolean
+        outputDir = opts.outputDir
+        resume = opts.resume as boolean
+        workDir = opts.workDir
     }
 
-    @Override
-    Object get(Object key) {
-        final result = super.get(key)
-        // check if it's a secret value
-        if( result instanceof SecretHolder && result.isBound() ) {
-            return result.call()
-        }
-        return result
-    }
-
-    ConfigMap withSecretProvider(SecretsProvider provider) {
-        withSecretProvider0(provider,this)
-        return this
-    }
-
-    private withSecretProvider0(SecretsProvider provider, Map map) {
-        for( Object key : map.keySet() ) {
-            def entry = map.get(key)
-            // traverse nested config map objects
-            if( entry instanceof Map ) {
-                withSecretProvider0(provider, entry)
-            }
-            // look for all secret holders in the config map
-            // and bind the secrets provider
-            if( entry instanceof SecretHolder ) {
-                entry.bind(provider)
-            }
-            // same bind secret holders in Gstring objects
-            else if( entry instanceof GString ) {
-                final str = (GString)entry
-                for( Object value : str.getValues() ) {
-                    if( value instanceof SecretHolder ) {
-                        value.bind(provider)
-                    }
-                }
-            }
-        }
-    }
 }

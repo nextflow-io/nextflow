@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,13 +40,19 @@ import nextflow.datasource.SraExplorer
 import nextflow.exception.AbortOperationException
 import nextflow.extension.CH
 import nextflow.extension.GroupTupleOp
+import nextflow.extension.LinExtension
 import nextflow.extension.MapOp
+import nextflow.file.DirListener
 import nextflow.file.DirWatcher
+import nextflow.file.DirWatcherV2
 import nextflow.file.FileHelper
 import nextflow.file.FilePatternSplitter
 import nextflow.file.PathVisitor
-import nextflow.util.CheckHelper
+import nextflow.plugin.Plugins
+import nextflow.plugin.extension.PluginExtensionProvider
 import nextflow.util.Duration
+import nextflow.util.TestOnly
+import org.codehaus.groovy.runtime.InvokerHelper
 import org.codehaus.groovy.runtime.NullObject
 /**
  * Channel factory object
@@ -62,11 +67,49 @@ class Channel  {
 
     static public NullObject VOID = NullObject.getNullObject()
 
-    // only for testing purpose !
+    @TestOnly
     private static CompletableFuture fromPath0Future
 
     static private Session getSession() { Global.session as Session }
-    
+
+    /**
+     * Allow the dynamic loading of plugin provided channel extension methods
+     *
+     * @param name The name of the method
+     * @param args The method arguments
+     * @return The method return value
+     */
+    static def $static_methodMissing(String name, Object args) {
+        PluginExtensionProvider.INSTANCE().invokeFactoryExtensionMethod(name, InvokerHelper.asArray(args))
+    }
+
+    static Object[] array0(Object value) {
+        if( value instanceof Object[] )
+            return (Object[])value
+        if( value instanceof Collection )
+            return value.toArray()
+        else
+            return new Object[] {value}
+    }
+
+    static private checkNoChannels(String name, Object value) {
+        if( value==null )
+            return
+        Object[] items = array0(value)
+        if( items.size()==1 && CH.isChannel(items[0]))
+            throw new IllegalArgumentException("Argument of '$name' method cannot be a channel object — Likely you can replace the use of '$name' with the channel object itself")
+        for( int i=0; i<items.size(); i++ ) {
+            if( CH.isChannel(items[i]) )
+                throw new IllegalArgumentException("Argument ${nth(i+1)} of method '$name' cannot be a channel object")
+        }
+    }
+
+    static private String nth(int i) {
+        if( i==1 ) return '1-st'
+        if( i==2 ) return '2-nd'
+        if( i==3 ) return '3-rd'
+        return "$i-th"
+    }
 
     /**
      * Create an new channel
@@ -78,6 +121,10 @@ class Channel  {
         if( NF.isDsl2() )
             throw new DeprecationException("Channel `create` method is not supported any more")
         return CH.queue()
+    }
+
+    static DataflowWriteChannel topic(String name) {
+        return CH.topic(name)
     }
 
     /**
@@ -92,6 +139,7 @@ class Channel  {
     }
 
     static DataflowWriteChannel of(Object ... items) {
+        checkNoChannels('channel.of', items)
         final result = CH.create()
         final values = new ArrayList()
         if( items == null ) {
@@ -153,26 +201,17 @@ class Channel  {
      */
     @Deprecated
     static DataflowWriteChannel from( Object... items ) {
+        checkNoChannels('channel.from', items)
+        for( Object it : items ) if(CH.isChannel(it))
+            throw new IllegalArgumentException("channel.from argument is already a channel object")
+
         final result = from0(items as List)
         NodeMarker.addSourceNode('Channel.from', result)
         return result
     }
 
-    /**
-     * Convert an object into a *channel* variable that emits that object
-     *
-     * @param obj
-     * @return
-     */
-    @Deprecated
-    static DataflowVariable just( obj = null ) {
-        if( NF.dsl2 )
-            throw new DeprecationException("The operator `just` is not available anymore -- Use `value` instead.")
-        log.warn "The operator `just` is deprecated -- Use `value` instead."
-        value(obj)
-    }
-
     static DataflowVariable value( obj = null ) {
+        checkNoChannels('channel.value', obj)
         obj != null ? CH.value(obj) : CH.value()
     }
 
@@ -218,9 +257,9 @@ class Channel  {
         }
 
         if( NF.isDsl2() )
-            session.addIgniter { timer.schedule( task as TimerTask, millis ) }  
+            session.addIgniter { timer.schedule( task as TimerTask, 0, millis ) }  
         else 
-            timer.schedule( task as TimerTask, millis )
+            timer.schedule( task as TimerTask, 0, millis )
         
         return result
     }
@@ -251,6 +290,7 @@ class Channel  {
      */
     static DataflowWriteChannel<Path> fromPath( Map opts = null, pattern ) {
         if( !pattern ) throw new AbortOperationException("Missing `fromPath` parameter")
+        checkNoChannels('channel.fromPath', pattern)
 
         // verify that the 'type' parameter has a valid value
         checkParams( 'path', opts, VALID_FROM_PATH_PARAMS )
@@ -293,11 +333,15 @@ class Channel  {
     }
 
     static private DataflowWriteChannel watchImpl( String syntax, String folder, String pattern, boolean skipHidden, String events, FileSystem fs ) {
-        
+
         final result = CH.create()
-        final watcher = new DirWatcher(syntax,folder,pattern,skipHidden,events, fs)
-                            .setOnComplete { result.bind(STOP) }
-         
+        final legacy = System.getenv('NXF_DIRWATCHER_LEGACY')
+        final DirListener watcher = legacy=='true'
+                        ? new DirWatcher(syntax,folder,pattern,skipHidden,events,fs)
+                        : new DirWatcherV2(syntax,folder,pattern,skipHidden,events,fs)
+        watcher.onComplete { result.bind(STOP) }
+        Global.onCleanup(it -> watcher.terminate())
+
         if( NF.isDsl2() )  {
             session.addIgniter {
                 watcher.apply { Path file -> result.bind(file.toAbsolutePath()) }   
@@ -398,6 +442,7 @@ class Channel  {
      *      A channel emitting the file pairs matching the specified pattern(s)
      */
     static DataflowWriteChannel fromFilePairs(Map options = null, pattern) {
+        checkNoChannels('channel.fromFilePairs', pattern)
         final allPatterns = pattern instanceof List ? pattern : [pattern]
         final allGrouping = new ArrayList(allPatterns.size())
         for( int i=0; i<allPatterns.size(); i++ ) {
@@ -430,6 +475,7 @@ class Channel  {
      *      A channel emitting the file pairs matching the specified pattern(s)
      */
     static DataflowWriteChannel fromFilePairs(Map options = null, pattern, Closure grouping) {
+        checkNoChannels('channel.fromFilePairs', pattern)
         final allPatterns = pattern instanceof List ? pattern : [pattern]
         final allGrouping = new ArrayList(allPatterns.size())
         for( int i=0; i<allPatterns.size(); i++ ) {
@@ -585,11 +631,13 @@ class Channel  {
     }
 
     static DataflowWriteChannel fromSRA(query) {
+        checkNoChannels('channel.fromSRA', query)
         fromSRA( Collections.emptyMap(), query )
     }
 
     static DataflowWriteChannel fromSRA(Map opts, query) {
-        CheckHelper.checkParams('fromSRA', opts, SraExplorer.PARAMS)
+        checkParams('fromSRA', opts, SraExplorer.PARAMS)
+        checkNoChannels('channel.fromSRA', query)
 
         def target = new DataflowQueue()
         def explorer = new SraExplorer(target, opts).setQuery(query)
@@ -609,4 +657,23 @@ class Channel  {
         fromPath0Future = future.exceptionally(Channel.&handlerException)
     }
 
+    static DataflowWriteChannel fromLineage(Map<String,?> params) {
+        checkParams('fromLineage', params, LinExtension.PARAMS)
+        final result = CH.create()
+        if( NF.isDsl2() ) {
+            session.addIgniter { fromLineage0(result, params) }
+        }
+        else {
+            fromLineage0(result, params )
+        }
+        return result
+    }
+
+    private static void fromLineage0(DataflowWriteChannel channel, Map<String,?> params) {
+        final linExt = Plugins.getExtension(LinExtension)
+        if( !linExt )
+            throw new IllegalStateException("Unable to load lineage extensions.")
+        final future = CompletableFuture.runAsync(() -> linExt.fromLineage(session, channel, params))
+        future.exceptionally(this.&handlerException)
+    }
 }

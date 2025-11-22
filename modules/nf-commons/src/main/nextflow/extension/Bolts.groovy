@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +15,6 @@
  */
 
 package nextflow.extension
-
 
 import java.nio.file.Path
 import java.text.DateFormat
@@ -37,7 +35,7 @@ import nextflow.util.CheckHelper
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import nextflow.util.RateUnit
-import org.apache.commons.lang.StringUtils
+import org.apache.commons.lang3.StringUtils
 import org.codehaus.groovy.runtime.DefaultGroovyMethods
 import org.codehaus.groovy.runtime.GStringImpl
 import org.codehaus.groovy.runtime.ResourceGroovyMethods
@@ -66,7 +64,7 @@ class Bolts {
         return new ThreadLocal<DateFormat>() {
             @Override
             protected DateFormat initialValue() {
-                def result = new SimpleDateFormat(fmt)
+                def result = new SimpleDateFormat(fmt, Locale.ENGLISH)
                 if(tz) result.setTimeZone(tz)
                 return result
             }
@@ -87,7 +85,7 @@ class Bolts {
     }
 
     static String format(OffsetDateTime self, String format) {
-        return self.format(DateTimeFormatter.ofPattern(format))
+        return self.format(DateTimeFormatter.ofPattern(format).withLocale(Locale.ENGLISH))
     }
 
     /**
@@ -277,7 +275,7 @@ class Bolts {
     }
 
     /**
-     * Check if a alphabetic characters in a string are lowercase. Non alphabetic characters are ingored
+     * Check if a alphabetic characters in a string are lowercase. Non alphabetic characters are ignored
      * @param self The string to check
      * @return {@true} if the string contains no uppercase characters, {@code false} otherwise
      */
@@ -445,6 +443,12 @@ class Bolts {
         else if( type == RateUnit ) {
             return new RateUnit(self)
         }
+        else if ( type == URL ) {
+            return new URL(self)
+        }
+        else if ( type == URI ) {
+            return URI.create(self)
+        }
 
         StringGroovyMethods.asType(self, type);
     }
@@ -465,6 +469,12 @@ class Bolts {
         }
         else if( type == MemoryUnit ) {
             return new MemoryUnit(self.toString())
+        }
+        else if ( type == URL ) {
+            return new URL(self.toString())
+        }
+        else if ( type == URI ) {
+            return URI.create(self.toString())
         }
 
         StringGroovyMethods.asType(self, type);
@@ -894,6 +904,7 @@ class Bolts {
         }
     }
 
+    @Deprecated
     static redact(String self, int max=5, String suffix='...') {
         if( !self )
             return self
@@ -926,16 +937,45 @@ class Bolts {
         return (T)result
     }
 
-    static <T extends Map> T deepMerge(T mergeIntoMap, T mergeFromMap, boolean replaceValues) {
-        for (Object key : mergeFromMap.keySet()) {
-            if (mergeFromMap.get(key) instanceof Map && mergeIntoMap.get(key) instanceof Map) {
-                mergeIntoMap.put(key, deepMerge((Map) mergeIntoMap.get(key), (Map) mergeFromMap.get(key), replaceValues));
-            } else {
-                if (!mergeIntoMap.containsKey(key) || replaceValues) {
-                    mergeIntoMap.put(key, mergeFromMap.get(key));
-                }
+    static Map deepMerge(Map target, Map source) {
+        final result = cloneMap0(target)
+        for (Object name : source.keySet()) {
+            // to prevent side-effects with ConfigObject object (which creates a value on-fly
+            // when getting it, always use `containsKey` before
+            if( result.containsKey(name) && result.get(name) instanceof Map && source.containsKey(name) && source.get(name) instanceof Map  ) {
+                result.put(name, deepMerge( (Map)result.get(name), (Map)source.get(name)))
+            }
+            else {
+                result.put(name, source.get(name))
             }
         }
-        return deepClone(mergeIntoMap)
+        return result
     }
+
+    static private Map cloneMap0(Map map) {
+        if( map instanceof ConfigObject )
+            return ((ConfigObject)map).clone()
+        if( map instanceof LinkedHashMap )
+            return new LinkedHashMap<>(map)
+        else
+            return new HashMap<>(map)
+    }
+
+    /**
+     * Resolve a lazy expression (e.g. closure, gstring) against
+     * a delegate (i.e. binding).
+     *
+     * @param binding
+     * @param value
+     */
+    static Object resolveLazy(Object binding, Object value) {
+        if( value instanceof Closure )
+            return cloneWith(value, binding).call()
+
+        if( value instanceof GString )
+            return cloneAsLazy(value, binding).toString()
+
+        return value
+    }
+    
 }

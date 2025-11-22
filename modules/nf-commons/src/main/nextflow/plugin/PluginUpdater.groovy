@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,14 +21,22 @@ import static java.nio.file.StandardCopyOption.*
 
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.function.Predicate
+import java.util.regex.Pattern
 
 import com.github.zafarkhaja.semver.Version
+import dev.failsafe.Failsafe
+import dev.failsafe.RetryPolicy
+import dev.failsafe.event.ExecutionAttemptedEvent
+import dev.failsafe.function.CheckedSupplier
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.Const
+import nextflow.BuildInfo
+import nextflow.SysEnv
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.file.FileMutex
+import org.pf4j.InvalidPluginDescriptorException
 import org.pf4j.PluginDependency
 import org.pf4j.PluginRuntimeException
 import org.pf4j.PluginState
@@ -51,29 +59,101 @@ import org.pf4j.util.FileUtils
 @CompileStatic
 class PluginUpdater extends UpdateManager {
 
+    static final public Pattern META_REGEX = ~/(.+)-(\d+\.\d+\.\d+\S*)-meta\.json/
+
     private CustomPluginManager pluginManager
 
     private Path pluginsStore
 
     private boolean pullOnly
 
-    private DefaultPlugins defaultPlugins = new DefaultPlugins()
+    private boolean offline
+
+    private DefaultPlugins defaultPlugins = DefaultPlugins.INSTANCE
 
     protected PluginUpdater(CustomPluginManager pluginManager) {
         super(pluginManager)
         this.pluginManager = pluginManager
     }
 
-    PluginUpdater(CustomPluginManager pluginManager, Path pluginsRoot, URL repo) {
-        super(pluginManager, wrap(repo))
+    PluginUpdater(CustomPluginManager pluginManager, Path pluginsRoot, URL repo, boolean offline) {
+        super(pluginManager, wrap(repo, pluginsRoot, offline))
+        this.offline = offline
         this.pluginsStore = pluginsRoot
         this.pluginManager = pluginManager
     }
 
-    static private List<UpdateRepository> wrap(URL repo) {
+    static private List<UpdateRepository> wrap(URL remote, Path local, boolean offline) {
         List<UpdateRepository> result = new ArrayList<>(1)
-        result << new DefaultUpdateRepository('nextflow.io', repo)
+        if( offline ) {
+            result.add(new LocalUpdateRepository('downloaded', local))
+        }
+        else {
+            def remoteRepo = remote.path.endsWith('.json')
+                ? new DefaultUpdateRepository('nextflow.io', remote)
+                : new HttpPluginRepository('registry', remote.toURI())
+
+            result.add(remoteRepo)
+            result.addAll(customRepos())
+        }
         return result
+    }
+
+    static private List<DefaultUpdateRepository> customRepos() {
+        final repos = SysEnv.get('NXF_PLUGINS_TEST_REPOSITORY')
+        if( !repos )
+            return List.of()
+        // warn the user that a custom
+        final msg = """\
+                        =======================================================================
+                        =                                WARNING                                    =
+                        = You are running this script using a un-official plugin repository.        =
+                        =                                                                           =
+                        = ${repos}
+                        =                                                                           =
+                        = This is only meant to be used for plugin testing purposes.                =
+                        =============================================================================
+                        """.stripIndent(true)
+        log.warn(msg)
+        final result = new ArrayList<DefaultUpdateRepository>(10)
+        // the repos string can contain one or more plugin repository uri separated by comma
+        for( String it : repos.tokenize(',') )
+            result.add(customRepo(it))
+        return result
+    }
+
+    static private DefaultUpdateRepository customRepo(String uri) {
+        // Check if it's a plugin meta file. The name must match the pattern `<plugin id>-X.Y.Z-meta.json`
+        final matcher = META_REGEX.matcher(uri.tokenize('/')[-1])
+        if( matcher.matches() ) {
+            try {
+                final pluginId = matcher.group(1)
+                final temp = File.createTempFile('nxf-','json')
+                temp.deleteOnExit()
+                temp.text = /[{"id":"${pluginId}", "releases":[ ${new URL(uri).text} ]}]/
+                uri = 'file://' + temp.absolutePath
+            }
+            catch (FileNotFoundException e) {
+                throw new IllegalArgumentException("Provided repository URL does not exist or cannot be accessed: $uri")
+            }
+        }
+        // create the update repository instance
+        final fileName = uri.tokenize('/')[-1]
+        return new DefaultUpdateRepository('uri', new URL(uri), fileName)
+    }
+
+    /**
+     * Prefetch metadata for plugins. This gives an opportunity for certain
+     * repository types to perform some data-loading optimisations.
+     */
+    void prefetchMetadata(List<PluginRef> plugins) {
+        // use direct field access to avoid the refresh() call in getRepositories()
+        // which could fail anything which hasn't had a chance to prefetch yet
+        for( def repo : this.@repositories ) {
+            if( repo instanceof PrefetchUpdateRepository ) {
+                repo.prefetch(plugins)
+            }
+        }
     }
 
     /**
@@ -105,8 +185,9 @@ class PluginUpdater extends UpdateManager {
     void pullPlugins(List<String> plugins) {
         pullOnly=true
         try {
-            final specs = plugins.collect(it -> PluginSpec.parse(it))
-            for( PluginSpec spec : specs ) {
+            final specs = plugins.collect(it -> PluginRef.parse(it,defaultPlugins))
+            prefetchMetadata(specs)
+            for( PluginRef spec : specs ) {
                 pullPlugin0(spec.id, spec.version)
             }
         }
@@ -145,20 +226,19 @@ class PluginUpdater extends UpdateManager {
     }
 
     private Path download0(String id, String version) {
+        // 0. check if version is specified
+        if( !version )
+            throw new InvalidPluginDescriptorException("Missing version for plugin $id")
+        log.info "Downloading plugin ${id}@${version}"
 
-        // 0. check if already exists
+        // 1. check if already exists
         final pluginPath = pluginsStore.resolve("$id-$version")
         if( FilesEx.exists(pluginPath) ) {
             return pluginPath
         }
 
-        // 1. determine the version
-        if( !version )
-            version = getLastPluginRelease(id)
-        log.info "Downloading plugin ${id}@${version}"
-
-        // 2. Download to temporary location
-        Path downloaded = downloadPlugin(id, version);
+        // 2. download to temporary location
+        Path downloaded = safeDownloadPlugin(id, version);
 
         // 3. unzip the content and delete downloaded file
         Path dir = FileUtils.expandIfZip(downloaded)
@@ -166,15 +246,42 @@ class PluginUpdater extends UpdateManager {
 
         // 4. move the final destination the plugin directory
         assert pluginPath.getFileName() == dir.getFileName()
-
         try {
             safeMove(dir, pluginPath)
         }
         catch (IOException e) {
-            throw new PluginRuntimeException(e, "Failed to write file '$pluginPath' to plugins folder");
+            throw new PluginRuntimeException(e, "Failed to write file '$pluginPath' to plugins folder")
         }
 
         return pluginPath
+    }
+
+    protected Path safeDownloadPlugin(String id, String version) {
+        final CheckedSupplier<Path> supplier = () -> downloadPlugin(id, version)
+        final policy = retryPolicy(id,version)
+        return Failsafe.with(policy).get(supplier)
+    }
+
+    protected <T> RetryPolicy<T> retryPolicy(String id, String version) {
+        final listener = new dev.failsafe.event.EventListener<ExecutionAttemptedEvent<T>>() {
+            @Override
+            void accept(ExecutionAttemptedEvent<T> event) throws Throwable {
+                log.debug("Failed to download plugin: $id; version: $version - attempt: ${event.attemptCount}", event.lastFailure)
+            }
+        }
+
+        final condition = new Predicate<Throwable>() {
+            @Override
+            boolean test(Throwable error) {
+                return error?.cause instanceof ConnectException
+            }
+        }
+
+        return RetryPolicy.<T>builder()
+                .handleIf(condition)
+                .withMaxAttempts(3)
+                .onRetry(listener)
+                .build()
     }
 
     protected void safeMove(Path source, Path target) {
@@ -182,7 +289,7 @@ class PluginUpdater extends UpdateManager {
             Files.move(source, target, ATOMIC_MOVE, REPLACE_EXISTING)
         }
         catch (IOException e) {
-            log.debug "Failed atomic move for pluging $source -> $target - Reason: ${e.message ?: e} - Fallback on safe move"
+            log.debug "Failed atomic move for plugin $source -> $target - Reason: ${e.message ?: e} - Fallback on safe move"
             safeMove0(source, target)
         }
     }
@@ -197,12 +304,12 @@ class PluginUpdater extends UpdateManager {
             FileHelper.deletePath(source)
         }
         catch (IOException e) {
-            log.warn("Unable to deleting plugin directory: $source", e)
+            log.warn("Unable to delete plugin directory: $source", e)
         }
     }
 
     /**
-     * Race condition safe plugin download. Multiple instaces are synchronised
+     * Race condition safe plugin download. Multiple instances are synchronised
      * using a file system lock created in the tmp directory
      *
      * @param id The plugin Id
@@ -232,17 +339,42 @@ class PluginUpdater extends UpdateManager {
         new File(tmp, "nextflow-plugin-${id}-${version}.lock")
     }
 
-    private boolean load0(String id, String version) {
+    private boolean load0(String id, String requestedVersion) {
         assert id, "Missing plugin Id"
 
-        if( version == null )
+        if( offline && !requestedVersion ) {
+            throw new IllegalStateException("Cannot find version for $id plugin -- plugin versions MUST be specified in offline mode")
+        }
+
+        def version = requestedVersion
+        if( !version ) {
             version = getLastPluginRelease(id)?.version
-        if( !version )
-            throw new IllegalStateException("Cannot find latest version of $id plugin")
+        }
+        else if( !Version.isValid(version) ) {
+            // a version is 'valid' if it's an exact semver version "major.minor.patch" so
+            // if it's not that, treat it as a version constraint and look for matches
+            version = findNewestMatchingRelease(id, version)?.version
+        }
+
+        if( !version ) {
+            final msg = requestedVersion
+                ? "Cannot find version of $id plugin matching $requestedVersion"
+                : "Cannot find latest version of $id plugin"
+            throw new IllegalStateException(msg)
+        }
+
+        if( version != requestedVersion ) {
+            log.debug "Plugin $id version $requestedVersion resolved to: $version"
+        }
 
         def pluginPath = pluginsStore.resolve("$id-$version")
         if( !FilesEx.exists(pluginPath) ) {
             pluginPath = safeDownload(id, version)
+        }
+
+        // verify the plugin install path contains the expected manifest path
+        if( !FilesEx.exists(pluginPath.resolve('classes/META-INF/MANIFEST.MF')) ) {
+            log.warn("Plugin '${pluginPath.getFileName()}' installation looks corrupted - Delete the following directory and run nextflow again: $pluginPath")
         }
 
         // load the plugin from the file system
@@ -277,7 +409,7 @@ class PluginUpdater extends UpdateManager {
         // resolve the plugins
         pluginManager.resolvePlugins()
         // finally start it
-        PluginState state = pluginManager.startPlugin(id);
+        PluginState state = pluginManager.startPlugin(id)
         return PluginState.STARTED == state
     }
 
@@ -295,13 +427,13 @@ class PluginUpdater extends UpdateManager {
             throw new PluginRuntimeException("Plugin $id cannot be updated since it is not installed")
         }
 
-        PluginInfo pluginInfo = getPluginsMap().get(id);
+        PluginInfo pluginInfo = getPluginsMap().get(id)
         if (pluginInfo == null) {
             throw new PluginRuntimeException("Plugin $id does not exist in any repository")
         }
 
         if (!pluginManager.deletePlugin(id)) {
-            return false;
+            return false
         }
 
         load0(id, version)
@@ -309,7 +441,11 @@ class PluginUpdater extends UpdateManager {
 
     protected boolean shouldUpdate(String pluginId, String version, PluginWrapper current) {
         if( pluginManager.runtimeMode == RuntimeMode.DEVELOPMENT ) {
-            log.debug "Update not support during dev"
+            log.debug "Update not supported during development mode"
+            return false
+        }
+        if( offline ) {
+            log.debug "Update not supported in offline mode"
             return false
         }
 
@@ -353,12 +489,12 @@ class PluginUpdater extends UpdateManager {
             throw new IllegalArgumentException("Unknown plugin id: $id")
 
         // note: order releases list by descending version numbers ie. latest version comes first
-        def releases = pluginInfo.releases.sort(false) { a,b -> Version.valueOf(b.version) <=> Version.valueOf(a.version) }
+        def releases = pluginInfo.releases.sort(false) { a,b -> Version.parse(b.version) <=> Version.parse(a.version) }
         for (PluginInfo.PluginRelease rel : releases ) {
             if( !versionManager.checkVersionConstraint(rel.version, verConstraint) || !rel.url )
                 continue
 
-            if( versionManager.checkVersionConstraint(Const.APP_VER, rel.requires) )
+            if( versionManager.checkVersionConstraint(BuildInfo.version, rel.requires) )
                 return rel
         }
 

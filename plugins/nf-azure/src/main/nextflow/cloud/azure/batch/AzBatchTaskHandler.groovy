@@ -15,22 +15,21 @@
  */
 package nextflow.cloud.azure.batch
 
+import nextflow.exception.ProcessException
+
 import java.nio.file.Path
 
-import com.microsoft.azure.batch.protocol.models.TaskState
-import com.microsoft.azure.batch.protocol.models.TaskExecutionInformation
-import com.microsoft.azure.batch.protocol.models.TaskExecutionResult
+import com.azure.compute.batch.models.BatchTaskState
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
-import nextflow.processor.TaskBean
+import nextflow.fusion.FusionAwareTask
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
-
 /**
  * Implements a task handler for Azure Batch service
  *
@@ -38,11 +37,9 @@ import nextflow.trace.TraceRecord
  */
 @Slf4j
 @CompileStatic
-class AzBatchTaskHandler extends TaskHandler {
+class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
     AzBatchExecutor executor
-
-    private TaskBean taskBean
 
     private Path exitFile
 
@@ -54,22 +51,18 @@ class AzBatchTaskHandler extends TaskHandler {
 
     private volatile long timestamp
 
-    private volatile TaskState taskState
+    private volatile BatchTaskState taskState
 
     private CloudMachineInfo machineInfo
 
     AzBatchTaskHandler(TaskRun task, AzBatchExecutor executor) {
         super(task)
         this.executor = executor
-        this.taskBean = new TaskBean(task)
         this.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
         this.errorFile = task.workDir.resolve(TaskRun.CMD_ERRFILE)
         this.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
         validateConfiguration()
     }
-
-    /** only for testing purpose - DO NOT USE */
-    protected AzBatchTaskHandler() { }
 
     AzBatchService getBatchService() {
         return executor.batchService
@@ -82,7 +75,9 @@ class AzBatchTaskHandler extends TaskHandler {
     }
 
     protected BashWrapperBuilder createBashWrapper() {
-        new AzBatchScriptLauncher(taskBean, executor)
+        return fusionEnabled()
+                ? fusionLauncher()
+                : new AzBatchScriptLauncher(task.toTaskBean(), executor)
     }
 
     @Override
@@ -103,8 +98,8 @@ class AzBatchTaskHandler extends TaskHandler {
         final state = taskState0(taskKey)
         // note, include complete status otherwise it hangs if the task
         // completes before reaching this check
-        final running = state==TaskState.RUNNING || state==TaskState.COMPLETED
-        log.debug "[AZURE BATCH] Task status $task.name taskId=$taskKey; running=$running"
+        final running = state==BatchTaskState.RUNNING || state==BatchTaskState.COMPLETED
+        log.trace "[AZURE BATCH] Task status $task.name taskId=$taskKey; running=$running"
         if( running )
             this.status = TaskStatus.RUNNING
         return running
@@ -115,16 +110,20 @@ class AzBatchTaskHandler extends TaskHandler {
         assert taskKey
         if( !isRunning() )
             return false
-        final done = taskState0(taskKey)==TaskState.COMPLETED
+        final done = taskState0(taskKey)==BatchTaskState.COMPLETED
         if( done ) {
             // finalize the task
-            task.exitStatus = readExitFile()
+            final info = batchService.getTask(taskKey).executionInfo
+            task.exitStatus = info?.exitCode ?: readExitFile()
             task.stdout = outputFile
             task.stderr = errorFile
             status = TaskStatus.COMPLETED
-            TaskExecutionInformation info = batchService.getTask(taskKey).executionInfo()
-            if (info.result() == TaskExecutionResult.FAILURE)
-                task.error = new ProcessUnrecoverableException(info.failureInfo().message())
+            if( task.exitStatus == Integer.MAX_VALUE && info.failureInfo.message) {
+                final reason = info.failureInfo.message
+                final unrecoverable = reason.contains('CannotPullContainer') && reason.contains('unauthorized')
+                // when task exist code is not defined and there is a Azure Batch task failure raise an exception with Azure's failure message
+                task.error = unrecoverable ? new ProcessUnrecoverableException(reason) : new ProcessException(reason)
+            }
             deleteTask(taskKey, task)
             return true
         }
@@ -132,7 +131,7 @@ class AzBatchTaskHandler extends TaskHandler {
     }
 
     private Boolean shouldDelete() {
-        executor.config.batch().deleteJobsOnCompletion
+        executor.azConfig.batch().deleteTasksOnCompletion
     }
 
     protected void deleteTask(AzTaskKey taskKey, TaskRun task) {
@@ -140,7 +139,7 @@ class AzBatchTaskHandler extends TaskHandler {
             return
 
         if( !task.isSuccess() && shouldDelete()==null ) {
-            // do not delete successfully executed pods for debugging purpose
+            // preserve failed tasks for debugging purposes, unless deletion is explicitly enabled
             return
         }
 
@@ -155,11 +154,11 @@ class AzBatchTaskHandler extends TaskHandler {
     /**
      * @return Retrieve the task status caching the result for at lest one second
      */
-    protected TaskState taskState0(AzTaskKey key) {
+    protected BatchTaskState taskState0(AzTaskKey key) {
         final now = System.currentTimeMillis()
         final delta =  now - timestamp;
         if( !taskState || delta >= 1_000) {
-            def newState = batchService.getTask(key).state()
+            def newState = batchService.getTask(key).state
             log.trace "[AZURE BATCH] Task: $key state=$newState"
             if( newState ) {
                 taskState = newState
@@ -174,13 +173,13 @@ class AzBatchTaskHandler extends TaskHandler {
             exitFile.text as Integer
         }
         catch( Exception e ) {
-            log.debug "[AZURE BATCH] Cannot read exitstatus for task: `$task.name` | ${e.message}"
+            log.debug "[AZURE BATCH] Cannot read exit status for task: `$task.name` | ${e.message}"
             return Integer.MAX_VALUE
         }
     }
 
     @Override
-    void kill() {
+    protected void killTask() {
         if( !taskKey )
             return
         batchService.terminate(taskKey)
@@ -205,4 +204,5 @@ class AzBatchTaskHandler extends TaskHandler {
         }
         return machineInfo
     }
+
 }

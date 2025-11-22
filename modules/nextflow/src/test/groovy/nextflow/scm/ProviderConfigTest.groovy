@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +17,7 @@
 package nextflow.scm
 
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  *
@@ -95,7 +95,7 @@ class ProviderConfigTest extends Specification {
         then:
         config.name == 'bitbucket'
         config.server == 'https://bitbucket.org'
-        config.endpoint == 'https://bitbucket.org'
+        config.endpoint == 'https://api.bitbucket.org'
         config.platform == 'bitbucket'
         config.domain == 'bitbucket.org'
     }
@@ -189,6 +189,16 @@ class ProviderConfigTest extends Specification {
         config.user == null
         config.password == null
         config.token == 'xyz'
+
+        when:
+        config = new ProviderConfig('gitea', [auth: 'xyz'])
+        then:
+        config.auth == null
+        config.user == null
+        config.password == null
+        config.token == 'xyz'
+        config.server == 'https://gitea.com'
+        config.endpoint == 'https://gitea.com/api/v1'
     }
 
     def 'should ending slash and add protocol prefix' () {
@@ -222,5 +232,25 @@ class ProviderConfigTest extends Specification {
         !result.find { it.name == 'xxxx' }
     }
 
+    @Unroll
+    def 'should resolve project name' () {
+        given:
+        def config = new ProviderConfig('github', [server: SERVER])
+
+        expect:
+        config.resolveProjectName(PATH) == EXPECTED
+
+        where:
+        PATH          | SERVER                  | EXPECTED
+        'a/b/c'       | null                    | 'a/b/c'
+        'a/b/c'       | 'http://dot.com'        | 'a/b/c'
+        'a/b/c'       | 'http://dot.com/'       | 'a/b/c'
+        'a/b/c'       | 'http://dot.com/a'      | 'b/c'
+        'a/b/c'       | 'http://dot.com/a/'     | 'b/c'
+        and:
+        'paolo0758/nf-azure-repo'                    | 'https://dev.azure.com' | 'paolo0758/nf-azure-repo/nf-azure-repo'
+        'paolo0758/nf-azure-repo/_git/nf-azure-repo' | 'https://dev.azure.com' | 'paolo0758/nf-azure-repo/nf-azure-repo'
+        'paolo0758/nf-azure-repo/_git/another-azure-repo' | 'https://dev.azure.com' | 'paolo0758/nf-azure-repo/another-azure-repo'
+    }
 
 }

@@ -1,7 +1,6 @@
 #!/usr/bin/env nextflow
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,41 +14,54 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-echo true
+workflow {
+    alpha()
+    beta()
+    delta()
+    gamma()
+}
 
 process alpha {
-    /
+    debug true
+
+    script:
+    """
     echo alpha memry: ${task.memory}
     echo alpha queue: ${task.queue}
-    /
+    """
 }
 
 process beta {
+    debug true
     label 'small'
 
-    /
+    script:
+    """
     echo beta memry: ${task.memory}
     echo beta queue: ${task.queue}
-    /
+    """
 }
 
 process delta {
+    debug true
     label 'big'
 
-    /
+    script:
+    """
     echo delta memry: ${task.memory}
     echo delta queue: ${task.queue}
-    /
+    """
 }
 
 process gamma {
+    debug true
     label 'big'
     memory 40.MB
     queue 'foo'
 
-    /
+    script:
+    """
     echo gamma memry: ${task.memory}
     echo gamma queue: ${task.queue}
-    /
+    """
 }

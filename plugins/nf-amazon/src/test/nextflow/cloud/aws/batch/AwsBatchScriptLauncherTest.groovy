@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +16,15 @@
 
 package nextflow.cloud.aws.batch
 
+import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Paths
 
 import nextflow.Session
+import nextflow.SysEnv
+import nextflow.cloud.aws.config.AwsConfig
+import nextflow.cloud.aws.util.S3PathFactory
+import nextflow.container.DockerConfig
 import nextflow.processor.TaskBean
 import nextflow.util.Duration
 import spock.lang.Specification
@@ -35,12 +39,12 @@ class AwsBatchScriptLauncherTest extends Specification {
     }
 
     def 'test bash wrapper with input'() {
-
         /*
          * simple bash run
          */
         when:
-        def opts = new AwsOptions(cliPath:'/conda/bin/aws', region: 'eu-west-1')
+        def cfg = new AwsConfig(region: 'eu-west-1', batch: [cliPath:'/conda/bin/aws', retryMode: 'built-in'])
+        def opts = new AwsOptions(awsConfig: cfg)
         def binding = new AwsBatchScriptLauncher([
                 name: 'Hello 1',
                 workDir: Paths.get('/work/dir'),
@@ -60,7 +64,7 @@ class AwsBatchScriptLauncherTest extends Specification {
         binding.helpers_script == '''\
                 # bash helper functions
                 nxf_cp_retry() {
-                    local max_attempts=1
+                    local max_attempts=5
                     local timeout=10
                     local attempt=0
                     local exitCode=0
@@ -94,7 +98,9 @@ class AwsBatchScriptLauncherTest extends Specification {
                     while ((i<${#cmd[@]})); do
                         local copy=()
                         for x in "${pid[@]}"; do
-                          [[ -e /proc/$x ]] && copy+=($x)
+                          # if the process exist, keep in the 'copy' array, otherwise wait on it to capture the exit code
+                          # see https://github.com/nextflow-io/nextflow/pull/4050
+                          [[ -e /proc/$x ]] && copy+=($x) || wait $x
                         done
                         pid=("${copy[@]}")
                 
@@ -147,7 +153,7 @@ class AwsBatchScriptLauncherTest extends Specification {
          */
         when:
         def bucket = Paths.get('/bucket/work')
-        def opts = new AwsOptions(remoteBinDir: '/bucket/bin')
+        def opts = new AwsOptions(remoteBinDir: '/bucket/bin', awsConfig: new AwsConfig([:]))
 
         def binding = new AwsBatchScriptLauncher([
                 name: 'Hello 1',
@@ -159,7 +165,7 @@ class AwsBatchScriptLauncherTest extends Specification {
         then:
         binding.task_env == '''\
                     aws s3 cp --recursive --only-show-errors s3://bucket/bin $PWD/nextflow-bin
-                    chmod +x $PWD/nextflow-bin/*
+                    chmod +x $PWD/nextflow-bin/* || true
                     export PATH=$PWD/nextflow-bin:$PATH
                     export FOO="xxx"
                     '''.stripIndent()
@@ -169,7 +175,7 @@ class AwsBatchScriptLauncherTest extends Specification {
 
         when:
         def bucket = Paths.get('/bucket/work')
-        def opts = new AwsOptions(remoteBinDir: '/bucket/bin')
+        def opts = new AwsOptions(remoteBinDir: '/bucket/bin', awsConfig: new AwsConfig([:]))
 
         def binding = new AwsBatchScriptLauncher([
                 name: 'Hello 1',
@@ -189,7 +195,7 @@ class AwsBatchScriptLauncherTest extends Specification {
          */
         when:
         def bucket = Paths.get('/bucket/work')
-        def opts = new AwsOptions()
+        def opts = new AwsOptions(awsConfig: new AwsConfig(batch: [retryMode: 'built-in']))
 
         def binding = new AwsBatchScriptLauncher([
                 name: 'Hello 1',
@@ -214,9 +220,9 @@ class AwsBatchScriptLauncherTest extends Specification {
                 rm -f .command.sh
                 rm -f .command.run
                 rm -f .command.in
-                downloads+=("nxf_s3_download s3://bucket/work/.command.sh .command.sh")
-                downloads+=("nxf_s3_download s3://bucket/work/.command.run .command.run")
-                downloads+=("nxf_s3_download s3://bucket/work/.command.in .command.in")
+                downloads+=("nxf_cp_retry nxf_s3_download s3://bucket/work/.command.sh .command.sh")
+                downloads+=("nxf_cp_retry nxf_s3_download s3://bucket/work/.command.run .command.run")
+                downloads+=("nxf_cp_retry nxf_s3_download s3://bucket/work/.command.in .command.in")
                 nxf_parallel "${downloads[@]}"
                 '''.stripIndent()
 
@@ -237,7 +243,7 @@ class AwsBatchScriptLauncherTest extends Specification {
         binding.helpers_script == '''\
                     # bash helper functions
                     nxf_cp_retry() {
-                        local max_attempts=1
+                        local max_attempts=5
                         local timeout=10
                         local attempt=0
                         local exitCode=0
@@ -271,7 +277,9 @@ class AwsBatchScriptLauncherTest extends Specification {
                         while ((i<${#cmd[@]})); do
                             local copy=()
                             for x in "${pid[@]}"; do
-                              [[ -e /proc/$x ]] && copy+=($x)
+                              # if the process exist, keep in the 'copy' array, otherwise wait on it to capture the exit code
+                              # see https://github.com/nextflow-io/nextflow/pull/4050
+                              [[ -e /proc/$x ]] && copy+=($x) || wait $x
                             done
                             pid=("${copy[@]}")
                     
@@ -329,7 +337,7 @@ class AwsBatchScriptLauncherTest extends Specification {
          * simple bash run
          */
         when:
-        def opts = new AwsOptions(cliPath:'/conda/bin/aws', region: 'eu-west-1')
+        def opts = new AwsOptions(awsConfig: new AwsConfig(aws:[batch:[cliPath:'/conda/bin/aws', region: 'eu-west-1']]))
         def bash = new AwsBatchScriptLauncher([
                 name: 'Hello 1',
                 workDir: folder,
@@ -344,6 +352,34 @@ class AwsBatchScriptLauncherTest extends Specification {
 
         folder.resolve('.command.run').text.contains('NXF_SCRATCH="$(set +u; nxf_mktemp /foo/bar/tmp)"')
 
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'test should disable scratch'() {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+
+        /*
+         * simple bash run
+         */
+        when:
+        def cfg = new AwsConfig(batch: [cliPath:'/conda/bin/aws'], region: 'eu-west-1')
+        def opts = new AwsOptions(awsConfig: cfg)
+        def bash = new AwsBatchScriptLauncher([
+                name: 'Hello 1',
+                workDir: folder,
+                script: 'echo Hello world!',
+                scratch: false
+        ] as TaskBean, opts)
+        bash.build()
+
+        then:
+        Files.exists(folder.resolve('.command.sh'))
+        Files.exists(folder.resolve('.command.run'))
+
+        folder.resolve('.command.run').text.contains("NXF_SCRATCH=''")
 
         cleanup:
         folder?.deleteDir()
@@ -356,9 +392,8 @@ class AwsBatchScriptLauncherTest extends Specification {
          */
         when:
         def bucket = Paths.get('/bucket/work')
-        def opts = new AwsOptions()
-        opts.maxTransferAttempts = 3
-        opts.delayBetweenAttempts = '9 sec' as Duration
+        def cfg = new AwsConfig(batch: [maxTransferAttempts:3, delayBetweenAttempts: '9 sec' as Duration, retryMode: 'built-in'])
+        def opts = new AwsOptions(awsConfig: cfg)
 
         def binding = new AwsBatchScriptLauncher([
                 name: 'Hello 1',
@@ -414,7 +449,9 @@ class AwsBatchScriptLauncherTest extends Specification {
                         while ((i<${#cmd[@]})); do
                             local copy=()
                             for x in "${pid[@]}"; do
-                              [[ -e /proc/$x ]] && copy+=($x)
+                              # if the process exist, keep in the 'copy' array, otherwise wait on it to capture the exit code
+                              # see https://github.com/nextflow-io/nextflow/pull/4050
+                              [[ -e /proc/$x ]] && copy+=($x) || wait $x
                             done
                             pid=("${copy[@]}")
                     
@@ -463,16 +500,13 @@ class AwsBatchScriptLauncherTest extends Specification {
     }
 
     def 'should aws cli native retry'() {
-
         /*
          * simple bash run
          */
         when:
         def bucket = Paths.get('/bucket/work')
-        def opts = new AwsOptions()
-        opts.maxTransferAttempts = 3
-        opts.retryMode = 'adaptive'
-        opts.delayBetweenAttempts = '9 sec' as Duration
+        def cfg = new AwsConfig(batch: [maxTransferAttempts: 3, retryMode: 'adaptive', delayBetweenAttempts: '9 sec' as Duration])
+        def opts = new AwsOptions(awsConfig: cfg)
 
         def binding = new AwsBatchScriptLauncher([
                 name: 'Hello 1',
@@ -528,7 +562,9 @@ class AwsBatchScriptLauncherTest extends Specification {
                         while ((i<${#cmd[@]})); do
                             local copy=()
                             for x in "${pid[@]}"; do
-                              [[ -e /proc/$x ]] && copy+=($x)
+                              # if the process exist, keep in the 'copy' array, otherwise wait on it to capture the exit code
+                              # see https://github.com/nextflow-io/nextflow/pull/4050
+                              [[ -e /proc/$x ]] && copy+=($x) || wait $x
                             done
                             pid=("${copy[@]}")
                     
@@ -582,20 +618,60 @@ class AwsBatchScriptLauncherTest extends Specification {
 
     def 'should include fix ownership command' () {
         given:
-        def opts = new AwsOptions(cliPath:'/conda/bin/aws', region: 'eu-west-1')
+        def cfg = new AwsConfig(batch: [cliPath:'/conda/bin/aws'], region: 'eu-west-1')
+        def opts = new AwsOptions(awsConfig: cfg)
         def builder = new AwsBatchScriptLauncher([
                 name: 'Hello 1',
                 workDir: Paths.get('/work/dir'),
                 script: 'echo Hello world!',
-                containerConfig: [fixOwnership: true],
+                containerConfig: new DockerConfig(fixOwnership: true),
                 input: 'Ciao ciao' ] as TaskBean, opts)
 
         when:
         def binding = builder.makeBinding()
         then:
-        builder.fixOwnership() >> true
-        binding.fix_ownership == '[ ${NXF_OWNER:=\'\'} ] && chown -fR --from root $NXF_OWNER /work/dir/{*,.*} || true'
+        binding.fix_ownership == '[ ${NXF_OWNER:=\'\'} ] && (shopt -s extglob; GLOBIGNORE=\'..\'; chown -fR --from root $NXF_OWNER /work/dir/{*,.*}) || true'
 
+    }
+
+    def 'should not create separate stage script' () {
+        given:
+        SysEnv.push([NXF_WRAPPER_STAGE_FILE_THRESHOLD: '100'])
+        and:
+        def workDir = S3PathFactory.parse('s3://my-bucket/work')
+        and:
+        def inputFiles = [
+                'sample_1.fq': Paths.get('/my-bucket/data/sample_1.fq'),
+                'sample_2.fq': Paths.get('/my-bucket/data/sample_2.fq'),
+        ]
+        def stageScript = '''\
+                # stage input files
+                downloads=(true)
+                rm -f sample_1.fq
+                rm -f sample_2.fq
+                rm -f .command.sh
+                downloads+=("nxf_s3_download s3://my-bucket/data/sample_1.fq sample_1.fq")
+                downloads+=("nxf_s3_download s3://my-bucket/data/sample_2.fq sample_2.fq")
+                downloads+=("nxf_s3_download s3://my-bucket/work/.command.sh .command.sh")
+                nxf_parallel "${downloads[@]}"
+                '''.stripIndent()
+        and:
+        def bean = [
+                workDir: workDir,
+                targetDir: workDir,
+                inputFiles: inputFiles,
+                script: 'echo Hello world!'
+        ] as TaskBean
+        def opts = new AwsOptions()
+        def builder = new AwsBatchScriptLauncher(bean, opts)
+
+        when:
+        def binding = builder.makeBinding()
+        then:
+        binding.stage_inputs == stageScript
+
+        cleanup:
+        SysEnv.pop()
     }
 
 }

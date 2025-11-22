@@ -18,7 +18,7 @@ package nextflow.dag
 import java.io.File
 
 import groovyx.gpars.dataflow.DataflowQueue
-import groovy.util.XmlSlurper
+import groovy.xml.XmlSlurper
 import spock.lang.Specification
 
 import nextflow.Session

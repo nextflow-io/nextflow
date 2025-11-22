@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +25,7 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
 
-    private boolean remove = true
+    private boolean remove
 
     private String registry
 
@@ -40,25 +39,35 @@ class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
 
     private String mountFlags0
 
-    PodmanBuilder( String name ) {
+    private String device
+
+    private String capAdd
+    
+    PodmanBuilder(String name, PodmanConfig config) {
         this.image = name
+
+        if( config.engineOptions )
+            addEngineOptions(config.engineOptions)
+
+        if( config.mountFlags )
+            this.mountFlags0 = config.mountFlags
+
+        this.remove = config.remove
+
+        if( config.runOptions )
+            addRunOptions(config.runOptions)
+
+        if( config.temp )
+            this.temp = config.temp
+    }
+
+    PodmanBuilder(String name) {
+        this(name, new PodmanConfig([:]))
     }
 
     @Override
     PodmanBuilder params( Map params ) {
         if( !params ) return this
-
-        if( params.containsKey('temp') )
-            this.temp = params.temp
-
-        if( params.containsKey('engineOptions') )
-            addEngineOptions(params.engineOptions.toString())
-
-        if( params.containsKey('runOptions') )
-            addRunOptions(params.runOptions.toString())
-
-        if ( params.containsKey('remove') )
-            this.remove = params.remove?.toString() == 'true'
 
         if( params.containsKey('entry') )
             this.entryPoint = params.entry
@@ -69,8 +78,14 @@ class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
         if( params.containsKey('readOnlyInputs') )
             this.readOnlyInputs = params.readOnlyInputs?.toString() == 'true'
 
-        if( params.containsKey('mountFlags') )
-            this.mountFlags0 = params.mountFlags
+        if( params.containsKey('privileged') )
+            this.privileged = params.privileged?.toString() == 'true'
+
+        if( params.containsKey('device') )
+            this.device = params.device
+
+        if( params.containsKey('capAdd') )
+            this.capAdd = params.capAdd
 
         return this
     }
@@ -100,7 +115,7 @@ class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
 
         // mount the input folders
         result << makeVolumes(mounts)
-        result << '-w "$PWD" '
+        result << '-w "$NXF_TASK_WORKDIR" '
 
         if( entryPoint )
             result << '--entrypoint ' << entryPoint << ' '
@@ -108,14 +123,26 @@ class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
         if( runOptions )
             result << runOptions.join(' ') << ' '
 
+        if( privileged )
+            result << '--privileged '
+
+        if( device )
+            result << '--device ' << device << ' '
+
+        if( capAdd )
+            result << '--cap-add ' << capAdd << ' '
+
         if( cpus ) {
-            result << "--cpus ${String.format(Locale.ROOT, "%.1f", cpus)} "
+            result << "--cpu-shares ${cpus * 1024} "
         }
 
         if( memory ) {
             result << "--memory ${memory} "
         }
 
+        if( platform ) {
+            result << "--platform ${platform} "
+        }
 
         // the name is after the user option so it has precedence over any options provided by the user
         if ( name )
@@ -136,9 +163,9 @@ class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
         }
 
         if( kill )  {
-            killCommand = 'podman kill '
+            killCommand = 'podman stop '
             // if `kill` is a string it is interpreted as a the kill signal
-            if( kill instanceof String ) killCommand += "-s $kill "
+            if( kill instanceof String ) killCommand = "podman kill -s $kill "
             killCommand += name
         }
 

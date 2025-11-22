@@ -1,5 +1,6 @@
 package nextflow.executor
 
+import groovy.transform.CompileStatic
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.trace.TraceRecord
@@ -10,6 +11,7 @@ import nextflow.trace.TraceRecord
  * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
 class StoredTaskHandler extends TaskHandler {
 
     StoredTaskHandler(TaskRun task) {
@@ -27,7 +29,7 @@ class StoredTaskHandler extends TaskHandler {
     }
 
     @Override
-    void kill() {
+    protected void killTask() {
         throw new UnsupportedOperationException()
     }
 

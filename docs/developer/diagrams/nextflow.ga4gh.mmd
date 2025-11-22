@@ -1,0 +1,14 @@
+classDiagram
+    %%
+    %% nextflow.ga4gh
+    %%
+    Executor <|-- TesExecutor
+    %% TaskHandler <|-- TesTaskHandler
+    %% BashWrapperBuilder <|-- TesBashBuilder
+
+    TesExecutor --> TaskPollingMonitor : init
+    TesExecutor --> TesTaskHandler : submit
+    TesTaskHandler --> TesBashBuilder : submit
+
+    %% ScriptFileCopyStrategy <|-- TesFileCopyStrategy
+    TesBashBuilder --* TesFileCopyStrategy

@@ -1,119 +1,84 @@
+/*
+ * Copyright 2013-2024, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package nextflow.trace
 
-import java.nio.file.Path
-
+import groovy.transform.CompileStatic
 import nextflow.Session
+import nextflow.trace.config.DagConfig
+import nextflow.trace.config.ReportConfig
+import nextflow.trace.config.TimelineConfig
+import nextflow.trace.config.TraceConfig
 
 /**
  * Creates Nextflow observes object
  * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class DefaultObserverFactory implements TraceObserverFactory {
+@CompileStatic
+class DefaultObserverFactory implements TraceObserverFactoryV2 {
 
-    private Map config
     private Session session
 
     @Override
-    Collection<TraceObserver> create(Session session) {
+    Collection<TraceObserverV2> create(Session session) {
         this.session = session
-        this.config = session.config
 
-        final result = new ArrayList(10)
-        createTraceFileObserver(result)
+        final result = new ArrayList<TraceObserverV2>(5)
+        createAnsiLogObserver(result)
+        createGraphObserver(result)
         createReportObserver(result)
         createTimelineObserver(result)
-        createDagObserver(result)
-        createWebLogObserver(result)
-        createAnsiLogObserver(result)
+        createTraceFileObserver(result)
         return result
     }
 
-    protected void createAnsiLogObserver(Collection<TraceObserver> result) {
+    protected void createAnsiLogObserver(Collection<TraceObserverV2> result) {
         if( session.ansiLog ) {
             session.ansiLogObserver = new AnsiLogObserver()
             result << session.ansiLogObserver
         }
     }
 
-    /**
-     * Create workflow message observer
-     * @param result
-     */
-    protected void createWebLogObserver(Collection<TraceObserver> result) {
-        Boolean isEnabled = config.navigate('weblog.enabled') as Boolean
-        String url = config.navigate('weblog.url') as String
-        if ( isEnabled ) {
-            if ( !url ) url = WebLogObserver.DEF_URL
-            def observer = new WebLogObserver(url)
-            result << observer
-        }
+    protected void createReportObserver(Collection<TraceObserverV2> result) {
+        final opts = session.config.report as Map ?: Collections.emptyMap()
+        final config = new ReportConfig(opts)
+        if( config.enabled )
+            result << new ReportObserver(config)
     }
 
-    /**
-     * Create workflow report file observer
-     */
-    protected void createReportObserver(Collection<TraceObserver> result) {
-        Boolean isEnabled = config.navigate('report.enabled') as Boolean
-        if( !isEnabled )
-            return
-
-        String fileName = config.navigate('report.file')
-        def maxTasks = config.navigate('report.maxTasks', ReportObserver.DEF_MAX_TASKS) as int
-        if( !fileName ) fileName = ReportObserver.DEF_FILE_NAME
-        def report = (fileName as Path).complete()
-        def observer = new ReportObserver(report)
-        observer.maxTasks = maxTasks
-        config.navigate('report.overwrite') { observer.overwrite = true }
-        result << observer
+    protected void createTimelineObserver(Collection<TraceObserverV2> result) {
+        final opts = session.config.timeline as Map ?: Collections.emptyMap()
+        final config = new TimelineConfig(opts)
+        if( config.enabled )
+            result << new TimelineObserver(config)
     }
 
-    /**
-     * Create timeline report file observer
-     */
-    protected void createTimelineObserver(Collection<TraceObserver> result) {
-        Boolean isEnabled = config.navigate('timeline.enabled') as Boolean
-        if( !isEnabled )
-            return
-
-        String fileName = config.navigate('timeline.file')
-        if( !fileName ) fileName = TimelineObserver.DEF_FILE_NAME
-        def traceFile = (fileName as Path).complete()
-        def observer = new TimelineObserver(traceFile)
-        config.navigate('timeline.overwrite')  { observer.overwrite = it }
-        result << observer
+    protected void createGraphObserver(Collection<TraceObserverV2> result) {
+        final opts = session.config.dag as Map ?: Collections.emptyMap()
+        final config = new DagConfig(opts)
+        if( config.enabled )
+            result << new GraphObserver(config)
     }
 
-    protected void createDagObserver(Collection<TraceObserver> result) {
-        Boolean isEnabled = config.navigate('dag.enabled') as Boolean
-        if( !isEnabled )
-            return
-
-        String fileName = config.navigate('dag.file')
-        if( !fileName ) fileName = GraphObserver.DEF_FILE_NAME
-        def traceFile = (fileName as Path).complete()
-        def observer = new GraphObserver(traceFile)
-        config.navigate('dag.overwrite')  { observer.overwrite = it }
-        result << observer
-    }
-
-    /*
-     * create the execution trace observer
-     */
-    protected void createTraceFileObserver(Collection<TraceObserver> result) {
-        Boolean isEnabled = config.navigate('trace.enabled') as Boolean
-        if( !isEnabled )
-            return
-
-        String fileName = config.navigate('trace.file')
-        if( !fileName ) fileName = TraceFileObserver.DEF_FILE_NAME
-        def traceFile = (fileName as Path).complete()
-        def observer = new TraceFileObserver(traceFile)
-        config.navigate('trace.raw') { it -> observer.useRawNumbers(it == true) }
-        config.navigate('trace.sep') { observer.separator = it }
-        config.navigate('trace.fields') { observer.setFieldsAndFormats(it) }
-        config.navigate('trace.overwrite') { observer.overwrite = it }
-        result << observer
+    protected void createTraceFileObserver(Collection<TraceObserverV2> result) {
+        final opts = session.config.trace as Map ?: Collections.emptyMap()
+        final config = new TraceConfig(opts)
+        if( config.enabled )
+            result << new TraceFileObserver(config)
     }
 
 }

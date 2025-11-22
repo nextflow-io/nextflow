@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +20,11 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.regex.Pattern
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.fusion.FusionHelper
+import nextflow.processor.TaskArrayRun
+import nextflow.processor.TaskConfig
 import nextflow.processor.TaskRun
 /**
  * Processor for LSF resource manager
@@ -34,7 +37,8 @@ import nextflow.processor.TaskRun
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-class LsfExecutor extends AbstractGridExecutor {
+@CompileStatic
+class LsfExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
 
     static private Pattern KEY_REGEX = ~/^[A-Z_0-9]+=.*/
 
@@ -66,7 +70,7 @@ class LsfExecutor extends AbstractGridExecutor {
      */
     protected List<String> getDirectives(TaskRun task, List<String> result) {
 
-        result << '-o' << task.workDir.resolve(TaskRun.CMD_LOG).toString()
+        result << '-o' << (task.isArray() ?  '/dev/null' : task.workDir.resolve(TaskRun.CMD_LOG).toString())
 
         // add other parameters (if any)
         if( task.config.queue ) {
@@ -74,12 +78,12 @@ class LsfExecutor extends AbstractGridExecutor {
         }
 
         //number of cpus for multiprocessing/multi-threading
-        if( task.config.cpus > 1 ) {
-            result << "-n" << task.config.cpus.toString()
+        if( task.config.getCpus() > 1 ) {
+            result << "-n" << task.config.getCpus().toString()
             result << "-R" << "span[hosts=1]"
         }
 
-        if( task.config.time ) {
+        if( task.config.getTime() ) {
             result << '-W' << task.config.getTime().format('HH:mm')
         }
 
@@ -89,8 +93,8 @@ class LsfExecutor extends AbstractGridExecutor {
             // depending a system configuration setting -- see https://www.ibm.com/support/knowledgecenter/SSETD4_9.1.3/lsf_config_ref/lsf.conf.lsb_job_memlimit.5.dita
             // When per-process is used (default) the amount of requested memory
             // is divided by the number of used cpus (processes)
-            def mem1 = ( task.config.cpus > 1 && !perJobMemLimit ) ? mem.div(task.config.cpus as int) : mem
-            def mem2 = ( task.config.cpus > 1 && perTaskReserve ) ? mem.div(task.config.cpus as int) : mem
+            def mem1 = ( task.config.getCpus() > 1 && !perJobMemLimit ) ? mem.div(task.config.getCpus() as int) : mem
+            def mem2 = ( task.config.getCpus() > 1 && perTaskReserve ) ? mem.div(task.config.getCpus() as int) : mem
 
             result << '-M' << String.valueOf(mem1.toUnit(memUnit))
             result << '-R' << "select[mem>=${mem.toUnit(memUnit)}] rusage[mem=${mem2.toUnit(usageUnit)}]".toString()
@@ -102,14 +106,49 @@ class LsfExecutor extends AbstractGridExecutor {
         }
 
         // -- the job name
-        result << '-J' << getJobNameFor(task)
+        if( task instanceof TaskArrayRun ) {
+            final arraySize = task.getArraySize()
+            result << '-J' << "${getJobNameFor(task)}[1-${arraySize}]".toString()
+        }
+        else {
+            result << '-J' << getJobNameFor(task)
+        }
 
         // -- at the end append the command script wrapped file name
-        result.addAll( task.config.getClusterOptionsAsList() )
+        addClusterOptionsDirective(task.config, result)
+
+        // add account from config
+        final account = config.getExecConfigProp(name, 'account', null) as String
+        if( account ) {
+            result << '-G' << account
+        }
 
         return result
     }
 
+    @Override
+    protected void addClusterOptionsDirective(TaskConfig config, List<String> result) {
+        final opts = config.getClusterOptions()
+        // when cluster options are defined as a list rely on default behavior
+        if( opts instanceof Collection ) {
+            super.addClusterOptionsDirective(config,result)
+        }
+        // when cluster options are a string value use the `getClusterOptionsAsList` for backward compatibility
+        else if( opts instanceof CharSequence ) {
+            result.addAll( config.getClusterOptionsAsList() )
+        }
+        else if( opts != null ) {
+            throw new IllegalArgumentException("Unexpected value for clusterOptions process directive - offending value: $opts")
+        }
+    }
+
+    @Override
+    String sanitizeJobName( String name ) {
+        // LSF does not allow square brackets in job names except for job arrays
+        name = name.replace('[','').replace(']','')
+        // Old LSF versions do not allow job names longer than 511 chars
+        name.size()>511 ? name.substring(0,511) : name
+    }
 
     /**
      * The command line to submit this job
@@ -128,7 +167,6 @@ class LsfExecutor extends AbstractGridExecutor {
     protected boolean pipeLauncherScript() { true }
 
     protected String getHeaderToken() { '#BSUB' }
-
 
     /**
      * Parse the string returned by the {@code bsub} command and extract the job ID string
@@ -155,7 +193,7 @@ class LsfExecutor extends AbstractGridExecutor {
 
     @Override
     protected List<String> queueStatusCommand( queue ) {
-        // note: use the `-w` option to avoid that the printed jobid maybe truncated when exceed 7 digits
+        // note: use the `-w` option to avoid that the printed jobid may be truncated when exceed 7 digits
         // see https://www.ibm.com/support/knowledgecenter/en/SSETD4_9.1.3/lsf_config_ref/lsf.conf.lsb_jobid_disp_length.5.html
         final result = ['bjobs', '-w']
 
@@ -166,7 +204,7 @@ class LsfExecutor extends AbstractGridExecutor {
     }
 
     // https://www.ibm.com/support/knowledgecenter/en/SSETD4_9.1.3/lsf_command_ref/bjobs.zz4category.description.1.html
-    private static Map DECODE_STATUS = [
+    private static Map<String,QueueStatus> DECODE_STATUS = [
             'PEND': QueueStatus.PENDING,
             'RUN': QueueStatus.RUNNING,
             'PSUSP': QueueStatus.HOLD,
@@ -181,7 +219,7 @@ class LsfExecutor extends AbstractGridExecutor {
     @Override
     protected Map<String, QueueStatus> parseQueueStatus(String text) {
 
-        def result = [:]
+        final Map<String, QueueStatus> result = new LinkedHashMap<>()
         def col1 = -1
         def col2 = -1
         for( String line : text.readLines() ) {
@@ -194,8 +232,8 @@ class LsfExecutor extends AbstractGridExecutor {
                 continue
             }
 
-            def jobId = line.tokenize(' ')[col1]
-            def status = line.tokenize(' ')[col2]
+            final jobId = line.tokenize(' ')[col1]
+            final status = line.tokenize(' ')[col2]
             if( jobId )
                 result[jobId] = DECODE_STATUS.get(status)
         }
@@ -223,7 +261,7 @@ class LsfExecutor extends AbstractGridExecutor {
         return needWrap ? "\"$str\"" : str
     }
 
-    protected getEnv0(String name) {
+    protected String getEnv0(String name) {
         System.getenv(name)
     }
 
@@ -233,23 +271,25 @@ class LsfExecutor extends AbstractGridExecutor {
      * -- see https://www.ibm.com/support/knowledgecenter/en/SSETD4_9.1.3/lsf_config_ref/lsf.conf.lsf_unit_for_limits.5.html
      */
     protected Map<String,String> parseLsfConfig() {
-        def result = new LinkedHashMap<>(20)
+        final Map<String,String> result = new LinkedHashMap<>(20)
 
         // check environment variable exists
         def envDir = getEnv0('LSF_ENVDIR')
-        if ( !envDir )
-            return result
-        def envFile = Paths.get(envDir).resolve("lsf.conf")
-        if ( !envFile.exists() )
+        if( !envDir )
             return result
 
-        for (def line : envFile.readLines() ){
+        def envFile = Paths.get(envDir).resolve("lsf.conf")
+        if( !envFile.exists() )
+            return result
+
+        for( def line : envFile.readLines() ) {
             if( !KEY_REGEX.matcher(line).matches() )
                 continue
             def entry = line.tokenize('=')
             if( entry.size() != 2 )
                 continue
-            def (String key,String value) = entry
+            def key = entry[0]
+            def value = entry[1]
             def matcher = QUOTED_STRING_REGEX.matcher(value)
             if( matcher.matches() ) {
                 value = matcher.group(1)
@@ -284,16 +324,38 @@ class LsfExecutor extends AbstractGridExecutor {
             perJobMemLimit = str == 'Y'
             log.debug "[LSF] Detected lsf.conf LSB_JOB_MEMLIMIT=$str ($perJobMemLimit)"
         }
-        else {
-            perJobMemLimit = session.getExecConfigProp(name, 'perJobMemLimit', false)
-        }
+
+        perJobMemLimit = config.getExecConfigProp(name, 'perJobMemLimit', perJobMemLimit)
 
         // per task reserve https://github.com/nextflow-io/nextflow/issues/1071#issuecomment-481412239
         if( conf.get('RESOURCE_RESERVE_PER_TASK') ) {
             final str = conf.get('RESOURCE_RESERVE_PER_TASK').toUpperCase()
             perTaskReserve = str == 'Y'
-            log.debug "[LSF] Detected lsf.conf RESOURCE_RESERVE_PER_TASK=$str ($perJobMemLimit)"
+            log.debug "[LSF] Detected lsf.conf RESOURCE_RESERVE_PER_TASK=$str ($perTaskReserve)"
         }
+
+        perTaskReserve = config.getExecConfigProp(name, 'perTaskReserve', perTaskReserve)
+    }
+
+    @Override
+    boolean isFusionEnabled() {
+        return FusionHelper.isFusionEnabled(session)
+    }
+
+    @Override
+    String getArrayIndexName() {
+        return 'LSB_JOBINDEX'
+    }
+
+    @Override
+    int getArrayIndexStart() {
+        return 1
+    }
+
+    @Override
+    String getArrayTaskId(String jobId, int index) {
+        assert jobId, "Missing 'jobId' argument"
+        return "${jobId}[${index + 1}]"
     }
 
 }

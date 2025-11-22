@@ -1,7 +1,6 @@
 #!/usr/bin/env nextflow
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +17,9 @@
 
 process foo {
   output:
-  file x into foo_ch
+  file 'x'
 
+  script:
   '''
   echo -n Hello > x
   '''
@@ -27,12 +27,18 @@ process foo {
 
 process bar {
   input:
-  file x from foo_ch
-  val y from (1,2,3)
+  file x
+  val y
 
+  script:
   """
   cat $x
   echo $y
   """
 
+}
+
+workflow {
+  foo()
+  bar(foo.out, channel.of(1,2,3))
 }

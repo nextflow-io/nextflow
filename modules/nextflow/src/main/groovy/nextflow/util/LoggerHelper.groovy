@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,9 +20,11 @@ import static nextflow.Const.*
 
 import java.lang.reflect.Field
 import java.nio.file.DirectoryNotEmptyException
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.regex.Pattern
 
 import ch.qos.logback.classic.Level
@@ -38,13 +39,16 @@ import ch.qos.logback.core.ConsoleAppender
 import ch.qos.logback.core.CoreConstants
 import ch.qos.logback.core.FileAppender
 import ch.qos.logback.core.LayoutBase
+import ch.qos.logback.core.encoder.Encoder
 import ch.qos.logback.core.encoder.LayoutWrappingEncoder
 import ch.qos.logback.core.filter.Filter
 import ch.qos.logback.core.joran.spi.NoAutoStart
 import ch.qos.logback.core.rolling.FixedWindowRollingPolicy
 import ch.qos.logback.core.rolling.RollingFileAppender
 import ch.qos.logback.core.rolling.TriggeringPolicyBase
+import ch.qos.logback.core.spi.FilterAttachable
 import ch.qos.logback.core.spi.FilterReply
+import ch.qos.logback.core.spi.LifeCycle
 import ch.qos.logback.core.util.FileSize
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
@@ -55,6 +59,7 @@ import nextflow.Session
 import nextflow.cli.CliOptions
 import nextflow.cli.Launcher
 import nextflow.exception.AbortOperationException
+import nextflow.exception.PlainExceptionMessage
 import nextflow.exception.ProcessException
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.OpCall
@@ -67,7 +72,7 @@ import nextflow.script.FunctionDef
 import nextflow.script.ScriptMeta
 import nextflow.script.WorkflowBinding
 import nextflow.script.WorkflowDef
-import org.apache.commons.lang.exception.ExceptionUtils
+import org.apache.commons.lang3.exception.ExceptionUtils
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.Marker
@@ -80,6 +85,10 @@ import org.slf4j.MarkerFactory
 @CompileStatic
 class LoggerHelper {
 
+    static volatile boolean aborted
+
+    static final AtomicInteger errCount = new AtomicInteger()
+
     static private Logger log = LoggerFactory.getLogger(LoggerHelper)
 
     static public Marker STICKY = MarkerFactory.getMarker('sticky')
@@ -87,6 +96,8 @@ class LoggerHelper {
     static private String STARTUP_ERROR = 'startup failed:\n'
 
     static private String logFileName
+
+    static private LoggerHelper INSTANCE
 
     private CliOptions opts
 
@@ -152,7 +163,11 @@ class LoggerHelper {
         return false
     }
 
-    void setup() {
+    private void setQuiet0(boolean quiet) {
+        packages[MAIN_PACKAGE] = quiet ? Level.ERROR : Level.INFO
+    }
+
+    LoggerHelper setup() {
         logFileName = opts.logFile ?: System.getenv('NXF_LOG_FILE')
 
         final boolean quiet = opts.quiet
@@ -164,11 +179,11 @@ class LoggerHelper {
         root.detachAndStopAllAppenders()
 
         // -- define the console appender
-        packages[MAIN_PACKAGE] = quiet ? Level.WARN : Level.INFO
+        setQuiet0(quiet)
 
         // -- add the S3 uploader by default
-        if( !containsClassName(debugConf,traceConf, 'com.upplication.s3fs') )
-            debugConf << S3_UPLOADER_CLASS
+        if( !containsClassName(debugConf,traceConf, 'nextflow.cloud.aws.nio') )
+            debugConf << 'nextflow.cloud.aws.nio'
         if( !containsClassName(debugConf,traceConf, 'io.seqera') )
             debugConf << 'io.seqera'
 
@@ -198,13 +213,18 @@ class LoggerHelper {
             root.addAppender(syslogAppender)
 
         // -- main package logger
-        def mainLevel = packages[MAIN_PACKAGE] == Level.TRACE ? Level.TRACE : Level.DEBUG
-        def logger = createLogger(MAIN_PACKAGE, mainLevel)
+        final mainLevel = packages[MAIN_PACKAGE] == Level.TRACE ? Level.TRACE : Level.DEBUG
+        final logger = createLogger(MAIN_PACKAGE, mainLevel)
 
         // -- set AWS lib level to WARN to reduce noise in the log file
-        final AWS = 'com.amazonaws'
+        final AWS = 'software.amazon'
         if( !debugConf.contains(AWS) && !traceConf.contains(AWS)) {
             createLogger(AWS, Level.WARN)
+        }
+        // -- patch jgit warn
+        final JGIT = 'org.eclipse.jgit.util.FS'
+        if( !debugConf.contains(JGIT) && !traceConf.contains(JGIT)) {
+            createLogger(JGIT, Level.ERROR)
         }
 
         // -- debug packages specified by the user
@@ -218,6 +238,8 @@ class LoggerHelper {
 
         if(!consoleAppender)
             logger.debug "Console appender: disabled"
+
+        return this
     }
 
     protected Logger createLogger(String clazz, Level level ) {
@@ -236,7 +258,9 @@ class LoggerHelper {
 
     protected Appender createConsoleAppender() {
 
-        final Appender result = daemon && opts.isBackground() ? null : ( opts.ansiLog ? new CaptureAppender() : new ConsoleAppender())
+        final Appender<ILoggingEvent> result = daemon && opts.isBackground()
+                ? (Appender<ILoggingEvent>) null
+                : (opts.ansiLog ? new CaptureAppender() : new ConsoleAppender<ILoggingEvent>())
         if( result )  {
             final filter = new ConsoleLoggerFilter( packages )
             filter.setContext(loggerContext)
@@ -245,8 +269,8 @@ class LoggerHelper {
             result.setContext(loggerContext)
             if( result instanceof ConsoleAppender )
                 result.setEncoder( new LayoutWrappingEncoder( layout: new PrettyConsoleLayout() ) )
-            result.addFilter(filter)
-            result.start()
+            (result as FilterAttachable).addFilter(filter)
+            (result as LifeCycle).start()
         }
 
         return result
@@ -273,13 +297,13 @@ class LoggerHelper {
         return result
     }
 
-    protected RollingFileAppender createRollingAppender() {
+    protected RollingFileAppender<ILoggingEvent> createRollingAppender() {
 
-        RollingFileAppender result = logFileName ? new RollingFileAppender() : null
+        RollingFileAppender<ILoggingEvent> result = logFileName ? new RollingFileAppender<ILoggingEvent>() : null
         if( result ) {
             result.file = logFileName
 
-            def rollingPolicy = new  FixedWindowRollingPolicy( )
+            def rollingPolicy = new FixedWindowRollingPolicy( )
             rollingPolicy.fileNamePattern = "${logFileName}.%i"
             rollingPolicy.setContext(loggerContext)
             rollingPolicy.setParent(result)
@@ -288,9 +312,9 @@ class LoggerHelper {
             rollingPolicy.start()
 
             result.rollingPolicy = rollingPolicy
-            result.encoder = createEncoder()
+            result.encoder = createEncoder() as Encoder
             result.setContext(loggerContext)
-            result.setTriggeringPolicy(new RollOnStartupPolicy())
+            result.setTriggeringPolicy(new RollOnStartupPolicy<ILoggingEvent>())
             result.triggeringPolicy.start()
             result.start()
         }
@@ -298,12 +322,12 @@ class LoggerHelper {
         return result
     }
 
-    protected FileAppender createFileAppender() {
+    protected FileAppender<ILoggingEvent> createFileAppender() {
 
-        FileAppender result = logFileName ? new FileAppender() : null
+        FileAppender<ILoggingEvent> result = logFileName ? new FileAppender<ILoggingEvent>() : null
         if( result ) {
             result.file = logFileName
-            result.encoder = createEncoder()
+            result.encoder = createEncoder() as Encoder
             result.setContext(loggerContext)
             result.bufferSize = FileSize.valueOf('64KB')
             result.start()
@@ -328,25 +352,53 @@ class LoggerHelper {
      *     instead in the file are saved the DEBUG level messages.
      *
      * @param logFileName The file where save the application log
-     * @param quiet When {@code true} only Warning and Error messages are visualized to teh console
+     * @param quiet When {@code true} only Warning and Error messages are visualized to the console
      * @param debugConf The list of packages for which use a Debug logging level
      * @param traceConf The list of packages for which use a Trace logging level
      */
 
     static void configureLogger( Launcher launcher ) {
-        new LoggerHelper(launcher.options)
+        INSTANCE = new LoggerHelper(launcher.options)
                 .setDaemon(launcher.isDaemon())
                 .setRolling(true)
                 .setSyslog(launcher.options.syslog)
                 .setup()
     }
 
-    static void configureLogger( final CliOptions opts, boolean daemon = false ) {
-        new LoggerHelper(opts)
-                .setDaemon(daemon)
-                .setRolling(true)
-                .setSyslog(opts.syslog)
-                .setup()
+    static setQuiet(boolean quiet) {
+        if( INSTANCE==null )
+            throw new IllegalStateException("Method 'LoggerHelper.setQuiet' must be called after the invocation of 'LoggerHelper.configureLogger'")
+        INSTANCE.setQuiet0(quiet)
+    }
+
+    /**
+     * Setup a minimal logger that redirect log events to stderr only used during app bootstrap
+     */
+    static void bootstrapLogger() {
+        LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
+
+        // Reset the logger context (this clears any existing loggers)
+        context.reset();
+
+        // Create a console appender that writes to stderr
+        final consoleAppender = new ConsoleAppender<ILoggingEvent>();
+        consoleAppender.setContext(context);
+        consoleAppender.setTarget("System.err");
+
+        // Set a simple pattern for the log output
+        final encoder = new PatternLayoutEncoder();
+        encoder.setContext(context);
+        encoder.setPattern("%d{HH:mm:ss.SSS} %-5level - %msg%n");
+        encoder.start();
+
+        // Attach the encoder to the appender
+        consoleAppender.setEncoder(encoder);
+        consoleAppender.start();
+
+        // Get the root logger and set its level to DEBUG
+        Logger rootLogger = context.getLogger(Logger.ROOT_LOGGER_NAME);
+        rootLogger.addAppender(consoleAppender)
+        rootLogger.setLevel(Level.DEBUG)
     }
 
     /*
@@ -370,6 +422,10 @@ class LoggerHelper {
             if (!isStarted()) {
                 return FilterReply.NEUTRAL;
             }
+
+            // print to console only the very first error log and ignore the others
+            if( aborted && event.level==Level.ERROR && errCount.getAndIncrement()>0 )
+                return FilterReply.DENY;
 
             def logger = event.getLoggerName()
             def level = event.getLevel()
@@ -434,7 +490,7 @@ class LoggerHelper {
     static protected void appendFormattedMessage( StringBuilder buffer, ILoggingEvent event, Throwable fail, Session session) {
         final className = session?.script?.getClass()?.getName()
         final message = event.getFormattedMessage()
-        final quiet = fail instanceof AbortOperationException || fail instanceof ProcessException || ScriptRuntimeException
+        final quiet = fail instanceof AbortOperationException || fail instanceof ProcessException || fail instanceof ScriptRuntimeException
         final normalize = { String str -> str ?. replace("${className}.", '')}
         List error = fail ? findErrorLine(fail) : null
 
@@ -455,7 +511,10 @@ class LoggerHelper {
             buffer.append("No such field: ${normalize(fail.message)}")
         }
         else if( fail instanceof NoSuchFileException ) {
-            buffer.append("No such file: ${normalize(fail.message)}")
+            buffer.append("No such file or directory: ${normalize(fail.message)}")
+        }
+        else if( fail instanceof FileAlreadyExistsException ) {
+            buffer.append("File or directory already exists: $fail.message")
         }
         else if( fail instanceof ClassNotFoundException ) {
             buffer.append("Class not found: ${normalize(fail.message)}")
@@ -481,17 +540,23 @@ class LoggerHelper {
         else {
             buffer.append("Unexpected error")
         }
+        if( fail instanceof PlainExceptionMessage )
+            return
+
         buffer.append(CoreConstants.LINE_SEPARATOR)
         buffer.append(CoreConstants.LINE_SEPARATOR)
 
         // extra formatting
         if( error ) {
-            buffer.append(" -- Check script '${error[0]}' at line: ${error[1]} or see '${logFileName}' file for more details")
+            buffer.append(errorDetailsMsg(error))
         }
         else if( logFileName && !quiet ) {
             buffer.append(" -- Check '${logFileName}' file for details")
         }
+    }
 
+    static private String errorDetailsMsg(List<String> error) {
+        return " -- Check script '${error[0]}' at line: ${error[1]} or see '${logFileName}' file for more details"
     }
 
     @PackageScope
@@ -552,6 +617,17 @@ class LoggerHelper {
         return msg
     }
 
+    static String formatErrMessage(String message, Throwable error) {
+        try {
+            final line = findErrorLine(error)
+            return line ? message + errorDetailsMsg(line) : message
+        }
+        catch (Throwable t) {
+            log.debug "Unable to determine script line for error: $error", t
+            return message
+        }
+    }
+
     static List<String> findErrorLine( Throwable e ) {
         return findErrorLine(e, ScriptMeta.allScriptNames())
     }
@@ -572,12 +648,12 @@ class LoggerHelper {
             return ExceptionUtils.getStackTrace(e).split('\n')
         }
         catch( Throwable t ) {
-            log.warn "Oops .. something wrong formatting the error stack trace | ${t.message ?: t}", e
+            log.warn "Something went wrong while formatting the error stack trace | ${t.message ?: t}", e
             return Collections.emptyList() as String[]
         }
     }
 
-    static private Pattern ERR_LINE_REGEX = ~/\((Script_[0-9a-f]{8}):(\d*)\)$/
+    static private Pattern ERR_LINE_REGEX = ~/\((Script_[0-9a-f]{16}):(\d*)\)$/
 
     @PackageScope
     static List<String> getErrorLine( String str, Map<String,Path> allNames ) {
@@ -663,10 +739,10 @@ class LoggerHelper {
     static private char OPEN_CH = '[' as char
     static private char CLOSE_CH = ']' as char
     static private char SLASH_CH = '/' as char
-    static private int ZERO_CH = '0' as char
-    static private int NINE_CH = '9' as char
-    static private int ALPHA_CH = 'a' as char
-    static private int EFFE_CH = 'f' as char
+    static private char ZERO_CH = '0' as char
+    static private char NINE_CH = '9' as char
+    static private char ALPHA_CH = 'a' as char
+    static private char EFFE_CH = 'f' as char
 
     static boolean isHashLogPrefix(String str) {
         if( str?.length()<10 )

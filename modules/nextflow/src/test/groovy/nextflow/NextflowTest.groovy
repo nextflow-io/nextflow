@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +15,7 @@
  */
 
 package nextflow
+
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.Paths
@@ -35,16 +35,23 @@ class NextflowTest extends Specification {
         System.getenv('CI_GROOVY_VERSION') == GroovySystem.getVersion()
     }
 
-    def testFile() {
+    def 'should get an environment variable' () {
+        given:
+        SysEnv.push(FOO: 'FOO_VALUE')
 
+        expect:
+        Nextflow.env('FOO') == 'FOO_VALUE'
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def testFile() {
         expect:
         Nextflow.file('file.log').toFile() == new File('file.log').canonicalFile
         Nextflow.file('relative/file.test').toFile() == new File( new File('.').canonicalFile, 'relative/file.test')
         Nextflow.file('/user/home/file.log').toFile() == new File('/user/home/file.log')
-
     }
-
-
 
     def testFile2() {
 
@@ -59,19 +66,49 @@ class NextflowTest extends Specification {
 
     }
 
+    def 'should resolve rel paths against env base' () {
+        given:
+        SysEnv.push(NXF_FILE_ROOT: '/some/base/dir')
+
+        expect:
+        Nextflow.file( '/abs/path/file.txt' ) == Paths.get('/abs/path/file.txt')
+        and:
+        Nextflow.file( 'file.txt' ) == Paths.get('/some/base/dir/file.txt')
+
+        cleanup:
+        SysEnv.pop()
+    }
+
     def testFile3() {
         Exception e
         when:
         Nextflow.file(null)
         then:
         e = thrown(IllegalArgumentException)
-        e.message == 'Argument of `file` function cannot be null'
+        e.message == 'Argument of `file()` function cannot be null'
 
         when:
         Nextflow.file('')
         then:
         e = thrown(IllegalArgumentException)
-        e.message == 'Argument of `file` function cannot be empty'
+        e.message == 'Argument of `file()` function cannot be empty'
+    }
+
+    def 'should return http path' () {
+
+        when:
+        def uri = (URI) Nextflow.file(LOCATION).toUri()
+        then:
+        uri.scheme == SCHEME
+        uri.authority == AUTH
+        uri.path == PATH
+        uri.query == QUERY
+        
+        where:
+        LOCATION                            | SCHEME    | AUTH      | PATH              | QUERY
+        'http://foo.com/some/file.txt'      | 'http'    | 'foo.com' | '/some/file.txt'  | null
+        'https://foo.com/some/file.txt?q=1' | 'https'   | 'foo.com' | '/some/file.txt'  | 'q=1'
+
     }
 
     def testFileWithWildcards() {
@@ -178,7 +215,7 @@ class NextflowTest extends Specification {
         when:
         result = Nextflow.files("$folder/**.fa", relative: true, followLinks: false)
         then:
-        result.collect { it.toString() } .sort() == ['dir1/dir2/file4.fa', 'file2.fa']
+        result.collect { it.toString() } .sort() == ['dir1/dir2/file4.fa', 'file2.fa', 'file_link.fa']
 
         when:
         result = Nextflow.files("$folder/**.fa", relative: true, maxDepth: 1)
@@ -201,8 +238,10 @@ class NextflowTest extends Specification {
         then:
         result.collect { it.toString() } .sort() == ['dir1/dir2/file4.fa',
                                                      'dir1/file3.txt',
+                                                     'dir_link',
                                                      'file1.txt',
-                                                     'file2.fa']
+                                                     'file2.fa',
+                                                     'file_link.fa']
 
         when:
         result = Nextflow.files("$folder/**", relative: true, type:'dir')
@@ -226,8 +265,10 @@ class NextflowTest extends Specification {
                                                      'dir1/dir2',
                                                      'dir1/dir2/file4.fa',
                                                      'dir1/file3.txt',
+                                                     'dir_link',
                                                      'file1.txt',
-                                                     'file2.fa']
+                                                     'file2.fa',
+                                                     'file_link.fa']
 
         cleanup:
         folder?.deleteDir()
@@ -306,6 +347,12 @@ class NextflowTest extends Specification {
         then:
         def e = thrown(NoSuchFileException)
         e.message == foo.toString()
+
+        when:
+        Nextflow.file("$folder/*.txt", checkIfExists: true)
+        then:
+        e = thrown(NoSuchFileException)
+        e.message == "$folder/*.txt"
 
         cleanup:
         folder?.deleteDir()

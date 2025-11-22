@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +19,8 @@ package nextflow.util
 import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
+import nextflow.extension.Bolts
+import nextflow.script.types.VersionNumber as IVersionNumber
 
 /**
  * Model a semantic version number
@@ -27,11 +28,13 @@ import groovy.transform.CompileStatic
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-class VersionNumber implements Comparable {
+class VersionNumber implements IVersionNumber, Comparable {
 
     static private Pattern CHECK = ~/\s*([!<=>]+)?\s*([0-9A-Za-z\-_\.]+)(\+)?/
 
     private List<String> version
+
+    private String human
 
     /**
      * Create a version number object
@@ -41,6 +44,7 @@ class VersionNumber implements Comparable {
      */
     VersionNumber(String str) {
         version = str ? str.tokenize('.-') : ['0']
+        human = str ? Bolts.stripStart(Bolts.stripEnd(str,'.-'),'.-') : '0'
     }
 
     /**
@@ -59,16 +63,19 @@ class VersionNumber implements Comparable {
     /**
      * @return The major version number ie. the first component
      */
+    @Override
     String getMajor() { version[0] }
 
     /**
      * @return The minor version number ie. the second component
      */
+    @Override
     String getMinor() { version[1] }
 
     /**
      * @return The minor version number ie. the third component
      */
+    @Override
     String getPatch() { version[2] }
 
     /**
@@ -122,7 +129,7 @@ class VersionNumber implements Comparable {
     }
 
     String toString() {
-        version.join('.')
+        return human
     }
 
     @Override
@@ -174,6 +181,7 @@ class VersionNumber implements Comparable {
      * @param condition
      * @return
      */
+    @Override
     boolean matches(String condition) {
         for( String token : condition.tokenize(',')) {
             if( !matches0(token) )

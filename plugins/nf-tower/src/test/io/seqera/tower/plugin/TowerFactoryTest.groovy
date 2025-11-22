@@ -1,12 +1,18 @@
 /*
- * Copyright (c) 2019, Seqera Labs.
+ * Copyright 2013-2024, Seqera Labs
  *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/. 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This Source Code Form is "Incompatible With Secondary Licenses", as
- * defined by the Mozilla Public License, v. 2.0.
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
  */
 
 package io.seqera.tower.plugin
@@ -22,29 +28,23 @@ import spock.lang.Unroll
 class TowerFactoryTest extends Specification {
 
     def 'should create an tower observer' () {
-
         given:
-        def session = Mock(Session) { getConfig() >> [:] }
         def factory = new TowerFactory(env: [TOWER_ACCESS_TOKEN: '123'])
 
         when:
+        def session = Mock(Session) { getConfig() >> [tower: [enabled: true]] }
         def client = factory.create(session)[0] as TowerClient
-        then:
-        session.getConfig() >> [tower: [enabled: true]]
         then:
         client.endpoint == TowerClient.DEF_ENDPOINT_URL
 
         when:
+        session = Mock(Session) { getConfig() >> [tower: [enabled: true, endpoint:'http://foo.com/api', accessToken: 'xyz']] }
         client = factory.create(session)[0] as TowerClient
         then:
-        session.getConfig() >> [tower: [enabled: true, endpoint:'http://foo.com/api', accessToken: 'xyz']]
-        then:
         client.endpoint == 'http://foo.com/api'
-
     }
 
     def 'should not create a tower observer' () {
-
         given:
         def session = Mock(Session)
         def factory = new TowerFactory()
@@ -55,33 +55,65 @@ class TowerFactoryTest extends Specification {
         session.getConfig() >> [:]
         then:
         result == []
-
     }
 
     def 'should create with with workspace id'() {
-        given:
-        def session = Mock(Session)
-        def factory = new TowerFactory(env: [TOWER_WORKSPACE_ID: '100'])
-
+        //
+        // the workspace id is taken from the env
+        //
         when:
+        def session = Mock(Session) { getConfig() >> [tower: [enabled: true, accessToken: 'xyz']] }
+        def factory = new TowerFactory(env: [TOWER_WORKSPACE_ID: '100'])
         def client = (TowerClient) factory.create(session)[0]
         then:
-        session.getConfig() >> [tower: [enabled: true, accessToken: 'xyz']]
-        and:
         client.getWorkspaceId() == '100'
 
-
+        //
+        // the workspace id is taken from the config
+        //
         when:
+        session = Mock(Session) { getConfig() >> [tower: [enabled: true, workspaceId: '200', accessToken: 'xyz']] }
+        factory = new TowerFactory(env: [:])
         client = (TowerClient) factory.create(session)[0]
         then:
-        session.getConfig() >> [tower: [enabled: true, workspaceId: '200', accessToken: 'xyz']]
-        and:
         client.getWorkspaceId() == '200'
+
+        //
+        // the workspace id is set both in the config and the env
+        // the config has the priority
+        //
+        when:
+        session = Mock(Session) { getConfig() >> [tower: [enabled: true, workspaceId: '200', accessToken: 'xyz']] }
+        factory = new TowerFactory(env: [TOWER_WORKSPACE_ID: '100'])
+        client = (TowerClient) factory.create(session)[0]
+        then:
+        client.getWorkspaceId() == '200'
+
+        //
+        // when TOWER_WORKFLOW_ID is set is a tower launch
+        // then the workspace id is only taken from the env
+        //
+        when:
+        session = Mock(Session) { getConfig() >> [tower: [enabled: true, workspaceId: '200', accessToken: 'xyz']] }
+        factory = new TowerFactory(env: [TOWER_WORKSPACE_ID: '100', TOWER_WORKFLOW_ID: '111222333', TOWER_ACCESS_TOKEN: 'xyz'])
+        client = (TowerClient) factory.create(session)[0]
+        then:
+        client.getWorkspaceId() == '100'
+
+        //
+        // when enabled is false but `TOWER_WORKFLOW_ID` is provided
+        // then the client should be created
+        //
+        when:
+        session = Mock(Session) { getConfig() >> [tower: [enabled: false]]}
+        factory = new TowerFactory(env: [TOWER_WORKSPACE_ID: '100', TOWER_WORKFLOW_ID: '111222333', TOWER_ACCESS_TOKEN: 'xyz'])
+        client = (TowerClient) factory.create(session)[0]
+        then:
+        client.getWorkspaceId() == '100'
     }
 
     @Unroll
     def 'should create tower http auth provider' () {
-
         given:
         def factory = new TowerFactory()
         and:
@@ -102,8 +134,6 @@ class TowerFactoryTest extends Specification {
         'https://tower.nf/'             | true          | 'Bearer xyz123'
         'https://tower.nf/this/that'    | true          | 'Bearer xyz123'
         'HTTPS://TOWER.NF/THIS/THAT'    | true          | 'Bearer xyz123'
-
-
     }
 
 }

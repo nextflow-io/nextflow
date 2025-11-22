@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +24,7 @@ import nextflow.util.ArrayBag
 import nextflow.util.CacheHelper
 import nextflow.util.CheckHelper
 /**
- * Implements {@link OperatorEx#groupTuple} operator logic
+ * Implements {@link OperatorImpl#groupTuple} operator logic
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -35,7 +34,6 @@ class GroupTupleOp {
     static private Map GROUP_TUPLE_PARAMS = [ by: [Integer, List], sort: [Boolean, 'true','natural','deep','hash',Closure,Comparator], size: Integer, remainder: Boolean ]
 
     static private List<Integer> GROUP_DEFAULT_INDEX = [0]
-
 
     /**
      * Comparator used to sort tuple entries (when required)
@@ -93,11 +91,11 @@ class GroupTupleOp {
      */
     private void collect(List tuple) {
 
-        final key = tuple[indices]                      // the actual grouping key
+        final key = normalizeKey(tuple[indices])        // the actual grouping key
         final len = tuple.size()
 
         final List items = groups.getOrCreate(key) {    // get the group for the specified key
-            def result = new ArrayList(len)             // create if does not exists
+            def result = new ArrayList(len)             // create if does not exist
             for( int i=0; i<len; i++ )
                 result[i] = (i in indices ? tuple[i] : new ArrayBag())
             return result
@@ -105,8 +103,12 @@ class GroupTupleOp {
 
         int count=-1
         for( int i=0; i<len; i++ ) {                    // append the values in the tuple
-            if( ! (i in indices) ) {
+            if( i !in indices ) {
                 def list = (items[i] as List)
+                if( list==null ) {
+                    list = new ArrayBag()
+                    items.add(i, list)
+                }
                 list.add( tuple[i] )
                 count=list.size()
             }
@@ -124,7 +126,9 @@ class GroupTupleOp {
      * finalize the grouping binding the remaining values
      */
     private void finalise(nop) {
-        groups.each { keys, items -> bindTuple(items, size ?: sizeBy(keys)) }
+        for( Map.Entry<List,List> entry : groups.entrySet() ) {
+            bindTuple(entry.value, size ?: sizeBy(entry.key))
+        }
         target.bind(Channel.STOP)
     }
 
@@ -250,6 +254,21 @@ class GroupTupleOp {
         }
         else
             return 0
+    }
+
+    /**
+     * Normalize key by converting GString objects to String to ensure consistent grouping
+     *
+     * @param key The key object or list of key objects to normalize
+     * @return The normalized key with GString objects converted to String
+     */
+    static protected List normalizeKey(List keyList) {
+        final result = new ArrayList(keyList.size())
+        for( int i=0; i<keyList.size(); i++ ) {
+            final k = keyList[i]
+            result[i] = k instanceof GString ? k.toString() : k
+        }
+        return result
     }
 
 }

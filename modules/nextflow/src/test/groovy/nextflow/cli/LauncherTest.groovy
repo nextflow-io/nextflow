@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,12 +16,12 @@
 
 package nextflow.cli
 
-import spock.lang.Specification
-
 import java.nio.file.Files
 
 import com.beust.jcommander.DynamicParameter
 import com.beust.jcommander.Parameter
+import spock.lang.Specification
+import spock.lang.Unroll
 import spock.util.environment.RestoreSystemProperties
 import test.OutputCapture
 /**
@@ -172,15 +171,15 @@ class LauncherTest extends Specification {
         launcher.normalizeArgs('-x', '1', 'script.nf', '--long', 'v1', '--more', 'v2', '--flag') == ['-x','1','script.nf','--long=v1','--more=v2','--flag=true']
 
         launcher.normalizeArgs('-x', '1', '-process.alpha','2', '3') == ['-x', '1', '-process.alpha=2', '3']
-        launcher.normalizeArgs('-x', '1', '-process.echo') == ['-x', '1', '-process.echo=true']
-        launcher.normalizeArgs('-x', '1', '-process.echo', '-with-docker', 'ubuntu' ) == ['-x', '1', '-process.echo=true', '-with-docker','ubuntu']
-        launcher.normalizeArgs('-x', '1', '-process.echo', '-123') == ['-x', '1', '-process.echo=-123' ]
+        launcher.normalizeArgs('-x', '1', '-process.debug') == ['-x', '1', '-process.debug=true']
+        launcher.normalizeArgs('-x', '1', '-process.debug', '-with-docker', 'ubuntu' ) == ['-x', '1', '-process.debug=true', '-with-docker','ubuntu']
+        launcher.normalizeArgs('-x', '1', '-process.debug', '-123') == ['-x', '1', '-process.debug=-123' ]
 
         launcher.normalizeArgs('-x', '1', '-cluster.alpha','2', '3') == ['-x', '1', '-cluster.alpha=2', '3']
-        launcher.normalizeArgs('-x', '1', '-cluster.echo') == ['-x', '1', '-cluster.echo=true']
+        launcher.normalizeArgs('-x', '1', '-cluster.debug') == ['-x', '1', '-cluster.debug=true']
 
         launcher.normalizeArgs('-x', '1', '-executor.alpha','2', '3') == ['-x', '1', '-executor.alpha=2', '3']
-        launcher.normalizeArgs('-x', '1', '-executor.echo') == ['-x', '1', '-executor.echo=true']
+        launcher.normalizeArgs('-x', '1', '-executor.debug') == ['-x', '1', '-executor.debug=true']
 
         launcher.normalizeArgs('-x', '1', '-that.alpha','2', '3') == ['-x', '1', '-that.alpha','2', '3']
 
@@ -188,9 +187,17 @@ class LauncherTest extends Specification {
         launcher.normalizeArgs('run', '-', '-a', '-b') == ['run','-stdin', '-a', '-b']
         launcher.normalizeArgs('run') == ['run']
 
+        launcher.normalizeArgs('run','-with-cloudcache') == ['run', '-with-cloudcache', '-']
+        launcher.normalizeArgs('run','-with-cloudcache', '-x') == ['run', '-with-cloudcache', '-', '-x']
+        launcher.normalizeArgs('run','-with-cloudcache', 's3://foo/bar') == ['run', '-with-cloudcache','s3://foo/bar']
+        
         launcher.normalizeArgs('run','-with-tower') == ['run', '-with-tower', '-']
         launcher.normalizeArgs('run','-with-tower', '-x') == ['run', '-with-tower', '-', '-x']
         launcher.normalizeArgs('run','-with-tower', 'foo.com') == ['run', '-with-tower','foo.com']
+
+        launcher.normalizeArgs('run','-with-wave') == ['run', '-with-wave', '-']
+        launcher.normalizeArgs('run','-with-wave', '-x') == ['run', '-with-wave', '-', '-x']
+        launcher.normalizeArgs('run','-with-wave', 'foo.com') == ['run', '-with-wave','foo.com']
 
         launcher.normalizeArgs('run','-with-trace') == ['run', '-with-trace','-']
         launcher.normalizeArgs('run','-with-trace', '-x') == ['run', '-with-trace','-', '-x']
@@ -224,6 +231,14 @@ class LauncherTest extends Specification {
         launcher.normalizeArgs('run','-with-charliecloud', '-x') == ['run', '-with-charliecloud','-', '-x']
         launcher.normalizeArgs('run','-with-charliecloud', 'busybox') == ['run', '-with-charliecloud','busybox']
 
+        launcher.normalizeArgs('run','-with-conda') == ['run', '-with-conda','-']
+        launcher.normalizeArgs('run','-with-conda', '-x') == ['run', '-with-conda','-', '-x']
+        launcher.normalizeArgs('run','-with-conda', 'busybox') == ['run', '-with-conda','busybox']
+
+        launcher.normalizeArgs('run','-with-spack') == ['run', '-with-spack','-']
+        launcher.normalizeArgs('run','-with-spack', '-x') == ['run', '-with-spack','-', '-x']
+        launcher.normalizeArgs('run','-with-spack', 'busybox') == ['run', '-with-spack','busybox']
+
         launcher.normalizeArgs('run','-dump-channels') == ['run', '-dump-channels','*']
         launcher.normalizeArgs('run','-dump-channels', '-x') == ['run', '-dump-channels','*', '-x']
         launcher.normalizeArgs('run','-dump-channels', 'foo,bar') == ['run', '-dump-channels','foo,bar']
@@ -232,17 +247,13 @@ class LauncherTest extends Specification {
         launcher.normalizeArgs('run','-with-notification') == ['run', '-with-notification','true']
         launcher.normalizeArgs('run','-with-notification', '-x') == ['run', '-with-notification','true', '-x']
 
+        launcher.normalizeArgs('run','-with-fusion', 'false') == ['run', '-with-fusion','false']
+        launcher.normalizeArgs('run','-with-fusion') == ['run', '-with-fusion','true']
+        launcher.normalizeArgs('run','-with-fusion', '-x') == ['run', '-with-fusion','true', '-x']
+
         launcher.normalizeArgs('run','-N', 'paolo@yo.com') == ['run', '-N','paolo@yo.com']
         launcher.normalizeArgs('run','-N') == ['run', '-N','true']
         launcher.normalizeArgs('run','-N', '-x') == ['run', '-N','true', '-x']
-
-        launcher.normalizeArgs('run','-K', 'true') == ['run', '-K','true']
-        launcher.normalizeArgs('run','-K') == ['run', '-K','true']
-        launcher.normalizeArgs('run','-K', '-x') == ['run', '-K','true', '-x']
-
-        launcher.normalizeArgs('run','-with-k8s', 'true') == ['run', '-with-k8s','true']
-        launcher.normalizeArgs('run','-with-k8s') == ['run', '-with-k8s','true']
-        launcher.normalizeArgs('run','-with-k8s', '-x') == ['run', '-with-k8s','true', '-x']
 
         launcher.normalizeArgs('run','-syslog', 'host.com') == ['run', '-syslog','host.com']
         launcher.normalizeArgs('run','-syslog') == ['run', '-syslog','localhost']
@@ -251,8 +262,6 @@ class LauncherTest extends Specification {
         launcher.normalizeArgs('run','-ansi-log', '-x') == ['run', '-ansi-log','true', '-x']
         launcher.normalizeArgs('run','-ansi-log', 'true', '-x') == ['run', '-ansi-log','true', '-x']
         launcher.normalizeArgs('run','-ansi-log', 'false', '-x') == ['run', '-ansi-log','false', '-x']
-
-        launcher.normalizeArgs('run','-dsl2', '-x') == ['run', '-dsl2','true', '-x']
 
         launcher.normalizeArgs('run','-stub', '-x') == ['run', '-stub','true', '-x']
         launcher.normalizeArgs('run','-stub-run', '-x') == ['run', '-stub-run','true', '-x']
@@ -418,6 +427,27 @@ class LauncherTest extends Specification {
         [NO_PROXY: '127.0.0.1' ]    | '127.0.0.1'
         [NO_PROXY:'localhost,127.0.0.1,.localdomain.com']  | 'localhost|127.0.0.1|.localdomain.com'
 
+    }
+
+    @RestoreSystemProperties
+    @Unroll
+    def 'should set http client timeout' () {
+        when:
+        Launcher.setHttpClientProperties(ENV)
+        then:
+        System.getProperty('jdk.httpclient.keepalive.timeout') == TIMEOUT
+        and:
+        System.getProperty('jdk.httpclient.connectionPoolSize') == POOLSIZE
+
+        where:
+        ENV                                             | TIMEOUT   | POOLSIZE
+        [:]                                             | '10'      | null
+        and:
+        [NXF_JDK_HTTPCLIENT_KEEPALIVE_TIMEOUT: '1']     | '1'       | null
+        [NXF_JDK_HTTPCLIENT_KEEPALIVE_TIMEOUT: '100']   | '100'     | null
+        and:
+        [NXF_JDK_HTTPCLIENT_CONNECTIONPOOLSIZE: '0']    | '10'      | '0'
+        [NXF_JDK_HTTPCLIENT_CONNECTIONPOOLSIZE: '99']   | '10'      | '99'
     }
 
     def 'should make cli' () {

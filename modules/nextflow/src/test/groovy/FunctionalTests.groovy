@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,67 +14,26 @@
  * limitations under the License.
  */
 
-
-
-import spock.lang.Shared
-import spock.lang.Specification
-import spock.lang.Timeout
-
-import nextflow.config.ConfigParser
+import nextflow.config.ConfigParserFactory
+import nextflow.exception.AbortRunException
 import nextflow.processor.TaskProcessor
 import nextflow.util.MemoryUnit
-import nextflow.script.TestScriptRunner
+import spock.lang.Timeout
+import test.Dsl2Spec
+import test.MockScriptRunner
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Timeout(5)
-class FunctionalTests extends Specification {
-
-    @Shared
-    File scriptFile
-
-    // run before the first feature method
-    def setupSpec() {
-        scriptFile = new File('test.nf')
-        scriptFile.deleteOnExit()
-    }
-
-    // run after the last feature method
-    def cleanupSpec() {
-    }
-
-    /**
-     * test passing values through environment variables
-     */
-    def 'test environment' () {
-
-        setup:
-        def environment = [ XXX: 'value1']
-        def script = '''
-
-            def x = config.env['XXX']
-            def y = config.env['YYY'] ?: -1
-
-            [ x, y ]
-
-            '''
-
-        when:
-        def runner = new TestScriptRunner( [env: environment] )
-
-        then:
-        runner.setScript(script).execute() == ['value1', -1]
-
-    }
-
+@Timeout(10)
+class FunctionalTests extends Dsl2Spec {
 
     /*
      * test passing values through command line argument (unnamed parameters)
      */
     def 'test args'()  {
 
-        when:
+        given:
         def script = """
             def len = args.size()
             def x = args[0]
@@ -83,8 +41,9 @@ class FunctionalTests extends Specification {
 
             return [ x, y, len ]
             """
-        def runner = new TestScriptRunner()
-        def result = runner.setScript(script).execute(['hello', 'hola'] )
+
+        when:
+        def result = new MockScriptRunner().setScript(script).execute(['hello', 'hola'])
 
         then:
         result[0] == 'hello'
@@ -96,57 +55,54 @@ class FunctionalTests extends Specification {
 
     def 'test configure processor'() {
 
-        setup:
-        def configStr = '''
+        given:
+        def config = '''
              process {
                 dummyField = 99
                 executor = 'nope'
-                echo = true
+                debug = true
                 shell = 'zsh'
                 maxForks = 10
                 environment = [a:1, b:2,c:3]
-                validExitStatus = [0,11,22,33]
             }
             '''
-        def cfg = new ConfigSlurper().parse(configStr)
 
-
-        when:
+        and:
         def script = '''
 
             process taskHello {
-                echo true
+                debug true
                 maxForks 11
                 'echo hello'
             }
 
+            workflow { taskHello() }
             '''
 
-        def runner = new TestScriptRunner(cfg)
-        runner.setScript(script).execute()
-        def processor = runner.scriptObj.taskProcessor
+        when:
+        new MockScriptRunner(ConfigParserFactory.create().parse(config))
+                .setScript(script)
+                .execute()
+        def processor = TaskProcessor.currentProcessor()
 
         then:
         processor instanceof TaskProcessor
         processor.getName() == 'taskHello'
-        processor.config.echo == true
+        processor.config.debug == true
         processor.config.shell == 'zsh'
         processor.config.maxForks == 11
         processor.config.dummyField == 99
         processor.config.environment.entrySet() == [a:1,b:2,c:3].entrySet()
-        processor.config.validExitStatus == [0,11,22,33]
 
     }
 
     def 'should define default ext property' () {
 
         given:
-        def CONFIG = '''
+        def config = '''
             process.ext.foo = 'hello'
         '''
-        def cfg = new ConfigParser().parse(CONFIG)
-
-        when:
+        and:
         def script = '''
 
             process foo {
@@ -156,11 +112,14 @@ class FunctionalTests extends Specification {
                 /
             }
 
+            workflow { foo() }
             '''
 
-        def runner = new TestScriptRunner(cfg).setScript(script)
-        runner.execute()
-        def processor = runner.scriptObj.taskProcessor
+        when:
+        new MockScriptRunner(ConfigParserFactory.create().parse(config))
+                .setScript(script)
+                .execute()
+        def processor = TaskProcessor.currentProcessor()
         then:
         processor instanceof TaskProcessor
         processor.config.ext.foo == 'hello'
@@ -170,7 +129,7 @@ class FunctionalTests extends Specification {
 
     def 'test merge ext properties' () {
         given:
-        def configStr = '''
+        def config = '''
             process {
                 ext {
                     alpha = "aaa"
@@ -184,9 +143,7 @@ class FunctionalTests extends Specification {
                 }
             }
         '''
-        def cfg = new ConfigParser().parse(configStr)
-
-        when:
+        and:
         def script = '''
 
             process foo {
@@ -194,12 +151,14 @@ class FunctionalTests extends Specification {
                 println true
             }
 
+            workflow { foo() }
             '''
 
-        def runner = new TestScriptRunner(cfg)
-        runner.setScript(script).execute()
-        def processor = runner.scriptObj.taskProcessor
-        println processor.config.ext
+        when:
+        new MockScriptRunner(ConfigParserFactory.create().parse(config))
+                .setScript(script)
+                .execute()
+        def processor = TaskProcessor.currentProcessor()
         then:
         processor instanceof TaskProcessor
         processor.config.ext.alpha == 'aaa'
@@ -211,7 +170,7 @@ class FunctionalTests extends Specification {
     def 'test configure processor with dynamic resources'() {
 
         setup:
-        def configStr = '''
+        def config = '''
              process {
                 cpus = { 2 * task.attempt }
                 memory = { 1.GB * task.attempt  }
@@ -219,10 +178,8 @@ class FunctionalTests extends Specification {
                 withName: taskHello{ errorStrategy = 'finish' }
             }
             '''
-        def cfg = new ConfigParser().parse(configStr)
 
-
-        when:
+        and:
         def script = '''
 
             process taskHello {
@@ -235,11 +192,14 @@ class FunctionalTests extends Specification {
                 'echo hello'
             }
 
+            workflow { taskHello() }
             '''
 
-        def runner = new TestScriptRunner(cfg)
-        runner.setScript(script).execute()
-        def processor = runner.scriptObj.taskProcessor
+        when:
+        new MockScriptRunner(ConfigParserFactory.create().parse(config))
+                .setScript(script)
+                .execute()
+        def processor = TaskProcessor.currentProcessor()
 
         then:
         processor instanceof TaskProcessor
@@ -257,7 +217,7 @@ class FunctionalTests extends Specification {
          * A config with a `memory` definition for all process
          * and two labels `small` and `big`
          */
-        String CONFIG = '''
+        String config = '''
             process {
                 executor = 'nope'
                 memory = 2.GB
@@ -280,8 +240,7 @@ class FunctionalTests extends Specification {
             }
             '''
 
-
-        when:
+        and:
             /*
              * no label is specified it should only use default directives
              */
@@ -291,12 +250,15 @@ class FunctionalTests extends Specification {
                     script:
                     'echo hello'
                 }
+                
+                workflow { foo() }
                 '''
 
-            def cfg = new ConfigParser().parse(CONFIG)
-            def runner = new TestScriptRunner(cfg)
-            runner.setScript(script).execute()
-            def processor = runner.scriptObj.taskProcessor
+        when:
+            new MockScriptRunner(ConfigParserFactory.create().parse(config))
+                    .setScript(script)
+                    .execute()
+            def processor = TaskProcessor.currentProcessor()
 
         then:
             processor instanceof TaskProcessor
@@ -315,12 +277,15 @@ class FunctionalTests extends Specification {
                     script:
                     'echo hello'
                 }
+                
+                workflow { foo() }
                 '''
 
-            cfg = new ConfigParser().parse(CONFIG)
-            runner = new TestScriptRunner(cfg)
-            runner.setScript(script).execute()
-            processor = runner.scriptObj.taskProcessor
+        and:
+            new MockScriptRunner(ConfigParserFactory.create().parse(config))
+                    .setScript(script)
+                    .execute()
+            processor = TaskProcessor.currentProcessor()
 
         then:
             processor instanceof TaskProcessor
@@ -339,12 +304,14 @@ class FunctionalTests extends Specification {
                     script:
                     'echo hello'
                 }
+                
+                workflow { foo() }
                 '''
-
-            cfg = new ConfigParser().parse(CONFIG)
-            runner = new TestScriptRunner(cfg)
-            runner.setScript(script).execute()
-            processor = runner.scriptObj.taskProcessor
+        and:
+            new MockScriptRunner(ConfigParserFactory.create().parse(config))
+                    .setScript(script)
+                    .execute()
+            processor = TaskProcessor.currentProcessor()
 
         then:
             processor instanceof TaskProcessor
@@ -365,12 +332,15 @@ class FunctionalTests extends Specification {
                     script:
                     'echo hello'
                 }
+                
+                workflow { legacy() }
                 '''
 
-        cfg = new ConfigParser().parse(CONFIG)
-        runner = new TestScriptRunner(cfg)
-        runner.setScript(script).execute()
-        processor = runner.scriptObj.taskProcessor
+        and:
+            new MockScriptRunner(ConfigParserFactory.create().parse(config))
+                    .setScript(script)
+                    .execute()
+            processor = TaskProcessor.currentProcessor()
 
         then:
         processor instanceof TaskProcessor
@@ -381,13 +351,12 @@ class FunctionalTests extends Specification {
 
     def 'should set setting for process with name' () {
 
-
         given:
         /*
          * A config with a `memory` definition for all process
          * and two labels `small` and `big`
          */
-        String CONFIG = '''
+        String config = '''
             process {
                 executor = 'nope' 
                 
@@ -404,8 +373,7 @@ class FunctionalTests extends Specification {
             }
             '''
 
-
-        when:
+        and:
         /*
          * no label is specified it should only use default directives
          */
@@ -416,12 +384,15 @@ class FunctionalTests extends Specification {
                     script:
                     'echo hello'
                 }
+                
+                workflow { foo() }
                 '''
 
-        def cfg = new ConfigParser().parse(CONFIG)
-        def runner = new TestScriptRunner(cfg)
-        runner.setScript(script).execute()
-        def processor = runner.scriptObj.taskProcessor
+        when:
+        new MockScriptRunner(ConfigParserFactory.create().parse(config))
+                .setScript(script)
+                .execute()
+        def processor = TaskProcessor.currentProcessor()
 
         then:
         processor instanceof TaskProcessor
@@ -440,12 +411,14 @@ class FunctionalTests extends Specification {
                     script:
                     'echo hello'
                 }
+                
+                workflow { bar() }
                 '''
-
-        cfg = new ConfigParser().parse(CONFIG)
-        runner = new TestScriptRunner(cfg)
-        runner.setScript(script).execute()
-        processor = runner.scriptObj.taskProcessor
+        and:
+        new MockScriptRunner(ConfigParserFactory.create().parse(config))
+                .setScript(script)
+                .execute()
+        processor = TaskProcessor.currentProcessor()
 
         then:
         processor instanceof TaskProcessor
@@ -454,7 +427,7 @@ class FunctionalTests extends Specification {
     }
 
     def 'should set module directive' () {
-        when:
+        given:
         String config = '''
             process {
                 executor = 'nope'
@@ -463,19 +436,22 @@ class FunctionalTests extends Specification {
                 }
             }
             '''
+        and:
         String script = '''   
                 process foo {
                     module 'mod-a/1.1:mod-b/2.2'
                     script:
                     'echo hello'
                 }
+                
+                workflow { foo() }
                 '''
 
-        def cfg = new ConfigParser().parse(config)
-        def runner = new TestScriptRunner(cfg)
-        runner.setScript(script).execute()
-        def processor = runner.scriptObj.taskProcessor
-
+        when:
+        new MockScriptRunner(ConfigParserFactory.create().parse(config))
+                .setScript(script)
+                .execute()
+        def processor = TaskProcessor.currentProcessor()
         then:
         processor instanceof TaskProcessor
         processor.config.module == ['mod-a/1.1:mod-b/2.2']
@@ -491,18 +467,22 @@ class FunctionalTests extends Specification {
                 }
             }
             '''
+        and:
         script = '''   
                 process foo {
                     label 'my_env'
                     script:
                     'echo hello'
                 }
+                
+                workflow { foo() }
                 '''
 
-        cfg = new ConfigParser().parse(config)
-        runner = new TestScriptRunner(cfg)
-        runner.setScript(script).execute()
-        processor = runner.scriptObj.taskProcessor
+        and:
+        new MockScriptRunner(ConfigParserFactory.create().parse(config))
+                .setScript(script)
+                .execute()
+        processor = TaskProcessor.currentProcessor()
 
         then:
         processor instanceof TaskProcessor
@@ -512,8 +492,8 @@ class FunctionalTests extends Specification {
     }
 
     def 'should set publishDir directive' () {
-        when:
-        String CONFIG = '''
+        given:
+        String config = '''
             process {
                 executor = 'nope'
                 publishDir = '/some/dir'
@@ -524,35 +504,41 @@ class FunctionalTests extends Specification {
                     script:
                     'echo hello'
                 }
+                
+                workflow { foo() }
                 '''
 
-        def cfg = new ConfigParser().parse(CONFIG)
-        def runner = new TestScriptRunner(cfg)
-        runner.setScript(script).execute()
-        def processor = runner.scriptObj.taskProcessor
+        when:
+        new MockScriptRunner(ConfigParserFactory.create().parse(config))
+                .setScript(script)
+                .execute()
+        def processor = TaskProcessor.currentProcessor()
         then:
         processor instanceof TaskProcessor
         processor.config.publishDir[0] == [path:'/some/dir']
 
 
         when:
-        CONFIG = '''
+        config = '''
             process {
                 executor = 'nope'
                 publishDir = [ '/some/dir', [path:'/other/dir', mode: 'copy'] ]
             }
             '''
+        and:
         script = '''   
                 process foo {
                     script:
                     'echo hello'
                 }
+                
+                workflow { foo() }
                 '''
-
-        cfg = new ConfigParser().parse(CONFIG)
-        runner = new TestScriptRunner(cfg)
-        runner.setScript(script).execute()
-        processor = runner.scriptObj.taskProcessor
+        and:
+        new MockScriptRunner(ConfigParserFactory.create().parse(config))
+                .setScript(script)
+                .execute()
+        processor = TaskProcessor.currentProcessor()
         then:
         processor instanceof TaskProcessor
         processor.config.publishDir[0] == [path:'/some/dir']
@@ -560,11 +546,12 @@ class FunctionalTests extends Specification {
 
 
         when:
-        CONFIG = '''
+        config = '''
             process {
                 executor = 'nope'
             }
             '''
+        and:
         script = '''   
                 process foo {
                     publishDir '/data1'
@@ -572,12 +559,15 @@ class FunctionalTests extends Specification {
                     script:
                     'echo hello'
                 }
+                
+                workflow { foo() }
                 '''
 
-        cfg = new ConfigParser().parse(CONFIG)
-        runner = new TestScriptRunner(cfg)
-        runner.setScript(script).execute()
-        processor = runner.scriptObj.taskProcessor
+        and:
+        new MockScriptRunner(ConfigParserFactory.create().parse(config))
+                .setScript(script)
+                .execute()
+        processor = TaskProcessor.currentProcessor()
         then:
         processor instanceof TaskProcessor
         processor.config.publishDir[0] == [path:'/data1']
@@ -585,12 +575,13 @@ class FunctionalTests extends Specification {
 
 
         when:
-        CONFIG = '''
+        config = '''
             process {
                 executor = 'nope'
                 publishDir = '/dir/cfg'
             }
             '''
+        and:
         script = '''   
                 process foo {
                     publishDir '/dir/alpha'
@@ -598,12 +589,15 @@ class FunctionalTests extends Specification {
                     script:
                     'echo hello'
                 }
+                
+                workflow { foo() }
                 '''
 
-        cfg = new ConfigParser().parse(CONFIG)
-        runner = new TestScriptRunner(cfg)
-        runner.setScript(script).execute()
-        processor = runner.scriptObj.taskProcessor
+        and:
+        new MockScriptRunner(ConfigParserFactory.create().parse(config))
+                .setScript(script)
+                .execute()
+        processor = TaskProcessor.currentProcessor()
         then:
         processor instanceof TaskProcessor
         processor.config.publishDir[0] == [path:'/dir/alpha']
@@ -611,15 +605,15 @@ class FunctionalTests extends Specification {
         processor.config.publishDir.size() == 2
 
 
-
         when:
-        CONFIG = '''
+        config = '''
             process {
                 executor = 'nope'
                 publishDir = '/dir/cfg'
                 withName: foo { publishDir = '/dir/omega' }
             }
             '''
+        and:
         script = '''   
                 process foo {
                     publishDir '/dir/alpha'
@@ -627,12 +621,15 @@ class FunctionalTests extends Specification {
                     script:
                     'echo hello'
                 }
+                
+                workflow { foo() }
                 '''
 
-        cfg = new ConfigParser().parse(CONFIG)
-        runner = new TestScriptRunner(cfg)
-        runner.setScript(script).execute()
-        processor = runner.scriptObj.taskProcessor
+        and:
+        new MockScriptRunner(ConfigParserFactory.create().parse(config))
+                .setScript(script)
+                .execute()
+        processor = TaskProcessor.currentProcessor()
         then:
         processor instanceof TaskProcessor
         processor.config.publishDir[0] == [path:'/dir/omega']
@@ -640,11 +637,10 @@ class FunctionalTests extends Specification {
     }
 
 
-
     def 'should set directive label' () {
 
-        when:
-        def CONFIG = '''
+        given:
+        def config = '''
             process {
                 executor = 'nope'
                 label = 'alpha'
@@ -655,24 +651,28 @@ class FunctionalTests extends Specification {
                     script:
                     'echo hello'
                 }
+                
+                workflow { foo() }
                 '''
 
-        def cfg = new ConfigParser().parse(CONFIG)
-        def runner = new TestScriptRunner(cfg)
-        runner.setScript(script).execute()
-        def processor = runner.scriptObj.taskProcessor
+        when:
+        new MockScriptRunner(ConfigParserFactory.create().parse(config))
+                .setScript(script)
+                .execute()
+        def processor = TaskProcessor.currentProcessor()
         then:
         processor instanceof TaskProcessor
         processor.config.label == [ 'alpha' ]
 
 
         when:
-        CONFIG = '''
+        config = '''
             process {
                 executor = 'nope'
                 label = 'alpha'
             }
             '''
+        and:
         script = '''   
                 process foo {
                     label 'bravo'
@@ -680,12 +680,15 @@ class FunctionalTests extends Specification {
                     script:
                     'echo hello'
                 }
+                
+                workflow { foo() }
                 '''
 
-        cfg = new ConfigParser().parse(CONFIG)
-        runner = new TestScriptRunner(cfg)
-        runner.setScript(script).execute()
-        processor = runner.scriptObj.taskProcessor
+        and:
+        new MockScriptRunner(ConfigParserFactory.create().parse(config))
+                .setScript(script)
+                .execute()
+        processor = TaskProcessor.currentProcessor()
         then:
         processor instanceof TaskProcessor
         processor.config.label.size() == 2
@@ -694,26 +697,57 @@ class FunctionalTests extends Specification {
 
     def 'should create process with repeater'() {
 
-        when:
-        def CONFIG = '''
+        given:
+        def config = '''
             process {
                 executor = 'nope'
             }
             '''
-
+        and:
         def script = '''   
                 process foo {
                     input:
-                    each x from (1,2,3)
+                    each x
                     script:
                     'echo hello'
                 }
+                
+                workflow { foo([1,2,3]) }
                 '''
 
-        def cfg = new ConfigParser().parse(CONFIG)
-        def runner = new TestScriptRunner(cfg)
-        runner.setScript(script).execute()
+        when:
+        new MockScriptRunner(ConfigParserFactory.create().parse(config))
+                .setScript(script)
+                .execute()
         then:
         noExceptionThrown()
+    }
+
+    def 'should show the line of the error when throw an exception'() {
+
+        given:
+        def script = '''/*1*/
+/*2*/   def thisMethodExpectsOnlyOneString(String a){
+/*3*/      a
+/*4*/   }
+/*5*/                   
+/*6*/   process foo {
+/*7*/       input:
+/*8*/           each x
+/*9*/       script:
+/*10*/          "${thisMethodExpectsOnlyOneString(1)}"
+/*11*/      }
+/*12*/
+/*13*/   workflow { foo(1) }
+        '''
+
+        when:
+        def config = [process:[executor: 'nope']]
+        def runner = new MockScriptRunner(config)
+        runner.setScript(script).execute()
+        then:
+        def abort = thrown(AbortRunException)
+        and:
+        runner.session.fault.report ==~ /(?s).*-- Check script '(.*?)' at line: 10.*/
     }
 }

@@ -1,6 +1,5 @@
 ##
-##  Copyright 2020-2021, Seqera Labs
-##  Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+##  Copyright 2013-2024, Seqera Labs
 ##
 ##  Licensed under the Apache License, Version 2.0 (the "License");
 ##  you may not use this file except in compliance with the License.
@@ -24,12 +23,12 @@ nxf_tree() {
 
     pstat() {
         local x_pid=$1
-        local STATUS=$(2> /dev/null < /proc/$1/status egrep 'Vm|ctxt')
+        local STATUS=$(2> /dev/null < /proc/$1/status grep -E 'Vm|ctxt')
 
         if [ $? = 0 ]; then
         local  x_vsz=$(echo "$STATUS" | grep VmSize | awk '{print $2}' || echo -n '0')
         local  x_rss=$(echo "$STATUS" | grep VmRSS | awk '{print $2}' || echo -n '0')
-        local x_peak=$(echo "$STATUS" | egrep 'VmPeak|VmHWM' | sed 's/^.*:\s*//' | sed 's/[\sa-zA-Z]*$//' | tr '\n' ' ' || echo -n '0 0')
+        local x_peak=$(echo "$STATUS" | grep -E 'VmPeak|VmHWM' | sed 's/^.*:\s*//' | sed 's/[\sa-zA-Z]*$//' | tr '\n' ' ' || echo -n '0 0')
         local x_pmem=$(awk -v rss=$x_rss -v mem_tot=$mem_tot 'BEGIN {printf "%.0f", rss/mem_tot*100*10}' || echo -n '0')
         local vol_ctxt=$(echo "$STATUS" | grep '\bvoluntary_ctxt_switches' | awk '{print $2}' || echo -n '0')
         local inv_ctxt=$(echo "$STATUS" | grep '\bnonvoluntary_ctxt_switches' | awk '{print $2}' || echo -n '0')
@@ -115,25 +114,28 @@ nxf_mem_watch() {
     done
 
     ## result struct: pid %mem vmem rss peak_vmem peak_rss
-    echo "%mem=${nxf_stat_ret[1]}"      >> $trace_file
-    echo "vmem=${nxf_stat_ret[2]}"      >> $trace_file
-    echo "rss=${nxf_stat_ret[3]}"       >> $trace_file
-    echo "peak_vmem=${nxf_stat_ret[4]}" >> $trace_file
-    echo "peak_rss=${nxf_stat_ret[5]}"  >> $trace_file
-    echo "vol_ctxt=${nxf_stat_ret[6]}"  >> $trace_file
-    echo "inv_ctxt=${nxf_stat_ret[7]}"  >> $trace_file
+    printf "%s\n" \
+        "%mem=${nxf_stat_ret[1]}" \
+        "vmem=${nxf_stat_ret[2]}" \
+        "rss=${nxf_stat_ret[3]}" \
+        "peak_vmem=${nxf_stat_ret[4]}" \
+        "peak_rss=${nxf_stat_ret[5]}" \
+        "vol_ctxt=${nxf_stat_ret[6]}" \
+        "inv_ctxt=${nxf_stat_ret[7]}" >> "$trace_file" || >&2 echo "Error: Failed to append to file: $trace_file"
 }
 
 nxf_write_trace() {
-    echo "nextflow.trace/v2"           > $trace_file
-    echo "realtime=$wall_time"         >> $trace_file
-    echo "%cpu=$ucpu"                  >> $trace_file
-    echo "rchar=${io_stat1[0]}"        >> $trace_file
-    echo "wchar=${io_stat1[1]}"        >> $trace_file
-    echo "syscr=${io_stat1[2]}"        >> $trace_file
-    echo "syscw=${io_stat1[3]}"        >> $trace_file
-    echo "read_bytes=${io_stat1[4]}"   >> $trace_file
-    echo "write_bytes=${io_stat1[5]}"  >> $trace_file
+    printf "%s\n" \
+        "nextflow.trace/v2" \
+        "realtime=$wall_time" \
+        "%cpu=$ucpu" \
+        "cpu_model=$cpu_model" \
+        "rchar=${io_stat1[0]}" \
+        "wchar=${io_stat1[1]}" \
+        "syscr=${io_stat1[2]}" \
+        "syscw=${io_stat1[3]}" \
+        "read_bytes=${io_stat1[4]}" \
+        "write_bytes=${io_stat1[5]}" >| "$trace_file" || >&2 echo "Error: Failed to write to file: $trace_file"
 }
 
 nxf_trace_mac() {
@@ -145,6 +147,7 @@ nxf_trace_mac() {
     local end_millis=$(nxf_date)
     local wall_time=$((end_millis-start_millis))
     local ucpu=''
+    local cpu_model=''
     local io_stat1=('' '' '' '' '' '')
     nxf_write_trace
 }
@@ -164,6 +167,7 @@ nxf_trace_linux() {
     ##  https://stackoverflow.com/questions/27508531/calculate-cpu-per-process/27514562##27514562
     ##  https://stackoverflow.com/questions/16726779/how-do-i-get-the-total-cpu-usage-of-an-application-from-proc-pid-stat
     local num_cpus=$(< /proc/cpuinfo grep '^processor' -c)
+    local cpu_model=$(< /proc/cpuinfo grep '^model name' | head -n 1 | awk 'BEGIN{FS="\t: "} { print $2 }')
     local tot_time0=$(grep '^cpu ' /proc/stat | awk '{sum=$2+$3+$4+$5+$6+$7+$8+$9; printf "%.0f",sum}')
     local cpu_time0=$(2> /dev/null < /proc/$pid/stat awk '{printf "%.0f", ($16+$17)*10 }' || echo -n 'X')
     local io_stat0=($(2> /dev/null < /proc/$pid/io sed 's/^.*:\s*//' | head -n 6 | tr '\n' ' ' || echo -n '0 0 0 0 0 0'))
@@ -197,15 +201,17 @@ nxf_trace_linux() {
     local wall_time=$((end_millis-start_millis))
     [ $NXF_DEBUG = 1 ] && echo "+++ STATS %CPU=$ucpu TIME=$wall_time I/O=${io_stat1[*]}"
 
-    echo "nextflow.trace/v2"           > $trace_file
-    echo "realtime=$wall_time"         >> $trace_file
-    echo "%cpu=$ucpu"                  >> $trace_file
-    echo "rchar=${io_stat1[0]}"        >> $trace_file
-    echo "wchar=${io_stat1[1]}"        >> $trace_file
-    echo "syscr=${io_stat1[2]}"        >> $trace_file
-    echo "syscw=${io_stat1[3]}"        >> $trace_file
-    echo "read_bytes=${io_stat1[4]}"   >> $trace_file
-    echo "write_bytes=${io_stat1[5]}"  >> $trace_file
+    printf "%s\n" \
+        "nextflow.trace/v2" \
+        "realtime=$wall_time" \
+        "%cpu=$ucpu" \
+        "cpu_model=$cpu_model" \
+        "rchar=${io_stat1[0]}" \
+        "wchar=${io_stat1[1]}" \
+        "syscr=${io_stat1[2]}" \
+        "syscw=${io_stat1[3]}" \
+        "read_bytes=${io_stat1[4]}" \
+        "write_bytes=${io_stat1[5]}" >| "$trace_file" || >&2 echo "Error: Failed to write to file: $trace_file"
 
     ## join nxf_mem_watch
     [ -e /proc/$mem_proc ] && eval "echo 'DONE' >&$mem_fd" || true

@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,7 +55,7 @@ class FastaSplitter extends AbstractTextSplitter {
         super.options(options)
 
         if( options.size && options.by )
-            throw new AbortOperationException("Parameter `by` and `size` conflicts -- check operator `$operatorName`")
+            throw new AbortOperationException("Parameters `by` and `size` conflict -- check operator `$operatorName`")
 
         if( options.size ) {
             final size = parseChunkSize(options.size)
@@ -80,7 +79,7 @@ class FastaSplitter extends AbstractTextSplitter {
     }
 
     /**
-     * Parse a {@code CharSequence} as a FASTA formatted text, retuning a {@code Map} object
+     * Parse a {@code CharSequence} as a FASTA formatted text, returning a {@code Map} object
      * containing the fields as specified by the @{code record} parameter.
      * <p>
      *  For example:

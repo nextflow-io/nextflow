@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +16,7 @@
 
 package nextflow.trace
 
+import java.nio.file.Files
 import java.nio.file.Path
 import java.util.regex.Pattern
 
@@ -26,6 +26,7 @@ import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.cloud.types.CloudMachineInfo
+import nextflow.container.resolver.ContainerMeta
 import nextflow.extension.Bolts
 import nextflow.processor.TaskId
 import nextflow.script.ProcessDef
@@ -99,8 +100,10 @@ class TraceRecord implements Serializable {
             time:       'time',
             env:        'str',
             error_action:'str',
-            vol_ctxt: 'num',
-            inv_ctxt: 'num'
+            vol_ctxt: 'num',        // -- /proc/$pid/status field 'voluntary_ctxt_switches'
+            inv_ctxt: 'num',        // -- /proc/$pid/status field 'nonvoluntary_ctxt_switches'
+            hostname: 'str',
+            cpu_model:  'str'
     ]
 
     static public Map<String,Closure<String>> FORMATTER = [
@@ -117,6 +120,7 @@ class TraceRecord implements Serializable {
 
     transient private String executorName
     transient private CloudMachineInfo machineInfo
+    transient private ContainerMeta containerMeta
 
     /**
      * Convert the given value to a string
@@ -175,7 +179,7 @@ class TraceRecord implements Serializable {
     }
 
     /**
-     * Coverts the value to a duration string.
+     * Converts the value to a duration string.
      *
      * See {@link Duration}
      * @param value
@@ -231,14 +235,15 @@ class TraceRecord implements Serializable {
 
         }
         catch( Exception e ) {
-            log.debug "Not a valid percentual value: '$value'"
+            log.debug "Not a valid percentage value: '$value'"
             return NA
         }
     }
 
-
     @PackageScope
     Map<String,Object> store
+
+    Map<String,Object> getStore() { store }
 
     @Memoized
     Set<String> keySet() {
@@ -393,14 +398,14 @@ class TraceRecord implements Serializable {
     }
 
     CharSequence renderJson(StringBuilder result = new StringBuilder()) {
-        def fields = []
-        def formats = []
+        List<String> fields = []
+        List<String> formats = []
         FIELDS.each { name, type -> fields << name; formats << type }
         renderJson(result, fields, formats)
     }
 
     String toString() {
-        "${this.class.simpleName} ${store}"
+        "${this.class.simpleName} ${this.store}"
     }
 
 
@@ -414,49 +419,52 @@ class TraceRecord implements Serializable {
      * </pre>
      *
      */
-
     TraceRecord parseTraceFile( Path file ) {
 
-        final text = file.text
+        try(BufferedReader reader = Files.newBufferedReader(file)) {
+            final lines = reader.readLines()
+            if( !lines )
+                return this
+            if( lines[0] != 'nextflow.trace/v2' )
+                return parseLegacy(file, lines)
 
-        final lines = text.readLines()
-        if( !lines )
-            return this
-        if( lines[0] != 'nextflow.trace/v2' )
-            return parseLegacy(file, lines)
+            for( int i=0; i<lines.size(); i++ ) {
+                final pair = lines[i].tokenize('=')
+                final name = pair[0]
+                final value = pair[1]
+                if( value == null )
+                    continue
 
-        for( int i=0; i<lines.size(); i++ ) {
-            final pair = lines[i].tokenize('=')
-            final name = pair[0]
-            final value = pair[1]
-            if( value == null )
-                continue
+                switch (name) {
+                    case '%cpu':
+                    case '%mem':
+                        // fields '%cpu' and '%mem' are expressed as percent value
+                        this.put(name, parseInt(value, file, name) / 10F)
+                        break
 
-            switch (name) {
-                case '%cpu':
-                case '%mem':
-                    // fields '%cpu' and '%mem' are expressed as percent value
-                    this.put(name, parseInt(value, file, name) / 10F)
-                    break
+                    case 'rss':
+                    case 'vmem':
+                    case 'peak_rss':
+                    case 'peak_vmem':
+                        // these fields are provided in KB, so they are normalized to bytes
+                        def val = parseLong(value, file, name) * 1024
+                        this.put(name, val)
+                        break
 
-                case 'rss':
-                case 'vmem':
-                case 'peak_rss':
-                case 'peak_vmem':
-                    // these fields are provided in KB, so they are normalized to bytes
-                    def val = parseLong(value, file, name) * 1024
-                    this.put(name, val)
-                    break
+                    case 'cpu_model':
+                        this.put(name, value)
+                        break
 
-                default:
-                    def val = parseLong(value, file, name)
-                    this.put(name, val)
-                    break
+                    default:
+                        def val = parseLong(value, file, name)
+                        this.put(name, val)
+                        break
+                }
+
             }
 
+            return this
         }
-
-        return this
     }
 
     private TraceRecord parseLegacy( Path file, List<String> lines) {
@@ -583,6 +591,10 @@ class TraceRecord implements Serializable {
         store.status == 'CACHED'
     }
 
+    boolean isCompleted() {
+        store.status == 'COMPLETED'
+    }
+
     String getExecutorName() {
         return executorName
     }
@@ -599,4 +611,11 @@ class TraceRecord implements Serializable {
         this.machineInfo = value
     }
 
+    ContainerMeta getContainerMeta() {
+        return containerMeta
+    }
+
+    void setContainerMeta(ContainerMeta meta) {
+        this.containerMeta = meta
+    }
 }

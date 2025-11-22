@@ -1,7 +1,6 @@
 #!/usr/bin/env nextflow
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +15,20 @@
  * limitations under the License.
  */
 
-Channel.fromPath("$baseDir/data/p{1,2,3}.fa").set { data_ch }
-
-
 process foo {
-  echo true
-
+  debug true
   tag "$x"
 
   input:
-  each file(x) from data_ch
+  each path(x)
 
+  script:
   """
   grep '>' $x
   """
+}
 
+
+workflow {
+    channel.fromPath("$baseDir/data/p{1,2,3}.fa") | foo
 }

@@ -17,7 +17,8 @@
 
 package nextflow.secret
 
-import groovy.transform.Memoized
+import groovy.util.logging.Slf4j
+import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
 
@@ -26,20 +27,60 @@ import nextflow.plugin.Plugins
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @Singleton
 class SecretsLoader {
 
+    private SecretsProvider provider
+
     static boolean isEnabled() {
-        System.getenv('NXF_ENABLE_SECRETS')=='true'
+        SysEnv.get('NXF_ENABLE_SECRETS', 'true') == 'true'
     }
 
-    @Memoized
     SecretsProvider load() {
-        final provider = Plugins.getExtensions(SecretsProvider).first()
+        if( provider )
+            return provider
+        synchronized (this) {
+            if( provider )
+                return provider
+            return provider = load0()
+        }
+    }
+
+    private SecretsProvider load0() {
+        // discover all available secrets provider
+        final all = Plugins.getPriorityExtensions(SecretsProvider)
+        // find first activable in the current environment
+        final provider = all.find { it.activable() }
+        log.debug "Discovered secrets providers: $all - activable => $provider"
         if( provider )
             return provider.load()
         else
             throw new AbortOperationException("Unable to load secrets provider")
+    }
+
+    void reset() {
+        provider=null
+    }
+
+    static protected makeSecretsContext(SecretsProvider provider) {
+
+        return new Object() {
+            def getProperty(String name) {
+                if( !provider )
+                    throw new AbortOperationException("Unable to resolve secrets.$name - no secret provider is available")
+                provider.getSecret(name)?.value
+            }
+        }
+    }
+
+    static Object secretContext() {
+        final provider = isEnabled() ? getInstance().load() : new NullProvider()
+        return makeSecretsContext(provider)
+    }
+
+    static Object secretContext(SecretsProvider provider) {
+        return makeSecretsContext(provider)
     }
 
 }

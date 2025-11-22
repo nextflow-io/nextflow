@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +21,7 @@ import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
+import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
 
 /**
@@ -47,7 +47,7 @@ class CmdDrop extends CmdBase {
 
     @Override
     void run() {
-
+        Plugins.init()
         def manager = new AssetManager(args[0])
         if( !manager.localPath.exists() ) {
             throw new AbortOperationException("No match found for: ${args[0]}")
@@ -60,6 +60,6 @@ class CmdDrop extends CmdBase {
             return
         }
 
-        throw new AbortOperationException("Local project repository contains uncommitted changes -- wont drop it")
+        throw new AbortOperationException("Local project repository contains uncommitted changes -- won't drop it")
     }
 }

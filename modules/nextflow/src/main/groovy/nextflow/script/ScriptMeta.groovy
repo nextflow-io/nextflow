@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,11 +21,15 @@ import java.lang.reflect.Modifier
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.NF
-import nextflow.exception.DuplicateModuleIncludeException
+import nextflow.exception.DuplicateModuleFunctionException
 import nextflow.exception.MissingModuleComponentException
+import nextflow.script.bundle.ResourcesBundle
+import nextflow.util.TestOnly
+
 /**
  * Holds a nextflow script meta-data such as the
  * defines processes and workflows, the included modules
@@ -45,11 +48,24 @@ class ScriptMeta {
 
     static private Map<BaseScript,ScriptMeta> REGISTRY = new HashMap<>(10)
 
+    static private Map<Path,BaseScript> scriptsByPath = new HashMap<>(10)
+
     static private Set<String> resolvedProcessNames = new HashSet<>(20)
+
+    @TestOnly
+    static void reset() {
+        REGISTRY.clear()
+        scriptsByPath.clear()
+        resolvedProcessNames.clear()
+    }
 
     static ScriptMeta get(BaseScript script) {
         if( !script ) throw new IllegalStateException("Missing current script context")
         return REGISTRY.get(script)
+    }
+
+    static BaseScript getScriptByPath(Path path) {
+        return scriptsByPath.get(path)
     }
 
     static Set<String> allProcessNames() {
@@ -58,6 +74,15 @@ class ScriptMeta {
             result.addAll( entry.getProcessNames() )
         // add all resolved names
         result.addAll(resolvedProcessNames)
+        return result
+    }
+
+    static Set<ProcessDef> allProcesses() {
+        final result = new HashSet()
+        for( final entry : REGISTRY.values() ) {
+            final processes = entry.getDefinitions().findAll { d -> d instanceof ProcessDef }
+            result.addAll(processes)
+        }
         return result
     }
 
@@ -76,8 +101,8 @@ class ScriptMeta {
         get(ExecutionStack.script())
     }
 
-    /** the script {@link Class} object */
-    private Class<? extends BaseScript> clazz
+    /** the script object */
+    private BaseScript script
 
     /** The location path from where the script has been loaded */
     private Path scriptPath
@@ -88,56 +113,63 @@ class ScriptMeta {
     /** The module components included in the script */
     private Map<String,ComponentDef> imports = new HashMap<>(10)
 
-    private List<String> dsl1ProcessNames
-
     /** Whenever it's a module script or the main script */
     private boolean module
+
+    private Map<String,Integer> functionsCount = new HashMap<>()
 
     Path getScriptPath() { scriptPath }
 
     Path getModuleDir () { scriptPath?.parent }
 
-    String getScriptName() { clazz.getName() }
+    String getScriptName() { script.getClass().getName() }
 
     boolean isModule() { module }
 
     ScriptMeta(BaseScript script) {
-        this.clazz = script.class
+        this.script = script
         for( def entry : definedFunctions0(script) ) {
             addDefinition(entry)
         }
     }
 
-    /** only for testing */
-    protected ScriptMeta() {}
-
-    @PackageScope
     void setScriptPath(Path path) {
+        scriptsByPath.put(path, script)
         scriptPath = path
     }
 
-    @PackageScope
     void setModule(boolean val) {
         this.module = val
     }
 
-    /*
-     * This method invocation is made by the NF AST transformer to pass
-     * the process names declared in the workflow script. This is only required
-     * for DSL1 script.
-     *
-     * When using DSL2 process names can be discovered during
-     * the script execution since, the process declaration is de-coupled by the
-     * process invocations.
-     */
-    @PackageScope
-    void setDsl1ProcessNames(List<String> names) {
-        this.dsl1ProcessNames = names
+    private void incFunctionCount(String name) {
+        final count = functionsCount.getOrDefault(name, 0)
+        functionsCount.put(name, count+1)
     }
 
-    @PackageScope
-    List<String> getDsl1ProcessNames() {
-        dsl1ProcessNames ?: Collections.<String>emptyList()
+    void validate() {
+        // check for duplicate function names
+        for( final name : functionsCount.keySet() ) {
+            if( functionsCount.get(name)<2 )
+                continue
+            final msg = "A function with name '$name' is defined more than once in module script: $scriptPath -- Make sure to not define the same function with multiple signatures or arguments with a default value"
+            if( NF.isStrictMode() )
+                throw new DuplicateModuleFunctionException(msg)
+            log.warn(msg)
+        }
+    }
+
+    void checkComponentName(ComponentDef component, String name) {
+        if( component !instanceof WorkflowDef && component !instanceof ProcessDef && component !instanceof FunctionDef ) {
+            return
+        }
+        if( functionsCount.get(name) ) {
+            throw new DuplicateModuleFunctionException("A function named '$name' is already defined or included in script: $scriptPath")
+        }
+        final existing = imports.get(name)
+        if( existing != null ) {
+            throw new DuplicateModuleFunctionException("A ${existing.type} named '$name' is already defined or included in script: $scriptPath")
+        }
     }
 
     @PackageScope
@@ -148,15 +180,17 @@ class ScriptMeta {
     }
 
     static List<FunctionDef> definedFunctions0(BaseScript script) {
-        def allMethods = script.class.getDeclaredMethods()
-        def result = new ArrayList(allMethods.length)
+        final allMethods = script.class.getDeclaredMethods()
+        final result = new ArrayList<FunctionDef>(allMethods.length)
         for( Method method : allMethods ) {
             if( !Modifier.isPublic(method.getModifiers()) ) continue
             if( Modifier.isStatic(method.getModifiers())) continue
             if( method.name.startsWith('super$')) continue
             if( method.name in INVALID_FUNCTION_NAMES ) continue
 
-            result.add(new FunctionDef(script, method))
+            // If method is already into the list, maybe with other signature, it's not necessary to include it again
+            if( result.find{it.name == method.name}) continue
+            result.add(new FunctionDef(script, method.name))
         }
         return result
     }
@@ -165,7 +199,12 @@ class ScriptMeta {
         final name = component.name
         if( !module && NF.hasOperator(name) )
             log.warn "${component.type.capitalize()} with name '$name' overrides a built-in operator with the same name"
+        if( !NF.isSyntaxParserV2() )
+            checkComponentName(component, name)
         definitions.put(component.name, component)
+        if( component instanceof FunctionDef ){
+            incFunctionCount(name)
+        }
         return this
     }
 
@@ -185,15 +224,18 @@ class ScriptMeta {
     }
 
     WorkflowDef getWorkflow(String name) {
-        (WorkflowDef)getComponent(name)
+        final result = getComponent(name)
+        return result instanceof WorkflowDef ? result : null
     }
 
     ProcessDef getProcess(String name) {
-        (ProcessDef)getComponent(name)
+        final result = getComponent(name)
+        return result instanceof ProcessDef ? result : null
     }
 
     FunctionDef getFunction(String name) {
-        (FunctionDef)getComponent(name)
+        final result = getComponent(name)
+        return result instanceof FunctionDef ? result : null
     }
 
     Set<String> getAllNames() {
@@ -211,10 +253,22 @@ class ScriptMeta {
         return result
     }
 
-    Set<String> getProcessNames() {
-        if( NF.dsl1 )
-            return new HashSet<String>(getDsl1ProcessNames())
+    Set<String> getWorkflowNames() {
+        final result = new HashSet(definitions.size() + imports.size())
+        // local definitions
+        for( def item : definitions.values() ) {
+            if( item instanceof WorkflowDef && item.name )
+                result.add(item.name)
+        }
+        // processes from imports
+        for( def item: imports.values() ) {
+            if( item instanceof WorkflowDef )
+                result.add(item.name)
+        }
+        return result
+    }
 
+    Set<String> getProcessNames() {
         def result = new HashSet(definitions.size() + imports.size())
         // local definitions
         for( def item : definitions.values() ) {
@@ -223,6 +277,16 @@ class ScriptMeta {
         }
         // processes from imports
         for( def item: imports.values() ) {
+            if( item instanceof ProcessDef )
+                result.add(item.name)
+        }
+        return result
+    }
+
+    Set<String> getLocalProcessNames() {
+        def result = new HashSet(definitions.size() + imports.size())
+        // local definitions
+        for( def item : definitions.values() ) {
             if( item instanceof ProcessDef )
                 result.add(item.name)
         }
@@ -238,40 +302,58 @@ class ScriptMeta {
         return result
     }
 
+    /**
+     * Check if this script has standalone processes that can be executed
+     * automatically without requiring workflows
+     * 
+     * @return true if the script has one or more processes and no workflows
+     */
+    boolean hasExecutableProcesses() {
+        // Don't allow execution of true modules (those are meant for inclusion)
+        if( isModule() )
+            return false
+        
+        // Must have at least one process
+        final processNames = getLocalProcessNames()
+        if( processNames.isEmpty() )
+            return false
+        
+        // Must not have any workflow definitions (including unnamed workflow)
+        return getLocalWorkflowNames().isEmpty()
+    }
+
     void addModule(BaseScript script, String name, String alias) {
        addModule(get(script), name, alias)
     }
 
     void addModule(ScriptMeta script, String name, String alias) {
         assert script
-        if( name ) {
-            // include a specific
-            def item = script.getComponent(name)
-            if( !item )
-                throw new MissingModuleComponentException(script, name)
-            addModule0(item, alias)
-        }
-        else for( def item : script.getDefinitions() ) {
-            addModule0(item)
-        }
+        assert name
+        // include a specific
+        def item = script.getComponent(name)
+        if( !item )
+            throw new MissingModuleComponentException(script, name)
+        addModule0(item, alias)
     }
 
     protected void addModule0(ComponentDef component, String alias=null) {
         assert component
 
         final name = alias ?: component.name
-        final existing = getComponent(name)
-        if (existing) {
-            def msg = "A ${existing.type} with name '$name' is already defined in the current context"
-            throw new DuplicateModuleIncludeException(msg)
-        }
-
-        if( name != component.name ) {
+        if( !NF.isSyntaxParserV2() )
+            checkComponentName(component, name)
+        if( name != component.name )
             imports.put(name, component.cloneWithName(name))
-        }
-        else {
+        else
             imports.put(name, component)
-        }
+    }
+
+    @Memoized
+    ResourcesBundle getModuleBundle() {
+        if( !scriptPath )
+            throw new IllegalStateException("Module scriptPath has not been defined yet")
+        final bundlePath = scriptPath.resolveSibling('resources')
+        return ResourcesBundle.scan(bundlePath)
     }
 
 }

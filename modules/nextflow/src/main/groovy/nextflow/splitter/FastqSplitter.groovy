@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -135,13 +134,16 @@ class FastqSplitter extends AbstractTextSplitter {
     @Override
     protected fetchRecord(BufferedReader reader) {
 
-        def l1 = reader.readLine()
-        def l2 = reader.readLine()
-        def l3 = reader.readLine()
-        def l4 = reader.readLine()
+        final l1 = reader.readLine()
+        final l2 = reader.readLine()
+        final l3 = reader.readLine()
+        final l4 = reader.readLine()
+
+        if( !l1 && !l2 && !l3 && !l4 )
+            return null
 
         if( !l1 || !l2 || !l3 || !l4 )
-            return null
+            throw new IllegalStateException(errorMessage)
 
         if( !l1.startsWith('@') || !l3.startsWith('+') )
             throw new IllegalStateException(errorMessage)

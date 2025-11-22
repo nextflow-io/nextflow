@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -87,4 +86,16 @@ class TestHelper {
         file.text
     }
 
+    static String decodeBase64(String encoded) {
+        byte[] decodedBytes = Base64.getDecoder().decode(encoded);
+        // Convert the decoded bytes into a string
+        return new String(decodedBytes);
+    }
+
+    static int rndServerPort() {
+        ServerSocket socket = new ServerSocket(0)
+        int port = socket.localPort
+        socket.close()
+        return port
+    }
 }

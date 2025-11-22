@@ -1,7 +1,6 @@
 #!/usr/bin/env nextflow
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +15,16 @@
  * limitations under the License.
  */
 
-seqs = Channel.fromPath("$baseDir/data/p{1,2,3}.fa")
-
 process foo {
-    echo true
+    debug true
 
     input:
-    file 'dir1/link_*.fasta' from seqs.toList()
+    file 'dir1/link_*.fasta'
 
     output:
-    file 'dir2/*' into result mode flatten
+    file 'dir2/*' 
 
+    script:
     '''
     ls dir1 | sort
     mkdir dir2
@@ -35,4 +33,10 @@ process foo {
     '''
 }
 
-result.view { it.name }
+workflow {
+  channel.fromPath("$baseDir/data/p{1,2,3}.fa") \
+    | toList \
+    | foo \
+    | flatten \
+    | view { it.name }
+}

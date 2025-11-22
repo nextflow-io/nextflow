@@ -1,7 +1,6 @@
 #!/usr/bin/env nextflow
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +15,13 @@
  * limitations under the License.
  */
 
- /* 
-  * Run a process using a S3 file as input 
-  */
-
-
-s3file = file('s3://nextflow-ci/nf-test-data/transcriptome.fa')
-s3glob = Channel.fromFilePairs('s3://nextflow-ci/nf-test-data/*_{1,2}.fq')
 
 process foo {
-  echo true
+  debug true
   input:
-  file(obj) from s3file
+  path(obj)
 
+  script:
   """
   cat $obj | head
   """
@@ -37,10 +30,18 @@ process foo {
 process bar {
   tag "$pair"
   input:
-  set pair, file(obj) from s3glob
+  tuple val(pair), path(obj)
 
+  script:
   """
   cat $obj | head
   """
+}
 
+workflow {
+  def s3file = file('s3://rnaseq-nf/data/ggal/transcript.fa')
+  def s3glob = channel.fromFilePairs('s3://rnaseq-nf/data/ggal/*_{1,2}.fq')
+
+  foo(s3file)
+  bar(s3glob)
 }

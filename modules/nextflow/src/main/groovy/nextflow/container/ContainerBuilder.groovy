@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +18,8 @@ package nextflow.container
 
 import java.nio.file.Path
 
+import groovy.transform.CompileStatic
+import nextflow.executor.BashWrapperBuilder
 import nextflow.util.Escape
 import nextflow.util.MemoryUnit
 import nextflow.util.PathTrie
@@ -27,7 +28,30 @@ import nextflow.util.PathTrie
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
 abstract class ContainerBuilder<V extends ContainerBuilder> {
+
+    /**
+     * Create a builder instance given the container engine
+     */
+    static ContainerBuilder create(ContainerConfig config, String containerImage) {
+        if( config instanceof DockerConfig )
+            return new DockerBuilder(containerImage, config)
+        if( config instanceof PodmanConfig )
+            return new PodmanBuilder(containerImage, config)
+        if( config instanceof SingularityConfig )
+            return new SingularityBuilder(containerImage, config)
+        if( config instanceof ApptainerConfig )
+            return new ApptainerBuilder(containerImage, config)
+        if( config instanceof SarusConfig )
+            return new SarusBuilder(containerImage, config)
+        if( config instanceof ShifterConfig )
+            return new ShifterBuilder(containerImage, config)
+        if( config instanceof CharliecloudConfig )
+            return new CharliecloudBuilder(containerImage, config)
+        //
+        throw new IllegalArgumentException("Unknown container engine: $config.engine")
+    }
 
     final protected List env = []
 
@@ -37,7 +61,7 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
 
     protected List<String> engineOptions = []
 
-    protected Float cpus
+    protected Integer cpus
 
     protected String cpuset
 
@@ -51,23 +75,32 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
 
     protected boolean readOnlyInputs
 
+    @Deprecated
     protected String entryPoint
 
     protected String runCommand
 
     protected boolean mountWorkDir = true
 
+    protected boolean privileged
+
+    protected String platform
+
+    String getImage() { image }
+
     V addRunOptions(String str) {
-        runOptions.add(str)
+        if( str )
+            runOptions.add(str)
         return (V)this
     }
 
     V addEngineOptions(String str) {
-        engineOptions.add(str)
+        if( str )
+            engineOptions.add(str)
         return (V)this
     }
 
-    V setCpus(Float value) {
+    V setCpus(Integer value) {
         this.cpus = value
         return (V)this
     }
@@ -87,6 +120,11 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
         else
             throw new IllegalArgumentException("Not a supported memory value")
 
+        return (V)this
+    }
+
+    V setPlatform(String platform) {
+        this.platform = platform
         return (V)this
     }
 
@@ -129,7 +167,7 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
         return run + ' ' + launcher
     }
 
-    String getKillCommand() { return '[[ "$pid" ]] && kill $pid 2>/dev/null' }
+    String getKillCommand() { BashWrapperBuilder.KILL_CMD }
 
     String getRemoveCommand() { return null }
 
@@ -156,6 +194,12 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
     V addMount( Path path ) {
         if( path )
             mounts.add(path)
+        return (V)this
+    }
+
+    V addMounts( List<Path> paths ) {
+        if( paths ) for( Path it : paths )
+            mounts.add(it)
         return (V)this
     }
 
@@ -209,7 +253,7 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
             result << '-e "' << env << '"'
         }
         else if( env instanceof String ) {
-            result << "\${$env:+-e \"$env=\$$env\"}"
+            result << "-e \"$env\""
         }
         else if( env ) {
             throw new IllegalArgumentException("Not a valid environment value: $env [${env.class.name}]")
@@ -258,7 +302,7 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
 
         // -- append by default the current path -- this is needed when `scratch` is set to true
         if( mountWorkDir ) {
-            result << composeVolumePath('$PWD')
+            result << composeVolumePath('$NXF_TASK_WORKDIR')
             result << ' '
         }
 

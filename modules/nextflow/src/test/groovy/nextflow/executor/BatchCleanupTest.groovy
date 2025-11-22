@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,10 +50,10 @@ class BatchCleanupTest extends Specification {
 
         given:
         def batch = new BatchCleanup()
-        def lsf = Mock(AbstractGridExecutor)
+        def lsf = Mock(AbstractGridExecutor) {
+            getConfig() >> new ExecutorConfig([killBatchSize: 5])
+        }
         lsf.getName() >> 'lsf'
-        and:
-        batch.size = 5
 
         when:
         5.times { batch.collect(lsf, 100+it)  }

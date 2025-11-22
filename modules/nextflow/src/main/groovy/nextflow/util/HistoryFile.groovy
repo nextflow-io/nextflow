@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +24,8 @@ import java.text.SimpleDateFormat
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.Const
+import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 /**
  * Manages the history file containing the last 1000 executed commands
@@ -34,10 +35,12 @@ import nextflow.exception.AbortOperationException
 @Slf4j
 class HistoryFile extends File {
 
-    public static final String FILE_NAME = '.nextflow/history'
+    static String defaultFileName() { Const.appCacheDir.resolve('history').toString() }
 
     @Lazy
     public static final HistoryFile DEFAULT = { def f=new HistoryFile(); f.parentFile?.mkdirs(); return f } ()
+
+    static final disabled() { SysEnv.get('NXF_IGNORE_RESUME_HISTORY')=='true' }
 
     private static final DateFormat TIMESTAMP_FMT = new SimpleDateFormat('yyyy-MM-dd HH:mm:ss')
 
@@ -47,7 +50,7 @@ class HistoryFile extends File {
     private static final VAL_9 = (int)('9' as char)
 
     private HistoryFile() {
-        super(FILE_NAME)
+        super(defaultFileName())
     }
 
     HistoryFile(File file) {
@@ -217,7 +220,7 @@ class HistoryFile extends File {
     List<Record> findByIdOrName( String str ) {
         if( str == 'last' ) {
             def entry = getLast()
-            return entry ? [entry] : Collections.emptyList()
+            return entry ? [entry] : Collections.<Record>emptyList()
         }
 
         if( isUuidString(str) )
@@ -225,7 +228,7 @@ class HistoryFile extends File {
 
         else {
             def entry = getByName(str)
-            return entry ? [entry] : Collections.emptyList()
+            return entry ? [entry] : Collections.<Record>emptyList()
         }
 
     }

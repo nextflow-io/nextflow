@@ -10,11 +10,6 @@ export NXF_CMD=${NXF_CMD:-$(get_abs_filename ../launch.sh)}
 [[ $TOWER_ACCESS_TOKEN ]] && OPTS='-with-tower' || OPTS=''
 set -x
 $NXF_CMD -C ./azure.config \
-    run nextflow-io/rnaseq-nf \
-    -with-report \
-    -with-trace $OPTS
-
-$NXF_CMD -C ./azure.config \
     run ./test-readspair.nf \
     -with-report \
     -with-trace $OPTS
@@ -50,3 +45,21 @@ $NXF_CMD -C ./azure.config run ./test-complexpaths.nf -resume
 
 ## run test-subdirs inputs/outputs
 $NXF_CMD -C ./azure.config run ./test-subdirs.nf
+
+NXF_CLOUDCACHE_PATH=az://my-data/cache \
+$NXF_CMD -C ./azure.config \
+    run nextflow-io/rnaseq-nf \
+    -with-report \
+    -with-trace $OPTS \
+    -plugins nf-cloudcache
+[[ `grep -c 'Using Nextflow cache factory: nextflow.cache.CloudCacheFactory' .nextflow.log` == 1 ]] || false
+
+NXF_CLOUDCACHE_PATH=az://my-data/cache \
+$NXF_CMD -C ./azure.config \
+    run nextflow-io/rnaseq-nf \
+    -with-report \
+    -with-trace $OPTS \
+    -plugins nf-cloudcache \
+    -resume
+[[ `grep -c 'Using Nextflow cache factory: nextflow.cache.CloudCacheFactory' .nextflow.log` == 1 ]] || false
+[[ `grep -c 'Cached process > ' .nextflow.log` == 4 ]] || false

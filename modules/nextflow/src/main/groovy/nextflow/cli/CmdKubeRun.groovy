@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +21,8 @@ import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
-import nextflow.k8s.K8sDriverLauncher
+import nextflow.plugin.Plugins
+import org.pf4j.ExtensionPoint
 /**
  * Extends `run` command to support Kubernetes deployment
  * 
@@ -32,6 +32,10 @@ import nextflow.k8s.K8sDriverLauncher
 @CompileStatic
 @Parameters(commandDescription = "Execute a workflow in a Kubernetes cluster (experimental)")
 class CmdKubeRun extends CmdRun {
+
+    interface KubeCommand extends ExtensionPoint {
+        int run(CmdKubeRun cmd, String pipeline, List<String> args)
+    }
 
     static private String POD_NAME = /[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/
 
@@ -44,8 +48,27 @@ class CmdKubeRun extends CmdRun {
     @Parameter(names = ['-n','-namespace'], description = 'Specify the K8s namespace to use')
     String namespace
 
-    @Parameter(names = '-pod-image', description = 'Specify the container image for the Nextflow pod')
+    @Parameter(names = '-head-image', description = 'Specify the container image for the Nextflow driver pod')
+    String headImage
+
+    @Parameter(names = '-pod-image', description = 'Alias for -head-image (deprecated)')
     String podImage
+
+    @Parameter(names = '-head-cpus', description = 'Specify number of CPUs requested for the Nextflow driver pod')
+    int headCpus
+
+    @Parameter(names = '-head-memory', description = 'Specify amount of memory requested for the Nextflow driver pod')
+    String headMemory
+
+    @Parameter(names = '-head-prescript', description = 'Specify script to be run before nextflow run starts')
+    String headPreScript
+
+    @Parameter(names= '-remoteConfig', description = 'Add the specified file from the K8s cluster to configuration set', hidden = true )
+    List<String> runRemoteConfig
+
+    @Parameter(names=['-remoteProfile'], description = 'Choose a configuration profile in the remoteConfig')
+    String remoteProfile
+
 
     @Override
     String getName() { 'kuberun' }
@@ -58,7 +81,7 @@ class CmdKubeRun extends CmdRun {
         runName = runName.replace('_','-')
     }
 
-    protected boolean background() { launcher.options.background }
+    boolean background() { launcher.options.background }
 
     protected hasAnsiLogFlag() { launcher.options.hasAnsiLogFlag() }
 
@@ -70,10 +93,16 @@ class CmdKubeRun extends CmdRun {
             throw new AbortOperationException("No project name was specified")
         if( hasAnsiLogFlag() )
             log.warn "Ansi logging not supported by kuberun command"
+        if( podImage ) {
+            log.warn "-pod-image is deprecated (use -head-image instead)"
+            headImage = podImage
+        }
         checkRunName()
-        final driver = new K8sDriverLauncher(cmd: this, runName: runName, podImage: podImage, background: background())
-        driver.run(pipeline, scriptArgs)
-        final status = driver.shutdown()
+        Plugins.init()
+        Plugins.start('nf-k8s')
+        // load the command operations
+        final command = Plugins.getExtension(KubeCommand)
+        final status = command.run(this, pipeline, scriptArgs)
         System.exit(status)
     }
 

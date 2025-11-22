@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,12 +21,33 @@ import java.lang.annotation.Retention
 import java.lang.annotation.RetentionPolicy
 import java.lang.annotation.Target
 
+import groovy.transform.CompileStatic
+import nextflow.script.control.PathCompareVisitor
+import org.codehaus.groovy.ast.ASTNode
+import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.control.CompilePhase
+import org.codehaus.groovy.control.SourceUnit
+import org.codehaus.groovy.transform.ASTTransformation
+import org.codehaus.groovy.transform.GroovyASTTransformation
 import org.codehaus.groovy.transform.GroovyASTTransformationClass
 
 /**
- * Marker interface which to apply AST transformation to {@code process} declaration
+ * Replace path comparisons with explicit method calls.
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Retention(RetentionPolicy.SOURCE)
 @Target(ElementType.METHOD)
 @GroovyASTTransformationClass(classes = [NextflowXformImpl])
-@interface NextflowXform {}
+@interface NextflowXform {
+
+    @CompileStatic
+    @GroovyASTTransformation(phase = CompilePhase.CONVERSION)
+    class NextflowXformImpl implements ASTTransformation {
+
+        @Override
+        void visit(ASTNode[] nodes, SourceUnit source) {
+            new PathCompareVisitor(source).visitClass((ClassNode)nodes[1])
+        }
+    }
+}

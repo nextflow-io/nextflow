@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +19,7 @@ package nextflow.processor
 import java.nio.file.Files
 import java.nio.file.Paths
 
-import groovy.runtime.metaclass.DelegatingPlugin
+import groovy.runtime.metaclass.ExtensionProvider
 import groovy.runtime.metaclass.NextflowDelegatingMetaClass
 import groovy.transform.InheritConstructors
 import nextflow.Global
@@ -29,7 +28,6 @@ import nextflow.NextflowMeta
 import nextflow.Session
 import nextflow.script.BaseScript
 import nextflow.script.BodyDef
-import nextflow.script.ProcessConfig
 import nextflow.script.ScriptBinding
 import nextflow.script.ScriptMeta
 import nextflow.util.BlankSeparatedList
@@ -49,10 +47,9 @@ class TaskContextTest extends Specification {
     def 'should save and read TaskContext object' () {
 
         setup:
-        def taskConfig = new ProcessConfig([:])
-        def processor = [:] as TaskProcessor
-        processor.metaClass.getTaskConfig = { taskConfig }
-        processor.metaClass.getTaskBody = { new BodyDef(null,'source') }
+        def processor = Mock(TaskProcessor) {
+            getTaskBody() >> new BodyDef(null,'source')
+        }
         def str = 'Hola'
         def map = new TaskContext(processor, [:])
         map.alpha = 1
@@ -190,7 +187,7 @@ class TaskContextTest extends Specification {
         when:
         // it's a DSL2 module
         NextflowMeta.instance.enableDsl2()
-        NextflowDelegatingMetaClass.plugin = Mock(DelegatingPlugin) { operatorNames() >> new HashSet<String>() }
+        NextflowDelegatingMetaClass.provider = Mock(ExtensionProvider) { operatorNames() >> new HashSet<String>() }
         def meta = ScriptMeta.register(script)
         meta.setScriptPath(temp.resolve('modules/my-module/main.nf'))
         and:
@@ -205,7 +202,7 @@ class TaskContextTest extends Specification {
         result == temp.resolve('modules/my-module/templates/foo.txt')
 
         cleanup:
-        NextflowDelegatingMetaClass.plugin = null
+        NextflowDelegatingMetaClass.provider = null
         NextflowMeta.instance.disableDsl2()
         temp?.deleteDir()
     }

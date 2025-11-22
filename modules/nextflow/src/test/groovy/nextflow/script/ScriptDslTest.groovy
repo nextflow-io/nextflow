@@ -359,7 +359,7 @@ class ScriptDslTest extends Dsl2Spec {
 
         then:
         def err = thrown(ScriptRuntimeException)
-        err.message == 'Process `bar` declares 1 input channel but 0 were specified'
+        err.message == 'Process `bar` declares 1 input but was called with 0 arguments'
     }
 
     def 'should report error accessing undefined out/a' () {
@@ -381,7 +381,7 @@ class ScriptDslTest extends Dsl2Spec {
 
         then:
         def err = thrown(ScriptRuntimeException)
-        err.message == "Access to 'foo.out' is undefined since process doesn't declare any output"
+        err.message == "Access to 'foo.out' is undefined since the process 'foo' has not been invoked before accessing the output attribute"
     }
 
     def 'should report error accessing undefined out/b' () {
@@ -403,7 +403,7 @@ class ScriptDslTest extends Dsl2Spec {
 
         then:
         def err = thrown(ScriptRuntimeException)
-        err.message == "Access to 'foo.out' is undefined since process doesn't declare any output"
+        err.message == "Access to 'foo.out' is undefined since the process 'foo' has not been invoked before accessing the output attribute"
     }
 
     def 'should report error accessing undefined out/c' () {
@@ -425,7 +425,7 @@ class ScriptDslTest extends Dsl2Spec {
 
         then:
         def err = thrown(ScriptRuntimeException)
-        err.message == "Access to 'flow1.out' is undefined since workflow doesn't declare any output"
+        err.message == "Access to 'flow1.out' is undefined since the workflow 'flow1' doesn't declare any output"
     }
 
     def 'should report error accessing undefined out/d' () {
@@ -451,28 +451,28 @@ class ScriptDslTest extends Dsl2Spec {
 
         then:
         def err = thrown(ScriptRuntimeException)
-        err.message == "Process `bar` declares 1 input channel but 0 were specified"
+        err.message == "Process `bar` declares 1 input but was called with 0 arguments"
     }
 
-
-    def 'should report unsupported error' () {
+    def 'should report error accessing undefined out/e' () {
         when:
         dsl_eval('''
         process foo {
           /echo foo/
         }
         
+        workflow flow1 {
+            foo()
+        }
+        
         workflow {
-          get: 
-            x
-          main: 
-          flow()
+          flow1.out.view()
         }
         ''')
 
         then:
-        def err = thrown(ScriptCompilationException)
-        err.message.contains "Workflow 'get' is not supported anymore use 'take' instead"
+        def err = thrown(ScriptRuntimeException)
+        err.message == "Access to 'flow1.out' is undefined since the workflow 'flow1' has not been invoked before accessing the output attribute"
     }
 
     def 'should fail with wrong scope'() {
@@ -517,7 +517,7 @@ class ScriptDslTest extends Dsl2Spec {
 
         then:
         def err = thrown(MissingProcessException)
-        err.message == "Missing process or function with name 'hello'"
+        err.message == "Missing process or function hello()"
     }
 
 
@@ -544,7 +544,7 @@ class ScriptDslTest extends Dsl2Spec {
 
         then:
         def err = thrown(MissingProcessException)
-        err.message == "Missing process or function with name 'sleeper_2' -- Did you mean 'sleeper' instead?"
+        err.message == "Missing process or function sleeper_2() -- Did you mean 'sleeper' instead?"
     }
 
     def 'should fail because is not defined /3' () {
@@ -573,7 +573,7 @@ class ScriptDslTest extends Dsl2Spec {
         then:
         def err = thrown(MissingProcessException)
         err.message ==  '''\
-                        Missing process or function with name 'sleeper3'
+                        Missing process or function sleeper3()
                         
                         Did you mean any of these instead?
                           sleeper1
@@ -602,6 +602,46 @@ class ScriptDslTest extends Dsl2Spec {
 
         then:
         result.val == 'Hello'
+    }
+
+
+    def 'should throw an exception on missing method' () {
+
+        when:
+        dsl_eval '''
+           Channel.doesNotExist()
+        '''
+        then:
+        def e1 = thrown(MissingMethodException)
+        e1.message == 'No signature of method: java.lang.Object.Channel.doesNotExist() is applicable for argument types: () values: []'
+
+        when:
+        dsl_eval '''
+        workflow {
+           Channel.doesNotExist()
+        }
+        '''
+        then:
+        def e2 = thrown(MissingProcessException)
+        e2.message == 'Missing process or function Channel.doesNotExist()'
+    }
+
+    def 'should show proper error message for invalid entry name' () {
+        when:
+        // Use dsl_eval with an invalid entry name to trigger the error
+        dsl_eval('invalidEntry', '''
+        workflow validWorkflow {
+          /println 'valid'/
+        }
+        
+        workflow {
+          /println 'default'/
+        }
+        ''')
+        
+        then:
+        def err = thrown(IllegalArgumentException)
+        err.message.contains('Unknown workflow entry name: invalidEntry')
     }
 
 }

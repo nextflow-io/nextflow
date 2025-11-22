@@ -38,7 +38,7 @@ class AzWriteableByteChannel implements SeekableByteChannel {
 
     @Override
     int read(ByteBuffer dst) throws IOException {
-        throw new UnsupportedOperationException()
+        throw new UnsupportedOperationException("Operation 'read(ByteBuffer)' is not supported by AzWriteableByteChannel")
     }
 
     @Override
@@ -55,7 +55,7 @@ class AzWriteableByteChannel implements SeekableByteChannel {
 
     @Override
     SeekableByteChannel position(long newPosition) throws IOException {
-        throw new UnsupportedOperationException()
+        throw new UnsupportedOperationException("Operation 'position(long)' is not supported by AzWriteableByteChannel")
     }
 
     @Override
@@ -65,7 +65,7 @@ class AzWriteableByteChannel implements SeekableByteChannel {
 
     @Override
     SeekableByteChannel truncate(long size) throws IOException {
-        throw new UnsupportedOperationException()
+        throw new UnsupportedOperationException("Operation 'truncate(long)' is not supported by AzWriteableByteChannel")
     }
 
     @Override

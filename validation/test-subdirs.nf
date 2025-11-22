@@ -1,13 +1,19 @@
+workflow {
+  foo | bar
+}
+
 process foo {
     output:
-    path 'gsfolder/' into ch1
-    path 'gsfolder2' into ch2
-    path 'gsfolder3' into ch3
-    path 'gsfolder4' into ch4
-    path 'test5.txt' into ch5
-    path 'test6.txt' into ch6
-    path 'test7.txt' into ch7
+    path 'gsfolder/'
+    path 'gsfolder2'
+    path 'gsfolder3'
+    path 'gsfolder4'
+    path 'test5.txt'
+    path 'test6.txt'
+    path 'test7.txt'
+    path 'gsfolder5/sub'
 
+    script:
     """
     mkdir -p gsfolder/sub
     touch gsfolder/test1.txt
@@ -26,19 +32,23 @@ process foo {
     echo 'Hello 6'>>test6.txt
     echo 'Hello 7'>>test7.txt
 
+    mkdir -p gsfolder5/sub
+    touch gsfolder5/sub/test8.txt
     """
 }
 
 process bar {
     input:
-    path test_folder from ch1
-    path test_folder2 from ch2
-    path 'test-folder3' from ch3
-    path 'test-folder4/*' from ch4
-    path test5 from ch5
-    path 'this-is-test-6.txt' from ch6
-    path 'test7/foo/*' from ch7
+    path test_folder
+    path test_folder2
+    path 'test-folder3'
+    path 'test-folder4/*'
+    path test5
+    path 'this-is-test-6.txt'
+    path 'test7/foo/*'
+    path 'test8/*'
 
+    script:
     """
     set -x
     [[ -f $test_folder/test1.txt ]] || false

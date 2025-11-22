@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +15,12 @@
  */
 
 package nextflow.dag
+
 import java.nio.file.Path
 
+import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
+import groovy.util.logging.Slf4j
 
 /**
  * Render the DAG using the Graphviz DOT format
@@ -29,17 +31,22 @@ import groovy.transform.PackageScope
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  * @author Mike Smoot <mes@aescon.com>
  */
+@Slf4j
+@CompileStatic
 class DotRenderer implements DagRenderer {
 
-    private String name
+    private final String name
 
-    /**
-     * Create a render instance
-     *
-     * @param name The graph name used in the DOT format
-     */
-    DotRenderer( String name ) {
+    private final String direction
+
+    DotRenderer(String name, String direction) {
         this.name = normalise(name)
+        if( direction !in ['TB','LR'] ) {
+            log.warn "Invalid configuration property `dag.direction = '$direction'` - use either: 'TB' (top-bottom) or 'LR' (left-right)"
+            this.direction = 'TB'
+        } else {
+            this.direction = direction
+        }
     }
 
     @PackageScope
@@ -53,6 +60,7 @@ class DotRenderer implements DagRenderer {
     String renderNetwork(DAG dag) {
         def result = []
         result << "digraph \"$name\" {"
+        result << "rankdir=$direction;"
         dag.edges.each { edge -> result << renderEdge( edge ) }
         result << "}\n"
         return result.join('\n')

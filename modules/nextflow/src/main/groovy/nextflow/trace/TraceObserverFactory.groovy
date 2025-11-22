@@ -7,6 +7,7 @@ import org.pf4j.ExtensionPoint
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Deprecated
 interface TraceObserverFactory extends ExtensionPoint {
 
     /**

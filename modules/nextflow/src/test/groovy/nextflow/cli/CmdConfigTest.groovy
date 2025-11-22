@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,16 +16,25 @@
 
 package nextflow.cli
 
-import spock.lang.IgnoreIf
-
 import java.nio.file.Files
 
+import nextflow.SysEnv
+import nextflow.exception.AbortOperationException
+import nextflow.extension.FilesEx
+import nextflow.plugin.Plugins
+import nextflow.secret.SecretsLoader
+import spock.lang.IgnoreIf
+import spock.lang.Requires
 import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class CmdConfigTest extends Specification {
+
+    def cleanup() {
+        Plugins.stop()
+    }
 
     def 'should default notation' () {
 
@@ -83,6 +91,7 @@ class CmdConfigTest extends Specification {
                 .stripIndent().leftTrim()
 
     }
+
     def 'should canonical notation' () {
 
         given:
@@ -162,6 +171,112 @@ class CmdConfigTest extends Specification {
 
     }
 
+    def 'should print the value of a config option' () {
+
+        given:
+        def cmd = new CmdConfig()
+        and:
+        def config = new ConfigObject()
+        config.process.executor = 'slurm'
+        config.process.queue = 'long'
+        config.docker.enabled = true
+        and:
+        def buffer
+
+        when:
+        buffer = new ByteArrayOutputStream()
+        cmd.printValue0(config, 'process.executor', buffer)
+        then:
+        buffer.toString() == 'slurm\n'
+
+        when:
+        buffer = new ByteArrayOutputStream()
+        cmd.printValue0(config, 'does.not.exist', buffer)
+        then:
+        def e = thrown(AbortOperationException)
+        e.message == "Configuration option 'does.not.exist' not found"
+
+    }
+
+    def 'should print config using json' () {
+        given:
+        ByteArrayOutputStream buffer
+        ConfigObject config
+        def cmd = new CmdConfig(sort: true)
+
+        when:
+        buffer = new ByteArrayOutputStream()
+
+        config = new ConfigObject()
+        config.process.executor = 'slurm'
+        config.process.queue = 'long'
+        config.docker.enabled = true
+        config.dummy = new ConfigObject() // <-- empty config object should not be print
+        config.mail.from = 'yo@mail.com'
+        config.mail.smtp.host = 'mail.com'
+        config.mail.smtp.port = 25
+        config.mail.smtp.user = 'yo'
+
+        cmd.printJson0(config, buffer)
+        then:
+        buffer.toString() == '''\
+                    {
+                        "docker": {
+                            "enabled": true
+                        },
+                        "mail": {
+                            "from": "yo@mail.com",
+                            "smtp": {
+                                "host": "mail.com",
+                                "port": 25,
+                                "user": "yo"
+                            }
+                        },
+                        "process": {
+                            "executor": "slurm",
+                            "queue": "long"
+                        }
+                    }
+                    '''
+                    .stripIndent()
+    }
+
+    def 'should print config using yaml' () {
+        given:
+        ByteArrayOutputStream buffer
+        ConfigObject config
+        def cmd = new CmdConfig(sort: true)
+
+        when:
+        buffer = new ByteArrayOutputStream()
+
+        config = new ConfigObject()
+        config.process.executor = 'slurm'
+        config.process.queue = 'long'
+        config.docker.enabled = true
+        config.dummy = new ConfigObject() // <-- empty config object should not be print
+        config.mail.from = 'yo@mail.com'
+        config.mail.smtp.host = 'mail.com'
+        config.mail.smtp.port = 25
+        config.mail.smtp.user = 'yo'
+
+        cmd.printYaml0(config, buffer)
+        then:
+        buffer.toString() == '''\
+                    docker:
+                      enabled: true
+                    mail:
+                      from: yo@mail.com
+                      smtp:
+                        host: mail.com
+                        port: 25
+                        user: yo
+                    process:
+                      executor: slurm
+                      queue: long
+                    '''
+                    .stripIndent()
+    }
 
     def 'should parse config file' () {
         given:
@@ -270,7 +385,7 @@ class CmdConfigTest extends Specification {
         params {
           alpha = ["${X1}/a", "b", "c"]
           delta = [ X2, 'z' ]
-          gamma = [p: "${X1}/a", q: X2]
+          gamma = [p: "${X1}/a", q: X2, 'r-r': 'X1']
           omega = X3 
         }
         '''
@@ -294,7 +409,7 @@ class CmdConfigTest extends Specification {
         params {
            alpha = ['SOMETHING/a', 'b', 'c']
            delta = [['SOMETHING'], 'z']
-           gamma = [p:'SOMETHING/a', q:['SOMETHING']]
+           gamma = [p:'SOMETHING/a', q:['SOMETHING'], 'r-r':'X1']
            omega = [p:111, q:'bbb']
         }
         '''.stripIndent()
@@ -307,15 +422,17 @@ class CmdConfigTest extends Specification {
         result.X3 == [p:111, q:'bbb']
         result.params.alpha == ['SOMETHING/a', 'b', 'c']
         result.params.delta == [['SOMETHING'], 'z']
-        result.params.gamma == [p:'SOMETHING/a', q:['SOMETHING']]
+        result.params.gamma == [p:'SOMETHING/a', q:['SOMETHING'], 'r-r': 'X1']
         result.params.omega == [p:111, q:'bbb']
 
     }
 
-
     @IgnoreIf({System.getenv('NXF_SMOKE')})
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def 'should resolve remote config' () {
         given:
+        SysEnv.push(GITHUB_TOKEN: System.getenv('NXF_GITHUB_ACCESS_TOKEN'))
+        and:
         def buffer = new ByteArrayOutputStream()
         def cmd = new CmdConfig(
                 args: ['https://github.com/nextflow-io/hello'],
@@ -332,6 +449,190 @@ class CmdConfigTest extends Specification {
             }
             '''
             .stripIndent()
+
+        cleanup:
+        SysEnv.pop()
     }
 
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
+    def 'should resolve profiles into profiles config' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def CONFIG = folder.resolve('nextflow.config')
+
+        CONFIG.text = '''
+            params {
+               foo = 'baz'
+            }
+            
+            profiles {
+               test {
+                  params {
+                    foo = 'foo'
+                  }
+                  profiles {                      
+                      debug {
+                        cleanup = false
+                      }                    
+                  }
+               }
+            }        
+        '''
+
+        def buffer = new ByteArrayOutputStream()
+        // command definition
+        def cmd = new CmdConfig(showAllProfiles: true)
+        cmd.launcher = new Launcher(options: new CliOptions(config: [CONFIG.toString()]))
+        cmd.stdout = buffer
+        cmd.args = ['.']
+
+        when:
+        cmd.run()
+        def result = new ConfigSlurper().parse(buffer.toString())
+
+        then:
+        result.params.foo == 'baz'
+        result.profiles.test.params.foo == 'foo'
+        result.profiles.debug.cleanup == false
+    }
+
+
+    def 'should remove secrets for config' () {
+        given:
+        SecretsLoader.instance.reset()
+        and:
+        def folder = Files.createTempDirectory('test')
+        and:
+        def secrets  = folder.resolve('store.json')
+        and:
+        secrets.text = "[ ]"
+        FilesEx.setPermissions(secrets, 'rw-------')
+        SysEnv.push(NXF_SECRETS_FILE:secrets.toAbsolutePath().toString())
+
+        and:
+        def CONFIG = folder.resolve('nextflow.config')
+        CONFIG.text = '''
+        process { 
+            queue = secrets.MYSTERY
+        }
+        '''
+        def buffer = new ByteArrayOutputStream()
+        // command definition
+        def cmd = new CmdConfig()
+        cmd.launcher = new Launcher(options: new CliOptions(config: [CONFIG.toString()]))
+        cmd.stdout = buffer
+        cmd.args = [ '.' ]
+
+        when:
+        cmd.run()
+
+        then:
+        buffer.toString() == '''
+        process {
+           queue = 'secrets.MYSTERY'
+        }
+        '''
+            .stripIndent().leftTrim()
+
+        cleanup:
+        folder?.deleteDir()
+        SysEnv.pop()
+    }
+
+    def 'should render json config output' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def CONFIG = folder.resolve('nextflow.config')
+
+        CONFIG.text = '''
+        manifest {
+            author = 'me'
+            mainScript = 'foo.nf'
+        }
+        
+        process {
+          cpus = 4 
+          queue = 'cn-el7'
+          memory = { 10.GB }   
+          ext.other = { 10.GB * task.attempt }
+        }
+        '''
+        def buffer = new ByteArrayOutputStream()
+        // command definition
+        def cmd = new CmdConfig(outputFormat: 'json')
+        cmd.launcher = new Launcher(options: new CliOptions(config: [CONFIG.toString()]))
+        cmd.stdout = buffer
+        cmd.args = [ '.' ]
+
+        when:
+        cmd.run()
+
+        then:
+        buffer.toString() == '''
+        {
+            "manifest": {
+                "author": "me",
+                "mainScript": "foo.nf"
+            },
+            "process": {
+                "cpus": 4,
+                "queue": "cn-el7",
+                "memory": "{ 10.GB }",
+                "ext": {
+                    "other": "{ 10.GB * task.attempt }"
+                }
+            }
+        }
+        '''
+            .stripIndent().leftTrim()
+
+        cleanup:
+        folder.deleteDir()
+    }
+
+    def 'should render yaml config output' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def CONFIG = folder.resolve('nextflow.config')
+
+        CONFIG.text = '''
+        manifest {
+            author = 'me'
+            mainScript = 'foo.nf'
+        }
+        
+        process {
+          cpus = 4 
+          queue = 'cn-el7'
+          memory = { 10.GB }   
+          ext.other = { 10.GB * task.attempt }
+        }
+        '''
+        def buffer = new ByteArrayOutputStream()
+        // command definition
+        def cmd = new CmdConfig(outputFormat: 'yaml')
+        cmd.launcher = new Launcher(options: new CliOptions(config: [CONFIG.toString()]))
+        cmd.stdout = buffer
+        cmd.args = [ '.' ]
+
+        when:
+        cmd.run()
+
+        then:
+        buffer.toString() == '''
+            manifest:
+              author: me
+              mainScript: foo.nf
+            process:
+              cpus: 4
+              queue: cn-el7
+              memory: '{ 10.GB }'
+              ext:
+                other: '{ 10.GB * task.attempt }'
+            '''
+                .stripIndent().leftTrim()
+
+        cleanup:
+        folder.deleteDir()
+    }
 }

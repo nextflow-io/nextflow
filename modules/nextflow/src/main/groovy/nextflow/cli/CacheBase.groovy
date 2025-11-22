@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,11 +19,10 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
-import nextflow.CacheDB
+import nextflow.cache.CacheDB
+import nextflow.cache.CacheFactory
 import nextflow.exception.AbortOperationException
 import nextflow.util.HistoryFile
-
-import static nextflow.util.HistoryFile.Record
 
 /**
  * Common cache operations shared by {@link CmdLog} and {@link CmdClean}
@@ -51,11 +49,11 @@ trait CacheBase {
     void init() {
 
         if( !history ) {
-            history = !basePath ? HistoryFile.DEFAULT : new HistoryFile(basePath.resolve(HistoryFile.FILE_NAME))
+            history = !basePath ? HistoryFile.DEFAULT : new HistoryFile(basePath.resolve(HistoryFile.defaultFileName()))
         }
 
         if( !history.exists() || history.empty() )
-            throw new AbortOperationException("It looks no pipeline was executed in this folder (or execution history is empty)")
+            throw new AbortOperationException("It looks like no pipeline was executed in this folder (or execution history is empty)")
 
         if( after && before )
             throw new AbortOperationException("Options `after` and `before` cannot be used in the same command")
@@ -68,11 +66,11 @@ trait CacheBase {
 
     }
 
-    CacheDB cacheFor(Record entry) {
-        new CacheDB(entry,basePath)
+    CacheDB cacheFor(HistoryFile.Record entry) {
+        CacheFactory.create(entry.sessionId, entry.runName, basePath)
     }
 
-    List<Record> listIds() {
+    List<HistoryFile.Record> listIds() {
 
         if( but ) {
             return history.findBut(but)
@@ -90,7 +88,7 @@ trait CacheBase {
         if( !args )
             return history.findByIdOrName('last')
 
-        def result = []
+        List<HistoryFile.Record> result = []
         for( String name : args ) {
             result.addAll(history.findByIdOrName(name))
         }

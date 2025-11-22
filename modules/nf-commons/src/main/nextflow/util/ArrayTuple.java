@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +21,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
+import nextflow.script.types.Tuple;
 
 /**
  * Provides a basic tuple implementation extending an {@link ArrayList}
@@ -29,7 +29,7 @@ import java.util.ListIterator;
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-public class ArrayTuple<E> extends ArrayList<E> {
+public class ArrayTuple<E> extends ArrayList<E> implements Tuple {
 
     private static final long serialVersionUID = - 4765828600345948947L;
 

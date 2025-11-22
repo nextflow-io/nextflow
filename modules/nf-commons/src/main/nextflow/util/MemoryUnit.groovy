@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +22,7 @@ import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
+import nextflow.script.types.MemoryUnit as IMemoryUnit
 /**
  * Represent a memory unit
  *
@@ -30,7 +30,7 @@ import groovy.transform.EqualsAndHashCode
  */
 @CompileStatic
 @EqualsAndHashCode(includes = 'size', includeFields = true)
-class MemoryUnit implements Comparable<MemoryUnit>, Serializable, Cloneable {
+class MemoryUnit implements IMemoryUnit, Comparable<MemoryUnit>, Serializable, Cloneable {
 
     final static public MemoryUnit ZERO = new MemoryUnit(0)
 
@@ -96,20 +96,24 @@ class MemoryUnit implements Comparable<MemoryUnit>, Serializable, Cloneable {
 
     }
 
+    @Override
     long toBytes() {
         size
     }
 
     long getBytes() { size }
 
+    @Override
     long toKilo() { size >> 10 }
 
     long getKilo() { size >> 10 }
 
+    @Override
     long toMega() { size >> 20 }
 
     long getMega() { size >> 20 }
 
+    @Override
     long toGiga() { size >> 30 }
 
     long getGiga() { size >> 30 }
@@ -182,6 +186,7 @@ class MemoryUnit implements Comparable<MemoryUnit>, Serializable, Cloneable {
      *
      * @param unit String expressing memory unit in bytes, e.g. KB, MB, GB
      */
+    @Override
     long toUnit(String unit){
         int p = UNITS.indexOf(unit)
         if (p==-1)

@@ -1,57 +1,73 @@
 package nextflow
 
+import static nextflow.extension.Bolts.*
+
 import java.text.SimpleDateFormat
 import java.util.regex.Pattern
 
+import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
+import nextflow.exception.AbortOperationException
 import nextflow.util.VersionNumber
-import static nextflow.extension.Bolts.DATETIME_FORMAT
-
 /**
  * Models nextflow script properties and metadata
  * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
+@CompileStatic
 @Singleton(strict = false)
 @ToString(includeNames = true)
 @EqualsAndHashCode
 class NextflowMeta {
 
-    private static final Pattern DSL2_DECLARATION = ~/(?m)^\s*(nextflow\.(preview|enable)\.dsl\s*=\s*2)\s*;?\s*$/
+    private static final String DSL1_EOL_MESSAGE = "Nextflow DSL1 is no longer supported — Update your script to DSL2, or use Nextflow 22.10.x or earlier"
+    private static final Pattern DSL_DECLARATION = ~/(?m)^\s*(nextflow\.(preview|enable)\.dsl\s*=\s*(\d))\s*(;?\s*)?(;?\/{2}.*)?$/
+
+    private static final Pattern DSL1_INPUT = ~/(?m)input:\s*(tuple|file|path|val|env|stdin)\b.*\s.*\bfrom\b.+$/
+    private static final Pattern DSL1_OUTPUT = ~/(?m)output:\s*(tuple|file|path|val|env|stdout)\b.*\s.*\binto\b.+$/
+    private static final Pattern DSL2_WORKFLOW = ~/\s+workflow(?!\s*\.)\b.*\s*\{[^}]*}/
 
     private static boolean ignoreWarnDsl2 = System.getenv('NXF_IGNORE_WARN_DSL2')=='true'
 
     static trait Flags {
         abstract float dsl
         abstract boolean strict
+        abstract boolean moduleBinaries
     }
 
     @Slf4j
     static class Preview implements Flags {
-        volatile float dsl
-        boolean strict
+        @Deprecated volatile float dsl
+        @Deprecated boolean strict
         boolean recursion
+        boolean moduleBinaries
+        boolean types
 
+        @Deprecated
         void setDsl( float num ) {
-            if( num != 2 && num != 1 )
+            if( num == 1 )
+                throw new IllegalArgumentException(DSL1_EOL_MESSAGE)
+            if( num != 2 )
                 throw new IllegalArgumentException("Not a valid DSL version number: $num")
             if( num == 2 && !ignoreWarnDsl2 )
-                log.warn1 "DSL 2 PREVIEW MODE IS DEPRECATED - USE THE STABLE VERSION INSTEAD -- Read more at https://www.nextflow.io/docs/latest/dsl2.html#dsl2-migration-notes"
+                log.warn1 "DSL 2 PREVIEW MODE IS DEPRECATED - USE THE STABLE VERSION INSTEAD. Read more at https://www.nextflow.io/docs/latest/dsl2.html#dsl2-migration-notes"
             dsl = num
         }
 
-        void setRecursion(Boolean recurse) {
-            if( recurse )
-                log.warn "NEXTFLOW RECURSION IS A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CHANGE IN FUTURE RELEASE"
-            this.recursion = recurse
+        void setRecursion(Boolean recursion) {
+            if( recursion )
+                log.warn "NEXTFLOW RECURSION IS A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CHANGE IN FUTURE RELEASES"
+            this.recursion = recursion
         }
     }
 
     static class Features implements Flags {
         volatile float dsl
         boolean strict
+        boolean moduleBinaries
     }
 
     final VersionNumber version
@@ -67,9 +83,9 @@ class NextflowMeta {
     final Features enable = new Features()
 
     private NextflowMeta() {
-        version = new VersionNumber(Const.APP_VER)
-        build = Const.APP_BUILDNUM
-        timestamp = Const.APP_TIMESTAMP_UTC
+        version = new VersionNumber(BuildInfo.version)
+        build = BuildInfo.buildNum as int
+        timestamp = BuildInfo.timestampUTC
     }
 
     protected NextflowMeta(String ver, int build, String timestamp ) {
@@ -84,6 +100,8 @@ class NextflowMeta {
             result.dsl = 2i
         if( isStrictModeEnabled() )
             result.strict = true
+        if( isModuleBinariesEnabled() )
+            result.moduleBinaries = true
         return result
     }
 
@@ -92,11 +110,8 @@ class NextflowMeta {
         result.version = version.toString()
         result.build = build
         result.timestamp = parseDateStr(timestamp)
-        if( isDsl2Final() ) {
+        if( isDsl2() ) {
             result.enable = featuresMap()
-        }
-        else if( isDsl2() ) {
-            result.preview = featuresMap()
         }
         return result
     }
@@ -106,40 +121,82 @@ class NextflowMeta {
         fmt.parse(str)
     }
 
+    /**
+     * Determine if the workflow script uses DSL2 mode
+     * 
+     * {@code true} when the workflow script uses DSL2 syntax, {@code false} otherwise.
+     */
     boolean isDsl2() {
-        preview.dsl == 2 || enable.dsl == 2
+        enable.dsl == 2f
     }
 
-    boolean isDsl2Final() {
-        enable.dsl == 2
-    }
-
-    void enableDsl2(boolean preview=false) {
-        if( preview )
-            this.preview.dsl = 2
-        else
-            this.enable.dsl = 2
+    void enableDsl2() {
+        this.enable.dsl = 2f
     }
 
     void disableDsl2() {
-        enable.dsl = 1
-        preview.dsl = 1
+        enable.dsl = 1f
+    }
+
+    void enableDsl(String value) {
+        if( value == '1' )
+            throw new AbortOperationException(DSL1_EOL_MESSAGE)
+        if( value != '2' ) {
+            throw new AbortOperationException("Invalid Nextflow DSL value: $value")
+        }
+        this.enable.dsl = value=='1' ? 1f : 2f
     }
 
     boolean isStrictModeEnabled() {
-        preview.strict || enable.strict
+        return enable.strict
     }
 
-    void checkDsl2Mode(String script) {
-        final matcher = DSL2_DECLARATION.matcher(script)
+    void strictMode(boolean mode) {
+        enable.strict = mode
+    }
+
+    boolean isModuleBinariesEnabled() {
+        return enable.moduleBinaries
+    }
+
+    void moduleBinaries(boolean mode) {
+        enable.moduleBinaries = mode
+    }
+
+    static String checkDslMode(String script) {
+        final matcher = DSL_DECLARATION.matcher(script)
         final mode = matcher.find() ? matcher.group(2) : null
         if( !mode )
-            return
-        if( mode == 'enable' )
-            enableDsl2()
+            return null
+        final ver = matcher.group(3)
+        if( mode == 'enable' ) {
+            return ver
+        }
         else if( mode == 'preview' )
-            enableDsl2(true)
+            throw new IllegalArgumentException("Preview nextflow mode ('preview') is no longer supported —- use `nextflow.enable.dsl=2` instead")
         else
             throw new IllegalArgumentException("Unknown nextflow mode=${matcher.group(1)}")
+    }
+
+    static boolean probeDsl1(String script) {
+        try {
+            return (hasDsl1Input(script) || hasDsl1Output(script)) && !hasWorkflowDef(script)
+        }
+        catch (Throwable e) {
+            log.debug "Unable to infer DSL version", e
+            return false
+        }
+    }
+
+    static protected boolean hasDsl1Input(String script) {
+        DSL1_INPUT.matcher(script).find()
+    }
+
+    static protected boolean hasDsl1Output(String script) {
+        DSL1_OUTPUT.matcher(script).find()
+    }
+
+    static protected boolean hasWorkflowDef(String script) {
+        return DSL2_WORKFLOW.matcher(script).find()
     }
 }

@@ -1,7 +1,6 @@
 #!/usr/bin/env nextflow
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,20 +15,21 @@
  * limitations under the License.
  */
 
-x = 1
-y = ['a','b']
 
 process foo {
-    echo true
+    debug true
 
     input:
     val x
     val y
 
     output:
-    val y into result
+    val y 
 
+    script:
     "echo $x - $y"
 }
 
-result.view { "foo out: $it" }
+workflow {
+  foo(1, channel.of('a','b')) | view { "foo out: $it" }
+}

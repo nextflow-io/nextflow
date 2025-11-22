@@ -35,8 +35,8 @@ class ParamsDsl2Test extends Dsl2Spec {
         when:
         new MockScriptRunner() .setScript(SCRIPT).execute()
         then:
-        def e = thrown(DeprecationException)
-        e.message == "Unqualified input file declaration has been deprecated - replace `tuple 'x',..` with `tuple path('x'),..`"
+        def e = thrown(IllegalArgumentException)
+        e.message == "Unqualified input file declaration is not allowed - replace `tuple 'x',..` with `tuple path('x'),..`"
     }
 
     def 'should not allow unqualified input val' () {
@@ -57,8 +57,8 @@ class ParamsDsl2Test extends Dsl2Spec {
         when:
         new MockScriptRunner() .setScript(SCRIPT).execute()
         then:
-        def e = thrown(DeprecationException)
-        e.message == "Unqualified input value declaration has been deprecated - replace `tuple X,..` with `tuple val(X),..`"
+        def e = thrown(IllegalArgumentException)
+        e.message == "Unqualified input value declaration is not allowed - replace `tuple X,..` with `tuple val(X),..`"
     }
 
 
@@ -80,8 +80,8 @@ class ParamsDsl2Test extends Dsl2Spec {
         when:
         new MockScriptRunner() .setScript(SCRIPT).execute()
         then:
-        def e = thrown(DeprecationException)
-        e.message == "Unqualified output path declaration has been deprecated - replace `tuple 'x',..` with `tuple path('x'),..`"
+        def e = thrown(IllegalArgumentException)
+        e.message == "Unqualified output path declaration is not allowed - replace `tuple 'x',..` with `tuple path('x'),..`"
     }
 
     def 'should not allow unqualified output value' () {
@@ -102,15 +102,15 @@ class ParamsDsl2Test extends Dsl2Spec {
         when:
         new MockScriptRunner() .setScript(SCRIPT).execute()
         then:
-        def e = thrown(DeprecationException)
-        e.message == "Unqualified output value declaration has been deprecated - replace `tuple X,..` with `tuple val(X),..`"
+        def e = thrown(IllegalArgumentException)
+        e.message == "Unqualified output value declaration is not allowed - replace `tuple X,..` with `tuple val(X),..`"
     }
 
 
     def 'should allow unqualified stdin and stdout' () {
 
         given:
-        new Session()
+        def session = new Session()
         and:
         def config = new CompilerConfiguration()
         config.setScriptBaseClass(BaseScript.class.name)
@@ -131,7 +131,7 @@ class ParamsDsl2Test extends Dsl2Spec {
         '''
 
         when:
-        def binding = new ScriptBinding().setSession(Mock(Session))
+        def binding = new ScriptBinding().setSession(session)
         def script = (BaseScript)new GroovyShell(binding,config).parse(SCRIPT); script.run()
         and:
         def process = ScriptMeta.get(script).getProcess('alpha'); process.initialize()
@@ -151,7 +151,7 @@ class ParamsDsl2Test extends Dsl2Spec {
     def 'should allow unqualified tuple stdin and stdout' () {
 
         given:
-        new Session()
+        def session = new Session()
         and:
         def config = new CompilerConfiguration()
         config.setScriptBaseClass(BaseScript.class.name)
@@ -172,7 +172,7 @@ class ParamsDsl2Test extends Dsl2Spec {
         '''
 
         when:
-        def binding = new ScriptBinding().setSession(Mock(Session))
+        def binding = new ScriptBinding().setSession(session)
         def script = (BaseScript)new GroovyShell(binding,config).parse(SCRIPT); script.run()
         and:
         def process = ScriptMeta.get(script).getProcess('beta'); process.initialize()

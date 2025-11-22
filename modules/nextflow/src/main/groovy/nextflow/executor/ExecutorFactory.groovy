@@ -21,7 +21,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
-import nextflow.k8s.K8sExecutor
+import nextflow.executor.local.LocalExecutor
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
 import nextflow.script.ScriptType
@@ -44,6 +44,7 @@ class ExecutorFactory {
     final static Map<String, Class<? extends Executor>> BUILT_IN_EXECUTORS = [
             'nope': NopeExecutor,
             'local': LocalExecutor,
+            'flux': FluxExecutor,
             'sge':  SgeExecutor,
             'oge':  SgeExecutor,
             'uge':  SgeExecutor,
@@ -51,13 +52,15 @@ class ExecutorFactory {
             'pbs': PbsExecutor,
             'pbspro': PbsProExecutor,
             'slurm': SlurmExecutor,
+            'bridge': BridgeExecutor,
             'crg': CrgExecutor,
             'bsc': LsfExecutor,
             'condor': CondorExecutor,
-            'k8s': K8sExecutor,
             'nqsii': NqsiiExecutor,
             'moab': MoabExecutor,
-            'oar': OarExecutor
+            'oar': OarExecutor,
+            'hq': HyperQueueExecutor,
+            'tcs': TcsExecutor
     ]
 
     @PackageScope Map<String, Class<? extends Executor>> executorsMap
@@ -184,7 +187,7 @@ class ExecutorFactory {
         def clazz = getExecutorClass(name)
 
         if( !isTypeSupported(script.type, clazz) ) {
-            log.warn "Process '$processName' cannot be executed by '$name' executor -- Using 'local' executor instead"
+            log.warn1 "Process '$processName' cannot be executed by '$name' executor -- Using 'local' executor instead"
             name = 'local'
             clazz = LocalExecutor.class
         }
@@ -202,13 +205,14 @@ class ExecutorFactory {
     protected Executor createExecutor( Class<? extends Executor> clazz, String name, Session session) {
         def result = clazz.newInstance()
         result.session = session
+        result.config = new ExecutorConfig(session.config.executor as Map ?: Collections.emptyMap())
         result.name = name
         result.init()
         return result
     }
 
     /**
-     * Find out the 'executor' to be used in the process definition or in teh session configuration object
+     * Find out the 'executor' to be used in the process definition or in the session configuration object
      *
      * @param taskConfig
      */
@@ -217,13 +221,8 @@ class ExecutorFactory {
         // create the processor object
         def result = taskConfig.executor?.toString()
 
-        if( !result ) {
-            if( session.config.executor instanceof String ) {
-                result = session.config.executor
-            }
-            else if( session.config.executor?.name instanceof String ) {
-                result = session.config.executor.name
-            }
+        if( !result && session.config.executor?.name instanceof String ) {
+            result = session.config.executor.name
         }
 
         log.debug "<< taskConfig executor: $result"

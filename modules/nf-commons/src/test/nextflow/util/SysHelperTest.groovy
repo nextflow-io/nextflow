@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,10 +17,16 @@
 package nextflow.util
 
 import java.lang.management.ManagementFactory
+import java.time.Instant
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
 
 import com.sun.management.OperatingSystemMXBean
+import nextflow.SysEnv
 import nextflow.file.FileHelper
 import spock.lang.Specification
+import spock.lang.Unroll
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -73,9 +78,79 @@ class SysHelperTest extends Specification {
         SysHelper.hostName == (System.getenv('HOSTNAME') ?: InetAddress.getLocalHost().getHostName())
     }
 
+    @Unroll
     def 'should format date string' () {
-        expect:
-        SysHelper.fmtDate(1470901220000, TimeZone.getTimeZone('GMT+2')) == '11-Aug-2016 09:40'
+        given:
+        def env = dateFormat ? [NXF_DATE_FORMAT:dateFormat] : [:]
+        SysEnv.push(env)
+        and:
+        def defLocale = Locale.getDefault(Locale.Category.FORMAT)
+        def useLocale = new Locale.Builder().setLanguage(locale).build()
+        Locale.setDefault(Locale.Category.FORMAT, useLocale)
+
+        when:
+        String fmt = SysHelper.fmtDate(dateInMilis, TimeZone.getTimeZone('GMT+2'))
+        then:
+        fmt == expected
+
+        cleanup:
+        Locale.setDefault(Locale.Category.FORMAT, defLocale)
+        SysEnv.pop()
+
+        where:
+        dateInMilis    | locale | dateFormat                    | expected
+        1470901220000  | 'en'   | null                          | '11-Aug-2016 09:40:20'
+        1470901220000  | 'es'   | null                          | '11-Aug-2016 09:40:20'
+        and:
+        1470901220000  | 'en'   | 'iso'                         | '2016-08-11T09:40:20+02:00'
+        1470901220000  | 'es'   | 'iso'                         | '2016-08-11T09:40:20+02:00'
+        and:
+        1470901220000  | 'en'   | "yyyy-MM-dd'T'HH:mm:ss.SSS"   | '2016-08-11T09:40:20.000'
+        1470901220000  | 'es'   | "yyyy-MM-dd'T'HH:mm:ss.SSS"   | '2016-08-11T09:40:20.000'
+    }
+
+    def 'should format OffsetDateTime preserving timezone' () {
+        given:
+        SysEnv.push([:])
+        and:
+        def defLocale = Locale.getDefault(Locale.Category.FORMAT)
+        def useLocale = new Locale.Builder().setLanguage('en').build()
+        Locale.setDefault(Locale.Category.FORMAT, useLocale)
+        and:
+        // Create OffsetDateTime with specific timezone +02:00 (epoch time 1470901220000 = 2016-08-11T07:40:20Z)
+        def dateTime = OffsetDateTime.ofInstant(Instant.ofEpochMilli(1470901220000), ZoneOffset.ofHours(2))
+
+        when:
+        String fmt = SysHelper.fmtDate(dateTime)
+        then:
+        // Should format using the original timezone (+02:00), which gives 09:40:20 local time
+        fmt == '11-Aug-2016 09:40:20'
+
+        cleanup:
+        Locale.setDefault(Locale.Category.FORMAT, defLocale)
+        SysEnv.pop()
+    }
+
+    def 'should format OffsetDateTime with ISO format preserving timezone' () {
+        given:
+        SysEnv.push([NXF_DATE_FORMAT: 'iso'])
+        and:
+        def defLocale = Locale.getDefault(Locale.Category.FORMAT)
+        def useLocale = new Locale.Builder().setLanguage('en').build()
+        Locale.setDefault(Locale.Category.FORMAT, useLocale)
+        and:
+        // Create OffsetDateTime with specific timezone +05:00 (epoch time 1470901220000 = 2016-08-11T07:40:20Z)
+        def dateTime = OffsetDateTime.ofInstant(Instant.ofEpochMilli(1470901220000), ZoneOffset.ofHours(5))
+
+        when:
+        String fmt = SysHelper.fmtDate(dateTime)
+        then:
+        // Should preserve the original +05:00 timezone, giving 12:40:20 local time
+        fmt == '2016-08-11T12:40:20+05:00'
+
+        cleanup:
+        Locale.setDefault(Locale.Category.FORMAT, defLocale)
+        SysEnv.pop()
     }
 
 }

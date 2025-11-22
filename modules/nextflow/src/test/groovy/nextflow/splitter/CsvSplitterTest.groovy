@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +19,8 @@ package nextflow.splitter
 import spock.lang.Specification
 import spock.lang.Unroll
 
+import java.nio.charset.Charset
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -32,6 +33,13 @@ class CsvSplitterTest extends Specification {
         eta,theta,iota
         mu,nu,xi
         pi,rho,sigma
+        '''
+        .stripIndent().trim()
+
+    def bomText = '\ufeffh1,h2,h3\n'+'''
+        1,2,3
+        4,5,6
+        7,8,9
         '''
         .stripIndent().trim()
 
@@ -82,6 +90,22 @@ class CsvSplitterTest extends Specification {
         items[0] == ['gamma', '', 'zeta']
         items[1] == ['eta', 'theta', 'iota']
         items[2] == ['mu', 'nu', 'xi']
+
+        when:
+        def LINES = '''
+                alpha,beta,delta
+
+                gamma,,zeta
+                eta,theta,iota
+                pi,rho,sigma
+                '''
+                .stripIndent().trim()
+        items = new CsvSplitter().target(LINES).options(skip:3).list()
+        then:
+        items.size() == 2
+        items[0] instanceof List
+        items[0] == ['eta', 'theta', 'iota']
+        items[1] == ['pi', 'rho', 'sigma']
     }
 
     def testSplitWithCount() {
@@ -273,6 +297,23 @@ class CsvSplitterTest extends Specification {
         'a, ,c'                 | '"'  | true | ['a','','c']
         'a," ",c'               | '"'  | true | ['a','','c']
         'a, " " ,c'             | '"'  | true | ['a',' ','c']
+
+    }
+
+    def testSplitBOMCsvWithHeaderCols() {
+        given:
+        def file = File.createTempFile('bom','csv')
+        file.deleteOnExit()
+        file.bytes = bomText.bytes
+
+        when:
+        def items = new CsvSplitter().target(file).options(header:true).list()
+        then:
+        items.size() == 3
+
+        items[0].h1 == '1'
+        items[0].h2 == '2'
+        items[0].h3 == '3'
 
     }
 

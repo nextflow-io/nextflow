@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,8 +19,11 @@ package nextflow.script
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.NF
 import nextflow.exception.IllegalInvocationException
+import nextflow.exception.ScriptRuntimeException
+import nextflow.extension.CH
 import nextflow.extension.OpCall
 /**
  * Models the execution context of a workflow component
@@ -84,6 +86,15 @@ class WorkflowBinding extends Binding  {
         meta.getComponent(name)
     }
 
+    /**
+     * Invokes custom methods in the task execution context
+     *
+     * @see  BaseScript#invokeMethod(java.lang.String, java.lang.Object)
+     *
+     * @param name the name of the method to call
+     * @param args the arguments to use for the method call
+     * @return The result of the method invocation
+     */
     @Override
     Object invokeMethod(String name, Object args) {
         if( meta ) {
@@ -124,6 +135,10 @@ class WorkflowBinding extends Binding  {
     @Override
     void setVariable(String name, Object value) {
         lookupTable.put(value, name)
+        setVariable0(name, value)
+    }
+
+    protected void setVariable0(String name, Object value) {
         super.setVariable(name, value)
     }
 
@@ -145,6 +160,18 @@ class WorkflowBinding extends Binding  {
 
             throw e
         }
+    }
+
+    void _publish_(String name, Object source) {
+        if( source instanceof ChannelOut ) {
+            if( source.size() > 1 )
+                throw new ScriptRuntimeException("Cannot assign a multi-channel to a workflow output: $name")
+            source = source[0]
+        }
+
+        owner.session.outputs[name] = source instanceof DataflowWriteChannel
+            ? source
+            : CH.value(source)
     }
 
 }

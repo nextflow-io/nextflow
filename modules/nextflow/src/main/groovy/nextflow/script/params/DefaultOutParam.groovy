@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,17 +16,19 @@
 
 package nextflow.script.params
 
-import groovyx.gpars.dataflow.DataflowQueue
-import nextflow.script.ProcessConfig
 
+import groovyx.gpars.dataflow.DataflowQueue
+import nextflow.script.ProcessConfigV1
 /**
  * Model a process default output parameter
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-final class DefaultOutParam extends StdOutParam {
+final class DefaultOutParam extends BaseOutParam {
 
-    DefaultOutParam(ProcessConfig config ) {
+    static enum Completion { DONE }
+
+    DefaultOutParam(ProcessConfigV1 config ) {
         super(config)
         bind('-')
         setInto(new DataflowQueue())

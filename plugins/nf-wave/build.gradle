@@ -1,0 +1,65 @@
+/*
+ * Copyright (c) 2019, Seqera Labs.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. 
+ *
+ * This Source Code Form is "Incompatible With Secondary Licenses", as
+ * defined by the Mozilla Public License, v. 2.0.
+ */
+
+plugins {
+    id 'io.nextflow.nextflow-plugin' version "${nextflowPluginVersion}"
+    id 'java-test-fixtures'
+}
+
+nextflowPlugin {
+    nextflowVersion = '25.09.2-edge'
+
+    provider = "${nextflowPluginProvider}"
+    description = 'Provides dynamic container building and augmentation capabilities with on-demand software installation and advanced container management features'
+    className = 'io.seqera.wave.plugin.WavePlugin'
+    useDefaultDependencies = false
+    extensionPoints = [
+        'io.seqera.wave.plugin.WaveFactory',
+        'io.seqera.wave.plugin.config.WaveConfig',
+        'io.seqera.wave.plugin.resolver.WaveContainerResolver',
+    ]
+}
+
+sourceSets {
+    main.java.srcDirs = []
+    main.groovy.srcDirs = ['src/main']
+    main.resources.srcDirs = ['src/resources']
+    test.groovy.srcDirs = ['src/test']
+    test.java.srcDirs = []
+    test.resources.srcDirs = []
+}
+
+configurations {
+    // see https://docs.gradle.org/4.1/userguide/dependency_management.html#sub:exclude_transitive_dependencies
+    runtimeClasspath.exclude group: 'org.slf4j', module: 'slf4j-api'
+}
+
+dependencies {
+    compileOnly project(':nextflow')
+    compileOnly 'org.slf4j:slf4j-api:2.0.17'
+    compileOnly 'org.pf4j:pf4j:3.12.0'
+    compileOnly 'io.seqera:lib-trace:0.1.0'
+    compileOnly 'io.seqera:lib-httpx:2.1.0'
+    compileOnly 'org.apache.commons:commons-lang3:3.18.0'
+
+    // Force lib-httpx version to avoid conflicts with older versions from nf-commons
+    testImplementation 'io.seqera:lib-httpx:2.1.0'
+
+    api 'org.apache.commons:commons-compress:1.26.1'
+    api 'com.google.code.gson:gson:2.13.1'
+    api 'org.yaml:snakeyaml:2.2'
+    api 'io.seqera:wave-api:0.16.0'
+    api 'io.seqera:wave-utils:0.15.1'
+
+    testImplementation(testFixtures(project(":nextflow")))
+    testImplementation "org.apache.groovy:groovy:4.0.29"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.29"
+}

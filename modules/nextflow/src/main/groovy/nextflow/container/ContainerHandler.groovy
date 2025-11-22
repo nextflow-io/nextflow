@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +15,17 @@
  */
 
 package nextflow.container
+
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.regex.Pattern
 
+import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
+import groovy.util.logging.Slf4j
+import nextflow.container.inspect.ContainerInspectMode
+import nextflow.file.FileHelper
 import nextflow.util.Escape
-
 /**
  * Helper class to normalise a container image name depending
  * the the current select container engine
@@ -30,6 +33,8 @@ import nextflow.util.Escape
  * @author Emilio Palumbo <emilio.palumbo@crg.eu>
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
+@CompileStatic
 class ContainerHandler {
 
     final private static Path CWD = Paths.get('.').toAbsolutePath()
@@ -38,12 +43,12 @@ class ContainerHandler {
 
     private Path baseDir
 
-    ContainerHandler(Map containerConfig) {
-        this(containerConfig, CWD)
+    ContainerHandler(ContainerConfig config) {
+        this(config, CWD)
     }
 
-    ContainerHandler(Map containerConfig, Path dir) {
-        this.config = containerConfig as ContainerConfig
+    ContainerHandler(ContainerConfig config, Path dir) {
+        this.config = config
         this.baseDir = dir
     }
 
@@ -52,42 +57,62 @@ class ContainerHandler {
     Path getBaseDir() { baseDir }
 
     String normalizeImageName(String imageName) {
-        final engine = config.getEngine()
-        if( engine == 'shifter' ) {
-            normalizeShifterImageName(imageName)
+        if( config instanceof ShifterConfig ) {
+            return normalizeShifterImageName(imageName)
         }
-        else if( engine == 'udocker' ) {
-            normalizeUdockerImageName(imageName)
-        }
-        else if( engine == 'singularity' ) {
+        if( config instanceof SingularityConfig ) {
             final normalizedImageName = normalizeSingularityImageName(imageName)
             if( !config.isEnabled() || !normalizedImageName )
                 return normalizedImageName
+            if( normalizedImageName.startsWith('docker://') && config.canRunOciImage() )
+                return normalizedImageName
             final requiresCaching = normalizedImageName =~ IMAGE_URL_PREFIX
-            
-            final result = requiresCaching ? createSingularityCache(this.config, normalizedImageName) : normalizedImageName
-            Escape.path(result)
+            if( ContainerInspectMode.dryRun() && requiresCaching )
+                return imageName
+            final result = requiresCaching ? createSingularityCache(config, normalizedImageName) : normalizedImageName
+            return Escape.path(result)
         }
-        else if( engine == 'charliecloud' ) {
+        if( config instanceof ApptainerConfig ) {
+            final normalizedImageName = normalizeApptainerImageName(imageName)
+            if( !config.isEnabled() || !normalizedImageName )
+                return normalizedImageName
+            if( normalizedImageName.startsWith('docker://') && config.canRunOciImage() )
+                return normalizedImageName
+            final requiresCaching = normalizedImageName =~ IMAGE_URL_PREFIX
+            if( ContainerInspectMode.dryRun() && requiresCaching )
+                return imageName
+            final result = requiresCaching ? createApptainerCache(config, normalizedImageName) : normalizedImageName
+            return Escape.path(result)
+        }
+        if( config instanceof CharliecloudConfig ) {
+            final normalizedImageName = normalizeCharliecloudImageName(imageName)
+            if( !config.isEnabled() || !normalizedImageName )
+                return normalizedImageName
             // if the imagename starts with '/' it's an absolute path
             // otherwise we assume it's in a remote registry and pull it from there
             final requiresCaching = !imageName.startsWith('/')
-            final result = requiresCaching ? createCharliecloudCache(this.config, imageName) : imageName
-            Escape.path(result)
+            if( ContainerInspectMode.dryRun() && requiresCaching )
+                return imageName
+            final result = requiresCaching ? createCharliecloudCache(config, normalizedImageName) : normalizedImageName
+            return Escape.path(result)
         }
-        else {
-            normalizeDockerImageName(imageName)
-        }
+        // fallback to docker
+        return normalizeDockerImageName(imageName)
     }
 
     @PackageScope
-    String createSingularityCache(Map config, String imageName) {
-        new SingularityCache(new ContainerConfig(config)) .getCachePathFor(imageName) .toString()
+    String createSingularityCache(SingularityConfig config, String imageName) {
+        SingularityCache.create(config) .getCachePathFor(imageName) .toString()
     }
 
     @PackageScope
-    String createCharliecloudCache(Map config, String imageName) {
-        new CharliecloudCache(new ContainerConfig(config)) .getCachePathFor(imageName) .toString()
+    String createApptainerCache(ApptainerConfig config, String imageName) {
+        new ApptainerCache(config) .getCachePathFor(imageName) .toString()
+    }
+
+    @PackageScope
+    String createCharliecloudCache(CharliecloudConfig config, String imageName) {
+        new CharliecloudCache(config) .getCachePathFor(imageName) .toString()
     }
 
     /**
@@ -124,17 +149,20 @@ class ContainerHandler {
      * @return Image name in Docker canonical format
      */
      @PackageScope
-     String normalizeDockerImageName( String imageName) {
+     String normalizeDockerImageName(String imageName) {
 
         if( !imageName )
             return null
 
-        String reg = this.config?.registry
+        String reg = config.getRegistry()
         if( !reg )
             return imageName
 
-        if( isAbsoluteDockerName(imageName) )
-            return imageName
+        if( isAbsoluteDockerName(imageName) ) {
+             return config.getRegistryOverride()
+                 ? overrideRegistryName(imageName, reg)
+                 : imageName
+        }
 
         if( !reg.endsWith('/') )
             reg += '/'
@@ -142,7 +170,7 @@ class ContainerHandler {
         return reg + imageName
     }
 
-     static boolean isAbsoluteDockerName(String image) {
+    static boolean isAbsoluteDockerName(String image) {
         def p = image.indexOf('/')
         if( p==-1 )
             return false
@@ -151,27 +179,7 @@ class ContainerHandler {
         image.contains('.') || image.contains(':')
     }
 
-    /**
-     * Normalize Udocker image name adding `:latest`
-     * when required
-     *
-     * @param imageName The container image name
-     * @return Image name in Udocker canonical format
-     */
-     @PackageScope
-     String normalizeUdockerImageName( String imageName ) {
-
-        if( !imageName )
-            return null
-
-        if( !imageName.contains(':') )
-            imageName += ':latest'
-
-        return imageName
-    }
-
-
-    public static final Pattern IMAGE_URL_PREFIX = ~/^[^\/:\. ]+:\/\/(.*)/
+    public static final Pattern IMAGE_URL_PREFIX = ~/^[^\/:. ]+:\/\/(.*)/
 
     /**
      * Normalize Singularity image name resolving the absolute path or
@@ -207,6 +215,96 @@ class ContainerHandler {
 
         // in all other case it's supposed to be the name of an image in the docker hub
         // prefix it with the `docker://` pseudo protocol used by singularity to download it
-        return "docker://${img}"
+        return "docker://${normalizeDockerImageName(img)}"
+    }
+
+    /**
+     * Normalize Apptainer image name resolving the absolute path or
+     * adding `docker://` prefix when required
+     *
+     * @param imageName The container image name
+     * @return Image name in Apptainer canonical format
+     */
+     @PackageScope
+     String normalizeApptainerImageName(String img) {
+        if( !img )
+            return null
+
+        // when starts with `/` it's an absolute image file path, just return it
+        if( img.startsWith("/") )
+            return img
+
+         // when starts with `file://` it's an image file path, resolve it against the current path
+        if (img.startsWith("file://")) {
+             return baseDir.resolve(img.substring(7)).toString()
+        }
+
+        // check if matches a protocol scheme such as `docker://xxx`
+        if( img =~ IMAGE_URL_PREFIX ) {
+            return img
+        }
+
+        // if it's the path of an existing image file return it
+        def imagePath = baseDir.resolve(img)
+        if( imagePath.exists() ) {
+            return imagePath.toString()
+        }
+
+        // in all other case it's supposed to be the name of an image in the docker hub
+        // prefix it with the `docker://` pseudo protocol used by apptainer to download it
+        return "docker://${normalizeDockerImageName(img)}"
+    }
+
+    /**
+     * Normalize charliecloud image name resolving the absolute path
+     *
+     * @param imageName The container image name
+     * @return Image name in canonical format
+     */
+     @PackageScope
+     String normalizeCharliecloudImageName(String img) {
+        if( !img )
+            return null
+
+        // when starts with `/` it's an absolute image file path, just return it
+        if( img.startsWith("/") ) {
+            return img
+        }
+        // remove docker:// if present
+        if( img.startsWith("docker://") ) {
+            img = img.minus("docker://")
+        }
+        // if no tag, add :latest
+        if( !img.contains(':') ) {
+            img += ':latest'
+        }
+
+        // if it's the path of an existing image file return it
+        def imagePath = baseDir.resolve(img)
+        if( imagePath.exists() ) {
+            return imagePath.toString()
+        }
+
+        // in all other case it's supposed to be the name of an image
+        return "${normalizeDockerImageName(img)}"
+    }
+
+    static String overrideRegistryName(String repository, String target) {
+        // remove scheme prefix, if any
+        final scheme = FileHelper.getUrlProtocol(repository)
+        final source = scheme ? repository.substring(scheme.length()+3) : repository
+        final p = source.indexOf("/")
+        final first = p!=-1 ? source.substring(0,p) : source
+        final isHost = first.contains('.') || first.contains(":")
+        final path = isHost
+            ? source.substring(p+1)
+            : source
+
+        if( !target.endsWith("/") )
+            target += "/"
+        final result = target + path
+        return scheme
+            ? scheme + "://" + result
+            : result
     }
 }

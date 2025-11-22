@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +19,7 @@ package nextflow.util
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.transform.ToString
-import org.apache.commons.lang.StringUtils
+import org.apache.commons.lang3.StringUtils
 /**
  * Simple comma-separated-values parser
  *
@@ -69,12 +68,12 @@ class CsvParser {
         if( !str )
             return 0 as char
         if( str.size()>1 )
-            throw new IllegalArgumentException("Not a valid CVS character: $str")
+            throw new IllegalArgumentException("Not a valid CSV character: $str")
         str.charAt(0)
     }
 
     List<String> parse( String line ) {
-        def result = []
+        List<String> result = []
         while( line != null ) {
             if( !line ) {
                 result.add(empty)
