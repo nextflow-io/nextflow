@@ -841,6 +841,21 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             resources << ResourceRequirement.builder().type(ResourceType.GPU).value(accelerator.request.toString()).build()
         }
 
+        // set consumable resources
+        final consumableResources = task.config.getConsumableResources()
+        if( consumableResources ) {
+            for( Map<String,Object> resource : consumableResources ) {
+                final type = resource.get('type')?.toString()
+                final value = resource.get('value')
+                if( type && value ) {
+                    resources << ResourceRequirement.builder()
+                        .type(type)
+                        .value(value.toString())
+                        .build()
+                }
+            }
+        }
+
         if( resources )
             container.resourceRequirements(resources)
 
