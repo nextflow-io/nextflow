@@ -47,6 +47,7 @@ import nextflow.trace.TraceObserverV2
 import nextflow.trace.TraceRecord
 import nextflow.trace.event.FilePublishEvent
 import nextflow.trace.event.TaskEvent
+import nextflow.trace.event.WorkflowOutputEvent
 import nextflow.util.Duration
 import nextflow.util.LoggerHelper
 import nextflow.util.ProcessHelper
@@ -142,12 +143,17 @@ class TowerClient implements TraceObserverV2 {
 
     private Map<String,Boolean> allContainers = new ConcurrentHashMap<>()
 
+    private List<WorkflowOutputEvent> workflowOutputs = []
+
+    private DatasetConfig datasetConfig
+
     TowerClient(Session session, TowerConfig config) {
         this.session = session
         this.endpoint = checkUrl(config.endpoint)
         this.accessToken = config.accessToken
         this.workspaceId = config.workspaceId
         this.retryPolicy = config.retryPolicy
+        this.datasetConfig = config.datasets
         this.schema = loadSchema()
         this.generator = TowerJsonGenerator.create(schema)
         this.reports = new TowerReports(session)
@@ -258,6 +264,18 @@ class TowerClient implements TraceObserverV2 {
         if( workspaceId )
             result += "?workspaceId=$workspaceId"
         return result
+    }
+
+    protected String getUrlDatasets() {
+        if( workspaceId )
+            return "$endpoint/workspaces/$workspaceId/datasets/"
+        return "$endpoint/datasets/"
+    }
+
+    protected String getUrlDatasetUpload(String datasetId) {
+        if( workspaceId )
+            return "$endpoint/workspaces/$workspaceId/datasets/$datasetId/upload"
+        return "$endpoint/datasets/$datasetId/upload"
     }
 
     /**
@@ -409,6 +427,10 @@ class TowerClient implements TraceObserverV2 {
         }
         // wait and flush reports content
         reports.flowComplete()
+        // upload workflow outputs to datasets
+        if( shouldUploadDatasets() ) {
+            uploadWorkflowOutputsToDatasets()
+        }
         // notify the workflow completion
         if( workflowId ) {
             final req = makeCompleteReq(session)
@@ -493,6 +515,19 @@ class TowerClient implements TraceObserverV2 {
     @Override
     void onFilePublish(FilePublishEvent event) {
         reports.filePublish(event.target)
+    }
+
+    /**
+     * Collect workflow output events for later upload to datasets
+     *
+     * @param event The workflow output event
+     */
+    @Override
+    void onWorkflowOutput(WorkflowOutputEvent event) {
+        log.debug "Workflow output published: ${event.name} -> ${event.index}"
+        if( event.index ) {
+            workflowOutputs << event
+        }
     }
 
     /**
@@ -827,6 +862,246 @@ class TowerClient implements TraceObserverV2 {
                 tasks.clear()
             }
         }
+    }
+
+    /**
+     * Check if dataset uploads should be performed
+     *
+     * @return true if dataset uploads are enabled and there are outputs to upload
+     */
+    private boolean shouldUploadDatasets() {
+        if( !datasetConfig?.enabled )
+            return false
+        if( !workflowId )
+            return false
+        if( workflowOutputs.isEmpty() )
+            return false
+        return true
+    }
+
+    /**
+     * Upload workflow outputs to Seqera Platform datasets
+     */
+    private void uploadWorkflowOutputsToDatasets() {
+        log.info "Uploading workflow outputs to Seqera Platform datasets"
+
+        for( final output : workflowOutputs ) {
+            try {
+                if( !datasetConfig.isEnabledForOutput(output.name) ) {
+                    log.debug "Dataset upload disabled for output: ${output.name}"
+                    continue
+                }
+
+                uploadOutputToDataset(output)
+            }
+            catch( Exception e ) {
+                log.warn "Failed to upload workflow output '${output.name}' to dataset: ${e.message}", e
+            }
+        }
+    }
+
+    /**
+     * Upload a single workflow output to a dataset
+     *
+     * @param output The workflow output event to upload
+     */
+    private void uploadOutputToDataset(WorkflowOutputEvent output) {
+        // Resolve dataset ID
+        final datasetId = resolveDatasetId(output)
+        if( !datasetId ) {
+            log.warn "Could not determine dataset ID for output: ${output.name}"
+            return
+        }
+
+        // Upload index file
+        uploadIndexToDataset(datasetId, output.index, output.name)
+    }
+
+    /**
+     * Resolve the dataset ID for a workflow output
+     *
+     * @param output The workflow output event
+     * @return The dataset ID, or null if it could not be determined
+     */
+    private String resolveDatasetId(WorkflowOutputEvent output) {
+        // First check if a dataset ID is explicitly configured for this output
+        final configuredId = datasetConfig.getDatasetId(output.name)
+        if( configuredId ) {
+            log.debug "Using configured dataset ID for output '${output.name}': ${configuredId}"
+            return configuredId
+        }
+
+        // If auto-create is enabled, create a new dataset
+        if( datasetConfig.isAutoCreateEnabled() ) {
+            final datasetName = resolveDatasetName(output.name)
+            return createDataset(datasetName, output.name)
+        }
+
+        log.warn "No dataset ID configured for output '${output.name}' and auto-create is disabled"
+        return null
+    }
+
+    /**
+     * Resolve the dataset name using the configured pattern
+     *
+     * @param outputName The name of the workflow output
+     * @return The resolved dataset name
+     */
+    private String resolveDatasetName(String outputName) {
+        def name = datasetConfig.namePattern
+
+        // Replace variables in the pattern
+        name = name.replace('${workflow.runName}', session.runName ?: 'unknown')
+        name = name.replace('${workflow.sessionId}', session.uniqueId?.toString() ?: 'unknown')
+        name = name.replace('${output.name}', outputName)
+
+        return name
+    }
+
+    /**
+     * Create a new dataset in Seqera Platform
+     *
+     * @param name The name for the new dataset
+     * @param description The description for the new dataset
+     * @return The ID of the created dataset, or null if creation failed
+     */
+    private String createDataset(String name, String description) {
+        log.info "Creating new dataset: ${name}"
+
+        try {
+            final payload = [
+                name: name,
+                description: "Workflow output: ${description}",
+                header: true
+            ]
+
+            final url = getUrlDatasets()
+            final resp = sendHttpMessage(url, payload, 'POST')
+
+            if( resp.isError() ) {
+                log.warn "Failed to create dataset '${name}': ${resp.message}"
+                return null
+            }
+
+            // Parse the response to extract dataset ID
+            final json = new JsonSlurper().parseText(resp.message) as Map
+            final dataset = json.dataset as Map
+            final datasetId = dataset?.id as String
+
+            if( datasetId ) {
+                log.info "Created dataset '${name}' with ID: ${datasetId}"
+            }
+
+            return datasetId
+        }
+        catch( Exception e ) {
+            log.warn "Failed to create dataset '${name}': ${e.message}", e
+            return null
+        }
+    }
+
+    /**
+     * Upload an index file to a dataset
+     *
+     * @param datasetId The ID of the dataset
+     * @param indexPath The path to the index file
+     * @param outputName The name of the workflow output (for logging)
+     */
+    private void uploadIndexToDataset(String datasetId, java.nio.file.Path indexPath, String outputName) {
+        if( !indexPath || !java.nio.file.Files.exists(indexPath) ) {
+            log.warn "Index file does not exist for output '${outputName}': ${indexPath}"
+            return
+        }
+
+        log.info "Uploading index file for output '${outputName}' to dataset ${datasetId}: ${indexPath}"
+
+        try {
+            def url = getUrlDatasetUpload(datasetId)
+            // Workflow output index files always have headers
+            url += "?header=true"
+
+            // Upload file using multipart form data
+            final resp = uploadFile(url, indexPath.toFile())
+
+            if( resp.isError() ) {
+                log.warn "Failed to upload index file for output '${outputName}': ${resp.message}"
+            } else {
+                log.info "Successfully uploaded index file for output '${outputName}' to dataset ${datasetId}"
+            }
+        }
+        catch( Exception e ) {
+            log.warn "Failed to upload index file for output '${outputName}': ${e.message}", e
+        }
+    }
+
+    /**
+     * Upload a file to Seqera Platform using multipart/form-data
+     *
+     * @param url The upload URL
+     * @param file The file to upload
+     * @return Response object
+     */
+    protected Response uploadFile(String url, File file) {
+        log.trace "HTTP multipart upload: url=$url; file=${file.name}"
+
+        try {
+            // Create multipart body
+            final boundary = "----TowerNextflowBoundary" + System.currentTimeMillis()
+            final body = createMultipartBody(file, boundary)
+
+            // Build request
+            final request = HttpRequest.newBuilder(URI.create(url))
+                .header('Content-Type', "multipart/form-data; boundary=$boundary")
+                .header('User-Agent', "Nextflow/$BuildInfo.version")
+                .header('Traceparent', TraceUtils.rndTrace())
+                .POST(HttpRequest.BodyPublishers.ofByteArray(body))
+                .build()
+
+            final resp = httpClient.sendAsString(request)
+            final status = resp.statusCode()
+
+            if( status == 401 ) {
+                return new Response(status, 'Unauthorized Seqera Platform API access')
+            }
+            if( status >= 400 ) {
+                final msg = parseCause(resp?.body()) ?: "Unexpected response for request $url"
+                return new Response(status, msg as String)
+            }
+
+            return new Response(status, resp.body())
+        }
+        catch( IOException e ) {
+            return new Response(0, "Unable to connect to Seqera Platform API: ${getHostUrl(url)}")
+        }
+    }
+
+    /**
+     * Create a multipart/form-data request body
+     *
+     * @param file The file to include in the request
+     * @param boundary The multipart boundary string
+     * @return Byte array containing the multipart body
+     */
+    private byte[] createMultipartBody(File file, String boundary) {
+        final baos = new ByteArrayOutputStream()
+        final writer = new PrintWriter(new OutputStreamWriter(baos, 'UTF-8'), true)
+
+        // Write file part
+        writer.append("--${boundary}\r\n")
+        writer.append("Content-Disposition: form-data; name=\"file\"; filename=\"${file.name}\"\r\n")
+        writer.append("Content-Type: text/csv\r\n")
+        writer.append("\r\n")
+        writer.flush()
+
+        // Write file content
+        baos.write(file.bytes)
+
+        // Write closing boundary
+        writer.append("\r\n")
+        writer.append("--${boundary}--\r\n")
+        writer.flush()
+
+        return baos.toByteArray()
     }
 
 }
