@@ -112,6 +112,8 @@ class AzureRepositoryProviderTest extends Specification {
 
         expect:
         new AzureRepositoryProvider('t-neumann/hello', obj).setRevision("a-branch").getContentUrl('main.nf') == 'https://dev.azure.com/t-neumann/hello/_apis/git/repositories/hello/items?download=false&includeContent=true&includeContentMetadata=false&api-version=6.0&\$format=json&path=main.nf&versionDescriptor.version=a-branch'
+        and:
+        new AzureRepositoryProvider('t-neumann/hello', obj).setRevision("test/branch+with&strangecharacters").getContentUrl('main.nf') == 'https://dev.azure.com/t-neumann/hello/_apis/git/repositories/hello/items?download=false&includeContent=true&includeContentMetadata=false&api-version=6.0&\$format=json&path=main.nf&versionDescriptor.version=test%2Fbranch%2Bwith%26strangecharacters'
     }
 
     /*

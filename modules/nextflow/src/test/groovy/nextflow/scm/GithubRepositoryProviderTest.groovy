@@ -95,6 +95,11 @@ class GithubRepositoryProviderTest extends Specification {
                 .setRevision('the-commit-id')
                 .getContentUrl('main.nf') == 'https://github.com/repos/pditommaso/hello/contents/main.nf?ref=the-commit-id'
 
+        and:
+        new GithubRepositoryProvider('pditommaso/hello', obj)
+            .setRevision('test/branch+with&strangecharacters')
+            .getContentUrl('main.nf') == 'https://github.com/repos/pditommaso/hello/contents/main.nf?ref=test%2Fbranch%2Bwith%26strangecharacters'
+
     }
 
     def 'should user github token as creds' () {
