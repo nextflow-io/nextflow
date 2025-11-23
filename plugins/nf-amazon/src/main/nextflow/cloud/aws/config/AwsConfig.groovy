@@ -27,6 +27,7 @@ import nextflow.Global
 import nextflow.SysEnv
 import nextflow.config.spec.ConfigOption
 import nextflow.config.spec.ConfigScope
+import nextflow.config.spec.PlaceholderName
 import nextflow.config.spec.ScopeName
 import nextflow.script.dsl.Description
 import nextflow.util.IniFile
@@ -45,7 +46,7 @@ class AwsConfig implements ConfigScope {
 
     final AwsBatchConfig batch
 
-    final AwsS3Config client
+    final AwsS3ClientConfig client
 
     @ConfigOption
     @Description("""
@@ -71,6 +72,9 @@ class AwsConfig implements ConfigScope {
     """)
     final String profile
 
+    @PlaceholderName("<name>")
+    final Map<String, AwsBucketConfig> buckets
+
     /* required by extension point -- do not remove */
     AwsConfig() {}
 
@@ -80,7 +84,16 @@ class AwsConfig implements ConfigScope {
         this.profile = getAwsProfile0(SysEnv.get(), opts)
         this.region = getAwsRegion(SysEnv.get(), opts)
         this.batch = new AwsBatchConfig((Map)opts.batch ?: Collections.emptyMap())
-        this.client = new AwsS3Config((Map)opts.client ?: Collections.emptyMap())
+        this.client = new AwsS3ClientConfig((Map)opts.client ?: Collections.emptyMap())
+        this.buckets = parseBuckets((Map<String,Map>)opts.buckets ?:Collections.<String,Map> emptyMap())
+    }
+
+    private static Map<String, AwsBucketConfig> parseBuckets(Map<String,Map> buckets){
+        final result = new LinkedHashMap<String,AwsBucketConfig>()
+        buckets.each { Map.Entry<String, Map> entry ->
+            result[entry.key] = new AwsBucketConfig(entry.value)
+        }
+        return result
     }
 
     List<String> getCredentials() {
@@ -89,7 +102,7 @@ class AwsConfig implements ConfigScope {
                 : Collections.<String>emptyList()
     }
 
-    AwsS3Config getS3Config() { client }
+    AwsS3ClientConfig getS3Config() { client }
 
     AwsBatchConfig getBatchConfig() { batch }
 
@@ -105,15 +118,22 @@ class AwsConfig implements ConfigScope {
      *  Fallback to the global region US_EAST_1 when no region is found.
      *
      *  Preference:
-     *      1. endpoint region
-     *      2. config region
-     *      3. US_EAST_1
+     *      1. bucket specific endpoint region
+     *      2. global s3 client endpoint region
+     *      3. bucket specific region
+     *      5. config region
+     *      6. US_EAST_1
      *
      *  @returns Resolved region.
      **/
-    String resolveS3Region() {
-        final epRegion = client.getEndpointRegion()
-        return epRegion ?: this.region ?: Region.US_EAST_1.id()
+    String resolveS3Region(String bucketName) {
+        def bucketRegion = null
+        def bucketEpRegion = null
+        if( bucketName && buckets && buckets.containsKey(bucketName) ){
+            bucketRegion = buckets[bucketName].region
+            bucketEpRegion =  buckets[bucketName].getEndpointRegion()
+        }
+        return bucketEpRegion ?: client.getEndpointRegion() ?: bucketRegion ?: this.region ?: Region.US_EAST_1.id()
     }
 
     static protected String getAwsProfile0(Map env, Map<String,Object> config) {
@@ -148,6 +168,10 @@ class AwsConfig implements ConfigScope {
                 return region.toString()
         }
 
+        if( env && env.AWS_REGION )  {
+            return env.AWS_REGION.toString()
+        }
+
         if( env && env.AWS_DEFAULT_REGION )  {
             return env.AWS_DEFAULT_REGION.toString()
         }
@@ -161,11 +185,17 @@ class AwsConfig implements ConfigScope {
         return ini.section(profile).region
     }
 
-    Map getS3LegacyProperties() {
+    Map getS3LegacyProperties(String bucketName) {
         final result = new LinkedHashMap(20)
 
-        // -- remaining client config options
+        // -- global client config options
         def config = client.getAwsClientConfig()
+
+        // -- overwrite with bucket specific options
+        if( bucketName && buckets && buckets.containsKey(bucketName) ){
+            config = config + buckets[bucketName].toLegacyConfig()
+        }
+
         config = checkDefaultErrorRetry(config, SysEnv.get())
         if( config ) {
             result.putAll(config)
@@ -173,6 +203,18 @@ class AwsConfig implements ConfigScope {
 
         log.debug "AWS S3 config properties: ${dumpAwsConfig(result)}"
         return result
+    }
+
+    AwsBucketConfig getBucketConfig(String bucketName){
+        // Get global bucket
+        def config = client.toBucketConfigMap()
+
+        // overwrite with bucket specific options
+        if( bucketName && buckets && buckets.containsKey(bucketName) ){
+            config = config + buckets[bucketName].toBucketConfigMap()
+        }
+
+        return new AwsBucketConfig(config)
     }
 
     static protected Map checkDefaultErrorRetry(Map result, Map env) {
@@ -218,5 +260,40 @@ class AwsConfig implements ConfigScope {
 
     static AwsConfig config() {
         getConfig0(Global.config)
+    }
+
+    String generateUploadCliArgs(String bucketName){
+        final config = getBucketConfig(bucketName)
+        final region = config.region ?: region
+        final cliArgs = []
+        cliArgs.add(config.storageClass ? "--storage-class ${config.storageClass}" : "--storage-class STANDARD")
+        if(!batch.s5cmdPath && region)
+            cliArgs.add("--region ${region}")
+        if( config.anonymous )
+            cliArgs.add("--no-sign-request")
+        if( config.storageEncryption )
+            cliArgs.add("--sse ${config.storageEncryption}")
+        if( config.storageKmsKeyId )
+            cliArgs.add("--sse-kms-key-id ${config.storageKmsKeyId}")
+        if( config.s3Acl )
+            cliArgs.add("--acl ${config.s3Acl}")
+        if( config.requesterPays )
+            cliArgs.add("--request-payer requester")
+        if( config.endpoint)
+            cliArgs.add("--endpoint-url ${config.endpoint}")
+        return cliArgs.join(" ")
+    }
+
+    String generateDownloadCliArgs(String bucketName){
+        final config = getBucketConfig(bucketName)
+        final region = config.region ?: region
+        final cliArgs = []
+        if(!batch.s5cmdPath && region)
+            cliArgs.add("--region ${region}")
+        if( config.anonymous )
+            cliArgs.add("--no-sign-request")
+        if( config.endpoint)
+            cliArgs.add("--endpoint-url ${config.endpoint}")
+        return cliArgs.join(" ")
     }
 }
