@@ -870,6 +870,7 @@ The following settings are available:
 : Enable Fusion snapshotting (preview, default: `false`). This feature allows Fusion to automatically restore a job when it is interrupted by a spot reclamation.
 
 `fusion.tags`
+: *Currently only supported for S3.*
 : The pattern that determines how tags are applied to files created via the Fusion client (default: `[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)`). Set to `false` to disable tags.
 
 (config-google)=
