@@ -48,8 +48,6 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     private OutputDef publisher
 
-    @Lazy InputStream stdin = { System.in }()
-
     BaseScript() {
         meta = ScriptMeta.register(this)
     }
