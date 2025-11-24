@@ -16,7 +16,7 @@
 
 package nextflow.util;
 
-import static nextflow.Const;
+import static nextflow.Const.*;
 
 import java.io.IOException;
 import java.io.OutputStream;
