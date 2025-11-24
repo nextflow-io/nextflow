@@ -20,6 +20,7 @@ import java.nio.file.Files
 import java.nio.file.Paths
 
 import com.google.common.hash.Hashing
+import nextflow.Const
 import nextflow.Global
 import nextflow.Session
 import org.apache.commons.codec.digest.DigestUtils
@@ -73,10 +74,11 @@ class HashBuilderTest extends Specification {
     def 'should validate is asset file'() {
         when:
         def BASE = Paths.get("/some/pipeline/dir")
+        def ROOT = new File("/some/pipeline/")
         and:
         Global.session = Mock(Session) { getBaseDir() >> BASE }
         then:
-        !HashBuilder.isAssetFile(BASE.resolve('foo'))
+        !HashBuilder.isAssetFile(BASE.resolve('foo'), ROOT)
 
 
         when:
@@ -85,9 +87,33 @@ class HashBuilderTest extends Specification {
             getCommitId() >> '123456'
         }
         then:
-        HashBuilder.isAssetFile(BASE.resolve('foo'))
+        HashBuilder.isAssetFile(BASE.resolve('foo'), ROOT)
         and:
-        !HashBuilder.isAssetFile(Paths.get('/other/dir'))
+        !HashBuilder.isAssetFile(Paths.get('/other/dir'), ROOT)
+    }
+
+    def 'should validate is asset file when not part of base directory'() {
+        when:
+        def BASE = Paths.get("/some/pipeline/dir")
+        def ROOT = new File("/some/pipeline/")
+
+        and:
+        Global.session = Mock(Session) { getBaseDir() >> BASE }
+        
+        then:
+        !HashBuilder.isAssetFile(BASE.resolve('foo'), ROOT)
+
+        when:
+        Global.session = Mock(Session) {
+            getBaseDir() >> BASE
+            getCommitId() >> '123456'
+        }
+
+        then:
+        HashBuilder.isAssetFile(Paths.get('/some/pipeline/foo'), ROOT)
+        and:
+        !HashBuilder.isAssetFile(Paths.get('/other/dir'), ROOT)
+
     }
 
     def 'should hash file content'() {

@@ -20,6 +20,7 @@ import static nextflow.Const.*;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.File;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -264,7 +265,7 @@ public class HashBuilder {
             log.warn("Unable to get file attributes file: {} -- Cause: {}", FilesEx.toUriString(path), e.toString());
         }
 
-        if( (mode==HashMode.STANDARD || mode==HashMode.LENIENT) && isAssetFile(path) ) {
+        if( (mode==HashMode.STANDARD || mode==HashMode.LENIENT) && isAssetFile(path, DEFAULT_ROOT) ) {
             if( attrs==null ) {
                 // when file attributes are not avail, or it's a directory
                 // hash the file using the file name path and the repository
@@ -511,9 +512,13 @@ public class HashBuilder {
      * pipeline Git repository
      *
      * @param path
+     *      The item to check.
+     * @param asset_root
+     *      Location where assets are being stored.
      * @return
+     *      Whether or not `path` is included in the pipeline Git repository.  
      */
-    static protected boolean isAssetFile(Path path) {
+    static protected boolean isAssetFile(Path path, File asset_root) {
         final ISession session = Global.getSession();
         if( session==null )
             return false;
@@ -524,7 +529,7 @@ public class HashBuilder {
         if( session.getBaseDir().getFileSystem()!=path.getFileSystem() )
             return false;
         // if the file is in the same directory as the base dir it's a asset by definition
-        return path.startsWith(session.getBaseDir()) || path.startsWith(DEFAULT_ROOT.toPath());
+        return path.startsWith(session.getBaseDir()) || path.startsWith(asset_root.toPath());
     }
 
 }
