@@ -16,6 +16,8 @@
 
 package nextflow.util;
 
+import static nextflow.Const;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.FileVisitResult;
@@ -522,7 +524,7 @@ public class HashBuilder {
         if( session.getBaseDir().getFileSystem()!=path.getFileSystem() )
             return false;
         // if the file is in the same directory as the base dir it's a asset by definition
-        return path.startsWith(session.getBaseDir());
+        return path.startsWith(session.getBaseDir()) || path.startsWith(DEFAULT_ROOT.toPath());
     }
 
 }
