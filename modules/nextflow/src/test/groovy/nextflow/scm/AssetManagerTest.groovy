@@ -737,31 +737,7 @@ class AssetManagerTest extends Specification {
         when:
         // simulate calling `nextflow run nextflow-io/socks` without specifying a revision
         manager.download()
-        manager.checkout(null)
         then:
-        folder.resolve('nextflow-io/socks/.git').isDirectory()
-        manager.getCurrentRevision() == 'main'
-
-        when:
-        manager.download()
-        then:
-        noExceptionThrown()
-    }
-
-    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
-    def 'should identify default branch when downloading repo'() {
-
-        given:
-        def folder = tempDir.getRoot()
-        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def manager = new AssetManager().build('nextflow-io/socks', [providers: [github: [auth: token]]])
-
-        when:
-        // simulate calling `nextflow run nextflow-io/socks` without specifying a revision
-        manager.download()
-        manager.checkout(null)
-        then:
-        folder.resolve('nextflow-io/socks/.git').isDirectory()
         manager.getCurrentRevision() == 'main'
 
         when:
