@@ -513,12 +513,12 @@ public class HashBuilder {
      *
      * @param path
      *      The item to check.
-     * @param asset_root
+     * @param assetRoot
      *      Location where assets are being stored.
      * @return
      *      Whether or not `path` is included in the pipeline Git repository.  
      */
-    static protected boolean isAssetFile(Path path, File asset_root) {
+    static protected boolean isAssetFile(Path path, File assetRoot) {
         final ISession session = Global.getSession();
         if( session==null )
             return false;
@@ -529,7 +529,7 @@ public class HashBuilder {
         if( session.getBaseDir().getFileSystem()!=path.getFileSystem() )
             return false;
         // if the file is in the same directory as the base dir it's a asset by definition
-        return path.startsWith(session.getBaseDir()) || path.startsWith(asset_root.toPath());
+        return path.startsWith(session.getBaseDir()) || path.startsWith(assetRoot.toPath());
     }
 
 }
