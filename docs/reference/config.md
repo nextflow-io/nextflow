@@ -968,6 +968,10 @@ The following settings are available:
 `google.batch.installOpsAgent`
 : Enable the installation of the Ops Agent on Google Batch instances for enhanced monitoring and logging (default: `false`).
 
+: :::{note}
+  The Ops Agent requires a compatible boot disk image. For Google Batch, use [Batch-debian images](https://docs.cloud.google.com/batch/docs/vm-os-environment-overview#vm-os-image-options) (e.g., `batch-debian`) with `google.batch.bootDiskImage`. The default Container-Optimized OS (`batch-cos`) is not compatible with the Ops Agent.
+  :::
+
 `google.batch.logsPath`
 : :::{versionadded} 25.11.0-edge
   :::
