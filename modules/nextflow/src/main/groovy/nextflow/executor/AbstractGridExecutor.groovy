@@ -29,7 +29,7 @@ import nextflow.processor.TaskRun
 import nextflow.util.Duration
 import nextflow.util.Escape
 import nextflow.util.Throttle
-import org.apache.commons.lang.StringUtils
+import org.apache.commons.lang3.StringUtils
 /**
  * Generic task processor executing a task through a grid facility
  *
@@ -41,7 +41,7 @@ abstract class AbstractGridExecutor extends Executor {
 
     protected Duration queueInterval
 
-    private final static List<String> INVALID_NAME_CHARS = [ " ", "/", ":", "@", "*", "?", "\\n", "\\t", "\\r" ]
+    private final static List<String> INVALID_NAME_CHARS = [ " ", "/", ":", "@", "*", "?", "\\n", "\\t", "\\r", "=" ]
 
     private Map lastQueueStatus
 
@@ -51,7 +51,7 @@ abstract class AbstractGridExecutor extends Executor {
     @Override
     protected void register () {
         super.register()
-        queueInterval = session.getQueueStatInterval(name)
+        queueInterval = config.getQueueStatInterval(name)
         log.debug "Creating executor '$name' > queue-stat-interval: ${queueInterval}"
     }
 
@@ -60,7 +60,7 @@ abstract class AbstractGridExecutor extends Executor {
      * @return
      */
     TaskMonitor createTaskMonitor() {
-        return TaskPollingMonitor.create(session, name, 100, Duration.of('5 sec'))
+        return TaskPollingMonitor.create(session, config, name, 100, Duration.of('5 sec'))
     }
 
     /*
@@ -191,11 +191,11 @@ abstract class AbstractGridExecutor extends Executor {
     @PackageScope
     String resolveCustomJobName(TaskRun task) {
         try {
-            def custom = (Closure)session?.getExecConfigProp(name, 'jobName', null)
+            final custom = (Closure)config.getExecConfigProp(name, 'jobName', null)
             if( !custom )
                 return null
 
-            def ctx = [ (TaskProcessor.TASK_CONTEXT_PROPERTY_NAME): task.config ]
+            final ctx = [ (TaskProcessor.TASK_CONTEXT_PROPERTY_NAME): task.config ]
             custom.cloneWith(ctx).call()?.toString()
         }
         catch( Exception e ) {
@@ -321,7 +321,7 @@ abstract class AbstractGridExecutor extends Executor {
     }
 
     Map<String,QueueStatus> getQueueStatus(queue) {
-        final global = session.getExecConfigProp(name, 'queueGlobalStatus',false)
+        final global = config.getExecConfigProp(name, 'queueGlobalStatus', false)
         if( global ) {
             log.debug1("Executor '$name' fetching queue global status")
             queue = null

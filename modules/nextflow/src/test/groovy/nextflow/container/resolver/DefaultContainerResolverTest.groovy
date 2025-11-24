@@ -17,7 +17,7 @@
 
 package nextflow.container.resolver
 
-import nextflow.container.ContainerConfig
+import nextflow.container.DockerConfig
 import nextflow.executor.Executor
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
@@ -46,12 +46,21 @@ class DefaultContainerResolverTest extends Specification {
         when:
         def result = resolver.resolveImage(task, 'ubuntu:latest')
         then:
-        1 * task.getContainerConfig() >> new ContainerConfig([engine:'docker', enabled:true, registry:'quay.io'])
+        1 * task.getContainerConfig() >> new DockerConfig([enabled:true, registry:'quay.io'])
         and:
         result.source == 'ubuntu:latest'
         result.target == 'quay.io/ubuntu:latest'
         result.hashKey == 'quay.io/ubuntu:latest'
     }
 
+    def 'should return default meta' () {
+        given:
+        def image = 'my/container:latest'
+        def resolver = new DefaultContainerResolver()
+        when:
+        def meta = resolver.getContainerMeta(image)
+        then:
+        meta == new ContainerMeta(targetImage: image)
+    }
 
 }

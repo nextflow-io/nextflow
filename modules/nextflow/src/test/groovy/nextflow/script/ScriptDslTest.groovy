@@ -359,7 +359,7 @@ class ScriptDslTest extends Dsl2Spec {
 
         then:
         def err = thrown(ScriptRuntimeException)
-        err.message == 'Process `bar` declares 1 input channel but 0 were specified'
+        err.message == 'Process `bar` declares 1 input but was called with 0 arguments'
     }
 
     def 'should report error accessing undefined out/a' () {
@@ -451,7 +451,7 @@ class ScriptDslTest extends Dsl2Spec {
 
         then:
         def err = thrown(ScriptRuntimeException)
-        err.message == "Process `bar` declares 1 input channel but 0 were specified"
+        err.message == "Process `bar` declares 1 input but was called with 0 arguments"
     }
 
     def 'should report error accessing undefined out/e' () {
@@ -602,6 +602,46 @@ class ScriptDslTest extends Dsl2Spec {
 
         then:
         result.val == 'Hello'
+    }
+
+
+    def 'should throw an exception on missing method' () {
+
+        when:
+        dsl_eval '''
+           Channel.doesNotExist()
+        '''
+        then:
+        def e1 = thrown(MissingMethodException)
+        e1.message == 'No signature of method: java.lang.Object.Channel.doesNotExist() is applicable for argument types: () values: []'
+
+        when:
+        dsl_eval '''
+        workflow {
+           Channel.doesNotExist()
+        }
+        '''
+        then:
+        def e2 = thrown(MissingProcessException)
+        e2.message == 'Missing process or function Channel.doesNotExist()'
+    }
+
+    def 'should show proper error message for invalid entry name' () {
+        when:
+        // Use dsl_eval with an invalid entry name to trigger the error
+        dsl_eval('invalidEntry', '''
+        workflow validWorkflow {
+          /println 'valid'/
+        }
+        
+        workflow {
+          /println 'default'/
+        }
+        ''')
+        
+        then:
+        def err = thrown(IllegalArgumentException)
+        err.message.contains('Unknown workflow entry name: invalidEntry')
     }
 
 }

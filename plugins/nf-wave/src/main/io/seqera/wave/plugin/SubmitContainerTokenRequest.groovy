@@ -21,7 +21,11 @@ package io.seqera.wave.plugin
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
+import io.seqera.wave.api.BuildCompression
+import io.seqera.wave.api.ImageNameStrategy
 import io.seqera.wave.api.PackagesSpec
+import io.seqera.wave.api.ScanLevel
+import io.seqera.wave.api.ScanMode
 
 /**
  * Model a request for an augmented container
@@ -67,18 +71,6 @@ class SubmitContainerTokenRequest {
      * List of layers to be added in the pulled image
      */
     ContainerConfig containerConfig
-
-    /**
-     * Conda recipe file used to build the container
-     */
-    @Deprecated
-    String condaFile
-
-    /**
-     * Spack recipe file used to build the container
-     */
-    @Deprecated
-    String spackFile
 
     /**
      * The request container platform
@@ -134,5 +126,32 @@ class SubmitContainerTokenRequest {
      * Defines the packages to be included in this container request
      */
     PackagesSpec packages
+
+    /**
+     * The strategy applied to name a container build by wave when using
+     * the freeze option.
+     */
+    ImageNameStrategy nameStrategy;
+
+    /**
+     * Whenever use container "mirror" mode
+     */
+    boolean mirror;
+
+    /**
+     * The request security scan mode
+     */
+    ScanMode scanMode;
+
+    /**
+     * Define the allows security vulnerabilities in the container request.
+     * Empty or null means no vulnerabilities are allowed.
+     */
+    List<ScanLevel> scanLevels
+
+    /**
+     * Model build compression option
+     */
+    BuildCompression buildCompression
 
 }

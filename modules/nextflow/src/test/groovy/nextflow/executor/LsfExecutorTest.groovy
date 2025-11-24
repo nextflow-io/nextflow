@@ -34,10 +34,20 @@ import spock.lang.Unroll
  */
 class LsfExecutorTest extends Specification {
 
+    def createExecutor(config) {
+        Spy(LsfExecutor) {
+            getConfig() >> config
+        }
+    }
+
+    def createExecutor() {
+        createExecutor(new ExecutorConfig([:]))
+    }
+
     def testCommandLine() {
 
         when:
-        def executor = Spy(LsfExecutor)
+        def executor = createExecutor()
         then:
         executor.getSubmitCommandLine(Mock(TaskRun), null) == ['bsub']
 
@@ -46,7 +56,7 @@ class LsfExecutorTest extends Specification {
     def testMemDirectiveMemUnit() {
         given:
         def WORK_DIR = Paths.get('/work/dir')
-        def executor = Spy(LsfExecutor)
+        def executor = createExecutor()
         executor.getSession() >> Mock(Session)
         and:
         def task = Mock(TaskRun)
@@ -67,7 +77,7 @@ class LsfExecutorTest extends Specification {
     def testMemDirectiveMemUnit2() {
         given:
         def WORK_DIR = Paths.get('/work/dir')
-        def executor = Spy(new LsfExecutor(memUnit:'GB', usageUnit:'GB'))
+        def executor = createExecutor()
         executor.getSession() >> Mock(Session)
         and:
         def task = Mock(TaskRun)
@@ -90,7 +100,7 @@ class LsfExecutorTest extends Specification {
     def testReserveMemPerTask() {
         given:
         def WORK_DIR = Paths.get('/work/dir')
-        def executor = Spy(new LsfExecutor(usageUnit:'KB', perJobMemLimit:true))
+        def executor = createExecutor()
         executor.getSession() >> Mock(Session)
         and:
         def task = Mock(TaskRun)
@@ -115,7 +125,7 @@ class LsfExecutorTest extends Specification {
     def testReserveMemPerTask2() {
         given:
         def WORK_DIR = Paths.get('/work/dir')
-        def executor = Spy(new LsfExecutor(perTaskReserve:true, perJobMemLimit: true, usageUnit:'KB'))
+        def executor = createExecutor()
         executor.getSession() >> Mock(Session)
         and:
         def task = Mock(TaskRun)
@@ -124,6 +134,7 @@ class LsfExecutorTest extends Specification {
         when:
         executor.@perJobMemLimit = true
         executor.@perTaskReserve = true
+        executor.@usageUnit = 'KB'
         def result = executor.getDirectives(task, [])
         then:
         1 * executor.getJobNameFor(task) >> 'foo'
@@ -141,7 +152,7 @@ class LsfExecutorTest extends Specification {
     def 'test job script headers' () {
 
         setup:
-        def executor = Spy(LsfExecutor)
+        def executor = createExecutor()
         executor.@memUnit = 'MB'
         executor.@usageUnit = 'MB'
         executor.session = new Session()
@@ -324,6 +335,7 @@ class LsfExecutorTest extends Specification {
         }
         then:
         executor.getHeaders(taskArray) == '''
+                #BSUB -o /dev/null
                 #BSUB -J "nf-mapping_hola[1-5]"
                 '''
                 .stripIndent().leftTrim()
@@ -334,7 +346,7 @@ class LsfExecutorTest extends Specification {
         given:
         def config = new TaskConfig(clusterOptions: [], disk: '10GB')
         def WORKDIR = Paths.get('/my/work')
-        def executor = Spy(LsfExecutor)
+        def executor = createExecutor()
         executor.getSession() >> Mock(Session)
         executor.@memUnit = 'MB'
         and:
@@ -371,7 +383,7 @@ class LsfExecutorTest extends Specification {
 
         when:
         // LSF executor
-        def executor = Spy(LsfExecutor)
+        def executor = createExecutor()
         executor.session = new Session()
         executor.@memUnit = 'MB'
 
@@ -410,9 +422,9 @@ class LsfExecutorTest extends Specification {
 
         when:
         // LSF executor
-        def executor = Spy(LsfExecutor)
+        def config = new ExecutorConfig(perJobMemLimit: true)
+        def executor = createExecutor(config)
         executor.@memUnit = 'MB'
-        executor.session = new Session([executor: [perJobMemLimit: true]])
         executor.register()
 
         then:
@@ -432,7 +444,7 @@ class LsfExecutorTest extends Specification {
 
         given:
         // LSF executor
-        def executor = Spy(new LsfExecutor(memUnit: 'MB', usageUnit: 'MB'))
+        def executor = createExecutor()
         executor.session = new Session()
         executor.@memUnit = 'MB'
         executor.@usageUnit = 'MB'
@@ -480,7 +492,7 @@ class LsfExecutorTest extends Specification {
 
         when:
         // executor stub object
-        def executor = Spy(LsfExecutor)
+        def executor = createExecutor()
         then:
         executor.parseJobId( 'Job <2329803> is submitted to default queue <research-rh6>.' ) == '2329803'
 
@@ -489,7 +501,7 @@ class LsfExecutorTest extends Specification {
     def testKillCommand() {
         when:
         // executor stub object
-        def executor = Spy(LsfExecutor)
+        def executor = createExecutor()
         then:
         executor.killTaskCommand('12345').join(' ') == 'bkill 12345'
 
@@ -498,7 +510,7 @@ class LsfExecutorTest extends Specification {
     def testQstatCommand() {
 
         setup:
-        def executor = Spy(LsfExecutor)
+        def executor = createExecutor()
         def text =
                 """\
                 JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
@@ -541,7 +553,7 @@ class LsfExecutorTest extends Specification {
 
     def 'should parse bjobs stats with extra headers' () {
         setup:
-        def executor = Spy(LsfExecutor)
+        def executor = createExecutor()
         def TEXT = '''
             LSF is processing your request. Please wait ...
             LSF is processing your request. Please wait ...
@@ -571,7 +583,7 @@ class LsfExecutorTest extends Specification {
     def testQueueStatusCommand() {
 
         setup:
-        def executor = Spy(LsfExecutor)
+        def executor = createExecutor()
 
         expect:
         executor.queueStatusCommand(null) == ['bjobs', '-w']
@@ -584,7 +596,7 @@ class LsfExecutorTest extends Specification {
     def testWrapString() {
 
         given:
-        def executor = Spy(LsfExecutor)
+        def executor = createExecutor()
 
         expect:
         executor.wrapHeader('') == ''
@@ -598,7 +610,7 @@ class LsfExecutorTest extends Specification {
 
     def 'should apply lsf mem unit' () {
         given:
-        def executor = Spy(LsfExecutor)
+        def executor = createExecutor()
         executor.session = Mock(Session)
 
         when:
@@ -619,78 +631,76 @@ class LsfExecutorTest extends Specification {
     def 'should apply per task reserve' () {
 
         given:
-        def session = Mock(Session)
-        def executor = Spy(LsfExecutor)
-        executor.session = session
+        def config = Spy(ExecutorConfig)
+        def executor = createExecutor(config)
 
         when:
         executor.register()
         then:
         1 * executor.parseLsfConfig() >> [:]
-        1 * session.getExecConfigProp(_,'perTaskReserve',_) >> false
+        1 * config.getExecConfigProp(_,'perTaskReserve',_) >> false
         !executor.perTaskReserve
 
         when:
         executor.register()
         then:
         1 * executor.parseLsfConfig() >> [RESOURCE_RESERVE_PER_TASK:'y']
-        1 * session.getExecConfigProp(_,'perTaskReserve',_) >> false
+        1 * config.getExecConfigProp(_,'perTaskReserve',_) >> false
         !executor.perTaskReserve
 
         when:
         executor.register()
         then:
         1 * executor.parseLsfConfig() >> [:]
-        1 * session.getExecConfigProp(_,'perTaskReserve',_) >> true
+        1 * config.getExecConfigProp(_,'perTaskReserve',_) >> true
         executor.perTaskReserve
 
         when:
         executor.register()
         then:
         1 * executor.parseLsfConfig() >> [RESOURCE_RESERVE_PER_TASK:'y']
-        1 * session.getExecConfigProp(_,'perTaskReserve',_) >> { execName,name,defValue -> defValue }
+        1 * config.getExecConfigProp(_,'perTaskReserve',_) >> { execName,name,defValue -> defValue }
         executor.perTaskReserve
     }
 
     def 'should apply lsf per job limit' () {
         given:
-        def session = Mock(Session)
-        def executor = Spy(LsfExecutor)
-        executor.session = session
+        def config = Spy(ExecutorConfig)
+        def executor = createExecutor(config)
 
         when:
         executor.register()
         then:
         1 * executor.parseLsfConfig() >> [:]
-        1 * session.getExecConfigProp(_,'perJobMemLimit',_) >> false
+        1 * config.getExecConfigProp(_,'perJobMemLimit',_) >> false
         !executor.perJobMemLimit
 
         when:
         executor.register()
         then:
         1 * executor.parseLsfConfig() >> [LSB_JOB_MEMLIMIT:'y']
-        1 * session.getExecConfigProp(_,'perJobMemLimit',_) >> false
+        1 * config.getExecConfigProp(_,'perJobMemLimit',_) >> false
         !executor.perJobMemLimit
 
         when:
         executor.register()
         then:
         1 * executor.parseLsfConfig() >> [:]
-        1 * session.getExecConfigProp(_,'perJobMemLimit',_) >> true
+        1 * config.getExecConfigProp(_,'perJobMemLimit',_) >> true
         executor.perJobMemLimit
 
         when:
         executor.register()
         then:
         1 * executor.parseLsfConfig() >> [LSB_JOB_MEMLIMIT:'y']
-        1 * session.getExecConfigProp(_,'perJobMemLimit',_) >> { execName,name,defValue -> defValue }
+        1 * config.getExecConfigProp(_,'perJobMemLimit',_) >> { execName,name,defValue -> defValue }
         executor.perJobMemLimit
     }
 
 
     def 'should parse lsf.config' () {
         given:
-        def executor = Spy(LsfExecutor)
+        def executor = createExecutor()
         def folder = Files.createTempDirectory('test')
         def file = folder.resolve('lsf.conf')
         file.text = '''
@@ -716,7 +726,7 @@ class LsfExecutorTest extends Specification {
 
     def 'should parse complex config file' () {
         given:
-        def executor = Spy(LsfExecutor)
+        def executor = createExecutor()
         def file = new File('src/test/resources/nextflow/executor/lsf.conf')
         assert file.exists(), 'Cannot find LSF config test file'
 
@@ -739,7 +749,7 @@ class LsfExecutorTest extends Specification {
     @Unroll
     def 'should return valid job name given #name'() {
         given:
-        def executor = [:] as LsfExecutor
+        def executor = createExecutor()
         def task = Mock(TaskRun)
         task.getName() >> name
 
@@ -757,7 +767,7 @@ class LsfExecutorTest extends Specification {
 
     def 'should get array index name and start' () {
         given:
-        def executor = Spy(LsfExecutor)
+        def executor = createExecutor()
         expect:
         executor.getArrayIndexName() == 'LSB_JOBINDEX'
         executor.getArrayIndexStart() == 1
@@ -766,7 +776,7 @@ class LsfExecutorTest extends Specification {
     @Unroll
     def 'should get array task id' () {
         given:
-        def executor = Spy(LsfExecutor)
+        def executor = createExecutor()
         expect:
         executor.getArrayTaskId(JOB_ID, TASK_INDEX) == EXPECTED
 
@@ -786,10 +796,10 @@ class LsfExecutorTest extends Specification {
         task.processor.getSession() >> Mock(Session)
         task.config = Mock(TaskConfig)  { getClusterOptionsAsList()>>[] }
         and:
-        def executor = Spy(LsfExecutor)
+        def config = new ExecutorConfig(account: ACCOUNT)
+        def executor = createExecutor(config)
         executor.getJobNameFor(_) >> 'foo'
         executor.getName() >> 'lsf'
-        executor.getSession() >> Mock(Session) { getExecConfigProp('lsf', 'account',null)>>ACCOUNT }
 
         when:
         def result = executor.getDirectives(task, [])

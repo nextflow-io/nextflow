@@ -26,6 +26,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.NF
+import nextflow.SysEnv
 import nextflow.cli.CliOptions
 import nextflow.cli.CmdConfig
 import nextflow.cli.CmdNode
@@ -33,10 +34,7 @@ import nextflow.cli.CmdRun
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
 import nextflow.secret.SecretsLoader
-import nextflow.trace.GraphObserver
-import nextflow.trace.ReportObserver
-import nextflow.trace.TimelineObserver
-import nextflow.trace.TraceFileObserver
+import nextflow.secret.SecretsProvider
 import nextflow.util.HistoryFile
 import nextflow.util.SecretHelper
 /**
@@ -61,6 +59,8 @@ class ConfigBuilder {
 
     Path currentDir
 
+    Map<String,?> cliParams
+
     boolean showAllProfiles
 
     String profile = DEFAULT_PROFILE
@@ -71,21 +71,23 @@ class ConfigBuilder {
 
     List<Path> parsedConfigFiles = []
 
-    List<String> parsedProfileNames
-
     boolean showClosures
 
     boolean stripSecrets
 
     boolean showMissingVariables
 
+    SecretsProvider secretsProvider
+
     Map<ConfigObject, String> emptyVariables = new LinkedHashMap<>(10)
 
-    Map<String,String> env = new HashMap<>(System.getenv())
+    Map<String,String> env = new HashMap<>(SysEnv.get())
 
-    List<String> warnings = new ArrayList<>(10);
+    List<String> warnings = new ArrayList<>(10)
 
-    {
+    Map<String,Object> declaredParams = [:]
+
+    ConfigBuilder() {
         setHomeDir(Const.APP_HOME_DIR)
         setCurrentDir(Paths.get('.'))
     }
@@ -105,6 +107,11 @@ class ConfigBuilder {
         return this
     }
 
+    ConfigBuilder setSecretsProvider(SecretsProvider value) {
+        this.secretsProvider = value
+        return this
+    }
+
     ConfigBuilder setOptions( CliOptions options ) {
         this.options = options
         return this
@@ -113,6 +120,11 @@ class ConfigBuilder {
     ConfigBuilder setCmdRun( CmdRun cmdRun ) {
         this.cmdRun = cmdRun
         setProfile(cmdRun.profile)
+        return this
+    }
+
+    ConfigBuilder setCliParams( Map<String,?> cliParams ) {
+        this.cliParams = cliParams
         return this
     }
 
@@ -162,6 +174,10 @@ class ConfigBuilder {
         if( files )
             userConfigFiles.addAll(files)
         return this
+    }
+
+    Map<String,Object> getConfigParams() {
+        return declaredParams
     }
 
     static private wrapValue( value ) {
@@ -284,7 +300,7 @@ class ConfigBuilder {
         Map env = [:]
         if( exportSysEnv ) {
             log.debug "Adding current system environment to session environment"
-            env.putAll(System.getenv())
+            env.putAll(SysEnv.get())
         }
         if( vars ) {
             log.debug "Adding the following variables to session environment: $vars"
@@ -329,16 +345,20 @@ class ConfigBuilder {
         // this is needed to make sure to reuse the same
         // instance of the config vars across different instances of the ConfigBuilder
         // and prevent multiple parsing of the same params file (which can even be remote resource)
-        return cacheableConfigVars(baseDir)
+        final secretContext = secretsProvider
+            ? SecretsLoader.secretContext(secretsProvider)
+            : SecretsLoader.secretContext()
+        return getConfigVars(baseDir, secretContext)
     }
 
     @Memoized
-    static private Map cacheableConfigVars(Path base) {
+    static Map getConfigVars(Path base, Object secretContext) {
         final binding = new HashMap(10)
         binding.put('baseDir', base)
         binding.put('projectDir', base)
         binding.put('launchDir', Paths.get('.').toRealPath())
-        binding.put('secrets', SecretsLoader.secretContext())
+        binding.put('outputDir', Paths.get('results').complete())
+        binding.put('secrets', secretContext)
         return binding
     }
 
@@ -346,14 +366,14 @@ class ConfigBuilder {
         assert env != null
 
         final ignoreIncludes = options ? options.ignoreConfigIncludes : false
-        final slurper = new ConfigParser()
+        final parser = ConfigParserFactory.create()
                 .setRenderClosureAsString(showClosures)
                 .setStripSecrets(stripSecrets)
                 .setIgnoreIncludes(ignoreIncludes)
         ConfigObject result = new ConfigObject()
 
-        if( cmdRun && (cmdRun.hasParams()) )
-            slurper.setParams(cmdRun.parsedParams(configVars()))
+        if( cliParams )
+            parser.setParams(cliParams)
 
         // add the user specified environment to the session env
         env.sort().each { name, value -> result.env.put(name,value) }
@@ -362,17 +382,17 @@ class ConfigBuilder {
             // the configuration object binds always the current environment
             // so that in the configuration file may be referenced any variable
             // in the current environment
-            final binding = new HashMap(System.getenv())
+            final binding = new HashMap(SysEnv.get())
             binding.putAll(env)
             binding.putAll(configVars())
 
-            slurper.setBinding(binding)
+            parser.setBinding(binding)
 
             // merge of the provided configuration files
             for( def entry : configEntries ) {
 
                 try {
-                    merge0(result, slurper, entry)
+                    merge0(result, parser, entry)
                 }
                 catch( ConfigParseException e ) {
                     throw e
@@ -383,9 +403,8 @@ class ConfigBuilder {
                 }
             }
 
-            this.parsedProfileNames = new ArrayList<>(slurper.getProfileNames())
             if( validateProfile ) {
-                checkValidProfile(slurper.getConditionalBlockNames())
+                checkValidProfile(parser.getDeclaredProfiles())
             }
 
         }
@@ -402,44 +421,44 @@ class ConfigBuilder {
      * Merge the main config with a separate config file
      *
      * @param result The main {@link ConfigObject}
-     * @param slurper The {@ComposedConfigSlurper} parsed instance
+     * @param parser The {@ConfigParser} instance
      * @param entry The next config snippet/file to be parsed
      * @return
      */
-    protected void merge0(ConfigObject result, ConfigParser slurper, entry) {
+    protected void merge0(ConfigObject result, ConfigParser parser, entry) {
         if( !entry )
             return
 
         // select the profile
-        if( showAllProfiles ) {
-            def config = parse0(slurper,entry)
-            validate(config,entry)
-            result.merge(config)
-            return
+        if( !showAllProfiles ) {
+            log.debug "Applying config profile: `${profile}`"
+            parser.setProfiles(profile.tokenize(','))
         }
 
-        log.debug "Applying config profile: `${profile}`"
-        def allNames = profile.tokenize(',')
-        slurper.registerConditionalBlock('profiles', allNames)
-
-        def config = parse0(slurper,entry)
-        validate(config,entry)
+        final config = parse0(parser, entry)
+        if( NF.getSyntaxParserVersion() == 'v1' )
+            validate(config, entry)
+        declaredParams.putAll(parser.getDeclaredParams())
         result.merge(config)
     }
 
-    protected ConfigObject parse0(ConfigParser slurper, entry) {
+    protected ConfigObject parse0(ConfigParser parser, entry) {
         if( entry instanceof File ) {
             final path = entry.toPath()
             parsedConfigFiles << path
-            return slurper.parse(path)
+            return parser.parse(path)
         }
 
         if( entry instanceof Path ) {
             parsedConfigFiles << entry
-            return slurper.parse(entry)
+            return parser.parse(entry)
         }
 
-        return slurper.parse(entry.toString())
+        if( entry instanceof CharSequence ) {
+            return parser.parse(entry.toString())
+        }
+
+        throw new IllegalStateException("Unexpected config entry: ${entry}")
     }
 
     /**
@@ -449,7 +468,7 @@ class ConfigBuilder {
      * @param file The source config file/snippet
      * @return
      */
-    protected validate(ConfigObject config, file, String parent=null, List stack = new ArrayList()) {
+    protected void validate(ConfigObject config, file, String parent=null, List stack = new ArrayList()) {
         for( String key : new ArrayList<>(config.keySet()) ) {
             final value = config.get(key)
             if( value instanceof ConfigObject ) {
@@ -545,8 +564,15 @@ class ConfigBuilder {
         if( cmdRun.stubRun )
             config.stubRun = cmdRun.stubRun
 
+        // -- set the output directory
+        if( cmdRun.outputDir )
+            config.outputDir = cmdRun.outputDir
+
         if( cmdRun.preview )
             config.preview = cmdRun.preview
+
+        if( cmdRun.plugins )
+            config.plugins = cmdRun.plugins.tokenize(',')
 
         // -- sets the working directory
         if( cmdRun.workDir )
@@ -629,8 +655,6 @@ class ConfigBuilder {
             config.trace.enabled = true
             if( cmdRun.withTrace != '-' )
                 config.trace.file = cmdRun.withTrace
-            else if( !config.trace.file )
-                config.trace.file = TraceFileObserver.DEF_FILE_NAME
         }
 
         // -- sets report report options
@@ -640,8 +664,6 @@ class ConfigBuilder {
             config.report.enabled = true
             if( cmdRun.withReport != '-' )
                 config.report.file = cmdRun.withReport
-            else if( !config.report.file )
-                config.report.file = ReportObserver.DEF_FILE_NAME
         }
 
         // -- sets timeline report options
@@ -651,8 +673,6 @@ class ConfigBuilder {
             config.timeline.enabled = true
             if( cmdRun.withTimeline != '-' )
                 config.timeline.file = cmdRun.withTimeline
-            else if( !config.timeline.file )
-                config.timeline.file = TimelineObserver.DEF_FILE_NAME
         }
 
         // -- sets DAG report options
@@ -662,8 +682,6 @@ class ConfigBuilder {
             config.dag.enabled = true
             if( cmdRun.withDag != '-' )
                 config.dag.file = cmdRun.withDag
-            else if( !config.dag.file )
-                config.dag.file = GraphObserver.DEF_FILE_NAME
         }
 
         if( cmdRun.withNotification ) {
@@ -680,6 +698,7 @@ class ConfigBuilder {
 
         // -- sets the messages options
         if( cmdRun.withWebLog ) {
+            log.warn "The command line option '-with-weblog' is deprecated - consider enabling this feature by setting 'weblog.enabled=true' in your configuration file"
             if( !(config.weblog instanceof Map) )
                 config.weblog = [:]
             config.weblog.enabled = true
@@ -732,8 +751,8 @@ class ConfigBuilder {
         }
 
         // -- add the command line parameters to the 'taskConfig' object
-        if( cmdRun.hasParams() )
-            config.params = mergeMaps( (Map)config.params, cmdRun.parsedParams(configVars()), NF.strictMode )
+        if( cliParams )
+            config.params = mergeMaps( (Map)config.params, cliParams, NF.strictMode )
 
         if( cmdRun.withoutDocker && config.docker instanceof Map ) {
             // disable docker execution
@@ -814,7 +833,7 @@ class ConfigBuilder {
         def config = buildGivenFiles(configFiles)
 
         if( cmdRun )
-            configRunOptions(config, System.getenv(), cmdRun)
+            configRunOptions(config, SysEnv.get(), cmdRun)
 
         return config
     }

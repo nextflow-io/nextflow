@@ -73,6 +73,7 @@ class CmdInfoTest extends Specification {
         screen.contains(" main script : main.nf")
         screen.contains(" revisions   : ")
         screen.contains(" P master (default)")
+        !screen.contains("   HEAD")
     }
 
     def 'should print json info' () {
@@ -91,12 +92,13 @@ class CmdInfoTest extends Specification {
         json.repository == "https://github.com/nextflow-io/hello"
         json.localPath == "$tempDir/nextflow-io/hello"
         json.manifest.mainScript == 'main.nf'
-        json.manifest.defaultBranch == 'master'
+        json.manifest.defaultBranch == null
         json.revisions.master == 'master'
         json.revisions.pulled.size() == 1
         json.revisions.pulled.any { it == 'master' }
         json.revisions.branches.size()>1
         json.revisions.branches.any { it.name == 'master' }
+        !json.revisions.branches.any { it.name == 'HEAD' }
         json.revisions.tags.size()>1
         json.revisions.tags.any { it.name == 'v1.1' }
 
@@ -118,12 +120,13 @@ class CmdInfoTest extends Specification {
         json.repository == "https://github.com/nextflow-io/hello"
         json.localPath == "$tempDir/nextflow-io/hello"
         json.manifest.mainScript == 'main.nf'
-        json.manifest.defaultBranch == 'master'
+        json.manifest.defaultBranch == null
         json.revisions.master == 'master'
         json.revisions.pulled.size() == 1
         json.revisions.pulled.any { it == 'master' }
         json.revisions.branches.size()>1
         json.revisions.branches.any { it.name == 'master' }
+        !json.revisions.branches.any { it.name == 'HEAD' }
         json.revisions.tags.size()>1
         json.revisions.tags.any { it.name == 'v1.1' }
 

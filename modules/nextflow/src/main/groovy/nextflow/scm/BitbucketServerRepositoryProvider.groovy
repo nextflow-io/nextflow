@@ -107,8 +107,14 @@ final class BitbucketServerRepositoryProvider extends RepositoryProvider {
 
     @Override
     byte[] readBytes(String path) {
-        def url = getContentUrl(path)
-        invoke(url)?.getBytes()
+        final url = getContentUrl(path)
+        return invokeBytes(url)
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    List<RepositoryEntry> listDirectory(String path, int depth) {
+        throw new UnsupportedOperationException("BitbucketServerRepositoryProvider does not support 'listDirectory' operation")
     }
 
     @Override

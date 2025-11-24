@@ -54,6 +54,16 @@ class SysEnv {
         return Boolean.parseBoolean(result)
     }
 
+    static Integer getInteger(String name, Integer defValue) {
+        final result = get(name, defValue!=null ? String.valueOf(defValue) : null)
+        return result!=null ? Integer.valueOf(result) : null
+    }
+
+    static Long getLong(String name, Long defValue) {
+        final result = get(name, defValue!=null ? String.valueOf(defValue) : null)
+        return result!=null ? Long.valueOf(result) : null
+    }
+
     static void push(Map<String,String> env) {
         history.push(holder.getTarget())
         holder.setTarget(env)

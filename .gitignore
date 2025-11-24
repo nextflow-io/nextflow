@@ -8,6 +8,7 @@
 .node-nextflow*
 .devcontainer
 .vscode/*
+.lineage/
 */*/bin/*
 **/build/**
 build/**
@@ -39,3 +40,4 @@ temp
 plugins-prod
 sandbox
 wave-tests
+x/*

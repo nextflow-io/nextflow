@@ -20,7 +20,7 @@ package nextflow.plugin.hello
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
-import nextflow.trace.TraceObserver
+import nextflow.trace.TraceObserverV2
 
 /**
  * Example pipeline events observer
@@ -29,7 +29,7 @@ import nextflow.trace.TraceObserver
  */
 @Slf4j
 @CompileStatic
-class HelloObserver implements TraceObserver {
+class HelloObserver implements TraceObserverV2 {
 
     @Override
     void onFlowCreate(Session session) {

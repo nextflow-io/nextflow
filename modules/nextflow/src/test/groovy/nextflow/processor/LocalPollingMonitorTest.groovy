@@ -21,6 +21,7 @@ import java.lang.management.ManagementFactory
 import com.sun.management.OperatingSystemMXBean
 import nextflow.Session
 import nextflow.exception.ProcessUnrecoverableException
+import nextflow.executor.ExecutorConfig
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
 /**
@@ -96,6 +97,7 @@ class LocalPollingMonitorTest extends Specification {
         def handler = Mock(TaskHandler)
         handler.getTask() >> { task }
         handler.canForkProcess() >> true
+        handler.isReady() >> true
 
         expect:
         monitor.canSubmit(handler) == true
@@ -141,6 +143,7 @@ class LocalPollingMonitorTest extends Specification {
         def handler = Mock(TaskHandler)
         handler.getTask() >> { task }
         handler.canForkProcess() >> true
+        handler.isReady() >> true
         
         expect:
         monitor.canSubmit(handler) == true
@@ -217,24 +220,24 @@ class LocalPollingMonitorTest extends Specification {
         def OS = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean()
 
         when:
-        def session1 = new Session()
+        def config1 = new ExecutorConfig([:])
         then:
-        LocalPollingMonitor.configCpus(session1,'local') == OS.getAvailableProcessors()
+        LocalPollingMonitor.configCpus(config1,'local') == OS.getAvailableProcessors()
 
         when:
-        def session2 = new Session([executor: [cpus: 100]])
+        def config2 = new ExecutorConfig([cpus: 100])
         then:
-        LocalPollingMonitor.configCpus(session2,'local') == 100
+        LocalPollingMonitor.configCpus(config2,'local') == 100
 
         when:
-        def session3 = new Session([executor: ['$local': [cpus: 100]]])
+        def config3 = new ExecutorConfig(['$local': [cpus: 100]])
         then:
-        LocalPollingMonitor.configCpus(session3,'local') == 100
+        LocalPollingMonitor.configCpus(config3,'local') == 100
 
         when:
-        def session4 = new Session([executor: ['$sge': [cpus: 100]]])
+        def config4 = new ExecutorConfig(['$sge': [cpus: 100]])
         then:
-        LocalPollingMonitor.configCpus(session4,'local') == OS.getAvailableProcessors()
+        LocalPollingMonitor.configCpus(config4,'local') == OS.getAvailableProcessors()
 
     }
 
@@ -245,24 +248,24 @@ class LocalPollingMonitorTest extends Specification {
         def _10_GB = MemoryUnit.of('10 GB').toBytes()
 
         when:
-        def session1 = new Session()
+        def config1 = new ExecutorConfig([:])
         then:
-        LocalPollingMonitor.configMem(session1,'local') == OS.getTotalPhysicalMemorySize()
+        LocalPollingMonitor.configMem(config1,'local') == OS.getTotalPhysicalMemorySize()
 
         when:
-        def session2 = new Session([executor: [memory: '10 GB']])
+        def config2 = new ExecutorConfig([memory: '10 GB'])
         then:
-        LocalPollingMonitor.configMem(session2,'local') == _10_GB
+        LocalPollingMonitor.configMem(config2,'local') == _10_GB
 
         when:
-        def session3 = new Session([executor: ['$local': [memory: _10_GB]]])
+        def config3 = new ExecutorConfig(['$local': [memory: _10_GB]])
         then:
-        LocalPollingMonitor.configMem(session3,'local') == _10_GB
+        LocalPollingMonitor.configMem(config3,'local') == _10_GB
 
         when:
-        def session4 = new Session([executor: ['$sge': [memory: '1 GB']]])
+        def config4 = new ExecutorConfig(['$sge': [memory: '1 GB']])
         then:
-        LocalPollingMonitor.configMem(session4,'local') == OS.getTotalPhysicalMemorySize()
+        LocalPollingMonitor.configMem(config4,'local') == OS.getTotalPhysicalMemorySize()
 
     }
 }

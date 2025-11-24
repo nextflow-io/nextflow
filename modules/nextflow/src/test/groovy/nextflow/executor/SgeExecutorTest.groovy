@@ -207,6 +207,8 @@ class SgeExecutorTest extends Specification {
         executor.getHeaders(taskArray) == '''
                 #$ -t 1-5
                 #$ -N nf-the_task_name
+                #$ -o /dev/null
+                #$ -j y
                 #$ -terse
                 #$ -notify
                 '''

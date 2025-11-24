@@ -40,6 +40,7 @@ import nextflow.datasource.SraExplorer
 import nextflow.exception.AbortOperationException
 import nextflow.extension.CH
 import nextflow.extension.GroupTupleOp
+import nextflow.extension.LinExtension
 import nextflow.extension.MapOp
 import nextflow.file.DirListener
 import nextflow.file.DirWatcher
@@ -47,6 +48,7 @@ import nextflow.file.DirWatcherV2
 import nextflow.file.FileHelper
 import nextflow.file.FilePatternSplitter
 import nextflow.file.PathVisitor
+import nextflow.plugin.Plugins
 import nextflow.plugin.extension.PluginExtensionProvider
 import nextflow.util.Duration
 import nextflow.util.TestOnly
@@ -122,7 +124,6 @@ class Channel  {
     }
 
     static DataflowWriteChannel topic(String name) {
-        if( !NF.topicChannelEnabled ) throw new MissingMethodException('topic', Channel.class, InvokerHelper.EMPTY_ARGS)
         return CH.topic(name)
     }
 
@@ -656,4 +657,23 @@ class Channel  {
         fromPath0Future = future.exceptionally(Channel.&handlerException)
     }
 
+    static DataflowWriteChannel fromLineage(Map<String,?> params) {
+        checkParams('fromLineage', params, LinExtension.PARAMS)
+        final result = CH.create()
+        if( NF.isDsl2() ) {
+            session.addIgniter { fromLineage0(result, params) }
+        }
+        else {
+            fromLineage0(result, params )
+        }
+        return result
+    }
+
+    private static void fromLineage0(DataflowWriteChannel channel, Map<String,?> params) {
+        final linExt = Plugins.getExtension(LinExtension)
+        if( !linExt )
+            throw new IllegalStateException("Unable to load lineage extensions.")
+        final future = CompletableFuture.runAsync(() -> linExt.fromLineage(session, channel, params))
+        future.exceptionally(this.&handlerException)
+    }
 }

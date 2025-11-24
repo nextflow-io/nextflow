@@ -19,12 +19,14 @@ package nextflow.util
 
 import java.lang.management.ManagementFactory
 import java.text.SimpleDateFormat
+import java.time.OffsetDateTime
 
 import com.sun.management.OperatingSystemMXBean
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.SysEnv
 import nextflow.file.FileHelper
 /**
  * System helper methods
@@ -35,7 +37,9 @@ import nextflow.file.FileHelper
 @CompileStatic
 class SysHelper {
 
-    private static String DATE_FORMAT = 'dd-MMM-yyyy HH:mm'
+    public static final String DEFAULT_DOCKER_PLATFORM = 'linux/amd64'
+
+    private static final String DATE_FORMAT = 'dd-MMM-yyyy HH:mm:ss'
 
     /**
      * Given a timestamp as epoch time convert to a string representation
@@ -64,9 +68,32 @@ class SysHelper {
      *      The formatted date string
      */
     static String fmtDate(Date date, TimeZone tz=null) {
-        def formatter=new SimpleDateFormat(DATE_FORMAT, Locale.ENGLISH)
+        final formatter=new SimpleDateFormat(fmtEnv(), Locale.ENGLISH)
         if(tz) formatter.setTimeZone(tz)
         formatter.format(date)
+    }
+
+    /**
+     * Given a {@link java.time.OffsetDateTime} object convert to a string representation
+     * according the {@link #DATE_FORMAT}
+     *
+     * @param dateTime
+     *      The OffsetDateTime to render as a string
+     * @return
+     *      The formatted date string
+     */
+    static String fmtDate(OffsetDateTime dateTime) {
+        // Convert to Date while preserving the original timezone
+        final date = Date.from(dateTime.toInstant())
+        final timezone = TimeZone.getTimeZone(dateTime.getOffset())
+        fmtDate(date, timezone)
+    }
+
+    static private String fmtEnv() {
+        final result = SysEnv.get('NXF_DATE_FORMAT', DATE_FORMAT)
+        return result.toLowerCase() == 'iso'
+            ? "yyyy-MM-dd'T'HH:mm:ssXXX"
+            : result
     }
 
     /**
@@ -103,7 +130,7 @@ class SysHelper {
     }
 
     static String getBootTimeString() {
-        new SimpleDateFormat(DATE_FORMAT).format(new Date(getBootTimeMillis()))
+        fmtDate(new Date(getBootTimeMillis()))
     }
 
     /**
@@ -195,4 +222,5 @@ class SysHelper {
 
         return buffer.toString()
     }
+
 }

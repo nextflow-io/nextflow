@@ -1,5 +1,4 @@
 configurations {
-    capsule
     defaultCfg.extendsFrom api 
     //provided
     console.extendsFrom defaultCfg
@@ -15,11 +14,9 @@ dependencies {
     api project(':nextflow')
     // include Ivy at runtime in order to have Grape @Grab work correctly
     defaultCfg "org.apache.ivy:ivy:2.5.2"
-    // default cfg = runtime + httpfs + amazon + tower client + wave client
+    // default cfg = runtime + httpfs + lineage + amazon + tower client + wave client
     defaultCfg project(':nf-httpfs')
-    // Capsule manages the fat jar building process
-    capsule 'io.nextflow:capsule:1.1.1'
-    capsule 'io.nextflow:capsule-maven:1.0.3.2'
+    defaultCfg project(':nf-lineage')
     console project(':plugins:nf-console')
     google  project(':plugins:nf-google')
     amazon  project(':plugins:nf-amazon')
@@ -29,7 +26,7 @@ dependencies {
 }
 
 
-ext.mainClassName = 'nextflow.cli.Launcher'
+// ext.mainClassName removed - now using application.mainClass in Shadow plugin
 ext.homeDir = System.properties['user.home']
 ext.nextflowDir = "$homeDir/.nextflow/framework/$version"
 ext.releaseDir = "$buildDir/releases"
@@ -92,122 +89,44 @@ protected coordinates( it ) {
 }
 
 /*
- * Default nextflow package. It contains the capsule loader
+ * Compile and pack all packages
  */
-task packOne(type: Jar) {
-    dependsOn configurations.capsule, configurations.defaultCfg
-    archiveFileName = "nextflow-${version}-one.jar"
-
-    from (configurations.capsule.collect { zipTree(it) })
-
-    // main manifest attributes
-    def deps = resolveDeps('defaultCfg')
-
-    manifest.attributes(
-                'Main-Class'        : 'NextflowLoader',
-                'Application-Name'  : 'nextflow',
-                'Application-Class' : mainClassName,
-                'Application-Version': version,
-                'Min-Java-Version'  : '1.8.0',
-                'Caplets'           : 'MavenCapsule',
-                'Dependencies'      : deps
-    )
-
-    // enable snapshot dependencies lookup
-    if( version.endsWith('-SNAPSHOT') ) {
-        manifest.attributes 'Allow-Snapshots': true
-        manifest.attributes 'Repositories': 'local https://oss.sonatype.org/content/repositories/snapshots central seqera'
-    }
-    else {
-        manifest.attributes 'Repositories': 'central seqera'
-    }
-
+task packOne( dependsOn: [compile, ":nextflow:shadowJar"]) {
     doLast {
-        ant.copy(file: "$buildDir/libs/nextflow-${version}-one.jar", todir: releaseDir, overwrite: true)
-        ant.copy(file: "$buildDir/libs/nextflow-${version}-one.jar", todir: nextflowDir, overwrite: true)
-        println "\n+ Nextflow package `ONE` copied to: $releaseDir"
+        def source = "modules/nextflow/build/libs/nextflow-${version}-one.jar"
+        ant.copy(file: source, todir: releaseDir, overwrite: true)
+        ant.copy(file: source, todir: nextflowDir, overwrite: true)
+        println "\n+ Nextflow package `ONE` copied to: $releaseDir/nextflow-${version}-one.jar"
     }
 }
 
-task packAll(type: Jar) {
-    dependsOn configurations.capsule, configurations.defaultCfg
-    archiveFileName = "nextflow-${version}-all.jar"
-
-    from jar // embed our application jar
-    from (configurations.amazon + configurations.google + configurations.tower + configurations.wave)
-    from (configurations.capsule.collect { zipTree(it) })
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    
-    manifest.attributes( 'Main-Class'        : 'NextflowLoader',
-                          'Application-Name'  : 'nextflow-all',
-                          'Application-Class' : mainClassName,
-                          'Application-Version': version,
-                          'Min-Java-Version'  : '1.8.0'
-                          )
-
-    manifest.attributes('Main-Class': 'NextflowLoader', 'amazon')
-    manifest.attributes('Main-Class': 'NextflowLoader', 'google')
+task packDist( dependsOn: [compile, ":nextflow:shadowJar"]) {
 
     doLast {
-        file(releaseDir).mkdir()
+        file(releaseDir).mkdirs()
         // cleanup
-        def source = file("$buildDir/libs/nextflow-${version}-all.jar")
-        def target = file("$releaseDir/nextflow-${version}-all"); target.delete()
+        def source = file("modules/nextflow/build/libs/nextflow-${version}-one.jar")
+        def target = file("$releaseDir/nextflow-${version}-dist"); target.delete()
         // append the big jar
         target.withOutputStream {
-            it << file('nextflow').text.replaceAll(/NXF_PACK\=.*/, 'NXF_PACK=all')
+            it << file('nextflow').text.replaceAll(/NXF_PACK\=.*/, 'NXF_PACK=dist')
             it << new FileInputStream(source)
         }
         // execute permission
         "chmod +x $target".execute()
         // done
-        println "+ Nextflow package `ALL` copied to: $releaseDir\n"
+        println "+ Nextflow package `ALL` copied to: $target\n"
     }
 }
-
-task packCore(type: Jar) {
-    dependsOn configurations.capsule, configurations.defaultCfg
-    archiveFileName = "nextflow-${version}-core.jar"
-
-    from jar // embed our application jar
-    from (configurations.defaultCfg)
-    from (configurations.capsule.collect { zipTree(it) })
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-
-    manifest.attributes( 'Main-Class'        : 'NextflowLoader',
-            'Application-Name'  : 'nextflow-core',
-            'Application-Class' : mainClassName,
-            'Application-Version': version,
-            'Min-Java-Version'  : '1.8.0'
-    )
-
-    doLast {
-        file(releaseDir).mkdir()
-        // cleanup
-        def source = file("$buildDir/libs/nextflow-${version}-core.jar")
-        def target = file("$releaseDir/nextflow-${version}-core"); target.delete()
-        // append the big jar
-        target.withOutputStream {
-            it << file('nextflow').text.replaceAll(/NXF_PACK\=.*/, 'NXF_PACK=all')
-            it << new FileInputStream(source)
-        }
-        // execute permission
-        "chmod +x $target".execute()
-        // done
-        println "+ Nextflow package `CORE` copied to: $releaseDir\n"
-    }
-}
-
 
 /*
  * Compile and pack all packages
  */
-task pack( dependsOn: [packOne, packAll]) {
+task pack( dependsOn: [packOne, packDist]) {
 
 }
 
-
-task deploy( type: Exec, dependsOn: [clean, compile, pack]) {
+task deploy( type: Exec, dependsOn: [clean, compile, pack, validatePluginVersions]) {
 
     def temp = File.createTempFile('upload',null)
     temp.deleteOnExit()
@@ -246,6 +165,11 @@ task deploy( type: Exec, dependsOn: [clean, compile, pack]) {
 task installLauncher(type: Copy, dependsOn: ['pack']) {
     from "$releaseDir/nextflow-$version-one.jar"
     into "$homeDir/.nextflow/framework/$version/"
+}
+
+task installScratch(type: Copy, dependsOn: ['pack']) {
+    from "$releaseDir/nextflow-$version-one.jar"
+    into "${rootProject.projectDir}/test-e2e/.nextflow/framework/$version/"
 }
 
 /*
@@ -309,15 +233,15 @@ task dockerPack(type: Exec, dependsOn: ['packOne']) {
 
 /*
  * Tag and upload the release
- * 
+ *
  * https://github.com/aktau/github-release/
  */
-task release(type: Exec, dependsOn: [pack, dockerImage]) {
+task release(type: Exec, dependsOn: [pack, dockerImage, validatePluginVersions]) {
 
     def launcherFile = file('nextflow').absoluteFile
     def launcherSha1 = file('nextflow.sha1').absoluteFile
     def launcherSha256 = file('nextflow.sha256').absoluteFile
-    def nextflowAllFile = file("$releaseDir/nextflow-${version}-all")
+    def nextflowAllFile = file("$releaseDir/nextflow-${version}-dist")
     def versionFile = file('VERSION').absoluteFile
 
     def snapshot = version ==~ /^.+(-RC\d+|-SNAPSHOT)$/

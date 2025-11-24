@@ -19,6 +19,8 @@ package nextflow.util
 
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.ThreadFactory
+import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicInteger
 
 import groovy.transform.CompileStatic
@@ -26,6 +28,8 @@ import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.ISession
 import nextflow.Session
+import nextflow.exception.AbortOperationException
+
 /**
  * Holder object for file transfer thread pool
  *
@@ -39,7 +43,7 @@ class ThreadPoolManager {
     
     final static public int DEFAULT_MIN_THREAD = 10
     final static public int DEFAULT_MAX_THREAD = Math.max(DEFAULT_MIN_THREAD, Runtime.runtime.availableProcessors()*3)
-    final static public int DEFAULT_QUEUE_SIZE = 10_000
+    final static public int DEFAULT_QUEUE_SIZE = -1 // use -1 for using an unbound queue
     final static public Duration DEFAULT_KEEP_ALIVE =  Duration.of('60sec')
     final static public Duration DEFAULT_MAX_AWAIT = Duration.of('12 hour')
 
@@ -86,9 +90,24 @@ class ThreadPoolManager {
             minThreads = maxThreads
         }
 
-        return executorService = Threads.useVirtual()
-                ? Executors.newThreadPerTaskExecutor(new CustomThreadFactory(name ?: "nf-thread-pool-${poolCount.getAndIncrement()}".toString()))
-                : legacyThreadPool()
+        executorService = Threads.useVirtual()
+            ? virtualThreadService()
+            : legacyThreadPool()
+
+        return executorService
+    }
+
+    protected ExecutorService virtualThreadService() {
+        final poolName = name ?: "nf-thread-pool-${poolCount.getAndIncrement()}".toString()
+        final pool = VirtualThreadFactoryBuilder.create(poolName)
+        return Executors.newThreadPerTaskExecutor(pool)
+    }
+
+    // this class is required to avoid failures when using Java version < 21
+    private static class VirtualThreadFactoryBuilder {
+        static ThreadFactory create(String name) {
+            return Thread.ofVirtual().name(name).factory()
+        }
     }
 
     protected ExecutorService legacyThreadPool() {
@@ -127,6 +146,19 @@ class ThreadPoolManager {
         // wait for remaining threads to complete
         ThreadPoolHelper.await(executorService, maxAwait, waitMsg, exitMsg)
         log.debug "Thread pool '$name' shutdown completed (hard=$hard)"
+    }
+
+    void shutdownOrAbort(boolean hard, Session session) throws AbortOperationException {
+        try {
+            shutdown(hard)
+        }
+        catch( TimeoutException e ) {
+            final ignoreErrors = session.config.navigate('workflow.output.ignoreErrors', false)
+            if( ignoreErrors )
+                log.warn(e.message)
+            else
+                throw new AbortOperationException("Timed out while waiting to publish outputs", e)
+        }
     }
 
     static ExecutorService create(String name, int maxThreads=0) {

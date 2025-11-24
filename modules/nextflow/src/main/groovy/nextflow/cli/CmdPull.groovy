@@ -25,6 +25,7 @@ import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
+import nextflow.util.TestOnly
 /**
  * CLI sub-command PULL
  *
@@ -52,7 +53,7 @@ class CmdPull extends CmdBase implements HubOptions {
     @Override
     final String getName() { NAME }
 
-    /* only for testing purpose */
+    @TestOnly
     protected File root
 
     @Override
@@ -67,7 +68,6 @@ class CmdPull extends CmdBase implements HubOptions {
         if( all && revision )
             throw new AbortOperationException('Option `all` is not compatible with `revision`')
 
-        /* only for testing purpose */
         if( root ) {
             AssetManager.root = root
         }

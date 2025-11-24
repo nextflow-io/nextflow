@@ -38,7 +38,7 @@ class BasicCliOpts implements CliOpts {
             return result
         for( String item : cli ) {
             final p = item.indexOf('=')
-            if( p!==-1 ) {
+            if( p!=-1 ) {
                 result.options.put( item.substring(0,p), item.substring(p+1) )
             }
             else {

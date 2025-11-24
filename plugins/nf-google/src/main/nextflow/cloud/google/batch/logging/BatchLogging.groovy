@@ -21,29 +21,26 @@ import com.google.cloud.logging.LogEntry
 import com.google.cloud.logging.Logging
 import com.google.cloud.logging.LoggingOptions
 import com.google.cloud.logging.Severity
+import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import nextflow.cloud.google.batch.client.BatchConfig
+import nextflow.cloud.google.GoogleOpts
 /**
  * Batch logging client
  * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class BatchLogging implements Closeable {
     private LoggingOptions opts
     private String projectId
     private volatile Logging logging0
 
-    /** only for testing - do not use */
-    protected BatchLogging() {
-
-    }
-
-    BatchLogging(BatchConfig config) {
-        final creds = config.googleOpts.credentials
-        this.projectId = config.googleOpts.projectId
+    BatchLogging(GoogleOpts config) {
+        final creds = config.credentials
+        this.projectId = config.projectId
         this.opts = LoggingOptions .newBuilder() .setCredentials(creds) .setProjectId(this.projectId) .build()
     }
 
@@ -81,7 +78,7 @@ class BatchLogging implements Closeable {
         return [ stdout.toString(), stderr.toString() ]
     }
 
-    protected void parseOutput(LogEntry logEntry, StringBuilder stdout, StringBuilder stderr) {
+    protected static void parseOutput(LogEntry logEntry, StringBuilder stdout, StringBuilder stderr) {
         final output = logEntry.payload.data.toString()
         if (logEntry.severity == Severity.ERROR) {
             stderr.append(output)
@@ -90,7 +87,7 @@ class BatchLogging implements Closeable {
         }
     }
 
-    synchronized protected loggingService() {
+    synchronized protected Logging loggingService() {
         if( logging0==null ) {
             logging0 = opts.getService()
         }

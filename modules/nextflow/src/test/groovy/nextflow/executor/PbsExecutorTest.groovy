@@ -19,7 +19,6 @@ package nextflow.executor
 import java.nio.file.Paths
 
 import nextflow.processor.TaskArrayRun
-import nextflow.Session
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
@@ -32,10 +31,20 @@ import spock.lang.Unroll
  */
 class PbsExecutorTest extends Specification {
 
+    def createExecutor(config) {
+        Spy(PbsExecutor) {
+            getConfig() >> config
+        }
+    }
+
+    def createExecutor() {
+        createExecutor(new ExecutorConfig([:]))
+    }
+
     def testGetCommandLine() {
 
         given:
-        def executor = Spy(PbsExecutor)
+        def executor = createExecutor()
         def task = Mock(TaskRun); task.getName() >> 'hello world'
 
         expect:
@@ -46,8 +55,7 @@ class PbsExecutorTest extends Specification {
     def 'test job script headers'() {
 
         setup:
-        def executor = Spy(PbsExecutor)
-        executor.getSession() >> Mock(Session)
+        def executor = createExecutor()
 
         // mock process
         def proc = Mock(TaskProcessor)
@@ -172,8 +180,10 @@ class PbsExecutorTest extends Specification {
         }
         then:
         executor.getHeaders(taskArray) == '''
-                #PBS -J 0-4
+                #PBS -t 0-4
                 #PBS -N nf-task_name
+                #PBS -o /dev/null
+                #PBS -j oe
                 '''
                 .stripIndent().leftTrim()
     }
@@ -181,8 +191,7 @@ class PbsExecutorTest extends Specification {
     def WorkDirWithBlanks() {
 
         setup:
-        def executor = Spy(PbsExecutor)
-        executor.getSession() >> Mock(Session)
+        def executor = createExecutor()
 
         // mock process
         def proc = Mock(TaskProcessor)
@@ -208,7 +217,7 @@ class PbsExecutorTest extends Specification {
     @Unroll
     def 'should return valid job name given #name'() {
         given:
-        def executor = [:] as PbsExecutor
+        def executor = createExecutor()
         def task = Mock(TaskRun)
         task.getName() >> name
 
@@ -228,7 +237,7 @@ class PbsExecutorTest extends Specification {
     def testParseJobId() {
 
         given:
-        def executor = [:] as PbsExecutor
+        def executor = createExecutor()
 
         expect:
         executor.parseJobId('\n10.localhost\n') == '10.localhost'
@@ -246,7 +255,7 @@ class PbsExecutorTest extends Specification {
     def testKillTaskCommand() {
 
         given:
-        def executor = [:] as PbsExecutor
+        def executor = createExecutor()
         expect:
         executor.killTaskCommand('100.localhost') == ['qdel', '100.localhost']
 
@@ -255,7 +264,7 @@ class PbsExecutorTest extends Specification {
     def testParseQueueStatus() {
 
         setup:
-        def executor = [:] as PbsExecutor
+        def executor = createExecutor()
         def text =
                 """
                 Job Id: 12.localhost
@@ -295,7 +304,7 @@ class PbsExecutorTest extends Specification {
 
     def 'should return qstat command line' () {
         given:
-        def executor = [:] as PbsExecutor
+        def executor = createExecutor()
 
         expect:
         executor.queueStatusCommand(null) == ['bash','-c', "set -o pipefail; qstat -f -1 | { grep -E '(Job Id:|job_state =)' || true; }"]
@@ -317,16 +326,16 @@ class PbsExecutorTest extends Specification {
 
     def 'should get array index name and start' () {
         given:
-        def executor = Spy(PbsExecutor)
+        def executor = createExecutor()
         expect:
-        executor.getArrayIndexName() == 'PBS_ARRAY_INDEX'
+        executor.getArrayIndexName() == 'PBS_ARRAYID'
         executor.getArrayIndexStart() == 0
     }
 
     @Unroll
     def 'should get array task id' () {
         given:
-        def executor = Spy(PbsExecutor)
+        def executor = createExecutor()
         expect:
         executor.getArrayTaskId(JOB_ID, TASK_INDEX) == EXPECTED
 
@@ -342,13 +351,12 @@ class PbsExecutorTest extends Specification {
         def task = new TaskRun()
         task.workDir = Paths.get('/work/dir')
         task.processor = Mock(TaskProcessor)
-        task.processor.getSession() >> Mock(Session)
         task.config = Mock(TaskConfig)  { getClusterOptionsAsList()>>[] }
         and:
-        def executor = Spy(PbsExecutor)
+        def config = new ExecutorConfig(account: ACCOUNT)
+        def executor = createExecutor(config)
         executor.getJobNameFor(_) >> 'foo'
         executor.getName() >> 'pbs'
-        executor.getSession() >> Mock(Session) { getExecConfigProp('pbs', 'account',null)>>ACCOUNT }
 
         when:
         def result = executor.getDirectives(task, [])

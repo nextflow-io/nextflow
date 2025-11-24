@@ -44,6 +44,11 @@ abstract class Executor {
     Session session
 
     /**
+     * The `executor` configuration settings
+     */
+    ExecutorConfig config
+
+    /**
      * The executor simple name
      */
     String name
@@ -93,7 +98,7 @@ abstract class Executor {
         /*
          * Add the task to the queue for processing
          * Note: queue is implemented as a fixed size blocking queue, when
-         * there's not space *put* operation will block until, some other tasks finish
+         * there's not space the *put* operation will block until some other tasks finish
          */
         monitor.schedule(handler)
     }

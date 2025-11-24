@@ -25,13 +25,14 @@ import com.google.cloud.batch.v1.Volume
 import com.google.cloud.storage.contrib.nio.CloudStoragePath
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.cloud.google.batch.client.BatchConfig
+import nextflow.cloud.google.GoogleOpts
 import nextflow.executor.BashWrapperBuilder
 import nextflow.extension.FilesEx
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskRun
 import nextflow.util.Escape
 import nextflow.util.PathTrie
+import nextflow.util.TestOnly
 
 /**
  * Implement Nextflow task launcher script
@@ -44,13 +45,14 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
 
     private static final String MOUNT_ROOT = '/mnt/disks'
 
-    private BatchConfig config
+    private GoogleOpts config
     private CloudStoragePath remoteWorkDir
     private Path remoteBinDir
     private Set<String> buckets = new HashSet<>()
     private PathTrie pathTrie = new PathTrie()
+    private boolean isArray
 
-    /* ONLY FOR TESTING - DO NOT USE */
+    @TestOnly
     protected GoogleBatchScriptLauncher() {}
 
     GoogleBatchScriptLauncher(TaskBean bean, Path remoteBinDir) {
@@ -67,6 +69,12 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
         // add all children work dir 
         if( bean.arrayWorkDirs ) {
             for( Path it : bean.arrayWorkDirs )
+                toContainerMount(it)
+        }
+
+        // add input file mounts
+        if( bean.arrayInputFiles ) {
+            for( Path it : bean.arrayInputFiles )
                 toContainerMount(it)
         }
 
@@ -119,7 +127,9 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
 
     @Override
     String runCommand() {
-        launchCommand(workDirMount)
+        return isArray
+            ? launchArrayCommand(workDirMount)
+            : launchCommand(workDirMount)
     }
 
     @Override
@@ -135,9 +145,11 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
     List<Volume> getVolumes() {
         final result = new ArrayList(10)
         for( String it : buckets ) {
-            final mountOptions = ['-o rw', '-implicit-dirs']
-            if( config && config.googleOpts.enableRequesterPaysBuckets )
-                mountOptions << "--billing-project ${config.googleOpts.projectId}".toString()
+            final mountOptions = new LinkedList<String>()
+            if( config && config.batch.gcsfuseOptions )
+                mountOptions.addAll(config.batch.gcsfuseOptions)
+            if( config && config.enableRequesterPaysBuckets )
+                mountOptions.add("--billing-project ${config.projectId}".toString())
 
             result.add(
                 Volume.newBuilder()
@@ -172,13 +184,35 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
         return remoteWorkDir.resolve(TaskRun.CMD_INFILE)
     }
 
-    GoogleBatchScriptLauncher withConfig(BatchConfig config) {
+    GoogleBatchScriptLauncher withConfig(GoogleOpts config) {
         this.config = config
+        addLogsBucket(config.batch.logsPath())
         return this
     }
 
+    protected void addLogsBucket(Path path) {
+        if( path instanceof CloudStoragePath )
+            buckets.add(path.bucket())
+        else if( path != null )
+            throw new IllegalArgumentException("Unexpected value for Google Batch logs path: ${path.toUriString()}")
+    }
+
+    GoogleBatchScriptLauncher withIsArray(boolean value) {
+        this.isArray = value
+        return this
+    }
+
+    static String launchArrayCommand(String workDir ) {
+        // when executing a job array run directly the command script
+        // to prevent that all child jobs write on the same .command.*
+        // control files, causing an issue with the gcsfuse mount
+        // For the same reason the .command.log file is not uploaded
+        // See https://github.com/nextflow-io/nextflow/issues/5777
+        "/bin/bash ${workDir}/${TaskRun.CMD_SCRIPT}"
+    }
+
     static String launchCommand( String workDir ) {
-        "trap \"{ cp ${TaskRun.CMD_LOG} ${workDir}/${TaskRun.CMD_LOG}; }\" ERR; /bin/bash ${workDir}/${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}"
+        "trap \"{ cp ${TaskRun.CMD_LOG} ${workDir}/${TaskRun.CMD_LOG}; }\" EXIT; /bin/bash ${workDir}/${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}"
     }
 
     static String containerMountPath(CloudStoragePath path) {

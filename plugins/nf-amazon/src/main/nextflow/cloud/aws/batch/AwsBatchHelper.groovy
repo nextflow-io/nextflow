@@ -16,20 +16,20 @@
 
 package nextflow.cloud.aws.batch
 
-import com.amazonaws.services.batch.AWSBatch
-import com.amazonaws.services.batch.model.DescribeComputeEnvironmentsRequest
-import com.amazonaws.services.batch.model.DescribeJobQueuesRequest
-import com.amazonaws.services.batch.model.DescribeJobsRequest
-import com.amazonaws.services.ec2.AmazonEC2
-import com.amazonaws.services.ec2.model.DescribeInstancesRequest
-import com.amazonaws.services.ec2.model.Instance
-import com.amazonaws.services.ecs.AmazonECS
-import com.amazonaws.services.ecs.model.DescribeContainerInstancesRequest
-import com.amazonaws.services.ecs.model.DescribeTasksRequest
-import com.amazonaws.services.ecs.model.InvalidParameterException
-import com.amazonaws.services.logs.AWSLogs
-import com.amazonaws.services.logs.model.GetLogEventsRequest
-import com.amazonaws.services.logs.model.OutputLogEvent
+import software.amazon.awssdk.services.batch.BatchClient
+import software.amazon.awssdk.services.batch.model.DescribeComputeEnvironmentsRequest
+import software.amazon.awssdk.services.batch.model.DescribeJobQueuesRequest
+import software.amazon.awssdk.services.batch.model.DescribeJobsRequest
+import software.amazon.awssdk.services.ec2.Ec2Client
+import software.amazon.awssdk.services.ec2.model.DescribeInstancesRequest
+import software.amazon.awssdk.services.ec2.model.Instance
+import software.amazon.awssdk.services.ecs.EcsClient
+import software.amazon.awssdk.services.ecs.model.DescribeContainerInstancesRequest
+import software.amazon.awssdk.services.ecs.model.DescribeTasksRequest
+import software.amazon.awssdk.services.ecs.model.InvalidParameterException
+import software.amazon.awssdk.services.cloudwatchlogs.CloudWatchLogsClient
+import software.amazon.awssdk.services.cloudwatchlogs.model.GetLogEventsRequest
+import software.amazon.awssdk.services.cloudwatchlogs.model.OutputLogEvent
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
@@ -46,25 +46,25 @@ import nextflow.cloud.types.PriceModel
 class AwsBatchHelper {
 
     private AwsClientFactory factory
-    private AWSBatch batchClient
+    private BatchClient batchClient
 
-    AwsBatchHelper(AWSBatch batchClient, AwsClientFactory factory) {
+    AwsBatchHelper(BatchClient batchClient, AwsClientFactory factory) {
         this.batchClient = batchClient
         this.factory = factory
     }
 
     @Memoized
-    private AmazonECS getEcsClient() {
+    private EcsClient getEcsClient() {
         return factory.getEcsClient()
     }
 
     @Memoized
-    private AmazonEC2 getEc2Client() {
+    private Ec2Client getEc2Client() {
         return factory.getEc2Client()
     }
 
     @Memoized
-    private AWSLogs getLogsClient() {
+    private CloudWatchLogsClient getLogsClient() {
         return factory.getLogsClient()
     }
 
@@ -75,20 +75,26 @@ class AwsBatchHelper {
     }
 
     private List<String> getClusterArnByCompEnvNames(List<String> envNames) {
-        final req = new DescribeComputeEnvironmentsRequest().withComputeEnvironments(envNames)
+        final req = DescribeComputeEnvironmentsRequest.builder()
+            .computeEnvironments(envNames)
+            .build() as DescribeComputeEnvironmentsRequest
         batchClient
                 .describeComputeEnvironments(req)
-                .getComputeEnvironments()
-                *.getEcsClusterArn()
+                .computeEnvironments()
+                *.ecsClusterArn()
     }
 
     private List<String> getComputeEnvByQueueName(String queueName) {
-        final req = new DescribeJobQueuesRequest().withJobQueues(queueName)
+        final req = DescribeJobQueuesRequest.builder()
+            .jobQueues(queueName)
+            .build() as DescribeJobQueuesRequest
+
         final resp = batchClient.describeJobQueues(req)
-        final result = new ArrayList(10)
-        for (def queue : resp.getJobQueues()) {
-            for (def order : queue.getComputeEnvironmentOrder()) {
-                result.add(order.getComputeEnvironment())
+
+        final result = new ArrayList<String>(10)
+        for (final queue : resp.jobQueues()) {
+            for (final order : queue.computeEnvironmentOrder()) {
+                result.add(order.computeEnvironment())
             }
         }
         return result
@@ -101,14 +107,15 @@ class AwsBatchHelper {
     }
 
     private String getContainerIdByClusterAndTaskArn(String clusterArn, String taskArn) {
-        final describeTaskReq = new DescribeTasksRequest()
-                .withCluster(clusterArn)
-                .withTasks(taskArn)
+        final describeTaskReq = DescribeTasksRequest.builder()
+            .cluster(clusterArn)
+            .tasks(taskArn)
+            .build() as DescribeTasksRequest
         try {
             final describeTasksResult = ecsClient.describeTasks(describeTaskReq)
             final containers =
-                    describeTasksResult.getTasks()
-                    *.getContainerInstanceArn()
+                    describeTasksResult.tasks()
+                    *.containerInstanceArn()
             if( containers.size()==1 ) {
                 return containers.get(0)
             }
@@ -126,13 +133,14 @@ class AwsBatchHelper {
     }
 
     private String getInstanceIdByClusterAndContainerId(String clusterArn, String containerId) {
-        final describeContainerReq = new DescribeContainerInstancesRequest()
-                .withCluster(clusterArn)
-                .withContainerInstances(containerId)
+        final describeContainerReq = DescribeContainerInstancesRequest.builder()
+                .cluster(clusterArn)
+                .containerInstances(containerId)
+                .build() as DescribeContainerInstancesRequest
         final instanceIds = ecsClient
                 .describeContainerInstances(describeContainerReq)
-                .getContainerInstances()
-                *.getEc2InstanceId()
+                .containerInstances()
+                *.ec2InstanceId()
         if( !instanceIds ) {
             log.debug "Unable to find EC2 instance id for clusterArn=$clusterArn and containerId=$containerId"
             return null
@@ -146,22 +154,24 @@ class AwsBatchHelper {
     @Memoized(maxCacheSize = 1_000)
     private CloudMachineInfo getInfoByInstanceId(String instanceId) {
         assert instanceId
-        final req = new DescribeInstancesRequest() .withInstanceIds(instanceId)
-        final res = ec2Client .describeInstances(req) .getReservations() [0]
-        final Instance instance = res ? res.getInstances() [0] : null
+        final req = DescribeInstancesRequest.builder()
+            .instanceIds(instanceId)
+            .build() as DescribeInstancesRequest
+        final res = ec2Client.describeInstances(req).reservations() [0]
+        final Instance instance = res ? res.instances() [0] : null
         if( !instance ) {
             log.debug "Unable to find cloud machine info for instanceId=$instanceId"
             return null
         }
 
         new CloudMachineInfo(
-                instance.getInstanceType(),
-                instance.getPlacement().getAvailabilityZone(),
+                instance.instanceType().toString(),
+                instance.placement().availabilityZone(),
                 getPrice(instance))
     }
 
     private PriceModel getPrice(Instance instance) {
-        instance.getInstanceLifecycle()=='spot' ? PriceModel.spot : PriceModel.standard
+        instance.instanceLifecycle()=='spot' ? PriceModel.spot : PriceModel.standard
     }
 
     CloudMachineInfo getCloudInfoByQueueAndTaskArn(String queue, String taskArn) {
@@ -177,11 +187,13 @@ class AwsBatchHelper {
     }
 
     protected String getLogStreamId(String jobId) {
-        final request = new DescribeJobsRequest() .withJobs(jobId)
+        final request = DescribeJobsRequest.builder()
+            .jobs(jobId)
+            .build() as DescribeJobsRequest
         final response = batchClient.describeJobs(request)
-        if( response.jobs ) {
-            final detail = response.jobs[0]
-            return detail.container.logStreamName
+        if( response.jobs() ) {
+            final detail = response.jobs()[0]
+            return detail.container().logStreamName()
         }
         else {
             log.debug "Unable to find info for batch job id=$jobId"
@@ -198,21 +210,22 @@ class AwsBatchHelper {
      *      The Batch jobs as a string value or {@code null} if no logs is available. Note, if the log
      *      is made of multiple *page* this method returns only the first one
      */
-    String getTaskLogStream(String jobId) {
+    String getTaskLogStream(String jobId, String groupName) {
         final streamId = getLogStreamId(jobId)
         if( !streamId ) {
             log.debug "Unable to find CloudWatch log stream for batch job id=$jobId"
             return null
         }
 
-        final logRequest = new GetLogEventsRequest()
-                .withLogGroupName("/aws/batch/job")
-                .withLogStreamName(streamId)
+        final logRequest = GetLogEventsRequest.builder()
+                .logGroupName(groupName ?: "/aws/batch/job")
+                .logStreamName(streamId)
+                .build() as GetLogEventsRequest
 
         final result = new StringBuilder()
-        final resp = logsClient .getLogEvents(logRequest)
-        for( OutputLogEvent it : resp.events ) {
-            result.append(it.getMessage()).append('\n')
+        final resp = logsClient.getLogEvents(logRequest)
+        for( OutputLogEvent it : resp.events() ) {
+            result.append(it.message()).append('\n')
         }
         
         return result.toString()

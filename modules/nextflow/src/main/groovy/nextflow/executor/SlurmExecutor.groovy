@@ -62,10 +62,8 @@ class SlurmExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
 
         result << '-J' << getJobNameFor(task)
 
-        if( task !instanceof TaskArrayRun ) {
-            // -o OUTFILE and no -e option => stdout and stderr merged to stdout/OUTFILE
-            result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
-        }
+        // -o OUTFILE and no -e option => stdout and stderr merged to stdout/OUTFILE
+        result << '-o' << (task.isArray() ? '/dev/null' : quote(task.workDir.resolve(TaskRun.CMD_LOG)))
 
         result << '--no-requeue' << '' // note: directive need to be returned as pairs
 
@@ -105,7 +103,7 @@ class SlurmExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
         addClusterOptionsDirective(task.config, result)
 
         // add slurm account from config
-        final account = session.getExecConfigProp(getName(), 'account', null) as String
+        final account = config.getExecConfigProp(name, 'account', null) as String
         if( account ) {
             result << '-A' << account
         }
@@ -214,7 +212,7 @@ class SlurmExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
     @Override
     void register() {
         super.register()
-        perCpuMemAllocation = session.getExecConfigProp(name, 'perCpuMemAllocation', false)
+        perCpuMemAllocation = config.getExecConfigProp(name, 'perCpuMemAllocation', false)
     }
 
     @Override

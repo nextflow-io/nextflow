@@ -117,7 +117,7 @@ class HyperQueueExecutorTest extends Specification {
         then:
         executor.getHeaders(task) == '''
             #HQ --name nf-task-1
-            #HQ --log /work/dir/.command.log
+            #HQ --stream /work/dir/.command.log
             #HQ --cwd /work/dir
             '''
             .stripIndent().leftTrim()
@@ -131,9 +131,9 @@ class HyperQueueExecutorTest extends Specification {
         then:
         executor.getHeaders(task) == '''
             #HQ --name nf-task-1
-            #HQ --log /work/dir/.command.log
+            #HQ --stream /work/dir/.command.log
             #HQ --cwd /work/dir
-            #HQ --resource mem=8589934592
+            #HQ --resource mem=8192
             #HQ --cpus 4
             #HQ --time-limit 60sec
             #HQ --resource gpus=2

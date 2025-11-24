@@ -35,15 +35,16 @@ class NextflowMeta {
     static trait Flags {
         abstract float dsl
         abstract boolean strict
+        abstract boolean moduleBinaries
     }
 
     @Slf4j
     static class Preview implements Flags {
         @Deprecated volatile float dsl
         @Deprecated boolean strict
-        boolean output
         boolean recursion
-        boolean topic
+        boolean moduleBinaries
+        boolean types
 
         @Deprecated
         void setDsl( float num ) {
@@ -56,28 +57,17 @@ class NextflowMeta {
             dsl = num
         }
 
-        void setOutput(Boolean output) {
-            if( output )
-                log.warn "WORKFLOW OUTPUT DSL IS A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CHANGE IN FUTURE RELEASES"
-            this.output = output
-        }
-
         void setRecursion(Boolean recursion) {
             if( recursion )
                 log.warn "NEXTFLOW RECURSION IS A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CHANGE IN FUTURE RELEASES"
             this.recursion = recursion
-        }
-
-        void setTopic(Boolean topic) {
-            if( topic )
-                log.warn "CHANNEL TOPICS ARE A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CHANGE IN FUTURE RELEASES"
-            this.topic = topic
         }
     }
 
     static class Features implements Flags {
         volatile float dsl
         boolean strict
+        boolean moduleBinaries
     }
 
     final VersionNumber version
@@ -110,6 +100,8 @@ class NextflowMeta {
             result.dsl = 2i
         if( isStrictModeEnabled() )
             result.strict = true
+        if( isModuleBinariesEnabled() )
+            result.moduleBinaries = true
         return result
     }
 
@@ -161,6 +153,14 @@ class NextflowMeta {
 
     void strictMode(boolean mode) {
         enable.strict = mode
+    }
+
+    boolean isModuleBinariesEnabled() {
+        return enable.moduleBinaries
+    }
+
+    void moduleBinaries(boolean mode) {
+        enable.moduleBinaries = mode
     }
 
     static String checkDslMode(String script) {

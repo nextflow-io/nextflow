@@ -1,16 +1,16 @@
-Channel.of(1, 2, 3, 40, 50)
-    .branch {
-        foo: it < 10
-            return it+2
+channel.of(1, 2, 3, 40, 50)
+    .branch { v ->
+        alpha: v < 10
+            return v + 2
 
-        bar: it < 50
-            return it-2
+        beta: v < 50
+            return v - 2
 
         other: true
             return 0
     }
     .set { result }
 
-result.foo.view { "$it is foo" }
-result.bar.view { "$it is bar" }
-result.other.view { "$it is other" }
+result.alpha.view { v -> "$v is alpha" }
+result.beta.view { v -> "$v is beta" }
+result.other.view { v -> "$v is other" }

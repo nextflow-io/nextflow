@@ -18,6 +18,7 @@ package nextflow.executor
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.container.DockerConfig
 import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskRun
 /**
@@ -49,10 +50,8 @@ class CrgExecutor extends SgeExecutor {
 
         result << '-N' << getJobNameFor(task)
 
-        if( task !instanceof TaskArrayRun ) {
-            result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
-            result << '-j' << 'y'
-        }
+        result << '-o' << (task.isArray() ? '/dev/null' : quote(task.workDir.resolve(TaskRun.CMD_LOG)))
+        result << '-j' << 'y'
 
         result << '-terse' << ''    // note: directive need to be returned as pairs
 
@@ -120,7 +119,7 @@ class CrgExecutor extends SgeExecutor {
         // The Univa scheduler must allocate the required cores for the job execution
         // The variable '$SGE_BINDING' must contain the cores to be used
         if( task.container && task.isDockerEnabled() ) {
-            def opt = task.containerConfig.legacy ? '--cpuset' : '--cpuset-cpus'
+            def opt = legacyCpuOpts(task) ? '--cpuset' : '--cpuset-cpus'
             def str = "\n"
             str += "cpuset=\${cpuset:=''}\n"
             str += "[[ \$SGE_BINDING ]] && cpuset=\"$opt \$(echo \$SGE_BINDING | sed 's/ /,/g')\"\n"
@@ -129,6 +128,10 @@ class CrgExecutor extends SgeExecutor {
         }
 
         return builder
+    }
+
+    private boolean legacyCpuOpts(TaskRun task) {
+        return task.containerConfig instanceof DockerConfig && ((DockerConfig) task.containerConfig).legacy
     }
 
 }

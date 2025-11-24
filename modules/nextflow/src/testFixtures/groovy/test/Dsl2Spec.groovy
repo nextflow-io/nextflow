@@ -53,6 +53,6 @@ class Dsl2Spec extends BaseSpec {
 
     def dsl_eval(String entry, String str) {
         new MockScriptRunner()
-                .setScript(str).execute(null, entry)
+                .setScript(str).execute(null, null, null, entry)
     }
 }

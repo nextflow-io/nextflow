@@ -161,4 +161,20 @@ class ContainerConfigTest extends Specification {
         fusion1.fingerprint() != fusion2.fingerprint()
         config1.fingerprint() == config2.fingerprint()
     }
+
+    def 'should validate empty' () {
+        expect:
+        new ContainerConfig().empty()
+        new ContainerConfig([], null, null, null, null).empty()
+        new ContainerConfig(null, [], null, null, null).empty()
+        new ContainerConfig(null, null, [], null, null).empty()
+        new ContainerConfig(null, null, null, '', null).empty()
+        new ContainerConfig(null, null, null, null, []).empty()
+        and:
+        !new ContainerConfig(['x'], null, null, null, null).empty()
+        !new ContainerConfig(null, ['x'], null, null, null).empty()
+        !new ContainerConfig(null, null, ['x'], null, null).empty()
+        !new ContainerConfig(null, null, null, 'x', null).empty()
+        !new ContainerConfig(null, null, null, null, [new ContainerLayer()]).empty()
+    }
 }

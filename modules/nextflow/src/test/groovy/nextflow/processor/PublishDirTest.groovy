@@ -16,12 +16,16 @@
 
 package nextflow.processor
 
+import java.nio.file.CopyOption
 import java.nio.file.FileSystems
 import java.nio.file.Files
+import java.nio.file.LinkOption
 import java.nio.file.Paths
+import java.nio.file.StandardCopyOption
 
 import nextflow.Global
 import nextflow.Session
+import nextflow.SysEnv
 import spock.lang.Specification
 import test.TestHelper
 /**
@@ -35,8 +39,8 @@ class PublishDirTest extends Specification {
     }
 
     def 'should create a publish dir obj'() {
-
-        PublishDir publish
+        given:
+        def publish
 
         when:
         publish = PublishDir.create(path: '/data')
@@ -92,7 +96,7 @@ class PublishDirTest extends Specification {
 
     def 'should create publish dir with extended params' () {
         given:
-        PublishDir publish
+        def publish
 
         when:
         publish = PublishDir.create(tags: ['foo','bar'])
@@ -266,9 +270,6 @@ class PublishDirTest extends Specification {
     def 'should default mode to `symlink`' () {
 
         given:
-        def processor = [:] as TaskProcessor
-        processor.name = 'foo'
-
         def targetDir = Paths.get('/scratch/dir')
         def publisher = new PublishDir(path: targetDir, sourceFileSystem: FileSystems.default)
 
@@ -283,9 +284,6 @@ class PublishDirTest extends Specification {
 
         given:
         def workDirFileSystem = TestHelper.createInMemTempDir().fileSystem
-        def processor = [:] as TaskProcessor
-        processor.name = 'foo'
-
         def targetDir = TestHelper.createInMemTempDir()
         def publisher = new PublishDir(mode:'symlink', path: targetDir, sourceFileSystem: workDirFileSystem)
 
@@ -398,4 +396,40 @@ class PublishDirTest extends Specification {
         cleanup:
         folder?.deleteDir()
     }
+
+    def 'should set failOnError via env variable' () {
+        given:
+        SysEnv.push(ENV)
+
+        when:
+        def publish = new PublishDir()
+        then:
+        publish.failOnError == EXPECTED
+        cleanup:
+        SysEnv.pop()
+
+        where:
+        ENV                                         | EXPECTED
+        [:]                                         | true
+        [NXF_PUBLISH_FAIL_ON_ERROR: 'true']         | true
+        [NXF_PUBLISH_FAIL_ON_ERROR: 'false']        | false
+    }
+
+    def 'should return copy attributes' () {
+        expect:
+        new PublishDir().copyOpts() == [] as CopyOption[]
+        and:
+        new PublishDir().copyOpts(LinkOption.NOFOLLOW_LINKS) == [LinkOption.NOFOLLOW_LINKS] as CopyOption[]
+
+        when:
+        Global.session = Mock(Session) { getConfig()>>[workflow:[output:[copyAttributes: true]]] }
+        then:
+        new PublishDir().copyOpts() == [StandardCopyOption.COPY_ATTRIBUTES] as CopyOption[]
+        and:
+        new PublishDir().copyOpts(LinkOption.NOFOLLOW_LINKS) == [LinkOption.NOFOLLOW_LINKS,StandardCopyOption.COPY_ATTRIBUTES] as CopyOption[]
+
+        cleanup:
+        Global.session = null
+    }
+
 }

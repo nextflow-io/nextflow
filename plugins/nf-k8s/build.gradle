@@ -1,0 +1,64 @@
+/*
+ * Copyright 2019, Google Inc
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+plugins {
+    id 'io.nextflow.nextflow-plugin' version "${nextflowPluginVersion}"
+    id 'java-test-fixtures'
+}
+
+nextflowPlugin {
+    nextflowVersion = '25.09.2-edge'
+
+    provider = "${nextflowPluginProvider}"
+    description = 'Provides native Kubernetes execution capability with advanced pod management, volume mounting, and resource allocation features'
+    className = 'nextflow.k8s.K8sPlugin'
+    useDefaultDependencies = false
+    extensionPoints = [
+        'nextflow.k8s.K8sConfig',
+        'nextflow.k8s.K8sExecutor',
+        'nextflow.k8s.cli.KubeCommandImpl',
+    ]
+}
+
+sourceSets {
+    main.java.srcDirs = []
+    main.groovy.srcDirs = ['src/main']
+    main.resources.srcDirs = ['src/resources']
+    test.groovy.srcDirs = ['src/test']
+    test.java.srcDirs = []
+    test.resources.srcDirs = []
+}
+
+configurations {
+    // see https://docs.gradle.org/4.1/userguide/dependency_management.html#sub:exclude_transitive_dependencies
+    runtimeClasspath.exclude group: 'org.slf4j', module: 'slf4j-api'
+}
+
+dependencies {
+    compileOnly project(':nextflow')
+    compileOnly 'org.slf4j:slf4j-api:2.0.17'
+    compileOnly 'org.pf4j:pf4j:3.12.0'
+
+    api 'org.bouncycastle:bcprov-ext-jdk18on:1.78.1'
+    api 'org.bouncycastle:bcpkix-jdk18on:1.79'
+
+    testImplementation(testFixtures(project(":nextflow")))
+    testImplementation "org.apache.groovy:groovy:4.0.29"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.29"
+}
+
+test {
+    useJUnitPlatform()
+}

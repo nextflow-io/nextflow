@@ -18,14 +18,28 @@ package nextflow.scm
 
 import static nextflow.util.StringUtils.*
 
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.nio.channels.UnresolvedAddressException
+import java.time.Duration
+import java.util.concurrent.Executors
+import java.util.function.Predicate
+
 import groovy.json.JsonSlurper
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
+import io.seqera.http.HxClient
+import io.seqera.http.HxConfig
 import nextflow.Const
+import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
+import nextflow.exception.HttpResponseLengthExceedException
 import nextflow.exception.RateLimitExceededException
+import nextflow.util.RetryConfig
+import nextflow.util.Threads
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.lib.Ref
 import org.eclipse.jgit.transport.CredentialsProvider
@@ -52,6 +66,29 @@ abstract class RepositoryProvider {
         String commitId
     }
 
+    enum EntryType {
+        FILE, DIRECTORY
+    }
+
+    @Canonical
+    static class RepositoryEntry {
+        String name
+        String path
+        EntryType type
+        String sha
+        Long size
+    }
+
+    /**
+     * The client used to carry out http requests
+     */
+    private HxClient httpClient
+    
+    /**
+     * The retry options to be used for http requests
+     */
+    private RetryConfig retryConfig
+
     /**
      * The pipeline qualified name following the syntax {@code owner/repository}
      */
@@ -73,9 +110,26 @@ abstract class RepositoryProvider {
         return this
     }
 
+    String getRevision() {
+        return this.revision
+    }
+
     RepositoryProvider setRevision(String revision) {
         this.revision = revision
         return this
+    }
+
+    RepositoryProvider setRetryConfig(RetryConfig retryConfig) {
+        this.retryConfig = retryConfig
+        return this
+    }
+
+    String getProject() {
+        return this.project
+    }
+
+    ProviderConfig getConfig() {
+        return this.config
     }
 
     boolean hasCredentials() {
@@ -85,6 +139,8 @@ abstract class RepositoryProvider {
     String getUser() { config?.user }
 
     String getPassword() { config?.password }
+
+    String getToken() { config?.token }
 
     /**
      * @return The name of the source hub service e.g. github or bitbucket
@@ -162,6 +218,16 @@ abstract class RepositoryProvider {
         return new UsernamePasswordCredentialsProvider(getUser(), getPassword())
     }
 
+    protected HttpRequest newRequest(String api) {
+        final builder = HttpRequest
+            .newBuilder()
+            .uri(new URI(api))
+        final auth0 = getAuth()
+        if( auth0 )
+            builder.headers(auth0)
+        return builder.GET().build()
+    }
+
     /**
      * Invoke the API request specified
      *
@@ -169,27 +235,27 @@ abstract class RepositoryProvider {
      * @return The remote service response as a text
      */
     protected String invoke( String api ) {
+        final result = invokeBytes(api)
+        return result!=null ? new String(result) : null
+    }
+
+    /**
+     * Invoke the API request specified and return binary content
+     *
+     * @param api A API request url e.g. https://api.github.com/repos/nextflow-io/hello/raw/image.png
+     * @return The remote service response as byte array
+     */
+    protected byte[] invokeBytes( String api ) {
         assert api
-
         log.debug "Request [credentials ${getAuthObfuscated() ?: '-'}] -> $api"
-        def connection = new URL(api).openConnection() as URLConnection
-        connection.setConnectTimeout(5_000)
-
-        auth(connection)
-
-        if( connection instanceof HttpURLConnection ) {
-            checkResponse(connection)
-        }
-
-        InputStream content = connection.getInputStream()
-        try {
-            final result = content.text
-            log.trace "Git provider HTTP request: '$api' -- Response:\n${result}"
-            return result
-        }
-        finally{
-            content?.close()
-        }
+        final request = newRequest(api)
+        // submit the request
+        final HttpResponse<byte[]> resp = httpSend0(request)
+        // check the response code
+        checkResponse(resp)
+        checkMaxLength(resp)
+        // return the body as byte array
+        return resp.body()
     }
 
     protected String getAuthObfuscated() {
@@ -199,50 +265,83 @@ abstract class RepositoryProvider {
     }
 
     /**
-     * Sets the authentication credential on the connection object
+     * Define the credentials to be used to authenticate the http request
      *
-     * @param connection The URL connection object to be authenticated
+     * @return
+     *      A string array holding the authentication HTTP headers e.g.
+     *      {@code [ "Authorization", "Bearer 1234567890"] } or null when
+     *      the credentials are not available or provided.
      */
-    protected void auth( URLConnection connection ) {
+    protected String[] getAuth() {
         if( hasCredentials() ) {
             String authString = "${getUser()}:${getPassword()}".bytes.encodeBase64().toString()
-            connection.setRequestProperty("Authorization","Basic " + authString)
+            return new String[] { "Authorization", "Basic " + authString }
         }
+        return null
     }
 
     /**
      * Check for response error status. Throws a {@link AbortOperationException} exception
      * when a 401 or 403 error status is returned.
      *
-     * @param connection A {@link HttpURLConnection} connection instance
+     * @param response A {@link HttpURLConnection} response instance
      */
-    protected checkResponse( HttpURLConnection connection ) {
-        def code = connection.getResponseCode()
-
-        switch( code ) {
-            case 401:
-                log.debug "Response status: $code -- ${connection.getErrorStream()?.text}"
-                throw new AbortOperationException("Not authorized -- Check that the ${name.capitalize()} user name and password provided are correct")
-
-            case 403:
-                log.debug "Response status: $code -- ${connection.getErrorStream()?.text}"
-                def limit = connection.getHeaderField('X-RateLimit-Remaining')
-                if( limit == '0' ) {
-                    def message = config.auth ? "Check ${name.capitalize()}'s API rate limits for more details" : "Provide your ${name.capitalize()} user name and password to get a higher rate limit"
-                    throw new RateLimitExceededException("API rate limit exceeded -- $message")
-                }
-                else {
-                    def message = config.auth ? "Check that the ${name.capitalize()} user name and password provided are correct" : "Provide your ${name.capitalize()} user name and password to access this repository"
-                    throw new AbortOperationException("Forbidden -- $message")
-                }
-            case 404:
-                log.debug "Response status: $code -- ${connection.getErrorStream()?.text}"
-                throw new AbortOperationException("Remote resource not found: ${connection.getURL()}")
+    protected checkResponse( HttpResponse<?> response ) {
+        final code = response.statusCode()
+        if( code==401 ) {
+            log.debug "Response status: $code -- ${response.body()}"
+            throw new AbortOperationException("Not authorized -- Check that the ${name.capitalize()} user name and password provided are correct")
+        }
+        if( code==403 ) {
+            log.debug "Response status: $code -- ${response.body()}"
+            def limit = response.headers().firstValue('X-RateLimit-Remaining').orElse(null)
+            if( limit == '0' ) {
+                def message = config.auth ? "Check ${name.capitalize()}'s API rate limits for more details" : "Provide your ${name.capitalize()} user name and password to get a higher rate limit"
+                throw new RateLimitExceededException("API rate limit exceeded -- $message")
+            }
+            else {
+                def message = config.auth ? "Check that the ${name.capitalize()} user name and password provided are correct" : "Provide your ${name.capitalize()} user name and password to access this repository"
+                throw new AbortOperationException("Forbidden -- $message")
+            }
+        }
+        if( code==404 ) {
+            log.debug "Response status: $code -- ${response.body()}"
+            throw new AbortOperationException("Remote resource not found: ${response.uri()}")
+        }
+        if( code>=500 ) {
+            String msg = "Unexpected HTTP request error '${response.uri()}' [${code}]"
+            try {
+                final body = response.body()
+                if ( body )
+                    msg += " - response: ${body}"
+            }
+            catch (Throwable t) {
+                log.debug "Enable to read response body - ${t.message}"
+            }
+            throw new IOException(msg)
         }
     }
 
-    @Memoized
+    protected void checkMaxLength(HttpResponse<byte[]> response) {
+        final max = SysEnv.getLong("NXF_GIT_RESPONSE_MAX_LENGTH", 0)
+        if( max<=0 )
+            return
+        final length = response.headers().firstValueAsLong('Content-Length').orElse(0)
+        if( length<=0 )
+            return
+        if( length>max )
+            throw new HttpResponseLengthExceedException("HTTP response '${response.uri()}' is too big - response length: ${length}; max allowed length: ${max}")
+    }
+
     protected <T> List<T> invokeAndResponseWithPaging(String request, Closure<T> parse) {
+        // this is needed because apparently bytebuddy used by testing framework is not able
+        // to handle properly this method signature using both generics and `@Memoized` annotation.
+        // therefore the `@Memoized` has been moved to the inner method invocation
+        return invokeAndResponseWithPaging0(request, parse)
+    }
+
+    @Memoized
+    protected List invokeAndResponseWithPaging0(String request, Closure parse) {
         int page = 0
         final result = new ArrayList()
         while( true ) {
@@ -278,10 +377,8 @@ abstract class RepositoryProvider {
      */
     @Memoized
     protected Map invokeAndParseResponse( String request ) {
-
-        def response = invoke(request)
+        final response = invoke(request)
         return new JsonSlurper().parseText(response) as Map
-
     }
 
     /**
@@ -290,13 +387,44 @@ abstract class RepositoryProvider {
      * @param path The relative path of a file stored in the repository
      * @return The file content a
      */
-    abstract protected byte[] readBytes( String path )
+    abstract byte[] readBytes( String path )
+
+    /**
+     * List directory contents in the remote repository with depth control
+     *
+     * @param path The relative path of the directory to list (empty string or null for root)
+     * @param depth The maximum depth of traversal:
+     *              - depth = 1: immediate children only
+     *              - depth = 2: children + grandchildren  
+     *              - depth = 3: children + grandchildren + great-grandchildren
+     *              - larger values: traverse deeper accordingly
+     * 
+     * Example: Given repository structure:
+     * <pre>
+     * /
+     * ├── file-a.txt
+     * ├── file-b.txt
+     * ├── dir-a/
+     * │   ├── file-c.txt
+     * │   └── subdir/
+     * │       └── file-d.txt
+     * └── dir-b/
+     *     └── file-e.txt
+     * </pre>
+     *
+     * Results for listDirectory("/", depth):
+     * - depth = 1: [file-a.txt, file-b.txt, dir-a/, dir-b/]
+     * - depth = 2: [file-a.txt, file-b.txt, dir-a/, dir-b/, file-c.txt, file-e.txt]
+     * - depth = 3: [file-a.txt, file-b.txt, dir-a/, dir-b/, file-c.txt, file-e.txt, file-d.txt]
+     *
+     * @return A list of repository entries (files and directories) excluding the root directory itself
+     */
+    abstract List<RepositoryEntry> listDirectory( String path, int depth )
 
     String readText( String path ) {
         def bytes = readBytes(path)
         return bytes ? new String(bytes) : null
     }
-
 
     /**
      * Validate the repository for the specified file.
@@ -322,6 +450,143 @@ abstract class RepositoryProvider {
         catch( IOException e ) {
             throw new AbortOperationException("Cannot find `$project` -- Make sure exists a ${name.capitalize()} repository at this address `${getRepositoryUrl()}`", e)
         }
+    }
+
+    static private final Set<Integer> HTTP_RETRYABLE_ERRORS = Set.of(429, 500, 502, 503, 504)
+
+    @Memoized
+    private HxConfig retryConfig0() {
+        if( retryConfig==null )
+            retryConfig = new RetryConfig()
+
+        final retryOnException = ((Throwable e) -> isRetryable(e) || isRetryable(e.cause)) as Predicate<? extends Throwable>
+
+        HxConfig.newBuilder()
+            .withRetryConfig(retryConfig)
+            .withRetryStatusCodes(HTTP_RETRYABLE_ERRORS)
+            .withRetryCondition(retryOnException)
+            .build();
+    }
+
+    protected boolean isRetryable(Throwable t) {
+        // only retry SocketException and ignore generic IOException
+        return t instanceof SocketException && !isCausedByUnresolvedAddressException(t)
+    }
+
+    private boolean isCausedByUnresolvedAddressException(Throwable t) {
+        if( t instanceof UnresolvedAddressException )
+            return true
+        if( t.cause==null )
+            return false
+        else
+            return isCausedByUnresolvedAddressException(t.cause)
+    }
+
+    @Deprecated
+    protected HttpResponse<String> httpSend(HttpRequest request) {
+        if( httpClient==null ) {
+            httpClient = HxClient.newBuilder()
+                .httpClient(newHttpClient())
+                .retryConfig(retryConfig0())
+                .build()
+        }
+
+        return httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+    }
+
+    private HttpResponse<byte[]> httpSend0(HttpRequest request) {
+        if( httpClient==null ) {
+            httpClient = HxClient.newBuilder()
+                .httpClient(newHttpClient())
+                .retryConfig(retryConfig0())
+                .build()
+        }
+
+        return httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray())
+    }
+
+    private HttpClient newHttpClient() {
+        final builder = HttpClient.newBuilder()
+            .version(HttpClient.Version.HTTP_1_1)
+            .connectTimeout(Duration.ofSeconds(60))
+            .followRedirects(HttpClient.Redirect.NORMAL)
+        // use virtual threads executor if enabled
+        if( Threads.useVirtual() )
+            builder.executor(Executors.newVirtualThreadPerTaskExecutor())
+        // build and return the new client
+        return builder.build()
+    }
+
+    /**
+     * Normalizes a path for repository operations by treating "/" as an empty path (root directory).
+     * This helper method ensures consistent path handling across all repository providers.
+     *
+     * @param path The input path to normalize
+     * @return Normalized path: null/empty/"/" becomes "", otherwise removes leading slash
+     */
+    protected static String normalizePath(String path) {
+        if (path == "/" || path == null || path.isEmpty()) {
+            return ""
+        }
+        return path.startsWith("/") ? path.substring(1) : path
+    }
+
+    /**
+     * Ensures a path starts with "/" to create an absolute path for consistent API responses.
+     * This helper method is used when creating RepositoryEntry objects.
+     *
+     * @param path The input path
+     * @return Absolute path starting with "/"
+     */
+    protected static String ensureAbsolutePath(String path) {
+        if (path == null || path.isEmpty()) {
+            return "/"
+        }
+        return path.startsWith("/") ? path : "/" + path
+    }
+
+    /**
+     * Checks if an entry should be included based on depth filtering.
+     * This helper provides consistent depth semantics across providers.
+     *
+     * @param entryPath The full path of the entry
+     * @param basePath The base directory path being listed
+     * @param depth The maximum depth (-1 for unlimited, 0 for immediate children only)
+     * @return true if the entry should be included
+     */
+    protected static boolean shouldIncludeAtDepth(String entryPath, String basePath, int depth) {
+        if (depth == -1) {
+            return true // Unlimited depth
+        }
+
+        String relativePath = entryPath
+        String normalizedBasePath = normalizePath(basePath)
+        
+        if (normalizedBasePath && !normalizedBasePath.isEmpty()) {
+            String normalizedEntry = entryPath.stripStart('/').stripEnd('/')
+            normalizedBasePath = normalizedBasePath.stripEnd('/')
+            
+            if (normalizedEntry.startsWith(normalizedBasePath + "/")) {
+                relativePath = normalizedEntry.substring(normalizedBasePath.length() + 1)
+            } else if (normalizedEntry == normalizedBasePath) {
+                return false // Skip the base directory itself
+            } else {
+                return false // Entry is not under the base path
+            }
+        } else {
+            // For root directory, use the entry path directly
+            relativePath = entryPath.stripStart('/').stripEnd('/')
+        }
+        
+        if (relativePath.isEmpty()) {
+            return false
+        }
+        
+        // Count directory levels in the relative path
+        int entryDepth = relativePath.split("/").length - 1
+        
+        // Include if within depth limit: depth=0 includes immediate children only
+        return entryDepth <= depth
     }
 
 }

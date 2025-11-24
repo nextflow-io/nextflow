@@ -33,6 +33,7 @@ import nextflow.config.Manifest
 import nextflow.exception.WorkflowScriptErrorException
 import nextflow.trace.WorkflowStats
 import nextflow.util.Duration
+import nextflow.util.TestOnly
 import org.codehaus.groovy.runtime.InvokerHelper
 /**
  * Models workflow metadata properties and notification handler
@@ -138,6 +139,11 @@ class WorkflowMetadata {
      * Directory where workflow execution has been launched
      */
     Path launchDir
+
+    /**
+     * Workflow output directory
+     */
+    Path outputDir
 
     /**
      * Workflow working directory
@@ -257,6 +263,7 @@ class WorkflowMetadata {
         this.container = session.fetchContainers()
         this.commandLine = session.commandLine
         this.nextflow = NextflowMeta.instance
+        this.outputDir = session.outputDir
         this.workDir = session.workDir
         this.launchDir = Paths.get('.').complete()
         this.profile = session.profile ?: ConfigBuilder.DEFAULT_PROFILE
@@ -286,11 +293,8 @@ class WorkflowMetadata {
        return config.isEnabled() ? config.getEngine() : null
     }
 
-    /**
-     * Only for testing purpose -- do not use
-     */
-    @PackageScope
-    WorkflowMetadata() {}
+    @TestOnly
+    protected WorkflowMetadata() {}
 
     /**
      * Implements the following idiom in the pipeline script:
@@ -341,16 +345,6 @@ class WorkflowMetadata {
         clone.resolveStrategy = Closure.DELEGATE_FIRST
 
         onErrorActions.add(clone)
-    }
-
-    /**
-     * Dynamic getter for workflow metadata attributes
-     *
-     * @param field
-     * @return The value associated to the specified field
-     */
-    def get(String field) {
-        InvokerHelper.getProperty(this,field)
     }
 
     /**
@@ -491,11 +485,8 @@ class WorkflowMetadata {
      */
     protected void safeMailNotification() {
         try {
-            final notifier = new WorkflowNotifier(
-                workflow: this,
-                config: session.config,
-                variables: NF.binding.variables )
-            notifier.sendNotification()
+            final notifier = new WorkflowNotifier(NF.binding.variables, this)
+            notifier.sendNotification(session.config)
         }
         catch (Exception e) {
             log.warn "Failed to deliver notification email -- See the log file for details", e

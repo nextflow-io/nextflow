@@ -16,7 +16,11 @@
 package nextflow.cloud.azure.config
 
 import groovy.transform.CompileStatic
+import nextflow.SysEnv
 import nextflow.cloud.azure.nio.AzFileSystemProvider
+import nextflow.config.spec.ConfigOption
+import nextflow.config.spec.ConfigScope
+import nextflow.script.dsl.Description
 
 /**
  * Model Azure Entra (formerly Active Directory) config options
@@ -24,20 +28,31 @@ import nextflow.cloud.azure.nio.AzFileSystemProvider
  * @author Abhinav Sharma <abhi18av@outlook.com>
  */
 @CompileStatic
-class AzActiveDirectoryOpts {
+class AzActiveDirectoryOpts implements ConfigScope {
 
-    private Map<String, String> sysEnv
+    @ConfigOption
+    @Description("""
+        The service principal client ID. Defaults to environment variable `AZURE_CLIENT_ID`.
+    """)
+    final String servicePrincipalId
 
-    String servicePrincipalId
-    String servicePrincipalSecret
-    String tenantId
+    @ConfigOption
+    @Description("""
+        The service principal client secret. Defaults to environment variable `AZURE_CLIENT_SECRET`.
+    """)
+    final String servicePrincipalSecret
+
+    @ConfigOption
+    @Description("""
+        The Azure tenant ID. Defaults to environment variable `AZURE_TENANT_ID`.
+    """)
+    final String tenantId
 
     AzActiveDirectoryOpts(Map config, Map<String, String> env = null) {
         assert config != null
-        this.sysEnv = env == null ? new HashMap<String, String>(System.getenv()) : env
-        this.servicePrincipalId = config.servicePrincipalId ?: sysEnv.get('AZURE_CLIENT_ID')
-        this.servicePrincipalSecret = config.servicePrincipalSecret ?: sysEnv.get('AZURE_CLIENT_SECRET')
-        this.tenantId = config.tenantId ?: sysEnv.get('AZURE_TENANT_ID')
+        this.servicePrincipalId = config.servicePrincipalId ?: SysEnv.get('AZURE_CLIENT_ID')
+        this.servicePrincipalSecret = config.servicePrincipalSecret ?: SysEnv.get('AZURE_CLIENT_SECRET')
+        this.tenantId = config.tenantId ?: SysEnv.get('AZURE_TENANT_ID')
     }
 
     Map<String, Object> getEnv() {

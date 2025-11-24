@@ -236,7 +236,7 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
      * Force the submitted job to quit
      */
     @Override
-    void kill() {
+    protected void killTask() {
         if( !process ) return
         final pid = ProcessHelper.pid(process)
         log.trace("Killing process with pid: ${pid}")

@@ -23,12 +23,17 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.function.Function
 
 import com.google.common.hash.HashCode
-import groovy.transform.PackageScope
+import groovy.transform.Memoized
+import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.conda.CondaCache
+import nextflow.conda.CondaConfig
 import nextflow.container.ContainerConfig
+import nextflow.container.DockerConfig
 import nextflow.container.resolver.ContainerInfo
+import nextflow.container.resolver.ContainerMeta
+import nextflow.container.resolver.ContainerResolver
 import nextflow.container.resolver.ContainerResolverProvider
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessTemplateException
@@ -36,19 +41,19 @@ import nextflow.exception.ProcessUnrecoverableException
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.script.BodyDef
+import nextflow.script.ProcessConfigV1
+import nextflow.script.ProcessConfigV2
 import nextflow.script.ScriptType
 import nextflow.script.TaskClosure
 import nextflow.script.bundle.ResourcesBundle
 import nextflow.script.params.CmdEvalParam
-import nextflow.script.params.EnvInParam
 import nextflow.script.params.EnvOutParam
-import nextflow.script.params.FileInParam
 import nextflow.script.params.FileOutParam
 import nextflow.script.params.InParam
 import nextflow.script.params.OutParam
-import nextflow.script.params.StdInParam
 import nextflow.script.params.ValueOutParam
 import nextflow.spack.SpackCache
+import nextflow.util.ArrayBag
 /**
  * Models a task instance
  *
@@ -98,14 +103,7 @@ class TaskRun implements Cloneable {
 
     void setInput( InParam param, Object value = null ) {
         assert param
-
         inputs[param] = value
-
-        // copy the value to the task 'input' attribute
-        // it will be used to pipe it to the process stdin
-        if( param instanceof StdInParam) {
-            stdin = value
-        }
     }
 
     void setOutput( OutParam param, Object value = null ) {
@@ -113,9 +111,24 @@ class TaskRun implements Cloneable {
         outputs[param] = value
     }
 
+    /**
+     * The map of input environment vars
+     *
+     * @see TaskProcessor#resolveTaskInputs()
+     */
+    Map<String,String> inputEnv = [:]
+
+    /**
+     * The list of input files
+     *
+     * @see TaskProcessor#resolveTaskInputs()
+     */
+    List<FileHolder> inputFiles = new ArrayBag()
 
     /**
      * The value to be piped to the process stdin
+     *
+     * @see TaskProcessor#resolveTaskInputs()
      */
     def stdin
 
@@ -133,6 +146,14 @@ class TaskRun implements Cloneable {
      * Set {@code true} when the task executed is resumed from the cache
      */
     boolean cached
+
+    /**
+     * The list of resolved output files
+     *
+     * @see TaskOutputResolver#_file()
+     * @see TaskOutputResolver#_files()
+     */
+    Set<Path> outputFiles = []
 
     /**
      * Task produced standard output
@@ -326,6 +347,11 @@ class TaskRun implements Cloneable {
      */
     volatile ErrorStrategy errorAction
 
+    /**
+     * Unique key for the container used by this task
+     */
+    volatile String containerKey
+
     TaskConfig config
 
     TaskContext context
@@ -394,11 +420,14 @@ class TaskRun implements Cloneable {
     }
 
     String getTraceScript() {
-        return template!=null && body.source
+        return template!=null && body?.source
             ? body.source
             : getScript()
     }
 
+    boolean hasTypedInputsOutputs() {
+        return processor.config instanceof ProcessConfigV2
+    }
 
     /**
      * Check whenever there are values to be cached
@@ -416,18 +445,11 @@ class TaskRun implements Cloneable {
         return false
     }
 
-    Map<InParam,List<FileHolder>> getInputFiles() {
-        (Map<InParam,List<FileHolder>>) getInputsByType( FileInParam )
-    }
-
     /**
      * Return the list of all input files staged as inputs by this task execution
      */
     List<String> getStagedInputs()  {
-        getInputFiles()
-                .values()
-                .flatten()
-                .collect { it.stageName }
+        return inputFiles.collect { it.stageName }
     }
 
     /**
@@ -435,12 +457,9 @@ class TaskRun implements Cloneable {
      */
     Map<String,Path> getInputFilesMap() {
 
-        final allFiles = getInputFiles().values()
-        final result = new HashMap<String,Path>(allFiles.size())
-        for( List<FileHolder> entry : allFiles ) {
-            if( entry ) for( FileHolder it : entry ) {
-                result[ it.stageName ] = it.storePath
-            }
+        final result = new HashMap<String,Path>(inputFiles.size())
+        for( final holder : inputFiles ) {
+            result[ holder.stageName ] = holder.storePath
         }
 
         return result
@@ -450,18 +469,24 @@ class TaskRun implements Cloneable {
      * Look at the {@code nextflow.script.FileOutParam} which name is the expected
      *  output name
      */
+    @Memoized
     List<String> getOutputFilesNames() {
-        // note: use an explicit function instead of a closure or lambda syntax, otherwise
-        // when calling this method from a subclass it will result into a MissingMethodExeception
-        // see  https://issues.apache.org/jira/browse/GROOVY-2433
-        cache0.computeIfAbsent('outputFileNames', new Function<String,List<String>>() {
-            @Override
-            List<String> apply(String s) {
-                return getOutputFilesNames0()
-            }})
+        if( hasTypedInputsOutputs() )
+            return getOutputFilesNamesV2()
+        else
+            return getOutputFilesNamesV1()
     }
 
-    private List<String> getOutputFilesNames0() {
+    private List<String> getOutputFilesNamesV2() {
+        final config = processor.config as ProcessConfigV2
+        final declaredOutputs = config.getOutputs()
+        final result = []
+        for( final param : declaredOutputs.files.values() )
+            result.add( param.getFilePattern(context) )
+        return result.unique()
+    }
+
+    private List<String> getOutputFilesNamesV1() {
         def result = []
 
         for( FileOutParam param : getOutputsByType(FileOutParam).keySet() ) {
@@ -469,22 +494,6 @@ class TaskRun implements Cloneable {
         }
 
         return result.unique()
-    }
-
-    /**
-     * Get the map of *input* objects by the given {@code InParam} type
-     *
-     * @param types One or more subclass of {@code InParam}
-     * @return An associative array containing all the objects for the specified type
-     */
-    def <T extends InParam> Map<T,Object> getInputsByType( Class<T>... types ) {
-
-        def result = [:]
-        for( def it : inputs ) {
-            if( types.contains(it.key.class) )
-                result << it
-        }
-        return result
     }
 
     /**
@@ -503,17 +512,6 @@ class TaskRun implements Cloneable {
     }
 
     /**
-     * @return A map containing the task environment defined as input declaration by this task
-     */
-    protected Map<String,String> getInputEnvironment() {
-        final Map<String,String> environment = [:]
-        getInputsByType( EnvInParam ).each { param, value ->
-            environment.put( param.name, value?.toString() )
-        }
-        return environment
-    }
-
-    /**
      * @return A map representing the task execution environment
      */
     Map<String,String> getEnvironment() {
@@ -522,7 +520,7 @@ class TaskRun implements Cloneable {
         // IMPORTANT: when copying the environment map a LinkedHashMap must be used to preserve
         // the insertion order of the env entries (ie. export FOO=1; export BAR=$FOO)
         final result = new LinkedHashMap( getProcessor().getProcessEnvironment() )
-        result.putAll( getInputEnvironment() )
+        result.putAll( inputEnv )
         return result
     }
 
@@ -594,6 +592,19 @@ class TaskRun implements Cloneable {
     }
 
     List<String> getOutputEnvNames() {
+        if( hasTypedInputsOutputs() )
+            return getOutputEnvNamesV2()
+        else
+            return getOutputEnvNamesV1()
+    }
+
+    private List<String> getOutputEnvNamesV2() {
+        final config = processor.config as ProcessConfigV2
+        final declaredOutputs = config.getOutputs()
+        return new ArrayList(declaredOutputs.getEnv())
+    }
+
+    private List<String> getOutputEnvNamesV1() {
         final items = getOutputsByType(EnvOutParam)
         if( !items )
             return List.<String>of()
@@ -611,6 +622,28 @@ class TaskRun implements Cloneable {
      * output and the value the command the executed.
      */
     Map<String,String> getOutputEvals() {
+        if( hasTypedInputsOutputs() )
+            return getOutputEvalsV2()
+        else
+            return getOutputEvalsV1()
+    }
+
+    private Map<String,String> getOutputEvalsV2() {
+        final config = processor.config as ProcessConfigV2
+        final declaredOutputs = config.getOutputs()
+        final evalCmds = declaredOutputs.getEval()
+        final result = new LinkedHashMap(evalCmds.size())
+        for( String name : evalCmds.keySet() ) {
+            final target = evalCmds[name]
+            final evalCmd = target instanceof Closure
+                ? target.cloneWith(context).call()
+                : target.toString()
+            result.put(name, evalCmd)
+        }
+        return result
+    }
+
+    private Map<String,String> getOutputEvalsV1() {
         final items = getOutputsByType(CmdEvalParam)
         final result = new LinkedHashMap(items.size())
         for( CmdEvalParam it : items.keySet() ) {
@@ -632,10 +665,10 @@ class TaskRun implements Cloneable {
     }
 
     private Path getCondaEnv0() {
-        if( !config.conda || !processor.session.getCondaConfig().isEnabled() )
+        if( !config.conda || !getCondaConfig().isEnabled() )
             return null
 
-        final cache = new CondaCache(processor.session.getCondaConfig())
+        final cache = new CondaCache(getCondaConfig())
         cache.getCachePathFor(config.conda as String)
     }
 
@@ -662,13 +695,18 @@ class TaskRun implements Cloneable {
 
     protected ContainerInfo containerInfo() {
         // note: use an explicit function instead of a closure or lambda syntax, otherwise
-        // when calling this method from a subclass it will result into a MissingMethodExeception
+        // when calling this method from a subclass it will result into a MissingMethodException
         // see  https://issues.apache.org/jira/browse/GROOVY-2433
         cache0.computeIfAbsent('containerInfo', new Function<String,ContainerInfo>() {
             @Override
             ContainerInfo apply(String s) {
                 return containerInfo0()
             }})
+    }
+
+    @Memoized
+    protected ContainerResolver containerResolver() {
+        ContainerResolverProvider.load()
     }
 
     private ContainerInfo containerInfo0() {
@@ -681,8 +719,11 @@ class TaskRun implements Cloneable {
         if( !configImage )
             configImage = null
 
-        final res = ContainerResolverProvider.load()
-        final info = res.resolveImage(this, configImage as String)
+        final info = containerResolver().resolveImage(this, configImage as String)
+        // track the key of the container used
+        if( info!=null )
+            this.containerKey = info.hashKey
+        // return the info
         return info
     }
 
@@ -697,6 +738,23 @@ class TaskRun implements Cloneable {
     String getContainerFingerprint() {
         final info = containerInfo()
         return info?.hashKey
+    }
+
+    boolean isContainerReady() {
+       return containerKey
+            ? containerResolver().isContainerReady(containerKey)
+            : true
+    }
+
+    ContainerMeta containerMeta() {
+        return containerKey
+            ? containerResolver().getContainerMeta(containerKey)
+            : null
+    }
+    
+    String getContainerPlatform() {
+        final result = config.getArchitecture()
+        return result ? result.dockerArch : containerResolver().defaultContainerPlatform()
     }
 
     ResourcesBundle getModuleBundle() {
@@ -714,7 +772,7 @@ class TaskRun implements Cloneable {
         // when 'eng' is null the setting for the current engine marked as 'enabled' will be used
         final result
                 = sess.getContainerConfig(eng)
-                ?: new ContainerConfig(engine:'docker')
+                ?: new DockerConfig([:])
         // if a configuration is found is expected to enabled by default
         if( exe.isContainerNative() ) {
             result.setEnabled(true)
@@ -732,6 +790,10 @@ class TaskRun implements Cloneable {
 
     boolean isContainerNative() {
         return processor.executor?.isContainerNative() ?: false
+    }
+
+    boolean isArray() {
+        return false
     }
 
     boolean isContainerEnabled() {
@@ -763,7 +825,13 @@ class TaskRun implements Cloneable {
      *
      * @param body A {@code BodyDef} object instance
      */
-    @PackageScope void resolve(BodyDef body) {
+    void resolve(BodyDef body)  {
+        processor.session.stubRun && config.getStubBlock()
+            ? resolveStub(config.getStubBlock())
+            : resolveBody(body)
+    }
+
+    protected void resolveBody(BodyDef body) {
 
         // -- initialize the task code to be executed
         this.code = body.closure.clone() as Closure
@@ -805,7 +873,7 @@ class TaskRun implements Cloneable {
             throw new ProcessUnrecoverableException("Process `${getName()}` script is empty")
     }
 
-    @PackageScope void resolve(TaskClosure block) {
+    protected void resolveStub(TaskClosure block) {
         this.code = block.clone() as Closure
         this.code.delegate = this.context
         this.code.setResolveStrategy(Closure.DELEGATE_ONLY)
@@ -815,7 +883,13 @@ class TaskRun implements Cloneable {
         this.source = block.getSource()
 
         try {
-            script = code.call()?.toString()
+            final result = code.call()
+            if ( result instanceof Path ) {
+                script = renderTemplate(result)
+            }
+            else {
+                script = result.toString()
+            }
         }
         catch( ProcessException e ) {
             throw e
@@ -936,6 +1010,14 @@ class TaskRun implements Cloneable {
 
     TaskBean toTaskBean() {
         return new TaskBean(this)
+    }
+
+    CondaConfig getCondaConfig() {
+        return processor.session.getCondaConfig()
+    }
+
+    String getStubSource() {
+        return config?.getStubBlock()?.source
     }
 }
 

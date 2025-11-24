@@ -20,48 +20,68 @@ package nextflow.cloud.aws.config
 import java.nio.file.Path
 import java.nio.file.Paths
 
-import com.amazonaws.regions.Regions
+import software.amazon.awssdk.regions.Region
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.SysEnv
+import nextflow.config.spec.ConfigOption
+import nextflow.config.spec.ConfigScope
+import nextflow.config.spec.ScopeName
+import nextflow.script.dsl.Description
 import nextflow.util.IniFile
 /**
  * Model AWS cloud configuration settings
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@ScopeName("aws")
+@Description("""
+    The `aws` scope controls the interactions with AWS, including AWS Batch and S3.
+""")
 @Slf4j
 @CompileStatic
-class AwsConfig {
+class AwsConfig implements ConfigScope {
 
-    private AwsBatchConfig batchConfig
+    final AwsBatchConfig batch
 
-    private AwsS3Config s3config
+    final AwsS3Config client
 
-    private String region
+    @ConfigOption
+    @Description("""
+        AWS region (e.g. `us-east-1`).
+    """)
+    final String region
 
-    private String accessKey
+    @ConfigOption
+    @Description("""
+        AWS account access key.
+    """)
+    final String accessKey
 
-    private String secretKey
+    @ConfigOption
+    @Description("""
+        AWS account secret key.
+    """)
+    final String secretKey
 
-    private String profile
-    
-    private AwsS3Legacy s3Legacy
+    @ConfigOption
+    @Description("""
+        AWS profile from `~/.aws/credentials`.
+    """)
+    final String profile
 
-    AwsConfig(Map config) {
-        this.accessKey = config.accessKey
-        this.secretKey = config.secretKey
-        this.profile = getAwsProfile0(SysEnv.get(), config)
-        this.region = getAwsRegion(SysEnv.get(), config)
-        this.batchConfig = new AwsBatchConfig((Map)config.batch ?: Collections.emptyMap())
-        this.s3config = new AwsS3Config((Map)config.client ?: Collections.emptyMap())
-        this.s3Legacy = new AwsS3Legacy((Map)config.client ?: Collections.emptyMap())
+    /* required by extension point -- do not remove */
+    AwsConfig() {}
+
+    AwsConfig(Map opts) {
+        this.accessKey = opts.accessKey
+        this.secretKey = opts.secretKey
+        this.profile = getAwsProfile0(SysEnv.get(), opts)
+        this.region = getAwsRegion(SysEnv.get(), opts)
+        this.batch = new AwsBatchConfig((Map)opts.batch ?: Collections.emptyMap())
+        this.client = new AwsS3Config((Map)opts.client ?: Collections.emptyMap())
     }
-
-    String getAccessKey() { accessKey }
-
-    String getSecretKey() { secretKey }
 
     List<String> getCredentials() {
         return accessKey && secretKey
@@ -69,22 +89,31 @@ class AwsConfig {
                 : Collections.<String>emptyList()
     }
 
-    String getProfile() { profile }
+    AwsS3Config getS3Config() { client }
 
-    String getRegion() { region }
+    AwsBatchConfig getBatchConfig() { batch }
 
-    AwsS3Config getS3Config() { s3config }
-
-    AwsBatchConfig getBatchConfig() { batchConfig }
-
-    Map<String,?> getS3LegacyClientConfig() {
-        return s3Legacy.getAwsClientConfig()
-    }
-
+    @Deprecated
     String getS3GlobalRegion() {
         return !region || !s3Config.endpoint || s3Config.endpoint.contains(".amazonaws.com")
-            ? Regions.US_EAST_1.getName()   // always use US_EAST_1 as global region for AWS endpoints
+            ? Region.US_EAST_1.id()         // always use US_EAST_1 as global region for AWS endpoints
             : region                        // for custom endpoint use the config provided region
+    }
+
+    /**
+     *  Resolves the region used for S3 evaluating the region resolved from config and a possible region defined in the endpoint.
+     *  Fallback to the global region US_EAST_1 when no region is found.
+     *
+     *  Preference:
+     *      1. endpoint region
+     *      2. config region
+     *      3. US_EAST_1
+     *
+     *  @returns Resolved region.
+     **/
+    String resolveS3Region() {
+        final epRegion = client.getEndpointRegion()
+        return epRegion ?: this.region ?: Region.US_EAST_1.id()
     }
 
     static protected String getAwsProfile0(Map env, Map<String,Object> config) {
@@ -136,7 +165,7 @@ class AwsConfig {
         final result = new LinkedHashMap(20)
 
         // -- remaining client config options
-        def config = getS3LegacyClientConfig()
+        def config = client.getAwsClientConfig()
         config = checkDefaultErrorRetry(config, SysEnv.get())
         if( config ) {
             result.putAll(config)

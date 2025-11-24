@@ -16,6 +16,9 @@
 
 package nextflow.processor
 
+import static nextflow.util.CacheHelper.*
+
+import java.nio.file.CopyOption
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileSystem
 import java.nio.file.FileSystems
@@ -24,6 +27,7 @@ import java.nio.file.LinkOption
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.PathMatcher
+import java.nio.file.StandardCopyOption
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.ExecutorService
 
@@ -34,21 +38,21 @@ import dev.failsafe.event.ExecutionAttemptedEvent
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
+import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.NF
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.file.TagAwareFile
-import nextflow.fusion.FusionHelper
+import nextflow.trace.event.FilePublishEvent
 import nextflow.util.HashBuilder
 import nextflow.util.PathTrie
-
-import static nextflow.util.CacheHelper.HashMode
-
+import nextflow.util.RetryConfig
 /**
  * Implements the {@code publishDir} directory. It create links or copies the output
  * files of a given task to a user specified directory.
@@ -98,14 +102,19 @@ class PublishDir {
     boolean enabled = true
 
     /**
-     * Trow an exception in case publish fails
+     * Throw an exception in case publish fails
      */
-    boolean failOnError = true
+    boolean failOnError = SysEnv.getBool('NXF_PUBLISH_FAIL_ON_ERROR', true)
 
     /**
      * Tags to be associated to the target file
      */
     private def tags
+
+    /**
+     * Labels to be associated to the target file
+     */
+    private List<String> labels
 
     /**
      * The content type of the file. Currently only supported by AWS S3.
@@ -119,7 +128,7 @@ class PublishDir {
      */
     private String storageClass
 
-    private PublishRetryConfig retryConfig
+    private RetryConfig retryConfig
 
     private PathMatcher matcher
 
@@ -209,6 +218,9 @@ class PublishDir {
         if( params.tags != null )
             result.tags = params.tags
 
+        if( params.labels != null )
+            result.labels = params.labels as List<String>
+
         if( params.contentType instanceof Boolean )
             result.contentType = params.contentType
         else if( params.contentType )
@@ -222,9 +234,8 @@ class PublishDir {
 
     protected void apply0(Set<Path> files) {
         assert path
-
-        final retryOpts = session.config.navigate('nextflow.publish.retryPolicy') as Map ?: Collections.emptyMap()
-        this.retryConfig = new PublishRetryConfig(retryOpts)
+        // setup the retry policy config to be used
+        this.retryConfig = RetryConfig.config(session.config)
 
         createPublishDir()
         validatePublishMode()
@@ -318,7 +329,7 @@ class PublishDir {
             return
         }
 
-        final destination = resolveDestination(target)
+        final destination = resolveDestination(target).normalize()
 
         // apply tags
         if( this.tags!=null && destination instanceof TagAwareFile ) {
@@ -502,17 +513,25 @@ class PublishDir {
             FilesEx.mklink(source, [hard:true], destination)
         }
         else if( mode == Mode.MOVE ) {
-            FileHelper.movePath(source, destination)
+            FileHelper.movePath(source, destination, copyOpts())
         }
         else if( mode == Mode.COPY ) {
-            FileHelper.copyPath(source, destination)
+            FileHelper.copyPath(source, destination, copyOpts())
         }
         else if( mode == Mode.COPY_NO_FOLLOW ) {
-            FileHelper.copyPath(source, destination, LinkOption.NOFOLLOW_LINKS)
+            FileHelper.copyPath(source, destination, copyOpts(LinkOption.NOFOLLOW_LINKS))
         }
         else {
             throw new IllegalArgumentException("Unknown file publish mode: ${mode}")
         }
+    }
+
+    @Memoized
+    protected CopyOption[] copyOpts(CopyOption... opts) {
+        final copyAttributes = session.config.navigate('workflow.output.copyAttributes', false)
+        return copyAttributes
+            ? opts + StandardCopyOption.COPY_ATTRIBUTES
+            : opts
     }
 
     protected void createPublishDir() {
@@ -563,7 +582,7 @@ class PublishDir {
     }
 
     protected void notifyFilePublish(Path destination, Path source=null) {
-        session.notifyFilePublish(destination, source)
+        session.notifyFilePublish(new FilePublishEvent(source, destination, labels))
     }
 
 }

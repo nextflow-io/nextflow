@@ -28,6 +28,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.SysEnv
 import nextflow.container.ContainerBuilder
+import nextflow.container.ContainerHelper
 import nextflow.container.DockerBuilder
 import nextflow.container.SingularityBuilder
 import nextflow.exception.ProcessException
@@ -39,6 +40,7 @@ import nextflow.processor.TaskRun
 import nextflow.secret.SecretsLoader
 import nextflow.util.Escape
 import nextflow.util.MemoryUnit
+import nextflow.util.TestOnly
 /**
  * Builder to create the Bash script which is used to
  * wrap and launch the user task
@@ -109,6 +111,8 @@ class BashWrapperBuilder {
 
     private Path wrapperFile
 
+    private boolean stageFileEnabled
+
     private Path stageFile
 
     private String stageScript
@@ -124,8 +128,12 @@ class BashWrapperBuilder {
         this.copyStrategy = strategy ?: new SimpleFileCopyStrategy(bean)
     }
 
-    /** only for testing -- do not use */
-    protected BashWrapperBuilder() { }
+    @TestOnly
+    protected BashWrapperBuilder() {}
+
+    void withStageFile(boolean value) {
+        stageFileEnabled = value
+    }
 
     /**
      * @return The bash script fragment to change to the 'scratch' directory if it has been specified in the task configuration
@@ -158,8 +166,25 @@ class BashWrapperBuilder {
         return targetDir && workDir!=targetDir
     }
 
+    /**
+     * Template method that allows controlling if it's required to unstage
+     * task control files (.command.out, .command.err, .command.trace, .command.env)
+     *
+     * See also https://github.com/nextflow-io/nextflow/pull/6364
+     * 
+     * @return false by default; executors may override to implement their own logic
+     */
+    protected boolean shouldUnstageControls() {
+        return false
+    }
+
     protected boolean fixOwnership() {
-        systemOsName == 'Linux' && containerConfig?.fixOwnership && runWithContainer && containerConfig.engine == 'docker' // <-- note: only for docker (other container runtimes are not affected)
+        // note: only for docker (other container runtimes are not affected)
+        ContainerHelper.fixOwnership(containerConfig) && isLinuxOS() && runWithContainer
+    }
+
+    protected isLinuxOS() {
+        systemOsName == 'Linux'
     }
 
     protected isMacOS() {
@@ -253,14 +278,13 @@ class BashWrapperBuilder {
             return null
 
         final header = "# stage input files\n"
-        // enable only when the stage uses the default file system, i.e. it's not a remote object storage file
-        // see https://github.com/nextflow-io/nextflow/issues/4279
-        if( stageFile.fileSystem == FileSystems.default && stagingScript.size() >= stageFileThreshold.bytes ) {
+        if( stageFileEnabled && stagingScript.size() >= stageFileThreshold.bytes ) {
             stageScript = stagingScript
             return header + "bash ${stageFile}"
         }
-        else
+        else {
             return header + stagingScript
+        }
     }
 
     protected Map<String,String> makeBinding() {
@@ -372,7 +396,7 @@ class BashWrapperBuilder {
         binding.launch_cmd = getLaunchCommand(interpreter,env)
         binding.stage_cmd = getStageCommand()
         binding.unstage_cmd = getUnstageCommand()
-        binding.unstage_controls = changeDir || shouldUnstageOutputs() ? getUnstageControls() : null
+        binding.unstage_controls = changeDir || shouldUnstageControls() ? getUnstageControls() : null
 
         if( changeDir || shouldUnstageOutputs() ) {
             binding.unstage_outputs = copyStrategy.getUnstageOutputFilesScript(outputFiles,targetDir)
@@ -470,6 +494,8 @@ class BashWrapperBuilder {
             return true
         if( e instanceof SocketException )
             return true
+        if( e instanceof SocketTimeoutException )
+            return true
         if( e instanceof RuntimeException )
             return true
         if( e.class.getSimpleName() == 'HttpResponseException' )
@@ -533,10 +559,13 @@ class BashWrapperBuilder {
     private String getCondaActivateSnippet() {
         if( !condaEnv )
             return null
-        def result = "# conda environment\n"
-        result += 'source $(conda info --json | awk \'/conda_prefix/ { gsub(/"|,/, "", $2); print $2 }\')'
-        result += "/bin/activate ${Escape.path(condaEnv)}\n"
-        return result
+        final command = useMicromamba
+            ? 'eval "$(micromamba shell hook --shell bash)" && micromamba activate'
+            : 'source $(conda info --json | awk \'/conda_prefix/ { gsub(/"|,/, "", $2); print $2 }\')/bin/activate'
+        return """\
+            # conda environment
+            ${command} ${Escape.path(condaEnv)}
+            """.stripIndent()
     }
 
     private String getSpackActivateSnippet() {
@@ -560,6 +589,14 @@ class BashWrapperBuilder {
         statsEnabled || fixOwnership()
     }
 
+    protected String shellPath() {
+        // keep the shell path as "/bin/bash" when a non-custom "shell" attribute is specified
+        // to not introduce unexpected changes due to the fact BASH is defined as "/bin/bash -eu" by default
+        return shell.is(BASH)
+            ? "/bin/bash"
+            : shell.join(' ')
+    }
+
     protected String getLaunchCommand(String interpreter, String env) {
         /*
         * process stats
@@ -571,7 +608,7 @@ class BashWrapperBuilder {
         final traceWrapper = isTraceRequired()
         if( traceWrapper ) {
             // executes the stub which in turn executes the target command
-            launcher = "/bin/bash ${fileStr(wrapperFile)} nxf_trace"
+            launcher = "${shellPath()} ${fileStr(wrapperFile)} nxf_trace"
         }
         else {
             launcher = "${interpreter} ${fileStr(scriptFile)}"
@@ -640,8 +677,8 @@ class BashWrapperBuilder {
     }
 
     @PackageScope
-    ContainerBuilder createContainerBuilder0(String engine) {
-        ContainerBuilder.create(engine, containerImage)
+    ContainerBuilder createContainerBuilder0() {
+        ContainerBuilder.create(containerConfig, containerImage)
     }
 
     protected boolean getAllowContainerMounts() {
@@ -658,8 +695,7 @@ class BashWrapperBuilder {
     @PackageScope
     ContainerBuilder createContainerBuilder(String changeDir) {
 
-        final engine = containerConfig.getEngine()
-        ContainerBuilder builder = createContainerBuilder0(engine)
+        final builder = createContainerBuilder0()
 
         /*
          * initialise the builder
@@ -690,6 +726,9 @@ class BashWrapperBuilder {
         if( this.containerCpuset )
             builder.addRunOptions(containerCpuset)
 
+        if( this.containerPlatform )
+            builder.setPlatform(this.containerPlatform)
+
         // export task work directory
         builder.addEnv('NXF_TASK_WORKDIR')
         // export the nextflow script debug variable
@@ -711,22 +750,14 @@ class BashWrapperBuilder {
                 builder.addEnv(var)
         }
 
-        // set up run docker params
-        builder.params(containerConfig)
-
-        // extra rule for the 'auto' temp dir temp dir
-        def temp = containerConfig.temp?.toString()
-        if( temp == 'auto' || temp == 'true' ) {
+        // extra rule for the 'auto' temp dir
+        if( containerConfig.getTemp() == 'auto' )
             builder.setTemp( changeDir ? '$NXF_SCRATCH' : '$(nxf_mktemp)' )
-        }
 
-        if( containerConfig.containsKey('kill') )
-            builder.params(kill: containerConfig.kill)
+        if( containerConfig.getKill() != null )
+            builder.params(kill: containerConfig.getKill())
 
-        if( containerConfig.writableInputMounts==false )
-            builder.params(readOnlyInputs: true)
-
-        if( this.containerConfig.entrypointOverride() )
+        if( containerConfig.entrypointOverride() )
             builder.params(entry: '/bin/bash')
 
         // give a chance to override any option with process specific `containerOptions`
@@ -757,7 +788,7 @@ class BashWrapperBuilder {
         result += copyFileToWorkDir(TaskRun.CMD_ERRFILE) + ' || true' + ENDL
         if( statsEnabled )
             result += copyFileToWorkDir(TaskRun.CMD_TRACE) + ' || true' + ENDL
-        if(  outputEnvNames )
+        if( outputEnvNames || outputEvals )
             result += copyFileToWorkDir(TaskRun.CMD_ENV) + ' || true' + ENDL
         return result
     }

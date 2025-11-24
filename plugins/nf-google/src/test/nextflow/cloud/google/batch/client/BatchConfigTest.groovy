@@ -17,8 +17,7 @@
 
 package nextflow.cloud.google.batch.client
 
-import nextflow.Session
-import spock.lang.Requires
+import nextflow.util.MemoryUnit
 import spock.lang.Specification
 /**
  *
@@ -26,24 +25,46 @@ import spock.lang.Specification
  */
 class BatchConfigTest extends Specification {
 
-    @Requires({System.getenv('GOOGLE_APPLICATION_CREDENTIALS')})
     def 'should create batch config' () {
+        when:
+        def config = new BatchConfig([:])
+        then:
+        !config.getSpot()
+        and:
+        config.retryConfig.maxAttempts == 5
+        config.maxSpotAttempts == 0
+        config.autoRetryExitCodes == [50001]
+        and:
+        !config.bootDiskImage
+        !config.bootDiskSize
+        !config.logsPath
+    }
+
+    def 'should create batch config with custom settings' () {
         given:
-        def CONFIG = [google: [
-                                batch: [
-                                    spot: true,
-                                    retryPolicy: [maxAttempts: 10]
-                                ]
-                        ] ]
-        def session = Mock(Session) { getConfig()>>CONFIG }
+        def opts = [
+            spot: true,
+            maxSpotAttempts: 8,
+            autoRetryExitCodes: [50001, 50003, 50005],
+            retryPolicy: [maxAttempts: 10],
+            bootDiskImage: 'batch-foo',
+            bootDiskSize: '100GB',
+            logsPath: 'gs://my-logs-bucket/logs'
+        ]
 
         when:
-        def config = BatchConfig.create(session)
+        def config = new BatchConfig(opts)
         then:
         config.getSpot()
         and:
         config.retryConfig.maxAttempts == 10
-        
+        config.maxSpotAttempts == 8
+        config.autoRetryExitCodes == [50001, 50003, 50005]
+        and:
+        config.bootDiskImage == 'batch-foo'
+        config.bootDiskSize == MemoryUnit.of('100GB')
+        and:
+        config.logsPath == 'gs://my-logs-bucket/logs'
     }
 
 }

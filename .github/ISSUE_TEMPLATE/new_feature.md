@@ -1,22 +1,16 @@
 ---
 name: New feature
-about: Submit a new feature proposal
+about: Propose a new feature or enhancement
 ---
 
 ## New feature
 
-Hi! Thanks for using Nextflow and submitting the proposal 
-for a new feature or the enhancement of an existing functionality. 
+(Hi! Thanks for using Nextflow and for proposing a new feature or enhancement. Please replace this text with a brief description of your proposal.)
 
-Please replace this text providing a short description of your 
-proposal.
+## Use case 
 
-## Usage scenario 
+(What's the main use case and deployment scenario addressed by this proposal)
 
-(What's the main usage case and the deployment scenario addressed by this proposal)
-
-## Suggest implementation 
+## Suggested implementation 
 
 (Highlight the main building blocks of a possible implementation and/or related components)
-
-

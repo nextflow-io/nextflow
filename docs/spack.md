@@ -45,10 +45,11 @@ Alternatively, it can be specified by setting the variable `NXF_SPACK_ENABLED=tr
 
 Spack package names can specified using the `spack` directive. Multiple package names can be specified by separating them with a blank space. For example:
 
-```groovy
-process foo {
+```nextflow
+process hello {
   spack 'bwa samtools py-multiqc'
 
+  script:
   '''
   your_command --here
   '''
@@ -89,10 +90,11 @@ Read the Spack documentation for more details about how to create [environment f
 
 The path of an environment file can be specified using the `spack` directive:
 
-```groovy
-process foo {
+```nextflow
+process hello {
   spack '/some/path/my-env.yaml'
 
+  script:
   '''
   your_command --here
   '''
@@ -107,10 +109,11 @@ The environment file name **must** have a `.yaml` extension or else it won't be 
 
 If you already have a local Spack environment, you can use it in your workflow specifying the installation directory of such environment by using the `spack` directive:
 
-```groovy
-process foo {
+```nextflow
+process hello {
   spack '/path/to/an/existing/env/directory'
 
+  script:
   '''
   your_command --here
   '''
@@ -161,8 +164,11 @@ profiles {
 }
 ```
 
-The above configuration snippet allows the execution either with Spack or Docker by specifying `-profile spack` or
-`-profile docker` when running the pipeline script.
+The above configuration snippet allows the execution either with Spack or Docker by specifying `-profile spack` or `-profile docker` when running the pipeline script.
+
+:::{note}
+Nextflow does not allow for fine-grained configuration of the Spack package manager. Instead, this has to be performed directly on the host Spack installation. For more information see the [Spack documentation](https://spack.readthedocs.io).
+:::
 
 ## Advanced settings
 

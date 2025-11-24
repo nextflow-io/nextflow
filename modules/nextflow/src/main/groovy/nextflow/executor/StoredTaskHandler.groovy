@@ -29,7 +29,7 @@ class StoredTaskHandler extends TaskHandler {
     }
 
     @Override
-    void kill() {
+    protected void killTask() {
         throw new UnsupportedOperationException()
     }
 
