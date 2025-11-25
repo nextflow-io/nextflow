@@ -24,43 +24,81 @@ Implement a module system with four core capabilities:
 
 **DSL Syntax**:
 ```groovy
-// Import from registry (version resolved from meta.yaml)
-include { BWA_ALIGN } from module 'bwa/align'
+// Import from registry (scoped module name, detected by @scope prefix)
+include { BWA_ALIGN } from '@nf-core/bwa-align'
 
 // Existing file-based includes remain supported
 include { MY_PROCESS } from './modules/my-process.nf'
 ```
 
-**Version Resolution**: Module versions and dependencies declared in the **module's own meta.yaml**, not in include statements or separate lock files.
+**Module Naming**: NPM-style scoped packages `@scope/name` (e.g., `@nf-core/salmon`, `@myorg/custom`). Unscoped names supported for legacy compatibility. No nested paths allowed - each module must have a `main.nf` as the entry point.
 
-**Resolution**: Modules resolved at workflow parse time (after plugin resolution at startup).
+**Version Resolution**: Module versions pinned in `nextflow.config`. If not specified, uses latest available locally in `modules/` directory, or falls back to latest from registry.
 
-**Caching**: Downloaded modules cached in `$NXF_HOME/modules/cache/` organized by name/version.
+**Resolution Order**:
+1. Check `nextflow.config` for pinned version
+2. Check local `modules/@scope/name/` for any cached version
+3. Query registry for latest version if not found
+4. Warn if transitive dependencies are not pinned
 
-### 2. Semantic Versioning
+**Resolution Timing**: Modules resolved at workflow parse time (after plugin resolution at startup).
+
+**Local Storage**: Downloaded modules stored in `modules/@scope/name@version/` directory in project root (not global cache). Each module must contain a `main.nf` file as the required entry point.
+
+### 2. Semantic Versioning and Configuration
 
 **Version Format**: MAJOR.MINOR.PATCH
 - **MAJOR**: Breaking changes to process signatures, inputs, or outputs
 - **MINOR**: New processes, backward-compatible enhancements
 - **PATCH**: Bug fixes, documentation updates
 
-**Version Declaration**: Module versions and dependency constraints declared in **meta.yaml**:
-```yaml
-name: bwa/align
-version: 1.2.4                    # This module's version
+**Workflow Configuration** (`nextflow.config`):
+```groovy
+// Module versions (exact versions only, no ranges)
+modules {
+    '@nf-core/salmon' = '1.1.0'              // Simple syntax
+    '@nf-core/bwa-align' = [                 // Extended syntax (with checksum)
+        version: '1.2.0',
+        checksum: 'sha256-abc123...'
+    ]
+}
 
-dependencies:
-  "samtools/view": "^1.0.0"       # Semantic version constraint
-  "samtools/sort": "~2.1.0"       # Tilde constraint
-  "picard/mark": "3.0.1"          # Exact version
+// Registry configuration (separate block)
+registry {
+    url = 'https://registry.nextflow.io'     // Default registry
+
+    scopes {
+        '@myorg' = 'https://npm.myorg.com'   // Custom registry for @myorg scope
+        '@private' = 'https://private.com'
+    }
+
+    auth {
+        'registry.nextflow.io' = '${NXF_REGISTRY_TOKEN}'
+        'npm.myorg.com' = '${MYORG_TOKEN}'
+    }
+}
 ```
 
-**Version Constraints**:
+**Module Manifest** (`meta.yaml`):
+```yaml
+name: "@nf-core/bwa-align"
+version: 1.2.4                    # This module's version
+
+dependencies:                     # Transitive dependencies (version constraints)
+  "@nf-core/samtools-view": "^1.0.0"
+  "@nf-core/samtools-sort": "~2.1.0"
+```
+
+**Version Constraints** (in module's meta.yaml only):
 - `1.2.3`: Exact version
 - `^1.2.3`: Compatible with >=1.2.3 <2.0.0 (caret - allow minor/patch)
 - `~1.2.3`: Compatible with >=1.2.3 <1.3.0 (tilde - allow patch only)
 
-**Dependency Resolution**: When a module is imported, resolve its dependencies recursively using constraints from each module's meta.yaml. Use minimal version selection algorithm (choose minimum version satisfying all constraints).
+**Dependency Resolution**:
+- Workflow's `nextflow.config` specifies exact versions for direct dependencies
+- Transitive dependencies resolved from each module's `meta.yaml` using version constraints
+- Warn if transitive dependencies are not pinned in workflow config
+- Use `nextflow module freeze` to pin all transitive dependencies with checksums
 
 ### 3. Unified Nextflow Registry
 
@@ -78,18 +116,12 @@ POST /api/v1/plugins/release/{releaseId}/upload       # Upload artifact
 
 **Proposed Module API Extension** (same pattern):
 ```
-GET  /api/v1/modules                                  # List/search modules
-GET  /api/v1/modules/{moduleId}                       # Get module + all releases
-GET  /api/v1/modules/{moduleId}/{version}             # Get specific release
-GET  /api/v1/modules/{moduleId}/{version}/download/{fileName}  # Download source archive
-POST /api/v1/modules/release                          # Create draft release
-POST /api/v1/modules/release/{releaseId}/upload       # Upload module archive
-```
-
-**Internal API** (already exists for modules - currently semantic search):
-```
-GET /internal/modules          # Natural language search
-GET /internal/modules/{name}   # Retrieve module metadata
+GET  /api/v1/modules                                         # List/search modules
+GET  /api/v1/modules/{scope}/{name}                          # Get module + all releases
+GET  /api/v1/modules/{scope}/{name}/{version}                # Get specific release
+GET  /api/v1/modules/{scope}/{name}/{version}/download       # Download source archive
+POST /api/v1/modules/release                                 # Create draft release
+POST /api/v1/modules/release/{releaseId}/upload              # Upload module archive
 ```
 
 **Registry URL**: `registry.nextflow.io`
@@ -108,17 +140,23 @@ GET /internal/modules/{name}   # Retrieve module metadata
 
 **Commands**:
 ```bash
-nextflow module search <query>         # Search registry
-nextflow module pull <name>            # Download to cache
-nextflow module push <directory>       # Publish to registry (requires auth)
-nextflow module run <name> [args]      # Execute module directly
+nextflow module search <query>              # Search registry
+nextflow module install [@scope/name]       # Install all from config, or specific module
+nextflow module update [@scope/name]        # Update specific module or all
+nextflow module freeze                      # Pin all versions + checksums to config
+nextflow module list                        # Show installed vs configured
+nextflow module remove @scope/name          # Remove from config + local cache
+nextflow module publish @scope/name         # Publish to registry (requires api key)
 ```
 
 **Key Features**:
 - `search`: Find modules by name, description, tags
-- `pull`: Download module and transitive dependencies
-- `push`: Validate meta.yaml, authenticate, upload to registry
-- `run`: Execute module with auto-generated CLI flags from meta.yaml
+- `install`: Download modules to local `modules/` directory, auto-download on `nextflow run` if missing
+- `update`: Re-query registry for latest version, update config
+- `freeze`: Scan `modules/` directory, write all versions + checksums to config (extended syntax)
+- `list`: Compare config versions vs installed versions
+- `publish`: Validate meta.yaml, authenticate, upload to registry
+- **Warnings**: Unpinned transitive dependencies generate warnings during resolution
 
 ## Module Structure
 
@@ -126,14 +164,14 @@ nextflow module run <name> [args]      # Execute module directly
 ```
 my-module/
 ├── meta.yaml    # Module manifest (metadata, dependencies, I/O specs)
-├── main.nf      # Process definitions
+├── main.nf      # Required: entry point for module
 ├── tests/       # Optional test workflows
 └── README.md    # Optional documentation
 ```
 
 **Module Manifest** (`meta.yaml`):
 ```yaml
-name: bwa/align
+name: "@nf-core/bwa-align"
 version: 1.2.4              # This module's version
 description: Align reads using BWA-MEM
 author: nf-core community
@@ -157,9 +195,28 @@ processes:
         format: bam
         ontology: edam:format_2572
 
-dependencies:                # Module dependencies with version constraints
-  "samtools/view": "^1.0.0"
-  "samtools/sort": "~2.1.0"
+dependencies:                       # Transitive dependencies with version constraints
+  "@nf-core/samtools-view": "^1.0.0"
+  "@nf-core/samtools-sort": "~2.1.0"
+```
+
+**Local Storage Structure**:
+```
+project-root/
+├── nextflow.config
+├── main.nf
+└── modules/                        # Local module cache
+    ├── @nf-core/
+    │   ├── bwa-align@1.2.4/
+    │   │   ├── meta.yaml
+    │   │   └── main.nf             # Required entry point
+    │   └── samtools-view@1.0.5/
+    │       ├── meta.yaml
+    │       └── main.nf             # Required entry point
+    └── @myorg/
+        └── custom-process@2.0.0/
+            ├── meta.yaml
+            └── main.nf             # Required entry point
 ```
 
 ## Implementation Strategy
@@ -177,12 +234,16 @@ dependencies:                # Module dependencies with version constraints
 ## Technical Details
 
 **Dependency Resolution Flow**:
-1. Parse `include` statements → extract module names (no version in include)
-2. Check local cache for latest or fetch module meta.yaml from registry
-3. Read module's meta.yaml → get version and dependencies
-4. Recursively resolve dependencies using version constraints in each meta.yaml
-5. Download missing modules (minimal version selection)
-6. Parse module scripts → make processes available
+1. Parse `include` statements → extract module names (e.g., `@nf-core/bwa-align`)
+2. For each module:
+   a. Check `nextflow.config` modules section for pinned version
+   b. If not pinned: check local `modules/@scope/name/` for any cached version (use latest local)
+   c. If not found locally: query registry for latest version
+   d. Warn if module not pinned in config (especially transitive dependencies)
+3. Download missing modules to `modules/@scope/name@version/`
+4. Read module's `meta.yaml` → resolve transitive dependencies recursively
+5. Verify checksums (if present in config)
+6. Parse module's `main.nf` file → make processes available
 
 **Security**:
 - SHA-256 checksum verification for all downloads
@@ -193,7 +254,7 @@ dependencies:                # Module dependencies with version constraints
 - Modules can declare plugin dependencies in meta.yaml
 - Both plugins and modules query same registry
 - Single authentication system
-- Separate cache locations: `$NXF_HOME/plugins/` vs `$NXF_HOME/modules/`
+- Separate cache locations: `$NXF_HOME/plugins/` (global) vs `modules/` (per-project)
 
 ## Comparison: Plugins vs. Modules
 
@@ -203,7 +264,10 @@ dependencies:                # Module dependencies with version constraints
 | Format | JAR files | Source code (.nf) |
 | Resolution | Startup | Parse time |
 | Metadata | JSON spec | YAML manifest |
-| Registry Path | `/v1/artifacts/plugins/` | `/v1/artifacts/modules/` |
+| Naming | `nf-amazon` | `@nf-core/salmon` |
+| Cache Location | `$NXF_HOME/plugins/` | `modules/@scope/name@version/` |
+| Version Config | `plugins {}` in config | `modules {}` in config |
+| Registry Path | `/api/v1/plugins/` | `/api/v1/modules/@scope/name` |
 
 ## Rationale
 
@@ -213,35 +277,48 @@ dependencies:                # Module dependencies with version constraints
 - Lower operational overhead
 - Type-specific handling maintains separation of concerns
 
-**Why versions in meta.yaml instead of lock files?**
-- Each module is self-contained with its own dependencies
-- Simpler model: no separate lock file to manage
-- Module author controls exact versions of dependencies
-- Reproducibility guaranteed by module version itself
+**Why versions in nextflow.config instead of separate lock file?**
+- Single source of truth for workflow dependencies
+- Simple: exact versions in config, no separate lock file to manage
+- Transitive dependencies resolved from module's meta.yaml with version constraints
+- Use `nextflow module freeze` to pin all versions + checksums when needed
+- Reproducibility via explicit version pinning in config
 
 **Why parse-time resolution?**
 - Modules are source code, not compiled artifacts
 - Allows inspection/modification for reproducibility
 - Enables dependency analysis before execution
 
+**Why NPM-style scoped packages?**
+- Organization namespacing prevents name collisions (`@nf-core/salmon` vs `@myorg/salmon`)
+- Clear ownership and provenance of modules
+- Supports private registries per scope
+- Industry-standard pattern (NPM, Terraform, others)
+- Enables ecosystem organization by maintainer/organization
+
 **Why semantic versioning?**
 - Clear compatibility guarantees
-- Enables automated dependency resolution
+- Enables automated dependency resolution for transitive dependencies
 - Industry standard (npm, cargo, Go modules)
 
 ## Consequences
 
 **Positive**:
 - Enables ecosystem-wide code reuse
-- Reproducible workflows (versions pinned in module meta.yaml)
-- Centralized discovery and distribution
-- Minimal operational overhead (single registry)
-- No separate lock file needed (versions self-contained in modules)
+- Reproducible workflows (exact versions pinned in nextflow.config)
+- Centralized discovery and distribution via unified registry
+- Minimal operational overhead (single registry for both plugins and modules)
+- NPM-style scoping enables organization namespaces and private registries
+- Local `modules/` directory provides project isolation
+- Simple config model: no separate lock file unless using `freeze`
+- Simple module structure: each module has single `main.nf` entry point
 
 **Negative**:
 - Registry becomes critical infrastructure (requires HA setup)
 - Type-specific handling adds registry complexity
 - Parse-time resolution adds latency to workflow startup
+- Local `modules/` directory duplicates storage across projects (unlike global cache)
+- Warnings for unpinned transitive dependencies may be noisy initially
 
 **Neutral**:
 - Modules and plugins conceptually distinct but share infrastructure
