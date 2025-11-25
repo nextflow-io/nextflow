@@ -1656,17 +1656,17 @@ The `stageOutMode` directive defines how output files are staged out from the sc
 : Output files are copied from the scratch directory to the work directory.
 
 `'fcp'`
-: :::{versionadded} 23.02.0-edge
+: :::{versionadded} 23.04.0
   :::
-: Output files are copied from the scratch directory to the work directory by using the [fcp](https://github.com/Svetlitski/fcp) utility (note: it must be available in your cluster computing nodes).
+: Output files are copied from the scratch directory to the work directory by using the [fcp](https://github.com/Svetlitski/fcp) utility (note: it must be available in the task environment).
 
 `'move'`
 : Output files are moved from the scratch directory to the work directory.
 
 `'rclone'`
-: :::{versionadded} 23.01.0-edge
+: :::{versionadded} 23.04.0
   :::
-: Output files are copied from the scratch directory to the work directory by using the [rclone](https://rclone.org) utility (note: it must be available in your cluster computing nodes).
+: Output files are copied from the scratch directory to the work directory by using the [rclone](https://rclone.org) utility (note: it must be available in the task environment).
 
 `'rsync'`
 : Output files are copied from the scratch directory to the work directory by using the `rsync` utility.

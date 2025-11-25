@@ -179,7 +179,8 @@ class ManifestTest extends Specification {
         ])
         manifest.contributors
         then:
-        thrown(AbortOperationException)
+        def e = thrown(AbortOperationException)
+        e.message.contains("Invalid contribution type 'owner' in `manifest.contributors` config option")
     }
 
 }

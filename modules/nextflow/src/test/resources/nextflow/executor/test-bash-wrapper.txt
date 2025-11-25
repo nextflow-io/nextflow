@@ -69,7 +69,10 @@ nxf_fs_move() {
 }
 
 nxf_fs_rsync() {
-  rsync -rRl $1 $2
+  local source=$1
+  local target=$2
+  mkdir -p $target
+  rsync -rRl $source $target
 }
 
 nxf_fs_rclone() {

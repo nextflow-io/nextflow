@@ -56,6 +56,7 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
 
     private long itemsCount
 
+    @Override
     AbstractTextSplitter options(Map options) {
         super.options(options)
 
@@ -108,6 +109,7 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
      * @return  A  {@link Reader} for the given object.
      * @throws IllegalArgumentException if the object specified is of a type not supported
      */
+    @Override
     protected Reader normalizeSource( obj ) {
         Reader reader = normalizeSource0( obj )
         // detect if starts with bom and position after it
@@ -178,6 +180,7 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
      * @param offset
      * @return
      */
+    @Override
     protected process( Reader targetObject ) {
 
         def result = null
@@ -244,6 +247,7 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
      * @return A {@link CollectorStrategy} object implementing a concrete
      * strategy according the user provided options
      */
+    @Override
     protected CollectorStrategy createCollector() {
 
         if( !isCollectorEnabled() )
@@ -325,7 +329,6 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
      * @return A logical record read from underlying stream
      */
     abstract protected fetchRecord( BufferedReader reader )
-
 
     protected int positionAfterBOM(Reader reader ){
         if( !reader.markSupported() )
