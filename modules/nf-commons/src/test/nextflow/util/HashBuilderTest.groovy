@@ -20,7 +20,6 @@ import java.nio.file.Files
 import java.nio.file.Paths
 
 import com.google.common.hash.Hashing
-import nextflow.Const
 import nextflow.Global
 import nextflow.Session
 import org.apache.commons.codec.digest.DigestUtils
@@ -93,27 +92,24 @@ class HashBuilderTest extends Specification {
     }
 
     def 'should validate is asset file when not part of base directory'() {
-        when:
-        def BASE = Paths.get("/some/pipeline/dir")
-        def ROOT = new File("/some/pipeline/")
-
-        and:
-        Global.session = Mock(Session) { getBaseDir() >> BASE }
-        
-        then:
-        !HashBuilder.isAssetFile(BASE.resolve('foo'), ROOT)
-
-        when:
+        given:
         Global.session = Mock(Session) {
-            getBaseDir() >> BASE
-            getCommitId() >> '123456'
+            getBaseDir() >> Paths.get(BASE)
+            getCommitId() >> COMMIT_ID
         }
 
-        then:
-        HashBuilder.isAssetFile(Paths.get('/some/pipeline/foo'), ROOT)
-        and:
-        !HashBuilder.isAssetFile(Paths.get('/other/dir'), ROOT)
+        expect:
+        HashBuilder.isAssetFile(Paths.get(PATH), new File(ROOT)) == EXPECTED
 
+        where:
+        BASE                  | ROOT              | COMMIT_ID | PATH                       | EXPECTED
+        "/some/pipeline/dir"  | "/some/pipeline/" | null      | "/some/pipeline/dir/foo"   | false
+        "/some/pipeline/dir"  | "/some/pipeline/" | '123456'  | '/other/dir'               | false
+        "/some/pipeline/dir"  | "/some/pipeline/" | '123456'  | '/some/pipeline/foo'       | true
+        and:
+        "/this/pipeline"      | "/that/pipeline/" | '123456'  | '/other/pipeline/foo'      | false
+        "/this/pipeline"      | "/that/pipeline/" | '123456'  | '/this/pipeline/foo'       | true
+        "/this/pipeline"      | "/that/pipeline/" | '123456'  | '/that/pipeline/foo'       | true
     }
 
     def 'should hash file content'() {
