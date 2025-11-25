@@ -31,8 +31,8 @@ Follow-up TODOs:
 
 Nextflow MUST maintain a clear separation between core functionality and extensions through its modular architecture:
 
-- **Core modules** (`modules/`) contain essential functionality: workflow engine (nextflow), shared utilities (nf-commons), language parsing (nf-lang), HTTP filesystem support (nf-httpfs), and lineage tracking (nf-lineage)
-- **Plugin system** (`plugins/`) provides cloud provider integrations (AWS, Azure, GCP), execution platforms (Kubernetes), and specialized services (Seqera Platform, Wave container management)
+- **Core modules** (`modules/`) contain essential functionality: core workflow runtime & plugin system (nextflow), shared utilities (nf-commons), language parsing (nf-lang), HTTP filesystem support (nf-httpfs), and lineage tracking (nf-lineage)
+- **Core plugins** (`plugins/`) provides cloud provider integrations (AWS, Azure, GCP), execution platforms (Kubernetes), and specialized services (Seqera Platform, Wave container management)
 - New features MUST be evaluated for placement: core features belong in `modules/`, specialized/cloud-specific features belong in `plugins/`
 - Each module and plugin MUST be independently buildable and testable
 - Plugin dependencies MUST be explicitly declared in `build.gradle` with semantic versioning
@@ -62,7 +62,7 @@ Nextflow's core abstraction MUST adhere to the dataflow programming model:
 - Changes to the language parser (ANTLR grammars in `nf-lang`) MUST preserve backward compatibility with existing pipelines unless explicitly versioned (DSL1 vs DSL2)
 - Concurrency primitives (GPars actors/dataflow) MUST be used correctly to maintain the dataflow semantics
 
-**Rationale**: The dataflow model is Nextflow's fundamental value proposition, enabling automatic parallelization and distribution. Preserving this model ensures existing scientific pipelines continue to work and users can reason about workflow behavior.
+**Rationale**: The dataflow paradigm is Nextflow's fundamental programming model, enabling automatic parallelization and distribution. Preserving this model ensures existing scientific pipelines continue to work and users can reason about workflow behavior.
 
 ### IV. Apache 2.0 License Compliance
 
