@@ -3,14 +3,14 @@ import {
   createSeqeraConfig, 
   getSeqeraThemeConfig,
   getSeqeraPresetOptions 
-} from "@seqera/docusaurus-preset-seqera";
+} from "@seqeralabs/docusaurus-preset-seqera";
 
 export default async function createConfigAsync(): Promise<Config> {
   return createSeqeraConfig({
     plugins: [],
     presets: [
       [
-        "@seqera/docusaurus-preset-seqera",
+        "@seqeralabs/docusaurus-preset-seqera",
         getSeqeraPresetOptions({
         docs: {
           path: 'nextflow-docs',  // Path to YOUR docs folder
