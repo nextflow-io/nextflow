@@ -915,6 +915,10 @@ The following settings are available:
 `google.batch.bootDiskSize`
 : The size of the virtual machine boot disk, e.g `50.GB` (default: none).
 
+`google.batch.bootDiskType`
+: The type of the virtual machine boot disk, e.g `pd-balanced`, `pd-ssd`, `pd-standard`, `hyperdisk-balanced` (default: none).
+: See [Google documentation](https://cloud.google.com/compute/docs/disks) for details on available disk types.
+
 `google.batch.cpuPlatform`
 : The [minimum CPU Platform](https://cloud.google.com/compute/docs/instances/specify-min-cpu-platform#specifications), e.g. `'Intel Skylake'` (default: none).
 
