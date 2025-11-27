@@ -772,10 +772,19 @@ class AssetManager {
      */
     List<String> listRevisions( String projectName = this.project ) {
         log.debug "Listing revisions for project: $projectName"
-
+        final revisions = new LinkedList<String> ()
         if( !root.exists() )
-            return []
-        return getRevisionsMapAsMap().keySet().asList()
+            return revisions
+
+        if( !revisionMap.exists() )
+            return revisions
+
+        // Add revisions in map not referring to commits
+        revisionMap.eachLine{ it ->
+            final lineItems =  it.split(',')
+            if (lineItems[0] != lineItems[1]) revisions.add(lineItems[0])
+        }
+        return revisions
     }
 
     /**

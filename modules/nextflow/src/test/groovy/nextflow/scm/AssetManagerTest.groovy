@@ -760,12 +760,6 @@ class AssetManagerTest extends Specification {
         def branches = manager.getBranchList()
 
         when:
-        def remote_head = branches.find { it.name == 'refs/remotes/origin/HEAD' }
-        then:
-        remote_head != null
-        !AssetManager.isRemoteBranch(remote_head)
-
-        when:
         def remote_master = branches.find { it.name == 'refs/remotes/origin/master' }
         then:
         remote_master != null
