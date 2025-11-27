@@ -237,13 +237,17 @@ class AssetManagerTest extends Specification {
         String revision = null
         def manager = new AssetManager().build('nextflow-io/hello')
         manager.setRevisionAndLocalPath('nextflow-io/hello', revision)
-        String revisionMap1 = '''v1.2,1b420d060d3fad67027154ac48e3bdea06f058da\n'''
+        String revisionMapLine1 = 'v1.2,1b420d060d3fad67027154ac48e3bdea06f058da'
+        String revisionMapLine2 ='1b420d060d3fad67027154ac48e3bdea06f058da,1b420d060d3fad67027154ac48e3bdea06f058da'
 
         when:
         manager.updateRevisionMap('v1.2','1b420d060d3fad67027154ac48e3bdea06f058da')
         then:
         folder.resolve('nextflow-io/hello/' + REVISION_MAP).exists()
-        folder.resolve('nextflow-io/hello/' + REVISION_MAP).text == revisionMap1
+        def lines = folder.resolve('nextflow-io/hello/' + REVISION_MAP).readLines()
+        lines.size() == 2
+        revisionMapLine1 in lines
+        revisionMapLine2 in lines
     }
 
 

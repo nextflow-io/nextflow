@@ -77,17 +77,8 @@ class CmdInfo extends CmdBase {
         Plugins.init()
         def manager = new AssetManager(args[0])
         manager.setRevisionAndLocalPath(args[0], null)
-        if( !manager.isLocal() ) {
-            // if default branch not found locally, use first one from list of local pulls
-            if ( manager.listRevisions() ) {
-                manager = new AssetManager(args[0])
-                manager.setRevisionAndLocalPath(args[0], manager.listRevisions()[0])
-                if( !manager.isLocal() )
-                    throw new AbortOperationException("Unknown project `${args[0]}`")
-            }
-            else {
-                throw new AbortOperationException("Unknown project `${args[0]}`")
-            }
+        if( !manager.hasBareRepo() ) {
+            throw new AbortOperationException("Unknown project `${args[0]}`")
         }
 
         if( !format || format == 'text' ) {

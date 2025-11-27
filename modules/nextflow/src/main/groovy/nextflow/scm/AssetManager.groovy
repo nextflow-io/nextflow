@@ -331,26 +331,56 @@ class AssetManager {
             }
         }
     }
-
+    /**
+     * Update the revisions map.
+     * If revision is a commit (revision == commitId) only <commitId,commitId> entry is added.
+     * If revision is a branch or tag, the <revision,commitId> and <commitId,commitId> entries are added.
+     * Moreover if revision already contain an old commitId, the <oldCommitId,oldCommitID> entry is added.
+     * It is done to maintain the consistency with 'commits' folder.
+     *
+     * @param revision
+     * @param commitId
+     */
     @PackageScope
     void updateRevisionMap(String revision, String commitId) {
         String revisionTmp = revision ?: DEFAULT_REVISION_DIRNAME
-        if( !revisionMap.exists() ) {
-            revisionMap.parentFile.mkdirs()
-            revisionMap << revisionTmp + ',' + commitId + '\n'
-        } else {
-            List oldRevisionMap = revisionMap.readLines()
-            revisionMap.text = ''
-            oldRevisionMap.each{
-                if( it.split(',')[0] != revisionTmp )
-                    revisionMap << it + '\n'
-            }
-            revisionMap << revisionTmp + ',' + commitId + '\n'
-        }
+        def revisions = getRevisionsMapAsMap()
+        //If revision is a commit, just add the commit
+        if (revisionTmp == commitId)
+            revisions[commitId] = commitId
+        //If revision is a tag or branch ensure old and commit are also added as entry in the revision map
+        def oldCommit = revisions[revisionTmp]
+            revisions[commitId] = commitId
+            revisions[revisionTmp] = commitId
+            if (oldCommit)
+                revisions[oldCommit] = oldCommit
+            writeRevisionMap(revisions)
     }
 
+    private Map<String,String> getRevisionsMapAsMap(){
+        def result = new LinkedHashMap<String,String>()
+        if( !revisionMap.exists() )
+            return result
+
+        revisionMap.eachLine{ it -> result[ it.split(',')[0] ] = it.split(',')[1] }
+
+        return result
+    }
+
+
+    private void writeRevisionMap(Map<String,String> map) {
+        if( !revisionMap.exists() ) {
+            revisionMap.parentFile.mkdirs()
+        }
+        revisionMap.text = ''
+        map.forEach {key, value -> revisionMap << key + ',' + value + '\n'}
+    }
+
+
     AssetManager setRevisionAndLocalPath(String pipelineName, String revision) {
-        this.revision = revision
+        if(! revision )
+            revision = getDefaultBranchFromBareRepo()
+            this.revision = revision
         updateProjectDir(resolveName(pipelineName), revisionToCommitWithMap(revision))
 
         return this
@@ -360,7 +390,7 @@ class AssetManager {
     void updateRevisionMapAndLocalPath(String revision) {
 
         String commitId = revisionToCommitWithBareRepo(revision)
-
+        log.debug "Updating revision {} with commit: {}", revision, commitId
         updateRevisionMap(revision, commitId)
         updateProjectDir(this.project, commitId)
     }
@@ -581,10 +611,29 @@ class AssetManager {
         // if specified in manifest, that takes priority
         // otherwise look for a symbolic ref (refs/remotes/origin/HEAD)
         return getManifest().getDefaultBranch()
-                ?: getRemoteBranch()
+                ?: getDefaultBranchFromBareRepo()
                 ?: DEFAULT_BRANCH
     }
 
+    protected String getDefaultBranchFromBareRepo(){
+        if (!bareRepo.exists()) {
+            log.debug "Bare repo ${bareRepo} doesn't exist"
+            return null
+        }
+        def head = getDefaultBranchRef()
+        if( head ) {
+            Repository.shortenRefName(head.getName())
+        } else {
+            log.debug "Unable to determine default branch from bare repo ${bareRepo}"
+            return null
+        }
+    }
+
+    protected Ref getDefaultBranchRef(){
+        return bareGit.getRepository().findRef(Constants.HEAD).getTarget()
+    }
+
+    @Deprecated
     protected String getRemoteBranch() {
         Ref remoteHead = git.getRepository().findRef(REMOTE_DEFAULT_HEAD)
         return remoteHead?.getTarget()?.getName()?.substring(REMOTE_REFS_ROOT.length())
@@ -654,6 +703,13 @@ class AssetManager {
     }
 
     /**
+     * @return True if AssetManager already contains the bare repository of the project
+     */
+    boolean hasBareRepo() {
+        bareRepo.exists()
+    }
+
+    /**
      * @return {@code true} when the local project path exists and contains at least the default script
      *      file (i.e. main.nf) or the nextflow manifest file (i.e. nextflow.config)
      */
@@ -717,15 +773,9 @@ class AssetManager {
     List<String> listRevisions( String projectName = this.project ) {
         log.debug "Listing revisions for project: $projectName"
 
-        def result = new LinkedList()
         if( !root.exists() )
-            return result
-        if( !revisionMap.exists() )
-            return result
-
-        revisionMap.eachLine{ it -> result << it.split(',')[0] }
-
-        return result
+            return []
+        return getRevisionsMapAsMap().keySet().asList()
     }
 
     /**
@@ -742,16 +792,9 @@ class AssetManager {
      */
     Map<String,String> listRevisionsAndCommits( String projectName = this.project ) {
         log.debug "Listing revisions for project: $projectName"
-
-        def result = new LinkedHashMap<String,String>()
         if( !root.exists() )
-            return result
-        if( !revisionMap.exists() )
-            return result
-
-        revisionMap.eachLine{ it -> result[ it.split(',')[0] ] = it.split(',')[1] }
-
-        return result
+            return [:]
+        return getRevisionsMapAsMap()
     }
 
     /**
@@ -817,8 +860,9 @@ class AssetManager {
         checkBareRepo()
         // update mapping of revision to commit, and update localPath
         // boolean is for testing purposes only (e.g. UpdateModuleTest)
+        final downloadRevision = revision ?: getDefaultBranch()
         if( !testDisableUpdateLocalPath )
-            updateRevisionMapAndLocalPath(revision)
+            updateRevisionMapAndLocalPath(downloadRevision)
 
         /*
          * if the pipeline does not exists locally pull it from the remote repo
@@ -860,8 +904,8 @@ class AssetManager {
 
             // now the default branch is recorded in the repo, explicitly checkout the revision (if specified).
             // this also allows 'revision' to be a SHA commit id, which isn't supported by the clone command
-            if( revision ) {
-                try { git.checkout() .setName(revision) .call() }
+            if( downloadRevision ) {
+                try { git.checkout() .setName(downloadRevision) .call() }
                 catch ( RefNotFoundException e ) { checkoutRemoteBranch() }
             }
 
@@ -875,12 +919,12 @@ class AssetManager {
         if( !isClean() )
             throw new AbortOperationException("$project contains uncommitted changes -- cannot pull from repository")
 
-        if( revision && revision != getCurrentRevision() ) {
+        if( downloadRevision && downloadRevision!= getCurrentRevision() ) {
             /*
              * check out a revision before the pull operation
              */
             try {
-                git.checkout() .setName(revision) .call()
+                git.checkout() .setName(downloadRevision) .call()
             }
             /*
              * If the specified revision does not exist
@@ -891,7 +935,7 @@ class AssetManager {
                 final commitId = ref?.getObjectId()
                 return commitId
                     ? "checked out at ${commitId.name()}"
-                    : "checked out revision ${revision}"
+                    : "checked out revision ${downloadRevision}"
             }
         }
 
@@ -981,8 +1025,8 @@ class AssetManager {
             return null
 
         // try to resolve the the current object id to a tag name
-        Map<ObjectId, String> allNames = git.nameRev().addPrefix( "refs/tags/" ).add(head.objectId).call()
-        def name = allNames.get( head.objectId )
+        Collection<Ref> tags = git.getRepository().getRefDatabase().getRefsByPrefix(Constants.R_TAGS)
+        def name = tags.find { it.objectId == head.objectId }?.name
         if( name ) {
             return new RevisionInfo(head.objectId.name(), name, RevisionInfo.Type.TAG)
         }
@@ -1014,9 +1058,9 @@ class AssetManager {
         def current = getCurrentRevision()
         def master = getDefaultBranch()
         def pulled = listRevisionsToCompareInfo()
-
+        def headRef = getDefaultBranchRef()
         List<String> branches = getBranchList()
-            .findAll { it.name.startsWith('refs/heads/') || isRemoteBranch(it) }
+            .findAll { (it.name.startsWith('refs/heads/') && it.name != headRef?.name ) || isRemoteBranch(it) }
             .unique { shortenRefName(it.name) }
             .collect { Ref it -> refToString(it,current,master,pulled,false,level) }
 
@@ -1025,6 +1069,8 @@ class AssetManager {
                 .collect { refToString(it,current,master,pulled,true,level) }
 
         def result = new ArrayList<String>(branches.size() + tags.size())
+        if (headRef)
+            result.add(refToString(headRef,current,master,pulled,false,level))
         result.addAll(branches)
         result.addAll(tags)
         return result
@@ -1068,7 +1114,7 @@ class AssetManager {
 
     protected Map refToMap(Ref ref, Map<String,Ref> remote) {
         final entry = new HashMap(2)
-        final peel = git.getRepository().getRefDatabase().peel(ref)
+        final peel = bareGit.getRepository().getRefDatabase().peel(ref)
         final objId = peel.getPeeledObjectId() ?: peel.getObjectId()
         // the branch or tag name
         entry.name = shortenRefName(ref.name)
@@ -1083,12 +1129,12 @@ class AssetManager {
 
     @Memoized
     protected List<Ref> getBranchList() {
-        git.branchList().setListMode(ListBranchCommand.ListMode.ALL) .call()
+        bareGit.branchList().setListMode(ListBranchCommand.ListMode.ALL) .call()
     }
 
     @Memoized
     protected List<Ref> getTagList() {
-        git.tagList().call()
+        bareGit.tagList().call()
     }
 
     protected formatObjectId(ObjectId obj, boolean human) {
@@ -1102,7 +1148,7 @@ class AssetManager {
         result << (name in pulled ? 'P' : ' ')
 
         if( level ) {
-            def peel = git.getRepository().getRefDatabase().peel(ref)
+            def peel = bareGit.getRepository().getRefDatabase().peel(ref)
             def obj = peel.getPeeledObjectId() ?: peel.getObjectId()
             result << ' '
             result << formatObjectId(obj, level == 1)
