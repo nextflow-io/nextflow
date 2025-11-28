@@ -51,15 +51,15 @@ import nextflow.util.TestOnly
 @CompileStatic
 class BashWrapperBuilder {
 
-    private static MemoryUnit DEFAULT_STAGE_FILE_THRESHOLD = MemoryUnit.of('1 MB')
-    private static int DEFAULT_WRITE_BACK_OFF_BASE = 3
-    private static int DEFAULT_WRITE_BACK_OFF_DELAY = 250
-    private static int DEFAULT_WRITE_MAX_ATTEMPTS = 5
+    final private static MemoryUnit DEFAULT_STAGE_FILE_THRESHOLD = MemoryUnit.of('1 MB')
+    final private static int DEFAULT_WRITE_BACK_OFF_BASE = 3
+    final private static int DEFAULT_WRITE_BACK_OFF_DELAY = 250
+    final private static int DEFAULT_WRITE_MAX_ATTEMPTS = 5
 
-    private MemoryUnit stageFileThreshold = SysEnv.get('NXF_WRAPPER_STAGE_FILE_THRESHOLD') as MemoryUnit ?: DEFAULT_STAGE_FILE_THRESHOLD
-    private int writeBackOffBase = SysEnv.get('NXF_WRAPPER_BACK_OFF_BASE') as Integer ?: DEFAULT_WRITE_BACK_OFF_BASE
-    private int writeBackOffDelay = SysEnv.get('NXF_WRAPPER_BACK_OFF_DELAY') as Integer ?: DEFAULT_WRITE_BACK_OFF_DELAY
-    private int writeMaxAttempts = SysEnv.get('NXF_WRAPPER_MAX_ATTEMPTS') as Integer ?: DEFAULT_WRITE_MAX_ATTEMPTS
+    final private MemoryUnit stageFileThreshold = SysEnv.get('NXF_WRAPPER_STAGE_FILE_THRESHOLD') as MemoryUnit ?: DEFAULT_STAGE_FILE_THRESHOLD
+    final private int writeBackOffBase = SysEnv.get('NXF_WRAPPER_BACK_OFF_BASE') as Integer ?: DEFAULT_WRITE_BACK_OFF_BASE
+    final private int writeBackOffDelay = SysEnv.get('NXF_WRAPPER_BACK_OFF_DELAY') as Integer ?: DEFAULT_WRITE_BACK_OFF_DELAY
+    final private int writeMaxAttempts = SysEnv.get('NXF_WRAPPER_MAX_ATTEMPTS') as Integer ?: DEFAULT_WRITE_MAX_ATTEMPTS
 
     static final public KILL_CMD = '[[ "$pid" ]] && nxf_kill $pid'
 
@@ -272,9 +272,10 @@ class BashWrapperBuilder {
             return null
 
         final header = "# stage input files\n"
-        // enable only when the stage uses the default file system, i.e. it's not a remote object storage file
-        // see https://github.com/nextflow-io/nextflow/issues/4279
-        if( stageFile.fileSystem == FileSystems.default && stagingScript.size() >= stageFileThreshold.bytes ) {
+        // Write large staging scripts to a separate .command.stage file to avoid command line length limits.
+        // This is enabled only for executors that support it (e.g. HPC grid schedulers with shared filesystem,
+        // See https://github.com/nextflow-io/nextflow/issues/4279
+        if( stageFileEnabled && stagingScript.size() >= stageFileThreshold.bytes ) {
             stageScript = stagingScript
             return header + "bash ${stageFile}"
         }

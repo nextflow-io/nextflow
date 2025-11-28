@@ -493,7 +493,8 @@ class BashWrapperBuilderTest extends Specification {
         def builder = newBashWrapperBuilder([
                 workDir: folder,
                 targetDir: folder,
-                inputFiles: inputs ])
+                inputFiles: inputs,
+                stageFileEnabled: true ])
 
         when:
         def binding = builder.makeBinding()
