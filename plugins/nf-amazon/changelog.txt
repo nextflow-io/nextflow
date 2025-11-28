@@ -1,5 +1,8 @@
 nf-amazon changelog
 ===================
+3.5.0 - 28 Nov 2025
+- Optimize exit code handling by relying on scheduler status for successful executions (#6484) [454a2ae85]
+
 3.4.2 - 28 Nov 2025
 - Fix incorrect AWS region when specifying a S3 regional endpoint (#6530) [770bdd3eb]
 - Fix unordered completed parts in AWS multipart upload (#6560) [89eb70130]
