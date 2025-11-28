@@ -500,8 +500,8 @@ class K8sTaskHandlerTest extends Specification {
         then:
         1 * handler.getState() >> fullState
         1 * handler.updateTimestamps(termState)
-        1 * handler.deletePodIfSuccessful(task) >> null
-        1 * handler.savePodLogOnError(task) >> null
+        1 * handler.deleteJobIfSuccessful(task) >> null
+        1 * handler.saveJobLogOnError(task) >> null
         handler.task.exitStatus == 0
         handler.task.@stdout == OUT_FILE
         handler.task.@stderr == ERR_FILE
