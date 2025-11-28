@@ -16,6 +16,10 @@
 
 package nextflow.scm
 
+import org.eclipse.jgit.internal.storage.file.FileRepository
+import org.eclipse.jgit.storage.file.FileRepositoryBuilder
+import org.eclipse.jgit.transport.RefSpec
+
 import static nextflow.Const.*
 
 import java.nio.file.Path
@@ -390,7 +394,6 @@ class AssetManager {
     void updateRevisionMapAndLocalPath(String revision) {
 
         String commitId = revisionToCommitWithBareRepo(revision)
-        log.debug "Updating revision {} with commit: {}", revision, commitId
         updateRevisionMap(revision, commitId)
         updateProjectDir(this.project, commitId)
     }
@@ -973,6 +976,75 @@ class AssetManager {
         return result?.mergeResult?.mergeStatus?.toString()
 
     }
+    /**
+     * Creates a clone in commits folder where objects are shared with the bare repository.
+     *
+     * @param testDisableUpdateLocalPath
+     * @return
+     */
+    String createSharedClone(boolean testDisableUpdateLocalPath = false){
+        assert project
+
+        // make sure it contains a valid repository
+        checkValidRemoteRepo()
+
+        // get local copy of bare repository
+        checkBareRepo()
+        // update mapping of revision to commit, and update localPath
+        // boolean is for testing purposes only (e.g. UpdateModuleTest)
+        final downloadRevision = revision ?: getDefaultBranch()
+        if( !testDisableUpdateLocalPath )
+            updateRevisionMapAndLocalPath(downloadRevision)
+
+        /*
+         * if the pipeline does not exists locally pull it from the remote repo
+         */
+        if( !localPath.exists() ) {
+            localPath.parentFile.mkdirs()
+
+            final cloneURL = bareRepo.toString()
+            log.debug "Pulling $project -- Using remote clone url: ${cloneURL}"
+
+            // clone it, but don't specify a revision - jgit will checkout the default branch
+            File bareObjectsDir = new File(bareRepo,"objects")
+            FileRepository repo = new FileRepositoryBuilder().setGitDir(new File(localPath, ".git")).addAlternateObjectDirectory(bareObjectsDir).build() as FileRepository
+            repo.create()
+
+            // Write alternates file (not done by repo create).
+            new File(repo.getObjectsDirectory(), "info/alternates").write(bareObjectsDir.absolutePath)
+
+            // 3️⃣ Configure remote pointing to the cache repo
+            repo.getConfig().setString("remote", "origin", "url", cloneURL);
+            repo.getConfig().save();
+
+
+            log.info(git.fetch().setRefSpecs(refSpecForName(downloadRevision)).call().messages)
+
+            git.checkout().setName(downloadRevision).call()
+
+
+
+            // return status message
+            return "downloaded from ${getGitRepositoryUrl()}"
+        }
+    }
+
+    private RefSpec refSpecForName(String revision) {
+        // Is it a local branch?
+        Ref branch = bareGit.getRepository().findRef("refs/heads/" + revision);
+        if (branch != null) {
+            return new RefSpec("refs/heads/" + revision + ":refs/heads/" + revision);
+        }
+
+        // Is it a tag?
+        Ref tag = bareGit.getRepository().findRef("refs/tags/" + revision);
+        if (tag != null) {
+            return new RefSpec("refs/tags/" + revision + ":refs/tags/" + revision);
+        }
+
+        // It is a commit
+        return new RefSpec(revision + ":refs/tags/" + revision)
+    }
 
     /**
      * Clone a pipeline from a remote pipeline repository to the specified folder
@@ -1136,12 +1208,10 @@ class AssetManager {
         return entry
     }
 
-    @Memoized
     protected List<Ref> getBranchList() {
-        bareGit.branchList().setListMode(ListBranchCommand.ListMode.ALL) .call()
+        bareGit.branchList().setListMode(ListBranchCommand.ListMode.ALL).call()
     }
 
-    @Memoized
     protected List<Ref> getTagList() {
         bareGit.tagList().call()
     }

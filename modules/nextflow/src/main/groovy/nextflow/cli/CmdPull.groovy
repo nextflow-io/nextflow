@@ -100,7 +100,7 @@ class CmdPull extends CmdBase implements HubOptions {
         list.each { manager ->
             log.info "Checking ${manager.getProjectWithRevision()} ..."
 
-            def result = manager.download(deep)
+            def result = manager.createSharedClone()
             manager.updateModules()
 
             def scriptFile = manager.getScriptFile()
