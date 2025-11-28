@@ -1,5 +1,9 @@
 NEXTFLOW CHANGE-LOG
 ===================
+25.10.2 - 28 Nov 2025
+- Fix TowerJsonGenerator thread-safety issue (#6619) [f62fcc72a]
+- Bump nf-tower@1.17.3
+
 25.10.1 - 28 Nov 2025
 - Add default value to Apptainer pull timeout config parameter (#6534) [a124a5ca0]
 - Fix asset detection when item is not a sibling of the executed script (#6605) [2390d4a8d]
