@@ -37,6 +37,7 @@ class BatchConfigTest extends Specification {
         and:
         !config.bootDiskImage
         !config.bootDiskSize
+        !config.bootDiskType
         !config.logsPath
     }
 
@@ -49,6 +50,7 @@ class BatchConfigTest extends Specification {
             retryPolicy: [maxAttempts: 10],
             bootDiskImage: 'batch-foo',
             bootDiskSize: '100GB',
+            bootDiskType: 'pd-ssd',
             logsPath: 'gs://my-logs-bucket/logs'
         ]
 
@@ -63,6 +65,7 @@ class BatchConfigTest extends Specification {
         and:
         config.bootDiskImage == 'batch-foo'
         config.bootDiskSize == MemoryUnit.of('100GB')
+        config.bootDiskType == 'pd-ssd'
         and:
         config.logsPath == 'gs://my-logs-bucket/logs'
     }
