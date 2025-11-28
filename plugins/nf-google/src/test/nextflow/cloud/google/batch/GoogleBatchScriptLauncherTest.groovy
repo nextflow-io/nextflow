@@ -22,6 +22,7 @@ import java.nio.file.Paths
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
 import nextflow.cloud.google.GoogleOpts
 import nextflow.cloud.google.batch.client.BatchConfig
+import nextflow.processor.TaskRun
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -85,6 +86,19 @@ class GoogleBatchScriptLauncherTest extends Specification{
         volumes[1].getGcs().getRemotePath() == 'omega'
         volumes[1].getMountPath() == '/mnt/disks/omega'
         volumes[1].getMountOptionsList() == ['-o rw', '-implicit-dirs', '-o allow_other', '--uid=1000', '--billing-project my-project']
+    }
+
+    def 'should return target files in remote work dir' () {
+        given:
+        def launcher = new GoogleBatchScriptLauncher()
+        def workDir = CloudStorageFileSystem.forBucket('my-bucket').getPath('/work/dir')
+        launcher.@remoteWorkDir = workDir
+
+        expect:
+        launcher.targetInputFile() == workDir.resolve(TaskRun.CMD_INFILE)
+        launcher.targetScriptFile() == workDir.resolve(TaskRun.CMD_SCRIPT)
+        launcher.targetWrapperFile() == workDir.resolve(TaskRun.CMD_RUN)
+        launcher.targetStageFile() == workDir.resolve(TaskRun.CMD_STAGE)
     }
 
 }
