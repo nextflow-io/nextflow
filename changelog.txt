@@ -1,5 +1,19 @@
 NEXTFLOW CHANGE-LOG
 ===================
+25.10.1 - 28 Nov 2025
+- Add default value to Apptainer pull timeout config parameter (#6534) [a124a5ca0]
+- Fix asset detection when item is not a sibling of the executed script (#6605) [2390d4a8d]
+- Fix error with dynamic directives with named arguments (#6550) [c58750bf4]
+- Fix false config validation warnings for process selectors (#6542) [7bfae6db9]
+- Fix Fusion license JWT token refresh by reusing TowerClient [561ed6c32]
+- Fix incorrect AWS region when specifying a S3 regional endpoint (#6530) [770bdd3eb]
+- Fix issue with optional workflow output (#6519) [5444a7879]
+- Fix unordered completed parts in AWS multipart upload (#6560) [89eb70130]
+- Revert Plugins.init() in run command to original location (#6568) [1533f7d9e]
+- Bump logback 1.5.20
+- Bump nf-amazon@3.4.2
+- Bump nf-tower@1.17.2
+
 25.10.0 - 22 Oct 2025
 - Add publish-artifacts step to release process [75d8ebf9b]
 - Add type checking utils (#6482) [3e9a2c091]
