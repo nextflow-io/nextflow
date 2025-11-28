@@ -263,7 +263,7 @@ The `clone` command downloads a pipeline from a Git-hosting platform into the *c
 : Service hub where the project is hosted. Options: `gitlab` or `bitbucket`.
 
 `-r` (`master`)
-: Revision to clone - It can be a git branch, tag, or revision number.
+: Revision to clone - It can be a git branch, tag, or commit SHA number.
 
 `-user`
 : Private repository user name.
@@ -313,6 +313,11 @@ The `config` command is used for printing the project's configuration i.e. the `
 
 `-properties`
 : Print config using Java properties notation.
+
+`-r, -revision`
+: :::{versionadded} 25.11.0-edge
+  :::
+: Revision of the project (either a git branch, tag or commit SHA number).
 
 `-a, -show-profiles`
 : Show all configuration profiles.
@@ -436,11 +441,21 @@ The `drop` command is used to remove the projects which have been downloaded int
 
 **Options**
 
+`-a, -all-revisions`
+: :::{versionadded} 25.11.0-edge
+:::
+: For specified project, drop all revisions.
+
 `-f`
 : Delete the repository without taking care of local changes.
 
 `-h, -help`
 : Print the command usage.
+
+`-r, -revision`
+: :::{versionadded} 25.11.0-edge
+:::
+: Revision of the project to drop (either a git branch, tag or commit SHA number).
 
 **Examples**
 
@@ -609,10 +624,10 @@ $ nextflow info nextflow-io/hello
   local path  : /Users/evanfloden/.nextflow/assets/nextflow-io/hello
   main script : main.nf
   revisions   :
-  * master (default)
+  P master (default)
     mybranch
     testing
-    v1.1 [t]
+  P v1.1 [t]
     v1.2 [t]
 ```
 
@@ -1155,7 +1170,7 @@ The `pull` command downloads a pipeline from a Git-hosting platform into the glo
 
 **Options**
 
-`-all`
+`-a, -all`
 : Update all downloaded projects.
 
 `-d, -deep`
@@ -1168,7 +1183,7 @@ The `pull` command downloads a pipeline from a Git-hosting platform into the glo
 : Service hub where the project is hosted. Options: `gitlab` or `bitbucket`
 
 `-r, -revision`
-: Revision of the project to run (either a git branch, tag or commit hash).
+: Revision of the project to run (either a git branch, tag or commit SHA number).
 : When passing a git tag or branch, the `workflow.revision` and `workflow.commitId` fields are populated. When passing only the commit hash, `workflow.revision` is not defined.
 
 `-user`
@@ -1319,7 +1334,7 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 : Execute the script using the cached results, useful to continue executions that was stopped by an error.
 
 `-r, -revision`
-: Revision of the project to run (either a git branch, tag or commit hash).
+: Revision of the project to run (either a git branch, tag or commit SHA number).
 : When passing a git tag or branch, the `workflow.revision` and `workflow.commitId` fields are populated. When passing only the commit hash, `workflow.revision` is not defined.
 
 `-stub-run, -stub`
@@ -1564,6 +1579,11 @@ The `view` command is used to inspect the pipelines that are already stored in t
 
 `-q`
 : Hide header line.
+
+`-r, -revision`
+: :::{versionadded} 25.11.0-edge
+  :::
+: Revision of the project (either a git branch, tag or commit SHA number).
 
 **Examples**
 
