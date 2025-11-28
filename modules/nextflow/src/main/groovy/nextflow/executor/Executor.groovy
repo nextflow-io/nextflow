@@ -203,7 +203,7 @@ abstract class Executor {
      * Cloud executors that support this feature (e.g. Google Batch with gcsfuse mounts) can
      * override this method to return {@code true}.
      *
-     * Can be controlled via the {@code NXF_WRAPPER_STAGE_FILE_ENABLED} environment variable.
+     * Can be controlled via the {@code NXF_WRAPPER_STAGE_FILE_THRESHOLD} environment variable.
      *
      * @return {@code true} when the executor supports writing large staging scripts to a separate file
      * @see <a href="https://github.com/nextflow-io/nextflow/issues/4279">GitHub issue #4279</a>
@@ -214,11 +214,10 @@ abstract class Executor {
 
     @Memoized
     static private boolean isStageFileEnabled0(Executor executor) {
-        final flag = SysEnv.get('NXF_WRAPPER_STAGE_FILE_ENABLED')
-        if( flag )
-            return Boolean.parseBoolean(flag)
-        else
-            return executor instanceof AbstractGridExecutor
+        final flag = SysEnv.get('NXF_WRAPPER_STAGE_FILE_THRESHOLD')
+        return flag==null
+            ? executor instanceof AbstractGridExecutor
+            : true
     }
 
     /**

@@ -5,6 +5,7 @@ import java.nio.file.Paths
 import nextflow.Session
 import nextflow.SysEnv
 import spock.lang.Specification
+import spock.lang.Unroll
 import test.TestHelper
 /**
  *
@@ -49,6 +50,7 @@ class ExecutorTest extends Specification {
 
     }
 
+    @Unroll
     def 'should check stage file enabled' () {
         given:
         SysEnv.push(ENV)
@@ -63,8 +65,8 @@ class ExecutorTest extends Specification {
         EXECUTOR             | ENV                                       | EXPECTED
         Executor             | [:]                                       | false      // base Executor defaults to false
         AbstractGridExecutor | [:]                                       | true       // grid executor defaults to true
-        Executor             | [NXF_WRAPPER_STAGE_FILE_ENABLED: 'true']  | true       // env var overrides
-        AbstractGridExecutor | [NXF_WRAPPER_STAGE_FILE_ENABLED: 'false'] | false      // env var overrides grid default
+        Executor             | [NXF_WRAPPER_STAGE_FILE_THRESHOLD: '100'] | true       // env var overrides
+        AbstractGridExecutor | [NXF_WRAPPER_STAGE_FILE_THRESHOLD: '200'] | true       // env var overrides grid default
     }
 
 }
