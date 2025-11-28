@@ -26,7 +26,7 @@ sourceSets {
 
 dependencies {
     api(project(':nf-lang'))
-    api "ch.qos.logback:logback-classic:1.5.18"
+    api "ch.qos.logback:logback-classic:1.5.20"
     api "org.apache.groovy:groovy:4.0.28"
     api "org.apache.groovy:groovy-nio:4.0.28"
     api "commons-lang:commons-lang:2.6"
