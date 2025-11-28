@@ -21,7 +21,6 @@ import nextflow.Global
 import nextflow.Session
 import nextflow.cloud.aws.batch.AwsOptions
 import nextflow.executor.BashFunLib
-import software.amazon.awssdk.services.s3.model.ObjectCannedACL
 
 /**
  * AWS S3 helper class
@@ -29,15 +28,10 @@ import software.amazon.awssdk.services.s3.model.ObjectCannedACL
 @CompileStatic
 class S3BashLib extends BashFunLib<S3BashLib> {
 
-    private String storageClass = 'STANDARD'
-    private String storageEncryption = ''
-    private String storageKmsKeyId = ''
     private String debug = ''
     private String cli = 'aws'
     private String retryMode
     private String s5cmdPath
-    private String acl = ''
-    private String requesterPays = ''
 
     S3BashLib withCliPath(String cliPath) {
         if( cliPath )
@@ -56,37 +50,8 @@ class S3BashLib extends BashFunLib<S3BashLib> {
         return this
     }
 
-    S3BashLib withStorageClass(String value) {
-        if( value )
-            this.storageClass = value
-        return this
-    }
-
-    S3BashLib withStorageEncryption(String value) {
-        if( value )
-            this.storageEncryption = value ? "--sse $value " : ''
-        return this
-    }
-
-    S3BashLib withStorageKmsKeyId(String value) {
-        if( value )
-            this.storageKmsKeyId = value ? "--sse-kms-key-id $value " : ''
-        return this
-    }
-
     S3BashLib withS5cmdPath(String value) {
         this.s5cmdPath = value
-        return this
-    }
-
-    S3BashLib withAcl(ObjectCannedACL value) {
-        if( value )
-            this.acl = "--acl $value "
-        return this
-    }
-
-    S3BashLib withRequesterPays(Boolean value) {
-        this.requesterPays = value ? "--request-payer requester " : ''
         return this
     }
 
@@ -111,12 +76,15 @@ class S3BashLib extends BashFunLib<S3BashLib> {
         nxf_s3_upload() {
             local name=\$1
             local s3path=\$2
+            shift 2
+            # Collect remaining args in an array to preserve quoting & handle empty safely
+            local opts=( "\$@" )
             if [[ "\$name" == - ]]; then
-              $cli s3 cp --only-show-errors ${debug}${acl}${storageEncryption}${storageKmsKeyId}${requesterPays}--storage-class $storageClass - "\$s3path"
+              $cli s3 cp --only-show-errors "\${opts[@]}" - "\$s3path"
             elif [[ -d "\$name" ]]; then
-              $cli s3 cp --only-show-errors --recursive ${debug}${acl}${storageEncryption}${storageKmsKeyId}${requesterPays}--storage-class $storageClass "\$name" "\$s3path/\$name"
+              $cli s3 cp --only-show-errors --recursive "\${opts[@]}" "\$name" "\$s3path/\$name"
             else
-              $cli s3 cp --only-show-errors ${debug}${acl}${storageEncryption}${storageKmsKeyId}${requesterPays}--storage-class $storageClass "\$name" "\$s3path/\$name"
+              $cli s3 cp --only-show-errors "\${opts[@]}" "\$name" "\$s3path/\$name"
             fi
         }
         
@@ -124,11 +92,14 @@ class S3BashLib extends BashFunLib<S3BashLib> {
             local source=\$1
             local target=\$2
             local file_name=\$(basename \$1)
-            local is_dir=\$($cli s3 ls \$source | grep -F "PRE \${file_name}/" -c)
+            shift 2
+            # Collect remaining args in an array to preserve quoting & handle empty safely
+            local opts=( "\$@" )
+            local is_dir=\$($cli s3 ls "\${opts[@]}" \$source | grep -F "PRE \${file_name}/" -c)
             if [[ \$is_dir == 1 ]]; then
-                $cli s3 cp --only-show-errors --recursive "\$source" "\$target"
+                $cli s3 cp --only-show-errors${debug} --recursive "\${opts[@]}" "\$source" "\$target"
             else 
-                $cli s3 cp --only-show-errors "\$source" "\$target"
+                $cli s3 cp --only-show-errors${debug} "\${opts[@]}" "\$source" "\$target"
             fi
         }
         """.stripIndent(true)
@@ -147,14 +118,17 @@ class S3BashLib extends BashFunLib<S3BashLib> {
         nxf_s3_upload() {
             local name=\$1
             local s3path=\$2
+            shift 2
+            # Collect remaining args in an array to preserve quoting & handle empty safely
+            local opts=( "\$@" )
             if [[ "\$name" == - ]]; then
               local tmp=\$(nxf_mktemp)
               cp /dev/stdin \$tmp/\$name
-              $cli cp ${acl}${storageEncryption}${storageKmsKeyId}${requesterPays}--storage-class $storageClass \$tmp/\$name "\$s3path"
+              $cli cp "\${opts[@]}" \$tmp/\$name "\$s3path"
             elif [[ -d "\$name" ]]; then
-              $cli cp ${acl}${storageEncryption}${storageKmsKeyId}${requesterPays}--storage-class $storageClass "\$name/" "\$s3path/\$name/"
+              $cli cp "\${opts[@]}" "\$name/" "\$s3path/\$name/"
             else
-              $cli cp ${acl}${storageEncryption}${storageKmsKeyId}${requesterPays}--storage-class $storageClass "\$name" "\$s3path/\$name"
+              $cli cp "\${opts[@]}" "\$name" "\$s3path/\$name"
             fi
         }
         
@@ -162,11 +136,14 @@ class S3BashLib extends BashFunLib<S3BashLib> {
             local source=\$1
             local target=\$2
             local file_name=\$(basename \$1)
-            local is_dir=\$($cli ls \$source | grep -F "DIR  \${file_name}/" -c)
+            shift 2
+            # Collect remaining args in an array to preserve quoting & handle empty safely
+            local opts=( "\$@" )
+            local is_dir=\$($cli ls \${opts[@]} \$source | grep -F "DIR  \${file_name}/" -c)
             if [[ \$is_dir == 1 ]]; then
-                $cli cp "\$source/*" "\$target"
+                $cli cp \${opts[@]} "\$source/*" "\$target"
             else 
-                $cli cp "\$source" "\$target"
+                $cli cp \${opts[@]} "\$source" "\$target"
             fi
         }
         """.stripIndent()
@@ -186,14 +163,9 @@ class S3BashLib extends BashFunLib<S3BashLib> {
                 .withDelayBetweenAttempts(opts.delayBetweenAttempts )
                 .withMaxTransferAttempts( opts.maxTransferAttempts )
                 .withCliPath( opts.awsCli )
-                .withStorageClass(opts.storageClass )
-                .withStorageEncryption( opts.storageEncryption )
-                .withStorageKmsKeyId( opts.storageKmsKeyId )
                 .withRetryMode( opts.retryMode )
                 .withDebug( opts.debug )
                 .withS5cmdPath( opts.s5cmdPath )
-                .withAcl( opts.s3Acl )
-                .withRequesterPays( opts.requesterPays )
     }
 
     static String script(AwsOptions opts) {
