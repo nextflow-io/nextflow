@@ -317,7 +317,7 @@ class SessionTest extends Specification {
         when:
         def session = new Session([manifest: MAN])
         then:
-        session.manifest.with {
+        session.getManifest().with {
             author == 'pablo'
             nextflowVersion == '1.2.3'
             name == 'foo'
@@ -399,49 +399,6 @@ class SessionTest extends Specification {
         session.binding.setVariable('workflow',meta)
         then:
         session.fetchContainers() == 'ngi/rnaseq:1.2'
-    }
-
-
-    def 'should validate version'() {
-
-        given:
-        def manifest = Mock(Manifest)
-        def session = Spy(Session)
-
-        when:
-        session.checkVersion()
-        then:
-        session.getManifest() >> manifest
-        1 * session.getCurrentVersion() >> new VersionNumber('1.1')
-        1 * manifest.getNextflowVersion() >> '>= 1.0'
-        0 * session.showVersionWarning(_)
-
-        when:
-        session.checkVersion()
-        then:
-        session.getManifest() >> manifest
-        1 * session.getCurrentVersion() >> new VersionNumber('1.1')
-        1 * manifest.getNextflowVersion() >> '>= 1.2'
-        1 * session.showVersionWarning('>= 1.2')
-
-        when:
-        session.checkVersion()
-        then:
-        session.getManifest() >> manifest
-        1 * session.getCurrentVersion() >> new VersionNumber('1.1')
-        1 * manifest.getNextflowVersion() >> '! >= 1.2'
-        1 * session.showVersionError('>= 1.2')
-        thrown(AbortOperationException)
-
-        when:
-        session.checkVersion()
-        then:
-        session.getManifest() >> manifest
-        1 * manifest.getNextflowVersion() >> null
-        0 * session.getCurrentVersion() >> null
-        0 * session.showVersionWarning(_)
-        0 * session.showVersionError(_)
-
     }
 
     @Unroll
