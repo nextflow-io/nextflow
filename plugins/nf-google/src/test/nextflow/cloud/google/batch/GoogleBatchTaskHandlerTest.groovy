@@ -158,6 +158,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
                 getServiceAccountEmail() >> 'foo@bar.baz'
                 getSubnetwork() >> 'subnet-1'
                 usePrivateAddress >> true
+                installOpsAgent >> true
                 logsPath() >> LOGS_PATH
             }
         }
@@ -224,6 +225,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         allocationPolicy.getLocation().getAllowedLocations(0) == 'zones/us-central1-a'
         allocationPolicy.getLocation().getAllowedLocations(1) == 'zones/us-central1-c'
         allocationPolicy.getInstances(0).getInstallGpuDrivers() == true
+        allocationPolicy.getInstances(0).getInstallOpsAgent() == true
         allocationPolicy.getLabelsMap() == [foo: 'bar']
         allocationPolicy.getServiceAccount().getEmail() == 'foo@bar.baz'
         allocationPolicy.getTagsList() == ['tag1', 'tag2']
