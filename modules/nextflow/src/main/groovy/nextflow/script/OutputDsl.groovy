@@ -16,11 +16,15 @@
 
 package nextflow.script
 
+import groovy.json.JsonBuilder
+import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Session
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
+import nextflow.extension.DumpHelper
 import nextflow.extension.PublishOp
 /**
  * Implements the DSL for publishing workflow outputs
@@ -33,7 +37,7 @@ class OutputDsl {
 
     private Map<String,Map> declarations = [:]
 
-    private volatile List<PublishOp> ops = []
+    private Map<String,DataflowVariable> output = [:]
 
     void declare(String name, Closure closure) {
         if( declarations.containsKey(name) )
@@ -70,7 +74,12 @@ class OutputDsl {
             final opts = publishOptions(name, defaults, overrides)
 
             if( opts.enabled == null || opts.enabled )
-                ops << new PublishOp(session, name, CH.getReadChannel(source), opts).apply()
+                output[name] = new PublishOp(session, name, CH.getReadChannel(source), opts).apply()
+        }
+
+        // write output to stdout as JSON
+        session.addIgniter {
+            println DumpHelper.prettyPrintJson(getOutput())
         }
     }
 
@@ -92,11 +101,8 @@ class OutputDsl {
         return opts
     }
 
-    boolean getComplete() {
-        for( final op : ops )
-            if( !op.complete )
-                return false
-        return true
+    Map<String,Object> getOutput() {
+        output.collectEntries { name, dv -> [name, dv.get()] }
     }
 
     static class DeclareDsl {
