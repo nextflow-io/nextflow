@@ -54,7 +54,10 @@ class GiteaRepositoryProviderTest extends Specification {
         new GiteaRepositoryProvider('pditommaso/hello', obj)
                 .setRevision('12345')
                 .getContentUrl('main.nf') == 'https://gitea.com/api/v1/repos/pditommaso/hello/raw/main.nf?ref=12345'
-
+        and:
+        new GiteaRepositoryProvider('pditommaso/hello', obj)
+                .setRevision('test/branch+with&strangecharacters')
+                .getContentUrl('main.nf') == 'https://gitea.com/api/v1/repos/pditommaso/hello/raw/main.nf?ref=test%2Fbranch%2Bwith%26strangecharacters'
     }
 
     @Unroll
