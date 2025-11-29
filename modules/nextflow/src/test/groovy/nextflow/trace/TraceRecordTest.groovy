@@ -172,6 +172,7 @@ class TraceRecordTest extends Specification {
             rss=146536
             peak_vmem=323252
             peak_rss=197136
+            num_reclamations=3
             '''.stripIndent().leftTrim()
 
         when:
@@ -192,12 +193,14 @@ class TraceRecordTest extends Specification {
         trace.rss == 146536 * KB
         trace.peak_vmem == 323252 * KB
         trace.peak_rss == 197136 * KB
+        trace.num_reclamations == 3
 
         trace.getFmtStr('%mem') == '0.9%'
         trace.getFmtStr('vmem') == '315.5 MB'
         trace.getFmtStr('rss') == '143.1 MB'
         trace.getFmtStr('peak_vmem') == '315.7 MB'
         trace.getFmtStr('peak_rss') == '192.5 MB'
+        trace.getFmtStr('num_reclamations') == '3'
     }
 
     def 'should parse a legacy trace file and return a TraceRecord object'() {
