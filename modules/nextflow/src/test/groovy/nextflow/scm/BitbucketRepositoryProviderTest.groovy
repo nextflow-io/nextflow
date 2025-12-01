@@ -126,7 +126,7 @@ class BitbucketRepositoryProviderTest extends Specification {
         and:
         new BitbucketRepositoryProvider('pditommaso/tutorial', config)
             .setRevision('test/branch+with&special-chars')
-            .getContentUrl('main.nf') == 'https://api.bitbucket.org/2.0/repositories/pditommaso/tutorial/src/8f849beceb2ea479ef836809ca33d3daeeed25f9/main.nf'
+            .getContentUrl('main.nf') == 'https://api.bitbucket.org/2.0/repositories/pditommaso/tutorial/src/755ba829cbc4f28dcb3c16b9dcc1c49c7ee47ff5/main.nf'
     }
 
     @Requires( { System.getenv('NXF_BITBUCKET_ACCESS_TOKEN') } )

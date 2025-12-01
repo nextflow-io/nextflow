@@ -135,6 +135,8 @@ class AzureRepositoryProviderTest extends Specification {
         def result = repo.readText('main.nf')
         then:
         result == 'println "Hello from Azure repos!"'
+
+
     }
 
     @IgnoreIf({System.getenv('NXF_SMOKE')})
@@ -230,13 +232,12 @@ class AzureRepositoryProviderTest extends Specification {
         result=='hello\n'
 
         when:
-        // uses repo at
-        //  https://pditommaso.visualstudio.com/nf-azure-repo/_git/nf-azure-repo
+        // check revision with special branches
         repo = new AzureRepositoryProvider('pditommaso/nf-azure-repo', config)
         repo.revision = 'test/branch+with&special-chars'
-        result = repo.readText('file-on-dev.txt')
+        result = repo.readText('main.nf')
         then:
-        result=='hello\n'
+        result == 'println "Hello from Azure repos!"'
 
     }
 
