@@ -52,6 +52,14 @@ class GithubRepositoryProviderTest extends Specification {
         def result = repo.readText('main.nf')
         then:
         result.trim().startsWith('#!/usr/bin/env nextflow')
+
+        //Read from branch
+        when:
+        repo.setRevision('test/branch+with&strangecharacters')
+        result = repo.readText('/test/branch_name')
+        then:
+        result.trim().startsWith('test/branch+with&strangecharacters')
+
     }
 
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})

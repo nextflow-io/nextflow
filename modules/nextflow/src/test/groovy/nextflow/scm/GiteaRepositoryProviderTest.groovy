@@ -95,6 +95,13 @@ class GiteaRepositoryProviderTest extends Specification {
 //        result = repo.readText('README.md')
 //        then:
 //        result.contains("foo branch")
+
+        when:
+        repo = new GiteaRepositoryProvider('pditommaso/test-hello', config)
+        repo.setRevision('test/branch+with&special-chars')
+        result = repo.readText('README.md')
+        then:
+        result.contains('Basic Nextflow script')
     }
 
     @IgnoreIf({System.getenv('NXF_SMOKE')})
