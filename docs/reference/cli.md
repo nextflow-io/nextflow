@@ -1174,6 +1174,8 @@ The `pull` command downloads a pipeline from a Git-hosting platform into the glo
 : Update all downloaded projects.
 
 `-d, -deep`
+: :::{deprecated} 25.11.X-edge
+  :::
 : Create a shallow clone of the specified depth.
 
 `-h, -help`
@@ -1251,6 +1253,8 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 : Enable/disable processes caching.
 
 `-d, -deep`
+: :::{deprecated} 25.11.X-edge
+  :::
 : Create a shallow clone of the specified depth.
 
 `-disable-jobs-cancellation`

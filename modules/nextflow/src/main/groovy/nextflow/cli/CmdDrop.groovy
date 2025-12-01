@@ -16,8 +16,6 @@
 
 package nextflow.cli
 
-import static nextflow.scm.AssetManager.DEFAULT_REVISION_DIRNAME
-
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
@@ -44,7 +42,7 @@ class CmdDrop extends CmdBase {
     @Parameter(names=['-r','-revision'], description = 'Revision of the project to drop (either a git branch, tag or commit SHA number)')
     String revision
 
-    @Parameter(names=['-a','-all-revisions'], description = 'For specified project, drop all revisions')
+    @Parameter(names=['-a','-all'], description = 'For specified project, drop all pulled commits')
     Boolean allRevisions
 
     @Parameter(names='-f', description = 'Delete the repository without taking care of local changes')
@@ -60,9 +58,10 @@ class CmdDrop extends CmdBase {
         List<AssetManager> dropList = []
         if ( allRevisions ) {
             def revManager = new AssetManager(args[0])
-            revManager.listRevisions().each { rev ->
-                if( rev == DEFAULT_REVISION_DIRNAME )
-                    rev = null
+            if( !revManager.localRootPath.exists() ) {
+                throw new AbortOperationException("No match found for: ${revManager.getProjectWithRevision()}")
+            }
+            revManager.listCommits().each { rev ->
                 dropList << new AssetManager(args[0]).setRevisionAndLocalPath(args[0], rev)
             }
         } else {
@@ -70,7 +69,10 @@ class CmdDrop extends CmdBase {
         }
 
         if ( !dropList ) {
-            throw new AbortOperationException("No revisions found for specified project: ${args[0]}")
+            if ( allRevisions && force ) // When removing all revision with 'force' not throw the exception to remove the project folder
+                log.warn("No revisions found for specified project: ${args[0]}")
+            else
+                throw new AbortOperationException("No revisions found for specified project: ${args[0]}")
         }
 
         dropList.each { manager ->
@@ -82,7 +84,6 @@ class CmdDrop extends CmdBase {
                 manager.close()
                 if( !manager.localPath.deleteDir() )
                     throw new AbortOperationException("Unable to delete project `${manager.getProjectWithRevision()}` -- Check access permissions for path: ${manager.localPath}")
-                manager.pruneRevisionMap(manager.revision)
                 return
             }
 
@@ -91,6 +92,7 @@ class CmdDrop extends CmdBase {
 
         if ( allRevisions ) {
             def revManager = new AssetManager(args[0])
+            log.info("Removing directory ${revManager.localRootPath.absolutePath}")
             revManager.localRootPath.deleteDir()
         }
     }

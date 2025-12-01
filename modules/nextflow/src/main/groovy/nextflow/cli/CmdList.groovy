@@ -16,8 +16,6 @@
 
 package nextflow.cli
 
-import static nextflow.scm.AssetManager.DEFAULT_REVISION_DIRNAME
-
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
@@ -60,39 +58,35 @@ class CmdList extends CmdBase {
             return
         }
 
-    if( moreDetailed )
-        detailed = true
-    if( detailed && allRevisions ) {
-        all.each{
-            println(" $it")
-            def revManager = new AssetManager(it)
-            revManager.listRevisionsAndCommits().each{ k,v ->
-                if( k == DEFAULT_REVISION_DIRNAME )
-                    k = '(default)'
-                if( !moreDetailed )
-                    v = v.substring(0,10)
-                println("   $v $k") }
-        }
-    }
-    else if( allRevisions ) {
-        all.each{
-            println(" $it")
-            def revManager = new AssetManager(it)
-            revManager.listRevisions().each{
-                if( it == DEFAULT_REVISION_DIRNAME )
-                    it = '(default)'
-                println("   $it")
+        if( moreDetailed )
+            detailed = true
+        if( detailed && allRevisions ) {
+            all.each {
+                println(" $it")
+                def revManager = new AssetManager(it)
+                revManager.listRevisionsAndCommits().each { k, v ->
+                    if( !moreDetailed )
+                        v = v.substring(0, 10)
+                    println("   $v $k")
+                }
             }
+        } else if( allRevisions ) {
+            all.each {
+                println(" $it")
+                def revManager = new AssetManager(it)
+                revManager.listRevisions().each {
+                    println("   $it")
+                }
+            }
+        } else if( allCommits ) {
+            all.each {
+                println(" $it")
+                def revManager = new AssetManager(it)
+                revManager.listCommits().each { println("   $it") }
+            }
+        } else {
+            all.each { println(" $it") }
         }
-    } else if( allCommits ) {
-        all.each{
-            println(" $it")
-            def revManager = new AssetManager(it)
-            revManager.listCommits().each{ println("   $it") }
-        }
-    } else {
-        all.each{ println(" $it") }
-    }
     }
 
 }

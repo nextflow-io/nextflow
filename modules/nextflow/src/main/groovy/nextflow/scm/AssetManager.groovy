@@ -16,6 +16,7 @@
 
 package nextflow.scm
 
+import nextflow.file.FileMutex
 import org.eclipse.jgit.internal.storage.file.FileRepository
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder
 import org.eclipse.jgit.transport.RefSpec
@@ -70,11 +71,7 @@ class AssetManager {
 
     static final String BARE_REPO = '.nextflow/bare_repo'
 
-    static final String REVISION_MAP = '.nextflow/revision_map_file'
-
     static public final String REVISION_SUBDIR = '.nextflow/commits'
-
-    static public final String DEFAULT_REVISION_DIRNAME = 'DEFAULT_REVISION'
 
     /**
      * The pipeline name. It must be in the form {@code username/repo} where 'username'
@@ -166,18 +163,6 @@ class AssetManager {
     @PackageScope
     File getBareRepo() {
         new File(root, project + '/' + BARE_REPO)
-    }
-
-    /**
-     * Path of the "revision -> commit" map file for the project
-     *
-     * CSV format: <revision>,<commit>
-     *
-     * Schema: $NXF_ASSETS/<org>/<repo>/.nextflow/revisionMapFile
-     */
-    @PackageScope
-    File getRevisionMap() {
-        new File(root, project + '/' + REVISION_MAP)
     }
 
     @PackageScope
@@ -288,11 +273,9 @@ class AssetManager {
                 .setGitDir(bareRepo)
                 .call()
         }  else  {
-            log.debug "Fetching (updating) bare repo for $project"
-
-            Git.open(bareRepo)
-               .fetch()
-               .call()
+            final updateRevision = revision ?: getDefaultBranch()
+            log.debug "Fetching (updating) bare repo for $project [revision: $updateRevision]"
+            bareGit.fetch().setRefSpecs(refSpecForName(updateRevision)).call()
         }
     }
 
@@ -311,82 +294,12 @@ class AssetManager {
         return commitId
     }
 
-    @PackageScope
-    String revisionToCommitWithMap(String revision) {
-        String commitId
-
-        if( revisionMap.exists() ) {
-            String revisionTmp = revision ?: DEFAULT_REVISION_DIRNAME
-            commitId = revisionMap.readLines().find{ it.split(',')[0] == revisionTmp }
-            commitId = commitId ? commitId.split(',')[1] : commitId
-        }
-
-        return commitId
-    }
-
-    void pruneRevisionMap(String revision) {
-        if( revisionMap.exists() ) {
-            String commitId = revisionToCommitWithMap(revision)
-            List oldRevisionMap = revisionMap.readLines()
-            revisionMap.text = ''
-            oldRevisionMap.each{
-                if( it.split(',')[1] != commitId )
-                    revisionMap << it + '\n'
-            }
-        }
-    }
-    /**
-     * Update the revisions map.
-     * If revision is a commit (revision == commitId) only <commitId,commitId> entry is added.
-     * If revision is a branch or tag, the <revision,commitId> and <commitId,commitId> entries are added.
-     * Moreover if revision already contain an old commitId, the <oldCommitId,oldCommitID> entry is added.
-     * It is done to maintain the consistency with 'commits' folder.
-     *
-     * @param revision
-     * @param commitId
-     */
-    @PackageScope
-    void updateRevisionMap(String revision, String commitId) {
-        String revisionTmp = revision ?: DEFAULT_REVISION_DIRNAME
-        def revisions = getRevisionsMapAsMap()
-        //If revision is a commit, just add the commit
-        if (revisionTmp == commitId)
-            revisions[commitId] = commitId
-        //If revision is a tag or branch ensure old and commit are also added as entry in the revision map
-        def oldCommit = revisions[revisionTmp]
-            revisions[commitId] = commitId
-            revisions[revisionTmp] = commitId
-            if (oldCommit)
-                revisions[oldCommit] = oldCommit
-            writeRevisionMap(revisions)
-    }
-
-    private Map<String,String> getRevisionsMapAsMap(){
-        def result = new LinkedHashMap<String,String>()
-        if( !revisionMap.exists() )
-            return result
-
-        revisionMap.eachLine{ it -> result[ it.split(',')[0] ] = it.split(',')[1] }
-
-        return result
-    }
-
-
-    private void writeRevisionMap(Map<String,String> map) {
-        if( !revisionMap.exists() ) {
-            revisionMap.parentFile.mkdirs()
-        }
-        revisionMap.text = ''
-        map.forEach {key, value -> revisionMap << key + ',' + value + '\n'}
-    }
-
 
     AssetManager setRevisionAndLocalPath(String pipelineName, String revision) {
         if(! revision )
             revision = getDefaultBranchFromBareRepo()
             this.revision = revision
-        updateProjectDir(resolveName(pipelineName), revisionToCommitWithMap(revision))
-
+        updateProjectDir(resolveName(pipelineName), revisionToCommitWithBareRepo(revision))
         return this
     }
 
@@ -394,7 +307,6 @@ class AssetManager {
     void updateRevisionMapAndLocalPath(String revision) {
 
         String commitId = revisionToCommitWithBareRepo(revision)
-        updateRevisionMap(revision, commitId)
         updateProjectDir(this.project, commitId)
     }
 
@@ -775,28 +687,9 @@ class AssetManager {
      */
     List<String> listRevisions( String projectName = this.project ) {
         log.debug "Listing revisions for project: $projectName"
-        final revisions = new LinkedList<String> ()
         if( !root.exists() )
-            return revisions
-
-        if( !revisionMap.exists() )
-            return revisions
-
-        // Add revisions in map not referring to commits
-        revisionMap.eachLine{ it ->
-            final lineItems =  it.split(',')
-            if (lineItems[0] != lineItems[1]) revisions.add(lineItems[0])
-        }
-        return revisions
-    }
-
-    /**
-     * uses getDefaultBranch()
-     * only for usage within service methods getRevisions() and getBranchesAndTags()
-     */
-    @PackageScope
-    List<String> listRevisionsToCompareInfo() {
-        listRevisions().collect{ it = ( it != DEFAULT_REVISION_DIRNAME ? it : getDefaultBranch() ) }
+            return []
+        return getBranchesAndTags(false, true).pulled as List<String>
     }
 
     /**
@@ -806,7 +699,10 @@ class AssetManager {
         log.debug "Listing revisions for project: $projectName"
         if( !root.exists() )
             return [:]
-        return getRevisionsMapAsMap()
+        final revisions = new HashMap<String,String>()
+        getBranchesAndTags(false, false).pulled.each { Map it -> revisions[it.name as String] = it.commitId as String }
+        return revisions
+
     }
 
     /**
@@ -980,9 +876,10 @@ class AssetManager {
      * Creates a clone in commits folder where objects are shared with the bare repository.
      *
      * @param testDisableUpdateLocalPath
+     * @param createTimeout
      * @return
      */
-    String createSharedClone(boolean testDisableUpdateLocalPath = false){
+    String createSharedClone(boolean testDisableUpdateLocalPath = false, createTimeout = '60s'){
         assert project
 
         // make sure it contains a valid repository
@@ -996,17 +893,42 @@ class AssetManager {
         if( !testDisableUpdateLocalPath )
             updateRevisionMapAndLocalPath(downloadRevision)
 
+        if( localPath.exists() )
+            return
         /*
-         * if the pipeline does not exists locally pull it from the remote repo
+         * if revision does not exists locally pull it from the remote repo
          */
-        if( !localPath.exists() ) {
+        if( !localPath.parentFile.exists() )
             localPath.parentFile.mkdirs()
 
+        // Use a file mutex to prevent concurrent clones of the same commit.
+        final file = new File(localPath.parentFile, ".${localPath.name}.lock")
+        final wait = "Another Nextflow instance is creating clone for $downloadRevision -- please wait till it completes"
+        final err = "Unable to acquire exclusive lock after $createTimeout on file: $file"
+
+        final mutex = new FileMutex(target: file, timeout: createTimeout, waitMessage: wait, errorMessage: err)
+        try {
+            mutex.lock { createSharedClone0(downloadRevision) }
+        }
+        finally {
+            file.delete()
+        }
+        return "downloaded from ${getGitRepositoryUrl()}"
+    }
+
+    private String createSharedClone0(String downloadRevision) {
+        // This check is required in case of two nextflow instances were doing the same shared clone at the same time.
+        // If localPath exists the previous nextflow instance created the shared clone succesfully.
+        if( localPath.exists() )
+            return
+
+        localPath.parentFile.mkdirs()
+        try {
             final cloneURL = bareRepo.toString()
             log.debug "Pulling $project -- Using remote clone url: ${cloneURL}"
 
             // clone it, but don't specify a revision - jgit will checkout the default branch
-            File bareObjectsDir = new File(bareRepo,"objects")
+            File bareObjectsDir = new File(bareRepo, "objects")
             FileRepository repo = new FileRepositoryBuilder().setGitDir(new File(localPath, ".git")).addAlternateObjectDirectory(bareObjectsDir).build() as FileRepository
             repo.create()
 
@@ -1018,15 +940,18 @@ class AssetManager {
             repo.getConfig().save();
 
 
-            log.info(git.fetch().setRefSpecs(refSpecForName(downloadRevision)).call().messages)
+            git.fetch().setRefSpecs(refSpecForName(downloadRevision)).call()
 
             git.checkout().setName(downloadRevision).call()
 
-
-
-            // return status message
-            return "downloaded from ${getGitRepositoryUrl()}"
+        } catch (Throwable t){
+            // If there is an error creating the sared clone, remove the local path to avoid incorrect clones.
+            localPath.deleteDir()
+            throw t
         }
+
+        // return status message
+        return "downloaded from ${getGitRepositoryUrl()}"
     }
 
     private RefSpec refSpecForName(String revision) {
@@ -1138,7 +1063,7 @@ class AssetManager {
 
         def current = getCurrentRevision()
         def master = getDefaultBranch()
-        def pulled = listRevisionsToCompareInfo()
+        def pulled = listCommits()
         def headRef = getDefaultBranchRef()
         List<String> branches = getBranchList()
             .findAll { (it.name.startsWith('refs/heads/') && it.name != headRef?.name ) || isRemoteBranch(it) }
@@ -1168,26 +1093,38 @@ class AssetManager {
         return result
     }
 
-    Map getBranchesAndTags(boolean checkForUpdates) {
+    Map getBranchesAndTags(boolean checkForUpdates, boolean pulledAsNames = true ) {
         final result = [:]
+        if( !hasBareRepo() ){
+            return result
+        }
         final master = getDefaultBranch()
-
+        final commits = listCommits()
         final branches = []
         final tags = []
+        final pulled = new LinkedList<Map>()
 
         Map<String, Ref> remote = checkForUpdates ? bareGit.lsRemote().callAsMap() : null
         getBranchList()
                 .findAll { it.name.startsWith('refs/heads/') || isRemoteBranch(it) }
                 .unique { shortenRefName(it.name) }
-                .each { Ref it -> branches << refToMap(it,remote)  }
+                .each {
+                    final map = refToMap(it,remote)
+                    if (map.commitId as String in commits) pulled << map
+                    branches << map
+                }
 
         remote = checkForUpdates ? bareGit.lsRemote().setTags(true).callAsMap() : null
         getTagList()
                 .findAll  { it.name.startsWith('refs/tags/') }
-                .each { Ref it -> tags << refToMap(it,remote) }
+                .each {
+                    final map = refToMap(it,remote)
+                    if (map.commitId as String in commits) pulled << map
+                    tags << map
+                }
 
         result.master = master      // master branch name
-        result.pulled = listRevisionsToCompareInfo() // list of pulled revisions
+        result.pulled = pulledAsNames ? pulled.collect { it.name } : pulled      // collection of pulled revisions
         result.branches = branches  // collection of branches
         result.tags = tags          // collect of tags
         return result
@@ -1224,11 +1161,11 @@ class AssetManager {
 
         def result = new StringBuilder()
         def name = shortenRefName(ref.name)
-        result << (name in pulled ? 'P' : ' ')
+        def peel = bareGit.getRepository().getRefDatabase().peel(ref)
+        def obj = peel.getPeeledObjectId() ?: peel.getObjectId()
+        result << (obj.name in pulled ? 'P' : ' ')
 
         if( level ) {
-            def peel = bareGit.getRepository().getRefDatabase().peel(ref)
-            def obj = peel.getPeeledObjectId() ?: peel.getObjectId()
             result << ' '
             result << formatObjectId(obj, level == 1)
         }
@@ -1269,7 +1206,9 @@ class AssetManager {
 
     @Deprecated
     List<String> getUpdates(int level) {
-
+        if( !hasBareRepo() ){
+            return []
+        }
         def remote = bareGit.lsRemote().callAsMap()
         List<String> branches = getBranchList()
                 .findAll { it.name.startsWith('refs/heads/') || isRemoteBranch(it) }

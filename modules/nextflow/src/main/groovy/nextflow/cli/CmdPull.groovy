@@ -16,8 +16,6 @@
 
 package nextflow.cli
 
-import static nextflow.scm.AssetManager.DEFAULT_REVISION_DIRNAME
-
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
@@ -46,9 +44,6 @@ class CmdPull extends CmdBase implements HubOptions {
 
     @Parameter(names=['-r','-revision'], description = 'Revision of the project to pull (either a git branch, tag or commit SHA number)')
     String revision
-
-    @Parameter(names=['-d','-deep'], description = 'Create a shallow clone of the specified depth')
-    Integer deep
 
     @Override
     final String getName() { NAME }
@@ -81,8 +76,6 @@ class CmdPull extends CmdBase implements HubOptions {
             all.each{ proj ->
                 def revManager = new AssetManager(proj)
                 revManager.listRevisions().each{ rev ->
-                    if( rev == DEFAULT_REVISION_DIRNAME )
-                        rev = null
                     list << new AssetManager(proj, this).setRevisionAndLocalPath(proj, rev)
                 }
             }
