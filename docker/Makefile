@@ -37,9 +37,9 @@ release: build
 
 dist/docker/amd64:
 	mkdir -p dist/linux/amd64
-	curl -fsSL https://download.docker.com/linux/static/stable/x86_64/docker-17.09.0-ce.tgz | tar --strip-components=1 -xvz -C dist/linux/amd64
+	curl -fsSL https://download.docker.com/linux/static/stable/x86_64/docker-19.03.15.tgz | tar --strip-components=1 -xvz -C dist/linux/amd64
 
 dist/docker/arm64:
 	mkdir -p dist/linux/arm64
-	curl -fsSL https://download.docker.com/linux/static/stable/aarch64/docker-17.09.0-ce.tgz | tar --strip-components=1 -xvz -C dist/linux/arm64
+	curl -fsSL https://download.docker.com/linux/static/stable/aarch64/docker-19.03.15.tgz | tar --strip-components=1 -xvz -C dist/linux/arm64
 
