@@ -90,6 +90,22 @@ class CsvSplitterTest extends Specification {
         items[0] == ['gamma', '', 'zeta']
         items[1] == ['eta', 'theta', 'iota']
         items[2] == ['mu', 'nu', 'xi']
+
+        when:
+        def LINES = '''
+                alpha,beta,delta
+
+                gamma,,zeta
+                eta,theta,iota
+                pi,rho,sigma
+                '''
+                .stripIndent().trim()
+        items = new CsvSplitter().target(LINES).options(skip:3).list()
+        then:
+        items.size() == 2
+        items[0] instanceof List
+        items[0] == ['eta', 'theta', 'iota']
+        items[1] == ['pi', 'rho', 'sigma']
     }
 
     def testSplitWithCount() {
