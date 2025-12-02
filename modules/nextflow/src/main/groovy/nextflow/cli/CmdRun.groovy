@@ -101,6 +101,9 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-resume'], description = 'Execute the script using the cached results, useful to continue executions that was stopped by an error')
     String resume
 
+    @Parameter(names=['-dry'], description = 'Print the tasks that will be executed, then exit without executing any tasks')
+    boolean dryRun
+
     @Parameter(names=['-ps','-pool-size'], description = 'Number of threads in the execution pool', hidden = true)
     Integer poolSize
 
