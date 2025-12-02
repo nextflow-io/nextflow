@@ -73,10 +73,11 @@ class HashBuilderTest extends Specification {
     def 'should validate is asset file'() {
         when:
         def BASE = Paths.get("/some/pipeline/dir")
+        def ROOT = new File("/some/pipeline/")
         and:
         Global.session = Mock(Session) { getBaseDir() >> BASE }
         then:
-        !HashBuilder.isAssetFile(BASE.resolve('foo'))
+        !HashBuilder.isAssetFile(BASE.resolve('foo'), ROOT)
 
 
         when:
@@ -85,9 +86,30 @@ class HashBuilderTest extends Specification {
             getCommitId() >> '123456'
         }
         then:
-        HashBuilder.isAssetFile(BASE.resolve('foo'))
+        HashBuilder.isAssetFile(BASE.resolve('foo'), ROOT)
         and:
-        !HashBuilder.isAssetFile(Paths.get('/other/dir'))
+        !HashBuilder.isAssetFile(Paths.get('/other/dir'), ROOT)
+    }
+
+    def 'should validate is asset file when not part of base directory'() {
+        given:
+        Global.session = Mock(Session) {
+            getBaseDir() >> Paths.get(BASE)
+            getCommitId() >> COMMIT_ID
+        }
+
+        expect:
+        HashBuilder.isAssetFile(Paths.get(PATH), new File(ROOT)) == EXPECTED
+
+        where:
+        BASE                  | ROOT              | COMMIT_ID | PATH                       | EXPECTED
+        "/some/pipeline/dir"  | "/some/pipeline/" | null      | "/some/pipeline/dir/foo"   | false
+        "/some/pipeline/dir"  | "/some/pipeline/" | '123456'  | '/other/dir'               | false
+        "/some/pipeline/dir"  | "/some/pipeline/" | '123456'  | '/some/pipeline/foo'       | true
+        and:
+        "/this/pipeline"      | "/that/pipeline/" | '123456'  | '/other/pipeline/foo'      | false
+        "/this/pipeline"      | "/that/pipeline/" | '123456'  | '/this/pipeline/foo'       | true
+        "/this/pipeline"      | "/that/pipeline/" | '123456'  | '/that/pipeline/foo'       | true
     }
 
     def 'should hash file content'() {

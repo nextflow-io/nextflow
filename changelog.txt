@@ -1,5 +1,76 @@
 NEXTFLOW CHANGE-LOG
 ===================
+25.11.0-edge - 28 Nov 2025
+- Add Google Batch LogsPolicy PATH option for logging to GCS (#6431) [5b61afe0]
+- Add default value to Apptainer pull timeout config paramter (#6534) [f4548bd1]
+- Add test case for printing config with nested includes (#2498) [0876d557]
+- Allow pre-existing write-protected plugins directory to be used (#6594) [33943b5b]
+- Change log level from warn1 to debug1 for K8s Job Pod Warnings (#6523) [74d1b786]
+- Fix Do not delete K8s jobs when ttlSecondsAfterFinished is set (#6597) [51042dbe]
+- Fix Fusion license JWT token refresh by reusing TowerClient [498125d2]
+- Fix Invalid type error detection [9e3aeed1]
+- Fix K8sTaskHandlerTest method name typos [bcf81d90]
+- Fix asset detection when item is not a sibling of the executed script (#6605) [1ca327c8]
+- Fix csv splitter when skipping empty lines (#6586) [253666de]
+- Fix documentation of `unique` operator (#6541) [6b8aedf5]
+- Fix error with dynamic directives with named arguments (#6550) [064f57f6]
+- Fix false config validation warnings for process selectors (#6542) [4db05a00]
+- Fix false error with task ext blocks in strict syntax (#6569) [fe8065ae]
+- Fix incorrect AWS region when specifying a S3 regional endpoint (#6530) [0989d31c]
+- Fix invalid cache write when cacheable split operation fails (#6588) [9930e35d]
+- Fix issue with optional workflow output (#6519) [75e47147]
+- Fix issues with rsync stage-out mode (#6587) [bcac9010]
+- Fix security vulnerabilities in org.json dependency [c7161c2a]
+- Fix unordered completed parts in AWS multipart upload (#6560) [10209528]
+- Fix TowerJsonGenerator thread-safety issue (#6619) [579cd6e4]
+- Fix Plugins.init() in run command to original location (#6568) [ba6be77b]
+- Fix security vulnerabilities for wiremock (#6607) [0f86933a]
+- Fix replace complete plotly bundle with smaller more specific one (#6527) [fdab3426]
+- Fix stageFileEnabled flag to control `.command.stage` file creation (#6618) [2d117cb5]
+- Improve error message for invalid accelerator resource (#6585) [7c40ee5b]
+- Improve error message for invalid contribution type in manifest contributors (#6593) [d440040e]
+- Issue templates: add external links via config (#6563) [3f608789]
+- Move task error formatting logic into separate class (#6551) [7b664ced]
+- Optimize exit code handling by relying on scheduler status for successful executions (#6484) [454a2ae8]
+- Remove unnecessary runtime checks with strict syntax (#6539) [9e296b85]
+- Remove unused BatchHelper class (#6547) [1c543c05]
+- Remove wiremock-groovy dependency and update tests using this dependecy (#6611) [6f4cf1ac]
+- Update bundled Docker runtime to 19.03.15 (#6565) [6c081376]
+- Update migration timeline for plugin registry (#6543) [ecfb62df]
+- Update trace table columns in Reports page (#6483) [064ef346]
+- Upgrade from Apache Commons Lang 2.6 to Commons Lang3 3.18.0 (#6511) [9b2ccb8a]
+- docs: Add admonition to clarify plugin provider and org (#6536) [e9ab1bb7]
+- docs: Add admonition to inputs and index words (#6461) [4eee1b69]
+- docs: Improve task previousTrace documentation (#6538) [53c28b85]
+- docs: Mark Fusion.tags as supported only for S3 (#6601) [cc0d177f]
+- docs: Update feature flags page (#6504) [4dc9945d]
+- docs: Update task directives (#6506) [ce680c53]
+- Bump Fusion to version 2.5 (#6557) [ec228f64]
+- Bump Gradle 9.2.0 [26575244]
+- Bump groovy 4.0.29 (#6510) [a30dbbbc]
+- Bump logback to version 1.5.20 [462eec58]
+- Bump org.bouncycastle:bcpkix-jdk18on from 1.78.1 to 1.79 (#6537) [ede076b0]
+- Bump nf-amazon@3.5.0
+- Bump nf-azure@1.21.0
+- Bump nf-google@1.24.0
+- Bump nf-k8s@1.3.0
+- Bump nf-tower@1.18.0
+- Bump nf-wave@1.17.0
+
+25.10.1 - 28 Nov 2025
+- Add default value to Apptainer pull timeout config parameter (#6534) [a124a5ca0]
+- Fix asset detection when item is not a sibling of the executed script (#6605) [2390d4a8d]
+- Fix error with dynamic directives with named arguments (#6550) [c58750bf4]
+- Fix false config validation warnings for process selectors (#6542) [7bfae6db9]
+- Fix Fusion license JWT token refresh by reusing TowerClient [561ed6c32]
+- Fix incorrect AWS region when specifying a S3 regional endpoint (#6530) [770bdd3eb]
+- Fix issue with optional workflow output (#6519) [5444a7879]
+- Fix unordered completed parts in AWS multipart upload (#6560) [89eb70130]
+- Revert Plugins.init() in run command to original location (#6568) [1533f7d9e]
+- Bump logback 1.5.20
+- Bump nf-amazon@3.4.2
+- Bump nf-tower@1.17.2
+
 25.10.0 - 22 Oct 2025
 - Add publish-artifacts step to release process [75d8ebf9b]
 - Add type checking utils (#6482) [3e9a2c091]

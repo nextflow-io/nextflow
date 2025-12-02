@@ -1,5 +1,9 @@
 nf-k8s changelog
 ===================
+1.3.0 - 28 Nov 2025
+- Do not delete K8s jobs when ttlSecondsAfterFinished is set (#6597) [51042dbe2]
+- Optimize exit code handling by relying on scheduler status for successful executions (#6484) [454a2ae85]
+
 1.2.2 - 21 Oct 2025
 - Add .command.log redirection in K8s container command (#6455) [e6eed7949]
 - Rename `config.schema` package to `config.spec` (#6485) [ef0d2d601]
