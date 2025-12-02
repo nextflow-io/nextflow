@@ -61,31 +61,43 @@ class CmdList extends CmdBase {
         if( moreDetailed )
             detailed = true
         if( detailed && allRevisions ) {
-            all.each {
-                println(" $it")
-                def revManager = new AssetManager(it)
-                revManager.listRevisionsAndCommits().each { k, v ->
-                    if( !moreDetailed )
-                        v = v.substring(0, 10)
-                    println("   $v $k")
-                }
-            }
+            printRevisionsAndCommits(all)
         } else if( allRevisions ) {
-            all.each {
-                println(" $it")
-                def revManager = new AssetManager(it)
-                revManager.listRevisions().each {
-                    println("   $it")
-                }
-            }
+            printRevisions(all)
         } else if( allCommits ) {
-            all.each {
-                println(" $it")
-                def revManager = new AssetManager(it)
-                revManager.listCommits().each { println("   $it") }
-            }
+            printCommits(all)
         } else {
             all.each { println(" $it") }
+        }
+    }
+
+    private void printCommits(List<String> all) {
+        all.each {
+            println(" $it")
+            def revManager = new AssetManager(it)
+            revManager.listCommits().each { println("   $it") }
+        }
+    }
+
+    private void printRevisions(List<String> all) {
+        all.each {
+            println(" $it")
+            def revManager = new AssetManager(it)
+            revManager.listRevisions().each {
+                println("   $it")
+            }
+        }
+    }
+
+    private void printRevisionsAndCommits(List<String> all) {
+        all.each {
+            println(" $it")
+            def revManager = new AssetManager(it)
+            revManager.listRevisionsAndCommits().each { k, v ->
+                if( !moreDetailed )
+                    v = v.substring(0, 10)
+                println("   $v $k")
+            }
         }
     }
 

@@ -689,7 +689,7 @@ class AssetManager {
         log.debug "Listing revisions for project: $projectName"
         if( !root.exists() )
             return []
-        return getBranchesAndTags(false, true).pulled as List<String>
+        return getBranchesAndTags(false, true).pulled as List<String> ?: []
     }
 
     /**
@@ -700,7 +700,7 @@ class AssetManager {
         if( !root.exists() )
             return [:]
         final revisions = new HashMap<String,String>()
-        getBranchesAndTags(false, false).pulled.each { Map it -> revisions[it.name as String] = it.commitId as String }
+        getBranchesAndTags(false, false).pulled?.each { Map it -> revisions[it.name as String] = it.commitId as String }
         return revisions
 
     }

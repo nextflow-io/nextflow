@@ -57,13 +57,7 @@ class CmdDrop extends CmdBase {
 
         List<AssetManager> dropList = []
         if ( allRevisions ) {
-            def revManager = new AssetManager(args[0])
-            if( !revManager.localRootPath.exists() ) {
-                throw new AbortOperationException("No match found for: ${revManager.getProjectWithRevision()}")
-            }
-            revManager.listCommits().each { rev ->
-                dropList << new AssetManager(args[0]).setRevisionAndLocalPath(args[0], rev)
-            }
+            addRevisionsMangerToDropList(dropList)
         } else {
             dropList << new AssetManager(args[0]).setRevisionAndLocalPath(args[0], revision)
         }
@@ -75,8 +69,17 @@ class CmdDrop extends CmdBase {
                 throw new AbortOperationException("No revisions found for specified project: ${args[0]}")
         }
 
-        dropList.each { manager ->
-            if( !manager.localPathDefinedAndExists() ) {
+        dropList.each { manager -> dropRevision(manager) }
+
+        if ( allRevisions ) {
+            def revManager = new AssetManager(args[0])
+            log.info("Removing directory ${revManager.localRootPath.absolutePath}")
+            revManager.localRootPath.deleteDir()
+        }
+    }
+
+    private void dropRevision(AssetManager manager){
+        if( !manager.localPathDefinedAndExists() ) {
                 throw new AbortOperationException("No match found for: ${manager.getProjectWithRevision()}")
             }
 
@@ -88,12 +91,15 @@ class CmdDrop extends CmdBase {
             }
 
             throw new AbortOperationException("Local project repository contains uncommitted changes -- won't drop it")
-        }
+    }
 
-        if ( allRevisions ) {
-            def revManager = new AssetManager(args[0])
-            log.info("Removing directory ${revManager.localRootPath.absolutePath}")
-            revManager.localRootPath.deleteDir()
+    private void addRevisionsMangerToDropList(List<AssetManager> dropList) {
+        def revManager = new AssetManager(args[0])
+        if( !revManager.localRootPath.exists() ) {
+            throw new AbortOperationException("No match found for: ${revManager.getProjectWithRevision()}")
+        }
+        revManager.listCommits().each { rev ->
+            dropList << new AssetManager(args[0]).setRevisionAndLocalPath(args[0], rev)
         }
     }
 }
