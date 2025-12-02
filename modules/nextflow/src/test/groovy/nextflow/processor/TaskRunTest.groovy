@@ -579,6 +579,28 @@ class TaskRunTest extends Specification {
         isNative
     }
 
+    def 'should check stage file enabled flag' () {
+
+        given:
+        def executor = Mock(Executor)
+        def task = Spy(TaskRun)
+        task.processor = Mock(TaskProcessor)
+
+        when:
+        def enabled = task.isStageFileEnabled()
+        then:
+        1 * task.processor.getExecutor() >> executor
+        1 * executor.isStageFileEnabled() >> false
+        !enabled
+
+        when:
+        enabled = task.isStageFileEnabled()
+        then:
+        1 * task.processor.getExecutor() >> executor
+        1 * executor.isStageFileEnabled() >> true
+        enabled
+    }
+
     def 'should check container enabled flag' () {
 
         given:
