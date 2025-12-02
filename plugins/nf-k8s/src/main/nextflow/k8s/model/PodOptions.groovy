@@ -72,6 +72,8 @@ class PodOptions {
 
     private Integer ttlSecondsAfterFinished
 
+    private String runtimeClassName
+
     PodOptions( List<Map> options=null ) {
         int size = options ? options.size() : 0
         envVars = new HashSet<>(size)
@@ -166,6 +168,9 @@ class PodOptions {
         else if( entry.ttlSecondsAfterFinished instanceof Integer ) {
             this.ttlSecondsAfterFinished = entry.ttlSecondsAfterFinished as Integer
         }
+        else if( entry.runtimeClassName ) {
+            this.runtimeClassName = entry.runtimeClassName
+        }
         else
             throw new IllegalArgumentException("Unknown pod options: $entry")
     }
@@ -235,6 +240,8 @@ class PodOptions {
     Boolean getPrivileged() { privileged }
 
     Integer getTtlSecondsAfterFinished() { ttlSecondsAfterFinished }
+
+    String getRuntimeClassName() { runtimeClassName }
 
     PodOptions plus( PodOptions other ) {
         def result = new PodOptions()
@@ -307,6 +314,9 @@ class PodOptions {
 
         // ttl seconds after finished (job)
         result.ttlSecondsAfterFinished = other.ttlSecondsAfterFinished!=null ? other.ttlSecondsAfterFinished : this.ttlSecondsAfterFinished
+
+        // runtime class name
+        result.runtimeClassName = other.runtimeClassName ?: this.runtimeClassName
 
         return result
     }

@@ -124,6 +124,8 @@ class PodSpecBuilder {
 
     Integer ttlSecondsAfterFinished
 
+    String runtimeClassName
+
     /**
      * @return A sequential volume unique identifier
      */
@@ -390,6 +392,9 @@ class PodSpecBuilder {
         // -- ttl seconds after finished (job)
         if( opts.ttlSecondsAfterFinished != null )
             ttlSecondsAfterFinished = opts.ttlSecondsAfterFinished
+        // runtime class name
+        if( opts.runtimeClassName != null )
+            runtimeClassName = opts.runtimeClassName
 
         return this
     }
@@ -487,6 +492,9 @@ class PodSpecBuilder {
         // time directive
         if ( activeDeadlineSeconds > 0)
             spec.activeDeadlineSeconds = activeDeadlineSeconds
+
+        if ( runtimeClassName )
+            spec.runtimeClassName = runtimeClassName
 
         final pod = [
                 apiVersion: 'v1',

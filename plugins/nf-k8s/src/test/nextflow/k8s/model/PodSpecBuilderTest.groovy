@@ -891,4 +891,24 @@ class PodSpecBuilderTest extends Specification {
         job.spec.ttlSecondsAfterFinished == 60
     }
 
+    def 'should create pod spec with runtimeClassName' () {
+        when:
+        def pod = new PodSpecBuilder()
+                .withPodName('foo')
+                .withImageName('busybox')
+                .withCommand(['echo', 'hello'])
+                .build()
+        then:
+        !pod.spec.runtimeClassName
+
+        when:
+        pod = new PodSpecBuilder()
+                .withPodName('foo')
+                .withImageName('busybox')
+                .withCommand(['echo', 'hello'])
+                .withPodOptions(new PodOptions(runtimeClassName: 'val1'))
+                .build()
+        then:
+        pod.spec.runtimeClassName == 'val1'
+    }
 }
