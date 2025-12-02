@@ -45,7 +45,6 @@ dependencies {
     testFixturesImplementation(project(":nextflow"))
 
     testImplementation "org.apache.groovy:groovy-json:4.0.29" // needed by wiremock
-    testImplementation ('com.github.tomakehurst:wiremock:3.0.0-beta-10') { exclude module: 'groovy-all' }
-    testImplementation ('com.github.tomjankes:wiremock-groovy:0.2.0') { exclude module: 'groovy-all' }
+    testImplementation ('org.wiremock:wiremock:3.13.1') { exclude module: 'groovy-all' }
 }
 
