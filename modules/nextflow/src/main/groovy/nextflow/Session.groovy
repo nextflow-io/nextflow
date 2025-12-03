@@ -16,6 +16,8 @@
 
 package nextflow
 
+import nextflow.util.CacheHelper
+
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -143,6 +145,11 @@ class Session implements ISession {
      * whenever it has been launched in resume mode
      */
     boolean resumeMode
+
+    /**
+     * whenever it has been launched with globalCache
+     */
+    boolean globalCache
 
     /**
      * The folder where workflow outputs are stored
@@ -373,6 +380,10 @@ class Session implements ISession {
         if( config.resume ) {
             resumeMode = true
             uniqueId = UUID.fromString(config.resume as String)
+        }
+        else if ( config.globalcache ){
+            globalCache = true
+            uniqueId = UUID.nameUUIDFromBytes(CacheHelper.hasher(FileHelper.asPath(config.globalcache as String).normalize().toString()).hash().asBytes())
         }
         else {
            uniqueId = systemEnv.get('NXF_UUID') ? UUID.fromString(systemEnv.get('NXF_UUID')) : UUID.randomUUID()
