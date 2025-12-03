@@ -160,7 +160,7 @@ class PodSpecBuilderTest extends Specification {
                 anno3: "value3"
         ]
     }
-    
+
     def 'should truncate labels longer than 63 chars' () {
 
         when:
@@ -603,7 +603,7 @@ class PodSpecBuilderTest extends Specification {
         when:
         def result = builder.createPullSecret()
         then:
-        result.size() == 1 
+        result.size() == 1
         result.get(0).name == 'MySecret'
     }
 

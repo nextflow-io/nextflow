@@ -71,7 +71,7 @@ class PodOptions {
     private String schedulerName
 
     private Integer ttlSecondsAfterFinished
-    
+
     PodOptions( List<Map> options=null ) {
         int size = options ? options.size() : 0
         envVars = new HashSet<>(size)
@@ -87,7 +87,7 @@ class PodOptions {
     }
 
     @PackageScope void init(List<Map> options) {
-        if( !options ) return 
+        if( !options ) return
         for( Map entry : options ) {
             create(entry)
         }

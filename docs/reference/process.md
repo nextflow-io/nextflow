@@ -154,7 +154,7 @@ The following functions are available in the `output:` and `topic:` sections of 
 
 : :::{tip}
   See {ref}`process-multiple-input-files` for more information about accepting collections of files.
-  ::: 
+  :::
 
 : The argument can be an identifier or string. If an identifier, the received value will be made available to the process body as a variable. If a string, the received value will be staged into the task directory under the given alias.
 
@@ -215,7 +215,7 @@ The following functions are available in the `output:` and `topic:` sections of 
   : Specify the number of expected files. Can be a number or a range. If a task produces an invalid number of files for this `path` output, it will fail.
 
   : If the arity is `1`, a single file will be emitted. Otherwise, a list will always be emitted, even if only one file is produced.
-  
+
   : :::{warning}
     If the arity is not specified, a single file or list will be emitted based on whether a single file or multiple files are produced at runtime, resulting potentially in an output channel with a mixture of files and file collections.
     :::
@@ -1576,7 +1576,7 @@ process hello_secret {
 }
 ```
 
-See {ref}`secrets-page` for more information. 
+See {ref}`secrets-page` for more information.
 
 :::{warning}
 Secrets are made available as environment variables in the process script. To prevent evaluation in the Nextflow script context, escape variable names with a backslash (e.g., `\$MY_ACCESS_KEY`) as shown above.
