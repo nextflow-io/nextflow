@@ -804,6 +804,10 @@ class TaskRun implements Cloneable {
         return processor.executor?.isSecretNative() ?: false
     }
 
+    boolean isStageFileEnabled() {
+        return processor.executor?.isStageFileEnabled() ?: false
+    }
+
     boolean isSuccess( status = exitStatus ) {
         if( status == null )
             return false

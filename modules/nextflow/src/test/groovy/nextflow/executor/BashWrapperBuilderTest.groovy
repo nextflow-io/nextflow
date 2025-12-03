@@ -473,7 +473,7 @@ class BashWrapperBuilderTest extends Specification {
         binding.stage_inputs == stageScript
     }
 
-    def 'should stage inputs to external file when enabled' () {
+    def 'should stage inputs to external file' () {
         given:
         SysEnv.push([NXF_WRAPPER_STAGE_FILE_THRESHOLD: '100'])
         and:
@@ -489,28 +489,21 @@ class BashWrapperBuilderTest extends Specification {
                 ln -s /some/data/sample_1.fq sample_1.fq
                 ln -s /some/data/sample_2.fq sample_2.fq
                 '''.stripIndent().rightTrim()
-
-        when:
+        and:
         def builder = newBashWrapperBuilder([
                 workDir: folder,
                 targetDir: folder,
-                inputFiles: inputs ])
-        builder.build()
-        then:
-        builder.makeBinding().stage_inputs == "# stage input files\n${stageScript}"
-        and:
-        !folder.resolve('.command.stage').exists()
+                inputFiles: inputs,
+                stageFileEnabled: true ])
 
         when:
-        builder = newBashWrapperBuilder([
-                workDir: folder,
-                targetDir: folder,
-                inputFiles: inputs ])
-        builder.withStageFile(true)
+        def binding = builder.makeBinding()
+        then:
+        binding.stage_inputs == "# stage input files\nbash ${folder}/.command.stage"
+
+        when:
         builder.build()
         then:
-        builder.makeBinding().stage_inputs == "# stage input files\nbash ${folder}/.command.stage"
-        and:
         folder.resolve('.command.stage').text == stageScript
 
         cleanup:

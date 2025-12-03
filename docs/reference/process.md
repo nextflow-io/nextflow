@@ -152,6 +152,10 @@ The following functions are available in the `output:` and `topic:` sections of 
 
 : Declare a file input. The received value should be a file or collection of files and will be staged into the task directory.
 
+: :::{tip}
+  See {ref}`process-multiple-input-files` for more information about accepting collections of files.
+  ::: 
+
 : The argument can be an identifier or string. If an identifier, the received value will be made available to the process body as a variable. If a string, the received value will be staged into the task directory under the given alias.
 
 : Available options:
@@ -1656,17 +1660,17 @@ The `stageOutMode` directive defines how output files are staged out from the sc
 : Output files are copied from the scratch directory to the work directory.
 
 `'fcp'`
-: :::{versionadded} 23.02.0-edge
+: :::{versionadded} 23.04.0
   :::
-: Output files are copied from the scratch directory to the work directory by using the [fcp](https://github.com/Svetlitski/fcp) utility (note: it must be available in your cluster computing nodes).
+: Output files are copied from the scratch directory to the work directory by using the [fcp](https://github.com/Svetlitski/fcp) utility (note: it must be available in the task environment).
 
 `'move'`
 : Output files are moved from the scratch directory to the work directory.
 
 `'rclone'`
-: :::{versionadded} 23.01.0-edge
+: :::{versionadded} 23.04.0
   :::
-: Output files are copied from the scratch directory to the work directory by using the [rclone](https://rclone.org) utility (note: it must be available in your cluster computing nodes).
+: Output files are copied from the scratch directory to the work directory by using the [rclone](https://rclone.org) utility (note: it must be available in the task environment).
 
 `'rsync'`
 : Output files are copied from the scratch directory to the work directory by using the `rsync` utility.
