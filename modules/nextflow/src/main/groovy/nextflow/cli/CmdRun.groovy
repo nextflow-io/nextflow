@@ -619,6 +619,61 @@ class CmdRun extends CmdBase implements HubOptions {
         }
 
         /*
+         * Handle archive URLs directly
+         */
+        if (pipelineName.startsWith('http://') || pipelineName.startsWith('https://')) {
+            def url = pipelineName.toLowerCase()
+            
+            if (url.endsWith('.zip') || url.endsWith('.tar.gz') || url.endsWith('.tgz')) {
+                log.info "Detected archive URL: $pipelineName"
+                
+                // Use AssetManager to handle the archive
+                try {
+                    // For direct invocation of archive URLs, we'll create a generic AssetManager
+                    // and manually invoke its archive handling methods
+                    def manager = new AssetManager()
+                    
+                    // Create path in .nextflow/assets/artefacts directory
+                    String pathPart = pipelineName.replaceFirst('^https?://', '')
+                    pathPart = pathPart.replaceAll("[<>:\"|?*]", "_")
+                    def artefactsRoot = new File(AssetManager.root, "artefacts")
+                    File artefactPath = new File(artefactsRoot, pathPart)
+                    artefactPath.parentFile.mkdirs()
+
+                    if (!artefactPath.exists()) {
+                        log.info "Downloading and extracting archive..."
+                        // Download and extract the archive
+                        manager.downloadAndExtractArchive(pipelineName, artefactPath)
+                        
+                        log.debug "Downloaded and extracted to: $artefactPath"
+                    }
+                    else {
+                        log.info "Using cached archive: $artefactPath"
+                    }
+                    
+                    // Check if the archive contains a single root directory (common for GitHub archives)
+                    File[] files = artefactPath.listFiles()
+                    if (files && files.length == 1 && files[0].isDirectory()) {
+                        // The archive has a subdirectory - use that as the root
+                        artefactPath = files[0]
+                        log.debug "Using subdirectory as project root: $artefactPath"
+                    }
+                    
+                    // Now find the main script file in the extracted directory
+                    File scriptFile = mainScript 
+                        ? new File(artefactPath, mainScript)
+                        : manager.setLocalPath(artefactPath).getMainScriptFile()
+                    
+                    // Return the script as a local file
+                    return new ScriptFile(scriptFile)
+                }
+                catch (Exception e) {
+                    throw new AbortOperationException("Cannot download or extract archive: $pipelineName", e)
+                }
+            }
+        }
+        
+        /*
          * look for a file with the specified pipeline name
          */
         def script = new File(pipelineName)
@@ -650,11 +705,16 @@ class CmdRun extends CmdBase implements HubOptions {
         }
         // checkout requested revision
         try {
-            manager.checkout(revision)
-            manager.updateModules()
+            // Only perform checkout if this is a Git repository (not archive-based)
+            if (!manager.isLocalArchiveRepo()) {
+                manager.checkout(revision)
+                manager.updateModules()
+            }
             final scriptFile = manager.getScriptFile(mainScript)
-            if( checkForUpdate && !offline )
+            // Only check remote status for Git repositories
+            if (checkForUpdate && !offline && !manager.isLocalArchiveRepo()) {
                 manager.checkRemoteStatus(scriptFile.revisionInfo)
+            }
             // return the script file
             return scriptFile
         }
@@ -664,7 +724,6 @@ class CmdRun extends CmdBase implements HubOptions {
         catch( Exception e ) {
             throw new AbortOperationException("Unknown error accessing project `$repo` -- Repository may be corrupted: ${manager.localPath}", e)
         }
-
     }
 
     static protected File tryReadFromStdin() {
