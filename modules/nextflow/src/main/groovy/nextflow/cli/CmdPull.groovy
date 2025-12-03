@@ -23,6 +23,7 @@ import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
+import nextflow.scm.MultiRevisionAssetManager
 import nextflow.util.TestOnly
 /**
  * CLI sub-command PULL
@@ -70,18 +71,18 @@ class CmdPull extends CmdBase implements HubOptions {
         // init plugin system
         Plugins.init()
 
-        List<AssetManager> list = []
+        List<MultiRevisionAssetManager> list = []
         if ( all ) {
             def all = AssetManager.list()
             all.each{ proj ->
-                def revManager = new AssetManager(proj)
+                def revManager = new MultiRevisionAssetManager(proj)
                 revManager.listRevisions().each{ rev ->
-                    list << new AssetManager(proj, this).setRevisionAndLocalPath(proj, rev)
+                    list << new MultiRevisionAssetManager(proj, this, rev)
                 }
             }
         } else {
             args.toList().each {
-                list << new AssetManager(it, this).setRevisionAndLocalPath(it, revision)
+                list << new MultiRevisionAssetManager(it, this, revision)
             }
         }
 

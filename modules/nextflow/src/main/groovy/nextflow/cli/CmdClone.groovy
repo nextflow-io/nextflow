@@ -22,7 +22,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
-import nextflow.scm.AssetManager
+import nextflow.scm.MultiRevisionAssetManager
 /**
  * CLI sub-command clone
  *
@@ -53,8 +53,7 @@ class CmdClone extends CmdBase implements HubOptions {
         Plugins.init()
         // the pipeline name
         String pipeline = args[0]
-        final manager = new AssetManager(pipeline, this)
-        manager.setRevisionAndLocalPath(pipeline, revision)
+        final manager = new MultiRevisionAssetManager(pipeline, this)
 
         // the target directory is the second parameter
         // otherwise default the current pipeline name
@@ -71,7 +70,7 @@ class CmdClone extends CmdBase implements HubOptions {
 
         manager.checkValidRemoteRepo()
         print "Cloning ${manager.getProjectWithRevision()} ..."
-        manager.clone(target, deep)
+        manager.clone(target, revision, deep)
         print "\r"
         println "${manager.getProjectWithRevision()} cloned to: $target"
     }

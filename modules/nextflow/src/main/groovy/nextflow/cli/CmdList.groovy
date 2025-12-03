@@ -20,7 +20,7 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.scm.AssetManager
+import nextflow.scm.MultiRevisionAssetManager
 
 /**
  * CLI sub-command LIST. Prints a list of locally installed pipelines
@@ -52,7 +52,7 @@ class CmdList extends CmdBase {
     @Override
     void run() {
 
-        def all = AssetManager.list()
+        def all = MultiRevisionAssetManager.list()
         if( !all ) {
             log.info '(none)'
             return
@@ -74,7 +74,7 @@ class CmdList extends CmdBase {
     private void printCommits(List<String> all) {
         all.each {
             println(" $it")
-            def revManager = new AssetManager(it)
+            def revManager = new MultiRevisionAssetManager(it)
             revManager.listCommits().each { println("   $it") }
         }
     }
@@ -82,7 +82,7 @@ class CmdList extends CmdBase {
     private void printRevisions(List<String> all) {
         all.each {
             println(" $it")
-            def revManager = new AssetManager(it)
+            def revManager = new MultiRevisionAssetManager(it)
             revManager.listRevisions().each {
                 println("   $it")
             }
@@ -92,7 +92,7 @@ class CmdList extends CmdBase {
     private void printRevisionsAndCommits(List<String> all) {
         all.each {
             println(" $it")
-            def revManager = new AssetManager(it)
+            def revManager = new MultiRevisionAssetManager(it)
             revManager.listRevisionsAndCommits().each { k, v ->
                 if( !moreDetailed )
                     v = v.substring(0, 10)

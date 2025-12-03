@@ -16,6 +16,9 @@
 
 package nextflow.cli
 
+import nextflow.scm.AssetManager
+import org.eclipse.jgit.api.errors.RefNotFoundException
+
 import static org.fusesource.jansi.Ansi.*
 
 import java.nio.file.NoSuchFileException
@@ -41,7 +44,7 @@ import nextflow.config.ConfigValidator
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
 import nextflow.plugin.Plugins
-import nextflow.scm.AssetManager
+import nextflow.scm.MultiRevisionAssetManager
 import nextflow.script.ScriptFile
 import nextflow.script.ScriptRunner
 import nextflow.secret.EmptySecretProvider
@@ -627,19 +630,26 @@ class CmdRun extends CmdBase implements HubOptions {
         /*
          * try to look for a pipeline in the repository
          */
-        def manager = new AssetManager(pipelineName, this)
-        manager.setRevisionAndLocalPath(pipelineName, revision)
+        def manager = new MultiRevisionAssetManager(pipelineName, this, revision)
         def repo = manager.getProjectWithRevision()
 
         boolean checkForUpdate = true
-        if( !manager.isRunnable() || latest ) {
-            if( offline )
-                throw new AbortOperationException("Unknown project `$repo` -- NOTE: automatic download from remote repositories is disabled")
-            log.info "Pulling $repo ..."
-            def result = manager.createSharedClone()
-            if( result )
-                log.info " $result"
+        // The assets cache can contain projects with new multi-revision assets, old assets clones or both.
+        // Based on what's the project status we can use the new multi-revision assets
+        // Case 1: Always use new multi-revision assets manager when updating to latest, or when no multi-revisions and no old assets clone.
+        if( latest || (!manager.isRunnable() && !manager.hasLegacyRepo())) {
+            updateMultiRevisionRepo(repo, manager)
             checkForUpdate = false
+
+        } // Case 2: No multi-revision clone but has the legacy clone
+        else if (!manager.isRunnable() && manager.hasLegacyRepo()){
+            try {
+                manager = tryLegacyRepo(pipelineName)
+            } catch ( RefNotFoundException e ) {
+                // If revision is not in legacy repo use new multi-revision
+                updateMultiRevisionRepo(repo, manager as MultiRevisionAssetManager)
+                checkForUpdate = false
+            }
         }
         // post download operations
         try {
@@ -657,6 +667,30 @@ class CmdRun extends CmdBase implements HubOptions {
             throw new AbortOperationException("Unknown error accessing project `$repo` -- Repository may be corrupted: ${manager.localPath}", e)
         }
 
+    }
+
+    private void updateMultiRevisionRepo(String repo, MultiRevisionAssetManager manager) {
+        if( offline )
+            throw new AbortOperationException("Unknown project `$repo` -- NOTE: automatic download from remote repositories is disabled")
+        log.info "Pulling $repo ..."
+        def result = manager.createSharedClone()
+        if( result )
+            log.info " $result"
+    }
+
+    /**
+     * Try to use the legacy repo using the basic AssetManager and checking out to the requested revision.
+     * It will throw RefNotFoundException if the requested revision is not locally available.
+     *
+     * @param pipelineName
+     * @return return The AssetsManager pointing the legacy repo.
+     * @throws RefNotFoundException
+     */
+    private AssetManager tryLegacyRepo(String pipelineName) throws RefNotFoundException{
+        def manager = new AssetManager(pipelineName, this)
+        manager.tryCheckout(revision)
+        log.warn("Repo This Nextflow version can use multi-revision assets manager,")
+        return manager
     }
 
     static protected File tryReadFromStdin() {

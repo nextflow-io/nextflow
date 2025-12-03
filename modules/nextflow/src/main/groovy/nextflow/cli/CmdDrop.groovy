@@ -22,7 +22,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
-import nextflow.scm.AssetManager
+import nextflow.scm.MultiRevisionAssetManager
 
 /**
  * CLI sub-command DROP
@@ -55,11 +55,11 @@ class CmdDrop extends CmdBase {
     void run() {
         Plugins.init()
 
-        List<AssetManager> dropList = []
+        List<MultiRevisionAssetManager> dropList = []
         if ( allRevisions ) {
             addRevisionsMangerToDropList(dropList)
         } else {
-            dropList << new AssetManager(args[0]).setRevisionAndLocalPath(args[0], revision)
+            dropList << new MultiRevisionAssetManager(args[0]).setRevision(revision)
         }
 
         if ( !dropList ) {
@@ -72,14 +72,14 @@ class CmdDrop extends CmdBase {
         dropList.each { manager -> dropRevision(manager) }
 
         if ( allRevisions ) {
-            def revManager = new AssetManager(args[0])
+            def revManager = new MultiRevisionAssetManager(args[0])
             log.info("Removing directory ${revManager.localRootPath.absolutePath}")
             revManager.localRootPath.deleteDir()
         }
     }
 
-    private void dropRevision(AssetManager manager){
-        if( !manager.localPathDefinedAndExists() ) {
+    private void dropRevision(MultiRevisionAssetManager manager){
+        if( !manager.isLocal() ) {
                 throw new AbortOperationException("No match found for: ${manager.getProjectWithRevision()}")
             }
 
@@ -93,13 +93,13 @@ class CmdDrop extends CmdBase {
             throw new AbortOperationException("Local project repository contains uncommitted changes -- won't drop it")
     }
 
-    private void addRevisionsMangerToDropList(List<AssetManager> dropList) {
-        def revManager = new AssetManager(args[0])
+    private void addRevisionsMangerToDropList(List<MultiRevisionAssetManager> dropList) {
+        def revManager = new MultiRevisionAssetManager(args[0])
         if( !revManager.localRootPath.exists() ) {
             throw new AbortOperationException("No match found for: ${revManager.getProjectWithRevision()}")
         }
         revManager.listCommits().each { rev ->
-            dropList << new AssetManager(args[0]).setRevisionAndLocalPath(args[0], rev)
+            dropList << new MultiRevisionAssetManager(args[0]).setRevision(rev)
         }
     }
 }
