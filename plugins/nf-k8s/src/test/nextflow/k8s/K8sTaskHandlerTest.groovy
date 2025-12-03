@@ -474,6 +474,10 @@ class K8sTaskHandlerTest extends Specification {
                           finishedAt: "2018-01-13T10:19:36Z",
                           exitCode: 0 ]
         def fullState = [terminated: termState]
+        def noExitCodeTermState = [ reason: "Completed",
+                                    startedAt: "2018-01-13T10:09:36Z",
+                                    finishedAt: "2018-01-13T10:19:36Z" ]
+        def noExitCodeState = [terminated: noExitCodeTermState]
         and:
         def handler = Spy(new K8sTaskHandler(task: task, client:client, podName: POD_NAME, outputFile: OUT_FILE, errorFile: ERR_FILE))
 
@@ -496,6 +500,21 @@ class K8sTaskHandlerTest extends Specification {
         then:
         1 * handler.getState() >> fullState
         1 * handler.updateTimestamps(termState)
+        1 * handler.deleteJobIfSuccessful(task) >> null
+        1 * handler.saveJobLogOnError(task) >> null
+        handler.task.exitStatus == 0
+        handler.task.@stdout == OUT_FILE
+        handler.task.@stderr == ERR_FILE
+        handler.status == TaskStatus.COMPLETED
+        handler.startTimeMillis == 1515838176000
+        handler.completeTimeMillis == 1515838776000
+        result == true
+
+        when:
+        result = handler.checkIfCompleted()
+        then:
+        1 * handler.getState() >> noExitCodeState
+        1 * handler.updateTimestamps(noExitCodeTermState)
         1 * handler.readExitFile() >> EXIT_STATUS
         1 * handler.deleteJobIfSuccessful(task) >> null
         1 * handler.saveJobLogOnError(task) >> null
