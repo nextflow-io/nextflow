@@ -1251,6 +1251,9 @@ The following options are available:
 `runAsUser: '<uid>'`
 : Specifies the user ID with which to run the container. Shortcut for the `securityContext` option.
 
+`runtimeClassName: '<name>'`
+: Specifies the [runtime class](https://kubernetes.io/docs/concepts/containers/runtime-class/).
+
 `schedulerName: '<name>'`
 : Specifies which [scheduler](https://kubernetes.io/docs/tasks/extend-kubernetes/configure-multiple-schedulers/#specify-schedulers-for-pods) is used to schedule the container.
 
