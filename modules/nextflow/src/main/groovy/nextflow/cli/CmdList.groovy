@@ -16,7 +16,6 @@
 
 package nextflow.cli
 
-import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -34,18 +33,6 @@ class CmdList extends CmdBase {
 
     static final public NAME = 'list'
 
-    @Parameter(names=['-a','-all-revisions'], description = 'For each project, also list revisions')
-    Boolean allRevisions
-
-    @Parameter(names=['-all-commits'], description = 'For each project, also list all downloaded commits')
-    Boolean allCommits
-
-    @Parameter(names='-d',description = 'Show commit information for revisions', arity = 0)
-    boolean detailed
-
-    @Parameter(names='-dd', hidden = true, arity = 0)
-    boolean moreDetailed
-
     @Override
     final String getName() { NAME }
 
@@ -58,47 +45,7 @@ class CmdList extends CmdBase {
             return
         }
 
-        if( moreDetailed )
-            detailed = true
-        if( detailed && allRevisions ) {
-            printRevisionsAndCommits(all)
-        } else if( allRevisions ) {
-            printRevisions(all)
-        } else if( allCommits ) {
-            printCommits(all)
-        } else {
-            all.each { println(" $it") }
-        }
-    }
-
-    private void printCommits(List<String> all) {
-        all.each {
-            println(" $it")
-            def revManager = new MultiRevisionAssetManager(it)
-            revManager.listCommits().each { println("   $it") }
-        }
-    }
-
-    private void printRevisions(List<String> all) {
-        all.each {
-            println(" $it")
-            def revManager = new MultiRevisionAssetManager(it)
-            revManager.listRevisions().each {
-                println("   $it")
-            }
-        }
-    }
-
-    private void printRevisionsAndCommits(List<String> all) {
-        all.each {
-            println(" $it")
-            def revManager = new MultiRevisionAssetManager(it)
-            revManager.listRevisionsAndCommits().each { k, v ->
-                if( !moreDetailed )
-                    v = v.substring(0, 10)
-                println("   $v $k")
-            }
-        }
+        all.each { println(" $it") }
     }
 
 }

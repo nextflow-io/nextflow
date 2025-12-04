@@ -85,7 +85,6 @@ class AssetManager {
     private String hub
 
     private List<ProviderConfig> providerConfigs
-
     /**
      * Create a new asset manager object with default parameters
      */

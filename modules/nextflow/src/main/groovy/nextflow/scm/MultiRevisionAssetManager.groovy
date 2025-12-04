@@ -254,19 +254,7 @@ class MultiRevisionAssetManager extends AssetManager{
         log.debug "Listing revisions for project: $projectName"
         if( !root.exists() )
             return []
-        return getBranchesAndTagsMap(false, true).pulled as List<String> ?: []
-    }
-
-    /**
-     * @return The map of available revisions and corresponding commits for a given project name
-     */
-    Map<String,String> listRevisionsAndCommits( String projectName = this.project ) {
-        log.debug "Listing revisions for project: $projectName"
-        if( !root.exists() )
-            return [:]
-        final revisions = new HashMap<String,String>()
-        getBranchesAndTagsMap(false, false).pulled?.each { Map it -> revisions[it.name as String] = it.commitId as String }
-        return revisions
+        return getBranchesAndTags(false).pulled as List<String> ?: []
     }
 
     /**
@@ -453,10 +441,6 @@ class MultiRevisionAssetManager extends AssetManager{
 
     @Override
     Map getBranchesAndTags(boolean checkForUpdates) {
-        return getBranchesAndTagsMap(checkForUpdates, true)
-    }
-
-    Map getBranchesAndTagsMap(boolean checkForUpdates, boolean pulledAsNames = true ) {
         final result = [:]
         if( !hasBareRepo() ){
             return result
@@ -487,7 +471,7 @@ class MultiRevisionAssetManager extends AssetManager{
                 }
 
         result.master = master      // master branch name
-        result.pulled = pulledAsNames ? pulled.collect { it.name } : pulled      // collection of pulled revisions
+        result.pulled = pulled.collect { it.name }  // collection of pulled revisions
         result.branches = branches  // collection of branches
         result.tags = tags          // collect of tags
         return result

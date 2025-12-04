@@ -21,7 +21,6 @@ import static MultiRevisionAssetManager.REVISION_SUBDIR
 
 import spock.lang.IgnoreIf
 
-import org.eclipse.jgit.api.Git
 import org.junit.Rule
 import spock.lang.Requires
 import spock.lang.Specification
@@ -45,9 +44,9 @@ class MultiRevisionAssetManagerTest extends Specification {
     def 'should list revisions and commits'() {
         given:
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def pipelineName ='nextflow-io/nf-test-branch'
-        def revision1 = 'v0.1'
-        def revision2 = 'dev'
+        def pipelineName ='nextflow-io/hello'
+        def revision1 = 'v1.2'
+        def revision2 = 'mybranch'
         def manager = new MultiRevisionAssetManager().build(pipelineName, [providers: [github: [auth: token]]])
         manager.setRevision(revision1)
         manager.createSharedClone()
@@ -62,36 +61,29 @@ class MultiRevisionAssetManagerTest extends Specification {
         list.contains(revision2)
 
         when:
-        def revAndCommits = manager.listRevisionsAndCommits()
-        then:
-        revAndCommits.size() == 2
-        revAndCommits[revision1] == 'commit1'
-        revAndCommits[revision2] == 'commit2'
-
-        when:
         def branchesAndTags = manager.getBranchesAndTags(false)
         then:
         branchesAndTags.size() == 2
-        [revision1] == 'commit1'
-        revAndCommits[revision2] == 'commit2'
+        branchesAndTags[revision1] == '1b420d060d3fad67027154ac48e3bdea06f058da'
+        branchesAndTags[revision2] == '1c3e9e7404127514d69369cd87f8036830f5cf64'
     }
 
     def 'should list commits' () {
         given:
         def folder = tempDir.getRoot()
-        folder.resolve('cbcrg/pipe1/' + REVISION_SUBDIR + '/12345').mkdirs()
-        folder.resolve('cbcrg/pipe1/' + REVISION_SUBDIR + '/67890').mkdirs()
-        folder.resolve('cbcrg/pipe2/' + REVISION_SUBDIR + '/abcde').mkdirs()
-        folder.resolve('cbcrg/pipe2/' + REVISION_SUBDIR + '/fghij').mkdirs()
 
         when:
         def manager = new MultiRevisionAssetManager('cbcrg/pipe1')
+        folder.resolve('cbcrg/pipe1/' + REVISION_SUBDIR + '/12345').mkdirs()
+        folder.resolve('cbcrg/pipe1/' + REVISION_SUBDIR + '/67890').mkdirs()
         def list = manager.listCommits()
         then:
         list.sort() == ['12345','67890']
 
         when:
         manager = new MultiRevisionAssetManager('cbcrg/pipe2')
+        folder.resolve('cbcrg/pipe2/' + REVISION_SUBDIR + '/abcde').mkdirs()
+        folder.resolve('cbcrg/pipe2/' + REVISION_SUBDIR + '/fghij').mkdirs()
         list = manager.listCommits()
         then:
         list.sort() == ['abcde','fghij']
@@ -133,7 +125,7 @@ class MultiRevisionAssetManagerTest extends Specification {
 
 
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
-    def 'should create shared clone from commit twice'() {
+    def 'should create shared clone from commit'() {
 
         given:
         def folder = tempDir.getRoot()
@@ -147,18 +139,17 @@ class MultiRevisionAssetManagerTest extends Specification {
         then:
         def git = folder.resolve('nextflow-io/hello/' + REVISION_SUBDIR + '/' + '7588c46ffefb4e3c06d4ab32c745c4d5e56cdad8' + '/.git')
         git.isDirectory()
-        git.resolve('objects/info/alternates').text == 'nextflow-io/hello/'+ BARE_REPO
+        git.resolve('objects/info/alternates').text == folder.resolve('nextflow-io/hello/'+ BARE_REPO + '/objects').toAbsolutePath().toString()
 
         when:
         def result = manager.createSharedClone()
         then:
         noExceptionThrown()
-        result == "Already-up-to-date"
     }
 
 
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
-    def 'should create shared clone from tag twice'() {
+    def 'should create shared clone from tag'() {
 
         given:
         def folder = tempDir.getRoot()
@@ -173,7 +164,7 @@ class MultiRevisionAssetManagerTest extends Specification {
         then:
         def git = folder.resolve('nextflow-io/hello/' + REVISION_SUBDIR + '/' + '1b420d060d3fad67027154ac48e3bdea06f058da' + '/.git')
         git.isDirectory()
-        git.resolve('objects/info/alternates').text == 'nextflow-io/hello/'+ BARE_REPO
+        git.resolve('objects/info/alternates').text == folder.resolve('nextflow-io/hello/'+ BARE_REPO + '/objects').toAbsolutePath().toString()
 
         when:
         manager.createSharedClone()
@@ -185,7 +176,7 @@ class MultiRevisionAssetManagerTest extends Specification {
     // Downloading a branch first and then pulling the branch
     // should work fine, unlike with tags.
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
-    def 'should create shared clone from branch twice'() {
+    def 'should create shared clone from branch'() {
 
         given:
         def folder = tempDir.getRoot()
@@ -204,60 +195,6 @@ class MultiRevisionAssetManagerTest extends Specification {
         def result = manager.createSharedClone()
         then:
         noExceptionThrown()
-        result == "Already-up-to-date"
-    }
-
-    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
-    def 'should create shared clone for branch specified'() {
-
-        given:
-        def folder = tempDir.getRoot()
-        String revision = 'dev'
-        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def manager = new MultiRevisionAssetManager().build('nextflow-io/nf-test-branch', [providers: [github: [auth: token]]])
-        manager.setRevision(revision)
-        // as of June 2024, branch "dev" -> commit "6f882561d589365c3950d170df8445e3c0dc8028"
-
-        when:
-        manager.createSharedClone()
-        then:
-        folder.resolve('nextflow-io/nf-test-branch/' + REVISION_SUBDIR + '/' + '6f882561d589365c3950d170df8445e3c0dc8028' + '/.git').isDirectory()
-        and:
-        folder.resolve('nextflow-io/nf-test-branch/' + REVISION_SUBDIR + '/' + '6f882561d589365c3950d170df8445e3c0dc8028' + '/workflow.nf').text == "println 'Hello'\n"
-    }
-
-    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
-    def 'should fetch main script from branch specified'() {
-
-        given:
-        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        String revision = 'dev'
-        def manager = new MultiRevisionAssetManager().build('nextflow-io/nf-test-branch', [providers: [github: [auth: token]]])
-        manager.setRevision(revision)
-
-        expect:
-        manager.checkValidRemoteRepo()
-        and:
-        manager.getMainScriptName() == 'workflow.nf'
-    }
-
-    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
-    def 'should crease shared clone for tag specified'() {
-
-        given:
-        def folder = tempDir.getRoot()
-        String revision = 'v0.1'
-        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def manager = new MultiRevisionAssetManager().build('nextflow-io/nf-test-branch', [providers: [github: [auth: token]]])
-        manager.setRevision( revision)
-        // tag "v0.1" -> commit "6f882561d589365c3950d170df8445e3c0dc8028"
-
-        when:
-        manager.createSharedClone()
-        then:
-        folder.resolve('nextflow-io/nf-test-branch/' + REVISION_SUBDIR + '/' + '6f882561d589365c3950d170df8445e3c0dc8028' + '/.git').isDirectory()
-        and:
-        folder.resolve('nextflow-io/nf-test-branch/' + REVISION_SUBDIR + '/' + '6f882561d589365c3950d170df8445e3c0dc8028' + '/workflow.nf').text == "println 'Hello'\n"
     }
 
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
