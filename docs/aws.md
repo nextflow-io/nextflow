@@ -156,7 +156,6 @@ See the [bucket policy documentation](https://docs.aws.amazon.com/config/latest/
 
 [AWS Batch](https://aws.amazon.com/batch/) is a managed computing service that enables the execution of containerized workloads on AWS cloud infrastructure. It dynamically provisions the optimal quantity and type of compute resources (e.g., CPU or memory optimized compute resources) based on the volume and specific resource requirements of the submitted jobs.
 
-Nextflow provides built-in support for AWS Batch, allowing the seamless deployment of Nextflow pipelines in the cloud, in which tasks are offloaded as Batch jobs.
 
 Nextflow natively supports AWS Batch, allowing you to run pipeline tasks as Batch jobs in the cloud.
 
