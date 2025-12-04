@@ -9,7 +9,13 @@ If you are still using DSL1, see {ref}`dsl1-page` to learn how to migrate your N
 :::
 
 :::{versionadded} 25.04.0
-The strict syntax can be enabled in Nextflow by setting the environment variable `NXF_SYNTAX_PARSER=v2`.
+To enable strict syntax, set the `NXF_SYNTAX_PARSER` environment variable to `v2`:
+
+```bash
+export NXF_SYNTAX_PARSER=v2
+```
+
+Without this environment variable set, Nextflow will not enforce strict syntax rules. Add this to your shell profile (e.g., `~/.bashrc`, `~/.zshrc`) or set it before running Nextflow commands.
 :::
 
 ## Overview
@@ -568,7 +574,11 @@ The process {ref}`process-when` section is discouraged. As a best practice, cond
 ## Configuration syntax
 
 :::{versionadded} 25.04.0
-The strict config syntax can be enabled in Nextflow by setting the environment variable `NXF_SYNTAX_PARSER=v2`.
+To enable the {ref}`strict syntax <strict-syntax-page>`, set the `NXF_SYNTAX_PARSER` environment variable:
+
+```bash
+export NXF_SYNTAX_PARSER=v2
+```
 :::
 
 See {ref}`Configuration <config-syntax>` for a comprehensive description of the configuration language.
