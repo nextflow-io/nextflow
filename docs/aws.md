@@ -167,7 +167,7 @@ See {ref}`AWS Batch executor <awsbatch-executor>` to learn more about the `awsba
 ### AWS CLI
 
 :::{tip}
-The recommended approach for running Nextflow pipelines with AWS Batch is to use {ref}`wave-page` and {ref}`fusion-page` for S3 access, rather than relying on the AWS CLI.
+The recommended approach for running Nextflow pipelines with AWS Batch is to use {ref}`wave-page` and {ref}`fusion-page` for S3 access, rather than relying on the AWS CLI. This approach removes the requirement to install and configure the AWS CLI in containers or custom AMIs.
 :::
 
 Nextflow uses the [AWS command line tool](https://aws.amazon.com/cli/) (`aws`) to stage input files and output files between S3 and the task containers.
