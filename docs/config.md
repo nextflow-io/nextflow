@@ -129,20 +129,44 @@ The following functions are globally available in a Nextflow configuration file:
 Pipeline parameters can be defined in the config file using the `params` scope:
 
 ```groovy
-params.alpha = 123
-params.beta = 'string value .. '
+// dot syntax
+params.max_cpus = 64
+params.publish_mode = 'copy'
 
+// block syntax
 params {
-    gamma = true
-    delta = "params.alpha is ${params.alpha}"
+    max_cpus = 64
+    publish_mode = 'copy'
 }
 ```
-
-See {ref}`cli-params` for information about how to specify pipeline parameters.
 
 :::{note}
 When including a config file, the included config is evaluated with the parameters that are defined before the include. Parameters defined after the include are not visible to the included config.
 :::
+
+As a best practice, declare parameters in the config file only if they are used by other config options. If a parameter is used within the script, declare it there and override it in config profiles as needed. For example:
+
+```nextflow
+// main.nf
+params.input = null
+```
+
+```groovy
+// nextflow.config
+params {
+    publish_mode = 'copy'
+}
+
+workflow.output.mode = params.publish_mode
+
+profiles {
+    test {
+        params.input = "${projectDir}/test/input.txt"
+    }
+}
+```
+
+See {ref}`cli-params` for information about how pipeline parameters are resovled at runtime.
 
 (config-process)=
 
