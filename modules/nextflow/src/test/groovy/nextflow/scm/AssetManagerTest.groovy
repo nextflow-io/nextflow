@@ -598,7 +598,7 @@ class AssetManagerTest extends Specification {
         when:
         manager.download()
         then:
-        noExceptionThrown()
+         noExceptionThrown()
     }
 
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})

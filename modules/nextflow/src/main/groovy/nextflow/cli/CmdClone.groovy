@@ -15,13 +15,14 @@
  */
 
 package nextflow.cli
+
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
-import nextflow.scm.AssetManager
+import nextflow.scm.MultiRevisionAssetManager
 /**
  * CLI sub-command clone
  *
@@ -37,7 +38,7 @@ class CmdClone extends CmdBase implements HubOptions {
     @Parameter(required=true, description = 'name of the project to clone')
     List<String> args
 
-    @Parameter(names='-r', description = 'Revision to clone - It can be a git branch, tag or revision number')
+    @Parameter(names='-r', description = 'Revision of the project to clone (either a git branch, tag or commit SHA number)')
     String revision
 
     @Parameter(names=['-d','-deep'], description = 'Create a shallow clone of the specified depth')
@@ -52,7 +53,7 @@ class CmdClone extends CmdBase implements HubOptions {
         Plugins.init()
         // the pipeline name
         String pipeline = args[0]
-        final manager = new AssetManager(pipeline, this)
+        final manager = new MultiRevisionAssetManager(pipeline, this)
 
         // the target directory is the second parameter
         // otherwise default the current pipeline name
@@ -68,9 +69,9 @@ class CmdClone extends CmdBase implements HubOptions {
         }
 
         manager.checkValidRemoteRepo()
-        print "Cloning ${manager.project}${revision ? ':'+revision:''} ..."
+        print "Cloning ${manager.getProjectWithRevision()} ..."
         manager.clone(target, revision, deep)
         print "\r"
-        println "${manager.project} cloned to: $target"
+        println "${manager.getProjectWithRevision()} cloned to: $target"
     }
 }

@@ -74,7 +74,7 @@ class AssetManager {
     /**
      * Directory where the pipeline is cloned (i.e. downloaded)
      */
-    private File localPath
+    private File localRootPath
 
     private Git _git
 
@@ -126,7 +126,7 @@ class AssetManager {
         this.providerConfigs = ProviderConfig.createFromMap(config)
 
         this.project = resolveName(pipelineName)
-        this.localPath = checkProjectDir(project)
+        this.localRootPath = checkProjectDir(project)
         this.hub = checkHubProvider(cliOpts)
         this.provider = createHubProvider(hub)
         setupCredentials(cliOpts)
@@ -361,7 +361,7 @@ class AssetManager {
     }
 
     AssetManager setLocalPath(File path) {
-        this.localPath = path
+        this.localRootPath = path
         return this
     }
 
@@ -385,7 +385,9 @@ class AssetManager {
         provider.getCloneUrl()
     }
 
-    File getLocalPath() { localPath }
+    File getLocalPath() { localRootPath }
+
+    File getLocalRootPath() { localRootPath }
 
     ScriptFile getScriptFile(String scriptName=null) {
 
@@ -427,11 +429,11 @@ class AssetManager {
         // if specified in manifest, that takes priority
         // otherwise look for a symbolic ref (refs/remotes/origin/HEAD)
         return getManifest().getDefaultBranch()
-                ?: getRemoteBranch()
+                ?: getRemoteDefaultBranch()
                 ?: DEFAULT_BRANCH
     }
 
-    protected String getRemoteBranch() {
+    protected String getRemoteDefaultBranch() {
         Ref remoteHead = git.getRepository().findRef(REMOTE_DEFAULT_HEAD)
         return remoteHead?.getTarget()?.getName()?.substring(REMOTE_REFS_ROOT.length())
     }
@@ -496,7 +498,7 @@ class AssetManager {
     }
 
     boolean isLocal() {
-        localPath.exists()
+        localPath != null && localPath.exists()
     }
 
     /**
@@ -504,7 +506,7 @@ class AssetManager {
      *      file (i.e. main.nf) or the nextflow manifest file (i.e. nextflow.config)
      */
     boolean isRunnable() {
-        localPath.exists() && ( new File(localPath,DEFAULT_MAIN_FILE_NAME).exists() || new File(localPath,MANIFEST_FILE_NAME).exists() )
+        isLocal() && ( new File(localPath,DEFAULT_MAIN_FILE_NAME).exists() || new File(localPath,MANIFEST_FILE_NAME).exists() )
     }
 
     /**
@@ -718,7 +720,7 @@ class AssetManager {
      * @return The symbolic name of the current revision i.e. the current checked out branch or tag
      */
     String getCurrentRevision() {
-        Ref head = git.getRepository().findRef(Constants.HEAD);
+        Ref head = findHeadRef()
         if( !head )
             return '(unknown)'
 
@@ -729,12 +731,11 @@ class AssetManager {
             return '(unknown)'
 
         // try to resolve the the current object id to a tag name
-        Map<ObjectId, String> names = git.nameRev().addPrefix( "refs/tags/" ).add(head.objectId).call()
-        names.get( head.objectId ) ?: head.objectId.name()
+        return resolveTagNameByObjectId(head.objectId)
     }
 
     RevisionInfo getCurrentRevisionAndName() {
-        Ref head = git.getRepository().findRef(Constants.HEAD);
+        Ref head = findHeadRef()
         if( !head )
             return null
 
@@ -745,15 +746,25 @@ class AssetManager {
         if( !head.getObjectId() )
             return null
 
-        // try to resolve the the current object id to a tag name
-        Map<ObjectId, String> allNames = git.nameRev().addPrefix( "refs/tags/" ).add(head.objectId).call()
-        def name = allNames.get( head.objectId )
+        final name = resolveTagNameByObjectId(head.objectId)
         if( name ) {
             return new RevisionInfo(head.objectId.name(), name, RevisionInfo.Type.TAG)
         }
         else {
             return new RevisionInfo(head.objectId.name(), null, RevisionInfo.Type.COMMIT)
         }
+    }
+
+    protected Ref findHeadRef(){
+        git.getRepository().findRef(Constants.HEAD);
+    }
+
+    /**
+     * Try to resolve the the current object id to a tag name
+     */
+    protected String resolveTagNameByObjectId(ObjectId objectId){
+        Collection<Ref> tags = git.getRepository().getRefDatabase().getRefsByPrefix(Constants.R_TAGS)
+        return tags.find { it.objectId == objectId }?.name
     }
 
     static boolean isRemoteBranch(Ref ref) {
@@ -813,13 +824,13 @@ class AssetManager {
         final branches = []
         final tags = []
 
-        Map<String, Ref> remote = checkForUpdates ? git.lsRemote().callAsMap() : null
+        Map<String, Ref> remote = checkForUpdates ? lsRemote() : null
         getBranchList()
                 .findAll { it.name.startsWith('refs/heads/') || isRemoteBranch(it) }
                 .unique { shortenRefName(it.name) }
                 .each { Ref it -> branches << refToMap(it,remote)  }
 
-        remote = checkForUpdates ? git.lsRemote().setTags(true).callAsMap() : null
+        remote = checkForUpdates ? lsRemote(true) : null
         getTagList()
                 .findAll  { it.name.startsWith('refs/tags/') }
                 .each { Ref it -> tags << refToMap(it,remote) }
@@ -833,7 +844,7 @@ class AssetManager {
 
     protected Map refToMap(Ref ref, Map<String,Ref> remote) {
         final entry = new HashMap(2)
-        final peel = git.getRepository().getRefDatabase().peel(ref)
+        final peel = getPeeledRef(ref)
         final objId = peel.getPeeledObjectId() ?: peel.getObjectId()
         // the branch or tag name
         entry.name = shortenRefName(ref.name)
@@ -845,6 +856,12 @@ class AssetManager {
         }
         return entry
     }
+
+    protected Ref getPeeledRef(Ref ref){
+        return git.getRepository().getRefDatabase().peel(ref)
+    }
+
+    protected lsRemote
 
     @Memoized
     protected List<Ref> getBranchList() {
@@ -867,7 +884,7 @@ class AssetManager {
         result << (name == current ? '*' : ' ')
 
         if( level ) {
-            def peel = git.getRepository().getRefDatabase().peel(ref)
+            def peel = getPeeledRef(ref)
             def obj = peel.getPeeledObjectId() ?: peel.getObjectId()
             result << ' '
             result << formatObjectId(obj, level == 1)
@@ -883,7 +900,7 @@ class AssetManager {
         return result.toString()
     }
 
-    private String shortenRefName( String name ) {
+    protected String shortenRefName( String name ) {
         if( name.startsWith('refs/remotes/origin/') )
             return name.replace('refs/remotes/origin/', '')
 
@@ -907,17 +924,24 @@ class AssetManager {
         ref.objectId.name != remote[ref.name].objectId.name
     }
 
+    protected Map<String,Ref> lsRemote(boolean tags = false){
+        final cmd = git.lsRemote().setTags(tags)
+        if( provider.hasCredentials() )
+            cmd.setCredentialsProvider( provider.getGitCredentials() )
+        return cmd.callAsMap()
+    }
+
     @Deprecated
     List<String> getUpdates(int level) {
 
-        def remote = git.lsRemote().callAsMap()
+        def remote = lsRemote()
         List<String> branches = getBranchList()
                 .findAll { it.name.startsWith('refs/heads/') || isRemoteBranch(it) }
                 .unique { shortenRefName(it.name) }
                 .findAll { Ref ref -> hasRemoteChange(ref,remote) }
                 .collect { Ref ref -> formatUpdate(remote.get(ref.name),level) }
 
-        remote = git.lsRemote().setTags(true).callAsMap()
+        remote = lsRemote(true)
         List<String> tags = getTagList()
                 .findAll  { it.name.startsWith('refs/tags/') }
                 .findAll { Ref ref -> hasRemoteChange(ref,remote) }
@@ -930,10 +954,24 @@ class AssetManager {
     }
 
     /**
-     * Checkout a specific revision
+     * Checkout a specific revision, and fetch remote if not locally available.
      * @param revision The revision to be checked out
      */
     void checkout( String revision = null ) {
+        try {
+            tryCheckout(revision)
+        }
+        catch( RefNotFoundException e ) {
+            checkoutRemoteBranch(revision)
+        }
+
+    }
+
+    /**
+     * Checkout a specific revision returns exception if revision is not found locally
+     * @param revision The revision to be checked out
+     */
+    void tryCheckout( String revision = null ) throws RefNotFoundException{
         assert localPath
 
         def current = getCurrentRevision()
@@ -951,12 +989,9 @@ class AssetManager {
         if( !isClean() )
             throw new AbortOperationException("Project `$project` contains uncommitted changes -- Cannot switch to revision: $revision")
 
-        try {
-            git.checkout().setName(revision) .call()
-        }
-        catch( RefNotFoundException e ) {
-            checkoutRemoteBranch(revision)
-        }
+
+        git.checkout().setName(revision) .call()
+
 
     }
 
@@ -1032,10 +1067,7 @@ class AssetManager {
 
     protected String getRemoteCommitId(RevisionInfo rev) {
         final tag = rev.type == RevisionInfo.Type.TAG
-        final cmd = git.lsRemote().setTags(tag)
-        if( provider.hasCredentials() )
-            cmd.setCredentialsProvider( provider.getGitCredentials() )
-        final list = cmd.call()
+        final list = lsRemote(tag).values()
         final ref = list.find { Repository.shortenRefName(it.name) == rev.name }
         if( !ref ) {
             log.debug "WARN: Cannot find any Git revision matching: ${rev.name}; ls-remote: $list"

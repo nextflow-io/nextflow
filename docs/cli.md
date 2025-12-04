@@ -79,6 +79,13 @@ $ nextflow run nextflow-io/hello -r v1.1
 $ nextflow run nextflow-io/hello -r dev-branch
 $ nextflow run nextflow-io/hello -r a3f5c8e
 ```
+:::{versionadded} 25.11.0-edge
+:::
+Nextflow downloads and locally maintains each explicitly requested Git branch, tag or commit ID in a separate directory path, thus enabling to run multiple revisions of the same pipeline at the same time. Each downloaded revision is stored in a subdirecrory path of the local project path: `$NXF_ASSETS/<org>/<repo>/.nextflow/commits/<commitId>`.
+
+:::{warning}
+If you really care about reproducibility of your pipelines, consider explicitly referring to them by tag or commit ID, rather than my branch. This is because the same branch will point to different underlying commits over time, as pipeline development goes on.
+:::
 
 (cli-params)=
 
@@ -174,9 +181,9 @@ repository  : https://github.com/nextflow-io/hello
 local path  : $HOME/.nextflow/assets/nextflow-io/hello
 main script : main.nf
 revisions   :
-* master (default)
+P master (default)
   mybranch
-  v1.1 [t]
+P v1.1 [t]
   v1.2 [t]
 ```
 
@@ -186,11 +193,12 @@ This shows:
 - Where it's cached locally
 - Which script runs by default
 - Available revisions (branches and tags marked with `[t]`)
-- Which revision is currently checked out (marked with `*`)
+- Which revisions are currently pulled (marked with `P`)
 
 ### Pulling or updating projects
 
 The `pull` command downloads a pipeline or updates an existing one to the latest version from its Git repository.
+
 
 Use this to manually download pipelines before running them, update cached pipelines, or download pipelines for offline use.
 

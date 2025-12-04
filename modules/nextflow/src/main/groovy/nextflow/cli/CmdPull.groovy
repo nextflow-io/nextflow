@@ -15,6 +15,7 @@
  */
 
 package nextflow.cli
+
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
@@ -22,6 +23,7 @@ import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
+import nextflow.scm.MultiRevisionAssetManager
 import nextflow.util.TestOnly
 /**
  * CLI sub-command PULL
@@ -38,14 +40,11 @@ class CmdPull extends CmdBase implements HubOptions {
     @Parameter(description = 'project name or repository url to pull', arity = 1)
     List<String> args
 
-    @Parameter(names='-all', description = 'Update all downloaded projects', arity = 0)
+    @Parameter(names=['-a','-all'], description = 'Update all downloaded projects', arity = 0)
     boolean all
 
-    @Parameter(names=['-r','-revision'], description = 'Revision of the project to run (either a git branch, tag or commit SHA number)')
+    @Parameter(names=['-r','-revision'], description = 'Revision of the project to pull (either a git branch, tag or commit SHA number)')
     String revision
-
-    @Parameter(names=['-d','-deep'], description = 'Create a shallow clone of the specified depth')
-    Integer deep
 
     @Override
     final String getName() { NAME }
@@ -59,11 +58,11 @@ class CmdPull extends CmdBase implements HubOptions {
         if( !all && !args )
             throw new AbortOperationException('Missing argument')
 
-        def list = all ? AssetManager.list() : args.toList()
-        if( !list ) {
-            log.info "(nothing to do)"
-            return
-        }
+        if( all && args )
+            throw new AbortOperationException('Option `all` requires no arguments')
+
+        if( all && revision )
+            throw new AbortOperationException('Option `all` is not compatible with `revision`')
 
         if( root ) {
             AssetManager.root = root
@@ -71,12 +70,31 @@ class CmdPull extends CmdBase implements HubOptions {
 
         // init plugin system
         Plugins.init()
-        
-        list.each {
-            log.info "Checking $it ..."
-            def manager = new AssetManager(it, this)
 
-            def result = manager.download(revision,deep)
+        List<MultiRevisionAssetManager> list = []
+        if ( all ) {
+            def all = AssetManager.list()
+            all.each{ proj ->
+                def revManager = new MultiRevisionAssetManager(proj)
+                revManager.listRevisions().each{ rev ->
+                    list << new MultiRevisionAssetManager(proj, this, rev)
+                }
+            }
+        } else {
+            args.toList().each {
+                list << new MultiRevisionAssetManager(it, this, revision)
+            }
+        }
+
+        if( !list ) {
+            log.info "(nothing to do)"
+            return
+        }
+
+        list.each { manager ->
+            log.info "Checking ${manager.getProjectWithRevision()} ..."
+
+            def result = manager.createSharedClone()
             manager.updateModules()
 
             def scriptFile = manager.getScriptFile()

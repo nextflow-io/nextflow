@@ -29,7 +29,7 @@ import nextflow.BuildInfo
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.DefaultPlugins
 import nextflow.plugin.Plugins
-import nextflow.scm.AssetManager
+import nextflow.scm.MultiRevisionAssetManager
 import nextflow.util.MemoryUnit
 import nextflow.util.Threads
 import org.yaml.snakeyaml.Yaml
@@ -75,9 +75,10 @@ class CmdInfo extends CmdBase {
         }
 
         Plugins.init()
-        final manager = new AssetManager(args[0])
-        if( !manager.isLocal() )
+        def manager = new MultiRevisionAssetManager(args[0])
+        if( !manager.hasBareRepo() ) {
             throw new AbortOperationException("Unknown project `${args[0]}`")
+        }
 
         if( !format || format == 'text' ) {
             printText(manager,level)
@@ -96,12 +97,12 @@ class CmdInfo extends CmdBase {
 
     }
 
-    protected printText(AssetManager manager, int level) {
+    protected printText(MultiRevisionAssetManager manager, int level) {
         final manifest = manager.getManifest()
 
         out.println " project name: ${manager.project}"
         out.println " repository  : ${manager.repositoryUrl}"
-        out.println " local path  : ${manager.localPath}"
+        out.println " local path  : ${manager.localRootPath.toString()}"
         out.println " main script : ${manager.mainScriptName}"
         if( manager.homePage && manager.homePage != manager.repositoryUrl )
             out.println " home page   : ${manager.homePage}"
@@ -134,11 +135,11 @@ class CmdInfo extends CmdBase {
         out.flush()
     }
 
-    protected Map createMap(AssetManager manager) {
+    protected Map createMap(MultiRevisionAssetManager manager) {
         def result = [:]
         result.projectName = manager.project
         result.repository = manager.repositoryUrl
-        result.localPath = manager.localPath?.toString()
+        result.localPath = manager.localRootPath.toString()
         result.manifest = manager.manifest.toMap()
         result.revisions = manager.getBranchesAndTags(checkForUpdates)
         return result
