@@ -144,7 +144,7 @@ params {
 When including a config file, the included config is evaluated with the parameters that are defined before the include. Parameters defined after the include are not visible to the included config.
 :::
 
-As a best practice, parameters should be declared in the config file only if they are used by other config options. If a parameter is used in the script, it should be declared in the script and overridden in config profiles if necessary. For example:
+As a best practice, declare parameters in the config file only if they are used by other config options. If a parameter is used within the script, declare it there and override it in config profiles as needed. For example:
 
 ```nextflow
 // main.nf
