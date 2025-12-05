@@ -34,7 +34,7 @@ Parameters can be declared in a Nextflow script with the `params` block or with 
 :::
 
 :::{note}
-Typed parameters require the {ref}`strict syntax <strict-syntax-page>`. Set the `NXF_SYNTAX_PARSER` environment variable to `v2` to enable.
+Typed parameters require the {ref}`strict syntax <strict-syntax-page>`. Set the `NXF_SYNTAX_PARSER` environment variable to `v2` to enable:
 
 ```bash
 export NXF_SYNTAX_PARSER=v2

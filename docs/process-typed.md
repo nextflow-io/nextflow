@@ -26,7 +26,7 @@ process hello {
 
 To use this feature:
 
-1. Set the `NXF_SYNTAX_PARSER` environment variable to `v2` of the {ref}`strict syntax <strict-syntax-page>`.
+1. Set the `NXF_SYNTAX_PARSER` environment variable to `v2`:
 
     ```bash
     export NXF_SYNTAX_PARSER=v2

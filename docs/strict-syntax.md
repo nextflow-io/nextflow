@@ -574,7 +574,7 @@ The process {ref}`process-when` section is discouraged. As a best practice, cond
 ## Configuration syntax
 
 :::{versionadded} 25.04.0
-To enable the {ref}`strict syntax <strict-syntax-page>`, set the `NXF_SYNTAX_PARSER` environment variable:
+To enable the {ref}`strict syntax <strict-syntax-page>`, set the `NXF_SYNTAX_PARSER` environment variable to `v2`:
 
 ```bash
 export NXF_SYNTAX_PARSER=v2
