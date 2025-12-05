@@ -14,7 +14,7 @@ Kubernetes main abstraction is the `pod`. A `pod` defines the (desired) state of
 
 Kubernetes abstracts also the storage provisioning through the definition of one more persistent volumes that allow containers to access to the underlying storage systems in a transparent and portable manner.
 
-When using the `k8s` executor Nextflow deploys the workflow execution as a Kubernetes pod. This pod orchestrates the workflow execution and submits a separate pod execution for each job that need to be carried out by the workflow application.
+When using the `k8s` executor Nextflow deploys the workflow execution as a Kubernetes pod. This pod orchestrates the workflow execution and submits a separate pod execution for each job that needs to be carried out by the workflow application.
 
 ```{image} _static/nextflow-k8s-min.png
 ```

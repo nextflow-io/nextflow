@@ -38,7 +38,7 @@ To learn more about this and other project metadata information, that can be def
 
 Once you have uploaded your pipeline project to GitHub other people can execute it simply using the project name or the repository URL.
 
-For if your GitHub account name is `acme` and you have uploaded a project into a repository named `hello` the repository URL will be `http://github.com/acme/hello` and people will able to download and run it by using either the command:
+For example, if your GitHub account name is `acme` and you have uploaded a project into a repository named `hello` the repository URL will be `http://github.com/acme/hello` and people will able to download and run it by using either the command:
 
 ```bash
 nextflow run acme/hello
@@ -60,10 +60,10 @@ These external dependencies are the primary challenge when sharing software, bec
 
 Nextflow tackles this problem by integrating with existing tools for reproducible software, namely Git for source code and Docker for containers. These tools allow you to keep all the dependencies of your pipeline project in one place and track changes over time with version control.
 
-By making your pipeline project is self-contained, meaning all of its dependencies are fully defined in the project itself, you gain two major advantages:
+By making your pipeline project self-contained, meaning all of its dependencies are fully defined in the project itself, you gain two major advantages:
 
 - **Portability**: the pipeline can be run in virtually any environment with a Java VM and a container runtime
-- **Reproducibility**: any results produced by the pipelined can be easily reproduced, even across different environments
+- **Reproducibility**: any results produced by the pipeline can be easily reproduced, even across different environments
 
 One way to account for dependencies is to break them down into three categories: code, data, and environment. Here we will describe how to include each of these dependencies in your Nextflow pipeline:
 
@@ -159,7 +159,7 @@ workflow {
     channel.of('ACGTTGCAATGCCGTA', 'GCGTACGGTACGTTAC')
         .map { seq -> new DNASequence(seq) }
         .view { dna ->
-            "Found sequence '$dna' with melting temperaure ${dna.getMeltingTemperature()}°C"
+            "Found sequence '$dna' with melting temperature ${dna.getMeltingTemperature()}°C"
         }
 }
 ```
@@ -167,8 +167,8 @@ workflow {
 It prints:
 
 ```
-Found sequence 'DNA[ACGTTGCAATGCCGTA]' with melting temperaure 48.0°C
-Found sequence 'DNA[GCGTACGGTACGTTAC]' with melting temperaure 50.0°C
+Found sequence 'DNA[ACGTTGCAATGCCGTA]' with melting temperature 48.0°C
+Found sequence 'DNA[GCGTACGGTACGTTAC]' with melting temperature 50.0°C
 ```
 
 :::{note}
