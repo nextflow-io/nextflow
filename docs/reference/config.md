@@ -1600,6 +1600,15 @@ The following settings are available:
 : The container repository where images built by Wave are uploaded.
 : The corresponding credentials must be provided in your Seqera Platform account.
 
+`wave.build.template`
+: :::{versionadded} 25.12.0-edge
+  :::
+: The build template to use for container builds. Supported values:
+: - `conda/pixi/v1`: Pixi package manager with multi-stage builds for optimized image sizes.
+: - `conda/micromamba/v2`: Micromamba 2.x with multi-stage builds.
+: - `cran/installr/v1`: R/CRAN packages using installr.
+: Multi-stage templates produce smaller images by excluding build tools from the final image.
+
 `wave.httpClient.connectTimeout`
 : :::{versionadded} 22.06.0-edge
   :::
