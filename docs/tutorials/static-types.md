@@ -123,6 +123,14 @@ params {
 
 See {ref}`workflow-params-def` for more information about the `params` block.
 
+:::{note}
+Parameters used only in the config file should be declared there, not in the script. Since rnaseq-nf has no such parameters, all parameters are declared in the script. See {ref}`config-params` for more information.
+:::
+
+:::{tip}
+The rnaseq-nf pipeline initializes the `reads` and `transcriptome` parameters to a test dataset by default, as it is designed as a toy example. In practice, defaults for test data should be defined in a config profile (e.g., `test`).
+:::
+
 ### Migrating workflows
 
 The type of each workflow input can be inferred by examining how the workflow is called.

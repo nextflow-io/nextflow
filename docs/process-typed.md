@@ -24,9 +24,14 @@ process hello {
 }
 ```
 
-In order to use this feature, you'll need to:
+To use this feature:
 
-1. Enable {ref}`strict syntax <strict-syntax-page>` by setting `NXF_SYNTAX_PARSER=v2`.
+1. Set the `NXF_SYNTAX_PARSER` environment variable to `v2`:
+
+    ```bash
+    export NXF_SYNTAX_PARSER=v2
+    ```
+
 2. Set `nextflow.preview.types = true` in every script that uses typed processes.
 
 See {ref}`syntax-process-typed` for the complete syntax reference and {ref}`migrating-static-types` to migrate existing code to static types.
