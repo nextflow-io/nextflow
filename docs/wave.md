@@ -119,7 +119,7 @@ Available templates:
 
 | Template | Description |
 |----------|-------------|
-| `conda/micromamba/v1` | Standard Micromamba 1.x single-stage build (default when unspecified). The final image includes the package manager. |
+| `conda/micromamba/v1` | Standard Micromamba 1.x single-stage build. The final image includes the package manager. Default when unspecified. |
 | `conda/micromamba/v2` | Multi-stage build using Micromamba 2.x. Produces smaller images without the package manager. |
 | `conda/pixi/v1` | Multi-stage build using [Pixi](https://pixi.sh/) package manager. Produces smaller images with faster dependency resolution. |
 | `cran/installr/v1` | Build template for R/CRAN packages using installr. |
