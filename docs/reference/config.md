@@ -1603,9 +1603,10 @@ The following settings are available:
 `wave.build.template`
 : :::{versionadded} 25.12.0-edge
   :::
-: The build template to use for container builds. Supported values:
-: - `conda/pixi/v1`: Pixi package manager with multi-stage builds for optimized image sizes.
+: The build template to use for container builds (default: `conda/micromamba/v1`). Supported values:
+: - `conda/micromamba/v1`: Standard Micromamba 1.x single-stage build (default when unspecified).
 : - `conda/micromamba/v2`: Micromamba 2.x with multi-stage builds.
+: - `conda/pixi/v1`: Pixi package manager with multi-stage builds for optimized image sizes.
 : - `cran/installr/v1`: R/CRAN packages using installr.
 : Multi-stage templates produce smaller images by excluding build tools from the final image.
 

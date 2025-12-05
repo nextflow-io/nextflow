@@ -119,10 +119,12 @@ Available templates:
 
 | Template | Description |
 |----------|-------------|
-| (default) | Standard Micromamba v1 single-stage build. The final image includes the package manager. |
+| `conda/micromamba/v1` | Standard Micromamba 1.x single-stage build (default when unspecified). The final image includes the package manager. |
 | `conda/micromamba/v2` | Multi-stage build using Micromamba 2.x. Produces smaller images without the package manager. |
 | `conda/pixi/v1` | Multi-stage build using [Pixi](https://pixi.sh/) package manager. Produces smaller images with faster dependency resolution. |
 | `cran/installr/v1` | Build template for R/CRAN packages using installr. |
+
+When `wave.build.template` is not specified, Wave uses the standard `conda/micromamba/v1` template.
 
 (wave-singularity)=
 
