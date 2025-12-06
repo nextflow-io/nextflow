@@ -410,6 +410,9 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             instancePolicyOrTemplate.setPolicy( instancePolicy )
         }
 
+        if( batchConfig.installOpsAgent )
+            instancePolicyOrTemplate.setInstallOpsAgent( true )
+
         allocationPolicy.addInstances(instancePolicyOrTemplate)
 
         // network policy

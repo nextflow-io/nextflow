@@ -86,6 +86,12 @@ class BatchConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
+        Enable the installation of the Ops Agent on Google Batch instances for enhanced monitoring and logging (default: `false`).
+    """)
+    final boolean installOpsAgent
+
+    @ConfigOption
+    @Description("""
         The Google Cloud Storage path where job logs should be stored, e.g. `gs://my-logs-bucket/logs`.
     """)
     final String logsPath
@@ -147,6 +153,7 @@ class BatchConfig implements ConfigScope {
         cpuPlatform = opts.cpuPlatform
         gcsfuseOptions = opts.gcsfuseOptions as List<String> ?: DEFAULT_GCSFUSE_OPTS
         installGpuDrivers = opts.installGpuDrivers as boolean
+        installOpsAgent = opts.installOpsAgent as boolean
         logsPath = opts.logsPath
         maxSpotAttempts = opts.maxSpotAttempts != null ? opts.maxSpotAttempts as int : DEFAULT_MAX_SPOT_ATTEMPTS
         network = opts.network
