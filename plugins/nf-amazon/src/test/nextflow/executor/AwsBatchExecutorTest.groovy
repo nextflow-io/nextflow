@@ -7,6 +7,8 @@
 
 package nextflow.executor
 
+import nextflow.file.FileHelper
+
 import java.nio.file.Path
 
 import nextflow.Session
@@ -121,6 +123,7 @@ class AwsBatchExecutorTest extends Specification {
                 getS5cmdPath() >> { S5CMD ? 's5cmd' : null }
                 getAwsCli() >> { 'aws' }
             }
+            getWorkDir() >> FileHelper.asPath(TASK_DIR)
         }
         expect:
         executor.getArrayLaunchCommand(TASK_DIR) == EXPECTED

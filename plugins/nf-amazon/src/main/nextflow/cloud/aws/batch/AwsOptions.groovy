@@ -18,7 +18,6 @@ package nextflow.cloud.aws.batch
 
 import java.nio.file.Path
 
-import software.amazon.awssdk.services.s3.model.ObjectCannedACL
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
@@ -112,34 +111,13 @@ class AwsOptions implements CloudTransferOptions {
         return awsConfig.batchConfig.getDelayBetweenAttempts()
     }
 
-    String getStorageClass() {
-        return awsConfig.s3Config.getStorageClass()
-    }
-
-    String getStorageEncryption() {
-        return awsConfig.s3Config.getStorageEncryption()
-    }
-
-    String getStorageKmsKeyId() {
-        return awsConfig.s3Config.getStorageKmsKeyId()
-    }
-
-    ObjectCannedACL getS3Acl() {
-        return awsConfig.s3Config.getS3Acl()
-    }
-
     Boolean getDebug() {
         return awsConfig.s3Config.getDebug()
-    }
-
-    Boolean getRequesterPays() {
-        return awsConfig.s3Config.getRequesterPays()
     }
 
     String getAwsCli() {
         def result = getCliPath()
         if( !result ) result = 'aws'
-        if( region ) result += " --region $region"
         return result
     }
 
@@ -162,6 +140,14 @@ class AwsOptions implements CloudTransferOptions {
 
     boolean terminateUnschedulableJobs() {
         return awsConfig.batchConfig.terminateUnschedulableJobs
+    }
+
+    String generateUploadCliArgs(String bucketName){
+        return awsConfig.generateUploadCliArgs(bucketName)
+    }
+
+    String generateDownloadCliArgs(String bucketName){
+        return awsConfig.generateDownloadCliArgs(bucketName)
     }
 
 }

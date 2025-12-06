@@ -20,6 +20,8 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.cloud.aws.config.AwsConfig
+import nextflow.cloud.aws.nio.S3Path
 import nextflow.cloud.aws.util.S3BashLib
 import nextflow.executor.SimpleFileCopyStrategy
 import nextflow.processor.TaskBean
@@ -93,10 +95,12 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
      */
     @Override
     String stageInputFile( Path path, String targetName ) {
+        def args = path instanceof S3Path ? opts.generateDownloadCliArgs(((S3Path)path).bucket) : ''
+        args = args ? " $args" : ''
         // third param should not be escaped, because it's used in the grep match rule
         def stage_cmd = opts.maxTransferAttempts > 1 && !opts.retryMode
-                ? "downloads+=(\"nxf_cp_retry nxf_s3_download s3:/${Escape.path(path)} ${Escape.path(targetName)}\")"
-                : "downloads+=(\"nxf_s3_download s3:/${Escape.path(path)} ${Escape.path(targetName)}\")"
+                ? "downloads+=(\"nxf_cp_retry nxf_s3_download s3:/${Escape.path(path)} ${Escape.path(targetName)}${args}\")"
+                : "downloads+=(\"nxf_s3_download s3:/${Escape.path(path)} ${Escape.path(targetName)}${args}\")"
         return stage_cmd
     }
 
@@ -116,12 +120,14 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
         final escape = new ArrayList(outputFiles.size())
         for( String it : patterns )
             escape.add( Escape.path(it) )
+        def args = targetDir instanceof S3Path ? opts.generateUploadCliArgs(((S3Path)targetDir).bucket) : ''
+        args = args ? " $args" : ''
 
         return """\
             uploads=()
             IFS=\$'\\n'
             for name in \$(eval "ls -1d ${escape.join(' ')}" | sort | uniq); do
-                uploads+=("nxf_s3_upload '\$name' s3:/${Escape.path(targetDir)}")
+                uploads+=("nxf_s3_upload '\$name' s3:/${Escape.path(targetDir)}${args}")
             done
             unset IFS
             nxf_parallel "\${uploads[@]}"
@@ -133,7 +139,9 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
      */
     @Override
     String touchFile( Path file ) {
-        "echo start | nxf_s3_upload - s3:/${Escape.path(file)}"
+        def args = file instanceof S3Path ? opts.generateUploadCliArgs(((S3Path)file).bucket) : ''
+        args = args ? " $args" : ''
+        return "echo start | nxf_s3_upload - s3:/${Escape.path(file)}${args}"
     }
 
     /**
@@ -141,7 +149,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
      */
     @Override
     String fileStr( Path path ) {
-        Escape.path(path.getFileName())
+        return Escape.path(path.getFileName())
     }
 
     /**
@@ -149,18 +157,24 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
      */
     @Override
     String copyFile( String name, Path target ) {
-        "nxf_s3_upload ${Escape.path(name)} s3:/${Escape.path(target.getParent())}"
+        def args = target instanceof S3Path ? opts.generateUploadCliArgs(((S3Path)target).bucket) : ''
+        args = args ? " $args" : ''
+        return "nxf_s3_upload ${Escape.path(name)} s3:/${Escape.path(target.getParent())}${args}"
     }
 
-    static String uploadCmd( String source, Path target ) {
-        "nxf_s3_upload ${Escape.path(source)} s3:/${Escape.path(target)}"
+    static String uploadCmd( String source, Path target, Map config) {
+        def args = target instanceof S3Path && config ? new AwsConfig(config).generateUploadCliArgs(((S3Path)target).bucket) : ''
+        args = args ? " $args" : ''
+        return "nxf_s3_upload ${Escape.path(source)} s3:/${Escape.path(target)}${args}"
     }
 
     /**
      * {@inheritDoc}
      */
     String exitFile( Path path ) {
-        "| nxf_s3_upload - s3:/${Escape.path(path)} || true"
+        def args = path instanceof S3Path ? opts.generateUploadCliArgs(((S3Path)path).bucket) : ''
+        args = args ? " $args" : ''
+        return "| nxf_s3_upload - s3:/${Escape.path(path)}${args} || true"
     }
 
     /**
