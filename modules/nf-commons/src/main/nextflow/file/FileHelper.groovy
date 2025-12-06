@@ -362,7 +362,7 @@ class FileHelper {
         return asPath(toPathURI(str))
     }
 
-    static final private Map<String,String> PLUGINS_MAP = [s3:'nf-amazon', gs:'nf-google', az:'nf-azure']
+    static final private Map<String,String> PLUGINS_MAP = [s3:'nf-amazon', gs:'nf-google', az:'nf-azure', seqera: 'nf-tower']
 
     static final private Map<String,Boolean> SCHEME_CHECKED = new HashMap<>()
 
