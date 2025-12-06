@@ -226,7 +226,8 @@ class WaveClient {
                 mirror: config.mirrorMode(),
                 scanMode: config.scanMode(),
                 scanLevels: config.scanAllowedLevels(),
-                buildCompression: config.buildCompression()
+                buildCompression: config.buildCompression(),
+                buildTemplate: config.buildTemplate()
         )
     }
 
@@ -254,7 +255,8 @@ class WaveClient {
                 mirror: config.mirrorMode(),
                 scanMode: config.scanMode(),
                 scanLevels: config.scanAllowedLevels(),
-                buildCompression: config.buildCompression()
+                buildCompression: config.buildCompression(),
+                buildTemplate: config.buildTemplate()
         )
         return sendRequest(request)
     }
