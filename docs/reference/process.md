@@ -364,9 +364,9 @@ The example above declares that the CPU generic architecture is `linux/x86_64` (
 
 This directive is currently used by the following Nextflow functionalities:
 
-- by the [spack](#spack) directive, to build microarchitecture-optimised applications;
+- by the [spack](#spack) directive, to build microarchitecture-optimized applications;
 - by the {ref}`wave-page` service, to build containers for one of the generic families of CPU architectures (see below);
-- by the `spack` strategy within {ref}`wave-page`, to optimise the container builds for specific CPU microarchitectures.
+- by the `spack` strategy within {ref}`wave-page`, to optimize the container builds for specific CPU microarchitectures.
 
 Allowed values for the `arch` directive are as follows, grouped by equivalent family (choices available for the sake of compatibility):
 - X86 64 bit: `linux/x86_64`, `x86_64`, `linux/amd64`, `amd64`
@@ -443,7 +443,7 @@ When using Wave, the following additional directives must be uniform:
 
 ### beforeScript
 
-The `beforeScript` directive allows you to execute a custom (Bash) snippet *before* the main process script is run. This may be useful to initialise the underlying cluster environment or for other custom initialisation.
+The `beforeScript` directive allows you to execute a custom (Bash) snippet *before* the main process script is run. This may be useful to initialize the underlying cluster environment or for other custom initialization.
 
 For example:
 

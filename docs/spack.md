@@ -9,7 +9,7 @@
 
 Nextflow has built-in support for Spack that allows the configuration of workflow dependencies using Spack recipes and environment files.
 
-This allows Nextflow applications to build packages from source on the compute infrastructure in use, whilst taking advantage of the configuration flexibility provided by Nextflow. At shared compute facilities where Spack has been configured by the administrators, this may result in optimized builds without user intervention. With appropriate options, this also permits end users to customize binary optimizations by themselves.
+This allows Nextflow applications to build packages from source on the compute infrastructure in use, while taking advantage of the configuration flexibility provided by Nextflow. At shared compute facilities where Spack has been configured by the administrators, this may result in optimized builds without user intervention. With appropriate options, this also permits end users to customize binary optimizations by themselves.
 
 ## Prerequisites
 
