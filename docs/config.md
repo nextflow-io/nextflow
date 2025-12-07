@@ -166,7 +166,7 @@ profiles {
 }
 ```
 
-See {ref}`cli-params` for information about how pipeline parameters are resovled at runtime.
+See {ref}`cli-params` for information about how pipeline parameters are resolved at runtime.
 
 (config-process)=
 

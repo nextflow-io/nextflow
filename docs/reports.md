@@ -197,7 +197,7 @@ The following table shows the fields that can be included in the execution repor
 : Nextflow process name.
 
 `tag`
-: User provided identifier associated this task.
+: User provided identifier associated with this task.
 
 `name`
 : Task name.
