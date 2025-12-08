@@ -4,30 +4,30 @@
 
 ## Configuration file
 
-When a pipeline script is launched, Nextflow looks for configuration files in multiple locations. Since each configuration file may contain conflicting settings, they are applied in the following order (from lowest to highest priority):
+Nextflow looks for configuration files in multiple locations when you launch a pipeline script. Nextflow applies conflicting settings in the following order (from lowest to highest):
 
-1. The config file `$HOME/.nextflow/config` (or `$NXF_HOME/config` when {ref}`NXF_HOME <nxf-env-vars>` is set).
-2. The config file `nextflow.config` in the project directory
-3. The config file `nextflow.config` in the launch directory
-4. Config files specified using the `-c <config-files>` option
+1. `$HOME/.nextflow/config`, or `$NXF_HOME/config` when {ref}`NXF_HOME <nxf-env-vars>` is set
+2. `nextflow.config` in the project directory
+3. `nextflow.config` in the launch directory
+4. Config files specified with `-c <config-files>`
 
 :::{tip}
-You can alternatively use the `-C <config-file>` option to specify a fixed set of configuration files and ignore all other files.
+You can use the `-C <config-file>` option to specify a fixed set of configuration files and ignore all other files.
 :::
 
 (config-syntax)=
 
 ## Syntax
 
-The Nextflow configuration syntax is based on the Nextflow script syntax. It is designed for setting configuration options in a declarative manner while also allowing for dynamic expressions where appropriate.
+Nextflow configuration uses the same syntax as Nextflow scripts. You can set configuration options declaratively and define dynamic expressions when needed.
 
-A Nextflow config file may consist of any number of *assignments*, *blocks*, and *includes*. Config files may also contain comments in the same manner as scripts.
+Config files can contain any number of *assignments*, *blocks*, and *includes*. You can add comments just like in scripts.
 
-See {ref}`syntax-page` for more information about the Nextflow script syntax.
+For more information, see {ref}`syntax-page`.
 
 ### Assignments
 
-A config assignment consists of a config option and an expression separated by an equals sign:
+A config assignment sets a config option to an expression using an equals sign:
 
 ```groovy
 workDir = 'work'
@@ -35,9 +35,9 @@ docker.enabled = true
 process.maxErrors = 10
 ```
 
-A config option consists of an *option name* prefixed by any number of *scopes* separated by dots. Config scopes are used to group related config options. See {ref}`config-options` for the full set of config options.
+A config option has an *option name* with any number of *scopes* as prefixes, separated by dots. Scopes group related config options. For all options, see {ref}`config-options`.
 
-The expression is typically a literal value such as a number, boolean, or string. However, any expression can be used:
+Expressions are typically literal values (numbers, booleans, or strings). However, you can use any expression:
 
 ```groovy
 params.helper_file = "${projectDir}/assets/helper.txt"
@@ -45,7 +45,7 @@ params.helper_file = "${projectDir}/assets/helper.txt"
 
 ### Blocks
 
-A config scope can also be specified as a block, which may contain multiple configuration options. For example:
+You can also specify a config scope as a block with multiple options:
 
 ```groovy
 // dot syntax
@@ -59,7 +59,7 @@ docker {
 }
 ```
 
-As a result, deeply nested config options can be assigned in various ways. For example, the following three assignments are equivalent:
+You can assign deeply nested config options in multiple ways. The following three assignments are equivalent:
 
 ```groovy
 executor.retry.maxAttempt = 5
@@ -77,7 +77,7 @@ executor {
 
 ### Includes
 
-A configuration file can include any number of other configuration files using the `includeConfig` keyword:
+You can include configuration files in other configuration files with the `includeConfig` keyword:
 
 ```groovy
 process.executor = 'sge'
@@ -87,10 +87,10 @@ process.memory = '10G'
 includeConfig 'path/extra.config'
 ```
 
-Relative paths are resolved against the location of the including file.
+Nextflow resolves relative paths from the including file's location.
 
 :::{note}
-Config includes can also be specified within config blocks. However, config files should only be included at the top level or in a [profile](#config-profiles) so that the included config file is valid on its own and in the context in which it is included.
+You can specify config includes within config blocks. However, you should only include config files at the top level or in a [profile](#config-profiles). This ensures the included config file is valid on its own and in the context in which it is included.
 :::
 
 (config-constants)=
