@@ -4,7 +4,7 @@
 
 ## Configuration file
 
-Nextflow looks for configuration files in multiple locations when you launch a pipeline script. Nextflow applies conflicting settings in the following order (from lowest to highest):
+When you launch a pipeline script, Nextflow looks for configuration files in multiple locations. Nextflow applies conflicting settings in the following order (from lowest to highest):
 
 1. `$HOME/.nextflow/config`, or `$NXF_HOME/config` when {ref}`NXF_HOME <nxf-env-vars>` is set
 2. `nextflow.config` in the project directory
@@ -45,7 +45,7 @@ params.helper_file = "${projectDir}/assets/helper.txt"
 
 ### Blocks
 
-You can also specify a config scope as a block with multiple options:
+You can specify a config scope as a block with multiple options:
 
 ```groovy
 // dot syntax
@@ -117,7 +117,7 @@ For the full list of available constants and functions, see {ref}`stdlib-namespa
 
 ## Parameters
 
-Pipeline parameters can be defined in the config file using the `params` scope:
+You can define pipeline parameters in config files using the `params` scope:
 
 ```groovy
 // dot syntax
@@ -132,10 +132,10 @@ params {
 ```
 
 :::{note}
-When including a config file, the included config is evaluated with the parameters that are defined before the include. Parameters defined after the include are not visible to the included config.
+When including a config file, Nextflow evaluates the included config with parameters defined before the include. Parameters defined after the include are not visible to the included config.
 :::
 
-As a best practice, declare parameters in the config file only if they are used by other config options. If a parameter is used within the script, declare it there and override it in config profiles as needed. For example:
+You should declare parameters in the config file only when other config options use them. When a parameter is used in the script, you should declare it there and override it in config profiles as needed:
 
 ```nextflow
 // main.nf
@@ -157,7 +157,7 @@ profiles {
 }
 ```
 
-See {ref}`cli-params` for information about how pipeline parameters are resovled at runtime.
+For more information about how Nextflow resolves pipeline parameters at runtime, see {ref}`cli-params`.
 
 (config-process)=
 
