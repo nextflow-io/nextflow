@@ -78,7 +78,7 @@ To preview the DAG of a workflow, select the **Preview DAG** CodeLens above the 
 
 ### Automatic code migration
 
-The extension can automatiicaly migrate scripts to static types. See {ref}`migrating-static-types` for details.
+The extension can automatically migrate scripts to static types. See {ref}`migrating-static-types` for details.
 
 To migrate a script, open the Command Palette, search for **Convert script to static types**, and select it.
 

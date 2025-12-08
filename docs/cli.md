@@ -32,7 +32,7 @@ $ nextflow run main.nf
 
 **Remote pipelines**
 
-Use the format `<organization>/<repository>` to run a pipeline from directly from Git repositories:
+Use the format `<organization>/<repository>` to run a pipeline directly from Git repositories:
 
 ```console
 $ nextflow run nextflow-io/hello
