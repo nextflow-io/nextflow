@@ -95,32 +95,23 @@ You can specify config includes within config blocks. However, you should only i
 
 (config-constants)=
 
-## Constants
+## Constants and functions
 
-The following constants are globally available in a Nextflow configuration file:
+Nextflow configuration files have access to constants and functions from the global namespace. Constants allow you to reference runtime paths like project and launch directories, while functions enable dynamic operations such as reading environment variables.
 
-`baseDir: Path`
-: :::{deprecated} 20.04.0
-  :::
-: Alias for `projectDir`.
+For example, you can use `projectDir` constant to reference files relative to your project location:
 
-`launchDir: Path`
-: The directory where the workflow was launched.
+```groovy
+params.helper_file = "${projectDir}/assets/helper.txt"
+```
 
-`projectDir: Path`
-: The directory where the main script is located.
+Or use the `env()` function to read environment variables:
 
-`secrets: Map<String,String>`
-: Map of pipeline secrets. See {ref}`secrets-page` for more information.
+```groovy
+process.queue = env('MY_QUEUE')
+```
 
-## Functions
-
-The following functions are globally available in a Nextflow configuration file:
-
-`env( name: String ) -> String`
-: :::{versionadded} 24.11.0-edge
-  :::
-: Get the value of the environment variable with the specified name in the Nextflow launch environment.
+For the full list of available constants and functions, see {ref}`stdlib-namespaces-global`.
 
 (config-params)=
 
