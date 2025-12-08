@@ -21,9 +21,9 @@ You can use the `-C <config-file>` option to specify a fixed set of configuratio
 
 Nextflow configuration uses the same syntax as Nextflow scripts. You can set configuration options declaratively and define dynamic expressions when needed.
 
-Config files can contain any number of *assignments*, *blocks*, and *includes*. You can add comments just like in scripts.
+Config files can contain any number of [assignments](#assignments), [blocks](#blocks), and [includes](#includes). You can add comments just like in scripts.
 
-For more information, see {ref}`syntax-page`.
+For more about information about the Nextflow script syntax, see {ref}`syntax-page`.
 
 ### Assignments
 
