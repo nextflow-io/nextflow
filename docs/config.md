@@ -105,7 +105,7 @@ For example, you can use `projectDir` constant to reference files relative to yo
 params.helper_file = "${projectDir}/assets/helper.txt"
 ```
 
-Or use the `env()` function to read environment variables:
+Or, use the `env()` function to read environment variables:
 
 ```groovy
 process.queue = env('MY_QUEUE')
@@ -163,7 +163,7 @@ For more information about how Nextflow resolves pipeline parameters at runtime,
 
 ## Process configuration
 
-The `process` scope allows you to specify {ref}`process directives <process-reference>` separately from the pipeline code.
+You can use the `process` scope to specify {ref}`process directives <process-reference>` separately from the pipeline code.
 
 For example:
 
@@ -175,13 +175,13 @@ process {
 }
 ```
 
-By using this configuration, all processes in your pipeline will be executed through the SGE cluster, with the specified settings.
+This configuration executes all processes through the SGE cluster with the specified settings.
 
 (config-process-selectors)=
 
 ### Process selectors
 
-The `withLabel` selectors allow the configuration of all processes annotated with a {ref}`process-label` directive as shown below:
+You can use the `withLabel` selector to configure all processes annotated with a {ref}`process-label` directive:
 
 ```groovy
 process {
@@ -193,9 +193,9 @@ process {
 }
 ```
 
-The above configuration example assigns 16 cpus, 64 Gb of memory and the `long` queue to all processes annotated with the `big_mem` label.
+This configuration assigns 16 CPUs, 64 GB of memory, and the `long` queue to all processes with the `big_mem` label.
 
-In the same manner, the `withName` selector allows the configuration of a specific process in your pipeline by its name. For example:
+You can use the `withName` selector to configure a specific process by its name:
 
 ```groovy
 process {
@@ -207,19 +207,22 @@ process {
 }
 ```
 
-The `withName` selector applies both to processes defined with the same name and processes included under the same alias. For example, `withName: hello` will apply to any process originally defined as `hello`, as well as any process included under the alias `hello`.
+The `withName` selector matches both:
 
-Furthermore, selectors for the alias of an included process take priority over selectors for the original name of the process. For example, given a process defined as `hello` and included as `sayHello`, the selectors `withName: hello` and `withName: sayHello` will both be applied to the process, with the second selector taking priority over the first.
+- Processes defined with that name
+- Processes included under that alias
+
+When a process is included with an alias, selectors for the alias take priority over selectors for the original name. For example, if you define a process as `hello` and include it as `sayHello`, both `withName: hello` and `withName: sayHello` apply, with `sayHello` taking priority.
 
 :::{tip}
-Label and process names do not need to be enclosed with quotes, provided the name does not include special characters (`-`, `!`, etc) and is not a keyword or a built-in type identifier. When in doubt, you can enclose the label name or process name with single or double quotes.
+You don't need to enclose label and process names in quotes unless they contain special characters (`-`, `!`, etc.) or are keywords or built-in type identifiers. When in doubt, use single or double quotes.
 :::
 
 (config-selector-expressions)=
 
 ### Selector expressions
 
-Both label and process name selectors allow the use of a regular expression in order to apply the same configuration to all processes matching the specified pattern condition. For example:
+You can use regular expressions in label and process name selectors to apply the same configuration to all processes matching the pattern:
 
 ```groovy
 process {
@@ -230,9 +233,9 @@ process {
 }
 ```
 
-The above configuration snippet requests 2 cpus and 4 GB of memory for processes labeled as `hello` or `bye`.
+This configuration requests 2 CPUs and 4 GB of memory for processes labeled as `hello` or `bye`.
 
-A process selector can be negated prefixing it with the special character `!`. For example:
+You can negate a process selector by prefixing it with the special character `!`:
 
 ```groovy
 process {
@@ -242,13 +245,13 @@ process {
 }
 ```
 
-The above configuration snippet sets 2 cpus for every process labeled as `hello` and 4 cpus to every process *not* labeled as `hello`. It also specifies the `long` queue for every process whose name does *not* start with `align`.
+This configuration sets 2 CPUs for processes labeled as `hello` and 4 CPUs for all processes *not* labeled as `hello`. It also specifies the `long` queue for processes whose name does *not* start with `align`.
 
 (config-selector-priority)=
 
 ### Selector priority
 
-Process configuration settings are applied to a process in the following order (from lowest to highest priority):
+Nextflow applies process configuration settings in the following order (from lowest to highest priority):
 
 1. Process configuration settings (without a selector)
 2. Process directives in the process definition
@@ -268,11 +271,12 @@ process {
 }
 ```
 
-With the above configuration:
-- All processes will use 4 cpus (unless otherwise specified in their process definition).
-- Processes annotated with the `hello` label will use 8 cpus.
-- Any process named `bye` (or imported as `bye`) will use 16 cpus.
-- Any process named `bye` (or imported as `bye`) invoked by a workflow named `aloha` will use 32 cpus.
+This configuration:
+
+- Sets 4 CPUs for all processes (unless otherwise specified in their process definition)
+- Sets 8 CPUs for processes annotated with the `hello` label
+- Sets 16 CPUs for any process named `bye` (or imported as `bye`)
+- Sets 32 CPUs for any process named `bye` (or imported as `bye`) invoked by a workflow named `aloha`
 
 (config-profiles)=
 
@@ -302,18 +306,18 @@ profiles {
 }
 ```
 
-The above configuration defines three profiles: `standard`, `cluster`, and `cloud`. Each profile provides a different configuration for a given execution environment. The `standard` profile is used by default when no profile is specified.
+This configuration defines three profiles: `standard`, `cluster`, and `cloud`. Each profile provides a different configuration for a given execution environment. Nextflow uses the `standard` profile by default when no profile is specified.
 
-Configuration profiles can be specified at runtime as a comma-separated list:
+You can specify configuration profiles at runtime as a comma-separated list:
 
 ```bash
-nextflow run <your script> -profile standard,cloud
+nextflow run main.nf -profile standard,cloud
 ```
 
-Config profiles are applied in the order in which they were defined in the config file, regardless of the order they are specified on the command line.
+Nextflow applies config profiles in the order in which they were defined in the config file, regardless of the order you specify them on the command line.
 
 :::{versionadded} 25.02.0-edge
-When using the {ref}`strict config syntax <updating-config-syntax>`, profiles are applied in the order in which they are specified on the command line.
+When using the {ref}`strict config syntax <updating-config-syntax>`, Nextflow applies profiles in the order you specify them on the command line.
 :::
 
 :::{danger}
@@ -330,7 +334,7 @@ profiles {
 }
 ```
 
-Due to a limitation of the legacy config parser, the first setting will be overwritten by the second:
+Due to a limitation of the legacy config parser, the second setting overwrites the first:
 
 ```console
 $ nextflow config -profile cluster
@@ -339,7 +343,7 @@ process {
 }
 ```
 
-This limitation can be avoided by using the {ref}`strict config syntax <updating-config-syntax>`.
+You can avoid this limitation by using the {ref}`strict config syntax <updating-config-syntax>`.
 :::
 
 (config-workflow-handlers)=
