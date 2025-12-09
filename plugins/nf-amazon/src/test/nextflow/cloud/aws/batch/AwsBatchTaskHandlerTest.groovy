@@ -16,10 +16,6 @@
 
 package nextflow.cloud.aws.batch
 
-import software.amazon.awssdk.services.batch.model.AttemptDetail
-import software.amazon.awssdk.services.batch.model.ContainerDetail
-import software.amazon.awssdk.services.batch.model.JobStatus
-
 import java.nio.file.Path
 import java.time.Instant
 
@@ -47,6 +43,8 @@ import nextflow.script.ProcessConfig
 import nextflow.util.CacheHelper
 import nextflow.util.MemoryUnit
 import software.amazon.awssdk.services.batch.BatchClient
+import software.amazon.awssdk.services.batch.model.AttemptDetail
+import software.amazon.awssdk.services.batch.model.ContainerDetail
 import software.amazon.awssdk.services.batch.model.DescribeJobDefinitionsRequest
 import software.amazon.awssdk.services.batch.model.DescribeJobDefinitionsResponse
 import software.amazon.awssdk.services.batch.model.DescribeJobsRequest
@@ -55,6 +53,7 @@ import software.amazon.awssdk.services.batch.model.EvaluateOnExit
 import software.amazon.awssdk.services.batch.model.JobDefinition
 import software.amazon.awssdk.services.batch.model.JobDefinitionType
 import software.amazon.awssdk.services.batch.model.JobDetail
+import software.amazon.awssdk.services.batch.model.JobStatus
 import software.amazon.awssdk.services.batch.model.KeyValuePair
 import software.amazon.awssdk.services.batch.model.PlatformCapability
 import software.amazon.awssdk.services.batch.model.RegisterJobDefinitionResponse
