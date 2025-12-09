@@ -386,6 +386,75 @@ class GoogleBatchTaskHandlerTest extends Specification {
         trace.executorName == 'google-batch'
     }
 
+    def 'should create the trace record when job is completed with spot reclamations' () {
+        given:
+        def exec = Mock(Executor) { getName() >> 'google-batch' }
+        def processor = Mock(TaskProcessor) {
+            getExecutor() >> exec
+            getName() >> 'foo'
+            getConfig() >> new ProcessConfig(Mock(BaseScript))
+        }
+        and:
+        def task = Mock(TaskRun)
+        task.getProcessor() >> processor
+        task.getConfig() >> GroovyMock(TaskConfig)
+        and:
+        def client = Mock(BatchClient)
+        def handler = Spy(GoogleBatchTaskHandler)
+        handler.task = task
+        handler.@client = client
+        handler.@jobId = 'xyz-123'
+        handler.@taskId = '0'
+        handler.@uid = '789'
+
+        def event1 = StatusEvent.newBuilder()
+            .setTaskExecution(TaskExecution.newBuilder().setExitCode(50001).build())
+            .build()
+        def event2 = StatusEvent.newBuilder()
+            .setTaskExecution(TaskExecution.newBuilder().setExitCode(0).build())
+            .build()
+        def taskStatus = TaskStatus.newBuilder()
+            .addStatusEvents(event1)
+            .addStatusEvents(event2)
+            .build()
+
+        when:
+        def trace = handler.getTraceRecord()
+        then:
+        2 * handler.isCompleted() >> true
+        1 * client.getTaskStatus('xyz-123', '0') >> taskStatus
+        and:
+        trace.native_id == 'xyz-123/0/789'
+        trace.executorName == 'google-batch'
+        trace.num_reclamations == 1
+    }
+
+    def 'should count spot reclamations from task status events'() {
+        given:
+        def events = eventData?.collect { exitCode ->
+            StatusEvent.newBuilder()
+                .setTaskExecution(TaskExecution.newBuilder().setExitCode(exitCode).build())
+                .build()
+        }
+        def statusBuilder = TaskStatus.newBuilder()
+        if (events) {
+            events.each { event -> statusBuilder.addStatusEvents(event) }
+        }
+        def status = statusBuilder.build()
+
+        expect:
+        GoogleBatchTaskHandler.countSpotReclamations(status) == expectedCount
+
+        where:
+        description                    | eventData              | expectedCount
+        'no events (null)'             | null                   | 0
+        'empty events list'            | []                     | 0
+        'single spot reclamation'      | [50001, 0]             | 1
+        'multiple spot reclamations'   | [50001, 50001]         | 2
+        'no spot interruptions'        | [0, 1]                 | 0
+        'mixed exit codes'             | [50001, 0, 50001, 1]   | 2
+    }
+
     def 'should create submit request with fusion enabled' () {
         given:
         def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
