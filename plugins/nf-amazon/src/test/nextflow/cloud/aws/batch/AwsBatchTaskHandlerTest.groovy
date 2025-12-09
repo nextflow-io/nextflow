@@ -17,6 +17,8 @@
 package nextflow.cloud.aws.batch
 
 import software.amazon.awssdk.services.batch.model.AttemptDetail
+import software.amazon.awssdk.services.batch.model.ContainerDetail
+import software.amazon.awssdk.services.batch.model.JobStatus
 
 import java.nio.file.Path
 import java.time.Instant
@@ -1204,5 +1206,107 @@ class AwsBatchTaskHandlerTest extends Specification {
         0           | true  | true       | 5    // <-- default to 5
         1           | true  | true       | 1
         2           | true  | true       | 2
+    }
+
+    def 'should check if completed with exit code from scheduler'() {
+        given:
+        def task = new TaskRun()
+        def jobId = 'job-123'
+        def handler = Spy(new AwsBatchTaskHandler(task: task, jobId: jobId, status: TaskStatus.RUNNING))
+        and:
+
+        def job = JobDetail.builder().container(ContainerDetail.builder()
+            .exitCode(0).build()).status(JobStatus.SUCCEEDED)
+            .build()
+
+        when:
+        def result = handler.checkIfCompleted()
+        then:
+        1 * handler.describeJob('job-123') >> job
+        0 * handler.readExitFile()  // Should NOT read exit file when scheduler provides exit code
+        and:
+        result == true
+        handler.status == TaskStatus.COMPLETED
+        handler.task.exitStatus == 0
+    }
+
+    def 'should check if completed with non-zero exit code from scheduler'() {
+        given:
+        def task = new TaskRun()
+        def executor = Mock(AwsBatchExecutor)
+        def jobId = 'job-123'
+        def handler = Spy(new AwsBatchTaskHandler(task: task, jobId: jobId, status: TaskStatus.RUNNING, executor: executor))
+        and:
+        def job = JobDetail.builder().container(ContainerDetail.builder().exitCode(137).build())
+            .status(JobStatus.FAILED)
+            .statusReason('Task terminated')
+            .build()
+
+        when:
+        def result = handler.checkIfCompleted()
+        then:
+
+        1 * handler.describeJob(jobId) >> job
+        0 * handler.readExitFile()  // Should NOT read exit file when scheduler provides exit code
+        1 * executor.getJobOutputStream('job-123') >> null
+        and:
+        result == true
+        handler.status == TaskStatus.COMPLETED
+        handler.task.exitStatus == 137
+
+    }
+
+    def 'should check if completed and fallback to exit file when scheduler exit code is null'() {
+        given:
+        def task = new TaskRun()
+        task.name = 'hello'
+        def jobId = 'job-123'
+        def handler = Spy(new AwsBatchTaskHandler(task: task, jobId: jobId, status: TaskStatus.RUNNING))
+        and:
+
+        def job = JobDetail.builder().container(ContainerDetail.builder().build())
+            .status(JobStatus.SUCCEEDED)
+            .build()
+
+
+        when:
+        def result = handler.checkIfCompleted()
+        then:
+        1 * handler.describeJob('job-123') >> job
+        1 * handler.readExitFile() >> 0   // Should read exit file as fallback
+        and:
+        result == true
+        handler.status == TaskStatus.COMPLETED
+        handler.task.exitStatus == 0
+
+    }
+
+    def 'should check if completed no container exit code neither .exitcode file'() {
+        given:
+        def task = new TaskRun()
+        task.name = 'hello'
+        def jobId = 'job-123'
+        def executor = Mock(AwsBatchExecutor)
+        def handler = Spy(new AwsBatchTaskHandler(task: task, jobId: jobId, status: TaskStatus.RUNNING, executor: executor))
+        and:
+
+        def job = JobDetail.builder().container(ContainerDetail.builder().build())
+            .status(JobStatus.SUCCEEDED)
+            .statusReason('Unknown termination')
+            .build()
+
+
+        when:
+        def result = handler.checkIfCompleted()
+        then:
+        1 * handler.describeJob(jobId) >> job
+        1 * handler.readExitFile() >> Integer.MAX_VALUE   // Should read exit file as fallback
+        1 * executor.getJobOutputStream(jobId) >> null
+        and:
+        result == true
+        handler.status == TaskStatus.COMPLETED
+        handler.task.exitStatus == Integer.MAX_VALUE
+        handler.task.error.message == 'Unknown termination'
+
     }
 }
