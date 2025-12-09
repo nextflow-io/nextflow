@@ -16,6 +16,9 @@
 
 package nextflow.cloud.aws.batch
 
+import software.amazon.awssdk.services.batch.model.AttemptContainerDetail
+import software.amazon.awssdk.services.batch.model.AttemptDetail
+
 import software.amazon.awssdk.services.batch.model.JobStatus
 
 import java.nio.file.Path
