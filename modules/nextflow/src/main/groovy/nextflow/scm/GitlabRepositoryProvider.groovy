@@ -18,7 +18,11 @@ package nextflow.scm
 
 import groovy.json.JsonSlurper
 import groovy.util.logging.Slf4j
+
+import java.nio.charset.StandardCharsets
+
 import static nextflow.Const.DEFAULT_BRANCH
+
 /**
  * Implements a repository provider for GitHub service
  *
@@ -95,8 +99,8 @@ class GitlabRepositoryProvider extends RepositoryProvider {
         // see
         //  https://docs.gitlab.com/ee/api/repository_files.html#get-raw-file-from-repository
         //
-        final ref = revision ?: getDefaultBranch()
-        final encodedPath = URLEncoder.encode(path.stripStart('/'),'utf-8')
+        final ref = URLEncoder.encode(revision ?: getDefaultBranch(), StandardCharsets.UTF_8)
+        final encodedPath = URLEncoder.encode(path.stripStart('/'), StandardCharsets.UTF_8)
         return "${config.endpoint}/api/v4/projects/${getProjectName()}/repository/files/${encodedPath}?ref=${ref}"
     }
 
@@ -129,9 +133,9 @@ class GitlabRepositoryProvider extends RepositoryProvider {
     /** {@inheritDoc} */
     @Override
     List<RepositoryEntry> listDirectory(String path, int depth) {
-        final ref = revision ?: getDefaultBranch()
+        final ref = URLEncoder.encode(revision ?: getDefaultBranch(),StandardCharsets.UTF_8)
         final normalizedPath = normalizePath(path)
-        final encodedPath = normalizedPath ? URLEncoder.encode(normalizedPath, 'utf-8') : ""
+        final encodedPath = normalizedPath ? URLEncoder.encode(normalizedPath, StandardCharsets.UTF_8) : ""
         
         // Build the Tree API URL
         String url = "${config.endpoint}/api/v4/projects/${getProjectName()}/repository/tree"

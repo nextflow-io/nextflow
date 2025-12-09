@@ -22,6 +22,8 @@ import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.SysEnv
 
+import java.nio.charset.StandardCharsets
+
 /**
  * Implements a repository provider for GitHub service
  *
@@ -69,7 +71,7 @@ class GithubRepositoryProvider extends RepositoryProvider {
         //
         def result = "${config.endpoint}/repos/$project/contents/$path"
         if( revision )
-            result += "?ref=$revision"
+            result += "?ref=${URLEncoder.encode(revision, StandardCharsets.UTF_8)}"
         return result
     }
 
@@ -205,7 +207,8 @@ class GithubRepositoryProvider extends RepositoryProvider {
         if (revision) {
             // Try to resolve the revision to a commit SHA
             try {
-                Map ref = invokeAndParseResponse("${config.endpoint}/repos/$project/git/refs/heads/$revision")
+
+                Map ref = invokeAndParseResponse("${config.endpoint}/repos/$project/git/refs/heads/${URLEncoder.encode(revision, StandardCharsets.UTF_8)}")
                 Map object = ref.get('object') as Map
                 return object.get('sha') as String
             } catch (Exception e) {

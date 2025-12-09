@@ -221,7 +221,7 @@ See the {ref}`Kubernetes <k8s-page>` page to learn how to set up a Kubernetes cl
 
 ## Local
 
-The `local` executor is used by default. It runs the pipeline processes on the computer where Nextflow is launched. The processes are parallelised by spawning multiple threads, taking advantage of the multi-core architecture of the CPU.
+The `local` executor is used by default. It runs the pipeline processes on the computer where Nextflow is launched. The processes are parallelized by spawning multiple threads, taking advantage of the multi-core architecture of the CPU.
 
 The `local` executor is useful for developing and testing a pipeline script on your computer, before switching to a cluster or cloud environment with production data.
 
