@@ -157,7 +157,7 @@ profiles {
 }
 ```
 
-For more information about how Nextflow resolves pipeline parameters at runtime, see {ref}`cli-params`.
+See {ref}`cli-params` for information about how pipeline parameters are resolved at runtime.
 
 (config-process)=
 

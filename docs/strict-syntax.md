@@ -14,8 +14,6 @@ To enable strict syntax, set the `NXF_SYNTAX_PARSER` environment variable to `v2
 ```bash
 export NXF_SYNTAX_PARSER=v2
 ```
-
-Without this environment variable set, Nextflow will not enforce strict syntax rules. Add this to your shell profile (e.g., `~/.bashrc`, `~/.zshrc`) or set it before you run Nextflow commands.
 :::
 
 ## Overview
