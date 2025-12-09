@@ -26,7 +26,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 import groovy.json.JsonSlurper
-import nextflow.scm.MultiRevisionAssetManager
+import nextflow.scm.AssetManager
 import org.yaml.snakeyaml.Yaml
 /**
  *
@@ -44,13 +44,12 @@ class CmdInfoTest extends Specification {
     
     def setupSpec() {
         tempDir = Files.createTempDirectory('test')
-        MultiRevisionAssetManager.root = tempDir.toFile()
+        AssetManager.root = tempDir.toFile()
         String revision = null
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def manager = new MultiRevisionAssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
-        manager.setRevisionAndLocalPath('nextflow-io/hello', revision)
+        def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
         // download the project
-        manager.download()
+        manager.download(revision)
     }
 
     def cleanupSpec() {

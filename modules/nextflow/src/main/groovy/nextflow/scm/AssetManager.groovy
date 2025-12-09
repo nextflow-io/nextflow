@@ -17,6 +17,7 @@
 package nextflow.scm
 
 import static nextflow.Const.*
+import static GitReferenceHelper.*
 
 import java.nio.file.Path
 
@@ -33,21 +34,24 @@ import nextflow.config.ConfigParserFactory
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AmbiguousPipelineNameException
 import nextflow.script.ScriptFile
+import nextflow.SysEnv
 import nextflow.util.IniFile
-import org.eclipse.jgit.api.CreateBranchCommand
 import org.eclipse.jgit.api.Git
-import org.eclipse.jgit.api.ListBranchCommand
-import org.eclipse.jgit.api.MergeResult
 import org.eclipse.jgit.api.errors.RefNotFoundException
-import org.eclipse.jgit.errors.RepositoryNotFoundException
-import org.eclipse.jgit.lib.Constants
-import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.Ref
 import org.eclipse.jgit.lib.Repository
-import org.eclipse.jgit.lib.SubmoduleConfig.FetchRecurseSubmodulesMode
 import org.eclipse.jgit.merge.MergeStrategy
 /**
- * Handles operation on remote and local installed pipelines
+ * Handles operation on remote and local installed pipelines.
+ * Uses the strategy pattern to support different ways to manage local installations.
+ * Current available {@link RepositoryStrategy}:
+ * - {@link LegacyRepositoryStrategy}: This is the traditional approach where each project gets a full git clone.
+ * - {@Link MultiRevisionRepositoryStrategy}: This approach allows multiple revisions to coexist efficiently by sharing objects
+ * through a bare repository and creating lightweight clones for each commit.
+ *
+ * A {@link AssetManager.RepositoryStatus} is defined according to the status of the project folder (`localRootPath`).
+ * It is used to automatically select the {@link RepositoryStrategy}. The {@link LegacyRepositoryStrategy} will be selected for LEGACY_ONLY status,
+ * and the @Link MultiRevisionRepositoryStrategy} for other statuses (UNINNITIALIZED, BARE_ONLY and HYBRID)
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -55,8 +59,6 @@ import org.eclipse.jgit.merge.MergeStrategy
 @Slf4j
 @CompileStatic
 class AssetManager {
-    private static final String REMOTE_REFS_ROOT = "refs/remotes/origin/"
-    private static final String REMOTE_DEFAULT_HEAD = REMOTE_REFS_ROOT + "HEAD"
 
     /**
      * The folder all pipelines scripts are installed
@@ -85,6 +87,12 @@ class AssetManager {
     private String hub
 
     private List<ProviderConfig> providerConfigs
+
+    /**
+     * The repository strategy (legacy or multi-revision)
+     */
+    private RepositoryStrategy strategy
+
     /**
      * Create a new asset manager object with default parameters
      */
@@ -129,18 +137,178 @@ class AssetManager {
         this.hub = checkHubProvider(cliOpts)
         this.provider = createHubProvider(hub)
         setupCredentials(cliOpts)
+
+        // Initialize strategy based on environment and repository state
+        updateStrategy()
         validateProjectDir()
 
         return this
     }
 
+    /**
+     * Update the repository strategy based on environment and current state, or create a new one if not exists
+     *
+     *
+     */
+    private void updateStrategy() {
+        //
+        def revision = getRevision()
+        if (strategy)
+            strategy.close()
+
+        def context = new RepositoryContext(
+            project,
+            root,
+            localRootPath,
+            provider
+        )
+
+        // Check environment variable for legacy mode
+        if( SysEnv.get('NXF_SCM_LEGACY') as boolean ) {
+            log.warn "Forcing to use legacy repository strategy (NXF_SCM_LEGACY is set to true)"
+            this.strategy = new LegacyRepositoryStrategy(context)
+            return
+        }
+
+        // Detect current repository status
+        def status = getRepositoryStatus()
+
+        switch( status ) {
+            case RepositoryStatus.UNINITIALIZED:
+                // No repo exists yet, use multi-revision by default
+                log.debug "No existing repository, using multi-revision strategy"
+                this.strategy = new MultiRevisionRepositoryStrategy(context, revision)
+                break
+
+            case RepositoryStatus.LEGACY_ONLY:
+                // Legacy repo exists, continue using legacy
+                log.debug "Legacy repository detected, using legacy strategy"
+                this.strategy = new LegacyRepositoryStrategy(context)
+                break
+
+            case RepositoryStatus.BARE_ONLY:
+                // Bare repo exists, use multi-revision
+                log.debug "Bare repository detected, using multi-revision strategy"
+                this.strategy = new MultiRevisionRepositoryStrategy(context, revision)
+                break
+
+            case RepositoryStatus.HYBRID:
+                // Both exist, prefer multi-revision
+                log.debug "Hybrid repository detected, preferring multi-revision strategy"
+                this.strategy = new MultiRevisionRepositoryStrategy(context, revision)
+                break
+
+            default:
+                // Default to multi-revision
+                this.strategy = new MultiRevisionRepositoryStrategy(context, revision)
+        }
+        setRevision(revision)
+    }
+
+    /**
+     * Get the current repository status
+     *
+     * @return The status indicating what type of repositories exist
+     */
+    RepositoryStatus getRepositoryStatus() {
+        boolean hasBare = new File(root, project + '/' + MultiRevisionRepositoryStrategy.BARE_REPO).exists()
+        boolean hasLegacy = localRootPath.exists() && new File(localRootPath, '.git').exists()
+
+        if( !hasBare && !hasLegacy ) return RepositoryStatus.UNINITIALIZED
+        if( hasBare && hasLegacy ) return RepositoryStatus.HYBRID
+        if( hasBare ) return RepositoryStatus.BARE_ONLY
+        return RepositoryStatus.LEGACY_ONLY
+    }
+
+    /**
+     * Set the repository strategy type explicitly
+     *
+     * @param useLegacy If true, use legacy strategy; otherwise use multi-revision
+     */
+    void setStrategyType(RepositoryStrategyType type) {
+        def context = new RepositoryContext(
+            project,
+            root,
+            localRootPath,
+            provider
+        )
+        if( (type == RepositoryStrategyType.LEGACY && isUsingLegacyStrategy()) ||
+            (type == RepositoryStrategyType.MULTI_REVISION && isUsingMultiRevisionStrategy()) ) {
+            //nothing to do
+            return
+        }
+        if( type == RepositoryStrategyType.LEGACY && isUsingMultiRevisionStrategy() ) {
+            log.warn1 "Switching to legacy SCM repository management"
+            if( strategy ) strategy.close()
+            this.strategy = new LegacyRepositoryStrategy(context)
+        } else if( type == RepositoryStrategyType.MULTI_REVISION && SysEnv.get('NXF_SCM_LEGACY') ) {
+            log.warn1 "Recieved a request to change to multi-revision SCM repository management and NXF_SCM_LEGACY is defined. Keeping legacy strategy"
+            this.strategy = new LegacyRepositoryStrategy(context)
+        } else {
+            log.debug "Switching to multi-revision repository strategy"
+            if( strategy ) strategy.close()
+            this.strategy = new MultiRevisionRepositoryStrategy(context, revision)
+        }
+    }
+
+    /**
+     * Check if using legacy strategy
+     */
+    boolean isUsingLegacyStrategy() {
+        return strategy instanceof LegacyRepositoryStrategy
+    }
+
+    /**
+     * Check if using legacy strategy
+     */
+    boolean isUsingMultiRevisionStrategy() {
+        return strategy instanceof MultiRevisionRepositoryStrategy
+    }
+
+    /**
+     * Check if using multi-revision strategy
+     */
+    boolean isNotInitialized() {
+        return getRepositoryStatus() == RepositoryStatus.UNINITIALIZED
+    }
+
+
+    /**
+     * Set the revision for multi-revision strategy
+     */
+    AssetManager setRevision(String revision) {
+        if( revision && strategy instanceof MultiRevisionRepositoryStrategy ) {
+            ((MultiRevisionRepositoryStrategy) strategy).setRevision(revision)
+        }
+        return this
+    }
+
+    /**
+     * Get the current revision (multi-revision strategy only)
+     */
+    String getRevision() {
+        if( strategy && strategy instanceof MultiRevisionRepositoryStrategy ) {
+            return ((MultiRevisionRepositoryStrategy) strategy).getRevision()
+        }
+        return null
+    }
+
+    /**
+     * Get the project name with revision appended (for multi-revision strategy)
+     */
+    String getProjectWithRevision() {
+        def rev = getRevision()
+        return project + (rev ? ':' + rev : '')
+    }
+
     @PackageScope
     File getLocalGitConfig() {
-        localPath ? new File(localPath,'.git/config') : null
+        return strategy?.getLocalGitConfig() ?: (localPath ? new File(localPath,'.git/config') : null)
     }
 
     @PackageScope AssetManager setProject(String name) {
         this.project = name
+        updateStrategy()
         return this
     }
 
@@ -361,6 +529,7 @@ class AssetManager {
 
     AssetManager setLocalPath(File path) {
         this.localRootPath = path
+        updateStrategy()
         return this
     }
 
@@ -384,7 +553,9 @@ class AssetManager {
         provider.getCloneUrl()
     }
 
-    File getLocalPath() { localRootPath }
+    File getLocalPath() {
+        return strategy?.getLocalPath() ?: localRootPath
+    }
 
     File getLocalRootPath() { localRootPath }
 
@@ -428,13 +599,8 @@ class AssetManager {
         // if specified in manifest, that takes priority
         // otherwise look for a symbolic ref (refs/remotes/origin/HEAD)
         return getManifest().getDefaultBranch()
-                ?: getRemoteDefaultBranch()
+                ?: strategy?.getRemoteDefaultBranch()
                 ?: DEFAULT_BRANCH
-    }
-
-    protected String getRemoteDefaultBranch() {
-        Ref remoteHead = git.getRepository().findRef(REMOTE_DEFAULT_HEAD)
-        return remoteHead?.getTarget()?.getName()?.substring(REMOTE_REFS_ROOT.length())
     }
 
     @Memoized
@@ -513,12 +679,7 @@ class AssetManager {
      *         and the current HEAD, false if differences do exist
      */
     boolean isClean() {
-        try {
-            git.status().call().isClean()
-        }
-        catch( RepositoryNotFoundException e ) {
-            return true
-        }
+        return strategy?.isClean() ?: true
     }
 
     /**
@@ -528,6 +689,9 @@ class AssetManager {
         if( _git ) {
             _git.close()
             _git = null
+        }
+        if( strategy ) {
+            strategy.close()
         }
     }
 
@@ -568,6 +732,10 @@ class AssetManager {
 
 
     protected Git getGit() {
+        if( strategy ) {
+            return strategy.getGit()
+        }
+        // Fallback to legacy behavior if strategy not initialized
         if( !_git ) {
             _git = Git.open(localPath)
         }
@@ -578,112 +746,19 @@ class AssetManager {
      * Download a pipeline from a remote Github repository
      *
      * @param revision The revision to download
-     * @result A message representing the operation result
+     * @param deep Optional depth for shallow clones
+     * @return A message representing the operation result
      */
     String download(String revision=null, Integer deep=null) {
         assert project
-
-        /*
-         * if the pipeline already exists locally pull it from the remote repo
-         */
-        if( !localPath.exists() ) {
-            localPath.parentFile.mkdirs()
-            // make sure it contains a valid repository
+        if (!strategy) {
+            throw new IllegalStateException("Strategy not initialized")
+        }
+        // If it is a new download check is a valid repository
+        if (!localPath.exists()){
             checkValidRemoteRepo(revision)
-
-            final cloneURL = getGitRepositoryUrl()
-            log.debug "Pulling $project -- Using remote clone url: ${cloneURL}"
-
-            // clone it, but don't specify a revision - jgit will checkout the default branch
-            def clone = Git.cloneRepository()
-            if( provider.hasCredentials() )
-                clone.setCredentialsProvider( provider.getGitCredentials() )
-
-            clone
-                .setURI(cloneURL)
-                .setDirectory(localPath)
-                .setCloneSubmodules(manifest.recurseSubmodules)
-            if( deep )
-                clone.setDepth(deep)
-            clone.call()
-
-            // git cli would automatically create a 'refs/remotes/origin/HEAD' symbolic ref pointing at the remote's
-            // default branch. jgit doesn't do this, but since it automatically checked out the default branch on clone
-            // we can create the symbolic ref ourselves using the current head
-            def head = git.getRepository().findRef(Constants.HEAD)
-            if( head ) {
-                def headName = head.isSymbolic()
-                    ? Repository.shortenRefName(head.getTarget().getName())
-                    : head.getName()
-
-                git.repository.getRefDatabase()
-                    .newUpdate(REMOTE_DEFAULT_HEAD, true)
-                    .link(REMOTE_REFS_ROOT + headName)
-            } else {
-                log.debug "Unable to determine default branch of repo ${cloneURL}, symbolic ref not created"
-            }
-
-            // now the default branch is recorded in the repo, explicitly checkout the revision (if specified).
-            // this also allows 'revision' to be a SHA commit id, which isn't supported by the clone command
-            if( revision ) {
-                try { git.checkout() .setName(revision) .call() }
-                catch ( RefNotFoundException e ) { checkoutRemoteBranch(revision) }
-            }
-
-            // return status message
-            return "downloaded from ${cloneURL}"
         }
-
-        log.debug "Pull pipeline $project  -- Using local path: $localPath"
-
-        // verify that is clean
-        if( !isClean() )
-            throw new AbortOperationException("$project contains uncommitted changes -- cannot pull from repository")
-
-        if( revision && revision != getCurrentRevision() ) {
-            /*
-             * check out a revision before the pull operation
-             */
-            try {
-                git.checkout() .setName(revision) .call()
-            }
-            /*
-             * If the specified revision does not exist
-             * Try to checkout it from a remote branch and return
-             */
-            catch ( RefNotFoundException e ) {
-                final ref = checkoutRemoteBranch(revision)
-                final commitId = ref?.getObjectId()
-                return commitId
-                    ? "checked out at ${commitId.name()}"
-                    : "checked out revision ${revision}"
-            }
-        }
-
-        def pull = git.pull()
-        def revInfo = getCurrentRevisionAndName()
-
-        if ( revInfo.type == RevisionInfo.Type.COMMIT ) {
-            log.debug("Repo appears to be checked out to a commit hash, but not a TAG, so we will assume the repo is already up to date and NOT pull it!")
-            return MergeResult.MergeStatus.ALREADY_UP_TO_DATE.toString()
-        }
-
-        if ( revInfo.type == RevisionInfo.Type.TAG ) {
-            pull.setRemoteBranchName( "refs/tags/" + revInfo.name )
-        }
-
-        if( provider.hasCredentials() )
-            pull.setCredentialsProvider( provider.getGitCredentials() )
-
-        if( manifest.recurseSubmodules ) {
-            pull.setRecurseSubmodules(FetchRecurseSubmodulesMode.YES)
-        }
-        def result = pull.call()
-        if(!result.isSuccessful())
-            throw new AbortOperationException("Cannot pull project `$project` -- ${result.toString()}")
-
-        return result?.mergeResult?.mergeStatus?.toString()
-
+        return strategy.download(revision, deep, manifest)
     }
 
     /**
@@ -719,55 +794,18 @@ class AssetManager {
      * @return The symbolic name of the current revision i.e. the current checked out branch or tag
      */
     String getCurrentRevision() {
-        Ref head = findHeadRef()
-        if( !head )
-            return '(unknown)'
+        if (!strategy) {
+            throw new IllegalStateException("Strategy not initialized")
+        }
+        return strategy.getCurrentRevision()
 
-        if( head.isSymbolic() )
-            return Repository.shortenRefName(head.getTarget().getName())
-
-        if( !head.getObjectId() )
-            return '(unknown)'
-
-        // try to resolve the the current object id to a tag name
-        return resolveTagNameByObjectId(head.objectId)
     }
 
     RevisionInfo getCurrentRevisionAndName() {
-        Ref head = findHeadRef()
-        if( !head )
-            return null
-
-        if( head.isSymbolic() ) {
-            return new RevisionInfo(head.objectId.name(), Repository.shortenRefName(head.getTarget().getName()), RevisionInfo.Type.BRANCH)
+        if (!strategy) {
+            throw new IllegalStateException("Strategy not initialized")
         }
-
-        if( !head.getObjectId() )
-            return null
-
-        final name = resolveTagNameByObjectId(head.objectId)
-        if( name ) {
-            return new RevisionInfo(head.objectId.name(), name, RevisionInfo.Type.TAG)
-        }
-        else {
-            return new RevisionInfo(head.objectId.name(), null, RevisionInfo.Type.COMMIT)
-        }
-    }
-
-    protected Ref findHeadRef(){
-        git.getRepository().findRef(Constants.HEAD);
-    }
-
-    /**
-     * Try to resolve the the current object id to a tag name
-     */
-    protected String resolveTagNameByObjectId(ObjectId objectId){
-        Collection<Ref> tags = git.getRepository().getRefDatabase().getRefsByPrefix(Constants.R_TAGS)
-        return tags.find { it.objectId == objectId }?.name
-    }
-
-    static boolean isRemoteBranch(Ref ref) {
-        return ref.name.startsWith(REMOTE_REFS_ROOT) && ref.name != REMOTE_DEFAULT_HEAD
+        return strategy.getCurrentRevisionAndName()
     }
 
     /**
@@ -786,17 +824,17 @@ class AssetManager {
     @Deprecated
     List<String> getRevisions(int level) {
 
-        def current = getCurrentRevision()
+        def pulled = strategy.listDownloadedCommits()
         def master = getDefaultBranch()
 
         List<String> branches = getBranchList()
             .findAll { it.name.startsWith('refs/heads/') || isRemoteBranch(it) }
             .unique { shortenRefName(it.name) }
-            .collect { Ref it -> refToString(it,current,master,false,level) }
+            .collect { Ref it -> refToString(it,pulled,master,false,level) }
 
         List<String> tags = getTagList()
                 .findAll  { it.name.startsWith('refs/tags/') }
-                .collect { refToString(it,current,master,true,level) }
+                .collect { refToString(strategy.peel(it),pulled,master,true,level) }
 
         def result = new ArrayList<String>(branches.size() + tags.size())
         result.addAll(branches)
@@ -817,74 +855,60 @@ class AssetManager {
 
     Map getBranchesAndTags(boolean checkForUpdates) {
         final result = [:]
-        final current = getCurrentRevision()
+        final currentCommits = strategy.listDownloadedCommits()
         final master = getDefaultBranch()
 
         final branches = []
         final tags = []
-
-        Map<String, Ref> remote = checkForUpdates ? lsRemote() : null
+        final pulled = new LinkedList<Map>()
+        log.debug("Current commits : $currentCommits")
+        Map<String, Ref> remote = checkForUpdates ? strategy.lsRemote(false) : null
         getBranchList()
                 .findAll { it.name.startsWith('refs/heads/') || isRemoteBranch(it) }
                 .unique { shortenRefName(it.name) }
-                .each { Ref it -> branches << refToMap(it,remote)  }
+                .each {
+                    final map = refToMap(it,remote)
+                    if (isRefInCommits(it,currentCommits))
+                        pulled << map
+                    branches << map
+                }
 
-        remote = checkForUpdates ? lsRemote(true) : null
+        remote = checkForUpdates ? strategy.lsRemote(true) : null
         getTagList()
                 .findAll  { it.name.startsWith('refs/tags/') }
-                .each { Ref it -> tags << refToMap(it,remote) }
+                .each {
+                    Ref ref = strategy.peel(it)
+                    final map = refToMap(ref,remote)
+                    if (isRefInCommits(ref, currentCommits))
+                        pulled << map
+                    tags << map
+                }
 
-        result.current = current    // current branch name
+        result.pulled = pulled.collect { it.name }  // current pulled revisions
         result.master = master      // master branch name
         result.branches = branches  // collection of branches
         result.tags = tags          // collect of tags
         return result
     }
 
-    protected Map refToMap(Ref ref, Map<String,Ref> remote) {
-        final entry = new HashMap(2)
-        final peel = getPeeledRef(ref)
-        final objId = peel.getPeeledObjectId() ?: peel.getObjectId()
-        // the branch or tag name
-        entry.name = shortenRefName(ref.name)
-        // the local commit it
-        entry.commitId = objId.name()
-        // the remote commit Id for this branch or tag
-        if( remote && hasRemoteChange(ref,remote) ) {
-            entry.latestId = remote.get(ref.name).objectId.name()
-        }
-        return entry
-    }
-
-    protected Ref getPeeledRef(Ref ref){
-        return git.getRepository().getRefDatabase().peel(ref)
-    }
-
-    protected lsRemote
-
     @Memoized
     protected List<Ref> getBranchList() {
-        git.branchList().setListMode(ListBranchCommand.ListMode.ALL) .call()
+        return strategy?.getBranchList() ?: []
     }
 
     @Memoized
     protected List<Ref> getTagList() {
-        git.tagList().call()
+        return strategy?.getTagList() ?: []
     }
 
-    protected formatObjectId(ObjectId obj, boolean human) {
-        return human ? obj.name.substring(0,10) : obj.name
-    }
-
-    protected String refToString(Ref ref, String current, String master, boolean tag, int level ) {
+    protected String refToString(Ref ref, List<String> downloaded, String master, boolean tag, int level ) {
 
         def result = new StringBuilder()
         def name = shortenRefName(ref.name)
-        result << (name == current ? '*' : ' ')
+        def obj = ref.getPeeledObjectId() ?: ref.getObjectId()
+        result << ( isRefInCommits(ref, downloaded) ? '*' : ' ')
 
         if( level ) {
-            def peel = getPeeledRef(ref)
-            def obj = peel.getPeeledObjectId() ?: peel.getObjectId()
             result << ' '
             result << formatObjectId(obj, level == 1)
         }
@@ -899,48 +923,17 @@ class AssetManager {
         return result.toString()
     }
 
-    protected String shortenRefName( String name ) {
-        if( name.startsWith('refs/remotes/origin/') )
-            return name.replace('refs/remotes/origin/', '')
-
-        return Repository.shortenRefName(name)
-    }
-
-    protected String formatUpdate(Ref remoteRef, int level) {
-
-        def result = new StringBuilder()
-        result << '  '
-        result << formatObjectId(remoteRef.objectId, level<2)
-        result << ' '
-        result << shortenRefName(remoteRef.name)
-
-        return result.toString()
-    }
-
-    protected hasRemoteChange(Ref ref, Map<String,Ref> remote) {
-        if( !remote.containsKey(ref.name) )
-            return false
-        ref.objectId.name != remote[ref.name].objectId.name
-    }
-
-    protected Map<String,Ref> lsRemote(boolean tags = false){
-        final cmd = git.lsRemote().setTags(tags)
-        if( provider.hasCredentials() )
-            cmd.setCredentialsProvider( provider.getGitCredentials() )
-        return cmd.callAsMap()
-    }
-
     @Deprecated
     List<String> getUpdates(int level) {
 
-        def remote = lsRemote()
+        def remote = strategy.lsRemote(false)
         List<String> branches = getBranchList()
                 .findAll { it.name.startsWith('refs/heads/') || isRemoteBranch(it) }
                 .unique { shortenRefName(it.name) }
                 .findAll { Ref ref -> hasRemoteChange(ref,remote) }
                 .collect { Ref ref -> formatUpdate(remote.get(ref.name),level) }
 
-        remote = lsRemote(true)
+        remote = strategy.lsRemote(true)
         List<String> tags = getTagList()
                 .findAll  { it.name.startsWith('refs/tags/') }
                 .findAll { Ref ref -> hasRemoteChange(ref,remote) }
@@ -971,57 +964,22 @@ class AssetManager {
      * @param revision The revision to be checked out
      */
     void tryCheckout( String revision = null ) throws RefNotFoundException{
-        assert localPath
-
-        def current = getCurrentRevision()
-        if( current != defaultBranch ) {
-            if( !revision ) {
-                throw new AbortOperationException("Project `$project` is currently stuck on revision: $current -- you need to explicitly specify a revision with the option `-r` in order to use it")
-            }
+        assert project
+        if (!strategy) {
+            throw new IllegalStateException("Strategy not initialized")
         }
-        if( !revision || revision == current ) {
-            // nothing to do
-            return
-        }
-
-        // verify that is clean
-        if( !isClean() )
-            throw new AbortOperationException("Project `$project` contains uncommitted changes -- Cannot switch to revision: $revision")
-
-
-        git.checkout().setName(revision) .call()
-
+        strategy.tryCheckout(revision, manifest)
 
     }
 
 
     protected Ref checkoutRemoteBranch( String revision ) {
-
-        try {
-            def fetch = git.fetch()
-            if(provider.hasCredentials()) {
-                fetch.setCredentialsProvider( provider.getGitCredentials() )
-            }
-            if( manifest.recurseSubmodules ) {
-                fetch.setRecurseSubmodules(FetchRecurseSubmodulesMode.YES)
-            }
-            fetch.call()
-
-            try {
-                return git.checkout()
-                        .setCreateBranch(true)
-                        .setName(revision)
-                        .setUpstreamMode(CreateBranchCommand.SetupUpstreamMode.TRACK)
-                        .setStartPoint("origin/" + revision)
-                        .call()
-            }
-            catch (RefNotFoundException e) {
-                return git.checkout() .setName(revision) .call()
-            }
+        assert project
+        if (!strategy) {
+            throw new IllegalStateException("Strategy not initialized")
         }
-        catch (RefNotFoundException e) {
-            throw new AbortOperationException("Cannot find revision `$revision` -- Make sure that it exists in the remote repository `$repositoryUrl`", e)
-        }
+        return strategy.checkoutRemoteBranch(revision, manifest)
+
 
     }
 
@@ -1066,7 +1024,7 @@ class AssetManager {
 
     protected String getRemoteCommitId(RevisionInfo rev) {
         final tag = rev.type == RevisionInfo.Type.TAG
-        final list = lsRemote(tag).values()
+        final list = strategy.lsRemote(tag).values()
         final ref = list.find { Repository.shortenRefName(it.name) == rev.name }
         if( !ref ) {
             log.debug "WARN: Cannot find any Git revision matching: ${rev.name}; ls-remote: $list"
@@ -1139,6 +1097,15 @@ class AssetManager {
         }
 
     }
+    /**
+     * Drop local copy of a repository. If revision is specified, only removes the specified revision
+     * @param revision
+     */
+    void drop(String revision = null, boolean force = false){
+        if (!localRootPath.exists())
+            throw new AbortOperationException("No match found for: ${getProjectWithRevision()}")
+        strategy.drop(revision, force)
+    }
 
 
     protected String guessHubProviderFromGitConfig(boolean failFast=false) {
@@ -1206,4 +1173,47 @@ class AssetManager {
             return commitId
         }
     }
+
+    /**
+     * Enumeration of possible repository strategy types.
+     */
+    enum RepositoryStrategyType {
+        /**
+         * Legacy full clone strategy
+         */
+        LEGACY,
+
+        /**
+         * Bare repo + Multi-revision strategy
+         */
+        MULTI_REVISION
+    }
+
+    /**
+     * Enumeration of possible repository states for a project.
+     * A project directory can contain different types of repositories depending on which
+     * strategy was used to download it.
+     */
+    enum RepositoryStatus {
+        /**
+         * No repository exists yet - project has not been downloaded
+         */
+        UNINITIALIZED,
+
+        /**
+         * Only a bare repository exists (multi-revision strategy)
+         */
+        BARE_ONLY,
+
+        /**
+         * Only a legacy repository exists (direct clone strategy)
+         */
+        LEGACY_ONLY,
+
+        /**
+         * Both bare and legacy repositories exist (hybrid state)
+         */
+        HYBRID
+    }
+
 }

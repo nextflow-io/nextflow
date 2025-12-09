@@ -38,7 +38,7 @@ import nextflow.k8s.model.PodEnv
 import nextflow.k8s.model.PodMountConfig
 import nextflow.k8s.model.PodSpecBuilder
 import nextflow.k8s.model.ResourceType
-import nextflow.scm.MultiRevisionAssetManager
+import nextflow.scm.AssetManager
 import nextflow.scm.ProviderConfig
 import nextflow.util.ConfigHelper
 import nextflow.util.Escape
@@ -271,7 +271,7 @@ class K8sDriverLauncher {
 
         if( !interactive && !pipelineName.startsWith('/') && !cmd.remoteProfile && !cmd.runRemoteConfig ) {
             // -- check and parse project remote config
-            final pipelineConfig = new MultiRevisionAssetManager(pipelineName, cmd).setRevision(cmd.revision).getConfigFile()
+            final pipelineConfig = new AssetManager(pipelineName, cmd).setRevision(cmd.revision).getConfigFile()
             builder.setUserConfigFiles(pipelineConfig)
         }
 

@@ -16,7 +16,7 @@
 
 package nextflow.cli
 
-import static nextflow.scm.MultiRevisionAssetManager.REVISION_SUBDIR
+import static nextflow.scm.MultiRevisionRepositoryStrategy.REVISION_SUBDIR
 
 import nextflow.plugin.Plugins
 import spock.lang.IgnoreIf

@@ -29,7 +29,7 @@ import nextflow.config.ConfigBuilder
 import nextflow.config.ConfigValidator
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
-import nextflow.scm.MultiRevisionAssetManager
+import nextflow.scm.AssetManager
 import nextflow.util.ConfigHelper
 /**
  *  Prints the pipeline configuration
@@ -233,7 +233,8 @@ class CmdConfig extends CmdBase {
             return file.parent ?: Paths.get('/')
         }
 
-        final manager = new MultiRevisionAssetManager(path).setRevision(revision)
+        final manager = new AssetManager(path)
+        manager.setRevision(revision)
         manager.isLocal() ? manager.localPath.toPath() : manager.configFile?.parent
 
     }

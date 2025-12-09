@@ -25,7 +25,6 @@ import org.junit.Rule
 import spock.lang.Requires
 import spock.lang.Specification
 import test.TemporaryPath
-import java.nio.file.Path
 import java.nio.file.Paths
 /**
  *
@@ -71,7 +70,7 @@ class AssetManagerTest extends Specification {
         AssetManager.root = tempDir.root.toFile()
     }
 
-    // Helper method to grab the default brasnch if set in ~/.gitconfig
+    // Helper method to grab the default branch if set in ~/.gitconfig
     String getLocalDefaultBranch() {
         def defaultBranch = 'master'
         def gitconfig = Paths.get(System.getProperty('user.home'),'.gitconfig');
@@ -155,15 +154,24 @@ class AssetManagerTest extends Specification {
         thrown(AbortOperationException)
 
     }
-
+    def 'test token'() {
+        given:
+        def token = 'this is a token'
+        def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
+        expect:
+        manager.getProvider().hasCredentials()
+        manager.getProvider().getAuth() == ['Authorization', 'Basic dGhpcyBpcyBhIHRva2VuOngtb2F1dGgtYmFzaWM=']
+        manager.getProvider().getToken() == 'this is a token'
+    }
 
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
-    def testPull() {
+    def 'test download with legacy'() {
 
         given:
         def folder = tempDir.getRoot()
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
         def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
+        manager.setStrategyType(AssetManager.RepositoryStrategyType.LEGACY)
 
         when:
         manager.download()
@@ -177,34 +185,80 @@ class AssetManagerTest extends Specification {
 
     }
 
-
-    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
-    def testPullTagTwice() {
+    def 'test download from tag twice with multi-revision'() {
 
         given:
         def folder = tempDir.getRoot()
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
         def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
+        manager.setStrategyType(AssetManager.RepositoryStrategyType.MULTI_REVISION)
+
+        when:
+        manager.download("v1.2")
+        then:
+        folder.resolve('nextflow-io/hello/.nextflow/commits/1b420d060d3fad67027154ac48e3bdea06f058da/.git').isDirectory()
+        folder.resolve('nextflow-io/hello/.nextflow/bare_repo').isDirectory()
+        manager.getLocalPath().toString() == folder.resolve('nextflow-io/hello/.nextflow/commits/1b420d060d3fad67027154ac48e3bdea06f058da').toString()
+        when:
+        manager.download("v1.2")
+        then:
+        noExceptionThrown()
+
+    }
+
+
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def 'test download from tag twice legacy'() {
+
+        given:
+        def folder = tempDir.getRoot()
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
+        manager.setStrategyType(AssetManager.RepositoryStrategyType.LEGACY)
 
         when:
         manager.download("v1.2")
         then:
         folder.resolve('nextflow-io/hello/.git').isDirectory()
+        manager.getLocalPath().toString() == folder.resolve('nextflow-io/hello').toString()
 
         when:
         manager.download("v1.2")
+        then:
+        noExceptionThrown()
+    }
+
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def 'test download from hash twice with multi-revision'() {
+
+        given:
+        def folder = tempDir.getRoot()
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
+        manager.setStrategyType(AssetManager.RepositoryStrategyType.MULTI_REVISION)
+
+        when:
+        manager.download("6b9515aba6c7efc6a9b3f273ce116fc0c224bf68")
+        then:
+        folder.resolve('nextflow-io/hello/.nextflow/commits/6b9515aba6c7efc6a9b3f273ce116fc0c224bf68/.git').isDirectory()
+        folder.resolve('nextflow-io/hello/.nextflow/bare_repo').isDirectory()
+        manager.getLocalPath().toString() == folder.resolve('nextflow-io/hello/.nextflow/commits/6b9515aba6c7efc6a9b3f273ce116fc0c224bf68').toString()
+
+        when:
+        def result = manager.download("6b9515aba6c7efc6a9b3f273ce116fc0c224bf68")
         then:
         noExceptionThrown()
     }
 
     // The hashes used here are NOT associated with tags.
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
-    def testPullHashTwice() {
+    def 'test download from hash twice legacy'() {
 
         given:
         def folder = tempDir.getRoot()
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
         def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
+        manager.setStrategyType(AssetManager.RepositoryStrategyType.LEGACY)
 
         when:
         manager.download("6b9515aba6c7efc6a9b3f273ce116fc0c224bf68")
@@ -222,12 +276,13 @@ class AssetManagerTest extends Specification {
     // Downloading a branch first and then pulling the branch
     // should work fine, unlike with tags.
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
-    def testPullBranchTwice() {
+    def 'test download from branch twice legacy'() {
 
         given:
         def folder = tempDir.getRoot()
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
         def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
+        manager.setStrategyType(AssetManager.RepositoryStrategyType.LEGACY)
 
         when:
         manager.download("mybranch")
@@ -240,17 +295,39 @@ class AssetManagerTest extends Specification {
         noExceptionThrown()
     }
 
-    // First clone a repo with a tag, then forget to include the -r argument
-    // when you execute nextflow.
-    // Note that while the download will work, execution will fail subsequently
-    // at a separate check - this just tests that we don't fail because of a detached head.
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
-    def testPullTagThenBranch() {
+    def 'test download from branch twice with multi-revision'() {
 
         given:
         def folder = tempDir.getRoot()
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
         def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
+        manager.setStrategyType(AssetManager.RepositoryStrategyType.MULTI_REVISION)
+
+        when:
+        manager.download("mybranch")
+        then:
+        folder.resolve('nextflow-io/hello/.nextflow/bare_repo').isDirectory()
+        folder.resolve('nextflow-io/hello/.nextflow/commits/1c3e9e7404127514d69369cd87f8036830f5cf64/.git').isDirectory()
+        manager.getLocalPath().toString() == folder.resolve('nextflow-io/hello/.nextflow/commits/1c3e9e7404127514d69369cd87f8036830f5cf64').toString()
+        when:
+        manager.download("mybranch")
+        then:
+        noExceptionThrown()
+    }
+
+    // First clone a repo with a tag, then forget to include the -r argument
+    // when you execute nextflow.
+    // Note that while the download will work, execution will fail subsequently
+    // at a separate check - this just tests that we don't fail because of a detached head.
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def 'test download tag then branch legacy'() {
+
+        given:
+        def folder = tempDir.getRoot()
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
+        manager.setStrategyType(AssetManager.RepositoryStrategyType.LEGACY)
 
         when:
         manager.download("v1.2")
@@ -260,6 +337,31 @@ class AssetManagerTest extends Specification {
         when:
         manager.download()
         then:
+        noExceptionThrown()
+    }
+
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def 'test download tag then branch with multi-revision'() {
+
+        given:
+        def folder = tempDir.getRoot()
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
+        manager.setStrategyType(AssetManager.RepositoryStrategyType.MULTI_REVISION)
+
+        when:
+        manager.download("v1.2")
+        then:
+        folder.resolve('nextflow-io/hello/.nextflow/commits/1b420d060d3fad67027154ac48e3bdea06f058da/.git').isDirectory()
+        folder.resolve('nextflow-io/hello/.nextflow/bare_repo').isDirectory()
+        manager.getLocalPath().toString() == folder.resolve('nextflow-io/hello/.nextflow/commits/1b420d060d3fad67027154ac48e3bdea06f058da').toString()
+
+        when:
+        manager.download("mybranch")
+        then:
+        folder.resolve('nextflow-io/hello/.nextflow/bare_repo').isDirectory()
+        folder.resolve('nextflow-io/hello/.nextflow/commits/1c3e9e7404127514d69369cd87f8036830f5cf64/.git').isDirectory()
+        manager.getLocalPath().toString() == folder.resolve('nextflow-io/hello/.nextflow/commits/1c3e9e7404127514d69369cd87f8036830f5cf64').toString()
         noExceptionThrown()
     }
 
@@ -447,7 +549,7 @@ class AssetManagerTest extends Specification {
 
     }
 
-    def 'should create a script file object' () {
+    def 'should create a script file object legacy' () {
 
         given:
         def dir = tempDir.root
@@ -546,12 +648,13 @@ class AssetManagerTest extends Specification {
     }
 
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
-    def 'should download branch specified'() {
+    def 'should download branch specified legacy'() {
 
         given:
         def folder = tempDir.getRoot()
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
         def manager = new AssetManager().build('nextflow-io/nf-test-branch', [providers: [github: [auth: token]]])
+        manager.setStrategyType(AssetManager.RepositoryStrategyType.LEGACY)
 
         when:
         manager.download("dev")
@@ -559,6 +662,28 @@ class AssetManagerTest extends Specification {
         folder.resolve('nextflow-io/nf-test-branch/.git').isDirectory()
         and:
         folder.resolve('nextflow-io/nf-test-branch/workflow.nf').text == "println 'Hello'\n"
+
+        when:
+        manager.download()
+        then:
+        noExceptionThrown()
+    }
+
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def 'should download branch specified legacy'() {
+
+        given:
+        def folder = tempDir.getRoot()
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def manager = new AssetManager().build('nextflow-io/nf-test-branch', [providers: [github: [auth: token]]])
+        manager.setStrategyType(AssetManager.RepositoryStrategyType.MULTI_REVISION)
+
+        when:
+        manager.download("dev")
+        then:
+        folder.resolve('nextflow-io/nf-test-branch/.nextflow/commits/6f882561d589365c3950d170df8445e3c0dc8028/.git').isDirectory()
+        and:
+        folder.resolve('nextflow-io/nf-test-branch/.nextflow/commits/6f882561d589365c3950d170df8445e3c0dc8028/workflow.nf').text == "println 'Hello'\n"
 
         when:
         manager.download()
@@ -581,12 +706,13 @@ class AssetManagerTest extends Specification {
     }
 
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
-    def 'should download tag specified'() {
+    def 'should download tag specified legacy'() {
 
         given:
         def folder = tempDir.getRoot()
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
         def manager = new AssetManager().build('nextflow-io/nf-test-branch', [providers: [github: [auth: token]]])
+        manager.setStrategyType(AssetManager.RepositoryStrategyType.LEGACY)
 
         when:
         manager.download("v0.1")
@@ -599,6 +725,27 @@ class AssetManagerTest extends Specification {
         manager.download()
         then:
          noExceptionThrown()
+    }
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def 'should download tag specified with revision'() {
+
+        given:
+        def folder = tempDir.getRoot()
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def manager = new AssetManager().build('nextflow-io/nf-test-branch', [providers: [github: [auth: token]]])
+        manager.setStrategyType(AssetManager.RepositoryStrategyType.MULTI_REVISION)
+
+        when:
+        manager.download("v0.1")
+        then:
+        folder.resolve('nextflow-io/nf-test-branch/.nextflow/commits/6f882561d589365c3950d170df8445e3c0dc8028/.git').isDirectory()
+        and:
+        folder.resolve('nextflow-io/nf-test-branch/.nextflow/commits/6f882561d589365c3950d170df8445e3c0dc8028/workflow.nf').text == "println 'Hello'\n"
+
+        when:
+        manager.download()
+        then:
+        noExceptionThrown()
     }
 
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
@@ -614,7 +761,6 @@ class AssetManagerTest extends Specification {
         manager.download()
         manager.checkout(null)
         then:
-        folder.resolve('nextflow-io/socks/.git').isDirectory()
         manager.getCurrentRevision() == 'main'
 
         when:
@@ -624,31 +770,26 @@ class AssetManagerTest extends Specification {
     }
 
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
-    def 'can filter remote branches'() {
+    def 'should list revisions and commits'() {
         given:
-        def folder = tempDir.getRoot()
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
-        manager.download()
-        def branches = manager.getBranchList()
+        def pipelineName ='nextflow-io/hello'
+        def revision1 = 'v1.2'
+        def revision2 = 'mybranch'
+        def manager = new AssetManager().build(pipelineName, [providers: [github: [auth: token]]])
+        manager.download(revision1)
+        manager.download(revision2)
 
         when:
-        def remote_head = branches.find { it.name == 'refs/remotes/origin/HEAD' }
+        def branchesAndTags = manager.getBranchesAndTags(false)
         then:
-        remote_head != null
-        !AssetManager.isRemoteBranch(remote_head)
-
-        when:
-        def remote_master = branches.find { it.name == 'refs/remotes/origin/master' }
-        then:
-        remote_master != null
-        AssetManager.isRemoteBranch(remote_master)
-
-        when:
-        def local_master = branches.find { it.name == 'refs/heads/master' }
-        then:
-        local_master != null
-        !AssetManager.isRemoteBranch(local_master)
+        def pulled = branchesAndTags.pulled as List
+        pulled.size() == 2
+        revision1 in pulled && revision2 in pulled
+        def branches = branchesAndTags.branches as List<Map>
+        def tags = branchesAndTags.tags as List<Map>
+        tags.find {it.name == revision1 }.commitId == '0ec2ecd0ac13bc7e32594c0258ebce55e383d241'
+        branches.find { it.name == revision2 }.commitId == '1c3e9e7404127514d69369cd87f8036830f5cf64'
     }
 
 }

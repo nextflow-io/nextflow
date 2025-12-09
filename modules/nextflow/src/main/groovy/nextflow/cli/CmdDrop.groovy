@@ -20,9 +20,8 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
-import nextflow.scm.MultiRevisionAssetManager
+import nextflow.scm.AssetManager
 
 /**
  * CLI sub-command DROP
@@ -54,52 +53,11 @@ class CmdDrop extends CmdBase {
     @Override
     void run() {
         Plugins.init()
-
-        List<MultiRevisionAssetManager> dropList = []
         if ( allRevisions ) {
-            addRevisionsMangerToDropList(dropList)
+            new AssetManager(args[0]).drop(null, force)
         } else {
-            dropList << new MultiRevisionAssetManager(args[0]).setRevision(revision)
-        }
-
-        if ( !dropList ) {
-            if ( allRevisions && force ) // When removing all revision with 'force' not throw the exception to remove the project folder
-                log.warn("No revisions found for specified project: ${args[0]}")
-            else
-                throw new AbortOperationException("No revisions found for specified project: ${args[0]}")
-        }
-
-        dropList.each { manager -> dropRevision(manager) }
-
-        if ( allRevisions ) {
-            def revManager = new MultiRevisionAssetManager(args[0])
-            log.info("Removing directory ${revManager.localRootPath.absolutePath}")
-            revManager.localRootPath.deleteDir()
+            new AssetManager(args[0]).drop(revision, force)
         }
     }
 
-    private void dropRevision(MultiRevisionAssetManager manager){
-        if( !manager.isLocal() ) {
-                throw new AbortOperationException("No match found for: ${manager.getProjectWithRevision()}")
-            }
-
-            if( this.force || manager.isClean() ) {
-                manager.close()
-                if( !manager.localPath.deleteDir() )
-                    throw new AbortOperationException("Unable to delete project `${manager.getProjectWithRevision()}` -- Check access permissions for path: ${manager.localPath}")
-                return
-            }
-
-            throw new AbortOperationException("Local project repository contains uncommitted changes -- won't drop it")
-    }
-
-    private void addRevisionsMangerToDropList(List<MultiRevisionAssetManager> dropList) {
-        def revManager = new MultiRevisionAssetManager(args[0])
-        if( !revManager.localRootPath.exists() ) {
-            throw new AbortOperationException("No match found for: ${revManager.getProjectWithRevision()}")
-        }
-        revManager.listCommits().each { rev ->
-            dropList << new MultiRevisionAssetManager(args[0]).setRevision(rev)
-        }
-    }
 }

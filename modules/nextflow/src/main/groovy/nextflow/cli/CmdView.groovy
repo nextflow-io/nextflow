@@ -22,7 +22,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
-import nextflow.scm.MultiRevisionAssetManager
+import nextflow.scm.AssetManager
 
 /**
  * CLI sub-command VIEW -- Print a pipeline script to console
@@ -54,7 +54,9 @@ class CmdView extends CmdBase {
     @Override
     void run() {
         Plugins.init()
-        def manager = new MultiRevisionAssetManager(args[0]).setRevision(revision)
+        def manager = new AssetManager(args[0])
+        if( revision )
+            manager.setRevision(revision)
         if( !manager.isLocal() )
             throw new AbortOperationException("Unknown project `${manager.getProjectWithRevision()}`")
 

@@ -23,7 +23,6 @@ import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
-import nextflow.scm.MultiRevisionAssetManager
 import nextflow.util.TestOnly
 /**
  * CLI sub-command PULL
@@ -46,6 +45,12 @@ class CmdPull extends CmdBase implements HubOptions {
     @Parameter(names=['-r','-revision'], description = 'Revision of the project to pull (either a git branch, tag or commit SHA number)')
     String revision
 
+    @Parameter(names=['-d','-deep'], description = 'Create a shallow clone of the specified depth')
+    Integer deep
+
+    @Parameter(names=['-m','-migrate'], description = 'Migrate projects to multi-revision strategy', arity = 0)
+    boolean migrate
+
     @Override
     final String getName() { NAME }
 
@@ -64,6 +69,12 @@ class CmdPull extends CmdBase implements HubOptions {
         if( all && revision )
             throw new AbortOperationException('Option `all` is not compatible with `revision`')
 
+        def list = all ? AssetManager.list() : args.toList()
+        if( !list ) {
+            log.info "(nothing to do)"
+            return
+        }
+
         if( root ) {
             AssetManager.root = root
         }
@@ -71,38 +82,36 @@ class CmdPull extends CmdBase implements HubOptions {
         // init plugin system
         Plugins.init()
 
-        List<MultiRevisionAssetManager> list = []
-        if ( all ) {
-            def all = AssetManager.list()
-            all.each{ proj ->
-                def revManager = new MultiRevisionAssetManager(proj)
-                revManager.listRevisions().each{ rev ->
-                    list << new MultiRevisionAssetManager(proj, this, rev)
-                }
-            }
-        } else {
-            args.toList().each {
-                list << new MultiRevisionAssetManager(it, this, revision)
+        list.each { proj ->
+            if (all) {
+                def branches = new AssetManager(proj).getBranchesAndTags(false).pulled as List<String>
+                branches.each { rev -> pullProjectRevision(proj, rev) }
+            } else {
+                pullProjectRevision(proj, revision)
             }
         }
+    }
 
-        if( !list ) {
-            log.info "(nothing to do)"
-            return
+    private pullProjectRevision(String project, String revision) {
+        final manager = new AssetManager(project, this)
+
+        if( manager.isUsingLegacyStrategy() && migrate ) {
+            log.info "Migrating ${project} revision ${revision} to multi-revision strategy."
+            manager.setStrategyType(AssetManager.RepositoryStrategyType.LEGACY)
         }
 
-        list.each { manager ->
-            log.info "Checking ${manager.getProjectWithRevision()} ..."
+        if( revision )
+            manager.setRevision(revision)
 
-            def result = manager.createSharedClone()
-            manager.updateModules()
+        log.info "Checking ${manager.getProjectWithRevision()} ..."
 
-            def scriptFile = manager.getScriptFile()
-            String message = !result ? " done" : " $result"
-            message += " - revision: ${scriptFile.revisionInfo}"
-            log.info message
-        }
+        def result = manager.download(manager.getRevision(), deep)
+        manager.updateModules()
 
+        def scriptFile = manager.getScriptFile()
+        String message = !result ? " done" : " $result"
+        message += " - revision: ${scriptFile.revisionInfo}"
+        log.info message
     }
 
 }
