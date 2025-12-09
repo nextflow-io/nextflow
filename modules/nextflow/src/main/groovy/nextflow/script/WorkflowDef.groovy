@@ -106,8 +106,6 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
 
     @PackageScope Map<String,Map> getDeclaredPublish() { declaredPublish }
 
-    @PackageScope String getSource() { body.source }
-
     @PackageScope List<String> getDeclaredVariables() { new ArrayList<String>(variableNames) }
 
     String getType() { 'workflow' }
@@ -198,14 +196,17 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
 
     private Object run0(Object[] args) {
         collectInputs(binding, args)
-        // invoke the workflow execution
         final closure = body.closure
         closure.setDelegate(binding)
         closure.setResolveStrategy(Closure.DELEGATE_FIRST)
-        closure.call()
-        // collect the workflow outputs
-        output = collectOutputs(declaredOutputs)
-        return output
+        final result = closure.call()
+        if( name == null ) {
+            return result
+        }
+        else {
+            output = collectOutputs(declaredOutputs)
+            return output
+        }
     }
 
 }

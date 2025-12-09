@@ -42,13 +42,15 @@ class ConfigDsl extends Script {
 
     private boolean strict
 
+    private boolean stripSecrets
+
     private Path configPath
 
-    private Map paramOverrides
+    private Map cliParams
 
     private List<String> profiles
 
-    private Map target = [:]
+    private Map target = [params: [:]]
 
     private Set<String> declaredProfiles = []
 
@@ -66,13 +68,21 @@ class ConfigDsl extends Script {
         this.strict = value
     }
 
+    void setStripSecrets(boolean value) {
+        this.stripSecrets = value
+    }
+
     void setConfigPath(Path path) {
         this.configPath = path
     }
 
-    void setParams(Map paramOverrides) {
-        this.paramOverrides = paramOverrides
-        target.params = paramOverrides
+    void setParams(Map params) {
+        this.cliParams = params
+        (target.params as Map).putAll(params)
+    }
+
+    void setConfigParams(Map params) {
+        (target.params as Map).putAll(params)
     }
 
     void setProfiles(List<String> profiles) {
@@ -120,7 +130,7 @@ class ConfigDsl extends Script {
     void assign(List<String> names, Object value) {
         if( names.size() == 2 && names.first() == 'params' ) {
             declareParam(names.last(), value)
-            if( paramOverrides.containsKey(names.last()) )
+            if( cliParams.containsKey(names.last()) )
                 return
         }
         navigate(names.init()).put(names.last(), value)
@@ -195,8 +205,10 @@ class ConfigDsl extends Script {
                 .setIgnoreIncludes(ignoreIncludes)
                 .setRenderClosureAsString(renderClosureAsString)
                 .setStrict(strict)
+                .setStripSecrets(stripSecrets)
                 .setBinding(binding.getVariables())
-                .setParams(target.params as Map)
+                .setParams(cliParams)
+                .setConfigParams(target.params as Map)
                 .setProfiles(profiles)
         final config = parser.parse(configText, includePath)
         declaredProfiles.addAll(parser.getDeclaredProfiles())

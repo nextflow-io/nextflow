@@ -147,7 +147,7 @@ class ScriptLoaderV1 implements ScriptLoader {
      * with the implicit and user variables
      */
     protected String computeClassName(script) {
-        final PREFIX = 'Script_'
+        final PREFIX = '_nf_script_'
 
         if( script instanceof Path ) {
             return FileHelper.getIdentifier(script,PREFIX)

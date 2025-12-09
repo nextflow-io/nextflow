@@ -35,9 +35,11 @@ import nextflow.script.ast.ScriptVisitorSupport;
 import nextflow.script.ast.WorkflowNode;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.CodeVisitorSupport;
+import org.codehaus.groovy.ast.MethodNode;
 import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.ast.VariableScope;
 import org.codehaus.groovy.ast.expr.BinaryExpression;
+import org.codehaus.groovy.ast.expr.DeclarationExpression;
 import org.codehaus.groovy.ast.expr.Expression;
 import org.codehaus.groovy.ast.expr.MethodCallExpression;
 import org.codehaus.groovy.ast.expr.VariableExpression;
@@ -143,6 +145,9 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitWorkflow(WorkflowNode node) {
+        if( !node.isEntry() )
+            checkReservedMethodName(node, "workflow");
+
         var main = node.main instanceof BlockStatement block ? block : new BlockStatement();
         visitWorkflowEmits(node.emits, main);
         visitWorkflowPublishers(node.publishers, main);
@@ -153,7 +158,7 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
             "nextflow.script.BodyDef",
             args(
                 closureX(null, main),
-                constX(getSourceText(node)),
+                constX(null),
                 constX("workflow")
             )
         ));
@@ -217,23 +222,27 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitProcessV2(ProcessNodeV2 node) {
+        checkReservedMethodName(node, "process");
         var result = new ProcessToGroovyVisitorV2(sourceUnit).transform(node);
         moduleNode.addStatement(result);
     }
 
     @Override
     public void visitProcessV1(ProcessNodeV1 node) {
+        checkReservedMethodName(node, "process");
         var result = new ProcessToGroovyVisitorV1(sourceUnit).transform(node);
         moduleNode.addStatement(result);
     }
 
     @Override
     public void visitFunction(FunctionNode node) {
-        if( RESERVED_NAMES.contains(node.getName()) ) {
-            syntaxError(node, "`" + node.getName() + "` is not allowed as a function name because it is reserved for internal use");
-            return;
-        }
+        checkReservedMethodName(node, "function");
         moduleNode.getScriptClassDummy().addMethod(node);
+    }
+
+    private void checkReservedMethodName(MethodNode node, String typeLabel) {
+        if( RESERVED_NAMES.contains(node.getName()) )
+            syntaxError(node, "`" + node.getName() + "` is not allowed as a " + typeLabel + " name because it is reserved for internal use");
     }
 
     @Override
@@ -249,32 +258,6 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
         var closure = closureX(null, block(new VariableScope(), statements));
         var result = stmt(callThisX("output", args(closure)));
         moduleNode.addStatement(result);
-    }
-
-    private String getSourceText(WorkflowNode node) {
-        if( node.isEntry() && node.getLineNumber() == -1 )
-            return sgh.getSourceText(node.main);
-
-        var builder = new StringBuilder();
-        var colx = node.getColumnNumber();
-        var colz = node.getLastColumnNumber();
-        var first = node.getLineNumber();
-        var last = node.getLastLineNumber();
-        for( int i = first; i <= last; i++ ) {
-            var line = sourceUnit.getSource().getLine(i, null);
-            if( i == last ) {
-                line = line.substring(0, colz-1).replaceFirst("}.*$", "");
-                if( line.trim().isEmpty() )
-                    continue;
-            }
-            if( i == first ) {
-                line = line.substring(colx-1).replaceFirst("^.*\\{", "").trim();
-                if( line.isEmpty() )
-                    continue;
-            }
-            builder.append(line).append('\n');
-        }
-        return builder.toString();
     }
 
     private void syntaxError(ASTNode node, String message) {

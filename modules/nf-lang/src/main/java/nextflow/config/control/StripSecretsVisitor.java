@@ -50,14 +50,18 @@ public class StripSecretsVisitor extends ClassCodeExpressionTransformer {
 
     @Override
     public Expression transform(Expression node) {
-        if( node instanceof ClosureExpression ce )
-            super.visitClosureExpression(ce);
+        if( node instanceof ClosureExpression ce ) {
+            ce.visit(this);
+            return ce;
+        }
 
-        if( node instanceof MethodCallExpression mce )
+        if( node instanceof MethodCallExpression mce ) {
             return transformMethodCall(mce);
+        }
 
-        if( node instanceof PropertyExpression pe )
+        if( node instanceof PropertyExpression pe ) {
             return transformProperty(pe);
+        }
 
         return super.transform(node);
     }

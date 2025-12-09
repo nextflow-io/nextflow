@@ -36,7 +36,9 @@ class ConfigParserV2 implements ConfigParser {
 
     private Map bindingVars = [:]
 
-    private Map paramOverrides = [:]
+    private Map cliParams = [:]
+
+    private Map configParams = [:]
 
     private boolean ignoreIncludes = false
 
@@ -79,7 +81,7 @@ class ConfigParserV2 implements ConfigParser {
     }
 
     @Override
-    ConfigParser setStripSecrets(boolean value) {
+    ConfigParserV2 setStripSecrets(boolean value) {
         this.stripSecrets = value
         return this
     }
@@ -91,10 +93,15 @@ class ConfigParserV2 implements ConfigParser {
     }
 
     @Override
-    ConfigParserV2 setParams(Map vars) {
-        // deep clone the map to prevent side-effect
+    ConfigParserV2 setParams(Map params) {
+        // deep clone the map to prevent side effects with nested params
         // see https://github.com/nextflow-io/nextflow/issues/1923
-        this.paramOverrides = Bolts.deepClone(vars)
+        this.cliParams = Bolts.deepClone(params)
+        return this
+    }
+
+    ConfigParserV2 setConfigParams(Map params) {
+        this.configParams = params
         return this
     }
 
@@ -127,9 +134,12 @@ class ConfigParserV2 implements ConfigParser {
             if( path )
                 script.setConfigPath(path)
             script.setIgnoreIncludes(ignoreIncludes)
-            script.setParams(paramOverrides)
-            script.setProfiles(appliedProfiles)
             script.setRenderClosureAsString(renderClosureAsString)
+            script.setStrict(strict)
+            script.setStripSecrets(stripSecrets)
+            script.setParams(cliParams)
+            script.setConfigParams(configParams)
+            script.setProfiles(appliedProfiles)
             script.run()
 
             final target = script.getTarget()

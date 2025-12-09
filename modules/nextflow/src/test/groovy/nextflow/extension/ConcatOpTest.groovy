@@ -16,23 +16,24 @@
 
 package nextflow.extension
 
-import spock.lang.Timeout
-
 import nextflow.Channel
+import spock.lang.Timeout
 import test.Dsl2Spec
+
+import static test.ScriptHelper.*
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Timeout(5)
-class ConcatOp2Test extends Dsl2Spec {
+class ConcatOpTest extends Dsl2Spec {
 
     def 'should concat two channel'() {
 
         when:
-        def result = dsl_eval('''
-            c1 = Channel.of(1,2,3)
-            c2 = Channel.of('a','b','c')
+        def result = runScript('''
+            c1 = channel.of(1,2,3)
+            c2 = channel.of('a','b','c')
             c1.concat(c2)
         ''')
         then:
@@ -47,10 +48,10 @@ class ConcatOp2Test extends Dsl2Spec {
 
     def 'should concat value with channel'() {
         when:
-        def result = dsl_eval('''
-            ch1 = Channel.value(1)
-            ch2 = Channel.of(2,3)
-            ch1.concat(ch2)        
+        def result = runScript('''
+            ch1 = channel.value(1)
+            ch2 = channel.of(2,3)
+            ch1.concat(ch2)
         ''')
         then:
         result.val == 1
@@ -61,10 +62,10 @@ class ConcatOp2Test extends Dsl2Spec {
 
     def 'should concat two value channels'() {
         when:
-        def result = dsl_eval('''
-            ch1 = Channel.value(1)
-            ch2 = Channel.value(2)
-            ch1.concat(ch2)        
+        def result = runScript('''
+            ch1 = channel.value(1)
+            ch2 = channel.value(2)
+            ch1.concat(ch2)
         ''')
         then:
         result.val == 1
@@ -74,20 +75,20 @@ class ConcatOp2Test extends Dsl2Spec {
 
     def 'should concat with empty'() {
         when:
-        def result = dsl_eval('''
-            ch1 = Channel.value(1)
-            ch2 = Channel.empty()
-            ch1.concat(ch2)        
+        def result = runScript('''
+            ch1 = channel.value(1)
+            ch2 = channel.empty()
+            ch1.concat(ch2)
         ''')
         then:
         result.val == 1
         result.val == Channel.STOP
-        
+
         when:
-        result = dsl_eval('''
-            ch1 = Channel.empty()
-            ch2 = Channel.empty()
-            ch1.concat(ch2)        
+        result = runScript('''
+            ch1 = channel.empty()
+            ch2 = channel.empty()
+            ch1.concat(ch2)
         ''')
         then:
         result.val == Channel.STOP
