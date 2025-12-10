@@ -22,11 +22,11 @@ For example, given a bare repository at `/shared/projects/hello.git`, Nextflow i
 nextflow run file:/shared/projects/hello.git
 ```
 
-See [Git documentation](https://git-scm.com/book/en/v2/Git-on-the-Server-Getting-Git-on-a-Server) for more details about how create and manage bare repositories.
+See [Git documentation](https://git-scm.com/book/en/v2/Git-on-the-Server-Getting-Git-on-a-Server) for more details about how to create and manage bare repositories.
 
 ## Publishing your pipeline
 
-In order to publish your Nextflow pipeline to GitHub (or any other supported platform) and allow other people to use it, you only need to create a GitHub repository containing all your project script and data files. If you don't know how to do it, follow this simple tutorial that explains how [create a GitHub repository](https://help.github.com/articles/create-a-repo).
+In order to publish your Nextflow pipeline to GitHub (or any other supported platform) and allow other people to use it, you only need to create a GitHub repository containing all your project script and data files. If you don't know how to do it, follow this simple tutorial that explains how to [create a GitHub repository](https://help.github.com/articles/create-a-repo).
 
 Nextflow only requires that the main script in your pipeline project is called `main.nf`. A different name can be used by specifying the `manifest.mainScript` attribute in the `nextflow.config` file that must be included in your project. For example:
 
@@ -38,7 +38,7 @@ To learn more about this and other project metadata information, that can be def
 
 Once you have uploaded your pipeline project to GitHub other people can execute it simply using the project name or the repository URL.
 
-For if your GitHub account name is `acme` and you have uploaded a project into a repository named `hello` the repository URL will be `http://github.com/acme/hello` and people will able to download and run it by using either the command:
+For example, if your GitHub account name is `acme` and you have uploaded a project into a repository named `hello` the repository URL will be `http://github.com/acme/hello` and people will be able to download and run it by using either the command:
 
 ```bash
 nextflow run acme/hello
@@ -60,10 +60,10 @@ These external dependencies are the primary challenge when sharing software, bec
 
 Nextflow tackles this problem by integrating with existing tools for reproducible software, namely Git for source code and Docker for containers. These tools allow you to keep all the dependencies of your pipeline project in one place and track changes over time with version control.
 
-By making your pipeline project is self-contained, meaning all of its dependencies are fully defined in the project itself, you gain two major advantages:
+By making your pipeline project self-contained, meaning all of its dependencies are fully defined in the project itself, you gain two major advantages:
 
 - **Portability**: the pipeline can be run in virtually any environment with a Java VM and a container runtime
-- **Reproducibility**: any results produced by the pipelined can be easily reproduced, even across different environments
+- **Reproducibility**: any results produced by the pipeline can be easily reproduced, even across different environments
 
 One way to account for dependencies is to break them down into three categories: code, data, and environment. Here we will describe how to include each of these dependencies in your Nextflow pipeline:
 
@@ -159,7 +159,7 @@ workflow {
     channel.of('ACGTTGCAATGCCGTA', 'GCGTACGGTACGTTAC')
         .map { seq -> new DNASequence(seq) }
         .view { dna ->
-            "Found sequence '$dna' with melting temperaure ${dna.getMeltingTemperature()}°C"
+            "Found sequence '$dna' with melting temperature ${dna.getMeltingTemperature()}°C"
         }
 }
 ```
@@ -167,8 +167,8 @@ workflow {
 It prints:
 
 ```
-Found sequence 'DNA[ACGTTGCAATGCCGTA]' with melting temperaure 48.0°C
-Found sequence 'DNA[GCGTACGGTACGTTAC]' with melting temperaure 50.0°C
+Found sequence 'DNA[ACGTTGCAATGCCGTA]' with melting temperature 48.0°C
+Found sequence 'DNA[GCGTACGGTACGTTAC]' with melting temperature 50.0°C
 ```
 
 :::{note}

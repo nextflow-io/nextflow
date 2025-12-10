@@ -1350,7 +1350,7 @@ Many fields from the previous task attempts are accessible. See {ref}`trace-repo
 
 ### Dynamic retry with backoff
 
-There are cases in which the required execution resources may be temporary unavailable e.g. network congestion. In these cases immediately re-executing the task will likely result in the identical error. A retry with an exponential backoff delay can better recover these error conditions:
+There are cases in which the required execution resources may be temporarily unavailable e.g. network congestion. In these cases immediately re-executing the task will likely result in the identical error. A retry with an exponential backoff delay can better recover these error conditions:
 
 ```nextflow
 process hello {

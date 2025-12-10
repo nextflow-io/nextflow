@@ -112,6 +112,8 @@ class AzureRepositoryProviderTest extends Specification {
 
         expect:
         new AzureRepositoryProvider('t-neumann/hello', obj).setRevision("a-branch").getContentUrl('main.nf') == 'https://dev.azure.com/t-neumann/hello/_apis/git/repositories/hello/items?download=false&includeContent=true&includeContentMetadata=false&api-version=6.0&\$format=json&path=main.nf&versionDescriptor.version=a-branch'
+        and:
+        new AzureRepositoryProvider('t-neumann/hello', obj).setRevision("test/branch+with&strangecharacters").getContentUrl('main.nf') == 'https://dev.azure.com/t-neumann/hello/_apis/git/repositories/hello/items?download=false&includeContent=true&includeContentMetadata=false&api-version=6.0&\$format=json&path=main.nf&versionDescriptor.version=test%2Fbranch%2Bwith%26strangecharacters'
     }
 
     /*
@@ -133,6 +135,8 @@ class AzureRepositoryProviderTest extends Specification {
         def result = repo.readText('main.nf')
         then:
         result == 'println "Hello from Azure repos!"'
+
+
     }
 
     @IgnoreIf({System.getenv('NXF_SMOKE')})
@@ -226,6 +230,15 @@ class AzureRepositoryProviderTest extends Specification {
         def result = repo.readText('file-on-dev.txt')
         then:
         result=='hello\n'
+
+        when:
+        // check revision with special branches
+        repo = new AzureRepositoryProvider('pditommaso/nf-azure-repo', config)
+        repo.revision = 'test/branch+with&special-chars'
+        result = repo.readText('main.nf')
+        then:
+        result == 'println "Hello from Azure repos!"'
+
     }
 
     @IgnoreIf({System.getenv('NXF_SMOKE')})
