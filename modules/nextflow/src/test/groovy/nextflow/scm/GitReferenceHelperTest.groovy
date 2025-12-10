@@ -37,6 +37,7 @@ class GitReferenceHelperTest extends Specification {
         def folder = tempDir.getRoot()
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
         def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
+        manager.setStrategyType(AssetManager.RepositoryStrategyType.LEGACY)
         manager.download()
         def branches = manager.getBranchList()
 
