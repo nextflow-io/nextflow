@@ -17,10 +17,19 @@ package nextflow.scm
 
 import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.Ref
+import org.junit.Rule
 import spock.lang.Requires
 import spock.lang.Specification
+import test.TemporaryPath
 
 class GitReferenceHelperTest extends Specification {
+
+    @Rule
+    TemporaryPath tempDir = new TemporaryPath()
+
+    def setup() {
+        AssetManager.root = tempDir.root.toFile()
+    }
 
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def 'can filter remote branches'() {

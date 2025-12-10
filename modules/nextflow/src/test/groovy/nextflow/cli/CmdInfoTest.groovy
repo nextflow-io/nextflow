@@ -71,7 +71,7 @@ class CmdInfoTest extends Specification {
         screen.contains(" local path  : $tempDir/nextflow-io/hello" )
         screen.contains(" main script : main.nf")
         screen.contains(" revisions   : ")
-        screen.contains(" P master (default)")
+        screen.contains(" * master (default)")
         !screen.contains("   HEAD")
     }
 
