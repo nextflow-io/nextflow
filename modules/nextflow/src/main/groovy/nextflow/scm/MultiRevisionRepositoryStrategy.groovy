@@ -22,7 +22,6 @@ import groovy.util.logging.Slf4j
 import nextflow.config.Manifest
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileMutex
-import nextflow.util.IniFile
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.ListBranchCommand
 import org.eclipse.jgit.api.errors.RefNotFoundException
@@ -46,8 +45,9 @@ import org.eclipse.jgit.transport.RefSpec
 @CompileStatic
 class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
 
-    static final String BARE_REPO = '.nextflow/bare_repo'
-    static final String REVISION_SUBDIR = '.nextflow/commits'
+    static final String MULTI_REVISION_SUBDIR = '.multi-revision'
+    static final String BARE_REPO = 'bare_repo'
+    static final String REVISION_SUBDIR = 'commits'
 
     /**
      * The revision (branch, tag, or commit SHA) to work with
@@ -57,18 +57,25 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
     /**
      * Path to the commit-specific clone
      */
+    private File legacyRepoPath
+    private File projectPath
     private File commitPath
     private File bareRepo
     private File revisionSubdir
     private Git _bareGit
     private Git _commitGit
 
-    MultiRevisionRepositoryStrategy(RepositoryContext context, String revision = null) {
-        super(context)
-        this.bareRepo = new File(context.root, context.project + '/' + BARE_REPO)
-        this.revisionSubdir = new File(context.root, context.project + '/' + REVISION_SUBDIR)
-        if (revision)
-            setRevision(revision)
+    MultiRevisionRepositoryStrategy(String project) {
+        super(project)
+
+        this.legacyRepoPath = new File(root, project)
+        this.projectPath = new File(root, MULTI_REVISION_SUBDIR + '/' + project)
+        this.bareRepo = new File(projectPath, BARE_REPO)
+        this.revisionSubdir = new File(projectPath, REVISION_SUBDIR)
+
+    }
+    static boolean isLocal(File root, String project){
+        return new File(root, MULTI_REVISION_SUBDIR + '/' + project + '/' + BARE_REPO).exists()
     }
 
     @PackageScope
@@ -141,7 +148,7 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
             getBareRepo().parentFile.mkdirs()
             // Use a file mutex to prevent concurrent clones of the same commit.
             final file = new File(getBareRepo().parentFile, ".${getBareRepo().name}.lock")
-            final wait = "Another Nextflow instance is creating the bare repo for ${context.project} -- please wait till it completes"
+            final wait = "Another Nextflow instance is creating the bare repo for ${project} -- please wait till it completes"
             final err = "Unable to acquire exclusive lock after 60s on file: $file"
 
             final mutex = new FileMutex(target: file, timeout: '60s', waitMessage: wait, errorMessage: err)
@@ -153,22 +160,23 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
             }
         }
         final updateRevision = revision ?: getDefaultBranch(manifest)
-        log.debug "Fetching (updating) bare repo for ${context.project} [revision: $updateRevision]"
+        log.debug "Fetching (updating) bare repo for ${project} [revision: $updateRevision]"
         getBareGit().fetch().setRefSpecs(refSpecForName(updateRevision)).call()
     }
 
     private void createBareRepo(Manifest manifest) {
+        assert provider
         // This check is required in case of two nextflow instances were doing the same shared clone at the same time.
         // If commitPath exists the previous nextflow instance created the shared clone successfully.
         if( getBareRepo().exists() )
             return
 
         try {
-            final cloneURL = getGitRepositoryUrl()
-            log.debug "Pulling bare repo for ${context.project} -- Using remote clone url: ${cloneURL}"
+            final cloneURL = provider.getCloneUrl()
+            log.debug "Pulling bare repo for ${project} -- Using remote clone url: ${cloneURL}"
             def bare = Git.cloneRepository()
-            if( context.provider.hasCredentials() )
-                bare.setCredentialsProvider(context.provider.getGitCredentials())
+            if( provider.hasCredentials() )
+                bare.setCredentialsProvider(provider.getGitCredentials())
 
             bare
                 .setBare(true)
@@ -197,7 +205,7 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
         this.revision ?= getDefaultBranch(manifest)
         final commitId = revisionToCommitWithBareRepo(this.revision)
         if( !commitId ) {
-            throw new AbortOperationException("No commit found for revision ${this.revision} in project ${context.project}")
+            throw new AbortOperationException("No commit found for revision ${this.revision} in project ${project}")
         }
         updateCommitDir(commitId)
 
@@ -241,7 +249,7 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
         final downloadRevision = revision ?: getDefaultBranch(manifest)
         final commitId = revisionToCommitWithBareRepo(downloadRevision)
         if( !commitId ) {
-            throw new RefNotFoundException("No commit found for revision ${downloadRevision} in project ${context.project}")
+            throw new RefNotFoundException("No commit found for revision ${downloadRevision} in project ${project}")
         }
         if( new File(revisionSubdir, commitId).exists() ) {
             setRevision(downloadRevision)
@@ -265,7 +273,7 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
         commitPath.parentFile.mkdirs()
         try {
             final cloneURL = getBareRepo().toString()
-            log.debug "Pulling ${context.project} -- Using remote clone url: ${cloneURL}"
+            log.debug "Pulling ${project} -- Using remote clone url: ${cloneURL}"
 
             // clone it, but don't specify a revision - jgit will checkout the default branch
             File bareObjectsDir = new File(getBareRepo(), "objects")
@@ -319,7 +327,7 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
 
     @Override
     File getLocalPath() {
-        return this.commitPath ?: context.localRootPath
+        return this.commitPath ?: legacyRepoPath
     }
 
     protected Git getBareGit() {
@@ -342,9 +350,6 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
             return getCommitGit()
         if( getBareRepo().exists() )
             return getBareGit()
-        // Fallback to legacy if it exists
-        if( context.localRootPath.exists() && new File(context.localRootPath, '.git').exists() )
-            return Git.open(context.localRootPath)
         return null
     }
 
@@ -352,8 +357,8 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
         if( getBareRepo().exists() )
             return getBareGit()
         // Fallback to legacy
-        if( context.localRootPath.exists() && new File(context.localRootPath, '.git').exists() )
-            return Git.open(context.localRootPath)
+        if( new File(legacyRepoPath, '.git').exists() )
+            return Git.open(legacyRepoPath)
         return null
     }
 
@@ -365,6 +370,11 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
         catch( RepositoryNotFoundException e ) {
             return true
         }
+    }
+
+    @Override
+    boolean isLocal() {
+        return bareRepo != null && bareRepo.exists()
     }
 
     @Override
@@ -390,8 +400,8 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
     @Override
     Map<String, Ref> lsRemote(boolean tags) {
         final cmd = getBareGitWithLegacyFallback()?.lsRemote()?.setTags(tags)
-        if( context.provider.hasCredentials() )
-            cmd?.setCredentialsProvider(context.provider.getGitCredentials())
+        if( provider.hasCredentials() )
+            cmd?.setCredentialsProvider(provider.getGitCredentials())
         return cmd?.callAsMap() ?: [:]
     }
 
@@ -402,15 +412,19 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
 
     @Override
     File getLocalGitConfig() {
-        getBareRepo().exists() ? new File(getBareRepo(), 'config')
-            : (context.localRootPath ? new File(context.localRootPath, '.git/config') : null)
+        return getBareRepo().exists() ? new File(getBareRepo(), 'config') : null
+    }
+
+    @Override
+    String getGitRepositoryUrl() {
+        if (bareRepo.exists())
+            return bareRepo.toURI().toString()
+        return provider.getCloneUrl()
     }
 
     @Override
     List<String> listDownloadedCommits() {
         def result = new LinkedList()
-        if( !context.localRootPath.exists() )
-            return result
         if( !getRevisionSubdir().exists() )
             return result
 
@@ -425,7 +439,7 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
             dropRevision(revision, force)
         } else {
             listDownloadedCommits().each { dropRevision(it, force) }
-            context.localRootPath.deleteDir()
+            bareRepo.parentFile.deleteDir()
         }
     }
 
@@ -435,11 +449,11 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
         if( force || isClean() ) {
             close()
             if( !localPath.deleteDir() )
-                throw new AbortOperationException("Unable to delete project `${context.project}` -- Check access permissions for path: ${localPath}")
+                throw new AbortOperationException("Unable to delete project `${project}` -- Check access permissions for path: ${localPath}")
             return
         }
 
-        throw new AbortOperationException("Revision $revision for project `${context.project}` contains uncommitted changes -- won't drop it")
+        throw new AbortOperationException("Revision $revision for project `${project}` contains uncommitted changes -- won't drop it")
     }
 
     @Override
@@ -452,5 +466,15 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
             _commitGit.close()
             _commitGit = null
         }
+    }
+
+    @Override
+    void setLocalPath(File file) {
+        legacyRepoPath = file
+    }
+
+    @Override
+    File getProjectPath() {
+        return projectPath
     }
 }

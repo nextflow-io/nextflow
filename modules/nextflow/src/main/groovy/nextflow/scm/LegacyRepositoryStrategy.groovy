@@ -17,6 +17,7 @@
 package nextflow.scm
 
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.config.Manifest
 import nextflow.exception.AbortOperationException
@@ -42,9 +43,16 @@ import org.eclipse.jgit.lib.SubmoduleConfig.FetchRecurseSubmodulesMode
 class LegacyRepositoryStrategy extends AbstractRepositoryStrategy {
 
     private Git _git
+    private File localPath
 
-    LegacyRepositoryStrategy(RepositoryContext context) {
-        super(context)
+    LegacyRepositoryStrategy(String project) {
+        super(project)
+        this.localPath = new File(root, project)
+    }
+
+    @PackageScope
+    static boolean checkProject(File root, String project){
+         return new File(root, project + '/.git').exists()
     }
 
     @Override
@@ -52,16 +60,17 @@ class LegacyRepositoryStrategy extends AbstractRepositoryStrategy {
         /*
          * if the pipeline already exists locally pull it from the remote repo
          */
-        if( !getLocalPath().exists() ) {
+        if( !isLocal() ) {
+            assert provider
             getLocalPath().parentFile.mkdirs()
 
             final cloneURL = getGitRepositoryUrl()
-            log.debug "Pulling ${context.project} -- Using remote clone url: ${cloneURL}"
+            log.debug "Pulling ${project} -- Using remote clone url: ${cloneURL}"
 
             // clone it, but don't specify a revision - jgit will checkout the default branch
             def clone = Git.cloneRepository()
-            if( context.provider.hasCredentials() )
-                clone.setCredentialsProvider( context.provider.getGitCredentials() )
+            if( provider.hasCredentials() )
+                clone.setCredentialsProvider( provider.getGitCredentials() )
 
             clone
                 .setURI(cloneURL)
@@ -98,11 +107,11 @@ class LegacyRepositoryStrategy extends AbstractRepositoryStrategy {
             return "downloaded from ${cloneURL}"
         }
 
-        log.debug "Pull pipeline ${context.project}  -- Using local path: ${getLocalPath()}"
+        log.debug "Pull pipeline ${project}  -- Using local path: ${getLocalPath()}"
 
         // verify that is clean
         if( !isClean() )
-            throw new AbortOperationException("${context.project} contains uncommitted changes -- cannot pull from repository")
+            throw new AbortOperationException("${project} contains uncommitted changes -- cannot pull from repository")
 
         if( revision && revision != getCurrentRevision() ) {
             /*
@@ -136,15 +145,15 @@ class LegacyRepositoryStrategy extends AbstractRepositoryStrategy {
             pull.setRemoteBranchName( "refs/tags/" + revInfo.name )
         }
 
-        if( context.provider.hasCredentials() )
-            pull.setCredentialsProvider( context.provider.getGitCredentials() )
+        if( provider.hasCredentials() )
+            pull.setCredentialsProvider( provider.getGitCredentials() )
 
         if( manifest.recurseSubmodules ) {
             pull.setRecurseSubmodules(FetchRecurseSubmodulesMode.YES)
         }
         def result = pull.call()
         if(!result.isSuccessful())
-            throw new AbortOperationException("Cannot pull project `${context.project}` -- ${result.toString()}")
+            throw new AbortOperationException("Cannot pull project `${project}` -- ${result.toString()}")
 
         return result?.mergeResult?.mergeStatus?.toString()
     }
@@ -156,7 +165,7 @@ class LegacyRepositoryStrategy extends AbstractRepositoryStrategy {
         def current = getCurrentRevision()
         if( current != getDefaultBranch(manifest) ) {
             if( !revision ) {
-                throw new AbortOperationException("Project `$context.project` is currently stuck on revision: $current -- you need to explicitly specify a revision with the option `-r` in order to use it")
+                throw new AbortOperationException("Project `$project` is currently stuck on revision: $current -- you need to explicitly specify a revision with the option `-r` in order to use it")
             }
         }
         if( !revision || revision == current ) {
@@ -166,7 +175,7 @@ class LegacyRepositoryStrategy extends AbstractRepositoryStrategy {
 
         // verify that is clean
         if( !isClean() )
-            throw new AbortOperationException("Project `$context.project` contains uncommitted changes -- Cannot switch to revision: $revision")
+            throw new AbortOperationException("Project `$project` contains uncommitted changes -- Cannot switch to revision: $revision")
 
 
         git.checkout().setName(revision) .call()
@@ -174,10 +183,11 @@ class LegacyRepositoryStrategy extends AbstractRepositoryStrategy {
 
     @Override
     Ref checkoutRemoteBranch(String revision, Manifest manifest) {
+        assert provider
         try {
             def fetch = git.fetch()
-            if(context.provider.hasCredentials()) {
-                fetch.setCredentialsProvider( context.provider.getGitCredentials() )
+            if(provider.hasCredentials()) {
+                fetch.setCredentialsProvider( provider.getGitCredentials() )
             }
             if( manifest.recurseSubmodules ) {
                 fetch.setRecurseSubmodules(FetchRecurseSubmodulesMode.YES)
@@ -203,13 +213,25 @@ class LegacyRepositoryStrategy extends AbstractRepositoryStrategy {
 
     @Override
     File getLocalPath() {
-        return context.localRootPath
+        return this.localPath
+    }
+
+    @Override
+    void setLocalPath(File file) {
+        this.localPath = file
+        if( _git )
+            _git.close()
+    }
+
+    @Override
+    File getProjectPath() {
+        return this.localPath
     }
 
     @Override
     Git getGit() {
         if( !_git ) {
-            _git = Git.open(getLocalPath())
+            _git = Git.open(localPath)
         }
         return _git
     }
@@ -222,6 +244,11 @@ class LegacyRepositoryStrategy extends AbstractRepositoryStrategy {
         catch( RepositoryNotFoundException e ) {
             return true
         }
+    }
+
+    @Override
+    boolean isLocal() {
+        localPath != null && localPath.exists() && getLocalGitConfig().exists()
     }
 
     @Override
@@ -242,9 +269,10 @@ class LegacyRepositoryStrategy extends AbstractRepositoryStrategy {
 
     @Override
     Map<String, Ref> lsRemote(boolean tags) {
+        assert provider
         final cmd = getGit().lsRemote().setTags(tags)
-        if( context.provider.hasCredentials() )
-            cmd.setCredentialsProvider( context.provider.getGitCredentials() )
+        if( provider.hasCredentials() )
+            cmd.setCredentialsProvider( provider.getGitCredentials() )
         return cmd.callAsMap()
     }
 
@@ -259,8 +287,16 @@ class LegacyRepositoryStrategy extends AbstractRepositoryStrategy {
     }
 
     @Override
+    String getGitRepositoryUrl() {
+        if( localPath.exists() ) {
+            return localPath.toURI().toString()
+        }
+        return provider.getCloneUrl()
+    }
+
+    @Override
     List<String> listDownloadedCommits() {
-        if( !context.localRootPath.exists() )
+        if( !localPath.exists() )
             return []
         return [findHeadRef().objectId.getName()]
     }
@@ -268,7 +304,7 @@ class LegacyRepositoryStrategy extends AbstractRepositoryStrategy {
     @Override
     void drop(String revision, boolean force) {
         if (!localPath.exists())
-            throw new AbortOperationException("No match found for: ${context.project}")
+            throw new AbortOperationException("No match found for: ${project}")
 
         if (revision)
             throw new AbortOperationException("Not able to remove a revision for a Legacy Repo. Use all option to remove the local repository.")
@@ -276,7 +312,7 @@ class LegacyRepositoryStrategy extends AbstractRepositoryStrategy {
         if (force || isClean()) {
             close()
             if( !localPath.deleteDir() )
-                throw new AbortOperationException("Unable to delete project `${context.project}` -- Check access permissions for path: ${localPath}")
+                throw new AbortOperationException("Unable to delete project `${project}` -- Check access permissions for path: ${localPath}")
             return
         }
         throw new AbortOperationException("Local project repository contains uncommitted changes -- won't drop it")

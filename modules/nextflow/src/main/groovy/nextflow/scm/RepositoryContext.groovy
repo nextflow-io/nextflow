@@ -38,23 +38,16 @@ class RepositoryContext {
      */
     final File root
 
-    /**
-     * The local root path for this project
-     */
-    final File localRootPath
-
     final RepositoryProvider provider
 
 
     RepositoryContext(
         String project,
         File root,
-        File localRootPath,
         RepositoryProvider provider
     ) {
         this.project = project
         this.root = root
-        this.localRootPath = localRootPath
         this.provider = provider
     }
 }

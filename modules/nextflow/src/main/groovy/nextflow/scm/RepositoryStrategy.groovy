@@ -55,7 +55,7 @@ interface RepositoryStrategy {
     Ref checkoutRemoteBranch( String revision, Manifest manifest )
 
     /**
-     * @return The local path where the repository files are accessible
+     * @return The local path where the worktree and repository files are accessible
      */
     File getLocalPath()
 
@@ -68,6 +68,11 @@ interface RepositoryStrategy {
      * @return True if the working directory has no uncommitted changes
      */
     boolean isClean()
+
+    /**
+     * @return True if the localPath exists and has git configuration
+     */
+    boolean isLocal()
 
     /**
      * @return The default branch name from the remote repository
@@ -106,6 +111,11 @@ interface RepositoryStrategy {
     File getLocalGitConfig()
 
     /**
+     * @return The local asset repository URL
+     */
+    String getGitRepositoryUrl()
+
+    /**
      * @return The current revision in the local repository
      */
     String getCurrentRevision()
@@ -130,4 +140,16 @@ interface RepositoryStrategy {
      * Close any open resources (e.g., Git objects)
      */
     void close()
+    /**
+     * Set the localPath
+     * @param file
+     */
+    void setLocalPath(File file)
+
+    /**
+     * @return return the local path where project repository and revisions are download
+     */
+    File getProjectPath()
+
+    void setProvider(RepositoryProvider provider)
 }

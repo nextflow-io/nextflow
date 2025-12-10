@@ -42,10 +42,21 @@ abstract class AbstractRepositoryStrategy implements RepositoryStrategy {
     /**
      * Context providing access to shared resources and configuration
      */
-    protected final RepositoryContext context
+    protected final File root = AssetManager.root
+    protected final String project
+    protected RepositoryProvider provider
 
-    AbstractRepositoryStrategy(RepositoryContext context) {
-        this.context = context
+    AbstractRepositoryStrategy(String project) {
+        this.project = project
+    }
+
+    AbstractRepositoryStrategy(String project, RepositoryProvider provider ) {
+        this.project = project
+        this.provider = provider
+    }
+
+    void setProvider(RepositoryProvider provider){
+        this.provider = provider
     }
 
     String getCurrentRevision() {
@@ -102,14 +113,6 @@ abstract class AbstractRepositoryStrategy implements RepositoryStrategy {
     protected String resolveTagNameByObjectId(ObjectId objectId) {
         Collection<Ref> tags = getGit()?.getRepository()?.getRefDatabase()?.getRefsByPrefix(Constants.R_TAGS)
         return tags?.find { it.objectId == objectId }?.name
-    }
-
-
-    /**
-     * Get the git repository URL
-     */
-    protected String getGitRepositoryUrl() {
-        return context.provider.getCloneUrl()
     }
 
     /**

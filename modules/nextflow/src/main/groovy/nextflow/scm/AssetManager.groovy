@@ -73,11 +73,6 @@ class AssetManager {
      */
     private String project
 
-    /**
-     * Directory where the pipeline is cloned (i.e. downloaded)
-     */
-    private File localRootPath
-
     private Git _git
 
     private String mainScript
@@ -133,13 +128,18 @@ class AssetManager {
         this.providerConfigs = ProviderConfig.createFromMap(config)
 
         this.project = resolveName(pipelineName)
-        this.localRootPath = checkProjectDir(project)
+
+        if( !isValidProjectName(pipelineName)) {
+            throw new IllegalArgumentException("Not a valid project name: $pipelineName")
+        }
+        // Initialize strategy based on environment and repository state
+        initStrategy()
         this.hub = checkHubProvider(cliOpts)
         this.provider = createHubProvider(hub)
+        strategy.setProvider(this.provider)
         setupCredentials(cliOpts)
 
-        // Initialize strategy based on environment and repository state
-        updateStrategy()
+
         validateProjectDir()
 
         return this
@@ -147,62 +147,74 @@ class AssetManager {
 
     /**
      * Update the repository strategy based on environment and current state, or create a new one if not exists
-     *
-     *
      */
-    private void updateStrategy() {
-        //
+    private void updateStrategy(RepositoryStrategyType type = null) {
         def revision = getRevision()
-        if (strategy)
+        if( strategy )
             strategy.close()
+        if( !type )
+            type = selectStrategyType()
+        if( type == RepositoryStrategyType.LEGACY )
+            strategy = new LegacyRepositoryStrategy(project)
+        else if( type == RepositoryStrategyType.MULTI_REVISION )
+            strategy = new MultiRevisionRepositoryStrategy(project)
+        else
+            throw new AbortOperationException("Not supported strategy $type")
+        strategy.setProvider(provider)
+        setRevision(revision)
+    }
 
-        def context = new RepositoryContext(
-            project,
-            root,
-            localRootPath,
-            provider
-        )
+    private void initStrategy(){
+        def type = selectStrategyType()
+        if( type == RepositoryStrategyType.LEGACY )
+            strategy = new LegacyRepositoryStrategy(project)
+        else if( type == RepositoryStrategyType.MULTI_REVISION )
+            strategy = new MultiRevisionRepositoryStrategy(project)
+        else
+            throw new AbortOperationException("Not supported strategy $type")
+    }
 
+    private RepositoryStrategyType selectStrategyType(){
         // Check environment variable for legacy mode
         if( SysEnv.get('NXF_SCM_LEGACY') as boolean ) {
             log.warn "Forcing to use legacy repository strategy (NXF_SCM_LEGACY is set to true)"
-            this.strategy = new LegacyRepositoryStrategy(context)
-            return
+            return RepositoryStrategyType.LEGACY
         }
 
         // Detect current repository status
         def status = getRepositoryStatus()
-
+        // Select type
+        def type = RepositoryStrategyType.MULTI_REVISION
         switch( status ) {
             case RepositoryStatus.UNINITIALIZED:
                 // No repo exists yet, use multi-revision by default
                 log.debug "No existing repository, using multi-revision strategy"
-                this.strategy = new MultiRevisionRepositoryStrategy(context, revision)
+                type = RepositoryStrategyType.MULTI_REVISION
                 break
 
             case RepositoryStatus.LEGACY_ONLY:
                 // Legacy repo exists, continue using legacy
                 log.debug "Legacy repository detected, using legacy strategy"
-                this.strategy = new LegacyRepositoryStrategy(context)
+                type = RepositoryStrategyType.LEGACY
                 break
 
             case RepositoryStatus.BARE_ONLY:
                 // Bare repo exists, use multi-revision
                 log.debug "Bare repository detected, using multi-revision strategy"
-                this.strategy = new MultiRevisionRepositoryStrategy(context, revision)
+                type = RepositoryStrategyType.MULTI_REVISION
                 break
 
             case RepositoryStatus.HYBRID:
                 // Both exist, prefer multi-revision
                 log.debug "Hybrid repository detected, preferring multi-revision strategy"
-                this.strategy = new MultiRevisionRepositoryStrategy(context, revision)
+                type = RepositoryStrategyType.MULTI_REVISION
                 break
 
             default:
                 // Default to multi-revision
-                this.strategy = new MultiRevisionRepositoryStrategy(context, revision)
+                type = RepositoryStrategyType.MULTI_REVISION
         }
-        setRevision(revision)
+        return type
     }
 
     /**
@@ -211,12 +223,15 @@ class AssetManager {
      * @return The status indicating what type of repositories exist
      */
     RepositoryStatus getRepositoryStatus() {
-        boolean hasBare = new File(root, project + '/' + MultiRevisionRepositoryStrategy.BARE_REPO).exists()
-        boolean hasLegacy = localRootPath.exists() && new File(localRootPath, '.git').exists()
+        if (!root || !project)
+            return RepositoryStatus.UNINITIALIZED
 
-        if( !hasBare && !hasLegacy ) return RepositoryStatus.UNINITIALIZED
-        if( hasBare && hasLegacy ) return RepositoryStatus.HYBRID
-        if( hasBare ) return RepositoryStatus.BARE_ONLY
+        boolean hasMultiRevision = MultiRevisionRepositoryStrategy.isLocal(root, project)
+        boolean hasLegacy = LegacyRepositoryStrategy.checkProject(root, project)
+
+        if( !hasMultiRevision && !hasLegacy ) return RepositoryStatus.UNINITIALIZED
+        if( hasMultiRevision && hasLegacy ) return RepositoryStatus.HYBRID
+        if( hasMultiRevision ) return RepositoryStatus.BARE_ONLY
         return RepositoryStatus.LEGACY_ONLY
     }
 
@@ -226,12 +241,6 @@ class AssetManager {
      * @param useLegacy If true, use legacy strategy; otherwise use multi-revision
      */
     void setStrategyType(RepositoryStrategyType type) {
-        def context = new RepositoryContext(
-            project,
-            root,
-            localRootPath,
-            provider
-        )
         if( (type == RepositoryStrategyType.LEGACY && isUsingLegacyStrategy()) ||
             (type == RepositoryStrategyType.MULTI_REVISION && isUsingMultiRevisionStrategy()) ) {
             //nothing to do
@@ -239,15 +248,13 @@ class AssetManager {
         }
         if( type == RepositoryStrategyType.LEGACY && isUsingMultiRevisionStrategy() ) {
             log.warn1 "Switching to legacy SCM repository management"
-            if( strategy ) strategy.close()
-            this.strategy = new LegacyRepositoryStrategy(context)
+            updateStrategy(RepositoryStrategyType.LEGACY)
         } else if( type == RepositoryStrategyType.MULTI_REVISION && SysEnv.get('NXF_SCM_LEGACY') ) {
-            log.warn1 "Recieved a request to change to multi-revision SCM repository management and NXF_SCM_LEGACY is defined. Keeping legacy strategy"
-            this.strategy = new LegacyRepositoryStrategy(context)
+            log.warn1 "Received a request to change to multi-revision SCM repository management and NXF_SCM_LEGACY is defined. Keeping legacy strategy"
+            updateStrategy(RepositoryStrategyType.LEGACY)
         } else {
             log.debug "Switching to multi-revision repository strategy"
-            if( strategy ) strategy.close()
-            this.strategy = new MultiRevisionRepositoryStrategy(context, revision)
+            updateStrategy(RepositoryStrategyType.MULTI_REVISION)
         }
     }
 
@@ -335,23 +342,6 @@ class AssetManager {
     @PackageScope
     boolean isValidProjectName( String projectName ) {
         projectName =~~ /.+\/.+/
-    }
-
-    /**
-     * Verify the project name matcher the expected pattern.
-     * and return the directory where the project is stored locally
-     *
-     * @param projectName A project name matching the pattern {@code owner/project}
-     * @return The project dir {@link File}
-     */
-    @PackageScope
-    File checkProjectDir(String projectName) {
-
-        if( !isValidProjectName(projectName)) {
-            throw new IllegalArgumentException("Not a valid project name: $projectName")
-        }
-
-        new File(root, project)
     }
 
     /**
@@ -528,8 +518,9 @@ class AssetManager {
     }
 
     AssetManager setLocalPath(File path) {
-        this.localRootPath = path
-        updateStrategy()
+        if (!strategy)
+            updateStrategy()
+        strategy.setLocalPath(path)
         return this
     }
 
@@ -543,21 +534,17 @@ class AssetManager {
         return this
     }
 
-    @Memoized
     String getGitRepositoryUrl() {
-
-        if( localPath.exists() ) {
-            return localPath.toURI().toString()
-        }
-
-        provider.getCloneUrl()
+        return strategy?.getGitRepositoryUrl() ?: provider.getCloneUrl()
     }
 
     File getLocalPath() {
-        return strategy?.getLocalPath() ?: localRootPath
+        return strategy?.getLocalPath()
     }
 
-    File getLocalRootPath() { localRootPath }
+    File getProjectPath() {
+        return strategy?.getProjectPath()
+    }
 
     ScriptFile getScriptFile(String scriptName=null) {
 
@@ -663,7 +650,7 @@ class AssetManager {
     }
 
     boolean isLocal() {
-        localPath != null && localPath.exists()
+        strategy?.isLocal()
     }
 
     /**
@@ -701,17 +688,26 @@ class AssetManager {
     static List<String> list() {
         log.debug "Listing projects in folder: $root"
 
-        def result = new LinkedList()
         if( !root.exists() )
-            return result
+            return []
 
-        root.eachDir { File org ->
-            org.eachDir { File it ->
-                result << "${org.getName()}/${it.getName()}".toString()
+        def result = new HashSet<String>()
+        appendProjectsFromDir(root, result)
+        return result.toList()
+    }
+
+    static void appendProjectsFromDir(File file, HashSet result) {
+        file.eachDir { File org ->
+            if( org.getName() == MultiRevisionRepositoryStrategy.MULTI_REVISION_SUBDIR ) {
+                log.debug("Appending multi-revision projects")
+                appendProjectsFromDir(org, result)
+            } else {
+                org.eachDir { File it ->
+                    log.debug("Adding ${org.getName()}/${it.getName()}")
+                    result << "${org.getName()}/${it.getName()}".toString()
+                }
             }
         }
-
-        return result
     }
 
     static protected def find( String name ) {
@@ -1102,7 +1098,7 @@ class AssetManager {
      * @param revision
      */
     void drop(String revision = null, boolean force = false){
-        if (!localRootPath.exists())
+        if (!isNotInitialized())
             throw new AbortOperationException("No match found for: ${getProjectWithRevision()}")
         strategy.drop(revision, force)
     }
