@@ -120,9 +120,9 @@ class WaveConfigTest extends Specification {
         opts.buildTemplate() == null
 
         when:
-        opts = new WaveConfig([build:[template:'conda/pixi/v1']])
+        opts = new WaveConfig([build:[template:'conda/pixi:v1']])
         then:
-        opts.buildTemplate() == 'conda/pixi/v1'
+        opts.buildTemplate() == 'conda/pixi:v1'
     }
 
     @Unroll

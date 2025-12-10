@@ -279,7 +279,7 @@ class BuildOpts implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The build template to use for container builds. Supported values: `conda/pixi/v1` (Pixi with multi-stage builds), `conda/micromamba/v2` (Micromamba 2.x with multi-stage builds), `cran/installr/v1` (R/CRAN packages). Default: standard conda/micromamba v1 template.
+        The build template to use for container builds. Supported values: `conda/pixi:v1` (Pixi with multi-stage builds), `conda/micromamba:v2` (Micromamba 2.x with multi-stage builds), `cran/installr:v1` (R/CRAN packages). Default: standard conda/micromamba:v1 template.
     """)
     final String template
 
