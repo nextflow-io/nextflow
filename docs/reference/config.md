@@ -1587,6 +1587,11 @@ The following settings are available:
   :::
 : Forcefully apply compression option to all layers, including already existing layers (default: `false`).
 
+`wave.build.conda.baseImage`
+: :::{versionadded} 25.12.0-edge
+  :::
+: The base image for the final stage in multi-stage Conda container builds (default: `ubuntu:24.04`). This option only applies when using `wave.build.template` set to `conda/micromamba:v2` or `conda/pixi:v1`.
+
 `wave.build.conda.basePackages`
 : One or more Conda packages to be always added in the resulting container (default: `conda-forge::procps-ng`).
 
