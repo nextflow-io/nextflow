@@ -16,13 +16,13 @@
 package nextflow.script.control;
 
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import groovy.lang.Tuple2;
 import nextflow.script.ast.ASTNodeMarker;
-import nextflow.script.types.Bag;
 import org.codehaus.groovy.GroovyBugError;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.ClassCodeExpressionTransformer;
@@ -62,14 +62,16 @@ import static org.codehaus.groovy.ast.tools.ClosureUtils.getParametersSafe;
 public class ResolveVisitor extends ClassCodeExpressionTransformer {
 
     public static final ClassNode[] STANDARD_TYPES = {
-        ClassHelper.makeCached(Bag.class),
+        ClassHelper.makeCached(nextflow.script.types.Bag.class),
         ClassHelper.Boolean_TYPE,
+        ClassHelper.Float_TYPE,
         ClassHelper.Integer_TYPE,
-        ClassHelper.Number_TYPE,
-        ClassHelper.STRING_TYPE,
         ClassHelper.LIST_TYPE,
         ClassHelper.MAP_TYPE,
-        ClassHelper.SET_TYPE
+        ClassHelper.makeCached(java.nio.file.Path.class),
+        ClassHelper.SET_TYPE,
+        ClassHelper.STRING_TYPE,
+        ClassHelper.makeCached(nextflow.script.types.Tuple.class)
     };
 
     private SourceUnit sourceUnit;
@@ -109,14 +111,41 @@ public class ResolveVisitor extends ClassCodeExpressionTransformer {
     }
 
     public void resolveOrFail(ClassNode type, ASTNode node) {
-        if( !resolve(type) )
-            addError("`" + type.toString(false) + "` is not defined", node);
+        var unresolvedTypes = new LinkedList<ClassNode>();
+        resolve(type, unresolvedTypes);
+        for( var ut : unresolvedTypes )
+            addError("`" + ut.toString(false) + "` is not defined", node);
     }
 
-    public boolean resolve(ClassNode type) {
-        var genericsTypes = type.getGenericsTypes();
-        resolveGenericsTypes(genericsTypes);
+    private boolean resolve(ClassNode type) {
+        var unresolvedTypes = new LinkedList<ClassNode>();
+        resolve(type, unresolvedTypes);
+        return unresolvedTypes.isEmpty();
+    }
 
+    /**
+     * Resolve a type annotation, including generic type arguments.
+     *
+     * Returns the list of types that could not be resolved.
+     *
+     * @param type
+     * @param unresolvedTypes
+     */
+    private void resolve(ClassNode type, List<ClassNode> unresolvedTypes) {
+        if( !resolveType(type) )
+            unresolvedTypes.add(type);
+        var gts = type.getGenericsTypes();
+        if( gts == null )
+            return;
+        for( var gt : gts ) {
+            if( gt.isResolved() )
+                continue;
+            resolve(gt.getType(), unresolvedTypes);
+            gt.setResolved(gt.getType().isResolved());
+        }
+    }
+
+    private boolean resolveType(ClassNode type) {
         if( type.isPrimaryClassNode() )
             return true;
         if( type.isResolved() )
@@ -132,27 +161,6 @@ public class ResolveVisitor extends ClassCodeExpressionTransformer {
         if( !type.hasPackageName() && resolveFromGroovyImports(type) )
             return true;
         return resolveFromClassResolver(type.getName()) != null;
-    }
-
-    private boolean resolveGenericsTypes(GenericsType[] types) {
-        if( types == null )
-            return true;
-        boolean resolved = true;
-        for( var type : types ) {
-            if( !resolveGenericsType(type) )
-                resolved = false;
-        }
-        return resolved;
-    }
-
-    private boolean resolveGenericsType(GenericsType genericsType) {
-        if( genericsType.isResolved() )
-            return true;
-        var type = genericsType.getType();
-        resolveOrFail(type, genericsType);
-        if( resolveGenericsTypes(type.getGenericsTypes()) )
-            genericsType.setResolved(genericsType.getType().isResolved());
-        return genericsType.isResolved();
     }
 
     protected boolean resolveFromModule(ClassNode type) {

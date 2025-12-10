@@ -16,6 +16,7 @@
 
 package nextflow.util;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.FileVisitResult;
@@ -44,12 +45,11 @@ import nextflow.Global;
 import nextflow.ISession;
 import nextflow.extension.Bolts;
 import nextflow.extension.FilesEx;
-import nextflow.file.FileHolder;
 import nextflow.io.SerializableMarker;
 import nextflow.script.types.Bag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+import static nextflow.Const.DEFAULT_ROOT;
 import static nextflow.util.CacheHelper.HashMode;
 
 
@@ -163,9 +163,6 @@ public class HashBuilder {
             for( Object item : ((Collection)value) )
                 with(item);
 
-        else if( value instanceof FileHolder )
-            with(((FileHolder) value).getSourceObj());
-
         else if( value instanceof Path )
             hashFile(hasher, (Path)value, mode, basePath);
 
@@ -266,7 +263,7 @@ public class HashBuilder {
             log.warn("Unable to get file attributes file: {} -- Cause: {}", FilesEx.toUriString(path), e.toString());
         }
 
-        if( (mode==HashMode.STANDARD || mode==HashMode.LENIENT) && isAssetFile(path) ) {
+        if( (mode==HashMode.STANDARD || mode==HashMode.LENIENT) && isAssetFile(path, DEFAULT_ROOT) ) {
             if( attrs==null ) {
                 // when file attributes are not avail, or it's a directory
                 // hash the file using the file name path and the repository
@@ -510,12 +507,34 @@ public class HashBuilder {
 
     /**
      * Check if the argument is an asset file i.e. a file that makes part of the
-     * pipeline Git repository
+     * pipeline Git repository.
+     *
+     * <p>Asset files are hashed using their content (SHA-256) rather than metadata
+     * to maintain cache validity across different clones where timestamps may differ
+     * on remote executors like batch processing systems.
+     *
+     * <p>This method checks two locations:
+     * <ol>
+     *   <li>Files under {@code session.getBaseDir()} - the script's working directory</li>
+     *   <li>Files under {@code assetRoot} - the repository root (typically ~/.nextflow/assets)</li>
+     * </ol>
+     *
+     * The distinction is important when executing workflows from subdirectories using
+     * the main-script parameter, as repository assets may exist outside the script's
+     * directory but still be part of the repository.
      *
      * @param path
+     *      The item to check.
+     * @param assetRoot
+     *      Location where assets are being stored (the repository root).
      * @return
+     *      {@code true} if the path is included in the pipeline Git repository,
+     *      {@code false} otherwise.
+     *
+     * @see <a href="https://github.com/nextflow-io/nextflow/issues/6604">Issue #6604</a>
+     * @see <a href="https://github.com/nextflow-io/nextflow/pull/6605">PR #6605</a>
      */
-    static protected boolean isAssetFile(Path path) {
+    static protected boolean isAssetFile(Path path, File assetRoot) {
         final ISession session = Global.getSession();
         if( session==null )
             return false;
@@ -525,8 +544,11 @@ public class HashBuilder {
         // if the file belong to different file system, cannot be a file belonging to the repo
         if( session.getBaseDir().getFileSystem()!=path.getFileSystem() )
             return false;
-        // if the file is in the same directory as the base dir it's a asset by definition
-        return path.startsWith(session.getBaseDir());
+        // Check both the script's base directory and the repository root.
+        // This handles cases where a workflow is executed from a subdirectory
+        // (using the main-script parameter) but references assets elsewhere in the repo.
+        // The assetRoot check ensures these non-sibling assets are still recognized.
+        return path.startsWith(session.getBaseDir()) || path.startsWith(assetRoot.toPath());
     }
 
 }

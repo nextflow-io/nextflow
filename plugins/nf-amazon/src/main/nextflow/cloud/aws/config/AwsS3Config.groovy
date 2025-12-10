@@ -19,12 +19,13 @@ package nextflow.cloud.aws.config
 
 import static nextflow.cloud.aws.util.AwsHelper.*
 
+import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.model.ObjectCannedACL
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.SysEnv
-import nextflow.config.schema.ConfigOption
-import nextflow.config.schema.ConfigScope
+import nextflow.config.spec.ConfigOption
+import nextflow.config.spec.ConfigScope
 import nextflow.script.dsl.Description
 import nextflow.file.FileHelper
 import nextflow.util.Duration
@@ -58,15 +59,16 @@ class AwsS3Config implements ConfigScope {
     """)
     final String endpoint
 
+    /**
+     * Maximum number of concurrent transfers used by S3 transfer manager. By default,
+     * it is determined automatically by `targetThroughputInGbps`.
+     */
     @ConfigOption
-    @Description("""
-        The maximum number of concurrent S3 transfers used by the S3 transfer manager. By default, this setting is determined by `aws.client.targetThroughputInGbps`. Modifying this value can affect the amount of memory used for S3 transfers.
-    """)
     final Integer maxConcurrency
 
     @ConfigOption
     @Description("""
-        The maximum number of open HTTP connections used by the S3 transfer manager (default: `50`).
+        The maximum number of open HTTP connections used by the S3 client (default: `50`).
     """)
     final Integer maxConnections
 
@@ -82,21 +84,22 @@ class AwsS3Config implements ConfigScope {
     """)
     final Integer maxErrorRetry
 
+    /**
+     * Maximum native memory used by S3 transfer manager. By default, it is
+     * determined automatically by `targetThroughputInGbps`.
+     */
     @ConfigOption
-    @Description("""
-        The maximum native memory used by the S3 transfer manager. By default, this setting is determined by `aws.client.targetThroughputInGbps`.
-    """)
     final MemoryUnit maxNativeMemory
 
     @ConfigOption
     @Description("""
-        The minimum part size used by the S3 transfer manager for multi-part uploads (default: `8 MB`).
+        The minimum part size used for multipart uploads to S3 (default: `8 MB`).
     """)
     final MemoryUnit minimumPartSize
 
     @ConfigOption
     @Description("""
-        The object size threshold used by the S3 transfer manager for performing multi-part uploads (default: same as `aws.cllient.minimumPartSize`).
+        The object size threshold used for multipart uploads to S3 (default: same as `aws.cllient.minimumPartSize`).
     """)
     final MemoryUnit multipartThreshold
 
@@ -174,15 +177,9 @@ class AwsS3Config implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The target network throughput (in Gbps) used by the S3 transfer manager (default: `10`). This setting is not used when `aws.client.maxConcurrency` and `aws.client.maxNativeMemory` are specified.
+        The target network throughput (in Gbps) used for S3 uploads and downloads (default: `10`).
     """)
     final Double targetThroughputInGbps
-
-    @ConfigOption
-    @Description("""
-        The number of threads used by the S3 transfer manager (default: `10`).
-    """)
-    final Integer transferManagerThreads
 
     // deprecated
 
@@ -255,7 +252,6 @@ class AwsS3Config implements ConfigScope {
         this.storageEncryption = parseStorageEncryption(opts.storageEncryption as String)
         this.storageKmsKeyId = opts.storageKmsKeyId
         this.targetThroughputInGbps = opts.targetThroughputInGbps as Double
-        this.transferManagerThreads = opts.transferManagerThreads as Integer
         this.uploadChunkSize = opts.uploadChunkSize as MemoryUnit
         this.uploadMaxAttempts = opts.uploadMaxAttempts as Integer
         this.uploadMaxThreads = opts.uploadMaxThreads as Integer
@@ -293,6 +289,35 @@ class AwsS3Config implements ConfigScope {
         endpoint && !endpoint.endsWith(".amazonaws.com")
     }
 
+    /**
+     * Looks for the region defined in endpoints such as https://xxx.<region>.amazonaws.com
+     * @returns Region defined in the endpoint. Null if no endpoint or custom endpoint is defined,
+     * or when URI region subdomain doesn't match with a region (global or multi-region access point)
+     */
+    String getEndpointRegion(){
+        if( !endpoint || isCustomEndpoint() )
+            return null
+
+        try {
+            String host = URI.create(endpoint).getHost()
+            final hostDomains = host.split('\\.')
+            if (hostDomains.size() < 3) {
+                log.debug("Region subdomain doesn't exist in endpoint '${endpoint}'")
+                return null
+            }
+            final region = hostDomains[hostDomains.size()-3]
+            if (!Region.regions().contains(Region.of(region))){
+                log.debug("Region '${region}' extracted from endpoint '${endpoint}' is not valid")
+                return null
+            }
+            return region
+
+        } catch (Exception e){
+            log.debug("Exception getting region from endpoint: '${endpoint}' - ${e.message}")
+            return null
+        }
+    }
+
     Map<String,String> getAwsClientConfig() {
         return [
             connection_timeout: connectionTimeout?.toString(),
@@ -314,7 +339,6 @@ class AwsS3Config implements ConfigScope {
             storage_encryption: storageEncryption?.toString(),
             storage_kms_key_id: storageKmsKeyId?.toString(),
             target_throughput_in_gbps: targetThroughputInGbps?.toString(),
-            transfer_manager_threads: transferManagerThreads?.toString(),
             upload_chunk_size: uploadChunkSize?.toBytes()?.toString(),
             upload_max_attempts: uploadMaxAttempts?.toString(),
             upload_max_threads: uploadMaxThreads?.toString(),

@@ -465,10 +465,11 @@ class LinObserver implements TraceObserverV2 {
     private List<Object> manageFileInParam(List<FileHolder> files, PathNormalizer normalizer){
         final paths = new LinkedList<Object>();
         for( FileHolder it : files ) {
-            final ref = getSourceReference(it.storePath)
+            final path = it.sourcePath ?: it.storePath
+            final ref = getSourceReference(path)
             paths.add(ref ?: new DataPath(
-                normalizer.normalizePath(it.storePath),
-                Checksum.ofNextflow(it.storePath))
+                normalizer.normalizePath(path),
+                Checksum.ofNextflow(path))
             )
         }
         return paths

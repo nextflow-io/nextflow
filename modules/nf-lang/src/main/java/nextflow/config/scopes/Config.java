@@ -15,8 +15,8 @@
  */
 package nextflow.config.scopes;
 
-import nextflow.config.schema.ConfigOption;
-import nextflow.config.schema.ConfigScope;
+import nextflow.config.spec.ConfigOption;
+import nextflow.config.spec.ConfigScope;
 import nextflow.script.dsl.Description;
 
 public class Config implements ConfigScope {

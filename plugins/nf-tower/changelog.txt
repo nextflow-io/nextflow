@@ -1,5 +1,19 @@
 nf-tower changelog
 ===================
+1.18.0 - 28 Nov 2025
+- Fix TowerJsonGenerator thread-safety issue (#6619) [579cd6e4e]
+
+1.17.2 - 28 Nov 2025
+- Fix Fusion license JWT token refresh by reusing TowerClient [561ed6c32]
+
+1.17.1 - 22 Oct 2025
+- Show workspace roles in 'auth status', tweak error message on 403 (#6497) [0633d90d1]
+
+1.17.0 - 21 Oct 2025
+- Add nextflow auth command for Seqera Platform authentication (#6463) [bedf02a99]
+- Add nextflow launch command (#6491) [7c8fa3d9d]
+- Rename `config.schema` package to `config.spec` (#6485) [ef0d2d601]
+
 1.16.0 - 8 Oct 2025
 - Fix cache command to check session cloudCachePath [a88e2cdf2]
 - Fix cache command to use SysEnv for cloudcache path check (#6432) [771b8b60e]

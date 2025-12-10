@@ -19,7 +19,7 @@ plugins {
 }
 
 nextflowPlugin {
-    nextflowVersion = '25.08.0-edge'
+    nextflowVersion = '25.11.0-edge'
 
     provider = "${nextflowPluginProvider}"
     description = 'Enables Google Cloud Platform execution through Batch service with native Cloud Storage access and intelligent machine type selection'
@@ -62,8 +62,8 @@ dependencies {
     runtimeOnly 'io.grpc:grpc-netty-shaded:1.75.0'
 
     testImplementation(testFixtures(project(":nextflow")))
-    testImplementation "org.apache.groovy:groovy:4.0.28"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.28"
+    testImplementation "org.apache.groovy:groovy:4.0.29"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.29"
 }
 
 test {

@@ -18,9 +18,9 @@
 package io.seqera.tower.plugin
 
 import groovy.transform.CompileStatic
-import nextflow.config.schema.ConfigOption
-import nextflow.config.schema.ConfigScope
-import nextflow.config.schema.ScopeName
+import nextflow.config.spec.ConfigOption
+import nextflow.config.spec.ConfigScope
+import nextflow.config.spec.ScopeName
 import nextflow.script.dsl.Description
 import nextflow.platform.PlatformHelper
 
@@ -62,6 +62,12 @@ class TowerConfig implements ConfigScope {
     """)
     final String workspaceId
 
+    @ConfigOption
+    @Description("""
+        The Compute Environment ID in Seqera Platform in which to launch the run (default: the primary environment in the workspace).
+    """)
+    final String computeEnvId
+
     /* required by extension point -- do not remove */
     TowerConfig() {}
 
@@ -71,5 +77,7 @@ class TowerConfig implements ConfigScope {
         this.endpoint = PlatformHelper.getEndpoint(opts, env)
         this.retryPolicy = new TowerRetryPolicy(opts.retryPolicy as Map ?: Map.of(), opts)
         this.workspaceId = PlatformHelper.getWorkspaceId(opts, env)
+        if( opts.computeEnvId )
+            this.computeEnvId = opts.computeEnvId as String
     }
 }

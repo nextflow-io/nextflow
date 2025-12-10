@@ -1,5 +1,15 @@
 nf-google changelog
 ===================
+1.24.0 - 28 Nov 2025
+- Add stageFileEnabled flag to control .command.stage file creation (#6618) [2d117cb59]
+- Add Google Batch LogsPolicy PATH option for logging to GCS (#6431) [5b61afe01]
+
+1.23.3 - 22 Oct 2025
+- Prioritize Google Batch API exit codes with fallback to .exitcode file (#6498) [6ac2efcba]
+
+1.23.2 - 21 Oct 2025
+- Rename `config.schema` package to `config.spec` (#6485) [ef0d2d601]
+
 1.23.1 - 8 Oct 2025
 - Fix CVE-2025-55163 in nf-google plugin [7d7061797]
 - Bump Google Cloud libraries to latest versions (#6438) [59a63f1ae]

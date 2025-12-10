@@ -740,14 +740,13 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
         // when enabling that flag, it overrides S3 endpoints with AWS global endpoint
         // see https://github.com/nextflow-io/nextflow/pull/5779
 		final boolean global = bucketName!=null && !awsConfig.getS3Config().isCustomEndpoint();
-		final AwsClientFactory factory = new AwsClientFactory(awsConfig, awsConfig.getS3GlobalRegion());
+		final AwsClientFactory factory = new AwsClientFactory(awsConfig, awsConfig.resolveS3Region());
 		final S3Client client = new S3Client(factory, props, global);
 
 		// set the client acl
 		client.setCannedAcl(getProp(props, "s_3_acl", "s3_acl", "s3acl", "s3Acl"));
 		client.setStorageEncryption(props.getProperty("storage_encryption"));
 		client.setKmsKeyId(props.getProperty("storage_kms_key_id"));
-		client.setTransferManagerThreads(props.getProperty("transfer_manager_threads"));
         client.setRequesterPaysEnabled(props.getProperty("requester_pays"));
 
 		if( props.getProperty("glacier_auto_retrieval") != null )

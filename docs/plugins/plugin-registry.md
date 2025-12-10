@@ -33,7 +33,7 @@ To claim ownership of a plugin:
 5. Enter your organization name in the **Provider** field.
 
     :::{note}
-    This organization must match with the organization specified when publishing your plugin.
+    Your organization must match the provider specified when publishing your plugin.
     :::
 
 6. Select **Submit Request**.

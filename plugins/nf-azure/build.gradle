@@ -19,7 +19,7 @@ plugins {
 }
 
 nextflowPlugin {
-    nextflowVersion = '25.09.0-edge'
+    nextflowVersion = '25.11.0-edge'
 
     provider = "${nextflowPluginProvider}"
     description = 'Enables Azure cloud execution through Batch service with native Blob storage access and comprehensive authentication options'
@@ -70,6 +70,6 @@ dependencies {
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
-    testImplementation "org.apache.groovy:groovy:4.0.28"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.28"
+    testImplementation "org.apache.groovy:groovy:4.0.29"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.29"
 }

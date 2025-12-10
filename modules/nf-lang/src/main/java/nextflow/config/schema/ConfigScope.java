@@ -15,7 +15,12 @@
  */
 package nextflow.config.schema;
 
-import org.pf4j.ExtensionPoint;
-
-public interface ConfigScope extends ExtensionPoint {
+/**
+ * Deprecated alias for backwards compatibility.
+ *
+ * @deprecated Use {@link nextflow.config.spec.ConfigScope} instead.
+ *             This package was renamed from config.schema to config.spec.
+ */
+@Deprecated
+public interface ConfigScope {
 }

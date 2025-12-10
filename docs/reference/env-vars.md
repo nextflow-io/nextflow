@@ -247,8 +247,32 @@ The following environment variables control the configuration of the Nextflow ru
 `NXF_WRAPPER_STAGE_FILE_THRESHOLD`
 : :::{versionadded} 23.05.0-edge
   :::
-: Defines the minimum size of the `.command.run` staging script for it to be written to a separate `.command.stage` file (default: `'1 MB'`).
+: Enables writing large staging scripts to a separate `.command.stage` file. The value defines the minimum size of the `.command.run` staging script for it to be written to the separate file (default when enabled: `'1 MB'`).
 : This setting is useful for executors that impose a size limit on job scripts.
+
+## Seqera Platform settings
+
+`TOWER_ACCESS_TOKEN`
+: Specifies the access token for authenticating with Seqera Platform. Can also be configured using the `tower.accessToken` config option.
+
+`TOWER_API_ENDPOINT`
+: Specifies the Seqera Platform API endpoint (default: `https://api.cloud.seqera.io`). Can also be configured using the `tower.endpoint` config option.
+
+`TOWER_AUTH_DOMAIN`
+: :::{versionadded} 25.10.0
+  :::
+: Specifies the Auth0 domain for authenticating with Seqera Platform when connecting to a custom endpoint. When specified, this value takes precedence over the built-in mappings for known Seqera endpoints. Must be used in conjunction with `TOWER_AUTH_CLIENT_ID`.
+
+`TOWER_AUTH_CLIENT_ID`
+: :::{versionadded} 25.10.0
+  :::
+: Specifies the Auth0 client ID for authenticating with a custom Seqera Platform endpoint. Must be used in conjunction with `TOWER_AUTH_DOMAIN`.
+
+`TOWER_REFRESH_TOKEN`
+: Specifies the refresh token for maintaining authentication with Seqera Platform. Can also be configured using the `tower.refreshToken` config option.
+
+`TOWER_WORKSPACE_ID`
+: Specifies the Seqera Platform workspace ID. Can also be configured using the `tower.workspaceId` config option.
 
 ## Other settings
 

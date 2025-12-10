@@ -94,7 +94,7 @@ The above example is only meant to demonstrate how to access a secret, not how t
 
 ## Process directive
 
-Secrets can be accesses by processes using the {ref}`process-secret` directive. For example:
+Secrets can be accessed by processes using the {ref}`process-secret` directive. For example:
 
 ```nextflow
 process my_task {

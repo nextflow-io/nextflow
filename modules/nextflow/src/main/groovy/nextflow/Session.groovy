@@ -61,13 +61,13 @@ import nextflow.processor.TaskFault
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
 import nextflow.script.BaseScript
-import nextflow.script.ProcessConfig
 import nextflow.script.ProcessFactory
 import nextflow.script.ScriptBinding
 import nextflow.script.ScriptFile
 import nextflow.script.ScriptMeta
 import nextflow.script.ScriptRunner
 import nextflow.script.WorkflowMetadata
+import nextflow.script.dsl.ProcessConfigBuilder
 import nextflow.spack.SpackConfig
 import nextflow.trace.AnsiLogObserver
 import nextflow.trace.TraceObserver
@@ -88,8 +88,7 @@ import nextflow.util.NameGenerator
 import nextflow.util.SysHelper
 import nextflow.util.ThreadPoolManager
 import nextflow.util.Threads
-import nextflow.util.VersionNumber
-import org.apache.commons.lang.exception.ExceptionUtils
+import org.apache.commons.lang3.exception.ExceptionUtils
 import sun.misc.Signal
 import sun.misc.SignalHandler
 /**
@@ -686,7 +685,6 @@ class Session implements ISession {
         throw new IllegalStateException("Not a valid config env object: $config.env")
     }
 
-    @Memoized
     Manifest getManifest() {
         if( !config.manifest )
             return new Manifest()
@@ -890,13 +888,6 @@ class Session implements ISession {
 
     ExecutorService getExecService() { execService }
 
-    /**
-     * Check preconditions before run the main script
-     */
-    protected void validate() {
-        checkVersion()
-    }
-
     @PackageScope void checkConfig() {
         final enabled = config.navigate('nextflow.enable.configProcessNamesValidation', true) as boolean
         if( enabled ) {
@@ -916,36 +907,6 @@ class Session implements ISession {
 
     boolean failOnIgnore() {
         config.navigate('workflow.failOnIgnore', false) as boolean
-    }
-
-    @PackageScope VersionNumber getCurrentVersion() {
-        new VersionNumber(BuildInfo.version)
-    }
-
-    @PackageScope void checkVersion() {
-        def version = manifest.getNextflowVersion()?.trim()
-        if( !version )
-            return
-
-        // when the version string is prefix with a `!`
-        // an exception is thrown is the version does not match
-        boolean important = false
-        if( version.startsWith('!') ) {
-            important = true
-            version = version.substring(1).trim()
-        }
-
-        if( !getCurrentVersion().matches(version) ) {
-            important ? showVersionError(version) : showVersionWarning(version)
-        }
-    }
-
-    @PackageScope void showVersionError(String ver) {
-        throw new AbortOperationException("Nextflow version $BuildInfo.version does not match workflow required version: $ver")
-    }
-
-    @PackageScope void showVersionWarning(String ver) {
-        log.warn "Nextflow version $BuildInfo.version does not match workflow required version: $ver -- Execution will continue, but things may break!"
     }
 
     /**
@@ -992,7 +953,7 @@ class Session implements ISession {
      * @return {@code true} if the name specified belongs to the list of process names or {@code false} otherwise
      */
     protected boolean checkValidProcessName(Collection<String> processNames, String selector, List<String> errorMessage)  {
-        final matches = processNames.any { name -> ProcessConfig.matchesSelector(name, selector) }
+        final matches = processNames.any { name -> ProcessConfigBuilder.matchesSelector(name, selector) }
         if( matches )
             return true
 
@@ -1090,7 +1051,6 @@ class Session implements ISession {
     }
 
     void notifyBeforeWorkflowExecution() {
-        validate()
     }
 
     void notifyAfterWorkflowExecution() {

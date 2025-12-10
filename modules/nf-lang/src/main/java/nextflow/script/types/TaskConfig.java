@@ -214,7 +214,7 @@ public interface TaskConfig {
 
         [Read more](https://nextflow.io/docs/latest/reference/process.html#ext)
     """)
-    Map<String,?> getExt();
+    Map<String,String> getExt();
 
     @Constant("fair")
     @Description("""
