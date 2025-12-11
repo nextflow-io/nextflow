@@ -16,6 +16,7 @@
 
 package nextflow.cli
 
+import static nextflow.scm.MultiRevisionRepositoryStrategy.REPOS_SUBDIR
 import static nextflow.scm.MultiRevisionRepositoryStrategy.REVISION_SUBDIR
 
 import nextflow.plugin.Plugins
@@ -47,8 +48,8 @@ class CmdPullTest extends Specification {
         when:
         cmd.run()
         then:
-        dir.resolve('nextflow-io/hello/' + REVISION_SUBDIR + '/' + '7588c46ffefb4e3c06d4ab32c745c4d5e56cdad8' + '/.git').exists()
-        dir.resolve('nextflow-io/hello/' + REVISION_SUBDIR + '/' + '7588c46ffefb4e3c06d4ab32c745c4d5e56cdad8' + '/README.md').exists()
+        dir.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/' + '7588c46ffefb4e3c06d4ab32c745c4d5e56cdad8' + '/.git').exists()
+        dir.resolve(REPOS_SUBDIR+ '/nextflow-io/hello/' + REVISION_SUBDIR + '/' + '7588c46ffefb4e3c06d4ab32c745c4d5e56cdad8' + '/README.md').exists()
 
         cleanup:
         dir?.deleteDir()
