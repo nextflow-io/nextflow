@@ -30,9 +30,13 @@ Workflow outputs were introduced to address these problems by providing a unifie
 
 ## Timeline
 
-Nextflow {ref}`24.04 <workflow-outputs-first-preview>` introduced the workflow output definition as a preview feature. It has since undergone multiple revisions, with the third preview currently available in Nextflow {ref}`25.04 <workflow-outputs-third-preview>`.
+Nextflow {ref}`24.04 <workflow-outputs-first-preview>` introduced the workflow output definition as a preview feature. It has since undergone revisions in {ref}`24.10 <workflow-outputs-second-preview>` and {ref}`25.04 <workflow-outputs-third-preview>`.
 
-Nextflow 25.10 will finalize workflow outputs and bring them out of preview. The `publishDir` directive will continue to be supported, but will be deprecated. It may be removed in a future release.
+Nextflow 25.10 has brought them out of preview. The `publishDir` directive will continue to be supported, but will be deprecated. It may be removed in a future release.
+
+:::{warning}
+You **must** remove the `nextflow.preview.output` feature flag when you upgrade to Nextflow 25.10. Running with this feature flag in 25.10 will cause your pipeline to fail.
+:::
 
 ## Example: rnaseq-nf
 
