@@ -2,12 +2,15 @@
 
 - Authors: Paolo Di Tommaso
 - Status: draft
-- Date: 2025-11-14
+- Date: 2025-12-11
 - Tags: modules, dsl, registry, versioning, architecture
+- Version: 2.1
 
 ## Context and Problem Statement
 
 Nextflow supports local script inclusion via `include` directive but lacks standardized mechanisms for package management, versioning, and distribution of reusable process definitions. This limits code reuse and reproducibility across the ecosystem.
+
+Discussion/request goes back to at least 2019, see GitHub issues [#1376](https://github.com/nextflow-io/nextflow/issues/1376), [#1463](https://github.com/nextflow-io/nextflow/issues/1463) and [#4122](https://github.com/nextflow-io/nextflow/issues/4112).
 
 ## Decision
 
@@ -31,9 +34,9 @@ include { BWA_ALIGN } from '@nf-core/bwa-align'
 include { MY_PROCESS } from './modules/my-process.nf'
 ```
 
-**Module Naming**: NPM-style scoped packages `@scope/name` (e.g., `@nf-core/salmon`, `@myorg/custom`). Unscoped names supported for legacy compatibility. No nested paths allowed - each module must have a `main.nf` as the entry point.
+**Module Naming**: NPM-style scoped packages `@scope/name` (e.g., `@nf-core/salmon`, `@myorg/custom`). Unscoped names (eg. local paths) supported for legacy compatibility. No nested paths with the module are allowed - each module must have a `main.nf` as the entry point.
 
-**Version Resolution**: Module versions pinned in `nextflow.config`. If not specified, uses latest available locally in `modules/` directory, or falls back to latest from registry.
+**Version Resolution**: Module versions pinned in `nextflow.config`. If not specified, use the latest available locally in `modules/` directory, or downloaded and cached in the `modules/` directory.
 
 **Resolution Order**:
 1. Check `nextflow.config` for pinned version
@@ -43,7 +46,7 @@ include { MY_PROCESS } from './modules/my-process.nf'
 
 **Resolution Timing**: Modules resolved at workflow parse time (after plugin resolution at startup).
 
-**Local Storage**: Downloaded modules stored in `modules/@scope/name@version/` directory in project root (not global cache). Each module must contain a `main.nf` file as the required entry point.
+**Local Storage**: Downloaded modules stored in `modules/@scope/name@version/` directory in project root (not global cache). Each module must contain a `main.nf` file as the required entry point. It is intended that module source code will be committed to the pipeline git repository.
 
 ### 2. Semantic Versioning and Configuration
 
@@ -67,10 +70,9 @@ modules {
 registry {
     url = 'https://registry.nextflow.io'     // Default registry
 
-    scopes {
-        '@myorg' = 'https://npm.myorg.com'   // Custom registry for @myorg scope
-        '@private' = 'https://private.com'
-    }
+    // allow the use of multiple registry url for resolving module
+    // across custom registries, e.g.
+    // url = [ 'https://custom.registry.com', 'https://registry.nextflow.io' ]
 
     auth {
         'registry.nextflow.io' = '${NXF_REGISTRY_TOKEN}'
@@ -91,8 +93,30 @@ dependencies:                     # Transitive dependencies (version constraints
 
 **Version Constraints** (in module's meta.yaml only):
 - `1.2.3`: Exact version
-- `^1.2.3`: Compatible with >=1.2.3 <2.0.0 (caret - allow minor/patch)
-- `~1.2.3`: Compatible with >=1.2.3 <1.3.0 (tilde - allow patch only)
+- `>=1.2.3`: Greater or equal
+- `>=1.2.3, <2.0.0`: Range (comma-separated) - equivalent to npm's `^1.2.3`
+- `>=1.2.3, <1.3.0`: Range (comma-separated) - equivalent to npm's `~1.2.3`
+
+**Version Notation Consistency**:
+
+Modules use the same version constraint syntax already supported by both `nextflowVersion` and plugins:
+
+| Notation | Meaning | nextflowVersion | Plugins | Modules |
+| :---- | :---- | :---- | :---- | :---- |
+| 1.2.3 | Exact version | ✓ | ✓ | ✓ |
+| >=1.2.3 | Greater or equal | ✓ | ✓ | ✓ |
+| <=1.2.3 | Less or equal | ✓ | ✓ | ✓ |
+| >1.2.3 | Greater than | ✓ | ✓ | ✓ |
+| <1.2.3 | Less than | ✓ | ✓ | ✓ |
+| >=1.2, <2.0 | Range (comma) | ✓ | ✓ | ✓ |
+| !=1.2.3 | Not equal | ✓ | - | - |
+| 1.2+ | >=1.2.x <2.0 | ✓ | - | - |
+| 1.2.+ | >=1.2.0 <1.3.0 | ✓ | - | - |
+| ~1.2.3 | >=1.2.3 <1.3.0 | - | ✓ | - |
+
+Using comparison operators (`>=`, `<`) with comma-separated ranges provides the same expressive power as
+npm-style `^` and `~` notation while maintaining consistency with existing Nextflow version constraint syntax.
+This avoids introducing new notation that would require additional parser support.
 
 **Dependency Resolution**:
 - Workflow's `nextflow.config` specifies exact versions for direct dependencies
@@ -161,15 +185,16 @@ nextflow module publish @scope/name         # Publish to registry (requires api 
 ## Module Structure
 
 **Directory Layout**:
+Everything within the module directory should be uploaded. Module bundle should not exceed 1MB (uncompressed). Typically this is expected to look something like this:
 ```
 my-module/
-├── meta.yaml    # Module manifest (metadata, dependencies, I/O specs)
 ├── main.nf      # Required: entry point for module
-├── tests/       # Optional test workflows
-└── README.md    # Optional documentation
+├── meta.yaml    # Optional: Module spec (metadata, dependencies, I/O specs)
+├── README.md    # Required: Module description
+└── tests/       # Optional test workflows
 ```
 
-**Module Manifest** (`meta.yaml`):
+**Module Spec extension** (`meta.yaml`):
 ```yaml
 name: "@nf-core/bwa-align"
 version: 1.2.4              # This module's version
@@ -182,20 +207,7 @@ requires:
   plugins:
     - nf-amazon@2.0.0
 
-processes:
-  - name: BWA_ALIGN
-    inputs:
-      - name: reads
-        type: path
-        format: fastq
-        ontology: edam:format_1930
-    outputs:
-      - name: bam
-        type: path
-        format: bam
-        ontology: edam:format_2572
-
-dependencies:                       # Transitive dependencies with version constraints
+dependencies:
   "@nf-core/samtools-view": "^1.0.0"
   "@nf-core/samtools-sort": "~2.1.0"
 ```
