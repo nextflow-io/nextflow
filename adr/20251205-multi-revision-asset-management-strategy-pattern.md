@@ -80,8 +80,8 @@ Use a bare repository for storage and create clones for each commit, tracking th
 Similar to Option 2 but create eliminate the separate revision map file by using the bare repository itself as the source of truth.
 
 **Implementation**:
-- Bare repository at `~/.nextflow/assets/<org>/<project>/.nextflow/bare_repo/`
-- Shared clones at `~/.nextflow/assets/<org>/<project>/.nextflow/commits/<commit-sha>/`
+- Bare repository at `~/.nextflow/assets/.repos/<org>/<project>/.nextflow/bare/`
+- Shared clones at `~/.nextflow/assets/.repos/<org>/<project>/.nextflow/commits/<commit-sha>/`
 - Use bare repository refs to resolve revisions to commit SHAs dynamically
 - JGit alternates mechanism for object sharing
 
@@ -126,7 +126,7 @@ Implemented **Option 3 (Bare Repository + Shared Clones per Commit)** for multi-
 The bare repository approach provides efficient multi-revision support:
 
 ```
-~/.nextflow/assets/nextflow-io/hello/
+~/.nextflow/assets/.repos/nextflow-io/hello/
 ├── .nextflow/
 │   ├── bare_repo/              # Bare repository (shared objects)
 │   │   ├── objects/            # All Git objects stored here
@@ -230,7 +230,6 @@ Users naturally migrate as they pull new revisions:
 - `AbstractRepositoryStrategy`: Base class with shared helper methods
 - `LegacyRepositoryStrategy`: Direct clone implementation (original behavior)
 - `MultiRevisionRepositoryStrategy`: Bare repo + shared clones implementation
-- `RepositoryContext`: Dependency injection container for shared state
 
 **Critical methods:**
 
@@ -241,7 +240,7 @@ Users naturally migrate as they pull new revisions:
 ### Performance Characteristics
 
 **Disk usage:**
-- Legacy: ~100% per repository (full clone with all git objects) + Worktree size
+- Legacy: ~100% per repository (full clone with all git objects) + Worktree
 - Multi-revision: ~100% for bare + ~100K (.git with alternates) per revision + Worktree per revision
 
 **Operation speed:**

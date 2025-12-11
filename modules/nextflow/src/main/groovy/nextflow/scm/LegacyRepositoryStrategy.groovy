@@ -47,6 +47,13 @@ class LegacyRepositoryStrategy extends AbstractRepositoryStrategy {
 
     LegacyRepositoryStrategy(String project) {
         super(project)
+        if (project)
+            this.localPath = new File(root, project)
+    }
+
+    @Override
+    void setProject(String project){
+        super.setProject(project)
         this.localPath = new File(root, project)
     }
 
@@ -57,10 +64,11 @@ class LegacyRepositoryStrategy extends AbstractRepositoryStrategy {
 
     @Override
     String download(String revision, Integer deep, Manifest manifest) {
+        assert localPath
         /*
          * if the pipeline already exists locally pull it from the remote repo
          */
-        if( !isLocal() ) {
+        if( !localPath.exists() ) {
             assert provider
             getLocalPath().parentFile.mkdirs()
 
@@ -244,11 +252,6 @@ class LegacyRepositoryStrategy extends AbstractRepositoryStrategy {
         catch( RepositoryNotFoundException e ) {
             return true
         }
-    }
-
-    @Override
-    boolean isLocal() {
-        localPath != null && localPath.exists() && getLocalGitConfig().exists()
     }
 
     @Override

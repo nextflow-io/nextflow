@@ -114,6 +114,14 @@ class AssetManager {
         build(pipelineName, config)
     }
 
+    AssetManager( String pipelineName, String revision, HubOptions cliOpts = null) {
+        assert pipelineName
+        // build the object
+        def config = ProviderConfig.getDefault()
+        // build the object
+        build(pipelineName, config, cliOpts, revision)
+    }
+
     /**
      * Build the asset manager internal data structure
      *
@@ -123,22 +131,27 @@ class AssetManager {
      * @return The {@link AssetManager} object itself
      */
     @PackageScope
-    AssetManager build( String pipelineName, Map config = null, HubOptions cliOpts = null ) {
+    AssetManager build( String pipelineName, Map config = null, HubOptions cliOpts = null, String revision = null ) {
 
         this.providerConfigs = ProviderConfig.createFromMap(config)
 
         this.project = resolveName(pipelineName)
 
-        if( !isValidProjectName(pipelineName)) {
-            throw new IllegalArgumentException("Not a valid project name: $pipelineName")
+        if( !isValidProjectName(this.project)) {
+            throw new IllegalArgumentException("Not a valid project name: ${this.project}")
         }
         // Initialize strategy based on environment and repository state
-        initStrategy()
+        initStrategy(revision)
         this.hub = checkHubProvider(cliOpts)
         this.provider = createHubProvider(hub)
-        strategy.setProvider(this.provider)
-        setupCredentials(cliOpts)
 
+        if( revision ){
+            provider.setRevision(revision)
+        }
+
+        strategy.setProvider(this.provider)
+
+        setupCredentials(cliOpts)
 
         validateProjectDir()
 
@@ -157,21 +170,21 @@ class AssetManager {
         if( type == RepositoryStrategyType.LEGACY )
             strategy = new LegacyRepositoryStrategy(project)
         else if( type == RepositoryStrategyType.MULTI_REVISION )
-            strategy = new MultiRevisionRepositoryStrategy(project)
+            strategy = new MultiRevisionRepositoryStrategy(project, revision)
         else
             throw new AbortOperationException("Not supported strategy $type")
         strategy.setProvider(provider)
-        setRevision(revision)
     }
 
-    private void initStrategy(){
+    private void initStrategy(String revision = null){
         def type = selectStrategyType()
         if( type == RepositoryStrategyType.LEGACY )
             strategy = new LegacyRepositoryStrategy(project)
         else if( type == RepositoryStrategyType.MULTI_REVISION )
-            strategy = new MultiRevisionRepositoryStrategy(project)
+            strategy = new MultiRevisionRepositoryStrategy(project, revision)
         else
             throw new AbortOperationException("Not supported strategy $type")
+        strategy.setProvider(provider)
     }
 
     private RepositoryStrategyType selectStrategyType(){
@@ -226,7 +239,7 @@ class AssetManager {
         if (!root || !project)
             return RepositoryStatus.UNINITIALIZED
 
-        boolean hasMultiRevision = MultiRevisionRepositoryStrategy.isLocal(root, project)
+        boolean hasMultiRevision = MultiRevisionRepositoryStrategy.checkProject(root, project)
         boolean hasLegacy = LegacyRepositoryStrategy.checkProject(root, project)
 
         if( !hasMultiRevision && !hasLegacy ) return RepositoryStatus.UNINITIALIZED
@@ -284,6 +297,8 @@ class AssetManager {
      * Set the revision for multi-revision strategy
      */
     AssetManager setRevision(String revision) {
+        if( provider )
+            provider.setRevision(revision)
         if( revision && strategy instanceof MultiRevisionRepositoryStrategy ) {
             ((MultiRevisionRepositoryStrategy) strategy).setRevision(revision)
         }
@@ -293,7 +308,9 @@ class AssetManager {
     /**
      * Get the current revision (multi-revision strategy only)
      */
-    String getRevision() {
+    private String getRevision() {
+        if( provider )
+            return provider.getRevision()
         if( strategy && strategy instanceof MultiRevisionRepositoryStrategy ) {
             return ((MultiRevisionRepositoryStrategy) strategy).getRevision()
         }
@@ -315,7 +332,9 @@ class AssetManager {
 
     @PackageScope AssetManager setProject(String name) {
         this.project = name
-        updateStrategy()
+        if (!strategy)
+            initStrategy(getRevision())
+        strategy.setProject(name)
         return this
     }
 
@@ -519,7 +538,7 @@ class AssetManager {
 
     AssetManager setLocalPath(File path) {
         if (!strategy)
-            updateStrategy()
+            initStrategy(getRevision())
         strategy.setLocalPath(path)
         return this
     }
@@ -590,16 +609,16 @@ class AssetManager {
                 ?: DEFAULT_BRANCH
     }
 
-    @Memoized
     Manifest getManifest() {
-        getManifest0()
+        getManifest0(getLocalPath())
     }
 
-    protected Manifest getManifest0() {
+    @Memoized
+    protected Manifest getManifest0(File projectPath) {
         String text = null
         ConfigObject result = null
         try {
-            text = localPath.exists() ? new File(localPath, MANIFEST_FILE_NAME).text : provider.readText(MANIFEST_FILE_NAME)
+            text = projectPath.exists() ? new File(projectPath, MANIFEST_FILE_NAME).text : provider.readText(MANIFEST_FILE_NAME)
         }
         catch( FileNotFoundException e ) {
             log.debug "Project manifest does not exist: ${e.message}"
@@ -650,7 +669,7 @@ class AssetManager {
     }
 
     boolean isLocal() {
-        strategy?.isLocal()
+        return localPath && localPath.exists()
     }
 
     /**
@@ -698,7 +717,7 @@ class AssetManager {
 
     static void appendProjectsFromDir(File file, HashSet result) {
         file.eachDir { File org ->
-            if( org.getName() == MultiRevisionRepositoryStrategy.MULTI_REVISION_SUBDIR ) {
+            if( org.getName() == MultiRevisionRepositoryStrategy.REPOS_SUBDIR ) {
                 log.debug("Appending multi-revision projects")
                 appendProjectsFromDir(org, result)
             } else {
@@ -1057,7 +1076,7 @@ class AssetManager {
     }
 
     protected String getGitConfigRemoteUrl() {
-        if( !localPath ) {
+        if( !isLocal() ) {
             return null
         }
 
@@ -1098,7 +1117,7 @@ class AssetManager {
      * @param revision
      */
     void drop(String revision = null, boolean force = false){
-        if (!isNotInitialized())
+        if ( isNotInitialized() )
             throw new AbortOperationException("No match found for: ${getProjectWithRevision()}")
         strategy.drop(revision, force)
     }

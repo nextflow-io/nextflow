@@ -41,9 +41,6 @@ class CmdDrop extends CmdBase {
     @Parameter(names=['-r','-revision'], description = 'Revision of the project to drop (either a git branch, tag or commit SHA number)')
     String revision
 
-    @Parameter(names=['-a','-all'], description = 'For specified project, drop all pulled commits')
-    Boolean allRevisions
-
     @Parameter(names='-f', description = 'Delete the repository without taking care of local changes')
     boolean force
 
@@ -53,11 +50,7 @@ class CmdDrop extends CmdBase {
     @Override
     void run() {
         Plugins.init()
-        if ( allRevisions ) {
-            new AssetManager(args[0]).drop(null, force)
-        } else {
-            new AssetManager(args[0]).drop(revision, force)
-        }
+        new AssetManager(args[0]).drop(revision, force)
     }
 
 }

@@ -45,8 +45,8 @@ import org.eclipse.jgit.transport.RefSpec
 @CompileStatic
 class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
 
-    static final String MULTI_REVISION_SUBDIR = '.multi-revision'
-    static final String BARE_REPO = 'bare_repo'
+    static final String REPOS_SUBDIR = '.repos'
+    static final String BARE_REPO = 'bare'
     static final String REVISION_SUBDIR = 'commits'
 
     /**
@@ -65,21 +65,37 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
     private Git _bareGit
     private Git _commitGit
 
-    MultiRevisionRepositoryStrategy(String project) {
+    MultiRevisionRepositoryStrategy(String project, String revision) {
         super(project)
-
-        this.legacyRepoPath = new File(root, project)
-        this.projectPath = new File(root, MULTI_REVISION_SUBDIR + '/' + project)
-        this.bareRepo = new File(projectPath, BARE_REPO)
-        this.revisionSubdir = new File(projectPath, REVISION_SUBDIR)
+        if (project) {
+            this.legacyRepoPath = new File(root, project)
+            this.projectPath = new File(root, REPOS_SUBDIR + '/' + project)
+            this.bareRepo = new File(projectPath, BARE_REPO)
+            this.revisionSubdir = new File(projectPath, REVISION_SUBDIR)
+        }
+        if( revision )
+            setRevision(revision)
+        else if ( hasBareRepo() ){
+            setRevision(getDefaultBranchFromBareRepo())
+        }
 
     }
-    static boolean isLocal(File root, String project){
-        return new File(root, MULTI_REVISION_SUBDIR + '/' + project + '/' + BARE_REPO).exists()
+    /**
+     * Check if a project exists and has the bare repo for multi-revision
+     * @param root
+     * @param project
+     * @return
+     */
+    static boolean checkProject(File root, String project){
+        return new File(root, REPOS_SUBDIR + '/' + project + '/' + BARE_REPO).exists()
     }
 
     @PackageScope
     File getBareRepo() { this.bareRepo }
+
+    boolean hasBareRepo(){
+        return this.bareRepo && this.bareRepo.exists()
+    }
 
     @PackageScope
     File getRevisionSubdir() { this.revisionSubdir }
@@ -97,22 +113,20 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
 
     @PackageScope
     void updateCommitDir(String commitId) {
-        if( !commitId )
-            return
         final oldCommitPath = this.commitPath
         if( oldCommitPath && _commitGit ) {
             _commitGit.close()
             _commitGit = null
         }
-        this.commitPath = new File(getRevisionSubdir(), commitId)
+        this.commitPath = commitId ? new File(getRevisionSubdir(), commitId) : null
     }
 
     @PackageScope
     String revisionToCommitWithBareRepo(String revision) {
         String commitId = null
 
-        if( getBareRepo().exists() ) {
-            def rev = Git.open(getBareRepo())
+        if( hasBareRepo() ) {
+            def rev = Git.open(this.bareRepo)
                 .getRepository()
                 .resolve(revision ?: Constants.HEAD)
             if( rev )
@@ -123,15 +137,15 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
     }
 
     protected String getDefaultBranchFromBareRepo() {
-        if( !getBareRepo().exists() ) {
-            log.debug "Bare repo ${getBareRepo()} doesn't exist"
+        if( !hasBareRepo() ) {
+            log.debug "Bare repo ${this.bareRepo} doesn't exist"
             return null
         }
         def head = getDefaultBranchRef()
         if( head ) {
             Repository.shortenRefName(head.getName())
         } else {
-            log.debug "Unable to determine default branch from bare repo ${getBareRepo()}"
+            log.debug "Unable to determine default branch from bare repo ${this.bareRepo}"
             return null
         }
     }
@@ -141,13 +155,14 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
     }
 
     protected void checkBareRepo(Manifest manifest) {
+        assert bareRepo
         /*
          * if the bare repository of the pipeline does not exists locally pull it from the remote repo
          */
-        if( !getBareRepo().exists() ) {
-            getBareRepo().parentFile.mkdirs()
+        if( !hasBareRepo() ) {
+            this.bareRepo.parentFile.mkdirs()
             // Use a file mutex to prevent concurrent clones of the same commit.
-            final file = new File(getBareRepo().parentFile, ".${getBareRepo().name}.lock")
+            final file = new File(this.bareRepo.parentFile, ".${this.bareRepo.name}.lock")
             final wait = "Another Nextflow instance is creating the bare repo for ${project} -- please wait till it completes"
             final err = "Unable to acquire exclusive lock after 60s on file: $file"
 
@@ -168,7 +183,7 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
         assert provider
         // This check is required in case of two nextflow instances were doing the same shared clone at the same time.
         // If commitPath exists the previous nextflow instance created the shared clone successfully.
-        if( getBareRepo().exists() )
+        if( hasBareRepo() )
             return
 
         try {
@@ -181,7 +196,7 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
             bare
                 .setBare(true)
                 .setURI(cloneURL)
-                .setGitDir(getBareRepo())
+                .setGitDir(this.bareRepo)
                 .setCloneSubmodules(manifest.recurseSubmodules)
                 .call()
         } catch( Throwable t ) {
@@ -210,7 +225,7 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
         updateCommitDir(commitId)
 
         if( commitPath.exists() )
-            return "already downloaded from ${getGitRepositoryUrl()}"
+            return "Already-up-to-date"
 
         /*
          * if revision does not exists locally pull it from the remote repo
@@ -242,7 +257,7 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
      */
     @Override
     void tryCheckout(String revision, Manifest manifest) throws RefNotFoundException {
-        if( !bareRepo.exists() ) {
+        if( !hasBareRepo() ) {
             throw new RefNotFoundException("Unknown repository")
         }
         // get the commit ID for the revision. If not specified try to checkout to default branch
@@ -251,11 +266,15 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
         if( !commitId ) {
             throw new RefNotFoundException("No commit found for revision ${downloadRevision} in project ${project}")
         }
-        if( new File(revisionSubdir, commitId).exists() ) {
+        if( isRevisionLocal(commitId) ) {
             setRevision(downloadRevision)
         } else {
             throw new RefNotFoundException("Revision ${downloadRevision} not locally checked out.")
         }
+    }
+
+    private boolean isRevisionLocal(String commitId) {
+        this.revisionSubdir && new File(revisionSubdir, commitId).exists()
     }
 
     @Override
@@ -268,15 +287,15 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
         // This check is required in case of two nextflow instances were doing the same shared clone at the same time.
         // If commitPath exists the previous nextflow instance created the shared clone successfully.
         if( commitPath.exists() )
-            return "already downloaded"
+            return "Already-up-to-date"
 
         commitPath.parentFile.mkdirs()
         try {
-            final cloneURL = getBareRepo().toString()
+            final cloneURL = this.bareRepo.toString()
             log.debug "Pulling ${project} -- Using remote clone url: ${cloneURL}"
 
             // clone it, but don't specify a revision - jgit will checkout the default branch
-            File bareObjectsDir = new File(getBareRepo(), "objects")
+            File bareObjectsDir = new File(this.bareRepo, "objects")
             FileRepository repo = new FileRepositoryBuilder()
                 .setGitDir(new File(getLocalPath(), ".git"))
                 .addAlternateObjectDirectory(bareObjectsDir)
@@ -331,8 +350,9 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
     }
 
     protected Git getBareGit() {
+        assert bareRepo
         if( !_bareGit ) {
-            _bareGit = Git.open(getBareRepo())
+            _bareGit = Git.open(this.bareRepo)
         }
         return _bareGit
     }
@@ -348,17 +368,19 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
     Git getGit() {
         if( commitPath && commitPath.exists() )
             return getCommitGit()
-        if( getBareRepo().exists() )
+        if( hasBareRepo() )
             return getBareGit()
+        if( this.legacyRepoPath && new File(this.legacyRepoPath, '.git').exists() )
+            return Git.open(this.legacyRepoPath)
         return null
     }
 
     private Git getBareGitWithLegacyFallback() {
-        if( getBareRepo().exists() )
+        if( hasBareRepo() )
             return getBareGit()
         // Fallback to legacy
-        if( new File(legacyRepoPath, '.git').exists() )
-            return Git.open(legacyRepoPath)
+        if( this.legacyRepoPath && new File(this.legacyRepoPath, '.git').exists() )
+            return Git.open(this.legacyRepoPath)
         return null
     }
 
@@ -370,11 +392,6 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
         catch( RepositoryNotFoundException e ) {
             return true
         }
-    }
-
-    @Override
-    boolean isLocal() {
-        return bareRepo != null && bareRepo.exists()
     }
 
     @Override
@@ -412,13 +429,11 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
 
     @Override
     File getLocalGitConfig() {
-        return getBareRepo().exists() ? new File(getBareRepo(), 'config') : null
+        return hasBareRepo() ? new File(this.bareRepo, 'config') : null
     }
 
     @Override
     String getGitRepositoryUrl() {
-        if (bareRepo.exists())
-            return bareRepo.toURI().toString()
         return provider.getCloneUrl()
     }
 
@@ -446,9 +461,15 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
     private void dropRevision(String revision, boolean force) {
         assert revision
         setRevision(revision)
+
+        if( !commitPath || !commitPath.exists() ) {
+            log.info "No local folder found for revision '$revision' in '$project' -- Nothing to do"
+            return
+        }
+
         if( force || isClean() ) {
             close()
-            if( !localPath.deleteDir() )
+            if( !commitPath.deleteDir() )
                 throw new AbortOperationException("Unable to delete project `${project}` -- Check access permissions for path: ${localPath}")
             return
         }
@@ -471,6 +492,14 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
     @Override
     void setLocalPath(File file) {
         legacyRepoPath = file
+    }
+
+    @Override
+    void setProject(String project) {
+        super.setProject(project)
+        this.projectPath = new File(root, REPOS_SUBDIR + '/' + project)
+        this.bareRepo = new File(projectPath, BARE_REPO)
+        this.revisionSubdir = new File(projectPath, REVISION_SUBDIR)
     }
 
     @Override

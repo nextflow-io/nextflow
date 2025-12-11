@@ -95,9 +95,14 @@ class CmdPull extends CmdBase implements HubOptions {
     private pullProjectRevision(String project, String revision) {
         final manager = new AssetManager(project, this)
 
-        if( manager.isUsingLegacyStrategy() && migrate ) {
-            log.info "Migrating ${project} revision ${revision} to multi-revision strategy."
-            manager.setStrategyType(AssetManager.RepositoryStrategyType.LEGACY)
+        if( manager.isUsingLegacyStrategy() ) {
+            if( migrate ) {
+                log.info "Migrating ${project} revision ${revision} to multi-revision strategy"
+                manager.setStrategyType(AssetManager.RepositoryStrategyType.MULTI_REVISION)
+            } else {
+                log.warn "The local asset for ${project} does not support multi-revision - Pulling with legacy strategy"
+                log.warn "Consider updating the project ${project} using '-migrate' option"
+            }
         }
 
         if( revision )
@@ -105,7 +110,7 @@ class CmdPull extends CmdBase implements HubOptions {
 
         log.info "Checking ${manager.getProjectWithRevision()} ..."
 
-        def result = manager.download(manager.getRevision(), deep)
+        def result = manager.download(revision, deep)
         manager.updateModules()
 
         def scriptFile = manager.getScriptFile()

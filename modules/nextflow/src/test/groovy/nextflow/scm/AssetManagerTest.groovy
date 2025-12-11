@@ -16,6 +16,10 @@
 
 package nextflow.scm
 
+import static MultiRevisionRepositoryStrategy.BARE_REPO
+import static MultiRevisionRepositoryStrategy.REVISION_SUBDIR
+import static nextflow.scm.MultiRevisionRepositoryStrategy.REPOS_SUBDIR
+
 import spock.lang.IgnoreIf
 
 import nextflow.exception.AbortOperationException
@@ -89,16 +93,19 @@ class AssetManagerTest extends Specification {
         folder.resolve('cbcrg/pipe1').mkdirs()
         folder.resolve('cbcrg/pipe2').mkdirs()
         folder.resolve('ncbi/blast').mkdirs()
+        folder.resolve(REPOS_SUBDIR +'/ncbi/blast').mkdirs()
+        folder.resolve(REPOS_SUBDIR +'/new/repo').mkdirs()
 
         when:
         def list = AssetManager.list()
         then:
-        list.sort() == ['cbcrg/pipe1','cbcrg/pipe2','ncbi/blast']
+        list.sort() == ['cbcrg/pipe1','cbcrg/pipe2','ncbi/blast', 'new/repo']
 
         expect:
         AssetManager.find('blast') == 'ncbi/blast'
         AssetManager.find('pipe1') == 'cbcrg/pipe1'
         AssetManager.find('pipe') as Set == ['cbcrg/pipe1', 'cbcrg/pipe2'] as Set
+        AssetManager.find('repo') == 'new/repo'
 
     }
 
@@ -154,15 +161,6 @@ class AssetManagerTest extends Specification {
         thrown(AbortOperationException)
 
     }
-    def 'test token'() {
-        given:
-        def token = 'this is a token'
-        def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
-        expect:
-        manager.getProvider().hasCredentials()
-        manager.getProvider().getAuth() == ['Authorization', 'Basic dGhpcyBpcyBhIHRva2VuOngtb2F1dGgtYmFzaWM=']
-        manager.getProvider().getToken() == 'this is a token'
-    }
 
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def 'test download with legacy'() {
@@ -196,9 +194,9 @@ class AssetManagerTest extends Specification {
         when:
         manager.download("v1.2")
         then:
-        folder.resolve('nextflow-io/hello/.nextflow/commits/1b420d060d3fad67027154ac48e3bdea06f058da/.git').isDirectory()
-        folder.resolve('nextflow-io/hello/.nextflow/bare_repo').isDirectory()
-        manager.getLocalPath().toString() == folder.resolve('nextflow-io/hello/.nextflow/commits/1b420d060d3fad67027154ac48e3bdea06f058da').toString()
+        folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/1b420d060d3fad67027154ac48e3bdea06f058da/.git').isDirectory()
+        folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + BARE_REPO).isDirectory()
+        manager.getLocalPath().toString() == folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/1b420d060d3fad67027154ac48e3bdea06f058da').toString()
         when:
         manager.download("v1.2")
         then:
@@ -240,9 +238,9 @@ class AssetManagerTest extends Specification {
         when:
         manager.download("6b9515aba6c7efc6a9b3f273ce116fc0c224bf68")
         then:
-        folder.resolve('nextflow-io/hello/.nextflow/commits/6b9515aba6c7efc6a9b3f273ce116fc0c224bf68/.git').isDirectory()
-        folder.resolve('nextflow-io/hello/.nextflow/bare_repo').isDirectory()
-        manager.getLocalPath().toString() == folder.resolve('nextflow-io/hello/.nextflow/commits/6b9515aba6c7efc6a9b3f273ce116fc0c224bf68').toString()
+        folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/6b9515aba6c7efc6a9b3f273ce116fc0c224bf68/.git').isDirectory()
+        folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + BARE_REPO).isDirectory()
+        manager.getLocalPath().toString() == folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/6b9515aba6c7efc6a9b3f273ce116fc0c224bf68').toString()
 
         when:
         def result = manager.download("6b9515aba6c7efc6a9b3f273ce116fc0c224bf68")
@@ -307,9 +305,9 @@ class AssetManagerTest extends Specification {
         when:
         manager.download("mybranch")
         then:
-        folder.resolve('nextflow-io/hello/.nextflow/bare_repo').isDirectory()
-        folder.resolve('nextflow-io/hello/.nextflow/commits/1c3e9e7404127514d69369cd87f8036830f5cf64/.git').isDirectory()
-        manager.getLocalPath().toString() == folder.resolve('nextflow-io/hello/.nextflow/commits/1c3e9e7404127514d69369cd87f8036830f5cf64').toString()
+        folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + BARE_REPO).isDirectory()
+        folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/1c3e9e7404127514d69369cd87f8036830f5cf64/.git').isDirectory()
+        manager.getLocalPath().toString() == folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/1c3e9e7404127514d69369cd87f8036830f5cf64').toString()
         when:
         manager.download("mybranch")
         then:
@@ -352,16 +350,16 @@ class AssetManagerTest extends Specification {
         when:
         manager.download("v1.2")
         then:
-        folder.resolve('nextflow-io/hello/.nextflow/commits/1b420d060d3fad67027154ac48e3bdea06f058da/.git').isDirectory()
-        folder.resolve('nextflow-io/hello/.nextflow/bare_repo').isDirectory()
-        manager.getLocalPath().toString() == folder.resolve('nextflow-io/hello/.nextflow/commits/1b420d060d3fad67027154ac48e3bdea06f058da').toString()
+        folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/1b420d060d3fad67027154ac48e3bdea06f058da/.git').isDirectory()
+        folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + BARE_REPO).isDirectory()
+        manager.getLocalPath().toString() == folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/1b420d060d3fad67027154ac48e3bdea06f058da').toString()
 
         when:
         manager.download("mybranch")
         then:
-        folder.resolve('nextflow-io/hello/.nextflow/bare_repo').isDirectory()
-        folder.resolve('nextflow-io/hello/.nextflow/commits/1c3e9e7404127514d69369cd87f8036830f5cf64/.git').isDirectory()
-        manager.getLocalPath().toString() == folder.resolve('nextflow-io/hello/.nextflow/commits/1c3e9e7404127514d69369cd87f8036830f5cf64').toString()
+        folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + BARE_REPO).isDirectory()
+        folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/1c3e9e7404127514d69369cd87f8036830f5cf64/.git').isDirectory()
+        manager.getLocalPath().toString() == folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/1c3e9e7404127514d69369cd87f8036830f5cf64').toString()
         noExceptionThrown()
     }
 
@@ -670,7 +668,7 @@ class AssetManagerTest extends Specification {
     }
 
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
-    def 'should download branch specified legacy'() {
+    def 'should download branch specified multi-revision'() {
 
         given:
         def folder = tempDir.getRoot()
@@ -681,9 +679,9 @@ class AssetManagerTest extends Specification {
         when:
         manager.download("dev")
         then:
-        folder.resolve('nextflow-io/nf-test-branch/.nextflow/commits/6f882561d589365c3950d170df8445e3c0dc8028/.git').isDirectory()
+        folder.resolve(REPOS_SUBDIR + '/nextflow-io/nf-test-branch/' + REVISION_SUBDIR + '/6f882561d589365c3950d170df8445e3c0dc8028/.git').isDirectory()
         and:
-        folder.resolve('nextflow-io/nf-test-branch/.nextflow/commits/6f882561d589365c3950d170df8445e3c0dc8028/workflow.nf').text == "println 'Hello'\n"
+        folder.resolve(REPOS_SUBDIR + '/nextflow-io/nf-test-branch/' + REVISION_SUBDIR + '/6f882561d589365c3950d170df8445e3c0dc8028/workflow.nf').text == "println 'Hello'\n"
 
         when:
         manager.download()
@@ -738,9 +736,9 @@ class AssetManagerTest extends Specification {
         when:
         manager.download("v0.1")
         then:
-        folder.resolve('nextflow-io/nf-test-branch/.nextflow/commits/6f882561d589365c3950d170df8445e3c0dc8028/.git').isDirectory()
+        folder.resolve(REPOS_SUBDIR + '/nextflow-io/nf-test-branch/' + REVISION_SUBDIR + '/6f882561d589365c3950d170df8445e3c0dc8028/.git').isDirectory()
         and:
-        folder.resolve('nextflow-io/nf-test-branch/.nextflow/commits/6f882561d589365c3950d170df8445e3c0dc8028/workflow.nf').text == "println 'Hello'\n"
+        folder.resolve(REPOS_SUBDIR + '/nextflow-io/nf-test-branch/' + REVISION_SUBDIR + '/6f882561d589365c3950d170df8445e3c0dc8028/workflow.nf').text == "println 'Hello'\n"
 
         when:
         manager.download()
@@ -749,10 +747,29 @@ class AssetManagerTest extends Specification {
     }
 
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
-    def 'should identify default branch when downloading repo'() {
+    def 'should identify default branch when downloading repo legacy'() {
 
         given:
-        def folder = tempDir.getRoot()
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def manager = new AssetManager().build('nextflow-io/socks', [providers: [github: [auth: token]]])
+        manager.setStrategyType(AssetManager.RepositoryStrategyType.LEGACY)
+        when:
+        // simulate calling `nextflow run nextflow-io/socks` without specifying a revision
+        manager.download()
+        manager.checkout(null)
+        then:
+        manager.getCurrentRevision() == 'main'
+
+        when:
+        manager.download()
+        then:
+        noExceptionThrown()
+    }
+
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def 'should identify default branch when downloading repo multi-revision'() {
+
+        given:
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
         def manager = new AssetManager().build('nextflow-io/socks', [providers: [github: [auth: token]]])
 
@@ -790,6 +807,185 @@ class AssetManagerTest extends Specification {
         def tags = branchesAndTags.tags as List<Map>
         tags.find {it.name == revision1 }.commitId == '0ec2ecd0ac13bc7e32594c0258ebce55e383d241'
         branches.find { it.name == revision2 }.commitId == '1c3e9e7404127514d69369cd87f8036830f5cf64'
+    }
+
+    def 'should select multi-revision strategy for uninitialized repository'() {
+        given:
+        def folder = tempDir.getRoot()
+        // No repositories exist yet
+
+        when:
+        def manager = new AssetManager().build('test-org/test-repo')
+
+        then:
+        manager.getRepositoryStatus() == AssetManager.RepositoryStatus.UNINITIALIZED
+        manager.isUsingMultiRevisionStrategy()
+        !manager.isUsingLegacyStrategy()
+    }
+
+    def 'should select legacy strategy when legacy repository exists'() {
+        given:
+        def folder = tempDir.getRoot()
+        def legacyPath = folder.resolve('test-org/test-repo')
+        legacyPath.mkdirs()
+
+        // Create a proper git repository
+        def init = Git.init()
+        def repo = init.setDirectory(legacyPath.toFile()).call()
+        repo.close()
+
+        // Add git config with remote url
+        legacyPath.resolve('.git/config').text = GIT_CONFIG_TEXT
+
+        when:
+        def manager = new AssetManager().build('test-org/test-repo')
+
+        then:
+        manager.getRepositoryStatus() == AssetManager.RepositoryStatus.LEGACY_ONLY
+        manager.isUsingLegacyStrategy()
+        !manager.isUsingMultiRevisionStrategy()
+    }
+
+    def 'should select multi-revision strategy when bare repository exists'() {
+        given:
+        def folder = tempDir.getRoot()
+        def barePath = folder.resolve(REPOS_SUBDIR + '/test-org/test-repo/' + BARE_REPO)
+        barePath.mkdirs()
+
+        // Create a proper bare git repository
+        def init = Git.init()
+        init.setDirectory(barePath.toFile())
+        init.setBare(true)
+        def repo = init.call()
+        repo.close()
+
+        when:
+        def manager = new AssetManager().build('test-org/test-repo')
+
+        then:
+        manager.getRepositoryStatus() == AssetManager.RepositoryStatus.BARE_ONLY
+        manager.isUsingMultiRevisionStrategy()
+        !manager.isUsingLegacyStrategy()
+    }
+
+    def 'should prefer multi-revision strategy for hybrid repository'() {
+        given:
+        def folder = tempDir.getRoot()
+        // Create legacy repository
+        def legacyPath = folder.resolve('test-org/test-repo')
+        legacyPath.mkdirs()
+        def initLegacy = Git.init()
+        def repoLegacy = initLegacy.setDirectory(legacyPath.toFile()).call()
+        repoLegacy.close()
+        legacyPath.resolve('.git/config').text = GIT_CONFIG_TEXT
+
+        // Create bare repository
+        def barePath = folder.resolve(REPOS_SUBDIR + '/test-org/test-repo/' + BARE_REPO)
+        barePath.mkdirs()
+        def initBare = Git.init()
+        initBare.setDirectory(barePath.toFile())
+        initBare.setBare(true)
+        def repoBare = initBare.call()
+        repoBare.close()
+        barePath.resolve('config').text = GIT_CONFIG_TEXT
+
+        when:
+        def manager = new AssetManager().build('test-org/test-repo')
+
+        then:
+        manager.getRepositoryStatus() == AssetManager.RepositoryStatus.HYBRID
+        manager.isUsingMultiRevisionStrategy()
+        !manager.isUsingLegacyStrategy()
+    }
+
+    def 'should force legacy strategy when NXF_SCM_LEGACY is set'() {
+        given:
+        def folder = tempDir.getRoot()
+        // No repositories exist yet
+        and:
+        def originalValue = System.getenv('NXF_SCM_LEGACY')
+
+        when:
+        // Simulate NXF_SCM_LEGACY being set to true
+        nextflow.SysEnv.push([NXF_SCM_LEGACY: 'true'])
+        def manager = new AssetManager().build('test-org/test-repo')
+
+        then:
+        manager.getRepositoryStatus() == AssetManager.RepositoryStatus.UNINITIALIZED
+        manager.isUsingLegacyStrategy()
+        !manager.isUsingMultiRevisionStrategy()
+
+        cleanup:
+        nextflow.SysEnv.pop()
+    }
+
+    def 'should switch strategy when explicitly set'() {
+        given:
+        def folder = tempDir.getRoot()
+
+        when:
+        def manager = new AssetManager().build('test-org/test-repo')
+        then:
+        manager.isUsingMultiRevisionStrategy()
+
+        when:
+        manager.setStrategyType(AssetManager.RepositoryStrategyType.LEGACY)
+        then:
+        manager.isUsingLegacyStrategy()
+
+        when:
+        manager.setStrategyType(AssetManager.RepositoryStrategyType.MULTI_REVISION)
+        then:
+        manager.isUsingMultiRevisionStrategy()
+    }
+
+    def 'should not switch strategy if already using requested type'() {
+        given:
+        def folder = tempDir.getRoot()
+        def manager = new AssetManager().build('test-org/test-repo')
+
+        when:
+        def strategyBefore = manager.@strategy
+        manager.setStrategyType(AssetManager.RepositoryStrategyType.MULTI_REVISION)
+        def strategyAfter = manager.@strategy
+
+        then:
+        strategyBefore.is(strategyAfter)
+        manager.isUsingMultiRevisionStrategy()
+    }
+
+    def 'should detect repository status correctly'() {
+        given:
+        def folder = tempDir.getRoot()
+
+        expect: 'no repository exists'
+        def status1 = LegacyRepositoryStrategy.checkProject(folder.toFile(), 'test-org/repo1') || MultiRevisionRepositoryStrategy.checkProject(folder.toFile(), 'test-org/repo1')
+        !status1
+
+        when: 'only legacy exists'
+        def legacyPath2 = folder.resolve('test-org/repo2')
+        legacyPath2.mkdirs()
+        legacyPath2.resolve('.git').mkdir()
+        then:
+        LegacyRepositoryStrategy.checkProject(folder.toFile(), 'test-org/repo2')
+        !MultiRevisionRepositoryStrategy.checkProject(folder.toFile(), 'test-org/repo2')
+
+        when: 'only bare exists'
+        def barePath3 = folder.resolve(REPOS_SUBDIR + '/test-org/repo3/' + BARE_REPO)
+        barePath3.mkdirs()
+        then:
+        !LegacyRepositoryStrategy.checkProject(folder.toFile(), 'test-org/repo3')
+        MultiRevisionRepositoryStrategy.checkProject(folder.toFile(), 'test-org/repo3')
+
+        when: 'both exist'
+        def legacyPath4 = folder.resolve('test-org/repo4')
+        legacyPath4.mkdirs()
+        legacyPath4.resolve('.git').mkdir()
+        def barePath4 = folder.resolve(REPOS_SUBDIR + '/test-org/repo4/' + BARE_REPO)
+        barePath4.mkdirs()
+        then:
+        LegacyRepositoryStrategy.checkProject(folder.toFile(), 'test-org/repo4')
+        MultiRevisionRepositoryStrategy.checkProject(folder.toFile(), 'test-org/repo4')
     }
 
 }

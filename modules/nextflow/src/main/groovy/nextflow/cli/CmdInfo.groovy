@@ -102,7 +102,7 @@ class CmdInfo extends CmdBase {
 
         out.println " project name: ${manager.project}"
         out.println " repository  : ${manager.repositoryUrl}"
-        out.println " local path  : ${manager.project}"
+        out.println " local path  : ${manager.projectPath}"
         out.println " main script : ${manager.mainScriptName}"
         if( manager.homePage && manager.homePage != manager.repositoryUrl )
             out.println " home page   : ${manager.homePage}"

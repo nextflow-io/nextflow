@@ -54,12 +54,13 @@ class CmdView extends CmdBase {
     @Override
     void run() {
         Plugins.init()
-        def manager = new AssetManager(args[0])
-        if( revision )
-            manager.setRevision(revision)
+        def manager = new AssetManager(args[0], revision)
         if( !manager.isLocal() )
             throw new AbortOperationException("Unknown project `${manager.getProjectWithRevision()}`")
-
+        if( revision && manager.isUsingLegacyStrategy()){
+            log.warn("The local asset ${args[0]} does not support multi-revision - 'revision' option is ignored")
+            log.warn("Consider updating the asset using 'nextflow pull ${args[0]} -r $revision -migrate'")
+        }
         if( all ) {
             if( !quiet )
                 println "== content of path: ${manager.localPath}"

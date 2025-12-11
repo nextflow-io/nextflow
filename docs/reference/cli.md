@@ -441,11 +441,6 @@ The `drop` command is used to remove the projects which have been downloaded int
 
 **Options**
 
-`-a, -all-revisions`
-: :::{versionadded} 25.11.0-edge
-:::
-: For specified project, drop all revisions.
-
 `-f`
 : Delete the repository without taking care of local changes.
 
@@ -453,7 +448,7 @@ The `drop` command is used to remove the projects which have been downloaded int
 : Print the command usage.
 
 `-r, -revision`
-: :::{versionadded} 25.11.0-edge
+: :::{versionadded} 25.12.0-edge
 :::
 : Revision of the project to drop (either a git branch, tag or commit SHA number).
 
@@ -1174,7 +1169,8 @@ The `pull` command downloads a pipeline from a Git-hosting platform into the glo
 : Update all downloaded projects.
 
 `-d, -deep`
-: :::{deprecated} 25.11.X-edge
+: :::{deprecated} 25.12.0-edge. 
+  Ignored for new multi-revision asset management strategy. Still used in legacy assets.
   :::
 : Create a shallow clone of the specified depth.
 
@@ -1183,6 +1179,11 @@ The `pull` command downloads a pipeline from a Git-hosting platform into the glo
 
 `-hub` (`github`)
 : Service hub where the project is hosted. Options: `gitlab` or `bitbucket`
+
+`-migrate`
+:::{versionadded} 25.12.0-edge
+  :::
+: Update the project asset to new multi-revision strategy.
 
 `-r, -revision`
 : Revision of the project to run (either a git branch, tag or commit SHA number).

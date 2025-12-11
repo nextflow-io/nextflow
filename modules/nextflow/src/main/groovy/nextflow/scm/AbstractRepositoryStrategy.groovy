@@ -43,7 +43,7 @@ abstract class AbstractRepositoryStrategy implements RepositoryStrategy {
      * Context providing access to shared resources and configuration
      */
     protected final File root = AssetManager.root
-    protected final String project
+    protected String project
     protected RepositoryProvider provider
 
     AbstractRepositoryStrategy(String project) {
@@ -57,6 +57,10 @@ abstract class AbstractRepositoryStrategy implements RepositoryStrategy {
 
     void setProvider(RepositoryProvider provider){
         this.provider = provider
+    }
+
+    void setProject(String project){
+        this.project = project
     }
 
     String getCurrentRevision() {

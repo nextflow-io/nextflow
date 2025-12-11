@@ -181,9 +181,9 @@ repository  : https://github.com/nextflow-io/hello
 local path  : $HOME/.nextflow/assets/nextflow-io/hello
 main script : main.nf
 revisions   :
-P master (default)
+* master (default)
   mybranch
-P v1.1 [t]
+* v1.1 [t]
   v1.2 [t]
 ```
 
@@ -193,7 +193,7 @@ This shows:
 - Where it's cached locally
 - Which script runs by default
 - Available revisions (branches and tags marked with `[t]`)
-- Which revisions are currently pulled (marked with `P`)
+- Which revisions are currently pulled (marked with `*`)
 
 ### Pulling or updating projects
 

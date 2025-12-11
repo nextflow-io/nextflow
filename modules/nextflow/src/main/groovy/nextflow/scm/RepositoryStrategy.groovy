@@ -70,11 +70,6 @@ interface RepositoryStrategy {
     boolean isClean()
 
     /**
-     * @return True if the localPath exists and has git configuration
-     */
-    boolean isLocal()
-
-    /**
      * @return The default branch name from the remote repository
      */
     String getRemoteDefaultBranch()
@@ -140,11 +135,18 @@ interface RepositoryStrategy {
      * Close any open resources (e.g., Git objects)
      */
     void close()
+
     /**
      * Set the localPath
      * @param file
      */
     void setLocalPath(File file)
+
+    /**
+     * Set project
+     * @param projectName
+     */
+    void setProject(String projectName)
 
     /**
      * @return return the local path where project repository and revisions are download
