@@ -624,6 +624,48 @@ class FileHelperTest extends Specification {
 
     }
 
+    def 'should match files at root and subdirectories with double-star glob'() {
+        // Tests that **/ pattern matches files at the root level (zero directories)
+        // as well as files in subdirectories (one or more directories)
+        // See: https://github.com/nextflow-io/nextflow/issues/5948
+
+        given:
+        def folder = Files.createTempDirectory('test')
+
+        // Create files at root level
+        folder.resolve('data.bin').text = 'root data'
+        folder.resolve('other.txt').text = 'other file'
+
+        // Create files in subdirectory
+        folder.resolve('subdir').mkdir()
+        folder.resolve('subdir').resolve('data.bin').text = 'subdir data'
+
+        // Create files in nested subdirectory
+        folder.resolve('subdir').resolve('nested').mkdir()
+        folder.resolve('subdir').resolve('nested').resolve('data.bin').text = 'nested data'
+
+        when: 'using **/ pattern should match files at all levels including root'
+        def result = []
+        FileHelper.visitFiles(folder, '**/data.bin', relative: true) { result << it.toString() }
+
+        then: 'files at root AND in subdirectories are matched'
+        result.sort() == ['data.bin', 'subdir/data.bin', 'subdir/nested/data.bin']
+
+        when: 'using **/ with intermediate directory should also match at all levels'
+        result = []
+        folder.resolve('InterOp').mkdir()
+        folder.resolve('InterOp').resolve('metrics.bin').text = 'root interop'
+        folder.resolve('subdir').resolve('InterOp').mkdir()
+        folder.resolve('subdir').resolve('InterOp').resolve('metrics.bin').text = 'subdir interop'
+        FileHelper.visitFiles(folder, '**/InterOp/*.bin', relative: true) { result << it.toString() }
+
+        then: 'InterOp directories at root AND in subdirectories are matched'
+        result.sort() == ['InterOp/metrics.bin', 'subdir/InterOp/metrics.bin']
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
 
     def 'should copy file path to foreign file system' () {
 

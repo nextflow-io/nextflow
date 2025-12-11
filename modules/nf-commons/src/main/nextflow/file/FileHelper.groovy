@@ -859,7 +859,13 @@ class FileHelper {
         final syntax = options.syntax ?: 'glob'
         final relative = options.relative == true
 
-        final matcher = getPathMatcherFor("$syntax:${filePattern}", folder.fileSystem)
+        // Transform leading ** to match zero-or-more directories (not just one-or-more)
+        // Java's glob ** at pattern start requires at least one directory component,
+        // but users expect **/foo to also match foo at the root level
+        final adjustedPattern = filePattern.startsWith('**/')
+            ? "{,**/}" + filePattern.substring(3)
+            : filePattern
+        final matcher = getPathMatcherFor("$syntax:${adjustedPattern}", folder.fileSystem)
         final singleParam = action.getMaximumNumberOfParameters() == 1
 
         Files.walkFileTree(folder, walkOptions, Integer.MAX_VALUE, new SimpleFileVisitor<Path>() {
