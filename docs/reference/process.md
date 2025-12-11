@@ -152,6 +152,10 @@ The following functions are available in the `output:` and `topic:` sections of 
 
 : Declare a file input. The received value should be a file or collection of files and will be staged into the task directory.
 
+: :::{tip}
+  See {ref}`process-multiple-input-files` for more information about accepting collections of files.
+  :::
+
 : The argument can be an identifier or string. If an identifier, the received value will be made available to the process body as a variable. If a string, the received value will be staged into the task directory under the given alias.
 
 : Available options:
@@ -211,7 +215,7 @@ The following functions are available in the `output:` and `topic:` sections of 
   : Specify the number of expected files. Can be a number or a range. If a task produces an invalid number of files for this `path` output, it will fail.
 
   : If the arity is `1`, a single file will be emitted. Otherwise, a list will always be emitted, even if only one file is produced.
-  
+
   : :::{warning}
     If the arity is not specified, a single file or list will be emitted based on whether a single file or multiple files are produced at runtime, resulting potentially in an output channel with a mixture of files and file collections.
     :::
@@ -290,9 +294,6 @@ The following options are available for all process outputs:
 
 ### accelerator
 
-:::{versionadded} 19.09.0-edge
-:::
-
 The `accelerator` directive allows you to request hardware accelerators (e.g. GPUs) for the task execution. For example:
 
 ```nextflow
@@ -313,17 +314,23 @@ This directive is only used by certain executors. Refer to the {ref}`executor-pa
 :::
 
 :::{note}
-Additional options may be required to fully enable the use of accelerators. When using containers with GPUs, you must pass the GPU drivers through to the container. For Docker, this requires the option `--gpus all` in the docker run command. For Apptainer/Singularity, this requires the option `--nv`. The specific implementation details depend on the accelerator and container type being used.
+Additional options may be required to fully enable the use of accelerators. When using containers with GPUs, you must pass the GPU drivers through to the container. For Docker, this requires the option `--gpus all` in the `docker run` command. For Apptainer/Singularity, this requires the option `--nv`. The specific implementation details depend on the accelerator and container type being used.
 :::
 
-:::{note}
-The accelerator `type` option depends on the target execution platform. Refer to the platform-specific documentation for details on the available accelerators:
+The following options are available:
 
-- [Google Cloud](https://cloud.google.com/compute/docs/gpus/)
-- [Kubernetes](https://kubernetes.io/docs/tasks/manage-gpus/scheduling-gpus/#clusters-containing-different-types-of-gpus)
+`request: Integer`
+: The number of requested accelerators.
+: Specifying this directive with a number (e.g., `accelerator 4`) is equivalent to the `request` option (e.g., `accelerator request: 4`).
 
-The accelerator `type` option is not supported for AWS Batch. You can control the accelerator type indirectly through the allowed instance types in your Compute Environment. See the [AWS Batch FAQs](https://aws.amazon.com/batch/faqs/?#GPU_Scheduling_) for more information.
-:::
+`type: String`
+: The accelerator type.
+: The meaning of this option depends on the target execution platform. See the platform-specific documentation for more information about the available accelerators:
+
+  - [Google Cloud](https://cloud.google.com/compute/docs/gpus/)
+  - [Kubernetes](https://kubernetes.io/docs/tasks/manage-gpus/scheduling-gpus/#clusters-containing-different-types-of-gpus)
+
+: This option is not supported for AWS Batch. You can control the accelerator type indirectly through the allowed instance types in your Compute Environment. See the [AWS Batch FAQs](https://aws.amazon.com/batch/faqs/?#GPU_Scheduling_) for more information.
 
 (process-afterscript)=
 
@@ -357,9 +364,9 @@ The example above declares that the CPU generic architecture is `linux/x86_64` (
 
 This directive is currently used by the following Nextflow functionalities:
 
-- by the [spack](#spack) directive, to build microarchitecture-optimised applications;
+- by the [spack](#spack) directive, to build microarchitecture-optimized applications;
 - by the {ref}`wave-page` service, to build containers for one of the generic families of CPU architectures (see below);
-- by the `spack` strategy within {ref}`wave-page`, to optimise the container builds for specific CPU microarchitectures.
+- by the `spack` strategy within {ref}`wave-page`, to optimize the container builds for specific CPU microarchitectures.
 
 Allowed values for the `arch` directive are as follows, grouped by equivalent family (choices available for the sake of compatibility):
 - X86 64 bit: `linux/x86_64`, `x86_64`, `linux/amd64`, `amd64`
@@ -436,7 +443,7 @@ When using Wave, the following additional directives must be uniform:
 
 ### beforeScript
 
-The `beforeScript` directive allows you to execute a custom (Bash) snippet *before* the main process script is run. This may be useful to initialise the underlying cluster environment or for other custom initialisation.
+The `beforeScript` directive allows you to execute a custom (Bash) snippet *before* the main process script is run. This may be useful to initialize the underlying cluster environment or for other custom initialization.
 
 For example:
 
@@ -1244,6 +1251,9 @@ The following options are available:
 `runAsUser: '<uid>'`
 : Specifies the user ID with which to run the container. Shortcut for the `securityContext` option.
 
+`runtimeClassName: '<name>'`
+: Specifies the [runtime class](https://kubernetes.io/docs/concepts/containers/runtime-class/).
+
 `schedulerName: '<name>'`
 : Specifies which [scheduler](https://kubernetes.io/docs/tasks/extend-kubernetes/configure-multiple-schedulers/#specify-schedulers-for-pods) is used to schedule the container.
 
@@ -1569,7 +1579,7 @@ process hello_secret {
 }
 ```
 
-See {ref}`secrets-page` for more information. 
+See {ref}`secrets-page` for more information.
 
 :::{warning}
 Secrets are made available as environment variables in the process script. To prevent evaluation in the Nextflow script context, escape variable names with a backslash (e.g., `\$MY_ACCESS_KEY`) as shown above.
@@ -1653,17 +1663,17 @@ The `stageOutMode` directive defines how output files are staged out from the sc
 : Output files are copied from the scratch directory to the work directory.
 
 `'fcp'`
-: :::{versionadded} 23.02.0-edge
+: :::{versionadded} 23.04.0
   :::
-: Output files are copied from the scratch directory to the work directory by using the [fcp](https://github.com/Svetlitski/fcp) utility (note: it must be available in your cluster computing nodes).
+: Output files are copied from the scratch directory to the work directory by using the [fcp](https://github.com/Svetlitski/fcp) utility (note: it must be available in the task environment).
 
 `'move'`
 : Output files are moved from the scratch directory to the work directory.
 
 `'rclone'`
-: :::{versionadded} 23.01.0-edge
+: :::{versionadded} 23.04.0
   :::
-: Output files are copied from the scratch directory to the work directory by using the [rclone](https://rclone.org) utility (note: it must be available in your cluster computing nodes).
+: Output files are copied from the scratch directory to the work directory by using the [rclone](https://rclone.org) utility (note: it must be available in the task environment).
 
 `'rsync'`
 : Output files are copied from the scratch directory to the work directory by using the `rsync` utility.

@@ -101,7 +101,7 @@ Packages from the [Python Package Index](https://pypi.org/) can also be added to
 
 Nextflow can build Singularity native images on-demand either using `Singularityfile`,
 Conda packages or Spack packages. The Singularity images are automatically uploaded in a container registry OCI compliant
-of your choice and stored as a [ORAS artefact](https://oras.land/).
+of your choice and stored as a [ORAS artifact](https://oras.land/).
 
 :::{note}
 This feature requires Singularity (or Apptainer) version supporting the pull of images using the `oras:` pseudo-protocol.
@@ -152,7 +152,7 @@ The repository access keys must be provided as Seqera Platform credentials (see
 Wave allows mirroring, i.e., copying containers used by your pipeline into a container registry of your choice. This allows the pipeline to pull containers from the target registry rather than the original registry.
 
 Mirroring is useful to create an on-demand cache of container images that are co-located in the same region where the pipeline
-is executed, and therefore optimising cost and network efficiency.
+is executed, and therefore optimizing cost and network efficiency.
 
 Include the following settings in your Nextflow configuration to enable this capability:
 

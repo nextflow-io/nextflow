@@ -32,7 +32,7 @@ $ nextflow run main.nf
 
 **Remote pipelines**
 
-Use the format `<organization>/<repository>` to run a pipeline from directly from Git repositories:
+Use the format `<organization>/<repository>` to run a pipeline directly from Git repositories:
 
 ```console
 $ nextflow run nextflow-io/hello
@@ -123,15 +123,15 @@ For complex parameter sets, use YAML or JSON files with `-params-file`. This is 
 ```
 
 ```console
-$ nextflow run main.nf -params-file params.yml
+$ nextflow run main.nf -params-file params.json
 ```
 
 **Parameter precedence**
 
 Nextflow applies parameters defined in multiple places in the following order (lowest to highest priority):
 
-1. Pipeline script defaults (`params.foo = 'default'`)
-2. Configuration files (see {ref}`config-params`)
+1. Script parameters (`params.foo = 'default'`)
+2. Configuration parameters (see {ref}`config-params`)
 3. Parameter files (`-params-file`)
 4. Command line parameters (`--foo bar`)
 

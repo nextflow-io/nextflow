@@ -52,6 +52,14 @@ class GithubRepositoryProviderTest extends Specification {
         def result = repo.readText('main.nf')
         then:
         result.trim().startsWith('#!/usr/bin/env nextflow')
+
+        //Read from branch
+        when:
+        repo.setRevision('test/branch+with&strangecharacters')
+        result = repo.readText('/test/branch_name')
+        then:
+        result.trim().startsWith('test/branch+with&strangecharacters')
+
     }
 
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
@@ -94,6 +102,11 @@ class GithubRepositoryProviderTest extends Specification {
         new GithubRepositoryProvider('pditommaso/hello', obj)
                 .setRevision('the-commit-id')
                 .getContentUrl('main.nf') == 'https://github.com/repos/pditommaso/hello/contents/main.nf?ref=the-commit-id'
+
+        and:
+        new GithubRepositoryProvider('pditommaso/hello', obj)
+            .setRevision('test/branch+with&strangecharacters')
+            .getContentUrl('main.nf') == 'https://github.com/repos/pditommaso/hello/contents/main.nf?ref=test%2Fbranch%2Bwith%26strangecharacters'
 
     }
 

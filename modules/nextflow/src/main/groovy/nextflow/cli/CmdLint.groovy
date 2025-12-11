@@ -287,6 +287,8 @@ class JsonErrorListener implements ErrorListener {
 
     private List<Map> errors = []
 
+    private List<Map> warnings = []
+
     @Override
     void beforeAll() {
     }
@@ -311,6 +313,13 @@ class JsonErrorListener implements ErrorListener {
 
     @Override
     void onWarning(WarningMessage warning, String filename, SourceUnit source) {
+        final token = warning.getContext().getRoot()
+        warnings.add([
+            filename: filename,
+            startLine: token.getStartLine(),
+            startColumn: token.getStartColumn(),
+            message: warning.getMessage()
+        ])
     }
 
     @Override
@@ -326,7 +335,8 @@ class JsonErrorListener implements ErrorListener {
         final result = [
             date: Instant.now().toString(),
             summary: summary,
-            errors: errors
+            errors: errors,
+            warnings: warnings
         ]
         println JsonOutput.prettyPrint(JsonOutput.toJson(result))
     }
