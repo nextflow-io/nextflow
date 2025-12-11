@@ -32,6 +32,7 @@ import com.google.cloud.batch.v1.GCS
 import com.google.cloud.batch.v1.StatusEvent
 import com.google.cloud.batch.v1.TaskStatus
 import com.google.cloud.batch.v1.Volume
+import com.google.protobuf.Timestamp
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
 import nextflow.Session
 import nextflow.SysEnv
@@ -771,6 +772,51 @@ class GoogleBatchTaskHandlerTest extends Specification {
         TASK_STATE              | DESC                                                          | EXIT_CODE | ARRAY_CHILD    | TASK_STATUS                               | EXIT_STATUS       | RESULT    | TASK_ERROR
         TaskStatus.State.FAILED | 'Task failed due to Spot VM preemption with exit code 50001.' | 50001     | true           | nextflow.processor.TaskStatus.COMPLETED   | 50001             | true      | 'Task failed due to Spot VM preemption with exit code 50001.'
         TaskStatus.State.FAILED | 'Task failed due to Spot VM preemption with exit code 50001.' | 50001     | false          | nextflow.processor.TaskStatus.COMPLETED   | 50001             | true      | 'Task failed due to Spot VM preemption with exit code 50001.'
+    }
+
+    StatusEvent makeStatusEventWithTime(long seconds, Integer exitCode) {
+        def builder = StatusEvent.newBuilder()
+            .setEventTime(Timestamp.newBuilder().setSeconds(seconds).build())
+        if (exitCode != null) {
+            builder.setTaskExecution(TaskExecution.newBuilder().setExitCode(exitCode).build())
+        }
+        builder.build()
+    }
+
+    TaskStatus makeTaskStatusWithEvents(List<StatusEvent> events) {
+        def builder = TaskStatus.newBuilder()
+        events.each { builder.addStatusEvents(it) }
+        builder.build()
+    }
+
+    def 'should get exit code from latest task execution event'() {
+        given:
+        def jobId = 'job-id'
+        def taskId = 'task-id'
+        def client = Mock(BatchClient)
+        def task = Mock(TaskRun) {
+            lazyName() >> 'foo (1)'
+        }
+        def handler = Spy(new GoogleBatchTaskHandler(jobId: jobId, taskId: taskId, client: client, task: task))
+
+        when:
+        client.getTaskStatus(jobId, taskId) >> TASK_STATUS
+        def result = handler.getExitCode()
+
+        then:
+        READ_EXIT_FILE_CALLS * handler.readExitFile() >> FALLBACK_EXIT_CODE
+        result == EXPECTED
+
+        where:
+        DESCRIPTION                                  | TASK_STATUS                                                                                                  | READ_EXIT_FILE_CALLS | FALLBACK_EXIT_CODE | EXPECTED
+        'null task status'                           | null                                                                                                         | 1                    | 42                 | 42
+        'empty events list'                          | makeTaskStatusWithEvents([])                                                                                 | 1                    | 99                 | 99
+        'single event with exit code'                | makeTaskStatusWithEvents([makeStatusEventWithTime(100, 0)])                                                  | 0                    | null               | 0
+        'single event with non-zero exit code'       | makeTaskStatusWithEvents([makeStatusEventWithTime(100, 1)])                                                  | 0                    | null               | 1
+        'event without task execution'               | makeTaskStatusWithEvents([StatusEvent.newBuilder().setEventTime(Timestamp.newBuilder().setSeconds(100).build()).build()]) | 1 | 77                 | 77
+        'multiple events returns latest exit code'   | makeTaskStatusWithEvents([makeStatusEventWithTime(100, 1), makeStatusEventWithTime(200, 0)])                 | 0                    | null               | 0
+        'multiple events out of order'               | makeTaskStatusWithEvents([makeStatusEventWithTime(300, 2), makeStatusEventWithTime(100, 1)])                 | 0                    | null               | 2
+        'mixed events with and without execution'    | makeTaskStatusWithEvents([StatusEvent.newBuilder().setEventTime(Timestamp.newBuilder().setSeconds(50).build()).build(), makeStatusEventWithTime(100, 5)]) | 0 | null | 5
     }
 
 
