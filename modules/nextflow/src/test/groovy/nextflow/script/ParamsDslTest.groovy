@@ -21,12 +21,25 @@ class ParamsDslTest extends Specification {
 
         when:
         def dsl = new ParamsDsl()
-        dsl.declare('input', Path)
-        dsl.declare('chunk_size', Integer, 1)
-        dsl.declare('save_intermeds', Boolean, false)
+        dsl.declare('input', Path, false)
+        dsl.declare('chunk_size', Integer, false, 1)
+        dsl.declare('save_intermeds', Boolean, false, false)
         dsl.apply(session)
         then:
         session.binding.getParams() == [input: FileHelper.asPath('./data'), chunk_size: 3, save_intermeds: false, outdir: 'results']
+    }
+
+    def 'should allow optional param'() {
+        given:
+        def session = new Session()
+        session.init(null)
+
+        when:
+        def dsl = new ParamsDsl()
+        dsl.declare('input', Path, true)
+        dsl.apply(session)
+        then:
+        noExceptionThrown()
     }
 
     def 'should report error for missing required param'() {
@@ -38,8 +51,8 @@ class ParamsDslTest extends Specification {
 
         when:
         def dsl = new ParamsDsl()
-        dsl.declare('input', Path)
-        dsl.declare('save_intermeds', Boolean, false)
+        dsl.declare('input', Path, false)
+        dsl.declare('save_intermeds', Boolean, false, false)
         dsl.apply(session)
         then:
         def e = thrown(ScriptRuntimeException)
@@ -55,8 +68,8 @@ class ParamsDslTest extends Specification {
 
         when:
         def dsl = new ParamsDsl()
-        dsl.declare('input', Path)
-        dsl.declare('save_intermeds', Boolean, false)
+        dsl.declare('input', Path, false)
+        dsl.declare('save_intermeds', Boolean, false, false)
         dsl.apply(session)
         then:
         def e = thrown(ScriptRuntimeException)
@@ -72,8 +85,8 @@ class ParamsDslTest extends Specification {
 
         when:
         def dsl = new ParamsDsl()
-        dsl.declare('input', Path)
-        dsl.declare('save_intermeds', Boolean, false)
+        dsl.declare('input', Path, false)
+        dsl.declare('save_intermeds', Boolean, false, false)
         dsl.apply(session)
         then:
         def e = thrown(ScriptRuntimeException)
