@@ -139,7 +139,7 @@ class CmdInfo extends CmdBase {
         def result = [:]
         result.projectName = manager.project
         result.repository = manager.repositoryUrl
-        result.localPath = manager.projectPath
+        result.localPath = manager.projectPath?.toString()
         result.manifest = manager.manifest.toMap()
         result.revisions = manager.getBranchesAndTags(checkForUpdates)
         return result

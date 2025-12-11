@@ -116,7 +116,7 @@ abstract class AbstractRepositoryStrategy implements RepositoryStrategy {
      */
     protected String resolveTagNameByObjectId(ObjectId objectId) {
         Collection<Ref> tags = getGit()?.getRepository()?.getRefDatabase()?.getRefsByPrefix(Constants.R_TAGS)
-        return tags?.find { it.objectId == objectId }?.name
+        return tags?.find { it.objectId == objectId || it.peeledObjectId == objectId }?.name
     }
 
     /**

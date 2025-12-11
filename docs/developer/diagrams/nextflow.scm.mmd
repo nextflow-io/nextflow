@@ -8,15 +8,59 @@ classDiagram
 
     class AssetManager {
         project : String
-        revision : String
-        localPath : File
         mainScript : String
         provider : RepositoryProvider
+        strategy : RepositoryStrategy
         hub : String
         providerConfigs : List~ProviderConfig~
     }
-    AssetManager --* RepositoryProvider
+    class RepositoryStatus {
+        <<enumeration>>
+        UNINITIALIZED
+        LEGACY_ONLY
+        BARE_ONLY
+        HYBRID
+    }
+    class RepositoryStrategyType {
+        <<enumeration>>
+        LEGACY
+        MULTI_REVISION
+    }
+
+    AssetManager --> RepositoryStatus
+    AssetManager --> RepositoryStrategyType
+    AssetManager "1" --o "1" RepositoryStrategy
+    AssetManager "1" --o "1" RepositoryProvider
     AssetManager "1" --* "*" ProviderConfig
+
+    class RepositoryStrategy {
+        <<interface>>
+    }
+    class AbstractRepositoryStrategy {
+        <<abstract>>
+        project : String
+        provider : RepositoryProvider
+        root : File
+    }
+    class LegacyRepositoryStrategy {
+        localPath : File
+    }
+    class MultiRevisionRepositoryStrategy {
+        revision : String
+        bareRepo : File
+        commitPath : File
+        revisionSubdir : File
+    }
+
+    RepositoryStrategy <|-- AbstractRepositoryStrategy
+    AbstractRepositoryStrategy <|-- LegacyRepositoryStrategy
+    AbstractRepositoryStrategy <|-- MultiRevisionRepositoryStrategy
+
+    class RepositoryProvider {
+        <<abstract>>
+    }
+
+    RepositoryStrategy --> RepositoryProvider
 
     RepositoryProvider <|-- AzureRepositoryProvider
     RepositoryProvider <|-- BitbucketRepositoryProvider
@@ -25,3 +69,7 @@ classDiagram
     RepositoryProvider <|-- GithubRepositoryProvider
     RepositoryProvider <|-- GitlabRepositoryProvider
     RepositoryProvider <|-- LocalRepositoryProvider
+
+    class FileMutex
+
+    MultiRevisionRepositoryStrategy --> FileMutex

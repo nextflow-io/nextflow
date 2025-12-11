@@ -65,7 +65,7 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
     private Git _bareGit
     private Git _commitGit
 
-    MultiRevisionRepositoryStrategy(String project, String revision) {
+    MultiRevisionRepositoryStrategy(String project, String revision = null) {
         super(project)
         if (project) {
             this.legacyRepoPath = new File(root, project)
@@ -160,7 +160,8 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
          * if the bare repository of the pipeline does not exists locally pull it from the remote repo
          */
         if( !hasBareRepo() ) {
-            this.bareRepo.parentFile.mkdirs()
+            if( !bareRepo.parentFile.exists() )
+                this.bareRepo.parentFile.mkdirs()
             // Use a file mutex to prevent concurrent clones of the same commit.
             final file = new File(this.bareRepo.parentFile, ".${this.bareRepo.name}.lock")
             final wait = "Another Nextflow instance is creating the bare repo for ${project} -- please wait till it completes"

@@ -16,6 +16,8 @@
 
 package nextflow.cli
 
+import static nextflow.scm.MultiRevisionRepositoryStrategy.REPOS_SUBDIR
+
 import nextflow.plugin.Plugins
 import spock.lang.IgnoreIf
 import spock.lang.Requires
@@ -68,7 +70,7 @@ class CmdInfoTest extends Specification {
         then:
         screen.contains(" project name: nextflow-io/hello")
         screen.contains(" repository  : https://github.com/nextflow-io/hello")
-        screen.contains(" local path  : $tempDir/nextflow-io/hello" )
+        screen.contains(" local path  : $tempDir/$REPOS_SUBDIR/nextflow-io/hello" )
         screen.contains(" main script : main.nf")
         screen.contains(" revisions   : ")
         screen.contains(" * master (default)")
@@ -89,7 +91,7 @@ class CmdInfoTest extends Specification {
         then:
         json.projectName == "nextflow-io/hello"
         json.repository == "https://github.com/nextflow-io/hello"
-        json.localPath == "$tempDir/nextflow-io/hello"
+        json.localPath == "${tempDir}/${REPOS_SUBDIR}/nextflow-io/hello".toString()
         json.manifest.mainScript == 'main.nf'
         json.manifest.defaultBranch == null
         json.revisions.master == 'master'
@@ -117,7 +119,7 @@ class CmdInfoTest extends Specification {
         then:
         json.projectName == "nextflow-io/hello"
         json.repository == "https://github.com/nextflow-io/hello"
-        json.localPath == "$tempDir/nextflow-io/hello"
+        json.localPath == "${tempDir}/${REPOS_SUBDIR}/nextflow-io/hello"
         json.manifest.mainScript == 'main.nf'
         json.manifest.defaultBranch == null
         json.revisions.master == 'master'
