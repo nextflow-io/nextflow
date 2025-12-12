@@ -32,7 +32,9 @@ import com.google.cloud.batch.v1.GCS
 import com.google.cloud.batch.v1.StatusEvent
 import com.google.cloud.batch.v1.TaskStatus
 import com.google.cloud.batch.v1.Volume
+import com.google.protobuf.Timestamp
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
+import nextflow.Global
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.cloud.google.batch.client.BatchClient
@@ -842,5 +844,92 @@ class GoogleBatchTaskHandlerTest extends Specification {
         TaskStatus.State.FAILED | 'Task failed due to Spot VM preemption with exit code 50001.' | 50001     | false          | nextflow.processor.TaskStatus.COMPLETED   | 50001             | true      | 'Task failed due to Spot VM preemption with exit code 50001.'
     }
 
+    StatusEvent makeStatusEventWithTime(long seconds, Integer exitCode) {
+        def builder = StatusEvent.newBuilder()
+            .setEventTime(Timestamp.newBuilder().setSeconds(seconds).build())
+        if (exitCode != null) {
+            builder.setTaskExecution(TaskExecution.newBuilder().setExitCode(exitCode).build())
+        }
+        builder.build()
+    }
+
+    TaskStatus makeTaskStatusWithEvents(List<StatusEvent> events) {
+        def builder = TaskStatus.newBuilder()
+        events.each { builder.addStatusEvents(it) }
+        builder.build()
+    }
+
+    def 'should get exit code from latest task execution event'() {
+        given:
+        def jobId = 'job-id'
+        def taskId = 'task-id'
+        def client = Mock(BatchClient)
+        def task = Mock(TaskRun) {
+            lazyName() >> 'foo (1)'
+        }
+        def handler = Spy(new GoogleBatchTaskHandler(jobId: jobId, taskId: taskId, client: client, task: task))
+
+        when:
+        client.getTaskStatus(jobId, taskId) >> TASK_STATUS
+        def result = handler.getExitCode()
+
+        then:
+        READ_EXIT_FILE_CALLS * handler.readExitFile() >> FALLBACK_EXIT_CODE
+        result == EXPECTED
+
+        where:
+        DESCRIPTION                                  | TASK_STATUS                                                                                                  | READ_EXIT_FILE_CALLS | FALLBACK_EXIT_CODE | EXPECTED
+        'null task status'                           | null                                                                                                         | 1                    | 42                 | 42
+        'empty events list'                          | makeTaskStatusWithEvents([])                                                                                 | 1                    | 99                 | 99
+        'single event with exit code'                | makeTaskStatusWithEvents([makeStatusEventWithTime(100, 0)])                                                  | 0                    | null               | 0
+        'single event with non-zero exit code'       | makeTaskStatusWithEvents([makeStatusEventWithTime(100, 1)])                                                  | 0                    | null               | 1
+        'event without task execution'               | makeTaskStatusWithEvents([StatusEvent.newBuilder().setEventTime(Timestamp.newBuilder().setSeconds(100).build()).build()]) | 1 | 77                 | 77
+        'multiple events returns latest exit code'   | makeTaskStatusWithEvents([makeStatusEventWithTime(100, 1), makeStatusEventWithTime(200, 0)])                 | 0                    | null               | 0
+        'multiple events out of order'               | makeTaskStatusWithEvents([makeStatusEventWithTime(300, 2), makeStatusEventWithTime(100, 1)])                 | 0                    | null               | 2
+        'mixed events with and without execution'    | makeTaskStatusWithEvents([StatusEvent.newBuilder().setEventTime(Timestamp.newBuilder().setSeconds(50).build()).build(), makeStatusEventWithTime(100, 5)]) | 0 | null | 5
+    }
+
+    def 'should validate max spot attempts' () {
+        given:
+        Global.config = [fusion: [enabled: FUSION, snapshots: SNAPSHOTS]]
+        def workDir = Path.of('/work/dir')
+        def client = Mock(BatchClient)
+        def batchConfig = Mock(BatchConfig) { getMaxSpotAttempts() >> ATTEMPTS }
+        and:
+        def executor = Mock(GoogleBatchExecutor) {
+            getBatchConfig() >> batchConfig
+            getClient() >> client
+            isFusionEnabled() >> FUSION
+        }
+        def processor = Mock(TaskProcessor) { getExecutor() >> executor }
+        def task = Mock(TaskRun) {
+            getHashLog() >> '1234567890'
+            getWorkDir() >> workDir
+            getProcessor() >> processor
+        }
+        def handler = Spy(new GoogleBatchTaskHandler(task, executor)) {
+            fusionEnabled() >> FUSION
+        }
+
+        expect:
+        handler.maxSpotAttempts() == EXPECTED
+
+        cleanup:
+        Global.config = null
+
+        where:
+        ATTEMPTS | FUSION | SNAPSHOTS | EXPECTED
+        0        | false  | false     | 0
+        1        | false  | false     | 1
+        2        | false  | false     | 2
+        and:
+        0        | true   | false     | 0
+        1        | true   | false     | 1
+        2        | true   | false     | 2
+        and:
+        0        | true   | true      | 5    // <-- default to 5
+        1        | true   | true      | 1
+        2        | true   | true      | 2
+    }
 
 }
