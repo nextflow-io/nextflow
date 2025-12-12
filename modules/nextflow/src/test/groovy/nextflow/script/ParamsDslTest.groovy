@@ -6,6 +6,7 @@ import nextflow.Session
 import nextflow.file.FileHelper
 import nextflow.exception.ScriptRuntimeException
 import spock.lang.Specification
+import spock.lang.Unroll
 /**
  *
  * @author Ben Sherman <bentshermann@gmail.com>
@@ -78,6 +79,40 @@ class ParamsDslTest extends Specification {
         then:
         def e = thrown(ScriptRuntimeException)
         e.message == 'Parameter `save_intermeds` with type Boolean cannot be assigned to 42 [Integer]'
+    }
+
+    @Unroll
+    def 'should validate float param with default value'() {
+        given:
+        def session = new Session()
+        session.init(null)
+
+        when:
+        def dsl = new ParamsDsl()
+        dsl.declare('factor', Float, DEF_VALUE)
+        dsl.apply(session)
+        then:
+        noExceptionThrown()
+
+        where:
+        DEF_VALUE << [ 0.1f, 0.1d, 0.1g ]
+    }
+
+    @Unroll
+    def 'should validate integer param with default value'() {
+        given:
+        def session = new Session()
+        session.init(null)
+
+        when:
+        def dsl = new ParamsDsl()
+        dsl.declare('factor', Integer, DEF_VALUE)
+        dsl.apply(session)
+        then:
+        noExceptionThrown()
+
+        where:
+        DEF_VALUE << [ 100i, 100l, 100g ]
     }
 
 }
