@@ -90,7 +90,7 @@ class AzBatchTaskHandlerTest extends Specification {
         processor.getConfig() >> new ProcessConfig(Mock(BaseScript))
         def task = createTaskRun()
         task.getProcessor() >> processor
-        task.getConfig() >> GroovyMock(TaskConfig)
+        task.getConfig() >> new TaskConfig()
         def handler = Spy(new AzBatchTaskHandler(task, exec))
         handler.@taskKey = new AzTaskKey('job-123', 'nf-456')
 
