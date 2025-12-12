@@ -47,19 +47,19 @@ class LegacyRepositoryStrategy extends AbstractRepositoryStrategy {
 
     LegacyRepositoryStrategy(String project) {
         super(project)
-        if (project)
+        if( project )
             this.localPath = new File(root, project)
     }
 
     @Override
-    void setProject(String project){
+    void setProject(String project) {
         super.setProject(project)
         this.localPath = new File(root, project)
     }
 
     @PackageScope
-    static boolean checkProject(File root, String project){
-         return new File(root, project + '/.git').exists()
+    static boolean checkProject(File root, String project) {
+        return new File(root, project + '/.git').exists()
     }
 
     @Override
@@ -78,7 +78,7 @@ class LegacyRepositoryStrategy extends AbstractRepositoryStrategy {
             // clone it, but don't specify a revision - jgit will checkout the default branch
             def clone = Git.cloneRepository()
             if( provider.hasCredentials() )
-                clone.setCredentialsProvider( provider.getGitCredentials() )
+                clone.setCredentialsProvider(provider.getGitCredentials())
 
             clone
                 .setURI(cloneURL)
@@ -107,8 +107,12 @@ class LegacyRepositoryStrategy extends AbstractRepositoryStrategy {
             // now the default branch is recorded in the repo, explicitly checkout the revision (if specified).
             // this also allows 'revision' to be a SHA commit id, which isn't supported by the clone command
             if( revision ) {
-                try { getGit().checkout() .setName(revision) .call() }
-                catch ( RefNotFoundException e ) { checkoutRemoteBranch(revision, manifest) }
+                try {
+                    getGit().checkout().setName(revision).call()
+                }
+                catch( RefNotFoundException e ) {
+                    checkoutRemoteBranch(revision, manifest)
+                }
             }
 
             // return status message
@@ -126,13 +130,13 @@ class LegacyRepositoryStrategy extends AbstractRepositoryStrategy {
              * check out a revision before the pull operation
              */
             try {
-                getGit().checkout() .setName(revision) .call()
+                getGit().checkout().setName(revision).call()
             }
             /*
              * If the specified revision does not exist
              * Try to checkout it from a remote branch and return
              */
-            catch ( RefNotFoundException e ) {
+            catch( RefNotFoundException e ) {
                 final ref = checkoutRemoteBranch(revision, manifest)
                 final commitId = ref?.getObjectId()
                 return commitId
@@ -144,23 +148,23 @@ class LegacyRepositoryStrategy extends AbstractRepositoryStrategy {
         def pull = getGit().pull()
         def revInfo = getCurrentRevisionAndName()
 
-        if ( revInfo.type == AssetManager.RevisionInfo.Type.COMMIT ) {
+        if( revInfo.type == AssetManager.RevisionInfo.Type.COMMIT ) {
             log.debug("Repo appears to be checked out to a commit hash, but not a TAG, so we will assume the repo is already up to date and NOT pull it!")
             return MergeResult.MergeStatus.ALREADY_UP_TO_DATE.toString()
         }
 
-        if ( revInfo.type == AssetManager.RevisionInfo.Type.TAG ) {
-            pull.setRemoteBranchName( "refs/tags/" + revInfo.name )
+        if( revInfo.type == AssetManager.RevisionInfo.Type.TAG ) {
+            pull.setRemoteBranchName("refs/tags/" + revInfo.name)
         }
 
         if( provider.hasCredentials() )
-            pull.setCredentialsProvider( provider.getGitCredentials() )
+            pull.setCredentialsProvider(provider.getGitCredentials())
 
         if( manifest.recurseSubmodules ) {
             pull.setRecurseSubmodules(FetchRecurseSubmodulesMode.YES)
         }
         def result = pull.call()
-        if(!result.isSuccessful())
+        if( !result.isSuccessful() )
             throw new AbortOperationException("Cannot pull project `${project}` -- ${result.toString()}")
 
         return result?.mergeResult?.mergeStatus?.toString()
@@ -186,7 +190,7 @@ class LegacyRepositoryStrategy extends AbstractRepositoryStrategy {
             throw new AbortOperationException("Project `$project` contains uncommitted changes -- Cannot switch to revision: $revision")
 
 
-        git.checkout().setName(revision) .call()
+        git.checkout().setName(revision).call()
     }
 
     @Override
@@ -194,8 +198,8 @@ class LegacyRepositoryStrategy extends AbstractRepositoryStrategy {
         assert provider
         try {
             def fetch = git.fetch()
-            if(provider.hasCredentials()) {
-                fetch.setCredentialsProvider( provider.getGitCredentials() )
+            if( provider.hasCredentials() ) {
+                fetch.setCredentialsProvider(provider.getGitCredentials())
             }
             if( manifest.recurseSubmodules ) {
                 fetch.setRecurseSubmodules(FetchRecurseSubmodulesMode.YES)
@@ -210,11 +214,11 @@ class LegacyRepositoryStrategy extends AbstractRepositoryStrategy {
                     .setStartPoint("origin/" + revision)
                     .call()
             }
-            catch (RefNotFoundException e) {
-                return git.checkout() .setName(revision) .call()
+            catch( RefNotFoundException e ) {
+                return git.checkout().setName(revision).call()
             }
         }
-        catch (RefNotFoundException e) {
+        catch( RefNotFoundException e ) {
             throw new AbortOperationException("Cannot find revision `$revision` -- Make sure that it exists in the remote repository `$gitRepositoryUrl`", e)
         }
     }
@@ -275,7 +279,7 @@ class LegacyRepositoryStrategy extends AbstractRepositoryStrategy {
         assert provider
         final cmd = getGit().lsRemote().setTags(tags)
         if( provider.hasCredentials() )
-            cmd.setCredentialsProvider( provider.getGitCredentials() )
+            cmd.setCredentialsProvider(provider.getGitCredentials())
         return cmd.callAsMap()
     }
 
@@ -286,7 +290,7 @@ class LegacyRepositoryStrategy extends AbstractRepositoryStrategy {
 
     @Override
     File getLocalGitConfig() {
-        getLocalPath() ? new File(getLocalPath(),'.git/config') : null
+        getLocalPath() ? new File(getLocalPath(), '.git/config') : null
     }
 
     @Override
@@ -306,13 +310,13 @@ class LegacyRepositoryStrategy extends AbstractRepositoryStrategy {
 
     @Override
     void drop(String revision, boolean force) {
-        if (!localPath.exists())
+        if( !localPath.exists() )
             throw new AbortOperationException("No match found for: ${project}")
 
-        if (revision)
+        if( revision )
             throw new AbortOperationException("Not able to remove a revision for a Legacy Repo. Use all option to remove the local repository.")
 
-        if (force || isClean()) {
+        if( force || isClean() ) {
             close()
             if( !localPath.deleteDir() )
                 throw new AbortOperationException("Unable to delete project `${project}` -- Check access permissions for path: ${localPath}")

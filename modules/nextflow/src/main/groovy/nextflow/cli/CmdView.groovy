@@ -54,7 +54,7 @@ class CmdView extends CmdBase {
     @Override
     void run() {
         Plugins.init()
-        def manager = new AssetManager(args[0], revision)
+        final manager = new AssetManager(args[0], revision)
         if( !manager.isLocal() )
             throw new AbortOperationException("Unknown project `${manager.getProjectWithRevision()}`")
         if( revision && manager.isUsingLegacyStrategy()){

@@ -15,7 +15,6 @@
  */
 
 package nextflow.cli
-
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
@@ -83,7 +82,7 @@ class CmdPull extends CmdBase implements HubOptions {
         Plugins.init()
 
         list.each { proj ->
-            if (all) {
+            if( all ) {
                 def branches = new AssetManager(proj).getBranchesAndTags(false).pulled as List<String>
                 branches.each { rev -> pullProjectRevision(proj, rev) }
             } else {

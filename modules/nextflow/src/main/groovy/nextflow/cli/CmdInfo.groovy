@@ -75,7 +75,7 @@ class CmdInfo extends CmdBase {
         }
 
         Plugins.init()
-        def manager = new AssetManager(args[0])
+        final manager = new AssetManager(args[0])
         if( manager.isNotInitialized() ) {
             throw new AbortOperationException("Unknown project `${args[0]}`")
         }

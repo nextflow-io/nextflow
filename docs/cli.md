@@ -199,7 +199,6 @@ This shows:
 
 The `pull` command downloads a pipeline or updates an existing one to the latest version from its Git repository.
 
-
 Use this to manually download pipelines before running them, update cached pipelines, or download pipelines for offline use.
 
 ```console

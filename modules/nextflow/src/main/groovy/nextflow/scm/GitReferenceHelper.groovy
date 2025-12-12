@@ -34,7 +34,7 @@ class GitReferenceHelper {
     /**
      * Check if a ref has remote changes
      */
-    static boolean hasRemoteChange(Ref ref, Map<String,Ref> remote) {
+    static boolean hasRemoteChange(Ref ref, Map<String, Ref> remote) {
         if( !remote )
             return false
 
@@ -53,7 +53,7 @@ class GitReferenceHelper {
         result << 'updates on remote'
         if( level ) {
             result << ' '
-            result << formatObjectId(remoteRef.getObjectId(), level==1)
+            result << formatObjectId(remoteRef.getObjectId(), level == 1)
         }
         return result.toString()
     }
@@ -63,17 +63,17 @@ class GitReferenceHelper {
     }
 
     static formatObjectId(ObjectId obj, boolean human) {
-        return human ? obj.name.substring(0,10) : obj.name
+        return human ? obj.name.substring(0, 10) : obj.name
     }
 
-    static String shortenRefName( String name ) {
+    static String shortenRefName(String name) {
         if( name.startsWith('refs/remotes/origin/') )
             return name.replace('refs/remotes/origin/', '')
 
         return Repository.shortenRefName(name)
     }
 
-    static Map refToMap(Ref ref, Map<String,Ref> remote) {
+    static Map refToMap(Ref ref, Map<String, Ref> remote) {
         final entry = new HashMap(2)
         final objId = ref.getPeeledObjectId() ?: ref.getObjectId()
         // the branch or tag name
@@ -81,19 +81,19 @@ class GitReferenceHelper {
         // the local commit it
         entry.commitId = objId.name()
         // the remote commit Id for this branch or tag
-        if( remote && hasRemoteChange(ref,remote) ) {
+        if( remote && hasRemoteChange(ref, remote) ) {
             entry.latestId = remote.get(ref.name).objectId.name()
         }
         return entry
     }
 
-    static boolean isRefInCommits( Ref ref, List<String> commits){
+    static boolean isRefInCommits(Ref ref, List<String> commits) {
         if( !commits )
             return false
         String peeledId = ref.getPeeledObjectId()?.name()
         String id = ref.getObjectId()?.name()
-        for( String commit: commits){
-            if( commit.equals(peeledId) || commit.equals(id))
+        for( String commit : commits ) {
+            if( commit.equals(peeledId) || commit.equals(id) )
                 return true
         }
         return false

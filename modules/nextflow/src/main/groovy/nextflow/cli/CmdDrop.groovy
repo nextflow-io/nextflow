@@ -52,5 +52,4 @@ class CmdDrop extends CmdBase {
         Plugins.init()
         new AssetManager(args[0]).drop(revision, force)
     }
-
 }

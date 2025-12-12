@@ -114,7 +114,7 @@ class AssetManager {
         build(pipelineName, config)
     }
 
-    AssetManager( String pipelineName, String revision, HubOptions cliOpts = null) {
+    AssetManager( String pipelineName, String revision, HubOptions cliOpts = null ) {
         assert pipelineName
         // build the object
         def config = ProviderConfig.getDefault()
@@ -137,7 +137,7 @@ class AssetManager {
 
         this.project = resolveName(pipelineName)
 
-        if( !isValidProjectName(this.project)) {
+        if( !isValidProjectName(this.project) ) {
             throw new IllegalArgumentException("Not a valid project name: ${this.project}")
         }
         // Initialize strategy based on environment and repository state
@@ -146,7 +146,7 @@ class AssetManager {
         this.provider = createHubProvider(hub)
 
         if( revision ){
-            provider.setRevision(revision)
+            setRevision(revision)
         }
 
         strategy.setProvider(this.provider)
@@ -173,10 +173,12 @@ class AssetManager {
             strategy = new MultiRevisionRepositoryStrategy(project, revision)
         else
             throw new AbortOperationException("Not supported strategy $type")
+        if( revision )
+            setRevision(revision)
         strategy.setProvider(provider)
     }
 
-    private void initStrategy(String revision = null){
+    private void initStrategy(String revision = null) {
         def type = selectStrategyType()
         if( type == RepositoryStrategyType.LEGACY )
             strategy = new LegacyRepositoryStrategy(project)
@@ -184,10 +186,12 @@ class AssetManager {
             strategy = new MultiRevisionRepositoryStrategy(project, revision)
         else
             throw new AbortOperationException("Not supported strategy $type")
+        if( revision )
+            setRevision(revision)
         strategy.setProvider(provider)
     }
 
-    private RepositoryStrategyType selectStrategyType(){
+    private RepositoryStrategyType selectStrategyType() {
         // Check environment variable for legacy mode
         if( SysEnv.get('NXF_SCM_LEGACY') as boolean ) {
             log.warn "Forcing to use legacy repository strategy (NXF_SCM_LEGACY is set to true)"
@@ -236,7 +240,7 @@ class AssetManager {
      * @return The status indicating what type of repositories exist
      */
     RepositoryStatus getRepositoryStatus() {
-        if (!root || !project)
+        if( !root || !project )
             return RepositoryStatus.UNINITIALIZED
 
         boolean hasMultiRevision = MultiRevisionRepositoryStrategy.checkProject(root, project)
@@ -327,12 +331,13 @@ class AssetManager {
 
     @PackageScope
     File getLocalGitConfig() {
-        return strategy?.getLocalGitConfig() ?: (localPath ? new File(localPath,'.git/config') : null)
+        return strategy?.getLocalGitConfig() ?: null
     }
 
-    @PackageScope AssetManager setProject(String name) {
+    @PackageScope
+    AssetManager setProject(String name) {
         this.project = name
-        if (!strategy)
+        if( !strategy )
             initStrategy(getRevision())
         strategy.setProject(name)
         return this
@@ -609,16 +614,17 @@ class AssetManager {
                 ?: DEFAULT_BRANCH
     }
 
+    @Memoized
     Manifest getManifest() {
-        getManifest0(getLocalPath())
+        getManifest0()
     }
 
-    @Memoized
-    protected Manifest getManifest0(File projectPath) {
+
+    protected Manifest getManifest0() {
         String text = null
         ConfigObject result = null
         try {
-            text = projectPath.exists() ? new File(projectPath, MANIFEST_FILE_NAME).text : provider.readText(MANIFEST_FILE_NAME)
+            text = localPath.exists() ? new File(localPath, MANIFEST_FILE_NAME).text : provider.readText(MANIFEST_FILE_NAME)
         }
         catch( FileNotFoundException e ) {
             log.debug "Project manifest does not exist: ${e.message}"
@@ -712,13 +718,17 @@ class AssetManager {
 
         def result = new HashSet<String>()
         appendProjectsFromDir(root, result)
-        return result.toList()
+        return result.toList().sort()
     }
 
-    static void appendProjectsFromDir(File file, HashSet result) {
-        file.eachDir { File org ->
+    /**
+     * Append found projects to results considering the new multi-revision projects in '.repos' subdirectory
+     * @param dir
+     * @param result
+     */
+    private static void appendProjectsFromDir(File dir, HashSet result) {
+        dir.eachDir { File org ->
             if( org.getName() == MultiRevisionRepositoryStrategy.REPOS_SUBDIR ) {
-                log.debug("Appending multi-revision projects")
                 appendProjectsFromDir(org, result)
             } else {
                 org.eachDir { File it ->
@@ -764,13 +774,13 @@ class AssetManager {
      * @param deep Optional depth for shallow clones
      * @return A message representing the operation result
      */
-    String download(String revision=null, Integer deep=null) {
+    String download(String revision = null, Integer deep = null) {
         assert project
-        if (!strategy) {
+        if( !strategy ) {
             throw new IllegalStateException("Strategy not initialized")
         }
         // If it is a new download check is a valid repository
-        if (!localPath.exists()){
+        if( !localPath.exists() ) {
             checkValidRemoteRepo(revision)
         }
         return strategy.download(revision, deep, manifest)
@@ -809,7 +819,7 @@ class AssetManager {
      * @return The symbolic name of the current revision i.e. the current checked out branch or tag
      */
     String getCurrentRevision() {
-        if (!strategy) {
+        if( !strategy ) {
             throw new IllegalStateException("Strategy not initialized")
         }
         return strategy.getCurrentRevision()
@@ -817,7 +827,7 @@ class AssetManager {
     }
 
     RevisionInfo getCurrentRevisionAndName() {
-        if (!strategy) {
+        if( !strategy ) {
             throw new IllegalStateException("Strategy not initialized")
         }
         return strategy.getCurrentRevisionAndName()
@@ -845,11 +855,11 @@ class AssetManager {
         List<String> branches = getBranchList()
             .findAll { it.name.startsWith('refs/heads/') || isRemoteBranch(it) }
             .unique { shortenRefName(it.name) }
-            .collect { Ref it -> refToString(it,pulled,master,false,level) }
+            .collect { Ref it -> refToString(it, pulled, master, false, level) }
 
         List<String> tags = getTagList()
                 .findAll  { it.name.startsWith('refs/tags/') }
-                .collect { refToString(strategy.peel(it),pulled,master,true,level) }
+                .collect { refToString(strategy.peel(it) , pulled, master, true, level) }
 
         def result = new ArrayList<String>(branches.size() + tags.size())
         result.addAll(branches)
@@ -879,25 +889,25 @@ class AssetManager {
         log.debug("Current commits : $currentCommits")
         Map<String, Ref> remote = checkForUpdates ? strategy.lsRemote(false) : null
         getBranchList()
-                .findAll { it.name.startsWith('refs/heads/') || isRemoteBranch(it) }
-                .unique { shortenRefName(it.name) }
-                .each {
-                    final map = refToMap(it,remote)
-                    if (isRefInCommits(it,currentCommits))
-                        pulled << map
-                    branches << map
-                }
+            .findAll { it.name.startsWith('refs/heads/') || isRemoteBranch(it) }
+            .unique { shortenRefName(it.name) }
+            .each {
+                final map = refToMap(it, remote)
+                if( isRefInCommits(it, currentCommits) )
+                    pulled << map
+                branches << map
+            }
 
         remote = checkForUpdates ? strategy.lsRemote(true) : null
         getTagList()
-                .findAll  { it.name.startsWith('refs/tags/') }
-                .each {
-                    Ref ref = strategy.peel(it)
-                    final map = refToMap(ref,remote)
-                    if (isRefInCommits(ref, currentCommits))
-                        pulled << map
-                    tags << map
-                }
+            .findAll { it.name.startsWith('refs/tags/') }
+            .each {
+                Ref ref = strategy.peel(it)
+                final map = refToMap(ref, remote)
+                if( isRefInCommits(ref, currentCommits) )
+                    pulled << map
+                tags << map
+            }
 
         result.pulled = pulled.collect { it.name }  // current pulled revisions
         result.master = master      // master branch name
@@ -920,10 +930,10 @@ class AssetManager {
 
         def result = new StringBuilder()
         def name = shortenRefName(ref.name)
-        def obj = ref.getPeeledObjectId() ?: ref.getObjectId()
         result << ( isRefInCommits(ref, downloaded) ? '*' : ' ')
 
         if( level ) {
+            def obj = ref.getPeeledObjectId() ?: ref.getObjectId()
             result << ' '
             result << formatObjectId(obj, level == 1)
         }
@@ -964,7 +974,7 @@ class AssetManager {
      * Checkout a specific revision, and fetch remote if not locally available.
      * @param revision The revision to be checked out
      */
-    void checkout( String revision = null ) {
+    void checkout(String revision = null) {
         try {
             tryCheckout(revision)
         }
@@ -978,24 +988,21 @@ class AssetManager {
      * Checkout a specific revision returns exception if revision is not found locally
      * @param revision The revision to be checked out
      */
-    void tryCheckout( String revision = null ) throws RefNotFoundException{
+    void tryCheckout(String revision = null) throws RefNotFoundException {
         assert project
-        if (!strategy) {
+        if( !strategy ) {
             throw new IllegalStateException("Strategy not initialized")
         }
         strategy.tryCheckout(revision, manifest)
-
     }
 
 
-    protected Ref checkoutRemoteBranch( String revision ) {
+    protected Ref checkoutRemoteBranch(String revision) {
         assert project
-        if (!strategy) {
+        if( !strategy ) {
             throw new IllegalStateException("Strategy not initialized")
         }
         return strategy.checkoutRemoteBranch(revision, manifest)
-
-
     }
 
     void updateModules() {
@@ -1112,12 +1119,13 @@ class AssetManager {
         }
 
     }
+
     /**
      * Drop local copy of a repository. If revision is specified, only removes the specified revision
      * @param revision
      */
-    void drop(String revision = null, boolean force = false){
-        if ( isNotInitialized() )
+    void drop(String revision = null, boolean force = false) {
+        if( isNotInitialized() )
             throw new AbortOperationException("No match found for: ${getProjectWithRevision()}")
         strategy.drop(revision, force)
     }

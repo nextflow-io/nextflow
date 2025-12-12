@@ -45,7 +45,7 @@ class CmdList extends CmdBase {
             return
         }
 
-        all.each { println(" $it") }
+        all.each { println it }
     }
 
 }

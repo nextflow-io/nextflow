@@ -648,6 +648,7 @@ class CmdRun extends CmdBase implements HubOptions {
             def result = manager.download(revision,deep)
             if( result )
                 log.info " $result"
+            checkForUpdate = false
         }
         // Warn if using legacy
         if( manager.isUsingLegacyStrategy() ){

@@ -50,16 +50,16 @@ abstract class AbstractRepositoryStrategy implements RepositoryStrategy {
         this.project = project
     }
 
-    AbstractRepositoryStrategy(String project, RepositoryProvider provider ) {
+    AbstractRepositoryStrategy(String project, RepositoryProvider provider) {
         this.project = project
         this.provider = provider
     }
 
-    void setProvider(RepositoryProvider provider){
+    void setProvider(RepositoryProvider provider) {
         this.provider = provider
     }
 
-    void setProject(String project){
+    void setProject(String project) {
         this.project = project
     }
 
@@ -98,8 +98,7 @@ abstract class AbstractRepositoryStrategy implements RepositoryStrategy {
         final name = resolveTagNameByObjectId(head.objectId)
         if( name ) {
             return new AssetManager.RevisionInfo(head.objectId.name(), Repository.shortenRefName(name), AssetManager.RevisionInfo.Type.TAG)
-        }
-        else {
+        } else {
             return new AssetManager.RevisionInfo(head.objectId.name(), null, AssetManager.RevisionInfo.Type.COMMIT)
         }
     }

@@ -46,13 +46,13 @@ interface RepositoryStrategy {
      * Checkout a specific revision and returns exception if revision is not found locally
      * @param revision The revision to be checked out
      */
-    void tryCheckout( String revision, Manifest manifest ) throws RefNotFoundException
+    void tryCheckout(String revision, Manifest manifest) throws RefNotFoundException
 
     /**
      * Fetch and checkout a specific revision
      * @param revision The revision to be checked out
      */
-    Ref checkoutRemoteBranch( String revision, Manifest manifest )
+    Ref checkoutRemoteBranch(String revision, Manifest manifest)
 
     /**
      * @return The local path where the worktree and repository files are accessible
@@ -153,5 +153,9 @@ interface RepositoryStrategy {
      */
     File getProjectPath()
 
+    /**
+     * Set repository provider
+     * @param provider
+     */
     void setProvider(RepositoryProvider provider)
 }

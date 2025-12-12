@@ -67,7 +67,7 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
 
     MultiRevisionRepositoryStrategy(String project, String revision = null) {
         super(project)
-        if (project) {
+        if( project ) {
             this.legacyRepoPath = new File(root, project)
             this.projectPath = new File(root, REPOS_SUBDIR + '/' + project)
             this.bareRepo = new File(projectPath, BARE_REPO)
@@ -75,7 +75,7 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
         }
         if( revision )
             setRevision(revision)
-        else if ( hasBareRepo() ){
+        else if( hasBareRepo() ) {
             setRevision(getDefaultBranchFromBareRepo())
         }
 
@@ -86,14 +86,14 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
      * @param project
      * @return
      */
-    static boolean checkProject(File root, String project){
+    static boolean checkProject(File root, String project) {
         return new File(root, REPOS_SUBDIR + '/' + project + '/' + BARE_REPO).exists()
     }
 
     @PackageScope
     File getBareRepo() { this.bareRepo }
 
-    boolean hasBareRepo(){
+    boolean hasBareRepo() {
         return this.bareRepo && this.bareRepo.exists()
     }
 
@@ -430,7 +430,7 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
 
     @Override
     File getLocalGitConfig() {
-        return hasBareRepo() ? new File(this.bareRepo, 'config') : null
+        return hasBareRepo() ? new File(this.bareRepo, 'config') : legacyRepoPath ? new File(legacyRepoPath,'.git/config') : null
     }
 
     @Override
