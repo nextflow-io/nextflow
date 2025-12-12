@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import nextflow.script.ast.ASTNodeMarker;
 import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.FeatureFlagNode;
 import nextflow.script.ast.FunctionNode;
@@ -122,9 +123,10 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
             .map((param) -> {
                 var name = constX(param.getName());
                 var type = classX(param.getType());
+                var optional = constX(type.getNodeMetaData(ASTNodeMarker.NULLABLE) != null);
                 var arguments = param.hasInitialExpression()
-                    ? args(name, type, param.getInitialExpression())
-                    : args(name, type);
+                    ? args(name, type, optional, param.getInitialExpression())
+                    : args(name, type, optional);
                 return stmt(callThisX("declare", arguments));
             })
             .toList();
