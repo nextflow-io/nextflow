@@ -81,7 +81,7 @@ $ nextflow run nextflow-io/hello -r a3f5c8e
 ```
 :::{versionadded} 25.12.0-edge
 :::
-Nextflow downloads and locally maintains each explicitly requested Git branch, tag or commit ID in a separate directory path, thus enabling to run multiple revisions of the same pipeline at the same time. Each downloaded revision is stored in a subdirecrory path of the local project path: `$NXF_ASSETS/<org>/<repo>/.nextflow/commits/<commitId>`.
+Nextflow downloads and stores each explicitly requested Git branch, tag, or commit ID in a separate directory path, enabling you to run multiple revisions of the same pipeline simultaneously. Downloaded revisions are stored in a subdirectory of the local project: `$NXF_ASSETS/.repos/<org>/<repo>/.nextflow/commits/<commitId>`.
 
 :::{tip}
 Use tags or commit IDs instead of branches for reproducible pipeline runs. Branch references change as development progresses over time.
