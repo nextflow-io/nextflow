@@ -20,6 +20,9 @@ package nextflow.scm
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+
+import java.nio.charset.StandardCharsets
+
 /**
  * Implements a repository provider for Gitea service
  *
@@ -86,7 +89,7 @@ final class GiteaRepositoryProvider extends RepositoryProvider {
         // note: `ref` is undocumented
         def result = "${config.endpoint}/repos/$project/raw/$path"
         if( revision )
-            result += "?ref=$revision"
+            result += "?ref=${URLEncoder.encode(revision, StandardCharsets.UTF_8)}"
         return result
     }
 
@@ -118,7 +121,7 @@ final class GiteaRepositoryProvider extends RepositoryProvider {
     /** {@inheritDoc} */
     @Override
     List<RepositoryEntry> listDirectory(String path, int depth) {
-        final branch = revision ?: "master"
+        final branch = URLEncoder.encode(revision ?: "master", StandardCharsets.UTF_8)
         // Normalize path using base class helper
         final dirPath = normalizePath(path)
         
