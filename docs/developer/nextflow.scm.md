@@ -12,11 +12,11 @@ The `nextflow.scm` package defines the Git provider interface and implements sev
 Some classes may be excluded from the above diagram for brevity.
 ```
 
-## Architecture Overview
+## Architecture overview
 
-### Repository Strategies
+### Repository strategies
 
-The `AssetManager` uses the **Strategy Pattern** to support different ways of managing local pipeline installations:
+The `AssetManager` uses the **Strategy pattern** to support different ways of managing local pipeline installations:
 
 - **`LegacyRepositoryStrategy`**: Traditional approach where each project gets a full git clone in `$NXF_HOME/{project}` directory. Only one revision can exist at a time per project.
 
@@ -25,26 +25,27 @@ The `AssetManager` uses the **Strategy Pattern** to support different ways of ma
   - Creating lightweight clones for each commit in `$NXF_HOME/.repos/{project}/commits/{commitId}/`
   - Sharing git objects between revisions to minimize disk space
 
-### Strategy Selection
+### Strategy selection
 
 The `AssetManager` automatically selects the appropriate strategy based on:
 
-1. **Environment Variable**: `NXF_SCM_LEGACY=true` forces legacy mode
-2. **Repository Status**: Detected by checking existing repository structure:
-   - `UNINITIALIZED`: No repository exists → Use Multi-Revision (default)
-   - `LEGACY_ONLY`: Only legacy `.git` directory exists → Use Legacy
-   - `BARE_ONLY`: Only bare repository exists → Use Multi-Revision
-   - `HYBRID`: Both exist → Prefer Multi-Revision
+1. **Environment variable**: `NXF_SCM_LEGACY=true` forces legacy mode
+2. **Repository status**: Detected by checking existing repository structure:
+   - `UNINITIALIZED`: No repository exists, use Multi-Revision (default)
+   - `LEGACY_ONLY`: Only legacy `.git` directory exists, use Legacy
+   - `BARE_ONLY`: Only bare repository exists, use Multi-Revision
+   - `HYBRID`: Both exist, prefer Multi-Revision
 
-### Repository Provider
+### Repository provider
 
 The `RepositoryProvider` class is the base class for all Git providers. It defines how to authenticate with the provider, clone a Git repository, inspect branches and tags, etc. The provider is used by repository strategies to interact with remote Git services.
 
-## Key Components
+## Key components
 
 ### AssetManager
 
-Central class that manages pipeline assets. Key responsibilities:
+Central class that manages pipeline assets. Key responsibilities include:
+
 - Project name resolution and validation
 - Strategy selection and initialization
 - Provider configuration and authentication

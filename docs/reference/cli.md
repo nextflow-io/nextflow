@@ -263,7 +263,7 @@ The `clone` command downloads a pipeline from a Git-hosting platform into the *c
 : Service hub where the project is hosted. Options: `gitlab` or `bitbucket`.
 
 `-r` (`master`)
-: Revision to clone - It can be a git branch, tag, or commit SHA number.
+: Revision to clone. Can be a git branch, tag, or commit SHA number.
 
 `-user`
 : Private repository user name.
@@ -315,9 +315,9 @@ The `config` command is used for printing the project's configuration i.e. the `
 : Print config using Java properties notation.
 
 `-r, -revision`
-: :::{versionadded} 25.11.0-edge
+: :::{versionadded} 25.12.0-edge
   :::
-: Revision of the project (either a git branch, tag or commit SHA number).
+: Project revision. Can be a git branch, tag, or commit SHA number.
 
 `-a, -show-profiles`
 : Show all configuration profiles.
@@ -450,7 +450,7 @@ The `drop` command is used to remove the projects which have been downloaded int
 `-r, -revision`
 : :::{versionadded} 25.12.0-edge
 :::
-: Revision of the project to drop (either a git branch, tag or commit SHA number).
+: Project revision to drop. Can be a git branch, tag, or commit SHA number.
 
 **Examples**
 
@@ -619,10 +619,10 @@ $ nextflow info nextflow-io/hello
   local path  : /Users/evanfloden/.nextflow/assets/nextflow-io/hello
   main script : main.nf
   revisions   :
-  P master (default)
+  * master (default)
     mybranch
     testing
-  P v1.1 [t]
+  * v1.1 [t]
     v1.2 [t]
 ```
 
@@ -1186,7 +1186,7 @@ The `pull` command downloads a pipeline from a Git-hosting platform into the glo
 : Update the project asset to new multi-revision strategy.
 
 `-r, -revision`
-: Revision of the project to run (either a git branch, tag or commit SHA number).
+: Project revision to run. Can be a git branch, tag, or commit SHA number.
 : When passing a git tag or branch, the `workflow.revision` and `workflow.commitId` fields are populated. When passing only the commit hash, `workflow.revision` is not defined.
 
 `-user`
@@ -1254,7 +1254,8 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 : Enable/disable processes caching.
 
 `-d, -deep`
-: :::{deprecated} 25.11.X-edge
+: :::{deprecated} 25.12.0-edge
+  Ignored for new multi-revision asset management strategy. Still used in legacy assets.
   :::
 : Create a shallow clone of the specified depth.
 
@@ -1339,7 +1340,7 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 : Execute the script using the cached results, useful to continue executions that was stopped by an error.
 
 `-r, -revision`
-: Revision of the project to run (either a git branch, tag or commit SHA number).
+: Project revision to run. Can be a git branch, tag, or commit SHA number.
 : When passing a git tag or branch, the `workflow.revision` and `workflow.commitId` fields are populated. When passing only the commit hash, `workflow.revision` is not defined.
 
 `-stub-run, -stub`
@@ -1586,9 +1587,9 @@ The `view` command is used to inspect the pipelines that are already stored in t
 : Hide header line.
 
 `-r, -revision`
-: :::{versionadded} 25.11.0-edge
+: :::{versionadded} 25.12.0-edge
   :::
-: Revision of the project (either a git branch, tag or commit SHA number).
+: Project revision. Can be a git branch, tag, or commit SHA number.
 
 **Examples**
 
