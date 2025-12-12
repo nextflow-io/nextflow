@@ -29,6 +29,7 @@ import com.google.cloud.batch.v1.LifecyclePolicy
 import com.google.cloud.batch.v1.LogsPolicy
 import com.google.cloud.batch.v1.Runnable
 import com.google.cloud.batch.v1.ServiceAccount
+import com.google.cloud.batch.v1.StatusEvent
 import com.google.cloud.batch.v1.TaskGroup
 import com.google.cloud.batch.v1.TaskSpec
 import com.google.cloud.batch.v1.Volume
@@ -597,17 +598,31 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
      *
      * @return exit code if found, otherwise Integer.MAX_VALUE
      */
-    private Integer getExitCode(){
+    protected Integer getExitCode(){
         final events = client.getTaskStatus(jobId, taskId)?.getStatusEventsList()
         if( events ) {
-            final batchExitCode = events.stream().filter(ev -> ev.hasTaskExecution())
-                .max( (ev1, ev2) -> Long.compare(ev1.getEventTime().seconds, ev2.getEventTime().seconds) )
-                .map(ev -> ev.getTaskExecution().getExitCode())
-                .orElse(null)
-            if( batchExitCode != null )
-                return batchExitCode
+            // Find the most recent event that contains a TaskExecution with an exit code.
+            // Events are not guaranteed to be in chronological order, so we iterate through
+            // all of them and track the one with the highest timestamp.
+            StatusEvent latestEvent = null
+            long latestTime = Long.MIN_VALUE
+            for( StatusEvent ev : events ) {
+                // Only consider events that have task execution info (which contains exit code)
+                if( ev.hasTaskExecution() ) {
+                    final long eventTime = ev.getEventTime().getSeconds()
+                    if( eventTime > latestTime ) {
+                        latestTime = eventTime
+                        latestEvent = ev
+                    }
+                }
+            }
+            // Return the exit code from the most recent task execution event
+            if( latestEvent?.getTaskExecution()?.getExitCode() != null ) {
+                return latestEvent.getTaskExecution().getExitCode()
+            }
         }
-        // fallback to read
+        // Fallback: if no exit code found from the Batch API (either no events or none with
+        // TaskExecution), read the .exitcode file that Nextflow generates in the work directory
         log.debug("[GOOGLE BATCH] Exit code not found from API. Checking .exitcode file...")
         return readExitFile()
     }
