@@ -137,9 +137,7 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
             throw e
         }
         catch (Exception e) {
-            // Note: escape '%' chars to avoid String.format interpretation in PluginRuntimeException
-            final msg = "Unable to connect to ${uri} - cause: ${e.message}".replace('%','%%')
-            throw new PluginRuntimeException(e, msg)
+            throw new PluginRuntimeException(e, "Unable to connect to %s - cause: %s", uri, e.message)
         }
     }
 
