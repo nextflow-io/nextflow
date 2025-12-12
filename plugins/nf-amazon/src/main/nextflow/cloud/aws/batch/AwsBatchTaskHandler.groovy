@@ -932,9 +932,6 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             // Check attempt-level statusReason
             def attemptReason = attempt.statusReason()
 
-            // Check container-level reason (following pattern from errReason() method)
-            def containerReason = attempt.container()?.reason()
-
             // AWS Batch uses "Host EC2 (instance i-xxx) terminated." pattern for spot interruptions
             // Using startsWith to match the pattern regardless of instance ID
             if (attemptReason && attemptReason.startsWith('Host EC2')) {
