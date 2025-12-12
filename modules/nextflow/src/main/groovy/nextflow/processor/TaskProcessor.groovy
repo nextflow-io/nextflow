@@ -298,7 +298,8 @@ class TaskProcessor {
         this.forksCount = maxForks ? new LongAdder() : null
         this.isFair0 = config.getFair()
         final arraySize = config.getArray()
-        this.arrayCollector = arraySize > 0 ? new TaskArrayCollector(this, executor, arraySize) : null
+        final arrayTimeoutMillis = executor.config.getArrayTimeout().toMillis()
+        this.arrayCollector = arraySize > 0 ? new TaskArrayCollector(this, executor, arraySize, arrayTimeoutMillis) : null
         log.debug "Creating process '$name': maxForks=${maxForks}; fair=${isFair0}; array=${arraySize}"
     }
 

@@ -41,6 +41,12 @@ class ExecutorConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
+        Determines how long to wait for a job array to fill to the specified array size before submitting a partial array (default: `60 min`).
+    """)
+    final Duration arrayTimeout
+
+    @ConfigOption
+    @Description("""
         *Used only by the local executor.*
 
         The maximum number of CPUs made available by the underlying system.
@@ -142,14 +148,6 @@ class ExecutorConfig implements ConfigScope {
     """)
     final Duration queueStatInterval
     
-    @ConfigOption
-    @Description("""
-        *Used only by grid executors.*
-
-        Determines how long to wait for a job array to fill to the specified array size before submitting an unfilled array (default: `60 min`).
-    """)
-    final Duration executorArrayTimeout
-
     @Description("""
         The `executor.retry` scope controls the behavior of retrying failed job submissions.
     
@@ -170,6 +168,7 @@ class ExecutorConfig implements ConfigScope {
 
     ExecutorConfig(Map opts) {
         account = opts.account
+        arrayTimeout = opts.arrayTimeout as Duration ?: Duration.of('60min')
         cpus = opts.cpus as Integer
         dumpInterval = opts.dumpInterval as Duration ?: Duration.of('5min')
         exitReadTimeout = opts.exitReadTimeout as Duration ?: Duration.of('270sec')
@@ -184,12 +183,15 @@ class ExecutorConfig implements ConfigScope {
         queueGlobalStatus = opts.queueGlobalStatus as boolean
         queueSize = opts.queueSize as Integer
         queueStatInterval = opts.queueStatInterval as Duration ?: Duration.of('1min')
-        executorArrayTimeout = opts.executorArrayTimeout as Duration ?: Duration.of('60min')
         retry = opts.retry ? new ExecutorRetryConfig(opts.retry as Map) : new ExecutorRetryConfig(Map.of())
         submitRateLimit = opts.submitRateLimit
 
         // preserve executor-specific opts
         this.opts = opts
+    }
+
+    Duration getArrayTimeout(String execName) {
+        getExecConfigProp(execName, 'arrayTimeout', null) as Duration
     }
 
     Duration getExitReadTimeout(String execName) {
@@ -210,10 +212,6 @@ class ExecutorConfig implements ConfigScope {
 
     Duration getQueueStatInterval(String execName) {
         getExecConfigProp(execName, 'queueStatInterval', null) as Duration
-    }
-
-    Duration getExecutorArrayTimeout(String execName) {
-        getExecConfigProp(execName, 'executorArrayTimeout', null) as Duration
     }
 
     @Memoized
