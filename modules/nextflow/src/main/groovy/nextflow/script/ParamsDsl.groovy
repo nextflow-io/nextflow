@@ -66,7 +66,7 @@ class ParamsDsl {
                 throw new ScriptRuntimeException("Parameter `$name` is required but was not specified on the command line, params file, or config")
 
             final actualType = params[name].getClass()
-            if( !decl.type.isAssignableFrom(actualType) )
+            if( !isAssignableFrom(decl.type, actualType) )
                 throw new ScriptRuntimeException("Parameter `$name` with type ${Types.getName(decl.type)} cannot be assigned to ${params[name]} [${Types.getName(actualType)}]")
         }
 
@@ -90,11 +90,13 @@ class ParamsDsl {
         if( decl.type == Integer || decl.type == Float ) {
             if( str.isInteger() ) return str.toInteger()
             if( str.isLong() ) return str.toLong()
+            if( str.isBigInteger() ) return str.toBigInteger()
         }
 
         if( decl.type == Float ) {
             if( str.isFloat() ) return str.toFloat()
             if( str.isDouble() ) return str.toDouble()
+            if( str.isBigDecimal() ) return str.toBigDecimal()
         }
 
         if( decl.type == Path ) {
@@ -112,6 +114,16 @@ class ParamsDsl {
             return FileHelper.asPath(value.toString())
 
         return value
+    }
+
+    private boolean isAssignableFrom(Class target, Class source) {
+        if( target == Float.class )
+            return Number.class.isAssignableFrom(source)
+
+        if( target == Integer.class )
+            return source == BigInteger.class || source == Long.class || source == Integer.class
+
+        return target.isAssignableFrom(source)
     }
 
     @Canonical
