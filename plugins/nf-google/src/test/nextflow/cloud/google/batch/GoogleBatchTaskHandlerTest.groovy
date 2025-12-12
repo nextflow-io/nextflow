@@ -399,7 +399,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         and:
         def task = Mock(TaskRun)
         task.getProcessor() >> processor
-        task.getConfig() >> GroovyMock(TaskConfig)
+        task.getConfig() >> new TaskConfig()
         and:
         def client = Mock(BatchClient)
         def handler = Spy(GoogleBatchTaskHandler)
