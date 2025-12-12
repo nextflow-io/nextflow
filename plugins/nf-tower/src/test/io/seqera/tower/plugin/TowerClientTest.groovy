@@ -114,7 +114,6 @@ class TowerClientTest extends Specification {
         'abc'               | 'abc'
         'a_b_c'             | 'aBC'
         'foo__bar'          | 'fooBar'
-        'num_reclamations'  | 'numReclamations'
     }
     
 

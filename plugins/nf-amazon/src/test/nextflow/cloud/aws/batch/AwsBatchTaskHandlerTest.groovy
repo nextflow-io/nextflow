@@ -958,7 +958,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         trace.machineInfo.type == 'x1.large'
         trace.machineInfo.zone == 'us-east-1b'
         trace.machineInfo.priceModel == PriceModel.spot
-        trace.num_reclamations == 1
+        trace.numReclamations == 1
     }
 
     def 'should count spot reclamations from job attempts'() {

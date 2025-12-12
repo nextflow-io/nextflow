@@ -426,7 +426,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         and:
         trace.native_id == 'xyz-123/0/789'
         trace.executorName == 'google-batch'
-        trace.num_reclamations == 1
+        trace.numReclamations == 1
     }
 
     def 'should count spot reclamations from task status events'() {

@@ -682,7 +682,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             try {
                 def status = client.getTaskStatus(jobId, taskId)
                 if (status) {
-                    result.put('num_reclamations', countSpotReclamations(status))
+                    result.numReclamations = countSpotReclamations(status)
                 }
             } catch (Exception e) {
                 log.debug "[GOOGLE BATCH] Unable to count spot reclamations for job=$jobId task=$taskId - ${e.message}"
