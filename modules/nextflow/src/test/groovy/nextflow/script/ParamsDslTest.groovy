@@ -102,7 +102,7 @@ class ParamsDslTest extends Specification {
 
         when:
         def dsl = new ParamsDsl()
-        dsl.declare('factor', Float, DEF_VALUE)
+        dsl.declare('factor', Float, false, DEF_VALUE)
         dsl.apply(session)
         then:
         noExceptionThrown()
@@ -119,7 +119,7 @@ class ParamsDslTest extends Specification {
 
         when:
         def dsl = new ParamsDsl()
-        dsl.declare('factor', Integer, DEF_VALUE)
+        dsl.declare('factor', Integer, false, DEF_VALUE)
         dsl.apply(session)
         then:
         noExceptionThrown()
