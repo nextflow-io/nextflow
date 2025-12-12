@@ -446,8 +446,8 @@ Nextflow does not provide direct support for SLURM multi-clusters. If you need t
 Some SLURM clusters require memory allocations to be specified with `--mem-per-cpu` instead of `--mem`. You can specify `executor.perCpuMemAllocation = true` in the Nextflow configuration to enable this behavior. Nextflow will automatically compute the memory per CPU for each task (by default 1 CPU is used).
 :::
 
-:::{versionadded} 25.10.0
-Since SLURM 24, `squeue` supports an `--only-job-state` option that ignores the partition (`-p`) or user (`-u`) filters. To enable this behavior, specify `executor.$slurm.onlyJobState = true` in your Nextflow configuration. If `SchedulerParameters=enable_job_state_cache` is enabled, you can expect improved Nextflow performance and reduced load on the SLURM controller.
+:::{versionadded} 25.12.0-edge
+Since SLURM 24, `squeue` supports an `--only-job-state` option that ignores the partition (`-p`) or user (`-u`) filters. To enable this behavior, specify `executor.$slurm.onlyJobState = true` in your Nextflow configuration. If `SchedulerParameters=enable_job_state_cache` is enabled, you can expect improved Nextflow performance and reduced load on the SLURM controller. More information about this feature in the [SLURM configuration](https://slurm.schedmd.com/slurm.conf.html#OPT_enable_job_state_cache) and the [`squeue` documentation](https://slurm.schedmd.com/squeue.html#OPT_only-job-state).
 :::
 
 (tcs-executor)=
