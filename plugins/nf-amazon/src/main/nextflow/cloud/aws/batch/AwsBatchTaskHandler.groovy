@@ -954,7 +954,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             try {
                 def job = describeJob(jobId)
                 if (job) {
-                    result.put('num_reclamations', countSpotReclamations(job))
+                    result.numReclamations = countSpotReclamations(job)
                 }
             } catch (Exception e) {
                 log.debug "[AWS BATCH] Unable to count spot reclamations for job=$jobId - ${e.message}"
