@@ -606,7 +606,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                 }
             }
             // Return the exit code from the most recent task execution event
-            if( latestEvent != null ) {
+            if( latestEvent?.getTaskExecution()?.getExitCode() != null ) {
                 return latestEvent.getTaskExecution().getExitCode()
             }
         }
