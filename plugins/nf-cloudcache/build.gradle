@@ -25,6 +25,7 @@ nextflowPlugin {
     description = 'Implements cloud-based caching system to optimize workflow performance by reducing redundant computations and data transfers'
     className = 'nextflow.CloudCachePlugin'
     useDefaultDependencies = false
+    generateSpec = false
     extensionPoints = [
         'nextflow.cache.CloudCacheFactory'
     ]
