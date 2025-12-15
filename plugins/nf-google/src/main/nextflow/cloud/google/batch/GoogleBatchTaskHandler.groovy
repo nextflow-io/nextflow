@@ -250,9 +250,9 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
         // task spec
         final env = Environment
-            .newBuilder()
-            .putAllVariables( launcher.getEnvironment() )
-            .build()
+                .newBuilder()
+                .putAllVariables( launcher.getEnvironment() )
+                .build()
 
         taskSpec
             .setComputeResource(computeResource)
@@ -349,12 +349,12 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             if( machineType ) {
                 instancePolicy.setMachineType(machineType.type)
                 instancePolicyOrTemplate.setInstallGpuDrivers(
-                    GoogleBatchMachineTypeSelector.INSTANCE.installGpuDrivers(machineType)
+                        GoogleBatchMachineTypeSelector.INSTANCE.installGpuDrivers(machineType)
                 )
                 machineInfo = new CloudMachineInfo(
-                    type: machineType.type,
-                    zone: machineType.location,
-                    priceModel: machineType.priceModel
+                        type: machineType.type,
+                        zone: machineType.location,
+                        priceModel: machineType.priceModel
                 )
             }
 
