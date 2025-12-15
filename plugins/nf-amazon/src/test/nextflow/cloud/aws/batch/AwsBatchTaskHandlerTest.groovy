@@ -958,31 +958,8 @@ class AwsBatchTaskHandlerTest extends Specification {
         trace.machineInfo.type == 'x1.large'
         trace.machineInfo.zone == 'us-east-1b'
         trace.machineInfo.priceModel == PriceModel.spot
-        trace.numReclamations == 1
+        trace.numSpotInterruptions == 1
     }
-
-    def 'should count spot reclamations from job attempts'() {
-        given:
-        def attempts = attemptReasons?.collect { reason ->
-            GroovyMock(AttemptDetail) {
-                statusReason() >> reason
-                container() >> null
-            }
-        }
-        def job = JobDetail.builder().attempts(attempts).build()
-
-        expect:
-        AwsBatchTaskHandler.countSpotReclamations(job) == expectedCount
-
-        where:
-        description                                    | attemptReasons                                                                          | expectedCount
-        'no attempts (null)'                           | null                                                                                    | 0
-        'empty attempts list'                          | []                                                                                      | 0
-        'single spot reclamation'                      | ['Host EC2 (instance i-123) terminated.', 'Essential container in task exited']         | 1
-        'multiple spot reclamations'                   | ['Host EC2 (instance i-123) terminated.', 'Host EC2 (instance i-456) terminated.']      | 2
-        'no spot interruptions'                        | ['Essential container in task exited', null]                                            | 0
-    }
-
 
     def 'should render submit command' () {
         given:
@@ -1308,4 +1285,56 @@ class AwsBatchTaskHandlerTest extends Specification {
         handler.task.error.message == 'Unknown termination'
 
     }
+
+    def 'should return zero spot interruptions when no attempts or non-spot terminations exist'() {
+        given:
+        def handler = Spy(AwsBatchTaskHandler)
+        def attempt1 = GroovyMock(AttemptDetail) {
+            statusReason() >> 'Essential container in task exited'
+        }
+        def attempt2 = GroovyMock(AttemptDetail) {
+            statusReason() >> 'Some other reason'
+        }
+
+        when:
+        def resultNoAttempts = handler.getNumSpotInterruptions('job-123')
+        then:
+        1 * handler.isCompleted() >> true
+        1 * handler.describeJob('job-123') >> JobDetail.builder().attempts([]).build()
+        resultNoAttempts == 0
+
+        when:
+        def resultNonSpot = handler.getNumSpotInterruptions('job-456')
+        then:
+        1 * handler.isCompleted() >> true
+        1 * handler.describeJob('job-456') >> JobDetail.builder().attempts([attempt1, attempt2]).build()
+        resultNonSpot == 0
+    }
+
+    def 'should return null when job cannot be processed'() {
+        given:
+        def handler = Spy(AwsBatchTaskHandler)
+
+        when:
+        def resultNotCompleted = handler.getNumSpotInterruptions('job-123')
+        then:
+        1 * handler.isCompleted() >> false
+        0 * handler.describeJob(_)
+        resultNotCompleted == null
+
+        when:
+        def resultNullJobId = handler.getNumSpotInterruptions(null)
+        then:
+        0 * handler.isCompleted()
+        0 * handler.describeJob(_)
+        resultNullJobId == null
+
+        when:
+        def resultException = handler.getNumSpotInterruptions('job-789')
+        then:
+        1 * handler.isCompleted() >> true
+        1 * handler.describeJob('job-789') >> { throw new RuntimeException("Error") }
+        resultException == null
+    }
+
 }

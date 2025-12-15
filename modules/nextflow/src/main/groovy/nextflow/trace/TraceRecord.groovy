@@ -121,7 +121,7 @@ class TraceRecord implements Serializable {
     transient private String executorName
     transient private CloudMachineInfo machineInfo
     transient private ContainerMeta containerMeta
-    transient private int numReclamations
+    transient private Integer numSpotInterruptions
 
     /**
      * Convert the given value to a string
@@ -612,12 +612,12 @@ class TraceRecord implements Serializable {
         this.machineInfo = value
     }
 
-    int getNumReclamations() {
-        return numReclamations
+    Integer getNumSpotInterruptions() {
+        return numSpotInterruptions
     }
 
-    void setNumReclamations(int numReclamations) {
-        this.numReclamations = numReclamations
+    void setNumSpotInterruptions(Integer numSpotInterruptions) {
+        this.numSpotInterruptions = numSpotInterruptions
     }
 
     ContainerMeta getContainerMeta() {

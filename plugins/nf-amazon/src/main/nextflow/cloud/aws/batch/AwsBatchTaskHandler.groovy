@@ -921,44 +921,43 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      * Count the number of spot instance reclamations for this job by examining
      * the job attempts and checking for EC2 spot interruption status reasons
      *
-     * @param job The AWS Batch JobDetail object
+     * @param jobId The AWS Batch Job Id
      * @return The number of times this job was retried due to spot instance reclamation
      */
-    protected static int countSpotReclamations(JobDetail job) {
-        if (!job?.attempts())
-            return 0
+    protected Integer getNumSpotInterruptions(String jobId) {
+        // Add spot instance reclamation count
+        if (jobId && isCompleted()) {
+            try {
+                def job = describeJob(jobId)
+                if (job) {
+                    if (!job?.attempts())
+                        return 0
 
-        int count = 0
-        for (def attempt : job.attempts()) {
-            // Check attempt-level statusReason
-            def attemptReason = attempt.statusReason()
-
-            // AWS Batch uses "Host EC2 (instance i-xxx) terminated." pattern for spot interruptions
-            // Using startsWith to match the pattern regardless of instance ID
-            if (attemptReason && attemptReason.startsWith('Host EC2')) {
-                count++
+                    int count = 0
+                    for (def attempt : job.attempts()) {
+                        // Check attempt-level statusReason
+                        def attemptReason = attempt.statusReason()
+                        // AWS Batch uses "Host EC2 (instance i-xxx) terminated." pattern for spot interruptions
+                        // Using startsWith to match the pattern regardless of instance ID
+                        if (attemptReason && attemptReason.startsWith('Host EC2')) {
+                            count++
+                        }
+                    }
+                    log.trace "Job $jobId had $count spot interruptions"
+                    return count
+                }
+            } catch (Exception e) {
+                log.debug "[AWS BATCH] Unable to count spot interruptions for job=$jobId - ${e.message}"
             }
+            return  null
         }
-        return count
     }
 
     TraceRecord getTraceRecord() {
         def result = super.getTraceRecord()
         result.put('native_id', jobId)
         result.machineInfo = getMachineInfo()
-
-        // Add spot instance reclamation count
-        if (jobId && isCompleted()) {
-            try {
-                def job = describeJob(jobId)
-                if (job) {
-                    result.numReclamations = countSpotReclamations(job)
-                }
-            } catch (Exception e) {
-                log.debug "[AWS BATCH] Unable to count spot reclamations for job=$jobId - ${e.message}"
-            }
-        }
-
+        result.numSpotInterruptions = getNumSpotInterruptions(jobId)
         return result
     }
 

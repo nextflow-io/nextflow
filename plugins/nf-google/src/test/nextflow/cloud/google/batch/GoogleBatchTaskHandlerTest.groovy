@@ -428,33 +428,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         and:
         trace.native_id == 'xyz-123/0/789'
         trace.executorName == 'google-batch'
-        trace.numReclamations == 1
-    }
-
-    def 'should count spot reclamations from task status events'() {
-        given:
-        def events = eventData?.collect { exitCode ->
-            StatusEvent.newBuilder()
-                .setTaskExecution(TaskExecution.newBuilder().setExitCode(exitCode).build())
-                .build()
-        }
-        def statusBuilder = TaskStatus.newBuilder()
-        if (events) {
-            events.each { event -> statusBuilder.addStatusEvents(event) }
-        }
-        def status = statusBuilder.build()
-
-        expect:
-        GoogleBatchTaskHandler.countSpotReclamations(status) == expectedCount
-
-        where:
-        description                    | eventData              | expectedCount
-        'no events (null)'             | null                   | 0
-        'empty events list'            | []                     | 0
-        'single spot reclamation'      | [50001, 0]             | 1
-        'multiple spot reclamations'   | [50001, 50001]         | 2
-        'no spot interruptions'        | [0, 1]                 | 0
-        'mixed exit codes'             | [50001, 0, 50001, 1]   | 2
+        trace.numSpotInterruptions == 1
     }
 
     def 'should create submit request with fusion enabled' () {
@@ -930,6 +904,85 @@ class GoogleBatchTaskHandlerTest extends Specification {
         0        | true   | true      | 5    // <-- default to 5
         1        | true   | true      | 1
         2        | true   | true      | 2
+    }
+
+    def 'should return zero when no status events exist'() {
+        given:
+        def handler = Spy(GoogleBatchTaskHandler)
+        handler.@taskId = 'task-123'
+        handler.@client = Mock(BatchClient) {
+            getTaskStatus('job-123', 'task-123') >> TaskStatus.newBuilder().build()
+        }
+
+        when:
+        def result = handler.getNumSpotInterruptions('job-123')
+
+        then:
+        handler.isCompleted() >> true
+        result == 0
+    }
+
+    def 'should count spot interruptions correctly from status events'() {
+        given:
+        def handler = Spy(GoogleBatchTaskHandler)
+        handler.@taskId = 'task-123'
+        handler.@client = Mock(BatchClient) {
+            getTaskStatus('job-123', 'task-123') >> TaskStatus.newBuilder()
+                .addStatusEvents(
+                    StatusEvent.newBuilder()
+                        .setTaskExecution(
+                            TaskExecution.newBuilder().setExitCode(0).build()
+                        ).build())
+                .addStatusEvents(
+                StatusEvent.newBuilder()
+                    .setTaskExecution(
+                        TaskExecution.newBuilder().setExitCode(50001).build()
+                    ).build())
+                .addStatusEvents(
+                    StatusEvent.newBuilder()
+                        .setTaskExecution(
+                            TaskExecution.newBuilder().setExitCode(50001).build()
+                        ).build()
+                ).build()
+        }
+
+        when:
+        def result = handler.getNumSpotInterruptions('job-123')
+
+        then:
+        handler.isCompleted() >> true
+        result == 2
+    }
+
+    def 'should return null when jobId is null or task is incomplete'() {
+        given:
+        def handler = Spy(GoogleBatchTaskHandler)
+        handler.@taskId = 'task-123'
+
+        when:
+        def resultNullJobId = handler.getNumSpotInterruptions(null)
+        def resultIncompleteTask = handler.getNumSpotInterruptions('job-123')
+
+        then:
+        handler.isCompleted() >> false
+        resultNullJobId == null
+        resultIncompleteTask == null
+    }
+
+    def 'should return null when an exception occurs while fetching task status'() {
+        given:
+        def handler = Spy(GoogleBatchTaskHandler)
+        handler.@taskId = 'task-123'
+        handler.@client = Mock(BatchClient) {
+            getTaskStatus('job-123', 'task-123') >> { throw new RuntimeException("Error") }
+        }
+
+        when:
+        def result = handler.getNumSpotInterruptions('job-123')
+
+        then:
+        handler.isCompleted() >> true
+        result == null
     }
 
 }
