@@ -679,29 +679,33 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
      */
 
     protected Integer getNumSpotInterruptions(String jobId) {
-        // Add spot instance reclamation count
-        if (jobId && taskId && isCompleted()) {
-            try {
-                def status = client.getTaskStatus(jobId, taskId)
-                if (status) {
-                    if (!status?.statusEventsList)
-                        return 0
-
-                    int count = 0
-                    for (def event : status.statusEventsList) {
-                        // Google Batch uses exit code 50001 for spot preemption
-                        // Check if the event has a task execution with exit code 50001
-                        if (event.hasTaskExecution() && event.taskExecution.exitCode == 50001) {
-                            count++
-                        }
-                    }
-                    return count
-                }
-            } catch (Exception e) {
-                log.debug "[GOOGLE BATCH] Unable to count spot reclamations for job=$jobId task=$taskId - ${e.message}"
-            }
+        if (!jobId || !taskId || !isCompleted()) {
+            return null
         }
-        return null
+
+        try {
+            def status = client.getTaskStatus(jobId, taskId)
+
+            if (!status)
+                return null
+
+            if (!status?.statusEventsList)
+                return 0
+
+            int count = 0
+            for (def event : status.statusEventsList) {
+                // Google Batch uses exit code 50001 for spot preemption
+                // Check if the event has a task execution with exit code 50001
+                if (event.hasTaskExecution() && event.taskExecution.exitCode == 50001) {
+                    count++
+                }
+            }
+            return count
+
+        } catch (Exception e) {
+            log.debug "[GOOGLE BATCH] Unable to count spot reclamations for job=$jobId task=$taskId - ${e.message}"
+            return null
+        }
     }
 
     @Override
