@@ -388,7 +388,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         trace.executorName == 'google-batch'
     }
 
-    def 'should create the trace record when job is completed with spot reclamations' () {
+    def 'should create the trace record when job is completed with spot interruptions' () {
         given:
         def exec = Mock(Executor) { getName() >> 'google-batch' }
         def processor = Mock(TaskProcessor) {

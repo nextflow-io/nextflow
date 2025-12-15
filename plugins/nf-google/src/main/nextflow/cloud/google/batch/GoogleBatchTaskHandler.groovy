@@ -707,7 +707,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             return count
 
         } catch (Exception e) {
-            log.debug "[GOOGLE BATCH] Unable to count spot reclamations for job=$jobId task=$taskId - ${e.message}"
+            log.debug "[GOOGLE BATCH] Unable to count spot interruptions for job=$jobId task=$taskId - ${e.message}"
             return null
         }
     }

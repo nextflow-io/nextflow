@@ -919,7 +919,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         trace.machineInfo.priceModel == PriceModel.spot
     }
 
-    def 'should create the trace record when job is completed with spot reclamations' () {
+    def 'should create the trace record when job is completed with spot interruptions' () {
         given:
         def exec = Mock(Executor) { getName() >> 'awsbatch' }
         def processor = Mock(TaskProcessor)
