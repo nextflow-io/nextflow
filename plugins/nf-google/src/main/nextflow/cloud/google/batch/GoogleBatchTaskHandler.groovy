@@ -711,7 +711,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     @Override
     TraceRecord getTraceRecord() {
         def result = super.getTraceRecord()
-        if (jobId && uid)
+        if( jobId && uid )
             result.put('native_id', "$jobId/$taskId/$uid")
         result.machineInfo = getMachineInfo()
         result.numSpotInterruptions = getNumSpotInterruptions(jobId)
@@ -732,7 +732,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         final priceModel = spot ? PriceModel.spot : PriceModel.standard
 
         try {
-            if (executor.isCloudinfoEnabled()) {
+            if( executor.isCloudinfoEnabled() ) {
                 return bestMachineType0(cpus, memory, location, spot, localSSD, families)
             }
         }
@@ -741,7 +741,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         }
 
         // Check if a specific machine type was provided by the user
-        if (machineType && !machineType.contains(',') && !machineType.contains('*'))
+        if( machineType && !machineType.contains(',') && !machineType.contains('*') )
             return new GoogleBatchMachineTypeSelector.MachineType(
                 type: machineType,
                 location: location,
