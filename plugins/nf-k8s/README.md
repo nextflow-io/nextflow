@@ -1,6 +1,6 @@
 # Kubernetes plugin for Nextflow
 
-This plugin provides native Kubernetes execution capability for Nextflow pipelines, with support for pod management, volume mounting, and resource allocation.
+The Kubernetes plugin provides native Kubernetes execution capability for Nextflow pipelines. It supports pod management, volume mounting, and resource allocation.
 
 ## Get Started
 
