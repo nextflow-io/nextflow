@@ -99,8 +99,8 @@ class CmdPull extends CmdBase implements HubOptions {
                 log.info "Migrating ${project} revision ${revision} to multi-revision strategy"
                 manager.setStrategyType(AssetManager.RepositoryStrategyType.MULTI_REVISION)
             } else {
-                log.warn "The local asset for ${project} does not support multi-revision - Pulling with legacy strategy"
-                log.warn "Consider updating the project ${project} using '-migrate' option"
+                log.warn "The local asset for ${project} does not support multi-revision - Pulling with legacy strategy\n" +
+                    "Consider updating the project ${project} using '-migrate' option"
             }
         }
 

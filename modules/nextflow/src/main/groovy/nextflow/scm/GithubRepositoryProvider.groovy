@@ -55,12 +55,12 @@ class GithubRepositoryProvider extends RepositoryProvider {
 
     @Override
     String getUser() {
-        super.getUser() ?: getToken() ?: SysEnv.get('GITHUB_TOKEN')
+        super.getUser() ?: SysEnv.get('GITHUB_TOKEN')
     }
 
     @Override
     String getPassword() {
-        super.getPassword() ?: ( (getToken() || SysEnv.containsKey('GITHUB_TOKEN')) ? 'x-oauth-basic' : null)
+        super.getPassword() ?: (SysEnv.containsKey('GITHUB_TOKEN') ? 'x-oauth-basic' : null)
     }
 
     /** {@inheritDoc} */
