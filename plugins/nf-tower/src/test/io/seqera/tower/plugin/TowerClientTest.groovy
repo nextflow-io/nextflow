@@ -550,7 +550,7 @@ class TowerClientTest extends Specification {
             start: now-1000,
             complete: now
         ])
-        trace.setnumSpotInterruptions(3)
+        trace.setNumSpotInterruptions(3)
 
         when:
         def req = client.makeTasksReq([trace])
