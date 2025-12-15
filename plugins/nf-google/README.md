@@ -1,6 +1,6 @@
 # Google Cloud plugin for Nextflow
 
-This plugin provides support for Google Cloud Platform (GCP), including Google Cloud Batch as a compute executor and Google Cloud Storage as a file system.
+The Google Cloud plugin provides support for Google Cloud Platform (GCP), including Google Cloud Batch as a compute executor and Google Cloud Storage as a file system.
 
 ## Get Started
 
