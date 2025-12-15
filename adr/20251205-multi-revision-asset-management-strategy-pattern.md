@@ -75,76 +75,68 @@ Use a bare repository for storage and create clones for each commit, tracking th
 
 **Decision**: Initially implemented but later refined
 
-### Option 3: Bare Repository + Clones per Commit (Bare as Revision Map)
+### Option 3: Bare Repository + Shared Clones with Strategy Pattern
 
-Similar to Option 2 but create eliminate the separate revision map file by using the bare repository itself as the source of truth.
+Similar to Option 2 but eliminate the separate revision map file by using the bare repository itself as the source of truth. Additionally, use the Strategy pattern to maintain backward compatibility with existing legacy repositories without requiring migration.
 
 **Implementation**:
-- Bare repository at `~/.nextflow/assets/.repos/<org>/<project>/.nextflow/bare/`
-- Shared clones at `~/.nextflow/assets/.repos/<org>/<project>/.nextflow/commits/<commit-sha>/`
+- Bare repository at `~/.nextflow/assets/.repos/<org>/<project>/bare/`
+- Shared clones at `~/.nextflow/assets/.repos/<org>/<project>/commits/<commit-sha>/`
 - Use bare repository refs to resolve revisions to commit SHAs dynamically
 - JGit alternates mechanism for object sharing
-
-- Good, because no external state file to maintain
-- Good, because bare repository is always in sync (fetched on updates)
-- Good, because simpler and more reliable
-- Good, because atomic updates (Git operations are atomic)
-- Good, because works entirely within JGit
-- Bad, because requires resolution on every access (minimal overhead)
-
-**Decision**: Selected as the multi-revision implementation
-
-### Option 4: Strategy Pattern for Backward Compatibility
-
-Instead of migrating existing repositories, use the Strategy pattern to support both legacy and multi-revision approaches.
-
-**Implementation**:
 - `AssetManager` as facade with unchanged public API
 - `RepositoryStrategy` interface defining repository operations
 - `LegacyRepositoryStrategy` for existing direct-clone behavior
 - `MultiRevisionRepositoryStrategy` for new bare-repo approach
 - Strategy selection based on environment variable or repository state detection
 
-- Good, because zero migration needed
+- Good, because no external state file to maintain
+- Good, because bare repository is always in sync (fetched on updates)
+- Good, because simpler and more reliable
+- Good, because atomic updates (Git operations are atomic)
+- Good, because works entirely within JGit
+- Good, because zero migration needed for existing repositories
 - Good, because maintains API compatibility
 - Good, because allows gradual adoption
 - Good, because isolates legacy code
 - Good, because makes future strategies easy to add
 - Neutral, because adds abstraction layer
+- Bad, because requires resolution on every access (minimal overhead)
 - Bad, because increases codebase size initially
 
-**Decision**: Selected for backward compatibility layer
+**Decision**: Selected
 
 ## Solution or decision outcome
 
-Implemented **Option 3 (Bare Repository + Shared Clones per Commit)** for multi-revision support, combined with **Option 4 (Strategy Pattern)** for backward compatibility. Multi-revision is the default for new repositories, while legacy mode is available via `NXF_SCM_LEGACY` environment variable.
+Implemented **Option 3 (Bare Repository + Shared Clones with Strategy Pattern)** for multi-revision support with backward compatibility. Multi-revision is the default for new repositories, while legacy mode is available via `NXF_SCM_LEGACY` environment variable.
 
 ## Rationale & discussion
 
-### Multi-Revision Implementation (Option 3)
+### Multi-Revision Implementation
 
 The bare repository approach provides efficient multi-revision support:
 
 ```
 ~/.nextflow/assets/.repos/nextflow-io/hello/
-├── .nextflow/
-│   ├── bare_repo/              # Bare repository (shared objects)
-│   │   ├── objects/            # All Git objects stored here
-│   │   ├── refs/
-│   │   │   ├── heads/
-│   │   │   └── tags/
-│   │   └── config
-│   │
-│   └── commits/                # Commit-specific clones
-│       ├── abc123.../          # Clone for commit abc123
-│       │   └── .git/
-│       │       ├── objects/    # (uses alternates → bare_repo)
-│       │       └── info/
-│       │           └── alternates  # Points to bare_repo/objects
-│       │
-│       └── def456.../          # Clone for commit def456
-│           └── .git/
-└── .git/                       # Optional legacy repo (HYBRID state)
+├── bare/                       # Bare repository (shared objects)
+│   ├── objects/                # All Git objects stored here
+│   ├── refs/
+│   │   ├── heads/
+│   │   └── tags/
+│   └── config
+│
+└── commits/                    # Commit-specific clones
+    ├── abc123.../              # Clone for commit abc123
+    │   └── .git/
+    │       ├── objects/        # (uses alternates → bare/objects)
+    │       └── info/
+    │           └── alternates  # Points to bare/objects
+    │
+    └── def456.../              # Clone for commit def456
+        └── .git/
+
+~/.nextflow/assets/nextflow-io/hello/
+└── .git/                       # Legacy repo location (HYBRID state)
 ```
 
 **Key mechanisms:**
@@ -162,7 +154,7 @@ The bare repository approach provides efficient multi-revision support:
 - No race conditions on file updates
 - Simpler code with fewer failure modes
 
-### Strategy Pattern Implementation (Option 4)
+### Strategy Pattern for Backward Compatibility
 
 The Strategy pattern provides clean separation and backward compatibility:
 
