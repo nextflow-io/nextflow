@@ -1,6 +1,6 @@
 # Seqera Platform plugin for Nextflow
 
-This plugin provides integration with Seqera Platform (formerly Tower) for workflow monitoring, resource tracking, and centralized pipeline management.
+The Seqera Platform plugin provides integration with Seqera Platform (formerly Tower) for workflow monitoring, resource tracking, and centralized pipeline management.
 
 ## Get Started
 
