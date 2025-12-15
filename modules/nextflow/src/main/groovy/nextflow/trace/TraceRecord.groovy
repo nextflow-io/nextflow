@@ -292,7 +292,7 @@ class TraceRecord implements Serializable {
 
         // Peak resident set size ("high water mark")
         // This is a synonym of 'max_rss' field
-        else if (name == 'vmhwm' ) {
+        else if (name == 'vmhwm') {
             store.put('max_rss', value)
         }
 
