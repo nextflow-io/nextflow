@@ -81,7 +81,7 @@ class CmdPull extends CmdBase implements HubOptions {
         // init plugin system
         Plugins.init()
 
-        list.each { proj ->
+        for( String proj : list ) {
             if( all ) {
                 def branches = new AssetManager(proj).getBranchesAndTags(false).pulled as List<String>
                 branches.each { rev -> pullProjectRevision(proj, rev) }
