@@ -193,7 +193,7 @@ This shows:
 - Where it's cached locally
 - Which script runs by default
 - Available revisions (branches and tags marked with `[t]`)
-- Which revisions are currently pulled (marked with `*`)
+- Which revisions are currently checkout out (marked with `*`)
 
 ### Pulling or updating projects
 
