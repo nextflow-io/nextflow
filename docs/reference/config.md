@@ -715,6 +715,13 @@ The following settings are available:
 : *Used only by the {ref}`slurm-executor` executor.*
 : When `true`, memory allocations for SLURM jobs are specified as `--mem-per-cpu <task.memory / task.cpus>` instead of `--mem <task.memory>`.
 
+`executor.onlyJobState`
+: :::{versionadded} 25.12.0-edge
+  :::
+: *Used only by the {ref}`slurm-executor` executor.*
+: *Requires SLURM 24.05 or later.*
+: When `true`, job status queries use `squeue --only-job-state` without partition (`-p`) or user (`-u`) filters. This can reduce the load on the SLURM controller, especially if your SLURM administrator has enabled `SchedulerParameters=enable_job_state_cache` in your [SLURM configuration](https://slurm.schedmd.com/slurm.conf.html#OPT_enable_job_state_cache). See [`--only-job-state`](https://slurm.schedmd.com/squeue.html#OPT_only-job-state) for more information (default: `false`).
+
 `executor.perJobMemLimit`
 : *Used only by the {ref}`lsf-executor` executor.*
 : Enables the *per-job* memory limit mode for LSF jobs.
