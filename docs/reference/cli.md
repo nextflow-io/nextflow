@@ -263,7 +263,7 @@ The `clone` command downloads a pipeline from a Git-hosting platform into the *c
 : Service hub where the project is hosted. Options: `gitlab` or `bitbucket`.
 
 `-r` (`master`)
-: Revision to clone. Can be a git branch, tag, or commit SHA number.
+: Revision to clone. It can be a git branch, tag, or commit SHA number.
 
 `-user`
 : Private repository user name.
