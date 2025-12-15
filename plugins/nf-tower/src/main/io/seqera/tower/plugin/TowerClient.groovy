@@ -808,7 +808,7 @@ class TowerClient implements TraceObserverV2 {
             final delta = now -previous
 
             if (!tasks) {
-                if (delta > aliveInterval.millis) {
+                if (delta > aliveInterval.millis ) {
                     final req = makeHeartbeatReq()
                     final resp = sendHttpMessage(urlTraceHeartbeat, req, 'PUT')
                     logHttpResponse(urlTraceHeartbeat, resp)
