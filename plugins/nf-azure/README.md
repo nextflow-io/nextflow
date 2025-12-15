@@ -1,6 +1,6 @@
 # Microsoft Azure plugin for Nextflow
 
-This plugin provides support for Azure Blob Storage as a file system and Azure Batch as a compute executor for Nextflow pipelines.
+The Microsoft Azure plugin provides support for Azure Blob Storage as a file system, and Azure Batch as a compute executor for Nextflow pipelines.
 
 ## Get Started
 
