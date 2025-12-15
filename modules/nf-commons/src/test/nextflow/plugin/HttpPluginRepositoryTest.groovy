@@ -104,6 +104,26 @@ class HttpPluginRepositoryTest extends Specification {
 
     // ------------------------------------------------------------------------
 
+    def 'handle prefetch error with percent chars in error message'() {
+        given:
+        // Test that URLs containing '%' characters (like URL-encoded values) are handled
+        // correctly when an exception occurs. The '%' must be escaped to '%%' to avoid
+        // String.format interpretation in PluginRuntimeException.
+        def repoWithEncodedUrl = new HttpPluginRepository("test-repo", new URI("http://localhost:${wiremock.port()}/path%20with%20spaces/"))
+        wiremock.stop()
+
+        when:
+        repoWithEncodedUrl.prefetch([new PluginRef("nf-fake")])
+
+        then:
+        def err = thrown PluginRuntimeException
+        // Verify the error message is properly formatted and contains the URL with encoded spaces
+        err.message.contains("Unable to connect to")
+        err.message.contains("path%20with%20spaces")
+    }
+
+    // ------------------------------------------------------------------------
+
     def 'handle prefetch error when metadata service returns an error response'() {
         given:
         wiremock.stubFor(get(urlEqualTo("/v1/plugins/dependencies?plugins=nf-fake&nextflowVersion=${BuildInfo.version}"))
