@@ -209,10 +209,10 @@ class TowerClient implements TraceObserverV2 {
      */
     protected String checkUrl(String url) {
         // report a warning for legacy endpoint
-        if( url.contains('https://api.tower.nf') ) {
+        if (url.contains('https://api.tower.nf')) {
             log.warn "The endpoint `https://api.tower.nf` is deprecated - Please use `https://api.cloud.seqera.io` instead"
         }
-        if( url =~ "^(https|http)://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]" ) {
+        if (url =~ "^(https|http)://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]") {
             while( url.endsWith('/') )
                 url = url[0..-2]
             return url
@@ -227,35 +227,35 @@ class TowerClient implements TraceObserverV2 {
 
     protected String getUrlTraceCreate() {
         def result = this.endpoint + '/trace/create'
-        if( workspaceId )
+        if (workspaceId)
             result += "?workspaceId=$workspaceId"
         return result
     }
 
     protected String getUrlTraceBegin() {
         def result = "$endpoint/trace/$workflowId/begin"
-        if( workspaceId )
+        if (workspaceId)
             result += "?workspaceId=$workspaceId"
         return result
     }
 
     protected String getUrlTraceComplete() {
         def result = "$endpoint/trace/$workflowId/complete"
-        if( workspaceId )
+        if (workspaceId)
             result += "?workspaceId=$workspaceId"
         return result
     }
 
     protected String getUrlTraceHeartbeat() {
         def result = "$endpoint/trace/$workflowId/heartbeat"
-        if( workspaceId )
+        if (workspaceId)
             result += "?workspaceId=$workspaceId"
         return result
     }
 
     protected String getUrlTraceProgress() {
         def result = "$endpoint/trace/$workflowId/progress"
-        if( workspaceId )
+        if (workspaceId)
             result += "?workspaceId=$workspaceId"
         return result
     }
@@ -279,7 +279,7 @@ class TowerClient implements TraceObserverV2 {
         // send hello to verify auth
         final req = makeCreateReq(session)
         final resp = sendHttpMessage(urlTraceCreate, req, 'POST')
-        if( resp.error ) {
+        if (resp.error) {
             log.debug """\
                 Unexpected HTTP response
                 - endpoint    : $urlTraceCreate
@@ -290,9 +290,9 @@ class TowerClient implements TraceObserverV2 {
         }
         final ret = parseTowerResponse(resp)
         this.workflowId = ret.workflowId
-        if( !workflowId )
+        if (!workflowId)
             throw new AbortOperationException("Invalid Seqera Platform API response - Missing workflow Id")
-        if( ret.message )
+        if (ret.message)
             log.warn(ret.message.toString())
 
         // Prepare to collect report paths if tower configuration has a 'reports' section
@@ -316,7 +316,7 @@ class TowerClient implements TraceObserverV2 {
         // check for plain jwt token
         final refreshToken = env.get('TOWER_REFRESH_TOKEN')
         final refreshUrl = refreshToken ? "$endpoint/oauth/access_token" : null
-        if( token.count('.')==2 ) {
+        if (token.count('.')==2) {
             config.bearerToken(token)
             config.refreshToken(refreshToken)
             config.refreshTokenUrl(refreshUrl)
@@ -328,7 +328,7 @@ class TowerClient implements TraceObserverV2 {
         try {
             final plain = new String(token.decodeBase64())
             final p = plain.indexOf('.')
-            if( p!=-1 && new JsonSlurper().parseText(  plain.substring(0, p) )  ) {
+            if (p!=-1 && new JsonSlurper().parseText(plain.substring(0, p))) {
                 // ok this is bearer token
                 config.bearerToken(token)
                 // setup the refresh
@@ -361,7 +361,7 @@ class TowerClient implements TraceObserverV2 {
     @Override
     void onProcessCreate(TaskProcessor process) {
         log.trace "Creating process ${process.name}"
-        if( !processNames.add(process.name) )
+        if (!processNames.add(process.name))
             throw new IllegalStateException("Process name `${process.name}` already used")
     }
 
@@ -371,7 +371,7 @@ class TowerClient implements TraceObserverV2 {
 
         final req = makeBeginReq(session)
         final resp = sendHttpMessage(urlTraceBegin, req, 'PUT')
-        if( resp.error ) {
+        if (resp.error) {
             log.debug """\
                 Unexpected HTTP response
                 - endpoint    : $urlTraceBegin
@@ -389,7 +389,7 @@ class TowerClient implements TraceObserverV2 {
     }
 
     String getAccessToken() {
-        if( !accessToken )
+        if (!accessToken)
             throw new AbortOperationException("Missing Seqera Platform access token -- Make sure there's a variable TOWER_ACCESS_TOKEN in your environment")
         return accessToken
     }
@@ -402,7 +402,7 @@ class TowerClient implements TraceObserverV2 {
         // publish runtime reports
         reports.publishRuntimeReports()
         // submit the completion record
-        if( sender ) {
+        if (sender) {
             events << new ProcessEvent(completed: true)
             // wait the submission of pending events
             sender.join()
@@ -410,7 +410,7 @@ class TowerClient implements TraceObserverV2 {
         // wait and flush reports content
         reports.flowComplete()
         // notify the workflow completion
-        if( workflowId ) {
+        if (workflowId) {
             final req = makeCompleteReq(session)
             final resp = sendHttpMessage(urlTraceComplete, req, 'PUT')
             logHttpResponse(urlTraceComplete, resp)
@@ -462,7 +462,7 @@ class TowerClient implements TraceObserverV2 {
     @Override
     void onTaskCached(TaskEvent event) {
         // event was triggered by a stored task, ignore it
-        if( !event.trace )
+        if (!event.trace)
             return
 
         // add the cached task event
@@ -512,11 +512,11 @@ class TowerClient implements TraceObserverV2 {
         try {
             final resp = httpClient.sendAsString(makeRequest(url, json, method))
             final status = resp.statusCode()
-            if( status == 401 ) {
+            if (status == 401) {
                 final msg = 'Unauthorized Seqera Platform API access -- Make sure you have specified the correct access token'
                 return new Response(status, msg)
             }
-            if( status>=400 ) {
+            if (status>=400) {
                 final msg = parseCause(resp?.body()) ?: "Unexpected response for request $url"
                 return new Response(status, msg as String)
             }
@@ -538,10 +538,10 @@ class TowerClient implements TraceObserverV2 {
             .header('User-Agent', "Nextflow/$BuildInfo.version")
             .header('Traceparent', TraceUtils.rndTrace())
 
-        if( verb == 'PUT' )
+        if (verb == 'PUT')
             return builder.PUT(HttpRequest.BodyPublishers.ofString(payload)).build()
 
-        if( verb == 'POST' )
+        if (verb == 'POST')
             return builder.POST(HttpRequest.BodyPublishers.ofString(payload)).build()
 
         throw new IllegalArgumentException("Unsupported HTTP verb: $verb")
@@ -552,10 +552,10 @@ class TowerClient implements TraceObserverV2 {
     }
 
     protected String getOperationId() {
-        if( !isCliLogsEnabled() )
+        if (!isCliLogsEnabled())
             return null
         try {
-            if( env.get('AWS_BATCH_JOB_ID') )
+            if (env.get('AWS_BATCH_JOB_ID'))
                 return  "aws-batch::${env.get('AWS_BATCH_JOB_ID')}"
             else
                 return "local-platform::${ProcessHelper.selfPid()}"
@@ -624,11 +624,11 @@ class TowerClient implements TraceObserverV2 {
     }
 
     protected String mapToString(def obj) {
-        if( obj == null )
+        if (obj == null)
             return null
-        if( obj instanceof CharSequence )
+        if (obj instanceof CharSequence)
             return obj.toString()
-        if( obj instanceof Map ) {
+        if (obj instanceof Map) {
             // turn this off for multiple containers because the string representation is broken
             return null
         }
@@ -640,7 +640,7 @@ class TowerClient implements TraceObserverV2 {
         for( Map.Entry<String,Object> entry : trace.store.entrySet() ) {
             def name = entry.key
             // remove '%' char from field prefix
-            if( name.startsWith('%') )
+            if (name.startsWith('%'))
                 name = 'p' + name.substring(1)
             // normalise to camelCase
             name = underscoreToCamelCase(name)
@@ -649,7 +649,7 @@ class TowerClient implements TraceObserverV2 {
         }
 
         // prevent invalid tag data
-        if( record.tag!=null && !(record.tag instanceof CharSequence)) {
+        if (record.tag!=null && !(record.tag instanceof CharSequence)) {
             final msg = "Invalid tag value for process: ${record.process} -- A string is expected instead of type: ${record.tag.getClass().getName()}; offending value=${record.tag}"
             log.warn1(msg, cacheKey: record.process)
             record.tag = null
@@ -667,7 +667,7 @@ class TowerClient implements TraceObserverV2 {
 
 
     static protected Object fixTaskField(String name, value) {
-        if( TraceRecord.FIELDS[name] == 'date' )
+        if (TraceRecord.FIELDS[name] == 'date')
             return value ? OffsetDateTime.ofInstant(Instant.ofEpochMilli(value as long), ZoneId.systemDefault()) : null
         else
             return value
@@ -692,7 +692,7 @@ class TowerClient implements TraceObserverV2 {
         final result = new ArrayList<ContainerMeta>()
         for( TraceRecord it : tasks ) {
             final meta = it.getContainerMeta()
-            if( meta && !allContainers.get(meta.targetImage) ) {
+            if (meta && !allContainers.get(meta.targetImage)) {
                 allContainers.put(meta.targetImage, Boolean.TRUE)
                 result.add(meta)
             }
@@ -749,7 +749,7 @@ class TowerClient implements TraceObserverV2 {
     }
 
     protected String parseCause(String cause) {
-        if( !cause )
+        if (!cause)
             return null
         try {
             def map = (Map)new JsonSlurper().parseText(cause)
@@ -762,7 +762,7 @@ class TowerClient implements TraceObserverV2 {
     }
 
     protected String underscoreToCamelCase(String str) {
-        if( !str.contains('_') )
+        if (!str.contains('_'))
             return str
 
         final words = str.tokenize('_')
@@ -795,11 +795,11 @@ class TowerClient implements TraceObserverV2 {
         while( !complete ) {
             final ProcessEvent ev = events.poll(delay, TimeUnit.MILLISECONDS)
             // reconcile task events ie. send out only the last event
-            if( ev ) {
+            if (ev) {
                 log.trace "Tower event=$ev"
-                if( ev.trace )
+                if (ev.trace)
                     tasks[ev.trace.taskId] = ev.trace
-                if( ev.completed )
+                if (ev.completed)
                     complete = true
             }
 
@@ -807,8 +807,8 @@ class TowerClient implements TraceObserverV2 {
             final now = System.currentTimeMillis()
             final delta = now -previous
 
-            if( !tasks ) {
-                if( delta > aliveInterval.millis ) {
+            if (!tasks) {
+                if (delta > aliveInterval.millis ) {
                     final req = makeHeartbeatReq()
                     final resp = sendHttpMessage(urlTraceHeartbeat, req, 'PUT')
                     logHttpResponse(urlTraceHeartbeat, resp)
@@ -817,7 +817,7 @@ class TowerClient implements TraceObserverV2 {
                 continue
             }
 
-            if( delta > period || tasks.size() >= TASKS_PER_REQUEST || complete ) {
+            if (delta > period || tasks.size() >= TASKS_PER_REQUEST || complete) {
                 // send
                 final req = makeTasksReq(tasks.values())
                 log.trace "Sending ${tasks.values()} task records to Seqera Platform"

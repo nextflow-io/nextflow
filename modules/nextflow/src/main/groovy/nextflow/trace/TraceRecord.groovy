@@ -131,7 +131,7 @@ class TraceRecord implements Serializable {
      */
     @PackageScope
     static String fmtString(value, String fmt) {
-        if( value instanceof Number )
+        if (value instanceof Number)
             return value != Integer.MAX_VALUE ? value.toString() : NA
 
         value ? value.toString() : NA
@@ -149,16 +149,16 @@ class TraceRecord implements Serializable {
      */
     @PackageScope
     static String fmtNumber(def value, String fmt) {
-        if( value == null )
+        if (value == null)
             return NA
 
-       if( value instanceof Duration )
+       if (value instanceof Duration)
             return String.valueOf(value.toMillis())
 
-        if( value instanceof MemoryUnit )
+        if (value instanceof MemoryUnit)
             return String.valueOf(value.toBytes())
 
-        if( value instanceof Date )
+        if (value instanceof Date)
             return String.valueOf(value.getTime())
 
         return value.toString()
@@ -173,8 +173,8 @@ class TraceRecord implements Serializable {
      */
     @PackageScope
     static String fmtDate(def value, String fmt) {
-        if( !value ) return NA
-        if( !fmt )
+        if (!value) return NA
+        if (!fmt)
             fmt = DEFAULT_DATE_FORMAT
         Bolts.format(new Date(value as long), fmt, TIMEZONE)
     }
@@ -189,7 +189,7 @@ class TraceRecord implements Serializable {
      */
     @PackageScope
     static String fmtTime(def value, String fmt) {
-        if( value == null ) return NA
+        if (value == null) return NA
         new Duration(value as long).toString()
     }
 
@@ -204,13 +204,13 @@ class TraceRecord implements Serializable {
      */
     @PackageScope
     static String fmtMemory( def value, String fmt ) {
-        if( value == null ) return NA
+        if (value == null) return NA
 
-        if( value instanceof Number )
+        if (value instanceof Number)
             return new MemoryUnit(value.toLong()).toString()
 
         String str = value.toString()
-        if( str.isLong() ) {
+        if (str.isLong()) {
             return new MemoryUnit(str.toLong()).toString()
         }
 
@@ -225,9 +225,9 @@ class TraceRecord implements Serializable {
      */
     @PackageScope
     static String fmtPercent( def value, String fmt ) {
-        if( value == null ) return NA
+        if (value == null) return NA
         try {
-            if( value instanceof Number )
+            if (value instanceof Number)
                 return String.format(Locale.ROOT, '%.1f%%', value.toFloat())
             else {
                 def x = value.toString().toFloat()
@@ -266,7 +266,7 @@ class TraceRecord implements Serializable {
 
     def get( String name ) {
         assert keySet().contains(name), "Not a valid TraceRecord field: '$name'"
-        if( name == 'env' ) {
+        if (name == 'env') {
             final ret = store.get(name)
             return ret ? secureEnvString(ret.toString()) : ret
         }
@@ -279,24 +279,24 @@ class TraceRecord implements Serializable {
 
 
     void put( String name, def value ) {
-        if( !keySet().contains(name) ) {
+        if (!keySet().contains(name)) {
             log.warn1 "Unknown trace record field: $name"
             return
         }
 
         // vmpeak: Peak virtual memory size
         // this is a synonym of 'max_vmem' field
-        if( name == 'vmpeak' ) {
+        if (name == 'vmpeak') {
             store.put('max_vmem', value)
         }
 
         // Peak resident set size ("high water mark")
         // This is a synonym of 'max_rss' field
-        else if( name == 'vmhwm' ) {
+        else if (name == 'vmhwm' ) {
             store.put('max_rss', value)
         }
 
-        else if( name == 'env' ) {
+        else if (name == 'env') {
             store.put(name, value ? secureEnvString(value.toString()) : value)
         }
 
@@ -306,7 +306,7 @@ class TraceRecord implements Serializable {
     }
 
     void putAll( Map<String,Object> values ) {
-        if( !values )
+        if (!values)
             return
 
         for( String key : values.keySet() ) {
@@ -327,9 +327,9 @@ class TraceRecord implements Serializable {
 
         String sType=null
         String sFormat=null
-        if( converter ) {
+        if (converter) {
             int p = converter.indexOf(':')
-            if( p == -1 ) {
+            if (p == -1) {
                 sType = converter
             }
             else {
@@ -339,12 +339,12 @@ class TraceRecord implements Serializable {
         }
 
         def type = sType ?: FIELDS.get(name)
-        if( !type )
+        if (!type)
             throw new IllegalArgumentException("Not a valid trace field name: '$name'")
 
 
         def formatter = FORMATTER.get(type)
-        if( !formatter )
+        if (!formatter)
             throw new IllegalArgumentException("Not a valid trace formatter for field: '$name' with type: '$type'")
 
         try {
@@ -385,10 +385,10 @@ class TraceRecord implements Serializable {
 
     CharSequence renderJson(StringBuilder result, List<String> fields, List<String> formats) {
         final QUOTE = '"'
-        if( result == null ) result = new StringBuilder()
+        if (result == null) result = new StringBuilder()
         result << "{"
         for( int i=0; i<fields.size(); i++ ) {
-            if( i ) result << ','
+            if (i) result << ','
             String name = fields[i]
             String format = i<formats?.size() ? formats[i] : null
             String value = StringEscapeUtils.escapeJavaScript(getFmtStr(name, format) ?: NA)
@@ -424,16 +424,16 @@ class TraceRecord implements Serializable {
 
         try(BufferedReader reader = Files.newBufferedReader(file)) {
             final lines = reader.readLines()
-            if( !lines )
+            if (!lines)
                 return this
-            if( lines[0] != 'nextflow.trace/v2' )
+            if (lines[0] != 'nextflow.trace/v2')
                 return parseLegacy(file, lines)
 
             for( int i=0; i<lines.size(); i++ ) {
                 final pair = lines[i].tokenize('=')
                 final name = pair[0]
                 final value = pair[1]
-                if( value == null )
+                if (value == null)
                     continue
 
                 switch (name) {
@@ -476,26 +476,26 @@ class TraceRecord implements Serializable {
             /*
              * 1st line -- parse the header
              */
-            if( count == 0 ) {
+            if (count == 0) {
                 header = row.trim().split(/\s+/)
             }
 
             /*
              * 2nd line -- parse values produced by 'ps'
              */
-            else if( count == 1 ) {
+            else if (count == 1) {
                 String[] values = row.trim().split(/\s+/)
                 for( int i=0; i<values.length; i++ ) {
 
                     final name = header[i]
-                    if( i==2 || i==3 ) {
+                    if (i==2 || i==3) {
                         // fields '%cpu' and '%mem' are expressed as percent value
                         this.put(name, parseInt(values[i], file, i) / 10F)
                     }
-                    else if( i>3 ) {
+                    else if (i>3) {
                         def val = parseLong(values[i], file, i)
                         // fields from index 4 to 7 (vmem,rss,peak_vmem, peak_rss) are provided in KB, so they are normalized to bytes
-                        if( i<8 ) val *= 1024
+                        if (i<8) val *= 1024
                         this.put(name, val)
                     }
 
@@ -503,7 +503,7 @@ class TraceRecord implements Serializable {
             }
 
             // third line is the cpu realtime
-            else if( count == 2 ) {
+            else if (count == 2) {
                 try {
                     def elapsed = row.toString().trim().toLong()
                     this.put('realtime', elapsed)
@@ -582,7 +582,7 @@ class TraceRecord implements Serializable {
     }
 
     TraceRecord setCached(boolean value) {
-        if( value ) {
+        if (value) {
             store.status = 'CACHED'
         }
         return this
@@ -600,7 +600,7 @@ class TraceRecord implements Serializable {
         return executorName
     }
 
-    void setExecutorName(String value ) {
+    void setExecutorName(String value) {
         this.executorName = value
     }
 
