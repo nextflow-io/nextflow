@@ -535,7 +535,7 @@ class TowerClientTest extends Specification {
         request.uri().toString() == 'http://example.com/test'
     }
 
-    def 'should include numReclamations in task map'() {
+    def 'should include numSpotInterruptions in task map'() {
         given:
         def client = Spy(new TowerClient())
         client.getWorkflowProgress(true) >> new WorkflowProgress()
@@ -550,14 +550,14 @@ class TowerClientTest extends Specification {
             start: now-1000,
             complete: now
         ])
-        trace.setNumReclamations(3)
+        trace.setnumSpotInterruptions(3)
 
         when:
         def req = client.makeTasksReq([trace])
 
         then:
         req.tasks.size() == 1
-        req.tasks[0].numReclamations == 3
+        req.tasks[0].numSpotInterruptions == 3
     }
 
 }
