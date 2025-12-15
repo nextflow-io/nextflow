@@ -1,4 +1,4 @@
-# Multi-Revision Asset Management with Strategy Pattern
+# Git Multi-Revision Asset Management with Strategy Pattern
 
 - Authors: Jorge Ejarque
 - Status: Approved
@@ -14,7 +14,7 @@ Nextflow's asset management system has been refactored to support multiple revis
 
 The original asset management system (`AssetManager`) cloned each pipeline directly to `~/.nextflow/assets/<org>/<project>/.git`, creating several limitations:
 
-1. **No concurrent multi-revision support**: Only one revision of a pipeline could be checked out at a time, preventing concurrent execution of different versions
+1. **No concurrent Git multi-revision support**: Only one revision of a pipeline could be checked out at a time, preventing concurrent execution of different versions
 2. **Update conflicts**: Pulling updates while a pipeline was running could cause conflicts or corruption
 3. **Testing limitations**: Users couldn't easily test different versions of a pipeline side-by-side
 
@@ -112,7 +112,7 @@ Implemented **Option 3 (Bare Repository + Shared Clones with Strategy Pattern)**
 
 ## Rationale & discussion
 
-### Multi-Revision Implementation
+### Git Multi-Revision Implementation
 
 The bare repository approach provides efficient multi-revision support:
 
