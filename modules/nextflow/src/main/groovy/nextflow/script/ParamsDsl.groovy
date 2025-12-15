@@ -36,12 +36,8 @@ class ParamsDsl {
 
     private Map<String,Param> declarations = [:]
 
-    void declare(String name, Class type) {
-        declarations[name] = new Param(name, type, Optional.empty())
-    }
-
-    void declare(String name, Class type, Object defaultValue) {
-        declarations[name] = new Param(name, type, Optional.of(defaultValue))
+    void declare(String name, Class type, boolean optional, Object defaultValue = null) {
+        declarations[name] = new Param(name, type, optional, defaultValue)
     }
 
     void apply(Session session) {
@@ -56,17 +52,24 @@ class ParamsDsl {
         final params = new HashMap<String,?>()
         for( final name : declarations.keySet() ) {
             final decl = declarations[name]
-            if( cliParams.containsKey(name) )
+            if( cliParams.containsKey(name) ) {
                 params[name] = resolveFromCli(decl, cliParams[name])
-            else if( configParams.containsKey(name) )
+            }
+            else if( configParams.containsKey(name) ) {
                 params[name] = resolveFromCode(decl, configParams[name])
-            else if( decl.defaultValue.isPresent() )
-                params[name] = resolveFromCode(decl, decl.defaultValue.get())
-            else
+            }
+            else if( decl.defaultValue != null ) {
+                params[name] = resolveFromCode(decl, decl.defaultValue)
+            }
+            else if( decl.optional ) {
+                params[name] = null
+            }
+            else {
                 throw new ScriptRuntimeException("Parameter `$name` is required but was not specified on the command line, params file, or config")
+            }
 
-            final actualType = params[name].getClass()
-            if( !decl.type.isAssignableFrom(actualType) )
+            final actualType = params[name]?.getClass()
+            if( actualType != null && !isAssignableFrom(decl.type, actualType) )
                 throw new ScriptRuntimeException("Parameter `$name` with type ${Types.getName(decl.type)} cannot be assigned to ${params[name]} [${Types.getName(actualType)}]")
         }
 
@@ -90,11 +93,13 @@ class ParamsDsl {
         if( decl.type == Integer || decl.type == Float ) {
             if( str.isInteger() ) return str.toInteger()
             if( str.isLong() ) return str.toLong()
+            if( str.isBigInteger() ) return str.toBigInteger()
         }
 
         if( decl.type == Float ) {
             if( str.isFloat() ) return str.toFloat()
             if( str.isDouble() ) return str.toDouble()
+            if( str.isBigDecimal() ) return str.toBigDecimal()
         }
 
         if( decl.type == Path ) {
@@ -114,11 +119,22 @@ class ParamsDsl {
         return value
     }
 
+    private boolean isAssignableFrom(Class target, Class source) {
+        if( target == Float.class )
+            return Number.class.isAssignableFrom(source)
+
+        if( target == Integer.class )
+            return source == BigInteger.class || source == Long.class || source == Integer.class
+
+        return target.isAssignableFrom(source)
+    }
+
     @Canonical
     private static class Param {
         String name
         Class type
-        Optional<?> defaultValue
+        boolean optional
+        Object defaultValue
     }
 
 }

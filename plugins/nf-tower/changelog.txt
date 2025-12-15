@@ -1,5 +1,11 @@
 nf-tower changelog
 ===================
+1.18.0 - 28 Nov 2025
+- Fix TowerJsonGenerator thread-safety issue (#6619) [579cd6e4e]
+
+1.17.2 - 28 Nov 2025
+- Fix Fusion license JWT token refresh by reusing TowerClient [561ed6c32]
+
 1.17.1 - 22 Oct 2025
 - Show workspace roles in 'auth status', tweak error message on 403 (#6497) [0633d90d1]
 

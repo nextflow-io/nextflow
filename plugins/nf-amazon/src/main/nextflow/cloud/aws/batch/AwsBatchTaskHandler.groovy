@@ -38,6 +38,7 @@ import nextflow.exception.ProcessSubmitException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.fusion.FusionAwareTask
+import nextflow.fusion.FusionConfig
 import nextflow.processor.BatchContext
 import nextflow.processor.BatchHandler
 import nextflow.processor.TaskArrayRun
@@ -303,11 +304,11 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         final job = describeJob(jobId)
         final done = job?.status() in [JobStatus.SUCCEEDED, JobStatus.FAILED]
         if( done ) {
-            // take the exit code of the container, if 0 (successful) or missing
+            // take the exit code of the container, if missing (null)
             // take the exit code from the `.exitcode` file create by nextflow
             // the rationale of this is that, in case of error, the exit code return
             // by the batch API is more reliable.
-            task.exitStatus = job.container().exitCode() ?: readExitFile()
+            task.exitStatus = job.container()?.exitCode() != null ? job.container().exitCode() : readExitFile()
             // finalize the task
             task.stdout = outputFile
             if( job?.status() == JobStatus.FAILED || task.exitStatus==Integer.MAX_VALUE ) {
@@ -326,7 +327,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         return false
     }
 
-    private int readExitFile() {
+    protected int readExitFile() {
         try {
             exitFile.text as Integer
         }
@@ -753,7 +754,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             return result
         // when fusion snapshot is enabled max attempt should be > 0
         // to enable to allow snapshot retry the job execution in a new ec2 instance
-        return fusionEnabled() && fusionConfig().snapshotsEnabled() ? 5 : 0
+        return fusionEnabled() && fusionConfig().snapshotsEnabled() ? FusionConfig.DEFAULT_SNAPSHOT_MAX_SPOT_ATTEMPTS : 0
     }
 
     protected String getJobName(TaskRun task) {

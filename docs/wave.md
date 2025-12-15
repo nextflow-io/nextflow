@@ -92,6 +92,40 @@ conda.channels = 'conda-forge,bioconda'
 
 Packages from the [Python Package Index](https://pypi.org/) can also be added to a Conda `environment.yml` file. See {ref}`Conda and PyPI <conda-pypi>` for more information.
 
+(wave-build-templates)=
+
+### Build templates
+
+:::{versionadded} 25.12.0-edge
+:::
+
+Wave supports different build templates for creating container images from Conda packages. Build templates control how packages are installed and how the final container image is structured.
+
+Multi-stage build templates (`conda/pixi:v1` and `conda/micromamba:v2`) offer several advantages:
+
+- **Smaller images**: Build tools and package managers are excluded from the final image (30-50% size reduction typical).
+- **Reproducibility**: Lock files are generated for exact package version tracking.
+- **Security**: Fewer binaries in the final image reduces the attack surface.
+
+To use a specific build template, add the following to your configuration:
+
+```groovy
+wave.enabled = true
+wave.strategy = ['conda']
+wave.build.template = 'conda/pixi:v1'
+```
+
+Available templates:
+
+| Template | Description |
+|----------|-------------|
+| `conda/micromamba:v1` | Standard Micromamba 1.x single-stage build. The final image includes the package manager. Default when unspecified. |
+| `conda/micromamba:v2` | Multi-stage build using Micromamba 2.x. Produces smaller images without the package manager. |
+| `conda/pixi:v1` | Multi-stage build using [Pixi](https://pixi.sh/) package manager. Produces smaller images with faster dependency resolution. |
+| `cran/installr:v1` | Build template for R/CRAN packages using installr. |
+
+When `wave.build.template` is not specified, Wave uses the standard `conda/micromamba:v1` template.
+
 (wave-singularity)=
 
 ### Build Singularity native images
@@ -101,7 +135,7 @@ Packages from the [Python Package Index](https://pypi.org/) can also be added to
 
 Nextflow can build Singularity native images on-demand either using `Singularityfile`,
 Conda packages or Spack packages. The Singularity images are automatically uploaded in a container registry OCI compliant
-of your choice and stored as a [ORAS artefact](https://oras.land/).
+of your choice and stored as a [ORAS artifact](https://oras.land/).
 
 :::{note}
 This feature requires Singularity (or Apptainer) version supporting the pull of images using the `oras:` pseudo-protocol.
@@ -152,7 +186,7 @@ The repository access keys must be provided as Seqera Platform credentials (see
 Wave allows mirroring, i.e., copying containers used by your pipeline into a container registry of your choice. This allows the pipeline to pull containers from the target registry rather than the original registry.
 
 Mirroring is useful to create an on-demand cache of container images that are co-located in the same region where the pipeline
-is executed, and therefore optimising cost and network efficiency.
+is executed, and therefore optimizing cost and network efficiency.
 
 Include the following settings in your Nextflow configuration to enable this capability:
 

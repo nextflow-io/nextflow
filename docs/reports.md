@@ -95,7 +95,7 @@ nextflow log goofy_kilby -filter 'name =~ /hello.*/ && status == "FAILED"'
 
 ## Execution report
 
-Nextflow can create an HTML execution report: a single document which includes many useful metrics about a workflow execution. The report is organised in the three main sections: `Summary`, `Resources` and `Tasks` (see below for details).
+Nextflow can create an HTML execution report: a single document which includes many useful metrics about a workflow execution. The report is organized in the three main sections: `Summary`, `Resources` and `Tasks` (see below for details).
 
 To enable the creation of this report add the `-with-report` command line option when launching the pipeline execution. For example:
 
@@ -197,7 +197,7 @@ The following table shows the fields that can be included in the execution repor
 : Nextflow process name.
 
 `tag`
-: User provided identifier associated this task.
+: User provided identifier associated with this task.
 
 `name`
 : Task name.
@@ -331,7 +331,7 @@ Nextflow can render an HTML timeline for all processes executed in your pipeline
 ```{image} _static/timeline-min.png
 ```
 
-Each bar represents a process run in the pipeline execution. The bar length represents the task duration time (wall-time). The colored area in each bar represents the real execution time. The grey area to the *left* of the colored area represents the task scheduling wait time. The grey area to the *right* of the colored area represents the task termination time (clean-up and file un-staging). The numbers on the x-axis represent the time in absolute units e.g. minutes, hours, etc.
+Each bar represents a process run in the pipeline execution. The bar length represents the task duration time (wall-time). The colored area in each bar represents the real execution time. The gray area to the *left* of the colored area represents the task scheduling wait time. The gray area to the *right* of the colored area represents the task termination time (clean-up and file un-staging). The numbers on the x-axis represent the time in absolute units e.g. minutes, hours, etc.
 
 Each bar displays two numbers: the task duration time and the virtual memory size peak.
 

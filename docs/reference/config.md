@@ -865,6 +865,7 @@ The following settings are available:
 : Enable Fusion snapshotting (preview, default: `false`). This feature allows Fusion to automatically restore a job when it is interrupted by a spot reclamation.
 
 `fusion.tags`
+: *Currently only supported for S3.*
 : The pattern that determines how tags are applied to files created via the Fusion client (default: `[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)`). Set to `false` to disable tags.
 
 (config-google)=
@@ -1586,6 +1587,11 @@ The following settings are available:
   :::
 : Forcefully apply compression option to all layers, including already existing layers (default: `false`).
 
+`wave.build.conda.baseImage`
+: :::{versionadded} 25.12.0-edge
+  :::
+: The base image for the final stage in multi-stage Conda container builds (default: `ubuntu:24.04`). This option only applies when using `wave.build.template` set to `conda/micromamba:v2` or `conda/pixi:v1`.
+
 `wave.build.conda.basePackages`
 : One or more Conda packages to be always added in the resulting container (default: `conda-forge::procps-ng`).
 
@@ -1598,6 +1604,16 @@ The following settings are available:
 `wave.build.repository`
 : The container repository where images built by Wave are uploaded.
 : The corresponding credentials must be provided in your Seqera Platform account.
+
+`wave.build.template`
+: :::{versionadded} 25.12.0-edge
+  :::
+: The build template to use for container builds (default: `conda/micromamba:v1`). Supported values:
+: - `conda/micromamba:v1`: Standard Micromamba 1.x single-stage build. Default when unspecified.
+: - `conda/micromamba:v2`: Micromamba 2.x with multi-stage builds.
+: - `conda/pixi:v1`: Pixi package manager with multi-stage builds for optimized image sizes.
+: - `cran/installr:v1`: R/CRAN packages using installr.
+: Multi-stage templates produce smaller images by excluding build tools from the final image.
 
 `wave.httpClient.connectTimeout`
 : :::{versionadded} 22.06.0-edge
