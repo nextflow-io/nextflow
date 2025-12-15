@@ -25,6 +25,7 @@ import java.time.ZoneId
 
 import io.seqera.http.HxClient
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
 import nextflow.container.DockerConfig
@@ -394,6 +395,7 @@ class TowerClientTest extends Specification {
         when:
         client.onFlowCreate(session)
         then:
+        1 * client.getPlatformMetadata(_) >> null
         1 * client.getAccessToken() >> 'secret'
         1 * client.makeCreateReq(session) >> [runName: 'foo']
         1 * client.sendHttpMessage('https://api.cloud.seqera.io/trace/create', [runName: 'foo'], 'POST') >> new TowerClient.Response(200, '{"workflowId":"xyz123"}')
@@ -533,5 +535,35 @@ class TowerClientTest extends Specification {
         request != null
         request.method() == 'POST'
         request.uri().toString() == 'http://example.com/test'
+    }
+
+    def 'should retreive platform metadata content'() {
+
+        def session = Mock(Session)
+        def config = new TowerConfig( [accessToken: 'token-1234', workspaceId: '1234'] , SysEnv.get() )
+        def towerClient = Spy(new TowerClient(session, config)) {
+            apiGet(_, 'https://api.cloud.seqera.io', '/user-info', _) >> [ user: [ id: 'u1234', userName: 'user', email: 'john@acme.com', firstName: 'John', lastName: 'Smith', organization: 'ACME Inc.']]
+            apiGet(_, 'https://api.cloud.seqera.io', '/workflow/wf1234', _) >> [ workflow: [ id: 'wf1234', labels: [ [key: 'key1', value: 'value1'], [value: 'value2'] ] ] ]
+            apiGet(_, 'https://api.cloud.seqera.io', '/user/u1234/workspaces', _) >> [ orgsAndWorkspaces: [ [ orgId: 123, orgName: "ACME Inc.", workspaceId: 1234, workspaceName: "Workspace-Name", workspaceFullName: "Full Workspace Name", roles: ["member"]], [orgId: 234, orgName: "Name", workspaceId: "5434"]]]
+            apiGet(_, 'https://api.cloud.seqera.io', '/workflow/wf1234/launch', _) >> [ launch: [ id: 'l1234', computeEnv: [id: 'ce1234', name: 'ce-test', platform: 'aws-batch'], pipeline: 'test-pipeline', pipelineId: 'pipe1234', revision: 'v1.1', commitId: 'abcd12345']]
+        }
+        def workflowId = 'wf1234'
+
+        when:
+        def metadata = towerClient.getPlatformMetadata(workflowId)
+
+        then:
+        metadata.workflowId == 'wf1234'
+        metadata.user.id == 'u1234'
+        metadata.user.userName == 'user'
+        metadata.user.email == 'john@acme.com'
+        metadata.workspace.id == '1234'
+        metadata.workspace.name == "Workspace-Name"
+        metadata.workspace.organization == "ACME Inc."
+        metadata.pipeline.id == 'pipe1234'
+        metadata.pipeline.name == 'test-pipeline'
+        metadata.pipeline.revision == 'v1.1'
+        metadata.pipeline.commitId == 'abcd12345'
+        metadata.labels == ['key1=value1', 'value2']
     }
 }
