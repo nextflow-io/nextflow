@@ -164,23 +164,225 @@ POST /api/v1/modules/release/{releaseId}/upload              # Upload module arc
 
 **Commands**:
 ```bash
+nextflow module run scope/name              # Run a module directly without a wrapper script
 nextflow module search <query>              # Search registry
-nextflow module install [@scope/name]       # Install all from config, or specific module
-nextflow module update [@scope/name]        # Update specific module or all
+nextflow module install [scope/name]        # Install all from config, or specific module
 nextflow module freeze                      # Pin all versions + checksums to config
 nextflow module list                        # Show installed vs configured
-nextflow module remove @scope/name          # Remove from config + local cache
-nextflow module publish @scope/name         # Publish to registry (requires api key)
+nextflow module remove scope/name           # Remove from config + local cache
+nextflow module publish scope/name          # Publish to registry (requires api key)
 ```
 
-**Key Features**:
-- `search`: Find modules by name, description, tags
-- `install`: Download modules to local `modules/` directory, auto-download on `nextflow run` if missing
-- `update`: Re-query registry for latest version, update config
-- `freeze`: Scan `modules/` directory, write all versions + checksums to config (extended syntax)
-- `list`: Compare config versions vs installed versions
-- `publish`: Validate meta.yaml, authenticate, upload to registry
-- **Warnings**: Unpinned transitive dependencies generate warnings during resolution
+#### `nextflow module run scope/name`
+
+Run a module directly without requiring a wrapper workflow script. This command enables standalone execution of any module by automatically mapping command-line arguments to the module's process inputs. If the module is not available locally, it is automatically installed before execution.
+
+**Arguments**:
+- `scope/name`: Module identifier to run (required)
+
+**Options**:
+- `-version <ver>`: Run a specific version (default: latest or configured version)
+- `--<input_name> <value>`: Map value to the corresponding module process input channel
+- All standard `nextflow run` options (e.g., `-profile`, `-work-dir`, `-resume`, etc.)
+
+**Behavior**:
+1. Checks if module is installed locally; if not, downloads from registry
+2. Parses the module's `main.nf` to identify the main process and its input declarations
+3. Validates command-line arguments against the process input schema
+4. Generates an implicit workflow that wires CLI arguments to process inputs
+5. Executes the workflow using standard Nextflow runtime
+
+**Input Mapping**:
+- Named arguments (`--reads`, `--reference`) are mapped to corresponding process inputs
+- File paths are automatically converted to file channels
+- Multiple values can be provided for inputs expecting collections
+- Required inputs without defaults must be provided; optional inputs use declared defaults
+
+**Example**:
+```bash
+# Run BWA alignment module with input files
+nextflow module run nf-core/bwa-align \
+    --reads 'samples/*_{1,2}.fastq.gz' \
+    --reference genome.fa
+
+# Run a specific version with Nextflow options
+nextflow module run nf-core/fastqc -version 1.0.0 \
+    --input 'data/*.fastq.gz' \
+    -profile docker \
+    -resume
+
+# Run with work directory and output specification
+nextflow module run nf-core/salmon \
+    --reads reads.fq \
+    --index salmon_index \
+    -work-dir /tmp/work \
+    --outdir results/
+```
+
+---
+
+#### `nextflow module search <query>`
+
+Search the Nextflow registry for available modules matching the specified query. The search operates against module names, descriptions, tags, and author information. Results are displayed with module name, latest version, description, and download statistics.
+
+**Arguments**:
+- `<query>`: Search term (required) - matches against module metadata
+
+**Options**:
+- `-limit <n>`: Maximum number of results to return (default: 10)
+- `-json`: Output results in JSON format for programmatic use
+
+**Example**:
+```bash
+nextflow module search bwa
+nextflow module search "alignment" -limit 50
+```
+
+---
+
+#### `nextflow module install [scope/name]`
+
+Download and install modules to the local `modules/` directory. When called without arguments, installs all modules declared in `nextflow.config`. When a specific module is provided, installs that module and adds it to the configuration.
+
+**Arguments**:
+- `[scope/name]`: Optional module identifier. If omitted, installs all modules from config
+
+**Options**:
+- `-version <ver>`: Install a specific version (default: latest)
+- `-force`: Re-download even if already installed locally
+
+**Behavior**:
+1. Resolves the module version from `nextflow.config` or queries registry for latest
+2. Downloads the module archive from the registry
+3. Extracts to `modules/@scope/name@version/` directory
+4. Recursively installs transitive dependencies declared in `meta.yaml`
+5. Updates `nextflow.config` if installing a new module not already configured
+
+**Example**:
+```bash
+nextflow module install                      # Install all from config
+nextflow module install nf-core/bwa-align    # Install specific module (latest)
+nextflow module install nf-core/salmon -version 1.2.0
+```
+
+---
+
+#### `nextflow module freeze`
+
+Lock all module versions by writing exact versions and SHA-256 checksums to `nextflow.config`. This ensures fully reproducible builds by capturing the precise state of all dependencies.
+
+**Options**:
+- `-verify`: Verify existing checksums without updating
+
+**Behavior**:
+1. Scans the `modules/` directory for all installed modules
+2. Computes SHA-256 checksums for each module archive
+3. Converts simple version syntax to extended syntax with checksums in `nextflow.config`
+4. Includes transitive dependencies not explicitly declared
+
+**Output** (in `nextflow.config`):
+```groovy
+modules {
+    '@nf-core/bwa-align' = [
+        version: '1.2.4',
+        checksum: 'sha256-a1b2c3d4e5f6...'
+    ]
+}
+```
+
+**Example**:
+```bash
+nextflow module freeze                       # Pin all versions + checksums
+nextflow module freeze -verify               # Verify checksums match
+```
+
+---
+
+#### `nextflow module list`
+
+Display the status of all modules, comparing what is configured in `nextflow.config` against what is actually installed in the `modules/` directory.
+
+**Options**:
+- `-json`: Output in JSON format
+- `-outdated`: Only show modules with available updates
+
+**Output columns**:
+- Module name (`@scope/name`)
+- Configured version (from `nextflow.config`)
+- Installed version (from `modules/` directory)
+- Latest available version (from registry)
+- Status indicator (up-to-date, outdated, missing, not configured)
+
+**Example**:
+```bash
+nextflow module list
+nextflow module list -outdated
+```
+
+---
+
+#### `nextflow module remove scope/name`
+
+Remove a module from both the local `modules/` directory and the `nextflow.config` configuration. Also removes orphaned transitive dependencies that are no longer required by other modules.
+
+**Arguments**:
+- `scope/name`: Module identifier to remove (required)
+
+**Options**:
+- `-keep-config`: Remove local files but keep the entry in `nextflow.config`
+- `-keep-files`: Remove from config but keep local files
+
+**Behavior**:
+1. Removes the module directory from `modules/@scope/name@version/`
+2. Removes the module entry from the `modules {}` block in `nextflow.config`
+3. Identifies and optionally removes orphaned transitive dependencies
+4. Warns if the module is still referenced in workflow files
+
+**Example**:
+```bash
+nextflow module remove nf-core/bwa-align
+nextflow module remove myorg/custom -keep-files
+```
+
+---
+
+#### `nextflow module publish scope/name`
+
+Publish a module to the Nextflow registry, making it available for others to install. Requires authentication via API key and appropriate permissions for the target scope.
+
+**Arguments**:
+- `scope/name`: Module identifier to publish (required)
+
+**Options**:
+- `-registry <url>`: Target registry URL (default: `registry.nextflow.io`)
+- `-tag <tag>`: Additional tags for discoverability
+- `-dry-run`: Validate without publishing
+
+**Behavior**:
+1. Validates `meta.yaml` schema and required fields (name, version, description)
+2. Verifies `main.nf` exists and is valid Nextflow syntax
+3. Checks that `README.md` documentation is present
+4. Authenticates with registry using configured credentials
+5. Creates a release draft and uploads the module archive
+6. Publishes the release, making it available for installation
+
+**Requirements**:
+- Valid `meta.yaml` with name, version, and description
+- `main.nf` entry point file
+- `README.md` documentation
+- Authentication token configured in `registry.auth` or `NXF_REGISTRY_TOKEN`
+- Write permission for the target scope
+
+**Example**:
+```bash
+nextflow module publish myorg/my-process
+nextflow module publish myorg/my-process -dry-run
+```
+
+**General Notes**:
+- All commands respect the `registry.url` configuration for custom registries
+- Unpinned transitive dependencies generate warnings during resolution
+- Modules are automatically downloaded on `nextflow run` if missing but configured
 
 ## Module Structure
 
