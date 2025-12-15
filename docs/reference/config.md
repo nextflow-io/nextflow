@@ -720,7 +720,7 @@ The following settings are available:
   :::
 : *Used only by the {ref}`slurm-executor` executor.*
 : *Requires SLURM 24.05 or later.*
-: When `true`, job status queries use `squeue --only-job-state` without partition (`-p`) or user (`-u`) filters. This can reduce the load on the SLURM controller, especially if your SLURM administrator has enabled `SchedulerParameters=enable_job_state_cache` in the [SLURM configuration](https://slurm.schedmd.com/slurm.conf.html#OPT_enable_job_state_cache). More information in the [`squeue` documentation](https://slurm.schedmd.com/squeue.html#OPT_only-job-state). (default: `false`).
+: When `true`, job status queries use `squeue --only-job-state` without partition (`-p`) or user (`-u`) filters. This can reduce the load on the SLURM controller, especially if your SLURM administrator has enabled `SchedulerParameters=enable_job_state_cache` in your [SLURM configuration](https://slurm.schedmd.com/slurm.conf.html#OPT_enable_job_state_cache). See [`--only-job-state`](https://slurm.schedmd.com/squeue.html#OPT_only-job-state) for more information (default: `false`).
 
 `executor.perJobMemLimit`
 : *Used only by the {ref}`lsf-executor` executor.*
