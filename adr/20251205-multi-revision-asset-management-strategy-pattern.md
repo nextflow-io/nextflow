@@ -1,7 +1,7 @@
 # Multi-Revision Asset Management with Strategy Pattern
 
 - Authors: Jorge Ejarque
-- Status: Pending
+- Status: Approved
 - Deciders: Jorge Ejarque, Ben Sherman, Paolo Di Tommaso
 - Date: 2025-12-05
 - Tags: scm, asset-management, multi-revision
