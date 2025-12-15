@@ -1,6 +1,6 @@
 # Amazon Web Services plugin for Nextflow
 
-This plugin provides support for Amazon Web Services (AWS), including AWS Batch as a compute executor, S3 as a file system, and Fusion file system for high-performance data operations.
+The Amazon Web Services (AWS) plugin provides support for AWS, including AWS Batch as a compute executor, S3 as a file system, and Fusion file system for high-performance data operations.
 
 ## Get Started
 
