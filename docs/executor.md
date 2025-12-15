@@ -447,7 +447,7 @@ Some SLURM clusters require memory allocations to be specified with `--mem-per-c
 :::
 
 :::{versionadded} 25.12.0-edge
-Since SLURM 24, `squeue` supports an `--only-job-state` option that ignores the partition (`-p`) or user (`-u`) filters. To enable this behavior, specify `executor.$slurm.onlyJobState = true` in your Nextflow configuration. If `SchedulerParameters=enable_job_state_cache` is enabled, you can expect improved Nextflow performance and reduced load on the SLURM controller. More information about this feature in the [SLURM configuration](https://slurm.schedmd.com/slurm.conf.html#OPT_enable_job_state_cache) and the [`squeue` documentation](https://slurm.schedmd.com/squeue.html#OPT_only-job-state).
+Since SLURM 24, `squeue` supports an `--only-job-state` option that ignores the partition (`-p`) or user (`-u`) filters. To enable this behavior, specify `executor.$slurm.onlyJobState = true` in your Nextflow configuration. If `SchedulerParameters=enable_job_state_cache` is enabled, you can expect improved Nextflow performance and reduced load on the SLURM controller. See [`enable_job_state_cache`](https://slurm.schedmd.com/slurm.conf.html#OPT_enable_job_state_cache) and [`--only-job-state`](https://slurm.schedmd.com/squeue.html#OPT_only-job-state) for more information.
 :::
 
 (tcs-executor)=
