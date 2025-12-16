@@ -925,31 +925,32 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      * @return The number of times this job was retried due to spot instance reclamation
      */
     protected Integer getNumSpotInterruptions(String jobId) {
-        // Add spot instance reclamation count
-        if (jobId && isCompleted()) {
-            try {
-                def job = describeJob(jobId)
-                if (job) {
-                    if (!job?.attempts())
-                        return 0
+        if (!jobId || !isCompleted())
+            return null
 
-                    int count = 0
-                    for (def attempt : job.attempts()) {
-                        // Check attempt-level statusReason
-                        def attemptReason = attempt.statusReason()
-                        // AWS Batch uses "Host EC2 (instance i-xxx) terminated." pattern for spot interruptions
-                        // Using startsWith to match the pattern regardless of instance ID
-                        if (attemptReason && attemptReason.startsWith('Host EC2')) {
-                            count++
-                        }
-                    }
-                    log.trace "Job $jobId had $count spot interruptions"
-                    return count
+        try {
+            def job = describeJob(jobId)
+            if (!job)
+                return null
+            if (!job.attempts())
+                return 0
+
+            int count = 0
+            for (def attempt : job.attempts()) {
+                // Check attempt-level statusReason
+                def attemptReason = attempt.statusReason()
+                // AWS Batch uses "Host EC2 (instance i-xxx) terminated." pattern for spot interruptions
+                // Using startsWith to match the pattern regardless of instance ID
+                if (attemptReason && attemptReason.startsWith('Host EC2')) {
+                    count++
                 }
-            } catch (Exception e) {
-                log.debug "[AWS BATCH] Unable to count spot interruptions for job=$jobId - ${e.message}"
             }
-            return  null
+            log.trace "Job $jobId had $count spot interruptions"
+            return count
+        }
+        catch (Exception e) {
+            log.debug "[AWS BATCH] Unable to count spot interruptions for job=$jobId - ${e.message}"
+            return null
         }
     }
 

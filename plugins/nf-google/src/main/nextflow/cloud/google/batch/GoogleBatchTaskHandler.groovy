@@ -59,7 +59,7 @@ import nextflow.trace.TraceRecord
 import nextflow.util.TestOnly
 /**
  * Implements a task handler for Google Batch executor
- *
+ * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
@@ -688,11 +688,12 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         }
 
         try {
-            def status = client.getTaskStatus(jobId, taskId)
+            final status = client.getTaskStatus(jobId, taskId)
 
             if (!status)
                 return null
 
+            // valid status but no events present means no interruptions occurred
             if (!status?.statusEventsList)
                 return 0
 

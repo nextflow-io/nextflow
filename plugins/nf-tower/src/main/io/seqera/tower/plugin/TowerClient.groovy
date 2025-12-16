@@ -820,7 +820,6 @@ class TowerClient implements TraceObserverV2 {
             if( delta > period || tasks.size() >= TASKS_PER_REQUEST || complete ) {
                 // send
                 final req = makeTasksReq(tasks.values())
-                log.trace "Sending ${tasks.values()} task records to Seqera Platform"
                 final resp = sendHttpMessage(urlTraceProgress, req, 'PUT')
                 logHttpResponse(urlTraceProgress, resp)
 
