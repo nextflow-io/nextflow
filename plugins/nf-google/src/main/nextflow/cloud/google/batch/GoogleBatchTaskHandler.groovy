@@ -674,12 +674,52 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         return machineInfo
     }
 
+    /**
+     * Count the number of spot instance reclamations for this task by examining
+     * the task status events and checking for preemption exit codes
+     *
+     * @param jobId The Google Batch Job Id
+     * @return The number of times this task was retried due to spot instance reclamation
+     */
+
+    protected Integer getNumSpotInterruptions(String jobId) {
+        if (!jobId || !taskId || !isCompleted()) {
+            return null
+        }
+
+        try {
+            final status = client.getTaskStatus(jobId, taskId)
+
+            if (!status)
+                return null
+
+            // valid status but no events present means no interruptions occurred
+            if (!status?.statusEventsList)
+                return 0
+
+            int count = 0
+            for (def event : status.statusEventsList) {
+                // Google Batch uses exit code 50001 for spot preemption
+                // Check if the event has a task execution with exit code 50001
+                if (event.hasTaskExecution() && event.taskExecution.exitCode == 50001) {
+                    count++
+                }
+            }
+            return count
+
+        } catch (Exception e) {
+            log.debug "[GOOGLE BATCH] Unable to count spot interruptions for job=$jobId task=$taskId - ${e.message}"
+            return null
+        }
+    }
+
     @Override
     TraceRecord getTraceRecord() {
         def result = super.getTraceRecord()
         if( jobId && uid )
             result.put('native_id', "$jobId/$taskId/$uid")
         result.machineInfo = getMachineInfo()
+        result.numSpotInterruptions = getNumSpotInterruptions(jobId)
         return result
     }
 

@@ -16,8 +16,6 @@
 
 package nextflow.cloud.aws.batch
 
-import software.amazon.awssdk.services.batch.model.JobStatus
-
 import java.nio.file.Path
 import java.time.Instant
 
@@ -45,6 +43,7 @@ import nextflow.script.ProcessConfig
 import nextflow.util.CacheHelper
 import nextflow.util.MemoryUnit
 import software.amazon.awssdk.services.batch.BatchClient
+import software.amazon.awssdk.services.batch.model.AttemptDetail
 import software.amazon.awssdk.services.batch.model.ContainerDetail
 import software.amazon.awssdk.services.batch.model.DescribeJobDefinitionsRequest
 import software.amazon.awssdk.services.batch.model.DescribeJobDefinitionsResponse
@@ -54,6 +53,7 @@ import software.amazon.awssdk.services.batch.model.EvaluateOnExit
 import software.amazon.awssdk.services.batch.model.JobDefinition
 import software.amazon.awssdk.services.batch.model.JobDefinitionType
 import software.amazon.awssdk.services.batch.model.JobDetail
+import software.amazon.awssdk.services.batch.model.JobStatus
 import software.amazon.awssdk.services.batch.model.KeyValuePair
 import software.amazon.awssdk.services.batch.model.PlatformCapability
 import software.amazon.awssdk.services.batch.model.RegisterJobDefinitionResponse
@@ -908,7 +908,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         when:
         def trace = handler.getTraceRecord()
         then:
-        1 * handler.isCompleted() >> false
+        2 * handler.isCompleted() >> false
         1 * handler.getMachineInfo() >> new CloudMachineInfo('x1.large', 'us-east-1b', PriceModel.spot)
         
         and:
@@ -917,6 +917,48 @@ class AwsBatchTaskHandlerTest extends Specification {
         trace.machineInfo.type == 'x1.large'
         trace.machineInfo.zone == 'us-east-1b'
         trace.machineInfo.priceModel == PriceModel.spot
+    }
+
+    def 'should create the trace record when job is completed with spot interruptions' () {
+        given:
+        def exec = Mock(Executor) { getName() >> 'awsbatch' }
+        def processor = Mock(TaskProcessor)
+        processor.getExecutor() >> exec
+        processor.getName() >> 'foo'
+        processor.getConfig() >> new ProcessConfig(Mock(BaseScript))
+        def task = Mock(TaskRun)
+        task.getProcessor() >> processor
+        task.getConfig() >> GroovyMock(TaskConfig)
+        def proxy = Mock(AwsBatchProxy)
+        def handler = Spy(AwsBatchTaskHandler)
+        handler.@client = proxy
+        handler.task = task
+        handler.@jobId = 'xyz-123'
+        handler.setStatus(TaskStatus.COMPLETED)
+
+        def attempt1 = GroovyMock(AttemptDetail)
+        def attempt2 = GroovyMock(AttemptDetail)
+        attempt1.statusReason() >> 'Host EC2 (instance i-123) terminated.'
+        attempt1.container() >> null
+        attempt2.statusReason() >> 'Essential container in task exited'
+        attempt2.container() >> null
+        def job = JobDetail.builder().attempts([attempt1, attempt2]).build()
+
+        // Stub BEFORE calling the method
+        handler.isCompleted() >> true
+        handler.getMachineInfo() >> new CloudMachineInfo('x1.large', 'us-east-1b', PriceModel.spot)
+        handler.describeJob('xyz-123') >> job
+
+        when:
+        def trace = handler.getTraceRecord()
+
+        then:
+        trace.native_id == 'xyz-123'
+        trace.executorName == 'awsbatch'
+        trace.machineInfo.type == 'x1.large'
+        trace.machineInfo.zone == 'us-east-1b'
+        trace.machineInfo.priceModel == PriceModel.spot
+        trace.numSpotInterruptions == 1
     }
 
     def 'should render submit command' () {
@@ -1243,4 +1285,56 @@ class AwsBatchTaskHandlerTest extends Specification {
         handler.task.error.message == 'Unknown termination'
 
     }
+
+    def 'should return zero spot interruptions when no attempts or non-spot terminations exist'() {
+        given:
+        def handler = Spy(AwsBatchTaskHandler)
+        def attempt1 = GroovyMock(AttemptDetail) {
+            statusReason() >> 'Essential container in task exited'
+        }
+        def attempt2 = GroovyMock(AttemptDetail) {
+            statusReason() >> 'Some other reason'
+        }
+
+        when:
+        def resultNoAttempts = handler.getNumSpotInterruptions('job-123')
+        then:
+        1 * handler.isCompleted() >> true
+        1 * handler.describeJob('job-123') >> JobDetail.builder().attempts([]).build()
+        resultNoAttempts == 0
+
+        when:
+        def resultNonSpot = handler.getNumSpotInterruptions('job-456')
+        then:
+        1 * handler.isCompleted() >> true
+        1 * handler.describeJob('job-456') >> JobDetail.builder().attempts([attempt1, attempt2]).build()
+        resultNonSpot == 0
+    }
+
+    def 'should return null when job cannot be processed'() {
+        given:
+        def handler = Spy(AwsBatchTaskHandler)
+
+        when:
+        def resultNotCompleted = handler.getNumSpotInterruptions('job-123')
+        then:
+        1 * handler.isCompleted() >> false
+        0 * handler.describeJob(_)
+        resultNotCompleted == null
+
+        when:
+        def resultNullJobId = handler.getNumSpotInterruptions(null)
+        then:
+        0 * handler.isCompleted()
+        0 * handler.describeJob(_)
+        resultNullJobId == null
+
+        when:
+        def resultException = handler.getNumSpotInterruptions('job-789')
+        then:
+        1 * handler.isCompleted() >> true
+        1 * handler.describeJob('job-789') >> { throw new RuntimeException("Error") }
+        resultException == null
+    }
+
 }
