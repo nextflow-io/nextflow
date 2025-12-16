@@ -189,13 +189,14 @@ class CondaCache {
     }
 
     /**
-     * Check if the given path is a remote URL (http/https)
+     * Check if the given path is a remote URL (http, https, s3, gs, az, ftp, etc.)
      * @param str The path string to check
      * @return true if it's a remote URL
      */
     @PackageScope
     boolean isRemoteFile(String str) {
-        str?.startsWith('http://') || str?.startsWith('https://')
+        final protocol = FileHelper.getUrlProtocol(str)
+        return protocol != null && protocol != 'file'
     }
 
     /**

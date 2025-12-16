@@ -176,7 +176,7 @@ process hello {
 }
 ```
 
-Conda lock files can also be specified using a remote URL:
+Conda lock files can also be specified using a remote URL (HTTP, HTTPS, S3, Google Cloud Storage, Azure Blob Storage, etc.):
 
 ```nextflow
 process hello {
@@ -189,9 +189,20 @@ process hello {
 }
 ```
 
+```nextflow
+process hello {
+  conda 's3://my-bucket/conda/env.lock'
+
+  script:
+  """
+  your_command --here
+  """
+}
+```
+
 :::{versionchanged} 26.01.0-edge
 Conda lock files are now detected by the presence of the `@EXPLICIT` marker in the first 20 lines of the file.
-They can have any file extension (e.g., `.lock`, `.txt`, or no extension at all), and can be specified using remote URLs.
+They can have any file extension (e.g., `.lock`, `.txt`, or no extension at all), and can be specified using remote URLs including cloud storage paths (S3, GS, AZ).
 :::
 
 ### Use existing Conda environments

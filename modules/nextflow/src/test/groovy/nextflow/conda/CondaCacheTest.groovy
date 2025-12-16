@@ -87,12 +87,20 @@ class CondaCacheTest extends Specification {
         def cache = new CondaCache()
 
         expect:
+        // HTTP/HTTPS protocols
         cache.isRemoteFile('http://example.com/condalock')
         cache.isRemoteFile('https://example.com/env.lock')
         cache.isRemoteFile('https://wave.seqera.io/v1alpha1/builds/bd-123/condalock')
+        // Cloud storage protocols
+        cache.isRemoteFile('s3://bucket/path/to/condalock')
+        cache.isRemoteFile('gs://bucket/path/to/condalock')
+        cache.isRemoteFile('az://container/path/to/condalock')
+        // FTP protocol
+        cache.isRemoteFile('ftp://example.com/file')
+        // Not remote files
         !cache.isRemoteFile('foo.yml')
         !cache.isRemoteFile('/path/to/env.lock')
-        !cache.isRemoteFile('ftp://example.com/file')
+        !cache.isRemoteFile('file:///path/to/env.lock')
         !cache.isRemoteFile(null)
     }
 
