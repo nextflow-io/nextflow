@@ -462,6 +462,10 @@ workflow {
 :::{versionadded} 21.11.0-edge
 :::
 
+:::{warning}
+This is a preview feature – the syntax and behavior may change in future releases.
+:::
+
 :::{note}
 This feature requires the `nextflow.preview.recursion` feature flag to be enabled.
 :::

@@ -5,6 +5,14 @@
 :::{versionadded} 25.10.0
 :::
 
+:::{warning}
+This is a preview feature – the syntax and behavior may change in future releases.
+:::
+
+:::{note}
+This feature requires the `nextflow.preview.types` feature flag to be enabled in every script that uses typed processes.
+:::
+
 Typed processes use a new syntax for inputs and outputs based on static types.
 
 ```nextflow
