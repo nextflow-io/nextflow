@@ -163,10 +163,35 @@ https://conda.anaconda.org/conda-forge/linux-64/libgcc-ng-13.2.0-h77fa898_7.cond
 # .. and so on
 ```
 
-To use a Conda lock file with Nextflow, set the `conda` directive to the path of the lock file.
+To use a Conda lock file with Nextflow, set the `conda` directive to the path of the lock file:
+
+```nextflow
+process hello {
+  conda '/path/to/spec-file.lock'
+
+  script:
+  """
+  your_command --here
+  """
+}
+```
+
+Conda lock files can also be specified using a remote URL:
+
+```nextflow
+process hello {
+  conda 'https://wave.seqera.io/v1alpha1/builds/bd-12345/condalock'
+
+  script:
+  """
+  your_command --here
+  """
+}
+```
 
 :::{note}
-Conda lock files must be a text file with the `.txt` extension.
+Conda lock files are detected by the presence of the `@EXPLICIT` marker in the first 20 lines of the file.
+They can have any file extension (e.g., `.lock`, `.txt`, or no extension at all).
 :::
 
 ### Use existing Conda environments

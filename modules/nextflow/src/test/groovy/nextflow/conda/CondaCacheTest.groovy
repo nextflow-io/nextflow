@@ -59,6 +59,42 @@ class CondaCacheTest extends Specification {
         cache.isTextFilePath('foo/bar/env.txt')
     }
 
+    def 'should detect lock file content' () {
+
+        given:
+        def cache = new CondaCache()
+
+        expect:
+        // Valid lock file content - @EXPLICIT marker present
+        cache.isLockFile('@EXPLICIT\nhttps://conda.anaconda.org/conda-forge/linux-64/package-1.0.tar.bz2')
+        cache.isLockFile('# This file may be used to create an environment\n@EXPLICIT\nhttps://url')
+        cache.isLockFile('# comment\n# another comment\n@EXPLICIT\nhttps://url')
+        // With spaces/indentation
+        cache.isLockFile('  @EXPLICIT  \nhttps://url')
+
+        // Invalid lock file content - no @EXPLICIT marker
+        !cache.isLockFile('foo=1.0')
+        !cache.isLockFile('channels:\n  - conda-forge\ndependencies:\n  - bwa')
+        !cache.isLockFile('')
+        !cache.isLockFile(null)
+        // @EXPLICIT after 20 lines should not be detected
+        !cache.isLockFile((1..25).collect { "# line $it" }.join('\n') + '\n@EXPLICIT')
+    }
+
+    def 'should detect remote file' () {
+
+        given:
+        def cache = new CondaCache()
+
+        expect:
+        cache.isRemoteFile('http://example.com/condalock')
+        cache.isRemoteFile('https://example.com/env.lock')
+        cache.isRemoteFile('https://wave.seqera.io/v1alpha1/builds/bd-123/condalock')
+        !cache.isRemoteFile('foo.yml')
+        !cache.isRemoteFile('/path/to/env.lock')
+        !cache.isRemoteFile('ftp://example.com/file')
+        !cache.isRemoteFile(null)
+    }
 
     def 'should create conda env prefix path for a string env' () {
 
@@ -187,6 +223,84 @@ class CondaCacheTest extends Specification {
         1 * cache.isYamlFilePath(ENV)
         0 * cache.getCacheDir()
         prefix.toString() == folder.toString()
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should create conda env prefix path for a lock file with .lock extension' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        def cache = Spy(CondaCache)
+        def BASE = Paths.get('/conda/envs')
+        def ENV = folder.resolve('env.lock')
+        ENV.text = '''
+                # This file may be used to create an environment using:
+                # $ conda create --name <env> --file <this file>
+                @EXPLICIT
+                https://conda.anaconda.org/conda-forge/linux-64/package-1.0.tar.bz2
+                '''
+                .stripIndent(true)
+
+        when:
+        def prefix = cache.condaPrefixPath(ENV.toString())
+        then:
+        1 * cache.isYamlFilePath(ENV.toString())
+        1 * cache.isTextFilePath(ENV.toString())
+        1 * cache.isLockFile(_) >> true
+        1 * cache.getCacheDir() >> BASE
+        prefix.toString().startsWith("/conda/envs/env-")
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should create conda env prefix path for a lock file with no extension' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        def cache = Spy(CondaCache)
+        def BASE = Paths.get('/conda/envs')
+        def ENV = folder.resolve('condalock')
+        ENV.text = '''
+                @EXPLICIT
+                https://conda.anaconda.org/conda-forge/linux-64/package-1.0.tar.bz2
+                '''
+                .stripIndent(true)
+
+        when:
+        def prefix = cache.condaPrefixPath(ENV.toString())
+        then:
+        1 * cache.isYamlFilePath(ENV.toString())
+        1 * cache.isTextFilePath(ENV.toString())
+        1 * cache.isLockFile(_) >> true
+        1 * cache.getCacheDir() >> BASE
+        prefix.toString().startsWith("/conda/envs/env-")
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should reject file with non-standard extension that is not a lock file' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        def cache = Spy(CondaCache)
+        def ENV = folder.resolve('env.lock')
+        ENV.text = '''
+                # This is not a valid lock file
+                bwa=1.0
+                samtools=1.15
+                '''
+                .stripIndent(true)
+
+        when:
+        cache.condaPrefixPath(ENV.toString())
+
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains('not a valid lock file')
 
         cleanup:
         folder?.deleteDir()
@@ -452,6 +566,62 @@ class CondaCacheTest extends Specification {
         1 * cache.runCommand( "micromamba create --this --that --yes --quiet --prefix $PREFIX --file /usr/base/foo.txt" ) >> null
         result == PREFIX
 
+    }
+
+    def 'should create a conda env with a lock file with .lock extension' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        def ENV = folder.resolve('env.lock').toString()
+        folder.resolve('env.lock').text = '''
+                @EXPLICIT
+                https://conda.anaconda.org/conda-forge/linux-64/package-1.0.tar.bz2
+                '''
+                .stripIndent(true)
+        def PREFIX = Paths.get('/conda/envs/my-env')
+        and:
+        def cache = Spy(new CondaCache(createOptions: '--this --that'))
+
+        when:
+        def result = cache.createLocalCondaEnv0(ENV, PREFIX)
+        then:
+        1 * cache.isYamlFilePath(ENV)
+        1 * cache.isRemoteFile(ENV)
+        1 * cache.isTextFilePath(ENV)
+        1 * cache.isLockFilePath(_) >> true
+        1 * cache.runCommand({ it.contains('--file') && it.contains('env.lock') }) >> null
+        result == PREFIX
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should create a conda env with a lock file with no extension' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        def ENV = folder.resolve('condalock').toString()
+        folder.resolve('condalock').text = '''
+                @EXPLICIT
+                https://conda.anaconda.org/conda-forge/linux-64/package-1.0.tar.bz2
+                '''
+                .stripIndent(true)
+        def PREFIX = Paths.get('/conda/envs/my-env')
+        and:
+        def cache = Spy(new CondaCache())
+
+        when:
+        def result = cache.createLocalCondaEnv0(ENV, PREFIX)
+        then:
+        1 * cache.isYamlFilePath(ENV)
+        1 * cache.isRemoteFile(ENV)
+        1 * cache.isTextFilePath(ENV)
+        1 * cache.isLockFilePath(_) >> true
+        1 * cache.runCommand({ it.contains('--file') && it.contains('condalock') }) >> null
+        result == PREFIX
+
+        cleanup:
+        folder?.deleteDir()
     }
 
     def 'should get options from the config' () {

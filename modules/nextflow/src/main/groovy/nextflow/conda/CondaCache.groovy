@@ -17,6 +17,7 @@
 package nextflow.conda
 
 import java.nio.file.FileSystems
+import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -29,6 +30,7 @@ import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.LazyDataflowVariable
 import nextflow.Global
 import nextflow.SysEnv
+import nextflow.file.FileHelper
 import nextflow.file.FileMutex
 import nextflow.util.CacheHelper
 import nextflow.util.Duration
@@ -167,6 +169,61 @@ class CondaCache {
     }
 
     /**
+     * Check if the given content represents a conda lock file.
+     * A conda lock file contains "@EXPLICIT" marker in the first 20 lines.
+     *
+     * @param content The file content to check
+     * @return true if this is a conda lock file, false otherwise
+     */
+    @PackageScope
+    boolean isLockFile(String content) {
+        if( !content )
+            return false
+        final lines = content.readLines()
+        final limit = Math.min(20, lines.size())
+        for( int i = 0; i < limit; i++ ) {
+            if( lines[i].trim() == '@EXPLICIT' )
+                return true
+        }
+        return false
+    }
+
+    /**
+     * Check if the given path is a remote URL (http/https)
+     * @param str The path string to check
+     * @return true if it's a remote URL
+     */
+    @PackageScope
+    boolean isRemoteFile(String str) {
+        str?.startsWith('http://') || str?.startsWith('https://')
+    }
+
+    /**
+     * Stage a remote file to the local cache directory.
+     *
+     * @param url The remote URL to download
+     * @return The local path where the file was staged
+     */
+    @PackageScope
+    Path stageRemoteFile(String url) {
+        final remotePath = FileHelper.asPath(url)
+        final hash = CacheHelper.hasher(url).hash().toString()
+        final fileName = remotePath.getFileName()?.toString() ?: 'condalock'
+        final localPath = getCacheDir().resolve("downloads").resolve("${hash}-${fileName}")
+
+        if( !localPath.parent.exists() )
+            Files.createDirectories(localPath.parent)
+
+        if( !localPath.exists() ) {
+            log.debug "Staging remote conda file: $url -> $localPath"
+            final content = remotePath.text
+            localPath.text = content
+        }
+
+        return localPath
+    }
+
+    /**
      * Get the path on the file system where store a Conda environment
      *
      * @param condaEnv The conda environment
@@ -178,9 +235,17 @@ class CondaCache {
 
         String content
         String name = 'env'
-        // check if it's a remote uri
-        if( isYamlUriPath(condaEnv) ) {
-            content = condaEnv
+
+        // check if it's a remote URL
+        if( isRemoteFile(condaEnv) ) {
+            try {
+                // stage the remote file locally and read its content
+                final localPath = stageRemoteFile(condaEnv)
+                content = localPath.text
+            }
+            catch( Exception e ) {
+                throw new IllegalArgumentException("Error fetching remote Conda environment file: $condaEnv -- Check the log file for details", e)
+            }
         }
         // check if it's a YAML file
         else if( isYamlFilePath(condaEnv) ) {
@@ -210,13 +275,32 @@ class CondaCache {
         }
         // it's interpreted as user provided prefix directory
         else if( condaEnv.contains('/') ) {
-            final prefix = condaEnv as Path
-            if( !prefix.isDirectory() )
-                throw new IllegalArgumentException("Conda prefix path does not exist or is not a directory: $prefix")
-            if( prefix.fileSystem != FileSystems.default )
-                throw new IllegalArgumentException("Conda prefix path must be a POSIX file path: $prefix")
-
-            return prefix
+            // check if it's a file path that might be a lock file
+            final path = condaEnv as Path
+            if( path.isDirectory() ) {
+                if( path.fileSystem != FileSystems.default )
+                    throw new IllegalArgumentException("Conda prefix path must be a POSIX file path: $path")
+                return path
+            }
+            // it could be a file with a non-standard extension (e.g., .lock or no extension)
+            if( Files.exists(path) ) {
+                try {
+                    content = path.text
+                    // if it's a lock file, use it; otherwise treat as invalid
+                    if( !isLockFile(content) ) {
+                        throw new IllegalArgumentException("Conda environment file is not a valid lock file (missing @EXPLICIT marker): $condaEnv")
+                    }
+                }
+                catch( IllegalArgumentException e ) {
+                    throw e
+                }
+                catch( Exception e ) {
+                    throw new IllegalArgumentException("Error reading Conda environment file: $condaEnv -- Check the log file for details", e)
+                }
+            }
+            else {
+                throw new IllegalArgumentException("Conda prefix path does not exist or is not a directory: $path")
+            }
         }
         else if( condaEnv.contains('\n') ) {
             throw new IllegalArgumentException("Invalid Conda environment definition: $condaEnv")
@@ -267,6 +351,41 @@ class CondaCache {
         env.startsWith('http://') || env.startsWith('https://')
     }
 
+    /**
+     * Get the local file path for a conda environment file.
+     * If the path is a remote URL, return the staged local path.
+     *
+     * @param condaEnv The conda environment string (can be local path or URL)
+     * @return The local file path
+     */
+    @PackageScope
+    Path getLocalFilePath(String condaEnv) {
+        if( isRemoteFile(condaEnv) ) {
+            return stageRemoteFile(condaEnv)
+        }
+        return makeAbsolute(condaEnv)
+    }
+
+    /**
+     * Check if a conda environment file is a lock file.
+     * Reads the file content and checks for @EXPLICIT marker.
+     *
+     * @param filePath The path to the file
+     * @return true if the file is a lock file
+     */
+    @PackageScope
+    boolean isLockFilePath(Path filePath) {
+        if( !Files.exists(filePath) )
+            return false
+        try {
+            return isLockFile(filePath.text)
+        }
+        catch( Exception e ) {
+            log.debug "Error checking if file is lock file: $filePath", e
+            return false
+        }
+    }
+
     @PackageScope
     Path createLocalCondaEnv0(String condaEnv, Path prefixPath) {
         if( prefixPath.isDirectory() ) {
@@ -279,15 +398,40 @@ class CondaCache {
         String opts = createOptions ? "$createOptions " : ''
 
         def cmd
+        // Check if it's a YAML file (by extension)
         if( isYamlFilePath(condaEnv) ) {
-            final target = isYamlUriPath(condaEnv) ? condaEnv : Escape.path(makeAbsolute(condaEnv))
+            final target = Escape.path(getLocalFilePath(condaEnv))
             final yesOpt = binaryName=="mamba" || binaryName == "micromamba"  ? '--yes ' : ''
             cmd = "${binaryName} env create ${yesOpt}--prefix ${Escape.path(prefixPath)} --file ${target}"
         }
+        // Check if it's a remote file (http/https URL)
+        else if( isRemoteFile(condaEnv) ) {
+            final localPath = getLocalFilePath(condaEnv)
+            if( isLockFilePath(localPath) ) {
+                // It's a lock file - use conda create --file
+                cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} --file ${Escape.path(localPath)}"
+            }
+            else {
+                // Assume it's a YAML environment file
+                final yesOpt = binaryName=="mamba" || binaryName == "micromamba"  ? '--yes ' : ''
+                cmd = "${binaryName} env create ${yesOpt}--prefix ${Escape.path(prefixPath)} --file ${Escape.path(localPath)}"
+            }
+        }
+        // Check if it's a text file (by extension) - legacy support
         else if( isTextFilePath(condaEnv) ) {
             cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
         }
-
+        // Check if it's a file path with non-standard extension that might be a lock file
+        else if( condaEnv.contains('/') ) {
+            final localPath = makeAbsolute(condaEnv)
+            if( Files.exists(localPath) && isLockFilePath(localPath) ) {
+                cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} --file ${Escape.path(localPath)}"
+            }
+            else {
+                throw new IllegalArgumentException("Conda environment file is not a valid lock file: $condaEnv")
+            }
+        }
+        // Otherwise treat as package name(s)
         else {
             final channelsOpt = channels.collect(it -> "-c $it ").join('')
             cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} ${channelsOpt}$condaEnv"
