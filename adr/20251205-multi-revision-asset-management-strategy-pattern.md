@@ -182,11 +182,9 @@ The Strategy pattern provides clean separation and backward compatibility:
 **Strategy selection logic:**
 
 1. Check `NXF_SCM_LEGACY` environment variable → Use legacy if set
-2. Detect repository state:
-   - `UNINITIALIZED` (no repo) → Use multi-revision (default for new)
-   - `LEGACY_ONLY` (only `.git/`) → Use legacy (preserve existing)
-   - `BARE_ONLY` (only bare repo) → Use multi-revision
-   - `HYBRID` (both exist) → Prefer multi-revision
+2. Check if there is only the legacy asset of the repository (`isOnlyLegacy` method) → Use legacy (preserve existing)
+3. Otherwise -> Use multi-revision
+
 
 **Backward compatibility guarantees:**
 
@@ -200,17 +198,17 @@ The Strategy pattern provides clean separation and backward compatibility:
 
 The system gracefully handles hybrid states where both legacy and multi-revision repositories coexist:
 
-- **Detection**: `RepositoryStatus` enum represents all possible states
+- **Detection**: In hybrid states, a multi-revision strategy is selected by default.
 - **Fallback logic**: Multi-revision strategy can fall back to legacy repo for operations if needed
 - **No conflicts**: Strategies are designed to coexist; operations target different directories
-- **Explicit control**: Users can force a specific strategy via `setStrategyType()`
+- **Explicit control**: Users can force a specific strategy via `setStrategyType()` or `NXF_SCM_LEGACY` environment variable
 
 ### Migration Path
 
 Users naturally migrate as they pull new revisions:
 
-1. **Existing users**: Continue with legacy repos (`LEGACY_ONLY` state detected)
-2. **New users**: Get multi-revision by default (`UNINITIALIZED` → multi-revision)
+1. **Existing users**: Can continue with legacy repos (`NXF_SCM_LEGACY` state detected)
+2. **New users**: Get multi-revision by default
 3. **Opt-in migration**: Delete project directory to switch to multi-revision or pull with --migrate
 4. **Opt-out**: Set `NXF_SCM_LEGACY=true` to force legacy mode
 

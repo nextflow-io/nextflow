@@ -14,20 +14,13 @@ classDiagram
         hub : String
         providerConfigs : List~ProviderConfig~
     }
-    class RepositoryStatus {
-        <<enumeration>>
-        UNINITIALIZED
-        LEGACY_ONLY
-        BARE_ONLY
-        HYBRID
-    }
+
     class RepositoryStrategyType {
         <<enumeration>>
         LEGACY
         MULTI_REVISION
     }
 
-    AssetManager --> RepositoryStatus
     AssetManager --> RepositoryStrategyType
     AssetManager "1" --o "1" RepositoryStrategy
     AssetManager "1" --o "1" RepositoryProvider

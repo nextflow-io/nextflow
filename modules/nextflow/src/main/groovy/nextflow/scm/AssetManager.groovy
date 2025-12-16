@@ -198,58 +198,13 @@ class AssetManager {
             return RepositoryStrategyType.LEGACY
         }
 
-        // Detect current repository status
-        def status = getRepositoryStatus()
-        // Select type
-        def type = RepositoryStrategyType.MULTI_REVISION
-        switch( status ) {
-            case RepositoryStatus.UNINITIALIZED:
-                // No repo exists yet, use multi-revision by default
-                log.debug "No existing repository, using multi-revision strategy"
-                type = RepositoryStrategyType.MULTI_REVISION
-                break
-
-            case RepositoryStatus.LEGACY_ONLY:
-                // Legacy repo exists, continue using legacy
-                log.debug "Legacy repository detected, using legacy strategy"
-                type = RepositoryStrategyType.LEGACY
-                break
-
-            case RepositoryStatus.BARE_ONLY:
-                // Bare repo exists, use multi-revision
-                log.debug "Bare repository detected, using multi-revision strategy"
-                type = RepositoryStrategyType.MULTI_REVISION
-                break
-
-            case RepositoryStatus.HYBRID:
-                // Both exist, prefer multi-revision
-                log.debug "Hybrid repository detected, preferring multi-revision strategy"
-                type = RepositoryStrategyType.MULTI_REVISION
-                break
-
-            default:
-                // Default to multi-revision
-                type = RepositoryStrategyType.MULTI_REVISION
+        if (isOnlyLegacy()){
+            log.debug "Legacy repository detected, selecting legacy strategy"
+            return RepositoryStrategyType.LEGACY
+        } else {
+            log.debug "Selecting multi-revision strategy"
+            return RepositoryStrategyType.MULTI_REVISION
         }
-        return type
-    }
-
-    /**
-     * Get the current repository status
-     *
-     * @return The status indicating what type of repositories exist
-     */
-    RepositoryStatus getRepositoryStatus() {
-        if( !root || !project )
-            return RepositoryStatus.UNINITIALIZED
-
-        boolean hasMultiRevision = MultiRevisionRepositoryStrategy.checkProject(root, project)
-        boolean hasLegacy = LegacyRepositoryStrategy.checkProject(root, project)
-
-        if( !hasMultiRevision && !hasLegacy ) return RepositoryStatus.UNINITIALIZED
-        if( hasMultiRevision && hasLegacy ) return RepositoryStatus.HYBRID
-        if( hasMultiRevision ) return RepositoryStatus.BARE_ONLY
-        return RepositoryStatus.LEGACY_ONLY
     }
 
     /**
@@ -283,17 +238,32 @@ class AssetManager {
     }
 
     /**
-     * Check if using legacy strategy
+     * Check if using multi-revision strategy
      */
     boolean isUsingMultiRevisionStrategy() {
         return strategy instanceof MultiRevisionRepositoryStrategy
     }
 
     /**
-     * Check if using multi-revision strategy
+     * Check if a multi-revision or legacy local asset exist.
+     * @return 'true' if none of them exist, otherwise 'false'.
      */
     boolean isNotInitialized() {
-        return getRepositoryStatus() == RepositoryStatus.UNINITIALIZED
+        final hasMultiRevision = MultiRevisionRepositoryStrategy.checkProject(root, project)
+        final hasLegacy = LegacyRepositoryStrategy.checkProject(root, project)
+
+        return !hasMultiRevision && !hasLegacy
+    }
+
+    /**
+     * Check if repository has only a local legacy asset
+     * @return 'true' if legacy asset exists and multi-revision doesn't exist, otherwise 'false'.
+     */
+    boolean isOnlyLegacy(){
+        final hasMultiRevision = MultiRevisionRepositoryStrategy.checkProject(root, project)
+        final hasLegacy = LegacyRepositoryStrategy.checkProject(root, project)
+
+        return hasLegacy && !hasMultiRevision
     }
 
 
@@ -1210,33 +1180,6 @@ class AssetManager {
          * Bare repo + Multi-revision strategy
          */
         MULTI_REVISION
-    }
-
-    /**
-     * Enumeration of possible repository states for a project.
-     * A project directory can contain different types of repositories depending on which
-     * strategy was used to download it.
-     */
-    enum RepositoryStatus {
-        /**
-         * No repository exists yet - project has not been downloaded
-         */
-        UNINITIALIZED,
-
-        /**
-         * Only a bare repository exists (multi-revision strategy)
-         */
-        BARE_ONLY,
-
-        /**
-         * Only a legacy repository exists (direct clone strategy)
-         */
-        LEGACY_ONLY,
-
-        /**
-         * Both bare and legacy repositories exist (hybrid state)
-         */
-        HYBRID
     }
 
 }
