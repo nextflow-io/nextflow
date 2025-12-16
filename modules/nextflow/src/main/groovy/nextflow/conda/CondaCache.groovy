@@ -348,10 +348,6 @@ class CondaCache {
         Paths.get(envFile).toAbsolutePath()
     }
 
-    @PackageScope boolean isYamlUriPath(String env) {
-        env.startsWith('http://') || env.startsWith('https://')
-    }
-
     /**
      * Get the local file path for a conda environment file.
      * If the path is a remote URL, return the staged local path.
