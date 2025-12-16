@@ -189,9 +189,9 @@ process hello {
 }
 ```
 
-:::{note}
-Conda lock files are detected by the presence of the `@EXPLICIT` marker in the first 20 lines of the file.
-They can have any file extension (e.g., `.lock`, `.txt`, or no extension at all).
+:::{versionchanged} 26.01.0-edge
+Conda lock files are now detected by the presence of the `@EXPLICIT` marker in the first 20 lines of the file.
+They can have any file extension (e.g., `.lock`, `.txt`, or no extension at all), and can be specified using remote URLs.
 :::
 
 ### Use existing Conda environments
