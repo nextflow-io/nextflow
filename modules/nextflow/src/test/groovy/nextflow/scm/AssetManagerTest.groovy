@@ -821,7 +821,7 @@ class AssetManagerTest extends Specification {
         def manager = new AssetManager().build('test-org/test-repo')
 
         then:
-        manager.getRepositoryStatus() == AssetManager.RepositoryStatus.UNINITIALIZED
+        manager.isNotInitialized()
         manager.isUsingMultiRevisionStrategy()
         !manager.isUsingLegacyStrategy()
     }
@@ -844,7 +844,7 @@ class AssetManagerTest extends Specification {
         def manager = new AssetManager().build('test-org/test-repo')
 
         then:
-        manager.getRepositoryStatus() == AssetManager.RepositoryStatus.LEGACY_ONLY
+        manager.isOnlyLegacy()
         manager.isUsingLegacyStrategy()
         !manager.isUsingMultiRevisionStrategy()
     }
@@ -866,7 +866,6 @@ class AssetManagerTest extends Specification {
         def manager = new AssetManager().build('test-org/test-repo')
 
         then:
-        manager.getRepositoryStatus() == AssetManager.RepositoryStatus.BARE_ONLY
         manager.isUsingMultiRevisionStrategy()
         !manager.isUsingLegacyStrategy()
     }
@@ -896,7 +895,6 @@ class AssetManagerTest extends Specification {
         def manager = new AssetManager().build('test-org/test-repo')
 
         then:
-        manager.getRepositoryStatus() == AssetManager.RepositoryStatus.HYBRID
         manager.isUsingMultiRevisionStrategy()
         !manager.isUsingLegacyStrategy()
     }
@@ -914,7 +912,7 @@ class AssetManagerTest extends Specification {
         def manager = new AssetManager().build('test-org/test-repo')
 
         then:
-        manager.getRepositoryStatus() == AssetManager.RepositoryStatus.UNINITIALIZED
+        manager.isNotInitialized()
         manager.isUsingLegacyStrategy()
         !manager.isUsingMultiRevisionStrategy()
 
@@ -962,31 +960,51 @@ class AssetManagerTest extends Specification {
         def folder = tempDir.getRoot()
 
         expect: 'no repository exists'
-        def status1 = LegacyRepositoryStrategy.checkProject(folder.toFile(), 'test-org/repo1') || MultiRevisionRepositoryStrategy.checkProject(folder.toFile(), 'test-org/repo1')
-        !status1
+        new AssetManager().build('test-org/test-repo').isNotInitialized()
+
 
         when: 'only legacy exists'
         def legacyPath2 = folder.resolve('test-org/repo2')
         legacyPath2.mkdirs()
         legacyPath2.resolve('.git').mkdir()
+        legacyPath2.resolve('.git/config').text = GIT_CONFIG_TEXT
+        def manager = new AssetManager().build('test-org/repo2')
         then:
-        LegacyRepositoryStrategy.checkProject(folder.toFile(), 'test-org/repo2')
-        !MultiRevisionRepositoryStrategy.checkProject(folder.toFile(), 'test-org/repo2')
+        !manager.isNotInitialized()
+        manager.isOnlyLegacy()
 
         when: 'only bare exists'
         def barePath3 = folder.resolve(REPOS_SUBDIR + '/test-org/repo3/' + BARE_REPO)
         barePath3.mkdirs()
+        def initBare3 = Git.init()
+        initBare3.setDirectory(barePath3.toFile())
+        initBare3.setBare(true)
+        def repoBare3 = initBare3.call()
+        repoBare3.close()
+        barePath3.resolve('config').text = GIT_CONFIG_TEXT
+        manager = new AssetManager().build('test-org/repo3')
         then:
-        !LegacyRepositoryStrategy.checkProject(folder.toFile(), 'test-org/repo3')
+        !manager.isNotInitialized()
+        !manager.isOnlyLegacy()
         MultiRevisionRepositoryStrategy.checkProject(folder.toFile(), 'test-org/repo3')
 
         when: 'both exist'
         def legacyPath4 = folder.resolve('test-org/repo4')
         legacyPath4.mkdirs()
         legacyPath4.resolve('.git').mkdir()
+        legacyPath4.resolve('.git/config').text = GIT_CONFIG_TEXT
         def barePath4 = folder.resolve(REPOS_SUBDIR + '/test-org/repo4/' + BARE_REPO)
         barePath4.mkdirs()
+        def initBare4 = Git.init()
+        initBare4.setDirectory(barePath4.toFile())
+        initBare4.setBare(true)
+        def repoBare4 = initBare4.call()
+        repoBare4.close()
+        barePath4.resolve('config').text = GIT_CONFIG_TEXT
+        manager = new AssetManager().build('test-org/repo4')
         then:
+        !manager.isNotInitialized()
+        !manager.isOnlyLegacy()
         LegacyRepositoryStrategy.checkProject(folder.toFile(), 'test-org/repo4')
         MultiRevisionRepositoryStrategy.checkProject(folder.toFile(), 'test-org/repo4')
     }
