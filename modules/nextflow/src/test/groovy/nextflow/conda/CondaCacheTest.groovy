@@ -410,11 +410,11 @@ class CondaCacheTest extends Specification {
         PREFIX.deleteDir()
         result = cache.createLocalCondaEnv0(ENV, PREFIX)
         then:
+        // isYamlFilePath returns true for .yml files, so we enter YAML branch
         1 * cache.isYamlFilePath(ENV)
-        1 * cache.isRemoteFile(ENV) >> true
+        // getLocalFilePath is called, which internally calls isRemoteFile and stageRemoteFile
         1 * cache.getLocalFilePath(ENV) >> STAGED_PATH
-        1 * cache.isLockFilePath(STAGED_PATH) >> false
-        1 * cache.runCommand({ it.contains('mamba env create') && it.contains('--file') && it.contains(STAGED_PATH.toString()) }) >> null
+        1 * cache.runCommand({ it.contains('mamba env create') && it.contains('--yes') && it.contains('--file') && it.contains(STAGED_PATH.toString()) }) >> null
         result == PREFIX
     }
 
@@ -437,16 +437,17 @@ class CondaCacheTest extends Specification {
         PREFIX.deleteDir()
         result = cache.createLocalCondaEnv0(ENV, PREFIX)
         then:
+        // isYamlFilePath returns true for .yml files, so we enter YAML branch
         1 * cache.isYamlFilePath(ENV)
-        1 * cache.isRemoteFile(ENV) >> true
+        // getLocalFilePath is called, which internally calls isRemoteFile and stageRemoteFile
         1 * cache.getLocalFilePath(ENV) >> STAGED_PATH
-        1 * cache.isLockFilePath(STAGED_PATH) >> false
-        1 * cache.runCommand({ it.contains('micromamba env create') && it.contains('--file') && it.contains(STAGED_PATH.toString()) }) >> null
+        1 * cache.runCommand({ it.contains('micromamba env create') && it.contains('--yes') && it.contains('--file') && it.contains(STAGED_PATH.toString()) }) >> null
         result == PREFIX
     }
 
     def 'should create a conda environment using mamba and remote lock file' () {
         given:
+        // Use a URL without .yml extension so isYamlFilePath returns false
         def ENV = 'http://foo.com/some/condalock'
         def PREFIX = Files.createTempDirectory('foo')
         def STAGED_PATH = Paths.get('/staged/condalock')
@@ -456,8 +457,8 @@ class CondaCacheTest extends Specification {
         PREFIX.deleteDir()
         def result = cache.createLocalCondaEnv0(ENV, PREFIX)
         then:
-        1 * cache.isYamlFilePath(ENV)
-        1 * cache.isRemoteFile(ENV) >> true
+        1 * cache.isYamlFilePath(ENV)  // returns false
+        1 * cache.isRemoteFile(ENV)    // returns true, enters remote branch
         1 * cache.getLocalFilePath(ENV) >> STAGED_PATH
         1 * cache.isLockFilePath(STAGED_PATH) >> true
         1 * cache.runCommand({ it.contains('mamba create') && it.contains('--file') && it.contains(STAGED_PATH.toString()) }) >> null
@@ -466,6 +467,7 @@ class CondaCacheTest extends Specification {
 
     def 'should create a conda environment using micromamba and remote lock file' () {
         given:
+        // Use a URL without .yml extension so isYamlFilePath returns false
         def ENV = 'http://foo.com/some/condalock'
         def PREFIX = Files.createTempDirectory('foo')
         def STAGED_PATH = Paths.get('/staged/condalock')
@@ -475,8 +477,8 @@ class CondaCacheTest extends Specification {
         PREFIX.deleteDir()
         def result = cache.createLocalCondaEnv0(ENV, PREFIX)
         then:
-        1 * cache.isYamlFilePath(ENV)
-        1 * cache.isRemoteFile(ENV) >> true
+        1 * cache.isYamlFilePath(ENV)  // returns false
+        1 * cache.isRemoteFile(ENV)    // returns true, enters remote branch
         1 * cache.getLocalFilePath(ENV) >> STAGED_PATH
         1 * cache.isLockFilePath(STAGED_PATH) >> true
         1 * cache.runCommand({ it.contains('micromamba create') && it.contains('--file') && it.contains(STAGED_PATH.toString()) }) >> null
