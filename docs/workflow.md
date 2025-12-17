@@ -459,15 +459,11 @@ workflow {
 
 ## Process and workflow recursion
 
-:::{versionadded} 21.11.0-edge
-:::
-
-:::{warning}
-This is a preview feature – the syntax and behavior may change in future releases.
+:::{versionadded} 22.04.0
 :::
 
 :::{note}
-This feature requires the `nextflow.preview.recursion` feature flag to be enabled.
+This is a preview feature and requires the `nextflow.preview.recursion` feature flag to be enabled. The syntax and behavior may change in future releases.
 :::
 
 Processes can be invoked recursively using the `recurse` method.
