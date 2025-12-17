@@ -29,7 +29,7 @@ aws {
 
 ## Examples
 
-### Basic AWS Batch Configuration
+### Basic AWS Batch configuration
 
 ```groovy
 plugins {
