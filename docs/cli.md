@@ -79,6 +79,13 @@ $ nextflow run nextflow-io/hello -r v1.1
 $ nextflow run nextflow-io/hello -r dev-branch
 $ nextflow run nextflow-io/hello -r a3f5c8e
 ```
+:::{versionadded} 25.12.0-edge
+:::
+Nextflow downloads and stores each explicitly requested Git branch, tag, or commit ID in a separate directory path, enabling you to run multiple revisions of the same pipeline simultaneously. Downloaded revisions are stored in a subdirectory of the local project: `$NXF_ASSETS/.repos/<org>/<repo>/clones/<commitId>`.
+
+:::{tip}
+Use tags or commit IDs instead of branches for reproducible pipeline runs. Branch references change as development progresses over time.
+:::
 
 (cli-params)=
 
@@ -171,12 +178,12 @@ Use this to understand a project's structure, see available versions, or verify 
 $ nextflow info hello
 project name: nextflow-io/hello
 repository  : https://github.com/nextflow-io/hello
-local path  : $HOME/.nextflow/assets/nextflow-io/hello
+local path  : $HOME/.nextflow/assets/.repos/nextflow-io/hello
 main script : main.nf
 revisions   :
-* master (default)
+> master (default)
   mybranch
-  v1.1 [t]
+> v1.1 [t]
   v1.2 [t]
 ```
 
@@ -186,7 +193,7 @@ This shows:
 - Where it's cached locally
 - Which script runs by default
 - Available revisions (branches and tags marked with `[t]`)
-- Which revision is currently checked out (marked with `*`)
+- Which revisions are currently checked out (marked with `>`)
 
 ### Pulling or updating projects
 
