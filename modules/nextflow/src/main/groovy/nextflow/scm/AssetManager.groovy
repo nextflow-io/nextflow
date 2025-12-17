@@ -106,6 +106,14 @@ class AssetManager {
         build(pipelineName, config, cliOpts)
     }
 
+    AssetManager( String pipelineName, String scriptFile, HubOptions cliOpts = null) {
+        assert pipelineName
+        // read the default config file (if available)
+        def config = ProviderConfig.getDefault()
+        // build the object
+        build(pipelineName, config, cliOpts, scriptFile)
+    }
+
     AssetManager( String pipelineName, Map config ) {
         assert pipelineName
         // build the object
@@ -121,10 +129,11 @@ class AssetManager {
      * @return The {@link AssetManager} object itself
      */
     @PackageScope
-    AssetManager build( String pipelineName, Map config = null, HubOptions cliOpts = null ) {
+    AssetManager build( String pipelineName, Map config = null, HubOptions cliOpts = null, String scriptFile = null) {
 
         this.providerConfigs = ProviderConfig.createFromMap(config)
-
+        if( scriptFile )
+            this.mainScript = scriptFile
         this.project = resolveName(pipelineName)
         this.localPath = checkProjectDir(project)
         this.hub = checkHubProvider(cliOpts)
@@ -310,6 +319,9 @@ class AssetManager {
         final isUrl = repository.startsWith('http://') || repository.startsWith('https://') || repository.startsWith('file:/')
         if( !isUrl )
             return null
+
+        if( repository.endsWith('.nf') || repository.endsWith('.nxf') )
+            throw new AbortOperationException("Repository URL can end as a script file (.nf|.nxf) - Use -main-script option.")
 
         try {
             def url = new GitUrl(repository)
