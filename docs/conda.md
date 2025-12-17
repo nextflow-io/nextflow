@@ -176,7 +176,7 @@ process hello {
 }
 ```
 
-Conda lock files can also be specified using a remote URL (HTTP, HTTPS, S3, Google Cloud Storage, Azure Blob Storage, etc.):
+You can also specify Conda lock files using a remote URL (HTTP, HTTPS, S3, Google Cloud Storage, Azure Blob Storage, etc.):
 
 ```nextflow
 process hello {
