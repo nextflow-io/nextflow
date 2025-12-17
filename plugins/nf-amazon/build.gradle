@@ -25,6 +25,7 @@ nextflowPlugin {
     description = 'Provides comprehensive AWS cloud integration including Batch executor, S3 file system, and Fusion support for high-performance data operations'
     className = 'nextflow.cloud.aws.AmazonPlugin'
     useDefaultDependencies = false
+    generateSpec = false
     extensionPoints = [
         'nextflow.cloud.aws.batch.AwsBatchExecutor',
         'nextflow.cloud.aws.config.AwsConfig',

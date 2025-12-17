@@ -636,7 +636,9 @@ class CmdRun extends CmdBase implements HubOptions {
          * try to look for a pipeline in the repository
          */
         def manager = new AssetManager(pipelineName, this)
-        def repo = manager.getProject()
+        if( revision )
+            manager.setRevision(revision)
+        def repo = manager.getProjectWithRevision()
 
         boolean checkForUpdate = true
         if( !manager.isRunnable() || latest ) {
@@ -648,7 +650,12 @@ class CmdRun extends CmdBase implements HubOptions {
                 log.info " $result"
             checkForUpdate = false
         }
-        // checkout requested revision
+        // Warn if using legacy
+        if( manager.isUsingLegacyStrategy() ){
+            log.warn1 "This Nextflow version supports a new Multi-revision strategy for managing the SCM repositories, " +
+                "but '${repo}' is single-revision legacy strategy - Please consider to update the repository with the 'nextflow pull -migrate' command."
+        }
+        // post download operations
         try {
             manager.checkout(revision)
             manager.updateModules()
