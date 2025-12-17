@@ -176,7 +176,7 @@ process hello {
 }
 ```
 
-You can also specify Conda lock files using a remote URL (HTTP, HTTPS, S3, Google Cloud Storage, Azure Blob Storage, etc.):
+You can also specify Conda lock files using a remote URL:
 
 ```nextflow
 process hello {
@@ -189,16 +189,6 @@ process hello {
 }
 ```
 
-```nextflow
-process hello {
-  conda 's3://my-bucket/conda/env.lock'
-
-  script:
-  """
-  your_command --here
-  """
-}
-```
 
 :::{versionchanged} 26.01.0-edge
 Conda lock files are now detected by the presence of the `@EXPLICIT` marker in the first 20 lines of the file.
