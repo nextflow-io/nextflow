@@ -137,7 +137,9 @@ public class S3ObjectSummaryLookup {
 
         // Check for client-side credential errors based on message patterns
         String message = e.getMessage();
-        if (message != null && message.contains("Unable to load credentials")) {
+        if (message != null && (
+                message.contains("Unable to load credentials") ||
+                message.contains("Unable to marshall request"))) {
             return new AccessDeniedException(path, null,
                 "Cannot access S3 path - AWS credentials may not be configured");
         }

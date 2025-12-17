@@ -93,7 +93,7 @@ class S3ObjectSummaryLookupTest extends Specification {
         result.message.contains("credentials")
     }
 
-    def 'should wrap marshall errors as IOException'() {
+    def 'should translate marshall errors to AccessDeniedException'() {
         given:
         def clientException = SdkClientException.builder()
             .message("Unable to marshall request to JSON: Key cannot be empty")
@@ -103,9 +103,8 @@ class S3ObjectSummaryLookupTest extends Specification {
         def result = lookup.translateException(clientException, "s3://bucket/key")
 
         then:
-        result instanceof IOException
-        !(result instanceof AccessDeniedException)
-        result.cause == clientException
+        result instanceof AccessDeniedException
+        result.message.contains("credentials")
     }
 
     def 'should wrap other SDK exceptions as IOException'() {
