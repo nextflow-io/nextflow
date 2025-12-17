@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2020-2025, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -93,7 +93,7 @@ class S3ObjectSummaryLookupTest extends Specification {
         result.message.contains("credentials")
     }
 
-    def 'should translate marshall errors to AccessDeniedException'() {
+    def 'should wrap marshall errors as IOException'() {
         given:
         def clientException = SdkClientException.builder()
             .message("Unable to marshall request to JSON: Key cannot be empty")
@@ -103,8 +103,9 @@ class S3ObjectSummaryLookupTest extends Specification {
         def result = lookup.translateException(clientException, "s3://bucket/key")
 
         then:
-        result instanceof AccessDeniedException
-        result.message.contains("credentials")
+        result instanceof IOException
+        !(result instanceof AccessDeniedException)
+        result.cause == clientException
     }
 
     def 'should wrap other SDK exceptions as IOException'() {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2020-2025, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -137,9 +137,7 @@ public class S3ObjectSummaryLookup {
 
         // Check for client-side credential errors based on message patterns
         String message = e.getMessage();
-        if (message != null && (
-                message.contains("Unable to load credentials") ||
-                message.contains("Unable to marshall request"))) {
+        if (message != null && message.contains("Unable to load credentials")) {
             return new AccessDeniedException(path, null,
                 "Cannot access S3 path - AWS credentials may not be configured");
         }
@@ -163,16 +161,18 @@ public class S3ObjectSummaryLookup {
         return foundKey.charAt(fileName.length()) == '/';
     }
 
-    public HeadObjectResponse getS3ObjectMetadata(S3Path s3Path) {
+    public HeadObjectResponse getS3ObjectMetadata(S3Path s3Path) throws IOException {
         S3Client client = s3Path.getFileSystem().getClient();
+        final String path = s3Path.toS3ObjectId().toString();
         try {
             return client.getObjectMetadata(s3Path.getBucket(), s3Path.getKey());
         }
-        catch (S3Exception e){
-            if (e.statusCode() != 404){
-                throw e;
+        catch (SdkException e) {
+            // Check if it's a 404 - return null for not found
+            if (e instanceof AwsServiceException && ((AwsServiceException) e).statusCode() == 404) {
+                return null;
             }
-            return null;
+            throw translateException(e, path);
         }
     }
 }
