@@ -49,7 +49,7 @@ aws {
 }
 ```
 
-### Using Fusion File System
+### Using Fusion file system
 
 ```groovy
 fusion {
