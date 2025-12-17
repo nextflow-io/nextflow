@@ -70,7 +70,7 @@ tower {
 }
 ```
 
-### Reports and Cache Management
+### Reports and cache management
 
 ```groovy
 tower {
