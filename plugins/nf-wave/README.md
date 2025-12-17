@@ -57,7 +57,7 @@ process ALIGN {
 }
 ```
 
-### Wave with Fusion File System
+### Wave with Fusion file system
 
 ```groovy
 wave {
