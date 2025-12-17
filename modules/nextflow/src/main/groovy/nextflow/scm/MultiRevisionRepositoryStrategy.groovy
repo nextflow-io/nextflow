@@ -47,7 +47,7 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
 
     static final String REPOS_SUBDIR = '.repos'
     static final String BARE_REPO = 'bare'
-    static final String REVISION_SUBDIR = 'revs'
+    static final String REVISION_SUBDIR = 'clones'
 
     /**
      * The revision (branch, tag, or commit SHA) to work with
