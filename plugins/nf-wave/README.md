@@ -72,7 +72,7 @@ process.executor = 'awsbatch'
 workDir = 's3://my-bucket/work'
 ```
 
-### Container Augmentation
+### Container augmentation
 
 ```groovy
 wave {
@@ -91,7 +91,7 @@ process TOOL {
 }
 ```
 
-### Using Private Registries
+### Using private registries
 
 ```groovy
 wave {
