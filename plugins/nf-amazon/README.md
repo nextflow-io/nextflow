@@ -64,7 +64,7 @@ process.executor = 'awsbatch'
 workDir = 's3://my-bucket/work'
 ```
 
-### S3 Storage Options
+### S3 storage options
 
 ```groovy
 aws {
