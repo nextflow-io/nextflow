@@ -130,6 +130,21 @@ class GithubRepositoryProviderTest extends Specification {
         SysEnv.pop()
     }
 
+    def 'should user specified token instead of github token as creds' () {
+        given:
+        SysEnv.push(['GITHUB_TOKEN': '1234567890'])
+        and:
+        def config = new ProviderConfig('github', [auth: '987654321'])
+        def provider = Spy(new GithubRepositoryProvider('foo/bar', config))
+
+        expect:
+        provider.getUser() == '987654321'
+        provider.getPassword() == 'x-oauth-basic'
+
+        cleanup:
+        SysEnv.pop()
+    }
+
     def 'should user from config' () {
         given:
         SysEnv.push(['GITHUB_TOKEN': '1234567890'])
