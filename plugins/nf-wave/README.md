@@ -24,7 +24,7 @@ Wave automatically builds containers from Conda packages or Dockerfiles defined 
 
 ## Examples
 
-### Basic Wave Configuration
+### Basic Wave configuration
 
 ```groovy
 plugins {
@@ -40,7 +40,7 @@ process {
 }
 ```
 
-### Using Wave with Conda Packages
+### Using Wave with Conda packages
 
 ```groovy
 wave {
