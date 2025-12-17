@@ -40,6 +40,7 @@ class FusionScriptLauncher extends BashWrapperBuilder {
     private String scheme
     private Path remoteWorkDir
     private Map<String,String> env
+    private List<Path> externalInputs
 
     static FusionScriptLauncher create(TaskBean bean, String scheme) {
 
@@ -50,9 +51,16 @@ class FusionScriptLauncher extends BashWrapperBuilder {
         bean.workDir = toContainerMount(bean.workDir, scheme)
         bean.targetDir = toContainerMount(bean.targetDir, scheme)
 
+        final externalInputs = new LinkedList<Path>()
         // remap input files to container mounted paths
         for( Map.Entry<String,Path> entry : new HashMap<>(bean.inputFiles).entrySet() ) {
-            bean.inputFiles.put( entry.key, toContainerMount(entry.value, scheme) )
+            def inputScheme = scheme
+            if (entry.value.scheme && entry.value.scheme != scheme){
+                inputScheme = entry.value.scheme
+                externalInputs.add(entry.value)
+            }
+
+            bean.inputFiles.put( entry.key, toContainerMount(entry.value, inputScheme) )
         }
 
         // make it change to the task work dir
@@ -61,14 +69,15 @@ class FusionScriptLauncher extends BashWrapperBuilder {
         if( bean.scratch==null )
             bean.scratch = false
 
-        return new FusionScriptLauncher(bean, scheme, remoteWorkDir)
+        return new FusionScriptLauncher(bean, scheme, remoteWorkDir, externalInputs)
     }
 
-    FusionScriptLauncher(TaskBean bean, String scheme, Path remoteWorkDir) {
+    FusionScriptLauncher(TaskBean bean, String scheme, Path remoteWorkDir, List<Path> external = List.of()) {
         super(bean)
         // keep track the google storage work dir
         this.scheme = scheme
         this.remoteWorkDir = remoteWorkDir
+        this.externalInputs = external
     }
 
     static protected String headerScript(TaskBean bean) {
@@ -87,6 +96,9 @@ class FusionScriptLauncher extends BashWrapperBuilder {
             // foreign env
             final provider = new FusionEnvProvider()
             result.putAll(provider.getEnvironment(scheme))
+            for (Path p: this.externalInputs){
+                result.putAll(provider.getEnvironmentFromPath(p))
+            }
             env = result
         }
         return env

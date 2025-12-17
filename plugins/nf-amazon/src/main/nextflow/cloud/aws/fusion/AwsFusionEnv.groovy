@@ -22,6 +22,9 @@ import nextflow.cloud.aws.config.AwsConfig
 import nextflow.fusion.FusionConfig
 import nextflow.fusion.FusionEnv
 import org.pf4j.Extension
+
+import java.nio.file.Path
+
 /**
  * Implements {@link FusionEnv} for AWS cloud
  *
@@ -70,5 +73,9 @@ class AwsFusionEnv implements FusionEnv {
             return List.<String>of(SysEnv.get('AWS_ACCESS_KEY_ID'), SysEnv.get('AWS_SECRET_ACCESS_KEY'))
         else
             return List.<String>of()
+    }
+
+    Map<String, String> getEnvironmentFromPath(Path path, FusionConfig config) {
+        return getEnvironment(path.scheme,config)
     }
 }
