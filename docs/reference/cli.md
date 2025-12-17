@@ -616,7 +616,7 @@ $ nextflow info nextflow-io/hello
 
   project name: nextflow-io/hello
   repository  : https://github.com/nextflow-io/hello
-  local path  : /Users/evanfloden/.nextflow/assets/nextflow-io/hello
+  local path  : /Users/evanfloden/.nextflow/assets/.repos/nextflow-io/hello
   main script : main.nf
   revisions   :
   * master (default)
@@ -1598,7 +1598,7 @@ Viewing the contents of a downloaded pipeline.
 ```console
 $ nextflow view nextflow-io/hello
 
-== content of file: .nextflow/assets/nextflow-io/hello/main.nf
+== content of file: .nextflow/assets/.repos/nextflow-io/hello/main.nf
 #!/usr/bin/env nextflow
 
 process sayHello {
@@ -1622,7 +1622,7 @@ List the folder structure of the downloaded pipeline:
 ```console
 $ nextflow view -l nextflow-io/hello
 
-== content of path: .nextflow/assets/nextflow-io/hello
+== content of path: .nextflow/assets/.repos/nextflow-io/hello
 .git
 .gitignore
 LICENSE

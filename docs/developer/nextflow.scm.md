@@ -22,7 +22,7 @@ The `AssetManager` uses the **Strategy pattern** to support different ways of ma
 
 - **`MultiRevisionRepositoryStrategy`**: Modern approach that allows multiple revisions to coexist efficiently by:
   - Maintaining a shared bare repository in `$NXF_HOME/.repos/{project}/bare/`
-  - Creating lightweight clones for each commit in `$NXF_HOME/.repos/{project}/commits/{commitId}/`
+  - Creating lightweight clones for each commit in `$NXF_HOME/.repos/{project}/revs/{commitId}/`
   - Sharing git objects between revisions to minimize disk space
 
 ### Strategy selection

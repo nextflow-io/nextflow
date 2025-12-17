@@ -81,7 +81,7 @@ Similar to Option 2 but eliminate the separate revision map file by using the ba
 
 **Implementation**:
 - Bare repository at `~/.nextflow/assets/.repos/<org>/<project>/bare/`
-- Shared clones at `~/.nextflow/assets/.repos/<org>/<project>/commits/<commit-sha>/`
+- Shared clones at `~/.nextflow/assets/.repos/<org>/<project>/revs/<commit-sha>/`
 - Use bare repository refs to resolve revisions to commit SHAs dynamically
 - JGit alternates mechanism for object sharing
 - `AssetManager` as facade with unchanged public API
@@ -125,7 +125,7 @@ The bare repository approach provides efficient multi-revision support:
 │   │   └── tags/
 │   └── config
 │
-└── commits/                    # Commit-specific clones
+└── revs/                    # Revisions-specific clones
     ├── abc123.../              # Clone for commit abc123
     │   └── .git/
     │       ├── objects/        # (uses alternates → bare/objects)

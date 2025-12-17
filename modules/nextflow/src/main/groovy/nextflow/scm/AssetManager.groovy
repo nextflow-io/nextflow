@@ -900,7 +900,8 @@ class AssetManager {
 
         def result = new StringBuilder()
         def name = shortenRefName(ref.name)
-        result << ( isRefInCommits(ref, downloaded) ? '*' : ' ')
+        def coChar = isOnlyLegacy() ? '*' : '•'
+        result << ( isRefInCommits(ref, downloaded) ? coChar : ' ')
 
         if( level ) {
             def obj = ref.getPeeledObjectId() ?: ref.getObjectId()
