@@ -75,7 +75,7 @@ class TowerRetryPolicy implements Retryable.Config, ConfigScope {
     TowerRetryPolicy(Map opts, Map legacy=Map.of()) {
         this.delay = opts.delay as Duration ?: legacy.backOffDelay as Duration ?: RetryConfig.DEFAULT_DELAY
         this.maxDelay = opts.maxDelay as Duration ?: RetryConfig.DEFAULT_MAX_DELAY
-        this.maxAttempts = opts.maxAttemps as Integer ?: legacy.maxRetries as Integer ?: RetryConfig.DEFAULT_MAX_ATTEMPTS
+        this.maxAttempts = opts.maxAttempts as Integer ?: legacy.maxRetries as Integer ?: RetryConfig.DEFAULT_MAX_ATTEMPTS
         this.jitter = opts.jitter as Double ?: RetryConfig.DEFAULT_JITTER
         this.multiplier = opts.multiplier as Double ?: legacy.backOffBase as Double ?: RetryConfig.DEFAULT_MULTIPLIER
     }
