@@ -900,7 +900,7 @@ class AssetManager {
 
         def result = new StringBuilder()
         def name = shortenRefName(ref.name)
-        def coChar = isOnlyLegacy() ? '*' : '•'
+        def coChar = isOnlyLegacy() ? '*' : '>'
         result << ( isRefInCommits(ref, downloaded) ? coChar : ' ')
 
         if( level ) {
