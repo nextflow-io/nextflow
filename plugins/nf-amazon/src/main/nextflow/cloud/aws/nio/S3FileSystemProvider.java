@@ -792,11 +792,12 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 				"the following options are not supported: %s", unsupported);
 	}
 	/**
-	 * check that the paths exists or not
+	 * check that the path exists or not
 	 * @param path S3Path
 	 * @return true if exists
+	 * @throws IOException if an I/O error occurs (including AccessDeniedException for permission issues)
 	 */
-	private boolean exists(S3Path path) {
+	private boolean exists(S3Path path) throws IOException {
 		try {
             s3ObjectSummaryLookup.lookup(path);
 			return true;
