@@ -184,7 +184,7 @@ The following settings are available:
 `aws.client.multipartThreshold`
 : :::{versionadded} 25.06.0-edge
   :::
-: The object size threshold used for multipart S3 transfers (default: same as `aws.cllient.minimumPartSize`).
+: The object size threshold used for multipart S3 transfers (default: same as `aws.client.minimumPartSize`).
 
 `aws.client.protocol`
 : :::{deprecated} 25.06.0-edge
