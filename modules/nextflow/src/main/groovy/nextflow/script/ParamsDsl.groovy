@@ -18,6 +18,8 @@ package nextflow.script
 
 import java.nio.file.Path
 
+import groovy.json.JsonSlurper
+import groovy.yaml.YamlSlurper
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -25,6 +27,11 @@ import nextflow.Session
 import nextflow.file.FileHelper
 import nextflow.exception.ScriptRuntimeException
 import nextflow.script.types.Types
+import nextflow.splitter.CsvSplitter
+import nextflow.util.Duration
+import nextflow.util.MemoryUnit
+import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation
+import org.codehaus.groovy.runtime.typehandling.GroovyCastException
 /**
  * Implements the DSL for defining workflow params
  *
@@ -102,6 +109,18 @@ class ParamsDsl {
             if( str.isBigDecimal() ) return str.toBigDecimal()
         }
 
+        if( decl.type == Duration ) {
+            return Duration.of(str)
+        }
+
+        if( decl.type == MemoryUnit ) {
+            return MemoryUnit.of(str)
+        }
+
+        if( Collection.class.isAssignableFrom(decl.type) ) {
+            return resolveFromFile(decl.name, decl.type, FileHelper.asPath(str))
+        }
+
         if( decl.type == Path ) {
             return FileHelper.asPath(str)
         }
@@ -113,10 +132,37 @@ class ParamsDsl {
         if( value == null )
             return null
 
-        if( decl.type == Path && value instanceof CharSequence )
-            return FileHelper.asPath(value.toString())
+        if( value !instanceof CharSequence )
+            return value
+
+        final str = value.toString()
+
+        if( Collection.class.isAssignableFrom(decl.type) )
+            return resolveFromFile(decl.name, decl.type, FileHelper.asPath(str))
+
+        if( decl.type == Path )
+            return FileHelper.asPath(str)
 
         return value
+    }
+
+    private Object resolveFromFile(String name, Class type, Path file) {
+        final ext = file.getExtension()
+        final value = switch( ext ) {
+            case 'csv' -> new CsvSplitter().options(header: true, sep: ',').target(file).list()
+            case 'json' -> new JsonSlurper().parse(file)
+            case 'yaml' -> new YamlSlurper().parse(file)
+            case 'yml' -> new YamlSlurper().parse(file)
+            default -> throw new ScriptRuntimeException("Unrecognized file format '${ext}' for input file '${file}' supplied for parameter `${name}` -- should be CSV, JSON, or YAML")
+        }
+
+        try {
+            return DefaultTypeTransformation.castToType(value, type)
+        }
+        catch( GroovyCastException e ) {
+            final actualType = value.getClass()
+            throw new ScriptRuntimeException("Parameter `${name}` with type ${Types.getName(type)} cannot be assigned to contents of '${file}' [${Types.getName(actualType)}]")
+        }
     }
 
     private boolean isAssignableFrom(Class target, Class source) {

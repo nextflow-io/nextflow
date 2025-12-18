@@ -1,5 +1,6 @@
 package nextflow.script
 
+import java.nio.file.Files
 import java.nio.file.Path
 
 import nextflow.Session
@@ -126,6 +127,175 @@ class ParamsDslTest extends Specification {
 
         where:
         DEF_VALUE << [ 100i, 100l, 100g ]
+    }
+
+    def 'should load collection param from CSV file'() {
+        given:
+        def csvFile = Files.createTempFile('test', '.csv')
+        csvFile.text = '''\
+            id,name,value
+            1,sample1,100
+            2,sample2,200
+            3,sample3,300
+            '''.stripIndent()
+        def cliParams = [samples: csvFile.toString()]
+        def session = new Session()
+        session.init(null, null, cliParams, [:])
+
+        when:
+        def dsl = new ParamsDsl()
+        dsl.declare('samples', List, false)
+        dsl.apply(session)
+
+        then:
+        def samples = session.binding.getParams().samples
+        samples instanceof List
+        samples.size() == 3
+        samples[0].id == '1'
+        samples[0].name == 'sample1'
+        samples[0].value == '100'
+        samples[1].id == '2'
+        samples[2].id == '3'
+
+        cleanup:
+        csvFile?.delete()
+    }
+
+    def 'should load collection param from JSON file'() {
+        given:
+        def jsonFile = Files.createTempFile('test', '.json')
+        jsonFile.text = '''\
+            [
+              {"id": 1, "name": "sample1", "value": 100},
+              {"id": 2, "name": "sample2", "value": 200},
+              {"id": 3, "name": "sample3", "value": 300}
+            ]
+            '''.stripIndent()
+        def cliParams = [samples: jsonFile.toString()]
+        def session = new Session()
+        session.init(null, null, cliParams, [:])
+
+        when:
+        def dsl = new ParamsDsl()
+        dsl.declare('samples', List, false)
+        dsl.apply(session)
+
+        then:
+        def samples = session.binding.getParams().samples
+        samples instanceof List
+        samples.size() == 3
+        samples[0].id == 1
+        samples[0].name == 'sample1'
+        samples[0].value == 100
+        samples[1].id == 2
+        samples[2].id == 3
+
+        cleanup:
+        jsonFile?.delete()
+    }
+
+    def 'should load collection param from YAML file'() {
+        given:
+        def yamlFile = Files.createTempFile('test', '.yml')
+        yamlFile.text = '''\
+            - id: 1
+              name: sample1
+              value: 100
+            - id: 2
+              name: sample2
+              value: 200
+            - id: 3
+              name: sample3
+              value: 300
+            '''.stripIndent()
+        def cliParams = [samples: yamlFile.toString()]
+        def session = new Session()
+        session.init(null, null, cliParams, [:])
+
+        when:
+        def dsl = new ParamsDsl()
+        dsl.declare('samples', List, false)
+        dsl.apply(session)
+
+        then:
+        def samples = session.binding.getParams().samples
+        samples instanceof List
+        samples.size() == 3
+        samples[0].id == 1
+        samples[0].name == 'sample1'
+        samples[0].value == 100
+        samples[1].id == 2
+        samples[2].id == 3
+
+        cleanup:
+        yamlFile?.delete()
+    }
+
+    def 'should load collection param from file specified in config'() {
+        given:
+        def jsonFile = Files.createTempFile('test', '.json')
+        jsonFile.text = '[{"x": 1}, {"x": 2}]'
+        def configParams = [items: jsonFile.toString()]
+        def session = new Session()
+        session.init(null, null, [:], configParams)
+
+        when:
+        def dsl = new ParamsDsl()
+        dsl.declare('items', List, false)
+        dsl.apply(session)
+
+        then:
+        def items = session.binding.getParams().items
+        items instanceof List
+        items.size() == 2
+        items[0].x == 1
+        items[1].x == 2
+
+        cleanup:
+        jsonFile?.delete()
+    }
+
+    def 'should report error for unrecognized file format'() {
+        given:
+        def txtFile = Files.createTempFile('test', '.txt')
+        txtFile.text = 'some text'
+        def cliParams = [items: txtFile.toString()]
+        def session = new Session()
+        session.init(null, null, cliParams, [:])
+
+        when:
+        def dsl = new ParamsDsl()
+        dsl.declare('items', List, false)
+        dsl.apply(session)
+
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message.contains("Unrecognized file format 'txt'")
+        e.message.contains("supplied for parameter `items` -- should be CSV, JSON, or YAML")
+
+        cleanup:
+        txtFile?.delete()
+    }
+
+    def 'should report error for invalid file content type'() {
+        given:
+        def jsonFile = Files.createTempFile('test', '.json')
+        jsonFile.text = '{"not": "a list"}'
+        def cliParams = [items: jsonFile.toString()]
+        def session = new Session()
+        session.init(null, null, cliParams, [:])
+
+        when:
+        def dsl = new ParamsDsl()
+        dsl.declare('items', List, false)
+        dsl.apply(session)
+
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message.contains('Parameter `items` with type List cannot be assigned to contents of')
+
+        cleanup:
+        jsonFile?.delete()
     }
 
 }
