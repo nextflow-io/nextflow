@@ -140,7 +140,7 @@ class ParamsDsl {
 
         final str = value.toString()
 
-        if( Iterable.class.isAssignableFrom(decl.type) || Map.class.isAssignableFrom(decl.type))
+        if( Collection.class.isAssignableFrom(decl.type) || Iterable.class == decl.type || Map.class == decl.type )
             return resolveFromFile(decl.name, decl.type, FileHelper.asPath(str))
 
         if( decl.type == Path )
