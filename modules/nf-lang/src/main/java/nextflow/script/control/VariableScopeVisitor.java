@@ -33,7 +33,6 @@ import nextflow.script.ast.ProcessNodeV1;
 import nextflow.script.ast.ProcessNodeV2;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
-import nextflow.script.ast.TupleParameter;
 import nextflow.script.ast.WorkflowNode;
 import nextflow.script.dsl.Constant;
 import nextflow.script.dsl.EntryWorkflowDsl;
@@ -114,18 +113,19 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
                 declareMethod(processNode);
             for( var functionNode : sn.getFunctions() )
                 declareMethod(functionNode);
+            declareTypes(sn);
         }
     }
 
     private void declareInclude(IncludeNode node) {
         for( var entry : node.entries ) {
-            if( entry.getTarget() == null )
-                continue;
-            var name = entry.getNameOrAlias();
-            var otherInclude = vsc.getInclude(name);
-            if( otherInclude != null )
-                vsc.addError("`" + name + "` is already included", node, "First included here", otherInclude);
-            vsc.include(name, entry.getTarget());
+            if( entry.getTarget() instanceof MethodNode mn ) {
+                var name = entry.getNameOrAlias();
+                var otherInclude = vsc.getInclude(name);
+                if( otherInclude != null )
+                    vsc.addError("`" + name + "` is already included", node, "First included here", otherInclude);
+                vsc.include(name, mn);
+            }
         }
     }
 
@@ -168,6 +168,20 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
             return;
         }
         cn.addMethod(mn);
+    }
+
+    private void declareTypes(ScriptNode sn) {
+        var types = sn.getTypes();
+        for( int i = 0; i < types.size(); i++ ) {
+            // TODO: check included types
+            for( int j = 0; j < i; j++ ) {
+                var first = types.get(j);
+                var second = types.get(i);
+                if( !first.getName().equals(second.getName()) )
+                    continue;
+                vsc.addError("`" + second.getName() + "` is already declared", second, "First declared here", first);
+            }
+        }
     }
 
     public void visit() {

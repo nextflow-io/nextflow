@@ -108,8 +108,11 @@ The global namespace contains globally available constants and functions.
 `sleep( milliseconds: long )`
 : Sleep for the given number of milliseconds.
 
+`record( [options] ) -> Record`
+: Create a record from the given named arguments.
+
 `tuple( args... ) -> Tuple`
-: Create a tuple object from the given arguments.
+: Create a tuple from the given arguments.
 
 (stdlib-namespaces-channel)=
 

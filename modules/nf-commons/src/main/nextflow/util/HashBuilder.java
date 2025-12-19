@@ -27,6 +27,7 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -46,7 +47,6 @@ import nextflow.ISession;
 import nextflow.extension.Bolts;
 import nextflow.extension.FilesEx;
 import nextflow.io.SerializableMarker;
-import nextflow.script.types.Bag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import static nextflow.Const.DEFAULT_ROOT;
@@ -141,14 +141,21 @@ public class HashBuilder {
         else if( value instanceof byte[] )
             hasher.putBytes( (byte[])value );
 
-        else if( value instanceof Object[])
+        else if( value instanceof Object[]) {
             for( Object item : ((Object[])value) )
                 with(item);
+        }
 
-        // note: should map be order invariant as Set ?
-        else if( value instanceof Map )
-            for( Object item : ((Map)value).values() )
+        else if( value instanceof CacheFunnel )
+            ((CacheFunnel)value).funnel(hasher, mode);
+
+        else if( value instanceof List ) {
+            for( Object item : ((List)value) )
                 with(item);
+        }
+
+        else if( value instanceof Map )
+            hashUnorderedCollection(hasher, ((Map) value).entrySet(), mode);
 
         else if( value instanceof Map.Entry ) {
             Map.Entry entry = (Map.Entry)value;
@@ -156,12 +163,8 @@ public class HashBuilder {
             with(entry.getValue());
         }
 
-        else if( value instanceof Bag || value instanceof Set )
+        else if( value instanceof Collection )
             hashUnorderedCollection(hasher, (Collection) value, mode);
-
-        else if( value instanceof Collection)
-            for( Object item : ((Collection)value) )
-                with(item);
 
         else if( value instanceof Path )
             hashFile(hasher, (Path)value, mode, basePath);
@@ -179,9 +182,6 @@ public class HashBuilder {
 
         else if( value instanceof SerializableMarker)
             hasher.putInt( value.hashCode() );
-
-        else if( value instanceof CacheFunnel )
-            ((CacheFunnel)value).funnel(hasher, mode);
 
         else if( value instanceof Enum )
             hasher.putUnencodedChars( value.getClass().getName() + "." + value );
