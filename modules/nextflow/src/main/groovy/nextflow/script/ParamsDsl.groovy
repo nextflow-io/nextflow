@@ -120,7 +120,7 @@ class ParamsDsl {
             return MemoryUnit.of(str)
         }
 
-        if( Iterable.class.isAssignableFrom(decl.type) || Map.class.isAssignableFrom(decl.type)) {
+        if( Collection.class.isAssignableFrom(decl.type) || decl.type == Iterable.class || decl.type == Map.class) {
             return resolveFromFile(decl.name, decl.type, FileHelper.asPath(str))
         }
 
