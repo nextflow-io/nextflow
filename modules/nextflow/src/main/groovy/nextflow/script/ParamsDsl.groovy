@@ -16,6 +16,9 @@
 
 package nextflow.script
 
+import nextflow.script.types.Bag
+import nextflow.util.ArrayBag
+
 import java.nio.file.Path
 
 import groovy.json.JsonSlurper
@@ -117,7 +120,7 @@ class ParamsDsl {
             return MemoryUnit.of(str)
         }
 
-        if( Collection.class.isAssignableFrom(decl.type) ) {
+        if( Iterable.class.isAssignableFrom(decl.type) || Map.class.isAssignableFrom(decl.type)) {
             return resolveFromFile(decl.name, decl.type, FileHelper.asPath(str))
         }
 
@@ -137,7 +140,7 @@ class ParamsDsl {
 
         final str = value.toString()
 
-        if( Collection.class.isAssignableFrom(decl.type) )
+        if( Iterable.class.isAssignableFrom(decl.type) || Map.class.isAssignableFrom(decl.type))
             return resolveFromFile(decl.name, decl.type, FileHelper.asPath(str))
 
         if( decl.type == Path )
@@ -155,11 +158,12 @@ class ParamsDsl {
             case 'yml' -> new YamlSlurper().parse(file)
             default -> throw new ScriptRuntimeException("Unrecognized file format '${ext}' for input file '${file}' supplied for parameter `${name}` -- should be CSV, JSON, or YAML")
         }
-
         try {
             return DefaultTypeTransformation.castToType(value, type)
         }
         catch( GroovyCastException e ) {
+            if( Bag.class.isAssignableFrom(type) || value instanceof Collection )
+                return new ArrayBag(value)
             final actualType = value.getClass()
             throw new ScriptRuntimeException("Parameter `${name}` with type ${Types.getName(type)} cannot be assigned to contents of '${file}' [${Types.getName(actualType)}]")
         }
