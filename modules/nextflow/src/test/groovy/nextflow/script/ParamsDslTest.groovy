@@ -6,6 +6,7 @@ import java.nio.file.Path
 import nextflow.Session
 import nextflow.file.FileHelper
 import nextflow.exception.ScriptRuntimeException
+import nextflow.script.types.Bag
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -171,24 +172,38 @@ class ParamsDslTest extends Specification {
               {"id": 3, "name": "sample3", "value": 300}
             ]
             '''.stripIndent()
-        def cliParams = [samples: jsonFile.toString()]
+        def cliParams = [
+            samplesList: jsonFile.toString(),
+            samplesBag: jsonFile.toString(),
+            samplesSet: jsonFile.toString()
+        ]
         def session = new Session()
         session.init(null, null, cliParams, [:])
 
         when:
         def dsl = new ParamsDsl()
-        dsl.declare('samples', List, false)
+        dsl.declare('samplesList', List, false)
+        dsl.declare('samplesBag', Bag, false)
+        dsl.declare('samplesSet', Set, false)
         dsl.apply(session)
 
         then:
-        def samples = session.binding.getParams().samples
-        samples instanceof List
-        samples.size() == 3
-        samples[0].id == 1
-        samples[0].name == 'sample1'
-        samples[0].value == 100
-        samples[1].id == 2
-        samples[2].id == 3
+        def samplesList = session.binding.getParams().samplesList
+        samplesList instanceof List
+        samplesList.size() == 3
+        samplesList[0].id == 1
+        samplesList[0].name == 'sample1'
+        samplesList[0].value == 100
+        samplesList[1].id == 2
+        samplesList[2].id == 3
+
+        def samplesBag = session.binding.getParams().samplesBag
+        samplesBag instanceof Bag
+        samplesBag.size() == 3
+
+        def samplesSet = session.binding.getParams().samplesSet
+        samplesSet instanceof Set
+        samplesSet.size() == 3
 
         cleanup:
         jsonFile?.delete()

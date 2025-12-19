@@ -26,8 +26,10 @@ import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.file.FileHelper
 import nextflow.exception.ScriptRuntimeException
+import nextflow.script.types.Bag
 import nextflow.script.types.Types
 import nextflow.splitter.CsvSplitter
+import nextflow.util.ArrayBag
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation
@@ -157,6 +159,8 @@ class ParamsDsl {
         }
 
         try {
+            if( Bag.class.isAssignableFrom(type) && value instanceof Collection )
+                return new ArrayBag(value)
             return DefaultTypeTransformation.castToType(value, type)
         }
         catch( GroovyCastException e ) {
