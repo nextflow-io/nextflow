@@ -162,7 +162,7 @@ class ParamsDsl {
             return DefaultTypeTransformation.castToType(value, type)
         }
         catch( GroovyCastException e ) {
-            if( Bag.class.isAssignableFrom(type) || value instanceof Collection )
+            if( Bag.class.isAssignableFrom(type) && value instanceof Collection )
                 return new ArrayBag(value)
             final actualType = value.getClass()
             throw new ScriptRuntimeException("Parameter `${name}` with type ${Types.getName(type)} cannot be assigned to contents of '${file}' [${Types.getName(actualType)}]")
