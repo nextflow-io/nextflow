@@ -122,6 +122,7 @@ class TraceRecord implements Serializable {
     transient private CloudMachineInfo machineInfo
     transient private ContainerMeta containerMeta
     transient private Integer numSpotInterruptions
+    transient private Boolean accelerator
 
     /**
      * Convert the given value to a string
@@ -627,4 +628,48 @@ class TraceRecord implements Serializable {
     void setContainerMeta(ContainerMeta meta) {
         this.containerMeta = meta
     }
+
+    Boolean getAccelerator() {
+        return accelerator
+    }
+
+    void setAccelerator(Boolean acc) {
+        this.accelerator = acc
+    }
+
+    void parseFusionAccelerator(Path file) {
+        this.accelerator = parseFusionAccelerator0(file)
+    }
+
+    /**
+     * Parses the Fusion accelerator value.
+     * Fusion writes FUSION_GPU_USED=true|false in the first line of the log file.
+     */
+    private Boolean parseFusionAccelerator0(Path file) {
+        if ( !file.exists() ) {
+            return null
+        }
+
+        String line = file.withReader { it.readLine() }
+
+        if (!line) {
+            return null
+        }
+
+        line = line.trim()
+
+        if (!line.startsWith("FUSION_GPU_USED=")) {
+            return null
+        }
+
+        String value = line.substring("FUSION_GPU_USED=".length()).trim()
+
+        if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) {
+            return null
+        }
+
+        return value.toBoolean()
+    }
+
+
 }
