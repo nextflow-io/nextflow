@@ -1,5 +1,9 @@
 nf-k8s changelog
 ===================
+1.4.0 - 19 Dec 2025
+- Implementation of Git multiple revisions (#6620) [ce9d7b592]
+- Add runtimeClassName to the pod options (#6633) [ddcef4f45]
+
 1.3.0 - 28 Nov 2025
 - Do not delete K8s jobs when ttlSecondsAfterFinished is set (#6597) [51042dbe2]
 - Optimize exit code handling by relying on scheduler status for successful executions (#6484) [454a2ae85]
