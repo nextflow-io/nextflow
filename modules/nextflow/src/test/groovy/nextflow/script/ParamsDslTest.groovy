@@ -1,13 +1,12 @@
 package nextflow.script
 
-import nextflow.script.types.Bag
-
 import java.nio.file.Files
 import java.nio.file.Path
 
 import nextflow.Session
 import nextflow.file.FileHelper
 import nextflow.exception.ScriptRuntimeException
+import nextflow.script.types.Bag
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -173,25 +172,19 @@ class ParamsDslTest extends Specification {
               {"id": 3, "name": "sample3", "value": 300}
             ]
             '''.stripIndent()
-        def jsonFile2 = Files.createTempFile('test2', '.json')
-        jsonFile2.text = '''\
-            {"id": 1, "name": "sample1", "value": 100}
-            '''.stripIndent()
-        def cliParams = [samplesList: jsonFile.toString(),
-                         samplesIter: jsonFile.toString(),
-                         samplesBag: jsonFile.toString(),
-                         samplesSet: jsonFile.toString(),
-                         inputMap: jsonFile2.toString()]
+        def cliParams = [
+            samplesList: jsonFile.toString(),
+            samplesBag: jsonFile.toString(),
+            samplesSet: jsonFile.toString()
+        ]
         def session = new Session()
         session.init(null, null, cliParams, [:])
 
         when:
         def dsl = new ParamsDsl()
         dsl.declare('samplesList', List, false)
-        dsl.declare('samplesIter', Iterable, false)
         dsl.declare('samplesBag', Bag, false)
         dsl.declare('samplesSet', Set, false)
-        dsl.declare('inputMap', Map, false)
         dsl.apply(session)
 
         then:
@@ -204,10 +197,6 @@ class ParamsDslTest extends Specification {
         samplesList[1].id == 2
         samplesList[2].id == 3
 
-        def samplesIter = session.binding.getParams().samplesIter
-        samplesIter instanceof Iterable
-        samplesIter.size() == 3
-
         def samplesBag = session.binding.getParams().samplesBag
         samplesBag instanceof Bag
         samplesBag.size() == 3
@@ -216,16 +205,8 @@ class ParamsDslTest extends Specification {
         samplesSet instanceof Set
         samplesSet.size() == 3
 
-        def inputMap = session.binding.getParams().inputMap
-        inputMap instanceof Map
-        inputMap.id == 1
-        inputMap.name == 'sample1'
-        inputMap.value == 100
-
-
         cleanup:
         jsonFile?.delete()
-        jsonFile2?.delete()
     }
 
     def 'should load collection param from YAML file'() {

@@ -16,9 +16,6 @@
 
 package nextflow.script
 
-import nextflow.script.types.Bag
-import nextflow.util.ArrayBag
-
 import java.nio.file.Path
 
 import groovy.json.JsonSlurper
@@ -29,8 +26,10 @@ import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.file.FileHelper
 import nextflow.exception.ScriptRuntimeException
+import nextflow.script.types.Bag
 import nextflow.script.types.Types
 import nextflow.splitter.CsvSplitter
+import nextflow.util.ArrayBag
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation
@@ -120,7 +119,7 @@ class ParamsDsl {
             return MemoryUnit.of(str)
         }
 
-        if( Collection.class.isAssignableFrom(decl.type) || decl.type == Iterable.class || decl.type == Map.class) {
+        if( Collection.class.isAssignableFrom(decl.type) ) {
             return resolveFromFile(decl.name, decl.type, FileHelper.asPath(str))
         }
 
@@ -140,7 +139,7 @@ class ParamsDsl {
 
         final str = value.toString()
 
-        if( Collection.class.isAssignableFrom(decl.type) || Iterable.class == decl.type || Map.class == decl.type )
+        if( Collection.class.isAssignableFrom(decl.type) )
             return resolveFromFile(decl.name, decl.type, FileHelper.asPath(str))
 
         if( decl.type == Path )
@@ -158,12 +157,13 @@ class ParamsDsl {
             case 'yml' -> new YamlSlurper().parse(file)
             default -> throw new ScriptRuntimeException("Unrecognized file format '${ext}' for input file '${file}' supplied for parameter `${name}` -- should be CSV, JSON, or YAML")
         }
+
         try {
+            if( Bag.class.isAssignableFrom(type) && value instanceof Collection )
+                return new ArrayBag(value)
             return DefaultTypeTransformation.castToType(value, type)
         }
         catch( GroovyCastException e ) {
-            if( Bag.class.isAssignableFrom(type) && value instanceof Collection )
-                return new ArrayBag(value)
             final actualType = value.getClass()
             throw new ScriptRuntimeException("Parameter `${name}` with type ${Types.getName(type)} cannot be assigned to contents of '${file}' [${Types.getName(actualType)}]")
         }
