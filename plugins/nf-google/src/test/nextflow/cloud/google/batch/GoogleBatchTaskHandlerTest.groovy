@@ -985,4 +985,155 @@ class GoogleBatchTaskHandlerTest extends Specification {
         result == null
     }
 
+    // ==========================================================================
+    // Tests for extracted helper methods
+    // ==========================================================================
+
+    def 'should build compute resource' () {
+        given:
+        def handler = Spy(GoogleBatchTaskHandler)
+        handler.@batchConfig = Mock(BatchConfig) {
+            getBootDiskSize() >> BOOT_DISK
+        }
+        def config = Mock(TaskConfig) {
+            getCpus() >> CPUS
+            getMemory() >> MEMORY
+        }
+
+        when:
+        def result = handler.buildComputeResource(config, DISK)
+
+        then:
+        result.getCpuMilli() == CPUS * 1000
+        result.getMemoryMib() == (MEMORY?.toMega() ?: 0)
+        result.getBootDiskMib() == EXPECTED_BOOT_DISK
+
+        where:
+        CPUS | MEMORY                  | DISK                                      | BOOT_DISK                 | EXPECTED_BOOT_DISK
+        2    | null                    | null                                      | null                      | 0
+        4    | MemoryUnit.of('8 GB')   | null                                      | null                      | 0
+        4    | MemoryUnit.of('8 GB')   | null                                      | MemoryUnit.of('50 GB')    | 50 * 1024
+        4    | MemoryUnit.of('8 GB')   | new DiskResource(request: '100 GB')       | null                      | 100 * 1024
+        4    | MemoryUnit.of('8 GB')   | new DiskResource(request: '100 GB', type: 'pd-ssd') | null           | 0  // type specified, use attached disk
+    }
+
+    def 'should build spot retry policy' () {
+        given:
+        def handler = Spy(GoogleBatchTaskHandler)
+        handler.@batchConfig = Mock(BatchConfig) {
+            getAutoRetryExitCodes() >> [50001, 50002]
+        }
+
+        when:
+        def result = handler.buildSpotRetryPolicy()
+
+        then:
+        result.getAction().toString() == 'RETRY_TASK'
+        result.getActionCondition().getExitCodesList() == [50001, 50002]
+    }
+
+    def 'should build network policy' () {
+        given:
+        def handler = Spy(GoogleBatchTaskHandler)
+        handler.@batchConfig = Mock(BatchConfig) {
+            getNetwork() >> NETWORK
+            getSubnetwork() >> SUBNET
+            isUsePrivateAddress() >> PRIVATE
+        }
+
+        when:
+        def result = handler.buildNetworkPolicy()
+
+        then:
+        (result != null) == EXPECTED_NOT_NULL
+        if (result) {
+            result.getNetworkInterfaces(0).getNetwork() == (NETWORK ?: '')
+            result.getNetworkInterfaces(0).getSubnetwork() == (SUBNET ?: '')
+            result.getNetworkInterfaces(0).getNoExternalIpAddress() == PRIVATE
+        }
+
+        where:
+        NETWORK | SUBNET   | PRIVATE | EXPECTED_NOT_NULL
+        null    | null     | false   | false
+        'net-1' | null     | false   | true
+        null    | 'sub-1'  | false   | true
+        null    | null     | true    | true
+        'net-1' | 'sub-1'  | true    | true
+    }
+
+    def 'should build task group' () {
+        given:
+        def handler = Spy(GoogleBatchTaskHandler)
+        def taskSpec = com.google.cloud.batch.v1.TaskSpec.newBuilder()
+        def task = Mock(TaskRun)
+
+        when:
+        def result = handler.buildTaskGroup(taskSpec, task)
+
+        then:
+        result.hasTaskSpec()
+        result.getTaskCount() == 0  // default for non-array task
+    }
+
+    def 'should build scratch volume' () {
+        given:
+        def handler = Spy(GoogleBatchTaskHandler)
+
+        when:
+        def result = handler.buildScratchVolume()
+
+        then:
+        result.getDeviceName() == 'scratch'
+        result.getMountPath() == '/tmp'
+    }
+
+    def 'should build container runnable' () {
+        given:
+        def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
+        def exec = Mock(GoogleBatchExecutor)
+        def task = Mock(TaskRun) {
+            getHashLog() >> 'abcd1234'
+            getWorkDir() >> WORK_DIR
+            getContainer() >> 'ubuntu:latest'
+            getConfig() >> Mock(TaskConfig) {
+                getContainerOptions() >> '--foo'
+            }
+        }
+        def handler = Spy(new GoogleBatchTaskHandler(task, exec))
+        def launcher = new GoogleBatchLauncherSpecMock('bash .command.run', ['/mnt:/mnt:rw'], [], [VAR1: 'value1'])
+
+        when:
+        def result = handler.buildContainerRunnable(task, launcher)
+
+        then:
+        handler.fusionEnabled() >> false
+        result.getContainer().getImageUri() == 'ubuntu:latest'
+        result.getContainer().getOptions() == '--foo'
+        result.getContainer().getVolumesList() == ['/mnt:/mnt:rw']
+        result.getEnvironment().getVariablesMap() == [VAR1: 'value1']
+    }
+
+    def 'should build container runnable with fusion privileged' () {
+        given:
+        def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
+        def exec = Mock(GoogleBatchExecutor)
+        def task = Mock(TaskRun) {
+            getHashLog() >> 'abcd1234'
+            getWorkDir() >> WORK_DIR
+            getContainer() >> 'ubuntu:latest'
+            getConfig() >> Mock(TaskConfig) {
+                getContainerOptions() >> ''
+            }
+        }
+        def handler = Spy(new GoogleBatchTaskHandler(task, exec))
+        def launcher = new GoogleBatchLauncherSpecMock('bash .command.run', [], [])
+
+        when:
+        def result = handler.buildContainerRunnable(task, launcher)
+
+        then:
+        handler.fusionEnabled() >> true
+        result.getContainer().getOptions() == '--privileged'
+    }
+
 }
