@@ -9,5 +9,6 @@ output-dsl.nf
 params-dsl.nf
 task-ext-block.nf
 topic-channel-typed.nf
+topic-file-output-typed.nf
 type-annotations.nf
 workflow-oncomplete-v2.nf
