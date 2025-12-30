@@ -166,9 +166,9 @@ The executor MUST minimize required user configuration by using sensible default
 
 **Auto-Discovery** (use defaults when not specified):
 
-- **FR-024**: System MUST auto-discover VPC subnets from the default VPC when `aws.ecs.subnets` is not specified.
+- **FR-024**: System MUST auto-discover VPC subnets from the default VPC when `aws.ecs.subnets` is not specified. If no default VPC exists, system MUST fail with a clear error message instructing the user to explicitly configure `aws.ecs.subnets`.
 
-- **FR-025**: System MUST auto-discover the default security group from the default VPC when `aws.ecs.securityGroups` is not specified.
+- **FR-025**: System MUST auto-discover the default security group from the default VPC when `aws.ecs.securityGroups` is not specified. If no default VPC exists, system MUST fail with a clear error message instructing the user to explicitly configure `aws.ecs.securityGroups`.
 
 **Default Values**:
 
