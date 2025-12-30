@@ -154,6 +154,30 @@ A pipeline developer needs to monitor task progress and debug failures. They nee
 
 - **FR-021**: System MUST use configuration namespace `aws.ecs.*` for all ECS executor settings (e.g., `aws.ecs.cluster`, `aws.ecs.maxSpotAttempts`), consistent with the existing `aws.batch.*` pattern.
 
+### Infrastructure Configuration Requirements
+
+The executor MUST minimize required user configuration by using sensible defaults and auto-discovery.
+
+**Required Settings** (no defaults possible):
+
+- **FR-022**: System MUST require `aws.ecs.cluster` setting specifying the ECS cluster name or ARN with Managed Instances capacity provider.
+
+- **FR-023**: System MUST require `aws.ecs.executionRole` setting specifying the IAM role ARN for ECS task execution (image pull, CloudWatch logs).
+
+**Auto-Discovery** (use defaults when not specified):
+
+- **FR-024**: System MUST auto-discover VPC subnets from the default VPC when `aws.ecs.subnets` is not specified.
+
+- **FR-025**: System MUST auto-discover the default security group from the default VPC when `aws.ecs.securityGroups` is not specified.
+
+**Default Values**:
+
+- **FR-026**: System MUST use `/aws/ecs/nextflow` as the default CloudWatch log group when `aws.ecs.logsGroup` is not specified.
+
+- **FR-027**: System MUST default `aws.ecs.assignPublicIp` to `true` to enable internet access without requiring NAT gateway configuration.
+
+- **FR-028**: System MUST default `aws.ecs.maxSpotAttempts` to `5` for automatic spot interruption retry.
+
 ### Key Entities
 
 - **ECS Cluster**: The AWS ECS cluster with Managed Instances capacity provider where tasks are executed.
@@ -188,6 +212,7 @@ A pipeline developer needs to monitor task progress and debug failures. They nee
 
 - Users have an AWS account with appropriate IAM permissions for ECS, EC2, S3, and CloudWatch.
 - An ECS cluster with Managed Instances capacity provider MUST be pre-configured by the user; the executor validates but does not create infrastructure.
+- Wave containers service is enabled (required for Fusion filesystem).
 - Fusion filesystem is properly configured and licensed for S3 access.
 - Container images are accessible from the ECS execution environment (ECR, Docker Hub, or other registry).
 - Network configuration (VPC, subnets, security groups) allows ECS tasks to access S3 and pull container images.
