@@ -17,10 +17,10 @@
 
 **Purpose**: Package structure and configuration foundation
 
-- [ ] T001 Create ECS executor package directory structure at `main/nextflow/cloud/aws/ecs/`
-- [ ] T002 Create ECS model subpackage at `main/nextflow/cloud/aws/ecs/model/`
-- [ ] T003 [P] Create test package at `test/nextflow/cloud/aws/ecs/`
-- [ ] T004 Register extension point in `plugins/nf-amazon/build.gradle` for AwsEcsExecutor
+- [x] T001 Create ECS executor package directory structure at `main/nextflow/cloud/aws/ecs/`
+- [x] T002 Create ECS model subpackage at `main/nextflow/cloud/aws/ecs/model/`
+- [x] T003 [P] Create test package at `test/nextflow/cloud/aws/ecs/`
+- [x] T004 Register extension point in `plugins/nf-amazon/build.gradle` for AwsEcsExecutor
 
 ---
 
@@ -30,12 +30,12 @@
 
 **CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T005 Create AwsEcsConfig class with @ConfigScope annotation at `main/nextflow/cloud/aws/config/AwsEcsConfig.groovy`
-- [ ] T006 Add `ecs` field to AwsConfig class at `main/nextflow/cloud/aws/config/AwsConfig.groovy`
-- [ ] T007 [P] Create AwsEcsOptions wrapper class at `main/nextflow/cloud/aws/ecs/AwsEcsOptions.groovy`
-- [ ] T008 Create AwsEcsExecutor skeleton with @ServiceName('awsecs') at `main/nextflow/cloud/aws/ecs/AwsEcsExecutor.groovy`
-- [ ] T009 Create AwsEcsTaskHandler skeleton extending TaskHandler at `main/nextflow/cloud/aws/ecs/AwsEcsTaskHandler.groovy`
-- [ ] T010 [P] Create AwsEcsConfigTest at `test/nextflow/cloud/aws/ecs/AwsEcsConfigTest.groovy`
+- [x] T005 Create AwsEcsConfig class with @ConfigScope annotation at `main/nextflow/cloud/aws/config/AwsEcsConfig.groovy`
+- [x] T006 Add `ecs` field to AwsConfig class at `main/nextflow/cloud/aws/config/AwsConfig.groovy`
+- [x] T007 [P] Create AwsEcsOptions wrapper class at `main/nextflow/cloud/aws/ecs/AwsEcsOptions.groovy`
+- [x] T008 Create AwsEcsExecutor skeleton with @ServiceName('awsecs') at `main/nextflow/cloud/aws/ecs/AwsEcsExecutor.groovy`
+- [x] T009 Create AwsEcsTaskHandler skeleton extending TaskHandler at `main/nextflow/cloud/aws/ecs/AwsEcsTaskHandler.groovy`
+- [x] T010 [P] Create AwsEcsConfigTest at `test/nextflow/cloud/aws/ecs/AwsEcsConfigTest.groovy`
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
