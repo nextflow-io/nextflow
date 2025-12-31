@@ -57,7 +57,7 @@ import org.eclipse.jgit.merge.MergeStrategy
 class AssetManager {
     private static final String REMOTE_REFS_ROOT = "refs/remotes/origin/"
     private static final String REMOTE_DEFAULT_HEAD = REMOTE_REFS_ROOT + "HEAD"
-
+    private static final String MULTI_REVISION_SUBDIR = ".repos"
     /**
      * The folder all pipelines scripts are installed
      */
@@ -541,8 +541,10 @@ class AssetManager {
             return result
 
         root.eachDir { File org ->
-            org.eachDir { File it ->
-                result << "${org.getName()}/${it.getName()}".toString()
+            if( org.name != MULTI_REVISION_SUBDIR) {
+                org.eachDir { File it ->
+                    result << "${org.getName()}/${it.getName()}".toString()
+                }
             }
         }
 
