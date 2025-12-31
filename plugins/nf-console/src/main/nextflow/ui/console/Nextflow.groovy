@@ -31,7 +31,7 @@ import nextflow.Session
 import nextflow.cli.CliOptions
 import nextflow.cli.CmdInfo
 import nextflow.cli.CmdRun
-import nextflow.config.ConfigBuilder
+import nextflow.config.ConfigCmdAdapter
 import nextflow.script.ScriptBinding
 import nextflow.script.ScriptFile
 import nextflow.script.parser.v1.ScriptLoaderV1
@@ -82,7 +82,7 @@ class Nextflow extends Console {
         final base = script ? script.parent : Paths.get('.')
 
         // create the config object
-        return new ConfigBuilder()
+        return new ConfigCmdAdapter()
                     .setOptions( new CliOptions() )
                     .setBaseDir(base)
                     .setCmdRun( new CmdRun() )

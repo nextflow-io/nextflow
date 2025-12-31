@@ -22,7 +22,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.SysEnv
-import nextflow.config.ConfigBuilder
+import nextflow.config.ConfigCmdAdapter
 import nextflow.exception.AbortOperationException
 import nextflow.platform.PlatformHelper
 import nextflow.plugin.Plugins
@@ -283,7 +283,7 @@ class CmdAuth extends CmdBase implements UsageAware {
         @Override
         void usage(List<String> result) {
             // Read config to get the actual resolved endpoint value
-            final builder = new ConfigBuilder().setHomeDir(Const.APP_HOME_DIR).setCurrentDir(Const.APP_HOME_DIR)
+            final builder = new ConfigCmdAdapter().setHomeDir(Const.APP_HOME_DIR).setCurrentDir(Const.APP_HOME_DIR)
             final config = builder.buildConfigObject().flatten()
             final towerConfig = config.findAll { it.key.toString().startsWith('tower.') }
                 .collectEntries { k, v -> [(k.toString().substring(6)): v] }

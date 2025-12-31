@@ -12,20 +12,20 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
-package nextflow.cli
+package nextflow.util
 
-/**
- * Define the interface for plugin commands
- *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
- */
-interface PluginExecAware {
+import groovy.transform.CompileStatic
 
-    static final String CMD_SEP = ':'
-
-    int exec(Launcher launcher, String pluginId, String cmd, List<String> args)
-
+@CompileStatic
+record LoggerOptions(
+    boolean ansiLog,
+    boolean background,
+    List<String> debug,
+    String logFile,
+    boolean quiet,
+    String syslog,
+    List<String> trace
+) {
 }

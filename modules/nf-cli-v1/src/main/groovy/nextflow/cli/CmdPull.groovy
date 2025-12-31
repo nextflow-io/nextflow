@@ -31,7 +31,7 @@ import nextflow.util.TestOnly
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Download or update a project")
-class CmdPull extends CmdBase implements HubOptions {
+class CmdPull extends CmdBase implements HubAware {
 
     static final public NAME = 'pull'
 
@@ -83,7 +83,7 @@ class CmdPull extends CmdBase implements HubOptions {
 
         for( String proj : list ) {
             if( all ) {
-                def branches = new AssetManager(proj).getBranchesAndTags(false).pulled as List<String>
+                def branches = new AssetManager(proj, toHubOptions()).getBranchesAndTags(false).pulled as List<String>
                 branches.each { rev -> pullProjectRevision(proj, rev) }
             } else {
                 pullProjectRevision(proj, revision)
@@ -92,7 +92,7 @@ class CmdPull extends CmdBase implements HubOptions {
     }
 
     private pullProjectRevision(String project, String revision) {
-        final manager = new AssetManager(project, this)
+        final manager = new AssetManager(project, toHubOptions())
 
         if( manager.isUsingLegacyStrategy() ) {
             if( migrate ) {

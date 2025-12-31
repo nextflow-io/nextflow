@@ -26,9 +26,9 @@ import groovy.util.logging.Slf4j
 import io.seqera.wave.plugin.ContainerConfig
 import io.seqera.wave.plugin.packer.Packer
 import io.seqera.wave.plugin.util.BasicCliOpts
-import nextflow.cli.PluginAbstractExec
 import nextflow.exception.AbortOperationException
 import nextflow.io.BucketParser
+import nextflow.plugin.cli.PluginAbstractExec
 /**
  * Implements Wave CLI tool
  *

@@ -20,7 +20,7 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.config.ConfigBuilder
+import nextflow.config.ConfigCmdAdapter
 import nextflow.daemon.DaemonLauncher
 import nextflow.plugin.Plugins
 import nextflow.util.ServiceName
@@ -65,10 +65,10 @@ class CmdNode extends CmdBase {
     protected launchDaemon(String name = null) {
 
         // create the config object
-        def config = new ConfigBuilder()
-                            .setOptions(launcher.options)
-                            .setCmdNode(this)
-                            .build()
+        final config = new ConfigCmdAdapter()
+                .setOptions(launcher.options)
+                .setCmdNode(this)
+                .build()
 
         DaemonLauncher instance
         if( name ) {

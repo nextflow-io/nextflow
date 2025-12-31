@@ -17,8 +17,6 @@
 
 package nextflow.cli
 
-import static nextflow.cli.PluginExecAware.CMD_SEP
-
 import java.nio.file.Path
 
 import com.beust.jcommander.DynamicParameter
@@ -27,8 +25,11 @@ import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
+import nextflow.plugin.cli.PluginExecAware
 import nextflow.plugin.util.PluginRefactor
 import org.eclipse.jgit.api.Git
+
+import static nextflow.plugin.cli.PluginExecAware.CMD_SEP
 /**
  * Plugin manager command
  * 
@@ -89,7 +90,7 @@ class CmdPlugin extends CmdBase {
                     mapped << "$it.value".toString()
                 }
                 args.addAll(mapped)
-                final ret = plugin.exec(getLauncher(), target, cmd, args)
+                final ret = plugin.exec(target, cmd, args)
                 // use explicit exit to invoke the system shutdown hooks
                 System.exit(ret)
             }
