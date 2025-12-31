@@ -49,7 +49,8 @@ class BatchConfigTest extends Specification {
             retryPolicy: [maxAttempts: 10],
             bootDiskImage: 'batch-foo',
             bootDiskSize: '100GB',
-            logsPath: 'gs://my-logs-bucket/logs'
+            logsPath: 'gs://my-logs-bucket/logs',
+            installOpsAgent: true
         ]
 
         when:
@@ -65,6 +66,8 @@ class BatchConfigTest extends Specification {
         config.bootDiskSize == MemoryUnit.of('100GB')
         and:
         config.logsPath == 'gs://my-logs-bucket/logs'
+        and:
+        config.installOpsAgent == true
     }
 
 }
