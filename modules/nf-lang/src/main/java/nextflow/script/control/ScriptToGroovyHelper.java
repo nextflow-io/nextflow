@@ -22,10 +22,12 @@ import org.codehaus.groovy.ast.CodeVisitorSupport;
 import org.codehaus.groovy.ast.Variable;
 import org.codehaus.groovy.ast.expr.ClosureExpression;
 import org.codehaus.groovy.ast.expr.Expression;
+import org.codehaus.groovy.ast.expr.PropertyExpression;
 import org.codehaus.groovy.ast.expr.VariableExpression;
 import org.codehaus.groovy.ast.stmt.Statement;
 import org.codehaus.groovy.control.SourceUnit;
 
+import static nextflow.script.ast.ASTUtils.*;
 import static org.codehaus.groovy.ast.tools.GeneralUtils.*;
 
 /**
@@ -39,6 +41,76 @@ public class ScriptToGroovyHelper {
 
     public ScriptToGroovyHelper(SourceUnit sourceUnit) {
         this.sourceUnit = sourceUnit;
+    }
+
+    /**
+     * Get the list of variable references in a statement.
+     *
+     * This method is used to collect references to task ext
+     * properties (e.g. `task.ext.args`) in the process body, so that
+     * they are included in the task hash.
+     *
+     * These properties are typically used like inputs, but are not
+     * explicitly declared, so they must be identified by their usage.
+     *
+     * The resulting list expression should be provided as the fourth
+     * argument of the BodyDef constructor.
+     *
+     * @param node
+     */
+    public Expression getVariableRefs(Statement node) {
+        var refs = new VariableRefCollector().collect(node).stream()
+            .map(name -> createX("nextflow.script.TokenValRef", constX(name)))
+            .toList();
+
+        return listX(refs);
+    }
+
+    private class VariableRefCollector extends CodeVisitorSupport {
+
+        private Set<String> variableRefs;
+
+        public Set<String> collect(Statement node) {
+            variableRefs = new HashSet<>();
+            visit(node);
+            return variableRefs;
+        }
+
+        @Override
+        public void visitPropertyExpression(PropertyExpression node) {
+            if( !isPropertyChain(node) ) {
+                super.visitPropertyExpression(node);
+                return;
+            }
+
+            var name = asPropertyChain(node);
+            if( name.startsWith("task.ext.") )
+                variableRefs.add(name);
+        }
+
+        private static boolean isPropertyChain(PropertyExpression node) {
+            var target = node.getObjectExpression();
+            while( target instanceof PropertyExpression pe )
+                target = pe.getObjectExpression();
+            return target instanceof VariableExpression;
+        }
+
+        private static String asPropertyChain(PropertyExpression node) {
+            var builder = new StringBuilder();
+            builder.append(node.getPropertyAsString());
+
+            var target = node.getObjectExpression();
+            while( target instanceof PropertyExpression pe ) {
+                builder.append('.');
+                builder.append(pe.getPropertyAsString());
+                target = pe.getObjectExpression();
+            }
+
+            builder.append('.');
+            builder.append(target.getText());
+
+            return builder.reverse().toString();
+        }
     }
 
     /**
