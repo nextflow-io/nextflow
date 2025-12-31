@@ -33,6 +33,7 @@ import com.google.cloud.batch.v1.StatusEvent
 import com.google.cloud.batch.v1.TaskStatus
 import com.google.cloud.batch.v1.Volume
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
+import nextflow.Global
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.cloud.google.batch.client.BatchClient
@@ -770,5 +771,47 @@ class GoogleBatchTaskHandlerTest extends Specification {
         TaskStatus.State.FAILED | 'Task failed due to Spot VM preemption with exit code 50001.' | 50001     | false          | nextflow.processor.TaskStatus.COMPLETED   | 50001             | true      | 'Task failed due to Spot VM preemption with exit code 50001.'
     }
 
+    def 'should validate max spot attempts' () {
+        given:
+        Global.config = [fusion: [enabled: FUSION, snapshots: SNAPSHOTS]]
+        def workDir = Path.of('/work/dir')
+        def client = Mock(BatchClient)
+        def batchConfig = Mock(BatchConfig) { getMaxSpotAttempts() >> ATTEMPTS }
+        and:
+        def executor = Mock(GoogleBatchExecutor) {
+            getBatchConfig() >> batchConfig
+            getClient() >> client
+            isFusionEnabled() >> FUSION
+        }
+        def processor = Mock(TaskProcessor) { getExecutor() >> executor }
+        def task = Mock(TaskRun) {
+            getHashLog() >> '1234567890'
+            getWorkDir() >> workDir
+            getProcessor() >> processor
+        }
+        def handler = Spy(new GoogleBatchTaskHandler(task, executor)) {
+            fusionEnabled() >> FUSION
+        }
+
+        expect:
+        handler.maxSpotAttempts() == EXPECTED
+
+        cleanup:
+        Global.config = null
+
+        where:
+        ATTEMPTS | FUSION | SNAPSHOTS | EXPECTED
+        0        | false  | false     | 0
+        1        | false  | false     | 1
+        2        | false  | false     | 2
+        and:
+        0        | true   | false     | 0
+        1        | true   | false     | 1
+        2        | true   | false     | 2
+        and:
+        0        | true   | true      | 5    // <-- default to 5
+        1        | true   | true      | 1
+        2        | true   | true      | 2
+    }
 
 }

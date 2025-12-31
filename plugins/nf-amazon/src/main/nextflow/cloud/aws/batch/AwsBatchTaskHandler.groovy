@@ -38,6 +38,7 @@ import nextflow.exception.ProcessSubmitException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.fusion.FusionAwareTask
+import nextflow.fusion.FusionConfig
 import nextflow.processor.BatchContext
 import nextflow.processor.BatchHandler
 import nextflow.processor.TaskArrayRun
@@ -753,7 +754,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             return result
         // when fusion snapshot is enabled max attempt should be > 0
         // to enable to allow snapshot retry the job execution in a new ec2 instance
-        return fusionEnabled() && fusionConfig().snapshotsEnabled() ? 5 : 0
+        return fusionEnabled() && fusionConfig().snapshotsEnabled() ? FusionConfig.DEFAULT_SNAPSHOT_MAX_SPOT_ATTEMPTS : 0
     }
 
     protected String getJobName(TaskRun task) {
