@@ -25,9 +25,10 @@ The task hash is computed from the following metadata:
 - Task {ref}`Conda environment <process-conda>` (if applicable)
 - Task {ref}`Spack environment <process-spack>` and {ref}`CPU architecture <process-arch>` (if applicable)
 - Task {ref}`inputs <process-input>`
+- *New in 25.10:* Task {ref}`eval commands <process-out-eval>`
 - Task {ref}`script <process-script>`
-- Any global variables referenced in the task script
-- Any task {ref}`process-ext` properties referenced in the task script
+- Global variables referenced in the task script
+- *New in 23.10:* Task {ref}`process-ext` properties referenced in the task script
 - Any {ref}`bundled scripts <bundling-executables>` used in the task script
 - Whether the task is a {ref}`stub run <process-stub>`
 
@@ -35,11 +36,7 @@ The task hash is computed from the following metadata:
 Nextflow also includes an incrementing component in the hash generation process, which allows it to iterate through multiple hash values until it finds one that does not match an existing execution directory. This mechanism typically aligns with task retries (i.e., task attempts), however this is not guaranteed.
 :::
 
-:::{versionchanged} 23.09.2-edge
-The {ref}`process-ext` directive was added to the task hash.
-:::
-
-Nextflow computes this hash for every task when it is created but before it is executed. If resumability is enabled and there is an entry in the task cache with the same hash, Nextflow tries to recover the previous task execution. A cache hit does not guarantee that the task will be resumed, because it must also recover the task outputs from the [work directory](#work-directory).
+Nextflow computes this hash for every task when it is created but before it is executed. If resumability is enabled, and there is an entry in the task cache with the same hash, and the task outputs are present in the [work directory](#work-directory), the task is resumed. Otherwise, the task is re-executed.
 
 Files are hashed differently depending on the caching mode. See the {ref}`process-cache` directive for more details.
 
