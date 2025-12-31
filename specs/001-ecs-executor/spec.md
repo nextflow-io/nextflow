@@ -126,6 +126,11 @@ A pipeline developer needs to monitor task progress and debug failures. They nee
 
 - **FR-007**: System MUST use AWS S3 as the work directory with Seqera Fusion filesystem for efficient data access.
 
+- **FR-007a**: System MUST configure ECS task definitions with Linux capabilities and device mappings required for FUSE driver operation:
+  - `linuxParameters.capabilities.add` MUST include `SYS_ADMIN` capability
+  - `linuxParameters.devices` MUST include `/dev/fuse` device mapping
+  - These settings are required for Fusion filesystem to mount S3 as a FUSE filesystem inside the container.
+
 - **FR-008**: System MUST automatically create ECS task definitions based on process requirements (container image, resources, environment variables).
 
 - **FR-009**: System MUST poll and track task status (PENDING, RUNNING, STOPPED) and report back to Nextflow runtime.

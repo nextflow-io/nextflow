@@ -337,6 +337,10 @@ class AwsEcsTaskHandler extends TaskHandler implements FusionAwareTask {
         container.cpu = cpus * 1024
         container.memory = memory ? memory.toMega() as Integer : 1024
 
+        // Enable Fusion filesystem support (adds SYS_ADMIN capability and /dev/fuse device)
+        // This is always enabled because ECS executor requires Fusion
+        container.fusionEnabled = true
+
         return model
     }
 

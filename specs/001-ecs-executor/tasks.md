@@ -49,26 +49,27 @@
 
 ### Implementation for User Story 1
 
-- [ ] T011 [US1] Implement AwsEcsConfig required fields (cluster, executionRole) with validation at `main/nextflow/cloud/aws/config/AwsEcsConfig.groovy`
-- [ ] T012 [US1] Implement AwsEcsConfig optional fields with defaults (logsGroup, maxSpotAttempts, assignPublicIp) at `main/nextflow/cloud/aws/config/AwsEcsConfig.groovy`
-- [ ] T013 [US1] Implement VPC auto-discovery for subnets/securityGroups in AwsEcsConfig (fail with clear error if no default VPC) at `main/nextflow/cloud/aws/config/AwsEcsConfig.groovy`
-- [ ] T014 [US1] Implement AwsEcsExecutor.register() with ECS and EC2 client initialization (EC2 for VPC auto-discovery) at `main/nextflow/cloud/aws/ecs/AwsEcsExecutor.groovy`
-- [ ] T015 [US1] Implement AwsEcsExecutor.createTaskHandler() at `main/nextflow/cloud/aws/ecs/AwsEcsExecutor.groovy`
-- [ ] T016 [US1] Implement AwsEcsExecutor.createTaskMonitor() with ParallelPollingMonitor at `main/nextflow/cloud/aws/ecs/AwsEcsExecutor.groovy`
-- [ ] T017 [P] [US1] Create RegisterTaskDefinitionModel at `main/nextflow/cloud/aws/ecs/model/RegisterTaskDefinitionModel.groovy`
-- [ ] T018 [P] [US1] Create ContainerDefinitionModel at `main/nextflow/cloud/aws/ecs/model/ContainerDefinitionModel.groovy`
-- [ ] T019 [US1] Implement task definition registration with RegisterTaskDefinition API in AwsEcsTaskHandler at `main/nextflow/cloud/aws/ecs/AwsEcsTaskHandler.groovy`
-- [ ] T020 [US1] Implement CPU/memory mapping (cpus directive -> CPU units, memory -> MiB) in AwsEcsTaskHandler at `main/nextflow/cloud/aws/ecs/AwsEcsTaskHandler.groovy`
-- [ ] T021 [US1] Implement AwsEcsTaskHandler.submit() with RunTask API at `main/nextflow/cloud/aws/ecs/AwsEcsTaskHandler.groovy`
-- [ ] T022 [US1] Implement AwsEcsTaskHandler.checkIfRunning() with status polling at `main/nextflow/cloud/aws/ecs/AwsEcsTaskHandler.groovy`
-- [ ] T023 [US1] Implement AwsEcsTaskHandler.checkIfCompleted() with exit code extraction at `main/nextflow/cloud/aws/ecs/AwsEcsTaskHandler.groovy`
-- [ ] T024 [US1] Implement AwsEcsTaskHandler.killTask() with StopTask API at `main/nextflow/cloud/aws/ecs/AwsEcsTaskHandler.groovy`
-- [ ] T025 [US1] Implement FusionAwareTask trait for S3/Fusion integration in AwsEcsTaskHandler at `main/nextflow/cloud/aws/ecs/AwsEcsTaskHandler.groovy`
-- [ ] T026 [US1] Implement task definition caching by container+resource hash in AwsEcsExecutor at `main/nextflow/cloud/aws/ecs/AwsEcsExecutor.groovy`
-- [ ] T027 [P] [US1] Create AwsEcsExecutorTest with mock ECS client at `test/nextflow/cloud/aws/ecs/AwsEcsExecutorTest.groovy`
-- [ ] T028 [P] [US1] Create AwsEcsTaskHandlerTest at `test/nextflow/cloud/aws/ecs/AwsEcsTaskHandlerTest.groovy`
+- [x] T011 [US1] Implement AwsEcsConfig required fields (cluster, executionRole) with validation at `main/nextflow/cloud/aws/config/AwsEcsConfig.groovy`
+- [x] T012 [US1] Implement AwsEcsConfig optional fields with defaults (logsGroup, maxSpotAttempts, assignPublicIp) at `main/nextflow/cloud/aws/config/AwsEcsConfig.groovy`
+- [x] T013 [US1] Implement VPC auto-discovery for subnets/securityGroups in AwsEcsExecutor (fail with clear error if no default VPC) at `main/nextflow/cloud/aws/ecs/AwsEcsExecutor.groovy`
+- [x] T014 [US1] Implement AwsEcsExecutor.register() with ECS and EC2 client initialization (EC2 for VPC auto-discovery) at `main/nextflow/cloud/aws/ecs/AwsEcsExecutor.groovy`
+- [x] T015 [US1] Implement AwsEcsExecutor.createTaskHandler() at `main/nextflow/cloud/aws/ecs/AwsEcsExecutor.groovy`
+- [x] T016 [US1] Implement AwsEcsExecutor.createTaskMonitor() with ParallelPollingMonitor at `main/nextflow/cloud/aws/ecs/AwsEcsExecutor.groovy`
+- [x] T017 [P] [US1] Create RegisterTaskDefinitionModel at `main/nextflow/cloud/aws/ecs/model/RegisterTaskDefinitionModel.groovy`
+- [x] T018 [P] [US1] Create ContainerDefinitionModel at `main/nextflow/cloud/aws/ecs/model/ContainerDefinitionModel.groovy`
+- [x] T019 [US1] Implement task definition registration with RegisterTaskDefinition API in AwsEcsTaskHandler at `main/nextflow/cloud/aws/ecs/AwsEcsTaskHandler.groovy`
+- [x] T020 [US1] Implement CPU/memory mapping (cpus directive -> CPU units, memory -> MiB) in AwsEcsTaskHandler at `main/nextflow/cloud/aws/ecs/AwsEcsTaskHandler.groovy`
+- [x] T021 [US1] Implement AwsEcsTaskHandler.submit() with RunTask API at `main/nextflow/cloud/aws/ecs/AwsEcsTaskHandler.groovy`
+- [x] T022 [US1] Implement AwsEcsTaskHandler.checkIfRunning() with status polling at `main/nextflow/cloud/aws/ecs/AwsEcsTaskHandler.groovy`
+- [x] T023 [US1] Implement AwsEcsTaskHandler.checkIfCompleted() with exit code extraction at `main/nextflow/cloud/aws/ecs/AwsEcsTaskHandler.groovy`
+- [x] T024 [US1] Implement AwsEcsTaskHandler.killTask() with StopTask API at `main/nextflow/cloud/aws/ecs/AwsEcsTaskHandler.groovy`
+- [x] T025 [US1] Implement FusionAwareTask trait for S3/Fusion integration in AwsEcsTaskHandler at `main/nextflow/cloud/aws/ecs/AwsEcsTaskHandler.groovy`
+- [x] T025a [US1] Implement Linux capabilities (SYS_ADMIN) and device mappings (/dev/fuse) in task definition for Fusion FUSE driver support at `main/nextflow/cloud/aws/ecs/AwsEcsTaskHandler.groovy`
+- [x] T026 [US1] Implement task definition caching by container+resource hash in AwsEcsTaskHandler at `main/nextflow/cloud/aws/ecs/AwsEcsTaskHandler.groovy`
+- [x] T027 [P] [US1] Create AwsEcsExecutorTest with mock ECS client at `test/nextflow/cloud/aws/ecs/AwsEcsExecutorTest.groovy`
+- [x] T028 [P] [US1] Create AwsEcsTaskHandlerTest at `test/nextflow/cloud/aws/ecs/AwsEcsTaskHandlerTest.groovy`
 
-**Checkpoint**: Basic task execution works - MVP complete
+**Checkpoint**: Basic task execution works - MVP complete ✅
 
 ---
 
@@ -98,10 +99,10 @@
 
 ### Implementation for User Story 3
 
-- [ ] T034 [US3] Add storageConfiguration to RegisterTaskDefinitionModel at `main/nextflow/cloud/aws/ecs/model/RegisterTaskDefinitionModel.groovy`
-- [ ] T035 [US3] Implement disk directive parsing with validation (30-16384 GiB) in AwsEcsTaskHandler at `main/nextflow/cloud/aws/ecs/AwsEcsTaskHandler.groovy`
-- [ ] T036 [US3] Map disk size to managedInstancesProvider.storageConfiguration in task definition at `main/nextflow/cloud/aws/ecs/AwsEcsTaskHandler.groovy`
-- [ ] T037 [US3] Add disk size to task definition cache key computation at `main/nextflow/cloud/aws/ecs/AwsEcsExecutor.groovy`
+- [x] T034 [US3] Add storageConfiguration to RegisterTaskDefinitionModel at `main/nextflow/cloud/aws/ecs/model/RegisterTaskDefinitionModel.groovy`
+- [x] T035 [US3] Implement disk directive parsing with validation (30-16384 GiB) in AwsEcsTaskHandler at `main/nextflow/cloud/aws/ecs/AwsEcsTaskHandler.groovy`
+- [x] T036 [US3] Map disk size to ephemeralStorage in task definition at `main/nextflow/cloud/aws/ecs/AwsEcsTaskHandler.groovy`
+- [x] T037 [US3] Add disk size to task definition cache key computation at `main/nextflow/cloud/aws/ecs/model/RegisterTaskDefinitionModel.groovy`
 - [ ] T038 [P] [US3] Add disk storage tests to AwsEcsTaskHandlerTest at `test/nextflow/cloud/aws/ecs/AwsEcsTaskHandlerTest.groovy`
 
 **Checkpoint**: Custom storage works independently
@@ -135,17 +136,17 @@
 
 - [ ] T043 [US5] Create AwsEcsHelper class for CloudWatch logs operations at `main/nextflow/cloud/aws/ecs/AwsEcsHelper.groovy`
 - [ ] T044 [US5] Implement getTaskLogStream() for log retrieval in AwsEcsHelper at `main/nextflow/cloud/aws/ecs/AwsEcsHelper.groovy`
-- [ ] T045 [US5] Implement CloudWatch log configuration in task definition (awslogs driver) at `main/nextflow/cloud/aws/ecs/AwsEcsTaskHandler.groovy`
+- [x] T045 [US5] Implement CloudWatch log configuration in task definition (awslogs driver) at `main/nextflow/cloud/aws/ecs/model/ContainerDefinitionModel.groovy`
 - [ ] T046 [US5] Implement describeCluster() for cluster validation in AwsEcsHelper at `main/nextflow/cloud/aws/ecs/AwsEcsHelper.groovy`
 - [ ] T047 [US5] Add cluster validation at executor startup using AwsEcsHelper at `main/nextflow/cloud/aws/ecs/AwsEcsExecutor.groovy`
-- [ ] T048 [US5] Implement spot interruption detection in checkIfCompleted() at `main/nextflow/cloud/aws/ecs/AwsEcsTaskHandler.groovy`
+- [x] T048 [US5] Implement spot interruption detection in checkIfCompleted() at `main/nextflow/cloud/aws/ecs/AwsEcsTaskHandler.groovy`
 - [ ] T049 [US5] Implement spot retry logic with maxSpotAttempts counter at `main/nextflow/cloud/aws/ecs/AwsEcsTaskHandler.groovy`
 - [ ] T050 [US5] Implement 14-day lifecycle error detection and clear error message at `main/nextflow/cloud/aws/ecs/AwsEcsTaskHandler.groovy`
 - [ ] T051 [US5] Implement BatchHandler trait for efficient status polling via BatchContext at `main/nextflow/cloud/aws/ecs/AwsEcsTaskHandler.groovy`
 - [ ] T052 [US5] Implement resource limits validation with clear error for exceeded limits (>16 vCPUs, >120 GB memory) at `main/nextflow/cloud/aws/ecs/AwsEcsTaskHandler.groovy`
 - [ ] T053 [US5] Implement capacity unavailable error handling (instance type not available) at `main/nextflow/cloud/aws/ecs/AwsEcsTaskHandler.groovy`
-- [ ] T054 [US5] Implement container image pull failure detection and clear error message at `main/nextflow/cloud/aws/ecs/AwsEcsTaskHandler.groovy`
-- [ ] T055 [US5] Implement AWS API rate limit handling with appropriate backoff at `main/nextflow/cloud/aws/ecs/AwsEcsExecutor.groovy`
+- [x] T054 [US5] Implement container image pull failure detection and clear error message at `main/nextflow/cloud/aws/ecs/AwsEcsTaskHandler.groovy`
+- [x] T055 [US5] Implement AWS API rate limit handling with appropriate backoff at `main/nextflow/cloud/aws/ecs/AwsEcsExecutor.groovy`
 - [ ] T056 [P] [US5] Add error handling tests to AwsEcsTaskHandlerTest at `test/nextflow/cloud/aws/ecs/AwsEcsTaskHandlerTest.groovy`
 - [ ] T057 [P] [US5] Add CloudWatch logs tests to AwsEcsExecutorTest at `test/nextflow/cloud/aws/ecs/AwsEcsExecutorTest.groovy`
 
@@ -157,7 +158,7 @@
 
 **Purpose**: Documentation, integration validation, cleanup
 
-- [ ] T058 [P] Add Apache 2.0 license headers to all new source files
+- [x] T058 [P] Add Apache 2.0 license headers to all new source files
 - [ ] T059 [P] Update plugins/nf-amazon/VERSION with appropriate version bump
 - [ ] T060 Run quickstart.md validation scenarios
 - [ ] T061 Code cleanup and Groovy idiom consistency review
@@ -170,8 +171,8 @@
 
 ### Phase Dependencies
 
-- **Setup (Phase 1)**: No dependencies - can start immediately
-- **Foundational (Phase 2)**: Depends on Setup completion - BLOCKS all user stories
+- **Setup (Phase 1)**: No dependencies - can start immediately ✅ COMPLETE
+- **Foundational (Phase 2)**: Depends on Setup completion - BLOCKS all user stories ✅ COMPLETE
 - **User Stories (Phase 3-7)**: All depend on Foundational phase completion
   - User stories can proceed in parallel (if staffed)
   - Or sequentially in priority order (P1 -> P2 -> P3)
@@ -179,11 +180,11 @@
 
 ### User Story Dependencies
 
-- **User Story 1 (P1)**: Can start after Foundational (Phase 2) - No dependencies on other stories
+- **User Story 1 (P1)**: Can start after Foundational (Phase 2) - No dependencies on other stories ✅ COMPLETE
 - **User Story 2 (P2)**: Can start after Foundational - Extends US1 task definition model
-- **User Story 3 (P2)**: Can start after Foundational - Extends US1 task definition model
+- **User Story 3 (P2)**: Can start after Foundational - Extends US1 task definition model ✅ MOSTLY COMPLETE (T038 pending)
 - **User Story 4 (P3)**: Can start after Foundational - Extends US1 RunTask handling
-- **User Story 5 (P3)**: Can start after Foundational - Adds observability to US1 infrastructure
+- **User Story 5 (P3)**: Can start after Foundational - Adds observability to US1 infrastructure (partial)
 
 ### Within Each User Story
 
@@ -201,49 +202,20 @@
 
 ---
 
-## Parallel Example: User Story 1
+## Progress Summary
 
-```bash
-# Launch model classes in parallel:
-Task: "Create RegisterTaskDefinitionModel at main/nextflow/cloud/aws/ecs/model/RegisterTaskDefinitionModel.groovy"
-Task: "Create ContainerDefinitionModel at main/nextflow/cloud/aws/ecs/model/ContainerDefinitionModel.groovy"
+| Phase | Status | Tasks Complete | Tasks Remaining |
+|-------|--------|----------------|-----------------|
+| Phase 1: Setup | ✅ COMPLETE | 4/4 | 0 |
+| Phase 2: Foundational | ✅ COMPLETE | 6/6 | 0 |
+| Phase 3: US1 Basic Tasks | ✅ COMPLETE | 18/18 | 0 |
+| Phase 4: US2 GPU | ⬜ NOT STARTED | 0/5 | 5 |
+| Phase 5: US3 Storage | 🟡 IN PROGRESS | 4/5 | 1 (T038) |
+| Phase 6: US4 Instance Type | ⬜ NOT STARTED | 0/4 | 4 |
+| Phase 7: US5 Monitoring | 🟡 IN PROGRESS | 4/15 | 11 |
+| Phase 8: Polish | 🟡 IN PROGRESS | 1/6 | 5 |
 
-# Launch tests in parallel with implementation:
-Task: "Create AwsEcsExecutorTest at test/nextflow/cloud/aws/ecs/AwsEcsExecutorTest.groovy"
-Task: "Create AwsEcsTaskHandlerTest at test/nextflow/cloud/aws/ecs/AwsEcsTaskHandlerTest.groovy"
-```
-
----
-
-## Implementation Strategy
-
-### MVP First (User Story 1 Only)
-
-1. Complete Phase 1: Setup
-2. Complete Phase 2: Foundational (CRITICAL - blocks all stories)
-3. Complete Phase 3: User Story 1
-4. **STOP and VALIDATE**: Test basic task execution independently
-5. Deploy/demo if ready - users can run basic workflows
-
-### Incremental Delivery
-
-1. Complete Setup + Foundational -> Foundation ready
-2. Add User Story 1 -> Test independently -> Deploy (MVP!)
-3. Add User Story 2 (GPU) -> Test independently -> Deploy
-4. Add User Story 3 (Storage) -> Test independently -> Deploy
-5. Add User Story 4 (Instance Type) -> Test independently -> Deploy
-6. Add User Story 5 (Monitoring) -> Test independently -> Deploy
-7. Each story adds value without breaking previous stories
-
-### Parallel Team Strategy
-
-With multiple developers:
-
-1. Team completes Setup + Foundational together
-2. Once Foundational is done:
-   - Developer A: User Story 1 (MVP)
-   - Developer B: User Story 2 + 3 (after US1 models exist)
-3. Stories complete and integrate independently
+**Overall Progress**: 37/63 tasks complete (59%)
 
 ---
 

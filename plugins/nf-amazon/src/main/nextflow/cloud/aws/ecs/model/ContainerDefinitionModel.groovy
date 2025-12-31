@@ -21,7 +21,11 @@ import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
 import software.amazon.awssdk.services.ecs.model.ContainerDefinition
+import software.amazon.awssdk.services.ecs.model.Device
+import software.amazon.awssdk.services.ecs.model.DeviceCgroupPermission
+import software.amazon.awssdk.services.ecs.model.KernelCapabilities
 import software.amazon.awssdk.services.ecs.model.KeyValuePair
+import software.amazon.awssdk.services.ecs.model.LinuxParameters
 import software.amazon.awssdk.services.ecs.model.LogConfiguration
 import software.amazon.awssdk.services.ecs.model.LogDriver
 import software.amazon.awssdk.services.ecs.model.ResourceRequirement
@@ -106,6 +110,11 @@ class ContainerDefinitionModel {
     Integer memoryReservation
 
     /**
+     * Whether to enable Fusion filesystem support (adds SYS_ADMIN capability and /dev/fuse device)
+     */
+    boolean fusionEnabled = false
+
+    /**
      * Build the ECS ContainerDefinition from this model.
      *
      * @param gpuCount Number of GPUs to allocate (null or 0 for none)
@@ -169,6 +178,30 @@ class ContainerDefinitionModel {
                 ResourceRequirement.builder()
                     .type(ResourceType.GPU)
                     .value(gpuCount.toString())
+                    .build()
+            )
+        }
+
+        // Add Linux parameters for Fusion filesystem FUSE driver support
+        if (fusionEnabled) {
+            builder.linuxParameters(
+                LinuxParameters.builder()
+                    .capabilities(
+                        KernelCapabilities.builder()
+                            .add('SYS_ADMIN')  // Required for FUSE mount operations
+                            .build()
+                    )
+                    .devices(
+                        Device.builder()
+                            .hostPath('/dev/fuse')
+                            .containerPath('/dev/fuse')
+                            .permissions(
+                                DeviceCgroupPermission.READ,
+                                DeviceCgroupPermission.WRITE,
+                                DeviceCgroupPermission.MKNOD
+                            )
+                            .build()
+                    )
                     .build()
             )
         }
