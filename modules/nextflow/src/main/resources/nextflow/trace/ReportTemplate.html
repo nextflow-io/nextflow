@@ -177,6 +177,36 @@
           <dd class="col-sm-9"><code>${workflow.scriptId}</code></dd>
         <% } %>
 
+        <% if (workflow.manifest.name) { %>
+          <dt class="col-sm-3">Workflow name</dt>
+          <dd class="col-sm-9"><samp>${workflow.manifest.name}</samp></dd>
+        <% } %>
+
+        <% if (workflow.manifest.version) { %>
+          <dt class="col-sm-3">Workflow version</dt>
+          <dd class="col-sm-9"><samp>${workflow.manifest.version}</samp></dd>
+        <% } %>
+
+        <% if (workflow.manifest.description) { %>
+          <dt class="col-sm-3">Workflow description</dt>
+          <dd class="col-sm-9">${workflow.manifest.description}</dd>
+        <% } %>
+
+        <% if (workflow.manifest.author) { %>
+          <dt class="col-sm-3">Workflow author</dt>
+          <dd class="col-sm-9">${workflow.manifest.author}</dd>
+        <% } %>
+
+        <% if (workflow.manifest.homePage) { %>
+          <dt class="col-sm-3">Workflow home page</dt>
+          <dd class="col-sm-9"><a href="${workflow.manifest.homePage}" target="_blank">${workflow.manifest.homePage}</a></dd>
+        <% } %>
+
+        <% if (workflow.manifest.doi) { %>
+          <dt class="col-sm-3">Workflow DOI</dt>
+          <dd class="col-sm-9"><a href="https://doi.org/${workflow.manifest.doi}" target="_blank">${workflow.manifest.doi}</a></dd>
+        <% } %>
+
         <dt class="col-sm-3">Workflow session</dt>
         <dd class="col-sm-9"><code>${workflow.sessionId}</code></dd>
 
