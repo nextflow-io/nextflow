@@ -129,7 +129,7 @@ class CsvSplitter extends AbstractTextSplitter {
         String line
         int z = 0
 
-        while( z++ < skipLines && reader.readLine()) { /* nope */ }
+        while( z++ < skipLines && reader.readLine() != null ) { /* nope */ }
 
         if( firstLineAsHeader ) {
             line = reader.readLine()

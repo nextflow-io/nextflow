@@ -67,7 +67,6 @@ config
 executor
 cache-and-resume
 reports
-plugins
 ```
 
 ```{toctree}
@@ -78,6 +77,7 @@ plugins
 script
 working-with-files
 process
+process-typed
 channel
 workflow
 module
@@ -110,6 +110,17 @@ azure
 google
 kubernetes
 fusion
+```
+
+```{toctree}
+:hidden:
+:caption: Plugins
+:maxdepth: 1
+
+plugins/plugins
+plugins/using-plugins
+plugins/developing-plugins
+plugins/plugin-registry
 ```
 
 ```{toctree}
@@ -152,8 +163,21 @@ migrations/index
 
 developer/index
 developer/diagram
+developer/config-scopes
 developer/packages
-developer/plugins
+```
+
+```{toctree}
+:hidden:
+:caption: Tutorials
+:maxdepth: 1
+
+tutorials/rnaseq-nf
+tutorials/data-lineage
+tutorials/workflow-outputs
+tutorials/static-types
+tutorials/metrics
+tutorials/flux
 ```
 
 ```{toctree}
@@ -161,8 +185,8 @@ developer/plugins
 :caption: Guides
 :maxdepth: 1
 
-data-lineage
-updating-spot-retries
-metrics
-flux
+guides/aws-java-sdk-v2
+guides/gradle-plugin
+guides/migrate-plugin
+guides/updating-spot-retries
 ```

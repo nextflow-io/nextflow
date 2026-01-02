@@ -44,11 +44,15 @@ class ConfigDsl extends Script {
 
     private Path configPath
 
+    private Map paramOverrides
+
     private List<String> profiles
 
     private Map target = [:]
 
-    private Set<String> parsedProfiles = []
+    private Set<String> declaredProfiles = []
+
+    private Map<String,Object> declaredParams = [:]
 
     void setIgnoreIncludes(boolean value) {
         this.ignoreIncludes = value
@@ -66,20 +70,29 @@ class ConfigDsl extends Script {
         this.configPath = path
     }
 
-    void setParams(Map params) {
-        target.params = params
+    void setParams(Map paramOverrides) {
+        this.paramOverrides = paramOverrides
+        target.params = paramOverrides
     }
 
     void setProfiles(List<String> profiles) {
         this.profiles = profiles
     }
 
-    void addParsedProfile(String profile) {
-        parsedProfiles.add(profile)
+    void declareProfile(String profile) {
+        declaredProfiles.add(profile)
     }
 
-    Set<String> getParsedProfiles() {
-        return parsedProfiles
+    Set<String> getDeclaredProfiles() {
+        return declaredProfiles
+    }
+
+    void declareParam(String name, Object value) {
+        declaredParams.put(name, value)
+    }
+
+    Map<String,Object> getDeclaredParams() {
+        return declaredParams
     }
 
     Map getTarget() {
@@ -104,8 +117,13 @@ class ConfigDsl extends Script {
         }
     }
 
-    void assign(List<String> names, Object right) {
-        navigate(names.init()).put(names.last(), right)
+    void assign(List<String> names, Object value) {
+        if( names.size() == 2 && names.first() == 'params' ) {
+            declareParam(names.last(), value)
+            if( paramOverrides.containsKey(names.last()) )
+                return
+        }
+        navigate(names.init()).put(names.last(), value)
     }
 
     private Map navigate(List<String> names) {
@@ -134,7 +152,11 @@ class ConfigDsl extends Script {
         if( names.size() == 1 && names.first() == 'plugins' )
             return new PluginsDsl(this)
 
-        if( names.size() == 1 && names.first() == 'process' )
+        final relativeNames = names.size() == 3 && names.first() == 'profiles'
+            ? List.of(names.last())
+            : names
+
+        if( relativeNames.size() == 1 && relativeNames.last() == 'process' )
             return new ProcessDsl(this, names)
 
         if( names.size() == 1 && names.first() == 'profiles' )
@@ -177,7 +199,8 @@ class ConfigDsl extends Script {
                 .setParams(target.params as Map)
                 .setProfiles(profiles)
         final config = parser.parse(configText, includePath)
-        parsedProfiles.addAll(parser.getProfiles())
+        declaredProfiles.addAll(parser.getDeclaredProfiles())
+        declaredParams.putAll(parser.getDeclaredParams())
 
         final ctx = navigate(names)
         ctx.putAll(Bolts.deepMerge(ctx, config))
@@ -280,7 +303,7 @@ class ConfigDsl extends Script {
         @Override
         void block(String name, Closure closure) {
             blocks[name] = closure
-            dsl.addParsedProfile(name)
+            dsl.declareProfile(name)
         }
 
         @Override

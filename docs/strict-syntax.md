@@ -8,8 +8,12 @@ This page explains how to update Nextflow scripts and config files to adhere to 
 If you are still using DSL1, see {ref}`dsl1-page` to learn how to migrate your Nextflow pipelines to DSL2 before consulting this guide.
 :::
 
-:::{versionadded} 25.02.0-edge
-The strict syntax can be enabled in Nextflow by setting the environment variable `NXF_SYNTAX_PARSER=v2`.
+:::{versionadded} 25.04.0
+To enable strict syntax, set the `NXF_SYNTAX_PARSER` environment variable to `v2`:
+
+```bash
+export NXF_SYNTAX_PARSER=v2
+```
 :::
 
 ## Overview
@@ -222,7 +226,7 @@ In the strict syntax, use `System.getenv()` instead:
 println "PWD = ${System.getenv('PWD')}"
 ```
 
-:::{versionadded} 24.11.0-edge
+:::{versionadded} 24.04.0
 The `env()` function should be used instead of `System.getenv()`:
 
 ```nextflow
@@ -299,9 +303,21 @@ def str = 'hello'
 def meta = [:]
 ```
 
-:::{note}
-Because type annotations are useful for providing type checking at runtime, the language server will not report errors for Groovy-style type annotations at this time. Type annotations will be addressed in a future version of the Nextflow language specification.
+:::{versionadded} 25.10.0
 :::
+
+Local variables can be declared with a type annotation:
+
+```nextflow
+def a: Integer = 1
+def b: Integer = 2
+def (c: Integer, d: Integer) = [3, 4]
+def (e: Integer, f: Integer) = [5, 6]
+def str: String = 'hello'
+def meta: Map = [:]
+```
+
+Groovy-style type annotations are still supported. However, the language server and `nextflow lint` will automatically convert them to Nextflow-style type annotations when formatting code. Groovy-style type annotations will not be supported in a future version.
 
 ### Strings
 
@@ -368,15 +384,7 @@ def map = (Map) readJson(json)  // soft cast
 def map = readJson(json) as Map // hard cast
 ```
 
-In the strict syntax, only hard casts are supported. However, hard casts are discouraged because they can cause unexpected behavior if used improperly. Groovy-style type annotations should be used instead:
-
-```groovy
-def Map map = readJson(json)
-```
-
-Nextflow will raise an error at runtime if the `readJson()` function does not return a `Map`.
-
-When converting a value to a different type, it is better to use an explicit method rather than a cast. For example, to parse a string as a number:
+In the strict syntax, only hard casts are supported. Use an explicit method to cast a value to a different type if one is available. For example, to parse a string as a number:
 
 ```groovy
 def x = '42' as Integer
@@ -468,21 +476,40 @@ workflow {
 }
 ```
 
-:::{note}
-A more concise syntax for workflow handlers will be addressed in a future version of the Nextflow language specification.
+:::{versionadded} 25.10.0
 :::
+
+Workflow handlers can be specified as sections in the entry workflow:
+
+```nextflow
+workflow {
+    main:
+    // ...
+
+    onComplete:
+    println "Pipeline completed at: $workflow.complete"
+    println "Execution status: ${ workflow.success ? 'OK' : 'failed' }"
+}
+```
+
+See {ref}`workflow-handlers` for details.
+
+(strict-syntax-deprecated)=
 
 ## Deprecated syntax
 
 The following patterns are deprecated, and the strict syntax reports warnings for them. These warnings will become errors in the future.
 
-### Process shell section
+### `channel` vs `Channel`
 
-The process `shell` section is deprecated. Use the `script` section instead. The strict syntax provides error checking to help distinguish between Nextflow variables and Bash variables.
+Channel factories should be accessed using the `channel` namespace instead of the `Channel` type:
 
-## Best practices
+```nextflow
+Channel.of(1, 2, 3) // incorrect
+channel.of(1, 2, 3) // correct
+```
 
-The following patterns are discouraged. The language server reports informative messages for these patterns, which are disabled by default. Enable them by setting the error reporiting mode (**Nextflow > Error reporting mode** in the extension settings) to `paranoid`. These messages may become warnings or errors in the future.
+See {ref}`stdlib-namespaces-channel` and {ref}`stdlib-types-channel` for more information.
 
 ### Implicit closure parameter
 
@@ -492,16 +519,26 @@ In Groovy, a closure with no parameters is assumed to have a single parameter na
 ch.map { it * 2 }
 ```
 
-As a best practice, the closure parameter should be explicitly declared:
+In the strict syntax, the closure parameter should be explicitly declared:
 
 ```nextflow
 ch.map { v -> v * 2 }   // correct
 ch.map { it -> it * 2 } // also correct
 ```
 
+### Process shell section
+
+The process `shell` section is deprecated. Use the `script` section instead. The strict syntax provides error checking to help distinguish between Nextflow variables and Bash variables.
+
+## Best practices
+
+The following patterns are discouraged and may become warnings or errors in future Nextflow versions. The language server can detect these patterns, but does not report them by default.
+
+To enable these checks, set **Nextflow > Error reporting mode** to **paranoid** in the extension settings.
+
 ### Using params outside the entry workflow
 
-While params can be used anywhere in the pipeline code, they are only intended to be used in the entry workflow.
+While params can be used anywhere in the pipeline code, they are only intended to be used in the entry workflow and the `output` block.
 
 As a best practice, processes and workflows should receive params as explicit inputs:
 
@@ -534,8 +571,12 @@ The process {ref}`process-when` section is discouraged. As a best practice, cond
 
 ## Configuration syntax
 
-:::{versionadded} 25.02.0-edge
-The strict config syntax can be enabled in Nextflow by setting the environment variable `NXF_SYNTAX_PARSER=v2`.
+:::{versionadded} 25.04.0
+To enable the {ref}`strict syntax <strict-syntax-page>`, set the `NXF_SYNTAX_PARSER` environment variable to `v2`:
+
+```bash
+export NXF_SYNTAX_PARSER=v2
+```
 :::
 
 See {ref}`Configuration <config-syntax>` for a comprehensive description of the configuration language.
@@ -595,4 +636,4 @@ There are two ways to preserve Groovy code:
 
 Any Groovy code can be moved into the `lib` directory, which supports the full Groovy language. This approach is useful for temporarily preserving some Groovy code until it can be updated later and incorporated into a Nextflow script. See {ref}`lib-directory` documentation for more information.
 
-For Groovy code that is complicated or if it depends on third-party libraries, it may be better to create a plugin. Plugins can define custom functions that can be included by Nextflow scripts like a module. Furthermore, plugins can be easily re-used across different pipelines. See {ref}`plugins-dev-page` for more information on how to develop plugins.
+For Groovy code that is complicated or if it depends on third-party libraries, it may be better to create a plugin. Plugins can define custom functions that can be included by Nextflow scripts like a module. Furthermore, plugins can be easily re-used across different pipelines. See {ref}`dev-plugins-page` for more information on how to develop plugins.

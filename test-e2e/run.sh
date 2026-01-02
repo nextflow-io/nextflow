@@ -19,8 +19,8 @@
 rm -rf .nextflow && mkdir .nextflow
 # copy nextflow dependencies
 (cd ..
-make assemble
-BUILD_PACK=1 ./gradlew installScratch publishToMavenLocal
+export NXF_PLUGINS_DIR=$PWD/build/plugins
+make releaseInfo assemble installScratch
 )
 
 # copy nextflow plugins

@@ -14,16 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-nextflow.preview.output = true
+nextflow.preview.types = true
 
 params.save_bam_bai = false
 
 process fastqc {
   input:
-  val id
+  id: String
 
   output:
-  tuple val(id), path('*.fastqc.log')
+  tuple(id, file('*.fastqc.log'))
 
   script:
   """
@@ -33,11 +33,11 @@ process fastqc {
 
 process align {
   input:
-  val id
+  id: String
 
   output:
-  tuple val(id), path('*.bam')
-  tuple val(id), path('*.bai')
+  bam = tuple(id, file('*.bam'))
+  bai = tuple(id, file('*.bai'))
 
   script:
   """
@@ -48,10 +48,10 @@ process align {
 
 process quant {
   input:
-  val id
+  id: String
 
   output:
-  tuple val(id), path('quant')
+  tuple(id, file('quant'))
 
   script:
   '''
@@ -64,14 +64,17 @@ process quant {
 
 process summary {
   input:
-  path logs
+  logs: Bag<Path>
 
   output:
-  path('summary.txt'), emit: report
+  tuple(file('summary_report.html'), file('summary_data/data.json'), file('summary_data/fastqc.txt'))
 
   script:
   '''
-  ls -1 *.log > summary.txt
+  touch summary_report.html
+  mkdir summary_data
+  touch summary_data/data.json
+  touch summary_data/fastqc.txt
   '''
 }
 
@@ -90,8 +93,8 @@ workflow {
       [
         id: id,
         fastqc: fastqc,
-        bam: params.save_bam_bai ? bam : null,
-        bai: params.save_bam_bai ? bai : null,
+        bam: bam,
+        bai: bai,
         quant: quant
       ]
     }
@@ -111,8 +114,8 @@ output {
   samples {
     path { sample ->
       sample.fastqc >> 'log/'
-      sample.bam >> 'align/'
-      sample.bai >> 'align/'
+      sample.bam >> (params.save_bam_bai ? 'align/' : null)
+      sample.bai >> (params.save_bam_bai ? 'align/' : null)
       sample.quant >> "quant/${sample.id}"
     }
     index {
@@ -123,6 +126,10 @@ output {
   }
 
   summary {
-    path '.'
+    path { report, data_json, fastqc_txt ->
+      report >> './'
+      data_json >> './'
+      fastqc_txt >> './'
+    }
   }
 }

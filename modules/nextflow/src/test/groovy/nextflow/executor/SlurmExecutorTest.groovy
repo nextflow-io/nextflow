@@ -31,10 +31,20 @@ import spock.lang.Unroll
  */
 class SlurmExecutorTest extends Specification {
 
+    def createExecutor(config) {
+        Spy(SlurmExecutor) {
+            getConfig() >> config
+        }
+    }
+
+    def createExecutor() {
+        createExecutor(new ExecutorConfig([:]))
+    }
+
     def testParseJob() {
 
         given:
-        def exec = [:] as SlurmExecutor
+        def exec = createExecutor()
 
         expect:
         exec.parseJobId('Submitted batch job 10') == '10'
@@ -54,7 +64,7 @@ class SlurmExecutorTest extends Specification {
     def testKill() {
 
         given:
-        def exec = [:] as SlurmExecutor
+        def exec = createExecutor()
         expect:
         exec.killTaskCommand(123) == ['scancel','123']
 
@@ -63,8 +73,7 @@ class SlurmExecutorTest extends Specification {
     @Unroll
     def testGetCommandLine() {
         given:
-        def session = Mock(Session) {getConfig()>>[:]}
-        def exec = Spy(SlurmExecutor) { getSession()>>session }
+        def exec = createExecutor()
 
         when:
         def result = exec.getSubmitCommandLine(Mock(TaskRun), Paths.get(PATH))
@@ -82,8 +91,7 @@ class SlurmExecutorTest extends Specification {
 
         setup:
         // SLURM executor
-        def executor = [:] as SlurmExecutor
-        executor.session = Mock(Session)
+        def executor = createExecutor()
 
         // mock process
         def proc = Mock(TaskProcessor)
@@ -240,14 +248,10 @@ class SlurmExecutorTest extends Specification {
     def testWorkDirWithBlanks() {
 
         setup:
-        // LSF executor
-        def executor = Spy(SlurmExecutor)
-        executor.session = Mock(Session)
+        def executor = createExecutor()
 
-        // mock process
         def proc = Mock(TaskProcessor)
 
-        // task object
         def task = new TaskRun()
         task.processor = proc
         task.workDir = Paths.get('/work/some data/path')
@@ -271,7 +275,7 @@ class SlurmExecutorTest extends Specification {
     def testQstatCommand() {
 
         setup:
-        def executor = [:] as SlurmExecutor
+        def executor = createExecutor()
         def text =
                 """
                 5 PD
@@ -301,16 +305,64 @@ class SlurmExecutorTest extends Specification {
     def testQueueStatusCommand() {
         when:
         def usr = System.getProperty('user.name')
-        def exec = [:] as SlurmExecutor
+        def exec = createExecutor()
         then:
         usr
         exec.queueStatusCommand(null) == ['squeue','--noheader','-o','%i %t','-t','all','-u', usr]
         exec.queueStatusCommand('xxx') == ['squeue','--noheader','-o','%i %t','-t','all','-p','xxx','-u', usr]
     }
 
+    def 'should use onlyJobState option and omit queue and user' () {
+        given:
+        def exec = createExecutor()
+        exec.@onlyJobState = true
+
+        when:
+        def result = exec.queueStatusCommand(null)
+
+        then:
+        result == ['squeue','--noheader','-o','%i %t','-t','all','--only-job-state']
+        !result.contains('-u')
+        !result.contains('-p')
+    }
+
+    def 'should use onlyJobState option and ignore queue parameter' () {
+        given:
+        def exec = createExecutor()
+        exec.@onlyJobState = true
+
+        when:
+        def result = exec.queueStatusCommand('myqueue')
+
+        then:
+        result == ['squeue','--noheader','-o','%i %t','-t','all','--only-job-state']
+        !result.contains('-p')
+        !result.contains('myqueue')
+        !result.contains('-u')
+    }
+
+    def 'should include queue and user when onlyJobState is disabled' () {
+        given:
+        def exec = createExecutor()
+        exec.@onlyJobState = false
+
+        when:
+        def usr = System.getProperty('user.name')
+        def resultNoQueue = exec.queueStatusCommand(null)
+        def resultWithQueue = exec.queueStatusCommand('myqueue')
+
+        then:
+        resultNoQueue == ['squeue','--noheader','-o','%i %t','-t','all','-u', usr]
+        !resultNoQueue.contains('--only-job-state')
+
+        and:
+        resultWithQueue == ['squeue','--noheader','-o','%i %t','-t','all','-p','myqueue','-u', usr]
+        !resultWithQueue.contains('--only-job-state')
+    }
+
     def 'should get array index name and start' () {
         given:
-        def executor = Spy(SlurmExecutor)
+        def executor = createExecutor()
         expect:
         executor.getArrayIndexName() == 'SLURM_ARRAY_TASK_ID'
         executor.getArrayIndexStart() == 0
@@ -319,7 +371,7 @@ class SlurmExecutorTest extends Specification {
     @Unroll
     def 'should get array task id' () {
         given:
-        def executor = Spy(SlurmExecutor)
+        def executor = createExecutor()
         expect:
         executor.getArrayTaskId(JOB_ID, TASK_INDEX) == EXPECTED
 
@@ -339,10 +391,10 @@ class SlurmExecutorTest extends Specification {
         task.processor.getSession() >> Mock(Session)
         task.config = Mock(TaskConfig)
         and:
-        def executor = Spy(SlurmExecutor)
+        def config = new ExecutorConfig(account: ACCOUNT)
+        def executor = createExecutor(config)
         executor.getJobNameFor(_) >> 'foo'
         executor.getName() >> 'slurm'
-        executor.getSession() >> Mock(Session) { getExecConfigProp('slurm', 'account',null)>>ACCOUNT }
 
         when:
         def result = executor.getDirectives(task, [])

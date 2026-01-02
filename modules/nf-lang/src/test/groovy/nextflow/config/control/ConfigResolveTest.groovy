@@ -63,29 +63,6 @@ class ConfigResolveTest extends Specification {
         errors[0].getOriginalMessage() == '`process` is not defined'
     }
 
-    def 'should report an error for an invalid dynamic config option' () {
-        when:
-        def errors = check(
-            '''\
-            report.file = { "report.html" }
-            '''
-        )
-        then:
-        errors.size() == 1
-        errors[0].getStartLine() == 1
-        errors[0].getStartColumn() == 1
-        errors[0].getOriginalMessage() == 'Dynamic config options are only allowed in the `process` scope'
-
-        when:
-        errors = check(
-            '''\
-            process.clusterOptions = { "--cpus ${task.cpus}" }
-            '''
-        )
-        then:
-        errors.size() == 0
-    }
-
     def 'should report an error for an invalid config include' () {
         given:
         def root = tempDir()
@@ -192,6 +169,15 @@ class ConfigResolveTest extends Specification {
         errors[0].getStartLine() == 2
         errors[0].getStartColumn() == 23
         errors[0].getOriginalMessage() == '`meta` is not defined'
+
+        when:
+        errors = check(
+            '''\
+            executor.jobName = { "$task.name - $task.hash" }
+            '''
+        )
+        then:
+        errors.size() == 0
     }
 
 }

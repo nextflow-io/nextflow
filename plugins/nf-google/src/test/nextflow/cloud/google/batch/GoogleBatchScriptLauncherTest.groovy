@@ -22,6 +22,7 @@ import java.nio.file.Paths
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
 import nextflow.cloud.google.GoogleOpts
 import nextflow.cloud.google.batch.client.BatchConfig
+import nextflow.processor.TaskRun
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -51,12 +52,12 @@ class GoogleBatchScriptLauncherTest extends Specification{
     def 'should compute volume mounts' () {
         given:
         def launcher = new GoogleBatchScriptLauncher()
-        launcher.config = Mock(BatchConfig) {
-            getGoogleOpts() >> Mock(GoogleOpts) {
-                getProjectId() >> 'my-project'
-                getEnableRequesterPaysBuckets() >> true
+        launcher.config = Mock(GoogleOpts) {
+            getBatch() >> Mock(BatchConfig) {
+                getGcsfuseOptions() >> ['-o rw', '-implicit-dirs', '-o allow_other', '--uid=1000']
             }
-            getGcsfuseOptions() >> ['-o rw', '-implicit-dirs', '-o allow_other', '--uid=1000']
+            getProjectId() >> 'my-project'
+            enableRequesterPaysBuckets >> true
         }
         and:
         def PATH1 = CloudStorageFileSystem.forBucket('alpha').getPath('/data/sample1.bam')
@@ -85,6 +86,19 @@ class GoogleBatchScriptLauncherTest extends Specification{
         volumes[1].getGcs().getRemotePath() == 'omega'
         volumes[1].getMountPath() == '/mnt/disks/omega'
         volumes[1].getMountOptionsList() == ['-o rw', '-implicit-dirs', '-o allow_other', '--uid=1000', '--billing-project my-project']
+    }
+
+    def 'should return target files in remote work dir' () {
+        given:
+        def launcher = new GoogleBatchScriptLauncher()
+        def workDir = CloudStorageFileSystem.forBucket('my-bucket').getPath('/work/dir')
+        launcher.@remoteWorkDir = workDir
+
+        expect:
+        launcher.targetInputFile() == workDir.resolve(TaskRun.CMD_INFILE)
+        launcher.targetScriptFile() == workDir.resolve(TaskRun.CMD_SCRIPT)
+        launcher.targetWrapperFile() == workDir.resolve(TaskRun.CMD_RUN)
+        launcher.targetStageFile() == workDir.resolve(TaskRun.CMD_STAGE)
     }
 
 }

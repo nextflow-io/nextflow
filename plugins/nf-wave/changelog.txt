@@ -1,5 +1,31 @@
 nf-wave changelog
 ==================
+1.18.0 - 19 Dec 2025
+- Fix WaveClient sending Bearer token to public S3 URLs (#6672) [ffaef0b6a]
+- Add wave.build.template config option (#6639) [d08a8952a]
+
+1.17.0 - 28 Nov 2025
+- Bump Fusion to version 2.5 (#6557) [ec228f64f]
+
+1.16.1 - 21 Oct 2025
+- Rename `config.schema` package to `config.spec` (#6485) [ef0d2d601]
+
+1.16.0 - 8 Oct 2025
+- Fix cookie policy for Seqera Platform JWT token refresh (#6411) [c3959cfc3]
+
+1.14.1 - 15 Aug 2025
+- Unify nf-lang config scopes with runtime classes (#6271) [bfa67ca3]
+- Update trace observers to v2 (#6257) [544b8c47]
+- Bump groovy 4.0.28 (#6304) [ci fast] [a468f8ef]
+- Bump org.apache.commons:commons-lang3 from 3.12.0 to 3.18.0 (#6272) [b8ccddb5]
+
+1.14.0 - 6 Jul 2025
+- Fix http response err message [1f05451f]
+- Unwrap Failsafe exception cause in Wave client [0cb39df5]
+- Update wave retryPolicy default values (#6222) [b8069a58]
+- Bump Slf4j version 2.0.17 [93199e09]
+- Bump gson version 2.13.1 [ab8e36a2]
+
 1.13.0 - 2 Jun 2025
 - Deprecated condaFile attribute [9e52b2ad]
 - Add support for container build compression (#5964) [daeefa0c]

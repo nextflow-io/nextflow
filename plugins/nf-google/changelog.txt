@@ -1,8 +1,39 @@
 nf-google changelog
 ===================
+1.25.0 - 19 Dec 2025
+- Add spot interruption tracking to trace records (#6606) [eecd81671]
+- Refactor Google Batch getExitCode to imperative style (#6649) [addd59e9f]
+- Add default maxSpotAttempts for fusion snapshots in Google Batch (#6652) [458ef97a9]
+
+1.24.0 - 28 Nov 2025
+- Add stageFileEnabled flag to control .command.stage file creation (#6618) [2d117cb59]
+- Add Google Batch LogsPolicy PATH option for logging to GCS (#6431) [5b61afe01]
+
+1.23.3 - 22 Oct 2025
+- Prioritize Google Batch API exit codes with fallback to .exitcode file (#6498) [6ac2efcba]
+
+1.23.2 - 21 Oct 2025
+- Rename `config.schema` package to `config.spec` (#6485) [ef0d2d601]
+
+1.23.1 - 8 Oct 2025
+- Fix CVE-2025-55163 in nf-google plugin [7d7061797]
+- Bump Google Cloud libraries to latest versions (#6438) [59a63f1ae]
+
+1.22.2 - 15 Aug 2025
+- Fix NPE in GoogleBatchMachineTypeSelector when spotPrice is null [ci fast] [a797a795]
+- Unify nf-lang config scopes with runtime classes (#6271) [bfa67ca3]
+- Bump groovy 4.0.28 (#6304) [ci fast] [a468f8ef]
+
+1.22.1 - 6 Jul 2025
+- Fix class not found exception Google Life science executor (#6193) [7bfb9358]
+- Update Google dependencies (#6229) [8bd42acb]
+- Upload Google Batch log on task exit (#6226) [78d9f473]
+- Bump Slf4j version 2.0.17 [93199e09]
+- Bump gson version 2.13.1 [ab8e36a2]
+
 1.22.0 - 2 Jun 2025
 - Sunset the Google LS executor (#6070) [06e0d426]
-- Bump Groovy to version 4.0.27 (#6125) [ci fast] [258e1790]
+- Bump Groovy to version 4.0.27 (#6125) [258e1790]
 
 1.21.0 - 8 May 2025
 - Add Support for Google Batch network tags (#5951) [d6e4d6c2]

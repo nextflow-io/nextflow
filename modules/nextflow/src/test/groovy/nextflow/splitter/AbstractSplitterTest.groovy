@@ -119,4 +119,62 @@ class AbstractSplitterTest extends Specification {
         thrown(IllegalArgumentException)
     }
 
+    def 'test markComplete called when process succeeds'() {
+        given:
+        def mockCollector = Mock(TextFileCollector)
+        def splitter = new AbstractSplitter() {
+            @Override
+            protected Object process(Object targetObject) {
+                return "success"
+            }
+
+            @Override
+            protected Object normalizeSource(Object object) {
+                return object
+            }
+
+            @Override
+            protected CollectorStrategy createCollector() {
+                return mockCollector
+            }
+        }
+        splitter.target("test")
+
+        when:
+        splitter.apply()
+
+        then:
+        1 * mockCollector.checkCached() >> false
+        1 * mockCollector.markComplete()
+    }
+
+    def 'test markComplete not called when process fails'() {
+        given:
+        def mockCollector = Mock(TextFileCollector)
+        def splitter = new AbstractSplitter() {
+            @Override
+            protected Object process(Object targetObject) {
+                throw new OutOfMemoryError("Test error")
+            }
+
+            @Override
+            protected Object normalizeSource(Object object) {
+                return object
+            }
+
+            @Override
+            protected CollectorStrategy createCollector() {
+                return mockCollector
+            }
+        }
+        splitter.target("test")
+
+        when:
+        splitter.apply()
+
+        then:
+        thrown(OutOfMemoryError)
+        0 * mockCollector.markComplete()
+    }
+
 }

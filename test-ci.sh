@@ -10,7 +10,6 @@ X_PULL_REQUEST=${TRAVIS_PULL_REQUEST:-false}
 [[ $GITHUB_EVENT_NAME == pull_request ]] && X_PULL_REQUEST=true
 
 export WITH_DOCKER='-with-docker'
-export NXF_PLUGINS_DIR=$PWD/build/plugins
 export NXF_CMD=$PWD/nextflow;
 export TEST_JDK
 export TEST_MODE

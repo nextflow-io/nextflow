@@ -24,6 +24,10 @@ import io.seqera.wave.api.BuildCompression
 import io.seqera.wave.api.ScanLevel
 import io.seqera.wave.api.ScanMode
 import io.seqera.wave.config.CondaOpts
+import nextflow.config.spec.ConfigOption
+import nextflow.config.spec.ConfigScope
+import nextflow.config.spec.ScopeName
+import nextflow.script.dsl.Description
 import nextflow.file.FileHelper
 import nextflow.util.Duration
 /**
@@ -31,51 +35,83 @@ import nextflow.util.Duration
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@ScopeName("wave")
+@Description("""
+    The `wave` scope provides advanced configuration for the use of [Wave containers](https://docs.seqera.io/wave).
+""")
 @Slf4j
-@ToString(includeNames = true, includePackage = false, includeFields = true)
+@ToString(includeNames = true, includePackage = false, includeFields = true, useGetters = false)
 @CompileStatic
-class WaveConfig {
+class WaveConfig implements ConfigScope {
     final private static String DEF_ENDPOINT = 'https://wave.seqera.io'
     final private static List<String> DEF_STRATEGIES = List.of('container','dockerfile','conda')
-    final private Boolean enabled
-    final private String endpoint
-    final private List<URL> containerConfigUrl
-    final private Duration tokensCacheMaxDuration
-    final private CondaOpts condaOpts
-    final private List<String> strategy
+
+    final BuildOpts build
+
+    @ConfigOption
+    @Description("""
+        Enable the use of Wave containers (default: `false`).
+    """)
+    final boolean enabled
+
+    @ConfigOption
+    @Description("""
+        The Wave service endpoint (default: `https://wave.seqera.io`).
+    """)
+    final String endpoint
+
+    @ConfigOption
+    @Description("""
+        Enable Wave container freezing (default: `false`). Wave will provision a non-ephemeral container image that will be pushed to a container repository of your choice.
+
+        See also: `wave.build.repository` and `wave.build.cacheRepository`
+    """)
+    final boolean freeze
+
+    final HttpOpts httpClient
+
+    @ConfigOption
+    @Description("""
+        Enable Wave container mirroring (default: `false`). Wave will mirror (i.e. copy) the containers in your pipeline to a container registry of your choice, so that pipeline tasks can pull the containers from this registry instead of the original one.
+
+        See also: `wave.build.repository`
+    """)
+    final boolean mirror
+
+    final RetryOpts retryPolicy
+
+    final ScanOpts scan
+
+    @ConfigOption(types=[String])
+    @Description("""
+        The strategy to be used when resolving multiple Wave container requirements (default: `'container,dockerfile,conda'`).
+    """)
+    final List<String> strategy
+
     final private Boolean bundleProjectResources
-    final private String buildRepository
-    final private String cacheRepository
-    final private RetryOpts retryOpts
-    final private HttpOpts httpClientOpts
-    final private Boolean freezeMode
+    final private List<URL> containerConfigUrl
     final private Boolean preserveFileTimestamp
-    final private Duration buildMaxDuration
-    final private Boolean mirrorMode
-    final private ScanMode scanMode
-    final private List<ScanLevel> scanAllowedLevels
-    final private BuildCompression buildCompression
+    final private Duration tokensCacheMaxDuration
+
+    /* required by extension point -- do not remove */
+    WaveConfig() {}
 
     WaveConfig(Map opts, Map<String,String> env=System.getenv()) {
-        this.enabled = opts.enabled
+        this.build = new BuildOpts(opts.build as Map ?: Collections.emptyMap())
+        this.enabled = opts.enabled as boolean
         this.endpoint = (opts.endpoint?.toString() ?: env.get('WAVE_API_ENDPOINT') ?: DEF_ENDPOINT)?.stripEnd('/')
-        this.freezeMode = opts.freeze
-        this.mirrorMode = opts.mirror
-        this.preserveFileTimestamp = opts.preserveFileTimestamp as Boolean
-        this.containerConfigUrl = parseConfig(opts, env)
-        this.tokensCacheMaxDuration = opts.navigate('tokens.cache.maxDuration', '30m') as Duration
-        this.condaOpts = opts.navigate('build.conda', Collections.emptyMap()) as CondaOpts
-        this.buildRepository = opts.navigate('build.repository') as String
-        this.cacheRepository = opts.navigate('build.cacheRepository') as String
+        this.freeze = opts.freeze as boolean
+        this.httpClient = new HttpOpts(opts.httpClient as Map ?: Collections.emptyMap())
+        this.mirror = opts.mirror as boolean
+        this.retryPolicy = retryOpts0(opts)
+        this.scan = new ScanOpts(opts.scan as Map ?: Collections.emptyMap())
         this.strategy = parseStrategy(opts.strategy)
+
         this.bundleProjectResources = opts.bundleProjectResources
-        this.retryOpts = retryOpts0(opts)
-        this.httpClientOpts = new HttpOpts(opts.httpClient as Map ?: Map.of())
-        this.buildMaxDuration = opts.navigate('build.maxDuration', '40m') as Duration
-        this.scanMode = opts.navigate('scan.mode') as ScanMode
-        this.scanAllowedLevels = parseScanLevels(opts.navigate('scan.allowedLevels'))
-        this.buildCompression = parseCompression(opts.navigate('build.compression') as Map)
-        // some validation
+        this.containerConfigUrl = parseConfig(opts, env)
+        this.preserveFileTimestamp = opts.preserveFileTimestamp as Boolean
+        this.tokensCacheMaxDuration = opts.navigate('tokens.cache.maxDuration', '30m') as Duration
+
         validateConfig()
     }
 
@@ -83,38 +119,40 @@ class WaveConfig {
 
     String endpoint() { this.endpoint }
 
-    CondaOpts condaOpts() { this.condaOpts }
+    CondaOpts condaOpts() { this.build.conda }
 
-    RetryOpts retryOpts() { this.retryOpts }
+    RetryOpts retryOpts() { this.retryPolicy }
 
-    HttpOpts httpOpts() { this.httpClientOpts }
+    HttpOpts httpOpts() { this.httpClient }
 
     List<String> strategy() { this.strategy }
 
-    boolean freezeMode() { return this.freezeMode }
+    boolean freezeMode() { this.freeze }
 
-    boolean mirrorMode() { return this.mirrorMode }
+    boolean mirrorMode() { this.mirror }
 
     boolean preserveFileTimestamp() { return this.preserveFileTimestamp }
 
     boolean bundleProjectResources() { bundleProjectResources }
 
-    String buildRepository() { buildRepository }
+    String buildRepository() { build.repository }
 
-    String cacheRepository() { cacheRepository }
+    String cacheRepository() { build.cacheRepository }
 
-    Duration buildMaxDuration() { buildMaxDuration }
+    String buildTemplate() { build.template }
 
-    BuildCompression buildCompression() { buildCompression }
+    Duration buildMaxDuration() { build.maxDuration }
+
+    BuildCompression buildCompression() { build.compression }
 
     private void validateConfig() {
         def scheme= FileHelper.getUrlProtocol(endpoint)
         if( scheme !in ['http','https'] )
             throw new IllegalArgumentException("Endpoint URL should start with 'http:' or 'https:' protocol prefix - offending value: '$endpoint'")
-        if( FileHelper.getUrlProtocol(buildRepository) )
-            throw new IllegalArgumentException("Config setting 'wave.build.repository' should not include any protocol prefix - offending value: '$buildRepository'")
-        if( FileHelper.getUrlProtocol(cacheRepository) )
-            throw new IllegalArgumentException("Config setting 'wave.build.cacheRepository' should not include any protocol prefix - offending value: '$cacheRepository'")
+        if( FileHelper.getUrlProtocol(build.repository) )
+            throw new IllegalArgumentException("Config setting 'wave.build.repository' should not include any protocol prefix - offending value: '$build.repository'")
+        if( FileHelper.getUrlProtocol(build.cacheRepository) )
+            throw new IllegalArgumentException("Config setting 'wave.build.cacheRepository' should not include any protocol prefix - offending value: '$build.cacheRepository'")
     }
 
     private RetryOpts retryOpts0(Map opts) {
@@ -124,8 +162,9 @@ class WaveConfig {
             log.warn "Configuration options 'wave.retry' has been deprecated - replace it with 'wave.retryPolicy'"
             return new RetryOpts(opts.retry as Map)
         }
-        return new RetryOpts(Map.of())
+        return new RetryOpts(Collections.emptyMap())
     }
+
     protected List<String> parseStrategy(value) {
         if( !value ) {
             log.debug "Wave strategy not specified - using default: $DEF_STRATEGIES"
@@ -177,11 +216,34 @@ class WaveConfig {
     }
 
     ScanMode scanMode() {
-        return scanMode
+        return scan.mode
     }
 
     List<ScanLevel> scanAllowedLevels() {
-        return scanAllowedLevels
+        return scan.allowedLevels
+    }
+}
+
+
+@ToString(includeNames = true, includePackage = false, includeFields = true)
+@CompileStatic
+class ScanOpts implements ConfigScope {
+
+    @ConfigOption(types=[String])
+    @Description("""
+        Comma-separated list of allowed vulnerability levels when scanning containers for security vulnerabilities in `required` mode.
+    """)
+    final List<ScanLevel> allowedLevels
+
+    @ConfigOption(types=[String])
+    @Description("""
+        Enable Wave container security scanning. Wave will scan the containers in your pipeline for security vulnerabilities.
+    """)
+    final ScanMode mode
+
+    ScanOpts(Map opts) {
+        allowedLevels = parseScanLevels(opts.allowedLevels)
+        mode = opts.mode as ScanMode
     }
 
     protected List<ScanLevel> parseScanLevels(value) {
@@ -195,6 +257,48 @@ class WaveConfig {
             return (value as List).collect(it-> ScanLevel.valueOf(it.toString().toUpperCase()))
         }
         throw new IllegalArgumentException("Invalid value for 'wave.scan.levels' setting - offending value: $value; type: ${value.getClass().getName()}")
+    }
+}
+
+
+@ToString(includeNames = true, includePackage = false, includeFields = true)
+@CompileStatic
+class BuildOpts implements ConfigScope {
+
+    @ConfigOption
+    @Description("""
+        The container repository where images built by Wave are uploaded.
+    """)
+    final String repository
+
+    @ConfigOption
+    @Description("""
+        The container repository used to cache image layers built by the Wave service.
+    """)
+    final String cacheRepository
+
+    @ConfigOption
+    @Description("""
+        The build template to use for container builds. Supported values: `conda/pixi:v1` (Pixi with multi-stage builds), `conda/micromamba:v2` (Micromamba 2.x with multi-stage builds), `cran/installr:v1` (R/CRAN packages). Default: standard conda/micromamba:v1 template.
+    """)
+    final String template
+
+    final CondaOpts conda
+
+    final BuildCompression compression
+
+    @ConfigOption
+    @Description("""
+    """)
+    final Duration maxDuration
+
+    BuildOpts(Map opts) {
+        repository = opts.repository
+        cacheRepository = opts.cacheRepository
+        template = opts.template
+        conda = new CondaOpts(opts.conda as Map ?: Collections.emptyMap())
+        compression = parseCompression(opts.compression as Map)
+        maxDuration = opts.maxDuration as Duration ?: Duration.of('40m')
     }
 
     protected BuildCompression parseCompression(Map opts) {

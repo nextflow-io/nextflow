@@ -57,7 +57,7 @@ public class TaskCmdXformVisitor extends ClassCodeVisitorSupport {
      * @see LangHelpers.applyPathEscapeAware()
      */
     private static Expression applyEscape(Expression node) {
-        var cn = ClassHelper.makeWithoutCaching("nextflow.ast.LangHelpers");
+        var cn = ClassHelper.makeWithoutCaching("nextflow.util.LangHelpers");
         return callX(classX(cn), "applyPathEscapeAware", args(node));
     }
 

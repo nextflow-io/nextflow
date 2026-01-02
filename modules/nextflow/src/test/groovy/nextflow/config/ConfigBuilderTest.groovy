@@ -17,7 +17,7 @@
 package nextflow.config
 
 import java.nio.file.Files
-import java.nio.file.Paths
+import java.nio.file.Path
 
 import nextflow.SysEnv
 import nextflow.cli.CliOptions
@@ -29,7 +29,6 @@ import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
 import nextflow.extension.FilesEx
 import nextflow.secret.SecretsLoader
-import nextflow.trace.TraceHelper
 import nextflow.util.ConfigHelper
 import spock.lang.Ignore
 import spock.lang.Specification
@@ -40,8 +39,30 @@ import spock.lang.Unroll
  */
 class ConfigBuilderTest extends Specification {
 
-    def setup() {
-        TraceHelper.testTimestampFmt = '20221001'
+    def setupSpec() {
+        SysEnv.push([:])
+    }
+
+    def cleanupSpec() {
+        SysEnv.pop()
+    }
+
+    ConfigObject configWithParams(Path file, Map runOpts, Path baseDir=null) {
+        def run = new CmdRun(runOpts)
+        return new ConfigBuilder()
+            .setOptions(new CliOptions())
+            .setCmdRun(run)
+            .setCliParams(run.parsedParams(ConfigBuilder.getConfigVars(baseDir, null)))
+            .buildGivenFiles(file)
+    }
+
+    ConfigObject configWithParams(Map config, Map runOpts, Map cliOpts=[:]) {
+        def run = new CmdRun(runOpts)
+        return new ConfigBuilder(config)
+            .setOptions(new CliOptions(cliOpts))
+            .setCmdRun(run)
+            .setCliParams(run.parsedParams(ConfigBuilder.getConfigVars(null, null)))
+            .build()
     }
 
     def 'build config object' () {
@@ -140,7 +161,7 @@ class ConfigBuilderTest extends Specification {
 
         setup:
         def builder = [:] as ConfigBuilder
-        builder.baseDir = Paths.get('/base/path')
+        builder.baseDir = Path.of('/base/path')
 
         def text = '''
         params.p = "$baseDir/1"
@@ -158,8 +179,8 @@ class ConfigBuilderTest extends Specification {
         cfg.params.p == '/base/path/1'
         cfg.params.q == '/base/path/2'
         cfg.params.x == '/base/path/3'
-        cfg.params.y == "${Paths.get('.').toRealPath()}/4"
-        cfg.params.z == "${Paths.get('results').complete()}/5"
+        cfg.params.y == "${Path.of('.').toRealPath()}/4"
+        cfg.params.z == "${Path.of('results').complete()}/5"
 
     }
 
@@ -182,9 +203,7 @@ class ConfigBuilderTest extends Specification {
         }
         '''
         when:
-        def opt = new CliOptions()
-        def run = new CmdRun(params: [alpha: 'Hello', beta: 'World', omega: 'Last'])
-        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(file)
+        def result = configWithParams(file, [params: [alpha: 'Hello', beta: 'World', omega: 'Last']])
 
         then:
         result.params.alpha == 'Hello'  // <-- params defined as CLI options override the ones in the config file
@@ -215,9 +234,7 @@ class ConfigBuilderTest extends Specification {
         }
         '''
         when:
-        def opt = new CliOptions()
-        def run = new CmdRun(params: [alpha: 'Hello', beta: 'World', omega: 'Last'])
-        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(file)
+        def result = configWithParams(file, [params: [alpha: 'Hello', beta: 'World', omega: 'Last']])
 
         then:
         result.params.alpha == 'Hello'  // <-- params defined as CLI options override the ones in the config file
@@ -267,9 +284,7 @@ class ConfigBuilderTest extends Specification {
         '''
 
         when:
-        def opt = new CliOptions()
-        def run = new CmdRun(params: [one: '1', two: 'dos', three: 'tres'])
-        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(configMain.toPath())
+        def config = configWithParams(configMain.toPath(), [params: [one: '1', two: 'dos', three: 'tres']])
 
         then:
         config.params.one == 1
@@ -313,9 +328,7 @@ class ConfigBuilderTest extends Specification {
         '''
 
         when:
-        def opt = new CliOptions()
-        def run = new CmdRun(params: [igenomes_base: 'test'])
-        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(configMain.toPath())
+        def config = configWithParams(configMain.toPath(), [params: [igenomes_base: 'test']])
 
         then:
         config.params.genomes.GRCh37 == [fasta:'test/genome.fa', bwa:'test/BWAIndex/genome.fa']
@@ -329,7 +342,6 @@ class ConfigBuilderTest extends Specification {
         given:
         def folder = File.createTempDir()
         def configMain = new File(folder,'my.config').absoluteFile
-
 
         configMain.text = """
         process.name = 'alpha'
@@ -398,44 +410,34 @@ class ConfigBuilderTest extends Specification {
                 publishDir = [path: params.alpha]
             }
           }
-
         }
-
         '''
 
-
         when:
-        def opt = new CliOptions()
-        def run = new CmdRun(params: [alpha: 'AAA', beta: 'BBB'])
-        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(file)
+        def config = configWithParams(file, [params: [alpha: 'AAA', beta: 'BBB']])
         then:
         config.params.alpha == 'AAA'
         config.params.beta == 'BBB'
         config.params.delta == 'Foo'
         config.params.gamma == 'AAA'
-        config.params.genomes.GRCh37.bed12 == '/data/genes.bed'
-        config.params.genomes.GRCh37.bismark == '/data/BismarkIndex'
-        config.params.genomes.GRCh37.bowtie  == '/data/genome'
+        config.params.genomes.'GRCh37'.bed12 == '/data/genes.bed'
+        config.params.genomes.'GRCh37'.bismark == '/data/BismarkIndex'
+        config.params.genomes.'GRCh37'.bowtie  == '/data/genome'
 
         when:
-        opt = new CliOptions()
-        run = new CmdRun(params: [alpha: 'AAA', beta: 'BBB'], profile: 'first')
-        config = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(file)
+        config = configWithParams(file, [params: [alpha: 'AAA', beta: 'BBB'], profile: 'first'])
         then:
         config.params.alpha == 'AAA'
         config.params.beta == 'BBB'
         config.params.delta == 'Foo'
         config.params.gamma == 'First'
         config.process.name == 'Bar'
-        config.params.genomes.GRCh37.bed12 == '/data/genes.bed'
-        config.params.genomes.GRCh37.bismark == '/data/BismarkIndex'
-        config.params.genomes.GRCh37.bowtie  == '/data/genome'
-
+        config.params.genomes.'GRCh37'.bed12 == '/data/genes.bed'
+        config.params.genomes.'GRCh37'.bismark == '/data/BismarkIndex'
+        config.params.genomes.'GRCh37'.bowtie  == '/data/genome'
 
         when:
-        opt = new CliOptions()
-        run = new CmdRun(params: [alpha: 'AAA', beta: 'BBB', genomes: 'xxx'], profile: 'second')
-        config = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(file)
+        config = configWithParams(file, [params: [alpha: 'AAA', beta: 'BBB', genomes: 'xxx'], profile: 'second'])
         then:
         config.params.alpha == 'AAA'
         config.params.beta == 'BBB'
@@ -450,10 +452,10 @@ class ConfigBuilderTest extends Specification {
 
     def 'params-file should override params in the config file' () {
         setup:
-        def baseDir = Paths.get('/my/base/dir')
+        def baseDir = Path.of('/my/base/dir')
         and:
-        def params = Files.createTempFile('test', '.yml')
-        params.text = '''
+        def paramsFile = Files.createTempFile('test', '.yml')
+        paramsFile.text = '''
             alpha: "Hello" 
             beta: "World" 
             omega: "Last"
@@ -477,9 +479,7 @@ class ConfigBuilderTest extends Specification {
         }
         '''
         when:
-        def opt = new CliOptions()
-        def run = new CmdRun(paramsFile: params)
-        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).setBaseDir(baseDir).buildGivenFiles(file)
+        def result = configWithParams(file, [paramsFile: paramsFile], baseDir)
 
         then:
         result.params.alpha == 'Hello'  // <-- params defined in the params-file overrides the ones in the config file
@@ -492,7 +492,7 @@ class ConfigBuilderTest extends Specification {
 
         cleanup:
         file?.delete()
-        params?.delete()
+        paramsFile?.delete()
     }
 
     def 'params should override params-file and override params in the config file' () {
@@ -519,9 +519,7 @@ class ConfigBuilderTest extends Specification {
         }
         '''
         when:
-        def opt = new CliOptions()
-        def run = new CmdRun(paramsFile: params, params: [alpha: 'Hola', beta: 'Mundo'])
-        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(file)
+        def result = configWithParams(file, [paramsFile: params, params: [alpha: 'Hola', beta: 'Mundo']])
 
         then:
         result.params.alpha == 'Hola'   // <-- this comes from the CLI
@@ -833,7 +831,6 @@ class ConfigBuilderTest extends Specification {
         then: // command line should override the config file
         config.trace instanceof Map
         config.trace.enabled
-        config.trace.file == 'trace-20221001.txt'
     }
 
     def 'should set session report options' () {
@@ -889,7 +886,6 @@ class ConfigBuilderTest extends Specification {
         then:
         config.report instanceof Map
         config.report.enabled
-        config.report.file == 'report-20221001.html'
     }
 
 
@@ -946,7 +942,6 @@ class ConfigBuilderTest extends Specification {
         then:
         config.dag instanceof Map
         config.dag.enabled
-        config.dag.file == 'dag-20221001.html'
     }
 
     def 'should set session weblog options' () {
@@ -1065,7 +1060,6 @@ class ConfigBuilderTest extends Specification {
         then:
         config.timeline instanceof Map
         config.timeline.enabled
-        config.timeline.file == 'timeline-20221001.html'
     }
 
     def 'should set tower options' () {
@@ -1630,56 +1624,56 @@ class ConfigBuilderTest extends Specification {
         def config
 
         when:
-        config = new ConfigBuilder().setOptions(new CliOptions(config: EMPTY)).setCmdRun(new CmdRun()).build()
+        config = configWithParams([:], [:], [config: EMPTY])
         then:
         config.params == [:]
 
         // get params for the CLI
         when:
-        config = new ConfigBuilder().setOptions(new CliOptions(config: EMPTY)).setCmdRun(new CmdRun(params: [foo:'one', bar:'two'])).build()
+        config = configWithParams([:], [params: [foo:'one', bar:'two']], [config: EMPTY])
         then:
         config.params == [foo:'one', bar:'two']
 
         // get params from config file
         when:
-        config = new ConfigBuilder().setOptions(new CliOptions(config: [configFile])).setCmdRun(new CmdRun()).build()
+        config = configWithParams([:], [:], [config: [configFile]])
         then:
         config.params == [foo:1, bar:2, data: '/some/path']
 
         // get params form JSON file
         when:
-        config = new ConfigBuilder().setOptions(new CliOptions(config: EMPTY)).setCmdRun(new CmdRun(paramsFile: jsonFile)).build()
+        config = configWithParams([:], [paramsFile: jsonFile], [config: EMPTY])
         then:
         config.params == [foo:10, bar:20]
 
         // get params from YAML file
         when:
-        config = new ConfigBuilder().setOptions(new CliOptions(config: EMPTY)).setCmdRun(new CmdRun(paramsFile: yamlFile)).build()
+        config = configWithParams([:], [paramsFile: yamlFile], [config: EMPTY])
         then:
         config.params == [foo:100, bar:200]
 
         // cli override config
         when:
-        config = new ConfigBuilder().setOptions(new CliOptions(config: [configFile])).setCmdRun(new CmdRun(params:[foo:'hello', baz:'world'])).build()
+        config = configWithParams([:], [params: [foo:'hello', baz:'world']], [config: [configFile]])
         then:
         config.params == [foo:'hello', bar:2, baz: 'world', data: '/some/path']
 
         // CLI override JSON
         when:
-        config = new ConfigBuilder().setOptions(new CliOptions(config: EMPTY)).setCmdRun(new CmdRun(params:[foo:'hello', baz:'world'], paramsFile: jsonFile)).build()
+        config = configWithParams([:], [params: [foo:'hello', baz:'world'], paramsFile: jsonFile], [config: EMPTY])
         then:
         config.params == [foo:'hello', bar:20, baz: 'world']
 
         // JSON override config
         when:
-        config = new ConfigBuilder().setOptions(new CliOptions(config: [configFile])).setCmdRun(new CmdRun(paramsFile: jsonFile)).build()
+        config = configWithParams([:], [paramsFile: jsonFile], [config: [configFile]])
         then:
         config.params == [foo:10, bar:20, data: '/some/path']
 
 
         // CLI override JSON that override config
         when:
-        config = new ConfigBuilder().setOptions(new CliOptions(config: [configFile])).setCmdRun(new CmdRun(paramsFile: jsonFile, params: [foo:'Ciao'])).build()
+        config = configWithParams([:], [paramsFile: jsonFile, params: [foo:'Ciao']], [config: [configFile]])
         then:
         config.params == [foo:'Ciao', bar:20, data: '/some/path']
     }
@@ -1714,10 +1708,12 @@ class ConfigBuilderTest extends Specification {
 
 
         when:
+        SysEnv.push(HOME: '/home/user')
         def opt = new CliOptions(config: [file.toFile().canonicalPath] )
         def cfg = new ConfigBuilder().setOptions(opt).build()
+        SysEnv.pop()
         then:
-        cfg.params.foo == System.getenv('HOME')
+        cfg.params.foo == '/home/user'
 
         when:
         file.text =
@@ -2256,9 +2252,9 @@ class ConfigBuilderTest extends Specification {
         """
 
         when:
-        def opt = new CliOptions()
-        def run = new CmdRun(params: [bar: "world", 'baz.y': "mondo", 'baz.z.beta': "Welt"])
-        def config = new ConfigBuilder(env: [NXF_CONFIG_FILE: configMain.toString()]).setOptions(opt).setCmdRun(run).build()
+        def config = configWithParams(
+            [env: [NXF_CONFIG_FILE: configMain.toString()]],
+            [params: [bar: "world", 'baz.y': "mondo", 'baz.z.beta': "Welt"]] )
 
         then:
         config.params.foo == 'Hello'
@@ -2341,10 +2337,7 @@ class ConfigBuilderTest extends Specification {
 
         
         when:
-        def cfg2 = new ConfigBuilder()
-                .setOptions( new CliOptions(userConfig: [config.toString()]))
-                .setCmdRun( new CmdRun(params: ['test.foo': 'CLI_FOO'] ))
-                .build()
+        def cfg2 = configWithParams([:], [params: ['test.foo': 'CLI_FOO']], [userConfig: [config.toString()]])
         then:
         cfg2.params.test.foo == "CLI_FOO"
         cfg2.params.test.bar == "bar_def"
@@ -2374,7 +2367,7 @@ class ConfigBuilderTest extends Specification {
         '''.stripIndent()
 
         when:
-        def cfg1 = new ConfigBuilder().setCmdRun(new CmdRun(paramsFile: config.toString())).build()
+        def cfg1 = configWithParams([:], [paramsFile: config.toString()])
 
         then:
         cfg1.params.title == "something"
@@ -2402,7 +2395,7 @@ class ConfigBuilderTest extends Specification {
         '''.stripIndent()
 
         when:
-        def cfg1 = new ConfigBuilder().setCmdRun(new CmdRun(paramsFile: config.toString())).build()
+        def cfg1 = configWithParams([:], [paramsFile: config.toString()])
 
         then:
         cfg1.params.title == "something"

@@ -16,33 +16,35 @@ Available options:
 : Comma-separated list of configuration files which are used as the configuration set. Any other default configuration files are ignored.
 
 `-D`
-: Set JVM properties.
+: Set JVM properties (e.g. `-Dfile.encoding=UTF-8`). Equivalent to the `NXF_JVM_ARGS` environment variable.
 
 `-bg`
-: Execute nextflow in background.
+: Execute Nextflow in background.
+: Allows you to close your terminal without terminating the pipeline run.
 
 `-c, -config`
 : Comma-separated list of configuration files which are added to the configuration set.
 
 `-d, -dockerize`
-: :::{deprecated} 23.09.0-edge
+: :::{deprecated} 23.10.0
   :::
-: Launch nextflow via Docker (experimental).
+: Launch Nextflow via Docker (experimental).
 
 `-h`
-: Print this help.
+: Print available commands and options.
 
 `-log`
-: Set nextflow log file path.
+: Set Nextflow log file path (default: `.nextflow.log`).
 
 `-q, -quiet`
-: Do not print information messages.
+: Do not print the Nextflow banner and execution progress to the console.
+: Does not affect error messages.
 
 `-remote-debug`
 : Enable JVM interactive remote debugging (experimental).
 
 `-syslog`
-: Send logs to syslog server (e.g. localhost:514).
+: Send logs to a [Syslog](https://en.wikipedia.org/wiki/Syslog) server (e.g. `localhost:514`).
 
 `-trace`
 : Enable trace level logging for the specified packages. Multiple packages can be provided separating them with a comma, e.g. `-trace nextflow,io.seqera`.
@@ -51,6 +53,80 @@ Available options:
 : Print the program version.
 
 ## Commands
+
+(cli-auth)=
+
+### `auth`
+
+:::{versionadded} 25.10.0
+:::
+
+Manage Seqera Platform authentication.
+
+**Usage**
+
+```console
+$ nextflow auth <subcommand> [options]
+```
+
+**Description**
+
+The `auth` command provides authentication and configuration management for Seqera. For Seqera Cloud, it uses an OAuth2 authentication flow to generate and save a Personal Access Token (PAT) locally. For Seqera Enterprise installations, it uses direct PAT authentication. Credentials are saved to `~/.nextflow/seqera-auth.config`. An `includeConfig` statement is automatically added to `~/.nextflow/config` or the configuration file set using `$NXF_HOME`.
+
+**Options**
+
+`-h, -help`
+: Prints the command usage information.
+
+**Subcommands**
+
+`login`
+: Authenticates with Seqera and saves credentials. Sets Seqera primary compute environment, monitoring, and workspace.
+: The following options are available:
+
+  `-u, -url`
+  : Specifies your Seqera API endpoint (default: `https://api.cloud.seqera.io`)
+
+`logout`
+: Removes Seqera authentication and revokes the Seqera Cloud access token (if applicable).
+
+`config`
+: Sets Seqera primary compute environment, monitoring, and workspace.
+
+`status`
+: Shows Seqera authentication status and configuration.
+
+**Examples**
+
+Authenticate with Seqera Cloud:
+
+```console
+$ nextflow auth login
+```
+
+Authenticate with an Enterprise installation:
+
+```console
+$ nextflow auth login -u https://tower.example.com/api
+```
+
+View current authentication status:
+
+```console
+$ nextflow auth status
+```
+
+Configure Seqera settings:
+
+```console
+$ nextflow auth config
+```
+
+Remove authentication:
+
+```console
+$ nextflow auth logout
+```
 
 (cli-clean)=
 
@@ -159,6 +235,8 @@ Would remove temp files from work/bf/334115deec60929dc18edf0010032a
 Would remove temp files from work/a3/06521d75da296d4dd7f4f8caaddad8
 ```
 
+(cli-clone)=
+
 ### `clone`
 
 Clone a remote project into a folder.
@@ -185,7 +263,7 @@ The `clone` command downloads a pipeline from a Git-hosting platform into the *c
 : Service hub where the project is hosted. Options: `gitlab` or `bitbucket`.
 
 `-r` (`master`)
-: Revision to clone - It can be a git branch, tag, or revision number.
+: Revision to clone. It can be a git branch, tag, or commit SHA number.
 
 `-user`
 : Private repository user name.
@@ -205,6 +283,8 @@ Clone a specific revision of a pipeline.
 $ nextflow clone nextflow-io/hello -r v1.1
 nextflow-io/hello cloned to: hello
 ```
+
+(cli-config)=
 
 ### `config`
 
@@ -234,6 +314,11 @@ The `config` command is used for printing the project's configuration i.e. the `
 `-properties`
 : Print config using Java properties notation.
 
+`-r, -revision`
+: :::{versionadded} 25.12.0-edge
+  :::
+: Project revision. Can be a git branch, tag, or commit SHA number.
+
 `-a, -show-profiles`
 : Show all configuration profiles.
 
@@ -241,7 +326,7 @@ The `config` command is used for printing the project's configuration i.e. the `
 : Sort config attributes.
 
 `-value`
-: :::{versionadded} 23.08.0-edge
+: :::{versionadded} 23.10.0
   :::
 : Print the value of a config option, or fail if the option is not defined.
 
@@ -338,6 +423,8 @@ Launch the `console` GUI.
 $ nextflow console
 ```
 
+(cli-drop)=
+
 ### `drop`
 
 Delete the local copy of a project.
@@ -360,6 +447,11 @@ The `drop` command is used to remove the projects which have been downloaded int
 `-h, -help`
 : Print the command usage.
 
+`-r, -revision`
+: :::{versionadded} 25.12.0-edge
+:::
+: Project revision to drop. Can be a git branch, tag, or commit SHA number.
+
 **Examples**
 
 Drop the `nextflow-io/hello` project.
@@ -373,6 +465,8 @@ Forcefully drop the `nextflow-io/hello` pipeline, ignoring any local changes.
 ```console
 $ nextflow drop nextflow-io/hello -f
 ```
+
+(cli-fs)=
 
 ### `fs`
 
@@ -522,13 +616,13 @@ $ nextflow info nextflow-io/hello
 
   project name: nextflow-io/hello
   repository  : https://github.com/nextflow-io/hello
-  local path  : /Users/evanfloden/.nextflow/assets/nextflow-io/hello
+  local path  : /Users/evanfloden/.nextflow/assets/.repos/nextflow-io/hello
   main script : main.nf
   revisions   :
   * master (default)
     mybranch
     testing
-    v1.1 [t]
+  * v1.1 [t]
     v1.2 [t]
 ```
 
@@ -536,7 +630,7 @@ $ nextflow info nextflow-io/hello
 
 ### `inspect`
 
-:::{versionadded} 23.09.0-edge
+:::{versionadded} 23.10.0
 :::
 
 Inspect process settings in a pipeline project. Currently only supports the `container` directive.
@@ -584,6 +678,8 @@ Specify parameters as with the `run` command:
 ```console
 $ nextflow inspect main.nf --alpha 1 --beta hello
 ```
+
+(cli-kuberun)=
 
 ### `kuberun`
 
@@ -644,22 +740,18 @@ The `kuberun` command supports the following options from [`run`](#run):
 The following new options are also available:
 
 `-head-cpus`
-: :::{versionadded} 22.01.0-edge
-  :::
 : Specify number of CPUs requested for the Nextflow pod.
 
 `-head-image`
-: :::{versionadded} 22.07.1-edge
+: :::{versionadded} 22.10.0
   :::
 : Specify the container image for the Nextflow driver pod.
 
 `-head-memory`
-: :::{versionadded} 22.01.0-edge
-  :::
 : Specify amount of memory requested for the Nextflow pod.
 
 `-head-prescript`
-: :::{versionadded} 22.05.0-edge
+: :::{versionadded} 22.10.0
   :::
 : Specify script to be run before the Nextflow pod starts.
 
@@ -681,6 +773,77 @@ Execute a pipeline into a Kubernetes cluster.
 
 ```console
 $ nextflow kuberun nextflow-io/hello
+```
+
+(cli-launch)=
+
+### `launch`
+
+:::{versionadded} 25.10.0
+:::
+
+Launch a workflow in [Seqera Platform](https://seqera.io/platform/).
+
+**Usage**
+
+```console
+$ nextflow launch [options] [project]
+```
+
+**Description**
+
+The `launch` command launches a pipeline run in Seqera Platform. To log in and configure the execution environment, use the [`auth`](#auth) command.
+
+**Options**
+
+`-compute-env`
+: The compute environment for workflow execution.
+
+`-c, -config`
+: A configuration file to add to the configuration set.
+
+`-entry`
+: The entry workflow to be executed.
+
+`-h, -help`
+: Prints command usage information.
+
+`-latest`
+: Whether to pull the latest changes before execution.
+
+`-name`
+: A mnemonic name to assign to the run.
+
+`-main-script`
+: The script file to be executed when launching a project directory or repository.
+
+`-params-file`
+: A JSON or YAML file to load parameters from.
+
+`-profile`
+: A configuration profile.
+
+`-resume`
+: Whether to resume an execution using cached results from a previous run.
+
+`-r, -revision`
+: The project revision to run. Can be a git branch, tag, or commit hash.
+
+`-stub-run, -stub`
+: Whether to replace scripts with command stubs when executing the run.
+
+`-w, -work-dir`
+: The directory where intermediate result files are stored.
+
+`-workspace`
+: The Seqera Platform workspace name.
+
+**Examples**
+
+Execute a pipeline in Seqera Platform.
+
+```console
+$ nextflow launch nextflow-io/hello
 ```
 
 (cli-lineage)=
@@ -788,6 +951,16 @@ Lint and format all files in the current directory (and subdirectories) and use 
 ```console
 $ nextflow lint -format -spaces 2 .
 ```
+
+:::{note}
+Formatting code with the `lint` command in Nextflow 25.10 or later may make your code incompatible with previous versions of Nextflow. If you need your code to remain compatible with versions prior to 25.10, run the formatter with Nextflow 25.04:
+
+```bash
+NXF_VER=25.04.8 nextflow lint -format .
+```
+:::
+
+(cli-list)=
 
 ### `list`
 
@@ -960,7 +1133,11 @@ Manage plugins and run plugin-specific commands.
 $ nextflow plugin <subcommand> [options]
 ```
 
-The `plugin` command provides several subcommands for managing and using plugins:
+`create`
+
+: :::{versionadded} 25.04.0
+  :::
+: Create a plugin scaffold using the [Nextflow plugin template](https://github.com/nextflow-io/nf-plugin-template/). See {ref}`gradle-plugin-create` for more information.
 
 `install <plugin[@version],..>`
 
@@ -969,6 +1146,8 @@ The `plugin` command provides several subcommands for managing and using plugins
 `<plugin>:<subcommand> [options]`
 
 : Execute a plugin-specific command.
+
+(cli-pull)=
 
 ### `pull`
 
@@ -986,10 +1165,13 @@ The `pull` command downloads a pipeline from a Git-hosting platform into the glo
 
 **Options**
 
-`-all`
+`-a, -all`
 : Update all downloaded projects.
 
 `-d, -deep`
+: :::{deprecated} 25.12.0-edge. 
+  Ignored for new multi-revision asset management strategy. Still used in legacy assets.
+  :::
 : Create a shallow clone of the specified depth.
 
 `-h, -help`
@@ -998,8 +1180,13 @@ The `pull` command downloads a pipeline from a Git-hosting platform into the glo
 `-hub` (`github`)
 : Service hub where the project is hosted. Options: `gitlab` or `bitbucket`
 
+`-migrate`
+:::{versionadded} 25.12.0-edge
+  :::
+: Update the project asset to new multi-revision strategy.
+
 `-r, -revision`
-: Revision of the project to run (either a git branch, tag or commit hash).
+: Project revision to run. Can be a git branch, tag, or commit SHA number.
 : When passing a git tag or branch, the `workflow.revision` and `workflow.commitId` fields are populated. When passing only the commit hash, `workflow.revision` is not defined.
 
 `-user`
@@ -1067,18 +1254,21 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 : Enable/disable processes caching.
 
 `-d, -deep`
+: :::{deprecated} 25.12.0-edge
+  Ignored for new multi-revision asset management strategy. Still used in legacy assets.
+  :::
 : Create a shallow clone of the specified depth.
 
 `-disable-jobs-cancellation`
 : Prevent the cancellation of child jobs on execution termination
 
 `-dsl1`
-: :::{deprecated} 23.09.0-edge
+: :::{deprecated} 23.10.0
   :::
 : Execute the workflow using DSL1 syntax.
 
 `-dsl2`
-: :::{deprecated} 23.09.0-edge
+: :::{deprecated} 23.10.0
   :::
 : Execute the workflow using DSL2 syntax.
 
@@ -1113,8 +1303,6 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 : Library extension path.
 
 `-main-script` (`main.nf`)
-: :::{versionadded} 20.09.1-edge
-  :::
 : The script file to be executed when launching a project directory or repository.
 
 `-name`
@@ -1135,7 +1323,7 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 : Comma separated list of plugin ids to be applied in the pipeline execution.
 
 `-preview`
-: :::{versionadded} 22.06.0-edge
+: :::{versionadded} 22.10.0
   :::
 : Run the workflow script skipping the execution of all processes.
 
@@ -1152,7 +1340,7 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 : Execute the script using the cached results, useful to continue executions that was stopped by an error.
 
 `-r, -revision`
-: Revision of the project to run (either a git branch, tag or commit hash).
+: Project revision to run. Can be a git branch, tag, or commit SHA number.
 : When passing a git tag or branch, the `workflow.revision` and `workflow.commitId` fields are populated. When passing only the commit hash, `workflow.revision` is not defined.
 
 `-stub-run, -stub`
@@ -1371,6 +1559,8 @@ Nextflow installation completed. Please note:
 - the executable file `nextflow` has been created in the folder: /usr/local/bin
 ```
 
+(cli-view)=
+
 ### `view`
 
 View a project's script file(s).
@@ -1396,6 +1586,11 @@ The `view` command is used to inspect the pipelines that are already stored in t
 `-q`
 : Hide header line.
 
+`-r, -revision`
+: :::{versionadded} 25.12.0-edge
+  :::
+: Project revision. Can be a git branch, tag, or commit SHA number.
+
 **Examples**
 
 Viewing the contents of a downloaded pipeline.
@@ -1403,7 +1598,7 @@ Viewing the contents of a downloaded pipeline.
 ```console
 $ nextflow view nextflow-io/hello
 
-== content of file: .nextflow/assets/nextflow-io/hello/main.nf
+== content of file: .nextflow/assets/.repos/nextflow-io/hello/main.nf
 #!/usr/bin/env nextflow
 
 process sayHello {
@@ -1427,7 +1622,7 @@ List the folder structure of the downloaded pipeline:
 ```console
 $ nextflow view -l nextflow-io/hello
 
-== content of path: .nextflow/assets/nextflow-io/hello
+== content of path: .nextflow/assets/.repos/nextflow-io/hello
 .git
 .gitignore
 LICENSE

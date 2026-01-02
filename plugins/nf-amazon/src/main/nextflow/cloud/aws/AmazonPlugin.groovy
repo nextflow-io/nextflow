@@ -35,8 +35,6 @@ class AmazonPlugin extends BasePlugin {
     @Override
     void start() {
         super.start()
-        // disable aws sdk v1 warning
-        System.setProperty("aws.java.v1.disableDeprecationAnnouncement", "true")
         FileHelper.getOrInstallProvider(S3FileSystemProvider)
     }
 

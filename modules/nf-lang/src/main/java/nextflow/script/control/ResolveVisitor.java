@@ -16,6 +16,7 @@
 package nextflow.script.control;
 
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -60,9 +61,18 @@ import static org.codehaus.groovy.ast.tools.ClosureUtils.getParametersSafe;
  */
 public class ResolveVisitor extends ClassCodeExpressionTransformer {
 
-    public static final String[] DEFAULT_PACKAGE_PREFIXES = { "java.lang.", "java.util.", "java.io.", "java.net.", "groovy.lang.", "groovy.util." };
-
-    public static final String[] EMPTY_STRING_ARRAY = new String[0];
+    public static final ClassNode[] STANDARD_TYPES = {
+        ClassHelper.makeCached(nextflow.script.types.Bag.class),
+        ClassHelper.Boolean_TYPE,
+        ClassHelper.Float_TYPE,
+        ClassHelper.Integer_TYPE,
+        ClassHelper.LIST_TYPE,
+        ClassHelper.MAP_TYPE,
+        ClassHelper.makeCached(java.nio.file.Path.class),
+        ClassHelper.SET_TYPE,
+        ClassHelper.STRING_TYPE,
+        ClassHelper.makeCached(nextflow.script.types.Tuple.class)
+    };
 
     private SourceUnit sourceUnit;
 
@@ -101,46 +111,56 @@ public class ResolveVisitor extends ClassCodeExpressionTransformer {
     }
 
     public void resolveOrFail(ClassNode type, ASTNode node) {
-        if( !resolve(type) )
-            addError("`" + type.toString(false) + "` is not defined", node);
+        var unresolvedTypes = new LinkedList<ClassNode>();
+        resolve(type, unresolvedTypes);
+        for( var ut : unresolvedTypes )
+            addError("`" + ut.toString(false) + "` is not defined", node);
     }
 
-    public boolean resolve(ClassNode type) {
-        var genericsTypes = type.getGenericsTypes();
-        resolveGenericsTypes(genericsTypes);
+    private boolean resolve(ClassNode type) {
+        var unresolvedTypes = new LinkedList<ClassNode>();
+        resolve(type, unresolvedTypes);
+        return unresolvedTypes.isEmpty();
+    }
 
+    /**
+     * Resolve a type annotation, including generic type arguments.
+     *
+     * Returns the list of types that could not be resolved.
+     *
+     * @param type
+     * @param unresolvedTypes
+     */
+    private void resolve(ClassNode type, List<ClassNode> unresolvedTypes) {
+        if( !resolveType(type) )
+            unresolvedTypes.add(type);
+        var gts = type.getGenericsTypes();
+        if( gts == null )
+            return;
+        for( var gt : gts ) {
+            if( gt.isResolved() )
+                continue;
+            resolve(gt.getType(), unresolvedTypes);
+            gt.setResolved(gt.getType().isResolved());
+        }
+    }
+
+    private boolean resolveType(ClassNode type) {
         if( type.isPrimaryClassNode() )
             return true;
         if( type.isResolved() )
             return true;
-        if( resolveFromModule(type) )
+        if( !type.hasPackageName() && resolveFromModule(type) )
+            return true;
+        if( !type.hasPackageName() && resolveFromStandardTypes(type) )
             return true;
         if( resolveFromLibImports(type) )
             return true;
         if( !type.hasPackageName() && resolveFromDefaultImports(type) )
             return true;
+        if( !type.hasPackageName() && resolveFromGroovyImports(type) )
+            return true;
         return resolveFromClassResolver(type.getName()) != null;
-    }
-
-    private boolean resolveGenericsTypes(GenericsType[] types) {
-        if( types == null )
-            return true;
-        boolean resolved = true;
-        for( var type : types ) {
-            if( !resolveGenericsType(type) )
-                resolved = false;
-        }
-        return resolved;
-    }
-
-    private boolean resolveGenericsType(GenericsType genericsType) {
-        if( genericsType.isResolved() )
-            return true;
-        var type = genericsType.getType();
-        resolveOrFail(type, genericsType);
-        if( resolveGenericsTypes(type.getGenericsTypes()) )
-            genericsType.setResolved(genericsType.getType().isResolved());
-        return genericsType.isResolved();
     }
 
     protected boolean resolveFromModule(ClassNode type) {
@@ -156,10 +176,19 @@ public class ResolveVisitor extends ClassCodeExpressionTransformer {
         return false;
     }
 
+    protected boolean resolveFromStandardTypes(ClassNode type) {
+        for( var cn : STANDARD_TYPES ) {
+            if( cn.getNameWithoutPackage().equals(type.getName()) ) {
+                type.setRedirect(cn);
+                return true;
+            }
+        }
+        return false;
+    }
+
     protected boolean resolveFromLibImports(ClassNode type) {
-        var name = type.getName();
         for( var cn : libImports ) {
-            if( name.equals(cn.getName()) ) {
+            if( cn.getName().equals(type.getName()) ) {
                 type.setRedirect(cn);
                 return true;
             }
@@ -168,22 +197,29 @@ public class ResolveVisitor extends ClassCodeExpressionTransformer {
     }
 
     protected boolean resolveFromDefaultImports(ClassNode type) {
-        // resolve from script imports
-        var typeName = type.getName();
         for( var cn : defaultImports ) {
-            if( typeName.equals(cn.getNameWithoutPackage()) ) {
+            if( cn.getNameWithoutPackage().equals(type.getName()) ) {
                 type.setRedirect(cn);
                 return true;
             }
         }
-        // resolve from default imports cache
+        return false;
+    }
+
+    private static final String[] DEFAULT_PACKAGE_PREFIXES = { "java.lang.", "java.util.", "java.io.", "java.net.", "groovy.lang.", "groovy.util." };
+
+    private static final String[] EMPTY_STRING_ARRAY = new String[0];
+
+    protected boolean resolveFromGroovyImports(ClassNode type) {
+        var typeName = type.getName();
+        // resolve from Groovy imports cache
         var packagePrefixSet = DEFAULT_IMPORT_CLASS_AND_PACKAGES_CACHE.get(typeName);
         if( packagePrefixSet != null ) {
-            if( resolveFromDefaultImports(type, packagePrefixSet.toArray(EMPTY_STRING_ARRAY)) )
+            if( resolveFromGroovyImports(type, packagePrefixSet.toArray(EMPTY_STRING_ARRAY)) )
                 return true;
         }
-        // resolve from default imports
-        if( resolveFromDefaultImports(type, DEFAULT_PACKAGE_PREFIXES) ) {
+        // resolve from Groovy imports
+        if( resolveFromGroovyImports(type, DEFAULT_PACKAGE_PREFIXES) ) {
             return true;
         }
         if( "BigInteger".equals(typeName) ) {
@@ -202,7 +238,7 @@ public class ResolveVisitor extends ClassCodeExpressionTransformer {
         DEFAULT_IMPORT_CLASS_AND_PACKAGES_CACHE.putAll(VMPluginFactory.getPlugin().getDefaultImportClasses(DEFAULT_PACKAGE_PREFIXES));
     }
 
-    protected boolean resolveFromDefaultImports(ClassNode type, String[] packagePrefixes) {
+    protected boolean resolveFromGroovyImports(ClassNode type, String[] packagePrefixes) {
         var typeName = type.getName();
         for( var packagePrefix : packagePrefixes ) {
             var redirect = resolveFromClassResolver(packagePrefix + typeName);
@@ -278,13 +314,17 @@ public class ResolveVisitor extends ClassCodeExpressionTransformer {
         }
         if( inVariableDeclaration ) {
             // resolve type of variable declaration
-            resolveOrFail(ve.getType(), ve);
-            var origin = ve.getOriginType();
-            if( origin != ve.getType() )
-                resolveOrFail(origin, ve);
+            resolveOrFail(ve);
         }
         // if the variable is still dynamic (i.e. unresolved), it will be handled by DynamicVariablesVisitor
         return ve;
+    }
+
+    public void resolveOrFail(VariableExpression ve) {
+        resolveOrFail(ve.getType(), ve);
+        var origin = ve.getOriginType();
+        if( origin != ve.getType() )
+            resolveOrFail(origin, ve);
     }
 
     protected Expression transformPropertyExpression(PropertyExpression pe) {

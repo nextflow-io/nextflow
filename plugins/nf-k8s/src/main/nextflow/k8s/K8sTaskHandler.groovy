@@ -16,6 +16,7 @@
 
 package nextflow.k8s
 
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Instant
@@ -25,6 +26,7 @@ import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.SysEnv
+import nextflow.container.ContainerHelper
 import nextflow.container.DockerBuilder
 import nextflow.exception.NodeTerminationException
 import nextflow.k8s.client.PodUnschedulableException
@@ -146,8 +148,11 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     protected List<String> classicSubmitCli(TaskRun task) {
+        final workDir = Escape.path(task.workDir)
+
         final result = new ArrayList(BashWrapperBuilder.BASH)
-        result.add("${Escape.path(task.workDir)}/${TaskRun.CMD_RUN}".toString())
+        result.add('-c')
+        result.add("bash ${workDir}/${TaskRun.CMD_RUN} 2>&1 | tee ${workDir}/${TaskRun.CMD_LOG}")
         return result
     }
 
@@ -165,7 +170,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
     protected String getOwner() { OWNER }
 
     protected Boolean fixOwnership() {
-        task.containerConfig.fixOwnership
+        ContainerHelper.fixOwnership(task.containerConfig)
     }
 
     /**
@@ -411,8 +416,10 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
 
     @Override
     boolean checkIfCompleted() {
-        if( !podName ) throw new IllegalStateException("Missing K8s ${resourceType.lower()} name - cannot check if complete")
-        def state = getState()
+        if( !podName )
+            throw new IllegalStateException("Missing K8s ${resourceType.lower()} name - cannot check if complete")
+
+        final state = getState()
         if( state && state.terminated ) {
             if( state.nodeTermination instanceof NodeTerminationException ||
                 state.nodeTermination instanceof PodUnschedulableException ) {
@@ -423,13 +430,21 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
             }
             else {
                 // finalize the task
-                task.exitStatus = readExitFile()
+                // read the exit code from the K8s container terminated state, if missing
+                // take the exit code from the `.exitcode` file created by nextflow
+                // the rationale is that in case of error (e.g. OOMKilled, pod eviction), the exit code from
+                // the K8s API is more reliable because the container may terminate before the exit file is written
+                // See https://github.com/nextflow-io/nextflow/issues/6436
+                // https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#containerstateterminated-v1-core
+                log.trace("[k8s] Container Terminated state ${state.terminated}")
+                final k8sExitCode = (state.terminated as Map)?.exitCode as Integer
+                task.exitStatus = k8sExitCode != null ? k8sExitCode : readExitFile()
                 task.stdout = outputFile
                 task.stderr = errorFile
             }
             status = TaskStatus.COMPLETED
-            savePodLogOnError(task)
-            deletePodIfSuccessful(task)
+            saveJobLogOnError(task)
+            deleteJobIfSuccessful(task)
             updateTimestamps(state.terminated as Map)
             determineNode()
             return true
@@ -438,7 +453,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         return false
     }
 
-    protected void savePodLogOnError(TaskRun task) {
+    protected void saveJobLogOnError(TaskRun task) {
         if( task.isSuccess() )
             return
 
@@ -454,6 +469,9 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
                     ? client.jobLog(podName)
                     : client.podLog(podName)
             Files.copy(stream, task.workDir.resolve(TaskRun.CMD_LOG))
+        }
+        catch( FileAlreadyExistsException e ) {
+            log.debug "Log file already exists for ${resourceType.lower()} $podName", e
         }
         catch( Exception e ) {
             log.warn "Failed to copy log for ${resourceType.lower()} $podName", e
@@ -475,37 +493,39 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
      */
     @Override
     protected void killTask() {
+        if( !podName )
+            return
+
         if( cleanupDisabled() )
             return
         
-        if( podName ) {
-            log.trace "[K8s] deleting ${resourceType.lower()} name=$podName"
-            if ( useJobResource() )
-                client.jobDelete(podName)
-            else
-                client.podDelete(podName)
-        }
-        else {
-            log.debug "[K8s] Invalid delete action"
-        }
+        log.trace "[K8s] deleting ${resourceType.lower()} name=$podName"
+        delete0(podName)
     }
 
     protected boolean cleanupDisabled() {
         !k8sConfig.getCleanup()
     }
 
-    protected void deletePodIfSuccessful(TaskRun task) {
+    protected void deleteJobIfSuccessful(TaskRun task) {
         if( !podName )
             return
 
         if( cleanupDisabled() )
             return
 
-        if( !task.isSuccess() ) {
-            // do not delete successfully executed pods for debugging purpose
+        // preserve failed pods for debugging purposes
+        if( !task.isSuccess() )
             return
-        }
 
+        // k8s cluster will cleanup job on its own if TTL is set
+        if( useJobResource() && getPodOptions().getTtlSecondsAfterFinished() != null )
+            return
+
+        delete0(podName)
+    }
+
+    private void delete0(String podName) {
         try {
             if ( useJobResource() )
                 client.jobDelete(podName)
@@ -513,15 +533,15 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
                 client.podDelete(podName)
         }
         catch( Exception e ) {
-            log.warn "Unable to cleanup ${resourceType.lower()}: $podName -- see the log file for details", e
+            log.warn "Unable to delete ${resourceType.lower()}: $podName -- see the log file for details", e
         }
     }
 
-    private void determineNode(){
+    private void determineNode() {
         try {
             if ( k8sConfig.fetchNodeName() && !runsOnNode )
                 runsOnNode = client.getNodeOfPod( podName )
-        } catch ( Exception e ){
+        } catch ( Exception e ) {
             log.warn ("Unable to get the node name of pod $podName -- see the log file for details", e)
         }
     }

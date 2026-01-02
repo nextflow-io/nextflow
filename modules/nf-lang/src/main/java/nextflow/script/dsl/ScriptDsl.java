@@ -21,10 +21,13 @@ import java.util.List;
 import java.util.Map;
 
 import groovy.lang.Closure;
+import groovy.transform.NamedParam;
+import groovy.transform.NamedParams;
 import nextflow.script.namespaces.ChannelNamespace;
 import nextflow.script.namespaces.LogNamespace;
 import nextflow.script.namespaces.NextflowNamespace;
 import nextflow.script.namespaces.WorkflowNamespace;
+import nextflow.script.types.Tuple;
 
 /**
  * The built-in namespaces, constants, and functions in a script.
@@ -130,12 +133,36 @@ public interface ScriptDsl extends DslScope {
 
         *NOTE: This function will return a collection if the glob pattern yields zero or multiple files. Use `files()` to get a collection of files.*
     """)
-    Path file(Map<String,?> opts, String filePattern);
+    Path file(
+        @NamedParams({
+            @NamedParam(value = "checkIfExists", type = Boolean.class),
+            @NamedParam(value = "followLinks", type = Boolean.class),
+            @NamedParam(value = "glob", type = Boolean.class),
+            @NamedParam(value = "hidden", type = Boolean.class),
+            @NamedParam(value = "maxDepth", type = Integer.class),
+            @NamedParam(value = "type", type = String.class),
+        })
+        Map<String,?> opts,
+        String filePattern
+    );
+    Path file(String filePattern);
 
     @Description("""
         Get a collection of files from a file name or glob pattern.
     """)
-    Collection<Path> files(Map<String,?> opts, String filePattern);
+    Collection<Path> files(
+        @NamedParams({
+            @NamedParam(value = "checkIfExists", type = Boolean.class),
+            @NamedParam(value = "followLinks", type = Boolean.class),
+            @NamedParam(value = "glob", type = Boolean.class),
+            @NamedParam(value = "hidden", type = Boolean.class),
+            @NamedParam(value = "maxDepth", type = Integer.class),
+            @NamedParam(value = "type", type = String.class),
+        })
+        Map<String,?> opts,
+        String filePattern
+    );
+    Collection<Path> files(String filePattern);
 
     @Description("""
         Create a grouping key to use with the [groupTuple](https://nextflow.io/docs/latest/operator.html#grouptuple) operator.
@@ -171,6 +198,7 @@ public interface ScriptDsl extends DslScope {
         Send an email.
     """)
     void sendMail(Map<String,?> params);
+    void sendMail(Closure params);
 
     @Description("""
         Sleep for the given number of milliseconds.
@@ -180,6 +208,6 @@ public interface ScriptDsl extends DslScope {
     @Description("""
         Create a tuple from the given arguments.
     """)
-    List<?> tuple(Object... args);
+    Tuple tuple(Object... args);
 
 }

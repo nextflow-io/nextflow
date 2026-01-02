@@ -1,5 +1,40 @@
 nf-tower changelog
 ===================
+1.19.0 - 19 Dec 2025
+- Add spot interruption tracking to trace records (#6606) [eecd81671]
+
+1.18.0 - 28 Nov 2025
+- Fix TowerJsonGenerator thread-safety issue (#6619) [579cd6e4e]
+
+1.17.2 - 28 Nov 2025
+- Fix Fusion license JWT token refresh by reusing TowerClient [561ed6c32]
+
+1.17.1 - 22 Oct 2025
+- Show workspace roles in 'auth status', tweak error message on 403 (#6497) [0633d90d1]
+
+1.17.0 - 21 Oct 2025
+- Add nextflow auth command for Seqera Platform authentication (#6463) [bedf02a99]
+- Add nextflow launch command (#6491) [7c8fa3d9d]
+- Rename `config.schema` package to `config.spec` (#6485) [ef0d2d601]
+
+1.16.0 - 8 Oct 2025
+- Fix cache command to check session cloudCachePath [a88e2cdf2]
+- Fix cache command to use SysEnv for cloudcache path check (#6432) [771b8b60e]
+- Fix cookie policy for Seqera Platform JWT token refresh (#6411) [c3959cfc3]
+
+1.14.0 - 15 Aug 2025
+- Fix bug in DefaultObserverFactory (#6259) [bec4bf7a]
+- Improve Fusion license error message (#6313) [c3f397ea]
+- Unify nf-lang config scopes with runtime classes (#6271) [bfa67ca3]
+- Update trace observers to v2 (#6257) [544b8c47]
+- Bump groovy 4.0.28 (#6304) [a468f8ef]
+
+1.13.0 - 6 Jul 2025
+- Bump Slf4j version 2.0.17 [93199e09]
+- Fix JWT token refresh to Fusion validation request (#6231) [95dfdafd]
+- Fix http response err message [1f05451f]
+- Remove deprecated GsonHelper class [700faddb]
+
 1.12.0 - 2 Jun 2025
 - Add Platform info to Fusion license (#6142) [75f1bc52]
 - Bump Groovy to version 4.0.27 (#6125) [258e1790]

@@ -39,7 +39,7 @@ SSO credentials and instance profile credentials are the most recommended becaus
 
 ## AWS IAM policies
 
-[IAM policies](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html) are the mechanism used by AWS to defines permissions for IAM identities. In order to access certain AWS services, the proper policies must be attached to the identity associated to the AWS credentials.
+[IAM policies](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html) are the mechanism used by AWS to define permissions for IAM identities. In order to access certain AWS services, the proper policies must be attached to the identity associated to the AWS credentials.
 
 Minimal permissions policies to be attached to the AWS account used by Nextflow are:
 
@@ -154,19 +154,19 @@ See the [bucket policy documentation](https://docs.aws.amazon.com/config/latest/
 
 ## AWS Batch
 
-[AWS Batch](https://aws.amazon.com/batch/) is a managed computing service that allows the execution of containerised workloads in the AWS cloud infrastructure. It dynamically provisions the optimal quantity and type of compute resources (e.g., CPU or memory optimized compute resources) based on the volume and specific resource requirements of the jobs submitted.
+[AWS Batch](https://aws.amazon.com/batch/) is a managed computing service that enables the execution of containerized workloads on AWS cloud infrastructure. It dynamically provisions the optimal quantity and type of compute resources (e.g., CPU or memory optimized compute resources) based on the volume and specific resource requirements of the submitted jobs.
 
-Nextflow provides built-in support for AWS Batch, allowing the seamless deployment of Nextflow pipelines in the cloud, in which tasks are offloaded as Batch jobs.
 
-Read the {ref}`AWS Batch executor <awsbatch-executor>` section to learn more about the `awsbatch` executor in Nextflow.
+Nextflow natively supports AWS Batch, allowing you to run pipeline tasks as Batch jobs in the cloud.
+
+See {ref}`AWS Batch executor <awsbatch-executor>` to learn more about the `awsbatch` executor.
 
 (aws-batch-cli)=
 
 ### AWS CLI
 
 :::{tip}
-The need for the AWS CLI is considered a legacy requirement for the deployment of Nextflow pipelines with AWS Batch.
-Instead, consider using {ref}`wave-page` and {ref}`fusion-page` to facilitate access to S3 without using the AWS CLI.
+The recommended approach for running Nextflow pipelines with AWS Batch is to use {ref}`wave-page` and {ref}`fusion-page` for S3 access, rather than relying on the AWS CLI. This approach removes the requirement to install and configure the AWS CLI in containers or custom AMIs.
 :::
 
 Nextflow uses the [AWS command line tool](https://aws.amazon.com/cli/) (`aws`) to stage input files and output files between S3 and the task containers.
@@ -281,7 +281,7 @@ There are several reasons why you might need to create your own [AMI (Amazon Mac
 ### Create your custom AMI
 
 From the EC2 Dashboard, select **Launch Instance**, then select **Browse more AMIs**. In the new page, select
-**AWS Marketplace AMIs**, and then search for **Amazon ECS-Optimized Amazon Linux 2 (AL2) x86_64 AMI**. Select the AMI and continue as usual to configure and launch the instance.
+**AWS Marketplace AMIs**, and then search for `Amazon ECS-Optimized Amazon Linux 2 (AL2) x86_64 AMI`. Select the AMI and continue as usual to configure and launch the instance.
 
 :::{note}
 The selected instance has a root volume of 30GB. Make sure to increase its size or add a second EBS volume with enough storage for real genomic workloads.
@@ -366,7 +366,7 @@ sudo service docker start
 sudo usermod -a -G docker ec2-user
 ```
 
-You must logging out and logging back in again to use the new `ec2-user` permissions.
+You must log out and log back in again to use the new `ec2-user` permissions.
 
 These steps must be done *before* creating the AMI from the current EC2 instance.
 
@@ -386,7 +386,7 @@ sudo systemctl enable --now ecs
 To test the installation:
 
 ```bash
-curl -s http://localhost:51678/v1/metadata | python -mjson.tool (test)
+curl -s http://localhost:51678/v1/metadata | python -mjson.tool
 ```
 
 :::{note}

@@ -137,7 +137,7 @@
       <dl>
         <dt>Run times</dt>
         <dd>
-          <span id="workflow_start">${workflow.start.format('dd-MMM-yyyy HH:mm:ss')}</span> - <span id="workflow_complete">${workflow.complete.format('dd-MMM-yyyy HH:mm:ss')}</span>
+          <span id="workflow_start">${SysHelper.fmtDate(workflow.start)}</span> - <span id="workflow_complete">${SysHelper.fmtDate(workflow.complete)}</span>
           (<span id="completed_fromnow"></span>duration: <strong>${workflow.duration}</strong>)
         </dd>
 
@@ -175,6 +175,36 @@
         <% if (workflow.scriptId) { %>
           <dt class="col-sm-3">Script ID</dt>
           <dd class="col-sm-9"><code>${workflow.scriptId}</code></dd>
+        <% } %>
+
+        <% if (workflow.manifest.name) { %>
+          <dt class="col-sm-3">Workflow name</dt>
+          <dd class="col-sm-9"><samp>${workflow.manifest.name}</samp></dd>
+        <% } %>
+
+        <% if (workflow.manifest.version) { %>
+          <dt class="col-sm-3">Workflow version</dt>
+          <dd class="col-sm-9"><samp>${workflow.manifest.version}</samp></dd>
+        <% } %>
+
+        <% if (workflow.manifest.description) { %>
+          <dt class="col-sm-3">Workflow description</dt>
+          <dd class="col-sm-9">${workflow.manifest.description}</dd>
+        <% } %>
+
+        <% if (workflow.manifest.author) { %>
+          <dt class="col-sm-3">Workflow author</dt>
+          <dd class="col-sm-9">${workflow.manifest.author}</dd>
+        <% } %>
+
+        <% if (workflow.manifest.homePage) { %>
+          <dt class="col-sm-3">Workflow home page</dt>
+          <dd class="col-sm-9"><a href="${workflow.manifest.homePage}" target="_blank">${workflow.manifest.homePage}</a></dd>
+        <% } %>
+
+        <% if (workflow.manifest.doi) { %>
+          <dt class="col-sm-3">Workflow DOI</dt>
+          <dd class="col-sm-9"><a href="https://doi.org/${workflow.manifest.doi}" target="_blank">${workflow.manifest.doi}</a></dd>
         <% } %>
 
         <dt class="col-sm-3">Workflow session</dt>

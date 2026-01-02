@@ -29,8 +29,8 @@ import com.google.cloud.logging.Payload.StringPayload
 import com.google.cloud.logging.Severity
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.cloud.google.GoogleOpts
 import nextflow.cloud.google.batch.client.BatchClient
-import nextflow.cloud.google.batch.client.BatchConfig
 import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Specification
@@ -90,7 +90,7 @@ class BatchLoggingTest extends Specification {
     def 'should fetch logs' () {
         given:
         def sess = Mock(Session) { getConfig() >> [:] }
-        def config = BatchConfig.create(sess)
+        def config = GoogleOpts.create(sess)
         and:
         def batchClient = new BatchClient(config)
         def logClient = new BatchLogging(config)

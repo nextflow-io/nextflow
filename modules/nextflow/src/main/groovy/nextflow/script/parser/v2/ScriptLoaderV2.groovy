@@ -113,6 +113,9 @@ class ScriptLoaderV2 implements ScriptLoader {
             result.modules().forEach((path, clazz) -> {
                 createScript(clazz, new ScriptBinding(), path, true)
             })
+
+            for( final name : result.processNames() )
+                ScriptMeta.addResolvedName(name)
         }
         catch( CompilationFailedException e ) {
             if( scriptPath )
@@ -153,7 +156,6 @@ class ScriptLoaderV2 implements ScriptLoader {
             final meta = ScriptMeta.get(script)
             meta.setScriptPath(path)
             meta.setModule(module)
-            meta.validate()
             binding.setScriptPath(path)
             binding.setSession(session)
             return script

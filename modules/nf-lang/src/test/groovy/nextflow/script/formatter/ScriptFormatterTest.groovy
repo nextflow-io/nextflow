@@ -37,6 +37,7 @@ class ScriptFormatterTest extends Specification {
     }
 
     String format(String contents) {
+        scriptParser.compiler().getSources().clear()
         def source = scriptParser.parse('main.nf', contents)
         new ScriptResolveVisitor(source, scriptParser.compiler().compilationUnit(), Types.DEFAULT_SCRIPT_IMPORTS, Collections.emptyList()).visit()
         assert !TestUtils.hasSyntaxErrors(source)
@@ -132,9 +133,48 @@ class ScriptFormatterTest extends Specification {
             }
             '''
         )
+
+        checkFormat(
+            '''\
+            workflow hello{
+            take: x ; y ; emit: result = x * y
+            }
+            ''',
+            '''\
+            workflow hello {
+                take:
+                x
+                y
+
+                emit:
+                result = x * y
+            }
+            '''
+        )
+
+        checkFormat(
+            '''\
+            workflow hello{
+            take: x:Integer ; y:Integer ; main: xy=x*y ; emit: result:Integer = xy
+            }
+            ''',
+            '''\
+            workflow hello {
+                take:
+                x: Integer
+                y: Integer
+
+                main:
+                xy = x * y
+
+                emit:
+                result: Integer = xy
+            }
+            '''
+        )
     }
 
-    def 'should format a process definition' () {
+    def 'should format a legacy process definition' () {
         expect:
         checkFormat(
             '''\
@@ -160,6 +200,39 @@ class ScriptFormatterTest extends Specification {
         )
     }
 
+    def 'should format a typed process definition' () {
+        expect:
+        checkFormat(
+            '''\
+            nextflow.preview.types=true
+
+            process hello{
+            debug(true) ; input: (id,infile):Tuple<String,Path> ; index:Path ; stage: stageAs('input.txt',infile) ; output: result=tuple(id,file('output.txt')) ; script: 'cat input.txt > output.txt'
+            }
+            ''',
+            '''\
+            nextflow.preview.types = true
+
+            process hello {
+                debug true
+
+                input:
+                (id, infile): Tuple<String, Path>
+                index: Path
+
+                stage:
+                stageAs 'input.txt', infile
+
+                output:
+                result = tuple(id, file('output.txt'))
+
+                script:
+                'cat input.txt > output.txt'
+            }
+            '''
+        )
+    }
+
     def 'should format a function definition' () {
         expect:
         checkFormat(
@@ -170,6 +243,32 @@ class ScriptFormatterTest extends Specification {
             ''',
             '''\
             def hello(x, y) {
+                def xy = x * y
+                return xy
+            }
+            '''
+        )
+        checkFormat(
+            '''\
+            Integer hello(Integer x,Integer y){
+            Integer xy=x*y ; return xy
+            }
+            ''',
+            '''\
+            def hello(x: Integer, y: Integer) -> Integer {
+                def xy: Integer = x * y
+                return xy
+            }
+            '''
+        )
+        checkFormat(
+            '''\
+            def hello(x:Integer,y:Integer)->Integer{
+            def xy=x*y ; return xy
+            }
+            ''',
+            '''\
+            def hello(x: Integer, y: Integer) -> Integer {
                 def xy = x * y
                 return xy
             }
@@ -208,6 +307,27 @@ class ScriptFormatterTest extends Specification {
                     path 'foo'
                 }
                 bar {
+                    path 'bar'
+                    index {
+                        path 'index.csv'
+                    }
+                }
+            }
+            '''
+        )
+        checkFormat(
+            '''\
+            output{
+            foo:Path{path'foo'}
+            bar:Channel<Path>{path'bar';index{path'index.csv'}}
+            }
+            ''',
+            '''\
+            output {
+                foo: Path {
+                    path 'foo'
+                }
+                bar: Channel<Path> {
                     path 'bar'
                     index {
                         path 'index.csv'
@@ -264,11 +384,29 @@ class ScriptFormatterTest extends Specification {
         checkFormat(
             '''\
             def x=42
-            def(x,y)=[1,2]
+            def(x,y)=tuple(1,2)
             ''',
             '''\
             def x = 42
-            def (x, y) = [1, 2]
+            def (x, y) = tuple(1, 2)
+            '''
+        )
+        checkFormat(
+            '''\
+            def Integer x=42
+            ''',
+            '''\
+            def x: Integer = 42
+            '''
+        )
+        checkFormat(
+            '''\
+            def x:Integer=42
+            def(x:Integer,y:Integer)=tuple(1,2)
+            ''',
+            '''\
+            def x: Integer = 42
+            def (x: Integer, y: Integer) = tuple(1, 2)
             '''
         )
     }
@@ -280,13 +418,13 @@ class ScriptFormatterTest extends Specification {
             v=42
             list[0]='first'
             map.key='value'
-            (x,y)=[1,2]
+            (x,y)=tuple(1,2)
             ''',
             '''\
             v = 42
             list[0] = 'first'
             map.key = 'value'
-            (x, y) = [1, 2]
+            (x, y) = tuple(1, 2)
             '''
         )
     }
@@ -330,7 +468,7 @@ class ScriptFormatterTest extends Specification {
             try {
                 println(file('foo.txt').text)
             }
-            catch (IOException e) {
+            catch (e: IOException) {
                 log.warn("Could not load foo.txt")
             }
             '''
@@ -341,11 +479,11 @@ class ScriptFormatterTest extends Specification {
         expect:
         checkFormat(
             '''\
-            Channel.of( 1, 2, 3 )
+            channel.of( 1, 2, 3 )
                 .multiMap{v->foo:bar:v}.set{result}
             ''',
             '''\
-            Channel.of(1, 2, 3)
+            channel.of(1, 2, 3)
                 .multiMap { v -> foo: bar: v }
                 .set { result }
             '''
@@ -482,6 +620,22 @@ class ScriptFormatterTest extends Specification {
             ''',
             '''\
             { a, b -> a + b }
+            '''
+        )
+        checkFormat(
+            '''\
+            {Integer a,Integer b->a+b}
+            ''',
+            '''\
+            { a: Integer, b: Integer -> a + b }
+            '''
+        )
+        checkFormat(
+            '''\
+            {a:Integer,b:Integer->a+b}
+            ''',
+            '''\
+            { a: Integer, b: Integer -> a + b }
             '''
         )
         checkFormat(

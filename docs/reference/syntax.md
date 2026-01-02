@@ -28,7 +28,8 @@ A Nextflow script may contain the following top-level declarations:
 - Shebang
 - Feature flags
 - Include declarations
-- Parameter declarations
+- Params block
+- Parameter declarations (legacy)
 - Workflow definitions
 - Process definitions
 - Function definitions
@@ -107,9 +108,22 @@ The following definitions can be included:
 - Processes
 - Named workflows
 
-### Parameter
+### Params block
 
-A parameter declaration is an assignment. The target should be a pipeline parameter and the source should be an expression:
+The params block consists of one or more *parameter declarations*. A parameter declaration consists of a name, type, and an optional default value:
+
+```nextflow
+params {
+    input: Path
+    save_intermeds: Boolean = false
+}
+```
+
+Only one params block may be defined in a script.
+
+### Parameter (legacy)
+
+A legacy parameter declaration is an assignment. The target should be a pipeline parameter and the source should be an expression:
 
 ```nextflow
 params.message = 'Hello world!'
@@ -123,7 +137,7 @@ Parameters supplied via command line options, params files, and config files tak
 
 A workflow can be a *named workflow* or an *entry workflow*.
 
-A *named workflow* consists of a name and a body, and may consist of a *take*, *main*, *emit*, and *publish* section:
+A *named workflow* consists of a name and a body, and may consist of a *take*, *main*, and *emit* section:
 
 ```nextflow
 workflow greet {
@@ -146,28 +160,34 @@ workflow greet {
 
 - The emit section consists of one or more *emit statements*. An emit statement can be a [variable name](#variable), an [assignment](#assignment), or an [expression statement](#expression-statement). If an emit statement is an expression statement, it must be the only emit.
 
-- The publish section can be specified but is intended to be used in the entry workflow (see below).
 
-
-An *entry workflow* has no name and may consist of a *main* and *publish* section:
+An *entry workflow* has no name and may consist of a *main*, *publish*, *onComplete*, and *onError* section:
 
 ```nextflow
 workflow {
     main:
     greetings = channel.of('Bonjour', 'Ciao', 'Hello', 'Hola')
     messages = greetings.map { v -> "$v world!" }
-    greetings.view { it -> '$it world!' }
+    greetings.view { v -> "$v world!" }
 
     publish:
-    messages >> 'messages'
+    messages = messages
+
+    onComplete:
+    log.info 'Workflow completed successfully!'
+
+    onError:
+    log.error 'Workflow failed.'
 }
 ```
 
 - Only one entry workflow may be defined in a script.
 
-- The `main:` section label can be omitted if the publish section is not specified.
+- The `main:` section label can be omitted if the other sections are not specified.
 
-- The publish section consists of one or more *publish statements*. A publish statement is a [right-shift expression](#binary-expressions), where the left-hand side is an expression that refers to a value in the workflow body, and the right-hand side is an expression that returns a string.
+- The publish section consists of one or more *publish statements*. A publish statement is an [assignment](#assignment), where the assignment target is the name of a workflow output.
+
+- The `onComplete` and `onError` sections consist of one or more [statements](#statements).
 
 In order for a script to be executable, it must either define an entry workflow or be a code snippet as described [above](#script-declarations).
 
@@ -241,6 +261,54 @@ process greet {
 The script and stub sections must return a string in the same manner as a [function](#function).
 
 See {ref}`process-page` for more information on the semantics of each process section.
+
+(syntax-process-typed)=
+
+### Process (typed)
+
+A typed process is a process that uses static types for inputs and/or outputs:
+
+```nextflow
+process greet {
+    input: 
+    greeting: String
+    name: String
+
+    stage:
+    env 'NAME', name
+
+    output:
+    stdout()
+
+    topic:
+    eval('bash --version') >> 'versions'
+
+    script:
+    """
+    echo "${greeting}, \${NAME}!"
+    """
+}
+```
+
+Typed processes may specify the following sections:
+
+`input:`
+: Consists of one or more process inputs. Each input has a name and type.
+
+`stage:`
+: Consists of one or more stage directives. See {ref}`process-reference-typed` for the set of available stage directives.
+
+`output:`
+: Consists of one or more *output statements*. An output statement can be a [variable name](#variable), an [assignment](#assignment), or an [expression statement](#expression-statement). An output statement must be the only output if it is an expression statement.  See {ref}`process-reference-typed` for the set of available output functions.
+
+`topic:`
+: Consists of one or more *topic statements*. A topic statement is a right-shift expression with an output value on the left side and a string on the right side.
+
+:::{note}
+Typed processes use the same behavior as legacy processes for all other sections.
+:::
+
+See {ref}`process-typed-page` for more information on the semantics of typed processes.
 
 (syntax-function)=
 

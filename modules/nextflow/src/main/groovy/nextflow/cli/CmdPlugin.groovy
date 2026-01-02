@@ -48,6 +48,9 @@ class CmdPlugin extends CmdBase {
 
     @Parameter(hidden = true)
     List<String> args
+    
+    @Parameter(names = ['-template'], description = 'Plugin template version to use', hidden = true)
+    String templateVersion = 'v0.3.0'
 
     @Override
     void run() {
@@ -64,7 +67,7 @@ class CmdPlugin extends CmdBase {
             Plugins.pull(args[1].tokenize(','))
         }
         else if( args[0] == 'create' ) {
-            createPlugin(args)
+            createPlugin(args, templateVersion)
         }
         // plugin run command
         else if( args[0].contains(CMD_SEP) ) {
@@ -98,14 +101,14 @@ class CmdPlugin extends CmdBase {
         }
     }
 
-    static createPlugin(List<String> args) {
+    static createPlugin(List<String> args, String templateVersion) {
         if( args != ['create'] && (args[0] != 'create' || !(args.size() in [3, 4])) )
-            throw new AbortOperationException("Invalid create parameters - usage: nextflow plugin create <Plugin name> <Organization name>")
+            throw new AbortOperationException("Invalid create parameters - usage: nextflow plugin create <Plugin name> <Provider name>")
 
         final refactor = new PluginRefactor()
         if( args.size()>1 ) {
             refactor.withPluginName(args[1])
-            refactor.withOrgName(args[2])
+            refactor.withProviderName(args[2])
             refactor.withPluginDir(Path.of(args[3] ?: refactor.pluginName).toFile())
         }
         else {
@@ -113,26 +116,28 @@ class CmdPlugin extends CmdBase {
             print "Enter plugin name: "
             refactor.withPluginName(readLine())
 
-            // Prompt for maintainer organization
-            print "Enter organization: "
+            // Prompt for provider name
+            print "Enter provider name: "
+            refactor.withProviderName(readLine())
 
-            // Prompt for plugin path (default to the normalised plugin name)
-            refactor.withOrgName(readLine())
+            // Prompt for project path (default to the normalised plugin name)
             print "Enter project path [${refactor.pluginName}]: "
             refactor.withPluginDir(Path.of(readLine() ?: refactor.pluginName).toFile())
 
             // confirm and proceed
             print "All good, are you OK to continue [y/N]? "
             final confirm = readLine()
-            if( confirm!='y' )
+            if( confirm?.toLowerCase()!='y' ) {
+                println "Plugin creation aborted."
                 return
+            }
         }
 
         // the final directory where the plugin is created
         final File targetDir = refactor.getPluginDir()
 
         // clone the template repo
-        clonePluginTemplate(targetDir)
+        clonePluginTemplate(targetDir, templateVersion)
         // now refactor the template code
         refactor.apply()
         // remove git plat
@@ -148,15 +153,25 @@ class CmdPlugin extends CmdBase {
             : new BufferedReader(new InputStreamReader(System.in)).readLine()
     }
 
-    static private void clonePluginTemplate(File targetDir) {
+    static private void clonePluginTemplate(File targetDir, String templateVersion) {
         final templateUri = "https://github.com/nextflow-io/nf-plugin-template.git"
+        final isTag = templateVersion.startsWith('v')
+        final refSpec = isTag ? "refs/tags/$templateVersion".toString() : templateVersion
+        
         try {
-            Git.cloneRepository()
+            final gitCmd = Git.cloneRepository()
                 .setURI(templateUri)
                 .setDirectory(targetDir)
-                .setBranchesToClone(["refs/tags/v0.2.0"])
-                .setBranch("refs/tags/v0.2.0")
-                .call()
+            
+            if (isTag) {
+                gitCmd.setBranchesToClone([refSpec])
+                gitCmd.setBranch(refSpec)
+            } else {
+                // For branches, let Git handle the default behavior
+                gitCmd.setBranch(templateVersion)
+            }
+            
+            gitCmd.call()
         }
         catch (Exception e) {
             throw new AbortOperationException("Unable to clone pluging template repository - cause: ${e.message}")

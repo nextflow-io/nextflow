@@ -24,6 +24,7 @@ import nextflow.extension.FilesEx
 import nextflow.plugin.Plugins
 import nextflow.secret.SecretsLoader
 import spock.lang.IgnoreIf
+import spock.lang.Requires
 import spock.lang.Specification
 /**
  *
@@ -329,6 +330,48 @@ class CmdConfigTest extends Specification {
         folder.deleteDir()
     }
 
+    def 'should parse config file with nested configs' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def CONFIG = folder.resolve('nextflow.config')
+        def CONFIG2 = folder.resolve('nextflow2.config')
+        def CONFIG3 = folder.resolve('nextflow3.config')
+        CONFIG.text  = '''
+        profiles {
+            test { includeConfig 'nextflow2.config' }
+        }
+        '''
+        CONFIG2.text = '''
+        includeConfig 'nextflow3.config'
+        '''
+        CONFIG3.text = '''
+        params {
+            x = { 1 + 2 }
+        }
+        '''
+        and:
+        def buffer = new ByteArrayOutputStream()
+        def cmd = new CmdConfig()
+        cmd.launcher = new Launcher(options: new CliOptions(config: [CONFIG.toString()]))
+        cmd.profile = 'test'
+        cmd.stdout = buffer
+        cmd.args = [ '.' ]
+
+        when:
+        cmd.run()
+
+        then:
+        def result = buffer.toString()
+        result == '''
+        params {
+           x = { 1 + 2 }
+        }
+        '''.stripIndent().leftTrim()
+
+        cleanup:
+        folder.deleteDir()
+    }
+
     def 'should handle variables' () {
         given:
         def folder = Files.createTempDirectory('test')
@@ -384,10 +427,12 @@ class CmdConfigTest extends Specification {
 
     }
 
-
     @IgnoreIf({System.getenv('NXF_SMOKE')})
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def 'should resolve remote config' () {
         given:
+        SysEnv.push(GITHUB_TOKEN: System.getenv('NXF_GITHUB_ACCESS_TOKEN'))
+        and:
         def buffer = new ByteArrayOutputStream()
         def cmd = new CmdConfig(
                 args: ['https://github.com/nextflow-io/hello'],
@@ -404,6 +449,9 @@ class CmdConfigTest extends Specification {
             }
             '''
             .stripIndent()
+
+        cleanup:
+        SysEnv.pop()
     }
 
     @IgnoreIf({System.getenv('NXF_SMOKE')})

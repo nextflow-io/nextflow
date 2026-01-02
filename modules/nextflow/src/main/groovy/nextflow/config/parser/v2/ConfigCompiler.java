@@ -24,14 +24,15 @@ import com.google.common.hash.Hashing;
 import groovy.lang.Binding;
 import groovy.lang.GroovyClassLoader;
 import groovy.lang.Script;
-import nextflow.ast.NextflowXformImpl;
-import nextflow.config.StripSecretsXformImpl;
 import nextflow.config.control.ConfigResolveVisitor;
 import nextflow.config.control.ConfigToGroovyVisitor;
 import nextflow.config.control.ResolveIncludeVisitor;
 import nextflow.config.control.StringReaderSourceWithURI;
+import nextflow.config.control.StripSecretsVisitor;
 import nextflow.config.parser.ConfigParserPluginFactory;
 import nextflow.script.control.Compiler;
+import nextflow.script.control.GStringToStringVisitor;
+import nextflow.script.control.PathCompareVisitor;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
@@ -173,13 +174,13 @@ public class ConfigCompiler {
                 return;
 
             // convert to Groovy
-            var astNodes = new ASTNode[] { cn, cn };
             new ConfigToGroovyVisitor(source).visit();
-            new NextflowXformImpl().visit(astNodes, source);
+            new PathCompareVisitor(source).visitClass(cn);
             if( stripSecrets )
-                new StripSecretsXformImpl().visit(astNodes, source);
+                new StripSecretsVisitor(source).visitClass(cn);
             if( renderClosureAsString )
                 new ClosureToStringVisitor(source).visitClass(cn);
+            new GStringToStringVisitor(source).visitClass(cn);
         }
 
         SourceUnit createSourceUnit(String source, Path path) {

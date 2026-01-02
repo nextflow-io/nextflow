@@ -23,8 +23,8 @@ import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
-import nextflow.trace.TraceObserver
-import nextflow.trace.TraceObserverFactory
+import nextflow.trace.TraceObserverV2
+import nextflow.trace.TraceObserverFactoryV2
 /**
  * Factory class for wave session
  *
@@ -32,12 +32,12 @@ import nextflow.trace.TraceObserverFactory
  */
 @Slf4j
 @CompileStatic
-class WaveFactory implements TraceObserverFactory {
+class WaveFactory implements TraceObserverFactoryV2 {
 
     @Override
-    Collection<TraceObserver> create(Session session) {
+    Collection<TraceObserverV2> create(Session session) {
         shouldEnable(session)
-        return List.<TraceObserver>of()
+        return Collections.<TraceObserverV2>emptyList()
     }
 
     @Memoized // <-- declare as memoized to make it's invoked only once

@@ -17,6 +17,8 @@ package nextflow.script.ast;
 
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport;
 import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.ast.Parameter;
+import org.codehaus.groovy.ast.expr.ElvisOperatorExpression;
 import org.codehaus.groovy.ast.expr.MethodCallExpression;
 
 public abstract class ScriptVisitorSupport extends ClassCodeVisitorSupport implements ScriptVisitor {
@@ -30,8 +32,10 @@ public abstract class ScriptVisitorSupport extends ClassCodeVisitorSupport imple
             visitFeatureFlag(featureFlag);
         for( var includeNode : script.getIncludes() )
             visitInclude(includeNode);
-        for( var paramNode : script.getParams() )
-            visitParam(paramNode);
+        if( script.getParams() != null )
+            visitParams(script.getParams());
+        for( var paramNode : script.getParamsV1() )
+            visitParamV1(paramNode);
         for( var workflowNode : script.getWorkflows() )
             visitWorkflow(workflowNode);
         for( var processNode : script.getProcesses() )
@@ -56,20 +60,50 @@ public abstract class ScriptVisitorSupport extends ClassCodeVisitorSupport imple
     }
 
     @Override
-    public void visitParam(ParamNode node) {
+    public void visitParams(ParamBlockNode node) {
+        for( var param : node.declarations )
+            visitParam(param);
+    }
+
+    @Override
+    public void visitParam(Parameter node) {
+    }
+
+    @Override
+    public void visitParamV1(ParamNodeV1 node) {
         visit(node.value);
     }
 
     @Override
     public void visitWorkflow(WorkflowNode node) {
-        visit(node.takes);
         visit(node.main);
         visit(node.emits);
         visit(node.publishers);
+        visit(node.onComplete);
+        visit(node.onError);
     }
 
     @Override
     public void visitProcess(ProcessNode node) {
+        if( node instanceof ProcessNodeV2 pn )
+            visitProcessV2(pn);
+        if( node instanceof ProcessNodeV1 pn )
+            visitProcessV1(pn);
+    }
+
+    @Override
+    public void visitProcessV2(ProcessNodeV2 node) {
+        visit(node.directives);
+        visit(node.stagers);
+        visit(node.outputs);
+        visit(node.topics);
+        visit(node.when);
+        visit(node.exec);
+        visit(node.stub);
+    }
+
+    @Override
+    public void visitProcessV1(ProcessNodeV1 node) {
         visit(node.directives);
         visit(node.inputs);
         visit(node.outputs);
@@ -109,6 +143,12 @@ public abstract class ScriptVisitorSupport extends ClassCodeVisitorSupport imple
             node.getObjectExpression().visit(this);
         node.getMethod().visit(this);
         node.getArguments().visit(this);
+    }
+
+    @Override
+    public void visitShortTernaryExpression(ElvisOperatorExpression node) {
+        node.getTrueExpression().visit(this);
+        node.getFalseExpression().visit(this);
     }
 
 }

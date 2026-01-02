@@ -18,7 +18,10 @@ package nextflow.script.dsl;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
+import groovy.transform.NamedParam;
+import groovy.transform.NamedParams;
 import nextflow.script.types.Duration;
 import nextflow.script.types.MemoryUnit;
 import nextflow.script.types.TaskConfig;
@@ -48,7 +51,16 @@ public interface ProcessDsl extends DslScope {
 
             [Read more](https://nextflow.io/docs/latest/reference/process.html#accelerator)
         """)
-        void accelerator(Map<String,?> value);
+        void accelerator(
+            @NamedParams({
+                @NamedParam(value = "request", type = Integer.class),
+                @NamedParam(value = "limit", type = Integer.class),
+                @NamedParam(value = "type", type = String.class),
+            })
+            Map<String,?> opts
+        );
+        void accelerator(Map<String,?> opts, Integer value);
+        void accelerator(Integer value);
 
         @Description("""
             The `afterScript` directive allows you to execute a custom (Bash) snippet *after* the task script.
@@ -62,6 +74,14 @@ public interface ProcessDsl extends DslScope {
 
             [Read more](https://nextflow.io/docs/latest/reference/process.html#arch)
         """)
+        void arch(
+            @NamedParams({
+                @NamedParam(value = "name", type = String.class),
+                @NamedParam(value = "target", type = String.class),
+            })
+            Map<String,?> opts
+        );
+        void arch(Map<String,?> opts, String value);
         void arch(String value);
 
         @Description("""
@@ -84,6 +104,7 @@ public interface ProcessDsl extends DslScope {
             [Read more](https://nextflow.io/docs/latest/reference/process.html#cache)
         """)
         void cache(String value);
+        void cache(Boolean value);
 
         @Description("""
             The `clusterOptions` directive allows the usage of any native configuration option accepted by your cluster submit command. You can use it to request non-standard resources or use settings that are specific to your cluster and not supported out of the box by Nextflow.
@@ -91,6 +112,8 @@ public interface ProcessDsl extends DslScope {
             [Read more](https://nextflow.io/docs/latest/reference/process.html#clusteroptions)
         """)
         void clusterOptions(String value);
+        void clusterOptions(List<String> values);
+        void clusterOptions(String... values);
 
         @Description("""
             The `conda` directive allows for the definition of the process dependencies using the [Conda](https://conda.io) package manager.
@@ -125,13 +148,21 @@ public interface ProcessDsl extends DslScope {
 
             [Read more](https://nextflow.io/docs/latest/reference/process.html#debug)
         """)
-        void debug(boolean value);
+        void debug(Boolean value);
 
         @Description("""
             The `disk` directive allows you to define how much local disk storage the process is allowed to use.
 
             [Read more](https://nextflow.io/docs/latest/reference/process.html#disk)
         """)
+        void disk(
+            @NamedParams({
+                @NamedParam(value = "request", type = MemoryUnit.class),
+                @NamedParam(value = "type", type = String.class),
+            })
+            Map<String,?> opts
+        );
+        void disk(Map<String,?> opts, MemoryUnit value);
         void disk(MemoryUnit value);
 
         @Description("""
@@ -160,7 +191,7 @@ public interface ProcessDsl extends DslScope {
 
             [Read more](https://nextflow.io/docs/latest/reference/process.html#fair)
         """)
-        void fair(boolean value);
+        void fair(Boolean value);
 
         @Description("""
             The `label` directive allows you to annotate a process with a mnemonic identifier of your choice.
@@ -181,7 +212,7 @@ public interface ProcessDsl extends DslScope {
 
             [Read more](https://nextflow.io/docs/latest/reference/process.html#maxerrors)
         """)
-        void maxErrors(int value);
+        void maxErrors(Integer value);
 
         @Description("""
             The `maxForks` directive allows you to define the maximum number of tasks (per process) that can be executed in parallel.
@@ -195,7 +226,7 @@ public interface ProcessDsl extends DslScope {
 
             [Read more](https://nextflow.io/docs/latest/reference/process.html#maxretries)
         """)
-        void maxRetries(int value);
+        void maxRetries(Integer value);
 
         @Description("""
             The `maxSubmitAwait` directives allows you to specify how long a task can remain in the submission queue. If a task remains in the queue beyond this time limit, it will fail.
@@ -230,14 +261,18 @@ public interface ProcessDsl extends DslScope {
 
             [Read more](https://nextflow.io/docs/latest/reference/process.html#pod)
         """)
-        void pod(List<?> value);
+        void pod(Map<String,?> opts);
+        void pod(List<Map<String,?>> entries);
 
         @Description("""
             The `publishDir` directive allows you to publish the process output files to a directory.
 
             [Read more](https://nextflow.io/docs/latest/reference/process.html#publishdir)
         """)
-        void publishDir(List<?> value);
+        void publishDir(Map<String,?> opts);
+        void publishDir(Map<String,?> opts, String value);
+        void publishDir(String value);
+        void publishDir(List<Map<String,?>> entries);
 
         @Description("""
             The `queue` directive allows you to specify the queue to which jobs are submitted when using a grid executor.
@@ -251,14 +286,22 @@ public interface ProcessDsl extends DslScope {
 
             [Read more](https://nextflow.io/docs/latest/reference/process.html#resourcelabels)
         """)
-        void resourceLabels(Map<String,?> value);
+        void resourceLabels(Map<String,String> value);
 
         @Description("""
             The `resourceLimits` directive allows you to specify environment-specific limits for task resource requests.
 
             [Read more](https://nextflow.io/docs/latest/reference/process.html#resourcelimits)
         """)
-        void resourceLimits(Map<String,?> value);
+        void resourceLimits(
+            @NamedParams({
+                @NamedParam(value = "cpus", type = Integer.class),
+                @NamedParam(value = "disk", type = MemoryUnit.class),
+                @NamedParam(value = "memory", type = MemoryUnit.class),
+                @NamedParam(value = "time", type = Duration.class),
+            })
+            Map<String,?> opts
+        );
 
         @Description("""
             The `scratch` directive allows you to execute each task in a temporary directory that is local to the compute node.
@@ -266,6 +309,7 @@ public interface ProcessDsl extends DslScope {
             [Read more](https://nextflow.io/docs/latest/reference/process.html#scratch)
         """)
         void scratch(String value);
+        void scratch(Boolean value);
 
         @Description("""
             The `secret` directive allows you to securely provide secrets to a process.
@@ -280,6 +324,8 @@ public interface ProcessDsl extends DslScope {
             [Read more](https://nextflow.io/docs/latest/reference/process.html#shell)
         """)
         void shell(String value);
+        void shell(List<String> values);
+        void shell(String... values);
 
         @Description("""
             The `spack` directive allows you to provide software dependencies using the [Spack](https://spack.io) package manager.
@@ -325,7 +371,31 @@ public interface ProcessDsl extends DslScope {
 
     }
 
-    interface InputDsl extends DslScope {
+    interface StageDsl extends DslScope {
+
+        @Description("""
+            Declare an environment variable in the task environment with the given name and value.
+        """)
+        void env(String name, String value);
+
+        @Description("""
+            Stage a file into the task directory under the given alias.
+        """)
+        void stageAs(String filePattern, Path value);
+
+        @Description("""
+            Stage a collection of files into the task directory under the given alias.
+        """)
+        void stageAs(String filePattern, Iterable<Path> value);
+
+        @Description("""
+            Stage the given value as the standard input (i.e. `stdin`) to the task script.
+        """)
+        void stdin(String value);
+
+    }
+
+    interface InputDslV1 extends DslScope {
 
         @Description("""
             Declare a variable input. The received value can be any type, and it will be made available to the process body (i.e. `script`, `shell`, `exec`) as a variable with the given name.
@@ -369,7 +439,62 @@ public interface ProcessDsl extends DslScope {
 
     }
 
-    interface OutputDsl extends DslScope {
+    interface OutputDslV2 extends DslScope {
+
+        @Description("""
+            Get the value of an environment variable from the task environment.
+        """)
+        String env(String name);
+
+        @Description("""
+            Get the standard output of the given command, which is executed in the task environment after the task script.
+        """)
+        String eval(String command);
+
+        @Description("""
+            Get a file from the task environment that matches the given pattern.
+        """)
+        Path file(
+            @NamedParams({
+                @NamedParam(value = "followLinks", type = Boolean.class),
+                @NamedParam(value = "glob", type = Boolean.class),
+                @NamedParam(value = "hidden", type = Boolean.class),
+                @NamedParam(value = "includeInputs", type = Boolean.class),
+                @NamedParam(value = "maxDepth", type = Integer.class),
+                @NamedParam(value = "optional", type = Boolean.class),
+                @NamedParam(value = "type", type = String.class),
+            })
+            Map<String,?> opts,
+            String name
+        );
+        Path file(String name);
+
+        @Description("""
+            Get the files from the task environment that match the given pattern.
+        """)
+        Set<Path> files(
+            @NamedParams({
+                @NamedParam(value = "followLinks", type = Boolean.class),
+                @NamedParam(value = "glob", type = Boolean.class),
+                @NamedParam(value = "hidden", type = Boolean.class),
+                @NamedParam(value = "includeInputs", type = Boolean.class),
+                @NamedParam(value = "maxDepth", type = Integer.class),
+                @NamedParam(value = "optional", type = Boolean.class),
+                @NamedParam(value = "type", type = String.class),
+            })
+            Map<String,?> opts, 
+            String pattern
+        );
+        Set<Path> files(String pattern);
+
+        @Description("""
+            Get the standard output of the task script.
+        """)
+        String stdout();
+
+    }
+
+    interface OutputDslV1 extends DslScope {
 
         @Description("""
             Declare a value output. The argument can be any value, and it can reference any output variables defined in the process body (i.e. variables declared without the `def` keyword).

@@ -68,7 +68,7 @@ When building containers, Wave currently does not support `ADD`, `COPY`, or any 
 
 ### Build Conda based containers
 
-Wave allows the provisioning of containers based on the {ref}`process-conda` directive used by the processes in your pipeline. This is a quick alternative to building Conda packages in the local computer. Moreover, this enables the use of Conda packages in your pipeline when deploying in cloud-native platforms such as AWS Batch and Kubernetes, which do not allow the (easy) use of the Conda package manager.
+Wave allows the provisioning of containers based on the {ref}`process-conda` directive used by the processes in your pipeline. This is a quick alternative to building Conda packages in the local computer. Moreover, this enables the use of Conda packages in your pipeline when deploying to cloud-native platforms such as AWS Batch and Kubernetes, which do not allow the easy use of the Conda package manager.
 
 With Wave enabled in your pipeline, simply define the `conda` requirements in the pipeline processes, provided the same process does not also specify a `container` directive or a Dockerfile.
 
@@ -92,6 +92,40 @@ conda.channels = 'conda-forge,bioconda'
 
 Packages from the [Python Package Index](https://pypi.org/) can also be added to a Conda `environment.yml` file. See {ref}`Conda and PyPI <conda-pypi>` for more information.
 
+(wave-build-templates)=
+
+### Build templates
+
+:::{versionadded} 25.12.0-edge
+:::
+
+Wave supports different build templates for creating container images from Conda packages. Build templates control how packages are installed and how the final container image is structured.
+
+Multi-stage build templates (`conda/pixi:v1` and `conda/micromamba:v2`) offer several advantages:
+
+- **Smaller images**: Build tools and package managers are excluded from the final image (30-50% size reduction typical).
+- **Reproducibility**: Lock files are generated for exact package version tracking.
+- **Security**: Fewer binaries in the final image reduces the attack surface.
+
+To use a specific build template, add the following to your configuration:
+
+```groovy
+wave.enabled = true
+wave.strategy = ['conda']
+wave.build.template = 'conda/pixi:v1'
+```
+
+Available templates:
+
+| Template | Description |
+|----------|-------------|
+| `conda/micromamba:v1` | Standard Micromamba 1.x single-stage build. The final image includes the package manager. Default when unspecified. |
+| `conda/micromamba:v2` | Multi-stage build using Micromamba 2.x. Produces smaller images without the package manager. |
+| `conda/pixi:v1` | Multi-stage build using [Pixi](https://pixi.sh/) package manager. Produces smaller images with faster dependency resolution. |
+| `cran/installr:v1` | Build template for R/CRAN packages using installr. |
+
+When `wave.build.template` is not specified, Wave uses the standard `conda/micromamba:v1` template.
+
 (wave-singularity)=
 
 ### Build Singularity native images
@@ -101,10 +135,10 @@ Packages from the [Python Package Index](https://pypi.org/) can also be added to
 
 Nextflow can build Singularity native images on-demand either using `Singularityfile`,
 Conda packages or Spack packages. The Singularity images are automatically uploaded in a container registry OCI compliant
-of your choice and stored as a [ORAS artefact](https://oras.land/).
+of your choice and stored as a [ORAS artifact](https://oras.land/).
 
 :::{note}
-This feature requires of Singularity (or Apptainer) version supporting the pull of images using the `oras:` pseudo-protocol.
+This feature requires Singularity (or Apptainer) version supporting the pull of images using the `oras:` pseudo-protocol.
 :::
 
 For example to enable the provisioning of Singularity images in your pipeline use the following configuration snippet:
@@ -152,7 +186,7 @@ The repository access keys must be provided as Seqera Platform credentials (see
 Wave allows mirroring, i.e., copying containers used by your pipeline into a container registry of your choice. This allows the pipeline to pull containers from the target registry rather than the original registry.
 
 Mirroring is useful to create an on-demand cache of container images that are co-located in the same region where the pipeline
-is executed, and therefore optimising cost and network efficiency.
+is executed, and therefore optimizing cost and network efficiency.
 
 Include the following settings in your Nextflow configuration to enable this capability:
 
@@ -174,7 +208,7 @@ having `quay.io/biocontainers/bwa:0.7.13--1` as source container and `example.co
 container will be named `example.com/library/biocontainers/bwa:0.7.13--1`.
 :::
 
-The credentials to allow the push of  containers in the target repository need to be provided via the Seqera Platform
+The credentials to allow the push of containers to the target repository need to be provided via the Seqera Platform
 credentials manager. The account used for this is specified by the `tower.accessToken` in the configuration above.
 
 ### Container security scanning
@@ -205,7 +239,7 @@ Wave's security scanning applies to any container used in your pipeline, whether
 
 ### Run pipelines using Fusion file system
 
-Wave containers allows you to run your containerised workflow with {ref}`fusion-page`.
+Wave containers allow you to run your containerized workflow with {ref}`fusion-page`.
 
 This enables the use of an object storage bucket such as AWS S3 or Google Cloud Storage as your pipeline work directory, simplifying and speeding up many operations on local, AWS Batch, Google Batch or Kubernetes executions.
 

@@ -22,6 +22,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.file.FileHelper
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
@@ -42,6 +43,11 @@ abstract class Executor {
      * The current session object
      */
     Session session
+
+    /**
+     * The `executor` configuration settings
+     */
+    ExecutorConfig config
 
     /**
      * The executor simple name
@@ -186,7 +192,36 @@ abstract class Executor {
     }
 
     /**
-     * @return {@code true} when the executor uses fusion file system 
+     * Determines whether large staging scripts should be written to a separate `.command.stage` file
+     * instead of being inlined in the main wrapper script.
+     *
+     * This is enabled by default only for HPC grid schedulers (extending {@link AbstractGridExecutor})
+     * because they use a shared filesystem where the stage file can be reliably accessed.
+     * For cloud executors using object storage (e.g. S3, GCS), the stage file would need to be
+     * written to remote storage and then fetched, which may not work reliably in all cases.
+     *
+     * Cloud executors that support this feature (e.g. Google Batch with gcsfuse mounts) can
+     * override this method to return {@code true}.
+     *
+     * Can be controlled via the {@code NXF_WRAPPER_STAGE_FILE_THRESHOLD} environment variable.
+     *
+     * @return {@code true} when the executor supports writing large staging scripts to a separate file
+     * @see <a href="https://github.com/nextflow-io/nextflow/issues/4279">GitHub issue #4279</a>
+     */
+    boolean isStageFileEnabled() {
+        return isStageFileEnabled0(this)
+    }
+
+    @Memoized
+    static private boolean isStageFileEnabled0(Executor executor) {
+        final flag = SysEnv.get('NXF_WRAPPER_STAGE_FILE_THRESHOLD')
+        return flag==null
+            ? executor instanceof AbstractGridExecutor
+            : true
+    }
+
+    /**
+     * @return {@code true} when the executor uses fusion file system
      */
     boolean isFusionEnabled() {
         return false

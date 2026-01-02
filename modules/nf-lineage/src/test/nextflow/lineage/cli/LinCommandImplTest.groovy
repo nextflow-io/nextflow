@@ -387,27 +387,27 @@ class LinCommandImplTest extends Specification{
         def expectedOutput = '''diff --git 12345 67890
 --- 12345
 +++ 67890
-@@ -1,16 +1,16 @@
- {
+@@ -2,16 +2,16 @@
    "version": "lineage/v1beta1",
    "kind": "FileOutput",
--  "path": "path/to/file",
-+  "path": "path/to/file2",
-   "checksum": {
--    "value": "45372qe",
-+    "value": "42472qet",
-     "algorithm": "nextflow",
-     "mode": "standard"
-   },
--  "source": "lid://123987/file.bam",
-+  "source": "lid://123987/file2.bam",
-   "workflowRun": "lid://123987/",
-   "taskRun": null,
--  "size": 1234,
-+  "size": 1235,
-   "createdAt": "1970-01-02T10:17:36.789Z",
-   "modifiedAt": "1970-01-02T10:17:36.789Z",
-   "labels": null
+   "spec": {
+-    "path": "path/to/file",
++    "path": "path/to/file2",
+     "checksum": {
+-      "value": "45372qe",
++      "value": "42472qet",
+       "algorithm": "nextflow",
+       "mode": "standard"
+     },
+-    "source": "lid://123987/file.bam",
++    "source": "lid://123987/file2.bam",
+     "workflowRun": "lid://123987/",
+     "taskRun": null,
+-    "size": 1234,
++    "size": 1235,
+     "createdAt": "1970-01-02T10:17:36.789Z",
+     "modifiedAt": "1970-01-02T10:17:36.789Z",
+     "labels": null
 '''
 
         when:

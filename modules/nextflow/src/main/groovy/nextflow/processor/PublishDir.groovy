@@ -235,7 +235,7 @@ class PublishDir {
     protected void apply0(Set<Path> files) {
         assert path
         // setup the retry policy config to be used
-        this.retryConfig = RetryConfig.config(session)
+        this.retryConfig = RetryConfig.config(session.config)
 
         createPublishDir()
         validatePublishMode()

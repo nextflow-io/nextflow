@@ -22,7 +22,67 @@ workflow {
 }
 ```
 
-### Parameters
+(workflow-params-def)=
+
+## Parameters
+
+Parameters can be declared in a Nextflow script with the `params` block or with *legacy* parameter declarations.
+
+### Typed parameters
+
+:::{versionadded} 25.10.0
+:::
+
+:::{note}
+Typed parameters require the {ref}`strict syntax <strict-syntax-page>`. Set the `NXF_SYNTAX_PARSER` environment variable to `v2` to enable:
+
+```bash
+export NXF_SYNTAX_PARSER=v2
+```
+:::
+
+A script can declare parameters using the `params` block:
+
+```nextflow
+params {
+    // Path to input data.
+    input: Path
+
+    // Whether to save intermediate files.
+    save_intermeds: Boolean = false
+}
+```
+
+All {ref}`standard types <stdlib-types>` except for the dataflow types (`Channel` and `Value`) can be used for parameters.
+
+Parameters can be used in the entry workflow:
+
+```nextflow
+workflow {
+    analyze(params.input, params.save_intermeds)
+}
+```
+
+:::{note}
+As a best practice, parameters should only be referenced in the entry workflow or `output` block. Parameters can be passed to workflows and processes as explicit inputs.
+:::
+
+The default value can be overridden by the command line, params file, or config file. Parameters from multiple sources are resolved in the order described in {ref}`cli-params`. Parameters specified on the command line are converted to the appropriate type based on the corresponding type annotation.
+
+A parameter that doesn't specify a default value is a *required* parameter. If a required parameter is not given a value at runtime, the run will fail.
+
+:::{versionadded} 26.04.0
+:::
+
+Parameters with a collection type (i.e., `List`, `Set`, or `Bag`) can be supplied a file path instead of a literal collection. The file must be CSV, JSON, or YAML. Nextflow will parse the file contents and assign the resuling collection to the parameter. An error is thrown if the file contents do not match the parameter type.
+
+:::{note}
+When supplying a CSV file to a collection parameter, the CSV file must contain a header row and must use a comma (`,`) as the column separator.
+:::
+
+(workflow-params-legacy)=
+
+### Legacy parameters
 
 Parameters can be declared by assigning a `params` property to a default value:
 
@@ -37,10 +97,6 @@ workflow {
         analyze(fake_input(), params.save_intermeds)
 }
 ```
-
-:::{note}
-As a best practice, params should be used only in the entry workflow and passed to workflows and processes as explicit inputs.
-:::
 
 The default value can be overridden by the command line, params file, or config file. Parameters from multiple sources are resolved in the order described in {ref}`cli-params`.
 
@@ -118,6 +174,27 @@ The result of the above workflow can be accessed using `my_workflow.out.my_data`
 :::{note}
 Every output must be assigned to a name when multiple outputs are declared.
 :::
+
+:::{versionadded} 25.10.0
+:::
+
+When using the {ref}`strict syntax <strict-syntax-page>`, workflow takes and emits can specify a type annotation:
+
+```nextflow
+workflow my_workflow {
+    take:
+    data: Channel<Path>
+
+    main:
+    ch_hello = hello(data)
+    ch_bye = bye(ch_hello.collect())
+
+    emit:
+    my_data: Value<Path> = ch_bye
+}
+```
+
+In the above example, `my_workflow` takes a channel of files (`Channel<Path>`) and emits a dataflow value with a single file (`Value<Path>`). See {ref}`stdlib-types` for the list of available types.
 
 (workflow-process-invocation)=
 
@@ -284,9 +361,15 @@ The same process can be called in different workflows without using an alias, li
 The fully qualified process name can be used as a {ref}`process selector <config-process-selectors>` in a Nextflow configuration file, and it takes priority over the simple process name.
 :::
 
+(workflow-special-operators)=
+
 ## Special operators
 
 The following operators have a special meaning when used in a workflow with process and workflow calls.
+
+:::{note}
+As a best practice, avoid these operators when {ref}`type checking <preparing-static-types>` is enabled. Using these operators will prevent the type checker from validating your code.
+:::
 
 ### Pipe `|`
 
@@ -305,7 +388,7 @@ process greet {
 }
 
 workflow {
-    channel.of('Hello','Hola','Ciao')
+    channel.of('Hello', 'Hola', 'Ciao')
         | greet
         | map { v -> v.toUpperCase() }
         | view
@@ -318,9 +401,11 @@ The same code can also be written as:
 
 ```nextflow
 workflow {
-    ch1 = channel.of('Hello','Hola','Ciao')
-    ch2 = greet( ch1 )
-    ch2.map { v -> v.toUpperCase() }.view()
+    ch_input = channel.of('Hello', 'Hola', 'Ciao')
+    ch_greet = greet(ch_input)
+    ch_greet
+        .map { v -> v.toUpperCase() }
+        .view()
 }
 ```
 
@@ -377,11 +462,11 @@ workflow {
 
 ## Process and workflow recursion
 
-:::{versionadded} 21.11.0-edge
+:::{versionadded} 22.04.0
 :::
 
 :::{note}
-This feature requires the `nextflow.preview.recursion` feature flag to be enabled.
+This is a preview feature and requires the `nextflow.preview.recursion` feature flag to be enabled. The syntax and behavior may change in future releases.
 :::
 
 Processes can be invoked recursively using the `recurse` method.
@@ -425,19 +510,8 @@ Workflows can also be invoked recursively:
 
 ## Workflow outputs
 
-:::{versionadded} 24.04.0
-:::
-
-:::{versionchanged} 24.10.0
-A second preview version was introduced. See the {ref}`migration notes <workflow-outputs-second-preview>` for details.
-:::
-
-:::{versionchanged} 25.04.0
-A third preview version was introduced. See the {ref}`migration notes <workflow-outputs-third-preview>` for details.
-:::
-
-:::{note}
-This feature requires the `nextflow.preview.output` feature flag to be enabled.
+:::{versionadded} 25.10.0
+This feature is available as a preview in Nextflow {ref}`24.04 <workflow-outputs-first-preview>`, {ref}`24.10 <workflow-outputs-second-preview>`, and {ref}`25.04 <workflow-outputs-third-preview>`.
 :::
 
 A script can define an *output block* which declares the top-level outputs of the workflow. Each output should be assigned in the `publish` section of the entry workflow. Any channel in the workflow can be assigned to an output, including process and subworkflow outputs. This approach is intended to replace the {ref}`publishDir <process-publishdir>` directive.
@@ -456,10 +530,10 @@ process fetch {
 
 workflow {
     main:
-    fetch(params.input)
+    ch_samples = fetch(params.input)
 
     publish:
-    samples = fetch.out
+    samples = ch_samples
 }
 
 output {
@@ -541,7 +615,7 @@ The `path` directive can also be a closure which defines a custom publish path f
 workflow {
     main:
     ch_samples = channel.of(
-        [id: 'SAMP1', fastq_1: file('1.fastq'), fastq_1: file('2.fastq')]
+        [id: 'SAMP1', fastq_1: file('1.fastq'), fastq_2: file('2.fastq')]
     )
 
     publish:
@@ -572,6 +646,10 @@ output {
 
 Each `>>` specifies a *source file* and *publish target*. The source file should be a file or collection of files, and the publish target should be a directory or file name. If the publish target ends with a slash, it is treated as the directory in which source files are published. Otherwise, it is treated as the target filename of a source file. Only files that are published with the `>>` operator are saved to the output directory.
 
+:::{note}
+Files that do not originate from the work directory are not published.
+:::
+
 ### Index files
 
 Each output can create an index file of the values that were published. An index file preserves the structure of channel values, including metadata, which is simpler than encoding this information with directories and file names. The index file can be a CSV (`.csv`), JSON (`.json`), or YAML (`.yml`, `.yaml`) file. The channel values should be files, lists, or maps.
@@ -584,7 +662,7 @@ workflow {
     ch_samples = channel.of(
         [id: 1, name: 'sample 1', fastq_1: '1a.fastq', fastq_2: '1b.fastq'],
         [id: 2, name: 'sample 2', fastq_1: '2a.fastq', fastq_2: '2b.fastq'],
-        [id: 3, name: 'sample 3', fastq_1: '3a.fastq', fastq_2: '3b.fastq']
+        [id: 3, name: 'sample 3', fastq_1: '3a.fastq', fastq_2: null]
     )
 
     publish:
@@ -606,7 +684,7 @@ The above example will write the following CSV file to `results/samples.csv`:
 ```
 "1","sample 1","results/fastq/1a.fastq","results/fastq/1b.fastq"
 "2","sample 2","results/fastq/2a.fastq","results/fastq/2b.fastq"
-"3","sample 3","results/fastq/3a.fastq","results/fastq/3b.fastq"
+"3","sample 3","results/fastq/3a.fastq",""
 ```
 
 You can customize the index file with additional directives, for example:
@@ -625,8 +703,12 @@ This example will produce the following index file:
 "id"|"name"|"fastq_1"|"fastq_2"
 "1"|"sample 1"|"results/fastq/1a.fastq"|"results/fastq/1b.fastq"
 "2"|"sample 2"|"results/fastq/2a.fastq"|"results/fastq/2b.fastq"
-"3"|"sample 3"|"results/fastq/3a.fastq"|"results/fastq/3b.fastq"
+"3"|"sample 3"|"results/fastq/3a.fastq"|""
 ```
+
+:::{note}
+Files that do not originate from the work directory are not published, but are included in the index file.
+:::
 
 See [Output directives](#output-directives) for the list of available index directives.
 

@@ -95,7 +95,7 @@ nextflow log goofy_kilby -filter 'name =~ /hello.*/ && status == "FAILED"'
 
 ## Execution report
 
-Nextflow can create an HTML execution report: a single document which includes many useful metrics about a workflow execution. The report is organised in the three main sections: `Summary`, `Resources` and `Tasks` (see below for details).
+Nextflow can create an HTML execution report: a single document which includes many useful metrics about a workflow execution. The report is organized in the three main sections: `Summary`, `Resources` and `Tasks` (see below for details).
 
 To enable the creation of this report add the `-with-report` command line option when launching the pipeline execution. For example:
 
@@ -156,27 +156,27 @@ nextflow run <pipeline> -with-trace
 
 It will create a file named `trace.txt` in the current directory. The content looks like the above example:
 
-| task_id | hash      | native_id | name           | status    | exit | submit                  | duration | walltime | %cpu   | rss      | vmem     | rchar    | wchar    |
-| ------- | --------- | --------- | -------------- | --------- | ---- | ----------------------- | -------- | -------- | ------ | -------- | -------- | -------- | -------- |
-| 19      | 45/ab752a | 2032      | blast (1)      | COMPLETED | 0    | 2014-10-23 16:33:16.288 | 1m       | 5s       | 0.0%   | 29.8 MB  | 354 MB   | 33.3 MB  | 0        |
-| 20      | 72/db873d | 2033      | blast (2)      | COMPLETED | 0    | 2014-10-23 16:34:17.211 | 30s      | 10s      | 35.7%  | 152.8 MB | 428.1 MB | 192.7 MB | 1 MB     |
-| 21      | 53/d13188 | 2034      | blast (3)      | COMPLETED | 0    | 2014-10-23 16:34:17.518 | 29s      | 20s      | 4.5%   | 289.5 MB | 381.6 MB | 33.3 MB  | 0        |
-| 22      | 26/f65116 | 2035      | blast (4)      | COMPLETED | 0    | 2014-10-23 16:34:18.459 | 30s      | 9s       | 6.0%   | 122.8 MB | 353.4 MB | 33.3 MB  | 0        |
-| 23      | 88/bc00e4 | 2036      | blast (5)      | COMPLETED | 0    | 2014-10-23 16:34:18.507 | 30s      | 19s      | 5.0%   | 195 MB   | 395.8 MB | 65.3 MB  | 121 KB   |
-| 24      | 74/2556e9 | 2037      | blast (6)      | COMPLETED | 0    | 2014-10-23 16:34:18.553 | 30s      | 12s      | 43.6%  | 140.7 MB | 432.2 MB | 192.7 MB | 182.7 MB |
-| 28      | b4/0f9613 | 2041      | exonerate (1)  | COMPLETED | 0    | 2014-10-23 16:38:19.657 | 1m 30s   | 1m 11s   | 94.3%  | 611.6 MB | 693.8 MB | 961.2 GB | 6.1 GB   |
-| 32      | af/7f2f57 | 2044      | exonerate (4)  | COMPLETED | 0    | 2014-10-23 16:46:50.902 | 1m 1s    | 38s      | 36.6%  | 115.8 MB | 167.8 MB | 364 GB   | 5.1 GB   |
-| 33      | 37/ab1fcc | 2045      | exonerate (5)  | COMPLETED | 0    | 2014-10-23 16:47:51.625 | 30s      | 12s      | 59.6%  | 696 MB   | 734.6 MB | 354.3 GB | 420.4 MB |
-| 31      | d7/eabe51 | 2042      | exonerate (3)  | COMPLETED | 0    | 2014-10-23 16:45:50.846 | 3m 1s    | 2m 6s    | 130.1% | 703.3 MB | 760.9 MB | 1.1 TB   | 28.6 GB  |
-| 36      | c4/d6cc15 | 2048      | exonerate (6)  | COMPLETED | 0    | 2014-10-23 16:48:48.718 | 3m 1s    | 2m 43s   | 116.6% | 682.1 MB | 743.6 MB | 868.5 GB | 42 GB    |
-| 30      | 4f/1ad1f0 | 2043      | exonerate (2)  | COMPLETED | 0    | 2014-10-23 16:45:50.961 | 10m 2s   | 9m 16s   | 95.5%  | 706.2 MB | 764 MB   | 1.6 TB   | 172.4 GB |
-| 52      | 72/41d0c6 | 2055      | similarity (1) | COMPLETED | 0    | 2014-10-23 17:13:23.543 | 30s      | 352ms    | 0.0%   | 35.6 MB  | 58.3 MB  | 199.3 MB | 7.9 MB   |
-| 57      | 9b/111b5e | 2058      | similarity (6) | COMPLETED | 0    | 2014-10-23 17:13:23.655 | 30s      | 488ms    | 0.0%   | 108.2 MB | 158 MB   | 317.1 MB | 9.8 MB   |
-| 53      | 3e/bca30f | 2061      | similarity (2) | COMPLETED | 0    | 2014-10-23 17:13:23.770 | 30s      | 238ms    | 0.0%   | 6.7 MB   | 29.6 MB  | 190 MB   | 91.2 MB  |
-| 54      | 8b/d45b47 | 2062      | similarity (3) | COMPLETED | 0    | 2014-10-23 17:13:23.808 | 30s      | 442ms    | 0.0%   | 108.1 MB | 158 MB   | 832 MB   | 565.6 MB |
-| 55      | 51/ac19c6 | 2064      | similarity (4) | COMPLETED | 0    | 2014-10-23 17:13:23.873 | 30s      | 6s       | 0.0%   | 112.7 MB | 162.8 MB | 4.9 GB   | 3.9 GB   |
-| 56      | c3/ec5f4a | 2066      | similarity (5) | COMPLETED | 0    | 2014-10-23 17:13:23.948 | 30s      | 616ms    | 0.0%   | 10.4 MB  | 34.6 MB  | 238 MB   | 8.4 MB   |
-| 98      | de/d6c0a6 | 2099      | matrix (1)     | COMPLETED | 0    | 2014-10-23 17:14:27.139 | 30s      | 1s       | 0.0%   | 4.8 MB   | 42 MB    | 240.6 MB | 79 KB    |
+| task_id | hash      | native_id | name           | status    | exit | submit                  | duration | realtime | %cpu   | peak_rss  | peak_vmem | rchar    | wchar    |
+| ------- | --------- | --------- | -------------- | --------- | ---- | ----------------------- | -------- | -------- | ------ | --------- | --------- | -------- | -------- |
+| 19      | 45/ab752a | 2032      | blast (1)      | COMPLETED | 0    | 2014-10-23 16:33:16.288 | 1m       | 5s       | 0.0%   | 29.8 MB   | 354 MB    | 33.3 MB  | 0        |
+| 20      | 72/db873d | 2033      | blast (2)      | COMPLETED | 0    | 2014-10-23 16:34:17.211 | 30s      | 10s      | 35.7%  | 152.8 MB  | 428.1 MB  | 192.7 MB | 1 MB     |
+| 21      | 53/d13188 | 2034      | blast (3)      | COMPLETED | 0    | 2014-10-23 16:34:17.518 | 29s      | 20s      | 4.5%   | 289.5 MB  | 381.6 MB  | 33.3 MB  | 0        |
+| 22      | 26/f65116 | 2035      | blast (4)      | COMPLETED | 0    | 2014-10-23 16:34:18.459 | 30s      | 9s       | 6.0%   | 122.8 MB  | 353.4 MB  | 33.3 MB  | 0        |
+| 23      | 88/bc00e4 | 2036      | blast (5)      | COMPLETED | 0    | 2014-10-23 16:34:18.507 | 30s      | 19s      | 5.0%   | 195 MB    | 395.8 MB  | 65.3 MB  | 121 KB   |
+| 24      | 74/2556e9 | 2037      | blast (6)      | COMPLETED | 0    | 2014-10-23 16:34:18.553 | 30s      | 12s      | 43.6%  | 140.7 MB  | 432.2 MB  | 192.7 MB | 182.7 MB |
+| 28      | b4/0f9613 | 2041      | exonerate (1)  | COMPLETED | 0    | 2014-10-23 16:38:19.657 | 1m 30s   | 1m 11s   | 94.3%  | 611.6 MB  | 693.8 MB  | 961.2 GB | 6.1 GB   |
+| 32      | af/7f2f57 | 2044      | exonerate (4)  | COMPLETED | 0    | 2014-10-23 16:46:50.902 | 1m 1s    | 38s      | 36.6%  | 115.8 MB  | 167.8 MB  | 364 GB   | 5.1 GB   |
+| 33      | 37/ab1fcc | 2045      | exonerate (5)  | COMPLETED | 0    | 2014-10-23 16:47:51.625 | 30s      | 12s      | 59.6%  | 696 MB    | 734.6 MB  | 354.3 GB | 420.4 MB |
+| 31      | d7/eabe51 | 2042      | exonerate (3)  | COMPLETED | 0    | 2014-10-23 16:45:50.846 | 3m 1s    | 2m 6s    | 130.1% | 703.3 MB  | 760.9 MB  | 1.1 TB   | 28.6 GB  |
+| 36      | c4/d6cc15 | 2048      | exonerate (6)  | COMPLETED | 0    | 2014-10-23 16:48:48.718 | 3m 1s    | 2m 43s   | 116.6% | 682.1 MB  | 743.6 MB  | 868.5 GB | 42 GB    |
+| 30      | 4f/1ad1f0 | 2043      | exonerate (2)  | COMPLETED | 0    | 2014-10-23 16:45:50.961 | 10m 2s   | 9m 16s   | 95.5%  | 706.2 MB  | 764 MB    | 1.6 TB   | 172.4 GB |
+| 52      | 72/41d0c6 | 2055      | similarity (1) | COMPLETED | 0    | 2014-10-23 17:13:23.543 | 30s      | 352ms    | 0.0%   | 35.6 MB   | 58.3 MB   | 199.3 MB | 7.9 MB   |
+| 57      | 9b/111b5e | 2058      | similarity (6) | COMPLETED | 0    | 2014-10-23 17:13:23.655 | 30s      | 488ms    | 0.0%   | 108.2 MB  | 158 MB    | 317.1 MB | 9.8 MB   |
+| 53      | 3e/bca30f | 2061      | similarity (2) | COMPLETED | 0    | 2014-10-23 17:13:23.770 | 30s      | 238ms    | 0.0%   | 6.7 MB    | 29.6 MB   | 190 MB   | 91.2 MB  |
+| 54      | 8b/d45b47 | 2062      | similarity (3) | COMPLETED | 0    | 2014-10-23 17:13:23.808 | 30s      | 442ms    | 0.0%   | 108.1 MB  | 158 MB    | 832 MB   | 565.6 MB |
+| 55      | 51/ac19c6 | 2064      | similarity (4) | COMPLETED | 0    | 2014-10-23 17:13:23.873 | 30s      | 6s       | 0.0%   | 112.7 MB  | 162.8 MB  | 4.9 GB   | 3.9 GB   |
+| 56      | c3/ec5f4a | 2066      | similarity (5) | COMPLETED | 0    | 2014-10-23 17:13:23.948 | 30s      | 616ms    | 0.0%   | 10.4 MB   | 34.6 MB   | 238 MB   | 8.4 MB   |
+| 98      | de/d6c0a6 | 2099      | matrix (1)     | COMPLETED | 0    | 2014-10-23 17:14:27.139 | 30s      | 1s       | 0.0%   | 4.8 MB    | 42 MB     | 240.6 MB | 79 KB    |
 
 (trace-fields)=
 
@@ -197,7 +197,7 @@ The following table shows the fields that can be included in the execution repor
 : Nextflow process name.
 
 `tag`
-: User provided identifier associated this task.
+: User provided identifier associated with this task.
 
 `name`
 : Task name.
@@ -302,7 +302,7 @@ The following table shows the fields that can be included in the execution repor
 : The value of the process `scratch` directive.
 
 `error_action`
-: The action applied on errof task failure.
+: The action applied on error for task failure.
 
 `hostname`
 : :::{versionadded} 22.05.0-edge
@@ -331,7 +331,7 @@ Nextflow can render an HTML timeline for all processes executed in your pipeline
 ```{image} _static/timeline-min.png
 ```
 
-Each bar represents a process run in the pipeline execution. The bar length represents the task duration time (wall-time). The colored area in each bar represents the real execution time. The grey area to the *left* of the colored area represents the task scheduling wait time. The grey area to the *right* of the colored area represents the task termination time (clean-up and file un-staging). The numbers on the x-axis represent the time in absolute units e.g. minutes, hours, etc.
+Each bar represents a process run in the pipeline execution. The bar length represents the task duration time (wall-time). The colored area in each bar represents the real execution time. The gray area to the *left* of the colored area represents the task scheduling wait time. The gray area to the *right* of the colored area represents the task termination time (clean-up and file un-staging). The numbers on the x-axis represent the time in absolute units e.g. minutes, hours, etc.
 
 Each bar displays two numbers: the task duration time and the virtual memory size peak.
 

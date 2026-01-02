@@ -16,31 +16,27 @@
 
 package nextflow.scm
 
-import java.nio.channels.UnresolvedAddressException
-import java.time.temporal.ChronoUnit
-import java.util.function.Predicate
-
 import static nextflow.util.StringUtils.*
 
-import dev.failsafe.Failsafe
-import dev.failsafe.FailsafeException
-import dev.failsafe.RetryPolicy
-import dev.failsafe.event.EventListener
-import dev.failsafe.event.ExecutionAttemptedEvent
-import dev.failsafe.function.CheckedSupplier
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.nio.channels.UnresolvedAddressException
 import java.time.Duration
 import java.util.concurrent.Executors
+import java.util.function.Predicate
 
 import groovy.json.JsonSlurper
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
+import io.seqera.http.HxClient
+import io.seqera.http.HxConfig
 import nextflow.Const
+import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
+import nextflow.exception.HttpResponseLengthExceedException
 import nextflow.exception.RateLimitExceededException
 import nextflow.util.RetryConfig
 import nextflow.util.Threads
@@ -70,11 +66,24 @@ abstract class RepositoryProvider {
         String commitId
     }
 
+    enum EntryType {
+        FILE, DIRECTORY
+    }
+
+    @Canonical
+    static class RepositoryEntry {
+        String name
+        String path
+        EntryType type
+        String sha
+        Long size
+    }
+
     /**
      * The client used to carry out http requests
      */
-    private HttpClient httpClient
-
+    private HxClient httpClient
+    
     /**
      * The retry options to be used for http requests
      */
@@ -130,6 +139,8 @@ abstract class RepositoryProvider {
     String getUser() { config?.user }
 
     String getPassword() { config?.password }
+
+    String getToken() { config?.token }
 
     /**
      * @return The name of the source hub service e.g. github or bitbucket
@@ -224,14 +235,26 @@ abstract class RepositoryProvider {
      * @return The remote service response as a text
      */
     protected String invoke( String api ) {
+        final result = invokeBytes(api)
+        return result!=null ? new String(result) : null
+    }
+
+    /**
+     * Invoke the API request specified and return binary content
+     *
+     * @param api A API request url e.g. https://api.github.com/repos/nextflow-io/hello/raw/image.png
+     * @return The remote service response as byte array
+     */
+    protected byte[] invokeBytes( String api ) {
         assert api
         log.debug "Request [credentials ${getAuthObfuscated() ?: '-'}] -> $api"
         final request = newRequest(api)
         // submit the request
-        final HttpResponse<String> resp = httpSend(request)
+        final HttpResponse<byte[]> resp = httpSend0(request)
         // check the response code
         checkResponse(resp)
-        // return the body as string
+        checkMaxLength(resp)
+        // return the body as byte array
         return resp.body()
     }
 
@@ -263,7 +286,7 @@ abstract class RepositoryProvider {
      *
      * @param response A {@link HttpURLConnection} response instance
      */
-    protected checkResponse( HttpResponse<String> response ) {
+    protected checkResponse( HttpResponse<?> response ) {
         final code = response.statusCode()
         if( code==401 ) {
             log.debug "Response status: $code -- ${response.body()}"
@@ -297,6 +320,17 @@ abstract class RepositoryProvider {
             }
             throw new IOException(msg)
         }
+    }
+
+    protected void checkMaxLength(HttpResponse<byte[]> response) {
+        final max = SysEnv.getLong("NXF_GIT_RESPONSE_MAX_LENGTH", 0)
+        if( max<=0 )
+            return
+        final length = response.headers().firstValueAsLong('Content-Length').orElse(0)
+        if( length<=0 )
+            return
+        if( length>max )
+            throw new HttpResponseLengthExceedException("HTTP response '${response.uri()}' is too big - response length: ${length}; max allowed length: ${max}")
     }
 
     protected <T> List<T> invokeAndResponseWithPaging(String request, Closure<T> parse) {
@@ -355,6 +389,38 @@ abstract class RepositoryProvider {
      */
     abstract byte[] readBytes( String path )
 
+    /**
+     * List directory contents in the remote repository with depth control
+     *
+     * @param path The relative path of the directory to list (empty string or null for root)
+     * @param depth The maximum depth of traversal:
+     *              - depth = 1: immediate children only
+     *              - depth = 2: children + grandchildren  
+     *              - depth = 3: children + grandchildren + great-grandchildren
+     *              - larger values: traverse deeper accordingly
+     * 
+     * Example: Given repository structure:
+     * <pre>
+     * /
+     * ├── file-a.txt
+     * ├── file-b.txt
+     * ├── dir-a/
+     * │   ├── file-c.txt
+     * │   └── subdir/
+     * │       └── file-d.txt
+     * └── dir-b/
+     *     └── file-e.txt
+     * </pre>
+     *
+     * Results for listDirectory("/", depth):
+     * - depth = 1: [file-a.txt, file-b.txt, dir-a/, dir-b/]
+     * - depth = 2: [file-a.txt, file-b.txt, dir-a/, dir-b/, file-c.txt, file-e.txt]
+     * - depth = 3: [file-a.txt, file-b.txt, dir-a/, dir-b/, file-c.txt, file-e.txt, file-d.txt]
+     *
+     * @return A list of repository entries (files and directories) excluding the root directory itself
+     */
+    abstract List<RepositoryEntry> listDirectory( String path, int depth )
+
     String readText( String path ) {
         def bytes = readBytes(path)
         return bytes ? new String(bytes) : null
@@ -386,51 +452,20 @@ abstract class RepositoryProvider {
         }
     }
 
-    /**
-     * Creates a retry policy using the configuration specified by {@link RetryConfig}
-     *
-     * @param cond
-     *      A predicate that determines when a retry should be triggered
-     * @param handle
-     *
-     * @return
-     *      The {@link dev.failsafe.RetryPolicy} instance
-     */
-    protected <T> RetryPolicy<T> retryPolicy(Predicate<? extends Throwable> cond, Predicate<T> handle) {
-        final listener = new EventListener<ExecutionAttemptedEvent<?>>() {
-            @Override
-            void accept(ExecutionAttemptedEvent<?> event) throws Throwable {
-                def msg = "Git provider connection failure - attempt: ${event.attemptCount}"
-                if( event.lastResult !=null )
-                    msg += "; response: ${event.lastResult}"
-                if( event.lastFailure != null )
-                    msg += "; exception: [${event.lastFailure.class.name}] ${event.lastFailure.message}"
-                log.debug(msg)
-            }
-        }
-        return RetryPolicy.<T>builder()
-            .handleIf(cond)
-            .handleResultIf(handle)
-            .withBackoff(retryConfig.delay.toMillis(), retryConfig.maxDelay.toMillis(), ChronoUnit.MILLIS)
-            .withMaxAttempts(retryConfig.maxAttempts)
-            .withJitter(retryConfig.jitter)
-            .onRetry(listener as EventListener)
-            .build()
-    }
+    static private final Set<Integer> HTTP_RETRYABLE_ERRORS = Set.of(429, 500, 502, 503, 504)
 
-    static private final List<Integer> HTTP_RETRYABLE_ERRORS = [429, 500, 502, 503, 504]
+    @Memoized
+    private HxConfig retryConfig0() {
+        if( retryConfig==null )
+            retryConfig = new RetryConfig()
 
-    /**
-     * Carry out the invocation of the specified action using a retry policy.
-     *
-     * @param action A {@link dev.failsafe.function.CheckedSupplier} instance modeling the action to be performed in a safe manner
-     * @return The result of the supplied action
-     */
-    protected <T> HttpResponse<T> safeApply(CheckedSupplier action) {
         final retryOnException = ((Throwable e) -> isRetryable(e) || isRetryable(e.cause)) as Predicate<? extends Throwable>
-        final retryOnStatusCode = ((HttpResponse<T> resp) -> resp.statusCode() in HTTP_RETRYABLE_ERRORS) as Predicate<HttpResponse<T>>
-        final policy = retryPolicy(retryOnException, retryOnStatusCode)
-        return Failsafe.with(policy).get(action)
+
+        HxConfig.newBuilder()
+            .withRetryConfig(retryConfig)
+            .withRetryStatusCodes(HTTP_RETRYABLE_ERRORS)
+            .withRetryCondition(retryOnException)
+            .build();
     }
 
     protected boolean isRetryable(Throwable t) {
@@ -447,28 +482,111 @@ abstract class RepositoryProvider {
             return isCausedByUnresolvedAddressException(t.cause)
     }
 
+    @Deprecated
     protected HttpResponse<String> httpSend(HttpRequest request) {
-        if( httpClient==null )
-            httpClient = newHttpClient()
-        if( retryConfig==null )
-            retryConfig = new RetryConfig()
-        try {
-            safeApply(()-> httpClient.send(request, HttpResponse.BodyHandlers.ofString()))
+        if( httpClient==null ) {
+            httpClient = HxClient.newBuilder()
+                .httpClient(newHttpClient())
+                .retryConfig(retryConfig0())
+                .build()
         }
-        catch (FailsafeException e) {
-            throw e.cause
+
+        return httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+    }
+
+    private HttpResponse<byte[]> httpSend0(HttpRequest request) {
+        if( httpClient==null ) {
+            httpClient = HxClient.newBuilder()
+                .httpClient(newHttpClient())
+                .retryConfig(retryConfig0())
+                .build()
         }
+
+        return httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray())
     }
 
     private HttpClient newHttpClient() {
         final builder = HttpClient.newBuilder()
             .version(HttpClient.Version.HTTP_1_1)
             .connectTimeout(Duration.ofSeconds(60))
+            .followRedirects(HttpClient.Redirect.NORMAL)
         // use virtual threads executor if enabled
         if( Threads.useVirtual() )
             builder.executor(Executors.newVirtualThreadPerTaskExecutor())
         // build and return the new client
         return builder.build()
+    }
+
+    /**
+     * Normalizes a path for repository operations by treating "/" as an empty path (root directory).
+     * This helper method ensures consistent path handling across all repository providers.
+     *
+     * @param path The input path to normalize
+     * @return Normalized path: null/empty/"/" becomes "", otherwise removes leading slash
+     */
+    protected static String normalizePath(String path) {
+        if (path == "/" || path == null || path.isEmpty()) {
+            return ""
+        }
+        return path.startsWith("/") ? path.substring(1) : path
+    }
+
+    /**
+     * Ensures a path starts with "/" to create an absolute path for consistent API responses.
+     * This helper method is used when creating RepositoryEntry objects.
+     *
+     * @param path The input path
+     * @return Absolute path starting with "/"
+     */
+    protected static String ensureAbsolutePath(String path) {
+        if (path == null || path.isEmpty()) {
+            return "/"
+        }
+        return path.startsWith("/") ? path : "/" + path
+    }
+
+    /**
+     * Checks if an entry should be included based on depth filtering.
+     * This helper provides consistent depth semantics across providers.
+     *
+     * @param entryPath The full path of the entry
+     * @param basePath The base directory path being listed
+     * @param depth The maximum depth (-1 for unlimited, 0 for immediate children only)
+     * @return true if the entry should be included
+     */
+    protected static boolean shouldIncludeAtDepth(String entryPath, String basePath, int depth) {
+        if (depth == -1) {
+            return true // Unlimited depth
+        }
+
+        String relativePath = entryPath
+        String normalizedBasePath = normalizePath(basePath)
+        
+        if (normalizedBasePath && !normalizedBasePath.isEmpty()) {
+            String normalizedEntry = entryPath.stripStart('/').stripEnd('/')
+            normalizedBasePath = normalizedBasePath.stripEnd('/')
+            
+            if (normalizedEntry.startsWith(normalizedBasePath + "/")) {
+                relativePath = normalizedEntry.substring(normalizedBasePath.length() + 1)
+            } else if (normalizedEntry == normalizedBasePath) {
+                return false // Skip the base directory itself
+            } else {
+                return false // Entry is not under the base path
+            }
+        } else {
+            // For root directory, use the entry path directly
+            relativePath = entryPath.stripStart('/').stripEnd('/')
+        }
+        
+        if (relativePath.isEmpty()) {
+            return false
+        }
+        
+        // Count directory levels in the relative path
+        int entryDepth = relativePath.split("/").length - 1
+        
+        // Include if within depth limit: depth=0 includes immediate children only
+        return entryDepth <= depth
     }
 
 }

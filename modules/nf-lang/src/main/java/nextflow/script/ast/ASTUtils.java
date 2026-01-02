@@ -16,21 +16,29 @@
 
 package nextflow.script.ast;
 
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import groovy.transform.NamedParams;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.AnnotatedNode;
 import org.codehaus.groovy.ast.AnnotationNode;
 import org.codehaus.groovy.ast.MethodNode;
+import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.ast.PropertyNode;
 import org.codehaus.groovy.ast.Variable;
+import org.codehaus.groovy.ast.expr.AnnotationConstantExpression;
+import org.codehaus.groovy.ast.expr.ClassExpression;
 import org.codehaus.groovy.ast.expr.ClosureExpression;
 import org.codehaus.groovy.ast.expr.ConstantExpression;
 import org.codehaus.groovy.ast.expr.Expression;
+import org.codehaus.groovy.ast.expr.ListExpression;
 import org.codehaus.groovy.ast.expr.MapExpression;
 import org.codehaus.groovy.ast.expr.MapEntryExpression;
 import org.codehaus.groovy.ast.expr.MethodCall;
@@ -42,9 +50,7 @@ import org.codehaus.groovy.ast.expr.VariableExpression;
 import org.codehaus.groovy.ast.stmt.BlockStatement;
 import org.codehaus.groovy.ast.stmt.ExpressionStatement;
 import org.codehaus.groovy.ast.stmt.Statement;
-
-import static org.codehaus.groovy.ast.tools.GeneralUtils.args;
-import static org.codehaus.groovy.ast.tools.GeneralUtils.ctorX;
+import org.codehaus.groovy.ast.tools.GeneralUtils;
 
 /**
  * Utility functions for common AST operations.
@@ -53,20 +59,24 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.ctorX;
  */
 public class ASTUtils {
 
+    public static Expression classX(String name) {
+        return GeneralUtils.classX(ClassHelper.makeWithoutCaching(name));
+    }
+
     public static Expression createX(Class type, TupleExpression args) {
-        return ctorX(new ClassNode(type), args);
+        return GeneralUtils.ctorX(new ClassNode(type), args);
     }
 
     public static Expression createX(Class type, Expression... expressions) {
-        return ctorX(new ClassNode(type), args(expressions));
+        return GeneralUtils.ctorX(new ClassNode(type), GeneralUtils.args(expressions));
     }
 
     public static Expression createX(String name, TupleExpression args) {
-        return ctorX(ClassHelper.makeWithoutCaching(name), args);
+        return GeneralUtils.ctorX(ClassHelper.makeWithoutCaching(name), args);
     }
 
     public static Expression createX(String name, Expression... expressions) {
-        return ctorX(ClassHelper.makeWithoutCaching(name), args(expressions));
+        return GeneralUtils.ctorX(ClassHelper.makeWithoutCaching(name), GeneralUtils.args(expressions));
     }
 
     public static List<Statement> asBlockStatements(Statement statement) {
@@ -111,6 +121,16 @@ public class ASTUtils {
         return (BlockStatement) closure.getCode();
     }
 
+    public static Parameter[] asFlatParams(Parameter[] params) {
+        return Arrays.stream(params)
+            .flatMap((param) -> (
+                param instanceof TupleParameter tp
+                    ? Arrays.stream(tp.components)
+                    : Stream.of(param)
+            ))
+            .toArray(Parameter[]::new);
+    }
+
     public static MethodCallExpression asMethodCallX(Statement stmt) {
         if( !(stmt instanceof ExpressionStatement) )
             return null;
@@ -129,6 +149,40 @@ public class ASTUtils {
         return args.size() > 0 && args.get(0) instanceof NamedArgumentListExpression nale
             ? nale.getMapEntryExpressions()
             : Collections.emptyList();
+    }
+
+    /**
+     * Given a parameter with a @NamedParams annotation,
+     * return the map of named params.
+     *
+     * @param parameter
+     */
+    public static Map<String, AnnotationNode> asNamedParams(Parameter parameter) {
+        var namedParams = new LinkedHashMap<String, AnnotationNode>();
+        parameter.getAnnotations().stream()
+            .filter(an -> an.getClassNode().getName().equals(NamedParams.class.getName()))
+            .flatMap(an -> {
+                var value = an.getMember("value");
+                return value instanceof ListExpression le
+                    ? le.getExpressions().stream()
+                    : Stream.empty();
+            })
+            .forEach((value) -> {
+                if( !(value instanceof AnnotationConstantExpression) )
+                    return;
+                var ace = (AnnotationConstantExpression) value;
+                var namedParam = (AnnotationNode) ace.getValue();
+                var name = namedParam.getMember("value").getText();
+                namedParams.put(name, namedParam);
+            });
+        return namedParams;
+    }
+
+    public static Parameter asNamedParam(AnnotationNode node) {
+        var name = node.getMember("value").getText();
+        var typeX = (ClassExpression) node.getMember("type");
+        var type = typeX != null ? typeX.getType() : ClassHelper.dynamicType();
+        return new Parameter(type, name);
     }
 
     public static VariableExpression asVarX(Statement statement) {

@@ -16,6 +16,7 @@
 package nextflow.cloud.azure.batch
 
 import nextflow.exception.ProcessException
+import nextflow.util.TestOnly
 
 import java.nio.file.Path
 
@@ -114,7 +115,8 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         if( done ) {
             // finalize the task
             final info = batchService.getTask(taskKey).executionInfo
-            task.exitStatus = info?.exitCode ?: readExitFile()
+            // Try to get exit code from Azure batch API and fallback to .exitcode
+            task.exitStatus = info?.exitCode != null ? info.exitCode : readExitFile()
             task.stdout = outputFile
             task.stderr = errorFile
             status = TaskStatus.COMPLETED
@@ -131,7 +133,7 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     private Boolean shouldDelete() {
-        executor.config.batch().deleteTasksOnCompletion
+        executor.azConfig.batch().deleteTasksOnCompletion
     }
 
     protected void deleteTask(AzTaskKey taskKey, TaskRun task) {
@@ -203,6 +205,11 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             log.trace "[AZURE BATCH] task=$taskKey => machineInfo=$machineInfo"
         }
         return machineInfo
+    }
+
+    @TestOnly
+    protected setTaskKey(AzTaskKey key){
+        this.taskKey = key
     }
 
 }

@@ -16,6 +16,7 @@
 package nextflow.script.ast;
 
 import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.ast.GroovyCodeVisitor;
 
 public interface ScriptVisitor extends GroovyCodeVisitor {
@@ -26,11 +27,19 @@ public interface ScriptVisitor extends GroovyCodeVisitor {
 
     void visitInclude(IncludeNode node);
 
-    void visitParam(ParamNode node);
+    void visitParams(ParamBlockNode node);
+
+    void visitParam(Parameter node);
+
+    void visitParamV1(ParamNodeV1 node);
 
     void visitWorkflow(WorkflowNode node);
 
     void visitProcess(ProcessNode node);
+
+    void visitProcessV2(ProcessNodeV2 node);
+
+    void visitProcessV1(ProcessNodeV1 node);
 
     void visitFunction(FunctionNode node);
 

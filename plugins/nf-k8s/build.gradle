@@ -13,10 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-apply plugin: 'java'
-apply plugin: 'java-test-fixtures'
-apply plugin: 'idea'
-apply plugin: 'groovy'
+plugins {
+    id 'io.nextflow.nextflow-plugin' version "${nextflowPluginVersion}"
+    id 'java-test-fixtures'
+}
+
+nextflowPlugin {
+    nextflowVersion = '25.12.0-edge'
+
+    provider = "${nextflowPluginProvider}"
+    description = 'Provides native Kubernetes execution capability with advanced pod management, volume mounting, and resource allocation features'
+    className = 'nextflow.k8s.K8sPlugin'
+    useDefaultDependencies = false
+    generateSpec = false
+    extensionPoints = [
+        'nextflow.k8s.K8sConfig',
+        'nextflow.k8s.K8sExecutor',
+        'nextflow.k8s.cli.KubeCommandImpl',
+    ]
+}
 
 sourceSets {
     main.java.srcDirs = []
@@ -38,11 +53,11 @@ dependencies {
     compileOnly 'org.pf4j:pf4j:3.12.0'
 
     api 'org.bouncycastle:bcprov-ext-jdk18on:1.78.1'
-    api 'org.bouncycastle:bcpkix-jdk18on:1.78.1'
+    api 'org.bouncycastle:bcpkix-jdk18on:1.79'
 
     testImplementation(testFixtures(project(":nextflow")))
-    testImplementation "org.apache.groovy:groovy:4.0.27"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.27"
+    testImplementation "org.apache.groovy:groovy:4.0.29"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.29"
 }
 
 test {

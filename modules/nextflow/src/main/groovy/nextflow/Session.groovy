@@ -37,7 +37,14 @@ import nextflow.cache.CacheDB
 import nextflow.cache.CacheFactory
 import nextflow.conda.CondaConfig
 import nextflow.config.Manifest
+import nextflow.container.ApptainerConfig
+import nextflow.container.CharliecloudConfig
 import nextflow.container.ContainerConfig
+import nextflow.container.DockerConfig
+import nextflow.container.PodmanConfig
+import nextflow.container.SarusConfig
+import nextflow.container.ShifterConfig
+import nextflow.container.SingularityConfig
 import nextflow.dag.DAG
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortSignalException
@@ -54,13 +61,13 @@ import nextflow.processor.TaskFault
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
 import nextflow.script.BaseScript
-import nextflow.script.ProcessConfig
 import nextflow.script.ProcessFactory
 import nextflow.script.ScriptBinding
 import nextflow.script.ScriptFile
 import nextflow.script.ScriptMeta
 import nextflow.script.ScriptRunner
 import nextflow.script.WorkflowMetadata
+import nextflow.script.dsl.ProcessConfigBuilder
 import nextflow.spack.SpackConfig
 import nextflow.trace.AnsiLogObserver
 import nextflow.trace.TraceObserver
@@ -81,8 +88,7 @@ import nextflow.util.NameGenerator
 import nextflow.util.SysHelper
 import nextflow.util.ThreadPoolManager
 import nextflow.util.Threads
-import nextflow.util.VersionNumber
-import org.apache.commons.lang.exception.ExceptionUtils
+import org.apache.commons.lang3.exception.ExceptionUtils
 import sun.misc.Signal
 import sun.misc.SignalHandler
 /**
@@ -112,6 +118,16 @@ class Session implements ISession {
      * Script binding
      */
     ScriptBinding binding
+
+    /**
+     * Params that were specified on the command line.
+     */
+    Map cliParams
+
+    /**
+     * Params that were specified in the configuration.
+     */
+    Map configParams
 
     /**
      * Holds the configuration object
@@ -418,7 +434,7 @@ class Session implements ISession {
     /**
      * Initialize the session workDir, libDir, baseDir and scriptName variables
      */
-    Session init( ScriptFile scriptFile, List<String> args=null ) {
+    Session init( ScriptFile scriptFile, List<String> args=null, Map<String,?> cliParams=null, Map<String,?> configParams=null ) {
 
         if(!workDir.mkdirs()) throw new AbortOperationException("Cannot create work-dir: $workDir -- Make sure you have write permissions or specify a different directory by using the `-w` command line option")
         log.debug "Work-dir: ${workDir.toUriString()} [${FileHelper.getPathFsType(workDir)}]"
@@ -436,15 +452,17 @@ class Session implements ISession {
         }
 
         // set the byte-code target directory
-        this.disableRemoteBinDir = getExecConfigProp(null, 'disableRemoteBinDir', false)
+        this.disableRemoteBinDir = (config.executor as Map)?.disableRemoteBinDir as boolean
         this.classesDir = FileHelper.createLocalDir()
         this.executorFactory = new ExecutorFactory(Plugins.manager)
-        this.observersV1 = createObserversV1()
         this.observersV2 = createObserversV2()
+        this.observersV1 = createObserversV1()
         this.statsEnabled = observersV1.any { ob -> ob.enableMetrics() } || observersV2.any { ob -> ob.enableMetrics() }
         this.workflowMetadata = new WorkflowMetadata(this, scriptFile)
 
         // configure script params
+        this.cliParams = cliParams
+        this.configParams = configParams
         binding.setParams( (Map)config.params )
         binding.setArgs( new ScriptRunner.ArgsList(args) )
 
@@ -463,31 +481,23 @@ class Session implements ISession {
     }
 
     /**
-     * Given the `run` command line options creates the required {@link TraceObserver}s
-     *
-     * @param runOpts The {@code CmdRun} object holding the run command options
-     * @return A list of {@link TraceObserver} objects or an empty list
+     * Create the required trace observers based on the given CLI and config options.
      */
     @PackageScope
     List<TraceObserver> createObserversV1() {
-
-        final result = new ArrayList(10)
-
-        // stats is created as first because others may depend on it
-        statsObserver = new WorkflowStatsObserver(this)
-        result.add(statsObserver)
-
+        final result = new ArrayList<TraceObserver>(10)
         for( TraceObserverFactory f : Plugins.getExtensions(TraceObserverFactory) ) {
             log.debug "Observer factory: ${f.class.simpleName}"
             result.addAll(f.create(this))
         }
-
         return result
     }
 
     @PackageScope
     List<TraceObserverV2> createObserversV2() {
-        final result = new ArrayList(10)
+        final result = new ArrayList<TraceObserverV2>(10)
+        this.statsObserver = new WorkflowStatsObserver(this)
+        result.add(statsObserver)
         for( TraceObserverFactoryV2 f : Plugins.getExtensions(TraceObserverFactoryV2) ) {
             log.debug "Observer factory (v2): ${f.class.simpleName}"
             result.addAll(f.create(this))
@@ -675,7 +685,6 @@ class Session implements ISession {
         throw new IllegalStateException("Not a valid config env object: $config.env")
     }
 
-    @Memoized
     Manifest getManifest() {
         if( !config.manifest )
             return new Manifest()
@@ -819,8 +828,10 @@ class Session implements ISession {
             // dump threads status
             if( log.isTraceEnabled() )
                 log.trace(SysHelper.dumpThreads())
-            // force termination
+            // invoke shutdown callbacks
+            shutdown0()
             notifyError(null)
+            // force termination
             ansiLogObserver?.forceTermination()
             executorFactory?.signalExecutors()
             processesBarrier.forceTermination()
@@ -877,13 +888,6 @@ class Session implements ISession {
 
     ExecutorService getExecService() { execService }
 
-    /**
-     * Check preconditions before run the main script
-     */
-    protected void validate() {
-        checkVersion()
-    }
-
     @PackageScope void checkConfig() {
         final enabled = config.navigate('nextflow.enable.configProcessNamesValidation', true) as boolean
         if( enabled ) {
@@ -903,36 +907,6 @@ class Session implements ISession {
 
     boolean failOnIgnore() {
         config.navigate('workflow.failOnIgnore', false) as boolean
-    }
-
-    @PackageScope VersionNumber getCurrentVersion() {
-        new VersionNumber(BuildInfo.version)
-    }
-
-    @PackageScope void checkVersion() {
-        def version = manifest.getNextflowVersion()?.trim()
-        if( !version )
-            return
-
-        // when the version string is prefix with a `!`
-        // an exception is thrown is the version does not match
-        boolean important = false
-        if( version.startsWith('!') ) {
-            important = true
-            version = version.substring(1).trim()
-        }
-
-        if( !getCurrentVersion().matches(version) ) {
-            important ? showVersionError(version) : showVersionWarning(version)
-        }
-    }
-
-    @PackageScope void showVersionError(String ver) {
-        throw new AbortOperationException("Nextflow version $BuildInfo.version does not match workflow required version: $ver")
-    }
-
-    @PackageScope void showVersionWarning(String ver) {
-        log.warn "Nextflow version $BuildInfo.version does not match workflow required version: $ver -- Execution will continue, but things may break!"
     }
 
     /**
@@ -979,7 +953,7 @@ class Session implements ISession {
      * @return {@code true} if the name specified belongs to the list of process names or {@code false} otherwise
      */
     protected boolean checkValidProcessName(Collection<String> processNames, String selector, List<String> errorMessage)  {
-        final matches = processNames.any { name -> ProcessConfig.matchesSelector(name, selector) }
+        final matches = processNames.any { name -> ProcessConfigBuilder.matchesSelector(name, selector) }
         if( matches )
             return true
 
@@ -1077,7 +1051,6 @@ class Session implements ISession {
     }
 
     void notifyBeforeWorkflowExecution() {
-        validate()
     }
 
     void notifyAfterWorkflowExecution() {
@@ -1184,14 +1157,14 @@ class Session implements ISession {
 
     @Memoized
     CondaConfig getCondaConfig() {
-        final cfg = config.conda as Map ?: Collections.emptyMap()
-        return new CondaConfig(cfg, getSystemEnv())
+        final opts = config.conda as Map ?: Collections.emptyMap()
+        return new CondaConfig(opts, getSystemEnv())
     }
 
     @Memoized
     SpackConfig getSpackConfig() {
-        final cfg = config.spack as Map ?: Collections.emptyMap()
-        return new SpackConfig(cfg, getSystemEnv())
+        final opts = config.spack as Map ?: Collections.emptyMap()
+        return new SpackConfig(opts, getSystemEnv())
     }
 
     /**
@@ -1207,89 +1180,36 @@ class Session implements ISession {
     @Memoized
     ContainerConfig getContainerConfig(String engine) {
 
-        final allEngines = new LinkedList<Map>()
-        getContainerConfig0('docker', allEngines)
-        getContainerConfig0('podman', allEngines)
-        getContainerConfig0('sarus', allEngines)
-        getContainerConfig0('shifter', allEngines)
-        getContainerConfig0('udocker', allEngines)
-        getContainerConfig0('singularity', allEngines)
-        getContainerConfig0('apptainer', allEngines)
-        getContainerConfig0('charliecloud', allEngines)
+        final allConfigs = [
+            new DockerConfig(config.docker as Map ?: Collections.emptyMap()),
+            new PodmanConfig(config.podman as Map ?: Collections.emptyMap()),
+            new SarusConfig(config.sarus as Map ?: Collections.emptyMap()),
+            new ShifterConfig(config.shifter as Map ?: Collections.emptyMap()),
+            new SingularityConfig(config.singularity as Map ?: Collections.emptyMap()),
+            new ApptainerConfig(config.apptainer as Map ?: Collections.emptyMap()),
+            new CharliecloudConfig(config.charliecloud as Map ?: Collections.emptyMap()),
+        ] as List<ContainerConfig>
 
         if( engine ) {
-            final result = allEngines.find(it -> it.engine==engine) ?: [engine: engine]
-            return new ContainerConfig(result)
+            return allConfigs.find { it -> it.engine == engine }
         }
 
-        final enabled = allEngines.findAll(it -> it.enabled?.toString() == 'true')
-        if( enabled.size() > 1 ) {
-            final names = enabled.collect(it -> it.engine)
+        final allEnabled = allConfigs.findAll { it -> it.enabled }
+        if( allEnabled.size() > 1 ) {
+            final names = allEnabled.collect { it -> it.engine }
             throw new IllegalConfigException("Cannot enable more than one container engine -- Choose either one of: ${names.join(', ')}")
         }
-        if( enabled ) {
-            return new ContainerConfig(enabled.get(0))
+        if( allEnabled ) {
+            return allEnabled.first()
         }
-        if( allEngines ) {
-            return new ContainerConfig(allEngines.get(0))
+        if( allConfigs ) {
+            return allConfigs.first()
         }
-        return new ContainerConfig(engine:'docker')
+        return new DockerConfig([:])
     }
 
     ContainerConfig getContainerConfig() {
         return getContainerConfig(null)
-    }
-
-    private void getContainerConfig0(String engine, List<Map> drivers) {
-        assert engine
-        final entry = this.config?.get(engine)
-        if( entry instanceof Map ) {
-            final config0 = new LinkedHashMap()
-            config0.putAll((Map)entry)
-            config0.put('engine', engine)
-            drivers.add(config0)
-        }
-        else if( entry!=null ) {
-            log.warn "Malformed configuration for container engine '$engine' -- One or more attributes should be provided"
-        }
-    }
-
-    @Memoized
-    def getExecConfigProp( String execName, String name, Object defValue, Map env = null  ) {
-        def result = ConfigHelper.getConfigProperty(config.executor, execName, name )
-        if( result != null )
-            return result
-
-        // -- try to fallback sys env
-        def key = "NXF_EXECUTOR_${name.toUpperCase().replaceAll(/\./,'_')}".toString()
-        if( env == null ) env = System.getenv()
-        return env.containsKey(key) ? env.get(key) : defValue
-    }
-
-    @Memoized
-    def getConfigAttribute(String name, defValue )  {
-        def result = getMap0(getConfig(),name,name)
-        if( result != null )
-            return result
-
-        def key = "NXF_${name.toUpperCase().replaceAll(/\./,'_')}".toString()
-        def env = getSystemEnv()
-        return (env.containsKey(key) ? env.get(key) : defValue)
-    }
-
-    private getMap0(Map map, String name, String fqn) {
-        def p=name.indexOf('.')
-        if( p == -1 )
-            return map.get(name)
-        else {
-            def k=name.substring(0,p)
-            def v=map.get(k)
-            if( v == null )
-                return null
-            if( v instanceof Map )
-                return getMap0(v,name.substring(p+1),fqn)
-            throw new IllegalArgumentException("Not a valid config attribute: $fqn -- Missing element: $k")
-        }
     }
 
     @Memoized
@@ -1356,68 +1276,6 @@ class Session implements ISession {
         }
 
         return String.valueOf(val)
-    }
-
-
-    /**
-     * Defines the number of tasks the executor will handle in a parallel manner
-     *
-     * @param execName The executor name
-     * @param defValue The default value if setting is not defined in the configuration file
-     * @return The value of tasks to handle in parallel
-     */
-    @Memoized
-    int getQueueSize( String execName, int defValue ) {
-        getExecConfigProp(execName, 'queueSize', defValue) as int
-    }
-
-    /**
-     * Determines how often a poll occurs to check for a process termination
-     *
-     * @param execName The executor name
-     * @param defValue The default value if setting is not defined in the configuration file
-     * @return A {@code Duration} object. Default '1 second'
-     */
-    @Memoized
-    Duration getPollInterval( String execName, Duration defValue = Duration.of('1sec') ) {
-        getExecConfigProp( execName, 'pollInterval', defValue ) as Duration
-    }
-
-    /**
-     *  Determines how long the executors waits before return an error status when a process is
-     *  terminated but the exit file does not exist or it is empty. This setting is used only by grid executors
-     *
-     * @param execName The executor name
-     * @param defValue The default value if setting is not defined in the configuration file
-     * @return A {@code Duration} object. Default '90 second'
-     */
-    @Memoized
-    Duration getExitReadTimeout( String execName, Duration defValue = Duration.of('90sec') ) {
-        getExecConfigProp( execName, 'exitReadTimeout', defValue ) as Duration
-    }
-
-    /**
-     * Determines how often the executor status is written in the application log file
-     *
-     * @param execName The executor name
-     * @param defValue The default value if setting is not defined in the configuration file
-     * @return A {@code Duration} object. Default '5 minutes'
-     */
-    @Memoized
-    Duration getMonitorDumpInterval( String execName, Duration defValue = Duration.of('5min')) {
-        getExecConfigProp(execName, 'dumpInterval', defValue) as Duration
-    }
-
-    /**
-     * Determines how often the queue status is fetched from the cluster system. This setting is used only by grid executors
-     *
-     * @param execName The executor name
-     * @param defValue  The default value if setting is not defined in the configuration file
-     * @return A {@code Duration} object. Default '1 minute'
-     */
-    @Memoized
-    Duration getQueueStatInterval( String execName, Duration defValue = Duration.of('1min') ) {
-        getExecConfigProp(execName, 'queueStatInterval', defValue) as Duration
     }
 
     void printConsole(String str, boolean newLine=false) {

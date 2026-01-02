@@ -27,6 +27,9 @@ public enum ASTNodeMarker {
     // denotes that an assignment is an implicit declaration
     IMPLICIT_DECLARATION,
 
+    // the inferred return type of a closure expression
+    INFERRED_RETURN_TYPE,
+
     // the inferred type of an expression
     INFERRED_TYPE,
 
@@ -39,11 +42,20 @@ public enum ASTNodeMarker {
     // the verbatim text of a Groovy-style type annotation (ClassNode)
     LEGACY_TYPE,
 
+    // the list of candidate MethodNode's for a MethodCallExpression
+    METHOD_OVERLOADS,
+
     // the MethodNode targeted by a MethodCallExpression
     METHOD_TARGET,
 
     // the MethodNode targeted by a variable expression (PropertyNode)
     METHOD_VARIABLE_TARGET,
+
+    // denotes a nullable type annotation (ClassNode)
+    NULLABLE,
+
+    // the FieldNode targeted by a PropertyExpression
+    PROPERTY_TARGET,
 
     // the starting quote sequence of a string literal or gstring expression
     QUOTE_CHAR,

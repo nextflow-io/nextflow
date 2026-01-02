@@ -21,9 +21,8 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.SysEnv
-import nextflow.processor.TaskHandler
-import nextflow.trace.TraceObserver
-import nextflow.trace.TraceRecord
+import nextflow.trace.TraceObserverV2
+import nextflow.trace.event.TaskEvent
 import nextflow.util.Duration
 import nextflow.util.Threads
 /**
@@ -34,7 +33,7 @@ import nextflow.util.Threads
  */
 @Slf4j
 @CompileStatic
-class LogsCheckpoint implements TraceObserver {
+class LogsCheckpoint implements TraceObserverV2 {
 
     private Session session
     private Map config
@@ -61,8 +60,9 @@ class LogsCheckpoint implements TraceObserver {
         this.terminated = true
         thread.join()
     }
+
     @Override
-    void onFlowError(TaskHandler handler, TraceRecord trace){
+    void onFlowError(TaskEvent event) {
         this.terminated = true
         thread.join()
     }

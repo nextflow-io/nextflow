@@ -18,27 +18,40 @@ package nextflow.lineage.config
 
 import groovy.transform.CompileStatic
 import groovy.transform.ToString
-import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.Session
+import nextflow.config.spec.ConfigOption
+import nextflow.config.spec.ConfigScope
+import nextflow.config.spec.ScopeName
+import nextflow.script.dsl.Description
 
 /**
  * Model workflow data lineage config
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
+@ScopeName("lineage")
+@Description("""
+    The `lineage` scope controls the generation of lineage metadata.
+""")
 @ToString
 @CompileStatic
-class LineageConfig {
+class LineageConfig implements ConfigScope {
 
     final LineageStoreOpts store
 
+    @ConfigOption
+    @Description("""
+        Enable generation of lineage metadata (default: `false`).
+    """)
     final boolean enabled
 
+    /* required by extension point -- do not remove */
+    LineageConfig() {}
+
     LineageConfig(Map opts) {
-        this.store = new LineageStoreOpts(opts.store as Map ?: Map.of())
-        this.enabled = opts.enabled as boolean ?: false
+        this.store = new LineageStoreOpts(opts.store as Map ?: Collections.emptyMap())
+        this.enabled = opts.enabled as boolean
     }
 
     static Map<String,Object> asMap() {
@@ -46,9 +59,13 @@ class LineageConfig {
         return result != null ? result : new HashMap<String,Object>()
     }
 
+    static LineageConfig create(Map config) {
+        new LineageConfig(config.lineage as Map ?: Collections.emptyMap())
+    }
+
     static LineageConfig create(Session session) {
         if( session ) {
-            return new LineageConfig( session.config.navigate('lineage') as Map ?: Map.of())
+            return LineageConfig.create(session.config)
         }
         else
             throw new IllegalStateException("Missing Nextflow session")

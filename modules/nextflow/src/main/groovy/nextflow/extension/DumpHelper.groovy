@@ -33,7 +33,7 @@ import org.yaml.snakeyaml.Yaml
 class DumpHelper {
 
     static def deepConvertToString(value, nullValue = '') {
-        if( value instanceof List )
+        if( value instanceof Collection )
             value.collect { it -> deepConvertToString(it) }
 
         else if( value instanceof Map )
@@ -53,7 +53,7 @@ class DumpHelper {
     }
 
     static String prettyPrint(value) {
-        if( value instanceof List || value instanceof Map || value instanceof Path )
+        if( value instanceof Collection || value instanceof Map || value instanceof Path )
             return prettyPrintJson(value)
         else
             return InvokerHelper.inspect(value)

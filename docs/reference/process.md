@@ -12,8 +12,9 @@ The following task properties are defined in the process body:
 : The current task attempt.
 
 `task.exitStatus`
-: The exit code of the task script. Only applicable for processes with a `script:` or `shell:` block.
-: Since the exit code is only available after the task has been executed, it can only be used by certain process directives such as [errorStrategy](#errorstrategy).
+: *Available only in `script:` and `shell:` blocks*
+: The exit code returned by the task script.
+: The exit code is only available after the task has been executed (e.g., the [errorStrategy](#errorstrategy) directive).
 
 `task.hash`
 : *Available only in `exec:` blocks*
@@ -30,29 +31,108 @@ The following task properties are defined in the process body:
 : :::{versionadded} 24.10.0
   :::
 : The exception reported by the previous task attempt.
-: Since the exception is available after a failed task attempt,
-  it can only be accessed when retrying a failed task execution, and therefore when `task.attempt` is greater than 1.
+: Since the exception is available after a failed task attempt, it can only be accessed when retrying a failed task execution, i.e., when `task.attempt` is greater than 1.
 
 `task.previousTrace`
 : :::{versionadded} 24.10.0
   :::
 : The trace record associated with the previous task attempt.
-: Since the trace record is available after a failed task attempt,
-  it can only be accessed when retrying a failed task execution, and therefore when `task.attempt` is greater than 1.
-: This is useful when retrying a task execution to access the previous task attempt runtime metrics e.g. used memory and CPUs.
+: Since the trace record is available after a failed task attempt, it can only be accessed when retrying a failed task execution, i.e., when `task.attempt` is greater than 1. See {ref}`trace-report` for a list of available fields.
+
+: :::{note}
+  The trace fields `%cpu` and `%mem` can be accessed as `pcpu` and `pmem`, respectively.
+  :::
+
 
 `task.process`
-: The process name.
+: The name of the process that spawned the task.
 
 `task.workDir`
 : *Available only in `exec:` blocks*
-: The task unique directory.
+: The unique directory path for the task.
 
-Additionally, the [directive values](#directives) for the given task can be accessed via `task.<directive>`.
+:::{note}
+[Directive values](#directives) for a task can be accessed via `task.<directive>`. See {ref}`task-directive-values` for more information.
+:::
+
+(process-reference-typed)=
+
+## Inputs and outputs (typed)
+
+:::{versionadded} 25.10.0
+:::
+
+:::{note}
+Typed processes require the `nextflow.preview.types` feature flag to be enabled in every script that uses them. The syntax and behavior may change in future releases.
+:::
+
+### Stage directives
+
+The following directives can be used in the `stage:` section of a typed process:
+
+`env( name: String, String value )`
+: Declares an environment variable with the specified name and value in the task environment.
+
+`stageAs( filePattern: String, value: Path )`
+: Stages a file into the task directory under the given alias.
+
+`stageAs( filePattern: String, value: Iterable<Path> )`
+: Stages a collection of files into the task directory under the given alias.
+
+`stdin( value: String )`
+: Stages the given value as the standard input (i.e., `stdin`) to the task script.
+
+### Outputs
+
+The following functions are available in the `output:` and `topic:` sections of a typed process:
+
+`env( name: String ) -> String`
+: Returns the value of an environment variable from the task environment.
+
+`eval( command: String ) -> String`
+: Returns the standard output of the specified command, which is executed in the task environment after the task script completes.
+
+`file( pattern: String, [options] ) -> Path`
+: Returns a file from the task environment that matches the specified pattern.
+
+: Available options:
+
+  `followLinks: Boolean`
+  : When `true`, target files are returned in place of any matching symlink (default: `true`).
+
+  `glob: Boolean`
+  : When `true`, the file name is interpreted as a glob pattern (default: `true`).
+
+  `hidden: Boolean`
+  : When `true`, hidden files are included in the matching output files (default: `false`).
+
+  `includeInputs: Boolean`
+  : When `true` and the file name is a glob pattern, any input files matching the pattern are also included in the output (default: `false`).
+
+  `maxDepth: Integer`
+  : Maximum number of directory levels to visit (default: no limit).
+
+  `optional: Boolean`
+  : When `true`, the task will not fail if the given file is missing (default: `false`).
+
+  `type: String`
+  : Type of paths returned, either `file`, `dir` or `any` (default: `any`, or `file` if the given file name contains a double star (`**`)).
+
+`files( pattern: String, [options] ) -> Set<Path>`
+: Returns files from the task environment that match the given pattern.
+
+: Supports the same options as `file()` (except for `optional`).
+
+`stdout() -> String`
+: Returns the standard output of the task script.
+
+(process-reference-legacy)=
+
+## Inputs and outputs (legacy)
 
 (process-reference-inputs)=
 
-## Inputs
+### Inputs
 
 `val( identifier )`
 
@@ -71,6 +151,10 @@ Additionally, the [directive values](#directives) for the given task can be acce
 `path( identifier | stageName )`
 
 : Declare a file input. The received value should be a file or collection of files and will be staged into the task directory.
+
+: :::{tip}
+  See {ref}`process-multiple-input-files` for more information about accepting collections of files.
+  :::
 
 : The argument can be an identifier or string. If an identifier, the received value will be made available to the process body as a variable. If a string, the received value will be staged into the task directory under the given alias.
 
@@ -103,7 +187,7 @@ Additionally, the [directive values](#directives) for the given task can be acce
 
 (process-reference-outputs)=
 
-## Outputs
+### Outputs
 
 `val( value )`
 
@@ -131,7 +215,7 @@ Additionally, the [directive values](#directives) for the given task can be acce
   : Specify the number of expected files. Can be a number or a range. If a task produces an invalid number of files for this `path` output, it will fail.
 
   : If the arity is `1`, a single file will be emitted. Otherwise, a list will always be emitted, even if only one file is produced.
-  
+
   : :::{warning}
     If the arity is not specified, a single file or list will be emitted based on whether a single file or multiple files are produced at runtime, resulting potentially in an output channel with a mixture of files and file collections.
     :::
@@ -210,9 +294,6 @@ The following options are available for all process outputs:
 
 ### accelerator
 
-:::{versionadded} 19.09.0-edge
-:::
-
 The `accelerator` directive allows you to request hardware accelerators (e.g. GPUs) for the task execution. For example:
 
 ```nextflow
@@ -233,17 +314,23 @@ This directive is only used by certain executors. Refer to the {ref}`executor-pa
 :::
 
 :::{note}
-Additional options may be required to fully enable the use of accelerators. When using containers with GPUs, you must pass the GPU drivers through to the container. For Docker, this requires the option `--gpus all` in the docker run command. For Apptainer/Singularity, this requires the option `--nv`. The specific implementation details depend on the accelerator and container type being used.
+Additional options may be required to fully enable the use of accelerators. When using containers with GPUs, you must pass the GPU drivers through to the container. For Docker, this requires the option `--gpus all` in the `docker run` command. For Apptainer/Singularity, this requires the option `--nv`. The specific implementation details depend on the accelerator and container type being used.
 :::
 
-:::{note}
-The accelerator `type` option depends on the target execution platform. Refer to the platform-specific documentation for details on the available accelerators:
+The following options are available:
 
-- [Google Cloud](https://cloud.google.com/compute/docs/gpus/)
-- [Kubernetes](https://kubernetes.io/docs/tasks/manage-gpus/scheduling-gpus/#clusters-containing-different-types-of-gpus)
+`request: Integer`
+: The number of requested accelerators.
+: Specifying this directive with a number (e.g., `accelerator 4`) is equivalent to the `request` option (e.g., `accelerator request: 4`).
 
-The accelerator `type` option is not supported for AWS Batch. You can control the accelerator type indirectly through the allowed instance types in your Compute Environment. See the [AWS Batch FAQs](https://aws.amazon.com/batch/faqs/?#GPU_Scheduling_) for more information.
-:::
+`type: String`
+: The accelerator type.
+: The meaning of this option depends on the target execution platform. See the platform-specific documentation for more information about the available accelerators:
+
+  - [Google Cloud](https://cloud.google.com/compute/docs/gpus/)
+  - [Kubernetes](https://kubernetes.io/docs/tasks/manage-gpus/scheduling-gpus/#clusters-containing-different-types-of-gpus)
+
+: This option is not supported for AWS Batch. You can control the accelerator type indirectly through the allowed instance types in your Compute Environment. See the [AWS Batch FAQs](https://aws.amazon.com/batch/faqs/?#GPU_Scheduling_) for more information.
 
 (process-afterscript)=
 
@@ -277,9 +364,9 @@ The example above declares that the CPU generic architecture is `linux/x86_64` (
 
 This directive is currently used by the following Nextflow functionalities:
 
-- by the [spack](#spack) directive, to build microarchitecture-optimised applications;
+- by the [spack](#spack) directive, to build microarchitecture-optimized applications;
 - by the {ref}`wave-page` service, to build containers for one of the generic families of CPU architectures (see below);
-- by the `spack` strategy within {ref}`wave-page`, to optimise the container builds for specific CPU microarchitectures.
+- by the `spack` strategy within {ref}`wave-page`, to optimize the container builds for specific CPU microarchitectures.
 
 Allowed values for the `arch` directive are as follows, grouped by equivalent family (choices available for the sake of compatibility):
 - X86 64 bit: `linux/x86_64`, `x86_64`, `linux/amd64`, `amd64`
@@ -356,7 +443,7 @@ When using Wave, the following additional directives must be uniform:
 
 ### beforeScript
 
-The `beforeScript` directive allows you to execute a custom (Bash) snippet *before* the main process script is run. This may be useful to initialise the underlying cluster environment or for other custom initialisation.
+The `beforeScript` directive allows you to execute a custom (Bash) snippet *before* the main process script is run. This may be useful to initialize the underlying cluster environment or for other custom initialization.
 
 For example:
 
@@ -574,7 +661,7 @@ The `disk` directive allows you to define how much local disk storage the proces
 
 ```nextflow
 process hello {
-    disk '2 GB'
+    disk 2.GB
 
     script:
     """
@@ -617,17 +704,17 @@ The `errorStrategy` directive allows you to define how the process manages an er
 
 The following error strategies are available:
 
-`terminate` (default)
+`'terminate'` (default)
 : When a task fails, terminate the pipeline immediately and report an error. Pending and running jobs are killed.
 
-`finish`
+`'finish'`
 : When a task fails, wait for submitted and running tasks to finish and then terminate the pipeline, reporting an error.
 
-`ignore`
+`'ignore'`
 : When a task fails, ignore it and continue the pipeline execution. If the `workflow.failOnIgnore` config option is set to `true`, the pipeline will report an error (i.e. return a non-zero exit code) upon completion. Otherwise, the pipeline will complete successfully.
 : See the {ref}`stdlib-namespaces-workflow` namespace for more information.
 
-`retry`
+`'retry'`
 : When a task fails, retry it.
 
 When setting the `errorStrategy` directive to `ignore` the process doesn't stop on an error condition, it just reports a message notifying you of the error event.
@@ -833,34 +920,6 @@ process hello {
 
 See also: [cpus](#cpus) and [memory](#memory).
 
-(process-maxsubmitawait)=
-
-### maxSubmitAwait
-
-The `maxSubmitAwait` directive allows you to specify how long a task can remain in submission queue without being executed.
-Elapsed this time the task execution will fail.
-
-When used along with `retry` error strategy, it can be useful to re-schedule the task to a difference queue or
-resource requirement. For example:
-
-```nextflow
-process hello {
-  errorStrategy 'retry'
-  maxSubmitAwait '10 mins'
-  maxRetries 3
-  queue "${task.submitAttempt==1 ? 'spot-compute' : 'on-demand-compute'}"
-
-  script:
-  """
-  your_command --here
-  """
-}
-```
-
-In the above example the task is submitted to the `spot-compute` on the first attempt (`task.submitAttempt==1`). If the
-task execution does not start in the 10 minutes, a failure is reported and a new submission is attempted using the
-queue named `on-demand-compute`.
-
 (process-maxerrors)=
 
 ### maxErrors
@@ -928,6 +987,34 @@ There is a subtle but important difference between `maxRetries` and the `maxErro
 
 See also: [errorStrategy](#errorstrategy) and [maxErrors](#maxerrors).
 
+(process-maxsubmitawait)=
+
+### maxSubmitAwait
+
+The `maxSubmitAwait` directive allows you to specify how long a task can remain in submission queue without being executed.
+Elapsed this time the task execution will fail.
+
+When used along with `retry` error strategy, it can be useful to re-schedule the task to a difference queue or
+resource requirement. For example:
+
+```nextflow
+process hello {
+  errorStrategy 'retry'
+  maxSubmitAwait 10.m
+  maxRetries 3
+  queue "${task.submitAttempt==1 ? 'spot-compute' : 'on-demand-compute'}"
+
+  script:
+  """
+  your_command --here
+  """
+}
+```
+
+In the above example the task is submitted to the `spot-compute` on the first attempt (`task.submitAttempt==1`). If the
+task execution does not start in the 10 minutes, a failure is reported and a new submission is attempted using the
+queue named `on-demand-compute`.
+
 (process-memory)=
 
 ### memory
@@ -936,7 +1023,7 @@ The `memory` directive allows you to define how much memory the process is allow
 
 ```nextflow
 process hello {
-    memory '2 GB'
+    memory 2.GB
 
     script:
     """
@@ -1164,6 +1251,9 @@ The following options are available:
 `runAsUser: '<uid>'`
 : Specifies the user ID with which to run the container. Shortcut for the `securityContext` option.
 
+`runtimeClassName: '<name>'`
+: Specifies the [runtime class](https://kubernetes.io/docs/concepts/containers/runtime-class/).
+
 `schedulerName: '<name>'`
 : Specifies which [scheduler](https://kubernetes.io/docs/tasks/extend-kubernetes/configure-multiple-schedulers/#specify-schedulers-for-pods) is used to schedule the container.
 
@@ -1260,7 +1350,7 @@ process hello {
 ```
 
 :::{warning}
-Files are copied into the specified directory in an *asynchronous* manner, so they may not be immediately available in the publish directory at the end of the process execution. For this reason, downstream processes should not try to access output files through the publish directory, but through channels.
+Files are copied into the specified directory in an *asynchronous* manner, so they may not be immediately available in the publish directory at the end of the process execution. For this reason, downstream processes should not try to access output files through the publish directory, but through the outputs of the originating process.
 :::
 
 Available options:
@@ -1446,6 +1536,8 @@ process hello {
 
 By doing this, it tries to execute the script in the directory defined by the variable `$TMPDIR` in the execution node. If this variable does not exist, it will create a new temporary directory by using the Linux command `mktemp`.
 
+Nextflow creates a subdirectory within the scratch directory for each task and automatically deletes it once the task completes.
+
 :::{note}
 Cloud-based executors use `scratch = true` by default, since the work directory resides in object storage.
 :::
@@ -1487,7 +1579,7 @@ process hello_secret {
 }
 ```
 
-See {ref}`secrets-page` for more information. 
+See {ref}`secrets-page` for more information.
 
 :::{warning}
 Secrets are made available as environment variables in the process script. To prevent evaluation in the Nextflow script context, escape variable names with a backslash (e.g., `\$MY_ACCESS_KEY`) as shown above.
@@ -1571,17 +1663,17 @@ The `stageOutMode` directive defines how output files are staged out from the sc
 : Output files are copied from the scratch directory to the work directory.
 
 `'fcp'`
-: :::{versionadded} 23.02.0-edge
+: :::{versionadded} 23.04.0
   :::
-: Output files are copied from the scratch directory to the work directory by using the [fcp](https://github.com/Svetlitski/fcp) utility (note: it must be available in your cluster computing nodes).
+: Output files are copied from the scratch directory to the work directory by using the [fcp](https://github.com/Svetlitski/fcp) utility (note: it must be available in the task environment).
 
 `'move'`
 : Output files are moved from the scratch directory to the work directory.
 
 `'rclone'`
-: :::{versionadded} 23.01.0-edge
+: :::{versionadded} 23.04.0
   :::
-: Output files are copied from the scratch directory to the work directory by using the [rclone](https://rclone.org) utility (note: it must be available in your cluster computing nodes).
+: Output files are copied from the scratch directory to the work directory by using the [rclone](https://rclone.org) utility (note: it must be available in the task environment).
 
 `'rsync'`
 : Output files are copied from the scratch directory to the work directory by using the `rsync` utility.
@@ -1669,7 +1761,7 @@ The `time` directive allows you to define how long a process is allowed to run. 
 
 ```nextflow
 process hello {
-    time '1h'
+    time 1.h
 
     script:
     """
@@ -1680,15 +1772,13 @@ process hello {
 
 The following time unit suffixes can be used when specifying the duration value:
 
-| Unit                            | Description  |
-| ------------------------------- | ------------ |
-| `ms`, `milli`, `millis`         | Milliseconds |
-| `s`, `sec`, `second`, `seconds` | Seconds      |
-| `m`, `min`, `minute`, `minutes` | Minutes      |
-| `h`, `hour`, `hours`            | Hours        |
-| `d`, `day`, `days`              | Days         |
-
-Multiple units can be used in a single declaration, for example: `'1day 6hours 3minutes 30seconds'`
+| Unit | Description  |
+| ---- | ------------ |
+| `ms` | Milliseconds |
+| `s`  | Seconds      |
+| `m`  | Minutes      |
+| `h`  | Hours        |
+| `d`  | Days         |
 
 See {ref}`stdlib-types-duration` for more information.
 

@@ -18,7 +18,7 @@ The pipeline processes must specify the Docker image to use by defining the `con
 
 To enable this executor, set `process.executor = 'awsbatch'` in the `nextflow.config` file.
 
-The pipeline can be launched either in a local computer, or an EC2 instance. EC2 is suggested for heavy or long-running workloads. Additionally, an S3 bucket must be used as the pipeline work directory.
+The pipeline can be launched either on a local computer, or an EC2 instance. EC2 is suggested for heavy or long-running workloads. Additionally, an S3 bucket must be used as the pipeline work directory.
 
 Resource requests and other job characteristics can be controlled via the following process directives:
 
@@ -45,7 +45,7 @@ The pipeline processes must specify the Docker image to use by defining the `con
 
 To enable this executor, set `process.executor = 'azurebatch'` in the `nextflow.config` file.
 
-The pipeline can be launched either in a local computer, or a cloud virtual machine. The cloud VM is suggested for heavy or long-running workloads. Additionally, an Azure Blob storage container must be used as the pipeline work directory.
+The pipeline can be launched either on a local computer, or a cloud virtual machine. The cloud VM is suggested for heavy or long-running workloads. Additionally, an Azure Blob storage container must be used as the pipeline work directory.
 
 Resource requests and other job characteristics can be controlled via the following process directives:
 
@@ -121,7 +121,7 @@ By default, Flux will send all output to the `.command.log` file. To send this o
 
 [Google Cloud Batch](https://cloud.google.com/batch) is a managed computing service that allows the execution of containerized workloads in the Google Cloud Platform infrastructure.
 
-Nextflow provides built-in support for the Cloud Batch API, which allows the seamless deployment of a Nextflow pipeline in the cloud, offloading the process executions as pipelines.
+Nextflow provides built-in support for the Cloud Batch API, which allows the seamless deployment of Nextflow pipelines in the cloud, offloading the pipeline process executions.
 
 The pipeline processes must specify the Docker image to use by defining the `container` directive, either in the pipeline script or the `nextflow.config` file. Additionally, the pipeline work directory must be located in a Google Storage bucket.
 
@@ -221,7 +221,7 @@ See the {ref}`Kubernetes <k8s-page>` page to learn how to set up a Kubernetes cl
 
 ## Local
 
-The `local` executor is used by default. It runs the pipeline processes on the computer where Nextflow is launched. The processes are parallelised by spawning multiple threads, taking advantage of the multi-core architecture of the CPU.
+The `local` executor is used by default. It runs the pipeline processes on the computer where Nextflow is launched. The processes are parallelized by spawning multiple threads, taking advantage of the multi-core architecture of the CPU.
 
 The `local` executor is useful for developing and testing a pipeline script on your computer, before switching to a cluster or cloud environment with production data.
 
@@ -299,7 +299,7 @@ Resource requests and other job characteristics can be controlled via the follow
 
 ## NQSII
 
-The `nsqii` executor allows you to run your pipeline script using the [NQSII](https://www.rz.uni-kiel.de/en/our-portfolio/hiperf/nec-linux-cluster) resource manager.
+The `nqsii` executor allows you to run your pipeline script using the [NQSII](https://www.rz.uni-kiel.de/en/our-portfolio/hiperf/nec-linux-cluster) resource manager.
 
 Nextflow manages each process as a separate job that is submitted to the cluster using the `qsub` command provided by the scheduler.
 
@@ -445,3 +445,39 @@ Nextflow does not provide direct support for SLURM multi-clusters. If you need t
 :::{versionadded} 23.07.0-edge
 Some SLURM clusters require memory allocations to be specified with `--mem-per-cpu` instead of `--mem`. You can specify `executor.perCpuMemAllocation = true` in the Nextflow configuration to enable this behavior. Nextflow will automatically compute the memory per CPU for each task (by default 1 CPU is used).
 :::
+
+:::{versionadded} 25.12.0-edge
+Since SLURM 24, `squeue` supports an `--only-job-state` option that ignores the partition (`-p`) or user (`-u`) filters. To enable this behavior, specify `executor.$slurm.onlyJobState = true` in your Nextflow configuration. If `SchedulerParameters=enable_job_state_cache` is enabled, you can expect improved Nextflow performance and reduced load on the SLURM controller. See [`enable_job_state_cache`](https://slurm.schedmd.com/slurm.conf.html#OPT_enable_job_state_cache) and [`--only-job-state`](https://slurm.schedmd.com/squeue.html#OPT_only-job-state) for more information.
+:::
+
+(tcs-executor)=
+
+## TCS
+
+The `tcs` executor allows you to run your pipeline script using a [Fujitsu Technical Computing Suite (TCS)](https://software.fujitsu.com/jp/manual/manualindex/p21000155e.html).
+
+Nextflow manages each process as a separate job that is submitted to the cluster using the `pjsub` command.
+
+The pipeline must be launched from a node where the `pjsub` command is available, which is typically the login node.
+
+To enable the TCS executor, set `process.executor = 'tcs'` in the `nextflow.config` file.
+
+Resource requests and other job characteristics can be controlled via the following process directives:
+
+- {ref}`process-clusterOptions`
+- {ref}`process-time`
+
+:::{note}
+Use `clusterOptions` to specify system-dependent options such as queue (resource group), CPU, and node. These options vary across target systems and are not standardized. They correspond to `-L` options in the arguments of the `pjsub` command and should be configured according to the requirements of the specific cluster environment.
+
+For example:
+
+```groovy
+process {
+  executor = 'tcs'
+  time = '00:30:00'
+  clusterOptions = '-L rscgrp=a-batch -L vnode-core=4'
+}
+```
+:::
+

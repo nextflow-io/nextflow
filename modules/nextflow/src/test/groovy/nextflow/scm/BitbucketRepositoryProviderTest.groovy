@@ -21,6 +21,7 @@ import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Specification
 import spock.lang.Timeout
+import spock.lang.Unroll
 
 @Timeout(30)
 @IgnoreIf({System.getenv('NXF_SMOKE')})
@@ -28,7 +29,6 @@ class BitbucketRepositoryProviderTest extends Specification {
 
     @Requires( { System.getenv('NXF_BITBUCKET_ACCESS_TOKEN') } )
     def testBitbucketCloneURL() {
-
         given:
         def token = System.getenv('NXF_BITBUCKET_ACCESS_TOKEN')
         def config = new ProviderConfig('bitbucket').setAuth(token)
@@ -36,30 +36,41 @@ class BitbucketRepositoryProviderTest extends Specification {
         when:
         def url = new BitbucketRepositoryProvider('pditommaso/tutorial',config).getCloneUrl()
         then:
-        url == "https://${config.user}@bitbucket.org/pditommaso/tutorial.git".toString()
+        url ==~ /https:\/\/.+@bitbucket.org\/pditommaso\/tutorial.git/
     }
-
 
     def testGetHomePage() {
         expect:
         new BitbucketRepositoryProvider('pditommaso/tutorial').getRepositoryUrl() == "https://bitbucket.org/pditommaso/tutorial"
     }
 
-
     @Requires( { System.getenv('NXF_BITBUCKET_ACCESS_TOKEN') } )
     def testReadContent() {
-
         given:
         def token = System.getenv('NXF_BITBUCKET_ACCESS_TOKEN')
         def config = new ProviderConfig('bitbucket').setAuth(token)
 
         when:
-        def repo = new BitbucketRepositoryProvider('pditommaso/tutorial', config)
+        def repo = new BitbucketRepositoryProvider('pditommaso/secret', config)
         def result = repo.readText('main.nf')
 
         then:
-        result.trim().startsWith('#!/usr/bin/env nextflow')
+        result.trim() == "println 'Hello from Bitbucket'"
+    }
 
+    @Requires( { System.getenv('NXF_BITBUCKET_ACCESS_TOKEN') } )
+    def 'should read binary data'() {
+        given:
+        def token = System.getenv('NXF_BITBUCKET_ACCESS_TOKEN')
+        def config = new ProviderConfig('bitbucket').setAuth(token)
+        def DATA = this.class.getResourceAsStream('/test-sandbucket.jpg').bytes
+
+        when:
+        def repo = new BitbucketRepositoryProvider('pditommaso/tutorial', config)
+        def result = repo.readBytes('sandbucket.jpg')
+
+        then:
+        result == DATA
     }
 
     @Requires( { System.getenv('NXF_BITBUCKET_ACCESS_TOKEN') } )
@@ -100,18 +111,22 @@ class BitbucketRepositoryProviderTest extends Specification {
         expect:
         new BitbucketRepositoryProvider('pditommaso/tutorial', config)
                 .setRevision('test-branch')
-                .getContentUrl('main.nf') == 'https://bitbucket.org/api/2.0/repositories/pditommaso/tutorial/src/test-branch/main.nf'
+                .getContentUrl('main.nf') == 'https://api.bitbucket.org/2.0/repositories/pditommaso/tutorial/src/test-branch/main.nf'
 
         and:
         new BitbucketRepositoryProvider('pditommaso/tutorial', config)
             .setRevision('feature/with-slash')
-            .getContentUrl('main.nf') == 'https://bitbucket.org/api/2.0/repositories/pditommaso/tutorial/src/a6b825b22d46758cdeb496ae6cf26aef839ace52/main.nf'
+            .getContentUrl('main.nf') == 'https://api.bitbucket.org/2.0/repositories/pditommaso/tutorial/src/a6b825b22d46758cdeb496ae6cf26aef839ace52/main.nf'
 
         and:
         new BitbucketRepositoryProvider('pditommaso/tutorial', config)
             .setRevision('test/tag/v2')
-            .getContentUrl('main.nf') == 'https://bitbucket.org/api/2.0/repositories/pditommaso/tutorial/src/8f849beceb2ea479ef836809ca33d3daeeed25f9/main.nf'
+            .getContentUrl('main.nf') == 'https://api.bitbucket.org/2.0/repositories/pditommaso/tutorial/src/8f849beceb2ea479ef836809ca33d3daeeed25f9/main.nf'
 
+        and:
+        new BitbucketRepositoryProvider('pditommaso/tutorial', config)
+            .setRevision('test/branch+with&special-chars')
+            .getContentUrl('main.nf') == 'https://api.bitbucket.org/2.0/repositories/pditommaso/tutorial/src/755ba829cbc4f28dcb3c16b9dcc1c49c7ee47ff5/main.nf'
     }
 
     @Requires( { System.getenv('NXF_BITBUCKET_ACCESS_TOKEN') } )
@@ -161,5 +176,110 @@ class BitbucketRepositoryProviderTest extends Specification {
         !data.contains('world')
         data.contains('mundo')
 
+        when:
+        repo.setRevision('test/branch+with&special-chars')
+        and:
+        data = repo.readText('main.nf')
+        then:
+        data.contains('world')
+        !data.contains('WORLD')
+    }
+
+    @Unroll
+    def 'should validate hasCredentials' () {
+        given:
+        def provider = new BitbucketRepositoryProvider('pditommaso/tutorial', CONFIG)
+
+        expect:
+        provider.hasCredentials() == EXPECTED
+
+        where:
+        EXPECTED | CONFIG
+        false    | new ProviderConfig('bitbucket')
+        false    | new ProviderConfig('bitbucket').setUser('foo')
+        false    | new ProviderConfig('bitbucket').setToken('xyz')
+        true     | new ProviderConfig('bitbucket').setUser('foo').setPassword('bar')
+        true     | new ProviderConfig('bitbucket').setUser('foo').setToken('xyz')
+        true     | new ProviderConfig('bitbucket').setUser('foo').setPassword('bar').setToken('xyz')
+    }
+
+    @Unroll
+    def 'should validate getAuth' () {
+        given:
+        def provider = new BitbucketRepositoryProvider('pditommaso/tutorial', CONFIG)
+
+        expect:
+        provider.getAuth() == EXPECTED as String[]
+
+        where:
+        EXPECTED                                                                 | CONFIG
+        null                                                                     | new ProviderConfig('bitbucket')
+        ["Authorization", "Basic ${"foo:bar".bytes.encodeBase64()}"]             | new ProviderConfig('bitbucket').setUser('foo').setPassword('bar')
+        ["Authorization", "Basic ${"foo@nextflow.io:xyz".bytes.encodeBase64()}"] | new ProviderConfig('bitbucket').setUser('foo@nextflow.io').setToken('xyz')
+    }
+
+    @Requires({ System.getenv('NXF_BITBUCKET_ACCESS_TOKEN') })
+    def 'should list root directory contents'() {
+        given:
+        def token = System.getenv('NXF_BITBUCKET_ACCESS_TOKEN')
+        def config = new ProviderConfig('bitbucket').setAuth(token)
+        def repo = new BitbucketRepositoryProvider('pditommaso/tutorial', config)
+
+        when:
+        def entries = repo.listDirectory("/", 1)
+
+        then:
+        entries.size() > 0
+        and:
+        entries.any { it.name == 'main.nf' && it.type == RepositoryProvider.EntryType.FILE }
+        and:
+        entries.every { it.path && it.name && it.sha }
+        // Should only include immediate children for depth=1
+        entries.every { it.path.split('/').length <= 2 }
+        and:
+        // Should NOT include any nested paths beyond immediate children  
+        !entries.any { it.path.split('/').length > 2 }
+    }
+
+    @Requires({ System.getenv('NXF_BITBUCKET_ACCESS_TOKEN') })
+    def 'should list directory contents recursively'() {
+        given:
+        def token = System.getenv('NXF_BITBUCKET_ACCESS_TOKEN')
+        def config = new ProviderConfig('bitbucket').setAuth(token)
+        def repo = new BitbucketRepositoryProvider('pditommaso/tutorial', config)
+
+        when:
+        def entries = repo.listDirectory("/", 10)
+
+        then:
+        entries.size() > 0
+        and:
+        // Should include files from root and potentially subdirectories
+        entries.any { it.name == 'main.nf' && it.type == RepositoryProvider.EntryType.FILE }
+        and:
+        entries.every { it.path && it.name && it.sha }
+    }
+
+    @Requires({ System.getenv('NXF_BITBUCKET_ACCESS_TOKEN') })
+    def 'should list directory contents with depth 2'() {
+        given:
+        def token = System.getenv('NXF_BITBUCKET_ACCESS_TOKEN')
+        def config = new ProviderConfig('bitbucket').setAuth(token)
+        def repo = new BitbucketRepositoryProvider('pditommaso/tutorial', config)
+
+        when:
+        def depthOne = repo.listDirectory("/", 1)
+        def depthTwo = repo.listDirectory("/", 2)
+
+        then:
+        depthOne.size() > 0
+        depthTwo.size() >= depthOne.size()
+        and:
+        // Should include immediate children (depth 1)
+        depthOne.any { it.name == 'main.nf' && it.type == RepositoryProvider.EntryType.FILE }
+        depthTwo.any { it.name == 'main.nf' && it.type == RepositoryProvider.EntryType.FILE }
+        and:
+        depthOne.every { it.path && it.name && it.sha }
+        depthTwo.every { it.path && it.name && it.sha }
     }
 }

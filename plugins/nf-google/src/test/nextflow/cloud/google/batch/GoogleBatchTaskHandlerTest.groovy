@@ -21,7 +21,10 @@ import com.google.api.gax.grpc.GrpcStatusCode
 import com.google.api.gax.rpc.NotFoundException
 import com.google.cloud.batch.v1.JobStatus
 import com.google.cloud.batch.v1.Task
+import com.google.cloud.batch.v1.TaskExecution
 import io.grpc.Status
+import nextflow.cloud.google.batch.logging.BatchLogging
+import nextflow.exception.ProcessException
 
 import java.nio.file.Path
 
@@ -29,13 +32,16 @@ import com.google.cloud.batch.v1.GCS
 import com.google.cloud.batch.v1.StatusEvent
 import com.google.cloud.batch.v1.TaskStatus
 import com.google.cloud.batch.v1.Volume
+import com.google.protobuf.Timestamp
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
+import nextflow.Global
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.cloud.google.batch.client.BatchClient
 import nextflow.cloud.google.batch.client.BatchConfig
 import nextflow.cloud.types.PriceModel
 import nextflow.executor.Executor
+import nextflow.executor.ExecutorConfig
 import nextflow.executor.res.AcceleratorResource
 import nextflow.executor.res.DiskResource
 import nextflow.processor.TaskBean
@@ -59,7 +65,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
         def CONTAINER_IMAGE = 'debian:latest'
         def exec = Mock(GoogleBatchExecutor) {
-            getConfig() >> Mock(BatchConfig)
+            getBatchConfig() >> Mock(BatchConfig)
         }
         and:
         def bean = new TaskBean(workDir: WORK_DIR, inputFiles: [:])
@@ -138,21 +144,23 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def MACHINE_TYPE = 'vm-type-2'
         def MEM = MemoryUnit.of('8 GB')
         def TIMEOUT = Duration.of('1 hour')
+        def LOGS_PATH = CloudStorageFileSystem.forBucket('my-logs-bucket').getPath('/logs')
         and:
         def exec = Mock(GoogleBatchExecutor) {
-            getConfig() >> Mock(BatchConfig) {
+            getBatchConfig() >> Mock(BatchConfig) {
                 getAllowedLocations() >> ['zones/us-central1-a', 'zones/us-central1-c']
                 getBootDiskSize() >> BOOT_DISK
                 getBootDiskImage() >> BOOT_IMAGE
                 getCpuPlatform() >> CPU_PLATFORM
                 getMaxSpotAttempts() >> 5
                 getAutoRetryExitCodes() >> [50001,50002]
-                getSpot() >> true
+                spot >> true
                 getNetwork() >> 'net-1'
                 getNetworkTags() >> ['tag1', 'tag2']
                 getServiceAccountEmail() >> 'foo@bar.baz'
                 getSubnetwork() >> 'subnet-1'
-                getUsePrivateAddress() >> true
+                usePrivateAddress >> true
+                logsPath() >> LOGS_PATH
             }
         }
         and:
@@ -235,7 +243,8 @@ class GoogleBatchTaskHandlerTest extends Specification {
         networkInterface.getSubnetwork() == 'subnet-1'
         networkInterface.getNoExternalIpAddress() == true
         and:
-        req.getLogsPolicy().getDestination().toString() == 'CLOUD_LOGGING'
+        req.getLogsPolicy().getDestination().toString() == 'PATH'
+        req.getLogsPolicy().getLogsPath() == '/mnt/disks/my-logs-bucket/logs'
         and:
         req.getLabelsMap() == [foo: 'bar']
 
@@ -257,8 +266,11 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def CONTAINER_IMAGE = 'debian:latest'
         and:
         def bean = new TaskBean(workDir: WORK_DIR, inputFiles: [:])
-        def sess = Mock(Session)
-        def exec = new GoogleBatchExecutor(session: sess)
+        def config = Mock(ExecutorConfig)
+        def exec = Mock(GoogleBatchExecutor) {
+            getConfig() >> config
+            getBatchConfig() >> Mock(BatchConfig)
+        }
 
         and:
         def task = Mock(TaskRun) {
@@ -274,14 +286,14 @@ class GoogleBatchTaskHandlerTest extends Specification {
         when:
         def result = handler.customJobName(task)
         then:
-        1 * sess.getExecConfigProp(_,'jobName', null) >> null
+        1 * config.getExecConfigProp(_, 'jobName', null) >> null
         and:
         result == null
 
         when:
         result = handler.customJobName(task)
         then:
-        1 * sess.getExecConfigProp(_,'jobName', null) >> { return { "foo-${task.hashLog}" }  }
+        1 * config.getExecConfigProp(_, 'jobName', null) >> { return { "foo-${task.hashLog}" } }
         and:
         result == 'foo-abcd1234'
 
@@ -294,7 +306,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def CONTAINER_IMAGE = 'debian:latest'
         def INSTANCE_TEMPLATE = 'instance-template'
         def exec = Mock(GoogleBatchExecutor) {
-            getConfig() >> Mock(BatchConfig) {
+            getBatchConfig() >> Mock(BatchConfig) {
                 getInstallGpuDrivers() >> true
             }
         }
@@ -376,12 +388,55 @@ class GoogleBatchTaskHandlerTest extends Specification {
         trace.executorName == 'google-batch'
     }
 
+    def 'should create the trace record when job is completed with spot interruptions' () {
+        given:
+        def exec = Mock(Executor) { getName() >> 'google-batch' }
+        def processor = Mock(TaskProcessor) {
+            getExecutor() >> exec
+            getName() >> 'foo'
+            getConfig() >> new ProcessConfig(Mock(BaseScript))
+        }
+        and:
+        def task = Mock(TaskRun)
+        task.getProcessor() >> processor
+        task.getConfig() >> new TaskConfig()
+        and:
+        def client = Mock(BatchClient)
+        def handler = Spy(GoogleBatchTaskHandler)
+        handler.task = task
+        handler.@client = client
+        handler.@jobId = 'xyz-123'
+        handler.@taskId = '0'
+        handler.@uid = '789'
+
+        def event1 = StatusEvent.newBuilder()
+            .setTaskExecution(TaskExecution.newBuilder().setExitCode(50001).build())
+            .build()
+        def event2 = StatusEvent.newBuilder()
+            .setTaskExecution(TaskExecution.newBuilder().setExitCode(0).build())
+            .build()
+        def taskStatus = TaskStatus.newBuilder()
+            .addStatusEvents(event1)
+            .addStatusEvents(event2)
+            .build()
+
+        when:
+        def trace = handler.getTraceRecord()
+        then:
+        2 * handler.isCompleted() >> true
+        1 * client.getTaskStatus('xyz-123', '0') >> taskStatus
+        and:
+        trace.native_id == 'xyz-123/0/789'
+        trace.executorName == 'google-batch'
+        trace.numSpotInterruptions == 1
+    }
+
     def 'should create submit request with fusion enabled' () {
         given:
         def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
         def CONTAINER_IMAGE = 'debian:latest'
         def exec = Mock(GoogleBatchExecutor) {
-            getConfig() >> Mock(BatchConfig)
+            getBatchConfig() >> Mock(BatchConfig)
         }
         and:
         def bean = new TaskBean(workDir: WORK_DIR, inputFiles: [:])
@@ -441,7 +496,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
         def CONTAINER_IMAGE = 'debian:latest'
         def exec = Mock(GoogleBatchExecutor) {
-            getConfig() >> Mock(BatchConfig)
+            getBatchConfig() >> Mock(BatchConfig)
         }
         def bean = new TaskBean(workDir: WORK_DIR, inputFiles: [:])
         def task = Mock(TaskRun) {
@@ -469,15 +524,18 @@ class GoogleBatchTaskHandlerTest extends Specification {
 
     }
 
-    TaskStatus makeTaskStatus(TaskStatus.State state, String desc) {
+    TaskStatus makeTaskStatus(TaskStatus.State state, String desc, Integer exitCode = null) {
         def builder = TaskStatus.newBuilder()
         if (state)
             builder.setState(state)
-        if (desc)
-            builder.addStatusEvents(
-                StatusEvent.newBuilder()
-                    .setDescription(desc)
-            )
+        if (desc || exitCode != null) {
+            def statusBuilder = StatusEvent.newBuilder()
+            if (desc)
+                statusBuilder.setDescription(desc)
+            if (exitCode != null)
+                statusBuilder.setTaskExecution(TaskExecution.newBuilder().setExitCode(exitCode).build())
+            builder.addStatusEvents(statusBuilder.build())
+        }
         builder.build()
     }
 
@@ -511,7 +569,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         }
         def exec = Mock(GoogleBatchExecutor) {
             getClient() >> client
-            getConfig() >> Mock(BatchConfig) { getSpot()>>false }
+            getBatchConfig() >> Mock(BatchConfig) { getSpot()>>false }
             isCloudinfoEnabled() >> true
         }
         def handler = Spy(new GoogleBatchTaskHandler(task, exec))
@@ -539,7 +597,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         }
         def exec = Mock(GoogleBatchExecutor) {
             getClient() >> client
-            getConfig() >> Mock(BatchConfig) { getSpot()>>false }
+            getBatchConfig() >> Mock(BatchConfig) { getSpot()>>false }
             isCloudinfoEnabled() >> false
         }
         def handler = Spy(new GoogleBatchTaskHandler(task, exec))
@@ -661,4 +719,270 @@ class GoogleBatchTaskHandlerTest extends Specification {
             .build()
 
     }
+
+     def 'should check if completed from task status' () {
+         given:
+         def jobId = '1'
+         def taskId = '1'
+         def client = Mock(BatchClient){
+             getTaskInArrayStatus(jobId, taskId) >> makeTaskStatus(STATE,"", EXIT_CODE)
+             getTaskStatus(jobId, taskId) >> makeTaskStatus(STATE,"", EXIT_CODE)
+             getJobStatus(jobId) >> makeJobStatus(JOB_STATUS,"")
+         }
+         def logging = Mock(BatchLogging)
+         def executor = Mock(GoogleBatchExecutor){
+             getLogging() >> logging
+         }
+         def task = new TaskRun()
+         task.name = 'hello'
+         def handler = Spy(new GoogleBatchTaskHandler(jobId: jobId, taskId: taskId, client: client, task: task, isArrayChild: ARRAY_CHILD, status: nextflow.processor.TaskStatus.RUNNING, executor: executor))
+         when:
+         def result = handler.checkIfCompleted()
+         then:
+         handler.status == TASK_STATUS
+         handler.task.exitStatus == EXIT_STATUS
+         result == RESULT
+
+         where:
+         JOB_STATUS                 | STATE                          | EXIT_CODE | ARRAY_CHILD | TASK_STATUS                               | EXIT_STATUS       | RESULT
+         JobStatus.State.SUCCEEDED  | TaskStatus.State.SUCCEEDED     | 0         | true        | nextflow.processor.TaskStatus.COMPLETED   | 0                 | true
+         JobStatus.State.FAILED     | TaskStatus.State.FAILED        | 1         | true        | nextflow.processor.TaskStatus.COMPLETED   | 1                 | true
+         JobStatus.State.RUNNING    | TaskStatus.State.RUNNING       | null      | true        | nextflow.processor.TaskStatus.RUNNING     | Integer.MAX_VALUE | false
+         JobStatus.State.SUCCEEDED  | TaskStatus.State.SUCCEEDED     | 0         | false       | nextflow.processor.TaskStatus.COMPLETED   | 0                 | true
+         JobStatus.State.FAILED     | TaskStatus.State.FAILED        | 1         | false       | nextflow.processor.TaskStatus.COMPLETED   | 1                 | true
+         JobStatus.State.RUNNING    | TaskStatus.State.RUNNING       | null      | false       | nextflow.processor.TaskStatus.RUNNING     | Integer.MAX_VALUE | false
+
+     }
+
+    def 'should check if completed from read file' () {
+        given:
+        def jobId = '1'
+        def taskId = '1'
+        def client = Mock(BatchClient){
+            getTaskInArrayStatus(jobId, taskId) >> { TASK_STATE ? makeTaskStatus(TASK_STATE, DESC, EXIT_CODE): null }
+            getTaskStatus(jobId, taskId) >> { TASK_STATE ? makeTaskStatus(TASK_STATE, DESC, EXIT_CODE): null }
+            getJobStatus(jobId ) >> makeJobStatus(JobStatus.State.FAILED,DESC)
+        }
+        def logging = Mock(BatchLogging)
+        def executor = Mock(GoogleBatchExecutor){
+            getLogging() >> logging
+        }
+        def task = new TaskRun()
+        task.name = 'hello'
+        def handler = Spy(new GoogleBatchTaskHandler(jobId: jobId, taskId: taskId, client: client, task: task, isArrayChild: ARRAY_CHILD, status: nextflow.processor.TaskStatus.RUNNING, executor: executor))
+        when:
+        def result = handler.checkIfCompleted()
+        then:
+        1 * handler.readExitFile() >> EXIT_STATUS
+        handler.status == TASK_STATUS
+        handler.task.exitStatus == EXIT_STATUS
+        handler.task.error?.message == TASK_ERROR
+        result == RESULT
+
+        where:
+        TASK_STATE              | DESC      | EXIT_CODE | ARRAY_CHILD    | TASK_STATUS                               | EXIT_STATUS       | RESULT    | TASK_ERROR
+        TaskStatus.State.FAILED | "Error"   | null      | true           | nextflow.processor.TaskStatus.COMPLETED   | 0                 | true      | null
+        null                    | "Error"   | null      | true           | nextflow.processor.TaskStatus.COMPLETED   | 1                 | true      | null
+        TaskStatus.State.FAILED | "Error"   | null      | false          | nextflow.processor.TaskStatus.COMPLETED   | 0                 | true      | null
+        null                    | "Error"   | null      | false          | nextflow.processor.TaskStatus.COMPLETED   | 1                 | true      | null
+    }
+
+    def 'should check if completed when 500xx errors' () {
+        given:
+        def jobId = '1'
+        def taskId = '1'
+        def client = Mock(BatchClient){
+            getTaskInArrayStatus(jobId, taskId) >> { TASK_STATE ? makeTaskStatus(TASK_STATE, DESC, EXIT_CODE): null }
+            getTaskStatus(jobId, taskId) >> { TASK_STATE ? makeTaskStatus(TASK_STATE, DESC, EXIT_CODE): null }
+            getJobStatus(jobId ) >> makeJobStatus(JobStatus.State.FAILED,DESC)
+        }
+        def logging = Mock(BatchLogging)
+        def executor = Mock(GoogleBatchExecutor){
+            getLogging() >> logging
+        }
+        def task = new TaskRun()
+        task.name = 'hello'
+        def handler = Spy(new GoogleBatchTaskHandler(jobId: jobId, taskId: taskId, client: client, task: task, isArrayChild: ARRAY_CHILD, status: nextflow.processor.TaskStatus.RUNNING, executor: executor))
+        when:
+        def result = handler.checkIfCompleted()
+        then:
+        0 * handler.readExitFile() >> EXIT_STATUS
+        handler.status == TASK_STATUS
+        handler.task.exitStatus == EXIT_STATUS
+        handler.task.error?.message == TASK_ERROR
+        result == RESULT
+
+        where:
+        TASK_STATE              | DESC                                                          | EXIT_CODE | ARRAY_CHILD    | TASK_STATUS                               | EXIT_STATUS       | RESULT    | TASK_ERROR
+        TaskStatus.State.FAILED | 'Task failed due to Spot VM preemption with exit code 50001.' | 50001     | true           | nextflow.processor.TaskStatus.COMPLETED   | 50001             | true      | 'Task failed due to Spot VM preemption with exit code 50001.'
+        TaskStatus.State.FAILED | 'Task failed due to Spot VM preemption with exit code 50001.' | 50001     | false          | nextflow.processor.TaskStatus.COMPLETED   | 50001             | true      | 'Task failed due to Spot VM preemption with exit code 50001.'
+    }
+
+    StatusEvent makeStatusEventWithTime(long seconds, Integer exitCode) {
+        def builder = StatusEvent.newBuilder()
+            .setEventTime(Timestamp.newBuilder().setSeconds(seconds).build())
+        if (exitCode != null) {
+            builder.setTaskExecution(TaskExecution.newBuilder().setExitCode(exitCode).build())
+        }
+        builder.build()
+    }
+
+    TaskStatus makeTaskStatusWithEvents(List<StatusEvent> events) {
+        def builder = TaskStatus.newBuilder()
+        events.each { builder.addStatusEvents(it) }
+        builder.build()
+    }
+
+    def 'should get exit code from latest task execution event'() {
+        given:
+        def jobId = 'job-id'
+        def taskId = 'task-id'
+        def client = Mock(BatchClient)
+        def task = Mock(TaskRun) {
+            lazyName() >> 'foo (1)'
+        }
+        def handler = Spy(new GoogleBatchTaskHandler(jobId: jobId, taskId: taskId, client: client, task: task))
+
+        when:
+        client.getTaskStatus(jobId, taskId) >> TASK_STATUS
+        def result = handler.getExitCode()
+
+        then:
+        READ_EXIT_FILE_CALLS * handler.readExitFile() >> FALLBACK_EXIT_CODE
+        result == EXPECTED
+
+        where:
+        DESCRIPTION                                  | TASK_STATUS                                                                                                  | READ_EXIT_FILE_CALLS | FALLBACK_EXIT_CODE | EXPECTED
+        'null task status'                           | null                                                                                                         | 1                    | 42                 | 42
+        'empty events list'                          | makeTaskStatusWithEvents([])                                                                                 | 1                    | 99                 | 99
+        'single event with exit code'                | makeTaskStatusWithEvents([makeStatusEventWithTime(100, 0)])                                                  | 0                    | null               | 0
+        'single event with non-zero exit code'       | makeTaskStatusWithEvents([makeStatusEventWithTime(100, 1)])                                                  | 0                    | null               | 1
+        'event without task execution'               | makeTaskStatusWithEvents([StatusEvent.newBuilder().setEventTime(Timestamp.newBuilder().setSeconds(100).build()).build()]) | 1 | 77                 | 77
+        'multiple events returns latest exit code'   | makeTaskStatusWithEvents([makeStatusEventWithTime(100, 1), makeStatusEventWithTime(200, 0)])                 | 0                    | null               | 0
+        'multiple events out of order'               | makeTaskStatusWithEvents([makeStatusEventWithTime(300, 2), makeStatusEventWithTime(100, 1)])                 | 0                    | null               | 2
+        'mixed events with and without execution'    | makeTaskStatusWithEvents([StatusEvent.newBuilder().setEventTime(Timestamp.newBuilder().setSeconds(50).build()).build(), makeStatusEventWithTime(100, 5)]) | 0 | null | 5
+    }
+
+    def 'should validate max spot attempts' () {
+        given:
+        Global.config = [fusion: [enabled: FUSION, snapshots: SNAPSHOTS]]
+        def workDir = Path.of('/work/dir')
+        def client = Mock(BatchClient)
+        def batchConfig = Mock(BatchConfig) { getMaxSpotAttempts() >> ATTEMPTS }
+        and:
+        def executor = Mock(GoogleBatchExecutor) {
+            getBatchConfig() >> batchConfig
+            getClient() >> client
+            isFusionEnabled() >> FUSION
+        }
+        def processor = Mock(TaskProcessor) { getExecutor() >> executor }
+        def task = Mock(TaskRun) {
+            getHashLog() >> '1234567890'
+            getWorkDir() >> workDir
+            getProcessor() >> processor
+        }
+        def handler = Spy(new GoogleBatchTaskHandler(task, executor)) {
+            fusionEnabled() >> FUSION
+        }
+
+        expect:
+        handler.maxSpotAttempts() == EXPECTED
+
+        cleanup:
+        Global.config = null
+
+        where:
+        ATTEMPTS | FUSION | SNAPSHOTS | EXPECTED
+        0        | false  | false     | 0
+        1        | false  | false     | 1
+        2        | false  | false     | 2
+        and:
+        0        | true   | false     | 0
+        1        | true   | false     | 1
+        2        | true   | false     | 2
+        and:
+        0        | true   | true      | 5    // <-- default to 5
+        1        | true   | true      | 1
+        2        | true   | true      | 2
+    }
+
+    def 'should return zero when no status events exist'() {
+        given:
+        def handler = Spy(GoogleBatchTaskHandler)
+        handler.@taskId = 'task-123'
+        handler.@client = Mock(BatchClient) {
+            getTaskStatus('job-123', 'task-123') >> TaskStatus.newBuilder().build()
+        }
+
+        when:
+        def result = handler.getNumSpotInterruptions('job-123')
+
+        then:
+        handler.isCompleted() >> true
+        result == 0
+    }
+
+    def 'should count spot interruptions correctly from status events'() {
+        given:
+        def handler = Spy(GoogleBatchTaskHandler)
+        handler.@taskId = 'task-123'
+        handler.@client = Mock(BatchClient) {
+            getTaskStatus('job-123', 'task-123') >> TaskStatus.newBuilder()
+                .addStatusEvents(
+                    StatusEvent.newBuilder()
+                        .setTaskExecution(
+                            TaskExecution.newBuilder().setExitCode(0).build()
+                        ).build())
+                .addStatusEvents(
+                StatusEvent.newBuilder()
+                    .setTaskExecution(
+                        TaskExecution.newBuilder().setExitCode(50001).build()
+                    ).build())
+                .addStatusEvents(
+                    StatusEvent.newBuilder()
+                        .setTaskExecution(
+                            TaskExecution.newBuilder().setExitCode(50001).build()
+                        ).build()
+                ).build()
+        }
+
+        when:
+        def result = handler.getNumSpotInterruptions('job-123')
+
+        then:
+        handler.isCompleted() >> true
+        result == 2
+    }
+
+    def 'should return null when jobId is null or task is incomplete'() {
+        given:
+        def handler = Spy(GoogleBatchTaskHandler)
+        handler.@taskId = 'task-123'
+
+        when:
+        def resultNullJobId = handler.getNumSpotInterruptions(null)
+        def resultIncompleteTask = handler.getNumSpotInterruptions('job-123')
+
+        then:
+        handler.isCompleted() >> false
+        resultNullJobId == null
+        resultIncompleteTask == null
+    }
+
+    def 'should return null when an exception occurs while fetching task status'() {
+        given:
+        def handler = Spy(GoogleBatchTaskHandler)
+        handler.@taskId = 'task-123'
+        handler.@client = Mock(BatchClient) {
+            getTaskStatus('job-123', 'task-123') >> { throw new RuntimeException("Error") }
+        }
+
+        when:
+        def result = handler.getNumSpotInterruptions('job-123')
+
+        then:
+        handler.isCompleted() >> true
+        result == null
+    }
+
 }

@@ -39,10 +39,10 @@ class CondaConfigTest extends Specification {
         false       | [enabled: false]  | [:]
         true        | [enabled: true]   | [:]
         and:
-        false       | [:]               | [NXF_CONDA_ENABLED: false]
-        true        | [:]               | [NXF_CONDA_ENABLED: true]
-        false       | [enabled: false]  | [NXF_CONDA_ENABLED: true]  // <-- config has priority
-        true        | [enabled: true]   | [NXF_CONDA_ENABLED: true]
+        false       | [:]               | [NXF_CONDA_ENABLED: 'false']
+        true        | [:]               | [NXF_CONDA_ENABLED: 'true']
+        false       | [enabled: false]  | [NXF_CONDA_ENABLED: 'true']  // <-- config has priority
+        true        | [enabled: true]   | [NXF_CONDA_ENABLED: 'true']
     }
 
 

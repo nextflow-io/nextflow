@@ -18,6 +18,9 @@
 package nextflow.cloud.google.config
 
 import groovy.transform.CompileStatic
+import nextflow.config.spec.ConfigOption
+import nextflow.config.spec.ConfigScope
+import nextflow.script.dsl.Description
 import nextflow.util.Duration
 
 /**
@@ -26,10 +29,24 @@ import nextflow.util.Duration
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-class GoogleRetryOpts {
+class GoogleRetryOpts implements ConfigScope {
 
+    @ConfigOption
+    @Description("""
+        Max attempts when retrying failed API requests to Cloud Storage (default: `10`).
+    """)
     final int maxAttempts
+
+    @ConfigOption
+    @Description("""
+        Delay multiplier when retrying failed API requests to Cloud Storage (default: `2.0`).
+    """)
     final double multiplier
+
+    @ConfigOption
+    @Description("""
+        Max delay when retrying failed API requests to Cloud Storage (default: `'90s'`).
+    """)
     final Duration maxDelay
 
     GoogleRetryOpts(Map opts) {

@@ -15,35 +15,33 @@
  */
 package nextflow.script.control;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import nextflow.script.ast.ASTNodeMarker;
 import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.FeatureFlagNode;
 import nextflow.script.ast.FunctionNode;
 import nextflow.script.ast.IncludeNode;
 import nextflow.script.ast.OutputBlockNode;
-import nextflow.script.ast.ParamNode;
-import nextflow.script.ast.ProcessNode;
+import nextflow.script.ast.ParamBlockNode;
+import nextflow.script.ast.ParamNodeV1;
+import nextflow.script.ast.ProcessNodeV1;
+import nextflow.script.ast.ProcessNodeV2;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
 import nextflow.script.ast.WorkflowNode;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.CodeVisitorSupport;
+import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.ast.VariableScope;
-import org.codehaus.groovy.ast.expr.ArgumentListExpression;
 import org.codehaus.groovy.ast.expr.BinaryExpression;
-import org.codehaus.groovy.ast.expr.ClosureExpression;
-import org.codehaus.groovy.ast.expr.ConstructorCallExpression;
-import org.codehaus.groovy.ast.expr.EmptyExpression;
 import org.codehaus.groovy.ast.expr.Expression;
 import org.codehaus.groovy.ast.expr.MethodCallExpression;
-import org.codehaus.groovy.ast.expr.PropertyExpression;
-import org.codehaus.groovy.ast.expr.TupleExpression;
 import org.codehaus.groovy.ast.expr.VariableExpression;
 import org.codehaus.groovy.ast.stmt.BlockStatement;
-import org.codehaus.groovy.ast.stmt.EmptyStatement;
 import org.codehaus.groovy.ast.stmt.ExpressionStatement;
 import org.codehaus.groovy.ast.stmt.ReturnStatement;
 import org.codehaus.groovy.ast.stmt.Statement;
@@ -70,9 +68,12 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
 
     private ScriptNode moduleNode;
 
+    private ScriptToGroovyHelper sgh;
+
     public ScriptToGroovyVisitor(SourceUnit sourceUnit) {
         this.sourceUnit = sourceUnit;
         this.moduleNode = (ScriptNode) sourceUnit.getAST();
+        this.sgh = new ScriptToGroovyHelper(sourceUnit);
     }
 
     @Override
@@ -117,28 +118,47 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
     }
 
     @Override
-    public void visitParam(ParamNode node) {
+    public void visitParams(ParamBlockNode node) {
+        var statements = Arrays.stream(node.declarations)
+            .map((param) -> {
+                var name = constX(param.getName());
+                var type = classX(param.getType());
+                var optional = constX(type.getNodeMetaData(ASTNodeMarker.NULLABLE) != null);
+                var arguments = param.hasInitialExpression()
+                    ? args(name, type, optional, param.getInitialExpression())
+                    : args(name, type, optional);
+                return stmt(callThisX("declare", arguments));
+            })
+            .toList();
+        var closure = closureX(block(new VariableScope(), statements));
+        var result = stmt(callThisX("params", args(closure)));
+        moduleNode.addStatement(result);
+    }
+
+    @Override
+    public void visitParamV1(ParamNodeV1 node) {
         var result = stmt(assignX(node.target, node.value));
         moduleNode.addStatement(result);
     }
 
     @Override
     public void visitWorkflow(WorkflowNode node) {
-        visitWorkflowTakes(node.takes);
-        visit(node.main);
-        visitWorkflowEmits(node.emits, node.main);
-        visitWorkflowPublishers(node.publishers, node.main);
+        var main = node.main instanceof BlockStatement block ? block : new BlockStatement();
+        visitWorkflowEmits(node.emits, main);
+        visitWorkflowPublishers(node.publishers, main);
+        visitWorkflowHandler(node.onComplete, "setOnComplete", main);
+        visitWorkflowHandler(node.onError, "setOnError", main);
 
         var bodyDef = stmt(createX(
             "nextflow.script.BodyDef",
             args(
-                closureX(node.main),
+                closureX(null, main),
                 constX(getSourceText(node)),
                 constX("workflow")
             )
         ));
-        var closure = closureX(block(new VariableScope(), List.of(
-            node.takes,
+        var closure = closureX(null, block(new VariableScope(), List.of(
+            workflowTakes(node.getParameters()),
             node.emits,
             bodyDef
         )));
@@ -149,16 +169,16 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
         moduleNode.addStatement(result);
     }
 
-    private void visitWorkflowTakes(Statement takes) {
-        for( var stmt : asBlockStatements(takes) ) {
-            var es = (ExpressionStatement)stmt;
-            var take = (VariableExpression)es.getExpression();
-            es.setExpression(callThisX("_take_", args(constX(take.getName()))));
-        }
+    private Statement workflowTakes(Parameter[] takes) {
+        var statements = Arrays.stream(takes)
+            .map((take) ->
+                stmt(callThisX("_take_", args(constX(take.getName()))))
+            )
+            .toList();
+        return block(null, statements);
     }
 
-    private void visitWorkflowEmits(Statement emits, Statement main) {
-        var code = (BlockStatement)main;
+    private void visitWorkflowEmits(Statement emits, BlockStatement main) {
         for( var stmt : asBlockStatements(emits) ) {
             var es = (ExpressionStatement)stmt;
             var emit = es.getExpression();
@@ -167,220 +187,50 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
             }
             else if( emit instanceof AssignmentExpression ae ) {
                 var target = (VariableExpression)ae.getLeftExpression();
-                code.addStatement(assignS(target, emit));
+                main.addStatement(assignS(target, emit));
                 es.setExpression(callThisX("_emit_", args(constX(target.getName()))));
-                code.addStatement(es);
+                main.addStatement(es);
             }
             else {
                 var target = varX("$out");
-                code.addStatement(assignS(target, emit));
+                main.addStatement(assignS(target, emit));
                 es.setExpression(callThisX("_emit_", args(constX(target.getName()))));
-                code.addStatement(es);
+                main.addStatement(es);
             }
         }
     }
 
-    private void visitWorkflowPublishers(Statement publishers, Statement main) {
-        var code = (BlockStatement)main;
+    private void visitWorkflowPublishers(Statement publishers, BlockStatement main) {
         for( var stmt : asBlockStatements(publishers) ) {
             var es = (ExpressionStatement)stmt;
             var publish = (BinaryExpression)es.getExpression();
             var target = asVarX(publish.getLeftExpression());
             es.setExpression(callThisX("_publish_", args(constX(target.getName()), publish.getRightExpression())));
-            code.addStatement(es);
+            main.addStatement(es);
         }
+    }
+
+    private void visitWorkflowHandler(Statement code, String name, BlockStatement main) {
+        if( code instanceof BlockStatement block )
+            main.addStatement(stmt(callX(varX("workflow"), name, args(closureX(null, block)))));
     }
 
     @Override
-    public void visitProcess(ProcessNode node) {
-        visitProcessDirectives(node.directives);
-        visitProcessInputs(node.inputs);
-        visitProcessOutputs(node.outputs);
-        visit(node.exec);
-        visit(node.stub);
-
-        if( "script".equals(node.type) )
-            node.exec.visit(new TaskCmdXformVisitor(sourceUnit));
-        node.stub.visit(new TaskCmdXformVisitor(sourceUnit));
-
-        var when = processWhen(node.when);
-        var bodyDef = stmt(createX(
-            "nextflow.script.BodyDef",
-            args(
-                closureX(node.exec),
-                constX(getSourceText(node.exec)),
-                constX(node.type)
-            )
-        ));
-        var stub = processStub(node.stub);
-        var closure = closureX(block(new VariableScope(), List.of(
-            node.directives,
-            node.inputs,
-            node.outputs,
-            when,
-            stub,
-            bodyDef
-        )));
-        var result = stmt(callThisX("process", args(constX(node.getName()), closure)));
+    public void visitProcessV2(ProcessNodeV2 node) {
+        var result = new ProcessToGroovyVisitorV2(sourceUnit).transform(node);
         moduleNode.addStatement(result);
     }
 
-    private void visitProcessDirectives(Statement directives) {
-        asDirectives(directives).forEach((call) -> {
-            fixLazyGString(call);
-        });
-    }
-
-    private void visitProcessInputs(Statement inputs) {
-        asDirectives(inputs).forEach((call) -> {
-            fixLazyGString(call);
-
-            var name = call.getMethodAsString();
-            varToConstX(call.getArguments(), "tuple".equals(name), "each".equals(name));
-            call.setMethod( constX("_in_" + name) );
-        });
-    }
-
-    private void visitProcessOutputs(Statement outputs) {
-        asDirectives(outputs).forEach((call) -> {
-            fixLazyGString(call);
-
-            var name = call.getMethodAsString();
-            varToConstX(call.getArguments(), "tuple".equals(name), "each".equals(name));
-            call.setMethod( constX("_out_" + name) );
-            visitProcessOutputEmitAndTopic(call);
-        });
-    }
-
-    private static final List<String> EMIT_AND_TOPIC = List.of("emit", "topic");
-
-    private void visitProcessOutputEmitAndTopic(MethodCallExpression output) {
-        var namedArgs = asNamedArgs(output);
-        for( int i = 0; i < namedArgs.size(); i++ ) {
-            var entry = namedArgs.get(i);
-            var key = asConstX(entry.getKeyExpression());
-            var value = asVarX(entry.getValueExpression());
-            if( value != null && key != null && EMIT_AND_TOPIC.contains(key.getText()) ) {
-                namedArgs.set(i, entryX(key, constX(value.getText())));
-            }
-        }
-    }
-
-    private void fixLazyGString(Expression node) {
-        new GStringToLazyVisitor(sourceUnit).visit(node);
-    }
-
-    private Expression varToConstX(Expression node, boolean withinTuple, boolean withinEach) {
-        if( node instanceof TupleExpression te ) {
-            var arguments = te.getExpressions();
-            for( int i = 0; i < arguments.size(); i++ )
-                arguments.set(i, varToConstX(arguments.get(i), withinTuple, withinEach));
-            return te;
-        }
-
-        if( node instanceof VariableExpression ve ) {
-            var name = ve.getName();
-
-            if( "stdin".equals(name) && withinTuple )
-                return createX( "nextflow.script.TokenStdinCall" );
-
-            if ( "stdout".equals(name) && withinTuple )
-                return createX( "nextflow.script.TokenStdoutCall" );
-
-            return createX( "nextflow.script.TokenVar", constX(name) );
-        }
-
-        if( node instanceof MethodCallExpression mce ) {
-            var name = mce.getMethodAsString();
-            var arguments = mce.getArguments();
-
-            if( "env".equals(name) && withinTuple )
-                return createX( "nextflow.script.TokenEnvCall", (TupleExpression) varToStrX(arguments) );
-
-            if( "eval".equals(name) && withinTuple )
-                return createX( "nextflow.script.TokenEvalCall", (TupleExpression) varToStrX(arguments) );
-
-            if( "file".equals(name) && (withinTuple || withinEach) )
-                return createX( "nextflow.script.TokenFileCall", (TupleExpression) varToConstX(arguments, withinTuple, withinEach) );
-
-            if( "path".equals(name) && (withinTuple || withinEach) )
-                return createX( "nextflow.script.TokenPathCall", (TupleExpression) varToConstX(arguments, withinTuple, withinEach) );
-
-            if( "val".equals(name) && withinTuple )
-                return createX( "nextflow.script.TokenValCall", (TupleExpression) varToStrX(arguments) );
-        }
-
-        if( node instanceof PropertyExpression ) {
-            // before:
-            //   val( x.foo )
-            // after:
-            //   val({ x.foo })
-            return wrapExpressionInClosure(node);
-        }
-
-        return node;
-    }
-
-    private Expression varToStrX(Expression node) {
-        if( node instanceof TupleExpression te ) {
-            var arguments = te.getExpressions();
-            for( int i = 0; i < arguments.size(); i++ )
-                arguments.set(i, varToStrX(arguments.get(i)));
-            return te;
-        }
-
-        if( node instanceof VariableExpression ve ) {
-            // before:
-            //   val(x)
-            // after:
-            //   val(TokenVar('x'))
-            var name = ve.getName();
-            return createX( "nextflow.script.TokenVar", constX(name) );
-        }
-
-        if( node instanceof PropertyExpression ) {
-            // before:
-            //   tuple val( x.foo )
-            // after:
-            //   tuple val({ x.foo })
-            return wrapExpressionInClosure(node);
-        }
-
-        return node;
-    }
-
-    protected ClosureExpression wrapExpressionInClosure(Expression node)  {
-        return closureX(block(stmt(node)));
-    }
-
-    private Statement processWhen(Expression when) {
-        if( when instanceof EmptyExpression )
-            return EmptyStatement.INSTANCE;
-        return stmt(callThisX("when", createX(
-            "nextflow.script.TaskClosure",
-            args(
-                wrapExpressionInClosure(when),
-                constX(getSourceText(when))
-            )
-        )));
-    }
-
-    private Statement processStub(Statement stub) {
-        if( stub instanceof EmptyStatement )
-            return EmptyStatement.INSTANCE;
-        return stmt(callThisX("stub", createX(
-            "nextflow.script.TaskClosure",
-            args(
-                closureX(stub),
-                constX(getSourceText(stub))
-            )
-        )));
+    @Override
+    public void visitProcessV1(ProcessNodeV1 node) {
+        var result = new ProcessToGroovyVisitorV1(sourceUnit).transform(node);
+        moduleNode.addStatement(result);
     }
 
     @Override
     public void visitFunction(FunctionNode node) {
         if( RESERVED_NAMES.contains(node.getName()) ) {
-            syntaxError(node, "`${node.getName()}` is not allowed as a function name because it is reserved for internal use");
+            syntaxError(node, "`" + node.getName() + "` is not allowed as a function name because it is reserved for internal use");
             return;
         }
         moduleNode.getScriptClassDummy().addMethod(node);
@@ -391,49 +241,19 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
         var statements = node.declarations.stream()
             .map((output) -> {
                 new PublishDslVisitor().visit(output.body);
-                var name = constX(output.name);
-                var body = closureX(output.body);
+                var name = constX(output.getName());
+                var body = closureX(null, output.body);
                 return stmt(callThisX("declare", args(name, body)));
             })
             .toList();
-        var closure = closureX(block(new VariableScope(), statements));
+        var closure = closureX(null, block(new VariableScope(), statements));
         var result = stmt(callThisX("output", args(closure)));
         moduleNode.addStatement(result);
     }
 
-    private String getSourceText(Statement node) {
-        var builder = new StringBuilder();
-        var colx = node.getColumnNumber();
-        var colz = node.getLastColumnNumber();
-        var first = node.getLineNumber();
-        var last = node.getLastLineNumber();
-        for( int i = first; i <= last; i++ ) {
-            var line = sourceUnit.getSource().getLine(i, null);
-
-            // prepend first-line indent
-            if( i == first ) {
-                int k = 0;
-                while( k < line.length() && line.charAt(k) == ' ' )
-                    k++;
-                builder.append( line.substring(0, k) );
-            }
-
-            var begin = (i == first) ? colx - 1 : 0;
-            var end = (i == last) ? colz - 1 : line.length();
-            builder.append( line.substring(begin, end) ).append('\n');
-        }
-        return builder.toString();
-    }
-
-    private String getSourceText(Expression node) {
-        var stm = stmt(node);
-        stm.setSourcePosition(node);
-        return getSourceText(stm);
-    }
-
     private String getSourceText(WorkflowNode node) {
         if( node.isEntry() && node.getLineNumber() == -1 )
-            return getSourceText(node.main);
+            return sgh.getSourceText(node.main);
 
         var builder = new StringBuilder();
         var colx = node.getColumnNumber();
