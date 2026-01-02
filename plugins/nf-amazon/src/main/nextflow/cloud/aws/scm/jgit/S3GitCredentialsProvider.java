@@ -23,6 +23,7 @@ import org.eclipse.jgit.transport.URIish;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.regions.providers.DefaultAwsRegionProviderChain;
 
 /**
  * JGit credentials provider wrapper for the AWS credentialsProvider and other client configuration parameters.
@@ -42,7 +43,12 @@ public class S3GitCredentialsProvider extends CredentialsProvider {
     }
 
     public Region getRegion(){
-        return region != null ? region : Region.US_EAST_1;
+        if( region != null )
+            return region;
+        var region = DefaultAwsRegionProviderChain.builder().build().getRegion();
+        if( region != null)
+            return region;
+        return Region.US_EAST_1;
     }
 
     public AwsCredentialsProvider getAwsCredentialsProvider(){

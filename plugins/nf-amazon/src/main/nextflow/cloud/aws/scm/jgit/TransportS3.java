@@ -36,6 +36,10 @@ public class TransportS3 extends Transport {
         super(local, uri);
     }
 
+    public TransportS3(URIish uri) throws TransportException {
+        super(uri);
+    }
+
     @Override
     public FetchConnection openFetch() throws TransportException {
         return new S3FetchConnection(this);
@@ -76,6 +80,15 @@ public class TransportS3 extends Transport {
         public Transport open(URIish uri, Repository local, String remoteName) throws TransportException {
             try {
                 return new TransportS3(local, uri);
+            } catch (TransportException e) {
+                throw e;
+            }
+        }
+
+        @Override
+        public Transport open(URIish uri) throws TransportException {
+            try {
+                return new TransportS3(uri);
             } catch (TransportException e) {
                 throw e;
             }
