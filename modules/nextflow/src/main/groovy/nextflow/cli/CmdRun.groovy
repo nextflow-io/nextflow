@@ -328,7 +328,6 @@ class CmdRun extends CmdBase implements HubOptions {
         Plugins.init()
 
         // -- resolve main script
-        Plugins.init()
         final scriptFile = getScriptFile(pipeline)
 
         // -- load command line params
