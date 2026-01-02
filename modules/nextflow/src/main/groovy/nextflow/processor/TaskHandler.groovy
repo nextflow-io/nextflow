@@ -254,7 +254,7 @@ abstract class TaskHandler {
                 log.debug "[WARN] Cannot read trace file: $file -- Cause: ${e.message}"
             }
             // If Fusion is enabled read parse the use of accelerator form .command.log
-            if( FusionHelper.isFusionEnabled(Global.session as Session) )
+            if( Global.session && FusionHelper.isFusionEnabled(Global.session as Session) )
                 record.parseFusionAccelerator(task.workDir?.resolve(TaskRun.CMD_LOG))
         }
 
