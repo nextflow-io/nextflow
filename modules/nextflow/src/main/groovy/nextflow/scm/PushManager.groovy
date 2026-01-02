@@ -66,8 +66,8 @@ class PushManager {
             manageNextflowGitignore()
             stageAndCommitFiles()
         }
-        def manager = new AssetManager(folder, repo)
-        manager.upload(revision, remoteName, isNewRepo)
+        def manager = new AssetManager(repo)
+        manager.upload(folder, revision, remoteName, isNewRepo)
         log.info "Successfully pushed to ${repo} (revision: ${revision})"
         return revision
     }

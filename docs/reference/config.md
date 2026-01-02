@@ -184,7 +184,7 @@ The following settings are available:
 `aws.client.multipartThreshold`
 : :::{versionadded} 25.06.0-edge
   :::
-: The object size threshold used for multipart S3 transfers (default: same as `aws.cllient.minimumPartSize`).
+: The object size threshold used for multipart S3 transfers (default: same as `aws.client.minimumPartSize`).
 
 `aws.client.protocol`
 : :::{deprecated} 25.06.0-edge
@@ -715,6 +715,13 @@ The following settings are available:
 : *Used only by the {ref}`slurm-executor` executor.*
 : When `true`, memory allocations for SLURM jobs are specified as `--mem-per-cpu <task.memory / task.cpus>` instead of `--mem <task.memory>`.
 
+`executor.onlyJobState`
+: :::{versionadded} 25.12.0-edge
+  :::
+: *Used only by the {ref}`slurm-executor` executor.*
+: *Requires SLURM 24.05 or later.*
+: When `true`, job status queries use `squeue --only-job-state` without partition (`-p`) or user (`-u`) filters. This can reduce the load on the SLURM controller, especially if your SLURM administrator has enabled `SchedulerParameters=enable_job_state_cache` in your [SLURM configuration](https://slurm.schedmd.com/slurm.conf.html#OPT_enable_job_state_cache). See [`--only-job-state`](https://slurm.schedmd.com/squeue.html#OPT_only-job-state) for more information (default: `false`).
+
 `executor.perJobMemLimit`
 : *Used only by the {ref}`lsf-executor` executor.*
 : Enables the *per-job* memory limit mode for LSF jobs.
@@ -865,6 +872,7 @@ The following settings are available:
 : Enable Fusion snapshotting (preview, default: `false`). This feature allows Fusion to automatically restore a job when it is interrupted by a spot reclamation.
 
 `fusion.tags`
+: *Currently only supported for S3.*
 : The pattern that determines how tags are applied to files created via the Fusion client (default: `[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)`). Set to `false` to disable tags.
 
 (config-google)=
@@ -921,6 +929,12 @@ The following settings are available:
 : :::{versionadded} 25.03.0-edge
   :::
 : List of custom mount options for `gcsfuse` (default: `['-o rw', '-implicit-dirs']`).
+
+`google.batch.logsPath`
+: :::{versionadded} 25.11.0-edge
+  :::
+: The Google Cloud Storage path where job logs should be stored, e.g. `gs://my-logs-bucket/logs`.
+: When specified, Google Batch will write job logs to this location instead of [Cloud Logging](https://cloud.google.com/logging/docs). The bucket must be accessible and writable by the service account.
 
 `google.batch.maxSpotAttempts`
 : :::{versionadded} 23.11.0-edge
@@ -1580,6 +1594,11 @@ The following settings are available:
   :::
 : Forcefully apply compression option to all layers, including already existing layers (default: `false`).
 
+`wave.build.conda.baseImage`
+: :::{versionadded} 25.12.0-edge
+  :::
+: The base image for the final stage in multi-stage Conda container builds (default: `ubuntu:24.04`). This option only applies when using `wave.build.template` set to `conda/micromamba:v2` or `conda/pixi:v1`.
+
 `wave.build.conda.basePackages`
 : One or more Conda packages to be always added in the resulting container (default: `conda-forge::procps-ng`).
 
@@ -1592,6 +1611,16 @@ The following settings are available:
 `wave.build.repository`
 : The container repository where images built by Wave are uploaded.
 : The corresponding credentials must be provided in your Seqera Platform account.
+
+`wave.build.template`
+: :::{versionadded} 25.12.0-edge
+  :::
+: The build template to use for container builds (default: `conda/micromamba:v1`). Supported values:
+: - `conda/micromamba:v1`: Standard Micromamba 1.x single-stage build. Default when unspecified.
+: - `conda/micromamba:v2`: Micromamba 2.x with multi-stage builds.
+: - `conda/pixi:v1`: Pixi package manager with multi-stage builds for optimized image sizes.
+: - `cran/installr:v1`: R/CRAN packages using installr.
+: Multi-stage templates produce smaller images by excluding build tools from the final image.
 
 `wave.httpClient.connectTimeout`
 : :::{versionadded} 22.06.0-edge

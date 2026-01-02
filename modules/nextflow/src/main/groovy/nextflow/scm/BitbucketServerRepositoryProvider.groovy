@@ -21,6 +21,9 @@ import groovy.json.JsonSlurper
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
+
+import java.nio.charset.StandardCharsets
+
 /**
  * Implements a repository provider for the private hosted BitBucket Server service
  *
@@ -73,7 +76,7 @@ final class BitbucketServerRepositoryProvider extends RepositoryProvider {
         //
         def result = "${config.endpoint}/rest/api/1.0/projects/${project}/repos/${repository}/raw/${path}"
         if( revision )
-            result += "?at=$revision"
+            result += "?at=${URLEncoder.encode(revision, StandardCharsets.UTF_8)}"
         return result
     }
 
