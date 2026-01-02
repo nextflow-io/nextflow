@@ -104,7 +104,7 @@ class S3BashLibTest extends Specification {
                         local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
                         if [[ $is_dir == 1 ]]; then
                             aws s3 cp --only-show-errors --recursive "$source" "$target"
-                        else 
+                        else
                             aws s3 cp --only-show-errors "$source" "$target"
                         fi
                     }
@@ -203,7 +203,7 @@ class S3BashLibTest extends Specification {
                         local is_dir=$(/foo/bin/aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
                         if [[ $is_dir == 1 ]]; then
                             /foo/bin/aws s3 cp --only-show-errors --recursive "$source" "$target"
-                        else 
+                        else
                             /foo/bin/aws s3 cp --only-show-errors "$source" "$target"
                         fi
                     }
@@ -223,7 +223,7 @@ class S3BashLibTest extends Specification {
         expect:
         S3BashLib.script()  == '''
             # aws cli retry config
-            export AWS_RETRY_MODE=standard 
+            export AWS_RETRY_MODE=standard
             export AWS_MAX_ATTEMPTS=5
             # aws helper
             nxf_s3_upload() {
@@ -245,7 +245,7 @@ class S3BashLibTest extends Specification {
                 local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
                 if [[ $is_dir == 1 ]]; then
                     aws s3 cp --only-show-errors --recursive "$source" "$target"
-                else 
+                else
                     aws s3 cp --only-show-errors "$source" "$target"
                 fi
             }
@@ -261,7 +261,7 @@ class S3BashLibTest extends Specification {
         expect:
         S3BashLib.script()  == '''
             # aws cli retry config
-            export AWS_RETRY_MODE=legacy 
+            export AWS_RETRY_MODE=legacy
             export AWS_MAX_ATTEMPTS=100
             # aws helper
             nxf_s3_upload() {
@@ -283,7 +283,7 @@ class S3BashLibTest extends Specification {
                 local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
                 if [[ $is_dir == 1 ]]; then
                     aws s3 cp --only-show-errors --recursive "$source" "$target"
-                else 
+                else
                     aws s3 cp --only-show-errors "$source" "$target"
                 fi
             }
@@ -318,7 +318,7 @@ class S3BashLibTest extends Specification {
                 local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
                 if [[ $is_dir == 1 ]]; then
                     aws s3 cp --only-show-errors --recursive "$source" "$target"
-                else 
+                else
                     aws s3 cp --only-show-errors "$source" "$target"
                 fi
             }
@@ -334,7 +334,7 @@ class S3BashLibTest extends Specification {
         expect:
         S3BashLib.script() == '''
             # aws cli retry config
-            export AWS_RETRY_MODE=legacy 
+            export AWS_RETRY_MODE=legacy
             export AWS_MAX_ATTEMPTS=99
             # aws helper
             nxf_s3_upload() {
@@ -356,7 +356,7 @@ class S3BashLibTest extends Specification {
                 local is_dir=$(/some/bin/aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
                 if [[ $is_dir == 1 ]]; then
                     /some/bin/aws s3 cp --only-show-errors --recursive "$source" "$target"
-                else 
+                else
                     /some/bin/aws s3 cp --only-show-errors "$source" "$target"
                 fi
             }
@@ -450,7 +450,7 @@ class S3BashLibTest extends Specification {
                 local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
                 if [[ $is_dir == 1 ]]; then
                     aws s3 cp --only-show-errors --recursive "$source" "$target"
-                else 
+                else
                     aws s3 cp --only-show-errors "$source" "$target"
                 fi
             }
@@ -541,7 +541,7 @@ class S3BashLibTest extends Specification {
                 local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
                 if [[ $is_dir == 1 ]]; then
                     aws s3 cp --only-show-errors --recursive "$source" "$target"
-                else 
+                else
                     aws s3 cp --only-show-errors "$source" "$target"
                 fi
             }
@@ -616,7 +616,7 @@ class S3BashLibTest extends Specification {
             }
             
             # aws cli retry config
-            export AWS_RETRY_MODE=standard 
+            export AWS_RETRY_MODE=standard
             export AWS_MAX_ATTEMPTS=5
             # aws helper
             nxf_s3_upload() {
@@ -638,7 +638,7 @@ class S3BashLibTest extends Specification {
                 local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
                 if [[ $is_dir == 1 ]]; then
                     aws s3 cp --only-show-errors --recursive "$source" "$target"
-                else 
+                else
                     aws s3 cp --only-show-errors "$source" "$target"
                 fi
             }
@@ -714,7 +714,7 @@ class S3BashLibTest extends Specification {
             }
             
             # aws cli retry config
-            export AWS_RETRY_MODE=standard 
+            export AWS_RETRY_MODE=standard
             export AWS_MAX_ATTEMPTS=5
             # aws helper
             nxf_s3_upload() {
@@ -736,7 +736,7 @@ class S3BashLibTest extends Specification {
                 local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
                 if [[ $is_dir == 1 ]]; then
                     aws s3 cp --only-show-errors --recursive "$source" "$target"
-                else 
+                else
                     aws s3 cp --only-show-errors "$source" "$target"
                 fi
             }
@@ -773,7 +773,7 @@ class S3BashLibTest extends Specification {
                 local is_dir=$(s5cmd ls $source | grep -F "DIR  ${file_name}/" -c)
                 if [[ $is_dir == 1 ]]; then
                     s5cmd cp "$source/*" "$target"
-                else 
+                else
                     s5cmd cp "$source" "$target"
                 fi
             }
@@ -810,7 +810,7 @@ class S3BashLibTest extends Specification {
                 local is_dir=$(s5cmd ls $source | grep -F "DIR  ${file_name}/" -c)
                 if [[ $is_dir == 1 ]]; then
                     s5cmd cp "$source/*" "$target"
-                else 
+                else
                     s5cmd cp "$source" "$target"
                 fi
             }

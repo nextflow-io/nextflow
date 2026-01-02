@@ -95,7 +95,7 @@ class S3BashLib extends BashFunLib<S3BashLib> {
             return ''
         """
         # aws cli retry config
-        export AWS_RETRY_MODE=${retryMode} 
+        export AWS_RETRY_MODE=${retryMode}
         export AWS_MAX_ATTEMPTS=${maxTransferAttempts}
         """.stripIndent().rightTrim()
     }
@@ -127,7 +127,7 @@ class S3BashLib extends BashFunLib<S3BashLib> {
             local is_dir=\$($cli s3 ls \$source | grep -F "PRE \${file_name}/" -c)
             if [[ \$is_dir == 1 ]]; then
                 $cli s3 cp --only-show-errors --recursive "\$source" "\$target"
-            else 
+            else
                 $cli s3 cp --only-show-errors "\$source" "\$target"
             fi
         }
@@ -165,7 +165,7 @@ class S3BashLib extends BashFunLib<S3BashLib> {
             local is_dir=\$($cli ls \$source | grep -F "DIR  \${file_name}/" -c)
             if [[ \$is_dir == 1 ]]; then
                 $cli cp "\$source/*" "\$target"
-            else 
+            else
                 $cli cp "\$source" "\$target"
             fi
         }
