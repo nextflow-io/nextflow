@@ -35,17 +35,23 @@ class DiskResourceTest extends Specification {
         then:
         disk.request == REQ
         disk.type == TYPE
+        disk.fusion == FUSION
 
         where:
-        VALUE                                  | REQ      | TYPE
-        _100_GB                                | _100_GB  | null
-        [request: _100_GB]                     | _100_GB  | null
-        [request: _375_GB, type: 'local-ssd']  | _375_GB  | 'local-ssd'
+        VALUE                                              | REQ      | TYPE         | FUSION
+        _100_GB                                            | _100_GB  | null         | null
+        [request: _100_GB]                                 | _100_GB  | null         | null
+        [request: _375_GB, type: 'local-ssd']              | _375_GB  | 'local-ssd'  | null
+        [request: _100_GB, fusion: true]                   | _100_GB  | null         | true
+        [request: _100_GB, fusion: false]                  | _100_GB  | null         | false
+        [request: _375_GB, type: 'local-ssd', fusion: false] | _375_GB  | 'local-ssd'  | false
     }
 
     def 'should return a disk resource with the specified request' () {
         expect:
         new DiskResource(request: _100_GB).withRequest(_375_GB) == new DiskResource(request: _375_GB)
         new DiskResource(request: _100_GB, type: 'ssd').withRequest(_375_GB) == new DiskResource(request: _375_GB, type: 'ssd')
+        new DiskResource(request: _100_GB, fusion: true).withRequest(_375_GB) == new DiskResource(request: _375_GB, fusion: true)
+        new DiskResource(request: _100_GB, type: 'ssd', fusion: false).withRequest(_375_GB) == new DiskResource(request: _375_GB, type: 'ssd', fusion: false)
     }
 }
