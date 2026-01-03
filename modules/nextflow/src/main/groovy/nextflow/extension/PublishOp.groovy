@@ -26,6 +26,7 @@ import nextflow.exception.ScriptRuntimeException
 import nextflow.processor.PublishDir
 import nextflow.trace.event.FilePublishEvent
 import nextflow.trace.event.WorkflowOutputEvent
+import nextflow.trace.event.WorkflowPublishEvent
 import nextflow.util.CsvWriter
 /**
  * Publish a workflow output.
@@ -87,6 +88,9 @@ class PublishOp {
      */
     protected void onNext(value) {
         log.trace "Publish operator received: $value"
+
+        // notify observers
+        session.notifyWorkflowPublish(new WorkflowPublishEvent(name, value))
 
         // evaluate dynamic path
         final targetResolver = getTargetDir(value)
