@@ -261,6 +261,7 @@ public interface Channel<E> {
         [Read more](https://nextflow.io/docs/latest/reference/operator.html#mix)
     """)
     Channel<E> mix(Channel<E>... others);
+    Channel<E> mix(Value<E>... others);
 
     @Operator
     @Description("""
