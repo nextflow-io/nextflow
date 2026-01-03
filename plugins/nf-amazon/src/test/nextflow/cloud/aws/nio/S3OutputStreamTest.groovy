@@ -58,6 +58,11 @@ class S3OutputStreamTest extends Specification implements AwsS3BaseSpec {
         Global.session = Mock(Session) { getConfig() >> cfg }
     }
 
+    def cleanup() {
+        Global.config = null
+        Global.session = null
+    }
+
     @IgnoreIf({System.getenv('NXF_SMOKE')})
     @Requires({System.getenv('AWS_S3FS_ACCESS_KEY') && System.getenv('AWS_S3FS_SECRET_KEY')})
     def 'should ensure multipart is used'() {

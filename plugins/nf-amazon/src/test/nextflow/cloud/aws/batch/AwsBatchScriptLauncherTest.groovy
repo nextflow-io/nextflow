@@ -123,12 +123,15 @@ class AwsBatchScriptLauncherTest extends Specification {
                 nxf_s3_upload() {
                     local name=$1
                     local s3path=$2
+                    shift 2
+                    # Collect remaining args in an array to preserve quoting & handle empty safely
+                    local opts=( "$@" )
                     if [[ "$name" == - ]]; then
-                      /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors --storage-class STANDARD - "$s3path"
+                      /conda/bin/aws s3 cp --only-show-errors "${opts[@]}" - "$s3path"
                     elif [[ -d "$name" ]]; then
-                      /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
+                      /conda/bin/aws s3 cp --only-show-errors --recursive "${opts[@]}" "$name" "$s3path/$name"
                     else
-                      /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
+                      /conda/bin/aws s3 cp --only-show-errors "${opts[@]}" "$name" "$s3path/$name"
                     fi
                 }
                 
@@ -136,11 +139,14 @@ class AwsBatchScriptLauncherTest extends Specification {
                     local source=$1
                     local target=$2
                     local file_name=$(basename $1)
-                    local is_dir=$(/conda/bin/aws --region eu-west-1 s3 ls $source | grep -F "PRE ${file_name}/" -c)
+                    shift 2
+                    # Collect remaining args in an array to preserve quoting & handle empty safely
+                    local opts=( "$@" )
+                    local is_dir=$(/conda/bin/aws s3 ls "${opts[@]}" $source | grep -F "PRE ${file_name}/" -c)
                     if [[ $is_dir == 1 ]]; then
-                        /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors --recursive "$source" "$target"
+                        /conda/bin/aws s3 cp --only-show-errors --recursive "${opts[@]}" "$source" "$target"
                     else 
-                        /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors "$source" "$target"
+                        /conda/bin/aws s3 cp --only-show-errors "${opts[@]}" "$source" "$target"
                     fi
                 }
                 
@@ -302,12 +308,15 @@ class AwsBatchScriptLauncherTest extends Specification {
                     nxf_s3_upload() {
                         local name=$1
                         local s3path=$2
+                        shift 2
+                        # Collect remaining args in an array to preserve quoting & handle empty safely
+                        local opts=( "$@" )
                         if [[ "$name" == - ]]; then
-                          aws s3 cp --only-show-errors --storage-class STANDARD - "$s3path"
+                          aws s3 cp --only-show-errors "${opts[@]}" - "$s3path"
                         elif [[ -d "$name" ]]; then
-                          aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
+                          aws s3 cp --only-show-errors --recursive "${opts[@]}" "$name" "$s3path/$name"
                         else
-                          aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
+                          aws s3 cp --only-show-errors "${opts[@]}" "$name" "$s3path/$name"
                         fi
                     }
                     
@@ -315,11 +324,14 @@ class AwsBatchScriptLauncherTest extends Specification {
                         local source=$1
                         local target=$2
                         local file_name=$(basename $1)
-                        local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
+                        shift 2
+                        # Collect remaining args in an array to preserve quoting & handle empty safely
+                        local opts=( "$@" )
+                        local is_dir=$(aws s3 ls "${opts[@]}" $source | grep -F "PRE ${file_name}/" -c)
                         if [[ $is_dir == 1 ]]; then
-                            aws s3 cp --only-show-errors --recursive "$source" "$target"
+                            aws s3 cp --only-show-errors --recursive "${opts[@]}" "$source" "$target"
                         else 
-                            aws s3 cp --only-show-errors "$source" "$target"
+                            aws s3 cp --only-show-errors "${opts[@]}" "$source" "$target"
                         fi
                     }
                     
@@ -474,12 +486,15 @@ class AwsBatchScriptLauncherTest extends Specification {
                     nxf_s3_upload() {
                         local name=$1
                         local s3path=$2
+                        shift 2
+                        # Collect remaining args in an array to preserve quoting & handle empty safely
+                        local opts=( "$@" )
                         if [[ "$name" == - ]]; then
-                          aws s3 cp --only-show-errors --storage-class STANDARD - "$s3path"
+                          aws s3 cp --only-show-errors "${opts[@]}" - "$s3path"
                         elif [[ -d "$name" ]]; then
-                          aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
+                          aws s3 cp --only-show-errors --recursive "${opts[@]}" "$name" "$s3path/$name"
                         else
-                          aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
+                          aws s3 cp --only-show-errors "${opts[@]}" "$name" "$s3path/$name"
                         fi
                     }
                     
@@ -487,11 +502,14 @@ class AwsBatchScriptLauncherTest extends Specification {
                         local source=$1
                         local target=$2
                         local file_name=$(basename $1)
-                        local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
+                        shift 2
+                        # Collect remaining args in an array to preserve quoting & handle empty safely
+                        local opts=( "$@" )
+                        local is_dir=$(aws s3 ls "${opts[@]}" $source | grep -F "PRE ${file_name}/" -c)
                         if [[ $is_dir == 1 ]]; then
-                            aws s3 cp --only-show-errors --recursive "$source" "$target"
+                            aws s3 cp --only-show-errors --recursive "${opts[@]}" "$source" "$target"
                         else 
-                            aws s3 cp --only-show-errors "$source" "$target"
+                            aws s3 cp --only-show-errors "${opts[@]}" "$source" "$target"
                         fi
                     }
                     
@@ -590,12 +608,15 @@ class AwsBatchScriptLauncherTest extends Specification {
                     nxf_s3_upload() {
                         local name=$1
                         local s3path=$2
+                        shift 2
+                        # Collect remaining args in an array to preserve quoting & handle empty safely
+                        local opts=( "$@" )
                         if [[ "$name" == - ]]; then
-                          aws s3 cp --only-show-errors --storage-class STANDARD - "$s3path"
+                          aws s3 cp --only-show-errors "${opts[@]}" - "$s3path"
                         elif [[ -d "$name" ]]; then
-                          aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
+                          aws s3 cp --only-show-errors --recursive "${opts[@]}" "$name" "$s3path/$name"
                         else
-                          aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
+                          aws s3 cp --only-show-errors "${opts[@]}" "$name" "$s3path/$name"
                         fi
                     }
                     
@@ -603,11 +624,14 @@ class AwsBatchScriptLauncherTest extends Specification {
                         local source=$1
                         local target=$2
                         local file_name=$(basename $1)
-                        local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
+                        shift 2
+                        # Collect remaining args in an array to preserve quoting & handle empty safely
+                        local opts=( "$@" )
+                        local is_dir=$(aws s3 ls "${opts[@]}" $source | grep -F "PRE ${file_name}/" -c)
                         if [[ $is_dir == 1 ]]; then
-                            aws s3 cp --only-show-errors --recursive "$source" "$target"
+                            aws s3 cp --only-show-errors --recursive "${opts[@]}" "$source" "$target"
                         else 
-                            aws s3 cp --only-show-errors "$source" "$target"
+                            aws s3 cp --only-show-errors "${opts[@]}" "$source" "$target"
                         fi
                     }
                     

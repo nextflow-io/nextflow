@@ -17,7 +17,11 @@
 package nextflow.cloud.aws.batch
 import java.nio.file.Paths
 
+import nextflow.cloud.aws.config.AwsConfig
+import nextflow.cloud.aws.util.S3PathFactory
 import nextflow.processor.TaskBean
+import nextflow.util.Escape
+import software.amazon.awssdk.services.s3.model.ObjectCannedACL
 import spock.lang.Specification
 import test.TestHelper
 
@@ -124,8 +128,6 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         def script = copy.getBeforeStartScript()
         then:
         1 * opts.getAwsCli() >> 'aws'
-        1 * opts.getStorageClass() >> null
-        1 * opts.getStorageEncryption() >> null
 
         script ==   '''\
                     # bash helper functions
@@ -189,12 +191,15 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                     nxf_s3_upload() {
                         local name=$1
                         local s3path=$2
+                        shift 2
+                        # Collect remaining args in an array to preserve quoting & handle empty safely
+                        local opts=( "$@" )
                         if [[ "$name" == - ]]; then
-                          aws s3 cp --only-show-errors --storage-class STANDARD - "$s3path"
+                          aws s3 cp --only-show-errors "${opts[@]}" - "$s3path"
                         elif [[ -d "$name" ]]; then
-                          aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
+                          aws s3 cp --only-show-errors --recursive "${opts[@]}" "$name" "$s3path/$name"
                         else
-                          aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
+                          aws s3 cp --only-show-errors "${opts[@]}" "$name" "$s3path/$name"
                         fi
                     }
 
@@ -202,105 +207,17 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                         local source=$1
                         local target=$2
                         local file_name=$(basename $1)
-                        local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
+                        shift 2
+                        # Collect remaining args in an array to preserve quoting & handle empty safely
+                        local opts=( "$@" )
+                        local is_dir=$(aws s3 ls "${opts[@]}" $source | grep -F "PRE ${file_name}/" -c)
                         if [[ $is_dir == 1 ]]; then
-                            aws s3 cp --only-show-errors --recursive "$source" "$target"
+                            aws s3 cp --only-show-errors --recursive "${opts[@]}" "$source" "$target"
                         else 
-                            aws s3 cp --only-show-errors "$source" "$target"
+                            aws s3 cp --only-show-errors "${opts[@]}" "$source" "$target"
                         fi
                     }
                     '''.stripIndent(true)
-
-        when:
-        script = copy.getBeforeStartScript()
-        then:
-        1 * opts.getAwsCli() >> '/foo/aws'
-        1 * opts.getStorageClass() >> 'STANDARD_IA'
-        1 * opts.getStorageEncryption() >> 'AES256'
-
-        script == '''\
-                # bash helper functions
-                nxf_cp_retry() {
-                    local max_attempts=1
-                    local timeout=10
-                    local attempt=0
-                    local exitCode=0
-                    while (( \$attempt < \$max_attempts ))
-                    do
-                      if "\$@"
-                        then
-                          return 0
-                      else
-                        exitCode=\$?
-                      fi
-                      if [[ \$exitCode == 0 ]]
-                      then
-                        break
-                      fi
-                      nxf_sleep \$timeout
-                      attempt=\$(( attempt + 1 ))
-                      timeout=\$(( timeout * 2 ))
-                    done
-                }
-                
-                nxf_parallel() {
-                    IFS=$'\\n'
-                    local cmd=("$@")
-                    local cpus=$(nproc 2>/dev/null || < /proc/cpuinfo grep '^process' -c)
-                    local max=$(if (( cpus>4 )); then echo 4; else echo $cpus; fi)
-                    local i=0
-                    local pid=()
-                    (
-                    set +u
-                    while ((i<${#cmd[@]})); do
-                        local copy=()
-                        for x in "${pid[@]}"; do
-                          # if the process exist, keep in the 'copy' array, otherwise wait on it to capture the exit code
-                          # see https://github.com/nextflow-io/nextflow/pull/4050
-                          [[ -e /proc/$x ]] && copy+=($x) || wait $x
-                        done
-                        pid=("${copy[@]}")
-                
-                        if ((${#pid[@]}>=$max)); then
-                          nxf_sleep 0.2
-                        else
-                          eval "${cmd[$i]}" &
-                          pid+=($!)
-                          ((i+=1))
-                        fi
-                    done
-                    for p in "${pid[@]}"; do
-                        wait $p
-                    done
-                    )
-                    unset IFS
-                }
-                
-                # aws helper
-                nxf_s3_upload() {
-                    local name=$1
-                    local s3path=$2
-                    if [[ "$name" == - ]]; then
-                      /foo/aws s3 cp --only-show-errors --sse AES256 --storage-class STANDARD_IA - "$s3path"
-                    elif [[ -d "$name" ]]; then
-                      /foo/aws s3 cp --only-show-errors --recursive --sse AES256 --storage-class STANDARD_IA "$name" "$s3path/$name"
-                    else
-                      /foo/aws s3 cp --only-show-errors --sse AES256 --storage-class STANDARD_IA "$name" "$s3path/$name"
-                    fi
-                }
- 
-                nxf_s3_download() {
-                    local source=$1
-                    local target=$2
-                    local file_name=$(basename $1)
-                    local is_dir=$(/foo/aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
-                    if [[ $is_dir == 1 ]]; then
-                        /foo/aws s3 cp --only-show-errors --recursive "$source" "$target"
-                    else 
-                        /foo/aws s3 cp --only-show-errors "$source" "$target"
-                    fi
-                }
-            '''.stripIndent(true)
     }
 
     def 'should return env variables' () {
@@ -379,5 +296,44 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         script == "downloads+=(\"nxf_s3_download s3:/$file bar.txt\")" as String
 
     }
+
+    def 'should return staging with arguments'() {
+        given:
+        def config = [
+            client: [ endpoint: 'https://custom.endpoint.com', requesterPays: true, s3Acl: ObjectCannedACL.PRIVATE.toString(), storageEncryption: 'aws:kms', storageKmsKeyId: 'my-kms-key'],
+            buckets: [
+                'bucket-1': [region: "eu-south-1", anonymous: true, storageClass: 'STANDARD_IA'],
+            ]
+        ]
+        def cfg = new AwsConfig(config)
+        def opts = new AwsOptions(awsConfig: cfg)
+
+        def bean = Mock(TaskBean)
+        def copy = new AwsBatchFileCopyStrategy(bean, opts)
+
+        // Test download with region and anonymous
+        when:
+        def file = S3PathFactory.create("s3:///bucket-1/bar.txt")
+        def script = copy.stageInputFile( file, 'bar.txt')
+        then:
+        script == "downloads+=(\"nxf_s3_download s3:/${Escape.path(file)} bar.txt --region eu-south-1 --no-sign-request --endpoint-url https://custom.endpoint.com\")" as String
+
+        // Test upload with storage class, region, anonymous, encryption, kms key, acl, and requester pays
+        when:
+        def target = S3PathFactory.create("s3:///bucket-1/bar")
+        script = copy.getUnstageOutputFilesScript(['file.txt'], target)
+        then:
+        script.trim() == '''
+                    uploads=()
+                    IFS=$'\\n'
+                    for name in $(eval "ls -1d file.txt" | sort | uniq); do
+                        uploads+=("nxf_s3_upload '$name' s3://bucket-1/bar --storage-class STANDARD_IA --region eu-south-1 --no-sign-request --sse aws:kms --sse-kms-key-id my-kms-key --acl private --request-payer requester --endpoint-url https://custom.endpoint.com")
+                    done
+                    unset IFS
+                    nxf_parallel "${uploads[@]}"
+                    '''
+                    .stripIndent().trim()
+    }
+
     
 }

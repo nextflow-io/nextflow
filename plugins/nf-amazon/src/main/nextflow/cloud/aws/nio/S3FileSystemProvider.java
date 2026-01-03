@@ -732,16 +732,18 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 	protected S3FileSystem createFileSystem(URI uri, AwsConfig awsConfig) {
 		// try to load amazon props
 		Properties props = loadAmazonProperties();
-		// add properties for legacy compatibility
-		props.putAll(awsConfig.getS3LegacyProperties());
 
 		final String bucketName = S3Path.bucketName(uri);
+
+        // add properties for legacy compatibility
+        props.putAll(awsConfig.getS3LegacyProperties(bucketName));
+
         // do not use `global` flag for custom endpoint because
         // when enabling that flag, it overrides S3 endpoints with AWS global endpoint
         // see https://github.com/nextflow-io/nextflow/pull/5779
 		final boolean global = bucketName!=null && !awsConfig.getS3Config().isCustomEndpoint();
-		final AwsClientFactory factory = new AwsClientFactory(awsConfig, awsConfig.resolveS3Region());
-		final S3Client client = new S3Client(factory, props, global);
+		final AwsClientFactory factory = new AwsClientFactory(awsConfig, awsConfig.resolveS3Region(bucketName));
+		final S3Client client = new S3Client(factory, props, bucketName, global);
 
 		// set the client acl
 		client.setCannedAcl(getProp(props, "s_3_acl", "s3_acl", "s3acl", "s3Acl"));

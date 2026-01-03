@@ -32,7 +32,7 @@ import software.amazon.awssdk.transfer.s3.model.FileUpload;
 import software.amazon.awssdk.transfer.s3.model.UploadDirectoryRequest;
 import software.amazon.awssdk.transfer.s3.model.UploadFileRequest;
 
-import static nextflow.cloud.aws.config.AwsS3Config.*;
+import static nextflow.cloud.aws.config.AwsS3ClientConfig.*;
 
 /**
  * Extends the S3 Transfer Manager with semaphores to limit concurrent

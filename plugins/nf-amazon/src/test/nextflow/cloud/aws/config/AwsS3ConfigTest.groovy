@@ -31,7 +31,7 @@ class AwsS3ConfigTest extends Specification {
 
     def 'should get default config' () {
         when:
-        def client = new AwsS3Config([:])
+        def client = new AwsS3ClientConfig([:])
         then:
         !client.storageClass
         !client.storageKmsKeyId
@@ -56,7 +56,7 @@ class AwsS3ConfigTest extends Specification {
         ]
 
         when:
-        def client = new AwsS3Config(OPTS)
+        def client = new AwsS3ClientConfig(OPTS)
         then:
         client.debug
         client.storageClass == 'STANDARD'
@@ -74,7 +74,7 @@ class AwsS3ConfigTest extends Specification {
         ]
 
         when:
-        def client = new AwsS3Config(OPTS)
+        def client = new AwsS3ClientConfig(OPTS)
         then:
         client.storageClass == 'STANDARD_IA'
     }
@@ -85,7 +85,7 @@ class AwsS3ConfigTest extends Specification {
         SysEnv.push(ENV)
 
         when:
-        def config = new AwsS3Config(CONFIG)
+        def config = new AwsS3ClientConfig(CONFIG)
         then:
         config.endpoint == EXPECTED
 
@@ -103,7 +103,7 @@ class AwsS3ConfigTest extends Specification {
     @Unroll
     def 'should fail with invalid endpoint protocol' () {
         when:
-        new AwsS3Config(CONFIG)
+        new AwsS3ClientConfig(CONFIG)
         then:
         def e = thrown(IllegalArgumentException)
         e.message == EXPECTED
@@ -160,7 +160,7 @@ class AwsS3ConfigTest extends Specification {
     @Unroll
     def 'should check is custom endpoint' () {
         given:
-        def config = new AwsS3Config(CONFIG)
+        def config = new AwsS3ClientConfig(CONFIG)
 
         expect:
         config.isCustomEndpoint() == EXPECTED
@@ -178,7 +178,7 @@ class AwsS3ConfigTest extends Specification {
     @Unroll
     def 'should fail with invalid maxDownloadHeapMemory and minimumPartSize are incorrect' () {
         when:
-        new AwsS3Config(CONFIG)
+        new AwsS3ClientConfig(CONFIG)
         then:
         def e = thrown(IllegalArgumentException)
         e.message == EXPECTED
@@ -193,7 +193,7 @@ class AwsS3ConfigTest extends Specification {
     @Unroll
     def 'should get region from endpoint' () {
         expect:
-        new AwsS3Config(CONFIG).getEndpointRegion() == REGION
+        new AwsS3ClientConfig(CONFIG).getEndpointRegion() == REGION
 
         where:
         CONFIG                                                                                  | REGION
