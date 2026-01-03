@@ -2,68 +2,88 @@
 
 # Reports
 
+Nextflow provides several reporting mechanisms to monitor, debug, and analyze pipeline executions:
+
+- [**Execution log**](#execution-log): Query past pipeline runs without re-executing them
+- [**Execution report**](#execution-report): Generate an HTML report with resource usage metrics and task details
+- [**Trace file**](#trace-file): Create a file with detailed task metrics for custom analysis
+- [**Execution timeline**](#execution-timeline): Display a visual timeline showing task execution and scheduling
+- [**Workflow diagram**](#workflow-diagram): Produce a graph visualization of pipeline structure
+
 (execution-log)=
 
 ## Execution log
 
-The `nextflow log` command shows information about executed pipelines in the current folder:
+The `nextflow log` command helps you debug pipelines and inspect execution metadata. You can query by run name or session ID, and the command provides multiple options to filter and format the output.
 
 ```bash
-nextflow log <run name> [options]
+nextflow log <run_name> [options]
 ```
 
-:::{note}
-Both the [execution report](#execution-report) and the [trace file](#trace-file) must be specified when the pipeline is first called. By contrast, the `log` option is useful after a pipeline has already run and is available for every executed pipeline.
-:::
-
-By default, `log` prints the list of executed pipelines:
+By default, `log` prints a list of pipeline runs:
 
 ```console
 $ nextflow log
 TIMESTAMP            RUN NAME         SESSION ID                            COMMAND
-2016-08-01 11:44:51  grave_poincare   18cbe2d3-d1b7-4030-8df4-ae6c42abaa9c  nextflow run hello
-2016-08-01 11:44:55  small_goldstine  18cbe2d3-d1b7-4030-8df4-ae6c42abaa9c  nextflow run hello -resume
-2016-08-01 11:45:09  goofy_kilby      0a1f1589-bd0e-4cfc-b688-34a03810735e  nextflow run rnatoy -with-docker
+2025-12-09 11:43:18     1s              naughty_heisenberg      OK      2ce0b0e294      bae65ec6-a2b9-49bf-b63e-2fec91945e48    nextflow run hello                   
+2025-12-09 11:43:28     931ms           thirsty_swanson         OK      2ce0b0e294      bae65ec6-a2b9-49bf-b63e-2fec91945e48    nextflow run hello -resume           
+2025-12-09 11:43:37     8.5s            goofy_kilby             OK      ca20a6dfd2      d0a60572-076e-451a-b10e-16059ed77e36    nextflow run rnaseq-nf -profile conda
 ```
 
-Specifying a run name or session id prints tasks executed by that pipeline run:
+You can specify a run name or session ID prints tasks executed by that pipeline run:
 
 ```console
 $ nextflow log goofy_kilby
-/Users/../work/0b/be0d1c4b6fd6c778d509caa3565b64
-/Users/../work/ec/3100e79e21c28a12ec2204304c1081
-/Users/../work/7d/eb4d4471d04cec3c69523aab599fd4
-/Users/../work/8f/d5a26b17b40374d37338ccfe967a30
-/Users/../work/94/dfdfb63d5816c9c65889ae34511b32
+/Users/user/workspace/work/e1/fc2d06782f8263476426c576888033
+/Users/user/workspace/work/72/f0542cfa81ad6abeaf1adf02e5cc2b
+/Users/user/workspace/work/83/009346a3958358bb704e996d935c7a
+/Users/user/workspace/work/84/15e4cd16df1db6f9bc0e22cc05316d
 ```
+
+:::{note}
+The `nextflow log` command works retroactively and does not require advance configuration. In contrast, execution reports, trace files, and timelines must be enabled with their respective flags (`-with-report`, `-with-trace`, `-with-timeline`) when running the pipeline.
+:::
 
 ### Customizing fields
 
-By default, only the task execution paths are printed. A custom list of fields to print can be provided via the `-f` (`-fields`) option. For example:
+The `-f` (`-fields`) option specifies a custom list of log fields to include in a printed log.
+
+```bash
+nextflow log <run_name> -f [fields]
+```
+
+You can set a custom list of fields to focus on specific information. For example, `hash`, `name`, `exit`, and `status`:
 
 ```console
 $ nextflow log goofy_kilby -f hash,name,exit,status
-0b/be0d1c  buildIndex (ggal_1_48850000_49020000.Ggal71.500bpflank)  0  COMPLETED
-ec/3100e7  mapping (ggal_gut)                                       0  COMPLETED
-7d/eb4d44  mapping (ggal_liver)                                     0  COMPLETED
-8f/d5a26b  makeTranscript (ggal_liver)                              0  COMPLETED
-94/dfdfb6  makeTranscript (ggal_gut)                                0  COMPLETED
+e1/fc2d06       RNASEQ:INDEX  (ggal_1_48850000_49020000) 0       COMPLETED
+72/f0542c       RNASEQ:FASTQC (ggal_gut)                 0       COMPLETED
+83/009346       RNASEQ:QUANT  (ggal_gut)                 0       COMPLETED
+84/15e4cd       MULTIQC                                  0       COMPLETED
 ```
 
-The fields accepted by the `-f` options are the ones in the {ref}`trace report<trace-fields>`, as well as: script, stdout, stderr, env. List available fields using the `-l` (`-list-fields`) option.
+Optional fields include `script`, `stdout`, `stderr`, `env`, and fields accessible from the {ref}`trace report<trace-fields>`. See {ref}`cli-log` for a full list of available fields or run the `log` command with the `-l` option.
 
-The `script` field is useful for examining script commands run in each task:
+:::{tip}
+Use the `script` field to examine script commands run in each task:
 
 ```console
 $ nextflow log goofy_kilby -f name,status,script
-align_genome      COMPLETED
-   bowtie --index /data/genome input.fastq > output
+RNASEQ:FASTQC (ggal_gut)        COMPLETED
+    fastqc.sh "ggal_gut" "ggal_gut_1.fq ggal_gut_2.fq"
 ...
 ```
+:::
 
 ### Templates
 
-The `-t` option allows a template (string or file) to be specified. This makes it possible to create complex custom reports in any text-based format. For example, you could save this Markdown snippet to a file:
+The `-t` option specifies a template (string or file) to generate custom reports in any text-based format.
+
+```bash
+nextflow log <run_name>  -t <template> > <report>
+```
+
+You can create a template. For example, in Markdown:
 
 ```md
 ## $name
@@ -77,7 +97,7 @@ task status: $status
 task folder: $folder
 ```
 
-Then, the following command will output a markdown file containing the script, exit status and folder of all executed tasks:
+Then, use it to create a report:
 
 ```bash
 nextflow log goofy_kilby -t my-template.md > execution-report.md
@@ -85,76 +105,77 @@ nextflow log goofy_kilby -t my-template.md > execution-report.md
 
 ### Filtering
 
-The `filter` option makes it possible to select which entries to include in the log report. Any valid groovy boolean expression on the log fields can be used to define the filter condition. For example:
+The `filter` option selects which entries to include in log reports.
 
 ```bash
-nextflow log goofy_kilby -filter 'name =~ /hello.*/ && status == "FAILED"'
+nextflow log <run_name> -filter '<filters>'
+```
+
+Any valid Groovy boolean expression on the log fields can be used to define the filter condition. For example, you can filter for task names matching a pattern:
+
+```bash
+nextflow log goofy_kilby -filter 'name =~ /RNA.*/'
+/Users/user/workspace/work/e1/fc2d06782f8263476426c576888033
+/Users/user/workspace/work/72/f0542cfa81ad6abeaf1adf02e5cc2b
+/Users/user/workspace/work/83/009346a3958358bb704e996d935c7a
 ```
 
 (execution-report)=
 
 ## Execution report
 
-Nextflow can create an HTML execution report: a single document which includes many useful metrics about a workflow execution. The report is organized in the three main sections: `Summary`, `Resources` and `Tasks` (see below for details).
+You can create an HTML execution report that includes metrics about a workflow execution. The report is organized in three sections: **Summary**, **Resources**, and **Tasks**.
 
-To enable the creation of this report add the `-with-report` command line option when launching the pipeline execution. For example:
+To enable the creation of this report, add the `-with-report` command line option when launching the pipeline execution:
 
 ```bash
-nextflow run <pipeline> -with-report [file name]
+nextflow run <pipeline> -with-report [file_name]
 ```
 
-The report file name can be specified as an optional parameter following the report option.
+You can optionally specify a file name after the `-with-report` option.
 
 ### Summary
 
-The `Summary` section reports the execution status, the launch command, overall execution time and some other workflow metadata. You can see an example below:
+The **Summary** section reports the execution status, the launch command, overall execution time, and other workflow metadata:
 
 ```{image} _static/report-summary-min.png
 ```
 
-### Resource Usage
+### Resource usage
 
-The `Resources` section plots the distribution of resource usage for each workflow process using the interactive [plotly.js](https://plot.ly/javascript/) plotting library.
+The **Resources** section plots the distribution of resource usage for each workflow process using the interactive [plotly.js](https://plot.ly/javascript/) plotting library.
 
-Plots are shown for CPU, memory, job duration and disk I/O. They have two (or three) tabs with the raw values and a percentage representation showing what proportion of the requested resources were used. These plots are very helpful to check that task resources are used efficiently.
+Plots are shown for CPU, memory, job duration and disk I/O. They have two or three tabs with the raw values and a percentage representation showing what proportion of the requested resources were used. These plots are helpful to check that task resources are used efficiently.
 
-```{image} _static/report-resource-cpu.png
+```{image} _static/report-resources-min.png
 ```
 
-Learn more about how resource usage is computed in {ref}`this tutorial <metrics-page>`.
+For information about how resource usage is computed, see {ref}`metrics-page`.
 
 (execution-report-tasks)=
 
 ### Tasks
 
-The `Tasks` section lists all executed tasks, reporting for each of them the status, the actual command script, and many other metrics. You can see an example below:
+The **Tasks** section lists all executed tasks, reporting the status, command script, and other metrics for each task:
 
 ```{image} _static/report-tasks-min.png
 ```
 
-:::{note}
-Nextflow collects these metrics through a background process for each job in the target environment. Make sure the following tools are available in the environment where tasks are executed: `awk`, `date`, `grep`, `ps`, `sed`, `tail`, `tee`. Moreover, some of these metrics are not reported when running on Mac OS X. See the corresponding note in the [trace file](#trace-file) section.
-:::
-
-:::{warning}
-A common problem when using a third party container image is that it does not include one or more of the above utilities, resulting in an empty execution report.
-:::
-
-Please read {ref}`Report scope <config-report>` section to learn more about the execution report configuration details.
+Nextflow collects these metrics through a background process for each job in the target environment. Make sure the following tools are available in the environment where tasks are executed: `awk`, `date`, `grep`, `ps`, `sed`, `tail`, `tee`. Third-party container image that do not include one or more of the above utilities cause empty execution reports. Some metrics are not reported when running on macOS. For more information, see {ref}`Report scope <config-report>`.
 
 (trace-report)=
 
 ## Trace file
 
-Nextflow creates an execution tracing file that contains some useful information about each process executed in your pipeline script, including: submission time, start time, completion time, cpu and memory used.
+The trace file contains information about each process executed in your pipeline script, including submission time, start time, completion time, CPU, and memory used.
 
-In order to create the execution trace file add the `-with-trace` command line option when launching the pipeline execution. For example:
+To create the execution trace file, add the `-with-trace` command line option when launching the pipeline execution:
 
 ```bash
 nextflow run <pipeline> -with-trace
 ```
 
-It will create a file named `trace.txt` in the current directory. The content looks like the above example:
+The above command creates a file named `trace.txt` in the current directory. For example:
 
 | task_id | hash      | native_id | name           | status    | exit | submit                  | duration | realtime | %cpu   | peak_rss  | peak_vmem | rchar    | wchar    |
 | ------- | --------- | --------- | -------------- | --------- | ---- | ----------------------- | -------- | -------- | ------ | --------- | --------- | -------- | -------- |
@@ -182,174 +203,49 @@ It will create a file named `trace.txt` in the current directory. The content lo
 
 ### Trace fields
 
-The following table shows the fields that can be included in the execution report:
-
-`task_id`
-: Task ID.
-
-`hash`
-: Task hash code.
-
-`native_id`
-: Task ID given by the underlying execution system e.g. POSIX process PID when executed locally, job ID when executed by a grid engine, etc.
-
-`process`
-: Nextflow process name.
-
-`tag`
-: User provided identifier associated with this task.
-
-`name`
-: Task name.
-
-`status`
-: Task status. Possible values are: `NEW`, `SUBMITTED`, `RUNNING`, `COMPLETED`, `FAILED`, and `ABORTED`.
-
-`exit`
-: POSIX process exit status.
-
-`module`
-: Environment module used to run the task.
-
-`container`
-: Docker image name used to execute the task.
-
-`cpus`
-: The cpus number request for the task execution.
-
-`time`
-: The time request for the task execution
-
-`disk`
-: The disk space request for the task execution.
-
-`memory`
-: The memory request for the task execution.
-
-`attempt`
-: Attempt at which the task completed.
-
-`submit`
-: Timestamp when the task has been submitted.
-
-`start`
-: Timestamp when the task execution has started.
-
-`complete`
-: Timestamp when task execution has completed.
-
-`duration`
-: Time elapsed to complete since the submission.
-
-`realtime`
-: Task execution time i.e. delta between completion and start timestamp.
-
-`queue`
-: The queue that the executor attempted to run the process on.
-
-`%cpu`
-: Percentage of CPU used by the process.
-
-`%mem`
-: Percentage of memory used by the process.
-
-`rss`
-: Real memory (resident set) size of the process. Equivalent to `ps -o rss` .
-
-`vmem`
-: Virtual memory size of the process. Equivalent to `ps -o vsize` .
-
-`peak_rss`
-: Peak of real memory. This data is read from field `VmHWM` in `/proc/$pid/status` file.
-
-`peak_vmem`
-: Peak of virtual memory. This data is read from field `VmPeak` in `/proc/$pid/status` file.
-
-`rchar`
-: Number of bytes the process read, using any read-like system call from files, pipes, tty, etc. This data is read from file `/proc/$pid/io`.
-
-`wchar`
-: Number of bytes the process wrote, using any write-like system call. This data is read from file `/proc/$pid/io`.
-
-`syscr`
-: Number of read-like system call invocations that the process performed. This data is read from file `/proc/$pid/io`.
-
-`syscw`
-: Number of write-like system call invocations that the process performed. This data is read from file `/proc/$pid/io`.
-
-`read_bytes`
-: Number of bytes the process directly read from disk. This data is read from file `/proc/$pid/io`.
-
-`write_bytes`
-: Number of bytes the process originally dirtied in the page-cache (assuming they will go to disk later). This data is read from file `/proc/$pid/io`.
-
-`vol_ctxt`
-: Number of voluntary context switches. This data is read from field `voluntary_ctxt_switches` in `/proc/$pid/status` file.
-
-`inv_ctxt`
-: Number of involuntary context switches. This data is read from field `nonvoluntary_ctxt_switches` in `/proc/$pid/status` file.
-
-`env`
-: The variables defined in task execution environment.
-
-`workdir`
-: The directory path where the task was executed.
-
-`script`
-: The task command script.
-
-`scratch`
-: The value of the process `scratch` directive.
-
-`error_action`
-: The action applied on error for task failure.
-
-`hostname`
-: :::{versionadded} 22.05.0-edge
-  :::
-: The host on which the task was executed. Supported only for the Kubernetes executor yet. Activate with `k8s.fetchNodeName = true` in the Nextflow config file.
-
-`cpu_model`
-: :::{versionadded} 22.07.0-edge
-  :::
-: The name of the CPU model used to execute the task. This data is read from file `/proc/cpuinfo`.
+The trace report includes a comma-separated list of fields with detailed metrics for each task.
 
 :::{note}
 These metrics provide an estimation of the resources used by running tasks. They are not an alternative to low-level performance analysis tools, and they may not be completely accurate, especially for very short-lived tasks (running for less than a few seconds).
 :::
 
-Trace report layout and other configuration settings can be specified by using the `nextflow.config` configuration file.
-
-Please read {ref}`Trace scope <config-trace>` section to learn more about it.
+You can configure the trace report layout and other settings in the `nextflow.config` file. See {ref}`Trace scope <config-trace>` for more information.
 
 (timeline-report)=
 
 ## Execution timeline
 
-Nextflow can render an HTML timeline for all processes executed in your pipeline. An example of the execution timeline is shown below:
+You can render an HTML timeline for all processes executed in your pipeline. The following image shows an example execution timeline:
 
 ```{image} _static/timeline-min.png
 ```
 
-Each bar represents a process run in the pipeline execution. The bar length represents the task duration time (wall-time). The colored area in each bar represents the real execution time. The gray area to the *left* of the colored area represents the task scheduling wait time. The gray area to the *right* of the colored area represents the task termination time (clean-up and file un-staging). The numbers on the x-axis represent the time in absolute units e.g. minutes, hours, etc.
+Each bar in the timeline represents a task execution:
 
-Each bar displays two numbers: the task duration time and the virtual memory size peak.
+- **Bar length**: Total task duration (wall-time)
+- **Colored area**: Actual execution time
+- **Gray area (left)**: Task scheduling wait time
+- **Gray area (right)**: Task termination time (cleanup and file un-staging)
+- **Numbers on bar**: Task duration and peak virtual memory size
+- **Bar color**: Identifies tasks from the same process
 
-As each process can spawn many tasks, colors are used to identify those tasks belonging to the same process.
+The x-axis shows time in absolute units (e.g., minutes or hours).
 
-To enable the creation of the execution timeline add the `-with-timeline` command line option when launching the pipeline execution. For example:
+To enable the creation of the execution timeline, add the `-with-timeline` command line option when launching the pipeline execution:
 
 ```bash
-nextflow run <pipeline> -with-timeline [file name]
+nextflow run <pipeline> -with-timeline [file_name]
 ```
 
-The report file name can be specified as an optional parameter following the timeline option.
+:::{note}
+Specifying a file name is optional.
+:::
 
 (workflow-diagram)=
 
 ## Workflow diagram
 
-A Nextflow pipeline can be represented as a direct acyclic graph (DAG). The vertices in the graph represent the pipeline's processes and operators, while the edges represent the data dependencies (i.e. channels) between them.
+A Nextflow pipeline can be represented as a direct acyclic graph (DAG). The vertices in the graph represent the pipeline's processes and operators, while the edges represent the data dependencies (i.e., channels) between them.
 
 To render the workflow DAG, run your pipeline with the `-with-dag` option. By default, it creates a file named `dag-<timestamp>.html` with the workflow DAG rendered as a [Mermaid](https://mermaid.js.org/) diagram.
 
@@ -359,46 +255,11 @@ The workflow DAG can be rendered in a different format by specifying an output f
 nextflow run <pipeline> -with-dag flowchart.png
 ```
 
-:::{versionadded} 22.06.0-edge
-You can use the `-preview` option with `-with-dag` to render the workflow DAG without executing any tasks.
+:::{tip}
+Use the `-preview` option with `-with-dag` to render the workflow DAG without executing any tasks.
 :::
 
-:::{versionchanged} 23.10.0
-The default output format was changed from DOT to HTML.
-:::
-
-The following file formats are supported:
-
-`dot`
-: Graphviz [DOT](http://www.graphviz.org/content/dot-language) file
-
-`gexf`
-: Graph Exchange XML file (Gephi)
-
-`html`
-: HTML file with Mermaid diagram
-: :::{versionchanged} 23.10.0
-  The HTML format was changed to render a Mermaid diagram instead of a Cytoscape diagram.
-  :::
-
-`mmd`
-: :::{versionadded} 22.04.0
-  :::
-: Mermaid diagram
-
-`pdf`
-: *Requires [Graphviz](http://www.graphviz.org) to be installed*
-: Graphviz PDF file
-
-`png`
-: *Requires [Graphviz](http://www.graphviz.org) to be installed*
-: Graphviz PNG file
-
-`svg`
-: *Requires [Graphviz](http://www.graphviz.org) to be installed*
-: Graphviz SVG file
-
-Here is the Mermaid diagram produced by Nextflow for the [rnaseq-nf](https://github.com/nextflow-io/rnaseq-nf) pipeline (using the [Mermaid Live Editor](https://mermaid-js.github.io/mermaid-live-editor/edit) with the `default` theme):
+The following example shows the Mermaid diagram for the [rnaseq-nf](https://github.com/nextflow-io/rnaseq-nf) pipeline (using the [Mermaid Live Editor](https://mermaid-js.github.io/mermaid-live-editor/edit) with the `default` theme):
 
 ```bash
 nextflow run rnaseq-nf -preview -with-dag
