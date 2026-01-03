@@ -19,17 +19,17 @@ package nextflow.plugin.hello
 
 import nextflow.Channel
 import nextflow.plugin.extension.PluginExtensionProvider
-import spock.lang.Specification
 import spock.lang.Timeout
-import test.MockScriptRunner
+import test.Dsl2Spec
 
+import static test.ScriptHelper.runScript
 
 /**
  * @author : jorge <jorge.aguilera@seqera.io>
  *
  */
 @Timeout(10)
-class HelloDslTest extends Specification{
+class HelloDslTest extends Dsl2Spec {
 
     def setup () {
         def ext = new PluginExtensionProvider(){
@@ -47,7 +47,7 @@ class HelloDslTest extends Specification{
             channel.reverse('hi!') 
             '''
         and:
-        def result = new MockScriptRunner([:]).setScript(SCRIPT).execute()
+        def result = runScript(SCRIPT)
         then:
         result.val == '!ih'
         result.val == Channel.STOP
@@ -56,15 +56,12 @@ class HelloDslTest extends Specification{
     def 'should store a goodbye' () {
         when:
         def SCRIPT = '''
-            channel
-                .of('Bye bye folks')
-                .goodbye() 
+            channel.of('Bye bye folks').goodbye() 
             '''
         and:
-        def result = new MockScriptRunner([:]).setScript(SCRIPT).execute()
+        def result = runScript(SCRIPT)
         then:
         result.val == 'Bye bye folks'
         result.val == Channel.STOP
-        
     }
 }

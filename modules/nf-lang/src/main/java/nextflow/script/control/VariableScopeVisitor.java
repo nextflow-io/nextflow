@@ -160,7 +160,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
             vsc.addError("`" + name + "` is already included", mn, "First included here", otherInclude);
         }
         var otherMethods = cn.getDeclaredMethods(name);
-        if( otherMethods.size() > 0 ) {
+        if( !(mn instanceof FunctionNode) && otherMethods.size() > 0 ) {
             var other = otherMethods.get(0);
             var first = mn.getLineNumber() < other.getLineNumber() ? mn : other;
             var second = mn.getLineNumber() < other.getLineNumber() ? other : mn;

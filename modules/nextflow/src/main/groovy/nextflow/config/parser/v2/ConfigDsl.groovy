@@ -42,6 +42,8 @@ class ConfigDsl extends Script {
 
     private boolean strict
 
+    private boolean stripSecrets
+
     private Path configPath
 
     private Map paramOverrides
@@ -64,6 +66,10 @@ class ConfigDsl extends Script {
 
     void setStrict(boolean value) {
         this.strict = value
+    }
+
+    void setStripSecrets(boolean value) {
+        this.stripSecrets = value
     }
 
     void setConfigPath(Path path) {
@@ -195,6 +201,7 @@ class ConfigDsl extends Script {
                 .setIgnoreIncludes(ignoreIncludes)
                 .setRenderClosureAsString(renderClosureAsString)
                 .setStrict(strict)
+                .setStripSecrets(stripSecrets)
                 .setBinding(binding.getVariables())
                 .setParams(target.params as Map)
                 .setProfiles(profiles)

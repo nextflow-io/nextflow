@@ -21,7 +21,8 @@ import nextflow.Channel
 import nextflow.NextflowMeta
 import spock.lang.Timeout
 import test.Dsl2Spec
-import test.MockScriptRunner
+
+import static test.ScriptHelper.*
 
 /**
  *
@@ -44,14 +45,13 @@ class ScriptRecurseTest extends Dsl2Spec {
         }
        
         workflow {
-            main: foo.recurse(1).times(3)
-            emit: foo.out
+            foo.recurse(1).times(3)
+            foo.out
         }
         '''
 
         when:
-        def runner = new MockScriptRunner()
-        def result = runner.setScript(SCRIPT).execute()
+        def result = runScript(SCRIPT)
         then:
         result.val == 2
         result.val == 3
@@ -70,14 +70,13 @@ class ScriptRecurseTest extends Dsl2Spec {
         }
        
         workflow {
-            main: foo.recurse(1).until { it >= 4 }
-            emit: foo.out
+            foo.recurse(1).until { it >= 4 }
+            foo.out
         }
         '''
 
         when:
-        def runner = new MockScriptRunner()
-        def result = runner.setScript(SCRIPT).execute()
+        def result = runScript(SCRIPT)
         then:
         result.val == 2
         result.val == 3
@@ -112,14 +111,13 @@ class ScriptRecurseTest extends Dsl2Spec {
         }
         
         workflow {
-            main: group.recurse(1).times(3)
-            emit: group.out  
+            group.recurse(1).times(3)
+            group.out  
         }
         '''
 
         when:
-        def runner = new MockScriptRunner()
-        def result = runner.setScript(SCRIPT).execute()
+        def result = runScript(SCRIPT)
         then:
         result.val == 4
         result.val == 25
@@ -140,16 +138,13 @@ class ScriptRecurseTest extends Dsl2Spec {
          }
          
          workflow {
-           main:
              data = channel.of(10,20,30) 
              foo.scan(data)
-           emit:
              foo.out
          }
         '''
         when:
-        def runner = new MockScriptRunner()
-        def result = runner.setScript(SCRIPT).execute()
+        def result = runScript(SCRIPT)
         then:
         result.val == 11 // 10 +1
         result.val == 32 // 20 + 11 +1

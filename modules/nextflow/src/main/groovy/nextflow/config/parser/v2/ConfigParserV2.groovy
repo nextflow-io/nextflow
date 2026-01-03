@@ -79,7 +79,7 @@ class ConfigParserV2 implements ConfigParser {
     }
 
     @Override
-    ConfigParser setStripSecrets(boolean value) {
+    ConfigParserV2 setStripSecrets(boolean value) {
         this.stripSecrets = value
         return this
     }
@@ -127,9 +127,11 @@ class ConfigParserV2 implements ConfigParser {
             if( path )
                 script.setConfigPath(path)
             script.setIgnoreIncludes(ignoreIncludes)
+            script.setRenderClosureAsString(renderClosureAsString)
+            script.setStrict(strict)
+            script.setStripSecrets(stripSecrets)
             script.setParams(paramOverrides)
             script.setProfiles(appliedProfiles)
-            script.setRenderClosureAsString(renderClosureAsString)
             script.run()
 
             final target = script.getTarget()

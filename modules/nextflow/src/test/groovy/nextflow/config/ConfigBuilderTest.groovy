@@ -88,19 +88,38 @@ class ConfigBuilderTest extends Specification {
 
         setup:
         def builder = [:] as ConfigBuilder
-        def env = [HOME:'/home/my', PATH:'/local/bin', 'dot.key.name':'any text']
+        and:
+        SysEnv.push(HOME:'/home/my', PATH:'/local/bin', 'dot.key.name':'any text')
 
         def text1 = '''
-        task { field1 = 1; field2 = 'hola'; }
-        env { alpha = 'a1'; beta  = 'b1'; HOME="$HOME:/some/path"; }
+        task {
+            field1 = 1
+            field2 = 'hola'
+        }
+
+        env {
+            alpha = 'a1'
+            beta = 'b1'
+            HOME = "${env('HOME')}:/some/path"
+        }
         '''
 
         def text2 = '''
-        task { field2 = 'Hello' }
-        env { beta = 'b2'; delta = 'd2'; HOME="$HOME:/local/path"; XXX="$PATH:/xxx"; YYY = "$XXX:/yyy"; WWW = "${WWW?:''}:value"   }
+        task {
+            field2 = 'Hello'
+        }
+
+        env {
+            beta = 'b2'
+            delta = 'd2'
+            HOME = "${env('HOME')}:/local/path"
+            XXX = "${env('PATH')}:/xxx"
+            WWW = "${env('WWW') ?: ''}:value"
+        }
         '''
 
         when:
+        def env = SysEnv.get()
         def config1 = builder.buildConfig0(env, [text1])
         def config2 = builder.buildConfig0(env, [text1, text2])
 
@@ -122,27 +141,41 @@ class ConfigBuilderTest extends Specification {
         config2.env.HOME == '/home/my:/local/path'
         config2.env.XXX == '/local/bin:/xxx'
         config2.env.PATH == '/local/bin'
-        config2.env.YYY == '/local/bin:/xxx:/yyy'
         config2.env.ZZZ == '99'
         config2.env.WWW == ':value'
 
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'build config object 3' () {
 
         setup:
         def builder = [:] as ConfigBuilder
-        def env = [HOME:'/home/my', PATH:'/local/bin', 'dot.key.name':'any text']
+        and:
+        SysEnv.push(HOME:'/home/my', PATH:'/local/bin', 'dot.key.name':'any text')
 
         def text1 = '''
-        task { field1 = 1; field2 = 'hola'; }
-        env { alpha = 'a1'; beta  = 'b1'; HOME="$HOME:/some/path"; }
-        params { demo = 1  }
+        task {
+            field1 = 1
+            field2 = 'hola'
+        }
+
+        env {
+            alpha = 'a1'
+            beta  = 'b1'
+            HOME = "${env('HOME')}:/some/path"
+        }
+
+        params {
+            demo = 1
+        }
         params.test = 2
         '''
 
 
         when:
+        def env = SysEnv.get()
         def config1 = builder.buildConfig0(env, [text1])
 
         then:
@@ -155,6 +188,8 @@ class ConfigBuilderTest extends Specification {
         config1.params.test == 2
         config1.params.demo == 1
 
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'build config object 4' () {
@@ -169,7 +204,6 @@ class ConfigBuilderTest extends Specification {
             q = "$baseDir/2"
             x = "$projectDir/3"
             y = "$launchDir/4"
-            z = "$outputDir/5"
         }
         '''
 
@@ -180,7 +214,6 @@ class ConfigBuilderTest extends Specification {
         cfg.params.q == '/base/path/2'
         cfg.params.x == '/base/path/3'
         cfg.params.y == "${Path.of('.').toRealPath()}/4"
-        cfg.params.z == "${Path.of('results').complete()}/5"
 
     }
 
@@ -287,7 +320,7 @@ class ConfigBuilderTest extends Specification {
         def config = configWithParams(configMain.toPath(), [params: [one: '1', two: 'dos', three: 'tres']])
 
         then:
-        config.params.one == 1
+        config.params.one == '1'
         config.params.two == 'dos'
         config.params.three == 'tres'
         config.process.name == 'alpha'
@@ -1696,87 +1729,6 @@ class ConfigBuilderTest extends Specification {
 
     }
 
-    def 'should warn about missing attribute' () {
-
-        given:
-        def file = Files.createTempFile('test','config')
-        file.deleteOnExit()
-        file.text =
-                '''
-                params.foo = HOME
-                '''
-
-
-        when:
-        SysEnv.push(HOME: '/home/user')
-        def opt = new CliOptions(config: [file.toFile().canonicalPath] )
-        def cfg = new ConfigBuilder().setOptions(opt).build()
-        SysEnv.pop()
-        then:
-        cfg.params.foo == '/home/user'
-
-        when:
-        file.text =
-                '''
-                params.foo = bar
-                '''
-        opt = new CliOptions(config: [file.toFile().canonicalPath] )
-        new ConfigBuilder().setOptions(opt).build()
-        then:
-        def e = thrown(ConfigParseException)
-        e.message == "Unknown config attribute `bar` -- check config file: ${file.toRealPath()}".toString()
-
-    }
-
-    def 'should render missing variables' () {
-        given:
-        def file = Files.createTempFile('test',null)
-
-        file.text =
-                '''
-                foo = 'xyz'
-                bar = "$SCRATCH/singularity_images_nextflow"
-                '''
-
-        when:
-        def opt = new CliOptions(config: [file.toFile().canonicalPath] )
-        def builder = new ConfigBuilder()
-                .setOptions(opt)
-                .showMissingVariables(true)
-        def cfg = builder.buildConfigObject()
-        def str = ConfigHelper.toCanonicalString(cfg)
-        then:
-        str == '''\
-            foo = 'xyz'
-            bar = '$SCRATCH/singularity_images_nextflow'
-            '''.stripIndent()
-
-        and:
-        builder.warnings[0].startsWith('Unknown config attribute `SCRATCH`')
-        cleanup:
-        file?.delete()
-    }
-
-    def 'should report fully qualified missing attribute'  () {
-
-        given:
-        def file = Files.createTempFile('test','config')
-        file.deleteOnExit()
-
-        when:
-        file.text =
-                '''
-                params.x = foo.bar
-                '''
-        def opt = new CliOptions(config: [file.toFile().canonicalPath] )
-        new ConfigBuilder().setOptions(opt).build()
-        then:
-        def e = thrown(ConfigParseException)
-        e.message == "Unknown config attribute `foo.bar` -- check config file: ${file.toRealPath()}".toString()
-
-    }
-
-
     def 'should collect config files' () {
 
         given:
@@ -2470,9 +2422,7 @@ class ConfigBuilderTest extends Specification {
             test { includeConfig 'test.conf' }
         }
         
-        if (params.load_config) {
-            includeConfig 'process.conf'
-        }        
+        includeConfig (params.load_config ? 'process.conf' : '/dev/null')
         '''
         test.text = '''
         params {

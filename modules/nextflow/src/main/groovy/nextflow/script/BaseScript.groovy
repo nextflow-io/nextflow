@@ -40,15 +40,11 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     private Session session
 
-    private ProcessFactory processFactory
-
     private ScriptMeta meta
 
     private WorkflowDef entryFlow
 
     private OutputDef publisher
-
-    @Lazy InputStream stdin = { System.in }()
 
     BaseScript() {
         meta = ScriptMeta.register(this)
@@ -90,7 +86,6 @@ abstract class BaseScript extends Script implements ExecutionContext {
     private void setup() {
         binding.owner = this
         session = binding.getSession()
-        processFactory = session.newProcessFactory(this)
 
         binding.setVariable( 'baseDir', session.baseDir )
         binding.setVariable( 'projectDir', session.baseDir )
