@@ -205,7 +205,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                         local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
                         if [[ $is_dir == 1 ]]; then
                             aws s3 cp --only-show-errors --recursive "$source" "$target"
-                        else 
+                        else
                             aws s3 cp --only-show-errors "$source" "$target"
                         fi
                     }
@@ -296,7 +296,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                     local is_dir=$(/foo/aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
                     if [[ $is_dir == 1 ]]; then
                         /foo/aws s3 cp --only-show-errors --recursive "$source" "$target"
-                    else 
+                    else
                         /foo/aws s3 cp --only-show-errors "$source" "$target"
                     fi
                 }

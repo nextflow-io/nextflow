@@ -139,7 +139,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                     local is_dir=$(/conda/bin/aws --region eu-west-1 s3 ls $source | grep -F "PRE ${file_name}/" -c)
                     if [[ $is_dir == 1 ]]; then
                         /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors --recursive "$source" "$target"
-                    else 
+                    else
                         /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors "$source" "$target"
                     fi
                 }
@@ -318,7 +318,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                         local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
                         if [[ $is_dir == 1 ]]; then
                             aws s3 cp --only-show-errors --recursive "$source" "$target"
-                        else 
+                        else
                             aws s3 cp --only-show-errors "$source" "$target"
                         fi
                     }
@@ -490,7 +490,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                         local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
                         if [[ $is_dir == 1 ]]; then
                             aws s3 cp --only-show-errors --recursive "$source" "$target"
-                        else 
+                        else
                             aws s3 cp --only-show-errors "$source" "$target"
                         fi
                     }
@@ -584,7 +584,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                     }
                     
                     # aws cli retry config
-                    export AWS_RETRY_MODE=adaptive 
+                    export AWS_RETRY_MODE=adaptive
                     export AWS_MAX_ATTEMPTS=3
                     # aws helper
                     nxf_s3_upload() {
@@ -606,7 +606,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                         local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
                         if [[ $is_dir == 1 ]]; then
                             aws s3 cp --only-show-errors --recursive "$source" "$target"
-                        else 
+                        else
                             aws s3 cp --only-show-errors "$source" "$target"
                         fi
                     }

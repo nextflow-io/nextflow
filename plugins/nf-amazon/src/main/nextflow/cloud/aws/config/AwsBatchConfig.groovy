@@ -125,6 +125,12 @@ class AwsBatchConfig implements CloudTransferOptions, ConfigScope {
     """)
     final List<String> volumes
 
+    @ConfigOption
+    @Description("""
+        When `true`, the `--force-glacier-transfer` flag is added to AWS CLI S3 download commands, allowing restored Glacier/Deep Archive objects to be downloaded. Only needed when staging files that have been restored from archive storage (default: `false`).
+    """)
+    final boolean forceGlacierTransfer
+
     /**
      * The path for the `s5cmd` tool as an alternative to `aws s3` CLI to upload/download files
      */
@@ -151,6 +157,7 @@ class AwsBatchConfig implements CloudTransferOptions, ConfigScope {
         schedulingPriority = opts.schedulingPriority as Integer ?: 0
         executionRole = opts.executionRole
         terminateUnschedulableJobs = opts.terminateUnschedulableJobs as boolean
+        forceGlacierTransfer = opts.forceGlacierTransfer as boolean
         if( retryMode == 'built-in' )
             retryMode = null // this force falling back on NF built-in retry mode instead of delegating to AWS CLI tool
         if( retryMode && retryMode !in AwsOptions.VALID_RETRY_MODES )
