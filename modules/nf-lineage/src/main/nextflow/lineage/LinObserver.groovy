@@ -38,6 +38,7 @@ import nextflow.lineage.model.v1beta1.WorkflowOutput
 import nextflow.lineage.model.v1beta1.WorkflowRun
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
+import nextflow.processor.TaskHasher
 import nextflow.processor.TaskRun
 import nextflow.script.ScriptMeta
 import nextflow.script.params.BaseParam
@@ -257,8 +258,8 @@ class LinObserver implements TraceObserverV2 {
             normalizer.normalizePath(task.getCondaEnv()),
             normalizer.normalizePath(task.getSpackEnv()),
             task.config?.getArchitecture()?.toString(),
-            task.processor.getTaskGlobalVars(task),
-            task.processor.getTaskBinEntries(task.source).collect { Path p -> new DataPath(
+            new TaskHasher(task).getTaskGlobalVars(),
+            new TaskHasher(task).getTaskBinEntries(task.source).collect { Path p -> new DataPath(
                 normalizer.normalizePath(p.normalize()),
                 Checksum.ofNextflow(p) )
             },
