@@ -45,6 +45,8 @@ class AwsConfig implements ConfigScope {
 
     final AwsBatchConfig batch
 
+    final AwsEcsConfig ecs
+
     final AwsS3Config client
 
     @ConfigOption
@@ -80,6 +82,7 @@ class AwsConfig implements ConfigScope {
         this.profile = getAwsProfile0(SysEnv.get(), opts)
         this.region = getAwsRegion(SysEnv.get(), opts)
         this.batch = new AwsBatchConfig((Map)opts.batch ?: Collections.emptyMap())
+        this.ecs = new AwsEcsConfig((Map)opts.ecs ?: Collections.emptyMap())
         this.client = new AwsS3Config((Map)opts.client ?: Collections.emptyMap())
     }
 
@@ -92,6 +95,8 @@ class AwsConfig implements ConfigScope {
     AwsS3Config getS3Config() { client }
 
     AwsBatchConfig getBatchConfig() { batch }
+
+    AwsEcsConfig getEcsConfig() { ecs }
 
     @Deprecated
     String getS3GlobalRegion() {
