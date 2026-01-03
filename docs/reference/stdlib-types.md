@@ -731,7 +731,7 @@ The following methods are available for listing and traversing directories:
 : Returns the first-level elements (files and directories) in a directory.
 
 `listFiles() -> Iterable<Path>`
-: :::{deprecated}
+: :::{deprecated} 26.04.0
   Use `listDirectory()` instead.
   :::
 : Returns the first-level elements (files and directories) in a directory.
