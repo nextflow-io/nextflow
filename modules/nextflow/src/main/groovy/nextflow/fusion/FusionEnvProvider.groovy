@@ -21,6 +21,9 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.ReportWarningException
 import nextflow.plugin.Plugins
+
+import java.nio.file.Path
+
 /**
  * Provider strategy for {@link FusionEnv}
  *
@@ -49,6 +52,19 @@ class FusionEnvProvider {
             result.FUSION_CACHE_SIZE = "${config.cacheSize().toMega()}M"
         return result
     }
+    Map<String,String> getEnvironmentFromPath(Path p) {
+        final config = FusionConfig.getConfig()
+        final list =Plugins.getExtensions(FusionEnv)
+        log.debug "Fusion environment extensions=$list"
+        final result = new HashMap<String,String>()
+        for( FusionEnv it : list ) {
+            final env = it.getEnvironmentFromPath(p,config)
+            log.debug "Env for $p: $env"
+            if( env )
+                result.putAll(env)
+        }
+        return result
+    }
 
     protected Map<String,String> getFusionEnvironment(String scheme, FusionConfig config) {
         final list = Plugins.getExtensions(FusionEnv)
@@ -56,6 +72,7 @@ class FusionEnvProvider {
         final result = new HashMap<String,String>()
         for( FusionEnv it : list ) {
             final env = it.getEnvironment(scheme,config)
+            log.debug "Env for $scheme: $env"
             if( env )
                 result.putAll(env)
         }

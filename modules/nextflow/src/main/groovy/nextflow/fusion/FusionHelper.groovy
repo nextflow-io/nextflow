@@ -35,6 +35,7 @@ import nextflow.io.BucketParser
  */
 @CompileStatic
 class FusionHelper {
+    public static List<String> SUPPORTED_CLOUD_SCHEMES = ['s3', 'az']
 
     @Memoized
     static boolean isFusionEnabled(Session session) {
