@@ -76,6 +76,8 @@ class AwsClientFactory {
 
     private String profile
 
+    private boolean anonymous
+
     /**
      * Initialise the Amazon cloud driver with default (empty) parameters
      */
@@ -83,7 +85,7 @@ class AwsClientFactory {
         this(new AwsConfig(Collections.emptyMap()))
     }
 
-    AwsClientFactory(AwsConfig config, String region=null) {
+    AwsClientFactory(AwsConfig config, String region=null, Boolean anonymous=false) {
         this.config = config
 
         if( config.accessKey && config.secretKey ) {
@@ -104,7 +106,8 @@ class AwsClientFactory {
                 ?: SysEnv.get('AWS_REGION')
                 ?: SysEnv.get('AWS_DEFAULT_REGION')
                 ?: fetchRegion()
-
+        this.anonymous = anonymous ?:
+            config.s3Config.anonymous
         if( !this.region )
             throw new AbortOperationException('Missing AWS region -- Make sure to define in your system environment the variable `AWS_DEFAULT_REGION`')
     }
@@ -116,6 +119,8 @@ class AwsClientFactory {
     String region() { region }
 
     String profile() { profile }
+
+    AwsConfig config() { config }
 
     /**
      * Retrieve the current IAM role eventually define for a EC2 instance.
@@ -288,7 +293,7 @@ class AwsClientFactory {
      * @return an AwsCredentialsProvider instance, falling back to anonymous if needed.
      */
     private AwsCredentialsProvider getS3CredentialsProvider() {
-        if ( config.s3Config.anonymous )
+        if ( this.anonymous )
             return AnonymousCredentialsProvider.create()
         def provider = getCredentialsProvider0()
         try {
