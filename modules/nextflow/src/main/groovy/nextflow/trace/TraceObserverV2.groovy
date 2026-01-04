@@ -23,6 +23,7 @@ import nextflow.processor.TaskProcessor
 import nextflow.trace.event.FilePublishEvent
 import nextflow.trace.event.TaskEvent
 import nextflow.trace.event.WorkflowOutputEvent
+import nextflow.trace.event.WorkflowPublishEvent
 
 /**
  * Interface for consuming workflow lifecycle events.
@@ -126,6 +127,15 @@ interface TraceObserverV2 {
      * @param event
      */
     default void onWorkflowOutput(WorkflowOutputEvent event) {}
+
+    /**
+     * Invoked when a value is being published to a workflow output.
+     * Unlike {@link #onWorkflowOutput} which fires after all values are
+     * published, this fires for each value as it is published.
+     *
+     * @param event
+     */
+    default void onWorkflowPublish(WorkflowPublishEvent event) {}
 
     /**
      * Invoked when a file is published, either by a `publishDir` directive

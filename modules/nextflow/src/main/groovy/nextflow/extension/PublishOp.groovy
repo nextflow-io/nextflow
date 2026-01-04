@@ -26,6 +26,7 @@ import nextflow.exception.ScriptRuntimeException
 import nextflow.processor.PublishDir
 import nextflow.trace.event.FilePublishEvent
 import nextflow.trace.event.WorkflowOutputEvent
+import nextflow.trace.event.WorkflowPublishEvent
 import nextflow.util.CsvWriter
 /**
  * Publish a workflow output.
@@ -114,6 +115,9 @@ class PublishOp {
         final normalized = normalizePaths(value, targetResolver)
         log.trace "Normalized record for index file: ${normalized}"
         indexRecords << normalized
+
+        // notify observers
+        session.notifyWorkflowPublish(new WorkflowPublishEvent(name, normalized))
     }
 
     /**

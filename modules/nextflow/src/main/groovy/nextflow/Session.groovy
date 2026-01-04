@@ -79,6 +79,7 @@ import nextflow.trace.WorkflowStatsObserver
 import nextflow.trace.event.FilePublishEvent
 import nextflow.trace.event.TaskEvent
 import nextflow.trace.event.WorkflowOutputEvent
+import nextflow.trace.event.WorkflowPublishEvent
 import nextflow.util.Barrier
 import nextflow.util.ConfigHelper
 import nextflow.util.Duration
@@ -1069,6 +1070,10 @@ class Session implements ISession {
 
     void notifyWorkflowOutput(WorkflowOutputEvent event) {
         notifyEvent(observersV2, ob -> ob.onWorkflowOutput(event))
+    }
+
+    void notifyWorkflowPublish(WorkflowPublishEvent event) {
+        notifyEvent(observersV2, ob -> ob.onWorkflowPublish(event))
     }
 
     void notifyFilePublish(FilePublishEvent event) {
