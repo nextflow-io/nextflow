@@ -4,11 +4,11 @@
 
 Nextflow provides several reporting mechanisms to monitor, debug, and analyze pipeline executions:
 
-- [**Execution log**](#execution-log): Query past pipeline runs without re-executing them
-- [**Execution report**](#execution-report): Generate an HTML report with resource usage metrics and task details
-- [**Trace file**](#trace-file): Create a file with detailed task metrics for custom analysis
-- [**Execution timeline**](#execution-timeline): Display a visual timeline showing task execution and scheduling
-- [**Workflow diagram**](#workflow-diagram): Produce a graph visualization of pipeline structure
+- [Execution log](#execution-log): Query past pipeline runs without re-executing them
+- [Execution report](#execution-report): Generate an HTML report with resource usage metrics and task details
+- [Trace file](#trace-file): Create a file with detailed task metrics for custom analysis
+- [Execution timeline](#execution-timeline): Display a visual timeline showing task execution and scheduling
+- [Workflow diagram](#workflow-diagram): Produce a graph visualization of pipeline structure
 
 (execution-log)=
 
@@ -222,12 +222,12 @@ You can render an HTML timeline for all processes executed in your pipeline. The
 
 Each bar in the timeline represents a task execution:
 
-- **Bar length**: Total task duration (wall-time)
-- **Colored area**: Actual execution time
-- **Gray area (left)**: Task scheduling wait time
-- **Gray area (right)**: Task termination time (cleanup and file un-staging)
-- **Numbers on bar**: Task duration and peak virtual memory size
-- **Bar color**: Identifies tasks from the same process
+- Bar length: Total task duration (wall-time)
+- Colored area: Actual execution time
+- Gray area (left): Task scheduling wait time
+- Gray area (right): Task termination time (cleanup and file un-staging)
+- Numbers on bar: Task duration and peak virtual memory size
+- Bar color: Identifies tasks from the same process
 
 The x-axis shows time in absolute units (e.g., minutes or hours).
 
