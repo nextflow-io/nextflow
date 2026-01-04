@@ -116,5 +116,27 @@ class ExecutorConfigTest extends Specification {
         config.getExecConfigProp( 'hazelcast', 'jobName', 'alpha', [NXF_EXECUTOR_JOBNAME:'hola']) == 'hola'
     }
 
+    def 'test onlyJobState property'() {
+
+        when:
+        def config = new ExecutorConfig(['$slurm':[onlyJobState: true] ])
+        then:
+        config.getExecConfigProp('slurm', 'onlyJobState', false) == true
+        config.getExecConfigProp('lsf', 'onlyJobState', false) == false
+
+        when:
+        config = new ExecutorConfig([onlyJobState: true, '$slurm':[onlyJobState: false] ])
+        then:
+        config.getExecConfigProp('slurm', 'onlyJobState', false) == false
+        config.getExecConfigProp('lsf', 'onlyJobState', false) == true
+
+        when:
+        config = new ExecutorConfig([:])
+        then:
+        config.getExecConfigProp('slurm', 'onlyJobState', false) == false
+        config.getExecConfigProp('slurm', 'onlyJobState', true) == false  // Property exists and is false, so default is not used
+        config.getExecConfigProp('slurm', 'nonExistentProp', true) == true  // Non-existent property uses default
+    }
+
 
 }

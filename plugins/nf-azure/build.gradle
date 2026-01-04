@@ -25,6 +25,7 @@ nextflowPlugin {
     description = 'Enables Azure cloud execution through Batch service with native Blob storage access and comprehensive authentication options'
     className = 'nextflow.cloud.azure.AzurePlugin'
     useDefaultDependencies = false
+    generateSpec = false
     extensionPoints = [
         'nextflow.cloud.azure.batch.AzBatchExecutor',
         'nextflow.cloud.azure.config.AzConfig',
