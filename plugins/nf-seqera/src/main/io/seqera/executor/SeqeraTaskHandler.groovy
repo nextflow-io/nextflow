@@ -73,7 +73,7 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
         int cpuRequest = task.config.getCpus() ?: 1
         long memoryRequest = task.config.getMemory() ? task.config.getMemory().toBytes() : 1024 * 1024 * 1024
         final req = new CreateJobRequest()
-            .clusterId(executor.getClusterId())
+            .contextId(executor.getContextId())
             .image(task.getContainer())
             .command(fusionSubmitCli())
             .environment(fusionLauncher().fusionEnv())

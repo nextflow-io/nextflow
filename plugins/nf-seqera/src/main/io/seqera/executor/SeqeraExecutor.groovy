@@ -44,19 +44,18 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
 
     private SchedClient client
 
-    private SeqeraClusterHandler clusterHandler
+    private String contextId
 
     @Override
     protected void register() {
         createClient()
-        clusterHandler.createCluster()
+        createContext()
     }
 
     @Override
     void shutdown() {
-        clusterHandler.deleteCluster()
+        deleteContext()
     }
-
 
     protected void createClient() {
         def seqeraConfig = new SeqeraConfig(session.config.seqera as Map ?: Collections.emptyMap())
@@ -66,7 +65,22 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
                 .retryConfig(seqeraConfig.retryOpts())
                 .build()
         this.client = new SchedClient(clientConfig)
-        this.clusterHandler = new SeqeraClusterHandler(client)
+    }
+
+    protected void createContext() {
+        log.debug "[SEQERA] Creating context for workflow"
+        final context = client.createContext()
+        this.contextId = context.getContextId()
+        log.debug "[SEQERA] Context created id: ${contextId}"
+    }
+
+    protected void deleteContext() {
+        if (!contextId) {
+            return
+        }
+        log.debug "[SEQERA] Deleting context: ${contextId}"
+        client.deleteContext(contextId)
+        log.debug "[SEQERA] Context deleted"
     }
 
     @Override
@@ -98,7 +112,7 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
         return client
     }
 
-    String getClusterId() {
-        return clusterHandler.getClusterId()
+    String getContextId() {
+        return contextId
     }
 }
