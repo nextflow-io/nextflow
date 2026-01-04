@@ -6,7 +6,7 @@
 
 When you launch a pipeline script, Nextflow looks for configuration files in multiple locations. Nextflow applies conflicting settings in the following order (from lowest to highest):
 
-1. `$HOME/.nextflow/config`, or `$NXF_HOME/config` when {ref}`NXF_HOME <nxf-env-vars>` is set
+1. `$HOME/.nextflow/config`, or `$NXF_HOME/config` when you set {ref}`NXF_HOME <nxf-env-vars>`
 2. `nextflow.config` in the project directory
 3. `nextflow.config` in the launch directory
 4. Config files specified with `-c <config-files>`
@@ -23,7 +23,7 @@ Nextflow configuration uses the same syntax as Nextflow scripts. You can set con
 
 Config files can contain any number of [assignments](#assignments), [blocks](#blocks), and [includes](#includes). You can add comments just like in scripts.
 
-For more about information about the Nextflow script syntax, see {ref}`syntax-page`.
+For more information about the Nextflow script syntax, see {ref}`syntax-page`.
 
 ### Assignments
 
@@ -90,7 +90,7 @@ includeConfig 'path/extra.config'
 Nextflow resolves relative paths from the including file's location.
 
 :::{note}
-You can specify config includes within config blocks. However, you should only include config files at the top level or in a [profile](#config-profiles). This ensures the included config file is valid on its own and in the context in which it is included.
+You can specify config includes within config blocks. However, you should only include config files at the top level or in a [profile](#config-profiles). This ensures the included config file is valid on its own and in the context you include it.
 :::
 
 (config-constants)=
@@ -99,7 +99,7 @@ You can specify config includes within config blocks. However, you should only i
 
 Nextflow configuration files have access to constants and functions from the global namespace. Constants allow you to reference runtime paths like project and launch directories, while functions enable dynamic operations such as reading environment variables.
 
-For example, you can use `projectDir` constant to reference files relative to your project location:
+For example, you can use the `projectDir` constant to reference files relative to your project location:
 
 ```groovy
 params.helper_file = "${projectDir}/assets/helper.txt"
@@ -132,10 +132,10 @@ params {
 ```
 
 :::{note}
-When including a config file, Nextflow evaluates the included config with parameters defined before the include. Parameters defined after the include are not visible to the included config.
+When including a config file, Nextflow evaluates the included config with parameters defined before the include. The included config cannot see parameters defined after the include.
 :::
 
-You should declare parameters in the config file only when other config options use them. When a parameter is used in the script, you should declare it there and override it in config profiles as needed:
+You should declare parameters in the config file only when other config options use them. When you use a parameter in the script, you should declare it there and override it in config profiles as needed:
 
 ```nextflow
 // main.nf
@@ -157,7 +157,7 @@ profiles {
 }
 ```
 
-See {ref}`cli-params` for information about how pipeline parameters are resolved at runtime.
+See {ref}`cli-params` for information about how Nextflow resolves pipeline parameters at runtime.
 
 (config-process)=
 
@@ -212,7 +212,7 @@ The `withName` selector matches both:
 - Processes defined with that name
 - Processes included under that alias
 
-When a process is included with an alias, selectors for the alias take priority over selectors for the original name. For example, if you define a process as `hello` and include it as `sayHello`, both `withName: hello` and `withName: sayHello` apply, with `sayHello` taking priority.
+When you include a process with an alias, selectors for the alias take priority over selectors for the original name. For example, if you define a process as `hello` and include it as `sayHello`, both `withName: hello` and `withName: sayHello` apply, with `sayHello` taking priority.
 
 :::{tip}
 You don't need to enclose label and process names in quotes unless they contain special characters (`-`, `!`, etc.) or are keywords or built-in type identifiers. When in doubt, use single or double quotes.
@@ -282,9 +282,9 @@ This configuration:
 
 ## Config profiles
 
-Configuration files can define one or more *profiles*. A profile is a set of configuration settings that can be selected during pipeline execution using the `-profile` command line option.
+Configuration files can define one or more *profiles*. A profile is a set of configuration settings you select during pipeline execution using the `-profile` command line option.
 
-Configuration profiles are defined in the `profiles` scope. For example:
+Define configuration profiles in the `profiles` scope. For example:
 
 ```groovy
 profiles {
@@ -306,7 +306,7 @@ profiles {
 }
 ```
 
-This configuration defines three profiles: `standard`, `cluster`, and `cloud`. Each profile provides a different configuration for a given execution environment. Nextflow uses the `standard` profile by default when no profile is specified.
+This configuration defines three profiles: `standard`, `cluster`, and `cloud`. Each profile provides a different configuration for a given execution environment. When you do not specify a profile, Nextflow uses the `standard` profile by default.
 
 You can specify configuration profiles at runtime as a comma-separated list:
 
@@ -314,7 +314,7 @@ You can specify configuration profiles at runtime as a comma-separated list:
 nextflow run main.nf -profile standard,cloud
 ```
 
-Nextflow applies config profiles in the order in which they were defined in the config file, regardless of the order you specify them on the command line.
+Nextflow applies config profiles in the order you define them in the config file, regardless of the order you specify them on the command line.
 
 :::{versionadded} 25.02.0-edge
 When using the {ref}`strict config syntax <updating-config-syntax>`, Nextflow applies profiles in the order you specify them on the command line.
@@ -358,7 +358,7 @@ You can define workflow event handlers in the config file:
 
 ```groovy
 workflow.onComplete = {
-    // any workflow property can be used here
+    // You can use any workflow property here
     println "Pipeline complete"
     println "Command line: $workflow.commandLine"
 }
