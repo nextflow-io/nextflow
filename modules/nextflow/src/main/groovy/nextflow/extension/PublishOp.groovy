@@ -89,9 +89,6 @@ class PublishOp {
     protected void onNext(value) {
         log.trace "Publish operator received: $value"
 
-        // notify observers
-        session.notifyWorkflowPublish(new WorkflowPublishEvent(name, value))
-
         // evaluate dynamic path
         final targetResolver = getTargetDir(value)
         if( targetResolver == null )
@@ -118,6 +115,9 @@ class PublishOp {
         final normalized = normalizePaths(value, targetResolver)
         log.trace "Normalized record for index file: ${normalized}"
         indexRecords << normalized
+
+        // notify observers
+        session.notifyWorkflowPublish(new WorkflowPublishEvent(name, normalized))
     }
 
     /**
