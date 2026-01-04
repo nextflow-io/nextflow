@@ -17,20 +17,25 @@
 
 package io.seqera.config
 
+import java.time.temporal.TemporalAmount
+
 import groovy.transform.CompileStatic
 import groovy.transform.ToString
+import io.seqera.util.retry.Retryable
 import nextflow.util.Duration
 
 /**
- * Model retry options for Wave http requests
+ * Model retry options for Seqera scheduler HTTP requests.
+ * Implements {@link Retryable.Config} for integration with lib-retry.
  */
 @ToString(includeNames = true, includePackage = false)
 @CompileStatic
-class RetryOpts {
-    Duration delay = Duration.of('450ms')
-    Duration maxDelay = Duration.of('90s')
-    int maxAttempts = 10
-    double jitter = 0.25
+class RetryOpts implements Retryable.Config {
+    Duration delay0 = Duration.of('450ms')
+    Duration maxDelay0 = Duration.of('90s')
+    int maxAttempts0 = 10
+    double jitter0 = 0.25
+    double multiplier0 = 2.0d
 
     RetryOpts() {
         this(Collections.emptyMap())
@@ -38,12 +43,39 @@ class RetryOpts {
 
     RetryOpts(Map config) {
         if( config.delay )
-            delay = config.delay as Duration
+            delay0 = config.delay as Duration
         if( config.maxDelay )
-            maxDelay = config.maxDelay as Duration
+            maxDelay0 = config.maxDelay as Duration
         if( config.maxAttempts )
-            maxAttempts = config.maxAttempts as int
+            maxAttempts0 = config.maxAttempts as int
         if( config.jitter )
-            jitter = config.jitter as double
+            jitter0 = config.jitter as double
+        if( config.multiplier )
+            multiplier0 = config.multiplier as double
+    }
+
+    @Override
+    TemporalAmount getDelay() {
+        return java.time.Duration.ofMillis(delay0.toMillis())
+    }
+
+    @Override
+    TemporalAmount getMaxDelay() {
+        return java.time.Duration.ofMillis(maxDelay0.toMillis())
+    }
+
+    @Override
+    int getMaxAttempts() {
+        return maxAttempts0
+    }
+
+    @Override
+    double getJitter() {
+        return jitter0
+    }
+
+    @Override
+    double getMultiplier() {
+        return multiplier0
     }
 }

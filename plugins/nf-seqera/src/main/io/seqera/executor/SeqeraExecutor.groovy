@@ -17,8 +17,11 @@
 
 package io.seqera.executor
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import io.seqera.client.SeqeraClient
+import io.seqera.config.SeqeraConfig
+import io.seqera.sched.client.SchedClient
+import io.seqera.sched.client.SchedClientConfig
 import nextflow.exception.AbortOperationException
 import nextflow.executor.Executor
 import nextflow.fusion.FusionHelper
@@ -36,9 +39,10 @@ import org.pf4j.ExtensionPoint
  */
 @Slf4j
 @ServiceName('seqera')
+@CompileStatic
 class SeqeraExecutor extends Executor implements ExtensionPoint {
 
-    private SeqeraClient client
+    private SchedClient client
 
     private SeqeraClusterHandler clusterHandler
 
@@ -49,19 +53,25 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
     }
 
     @Override
-    public void shutdown() {
+    void shutdown() {
         clusterHandler.deleteCluster()
     }
 
 
     protected void createClient() {
-        this.client = new SeqeraClient(session)
+        def seqeraConfig = new SeqeraConfig(session.config.seqera as Map ?: Collections.emptyMap())
+        def clientConfig = SchedClientConfig.builder()
+                .endpoint(seqeraConfig.endpoint)
+                .region(seqeraConfig.region)
+                .retryConfig(seqeraConfig.retryOpts())
+                .build()
+        this.client = new SchedClient(clientConfig)
         this.clusterHandler = new SeqeraClusterHandler(client)
     }
 
     @Override
     protected TaskMonitor createTaskMonitor() {
-        TaskPollingMonitor.create(session, name, 1000, Duration.of('10 sec'))
+        TaskPollingMonitor.create(session, config, name, 1000, Duration.of('10 sec'))
     }
 
     @Override
@@ -84,7 +94,7 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
         return true
     }
 
-    SeqeraClient getClient() {
+    SchedClient getClient() {
         return client
     }
 

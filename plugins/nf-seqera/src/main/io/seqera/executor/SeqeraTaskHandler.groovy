@@ -20,10 +20,10 @@ package io.seqera.executor
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import io.seqera.client.SeqeraClient
-import io.seqera.sched.api.v1a1.CreateJobRequest
-import io.seqera.sched.api.v1a1.GetJobLogsResponse
-import io.seqera.sched.api.v1a1.JobState
+import io.seqera.sched.api.schema.v1a1.CreateJobRequest
+import io.seqera.sched.client.SchedClient
+import io.seqera.sched.api.schema.v1a1.GetJobLogsResponse
+import io.seqera.sched.api.schema.v1a1.JobStatus
 import nextflow.fusion.FusionAwareTask
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
@@ -39,7 +39,7 @@ import java.nio.file.Path
 @CompileStatic
 class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
 
-    private SeqeraClient client
+    private SchedClient client
 
     private SeqeraExecutor executor
 
@@ -73,31 +73,32 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
         int cpuRequest = task.config.getCpus() ?: 1
         long memoryRequest = task.config.getMemory() ? task.config.getMemory().toBytes() : 1024 * 1024 * 1024
         final req = new CreateJobRequest()
-            .withCommand(fusionSubmitCli())
-            .withImage(task.getContainer())
-            .withClusterId(executor.getClusterId())
-            .withEnvironment(fusionLauncher().fusionEnv())
-            .withPlatform(task.getContainerPlatform())
-            .withCpus(cpuRequest)
-            .withMemory(memoryRequest)
+            .clusterId(executor.getClusterId())
+            .image(task.getContainer())
+            .command(fusionSubmitCli())
+            .environment(fusionLauncher().fusionEnv())
+            .platform(task.getContainerPlatform())
+            .cpus(cpuRequest)
+            .memory(memoryRequest)
         log.debug "[SEQERA] Submitting job request=${req}"
         final resp = client.createJob(req)
-        this.jobId = resp.jobId
+        this.jobId = resp.getJobId()
         this.status = TaskStatus.SUBMITTED
     }
 
-    protected JobState jobState() {
+    protected JobStatus jobStatus() {
         return client
             .describeJob(jobId)
-            .jobsState
+            .getJobState()
+            .getStatus()
     }
 
     @Override
     boolean checkIfRunning() {
         if (isSubmitted()) {
-            final state = jobState()
-            log.debug "[SEQERA] checkIfRunning job=${jobId}; state=${state}"
-            if (state.isRunningOrTerminated()) {
+            final jobStatus = jobStatus()
+            log.debug "[SEQERA] checkIfRunning job=${jobId}; status=${jobStatus}"
+            if (isRunningOrTerminated(jobStatus)) {
                 status = TaskStatus.RUNNING
                 return true
             }
@@ -107,13 +108,13 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
 
     @Override
     boolean checkIfCompleted() {
-        final state = jobState()
-        log.debug "[SEQERA] checkIfCompleted state=${state}"
-        if (state.isTerminated()) {
-            log.debug "[SEQERA] Process `${task.lazyName()}` - terminated job=$jobId; state=$state"
+        final jobStatus = jobStatus()
+        log.debug "[SEQERA] checkIfCompleted status=${jobStatus}"
+        if (isTerminated(jobStatus)) {
+            log.debug "[SEQERA] Process `${task.lazyName()}` - terminated job=$jobId; status=$jobStatus"
             // finalize the task
             task.exitStatus = readExitFile()
-            if (state.isFailed()) {
+            if (isFailed(jobStatus)) {
                 final logs = getJobLogs(jobId)
                 task.stdout = logs?.stdout ?: outputFile
                 task.stderr = logs?.stderr ?: errorFile
@@ -126,6 +127,18 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
         }
 
         return false
+    }
+
+    protected boolean isRunningOrTerminated(JobStatus status) {
+        return status == JobStatus.RUNNING || isTerminated(status)
+    }
+
+    protected boolean isTerminated(JobStatus status) {
+        return status in [JobStatus.DONE, JobStatus.FAILED, JobStatus.CANCELLED]
+    }
+
+    protected boolean isFailed(JobStatus status) {
+        return status == JobStatus.FAILED
     }
 
     protected GetJobLogsResponse getJobLogs(String jobId) {

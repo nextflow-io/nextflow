@@ -18,7 +18,7 @@
 package io.seqera.executor
 
 import groovy.util.logging.Slf4j
-import io.seqera.client.SeqeraClient
+import io.seqera.sched.client.SchedClient
 
 /**
  * Handles cluster management operations for Seqera executor
@@ -26,28 +26,27 @@ import io.seqera.client.SeqeraClient
 @Slf4j
 class SeqeraClusterHandler {
 
-    private SeqeraClient client
+    private SchedClient client
     private String clusterId
 
-    SeqeraClusterHandler(SeqeraClient client) {
+    SeqeraClusterHandler(SchedClient client) {
         this.client = client
     }
 
     void createCluster() {
         log.debug "[SEQERA] Creating cluster for workflow"
         final cluster = client.createCluster()
-        this.clusterId = cluster.clusterId
-        log.debug "[SEQERA] Cluster created id: " + cluster.clusterId
+        this.clusterId = cluster.getClusterId()
+        log.debug "[SEQERA] Cluster created id: ${cluster.getClusterId()}"
     }
 
     void deleteCluster() {
         if (!clusterId) {
             return
         }
-        log.debug "[SEQERA] Deleting cluster: " + clusterId
-        client.deleteCluster(this.clusterId)
-        log.debug "[SEQERA] Cluster id deleted"
-
+        log.debug "[SEQERA] Terminating cluster: ${clusterId}"
+        client.terminateCluster(this.clusterId)
+        log.debug "[SEQERA] Cluster terminated"
     }
 
     String getClusterId() {
