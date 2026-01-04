@@ -30,7 +30,7 @@ TIMESTAMP            RUN NAME         SESSION ID                            COMM
 2025-12-09 11:43:37     8.5s            goofy_kilby             OK      ca20a6dfd2      d0a60572-076e-451a-b10e-16059ed77e36    nextflow run rnaseq-nf -profile conda
 ```
 
-You can specify a run name or session ID prints tasks executed by that pipeline run:
+Providing a run name or session ID prints the tasks executed by that pipeline run:
 
 ```console
 $ nextflow log goofy_kilby
@@ -145,7 +145,7 @@ The **Summary** section reports the execution status, the launch command, overal
 
 The **Resources** section plots the distribution of resource usage for each workflow process using the interactive [plotly.js](https://plot.ly/javascript/) plotting library.
 
-Plots are shown for CPU, memory, job duration and disk I/O. They have two or three tabs with the raw values and a percentage representation showing what proportion of the requested resources were used. These plots are helpful to check that task resources are used efficiently.
+Plots are shown for CPU, memory, job duration, and disk I/O. They have two or three tabs showing the raw values and a percentage representation of the requested resources that were used. These plots are helpful to check that task resources are used efficiently.
 
 ```{image} _static/report-resources-min.png
 ```
@@ -161,7 +161,7 @@ The **Tasks** section lists all executed tasks, reporting the status, command sc
 ```{image} _static/report-tasks-min.png
 ```
 
-Nextflow collects these metrics through a background process for each job in the target environment. Make sure the following tools are available in the environment where tasks are executed: `awk`, `date`, `grep`, `ps`, `sed`, `tail`, `tee`. Third-party container image that do not include one or more of the above utilities cause empty execution reports. Some metrics are not reported when running on macOS. For more information, see {ref}`Report scope <config-report>`.
+Nextflow collects these metrics through a background process for each job in the target environment. Make sure the following tools are available in the environment where tasks are executed: `awk`, `date`, `grep`, `ps`, `sed`, `tail`, `tee`. Third-party container images that do not include one or more of the above utilities cause empty execution reports. Some metrics are not reported when running on macOS. For more information, see {ref}`Report scope <config-report>`.
 
 (trace-report)=
 
@@ -245,7 +245,7 @@ Specifying a file name is optional.
 
 ## Workflow diagram
 
-A Nextflow pipeline can be represented as a direct acyclic graph (DAG). The vertices in the graph represent the pipeline's processes and operators, while the edges represent the data dependencies (i.e., channels) between them.
+A Nextflow pipeline can be represented as a directed acyclic graph (DAG). The vertices in the graph represent the pipeline's processes and operators, while the edges represent the data dependencies (i.e., channels) between them.
 
 To render the workflow DAG, run your pipeline with the `-with-dag` option. By default, it creates a file named `dag-<timestamp>.html` with the workflow DAG rendered as a [Mermaid](https://mermaid.js.org/) diagram.
 
