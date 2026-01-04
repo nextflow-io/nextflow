@@ -19,12 +19,13 @@ plugins {
 }
 
 nextflowPlugin {
-    nextflowVersion = '25.11.0-edge'
+    nextflowVersion = '25.12.0-edge'
 
     provider = "${nextflowPluginProvider}"
     description = 'Enables Google Cloud Platform execution through Batch service with native Cloud Storage access and intelligent machine type selection'
     className = 'nextflow.cloud.google.GoogleCloudPlugin'
     useDefaultDependencies = false
+    generateSpec = false
     extensionPoints = [
         'nextflow.cloud.google.GoogleOpts',
         'nextflow.cloud.google.batch.GoogleBatchExecutor',

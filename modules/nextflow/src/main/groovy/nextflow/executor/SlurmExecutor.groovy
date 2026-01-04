@@ -40,6 +40,7 @@ class SlurmExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
     static private Pattern SUBMIT_REGEX = ~/Submitted batch job (\d+)/
 
     private boolean perCpuMemAllocation
+    private boolean onlyJobState
 
     private boolean hasSignalOpt(TaskConfig config) {
         final opts = config.getClusterOptionsAsString()
@@ -157,7 +158,13 @@ class SlurmExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
     @Override
     protected List<String> queueStatusCommand(Object queue) {
 
-        final result = ['squeue','--noheader','-o','%i %t', '-t', 'all']
+        final result = ['squeue','--noheader', '-o','%i %t', '-t', 'all']
+
+        if( onlyJobState ) {
+            result << '--only-job-state'
+            // -p and -u cannot be used with --only-job-state
+            return result
+        }
 
         if( queue )
             result << '-p' << queue.toString()
@@ -213,6 +220,7 @@ class SlurmExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
     void register() {
         super.register()
         perCpuMemAllocation = config.getExecConfigProp(name, 'perCpuMemAllocation', false)
+        onlyJobState = config.getExecConfigProp(name, 'onlyJobState', false)
     }
 
     @Override

@@ -21,6 +21,8 @@ import groovy.util.logging.Slf4j
 
 import java.nio.charset.StandardCharsets
 
+import static nextflow.Const.DEFAULT_BRANCH
+
 /**
  * Implements a repository provider for GitHub service
  *
@@ -71,8 +73,8 @@ class GitlabRepositoryProvider extends RepositoryProvider {
     String getDefaultBranch() {
         def result = invokeAndParseResponse(getEndpointUrl()) ?. default_branch
         if( !result ) {
-            log.debug "Unable to fetch repo default branch. Using `master` branch -- See https://gitlab.com/gitlab-com/support-forum/issues/1655#note_26132691"
-            return 'master'
+            log.debug "Unable to fetch repo default branch. Using `${DEFAULT_BRANCH}` branch -- See https://gitlab.com/gitlab-com/support-forum/issues/1655#note_26132691"
+            return DEFAULT_BRANCH
         }
         return result
     }

@@ -1,5 +1,8 @@
 nf-amazon changelog
 ===================
+3.6.0 - 19 Dec 2025
+- Add spot interruption tracking to trace records (#6606) [eecd81671]
+
 3.5.0 - 28 Nov 2025
 - Optimize exit code handling by relying on scheduler status for successful executions (#6484) [454a2ae85]
 
