@@ -19,7 +19,7 @@ You can use the `-C <config-file>` option to specify a fixed set of configuratio
 
 ## Syntax
 
-Nextflow configuration uses a similar syntax as Nextflow {ref}`<scripts> syntax-page`. Configuration options must be set declaratively, but the value of a config option can be an arbitrary expression.
+Nextflow configuration uses a similar syntax as Nextflow scripts. Configuration options must be set declaratively, but the value of a config option can be an arbitrary expression.
 
 A config file may contain any number of [assignments](#assignments), [blocks](#blocks), and [includes](#includes). You can add comments just like in scripts.
 
@@ -35,7 +35,7 @@ process.maxErrors = 10
 
 The config option consists of an *option name* prefixed by any number of *scopes*. Scopes group related config options. See {ref}`config-options` for the full set of config options.
 
-The value is typically a literal value, such as a number, boolean, or string. However, you can use any expression:
+The value is typically a literal value, such as a number, boolean, or string. However, you can use any {ref}`expression <syntax-expressions>`:
 
 ```groovy
 params.helper_file = "${projectDir}/assets/helper.txt"
@@ -320,7 +320,7 @@ nextflow run main.nf -profile standard,cloud
 Nextflow applies config profiles in the order in which they were defined in the config, regardless of the order you specify them on the command line.
 
 :::{versionadded} 25.04.0
-When using the {ref}`strict config syntax <updating-config-syntax>`, Nextflow applies profiles in the order you specify them on the command line.
+When using the {ref}`strict syntax <strict-syntax-page>`, Nextflow applies profiles in the order you specify them on the command line.
 :::
 
 (config-workflow-handlers)=
