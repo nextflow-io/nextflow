@@ -49,6 +49,7 @@ class S3RepositoryProvider extends RepositoryProvider {
         this.config = config
     }
     /** {@inheritDoc} **/
+    @Memoized
     @Override
     CredentialsProvider getGitCredentials() {
         final providerConfig = this.config as S3ProviderConfig
