@@ -34,7 +34,7 @@ Available options:
 : Print available commands and options.
 
 `-log`
-: Set Nextflow log file path (default: `.nextflow.log`). This cannot be a remote URI, i.e. `s3:` or `az:`
+: Set Nextflow log file path (default: `.nextflow.log`). Must be a local path.
 
 `-q, -quiet`
 : Do not print the Nextflow banner and execution progress to the console.
