@@ -2,7 +2,7 @@
 
 # Reports
 
-Nextflow provides several reporting mechanisms to monitor, debug, and analyze pipeline runs:
+Nextflow provides several reporting mechanisms to analyze and debug pipeline runs:
 
 - [Execution log](#execution-log): Command to query information about past runs
 - [Execution report](#execution-report): Comprehensive HTML report for a pipeline run
