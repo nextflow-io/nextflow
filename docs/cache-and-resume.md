@@ -36,7 +36,7 @@ The task hash is computed from the following metadata:
 Nextflow also includes an incrementing component in the hash generation process, which allows it to iterate through multiple hash values until it finds one that does not match an existing execution directory. This mechanism typically aligns with task retries (i.e., task attempts), however this is not guaranteed.
 :::
 
-Nextflow computes this hash for every task when it is created but before it is executed. If resumability is enabled, and there is an entry in the task cache with the same hash, and the task outputs are present in the [work directory](#work-directory), the task is resumed. Otherwise, the task is re-executed.
+Nextflow computes this hash for every task before it is executed. If resumability is enabled, Nextflow checks whether the task cache contains a matching hash and whether the task outputs are still present in the [work directory](#work-directory). If both conditions are met, the task is resumed; otherwise, it is re-executed.
 
 Files are hashed differently depending on the caching mode. See the {ref}`process-cache` directive for more details.
 
