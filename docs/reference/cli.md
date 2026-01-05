@@ -1020,134 +1020,9 @@ The `log` command is used to query the execution metadata associated with pipeli
 : Show log entries for runs executed *but* the specified one.
 
 `-f, -fields`
-: Comma-separated list of fields to include in the printed log. Use the `-l` option to see the list of available fields.
-: Available fields:
-
-    `task_id`
-    : Task ID.
-
-    `hash`
-    : Task hash code.
-
-    `native_id`
-    : Task ID given by the underlying execution system e.g. POSIX process PID when executed locally, job ID when executed by a grid engine, etc.
-
-    `process`
-    : Nextflow process name.
-
-    `tag`
-    : User provided identifier associated with this task.
-
-    `name`
-    : Task name.
-
-    `status`
-    : Task status. Options: `NEW`, `SUBMITTED`, `RUNNING`, `COMPLETED`, `FAILED`, and `ABORTED`.
-
-    `exit`
-    : POSIX process exit status.
-
-    `module`
-    : Environment module used to run the task.
-
-    `container`
-    : Docker image name used to execute the task.
-
-    `cpus`
-    : The CPUs number request for the task execution.
-
-    `time`
-    : The time request for the task execution
-
-    `disk`
-    : The disk space request for the task execution.
-
-    `memory`
-    : The memory request for the task execution.
-
-    `attempt`
-    : Attempt at which the task completed.
-
-    `submit`
-    : Timestamp when the task has been submitted.
-
-    `start`
-    : Timestamp when the task execution has started.
-
-    `complete`
-    : Timestamp when task execution has completed.
-
-    `duration`
-    : Time elapsed to complete since the submission.
-
-    `realtime`
-    : Task execution time i.e. delta between completion and start timestamp.
-
-    `queue`
-    : The queue that the executor attempted to run the process on.
-
-    `%cpu`
-    : Percentage of CPU used by the process.
-
-    `%mem`
-    : Percentage of memory used by the process.
-
-    `rss`
-    : Real memory (resident set) size of the process. Equivalent to `ps -o rss` .
-
-    `vmem`
-    : Virtual memory size of the process. Equivalent to `ps -o vsize` .
-
-    `peak_rss`
-    : Peak of real memory. Data is read from field `VmHWM` in `/proc/$pid/status` file.
-
-    `peak_vmem`
-    : Peak of virtual memory. Data is read from field `VmPeak` in `/proc/$pid/status` file.
-
-    `rchar`
-    : Number of bytes the process read, using any read-like system call from files, pipes, tty, etc. Data is read from `/proc/$pid/io`.
-
-    `wchar`
-    : Number of bytes the process wrote, using any write-like system call. Data is read from `/proc/$pid/io`.
-
-    `syscr`
-    : Number of read-like system call invocations that the process performed. Data is read from `/proc/$pid/io`.
-
-    `syscw`
-    : Number of write-like system call invocations that the process performed. Data is read from `/proc/$pid/io`.
-
-    `read_bytes`
-    : Number of bytes the process directly read from disk. Data is read from `/proc/$pid/io`.
-
-    `write_bytes`
-    : Number of bytes the process originally dirtied in the page-cache (assuming they will go to disk later). Data is read from `/proc/$pid/io`.
-
-    `vol_ctxt`
-    : Number of voluntary context switches. Data is read from field `voluntary_ctxt_switches` in `/proc/$pid/status` file.
-
-    `inv_ctxt`
-    : Number of involuntary context switches. Data is read from field `nonvoluntary_ctxt_switches` in `/proc/$pid/status` file.
-
-    `env`
-    : The variables defined in task execution environment.
-
-    `workdir`
-    : The directory path where the task was executed.
-
-    `script`
-    : The task command script.
-
-    `scratch`
-    : The value of the process `scratch` directive.
-
-    `error_action`
-    : The action applied on error for task failure.
-
-    `hostname`
-    : The host on which the task was executed. Supported only for the Kubernetes executor yet. Activate with `k8s.fetchNodeName = true` in the Nextflow config file.
-
-    `cpu_model`
-    : The name of the CPU model used to execute the task. This data is read from`/proc/cpuinfo`.
+: Comma-separated list of fields to include in the printed log.
+: The same fields as the `trace.fields` option can be specified here, as well as `stdout` and `stderr`. The trace fields `%cpu` and `%mem` must be specified as `pcpu` and `pmem`, respectively.
+: Use the `-l` option to see the complete list of available fields.
 
 `-F, -filter`
 : Filter log entries by a custom expression, e.g. `process =~ /hello.*/ && status == 'COMPLETED'`.
@@ -1492,32 +1367,10 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 : Use the specified Conda environment package or file (must end with `.yml` or `.yaml`)
 
 `-with-dag` (`dag-<timestamp>.html`)
-: Create pipeline DAG file. Default format: `html`.
-: Supported file formats:
-
-    `dot`
-    : Graphviz [DOT](http://www.graphviz.org/content/dot-language) file.
-
-    `gexf`
-    : Graph Exchange XML file (Gephi).
-
-    `html`
-    : HTML file with Mermaid diagram.
-
-    `mmd`
-    : Mermaid diagram.
-
-    `pdf`
-    : *Requires [Graphviz](http://www.graphviz.org).*
-    : Graphviz PDF file.
-
-    `png`
-    : *Requires [Graphviz](http://www.graphviz.org)*
-    : Graphviz PNG file.
-
-    `svg`
-    : *Requires [Graphviz](http://www.graphviz.org)*
-    : Graphviz SVG file.
+: Create pipeline DAG file.
+: :::{versionchanged} 23.10.0
+  The default format was changed from `dot` to `html`.
+  :::
 
 `-with-docker`
 : Enable process execution in a Docker container.
