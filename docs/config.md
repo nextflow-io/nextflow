@@ -2,11 +2,11 @@
 
 # Configuration
 
-## Configuration file
+## Configuration files
 
-When you launch a pipeline script, Nextflow looks for configuration files in multiple locations. Nextflow applies conflicting settings in the following order (from lowest to highest):
+When you launch a pipeline script, Nextflow detects configuration files from multiple sources and applies them in the following order (from lowest to highest priority):
 
-1. `$HOME/.nextflow/config`, or `$NXF_HOME/config` when you set {ref}`NXF_HOME <nxf-env-vars>`
+1. `$NXF_HOME/config` (defaults to `$HOME/.nextflow/config`)
 2. `nextflow.config` in the project directory
 3. `nextflow.config` in the launch directory
 4. Config files specified with `-c <config-files>`
@@ -19,15 +19,13 @@ You can use the `-C <config-file>` option to specify a fixed set of configuratio
 
 ## Syntax
 
-Nextflow configuration uses the same syntax as Nextflow scripts. You can set configuration options declaratively and define dynamic expressions when needed.
+Nextflow configuration uses a similar syntax as Nextflow {ref}`<scripts> syntax-page`. Configuration options must be set declaratively, but the value of a config option can be an arbitrary expression.
 
-Config files can contain any number of [assignments](#assignments), [blocks](#blocks), and [includes](#includes). You can add comments just like in scripts.
-
-For more information about the Nextflow script syntax, see {ref}`syntax-page`.
+A config file may contain any number of [assignments](#assignments), [blocks](#blocks), and [includes](#includes). You can add comments just like in scripts.
 
 ### Assignments
 
-A config assignment sets a config option to an expression using an equals sign:
+A config assignment sets a config option to a value:
 
 ```groovy
 workDir = 'work'
@@ -35,9 +33,9 @@ docker.enabled = true
 process.maxErrors = 10
 ```
 
-A config option has an *option name* with any number of *scopes* as prefixes, separated by dots. Scopes group related config options. For all options, see {ref}`config-options`.
+The config option consists of an *option name* prefixed by any number of *scopes*. Scopes group related config options. See {ref}`config-options` for the full set of config options.
 
-Expressions are typically literal values (numbers, booleans, or strings). However, you can use any expression:
+The value is typically a literal value, such as a number, boolean, or string. However, you can use any expression:
 
 ```groovy
 params.helper_file = "${projectDir}/assets/helper.txt"
@@ -45,7 +43,7 @@ params.helper_file = "${projectDir}/assets/helper.txt"
 
 ### Blocks
 
-You can specify a config scope as a block with multiple options:
+You can specify config options in the same scope as a block:
 
 ```groovy
 // dot syntax
@@ -59,7 +57,7 @@ docker {
 }
 ```
 
-You can assign deeply nested config options in multiple ways. The following three assignments are equivalent:
+As a result, deeply nested config options can be assigned in multiple ways. The following three assignments are equivalent:
 
 ```groovy
 executor.retry.maxAttempt = 5
@@ -87,31 +85,36 @@ process.memory = '10G'
 includeConfig 'path/extra.config'
 ```
 
-Nextflow resolves relative paths from the including file's location.
+Relative paths are resolved against the location of the including file.
 
 :::{note}
-You can specify config includes within config blocks. However, you should only include config files at the top level or in a [profile](#config-profiles). This ensures the included config file is valid on its own and in the context you include it.
+Config files should only be included at the top level or in a [profile](#config-profiles). This ensures the included config file is valid on its own and in the context in which it is included.
 :::
-
-(config-constants)=
 
 ## Constants and functions
 
-Nextflow configuration files have access to constants and functions from the global namespace. Constants allow you to reference runtime paths like project and launch directories, while functions enable dynamic operations such as reading environment variables.
+The following constants are globally available in a Nextflow configuration file:
 
-For example, you can use the `projectDir` constant to reference files relative to your project location:
+`baseDir: Path`
+: :::{deprecated} 20.04.0
+  :::
+: Alias for `projectDir`.
 
-```groovy
-params.helper_file = "${projectDir}/assets/helper.txt"
-```
+`launchDir: Path`
+: The directory where the workflow was launched.
 
-Or, use the `env()` function to read environment variables:
+`projectDir: Path`
+: The directory where the main script is located.
 
-```groovy
-process.queue = env('MY_QUEUE')
-```
+`secrets: Map<String,String>`
+: Map of pipeline secrets. See {ref}`secrets-page` for more information.
 
-For the full list of available constants and functions, see {ref}`stdlib-namespaces-global`.
+The following functions are globally available in a Nextflow configuration file:
+
+`env( name: String ) -> String`
+: :::{versionadded} 25.04.0
+  :::
+: Get the value of the environment variable with the specified name in the Nextflow launch environment.
 
 (config-params)=
 
@@ -132,7 +135,7 @@ params {
 ```
 
 :::{note}
-When including a config file, Nextflow evaluates the included config with parameters defined before the include. The included config cannot see parameters defined after the include.
+When including a config file, the included config is evaluated with the parameters defined before the include. The included config cannot see parameters defined after the include.
 :::
 
 You should declare parameters in the config file only when other config options use them. When you use a parameter in the script, you should declare it there and override it in config profiles as needed:
@@ -175,7 +178,7 @@ process {
 }
 ```
 
-This configuration executes all processes through the SGE cluster with the specified settings.
+This configuration executes all processes using the SGE executor with the given settings.
 
 (config-process-selectors)=
 
@@ -212,17 +215,17 @@ The `withName` selector matches both:
 - Processes defined with that name
 - Processes included under that alias
 
-When you include a process with an alias, selectors for the alias take priority over selectors for the original name. For example, if you define a process as `hello` and include it as `sayHello`, both `withName: hello` and `withName: sayHello` apply, with `sayHello` taking priority.
+When you include a process with an alias, selectors for the alias take priority over selectors for the original name. For example, if you define a process as `hello` and include it as `sayHello`, both `withName: hello` and `withName: sayHello` apply, with `withName: sayHello` taking priority.
 
 :::{tip}
-You don't need to enclose label and process names in quotes unless they contain special characters (`-`, `!`, etc.) or are keywords or built-in type identifiers. When in doubt, use single or double quotes.
+You don't need to enclose label and process names in quotes unless they contain special characters (`-`, `!`, etc.) or are keywords or built-in type identifiers.
 :::
 
 (config-selector-expressions)=
 
 ### Selector expressions
 
-You can use regular expressions in label and process name selectors to apply the same configuration to all processes matching the pattern:
+You can use regular expressions in process selectors to apply the same configuration to all processes matching the pattern:
 
 ```groovy
 process {
@@ -235,7 +238,7 @@ process {
 
 This configuration requests 2 CPUs and 4 GB of memory for processes labeled as `hello` or `bye`.
 
-You can negate a process selector by prefixing it with the special character `!`:
+You can negate a selector expression by prefixing it with the special character `!`:
 
 ```groovy
 process {
@@ -282,9 +285,9 @@ This configuration:
 
 ## Config profiles
 
-Configuration files can define one or more *profiles*. A profile is a set of configuration settings you select during pipeline execution using the `-profile` command line option.
+Configuration files can define one or more *profiles*. A profile is a set of configuration settings that can be selected at runtime using the `-profile` command line option.
 
-Define configuration profiles in the `profiles` scope. For example:
+Configuration profiles are defined in the `profiles` scope. For example:
 
 ```groovy
 profiles {
@@ -308,42 +311,16 @@ profiles {
 
 This configuration defines three profiles: `standard`, `cluster`, and `cloud`. Each profile provides a different configuration for a given execution environment. When you do not specify a profile, Nextflow uses the `standard` profile by default.
 
-You can specify configuration profiles at runtime as a comma-separated list:
+You can enable configuration profiles at runtime as a comma-separated list:
 
 ```bash
 nextflow run main.nf -profile standard,cloud
 ```
 
-Nextflow applies config profiles in the order you define them in the config file, regardless of the order you specify them on the command line.
+Nextflow applies config profiles in the order in which they were defined in the config, regardless of the order you specify them on the command line.
 
-:::{versionadded} 25.02.0-edge
+:::{versionadded} 25.04.0
 When using the {ref}`strict config syntax <updating-config-syntax>`, Nextflow applies profiles in the order you specify them on the command line.
-:::
-
-:::{danger}
-When defining a profile in the config file, avoid using both the dot and block syntax for the same scope. For example:
-
-```groovy
-profiles {
-    cluster {
-        process.memory = '2 GB'
-        process {
-            cpus = 2
-        }
-    }
-}
-```
-
-Due to a limitation of the legacy config parser, the second setting overwrites the first:
-
-```console
-$ nextflow config -profile cluster
-process {
-   cpus = 2
-}
-```
-
-You can avoid this limitation by using the {ref}`strict config syntax <updating-config-syntax>`.
 :::
 
 (config-workflow-handlers)=
@@ -358,7 +335,6 @@ You can define workflow event handlers in the config file:
 
 ```groovy
 workflow.onComplete = {
-    // You can use any workflow property here
     println "Pipeline complete"
     println "Command line: $workflow.commandLine"
 }
