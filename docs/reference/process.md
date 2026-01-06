@@ -63,7 +63,7 @@ The following task properties are defined in the process body:
 :::
 
 :::{note}
-Typed processes require the `nextflow.preview.types` feature flag to be enabled in every script that uses them.
+Typed processes require the `nextflow.preview.types` feature flag to be enabled in every script that uses them. The syntax and behavior may change in future releases.
 :::
 
 ### Stage directives
