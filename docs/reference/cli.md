@@ -34,7 +34,7 @@ Available options:
 : Print available commands and options.
 
 `-log`
-: Set Nextflow log file path (default: `.nextflow.log`).
+: Set Nextflow log file path (default: `.nextflow.log`). Must be a local path.
 
 `-q, -quiet`
 : Do not print the Nextflow banner and execution progress to the console.
@@ -263,7 +263,7 @@ The `clone` command downloads a pipeline from a Git-hosting platform into the *c
 : Service hub where the project is hosted. Options: `gitlab` or `bitbucket`.
 
 `-r` (`master`)
-: Revision to clone - It can be a git branch, tag, or revision number.
+: Revision to clone. It can be a git branch, tag, or commit SHA number.
 
 `-user`
 : Private repository user name.
@@ -313,6 +313,11 @@ The `config` command is used for printing the project's configuration i.e. the `
 
 `-properties`
 : Print config using Java properties notation.
+
+`-r, -revision`
+: :::{versionadded} 25.12.0-edge
+  :::
+: Project revision. Can be a git branch, tag, or commit SHA number.
 
 `-a, -show-profiles`
 : Show all configuration profiles.
@@ -441,6 +446,11 @@ The `drop` command is used to remove the projects which have been downloaded int
 
 `-h, -help`
 : Print the command usage.
+
+`-r, -revision`
+: :::{versionadded} 25.12.0-edge
+:::
+: Project revision to drop. Can be a git branch, tag, or commit SHA number.
 
 **Examples**
 
@@ -606,13 +616,13 @@ $ nextflow info nextflow-io/hello
 
   project name: nextflow-io/hello
   repository  : https://github.com/nextflow-io/hello
-  local path  : /Users/evanfloden/.nextflow/assets/nextflow-io/hello
+  local path  : /Users/evanfloden/.nextflow/assets/.repos/nextflow-io/hello
   main script : main.nf
   revisions   :
   * master (default)
     mybranch
     testing
-    v1.1 [t]
+  * v1.1 [t]
     v1.2 [t]
 ```
 
@@ -1010,7 +1020,9 @@ The `log` command is used to query the execution metadata associated with pipeli
 : Show log entries for runs executed *but* the specified one.
 
 `-f, -fields`
-: Comma-separated list of fields to include in the printed log. Use the `-l` option to see the list of available fields.
+: Comma-separated list of fields to include in the printed log.
+: The same fields as the `trace.fields` option can be specified here, as well as `stdout` and `stderr`. The trace fields `%cpu` and `%mem` must be specified as `pcpu` and `pmem`, respectively.
+: Use the `-l` option to see the complete list of available fields.
 
 `-F, -filter`
 : Filter log entries by a custom expression, e.g. `process =~ /hello.*/ && status == 'COMPLETED'`.
@@ -1155,10 +1167,13 @@ The `pull` command downloads a pipeline from a Git-hosting platform into the glo
 
 **Options**
 
-`-all`
+`-a, -all`
 : Update all downloaded projects.
 
 `-d, -deep`
+: :::{deprecated} 25.12.0-edge. 
+  Ignored for new multi-revision asset management strategy. Still used in legacy assets.
+  :::
 : Create a shallow clone of the specified depth.
 
 `-h, -help`
@@ -1167,8 +1182,13 @@ The `pull` command downloads a pipeline from a Git-hosting platform into the glo
 `-hub` (`github`)
 : Service hub where the project is hosted. Options: `gitlab` or `bitbucket`
 
+`-migrate`
+:::{versionadded} 25.12.0-edge
+  :::
+: Update the project asset to new multi-revision strategy.
+
 `-r, -revision`
-: Revision of the project to run (either a git branch, tag or commit hash).
+: Project revision to run. Can be a git branch, tag, or commit SHA number.
 : When passing a git tag or branch, the `workflow.revision` and `workflow.commitId` fields are populated. When passing only the commit hash, `workflow.revision` is not defined.
 
 `-user`
@@ -1236,6 +1256,9 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 : Enable/disable processes caching.
 
 `-d, -deep`
+: :::{deprecated} 25.12.0-edge
+  Ignored for new multi-revision asset management strategy. Still used in legacy assets.
+  :::
 : Create a shallow clone of the specified depth.
 
 `-disable-jobs-cancellation`
@@ -1319,7 +1342,7 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 : Execute the script using the cached results, useful to continue executions that was stopped by an error.
 
 `-r, -revision`
-: Revision of the project to run (either a git branch, tag or commit hash).
+: Project revision to run. Can be a git branch, tag, or commit SHA number.
 : When passing a git tag or branch, the `workflow.revision` and `workflow.commitId` fields are populated. When passing only the commit hash, `workflow.revision` is not defined.
 
 `-stub-run, -stub`
@@ -1565,6 +1588,11 @@ The `view` command is used to inspect the pipelines that are already stored in t
 `-q`
 : Hide header line.
 
+`-r, -revision`
+: :::{versionadded} 25.12.0-edge
+  :::
+: Project revision. Can be a git branch, tag, or commit SHA number.
+
 **Examples**
 
 Viewing the contents of a downloaded pipeline.
@@ -1572,7 +1600,7 @@ Viewing the contents of a downloaded pipeline.
 ```console
 $ nextflow view nextflow-io/hello
 
-== content of file: .nextflow/assets/nextflow-io/hello/main.nf
+== content of file: .nextflow/assets/.repos/nextflow-io/hello/main.nf
 #!/usr/bin/env nextflow
 
 process sayHello {
@@ -1596,7 +1624,7 @@ List the folder structure of the downloaded pipeline:
 ```console
 $ nextflow view -l nextflow-io/hello
 
-== content of path: .nextflow/assets/nextflow-io/hello
+== content of path: .nextflow/assets/.repos/nextflow-io/hello
 .git
 .gitignore
 LICENSE

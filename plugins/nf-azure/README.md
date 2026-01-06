@@ -1,70 +1,83 @@
-# Azure plugin for Nextflow
+# Microsoft Azure plugin for Nextflow
 
-This plugin implements the support for Azure Blob storage as file system
-provider (via JSR203 interface) and Azure Batch executor for Nextflow.
+The Microsoft Azure plugin provides support for Azure Blob Storage as a file system, and Azure Batch as a compute executor for Nextflow pipelines.
 
-## Development
+## Get Started
 
-Build Nextflow as usual:
-
-```bash
-make compile
-```
-
-Use the following Nextflow configuration:
+To use this plugin, add it to your `nextflow.config`:
 
 ```groovy
 plugins {
-  id 'nf-azure'
+    id 'nf-azure'
+}
+```
+
+Configure your Azure credentials and services:
+
+```groovy
+azure {
+    storage {
+        accountName = '<YOUR STORAGE ACCOUNT NAME>'
+        accountKey = '<YOUR STORAGE ACCOUNT KEY>'
+    }
+
+    batch {
+        endpoint = 'https://<YOUR BATCH ACCOUNT NAME>.<REGION>.batch.azure.com'
+        accountName = '<YOUR BATCH ACCOUNT NAME>'
+        accountKey = '<YOUR BATCH ACCOUNT KEY>'
+    }
+}
+```
+
+Set the executor and work directory:
+
+```groovy
+process.executor = 'azurebatch'
+workDir = 'az://<YOUR CONTAINER>/work'
+```
+
+## Examples
+
+### Basic Azure Batch Configuration
+
+```groovy
+plugins {
+    id 'nf-azure'
 }
 
 azure {
-  storage {
-    accountKey = "<YOUR STORAGE ACCOUNT KEY>"
-    accountName = "<YOUR STORAGE ACCOUNT KEY>"
-  }
+    storage {
+        accountName = 'mystorageaccount'
+        accountKey = System.getenv('AZURE_STORAGE_KEY')
+    }
 
-  batch {
-    endpoint = 'https://<YOUR BATCH ACCOUNT NAME>.westeurope.batch.azure.com'
-    accountName = '<YOUR BATCH ACCOUNT NAME>'
-    accountKey = '<YOUR BATCH ACCOUNT KEY>'
-  }
+    batch {
+        endpoint = 'https://mybatchaccount.westeurope.batch.azure.com'
+        accountName = 'mybatchaccount'
+        accountKey = System.getenv('AZURE_BATCH_KEY')
+        autoPoolMode = true
+        deletePoolsOnCompletion = true
+    }
 }
 
 process.executor = 'azurebatch'
-workDir = 'az://<YOUR DATA CONTAINER>/work'
+workDir = 'az://mycontainer/work'
 ```
 
-Then test the local build as usual:
+### Using Managed Identity
 
-```bash
-./launch.sh run -c nextflow.config rnaseq-nf
+```groovy
+azure {
+    managedIdentity {
+        clientId = '<YOUR MANAGED IDENTITY CLIENT ID>'
+    }
+}
 ```
 
-## Todo
+## Resources
 
-* Currently, the Blob storage service uses NettyHttpClient and Batch service
-  uses OkHttp client, duplicating the number of required libraries. In principle
-  the Blob service can use OkHttp, adding the following deps, however using that
-  Nextflow hangs during the shutdown, apparently because the connection pool used
-  by the blob service is not closed timely.
+- [Azure Batch Executor Documentation](https://nextflow.io/docs/latest/azure.html)
 
-  ```groovy
-  compile('com.azure:azure-storage-blob:12.9.0') {
-      exclude group: 'org.slf4j', module: 'slf4j-api'
-      exclude group: 'com.azure', module: 'azure-core-http-netty'
-  }
-  compile('com.azure:azure-core-http-okhttp:1.3.3') {
-      exclude group: 'org.slf4j', module: 'slf4j-api'
-  }
-  ```
+## License
 
-* Remove invalid directory from .command.run PATH for project having `bin/` folder
-* Add the configuration for the region
-* Make the backend endpoint optional
-
-### Additional Resources
-
-* https://github.com/Azure/azure-sdk-for-java/wiki
-* https://github.com/Azure/azure-sdk-for-java/tree/master/sdk/storage/azure-storage-blob-nio
-* https://github.com/Azure/azure-sdk-for-java/blob/master/sdk/storage/azure-storage-blob-nio/src/samples/java/com/azure/storage/blob/nio/ReadmeSamples.java
+[Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)

@@ -19,12 +19,13 @@ plugins {
 }
 
 nextflowPlugin {
-    nextflowVersion = '25.09.2-edge'
+    nextflowVersion = '25.12.0-edge'
 
     provider = "${nextflowPluginProvider}"
     description = 'Provides native Kubernetes execution capability with advanced pod management, volume mounting, and resource allocation features'
     className = 'nextflow.k8s.K8sPlugin'
     useDefaultDependencies = false
+    generateSpec = false
     extensionPoints = [
         'nextflow.k8s.K8sConfig',
         'nextflow.k8s.K8sExecutor',

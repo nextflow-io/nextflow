@@ -25,6 +25,7 @@ nextflowPlugin {
     description = 'Provides seamless integration with AWS CodeCommit repositories for workflow source code management and version control'
     className = 'nextflow.cloud.aws.codecommit.AwsCodeCommitPlugin'
     useDefaultDependencies = false
+    generateSpec = false
     extensionPoints = [
         'nextflow.cloud.aws.codecommit.AwsCodeCommitFactory'
     ]

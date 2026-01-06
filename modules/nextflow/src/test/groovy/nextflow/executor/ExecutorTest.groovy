@@ -3,9 +3,10 @@ package nextflow.executor
 import java.nio.file.Paths
 
 import nextflow.Session
+import nextflow.SysEnv
 import spock.lang.Specification
+import spock.lang.Unroll
 import test.TestHelper
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -47,6 +48,25 @@ class ExecutorTest extends Specification {
         executor.isForeignFile(foreign1)
         executor.isForeignFile(foreign2)
 
+    }
+
+    @Unroll
+    def 'should check stage file enabled' () {
+        given:
+        SysEnv.push(ENV)
+
+        expect:
+        Spy(EXECUTOR).isStageFileEnabled() == EXPECTED
+
+        cleanup:
+        SysEnv.pop()
+
+        where:
+        EXECUTOR             | ENV                                       | EXPECTED
+        Executor             | [:]                                       | false      // base Executor defaults to false
+        AbstractGridExecutor | [:]                                       | true       // grid executor defaults to true
+        Executor             | [NXF_WRAPPER_STAGE_FILE_THRESHOLD: '100'] | true       // env var overrides
+        AbstractGridExecutor | [NXF_WRAPPER_STAGE_FILE_THRESHOLD: '200'] | true       // env var overrides grid default
     }
 
 }

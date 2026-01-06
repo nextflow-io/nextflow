@@ -56,7 +56,7 @@ Feature flags with the `nextflow.preview` prefix can cause pipelines run with ne
 : When `true`, enables the use of {ref}`workflow outputs <workflow-output-def>`.
 
 `nextflow.preview.recursion`
-: *Experimental: may change in a future release.*
+: *Preview feature: the syntax and behavior may change in future releases.*
 : When `true`, enables {ref}`process and workflow recursion <workflow-recursion>`.
 
 `nextflow.preview.topic`
@@ -70,4 +70,5 @@ Feature flags with the `nextflow.preview` prefix can cause pipelines run with ne
 `nextflow.preview.types`
 : :::{versionadded} 25.10.0
   :::
+: *Preview feature: the syntax and behavior may change in future releases.*
 : When `true`, enables the use of {ref}`typed processes <process-typed-page>`. Must be enabled in every script that uses typed processes. Legacy processes cannot be defined in scripts with this flag enabled.

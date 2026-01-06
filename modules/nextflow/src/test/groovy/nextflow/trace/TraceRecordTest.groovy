@@ -344,4 +344,29 @@ class TraceRecordTest extends Specification {
         then:
         thrown(NoSuchFileException)
     }
+
+    def 'should manage numSpotInterruptions and not persist it across serialization'() {
+        given:
+        def rec = new TraceRecord()
+
+        expect:
+        rec.getNumSpotInterruptions() == null
+        and:
+        rec.numSpotInterruptions ==  null
+
+        when:
+        rec.setNumSpotInterruptions(3)
+
+        then:
+        rec.getNumSpotInterruptions() == 3
+        rec.numSpotInterruptions == 3
+
+        when:
+        def buf = rec.serialize()
+        def rec2 = TraceRecord.deserialize(buf)
+
+        then:
+        rec2.getNumSpotInterruptions() == null
+    }
+
 }

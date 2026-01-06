@@ -54,7 +54,10 @@ class GiteaRepositoryProviderTest extends Specification {
         new GiteaRepositoryProvider('pditommaso/hello', obj)
                 .setRevision('12345')
                 .getContentUrl('main.nf') == 'https://gitea.com/api/v1/repos/pditommaso/hello/raw/main.nf?ref=12345'
-
+        and:
+        new GiteaRepositoryProvider('pditommaso/hello', obj)
+                .setRevision('test/branch+with&strangecharacters')
+                .getContentUrl('main.nf') == 'https://gitea.com/api/v1/repos/pditommaso/hello/raw/main.nf?ref=test%2Fbranch%2Bwith%26strangecharacters'
     }
 
     @Unroll
@@ -92,6 +95,13 @@ class GiteaRepositoryProviderTest extends Specification {
 //        result = repo.readText('README.md')
 //        then:
 //        result.contains("foo branch")
+
+        when:
+        repo = new GiteaRepositoryProvider('pditommaso/test-hello', config)
+        repo.setRevision('test/branch+with&special-chars')
+        result = repo.readText('README.md')
+        then:
+        result.contains('Basic Nextflow script')
     }
 
     @IgnoreIf({System.getenv('NXF_SMOKE')})

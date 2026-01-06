@@ -154,19 +154,19 @@ See the [bucket policy documentation](https://docs.aws.amazon.com/config/latest/
 
 ## AWS Batch
 
-[AWS Batch](https://aws.amazon.com/batch/) is a managed computing service that allows the execution of containerised workloads in the AWS cloud infrastructure. It dynamically provisions the optimal quantity and type of compute resources (e.g., CPU or memory optimized compute resources) based on the volume and specific resource requirements of the jobs submitted.
+[AWS Batch](https://aws.amazon.com/batch/) is a managed computing service that enables the execution of containerized workloads on AWS cloud infrastructure. It dynamically provisions the optimal quantity and type of compute resources (e.g., CPU or memory optimized compute resources) based on the volume and specific resource requirements of the submitted jobs.
 
-Nextflow provides built-in support for AWS Batch, allowing the seamless deployment of Nextflow pipelines in the cloud, in which tasks are offloaded as Batch jobs.
 
-Read the {ref}`AWS Batch executor <awsbatch-executor>` section to learn more about the `awsbatch` executor in Nextflow.
+Nextflow natively supports AWS Batch, allowing you to run pipeline tasks as Batch jobs in the cloud.
+
+See {ref}`AWS Batch executor <awsbatch-executor>` to learn more about the `awsbatch` executor.
 
 (aws-batch-cli)=
 
 ### AWS CLI
 
 :::{tip}
-The need for the AWS CLI is considered a legacy requirement for the deployment of Nextflow pipelines with AWS Batch.
-Instead, consider using {ref}`wave-page` and {ref}`fusion-page` to facilitate access to S3 without using the AWS CLI.
+The recommended approach for running Nextflow pipelines with AWS Batch is to use {ref}`wave-page` and {ref}`fusion-page` for S3 access, rather than relying on the AWS CLI. This approach removes the requirement to install and configure the AWS CLI in containers or custom AMIs.
 :::
 
 Nextflow uses the [AWS command line tool](https://aws.amazon.com/cli/) (`aws`) to stage input files and output files between S3 and the task containers.

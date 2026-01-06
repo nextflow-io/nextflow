@@ -94,6 +94,10 @@ class BitbucketServerRepositoryProviderTest extends Specification {
         new BitbucketServerRepositoryProvider('pditommaso/hello', obj)
                 .setRevision('foo')
                 .getContentUrl('main.nf') == 'https://bitbucket.server.com/rest/api/1.0/projects/pditommaso/repos/hello/raw/main.nf?at=foo'
+        and:
+        new BitbucketServerRepositoryProvider('pditommaso/hello', obj)
+                .setRevision('test/branch+with&strangecharacters')
+                .getContentUrl('main.nf') == 'https://bitbucket.server.com/rest/api/1.0/projects/pditommaso/repos/hello/raw/main.nf?at=test%2Fbranch%2Bwith%26strangecharacters'
 
     }
 

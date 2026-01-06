@@ -247,7 +247,7 @@ The following environment variables control the configuration of the Nextflow ru
 `NXF_WRAPPER_STAGE_FILE_THRESHOLD`
 : :::{versionadded} 23.05.0-edge
   :::
-: Defines the minimum size of the `.command.run` staging script for it to be written to a separate `.command.stage` file (default: `'1 MB'`).
+: Enables writing large staging scripts to a separate `.command.stage` file. The value defines the minimum size of the `.command.run` staging script for it to be written to the separate file (default when enabled: `'1 MB'`).
 : This setting is useful for executors that impose a size limit on job scripts.
 
 ## Seqera Platform settings

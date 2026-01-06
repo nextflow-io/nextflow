@@ -160,7 +160,7 @@ class PodSpecBuilderTest extends Specification {
                 anno3: "value3"
         ]
     }
-    
+
     def 'should truncate labels longer than 63 chars' () {
 
         when:
@@ -603,7 +603,7 @@ class PodSpecBuilderTest extends Specification {
         when:
         def result = builder.createPullSecret()
         then:
-        result.size() == 1 
+        result.size() == 1
         result.get(0).name == 'MySecret'
     }
 
@@ -891,4 +891,24 @@ class PodSpecBuilderTest extends Specification {
         job.spec.ttlSecondsAfterFinished == 60
     }
 
+    def 'should create pod spec with runtimeClassName' () {
+        when:
+        def pod = new PodSpecBuilder()
+                .withPodName('foo')
+                .withImageName('busybox')
+                .withCommand(['echo', 'hello'])
+                .build()
+        then:
+        !pod.spec.runtimeClassName
+
+        when:
+        pod = new PodSpecBuilder()
+                .withPodName('foo')
+                .withImageName('busybox')
+                .withCommand(['echo', 'hello'])
+                .withPodOptions(new PodOptions(runtimeClassName: 'val1'))
+                .build()
+        then:
+        pod.spec.runtimeClassName == 'val1'
+    }
 }

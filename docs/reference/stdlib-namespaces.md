@@ -83,7 +83,7 @@ The global namespace contains globally available constants and functions.
   This function returns a collection if the glob pattern yields zero or multiple files. Use `files()` to get a collection of files.
   :::
 
-`files( filePattern: String, [options] ) -> List<Path>`
+`files( filePattern: String, [options] ) -> Iterable<Path>`
 : Get a collection of files from a file name or glob pattern. Supports the same options as `file()`.
 : See also: {ref}`channel.fromPath <channel-path>`.
 

@@ -53,7 +53,7 @@ When defined as a directory, the module must be included by specifying the modul
 include { hello } from './some/module'
 ```
 
-Module directories allow the use of module scoped binaries scripts. See [Module binaries] for details.
+Module directories allow the use of module scoped binary scripts. See [Module binaries] for details.
 
 ## Multiple inclusions
 
@@ -259,7 +259,7 @@ To enable this feature, set the following flag in your pipeline script or config
 nextflow.enable.moduleBinaries = true
 ```
 
-The binary scripts must be placed in the module directory names `<module-dir>/resources/usr/bin`:
+The binary scripts must be placed in the module directory named `<module-dir>/resources/usr/bin`:
 
 ```
 <module-dir>

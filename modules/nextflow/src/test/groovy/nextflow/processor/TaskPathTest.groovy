@@ -87,7 +87,6 @@ class TaskPathTest extends Specification {
 
         cleanup:
         folder.deleteDir()
-
     }
 
     def 'should validate equals method' () {
@@ -111,9 +110,7 @@ class TaskPathTest extends Specification {
         new TaskPath(p1, 'foo.txt').equals(t2)
 
         !t1.equals(t3)
-
     }
-
 
     def 'should validate operator equality' () {
         given:
@@ -138,7 +135,6 @@ class TaskPathTest extends Specification {
 
         expect:
         new TaskPath(Paths.get('/foo')).size() == 0
-
     }
 
     @Ignore
@@ -159,9 +155,7 @@ class TaskPathTest extends Specification {
 
         cleanup:
         folder.deleteDir()
-
     }
-
 
     def 'should serialised task path' () {
 
@@ -174,7 +168,22 @@ class TaskPathTest extends Specification {
         copy.equals(p)
     }
 
+    def 'should support directory listing' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        folder.resolve('hello.txt').text = 'Hello world'
+
+        when:
+        def path = new TaskPath(folder, 'test')
+        def result = path.listDirectory()
+
+        then:
+        result.size() == 1
+        result[0].name == 'hello.txt'
+
+        cleanup:
+        folder.deleteDir()
+    }
+
 }
-
-
-

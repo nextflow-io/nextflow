@@ -49,6 +49,8 @@ class FusionConfig implements ConfigScope {
 
     final static public String DEFAULT_TAGS = "[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)"
 
+    final static public int DEFAULT_SNAPSHOT_MAX_SPOT_ATTEMPTS = 5
+
     final static public String FUSION_PATH = '/usr/bin/fusion'
 
     final static private String PRODUCT_NAME = 'fusion'

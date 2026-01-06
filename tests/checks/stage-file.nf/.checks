@@ -1,0 +1,23 @@
+set -e
+
+#
+# run normal mode
+#
+echo ''
+NXF_WRAPPER_STAGE_FILE_THRESHOLD='100' $NXF_RUN | tee stdout
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process'` == 2 ]] || false
+
+TASK_DIR=`$NXF_CMD log last -F "process == 'bar'"`
+[[ `cat $TASK_DIR/.command.stage | wc -l` -eq 19 ]] || false
+
+
+#
+# RESUME mode
+#
+echo ''
+NXF_WRAPPER_STAGE_FILE_THRESHOLD='100' $NXF_RUN -resume | tee stdout
+[[ `grep 'INFO' .nextflow.log | grep -c 'Cached process'` == 2 ]] || false
+
+TASK_DIR=`$NXF_CMD log last -F "process == 'bar'"`
+[[ `cat $TASK_DIR/.command.stage | wc -l` -eq 19 ]] || false
+

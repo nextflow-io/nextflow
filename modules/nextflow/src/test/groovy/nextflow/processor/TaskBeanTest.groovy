@@ -42,7 +42,7 @@ class TaskBeanTest extends Specification {
         }
         process.getConfig() >> Mock(ProcessConfig)
         process.getSession() >> session
-        process.getExecutor() >> Mock(Executor)
+        process.getExecutor() >> Mock(Executor) { isStageFileEnabled() >> true }
 
         def config = new TaskConfig()
         config.module = ['blast/1.1']
@@ -71,6 +71,7 @@ class TaskBeanTest extends Specification {
         task.getContainer() >> 'busybox:latest'
         task.getContainerConfig() >> new DockerConfig(registry: 'x')
         task.getCondaConfig() >> new CondaConfig([useMicromamba:true], [:])
+        task.isStageFileEnabled() >> true
 
         when:
         def bean = new TaskBean(task)
@@ -93,6 +94,7 @@ class TaskBeanTest extends Specification {
         bean.containerConfig == new DockerConfig(registry: 'x')
         bean.containerMemory == new MemoryUnit('1GB')
         bean.statsEnabled
+        bean.stageFileEnabled
 
         bean.inputFiles == [file_1: Paths.get('/file/one'), file_2: Paths.get('/file/two')]
         bean.outputFiles ==  [ 'simple.txt', 'my/path/file.bam' ]
