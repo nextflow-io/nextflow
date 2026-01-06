@@ -25,10 +25,12 @@ import io.seqera.sched.client.SchedClientConfig
 import nextflow.exception.AbortOperationException
 import nextflow.executor.Executor
 import nextflow.fusion.FusionHelper
+import nextflow.platform.PlatformHelper
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskRun
+import nextflow.SysEnv
 import nextflow.util.Duration
 import nextflow.util.ServiceName
 import org.pf4j.ExtensionPoint
@@ -59,9 +61,15 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
 
     protected void createClient() {
         def seqeraConfig = new SeqeraConfig(session.config.seqera as Map ?: Collections.emptyMap())
+        // Get access token and refresh token from tower config (shares authentication with Platform)
+        def towerConfig = session.config.tower as Map ?: Collections.emptyMap()
+        def accessToken = PlatformHelper.getAccessToken(towerConfig, SysEnv.get())
+        def refreshToken = PlatformHelper.getRefreshToken(towerConfig, SysEnv.get())
         def clientConfig = SchedClientConfig.builder()
                 .endpoint(seqeraConfig.endpoint)
                 .region(seqeraConfig.region)
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
                 .retryConfig(seqeraConfig.retryOpts())
                 .build()
         this.client = new SchedClient(clientConfig)
