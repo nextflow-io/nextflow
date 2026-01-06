@@ -176,23 +176,30 @@ process hello {
 }
 ```
 
-You can also specify Conda lock files using a remote URL:
+:::{versionchanged} 26.01.0-edge
+Conda lock files are now detected by the presence of the `@EXPLICIT` marker in the first 20 lines of the file.
+They can have any file extension (e.g., `.lock`, `.txt`, or no extension at all).
+:::
 
+:::{note}
+Remote URLs are only supported for Conda environment YAML files (`.yml`, `.yaml`), not for lock files.
+Lock files should be bundled with your pipeline as local files. This is intentional, as lock files are considered part of the module/pipeline bundle and should be versioned alongside your code rather than fetched on-the-fly.
+
+For example, you can use a remote YAML environment file:
 ```nextflow
 process hello {
-  conda 'https://wave.seqera.io/v1alpha1/builds/bd-12345/condalock'
-
-  script:
-  """
-  your_command --here
-  """
+  conda 'https://example.com/my-env.yml'
+  // ...
 }
 ```
 
-
-:::{versionchanged} 26.01.0-edge
-Conda lock files are now detected by the presence of the `@EXPLICIT` marker in the first 20 lines of the file.
-They can have any file extension (e.g., `.lock`, `.txt`, or no extension at all), and can be specified using remote URLs including cloud storage paths (S3, GS, AZ).
+But lock files must be local:
+```nextflow
+process hello {
+  conda '/path/to/spec-file.lock'
+  // ...
+}
+```
 :::
 
 ### Use existing Conda environments

@@ -30,7 +30,6 @@ import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.LazyDataflowVariable
 import nextflow.Global
 import nextflow.SysEnv
-import nextflow.file.FileHelper
 import nextflow.file.FileMutex
 import nextflow.util.CacheHelper
 import nextflow.util.Duration
@@ -189,39 +188,13 @@ class CondaCache {
     }
 
     /**
-     * Check if the given path is a remote URL (http, https, s3, gs, az, ftp, etc.)
+     * Check if the given path is a remote HTTP/HTTPS URL
      * @param str The path string to check
-     * @return true if it's a remote URL
+     * @return true if it's an HTTP/HTTPS URL
      */
     @PackageScope
-    boolean isRemoteFile(String str) {
-        final protocol = FileHelper.getUrlProtocol(str)
-        return protocol != null && protocol != 'file'
-    }
-
-    /**
-     * Stage a remote file to the local cache directory.
-     *
-     * @param url The remote URL to download
-     * @return The local path where the file was staged
-     */
-    @PackageScope
-    Path stageRemoteFile(String url) {
-        final remotePath = FileHelper.asPath(url)
-        final hash = CacheHelper.hasher(url).hash().toString()
-        final fileName = remotePath.getFileName()?.toString() ?: 'condalock'
-        final localPath = getCacheDir().resolve("downloads").resolve("${hash}-${fileName}")
-
-        if( !localPath.parent.exists() )
-            Files.createDirectories(localPath.parent)
-
-        if( !localPath.exists() ) {
-            log.debug "Staging remote conda file: $url -> $localPath"
-            final content = remotePath.text
-            localPath.text = content
-        }
-
-        return localPath
+    boolean isYamlUriPath(String str) {
+        str?.startsWith('http://') || str?.startsWith('https://')
     }
 
     /**
@@ -237,16 +210,14 @@ class CondaCache {
         String content
         String name = 'env'
 
-        // check if it's a remote URL
-        if( isRemoteFile(condaEnv) ) {
-            try {
-                // stage the remote file locally and read its content
-                final localPath = stageRemoteFile(condaEnv)
-                content = localPath.text
+        // check if it's a remote HTTP/HTTPS URL
+        if( isYamlUriPath(condaEnv) ) {
+            // Remote URLs are only supported for YAML environment files
+            if( !isYamlFilePath(condaEnv) ) {
+                throw new IllegalArgumentException("Remote Conda lock files are not supported. Only environment YAML files (.yml, .yaml) can be specified as remote URLs: $condaEnv")
             }
-            catch( Exception e ) {
-                throw new IllegalArgumentException("Error fetching remote Conda environment file: $condaEnv -- Check the log file for details", e)
-            }
+            // Use the URL itself as the content for hashing - conda will fetch it
+            content = condaEnv
         }
         // check if it's a YAML file
         else if( isYamlFilePath(condaEnv) ) {
@@ -348,41 +319,6 @@ class CondaCache {
         Paths.get(envFile).toAbsolutePath()
     }
 
-    /**
-     * Get the local file path for a conda environment file.
-     * If the path is a remote URL, return the staged local path.
-     *
-     * @param condaEnv The conda environment string (can be local path or URL)
-     * @return The local file path
-     */
-    @PackageScope
-    Path getLocalFilePath(String condaEnv) {
-        if( isRemoteFile(condaEnv) ) {
-            return stageRemoteFile(condaEnv)
-        }
-        return makeAbsolute(condaEnv)
-    }
-
-    /**
-     * Check if a conda environment file is a lock file.
-     * Reads the file content and checks for @EXPLICIT marker.
-     *
-     * @param filePath The path to the file
-     * @return true if the file is a lock file
-     */
-    @PackageScope
-    boolean isLockFilePath(Path filePath) {
-        if( !Files.exists(filePath) )
-            return false
-        try {
-            return isLockFile(filePath.text)
-        }
-        catch( Exception e ) {
-            log.debug "Error checking if file is lock file: $filePath", e
-            return false
-        }
-    }
-
     @PackageScope
     Path createLocalCondaEnv0(String condaEnv, Path prefixPath) {
         if( prefixPath.isDirectory() ) {
@@ -395,33 +331,21 @@ class CondaCache {
         String opts = createOptions ? "$createOptions " : ''
 
         def cmd
-        // Check if it's a YAML file (by extension)
+        // Check if it's a YAML file (by extension) - can be local path or HTTP/HTTPS URL
         if( isYamlFilePath(condaEnv) ) {
-            final target = Escape.path(getLocalFilePath(condaEnv))
+            // For remote URLs, pass directly to conda; for local files, use absolute path
+            final target = isYamlUriPath(condaEnv) ? condaEnv : Escape.path(makeAbsolute(condaEnv))
             final yesOpt = binaryName=="mamba" || binaryName == "micromamba"  ? '--yes ' : ''
             cmd = "${binaryName} env create ${yesOpt}--prefix ${Escape.path(prefixPath)} --file ${target}"
         }
-        // Check if it's a remote file (http/https URL)
-        else if( isRemoteFile(condaEnv) ) {
-            final localPath = getLocalFilePath(condaEnv)
-            if( isLockFilePath(localPath) ) {
-                // It's a lock file - use conda create --file
-                cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} --file ${Escape.path(localPath)}"
-            }
-            else {
-                // Assume it's a YAML environment file
-                final yesOpt = binaryName=="mamba" || binaryName == "micromamba"  ? '--yes ' : ''
-                cmd = "${binaryName} env create ${yesOpt}--prefix ${Escape.path(prefixPath)} --file ${Escape.path(localPath)}"
-            }
-        }
-        // Check if it's a text file (by extension) - legacy support
+        // Check if it's a text file (by extension) - legacy support for .txt lock files
         else if( isTextFilePath(condaEnv) ) {
             cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
         }
         // Check if it's a file path with non-standard extension that might be a lock file
         else if( condaEnv.contains('/') ) {
             final localPath = makeAbsolute(condaEnv)
-            if( Files.exists(localPath) && isLockFilePath(localPath) ) {
+            if( Files.exists(localPath) && isLockFile(localPath.text) ) {
                 cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} --file ${Escape.path(localPath)}"
             }
             else {
