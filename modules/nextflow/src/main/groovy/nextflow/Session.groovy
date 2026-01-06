@@ -79,6 +79,7 @@ import nextflow.trace.WorkflowStatsObserver
 import nextflow.trace.event.FilePublishEvent
 import nextflow.trace.event.TaskEvent
 import nextflow.trace.event.WorkflowOutputEvent
+import nextflow.trace.event.WorkflowPublishEvent
 import nextflow.util.Barrier
 import nextflow.util.ConfigHelper
 import nextflow.util.Duration
@@ -1067,13 +1068,17 @@ class Session implements ISession {
         notifyEvent(observersV2, ob -> ob.onFlowCreate(this))
     }
 
-    void notifyWorkflowOutput(WorkflowOutputEvent event) {
-        notifyEvent(observersV2, ob -> ob.onWorkflowOutput(event))
-    }
-
     void notifyFilePublish(FilePublishEvent event) {
         notifyEvent(observersV1, ob -> ob.onFilePublish(event.target, event.source))
         notifyEvent(observersV2, ob -> ob.onFilePublish(event))
+    }
+
+    void notifyWorkflowPublish(WorkflowPublishEvent event) {
+        notifyEvent(observersV2, ob -> ob.onWorkflowPublish(event))
+    }
+
+    void notifyWorkflowOutput(WorkflowOutputEvent event) {
+        notifyEvent(observersV2, ob -> ob.onWorkflowOutput(event))
     }
 
     void notifyFlowComplete() {
