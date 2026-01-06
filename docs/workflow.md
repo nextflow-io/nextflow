@@ -2,13 +2,13 @@
 
 # Workflows
 
-In Nextflow, a **workflow** is a function that is specialized for composing {ref}`processes <process-page>` and dataflow logic.
+In Nextflow, a **workflow** is a function that is specialized for composing {ref}`processes <process-page>` and dataflow logic:
 
-See {ref}`syntax-workflow` for a full description of the workflow syntax.
+- An [entry workflow](#entry-workflow) is the entrypoint of a pipeline. It can take [parameters](#parameters) as inputs using the `params` block, and it can publish [outputs](#outputs) using the `output` block.
 
-:::{note}
-Workflows were introduced in DSL2. If you are still using DSL1, see {ref}`dsl1-page` for more information about how to migrate your Nextflow pipelines to DSL2.
-:::
+- A [named workflow](#named-workflows) is a workflow that can be called by other workflows. It can define its own inputs and outputs, which are called *takes* and *emits*.
+
+- Both entry workflows and named workflows can contain [dataflow logic](#dataflow) such as calling processes, workflows, and channel operators.
 
 ## Entry workflow
 
