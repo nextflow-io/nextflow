@@ -122,27 +122,34 @@ interface TraceObserverV2 {
     default void onFlowError(TaskEvent event) {}
 
     /**
-     * Invoked when a workflow output is published.
+     * Invoked when a file is published by a workflow output
+     * or `publishDir` directive.
      *
      * @param event
      */
-    default void onWorkflowOutput(WorkflowOutputEvent event) {}
+    default void onFilePublish(FilePublishEvent event) {}
 
     /**
-     * Invoked when a value is being published to a workflow output.
-     * Unlike {@link #onWorkflowOutput} which fires after all values are
-     * published, this fires for each value as it is published.
+     * Invoked when a workflow output receives a value from
+     * a dataflow source.
+     *
+     * For a given published value, this event is guaranteed
+     * to be emitted after all files in that value have been
+     * published via onFilePublish().
      *
      * @param event
      */
     default void onWorkflowPublish(WorkflowPublishEvent event) {}
 
     /**
-     * Invoked when a file is published, either by a `publishDir` directive
-     * or a workflow output.
+     * Invoked when a workflow output is completed.
+     *
+     * For a given workflow output, this event is guaranteed
+     * to be emitted after all values for that output have been
+     * published via onWorkflowPublish().
      *
      * @param event
      */
-    default void onFilePublish(FilePublishEvent event) {}
+    default void onWorkflowOutput(WorkflowOutputEvent event) {}
 
 }

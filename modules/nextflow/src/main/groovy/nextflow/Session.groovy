@@ -1068,17 +1068,17 @@ class Session implements ISession {
         notifyEvent(observersV2, ob -> ob.onFlowCreate(this))
     }
 
-    void notifyWorkflowOutput(WorkflowOutputEvent event) {
-        notifyEvent(observersV2, ob -> ob.onWorkflowOutput(event))
+    void notifyFilePublish(FilePublishEvent event) {
+        notifyEvent(observersV1, ob -> ob.onFilePublish(event.target, event.source))
+        notifyEvent(observersV2, ob -> ob.onFilePublish(event))
     }
 
     void notifyWorkflowPublish(WorkflowPublishEvent event) {
         notifyEvent(observersV2, ob -> ob.onWorkflowPublish(event))
     }
 
-    void notifyFilePublish(FilePublishEvent event) {
-        notifyEvent(observersV1, ob -> ob.onFilePublish(event.target, event.source))
-        notifyEvent(observersV2, ob -> ob.onFilePublish(event))
+    void notifyWorkflowOutput(WorkflowOutputEvent event) {
+        notifyEvent(observersV2, ob -> ob.onWorkflowOutput(event))
     }
 
     void notifyFlowComplete() {

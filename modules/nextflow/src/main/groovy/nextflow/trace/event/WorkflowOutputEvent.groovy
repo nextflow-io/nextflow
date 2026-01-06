@@ -22,7 +22,8 @@ import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 
 /**
- * Models a workflow output event.
+ * Models a workflow output event, which is emitted for each
+ * workflow output when it is completed.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
@@ -34,7 +35,13 @@ class WorkflowOutputEvent {
      */
     String name
     /**
-     * The value of the workflow output. It will be null if the index file was specified.
+     * The value of the workflow output.
+     *
+     * If the source is a dataflow channel. this value is an unordered
+     * collection of the published values from the channel. If the source
+     * is a dataflow value, this value is the published value.
+     *
+     * If the index file was enabled, this value is null.
      */
     Object value
     /**

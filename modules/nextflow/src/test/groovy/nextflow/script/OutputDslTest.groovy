@@ -87,10 +87,10 @@ class OutputDslTest extends Specification {
             "${outputDir}/barbar/file2.txt"
             """.stripIndent()
         and:
-        1 * session.notifyWorkflowPublish(new WorkflowPublishEvent('foo', file1))
-        1 * session.notifyWorkflowPublish(new WorkflowPublishEvent('bar', file2))
         1 * session.notifyFilePublish(new FilePublishEvent(file1, outputDir.resolve('foo/file1.txt'), null))
         1 * session.notifyFilePublish(new FilePublishEvent(file2, outputDir.resolve('barbar/file2.txt'), ['foo', 'bar']))
+        1 * session.notifyWorkflowPublish(new WorkflowPublishEvent('foo', outputDir.resolve('foo/file1.txt')))
+        1 * session.notifyWorkflowPublish(new WorkflowPublishEvent('bar', outputDir.resolve('barbar/file2.txt')))
         1 * session.notifyWorkflowOutput(new WorkflowOutputEvent('foo', [outputDir.resolve('foo/file1.txt')], null))
         1 * session.notifyWorkflowOutput(new WorkflowOutputEvent('bar', [outputDir.resolve('barbar/file2.txt')], outputDir.resolve('index.csv')))
         1 * session.notifyFilePublish(new FilePublishEvent(null, outputDir.resolve('index.csv'), ['foo', 'bar']))
@@ -130,8 +130,8 @@ class OutputDslTest extends Specification {
         then:
         outputDir.resolve('file1.txt').text == 'Hello'
         and:
-        1 * session.notifyWorkflowPublish(new WorkflowPublishEvent('foo', file1))
         1 * session.notifyFilePublish(new FilePublishEvent(file1, outputDir.resolve('file1.txt'), null))
+        1 * session.notifyWorkflowPublish(new WorkflowPublishEvent('foo', outputDir.resolve('file1.txt')))
         1 * session.notifyWorkflowOutput(new WorkflowOutputEvent('foo', [outputDir.resolve('file1.txt')], null))
 
         cleanup:
@@ -169,8 +169,8 @@ class OutputDslTest extends Specification {
         dsl.apply(session)
         await(dsl)
         then:
-        1 * session.notifyWorkflowPublish(new WorkflowPublishEvent('foo', record))
         0 * session.notifyFilePublish(_)
+        1 * session.notifyWorkflowPublish(new WorkflowPublishEvent('foo', record))
         1 * session.notifyWorkflowOutput(new WorkflowOutputEvent('foo', [ record ], null))
 
         cleanup:

@@ -20,8 +20,8 @@ import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 
 /**
- * Models a workflow publish event, fired for each value
- * as it is published to a workflow output.
+ * Models a workflow publish event, which is emitted for each value
+ * that is published to a workflow output from a dataflow source.
  *
  * @author Rob Syme <rob.syme@gmail.com>
  */
@@ -33,7 +33,10 @@ class WorkflowPublishEvent {
      */
     String name
     /**
-     * The value being published.
+     * The published value.
+     *
+     * File paths from the work directory are normalized to
+     * their corresponding path in the output directory.
      */
     Object value
 }
