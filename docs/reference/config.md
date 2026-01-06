@@ -113,6 +113,8 @@ The following settings are available:
 : The AWS Batch [Execution Role](https://docs.aws.amazon.com/batch/latest/userguide/execution-IAM-role.html) ARN that needs to be used to execute the Batch Job. It is mandatory when using AWS Fargate.
 
 `aws.batch.forceGlacierTransfer`
+: :::{versionadded 26.04.0}
+  :::
 : When `true`, add the `--force-glacier-transfer` flag to AWS CLI S3 download commands (default: `false`).
 : This option is needed when staging directories that have been restored from [S3 Glacier](https://aws.amazon.com/s3/storage-classes/glacier/). It does not restore objects from Glacier.
 
