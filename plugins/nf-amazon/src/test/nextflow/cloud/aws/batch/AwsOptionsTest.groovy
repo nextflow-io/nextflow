@@ -45,11 +45,6 @@ class AwsOptionsTest extends Specification {
         opts = new AwsOptions(awsConfig: new AwsConfig(batch: [cliPath: '/foo/bin/aws']))
         then:
         opts.awsCli == '/foo/bin/aws'
-
-        when:
-        opts = new AwsOptions(awsConfig: new AwsConfig(region: 'eu-west-1', batch: [cliPath: '/foo/bin/aws']))
-        then:
-        opts.awsCli == '/foo/bin/aws --region eu-west-1'
     }
 
     def 'should get max connection'  () {
@@ -101,8 +96,6 @@ class AwsOptionsTest extends Specification {
         opts.maxParallelTransfers == 5
         opts.maxTransferAttempts == 3 
         opts.delayBetweenAttempts.seconds == 9
-        opts.storageClass == 'STANDARD'
-        opts.storageEncryption == 'AES256'
         opts.region == 'aws-west-2'
         opts.jobRole == 'aws::foo::bar'
         opts.volumes == ['/foo','/this:/that']
@@ -114,86 +107,17 @@ class AwsOptionsTest extends Specification {
 
     }
 
-    def 'should set aws kms key' () {
-        when:
-        def sess1 = Mock(Session)  {
-            getConfig() >> [aws: [ client: [ storageKmsKeyId: 'my-kms-key']]]
-        }
-        and:
-        def opts = new AwsOptions(sess1)
-        then:
-        opts.storageKmsKeyId == 'my-kms-key'
-        opts.storageEncryption == null
-
-        when:
-        def sess2 = Mock(Session)  {
-            getConfig() >> [aws: [ client: [ storageKmsKeyId: 'my-kms-key', storageEncryption: 'aws:kms']]]
-        }
-        and:
-        def opts2 = new AwsOptions(sess2)
-        then:
-        opts2.storageKmsKeyId == 'my-kms-key'
-        opts2.storageEncryption == 'aws:kms'    // <-- allow explicit `storageEncryption`
-
-    }
-
-
-
-    @Unroll
-    def 'should return aws options'() {
-        given:
-        def cfg = [
-                aws: [client: [
-                        uploadStorageClass: awsStorClass,
-                        storageEncryption  : awsStorEncrypt],
-                      batch: [ cliPath: awscliPath ]]
-        ]
-        def session = new Session(cfg)
-
-        when:
-        def opts = new AwsOptions(session)
-        then:
-        opts.cliPath == awscliPath
-        opts.storageClass == awsStorClass
-        opts.storageEncryption == awsStorEncrypt
-
-        where:
-        awscliPath      | awsStorClass | awsStorEncrypt
-        null            | null         | null
-        '/foo/bin/aws'  | 'STANDARD'   | 'AES256'
-
-    }
-
     def 'should validate aws options' () {
 
         when:
         def opts = new AwsOptions(awsConfig: new AwsConfig([:]))
         then:
         opts.getCliPath() == null
-        opts.getStorageClass() == null
-        opts.getStorageEncryption() == null
 
         when:
-        opts = new AwsOptions(awsConfig: new AwsConfig(batch: [cliPath: '/foo/bin/aws'], client: [storageClass: 'STANDARD', storageEncryption: 'AES256']))
+        opts = new AwsOptions(awsConfig: new AwsConfig(batch: [cliPath: '/foo/bin/aws']))
         then:
         opts.getCliPath() == '/foo/bin/aws'
-        opts.getStorageClass() == 'STANDARD'
-        opts.getStorageEncryption() == 'AES256'
-
-        when:
-        opts = new AwsOptions(awsConfig: new AwsConfig(client:[storageClass: 'foo']))
-        then:
-        opts.getStorageClass() == null
-
-        when:
-        opts = new AwsOptions(awsConfig: new AwsConfig(client:[storageEncryption: 'abr']))
-        then:
-        opts.getStorageEncryption() == null
-
-        when:
-        opts = new AwsOptions(awsConfig: new AwsConfig(client:[storageKmsKeyId: 'arn:aws:kms:eu-west-1:1234567890:key/e97ecf28-951e-4700-bf22-1bd416ec519f']))
-        then:
-        opts.getStorageKmsKeyId() == 'arn:aws:kms:eu-west-1:1234567890:key/e97ecf28-951e-4700-bf22-1bd416ec519f'
 
         when:
         new AwsOptions(awsConfig: new AwsConfig(batch: [cliPath: 'bin/aws']))
@@ -241,25 +165,6 @@ class AwsOptionsTest extends Specification {
         [aws:[batch:[platformType: 'fargate', cliPath: '/some/path/s5cmd']]]        | null              | '/some/path/s5cmd'
         [aws:[batch:[platformType: 'fargate', cliPath: 's5cmd --foo']]]             | null              | 's5cmd --foo'
         [aws:[batch:[platformType: 'fargate', cliPath: '/some/path/s5cmd --foo']]]  | null              | '/some/path/s5cmd --foo'
-    }
-    
-    def 'should parse s3 acl' ( ) {
-        when:
-        def opts = new AwsOptions(new Session(aws:[client:[s3Acl: 'PublicRead']]))
-        then:
-        opts.getS3Acl() == ObjectCannedACL.PUBLIC_READ
-
-
-        when:
-        opts = new AwsOptions(new Session(aws:[client:[s3Acl: 'public-read']]))
-        then:
-        opts.getS3Acl() == ObjectCannedACL.PUBLIC_READ
-
-
-        when:
-        opts = new AwsOptions(new Session(aws:[client:[s3Acl: 'unknown']]))
-        then:
-        thrown(IllegalArgumentException)
     }
 
 }

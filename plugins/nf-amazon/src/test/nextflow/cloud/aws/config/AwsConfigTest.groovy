@@ -18,6 +18,7 @@
 package nextflow.cloud.aws.config
 
 import software.amazon.awssdk.regions.Region
+import software.amazon.awssdk.services.s3.model.ObjectCannedACL
 
 import java.nio.file.Files
 
@@ -130,5 +131,43 @@ class AwsConfigTest extends Specification {
         [region: "eu-south-1", client: [endpoint: "http://custom.endpoint.com"]]                | Region.EU_SOUTH_1.id()
         [region: "eu-south-1", client: [endpoint: "https://s3.eu-west-1.amazonaws.com"]]        | Region.EU_WEST_1.id()
         [region: "eu-south-1", client: [endpoint: "https://bucket.s3-global.amazonaws.com"]]    | Region.EU_SOUTH_1.id()
+    }
+
+    def 'should resolve specific bucket config' () {
+        given:
+        def config = [
+            client: [endpoint: "http://custom.endpoint.com", requesterPays: true, s3Acl: ObjectCannedACL.PRIVATE.toString()],
+            buckets: [
+                'bucket-1': [endpoint: "http://custom2.endpoint2.com", region: "eu-south-1", anonymous: true, requesterPays: false]
+            ]
+        ]
+        def awsConfig = new AwsConfig(config)
+
+        when:
+        def bucketConfig = awsConfig.getBucketConfig('bucket-1')
+        then:
+        bucketConfig.endpoint == "http://custom2.endpoint2.com"
+        bucketConfig.requesterPays == false
+        bucketConfig.region == "eu-south-1"
+        bucketConfig.anonymous == true
+        bucketConfig.s3Acl == ObjectCannedACL.PRIVATE
+
+        when:
+        bucketConfig = awsConfig.getBucketConfig('no-exist')
+        then:
+        bucketConfig.endpoint == "http://custom.endpoint.com"
+        bucketConfig.requesterPays == true
+        bucketConfig.region == null
+        bucketConfig.anonymous == null
+        bucketConfig.s3Acl == ObjectCannedACL.PRIVATE
+
+        when:
+        bucketConfig = awsConfig.getBucketConfig(null)
+        then:
+        bucketConfig.endpoint == "http://custom.endpoint.com"
+        bucketConfig.requesterPays == true
+        bucketConfig.region == null
+        bucketConfig.anonymous == null
+        bucketConfig.s3Acl == ObjectCannedACL.PRIVATE
     }
 }

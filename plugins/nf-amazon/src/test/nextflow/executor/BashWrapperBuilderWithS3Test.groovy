@@ -34,6 +34,7 @@ class BashWrapperBuilderWithS3Test extends Specification {
     def 'should include s3 helpers' () {
         given:
         Global.session = Mock(Session) { getConfig() >> [:] }
+        Global.config = [:]
         and:
         def folder = Paths.get('/work/dir')
         def target = S3PathFactory.parse('s3://some/buck et')  // <-- path with blank
@@ -71,12 +72,15 @@ class BashWrapperBuilderWithS3Test extends Specification {
             nxf_s3_upload() {
                 local name=$1
                 local s3path=$2
+                shift 2
+                # Collect remaining args in an array to preserve quoting & handle empty safely
+                local opts=( "$@" )
                 if [[ "$name" == - ]]; then
-                  aws s3 cp --only-show-errors --storage-class STANDARD - "$s3path"
+                  aws s3 cp --only-show-errors "${opts[@]}" - "$s3path"
                 elif [[ -d "$name" ]]; then
-                  aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
+                  aws s3 cp --only-show-errors --recursive "${opts[@]}" "$name" "$s3path/$name"
                 else
-                  aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
+                  aws s3 cp --only-show-errors "${opts[@]}" "$name" "$s3path/$name"
                 fi
             }
             
@@ -84,11 +88,14 @@ class BashWrapperBuilderWithS3Test extends Specification {
                 local source=$1
                 local target=$2
                 local file_name=$(basename $1)
-                local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
+                shift 2
+                # Collect remaining args in an array to preserve quoting & handle empty safely
+                local opts=( "$@" )
+                local is_dir=$(aws s3 ls "${opts[@]}" $source | grep -F "PRE ${file_name}/" -c)
                 if [[ $is_dir == 1 ]]; then
-                    aws s3 cp --only-show-errors --recursive "$source" "$target"
+                    aws s3 cp --only-show-errors --recursive "${opts[@]}" "$source" "$target"
                 else 
-                    aws s3 cp --only-show-errors "$source" "$target"
+                    aws s3 cp --only-show-errors "${opts[@]}" "$source" "$target"
                 fi
             }
             
@@ -98,6 +105,7 @@ class BashWrapperBuilderWithS3Test extends Specification {
     def 'should include s3 helpers and bash lib' () {
         given:
         Global.session = Mock(Session) { getConfig() >> [:] }
+        //Global.config = [:]
         and:
         def folder = Paths.get('/work/dir')
         def target = S3PathFactory.parse('s3://some/bucket')
@@ -191,12 +199,15 @@ class BashWrapperBuilderWithS3Test extends Specification {
             nxf_s3_upload() {
                 local name=$1
                 local s3path=$2
+                shift 2
+                # Collect remaining args in an array to preserve quoting & handle empty safely
+                local opts=( "$@" )
                 if [[ "$name" == - ]]; then
-                  aws s3 cp --only-show-errors --storage-class STANDARD - "$s3path"
+                  aws s3 cp --only-show-errors "${opts[@]}" - "$s3path"
                 elif [[ -d "$name" ]]; then
-                  aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
+                  aws s3 cp --only-show-errors --recursive "${opts[@]}" "$name" "$s3path/$name"
                 else
-                  aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
+                  aws s3 cp --only-show-errors "${opts[@]}" "$name" "$s3path/$name"
                 fi
             }
             
@@ -204,11 +215,14 @@ class BashWrapperBuilderWithS3Test extends Specification {
                 local source=$1
                 local target=$2
                 local file_name=$(basename $1)
-                local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
+                shift 2
+                # Collect remaining args in an array to preserve quoting & handle empty safely
+                local opts=( "$@" )
+                local is_dir=$(aws s3 ls "${opts[@]}" $source | grep -F "PRE ${file_name}/" -c)
                 if [[ $is_dir == 1 ]]; then
-                    aws s3 cp --only-show-errors --recursive "$source" "$target"
+                    aws s3 cp --only-show-errors --recursive "${opts[@]}" "$source" "$target"
                 else 
-                    aws s3 cp --only-show-errors "$source" "$target"
+                    aws s3 cp --only-show-errors "${opts[@]}" "$source" "$target"
                 fi
             }
             

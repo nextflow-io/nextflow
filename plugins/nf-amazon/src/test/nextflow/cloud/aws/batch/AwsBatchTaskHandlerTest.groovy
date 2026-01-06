@@ -190,7 +190,10 @@ class AwsBatchTaskHandlerTest extends Specification {
         task.getConfig() >> new TaskConfig(memory: '2GB', cpus: 4, accelerator: 2)
         task.getWorkDirStr() >> 's3://my-bucket/work/dir'
         and:
-        def executor = Spy(AwsBatchExecutor) { getAwsOptions()>> new AwsOptions() }
+        def executor = Spy(AwsBatchExecutor) {
+            getAwsOptions()>> new AwsOptions()
+            getWorkDir()>>S3PathFactory.create('s3:///my-bucket/work/dir')
+        }
         and:
         def handler = Spy(new AwsBatchTaskHandler(executor: executor))
 
@@ -220,6 +223,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         and:
         def executor = Spy(AwsBatchExecutor) {
             getAwsOptions() >> { new AwsOptions(awsConfig: new AwsConfig(batch:[cliPath: '/bin/aws'])) }
+            getWorkDir() >> S3PathFactory.create('s3:///my-bucket/work/dir')
         }
         and:
         def handler = Spy(new AwsBatchTaskHandler(executor: executor))
@@ -963,7 +967,9 @@ class AwsBatchTaskHandlerTest extends Specification {
 
     def 'should render submit command' () {
         given:
-        def executor = Spy(AwsBatchExecutor)
+        def executor = Spy(AwsBatchExecutor){
+            getWorkDir() >> S3PathFactory.create('s3:///work')
+        }
         and:
         def handler = Spy(new AwsBatchTaskHandler(executor: executor)) {
             fusionEnabled() >> false
@@ -980,19 +986,19 @@ class AwsBatchTaskHandlerTest extends Specification {
         when:
         result =  handler.getSubmitCommand()
         then:
-        executor.getAwsOptions() >> Mock(AwsOptions)  {
-            getAwsCli() >> 'aws';
-            getDebug() >> true
-            getStorageEncryption() >> 'aws:kms'
-            getStorageKmsKeyId() >> 'kms-key-123'
-        }
+        executor.getAwsOptions() >> new AwsOptions(awsConfig: new AwsConfig(
+            batch: [cliPath: '/bin/aws'],
+            client: [debug: true, storageEncryption: 'aws:kms', storageKmsKeyId: 'kms-key-123']
+        ))
         then:
-        result.join(' ') == 'bash -o pipefail -c trap "[[ -n \\$pid ]] && kill -TERM \\$pid" TERM; trap "{ ret=$?; aws s3 cp --only-show-errors --sse aws:kms --sse-kms-key-id kms-key-123 --debug .command.log s3://work/.command.log||true; exit $ret; }" EXIT; aws s3 cp --only-show-errors --sse aws:kms --sse-kms-key-id kms-key-123 --debug s3://work/.command.run - | bash > >(tee .command.log) 2>&1 & pid=$!; wait $pid'
+        result.join(' ') == 'bash -o pipefail -c trap "[[ -n \\$pid ]] && kill -TERM \\$pid" TERM; trap "{ ret=$?; /bin/aws s3 cp --only-show-errors --debug --storage-class STANDARD --sse aws:kms --sse-kms-key-id kms-key-123 .command.log s3://work/.command.log||true; exit $ret; }" EXIT; /bin/aws s3 cp --only-show-errors --debug --storage-class STANDARD --sse aws:kms --sse-kms-key-id kms-key-123 s3://work/.command.run - | bash > >(tee .command.log) 2>&1 & pid=$!; wait $pid'
     }
 
     def 'should render submit command with s5cmd' () {
         given:
-        def executor = Spy(AwsBatchExecutor)
+        def executor = Spy(AwsBatchExecutor){
+            getWorkDir() >> S3PathFactory.create('s3:///work')
+        }
         and:
         def handler = Spy(new AwsBatchTaskHandler(executor: executor)) {
             fusionEnabled() >> false
@@ -1009,13 +1015,12 @@ class AwsBatchTaskHandlerTest extends Specification {
         when:
         result =  handler.getSubmitCommand()
         then:
-        executor.getAwsOptions() >> Mock(AwsOptions)  {
-            getS5cmdPath() >> 's5cmd --debug'
-            getStorageEncryption() >> 'aws:kms'
-            getStorageKmsKeyId() >> 'kms-key-123'
-        }
+        executor.getAwsOptions() >> new AwsOptions(awsConfig: new AwsConfig(
+            batch: [platformType: 'fargate', cliPath: 's5cmd --debug'],
+            client: [storageEncryption: 'aws:kms', storageKmsKeyId: 'kms-key-123']
+        ))
         then:
-        result.join(' ') == 'bash -o pipefail -c trap "[[ -n \\$pid ]] && kill -TERM \\$pid" TERM; trap "{ ret=$?; s5cmd --debug cp --sse aws:kms --sse-kms-key-id kms-key-123 .command.log s3://work/.command.log||true; exit $ret; }" EXIT; s5cmd --debug cat s3://work/.command.run | bash > >(tee .command.log) 2>&1 & pid=$!; wait $pid'
+        result.join(' ') == 'bash -o pipefail -c trap "[[ -n \\$pid ]] && kill -TERM \\$pid" TERM; trap "{ ret=$?; s5cmd --debug cp --storage-class STANDARD --sse aws:kms --sse-kms-key-id kms-key-123 .command.log s3://work/.command.log||true; exit $ret; }" EXIT; s5cmd --debug cat s3://work/.command.run | bash > >(tee .command.log) 2>&1 & pid=$!; wait $pid'
 
     }
 

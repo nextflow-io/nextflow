@@ -61,7 +61,7 @@ class S3PathFactory extends FileSystemPathFactory {
     @Override
     protected String getUploadCmd(String source, Path target) {
         return target instanceof S3Path
-                ? AwsBatchFileCopyStrategy.uploadCmd(source,target)
+                ? AwsBatchFileCopyStrategy.uploadCmd(source,target,config())
                 : null
     }
 

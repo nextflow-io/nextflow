@@ -78,6 +78,11 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         Global.session = Mock(Session) { getConfig()>>cfg }
     }
 
+    def cleanup() {
+        Global.config = null
+        Global.session = null
+    }
+
     def 'should create a blob' () {
         given:
         def bucket = createBucket()

@@ -16,6 +16,7 @@
 
 package nextflow.cloud.aws
 
+import nextflow.cloud.aws.config.AwsBucketConfig
 import nextflow.cloud.aws.nio.util.S3AsyncClientConfiguration
 import nextflow.cloud.aws.nio.util.S3SyncClientConfiguration
 import software.amazon.awssdk.auth.credentials.AnonymousCredentialsProvider
@@ -209,19 +210,20 @@ class AwsClientFactory {
         return CloudWatchLogsClient.builder().region(getRegionObj(region)).credentialsProvider(getCredentialsProvider0()).build()
     }
 
-    S3Client getS3Client(S3SyncClientConfiguration s3ClientConfig, boolean global = false) {
+    S3Client getS3Client(S3SyncClientConfiguration s3ClientConfig, String bucketName, boolean global = false) {
         final SdkHttpClient.Builder httpClientBuilder = s3ClientConfig.getHttpClientBuilder()
         final ClientOverrideConfiguration overrideConfiguration = s3ClientConfig.getClientOverrideConfiguration()
+        final bucketConfig = config.getBucketConfig(bucketName)
         final builder = S3Client.builder()
             .crossRegionAccessEnabled(global)
-            .credentialsProvider(getS3CredentialsProvider())
+            .credentialsProvider(getS3CredentialsProvider(bucketConfig))
             .serviceConfiguration(S3Configuration.builder()
-                .pathStyleAccessEnabled(config.s3Config.pathStyleAccess)
+                .pathStyleAccessEnabled(bucketConfig.s3PathStyleAccess)
                 .multiRegionEnabled(global)
                 .build())
 
-        if( config.s3Config.endpoint )
-            builder.endpointOverride(URI.create(config.s3Config.endpoint))
+        if( bucketConfig.endpoint )
+            builder.endpointOverride(URI.create(bucketConfig.endpoint))
 
         // AWS SDK v2 region must be always set, even when endpoint is overridden
         builder.region(getRegionObj(region))
@@ -235,14 +237,15 @@ class AwsClientFactory {
         return builder.build()
     }
 
-    S3AsyncClient getS3AsyncClient(S3AsyncClientConfiguration s3ClientConfig, boolean global = false) {
+    S3AsyncClient getS3AsyncClient(S3AsyncClientConfiguration s3ClientConfig, String bucketName, boolean global = false) {
+        final bucketConfig = config.getBucketConfig(bucketName)
         def builder = S3AsyncClient.crtBuilder()
             .crossRegionAccessEnabled(global)
-            .credentialsProvider(getS3CredentialsProvider())
-            .forcePathStyle(config.s3Config.pathStyleAccess)
+            .credentialsProvider(getS3CredentialsProvider(bucketConfig))
+            .forcePathStyle(bucketConfig.pathStyleAccess)
             .region(getRegionObj(region))
-        if( config.s3Config.endpoint )
-            builder.endpointOverride(URI.create(config.s3Config.endpoint))
+        if( bucketConfig.endpoint )
+            builder.endpointOverride(URI.create(bucketConfig.endpoint))
 
         final retryConfiguration = s3ClientConfig.getCrtRetryConfiguration()
         if( retryConfiguration != null )
@@ -287,8 +290,8 @@ class AwsClientFactory {
      *
      * @return an AwsCredentialsProvider instance, falling back to anonymous if needed.
      */
-    private AwsCredentialsProvider getS3CredentialsProvider() {
-        if ( config.s3Config.anonymous )
+    private AwsCredentialsProvider getS3CredentialsProvider(AwsBucketConfig configBucket) {
+        if ( configBucket?.anonymous || config.s3Config.anonymous)
             return AnonymousCredentialsProvider.create()
         def provider = getCredentialsProvider0()
         try {
