@@ -83,19 +83,21 @@ registry {
 
 **Module Manifest** (`meta.yaml`):
 ```yaml
-name: "@nf-core/bwa-align"
+name: nf-core/bwa-align
 version: 1.2.4                    # This module's version
 
-dependencies:                     # Transitive dependencies (version constraints)
-  "@nf-core/samtools-view": "^1.0.0"
-  "@nf-core/samtools-sort": "~2.1.0"
+requires:
+  nextflow: ">=24.04.0"
+  modules:                        # Required modules (version constraints)
+    - nf-core/samtools/view@>=1.0.0,<2.0.0
+    - nf-core/samtools/sort@>=2.1.0,<2.2.0
 ```
 
-**Version Constraints** (in module's meta.yaml only):
-- `1.2.3`: Exact version
-- `>=1.2.3`: Greater or equal
-- `>=1.2.3, <2.0.0`: Range (comma-separated) - equivalent to npm's `^1.2.3`
-- `>=1.2.3, <1.3.0`: Range (comma-separated) - equivalent to npm's `~1.2.3`
+**Version Constraints** (unified `name@constraint` syntax):
+- `name`: Any version (latest)
+- `name@1.2.3`: Exact version
+- `name@>=1.2.3`: Greater or equal
+- `name@>=1.2.3,<2.0.0`: Range (comma-separated)
 
 **Version Notation Consistency**:
 
@@ -398,7 +400,7 @@ my-module/
 
 **Module Spec extension** (`meta.yaml`):
 ```yaml
-name: "@nf-core/bwa-align"
+name: nf-core/bwa-align
 version: 1.2.4              # This module's version
 description: Align reads using BWA-MEM
 author: nf-core community
@@ -408,10 +410,9 @@ requires:
   nextflow: ">=24.04.0"
   plugins:
     - nf-amazon@2.0.0
-
-dependencies:
-  "@nf-core/samtools-view": "^1.0.0"
-  "@nf-core/samtools-sort": "~2.1.0"
+  modules:
+    - nf-core/samtools/view@>=1.0.0,<2.0.0
+    - nf-core/samtools/sort@>=2.1.0,<2.2.0
 ```
 
 **Local Storage Structure**:
@@ -543,3 +544,482 @@ project-root/
 - Related: [Plugin Spec ADR](20250922-plugin-spec.md)
 - Inspired by: [Go Modules](https://go.dev/ref/mod), [npm](https://docs.npmjs.com), [Cargo](https://doc.rust-lang.org/cargo/)
 - Related: [nf-core modules](https://nf-co.re/modules)
+
+---
+
+## Appendix A: Module Metadata Schema Specification
+
+This appendix defines the JSON schema for module `meta.yaml` files. The schema maintains backward compatibility with existing nf-core module metadata patterns while supporting the new Nextflow module system features.
+
+**Schema File:** [module-spec-schema.json](module-spec-schema.json)
+**Published URL:** `https://registry.nextflow.io/schemas/module-spec/v1.0.0`
+
+### Field Reference
+
+#### Core Fields (Existing nf-core Pattern)
+
+These fields are already widely adopted in the nf-core community and remain fully supported:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | Yes | Module identifier |
+| `description` | string | Yes | Brief description of module functionality |
+| `keywords` | array[string] | Recommended | Discovery and categorization keywords |
+| `authors` | array[string] | Recommended | Original authors (GitHub handles) |
+| `maintainers` | array[string] | Recommended | Current maintainers |
+| `tools` | array[object] | Conditional | Software tools wrapped by the module |
+| `input` | array/object | Recommended | Input channel specifications |
+| `output` | object/array | Recommended | Output channel specifications |
+
+#### Extension Fields (Nextflow Module System)
+
+These fields extend the schema to support the new Nextflow module system:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `version` | string | Registry | Semantic version (MAJOR.MINOR.PATCH) |
+| `license` | string | Registry | SPDX license identifier for module code |
+| `requires` | object | Optional | All requirements: runtime, plugins, and dependencies |
+| `requires.nextflow` | string | Optional | Nextflow version constraint |
+| `requires.plugins` | array[string] | Optional | Required Nextflow plugins |
+| `requires.modules` | array[string] | Optional | Required modules (processes) |
+| `requires.workflows` | array[string] | Optional | Required workflows/subworkflows |
+
+### Detailed Field Specifications
+
+#### `name`
+
+The module name must be a fully qualified scoped identifier in `scope/name` format:
+
+```yaml
+name: nf-core/fastqc
+name: nf-core/bwa-mem
+name: myorg/custom-aligner
+```
+
+**Naming Rules:**
+- Format: `scope/name` (e.g., `nf-core/salmon`, `myorg/custom`)
+- Scope: lowercase alphanumeric with hyphens (organization/owner identifier)
+- Name: lowercase alphanumeric with underscores/hyphens (module identifier)
+- Pattern: `^[a-z0-9][a-z0-9-]*/[a-z][a-z0-9_-]*$`
+
+**Note:** The `@` prefix is used only in Nextflow DSL `include` statements (e.g., `include { FASTQC } from '@nf-core/fastqc'`) to distinguish registry modules from local file paths. The meta.yaml `name` field should not include the `@` prefix.
+
+#### `version`
+
+Semantic version following [SemVer 2.0.0](https://semver.org/):
+
+```yaml
+version: "1.0.0"
+version: "2.3.1"
+version: "1.0.0-beta.1"
+```
+
+**Version Semantics:**
+- **MAJOR:** Breaking changes to process signatures, inputs, or outputs
+- **MINOR:** New processes, backward-compatible enhancements
+- **PATCH:** Bug fixes, documentation updates
+
+**Requirement:** Mandatory for registry-published modules (scoped names in `scope/name` format).
+
+#### `requires`
+
+Specifies all requirements for the module: runtime environment, plugins, and dependencies.
+
+```yaml
+requires:
+  nextflow: ">=24.04.0"
+  plugins:
+    - nf-amazon@2.0.0
+    - nf-wave@>=1.5.0
+  modules:
+    - nf-core/fastqc@>=1.0.0
+    - nf-core/samtools/sort@>=2.1.0,<3.0.0
+    - bwa/mem
+  workflows:
+    - nf-core/fastq-align-bwa@1.0.0
+```
+
+**Unified Version Constraint Syntax:**
+
+All requirements (except `nextflow`) use a unified `name@constraint` format:
+
+| Format | Meaning | Example |
+|--------|---------|---------|
+| `name` | Any version (latest) | `bwa/mem` |
+| `name@1.2.3` | Exact version | `nf-core/fastqc@1.0.0` |
+| `name@>=1.2.3` | Greater or equal | `nf-core/fastqc@>=1.0.0` |
+| `name@>=1.2.3,<2.0.0` | Range constraint | `nf-core/samtools/sort@>=2.1.0,<3.0.0` |
+
+**`requires.nextflow`** - Nextflow version constraint:
+```yaml
+requires:
+  nextflow: ">=24.04.0"           # minimum version
+  nextflow: ">=24.04.0,<25.0.0"   # version range
+```
+
+**`requires.plugins`** - Required Nextflow plugins:
+```yaml
+requires:
+  plugins:
+    - nf-amazon@2.0.0      # exact version
+    - nf-wave@>=1.5.0      # minimum version
+    - nf-azure             # any version
+```
+
+**`requires.modules`** - Required modules (processes):
+```yaml
+requires:
+  modules:
+    - nf-core/fastqc@>=1.0.0              # registry module with constraint
+    - nf-core/samtools/sort@>=2.1.0       # nested module path
+    - bwa/mem                              # local or registry (no constraint)
+```
+
+**`requires.workflows`** - Required workflows/subworkflows:
+```yaml
+requires:
+  workflows:
+    - nf-core/fastq-align-bwa@1.0.0       # registry workflow
+    - my-local-workflow                    # local workflow
+```
+
+**Resolution:**
+1. The resolver looks up dependencies locally first, then in configured registries
+2. Version constraints are resolved transitively
+3. Pinned versions are recorded in `nextflow.config` for reproducibility
+
+#### `tools`
+
+Documents the software tools wrapped by the module:
+
+```yaml
+tools:
+  - bwa:
+      description: |
+        BWA is a software package for mapping DNA sequences
+        against a large reference genome.
+      homepage: http://bio-bwa.sourceforge.net/
+      documentation: https://bio-bwa.sourceforge.net/bwa.shtml
+      doi: 10.1093/bioinformatics/btp324
+      arxiv: arXiv:1303.3997
+      licence: ["GPL-3.0-or-later"]
+      identifier: biotools:bwa
+```
+
+**Tool Properties:**
+
+| Property | Required | Description |
+|----------|----------|-------------|
+| `description` | Yes | Tool description |
+| `homepage` | One of these | Tool homepage URL |
+| `documentation` | One of these | Documentation URL |
+| `tool_dev_url` | One of these | Development/source URL |
+| `doi` | One of these | Publication DOI |
+| `arxiv` | No | arXiv identifier |
+| `licence` | Recommended | SPDX license(s) |
+| `identifier` | Recommended | bio.tools identifier |
+| `manual` | No | User manual URL |
+
+#### `input` and `output`
+
+The schema supports both nf-core patterns to ensure backward compatibility:
+
+**Module Pattern (Tuple-based):**
+```yaml
+input:
+  - - meta:
+        type: map
+        description: Sample metadata
+    - reads:
+        type: file
+        description: Input FastQ files
+        ontologies:
+          - edam: "http://edamontology.org/format_1930"
+  - - index:
+        type: directory
+        description: Reference index
+
+output:
+  bam:
+    - - meta:
+          type: map
+          description: Sample metadata
+      - "*.bam":
+          type: file
+          description: Aligned BAM file
+          pattern: "*.bam"
+  versions:
+    - versions.yml:
+        type: file
+        description: Software versions
+```
+
+**Subworkflow Pattern (Simplified):**
+```yaml
+input:
+  - ch_reads:
+      description: |
+        Input FastQ files
+        Structure: [ val(meta), [ path(reads) ] ]
+  - ch_index:
+      description: BWA index files
+      type: file
+
+output:
+  - bam:
+      description: Aligned BAM files
+  - versions:
+      description: Software versions
+```
+
+**Channel Element Properties:**
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `type` | string | Data type: `map`, `file`, `directory`, `string`, `integer`, `float`, `boolean`, `list`, `val` |
+| `description` | string | Human-readable description |
+| `pattern` | string | File glob pattern or value pattern |
+| `optional` | boolean | Whether input is optional (default: false) |
+| `default` | any | Default value if not provided |
+| `enum` | array | List of allowed values |
+| `ontologies` | array | EDAM or other ontology annotations |
+
+### Migration Guide
+
+#### From nf-core Module to Registry Module
+
+**Before (nf-core local):**
+```yaml
+name: bwa_mem
+description: Align reads using BWA-MEM
+keywords:
+  - alignment
+  - bwa
+tools:
+  - bwa:
+      description: BWA software
+      homepage: http://bio-bwa.sourceforge.net/
+      licence: ["GPL-3.0-or-later"]
+      identifier: biotools:bwa
+authors:
+  - "@drpatelh"
+maintainers:
+  - "@drpatelh"
+input:
+  # ... existing input spec
+output:
+  # ... existing output spec
+```
+
+**After (Registry-ready):**
+```yaml
+name: nf-core/bwa-mem              # Added scope prefix
+version: "1.0.0"                    # Added version
+description: Align reads using BWA-MEM
+keywords:
+  - alignment
+  - bwa
+license: MIT                        # Added module license
+requires:                           # Added requirements
+  nextflow: ">=24.04.0"
+  modules:                          # Added module dependencies (if any)
+    - nf-core/samtools/sort@>=1.0.0
+tools:
+  - bwa:
+      description: BWA software
+      homepage: http://bio-bwa.sourceforge.net/
+      licence: ["GPL-3.0-or-later"]
+      identifier: biotools:bwa
+authors:
+  - "@drpatelh"
+maintainers:
+  - "@drpatelh"
+input:
+  # ... unchanged
+output:
+  # ... unchanged
+```
+
+#### Schema Validation
+
+Use the schema reference in your `meta.yaml`:
+
+```yaml
+# yaml-language-server: $schema=https://registry.nextflow.io/schemas/module-spec/v1.0.0
+
+name: nf-core/my-module
+version: "1.0.0"
+# ...
+```
+
+### Compatibility Matrix
+
+| Feature | nf-core Current | Nextflow Module System |
+|---------|-----------------|------------------------|
+| Simple names | Yes | Yes (local only) |
+| Scoped names | No | Yes (registry) |
+| Version field | No | Yes (required for registry) |
+| `tools` section | Yes | Yes |
+| `components` | Yes (subworkflows) | Deprecated → use `requires.modules` |
+| `requires` | No | Yes (unified requirements field) |
+| I/O specifications | Yes | Yes |
+| Ontologies | Yes | Yes |
+
+### Unsupported nf-core Attributes
+
+The following attributes from the nf-core meta schema are **not supported** in the Nextflow module system:
+
+| Attribute | Reason | Future |
+|-----------|--------|--------|
+| `extra_args` | Not adopted in practice by nf-core modules | Will be redesigned as part of the `tools` schema attribute to document tool-specific arguments and configuration options |
+| `components` | Replaced by unified `requires.modules` | Use `requires.modules` for all module dependencies (local and registry) |
+
+### Complete Examples
+
+#### Minimal nf-core Module
+
+```yaml
+name: fastqc
+description: Run FastQC on sequenced reads
+keywords:
+  - quality control
+  - qc
+  - fastq
+tools:
+  - fastqc:
+      description: FastQC quality metrics
+      homepage: https://www.bioinformatics.babraham.ac.uk/projects/fastqc/
+      licence: ["GPL-2.0-only"]
+      identifier: biotools:fastqc
+authors:
+  - "@drpatelh"
+maintainers:
+  - "@drpatelh"
+output:
+  html:
+    - "*.html":
+        type: file
+        description: FastQC HTML report
+  versions:
+    - versions.yml:
+        type: file
+        description: Software versions
+```
+
+#### Full Registry Module
+
+```yaml
+name: nf-core/bwa-align
+version: "1.2.4"
+description: Align reads to reference genome using BWA-MEM algorithm
+keywords:
+  - alignment
+  - mapping
+  - bwa
+  - bam
+  - fastq
+license: MIT
+
+requires:
+  nextflow: ">=24.04.0"
+  plugins:
+    - nf-wave@1.5.0
+  modules:
+    - nf-core/samtools/view@>=1.0.0,<2.0.0
+    - nf-core/samtools/sort@>=2.1.0,<2.2.0
+
+tools:
+  - bwa:
+      description: |
+        BWA is a software package for mapping DNA sequences
+        against a large reference genome.
+      homepage: http://bio-bwa.sourceforge.net/
+      documentation: https://bio-bwa.sourceforge.net/bwa.shtml
+      doi: 10.1093/bioinformatics/btp324
+      licence: ["GPL-3.0-or-later"]
+      identifier: biotools:bwa
+
+authors:
+  - "@nf-core"
+maintainers:
+  - "@drpatelh"
+  - "@maxulysse"
+
+input:
+  - - meta:
+        type: map
+        description: Sample metadata map (e.g., [ id:'sample1', single_end:false ])
+    - reads:
+        type: file
+        description: Input FastQ files
+        ontologies:
+          - edam: "http://edamontology.org/format_1930"
+  - - meta2:
+        type: map
+        description: Reference metadata
+    - index:
+        type: directory
+        description: BWA index directory
+        ontologies:
+          - edam: "http://edamontology.org/data_3210"
+
+output:
+  bam:
+    - - meta:
+          type: map
+          description: Sample metadata
+      - "*.bam":
+          type: file
+          description: Aligned BAM file
+          pattern: "*.bam"
+          ontologies:
+            - edam: "http://edamontology.org/format_2572"
+  versions:
+    - versions.yml:
+        type: file
+        description: Software versions
+        pattern: "versions.yml"
+```
+
+#### Subworkflow with Module Dependencies
+
+```yaml
+name: fastq_align_bwa
+description: Align reads with BWA and generate statistics
+keywords:
+  - alignment
+  - bwa
+  - samtools
+  - statistics
+
+requires:
+  modules:
+    - bwa/mem
+    - samtools/sort
+    - samtools/index
+    - samtools/stats
+
+authors:
+  - "@JoseEspinosa"
+maintainers:
+  - "@JoseEspinosa"
+
+input:
+  - ch_reads:
+      description: |
+        Input FastQ files
+        Structure: [ val(meta), [ path(reads) ] ]
+  - ch_index:
+      description: BWA index files
+
+output:
+  - bam:
+      description: Sorted BAM files
+  - bai:
+      description: BAM index files
+  - stats:
+      description: Alignment statistics
+  - versions:
+      description: Software versions
+```
