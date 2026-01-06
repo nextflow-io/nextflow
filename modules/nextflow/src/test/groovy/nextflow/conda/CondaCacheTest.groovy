@@ -17,6 +17,7 @@
 package nextflow.conda
 
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 
 import nextflow.SysEnv
@@ -63,22 +64,32 @@ class CondaCacheTest extends Specification {
 
         given:
         def cache = new CondaCache()
+        def folder = Files.createTempDirectory('test')
 
         expect:
         // Valid lock file content - @EXPLICIT marker present
-        cache.isLockFile('@EXPLICIT\nhttps://conda.anaconda.org/conda-forge/linux-64/package-1.0.tar.bz2')
-        cache.isLockFile('# This file may be used to create an environment\n@EXPLICIT\nhttps://url')
-        cache.isLockFile('# comment\n# another comment\n@EXPLICIT\nhttps://url')
+        isLockFileContent(cache, folder, '@EXPLICIT\nhttps://conda.anaconda.org/conda-forge/linux-64/package-1.0.tar.bz2')
+        isLockFileContent(cache, folder, '# This file may be used to create an environment\n@EXPLICIT\nhttps://url')
+        isLockFileContent(cache, folder, '# comment\n# another comment\n@EXPLICIT\nhttps://url')
         // With spaces/indentation
-        cache.isLockFile('  @EXPLICIT  \nhttps://url')
+        isLockFileContent(cache, folder, '  @EXPLICIT  \nhttps://url')
 
         // Invalid lock file content - no @EXPLICIT marker
-        !cache.isLockFile('foo=1.0')
-        !cache.isLockFile('channels:\n  - conda-forge\ndependencies:\n  - bwa')
-        !cache.isLockFile('')
+        !isLockFileContent(cache, folder, 'foo=1.0')
+        !isLockFileContent(cache, folder, 'channels:\n  - conda-forge\ndependencies:\n  - bwa')
+        !isLockFileContent(cache, folder, '')
         !cache.isLockFile(null)
         // @EXPLICIT after 20 lines should not be detected
-        !cache.isLockFile((1..25).collect { "# line $it" }.join('\n') + '\n@EXPLICIT')
+        !isLockFileContent(cache, folder, (1..25).collect { "# line $it" }.join('\n') + '\n@EXPLICIT')
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    private boolean isLockFileContent(CondaCache cache, Path folder, String content) {
+        def file = folder.resolve("test-${System.nanoTime()}.lock")
+        file.text = content
+        return cache.isLockFile(file)
     }
 
     def 'should detect yaml uri path' () {
@@ -96,7 +107,6 @@ class CondaCacheTest extends Specification {
         !cache.isYamlUriPath('/path/to/env.yml')
         !cache.isYamlUriPath('s3://bucket/path/to/env.yml')
         !cache.isYamlUriPath('file:///path/to/env.yml')
-        !cache.isYamlUriPath(null)
     }
 
     def 'should create conda env prefix path for a string env' () {

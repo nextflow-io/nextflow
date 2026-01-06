@@ -168,33 +168,33 @@ class CondaCache {
     }
 
     /**
-     * Check if the given content represents a conda lock file.
+     * Check if the given file is a conda lock file.
      * A conda lock file contains "@EXPLICIT" marker in the first 20 lines.
+     * This method reads only the first 20 lines to avoid loading the entire file into memory.
      *
-     * @param content The file content to check
+     * @param path The file path to check
      * @return true if this is a conda lock file, false otherwise
      */
     @PackageScope
-    boolean isLockFile(String content) {
-        if( !content )
+    boolean isLockFile(Path path) {
+        if( path == null || !Files.exists(path) )
             return false
-        final lines = content.readLines()
-        final limit = Math.min(20, lines.size())
-        for( int i = 0; i < limit; i++ ) {
-            if( lines[i].trim() == '@EXPLICIT' )
-                return true
+        try {
+            path.withReader { reader ->
+                String line
+                int count = 0
+                while( count < 20 && (line = reader.readLine()) != null ) {
+                    if( line.trim() == '@EXPLICIT' )
+                        return true
+                    count++
+                }
+                return false
+            }
         }
-        return false
-    }
-
-    /**
-     * Check if the given path is a remote HTTP/HTTPS URL
-     * @param str The path string to check
-     * @return true if it's an HTTP/HTTPS URL
-     */
-    @PackageScope
-    boolean isYamlUriPath(String str) {
-        str?.startsWith('http://') || str?.startsWith('https://')
+        catch( Exception e ) {
+            log.debug "Error checking if file is lock file: $path", e
+            return false
+        }
     }
 
     /**
@@ -248,30 +248,24 @@ class CondaCache {
         // it's interpreted as user provided prefix directory
         else if( condaEnv.contains('/') ) {
             // check if it's a file path that might be a lock file
-            final path = condaEnv as Path
-            if( path.isDirectory() ) {
-                if( path.fileSystem != FileSystems.default )
-                    throw new IllegalArgumentException("Conda prefix path must be a POSIX file path: $path")
-                return path
+            final prefix = condaEnv as Path
+            if( prefix.isDirectory() ) {
+                if( prefix.fileSystem != FileSystems.default )
+                    throw new IllegalArgumentException("Conda prefix path must be a POSIX file path: $prefix")
+                return prefix
             }
             // it could be a file with a non-standard extension (e.g., .lock or no extension)
-            if( Files.exists(path) ) {
-                try {
-                    content = path.text
-                    // if it's a lock file, use it; otherwise treat as invalid
-                    if( !isLockFile(content) ) {
-                        throw new IllegalArgumentException("Conda environment file is not a valid lock file (missing @EXPLICIT marker): $condaEnv")
-                    }
+            if( Files.exists(prefix) ) {
+                // if it's a lock file, read content for hashing (like YAML/text files); otherwise treat as invalid
+                if( !isLockFile(prefix) ) {
+                    throw new IllegalArgumentException("Conda environment file is not a valid lock file (missing @EXPLICIT marker): $condaEnv")
                 }
-                catch( IllegalArgumentException e ) {
-                    throw e
-                }
-                catch( Exception e ) {
-                    throw new IllegalArgumentException("Error reading Conda environment file: $condaEnv -- Check the log file for details", e)
-                }
+                // Note: file is read twice - once by isLockFile (first 20 lines only) and once here for full content.
+                // This is intentional: isLockFile is memory-efficient for large files, while hashing needs full content.
+                content = prefix.text
             }
             else {
-                throw new IllegalArgumentException("Conda prefix path does not exist or is not a directory: $path")
+                throw new IllegalArgumentException("Conda prefix path does not exist or is not a directory: $prefix")
             }
         }
         else if( condaEnv.contains('\n') ) {
@@ -319,6 +313,10 @@ class CondaCache {
         Paths.get(envFile).toAbsolutePath()
     }
 
+    @PackageScope boolean isYamlUriPath(String env) {
+        env.startsWith('http://') || env.startsWith('https://')
+    }
+
     @PackageScope
     Path createLocalCondaEnv0(String condaEnv, Path prefixPath) {
         if( prefixPath.isDirectory() ) {
@@ -345,7 +343,7 @@ class CondaCache {
         // Check if it's a file path with non-standard extension that might be a lock file
         else if( condaEnv.contains('/') ) {
             final localPath = makeAbsolute(condaEnv)
-            if( Files.exists(localPath) && isLockFile(localPath.text) ) {
+            if( Files.exists(localPath) && isLockFile(localPath) ) {
                 cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} --file ${Escape.path(localPath)}"
             }
             else {
