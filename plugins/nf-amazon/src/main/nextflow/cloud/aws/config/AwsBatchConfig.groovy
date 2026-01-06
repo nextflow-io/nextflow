@@ -61,6 +61,12 @@ class AwsBatchConfig implements CloudTransferOptions, ConfigScope {
 
     @ConfigOption
     @Description("""
+        When `true`, add the `--force-glacier-transfer` flag to AWS CLI S3 download commands (default: `false`).
+    """)
+    final boolean forceGlacierTransfer
+
+    @ConfigOption
+    @Description("""
         The AWS Batch Job Role ARN that needs to be used to execute the Batch Job.
     """)
     final String jobRole
@@ -124,12 +130,6 @@ class AwsBatchConfig implements CloudTransferOptions, ConfigScope {
         List of container mounts. Mounts can be specified as simple e.g. `/some/path` or canonical format e.g. `/host/path:/mount/path[:ro|rw]`.
     """)
     final List<String> volumes
-
-    @ConfigOption
-    @Description("""
-        When `true`, the `--force-glacier-transfer` flag is added to AWS CLI S3 download commands, allowing restored Glacier/Deep Archive objects to be downloaded. Only needed when staging files that have been restored from archive storage (default: `false`).
-    """)
-    final boolean forceGlacierTransfer
 
     /**
      * The path for the `s5cmd` tool as an alternative to `aws s3` CLI to upload/download files
