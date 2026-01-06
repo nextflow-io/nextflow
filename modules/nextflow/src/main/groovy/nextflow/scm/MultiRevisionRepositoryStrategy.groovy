@@ -177,7 +177,7 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
         }
         final updateRevision = revision ?: getDefaultBranch(manifest)
         log.debug "Fetching (updating) bare repo for ${project} [revision: $updateRevision]"
-        def fetch = getBareGit().fetch().setRefSpecs(refSpecForName(updateRevision))
+        final fetch = getBareGit().fetch().setRefSpecs(refSpecForName(updateRevision))
         if( provider.hasCredentials() ) {
             fetch.setCredentialsProvider(provider.getGitCredentials())
         }
