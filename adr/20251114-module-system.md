@@ -2,9 +2,22 @@
 
 - Authors: Paolo Di Tommaso
 - Status: draft
-- Date: 2025-12-11
+- Date: 2025-01-06
 - Tags: modules, dsl, registry, versioning, architecture
-- Version: 2.1
+- Version: 2.2
+
+## Updates
+
+### Version 2.2 (2025-01-06)
+- **Structured tool arguments**: Added `args` property to `tools` section for type-safe argument configuration
+- **New implicit variables**: `tools.<toolname>.args.<argname>` returns formatted flag+value; `tools.<toolname>.args` returns all args concatenated
+- **Deprecation**: `ext.args`, `ext.args2`, `ext.args3` pattern deprecated in favor of structured tool arguments
+
+### Version 2.1 (2025-12-11)
+- **Unified dependencies**: Consolidated `components`, `dependencies`, and `requires` into single `requires` field
+- **New sub-properties**: `requires.modules` and `requires.workflows` for declaring module dependencies
+- **Unified version syntax**: `[scope/]name[@constraint]` format across plugins, modules, and workflows
+- **Deprecation**: `components` field deprecated (use `requires.modules` instead)
 
 ## Context and Problem Statement
 
@@ -471,6 +484,99 @@ project-root/
 - Single authentication system
 - Separate cache locations: `$NXF_HOME/plugins/` (global) vs `modules/` (per-project)
 
+## Tool Arguments Configuration
+
+The module system introduces a structured approach to tool argument configuration, replacing the legacy `ext.args` pattern with type-safe, documented argument specifications.
+
+### Current Pattern (Deprecated)
+
+The traditional nf-core pattern uses `ext.args` strings in config files:
+
+```groovy
+// Config file
+withName: 'BWA_MEM' {
+    ext.args = "-K 100000000 -Y -B 3 -R ${meta.read_group}"
+    ext.args2 = "--output-fmt cram"
+}
+
+// Module script
+def args = task.ext.args ?: ''
+def args2 = task.ext.args2 ?: ''
+bwa mem $args -t $task.cpus $index $reads | samtools sort $args2 -o out.bam -
+```
+
+**Limitations:**
+- No documentation of available arguments
+- No validation or type checking
+- Unclear which `ext.argsN` maps to which tool
+- No IDE autocompletion support
+
+### New Pattern: Structured Tool Arguments
+
+Modules declare available arguments in `meta.yaml` under each tool's `args` property:
+
+```yaml
+tools:
+  - bwa:
+      description: BWA aligner
+      homepage: http://bio-bwa.sourceforge.net/
+      args:
+        K:
+          flag: "-K"
+          type: integer
+          description: "Process INT input bases in each batch"
+        Y:
+          flag: "-Y"
+          type: boolean
+          description: "Use soft clipping for supplementary alignments"
+
+  - samtools:
+      description: SAMtools
+      homepage: http://www.htslib.org/
+      args:
+        output_fmt:
+          flag: "--output-fmt"
+          type: string
+          enum: ["sam", "bam", "cram"]
+          description: "Output format"
+```
+
+### Configuration Usage
+
+Arguments are configured using `tools.<toolname>.args.<argname>`:
+
+```groovy
+withName: 'BWA_MEM' {
+    tools.bwa.args.K = 100000000
+    tools.bwa.args.Y = true
+    tools.samtools.args.output_fmt = "cram"
+}
+```
+
+### Script Usage
+
+In module scripts, access arguments via the `tools` implicit variable:
+
+```groovy
+// tools.bwa.args.K → "-K 100000000"
+// tools.bwa.args.Y → "-Y"
+// tools.bwa.args   → "-K 100000000 -Y"  (all args concatenated)
+
+bwa mem ${tools.bwa.args} -t $task.cpus $index $reads \
+    | samtools sort ${tools.samtools.args} -o ${prefix}.bam -
+```
+
+### Benefits
+
+| Aspect | `ext.args` (Legacy) | `tools.*.args` (New) |
+|--------|---------------------|----------------------|
+| Documentation | None | In meta.yaml |
+| Type Safety | None | Validated |
+| IDE Support | None | Autocompletion |
+| Multi-tool | Confusing (`ext.args2`) | Clear (`tools.samtools.args`) |
+| Defaults | Manual | Schema-defined |
+| Enums | None | Validated |
+
 ## Comparison: Plugins vs. Modules
 
 | Aspect | Plugins | Modules |
@@ -691,20 +797,23 @@ requires:
 
 #### `tools`
 
-Documents the software tools wrapped by the module:
+Documents the software tools wrapped by the module, including their command-line arguments:
 
 ```yaml
 tools:
   - bwa:
-      description: |
-        BWA is a software package for mapping DNA sequences
-        against a large reference genome.
+      description: BWA aligner
       homepage: http://bio-bwa.sourceforge.net/
-      documentation: https://bio-bwa.sourceforge.net/bwa.shtml
-      doi: 10.1093/bioinformatics/btp324
-      arxiv: arXiv:1303.3997
       licence: ["GPL-3.0-or-later"]
-      identifier: biotools:bwa
+      args:
+        K:
+          flag: "-K"
+          type: integer
+          description: "Process INT input bases in each batch"
+        Y:
+          flag: "-Y"
+          type: boolean
+          description: "Use soft clipping for supplementary alignments"
 ```
 
 **Tool Properties:**
@@ -720,6 +829,29 @@ tools:
 | `licence` | Recommended | SPDX license(s) |
 | `identifier` | Recommended | bio.tools identifier |
 | `manual` | No | User manual URL |
+| `args` | No | Command-line argument specifications |
+
+**Argument Properties (`args.<name>`):**
+
+The `args` object maps argument names to their specifications. Argument names become accessible in scripts via `tools.<toolname>.args.<argname>`.
+
+| Property | Required | Description |
+|----------|----------|-------------|
+| `flag` | Yes | CLI flag (e.g., `-K`, `--output-fmt`) |
+| `type` | Yes | Data type: `boolean`, `integer`, `float`, `string`, `file`, `path` |
+| `description` | Yes | Human-readable description |
+| `default` | No | Default value |
+| `enum` | No | List of allowed values |
+| `required` | No | Whether the argument is mandatory (default: false) |
+
+**Argument Type Behavior:**
+
+| Type | Config Example | Output |
+|------|----------------|--------|
+| `boolean` | `tools.bwa.args.Y = true` | `-Y` |
+| `integer` | `tools.bwa.args.K = 100000` | `-K 100000` |
+| `string` | `tools.bwa.args.R = "@RG\tID:s1"` | `-R @RG\tID:s1` |
+| `string` + `enum` | `tools.samtools.args.output_fmt = "cram"` | `--output-fmt cram` |
 
 #### `input` and `output`
 

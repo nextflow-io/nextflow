@@ -232,6 +232,16 @@
           "type": "string",
           "format": "uri",
           "description": "Manual/user guide URL"
+        },
+        "args": {
+          "type": "object",
+          "description": "Command-line arguments supported by the tool. Keys are argument names accessible via tool.<toolname>.args.<name>",
+          "patternProperties": {
+            "^[a-zA-Z_][a-zA-Z0-9_]*$": {
+              "$ref": "#/$defs/toolArgSpec"
+            }
+          },
+          "additionalProperties": false
         }
       },
       "required": ["description"],
@@ -241,6 +251,40 @@
         { "required": ["tool_dev_url"] },
         { "required": ["doi"] }
       ]
+    },
+    "toolArgSpec": {
+      "type": "object",
+      "description": "Specification for a tool command-line argument",
+      "properties": {
+        "flag": {
+          "type": "string",
+          "description": "The CLI flag (e.g., '-n', '--output-fmt')",
+          "pattern": "^--?[a-zA-Z][a-zA-Z0-9_-]*$"
+        },
+        "type": {
+          "type": "string",
+          "description": "Data type of the argument value",
+          "enum": ["boolean", "integer", "float", "string", "file", "path"]
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description of the argument"
+        },
+        "default": {
+          "description": "Default value for the argument"
+        },
+        "enum": {
+          "type": "array",
+          "description": "List of allowed values",
+          "uniqueItems": true
+        },
+        "required": {
+          "type": "boolean",
+          "description": "Whether this argument is required",
+          "default": false
+        }
+      },
+      "required": ["flag", "type", "description"]
     },
     "channelElementSpec": {
       "type": "object",
@@ -452,12 +496,36 @@
       "tools": [
         {
           "bwa": {
-            "description": "BWA is a software package for mapping DNA sequences against a large reference genome.",
+            "description": "BWA aligner",
             "homepage": "http://bio-bwa.sourceforge.net/",
-            "documentation": "https://bio-bwa.sourceforge.net/bwa.shtml",
-            "doi": "10.1093/bioinformatics/btp324",
             "licence": ["GPL-3.0-or-later"],
-            "identifier": "biotools:bwa"
+            "args": {
+              "K": {
+                "flag": "-K",
+                "type": "integer",
+                "description": "Process INT input bases in each batch"
+              },
+              "Y": {
+                "flag": "-Y",
+                "type": "boolean",
+                "description": "Use soft clipping for supplementary alignments"
+              }
+            }
+          }
+        },
+        {
+          "samtools": {
+            "description": "SAMtools",
+            "homepage": "http://www.htslib.org/",
+            "licence": ["MIT"],
+            "args": {
+              "output_fmt": {
+                "flag": "--output-fmt",
+                "type": "string",
+                "description": "Output format",
+                "enum": ["sam", "bam", "cram"]
+              }
+            }
           }
         }
       ],
