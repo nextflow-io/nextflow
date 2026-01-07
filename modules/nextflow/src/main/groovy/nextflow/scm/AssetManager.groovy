@@ -541,10 +541,10 @@ class AssetManager {
             return result
 
         root.eachDir { File org ->
-            if( org.name != MULTI_REVISION_SUBDIR) {
-                org.eachDir { File it ->
-                    result << "${org.getName()}/${it.getName()}".toString()
-                }
+            if( org.name == MULTI_REVISION_SUBDIR )
+                return
+            org.eachDir { File it ->
+                result << "${org.getName()}/${it.getName()}".toString()
             }
         }
 
