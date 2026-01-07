@@ -661,6 +661,7 @@ class TowerClient implements TraceObserverV2 {
         record.machineType = trace.getMachineInfo()?.type
         record.priceModel = trace.getMachineInfo()?.priceModel?.toString()
         record.numSpotInterruptions = trace.getNumSpotInterruptions()
+
         return record
     }
 
