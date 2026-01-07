@@ -18,6 +18,7 @@ package nextflow.config.parser.v2
 
 import java.nio.file.Path
 
+import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import nextflow.config.ConfigParser
 import nextflow.exception.ConfigParseException
@@ -178,8 +179,9 @@ class ConfigParserV2 implements ConfigParser {
     }
 
     @Override
+    @CompileDynamic // required to support ProviderPath::getText() over NioExtensions::getText()
     ConfigObject parse(Path path) {
-        return parse(path.text, path)
+        return parse(path.getText(), path)
     }
 
     private ConfigCompiler compiler

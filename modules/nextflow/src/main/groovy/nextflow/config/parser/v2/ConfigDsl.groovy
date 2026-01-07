@@ -19,6 +19,7 @@ package nextflow.config.parser.v2
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
+import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
@@ -225,6 +226,7 @@ class ConfigDsl extends Script {
      * @param includePath
      */
     @Memoized
+    @CompileDynamic // required to support ProviderPath::getText() over NioExtensions::getText()
     protected static String readConfigFile(Path includePath) {
         try {
             return includePath.getText()
