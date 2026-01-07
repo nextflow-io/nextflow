@@ -575,14 +575,14 @@ class TowerClientTest extends Specification {
             start: now-1000,
             complete: now
         ])
-        trace.setAccelerator(true)
+        trace.setAcceleratorUsage(true)
 
         when:
         def req = client.makeTasksReq([trace])
 
         then:
         req.tasks.size() == 1
-        req.tasks[0].accelerator == true
+        req.tasks[0].acceleratorUsage == true
     }
 
 }

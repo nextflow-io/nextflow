@@ -122,7 +122,7 @@ class TraceRecord implements Serializable {
     transient private CloudMachineInfo machineInfo
     transient private ContainerMeta containerMeta
     transient private Integer numSpotInterruptions
-    transient private Boolean accelerator
+    transient private Boolean acceleratorUsage
 
     /**
      * Convert the given value to a string
@@ -629,16 +629,16 @@ class TraceRecord implements Serializable {
         this.containerMeta = meta
     }
 
-    Boolean getAccelerator() {
-        return accelerator
+    Boolean getAcceleratorUsage() {
+        return acceleratorUsage
     }
 
-    void setAccelerator(Boolean acc) {
-        this.accelerator = acc
+    void setAcceleratorUsage(Boolean acc) {
+        this.acceleratorUsage = acc
     }
 
-    void parseFusionAccelerator(Path file) {
-        this.accelerator = parseFusionAccelerator0(file)
+    void parseFusionAcceleratorUsage(Path file) {
+        this.acceleratorUsage = parseFusionAccelerator0(file)
     }
 
     /**

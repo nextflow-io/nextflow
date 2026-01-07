@@ -255,7 +255,7 @@ abstract class TaskHandler {
             }
             // If Fusion is enabled read parse the use of accelerator form .command.log
             if( Global.session && FusionHelper.isFusionEnabled(Global.session as Session) )
-                record.parseFusionAccelerator(task.workDir?.resolve(TaskRun.CMD_LOG))
+                record.parseFusionAcceleratorUsage(task.workDir?.resolve(TaskRun.CMD_LOG))
         }
 
         return record

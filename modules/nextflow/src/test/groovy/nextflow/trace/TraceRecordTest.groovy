@@ -374,30 +374,30 @@ class TraceRecordTest extends Specification {
         def rec = new TraceRecord()
 
         expect:
-        rec.getAccelerator() == null
+        rec.getAcceleratorUsage() == null
         and:
-        rec.accelerator == null
+        rec.acceleratorUsage == null
 
         when:
-        rec.setAccelerator(true)
+        rec.setAcceleratorUsage(true)
 
         then:
-        rec.getAccelerator() == true
-        rec.accelerator == true
+        rec.getAcceleratorUsage() == true
+        rec.acceleratorUsage == true
 
         when:
-        rec.setAccelerator(false)
+        rec.setAcceleratorUsage(false)
 
         then:
-        rec.getAccelerator() == false
-        rec.accelerator == false
+        rec.getAcceleratorUsage() == false
+        rec.acceleratorUsage == false
 
         when:
         def buf = rec.serialize()
         def rec2 = TraceRecord.deserialize(buf)
 
         then:
-        rec2.getAccelerator() == null
+        rec2.getAcceleratorUsage() == null
     }
 
     @Unroll
@@ -408,10 +408,10 @@ class TraceRecordTest extends Specification {
         file.text = CONTENT
 
         when:
-        rec.parseFusionAccelerator(file)
+        rec.parseFusionAcceleratorUsage(file)
 
         then:
-        rec.getAccelerator() == EXPECTED
+        rec.getAcceleratorUsage() == EXPECTED
 
         where:
         CONTENT                              | EXPECTED
@@ -437,10 +437,10 @@ class TraceRecordTest extends Specification {
         def file = Path.of('/non/existent/file.log')
 
         when:
-        rec.parseFusionAccelerator(file)
+        rec.parseFusionAcceleratorUsage(file)
 
         then:
-        rec.getAccelerator() == null
+        rec.getAcceleratorUsage() == null
     }
 
 }
