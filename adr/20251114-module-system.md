@@ -455,7 +455,7 @@ project-root/
 
 **Phase 3**: Extend DSL parser for `from module` syntax, implement dependency resolution from meta.yaml
 
-**Phase 4**: Implement `push` command with authentication and `run` command
+**Phase 4**: Implement `publish` command with authentication and `run` command
 
 **Phase 5**: Advanced features (search UI, language server integration, ontology validation)
 
