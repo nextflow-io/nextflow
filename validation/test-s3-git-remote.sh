@@ -49,7 +49,7 @@ $NXF_CMD -q run "${S3_REPO}" -r main | tee stdout1
 [[ `grep -c "Hey! Hola world!" stdout1` == 1 ]] || false
 
 echo "Modifying pipeline message"
-sed -i "s/Hey!/Hey there!/g" s3-remote-test-repo/main.nf
+sed -i "s/Hey!/Hey there!/g" ${TEMP_DIR}/s3-remote-test-repo/main.nf
 
 echo "Pushing modified pipeline to ${S3_REPO} (auto-detect from git remote)"
 $NXF_CMD push -m "Update greeting message" -c -y
