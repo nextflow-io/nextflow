@@ -451,7 +451,7 @@ project-root/
 
 **Phase 1**: Module manifest schema, local module loading, validation tools
 
-**Phase 2**: Extend plugin registry for modules, implement caching, add `pull` and `search` commands
+**Phase 2**: Extend plugin registry for modules, implement caching, add `install` and `search` commands
 
 **Phase 3**: Extend DSL parser for `from module` syntax, implement dependency resolution from meta.yaml
 
