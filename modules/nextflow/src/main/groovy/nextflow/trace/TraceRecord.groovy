@@ -104,7 +104,8 @@ class TraceRecord implements Serializable {
             inv_ctxt: 'num',        // -- /proc/$pid/status field 'nonvoluntary_ctxt_switches'
             hostname: 'str',
             cpu_model:  'str',
-            accelerator_request: 'num'
+            accelerator: 'num',
+            accelerator_type: 'str'
     ]
 
     static public Map<String,Closure<String>> FORMATTER = [

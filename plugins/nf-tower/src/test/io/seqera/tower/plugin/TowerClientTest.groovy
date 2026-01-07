@@ -574,7 +574,8 @@ class TowerClientTest extends Specification {
             submit: now-2000,
             start: now-1000,
             complete: now,
-            acceleratorRequest: 2
+            accelerator: 2,
+            acceleratorType: 'v100'
         ])
 
         when:
@@ -582,7 +583,8 @@ class TowerClientTest extends Specification {
 
         then:
         req.tasks.size() == 1
-        req.tasks[0].acceleratorRequest == 2
+        req.tasks[0].accelerator == 2
+        req.tasks[0].acceleratorType == 'v100'
     }
 
 }

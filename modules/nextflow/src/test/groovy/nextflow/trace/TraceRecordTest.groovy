@@ -246,7 +246,8 @@ class TraceRecordTest extends Specification {
         record.cpus = 4
         record.time = 3_600_000L
         record.memory = 1024L * 1024L * 1024L * 8L
-        record.accelerator_request = 3
+        record.accelerator = 3
+        record.accelerator_type = 'v100'
 
         when:
         def json = new JsonSlurper().parseText(record.renderJson().toString())
@@ -262,7 +263,8 @@ class TraceRecordTest extends Specification {
         json.cpus == '4'
         json.time == '1h'
         json.memory == '8 GB'
-        json.accelerator_request == '3'
+        json.accelerator == '3'
+        json.accelerator_type == 'v100'
 
     }
 
@@ -369,19 +371,6 @@ class TraceRecordTest extends Specification {
 
         then:
         rec2.getNumSpotInterruptions() == null
-    }
-
-    def 'should set accelerator request and persist across serialization'() {
-        given:
-        def rec = new TraceRecord()
-        rec.accelerator_request = 3
-
-        when:
-        def buf = rec.serialize()
-        def rec2 = TraceRecord.deserialize(buf)
-
-        then:
-        rec2.accelerator_request == 3
     }
 
 }
