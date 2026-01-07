@@ -134,7 +134,7 @@ class S3BashLib extends BashFunLib<S3BashLib> {
             if [[ \$is_dir == 1 ]]; then
                 $cli s3 cp --only-show-errors --recursive ${forceGlacierTransfer}"\$source" "\$target"
             else
-                $cli s3 cp --only-show-errors ${forceGlacierTransfer}"\$source" "\$target"
+                $cli s3 cp --only-show-errors "\$source" "\$target"
             fi
         }
         """.stripIndent(true)

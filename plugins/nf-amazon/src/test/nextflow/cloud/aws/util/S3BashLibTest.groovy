@@ -849,7 +849,7 @@ class S3BashLibTest extends Specification {
                 if [[ $is_dir == 1 ]]; then
                     aws s3 cp --only-show-errors --recursive --force-glacier-transfer "$source" "$target"
                 else
-                    aws s3 cp --only-show-errors --force-glacier-transfer "$source" "$target"
+                    aws s3 cp --only-show-errors "$source" "$target"
                 fi
             }
             '''.stripIndent(true)
