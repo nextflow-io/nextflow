@@ -45,6 +45,7 @@ import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.executor.res.DiskResource
 import nextflow.fusion.FusionAwareTask
+import nextflow.fusion.FusionConfig
 import nextflow.fusion.FusionScriptLauncher
 import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskConfig
@@ -261,12 +262,13 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             .addAllVolumes( launcher.getVolumes() )
 
         // retry on spot reclaim
-        if( batchConfig.maxSpotAttempts ) {
+        final attempts = maxSpotAttempts()
+        if( attempts > 0 ) {
             // Note: Google Batch uses the special exit status 50001 to signal
             // the execution was terminated due a spot reclaim. When this happens
             // The policy re-execute the jobs automatically up to `maxSpotAttempts` times
             taskSpec
-                .setMaxRetryCount( batchConfig.maxSpotAttempts )
+                .setMaxRetryCount( attempts )
                 .addLifecyclePolicies(
                     LifecyclePolicy.newBuilder()
                         .setActionCondition(
@@ -453,6 +455,15 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             )
             .putAllLabels(task.config.getResourceLabels())
             .build()
+    }
+
+    protected int maxSpotAttempts() {
+        final result = batchConfig.maxSpotAttempts
+        if( result > 0 )
+            return result
+        // when fusion snapshot is enabled max attempt should be > 0
+        // to enable to allow snapshot retry the job execution in a new compute instance
+        return fusionEnabled() && fusionConfig().snapshotsEnabled() ? FusionConfig.DEFAULT_SNAPSHOT_MAX_SPOT_ATTEMPTS : 0
     }
 
     /**
