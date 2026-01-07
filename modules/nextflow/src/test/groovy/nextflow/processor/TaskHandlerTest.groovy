@@ -52,7 +52,8 @@ class TaskHandlerTest extends Specification {
                 cpus: 2,
                 time: '1 hour',
                 disk: '100 GB',
-                memory: '4 GB'
+                memory: '4 GB',
+                accelerator: 3
         ]
         def task = new TaskRun(id: new TaskId(100), workDir: folder, name:'task1', exitStatus: 127, config: config  )
         task.metaClass.getHashLog = { "5d5d7ds" }
@@ -100,6 +101,7 @@ class TaskHandlerTest extends Specification {
         trace.memory == MemoryUnit.of('4 GB').toBytes()
         trace.disk == MemoryUnit.of('100 GB').toBytes()
         trace.env == 'FOO=hola\nBAR=mundo\nAWS_SECRET=[secure]\n'
+        trace.accelerator_request == 3
 
         // check get method
         trace.getFmtStr('%cpu') == '1.0%'

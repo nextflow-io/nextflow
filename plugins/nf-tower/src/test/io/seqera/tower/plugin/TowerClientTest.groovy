@@ -560,4 +560,29 @@ class TowerClientTest extends Specification {
         req.tasks[0].numSpotInterruptions == 3
     }
 
+    def 'should include accelerator request in task map'() {
+        given:
+        def client = Spy(new TowerClient())
+        client.getWorkflowProgress(true) >> new WorkflowProgress()
+
+        def now = System.currentTimeMillis()
+        def trace = new TraceRecord([
+            taskId: 42,
+            process: 'foo',
+            workdir: "/work/dir",
+            cpus: 1,
+            submit: now-2000,
+            start: now-1000,
+            complete: now,
+            acceleratorRequest: 2
+        ])
+
+        when:
+        def req = client.makeTasksReq([trace])
+
+        then:
+        req.tasks.size() == 1
+        req.tasks[0].acceleratorRequest == 2
+    }
+
 }
