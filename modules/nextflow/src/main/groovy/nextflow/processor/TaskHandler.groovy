@@ -16,6 +16,10 @@
 
 package nextflow.processor
 
+import nextflow.Global
+import nextflow.Session
+import nextflow.fusion.FusionHelper
+
 import static nextflow.processor.TaskStatus.*
 
 import java.nio.file.NoSuchFileException
@@ -249,6 +253,9 @@ abstract class TaskHandler {
             catch( IOException e ) {
                 log.debug "[WARN] Cannot read trace file: $file -- Cause: ${e.message}"
             }
+            // If Fusion is enabled read parse the use of accelerator form .command.log
+            if( Global.session && FusionHelper.isFusionEnabled(Global.session as Session) )
+                record.parseFusionAcceleratorUsage(task.workDir?.resolve(TaskRun.CMD_LOG))
         }
 
         return record

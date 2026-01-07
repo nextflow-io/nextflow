@@ -369,4 +369,78 @@ class TraceRecordTest extends Specification {
         rec2.getNumSpotInterruptions() == null
     }
 
+    def 'should manage accelerator field and not persist it across serialization'() {
+        given:
+        def rec = new TraceRecord()
+
+        expect:
+        rec.getAcceleratorUsage() == null
+        and:
+        rec.acceleratorUsage == null
+
+        when:
+        rec.setAcceleratorUsage(true)
+
+        then:
+        rec.getAcceleratorUsage() == true
+        rec.acceleratorUsage == true
+
+        when:
+        rec.setAcceleratorUsage(false)
+
+        then:
+        rec.getAcceleratorUsage() == false
+        rec.acceleratorUsage == false
+
+        when:
+        def buf = rec.serialize()
+        def rec2 = TraceRecord.deserialize(buf)
+
+        then:
+        rec2.getAcceleratorUsage() == null
+    }
+
+    @Unroll
+    def 'should parse fusion accelerator from file'() {
+        given:
+        def rec = new TraceRecord()
+        def file = TestHelper.createInMemTempFile('fusion-log')
+        file.text = CONTENT
+
+        when:
+        rec.parseFusionAcceleratorUsage(file)
+
+        then:
+        rec.getAcceleratorUsage() == EXPECTED
+
+        where:
+        CONTENT                              | EXPECTED
+        'FUSION_GPU_USED=true\n'             | true
+        'FUSION_GPU_USED=false\n'            | false
+        'FUSION_GPU_USED=TRUE\n'             | true
+        'FUSION_GPU_USED=FALSE\n'            | false
+        '  FUSION_GPU_USED=true  \n'         | true
+        '  FUSION_GPU_USED=false  \n'        | false
+        'FUSION_GPU_USED=true  \nother line' | true
+        'FUSION_GPU_USED=false\nother line'  | false
+        'other content\n'                    | null
+        'FUSION_GPU=true\n'                  | null
+        'FUSION_GPU_USED=\n'                 | null
+        'FUSION_GPU_USED=invalid\n'          | null
+        'FUSION_GPU_USED=123\n'              | null
+        ''                                   | null
+    }
+
+    def 'should parse fusion accelerator when file does not exist'() {
+        given:
+        def rec = new TraceRecord()
+        def file = Path.of('/non/existent/file.log')
+
+        when:
+        rec.parseFusionAcceleratorUsage(file)
+
+        then:
+        rec.getAcceleratorUsage() == null
+    }
+
 }
