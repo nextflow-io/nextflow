@@ -134,7 +134,7 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     protected boolean isTerminated(JobStatus status) {
-        return status in [JobStatus.DONE, JobStatus.FAILED, JobStatus.CANCELLED]
+        return status in [JobStatus.SUCCEEDED, JobStatus.FAILED, JobStatus.CANCELLED]
     }
 
     protected boolean isFailed(JobStatus status) {
