@@ -32,7 +32,7 @@ Implement a module system with four core capabilities:
 1. **Remote module inclusion** via registry
 2. **Semantic versioning** with dependency resolution
 3. **Unified Nextflow Registry** (rebrand existing plugin registry)
-4. **First-class CLI support** (pull, push, search, run)
+4. **First-class CLI support** (install, publish, search, list, remove, freeze, run)
 
 ## Core Capabilities
 
