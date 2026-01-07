@@ -96,20 +96,19 @@ public class ScriptToGroovyHelper {
         }
 
         private static String asPropertyChain(PropertyExpression node) {
-            var builder = new StringBuilder();
-            builder.append(node.getPropertyAsString());
+            var list = new ArrayList<String>();
+            list.add(node.getPropertyAsString());
 
             var target = node.getObjectExpression();
             while( target instanceof PropertyExpression pe ) {
-                builder.append('.');
-                builder.append(pe.getPropertyAsString());
+                list.add(pe.getPropertyAsString());
                 target = pe.getObjectExpression();
             }
 
-            builder.append('.');
-            builder.append(target.getText());
+            list.add(target.getText());
 
-            return builder.reverse().toString();
+            Collections.reverse(list);
+            return String.join(".", list);
         }
     }
 
