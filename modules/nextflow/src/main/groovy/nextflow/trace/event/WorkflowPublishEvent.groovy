@@ -16,36 +16,27 @@
 
 package nextflow.trace.event
 
-import java.nio.file.Path
-
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 
 /**
- * Models a workflow output event, which is emitted for each
- * workflow output when it is completed.
+ * Models a workflow publish event, which is emitted for each value
+ * that is published to a workflow output from a dataflow source.
  *
- * @author Ben Sherman <bentshermann@gmail.com>
+ * @author Rob Syme <rob.syme@gmail.com>
  */
 @Canonical
 @CompileStatic
-class WorkflowOutputEvent {
+class WorkflowPublishEvent {
     /**
      * The name of the workflow output.
      */
     String name
     /**
-     * The value of the workflow output.
+     * The published value.
      *
-     * If the source is a dataflow channel. this value is an unordered
-     * collection of the published values from the channel. If the source
-     * is a dataflow value, this value is the published value.
-     *
-     * If the index file was enabled, this value is null.
+     * File paths from the work directory are normalized to
+     * their corresponding path in the output directory.
      */
     Object value
-    /**
-     * The optional index file for the workflow output.
-     */
-    Path index
 }
