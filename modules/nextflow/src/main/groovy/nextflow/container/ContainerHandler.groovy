@@ -24,6 +24,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.container.inspect.ContainerInspectMode
+import nextflow.file.FileHelper
 import nextflow.util.Escape
 /**
  * Helper class to normalise a container image name depending
@@ -42,12 +43,12 @@ class ContainerHandler {
 
     private Path baseDir
 
-    ContainerHandler(Map containerConfig) {
-        this(containerConfig, CWD)
+    ContainerHandler(ContainerConfig config) {
+        this(config, CWD)
     }
 
-    ContainerHandler(Map containerConfig, Path dir) {
-        this.config = containerConfig as ContainerConfig
+    ContainerHandler(ContainerConfig config, Path dir) {
+        this.config = config
         this.baseDir = dir
     }
 
@@ -56,47 +57,43 @@ class ContainerHandler {
     Path getBaseDir() { baseDir }
 
     String normalizeImageName(String imageName) {
-        final engine = config.getEngine()
-        if( engine == 'shifter' ) {
+        if( config instanceof ShifterConfig ) {
             return normalizeShifterImageName(imageName)
         }
-        if( engine == 'udocker' ) {
-            return normalizeUdockerImageName(imageName)
-        }
-        if( engine == 'singularity' ) {
+        if( config instanceof SingularityConfig ) {
             final normalizedImageName = normalizeSingularityImageName(imageName)
             if( !config.isEnabled() || !normalizedImageName )
                 return normalizedImageName
             if( normalizedImageName.startsWith('docker://') && config.canRunOciImage() )
                 return normalizedImageName
             final requiresCaching = normalizedImageName =~ IMAGE_URL_PREFIX
-            if( ContainerInspectMode.active() && requiresCaching )
+            if( ContainerInspectMode.dryRun() && requiresCaching )
                 return imageName
-            final result = requiresCaching ? createSingularityCache(this.config, normalizedImageName) : normalizedImageName
+            final result = requiresCaching ? createSingularityCache(config, normalizedImageName) : normalizedImageName
             return Escape.path(result)
         }
-        if( engine == 'apptainer' ) {
+        if( config instanceof ApptainerConfig ) {
             final normalizedImageName = normalizeApptainerImageName(imageName)
             if( !config.isEnabled() || !normalizedImageName )
                 return normalizedImageName
             if( normalizedImageName.startsWith('docker://') && config.canRunOciImage() )
                 return normalizedImageName
             final requiresCaching = normalizedImageName =~ IMAGE_URL_PREFIX
-            if( ContainerInspectMode.active() && requiresCaching )
+            if( ContainerInspectMode.dryRun() && requiresCaching )
                 return imageName
-            final result = requiresCaching ? createApptainerCache(this.config, normalizedImageName) : normalizedImageName
+            final result = requiresCaching ? createApptainerCache(config, normalizedImageName) : normalizedImageName
             return Escape.path(result)
         }
-        if( engine == 'charliecloud' ) {
+        if( config instanceof CharliecloudConfig ) {
             final normalizedImageName = normalizeCharliecloudImageName(imageName)
             if( !config.isEnabled() || !normalizedImageName )
                 return normalizedImageName
             // if the imagename starts with '/' it's an absolute path
             // otherwise we assume it's in a remote registry and pull it from there
             final requiresCaching = !imageName.startsWith('/')
-            if( ContainerInspectMode.active() && requiresCaching )
+            if( ContainerInspectMode.dryRun() && requiresCaching )
                 return imageName
-            final result = requiresCaching ? createCharliecloudCache(this.config, normalizedImageName) : normalizedImageName
+            final result = requiresCaching ? createCharliecloudCache(config, normalizedImageName) : normalizedImageName
             return Escape.path(result)
         }
         // fallback to docker
@@ -104,18 +101,18 @@ class ContainerHandler {
     }
 
     @PackageScope
-    String createSingularityCache(Map config, String imageName) {
-        new SingularityCache(new ContainerConfig(config)) .getCachePathFor(imageName) .toString()
+    String createSingularityCache(SingularityConfig config, String imageName) {
+        SingularityCache.create(config) .getCachePathFor(imageName) .toString()
     }
 
     @PackageScope
-    String createApptainerCache(Map config, String imageName) {
-        new ApptainerCache(new ContainerConfig(config)) .getCachePathFor(imageName) .toString()
+    String createApptainerCache(ApptainerConfig config, String imageName) {
+        new ApptainerCache(config) .getCachePathFor(imageName) .toString()
     }
 
     @PackageScope
-    String createCharliecloudCache(Map config, String imageName) {
-        new CharliecloudCache(new ContainerConfig(config)) .getCachePathFor(imageName) .toString()
+    String createCharliecloudCache(CharliecloudConfig config, String imageName) {
+        new CharliecloudCache(config) .getCachePathFor(imageName) .toString()
     }
 
     /**
@@ -157,12 +154,15 @@ class ContainerHandler {
         if( !imageName )
             return null
 
-        String reg = this.config?.registry
+        String reg = config.getRegistry()
         if( !reg )
             return imageName
 
-        if( isAbsoluteDockerName(imageName) )
-            return imageName
+        if( isAbsoluteDockerName(imageName) ) {
+             return config.getRegistryOverride()
+                 ? overrideRegistryName(imageName, reg)
+                 : imageName
+        }
 
         if( !reg.endsWith('/') )
             reg += '/'
@@ -178,26 +178,6 @@ class ContainerHandler {
         image = image.substring(0,p)
         image.contains('.') || image.contains(':')
     }
-
-    /**
-     * Normalize Udocker image name adding `:latest`
-     * when required
-     *
-     * @param imageName The container image name
-     * @return Image name in Udocker canonical format
-     */
-     @PackageScope
-     String normalizeUdockerImageName( String imageName ) {
-
-        if( !imageName )
-            return null
-
-        if( !imageName.contains(':') )
-            imageName += ':latest'
-
-        return imageName
-    }
-
 
     public static final Pattern IMAGE_URL_PREFIX = ~/^[^\/:. ]+:\/\/(.*)/
 
@@ -307,5 +287,24 @@ class ContainerHandler {
 
         // in all other case it's supposed to be the name of an image
         return "${normalizeDockerImageName(img)}"
+    }
+
+    static String overrideRegistryName(String repository, String target) {
+        // remove scheme prefix, if any
+        final scheme = FileHelper.getUrlProtocol(repository)
+        final source = scheme ? repository.substring(scheme.length()+3) : repository
+        final p = source.indexOf("/")
+        final first = p!=-1 ? source.substring(0,p) : source
+        final isHost = first.contains('.') || first.contains(":")
+        final path = isHost
+            ? source.substring(p+1)
+            : source
+
+        if( !target.endsWith("/") )
+            target += "/"
+        final result = target + path
+        return scheme
+            ? scheme + "://" + result
+            : result
     }
 }

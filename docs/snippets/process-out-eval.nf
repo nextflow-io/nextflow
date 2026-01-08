@@ -1,12 +1,13 @@
-process sayHello {
+process hello {
     output:
-    eval('bash --version')
+    eval('echo Hello world!')
 
+    script:
     """
-    echo Hello world!
+    true
     """
 }
 
 workflow {
-    sayHello | view
+    hello | view
 }

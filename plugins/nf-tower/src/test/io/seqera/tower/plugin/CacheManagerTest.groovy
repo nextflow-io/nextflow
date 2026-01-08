@@ -20,6 +20,7 @@ package io.seqera.tower.plugin
 import java.nio.file.Files
 import java.nio.file.Paths
 
+import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 import spock.lang.Specification
 /**
@@ -27,6 +28,14 @@ import spock.lang.Specification
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class CacheManagerTest extends Specification {
+
+    def setupSpec() {
+        SysEnv.push([:])
+    }
+
+    def cleanupSpec() {
+        SysEnv.pop()
+    }
 
     def 'should init empty files' () {
         when:

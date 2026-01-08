@@ -35,10 +35,12 @@ class ContainerResolverProvider {
      * @return The {@link ContainerResolver} instance
      */
     static synchronized ContainerResolver load() {
-        final resolvers = Plugins.getPriorityExtensions(ContainerResolver)
-        if( !resolvers )
+        final resolver = Plugins
+            .getPriorityExtensions(ContainerResolver)
+            .find( it-> it.enabled() )
+        if( !resolver )
             throw new IllegalStateException("Cannot load ${ContainerResolver.class.simpleName}")
-        return resolvers.first()
+        return resolver
     }
 
 }

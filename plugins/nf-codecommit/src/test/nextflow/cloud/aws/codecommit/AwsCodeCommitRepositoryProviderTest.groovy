@@ -106,4 +106,56 @@ class AwsCodeCommitRepositoryProviderTest extends Specification {
 
     }
 
+    def 'should list root directory contents'() {
+        given:
+        def config = new AwsCodeCommitProviderConfig('git-codecommit.eu-west-1.amazonaws.com')
+        def provider = new AwsCodeCommitRepositoryProvider('codecommit-eu-west-1/my-repo', config)
+
+        when:
+        def entries = provider.listDirectory("/", 1)
+
+        then:
+        entries.size() > 0
+        and:
+        entries.any { it.name == 'main.nf' && it.type == RepositoryProvider.EntryType.FILE }
+        and:
+        entries.every { it.path && it.name && it.sha }
+        // Should only include immediate children for depth=1
+        entries.every { it.path.split('/').length <= 2 }
+    }
+
+    def 'should list directory contents recursively'() {
+        given:
+        def config = new AwsCodeCommitProviderConfig('git-codecommit.eu-west-1.amazonaws.com')
+        def provider = new AwsCodeCommitRepositoryProvider('codecommit-eu-west-1/my-repo', config)
+
+        when:
+        def entries = provider.listDirectory("/", 10)
+
+        then:
+        entries.size() > 0
+        and:
+        // Should include files from root and potentially subdirectories
+        entries.any { it.name == 'main.nf' && it.type == RepositoryProvider.EntryType.FILE }
+        and:
+        entries.every { it.path && it.name && it.sha }
+    }
+
+    def 'should list directory contents with depth 2'() {
+        given:
+        def config = new AwsCodeCommitProviderConfig('git-codecommit.eu-west-1.amazonaws.com')
+        def provider = new AwsCodeCommitRepositoryProvider('codecommit-eu-west-1/my-repo', config)
+
+        when:
+        def depthOne = provider.listDirectory("/", 1)
+        def depthTwo = provider.listDirectory("/", 2)
+
+        then:
+        depthOne.size() > 0
+        depthTwo.size() >= depthOne.size()
+        and:
+        depthOne.every { it.path && it.name && it.sha }
+        depthTwo.every { it.path && it.name && it.sha }
+    }
+
 }

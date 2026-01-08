@@ -39,7 +39,7 @@ SSO credentials and instance profile credentials are the most recommended becaus
 
 ## AWS IAM policies
 
-[IAM policies](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html) are the mechanism used by AWS to defines permissions for IAM identities. In order to access certain AWS services, the proper policies must be attached to the identity associated to the AWS credentials.
+[IAM policies](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html) are the mechanism used by AWS to define permissions for IAM identities. In order to access certain AWS services, the proper policies must be attached to the identity associated to the AWS credentials.
 
 Minimal permissions policies to be attached to the AWS account used by Nextflow are:
 
@@ -86,6 +86,8 @@ Minimal permissions policies to be attached to the AWS account used by Nextflow 
   "ecr:ListTagsForResource"
   ```
 
+  Alternatively, you can use AWS provided `AmazonEC2ContainerRegistryReadOnly` managed policy.
+
 :::{note}
 If you are running Fargate or Fargate Spot, you may need the following policies in addition to the listed above:
   ```json
@@ -121,7 +123,9 @@ Depending on the pipeline configuration, the above actions can be done all in a 
                 "Action": [
                     "s3:GetObject",
                     "s3:PutObject",
-                    "s3:DeleteObject"
+                    "s3:DeleteObject",
+                    "s3:PutObjectTagging",
+                    "s3:AbortMultipartUpload"
                 ],
                 "Resource": "arn:aws:s3:::<bucket name>/*"
             },
@@ -150,19 +154,19 @@ See the [bucket policy documentation](https://docs.aws.amazon.com/config/latest/
 
 ## AWS Batch
 
-[AWS Batch](https://aws.amazon.com/batch/) is a managed computing service that allows the execution of containerised workloads in the AWS cloud infrastructure. It dynamically provisions the optimal quantity and type of compute resources (e.g., CPU or memory optimized compute resources) based on the volume and specific resource requirements of the jobs submitted.
+[AWS Batch](https://aws.amazon.com/batch/) is a managed computing service that enables the execution of containerized workloads on AWS cloud infrastructure. It dynamically provisions the optimal quantity and type of compute resources (e.g., CPU or memory optimized compute resources) based on the volume and specific resource requirements of the submitted jobs.
 
-Nextflow provides built-in support for AWS Batch, allowing the seamless deployment of Nextflow pipelines in the cloud, in which tasks are offloaded as Batch jobs.
 
-Read the {ref}`AWS Batch executor <awsbatch-executor>` section to learn more about the `awsbatch` executor in Nextflow.
+Nextflow natively supports AWS Batch, allowing you to run pipeline tasks as Batch jobs in the cloud.
+
+See {ref}`AWS Batch executor <awsbatch-executor>` to learn more about the `awsbatch` executor.
 
 (aws-batch-cli)=
 
 ### AWS CLI
 
 :::{tip}
-The need for the AWS CLI is considered a legacy requirement for the deployment of Nextflow pipelines with AWS Batch.
-Instead, consider using {ref}`wave-page` and {ref}`fusion-page` to facilitate access to S3 without using the AWS CLI.
+The recommended approach for running Nextflow pipelines with AWS Batch is to use {ref}`wave-page` and {ref}`fusion-page` for S3 access, rather than relying on the AWS CLI. This approach removes the requirement to install and configure the AWS CLI in containers or custom AMIs.
 :::
 
 Nextflow uses the [AWS command line tool](https://aws.amazon.com/cli/) (`aws`) to stage input files and output files between S3 and the task containers.
@@ -277,7 +281,7 @@ There are several reasons why you might need to create your own [AMI (Amazon Mac
 ### Create your custom AMI
 
 From the EC2 Dashboard, select **Launch Instance**, then select **Browse more AMIs**. In the new page, select
-**AWS Marketplace AMIs**, and then search for **Amazon ECS-Optimized Amazon Linux 2 (AL2) x86_64 AMI**. Select the AMI and continue as usual to configure and launch the instance.
+**AWS Marketplace AMIs**, and then search for `Amazon ECS-Optimized Amazon Linux 2 (AL2) x86_64 AMI`. Select the AMI and continue as usual to configure and launch the instance.
 
 :::{note}
 The selected instance has a root volume of 30GB. Make sure to increase its size or add a second EBS volume with enough storage for real genomic workloads.
@@ -346,14 +350,13 @@ The grandparent directory of the `aws` tool will be mounted into the container a
 
 ### Docker installation
 
-Docker is required by Nextflow to execute tasks on AWS Batch. The **Amazon ECS-Optimized Amazon Linux 2 (AL2) x86_64 AMI** has Docker installed, however, if you create your AMI from a different AMI that does not have Docker installed, you will need to install it manually.
+Docker is required by Nextflow to execute tasks on AWS Batch. The **Amazon ECS-optimized Amazon Linux 2023 AMI** has Docker installed, however, if you create your AMI from a different AMI that does not have Docker installed, you will need to install it manually.
 
 The following snippet shows how to install Docker on an Amazon EC2 instance:
 
 ```bash
 # install Docker
 sudo yum update -y
-sudo amazon-linux-extras install docker
 sudo yum install docker
 
 # start the Docker service
@@ -363,7 +366,7 @@ sudo service docker start
 sudo usermod -a -G docker ec2-user
 ```
 
-You may have to reboot your instance for the changes to `ec2-user` to take effect.
+You must log out and log back in again to use the new `ec2-user` permissions.
 
 These steps must be done *before* creating the AMI from the current EC2 instance.
 
@@ -371,20 +374,19 @@ These steps must be done *before* creating the AMI from the current EC2 instance
 
 The [ECS container agent](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ECS_agent.html) is a component of Amazon Elastic Container Service (Amazon ECS) and is responsible for managing containers on behalf of ECS. AWS Batch uses ECS to execute containerized jobs, therefore it requires the agent to be installed on EC2 instances within your Compute Environments.
 
-The ECS agent is included in the **Amazon ECS-Optimized Amazon Linux 2 (AL2) x86_64 AMI** . If you use a different base AMI, you can also install the agent on any EC2 instance that supports the Amazon ECS specification.
+The ECS agent is included in the **Amazon ECS-optimized Amazon Linux 2023 AMI** . If you use a different base AMI, you can also install the agent on any EC2 instance that supports the Amazon ECS specification.
 
 To install the agent, follow these steps:
 
 ```bash
-sudo amazon-linux-extras disable docker
-sudo amazon-linux-extras install -y ecs
+sudo yum install ecs-init
 sudo systemctl enable --now ecs
 ```
 
 To test the installation:
 
 ```bash
-curl -s http://localhost:51678/v1/metadata | python -mjson.tool (test)
+curl -s http://localhost:51678/v1/metadata | python -mjson.tool
 ```
 
 :::{note}
@@ -513,6 +515,8 @@ There are multiple reasons why this can happen. They are mainly related to the C
 
 This [AWS page](https://aws.amazon.com/premiumsupport/knowledge-center/batch-job-stuck-runnable-status/) provides several resolutions and tips to investigate and work around the issue.
 
+(aws-fargate)=
+
 ## AWS Fargate
 
 :::{versionadded} 23.12.0-edge
@@ -540,7 +544,7 @@ and the Batch Execution Role.
 
 :::{note}
 Nextflow uses [s5cmd](https://github.com/peak/s5cmd) to download the task input data and upload the task outputs.
-To enable this capability, you need to enable the Wave service in the Nextflow configuration, as shown in the above example. See {ref}Wave <wave-page> documentation for more details.
+To enable this capability, you need to enable the Wave service in the Nextflow configuration, as shown in the above example. See {ref}`Wave <wave-page>` documentation for more details.
 :::
 
 ## Advanced configuration

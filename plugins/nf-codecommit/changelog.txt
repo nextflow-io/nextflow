@@ -1,5 +1,18 @@
 nf-codecommit changelog
 =======================
+0.5.0 - 8 Oct 2025
+- Add listDirectory traversal API to RepositoryProvider abstraction (#6430) [1449fdfec]
+
+0.3.0 - 15 Aug 2025
+- Bump groovy 4.0.28 (#6304) [a468f8ef]
+- Revert "Update nf-codecommit to AWS SDK v2 (#6263)" [5542351c]
+- Update nf-codecommit to AWS SDK v2 (#6263) [9e9476f2]
+- Update nf-codecommit to AWS SDK v2 with corrected test (#6293) [1557a91a]
+
+0.2.3 - 20 Jan 2025
+- Bump logback 1.5.13 + slf4j 2.0.16 [cc0163ac]
+- Bump groovy 4.0.24 missing deps [40670f7e]
+
 0.2.2 - 5 Aug 2024
 - Bump pf4j to version 3.12.0 [96117b9a]
 

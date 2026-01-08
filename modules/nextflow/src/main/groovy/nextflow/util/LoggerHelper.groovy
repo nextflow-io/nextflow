@@ -72,7 +72,7 @@ import nextflow.script.FunctionDef
 import nextflow.script.ScriptMeta
 import nextflow.script.WorkflowBinding
 import nextflow.script.WorkflowDef
-import org.apache.commons.lang.exception.ExceptionUtils
+import org.apache.commons.lang3.exception.ExceptionUtils
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.Marker
@@ -213,11 +213,11 @@ class LoggerHelper {
             root.addAppender(syslogAppender)
 
         // -- main package logger
-        def mainLevel = packages[MAIN_PACKAGE] == Level.TRACE ? Level.TRACE : Level.DEBUG
-        def logger = createLogger(MAIN_PACKAGE, mainLevel)
+        final mainLevel = packages[MAIN_PACKAGE] == Level.TRACE ? Level.TRACE : Level.DEBUG
+        final logger = createLogger(MAIN_PACKAGE, mainLevel)
 
         // -- set AWS lib level to WARN to reduce noise in the log file
-        final AWS = 'com.amazonaws'
+        final AWS = 'software.amazon'
         if( !debugConf.contains(AWS) && !traceConf.contains(AWS)) {
             createLogger(AWS, Level.WARN)
         }

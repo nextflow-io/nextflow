@@ -63,10 +63,6 @@ class DumpOp {
         return this
     }
 
-    /** Only for testing -- do not use */
-    protected DumpOp() {}
-
-
     boolean isEnabled() {
         if( !dumpNames )
             return false

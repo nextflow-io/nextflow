@@ -106,7 +106,8 @@ class ThreadPoolBuilder {
 
     ThreadPoolBuilder withQueueSize(int size) {
         this.queueSize = size
-        this.workQueue = new LinkedBlockingQueue<Runnable>(size)
+        if( size>0 )
+            this.workQueue = new HardBlockingQueue<Runnable>(size)
         return this
     }
 
@@ -141,7 +142,7 @@ class ThreadPoolBuilder {
         if( workQueue==null )
             workQueue = new LinkedBlockingQueue<>()
         if( rejectionPolicy==null )
-            rejectionPolicy = new ThreadPoolExecutor.CallerRunsPolicy()
+            rejectionPolicy = new ThreadPoolExecutor.AbortPolicy()
         if( threadFactory==null )
             threadFactory = new CustomThreadFactory(name)
 
@@ -158,21 +159,6 @@ class ThreadPoolBuilder {
         result.allowCoreThreadTimeOut(allowCoreThreadTimeout)
 
         return result
-    }
-
-
-    static ThreadPoolExecutor io(String name=null) {
-        io(10, 100, 10_000, name)
-    }
-
-
-    static ThreadPoolExecutor io(int min, int max, int queue, String name=null) {
-        new ThreadPoolBuilder()
-                .withMinSize(min)
-                .withMaxSize(max)
-                .withQueueSize(queue)
-                .withName(name)
-                .build()
     }
 
 }

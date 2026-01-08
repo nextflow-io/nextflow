@@ -1,0 +1,28 @@
+nf-k8s changelog
+===================
+1.4.0 - 19 Dec 2025
+- Implementation of Git multiple revisions (#6620) [ce9d7b592]
+- Add runtimeClassName to the pod options (#6633) [ddcef4f45]
+
+1.3.0 - 28 Nov 2025
+- Do not delete K8s jobs when ttlSecondsAfterFinished is set (#6597) [51042dbe2]
+- Optimize exit code handling by relying on scheduler status for successful executions (#6484) [454a2ae85]
+
+1.2.2 - 21 Oct 2025
+- Add .command.log redirection in K8s container command (#6455) [e6eed7949]
+- Rename `config.schema` package to `config.spec` (#6485) [ef0d2d601]
+
+1.2.1 - 8 Oct 2025
+- Fix pod log warning with Fusion enabled (#6449) [8c78b3126]
+- Get exit code from pod to manage OOM in k8s (#6442) [f258a758e]
+
+1.1.1 - 15 Aug 2025
+- Unify nf-lang config scopes with runtime classes (#6271) [bfa67ca3]
+- Bump groovy 4.0.28 (#6304) [ci fast] [a468f8ef]
+
+1.1.0 - 2 Jun 2025
+- Add Failsafe retry mechanism in K8s (#6083) [ci fast] [9e675c6a]
+- Bump Groovy to version 4.0.27 (#6125) [ci fast] [258e1790]
+
+1.0.0 - 13 Apr 2025
+- Refactor Kubernetes support as a core plugin

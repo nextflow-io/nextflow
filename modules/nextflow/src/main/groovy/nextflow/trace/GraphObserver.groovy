@@ -18,6 +18,7 @@ package nextflow.trace
 
 import java.nio.file.Path
 
+import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
@@ -30,8 +31,7 @@ import nextflow.dag.MermaidRenderer
 import nextflow.dag.MermaidHtmlRenderer
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
-import nextflow.processor.TaskHandler
-import nextflow.processor.TaskProcessor
+import nextflow.trace.config.DagConfig
 /**
  * Render the DAG document on pipeline completion using the
  * format specified by the user
@@ -39,9 +39,10 @@ import nextflow.processor.TaskProcessor
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-class GraphObserver implements TraceObserver {
+@CompileStatic
+class GraphObserver implements TraceObserverV2 {
 
-    static public final String DEF_FILE_NAME = "dag-${TraceHelper.launchTimestampFmt()}.html"
+    private DagConfig config
 
     private Path file
 
@@ -51,15 +52,13 @@ class GraphObserver implements TraceObserver {
 
     private String format
 
-    boolean overwrite
-
     String getFormat() { format }
 
     String getName() { name }
 
-    GraphObserver( Path file ) {
-        assert file
-        this.file = file
+    GraphObserver(DagConfig config) {
+        this.config = config
+        this.file = FileHelper.asPath(config.file)
         this.name = file.baseName
         this.format = file.getExtension().toLowerCase() ?: 'html'
     }
@@ -70,9 +69,9 @@ class GraphObserver implements TraceObserver {
         // check file existence
         final attrs = FileHelper.readAttributes(file)
         if( attrs ) {
-            if( overwrite && (attrs.isDirectory() || !file.delete()) )
+            if( config.overwrite && (attrs.isDirectory() || !file.delete()) )
                 throw new AbortOperationException("Unable to overwrite existing DAG file: ${file.toUriString()}")
-            else if( !overwrite )
+            else if( !config.overwrite )
                 throw new AbortOperationException("DAG file already exists: ${file.toUriString()} -- enable `dag.overwrite` in your config file to overwrite existing DAG files")
         }
     }
@@ -81,6 +80,10 @@ class GraphObserver implements TraceObserver {
     void onFlowComplete() {
         // -- normalise the DAG
         dag.normalize()
+
+        // -- make sure parent path exists
+        file.parent?.mkdirs()
+
         // -- render it to a file
         createRender().renderDocument(dag,file)
     }
@@ -88,45 +91,19 @@ class GraphObserver implements TraceObserver {
     @PackageScope
     DagRenderer createRender() {
         if( format == 'dot' )
-            new DotRenderer(name)
+            new DotRenderer(name, config.direction)
 
         else if( format == 'html' )
-            new MermaidHtmlRenderer()
+            new MermaidHtmlRenderer(config)
 
         else if( format == 'gexf' )
             new GexfRenderer(name)
 
         else if( format == 'mmd' )
-            new MermaidRenderer()
+            new MermaidRenderer(config)
 
         else
-            new GraphvizRenderer(name, format)
+            new GraphvizRenderer(name, format, config.direction)
     }
 
-
-    @Override
-    void onProcessCreate(TaskProcessor process) {
-
-    }
-
-
-    @Override
-    void onProcessSubmit(TaskHandler handler, TraceRecord trace) {
-
-    }
-
-    @Override
-    void onProcessStart(TaskHandler handler, TraceRecord trace) {
-
-    }
-
-    @Override
-    void onProcessComplete(TaskHandler handler, TraceRecord trace) {
-
-    }
-
-    @Override
-    boolean enableMetrics() {
-        return false
-    }
 }

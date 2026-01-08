@@ -42,10 +42,9 @@ class NextflowMeta {
     static class Preview implements Flags {
         @Deprecated volatile float dsl
         @Deprecated boolean strict
-        boolean output
         boolean recursion
-        boolean topic
         boolean moduleBinaries
+        boolean types
 
         @Deprecated
         void setDsl( float num ) {
@@ -58,22 +57,10 @@ class NextflowMeta {
             dsl = num
         }
 
-        void setOutput(Boolean output) {
-            if( output )
-                log.warn "WORKFLOW OUTPUT DSL IS A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CHANGE IN FUTURE RELEASES"
-            this.output = output
-        }
-
         void setRecursion(Boolean recursion) {
             if( recursion )
                 log.warn "NEXTFLOW RECURSION IS A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CHANGE IN FUTURE RELEASES"
             this.recursion = recursion
-        }
-
-        void setTopic(Boolean topic) {
-            if( topic )
-                log.warn "CHANNEL TOPICS ARE A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CHANGE IN FUTURE RELEASES"
-            this.topic = topic
         }
     }
 

@@ -200,7 +200,7 @@ abstract class XFileSystemProvider extends FileSystemProvider {
         if ( conn instanceof HttpURLConnection && conn.getResponseCode() in REDIRECT_CODES && attempt < MAX_REDIRECT_HOPS ) {
             final header = InsensitiveMap.of(conn.getHeaderFields())
             final location = header.get("Location")?.get(0)
-            log.debug "Remote redirect location: $location"
+            log.debug "Remote redirect location=$location; attempt=$attempt"
             final newUrl = new URI(absLocation(location,url)).toURL()
             if( url.protocol=='https' && newUrl.protocol=='http' )
                 throw new IOException("Refuse to follow redirection from HTTPS to HTTP (unsafe) URL - origin: $url - target: $newUrl")

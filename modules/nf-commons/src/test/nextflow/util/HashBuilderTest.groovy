@@ -73,10 +73,11 @@ class HashBuilderTest extends Specification {
     def 'should validate is asset file'() {
         when:
         def BASE = Paths.get("/some/pipeline/dir")
+        def ROOT = new File("/some/pipeline/")
         and:
         Global.session = Mock(Session) { getBaseDir() >> BASE }
         then:
-        !HashBuilder.isAssetFile(BASE.resolve('foo'))
+        !HashBuilder.isAssetFile(BASE.resolve('foo'), ROOT)
 
 
         when:
@@ -85,9 +86,30 @@ class HashBuilderTest extends Specification {
             getCommitId() >> '123456'
         }
         then:
-        HashBuilder.isAssetFile(BASE.resolve('foo'))
+        HashBuilder.isAssetFile(BASE.resolve('foo'), ROOT)
         and:
-        !HashBuilder.isAssetFile(Paths.get('/other/dir'))
+        !HashBuilder.isAssetFile(Paths.get('/other/dir'), ROOT)
+    }
+
+    def 'should validate is asset file when not part of base directory'() {
+        given:
+        Global.session = Mock(Session) {
+            getBaseDir() >> Paths.get(BASE)
+            getCommitId() >> COMMIT_ID
+        }
+
+        expect:
+        HashBuilder.isAssetFile(Paths.get(PATH), new File(ROOT)) == EXPECTED
+
+        where:
+        BASE                  | ROOT              | COMMIT_ID | PATH                       | EXPECTED
+        "/some/pipeline/dir"  | "/some/pipeline/" | null      | "/some/pipeline/dir/foo"   | false
+        "/some/pipeline/dir"  | "/some/pipeline/" | '123456'  | '/other/dir'               | false
+        "/some/pipeline/dir"  | "/some/pipeline/" | '123456'  | '/some/pipeline/foo'       | true
+        and:
+        "/this/pipeline"      | "/that/pipeline/" | '123456'  | '/other/pipeline/foo'      | false
+        "/this/pipeline"      | "/that/pipeline/" | '123456'  | '/this/pipeline/foo'       | true
+        "/this/pipeline"      | "/that/pipeline/" | '123456'  | '/that/pipeline/foo'       | true
     }
 
     def 'should hash file content'() {
@@ -110,13 +132,18 @@ class HashBuilderTest extends Specification {
         folder.resolve('dir1/bar').text = "I'm bar"
         folder.resolve('dir1/xxx/yyy').mkdirs()
         folder.resolve('dir1/xxx/foo1').text = "I'm foo within xxx"
-        folder.resolve('dir1/xxx/yyy/bar1').text = "I'm bar within yyy"
+        folder.resolve('dir1/xxx/yyy/bar1').text = "I'm bar 1 within yyy"
+        folder.resolve('dir1/xxx/yyy/bar2').text = "I'm bar 2 within yyy"
         and:
-        folder.resolve('dir2/foo').text = "I'm foo"
+        // create the same directory structure using a different
+        // creation order, the resulting hash should be the same 
         folder.resolve('dir2/bar').text = "I'm bar"
-        folder.resolve('dir2/xxx/yyy').mkdirs()
+        folder.resolve('dir2/foo').text = "I'm foo"
+        folder.resolve('dir2/xxx').mkdirs()
         folder.resolve('dir2/xxx/foo1').text = "I'm foo within xxx"
-        folder.resolve('dir2/xxx/yyy/bar1').text = "I'm bar within yyy"
+        folder.resolve('dir2/xxx/yyy').mkdirs()
+        folder.resolve('dir2/xxx/yyy/bar2').text = "I'm bar 2 within yyy"
+        folder.resolve('dir2/xxx/yyy/bar1').text = "I'm bar 1 within yyy"
 
         when:
         def hash1 = HashBuilder.hashDirSha256(HashBuilder.defaultHasher(), folder.resolve('dir1'), folder.resolve('dir1'))
@@ -125,6 +152,27 @@ class HashBuilderTest extends Specification {
 
         then:
         hash1.hash() == hash2.hash()
+    }
 
+    def 'directories with same content but different structure should yield different hashes'() {
+        given:
+        def folder = TestHelper.createInMemTempDir()
+        folder.resolve('dir1').mkdir()
+        folder.resolve('dir2').mkdir()
+        and:
+        folder.resolve('dir1/foo').text = "I'm foo"
+        folder.resolve('dir1/bar').text = "I'm bar"
+        and:
+        // the content of these files is intentionally swapped
+        folder.resolve('dir2/foo').text = "I'm bar"
+        folder.resolve('dir2/bar').text = "I'm foo"
+
+        when:
+        def hash1 = HashBuilder.hashDirSha256(HashBuilder.defaultHasher(), folder.resolve('dir1'), folder.resolve('dir1'))
+        and:
+        def hash2 = HashBuilder.hashDirSha256(HashBuilder.defaultHasher(), folder.resolve('dir2'), folder.resolve('dir2'))
+
+        then:
+        hash1.hash() != hash2.hash()
     }
 }

@@ -29,11 +29,12 @@ process sayHello {
   input:
   val x
   
+  script:
   """
   ${params.command} '$x world!'
   """
 }
 
 workflow {
-   Channel.of('Bojour', 'Ciao', 'Hello', 'Hola', 'Γεια σου') | sayHello
+   channel.of('Bojour', 'Ciao', 'Hello', 'Hola', 'Γεια σου') | sayHello
 }

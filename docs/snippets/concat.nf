@@ -1,5 +1,5 @@
-a = Channel.of( 'a', 'b', 'c' )
-b = Channel.of( 1, 2, 3 )
-c = Channel.of( 'p', 'q' )
+a = channel.of( 'a', 'b', 'c' )
+b = channel.of( 1, 2, 3 )
+c = channel.of( 'p', 'q' )
 
 c.concat( b, a ).view()

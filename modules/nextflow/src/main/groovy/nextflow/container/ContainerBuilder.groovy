@@ -18,6 +18,7 @@ package nextflow.container
 
 import java.nio.file.Path
 
+import groovy.transform.CompileStatic
 import nextflow.executor.BashWrapperBuilder
 import nextflow.util.Escape
 import nextflow.util.MemoryUnit
@@ -27,30 +28,29 @@ import nextflow.util.PathTrie
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
 abstract class ContainerBuilder<V extends ContainerBuilder> {
 
     /**
      * Create a builder instance given the container engine
      */
-    static ContainerBuilder create(String engine, String containerImage) {
-        if( engine == 'docker' )
-            return new DockerBuilder(containerImage)
-        if( engine == 'podman' )
-            return new PodmanBuilder(containerImage)
-        if( engine == 'singularity' )
-            return new SingularityBuilder(containerImage)
-        if( engine == 'apptainer' )
-            return new ApptainerBuilder(containerImage)
-        if( engine == 'udocker' )
-            return new UdockerBuilder(containerImage)
-        if( engine == 'sarus' )
-            return new SarusBuilder(containerImage)
-        if( engine == 'shifter' )
-            return new ShifterBuilder(containerImage)
-        if( engine == 'charliecloud' )
-            return new CharliecloudBuilder(containerImage)
+    static ContainerBuilder create(ContainerConfig config, String containerImage) {
+        if( config instanceof DockerConfig )
+            return new DockerBuilder(containerImage, config)
+        if( config instanceof PodmanConfig )
+            return new PodmanBuilder(containerImage, config)
+        if( config instanceof SingularityConfig )
+            return new SingularityBuilder(containerImage, config)
+        if( config instanceof ApptainerConfig )
+            return new ApptainerBuilder(containerImage, config)
+        if( config instanceof SarusConfig )
+            return new SarusBuilder(containerImage, config)
+        if( config instanceof ShifterConfig )
+            return new ShifterBuilder(containerImage, config)
+        if( config instanceof CharliecloudConfig )
+            return new CharliecloudBuilder(containerImage, config)
         //
-        throw new IllegalArgumentException("Unknown container engine: $engine")
+        throw new IllegalArgumentException("Unknown container engine: $config.engine")
     }
 
     final protected List env = []
@@ -83,6 +83,8 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
     protected boolean mountWorkDir = true
 
     protected boolean privileged
+
+    protected String platform
 
     String getImage() { image }
 
@@ -118,6 +120,11 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
         else
             throw new IllegalArgumentException("Not a supported memory value")
 
+        return (V)this
+    }
+
+    V setPlatform(String platform) {
+        this.platform = platform
         return (V)this
     }
 

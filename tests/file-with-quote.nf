@@ -20,6 +20,7 @@ process foo {
   path 'a b.txt'
   output:
   path 'x z.txt'
+  script:
   '''
   cat 'a b.txt' > 'x z.txt'
   '''

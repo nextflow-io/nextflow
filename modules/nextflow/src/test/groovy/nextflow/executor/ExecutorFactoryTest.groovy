@@ -20,7 +20,6 @@ import nextflow.executor.local.LocalExecutor
 import spock.lang.Specification
 
 import nextflow.Session
-import nextflow.k8s.K8sExecutor
 import nextflow.script.ProcessConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
@@ -50,7 +49,6 @@ class ExecutorFactoryTest extends Specification {
         factory.getExecutorClass('pbs') == PbsExecutor
         factory.getExecutorClass('slurm') == SlurmExecutor
         factory.getExecutorClass('condor') == CondorExecutor
-        factory.getExecutorClass('k8s') == K8sExecutor
         factory.getExecutorClass('x') == XExecutor  // <-- this is loaded by the name
 
         when:

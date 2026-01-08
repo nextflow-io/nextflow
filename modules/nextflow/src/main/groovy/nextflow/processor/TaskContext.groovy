@@ -34,6 +34,7 @@ import nextflow.Global
 import nextflow.exception.ProcessException
 import nextflow.script.ScriptBinding
 import nextflow.util.KryoHelper
+import nextflow.util.TestOnly
 /**
  * Map used to delegate variable resolution to script scope
  *
@@ -91,7 +92,7 @@ class TaskContext implements Map<String,Object>, Cloneable {
         log.trace "Binding names for '$name' > $variableNames"
     }
 
-    /** ONLY FOR TEST PURPOSE -- do not use */
+    @TestOnly
     protected TaskContext() { }
 
     TaskContext clone() {

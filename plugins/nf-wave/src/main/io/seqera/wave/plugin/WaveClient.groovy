@@ -17,7 +17,7 @@
 
 package io.seqera.wave.plugin
 
-import static io.seqera.wave.util.DockerHelper.*
+import static nextflow.util.SysHelper.*
 
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -26,27 +26,24 @@ import java.nio.file.Path
 import java.time.Duration
 import java.time.Instant
 import java.time.OffsetDateTime
-import java.time.temporal.ChronoUnit
+import java.time.ZoneId
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import java.util.function.Predicate
 
 import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
+import com.google.common.util.concurrent.RateLimiter
 import com.google.common.util.concurrent.UncheckedExecutionException
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import dev.failsafe.Failsafe
-import dev.failsafe.RetryPolicy
-import dev.failsafe.event.EventListener
-import dev.failsafe.event.ExecutionAttemptedEvent
-import dev.failsafe.function.CheckedSupplier
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
+import io.seqera.http.HxClient
+import io.seqera.util.trace.TraceUtils
 import io.seqera.wave.api.BuildStatusResponse
 import io.seqera.wave.api.ContainerStatus
 import io.seqera.wave.api.ContainerStatusResponse
@@ -54,12 +51,13 @@ import io.seqera.wave.api.PackagesSpec
 import io.seqera.wave.plugin.config.TowerConfig
 import io.seqera.wave.plugin.config.WaveConfig
 import io.seqera.wave.plugin.exception.BadResponseException
-import io.seqera.wave.plugin.exception.UnauthorizedException
 import io.seqera.wave.plugin.packer.Packer
+import io.seqera.wave.util.DockerHelper
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.container.inspect.ContainerInspectMode
 import nextflow.container.resolver.ContainerInfo
+import nextflow.container.resolver.ContainerMeta
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.fusion.FusionConfig
 import nextflow.processor.Architecture
@@ -91,9 +89,7 @@ class WaveClient {
 
     public static final List<String> DEFAULT_CONDA_CHANNELS = ['conda-forge','bioconda']
 
-    private static final String DEFAULT_DOCKER_PLATFORM = 'linux/amd64'
-
-    final private HttpClient httpClient
+    final private HxClient httpClient
 
     final private WaveConfig config
 
@@ -111,12 +107,6 @@ class WaveClient {
 
     private Session session
 
-    private volatile String accessToken
-
-    private volatile String refreshToken
-
-    private CookieManager cookieManager
-
     private List<String> condaChannels
 
     final private String waveRegistry
@@ -124,6 +114,8 @@ class WaveClient {
     final private boolean awsFargate
 
     final private URL s5cmdConfigUrl
+
+    final private RateLimiter limiter
 
     WaveClient(Session session) {
         this.session = session
@@ -137,13 +129,12 @@ class WaveClient {
         log.debug "Wave config: $config"
         this.packer = new Packer().withPreserveTimestamp(config.preserveFileTimestamp())
         this.waveRegistry = new URI(endpoint).getAuthority()
+        this.limiter = RateLimiter.create( config.httpOpts().maxRate().rate  )
         // create cache
         this.cache = CacheBuilder<String, Handle>
             .newBuilder()
             .expireAfterWrite(config.tokensCacheMaxDuration().toSeconds(), TimeUnit.SECONDS)
             .build()
-        // the cookie manager
-        cookieManager = new CookieManager()
         // create http client
         this.httpClient = newHttpClient()
     }
@@ -151,11 +142,33 @@ class WaveClient {
     /* only for testing */
     protected WaveClient() { }
 
-    protected HttpClient newHttpClient() {
+    /**
+     * Creates the main HTTP client for Wave/Tower API communication.
+     * This client includes Bearer token authentication for secure API calls.
+     *
+     * @return An {@link HxClient} configured with authentication tokens
+     */
+    protected HxClient newHttpClient() {
+        final refreshUrl = tower.refreshToken ? "${tower.endpoint}/oauth/access_token" : null
+        return HxClient.newBuilder()
+                .httpClient(newHttpClient0())
+                .bearerToken(tower.accessToken)
+                .refreshToken(tower.refreshToken)
+                .refreshTokenUrl(refreshUrl)
+                .retryConfig(config.retryOpts())
+                .refreshCookiePolicy(CookiePolicy.ACCEPT_ALL)
+                .build()
+    }
+
+    /**
+     * Creates the underlying Java HTTP client with common configuration.
+     *
+     * @return A configured {@link HttpClient} instance
+     */
+    protected HttpClient newHttpClient0() {
         final builder = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)
                 .followRedirects(HttpClient.Redirect.NEVER)
-                .cookieHandler(cookieManager)
                 .connectTimeout(config.httpOpts().connectTimeout())
         // use virtual threads executor if enabled
         if( Threads.useVirtual() )
@@ -164,9 +177,25 @@ class WaveClient {
         return builder.build()
     }
 
-    WaveConfig config() { return config }
+    /**
+     * Creates an HTTP client without authentication for fetching external resources.
+     * <p>
+     * This client is used for requests to external URLs (e.g., public S3 buckets)
+     * that do not require or support Bearer token authentication. Services like
+     * AWS S3 reject requests with unsupported Authorization headers.
+     *
+     * @return An {@link HxClient} without authentication configuration
+     * @see #newHttpClient() for authenticated Wave/Tower API calls
+     */
+    @Memoized
+    protected HxClient plainHttpClient() {
+        return HxClient.newBuilder()
+                .httpClient(newHttpClient0())
+                .retryConfig(config.retryOpts())
+                .build()
+    }
 
-    Boolean enabled() { return config.enabled() }
+    WaveConfig config() { return config }
 
     protected ContainerLayer makeLayer(ResourcesBundle bundle) {
         final result = packer.layer(bundle.content())
@@ -222,10 +251,12 @@ class WaveClient {
                 fingerprint: assets.fingerprint(),
                 freeze: config.freezeMode(),
                 format: assets.singularity ? 'sif' : null,
-                dryRun: ContainerInspectMode.active(),
+                dryRun: ContainerInspectMode.dryRun(),
                 mirror: config.mirrorMode(),
                 scanMode: config.scanMode(),
-                scanLevels: config.scanAllowedLevels()
+                scanLevels: config.scanAllowedLevels(),
+                buildCompression: config.buildCompression(),
+                buildTemplate: config.buildTemplate()
         )
     }
 
@@ -249,15 +280,30 @@ class WaveClient {
                 towerEndpoint: tower.endpoint,
                 workflowId: tower.workflowId,
                 freeze: config.freezeMode(),
-                dryRun: ContainerInspectMode.active(),
+                dryRun: ContainerInspectMode.dryRun(),
                 mirror: config.mirrorMode(),
                 scanMode: config.scanMode(),
-                scanLevels: config.scanAllowedLevels()
+                scanLevels: config.scanAllowedLevels(),
+                buildCompression: config.buildCompression(),
+                buildTemplate: config.buildTemplate()
         )
         return sendRequest(request)
     }
 
+    private void checkLimiter() {
+        final ts = System.currentTimeMillis()
+        try {
+            limiter.acquire()
+        } finally {
+            final delta = System.currentTimeMillis()-ts
+            if( delta>0 )
+                log.debug "Request limiter blocked ${Duration.ofMillis(delta)}"
+        }
+    }
+
+
     SubmitContainerTokenResponse sendRequest(SubmitContainerTokenRequest request) {
+        checkLimiter()
         return sendRequest0(request, 1)
     }
 
@@ -265,39 +311,25 @@ class WaveClient {
         assert endpoint, 'Missing wave endpoint'
         assert !endpoint.endsWith('/'), "Endpoint url must not end with a slash - offending value: $endpoint"
 
-        // update the request token
-        accessToken ?= tower.accessToken
-        refreshToken ?= tower.refreshToken
-
         // set the request access token
-        request.towerAccessToken = accessToken
-        request.towerRefreshToken = refreshToken
+        request.towerAccessToken = httpClient.currentJwtToken
+        request.towerRefreshToken = httpClient.currentRefreshToken
 
+        final trace = TraceUtils.rndTrace()
         final body = JsonOutput.toJson(request)
         final uri = URI.create("${endpoint}/v1alpha2/container")
         log.debug "Wave request: $uri; attempt=$attempt - request: $request"
         final req = HttpRequest.newBuilder()
                 .uri(uri)
-                .headers('Content-Type','application/json')
+                .headers('Content-Type','application/json', 'Traceparent', trace)
                 .POST(HttpRequest.BodyPublishers.ofString(body))
                 .build()
 
         try {
-            final resp = httpSend(req)
+            final resp = httpClient.sendAsString(req)
             log.debug "Wave response: statusCode=${resp.statusCode()}; body=${resp.body()}"
             if( resp.statusCode()==200 )
                 return jsonToSubmitResponse(resp.body())
-            if( resp.statusCode()==401 ) {
-                final shouldRetry = request.towerAccessToken
-                        && refreshToken
-                        && attempt==1
-                        && refreshJwtToken0(refreshToken)
-                if( shouldRetry ) {
-                    return sendRequest0(request, attempt+1)
-                }
-                else
-                    throw new UnauthorizedException("Unauthorized [401] - Verify you have provided a valid access token")
-            }
             else
                 throw new BadResponseException("Wave invalid response: POST ${uri} [${resp.statusCode()}] ${resp.body()}")
         }
@@ -347,8 +379,20 @@ class WaveClient {
     protected URL defaultFusionUrl(String platform) {
         final isArm = platform.tokenize('/')?.contains('arm64')
         return isArm
-                ? new URL(FusionConfig.DEFAULT_FUSION_ARM64_URL)
-                : new URL(FusionConfig.DEFAULT_FUSION_AMD64_URL)
+                ? fusionArm64(fusion.snapshotsEnabled())
+                : fusionAmd64(fusion.snapshotsEnabled())
+    }
+
+    protected URL fusionAmd64(boolean snapshots) {
+        return snapshots
+                ? URI.create(FusionConfig.DEFAULT_SNAPSHOT_AMD64_URL).toURL()
+                : URI.create(FusionConfig.DEFAULT_FUSION_AMD64_URL).toURL()
+    }
+
+    protected URL fusionArm64(boolean snapshots) {
+        return snapshots
+            ? URI.create(FusionConfig.DEFAULT_SNAPSHOT_ARM64_URL).toURL()
+            : URI.create(FusionConfig.DEFAULT_FUSION_ARM64_URL).toURL()
     }
 
     protected URL defaultS5cmdUrl(String platform) {
@@ -387,7 +431,7 @@ class WaveClient {
                 .GET()
                 .build()
 
-        final resp = httpSend(req)
+        final resp = plainHttpClient().sendAsString(req)
         final code = resp.statusCode()
         final body = resp.body()
         if( code>=200 && code<400 ) {
@@ -454,8 +498,7 @@ class WaveClient {
         // get the bundle
         final bundle = task.getModuleBundle()
         // get the architecture
-        final arch = task.config.getArchitecture()
-        final dockerArch = arch? arch.dockerArch : DEFAULT_DOCKER_PLATFORM
+        final dockerArch = task.getContainerPlatform()
         // compose the request attributes
         def attrs = new HashMap<String,String>()
         attrs.container = containerImage
@@ -505,7 +548,7 @@ class WaveClient {
                 if( isCondaLocalFile(attrs.conda) ) {
                     // 'conda' attribute is the path to the local conda environment
                     // note: ignore the 'channels' attribute because they are supposed to be provided by the conda file
-                    final condaFile = condaFileFromPath(attrs.conda, null)
+                    final condaFile = DockerHelper.condaFileFromPath(attrs.conda, null)
                     packagesSpec = new PackagesSpec()
                         .withType(PackagesSpec.Type.CONDA)
                         .withCondaOpts(config.condaOpts())
@@ -517,7 +560,7 @@ class WaveClient {
                         .withType(PackagesSpec.Type.CONDA)
                         .withChannels(condaChannels)
                         .withCondaOpts(config.condaOpts())
-                        .withEntries(condaPackagesToList(attrs.conda))
+                        .withEntries(DockerHelper.condaPackagesToList(attrs.conda))
                 }
 
             }
@@ -655,6 +698,24 @@ class WaveClient {
             return true
     }
 
+    ContainerMeta getContainerMeta(String key) {
+        final handle = responses.get(key)
+        if( !handle )
+            return null
+        final resp = handle.response
+        final result = new ContainerMeta()
+        result.requestTime = handle.createdAt?.atZone(ZoneId.systemDefault())?.toOffsetDateTime()
+        result.requestId = resp.requestId
+        result.sourceImage = resp.containerImage
+        result.targetImage = resp.targetImage
+        result.buildId = !resp.mirror ? resp.buildId : null
+        result.mirrorId = resp.mirror ? resp.buildId : null
+        result.scanId = resp.scanId
+        result.cached = resp.cached
+        result.freeze = resp.freeze
+        return result
+    }
+
     protected static int randomRange(int min, int max) {
         assert min<max
         Random rand = new Random();
@@ -669,7 +730,7 @@ class WaveClient {
             .GET()
             .build();
 
-        final HttpResponse<String> resp = httpSend(req);
+        final HttpResponse<String> resp = httpClient.sendAsString(req);
         log.debug("Wave container status response: statusCode={}; body={}", resp.statusCode(), resp.body())
         if( resp.statusCode()==200 ) {
             return jsonToContainerStatusResponse(resp.body())
@@ -689,7 +750,7 @@ class WaveClient {
             .GET()
             .build();
 
-        final HttpResponse<String> resp = httpSend(req);
+        final HttpResponse<String> resp = httpClient.sendAsString(req);
         log.debug("Wave build status response: statusCode={}; body={}", resp.statusCode(), resp.body())
         if( resp.statusCode()==200 ) {
             return jsonToBuildStatusResponse(resp.body())
@@ -714,87 +775,4 @@ class WaveClient {
         value.startsWith('http://') || value.startsWith('https://')
     }
 
-    protected boolean refreshJwtToken0(String refresh) {
-        log.debug "Token refresh request >> $refresh"
-
-        final req = HttpRequest.newBuilder()
-                .uri(new URI("${tower.endpoint}/oauth/access_token"))
-                .headers('Content-Type',"application/x-www-form-urlencoded")
-                .POST(HttpRequest.BodyPublishers.ofString("grant_type=refresh_token&refresh_token=${URLEncoder.encode(refresh, 'UTF-8')}"))
-                .build()
-
-        final resp = httpSend(req)
-        final code = resp.statusCode()
-        final body = resp.body()
-        log.debug "Refresh cookie response: [${code}] ${body}"
-        if( resp.statusCode() != 200 )
-            return false
-
-        final authCookie = getCookie('JWT')
-        final refreshCookie = getCookie('JWT_REFRESH_TOKEN')
-
-        // set the new bearer token in the current client session
-        if( authCookie?.value ) {
-            log.trace "Updating http client bearer token=$authCookie.value"
-            accessToken = authCookie.value
-        }
-        else {
-            log.warn "Missing JWT cookie from refresh token response ~ $authCookie"
-        }
-
-        // set the new refresh token
-        if( refreshCookie?.value ) {
-            log.trace "Updating http client refresh token=$refreshCookie.value"
-            refreshToken = refreshCookie.value
-        }
-        else {
-            log.warn "Missing JWT_REFRESH_TOKEN cookie from refresh token response ~ $refreshCookie"
-        }
-
-        return true
-    }
-
-    private HttpCookie getCookie(final String cookieName) {
-        for( HttpCookie it : cookieManager.cookieStore.cookies ) {
-            if( it.name == cookieName )
-                return it
-        }
-        return null
-    }
-
-    protected <T> RetryPolicy<T> retryPolicy(Predicate<? extends Throwable> cond, Predicate<T> handle) {
-        final cfg = config.retryOpts()
-        final listener = new EventListener<ExecutionAttemptedEvent<T>>() {
-            @Override
-            void accept(ExecutionAttemptedEvent event) throws Throwable {
-                def msg = "Wave connection failure - attempt: ${event.attemptCount}"
-                if( event.lastResult!=null )
-                    msg += "; response: ${event.lastResult}"
-                if( event.lastFailure != null )
-                    msg += "; exception: [${event.lastFailure.class.name}] ${event.lastFailure.message}"
-                log.debug(msg)
-            }
-        }
-        return RetryPolicy.<T>builder()
-                .handleIf(cond)
-                .handleResultIf(handle)
-                .withBackoff(cfg.delay.toMillis(), cfg.maxDelay.toMillis(), ChronoUnit.MILLIS)
-                .withMaxAttempts(cfg.maxAttempts)
-                .withJitter(cfg.jitter)
-                .onRetry(listener)
-                .build()
-    }
-
-    protected <T> HttpResponse<T> safeApply(CheckedSupplier action) {
-        final retryOnException = (e -> e instanceof IOException) as Predicate<? extends Throwable>
-        final retryOnStatusCode = ((HttpResponse<T> resp) -> resp.statusCode() in SERVER_ERRORS) as Predicate<HttpResponse<T>>
-        final policy = retryPolicy(retryOnException, retryOnStatusCode)
-        return Failsafe.with(policy).get(action)
-    }
-
-    static private final List<Integer> SERVER_ERRORS = [429,500,502,503,504]
-
-    protected HttpResponse<String> httpSend(HttpRequest req)  {
-        return safeApply(() -> httpClient.send(req, HttpResponse.BodyHandlers.ofString()))
-    }
 }

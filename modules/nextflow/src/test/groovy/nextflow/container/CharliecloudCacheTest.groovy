@@ -33,7 +33,7 @@ class CharliecloudCacheTest extends Specification {
     def 'should return a simple name given an image url'() {
 
         given:
-        def helper = new CharliecloudCache(Mock(ContainerConfig))
+        def helper = new CharliecloudCache(Mock(CharliecloudConfig))
 
         expect:
         helper.simpleName(url) == expected
@@ -70,7 +70,7 @@ class CharliecloudCacheTest extends Specification {
         def cacheDir = dir.resolve('nxf.ch')
 
         when:
-        def cache = new CharliecloudCache([cacheDir: "$cacheDir"] as ContainerConfig)
+        def cache = new CharliecloudCache([cacheDir: "$cacheDir"] as CharliecloudConfig)
         then:
         cache.getCacheDir() == cacheDir
 
@@ -86,7 +86,7 @@ class CharliecloudCacheTest extends Specification {
         def cacheDir = dir.resolve('nxf.ch')
 
         when:
-        def cache = new CharliecloudCache(GroovyMock(ContainerConfig), [NXF_CHARLIECLOUD_CACHEDIR: "$cacheDir"])
+        def cache = new CharliecloudCache(new CharliecloudConfig([:]), [NXF_CHARLIECLOUD_CACHEDIR: "$cacheDir"])
         then:
         cache.getCacheDir() == cacheDir
 
@@ -104,7 +104,7 @@ class CharliecloudCacheTest extends Specification {
         def charliecloudCacheDir = dir.resolve('charliecloud')
 
         when:
-        def cache = new CharliecloudCache([cacheDir: "$cacheDir"] as ContainerConfig, [CH_IMAGE_STORAGE: "$charliecloudCacheDir"])
+        def cache = new CharliecloudCache([cacheDir: "$cacheDir"] as CharliecloudConfig, [CH_IMAGE_STORAGE: "$charliecloudCacheDir"])
      
         then:
         cache.getCacheDir() == charliecloudCacheDir
@@ -123,7 +123,7 @@ class CharliecloudCacheTest extends Specification {
         def charliecloudCacheDir = dir.resolve('charliecloud')
 
         when:
-        def cache = new CharliecloudCache(GroovyMock(ContainerConfig), [NXF_CHARLIECLOUD_CACHEDIR: "$cacheDir", CH_IMAGE_STORAGE: "$charliecloudCacheDir"])
+        def cache = new CharliecloudCache(new CharliecloudConfig([:]), [NXF_CHARLIECLOUD_CACHEDIR: "$cacheDir", CH_IMAGE_STORAGE: "$charliecloudCacheDir"])
      
         then:
         cache.getCacheDir() == charliecloudCacheDir
@@ -140,7 +140,7 @@ class CharliecloudCacheTest extends Specification {
         def cacheDir = dir.resolve('nxf.ch')
 
         when:
-        def cache = new CharliecloudCache([cacheDir: "$cacheDir", writeFake: 'false'] as ContainerConfig, [CH_IMAGE_STORAGE: "$cacheDir"])
+        def cache = new CharliecloudCache([cacheDir: "$cacheDir", writeFake: false] as CharliecloudConfig, [CH_IMAGE_STORAGE: "$cacheDir"])
         and:
         cache.getCacheDir()
 
@@ -160,7 +160,7 @@ class CharliecloudCacheTest extends Specification {
         def cacheDir = dir.resolve('nxf.ch')
 
         when:
-        def cache = new CharliecloudCache([writeFake: 'false'] as ContainerConfig, [ NXF_CHARLIECLOUD_CACHEDIR: "$cacheDir", CH_IMAGE_STORAGE: "$cacheDir" ])
+        def cache = new CharliecloudCache([writeFake: false] as CharliecloudConfig, [ NXF_CHARLIECLOUD_CACHEDIR: "$cacheDir", CH_IMAGE_STORAGE: "$cacheDir" ])
         and:
         cache.getCacheDir()
         
@@ -181,7 +181,7 @@ class CharliecloudCacheTest extends Specification {
         def CACHE_PATH = dir.resolve('charliecloud')
         def TARGET_PATH = CACHE_PATH.resolve(LOCAL)
         and:
-        def cache = Spy(CharliecloudCache)
+        def cache = Spy(new CharliecloudCache([:] as CharliecloudConfig))
 
         when:
         def result = cache.downloadCharliecloudImage(IMAGE)
@@ -207,7 +207,7 @@ class CharliecloudCacheTest extends Specification {
         def CACHE_PATH = dir.resolve('charliecloud')
         def TARGET_PATH = CACHE_PATH.resolve(LOCAL)
         and:
-        def cache = Spy(CharliecloudCache)
+        def cache = Spy(new CharliecloudCache([:] as CharliecloudConfig))
         TARGET_PATH.mkdirs()
 
         when:
@@ -232,7 +232,7 @@ class CharliecloudCacheTest extends Specification {
         def dir = Paths.get('/test/path')
         def container = dir.resolve(LOCAL)
         and:
-        def cache = Spy(CharliecloudCache)
+        def cache = Spy(new CharliecloudCache([:] as CharliecloudConfig))
 
         when:
         def file = cache.getCachePathFor(IMAGE)

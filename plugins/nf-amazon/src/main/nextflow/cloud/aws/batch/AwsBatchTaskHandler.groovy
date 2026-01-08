@@ -16,51 +16,21 @@
 
 package nextflow.cloud.aws.batch
 
+
 import static nextflow.cloud.aws.batch.AwsContainerOptionsMapper.*
 
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Instant
 
-import com.amazonaws.services.batch.AWSBatch
-import com.amazonaws.services.batch.model.AWSBatchException
-import com.amazonaws.services.batch.model.ArrayProperties
-import com.amazonaws.services.batch.model.AssignPublicIp
-import com.amazonaws.services.batch.model.AttemptContainerDetail
-import com.amazonaws.services.batch.model.ClientException
-import com.amazonaws.services.batch.model.ContainerOverrides
-import com.amazonaws.services.batch.model.ContainerProperties
-import com.amazonaws.services.batch.model.DescribeJobDefinitionsRequest
-import com.amazonaws.services.batch.model.DescribeJobDefinitionsResult
-import com.amazonaws.services.batch.model.DescribeJobsRequest
-import com.amazonaws.services.batch.model.DescribeJobsResult
-import com.amazonaws.services.batch.model.EphemeralStorage
-import com.amazonaws.services.batch.model.EvaluateOnExit
-import com.amazonaws.services.batch.model.Host
-import com.amazonaws.services.batch.model.JobDefinition
-import com.amazonaws.services.batch.model.JobDefinitionType
-import com.amazonaws.services.batch.model.JobDetail
-import com.amazonaws.services.batch.model.JobTimeout
-import com.amazonaws.services.batch.model.KeyValuePair
-import com.amazonaws.services.batch.model.LogConfiguration
-import com.amazonaws.services.batch.model.MountPoint
-import com.amazonaws.services.batch.model.NetworkConfiguration
-import com.amazonaws.services.batch.model.RegisterJobDefinitionRequest
-import com.amazonaws.services.batch.model.RegisterJobDefinitionResult
-import com.amazonaws.services.batch.model.ResourceRequirement
-import com.amazonaws.services.batch.model.ResourceType
-import com.amazonaws.services.batch.model.RetryStrategy
-import com.amazonaws.services.batch.model.RuntimePlatform
-import com.amazonaws.services.batch.model.SubmitJobRequest
-import com.amazonaws.services.batch.model.SubmitJobResult
-import com.amazonaws.services.batch.model.TerminateJobRequest
-import com.amazonaws.services.batch.model.Volume
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.BuildInfo
 import nextflow.SysEnv
+import nextflow.cloud.aws.batch.model.ContainerPropertiesModel
+import nextflow.cloud.aws.batch.model.RegisterJobDefinitionModel
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.container.ContainerNameValidator
 import nextflow.exception.ProcessException
@@ -68,6 +38,7 @@ import nextflow.exception.ProcessSubmitException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.fusion.FusionAwareTask
+import nextflow.fusion.FusionConfig
 import nextflow.processor.BatchContext
 import nextflow.processor.BatchHandler
 import nextflow.processor.TaskArrayRun
@@ -77,6 +48,40 @@ import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
 import nextflow.util.CacheHelper
 import nextflow.util.MemoryUnit
+import nextflow.util.TestOnly
+import software.amazon.awssdk.services.batch.BatchClient
+import software.amazon.awssdk.services.batch.model.ArrayProperties
+import software.amazon.awssdk.services.batch.model.AssignPublicIp
+import software.amazon.awssdk.services.batch.model.AttemptContainerDetail
+import software.amazon.awssdk.services.batch.model.BatchException
+import software.amazon.awssdk.services.batch.model.ClientException
+import software.amazon.awssdk.services.batch.model.ContainerOverrides
+import software.amazon.awssdk.services.batch.model.DescribeJobDefinitionsRequest
+import software.amazon.awssdk.services.batch.model.DescribeJobDefinitionsResponse
+import software.amazon.awssdk.services.batch.model.DescribeJobsRequest
+import software.amazon.awssdk.services.batch.model.EphemeralStorage
+import software.amazon.awssdk.services.batch.model.EvaluateOnExit
+import software.amazon.awssdk.services.batch.model.Host
+import software.amazon.awssdk.services.batch.model.JobDefinition
+import software.amazon.awssdk.services.batch.model.JobDefinitionType
+import software.amazon.awssdk.services.batch.model.JobDetail
+import software.amazon.awssdk.services.batch.model.JobStatus
+import software.amazon.awssdk.services.batch.model.JobTimeout
+import software.amazon.awssdk.services.batch.model.KeyValuePair
+import software.amazon.awssdk.services.batch.model.LogConfiguration
+import software.amazon.awssdk.services.batch.model.MountPoint
+import software.amazon.awssdk.services.batch.model.NetworkConfiguration
+import software.amazon.awssdk.services.batch.model.PlatformCapability
+import software.amazon.awssdk.services.batch.model.RegisterJobDefinitionRequest
+import software.amazon.awssdk.services.batch.model.RegisterJobDefinitionResponse
+import software.amazon.awssdk.services.batch.model.ResourceRequirement
+import software.amazon.awssdk.services.batch.model.ResourceType
+import software.amazon.awssdk.services.batch.model.RetryStrategy
+import software.amazon.awssdk.services.batch.model.RuntimePlatform
+import software.amazon.awssdk.services.batch.model.SubmitJobRequest
+import software.amazon.awssdk.services.batch.model.SubmitJobResponse
+import software.amazon.awssdk.services.batch.model.TerminateJobRequest
+import software.amazon.awssdk.services.batch.model.Volume
 /**
  * Implements a task handler for AWS Batch jobs
  */
@@ -102,7 +107,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
     private AwsBatchExecutor executor
 
-    private AWSBatch client
+    private BatchClient client
 
     private volatile String jobId
 
@@ -116,12 +121,17 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
     final static private Map<String,String> jobDefinitions = [:]
 
+    final static private List<String> MISCONFIGURATION_REASONS = List.of(
+        "MISCONFIGURATION:JOB_RESOURCE_REQUIREMENT",
+        "MISCONFIGURATION:COMPUTE_ENVIRONMENT_MAX_RESOURCE"
+    )
+
     /**
      * Batch context shared between multiple task handlers
      */
     private BatchContext<String,JobDetail> context
 
-    /** only for testing purpose -- do not use */
+    @TestOnly
     protected AwsBatchTaskHandler() {}
 
     /**
@@ -197,18 +207,19 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
         // retrieve the status for the specified job and along with the next batch
         log.trace "[AWS BATCH] requesting describe jobs=${jobIdsToString(batchIds)}"
-        DescribeJobsResult resp = client.describeJobs(new DescribeJobsRequest().withJobs(batchIds))
-        if( !resp || !resp.getJobs() ) {
+        final request = DescribeJobsRequest.builder().jobs(batchIds).build()
+        final resp = client.describeJobs(request)
+        if( !resp || !resp.jobs() ) {
             log.debug "[AWS BATCH] cannot retrieve running status for job=$jobId"
             return null
         }
 
         JobDetail result=null
-        for( JobDetail entry : resp.jobs ) {
+        for( JobDetail entry : resp.jobs() ) {
             // cache the response in the batch collector
-            context?.put( entry.jobId, entry )
+            context?.put( entry.jobId(), entry )
             // return the job detail for the specified job
-            if( entry.jobId == jobId )
+            if( entry.jobId() == jobId )
                 result = entry
         }
         if( !result ) {
@@ -229,24 +240,52 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         if( !jobId || !isSubmitted() )
             return false
         final job = describeJob(jobId)
-        final result = job?.status in ['RUNNING', 'SUCCEEDED', 'FAILED']
+        final result = job?.status() in [JobStatus.RUNNING, JobStatus.SUCCEEDED, JobStatus.FAILED]
         if( result )
             this.status = TaskStatus.RUNNING
+        else
+            checkIfUnschedulable(job)
         // fetch the task arn
         if( !taskArn )
-            taskArn = job?.getContainer()?.getTaskArn()
+            taskArn = job?.container()?.taskArn()
         return result
+    }
+
+    protected void checkIfUnschedulable(JobDetail job) {
+        if( job ) try {
+            checkIfUnschedulable0(job)
+        }
+        catch (Throwable e) {
+            log.warn "Unable to check if job is unschedulable - ${e.message}", e
+        }
+    }
+
+    private void checkIfUnschedulable0(JobDetail job) {
+        final reason = errReason(job)
+        if( MISCONFIGURATION_REASONS.any((it) -> reason.contains(it)) ) {
+            final msg = "unschedulable AWS Batch job ${jobId} (${task.lazyName()}) - $reason"
+            // If indicated in aws.batch config kill the job an produce a failure
+            if( executor.awsOptions.terminateUnschedulableJobs() ){
+                log.warn("Terminating ${jobId}")
+                kill()
+                task.error = new ProcessException("Unschedulable AWS Batch job ${jobId} - $reason")
+                status = TaskStatus.COMPLETED
+            }
+            else {
+                log.warn "Detected $msg"
+            }
+        }
     }
 
     protected String errReason(JobDetail job){
         if(!job)
             return "(unknown)"
         final result = new ArrayList(2)
-        if( job.statusReason )
-            result.add(job.statusReason)
-        final AttemptContainerDetail container = job.attempts ? job.attempts[-1].container : null
-        if( container?.reason )
-            result.add(container.reason)
+        if( job.statusReason() )
+            result.add(job.statusReason())
+        final AttemptContainerDetail container = job.attempts() ? job.attempts()[-1].container() : null
+        if( container?.reason() )
+            result.add(container.reason())
         return result.join(' - ')
     }
 
@@ -256,19 +295,23 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     @Override
     boolean checkIfCompleted() {
         assert jobId
+        if( isCompleted() ) {
+            //Task can be marked as completed before running by unschedulable reason. Return true
+            return true
+        }
         if( !isRunning() )
             return false
         final job = describeJob(jobId)
-        final done = job?.status in ['SUCCEEDED', 'FAILED']
+        final done = job?.status() in [JobStatus.SUCCEEDED, JobStatus.FAILED]
         if( done ) {
-            // take the exit code of the container, if 0 (successful) or missing
+            // take the exit code of the container, if missing (null)
             // take the exit code from the `.exitcode` file create by nextflow
             // the rationale of this is that, in case of error, the exit code return
             // by the batch API is more reliable.
-            task.exitStatus = job.container.exitCode ?: readExitFile()
+            task.exitStatus = job.container()?.exitCode() != null ? job.container().exitCode() : readExitFile()
             // finalize the task
             task.stdout = outputFile
-            if( job?.status == 'FAILED' || task.exitStatus==Integer.MAX_VALUE ) {
+            if( job?.status() == JobStatus.FAILED || task.exitStatus==Integer.MAX_VALUE ) {
                 final reason = errReason(job)
                 // retry all CannotPullContainer errors apart when it does not exist or cannot be accessed
                 final unrecoverable = reason.contains('CannotPullContainer') && reason.contains('unauthorized')
@@ -284,7 +327,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         return false
     }
 
-    private int readExitFile() {
+    protected int readExitFile() {
         try {
             exitFile.text as Integer
         }
@@ -298,9 +341,8 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      * {@inheritDoc}
      */
     @Override
-    void kill() {
+    protected void killTask() {
         assert jobId
-        log.trace "[AWS BATCH] Process `${task.lazyName()}` - killing job=$jobId"
         final targetId = normaliseJobId(jobId)
         if( executor.shouldDeleteJob(targetId)) {
             terminateJob(targetId)
@@ -316,11 +358,15 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     }
 
     protected void terminateJob(String jobId) {
-        final req = new TerminateJobRequest() .withJobId(jobId) .withReason('Job killed by NF')
+        log.debug "[AWS BATCH] cleanup = terminating job $jobId"
+        final req = TerminateJobRequest.builder()
+            .jobId(jobId)
+            .reason('Job killed by NF')
+            .build()
         final batch = bypassProxy(client)
         executor.reaper.submit({
             final resp = batch.terminateJob(req)
-            log.debug "[AWS BATCH] killing job=$jobId; response=$resp"
+            log.debug "[AWS BATCH] cleanup = killing job $jobId"
         })
     }
 
@@ -346,7 +392,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         // note use the real client object because this method
         // is supposed to be invoked by the thread pool
         final resp = submit0(bypassProxy(client), req)
-        updateStatus(resp.jobId, req.getJobQueue())
+        updateStatus(resp.jobId(), req.jobQueue())
         log.debug "[AWS BATCH] Process `${task.lazyName()}` submitted > job=$jobId; work-dir=${task.getWorkDirStr()}"
     }
 
@@ -379,7 +425,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         createTaskWrapper().build()
     }
 
-    protected AWSBatch bypassProxy(AWSBatch batch) {
+    protected BatchClient bypassProxy(BatchClient batch) {
         batch instanceof AwsBatchProxy ? batch.getClient() : batch
     }
 
@@ -432,7 +478,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
                 return resolveJobDefinition0(task)
             }
             catch (ClientException e) {
-                if( e.statusCode != 404 || attempt++ > MAX_ATTEMPTS)
+                if( e.statusCode() != 404 || attempt++ > MAX_ATTEMPTS)
                     throw e
 
                 final delay = (Math.pow(DEFAULT_BACK_OFF_BASE, attempt) as long) * DEFAULT_BACK_OFF_DELAY
@@ -446,7 +492,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     protected String resolveJobDefinition0(TaskRun task) {
         final req = makeJobDefRequest(task)
         final container = task.getContainer()
-        final token = req.getParameters().get('nf-token')
+        final token = req.parameters.get('nf-token')
         final jobKey = "$container:$token".toString()
         if( jobDefinitions.containsKey(jobKey) )
             return jobDefinitions[jobKey]
@@ -479,15 +525,16 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      * Create a Batch job definition request object for the specified Docker image
      *
      * @param image The Docker container image for which is required to create a Batch job definition
-     * @return An instance of {@link com.amazonaws.services.batch.model.RegisterJobDefinitionRequest} for the specified Docker image
+     * @return An instance of {@link RegisterJobDefinitionModel} for the specified Docker image
      */
-    protected RegisterJobDefinitionRequest makeJobDefRequest(TaskRun task) {
+    @CompileStatic
+    protected RegisterJobDefinitionModel makeJobDefRequest(TaskRun task) {
         final uniq = new ArrayList()
         final result = configJobDefRequest(task, uniq)
 
         // create a job marker uuid
         def hash = computeUniqueToken(uniq)
-        result.setParameters(['nf-token':hash])
+        result.parameters(['nf-token':hash])
 
         return result
     }
@@ -505,16 +552,17 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      *      A list used to collect values that should be used to create a unique job definition Id for the given job request.
      *      It should be used to return such values in the calling context
      * @return
-     *      An instance of {@link com.amazonaws.services.batch.model.RegisterJobDefinitionRequest} for the specified Docker image
+     *      An instance of {@link RegisterJobDefinitionModel} for the specified Docker image
      */
-    protected RegisterJobDefinitionRequest configJobDefRequest(TaskRun task, List hashingTokens) {
+    @CompileStatic
+    protected RegisterJobDefinitionModel configJobDefRequest(TaskRun task, List hashingTokens) {
         final image = task.getContainer()
         final name = normalizeJobDefinitionName(image)
         final opts = getAwsOptions()
 
-        final result = new RegisterJobDefinitionRequest()
-        result.setJobDefinitionName(name)
-        result.setType(JobDefinitionType.Container)
+        final result = new RegisterJobDefinitionModel()
+        result.jobDefinitionName(name)
+        result.type(JobDefinitionType.CONTAINER)
 
         // create the container opts based on task config
         final containerOpts = task.getConfig().getContainerOptionsMap()
@@ -522,27 +570,27 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
         // container definition
         // https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-cpu-memory-error.html
-        final reqCpus = new ResourceRequirement().withType(ResourceType.VCPU).withValue('1')
-        final reqMem = new ResourceRequirement().withType(ResourceType.MEMORY).withValue( opts.fargateMode ? '2048' : '1024')
+        final reqCpus = ResourceRequirement.builder().type(ResourceType.VCPU).value('1').build()
+        final reqMem = ResourceRequirement.builder().type(ResourceType.MEMORY).value( opts.fargateMode ? '2048' : '1024').build()
         container
-                .withImage(image)
-                .withCommand('true')
+                .image(image)
+                .command('true')
                 // note the actual command, memory and cpus are overridden when the job is executed
-                .withResourceRequirements( reqCpus, reqMem )
+                .resourceRequirements( reqCpus, reqMem )
 
         final jobRole = opts.getJobRole()
         if( jobRole )
-            container.setJobRoleArn(jobRole)
+            container.jobRoleArn(jobRole)
 
         if( opts.executionRole )
-            container.setExecutionRoleArn(opts.executionRole)
+            container.executionRoleArn(opts.executionRole)
         
         final logsGroup = opts.getLogsGroup()
         if( logsGroup )
-            container.setLogConfiguration(getLogConfiguration(logsGroup, opts.getRegion()))
+            container.logConfiguration(getLogConfiguration(logsGroup, opts.getRegion()))
 
         if( fusionEnabled() )
-            container.setPrivileged(true)
+            container.privileged(true)
 
         final mountsMap = new LinkedHashMap( 10)
         final awscli = opts.cliPath
@@ -562,18 +610,18 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
         // Fargate specific settings
         if( opts.isFargateMode() ) {
-            result.setPlatformCapabilities(List.of('FARGATE'))
-            container.withNetworkConfiguration( new NetworkConfiguration().withAssignPublicIp(AssignPublicIp.ENABLED) )
+            result.platformCapabilities(List.of(PlatformCapability.FARGATE))
+            container.networkConfiguration( NetworkConfiguration.builder().assignPublicIp(AssignPublicIp.ENABLED).build() )
             // use at least 50 GB as disk local storage
             final diskGb = task.config.getDisk()?.toGiga()?.toInteger() ?: 50
-            container.withEphemeralStorage( new EphemeralStorage().withSizeInGiB(diskGb) )
+            container.ephemeralStorage( EphemeralStorage.builder().sizeInGiB(diskGb).build() )
             // check for arm64 cpu architecture
             if( task.config.getArchitecture()?.arch == 'arm64' )
-                container.withRuntimePlatform(new RuntimePlatform().withCpuArchitecture('ARM64'))
+                container.runtimePlatform(RuntimePlatform.builder().cpuArchitecture('ARM64').build())
         }
 
         // finally set the container options
-        result.setContainerProperties(container)
+        result.containerProperties(container)
 
         // add to this list all values that has to contribute to the
         // job definition unique name creation
@@ -587,15 +635,16 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
     @Memoized 
     LogConfiguration getLogConfiguration(String name, String region) {
-        new LogConfiguration()
-            .withLogDriver('awslogs')
-            .withOptions([
+        LogConfiguration.builder()
+            .logDriver('awslogs')
+            .options([
                 'awslogs-region': region,
                 'awslogs-group': name
-            ])
+            ]).build()
     }
 
-    protected void addVolumeMountsToContainer(Map<String,String> mountsMap, ContainerProperties container) {
+    @CompileStatic
+    protected void addVolumeMountsToContainer(Map<String,String> mountsMap, ContainerPropertiesModel container) {
         final mounts = new ArrayList<MountPoint>(mountsMap.size())
         final volumes = new  ArrayList<Volume>(mountsMap.size())
         for( Map.Entry<String,String> entry : mountsMap.entrySet() ) {
@@ -607,22 +656,23 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             if( parts.size()>3 )
                 throw new IllegalArgumentException("Not a valid volume mount syntax: $entry.value")
 
-            def mount = new MountPoint()
-                    .withSourceVolume(mountName)
-                    .withContainerPath(hostPath)
-                    .withReadOnly(readOnly)
+            def mount = MountPoint.builder()
+                    .sourceVolume(mountName)
+                    .containerPath(hostPath)
+                    .readOnly(readOnly)
+                    .build()
             mounts << mount
 
-            def vol = new Volume()
-                    .withName(mountName)
-                    .withHost(new Host()
-                    .withSourcePath(containerPath))
+            def vol = Volume.builder()
+                    .name(mountName)
+                    .host(Host.builder().sourcePath(containerPath).build())
+                    .build()
             volumes << vol
         }
 
         if( mountsMap ) {
-            container.setMountPoints(mounts)
-            container.setVolumes(volumes)
+            container.mountPoints(mounts)
+            container.volumes(volumes)
         }
     }
 
@@ -635,32 +685,35 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      */
     protected String findJobDef(String name, String jobId) {
         log.trace "[AWS BATCH] checking job definition with name=$name; jobid=$jobId"
-        final req = new DescribeJobDefinitionsRequest().withJobDefinitionName(name)
+        final req = DescribeJobDefinitionsRequest.builder()
+            .jobDefinitionName(name)
+            .build()
         // bypass the proxy because this method is invoked during a
         // job submit request that's already in a separate thread pool request
         // therefore it's protected by a TooManyRequestsException
         final res = describeJobDefinitions0(bypassProxy(this.client), req)
-        final jobs = res.getJobDefinitions()
+        final jobs = res.jobDefinitions()
         if( jobs.size()==0 )
             return null
 
-        def job = jobs.find { JobDefinition it -> it.status == 'ACTIVE' && it.parameters?.'nf-token' == jobId  }
-        return job ? "$name:$job.revision" : null
+        def job = jobs.find { JobDefinition it -> it.status() == 'ACTIVE' && it.parameters()?.'nf-token' == jobId  }
+        return job ? "$name:${job.revision()}" : null
     }
 
     /**
      * Create (aka register) a new Batch job definition
      *
-     * @param req A {@link RegisterJobDefinitionRequest} representing the Batch jib definition to create
+     * @param model A {@link RegisterJobDefinitionRequest} representing the Batch jib definition to create
      * @return The fully qualified Batch job definition name eg {@code my-job-definition:3}
      */
-    protected String createJobDef(RegisterJobDefinitionRequest req) {
+    protected String createJobDef(RegisterJobDefinitionModel model) {
         // add nextflow tags
-        req.addTagsEntry('nextflow.io/createdAt', Instant.now().toString())
-        req.addTagsEntry('nextflow.io/version', BuildInfo.version)
+        model.addTagsEntry('nextflow.io/createdAt', Instant.now().toString())
+        model.addTagsEntry('nextflow.io/version', BuildInfo.version)
         // create the job def
+        final req = model.toBatchRequest()
         final res = createJobDef0(bypassProxy(client), req) // bypass the client proxy! see #1024
-        return "${res.jobDefinitionName}:$res.revision"
+        return "${res.jobDefinitionName()}:${res.revision()}"
     }
 
     /**
@@ -696,7 +749,12 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     }
 
     protected int maxSpotAttempts() {
-        return executor.awsOptions.maxSpotAttempts
+        final result = executor.awsOptions.maxSpotAttempts
+        if( result )
+            return result
+        // when fusion snapshot is enabled max attempt should be > 0
+        // to enable to allow snapshot retry the job execution in a new ec2 instance
+        return fusionEnabled() && fusionConfig().snapshotsEnabled() ? FusionConfig.DEFAULT_SNAPSHOT_MAX_SPOT_ATTEMPTS : 0
     }
 
     protected String getJobName(TaskRun task) {
@@ -708,7 +766,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      * Create a new Batch job request for the given NF {@link TaskRun}
      *
      * @param task A {@link TaskRun} to be executed as Batch job
-     * @return A {@link com.amazonaws.services.batch.model.SubmitJobRequest} instance representing the Batch job to submit
+     * @return A {@link software.amazon.awssdk.services.batch.model.SubmitJobRequest} instance representing the Batch job to submit
      */
     protected SubmitJobRequest newSubmitRequest(TaskRun task) {
 
@@ -717,18 +775,18 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
          */
         final opts = getAwsOptions()
         final labels = task.config.getResourceLabels()
-        final result = new SubmitJobRequest()
-        result.setJobName(getJobName(task))
-        result.setJobQueue(getJobQueue(task))
-        result.setJobDefinition(getJobDefinition(task))
+        final builder = SubmitJobRequest.builder()
+        builder.jobName(getJobName(task))
+        builder.jobQueue(getJobQueue(task))
+        builder.jobDefinition(getJobDefinition(task))
         if( labels ) {
-            result.setTags(labels)
-            result.setPropagateTags(true)
+            builder.tags(labels)
+            builder.propagateTags(true)
         }
         // set the share identifier
         if( opts.shareIdentifier ) {
-            result.setShareIdentifier(opts.shareIdentifier)
-            result.setSchedulingPriorityOverride(opts.schedulingPriority)
+            builder.shareIdentifier(opts.shareIdentifier)
+            builder.schedulingPriorityOverride(opts.schedulingPriority)
         }
 
         /*
@@ -738,14 +796,15 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         final attempts = maxSpotAttempts()
         if( attempts>0 ) {
             // retry the job when an Ec2 instance is terminate
-            final cond1 = new EvaluateOnExit().withAction('RETRY').withOnStatusReason('Host EC2*')
+            final cond1 = EvaluateOnExit.builder().action('RETRY').onStatusReason('Host EC2*').build()
             // the exit condition prevent to retry for other reason and delegate
             // instead to nextflow error strategy the handling of the error
-            final cond2 = new EvaluateOnExit().withAction('EXIT').withOnReason('*')
-            final retry = new RetryStrategy()
-                    .withAttempts( attempts )
-                    .withEvaluateOnExit(cond1, cond2)
-            result.setRetryStrategy(retry)
+            final cond2 = EvaluateOnExit.builder().action('EXIT').onReason('*').build()
+            final retry = RetryStrategy.builder()
+                    .attempts( attempts )
+                    .evaluateOnExit(cond1, cond2)
+                    .build()
+            builder.retryStrategy(retry)
         }
 
         // set task timeout
@@ -755,43 +814,43 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             if( secs < 60 ) {
                 secs = 60   // Batch minimal allowed timeout is 60 seconds
             }
-            result.setTimeout(new JobTimeout().withAttemptDurationSeconds(secs))
+            builder.timeout(JobTimeout.builder().attemptDurationSeconds(secs).build())
         }
 
         // set the actual command
         final resources = new ArrayList<ResourceRequirement>(5)
-        final container = new ContainerOverrides()
-        container.command = getSubmitCommand()
+        final container = ContainerOverrides.builder()
+        container.command(getSubmitCommand())
         // set the task memory
         final cpus = task.config.getCpus()
         final mem = task.config.getMemory()
         if( mem ) {
             final mega = opts.fargateMode ? normaliseFargateMem(cpus, mem) : mem.toMega()
             if( mega >= 4 )
-                resources << new ResourceRequirement().withType(ResourceType.MEMORY).withValue(mega.toString())
+                resources << ResourceRequirement.builder().type(ResourceType.MEMORY).value(mega.toString()).build()
             else
                 log.warn "Ignoring task ${task.lazyName()} memory directive: ${task.config.getMemory()} -- AWS Batch job memory request cannot be lower than 4 MB"
         }
         // set the task cpus
         if( cpus > 1 )
-            resources << new ResourceRequirement().withType(ResourceType.VCPU).withValue(task.config.getCpus().toString())
+            resources << ResourceRequirement.builder().type(ResourceType.VCPU).value(task.config.getCpus().toString()).build()
 
         final accelerator = task.config.getAccelerator()
         if( accelerator ) {
             if( accelerator.type )
                 log.warn1 "Ignoring task ${task.lazyName()} accelerator type: ${accelerator.type} -- AWS Batch doesn't support accelerator type in job definition"
-            resources << new ResourceRequirement().withType(ResourceType.GPU).withValue(accelerator.request.toString())
+            resources << ResourceRequirement.builder().type(ResourceType.GPU).value(accelerator.request.toString()).build()
         }
 
         if( resources )
-            container.withResourceRequirements(resources)
+            container.resourceRequirements(resources)
 
         // set the environment
         def vars = getEnvironmentVars()
         if( vars )
-            container.setEnvironment(vars)
+            container.environment(vars)
 
-        result.setContainerOverrides(container)
+        builder.containerOverrides(container.build())
 
         // set the array properties
         if( task instanceof TaskArrayRun ) {
@@ -800,10 +859,10 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             if( arraySize > 10_000 )
                 throw new IllegalArgumentException("Job arrays on AWS Batch may not have more than 10,000 tasks")
 
-            result.setArrayProperties(new ArrayProperties().withSize(arraySize))
+            builder.arrayProperties(ArrayProperties.builder().size(arraySize).build())
         }
 
-        return result
+        return builder.build()
     }
 
     /**
@@ -812,16 +871,16 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     protected List<KeyValuePair> getEnvironmentVars() {
         List<KeyValuePair> vars = []
         if( this.environment?.containsKey('NXF_DEBUG') )
-            vars << new KeyValuePair().withName('NXF_DEBUG').withValue(this.environment['NXF_DEBUG'])
+            vars << KeyValuePair.builder().name('NXF_DEBUG').value(this.environment['NXF_DEBUG']).build()
         if( this.getAwsOptions().retryMode && this.getAwsOptions().retryMode in AwsOptions.VALID_RETRY_MODES)
-            vars << new KeyValuePair().withName('AWS_RETRY_MODE').withValue(this.getAwsOptions().retryMode)
+            vars << KeyValuePair.builder().name('AWS_RETRY_MODE').value(this.getAwsOptions().retryMode).build()
         if( this.getAwsOptions().maxTransferAttempts ) {
-            vars << new KeyValuePair().withName('AWS_MAX_ATTEMPTS').withValue(this.getAwsOptions().maxTransferAttempts as String)
-            vars << new KeyValuePair().withName('AWS_METADATA_SERVICE_NUM_ATTEMPTS').withValue(this.getAwsOptions().maxTransferAttempts as String)
+            vars << KeyValuePair.builder().name('AWS_MAX_ATTEMPTS').value(this.getAwsOptions().maxTransferAttempts as String).build()
+            vars << KeyValuePair.builder().name('AWS_METADATA_SERVICE_NUM_ATTEMPTS').value(this.getAwsOptions().maxTransferAttempts as String).build()
         }
         if( fusionEnabled() ) {
             for(Map.Entry<String,String> it : fusionLauncher().fusionEnv()) {
-                vars << new KeyValuePair().withName(it.key).withValue(it.value)
+                vars << KeyValuePair.builder().name(it.key).value(it.value).build()
             }
         }
         return vars
@@ -858,51 +917,89 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         return machineInfo
     }
 
+    /**
+     * Count the number of spot instance reclamations for this job by examining
+     * the job attempts and checking for EC2 spot interruption status reasons
+     *
+     * @param jobId The AWS Batch Job Id
+     * @return The number of times this job was retried due to spot instance reclamation
+     */
+    protected Integer getNumSpotInterruptions(String jobId) {
+        if (!jobId || !isCompleted())
+            return null
+
+        try {
+            def job = describeJob(jobId)
+            if (!job)
+                return null
+            if (!job.attempts())
+                return 0
+
+            int count = 0
+            for (def attempt : job.attempts()) {
+                // Check attempt-level statusReason
+                def attemptReason = attempt.statusReason()
+                // AWS Batch uses "Host EC2 (instance i-xxx) terminated." pattern for spot interruptions
+                // Using startsWith to match the pattern regardless of instance ID
+                if (attemptReason && attemptReason.startsWith('Host EC2')) {
+                    count++
+                }
+            }
+            log.trace "Job $jobId had $count spot interruptions"
+            return count
+        }
+        catch (Exception e) {
+            log.debug "[AWS BATCH] Unable to count spot interruptions for job=$jobId - ${e.message}"
+            return null
+        }
+    }
+
     TraceRecord getTraceRecord() {
         def result = super.getTraceRecord()
         result.put('native_id', jobId)
         result.machineInfo = getMachineInfo()
+        result.numSpotInterruptions = getNumSpotInterruptions(jobId)
         return result
     }
 
     // -- helpers
 
-    static private SubmitJobResult submit0(AWSBatch client, SubmitJobRequest req) {
+    static private SubmitJobResponse submit0(BatchClient client, SubmitJobRequest req) {
         try {
             return client.submitJob(req)
         }
-        catch (AWSBatchException e) {
-            if( e.statusCode>=500 )
+        catch (BatchException e) {
+            if( e.awsErrorDetails().sdkHttpResponse().statusCode() >= 500 )
                 // raise a process exception so that nextflow can try to recover it
-                throw new ProcessSubmitException("Failed to submit job: ${req.jobName} - Reason: ${e.errorCode}", e)
+                throw new ProcessSubmitException("Failed to submit job: ${req.jobName()} - Reason: ${e.awsErrorDetails().errorCode()}", e)
             else
                 // status code < 500 are not expected to be recoverable, just throw it again
                 throw e
         }
     }
 
-    static private DescribeJobDefinitionsResult describeJobDefinitions0(AWSBatch client, DescribeJobDefinitionsRequest req) {
+    static private DescribeJobDefinitionsResponse describeJobDefinitions0(BatchClient client, DescribeJobDefinitionsRequest req) {
         try {
             client.describeJobDefinitions(req)
         }
-        catch (AWSBatchException e) {
-            if( e.statusCode>=500 )
+        catch (BatchException e) {
+            if( e.awsErrorDetails().sdkHttpResponse().statusCode() >= 500 )
                 // raise a process exception so that nextflow can try to recover it
-                throw new ProcessSubmitException("Failed to describe job definitions: ${req.jobDefinitions} - Reason: ${e.errorCode}", e)
+                throw new ProcessSubmitException("Failed to describe job definitions: ${req.jobDefinitions()} - Reason: ${e.awsErrorDetails().errorCode()}", e)
             else
                 // status code < 500 are not expected to be recoverable, just throw it again
                 throw e
         }
     }
 
-    static private RegisterJobDefinitionResult createJobDef0(AWSBatch client, RegisterJobDefinitionRequest req) {
+    static private RegisterJobDefinitionResponse createJobDef0(BatchClient client, RegisterJobDefinitionRequest req) {
         try {
             return client.registerJobDefinition(req)
         }
-        catch (AWSBatchException e) {
-            if( e.statusCode>=500 )
+        catch (BatchException e) {
+            if( e.awsErrorDetails().sdkHttpResponse().statusCode() >= 500 )
                 // raise a process exception so that nextflow can try to recover it
-                throw new ProcessSubmitException("Failed to register job definition: ${req.jobDefinitionName} - Reason: ${e.errorCode}", e)
+                throw new ProcessSubmitException("Failed to register job definition: ${req.jobDefinitionName()} - Reason: ${e.awsErrorDetails().errorCode()}", e)
             else
                 // status code < 500 are not expected to be recoverable, just throw it again
                 throw e

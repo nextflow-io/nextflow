@@ -40,6 +40,7 @@ class SlurmExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
     static private Pattern SUBMIT_REGEX = ~/Submitted batch job (\d+)/
 
     private boolean perCpuMemAllocation
+    private boolean onlyJobState
 
     private boolean hasSignalOpt(TaskConfig config) {
         final opts = config.getClusterOptionsAsString()
@@ -103,7 +104,7 @@ class SlurmExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
         addClusterOptionsDirective(task.config, result)
 
         // add slurm account from config
-        final account = session.getExecConfigProp(getName(), 'account', null) as String
+        final account = config.getExecConfigProp(name, 'account', null) as String
         if( account ) {
             result << '-A' << account
         }
@@ -157,7 +158,13 @@ class SlurmExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
     @Override
     protected List<String> queueStatusCommand(Object queue) {
 
-        final result = ['squeue','--noheader','-o','%i %t', '-t', 'all']
+        final result = ['squeue','--noheader', '-o','%i %t', '-t', 'all']
+
+        if( onlyJobState ) {
+            result << '--only-job-state'
+            // -p and -u cannot be used with --only-job-state
+            return result
+        }
 
         if( queue )
             result << '-p' << queue.toString()
@@ -212,7 +219,8 @@ class SlurmExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
     @Override
     void register() {
         super.register()
-        perCpuMemAllocation = session.getExecConfigProp(name, 'perCpuMemAllocation', false)
+        perCpuMemAllocation = config.getExecConfigProp(name, 'perCpuMemAllocation', false)
+        onlyJobState = config.getExecConfigProp(name, 'onlyJobState', false)
     }
 
     @Override

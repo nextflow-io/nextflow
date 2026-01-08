@@ -22,6 +22,7 @@ import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
+import nextflow.util.TestOnly
 /**
  * CLI sub-command PULL
  *
@@ -37,19 +38,22 @@ class CmdPull extends CmdBase implements HubOptions {
     @Parameter(description = 'project name or repository url to pull', arity = 1)
     List<String> args
 
-    @Parameter(names='-all', description = 'Update all downloaded projects', arity = 0)
+    @Parameter(names=['-a','-all'], description = 'Update all downloaded projects', arity = 0)
     boolean all
 
-    @Parameter(names=['-r','-revision'], description = 'Revision of the project to run (either a git branch, tag or commit SHA number)')
+    @Parameter(names=['-r','-revision'], description = 'Revision of the project to pull (either a git branch, tag or commit SHA number)')
     String revision
 
     @Parameter(names=['-d','-deep'], description = 'Create a shallow clone of the specified depth')
     Integer deep
 
+    @Parameter(names=['-m','-migrate'], description = 'Migrate projects to multi-revision strategy', arity = 0)
+    boolean migrate
+
     @Override
     final String getName() { NAME }
 
-    /* only for testing purpose */
+    @TestOnly
     protected File root
 
     @Override
@@ -58,33 +62,60 @@ class CmdPull extends CmdBase implements HubOptions {
         if( !all && !args )
             throw new AbortOperationException('Missing argument')
 
+        if( all && args )
+            throw new AbortOperationException('Option `all` requires no arguments')
+
+        if( all && revision )
+            throw new AbortOperationException('Option `all` is not compatible with `revision`')
+
         def list = all ? AssetManager.list() : args.toList()
         if( !list ) {
             log.info "(nothing to do)"
             return
         }
 
-        /* only for testing purpose */
         if( root ) {
             AssetManager.root = root
         }
 
         // init plugin system
         Plugins.init()
-        
-        list.each {
-            log.info "Checking $it ..."
-            def manager = new AssetManager(it, this)
 
-            def result = manager.download(revision,deep)
-            manager.updateModules()
+        for( String proj : list ) {
+            if( all ) {
+                def branches = new AssetManager(proj).getBranchesAndTags(false).pulled as List<String>
+                branches.each { rev -> pullProjectRevision(proj, rev) }
+            } else {
+                pullProjectRevision(proj, revision)
+            }
+        }
+    }
 
-            def scriptFile = manager.getScriptFile()
-            String message = !result ? " done" : " $result"
-            message += " - revision: ${scriptFile.revisionInfo}"
-            log.info message
+    private pullProjectRevision(String project, String revision) {
+        final manager = new AssetManager(project, this)
+
+        if( manager.isUsingLegacyStrategy() ) {
+            if( migrate ) {
+                log.info "Migrating ${project} revision ${revision} to multi-revision strategy"
+                manager.setStrategyType(AssetManager.RepositoryStrategyType.MULTI_REVISION)
+            } else {
+                log.warn "The local asset for ${project} does not support multi-revision - Pulling with legacy strategy\n" +
+                    "Consider updating the project ${project} using '-migrate' option"
+            }
         }
 
+        if( revision )
+            manager.setRevision(revision)
+
+        log.info "Checking ${manager.getProjectWithRevision()} ..."
+
+        def result = manager.download(revision, deep)
+        manager.updateModules()
+
+        def scriptFile = manager.getScriptFile()
+        String message = !result ? " done" : " $result"
+        message += " - revision: ${scriptFile.revisionInfo}"
+        log.info message
     }
 
 }

@@ -71,32 +71,20 @@ class ContainerBuilderTest extends Specification {
         def IMAGE = 'foo:latest'
 
         when:
-        def builder = ContainerBuilder.create(ENGINE,IMAGE)
+        def builder = ContainerBuilder.create(CONFIG,IMAGE)
         then:
         builder.class == CLAZZ
         builder.getImage() == IMAGE
 
         where:
-        ENGINE              | CLAZZ
-        'docker'            | DockerBuilder
-        'podman'            | PodmanBuilder
-        'singularity'       | SingularityBuilder
-        'apptainer'         | ApptainerBuilder
-        'sarus'             | SarusBuilder
-        'shifter'           | ShifterBuilder
-        'charliecloud'      | CharliecloudBuilder
-        'udocker'           | UdockerBuilder
-
-    }
-
-    def 'should throw illegal arg' () {
-
-        when:
-        ContainerBuilder.create('foo','image:any')
-
-        then:
-        def e = thrown(IllegalArgumentException)
-        e.message == 'Unknown container engine: foo'
+        CONFIG                      | CLAZZ
+        new DockerConfig()          | DockerBuilder
+        new PodmanConfig()          | PodmanBuilder
+        new SingularityConfig()     | SingularityBuilder
+        new ApptainerConfig()       | ApptainerBuilder
+        new SarusConfig()           | SarusBuilder
+        new ShifterConfig()         | ShifterBuilder
+        new CharliecloudConfig()    | CharliecloudBuilder
 
     }
 

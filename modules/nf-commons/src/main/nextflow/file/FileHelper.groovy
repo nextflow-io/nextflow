@@ -49,6 +49,7 @@ import nextflow.extension.FilesEx
 import nextflow.plugin.Plugins
 import nextflow.util.CacheHelper
 import nextflow.util.Escape
+import nextflow.util.StringUtils
 /**
  * Provides some helper method handling files
  *
@@ -238,7 +239,7 @@ class FileHelper {
         return !(path.getFileSystem().provider().scheme in UNSUPPORTED_GLOB_WILDCARDS)
     }
 
-    static Path toCanonicalPath(value) {
+    static Path toPath(value) {
         if( value==null )
             return null
 
@@ -252,6 +253,14 @@ class FileHelper {
         else {
             throw new IllegalArgumentException("Unexpected path value: '$value' [${value.getClass().getName()}]")
         }
+        return result
+    }
+
+    static Path toCanonicalPath(value) {
+        if( value==null )
+            return null
+
+        Path result = toPath(value)
 
         if( result.fileSystem != FileSystems.default ) {
             // remote file paths are expected to be absolute by definition
@@ -468,14 +477,14 @@ class FileHelper {
      * @return The {@code true} when the path is a NFS mount {@code false} otherwise
      */
     @Memoized
-    static boolean isPathNFS(Path path) {
+    static boolean isPathSharedFS(Path path) {
         assert path
         if( path.getFileSystem() != FileSystems.getDefault() )
             return false
 
         final type = getPathFsType(path)
-        def result = type == 'nfs'
-        log.debug "NFS path ($result): $path"
+        final result = type == 'nfs' || type == 'lustre'
+        log.debug "FS path type ($result): $path"
         return result
     }
 
@@ -491,7 +500,7 @@ class FileHelper {
         process.destroy()
 
         if( status ) {
-            log.debug "Can't check if specified path is NFS ($status): ${FilesEx.toUriString(path)}\n${Bolts.indent(text,'  ')}"
+            log.debug "Unable to determine FS type ($status): ${FilesEx.toUriString(path)}\n${Bolts.indent(text,'  ')}"
             return null
         }
 
@@ -503,8 +512,8 @@ class FileHelper {
      *      {@code true} when the current session working directory is a NFS mounted path
      *      {@code false otherwise}
      */
-    static boolean getWorkDirIsNFS() {
-        isPathNFS(Global.session.workDir)
+    static boolean getWorkDirIsSharedFS() {
+        isPathSharedFS(Global.session.workDir)
     }
 
     /**
@@ -546,7 +555,7 @@ class FileHelper {
         if( Files.exists(self) )
             return true
 
-        if( !workDirIsNFS )
+        if( !workDirIsSharedFS )
             return false
 
 
@@ -610,7 +619,7 @@ class FileHelper {
     }
 
     /**
-     *  Caches File system providers
+     * Caches File system providers
      */
     @PackageScope
     static final Map<String, FileSystemProvider> providersMap = [:]
@@ -714,7 +723,7 @@ class FileHelper {
             try { fs = provider.getFileSystem(uri) }
             catch( FileSystemNotFoundException e ) { fs=null }
             if( !fs ) {
-                log.debug "Creating a file system instance for provider: ${provider.class.simpleName}"
+                log.debug "Creating a file system instance for provider: ${provider.class.simpleName}; config=${StringUtils.stripSecrets(config)}"
                 fs = provider.newFileSystem(uri, config!=null ? config : envFor(uri.scheme))
             }
             return fs
@@ -871,7 +880,9 @@ class FileHelper {
 
             @Override
             FileVisitResult visitFile(Path fullPath, BasicFileAttributes attrs) throws IOException {
-                final path = folder.relativize(fullPath)
+                final path = fullPath.isAbsolute()
+                    ? folder.relativize(fullPath)
+                    : fullPath
                 log.trace "visitFiles > file=$path; includeFile=$includeFile; matches=${matcher.matches(path)}; isRegularFile=${attrs.isRegularFile()}"
 
                 if (includeFile && matcher.matches(path) && (attrs.isRegularFile() || (options.followLinks == false && attrs.isSymbolicLink())) && (includeHidden || !isHidden(fullPath))) {
@@ -903,7 +914,9 @@ class FileHelper {
     }
 
     static protected Path relativize0(Path folder, Path fullPath) {
-        def result = folder.relativize(fullPath)
+        final result = fullPath.isAbsolute()
+            ? folder.relativize(fullPath)
+            : fullPath
         String str
         if( folder.is(FileSystems.default) || !(str=result.toString()).endsWith('/') )
             return result
@@ -1163,4 +1176,23 @@ class FileHelper {
         return null
     }
 
+    public static HashCode getTaskHashFromPath(Path sourcePath, Path workPath) {
+        assert sourcePath
+        assert workPath
+        if( !sourcePath.startsWith(workPath) )
+            return null
+        final relativePath = workPath.relativize(sourcePath)
+        if( relativePath.getNameCount() < 2 )
+            return null
+        final bucket = relativePath.getName(0).toString()
+        if( bucket.size() != 2 )
+            return null
+        final strHash = bucket + relativePath.getName(1).toString()
+        try {
+            return HashCode.fromString(strHash)
+        } catch (Throwable e) {
+            log.debug("String '${strHash}' is not a valid hash", e)
+            return null
+        }
+    }
 }

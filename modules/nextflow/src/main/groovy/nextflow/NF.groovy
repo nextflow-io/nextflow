@@ -32,6 +32,14 @@ class NF {
         return (Session)Global.session
     }
 
+    static String getSyntaxParserVersion() {
+        return SysEnv.get('NXF_SYNTAX_PARSER', 'v1')
+    }
+
+    static boolean isSyntaxParserV2() {
+        return getSyntaxParserVersion() == 'v2'
+    }
+
     static void init() {
         NextflowDelegatingMetaClass.provider = PluginExtensionProvider.INSTANCE()
         CH.init()
@@ -68,15 +76,7 @@ class NF {
         NextflowMeta.instance.isModuleBinariesEnabled()
     }
 
-    static boolean isOutputDefinitionEnabled() {
-        NextflowMeta.instance.preview.output
-    }
-
     static boolean isRecurseEnabled() {
         NextflowMeta.instance.preview.recursion
-    }
-
-    static boolean isTopicChannelEnabled() {
-        NextflowMeta.instance.preview.topic
     }
 }

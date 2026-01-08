@@ -40,9 +40,6 @@ class ProcessFactory {
 
     private ExecutorFactory executorFactory
 
-    /* only for test -- do not use */
-    protected ProcessFactory() { }
-
     ProcessFactory( BaseScript ownerScript, Session session ) {
         this.owner = ownerScript
         this.session = session
@@ -63,47 +60,6 @@ class ProcessFactory {
      */
     protected TaskProcessor newTaskProcessor(String name, Executor executor, ProcessConfig config, BodyDef taskBody ) {
         new TaskProcessor(name, executor, session, owner, config, taskBody)
-    }
-
-    /**
-     * Create a task processor
-     *
-     * @param name
-     *      The name of the process as defined in the script
-     * @param body
-     *      The process declarations provided by the user
-     * @param options
-     *      A map representing the named parameter specified after the process name eg:
-     *          `process foo(bar: 'x') {  }`
-     *      (not used)
-     * @return
-     *      The {@code Processor} instance
-     */
-    TaskProcessor createProcessor( String name, Closure<BodyDef> body ) {
-        assert body
-        assert config.process instanceof Map
-
-        // -- the config object
-        final processConfig = new ProcessConfig(owner, name)
-        // Invoke the code block which will return the script closure to the executed.
-        // As side effect will set all the property declarations in the 'taskConfig' object.
-        processConfig.throwExceptionOnMissingProperty(true)
-        final copy = (Closure<BodyDef>)body.clone()
-        copy.setResolveStrategy(Closure.DELEGATE_FIRST)
-        copy.setDelegate(processConfig)
-        final script = copy.call()
-        processConfig.throwExceptionOnMissingProperty(false)
-        if ( !script )
-            throw new IllegalArgumentException("Missing script in the specified process block -- make sure it terminates with the script string to be executed")
-
-        // -- apply settings from config file to process config
-        processConfig.applyConfigLegacy((Map)config.process, name)
-
-        // -- get the executor for the given process config
-        final execObj = executorFactory.getExecutor(name, processConfig, script, session)
-
-        // -- create processor class
-        newTaskProcessor( name, execObj, processConfig, script )
     }
 
 }

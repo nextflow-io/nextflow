@@ -13,10 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-apply plugin: 'java'
-apply plugin: 'java-test-fixtures'
-apply plugin: 'idea'
-apply plugin: 'groovy'
+plugins {
+    id 'io.nextflow.nextflow-plugin' version "${nextflowPluginVersion}"
+    id 'java-test-fixtures'
+}
+
+nextflowPlugin {
+    nextflowVersion = '25.09.0-edge'
+
+    provider = "${nextflowPluginProvider}"
+    description = 'Provides seamless integration with AWS CodeCommit repositories for workflow source code management and version control'
+    className = 'nextflow.cloud.aws.codecommit.AwsCodeCommitPlugin'
+    useDefaultDependencies = false
+    generateSpec = false
+    extensionPoints = [
+        'nextflow.cloud.aws.codecommit.AwsCodeCommitFactory'
+    ]
+}
 
 sourceSets {
     main.java.srcDirs = []
@@ -34,14 +47,16 @@ configurations {
 
 dependencies {
     compileOnly project(':nextflow')
-    compileOnly 'org.slf4j:slf4j-api:2.0.7'
+    compileOnly 'org.slf4j:slf4j-api:2.0.17'
     compileOnly 'org.pf4j:pf4j:3.12.0'
 
     api ('javax.xml.bind:jaxb-api:2.4.0-b180830.0359')
-    api ('com.amazonaws:aws-java-sdk-codecommit:1.12.777')
+    api ('software.amazon.awssdk:codecommit:2.31.64')
+    api ('software.amazon.awssdk:sso:2.31.64')
+    api ('software.amazon.awssdk:ssooidc:2.31.64')
         
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
-    testImplementation "org.apache.groovy:groovy:4.0.24"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.23"
+    testImplementation "org.apache.groovy:groovy:4.0.29"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.29"
 }

@@ -3472,6 +3472,14 @@
     "resourceDiskSizeInMB": 0
   },
   {
+    "maxDataDiskCount": 32,
+    "memoryInMB": 688128,
+    "name": "Standard_E96bs_v5",
+    "numberOfCores": 96,
+    "osDiskSizeInMB": 1047552,
+    "resourceDiskSizeInMB": 0
+  },
+  {
     "maxDataDiskCount": 64,
     "memoryInMB": 688128,
     "name": "Standard_E112ibs_v5",
@@ -3534,6 +3542,14 @@
     "numberOfCores": 64,
     "osDiskSizeInMB": 1047552,
     "resourceDiskSizeInMB": 2457600
+  },
+  {
+    "maxDataDiskCount": 32,
+    "memoryInMB": 688128,
+    "name": "Standard_E96bds_v5",
+    "numberOfCores": 96,
+    "osDiskSizeInMB": 1047552,
+    "resourceDiskSizeInMB": 3686400
   },
   {
     "maxDataDiskCount": 64,
@@ -4125,7 +4141,7 @@
     "name": "Standard_E80ids_v4",
     "numberOfCores": 80,
     "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 4362240
+    "resourceDiskSizeInMB": 2457600
   },
   {
     "maxDataDiskCount": 64,
@@ -4393,24 +4409,16 @@
   },
   {
     "maxDataDiskCount": 64,
-    "memoryInMB": 5836800,
-    "name": "Standard_M416-208s_v2",
-    "numberOfCores": 416,
-    "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 8388608
-  },
-  {
-    "maxDataDiskCount": 64,
-    "memoryInMB": 5836800,
-    "name": "Standard_M416s_v2",
-    "numberOfCores": 416,
-    "osDiskSizeInMB": 1047552,
-    "resourceDiskSizeInMB": 8388608
-  },
-  {
-    "maxDataDiskCount": 64,
     "memoryInMB": 11673600,
     "name": "Standard_M416-208ms_v2",
+    "numberOfCores": 416,
+    "osDiskSizeInMB": 1047552,
+    "resourceDiskSizeInMB": 8388608
+  },
+  {
+    "maxDataDiskCount": 64,
+    "memoryInMB": 5836800,
+    "name": "Standard_M416-208s_v2",
     "numberOfCores": 416,
     "osDiskSizeInMB": 1047552,
     "resourceDiskSizeInMB": 8388608
@@ -4430,6 +4438,30 @@
     "numberOfCores": 416,
     "osDiskSizeInMB": 1047552,
     "resourceDiskSizeInMB": 4194304
+  },
+  {
+    "maxDataDiskCount": 64,
+    "memoryInMB": 8773632,
+    "name": "Standard_M416s_9_v2",
+    "numberOfCores": 416,
+    "osDiskSizeInMB": 1047552,
+    "resourceDiskSizeInMB": 4194304
+  },
+  {
+    "maxDataDiskCount": 64,
+    "memoryInMB": 9723904,
+    "name": "Standard_M416s_10_v2",
+    "numberOfCores": 416,
+    "osDiskSizeInMB": 1047552,
+    "resourceDiskSizeInMB": 4194304
+  },
+  {
+    "maxDataDiskCount": 64,
+    "memoryInMB": 5836800,
+    "name": "Standard_M416s_v2",
+    "numberOfCores": 416,
+    "osDiskSizeInMB": 1047552,
+    "resourceDiskSizeInMB": 8388608
   },
   {
     "maxDataDiskCount": 8,

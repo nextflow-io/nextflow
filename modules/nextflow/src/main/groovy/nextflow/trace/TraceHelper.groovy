@@ -30,6 +30,7 @@ import java.time.format.DateTimeFormatter
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import nextflow.exception.AbortOperationException
+import nextflow.util.TestOnly
 
 /**
  * Helper methods for trace and observer feature
@@ -39,7 +40,7 @@ import nextflow.exception.AbortOperationException
 @CompileStatic
 class TraceHelper {
 
-    /* only for testing -- do not use */
+    @TestOnly
     static protected String testTimestampFmt
 
     static public final Instant launchTimestamp = Instant.now()

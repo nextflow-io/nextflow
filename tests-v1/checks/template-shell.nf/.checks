@@ -1,0 +1,22 @@
+#
+# run normal mode 
+#
+$NXF_RUN | tee stdout
+
+[[ `grep INFO .nextflow.log | grep -c 'Submitted process'` == 3 ]] || false
+< stdout grep "Hello $USER PF00389 zzz" || false
+< stdout grep "Hello $USER PF03061 zzz" || false
+< stdout grep "Hello $USER PF02826 zzz" || false
+
+
+#
+# run resume mode 
+#
+$NXF_RUN -resume | tee stdout
+
+[[ `grep INFO .nextflow.log | grep -c 'Cached process'` == 3 ]] || false
+< stdout grep "Hello $USER PF00389 zzz" || false
+< stdout grep "Hello $USER PF03061 zzz" || false
+< stdout grep "Hello $USER PF02826 zzz" || false
+
+

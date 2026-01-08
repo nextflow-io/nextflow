@@ -24,9 +24,9 @@ import groovy.json.JsonBuilder
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.dag.DAG
 import nextflow.exception.AbortOperationException
 import nextflow.processor.TaskRun
+import nextflow.script.ScriptMeta
 import org.codehaus.groovy.util.ListHashMap
 /**
  * Preview the list of containers used by a pipeline.
@@ -37,16 +37,13 @@ import org.codehaus.groovy.util.ListHashMap
 @CompileStatic
 class ContainersInspector {
 
-    private DAG dag
-
     private String format
 
     private boolean ignoreErrors
 
     private boolean concretize
 
-    ContainersInspector(DAG dag, boolean concretize) {
-        this.dag = dag
+    ContainersInspector(boolean concretize) {
         this.concretize = concretize
     }
 
@@ -83,15 +80,10 @@ class ContainersInspector {
         final containers = new ListHashMap<String,String>()
 
         List<TaskRun> tasks = new ArrayList<>()
-        for( def vertex : dag.vertices ) {
-            // skip nodes that are not processes
-            final process = vertex.process
-            if( !process )
-                continue
-
+        for( final process : ScriptMeta.allProcesses() ) {
             try {
                 // get container preview
-                final task = process.createTaskPreview()
+                final task = process.createTaskProcessor().createTaskPreview()
                 final containerName = task.getContainer()
                 containers[process.name] = containerName
                 if( containerName )
