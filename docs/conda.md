@@ -62,6 +62,10 @@ The usual Conda package syntax and naming conventions can be used. The version o
 
 The name of the channel where a package is located can be specified prefixing the package with the channel name as shown here `bioconda::bwa=0.7.15`.
 
+:::{versionadded} 26.01.0-edge
+By default, Nextflow uses the `conda-forge` and `bioconda` channels to resolve Conda packages. You can override this using the `conda.channels` configuration option.
+:::
+
 (conda-env-files)=
 ### Use Conda environment files
 
