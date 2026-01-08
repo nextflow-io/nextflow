@@ -51,9 +51,9 @@ class ConfigParserV2 implements ConfigParser {
 
     private List<String> appliedProfiles
 
-    private Set<String> declaredProfiles
+    private Set<String> declaredProfiles = []
 
-    private Map<String,Object> declaredParams
+    private Map<String,Object> declaredParams = [:]
 
     private GroovyShell groovyShell
 
@@ -144,8 +144,8 @@ class ConfigParserV2 implements ConfigParser {
             script.run()
 
             final target = script.getTarget()
-            declaredProfiles = script.getDeclaredProfiles()
-            declaredParams = script.getDeclaredParams()
+            declaredProfiles.addAll(script.getDeclaredProfiles())
+            declaredParams.putAll(script.getDeclaredParams())
             return Bolts.toConfigObject(target)
         }
         catch( CompilationFailedException e ) {
