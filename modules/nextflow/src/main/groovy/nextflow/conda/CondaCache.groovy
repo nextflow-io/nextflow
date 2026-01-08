@@ -17,6 +17,7 @@
 package nextflow.conda
 
 import java.nio.file.FileSystems
+import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -167,6 +168,36 @@ class CondaCache {
     }
 
     /**
+     * Check if the given file is a conda lock file.
+     * A conda lock file contains "@EXPLICIT" marker in the first 20 lines.
+     * This method reads only the first 20 lines to avoid loading the entire file into memory.
+     *
+     * @param path The file path to check
+     * @return true if this is a conda lock file, false otherwise
+     */
+    @PackageScope
+    boolean isLockFile(Path path) {
+        if( path == null || !Files.exists(path) )
+            return false
+        try {
+            path.withReader { reader ->
+                String line
+                int count = 0
+                while( count < 20 && (line = reader.readLine()) != null ) {
+                    if( line.trim() == '@EXPLICIT' )
+                        return true
+                    count++
+                }
+                return false
+            }
+        }
+        catch( Exception e ) {
+            log.debug "Error checking if file is lock file: $path", e
+            return false
+        }
+    }
+
+    /**
      * Get the path on the file system where store a Conda environment
      *
      * @param condaEnv The conda environment
@@ -178,8 +209,14 @@ class CondaCache {
 
         String content
         String name = 'env'
-        // check if it's a remote uri
+
+        // check if it's a remote HTTP/HTTPS URL
         if( isYamlUriPath(condaEnv) ) {
+            // Remote URLs are only supported for YAML environment files
+            if( !isYamlFilePath(condaEnv) ) {
+                throw new IllegalArgumentException("Remote Conda lock files are not supported. Only environment YAML files (.yml, .yaml) can be specified as remote URLs: $condaEnv")
+            }
+            // Use the URL itself as the content for hashing - conda will fetch it
             content = condaEnv
         }
         // check if it's a YAML file
@@ -210,13 +247,26 @@ class CondaCache {
         }
         // it's interpreted as user provided prefix directory
         else if( condaEnv.contains('/') ) {
+            // check if it's a file path that might be a lock file
             final prefix = condaEnv as Path
-            if( !prefix.isDirectory() )
+            if( prefix.isDirectory() ) {
+                if( prefix.fileSystem != FileSystems.default )
+                    throw new IllegalArgumentException("Conda prefix path must be a POSIX file path: $prefix")
+                return prefix
+            }
+            // it could be a file with a non-standard extension (e.g., .lock or no extension)
+            if( Files.exists(prefix) ) {
+                // if it's a lock file, read content for hashing (like YAML/text files); otherwise treat as invalid
+                if( !isLockFile(prefix) ) {
+                    throw new IllegalArgumentException("Conda environment file is not a valid lock file (missing @EXPLICIT marker): $condaEnv")
+                }
+                // Note: file is read twice - once by isLockFile (first 20 lines only) and once here for full content.
+                // This is intentional: isLockFile is memory-efficient for large files, while hashing needs full content.
+                content = prefix.text
+            }
+            else {
                 throw new IllegalArgumentException("Conda prefix path does not exist or is not a directory: $prefix")
-            if( prefix.fileSystem != FileSystems.default )
-                throw new IllegalArgumentException("Conda prefix path must be a POSIX file path: $prefix")
-
-            return prefix
+            }
         }
         else if( condaEnv.contains('\n') ) {
             throw new IllegalArgumentException("Invalid Conda environment definition: $condaEnv")
@@ -279,15 +329,28 @@ class CondaCache {
         String opts = createOptions ? "$createOptions " : ''
 
         def cmd
+        // Check if it's a YAML file (by extension) - can be local path or HTTP/HTTPS URL
         if( isYamlFilePath(condaEnv) ) {
+            // For remote URLs, pass directly to conda; for local files, use absolute path
             final target = isYamlUriPath(condaEnv) ? condaEnv : Escape.path(makeAbsolute(condaEnv))
             final yesOpt = binaryName=="mamba" || binaryName == "micromamba"  ? '--yes ' : ''
             cmd = "${binaryName} env create ${yesOpt}--prefix ${Escape.path(prefixPath)} --file ${target}"
         }
+        // Check if it's a text file (by extension) - legacy support for .txt lock files
         else if( isTextFilePath(condaEnv) ) {
             cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
         }
-
+        // Check if it's a file path with non-standard extension that might be a lock file
+        else if( condaEnv.contains('/') ) {
+            final localPath = makeAbsolute(condaEnv)
+            if( Files.exists(localPath) && isLockFile(localPath) ) {
+                cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} --file ${Escape.path(localPath)}"
+            }
+            else {
+                throw new IllegalArgumentException("Conda environment file is not a valid lock file: $condaEnv")
+            }
+        }
+        // Otherwise treat as package name(s)
         else {
             final channelsOpt = channels.collect(it -> "-c $it ").join('')
             cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} ${channelsOpt}$condaEnv"

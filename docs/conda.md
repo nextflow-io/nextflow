@@ -163,10 +163,43 @@ https://conda.anaconda.org/conda-forge/linux-64/libgcc-ng-13.2.0-h77fa898_7.cond
 # .. and so on
 ```
 
-To use a Conda lock file with Nextflow, set the `conda` directive to the path of the lock file.
+To use a Conda lock file with Nextflow, set the `conda` directive to the path of the lock file:
+
+```nextflow
+process hello {
+  conda '/path/to/spec-file.lock'
+
+  script:
+  """
+  your_command --here
+  """
+}
+```
+
+:::{versionchanged} 26.01.0-edge
+Conda lock files are now detected by the presence of the `@EXPLICIT` marker in the first 20 lines of the file.
+They can have any file extension (e.g., `.lock`, `.txt`, or no extension at all).
+:::
 
 :::{note}
-Conda lock files must be a text file with the `.txt` extension.
+Remote URLs are only supported for Conda environment YAML files (`.yml`, `.yaml`), not for lock files.
+Lock files should be bundled with your pipeline as local files. This is intentional, as lock files are considered part of the module/pipeline bundle and should be versioned alongside your code rather than fetched on-the-fly.
+
+For example, you can use a remote YAML environment file:
+```nextflow
+process hello {
+  conda 'https://example.com/my-env.yml'
+  // ...
+}
+```
+
+But lock files must be local:
+```nextflow
+process hello {
+  conda '/path/to/spec-file.lock'
+  // ...
+}
+```
 :::
 
 ### Use existing Conda environments
