@@ -397,9 +397,6 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         else {
             final instancePolicy = AllocationPolicy.InstancePolicy.newBuilder()
 
-            if( batchConfig.getBootDiskImage() )
-                instancePolicy.setBootDisk(AllocationPolicy.Disk.newBuilder().setImage(batchConfig.getBootDiskImage()))
-
             if( fusionEnabled() && !disk ) {
                 disk = new DiskResource(request: '375 GB', type: 'local-ssd')
                 log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - adding local volume as fusion scratch: $disk"
@@ -418,6 +415,27 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                     priceModel: machineType.priceModel
                 )
             }
+
+            // Configure boot disk
+            final bootDisk = AllocationPolicy.Disk.newBuilder()
+            boolean setBoot = false
+            if( batchConfig.getBootDiskImage() ) {
+                bootDisk.setImage( batchConfig.getBootDiskImage() )
+                setBoot = true
+            }
+
+            if( batchConfig.bootDiskType ) {
+                bootDisk.setType( batchConfig.bootDiskType )
+                setBoot = true
+            }
+
+            if( machineType && GoogleBatchMachineTypeSelector.INSTANCE.isHyperdiskOnly(machineType.type) && !batchConfig.bootDiskType ) {
+                bootDisk.setType('hyperdisk-balanced')
+                setBoot = true
+            }
+
+            if( setBoot )
+                instancePolicy.setBootDisk(bootDisk)
 
             if( task.config.getAccelerator() ) {
                 final accelerator = AllocationPolicy.Accelerator.newBuilder()

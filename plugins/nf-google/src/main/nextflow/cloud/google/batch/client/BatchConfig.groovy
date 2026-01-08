@@ -69,6 +69,12 @@ class BatchConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
+        The type of the virtual machine boot disk, e.g `pd-balanced`, `pd-ssd`, `pd-standard` (default: none).
+    """)
+    final String bootDiskType
+
+    @ConfigOption
+    @Description("""
         The [minimum CPU Platform](https://cloud.google.com/compute/docs/instances/specify-min-cpu-platform#specifications), e.g. `'Intel Skylake'` (default: none).
     """)
     final String cpuPlatform
@@ -144,6 +150,7 @@ class BatchConfig implements ConfigScope {
         autoRetryExitCodes = opts.autoRetryExitCodes as List<Integer> ?: DEFAULT_RETRY_LIST
         bootDiskImage = opts.bootDiskImage
         bootDiskSize = opts.bootDiskSize as MemoryUnit
+        bootDiskType = opts.bootDiskType
         cpuPlatform = opts.cpuPlatform
         gcsfuseOptions = opts.gcsfuseOptions as List<String> ?: DEFAULT_GCSFUSE_OPTS
         installGpuDrivers = opts.installGpuDrivers as boolean
