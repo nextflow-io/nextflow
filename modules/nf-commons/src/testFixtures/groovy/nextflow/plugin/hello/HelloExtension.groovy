@@ -28,6 +28,7 @@ import nextflow.NF
 import nextflow.Session
 import nextflow.extension.CH
 import nextflow.extension.DataflowHelper
+import nextflow.plugin.extension.Factory
 import nextflow.plugin.extension.Function
 import nextflow.plugin.extension.Operator
 import nextflow.plugin.extension.PluginExtensionPoint
@@ -50,7 +51,7 @@ class HelloExtension extends PluginExtensionPoint {
     private Session session
 
     /*
-     * nf-core initializes the plugin once loaded and session is ready
+     * Nextflow initializes the plugin once loaded and session is ready
      * @param session
      */
     @Override
@@ -65,7 +66,7 @@ class HelloExtension extends PluginExtensionPoint {
      * - it's public
      * - it returns a DataflowWriteChannel
      *
-     * nf-core will inspect the extension class and allow the script to call all these kind of methods
+     * Nextflow will inspect the extension class and allow the script to call all these kind of methods
      *
      * the method can require arguments but it's not mandatory, it depends of the business logic of the method
      *
@@ -115,7 +116,7 @@ class HelloExtension extends PluginExtensionPoint {
      */
     @Operator
     String goodbyeWrongSignature(DataflowReadChannel source) {
-        source.val
+        'goodbye'
     }
 
     protected DataflowWriteChannel createReverseChannel(final String message){

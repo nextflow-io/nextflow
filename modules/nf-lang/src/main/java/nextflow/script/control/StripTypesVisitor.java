@@ -63,14 +63,18 @@ public class StripTypesVisitor extends ClassCodeExpressionTransformer {
 
     @Override
     public Expression transform(Expression node) {
-        if( node instanceof CastExpression ce )
+        if( node instanceof CastExpression ce ) {
             return stripTypeAnnotation(ce);
+        }
 
-        if( node instanceof ClosureExpression ce )
-            super.visitClosureExpression(ce);
+        if( node instanceof ClosureExpression ce ) {
+            ce.visit(this);
+            return ce;
+        }
 
-        if( node instanceof DeclarationExpression de )
+        if( node instanceof DeclarationExpression de ) {
             stripTypeAnnotation(de);
+        }
 
         return super.transform(node);
     }

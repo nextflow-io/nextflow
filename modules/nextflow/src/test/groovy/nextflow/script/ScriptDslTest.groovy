@@ -5,36 +5,36 @@ import nextflow.exception.MissingProcessException
 import nextflow.exception.ScriptCompilationException
 import nextflow.exception.ScriptRuntimeException
 import test.Dsl2Spec
-import test.MockScriptRunner
+
+import static test.ScriptHelper.*
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class ScriptDslTest extends Dsl2Spec {
 
-
     def 'should define a process with output alias' () {
         given:
         def SCRIPT = '''
-         
+
         process foo {
-          output: val x, emit: 'ch1'
-          output: val y, emit: 'ch2' 
-          exec: x = 'Hello'; y = 'world'
+            output:
+            val x, emit: ch1
+            val y, emit: ch2
+
+            exec:
+            x = 'Hello'
+            y = 'world'
         }
-       
+
         workflow {
-            main: 
-                foo()
-            emit: 
-                foo.out.ch1
-                foo.out.ch2
+            foo()
+            [ foo.out.ch1, foo.out.ch2 ]
         }
         '''
 
         when:
-        def runner = new MockScriptRunner()
-        def result = runner.setScript(SCRIPT).execute()
+        def result = runScript(SCRIPT)
         then:
         result[0].val == 'Hello'
         result[1].val == 'world'
@@ -42,26 +42,15 @@ class ScriptDslTest extends Dsl2Spec {
 
     def 'should execute basic workflow' () {
         when:
-        def result = dsl_eval '''
-   
-        workflow {
-            emit: result 
-            main:
-            result = 'Hello world'
-        }
-        '''
+        def result = runScript '''
 
-        then:
-        result.val == 'Hello world'
-    }
-
-    def 'should execute emit' () {
-        when:
-        def result = dsl_eval '''
-   
-        workflow {
+        workflow hello {
             emit:
             result = 'Hello world'
+        }
+
+        workflow {
+            hello()
         }
         '''
 
@@ -71,13 +60,17 @@ class ScriptDslTest extends Dsl2Spec {
 
     def 'should emit expression' () {
         when:
-        def result = dsl_eval '''
-         
-        def foo() { 'Hello world' } 
-       
-        workflow {
+        def result = runScript '''
+
+        def foo() { 'Hello world' }
+
+        workflow foo_upper {
             emit:
             foo().toUpperCase()
+        }
+
+        workflow {
+            foo_upper()
         }
         '''
 
@@ -87,16 +80,20 @@ class ScriptDslTest extends Dsl2Spec {
 
     def 'should emit process out' () {
         when:
-        def result = dsl_eval '''
-         
+        def result = runScript '''
+
         process foo {
-          output: val x 
+          output: val x
           exec: x = 'Hello'
         }
-       
-        workflow {
+
+        workflow foo_out {
             main: foo()
             emit: foo.out
+        }
+
+        workflow {
+            foo_out()
         }
         '''
 
@@ -107,37 +104,35 @@ class ScriptDslTest extends Dsl2Spec {
 
     def 'should define processes and workflow' () {
         when:
-        def result = dsl_eval '''
+        def result = runScript '''
         process foo {
-          input: val data 
-          output: val result
-          exec:
-            result = "$data mundo"
-        }     
-        
-        process bar {
-            input: val data 
+            input: val data
             output: val result
-            exec: 
-              result = data.toUpperCase()
-        }   
-        
-        workflow alpha {
-            take: 
-                data
-            
-            main:
-                foo(data)
-                bar(foo.out)
-                
-            emit: 
-                x = bar.out 
-            
+            exec:
+            result = "$data mundo"
         }
-   
+
+        process bar {
+            input: val data
+            output: val result
+            exec:
+            result = data.toUpperCase()
+        }
+
+        workflow alpha {
+            take:
+            data
+
+            main:
+            foo(data)
+            bar(foo.out)
+
+            emit:
+            x = bar.out
+        }
+
         workflow {
-            main: alpha('Hello') 
-            emit: x = alpha.out 
+            alpha('Hello')
         }
         '''
 
@@ -146,88 +141,82 @@ class ScriptDslTest extends Dsl2Spec {
     }
 
 
-    def 'should access nextflow enabling property' () {
-        when:
-        def result = dsl_eval '''
-        return nextflow.enable.dsl 
-        '''
-
-        then:
-        result == 2
-    }
-
-
     def 'should not allow function with reserved identifier' () {
 
         when:
-        dsl_eval """ 
+        runScript """
             def main() { println 'ciao' }
         """
 
         then:
         def err = thrown(ScriptCompilationException)
-        err.message.contains('Identifier `main` is reserved for internal use')
+        err.cause.message.contains('`main` is not allowed as a function name because it is reserved for internal use')
     }
 
     def 'should not allow process with reserved identifier' () {
 
         when:
-        dsl_eval """ 
+        runScript """
             process main {
+              script:
               /echo ciao/
             }
+
+            workflow {}
         """
 
         then:
         def err = thrown(ScriptCompilationException)
-        err.message.contains('Identifier `main` is reserved for internal use')
+        err.cause.message.contains('`main` is not allowed as a process name because it is reserved for internal use')
     }
 
     def 'should not allow workflow with reserved identifier' () {
 
         when:
-        dsl_eval """ 
+        runScript """
             workflow main {
               /echo ciao/
             }
+
+            workflow {}
         """
         then:
         def err = thrown(ScriptCompilationException)
-        err.message.contains('Identifier `main` is reserved for internal use')
+        err.cause.message.contains('`main` is not allowed as a workflow name because it is reserved for internal use')
     }
 
     def 'should not allow duplicate workflow keyword' () {
         when:
-        dsl_eval(
-                """ 
-                workflow {
-                  /echo ciao/
-                }
-                
-                workflow {
-                  /echo miao/
-                }
+        runScript(
+            """
+            workflow {
+              /echo ciao/
+            }
+
+            workflow {
+              /echo miao/
+            }
             """
         )
         then:
         def err = thrown(ScriptCompilationException)
-        err.message.contains('Duplicate entry workflow definition')
+        err.cause.message.contains('Entry workflow defined more than once')
     }
 
     def 'should apply operator to process result' () {
         when:
-        def result = dsl_eval(/
+        def result = runScript('''
             process hello {
               output: val result
               exec:
                 result = "Hello"
-            }     
-            
-            workflow {
-               main: hello()
-               emit: hello.out.map { it.toUpperCase()  }
             }
-        /)
+
+            workflow {
+               hello()
+               hello.out.map { it.toUpperCase()  }
+            }
+        ''')
         then:
         result.val == 'HELLO'
     }
@@ -235,20 +224,19 @@ class ScriptDslTest extends Dsl2Spec {
     def 'should branch and view' () {
 
         when:
-        def result = dsl_eval(/
-            Channel
-                .from(1,2,3,40,50)
-                .branch { 
-                    small: it < 10 
-                    large: it > 10  
+        def result = runScript('''
+            channel.of(1,2,3,40,50)
+                .branch {
+                    small: it < 10
+                    large: it > 10
                 }
                 .set { result }
-                
-             ch1 = result.small.map { it }
-             ch2 = result.large.map { it }  
 
-             [ch1, ch2]
-        /)
+            ch1 = result.small.map { it }
+            ch2 = result.large.map { it }
+
+            [ch1, ch2]
+        ''')
         then:
         result[0].val == 1
         result[0].val == 2
@@ -261,19 +249,19 @@ class ScriptDslTest extends Dsl2Spec {
 
     def 'should allow pipe process and operator' () {
         when:
-        def result = dsl_eval('''
+        def result = runScript('''
         process foo {
           output: val result
           exec: result = "hello"
-        }     
- 
+        }
+
         process bar {
           output: val result
           exec: result = "world"
-        } 
-        
+        }
+
         workflow {
-           emit: (foo & bar) | concat      
+          (foo & bar) | concat
         }
         ''')
 
@@ -285,20 +273,21 @@ class ScriptDslTest extends Dsl2Spec {
 
     def 'should allow process and operator composition' () {
         when:
-        def result = dsl_eval('''
+        def result = runScript('''
         process foo {
           output: val result
           exec: result = "hello"
-        }     
- 
+        }
+
         process bar {
           output: val result
           exec: result = "world"
-        } 
-        
+        }
+
         workflow {
-           main: foo(); bar()
-           emit: foo.out.concat(bar.out)      
+          foo()
+          bar()
+          foo.out.concat(bar.out)
         }
         ''')
 
@@ -309,48 +298,20 @@ class ScriptDslTest extends Dsl2Spec {
         result.val == Channel.STOP
     }
 
-    def 'should run entry flow' () {
+    def 'should not allow invalid composition' () {
         when:
-        def result = dsl_eval('TEST_FLOW', '''
+        runScript('''
         process foo {
-          output: val result
-          exec: result = "hello"
-        }     
- 
-        process bar {
-          output: val result
-          exec: result = "world"
-        } 
-        
-        workflow {
-           main: foo()
-           emit: foo.out  
-        }
-    
-        workflow TEST_FLOW {
-           main: bar()
-           emit: bar.out  
-        }
-        ''')
-
-
-        then:
-        result.val == 'world'
-        
-    }
-
-    def 'should not allow composition' () {
-        when:
-        dsl_eval('''
-        process foo {
+          script:
           /echo foo/
         }
-        
+
         process bar {
-          input: val x 
-          /echo bar $x/
+          input: val x
+          script:
+          "echo bar $x"
         }
-        
+
         workflow {
           bar(foo())
         }
@@ -364,16 +325,18 @@ class ScriptDslTest extends Dsl2Spec {
 
     def 'should report error accessing undefined out/a' () {
         when:
-        dsl_eval('''
+        runScript('''
         process foo {
+          script:
           /echo foo/
         }
-        
+
         process bar {
-          input: val x 
-          /echo bar $x/
+          input: val x
+          script:
+          "echo bar $x"
         }
-        
+
         workflow {
           bar(foo.out)
         }
@@ -386,16 +349,18 @@ class ScriptDslTest extends Dsl2Spec {
 
     def 'should report error accessing undefined out/b' () {
         when:
-        dsl_eval('''
+        runScript('''
         process foo {
+          script:
           /echo foo/
         }
-        
+
         process bar {
-          input: val x 
-          /echo bar $x/
+          input: val x
+          script:
+          "echo bar $x"
         }
-        
+
         workflow {
           bar(foo.out)
         }
@@ -408,15 +373,16 @@ class ScriptDslTest extends Dsl2Spec {
 
     def 'should report error accessing undefined out/c' () {
         when:
-        dsl_eval('''
+        runScript('''
         process foo {
+          script:
           /echo foo/
         }
-        
+
         workflow flow1 {
             foo()
         }
-        
+
         workflow {
           flow1()
           flow1.out.view()
@@ -430,20 +396,22 @@ class ScriptDslTest extends Dsl2Spec {
 
     def 'should report error accessing undefined out/d' () {
         when:
-        dsl_eval('''
+        runScript('''
         process foo {
+          script:
           /echo foo/
         }
-        
+
         process bar {
-          input: val x 
-          /echo bar $x/
+          input: val x
+          script:
+          "echo bar $x"
         }
-        
+
         workflow flow1 {
             foo()
         }
-        
+
         workflow {
           flow1 | bar
         }
@@ -456,15 +424,16 @@ class ScriptDslTest extends Dsl2Spec {
 
     def 'should report error accessing undefined out/e' () {
         when:
-        dsl_eval('''
+        runScript('''
         process foo {
+          script:
           /echo foo/
         }
-        
+
         workflow flow1 {
             foo()
         }
-        
+
         workflow {
           flow1.out.view()
         }
@@ -477,13 +446,14 @@ class ScriptDslTest extends Dsl2Spec {
 
     def 'should fail with wrong scope'() {
         when:
-        dsl_eval('''\
+        runScript('''\
         process foo {
+          script:
           /echo foo/
         }
-        
-        workflow {
-          main: 
+
+        workflow foo_flow {
+          main:
           flow()
           emmit:
           flow.out
@@ -492,13 +462,13 @@ class ScriptDslTest extends Dsl2Spec {
 
         then:
         def err = thrown(ScriptCompilationException)
-        err.message.contains "Unknown execution scope 'emmit:' -- Did you mean 'emit'"
+        err.cause.message.contains "Invalid workflow definition -- check for missing or out-of-order section labels"
     }
 
 
     def 'should fail because process is not defined'() {
         when:
-        dsl_eval(
+        runScript(
         '''
         process sleeper {
             exec:
@@ -506,97 +476,90 @@ class ScriptDslTest extends Dsl2Spec {
             sleep 5
             """
         }
-        
+
         workflow {
             main:
-                sleeper()
-                hello()      
+            sleeper()
+            hello()
         }
-        
+
         ''')
 
         then:
-        def err = thrown(MissingProcessException)
-        err.message == "Missing process or function hello()"
+        def err = thrown(ScriptCompilationException)
+        err.cause.message.contains '`hello` is not defined'
     }
 
 
     def 'should fail because is not defined /2' () {
         when:
-        dsl_eval('''
+        runScript('''
         process sleeper {
             exec:
             """
             sleep 5
             """
         }
-        
+
         workflow nested {
             main:
-                sleeper()
-                sleeper_2()      
+            sleeper()
+            sleeper_2()
         }
-        
-        workflow{
+
+        workflow {
             nested()
         }
         ''')
 
         then:
-        def err = thrown(MissingProcessException)
-        err.message == "Missing process or function sleeper_2() -- Did you mean 'sleeper' instead?"
+        def err = thrown(ScriptCompilationException)
+        err.cause.message.contains '`sleeper_2` is not defined'
     }
 
     def 'should fail because is not defined /3' () {
         when:
-        dsl_eval('''
+        runScript('''
         process sleeper1 {
+            script:
             /echo 1/
         }
-        
+
         process sleeper2 {
+            script:
             /echo 3/
         }
 
-        
+
         workflow nested {
             main:
-                sleeper1()
-                sleeper3()      
+            sleeper1()
+            sleeper3()
         }
-        
-        workflow{
+
+        workflow {
             nested()
         }
         ''')
 
         then:
-        def err = thrown(MissingProcessException)
-        err.message ==  '''\
-                        Missing process or function sleeper3()
-                        
-                        Did you mean any of these instead?
-                          sleeper1
-                          sleeper2
-                        '''.stripIndent()
+        def err = thrown(ScriptCompilationException)
+        err.cause.message.contains '`sleeper3` is not defined'
     }
 
     def 'should not conflict with private meta attribute' () {
         when:
-        def result = dsl_eval '''
-         
+        def result = runScript '''
+
         process foo {
           input: val x
-          output: val y 
+          output: val y
           exec: y = x
         }
-       
+
         workflow {
-            main: 
-              meta = channel.of('Hello')
-              foo(meta)
-            emit: 
-              foo.out
+            meta = channel.of('Hello')
+            foo(meta)
         }
         '''
 
@@ -608,15 +571,15 @@ class ScriptDslTest extends Dsl2Spec {
     def 'should throw an exception on missing method' () {
 
         when:
-        dsl_eval '''
+        runScript '''
            Channel.doesNotExist()
         '''
         then:
-        def e1 = thrown(MissingMethodException)
-        e1.message == 'No signature of method: java.lang.Object.Channel.doesNotExist() is applicable for argument types: () values: []'
+        def e1 = thrown(MissingProcessException)
+        e1.message == 'Missing process or function Channel.doesNotExist()'
 
         when:
-        dsl_eval '''
+        runScript '''
         workflow {
            Channel.doesNotExist()
         }
@@ -624,24 +587,6 @@ class ScriptDslTest extends Dsl2Spec {
         then:
         def e2 = thrown(MissingProcessException)
         e2.message == 'Missing process or function Channel.doesNotExist()'
-    }
-
-    def 'should show proper error message for invalid entry name' () {
-        when:
-        // Use dsl_eval with an invalid entry name to trigger the error
-        dsl_eval('invalidEntry', '''
-        workflow validWorkflow {
-          /println 'valid'/
-        }
-        
-        workflow {
-          /println 'default'/
-        }
-        ''')
-        
-        then:
-        def err = thrown(IllegalArgumentException)
-        err.message.contains('Unknown workflow entry name: invalidEntry')
     }
 
 }

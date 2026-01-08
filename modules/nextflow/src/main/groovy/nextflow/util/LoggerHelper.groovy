@@ -633,17 +633,17 @@ class LoggerHelper {
     }
 
     static List<String> findErrorLine( Throwable e, Map<String, Path> allNames ) {
-        def lines = getErrorLines(e)
-        List error = null
-        for( String str : lines ) {
-            if( (error=getErrorLine(str,allNames))) {
-                break
-            }
+        final lines = getErrorLines(e)
+        for( final line : lines ) {
+            final error = getErrorLine(line, allNames)
+            if( error )
+                return error
         }
-        return error
+        return null
     }
 
-    static @PackageScope String[] getErrorLines(Throwable e) {
+    @PackageScope
+    static String[] getErrorLines(Throwable e) {
         try {
             return ExceptionUtils.getStackTrace(e).split('\n')
         }
@@ -653,7 +653,7 @@ class LoggerHelper {
         }
     }
 
-    static private Pattern ERR_LINE_REGEX = ~/\((Script_[0-9a-f]{16}):(\d*)\)$/
+    static private Pattern ERR_LINE_REGEX = ~/\((Main|_nf_script_[0-9a-f]{16}):(\d*)\)$/
 
     @PackageScope
     static List<String> getErrorLine( String str, Map<String,Path> allNames ) {

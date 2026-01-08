@@ -18,6 +18,7 @@ package nextflow.config.parser.v2
 
 import java.nio.file.Path
 
+import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import nextflow.config.ConfigParser
 import nextflow.exception.ConfigParseException
@@ -36,7 +37,9 @@ class ConfigParserV2 implements ConfigParser {
 
     private Map bindingVars = [:]
 
-    private Map paramOverrides = [:]
+    private Map cliParams = [:]
+
+    private Map configParams = [:]
 
     private boolean ignoreIncludes = false
 
@@ -48,9 +51,9 @@ class ConfigParserV2 implements ConfigParser {
 
     private List<String> appliedProfiles
 
-    private Set<String> declaredProfiles
+    private Set<String> declaredProfiles = []
 
-    private Map<String,Object> declaredParams
+    private Map<String,Object> declaredParams = [:]
 
     private GroovyShell groovyShell
 
@@ -79,7 +82,7 @@ class ConfigParserV2 implements ConfigParser {
     }
 
     @Override
-    ConfigParser setStripSecrets(boolean value) {
+    ConfigParserV2 setStripSecrets(boolean value) {
         this.stripSecrets = value
         return this
     }
@@ -91,10 +94,15 @@ class ConfigParserV2 implements ConfigParser {
     }
 
     @Override
-    ConfigParserV2 setParams(Map vars) {
-        // deep clone the map to prevent side-effect
+    ConfigParserV2 setParams(Map params) {
+        // deep clone the map to prevent side effects with nested params
         // see https://github.com/nextflow-io/nextflow/issues/1923
-        this.paramOverrides = Bolts.deepClone(vars)
+        this.cliParams = Bolts.deepClone(params)
+        return this
+    }
+
+    ConfigParserV2 setConfigParams(Map params) {
+        this.configParams = params
         return this
     }
 
@@ -127,14 +135,17 @@ class ConfigParserV2 implements ConfigParser {
             if( path )
                 script.setConfigPath(path)
             script.setIgnoreIncludes(ignoreIncludes)
-            script.setParams(paramOverrides)
-            script.setProfiles(appliedProfiles)
             script.setRenderClosureAsString(renderClosureAsString)
+            script.setStrict(strict)
+            script.setStripSecrets(stripSecrets)
+            script.setParams(cliParams)
+            script.setConfigParams(configParams)
+            script.setProfiles(appliedProfiles)
             script.run()
 
             final target = script.getTarget()
-            declaredProfiles = script.getDeclaredProfiles()
-            declaredParams = script.getDeclaredParams()
+            declaredProfiles.addAll(script.getDeclaredProfiles())
+            declaredParams.putAll(script.getDeclaredParams())
             return Bolts.toConfigObject(target)
         }
         catch( CompilationFailedException e ) {
@@ -168,8 +179,9 @@ class ConfigParserV2 implements ConfigParser {
     }
 
     @Override
+    @CompileDynamic // required to support ProviderPath::getText() over NioExtensions::getText()
     ConfigObject parse(Path path) {
-        return parse(path.text, path)
+        return parse(path.getText(), path)
     }
 
     private ConfigCompiler compiler
