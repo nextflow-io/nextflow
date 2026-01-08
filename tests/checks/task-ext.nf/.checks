@@ -1,0 +1,30 @@
+set -e
+
+#
+# initial run
+#
+$NXF_RUN -c ../../task-ext.config --value foo | tee .stdout
+
+[[ `grep INFO .nextflow.log | grep -c 'Submitted process'` == 1 ]] || false
+
+grep 'args = --some-param foo' .stdout
+
+
+#
+# resumed run (same value)
+#
+$NXF_RUN -c ../../task-ext.config --value foo -resume | tee .stdout
+
+[[ `grep INFO .nextflow.log | grep -c 'Cached process'` == 1 ]] || false
+
+grep 'args = --some-param foo' .stdout
+
+
+#
+# resumed run (new value)
+#
+$NXF_RUN -c ../../task-ext.config --value bar -resume | tee .stdout
+
+[[ `grep INFO .nextflow.log | grep -c 'Submitted process'` == 1 ]] || false
+
+grep 'args = --some-param bar' .stdout
