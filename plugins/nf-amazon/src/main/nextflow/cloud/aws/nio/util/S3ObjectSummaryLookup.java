@@ -52,15 +52,12 @@ public class S3ObjectSummaryLookup {
          * when `key` is an empty string retrieve the object meta-data of the bucket
          */
         if( "".equals(s3Path.getKey()) ) {
-            HeadObjectResponse meta = client.getObjectMetadata(s3Path.getBucket(), "");
+            HeadBucketResponse meta = client.getBucketMetadata(s3Path.getBucket());
             if( meta == null )
                 throw new NoSuchFileException("s3://" + s3Path.getBucket());
 
             summary = S3Object.builder()
-                    .eTag(meta.eTag())
                     .key(s3Path.getKey())
-                    .lastModified(meta.lastModified())
-                    .size(meta.contentLength())
                     .build();
 
             // TODO summary.setOwner(?);
