@@ -28,6 +28,7 @@ nextflowPlugin {
     generateSpec = false
     extensionPoints = [
         'nextflow.cloud.aws.batch.AwsBatchExecutor',
+        'nextflow.cloud.aws.ecs.AwsEcsExecutor',
         'nextflow.cloud.aws.config.AwsConfig',
         'nextflow.cloud.aws.fusion.AwsFusionEnv',
         'nextflow.cloud.aws.mail.AwsMailProvider',

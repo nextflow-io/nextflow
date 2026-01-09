@@ -139,3 +139,10 @@ Follow these actions to make a new release:
     git commit -m "[release] Nextflow version 25.09.0-edge"
     git push origin master
     ```
+
+## Active Technologies
+- Groovy 4.0.29, Java 17 target (Java 21 toolchain) + AWS SDK v2 (ECS, EC2, CloudWatch Logs, S3), GPars 1.2.1 (001-ecs-executor)
+- AWS S3 via Seqera Fusion filesystem (001-ecs-executor)
+
+## Recent Changes
+- 001-ecs-executor: Added Groovy 4.0.29, Java 17 target (Java 21 toolchain) + AWS SDK v2 (ECS, EC2, CloudWatch Logs, S3), GPars 1.2.1
