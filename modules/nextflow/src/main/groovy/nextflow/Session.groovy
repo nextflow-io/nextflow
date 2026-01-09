@@ -79,6 +79,7 @@ import nextflow.trace.WorkflowStatsObserver
 import nextflow.trace.event.FilePublishEvent
 import nextflow.trace.event.TaskEvent
 import nextflow.trace.event.WorkflowOutputEvent
+import nextflow.trace.event.WorkflowPublishEvent
 import nextflow.util.Barrier
 import nextflow.util.ConfigHelper
 import nextflow.util.Duration
@@ -88,7 +89,6 @@ import nextflow.util.NameGenerator
 import nextflow.util.SysHelper
 import nextflow.util.ThreadPoolManager
 import nextflow.util.Threads
-import nextflow.util.VersionNumber
 import org.apache.commons.lang3.exception.ExceptionUtils
 import sun.misc.Signal
 import sun.misc.SignalHandler
@@ -686,7 +686,6 @@ class Session implements ISession {
         throw new IllegalStateException("Not a valid config env object: $config.env")
     }
 
-    @Memoized
     Manifest getManifest() {
         if( !config.manifest )
             return new Manifest()
@@ -890,13 +889,6 @@ class Session implements ISession {
 
     ExecutorService getExecService() { execService }
 
-    /**
-     * Check preconditions before run the main script
-     */
-    protected void validate() {
-        checkVersion()
-    }
-
     @PackageScope void checkConfig() {
         final enabled = config.navigate('nextflow.enable.configProcessNamesValidation', true) as boolean
         if( enabled ) {
@@ -916,36 +908,6 @@ class Session implements ISession {
 
     boolean failOnIgnore() {
         config.navigate('workflow.failOnIgnore', false) as boolean
-    }
-
-    @PackageScope VersionNumber getCurrentVersion() {
-        new VersionNumber(BuildInfo.version)
-    }
-
-    @PackageScope void checkVersion() {
-        def version = manifest.getNextflowVersion()?.trim()
-        if( !version )
-            return
-
-        // when the version string is prefix with a `!`
-        // an exception is thrown is the version does not match
-        boolean important = false
-        if( version.startsWith('!') ) {
-            important = true
-            version = version.substring(1).trim()
-        }
-
-        if( !getCurrentVersion().matches(version) ) {
-            important ? showVersionError(version) : showVersionWarning(version)
-        }
-    }
-
-    @PackageScope void showVersionError(String ver) {
-        throw new AbortOperationException("Nextflow version $BuildInfo.version does not match workflow required version: $ver")
-    }
-
-    @PackageScope void showVersionWarning(String ver) {
-        log.warn "Nextflow version $BuildInfo.version does not match workflow required version: $ver -- Execution will continue, but things may break!"
     }
 
     /**
@@ -1090,7 +1052,6 @@ class Session implements ISession {
     }
 
     void notifyBeforeWorkflowExecution() {
-        validate()
     }
 
     void notifyAfterWorkflowExecution() {
@@ -1107,13 +1068,17 @@ class Session implements ISession {
         notifyEvent(observersV2, ob -> ob.onFlowCreate(this))
     }
 
-    void notifyWorkflowOutput(WorkflowOutputEvent event) {
-        notifyEvent(observersV2, ob -> ob.onWorkflowOutput(event))
-    }
-
     void notifyFilePublish(FilePublishEvent event) {
         notifyEvent(observersV1, ob -> ob.onFilePublish(event.target, event.source))
         notifyEvent(observersV2, ob -> ob.onFilePublish(event))
+    }
+
+    void notifyWorkflowPublish(WorkflowPublishEvent event) {
+        notifyEvent(observersV2, ob -> ob.onWorkflowPublish(event))
+    }
+
+    void notifyWorkflowOutput(WorkflowOutputEvent event) {
+        notifyEvent(observersV2, ob -> ob.onWorkflowOutput(event))
     }
 
     void notifyFlowComplete() {

@@ -34,7 +34,11 @@ Parameters can be declared in a Nextflow script with the `params` block or with 
 :::
 
 :::{note}
-This feature requires the {ref}`strict syntax <strict-syntax-page>` to be enabled (`NXF_SYNTAX_PARSER=v2`).
+Typed parameters require the {ref}`strict syntax <strict-syntax-page>`. Set the `NXF_SYNTAX_PARSER` environment variable to `v2` to enable:
+
+```bash
+export NXF_SYNTAX_PARSER=v2
+```
 :::
 
 A script can declare parameters using the `params` block:
@@ -49,13 +53,7 @@ params {
 }
 ```
 
-The following types can be used for parameters:
-
-- {ref}`stdlib-types-boolean`
-- {ref}`stdlib-types-float`
-- {ref}`stdlib-types-integer`
-- {ref}`stdlib-types-path`
-- {ref}`stdlib-types-string`
+All {ref}`standard types <stdlib-types>` except for the dataflow types (`Channel` and `Value`) can be used for parameters.
 
 Parameters can be used in the entry workflow:
 
@@ -71,7 +69,16 @@ As a best practice, parameters should only be referenced in the entry workflow o
 
 The default value can be overridden by the command line, params file, or config file. Parameters from multiple sources are resolved in the order described in {ref}`cli-params`. Parameters specified on the command line are converted to the appropriate type based on the corresponding type annotation.
 
-A parameter that doesn't specify a default value is a *required* param. If a required param is not given a value at runtime, the run will fail.
+A parameter that doesn't specify a default value is a *required* parameter. If a required parameter is not given a value at runtime, the run will fail.
+
+:::{versionadded} 26.04.0
+:::
+
+Parameters with a collection type (i.e., `List`, `Set`, or `Bag`) can be supplied a file path instead of a literal collection. The file must be CSV, JSON, or YAML. Nextflow will parse the file contents and assign the resuling collection to the parameter. An error is thrown if the file contents do not match the parameter type.
+
+:::{note}
+When supplying a CSV file to a collection parameter, the CSV file must contain a header row and must use a comma (`,`) as the column separator.
+:::
 
 (workflow-params-legacy)=
 
@@ -455,11 +462,11 @@ workflow {
 
 ## Process and workflow recursion
 
-:::{versionadded} 21.11.0-edge
+:::{versionadded} 22.04.0
 :::
 
 :::{note}
-This feature requires the `nextflow.preview.recursion` feature flag to be enabled.
+This is a preview feature and requires the `nextflow.preview.recursion` feature flag to be enabled. The syntax and behavior may change in future releases.
 :::
 
 Processes can be invoked recursively using the `recurse` method.

@@ -52,6 +52,14 @@ class GithubRepositoryProviderTest extends Specification {
         def result = repo.readText('main.nf')
         then:
         result.trim().startsWith('#!/usr/bin/env nextflow')
+
+        //Read from branch
+        when:
+        repo.setRevision('test/branch+with&strangecharacters')
+        result = repo.readText('/test/branch_name')
+        then:
+        result.trim().startsWith('test/branch+with&strangecharacters')
+
     }
 
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
@@ -95,6 +103,11 @@ class GithubRepositoryProviderTest extends Specification {
                 .setRevision('the-commit-id')
                 .getContentUrl('main.nf') == 'https://github.com/repos/pditommaso/hello/contents/main.nf?ref=the-commit-id'
 
+        and:
+        new GithubRepositoryProvider('pditommaso/hello', obj)
+            .setRevision('test/branch+with&strangecharacters')
+            .getContentUrl('main.nf') == 'https://github.com/repos/pditommaso/hello/contents/main.nf?ref=test%2Fbranch%2Bwith%26strangecharacters'
+
     }
 
     def 'should user github token as creds' () {
@@ -112,6 +125,21 @@ class GithubRepositoryProviderTest extends Specification {
         then:
         provider.getUser() >> null
         provider.getPassword() >> null
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def 'should user specified token instead of github token as creds' () {
+        given:
+        SysEnv.push(['GITHUB_TOKEN': '1234567890'])
+        and:
+        def config = new ProviderConfig('github', [auth: '987654321'])
+        def provider = Spy(new GithubRepositoryProvider('foo/bar', config))
+
+        expect:
+        provider.getUser() == '987654321'
+        provider.getPassword() == 'x-oauth-basic'
 
         cleanup:
         SysEnv.pop()

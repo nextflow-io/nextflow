@@ -38,6 +38,7 @@ import nextflow.SysEnv
 import nextflow.config.ConfigBuilder
 import nextflow.config.ConfigMap
 import nextflow.config.ConfigValidator
+import nextflow.config.Manifest
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
 import nextflow.plugin.Plugins
@@ -49,6 +50,7 @@ import nextflow.secret.SecretsLoader
 import nextflow.util.CustomPoolFactory
 import nextflow.util.Duration
 import nextflow.util.HistoryFile
+import nextflow.util.VersionNumber
 import org.apache.commons.lang3.StringUtils
 import org.fusesource.jansi.AnsiConsole
 import org.yaml.snakeyaml.Yaml
@@ -360,6 +362,9 @@ class CmdRun extends CmdBase implements HubOptions {
         ConfigMap config = builder.build()
         Map configParams = builder.getConfigParams()
 
+        // -- Check Nextflow version
+        checkVersion(config)
+
         // -- Load plugins (may register secret providers)
         Plugins.load(config)
 
@@ -630,8 +635,8 @@ class CmdRun extends CmdBase implements HubOptions {
         /*
          * try to look for a pipeline in the repository
          */
-        def manager = new AssetManager(pipelineName, mainScript, this)
-        def repo = manager.getProject()
+        def manager = new AssetManager(pipelineName, revision, mainScript, this)
+        def repo = manager.getProjectWithRevision()
 
         boolean checkForUpdate = true
         if( !manager.isRunnable() || latest ) {
@@ -643,7 +648,12 @@ class CmdRun extends CmdBase implements HubOptions {
                 log.info " $result"
             checkForUpdate = false
         }
-        // checkout requested revision
+        // Warn if using legacy
+        if( manager.isUsingLegacyStrategy() ){
+            log.warn1 "This Nextflow version supports a new Multi-revision strategy for managing the SCM repositories, " +
+                "but '${repo}' is single-revision legacy strategy - Please consider to update the repository with the 'nextflow pull -migrate' command."
+        }
+        // post download operations
         try {
             manager.checkout(revision)
             manager.updateModules()
@@ -675,6 +685,45 @@ class CmdRun extends CmdBase implements HubOptions {
         result.deleteOnExit()
         input.withReader { Reader reader -> result << reader }
         return result
+    }
+
+    /**
+     * Check the Nextflow version against the version required by
+     * the pipeline via `manifest.nextflowVersion`.
+     *
+     * When the version spec is prefixed with '!', the run will fail
+     * if the Nextflow version does not match.
+     *
+     * @param config
+     */
+    protected void checkVersion(Map config) {
+        final manifest = new Manifest(config.manifest as Map ?: Collections.emptyMap())
+        String version = manifest.nextflowVersion?.trim()
+        if( !version )
+            return
+
+        final important = version.startsWith('!')
+        if( important )
+            version = version.substring(1).trim()
+
+        if( !getCurrentVersion().matches(version) ) {
+            if( important )
+                showVersionError(version)
+            else
+                showVersionWarning(version)
+        }
+    }
+
+    protected VersionNumber getCurrentVersion() {
+        return new VersionNumber(BuildInfo.version)
+    }
+
+    protected void showVersionError(String ver) {
+        throw new AbortOperationException("Nextflow version ${BuildInfo.version} does not match version required by pipeline: ${ver}")
+    }
+
+    protected void showVersionWarning(String ver) {
+        log.warn "Nextflow version ${BuildInfo.version} does not match version required by pipeline: ${ver} -- execution will continue, but things might break!"
     }
 
     @Memoized  // <-- avoid parse multiple times the same file and params

@@ -254,4 +254,45 @@ class ScriptLoaderV2Test extends Dsl2Spec {
         noExceptionThrown()
     }
 
+    def 'should register outputs and topic emissions' () {
+
+        given:
+        def session = new Session()
+        def parser = new ScriptLoaderV2(session)
+
+        def TEXT = '''
+
+            nextflow.preview.types = true
+
+            process hello {
+
+                output:
+                out1: Path = file("out1.txt")
+                out2: Path = file("out2.txt")
+
+                topic:
+                file("version.txt") >> 'versions'
+
+                script:
+                """
+                echo "version" > version.txt
+                echo "result1" > out1.txt
+                echo "result2" > out2.txt
+                """
+            }
+            '''
+
+        when:
+        parser.setModule(true)
+        parser.parse(TEXT)
+        parser.runScript()
+        def process = ScriptMeta.get(parser.getScript()).getProcess('hello')
+        def outputs = process.getProcessConfig().getOutputs()
+
+        then:
+        outputs.getParams().size() == 2
+        outputs.getTopics().size() == 1
+        outputs.getFiles().size() == 3
+    }
+
 }

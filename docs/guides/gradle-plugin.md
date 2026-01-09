@@ -87,6 +87,31 @@ End-to-end tests should be tailored to the needs of your plugin, but generally t
 
 The Nextflow Gradle plugin allows you to publish plugins to the [Nextflow plugin registry](https://registry.nextflow.io/) from the command line.
 
+(gradle-plugin-readme)=
+
+### README.md requirement
+
+When publishing to the registry, your project must include a `README.md` file in the plugin project root directory. This file will be used as the plugin description in the registry.
+
+**Required sections:**
+
+1. **Summary** - Explain what the plugin does
+2. **Get Started** - Setup and configuration instructions
+3. **Examples** - Code examples with code blocks
+4. **License** - Specify the plugin's license (e.g., Apache 2.0, MIT, GPL)
+
+**Optional sections:**
+
+- **What's new** - Recent changes or new features
+- **Breaking changes** - Incompatible changes users should be aware of
+
+**Requirements:**
+
+- Content must be meaningful (no placeholder text like TODO, TBD, Lorem ipsum)
+- Content must be in English
+
+### Publishing steps
+
 To publish plugins to the [Nextflow plugin registry](https://registry.nextflow.io/):
 
 1. {ref}`Claim your plugin <plugin-registry-claim>` in the registry.

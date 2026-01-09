@@ -602,6 +602,8 @@ catch( IOException e ) {
 
 The try block will be executed, and if an error is raised and matches the expected error type of a catch clause, the code in that catch clause will be executed. If no catch clause is matched, the error will be raised to the next enclosing try/catch statement, or to the Nextflow runtime.
 
+(syntax-expressions)=
+
 ## Expressions
 
 An expression represents a value. A *literal* value is an expression whose value is known at compile-time, such as a number, string, or boolean. All other expressions must be evaluated at run-time.
@@ -1010,4 +1012,3 @@ The following legacy features were excluded from this page because they are depr
 - The `addParams` and `params` clauses of include declarations. See {ref}`module-params` for more information.
 - The `when:` section of a process definition. See {ref}`process-when` for more information.
 - The `shell:` section of a process definition. See {ref}`process-shell` for more information.
-- The implicit `it` closure parameter. See {ref}`script-closure` for more information.

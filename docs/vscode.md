@@ -74,11 +74,19 @@ If a `nextflow_schema.json` file exists in the same directory as a script with a
 
 The extension can generate a workflow DAG that includes the workflow inputs, outputs, and any processes or workflows that are called by the selected workflow. The workflow DAG is displayed in a new panel to the side.
 
+The DAG preview is similar to the {ref}`workflow diagram <workflow-diagram>` that can be generated at runtime using the `-with-dag` option. However, it is different in several ways:
+
+- The DAG preview does not require executing Nextflow code.
+
+- The DAG preview shows only a single workflow, whereas the workflow diagram shows the entire pipeline.
+
+- The DAG preview shows all conditional processes, whereas the workflow diagram shows only the processes that were called in a specific run.
+
 To preview the DAG of a workflow, select the **Preview DAG** CodeLens above the workflow definition.
 
 ### Automatic code migration
 
-The extension can automatiicaly migrate scripts to static types. See {ref}`migrating-static-types` for details.
+The extension can automatically migrate scripts to static types. See {ref}`migrating-static-types` for details.
 
 To migrate a script, open the Command Palette, search for **Convert script to static types**, and select it.
 
