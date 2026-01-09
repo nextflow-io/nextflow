@@ -231,6 +231,27 @@ class ScriptFormatterTest extends Specification {
             }
             '''
         )
+
+        checkFormat(
+            '''\
+            nextflow.preview.types=true
+
+            process hello{
+            input: (id:String,infile:Path):Record ; script: 'cat input.txt > output.txt'
+            }
+            ''',
+            '''\
+            nextflow.preview.types = true
+
+            process hello {
+                input:
+                (id: String, infile: Path): Record
+
+                script:
+                'cat input.txt > output.txt'
+            }
+            '''
+        )
     }
 
     def 'should format a function definition' () {
