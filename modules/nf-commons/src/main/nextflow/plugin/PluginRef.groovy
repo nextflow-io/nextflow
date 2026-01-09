@@ -19,15 +19,15 @@ package nextflow.plugin
 
 import com.google.common.hash.Hasher
 import groovy.transform.Canonical
-import nextflow.util.CacheFunnel
-import nextflow.util.CacheHelper
+import groovy.transform.CompileStatic
 /**
  * Model a plugin Id and version
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Canonical
-class PluginRef implements CacheFunnel, Comparable<PluginRef> {
+@CompileStatic
+class PluginRef implements Comparable<PluginRef> {
 
     /**
      * Plugin unique ID
@@ -54,14 +54,6 @@ class PluginRef implements CacheFunnel, Comparable<PluginRef> {
         if( defaultPlugins.hasPlugin(id) )
             return defaultPlugins.getPlugin(id)
         return new PluginRef(id)
-    }
-
-    @Override
-    Hasher funnel(Hasher hasher, CacheHelper.HashMode mode) {
-        hasher.putUnencodedChars(id)
-        if( version )
-            hasher.putUnencodedChars(version)
-        return hasher
     }
 
     @Override

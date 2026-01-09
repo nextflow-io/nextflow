@@ -14,7 +14,7 @@ import groovy.transform.ToString
 @CompileStatic
 @ToString(includes = 'options', includeFields = true)
 @EqualsAndHashCode(includes = 'options', includeFields = true)
-class CmdLineOptionMap implements CacheFunnel {
+class CmdLineOptionMap {
 
     final private Map<String, List<String>> options = new LinkedHashMap<String, List<String>>()
     final private static CmdLineOptionMap EMPTY = new CmdLineOptionMap()
@@ -73,10 +73,5 @@ class CmdLineOptionMap implements CacheFunnel {
             serialized << "option{${it.key}: ${it.value.each {it}}}"
         }
         return "[${serialized.join(', ')}]"
-    }
-
-    @Override
-    Hasher funnel(Hasher hasher, CacheHelper.HashMode mode) {
-        return CacheHelper.hasher(hasher, options, mode)
     }
 }
