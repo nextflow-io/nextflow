@@ -99,7 +99,7 @@ class CondaConfig implements ConfigScope {
 
     private List<String> parseChannels(Object value) {
         if( !value )
-            return Collections.emptyList()
+            return ['conda-forge','bioconda']
         if( value instanceof List )
             return value
         if( value instanceof CharSequence )

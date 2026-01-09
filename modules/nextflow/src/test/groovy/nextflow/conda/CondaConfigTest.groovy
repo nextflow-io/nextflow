@@ -54,14 +54,14 @@ class CondaConfigTest extends Specification {
         conda.getChannels() == EXPECTED
 
         where:
-        EXPECTED                | CONFIG
-        []                      | [:]
-        ['bioconda']            | [channels:'bioconda']
-        ['bioconda']            | [channels:['bioconda']]
+        EXPECTED                   | CONFIG
+        ['conda-forge','bioconda'] | [:]
+        ['bioconda']               | [channels:'bioconda']
+        ['bioconda']               | [channels:['bioconda']]
         and:
-        ['this','that','other'] | [channels:'this,that,other']
-        ['this','that','other'] | [channels:'this, that ,other']
+        ['this','that','other']    | [channels:'this,that,other']
+        ['this','that','other']    | [channels:'this, that ,other']
         and:
-        ['this','that','other'] | [channels:['this','that','other']]
+        ['this','that','other']    | [channels:['this','that','other']]
     }
 }
