@@ -458,7 +458,7 @@ class AssetManager {
     @PackageScope
     String resolveNameFromGitUrl( String repository ) {
 
-        final isUrl = repository.startsWith('http://') || repository.startsWith('https://') || repository.startsWith('file:/')
+        final isUrl = repository.startsWith('http://') || repository.startsWith('https://') || repository.startsWith('file:/') || repository.startsWith('s3://')
         if( !isUrl )
             return null
 
@@ -755,6 +755,64 @@ class AssetManager {
         }
         return strategy.download(revision, deep, manifest)
     }
+
+    /**
+     * Upload a pipeline to a remote repository
+     *
+     * @param directory storing the local pipeline to upload.
+     * @param revision The revision/branch to upload
+     * @param remoteName The name of the remote (default: origin)
+     * @param isNewRepo Whether this is a new repository initialization
+     * @result A message representing the operation result
+     */
+    String upload(File directory, String revision, String remoteName = "origin", boolean isNewRepo = false) {
+        assert project
+        
+        checkUploadDirectory(directory, remoteName)
+
+        def git = Git.open(directory)
+
+        // Create and checkout branch if it doesn't exist
+        try {
+            git.checkout().setName(revision).call()
+        }
+        catch( Exception ignored ) {
+            // Branch doesn't exist, create it
+            git.checkout()
+                .setCreateBranch(true)
+                .setName(revision)
+                .call()
+        }
+
+
+        def pushCommand = git.push()
+            .setRemote(remoteName)
+
+        pushCommand.add(revision)
+
+        if( provider.hasCredentials() )
+            pushCommand.setCredentialsProvider( provider.getGitCredentials() )
+
+        def result = pushCommand.call()
+        git.close()
+        return "pushed to ${remoteName} (${revision})"
+    }
+
+    private void checkUploadDirectory(File directory, String remote){
+        if( !directory )
+            throw new AbortOperationException("Directory to upload not provided")
+        if( !directory.exists() )
+            throw new AbortOperationException("Directory $directory not exists")
+        final gitConfig = new File(directory, '.git/config')
+        if( !directory.exists() )
+            throw new AbortOperationException("Directory $directory not a valid folder - no .git/config file found")
+        final url = new IniFile().load(gitConfig).getString("remote \"${remote}\"", "url")
+        final expected = getGitRepositoryUrl()
+        if( url != expected )
+            throw new AbortOperationException("Incorrect $remote remote URL ($url) in upload directory (Expected: $expected)")
+    }
+
+
 
     /**
      * Clone a pipeline from a remote pipeline repository to the specified folder
