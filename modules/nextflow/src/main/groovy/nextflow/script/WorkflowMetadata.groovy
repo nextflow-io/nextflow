@@ -307,7 +307,10 @@ class WorkflowMetadata {
      * @param action The action handler
      */
     void onComplete( Closure action ) {
+        onCompleteActions.add(action)
+    }
 
+    void setOnCompleteFormConfig( Closure action ) {
         final clone = (Closure)action.clone()
         clone.delegate = NF.binding.variables
         clone.resolveStrategy = Closure.DELEGATE_FIRST
@@ -339,7 +342,10 @@ class WorkflowMetadata {
      * @param action
      */
     void onError( Closure action ) {
+        onErrorActions.add(action)
+    }
 
+    void setOnErrorFromConfig(Closure action ) {
         final clone = (Closure)action.clone()
         clone.delegate = NF.binding.variables
         clone.resolveStrategy = Closure.DELEGATE_FIRST
@@ -370,11 +376,11 @@ class WorkflowMetadata {
         if( !workflowConfig ) return
         // -- register `onComplete`
         if( workflowConfig.onComplete instanceof Closure ) {
-            onComplete( (Closure)workflowConfig.onComplete )
+            setOnCompleteFormConfig( (Closure)workflowConfig.onComplete )
         }
         // -- register `onError`
         if( workflowConfig.onError instanceof Closure ) {
-            onError( (Closure)workflowConfig.onError )
+            setOnErrorFromConfig( (Closure)workflowConfig.onError )
         }
     }
 
