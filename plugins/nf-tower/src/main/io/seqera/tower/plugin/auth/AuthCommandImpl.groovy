@@ -19,7 +19,7 @@ import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.SysEnv
 import nextflow.cli.CmdAuth
-import nextflow.config.ConfigBuilder
+import nextflow.config.ConfigCmdAdapter
 import nextflow.exception.AbortOperationException
 import nextflow.platform.PlatformHelper
 
@@ -352,7 +352,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
     private String normalizeApiUrl(String url) {
         if( !url ) {
             // Read config to get the actual resolved endpoint value
-            final builder = new ConfigBuilder().setHomeDir(Const.APP_HOME_DIR).setCurrentDir(Const.APP_HOME_DIR)
+            final builder = new ConfigCmdAdapter().setHomeDir(Const.APP_HOME_DIR).setCurrentDir(Const.APP_HOME_DIR)
             final configObject = builder.buildConfigObject()
             final towerConfig = configObject.navigate('tower') as Map ?: [:]
             return PlatformHelper.getEndpoint(towerConfig, SysEnv.get())
@@ -564,7 +564,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
     @Override
     void config(Boolean showHeader = true) {
         // Read from both main config and seqera-auth.config file
-        final builder = new ConfigBuilder().setHomeDir(Const.APP_HOME_DIR).setCurrentDir(Const.APP_HOME_DIR)
+        final builder = new ConfigCmdAdapter().setHomeDir(Const.APP_HOME_DIR).setCurrentDir(Const.APP_HOME_DIR)
         final configObject = builder.buildConfigObject()
         final config = configObject.flatten()
 

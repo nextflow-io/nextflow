@@ -46,7 +46,7 @@ class ProviderPathTest extends Specification {
             '''
         
         when:
-        def cfg = new ConfigBuilder().buildGivenFiles(path)
+        def cfg = new ConfigBuilder().build([path])
         then:
         provider.readText('nextflow.config') >> MAIN_CONFIG
         provider.readText('conf/nested.config') >> NESTED_CONFIG

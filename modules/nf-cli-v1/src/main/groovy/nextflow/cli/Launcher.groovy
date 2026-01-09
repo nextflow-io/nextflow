@@ -39,8 +39,8 @@ import nextflow.exception.ScriptRuntimeException
 import nextflow.secret.SecretsLoader
 import nextflow.util.Escape
 import nextflow.util.LoggerHelper
+import nextflow.util.LoggerOptions
 import nextflow.util.ProxyConfig
-import nextflow.util.SpuriousDeps
 import org.eclipse.jgit.api.errors.GitAPIException
 
 import static nextflow.util.SysHelper.dumpThreads
@@ -116,11 +116,6 @@ class Launcher {
 
         if(SecretsLoader.isEnabled())
             allCommands.add(new CmdSecret())
-
-        // legacy command
-        final cmdCloud = SpuriousDeps.cmdCloud()
-        if( cmdCloud )
-            allCommands.add(cmdCloud)
 
         options = new CliOptions()
         jcommander = new JCommander(options)
@@ -445,7 +440,7 @@ class Launcher {
          */
         try {
             parseMainArgs(args)
-            LoggerHelper.configureLogger(this)
+            LoggerHelper.configureLogger(loggerOptions(), daemonMode)
         }
         catch( ParameterException e ) {
             // print command line parsing errors
@@ -465,6 +460,18 @@ class Launcher {
             System.exit(1)
         }
         return this
+    }
+
+    protected LoggerOptions loggerOptions() {
+        new LoggerOptions(
+            options.ansiLog,
+            options.background,
+            options.debug,
+            options.logFile,
+            options.quiet,
+            options.syslog,
+            options.trace
+        )
     }
 
     protected void checkForHelp() {

@@ -18,14 +18,14 @@ package nextflow.cli
 
 import com.beust.jcommander.Parameter
 import groovy.transform.CompileStatic
+import nextflow.scm.HubOptions
 /**
-  * Defines the command line parameters for command that need to interact with a pipeline service hub i.e. GitHub or BitBucket
+  * Command line parameters for commands that interact with a git repository provider i.e. GitHub or BitBucket
   *
   * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
   */
-
 @CompileStatic
-trait HubOptions {
+interface HubAware {
 
     @Parameter(names=['-hub'], description = "Service hub where the project is hosted")
     String hubProvider
@@ -33,36 +33,7 @@ trait HubOptions {
     @Parameter(names='-user', description = 'Private repository user name')
     String hubUser
 
-    /**
-     * Return the password provided on the command line or stop allowing the user to enter it on the console
-     *
-     * @return The password entered or {@code null} if no user has been entered
-     */
-    String getHubPassword() {
-
-        if( !hubUser )
-            return null
-
-        def p = hubUser.indexOf(':')
-        if( p != -1 )
-            return hubUser.substring(p+1)
-
-        def console = System.console()
-        if( !console )
-            return null
-
-        print "Enter your $hubProvider password: "
-        char[] pwd = console.readPassword()
-        new String(pwd)
+    default HubOptions toHubOptions() {
+        return new HubOptions(hubProvider, hubUser)
     }
-
-    String getHubUser() {
-        if(!hubUser) {
-            return hubUser
-        }
-
-        def p = hubUser.indexOf(':')
-        return p != -1 ? hubUser.substring(0,p) : hubUser
-    }
-
 }

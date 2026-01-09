@@ -28,11 +28,11 @@ import groovy.transform.PackageScope
 import groovy.transform.ToString
 import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
-import nextflow.cli.HubOptions
-import nextflow.config.Manifest
 import nextflow.config.ConfigParserFactory
+import nextflow.config.Manifest
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AmbiguousPipelineNameException
+import nextflow.scm.HubOptions
 import nextflow.script.ScriptFile
 import nextflow.SysEnv
 import nextflow.util.IniFile
@@ -100,12 +100,12 @@ class AssetManager {
      *
      * @param pipeline The pipeline to be managed by this manager e.g. {@code nextflow-io/hello}
      */
-    AssetManager( String pipelineName, HubOptions cliOpts = null) {
+    AssetManager( String pipelineName, HubOptions hubOpts = null) {
         assert pipelineName
         // read the default config file (if available)
         def config = ProviderConfig.getDefault()
         // build the object
-        build(pipelineName, config, cliOpts)
+        build(pipelineName, config, hubOpts)
     }
 
     AssetManager( String pipelineName, Map config ) {
@@ -114,12 +114,12 @@ class AssetManager {
         build(pipelineName, config)
     }
 
-    AssetManager( String pipelineName, String revision, HubOptions cliOpts = null ) {
+    AssetManager( String pipelineName, String revision, HubOptions hubOpts = null ) {
         assert pipelineName
         // build the object
         def config = ProviderConfig.getDefault()
         // build the object
-        build(pipelineName, config, cliOpts, revision)
+        build(pipelineName, config, hubOpts, revision)
     }
 
     /**
@@ -127,11 +127,11 @@ class AssetManager {
      *
      * @param pipelineName A project name or a project repository Git URL
      * @param config A {@link Map} holding the configuration properties defined in the {@link ProviderConfig#DEFAULT_SCM_FILE} file
-     * @param cliOpts User credentials provided on the command line. See {@link HubOptions} trait
+     * @param hubOpts User credentials provided on the command line. See {@link HubOptions} trait
      * @return The {@link AssetManager} object itself
      */
     @PackageScope
-    AssetManager build( String pipelineName, Map config = null, HubOptions cliOpts = null, String revision = null ) {
+    AssetManager build( String pipelineName, Map config = null, HubOptions hubOpts = null, String revision = null ) {
 
         this.providerConfigs = ProviderConfig.createFromMap(config)
 
@@ -142,7 +142,7 @@ class AssetManager {
         }
         // Initialize strategy based on environment and repository state
         initStrategy(revision)
-        this.hub = checkHubProvider(cliOpts)
+        this.hub = checkHubProvider(hubOpts)
         this.provider = createHubProvider(hub)
 
         if( revision ){
@@ -151,7 +151,7 @@ class AssetManager {
 
         strategy.setProvider(this.provider)
 
-        setupCredentials(cliOpts)
+        setupCredentials(hubOpts)
 
         validateProjectDir()
 
@@ -320,14 +320,14 @@ class AssetManager {
     /**
      * Sets the user credentials on the {@link RepositoryProvider} object
      *
-     * @param cliOpts The user credentials specified on the program command line. See {@code HubOptions}
+     * @param hubOpts The user credentials specified on the program command line. See {@code HubOptions}
      */
     @PackageScope
-    void setupCredentials( HubOptions cliOpts ) {
-        if( cliOpts?.hubUser ) {
-            cliOpts.hubProvider = hub
-            final user = cliOpts.getHubUser()
-            final pwd = cliOpts.getHubPassword()
+    void setupCredentials( HubOptions hubOpts ) {
+        if( hubOpts?.user() ) {
+            hubOpts = new HubOptions(hub, hubOpts.user())
+            final user = hubOpts.getUser()
+            final pwd = hubOpts.getPassword()
             provider.setCredentials(user, pwd)
         }
     }
@@ -365,15 +365,15 @@ class AssetManager {
      * Find out the "hub provider" (i.e. the platform on which the remote repository is stored
      * for example: github, bitbucket, etc) and verifies that it is a known provider.
      *
-     * @param cliOpts The user hub info provider as command line options. See {@link HubOptions}
+     * @param hubOpts The user hub info provider as command line options. See {@link HubOptions}
      * @return The name of hub name e.g. {@code github}, {@code bitbucket}, etc.
      */
     @PackageScope
-    String checkHubProvider( HubOptions cliOpts ) {
+    String checkHubProvider( HubOptions hubOpts ) {
 
         def result = hub
         if( !result )
-            result = cliOpts?.getHubProvider()
+            result = hubOpts?.provider()
         if( !result )
             result = guessHubProviderFromGitConfig()
         if( !result )
