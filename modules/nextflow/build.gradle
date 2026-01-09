@@ -61,8 +61,8 @@ dependencies {
     testFixturesApi ("org.apache.groovy:groovy-test:4.0.29") { exclude group: 'org.apache.groovy' }
     testFixturesApi ("org.objenesis:objenesis:3.4")
     testFixturesApi ("net.bytebuddy:byte-buddy:1.14.17")
-    testFixturesApi ("org.spockframework:spock-core:2.3-groovy-4.0") { exclude group: 'org.apache.groovy' }
-    testFixturesApi ('org.spockframework:spock-junit4:2.3-groovy-4.0') { exclude group: 'org.apache.groovy' }
+    testFixturesApi ("org.spockframework:spock-core:2.4-groovy-4.0") { exclude group: 'org.apache.groovy' }
+    testFixturesApi ('org.spockframework:spock-junit4:2.4-groovy-4.0') { exclude group: 'org.apache.groovy' }
     testFixturesApi 'com.google.jimfs:jimfs:1.2'
     // note: declare as separate dependency to avoid a circular dependency
     lineageImplementation (project(':nf-lineage'))
