@@ -186,6 +186,7 @@ class AssetManagerTest extends Specification {
 
     }
 
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def 'test download from tag twice with multi-revision'() {
 
         given:
@@ -313,6 +314,26 @@ class AssetManagerTest extends Specification {
         manager.getLocalPath().toString() == folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/1c3e9e7404127514d69369cd87f8036830f5cf64').toString()
         when:
         manager.download("mybranch")
+        then:
+        noExceptionThrown()
+    }
+
+    @Requires({System.getenv('NXF_AZURE_REPOS_TOKEN')})
+    def 'test download from branch twice with multi-revision private repo'() {
+
+        given:
+        def folder = tempDir.getRoot()
+        def token  = System.getenv('NXF_AZURE_REPOS_TOKEN')
+
+        def manager = new AssetManager().build('https://dev.azure.com/pditommaso/nf-azure-repo', [providers: [azurerepos: [ auth: token]]])
+        manager.setStrategyType(AssetManager.RepositoryStrategyType.MULTI_REVISION)
+
+        when:
+        manager.download("master")
+        then:
+        folder.resolve(REPOS_SUBDIR + '/pditommaso/nf-azure-repo/nf-azure-repo/' + BARE_REPO).isDirectory()
+        when:
+        manager.download("master")
         then:
         noExceptionThrown()
     }
