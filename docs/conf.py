@@ -57,7 +57,8 @@ rediraffe_redirects = {
     'workflow-outputs.md': 'tutorials/workflow-outputs.md',
     'flux.md': 'tutorials/flux.md',
     'developer/plugins.md': 'plugins/developing-plugins.md',
-    'plugins.md': 'plugins/plugins.md'
+    'plugins.md': 'plugins/plugins.md',
+    'channel.md': 'workflow.md'
 }
 
 # Add any paths that contain templates here, relative to this directory.
