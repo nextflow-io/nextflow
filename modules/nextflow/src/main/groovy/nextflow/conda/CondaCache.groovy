@@ -23,6 +23,7 @@ import java.nio.file.Paths
 import java.util.concurrent.ConcurrentHashMap
 
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowVariable
@@ -170,6 +171,7 @@ class CondaCache {
      * @return {@code true} if it's a path to an explicit file, {@code false} otherwise
      */
     @PackageScope
+    @Memoized // <-- annotate as "Memoized" to avoid parsing multiple time the same file
     boolean isExplicitFile(String str) {
         if( str.contains('\n') )
             return false
