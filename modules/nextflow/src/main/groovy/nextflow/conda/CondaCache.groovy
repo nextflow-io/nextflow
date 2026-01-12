@@ -182,6 +182,7 @@ class CondaCache {
             return containsExplicitMarker(path)
         }
         catch( Exception e ) {
+            log.debug "Failed to check explicit file: $str - ${e.message}"
             return false
         }
     }
@@ -194,10 +195,9 @@ class CondaCache {
      */
     private boolean containsExplicitMarker(Path path) {
         try {
-            def reader = path.newReader()
-            try {
+            try(final reader = path.newReader()) {
                 for( int i = 0; i < 20; i++ ) {
-                    def line = reader.readLine()
+                    final line = reader.readLine()
                     if( line == null )
                         break
                     if( line.trim() == '@EXPLICIT' )
@@ -205,11 +205,9 @@ class CondaCache {
                 }
                 return false
             }
-            finally {
-                reader.close()
-            }
         }
         catch( Exception e ) {
+            log.debug "Failed to check for @EXPLICIT marker in file: $path - ${e.message}"
             return false
         }
     }
