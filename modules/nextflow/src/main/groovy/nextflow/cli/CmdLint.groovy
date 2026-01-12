@@ -189,12 +189,18 @@ class CmdLint extends CmdBase {
             .sorted(Comparator.comparing((SourceUnit source) -> source.getSource().getURI()))
             .forEach((source) -> {
                 final errorCollector = source.getErrorCollector()
-                if( errorCollector.hasErrors() || errorCollector.hasWarnings() )
+                final hasWarnings = (errorCollector.getWarnings() ?: []).stream()
+                    .anyMatch(warning -> warning !instanceof ParanoidWarning)
+                if( errorCollector.hasErrors() || hasWarnings )
                     printErrors(source)
                 if( errorCollector.hasErrors() )
                     summary.filesWithErrors += 1
                 else
                     summary.filesWithoutErrors += 1
+                if( hasWarnings )
+                    summary.filesWithWarnings += 1
+                else
+                    summary.filesWithoutWarnings += 1
             })
     }
 
@@ -217,6 +223,7 @@ class CmdLint extends CmdBase {
             .sorted(WARNING_COMPARATOR)
             .forEach((warning) -> {
                 errorListener.onWarning(warning, source.getName(), source)
+                summary.warnings += 1
             })
 
         errorListener.afterErrors()
