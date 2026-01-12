@@ -162,8 +162,54 @@ class CondaCache {
         (str.endsWith('.yml') || str.endsWith('.yaml')) && !str.contains('\n')
     }
 
-    boolean isTextFilePath(String str) {
-        str.endsWith('.txt') && !str.contains('\n')
+    /**
+     * Check if the given string is a path to a conda explicit file
+     * by verifying it contains the @EXPLICIT marker in the first 20 lines
+     *
+     * @param str The conda environment string
+     * @return {@code true} if it's a path to an explicit file, {@code false} otherwise
+     */
+    @PackageScope
+    boolean isExplicitFile(String str) {
+        if( str.contains('\n') )
+            return false
+        try {
+            final path = str as Path
+            if( !path.exists() )
+                return false
+            return containsExplicitMarker(path)
+        }
+        catch( Exception e ) {
+            return false
+        }
+    }
+
+    /**
+     * Check if a file contains the @EXPLICIT marker in the first 20 lines
+     *
+     * @param path The file path to check
+     * @return {@code true} if the marker is found, {@code false} otherwise
+     */
+    private boolean containsExplicitMarker(Path path) {
+        try {
+            def reader = path.newReader()
+            try {
+                for( int i = 0; i < 20; i++ ) {
+                    def line = reader.readLine()
+                    if( line == null )
+                        break
+                    if( line.trim() == '@EXPLICIT' )
+                        return true
+                }
+                return false
+            }
+            finally {
+                reader.close()
+            }
+        }
+        catch( Exception e ) {
+            return false
+        }
     }
 
     /**
@@ -196,16 +242,14 @@ class CondaCache {
                 throw new IllegalArgumentException("Error parsing Conda environment YAML file: $condaEnv -- Check the log file for details", e)
             }
         }
-        else if( isTextFilePath(condaEnv) )  {
+        // check if it's a conda explicit file (contains @EXPLICIT marker)
+        else if( isExplicitFile(condaEnv) )  {
             try {
                 final path = condaEnv as Path
                 content = path.text
             }
-            catch( NoSuchFileException e ) {
-                throw new IllegalArgumentException("Conda environment file does not exist: $condaEnv")
-            }
             catch( Exception e ) {
-                throw new IllegalArgumentException("Error parsing Conda environment text file: $condaEnv -- Check the log file for details", e)
+                throw new IllegalArgumentException("Error reading Conda explicit file: $condaEnv -- Check the log file for details", e)
             }
         }
         // it's interpreted as user provided prefix directory
@@ -284,7 +328,7 @@ class CondaCache {
             final yesOpt = binaryName=="mamba" || binaryName == "micromamba"  ? '--yes ' : ''
             cmd = "${binaryName} env create ${yesOpt}--prefix ${Escape.path(prefixPath)} --file ${target}"
         }
-        else if( isTextFilePath(condaEnv) ) {
+        else if( isExplicitFile(condaEnv) ) {
             cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
         }
 
