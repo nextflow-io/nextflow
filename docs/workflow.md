@@ -2,7 +2,7 @@
 
 # Workflows
 
-In Nextflow, a **workflow** is a function that is specialized for composing {ref}`processes <process-page>` and dataflow logic:
+In Nextflow, a **workflow** is a specialized function for composing {ref}`processes <process-page>` and dataflow logic:
 
 - An [entry workflow](#entry-workflow) is the entrypoint of a pipeline. It can take [parameters](#parameters) as inputs using the `params` block, and it can publish [outputs](#outputs) using the `output` block.
 
@@ -105,16 +105,16 @@ The default value can be overridden by the command line, params file, or config 
 ## Outputs
 
 :::{versionadded} 25.10.0
-This feature is available as a preview in Nextflow {ref}`24.04 <workflow-outputs-first-preview>`, {ref}`24.10 <workflow-outputs-second-preview>`, and {ref}`25.04 <workflow-outputs-third-preview>`.
+Workflow outputs are available as a preview in Nextflow {ref}`24.04 <workflow-outputs-first-preview>`, {ref}`24.10 <workflow-outputs-second-preview>`, and {ref}`25.04 <workflow-outputs-third-preview>`.
 :::
 
 :::{note}
 Workflow outputs are intended to replace the {ref}`publishDir <process-publishdir>` directive. See {ref}`migrating-workflow-outputs` for guidance on migrating from `publishDir` to workflow outputs.
 :::
 
-A script can define an *output block* which declares the top-level outputs of the workflow. Each output should be assigned in the `publish` section of the entry workflow. Any channel in the workflow can be assigned to an output, including process and subworkflow outputs.
+A script can define an *output block* to declare the top-level workflow outputs. Each output should be assigned in the `publish` section of the entry workflow. Any channel in the workflow can be assigned to an output, including process and subworkflow outputs.
 
-Here is a basic example:
+**Example:**
 
 ```nextflow
 process fetch {
@@ -147,7 +147,11 @@ In the above example, the output of process `fetch` is assigned to the `samples`
 
 ### Publishing files
 
-The top-level output directory of a workflow run can be set using the `-output-dir` command-line option or the `outputDir` config option:
+Each workflow output can define how files are *published* from the work directory to a designated *output directory*.
+
+**Output directory**
+
+You can set the top-level output directory for a run using the `-output-dir` command-line option or the `outputDir` config option:
 
 ```bash
 nextflow run main.nf -output-dir 'my-results'
@@ -160,7 +164,9 @@ outputDir = 'my-results'
 
 The default output directory is `results` in the launch directory.
 
-By default, all output files are published to the output directory. Each output in the output block can define where files are published using the `path` directive. For example:
+**Publish path**
+
+By default, Nextflow publishes all output files to the output directory. Each workflow output can define where to publish files within the output directory using the `path` directive:
 
 ```nextflow
 workflow {
@@ -193,7 +199,7 @@ results/
     └── ...
 ```
 
-All files received by an output are published into the specified directory. Lists, maps, and tuples are recursively scanned for nested files. For example:
+Nextflow publishes all files received by an output into the specified directory. Nextflow recursively scans lists, maps, and tuples for nested files:
 
 ```nextflow
 workflow {
@@ -206,6 +212,12 @@ workflow {
     samples = ch_samples // 1.txt and 2.txt are published
 }
 ```
+
+:::{note}
+Files that do not originate from the work directory are not published.
+:::
+
+**Dynamic publish path**
 
 The `path` directive can also be a closure which defines a custom publish path for each channel value:
 
@@ -229,7 +241,7 @@ output {
 
 The above example publishes each channel value to a different subdirectory. In this case, each pair of FASTQ files is published into a subdirectory based on the sample ID.
 
-The closure can even define a different path for each individual file using the `>>` operator:
+Alternatively, you can define a different path for each individual file using the `>>` operator:
 
 ```nextflow
 output {
@@ -242,17 +254,32 @@ output {
 }
 ```
 
-Each `>>` specifies a *source file* and *publish target*. The source file should be a file or collection of files, and the publish target should be a directory or file name. If the publish target ends with a slash, it is treated as the directory in which source files are published. Otherwise, it is treated as the target filename of a source file. Only files that are published with the `>>` operator are saved to the output directory.
+Each `>>` specifies a *source file* and *publish target*. The source file should be a file or collection of files, and the publish target should be a directory or file name. If the publish target ends with a slash, Nextflow treats it as the directory in which to publish source files.
 
-:::{note}
-Files that do not originate from the work directory are not published.
-:::
+When using this syntax, only files captured with the `>>` operator are saved to the output directory.
+
+**Conditional publishing**
+
+Outputs can be conditionally published using pipeline parameters:
+
+```nextflow
+output {
+    samples {
+        path { sample ->
+            sample.fastqc >> "fastqc"
+            sample.bam >> params.save_bams ? "align" : null
+        }
+    }
+}
+```
+
+In the above example, the BAM files specified by `sample.bam` are published only when `params.save_bams` is `true`.
 
 ### Index files
 
-Each output can create an index file of the values that were published. An index file preserves the structure of channel values, including metadata, which is simpler than encoding this information with directories and file names. The index file can be a CSV (`.csv`), JSON (`.json`), or YAML (`.yml`, `.yaml`) file. The channel values should be files, lists, maps, or tuples.
+Index files are structured metadata files that catalog published outputs and their associated metadata. An index file preserves the structure of channel values, including metadata, which is more robust than encoding this information into file paths. The index file can be a CSV (`.csv`), JSON (`.json`), or YAML (`.yml`, `.yaml`) file. The channel values should be files, lists, maps, or tuples.
 
-For example:
+Each output can create an index file of its published values:
 
 ```nextflow
 workflow {
