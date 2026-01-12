@@ -5,6 +5,10 @@
 :::{versionadded} 25.10.0
 :::
 
+:::{warning}
+Typed processes are a preview feature. The syntax and behavior may change in future releases.
+:::
+
 Typed processes use a new syntax for inputs and outputs based on static types.
 
 ```nextflow

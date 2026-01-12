@@ -1,5 +1,9 @@
 nf-wave changelog
 ==================
+1.18.0 - 19 Dec 2025
+- Fix WaveClient sending Bearer token to public S3 URLs (#6672) [ffaef0b6a]
+- Add wave.build.template config option (#6639) [d08a8952a]
+
 1.17.0 - 28 Nov 2025
 - Bump Fusion to version 2.5 (#6557) [ec228f64f]
 

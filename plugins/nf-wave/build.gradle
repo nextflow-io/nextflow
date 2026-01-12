@@ -21,6 +21,7 @@ nextflowPlugin {
     description = 'Provides dynamic container building and augmentation capabilities with on-demand software installation and advanced container management features'
     className = 'io.seqera.wave.plugin.WavePlugin'
     useDefaultDependencies = false
+    generateSpec = false
     extensionPoints = [
         'io.seqera.wave.plugin.WaveFactory',
         'io.seqera.wave.plugin.config.WaveConfig',

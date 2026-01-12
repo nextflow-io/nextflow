@@ -1,5 +1,8 @@
 nf-tower changelog
 ===================
+1.19.0 - 19 Dec 2025
+- Add spot interruption tracking to trace records (#6606) [eecd81671]
+
 1.18.0 - 28 Nov 2025
 - Fix TowerJsonGenerator thread-safety issue (#6619) [579cd6e4e]
 
