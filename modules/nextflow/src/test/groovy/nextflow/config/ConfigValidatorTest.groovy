@@ -124,6 +124,19 @@ class ConfigValidatorTest extends Specification {
         ])
         then:
         !capture.toString().contains('Unrecognized config option')
+
+        when:
+        new ConfigValidator().validate([
+            process: [
+                publishDir: [
+                    path: { "results/foo" },
+                    mode: 'copy',
+                    saveAs: { filename -> filename }
+                ]
+            ]
+        ])
+        then:
+        !capture.toString().contains('Unrecognized config option')
     }
 
 }

@@ -190,7 +190,7 @@ class ConfigValidator {
 
     private static boolean isMapOption0(SpecNode.Scope scope, List<String> names) {
         final node = scope.getOption(names)
-        return node != null && node.type() == Map.class
+        return node != null && node.types().contains(Map.class)
     }
 
     /**
