@@ -45,6 +45,9 @@ class ErrorSummary {
     int filesWithErrors = 0
     int filesWithoutErrors = 0
     int filesFormatted = 0
+    int warnings = 0
+    int filesWithWarnings = 0
+    int filesWithoutWarnings = 0
 }
 
 
@@ -238,6 +241,9 @@ class StandardErrorListener implements ErrorListener {
         term.bold().a("Nextflow linting complete!").reset().newline()
         if( summary.filesWithErrors > 0 ) {
             term.fg(Ansi.Color.RED).a(" ❌ ${summary.filesWithErrors} file${summary.filesWithErrors==1 ? '' : 's'} had ${summary.errors} error${summary.errors==1 ? '' : 's'}").reset().newline()
+        }
+        if( summary.filesWithWarnings > 0 ) {
+            term.fg(Ansi.Color.YELLOW).a(" ⚠️  ${summary.filesWithWarnings} file${summary.filesWithWarnings==1 ? '' : 's'} had ${summary.warnings} warning${summary.warnings==1 ? '' : 's'}").reset().newline()
         }
         if( summary.filesWithoutErrors > 0 ) {
             term.fg(Ansi.Color.GREEN).a(" ✅ ${summary.filesWithoutErrors} file${summary.filesWithoutErrors==1 ? '' : 's'} had no errors")
