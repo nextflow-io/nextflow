@@ -157,8 +157,8 @@ class StandardErrorListener implements ErrorListener {
 
         for( int i = fromLine; i <= toLine; i++ ) {
             String fullLine = lines[i - 1]
-            int start = (i == startLine) ? startColumn - 1 : 0
-            int end = (i == endLine) ? endColumn - 1 : fullLine.length()
+            int start = (i == startLine) ? Math.min(startColumn - 1, fullLine.length()) : 0
+            int end = (i == endLine) ? Math.min(endColumn - 1, fullLine.length()) : fullLine.length()
 
             // Truncate to max 70 characters
             int maxLen = 70
@@ -174,8 +174,8 @@ class StandardErrorListener implements ErrorListener {
             }
 
             String line = fullLine.substring(windowStart, Math.min(lineLen, windowStart + maxLen))
-            int adjStart = Math.max(0, start - windowStart)
-            int adjEnd = Math.max(adjStart + 1, Math.min(end - windowStart, line.length()))
+            int adjStart = Math.max(0, Math.min(start - windowStart, line.length()))
+            int adjEnd = Math.max(adjStart, Math.min(end - windowStart, line.length()))
 
             // Left border
             if(i == toLine && i !== startLine) term.fg(color).a("╰").reset().a(" ")
