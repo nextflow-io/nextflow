@@ -114,12 +114,8 @@ class ConfigValidatorTest extends Specification {
     def 'should support map options' () {
         when:
         new ConfigValidator().validate([
-            process: [
-                resourceLimits: [
-                    cpus: 4,
-                    memory: '10GB',
-                    time: '1.h'
-                ]
+            k8s: [
+                pod: [env: 'MESSAGE', value: 'hello world']
             ]
         ])
         then:
@@ -132,6 +128,19 @@ class ConfigValidatorTest extends Specification {
                     path: { "results/foo" },
                     mode: 'copy',
                     saveAs: { filename -> filename }
+                ]
+            ]
+        ])
+        then:
+        !capture.toString().contains('Unrecognized config option')
+
+        when:
+        new ConfigValidator().validate([
+            process: [
+                resourceLimits: [
+                    cpus: 4,
+                    memory: '10GB',
+                    time: '1.h'
                 ]
             ]
         ])
