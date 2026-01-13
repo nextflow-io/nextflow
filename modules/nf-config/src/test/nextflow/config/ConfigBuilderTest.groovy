@@ -50,8 +50,8 @@ class ConfigBuilderTest extends Specification {
     ConfigObject configWithParams(Path file, Map runOpts, Path baseDir=null) {
         def run = new CmdRun(runOpts)
         return new ConfigBuilder()
-            .setOptions(new CliOptions())
-            .setCmdRun(run)
+            .setCliOptions(new CliOptions())
+            .setRunOptions(run)
             .setCliParams(run.parsedParams(ConfigBuilder.getConfigVars(baseDir, null)))
             .buildGivenFiles(file)
     }
@@ -59,8 +59,8 @@ class ConfigBuilderTest extends Specification {
     ConfigObject configWithParams(Map config, Map runOpts, Map cliOpts=[:]) {
         def run = new CmdRun(runOpts)
         return new ConfigBuilder(config)
-            .setOptions(new CliOptions(cliOpts))
-            .setCmdRun(run)
+            .setCliOptions(new CliOptions(cliOpts))
+            .setRunOptions(run)
             .setCliParams(run.parsedParams(ConfigBuilder.getConfigVars(null, null)))
             .build()
     }
@@ -606,7 +606,7 @@ class ConfigBuilderTest extends Specification {
         when:
         def opt = new CliOptions()
         def run = new CmdRun(executorOptions: [ alpha: 1, 'beta.x': 'hola', 'beta.y': 'ciao' ])
-        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles()
+        def result = new ConfigBuilder().setCliOptions(opt).setRunOptions(run).buildGivenFiles()
         then:
         result.executor.alpha == 1
         result.executor.beta.x == 'hola'
@@ -619,7 +619,7 @@ class ConfigBuilderTest extends Specification {
         when:
         def opt = new CliOptions()
         def run = new CmdRun(clusterOptions: [ alpha: 1, 'beta.x': 'hola', 'beta.y': 'ciao' ])
-        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles()
+        def result = new ConfigBuilder().setCliOptions(opt).setRunOptions(run).buildGivenFiles()
         then:
         result.cluster.alpha == 1
         result.cluster.beta.x == 'hola'
@@ -632,7 +632,7 @@ class ConfigBuilderTest extends Specification {
         when:
         def opt = new CliOptions()
         def run = new CmdRun(withDocker: 'cbcrg/piper')
-        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
+        def config = new ConfigBuilder().setCliOptions(opt).setRunOptions(run).build()
 
         then:
         config.docker.enabled
@@ -656,7 +656,7 @@ class ConfigBuilderTest extends Specification {
         when:
         def opt = new CliOptions(config: [file.toFile().canonicalPath] )
         def run = new CmdRun(withDocker: '-')
-        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
+        def config = new ConfigBuilder().setCliOptions(opt).setRunOptions(run).build()
         then:
         config.docker.enabled
         config.docker.image == 'busybox'
@@ -665,7 +665,7 @@ class ConfigBuilderTest extends Specification {
         when:
         opt = new CliOptions(config: [file.toFile().canonicalPath] )
         run = new CmdRun(withDocker: 'cbcrg/mybox')
-        config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
+        config = new ConfigBuilder().setCliOptions(opt).setRunOptions(run).build()
         then:
         config.docker.enabled
         config.process.container == 'cbcrg/mybox'
@@ -684,7 +684,7 @@ class ConfigBuilderTest extends Specification {
                 '''
         def opt = new CliOptions(config: [file.toFile().canonicalPath])
         def run = new CmdRun(withDocker: '-')
-        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
+        def config = new ConfigBuilder().setCliOptions(opt).setRunOptions(run).build()
         then:
         config.docker.enabled
         config.process.'withName:test'.container == 'busybox'
@@ -696,7 +696,7 @@ class ConfigBuilderTest extends Specification {
                 '''
         opt = new CliOptions(config: [file.toFile().canonicalPath])
         run = new CmdRun(withDocker: '-')
-        config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
+        config = new ConfigBuilder().setCliOptions(opt).setRunOptions(run).build()
         then:
         config.docker.enabled
         config.process.container == 'busybox'
@@ -704,7 +704,7 @@ class ConfigBuilderTest extends Specification {
         when:
         opt = new CliOptions()
         run = new CmdRun(withDocker: '-')
-        new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
+        new ConfigBuilder().setCliOptions(opt).setRunOptions(run).build()
         then:
         def e = thrown(AbortOperationException)
         e.message == 'You have requested to run with Docker but no image was specified'
@@ -716,7 +716,7 @@ class ConfigBuilderTest extends Specification {
                 '''
         opt = new CliOptions(config: [file.toFile().canonicalPath])
         run = new CmdRun(withDocker: '-')
-        new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
+        new ConfigBuilder().setCliOptions(opt).setRunOptions(run).build()
         then:
         e = thrown(AbortOperationException)
         e.message == 'You have requested to run with Docker but no image was specified'
@@ -739,7 +739,7 @@ class ConfigBuilderTest extends Specification {
         when:
         def opt = new CliOptions(config: [file.toFile().canonicalPath] )
         def run = new CmdRun(withoutDocker: true)
-        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
+        def config = new ConfigBuilder().setCliOptions(opt).setRunOptions(run).build()
         then:
         !config.docker.enabled
         config.docker.image == 'busybox'
@@ -754,8 +754,8 @@ class ConfigBuilderTest extends Specification {
         def cmd = new CmdNode(clusterOptions: [join: 'x', group: 'y', interface: 'abc', slots: 10, 'tcp.alpha':'uno', 'tcp.beta': 'due'])
 
         def config = new ConfigBuilder()
-                .setOptions(opt)
-                .setCmdNode(cmd)
+                .setCliOptions(opt)
+                .setNodeOptions(cmd)
                 .build()
 
         then:
@@ -1310,7 +1310,7 @@ class ConfigBuilderTest extends Specification {
         when:
         def opt = new CliOptions(config: [file.toFile().canonicalPath] )
         def run = new CmdRun(withoutConda: true)
-        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
+        def config = new ConfigBuilder().setCliOptions(opt).setRunOptions(run).build()
         then:
         !config.conda.enabled
         !config.process.conda
@@ -1378,7 +1378,7 @@ class ConfigBuilderTest extends Specification {
         when:
         def opt = new CliOptions(config: [file.toFile().canonicalPath] )
         def run = new CmdRun(withoutSpack: true)
-        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
+        def config = new ConfigBuilder().setCliOptions(opt).setRunOptions(run).build()
         then:
         !config.spack.enabled
         !config.process.spack
@@ -1549,43 +1549,22 @@ class ConfigBuilderTest extends Specification {
         def builder
 
         when:
-        builder = new ConfigBuilder().setCmdRun(new CmdRun(profile: 'foo'))
+        builder = new ConfigBuilder().setRunOptions(new CmdRun(profile: 'foo'))
         then:
         builder.profile == 'foo'
         builder.validateProfile
 
         when:
-        builder = new ConfigBuilder().setCmdRun(new CmdRun())
+        builder = new ConfigBuilder().setRunOptions(new CmdRun())
         then:
         builder.profile == 'standard'
         !builder.validateProfile
 
         when:
-        builder = new ConfigBuilder().setCmdRun(new CmdRun(profile: 'standard'))
+        builder = new ConfigBuilder().setRunOptions(new CmdRun(profile: 'standard'))
         then:
         builder.profile == 'standard'
         builder.validateProfile
-    }
-
-    def 'should set config options' () {
-        def builder
-
-        when:
-        builder = new ConfigBuilder().setCmdConfig(new CmdConfig())
-        then:
-        !builder.showAllProfiles
-
-        when:
-        builder = new ConfigBuilder().setCmdConfig(new CmdConfig(showAllProfiles: true))
-        then:
-        builder.showAllProfiles
-
-        when:
-        builder = new ConfigBuilder().setCmdConfig(new CmdConfig(profile: 'foo'))
-        then:
-        builder.profile == 'foo'
-        builder.validateProfile
-
     }
 
     def 'should set params into config object' () {
@@ -1681,7 +1660,7 @@ class ConfigBuilderTest extends Specification {
     def 'should run with conda' () {
 
         when:
-        def config = new ConfigBuilder().setCmdRun(new CmdRun(withConda: '/some/path/env.yml')).build()
+        def config = new ConfigBuilder().setRunOptions(new CmdRun(withConda: '/some/path/env.yml')).build()
         then:
         config.process.conda == '/some/path/env.yml'
 
@@ -1690,7 +1669,7 @@ class ConfigBuilderTest extends Specification {
     def 'should run with spack' () {
 
         when:
-        def config = new ConfigBuilder().setCmdRun(new CmdRun(withSpack: '/some/path/env.yaml')).build()
+        def config = new ConfigBuilder().setRunOptions(new CmdRun(withSpack: '/some/path/env.yaml')).build()
         then:
         config.process.spack == '/some/path/env.yaml'
 
@@ -1710,7 +1689,7 @@ class ConfigBuilderTest extends Specification {
         when:
         SysEnv.push(HOME: '/home/user')
         def opt = new CliOptions(config: [file.toFile().canonicalPath] )
-        def cfg = new ConfigBuilder().setOptions(opt).build()
+        def cfg = new ConfigBuilder().setCliOptions(opt).build()
         SysEnv.pop()
         then:
         cfg.params.foo == '/home/user'
@@ -1721,7 +1700,7 @@ class ConfigBuilderTest extends Specification {
                 params.foo = bar
                 '''
         opt = new CliOptions(config: [file.toFile().canonicalPath] )
-        new ConfigBuilder().setOptions(opt).build()
+        new ConfigBuilder().setCliOptions(opt).build()
         then:
         def e = thrown(ConfigParseException)
         e.message == "Unknown config attribute `bar` -- check config file: ${file.toRealPath()}".toString()
@@ -1741,7 +1720,7 @@ class ConfigBuilderTest extends Specification {
         when:
         def opt = new CliOptions(config: [file.toFile().canonicalPath] )
         def builder = new ConfigBuilder()
-                .setOptions(opt)
+                .setCliOptions(opt)
                 .showMissingVariables(true)
         def cfg = builder.buildConfigObject()
         def str = ConfigHelper.toCanonicalString(cfg)
@@ -1769,7 +1748,7 @@ class ConfigBuilderTest extends Specification {
                 params.x = foo.bar
                 '''
         def opt = new CliOptions(config: [file.toFile().canonicalPath] )
-        new ConfigBuilder().setOptions(opt).build()
+        new ConfigBuilder().setCliOptions(opt).build()
         then:
         def e = thrown(ConfigParseException)
         e.message == "Unknown config attribute `foo.bar` -- check config file: ${file.toRealPath()}".toString()
@@ -1809,23 +1788,23 @@ class ConfigBuilderTest extends Specification {
         Map config
 
         when:
-        config = new ConfigBuilder().setCmdRun(new CmdRun()).build()
+        config = new ConfigBuilder().setRunOptions(new CmdRun()).build()
         then:
         !config.notification
 
         when:
-        config = new ConfigBuilder().setCmdRun(new CmdRun(withNotification: true)).build()
+        config = new ConfigBuilder().setRunOptions(new CmdRun(withNotification: true)).build()
         then:
         config.notification.enabled == true
 
         when:
-        config = new ConfigBuilder().setCmdRun(new CmdRun(withNotification: false)).build()
+        config = new ConfigBuilder().setRunOptions(new CmdRun(withNotification: false)).build()
         then:
         config.notification.enabled == false
         config.notification.to == null
 
         when:
-        config = new ConfigBuilder().setCmdRun(new CmdRun(withNotification: 'yo@nextflow.com')).build()
+        config = new ConfigBuilder().setRunOptions(new CmdRun(withNotification: 'yo@nextflow.com')).build()
         then:
         config.notification.enabled == true
         config.notification.to == 'yo@nextflow.com'
@@ -1837,22 +1816,22 @@ class ConfigBuilderTest extends Specification {
         Map config
 
         when:
-        config = new ConfigBuilder().setCmdRun(new CmdRun()).build()
+        config = new ConfigBuilder().setRunOptions(new CmdRun()).build()
         then:
         !config.fusion
 
         when:
-        config = new ConfigBuilder().setCmdRun(new CmdRun(withFusion: true)).build()
+        config = new ConfigBuilder().setRunOptions(new CmdRun(withFusion: true)).build()
         then:
         config.fusion.enabled == true
 
         when:
-        config = new ConfigBuilder().setCmdRun(new CmdRun(withFusion: false)).build()
+        config = new ConfigBuilder().setRunOptions(new CmdRun(withFusion: false)).build()
         then:
         config.fusion == [enabled: false]
 
         when:
-        config = new ConfigBuilder().setCmdRun(new CmdRun(withFusion: true)).build()
+        config = new ConfigBuilder().setRunOptions(new CmdRun(withFusion: true)).build()
         then:
         config.fusion == [enabled: true]
     }
@@ -1862,12 +1841,12 @@ class ConfigBuilderTest extends Specification {
         Map config
 
         when:
-        config = new ConfigBuilder().setCmdRun(new CmdRun()).build()
+        config = new ConfigBuilder().setRunOptions(new CmdRun()).build()
         then:
         !config.stubRun
 
         when:
-        config = new ConfigBuilder().setCmdRun(new CmdRun(stubRun: true)).build()
+        config = new ConfigBuilder().setRunOptions(new CmdRun(stubRun: true)).build()
         then:
         config.stubRun == true
     }
@@ -1877,12 +1856,12 @@ class ConfigBuilderTest extends Specification {
         Map config
 
         when:
-        config = new ConfigBuilder().setCmdRun(new CmdRun()).build()
+        config = new ConfigBuilder().setRunOptions(new CmdRun()).build()
         then:
         !config.preview
 
         when:
-        config = new ConfigBuilder().setCmdRun(new CmdRun(preview: true)).build()
+        config = new ConfigBuilder().setRunOptions(new CmdRun(preview: true)).build()
         then:
         config.preview == true
     }
@@ -2329,7 +2308,7 @@ class ConfigBuilderTest extends Specification {
 
         when:
         def cfg1 = new ConfigBuilder()
-                .setOptions( new CliOptions(userConfig: [config.toString()]))
+                .setCliOptions( new CliOptions(userConfig: [config.toString()]))
                 .build()
         then:
         cfg1.params.test.foo == "foo_def"
@@ -2588,7 +2567,7 @@ class ConfigBuilderTest extends Specification {
 
         when:
         def opt = new CliOptions()
-        def config = new ConfigBuilder().setBaseDir(folder).setOptions(opt).buildGivenFiles(configMain)
+        def config = new ConfigBuilder().setBaseDir(folder).setCliOptions(opt).buildGivenFiles(configMain)
         then:
         config.p1 == 'one'
         config.p2 == 'two'
@@ -2645,7 +2624,7 @@ class ConfigBuilderTest extends Specification {
 
         when:
         def opt = new CliOptions()
-        def config = new ConfigBuilder().setBaseDir(folder).setOptions(opt).buildGivenFiles(configMain)
+        def config = new ConfigBuilder().setBaseDir(folder).setCliOptions(opt).buildGivenFiles(configMain)
         then:
         config.p1 == 'one'
         config.p2 == 'two'
@@ -2727,7 +2706,7 @@ class ConfigBuilderTest extends Specification {
         def opt = new CliOptions()
         def config = new ConfigBuilder()
                             .setBaseDir(folder)
-                            .setOptions(opt)
+                            .setCliOptions(opt)
                             .setStripSecrets(true)
                             .buildGivenFiles(configMain)
         then:

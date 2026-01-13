@@ -21,6 +21,7 @@ import com.beust.jcommander.Parameter
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.SysEnv
+import nextflow.config.ConfigCliOptions
 import nextflow.exception.AbortOperationException
 import org.fusesource.jansi.Ansi
 
@@ -31,7 +32,7 @@ import org.fusesource.jansi.Ansi
  */
 @Slf4j
 @CompileStatic
-class CliOptions {
+class CliOptions implements ConfigCliOptions{
 
     /**
      * The packages to debug

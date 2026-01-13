@@ -20,7 +20,6 @@ package nextflow.secret
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import nextflow.exception.AbortOperationException
-import org.eclipse.jgit.errors.NotSupportedException
 
 /**
  * A secret provider only used to report an error when secrets are disabled
@@ -47,27 +46,27 @@ class NullProvider implements SecretsProvider {
 
     @Override
     void putSecret(String name, String value) {
-        throw new NotSupportedException("Operation 'putSecret' is not supported by ${this.class.name}")
+        throw new UnsupportedOperationException("Operation 'putSecret' is not supported by ${this.class.name}")
     }
 
     @Override
     void removeSecret(String name) {
-        throw new NotSupportedException("Operation 'removeSecret' is not supported by ${this.class.name}")
+        throw new UnsupportedOperationException("Operation 'removeSecret' is not supported by ${this.class.name}")
     }
 
     @Override
     Set<String> listSecretsNames() {
-        throw new NotSupportedException("Operation 'listSecretsNames' is not supported by ${this.class.name}")
+        throw new UnsupportedOperationException("Operation 'listSecretsNames' is not supported by ${this.class.name}")
     }
 
     @Override
     String getSecretsEnv(List<String> secretNames) {
-        throw new NotSupportedException("Operation 'getSecretsEnv' is not supported by ${this.class.name}")
+        throw new UnsupportedOperationException("Operation 'getSecretsEnv' is not supported by ${this.class.name}")
     }
 
     @Override
     String getSecretsEnv() {
-        throw new NotSupportedException("Operation 'getSecretsEnv' is not supported by ${this.class.name}")
+        throw new UnsupportedOperationException("Operation 'getSecretsEnv' is not supported by ${this.class.name}")
     }
 
     @Override

@@ -24,6 +24,9 @@ configurations {
 dependencies {
     api(project(':nf-commons'))
     api(project(':nf-httpfs'))
+    api(project(':nf-scm'))
+    api(project(':nf-secrets'))
+    api(project(':nf-config'))
     api(project(':nf-lang'))
     api "org.apache.groovy:groovy:4.0.29"
     api "org.apache.groovy:groovy-nio:4.0.29"
@@ -44,7 +47,6 @@ dependencies {
     api "com.beust:jcommander:1.35"
     api("com.esotericsoftware.kryo:kryo:2.24.0") { exclude group: 'com.esotericsoftware.minlog', module: 'minlog' }
     api('org.iq80.leveldb:leveldb:0.12')
-    api('org.eclipse.jgit:org.eclipse.jgit:7.1.1.202505221757-r')
     api ('javax.activation:activation:1.1.1')
     api ('javax.mail:mail:1.4.7')
     api ('org.yaml:snakeyaml:2.2')

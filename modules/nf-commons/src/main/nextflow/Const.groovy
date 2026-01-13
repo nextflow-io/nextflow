@@ -70,6 +70,14 @@ class Const {
         return Path.of(SysEnv.get('NXF_CACHE_DIR', '.nextflow'))
     }
 
+    static String getSyntaxParserVersion() {
+        return SysEnv.get('NXF_SYNTAX_PARSER', 'v1')
+    }
+
+    static boolean isSyntaxParserV2() {
+        return getSyntaxParserVersion() == 'v2'
+    }
+
     static public final String ROLE_WORKER = 'worker'
 
     static public final String ROLE_MASTER = 'master'

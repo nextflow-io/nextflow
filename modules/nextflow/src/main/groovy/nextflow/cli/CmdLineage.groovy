@@ -88,7 +88,7 @@ class CmdLineage extends CmdBase implements UsageAware {
         Plugins.init()
         // load the config
         this.config = new ConfigBuilder()
-            .setOptions(launcher.options)
+            .setCliOptions(launcher.options)
             .setBaseDir(Paths.get('.'))
             .build()
         // init plugins

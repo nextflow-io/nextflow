@@ -16,6 +16,8 @@
 
 package nextflow.cli
 
+import nextflow.Const
+
 import java.nio.file.Path
 import java.nio.file.Paths
 
@@ -114,14 +116,15 @@ class CmdConfig extends CmdBase {
                 .setShowClosures(true)
                 .setStripSecrets(true)
                 .showMissingVariables(true)
-                .setOptions(launcher.options)
+                .setCliOptions(launcher.options)
                 .setBaseDir(base)
-                .setCmdConfig(this)
+                .setShowAllProfiles(this.showAllProfiles)
+                .setProfile(this.profile)
 
         final config = builder.buildConfigObject()
 
         // -- validate config options
-        if( NF.isSyntaxParserV2() ) {
+        if( Const.isSyntaxParserV2() ) {
             Plugins.load(config)
             new ConfigValidator().validate(config)
         }

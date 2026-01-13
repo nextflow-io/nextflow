@@ -31,7 +31,7 @@ import nextflow.util.TestOnly
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Download or update a project")
-class CmdPull extends CmdBase implements HubOptions {
+class CmdPull extends CmdBase implements CliHubOptions {
 
     static final public NAME = 'pull'
 

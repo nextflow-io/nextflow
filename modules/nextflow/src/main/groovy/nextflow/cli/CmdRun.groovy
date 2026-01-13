@@ -16,6 +16,8 @@
 
 package nextflow.cli
 
+import nextflow.config.ConfigCliOptions
+
 import static org.fusesource.jansi.Ansi.*
 
 import java.nio.file.NoSuchFileException
@@ -32,11 +34,13 @@ import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsConfig
 import nextflow.BuildInfo
+import nextflow.Const
 import nextflow.NF
 import nextflow.NextflowMeta
 import nextflow.SysEnv
 import nextflow.config.ConfigBuilder
 import nextflow.config.ConfigMap
+import nextflow.config.ConfigRunOptions
 import nextflow.config.ConfigValidator
 import nextflow.config.Manifest
 import nextflow.exception.AbortOperationException
@@ -62,7 +66,7 @@ import org.yaml.snakeyaml.Yaml
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Execute a pipeline project")
-class CmdRun extends CmdBase implements HubOptions {
+class CmdRun extends CmdBase implements CliHubOptions, ConfigRunOptions{
 
     static final public Pattern RUN_NAME_PATTERN = Pattern.compile(/^[a-z](?:[a-z\d]|[-_](?=[a-z\d])){0,79}$/, Pattern.CASE_INSENSITIVE)
 
@@ -354,8 +358,8 @@ class CmdRun extends CmdBase implements HubOptions {
         // -- PHASE 1: Load config with mock secrets provider
         final secretsProvider = new EmptySecretProvider()
         ConfigBuilder builder = new ConfigBuilder()
-            .setOptions(launcher.options)
-            .setCmdRun(this)
+            .setCliOptions(launcher.options)
+            .setRunOptions(this as ConfigRunOptions)
             .setBaseDir(scriptFile.parent)
             .setCliParams(cliParams)
             .setSecretsProvider(secretsProvider)  // Mock provider returns empty strings
@@ -382,8 +386,8 @@ class CmdRun extends CmdBase implements HubOptions {
         if( secretsProvider.usedSecrets() ) {
             log.debug "Config file used secrets -- reloading config with secrets provider"
             builder = new ConfigBuilder()
-                .setOptions(launcher.options)
-                .setCmdRun(this)
+                .setCliOptions(launcher.options)
+                .setRunOptions(this)
                 .setBaseDir(scriptFile.parent)
                 .setCliParams(cliParams)
                 // No .setSecretsProvider() - uses real secrets system now
@@ -395,7 +399,7 @@ class CmdRun extends CmdBase implements HubOptions {
         launchInfo(config, scriptFile)
 
         // -- validate config options
-        if( NF.isSyntaxParserV2() )
+        if( Const.isSyntaxParserV2() )
             new ConfigValidator().validate(config)
 
         // -- create a new runner instance
@@ -799,7 +803,7 @@ class CmdRun extends CmdBase implements HubOptions {
     }
 
     static protected parseParamValue(String str) {
-        if ( SysEnv.get('NXF_DISABLE_PARAMS_TYPE_DETECTION') || NF.isSyntaxParserV2() )
+        if ( SysEnv.get('NXF_DISABLE_PARAMS_TYPE_DETECTION') || Const.isSyntaxParserV2() )
             return str
 
         if ( str == null ) return null
@@ -878,6 +882,27 @@ class CmdRun extends CmdBase implements HubOptions {
         catch( Exception e ) {
             throw new AbortOperationException("Cannot parse params file: ${file.toUriString()}", e)
         }
+    }
+
+    ConfigCliOptions getConfigCliOptions(){
+        return launcher.options as ConfigCliOptions
+    }
+
+    String getNormalizeResumeId( String previousId ) {
+        String uniqueId = resume ?: previousId
+        if( !uniqueId )
+            return null
+        if( uniqueId == 'last' || uniqueId == 'true' ) {
+            if( HistoryFile.disabled() )
+                throw new AbortOperationException("The resume session id should be specified via `-resume` option when history file tracking is disabled")
+            uniqueId = HistoryFile.DEFAULT.getLast()?.sessionId
+
+            if( !uniqueId ) {
+                log.warn "It appears you have never run this project before -- Option `-resume` is ignored"
+            }
+        }
+
+        return uniqueId
     }
 
 }

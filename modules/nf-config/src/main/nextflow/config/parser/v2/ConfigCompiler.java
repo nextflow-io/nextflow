@@ -33,7 +33,6 @@ import nextflow.config.parser.ConfigParserPluginFactory;
 import nextflow.script.control.Compiler;
 import nextflow.script.control.GStringToStringVisitor;
 import nextflow.script.control.PathCompareVisitor;
-import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.control.CompilationUnit;

@@ -28,7 +28,6 @@ import groovy.transform.PackageScope
 import groovy.transform.ToString
 import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
-import nextflow.cli.HubOptions
 import nextflow.config.Manifest
 import nextflow.config.ConfigParserFactory
 import nextflow.exception.AbortOperationException
@@ -48,10 +47,6 @@ import org.eclipse.jgit.merge.MergeStrategy
  * - {@link LegacyRepositoryStrategy}: This is the traditional approach where each project gets a full git clone.
  * - {@Link MultiRevisionRepositoryStrategy}: This approach allows multiple revisions to coexist efficiently by sharing objects
  * through a bare repository and creating lightweight clones for each commit.
- *
- * A {@link AssetManager.RepositoryStatus} is defined according to the status of the project folder (`localRootPath`).
- * It is used to automatically select the {@link RepositoryStrategy}. The {@link LegacyRepositoryStrategy} will be selected for LEGACY_ONLY status,
- * and the @Link MultiRevisionRepositoryStrategy} for other statuses (UNINNITIALIZED, BARE_ONLY and HYBRID)
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

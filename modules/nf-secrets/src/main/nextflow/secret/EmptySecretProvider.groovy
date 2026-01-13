@@ -100,7 +100,7 @@ import groovy.transform.CompileStatic
  * </ul>
  *
  * @author Ben Sherman <bentshermann@gmail.com>
- * @see nextflow.cli.CmdRun#run()
+ * @see CmdRun#run()
  * @see nextflow.secret.SecretsLoader
  */
 @CompileStatic
