@@ -30,7 +30,7 @@ import nextflow.scm.AssetManager
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Clone a project into a folder")
-class CmdClone extends CmdBase implements HubOptions {
+class CmdClone extends CmdBase implements CliHubOptions {
 
     static final public NAME = 'clone'
 

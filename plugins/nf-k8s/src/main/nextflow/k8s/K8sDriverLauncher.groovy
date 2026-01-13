@@ -265,9 +265,9 @@ class K8sDriverLauncher {
         // -- load local config if available
         final builder = new ConfigBuilder()
                 .setShowClosures(true)
-                .setOptions(cmd.launcher.options)
+                .setCliOptions(cmd.launcher.options)
                 .setProfile(cmd.profile)
-                .setCmdRun(cmd)
+                .setRunOptions(cmd)
 
         if( !interactive && !pipelineName.startsWith('/') && !cmd.remoteProfile && !cmd.runRemoteConfig ) {
             // -- check and parse project remote config

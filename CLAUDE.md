@@ -38,7 +38,10 @@ The project follows a modular architecture with a plugin-based system for cloud 
 
 ### Core Modules (`modules/`)
 - **nextflow**: Main application module with core workflow engine, CLI, AST transformations, executors
-- **nf-commons**: Shared utilities, plugin system infrastructure, extension methods
+- **nf-commons**: Shared utilities, plugin system infrastructure, extension methods, common exceptions
+- **nf-config**: Configuration parsing and management (ConfigBuilder, ConfigParser, Manifest, WorkflowConfig)
+- **nf-scm**: Source code management (AssetManager, repository providers for GitHub/GitLab/Bitbucket/Azure/Gitea)
+- **nf-secrets**: Secrets management (SecretsProvider, SecretsLoader, integration with external secret stores)
 - **nf-httpfs**: HTTP filesystem support and custom providers
 - **nf-lang**: Language parsing, ANTLR grammars, AST implementation
 - **nf-lineage**: Data lineage tracking and workflow execution history

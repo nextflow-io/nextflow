@@ -51,7 +51,7 @@ trait PluginAbstractExec implements PluginExecAware {
         this.launcher = launcher1
         // create the config
         final config = new ConfigBuilder()
-                .setOptions(launcher1.options)
+                .setCliOptions(launcher1.options)
                 .setBaseDir(Paths.get('.'))
                 .build()
 

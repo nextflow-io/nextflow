@@ -19,7 +19,7 @@ package nextflow.config
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.NF
+import nextflow.Const
 import nextflow.config.parser.v1.ConfigParserV1
 import nextflow.config.parser.v2.ConfigParserV2
 
@@ -33,7 +33,7 @@ import nextflow.config.parser.v2.ConfigParserV2
 class ConfigParserFactory {
 
     static ConfigParser create() {
-        final parser = NF.getSyntaxParserVersion()
+        final parser = Const.getSyntaxParserVersion()
         if( parser == 'v1' ) {
             return new ConfigParserV1()
         }

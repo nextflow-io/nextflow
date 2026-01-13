@@ -96,8 +96,8 @@ class AssetManagerTest extends Specification {
         folder.resolve('cbcrg/pipe1').mkdirs()
         folder.resolve('cbcrg/pipe2').mkdirs()
         folder.resolve('ncbi/blast').mkdirs()
-        folder.resolve(REPOS_SUBDIR +'/ncbi/blast').mkdirs()
-        folder.resolve(REPOS_SUBDIR +'/new/repo').mkdirs()
+        folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR +'/ncbi/blast').mkdirs()
+        folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR +'/new/repo').mkdirs()
 
         when:
         def list = AssetManager.list()
@@ -198,9 +198,9 @@ class AssetManagerTest extends Specification {
         when:
         manager.download("v1.2")
         then:
-        folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/1b420d060d3fad67027154ac48e3bdea06f058da/.git').isDirectory()
-        folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + BARE_REPO).isDirectory()
-        manager.getLocalPath().toString() == folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/1b420d060d3fad67027154ac48e3bdea06f058da').toString()
+        folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR + '/nextflow-io/hello/' + MultiRevisionRepositoryStrategy.REVISION_SUBDIR + '/1b420d060d3fad67027154ac48e3bdea06f058da/.git').isDirectory()
+        folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR + '/nextflow-io/hello/' + MultiRevisionRepositoryStrategy.BARE_REPO).isDirectory()
+        manager.getLocalPath().toString() == folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR + '/nextflow-io/hello/' + MultiRevisionRepositoryStrategy.REVISION_SUBDIR + '/1b420d060d3fad67027154ac48e3bdea06f058da').toString()
         when:
         manager.download("v1.2")
         then:
@@ -242,9 +242,9 @@ class AssetManagerTest extends Specification {
         when:
         manager.download("6b9515aba6c7efc6a9b3f273ce116fc0c224bf68")
         then:
-        folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/6b9515aba6c7efc6a9b3f273ce116fc0c224bf68/.git').isDirectory()
-        folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + BARE_REPO).isDirectory()
-        manager.getLocalPath().toString() == folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/6b9515aba6c7efc6a9b3f273ce116fc0c224bf68').toString()
+        folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR + '/nextflow-io/hello/' + MultiRevisionRepositoryStrategy.REVISION_SUBDIR + '/6b9515aba6c7efc6a9b3f273ce116fc0c224bf68/.git').isDirectory()
+        folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR + '/nextflow-io/hello/' + MultiRevisionRepositoryStrategy.BARE_REPO).isDirectory()
+        manager.getLocalPath().toString() == folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR + '/nextflow-io/hello/' + MultiRevisionRepositoryStrategy.REVISION_SUBDIR + '/6b9515aba6c7efc6a9b3f273ce116fc0c224bf68').toString()
 
         when:
         def result = manager.download("6b9515aba6c7efc6a9b3f273ce116fc0c224bf68")
@@ -309,9 +309,9 @@ class AssetManagerTest extends Specification {
         when:
         manager.download("mybranch")
         then:
-        folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + BARE_REPO).isDirectory()
-        folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/1c3e9e7404127514d69369cd87f8036830f5cf64/.git').isDirectory()
-        manager.getLocalPath().toString() == folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/1c3e9e7404127514d69369cd87f8036830f5cf64').toString()
+        folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR + '/nextflow-io/hello/' + MultiRevisionRepositoryStrategy.BARE_REPO).isDirectory()
+        folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR + '/nextflow-io/hello/' + MultiRevisionRepositoryStrategy.REVISION_SUBDIR + '/1c3e9e7404127514d69369cd87f8036830f5cf64/.git').isDirectory()
+        manager.getLocalPath().toString() == folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR + '/nextflow-io/hello/' + MultiRevisionRepositoryStrategy.REVISION_SUBDIR + '/1c3e9e7404127514d69369cd87f8036830f5cf64').toString()
         when:
         manager.download("mybranch")
         then:
@@ -331,7 +331,7 @@ class AssetManagerTest extends Specification {
         when:
         manager.download("master")
         then:
-        folder.resolve(REPOS_SUBDIR + '/pditommaso/nf-azure-repo/nf-azure-repo/' + BARE_REPO).isDirectory()
+        folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR + '/pditommaso/nf-azure-repo/nf-azure-repo/' + MultiRevisionRepositoryStrategy.BARE_REPO).isDirectory()
         when:
         manager.download("master")
         then:
@@ -374,16 +374,16 @@ class AssetManagerTest extends Specification {
         when:
         manager.download("v1.2")
         then:
-        folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/1b420d060d3fad67027154ac48e3bdea06f058da/.git').isDirectory()
-        folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + BARE_REPO).isDirectory()
-        manager.getLocalPath().toString() == folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/1b420d060d3fad67027154ac48e3bdea06f058da').toString()
+        folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR + '/nextflow-io/hello/' + MultiRevisionRepositoryStrategy.REVISION_SUBDIR + '/1b420d060d3fad67027154ac48e3bdea06f058da/.git').isDirectory()
+        folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR + '/nextflow-io/hello/' + MultiRevisionRepositoryStrategy.BARE_REPO).isDirectory()
+        manager.getLocalPath().toString() == folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR + '/nextflow-io/hello/' + MultiRevisionRepositoryStrategy.REVISION_SUBDIR + '/1b420d060d3fad67027154ac48e3bdea06f058da').toString()
 
         when:
         manager.download("mybranch")
         then:
-        folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + BARE_REPO).isDirectory()
-        folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/1c3e9e7404127514d69369cd87f8036830f5cf64/.git').isDirectory()
-        manager.getLocalPath().toString() == folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/1c3e9e7404127514d69369cd87f8036830f5cf64').toString()
+        folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR + '/nextflow-io/hello/' + MultiRevisionRepositoryStrategy.BARE_REPO).isDirectory()
+        folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR + '/nextflow-io/hello/' + MultiRevisionRepositoryStrategy.REVISION_SUBDIR + '/1c3e9e7404127514d69369cd87f8036830f5cf64/.git').isDirectory()
+        manager.getLocalPath().toString() == folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR + '/nextflow-io/hello/' + MultiRevisionRepositoryStrategy.REVISION_SUBDIR + '/1c3e9e7404127514d69369cd87f8036830f5cf64').toString()
         noExceptionThrown()
     }
 
@@ -703,9 +703,9 @@ class AssetManagerTest extends Specification {
         when:
         manager.download("dev")
         then:
-        folder.resolve(REPOS_SUBDIR + '/nextflow-io/nf-test-branch/' + REVISION_SUBDIR + '/6f882561d589365c3950d170df8445e3c0dc8028/.git').isDirectory()
+        folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR + '/nextflow-io/nf-test-branch/' + MultiRevisionRepositoryStrategy.REVISION_SUBDIR + '/6f882561d589365c3950d170df8445e3c0dc8028/.git').isDirectory()
         and:
-        folder.resolve(REPOS_SUBDIR + '/nextflow-io/nf-test-branch/' + REVISION_SUBDIR + '/6f882561d589365c3950d170df8445e3c0dc8028/workflow.nf').text == "println 'Hello'\n"
+        folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR + '/nextflow-io/nf-test-branch/' + MultiRevisionRepositoryStrategy.REVISION_SUBDIR + '/6f882561d589365c3950d170df8445e3c0dc8028/workflow.nf').text == "println 'Hello'\n"
 
         when:
         manager.download()
@@ -760,9 +760,9 @@ class AssetManagerTest extends Specification {
         when:
         manager.download("v0.1")
         then:
-        folder.resolve(REPOS_SUBDIR + '/nextflow-io/nf-test-branch/' + REVISION_SUBDIR + '/6f882561d589365c3950d170df8445e3c0dc8028/.git').isDirectory()
+        folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR + '/nextflow-io/nf-test-branch/' + MultiRevisionRepositoryStrategy.REVISION_SUBDIR + '/6f882561d589365c3950d170df8445e3c0dc8028/.git').isDirectory()
         and:
-        folder.resolve(REPOS_SUBDIR + '/nextflow-io/nf-test-branch/' + REVISION_SUBDIR + '/6f882561d589365c3950d170df8445e3c0dc8028/workflow.nf').text == "println 'Hello'\n"
+        folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR + '/nextflow-io/nf-test-branch/' + MultiRevisionRepositoryStrategy.REVISION_SUBDIR + '/6f882561d589365c3950d170df8445e3c0dc8028/workflow.nf').text == "println 'Hello'\n"
 
         when:
         manager.download()
@@ -873,7 +873,7 @@ class AssetManagerTest extends Specification {
     def 'should select multi-revision strategy when bare repository exists'() {
         given:
         def folder = tempDir.getRoot()
-        def barePath = folder.resolve(REPOS_SUBDIR + '/test-org/test-repo/' + BARE_REPO)
+        def barePath = folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR + '/test-org/test-repo/' + MultiRevisionRepositoryStrategy.BARE_REPO)
         barePath.mkdirs()
 
         // Create a proper bare git repository
@@ -903,7 +903,7 @@ class AssetManagerTest extends Specification {
         legacyPath.resolve('.git/config').text = GIT_CONFIG_TEXT
 
         // Create bare repository
-        def barePath = folder.resolve(REPOS_SUBDIR + '/test-org/test-repo/' + BARE_REPO)
+        def barePath = folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR + '/test-org/test-repo/' + MultiRevisionRepositoryStrategy.BARE_REPO)
         barePath.mkdirs()
         def initBare = Git.init()
         initBare.setDirectory(barePath.toFile())
@@ -995,7 +995,7 @@ class AssetManagerTest extends Specification {
         manager.isOnlyLegacy()
 
         when: 'only bare exists'
-        def barePath3 = folder.resolve(REPOS_SUBDIR + '/test-org/repo3/' + BARE_REPO)
+        def barePath3 = folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR + '/test-org/repo3/' + MultiRevisionRepositoryStrategy.BARE_REPO)
         barePath3.mkdirs()
         def initBare3 = Git.init()
         initBare3.setDirectory(barePath3.toFile())
@@ -1014,7 +1014,7 @@ class AssetManagerTest extends Specification {
         legacyPath4.mkdirs()
         legacyPath4.resolve('.git').mkdir()
         legacyPath4.resolve('.git/config').text = GIT_CONFIG_TEXT
-        def barePath4 = folder.resolve(REPOS_SUBDIR + '/test-org/repo4/' + BARE_REPO)
+        def barePath4 = folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR + '/test-org/repo4/' + MultiRevisionRepositoryStrategy.BARE_REPO)
         barePath4.mkdirs()
         def initBare4 = Git.init()
         initBare4.setDirectory(barePath4.toFile())
@@ -1050,8 +1050,8 @@ class AssetManagerTest extends Specification {
         manager.download(revision2)
 
         and: 'verify both revisions exist'
-        def commit1Path = folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/1b420d060d3fad67027154ac48e3bdea06f058da')
-        def commit2Path = folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/1c3e9e7404127514d69369cd87f8036830f5cf64')
+        def commit1Path = folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR + '/nextflow-io/hello/' + MultiRevisionRepositoryStrategy.REVISION_SUBDIR + '/1b420d060d3fad67027154ac48e3bdea06f058da')
+        def commit2Path = folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR + '/nextflow-io/hello/' + MultiRevisionRepositoryStrategy.REVISION_SUBDIR + '/1c3e9e7404127514d69369cd87f8036830f5cf64')
         commit1Path.exists()
         commit2Path.exists()
 
@@ -1061,7 +1061,7 @@ class AssetManagerTest extends Specification {
         then: 'first revision is deleted but second remains'
         !commit1Path.exists()
         commit2Path.exists()
-        folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + BARE_REPO).exists()
+        folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR + '/nextflow-io/hello/' + MultiRevisionRepositoryStrategy.BARE_REPO).exists()
     }
 
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
@@ -1080,10 +1080,10 @@ class AssetManagerTest extends Specification {
         manager.download(revision2)
 
         and: 'verify both revisions and bare repo exist'
-        def projectPath = folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello')
-        def commit1Path = projectPath.resolve(REVISION_SUBDIR + '/1b420d060d3fad67027154ac48e3bdea06f058da')
-        def commit2Path = projectPath.resolve(REVISION_SUBDIR + '/1c3e9e7404127514d69369cd87f8036830f5cf64')
-        def barePath = projectPath.resolve(BARE_REPO)
+        def projectPath = folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR + '/nextflow-io/hello')
+        def commit1Path = projectPath.resolve(MultiRevisionRepositoryStrategy.REVISION_SUBDIR + '/1b420d060d3fad67027154ac48e3bdea06f058da')
+        def commit2Path = projectPath.resolve(MultiRevisionRepositoryStrategy.REVISION_SUBDIR + '/1c3e9e7404127514d69369cd87f8036830f5cf64')
+        def barePath = projectPath.resolve(MultiRevisionRepositoryStrategy.BARE_REPO)
         commit1Path.exists()
         commit2Path.exists()
         barePath.exists()
@@ -1112,7 +1112,7 @@ class AssetManagerTest extends Specification {
         manager.download(revision)
 
         and: 'make local changes'
-        def commitPath = folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/1b420d060d3fad67027154ac48e3bdea06f058da')
+        def commitPath = folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR + '/nextflow-io/hello/' + MultiRevisionRepositoryStrategy.REVISION_SUBDIR + '/1b420d060d3fad67027154ac48e3bdea06f058da')
         commitPath.resolve('test-file.txt').text = 'uncommitted change'
 
         when: 'try to drop without force'

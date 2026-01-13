@@ -55,16 +55,16 @@ class MultiRevisionRepositoryStrategyTest extends Specification {
 
         when:
         def strategy = createStrategy('cbcrg/pipe1', null)
-        folder.resolve(REPOS_SUBDIR + '/cbcrg/pipe1/' + REVISION_SUBDIR + '/12345').mkdirs()
-        folder.resolve(REPOS_SUBDIR + '/cbcrg/pipe1/' + REVISION_SUBDIR + '/67890').mkdirs()
+        folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR + '/cbcrg/pipe1/' + MultiRevisionRepositoryStrategy.REVISION_SUBDIR + '/12345').mkdirs()
+        folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR + '/cbcrg/pipe1/' + MultiRevisionRepositoryStrategy.REVISION_SUBDIR + '/67890').mkdirs()
         def list = strategy.listDownloadedCommits()
         then:
         list.sort() == ['12345', '67890']
 
         when:
         strategy = createStrategy('cbcrg/pipe2', null)
-        folder.resolve(REPOS_SUBDIR + '/cbcrg/pipe2/' + REVISION_SUBDIR + '/abcde').mkdirs()
-        folder.resolve(REPOS_SUBDIR + '/cbcrg/pipe2/' + REVISION_SUBDIR + '/fghij').mkdirs()
+        folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR + '/cbcrg/pipe2/' + MultiRevisionRepositoryStrategy.REVISION_SUBDIR + '/abcde').mkdirs()
+        folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR + '/cbcrg/pipe2/' + MultiRevisionRepositoryStrategy.REVISION_SUBDIR + '/fghij').mkdirs()
         list = strategy.listDownloadedCommits()
         then:
         list.sort() == ['abcde', 'fghij']
@@ -86,8 +86,8 @@ class MultiRevisionRepositoryStrategyTest extends Specification {
         when:
         strategy.checkBareRepo(manifest)
         then:
-        folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + BARE_REPO).isDirectory()
-        folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + BARE_REPO + '/config').exists()
+        folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR + '/nextflow-io/hello/' + MultiRevisionRepositoryStrategy.BARE_REPO).isDirectory()
+        folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR + '/nextflow-io/hello/' + MultiRevisionRepositoryStrategy.BARE_REPO + '/config').exists()
 
         expect:
         strategy.revisionToCommitWithBareRepo('v1.2') == '1b420d060d3fad67027154ac48e3bdea06f058da'
@@ -110,21 +110,21 @@ class MultiRevisionRepositoryStrategyTest extends Specification {
         when:
         strategy.download('7588c46ffefb4e3c06d4ab32c745c4d5e56cdad8', 1, manifest)
         then:
-        folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/7588c46ffefb4e3c06d4ab32c745c4d5e56cdad8/.git').isDirectory()
-        folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/7588c46ffefb4e3c06d4ab32c745c4d5e56cdad8/.git/objects/info/alternates').text == folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + BARE_REPO + '/objects').toAbsolutePath().toString()
+        folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR + '/nextflow-io/hello/' + MultiRevisionRepositoryStrategy.REVISION_SUBDIR + '/7588c46ffefb4e3c06d4ab32c745c4d5e56cdad8/.git').isDirectory()
+        folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR + '/nextflow-io/hello/' + MultiRevisionRepositoryStrategy.REVISION_SUBDIR + '/7588c46ffefb4e3c06d4ab32c745c4d5e56cdad8/.git/objects/info/alternates').text == folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR + '/nextflow-io/hello/' + MultiRevisionRepositoryStrategy.BARE_REPO + '/objects').toAbsolutePath().toString()
 
         when:
         // tag v1.2 -> commit 1b420d060d3fad67027154ac48e3bdea06f058da
         strategy.download('v1.2', 1, manifest)
         then:
-        folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/1b420d060d3fad67027154ac48e3bdea06f058da/.git').isDirectory()
-        folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/1b420d060d3fad67027154ac48e3bdea06f058da/.git/objects/info/alternates').text == folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + BARE_REPO + '/objects').toAbsolutePath().toString()
+        folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR + '/nextflow-io/hello/' + MultiRevisionRepositoryStrategy.REVISION_SUBDIR + '/1b420d060d3fad67027154ac48e3bdea06f058da/.git').isDirectory()
+        folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR + '/nextflow-io/hello/' + MultiRevisionRepositoryStrategy.REVISION_SUBDIR + '/1b420d060d3fad67027154ac48e3bdea06f058da/.git/objects/info/alternates').text == folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR + '/nextflow-io/hello/' + MultiRevisionRepositoryStrategy.BARE_REPO + '/objects').toAbsolutePath().toString()
 
         when:
         strategy.download('mybranch', 1, manifest)
         then:
-        folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/1c3e9e7404127514d69369cd87f8036830f5cf64/.git').isDirectory()
-        folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/1c3e9e7404127514d69369cd87f8036830f5cf64/.git/objects/info/alternates').text == folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + BARE_REPO + '/objects').toAbsolutePath().toString()
+        folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR + '/nextflow-io/hello/' + MultiRevisionRepositoryStrategy.REVISION_SUBDIR + '/1c3e9e7404127514d69369cd87f8036830f5cf64/.git').isDirectory()
+        folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR + '/nextflow-io/hello/' + MultiRevisionRepositoryStrategy.REVISION_SUBDIR + '/1c3e9e7404127514d69369cd87f8036830f5cf64/.git/objects/info/alternates').text == folder.resolve(MultiRevisionRepositoryStrategy.REPOS_SUBDIR + '/nextflow-io/hello/' + MultiRevisionRepositoryStrategy.BARE_REPO + '/objects').toAbsolutePath().toString()
     }
 
 }

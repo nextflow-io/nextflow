@@ -203,7 +203,7 @@ class CmdFs extends CmdBase implements UsageAware {
     private Session createSession() {
         // create the config
         final config = new ConfigBuilder()
-                .setOptions(getLauncher().getOptions())
+                .setCliOptions(getLauncher().getOptions())
                 .setBaseDir(Paths.get('.'))
                 .build()
 

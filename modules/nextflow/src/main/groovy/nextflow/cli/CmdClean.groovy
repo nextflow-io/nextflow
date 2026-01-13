@@ -108,7 +108,7 @@ class CmdClean extends CmdBase implements CacheBase {
             final builder = new ConfigBuilder()
                     .setShowClosures(true)
                     .showMissingVariables(true)
-                    .setOptions(launcher.options)
+                    .setCliOptions(launcher.options)
                     .setBaseDir(Paths.get('.'))
 
             final config = builder.buildConfigObject()

@@ -16,7 +16,7 @@
 
 package nextflow.scm
 
-import nextflow.cli.HubOptions
+import nextflow.cli.CliHubOptions
 import spock.lang.Specification
 
 /**
@@ -28,7 +28,7 @@ class HubOptionsTest extends Specification {
     def testUser() {
 
         when:
-        def cmd = [:] as HubOptions
+        def cmd = [:] as CliHubOptions
         cmd.hubUser = credential
         then:
         cmd.getHubUser() == user
