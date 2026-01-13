@@ -539,7 +539,10 @@ The following settings are available:
 : The path where Conda environments are stored. It should be accessible from all compute nodes when using a shared file system.
 
 `conda.channels`
-: The list of Conda channels that can be used to resolve Conda packages. Channel priority decreases from left to right (default: `'conda-forge,bioconda'`).
+: :::{versionchanged} 26.04.0
+  The default was changed to `'conda-forge,bioconda'`.
+  :::
+: The list of Conda channels that can be used to resolve Conda packages (default: `'conda-forge,bioconda'`). Channel priority decreases from left to right.
 
 `conda.createOptions`
 : Extra command line options for the `conda create` command. See the [Conda documentation](https://docs.conda.io/projects/conda/en/latest/commands/create.html) for more information.
