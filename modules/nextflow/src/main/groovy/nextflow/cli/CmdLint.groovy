@@ -59,7 +59,7 @@ class CmdLint extends CmdBase {
         names = ['-exclude'],
         description = 'File pattern to exclude from error checking (can be specified multiple times)'
     )
-    List<String> excludePatterns = ['.git', '.lineage', '.nf-test', '.nextflow', 'work']
+    List<String> excludePatterns = ['.git', '.lineage', '.nf-test', '.nextflow', 'work', 'nf-test.config']
 
     @Parameter(
         names = ['-o', '-output'],
