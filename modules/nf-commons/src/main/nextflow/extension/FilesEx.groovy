@@ -467,14 +467,7 @@ class FilesEx {
      * @return {@code true} if the directory is created successfully, or {@code false} otherwise
      */
     static boolean mkdir(Path self, FileAttribute<?>... attr) {
-
-        try {
-            Files.createDirectory(self,attr)
-            return true
-        }
-        catch(IOException e) {
-            return false
-        }
+        FileHelper.mkdir(self, attr)
 
     }
 
@@ -488,15 +481,7 @@ class FilesEx {
      * @return {@code true} if the directory is created successfully, or {@code false} otherwise
      */
     static boolean mkdirs(Path self, FileAttribute<?>... attr) {
-
-        try {
-            Files.createDirectories(self,attr)
-            return true
-        }
-        catch(IOException e) {
-            log.debug "Failed to create directory '$self'", e
-            return false
-        }
+        FileHelper.mkdirs(self, attr)
     }
 
     /**

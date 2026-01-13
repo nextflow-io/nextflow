@@ -236,7 +236,7 @@ class SingularityCache {
         final wait = "Another Nextflow instance is pulling the ${appName} image $imageUrl -- please wait the download completes"
         final err =  "Unable to acquire exclusive lock after $pullTimeout on file: $file"
 
-        final mutex = new FileMutex(target: file, timeout: pullTimeout, waitMessage: wait, errorMessage: err)
+        final mutex = new FileMutex(target: file, timeout: pullTimeout.toMillis(), waitMessage: wait, errorMessage: err)
         try {
             mutex .lock { downloadContainerImage0(imageUrl, localPath) }
         }

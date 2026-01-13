@@ -25,6 +25,7 @@ import io.seqera.tower.plugin.BaseCommandImpl
 import io.seqera.tower.plugin.TowerClient
 import nextflow.BuildInfo
 import nextflow.cli.CmdLaunch
+import nextflow.scm.ProviderConfigFactory
 import nextflow.util.ColorUtil
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
@@ -930,7 +931,7 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
     protected String resolvePipelineUrl(String pipelineName) {
         try {
             log.debug "Resolving pipeline name using AssetManager: ${pipelineName}"
-            def assetManager = new AssetManager(pipelineName)
+            def assetManager = new AssetManager(pipelineName, ProviderConfigFactory.getDefault())
             def repositoryUrl = assetManager.getRepositoryUrl()
             if (repositoryUrl) {
                 log.debug "AssetManager resolved URL: ${repositoryUrl}"

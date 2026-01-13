@@ -16,6 +16,8 @@
 
 package nextflow.cli
 
+import nextflow.scm.ScmConst
+
 import static org.fusesource.jansi.Ansi.*
 
 import java.nio.file.NoSuchFileException
@@ -42,7 +44,7 @@ import nextflow.config.Manifest
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
 import nextflow.plugin.Plugins
-import nextflow.scm.AssetManager
+import nextflow.scm.NextflowAssetManager
 import nextflow.script.ScriptFile
 import nextflow.script.ScriptRunner
 import nextflow.secret.EmptySecretProvider
@@ -62,7 +64,7 @@ import org.yaml.snakeyaml.Yaml
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Execute a pipeline project")
-class CmdRun extends CmdBase implements HubOptions {
+class CmdRun extends CmdBase implements HubAware{
 
     static final public Pattern RUN_NAME_PATTERN = Pattern.compile(/^[a-z](?:[a-z\d]|[-_](?=[a-z\d])){0,79}$/, Pattern.CASE_INSENSITIVE)
 
@@ -626,7 +628,7 @@ class CmdRun extends CmdBase implements HubOptions {
          */
         def script = new File(pipelineName)
         if( script.isDirectory()  ) {
-            script = mainScript ? new File(mainScript) : new AssetManager().setLocalPath(script).getMainScriptFile()
+            script = getLocalMainScriptFile(script)
         }
 
         if( script.exists() ) {
@@ -638,7 +640,7 @@ class CmdRun extends CmdBase implements HubOptions {
         /*
          * try to look for a pipeline in the repository
          */
-        def manager = new AssetManager(pipelineName, this)
+        def manager = new NextflowAssetManager(pipelineName, toHubOptions())
         if( revision )
             manager.setRevision(revision)
         def repo = manager.getProjectWithRevision()
@@ -675,6 +677,15 @@ class CmdRun extends CmdBase implements HubOptions {
             throw new AbortOperationException("Unknown error accessing project `$repo` -- Repository may be corrupted: ${manager.localPath}", e)
         }
 
+    }
+
+    private File getLocalMainScriptFile(File folder){
+        if (mainScript)
+            return new File(mainScript)
+
+        final manifestPath = new File(folder, ScmConst.MANIFEST_FILE_NAME).toPath()
+        String scriptName = manifestPath.exists() ? Manifest.parse(manifestPath.text).getMainScript() : ScmConst.DEFAULT_MAIN_FILE_NAME
+        return new File(folder, scriptName)
     }
 
     static protected File tryReadFromStdin() {
@@ -881,6 +892,23 @@ class CmdRun extends CmdBase implements HubOptions {
         catch( Exception e ) {
             throw new AbortOperationException("Cannot parse params file: ${file.toUriString()}", e)
         }
+    }
+
+    String getNormalizeResumeId( String previousId ) {
+        String uniqueId = resume ?: previousId
+        if( !uniqueId )
+            return null
+        if( uniqueId == 'last' || uniqueId == 'true' ) {
+            if( HistoryFile.disabled() )
+                throw new AbortOperationException("The resume session id should be specified via `-resume` option when history file tracking is disabled")
+            uniqueId = HistoryFile.DEFAULT.getLast()?.sessionId
+
+            if( !uniqueId ) {
+                log.warn "It appears you have never run this project before -- Option `-resume` is ignored"
+            }
+        }
+
+        return uniqueId
     }
 
 }

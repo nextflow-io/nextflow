@@ -17,6 +17,7 @@
 package nextflow.k8s
 
 import groovy.transform.MapConstructor
+import nextflow.scm.ProviderConfigFactory
 
 import java.lang.reflect.Field
 import java.nio.file.NoSuchFileException
@@ -39,7 +40,6 @@ import nextflow.k8s.model.PodMountConfig
 import nextflow.k8s.model.PodSpecBuilder
 import nextflow.k8s.model.ResourceType
 import nextflow.scm.AssetManager
-import nextflow.scm.ProviderConfig
 import nextflow.util.ConfigHelper
 import nextflow.util.Escape
 import org.codehaus.groovy.runtime.MethodClosure
@@ -265,9 +265,9 @@ class K8sDriverLauncher {
         // -- load local config if available
         final builder = new ConfigBuilder()
                 .setShowClosures(true)
-                .setOptions(cmd.launcher.options)
+                .setCliOptions(cmd.launcher.options)
                 .setProfile(cmd.profile)
-                .setCmdRun(cmd)
+                .setRunOptions(cmd)
 
         if( !interactive && !pipelineName.startsWith('/') && !cmd.remoteProfile && !cmd.runRemoteConfig ) {
             // -- check and parse project remote config
@@ -579,7 +579,7 @@ class K8sDriverLauncher {
     }
 
     protected Path getScmFile() {
-        ProviderConfig.getScmConfigPath()
+        ProviderConfigFactory.getScmConfigPath()
     }
 
     String getPodImage() {

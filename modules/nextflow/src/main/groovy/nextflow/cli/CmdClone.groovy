@@ -21,7 +21,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
-import nextflow.scm.AssetManager
+import nextflow.scm.NextflowAssetManager
 /**
  * CLI sub-command clone
  *
@@ -30,7 +30,7 @@ import nextflow.scm.AssetManager
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Clone a project into a folder")
-class CmdClone extends CmdBase implements HubOptions {
+class CmdClone extends CmdBase implements HubAware {
 
     static final public NAME = 'clone'
 
@@ -52,7 +52,7 @@ class CmdClone extends CmdBase implements HubOptions {
         Plugins.init()
         // the pipeline name
         String pipeline = args[0]
-        final manager = new AssetManager(pipeline, this)
+        final manager = new NextflowAssetManager(pipeline, toHubOptions())
 
         // the target directory is the second parameter
         // otherwise default the current pipeline name

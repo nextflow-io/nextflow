@@ -16,22 +16,22 @@
 
 package nextflow.config
 
-import java.util.stream.Collectors
-
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
+import groovy.util.logging.Slf4j
 import nextflow.config.spec.ConfigOption
 import nextflow.config.spec.ConfigScope
 import nextflow.config.spec.ScopeName
 import nextflow.exception.AbortOperationException
 import nextflow.script.dsl.Description
 
-import static nextflow.Const.DEFAULT_MAIN_FILE_NAME
+import static nextflow.scm.ScmConst.DEFAULT_MAIN_FILE_NAME
 /**
  * Models the nextflow config manifest settings
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @ScopeName("manifest")
 @Description("""
     The `manifest` scope allows you to define some metadata that is useful when publishing or running your pipeline.
@@ -158,6 +158,25 @@ class Manifest implements ConfigScope {
         organization = opts.organization as String
         recurseSubmodules = opts.recurseSubmodules as boolean
         version = opts.version as String
+    }
+
+    static Manifest parse(String text){
+        ConfigObject result = null
+        if( text ){
+            try {
+                def config = ConfigParserFactory.create().setIgnoreIncludes(true).setStrict(false).parse(text)
+                result = (ConfigObject)config.manifest
+            }
+            catch( Exception e ) {
+                log.warn "Cannot read project manifest -- Cause:  ${e.message ?: e}"
+            }
+        }
+
+        // by default return an empty object
+        if( result == null )
+            result = new ConfigObject()
+
+        return new Manifest(result)
     }
 
     private List<Contributor> parseContributors(Object value) {
