@@ -53,7 +53,7 @@ include { MY_PROCESS } from './modules/my-process.nf'
 
 **Resolution Order**:
 1. Check `nextflow.config` for pinned version
-2. Check local `modules/@scope/name/` for any cached version
+2. Check local `modules/@scope/name@version/` for any cached version
 3. Query registry for latest version if not found
 4. Warn if transitive dependencies are not pinned
 
@@ -416,7 +416,8 @@ my-module/
 name: nf-core/bwa-align
 version: 1.2.4              # This module's version
 description: Align reads using BWA-MEM
-author: nf-core community
+authors:
+  - nf-core community
 license: MIT
 
 requires:
@@ -438,7 +439,7 @@ project-root/
     │   ├── bwa-align@1.2.4/
     │   │   ├── meta.yaml
     │   │   └── main.nf             # Required entry point
-    │   └── samtools-view@1.0.5/
+    │   └── samtools/view@1.0.5/
     │       ├── meta.yaml
     │       └── main.nf             # Required entry point
     └── @myorg/
@@ -465,7 +466,7 @@ project-root/
 1. Parse `include` statements → extract module names (e.g., `@nf-core/bwa-align`)
 2. For each module:
    a. Check `nextflow.config` modules section for pinned version
-   b. If not pinned: check local `modules/@scope/name/` for any cached version (use latest local)
+   b. If not pinned: check local `modules/@scope/name@version/` for any cached version (use latest local)
    c. If not found locally: query registry for latest version
    d. Warn if module not pinned in config (especially transitive dependencies)
 3. Download missing modules to `modules/@scope/name@version/`
@@ -804,7 +805,7 @@ tools:
   - bwa:
       description: BWA aligner
       homepage: http://bio-bwa.sourceforge.net/
-      licence: ["GPL-3.0-or-later"]
+      license: ["GPL-3.0-or-later"]
       args:
         K:
           flag: "-K"
@@ -826,7 +827,7 @@ tools:
 | `tool_dev_url` | One of these | Development/source URL |
 | `doi` | One of these | Publication DOI |
 | `arxiv` | No | arXiv identifier |
-| `licence` | Recommended | SPDX license(s) |
+| `license` | Recommended | SPDX license(s) |
 | `identifier` | Recommended | bio.tools identifier |
 | `manual` | No | User manual URL |
 | `args` | No | Command-line argument specifications |
@@ -932,7 +933,7 @@ tools:
   - bwa:
       description: BWA software
       homepage: http://bio-bwa.sourceforge.net/
-      licence: ["GPL-3.0-or-later"]
+      license: ["GPL-3.0-or-later"]
       identifier: biotools:bwa
 authors:
   - "@drpatelh"
@@ -961,7 +962,7 @@ tools:
   - bwa:
       description: BWA software
       homepage: http://bio-bwa.sourceforge.net/
-      licence: ["GPL-3.0-or-later"]
+      license: ["GPL-3.0-or-later"]
       identifier: biotools:bwa
 authors:
   - "@drpatelh"
@@ -1022,7 +1023,7 @@ tools:
   - fastqc:
       description: FastQC quality metrics
       homepage: https://www.bioinformatics.babraham.ac.uk/projects/fastqc/
-      licence: ["GPL-2.0-only"]
+      license: ["GPL-2.0-only"]
       identifier: biotools:fastqc
 authors:
   - "@drpatelh"
@@ -1069,7 +1070,7 @@ tools:
       homepage: http://bio-bwa.sourceforge.net/
       documentation: https://bio-bwa.sourceforge.net/bwa.shtml
       doi: 10.1093/bioinformatics/btp324
-      licence: ["GPL-3.0-or-later"]
+      license: ["GPL-3.0-or-later"]
       identifier: biotools:bwa
 
 authors:
