@@ -1,15 +1,10 @@
 package nextflow.script.params
 
-import nextflow.Session
-import nextflow.ast.NextflowDSL
-import nextflow.script.BaseScript
-import nextflow.script.ScriptBinding
 import nextflow.script.ScriptMeta
-import org.codehaus.groovy.control.CompilerConfiguration
-import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 import spock.lang.Timeout
 import test.Dsl2Spec
-import test.MockScriptRunner
+
+import static test.ScriptHelper.*
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -17,124 +12,29 @@ import test.MockScriptRunner
 @Timeout(5)
 class ParamsDsl2Test extends Dsl2Spec {
 
-    def 'should not allow unqualified input file' () {
-        given:
-        def SCRIPT = '''
-         
-        process foo {
-          input: 
-          tuple 'x'
-          /touch x/
-        }
-       
-        workflow {
-            foo()
-        }
-        '''
-
-        when:
-        new MockScriptRunner() .setScript(SCRIPT).execute()
-        then:
-        def e = thrown(IllegalArgumentException)
-        e.message == "Unqualified input file declaration is not allowed - replace `tuple 'x',..` with `tuple path('x'),..`"
-    }
-
-    def 'should not allow unqualified input val' () {
-        given:
-        def SCRIPT = '''
-         
-        process foo {
-          input: 
-          tuple X
-          /echo $X/
-        }
-       
-        workflow {
-            foo()
-        }
-        '''
-
-        when:
-        new MockScriptRunner() .setScript(SCRIPT).execute()
-        then:
-        def e = thrown(IllegalArgumentException)
-        e.message == "Unqualified input value declaration is not allowed - replace `tuple X,..` with `tuple val(X),..`"
-    }
-
-
-    def 'should not allow unqualified output file' () {
-        given:
-        def SCRIPT = '''
-         
-        process foo {
-          output: 
-          tuple 'x'
-          /touch x/
-        }
-       
-        workflow {
-            foo()
-        }
-        '''
-
-        when:
-        new MockScriptRunner() .setScript(SCRIPT).execute()
-        then:
-        def e = thrown(IllegalArgumentException)
-        e.message == "Unqualified output path declaration is not allowed - replace `tuple 'x',..` with `tuple path('x'),..`"
-    }
-
-    def 'should not allow unqualified output value' () {
-        given:
-        def SCRIPT = '''
-         
-        process foo {
-          output: 
-          tuple X
-          /echo hello/
-        }
-       
-        workflow {
-            foo()
-        }
-        '''
-
-        when:
-        new MockScriptRunner() .setScript(SCRIPT).execute()
-        then:
-        def e = thrown(IllegalArgumentException)
-        e.message == "Unqualified output value declaration is not allowed - replace `tuple X,..` with `tuple val(X),..`"
-    }
-
-
     def 'should allow unqualified stdin and stdout' () {
 
         given:
-        def session = new Session()
-        and:
-        def config = new CompilerConfiguration()
-        config.setScriptBaseClass(BaseScript.class.name)
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
-
         def SCRIPT = '''
-                    
-         process alpha {
-              input:
-              stdin
-              output:
-              stdout 
 
-              /echo foo/
-          }
+        process alpha {
+            input:
+            stdin
+            output:
+            stdout
 
-         workflow { true } 
+            script:
+            /echo foo/
+        }
+
+        workflow {}
         '''
 
         when:
-        def binding = new ScriptBinding().setSession(session)
-        def script = (BaseScript)new GroovyShell(binding,config).parse(SCRIPT); script.run()
+        def script = loadScript(SCRIPT)
         and:
-        def process = ScriptMeta.get(script).getProcess('alpha'); process.initialize()
+        def process = ScriptMeta.get(script).getProcess('alpha')
+        process.initialize()
 
         then:
         def inputs = process.processConfig.getInputs()
@@ -151,31 +51,26 @@ class ParamsDsl2Test extends Dsl2Spec {
     def 'should allow unqualified tuple stdin and stdout' () {
 
         given:
-        def session = new Session()
-        and:
-        def config = new CompilerConfiguration()
-        config.setScriptBaseClass(BaseScript.class.name)
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
-
         def SCRIPT = '''
-                    
-         process beta {
-              input:
-              tuple stdin, val(x)
-              output:
-              tuple stdout, path('z')
 
-              /echo foo/
-          }
-       
-         workflow { true } 
+        process beta {
+            input:
+            tuple stdin, val(x)
+            output:
+            tuple stdout, path('z')
+
+            script:
+            /echo foo/
+        }
+
+        workflow {}
         '''
 
         when:
-        def binding = new ScriptBinding().setSession(session)
-        def script = (BaseScript)new GroovyShell(binding,config).parse(SCRIPT); script.run()
+        def script = loadScript(SCRIPT)
         and:
-        def process = ScriptMeta.get(script).getProcess('beta'); process.initialize()
+        def process = ScriptMeta.get(script).getProcess('beta')
+        process.initialize()
 
         then:
         def inputs = process.processConfig.getInputs()

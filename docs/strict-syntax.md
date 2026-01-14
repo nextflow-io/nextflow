@@ -16,6 +16,10 @@ export NXF_SYNTAX_PARSER=v2
 ```
 :::
 
+:::{versionchanged} 26.04.0
+The strict syntax is enabled by default. You can disable it by setting the environment variable `NXF_SYNTAX_PARSER=v1`.
+:::
+
 ## Overview
 
 The strict syntax is a subset of DSL2. While DSL2 allows any Groovy syntax, the strict syntax allows only a subset of Groovy syntax for Nextflow scripts and config files. This new specification enables more specific error reporting, ensures more consistent code, and will allow the Nextflow language to evolve independently of Groovy.
