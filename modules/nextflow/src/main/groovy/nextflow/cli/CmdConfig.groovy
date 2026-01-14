@@ -16,8 +16,6 @@
 
 package nextflow.cli
 
-import nextflow.Const
-
 import java.nio.file.Path
 import java.nio.file.Paths
 
@@ -124,7 +122,7 @@ class CmdConfig extends CmdBase {
         final config = builder.buildConfigObject()
 
         // -- validate config options
-        if( Const.isSyntaxParserV2() ) {
+        if( NF.isSyntaxParserV2() ) {
             Plugins.load(config)
             new ConfigValidator().validate(config)
         }
