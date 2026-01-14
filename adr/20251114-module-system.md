@@ -75,7 +75,7 @@ modules {
     '@nf-core/salmon' = '1.1.0'              // Simple syntax
     '@nf-core/bwa-align' = [                 // Extended syntax (with checksum)
         version: '1.2.0',
-        checksum: 'sha256-abc123...'
+        checksum: 'sha256:abc123...'
     ]
 }
 
@@ -300,7 +300,7 @@ Lock all module versions by writing exact versions and SHA-256 checksums to `nex
 modules {
     '@nf-core/bwa-align' = [
         version: '1.2.4',
-        checksum: 'sha256-a1b2c3d4e5f6...'
+        checksum: 'sha256:a1b2c3d4e5f6...'
     ]
 }
 ```
