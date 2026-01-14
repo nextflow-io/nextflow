@@ -178,8 +178,11 @@ class ConfigValidator {
     }
 
     /**
-     * Determine whether a config option is a map option or a
-     * property thereof.
+     * Determine whether a config option is a map option.
+     *
+     * This method is needed to distinguish between config scopes
+     * and config options that happen to be maps, since this distinction
+     * is lost when the config is resolved.
      *
      * @param names
      */

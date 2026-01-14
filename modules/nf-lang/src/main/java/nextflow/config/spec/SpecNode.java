@@ -74,6 +74,15 @@ public sealed interface SpecNode {
         );
     }
 
+    /**
+     * Initialize the `process` config scope from the set of
+     * process directives.
+     *
+     * Directives with multiple method overloads are treated as
+     * options with multiple supported types. Method overloads with
+     * multiple parameters are ignored because they are not supported
+     * in the configuration.
+     */
     private static SpecNode processScope() {
         var description = """
             The `process` scope allows you to specify default directives for processes in your pipeline.
