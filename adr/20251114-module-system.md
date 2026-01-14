@@ -11,7 +11,7 @@
 ### Version 2.2 (2025-01-06)
 - **Structured tool arguments**: Added `args` property to `tools` section for type-safe argument configuration
 - **New implicit variables**: `tools.<toolname>.args.<argname>` returns formatted flag+value; `tools.<toolname>.args` returns all args concatenated
-- **Deprecation**: `ext.args`, `ext.args2`, `ext.args3` pattern deprecated in favor of structured tool arguments
+- **Deprecation**: All `ext.*` custom directives (e.g., `ext.args`, `ext.args2`, `ext.args3`, `ext.prefix`, `ext.suffix`) deprecated in favor of structured tool arguments
 
 ### Version 2.1 (2025-12-11)
 - **Unified dependencies**: Consolidated `components`, `dependencies`, and `requires` into single `requires` field
