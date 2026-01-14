@@ -8,6 +8,9 @@
 
 ## Updates
 
+### Version 2.5 (2026-01-14)
+- **Removed remote module inclusion**: Module includes are local only; `module run` command can still execute remote modules
+
 ### Version 2.4 (2026-01-15)
 - **Removed transitive dependency resolution**: Module dependencies are explicit only; no automatic transitive resolution
 - **Removed `freeze` command**: No longer needed without transitive dependency management
@@ -38,71 +41,27 @@ Discussion/request goes back to at least 2019, see GitHub issues [#1376](https:/
 
 ## Decision
 
-Implement a module system with four core capabilities:
+Implement a basic module system with the following core capabilities:
 
-1. **Remote module inclusion** via registry
-2. **Semantic versioning** with dependency resolution
-3. **Unified Nextflow Registry** (rebrand existing Nextflow registry)
-4. **First-class CLI support** (install, publish, search, list, remove, run)
+1. **Module versioning** as a user-friendly alternative to commit hashes
+2. **Module registry** for publishing and installing modules
+3. **Module CLI** (install, publish, search, list, remove, run)
+
+These capabilities focus on tooling improvements that provide immediate value without changing the way that pipelines are written or executed. It avoids many open questions and challenges around remote module inclusion, transitive dependencies, and subworkflows.
 
 ## Core Capabilities
 
-### 1. Remote Module Inclusion
-
-**DSL Syntax**:
-```groovy
-// Import from registry (scoped module name, detected by @scope prefix)
-include { BWA_ALIGN } from '@nf-core/bwa-align'
-
-// Existing file-based includes remain supported
-include { MY_PROCESS } from './modules/my-process.nf'
-```
+### 1. Module Versioning
 
 **Module Naming**: NPM-style scoped packages `@scope/name` (e.g., `@nf-core/salmon`, `@myorg/custom`). Unscoped names (eg. local paths) supported for legacy compatibility. No nested paths with the module are allowed - each module must have a `main.nf` as the entry point.
-
-**Version Resolution**: Module versions pinned in `nextflow.config`. If not specified, use the latest available locally in `modules/` directory, or downloaded and cached in the `modules/` directory.
-
-**Resolution Order**:
-1. Check `nextflow.config` for declared version
-2. Check local `modules/@scope/name/` exists
-3. Verify integrity against `.checksum` file
-4. Apply resolution rules (see below)
-
-**Resolution Rules**:
-
-| Local State | Declared Version | Action |
-|-------------|------------------|--------|
-| Missing | Any | Download declared version (or latest if not declared) |
-| Exists, checksum valid | Same as declared | Use local module |
-| Exists, checksum valid | Different from declared | **Replace** local with declared version |
-| Exists, checksum mismatch | Same as declared | **Warn**: module was locally modified, do not override |
-| Exists, checksum mismatch | Different from declared | **Warn**: locally modified, will NOT replace unless `-force` is used |
-
-**Key Behaviors**:
-- **Version change**: When the declared version differs from the installed version (and local is unmodified), the local module is automatically replaced with the declared version
-- **Local modification**: When the local module content was manually changed (checksum mismatch with `.checksum`), Nextflow warns and does NOT override to prevent accidental loss of local changes
-- **Force flag**: Use `-force` with `nextflow module install` to override locally modified modules
-
-**Resolution Timing**: Modules resolved at workflow parse time (after plugin resolution at startup).
-
-**Local Storage**: Downloaded modules stored in `modules/@scope/name/` directory in project root (not global cache). Each module must contain a `main.nf` file as the required entry point. It is intended that module source code will be committed to the pipeline git repository.
-
-### 2. Semantic Versioning and Configuration
 
 **Version Format**: MAJOR.MINOR.PATCH
 - **MAJOR**: Breaking changes to process signatures, inputs, or outputs
 - **MINOR**: New processes, backward-compatible enhancements
 - **PATCH**: Bug fixes, documentation updates
 
-**Workflow Configuration** (`nextflow.config`):
+**Registry Configuration** (`nextflow.config`):
 ```groovy
-// Module versions (exact versions only, no ranges)
-modules {
-    '@nf-core/salmon' = '1.1.0'
-    '@nf-core/bwa-align' = '1.2.0'
-}
-
-// Registry configuration (separate block)
 registry {
     url = 'https://registry.nextflow.io'     // Default registry
 
@@ -117,16 +76,21 @@ registry {
 }
 ```
 
-**Module Manifest** (`meta.yaml`):
-```yaml
-name: nf-core/bwa-align
-version: 1.2.4                    # This module's version
-
-requires:
-  nextflow: ">=24.04.0"
-  modules:                        # Required modules (version constraints)
-    - nf-core/samtools/view@>=1.0.0,<2.0.0
-    - nf-core/samtools/sort@>=2.1.0,<2.2.0
+**Pipeline Spec** (`nextflow_spec.json`):
+```json
+{
+  "modules": [
+    {
+      "name": "@nf-core/salmon",
+      "version": "1.1.0"
+    },
+    {
+      "name": "@nf-core/bwa-align",
+      "version": "1.2.0",
+      "checksum": "sha256:abc123..."
+    }
+  ]
+}
 ```
 
 **Version Constraints** (unified `name@constraint` syntax):
@@ -157,10 +121,10 @@ npm-style `^` and `~` notation while maintaining consistency with existing Nextf
 This avoids introducing new notation that would require additional parser support.
 
 **Dependency Resolution**:
-- Workflow's `nextflow.config` specifies exact versions for dependencies
-- Module dependencies declared in `meta.yaml` using version constraints
+- Workflow's `nextflow_spec.json` specifies exact versions for direct dependencies
+- Warn if local module install does not match module version in registry
 
-### 3. Unified Nextflow Registry
+### 2. Module Registry
 
 **Architecture Decision**: Extend existing Nextflow registry at `registry.nextflow.io` to host both plugins and modules.
 
@@ -198,13 +162,13 @@ Note: The `{name}` parameter includes the namespace prefix (e.g., "nf-core/fastq
 - Operational simplicity (one service vs. two)
 - Internal module API already partially implemented
 
-### 4. First-Class CLI Support
+### 3. Module CLI
 
 **Commands**:
 ```bash
 nextflow module run scope/name              # Run a module directly without a wrapper script
 nextflow module search <query>              # Search registry
-nextflow module install [scope/name]        # Install all from config, or specific module
+nextflow module install scope/name          # Install specific module
 nextflow module list                        # Show installed vs configured
 nextflow module remove scope/name           # Remove from config + local cache
 nextflow module publish scope/name          # Publish to registry (requires api key)
@@ -224,18 +188,18 @@ Run a module directly without requiring a wrapper workflow script. This command 
 - All standard `nextflow run` options (e.g., `-profile`, `-work-dir`, `-resume`, etc.)
 
 **Behavior**:
-1. Checks if module is installed locally; if not, downloads from registry
+1. Uses local module path, or downloads remote module from registry to global cache
 2. Parses the module's `main.nf` to identify the main process and its input declarations
-3. Validates command-line arguments against the process input schema
-4. Validates tool arguments against the `tools.*.args` schema in `meta.yaml`
-5. Generates an implicit workflow that wires CLI arguments to process inputs
-6. Executes the workflow using standard Nextflow runtime
+3. Validates command-line arguments against the process input declarations
+4. Generates an implicit workflow that wires CLI arguments to process inputs
+5. Executes the workflow using standard Nextflow runtime
+6. Prints JSON of process outputs, publishes all file outputs to output directory
 
 **Input Mapping**:
 - Named arguments (`--reads`, `--reference`) are mapped to corresponding process inputs
-- File paths are automatically converted to file channels
+- File paths are automatically converted to files for process file inputs
 - Multiple values can be provided for inputs expecting collections
-- Required inputs without defaults must be provided; optional inputs use declared defaults
+- Required inputs must be provided; optional inputs can be omitted
 
 **Tool Arguments**:
 - Arguments prefixed with `--tools:` configure tool-specific parameters
@@ -246,8 +210,8 @@ Run a module directly without requiring a wrapper workflow script. This command 
 
 **Example**:
 ```bash
-# Run BWA alignment module with input files
-nextflow module run nf-core/bwa-align \
+# Run local BWA alignment module with input files
+nextflow module run ./modules/nf-core/bwa-align \
     --reads 'samples/*_{1,2}.fastq.gz' \
     --reference genome.fa
 
@@ -262,7 +226,7 @@ nextflow module run nf-core/salmon \
     --reads reads.fq \
     --index salmon_index \
     -work-dir /tmp/work \
-    --outdir results/
+    -output-dir results/
 
 # Run with tool-specific arguments
 nextflow module run nf-core/bwa-align \
@@ -294,30 +258,29 @@ nextflow module search "alignment" -limit 50
 
 ---
 
-#### `nextflow module install [scope/name]`
+#### `nextflow module install scope/name`
 
-Download and install modules to the local `modules/` directory. When called without arguments, installs all modules declared in `nextflow.config`. When a specific module is provided, installs that module and adds it to the configuration.
+Download and install modules to the local `modules/` directory. Add the module version to the pipeline spec.
 
 **Arguments**:
-- `[scope/name]`: Optional module identifier. If omitted, installs all modules from config
+- `<scope/name>`: Module identifier
 
 **Options**:
 - `-version <ver>`: Install a specific version (default: latest)
 - `-force`: Re-download even if already installed locally
 
 **Behavior**:
-1. If `-version` not specified, resolves the module version from `nextflow.config` or queries registry for latest
+1. Resolves the module version from registry or uses latest version by default
 2. Checks if local module exists and verifies integrity against `.checksum` file
 3. If local module is unmodified and version differs: replaces with requested version
 4. If local module was modified (checksum mismatch): warns and aborts unless `-force` is used
 5. Downloads the module archive from the registry
 6. Extracts to `modules/@scope/name/` directory
 7. Stores `.checksum` file from registry's X-Checksum response header
-8. Updates `nextflow.config` if installing a new module not already configured
+8. Updates `nextflow_spec.json` if installing a new module not already configured
 
 **Example**:
 ```bash
-nextflow module install                      # Install all from config
 nextflow module install nf-core/bwa-align    # Install specific module (latest)
 nextflow module install nf-core/salmon -version 1.2.0
 ```
@@ -326,7 +289,7 @@ nextflow module install nf-core/salmon -version 1.2.0
 
 #### `nextflow module list`
 
-Display the status of all modules, comparing what is configured in `nextflow.config` against what is actually installed in the `modules/` directory.
+Display the status of all modules, comparing what is specified in `nextflow_spec.json` against what is actually installed in the `modules/` directory.
 
 **Options**:
 - `-json`: Output in JSON format
@@ -334,7 +297,7 @@ Display the status of all modules, comparing what is configured in `nextflow.con
 
 **Output columns**:
 - Module name (`@scope/name`)
-- Configured version (from `nextflow.config`)
+- Configured version (from `nextflow_spec.json`)
 - Installed version (from `modules/` directory)
 - Latest available version (from registry)
 - Status indicator (up-to-date, outdated, missing, not configured)
@@ -349,19 +312,19 @@ nextflow module list -outdated
 
 #### `nextflow module remove scope/name`
 
-Remove a module from both the local `modules/` directory and the `nextflow.config` configuration.
+Remove a module from both the local `modules/` directory and the `nextflow_spec.json` configuration.
 
 **Arguments**:
 - `scope/name`: Module identifier to remove (required)
 
 **Options**:
-- `-keep-config`: Remove local files but keep the entry in `nextflow.config`
-- `-keep-files`: Remove from config but keep local files
+- `-keep-spec`: Remove local files but keep the entry in `nextflow_spec.json`
+- `-keep-files`: Remove from spec but keep local files
 
 **Behavior**:
 1. Removes the module directory from `modules/@scope/name/`
-2. Removes the module entry from the `modules {}` block in `nextflow.config`
-3. Warns if the module is still referenced in workflow files
+2. Removes the module entry from the `modules` section in `nextflow_spec.json`
+4. Warns if the module is still referenced in workflow files
 
 **Example**:
 ```bash
@@ -406,9 +369,12 @@ nextflow module publish myorg/my-process -dry-run
 
 **General Notes**:
 - All commands respect the `registry.url` configuration for custom registries
-- Modules are automatically downloaded on `nextflow run` if missing but configured
 
 ## Module Structure
+
+Downloaded modules stored in `modules/@scope/name@version/` directory in project root (not global cache). Each module must contain a `main.nf` file as the required entry point. It is intended that module source code will be committed to the pipeline git repository.
+
+The `nextflow module run` command should use a global cache to store remote modules that are executed on-the-fly.
 
 **Directory Layout**:
 Everything within the module directory should be uploaded. Module bundle should not exceed 1MB (uncompressed). Typically this is expected to look something like this:
@@ -431,11 +397,6 @@ license: MIT
 
 requires:
   nextflow: ">=24.04.0"
-  plugins:
-    - nf-amazon@2.0.0
-  modules:
-    - nf-core/samtools/view@>=1.0.0,<2.0.0
-    - nf-core/samtools/sort@>=2.1.0,<2.2.0
 ```
 
 **Local Storage Structure**:
@@ -468,43 +429,19 @@ project-root/
 
 ## Implementation Strategy
 
-**Phase 1**: Module manifest schema, local module loading, validation tools
+**Phase 1**: Extend Nextflow registry for modules
 
-**Phase 2**: Extend Nextflow registry for modules, implement caching, add `install` and `search` commands
+**Phase 2**: Generate module spec from source code
 
-**Phase 3**: Extend DSL parser for `from module` syntax, implement dependency resolution from meta.yaml
-
-**Phase 4**: Implement `publish` command with authentication and `run` command
-
-**Phase 5**: Advanced features (search UI, language server integration, ontology validation)
+**Phase 3**: Implement Module CLI
 
 ## Technical Details
-
-**Dependency Resolution Flow**:
-1. Parse `include` statements → extract module names (e.g., `@nf-core/bwa-align`)
-2. For each module:
-   a. Check `nextflow.config` modules section for declared version
-   b. Check local `modules/@scope/name/` exists
-   c. Verify local module integrity against `.checksum` file
-   d. Apply resolution rules:
-      - Missing → download declared version from registry
-      - Exists, checksum valid, same version → use local
-      - Exists, checksum valid, different version → replace with declared version
-      - Exists, checksum mismatch → warn and do NOT override (local changes detected)
-3. On download: store module to `modules/@scope/name/` with `.checksum` file
-4. Parse module's `main.nf` file → make processes available
 
 **Security**:
 - SHA-256 checksum verification on download (stored in `.checksum` file)
 - Integrity verification on run (local checksum vs `.checksum` file)
 - Authentication required for publishing
 - Support for private registries
-
-**Integration with Plugin System**:
-- Modules can declare plugin dependencies in meta.yaml
-- Both plugins and modules query same registry
-- Single authentication system
-- Separate cache locations: `$NXF_HOME/plugins/` (global) vs `modules/` (per-project)
 
 ## Tool Arguments Configuration
 
@@ -606,10 +543,10 @@ bwa mem ${tools.bwa.args} -t $task.cpus $index $reads \
 | Purpose | Extend runtime | Reusable processes |
 | Format | JAR files | Source code (.nf) |
 | Resolution | Startup | Parse time |
-| Metadata | JSON spec | YAML manifest |
+| Metadata | JSON spec | JSON/YAML spec |
 | Naming | `nf-amazon` | `@nf-core/salmon` |
 | Cache Location | `$NXF_HOME/plugins/` | `modules/@scope/name/` |
-| Version Config | `plugins {}` in config | `modules {}` in config |
+| Version Config | `plugins {}` in config | `modules` in pipeline spec |
 | Registry Path | `/api/v1/plugins/` | `/api/modules/{name}` |
 
 ## Rationale
@@ -620,10 +557,8 @@ bwa mem ${tools.bwa.args} -t $task.cpus $index $reads \
 - Lower operational overhead
 - Type-specific handling maintains separation of concerns
 
-**Why versions in nextflow.config instead of separate lock file?**
-- Single source of truth for workflow dependencies
-- Simple: exact versions in config, no separate lock file to manage
-- Reproducibility via explicit version pinning in config
+**Why versions in pipeline spec instead of separate lock file?**
+- Single source of truth in pipeline spec, no separate lock file to manage
 
 **Why parse-time resolution?**
 - Modules are source code, not compiled artifacts
@@ -645,18 +580,16 @@ bwa mem ${tools.bwa.args} -t $task.cpus $index $reads \
 
 **Positive**:
 - Enables ecosystem-wide code reuse
-- Reproducible workflows (exact versions pinned in nextflow.config)
 - Centralized discovery and distribution via unified registry
 - Minimal operational overhead (single registry for both plugins and modules)
 - NPM-style scoping enables organization namespaces and private registries
 - Local `modules/` directory provides project isolation
-- Simple config model: no separate lock file
+- Simple versioning model: no separate lock file
 - Simple module structure: each module has single `main.nf` entry point
 
 **Negative**:
 - Registry becomes critical infrastructure (requires HA setup)
 - Type-specific handling adds registry complexity
-- Parse-time resolution adds latency to workflow startup
 - Local `modules/` directory duplicates storage across projects (unlike global cache)
 
 **Neutral**:
@@ -681,7 +614,7 @@ bwa mem ${tools.bwa.args} -t $task.cpus $index $reads \
 
 ---
 
-## Appendix A: Module Metadata Schema Specification
+## Appendix A: Module Spec Schema
 
 This appendix defines the JSON schema for module `meta.yaml` files. The schema maintains backward compatibility with existing nf-core module metadata patterns while supporting the new Nextflow module system features.
 
@@ -713,11 +646,7 @@ These fields extend the schema to support the new Nextflow module system:
 |-------|------|----------|-------------|
 | `version` | string | Registry | Semantic version (MAJOR.MINOR.PATCH) |
 | `license` | string | Registry | SPDX license identifier for module code |
-| `requires` | object | Optional | All requirements: runtime, plugins, and dependencies |
 | `requires.nextflow` | string | Optional | Nextflow version constraint |
-| `requires.plugins` | array[string] | Optional | Required Nextflow plugins |
-| `requires.modules` | array[string] | Optional | Required modules (processes) |
-| `requires.workflows` | array[string] | Optional | Required workflows/subworkflows |
 
 ### Detailed Field Specifications
 
@@ -758,32 +687,14 @@ version: "1.0.0-beta.1"
 
 #### `requires`
 
-Specifies all requirements for the module: runtime environment, plugins, and dependencies.
+Specifies all requirements for the module.
 
 ```yaml
 requires:
   nextflow: ">=24.04.0"
-  plugins:
-    - nf-amazon@2.0.0
-    - nf-wave@>=1.5.0
-  modules:
-    - nf-core/fastqc@>=1.0.0
-    - nf-core/samtools/sort@>=2.1.0,<3.0.0
-    - bwa/mem
-  workflows:
-    - nf-core/fastq-align-bwa@1.0.0
 ```
 
 **Unified Version Constraint Syntax:**
-
-All requirements (except `nextflow`) use a unified `name@constraint` format:
-
-| Format | Meaning | Example |
-|--------|---------|---------|
-| `name` | Any version (latest) | `bwa/mem` |
-| `name@1.2.3` | Exact version | `nf-core/fastqc@1.0.0` |
-| `name@>=1.2.3` | Greater or equal | `nf-core/fastqc@>=1.0.0` |
-| `name@>=1.2.3,<2.0.0` | Range constraint | `nf-core/samtools/sort@>=2.1.0,<3.0.0` |
 
 **`requires.nextflow`** - Nextflow version constraint:
 ```yaml
@@ -791,36 +702,6 @@ requires:
   nextflow: ">=24.04.0"           # minimum version
   nextflow: ">=24.04.0,<25.0.0"   # version range
 ```
-
-**`requires.plugins`** - Required Nextflow plugins:
-```yaml
-requires:
-  plugins:
-    - nf-amazon@2.0.0      # exact version
-    - nf-wave@>=1.5.0      # minimum version
-    - nf-azure             # any version
-```
-
-**`requires.modules`** - Required modules (processes):
-```yaml
-requires:
-  modules:
-    - nf-core/fastqc@>=1.0.0              # registry module with constraint
-    - nf-core/samtools/sort@>=2.1.0       # nested module path
-    - bwa/mem                              # local or registry (no constraint)
-```
-
-**`requires.workflows`** - Required workflows/subworkflows:
-```yaml
-requires:
-  workflows:
-    - nf-core/fastq-align-bwa@1.0.0       # registry workflow
-    - my-local-workflow                    # local workflow
-```
-
-**Resolution:**
-1. The resolver looks up dependencies locally first, then in configured registries
-2. Pinned versions are recorded in `nextflow.config` for reproducibility
 
 #### `tools`
 
@@ -914,25 +795,7 @@ output:
         description: Software versions
 ```
 
-**Subworkflow Pattern (Simplified):**
-```yaml
-input:
-  - ch_reads:
-      description: |
-        Input FastQ files
-        Structure: [ val(meta), [ path(reads) ] ]
-  - ch_index:
-      description: BWA index files
-      type: file
-
-output:
-  - bam:
-      description: Aligned BAM files
-  - versions:
-      description: Software versions
-```
-
-**Channel Element Properties:**
+**Input/Output Properties:**
 
 | Property | Type | Description |
 |----------|------|-------------|
@@ -982,8 +845,6 @@ keywords:
 license: MIT                        # Added module license
 requires:                           # Added requirements
   nextflow: ">=24.04.0"
-  modules:                          # Added module dependencies (if any)
-    - nf-core/samtools/sort@>=1.0.0
 tools:
   - bwa:
       description: BWA software
@@ -1020,7 +881,6 @@ version: "1.0.0"
 | Scoped names | No | Yes (registry) |
 | Version field | No | Yes (required for registry) |
 | `tools` section | Yes | Yes |
-| `components` | Yes (subworkflows) | Deprecated → use `requires.modules` |
 | `requires` | No | Yes (unified requirements field) |
 | I/O specifications | Yes | Yes |
 | Ontologies | Yes | Yes |
@@ -1032,7 +892,6 @@ The following attributes from the nf-core meta schema are **not supported** in t
 | Attribute | Reason | Future |
 |-----------|--------|--------|
 | `extra_args` | Not adopted in practice by nf-core modules | Will be redesigned as part of the `tools` schema attribute to document tool-specific arguments and configuration options |
-| `components` | Replaced by unified `requires.modules` | Use `requires.modules` for all module dependencies (local and registry) |
 
 ### Complete Examples
 
@@ -1082,11 +941,6 @@ license: MIT
 
 requires:
   nextflow: ">=24.04.0"
-  plugins:
-    - nf-wave@1.5.0
-  modules:
-    - nf-core/samtools/view@>=1.0.0,<2.0.0
-    - nf-core/samtools/sort@>=2.1.0,<2.2.0
 
 tools:
   - bwa:
@@ -1139,46 +993,4 @@ output:
         type: file
         description: Software versions
         pattern: "versions.yml"
-```
-
-#### Subworkflow with Module Dependencies
-
-```yaml
-name: fastq_align_bwa
-description: Align reads with BWA and generate statistics
-keywords:
-  - alignment
-  - bwa
-  - samtools
-  - statistics
-
-requires:
-  modules:
-    - bwa/mem
-    - samtools/sort
-    - samtools/index
-    - samtools/stats
-
-authors:
-  - "@JoseEspinosa"
-maintainers:
-  - "@JoseEspinosa"
-
-input:
-  - ch_reads:
-      description: |
-        Input FastQ files
-        Structure: [ val(meta), [ path(reads) ] ]
-  - ch_index:
-      description: BWA index files
-
-output:
-  - bam:
-      description: Sorted BAM files
-  - bai:
-      description: BAM index files
-  - stats:
-      description: Alignment statistics
-  - versions:
-      description: Software versions
 ```
