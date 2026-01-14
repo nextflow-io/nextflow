@@ -1,5 +1,11 @@
 nf-wave changelog
 ==================
+1.16.1 - 21 Oct 2025
+- Rename `config.schema` package to `config.spec` (#6485) [ef0d2d601]
+
+1.16.0 - 8 Oct 2025
+- Fix cookie policy for Seqera Platform JWT token refresh (#6411) [c3959cfc3]
+
 1.14.1 - 15 Aug 2025
 - Unify nf-lang config scopes with runtime classes (#6271) [bfa67ca3]
 - Update trace observers to v2 (#6257) [544b8c47]

@@ -7,7 +7,7 @@ Feature flags are used to introduce experimental or other opt-in features. They 
 ##### `nextflow.enable.configProcessNamesValidation`
 
 <DeprecatedInVersion version="25.10.0">
-Use the strict syntax instead. It validates process selectors without producing false warnings.
+Use the [strict syntax][strict-syntax-page] instead. It validates process selectors without producing false warnings.
 </DeprecatedInVersion>
 
 When `true`, prints a warning for every `withName:` process selector that doesn't match a process in the pipeline (default: `true`).
@@ -20,7 +20,7 @@ Defines the DSL version to use (`1` or `2`).
 
 ##### `nextflow.enable.moduleBinaries`
 
-When `true`, enables the use of modules with binary scripts. See [Module binaries][module-binaries] for more information.
+When `true`, enables the use of modules with binary scripts. See [module-binaries][module-binaries] for more information.
 
 ##### `nextflow.enable.strict`
 
@@ -42,9 +42,11 @@ When `true`, the pipeline is executed in "strict" mode, which introduces the fol
 
 <AddedInVersion version="24.04.0" />
 
-*Experimental: may change in a future release.*
+<DeprecatedInVersion version="25.10.0">
+This feature flag is no longer required to use workflow outputs.
+</DeprecatedInVersion>
 
-When `true`, enables the use of the [workflow output definition][workflow-output-def].
+When `true`, enables the use of [workflow outputs][workflow-output-def].
 
 ##### `nextflow.preview.recursion`
 
@@ -57,10 +59,18 @@ When `true`, enables [process and workflow recursion][workflow-recursion].
 <AddedInVersion version="24.04.0" />
 
 <DeprecatedInVersion version="25.04.0">
-The feature flag is no longer required to use topic channels.
+This feature flag is no longer required to use topic channels.
 </DeprecatedInVersion>
 
 When `true`, enables [topic channels][channel-topic] feature.
+
+##### `nextflow.preview.types`
+
+<AddedInVersion version="25.10.0" />
+
+When `true`, enables the use of [typed processes][process-typed-page].
+
+This feature flag must be enabled in every script that uses typed processes. Legacy processes can not be defined in scripts that enable this feature flag.
 
 [channel-topic]: /nextflow_docs/nextflow_repo/docs/reference/channel.mdx#topic
 [module-binaries]: /nextflow_docs/nextflow_repo/docs/module.mdx#module-binaries

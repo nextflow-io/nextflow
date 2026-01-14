@@ -320,6 +320,7 @@ class TowerClient implements TraceObserverV2 {
             config.bearerToken(token)
             config.refreshToken(refreshToken)
             config.refreshTokenUrl(refreshUrl)
+            config.refreshCookiePolicy(CookiePolicy.ACCEPT_ALL)
             return
         }
 
@@ -333,6 +334,7 @@ class TowerClient implements TraceObserverV2 {
                 // setup the refresh
                 config.refreshToken(refreshToken)
                 config.refreshTokenUrl(refreshUrl)
+                config.refreshCookiePolicy(CookiePolicy.ACCEPT_ALL)
                 return
             }
         }

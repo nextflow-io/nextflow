@@ -202,6 +202,45 @@ class ScriptResolveTest extends Specification {
         when:
         def errors = check(
             '''\
+            'hello' as FooBar
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 1
+        errors[0].getOriginalMessage() == '`FooBar` is not defined'
+
+        when:
+        errors = check(
+            '''\
+            [] as List<FooBar>
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 1
+        errors[0].getOriginalMessage() == '`FooBar` is not defined'
+
+        when:
+        errors = check(
+            '''\
+            [:] as Map<Foo,Bar>
+            '''
+        )
+        then:
+        errors.size() == 2
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 1
+        errors[0].getOriginalMessage() == '`Foo` is not defined'
+        errors[1].getStartLine() == 1
+        errors[1].getStartColumn() == 1
+        errors[1].getOriginalMessage() == '`Bar` is not defined'
+
+        when:
+        errors = check(
+            '''\
             x = new FooBar()
             '''
         )

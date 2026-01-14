@@ -32,6 +32,9 @@ import java.util.Properties;
  */
 public class S3SyncClientConfiguration extends S3ClientConfiguration{
 
+    // Sync client should always have a connection limit
+    private int maxConnections = 50;
+
     private ApacheHttpClient.Builder httpClientBuilder;
 
     private ApacheHttpClient.Builder httpClientBuilder(){
@@ -40,11 +43,15 @@ public class S3SyncClientConfiguration extends S3ClientConfiguration{
         return this.httpClientBuilder;
     }
 
-     public SdkHttpClient.Builder getHttpClientBuilder(){
+    public int getMaxConnections() {
+        return maxConnections;
+    }
+
+    public SdkHttpClient.Builder getHttpClientBuilder(){
         if ( this.httpClientBuilder == null )
             return null;
         return this.httpClientBuilder;
-     }
+    }
 
     private S3SyncClientConfiguration(){
         super();
@@ -58,7 +65,8 @@ public class S3SyncClientConfiguration extends S3ClientConfiguration{
 
         if( props.containsKey("max_connections")) {
             log.trace("AWS client config - max_connections: {}", props.getProperty("max_connections"));
-            httpClientBuilder().maxConnections(Integer.parseInt(props.getProperty("max_connections")));
+            this.maxConnections = Integer.parseInt(props.getProperty("max_connections"));
+            httpClientBuilder().maxConnections(this.maxConnections);
         }
 
         if( props.containsKey("socket_timeout")) {
@@ -97,16 +105,14 @@ public class S3SyncClientConfiguration extends S3ClientConfiguration{
     }
 
     public static S3SyncClientConfiguration create(Properties props) {
-		S3SyncClientConfiguration config = new S3SyncClientConfiguration();
+        S3SyncClientConfiguration config = new S3SyncClientConfiguration();
 
-		if( props != null ) {
+        if( props != null ) {
             config.setClientOverrideConfiguration(props);
             config.setClientHttpBuilder(props);
         }
 
-		return config;
-	}
-
+        return config;
+    }
 
 }
-

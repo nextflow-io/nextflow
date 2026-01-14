@@ -1,5 +1,3 @@
-import { AddedInVersion, ChangedInVersion, DeprecatedInVersion } from '@site/src/components/VersionedAdmonitions';
-
 # Environment variables
 
 The following environment variables control the configuration of the Nextflow runtime and the underlying Java virtual machine.
@@ -22,17 +20,17 @@ Enables/disables ANSI console output (default `true` when ANSI terminal is detec
 
 ##### `NXF_ANSI_SUMMARY`
 
-Enables/disables ANSI completion summary`true\|false` (defaultprint summary if execution last more than 1 minute).
+Enables/disables ANSI completion summary: `true\|false` (default: print summary if execution last more than 1 minute).
 
 ##### `NXF_ASSETS`
 
-Defines the directory where downloaded pipeline repositories are stored (default`$NXF_HOME/assets`)
+Defines the directory where downloaded pipeline repositories are stored (default: `$NXF_HOME/assets`)
 
 ##### `NXF_CACHE_DIR`
 
 <AddedInVersion version="24.02.0-edge" />
 
-Defines the base cache directory when using the default cache store (default`"$launchDir/.nextflow"`).
+Defines the base cache directory when using the default cache store (default: `"$launchDir/.nextflow"`).
 
 ##### `NXF_CHARLIECLOUD_CACHEDIR`
 
@@ -56,7 +54,7 @@ Directory where Conda environments are stored. When using a computing cluster it
 
 <AddedInVersion version="22.08.0-edge" />
 
-Enable the use of Conda recipes defined by using the [conda][process-conda] directive. (default`false`).
+Enable the use of Conda recipes defined by using the [process-conda][process-conda] directive. (default: `false`).
 
 ##### `NXF_CONTAINER_ENTRYPOINT_OVERRIDE`
 
@@ -66,8 +64,7 @@ When `true`, override the container entrypoint with `/bin/bash` (default: `false
 
 ##### `NXF_DATE_FORMAT`
 
-<AddedInVersion version="25.07.0-edge">
-</AddedInVersion>
+<AddedInVersion version="25.07.0-edge" />
 
 Defines the format for date and time representations in notifications and reports. Supports custom formats (e.g., `yyyy-MM-dd HH:mm:ss`) or `iso` for ISO 8601 format with timezone (default: `dd-MMM-yyyy HH:mm:ss`).
 
@@ -75,13 +72,13 @@ Defines the format for date and time representations in notifications and report
 
 <AddedInVersion version="22.03.0-edge" />
 
-Defines the DSL version that should be used in not specified otherwise in the script of config file (default`2`)
+Defines the DSL version that should be used in not specified otherwise in the script of config file (default: `2`)
 
 ##### `NXF_DISABLE_CHECK_LATEST`
 
 <AddedInVersion version="23.09.0-edge" />
 
-Nextflow automatically checks for a newer version of itself unless this option is enabled (default`false`).
+Nextflow automatically checks for a newer version of itself unless this option is enabled (default: `false`).
 
 ##### `NXF_DISABLE_JOBS_CANCELLATION`
 
@@ -105,31 +102,31 @@ Disables the requirement for Wave service when enabling the Fusion file system.
 
 <AddedInVersion version="23.06.0-edge" />
 
-Enable to use of AWS SES native API for sending emails in place of legacy SMTP settings (default`false`)
+Enable to use of AWS SES native API for sending emails in place of legacy SMTP settings (default: `false`)
 
 ##### `NXF_ENABLE_FS_SYNC`
 
 <AddedInVersion version="23.10.0" />
 
-When enabled the job script will execute Linux `sync` command on job completion. This may be useful to synchronize the job state over shared file systems (default`false`)
+When enabled the job script will execute Linux `sync` command on job completion. This may be useful to synchronize the job state over shared file systems (default: `false`)
 
 ##### `NXF_ENABLE_SECRETS`
 
 <AddedInVersion version="21.09.0-edge" />
 
-Enable Nextflow secrets features (default`true`)
+Enable Nextflow secrets features (default: `true`)
 
 ##### `NXF_ENABLE_STRICT`
 
 <AddedInVersion version="22.05.0-edge" />
 
-Enable Nextflow *strict* execution mode (default`false`)
+Enable Nextflow *strict* execution mode (default: `false`)
 
 ##### `NXF_ENABLE_VIRTUAL_THREADS`
 
 <AddedInVersion version="23.05.0-edge" />
 
-Enable the use of virtual threads in the Nextflow runtime (default`false`)
+Enable the use of virtual threads in the Nextflow runtime (default: `false`)
 
 ##### `NXF_EXECUTOR`
 
@@ -145,7 +142,7 @@ For example, with `NXF_FILE_ROOT=/some/root/path`, the use of `file('hello')` wi
 
 ##### `NXF_HOME`
 
-Nextflow home directory (default`$HOME/.nextflow`).
+Nextflow home directory (default: `$HOME/.nextflow`).
 
 ##### `NXF_JAVA_HOME`
 
@@ -159,11 +156,11 @@ Allows the setting Java VM options. This is similar to `NXF_OPTS` however it's o
 
 ##### `NXF_LOG_FILE`
 
-The filename of the Nextflow log (default`.nextflow.log`)
+The filename of the Nextflow log (default: `.nextflow.log`)
 
 ##### `NXF_OFFLINE`
 
-When `true` prevents Nextflow from automatically downloading and updating remote project repositories (default`false`).
+When `true` prevents Nextflow from automatically downloading and updating remote project repositories (default: `false`).
 
 <ChangedInVersion version="23.09.0-edge">
 This option also disables the automatic version check (see `NXF_DISABLE_CHECK_LATEST`).
@@ -179,7 +176,7 @@ Provides extra options for the Java and Nextflow runtime. It must be a blank sep
 
 ##### `NXF_ORG`
 
-Default `organization` prefix when looking for a hosted repository (default`nextflow-io`).
+Default `organization` prefix when looking for a hosted repository (default: `nextflow-io`).
 
 ##### `NXF_PARAMS_FILE`
 
@@ -199,11 +196,11 @@ Comma separated list of plugin IDs that can be used in a workflow executions e.g
 
 ##### `NXF_PLUGINS_DEFAULT`
 
-Whether to use the default plugins when no plugins are specified in the Nextflow configuration (default`true`).
+Whether to use the default plugins when no plugins are specified in the Nextflow configuration (default: `true`).
 
 ##### `NXF_PLUGINS_DIR`
 
-The path where the plugin archives are loaded and stored (default`$NXF_HOME/plugins`).
+The path where the plugin archives are loaded and stored (default: `$NXF_HOME/plugins`).
 
 ##### `NXF_PLUGINS_REGISTRY_URL`
 
@@ -221,32 +218,7 @@ Defines a custom plugin registry or plugin release URL for testing plugins outsi
 
 <AddedInVersion version="24.04.3" />
 
-Defines the default behavior of `publishDir.failOnError` setting. See the [publishDir][process-publishdir] directive for more information.
-
-##### `NXF_RETRY_POLICY_DELAY`
-
-
-<AddedInVersion version="25.06.0-edge" />
-
-Delay used for HTTP retryable operations (default: `350ms`).
-
-##### `NXF_RETRY_POLICY_JITTER`
-
-<AddedInVersion version="25.06.0-edge" />
-
-Jitter value used for HTTP retryable operations (default: `0.25`).
-
-##### `NXF_RETRY_POLICY_MAX_ATTEMPTS`
-
-<AddedInVersion version="25.06.0-edge" />
-
-Max number of attempts used for HTTP retryable operations (default: `5`).
-
-##### `NXF_RETRY_POLICY_MAX_DELAY`
-
-<AddedInVersion version="25.06.0-edge" />
-
-Max delay used for HTTP retryable operations (default: `90s`).
+Defines the default behavior of `publishDir.failOnError` setting. See [publishDir][process-publishdir] directive for more information.
 
 ##### `NXF_RETRY_POLICY_DELAY`
 
@@ -302,13 +274,13 @@ Directory where Spack environments are stored. When using a computing cluster it
 
 <AddedInVersion version="23.02.0-edge" />
 
-Enable the use of Spack recipes defined by using the [spack][process-spack] directive. (default`false`).
+Enable the use of Spack recipes defined by using the [process-spack][process-spack] directive. (default: `false`).
 
 ##### `NXF_SYNTAX_PARSER`
 
 <AddedInVersion version="25.02.0-edge" />
 
-Set to `'v2'` to use the [strict syntax][strict-syntax-page] for Nextflow scripts and config files (default`'v1'`).
+Set to `'v2'` to use the [strict syntax][strict-syntax-page] for Nextflow scripts and config files (default: `'v1'`).
 
 ##### `NXF_TEMP`
 
@@ -330,8 +302,39 @@ Directory where working files are stored (usually your *scratch* directory)
 
 <AddedInVersion version="23.05.0-edge" />
 
-Defines the minimum size of the `.command.run` staging script for it to be written to a separate `.command.stage` file (default`'1 MB'`).
+Defines the minimum size of the `.command.run` staging script for it to be written to a separate `.command.stage` file (default: `'1 MB'`).
+
 This setting is useful for executors that impose a size limit on job scripts.
+
+## Seqera Platform settings
+
+##### `TOWER_ACCESS_TOKEN`
+
+Specifies the access token for authenticating with Seqera Platform. Can also be configured using the `tower.accessToken` config option.
+
+##### `TOWER_API_ENDPOINT`
+
+Specifies the Seqera Platform API endpoint (default: `https://api.cloud.seqera.io`). Can also be configured using the `tower.endpoint` config option.
+
+##### `TOWER_AUTH_DOMAIN`
+
+<AddedInVersion version="25.10.0" />
+
+Specifies the Auth0 domain for authenticating with Seqera Platform when connecting to a custom endpoint. When specified, this value takes precedence over the built-in mappings for known Seqera endpoints. Must be used in conjunction with `TOWER_AUTH_CLIENT_ID`.
+
+##### `TOWER_AUTH_CLIENT_ID`
+
+<AddedInVersion version="25.10.0" />
+
+Specifies the Auth0 client ID for authenticating with a custom Seqera Platform endpoint. Must be used in conjunction with `TOWER_AUTH_DOMAIN`.
+
+##### `TOWER_REFRESH_TOKEN`
+
+Specifies the refresh token for maintaining authentication with Seqera Platform. Can also be configured using the `tower.refreshToken` config option.
+
+##### `TOWER_WORKSPACE_ID`
+
+Specifies the Seqera Platform workspace ID. Can also be configured using the `tower.workspaceId` config option.
 
 ## Other settings
 
@@ -349,6 +352,14 @@ Defines the HTTP proxy server.
 Proxy authentication is supported by providing the credentials in the proxy URL, e.g. `http://user:password@proxy-host.com:port`.
 </AddedInVersion>
 
+##### `HTTPS_PROXY`
+
+Defines the HTTPS proxy server.
+
+<AddedInVersion version="21.06.0-edge">
+Proxy authentication is supported by providing the credentials in the proxy URL, e.g. `https://user:password@proxy-host.com:port`.
+</AddedInVersion>
+
 ##### `NO_COLOR`
 
 Disables ANSI color codes in Nextflow log output. When this variable is set, Nextflow prints plain text logs following the [NO_COLOR standard](https://no-color.org/).
@@ -364,6 +375,6 @@ Defines one or more host names that should not use the proxy server. Separate mu
 Forces the terminal width of ANSI-formatted log output. Overrides automatic terminal width detection and uses the specified width for line wrapping when set to an integer value.
 
 [process-conda]: /nextflow_docs/nextflow_repo/docs/reference/process.mdx#conda
-[process-spack]: /nextflow_docs/nextflow_repo/docs/reference/process.mdx#spack
 [process-publishdir]: /nextflow_docs/nextflow_repo/docs/reference/process.mdx#publishdir
+[process-spack]: /nextflow_docs/nextflow_repo/docs/reference/process.mdx#spack
 [strict-syntax-page]: /nextflow_docs/nextflow_repo/docs/strict-syntax.mdx

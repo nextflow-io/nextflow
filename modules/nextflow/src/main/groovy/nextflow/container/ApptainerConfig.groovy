@@ -16,9 +16,9 @@
 package nextflow.container
 
 import groovy.transform.CompileStatic
-import nextflow.config.schema.ConfigOption
-import nextflow.config.schema.ConfigScope
-import nextflow.config.schema.ScopeName
+import nextflow.config.spec.ConfigOption
+import nextflow.config.spec.ConfigScope
+import nextflow.config.spec.ScopeName
 import nextflow.script.dsl.Description
 import nextflow.util.Duration
 
@@ -107,7 +107,7 @@ class ApptainerConfig implements ConfigScope, ContainerConfig {
         libraryDir = opts.libraryDir
         noHttps = opts.noHttps as boolean
         ociAutoPull = opts.ociAutoPull as boolean
-        pullTimeout = opts.pullTimeout as Duration
+        pullTimeout = opts.pullTimeout as Duration ?: Duration.of('20min')
         registry = opts.registry
         runOptions = opts.runOptions
     }

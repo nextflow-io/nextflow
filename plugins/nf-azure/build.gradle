@@ -19,7 +19,7 @@ plugins {
 }
 
 nextflowPlugin {
-    nextflowVersion = '25.08.0-edge'
+    nextflowVersion = '25.09.2-edge'
 
     provider = "${nextflowPluginProvider}"
     description = 'Enables Azure cloud execution through Batch service with native Blob storage access and comprehensive authentication options'

@@ -323,6 +323,8 @@ class CmdRun extends CmdBase implements HubOptions {
 
         printBanner()
 
+        Plugins.init()
+
         // -- resolve main script
         final scriptFile = getScriptFile(pipeline)
 
@@ -359,7 +361,6 @@ class CmdRun extends CmdBase implements HubOptions {
         Map configParams = builder.getConfigParams()
 
         // -- Load plugins (may register secret providers)
-        Plugins.init()
         Plugins.load(config)
 
         // -- Initialize real secrets system

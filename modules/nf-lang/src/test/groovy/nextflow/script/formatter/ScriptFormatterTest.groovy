@@ -174,7 +174,7 @@ class ScriptFormatterTest extends Specification {
         )
     }
 
-    def 'should format a process definition' () {
+    def 'should format a legacy process definition' () {
         expect:
         checkFormat(
             '''\
@@ -195,6 +195,39 @@ class ScriptFormatterTest extends Specification {
 
                 script:
                 'echo true'
+            }
+            '''
+        )
+    }
+
+    def 'should format a typed process definition' () {
+        expect:
+        checkFormat(
+            '''\
+            nextflow.preview.types=true
+
+            process hello{
+            debug(true) ; input: (id,infile):Tuple<String,Path> ; index:Path ; stage: stageAs('input.txt',infile) ; output: result=tuple(id,file('output.txt')) ; script: 'cat input.txt > output.txt'
+            }
+            ''',
+            '''\
+            nextflow.preview.types = true
+
+            process hello {
+                debug true
+
+                input:
+                (id, infile): Tuple<String, Path>
+                index: Path
+
+                stage:
+                stageAs 'input.txt', infile
+
+                output:
+                result = tuple(id, file('output.txt'))
+
+                script:
+                'cat input.txt > output.txt'
             }
             '''
         )

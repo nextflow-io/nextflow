@@ -18,9 +18,9 @@ package nextflow.config
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.config.schema.ConfigScope
-import nextflow.config.schema.SchemaNode
-import nextflow.config.schema.ScopeName
+import nextflow.config.spec.ConfigScope
+import nextflow.config.spec.SpecNode
+import nextflow.config.spec.ScopeName
 import nextflow.plugin.Plugins
 import nextflow.script.dsl.Description
 /**
@@ -62,20 +62,20 @@ class ConfigValidator {
     /**
      * Additional config scopes added by third-party plugins
      */
-    private SchemaNode.Scope pluginScopes
+    private SpecNode.Scope pluginScopes
 
     ConfigValidator() {
         loadPluginScopes()
     }
 
     private void loadPluginScopes() {
-        final children = new HashMap<String, SchemaNode>()
+        final children = new HashMap<String, SpecNode>()
         for( final scope : Plugins.getExtensions(ConfigScope) ) {
             final clazz = scope.getClass()
             final name = clazz.getAnnotation(ScopeName)?.value()
             final description = clazz.getAnnotation(Description)?.value()
             if( name == '' ) {
-                children.putAll(SchemaNode.Scope.of(clazz, '').children())
+                children.putAll(SpecNode.Scope.of(clazz, '').children())
                 continue
             }
             if( !name )
@@ -84,40 +84,40 @@ class ConfigValidator {
                 log.warn "Plugin config scope `${clazz.name}` conflicts with existing scope: `${name}`"
                 continue
             }
-            children.put(name, SchemaNode.Scope.of(clazz, description))
+            children.put(name, SpecNode.Scope.of(clazz, description))
         }
-        pluginScopes = new SchemaNode.Scope('', children)
+        pluginScopes = new SpecNode.Scope('', children)
     }
 
-    void validate(ConfigMap config) {
-        validate(config.toConfigObject())
-    }
+    /**
+     * Validate a config block within the given scope.
+     *
+     * @param config
+     * @param scopes
+     */
+    void validate(Map<String,?> config, List<String> scopes=[]) {
+        for( final entry : config.entrySet() ) {
+            final key = entry.key
+            final value = entry.value
 
-    void validate(ConfigObject config) {
-        final flatConfig = config.flatten()
-        for( String key : flatConfig.keySet() ) {
-            final names = key.tokenize('.').findAll { name -> !isSelector(name) }
-            if( names.first() == 'profiles' ) {
-                if( !names.isEmpty() ) names.remove(0)
-                if( !names.isEmpty() ) names.remove(0)
+            final names = scopes + [key]
+
+            if( names.size() == 2 && names.first() == 'profiles' )
+                names.clear()
+
+            if( value instanceof Map ) {
+                log.debug "validate config block ${names}"
+                if( isSelector(key) )
+                    names.removeLast()
+                log.debug "  is map option ${isMapOption(names)}"
+                if( isMapOption(names) )
+                    continue
+                validate(value, names)
             }
-            final scope = names.first()
-            if( scope == 'env' ) {
-                checkEnv(names.last())
-                continue
+            else {
+                log.debug "validate config option ${names}"
+                validateOption(names)
             }
-            if( scope == 'params' )
-                continue
-            final fqName = names.join('.')
-            if( fqName.startsWith('process.ext.') )
-                continue
-            if( isValid(names) )
-                continue
-            if( isMissingCorePluginScope(names.first()) )
-                continue
-            if( isMapOption(names) )
-                continue
-            log.warn1 "Unrecognized config option '${fqName}'"
         }
     }
 
@@ -131,15 +131,38 @@ class ConfigValidator {
     }
 
     /**
-     * Determine whether a config option is defined in the schema.
+     * Validate a config option given by the list of names.
+     *
+     * For example, the option 'process.resourceLimits' is represented
+     * as ['process', 'resourceLimits'].
+     *
+     * @param names
+     */
+    void validateOption(List<String> names) {
+        final scope = names.first()
+        if( scope == 'env' ) {
+            checkEnv(names.last())
+            return
+        }
+        if( scope == 'params' )
+            return
+        if( isMissingCorePluginScope(scope) )
+            return
+        if( isValid(names) )
+            return
+        log.warn1 "Unrecognized config option '${names.join('.')}'"
+    }
+
+    /**
+     * Determine whether a config option is defined in the spec.
      *
      * @param names
      */
     boolean isValid(List<String> names) {
         if( names.size() == 1 && names.first() in HIDDEN_OPTIONS )
             return true
-        final child = SchemaNode.ROOT.getChild(names)
-        if( child instanceof SchemaNode.Option || child instanceof SchemaNode.DslOption )
+        final child = SpecNode.ROOT.getChild(names)
+        if( child instanceof SpecNode.Option || child instanceof SpecNode.DslOption )
             return true
         if( pluginScopes.getOption(names) )
             return true
@@ -161,26 +184,16 @@ class ConfigValidator {
      * Determine whether a config option is a map option or a
      * property thereof.
      *
-     * @param names Config option split into individual names, e.g. 'process.resourceLimits' -> [process, resourceLimits]
+     * @param names
      */
     private boolean isMapOption(List<String> names) {
-        return isMapOption0(SchemaNode.ROOT, names)
+        return isMapOption0(SpecNode.ROOT, names)
             || isMapOption0(pluginScopes, names)
     }
 
-    private static boolean isMapOption0(SchemaNode.Scope scope, List<String> names) {
-        SchemaNode node = scope
-        for( final name : names ) {
-            if( node instanceof SchemaNode.Scope )
-                node = node.children().get(name)
-            else if( node instanceof SchemaNode.Placeholder )
-                node = node.scope()
-            else if( node instanceof SchemaNode.Option )
-                return node.type() == Map.class
-            else
-                return false
-        }
-        return false
+    private static boolean isMapOption0(SpecNode.Scope scope, List<String> names) {
+        final node = scope.getOption(names)
+        return node != null && node.type() == Map.class
     }
 
     /**

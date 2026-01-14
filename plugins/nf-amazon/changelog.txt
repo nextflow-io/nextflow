@@ -1,5 +1,21 @@
 nf-amazon changelog
 ===================
+3.4.2 - 28 Nov 2025
+- Fix incorrect AWS region when specifying a S3 regional endpoint (#6530) [770bdd3eb]
+- Fix unordered completed parts in AWS multipart upload (#6560) [89eb70130]
+
+3.4.1 - 22 Oct 2025
+- Fix no secrets in AWS Batch jobs (#6499) [c76c32582]
+- Simplify S3 configuration options (#6496) [0b7f18049]
+
+3.4.0 - 21 Oct 2025
+- Limit S3 client connections when using virtual threads (#6369) [295c60b5c]
+- Rename `config.schema` package to `config.spec` (#6485) [ef0d2d601]
+
+3.3.0 - 8 Oct 2025
+- Fix SIGTERM forwarding in AWS Batch jobs (#6414) [abbef79b7]
+- Limit S3 concurrent downloads to fix Java Heap OOM (#6402) [fd71d0e8c]
+
 3.1.0 - 15 Aug 2025
 - Fix AWS transfer manager anonymous fallback (#6296) [ci fast] [ed5c99e1]
 - Fix silent failure when downloading a directory with AWS SDK v2 (#6266) [ci fast] [2d76d8f0]

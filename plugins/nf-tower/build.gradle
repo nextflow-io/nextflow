@@ -3,7 +3,7 @@
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/. 
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
  * This Source Code Form is "Incompatible With Secondary Licenses", as
  * defined by the Mozilla Public License, v. 2.0.
@@ -15,7 +15,7 @@ plugins {
 }
 
 nextflowPlugin {
-    nextflowVersion = '25.07.0-edge'
+    nextflowVersion = '25.09.2-edge'
 
     provider = "${nextflowPluginProvider}"
     description = 'Integrates with Seqera Platform for comprehensive workflow monitoring, resource tracking, and cache management capabilities'
@@ -25,6 +25,8 @@ nextflowPlugin {
         'io.seqera.tower.plugin.TowerConfig',
         'io.seqera.tower.plugin.TowerFactory',
         'io.seqera.tower.plugin.TowerFusionToken',
+        'io.seqera.tower.plugin.auth.AuthCommandImpl',
+        'io.seqera.tower.plugin.launch.LaunchCommandImpl'
     ]
 }
 
@@ -46,7 +48,7 @@ dependencies {
     compileOnly project(':nextflow')
     compileOnly 'org.slf4j:slf4j-api:2.0.17'
     compileOnly 'org.pf4j:pf4j:3.12.0'
-    compileOnly 'io.seqera:lib-httpx:2.0.0'
+    compileOnly 'io.seqera:lib-httpx:2.1.0'
 
     api "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.15.0"
     api "com.fasterxml.jackson.core:jackson-databind:2.12.7.1"

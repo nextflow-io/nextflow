@@ -22,7 +22,8 @@ import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.FunctionNode;
 import nextflow.script.ast.OutputNode;
 import nextflow.script.ast.ParamNodeV1;
-import nextflow.script.ast.ProcessNode;
+import nextflow.script.ast.ProcessNodeV1;
+import nextflow.script.ast.ProcessNodeV2;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
 import nextflow.script.ast.WorkflowNode;
@@ -102,20 +103,20 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
         for( var take : node.getParameters() )
             resolver.resolveOrFail(take.getType(), take);
         resolver.visit(node.main);
-        resolveWorkflowEmits(node.emits);
+        resolveTypedOutputs(node.emits);
         resolver.visit(node.emits);
         resolver.visit(node.publishers);
         resolver.visit(node.onComplete);
         resolver.visit(node.onError);
     }
 
-    private void resolveWorkflowEmits(Statement emits) {
-        for( var stmt : asBlockStatements(emits) ) {
+    private void resolveTypedOutputs(Statement block) {
+        for( var stmt : asBlockStatements(block) ) {
             var stmtX = (ExpressionStatement)stmt;
-            var emit = stmtX.getExpression();
+            var output = stmtX.getExpression();
             var target =
-                emit instanceof AssignmentExpression ae ? ae.getLeftExpression() :
-                emit instanceof VariableExpression ve ? ve :
+                output instanceof AssignmentExpression ae ? ae.getLeftExpression() :
+                output instanceof VariableExpression ve ? ve :
                 null;
 
             if( target instanceof VariableExpression ve )
@@ -124,7 +125,21 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
     }
 
     @Override
-    public void visitProcess(ProcessNode node) {
+    public void visitProcessV2(ProcessNodeV2 node) {
+        for( var input : node.inputs )
+            resolver.resolveOrFail(input.getType(), input);
+        resolver.visit(node.directives);
+        resolver.visit(node.stagers);
+        resolveTypedOutputs(node.outputs);
+        resolver.visit(node.outputs);
+        resolver.visit(node.topics);
+        resolver.visit(node.when);
+        resolver.visit(node.exec);
+        resolver.visit(node.stub);
+    }
+
+    @Override
+    public void visitProcessV1(ProcessNodeV1 node) {
         resolver.visit(node.directives);
         resolver.visit(node.inputs);
         resolver.visit(node.outputs);
@@ -145,6 +160,7 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitOutput(OutputNode node) {
+        resolver.resolveOrFail(node.getType(), node.getType());
         resolver.visit(node.body);
     }
 

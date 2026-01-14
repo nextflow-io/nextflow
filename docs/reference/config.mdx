@@ -19,19 +19,13 @@ Delete all files associated with a run in the work directory when the run comple
 :::warning
 This option will prevent the use of the *resume* feature on subsequent executions of that pipeline run.
 :::
-
 :::warning
 This option is not supported for remote work directories, such as Amazon S3, Google Cloud Storage, and Azure Blob Storage.
 :::
 
-##### `dumpHashes`
-
-If `true`, dump task hash keys in the log file, for debugging purposes. Equivalent to the `-dump-hashes` option of the `run` command.
-
 ##### `outputDir`
 
-<AddedInVersion version="24.10.0">
-</AddedInVersion>
+<AddedInVersion version="24.10.0" />
 
 The pipeline output directory. Equivalent to the `-output-dir` option of the `run` command.
 
@@ -79,15 +73,13 @@ Pull the Apptainer image with http protocol (default: `false`).
 
 ##### `apptainer.ociAutoPull`
 
-<AddedInVersion version="23.12.0-edge">
-</AddedInVersion>
+<AddedInVersion version="23.12.0-edge" />
 
 When enabled, OCI (and Docker) container images are pulled and converted to the SIF format by the Apptainer run command, instead of Nextflow (default: `false`).
 
 :::note
-Leave `ociAutoPull` disabled if you are willing to build a Singularity/Apptainer native image with Wave (see the [Singularity][wave-singularity] section).
+Leave `ociAutoPull` disabled if you are willing to build a Singularity/Apptainer native image with Wave (see the [wave-singularity][wave-singularity] section).
 :::
-
 
 ##### `apptainer.pullTimeout`
 
@@ -101,8 +93,6 @@ The registry from where Docker images are pulled. It should be only used to spec
 
 Specify extra command line options supported by `apptainer exec`.
 
-See the [Apptainer][container-apptainer] page to learn more about how to use Apptainer containers with Nextflow.
-
 ## `aws`
 
 The `aws` scope controls the interactions with AWS, including AWS Batch and S3.
@@ -115,8 +105,7 @@ AWS account access key.
 
 ##### `aws.profile`
 
-<AddedInVersion version="22.12.0-edge">
-</AddedInVersion>
+<AddedInVersion version="22.12.0-edge" />
 
 AWS profile from `~/.aws/credentials`.
 
@@ -146,8 +135,7 @@ The AWS Batch Job Role ARN that needs to be used to execute the Batch Job.
 
 ##### `aws.batch.logsGroup`
 
-<AddedInVersion version="22.09.0-edge">
-</AddedInVersion>
+<AddedInVersion version="22.09.0-edge" />
 
 The name of the logs group used by Batch Jobs (default: `/aws/batch/job`).
 
@@ -157,8 +145,7 @@ Max parallel upload/download transfer operations *per job* (default: `4`).
 
 ##### `aws.batch.maxSpotAttempts`
 
-<AddedInVersion version="22.04.0">
-</AddedInVersion>
+<AddedInVersion version="22.04.0" />
 
 <ChangedInVersion version="24.08.0-edge">
 The default value was changed from `5` to `0`.
@@ -180,22 +167,19 @@ The [retry mode](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-
 
 ##### `aws.batch.schedulingPriority`
 
-<AddedInVersion version="23.01.0-edge">
-</AddedInVersion>
+<AddedInVersion version="23.01.0-edge" />
 
 The scheduling priority for all tasks when using [fair-share scheduling](https://aws.amazon.com/blogs/hpc/introducing-fair-share-scheduling-for-aws-batch/) (default: `0`).
 
 ##### `aws.batch.shareIdentifier`
 
-<AddedInVersion version="22.09.0-edge">
-</AddedInVersion>
+<AddedInVersion version="22.09.0-edge" />
 
 The share identifier for all tasks when using [fair-share scheduling](https://aws.amazon.com/blogs/hpc/introducing-fair-share-scheduling-for-aws-batch/).
 
 ##### `aws.batch.terminateUnschedulableJobs`
 
-<AddedInVersion version="25.03.0-edge">
-</AddedInVersion>
+<AddedInVersion version="25.03.0-edge" />
 
 When `true`, jobs that cannot be scheduled due to lack of resources or misconfiguration are terminated and handled as task failures (default: `false`).
 
@@ -215,44 +199,35 @@ The amount of time to wait (in milliseconds) when initially establishing a conne
 
 The AWS S3 API entry point e.g. `https://s3-us-west-1.amazonaws.com`. The endpoint must include the protocol prefix e.g. `https://`.
 
-##### `aws.client.maxConcurrency`
-
-<AddedInVersion version="25.06.0-edge" />
-
-The maximum number of concurrent S3 transfers used by the S3 transfer manager. By default, this setting is determined by `aws.client.targetThroughputInGbps`. Modifying this value can affect the amount of memory used for S3 transfers.
-
 ##### `aws.client.maxConnections`
 
-The maximum number of open HTTP connections used by the S3 transfer manager (default: `50`).
+The maximum number of open HTTP connections used by the S3 client (default: `50`).
+
+##### `aws.client.maxDownloadHeapMemory`
+
+The maximum size for the heap memory buffer used by concurrent downloads. It must be at least 10 times the `minimumPartSize` (default:`400 MB`).
 
 ##### `aws.client.maxErrorRetry`
 
 The maximum number of retry attempts for failed retryable requests (default: `-1`).
 
-##### `aws.client.maxNativeMemory`
-
-<AddedInVersion version="25.06.0-edge">
-</AddedInVersion>
-
-The maximum native memory used by the S3 transfer manager. By default, this setting is determined by `aws.client.targetThroughputInGbps`.
-
 ##### `aws.client.minimumPartSize`
 
-<AddedInVersion version="25.06.0-edge">
-</AddedInVersion>
+<AddedInVersion version="25.06.0-edge" />
 
-The minimum part size used by the S3 transfer manager for multi-part uploads (default: `8 MB`).
+The minimum part size used for multipart S3 transfers (default: `8 MB`).
 
 ##### `aws.client.multipartThreshold`
 
-<AddedInVersion version="25.06.0-edge">
-</AddedInVersion>
+<AddedInVersion version="25.06.0-edge" />
 
-The object size threshold used by the S3 transfer manager for performing multi-part uploads (default: same as `aws.cllient.minimumPartSize`).
+The object size threshold used for multipart S3 transfers (default: same as `aws.cllient.minimumPartSize`).
 
 ##### `aws.client.protocol`
 
-<AddedInVersion version="25.06.0-edge" />
+<DeprecatedInVersion version="25.06.0-edge">
+This option is no longer supported.
+</DeprecatedInVersion>
 
 The protocol to use when connecting to AWS. Can be `http` or `https` (default: `'https'`).
 
@@ -270,8 +245,7 @@ The port to use when connecting through a proxy.
 
 ##### `aws.client.proxyScheme`
 
-<AddedInVersion version="25.06.0-edge">
-</AddedInVersion>
+<AddedInVersion version="25.06.0-edge" />
 
 The protocol scheme to use when connecting through a proxy. Can be `http` or `https` (default: `'http'`).
 
@@ -281,8 +255,7 @@ The user name to use when connecting through a proxy.
 
 ##### `aws.client.requesterPays`
 
-<AddedInVersion version="24.05.0-edge">
-</AddedInVersion>
+<AddedInVersion version="24.05.0-edge" />
 
 Use [Requester Pays](https://docs.aws.amazon.com/AmazonS3/latest/userguide/RequesterPaysBuckets.html) for S3 buckets (default: `false`).
 
@@ -296,19 +269,25 @@ Use the path-based access model to access objects in S3-compatible storage syste
 
 ##### `aws.client.signerOverride`
 
-<DeprecatedInVersion version="24.06.0-edge" />
+<DeprecatedInVersion version="25.06.0-edge">
+This option is no longer supported.
+</DeprecatedInVersion>
 
 The name of the signature algorithm to use for signing requests made by the client.
 
 ##### `aws.client.socketSendBufferSizeHint`
 
-<DeprecatedInVersion version="24.06.0-edge" />
+<DeprecatedInVersion version="25.06.0-edge">
+This option is no longer supported.
+</DeprecatedInVersion>
 
 The Size hint (in bytes) for the low level TCP send buffer (default: `0`).
 
 ##### `aws.client.socketRecvBufferSizeHint`
 
-<DeprecatedInVersion version="24.06.0-edge" />
+<DeprecatedInVersion version="25.06.0-edge">
+This option is no longer supported.
+</DeprecatedInVersion>
 
 The Size hint (in bytes) for the low level TCP receive buffer (default: `0`).
 
@@ -326,28 +305,20 @@ The S3 server side encryption to be used when saving objects on S3. Can be `AES2
 
 ##### `aws.client.storageKmsKeyId`
 
-<AddedInVersion version="25.05.0-edge">
-</AddedInVersion>
+<AddedInVersion version="22.05.0-edge" />
 
 The AWS KMS key Id to be used to encrypt files stored in the target S3 bucket.
 
 ##### `aws.client.targetThroughputInGbps`
 
-<AddedInVersion version="25.06.0-edge">
-</AddedInVersion>
+<AddedInVersion version="25.06.0-edge" />
 
-The target network throughput (in Gbps) used by the S3 transfer manager (default: `10`). This setting is not used when `aws.client.maxConcurrency` and `aws.client.maxNativeMemory` are specified.
-
-##### `aws.client.transferManagerThreads`
-
-<AddedInVersion version="25.06.0-edge">
-</AddedInVersion>
-
-The number of threads used by the S3 transfer manager (default: `10`).
+The target network throughput (in Gbps) used for S3 uploads and downloads (default: `10`).
 
 ##### `aws.client.userAgent`
 
 <DeprecatedInVersion version="25.06.0-edge">
+This option is no longer supported.
 </DeprecatedInVersion>
 
 The HTTP user agent header passed with all HTTP requests.
@@ -355,6 +326,7 @@ The HTTP user agent header passed with all HTTP requests.
 ##### `aws.client.uploadChunkSize`
 
 <DeprecatedInVersion version="25.06.0-edge">
+This option is no longer supported.
 </DeprecatedInVersion>
 
 The size of a single part in a multipart upload (default: `100 MB`).
@@ -362,19 +334,24 @@ The size of a single part in a multipart upload (default: `100 MB`).
 ##### `aws.client.uploadMaxAttempts`
 
 <DeprecatedInVersion version="25.06.0-edge">
+This option is no longer supported.
 </DeprecatedInVersion>
 
 The maximum number of upload attempts after which a multipart upload returns an error (default: `5`).
 
 ##### `aws.client.uploadMaxThreads`
 
-<DeprecatedInVersion version="24.06.0-edge" />
+<DeprecatedInVersion version="25.06.0-edge">
+This option is no longer supported.
+</DeprecatedInVersion>
 
 The maximum number of threads used for multipart upload (default: `10`).
 
 ##### `aws.client.uploadRetrySleep`
 
-<DeprecatedInVersion version="24.06.0-edge" />
+<DeprecatedInVersion version="25.06.0-edge">
+This option is no longer supported.
+</DeprecatedInVersion>
 
 The time to wait after a failed upload attempt to retry the part upload (default: `500ms`).
 
@@ -444,7 +421,7 @@ The `azcopy` tool is not installed.
 
 ##### `azure.batch.deleteJobsOnCompletion`
 
-<ChangedInVersion version="24.08.0-edge">
+<ChangedInVersion version="23.08.0-edge">
 Default value was changed from `true` to `false`.
 </ChangedInVersion>
 
@@ -456,8 +433,7 @@ Delete all compute node pools when the workflow completes (default: `false`).
 
 ##### `azure.batch.deleteTasksOnCompletion`
 
-<AddedInVersion version="23.08.0-edge">
-</AddedInVersion>
+<AddedInVersion version="23.08.0-edge" />
 
 Delete each task when it completes (default: `true`).
 Although this setting is enabled by default, failed tasks will not be deleted unless it is explicitly enabled. This way, the default behavior is that successful tasks are deleted while failed tasks are preserved for debugging purposes.
@@ -468,18 +444,16 @@ The batch service endpoint e.g. `https://nfbatch1.westeurope.batch.azure.com`.
 
 ##### `azure.batch.jobMaxWallClockTime`
 
-<AddedInVersion version="25.04.0">
-</AddedInVersion>
+<AddedInVersion version="25.04.0" />
 
 The maximum elapsed time that jobs may run, measured from the time they are created (default: `30d`).
-
 If jobs do not complete within this time limit, the Batch service terminates them and any tasks still running.
 
 ##### `azure.batch.location`
 
 The name of the batch service region, e.g. `westeurope` or `eastus2`. Not needed when the endpoint is specified.
 
-#####`azure.batch.poolIdentityClientId`
+##### `azure.batch.poolIdentityClientId`
 
 <AddedInVersion version="25.05.0-edge" />
 
@@ -498,8 +472,7 @@ The internal root mount point when mounting File Shares. Must be `/mnt/resource/
 Enable the use of low-priority VMs (default: `false`).
 
 :::warning
-As of September 30, 2025, Low Priority VMs will no longer be supported in Azure Batch accounts that use Batch Managed mode for pool allocation.
-You may continue to use this setting to configure Spot VMs in Batch accounts configured with User Subscription mode.
+As of September 30, 2025, Low Priority VMs will no longer be supported in Azure Batch accounts that use Batch Managed mode for pool allocation. You may continue to use this setting to configure Spot VMs in Batch accounts configured with User Subscription mode.
 :::
 
 ##### `azure.batch.pools.<name>.maxVmCount`
@@ -544,22 +517,19 @@ The ID of the Compute Node agent SKU which the pool identified with `<name>` sup
 
 ##### `azure.batch.pools.<name>.startTask.privileged`
 
-<AddedInVersion version="23.03.0-edge">
-</AddedInVersion>
+<AddedInVersion version="24.03.0-edge" />
 
 Enable the `startTask` to run with elevated access (default: `false`).
 
 ##### `azure.batch.pools.<name>.startTask.script`
 
-<AddedInVersion version="23.03.0-edge">
-</AddedInVersion>
+<AddedInVersion version="24.03.0-edge" />
 
 The `startTask` that is executed as the node joins the Azure Batch node pool.
 
 ##### `azure.batch.pools.<name>.virtualNetwork`
 
-<AddedInVersion version="23.03.0-edge">
-</AddedInVersion>
+<AddedInVersion version="23.03.0-edge" />
 
 The subnet ID of a virtual network in which to create the pool.
 
@@ -569,12 +539,11 @@ The number of virtual machines provisioned by the pool identified with `<name>`.
 
 ##### `azure.batch.pools.<name>.vmType`
 
-Specify the virtual machine type used by the pool identified with `<name>`.
+The virtual machine type used by the pool identified with `<name>`.
 
 ##### `azure.batch.terminateJobsOnCompletion`
 
-<AddedInVersion version="23.05.0-edge">
-</AddedInVersion>
+<AddedInVersion version="23.05.0-edge" />
 
 When the workflow completes, set all jobs to terminate on task completion (default: `true`).
 
@@ -584,7 +553,7 @@ The client ID for an Azure [managed identity](https://learn.microsoft.com/en-us/
 
 ##### `azure.managedIdentity.system`
 
- When `true`, use the system-assigned [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview) to authenticate Azure resources. Defaults to environment variable `AZURE_MANAGED_IDENTITY_SYSTEM`.
+When `true`, use the system-assigned [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview) to authenticate Azure resources. Defaults to environment variable `AZURE_MANAGED_IDENTITY_SYSTEM`.
 
 ##### `azure.registry.password`
 
@@ -626,7 +595,7 @@ The blob storage account name. Defaults to environment variable `AZURE_STORAGE_A
 
 The file share mount options.
 
-##### `azure storage.fileShares.<name>.mountPath`
+##### `azure.storage.fileShares.<name>.mountPath`
 
 The file share mount path.
 
@@ -679,7 +648,6 @@ When `false`, mount input directories as read-only (default: `true`).
 ##### `charliecloud.writeFake`
 
 Run containers from storage in writeable mode using overlayfs (default: `true`).
-
 This option requires unprivileged `overlayfs` (Linux kernel >= 5.11). For full support, tempfs with xattrs in the user namespace (Linux kernel >= 6.6) is required. See [charliecloud documentation](https://hpc.github.io/charliecloud/ch-run.html#ch-run-overlay) for details.
 
 ## `conda`
@@ -712,12 +680,11 @@ Execute tasks with Conda environments (default: `false`).
 
 Use [Mamba](https://github.com/mamba-org/mamba) instead of `conda` to create Conda environments (default: `false`).
 
-<AddedInVersion version="25.05.0-edge">
-</AddedInVersion>
+##### `conda.useMicromamba`
+
+<AddedInVersion version="22.05.0-edge" />
 
 Use [Micromamba](https://mamba.readthedocs.io/en/latest/user_guide/micromamba.html) instead of `conda` to create Conda environments (default: `false`).
-
-See [Conda][conda-page] for more information about using Conda environments with Nextflow.
 
 ## `dag`
 
@@ -725,26 +692,18 @@ The `dag` scope controls the workflow diagram generated by Nextflow.
 
 The following settings are available:
 
-##### `dag.enabled`
-
-When `true` enables the generation of the DAG file (default: `false`).
-
 ##### `dag.depth`
 
-<AddedInVersion version="23.10.0">
-</AddedInVersion>
+<AddedInVersion version="23.10.0" />
 
 *Supported by the HTML and Mermaid renderers.*
-
 Controls the maximum depth at which to render sub-workflows (default: no limit).
 
 ##### `dag.direction`
 
-<AddedInVersion version="23.10.0">
-</AddedInVersion>
+<AddedInVersion version="23.10.0" />
 
-*Supported by Graphviz, DOT, HTML and Mermaid renderers.*
-
+*Supported by the Graphviz, DOT, HTML and Mermaid renderers.*
 Controls the direction of the DAG, can be `'LR'` (left-to-right) or `'TB'` (top-to-bottom) (default: `'TB'`).
 
 ##### `dag.enabled`
@@ -761,11 +720,9 @@ When `true` overwrites any existing DAG file with the same name (default: `false
 
 ##### `dag.verbose`
 
-<AddedInVersion version="23.10.0">
-</AddedInVersion>
+<AddedInVersion version="23.10.0" />
 
 *Only supported by the HTML and Mermaid renderers.*
-
 When `false`, channel names are omitted, operators are collapsed, and empty workflow inputs are removed (default: `false`).
 
 ## `docker`
@@ -807,7 +764,6 @@ The registry from where Docker images are pulled. It should be only used to spec
 <AddedInVersion version="25.06.0-edge" />
 
 When `true`, forces the override of the registry name in fully qualified container image names with the registry specified by `docker.registry` (default: `false`).
-
 This setting allows you to redirect container image pulls from their original registry to a different registry, such as a private mirror or proxy.
 
 ##### `docker.remove`
@@ -866,16 +822,14 @@ The following settings are available:
 
 ##### `executor.account`
 
-<AddedInVersion version="24.04.0">
-</AddedInVersion>
+<AddedInVersion version="24.04.0" />
 
-*Used only by the [SLURM][slurm-executor], [LSF][lsf-executor], [PBS][pbs-executor] and [PBS Pro][pbspro-executor] executors.*
+*Used only by the [slurm-executor][slurm-executor], [lsf-executor][lsf-executor], [pbs-executor][pbs-executor] and [pbspro-executor][pbspro-executor] executors.*
 The project or organization account that should be charged for running the pipeline jobs.
 
 ##### `executor.cpus`
 
 *Used only by the local executor.*
-
 The maximum number of CPUs made available by the underlying system.
 
 ##### `executor.dumpInterval`
@@ -885,19 +839,15 @@ Determines how often to log the executor status (default: `5 min`).
 ##### `executor.exitReadTimeout`
 
 *Used only by grid executors.*
-
 Determines how long to wait for the `.exitcode` file to be created after the task has completed, before returning an error status (default: `270 sec`).
 
 ##### `executor.jobName`
 
 *Used only by grid executors and Google Batch.*
-
 Determines the name of jobs submitted to the underlying cluster executor:
-
 ```groovy
 executor.jobName = { "$task.name - $task.hash" }
 ```
-
 The job name should satisfy the validation constraints of the underlying scheduler.
 
 ##### `executor.killBatchSize`
@@ -907,7 +857,6 @@ Determines the number of jobs that can be killed in a single command execution (
 ##### `executor.memory`
 
 *Used only by the local executor.*
-
 The maximum amount of memory made available by the underlying system.
 
 ##### `executor.name`
@@ -916,23 +865,19 @@ The name of the executor to be used (default: `local`).
 
 ##### `executor.perCpuMemAllocation`
 
-<AddedInVersion version="23.07.0-edge">
-</AddedInVersion>
+<AddedInVersion version="23.07.0-edge" />
 
-*Used only by the [SLURM][slurm-executor] executor.*
-
+*Used only by the [slurm-executor][slurm-executor] executor.*
 When `true`, memory allocations for SLURM jobs are specified as `--mem-per-cpu <task.memory / task.cpus>` instead of `--mem <task.memory>`.
 
 ##### `executor.perJobMemLimit`
 
-*Used only by the [LSF][lsf-executor] executor.*
-
-Specifies Platform LSF *per-job* memory limit mode (default: `false`).
+*Used only by the [lsf-executor][lsf-executor] executor.*
+Enables the *per-job* memory limit mode for LSF jobs.
 
 ##### `executor.perTaskReserve`
 
-*Used only by the [LSF][lsf-executor] executor.*
-
+*Used only by the [lsf-executor][lsf-executor] executor.*
 Enables the *per-task* memory reserve mode for LSF jobs.
 
 ##### `executor.pollInterval`
@@ -941,8 +886,7 @@ Determines how often to check for process termination. Default varies for each e
 
 ##### `executor.queueGlobalStatus`
 
-<AddedInVersion version="23.01.0-edge">
-</AddedInVersion>
+<AddedInVersion version="23.01.0-edge" />
 
 Determines how job status is retrieved. When `false` only the queue associated with the job execution is queried. When `true` the job status is queried globally i.e. irrespective of the submission queue (default: `false`).
 
@@ -953,7 +897,6 @@ The number of tasks the executor will handle in a parallel manner. A queue size 
 ##### `executor.queueStatInterval`
 
 *Used only by grid executors.*
-
 Determines how often to fetch the queue status from the scheduler (default: `1 min`).
 
 ##### `executor.submitRateLimit`
@@ -962,51 +905,41 @@ Determines the max rate of job submission per time unit, for example `'10sec'` (
 
 ##### `executor.retry.delay`
 
-<AddedInVersion version="23.03.0-edge">
-</AddedInVersion>
+<AddedInVersion version="22.03.0-edge" />
 
 *Used only by grid executors.*
-
 Delay when retrying failed job submissions (default: `500ms`).
 
 ##### `executor.retry.jitter`
 
-<AddedInVersion version="23.03.0-edge">
-</AddedInVersion>
+<AddedInVersion version="22.03.0-edge" />
 
 *Used only by grid executors.*
-
 Jitter value when retrying failed job submissions (default: `0.25`).
 
-##### `executor.retry.maxAttempt`
+##### `executor.retry.maxAttempts`
 
-<AddedInVersion version="23.03.0-edge">
-</AddedInVersion>
+<AddedInVersion version="22.03.0-edge" />
 
 *Used only by grid executors.*
-
 Max attempts when retrying failed job submissions (default: `3`).
 
 ##### `executor.retry.maxDelay`
 
-<AddedInVersion version="23.03.0-edge">
-</AddedInVersion>
+<AddedInVersion version="22.03.0-edge" />
 
 *Used only by grid executors.*
-
 Max delay when retrying failed job submissions (default: `30s`).
 
 ##### `executor.retry.reason`
 
-<AddedInVersion version="23.03.0-edge">
-</AddedInVersion>
+<AddedInVersion version="22.03.0-edge" />
 
-<ChangedInVersion version="23.03.0-edge">
+<ChangedInVersion version="25.10.0">
 This option was renamed from `executor.submit.retry.reason` to `executor.retry.reason`.
 </ChangedInVersion>
 
 *Used only by grid executors.*
-
 Regex pattern that when verified causes a failed submit operation to be re-tried (default: `Socket timed out`).
 
 ### Executor-specific defaults
@@ -1055,8 +988,7 @@ The following settings are available:
 
 ##### `fusion.cacheSize`
 
-<AddedInVersion version="23.11.0-edge">
-</AddedInVersion>
+<AddedInVersion version="23.11.0-edge" />
 
 The maximum size of the local cache used by the Fusion client.
 
@@ -1094,19 +1026,16 @@ The output location of the Fusion log.
 
 ##### `fusion.privileged`
 
-<AddedInVersion version="23.10.0-edge">
-</AddedInVersion>
+<AddedInVersion version="23.10.0" />
 
-Enable privileged containers for Fusion (default: `true`)
-Non-privileged use is supported only on Kubernetes with the [k8s-fuse-plugin](https://github.com/nextflow-io/k8s-fuse-plugin) or a similar FUSE device plugin
+Enable privileged containers for Fusion (default: `true`).
+Non-privileged use is supported only on Kubernetes with the [k8s-fuse-plugin](https://github.com/nextflow-io/k8s-fuse-plugin) or a similar FUSE device plugin.
 
 ##### `fusion.snapshots`
 
-<AddedInVersion version="25.03.0-edge">
-</AddedInVersion>
+<AddedInVersion version="25.03.0-edge" />
 
 *Currently only supported for AWS Batch*
-
 Enable Fusion snapshotting (preview, default: `false`). This feature allows Fusion to automatically restore a job when it is interrupted by a spot reclamation.
 
 ##### `fusion.tags`
@@ -1125,15 +1054,13 @@ Use the given Google Cloud project ID as the billing project for storage access 
 
 ##### `google.httpConnectTimeout`
 
-<AddedInVersion version="23.06.0-edge">
-</AddedInVersion>
+<AddedInVersion version="23.06.0-edge" />
 
 The HTTP connection timeout for Cloud Storage API requests (default: `'60s'`).
 
 ##### `google.httpReadTimeout`
 
-<AddedInVersion version="23.06.0-edge">
-</AddedInVersion>
+<AddedInVersion version="23.06.0-edge" />
 
 The HTTP read timeout for Cloud Storage API requests (default: `'60s'`).
 
@@ -1147,23 +1074,20 @@ The Google Cloud project ID to use for pipeline execution.
 
 ##### `google.batch.allowedLocations`
 
-<AddedInVersion version="22.12.0-edge">
-</AddedInVersion>
+<AddedInVersion version="22.12.0-edge" />
 
 The set of [allowed locations](https://cloud.google.com/batch/docs/reference/rest/v1/projects.locations.jobs#locationpolicy) for VMs to be provisioned (default: no restriction).
 
 ##### `google.batch.autoRetryExitCodes`
 
-<AddedInVersion version="24.07.0-edge">
-</AddedInVersion>
+<AddedInVersion version="24.07.0-edge" />
 
 The list of exit codes that should be automatically retried by Google Batch when `google.batch.maxSpotAttempts` is greater than 0 (default: `[50001]`).
-See [Google Batch documentation](https://cloud.google.com/batch/docs/troubleshooting#reserved-exit-codes) for the complete list of exit codes.
+See [Google Batch documentation](https://cloud.google.com/batch/docs/troubleshooting#reserved-exit-codes) for the complete list of retryable exit codes.
 
 ##### `google.batch.bootDiskImage`
 
-<AddedInVersion version="24.08.0-edge">
-</AddedInVersion>
+<AddedInVersion version="24.08.0-edge" />
 
 The image URI of the virtual machine boot disk, e.g `batch-debian` (default: none).
 See [Google documentation](https://cloud.google.com/batch/docs/vm-os-environment-overview#vm-os-image-options) for details.
@@ -1178,15 +1102,13 @@ The [minimum CPU Platform](https://cloud.google.com/compute/docs/instances/speci
 
 ##### `google.batch.gcsfuseOptions`
 
-<AddedInVersion version="25.03.0-edg">
-</AddedInVersion>
+<AddedInVersion version="25.03.0-edge" />
 
 List of custom mount options for `gcsfuse` (default: `['-o rw', '-implicit-dirs']`).
 
 ##### `google.batch.maxSpotAttempts`
 
-<AddedInVersion version="23.11.0-edge">
-</AddedInVersion>
+<AddedInVersion version="23.11.0-edge" />
 
 <ChangedInVersion version="24.08.0-edge">
 The default value was changed from `5` to `0`.
@@ -1199,23 +1121,21 @@ See also: `google.batch.autoRetryExitCodes`
 
 The URL of an existing network resource to which the VM will be attached.
 
-Specify the network as a full or partial URL. For example, the following are all valid URLs:
+You can specify the network as a full or partial URL. For example, the following are all valid URLs:
 
-- `https://www.googleapis.com/compute/v1/projects/\{project\}/global/networks/\{network\}`
-- `projects/\{project\}/global/networks/\{network\}`
-- `global/networks/\{network\}`
+- `https://www.googleapis.com/compute/v1/projects/{project}/global/networks/{network}`
+- `projects/{project}/global/networks/{network}`
+- `global/networks/{network}`
 
 ##### `google.batch.networkTags`
 
 The [network tags](https://cloud.google.com/vpc/docs/add-remove-network-tags) to be applied to the instances created by Google Batch jobs (e.g., `['allow-ssh', 'allow-http']`).
-
 Network tags are ignored when using instance templates.
 
 ##### `google.batch.serviceAccountEmail`
 
 The Google service account email to use for the pipeline execution. If not specified, the default Compute Engine service account for the project will be used.
-
-This service account will only be used for tasks submitted by Nextflow, not for Nextflow itself. See [Credentials][google-credentials] for more information on Google Cloud credentials.
+This service account will only be used for tasks submitted by Nextflow, not for Nextflow itself. See [google-credentials][google-credentials] for more information on Google Cloud credentials.
 
 ##### `google.batch.spot`
 
@@ -1227,34 +1147,30 @@ The URL of an existing subnetwork resource in the network to which the VM will b
 
 You can specify the subnetwork as a full or partial URL. For example, the following are all valid URLs:
 
-- `https://www.googleapis.com/compute/v1/projects/\{project\}/regions/\{region\}/subnetworks/\{subnetwork\}`
-- `projects/\{project\}/regions/\{region}/subnetworks/\{subnetwork\}`
-- `regions/\{regio\n}/subnetworks/\{subnetwork\}`
+- `https://www.googleapis.com/compute/v1/projects/{project}/regions/{region}/subnetworks/{subnetwork}`
+- `projects/{project}/regions/{region}/subnetworks/{subnetwork}`
+- `regions/{region}/subnetworks/{subnetwork}`
 
 ##### `google.batch.usePrivateAddress`
 
 Do not provision public IP addresses for VMs, such that they only have an internal IP address (default: `false`).
-
 When this option is enabled, jobs can only load Docker images from Google Container Registry, and cannot use external services other than Google APIs.
 
 ##### `google.storage.retryPolicy.maxAttempts`
 
-<AddedInVersion version="23.11.0-edge">
-</AddedInVersion>
+<AddedInVersion version="23.11.0-edge" />
 
 Max attempts when retrying failed API requests to Cloud Storage (default: `10`).
 
 ##### `google.storage.retryPolicy.maxDelay`
 
-<AddedInVersion version="23.11.0-edge">
-</AddedInVersion>
+<AddedInVersion version="23.11.0-edge" />
 
 Max delay when retrying failed API requests to Cloud Storage (default: `'90s'`).
 
 ##### `google.storage.retryPolicy.multiplier`
 
-<AddedInVersion version="23.11.0-edge">
-</AddedInVersion>
+<AddedInVersion version="23.11.0-edge" />
 
 Delay multiplier when retrying failed API requests to Cloud Storage (default: `2.0`).
 
@@ -1276,9 +1192,7 @@ When `true`, successful pods are automatically deleted (default: `true`).
 
 Map of options for the Kubernetes HTTP client.
 If this option is specified, it will be used instead of `.kube/config`.
-
 The following options are available:
-
 - `server`
 - `token`
 - `tokenFile`
@@ -1292,8 +1206,7 @@ The following options are available:
 
 ##### `k8s.computeResourceType`
 
-<AddedInVersion version="22.05.0-edge">
-</AddedInVersion>
+<AddedInVersion version="22.05.0-edge" />
 
 Whether to use Kubernetes `Pod` or `Job` resource type to carry out Nextflow tasks (default: `Pod`).
 
@@ -1303,38 +1216,32 @@ The Kubernetes [configuration context](https://kubernetes.io/docs/tasks/access-a
 
 ##### `k8s.cpuLimits`
 
-<AddedInVersion version="24.04.0-edge">
-</AddedInVersion>
+<AddedInVersion version="24.04.0" />
 
 When `true`, set both the pod CPUs `request` and `limit` to the value specified by the `cpus` directive, otherwise set only the `request` (default: `false`).
-
 This setting is useful when a K8s cluster requires a CPU limit to be defined through a [LimitRange](https://kubernetes.io/docs/concepts/policy/limit-range/).
 
 ##### `k8s.fetchNodeName`
 
-<AddedInVersion version="22.05.0-edge">
-</AddedInVersion>
+<AddedInVersion version="22.05.0-edge" />
 
 Include the hostname of each task in the execution trace (default: `false`).
 
 ##### `k8s.fuseDevicePlugin`
 
-<AddedInVersion version="24.01.0-edge">
-</AddedInVersion>
+<AddedInVersion version="24.01.0-edge" />
 
 The FUSE device plugin to be used when enabling Fusion in unprivileged mode (default: `['nextflow.io/fuse': 1]`).
 
 ##### `k8s.httpConnectTimeout`
 
-<AddedInVersion version="22.10.0">
-</AddedInVersion>
+<AddedInVersion version="22.10.0" />
 
 The Kubernetes HTTP client request connection timeout e.g. `'60s'`.
 
 ##### `k8s.httpReadTimeout`
 
-<AddedInVersion version="22.10.0">
-</AddedInVersion>
+<AddedInVersion version="22.10.0" />
 
 The Kubernetes HTTP client request connection read timeout e.g. `'60s'`.
 
@@ -1352,8 +1259,7 @@ The Kubernetes namespace to use (default: `default`).
 
 ##### `k8s.pod`
 
-Additional pod configuration options such as environment variables, config maps, secrets, etc. Allows the same settings as the [pod][process-pod] process directive.
-
+Additional pod configuration options such as environment variables, config maps, secrets, etc. Allows the same settings as the [process-pod][process-pod] process directive.
 When using the `kuberun` command, this setting also applies to the submitter pod.
 
 ##### `k8s.projectDir`
@@ -1410,7 +1316,7 @@ Max delay when retrying failed API requests (default: `90s`).
 
 ## `lineage`
 
-The `lineage` scope controls the generation of [lineage][cli-lineage] metadata.
+The `lineage` scope controls the generation of [cli-lineage][cli-lineage] metadata.
 
 The following settings are available:
 
@@ -1480,8 +1386,7 @@ Project author name (use a comma to separate multiple names).
 
 ##### `manifest.contributors`
 
-<AddedInVersion version="24.09.0-edge">
-</AddedInVersion>
+<AddedInVersion version="24.09.0-edge" />
 
 List of project contributors. Should be a list of maps.
 
@@ -1489,19 +1394,19 @@ The following fields are supported in the contributor map:
 
 ###### `name`
 
-The contributor's name.
+The contributor name.
 
 ###### `affiliation`
 
-The contributor's affiliated organization.
+The contributor affiliated organization.
 
 ###### `email`
 
-The contributor's email address.
+The contributor email address.
 
 ###### `github`
 
-The contributor's GitHub URL.
+The contributor GitHub URL.
 
 ###### `contribution`
 
@@ -1509,7 +1414,7 @@ List of contribution types, each element can be one of `'author'`, `'maintainer'
 
 ###### `orcid`
 
-The contributor's [ORCID](https://orcid.org/) URL.
+The contributor [ORCID](https://orcid.org/) URL.
 
 ##### `manifest.defaultBranch`
 
@@ -1565,6 +1470,8 @@ manifest.nextflowVersion = '>=1.2'        // 1.2 or later
 manifest.nextflowVersion = '>=1.2, <=1.5' // any version in the 1.2 .. 1.5 range
 manifest.nextflowVersion = '!>=1.2'       // with ! prefix, stop execution if current version does not match required version.
 ```
+
+See [stdlib-types-versionnumber][stdlib-types-versionnumber] for details.
 
 ##### `manifest.organization`
 
@@ -1669,7 +1576,8 @@ Specify extra command line options supported by the `podman run` command.
 Mounts a path of your choice as the `/tmp` directory in the container. Use the special value `'auto'` to create a temporary directory each time a container is created.
 
 ## `report`
-The `report` scope allows you to configure the workflow [Execution report][execution-report].
+
+The `report` scope allows you to configure the workflow [execution-report][execution-report].
 
 The following settings are available:
 
@@ -1702,14 +1610,11 @@ Comma-separated list of environment variable names to be included in the contain
 ##### `sarus.runOptions`
 
 Specify extra command line options supported by the `sarus run` command.
-
-For details see the [Sarus user guide](https://sarus.readthedocs.io/en/stable/user/user_guide.html).
+See the [Sarus user guide](https://sarus.readthedocs.io/en/stable/user/user_guide.html) for details.
 
 ##### `sarus.tty`
 
 Allocates a pseudo-tty (default: `false`).
-
-See the [Sarus][container-sarus] page to learn more about how to use Sarus containers with Nextflow.
 
 ## `shifter`
 
@@ -1765,28 +1670,25 @@ Pull the Singularity image with http protocol (default: `false`).
 
 ##### `singularity.ociAutoPull`
 
-<AddedInVersion version="23.12.0-edge">
-</AddedInVersion>
+<AddedInVersion version="23.12.0-edge" />
 
 *Requires Singularity 3.11 or later*
-
 When enabled, OCI (and Docker) container images are pull and converted to a SIF image file format implicitly by the Singularity run command, instead of Nextflow (default: `false`).
 
 :::note
-Leave `ociAutoPull` disabled if willing to build a Singularity native image with Wave. See [Build Singularity native images][wave-singularity] for more information.
+Leave `ociAutoPull` disabled if willing to build a Singularity native image with Wave (see the [wave-singularity][wave-singularity] section).
 :::
 
 ##### `singularity.ociMode`
 
-<AddedInVersion version="23.12.0-edge">
-</AddedInVersion>
+<AddedInVersion version="23.12.0-edge" />
 
 *Requires Singularity 4 or later*
-
-nable OCI-mode, that allows running native OCI compliant container image with Singularity using `crun` or `runc` as low-level runtime (default: `false`). See `--oci` flag in the [Singularity documentation](https://docs.sylabs.io/guides/4.0/user-guide/oci_runtime.html#oci-mode) for more details and requirements (default: `false`).
+Enable OCI-mode, that allows running native OCI compliant container image with Singularity using `crun` or `runc` as low-level runtime (default: `false`).
+See `--oci` flag in the [Singularity documentation](https://docs.sylabs.io/guides/4.0/user-guide/oci_runtime.html#oci-mode) for more details and requirements (default: `false`).
 
 :::note
-Leave `ociMode` disabled if you are willing to build a Singularity native image with Wave. See the [Build Singularity native images][wave-singularit] section for more information.
+Leave `ociMode` disabled if you are willing to build a Singularity native image with Wave (see the [wave-singularity][wave-singularity] section).
 :::
 
 ##### `singularity.pullTimeout`
@@ -1795,8 +1697,7 @@ The amount of time the Singularity pull can last, after which the process is ter
 
 ##### `singularity.registry`
 
-<AddedInVersion version="22.12.0-edge">
-</AddedInVersion>
+<AddedInVersion version="22.12.0-edge" />
 
 The registry from where Docker images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`.
 
@@ -1858,8 +1759,11 @@ The following settings are available:
 ##### `tower.accessToken`
 
 The unique access token for your Seqera Platform account.
-
 Your `accessToken` can be obtained from your Seqera Platform instance in the [Tokens page](https://cloud.seqera.io/tokens).
+
+##### `tower.computeEnvId`
+
+The compute environment ID in your Seqera Platform account used to launch pipelines (default: the primary compute environment in the selected workspace).
 
 ##### `tower.enabled`
 
@@ -1872,7 +1776,6 @@ The endpoint of your Seqera Platform instance (default: `https://api.cloud.seqer
 ##### `tower.workspaceId`
 
 The workspace ID in Seqera Platform in which to save the run (default: the launching user's personal workspace).
-
 The workspace ID can also be specified using the environment variable `TOWER_WORKSPACE_ID` (config file has priority over the environment variable).
 
 ## `trace`
@@ -1894,6 +1797,7 @@ Comma-separated list of [trace fields][trace-fields] to include in the report.
 Trace file name (default: `'trace-<timestamp>.txt'`).
 
 ##### `trace.overwrite`
+
 Overwrite any existing trace file with the same name (default: `false`).
 
 ##### `trace.raw`
@@ -1923,25 +1827,19 @@ The Wave service endpoint (default: `https://wave.seqera.io`).
 <AddedInVersion version="23.07.0-edge" />
 
 Enable Wave container freezing (default: `false`). Wave will provision a non-ephemeral container image that will be pushed to a container repository of your choice.
-
 The target registry must be specified using the `wave.build.repository` setting. It is also recommended to specify a custom cache repository using `wave.build.cacheRepository`.
-
 :::note
 The container registry authentication must be managed by the underlying infrastructure.
 :::
 
 ##### `wave.mirror`
 
-<AddedInVersion version="23.07.0-edge" />
+<AddedInVersion version="24.09.1-edge" />
 
 Enable Wave container mirroring (default: `false`). Wave will mirror (i.e. copy) the containers in your pipeline to a container registry of your choice, so that pipeline tasks can pull the containers from this registry instead of the original one.
-
 The mirrored containers will have the same name, digest, and metadata.
-
 The target registry must be specified using the `wave.build.repository` setting.
-
 This option is only compatible with `wave.strategy = 'container'`. It cannot be used with `wave.freeze`.
-
 :::note
 The container registry authentication must be managed by the underlying infrastructure.
 :::
@@ -1992,7 +1890,7 @@ The corresponding credentials must be provided in your Seqera Platform account.
 
 ##### `wave.httpClient.connectTimeout`
 
-<AddedInVersion version="25.06.0-edge" />
+<AddedInVersion version="22.06.0-edge" />
 
 The connection timeout for the Wave HTTP client (default: `30s`).
 
@@ -2072,16 +1970,15 @@ When `true`, the pipeline will exit with a non-zero exit code if any failed task
 
 ##### `workflow.onComplete`
 
-Specify a closure that will be invoked at the end of a workflow run (including failed runs). See [Workflow handlers][workflow-handlers] for more information.
+Specify a closure that will be invoked at the end of a workflow run (including failed runs). See [workflow-handlers][workflow-handlers] for more information.
 
 ##### `workflow.onError`
 
-Specify a closure that will be invoked if a workflow run is terminated. See [Workflow handlers][workflow-handlers] for more information.
+Specify a closure that will be invoked if a workflow run is terminated. See [workflow-handlers][workflow-handlers] for more information.
 
 ##### `workflow.output.contentType`
 
 *Currently only supported for S3.*
-
 Specify the media type, also known as [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/MIME_types), of published files (default: `false`). Can be a string (e.g. `'text/html'`), or `true` to infer the content type from the file extension.
 
 ##### `workflow.output.copyAttributes`
@@ -2089,7 +1986,6 @@ Specify the media type, also known as [MIME type](https://developer.mozilla.org/
 <AddedInVersion version="25.01.0-edge" />
 
 *Currently only supported for local and shared filesystems.*
-
 Copy file attributes (such as the last modified timestamp) to the published file (default: `false`).
 
 ##### `workflow.output.enabled`
@@ -2100,7 +1996,7 @@ Enable or disable publishing (default: `true`).
 
 When `true`, the workflow will not fail if a file can't be published for some reason (default: `false`).
 
-#####`workflow.output.mode`
+##### `workflow.output.mode`
 
 The file publishing method (default: `'symlink'`).
 
@@ -2121,7 +2017,6 @@ Create a hard link in the output directory for each file.
 ###### `'move'`
 
 Move each file into the output directory.
-
 Should only be used for files which are not used by downstream processes in the workflow.
 
 ###### `'rellink'`
@@ -2161,17 +2056,14 @@ Overwrite existing files when the file size or last modified timestamp is differ
 ##### `workflow.output.storageClass`
 
 *Currently only supported for S3.*
-
 Specify the storage class for published files.
 
-`workflow.output.tags`
+##### `workflow.output.tags`
 
 *Currently only supported for S3.*
-
 Specify arbitrary tags for published files.
 
 For example:
-
 ```groovy
 workflow.output.tags = [FOO: 'hello', BAR: 'world']
 ```

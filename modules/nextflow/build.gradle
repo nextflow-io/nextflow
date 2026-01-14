@@ -1,5 +1,5 @@
 plugins {
-    id "com.gradleup.shadow" version "8.3.5"
+    id "com.gradleup.shadow" version "8.3.8"
 }
 apply plugin: 'groovy'
 apply plugin: 'application'
@@ -34,8 +34,8 @@ dependencies {
     api "org.slf4j:jcl-over-slf4j:2.0.17"
     api "org.slf4j:jul-to-slf4j:2.0.17"
     api "org.slf4j:log4j-over-slf4j:2.0.17"
-    api "ch.qos.logback:logback-classic:1.5.18"
-    api "ch.qos.logback:logback-core:1.5.18"
+    api "ch.qos.logback:logback-classic:1.5.20"
+    api "ch.qos.logback:logback-core:1.5.20"
     api "org.codehaus.gpars:gpars:1.2.1"
     api("ch.artecat.grengine:grengine:3.0.2") { exclude group: 'org.codehaus.groovy' }
     api "commons-lang:commons-lang:2.6"
@@ -53,6 +53,7 @@ dependencies {
     api 'org.pf4j:pf4j:3.12.0'
     api 'dev.failsafe:failsafe:3.1.0'
     api 'io.seqera:lib-trace:0.1.0'
+    api 'com.fasterxml.woodstox:woodstox-core:7.1.1'
 
     testImplementation 'org.subethamail:subethasmtp:3.1.7'
     testImplementation (project(':nf-lineage'))
@@ -87,7 +88,7 @@ shadowJar {
     configurations = [project.configurations.runtimeClasspath, project.configurations.lineageImplementation]
     archiveClassifier='one'
     manifest {
-        attributes 'Main-Class': "$mainClassName"
+        attributes 'Main-Class': application.mainClass.get()
     }
     mergeServiceFiles()
     mergeGroovyExtensionModules()
@@ -95,3 +96,4 @@ shadowJar {
         resource = 'META-INF/extensions.idx'
     }
 }
+

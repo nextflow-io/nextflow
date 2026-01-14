@@ -17,6 +17,7 @@
 
 package nextflow.cloud.aws.config
 
+import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.model.ObjectCannedACL
 import nextflow.SysEnv
 import spock.lang.Specification
@@ -141,6 +142,21 @@ class AwsS3ConfigTest extends Specification {
 
     }
 
+    def 'should get maxDownloadHeapMemory' () {
+        given:
+        SysEnv.push([:])
+
+        when:
+        def config = new AwsConfig([client:[ maxDownloadHeapMemory: '100 MB']])
+        def env = config.getS3Config().getAwsClientConfig()
+        then:
+        env.max_download_heap_memory == Long.toString( 100 * 1024 * 1024)
+
+        cleanup:
+        SysEnv.pop()
+
+    }
+
     @Unroll
     def 'should check is custom endpoint' () {
         given:
@@ -158,4 +174,33 @@ class AwsS3ConfigTest extends Specification {
         // see https://github.com/nextflow-io/nextflow/issues/5836
         true        | [endpoint: 'https://xxxx.s3.cn-north-1.vpce.amazonaws.com.cn']
     }
+
+    @Unroll
+    def 'should fail with invalid maxDownloadHeapMemory and minimumPartSize are incorrect' () {
+        when:
+        new AwsS3Config(CONFIG)
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message == EXPECTED
+
+        where:
+        CONFIG                                                      | EXPECTED
+        [ maxDownloadHeapMemory: '0MB' ]                            | "Configuration option `aws.client.maxDownloadHeapMemory` can't be 0"
+        [ minimumPartSize: '0MB' ]                                  | "Configuration option `aws.client.minimumPartSize` can't be 0"
+        [ maxDownloadHeapMemory: '50 MB', minimumPartSize: '6 MB']  | "Configuration option `aws.client.maxDownloadHeapMemory` must be at least 10 times `aws.client.minimumPartSize`"
+    }
+
+    @Unroll
+    def 'should get region from endpoint' () {
+        expect:
+        new AwsS3Config(CONFIG).getEndpointRegion() == REGION
+
+        where:
+        CONFIG                                                                                  | REGION
+        [:]                                                                                     | null
+        [endpoint: "http://custom.endpoint.com"]                                                | null
+        [endpoint: "https://s3.eu-west-1.amazonaws.com"]                                        | Region.EU_WEST_1.id()
+        [endpoint: "https://bucket.s3-global.amazonaws.com"]                                    | null
+    }
+
 }
