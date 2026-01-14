@@ -31,7 +31,7 @@ Implement a module system with four core capabilities:
 
 1. **Remote module inclusion** via registry
 2. **Semantic versioning** with dependency resolution
-3. **Unified Nextflow Registry** (rebrand existing plugin registry)
+3. **Unified Nextflow Registry** (rebrand existing Nextflow registry)
 4. **First-class CLI support** (install, publish, search, list, remove, freeze, run)
 
 ## Core Capabilities
@@ -141,7 +141,7 @@ This avoids introducing new notation that would require additional parser suppor
 
 ### 3. Unified Nextflow Registry
 
-**Architecture Decision**: Extend existing plugin registry at `registry.nextflow.io` to host both plugins and modules.
+**Architecture Decision**: Extend existing Nextflow registry at `registry.nextflow.io` to host both plugins and modules.
 
 **Current Plugin API** (reference: https://registry.nextflow.io/openapi/):
 ```
@@ -153,15 +153,17 @@ POST /api/v1/plugins/release                          # Create draft release
 POST /api/v1/plugins/release/{releaseId}/upload       # Upload artifact
 ```
 
-**Proposed Module API Extension** (same pattern):
+**Module API** (reference: https://github.com/seqeralabs/plugin-registry/pull/266):
 ```
-GET  /api/v1/modules                                         # List/search modules
-GET  /api/v1/modules/{scope}/{name}                          # Get module + all releases
-GET  /api/v1/modules/{scope}/{name}/{version}                # Get specific release
-GET  /api/v1/modules/{scope}/{name}/{version}/download       # Download source archive
-POST /api/v1/modules/release                                 # Create draft release
-POST /api/v1/modules/release/{releaseId}/upload              # Upload module archive
+GET  /api/modules?query=<text>               # Search modules (semantic search)
+GET  /api/modules/{name}                     # Get module + latest release
+GET  /api/modules/{name}/releases            # List all releases
+GET  /api/modules/{name}/{version}           # Get specific release
+GET  /api/modules/{name}/{version}/download  # Download module bundle
+POST /api/modules/{name}                     # Publish module version (authenticated)
 ```
+
+Note: The `{name}` parameter includes the namespace prefix (e.g., "nf-core/fastqc").
 
 **Registry URL**: `registry.nextflow.io`
 
@@ -452,7 +454,7 @@ project-root/
 
 **Phase 1**: Module manifest schema, local module loading, validation tools
 
-**Phase 2**: Extend plugin registry for modules, implement caching, add `install` and `search` commands
+**Phase 2**: Extend Nextflow registry for modules, implement caching, add `install` and `search` commands
 
 **Phase 3**: Extend DSL parser for `from module` syntax, implement dependency resolution from meta.yaml
 
@@ -589,7 +591,7 @@ bwa mem ${tools.bwa.args} -t $task.cpus $index $reads \
 | Naming | `nf-amazon` | `@nf-core/salmon` |
 | Cache Location | `$NXF_HOME/plugins/` | `modules/@scope/name@version/` |
 | Version Config | `plugins {}` in config | `modules {}` in config |
-| Registry Path | `/api/v1/plugins/` | `/api/v1/modules/{scope}/{name}` |
+| Registry Path | `/api/v1/plugins/` | `/api/modules/{name}` |
 
 ## Rationale
 
