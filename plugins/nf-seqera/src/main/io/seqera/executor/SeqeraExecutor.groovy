@@ -44,30 +44,31 @@ import org.pf4j.ExtensionPoint
 @CompileStatic
 class SeqeraExecutor extends Executor implements ExtensionPoint {
 
+    private SeqeraConfig seqeraConfig
+
     private SchedClient client
 
-    private String contextId
+    private String sessionId
 
     @Override
     protected void register() {
         createClient()
-        createContext()
+        createSession()
     }
 
     @Override
     void shutdown() {
-        deleteContext()
+        deleteSession()
     }
 
     protected void createClient() {
-        def seqeraConfig = new SeqeraConfig(session.config.seqera as Map ?: Collections.emptyMap())
+        this.seqeraConfig = new SeqeraConfig(session.config.seqera as Map ?: Collections.emptyMap())
         // Get access token and refresh token from tower config (shares authentication with Platform)
         def towerConfig = session.config.tower as Map ?: Collections.emptyMap()
         def accessToken = PlatformHelper.getAccessToken(towerConfig, SysEnv.get())
         def refreshToken = PlatformHelper.getRefreshToken(towerConfig, SysEnv.get())
         def clientConfig = SchedClientConfig.builder()
                 .endpoint(seqeraConfig.endpoint)
-                .region(seqeraConfig.region)
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .retryConfig(seqeraConfig.retryOpts())
@@ -75,20 +76,20 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
         this.client = new SchedClient(clientConfig)
     }
 
-    protected void createContext() {
-        log.debug "[SEQERA] Creating context for workflow"
-        final context = client.createContext()
-        this.contextId = context.getContextId()
-        log.debug "[SEQERA] Context created id: ${contextId}"
+    protected void createSession() {
+        log.debug "[SEQERA] Creating session for workflow in region: ${seqeraConfig.region}"
+        final response = client.createSession(seqeraConfig.region)
+        this.sessionId = response.getSessionId()
+        log.debug "[SEQERA] Session created id: ${sessionId}"
     }
 
-    protected void deleteContext() {
-        if (!contextId) {
+    protected void deleteSession() {
+        if (!sessionId) {
             return
         }
-        log.debug "[SEQERA] Deleting context: ${contextId}"
-        client.deleteContext(contextId)
-        log.debug "[SEQERA] Context deleted"
+        log.debug "[SEQERA] Deleting session: ${sessionId}"
+        client.deleteSession(sessionId)
+        log.debug "[SEQERA] Session deleted"
     }
 
     @Override
@@ -120,7 +121,7 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
         return client
     }
 
-    String getContextId() {
-        return contextId
+    String getSessionId() {
+        return sessionId
     }
 }
