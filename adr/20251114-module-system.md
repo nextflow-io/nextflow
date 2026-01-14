@@ -589,7 +589,7 @@ bwa mem ${tools.bwa.args} -t $task.cpus $index $reads \
 | Naming | `nf-amazon` | `@nf-core/salmon` |
 | Cache Location | `$NXF_HOME/plugins/` | `modules/@scope/name@version/` |
 | Version Config | `plugins {}` in config | `modules {}` in config |
-| Registry Path | `/api/v1/plugins/` | `/api/v1/modules/@scope/name` |
+| Registry Path | `/api/v1/plugins/` | `/api/v1/modules/{scope}/{name}` |
 
 ## Rationale
 
