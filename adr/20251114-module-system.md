@@ -55,9 +55,23 @@ include { MY_PROCESS } from './modules/my-process.nf'
 1. Check `nextflow.config` for declared version
 2. Check local `modules/@scope/name/` exists
 3. Verify integrity against `.checksum` file
-4. If missing, download from registry
-5. Warn if local module exist and checksum mismatch
-6. Warn if transitive dependencies are not pinned
+4. Apply resolution rules (see below)
+5. Warn if transitive dependencies are not pinned
+
+**Resolution Rules**:
+
+| Local State | Declared Version | Action |
+|-------------|------------------|--------|
+| Missing | Any | Download declared version (or latest if not declared) |
+| Exists, checksum valid | Same as declared | Use local module |
+| Exists, checksum valid | Different from declared | **Replace** local with declared version |
+| Exists, checksum mismatch | Same as declared | **Warn**: module was locally modified, do not override |
+| Exists, checksum mismatch | Different from declared | **Warn**: locally modified module will be replaced; use `-force` to override |
+
+**Key Behaviors**:
+- **Version change**: When the declared version differs from the installed version (and local is unmodified), the local module is automatically replaced with the declared version
+- **Local modification**: When the local module content was manually changed (checksum mismatch with `.checksum`), Nextflow warns and does NOT override to prevent accidental loss of local changes
+- **Force flag**: Use `-force` with `nextflow module install` to override locally modified modules
 
 **Resolution Timing**: Modules resolved at workflow parse time (after plugin resolution at startup).
 
@@ -285,12 +299,15 @@ Download and install modules to the local `modules/` directory. When called with
 - `-force`: Re-download even if already installed locally
 
 **Behavior**:
-1. If `-version' not specified, resolves the module version from `nextflow.config` or queries registry for latest
-2. Downloads the module archive from the registry
-3. Extracts to `modules/@scope/name/` directory (replaces existing if version differs)
-4. Stores `.checksum` file from registry's X-Checksum response header
-5. Recursively installs transitive dependencies declared in `meta.yaml`
-6. Updates `nextflow.config` if installing a new module not already configured
+1. If `-version` not specified, resolves the module version from `nextflow.config` or queries registry for latest
+2. Checks if local module exists and verifies integrity against `.checksum` file
+3. If local module is unmodified and version differs: replaces with requested version
+4. If local module was modified (checksum mismatch): warns and aborts unless `-force` is used
+5. Downloads the module archive from the registry
+6. Extracts to `modules/@scope/name/` directory
+7. Stores `.checksum` file from registry's X-Checksum response header
+8. Recursively installs transitive dependencies declared in `meta.yaml`
+9. Updates `nextflow.config` if installing a new module not already configured
 
 **Example**:
 ```bash
@@ -490,7 +507,11 @@ project-root/
    a. Check `nextflow.config` modules section for declared version
    b. Check local `modules/@scope/name/` exists
    c. Verify local module integrity against `.checksum` file
-   d. If missing: download from registry; if checksum mismatch: report warning
+   d. Apply resolution rules:
+      - Missing → download declared version from registry
+      - Exists, checksum valid, same version → use local
+      - Exists, checksum valid, different version → replace with declared version
+      - Exists, checksum mismatch → warn and do NOT override (local changes detected)
    e. Warn if module not pinned in config (especially transitive dependencies)
 3. On download: store module to `modules/@scope/name/` with `.checksum` file
 4. Read module's `meta.yaml` → resolve transitive dependencies recursively
