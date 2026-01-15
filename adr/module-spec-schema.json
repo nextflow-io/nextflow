@@ -57,43 +57,13 @@
     },
     "requires": {
       "type": "object",
-      "description": "All requirements for the module: runtime environment, plugins, and dependencies",
+      "description": "All requirements for the module",
       "properties": {
         "nextflow": {
           "type": "string",
           "description": "Nextflow version constraint using comparison operators",
           "examples": [">=24.04.0", ">=24.04.0,<25.0.0"],
           "pattern": "^[<>=!]+[0-9]+\\.[0-9]+\\.[0-9]+(-[a-zA-Z0-9]+)?(,\\s*[<>=!]+[0-9]+\\.[0-9]+\\.[0-9]+(-[a-zA-Z0-9]+)?)*$"
-        },
-        "plugins": {
-          "type": "array",
-          "description": "Required Nextflow plugins with optional version constraints",
-          "items": {
-            "type": "string",
-            "description": "Plugin reference in format 'plugin-name' or 'plugin-name@constraint'",
-            "pattern": "^[a-z][a-z0-9-]*(@[<>=,0-9.]+)?$",
-            "examples": ["nf-amazon@2.0.0", "nf-wave@>=1.5.0", "nf-azure"]
-          }
-        },
-        "modules": {
-          "type": "array",
-          "description": "Required modules (processes) with optional version constraints",
-          "items": {
-            "type": "string",
-            "description": "Module reference in format '[scope/]name' or '[scope/]name@constraint'",
-            "pattern": "^([a-z0-9][a-z0-9-]*/)?[a-z][a-z0-9_/-]*(@[<>=,0-9.]+)?$",
-            "examples": ["nf-core/fastqc@>=1.0.0", "nf-core/samtools/sort@>=2.1.0,<3.0.0", "bwa/mem"]
-          }
-        },
-        "workflows": {
-          "type": "array",
-          "description": "Required workflows/subworkflows with optional version constraints",
-          "items": {
-            "type": "string",
-            "description": "Workflow reference in format '[scope/]name' or '[scope/]name@constraint'",
-            "pattern": "^([a-z0-9][a-z0-9-]*/)?[a-z][a-z0-9_/-]*(@[<>=,0-9.]+)?$",
-            "examples": ["nf-core/fastq-align-bwa@1.0.0", "my-subworkflow"]
-          }
         }
       },
       "additionalProperties": false
@@ -484,14 +454,7 @@
       "authors": ["@nf-core"],
       "maintainers": ["@nf-core"],
       "requires": {
-        "nextflow": ">=24.04.0",
-        "plugins": [
-          "nf-amazon@2.0.0"
-        ],
-        "modules": [
-          "nf-core/samtools/view@>=1.0.0,<2.0.0",
-          "nf-core/samtools/sort@>=2.1.0,<2.2.0"
-        ]
+        "nextflow": ">=24.04.0"
       },
       "tools": [
         {
