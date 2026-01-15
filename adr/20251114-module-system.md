@@ -200,20 +200,29 @@ Run a module directly without requiring a wrapper workflow script. This command 
 **Options**:
 - `-version <ver>`: Run a specific version (default: latest or configured version)
 - `--<input_name> <value>`: Map value to the corresponding module process input channel
+- `--tools:<toolname>:<argname> <value>`: Configure tool-specific arguments (validated against meta.yaml schema)
 - All standard `nextflow run` options (e.g., `-profile`, `-work-dir`, `-resume`, etc.)
 
 **Behavior**:
 1. Checks if module is installed locally; if not, downloads from registry
 2. Parses the module's `main.nf` to identify the main process and its input declarations
 3. Validates command-line arguments against the process input schema
-4. Generates an implicit workflow that wires CLI arguments to process inputs
-5. Executes the workflow using standard Nextflow runtime
+4. Validates tool arguments against the `tools.*.args` schema in `meta.yaml`
+5. Generates an implicit workflow that wires CLI arguments to process inputs
+6. Executes the workflow using standard Nextflow runtime
 
 **Input Mapping**:
 - Named arguments (`--reads`, `--reference`) are mapped to corresponding process inputs
 - File paths are automatically converted to file channels
 - Multiple values can be provided for inputs expecting collections
 - Required inputs without defaults must be provided; optional inputs use declared defaults
+
+**Tool Arguments**:
+- Arguments prefixed with `--tools:` configure tool-specific parameters
+- Format: `--tools:<toolname>:<argname> <value>` (e.g., `--tools:bwa:K 100000000`)
+- Boolean flags can be specified without value (e.g., `--tools:bwa:Y`)
+- Arguments are validated against the tool's `args` schema in `meta.yaml`
+- Invalid argument names or values that fail type/enum validation produce errors
 
 **Example**:
 ```bash
@@ -234,6 +243,14 @@ nextflow module run nf-core/salmon \
     --index salmon_index \
     -work-dir /tmp/work \
     --outdir results/
+
+# Run with tool-specific arguments
+nextflow module run nf-core/bwa-align \
+    --reads 'samples/*_{1,2}.fastq.gz' \
+    --reference genome.fa \
+    --tools:bwa:K 100000000 \
+    --tools:bwa:Y \
+    --tools:samtools:output_fmt cram
 ```
 
 ---
@@ -653,6 +670,21 @@ bwa mem ${tools.bwa.args} -t $task.cpus $index $reads \
 - Related: [Plugin Spec ADR](20250922-plugin-spec.md)
 - Inspired by: [Go Modules](https://go.dev/ref/mod), [npm](https://docs.npmjs.com), [Cargo](https://doc.rust-lang.org/cargo/)
 - Related: [nf-core modules](https://nf-co.re/modules)
+
+## Open Questions
+
+1. **Local vs managed module distinction**: Should local modules use the `@` prefix in include statements, or should a dot file (e.g., `.nf-modules`) be used to distinguish local modules from managed/remote modules?
+
+2. **Tool arguments CLI syntax**: What is the preferred syntax for tool arguments on the command line?
+   - Colon-separated: `--tools:<tool>:<arg> <value>`
+   - Dot-separated: `--tools.<tool>.<arg> <value>`
+
+3. **Module version configuration**: Should pipeline module versions be specified in `nextflow.config` or in a dedicated pipeline spec file (e.g., `pipeline.yaml`)?
+
+4. **Local module checksum verification**: How should Nextflow verify that a locally installed module matches the registry checksum? Options include:
+   - Store a `.checksum` file alongside the downloaded module
+   - Query the registry API during `freeze -verify` to fetch the expected checksum
+   - Note: Storing the checksum in `meta.yaml` is not viable as it violates content-addressable storage principles (the checksum would change the content)
 
 ---
 
