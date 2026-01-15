@@ -285,7 +285,7 @@ Download and install modules to the local `modules/` directory. When called with
 - `-force`: Re-download even if already installed locally
 
 **Behavior**:
-1. Resolves the module version from `nextflow.config` or queries registry for latest
+1. If `-version' not specified, resolves the module version from `nextflow.config` or queries registry for latest
 2. Downloads the module archive from the registry
 3. Extracts to `modules/@scope/name/` directory (replaces existing if version differs)
 4. Stores `.checksum` file from registry's X-Checksum response header
