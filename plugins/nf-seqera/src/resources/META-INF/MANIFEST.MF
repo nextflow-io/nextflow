@@ -1,6 +1,0 @@
-Manifest-Version: 1.0
-Plugin-Class: io.seqera.plugin.SeqeraPlugin
-Plugin-Id: nf-seqera
-Plugin-Version: 0.1.0
-Plugin-Provider: Seqera Labs
-Plugin-Requires: >=25.01.0-edge
