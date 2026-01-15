@@ -19,7 +19,7 @@
 - **New implicit variables**: `tools.<toolname>.args.<argname>` returns formatted flag+value; `tools.<toolname>.args` returns all args concatenated
 - **Deprecation**: All `ext.*` custom directives (e.g., `ext.args`, `ext.args2`, `ext.args3`, `ext.prefix`, `ext.suffix`) deprecated in favor of structured tool arguments
 
-### Version 2.1 (2025-12-11)
+### Version 2.1 (2024-12-11)
 - **Unified dependencies**: Consolidated `components`, `dependencies`, and `requires` into single `requires` field
 - **New sub-properties**: `requires.modules` and `requires.workflows` for declaring module dependencies
 - **Unified version syntax**: `[scope/]name[@constraint]` format across plugins, modules, and workflows
