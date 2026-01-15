@@ -52,14 +52,16 @@ include { MY_PROCESS } from './modules/my-process.nf'
 **Version Resolution**: Module versions pinned in `nextflow.config`. If not specified, use the latest available locally in `modules/` directory, or downloaded and cached in the `modules/` directory.
 
 **Resolution Order**:
-1. Check `nextflow.config` for pinned version
-2. Check local `modules/@scope/name@version/` for any cached version
-3. Query registry for latest version if not found
-4. Warn if transitive dependencies are not pinned
+1. Check `nextflow.config` for declared version
+2. Check local `modules/@scope/name/` exists
+3. Verify integrity against `.checksum` file
+4. If missing, download from registry
+5. Warn if local module exist and checksum mismatch
+6. Warn if transitive dependencies are not pinned
 
 **Resolution Timing**: Modules resolved at workflow parse time (after plugin resolution at startup).
 
-**Local Storage**: Downloaded modules stored in `modules/@scope/name@version/` directory in project root (not global cache). Each module must contain a `main.nf` file as the required entry point. It is intended that module source code will be committed to the pipeline git repository.
+**Local Storage**: Downloaded modules stored in `modules/@scope/name/` directory in project root (not global cache). Each module must contain a `main.nf` file as the required entry point. It is intended that module source code will be committed to the pipeline git repository.
 
 ### 2. Semantic Versioning and Configuration
 
@@ -72,11 +74,8 @@ include { MY_PROCESS } from './modules/my-process.nf'
 ```groovy
 // Module versions (exact versions only, no ranges)
 modules {
-    '@nf-core/salmon' = '1.1.0'              // Simple syntax
-    '@nf-core/bwa-align' = [                 // Extended syntax (with checksum)
-        version: '1.2.0',
-        checksum: 'sha256:abc123...'
-    ]
+    '@nf-core/salmon' = '1.1.0'
+    '@nf-core/bwa-align' = '1.2.0'
 }
 
 // Registry configuration (separate block)
@@ -137,7 +136,7 @@ This avoids introducing new notation that would require additional parser suppor
 - Workflow's `nextflow.config` specifies exact versions for direct dependencies
 - Transitive dependencies resolved from each module's `meta.yaml` using version constraints
 - Warn if transitive dependencies are not pinned in workflow config
-- Use `nextflow module freeze` to pin all transitive dependencies with checksums
+- Use `nextflow module freeze` to pin all transitive dependencies to exact versions
 
 ### 3. Unified Nextflow Registry
 
@@ -184,7 +183,7 @@ Note: The `{name}` parameter includes the namespace prefix (e.g., "nf-core/fastq
 nextflow module run scope/name              # Run a module directly without a wrapper script
 nextflow module search <query>              # Search registry
 nextflow module install [scope/name]        # Install all from config, or specific module
-nextflow module freeze                      # Pin all versions + checksums to config
+nextflow module freeze                      # Pin all transitive dependencies to config
 nextflow module list                        # Show installed vs configured
 nextflow module remove scope/name           # Remove from config + local cache
 nextflow module publish scope/name          # Publish to registry (requires api key)
@@ -288,9 +287,10 @@ Download and install modules to the local `modules/` directory. When called with
 **Behavior**:
 1. Resolves the module version from `nextflow.config` or queries registry for latest
 2. Downloads the module archive from the registry
-3. Extracts to `modules/@scope/name@version/` directory
-4. Recursively installs transitive dependencies declared in `meta.yaml`
-5. Updates `nextflow.config` if installing a new module not already configured
+3. Extracts to `modules/@scope/name/` directory (replaces existing if version differs)
+4. Stores `.checksum` file from registry's X-Checksum response header
+5. Recursively installs transitive dependencies declared in `meta.yaml`
+6. Updates `nextflow.config` if installing a new module not already configured
 
 **Example**:
 ```bash
@@ -303,31 +303,25 @@ nextflow module install nf-core/salmon -version 1.2.0
 
 #### `nextflow module freeze`
 
-Lock all module versions by writing exact versions and SHA-256 checksums to `nextflow.config`. This ensures fully reproducible builds by capturing the precise state of all dependencies.
-
-**Options**:
-- `-verify`: Verify existing checksums without updating
+Pin all transitive module dependencies to exact versions in `nextflow.config`. This ensures reproducible builds by capturing the precise versions of all dependencies.
 
 **Behavior**:
 1. Scans the `modules/` directory for all installed modules
-2. Computes SHA-256 checksums for each module archive
-3. Converts simple version syntax to extended syntax with checksums in `nextflow.config`
-4. Includes transitive dependencies not explicitly declared
+2. Reads version from each module's `meta.yaml`
+3. Adds transitive dependencies not explicitly declared to `nextflow.config`
 
 **Output** (in `nextflow.config`):
 ```groovy
 modules {
-    '@nf-core/bwa-align' = [
-        version: '1.2.4',
-        checksum: 'sha256:a1b2c3d4e5f6...'
-    ]
+    '@nf-core/bwa-align' = '1.2.4'
+    '@nf-core/samtools/view' = '1.0.5'      // Transitive dependency
+    '@nf-core/samtools/sort' = '2.1.0'      // Transitive dependency
 }
 ```
 
 **Example**:
 ```bash
-nextflow module freeze                       # Pin all versions + checksums
-nextflow module freeze -verify               # Verify checksums match
+nextflow module freeze                       # Pin all transitive dependencies
 ```
 
 ---
@@ -367,7 +361,7 @@ Remove a module from both the local `modules/` directory and the `nextflow.confi
 - `-keep-files`: Remove from config but keep local files
 
 **Behavior**:
-1. Removes the module directory from `modules/@scope/name@version/`
+1. Removes the module directory from `modules/@scope/name/`
 2. Removes the module entry from the `modules {}` block in `nextflow.config`
 3. Identifies and optionally removes orphaned transitive dependencies
 4. Warns if the module is still referenced in workflow files
@@ -455,17 +449,26 @@ project-root/
 ├── main.nf
 └── modules/                        # Local module cache
     ├── @nf-core/
-    │   ├── bwa-align@1.2.4/
+    │   ├── bwa-align/
+    │   │   ├── .checksum           # Cached registry checksum
     │   │   ├── meta.yaml
     │   │   └── main.nf             # Required entry point
-    │   └── samtools/view@1.0.5/
+    │   └── samtools/view/
+    │       ├── .checksum
     │       ├── meta.yaml
     │       └── main.nf             # Required entry point
     └── @myorg/
-        └── custom-process@2.0.0/
+        └── custom-process/
+            ├── .checksum
             ├── meta.yaml
             └── main.nf             # Required entry point
 ```
+
+**Module Integrity Verification**:
+- On install: `.checksum` file created from registry's X-Checksum response header
+- On run: Local module checksum compared against `.checksum` file
+- If match: Proceed without network call
+- If mismatch: Report warning (module may have been locally modified)
 
 ## Implementation Strategy
 
@@ -484,17 +487,18 @@ project-root/
 **Dependency Resolution Flow**:
 1. Parse `include` statements → extract module names (e.g., `@nf-core/bwa-align`)
 2. For each module:
-   a. Check `nextflow.config` modules section for pinned version
-   b. If not pinned: check local `modules/@scope/name@version/` for any cached version (use latest local)
-   c. If not found locally: query registry for latest version
-   d. Warn if module not pinned in config (especially transitive dependencies)
-3. Download missing modules to `modules/@scope/name@version/`
+   a. Check `nextflow.config` modules section for declared version
+   b. Check local `modules/@scope/name/` exists
+   c. Verify local module integrity against `.checksum` file
+   d. If missing: download from registry; if checksum mismatch: report warning
+   e. Warn if module not pinned in config (especially transitive dependencies)
+3. On download: store module to `modules/@scope/name/` with `.checksum` file
 4. Read module's `meta.yaml` → resolve transitive dependencies recursively
-5. Verify checksums (if present in config)
-6. Parse module's `main.nf` file → make processes available
+5. Parse module's `main.nf` file → make processes available
 
 **Security**:
-- SHA-256 checksum verification for all downloads
+- SHA-256 checksum verification on download (stored in `.checksum` file)
+- Integrity verification on run (local checksum vs `.checksum` file)
 - Authentication required for publishing
 - Support for private registries
 
@@ -606,7 +610,7 @@ bwa mem ${tools.bwa.args} -t $task.cpus $index $reads \
 | Resolution | Startup | Parse time |
 | Metadata | JSON spec | YAML manifest |
 | Naming | `nf-amazon` | `@nf-core/salmon` |
-| Cache Location | `$NXF_HOME/plugins/` | `modules/@scope/name@version/` |
+| Cache Location | `$NXF_HOME/plugins/` | `modules/@scope/name/` |
 | Version Config | `plugins {}` in config | `modules {}` in config |
 | Registry Path | `/api/v1/plugins/` | `/api/modules/{name}` |
 
@@ -622,7 +626,7 @@ bwa mem ${tools.bwa.args} -t $task.cpus $index $reads \
 - Single source of truth for workflow dependencies
 - Simple: exact versions in config, no separate lock file to manage
 - Transitive dependencies resolved from module's meta.yaml with version constraints
-- Use `nextflow module freeze` to pin all versions + checksums when needed
+- Use `nextflow module freeze` to pin all transitive dependencies when needed
 - Reproducibility via explicit version pinning in config
 
 **Why parse-time resolution?**
@@ -680,11 +684,6 @@ bwa mem ${tools.bwa.args} -t $task.cpus $index $reads \
    - Dot-separated: `--tools.<tool>.<arg> <value>`
 
 3. **Module version configuration**: Should pipeline module versions be specified in `nextflow.config` or in a dedicated pipeline spec file (e.g., `pipeline.yaml`)?
-
-4. **Local module checksum verification**: How should Nextflow verify that a locally installed module matches the registry checksum? Options include:
-   - Store a `.checksum` file alongside the downloaded module
-   - Query the registry API during `freeze -verify` to fetch the expected checksum
-   - Note: Storing the checksum in `meta.yaml` is not viable as it violates content-addressable storage principles (the checksum would change the content)
 
 ---
 
