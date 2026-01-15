@@ -38,6 +38,7 @@ class S3BashLib extends BashFunLib<S3BashLib> {
     private String s5cmdPath
     private String acl = ''
     private String requesterPays = ''
+    private String forceGlacierTransfer = ''
 
     S3BashLib withCliPath(String cliPath) {
         if( cliPath )
@@ -90,12 +91,17 @@ class S3BashLib extends BashFunLib<S3BashLib> {
         return this
     }
 
+    S3BashLib withForceGlacierTransfer(Boolean value) {
+        this.forceGlacierTransfer = value ? '--force-glacier-transfer ' : ''
+        return this
+    }
+
     protected String retryEnv() {
         if( !retryMode )
             return ''
         """
         # aws cli retry config
-        export AWS_RETRY_MODE=${retryMode} 
+        export AWS_RETRY_MODE=${retryMode}
         export AWS_MAX_ATTEMPTS=${maxTransferAttempts}
         """.stripIndent().rightTrim()
     }
@@ -126,8 +132,8 @@ class S3BashLib extends BashFunLib<S3BashLib> {
             local file_name=\$(basename \$1)
             local is_dir=\$($cli s3 ls \$source | grep -F "PRE \${file_name}/" -c)
             if [[ \$is_dir == 1 ]]; then
-                $cli s3 cp --only-show-errors --recursive "\$source" "\$target"
-            else 
+                $cli s3 cp --only-show-errors --recursive ${forceGlacierTransfer}"\$source" "\$target"
+            else
                 $cli s3 cp --only-show-errors "\$source" "\$target"
             fi
         }
@@ -165,7 +171,7 @@ class S3BashLib extends BashFunLib<S3BashLib> {
             local is_dir=\$($cli ls \$source | grep -F "DIR  \${file_name}/" -c)
             if [[ \$is_dir == 1 ]]; then
                 $cli cp "\$source/*" "\$target"
-            else 
+            else
                 $cli cp "\$source" "\$target"
             fi
         }
@@ -194,6 +200,7 @@ class S3BashLib extends BashFunLib<S3BashLib> {
                 .withS5cmdPath( opts.s5cmdPath )
                 .withAcl( opts.s3Acl )
                 .withRequesterPays( opts.requesterPays )
+                .withForceGlacierTransfer( opts.forceGlacierTransfer )
     }
 
     static String script(AwsOptions opts) {

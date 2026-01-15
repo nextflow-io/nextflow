@@ -177,7 +177,11 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
         }
         final updateRevision = revision ?: getDefaultBranch(manifest)
         log.debug "Fetching (updating) bare repo for ${project} [revision: $updateRevision]"
-        getBareGit().fetch().setRefSpecs(refSpecForName(updateRevision)).call()
+        final fetch = getBareGit().fetch().setRefSpecs(refSpecForName(updateRevision))
+        if( provider.hasCredentials() ) {
+            fetch.setCredentialsProvider(provider.getGitCredentials())
+        }
+        fetch.call()
     }
 
     private void createBareRepo(Manifest manifest) {
