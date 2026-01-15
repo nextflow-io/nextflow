@@ -4,9 +4,15 @@
 - Status: draft
 - Date: 2025-01-06
 - Tags: modules, dsl, registry, versioning, architecture
-- Version: 2.2
+- Version: 2.3
 
 ## Updates
+
+### Version 2.3 (2026-01-15)
+- **Resolution Rules table**: Added clear table specifying behavior for each combination of local state and declared version
+- **Local modification protection**: Locally modified modules (checksum mismatch) are NOT overridden unless `-force` flag is used
+- **Simplified storage model**: Single version per module locally (`modules/@scope/name/` without version in path)
+- **`.checksum` file**: Registry checksum cached locally for fast integrity verification without network calls
 
 ### Version 2.2 (2025-01-06)
 - **Structured tool arguments**: Added `args` property to `tools` section for type-safe argument configuration
@@ -66,7 +72,7 @@ include { MY_PROCESS } from './modules/my-process.nf'
 | Exists, checksum valid | Same as declared | Use local module |
 | Exists, checksum valid | Different from declared | **Replace** local with declared version |
 | Exists, checksum mismatch | Same as declared | **Warn**: module was locally modified, do not override |
-| Exists, checksum mismatch | Different from declared | **Warn**: locally modified module will be replaced; use `-force` to override |
+| Exists, checksum mismatch | Different from declared | **Warn**: locally modified, will NOT replace unless `-force` is used |
 
 **Key Behaviors**:
 - **Version change**: When the declared version differs from the installed version (and local is unmodified), the local module is automatically replaced with the declared version
