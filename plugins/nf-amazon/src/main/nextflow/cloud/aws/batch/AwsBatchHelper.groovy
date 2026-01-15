@@ -23,6 +23,7 @@ import software.amazon.awssdk.services.batch.model.DescribeJobsRequest
 import software.amazon.awssdk.services.ec2.Ec2Client
 import software.amazon.awssdk.services.ec2.model.DescribeInstancesRequest
 import software.amazon.awssdk.services.ec2.model.Instance
+import software.amazon.awssdk.services.ec2.model.InstanceLifecycleType
 import software.amazon.awssdk.services.ecs.EcsClient
 import software.amazon.awssdk.services.ecs.model.DescribeContainerInstancesRequest
 import software.amazon.awssdk.services.ecs.model.DescribeTasksRequest
@@ -171,7 +172,7 @@ class AwsBatchHelper {
     }
 
     private PriceModel getPrice(Instance instance) {
-        instance.instanceLifecycle()=='spot' ? PriceModel.spot : PriceModel.standard
+        instance.instanceLifecycle() == InstanceLifecycleType.SPOT ? PriceModel.spot : PriceModel.standard
     }
 
     CloudMachineInfo getCloudInfoByQueueAndTaskArn(String queue, String taskArn) {
