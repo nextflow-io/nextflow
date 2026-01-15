@@ -4,9 +4,14 @@
 - Status: draft
 - Date: 2025-01-06
 - Tags: modules, dsl, registry, versioning, architecture
-- Version: 2.3
+- Version: 2.4
 
 ## Updates
+
+### Version 2.4 (2026-01-15)
+- **Removed transitive dependency resolution**: Module dependencies are explicit only; no automatic transitive resolution
+- **Removed `freeze` command**: No longer needed without transitive dependency management
+- **Simplified model**: Each module explicitly declares its dependencies in `nextflow.config`
 
 ### Version 2.3 (2026-01-15)
 - **Resolution Rules table**: Added clear table specifying behavior for each combination of local state and declared version
@@ -38,7 +43,7 @@ Implement a module system with four core capabilities:
 1. **Remote module inclusion** via registry
 2. **Semantic versioning** with dependency resolution
 3. **Unified Nextflow Registry** (rebrand existing Nextflow registry)
-4. **First-class CLI support** (install, publish, search, list, remove, freeze, run)
+4. **First-class CLI support** (install, publish, search, list, remove, run)
 
 ## Core Capabilities
 
@@ -62,7 +67,6 @@ include { MY_PROCESS } from './modules/my-process.nf'
 2. Check local `modules/@scope/name/` exists
 3. Verify integrity against `.checksum` file
 4. Apply resolution rules (see below)
-5. Warn if transitive dependencies are not pinned
 
 **Resolution Rules**:
 
@@ -153,10 +157,8 @@ npm-style `^` and `~` notation while maintaining consistency with existing Nextf
 This avoids introducing new notation that would require additional parser support.
 
 **Dependency Resolution**:
-- Workflow's `nextflow.config` specifies exact versions for direct dependencies
-- Transitive dependencies resolved from each module's `meta.yaml` using version constraints
-- Warn if transitive dependencies are not pinned in workflow config
-- Use `nextflow module freeze` to pin all transitive dependencies to exact versions
+- Workflow's `nextflow.config` specifies exact versions for dependencies
+- Module dependencies declared in `meta.yaml` using version constraints
 
 ### 3. Unified Nextflow Registry
 
@@ -203,7 +205,6 @@ Note: The `{name}` parameter includes the namespace prefix (e.g., "nf-core/fastq
 nextflow module run scope/name              # Run a module directly without a wrapper script
 nextflow module search <query>              # Search registry
 nextflow module install [scope/name]        # Install all from config, or specific module
-nextflow module freeze                      # Pin all transitive dependencies to config
 nextflow module list                        # Show installed vs configured
 nextflow module remove scope/name           # Remove from config + local cache
 nextflow module publish scope/name          # Publish to registry (requires api key)
@@ -312,39 +313,13 @@ Download and install modules to the local `modules/` directory. When called with
 5. Downloads the module archive from the registry
 6. Extracts to `modules/@scope/name/` directory
 7. Stores `.checksum` file from registry's X-Checksum response header
-8. Recursively installs transitive dependencies declared in `meta.yaml`
-9. Updates `nextflow.config` if installing a new module not already configured
+8. Updates `nextflow.config` if installing a new module not already configured
 
 **Example**:
 ```bash
 nextflow module install                      # Install all from config
 nextflow module install nf-core/bwa-align    # Install specific module (latest)
 nextflow module install nf-core/salmon -version 1.2.0
-```
-
----
-
-#### `nextflow module freeze`
-
-Pin all transitive module dependencies to exact versions in `nextflow.config`. This ensures reproducible builds by capturing the precise versions of all dependencies.
-
-**Behavior**:
-1. Scans the `modules/` directory for all installed modules
-2. Reads version from each module's `meta.yaml`
-3. Adds transitive dependencies not explicitly declared to `nextflow.config`
-
-**Output** (in `nextflow.config`):
-```groovy
-modules {
-    '@nf-core/bwa-align' = '1.2.4'
-    '@nf-core/samtools/view' = '1.0.5'      // Transitive dependency
-    '@nf-core/samtools/sort' = '2.1.0'      // Transitive dependency
-}
-```
-
-**Example**:
-```bash
-nextflow module freeze                       # Pin all transitive dependencies
 ```
 
 ---
@@ -374,7 +349,7 @@ nextflow module list -outdated
 
 #### `nextflow module remove scope/name`
 
-Remove a module from both the local `modules/` directory and the `nextflow.config` configuration. Also removes orphaned transitive dependencies that are no longer required by other modules.
+Remove a module from both the local `modules/` directory and the `nextflow.config` configuration.
 
 **Arguments**:
 - `scope/name`: Module identifier to remove (required)
@@ -386,8 +361,7 @@ Remove a module from both the local `modules/` directory and the `nextflow.confi
 **Behavior**:
 1. Removes the module directory from `modules/@scope/name/`
 2. Removes the module entry from the `modules {}` block in `nextflow.config`
-3. Identifies and optionally removes orphaned transitive dependencies
-4. Warns if the module is still referenced in workflow files
+3. Warns if the module is still referenced in workflow files
 
 **Example**:
 ```bash
@@ -432,7 +406,6 @@ nextflow module publish myorg/my-process -dry-run
 
 **General Notes**:
 - All commands respect the `registry.url` configuration for custom registries
-- Unpinned transitive dependencies generate warnings during resolution
 - Modules are automatically downloaded on `nextflow run` if missing but configured
 
 ## Module Structure
@@ -518,10 +491,8 @@ project-root/
       - Exists, checksum valid, same version → use local
       - Exists, checksum valid, different version → replace with declared version
       - Exists, checksum mismatch → warn and do NOT override (local changes detected)
-   e. Warn if module not pinned in config (especially transitive dependencies)
 3. On download: store module to `modules/@scope/name/` with `.checksum` file
-4. Read module's `meta.yaml` → resolve transitive dependencies recursively
-5. Parse module's `main.nf` file → make processes available
+4. Parse module's `main.nf` file → make processes available
 
 **Security**:
 - SHA-256 checksum verification on download (stored in `.checksum` file)
@@ -652,8 +623,6 @@ bwa mem ${tools.bwa.args} -t $task.cpus $index $reads \
 **Why versions in nextflow.config instead of separate lock file?**
 - Single source of truth for workflow dependencies
 - Simple: exact versions in config, no separate lock file to manage
-- Transitive dependencies resolved from module's meta.yaml with version constraints
-- Use `nextflow module freeze` to pin all transitive dependencies when needed
 - Reproducibility via explicit version pinning in config
 
 **Why parse-time resolution?**
@@ -670,7 +639,6 @@ bwa mem ${tools.bwa.args} -t $task.cpus $index $reads \
 
 **Why semantic versioning?**
 - Clear compatibility guarantees
-- Enables automated dependency resolution for transitive dependencies
 - Industry standard (npm, cargo, Go modules)
 
 ## Consequences
@@ -682,7 +650,7 @@ bwa mem ${tools.bwa.args} -t $task.cpus $index $reads \
 - Minimal operational overhead (single registry for both plugins and modules)
 - NPM-style scoping enables organization namespaces and private registries
 - Local `modules/` directory provides project isolation
-- Simple config model: no separate lock file unless using `freeze`
+- Simple config model: no separate lock file
 - Simple module structure: each module has single `main.nf` entry point
 
 **Negative**:
@@ -690,7 +658,6 @@ bwa mem ${tools.bwa.args} -t $task.cpus $index $reads \
 - Type-specific handling adds registry complexity
 - Parse-time resolution adds latency to workflow startup
 - Local `modules/` directory duplicates storage across projects (unlike global cache)
-- Warnings for unpinned transitive dependencies may be noisy initially
 
 **Neutral**:
 - Modules and plugins conceptually distinct but share infrastructure
@@ -853,8 +820,7 @@ requires:
 
 **Resolution:**
 1. The resolver looks up dependencies locally first, then in configured registries
-2. Version constraints are resolved transitively
-3. Pinned versions are recorded in `nextflow.config` for reproducibility
+2. Pinned versions are recorded in `nextflow.config` for reproducibility
 
 #### `tools`
 

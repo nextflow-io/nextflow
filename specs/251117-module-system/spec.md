@@ -30,7 +30,6 @@ A pipeline developer wants to use a pre-built module from the Nextflow registry 
 1. **Given** a new Nextflow project with no modules installed, **When** user runs `nextflow module install nf-core/fastqc`, **Then** the module is downloaded to `modules/@nf-core/fastqc/`, a `.checksum` file is created, and `nextflow.config` is updated with the version
 2. **Given** a workflow file with `include { FASTQC } from '@nf-core/fastqc'`, **When** user runs `nextflow run main.nf`, **Then** Nextflow resolves the module from local storage and executes the process
 3. **Given** a module version declared in `nextflow.config`, **When** user includes the module, **Then** the declared version is used (not latest)
-4. **Given** a module with transitive dependencies in `meta.yaml`, **When** user installs the module, **Then** all transitive dependencies are also installed
 
 ---
 
@@ -77,8 +76,7 @@ A pipeline developer wants to pin and manage module versions to ensure reproduci
 **Acceptance Scenarios**:
 
 1. **Given** a module is installed at version 1.0.0, **When** user changes `nextflow.config` to specify version 1.1.0 and runs the workflow, **Then** version 1.1.0 is automatically downloaded and replaces the local copy
-2. **Given** modules with transitive dependencies, **When** user runs `nextflow module freeze`, **Then** all transitive dependencies are pinned to exact versions in `nextflow.config`
-3. **Given** modules installed locally, **When** user runs `nextflow module list`, **Then** configured version, installed version, latest available version, and status are displayed for each module
+2. **Given** modules installed locally, **When** user runs `nextflow module list`, **Then** configured version, installed version, latest available version, and status are displayed for each module
 
 ---
 
@@ -110,7 +108,6 @@ A pipeline developer wants to remove a module they no longer need.
 
 1. **Given** a module is installed, **When** user runs `nextflow module remove nf-core/fastqc`, **Then** the module directory is deleted and the entry is removed from `nextflow.config`
 2. **Given** a module is referenced in workflow files, **When** user runs `nextflow module remove`, **Then** a warning is displayed about the reference but removal proceeds
-3. **Given** orphaned transitive dependencies exist, **When** user removes a module, **Then** orphaned dependencies are identified and user is prompted to remove them
 
 ---
 
@@ -179,8 +176,6 @@ A module author wants to publish their module to the Nextflow registry for other
 - **FR-007**: System MUST verify module integrity using `.checksum` file on every run
 - **FR-008**: System MUST download modules from registry when not present locally or when version differs
 - **FR-009**: System MUST NOT override locally modified modules (checksum mismatch) unless `-force` is used
-- **FR-010**: System MUST recursively resolve transitive dependencies from `meta.yaml`
-- **FR-011**: System MUST warn when transitive dependencies are not pinned in `nextflow.config`
 
 #### Local Storage
 
@@ -194,9 +189,8 @@ A module author wants to publish their module to the Nextflow registry for other
 - **FR-016**: System MUST provide `nextflow module search <query>` command to search the registry
 - **FR-017**: System MUST provide `nextflow module list` command to show installed vs configured modules
 - **FR-018**: System MUST provide `nextflow module remove scope/name` command to delete modules
-- **FR-019**: System MUST provide `nextflow module freeze` command to pin all transitive dependencies
-- **FR-020**: System MUST provide `nextflow module publish scope/name` command to upload modules to registry
-- **FR-021**: System MUST provide `nextflow module run scope/name` command to execute modules directly
+- **FR-019**: System MUST provide `nextflow module publish scope/name` command to upload modules to registry
+- **FR-020**: System MUST provide `nextflow module run scope/name` command to execute modules directly
 
 #### Configuration
 
@@ -237,7 +231,6 @@ A module author wants to publish their module to the Nextflow registry for other
 - **SC-005**: Users receive clear, actionable error messages for all failure scenarios (network, validation, authentication)
 - **SC-006**: Module authors can publish a new module version within 3 minutes using the CLI
 - **SC-007**: Locally modified modules are never accidentally overwritten during normal operations
-- **SC-008**: All transitive dependencies can be pinned with a single `nextflow module freeze` command
 
 ## Assumptions
 
