@@ -88,6 +88,8 @@ The `auth` command provides authentication and configuration management for Seqe
 
 Prints the command usage information.
 
+#
+
 **Subcommands**
 
 ##### `login`
@@ -96,7 +98,7 @@ Authenticates with Seqera and saves credentials. Sets Seqera primary compute env
 
 The following options are available:
 
-##### `-u, -url`
+######  `-u, -url`
 
 Specifies your Seqera API endpoint (default: `https://api.cloud.seqera.io`)
 
@@ -111,6 +113,10 @@ Sets Seqera primary compute environment, monitoring, and workspace.
 ##### `status`
 
 Shows Seqera authentication status and configuration.
+
+#
+
+#
 
 **Examples**
 
@@ -193,6 +199,10 @@ Removes only temporary files but retains execution log entries and metadata.
 ##### `-q, -quiet`
 
 Do not print names of files removed.
+
+#
+
+#
 
 **Examples**
 
@@ -293,6 +303,10 @@ Revision to clone. It can be a git branch, tag, or commit SHA number.
 
 Private repository user name.
 
+#
+
+#
+
 **Examples**
 
 Clone the latest revision of a pipeline.
@@ -360,6 +374,8 @@ Sort config attributes.
 <AddedInVersion version="23.10.0" />
 
 Print the value of a config option, or fail if the option is not defined.
+
+#
 
 **Examples**
 
@@ -444,6 +460,8 @@ The `console` command provides a Graphical User Interface (GUI) and an interacti
 
 None available
 
+#
+
 **Examples**
 
 Launch the `console` GUI.
@@ -482,6 +500,8 @@ Print the command usage.
 
 Project revision to drop. Can be a git branch, tag, or commit SHA number.
 
+#
+
 **Examples**
 
 Drop the `nextflow-io/hello` project.
@@ -515,6 +535,8 @@ The `fs` command is used to perform filesystem operations like copy, move, delet
 ##### `-h, -help`
 
 Print the command usage.
+
+#
 
 **Examples**
 
@@ -576,6 +598,8 @@ The `help` command prints out the overview of the CLI interface and enumerates t
 
 Print the command usage.
 
+#
+
 **Examples**
 
 Invoke the `help` option for the `drop` command.
@@ -627,6 +651,8 @@ Print the command usage.
 ##### `-o` (`text`)
 
 Output format, either `text`, `json` or `yaml`.
+
+#
 
 **Examples**
 
@@ -700,6 +726,8 @@ Use the given configuration profile(s).
 ##### `-r, revision`
 
 Revision of the project to inspect (either a git branch, tag or commit SHA number).
+
+#
 
 **Examples**
 
@@ -809,6 +837,8 @@ Choose a configuration profile in the remoteConfig.
 
 Volume claim mounts, e.g. `my-pvc:/mnt/path`.
 
+#
+
 **Examples**
 
 Execute a pipeline into a Kubernetes cluster.
@@ -890,6 +920,8 @@ The directory where intermediate result files are stored.
 ##### `-workspace`
 
 The Seqera Platform workspace name.
+
+#
 
 **Examples**
 
@@ -995,6 +1027,8 @@ Number of spaces to indent (default: `4`).
 
 Indent with tabs (default: `false`).
 
+#
+
 **Examples**
 
 Lint a specific file.
@@ -1042,6 +1076,8 @@ The `list` commands prints a list of the projects which are already downloaded i
 ##### `-h, -help`
 
 Print the command usage.
+
+#
 
 **Examples**
 
@@ -1113,6 +1149,8 @@ Character used to separate column values.
 ##### `-t, -template`
 
 Text template used to each record in the log.
+
+#
 
 **Examples**
 
@@ -1272,6 +1310,8 @@ When passing a git tag or branch, the `workflow.revision` and `workflow.commitId
 ##### `-user`
 
 Private repository user name.
+
+#
 
 **Examples**
 
@@ -1558,6 +1598,8 @@ Disable the use of Wave containers.
 
 Directory where intermediate result files are stored.
 
+#
+
 **Examples**
 
 - Run a specific revision of a remote pipeline.
@@ -1641,6 +1683,8 @@ Create or update a secret.
 
 Delete a secret.
 
+#
+
 **Examples**
 
 - Set a secret:
@@ -1680,6 +1724,8 @@ $ nextflow self-update
 **Description**
 
 The `self-update` command directs the `nextflow` CLI to update itself to the latest stable release.
+
+#
 
 **Examples**
 
@@ -1732,6 +1778,8 @@ Hide header line.
 <AddedInVersion version="25.12.0-edge" />
 
 Project revision. Can be a git branch, tag, or commit SHA number.
+
+#
 
 **Examples**
 

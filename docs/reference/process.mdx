@@ -14,9 +14,11 @@ The current task attempt.
 
 ##### `task.exitStatus`
 
-The exit code of the task script. Only applicable for processes with a `script:` or `shell:` block.
+*Available only in script: and shell: blocks*
 
-Since the exit code is only available after the task has been executed, it can only be used by certain process directives such as [errorStrategy](#errorstrategy).
+The exit code of the task script.
+
+The exit code is only available after the task has been executed (e.g., the [errorStrategy](#errorstrategy) directive may use it).
 
 ##### `task.hash`
 
@@ -36,15 +38,15 @@ The task name.
 
 ##### `task.previousException`
 
-<AddedInVersion version="24.10.0" />
+<AddedInVersion version="24.10.0"/>
 
 The exception reported by the previous task attempt.
 
-Since the exception is available after a failed task attempt, it can only be accessed when retrying a failed task execution, and therefore when `task.attempt` is greater than 1.
+Since the exception is available after a failed task attempt, it can only be accessed when retrying a failed task execution, i.e., when `task.attempt` is greater than 1.
 
 ##### `task.previousTrace`
 
-<AddedInVersion version="24.10.0" />
+<AddedInVersion version="24.10.0"/>
 
 The trace record associated with the previous task attempt.
 
@@ -56,7 +58,7 @@ The trace fields `%cpu` and `%mem` can be accessed as `pcpu` and `pmem`, respect
 
 ##### `task.process`
 
-The process name.
+The name of the process that spawned the task.
 
 ##### `task.workDir`
 
@@ -715,6 +717,8 @@ See the [workflow][stdlib-namespaces-workflow] namespace for more information.
 ##### `'retry'`
 
 When a task fails, retry it.
+
+#
 
 When setting the `errorStrategy` directive to `ignore` the process doesn't stop on an error condition, it just reports a message notifying you of the error event.
 

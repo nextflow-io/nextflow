@@ -38,7 +38,7 @@ The `publishDir` directive will continue to be supported, but will be deprecated
 
 This section describes how to migrate from `publishDir` to workflow outputs using the [rnaseq-nf](https://github.com/nextflow-io/rnaseq-nf) pipeline as an example. To view the completed migration, see the [`preview-25-04`](https://github.com/nextflow-io/rnaseq-nf/tree/preview-25-04) branch of the rnaseq-nf repository.
 
-See [Getting started with rnaseq-nf][rnaseq-nf-page] for an introduction to the rnaseq-nf pipeline.
+See [Getting started with rnaseq-nf][rnaseq-nf-page] for an introduction to the `rnaseq-nf` pipeline.
 
 ### Replacing `publishDir` with workflow outputs
 
@@ -290,7 +290,7 @@ $ cat results/samples.csv
 "spleen","results/fastqc/spleen","results/quant/spleen"
 ```
 
-In the future, if a tool with per-sample outputs were added, we would only need to join the tool output into the `samples_ch` channel and update the output `path` directive accordingly. This approach keeps our output definition concise as we add more tools to the pipeline. Additionally, a single unified index file for all per-sample outputs is easier for downstream pipelines to consume, rather than cross-referencing multiple related index files.
+In the future, if you add a tool with per-sample outputs, you only need to join the tool output into the `samples_ch` channel and update the output `path` directive accordingly. This approach keeps the output definition concise as you add more tools to the pipeline. Additionally, a single unified index file for all per-sample outputs is easier for downstream pipelines to consume, rather than cross-referencing multiple related index files.
 
 [config-process-selectors]: /nextflow_docs/nextflow_repo/docs/config.mdx#process-selectors
 [process-publishdir]: /nextflow_docs/nextflow_repo/docs/reference/process.mdx#publishdir
