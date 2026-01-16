@@ -1,0 +1,53 @@
+/*
+ * Copyright (c) 2019, Seqera Labs.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. 
+ *
+ * This Source Code Form is "Incompatible With Secondary Licenses", as
+ * defined by the Mozilla Public License, v. 2.0.
+ */
+
+plugins {
+    id 'io.nextflow.nextflow-plugin' version "${nextflowPluginVersion}"
+    id 'java-test-fixtures'
+}
+
+nextflowPlugin {
+    nextflowVersion = '25.12.0-edge'
+
+    provider = "${nextflowPluginProvider}"
+    description = 'Integrates with Seqera Platform for comprehensive workflow monitoring, resource tracking, and cache management capabilities'
+    className = 'io.seqera.plugin.SeqeraPlugin'
+    useDefaultDependencies = false
+    generateSpec = false
+    extensionPoints = [
+        'io.seqera.executor.SeqeraExecutor'
+    ]
+}
+
+sourceSets {
+    main.java.srcDirs = []
+    main.groovy.srcDirs = ['src/main']
+    main.resources.srcDirs = ['src/resources']
+    test.groovy.srcDirs = ['src/test']
+    test.java.srcDirs = []
+    test.resources.srcDirs = []
+}
+
+configurations {
+    // see https://docs.gradle.org/4.1/userguide/dependency_management.html#sub:exclude_transitive_dependencies
+    runtimeClasspath.exclude group: 'org.slf4j', module: 'slf4j-api'
+}
+
+dependencies {
+    compileOnly project(':nextflow')
+    compileOnly 'org.slf4j:slf4j-api:2.0.17'
+    compileOnly 'org.pf4j:pf4j:3.12.0'
+    api 'io.seqera:sched-client:0.7.0-SNAPSHOT'
+
+    testImplementation(testFixtures(project(":nextflow")))
+    testImplementation "org.apache.groovy:groovy:4.0.29"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.29"
+}
