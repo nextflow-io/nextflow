@@ -199,7 +199,8 @@ class ScriptMeta {
         final name = component.name
         if( !module && NF.hasOperator(name) )
             log.warn "${component.type.capitalize()} with name '$name' overrides a built-in operator with the same name"
-        checkComponentName(component, name)
+        if( !NF.isSyntaxParserV2() )
+            checkComponentName(component, name)
         definitions.put(component.name, component)
         if( component instanceof FunctionDef ){
             incFunctionCount(name)
@@ -339,13 +340,12 @@ class ScriptMeta {
         assert component
 
         final name = alias ?: component.name
-        checkComponentName(component, name)
-        if( name != component.name ) {
+        if( !NF.isSyntaxParserV2() )
+            checkComponentName(component, name)
+        if( name != component.name )
             imports.put(name, component.cloneWithName(name))
-        }
-        else {
+        else
             imports.put(name, component)
-        }
     }
 
     @Memoized

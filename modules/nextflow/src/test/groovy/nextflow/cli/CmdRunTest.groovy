@@ -23,6 +23,7 @@ import nextflow.NextflowMeta
 import nextflow.SysEnv
 import nextflow.config.ConfigMap
 import nextflow.exception.AbortOperationException
+import nextflow.util.VersionNumber
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -438,4 +439,37 @@ class CmdRunTest extends Specification {
         true    | [:]                                     | [NXF_ENABLE_STRICT: true ] | true
 
     }
+
+    def 'should validate Nextflow version against version required by pipeline'() {
+
+        given:
+        def cmd = Spy(new CmdRun())
+
+        when:
+        cmd.checkVersion([manifest: [nextflowVersion: '>= 1.0']])
+        then:
+        1 * cmd.getCurrentVersion() >> new VersionNumber('1.1')
+        0 * cmd.showVersionWarning(_)
+
+        when:
+        cmd.checkVersion([manifest: [nextflowVersion: '>= 1.2']])
+        then:
+        1 * cmd.getCurrentVersion() >> new VersionNumber('1.1')
+        1 * cmd.showVersionWarning('>= 1.2')
+
+        when:
+        cmd.checkVersion([manifest: [nextflowVersion: '! >= 1.2']])
+        then:
+        1 * cmd.getCurrentVersion() >> new VersionNumber('1.1')
+        1 * cmd.showVersionError('>= 1.2')
+        thrown(AbortOperationException)
+
+        when:
+        cmd.checkVersion([:])
+        then:
+        0 * cmd.getCurrentVersion()
+        0 * cmd.showVersionWarning(_)
+        0 * cmd.showVersionError(_)
+    }
+
 }

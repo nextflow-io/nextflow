@@ -36,7 +36,7 @@ import nextflow.script.ScriptLoader
 import nextflow.script.ScriptMeta
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
-import org.apache.commons.lang.StringUtils
+import org.apache.commons.lang3.StringUtils
 import org.codehaus.groovy.control.CompilationFailedException
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer

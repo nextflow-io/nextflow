@@ -154,4 +154,9 @@ class SubmitContainerTokenRequest {
      */
     BuildCompression buildCompression
 
+    /**
+     * The build template to use for container builds
+     */
+    String buildTemplate
+
 }

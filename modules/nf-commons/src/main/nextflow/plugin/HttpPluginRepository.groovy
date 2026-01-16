@@ -137,7 +137,7 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
             throw e
         }
         catch (Exception e) {
-            throw new PluginRuntimeException(e, "Unable to connect to ${uri} - cause: ${e.message}")
+            throw new PluginRuntimeException(e, "Unable to connect to %s - cause: %s", uri, e.message)
         }
     }
 

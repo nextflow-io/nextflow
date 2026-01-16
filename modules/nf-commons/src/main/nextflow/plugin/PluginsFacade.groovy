@@ -255,7 +255,7 @@ class PluginsFacade implements PluginStateListener {
 
         log.debug "Setting up plugin manager > mode=${mode}; embedded=$embedded; plugins-dir=$root; core-plugins: ${defaultPlugins.toSortedString()}"
         // make sure plugins dir exists
-        if( mode!=DEV_MODE && !FilesEx.mkdirs(root) )
+        if( mode!=DEV_MODE && !FilesEx.exists(root) && !FilesEx.mkdirs(root) )
             throw new IOException("Unable to create plugins dir: $root")
 
         this.manager = createManager(root, embedded)

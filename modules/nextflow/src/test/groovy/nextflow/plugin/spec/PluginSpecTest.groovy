@@ -59,7 +59,8 @@ class PluginSpecTest extends Specification {
                         spec: [
                             name: 'message',
                             description: 'Message to print to standard output when the plugin is enabled.',
-                            type: 'String'
+                            type: 'String',
+                            additionalTypes: []
                         ]
                     ]
                 ]

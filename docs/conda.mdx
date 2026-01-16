@@ -6,7 +6,7 @@ import { AddedInVersion, ChangedInVersion, DeprecatedInVersion } from '@site/src
 
 Nextflow has built-in support for conda that allows the configuration of workflow dependencies using conda recipes and environment files.
 
-This allows Nextflow applications to use popular tool collections such as [Bioconda](https://bioconda.github.io) and the [Python Package index](https://pypi.org/), whilst taking advantage of the configuration flexibility provided by Nextflow.
+This allows Nextflow applications to use popular tool collections such as [Bioconda](https://bioconda.github.io) and the [Python Package index](https://pypi.org/), while taking advantage of the configuration flexibility provided by Nextflow.
 
 ## Prerequisites
 
@@ -61,7 +61,12 @@ The usual conda package syntax and naming conventions can be used. The version o
 
 The name of the channel where a package is located can be specified prefixing the package with the channel name as shown here `bioconda::bwa=0.7.15`.
 
-### Use conda environment files
+<ChangedInVersion version="26.04.0">
+By default, Nextflow uses the `conda-forge` and `bioconda` channels to resolve Conda packages. You can override this using the `conda.channels` configuration option.
+</ChangedInVersion>
+
+
+### Use Conda environment files
 
 Conda environments can also be defined using one or more conda environment files. This is a file that lists the required packages and channels structured using the YAML format. For example:
 
@@ -91,7 +96,7 @@ process hello {
 ```
 
 :::warning
-The environment file name **must** have a `.yml` or `.yaml` extension or else it won't be properly recognised.
+The environment file name **must** have a `.yml` or `.yaml` extension or else it won't be properly recognized.
 :::
 
 ### Python Packages from PyPI

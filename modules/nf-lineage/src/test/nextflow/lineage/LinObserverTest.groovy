@@ -39,7 +39,6 @@ import nextflow.lineage.config.LineageConfig
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskId
-import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.script.ScriptBinding
 import nextflow.script.ScriptMeta
@@ -235,7 +234,7 @@ class LinObserverTest extends Specification {
         def store = new DefaultLinStore();
         store.open(LineageConfig.create(session))
         and:
-        def observer = new LinObserver(session, store)
+        def observer = Spy(new LinObserver(session, store))
         def normalizer = new PathNormalizer(metadata)
         observer.executionHash = "hash"
         observer.normalizer = normalizer
@@ -244,10 +243,8 @@ class LinObserverTest extends Specification {
         def taskWd = workDir.resolve('12/34567890')
         Files.createDirectories(taskWd)
         and:
-        def processor = Mock(TaskProcessor){
-            getTaskGlobalVars(_) >> [:]
-            getTaskBinEntries(_) >> []
-        }
+        observer.getTaskGlobalVars(_) >> [:]
+        observer.getTaskBinEntries(_) >> []
 
         and: 'Task Inputs'
         def inputs = new LinkedHashMap<InParam, Object>()
@@ -282,7 +279,6 @@ class LinObserverTest extends Specification {
             getId() >> TaskId.of(100)
             getName() >> 'foo'
             getHash() >> hash
-            getProcessor() >> processor
             getSource() >> 'echo task source'
             getScript() >> 'this is the script'
             getInputs() >> inputs

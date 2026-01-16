@@ -229,7 +229,7 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
 
         if( launcher ) {
             def result = getRunCommand()
-            result += entryPoint ? " $entryPoint -c \"cd \$NXF_TASK_WORKDIR; $launcher\"" : " $launcher"
+            result += entryPoint ? " $entryPoint -c \"cd \\\"\$NXF_TASK_WORKDIR\\\"; $launcher\"" : " $launcher"
             return result
         }
         return getRunCommand() + ' ' + launcher

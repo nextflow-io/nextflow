@@ -156,7 +156,6 @@ class ScriptLoaderV2 implements ScriptLoader {
             final meta = ScriptMeta.get(script)
             meta.setScriptPath(path)
             meta.setModule(module)
-            meta.validate()
             binding.setScriptPath(path)
             binding.setSession(session)
             return script

@@ -29,7 +29,7 @@ import nextflow.processor.TaskRun
 import nextflow.util.Duration
 import nextflow.util.Escape
 import nextflow.util.Throttle
-import org.apache.commons.lang.StringUtils
+import org.apache.commons.lang3.StringUtils
 /**
  * Generic task processor executing a task through a grid facility
  *

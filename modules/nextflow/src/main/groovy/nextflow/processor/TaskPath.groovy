@@ -334,9 +334,12 @@ final class TaskPath implements Path, PathEscapeAware {
         FilesEx.or(getFileName(),other)
     }
 
-
     String getPermissions() {
         FilesEx.getPermissions(target)
+    }
+
+    Collection<Path> listDirectory() {
+        FilesEx.listDirectory(target)
     }
 
     boolean setPermissions( String permissions ) {

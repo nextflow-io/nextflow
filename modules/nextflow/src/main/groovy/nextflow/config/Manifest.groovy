@@ -170,8 +170,11 @@ class Manifest implements ConfigScope {
                 .map(opts -> new Contributor(opts))
                 .toList()
         }
-        catch( ClassCastException | IllegalArgumentException e ){
-            throw new AbortOperationException("Invalid config option `manifest.contributors` -- should be a list of maps")
+        catch( IllegalArgumentException e ){
+            throw new AbortOperationException(e.message)
+        }
+        catch( ClassCastException e ){
+            throw new AbortOperationException("Invalid setting for `manifest.contributors` config option -- should be a list of maps")
         }
     }
 
@@ -208,17 +211,23 @@ class Manifest implements ConfigScope {
             affiliation = opts.affiliation as String
             email = opts.email as String
             github = opts.github as String
-            contribution = parseContributionTypes(opts.contribution)
+            contribution = parseContributionTypes(opts.contribution as List<String>)
             orcid = opts.orcid as String
         }
 
-        private List<ContributionType> parseContributionTypes(Object value) {
-            if( value == null )
+        private List<ContributionType> parseContributionTypes(List<String> values) {
+            if( values == null )
                 return []
-            return (value as List<String>).stream()
-                .map(c -> ContributionType.valueOf(c.toUpperCase()))
-                .sorted()
-                .toList()
+            final result = new LinkedList<ContributionType>()
+            for( final value : values ) {
+                try {
+                    result.add(ContributionType.valueOf(value.toUpperCase()))
+                }
+                catch( IllegalArgumentException e ) {
+                    throw new IllegalArgumentException("Invalid contribution type '$value' in `manifest.contributors` config option")
+                }
+            }
+            return result.toSorted()
         }
 
         Map toMap() {

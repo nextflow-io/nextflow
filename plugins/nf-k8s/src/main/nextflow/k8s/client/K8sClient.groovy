@@ -441,7 +441,7 @@ class K8sClient {
             throw new ProcessFailedException("K8s Job $jobName execution failed: $message")
         }
 
-        log.warn1("K8s Job $jobName does not have pod - Not yet scheduled?")
+        log.debug1("K8s Job $jobName does not have pod - Not yet scheduled?")
         return Collections.emptyMap()
     }
 

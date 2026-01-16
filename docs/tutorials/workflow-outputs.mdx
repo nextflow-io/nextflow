@@ -28,9 +28,11 @@ Workflow outputs were introduced to address these problems by providing a unifie
 
 ## Timeline
 
-Nextflow [24.04][workflow-outputs-first-preview] introduced the workflow output definition as a preview feature. It has since undergone multiple revisions, with the third preview currently available in Nextflow [25.04][workflow-outputs-third-preview].
+Workflow outputs are stable in Nextflow [25.10][workflow-outputs-final].
 
-Nextflow 25.10 will finalize workflow outputs and bring them out of preview. The `publishDir` directive will continue to be supported, but will be deprecated. It may be removed in a future release.
+This feature is also available as a preview in Nextflow [24.04][workflow-outputs-first-preview], [24.10][workflow-outputs-second-preview], and [25.04][workflow-outputs-third-preview]. If you are upgrading from a preview version of workflow outputs, you must remove the `nextflow.preview.output` feature flag, as it is not supported in Nextflow 25.10.
+
+The `publishDir` directive will continue to be supported, but will be deprecated. It may be removed in a future release.
 
 ## Example: rnaseq-nf
 
@@ -294,5 +296,7 @@ In the future, if a tool with per-sample outputs were added, we would only need 
 [process-publishdir]: /nextflow_docs/nextflow_repo/docs/reference/process.mdx#publishdir
 [rnaseq-nf-page]: /nextflow_docs/nextflow_repo/docs/tutorials/rnaseq-nf.mdx
 [workflow-output-def]: /nextflow_docs/nextflow_repo/docs/workflow.mdx#workflow-outputs
-[workflow-outputs-first-preview]: /nextflow_docs/nextflow_repo/docs/migrations/24-04.mdx#workflow-outputs-first-preview
+[workflow-outputs-final]: /nextflow_docs/nextflow_repo/docs/tutorials/workflow-outputs.mdx
+[workflow-outputs-first-preview]: /nextflow_docs/nextflow_repo/docs/migrations/24-04.mdx
+[workflow-outputs-second-preview]: /nextflow_docs/nextflow_repo/docs/migrations/24-10.mdx
 [workflow-outputs-third-preview]: /nextflow_docs/nextflow_repo/docs/migrations/25-04.mdx

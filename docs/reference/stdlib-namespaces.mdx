@@ -29,7 +29,6 @@ Alias of `workflow.launchDir`.
 
 Directory where a module script is located (equivalent to `projectDir` if used in the main script).
 
-
 ##### `params`
 
 Map of workflow parameters specified in the config file or as command line options.
@@ -106,7 +105,7 @@ Type of paths returned, can be `'file'`, `'dir'` or `'any'` (default: `'file'`).
 
 See also: [channel.fromPath][channel-path].
 
-##### `files( filePattern: String, [options] ) -> List<Path>`
+##### `files( filePattern: String, [options] ) -> Iterable<Path>`
 
 Get a collection of files from a file name or glob pattern. Supports the same options as `file()`.
 

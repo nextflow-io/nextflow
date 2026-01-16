@@ -16,11 +16,13 @@ Comma-separated list of configuration files which are used as the configuration 
 
 ##### `-D`
 
-Set JVM properties.
+Set JVM properties (e.g. `-Dfile.encoding=UTF-8`). Equivalent to the `NXF_JVM_ARGS` environment variable.
 
 ##### `-bg`
 
-Execute nextflow in background.
+Execute Nextflow in background.
+
+Allows you to close your terminal without terminating the pipeline run.
 
 ##### `-c, -config`
 
@@ -28,22 +30,23 @@ Comma-separated list of configuration files which are added to the configuration
 
 ##### `-d, -dockerize`
 
-<DeprecatedInVersion version="23.09.0-edge">
-</DeprecatedInVersion>
+<DeprecatedInVersion version="23.10.0" />
 
-Launch nextflow via Docker (experimental).
+Launch Nextflow via Docker (experimental).
 
 ##### `-h`
 
-Print this help.
+Print available commands and options.
 
 ##### `-log`
 
-Set nextflow log file path.
+Set Nextflow log file path (default: `.nextflow.log`). Must be a local path.
 
 ##### `-q, -quiet`
 
-Do not print information messages.
+Do not print the Nextflow banner and execution progress to the console.
+
+Does not affect error messages.
 
 ##### `-remote-debug`
 
@@ -51,7 +54,7 @@ Enable JVM interactive remote debugging (experimental).
 
 ##### `-syslog`
 
-Send logs to syslog server (e.g. localhost:514).
+Send logs to a [Syslog](https://en.wikipedia.org/wiki/Syslog) server (e.g. `localhost:514`).
 
 ##### `-trace`
 
@@ -61,15 +64,11 @@ Enable trace level logging for the specified packages. Multiple packages can be 
 
 Print the program version.
 
-##### `-E`
-
-Exports all current system environment.
-
 ## Commands
 
 ### `auth`
 
-<AddedInVersion version="25.09.0-edge" />
+<AddedInVersion version="25.10.0" />
 
 Manage Seqera Platform authentication.
 
@@ -97,19 +96,19 @@ Authenticates with Seqera and saves credentials. Sets Seqera primary compute env
 
 The following options are available:
 
-###### `-u, -url`
+##### `-u, -url`
 
 Specifies your Seqera API endpoint (default: `https://api.cloud.seqera.io`)
 
-###### `logout`
+##### `logout`
 
 Removes Seqera authentication and revokes the Seqera Cloud access token (if applicable).
 
-###### `config`
+##### `config`
 
 Sets Seqera primary compute environment, monitoring, and workspace.
 
-###### `status`
+##### `status`
 
 Shows Seqera authentication status and configuration.
 
@@ -194,9 +193,6 @@ Removes only temporary files but retains execution log entries and metadata.
 ##### `-q, -quiet`
 
 Do not print names of files removed.
-
-
-#
 
 **Examples**
 
@@ -291,13 +287,11 @@ Service hub where the project is hosted. Options: `gitlab` or `bitbucket`.
 
 ##### `-r` (`master`)
 
-Revision to clone - It can be a git branch, tag, or revision number.
+Revision to clone. It can be a git branch, tag, or commit SHA number.
 
 ##### `-user`
 
 Private repository user name.
-
-#
 
 **Examples**
 
@@ -327,7 +321,7 @@ $ nextflow config [options] [project name or path]
 
 **Description**
 
-The `config` command is used for printing the project's configuration i.e. the `nextflow.config` and is especially useful for understanding the resolved profiles and parameters that Nextflow will use run a pipeline. For in-depth information, please refer the [Config profiles][config-profiles] section.
+The `config` command is used for printing the project's configuration i.e. the `nextflow.config` and is especially useful for understanding the resolved profiles and parameters that Nextflow will use run a pipeline. For in-depth information, see the [Config profiles][config-profiles] section.
 
 **Options**
 
@@ -344,7 +338,14 @@ Print the command usage.
 Choose a configuration profile.
 
 ##### `-properties`
+
 Print config using Java properties notation.
+
+##### `-r, -revision`
+
+<AddedInVersion version="25.12.0-edge" />
+
+Project revision. Can be a git branch, tag, or commit SHA number.
 
 ##### `-a, -show-profiles`
 
@@ -356,11 +357,9 @@ Sort config attributes.
 
 ##### `-value`
 
-<AddedInVersion version="23.08.0-edge" />
+<AddedInVersion version="23.10.0" />
 
 Print the value of a config option, or fail if the option is not defined.
-
-#
 
 **Examples**
 
@@ -477,7 +476,11 @@ Delete the repository without taking care of local changes.
 
 Print the command usage.
 
-#
+##### `-r, -revision`
+
+<AddedInVersion version="25.12.0-edge" />
+
+Project revision to drop. Can be a git branch, tag, or commit SHA number.
 
 **Examples**
 
@@ -512,8 +515,6 @@ The `fs` command is used to perform filesystem operations like copy, move, delet
 ##### `-h, -help`
 
 Print the command usage.
-
-#
 
 **Examples**
 
@@ -575,8 +576,6 @@ The `help` command prints out the overview of the CLI interface and enumerates t
 
 Print the command usage.
 
-#
-
 **Examples**
 
 Invoke the `help` option for the `drop` command.
@@ -629,8 +628,6 @@ Print the command usage.
 
 Output format, either `text`, `json` or `yaml`.
 
-#
-
 **Examples**
 
 Display Nextflow runtime and system info:
@@ -652,19 +649,19 @@ $ nextflow info nextflow-io/hello
 
   project name: nextflow-io/hello
   repository  : https://github.com/nextflow-io/hello
-  local path  : /Users/evanfloden/.nextflow/assets/nextflow-io/hello
+  local path  : /Users/evanfloden/.nextflow/assets/.repos/nextflow-io/hello
   main script : main.nf
   revisions   :
   * master (default)
     mybranch
     testing
-    v1.1 [t]
+  * v1.1 [t]
     v1.2 [t]
 ```
 
 ### `inspect`
 
-<AddedInVersion version="23.09.0-edge" />
+<AddedInVersion version="23.10.0" />
 
 Inspect process settings in a pipeline project. Currently only supports the `container` directive.
 
@@ -704,8 +701,6 @@ Use the given configuration profile(s).
 
 Revision of the project to inspect (either a git branch, tag or commit SHA number).
 
-#
-
 **Examples**
 
 Get the list of containers used by a pipeline.
@@ -732,7 +727,7 @@ $ nextflow kuberun [options] [project]
 
 **Description**
 
-The `kuberun` command builds upon the `run` command and offers a deep integration with the Kubernetes execution environment. This command deploys the Nextflow runtime as a Kubernetes pod and assumes that you've already installed the `kubectl` CLI. The `kuberun` command does not allow the execution of local Nextflow scripts. See [kubernetes][k8s-page] for more information.
+The `kuberun` command builds upon the `run` command and offers a deep integration with the Kubernetes execution environment. This command deploys the Nextflow runtime as a Kubernetes pod and assumes that you've already installed the `kubectl` CLI. The `kuberun` command does not allow the execution of local Nextflow scripts. See [Kubernetes][k8s-page] for more information.
 
 **Options**
 
@@ -784,6 +779,8 @@ Specify number of CPUs requested for the Nextflow pod.
 
 ##### `-head-image`
 
+<AddedInVersion version="22.10.0" />
+
 Specify the container image for the Nextflow driver pod.
 
 ##### `-head-memory`
@@ -791,6 +788,8 @@ Specify the container image for the Nextflow driver pod.
 Specify amount of memory requested for the Nextflow pod.
 
 ##### `-head-prescript`
+
+<AddedInVersion version="22.10.0" />
 
 Specify script to be run before the Nextflow pod starts.
 
@@ -809,8 +808,6 @@ Choose a configuration profile in the remoteConfig.
 ##### `-v, -volume-mount`
 
 Volume claim mounts, e.g. `my-pvc:/mnt/path`.
-
-#
 
 **Examples**
 
@@ -838,47 +835,61 @@ The `launch` command launches a pipeline run in Seqera Platform. To log in and c
 
 **Options**
 
-`-compute-env`
-: The compute environment for workflow execution.
+##### `-compute-env`
 
-`-c, -config`
-: A configuration file to add to the configuration set.
+The compute environment for workflow execution.
 
-`-entry`
-: The entry workflow to be executed.
+##### `-c, -config`
 
-`-h, -help`
-: Prints command usage information.
+A configuration file to add to the configuration set.
 
-`-latest`
-: Whether to pull the latest changes before execution.
+##### `-entry`
 
-`-name`
-: A mnemonic name to assign to the run.
+The entry workflow to be executed.
 
-`-main-script`
-: The script file to be executed when launching a project directory or repository.
+##### `-h, -help`
 
-`-params-file`
-: A JSON or YAML file to load parameters from.
+Prints command usage information.
 
-`-profile`
-: A configuration profile.
+##### `-latest`
 
-`-resume`
-: Whether to resume an execution using cached results from a previous run.
+Whether to pull the latest changes before execution.
 
-`-r, -revision`
-: The project revision to run. Can be a git branch, tag, or commit hash.
+##### `-name`
 
-`-stub-run, -stub`
-: Whether to replace scripts with command stubs when executing the run.
+A mnemonic name to assign to the run.
 
-`-w, -work-dir`
-: The directory where intermediate result files are stored.
+##### `-main-script`
 
-`-workspace`
-: The Seqera Platform workspace name.
+The script file to be executed when launching a project directory or repository.
+
+##### `-params-file`
+
+A JSON or YAML file to load parameters from.
+
+##### `-profile`
+
+A configuration profile.
+
+##### `-resume`
+
+Whether to resume an execution using cached results from a previous run.
+
+##### `-r, -revision`
+
+The project revision to run. Can be a git branch, tag, or commit hash.
+
+##### `-stub-run, -stub`
+
+Whether to replace scripts with command stubs when executing the run.
+
+##### `-w, -work-dir`
+
+The directory where intermediate result files are stored.
+
+##### `-workspace`
+
+The Seqera Platform workspace name.
 
 **Examples**
 
@@ -892,7 +903,8 @@ $ nextflow launch nextflow-io/hello
 
 <AddedInVersion version="25.04.0" />
 
-:::warning{title="Experimental: may change in a future release."}
+:::warning
+*Experimental: may change in a future release.*
 :::
 
 Inspect lineage metadata for Nextflow runs.
@@ -907,7 +919,7 @@ $ nextflow lineage SUBCOMMAND [arg ..]
 
 The `lineage` command is used to inspect lineage metadata.
 
-See the [Data lineage][data-lineage-page] guide to learn how to get started with data lineage.
+See [Getting started with data lineage][data-lineage-page] to learn how to get started with data lineage.
 
 **Options**
 
@@ -969,7 +981,7 @@ Format scripts and config files that have no errors.
 
 ##### `-o, -output`
 
-Output mode for reporting errors: `full`, `extended`, `concise`, `json` (default: `full`).
+Output mode for reporting errors: `full`, `extended`, `concise`, `json`, `markdown` (default: `full`).
 
 ##### `-sort-declarations`
 
@@ -982,8 +994,6 @@ Number of spaces to indent (default: `4`).
 ##### `-tabs`
 
 Indent with tabs (default: `false`).
-
-#
 
 **Examples**
 
@@ -1005,6 +1015,14 @@ Lint and format all files in the current directory (and subdirectories) and use 
 $ nextflow lint -format -spaces 2 .
 ```
 
+:::note
+Formatting code with the `lint` command in Nextflow 25.10 or later may make your code incompatible with previous versions of Nextflow. If you need your code to remain compatible with versions prior to 25.10, run the formatter with Nextflow 25.04:
+
+```bash
+NXF_VER=25.04.8 nextflow lint -format .
+```
+:::
+
 ### `list`
 
 List all downloaded projects.
@@ -1024,8 +1042,6 @@ The `list` commands prints a list of the projects which are already downloaded i
 ##### `-h, -help`
 
 Print the command usage.
-
-#
 
 **Examples**
 
@@ -1068,7 +1084,11 @@ Show log entries for runs executed *but* the specified one.
 
 ##### `-f, -fields`
 
-Comma-separated list of fields to include in the printed log. Use the `-l` option to see the list of available fields.
+Comma-separated list of fields to include in the printed log.
+
+The same fields as the `trace.fields` option can be specified here, as well as `stdout` and `stderr`. The trace fields `%cpu` and `%mem` must be specified as `pcpu` and `pmem`, respectively.
+
+Use the `-l` option to see the complete list of available fields.
 
 ##### `-F, -filter`
 
@@ -1093,8 +1113,6 @@ Character used to separate column values.
 ##### `-t, -template`
 
 Text template used to each record in the log.
-
-#
 
 **Examples**
 
@@ -1187,6 +1205,8 @@ Manage plugins and run plugin-specific commands.
 $ nextflow plugin <subcommand> [options]
 ```
 
+**Subcommands**
+
 ##### `create`
 
 <AddedInVersion version="25.04.0" />
@@ -1217,11 +1237,15 @@ The `pull` command downloads a pipeline from a Git-hosting platform into the glo
 
 **Options**
 
-##### `-all`
+##### `-a, -all`
 
 Update all downloaded projects.
 
 ##### `-d, -deep`
+
+<DeprecatedInVersion version="25.12.0-edge">
+Ignored for new multi-revision asset management strategy. Still used in legacy assets.
+</DeprecatedInVersion>
 
 Create a shallow clone of the specified depth.
 
@@ -1233,17 +1257,21 @@ Print the command usage.
 
 Service hub where the project is hosted. Options: `gitlab` or `bitbucket`
 
+##### `-migrate`
+
+<AddedInVersion version="25.12.0-edge" />
+
+Update the project asset to new multi-revision strategy.
+
 ##### `-r, -revision`
 
-Revision of the project to run (either a git branch, tag or commit hash).
+Project revision to run. Can be a git branch, tag, or commit SHA number.
 
 When passing a git tag or branch, the `workflow.revision` and `workflow.commitId` fields are populated. When passing only the commit hash, `workflow.revision` is not defined.
 
 ##### `-user`
 
 Private repository user name.
-
-#
 
 **Examples**
 
@@ -1310,6 +1338,10 @@ Enable/disable processes caching.
 
 ##### `-d, -deep`
 
+<DeprecatedInVersion version="25.12.0-edge">
+Ignored for new multi-revision asset management strategy. Still used in legacy assets.
+</DeprecatedInVersion>
+
 Create a shallow clone of the specified depth.
 
 ##### `-disable-jobs-cancellation`
@@ -1318,15 +1350,13 @@ Prevent the cancellation of child jobs on execution termination
 
 ##### `-dsl1`
 
-<DeprecatedInVersion version="23.09.0-edge">
-</DeprecatedInVersion>
+<DeprecatedInVersion version="23.10.0" />
 
 Execute the workflow using DSL1 syntax.
 
 ##### `-dsl2`
 
-<DeprecatedInVersion version="23.09.0-edge">
-</DeprecatedInVersion>
+<DeprecatedInVersion version="23.10.0" />
 
 Execute the workflow using DSL2 syntax.
 
@@ -1335,10 +1365,11 @@ Execute the workflow using DSL2 syntax.
 Dump channels for debugging purpose.
 
 ##### `-dump-hashes`
+
 Dump task hash keys for debugging purposes.
 
 <AddedInVersion version="23.10.0">
-You can use `-dump-hashes json` to dump the task hash keys as JSON for easier post-processing. See the [caching and resuming tip][cache-compare-hashes] for more details.
+You can use `-dump-hashes json` to dump the task hash keys as JSON for easier post-processing. See the [caching and resuming tips][cache-compare-hashes] for more details.
 </AddedInVersion>
 
 ##### `-e.<key>=<value>`
@@ -1371,10 +1402,7 @@ Library extension path.
 
 ##### `-main-script` (`main.nf`)
 
-<AddedInVersion version="20.09.1-edge" />
-
 The script file to be executed when launching a project directory or repository.
-
 
 ##### `-name`
 
@@ -1400,7 +1428,7 @@ Comma separated list of plugin ids to be applied in the pipeline execution.
 
 ##### `-preview`
 
-<AddedInVersion version="22.06.0-edge" />
+<AddedInVersion version="22.10.0" />
 
 Run the workflow script skipping the execution of all processes.
 
@@ -1422,7 +1450,7 @@ Execute the script using the cached results, useful to continue executions that 
 
 ##### `-r, -revision`
 
-Revision of the project to run (either a git branch, tag or commit hash).
+Project revision to run. Can be a git branch, tag, or commit SHA number.
 
 When passing a git tag or branch, the `workflow.revision` and `workflow.commitId` fields are populated. When passing only the commit hash, `workflow.revision` is not defined.
 
@@ -1455,8 +1483,6 @@ Enable the use of the Cloud cache plugin for storing cache metadata to an object
 Use the specified Conda environment package or file (must end with `.yml` or `.yaml`)
 
 ##### `-with-dag` (`dag-<timestamp>.html`)
-
-Create pipeline DAG file.
 
 Create pipeline DAG file.
 
@@ -1532,8 +1558,6 @@ Disable the use of Wave containers.
 
 Directory where intermediate result files are stored.
 
-#
-
 **Examples**
 
 - Run a specific revision of a remote pipeline.
@@ -1551,7 +1575,7 @@ Directory where intermediate result files are stored.
   $ nextflow run main.nf -profile docker
   ```
 
-- Execute a pipeline and generate the summary HTML report. See [Reports][tracing-page] for more information:
+- Execute a pipeline and generate the summary HTML report. For more information on the metrics, see [Reports][tracing-page]:
 
   ```console
   $ nextflow run main.nf -with-report
@@ -1581,7 +1605,7 @@ Directory where intermediate result files are stored.
   $ nextflow run main.nf -params-file pipeline_params.yml
   ```
 
-See [Pipeline parameters][cli-params] for more information about writing custom parameters files.
+  See [Pipeline parameters][cli-params] for more information about writing custom parameters files.
 
 ### `secrets`
 
@@ -1590,7 +1614,7 @@ Manage [pipeline secrets][secrets-page].
 **Usage**
 
 ```console
-$ nextflow secrets <SUBCOMMAND> [OPTIONS]
+$ nextflow secrets <subcommand> [options]
 ```
 
 **Options**
@@ -1616,8 +1640,6 @@ Create or update a secret.
 ##### `delete <secret>`
 
 Delete a secret.
-
-#
 
 **Examples**
 
@@ -1705,7 +1727,11 @@ List repository content.
 
 Hide header line.
 
-#
+##### `-r, -revision`
+
+<AddedInVersion version="25.12.0-edge" />
+
+Project revision. Can be a git branch, tag, or commit SHA number.
 
 **Examples**
 
@@ -1714,7 +1740,7 @@ Viewing the contents of a downloaded pipeline.
 ```console
 $ nextflow view nextflow-io/hello
 
-== content of file: .nextflow/assets/nextflow-io/hello/main.nf
+== content of file: .nextflow/assets/.repos/nextflow-io/hello/main.nf
 #!/usr/bin/env nextflow
 
 process sayHello {
@@ -1738,7 +1764,7 @@ List the folder structure of the downloaded pipeline:
 ```console
 $ nextflow view -l nextflow-io/hello
 
-== content of path: .nextflow/assets/nextflow-io/hello
+== content of path: .nextflow/assets/.repos/nextflow-io/hello
 .git
 .gitignore
 LICENSE

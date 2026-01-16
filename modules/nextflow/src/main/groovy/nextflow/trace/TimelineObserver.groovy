@@ -31,7 +31,7 @@ import nextflow.trace.config.TimelineConfig
 import nextflow.trace.event.TaskEvent
 import nextflow.util.Duration
 import nextflow.util.TestOnly
-import org.apache.commons.lang.StringEscapeUtils
+import org.apache.commons.lang3.StringEscapeUtils
 /**
  * Render pipeline timeline processes execution
  *
@@ -195,7 +195,7 @@ class TimelineObserver implements TraceObserverV2 {
         final indent = "    ";
 
         template << indent << indent << '{'
-        template << "\"label\": \"${StringEscapeUtils.escapeJavaScript(name)}\", "
+        template << "\"label\": \"${StringEscapeUtils.escapeEcmaScript(name)}\", "
         template << "\"cached\": ${record.cached}, "
         template << "\"index\": $index, "
         template << "\"times\": ["
@@ -204,7 +204,7 @@ class TimelineObserver implements TraceObserverV2 {
             template << "{\"starting_time\": $submit, \"ending_time\": $start}"
 
             if( start && realtime ) {
-                final label = StringEscapeUtils.escapeJavaScript(labelString(record))
+                final label = StringEscapeUtils.escapeEcmaScript(labelString(record))
                 final ending = start+realtime
                 template << ", {\"starting_time\": $start, \"ending_time\": $ending, \"label\": \"$label\"}"
 

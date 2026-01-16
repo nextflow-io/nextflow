@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: General question
+    url: https://community.seqera.io/nextflow
+    about: Ask for help with Nextflow language and usage
+  - name: Nextflow official website
+    url: https://nextflow.io/
+    about: Documentation and tutorials
+  - name: Nextflow training
+    url: https://training.nextflow.io/
+    about: Learn Nextflow with hands-on tutorials

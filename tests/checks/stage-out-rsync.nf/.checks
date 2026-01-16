@@ -1,0 +1,29 @@
+
+echo "Initial run"
+$NXF_RUN | tee stdout
+
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > test'` == 3 ]] || false
+
+grep 'cache/test/1.txt' stdout
+grep 'cache/test/2.txt' stdout
+grep 'cache/test/3.txt' stdout
+
+
+echo "Stored run"
+$NXF_RUN | tee stdout
+
+[[ `grep 'INFO' .nextflow.log | grep -c 'Stored process > test'` == 3 ]] || false
+
+grep 'cache/test/1.txt' stdout
+grep 'cache/test/2.txt' stdout
+grep 'cache/test/3.txt' stdout
+
+
+echo "Resumed stored run"
+$NXF_RUN -resume | tee stdout
+
+[[ `grep 'INFO' .nextflow.log | grep -c 'Stored process > test'` == 3 ]] || false
+
+grep 'cache/test/1.txt' stdout
+grep 'cache/test/2.txt' stdout
+grep 'cache/test/3.txt' stdout

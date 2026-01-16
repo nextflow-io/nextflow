@@ -47,6 +47,7 @@ class AwsBatchConfigTest extends Specification {
         !batch.s5cmdPath
         batch.schedulingPriority == 0
         !batch.terminateUnschedulableJobs
+        !batch.forceGlacierTransfer
     }
 
     def 'should create config with options' () {
@@ -152,5 +153,19 @@ class AwsBatchConfigTest extends Specification {
         [:]                                     | false
         [terminateUnschedulableJobs: false]     | false
         [terminateUnschedulableJobs: true]      | true
+    }
+
+    def 'should parse forceGlacierTransfer flag' () {
+        given:
+        def opts = new AwsBatchConfig(OPTS)
+
+        expect:
+        opts.forceGlacierTransfer == FORCE_GLACIER
+
+        where:
+        OPTS                                    | FORCE_GLACIER
+        [:]                                     | false
+        [forceGlacierTransfer: false]           | false
+        [forceGlacierTransfer: true]            | true
     }
 }

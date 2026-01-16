@@ -16,6 +16,8 @@
 
 package nextflow.cli
 
+import static nextflow.scm.MultiRevisionRepositoryStrategy.REPOS_SUBDIR
+
 import nextflow.plugin.Plugins
 import spock.lang.IgnoreIf
 import spock.lang.Requires
@@ -45,10 +47,11 @@ class CmdInfoTest extends Specification {
     def setupSpec() {
         tempDir = Files.createTempDirectory('test')
         AssetManager.root = tempDir.toFile()
+        String revision = null
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
         def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
         // download the project
-        manager.download()
+        manager.download(revision)
     }
 
     def cleanupSpec() {
@@ -67,10 +70,10 @@ class CmdInfoTest extends Specification {
         then:
         screen.contains(" project name: nextflow-io/hello")
         screen.contains(" repository  : https://github.com/nextflow-io/hello")
-        screen.contains(" local path  : $tempDir/nextflow-io/hello" )
+        screen.contains(" local path  : $tempDir/$REPOS_SUBDIR/nextflow-io/hello" )
         screen.contains(" main script : main.nf")
         screen.contains(" revisions   : ")
-        screen.contains(" * master (default)")
+        screen.contains(" > master (default)")
         !screen.contains("   HEAD")
     }
 
@@ -88,11 +91,12 @@ class CmdInfoTest extends Specification {
         then:
         json.projectName == "nextflow-io/hello"
         json.repository == "https://github.com/nextflow-io/hello"
-        json.localPath == "$tempDir/nextflow-io/hello"
+        json.localPath == "${tempDir}/${REPOS_SUBDIR}/nextflow-io/hello".toString()
         json.manifest.mainScript == 'main.nf'
         json.manifest.defaultBranch == null
-        json.revisions.current == 'master'
         json.revisions.master == 'master'
+        json.revisions.pulled.size() == 1
+        json.revisions.pulled.any { it == 'master' }
         json.revisions.branches.size()>1
         json.revisions.branches.any { it.name == 'master' }
         !json.revisions.branches.any { it.name == 'HEAD' }
@@ -115,11 +119,12 @@ class CmdInfoTest extends Specification {
         then:
         json.projectName == "nextflow-io/hello"
         json.repository == "https://github.com/nextflow-io/hello"
-        json.localPath == "$tempDir/nextflow-io/hello"
+        json.localPath == "${tempDir}/${REPOS_SUBDIR}/nextflow-io/hello"
         json.manifest.mainScript == 'main.nf'
         json.manifest.defaultBranch == null
-        json.revisions.current == 'master'
         json.revisions.master == 'master'
+        json.revisions.pulled.size() == 1
+        json.revisions.pulled.any { it == 'master' }
         json.revisions.branches.size()>1
         json.revisions.branches.any { it.name == 'master' }
         !json.revisions.branches.any { it.name == 'HEAD' }

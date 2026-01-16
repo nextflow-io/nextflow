@@ -77,6 +77,13 @@ class GitlabRepositoryProviderTest extends Specification {
         def result = repo.readText('main.nf')
         then:
         result.trim().startsWith('#!/usr/bin/env nextflow')
+
+        when:
+        repo = new GitlabRepositoryProvider('pditommaso/hello', config)
+        repo.setRevision('test/branch+with&special-chars')
+        result = repo.readText('main.nf')
+        then:
+        result.trim().startsWith('#!/usr/bin/env nextflow')
     }
 
     @Requires({System.getenv('NXF_GITLAB_ACCESS_TOKEN')})
@@ -133,6 +140,11 @@ class GitlabRepositoryProviderTest extends Specification {
         new GitlabRepositoryProvider('pditommaso/hello', obj)
                 .setRevision('the-commit-id')
                 .getContentUrl('main.nf') == 'https://gitlab.com/api/v4/projects/pditommaso%2Fhello/repository/files/main.nf?ref=the-commit-id'
+
+        and:
+        new GitlabRepositoryProvider('pditommaso/hello', obj)
+                .setRevision('test/branch+with&strangecharacters')
+                .getContentUrl('main.nf') == 'https://gitlab.com/api/v4/projects/pditommaso%2Fhello/repository/files/main.nf?ref=test%2Fbranch%2Bwith%26strangecharacters'
 
         and:
         new GitlabRepositoryProvider('pditommaso/hello', obj)

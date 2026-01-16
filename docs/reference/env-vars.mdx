@@ -1,3 +1,5 @@
+import { AddedInVersion, ChangedInVersion, DeprecatedInVersion } from '@site/src/components/VersionedAdmonitions';
+
 # Environment variables
 
 The following environment variables control the configuration of the Nextflow runtime and the underlying Java virtual machine.
@@ -54,7 +56,7 @@ Directory where Conda environments are stored. When using a computing cluster it
 
 <AddedInVersion version="22.08.0-edge" />
 
-Enable the use of Conda recipes defined by using the [process-conda][process-conda] directive. (default: `false`).
+Enable the use of Conda recipes defined by using the [conda][process-conda] directive. (default: `false`).
 
 ##### `NXF_CONTAINER_ENTRYPOINT_OVERRIDE`
 
@@ -274,7 +276,7 @@ Directory where Spack environments are stored. When using a computing cluster it
 
 <AddedInVersion version="23.02.0-edge" />
 
-Enable the use of Spack recipes defined by using the [process-spack][process-spack] directive. (default: `false`).
+Enable the use of Spack recipes defined by using the [spack][process-spack] directive. (default: `false`).
 
 ##### `NXF_SYNTAX_PARSER`
 
@@ -302,7 +304,7 @@ Directory where working files are stored (usually your *scratch* directory)
 
 <AddedInVersion version="23.05.0-edge" />
 
-Defines the minimum size of the `.command.run` staging script for it to be written to a separate `.command.stage` file (default: `'1 MB'`).
+Enables writing large staging scripts to a separate `.command.stage` file. The value defines the minimum size of the `.command.run` staging script for it to be written to the separate file (default when enabled: `'1 MB'`).
 
 This setting is useful for executors that impose a size limit on job scripts.
 

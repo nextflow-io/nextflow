@@ -76,8 +76,9 @@ class CmdInfo extends CmdBase {
 
         Plugins.init()
         final manager = new AssetManager(args[0])
-        if( !manager.isLocal() )
+        if( manager.isNotInitialized() ) {
             throw new AbortOperationException("Unknown project `${args[0]}`")
+        }
 
         if( !format || format == 'text' ) {
             printText(manager,level)
@@ -101,7 +102,7 @@ class CmdInfo extends CmdBase {
 
         out.println " project name: ${manager.project}"
         out.println " repository  : ${manager.repositoryUrl}"
-        out.println " local path  : ${manager.localPath}"
+        out.println " local path  : ${manager.projectPath}"
         out.println " main script : ${manager.mainScriptName}"
         if( manager.homePage && manager.homePage != manager.repositoryUrl )
             out.println " home page   : ${manager.homePage}"
@@ -138,7 +139,7 @@ class CmdInfo extends CmdBase {
         def result = [:]
         result.projectName = manager.project
         result.repository = manager.repositoryUrl
-        result.localPath = manager.localPath?.toString()
+        result.localPath = manager.projectPath?.toString()
         result.manifest = manager.manifest.toMap()
         result.revisions = manager.getBranchesAndTags(checkForUpdates)
         return result

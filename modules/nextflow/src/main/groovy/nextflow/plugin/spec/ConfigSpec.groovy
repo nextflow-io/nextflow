@@ -44,14 +44,15 @@ class ConfigSpec {
 
     private static Map<String,?> fromOption(SpecNode.Option node, String name) {
         final description = node.description().stripIndent(true).trim()
-        final type = fromType(new ClassNode(node.type()))
+        final types = node.types().collect { t -> fromType(new ClassNode(t)) }
 
         return [
             type: 'ConfigOption',
             spec: [
                 name: name,
                 description: description,
-                type: type
+                type: types.head(),
+                additionalTypes: types.tail()
             ]
         ]
     }

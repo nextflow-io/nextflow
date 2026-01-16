@@ -61,6 +61,18 @@ class ConfigResolveTest extends Specification {
         errors[0].getStartLine() == 1
         errors[0].getStartColumn() == 36
         errors[0].getOriginalMessage() == '`process` is not defined'
+
+        when:
+        errors = check(
+            '''\
+            process.clusterOptions = "--cpus $PROCESS_CPUS"
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 34
+        errors[0].getOriginalMessage() == "`PROCESS_CPUS` is not defined (hint: use `env('...')` to access environment variable)"
     }
 
     def 'should report an error for an invalid config include' () {

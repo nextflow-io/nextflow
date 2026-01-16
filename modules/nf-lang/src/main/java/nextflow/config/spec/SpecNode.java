@@ -19,6 +19,7 @@ import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -58,9 +59,9 @@ public sealed interface SpecNode {
             var simpleName = names[names.length - 1];
             var desc = annotatedDescription(field, "");
             if( fqName.startsWith("nextflow.enable.") )
-                enableOpts.put(simpleName, new Option(desc, optionType(field)));
+                enableOpts.put(simpleName, new Option(desc, optionTypes(field)));
             else if( fqName.startsWith("nextflow.preview.") )
-                previewOpts.put(simpleName, new Option(desc, optionType(field)));
+                previewOpts.put(simpleName, new Option(desc, optionTypes(field)));
             else
                 throw new IllegalArgumentException();
         }
@@ -73,6 +74,15 @@ public sealed interface SpecNode {
         );
     }
 
+    /**
+     * Initialize the `process` config scope from the set of
+     * process directives.
+     *
+     * Directives with multiple method overloads are treated as
+     * options with multiple supported types. Method overloads with
+     * multiple parameters are ignored because they are not supported
+     * in the configuration.
+     */
     private static SpecNode processScope() {
         var description = """
             The `process` scope allows you to specify default directives for processes in your pipeline.
@@ -81,8 +91,15 @@ public sealed interface SpecNode {
         """;
         var children = new HashMap<String, SpecNode>();
         for( var method : ProcessDsl.DirectiveDsl.class.getDeclaredMethods() ) {
-            var desc = annotatedDescription(method, "");
-            children.put(method.getName(), new Option(desc, optionType(method)));
+            if( method.getParameters().length != 1 )
+                continue;
+            if( !children.containsKey(method.getName()) ) {
+                var desc = annotatedDescription(method, "");
+                children.put(method.getName(), new Option(desc, new ArrayList<>()));
+            }
+            var option = (Option) children.get(method.getName());
+            var paramType = method.getParameterTypes()[0];
+            option.types.add(paramType);
         }
         return new Scope(description, children);
     }
@@ -92,21 +109,17 @@ public sealed interface SpecNode {
         return annot != null ? annot.value() : defaultValue;
     }
 
-    private static Class optionType(AnnotatedElement element) {
-        if( element instanceof Field field ) {
-            return field.getType();
+    private static List<Class> optionTypes(Field field) {
+        var result = new ArrayList<Class>();
+        // use the field type
+        result.add(field.getType());
+        // append types from ConfigOption annotation if specified
+        var annot = field.getAnnotation(ConfigOption.class);
+        if( annot != null ) {
+            for( var type : annot.types() )
+                result.add(type);
         }
-        if( element instanceof Method method ) {
-            // use the return type if config option is not a directive
-            var returnType = method.getReturnType();
-            if( returnType != void.class )
-                return returnType;
-            // other use the type of the last parameter
-            var paramTypes = method.getParameterTypes();
-            if( paramTypes.length > 0 )
-                return paramTypes[paramTypes.length - 1];
-        }
-        return null;
+        return result;
     }
 
     /**
@@ -123,7 +136,7 @@ public sealed interface SpecNode {
      */
     public static record Option(
         String description,
-        Class type
+        List<Class> types
     ) implements SpecNode {}
 
     /**
@@ -207,7 +220,7 @@ public sealed interface SpecNode {
                     if( DslScope.class.isAssignableFrom(type) )
                         children.put(name, new DslOption(desc, type));
                     else
-                        children.put(name, new Option(desc, optionType(field)));
+                        children.put(name, new Option(desc, optionTypes(field)));
                 }
                 // fields of type ConfigScope are nested config scopes
                 else if( ConfigScope.class.isAssignableFrom(type) ) {

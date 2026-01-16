@@ -232,7 +232,7 @@ public class ScriptAstBuilder {
         if( hasDeclarations ) {
             for( var stmt : statements ) {
                 if( !(stmt instanceof InvalidDeclaration) )
-                    collectSyntaxError(new SyntaxException("Statements cannot be mixed with script declarations -- move statements into a process or workflow", stmt));
+                    collectSyntaxError(new SyntaxException("Statements cannot be mixed with script declarations -- move statements into a process, workflow, or function", stmt));
             }
         }
 

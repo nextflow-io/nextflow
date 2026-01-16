@@ -1,5 +1,14 @@
 nf-google changelog
 ===================
+1.25.0 - 19 Dec 2025
+- Add spot interruption tracking to trace records (#6606) [eecd81671]
+- Refactor Google Batch getExitCode to imperative style (#6649) [addd59e9f]
+- Add default maxSpotAttempts for fusion snapshots in Google Batch (#6652) [458ef97a9]
+
+1.24.0 - 28 Nov 2025
+- Add stageFileEnabled flag to control .command.stage file creation (#6618) [2d117cb59]
+- Add Google Batch LogsPolicy PATH option for logging to GCS (#6431) [5b61afe01]
+
 1.23.3 - 22 Oct 2025
 - Prioritize Google Batch API exit codes with fallback to .exitcode file (#6498) [6ac2efcba]
 

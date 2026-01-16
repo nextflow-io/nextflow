@@ -17,6 +17,7 @@
 package nextflow.scm
 
 import java.net.http.HttpResponse
+import java.nio.charset.StandardCharsets
 import java.util.regex.Pattern
 
 import groovy.transform.CompileDynamic
@@ -97,7 +98,7 @@ final class AzureRepositoryProvider extends RepositoryProvider {
                 'path':path
         ] as Map<String,Object>
         if( revision ) {
-            queryParams['versionDescriptor.version']=revision
+            queryParams['versionDescriptor.version']=URLEncoder.encode(revision, StandardCharsets.UTF_8)
 
             if( COMMIT_REGEX.matcher(revision).matches() )
                 queryParams['versionDescriptor.versionType'] = 'commit'
@@ -203,7 +204,7 @@ final class AzureRepositoryProvider extends RepositoryProvider {
         ] as Map<String,Object>
         
         if( revision ) {
-            queryParams['versionDescriptor.version'] = revision
+            queryParams['versionDescriptor.version'] = URLEncoder.encode(revision, StandardCharsets.UTF_8)
             if( COMMIT_REGEX.matcher(revision).matches() )
                 queryParams['versionDescriptor.versionType'] = 'commit'
         }
@@ -236,7 +237,7 @@ final class AzureRepositoryProvider extends RepositoryProvider {
         }
         
         if (revision) {
-            queryParams['versionDescriptor.version'] = revision
+            queryParams['versionDescriptor.version'] = URLEncoder.encode(revision, StandardCharsets.UTF_8)
             if (COMMIT_REGEX.matcher(revision).matches()) {
                 queryParams['versionDescriptor.versionType'] = 'commit'
             }

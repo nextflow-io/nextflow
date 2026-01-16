@@ -10,6 +10,7 @@ import nextflow.Session
 import nextflow.SysEnv
 import nextflow.trace.event.FilePublishEvent
 import nextflow.trace.event.WorkflowOutputEvent
+import nextflow.trace.event.WorkflowPublishEvent
 import spock.lang.Specification
 /**
  *
@@ -88,6 +89,8 @@ class OutputDslTest extends Specification {
         and:
         1 * session.notifyFilePublish(new FilePublishEvent(file1, outputDir.resolve('foo/file1.txt'), null))
         1 * session.notifyFilePublish(new FilePublishEvent(file2, outputDir.resolve('barbar/file2.txt'), ['foo', 'bar']))
+        1 * session.notifyWorkflowPublish(new WorkflowPublishEvent('foo', outputDir.resolve('foo/file1.txt')))
+        1 * session.notifyWorkflowPublish(new WorkflowPublishEvent('bar', outputDir.resolve('barbar/file2.txt')))
         1 * session.notifyWorkflowOutput(new WorkflowOutputEvent('foo', [outputDir.resolve('foo/file1.txt')], null))
         1 * session.notifyWorkflowOutput(new WorkflowOutputEvent('bar', [outputDir.resolve('barbar/file2.txt')], outputDir.resolve('index.csv')))
         1 * session.notifyFilePublish(new FilePublishEvent(null, outputDir.resolve('index.csv'), ['foo', 'bar']))
@@ -128,6 +131,7 @@ class OutputDslTest extends Specification {
         outputDir.resolve('file1.txt').text == 'Hello'
         and:
         1 * session.notifyFilePublish(new FilePublishEvent(file1, outputDir.resolve('file1.txt'), null))
+        1 * session.notifyWorkflowPublish(new WorkflowPublishEvent('foo', outputDir.resolve('file1.txt')))
         1 * session.notifyWorkflowOutput(new WorkflowOutputEvent('foo', [outputDir.resolve('file1.txt')], null))
 
         cleanup:
@@ -166,6 +170,7 @@ class OutputDslTest extends Specification {
         await(dsl)
         then:
         0 * session.notifyFilePublish(_)
+        1 * session.notifyWorkflowPublish(new WorkflowPublishEvent('foo', record))
         1 * session.notifyWorkflowOutput(new WorkflowOutputEvent('foo', [ record ], null))
 
         cleanup:

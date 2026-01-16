@@ -103,7 +103,9 @@ class TraceRecord implements Serializable {
             vol_ctxt: 'num',        // -- /proc/$pid/status field 'voluntary_ctxt_switches'
             inv_ctxt: 'num',        // -- /proc/$pid/status field 'nonvoluntary_ctxt_switches'
             hostname: 'str',
-            cpu_model:  'str'
+            cpu_model:  'str',
+            accelerator: 'num',
+            accelerator_type: 'str'
     ]
 
     static public Map<String,Closure<String>> FORMATTER = [
@@ -121,6 +123,7 @@ class TraceRecord implements Serializable {
     transient private String executorName
     transient private CloudMachineInfo machineInfo
     transient private ContainerMeta containerMeta
+    transient private Integer numSpotInterruptions
 
     /**
      * Convert the given value to a string
@@ -609,6 +612,14 @@ class TraceRecord implements Serializable {
 
     void setMachineInfo(CloudMachineInfo value) {
         this.machineInfo = value
+    }
+
+    Integer getNumSpotInterruptions() {
+        return numSpotInterruptions
+    }
+
+    void setNumSpotInterruptions(Integer numSpotInterruptions) {
+        this.numSpotInterruptions = numSpotInterruptions
     }
 
     ContainerMeta getContainerMeta() {

@@ -142,6 +142,12 @@ class WaveClient {
     /* only for testing */
     protected WaveClient() { }
 
+    /**
+     * Creates the main HTTP client for Wave/Tower API communication.
+     * This client includes Bearer token authentication for secure API calls.
+     *
+     * @return An {@link HxClient} configured with authentication tokens
+     */
     protected HxClient newHttpClient() {
         final refreshUrl = tower.refreshToken ? "${tower.endpoint}/oauth/access_token" : null
         return HxClient.newBuilder()
@@ -154,6 +160,11 @@ class WaveClient {
                 .build()
     }
 
+    /**
+     * Creates the underlying Java HTTP client with common configuration.
+     *
+     * @return A configured {@link HttpClient} instance
+     */
     protected HttpClient newHttpClient0() {
         final builder = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)
@@ -164,6 +175,24 @@ class WaveClient {
             builder.executor(Executors.newVirtualThreadPerTaskExecutor())
         // build and return the new client
         return builder.build()
+    }
+
+    /**
+     * Creates an HTTP client without authentication for fetching external resources.
+     * <p>
+     * This client is used for requests to external URLs (e.g., public S3 buckets)
+     * that do not require or support Bearer token authentication. Services like
+     * AWS S3 reject requests with unsupported Authorization headers.
+     *
+     * @return An {@link HxClient} without authentication configuration
+     * @see #newHttpClient() for authenticated Wave/Tower API calls
+     */
+    @Memoized
+    protected HxClient plainHttpClient() {
+        return HxClient.newBuilder()
+                .httpClient(newHttpClient0())
+                .retryConfig(config.retryOpts())
+                .build()
     }
 
     WaveConfig config() { return config }
@@ -226,7 +255,8 @@ class WaveClient {
                 mirror: config.mirrorMode(),
                 scanMode: config.scanMode(),
                 scanLevels: config.scanAllowedLevels(),
-                buildCompression: config.buildCompression()
+                buildCompression: config.buildCompression(),
+                buildTemplate: config.buildTemplate()
         )
     }
 
@@ -254,7 +284,8 @@ class WaveClient {
                 mirror: config.mirrorMode(),
                 scanMode: config.scanMode(),
                 scanLevels: config.scanAllowedLevels(),
-                buildCompression: config.buildCompression()
+                buildCompression: config.buildCompression(),
+                buildTemplate: config.buildTemplate()
         )
         return sendRequest(request)
     }
@@ -400,7 +431,7 @@ class WaveClient {
                 .GET()
                 .build()
 
-        final resp = httpClient.sendAsString(req)
+        final resp = plainHttpClient().sendAsString(req)
         final code = resp.statusCode()
         final body = resp.body()
         if( code>=200 && code<400 ) {
