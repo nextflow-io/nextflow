@@ -92,6 +92,11 @@ To migrate a script, open the Command Palette, search for **Convert script to st
 
 To migrate an entire pipeline, use the **Convert pipeline to static types** command.
 
+:::{versionadded} 26.04.0
+:::
+
+The migration command converts process inputs and outputs to records where applicable. See {ref}`migrating-records` for more information. To migrate code to static types without converting to records, set the language version to 25.10 before running the migration command.
+
 ## Troubleshooting
 
 In the event of a language server error, you can use the **Nextflow: Restart language server** command in the command palette to restart the language server.

@@ -25,6 +25,7 @@ import groovy.util.logging.Slf4j
 import nextflow.NF
 import nextflow.Session
 import nextflow.exception.AbortOperationException
+import nextflow.script.types.Record
 /**
  * Defines the script execution context. By default provided the following variables
  * <li>{@code __$session}: the current execution session
@@ -211,7 +212,7 @@ class ScriptBinding extends WorkflowBinding {
      * Implements immutable params map
      */
     @CompileStatic
-    static class ParamsMap implements Map<String,Object> {
+    static class ParamsMap implements Record, Map<String,Object> {
 
         private List<String> scriptAssignment = []
 

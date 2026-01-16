@@ -23,11 +23,13 @@ import java.util.List;
 import nextflow.script.ast.ASTNodeMarker;
 import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.ProcessNodeV2;
+import nextflow.script.ast.RecordNode;
 import nextflow.script.ast.TupleParameter;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.CodeVisitorSupport;
 import org.codehaus.groovy.ast.Parameter;
+import org.codehaus.groovy.ast.Variable;
 import org.codehaus.groovy.ast.VariableScope;
 import org.codehaus.groovy.ast.expr.BinaryExpression;
 import org.codehaus.groovy.ast.expr.ClosureExpression;
@@ -122,11 +124,33 @@ public class ProcessToGroovyVisitorV2 {
 
     private void visitProcessInputs(Parameter[] inputs, BlockStatement stagers) {
         for( var param : asFlatParams(inputs) ) {
-            if( isPathType(param.getType()) ) {
-                var ve = varX(param.getName());
-                var stager = stmt(callThisX("stageAs", args(closureX(stmt(ve)))));
-                stagers.addStatement(stager);
-            }
+            visitProcessInputType(param, varX(param.getName()), stagers);
+        }
+    }
+
+    /**
+     * Add implicit staging directives that are inferred from
+     * the process input type:
+     *
+     * - Inputs with type Path or a Path collection (e.g. Set<Path>)
+     *   are staged as input files.
+     *
+     * - Inputs with a record type are recursively inspected for nested
+     *   file inputs based on the record type definition.
+     *
+     * @param param
+     * @param target
+     * @param stagers
+     */
+    private void visitProcessInputType(Variable param, Expression target, BlockStatement stagers) {
+        var cn = param.getType();
+        if( isPathType(cn) ) {
+            var stager = stmt(callThisX("stageAs", args(closureX(stmt(target)))));
+            stagers.addStatement(stager);
+        }
+        else if( isRecordType(cn) ) {
+            for( var fn : cn.getFields() )
+                visitProcessInputType(fn, propX(target, fn.getName()), stagers);
         }
     }
 
@@ -143,6 +167,10 @@ public class ProcessToGroovyVisitorV2 {
             return Path.class.isAssignableFrom(genericType);
         }
         return false;
+    }
+
+    private static boolean isRecordType(ClassNode cn) {
+        return cn.redirect() instanceof RecordNode;
     }
 
     private static class TypeNode {

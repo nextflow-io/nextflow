@@ -43,6 +43,8 @@ public interface ScriptVisitor extends GroovyCodeVisitor {
 
     void visitFunction(FunctionNode node);
 
+    void visitRecord(RecordNode node);
+
     void visitEnum(ClassNode node);
 
     void visitOutputs(OutputBlockNode node);

@@ -34,6 +34,7 @@ A Nextflow script may contain the following top-level declarations:
 - Process definitions
 - Function definitions
 - Enum types
+- Record types
 - Output block
 
 Script declarations are in turn composed of statements and expressions.
@@ -107,6 +108,8 @@ The following definitions can be included:
 - Functions
 - Processes
 - Named workflows
+- *New in 26.04:* Enum types
+- *New in 26.04:* Record types
 
 ### Params block
 
@@ -360,9 +363,17 @@ enum Day {
 
 Enum values in the above example can be accessed as `Day.MONDAY`, `Day.TUESDAY`, and so on.
 
-:::{note}
-Enum types cannot be included across modules at this time.
-:::
+### Record type
+
+A record type declaration consists of a name and a body. The body consists of one or more fields, where each field has a name and a type:
+
+```nextflow
+record FastqPair {
+    id: String
+    fastq_1: Path
+    fastq_2: Path
+}
+```
 
 ### Output block
 

@@ -110,7 +110,7 @@ public class ScriptNode extends ModuleNode {
 
     public List<ClassNode> getTypes() {
         return getClasses().stream()
-            .filter(cn -> cn.isEnum())
+            .filter(cn -> cn instanceof RecordNode || cn.isEnum())
             .toList();
     }
 

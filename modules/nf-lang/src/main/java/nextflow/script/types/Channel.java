@@ -162,6 +162,7 @@ public interface Channel<E> {
         [Read more](https://nextflow.io/docs/latest/reference/operator.html#flatmap)
     """)
     <R> Channel<R> flatMap(Function<E,Iterable<R>> transform);
+    <R> Channel<R> flatMap();
 
     @Operator
     @Description("""
@@ -261,6 +262,7 @@ public interface Channel<E> {
         [Read more](https://nextflow.io/docs/latest/reference/operator.html#mix)
     """)
     Channel<E> mix(Channel<E>... others);
+    Channel<E> mix(Value<E>... others);
 
     @Operator
     @Description("""
