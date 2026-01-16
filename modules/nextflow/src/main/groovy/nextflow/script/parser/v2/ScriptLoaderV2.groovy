@@ -95,6 +95,7 @@ class ScriptLoaderV2 implements ScriptLoader {
     ScriptLoaderV2 runScript() {
         assert session
         assert mainScript
+        // capture the last statement of the snippet or entry workflow (used for testing)
         this.result = mainScript.run()
         return this
     }

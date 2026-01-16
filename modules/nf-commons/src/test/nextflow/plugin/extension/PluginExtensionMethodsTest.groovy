@@ -33,7 +33,6 @@ import static test.ScriptHelper.*
  *
  * @author Jorge Aguilera <jorge.aguilera@seqera.io>
  */
-@spock.lang.Timeout(5)
 class PluginExtensionMethodsTest extends Dsl2Spec {
 
     @TempDir

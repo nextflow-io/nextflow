@@ -195,15 +195,19 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
     }
 
     private Object run0(Object[] args) {
+        // add inputs to workflow binding
         collectInputs(binding, args)
+        // execute the workflow
         final closure = body.closure
         closure.setDelegate(binding)
         closure.setResolveStrategy(Closure.DELEGATE_FIRST)
         final result = closure.call()
         if( name == null ) {
+            // return the last statement if entry workflow (used for testing)
             return result
         }
         else {
+            // otherwise collect the outputs from the workflow binding
             output = collectOutputs(declaredOutputs)
             return output
         }

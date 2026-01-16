@@ -45,10 +45,26 @@ import nextflow.script.ScriptType
  */
 class ScriptHelper {
 
+    /**
+     * Load a config from source text.
+     *
+     * @param text
+     */
     static Map loadConfig(String text) {
         return ConfigParserFactory.create().parse(text)
     }
 
+    /**
+     * Load a script from source text.
+     *
+     * This function compiles and executes the script without
+     * running the pipeline. The entry workflow is executed
+     * (i.e. to construct the workflow DAG) unless opts.module
+     * is enabled.
+     *
+     * @param opts
+     * @param text
+     */
     static BaseScript loadScript(Map opts = [:], String text) {
         def session = opts.config ? new MockSession(opts.config as Map) : new MockSession()
         session.setBinding(new ScriptBinding())
@@ -65,20 +81,26 @@ class ScriptHelper {
         return loader.getScript()
     }
 
+    /**
+     * Load a script from source text and return the TaskProcessor
+     * for the last parsed process.
+     *
+     * The script should declare a single process.
+     *
+     * @param scriptText
+     * @param binding
+     */
     static TaskProcessor parseAndReturnProcess(String scriptText, Map binding = null) {
         def session = new TestSession()
         session.setBinding(binding ? new ScriptBinding(binding) : new ScriptBinding())
 
         session.init(null)
-        // session.start()
 
         ScriptLoaderFactory.create(session)
             .parse(scriptText)
             .runScript()
 
         session.fireDataflowNetwork()
-        // session.await()
-        // session.destroy()
 
         return TaskProcessor.currentProcessor()
     }
@@ -122,6 +144,17 @@ class ScriptHelper {
         }
     }
 
+    /**
+     * Execute a script from source text, with an optional config map.
+     *
+     * This function compiles and executes the script, launches a
+     * pipeline run, and waits for the run to finish. It returns the
+     * last statement of the entry workflow, which can be used to pass
+     * output channels to a test.
+     *
+     * @param text
+     * @param config
+     */
     static Object runScript(String text, Map config = null) {
         def session = config ? new MockSession(config) : new MockSession()
         session.setBinding(new ScriptBinding())
@@ -142,6 +175,17 @@ class ScriptHelper {
         return result
     }
 
+    /**
+     * Execute a script from a source file, with an optional config map.
+     *
+     * This function compiles and executes the script, launches a
+     * pipeline run, and waits for the run to finish. It returns the
+     * last statement of the entry workflow, which can be used to pass
+     * output channels to a test.
+     *
+     * @param opts
+     * @param path
+     */
     static Object runScript(Map opts = [:], Path path) {
         def session = opts.config ? new MockSession(opts.config) : new MockSession()
         session.setBinding(new ScriptBinding())
