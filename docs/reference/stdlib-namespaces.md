@@ -43,7 +43,7 @@ The global namespace contains globally available constants and functions.
 : Create a branch criteria to use with the {ref}`operator-branch` operator.
 
 `env( name: String ) -> String`
-: :::{versionadded} 24.11.0-edge
+: :::{versionadded} 25.04.0
   :::
 : Get the value of the environment variable with the specified name in the Nextflow launch environment.
 
@@ -108,8 +108,11 @@ The global namespace contains globally available constants and functions.
 `sleep( milliseconds: long )`
 : Sleep for the given number of milliseconds.
 
+`record( [options] ) -> Record`
+: Create a record from the given named arguments.
+
 `tuple( args... ) -> Tuple`
-: Create a tuple object from the given arguments.
+: Create a tuple from the given arguments.
 
 (stdlib-namespaces-channel)=
 

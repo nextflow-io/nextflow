@@ -51,6 +51,18 @@ public class Types {
     );
 
     /**
+     * Determine whether a type is a functional interface.
+     *
+     * @param type
+     */
+    public static boolean isFunctionalInterface(ClassNode type) {
+        return type.getAnnotations().stream()
+            .filter(an -> an.getClassNode().getName().equals(FunctionalInterface.class.getName()))
+            .findFirst()
+            .isPresent();
+    }
+
+    /**
      * Determine whether a class is a namespace.
      *
      * @param cn
@@ -71,7 +83,7 @@ public class Types {
         if( type.isArray() )
             return getName(type.getComponentType());
 
-        if( ClassHelper.isFunctionalInterface(type) )
+        if( isFunctionalInterface(type) )
             return closureName(type);
 
         return typeName(type);

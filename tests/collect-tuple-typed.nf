@@ -38,9 +38,9 @@ process merge {
   script:
   """
   echo barcode: $barcode
-  echo seq_ids: $seq_ids
-  echo bam    : $bam
-  echo bai    : $bai
+  echo seq_ids: ${seq_ids.join(' ')}
+  echo bam    : ${bam.join(' ')}
+  echo bai    : ${bai.join(' ')}
   """
 }
 

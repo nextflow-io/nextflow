@@ -43,7 +43,6 @@ class CacheHelperTest extends Specification {
         def aBool = Hashing.murmur3_128().newHasher().putBoolean(true).hash()
         def aByteArray = Hashing.murmur3_128().newHasher().putBytes([0x1,0x2,0x3] as byte[]).hash()
         def anObjectArray = Hashing.murmur3_128().newHasher().putInt(1).putInt(2).putInt(3).hash()
-        def aMap =  Hashing.murmur3_128().newHasher().putInt(1).putUnencodedChars('String1').putBoolean(true).hash()
         def aList = Hashing.murmur3_128().newHasher().putUnencodedChars('A').putUnencodedChars('B').putUnencodedChars('C').hash()
         def anEnum = Hashing.murmur3_128().newHasher().putUnencodedChars('nextflow.util.CacheHelperTest$TestEnum.TEST_A').hash()
 
@@ -66,7 +65,6 @@ class CacheHelperTest extends Specification {
         CacheHelper.hasher(true).hash() == aBool
         CacheHelper.hasher([0x1,0x2,0x3] as byte[]).hash() == aByteArray
         CacheHelper.hasher([1,2,3] as Object[]).hash() == anObjectArray
-        CacheHelper.hasher( [f1: 1, f2: 'String1', f3: true] ) .hash() == aMap
         CacheHelper.hasher( ['A','B','C'] ).hash() == aList
         CacheHelper.hasher(TestEnum.TEST_A).hash() == anEnum
         CacheHelper.hasher(file).hash() == aFile

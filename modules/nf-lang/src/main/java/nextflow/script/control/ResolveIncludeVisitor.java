@@ -27,6 +27,8 @@ import nextflow.script.ast.IncludeNode;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
 import org.codehaus.groovy.ast.ASTNode;
+import org.codehaus.groovy.ast.AnnotatedNode;
+import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.MethodNode;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage;
@@ -102,7 +104,7 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
         for( var entry : node.entries ) {
             var includedName = entry.name;
             var includedNode = definitions.stream()
-                .filter(defNode -> includedName.equals(defNode.getName()))
+                .filter(defNode -> includedName.equals(definitionName(defNode)))
                 .findFirst();
             if( !includedNode.isPresent() ) {
                 addError("Included name '" + includedName + "' is not defined in module '" + includeUri.getPath() + "'", node);
@@ -140,13 +142,21 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
         return false;
     }
 
-    private List<MethodNode> getDefinitions(URI uri) {
+    private List<AnnotatedNode> getDefinitions(URI uri) {
         var scriptNode = (ScriptNode) compiler.getSource(uri).getAST();
-        var result = new ArrayList<MethodNode>();
+        var result = new ArrayList<AnnotatedNode>();
         result.addAll(scriptNode.getWorkflows());
         result.addAll(scriptNode.getProcesses());
         result.addAll(scriptNode.getFunctions());
+        result.addAll(scriptNode.getTypes());
         return result;
+    }
+
+    private static String definitionName(AnnotatedNode node) {
+        return
+            node instanceof ClassNode cn ? cn.getName() :
+            node instanceof MethodNode mn ? mn.getName() :
+            null;
     }
 
     @Override

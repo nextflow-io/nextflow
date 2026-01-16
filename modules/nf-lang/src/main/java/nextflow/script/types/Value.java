@@ -33,6 +33,7 @@ public interface Value<V> {
         Transforms the dataflow value into a collection with the given closure and emits the resulting values in a dataflow channel.
     """)
     <R> Channel<R> flatMap(Function<V,Iterable<R>> transform);
+    <R> Channel<R> flatMap();
 
     @Operator
     @Description("""

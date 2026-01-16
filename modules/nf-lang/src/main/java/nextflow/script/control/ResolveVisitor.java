@@ -69,6 +69,7 @@ public class ResolveVisitor extends ClassCodeExpressionTransformer {
         ClassHelper.LIST_TYPE,
         ClassHelper.MAP_TYPE,
         ClassHelper.makeCached(java.nio.file.Path.class),
+        ClassHelper.makeCached(nextflow.script.types.Record.class),
         ClassHelper.SET_TYPE,
         ClassHelper.STRING_TYPE,
         ClassHelper.makeCached(nextflow.script.types.Tuple.class)

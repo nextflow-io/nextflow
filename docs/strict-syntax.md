@@ -50,13 +50,28 @@ def json = new groovy.json.JsonSlurper().parseText(json_file.text)
 
 Some users use classes in Nextflow to define helper functions or custom types. Helper functions should be defined as standalone functions in Nextflow. Custom types should be moved to the `lib` directory.
 
-:::{note}
-Enums, a special type of class, are supported, but they cannot be included across modules at this time.
+You can use an enum type to model a choice between a fixed set of categories:
+
+```nextflow
+enum Color {
+    RED,
+    GREEN,
+    BLUE
+}
+```
+
+:::{versionadded} 26.04.0
 :::
 
-:::{note}
-Record types will be addressed in a future version of the Nextflow language specification.
-:::
+You can use a record type to model a composition of multiple values:
+
+```nextflow
+record FastqPair {
+    id: String
+    fastq_1: Path
+    fastq_2: Path
+}
+```
 
 ### Mixing script declarations and statements
 
@@ -230,13 +245,14 @@ In the strict syntax, use `System.getenv()` instead:
 println "PWD = ${System.getenv('PWD')}"
 ```
 
-:::{versionadded} 24.04.0
-The `env()` function should be used instead of `System.getenv()`:
+:::{versionadded} 25.04.0
+:::
+
+Use the `env()` function instead of `System.getenv()`:
 
 ```nextflow
 println "PWD = ${env('PWD')}"
 ```
-:::
 
 ## Restricted syntax
 
