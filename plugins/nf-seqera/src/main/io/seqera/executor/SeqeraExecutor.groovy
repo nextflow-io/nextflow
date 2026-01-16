@@ -50,6 +50,8 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
 
     private String sessionId
 
+    private SeqeraBatchSubmitter batchSubmitter
+
     @Override
     protected void register() {
         createClient()
@@ -58,6 +60,10 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
 
     @Override
     void shutdown() {
+        // Flush any pending batch jobs before deleting session
+        if (batchSubmitter) {
+            batchSubmitter.shutdown()
+        }
         deleteSession()
     }
 
@@ -81,6 +87,9 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
         final response = client.createSession(seqeraConfig.region)
         this.sessionId = response.getSessionId()
         log.debug "[SEQERA] Session created id: ${sessionId}"
+        // Initialize and start batch submitter
+        this.batchSubmitter = new SeqeraBatchSubmitter(client, seqeraConfig.batchFlushInterval)
+        this.batchSubmitter.start()
     }
 
     protected void deleteSession() {
@@ -123,5 +132,9 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
 
     String getSessionId() {
         return sessionId
+    }
+
+    SeqeraBatchSubmitter getBatchSubmitter() {
+        return batchSubmitter
     }
 }

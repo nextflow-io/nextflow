@@ -18,6 +18,7 @@
 package io.seqera.config
 
 import groovy.transform.CompileStatic
+import nextflow.util.Duration
 
 /**
  *
@@ -34,6 +35,8 @@ class SeqeraConfig {
 
     private String keyPairName
 
+    private Duration batchFlushInterval
+
     SeqeraConfig(Map opts) {
         this.retryOpts = new RetryOpts(opts.retryPolicy as Map ?: Map.of())
         this.endpoint = opts.endpoint as String
@@ -45,6 +48,11 @@ class SeqeraConfig {
             region = "eu-central-1"
 
         this.keyPairName = opts.keyPairName as String
+
+        // Batch submission configuration
+        this.batchFlushInterval = opts.batchFlushInterval
+            ? Duration.of(opts.batchFlushInterval as String)
+            : Duration.of('1 sec')
     }
 
     RetryOpts retryOpts() {
@@ -61,5 +69,9 @@ class SeqeraConfig {
 
     String getKeyPairName() {
         return keyPairName
+    }
+
+    Duration getBatchFlushInterval() {
+        return batchFlushInterval
     }
 }
