@@ -20,10 +20,10 @@ package io.seqera.executor
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import io.seqera.sched.api.schema.v1a1.CreateJobRequest
+import io.seqera.sched.api.schema.v1a1.CreateTaskRequest
+import io.seqera.sched.api.schema.v1a1.GetTaskLogsResponse
+import io.seqera.sched.api.schema.v1a1.TaskStatus as SchedTaskStatus
 import io.seqera.sched.client.SchedClient
-import io.seqera.sched.api.schema.v1a1.GetJobLogsResponse
-import io.seqera.sched.api.schema.v1a1.JobStatus
 import nextflow.fusion.FusionAwareTask
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
@@ -49,7 +49,7 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
 
     private Path errorFile
 
-    private String jobId
+    private String taskId
 
     SeqeraTaskHandler(TaskRun task, SeqeraExecutor executor) {
         super(task)
@@ -72,7 +72,7 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
     void submit() {
         int cpuRequest = task.config.getCpus() ?: 1
         long memoryRequest = task.config.getMemory() ? task.config.getMemory().toBytes() : 1024 * 1024 * 1024
-        final req = new CreateJobRequest()
+        final req = new CreateTaskRequest()
             .sessionId(executor.getSessionId())
             .image(task.getContainer())
             .command(fusionSubmitCli())
@@ -80,25 +80,25 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
             .arch(task.getContainerPlatform())
             .cpus(cpuRequest)
             .memory(memoryRequest)
-        log.debug "[SEQERA] Submitting job request=${req}"
-        final resp = client.createJob(req)
-        this.jobId = resp.getJobId()
+        log.debug "[SEQERA] Submitting task request=${req}"
+        final resp = client.createTask(req)
+        this.taskId = resp.getTaskId()
         this.status = TaskStatus.SUBMITTED
     }
 
-    protected JobStatus jobStatus() {
+    protected SchedTaskStatus schedTaskStatus() {
         return client
-            .describeJob(jobId)
-            .getJobState()
+            .describeTask(taskId)
+            .getTaskState()
             .getStatus()
     }
 
     @Override
     boolean checkIfRunning() {
         if (isSubmitted()) {
-            final jobStatus = jobStatus()
-            log.debug "[SEQERA] checkIfRunning job=${jobId}; status=${jobStatus}"
-            if (isRunningOrTerminated(jobStatus)) {
+            final schedStatus = schedTaskStatus()
+            log.debug "[SEQERA] checkIfRunning task=${taskId}; status=${schedStatus}"
+            if (isRunningOrTerminated(schedStatus)) {
                 status = TaskStatus.RUNNING
                 return true
             }
@@ -108,14 +108,14 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
 
     @Override
     boolean checkIfCompleted() {
-        final jobStatus = jobStatus()
-        log.debug "[SEQERA] checkIfCompleted status=${jobStatus}"
-        if (isTerminated(jobStatus)) {
-            log.debug "[SEQERA] Process `${task.lazyName()}` - terminated job=$jobId; status=$jobStatus"
+        final schedStatus = schedTaskStatus()
+        log.debug "[SEQERA] checkIfCompleted status=${schedStatus}"
+        if (isTerminated(schedStatus)) {
+            log.debug "[SEQERA] Process `${task.lazyName()}` - terminated task=$taskId; status=$schedStatus"
             // finalize the task
             task.exitStatus = readExitFile()
-            if (isFailed(jobStatus)) {
-                final logs = getJobLogs(jobId)
+            if (isFailed(schedStatus)) {
+                final logs = getTaskLogs(taskId)
                 task.stdout = logs?.stdout ?: outputFile
                 task.stderr = logs?.stderr ?: errorFile
             } else {
@@ -129,33 +129,33 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
         return false
     }
 
-    protected boolean isRunningOrTerminated(JobStatus status) {
-        return status == JobStatus.RUNNING || isTerminated(status)
+    protected boolean isRunningOrTerminated(SchedTaskStatus status) {
+        return status == SchedTaskStatus.RUNNING || isTerminated(status)
     }
 
-    protected boolean isTerminated(JobStatus status) {
-        return status in [JobStatus.SUCCEEDED, JobStatus.FAILED, JobStatus.CANCELLED]
+    protected boolean isTerminated(SchedTaskStatus status) {
+        return status in [SchedTaskStatus.SUCCEEDED, SchedTaskStatus.FAILED, SchedTaskStatus.CANCELLED]
     }
 
-    protected boolean isFailed(JobStatus status) {
-        return status == JobStatus.FAILED
+    protected boolean isFailed(SchedTaskStatus status) {
+        return status == SchedTaskStatus.FAILED
     }
 
-    protected GetJobLogsResponse getJobLogs(String jobId) {
-        return client.getJobLogs(jobId)
+    protected GetTaskLogsResponse getTaskLogs(String taskId) {
+        return client.getTaskLogs(taskId)
     }
 
     @Override
     protected void killTask() {
-        log.debug "[SEQERA] Kill job=${jobId}"
-        client.cancelJob(jobId)
+        log.debug "[SEQERA] Kill task=${taskId}"
+        client.cancelTask(taskId)
     }
 
     @PackageScope
     Integer readExitFile() {
         try {
             final result = exitFile.text as Integer
-            log.trace "[SEQERA] Read exit file for job $jobId; exit=${result}"
+            log.trace "[SEQERA] Read exit file for task $taskId; exit=${result}"
             return result
         }
         catch (Exception e) {
