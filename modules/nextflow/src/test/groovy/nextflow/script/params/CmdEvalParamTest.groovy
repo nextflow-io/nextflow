@@ -16,9 +16,9 @@
 
 package nextflow.script.params
 
-import static test.TestParser.*
-
 import test.Dsl2Spec
+
+import static test.ScriptHelper.*
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -29,18 +29,22 @@ class CmdEvalParamTest extends Dsl2Spec {
         setup:
         def text = '''
             process hola {
+              input:
+              val tool
+
               output:
-              eval 'foo --version' 
+              eval 'foo --version'
               eval "$params.cmd --help"
-              eval "$tool --test"  
-              
-              /echo command/ 
+              eval "$tool --test"
+
+              script:
+              /echo command/
             }
-            
-            workflow { hola() }
+
+            workflow { hola('other') }
             '''
 
-        def binding = [params:[cmd:'bar'], tool: 'other']
+        def binding = [params:[cmd:'bar']]
         def process = parseAndReturnProcess(text, binding)
 
         when:
@@ -56,7 +60,7 @@ class CmdEvalParamTest extends Dsl2Spec {
         outs[1].getTarget(binding) == 'bar --help'
         and:
         outs[2].getName() =~ /nxf_out_eval_\d+/
-        outs[2].getTarget(binding) == 'other --test'
+        outs[2].getTarget(binding + [tool: 'other']) == 'other --test'
     }
 
 }

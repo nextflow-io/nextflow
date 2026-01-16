@@ -1,18 +1,13 @@
 package nextflow.script
 
-import spock.lang.Timeout
-
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
-import nextflow.Session
-import nextflow.ast.NextflowDSL
-import org.codehaus.groovy.control.CompilerConfiguration
-import org.codehaus.groovy.control.MultipleCompilationErrorsException
-import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
-import org.codehaus.groovy.runtime.typehandling.GroovyCastException
+import nextflow.exception.ScriptCompilationException
+import spock.lang.Timeout
 import test.Dsl2Spec
-import test.MockScriptRunner
+
+import static test.ScriptHelper.*
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -21,56 +16,33 @@ import test.MockScriptRunner
 @Timeout(5)
 class WorkflowDefTest extends Dsl2Spec {
 
-    static abstract class TestScript extends BaseScript {
-
-        private injectSession() {
-            try {
-                def sess = binding.getSession()
-                if( !sess )
-                    return
-                def f = this.class.superclass.superclass.getDeclaredField('session')
-                f.setAccessible(true)
-                f.set(this, sess)
-            }
-            catch (GroovyCastException e) {
-                log.warn "Can't inject session -- not a ScriptBinding context object"
-            }
-        }
-
-        Object run() {
-            injectSession()
-            runScript()
-            return this
-        }
-
-    }
-
-    def 'should parse workflow' () {
+    def 'should define named workflows' () {
 
         given:
-        def config = new CompilerConfiguration()
-        config.setScriptBaseClass(TestScript.class.name)
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
-
         def SCRIPT = '''
-                    
+
             workflow alpha {
               print 'Hello world'
             }
-        
-            workflow bravo() {
-              take: foo
-              take: bar
+
+            workflow bravo {
+              take:
+              foo
+              bar
+
               main:
-                print foo
-                print bar
-              emit: 
-                foo+bar
+              print foo
+              print bar
+
+              emit:
+              foo+bar
             }
-            
-            workflow delta() {
-                take: foo
-                take: bar
+
+            workflow delta {
+                take:
+                foo
+                bar
+
                 main:
                 println foo+bar
             }
@@ -79,45 +51,21 @@ class WorkflowDefTest extends Dsl2Spec {
         '''
 
         when:
-        def script = (TestScript)new GroovyShell(new ScriptBinding(), config).parse(SCRIPT).run()
+        def script = loadScript(SCRIPT, module: true)
         def meta = ScriptMeta.get(script)
 
         then:
         meta.definitions.size() == 4
         meta.getWorkflow('alpha') .declaredInputs == []
-        meta.getWorkflow('alpha') .declaredVariables == []
-        meta.getWorkflow('alpha') .source.stripIndent(true) == "print 'Hello world'\n"
-
         meta.getWorkflow('bravo') .declaredInputs == ['foo', 'bar']
-        meta.getWorkflow('bravo') .declaredVariables == ['$out0']
-        meta.getWorkflow('bravo') .source.stripIndent(true) == '''\
-              take: foo
-              take: bar
-              main:
-                print foo
-                print bar
-              emit: 
-                foo+bar
-              '''.stripIndent(true)
-
         meta.getWorkflow('delta') .declaredInputs == ['foo','bar']
-        meta.getWorkflow('delta') .declaredVariables == [] 
-        meta.getWorkflow('delta') .source.stripIndent(true) == '''\
-                take: foo
-                take: bar
-                main:
-                println foo+bar
-                '''.stripIndent(true)
-
-        meta.getWorkflow('empty') .source == ''
         meta.getWorkflow('empty') .declaredInputs == []
-        meta.getWorkflow('empty') .declaredVariables == [] 
     }
 
-    def 'should define anonymous workflow' () {
+    def 'should define entry workflow' () {
 
         def SCRIPT = '''
-                    
+
             workflow {
               print 1
               print 2
@@ -125,35 +73,28 @@ class WorkflowDefTest extends Dsl2Spec {
         '''
 
         when:
-        def runner = new MockScriptRunner().setScript(SCRIPT).invoke()
-        def meta = ScriptMeta.get(runner.getScript())
+        def script = loadScript(SCRIPT)
+        def meta = ScriptMeta.get(script)
         then:
-        meta.getWorkflow(null).getSource().stripIndent(true) == 'print 1\nprint 2\n'
+        meta.getWorkflow(null)
 
     }
 
     def 'should run workflow block' () {
 
         given:
-        def config = new CompilerConfiguration()
-        config.setScriptBaseClass(TestScript.class.name)
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
-
         def SCRIPT = '''
-                    
+
             workflow alpha {
               take: foo
-              emit: bar
-              emit: baz  
-              
-              main: "$x world"
+              main: bar = foo ; baz = foo
+              emit: bar ; baz  
             }
-       
+
         '''
 
         when:
-        def binding = new ScriptBinding().setSession(Mock(Session))
-        def script = (TestScript)new GroovyShell(binding,config).parse(SCRIPT).run()
+        def script = loadScript(SCRIPT, module: true)
         def workflow = ScriptMeta.get(script).getWorkflow('alpha')
         then:
         workflow.declaredInputs == ['foo']
@@ -164,27 +105,21 @@ class WorkflowDefTest extends Dsl2Spec {
     def 'should report malformed workflow block' () {
 
         given:
-        def config = new CompilerConfiguration()
-        config.setScriptBaseClass(TestScript.class.name)
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
-
         def SCRIPT = '''
-                    
+
             workflow alpha {
               take: foo
               main: println foo
               take: bar
             }
-       
+
         '''
 
         when:
-        def binding = new ScriptBinding().setSession(Mock(Session))
-        def script = (TestScript)new GroovyShell(binding,config).parse(SCRIPT).run()
-        def workflow = ScriptMeta.get(script).getWorkflow('alpha')
+        loadScript(SCRIPT)
         then:
-        def e = thrown(MultipleCompilationErrorsException)
-        e.message.contains('Unexpected workflow `take` context here')
+        def e = thrown(ScriptCompilationException)
+        e.cause.message.contains('Invalid workflow definition')
 
     }
 
@@ -194,16 +129,16 @@ class WorkflowDefTest extends Dsl2Spec {
         // does NOT define an implicit `it` parameter that would clash
         // with the `it` used by the inner closure
 
-        def SCRIPT = """       
-        
+        def SCRIPT = """
+
         workflow {
-            Channel.empty().map { id -> id +1 }  
-            Channel.empty().map { it -> def id = it+1 }  
+            channel.empty().map { id -> id +1 }
+            channel.empty().map { it -> def id = it+1 }
         }
         """
 
         when:
-        new MockScriptRunner().setScript(SCRIPT).execute()
+        runScript(SCRIPT)
 
         then:
         noExceptionThrown()
@@ -263,58 +198,6 @@ class WorkflowDefTest extends Dsl2Spec {
         def copy = work.cloneWithName('bar')
         then:
         copy.getName() == 'bar'
-    }
-
-
-    def 'should capture workflow code' () {
-        given:
-        def config = new CompilerConfiguration()
-        config.setScriptBaseClass(TestScript.class.name)
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
-
-        def SCRIPT = '''
-                    
-            workflow alpha {
-              take:
-                foo
-              main:
-                print x 
-              emit: 
-                foo  
-            }
-        '''
-
-        when:
-        def binding = new ScriptBinding().setSession(Mock(Session))
-        def script = (TestScript)new GroovyShell(binding,config).parse(SCRIPT).run()
-        def workflow = ScriptMeta.get(script).getWorkflow('alpha')
-        then:
-        workflow.getSource().stripIndent(true) == '''\
-                            take:
-                              foo
-                            main:
-                              print x 
-                            emit: 
-                              foo  
-                            '''.stripIndent(true)
-    }
-
-    def 'should capture empty workflow code'  () {
-        given:
-        def config = new CompilerConfiguration()
-        config.setScriptBaseClass(TestScript.class.name)
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
-
-        def SCRIPT = '''
-            workflow foo { } 
-        '''
-
-        when:
-        def binding = new ScriptBinding().setSession(Mock(Session))
-        def script = (TestScript)new GroovyShell(binding,config).parse(SCRIPT).run()
-        def workflow = ScriptMeta.get(script).getWorkflow('foo')
-        then:
-        workflow.getSource() == ''
     }
 
 }

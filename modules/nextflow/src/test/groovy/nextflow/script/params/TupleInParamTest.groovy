@@ -16,9 +16,9 @@
 
 package nextflow.script.params
 
-import static test.TestParser.*
-
 import test.Dsl2Spec
+
+import static test.ScriptHelper.*
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -28,20 +28,20 @@ class TupleInParamTest extends Dsl2Spec {
     def 'should create input tuples'() {
         setup:
         def text = '''
-            x = 'Hola mundo'
-
             process hola {
               input:
-              tuple val(p) 
-              tuple val(p), val(q) 
-              tuple val(v), path('file_name.fa') 
-              tuple val(p), path('file_name.txt'), '-' 
-              tuple val(p), path(z, stageAs: 'file*')
-              
+              tuple val(r)
+              tuple val(p), val(q)
+              tuple val(v), path('file_name.fa')
+              tuple val(s), path('file_name.txt'), '-'
+              tuple val(t), path(z, stageAs: 'file*')
+
+              script:
               /foo/
             }
-            
+
             workflow {
+              x = 'Hola mundo'
               hola(x, x, 'str', 'ciao', x)
             }
             '''
@@ -59,7 +59,7 @@ class TupleInParamTest extends Dsl2Spec {
         in1.inner.get(0) instanceof ValueInParam
         in1.inner.get(0).index == 0
         in1.inner.get(0).mapIndex == 0
-        in1.inner.get(0).name == 'p'
+        in1.inner.get(0).name == 'r'
         in1.inChannel.val == 'Hola mundo'
         and:
         in2.inner.size() == 2
@@ -87,7 +87,7 @@ class TupleInParamTest extends Dsl2Spec {
         and:
         in4.inner.size() == 3
         in4.inner.get(0) instanceof ValueInParam
-        in4.inner.get(0).name == 'p'
+        in4.inner.get(0).name == 's'
         in4.inner.get(0).index == 3
         in4.inner.get(0).mapIndex == 0
         in4.inner.get(1) instanceof FileInParam
@@ -117,20 +117,20 @@ class TupleInParamTest extends Dsl2Spec {
 
         setup:
         def text = '''
-            q = 'the file content'
-
             process hola {
               input:
-              tuple( file('name_$x') ) 
-              tuple( file("${x}_name.${str}") )
-              tuple( file("hola_${x}") ) 
-              tuple file( { "${x}_name.txt" } ) 
+              tuple( val(x), file('name_$x') )
+              tuple( file("${x}_name.fastq") )
+              tuple( file("hola_${x}") )
+              tuple file( { "${x}_name.txt" } )
 
+              script:
               /foo/
             }
-            
+
             workflow {
-              hola(q, q, q, q)
+              q = 'the file content'
+              hola(['the_file', q], q, q, q)
             }
             '''
 
@@ -140,13 +140,13 @@ class TupleInParamTest extends Dsl2Spec {
         TupleInParam in1 = process.config.getInputs().get(1)
         TupleInParam in2 = process.config.getInputs().get(2)
         TupleInParam in3 = process.config.getInputs().get(3)
-        def ctx = [x:'the_file', str: 'fastq']
+        def ctx = [x:'the_file']
 
         then:
-        in0.inChannel.val == 'the file content'
-        in0.inner[0] instanceof FileInParam
-        (in0.inner[0] as FileInParam).name == 'name_$x'
-        (in0.inner[0] as FileInParam).getFilePattern(ctx) == 'name_$x'
+        in0.inChannel.val == ['the_file', 'the file content']
+        in0.inner[1] instanceof FileInParam
+        (in0.inner[1] as FileInParam).name == 'name_$x'
+        (in0.inner[1] as FileInParam).getFilePattern(ctx) == 'name_$x'
 
         in1.inner[0] instanceof FileInParam
         (in1.inner[0] as FileInParam).name == '__$fileinparam<1:0>'

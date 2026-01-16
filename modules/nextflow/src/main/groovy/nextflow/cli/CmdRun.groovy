@@ -492,8 +492,9 @@ class CmdRun extends CmdBase implements HubOptions {
     }
 
     static void detectStrictFeature(ConfigMap config, Map sysEnv) {
+        if( NF.isSyntaxParserV2() )
+            return
         final defStrict = sysEnv.get('NXF_ENABLE_STRICT') ?: false
-        log
         final strictMode = config.navigate('nextflow.enable.strict', defStrict)
         if( strictMode ) {
             log.debug "Enabling nextflow strict mode"
@@ -522,8 +523,10 @@ class CmdRun extends CmdBase implements HubOptions {
     }
 
     static String detectDslMode(ConfigMap config, String scriptText, Map sysEnv) {
-        // -- try determine DSL version from config file
+        if( NF.isSyntaxParserV2() )
+            return DSL2
 
+        // -- try determine DSL version from config file
         final dsl = config.navigate('nextflow.enable.dsl') as String
 
         // -- script can still override the DSL version
