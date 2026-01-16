@@ -25,6 +25,7 @@ import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
 import io.seqera.sched.api.schema.v1a1.Task
 import io.seqera.sched.client.SchedClient
+import nextflow.SysEnv
 import nextflow.util.Duration
 import nextflow.util.Threads
 
@@ -38,10 +39,10 @@ import nextflow.util.Threads
 class SeqeraBatchSubmitter {
 
     /** Maximum tasks per API call */
-    static final int TASKS_PER_REQUEST = 100
+    static final int TASKS_PER_REQUEST = SysEnv.getInteger('NXF_SEQERA_TASK_PER_REQUEST', 100)
 
     /** Default flush interval */
-    static final Duration REQUEST_INTERVAL = Duration.of('1 sec')
+    static final Duration REQUEST_INTERVAL = SysEnv.get('NXF_SEQERA_REQUEST_INTERVAL', '1 sec') as Duration
 
     /**
      * Holds a task handler and its prepared Task object pending submission
@@ -153,9 +154,7 @@ class SeqeraBatchSubmitter {
 
             // Validate response
             if (taskIds.size() != batch.size()) {
-                throw new IllegalStateException(
-                    "API returned ${taskIds.size()} task IDs but submitted ${batch.size()} tasks"
-                )
+                throw new IllegalStateException("Seqera Scheduler API returned ${taskIds.size()} task IDs but submitted ${batch.size()} tasks")
             }
 
             // Map task IDs back to handlers
