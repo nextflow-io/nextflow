@@ -20,10 +20,10 @@ package io.seqera.executor
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import io.seqera.sched.api.schema.v1a1.Task
-import io.seqera.sched.client.SchedClient
 import io.seqera.sched.api.schema.v1a1.GetTaskLogsResponse
+import io.seqera.sched.api.schema.v1a1.Task
 import io.seqera.sched.api.schema.v1a1.TaskStatus as SchedTaskStatus
+import io.seqera.sched.client.SchedClient
 import nextflow.fusion.FusionAwareTask
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun

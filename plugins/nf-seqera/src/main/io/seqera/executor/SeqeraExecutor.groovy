@@ -61,9 +61,7 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
     @Override
     void shutdown() {
         // Flush any pending batch jobs before deleting session
-        if (batchSubmitter) {
-            batchSubmitter.shutdown()
-        }
+        batchSubmitter?.shutdown()
         deleteSession()
     }
 
