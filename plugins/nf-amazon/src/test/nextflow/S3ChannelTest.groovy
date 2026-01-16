@@ -19,6 +19,7 @@ package nextflow
 
 import spock.lang.Specification
 
+import static test.ScriptHelper.runDataflow
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -28,7 +29,9 @@ class S3ChannelTest extends Specification {
     def testFromPathS3() {
 
         when:
-        Channel.fromPath('s3://bucket/some/data.txt')
+        runDataflow {
+            Channel.fromPath('s3://bucket/some/data.txt')
+        }
         then:
         noExceptionThrown()
     }

@@ -893,8 +893,7 @@ class Session implements ISession {
         final enabled = config.navigate('nextflow.enable.configProcessNamesValidation', true) as boolean
         if( enabled ) {
             final names = ScriptMeta.allProcessNames()
-            final ver = "dsl${NF.dsl1 ?'1' :'2'}"
-            log.debug "Workflow process names [$ver]: ${names.join(', ')}"
+            log.debug "Process names: ${names.join(', ')}"
             validateConfig(names)
         }
         else {

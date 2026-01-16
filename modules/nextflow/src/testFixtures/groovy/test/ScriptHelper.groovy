@@ -206,6 +206,29 @@ class ScriptHelper {
         return result
     }
 
+    /**
+     * Run a block of code that executes a dataflow network.
+     *
+     * This method ensures that the dataflow network is properly
+     * ignited, and that any dataflow result is normalized into a
+     * readable channel.
+     *
+     * @param action
+     */
+    static Object runDataflow(Map opts = [:], Closure action) {
+        def session = opts.config ? new MockSession(opts.config) : new MockSession()
+
+        def cl = (Closure)action.clone()
+        cl.setDelegate(session.binding)
+        cl.setResolveStrategy(Closure.DELEGATE_FIRST)
+        
+        def result = normalizeResult(cl.call())
+
+        session.fireDataflowNetwork()
+
+        return result
+    }
+
     private static Object normalizeResult(value) {
         if( value instanceof ChannelOut ) {
             def result = new ArrayList<>(value.size())
