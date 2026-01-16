@@ -259,9 +259,16 @@ public class ResolveVisitor extends ClassCodeExpressionTransformer {
         var lookupResult = classNodeResolver.resolveName(name, compilationUnit);
         if( lookupResult == null )
             return null;
-        if( !lookupResult.isClassNode() )
-            throw new GroovyBugError("class resolver lookup result is not a class node");
-        return lookupResult.getClassNode();
+        if( lookupResult.isClassNode() )
+            return lookupResult.getClassNode();
+        // When a Groovy class from the lib directory is used, the class
+        // loader returns the URI of the Groovy file. We only need to compile
+        // the Groovy file enough to resolve the class definition for the purpose
+        // of name checking.
+        var su = lookupResult.getSourceUnit();
+        return GroovyCompiler.compile(su).stream()
+            .filter(cn -> cn.getName().equals(name))
+            .findFirst().orElse(null);
     }
 
     @Override
