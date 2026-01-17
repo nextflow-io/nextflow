@@ -423,7 +423,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         when:
         def trace = handler.getTraceRecord()
         then:
-        2 * handler.isCompleted() >> true
+        1 * handler.isCompleted() >> true
         1 * client.getTaskStatus('xyz-123', '0') >> taskStatus
         and:
         trace.native_id == 'xyz-123/0/789'
