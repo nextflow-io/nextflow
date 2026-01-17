@@ -29,18 +29,18 @@ class RetryOptsTest extends Specification {
     def 'should create retry config' () {
 
         expect:
-        new RetryOpts().delay0 == Duration.of('450ms')
-        new RetryOpts().maxDelay0 == Duration.of('90s')
-        new RetryOpts().maxAttempts0 == 10
-        new RetryOpts().jitter0 == 0.25d
-        new RetryOpts().multiplier0 == 2.0d
+        new RetryOpts().delay == Duration.of('450ms')
+        new RetryOpts().maxDelay == Duration.of('90s')
+        new RetryOpts().maxAttempts == 10
+        new RetryOpts().jitter == 0.25d
+        new RetryOpts().multiplier == 2.0d
 
         and:
-        new RetryOpts([maxAttempts: 20]).maxAttempts0 == 20
-        new RetryOpts([delay: '1s']).delay0 == Duration.of('1s')
-        new RetryOpts([maxDelay: '1m']).maxDelay0 == Duration.of('1m')
-        new RetryOpts([jitter: '0.5']).jitter0 == 0.5d
-        new RetryOpts([multiplier: '3.0']).multiplier0 == 3.0d
+        new RetryOpts([maxAttempts: 20]).maxAttempts == 20
+        new RetryOpts([delay: '1s']).delay == Duration.of('1s')
+        new RetryOpts([maxDelay: '1m']).maxDelay == Duration.of('1m')
+        new RetryOpts([jitter: '0.5']).jitter == 0.5d
+        new RetryOpts([multiplier: '3.0']).multiplier == 3.0d
 
     }
 
@@ -49,8 +49,8 @@ class RetryOptsTest extends Specification {
         def opts = new RetryOpts([delay: '1s', maxDelay: '2m', maxAttempts: 5, jitter: '0.3', multiplier: '1.5'])
 
         then:
-        opts.getDelay() == java.time.Duration.ofSeconds(1)
-        opts.getMaxDelay() == java.time.Duration.ofMinutes(2)
+        opts.getDelayAsDuration() == java.time.Duration.ofSeconds(1)
+        opts.getMaxDelayAsDuration() == java.time.Duration.ofMinutes(2)
         opts.getMaxAttempts() == 5
         opts.getJitter() == 0.3d
         opts.getMultiplier() == 1.5d

@@ -18,45 +18,68 @@
 package io.seqera.config
 
 import groovy.transform.CompileStatic
+import nextflow.config.spec.ConfigOption
+import nextflow.config.spec.ConfigScope
+import nextflow.config.spec.ScopeName
+import nextflow.script.dsl.Description
 import nextflow.util.Duration
 
 /**
+ * Configuration for the Seqera executor.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@ScopeName("seqera")
+@Description("""
+    The `seqera` scope provides configuration for the Seqera compute executor.
+""")
 @CompileStatic
-class SeqeraConfig {
+class SeqeraConfig implements ConfigScope {
 
-    private RetryOpts retryOpts
+    final RetryOpts retryPolicy
 
-    private String endpoint
+    @ConfigOption
+    @Description("""
+        The Seqera scheduler service endpoint URL.
+    """)
+    final String endpoint
 
-    private String region
+    @ConfigOption
+    @Description("""
+        The AWS region for task execution (default: `eu-central-1`).
+    """)
+    final String region
 
-    private String keyPairName
+    @ConfigOption
+    @Description("""
+        The EC2 key pair name for SSH access to instances.
+    """)
+    final String keyPairName
 
-    private Duration batchFlushInterval
+    @ConfigOption
+    @Description("""
+        The interval for batching task submissions (default: `1 sec`).
+    """)
+    final Duration batchFlushInterval
+
+    /* required by config scope -- do not remove */
+    SeqeraConfig() {}
 
     SeqeraConfig(Map opts) {
-        this.retryOpts = new RetryOpts(opts.retryPolicy as Map ?: Map.of())
+        this.retryPolicy = new RetryOpts(opts.retryPolicy as Map ?: Map.of())
         this.endpoint = opts.endpoint as String
         if (!endpoint)
             throw new IllegalArgumentException("Missing Seqera endpoint - make sure to specify 'seqera.endpoint' settings")
 
-        this.region = opts.region as String
-        if (!region)
-            region = "eu-central-1"
-
+        this.region = opts.region as String ?: "eu-central-1"
         this.keyPairName = opts.keyPairName as String
-
-        // Batch submission configuration
         this.batchFlushInterval = opts.batchFlushInterval
             ? Duration.of(opts.batchFlushInterval as String)
             : Duration.of('1 sec')
     }
 
     RetryOpts retryOpts() {
-        this.retryOpts
+        this.retryPolicy
     }
 
     String getEndpoint() {

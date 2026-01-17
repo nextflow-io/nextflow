@@ -22,12 +22,17 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import io.seqera.sched.api.schema.v1a1.GetTaskLogsResponse
 import io.seqera.sched.api.schema.v1a1.Task
+import io.seqera.sched.api.schema.v1a1.TaskState as SchedTaskState
 import io.seqera.sched.api.schema.v1a1.TaskStatus as SchedTaskStatus
+import io.seqera.sched.api.schema.v1a1.PriceModel as SchedPriceModel
 import io.seqera.sched.client.SchedClient
+import nextflow.cloud.types.CloudMachineInfo
+import nextflow.cloud.types.PriceModel
 import nextflow.fusion.FusionAwareTask
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
+import nextflow.trace.TraceRecord
 
 import java.nio.file.Path
 
@@ -50,6 +55,16 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
     private Path errorFile
 
     private String taskId
+
+    /**
+     * Cached task state from last describeTask call, used for trace record metadata
+     */
+    private volatile SchedTaskState cachedTaskState
+
+    /**
+     * Cached machine info extracted from task attempts
+     */
+    private volatile CloudMachineInfo machineInfo
 
     SeqeraTaskHandler(TaskRun task, SeqeraExecutor executor) {
         super(task)
@@ -104,10 +119,8 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     protected SchedTaskStatus schedTaskStatus() {
-        return client
-            .describeTask(taskId)
-            .getTaskState()
-            .getStatus()
+        cachedTaskState = client.describeTask(taskId).getTaskState()
+        return cachedTaskState.getStatus()
     }
 
     @Override
@@ -185,5 +198,98 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
             // return MAX_VALUE to signal it was unable to retrieve the exit code
             return Integer.MAX_VALUE
         }
+    }
+
+    /**
+     * Get machine info for the task execution from the last task attempt.
+     * The machine info is cached after first retrieval.
+     *
+     * @return CloudMachineInfo containing instance type, zone, and price model, or null if not available
+     */
+    protected CloudMachineInfo getMachineInfo() {
+        if (machineInfo)
+            return machineInfo
+        if (!cachedTaskState)
+            return null
+
+        try {
+            final attempts = cachedTaskState.getAttempts()
+            if (!attempts || attempts.isEmpty())
+                return null
+
+            final lastAttempt = attempts.get(attempts.size() - 1)
+            final lastInfo = lastAttempt.getMachineInfo()
+            if (!lastInfo)
+                return null
+
+            // Convert Sched API MachineInfo to Nextflow CloudMachineInfo
+            machineInfo = new CloudMachineInfo(
+                type: lastInfo.getType(),
+                zone: lastInfo.getZone(),
+                priceModel: convertPriceModel(lastInfo.getPriceModel())
+            )
+            log.trace "[SEQERA] taskId=$taskId => machineInfo=$machineInfo"
+            return machineInfo
+        }
+        catch (Exception e) {
+            log.debug "[SEQERA] Unable to get machine info for taskId=$taskId - ${e.message}"
+            return null
+        }
+    }
+
+    /**
+     * Convert Sched API PriceModel to Nextflow PriceModel.
+     *
+     * @param schedPriceModel the Sched API price model
+     * @return the Nextflow PriceModel, or null if input is null
+     */
+    protected PriceModel convertPriceModel(SchedPriceModel schedPriceModel) {
+        if (schedPriceModel == null)
+            return null
+        switch (schedPriceModel) {
+            case SchedPriceModel.SPOT:
+                return PriceModel.spot
+            case SchedPriceModel.STANDARD:
+                return PriceModel.standard
+            default:
+                return null
+        }
+    }
+
+    /**
+     * Get the number of spot interruptions for this task.
+     * This is calculated server-side from task attempts with spot-related stop reasons.
+     *
+     * @return the count of spot interruptions, or null if not completed or not available
+     */
+    protected Integer getNumSpotInterruptions() {
+        if (!taskId || !isCompleted())
+            return null
+        if (!cachedTaskState)
+            return null
+        return cachedTaskState.getNumSpotInterruptions()
+    }
+
+    /**
+     * Get the native backend ID for this task (ECS task ARN or Docker container ID).
+     *
+     * @return the native ID from the last task attempt, or null if not available
+     */
+    protected String getNativeId() {
+        return cachedTaskState?.getId()
+    }
+
+    /**
+     * Get the trace record for this task, including machine info and spot interruptions metadata.
+     *
+     * @return the trace record with additional metadata fields
+     */
+    @Override
+    TraceRecord getTraceRecord() {
+        final result = super.getTraceRecord()
+        result.put('native_id', getNativeId())
+        result.machineInfo = getMachineInfo()
+        result.numSpotInterruptions = getNumSpotInterruptions()
+        return result
     }
 }

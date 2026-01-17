@@ -17,11 +17,12 @@
 
 package io.seqera.config
 
-import java.time.temporal.TemporalAmount
-
 import groovy.transform.CompileStatic
 import groovy.transform.ToString
 import io.seqera.util.retry.Retryable
+import nextflow.config.spec.ConfigOption
+import nextflow.config.spec.ConfigScope
+import nextflow.script.dsl.Description
 import nextflow.util.Duration
 
 /**
@@ -30,12 +31,37 @@ import nextflow.util.Duration
  */
 @ToString(includeNames = true, includePackage = false)
 @CompileStatic
-class RetryOpts implements Retryable.Config {
-    Duration delay0 = Duration.of('450ms')
-    Duration maxDelay0 = Duration.of('90s')
-    int maxAttempts0 = 10
-    double jitter0 = 0.25
-    double multiplier0 = 2.0d
+class RetryOpts implements ConfigScope, Retryable.Config {
+
+    @ConfigOption
+    @Description("""
+        The initial delay when a failing HTTP request is retried (default: `450ms`).
+    """)
+    Duration delay = Duration.of('450ms')
+
+    @ConfigOption
+    @Description("""
+        The max delay when a failing HTTP request is retried (default: `90s`).
+    """)
+    Duration maxDelay = Duration.of('90s')
+
+    @ConfigOption
+    @Description("""
+        The maximum number of retry attempts (default: `10`).
+    """)
+    int maxAttempts = 10
+
+    @ConfigOption
+    @Description("""
+        The jitter factor for randomizing retry delays (default: `0.25`).
+    """)
+    double jitter = 0.25
+
+    @ConfigOption
+    @Description("""
+        The multiplier for exponential backoff (default: `2.0`).
+    """)
+    double multiplier = 2.0d
 
     RetryOpts() {
         this(Collections.emptyMap())
@@ -43,39 +69,25 @@ class RetryOpts implements Retryable.Config {
 
     RetryOpts(Map config) {
         if( config.delay )
-            delay0 = config.delay as Duration
+            delay = config.delay as Duration
         if( config.maxDelay )
-            maxDelay0 = config.maxDelay as Duration
+            maxDelay = config.maxDelay as Duration
         if( config.maxAttempts )
-            maxAttempts0 = config.maxAttempts as int
+            maxAttempts = config.maxAttempts as int
         if( config.jitter )
-            jitter0 = config.jitter as double
+            jitter = config.jitter as double
         if( config.multiplier )
-            multiplier0 = config.multiplier as double
+            multiplier = config.multiplier as double
+    }
+
+    // Methods required by Retryable.Config interface
+    @Override
+    java.time.Duration getDelayAsDuration() {
+        return java.time.Duration.ofMillis(delay.toMillis())
     }
 
     @Override
-    TemporalAmount getDelay() {
-        return java.time.Duration.ofMillis(delay0.toMillis())
-    }
-
-    @Override
-    TemporalAmount getMaxDelay() {
-        return java.time.Duration.ofMillis(maxDelay0.toMillis())
-    }
-
-    @Override
-    int getMaxAttempts() {
-        return maxAttempts0
-    }
-
-    @Override
-    double getJitter() {
-        return jitter0
-    }
-
-    @Override
-    double getMultiplier() {
-        return multiplier0
+    java.time.Duration getMaxDelayAsDuration() {
+        return java.time.Duration.ofMillis(maxDelay.toMillis())
     }
 }
