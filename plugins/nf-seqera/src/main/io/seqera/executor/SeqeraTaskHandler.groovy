@@ -165,7 +165,12 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
     @Override
     protected void killTask() {
         log.debug "[SEQERA] Cancel taskId=${taskId}"
-        client.cancelTask(taskId)
+        try {
+            client.cancelTask(taskId)
+        }
+        catch (Throwable t) {
+            log.warn "[SEQERA] Failed to cancel task ${taskId}", t
+        }
     }
 
     @PackageScope
