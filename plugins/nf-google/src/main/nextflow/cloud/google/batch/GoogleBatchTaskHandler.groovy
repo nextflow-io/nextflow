@@ -655,7 +655,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
      */
 
     protected Integer getNumSpotInterruptions(String jobId) {
-        if (!jobId || !taskId || !isCompleted()) {
+        if (!jobId || !taskId) {
             return null
         }
 
