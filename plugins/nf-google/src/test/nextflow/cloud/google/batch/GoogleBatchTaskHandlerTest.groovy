@@ -918,7 +918,6 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def result = handler.getNumSpotInterruptions('job-123')
 
         then:
-        handler.isCompleted() >> true
         result == 0
     }
 
@@ -950,7 +949,6 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def result = handler.getNumSpotInterruptions('job-123')
 
         then:
-        handler.isCompleted() >> true
         result == 2
     }
 
@@ -964,7 +962,6 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def resultIncompleteTask = handler.getNumSpotInterruptions('job-123')
 
         then:
-        handler.isCompleted() >> false
         resultNullJobId == null
         resultIncompleteTask == null
     }
@@ -981,7 +978,6 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def result = handler.getNumSpotInterruptions('job-123')
 
         then:
-        handler.isCompleted() >> true
         result == null
     }
 
