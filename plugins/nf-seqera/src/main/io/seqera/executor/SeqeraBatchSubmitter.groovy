@@ -44,6 +44,9 @@ class SeqeraBatchSubmitter {
     /** Default flush interval */
     static final Duration REQUEST_INTERVAL = SysEnv.get('NXF_SEQERA_REQUEST_INTERVAL', '1 sec') as Duration
 
+    /** Keep-alive interval - send empty submission to maintain session */
+    static final Duration KEEP_ALIVE_INTERVAL = SysEnv.get('NXF_SEQERA_KEEP_ALIVE_INTERVAL', '60 sec') as Duration
+
     /**
      * Holds a task handler and its prepared Task object pending submission
      */
@@ -54,18 +57,26 @@ class SeqeraBatchSubmitter {
     }
 
     private final SchedClient client
+    private final String sessionId
     private final Duration requestInterval
+    private final Duration keepAliveInterval
     private final LinkedBlockingQueue<PendingTask> pendingQueue = new LinkedBlockingQueue<>()
     private Thread sender
     private volatile boolean completed = false
 
-    SeqeraBatchSubmitter(SchedClient client) {
-        this(client, REQUEST_INTERVAL)
+    SeqeraBatchSubmitter(SchedClient client, String sessionId) {
+        this(client, sessionId, REQUEST_INTERVAL, KEEP_ALIVE_INTERVAL)
     }
 
-    SeqeraBatchSubmitter(SchedClient client, Duration requestInterval) {
+    SeqeraBatchSubmitter(SchedClient client, String sessionId, Duration requestInterval) {
+        this(client, sessionId, requestInterval, KEEP_ALIVE_INTERVAL)
+    }
+
+    SeqeraBatchSubmitter(SchedClient client, String sessionId, Duration requestInterval, Duration keepAliveInterval) {
         this.client = client
+        this.sessionId = sessionId
         this.requestInterval = requestInterval
+        this.keepAliveInterval = keepAliveInterval
     }
 
     /**
@@ -130,6 +141,12 @@ class SeqeraBatchSubmitter {
                     batch.clear()
                 }
             }
+            else if (delta > keepAliveInterval.millis) {
+                // Keep-alive: send empty submission to maintain session
+                log.debug "[SEQERA] Sending keep-alive for session ${sessionId}"
+                client.createTasks(sessionId, Collections.emptyList())
+                previous = System.currentTimeMillis()
+            }
         }
 
         // Final flush of any remaining tasks
@@ -149,7 +166,7 @@ class SeqeraBatchSubmitter {
             final List<Task> tasks = batch.collect { it.task }
 
             // Submit batch to API
-            final response = client.createTasks(tasks)
+            final response = client.createTasks(sessionId, tasks)
             final List<String> taskIds = response.getTaskIds()
 
             // Validate response

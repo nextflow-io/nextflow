@@ -54,7 +54,7 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
 
     private Path errorFile
 
-    private String taskId
+    private volatile String taskId
 
     /**
      * Cached task state from last describeTask call, used for trace record metadata
@@ -88,7 +88,7 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
         int cpuRequest = task.config.getCpus() ?: 1
         long memoryRequest = task.config.getMemory() ? task.config.getMemory().toBytes() : 1024 * 1024 * 1024
         final schedTask = new Task()
-            .sessionId(executor.getSessionId())
+            .name(task.lazyName())
             .image(task.getContainer())
             .command(fusionSubmitCli())
             .environment(fusionLauncher().fusionEnv())
@@ -138,6 +138,8 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
 
     @Override
     boolean checkIfCompleted() {
+        if (!isRunning())
+            return false
         final schedStatus = schedTaskStatus()
         log.debug "[SEQERA] checkIfCompleted status=${schedStatus}"
         if (isTerminated(schedStatus)) {
@@ -177,6 +179,10 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
 
     @Override
     protected void killTask() {
+        if( !taskId ) {
+            log.trace "[SEQERA] Skip cancel - taskId not yet assigned"
+            return
+        }
         log.debug "[SEQERA] Cancel taskId=${taskId}"
         try {
             client.cancelTask(taskId)

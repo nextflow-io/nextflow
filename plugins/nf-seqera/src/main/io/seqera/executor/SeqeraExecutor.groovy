@@ -86,7 +86,7 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
         this.sessionId = response.getSessionId()
         log.debug "[SEQERA] Session created id: ${sessionId}"
         // Initialize and start batch submitter
-        this.batchSubmitter = new SeqeraBatchSubmitter(client, seqeraConfig.batchFlushInterval)
+        this.batchSubmitter = new SeqeraBatchSubmitter(client, sessionId, seqeraConfig.batchFlushInterval)
         this.batchSubmitter.start()
     }
 
