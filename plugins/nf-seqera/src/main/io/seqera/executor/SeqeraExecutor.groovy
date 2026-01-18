@@ -81,8 +81,8 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
     }
 
     protected void createSession() {
-        log.debug "[SEQERA] Creating session for workflow in region: ${seqeraConfig.region}"
-        final response = client.createSession(seqeraConfig.region)
+        log.debug "[SEQERA] Creating session for workflow in region: ${seqeraConfig.region}, runName: ${session.runName}"
+        final response = client.createSession(seqeraConfig.region, session.runName)
         this.sessionId = response.getSessionId()
         log.debug "[SEQERA] Session created id: ${sessionId}"
         // Initialize and start batch submitter
