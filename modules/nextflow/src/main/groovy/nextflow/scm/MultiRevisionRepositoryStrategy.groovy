@@ -17,6 +17,7 @@
 package nextflow.scm
 
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.config.Manifest
@@ -333,20 +334,48 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
     }
 
     private RefSpec refSpecForName(String revision) {
-        // Is it a local branch?
+        // First, check if it's a local branch
         Ref branch = getBareGit().getRepository().findRef("refs/heads/" + revision)
         if( branch != null ) {
             return new RefSpec("refs/heads/" + revision + ":refs/heads/" + revision)
         }
 
-        // Is it a tag?
+        // Check if it's a local tag
         Ref tag = getBareGit().getRepository().findRef("refs/tags/" + revision)
         if( tag != null ) {
             return new RefSpec("refs/tags/" + revision + ":refs/tags/" + revision)
         }
 
-        // It is a commit
+        // Not found locally - check remote refs
+        final remoteRefs = fetchRemoteRefs()
+
+        // Is it a remote branch?
+        if( remoteRefs.containsKey("refs/heads/" + revision) ) {
+            return new RefSpec("refs/heads/" + revision + ":refs/heads/" + revision)
+        }
+
+        // Is it a remote tag?
+        if( remoteRefs.containsKey("refs/tags/" + revision) ) {
+            return new RefSpec("refs/tags/" + revision + ":refs/tags/" + revision)
+        }
+
+        // Assume it's a commit SHA
         return new RefSpec(revision + ":refs/tags/" + revision)
+    }
+
+    /**
+     * Fetch refs from remote repository using ls-remote.
+     * Results are cached per call via @Memoized.
+     * @return Map of ref name to Ref object
+     */
+    @Memoized
+    private Map<String, Ref> fetchRemoteRefs() {
+        log.debug "Fetching remote refs for ${project}"
+        final cmd = getBareGit().lsRemote()
+        if( provider?.hasCredentials() ) {
+            cmd.setCredentialsProvider(provider.getGitCredentials())
+        }
+        return cmd.callAsMap()
     }
 
     @Override
