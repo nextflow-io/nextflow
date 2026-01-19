@@ -128,6 +128,30 @@ class MultiRevisionRepositoryStrategyTest extends Specification {
         folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/1c3e9e7404127514d69369cd87f8036830f5cf64/.git/objects/info/alternates').text == folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + BARE_REPO + '/objects').toAbsolutePath().toString()
     }
 
+    def 'should create correct RefSpec for branches tags and commits'() {
+        given:
+        def folder = tempDir.getRoot()
+        // Create a bare repo manually for testing
+        def bareRepoPath = folder.resolve(REPOS_SUBDIR + '/test/project/' + BARE_REPO).toFile()
+        bareRepoPath.mkdirs()
+        def git = Git.init().setDirectory(bareRepoPath).setBare(true).call()
+        // Configure origin to point to itself so lsRemote works (returns empty refs)
+        def config = git.getRepository().getConfig()
+        config.setString("remote", "origin", "url", bareRepoPath.absolutePath)
+        config.save()
+        git.close()
+
+        def strategy = new MultiRevisionRepositoryStrategy('test/project')
+
+        when:
+        // Access the private method via Groovy's metaclass
+        def refSpec = strategy.invokeMethod('refSpecForName', 'some-revision')
+
+        then:
+        // When revision is not found locally or remotely, it's treated as a commit
+        refSpec.toString() == 'some-revision:refs/tags/some-revision'
+    }
+
     @IgnoreIf({ System.getenv('NXF_SMOKE') })
     @Requires({ System.getenv('NXF_GITHUB_ACCESS_TOKEN') })
     def 'should fetch new remote branch not in local bare repo'() {
