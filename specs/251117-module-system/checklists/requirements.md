@@ -33,7 +33,7 @@
 
 - Specification is complete and ready for `/speckit.plan`
 - All 8 user stories have clear acceptance scenarios
-- 32 functional requirements defined across 6 categories
+- 29 functional requirements defined across 6 categories
 - 8 success criteria defined with measurable outcomes
 - Edge cases documented for error handling scenarios
 - Registry backend is explicitly out of scope (assumed implemented)

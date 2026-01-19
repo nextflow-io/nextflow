@@ -10,7 +10,7 @@
 This specification covers the **Nextflow client-side implementation** of the module system, enabling pipeline developers to:
 - Include remote modules from the Nextflow registry using `@scope/name` syntax
 - Manage module versions through `nextflow.config`
-- Use CLI commands to install, search, list, remove, freeze, publish, and run modules
+- Use CLI commands to install, search, list, remove, publish, and run modules
 - Configure tool arguments through structured `meta.yaml` definitions
 
 **Out of Scope**: Registry backend implementation (assumed already available at `registry.nextflow.io`)
@@ -150,7 +150,7 @@ A module author wants to publish their module to the Nextflow registry for other
 - How does the system handle circular module dependencies?
   - Dependency resolver detects cycles and fails with an error listing the cycle
 - What happens when two modules require incompatible versions of the same dependency?
-  - Version conflict is reported with the conflicting requirements
+  - System automatically selects the highest compatible version; if no compatible version exists, fails with error listing conflicting requirements
 - How are modules resolved when multiple registries are configured?
   - Registries are tried in order; first match wins
 - What happens when `meta.yaml` is missing from a module?
@@ -176,41 +176,42 @@ A module author wants to publish their module to the Nextflow registry for other
 - **FR-007**: System MUST verify module integrity using `.checksum` file on every run
 - **FR-008**: System MUST download modules from registry when not present locally or when version differs
 - **FR-009**: System MUST NOT override locally modified modules (checksum mismatch) unless `-force` is used
+- **FR-010**: System MUST resolve version conflicts by selecting the highest compatible version; if no compatible version exists, MUST fail with error listing conflicting requirements
 
 #### Local Storage
 
-- **FR-012**: System MUST store modules in `modules/@scope/name/` directory structure (single version per module)
-- **FR-013**: System MUST create `.checksum` file from registry's X-Checksum header on download
-- **FR-014**: System MUST store module's `main.nf`, `meta.yaml`, and supporting files in the module directory
+- **FR-011**: System MUST store modules in `modules/@scope/name/` directory structure (single version per module)
+- **FR-012**: System MUST create `.checksum` file from registry's X-Checksum header on download
+- **FR-013**: System MUST store module's `main.nf`, `meta.yaml`, and supporting files in the module directory
 
 #### CLI Commands
 
-- **FR-015**: System MUST provide `nextflow module install [scope/name]` command to download modules
-- **FR-016**: System MUST provide `nextflow module search <query>` command to search the registry
-- **FR-017**: System MUST provide `nextflow module list` command to show installed vs configured modules
-- **FR-018**: System MUST provide `nextflow module remove scope/name` command to delete modules
-- **FR-019**: System MUST provide `nextflow module publish scope/name` command to upload modules to registry
-- **FR-020**: System MUST provide `nextflow module run scope/name` command to execute modules directly
+- **FR-014**: System MUST provide `nextflow module install [scope/name]` command to download modules
+- **FR-015**: System MUST provide `nextflow module search <query>` command to search the registry
+- **FR-016**: System MUST provide `nextflow module list` command to show installed vs configured modules
+- **FR-017**: System MUST provide `nextflow module remove scope/name` command to delete modules
+- **FR-018**: System MUST provide `nextflow module publish scope/name` command to upload modules to registry
+- **FR-019**: System MUST provide `nextflow module run scope/name` command to execute modules directly
 
 #### Configuration
 
-- **FR-022**: System MUST read module versions from `modules {}` block in `nextflow.config`
-- **FR-023**: System MUST support `registry {}` block for configuring registry URL and authentication
-- **FR-024**: System MUST support `NXF_REGISTRY_TOKEN` environment variable for authentication
-- **FR-025**: System MUST support multiple registry URLs with fallback ordering
+- **FR-020**: System MUST read module versions from `modules {}` block in `nextflow.config`
+- **FR-021**: System MUST support `registry {}` block for configuring registry URL and authentication
+- **FR-022**: System MUST support `NXF_REGISTRY_TOKEN` environment variable for authentication
+- **FR-023**: System MUST support multiple registry URLs with fallback ordering
 
 #### Tool Arguments
 
-- **FR-026**: System MUST provide `tools.<toolname>.args.<argname>` implicit variable in module scripts
-- **FR-027**: System MUST validate tool arguments against `meta.yaml` schema (type, enum)
-- **FR-028**: System MUST support boolean, integer, float, string, file, and path argument types
-- **FR-029**: System MUST concatenate all tool arguments when `tools.<toolname>.args` is accessed
+- **FR-024**: System MUST provide `tools.<toolname>.args.<argname>` implicit variable in module scripts
+- **FR-025**: System MUST validate tool arguments against `meta.yaml` schema (type, enum) at workflow parse time
+- **FR-026**: System MUST support boolean, integer, float, string, file, and path argument types
+- **FR-027**: System MUST concatenate all tool arguments when `tools.<toolname>.args` is accessed
 
 #### Registry Communication
 
-- **FR-030**: System MUST communicate with registry via documented Module API endpoints
-- **FR-031**: System MUST handle authentication using Bearer token in Authorization header
-- **FR-032**: System MUST verify SHA-256 checksum on module download
+- **FR-028**: System MUST communicate with registry via documented Module API endpoints
+- **FR-029**: System MUST handle authentication using Bearer token in Authorization header
+- **FR-030**: System MUST verify SHA-256 checksum on module download
 
 ### Key Entities
 
@@ -249,3 +250,10 @@ A module author wants to publish their module to the Nextflow registry for other
 - Existing Nextflow plugin system (for authentication reuse)
 - Existing DSL parser infrastructure (for `include` statement extension)
 - Existing config parser (for `modules {}` and `registry {}` blocks)
+
+## Clarifications
+
+### Session 2026-01-19
+
+- Q: What should happen when incompatible dependency versions are detected? → A: Use highest compatible version automatically, warn if none exists
+- Q: When should tool argument validation occur? → A: At workflow parse time (early, before any execution)
