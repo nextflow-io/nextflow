@@ -17,6 +17,7 @@
 package nextflow.scm
 
 import nextflow.config.Manifest
+import org.eclipse.jgit.api.Git
 
 import static MultiRevisionRepositoryStrategy.BARE_REPO
 import static MultiRevisionRepositoryStrategy.REVISION_SUBDIR
@@ -125,6 +126,46 @@ class MultiRevisionRepositoryStrategyTest extends Specification {
         then:
         folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/1c3e9e7404127514d69369cd87f8036830f5cf64/.git').isDirectory()
         folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/1c3e9e7404127514d69369cd87f8036830f5cf64/.git/objects/info/alternates').text == folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + BARE_REPO + '/objects').toAbsolutePath().toString()
+    }
+
+    @IgnoreIf({ System.getenv('NXF_SMOKE') })
+    @Requires({ System.getenv('NXF_GITHUB_ACCESS_TOKEN') })
+    def 'should fetch new remote branch not in local bare repo'() {
+        given:
+        def folder = tempDir.getRoot()
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        // Use a test repo with known branches
+        def strategy = createStrategy('nextflow-io/hello', token)
+        def manifest = Mock(Manifest) {
+            getDefaultBranch() >> 'master'
+            getRecurseSubmodules() >> false
+        }
+
+        when:
+        // First, create bare repo with default branch only
+        strategy.checkBareRepo(manifest)
+
+        then:
+        folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + BARE_REPO).isDirectory()
+
+        when:
+        // Now try to download 'mybranch' which exists remotely but wasn't fetched initially
+        // Clear the local branch ref to simulate it not existing locally
+        def bareGit = Git.open(strategy.getBareRepo())
+        def localBranchRef = bareGit.getRepository().findRef("refs/heads/mybranch")
+        // If mybranch was fetched during clone, delete it to simulate fresh fetch scenario
+        if (localBranchRef) {
+            bareGit.branchDelete().setBranchNames("mybranch").setForce(true).call()
+        }
+        bareGit.close()
+
+        // This should succeed by querying remote refs
+        strategy.download('mybranch', 1, manifest)
+
+        then:
+        noExceptionThrown()
+        // mybranch commit is 1c3e9e7404127514d69369cd87f8036830f5cf64
+        folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/1c3e9e7404127514d69369cd87f8036830f5cf64/.git').isDirectory()
     }
 
 }
