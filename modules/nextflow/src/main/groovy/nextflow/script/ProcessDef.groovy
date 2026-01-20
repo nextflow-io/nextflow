@@ -81,12 +81,6 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
      */
     private transient ChannelOut output
 
-    /**
-     * Flag to track whether the process config has been initialized with
-     * settings from the config file (withName/withLabel selectors)
-     */
-    private boolean initialized = false
-
     ProcessDef(BaseScript owner, String name, ProcessConfig config, BodyDef taskBody) {
         this.owner = owner
         this.simpleName = name
@@ -100,22 +94,11 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         str.split(Const.SCOPE_SEP).last()
     }
 
-    protected void initialize() {
-        // only initialize once
-        if (initialized)
-            return
-        initialized = true
-        // apply config settings to the process
-        final configProcessScope = (Map)session.config.process
-        new ProcessConfigBuilder(processConfig).applyConfig(configProcessScope, baseName, simpleName, processName)
-    }
-
     @Override
     ProcessDef clone() {
         def result = (ProcessDef)super.clone()
         result.@processConfig = processConfig.clone()
         result.@taskBody = taskBody?.clone()
-        result.@initialized = false  // reset so clone can be re-initialized
         return result
     }
 
@@ -155,9 +138,6 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
 
     @Override
     Object run(Object[] args) {
-        // initialise process config
-        initialize()
-
         // invoke process with legacy inputs/outputs
         if( processConfig instanceof ProcessConfigV1 )
             output = runV1(args, processConfig)
@@ -272,14 +252,23 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
     }
 
     TaskProcessor createTaskProcessor() {
-        // ensure config settings are applied (idempotent)
-        initialize()
+        // apply process directives from config settings
+        applyConfig()
+
+        // create executor for process
         final executor = session
             .executorFactory
             .getExecutor(processName, processConfig, taskBody, session)
+
+        // create task processor for process
         return session
             .newProcessFactory(owner)
             .newTaskProcessor(processName, executor, processConfig, taskBody)
+    }
+
+    protected void applyConfig() {
+        final configProcessScope = (Map)session.config.process
+        new ProcessConfigBuilder(processConfig).applyConfig(configProcessScope, baseName, simpleName, processName)
     }
 
 }

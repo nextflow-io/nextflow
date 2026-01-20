@@ -61,7 +61,7 @@ class ProcessDefTest extends Specification {
 
         when:
         def copy = proc.clone()
-        copy.initialize()
+        copy.applyConfig()
         then:
         def cfg1 = copy.processConfig.createTaskConfig()
         cfg1.getCpus()==2           // taken from the generic config
@@ -69,7 +69,7 @@ class ProcessDefTest extends Specification {
 
         when:
         copy = proc.cloneWithName('flow1:bar')
-        copy.initialize()
+        copy.applyConfig()
         then:
         def cfg2 = copy.processConfig.createTaskConfig()
         cfg2.getCpus()==4           // taken from the `bar` config
@@ -78,67 +78,38 @@ class ProcessDefTest extends Specification {
 
         when:
         copy = proc.cloneWithName('flow1:flow2:flow3:bar')
-        copy.initialize()
+        copy.applyConfig()
         then:
         def cfg3 = copy.processConfig.createTaskConfig()
         cfg3.getCpus()==4           // <-- taken from `withName: foo`
         cfg3.getMemory().giga == 8  // <-- taken from `withName: 'flow1:flow2:flow3:bar'`
     }
 
-    def 'should apply config when calling initialize multiple times (idempotent)' () {
+    def 'should apply config when creating task processor' () {
         given:
         def OWNER = Mock(BaseScript)
         def CONFIG = new ProcessConfig(OWNER, 'foo')
+        CONFIG.container = 'source-container:1.0'
         def BODY = new BodyDef({->}, 'echo hello')
         def proc = new ProcessDef(OWNER, 'foo', CONFIG, BODY)
         and:
         proc.session = Mock(Session) {
-            getConfig() >> [
+            config >> [
                 process: [
-                    cpus: 2,
-                    'withName:foo': [cpus: 8]
+                    'withName:foo': [container: 'config-container:2.0']
                 ]
             ]
+            executorFactory >> Mock(ExecutorFactory) {
+                getExecutor(_, _, _, _) >> Mock(Executor)
+            }
+            newProcessFactory(_) >> Mock(ProcessFactory) {
+                newTaskProcessor(_, _, _, _) >> Mock(TaskProcessor)
+            }
         }
 
-        when: 'initialize is called multiple times'
-        proc.initialize()
-        proc.initialize()
-        proc.initialize()
-        then: 'config is applied correctly and only once'
-        def cfg = proc.processConfig.createTaskConfig()
-        cfg.getCpus() == 8
-    }
-
-    def 'should apply config via createTaskProcessor without explicit initialize' () {
-        given:
-        def OWNER = Mock(BaseScript)
-        def CONFIG = new ProcessConfig(OWNER, 'foo')
-        CONFIG.container = 'source-container:1.0'  // container from source
-        def BODY = new BodyDef({->}, 'echo hello')
-        def proc = new ProcessDef(OWNER, 'foo', CONFIG, BODY)
-        and:
-        def mockExecutor = Mock(Executor) { getName() >> 'local' }
-        def mockExecutorFactory = Mock(ExecutorFactory) {
-            getExecutor(_, _, _, _) >> mockExecutor
-        }
-        def mockProcessFactory = Mock(ProcessFactory) {
-            newTaskProcessor(_, _, _, _) >> Mock(TaskProcessor)
-        }
-        proc.session = Mock(Session) {
-            getConfig() >> [
-                process: [
-                    'withName:foo': [container: 'config-container:2.0']  // override from config
-                ]
-            ]
-            getExecutorFactory() >> mockExecutorFactory
-            newProcessFactory(_) >> mockProcessFactory
-        }
-
-        when: 'createTaskProcessor is called without explicit initialize'
+        when:
         proc.createTaskProcessor()
-        then: 'config settings from withName selector are applied'
-        def cfg = proc.processConfig.createTaskConfig()
-        cfg.getContainer() == 'config-container:2.0'  // should be overridden by config
+        then:
+        proc.processConfig.container == 'config-container:2.0'
     }
 }
