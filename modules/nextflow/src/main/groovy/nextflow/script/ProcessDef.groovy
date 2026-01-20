@@ -81,6 +81,12 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
      */
     private transient ChannelOut output
 
+    /**
+     * Flag to track whether the process config has been initialized with
+     * settings from the config file (withName/withLabel selectors)
+     */
+    private boolean initialized = false
+
     ProcessDef(BaseScript owner, String name, ProcessConfig config, BodyDef taskBody) {
         this.owner = owner
         this.simpleName = name
@@ -95,6 +101,10 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
     }
 
     protected void initialize() {
+        // only initialize once
+        if (initialized)
+            return
+        initialized = true
         // apply config settings to the process
         final configProcessScope = (Map)session.config.process
         new ProcessConfigBuilder(processConfig).applyConfig(configProcessScope, baseName, simpleName, processName)
@@ -105,6 +115,7 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         def result = (ProcessDef)super.clone()
         result.@processConfig = processConfig.clone()
         result.@taskBody = taskBody?.clone()
+        result.@initialized = false  // reset so clone can be re-initialized
         return result
     }
 
@@ -261,8 +272,8 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
     }
 
     TaskProcessor createTaskProcessor() {
-        if( !processConfig )
-            initialize()
+        // ensure config settings are applied (idempotent)
+        initialize()
         final executor = session
             .executorFactory
             .getExecutor(processName, processConfig, taskBody, session)
