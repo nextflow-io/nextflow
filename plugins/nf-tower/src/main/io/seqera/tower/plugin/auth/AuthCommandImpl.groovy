@@ -18,8 +18,8 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.SysEnv
-import nextflow.cli.CmdAuth
-import nextflow.config.ConfigCmdAdapter
+import nextflow.cli.AuthCommand
+import nextflow.config.ConfigBuilder
 import nextflow.exception.AbortOperationException
 import nextflow.platform.PlatformHelper
 
@@ -40,7 +40,7 @@ import static nextflow.util.ColorUtil.colorize
  */
 @Slf4j
 @CompileStatic
-class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
+class AuthCommandImpl extends BaseCommandImpl implements AuthCommand {
     static final int AUTH_POLL_TIMEOUT_RETRIES = 60
     static final int AUTH_POLL_INTERVAL_SECONDS = 5
     static final int WORKSPACE_SELECTION_THRESHOLD = 8  // Max workspaces to show in single list; above this uses org-first selection
@@ -352,9 +352,8 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
     private String normalizeApiUrl(String url) {
         if( !url ) {
             // Read config to get the actual resolved endpoint value
-            final builder = new ConfigCmdAdapter().setHomeDir(Const.APP_HOME_DIR).setCurrentDir(Const.APP_HOME_DIR)
-            final configObject = builder.buildConfigObject()
-            final towerConfig = configObject.navigate('tower') as Map ?: [:]
+            final configObject = readConfig()
+            final towerConfig = configObject.tower as Map ?: [:]
             return PlatformHelper.getEndpoint(towerConfig, SysEnv.get())
         }
         if( !url.startsWith('http://') && !url.startsWith('https://') ) {
@@ -564,12 +563,11 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
     @Override
     void config(Boolean showHeader = true) {
         // Read from both main config and seqera-auth.config file
-        final builder = new ConfigCmdAdapter().setHomeDir(Const.APP_HOME_DIR).setCurrentDir(Const.APP_HOME_DIR)
-        final configObject = builder.buildConfigObject()
+        final configObject = readConfig()
         final config = configObject.flatten()
 
         // Navigate to tower config section (returns map without 'tower.' prefix)
-        final towerConfig = configObject.navigate('tower') as Map ?: [:]
+        final towerConfig = configObject.tower as Map ?: [:]
         final existingToken = PlatformHelper.getAccessToken(towerConfig, SysEnv.get())
         final endpoint = PlatformHelper.getEndpoint(towerConfig, SysEnv.get())
 
@@ -954,7 +952,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
      */
     @Override
     void status() {
-        final config = readConfig()
+        final config = readConfigFlat()
         printStatus(collectStatus(config))
     }
 

@@ -78,7 +78,7 @@ class AuthCommandImplTest extends Specification {
 
         expect:
         // readConfig method should return a Map
-        cmd.readConfig() instanceof Map
+        cmd.readConfigFlat() instanceof Map
     }
 
     def 'should handle config writing'() {

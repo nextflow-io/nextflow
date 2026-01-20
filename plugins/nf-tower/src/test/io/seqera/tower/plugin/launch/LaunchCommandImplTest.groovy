@@ -16,7 +16,7 @@
 
 package io.seqera.tower.plugin.launch
 
-import nextflow.cli.CmdLaunch
+import nextflow.cli.LaunchOptions
 import nextflow.exception.AbortOperationException
 import org.junit.Rule
 import spock.lang.Specification
@@ -359,8 +359,8 @@ class LaunchCommandImplTest extends Specification {
     def 'should throw error when no access token configured'() {
         given:
         def cmd = Spy(LaunchCommandImpl)
-        cmd.readConfig() >> [:]
-        def options = new CmdLaunch.LaunchOptions(pipeline: 'nf-core/rnaseq')
+        cmd.readConfigFlat() >> [:]
+        def options = new LaunchOptions(pipeline: 'nf-core/rnaseq')
 
         when:
         cmd.initializeLaunchContext(options)
@@ -378,13 +378,13 @@ class LaunchCommandImplTest extends Specification {
             'tower.accessToken': 'test-token',
             'tower.endpoint': 'https://api.cloud.seqera.io'
         ]
-        cmd.readConfig() >> config
+        cmd.readConfigFlat() >> config
         cmd.getUserInfo(_, _) >> [name: 'testuser', id: '123']
         cmd.resolveWorkspaceId(_, _, _, _) >> null
         cmd.getWorkspaceDetails(_, _, _) >> null
         cmd.resolveComputeEnvironment(_,_, _, _, _) >> [id: 'ce-123', name: 'test-ce', workDir: 's3://bucket/work']
 
-        def options = new CmdLaunch.LaunchOptions(pipeline: 'nf-core/rnaseq')
+        def options = new LaunchOptions(pipeline: 'nf-core/rnaseq')
 
         when:
         def context = cmd.initializeLaunchContext(options)
@@ -402,13 +402,13 @@ class LaunchCommandImplTest extends Specification {
         given:
         def cmd = Spy(LaunchCommandImpl)
         def config = ['tower.accessToken': 'test-token']
-        cmd.readConfig() >> config
+        cmd.readConfigFlat() >> config
         cmd.getUserInfo(_, _) >> [name: 'testuser', id: '123']
         cmd.resolveWorkspaceId(_, _, _, _) >> null
         cmd.getWorkspaceDetails(_, _, _) >> null
         cmd.resolveComputeEnvironment(_,_, _, _, _) >> [id: 'ce-123', name: 'test-ce', workDir: 's3://bucket/work']
 
-        def options = new CmdLaunch.LaunchOptions(pipeline: 'nf-core/rnaseq')
+        def options = new LaunchOptions(pipeline: 'nf-core/rnaseq')
 
         when:
         def context = cmd.initializeLaunchContext(options)
@@ -421,13 +421,13 @@ class LaunchCommandImplTest extends Specification {
         given:
         def cmd = Spy(LaunchCommandImpl)
         def config = ['tower.accessToken': 'test-token', 'tower.workspaceId': 12345]
-        cmd.readConfig() >> config
+        cmd.readConfigFlat() >> config
         cmd.getUserInfo(_, _) >> [name: 'testuser', id: '123']
         cmd.resolveWorkspaceId(_, _, _, _) >> 12345L
         cmd.getWorkspaceDetails(_, _, _) >> [orgName: 'TestOrg', workspaceName: 'TestWS']
         cmd.resolveComputeEnvironment(_, _, _, _, _) >> [id: 'ce-123', name: 'test-ce', workDir: 's3://bucket/work']
 
-        def options = new CmdLaunch.LaunchOptions(pipeline: 'nf-core/rnaseq')
+        def options = new LaunchOptions(pipeline: 'nf-core/rnaseq')
 
         when:
         def context = cmd.initializeLaunchContext(options)
@@ -559,7 +559,7 @@ class LaunchCommandImplTest extends Specification {
     def 'should build basic launch request'() {
         given:
         def cmd = new LaunchCommandImpl()
-        def options = new CmdLaunch.LaunchOptions(pipeline: 'nf-core/rnaseq')
+        def options = new LaunchOptions(pipeline: 'nf-core/rnaseq')
         def context = new LaunchCommandImpl.LaunchContext(
             computeEnvId: 'ce-123',
             workDir: 's3://bucket/work'
@@ -580,7 +580,7 @@ class LaunchCommandImplTest extends Specification {
     def 'should include optional parameters in launch request'() {
         given:
         def cmd = new LaunchCommandImpl()
-        def options = new CmdLaunch.LaunchOptions(
+        def options = new LaunchOptions(
             pipeline: 'nf-core/rnaseq',
             runName: 'test-run',
             revision: 'main',
@@ -765,7 +765,7 @@ class LaunchCommandImplTest extends Specification {
                 revision: 'main'
             ]
         ]
-        def options = new CmdLaunch.LaunchOptions(pipeline: 'nf-core/rnaseq')
+        def options = new LaunchOptions(pipeline: 'nf-core/rnaseq')
         def context = new LaunchCommandImpl.LaunchContext(
             apiEndpoint: 'https://api.cloud.seqera.io',
             userName: 'testuser'
@@ -787,7 +787,7 @@ class LaunchCommandImplTest extends Specification {
         given:
         def cmd = new LaunchCommandImpl()
         def response = [workflowId: 'wf-123']
-        def options = new CmdLaunch.LaunchOptions(pipeline: 'nf-core/rnaseq', runName: 'custom-run')
+        def options = new LaunchOptions(pipeline: 'nf-core/rnaseq', runName: 'custom-run')
         def context = new LaunchCommandImpl.LaunchContext(
             apiEndpoint: 'https://api.cloud.seqera.io',
             userName: 'testuser'
@@ -806,7 +806,7 @@ class LaunchCommandImplTest extends Specification {
         given:
         def cmd = new LaunchCommandImpl()
         def response = [workflowId: 'wf-123']
-        def options = new CmdLaunch.LaunchOptions(pipeline: 'nf-core/rnaseq')
+        def options = new LaunchOptions(pipeline: 'nf-core/rnaseq')
         def context = new LaunchCommandImpl.LaunchContext(
             apiEndpoint: 'https://api.cloud.seqera.io',
             userName: 'testuser',

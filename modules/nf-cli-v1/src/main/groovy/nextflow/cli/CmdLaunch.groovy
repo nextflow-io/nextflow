@@ -23,7 +23,6 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
-import org.pf4j.ExtensionPoint
 
 /**
  * Implements the 'nextflow launch' command
@@ -34,10 +33,6 @@ import org.pf4j.ExtensionPoint
 @CompileStatic
 @Parameters(commandDescription = "Launch a workflow in Seqera Platform")
 class CmdLaunch extends CmdBase implements UsageAware {
-
-    interface LaunchCommand extends ExtensionPoint {
-        void launch(LaunchOptions options)
-    }
 
     static final public String NAME = 'launch'
 
@@ -123,8 +118,7 @@ class CmdLaunch extends CmdBase implements UsageAware {
             latest: latest,
             stubRun: stubRun,
             mainScript: mainScript,
-            params: params,
-            launcher: launcher
+            params: params
         )
 
         // Execute launch
@@ -190,6 +184,5 @@ class CmdLaunch extends CmdBase implements UsageAware {
         boolean stubRun
         String mainScript
         Map<String, String> params
-        Launcher launcher
     }
 }
