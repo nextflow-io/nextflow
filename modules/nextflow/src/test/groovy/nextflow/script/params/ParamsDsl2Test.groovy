@@ -134,7 +134,7 @@ class ParamsDsl2Test extends Dsl2Spec {
         def binding = new ScriptBinding().setSession(session)
         def script = (BaseScript)new GroovyShell(binding,config).parse(SCRIPT); script.run()
         and:
-        def process = ScriptMeta.get(script).getProcess('alpha'); process.initialize()
+        def process = ScriptMeta.get(script).getProcess('alpha')
 
         then:
         def inputs = process.processConfig.getInputs()
@@ -175,7 +175,7 @@ class ParamsDsl2Test extends Dsl2Spec {
         def binding = new ScriptBinding().setSession(session)
         def script = (BaseScript)new GroovyShell(binding,config).parse(SCRIPT); script.run()
         and:
-        def process = ScriptMeta.get(script).getProcess('beta'); process.initialize()
+        def process = ScriptMeta.get(script).getProcess('beta')
 
         then:
         def inputs = process.processConfig.getInputs()
