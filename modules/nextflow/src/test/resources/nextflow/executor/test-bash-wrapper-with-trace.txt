@@ -144,28 +144,37 @@ nxf_fd() {
 nxf_trace_linux() {
     local pid=$$
     command -v ps &>/dev/null || { >&2 echo "Command 'ps' required by nextflow to collect task metrics cannot be found"; exit 1; }
-    local num_cpus=$(< /proc/cpuinfo grep '^processor' -c)
+    trap 'kill $mem_proc' ERR
+
     local cpu_model=$(< /proc/cpuinfo grep '^model name' | head -n 1 | awk 'BEGIN{FS="\t: "} { print $2 }')
-    local tot_time0=$(grep '^cpu ' /proc/stat | awk '{sum=$2+$3+$4+$5+$6+$7+$8+$9; printf "%.0f",sum}')
-    local cpu_time0=$(2> /dev/null < /proc/$pid/stat awk '{printf "%.0f", ($16+$17)*10 }' || echo -n 'X')
+
+    nxf_observe_task_stats() {
+        local -n stat_array_ref=$1
+        local -n mem_proc_ref=$2
+        local -n end_array_ref=$3
+
+        /bin/bash -ue {{folder}}/.command.sh &
+        local task=$!
+
+        mem_fd=$(nxf_fd)
+        eval "exec $mem_fd> >(nxf_mem_watch $task)"
+        mem_proc_ref=$!
+
+        wait $task
+
+        read -ra stat_array_ref < <(sed -E 's/\([^)]+\)/X/' "/proc/$$/stat")
+        read -ra end_array_ref < <(sed -E 's/\([^)]+\)/X/' "/proc/self/stat")
+    }
+
     local io_stat0=($(2> /dev/null < /proc/$pid/io sed 's/^.*:\s*//' | head -n 6 | tr '\n' ' ' || echo -n '0 0 0 0 0 0'))
     local start_millis=$(nxf_date)
-    trap 'kill $mem_proc' ERR
-    
-    /bin/bash -ue {{folder}}/.command.sh &
-    local task=$!
 
-    mem_fd=$(nxf_fd)
-    eval "exec $mem_fd> >(nxf_mem_watch $task)"
-    local mem_proc=$!
-
-    wait $task
+    local stat_array
+    local end_array
+    local mem_proc
+    nxf_observe_task_stats stat_array mem_proc end_array
 
     local end_millis=$(nxf_date)
-    local tot_time1=$(grep '^cpu ' /proc/stat | awk '{sum=$2+$3+$4+$5+$6+$7+$8+$9; printf "%.0f",sum}')
-    local cpu_time1=$(2> /dev/null < /proc/$pid/stat awk '{printf "%.0f", ($16+$17)*10 }' || echo -n 'X')
-    local ucpu=$(awk -v p1=$cpu_time1 -v p0=$cpu_time0 -v t1=$tot_time1 -v t0=$tot_time0 -v n=$num_cpus 'BEGIN { pct=(p1-p0)/(t1-t0)*100*n; printf("%.0f", pct>0 ? pct : 0) }' )
-
     local io_stat1=($(2> /dev/null < /proc/$pid/io sed 's/^.*:\s*//' | head -n 6 | tr '\n' ' ' || echo -n '0 0 0 0 0 0'))
     local i
     for i in {0..5}; do
@@ -175,10 +184,20 @@ nxf_trace_linux() {
     local wall_time=$((end_millis-start_millis))
     [ $NXF_DEBUG = 1 ] && echo "+++ STATS %CPU=$ucpu TIME=$wall_time I/O=${io_stat1[*]}"
 
+    local parent_user_ticks=${stat_array[13]}
+    local parent_kernel_ticks=${stat_array[14]}
+    local children_user_ticks=${stat_array[15]}
+    local children_kernel_ticks=${stat_array[16]}
+    local start_ticks=${stat_array[21]}
+    local end_ticks=${end_array[21]}
+
+    local task_ticks=$(( $parent_user_ticks + $parent_kernel_ticks + $children_user_ticks + $children_kernel_ticks ))
+    local cpu_usage=$( awk 'BEGIN {printf "%.0f",  ( ('$task_ticks' / ( '$end_ticks' - '$start_ticks' ) ) * 1000 )}' )
+
     printf "%s\n" \
         "nextflow.trace/v2" \
         "realtime=$wall_time" \
-        "%cpu=$ucpu" \
+        "%cpu=$cpu_usage" \
         "cpu_model=$cpu_model" \
         "rchar=${io_stat1[0]}" \
         "wchar=${io_stat1[1]}" \
