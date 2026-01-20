@@ -50,9 +50,14 @@ class BaseCommandImpl {
         return apiEndpoint.replace('://api.', '://').replace('/api', '')
     }
 
-    protected Map readConfig() {
-        final builder = new ConfigBuilder().setHomeDir(Const.APP_HOME_DIR).setCurrentDir(Const.APP_HOME_DIR)
-        return builder.buildConfigObject().flatten()
+    protected ConfigObject readConfig() {
+        // note: the Nextflow home config file is `$HOME/.nextflow/config` (not `nextflow.config`)
+        final configFile = Const.APP_HOME_DIR.resolve('config')
+        return new ConfigBuilder().build(configFile.exists() ? [ configFile ] : [])
+    }
+
+    protected Map readConfigFlat() {
+        return readConfig().flatten()
     }
 
     protected List<Map> listUserWorkspaces(TowerClient client, String userId) {
