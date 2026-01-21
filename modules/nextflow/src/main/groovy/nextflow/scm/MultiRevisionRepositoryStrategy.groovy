@@ -335,32 +335,34 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
 
     private RefSpec refSpecForName(String revision) {
         // First, check if it's a local branch
-        Ref branch = getBareGit().getRepository().findRef("refs/heads/" + revision)
+        final branchName = "refs/heads/$revision"
+        final branch = getBareGit().getRepository().findRef(branchName)
         if( branch != null ) {
-            return new RefSpec("refs/heads/" + revision + ":refs/heads/" + revision)
+            return new RefSpec("$branchName:$branchName")
         }
 
         // Check if it's a local tag
-        Ref tag = getBareGit().getRepository().findRef("refs/tags/" + revision)
+        final tagName = "refs/tags/$revision"
+        final tag = getBareGit().getRepository().findRef(tagName)
         if( tag != null ) {
-            return new RefSpec("refs/tags/" + revision + ":refs/tags/" + revision)
+            return new RefSpec("$tagName:$tagName")
         }
 
         // Not found locally - check remote refs
         final remoteRefs = lsRemote(false)
 
         // Is it a remote branch?
-        if( remoteRefs.containsKey("refs/heads/" + revision) ) {
-            return new RefSpec("refs/heads/" + revision + ":refs/heads/" + revision)
+        if( remoteRefs.containsKey(branchName) ) {
+            return new RefSpec("$branchName:$branchName")
         }
 
         // Is it a remote tag?
-        if( remoteRefs.containsKey("refs/tags/" + revision) ) {
-            return new RefSpec("refs/tags/" + revision + ":refs/tags/" + revision)
+        if( remoteRefs.containsKey(tagName) ) {
+            return new RefSpec("$tagName:$tagName")
         }
 
         // Assume it's a commit SHA
-        return new RefSpec(revision + ":refs/tags/" + revision)
+        return new RefSpec("$revision:$tagName")
     }
 
     @Override
