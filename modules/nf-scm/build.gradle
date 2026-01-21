@@ -1,0 +1,50 @@
+/*
+ * Copyright 2013-2024, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+
+apply plugin: 'groovy'
+
+sourceSets {
+    main.java.srcDirs = []
+    main.groovy.srcDirs = ['src/main']
+    main.resources.srcDirs = ['src/resources']
+    test.groovy.srcDirs = ['src/test']
+    test.java.srcDirs = []
+    test.resources.srcDirs = []
+}
+
+
+dependencies {
+    api project(':nf-commons')
+    api project(':nf-utils')
+    api "org.apache.groovy:groovy:4.0.29"
+    api "org.apache.groovy:groovy-nio:4.0.29"
+    api "org.apache.groovy:groovy-json:4.0.29"
+    api('org.eclipse.jgit:org.eclipse.jgit:7.1.1.202505221757-r')
+    api "org.apache.commons:commons-lang3:3.18.0"
+    api 'io.seqera:lib-httpx:2.1.0'
+    api 'io.seqera:lib-retry:2.0.0'
+    api 'org.pf4j:pf4j:3.12.0'
+    api 'org.pf4j:pf4j-update:2.3.0'
+
+    // patch gson dependency required by pf4j
+    api 'com.google.code.gson:gson:2.13.1'
+
+    /* testImplementation inherited from top gradle build file */
+    testImplementation "org.apache.groovy:groovy-json:4.0.29"
+    testImplementation(testFixtures(project(":nextflow")))
+}
+

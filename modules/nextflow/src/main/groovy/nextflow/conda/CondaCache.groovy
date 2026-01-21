@@ -291,7 +291,7 @@ class CondaCache {
         final wait = "Another Nextflow instance is creating the conda environment $condaEnv -- please wait till it completes"
         final err =  "Unable to acquire exclusive lock after $createTimeout on file: $file"
 
-        final mutex = new FileMutex(target: file, timeout: createTimeout, waitMessage: wait, errorMessage: err)
+        final mutex = new FileMutex(target: file, timeout: createTimeout.toMillis(), waitMessage: wait, errorMessage: err)
         try {
             mutex .lock { createLocalCondaEnv0(condaEnv, prefixPath) }
         }

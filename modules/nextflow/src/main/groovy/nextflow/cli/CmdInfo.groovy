@@ -29,7 +29,7 @@ import nextflow.BuildInfo
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.DefaultPlugins
 import nextflow.plugin.Plugins
-import nextflow.scm.AssetManager
+import nextflow.scm.NextflowAssetManager
 import nextflow.util.MemoryUnit
 import nextflow.util.Threads
 import org.yaml.snakeyaml.Yaml
@@ -75,7 +75,7 @@ class CmdInfo extends CmdBase {
         }
 
         Plugins.init()
-        final manager = new AssetManager(args[0])
+        final manager = new NextflowAssetManager(args[0])
         if( manager.isNotInitialized() ) {
             throw new AbortOperationException("Unknown project `${args[0]}`")
         }
@@ -97,7 +97,7 @@ class CmdInfo extends CmdBase {
 
     }
 
-    protected printText(AssetManager manager, int level) {
+    protected printText(NextflowAssetManager manager, int level) {
         final manifest = manager.getManifest()
 
         out.println " project name: ${manager.project}"
@@ -135,7 +135,7 @@ class CmdInfo extends CmdBase {
         out.flush()
     }
 
-    protected Map createMap(AssetManager manager) {
+    protected Map createMap(NextflowAssetManager manager) {
         def result = [:]
         result.projectName = manager.project
         result.repository = manager.repositoryUrl

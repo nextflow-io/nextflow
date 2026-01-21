@@ -325,7 +325,7 @@ task compile {
 
 def getRuntimeConfigs() {
     def names = subprojects
-            .findAll { prj -> prj.name in ['nextflow','nf-commons','nf-httpfs','nf-lang','nf-lineage'] }
+            .findAll { prj -> prj.name in ['nextflow','nf-commons','nf-scm','nf-utils','nf-httpfs','nf-lang','nf-lineage'] }
             .collect { it.name }
 
     FileCollection result = null
@@ -356,14 +356,14 @@ task exportClasspath {
         def libs = []
         
         // Resolve configurations during provider evaluation (not ideal but functional)
-        ['nextflow','nf-commons','nf-httpfs','nf-lang','nf-lineage'].each { moduleName ->
+        ['nextflow','nf-commons','nf-scm','nf-utils','nf-httpfs','nf-lang','nf-lineage'].each { moduleName ->
             def moduleProject = project(":$moduleName")
             def cfg = moduleProject.configurations.getByName('runtimeClasspath')
             libs.addAll(cfg.files.collect { it.canonicalPath })
         }
         
         // Add module jars
-        ['nextflow','nf-commons','nf-httpfs','nf-lang','nf-lineage'].each {
+        ['nextflow','nf-commons','nf-scm','nf-utils','nf-httpfs','nf-lang','nf-lineage'].each {
             libs << file("modules/$it/build/libs/${it}-${version}.jar").canonicalPath
         }
         
@@ -387,7 +387,7 @@ ext.nexusEmail = project.findProperty('nexusEmail')
 // `signing.keyId` property needs to be defined in the `gradle.properties` file
 ext.enableSignArchives = project.findProperty('signing.keyId')
 
-ext.coreProjects = projects( ':nextflow', ':nf-commons', ':nf-httpfs', ':nf-lang', ':nf-lineage' )
+ext.coreProjects = projects( ':nextflow', ':nf-commons', ':nf-scm', ':nf-utils',':nf-httpfs', ':nf-lang', ':nf-lineage' )
 
 configure(coreProjects) {
     group = 'io.nextflow'

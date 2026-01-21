@@ -16,6 +16,8 @@ dependencies {
     defaultCfg "org.apache.ivy:ivy:2.5.2"
     // default cfg = runtime + httpfs + lineage + amazon + tower client + wave client
     defaultCfg project(':nf-httpfs')
+    defaultCfg project(':nf-scm')
+    defaultCfg project(':nf-utils')
     defaultCfg project(':nf-lineage')
     console project(':plugins:nf-console')
     google  project(':plugins:nf-google')

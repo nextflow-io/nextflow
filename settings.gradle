@@ -29,6 +29,8 @@ rootProject.name = 'nextflow-prj'
 
 include 'nextflow'
 include 'nf-commons'
+include 'nf-scm'
+include 'nf-utils'
 include 'nf-httpfs'
 include 'nf-lang'
 include 'nf-lineage'

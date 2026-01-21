@@ -29,7 +29,7 @@ import nextflow.config.ConfigBuilder
 import nextflow.config.ConfigValidator
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
-import nextflow.scm.AssetManager
+import nextflow.scm.NextflowAssetManager
 import nextflow.util.ConfigHelper
 /**
  *  Prints the pipeline configuration
@@ -233,7 +233,7 @@ class CmdConfig extends CmdBase {
             return file.parent ?: Paths.get('/')
         }
 
-        final manager = new AssetManager(path, revision)
+        final manager = new NextflowAssetManager(path, revision)
         if( revision && manager.isUsingLegacyStrategy() ){
             log.warn("The local asset for ${path} does not support multi-revision - 'revision' option is ignored\n" +
                 "Consider updating the project using 'nextflow pull ${path} -r $revision -migrate'")

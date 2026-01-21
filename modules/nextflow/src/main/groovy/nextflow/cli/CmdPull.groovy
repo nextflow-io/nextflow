@@ -22,6 +22,7 @@ import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
+import nextflow.scm.NextflowAssetManager
 import nextflow.util.TestOnly
 /**
  * CLI sub-command PULL
@@ -31,7 +32,7 @@ import nextflow.util.TestOnly
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Download or update a project")
-class CmdPull extends CmdBase implements HubOptions {
+class CmdPull extends CmdBase implements HubAware {
 
     static final public NAME = 'pull'
 
@@ -83,7 +84,7 @@ class CmdPull extends CmdBase implements HubOptions {
 
         for( String proj : list ) {
             if( all ) {
-                def branches = new AssetManager(proj).getBranchesAndTags(false).pulled as List<String>
+                def branches = new NextflowAssetManager(proj).getBranchesAndTags(false).pulled as List<String>
                 branches.each { rev -> pullProjectRevision(proj, rev) }
             } else {
                 pullProjectRevision(proj, revision)
@@ -92,12 +93,12 @@ class CmdPull extends CmdBase implements HubOptions {
     }
 
     private pullProjectRevision(String project, String revision) {
-        final manager = new AssetManager(project, this)
+        final manager = new NextflowAssetManager(project, toHubOptions())
 
         if( manager.isUsingLegacyStrategy() ) {
             if( migrate ) {
                 log.info "Migrating ${project} revision ${revision} to multi-revision strategy"
-                manager.setStrategyType(AssetManager.RepositoryStrategyType.MULTI_REVISION)
+                manager.setStrategyType(NextflowAssetManager.RepositoryStrategyType.MULTI_REVISION)
             } else {
                 log.warn "The local asset for ${project} does not support multi-revision - Pulling with legacy strategy\n" +
                     "Consider updating the project ${project} using '-migrate' option"

@@ -17,6 +17,7 @@
 
 package nextflow.util
 
+
 import java.util.concurrent.CompletableFuture
 
 import nextflow.SysEnv

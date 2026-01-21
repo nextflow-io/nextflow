@@ -16,6 +16,8 @@
 
 package nextflow.file
 
+import nextflow.util.BasicFileHelper
+
 import java.lang.reflect.Field
 import java.nio.file.CopyOption
 import java.nio.file.FileSystem
@@ -57,7 +59,7 @@ import nextflow.util.StringUtils
  */
 @Slf4j
 @CompileStatic
-class FileHelper {
+class FileHelper extends BasicFileHelper{
 
     static final public Pattern URL_PROTOCOL = ~/^([a-zA-Z][a-zA-Z0-9]*):\\/\\/.+/
 
@@ -148,42 +150,6 @@ class FileHelper {
         }
         else {
             return [name,0]
-        }
-
-    }
-
-    /**
-     * Check whenever a file or a directory is empty
-     *
-     * @param file The file path to
-     */
-    static boolean empty( File file ) {
-        assert file
-        empty(file.toPath())
-    }
-
-    static boolean empty( Path path ) {
-
-        def attrs
-        try {
-            attrs = Files.readAttributes(path, BasicFileAttributes.class)
-        }
-        catch (IOException e) {
-            return true;
-        }
-
-        if ( attrs.isDirectory() ) {
-            def stream = Files.newDirectoryStream(path)
-            try {
-                Iterator<Path> itr = stream.iterator()
-                return !itr.hasNext()
-            }
-            finally {
-                stream.close()
-            }
-        }
-        else {
-            return attrs.size() == 0
         }
 
     }

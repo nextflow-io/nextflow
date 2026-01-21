@@ -34,7 +34,6 @@ import nextflow.exception.AbortOperationException
 import nextflow.exception.MissingCredentialsException
 import nextflow.scm.ProviderConfig
 import nextflow.scm.RepositoryProvider
-import nextflow.scm.RepositoryProvider.RepositoryEntry
 import nextflow.util.StringUtils
 import org.eclipse.jgit.api.errors.TransportException
 import org.eclipse.jgit.transport.CredentialsProvider

@@ -21,7 +21,7 @@ import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.plugin.Plugins
-import nextflow.scm.AssetManager
+import nextflow.scm.NextflowAssetManager
 
 /**
  * CLI sub-command DROP
@@ -50,6 +50,6 @@ class CmdDrop extends CmdBase {
     @Override
     void run() {
         Plugins.init()
-        new AssetManager(args[0]).drop(revision, force)
+        new NextflowAssetManager(args[0]).drop(revision, force)
     }
 }

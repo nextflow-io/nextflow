@@ -16,6 +16,8 @@
 
 package nextflow.extension
 
+import nextflow.util.BasicBolts
+
 import java.nio.file.Path
 import java.text.DateFormat
 import java.text.SimpleDateFormat
@@ -384,7 +386,7 @@ class Bolts {
     static withLock(File self, Duration timeout = null, Closure closure) {
         def locker = new FileMutex(self)
         if( timeout )
-            locker.setTimeout(timeout)
+            locker.setTimeout(timeout.toMillis())
         locker.lock(closure)
     }
 
@@ -411,7 +413,7 @@ class Bolts {
     static withLock( Path self, Duration timeout, Closure closure ) {
         def locker = new FileMutex(self.toFile())
         if( timeout )
-            locker.setTimeout(timeout)
+            locker.setTimeout(timeout.toMillis())
         locker.lock(closure)
     }
 
@@ -737,34 +739,7 @@ class Bolts {
      */
     @CompileDynamic
     static List<String> closest(Collection<String> options, String sample ) {
-        assert sample
-
-        if( !options )
-            return Collections.emptyList()
-
-        // Otherwise look for the most similar
-        def diffs = [:]
-        options.each {
-            diffs[it] = StringUtils.getLevenshteinDistance(sample, it)
-        }
-
-        // sort the Levenshtein Distance and get the fist entry
-        def sorted = diffs.sort { it.value }
-        def nearest = sorted.find()
-        def min = nearest.value
-        def len = sample.length()
-
-        def threshold = len<=3 ? 1 : ( len > 10 ? 5 : Math.floor(len/2))
-
-        def result
-        if( min <= threshold ) {
-            result = sorted.findAll { it.value==min } .collect { it.key }
-        }
-        else {
-            result = []
-        }
-
-        return result
+        return BasicBolts.closest(options, sample)
     }
 
     private static HashMap<Object,Long> LOGGER_CACHE = new LinkedHashMap<Object,Long>() {

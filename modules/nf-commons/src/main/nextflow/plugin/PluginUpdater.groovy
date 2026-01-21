@@ -36,6 +36,7 @@ import nextflow.SysEnv
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.file.FileMutex
+import nextflow.util.Duration
 import org.pf4j.InvalidPluginDescriptorException
 import org.pf4j.PluginDependency
 import org.pf4j.PluginRuntimeException
@@ -318,7 +319,7 @@ class PluginUpdater extends UpdateManager {
      */
     private Path safeDownload(String id, String version) {
         final sentinel = lockFile(id,version)
-        final mutex = new FileMutex(target: sentinel, timeout: '10 min')
+        final mutex = new FileMutex(target: sentinel, timeout: Duration.of('10 min').toMillis())
         try {
             return mutex.lock { download0(id, version) }
         }
