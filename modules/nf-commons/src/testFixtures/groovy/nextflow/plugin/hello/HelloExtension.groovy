@@ -73,7 +73,11 @@ class HelloExtension extends PluginExtensionPoint {
      * business logic can write into the channel once ready and values will be consumed from it
      */
     DataflowWriteChannel reverse(String message) {
-        createReverseChannel(message)
+        final channel = CH.create()
+        session.addIgniter { ->
+            businessLogicHere(channel, message)
+        }
+        return channel
     }
 
     /*
@@ -117,18 +121,6 @@ class HelloExtension extends PluginExtensionPoint {
     @Operator
     String goodbyeWrongSignature(DataflowReadChannel source) {
         'goodbye'
-    }
-
-    protected DataflowWriteChannel createReverseChannel(final String message){
-        final channel = CH.create()
-        if( NF.isDsl2() ){
-            session.addIgniter { ->
-                businessLogicHere(channel, message)
-            }
-        }else{
-            businessLogicHere(channel, message)
-        }
-        channel
     }
 
     HelloFunctions functions = new HelloFunctions()

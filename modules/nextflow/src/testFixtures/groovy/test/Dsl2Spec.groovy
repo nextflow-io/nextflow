@@ -30,9 +30,6 @@ import nextflow.script.ScriptMeta
 @Slf4j
 class Dsl2Spec extends BaseSpec {
 
-    def setupSpec() { NextflowMeta.instance.enableDsl2() }
-    def cleanupSpec() { NextflowMeta.instance.disableDsl2() }
-
     def setup() {
         TaskProcessor.reset()
         ScriptMeta.reset()

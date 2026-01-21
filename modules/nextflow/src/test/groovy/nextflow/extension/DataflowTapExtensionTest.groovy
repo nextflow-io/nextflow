@@ -16,66 +16,62 @@
 
 package nextflow.extension
 
-import groovyx.gpars.dataflow.DataflowQueue
-import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Channel
-import nextflow.Session
-import spock.lang.Shared
+import nextflow.Global
 import spock.lang.Specification
 
+import static test.ScriptHelper.runDataflow
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class DataflowTapExtensionTest extends Specification {
 
-    @Shared
-    Session session
-
-    def setup() {
-        session = new Session()
-    }
-
-
     def 'should `tap` item to a new channel' () {
 
         when:
-        def result = Channel.of( 4,7,9 ) .tap { first }.map { it+1 }
+        def (result, first) = runDataflow {
+            result = Channel.of( 4,7,9 ) .tap { first }.map { it+1 }
+            [ result, first ]
+        }
         then:
-        session.binding.first.val == 4
-        session.binding.first.val == 7
-        session.binding.first.val == 9
-        session.binding.first.val == Channel.STOP
+        first.val == 4
+        first.val == 7
+        first.val == 9
+        first.val == Channel.STOP
 
         result.val == 5
         result.val == 8
         result.val == 10
         result.val == Channel.STOP
 
-        !session.dag.isEmpty()
+        !Global.session.dag.isEmpty()
 
     }
 
     def 'should `tap` item to more than one channel' () {
 
         when:
-        def result = Channel.of( 4,7,9 ) .tap { foo; bar }.map { it+1 }
+        def (result, foo, bar) = runDataflow {
+            result = Channel.of( 4,7,9 ) .tap { foo; bar }.map { it+1 }
+            [ result, foo, bar ]
+        }
         then:
-        session.binding.foo.val == 4
-        session.binding.foo.val == 7
-        session.binding.foo.val == 9
-        session.binding.foo.val == Channel.STOP
-        session.binding.bar.val == 4
-        session.binding.bar.val == 7
-        session.binding.bar.val == 9
-        session.binding.bar.val == Channel.STOP
+        foo.val == 4
+        foo.val == 7
+        foo.val == 9
+        foo.val == Channel.STOP
+        bar.val == 4
+        bar.val == 7
+        bar.val == 9
+        bar.val == Channel.STOP
 
         result.val == 5
         result.val == 8
         result.val == 10
         result.val == Channel.STOP
 
-        !session.dag.isEmpty()
+        !Global.session.dag.isEmpty()
 
     }
 

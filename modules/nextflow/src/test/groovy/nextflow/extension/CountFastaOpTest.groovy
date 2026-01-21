@@ -16,11 +16,11 @@
 
 package nextflow.extension
 
-import spock.lang.Specification
-
 import nextflow.Channel
+import spock.lang.Specification
 import test.TestHelper
 
+import static test.ScriptHelper.runDataflow
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -62,7 +62,9 @@ class CountFastaOpTest extends Specification {
                 .stripIndent()
 
         when:
-        def result = Channel.of( str, str2 ).countFasta()
+        def result = runDataflow {
+            Channel.of( str, str2 ).countFasta()
+        }
         then:
         result.val == 8
 
@@ -111,7 +113,9 @@ class CountFastaOpTest extends Specification {
                 .stripIndent()
 
         when:
-        def result = Channel.of( file1, file2 ).countFasta()
+        def result = runDataflow {
+            Channel.of( file1, file2 ).countFasta()
+        }
         then:
         result.val == 10
 
