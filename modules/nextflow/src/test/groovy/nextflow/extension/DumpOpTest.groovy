@@ -24,6 +24,7 @@ import test.OutputCapture
 
 import java.nio.file.Path
 
+import static test.ScriptHelper.runDataflow
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -38,11 +39,11 @@ class DumpOpTest extends Specification {
 
     def 'should dump channel items'() {
 
-        given:
-        new Session(dumpChannels: ['*'])
-
         when:
-        def result = Channel.of(1, 2, 3).dump()
+        def config = [dumpChannels: ['*']]
+        def result = runDataflow(config: config) {
+            Channel.of(1, 2, 3).dump()
+        }
         then:
         result.val == 1
         result.val == 2
@@ -56,11 +57,11 @@ class DumpOpTest extends Specification {
 
     def 'should dump channel items with closure'() {
 
-        given:
-        new Session(dumpChannels: ['*'])
-
         when:
-        def result = Channel.of(1, 2, 3).dump { it * it }
+        def config = [dumpChannels: ['*']]
+        def result = runDataflow(config: config) {
+            Channel.of(1, 2, 3).dump { it * it }
+        }
         then:
         result.val == 1
         result.val == 2
@@ -74,11 +75,11 @@ class DumpOpTest extends Specification {
 
     def 'should print channel items with a tag'() {
 
-        given:
-        new Session(dumpChannels: ['*'])
-
         when:
-        def result = Channel.of(1, 2, 3).dump(tag: 'foo')
+        def config = [dumpChannels: ['*']]
+        def result = runDataflow(config: config) {
+            Channel.of(1, 2, 3).dump(tag: 'foo')
+        }
         then:
         result.val == 1
         result.val == 2
@@ -116,11 +117,11 @@ class DumpOpTest extends Specification {
     @Unroll
     def 'should pretty print channel with items #items'() {
 
-        given:
-        new Session(dumpChannels: ['*'])
-
         when:
-        def result = Channel.of(items).dump(tag: 'foo', pretty: true)
+        def config = [dumpChannels: ['*']]
+        def result = runDataflow(config: config) {
+            Channel.of(items).dump(tag: 'foo', pretty: true)
+        }
 
         then:
         result.val
@@ -139,18 +140,18 @@ class DumpOpTest extends Specification {
 
     def 'should pretty print a complex channel'() {
 
-        given:
-        new Session(dumpChannels: ['*'])
-
         when:
-        def result = Channel.of([
+        def config = [dumpChannels: ['*']]
+        def result = runDataflow(config: config) {
+            Channel.of([
                 id     : 'test',
                 samples: [
                         [id: 'S1', path: '/path/to/s1'],
                         [id: 'S2', path: '/path/to/s2'],
                         [id: 'S3', path: '/path/to/s3']
                 ]
-        ]).dump(tag: 'foo', pretty: true)
+            ]).dump(tag: 'foo', pretty: true)
+        }
 
         then:
         result.val

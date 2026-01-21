@@ -21,6 +21,7 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
+import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Session
 import nextflow.exception.ScriptRuntimeException
 import nextflow.processor.PublishDir
@@ -54,7 +55,7 @@ class PublishOp {
 
     private List publishedValues = []
 
-    private volatile boolean complete
+    private DataflowVariable target
 
     PublishOp(Session session, String name, DataflowReadChannel source, Map opts) {
         this.session = session
@@ -68,14 +69,13 @@ class PublishOp {
             this.indexOpts = new IndexOpts(session.outputDir, opts.index as Map)
     }
 
-    boolean getComplete() { complete }
-
-    PublishOp apply() {
+    DataflowVariable apply() {
         final events = new HashMap(2)
         events.onNext = this.&onNext
         events.onComplete = this.&onComplete
         DataflowHelper.subscribeImpl(source, events)
-        return this
+        this.target = new DataflowVariable()
+        return target
     }
 
     /**
@@ -226,7 +226,7 @@ class PublishOp {
         }
 
         log.trace "Completed workflow output '${name}'"
-        this.complete = true
+        target.bind(indexPath ?: outputValue)
     }
 
     /**
