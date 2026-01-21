@@ -347,7 +347,7 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
         }
 
         // Not found locally - check remote refs
-        final remoteRefs = fetchRemoteRefs()
+        final remoteRefs = lsRemote(false)
 
         // Is it a remote branch?
         if( remoteRefs.containsKey("refs/heads/" + revision) ) {
@@ -361,21 +361,6 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
 
         // Assume it's a commit SHA
         return new RefSpec(revision + ":refs/tags/" + revision)
-    }
-
-    /**
-     * Fetch refs from remote repository using ls-remote.
-     * Results are cached per call via @Memoized.
-     * @return Map of ref name to Ref object
-     */
-    @Memoized
-    private Map<String, Ref> fetchRemoteRefs() {
-        log.debug "Fetching remote refs for ${project}"
-        final cmd = getBareGit().lsRemote()
-        if( provider?.hasCredentials() ) {
-            cmd.setCredentialsProvider(provider.getGitCredentials())
-        }
-        return cmd.callAsMap()
     }
 
     @Override
@@ -451,7 +436,7 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
     @Override
     Map<String, Ref> lsRemote(boolean tags) {
         final cmd = getBareGitWithLegacyFallback()?.lsRemote()?.setTags(tags)
-        if( provider.hasCredentials() )
+        if( provider?.hasCredentials() )
             cmd?.setCredentialsProvider(provider.getGitCredentials())
         return cmd?.callAsMap() ?: [:]
     }

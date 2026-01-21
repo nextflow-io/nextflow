@@ -190,6 +190,25 @@ class MultiRevisionRepositoryStrategyTest extends Specification {
         noExceptionThrown()
         // mybranch commit is 1c3e9e7404127514d69369cd87f8036830f5cf64
         folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/1c3e9e7404127514d69369cd87f8036830f5cf64/.git').isDirectory()
+
+        when:
+        // Now try to download tag 'v1.2' which exists remotely but wasn't fetched initially
+        // Clear the local tag ref to simulate it not existing locally
+        bareGit = Git.open(strategy.getBareRepo())
+        def localTagRef = bareGit.getRepository().findRef("refs/tags/v1.2")
+        // If v1.2 was fetched during clone, delete it to simulate fresh fetch scenario
+        if (localTagRef) {
+            bareGit.tagDelete().setTags("v1.2").call()
+        }
+        bareGit.close()
+
+        // This should succeed by querying remote refs
+        strategy.download('v1.2', 1, manifest)
+
+        then:
+        noExceptionThrown()
+        // v1.2 ref is 1b420d060d3fad67027154ac48e3bdea06f058
+        folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/1b420d060d3fad67027154ac48e3bdea06f058da/.git').isDirectory()
     }
 
 }
