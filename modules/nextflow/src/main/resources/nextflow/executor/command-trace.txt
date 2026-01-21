@@ -166,68 +166,60 @@ nxf_trace_linux() {
     ##  https://github.com/Leo-G/DevopsWiki/wiki/How-Linux-CPU-Usage-Time-and-Percentage-is-calculated
     ##  https://stackoverflow.com/questions/27508531/calculate-cpu-per-process/27514562##27514562
     ##  https://stackoverflow.com/questions/16726779/how-do-i-get-the-total-cpu-usage-of-an-application-from-proc-pid-stat
-    ## capture error and kill mem watcher
-    trap 'kill $mem_proc' ERR
-
     local cpu_model=$(< /proc/cpuinfo grep '^model name' | head -n 1 | awk 'BEGIN{FS="\t: "} { print $2 }')
 
-    nxf_observe_task_stats() {
-        local -n stat_array_ref=$1
-        local -n mem_proc_ref=$2
-        local -n end_array_ref=$3
+    ## Prepare local variables before sampling
+    local stat_array_0
+    local stat_array_1
+    local end_array
 
-        ## run task script
-        {{trace_cmd}} &
-        local task=$!
-
-        ## run mem stat
-        mem_fd=$(nxf_fd)
-        eval "exec $mem_fd> >(nxf_mem_watch $task)"
-        mem_proc_ref=$!
-
-        wait $task
-
-        ## Read out timestamps
-        read -ra stat_array_ref < <(sed -E 's/\([^)]+\)/X/' "/proc/$$/stat")
-        read -ra end_array_ref < <(sed -E 's/\([^)]+\)/X/' "/proc/self/stat")
-    }
-
-    ## Capture pre-start snapshots
+    ## Sampling of stats before task execution
+    read -ra stat_array_0 < <(sed -E 's/\([^)]+\)/X/' "/proc/$$/stat")
     local io_stat0=($(2> /dev/null < /proc/$pid/io sed 's/^.*:\s*//' | head -n 6 | tr '\n' ' ' || echo -n '0 0 0 0 0 0'))
     local start_millis=$(nxf_date)
 
-    ## Execute task
-    local stat_array
-    local end_array
-    local mem_proc
-    nxf_observe_task_stats stat_array mem_proc end_array
+    ## capture error and kill mem watcher
+    trap 'kill $mem_proc' ERR
 
+    ## run task script
+    {{trace_cmd}} &
+    local task=$!
+
+    ## run mem stat
+    mem_fd=$(nxf_fd)
+    eval "exec $mem_fd> >(nxf_mem_watch $task)"
+    local mem_proc=$!
+
+    wait $task
+
+    ## Sampling of stats after task execution
     local end_millis=$(nxf_date)
+    read -ra stat_array_1 < <(sed -E 's/\([^)]+\)/X/' "/proc/$$/stat")
+    read -ra end_array < <(sed -E 's/\([^)]+\)/X/' "/proc/self/stat")
     local io_stat1=($(2> /dev/null < /proc/$pid/io sed 's/^.*:\s*//' | head -n 6 | tr '\n' ' ' || echo -n '0 0 0 0 0 0'))
+
+    ## Calculation of stats from samples
+    ## IO stats
     local i
     for i in {0..5}; do
         io_stat1[i]=$((io_stat1[i]-io_stat0[i]))
     done
 
-    ## Compute CPU usage
-    local parent_user_ticks=${stat_array[13]}
-    local parent_kernel_ticks=${stat_array[14]}
-    local children_user_ticks=${stat_array[15]}
-    local children_kernel_ticks=${stat_array[16]}
-    local start_ticks=${stat_array[21]}
+    ## CPU usage
+    local start_ticks=${stat_array_0[21]}
     local end_ticks=${end_array[21]}
+    local task_ticks=$(( "${stat_array_1[15]}" + "${stat_array_1[16]}" - "${stat_array_0[15]}" - "${stat_array_0[16]}"))
+    local wrapper_ticks=$(( "${stat_array_1[13]}" + "${stat_array_1[14]}" ))
+    local ucpu=$( awk 'BEGIN {printf "%.0f",  ( ('$task_ticks' / ( ( '$end_ticks' - '$start_ticks' ) - '$wrapper_ticks' ) ) * 1000 )}' )
 
-    local task_ticks=$(( $parent_user_ticks + $parent_kernel_ticks + $children_user_ticks + $children_kernel_ticks ))
-    ## active ticks of task / duration in ticks * 1000 (for percentage rounded to 1 decimal place)
-    local cpu_usage=$( awk 'BEGIN {printf "%.0f",  ( ('$task_ticks' / ( '$end_ticks' - '$start_ticks' ) ) * 1000 )}' )
-
+    ## Wall time
     local wall_time=$((end_millis-start_millis))
-    [ $NXF_DEBUG = 1 ] && echo "+++ STATS %CPU=$cpu_usage TIME=$wall_time I/O=${io_stat1[*]}"
+    [ $NXF_DEBUG = 1 ] && echo "+++ STATS %CPU=$ucpu TIME=$wall_time I/O=${io_stat1[*]}"
 
     printf "%s\n" \
         "nextflow.trace/v2" \
         "realtime=$wall_time" \
-        "%cpu=$cpu_usage" \
+        "%cpu=$ucpu" \
         "cpu_model=$cpu_model" \
         "rchar=${io_stat1[0]}" \
         "wchar=${io_stat1[1]}" \
