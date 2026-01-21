@@ -15,22 +15,19 @@
  */
 
 package nextflow.extension
+
 import groovyx.gpars.dataflow.DataflowQueue
 import nextflow.Channel
-import nextflow.Session
 import spock.lang.Specification
 import spock.lang.Timeout
+
+import static test.ScriptHelper.runDataflow
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Timeout(5)
 class CombineOpTest extends Specification {
-
-    def setupSpec() {
-        new Session()
-    }
-
 
     def 'should make a tuple' () {
         given:
@@ -56,14 +53,13 @@ class CombineOpTest extends Specification {
 
     def 'should combine channels' () {
 
-        given:
-        def left = Channel.of('a','b','c')
-        def right = Channel.of(1,2,3)
-        def op = new CombineOp(left, right)
-
         when:
-        def result = op.apply()
-        def all = (List) ToListOp.apply(result).val
+        def result = runDataflow {
+            def left = Channel.of('a','b','c')
+            def right = Channel.of(1,2,3)
+            left.combine(right).toList()
+        }
+        def all = (List) result.val
         then:
         all.size() == 9
         ['a', 1] in all
@@ -78,15 +74,14 @@ class CombineOpTest extends Specification {
     }
 
     def 'should combine by a value' () {
-        given:
-        def left = Channel.of(['A', 10], ['A', 20], ['B', 30], ['B', 40])
-        def right = Channel.of(['A', 11], ['A', 22], ['B', 33])
 
         when:
-        def op = new CombineOp(left,right)
-        op.setPivot([0])
-        def result = op.apply()
-        def all = (List) ToListOp.apply(result).val
+        def result = runDataflow {
+            def left = Channel.of(['A', 10], ['A', 20], ['B', 30], ['B', 40])
+            def right = Channel.of(['A', 11], ['A', 22], ['B', 33])
+            left.combine(right, by: 0).toList()
+        }
+        def all = (List) result.val
         println all
         then:
         true
@@ -94,14 +89,13 @@ class CombineOpTest extends Specification {
 
     def 'should combine a channel with a list' () {
 
-        given:
-        def left = Channel.of('a','b')
-        def right = [1,2,3,4]
-        def op = new CombineOp(left, right)
-
         when:
-        def result = op.apply()
-        def all = (List) ToListOp.apply(result).val
+        def result = runDataflow {
+            def left = Channel.of('a','b')
+            def right = [1,2,3,4]
+            left.combine(right).toList()
+        }
+        def all = (List) result.val
         then:
         all.size() == 8
         ['a', 1] in all
@@ -116,14 +110,13 @@ class CombineOpTest extends Specification {
 
     def 'should combine a value with a list' () {
 
-        given:
-        def left = Channel.value('x')
-        def right = [1,2,3,4]
-        def op = new CombineOp(left, right)
-
         when:
-        def result = op.apply()
-        def all = (List) ToListOp.apply(result).val
+        def result = runDataflow {
+            def left = Channel.value('x')
+            def right = [1,2,3,4]
+            left.combine(right).toList()
+        }
+        def all = (List) result.val
         then:
         all.size() == 4
         ['x', 1] in all
@@ -134,40 +127,40 @@ class CombineOpTest extends Specification {
 
     def 'should combine two values' () {
 
-        given:
-        def left = Channel.value('x')
-        def right = Channel.value('z')
-        def op = new CombineOp(left, right)
-
         when:
-        def result = op.apply()
-        def all = (List) ToListOp.apply(result).val
+        def result = runDataflow {
+            def left = Channel.value('x')
+            def right = Channel.value('z')
+            left.combine(right).toList()
+        }
+        def all = (List) result.val
         then:
         all.size() == 1
         ['x', 'z'] in all
     }
 
     def 'should combine with empty value' () {
-        given:
-        def left = Channel.empty()
-        def right = Channel.value('z')
-        def op = new CombineOp(left, right)
+
         when:
-        def result = op.apply()
+        def result = runDataflow {
+            def left = Channel.empty()
+            def right = Channel.value('z')
+            left.combine(right)
+        }
         then:
         result.val == Channel.STOP
     }
 
     def 'should chain combine ops flat default' () {
 
-        given:
-        def ch2 = Channel.of('a','b','c')
-        def ch3 = Channel.of('x','y')
-        def ch1 = Channel.of(1,2)
-
         when:
-        def result = new CombineOp(new CombineOp(ch1, ch2).apply(), ch3).apply()
-        def all = (List) ToListOp.apply(result).val
+        def result = runDataflow {
+            def ch2 = Channel.of('a','b','c')
+            def ch3 = Channel.of('x','y')
+            def ch1 = Channel.of(1,2)
+            ch1.combine(ch2).combine(ch3).toList()
+        }
+        def all = (List) result.val
         then:
         all.size() == 12
 
@@ -189,14 +182,14 @@ class CombineOpTest extends Specification {
 
     def 'should chain combine ops flat true' () {
 
-        given:
-        def ch1 = Channel.of(1,2)
-        def ch2 = Channel.of('a','b','c')
-        def ch3 = Channel.of('x','y')
-
         when:
-        def result = new CombineOp(new CombineOp(ch1, ch2).apply(), ch3).apply()
-        def all = (List) ToListOp.apply(result).val
+        def result = runDataflow {
+            def ch1 = Channel.of(1,2)
+            def ch2 = Channel.of('a','b','c')
+            def ch3 = Channel.of('x','y')
+            ch1.combine(ch2).combine(ch3).toList()
+        }
+        def all = (List) result.val
         then:
         all.size() == 12
 
@@ -218,11 +211,12 @@ class CombineOpTest extends Specification {
     def 'should combine with tuples' () {
 
         when:
-        def left = Channel.of([1, 'x'], [2,'y'], [3, 'z'])
-        def right = ['alpha','beta','gamma']
-
-        def result = new CombineOp(left, right).apply()
-        def all = (List) ToListOp.apply(result).val
+        def result = runDataflow {
+            def left = Channel.of([1, 'x'], [2,'y'], [3, 'z'])
+            def right = ['alpha','beta','gamma']
+            left.combine(right).toList()
+        }
+        def all = (List) result.val
 
         then:
         all.size() == 9
@@ -244,10 +238,12 @@ class CombineOpTest extends Specification {
     def 'should combine with map' () {
 
         when:
-        def left = Channel.of([id:1, val:'x'], [id:2,val:'y'], [id:3, val:'z'])
-        def right = ['alpha','beta','gamma']
-        def result = left.combine(right)
-        def all = (List) ToListOp.apply(result).val
+        def result = runDataflow {
+            def left = Channel.of([id:1, val:'x'], [id:2,val:'y'], [id:3, val:'z'])
+            def right = ['alpha','beta','gamma']
+            left.combine(right).toList()
+        }
+        def all = (List) result.val
 
         then:
         all.size() == 9
@@ -270,9 +266,11 @@ class CombineOpTest extends Specification {
     def 'should combine items'() {
 
         when:
-        def left = Channel.of(1,2,3)
-        def right = ['a','b']
-        def result = left.combine(right).toSortedList().val.iterator()
+        def result = runDataflow {
+            def left = Channel.of(1,2,3)
+            def right = ['a','b']
+            left.combine(right).toSortedList()
+        }.val.iterator()
         then:
         result.next() == [1, 'a']
         result.next() == [1, 'b']
@@ -282,9 +280,11 @@ class CombineOpTest extends Specification {
         result.next() == [3, 'b']
 
         when:
-        left = Channel.of(1,2)
-        right = Channel.of('a','b','c')
-        result = left.combine(right).toSortedList().val.iterator()
+        result = runDataflow {
+            def left = Channel.of(1,2)
+            def right = Channel.of('a','b','c')
+            left.combine(right).toSortedList()
+        }.val.iterator()
         then:
         result.next() == [1, 'a']
         result.next() == [1, 'b']
@@ -298,9 +298,11 @@ class CombineOpTest extends Specification {
     def 'should chain combine'() {
 
         when:
-        def str1 = Channel.of('a','b','c')
-        def str2 = Channel.of('x','y')
-        def result = Channel.of(1,2).combine(str1).combine(str2).toSortedList().val.iterator()
+        def result = runDataflow {
+            def str1 = Channel.of('a','b','c')
+            def str2 = Channel.of('x','y')
+            Channel.of(1,2).combine(str1).combine(str2).toSortedList()
+        }.val.iterator()
         then:
         result.next() == [1,'a','x']
         result.next() == [1,'a','y']
@@ -316,9 +318,11 @@ class CombineOpTest extends Specification {
         result.next() == [2,'c','y']
 
         when:
-        str1 = Channel.of('a','b','c')
-        str2 = Channel.of('x','y')
-        result = Channel.of(1,2).combine(str1).combine(str2,flat:false).toSortedList().val.iterator()
+        result = runDataflow {
+            def str1 = Channel.of('a','b','c')
+            def str2 = Channel.of('x','y')
+            Channel.of(1,2).combine(str1).combine(str2,flat:false).toSortedList()
+        }.val.iterator()
         then:
         result.next() == [1,'a','x']
         result.next() == [1,'a','y']
@@ -336,15 +340,13 @@ class CombineOpTest extends Specification {
 
     def 'should combine by first element' () {
 
-        given:
-        def left = Channel.of( ['A',1], ['A',2], ['B',1], ['B',2] )
-        def right = Channel.of( ['A',1], ['A',2], ['B',1], ['B',2] )
-
         when:
-        def op = new CombineOp(left, right)
-        op.pivot = 0
-        def result = op.apply()
-        def all = (List) ToListOp.apply(result).val
+        def result = runDataflow {
+            def left = Channel.of( ['A',1], ['A',2], ['B',1], ['B',2] )
+            def right = Channel.of( ['A',1], ['A',2], ['B',1], ['B',2] )
+            left.combine(right, by: 0).toList()
+        }
+        def all = (List) result.val
 
         then:
         all.size() == 8
@@ -366,8 +368,10 @@ class CombineOpTest extends Specification {
         def right = [[2,'p'], [2,'q'], [1,'r']]
 
         when:
-        def result = left.channel().combine(right.channel())
-        def all = (List) ToListOp.apply(result).val
+        def result = runDataflow {
+            left.channel().combine(right.channel()).toList()
+        }
+        def all = (List) result.val
         then:
         all.size() == 9
         [1, 'a', 2, 'p'] in all
@@ -383,8 +387,10 @@ class CombineOpTest extends Specification {
         [1, 'c', 1, 'r'] in all
 
         when:
-        result = left.channel().combine(right.channel(), by: 0)
-        all = (List) ToListOp.apply(result).val
+        result = runDataflow {
+            left.channel().combine(right.channel(), by: 0).toList()
+        }
+        all = (List) result.val
         then:
         all.size() == 4
         [1, 'a', 'r'] in all
@@ -393,8 +399,10 @@ class CombineOpTest extends Specification {
         [2, 'b', 'q'] in all
 
         when:
-        result = left.channel().combine(right.channel(), by: [0])
-        all = (List) ToListOp.apply(result).val
+        result = runDataflow {
+            left.channel().combine(right.channel(), by: [0]).toList()
+        }
+        all = (List) result.val
         then:
         all.size() == 4
         [1, 'a', 'r'] in all

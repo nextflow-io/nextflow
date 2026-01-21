@@ -1057,6 +1057,12 @@ The following settings are available:
   - `clientKey`
   - `clientKeyFile`
 
+`k8s.clientRefreshInterval`
+: :::{versionadded} 26.01.0-edge
+  :::
+: The interval after which the Kubernetes client configuration is refreshed (default: `50m`).
+: This setting is useful when the Kubernetes authentication token has a limited lifespan and needs to be periodically refreshed. The client configuration will be automatically reloaded after the specified interval, allowing Nextflow to obtain fresh credentials from the Kubernetes configuration.
+
 `k8s.computeResourceType`
 : :::{versionadded} 22.05.0-edge
   :::

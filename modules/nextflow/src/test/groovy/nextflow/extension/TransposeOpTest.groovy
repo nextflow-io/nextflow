@@ -15,25 +15,30 @@
  */
 
 package nextflow.extension
+
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
 import spock.lang.Specification
 import spock.lang.Timeout
+
+import static test.ScriptHelper.runDataflow
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Timeout(5)
 class TransposeOpTest extends Specification {
 
-    @Timeout(1)
     def 'should transpose tuple' () {
 
         given:
-        def ch = Channel.of(['a',[1,2,3],'p','q'], ['b',[4,5,6],'x','y'])
+        def values = [ ['a',[1,2,3],'p','q'], ['b',[4,5,6],'x','y'] ]
 
         when:
-        def result = new TransposeOp(ch).apply()
+        def result = runDataflow {
+            Channel.fromList(values).transpose()
+        }
         then:
         result.val == ['a',1,'p','q']
         result.val == ['a',2,'p','q']
@@ -46,14 +51,15 @@ class TransposeOpTest extends Specification {
         result.val == Channel.STOP
     }
 
-    @Timeout(1)
     def 'should transpose multiple tuples' () {
 
         given:
-        def ch = Channel.of(['a',[1,2,3],['p','q']], ['b',[4,5,6],['x','y']])
+        def values = [ ['a',[1,2,3],['p','q']], ['b',[4,5,6],['x','y']] ]
 
         when:
-        def result = new TransposeOp(ch).apply()
+        def result = runDataflow {
+            Channel.fromList(values).transpose()
+        }
         then:
         result.val == ['a',1,'p']
         result.val == ['a',2,'q']
@@ -64,14 +70,15 @@ class TransposeOpTest extends Specification {
         result.val == Channel.STOP
     }
 
-    @Timeout(1)
     def 'should transpose multiple tuples with remainder' () {
 
         given:
-        def ch = Channel.of(['a',[1,2,3],['p','q']], ['b',[4,5],['x','y','z']])
+        def values = [ ['a',[1,2,3],['p','q']], ['b',[4,5],['x','y','z']] ]
 
         when:
-        def result = new TransposeOp(ch, [remainder:true]).apply()
+        def result = runDataflow {
+            Channel.fromList(values).transpose(remainder: true)
+        }
         then:
         result.val == ['a',1,'p']
         result.val == ['a',2,'q']
@@ -84,14 +91,15 @@ class TransposeOpTest extends Specification {
         result.val == Channel.STOP
     }
 
-    @Timeout(1)
     def 'should transpose tuple by 1' () {
 
         given:
-        def ch = Channel.of(['a',[1,2,3],['p','q']], ['b',[4,5,6],['x','y']])
+        def values = [ ['a',[1,2,3],['p','q']], ['b',[4,5,6],['x','y']] ]
 
         when:
-        def result = new TransposeOp(ch, [by:1]).apply()
+        def result = runDataflow {
+            Channel.fromList(values).transpose(by: 1)
+        }
         then:
         result.val == ['a',1,['p','q']]
         result.val == ['a',2,['p','q']]
@@ -104,14 +112,15 @@ class TransposeOpTest extends Specification {
         result.val == Channel.STOP
     }
 
-    @Timeout(1)
     def 'should transpose tuple with index' () {
 
         given:
         def values = [ ['a',[1,2,3],['p','q']], ['b',[4,5,6],['x','y']] ]
 
         when:
-        def result = new TransposeOp(values.channel(), [by:2]).apply()
+        def result = runDataflow {
+            Channel.fromList(values).transpose(by: 2)
+        }
         then:
         result.val == ['a',[1,2,3],'p']
         result.val == ['a',[1,2,3],'q']
@@ -120,7 +129,9 @@ class TransposeOpTest extends Specification {
         result.val == Channel.STOP
 
         when:
-        result = new TransposeOp(values.channel(), [by:1]).apply()
+        result = runDataflow {
+            Channel.fromList(values).transpose(by: 1)
+        }
         then:
         result.val == ['a',1,['p','q']]
         result.val == ['a',2,['p','q']]
@@ -132,14 +143,15 @@ class TransposeOpTest extends Specification {
 
     }
 
-    @Timeout(1)
     def 'should transpose tuple 3' () {
 
         given:
-        def ch = Channel.of(['a','b'], ['c','d'], ['e','f'])
+        def values = [ ['a','b'], ['c','d'], ['e','f'] ]
 
         when:
-        def result = new TransposeOp(ch).apply()
+        def result = runDataflow {
+            Channel.fromList(values).transpose()
+        }
         then:
         result.val == ['a','b']
         result.val == ['c', 'd']
@@ -148,14 +160,15 @@ class TransposeOpTest extends Specification {
         result.val == Channel.STOP
     }
 
-    @Timeout(1)
     def 'should transpose values' () {
 
         given:
-        def ch = Channel.of('a','b','c','d')
+        def values = ['a','b','c','d']
 
         when:
-        def result = new TransposeOp(ch).apply()
+        def result = runDataflow {
+            Channel.fromList(values).transpose()
+        }
         then:
         result.val == 'a'
         result.val == 'b'
@@ -206,7 +219,6 @@ class TransposeOpTest extends Specification {
         thrown(IllegalArgumentException)
     }
 
-    @Timeout(1)
     def 'should transpose a tuple with reminder' () {
         given:
         def target = Mock(DataflowWriteChannel)
@@ -240,7 +252,6 @@ class TransposeOpTest extends Specification {
         1 * target.bind(['a','b', null, 'c', 'z'])
     }
 
-    @Timeout(1)
     def 'should fetch indexes from a tuple' () {
         given:
         def ch = Mock(DataflowQueue)
@@ -252,14 +263,15 @@ class TransposeOpTest extends Specification {
         op.findIndexes(['a',['b'],'x',['c','d']]) == [1,3]
     }
 
-    @Timeout(1)
     def 'should apply transpose operator' () {
 
         given:
-        def list = [['a',[1,2],['x']], ['b',[3,4], ['p','q']]]
+        def values = [['a',[1,2],['x']], ['b',[3,4], ['p','q']]]
 
         when:
-        def result = list.channel().transpose()
+        def result = runDataflow {
+            Channel.fromList(values).transpose()
+        }
         then:
         result.val == ['a',1,'x']
         result.val == ['b',3,'p']
@@ -267,7 +279,9 @@ class TransposeOpTest extends Specification {
         result.val == Channel.STOP
 
         when:
-        result = list.channel().transpose(by:1)
+        result = runDataflow {
+            Channel.fromList(values).transpose(by:1)
+        }
         then:
         result.val == ['a',1,['x']]
         result.val == ['a',2,['x']]
@@ -276,7 +290,9 @@ class TransposeOpTest extends Specification {
         result.val == Channel.STOP
 
         when:
-        result = list.channel().transpose(remainder:true)
+        result = runDataflow {
+            Channel.fromList(values).transpose(remainder:true)
+        }
         then:
         result.val == ['a',1,'x']
         result.val == ['a',2,null]
