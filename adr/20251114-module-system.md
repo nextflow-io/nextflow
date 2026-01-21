@@ -492,7 +492,10 @@ project-root/
       - Exists, checksum valid, different version → replace with declared version
       - Exists, checksum mismatch → warn and do NOT override (local changes detected)
 3. On download: store module to `modules/@scope/name/` with `.checksum` file
-4. Parse module's `main.nf` file → make processes available
+4. Read `meta.yaml` file:
+    a. Validates Nextflow requirement → Fail if not fulfilled
+    b. Load Pluign requirements if not exist.
+5. Parse module's `main.nf` file → make processes available```
 
 **Security**:
 - SHA-256 checksum verification on download (stored in `.checksum` file)
