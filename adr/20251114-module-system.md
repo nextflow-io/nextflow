@@ -539,7 +539,7 @@ bwa mem $args -t $task.cpus $index $reads | samtools sort $args2 -o out.bam -
 ### New Pattern: Structured Tool Arguments
 
 Modules declare available arguments in `meta.yaml` under each tool's `args` property.
-This list does _not_ need to be exhaustive. It should include any arguments known to be used by pipelines or that could be expected to be used by users. However, arguments can still be specified in the config even if not defined in this file, so absence does not prevent use.
+This list does _not_ need to be exhaustive. It should include any arguments known to be used by pipelines or that could be expected to be used by users.
 
 ```yaml
 tools:
