@@ -34,7 +34,6 @@ class ParamsDsl2Test extends Dsl2Spec {
         def script = loadScript(SCRIPT)
         and:
         def process = ScriptMeta.get(script).getProcess('alpha')
-        process.initialize()
 
         then:
         def inputs = process.processConfig.getInputs()
@@ -70,7 +69,6 @@ class ParamsDsl2Test extends Dsl2Spec {
         def script = loadScript(SCRIPT)
         and:
         def process = ScriptMeta.get(script).getProcess('beta')
-        process.initialize()
 
         then:
         def inputs = process.processConfig.getInputs()
