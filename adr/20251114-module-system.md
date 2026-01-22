@@ -4,9 +4,13 @@
 - Status: draft
 - Date: 2025-01-06
 - Tags: modules, dsl, registry, versioning, architecture
-- Version: 2.4
+- Version: 2.5
 
 ## Updates
+
+### Version 2.5 (2026-01-22)
+- **Simplified `requires` block**: Removed `plugins`, `modules`, and `subworkflows` sub-properties; `requires` now only contains `nextflow` version constraint
+- **Process modules focus**: Removed sub-workflow references; spec is now focused on process modules only
 
 ### Version 2.4 (2026-01-15)
 - **Removed transitive dependency resolution**: Module dependencies are explicit only; no automatic transitive resolution
@@ -26,9 +30,8 @@
 
 ### Version 2.1 (2024-12-11)
 - **Unified dependencies**: Consolidated `components`, `dependencies`, and `requires` into single `requires` field
-- **New sub-properties**: `requires.modules` and `requires.workflows` for declaring module dependencies
-- **Unified version syntax**: `[scope/]name[@constraint]` format across plugins, modules, and workflows
-- **Deprecation**: `components` field deprecated (use `requires.modules` instead)
+- **Unified version syntax**: `[scope/]name[@constraint]` format across plugins and modules
+- **Deprecation**: `components` field deprecated (use top-level `modules` instead)
 
 ## Context and Problem Statement
 
@@ -124,9 +127,6 @@ version: 1.2.4                    # This module's version
 
 requires:
   nextflow: ">=24.04.0"
-  modules:                        # Required modules (version constraints)
-    - nf-core/samtools/view@>=1.0.0,<2.0.0
-    - nf-core/samtools/sort@>=2.1.0,<2.2.0
 ```
 
 **Version Constraints** (unified `name@constraint` syntax):
@@ -157,8 +157,7 @@ npm-style `^` and `~` notation while maintaining consistency with existing Nextf
 This avoids introducing new notation that would require additional parser support.
 
 **Dependency Resolution**:
-- Workflow's `nextflow.config` specifies exact versions for dependencies
-- Module dependencies declared in `meta.yaml` using version constraints
+- Workflow's `nextflow.config` specifies exact versions for module dependencies
 
 ### 3. Unified Nextflow Registry
 
@@ -415,7 +414,7 @@ Everything within the module directory should be uploaded. Module bundle should 
 ```
 my-module/
 ├── main.nf      # Required: entry point for module
-├── meta.yaml    # Optional: Module spec (metadata, dependencies, I/O specs)
+├── meta.yaml    # Optional: Module spec (metadata, I/O specs)
 ├── README.md    # Required: Module description
 └── tests/       # Optional test workflows
 ```
@@ -431,11 +430,6 @@ license: MIT
 
 requires:
   nextflow: ">=24.04.0"
-  plugins:
-    - nf-amazon@2.0.0
-  modules:
-    - nf-core/samtools/view@>=1.0.0,<2.0.0
-    - nf-core/samtools/sort@>=2.1.0,<2.2.0
 ```
 
 **Local Storage Structure**:
@@ -472,7 +466,7 @@ project-root/
 
 **Phase 2**: Extend Nextflow registry for modules, implement caching, add `install` and `search` commands
 
-**Phase 3**: Extend DSL parser for `from module` syntax, implement dependency resolution from meta.yaml
+**Phase 3**: Extend DSL parser for `from module` syntax
 
 **Phase 4**: Implement `publish` command with authentication and `run` command
 
@@ -492,9 +486,7 @@ project-root/
       - Exists, checksum valid, different version → replace with declared version
       - Exists, checksum mismatch → warn and do NOT override (local changes detected)
 3. On download: store module to `modules/@scope/name/` with `.checksum` file
-4. Read `meta.yaml` file:
-    a. Validates Nextflow requirement → Fail if not fulfilled
-    b. Load Pluign requirements if not exist.
+4. Read `meta.yaml` file: Validates Nextflow requirement → Fail if not fulfilled
 5. Parse module's `main.nf` file → make processes available```
 
 **Security**:
@@ -504,7 +496,6 @@ project-root/
 - Support for private registries
 
 **Integration with Plugin System**:
-- Modules can declare plugin dependencies in meta.yaml
 - Both plugins and modules query same registry
 - Single authentication system
 - Separate cache locations: `$NXF_HOME/plugins/` (global) vs `modules/` (per-project)
@@ -717,11 +708,8 @@ These fields extend the schema to support the new Nextflow module system:
 |-------|------|----------|-------------|
 | `version` | string | Registry | Semantic version (MAJOR.MINOR.PATCH) |
 | `license` | string | Registry | SPDX license identifier for module code |
-| `requires` | object | Optional | All requirements: runtime, plugins, and dependencies |
+| `requires` | object | Optional | Runtime requirements |
 | `requires.nextflow` | string | Optional | Nextflow version constraint |
-| `requires.plugins` | array[string] | Optional | Required Nextflow plugins |
-| `requires.modules` | array[string] | Optional | Required modules (processes) |
-| `requires.workflows` | array[string] | Optional | Required workflows/subworkflows |
 
 ### Detailed Field Specifications
 
@@ -762,32 +750,12 @@ version: "1.0.0-beta.1"
 
 #### `requires`
 
-Specifies all requirements for the module: runtime environment, plugins, and dependencies.
+Specifies runtime requirements for the module.
 
 ```yaml
 requires:
   nextflow: ">=24.04.0"
-  plugins:
-    - nf-amazon@2.0.0
-    - nf-wave@>=1.5.0
-  modules:
-    - nf-core/fastqc@>=1.0.0
-    - nf-core/samtools/sort@>=2.1.0,<3.0.0
-    - bwa/mem
-  workflows:
-    - nf-core/fastq-align-bwa@1.0.0
 ```
-
-**Unified Version Constraint Syntax:**
-
-All requirements (except `nextflow`) use a unified `name@constraint` format:
-
-| Format | Meaning | Example |
-|--------|---------|---------|
-| `name` | Any version (latest) | `bwa/mem` |
-| `name@1.2.3` | Exact version | `nf-core/fastqc@1.0.0` |
-| `name@>=1.2.3` | Greater or equal | `nf-core/fastqc@>=1.0.0` |
-| `name@>=1.2.3,<2.0.0` | Range constraint | `nf-core/samtools/sort@>=2.1.0,<3.0.0` |
 
 **`requires.nextflow`** - Nextflow version constraint:
 ```yaml
@@ -795,36 +763,6 @@ requires:
   nextflow: ">=24.04.0"           # minimum version
   nextflow: ">=24.04.0,<25.0.0"   # version range
 ```
-
-**`requires.plugins`** - Required Nextflow plugins:
-```yaml
-requires:
-  plugins:
-    - nf-amazon@2.0.0      # exact version
-    - nf-wave@>=1.5.0      # minimum version
-    - nf-azure             # any version
-```
-
-**`requires.modules`** - Required modules (processes):
-```yaml
-requires:
-  modules:
-    - nf-core/fastqc@>=1.0.0              # registry module with constraint
-    - nf-core/samtools/sort@>=2.1.0       # nested module path
-    - bwa/mem                              # local or registry (no constraint)
-```
-
-**`requires.workflows`** - Required workflows/subworkflows:
-```yaml
-requires:
-  workflows:
-    - nf-core/fastq-align-bwa@1.0.0       # registry workflow
-    - my-local-workflow                    # local workflow
-```
-
-**Resolution:**
-1. The resolver looks up dependencies locally first, then in configured registries
-2. Pinned versions are recorded in `nextflow.config` for reproducibility
 
 #### `tools`
 
@@ -918,24 +856,6 @@ output:
         description: Software versions
 ```
 
-**Subworkflow Pattern (Simplified):**
-```yaml
-input:
-  - ch_reads:
-      description: |
-        Input FastQ files
-        Structure: [ val(meta), [ path(reads) ] ]
-  - ch_index:
-      description: BWA index files
-      type: file
-
-output:
-  - bam:
-      description: Aligned BAM files
-  - versions:
-      description: Software versions
-```
-
 **Channel Element Properties:**
 
 | Property | Type | Description |
@@ -986,8 +906,6 @@ keywords:
 license: MIT                        # Added module license
 requires:                           # Added requirements
   nextflow: ">=24.04.0"
-  modules:                          # Added module dependencies (if any)
-    - nf-core/samtools/sort@>=1.0.0
 tools:
   - bwa:
       description: BWA software
@@ -1024,8 +942,8 @@ version: "1.0.0"
 | Scoped names | No | Yes (registry) |
 | Version field | No | Yes (required for registry) |
 | `tools` section | Yes | Yes |
-| `components` | Yes (subworkflows) | Deprecated → use `requires.modules` |
-| `requires` | No | Yes (unified requirements field) |
+| `components` | Yes | Deprecated |
+| `requires` | No | Yes (Nextflow version constraint) |
 | I/O specifications | Yes | Yes |
 | Ontologies | Yes | Yes |
 
@@ -1036,7 +954,7 @@ The following attributes from the nf-core meta schema are **not supported** in t
 | Attribute | Reason | Future |
 |-----------|--------|--------|
 | `extra_args` | Not adopted in practice by nf-core modules | Will be redesigned as part of the `tools` schema attribute to document tool-specific arguments and configuration options |
-| `components` | Replaced by unified `requires.modules` | Use `requires.modules` for all module dependencies (local and registry) |
+| `components` | No longer supported | Module dependencies are managed via `nextflow.config` |
 
 ### Complete Examples
 
@@ -1086,11 +1004,6 @@ license: MIT
 
 requires:
   nextflow: ">=24.04.0"
-  plugins:
-    - nf-wave@1.5.0
-  modules:
-    - nf-core/samtools/view@>=1.0.0,<2.0.0
-    - nf-core/samtools/sort@>=2.1.0,<2.2.0
 
 tools:
   - bwa:
@@ -1145,44 +1058,3 @@ output:
         pattern: "versions.yml"
 ```
 
-#### Subworkflow with Module Dependencies
-
-```yaml
-name: fastq_align_bwa
-description: Align reads with BWA and generate statistics
-keywords:
-  - alignment
-  - bwa
-  - samtools
-  - statistics
-
-requires:
-  modules:
-    - bwa/mem
-    - samtools/sort
-    - samtools/index
-    - samtools/stats
-
-authors:
-  - "@JoseEspinosa"
-maintainers:
-  - "@JoseEspinosa"
-
-input:
-  - ch_reads:
-      description: |
-        Input FastQ files
-        Structure: [ val(meta), [ path(reads) ] ]
-  - ch_index:
-      description: BWA index files
-
-output:
-  - bam:
-      description: Sorted BAM files
-  - bai:
-      description: BAM index files
-  - stats:
-      description: Alignment statistics
-  - versions:
-      description: Software versions
-```
