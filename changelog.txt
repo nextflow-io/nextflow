@@ -1,5 +1,18 @@
 NEXTFLOW CHANGE-LOG
 ===================
+25.10.3 - 22 Jan 2026
+- Add Channel::mix(Value...) [a2bb57158]
+- Add spot interruption tracking to trace records (#6606) [f59137e6c]
+- Fix `nextflow inspect` not applying container settings from config (#6736) [5d19f93d7]
+- Fix false error with task ext blocks in strict syntax (#6569) [4f0bcf08b]
+- Fix issue with topic file emissions in typed processes (#6688) [19004870b]
+- Fix optional param in params block (#6657) [2334e85e9]
+- Fix validation of numeric types in params block (#6656) [02a9cc9c8]
+- Ignore multi-revision folder in `list` command (#6678) [8d653913e]
+- Bump nf-amazon@3.4.3
+- Bump nf-google@1.23.4
+- Bump nf-tower@1.17.4
+
 25.10.2 - 28 Nov 2025
 - Fix TowerJsonGenerator thread-safety issue (#6619) [f62fcc72a]
 - Bump nf-tower@1.17.3
