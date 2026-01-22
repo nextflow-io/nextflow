@@ -55,11 +55,6 @@ class ScriptRunner {
     private ScriptFile scriptFile
 
     /**
-     * The script result
-     */
-    private def result
-
-    /**
      * Simulate execution and exit
      */
     private boolean preview
@@ -107,12 +102,6 @@ class ScriptRunner {
     @Deprecated BaseScript getScriptObj() { scriptLoader.getScript() }
 
     /**
-     * @return The result produced by the script execution
-     */
-    def getResult() { result }
-
-
-    /**
      * Execute a Nextflow script:
      * 1. compile and load the script
      * 2. execute the script
@@ -154,8 +143,6 @@ class ScriptRunner {
         if( !session.success ) {
             throw new AbortRunException()
         }
-
-        return result
     }
 
     protected String scriptFiles0() {
@@ -220,10 +207,6 @@ class ScriptRunner {
         }
     }
 
-    def normalizeOutput(output) {
-        return output
-    }
-
     protected void parseScript( ScriptFile scriptFile, String entryName ) {
         scriptLoader = ScriptLoaderFactory.create(session)
                             .setEntryName(entryName)
@@ -244,8 +227,6 @@ class ScriptRunner {
         assert scriptLoader, "Missing script instance to run"
         // -- launch the script execution
         scriptLoader.runScript()
-        // -- normalise output
-        result = normalizeOutput(scriptLoader.getResult())
         // -- ignite dataflow network
         session.fireDataflowNetwork(preview)
     }
