@@ -335,14 +335,14 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
 
     private RefSpec refSpecForName(String revision) {
         // First, check if it's a local branch
-        final branchName = "refs/heads/$revision"
+        final branchName = "refs/heads/$revision".toString()
         final branch = getBareGit().getRepository().findRef(branchName)
         if( branch != null ) {
             return new RefSpec("$branchName:$branchName")
         }
 
         // Check if it's a local tag
-        final tagName = "refs/tags/$revision"
+        final tagName = "refs/tags/$revision".toString()
         final tag = getBareGit().getRepository().findRef(tagName)
         if( tag != null ) {
             return new RefSpec("$tagName:$tagName")
