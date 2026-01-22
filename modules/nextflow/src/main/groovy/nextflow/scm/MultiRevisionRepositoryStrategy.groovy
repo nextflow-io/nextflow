@@ -17,6 +17,7 @@
 package nextflow.scm
 
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.config.Manifest
@@ -333,20 +334,35 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
     }
 
     private RefSpec refSpecForName(String revision) {
-        // Is it a local branch?
-        Ref branch = getBareGit().getRepository().findRef("refs/heads/" + revision)
+        // First, check if it's a local branch
+        final branchName = "refs/heads/$revision".toString()
+        final branch = getBareGit().getRepository().findRef(branchName)
         if( branch != null ) {
-            return new RefSpec("refs/heads/" + revision + ":refs/heads/" + revision)
+            return new RefSpec("$branchName:$branchName")
         }
 
-        // Is it a tag?
-        Ref tag = getBareGit().getRepository().findRef("refs/tags/" + revision)
+        // Check if it's a local tag
+        final tagName = "refs/tags/$revision".toString()
+        final tag = getBareGit().getRepository().findRef(tagName)
         if( tag != null ) {
-            return new RefSpec("refs/tags/" + revision + ":refs/tags/" + revision)
+            return new RefSpec("$tagName:$tagName")
         }
 
-        // It is a commit
-        return new RefSpec(revision + ":refs/tags/" + revision)
+        // Not found locally - check remote refs
+        final remoteRefs = lsRemote(false)
+
+        // Is it a remote branch?
+        if( remoteRefs.containsKey(branchName) ) {
+            return new RefSpec("$branchName:$branchName")
+        }
+
+        // Is it a remote tag?
+        if( remoteRefs.containsKey(tagName) ) {
+            return new RefSpec("$tagName:$tagName")
+        }
+
+        // Assume it's a commit SHA
+        return new RefSpec("$revision:$tagName")
     }
 
     @Override
@@ -422,7 +438,7 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
     @Override
     Map<String, Ref> lsRemote(boolean tags) {
         final cmd = getBareGitWithLegacyFallback()?.lsRemote()?.setTags(tags)
-        if( provider.hasCredentials() )
+        if( provider?.hasCredentials() )
             cmd?.setCredentialsProvider(provider.getGitCredentials())
         return cmd?.callAsMap() ?: [:]
     }
