@@ -188,4 +188,41 @@ class ScriptMetaTest extends Dsl2Spec {
         bundle.getEntries() == ['foo.txt', 'bar.txt'] as Set
 
     }
+
+    def 'should lookup script by path with symlink' () {
+        given:
+        // create a temp directory structure with a symlink
+        // to simulate macOS /var -> /private/var scenario
+        def folder = Files.createTempDirectory('test')
+        def realDir = folder.resolve('real')
+        Files.createDirectory(realDir)
+        def symlinkDir = folder.resolve('symlink')
+        Files.createSymbolicLink(symlinkDir, realDir)
+
+        def scriptFile = realDir.resolve('module.nf')
+        Files.createFile(scriptFile)
+
+        // the real path (symlink resolved)
+        def realPath = scriptFile.toRealPath()
+        // the symlink path (symlink not resolved)
+        def symlinkPath = symlinkDir.resolve('module.nf')
+
+        and:
+        def script = new FooScript(new ScriptBinding())
+        def meta = new ScriptMeta(script)
+        // register with the real path (as v2 compiler does)
+        meta.setScriptPath(realPath)
+
+        when:
+        // lookup with symlink path (as include resolution does)
+        def result = ScriptMeta.getScriptByPath(symlinkPath)
+
+        then:
+        // should find the script even when using symlink path
+        result == script
+
+        cleanup:
+        ScriptMeta.reset()
+        folder?.deleteDir()
+    }
 }

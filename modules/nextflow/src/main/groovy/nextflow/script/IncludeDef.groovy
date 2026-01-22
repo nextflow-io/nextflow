@@ -134,7 +134,7 @@ class IncludeDef {
     static BaseScript loadModuleV2(Path path, Map params, Session session) {
         final script = ScriptMeta.getScriptByPath(path)
         if( !script )
-            throw new IllegalStateException()
+            throw new IllegalStateException("Unable to find module script for path: $path")
         script.getBinding().setParams(params)
         script.run()
         return script
