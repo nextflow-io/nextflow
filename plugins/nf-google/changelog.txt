@@ -1,5 +1,9 @@
 nf-google changelog
 ===================
+1.23.4 - 22 Jan 2026
+- Add spot interruption tracking to trace records (#6606) [f59137e6c]
+- Add default maxSpotAttempts for fusion snapshots (#6652) [ad7114eb4]
+
 1.23.3 - 22 Oct 2025
 - Prioritize Google Batch API exit codes with fallback to .exitcode file (#6498) [6ac2efcba]
 
