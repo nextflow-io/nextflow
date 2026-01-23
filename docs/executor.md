@@ -442,6 +442,12 @@ SLURM partitions can be specified with the `queue` directive.
 Nextflow does not provide direct support for SLURM multi-clusters. If you need to submit workflow executions to a cluster other than the current one, specify it with the `SLURM_CLUSTERS` variable in the launch environment.
 :::
 
+
+:::{note}
+Some SLURM clusters does not allow the use of the `--mem` option which causes failure in any process using the `memory` directive. In such clusters, the memory available to the process is defined by the number of cores allocated to the job. To tackle this issue, set environment variable `NXF_EXECUTOR_MEM_GIGA_PER_CORE` to define how many memory in GB is available by core. For example, if this variable is set to `4`, any nextflow process requiring `40 GB` of memory will make sure that the job requests a least 10 cores.  
+:::
+
+
 :::{versionadded} 23.07.0-edge
 Some SLURM clusters require memory allocations to be specified with `--mem-per-cpu` instead of `--mem`. You can specify `executor.perCpuMemAllocation = true` in the Nextflow configuration to enable this behavior. Nextflow will automatically compute the memory per CPU for each task (by default 1 CPU is used).
 :::

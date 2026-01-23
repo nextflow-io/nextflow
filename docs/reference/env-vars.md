@@ -112,6 +112,9 @@ The following environment variables control the configuration of the Nextflow ru
 `NXF_EXECUTOR`
 : Defines the default process executor, e.g. `sge`
 
+`NXF_EXECUTOR_MEM_GIGA_PER_CORE`
+: Some SLURM clusters does not allow the use of the `--mem` option which causes failure in any process using the `memory` directive. In such clusters, the memory available to the process is defined by the number of cores allocated to the job. This environment variable defines how many memory in GB is available by core. For example, if this variable is set to `4`, any nextflow process requiring `40 GB` of memory will make sure that the job requests a least 10 cores.  
+
 `NXF_FILE_ROOT`
 : :::{versionadded} 23.05.0-edge
   :::
