@@ -474,34 +474,6 @@ project-root/
 
 **Phase 5**: Advanced features (search UI, language server integration, ontology validation)
 
-## Technical Details
-
-**Dependency Resolution Flow**:
-1. Parse `include` statements → extract module names (e.g., `@nf-core/bwa-align`)
-2. For each module:
-   a. Check `nextflow.config` modules section for declared version
-   b. Check local `modules/@scope/name/` exists
-   c. Verify local module integrity against `.checksum` file
-   d. Apply resolution rules:
-      - Missing → download declared version from registry
-      - Exists, checksum valid, same version → use local
-      - Exists, checksum valid, different version → replace with declared version
-      - Exists, checksum mismatch → warn and do NOT override (local changes detected)
-3. On download: store module to `modules/@scope/name/` with `.checksum` file
-4. Read `meta.yaml` file: Validates Nextflow requirement → Fail if not fulfilled
-5. Parse module's `main.nf` file → make processes available```
-
-**Security**:
-- SHA-256 checksum verification on download (stored in `.checksum` file)
-- Integrity verification on run (local checksum vs `.checksum` file)
-- Authentication required for publishing
-- Support for private registries
-
-**Integration with Plugin System**:
-- Both plugins and modules query same registry
-- Single authentication system
-- Separate cache locations: `$NXF_HOME/plugins/` (global) vs `modules/` (per-project)
-
 ## Module Parameters
 
 The module system introduces a structured approach to module configuration through parameters defined in `meta.yaml`. Parameters provide a documented, type-safe way to customize module behavior.
@@ -568,6 +540,34 @@ bwa mem ${batch_arg} ${soft_clip} -t $task.cpus $index $reads \
 | IDE Support | None | Autocompletion |
 | Clarity | Opaque strings | Named parameters |
 | Defaults | Manual | Schema-defined |
+
+## Technical Details
+
+**Dependency Resolution Flow**:
+1. Parse `include` statements → extract module names (e.g., `@nf-core/bwa-align`)
+2. For each module:
+   a. Check `nextflow.config` modules section for declared version
+   b. Check local `modules/@scope/name/` exists
+   c. Verify local module integrity against `.checksum` file
+   d. Apply resolution rules:
+      - Missing → download declared version from registry
+      - Exists, checksum valid, same version → use local
+      - Exists, checksum valid, different version → replace with declared version
+      - Exists, checksum mismatch → warn and do NOT override (local changes detected)
+3. On download: store module to `modules/@scope/name/` with `.checksum` file
+4. Read `meta.yaml` file: Validates Nextflow requirement → Fail if not fulfilled
+5. Parse module's `main.nf` file → make processes available```
+
+**Security**:
+- SHA-256 checksum verification on download (stored in `.checksum` file)
+- Integrity verification on run (local checksum vs `.checksum` file)
+- Authentication required for publishing
+- Support for private registries
+
+**Integration with Plugin System**:
+- Both plugins and modules query same registry
+- Single authentication system
+- Separate cache locations: `$NXF_HOME/plugins/` (global) vs `modules/` (per-project)
 
 ## Comparison: Plugins vs. Modules
 

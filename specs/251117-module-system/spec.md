@@ -11,7 +11,7 @@ This specification covers the **Nextflow client-side implementation** of the mod
 - Include remote modules from the Nextflow registry using `@scope/name` syntax
 - Manage module versions through `nextflow.config`
 - Use CLI commands to install, search, list, remove, publish, and run modules
-- Configure tool arguments through structured `meta.yaml` definitions
+- Configure module parameters through structured `meta.yaml` definitions
 
 **Out of Scope**: Registry backend implementation (assumed already available at `registry.nextflow.io`)
 
@@ -44,24 +44,24 @@ A user wants to run a module directly from the command line without writing a wr
 **Acceptance Scenarios**:
 
 1. **Given** a module is available (locally or in registry), **When** user runs `nextflow module run nf-core/fastqc --input 'data/*.fastq'`, **Then** the module is executed with the provided inputs mapped to process parameters
-2. **Given** a module with tool arguments defined in `meta.yaml`, **When** user runs `nextflow module run nf-core/bwa-align --tools:bwa:K 100000`, **Then** the tool argument is validated and passed to the process
+2. **Given** a module with parameters defined in `meta.yaml`, **When** user runs `nextflow module run nf-core/bwa-align --batch_size 100000`, **Then** the parameter is validated and passed to the process
 3. **Given** a module is not installed locally, **When** user runs `nextflow module run nf-core/salmon`, **Then** the module is automatically downloaded before execution
 
 ---
 
-### User Story 3 - Structured Tool Arguments (Priority: P1)
+### User Story 3 - Module Parameters (Priority: P1)
 
-A module author wants to define typed, documented tool arguments that replace the legacy `ext.args` pattern.
+A module author wants to define typed, documented parameters that provide a clear interface for module customization.
 
-**Why this priority**: Critical for module usability - provides type-safe, documented arguments that enable IDE autocompletion and validation, replacing the opaque `ext.args` pattern.
+**Why this priority**: Critical for module usability - provides type-safe, documented parameters that enable IDE autocompletion and validation, replacing the opaque `ext.args` pattern.
 
-**Independent Test**: Can be tested by configuring `tools.bwa.args.K = 100000` in config and verifying the argument is applied in the script.
+**Independent Test**: Can be tested by configuring `params.batch_size = 100000` in config and verifying the parameter is applied in the script.
 
 **Acceptance Scenarios**:
 
-1. **Given** a module with `tools.*.args` defined in `meta.yaml`, **When** user configures `tools.bwa.args.K = 100000` in config, **Then** the argument is accessible in scripts as `tools.bwa.args.K` returning `-K 100000`
-2. **Given** all tool arguments are configured, **When** script uses `${tools.bwa.args}`, **Then** all configured arguments are concatenated in the output
-3. **Given** an argument with enum validation, **When** user provides an invalid value, **Then** a validation error is displayed
+1. **Given** a module with `params` defined in `meta.yaml`, **When** user configures `params.batch_size = 100000` in config, **Then** the parameter is accessible in scripts via `params.batch_size`
+2. **Given** a parameter with type validation, **When** user provides an invalid value type, **Then** a validation error is displayed
+3. **Given** a module with documented parameters, **When** user runs `nextflow module run --help`, **Then** available parameters with descriptions are listed
 
 ---
 
@@ -200,12 +200,12 @@ A module author wants to publish their module to the Nextflow registry for other
 - **FR-022**: System MUST support `NXF_REGISTRY_TOKEN` environment variable for authentication
 - **FR-023**: System MUST support multiple registry URLs with fallback ordering
 
-#### Tool Arguments
+#### Module Parameters
 
-- **FR-024**: System MUST provide `tools.<toolname>.args.<argname>` implicit variable in module scripts
-- **FR-025**: System MUST validate tool arguments against `meta.yaml` schema (type, enum) at workflow parse time
-- **FR-026**: System MUST support boolean, integer, float, string, file, and path argument types
-- **FR-027**: System MUST concatenate all tool arguments when `tools.<toolname>.args` is accessed
+- **FR-024**: System MUST parse module parameters from `params` section in `meta.yaml`
+- **FR-025**: System MUST validate module parameters against `meta.yaml` schema (type) at workflow parse time
+- **FR-026**: System MUST support boolean, integer, float, string, file, and path parameter types
+- **FR-027**: System MUST make module parameters accessible via standard `params` variable in scripts
 
 #### Registry Communication
 
@@ -217,7 +217,8 @@ A module author wants to publish their module to the Nextflow registry for other
 
 - **Module**: A reusable Nextflow process definition with `main.nf` entry point, optional `meta.yaml` manifest, and README documentation
 - **Module Reference**: A scoped identifier (`@scope/name`) pointing to a registry module
-- **Module Manifest (meta.yaml)**: YAML file containing module metadata, version, dependencies, tool arguments schema
+- **Module Manifest (meta.yaml)**: YAML file containing module metadata, version, dependencies, and parameter definitions
+- **Module Parameter**: A configurable parameter defined in `meta.yaml` with name, optional type, description, and example
 - **Checksum File (.checksum)**: Local cache of registry checksum for integrity verification
 - **Registry Configuration**: Settings for registry URL, authentication, and fallback ordering
 
@@ -242,7 +243,7 @@ A module author wants to publish their module to the Nextflow registry for other
 - The `modules/` directory is intended to be committed to the pipeline's git repository
 - Version constraints in `meta.yaml` follow the same syntax as existing Nextflow plugin version constraints
 - SHA-256 is used for all checksum operations
-- Tool arguments CLI syntax uses colon-separated format: `--tools:<tool>:<arg>`
+- Module parameters use standard `--<param_name>` CLI syntax
 
 ## Dependencies
 
@@ -256,4 +257,4 @@ A module author wants to publish their module to the Nextflow registry for other
 ### Session 2026-01-19
 
 - Q: What should happen when incompatible dependency versions are detected? → A: Use highest compatible version automatically, warn if none exists
-- Q: When should tool argument validation occur? → A: At workflow parse time (early, before any execution)
+- Q: When should module parameter validation occur? → A: At workflow parse time (early, before any execution)

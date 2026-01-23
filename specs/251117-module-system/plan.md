@@ -5,7 +5,7 @@
 
 ## Summary
 
-Implement client-side module system for Nextflow enabling pipeline developers to include remote modules from the Nextflow registry using `@scope/name` syntax, manage versions via `nextflow.config`, and use CLI commands (install, search, list, remove, publish, run). Implementation extends existing DSL parser, config parser, and follows plugin system patterns for registry communication and authentication.
+Implement client-side module system for Nextflow enabling pipeline developers to include remote modules from the Nextflow registry using `@scope/name` syntax, manage versions via `nextflow.config`, configure module parameters via `meta.yaml`, and use CLI commands (install, search, list, remove, publish, run). Implementation extends existing DSL parser, config parser, and follows plugin system patterns for registry communication and authentication.
 
 ## Technical Context
 
