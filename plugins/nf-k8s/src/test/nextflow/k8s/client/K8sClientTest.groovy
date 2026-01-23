@@ -1059,4 +1059,47 @@ class K8sClientTest extends Specification {
         def e = thrown(PodUnschedulableException)
         e.message == "K8s pod in Failed state"
     }
+
+    def 'should fallback to job status when pod is gone and not return hardcoded exit code' () {
+        given:
+        def JOB_STATUS_JSON = '''
+        {
+            "apiVersion": "batch/v1",
+            "kind": "Job",
+            "metadata": {
+                "name": "test-job"
+            },
+            "status": {
+                "succeeded": 1,
+                "startTime": "2025-01-15T10:00:00Z",
+                "completionTime": "2025-01-15T10:05:00Z",
+                "conditions": [
+                    {
+                        "type": "Complete",
+                        "status": "True",
+                        "lastProbeTime": "2025-01-15T10:05:00Z",
+                        "lastTransitionTime": "2025-01-15T10:05:00Z"
+                    }
+                ]
+            }
+        }
+        '''
+        def client = Spy(K8sClient)
+        final JOB_NAME = 'test-job'
+
+        when:
+        def result = client.jobStateFallback0(JOB_NAME)
+
+        then:
+        1 * client.jobStatus(JOB_NAME) >> new K8sResponseJson(JOB_STATUS_JSON)
+
+        and:
+        result.terminated != null
+        result.terminated.reason == 'Completed'
+        result.terminated.startedAt == '2025-01-15T10:00:00Z'
+        result.terminated.finishedAt == '2025-01-15T10:05:00Z'
+        // The key assertion: exitCode should not be present (null) so fallback to .exitcode file works
+        result.terminated.exitCode == null
+        result.terminated.exitcode == null
+    }
 }
