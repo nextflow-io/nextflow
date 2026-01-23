@@ -8,7 +8,9 @@
 
 ## Updates
 
-### Version 2.5 (2026-01-22)
+### Version 2.5 (2026-01-23)
+- **Module parameters**: Replaced structured tool arguments with general module parameters defined in `meta.yaml`
+- **Simplified tools section**: Removed `args` property from tools; tool arguments now configured via module parameters
 - **Simplified `requires` block**: Removed `plugins`, `modules`, and `subworkflows` sub-properties; `requires` now only contains `nextflow` version constraint
 - **Process modules focus**: Removed sub-workflow references; spec is now focused on process modules only
 
@@ -23,10 +25,11 @@
 - **Simplified storage model**: Single version per module locally (`modules/@scope/name/` without version in path)
 - **`.checksum` file**: Registry checksum cached locally for fast integrity verification without network calls
 
-### Version 2.2 (2025-01-06)
+### Version 2.2 (2025-01-06) — *Superseded by v2.5*
 - **Structured tool arguments**: Added `args` property to `tools` section for type-safe argument configuration
 - **New implicit variables**: `tools.<toolname>.args.<argname>` returns formatted flag+value; `tools.<toolname>.args` returns all args concatenated
 - **Deprecation**: All `ext.*` custom directives (e.g., `ext.args`, `ext.args2`, `ext.args3`, `ext.prefix`, `ext.suffix`) deprecated in favor of structured tool arguments
+- *Note: Tool arguments replaced by module parameters in v2.5*
 
 ### Version 2.1 (2024-12-11)
 - **Unified dependencies**: Consolidated `components`, `dependencies`, and `requires` into single `requires` field
@@ -219,14 +222,14 @@ Run a module directly without requiring a wrapper workflow script. This command 
 **Options**:
 - `-version <ver>`: Run a specific version (default: latest or configured version)
 - `--<input_name> <value>`: Map value to the corresponding module process input channel
-- `--tools:<toolname>:<argname> <value>`: Configure tool-specific arguments (validated against meta.yaml schema)
+- `--<param_name> <value>`: Configure module parameters (validated against meta.yaml schema)
 - All standard `nextflow run` options (e.g., `-profile`, `-work-dir`, `-resume`, etc.)
 
 **Behavior**:
 1. Checks if module is installed locally; if not, downloads from registry
 2. Parses the module's `main.nf` to identify the main process and its input declarations
 3. Validates command-line arguments against the process input schema
-4. Validates tool arguments against the `tools.*.args` schema in `meta.yaml`
+4. Validates parameters against the `params` schema in `meta.yaml`
 5. Generates an implicit workflow that wires CLI arguments to process inputs
 6. Executes the workflow using standard Nextflow runtime
 
@@ -236,12 +239,11 @@ Run a module directly without requiring a wrapper workflow script. This command 
 - Multiple values can be provided for inputs expecting collections
 - Required inputs without defaults must be provided; optional inputs use declared defaults
 
-**Tool Arguments**:
-- Arguments prefixed with `--tools:` configure tool-specific parameters
-- Format: `--tools:<toolname>:<argname> <value>` (e.g., `--tools:bwa:K 100000000`)
-- Boolean flags can be specified without value (e.g., `--tools:bwa:Y`)
-- Arguments are validated against the tool's `args` schema in `meta.yaml`
-- Invalid argument names or values that fail type/enum validation produce errors
+**Module Parameters**:
+- Parameters defined in `meta.yaml` can be configured via CLI arguments
+- Boolean flags can be specified without value (e.g., `--use_soft_clipping`)
+- Arguments are validated against the `params` schema in `meta.yaml`
+- Invalid parameter names or values that fail type validation produce errors
 
 **Example**:
 ```bash
@@ -263,13 +265,13 @@ nextflow module run nf-core/salmon \
     -work-dir /tmp/work \
     --outdir results/
 
-# Run with tool-specific arguments
+# Run with module parameters
 nextflow module run nf-core/bwa-align \
     --reads 'samples/*_{1,2}.fastq.gz' \
     --reference genome.fa \
-    --tools:bwa:K 100000000 \
-    --tools:bwa:Y \
-    --tools:samtools:output_fmt cram
+    --batch_size 100000000 \
+    --use_soft_clipping \
+    --output_format cram
 ```
 
 ---
@@ -414,7 +416,7 @@ Everything within the module directory should be uploaded. Module bundle should 
 ```
 my-module/
 ├── main.nf      # Required: entry point for module
-├── meta.yaml    # Optional: Module spec (metadata, I/O specs)
+├── meta.yaml    # Required: Module spec (version, metadata, I/O specs)
 ├── README.md    # Required: Module description
 └── tests/       # Optional test workflows
 ```
@@ -500,99 +502,72 @@ project-root/
 - Single authentication system
 - Separate cache locations: `$NXF_HOME/plugins/` (global) vs `modules/` (per-project)
 
-## Tool Arguments Configuration
+## Module Parameters
 
-The module system introduces a structured approach to tool argument configuration, replacing the legacy `ext.args` pattern with type-safe, documented argument specifications.
+The module system introduces a structured approach to module configuration through parameters defined in `meta.yaml`. Parameters provide a documented, type-safe way to customize module behavior.
 
-### Current Pattern (Deprecated)
+### Parameter Definition
 
-The traditional nf-core pattern uses `ext.args` strings in config files:
-
-```groovy
-// Config file
-withName: 'BWA_MEM' {
-    ext.args = "-K 100000000 -Y -B 3 -R ${meta.read_group}"
-    ext.args2 = "--output-fmt cram"
-}
-
-// Module script
-def args = task.ext.args ?: ''
-def args2 = task.ext.args2 ?: ''
-bwa mem $args -t $task.cpus $index $reads | samtools sort $args2 -o out.bam -
-```
-
-**Limitations:**
-- No documentation of available arguments
-- No validation or type checking
-- Unclear which `ext.argsN` maps to which tool
-- No IDE autocompletion support
-
-### New Pattern: Structured Tool Arguments
-
-Modules declare available arguments in `meta.yaml` under each tool's `args` property.
-This list does _not_ need to be exhaustive. It should include any arguments known to be used by pipelines or that could be expected to be used by users.
+Modules declare available parameters in `meta.yaml` under the `params` section. Each parameter has a name and optional attributes for type and description.
 
 ```yaml
-tools:
-  - bwa:
-      description: BWA aligner
-      homepage: http://bio-bwa.sourceforge.net/
-      args:
-        K:
-          flag: "-K"
-          type: integer
-          description: "Process INT input bases in each batch"
-        Y:
-          flag: "-Y"
-          type: boolean
-          description: "Use soft clipping for supplementary alignments"
+params:
+  - name: batch_size
+    type: integer
+    description: "Process INT input bases in each batch"
+    example: 100000000
 
-  - samtools:
-      description: SAMtools
-      homepage: http://www.htslib.org/
-      args:
-        output_fmt:
-          flag: "--output-fmt"
-          type: string
-          enum: ["sam", "bam", "cram"]
-          description: "Output format"
+  - name: use_soft_clipping
+    type: boolean
+    description: "Use soft clipping for supplementary alignments"
+
+  - name: output_format
+    type: string
+    description: "Output format (sam, bam, or cram)"
 ```
+
+### Parameter Attributes
+
+| Attribute | Required | Description |
+|-----------|----------|-------------|
+| `name` | Yes | Parameter identifier |
+| `type` | No | Data type: `boolean`, `integer`, `float`, `string`, `file`, `path` |
+| `description` | No | Human-readable description |
+| `example` | No | Example value for the parameter |
 
 ### Configuration Usage
 
-Arguments are configured using `tools.<toolname>.args.<argname>`:
+Parameters are configured using standard Nextflow params syntax:
 
 ```groovy
 withName: 'BWA_MEM' {
-    tools.bwa.args.K = 100000000
-    tools.bwa.args.Y = true
-    tools.samtools.args.output_fmt = "cram"
+    params.batch_size = 100000000
+    params.use_soft_clipping = true
+    params.output_format = "cram"
 }
 ```
 
 ### Script Usage
 
-In module scripts, access arguments via the `tools` implicit variable:
+In module scripts, access parameters via the standard `params` variable:
 
 ```groovy
-// tools.bwa.args.K → "-K 100000000"
-// tools.bwa.args.Y → "-Y"
-// tools.bwa.args   → "-K 100000000 -Y"  (all args concatenated)
+def batch_arg = params.batch_size ? "-K ${params.batch_size}" : ''
+def soft_clip = params.use_soft_clipping ? "-Y" : ''
 
-bwa mem ${tools.bwa.args} -t $task.cpus $index $reads \
-    | samtools sort ${tools.samtools.args} -o ${prefix}.bam -
+bwa mem ${batch_arg} ${soft_clip} -t $task.cpus $index $reads \
+    | samtools sort --output-fmt ${params.output_format ?: 'bam'} -o ${prefix}.bam -
 ```
 
 ### Benefits
 
-| Aspect | `ext.args` (Legacy) | `tools.*.args` (New) |
-|--------|---------------------|----------------------|
+| Aspect | `ext.args` (Legacy) | Module Parameters (New) |
+|--------|---------------------|-------------------------|
 | Documentation | None | In meta.yaml |
 | Type Safety | None | Validated |
 | IDE Support | None | Autocompletion |
-| Multi-tool | Confusing (`ext.args2`) | Clear (`tools.samtools.args`) |
+| Clarity | Opaque strings | Named parameters |
 | Defaults | Manual | Schema-defined |
-| Enums | None | Validated |
 
 ## Comparison: Plugins vs. Modules
 
@@ -668,11 +643,7 @@ bwa mem ${tools.bwa.args} -t $task.cpus $index $reads \
 
 1. **Local vs managed module distinction**: Should local modules use the `@` prefix in include statements, or should a dot file (e.g., `.nf-modules`) be used to distinguish local modules from managed/remote modules?
 
-2. **Tool arguments CLI syntax**: What is the preferred syntax for tool arguments on the command line?
-   - Colon-separated: `--tools:<tool>:<arg> <value>`
-   - Dot-separated: `--tools.<tool>.<arg> <value>`
-
-3. **Module version configuration**: Should pipeline module versions be specified in `nextflow.config` or in a dedicated pipeline spec file (e.g., `pipeline.yaml`)?
+2. **Module version configuration**: Should pipeline module versions be specified in `nextflow.config` or in a dedicated pipeline spec file (e.g., `pipeline.yaml`)?
 
 ---
 
@@ -710,6 +681,7 @@ These fields extend the schema to support the new Nextflow module system:
 | `license` | string | Registry | SPDX license identifier for module code |
 | `requires` | object | Optional | Runtime requirements |
 | `requires.nextflow` | string | Optional | Nextflow version constraint |
+| `params` | array[object] | Optional | Module parameter specifications |
 
 ### Detailed Field Specifications
 
@@ -766,7 +738,7 @@ requires:
 
 #### `tools`
 
-Documents the software tools wrapped by the module, including their command-line arguments:
+Documents the software tools wrapped by the module:
 
 ```yaml
 tools:
@@ -774,15 +746,7 @@ tools:
       description: BWA aligner
       homepage: http://bio-bwa.sourceforge.net/
       license: ["GPL-3.0-or-later"]
-      args:
-        K:
-          flag: "-K"
-          type: integer
-          description: "Process INT input bases in each batch"
-        Y:
-          flag: "-Y"
-          type: boolean
-          description: "Use soft clipping for supplementary alignments"
+      identifier: biotools:bwa
 ```
 
 **Tool Properties:**
@@ -798,29 +762,35 @@ tools:
 | `license` | Recommended | SPDX license(s) |
 | `identifier` | Recommended | bio.tools identifier |
 | `manual` | No | User manual URL |
-| `args` | No | Command-line argument specifications |
 
-**Argument Properties (`args.<name>`):**
+#### `params`
 
-The `args` object maps argument names to their specifications. Argument names become accessible in scripts via `tools.<toolname>.args.<argname>`.
+Defines configurable parameters for the module:
+
+```yaml
+params:
+  - name: batch_size
+    type: integer
+    description: "Process INT input bases in each batch"
+    example: 100000000
+
+  - name: use_soft_clipping
+    type: boolean
+    description: "Use soft clipping for supplementary alignments"
+
+  - name: output_format
+    type: string
+    description: "Output format (sam, bam, or cram)"
+```
+
+**Parameter Properties:**
 
 | Property | Required | Description |
 |----------|----------|-------------|
-| `flag` | Yes | CLI flag (e.g., `-K`, `--output-fmt`) |
-| `type` | Yes | Data type: `boolean`, `integer`, `float`, `string`, `file`, `path` |
-| `description` | Yes | Human-readable description |
-| `default` | No | Default value |
-| `enum` | No | List of allowed values |
-| `required` | No | Whether the argument is mandatory (default: false) |
-
-**Argument Type Behavior:**
-
-| Type | Config Example | Output |
-|------|----------------|--------|
-| `boolean` | `tools.bwa.args.Y = true` | `-Y` |
-| `integer` | `tools.bwa.args.K = 100000` | `-K 100000` |
-| `string` | `tools.bwa.args.R = "@RG\tID:s1"` | `-R @RG\tID:s1` |
-| `string` + `enum` | `tools.samtools.args.output_fmt = "cram"` | `--output-fmt cram` |
+| `name` | Yes | Parameter identifier |
+| `type` | No | Data type: `boolean`, `integer`, `float`, `string`, `file`, `path` |
+| `description` | No | Human-readable description |
+| `example` | No | Example value for the parameter |
 
 #### `input` and `output`
 
@@ -951,9 +921,9 @@ version: "1.0.0"
 
 The following attributes from the nf-core meta schema are **not supported** in the Nextflow module system:
 
-| Attribute | Reason | Future |
-|-----------|--------|--------|
-| `extra_args` | Not adopted in practice by nf-core modules | Will be redesigned as part of the `tools` schema attribute to document tool-specific arguments and configuration options |
+| Attribute | Reason | Alternative |
+|-----------|--------|-------------|
+| `extra_args` | Not adopted in practice by nf-core modules | Use `params` section to define module parameters |
 | `components` | No longer supported | Module dependencies are managed via `nextflow.config` |
 
 ### Complete Examples
@@ -1015,6 +985,20 @@ tools:
       doi: 10.1093/bioinformatics/btp324
       license: ["GPL-3.0-or-later"]
       identifier: biotools:bwa
+
+params:
+  - name: batch_size
+    type: integer
+    description: "Process INT input bases in each batch"
+    example: 100000000
+
+  - name: use_soft_clipping
+    type: boolean
+    description: "Use soft clipping for supplementary alignments"
+
+  - name: output_format
+    type: string
+    description: "Output format (sam, bam, or cram)"
 
 authors:
   - "@nf-core"

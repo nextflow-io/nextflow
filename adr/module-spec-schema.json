@@ -57,43 +57,13 @@
     },
     "requires": {
       "type": "object",
-      "description": "All requirements for the module: runtime environment, plugins, and dependencies",
+      "description": "Runtime requirements for the module",
       "properties": {
         "nextflow": {
           "type": "string",
           "description": "Nextflow version constraint using comparison operators",
           "examples": [">=24.04.0", ">=24.04.0,<25.0.0"],
           "pattern": "^[<>=!]+[0-9]+\\.[0-9]+\\.[0-9]+(-[a-zA-Z0-9]+)?(,\\s*[<>=!]+[0-9]+\\.[0-9]+\\.[0-9]+(-[a-zA-Z0-9]+)?)*$"
-        },
-        "plugins": {
-          "type": "array",
-          "description": "Required Nextflow plugins with optional version constraints",
-          "items": {
-            "type": "string",
-            "description": "Plugin reference in format 'plugin-name' or 'plugin-name@constraint'",
-            "pattern": "^[a-z][a-z0-9-]*(@[<>=,0-9.]+)?$",
-            "examples": ["nf-amazon@2.0.0", "nf-wave@>=1.5.0", "nf-azure"]
-          }
-        },
-        "modules": {
-          "type": "array",
-          "description": "Required modules (processes) with optional version constraints",
-          "items": {
-            "type": "string",
-            "description": "Module reference in format '[scope/]name' or '[scope/]name@constraint'",
-            "pattern": "^([a-z0-9][a-z0-9-]*/)?[a-z][a-z0-9_/-]*(@[<>=,0-9.]+)?$",
-            "examples": ["nf-core/fastqc@>=1.0.0", "nf-core/samtools/sort@>=2.1.0,<3.0.0", "bwa/mem"]
-          }
-        },
-        "workflows": {
-          "type": "array",
-          "description": "Required workflows/subworkflows with optional version constraints",
-          "items": {
-            "type": "string",
-            "description": "Workflow reference in format '[scope/]name' or '[scope/]name@constraint'",
-            "pattern": "^([a-z0-9][a-z0-9-]*/)?[a-z][a-z0-9_/-]*(@[<>=,0-9.]+)?$",
-            "examples": ["nf-core/fastq-align-bwa@1.0.0", "my-subworkflow"]
-          }
         }
       },
       "additionalProperties": false
@@ -110,6 +80,13 @@
             "$ref": "#/$defs/toolSpec"
           }
         }
+      }
+    },
+    "params": {
+      "type": "array",
+      "description": "Module parameter specifications",
+      "items": {
+        "$ref": "#/$defs/paramSpec"
       }
     },
     "input": {
@@ -232,16 +209,6 @@
           "type": "string",
           "format": "uri",
           "description": "Manual/user guide URL"
-        },
-        "args": {
-          "type": "object",
-          "description": "Command-line arguments supported by the tool. Keys are argument names accessible via tool.<toolname>.args.<name>",
-          "patternProperties": {
-            "^[a-zA-Z_][a-zA-Z0-9_]*$": {
-              "$ref": "#/$defs/toolArgSpec"
-            }
-          },
-          "additionalProperties": false
         }
       },
       "required": ["description"],
@@ -252,39 +219,29 @@
         { "required": ["doi"] }
       ]
     },
-    "toolArgSpec": {
+    "paramSpec": {
       "type": "object",
-      "description": "Specification for a tool command-line argument",
+      "description": "Specification for a module parameter",
       "properties": {
-        "flag": {
+        "name": {
           "type": "string",
-          "description": "The CLI flag (e.g., '-n', '--output-fmt')",
-          "pattern": "^--?[a-zA-Z][a-zA-Z0-9_-]*$"
+          "description": "Parameter identifier",
+          "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"
         },
         "type": {
           "type": "string",
-          "description": "Data type of the argument value",
+          "description": "Data type of the parameter value",
           "enum": ["boolean", "integer", "float", "string", "file", "path"]
         },
         "description": {
           "type": "string",
-          "description": "Human-readable description of the argument"
+          "description": "Human-readable description of the parameter"
         },
-        "default": {
-          "description": "Default value for the argument"
-        },
-        "enum": {
-          "type": "array",
-          "description": "List of allowed values",
-          "uniqueItems": true
-        },
-        "required": {
-          "type": "boolean",
-          "description": "Whether this argument is required",
-          "default": false
+        "example": {
+          "description": "Example value for the parameter"
         }
       },
-      "required": ["flag", "type", "description"]
+      "required": ["name"]
     },
     "channelElementSpec": {
       "type": "object",
@@ -484,49 +441,40 @@
       "authors": ["@nf-core"],
       "maintainers": ["@nf-core"],
       "requires": {
-        "nextflow": ">=24.04.0",
-        "plugins": [
-          "nf-amazon@2.0.0"
-        ],
-        "modules": [
-          "nf-core/samtools/view@>=1.0.0,<2.0.0",
-          "nf-core/samtools/sort@>=2.1.0,<2.2.0"
-        ]
+        "nextflow": ">=24.04.0"
       },
       "tools": [
         {
           "bwa": {
             "description": "BWA aligner",
             "homepage": "http://bio-bwa.sourceforge.net/",
-            "licence": ["GPL-3.0-or-later"],
-            "args": {
-              "K": {
-                "flag": "-K",
-                "type": "integer",
-                "description": "Process INT input bases in each batch"
-              },
-              "Y": {
-                "flag": "-Y",
-                "type": "boolean",
-                "description": "Use soft clipping for supplementary alignments"
-              }
-            }
+            "licence": ["GPL-3.0-or-later"]
           }
         },
         {
           "samtools": {
             "description": "SAMtools",
             "homepage": "http://www.htslib.org/",
-            "licence": ["MIT"],
-            "args": {
-              "output_fmt": {
-                "flag": "--output-fmt",
-                "type": "string",
-                "description": "Output format",
-                "enum": ["sam", "bam", "cram"]
-              }
-            }
+            "licence": ["MIT"]
           }
+        }
+      ],
+      "params": [
+        {
+          "name": "batch_size",
+          "type": "integer",
+          "description": "Process INT input bases in each batch",
+          "example": 100000000
+        },
+        {
+          "name": "use_soft_clipping",
+          "type": "boolean",
+          "description": "Use soft clipping for supplementary alignments"
+        },
+        {
+          "name": "output_format",
+          "type": "string",
+          "description": "Output format (sam, bam, or cram)"
         }
       ],
       "input": [
