@@ -419,7 +419,6 @@ class K8sClient {
                 log.warn1("Job $jobName already completed and Pod is gone")
                 final dummyPodStatus = [
                         terminated: [
-                                exitcode: 0,
                                 reason: "Completed",
                                 startedAt: jobStatus.startTime,
                                 finishedAt: jobStatus.completionTime,

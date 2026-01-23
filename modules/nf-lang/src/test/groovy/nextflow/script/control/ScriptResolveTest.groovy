@@ -335,4 +335,24 @@ class ScriptResolveTest extends Specification {
         errors[0].getOriginalMessage() == 'Workflows cannot be called from within a closure'
     }
 
+    def 'should recognize fully-qualified class name' () {
+        when:
+        def errors = check(
+            '''\
+            new groovy.json.JsonSlurper()
+            '''
+        )
+        then:
+        errors.size() == 0
+
+        when:
+        errors = check(
+            '''\
+            new groovy.json.JsonGenerator.Options()
+            '''
+        )
+        then:
+        errors.size() == 0
+    }
+
 }
