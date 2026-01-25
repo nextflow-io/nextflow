@@ -51,8 +51,9 @@ docs/
 ├── build/                  # Generated static site (git-ignored)
 ├── docusaurus.config.js    # Main Docusaurus configuration
 ├── sidebars.js             # Sidebar navigation structure
-├── package.json            # Node.js dependencies
-└── netlify.toml            # Netlify deployment configuration
+└── package.json            # Node.js dependencies
+
+../netlify.toml             # Netlify deployment configuration (at repo root)
 ```
 
 ## Writing documentation

@@ -80,17 +80,17 @@ To run your pipeline:
     nextflow run main.nf
     ```
 
-You will see output similar to the following:
+    You will see output similar to the following:
 
-```console
-N E X T F L O W   ~  version 24.10.3
+    ```console
+    N E X T F L O W   ~  version 24.10.3
 
-Launching `main.nf` [big_wegener] DSL2 - revision: 13a41a8946
+    Launching `main.nf` [big_wegener] DSL2 - revision: 13a41a8946
 
-executor >  local (3)
-[82/457482] split (1)                   | 1 of 1 ✔
-[2f/056a98] convert_to_upper (chunk_aa) | 2 of 2 ✔
-```
+    executor >  local (3)
+    [82/457482] split (1)                   | 1 of 1 ✔
+    [2f/056a98] convert_to_upper (chunk_aa) | 2 of 2 ✔
+    ```
 
 Nextflow creates a `work` directory to store files used during a pipeline run. Each execution of a process is run as a separate task. The `split` process is run as one task and the `convert_to_upper` process is run as two tasks. The hexadecimal string, for example, `82/457482`, is the beginning of a unique hash. It is a prefix used to identify the task directory where the script was executed.
 
@@ -147,17 +147,17 @@ You can enable resumability using the `-resume` flag when running a pipeline. To
     nextflow run main.nf -resume
     ```
 
-You will see output similar to the following:
+    You will see output similar to the following:
 
-```console
- N E X T F L O W   ~  version 24.10.3
+    ```console
+    N E X T F L O W   ~  version 24.10.3
 
-Launching `main.nf` [furious_curie] DSL2 - revision: 5490f13c43
+    Launching `main.nf` [furious_curie] DSL2 - revision: 5490f13c43
 
-executor >  local (2)
-[82/457482] split (1)                   | 1 of 1, cached: 1 ✔
-[02/9db40b] convert_to_upper (chunk_aa) | 2 of 2 ✔
-```
+    executor >  local (2)
+    [82/457482] split (1)                   | 1 of 1, cached: 1 ✔
+    [02/9db40b] convert_to_upper (chunk_aa) | 2 of 2 ✔
+    ```
 
 Nextflow skips the execution of the `split` process and retrieves the results from the cache. The `convert_to_upper` process is executed twice.
 
@@ -175,17 +175,17 @@ You can configure the `str` parameter in your pipeline. To modify your `str` par
     nextflow run main.nf --str 'Bonjour le monde'
     ```
 
-You will see output similar to the following:
+    You will see output similar to the following:
 
-```console
- N E X T F L O W   ~  version 24.10.3
+    ```console
+    N E X T F L O W   ~  version 24.10.3
 
-Launching `main.nf` [distracted_kalam] DSL2 - revision: 082867d4d6
+    Launching `main.nf` [distracted_kalam] DSL2 - revision: 082867d4d6
 
-executor >  local (4)
-[55/a3a700] process > split (1)           [100%] 1 of 1 ✔
-[f4/af5ddd] process > convert_to_upper (chunk_ac) [100%] 3 of 3 ✔
-```
+    executor >  local (4)
+    [55/a3a700] process > split (1)           [100%] 1 of 1 ✔
+    [f4/af5ddd] process > convert_to_upper (chunk_ac) [100%] 3 of 3 ✔
+    ```
 
 The input string is now longer and the `split` process splits it into three chunks. The `convert_to_upper` process is run three times.
 
