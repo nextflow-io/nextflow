@@ -1,47 +1,41 @@
-# Nextflow Documentation
+# Website
 
-Nextflow documentation is written using [Sphinx](http://www.sphinx-doc.org/), [MyST](https://myst-parser.readthedocs.io/en/latest/) which is an extended version of Markdown for Sphinx, and the [Read The Docs theme for Sphinx](https://github.com/readthedocs/sphinx_rtd_theme).
+This website is built using [Docusaurus](https://docusaurus.io/), a modern static website generator.
 
-
-## Dependencies
-
-The most convenient approach is to create a Conda environment with Python 3.7 (other versions may work but haven't been tested).
-
-The build dependencies can be installed with `pip`:
+## Installation
 
 ```bash
-cd docs
-pip install -r requirements.txt
+yarn
 ```
 
-Alternatively, you can use the Dockerfile to build the docs in a container (see below).
-
-
-## Contributing
-
-To edit and contribute to the documentation, you only need a text editor to change the appropriate `.md` files in this directory.
-
-Once you have made your changes, run the following command to build the HTML files:
+## Local Development
 
 ```bash
-make clean html
+yarn start
 ```
 
-Alternatively, you can use the Dockerfile to build the docs in a container:
+This command starts a local development server and opens up a browser window. Most changes are reflected live without having to restart the server.
+
+## Build
 
 ```bash
-docker build -t nextflow/sphinx:5.3.0 .
-docker run -v $(pwd):/tmp nextflow/sphinx:5.3.0 -- make html
+yarn build
 ```
 
-Then start up a local http server and open `localhost:8080` in your browser to verify the changes:
+This command generates static content into the `build` directory and can be served using any static contents hosting service.
+
+## Deployment
+
+Using SSH:
 
 ```bash
-python -m http.server 8080 --directory _build/html/
+USE_SSH=true yarn deploy
 ```
 
+Not using SSH:
 
-## License
+```bash
+GIT_USER=<Your GitHub username> yarn deploy
+```
 
-Nextflow documentation is distributed under
-[Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0) license](https://creativecommons.org/licenses/by-sa/4.0/).
+If you are using GitHub pages for hosting, this command is a convenient way to build the website and push to the `gh-pages` branch.

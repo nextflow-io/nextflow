@@ -46,8 +46,7 @@ Search for and convert all instances of:
 4. For duplicate patterns that appear multiple times, include enough surrounding context to make each match unique
 5. Verify the file has the correct imports at the top:
    ```javascript
-   import { AddedInVersion, ChangedInVersion, DeprecatedInVersion } from '@site/src/components/VersionedAdmonitions';
-   ```
+      ```
 6. After all conversions, verify no old-format admonitions remain using Grep
 
 ## Important Notes
