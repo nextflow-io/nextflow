@@ -27,6 +27,10 @@ tools/*
 tests_other
 other
 docs/_build/
+docs/.docusaurus                                                                                                                                                                                                                
+docs/build                                                                                                                                                                                                                      
+docs/node_modules                                                                                                                                                                                                               
+docs/.cache-loader
 ./*.txt
 errors/
 misc/

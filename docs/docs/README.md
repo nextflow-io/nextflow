@@ -40,7 +40,6 @@ Then start up a local http server and open `localhost:8080` in your browser to v
 python -m http.server 8080 --directory _build/html/
 ```
 
-
 ## License
 
 Nextflow documentation is distributed under
