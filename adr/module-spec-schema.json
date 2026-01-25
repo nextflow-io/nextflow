@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://registry.nextflow.io/schemas/module-spec/v1.0.0",
-  "title": "Nextflow Module Metadata Schema",
+  "$id": "https://raw.githubusercontent.com/nextflow-io/schemas/main/module/v1/schema.json",
+  "title": "Nextflow Module Schema",
   "description": "Schema for Nextflow module meta.yaml files, supporting both nf-core community patterns and the Nextflow module system",
   "type": "object",
   "properties": {
@@ -68,6 +68,34 @@
       },
       "additionalProperties": false
     },
+    "input": {
+      "type": "array",
+      "description": "Inputs of the module",
+      "items": {
+        "$ref": "#/$defs/structuredParameter"
+      }
+    },
+    "params": {
+      "type": "array",
+      "description": "Module parameter specifications",
+      "items": {
+        "$ref": "#/$defs/paramSpec"
+      }
+    },
+    "output": {
+      "type": "array",
+      "description": "Outputs of the module",
+      "items": {
+        "$ref": "#/$defs/structuredParameter"
+      }
+    },
+    "topics": {
+      "type": "array",
+      "description": "Topics of the module",
+      "items": {
+        "$ref": "#/$defs/structuredParameter"
+      }
+    },
     "tools": {
       "type": "array",
       "description": "Software tools wrapped by this module with their metadata",
@@ -81,60 +109,6 @@
           }
         }
       }
-    },
-    "params": {
-      "type": "array",
-      "description": "Module parameter specifications",
-      "items": {
-        "$ref": "#/$defs/paramSpec"
-      }
-    },
-    "input": {
-      "description": "Input channel specifications for the module's process(es)",
-      "oneOf": [
-        {
-          "type": "array",
-          "description": "Array-based input specification (nf-core modules pattern)",
-          "items": {
-            "$ref": "#/$defs/inputChannelItem"
-          }
-        },
-        {
-          "type": "object",
-          "description": "Object-based input specification (simplified pattern)",
-          "patternProperties": {
-            "^[a-zA-Z_][a-zA-Z0-9_]*$": {
-              "$ref": "#/$defs/channelElementSpec"
-            }
-          }
-        }
-      ]
-    },
-    "output": {
-      "description": "Output channel specifications for the module's process(es)",
-      "oneOf": [
-        {
-          "type": "object",
-          "description": "Object-based output specification (nf-core modules pattern)",
-          "patternProperties": {
-            "^[a-zA-Z_][a-zA-Z0-9_]*$": {
-              "$ref": "#/$defs/outputChannelDef"
-            }
-          }
-        },
-        {
-          "type": "array",
-          "description": "Array-based output specification (nf-core subworkflows pattern)",
-          "items": {
-            "type": "object",
-            "patternProperties": {
-              "^[a-zA-Z_][a-zA-Z0-9_]*$": {
-                "$ref": "#/$defs/channelElementSpec"
-              }
-            }
-          }
-        }
-      ]
     }
   },
   "required": ["name", "description"],
@@ -213,11 +187,35 @@
       },
       "required": ["description"],
       "anyOf": [
-        { "required": ["homepage"] },
-        { "required": ["documentation"] },
-        { "required": ["tool_dev_url"] },
-        { "required": ["doi"] }
+        {
+          "required": ["homepage"]
+        },
+        {
+          "required": ["documentation"]
+        },
+        {
+          "required": ["tool_dev_url"]
+        },
+        {
+          "required": ["doi"]
+        }
       ]
+    },
+    "structuredParameter": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "$ref": "#/$defs/paramSpec"
+          },
+          {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/paramSpec"
+            }
+          }
+        ]
+      }
     },
     "paramSpec": {
       "type": "object",
@@ -231,42 +229,29 @@
         "type": {
           "type": "string",
           "description": "Data type of the parameter value",
-          "enum": ["boolean", "integer", "float", "string", "file", "path"]
+          "enum": [
+            "boolean",
+            "float",
+            "integer",
+            "string",
+            "list",
+            "map",
+            "file",
+            "directory"
+          ]
         },
         "description": {
           "type": "string",
           "description": "Human-readable description of the parameter"
         },
-        "example": {
-          "description": "Example value for the parameter"
-        }
-      },
-      "required": ["name"]
-    },
-    "channelElementSpec": {
-      "type": "object",
-      "description": "Specification for a channel element (input or output)",
-      "properties": {
-        "type": {
-          "type": "string",
-          "description": "Data type of the channel element",
-          "enum": ["map", "file", "directory", "string", "integer", "float", "boolean", "list", "val"]
-        },
-        "description": {
-          "type": "string",
-          "description": "Human-readable description of the channel element"
-        },
         "pattern": {
           "type": "string",
-          "description": "File pattern in glob syntax or allowed values pattern"
+          "description": "Glob pattern for file/directory parameters"
         },
         "optional": {
           "type": "boolean",
-          "description": "Whether this input is optional",
+          "description": "Whether this parameter is optional",
           "default": false
-        },
-        "default": {
-          "description": "Default value if not provided"
         },
         "enum": {
           "type": "array",
@@ -289,62 +274,7 @@
           "uniqueItems": true
         }
       },
-      "required": ["description"]
-    },
-    "inputChannelItem": {
-      "description": "Input channel item - can be a tuple (array) or single element (object)",
-      "oneOf": [
-        {
-          "type": "array",
-          "description": "Tuple-style input channel (multiple elements per emission)",
-          "items": {
-            "type": "object",
-            "patternProperties": {
-              "^[a-zA-Z_][a-zA-Z0-9_]*$|^\\*\\..*$": {
-                "$ref": "#/$defs/channelElementSpec"
-              }
-            }
-          }
-        },
-        {
-          "type": "object",
-          "description": "Single-element input channel",
-          "patternProperties": {
-            "^[a-zA-Z_][a-zA-Z0-9_]*$": {
-              "$ref": "#/$defs/channelElementSpec"
-            }
-          }
-        }
-      ]
-    },
-    "outputChannelDef": {
-      "type": "array",
-      "description": "Output channel definition - array of emission patterns",
-      "items": {
-        "oneOf": [
-          {
-            "type": "object",
-            "description": "Single output element",
-            "patternProperties": {
-              "^[a-zA-Z_$][a-zA-Z0-9_{}.$*\"']*$": {
-                "$ref": "#/$defs/channelElementSpec"
-              }
-            }
-          },
-          {
-            "type": "array",
-            "description": "Tuple output (multiple elements per emission)",
-            "items": {
-              "type": "object",
-              "patternProperties": {
-                "^[a-zA-Z_$][a-zA-Z0-9_{}.$*\"']*$|^\\*\\..*$": {
-                  "$ref": "#/$defs/channelElementSpec"
-                }
-              }
-            }
-          }
-        ]
-      }
+      "required": ["name", "type", "description"]
     }
   },
   "allOf": [

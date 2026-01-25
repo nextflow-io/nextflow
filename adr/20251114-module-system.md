@@ -123,7 +123,7 @@ registry {
 }
 ```
 
-**Module Manifest** (`meta.yaml`):
+**Module Spec** (`meta.yaml`):
 ```yaml
 name: nf-core/bwa-align
 version: 1.2.4                    # This module's version
@@ -464,7 +464,7 @@ project-root/
 
 ## Implementation Strategy
 
-**Phase 1**: Module manifest schema, local module loading, validation tools
+**Phase 1**: Module schema, local module loading, validation tools
 
 **Phase 2**: Extend Nextflow registry for modules, implement caching, add `install` and `search` commands
 
@@ -576,7 +576,7 @@ bwa mem ${batch_arg} ${soft_clip} -t $task.cpus $index $reads \
 | Purpose | Extend runtime | Reusable processes |
 | Format | JAR files | Source code (.nf) |
 | Resolution | Startup | Parse time |
-| Metadata | JSON spec | YAML manifest |
+| Metadata | JSON spec | YAML spec |
 | Naming | `nf-amazon` | `@nf-core/salmon` |
 | Cache Location | `$NXF_HOME/plugins/` | `modules/@scope/name/` |
 | Version Config | `plugins {}` in config | `modules {}` in config |
@@ -647,7 +647,7 @@ bwa mem ${batch_arg} ${soft_clip} -t $task.cpus $index $reads \
 
 ---
 
-## Appendix A: Module Metadata Schema Specification
+## Appendix A: Module Schema Specification
 
 This appendix defines the JSON schema for module `meta.yaml` files. The schema maintains backward compatibility with existing nf-core module metadata patterns while supporting the new Nextflow module system features.
 
