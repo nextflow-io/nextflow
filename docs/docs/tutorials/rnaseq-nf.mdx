@@ -12,7 +12,7 @@ The pipeline is organized into modular workflows and processes that coordinate d
 
 The [entry workflow](https://github.com/nextflow-io/rnaseq-nf/blob/master/main.nf) orchestrates the entire pipeline by coordinating input parameters and data flow:
 
-```{mermaid}
+```mermaid
 flowchart TB
     subgraph " "
     subgraph params
@@ -42,7 +42,7 @@ Data flow:
 
 The [`RNASEQ`](https://github.com/nextflow-io/rnaseq-nf/blob/master/modules/rnaseq.nf) subworkflow coordinates three processes that run in parallel and sequence:
 
-```{mermaid}
+```mermaid
 flowchart TB
     subgraph RNASEQ
     subgraph take

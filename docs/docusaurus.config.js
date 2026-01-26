@@ -6,6 +6,10 @@ import {
 
 export default async function createConfigAsync() {
   return createSeqeraConfig({
+    themes: ["@docusaurus/theme-mermaid"],
+    markdown: {
+      mermaid: true,
+    },
     plugins: [
       [
         "@docusaurus/plugin-content-docs",
@@ -16,7 +20,10 @@ export default async function createConfigAsync() {
           showLastUpdateAuthor: false,
           showLastUpdateTime: false,
           rehypePlugins: [require("rehype-katex")],
-          remarkPlugins: [(await import("remark-math")).default],
+          remarkPlugins: [
+            (await import("remark-math")).default,
+            (await import("remark-sectionize")).default,
+          ],
         },
       ],
     ],

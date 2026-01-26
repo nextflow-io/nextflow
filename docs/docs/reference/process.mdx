@@ -90,7 +90,7 @@ Stages a file into the task directory under the given alias.
 
 Stages a collection of files into the task directory under the given alias.
 
-###### `stdin( value: String )`
+##### `stdin( value: String )`
 
 Stages the given value as the standard input (i.e., `stdin`) to the task script.
 
@@ -307,7 +307,7 @@ Defines the [channel topic][channel-topic>] to which the output will be sent.
 
 ## Directives
 
-### accelerator
+### `accelerator`
 
 The `accelerator` directive allows you to request hardware accelerators (e.g. GPUs) for the task execution. For example:
 
@@ -332,7 +332,7 @@ This directive is only used by certain executors. Refer to the [Executors][execu
 Additional options may be required to fully enable the use of accelerators. When using containers with GPUs, you must pass the GPU drivers through to the container. For Docker, this requires the option `--gpus all` in the `docker run` command. For Apptainer/Singularity, this requires the option `--nv`. The specific implementation details depend on the accelerator and container type being used.
 :::
 
-The following options are available:
+Available options:
 
 ##### `request: Integer`
 
@@ -351,7 +351,7 @@ The meaning of this option depends on the target execution platform. See the pla
 
 This option is not supported for AWS Batch. You can control the accelerator type indirectly through the allowed instance types in your Compute Environment. See the [AWS Batch FAQs](https://aws.amazon.com/batch/faqs/?#GPU_Scheduling_) for more information.
 
-### afterScript
+### `afterScript`
 
 The `afterScript` directive allows you to execute a custom (Bash) snippet immediately *after* the main process has run. This may be useful to clean up your staging area.
 
@@ -359,7 +359,7 @@ The `afterScript` directive allows you to execute a custom (Bash) snippet immedi
 When combined with the [container](#container) directive, the `afterScript` will be executed outside the specified container. In other words, the `afterScript` is always executed in the host environment.
 :::
 
-### arch
+### `arch`
 
 The `arch` directive allows you to define the CPU architecture to build the software in use by the process' task. For example:
 
@@ -379,18 +379,19 @@ The example above declares that the CPU generic architecture is `linux/x86_64` (
 
 This directive is currently used by the following Nextflow functionalities:
 
-- by the [spack](#spack) directive, to build microarchitecture-optimized applications;
-- by the [Wave][wave-page] service, to build containers for one of the generic families of CPU architectures (see below);
-- by the `spack` strategy within [Wave][wave-page], to optimize the container builds for specific CPU microarchitectures.
+- By the [spack](#spack) directive, to build microarchitecture-optimized applications;
+- By the [Wave][wave-page] service, to build containers for one of the generic families of CPU architectures (see below);
+- By the `spack` strategy within [Wave][wave-page], to optimize the container builds for specific CPU microarchitectures.
 
 Allowed values for the `arch` directive are as follows, grouped by equivalent family (choices available for the sake of compatibility):
+
 - X86 64 bit: `linux/x86_64`, `x86_64`, `linux/amd64`, `amd64`
 - ARM 64 bit: `linux/aarch64`, `aarch64`, `linux/arm64`, `arm64`, `linux/arm64/v8`
 - ARM 64 bit, older generation: `linux/arm64/v7`
 
 Examples of values for the architecture `target` option are `cascadelake`, `icelake`, `zen2` and `zen3`. See the [Spack documentation](https://spack.readthedocs.io/en/latest/basic_usage.html#support-for-specific-microarchitectures) for the full and up-to-date list of meaningful targets.
 
-### array
+### `array`
 
 <AddedInVersion version="24.04.0" />
 
@@ -451,7 +452,7 @@ When using Wave, the following additional directives must be uniform:
 
 - [conda](#conda)
 
-### beforeScript
+### `beforeScript`
 
 The `beforeScript` directive allows you to execute a custom (Bash) snippet *before* the main process script is run. This may be useful to initialize the underlying cluster environment or for other custom initialization.
 
@@ -470,7 +471,7 @@ process hello {
 
 When the process is containerized (using the [container](#container) directive), the `beforeScript` will be executed in the container only if the executor is *container-native* (e.g. cloud batch executors, Kubernetes). Otherwise, the `beforeScript` will be executed outside the container.
 
-### cache
+### `cache`
 
 The `cache` directive allows you to store the process results to a local cache. When the cache is enabled *and* the pipeline is launched with the [resume][getstarted-resume] option, any task executions that are already cached will be re-used. See [Cache and resume][cache-resume-page] for more information about how the cache works.
 
@@ -483,27 +484,27 @@ process hello {
 }
 ```
 
-The following options are available:
+Available options:
 
-######  `true`
+#####  `true`
 
 Enable caching. Input file metadata (name, size, last updated timestamp) are included in the cache keys (default).
 
-###### `false`
+##### `false`
 
 Disable caching.
 
-######  `'deep'`
+#####  `'deep'`
 
 Enable caching. Input file content is included in the cache keys.
 
-###### `'lenient'`
+##### `'lenient'`
 
 Enable caching. Minimal input file metadata (name and size only) are included in the cache keys.
 
 This strategy provides a workaround for incorrect caching invalidation observed on shared file systems due to inconsistent file timestamps.
 
-### clusterOptions
+### `clusterOptions`
 
 The `clusterOptions` directive allows the usage of any native configuration option accepted by your cluster submit command. You can use it to request non-standard resources or use settings that are specific to your cluster and not supported out of the box by Nextflow.
 
@@ -539,7 +540,7 @@ This directive is only used by grid executors. Refer to the [Executors][executor
 While you can use the `clusterOptions` directive to specify options that are supported as process directives (`queue`, `memory`, `time`, etc), you should not use both at the same time, as it will cause undefined behavior. Most HPC schedulers will either fail or simply ignore one or the other.
 :::
 
-### conda
+### `conda`
 
 The `conda` directive allows for the definition of the process dependencies using the [Conda](https://conda.io) package manager.
 
@@ -589,7 +590,7 @@ Containers are a very useful way to execute your scripts in a reproducible self-
 This directive is ignored for processes that are [executed natively][process-native].
 :::
 
-### containerOptions
+### `containerOptions`
 
 The `containerOptions` directive allows you to specify any container execution option supported by the underlying container engine (ie. Docker, Singularity, etc). This can be useful to provide container settings only for a specific process e.g. mount a custom path:
 
@@ -1116,7 +1117,7 @@ process {
 }
 ```
 
-The following options are available:
+Available options:
 
 ##### `affinity: <config>`
 

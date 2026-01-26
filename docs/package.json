@@ -20,6 +20,7 @@
     "@docusaurus/core": "3.9.2",
     "@docusaurus/faster": "^3.9.2",
     "@docusaurus/preset-classic": "3.9.2",
+    "@docusaurus/theme-mermaid": "3.9.2",
     "@mdx-js/react": "^3.0.0",
     "@seqera/docusaurus-preset-seqera": "^1.0.4",
     "clsx": "^2.0.0",
@@ -32,6 +33,7 @@
     "react-dom": "^19.0.0",
     "rehype-katex": "5.0.0",
     "remark-math": "^6.0.0",
+    "remark-sectionize": "^2.1.0",
     "tailwindcss": "^4.1.18"
   },
   "devDependencies": {
