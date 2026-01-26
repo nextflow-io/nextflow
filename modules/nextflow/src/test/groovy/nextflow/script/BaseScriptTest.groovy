@@ -61,7 +61,6 @@ class BaseScriptTest extends Dsl2Spec {
         result.projectDir == script.parent
         result.workDir == WORK_DIR
         result.launchDir == Paths.get('.').toRealPath()
-        // moduleDir uses real path (symlinks resolved) for consistent lookups
         result.moduleDir == script.parent
         result.workflow instanceof WorkflowMetadata
         result.nextflow == NextflowMeta.instance

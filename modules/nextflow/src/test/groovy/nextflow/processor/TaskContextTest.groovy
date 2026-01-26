@@ -186,20 +186,17 @@ class TaskContextTest extends Specification {
         when:
         NextflowDelegatingMetaClass.provider = Mock(ExtensionProvider) { operatorNames() >> new HashSet<String>() }
         def meta = ScriptMeta.register(script)
-        def moduleDir = temp.resolve('modules/my-module')
-        moduleDir.mkdirs()
-        moduleDir.resolve('main.nf').text = ''
-        meta.setScriptPath(moduleDir.resolve('main.nf'))
+        meta.setScriptPath(temp.resolve('modules/my-module/main.nf'))
         and:
         // the module has a nested `templates` directory
-        moduleDir.resolve('templates').mkdirs()
-        moduleDir.resolve('templates/foo.txt').text = 'echo Hola'
+        temp.resolve('modules/my-module/templates').mkdirs()
+        temp.resolve('modules/my-module/templates/foo.txt').text = 'echo Hola'
         and:
         // the template is a relative path
         result = context.template('foo.txt')
         then:
-        // the path is resolved against the module templates (using real path for consistent lookups)
-        result == moduleDir.resolve('templates/foo.txt')
+        // the path is resolved against the module templates
+        result == temp.resolve('modules/my-module/templates/foo.txt')
 
         cleanup:
         NextflowDelegatingMetaClass.provider = null

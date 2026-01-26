@@ -841,7 +841,6 @@ class ScriptIncludesTest extends Dsl2Spec {
         def foo () { return true }
 
         workflow {
-          // moduleDir uses real path (symlinks resolved) for consistent lookups
           assert moduleDir == file("$folder/module/dir")
           assert projectDir == file("$folder")
           assert launchDir == file('.')
@@ -852,7 +851,6 @@ class ScriptIncludesTest extends Dsl2Spec {
         include { foo } from "$MODULE"
 
         workflow {
-          // moduleDir uses real path (symlinks resolved) for consistent lookups
           assert moduleDir == file("$folder")
           assert projectDir == file("$folder")
           assert launchDir == file('.')
