@@ -263,7 +263,7 @@ nextflow module run nf-core/salmon \
     --reads reads.fq \
     --index salmon_index \
     -work-dir /tmp/work \
-    --outdir results/
+    -output-dir results/
 
 # Run with module parameters
 nextflow module run nf-core/bwa-align \
