@@ -62,6 +62,12 @@ class SeqeraConfig implements ConfigScope {
     """)
     final Duration batchFlushInterval
 
+    @ConfigOption
+    @Description("""
+        Machine/infrastructure requirements for session tasks.
+    """)
+    final MachineRequirementOpts machineRequirement
+
     /* required by config scope -- do not remove */
     SeqeraConfig() {}
 
@@ -76,6 +82,8 @@ class SeqeraConfig implements ConfigScope {
         this.batchFlushInterval = opts.batchFlushInterval
             ? Duration.of(opts.batchFlushInterval as String)
             : Duration.of('1 sec')
+        // machine requirement settings
+        this.machineRequirement = new MachineRequirementOpts(opts.machineRequirement as Map ?: Map.of())
     }
 
     RetryOpts retryOpts() {
@@ -96,5 +104,9 @@ class SeqeraConfig implements ConfigScope {
 
     Duration getBatchFlushInterval() {
         return batchFlushInterval
+    }
+
+    MachineRequirementOpts getMachineRequirement() {
+        return machineRequirement
     }
 }

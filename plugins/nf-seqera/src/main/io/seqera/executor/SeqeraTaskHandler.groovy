@@ -17,25 +17,25 @@
 
 package io.seqera.executor
 
+import java.nio.file.Path
+
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import io.seqera.sched.api.schema.v1a1.AcceleratorType
 import io.seqera.sched.api.schema.v1a1.GetTaskLogsResponse
+import io.seqera.sched.api.schema.v1a1.ResourceRequirement
 import io.seqera.sched.api.schema.v1a1.Task
 import io.seqera.sched.api.schema.v1a1.TaskState as SchedTaskState
 import io.seqera.sched.api.schema.v1a1.TaskStatus as SchedTaskStatus
-import io.seqera.sched.api.schema.v1a1.PriceModel as SchedPriceModel
 import io.seqera.sched.client.SchedClient
+import io.seqera.util.MapperUtil
 import nextflow.cloud.types.CloudMachineInfo
-import nextflow.cloud.types.PriceModel
 import nextflow.fusion.FusionAwareTask
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
-
-import java.nio.file.Path
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -85,16 +85,35 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
 
     @Override
     void submit() {
-        int cpuRequest = task.config.getCpus() ?: 1
-        long memoryRequest = task.config.getMemory() ? task.config.getMemory().toBytes() : 1024 * 1024 * 1024
+        int cpuShares = (task.config.getCpus() ?: 1) * 1024
+        int memoryMiB = task.config.getMemory() ? (int) (task.config.getMemory().toBytes() / (1024 * 1024)) : 1024
+        final resourceReq = new ResourceRequirement()
+            .cpuShares(cpuShares)
+            .memoryMiB(memoryMiB)
+        // add accelerator settings if defined
+        final accelerator = task.config.getAccelerator()
+        if( accelerator ) {
+            // number of accelerators requested, fallback to limit if request is not specified
+            resourceReq.acceleratorCount(accelerator.request ?: accelerator.limit)
+            // accelerator type is GPU by default (most common in scientific computing)
+            resourceReq.acceleratorType(AcceleratorType.GPU)
+            // specific accelerator model name e.g. "nvidia-tesla-v100", "nvidia-a10g"
+            if( accelerator.type )
+                resourceReq.acceleratorName(accelerator.type)
+        }
+        // build machine requirement merging config settings with task arch
+        final machineReq = MapperUtil.toMachineRequirement(
+            executor.getSeqeraConfig().machineRequirement,
+            task.getContainerPlatform()
+        )
         final schedTask = new Task()
             .name(task.lazyName())
             .image(task.getContainer())
             .command(fusionSubmitCli())
             .environment(fusionLauncher().fusionEnv())
-            .arch(task.getContainerPlatform())
-            .cpus(cpuRequest)
-            .memory(memoryRequest)
+            .resourceRequirement(resourceReq)
+            .workDir(task.getWorkDirStr())
+            .machineRequirement(machineReq)
         log.debug "[SEQERA] Enqueueing task for batch submission: ${schedTask}"
         // Enqueue for batch submission - status will be set by setBatchTaskId callback
         executor.getBatchSubmitter().enqueue(this, schedTask)
@@ -232,7 +251,7 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
             machineInfo = new CloudMachineInfo(
                 type: lastInfo.getType(),
                 zone: lastInfo.getZone(),
-                priceModel: convertPriceModel(lastInfo.getPriceModel())
+                priceModel: MapperUtil.toPriceModel(lastInfo.getPriceModel())
             )
             log.trace "[SEQERA] taskId=$taskId => machineInfo=$machineInfo"
             return machineInfo
@@ -240,25 +259,6 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
         catch (Exception e) {
             log.debug "[SEQERA] Unable to get machine info for taskId=$taskId - ${e.message}"
             return null
-        }
-    }
-
-    /**
-     * Convert Sched API PriceModel to Nextflow PriceModel.
-     *
-     * @param schedPriceModel the Sched API price model
-     * @return the Nextflow PriceModel, or null if input is null
-     */
-    protected PriceModel convertPriceModel(SchedPriceModel schedPriceModel) {
-        if (schedPriceModel == null)
-            return null
-        switch (schedPriceModel) {
-            case SchedPriceModel.SPOT:
-                return PriceModel.spot
-            case SchedPriceModel.STANDARD:
-                return PriceModel.standard
-            default:
-                return null
         }
     }
 

@@ -1,0 +1,130 @@
+/*
+ * Copyright 2013-2025, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
+package io.seqera.config
+
+import nextflow.util.Duration
+import spock.lang.Specification
+
+/**
+ * Unit tests for SeqeraConfig
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+class SeqeraConfigTest extends Specification {
+
+    def 'should throw error when endpoint is missing' () {
+        when:
+        new SeqeraConfig([:])
+
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains('Missing Seqera endpoint')
+    }
+
+    def 'should create config with minimal settings' () {
+        when:
+        def config = new SeqeraConfig([endpoint: 'https://sched.example.com'])
+
+        then:
+        config.endpoint == 'https://sched.example.com'
+        config.region == 'eu-central-1'  // default
+        config.keyPairName == null
+        config.batchFlushInterval == Duration.of('1 sec')
+        config.machineRequirement != null
+        config.machineRequirement.arch == null
+        config.machineRequirement.provisioning == null
+    }
+
+    def 'should create config with custom region' () {
+        when:
+        def config = new SeqeraConfig([
+            endpoint: 'https://sched.example.com',
+            region: 'us-west-2'
+        ])
+
+        then:
+        config.endpoint == 'https://sched.example.com'
+        config.region == 'us-west-2'
+    }
+
+    def 'should create config with custom batch flush interval' () {
+        when:
+        def config = new SeqeraConfig([
+            endpoint: 'https://sched.example.com',
+            batchFlushInterval: '5 sec'
+        ])
+
+        then:
+        config.batchFlushInterval == Duration.of('5 sec')
+    }
+
+    def 'should create config with machine requirement settings' () {
+        when:
+        def config = new SeqeraConfig([
+            endpoint: 'https://sched.example.com',
+            machineRequirement: [
+                arch: 'arm64',
+                provisioning: 'spotFirst',
+                maxSpotAttempts: 3,
+                machineFamilies: ['m6g', 'c6g']
+            ]
+        ])
+
+        then:
+        config.machineRequirement != null
+        config.machineRequirement.arch == 'arm64'
+        config.machineRequirement.provisioning == 'spotFirst'
+        config.machineRequirement.maxSpotAttempts == 3
+        config.machineRequirement.machineFamilies == ['m6g', 'c6g']
+    }
+
+    def 'should create config with retry policy' () {
+        when:
+        def config = new SeqeraConfig([
+            endpoint: 'https://sched.example.com',
+            retryPolicy: [maxAttempts: 5, delay: '2s']
+        ])
+
+        then:
+        config.retryOpts().maxAttempts == 5
+        config.retryOpts().delay == Duration.of('2s')
+    }
+
+    def 'should create config with all settings' () {
+        when:
+        def config = new SeqeraConfig([
+            endpoint: 'https://sched.example.com',
+            region: 'eu-west-1',
+            keyPairName: 'my-key',
+            batchFlushInterval: '2 sec',
+            machineRequirement: [
+                arch: 'x86_64',
+                provisioning: 'spot'
+            ]
+        ])
+
+        then:
+        config.endpoint == 'https://sched.example.com'
+        config.region == 'eu-west-1'
+        config.keyPairName == 'my-key'
+        config.batchFlushInterval == Duration.of('2 sec')
+        config.machineRequirement.arch == 'x86_64'
+        config.machineRequirement.provisioning == 'spot'
+    }
+
+}

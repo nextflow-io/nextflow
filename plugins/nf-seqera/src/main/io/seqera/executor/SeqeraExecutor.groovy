@@ -20,6 +20,7 @@ package io.seqera.executor
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.seqera.config.SeqeraConfig
+import io.seqera.util.MapperUtil
 import io.seqera.sched.client.SchedClient
 import io.seqera.sched.client.SchedClientConfig
 import nextflow.exception.AbortOperationException
@@ -81,8 +82,9 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
     }
 
     protected void createSession() {
-        log.debug "[SEQERA] Creating session for workflow in region: ${seqeraConfig.region}, runName: ${session.runName}"
-        final response = client.createSession(seqeraConfig.region, session.runName)
+        final machineReq = MapperUtil.toMachineRequirement(seqeraConfig.machineRequirement)
+        log.debug "[SEQERA] Creating session for workflow in region: ${seqeraConfig.region}, runName: ${session.runName}, machineRequirement: ${machineReq}"
+        final response = client.createSession(seqeraConfig.region, session.runName, machineReq)
         this.sessionId = response.getSessionId()
         log.debug "[SEQERA] Session created id: ${sessionId}"
         // Initialize and start batch submitter
@@ -134,5 +136,9 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
 
     SeqeraBatchSubmitter getBatchSubmitter() {
         return batchSubmitter
+    }
+
+    SeqeraConfig getSeqeraConfig() {
+        return seqeraConfig
     }
 }
