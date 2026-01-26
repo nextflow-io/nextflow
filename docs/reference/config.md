@@ -1481,6 +1481,54 @@ The following settings are available:
 `singularity.runOptions`
 : Specify extra command line options supported by `singularity exec`.
 
+(config-seqera)=
+
+## `seqera`
+
+:::{versionadded} 26.04.0
+:::
+
+:::{warning}
+*Preview feature: may change in a future release.*
+:::
+
+The `seqera` scope allows you to configure the interactions with the Seqera scheduler service for the {ref}`seqera-executor`.
+
+The following settings are available:
+
+`seqera.endpoint`
+: The Seqera scheduler service endpoint URL (required).
+
+`seqera.region`
+: The AWS region for task execution (default: `'eu-central-1'`).
+
+`seqera.machineRequirement.arch`
+: The CPU architecture for task execution, e.g. `'x86_64'` or `'arm64'`.
+
+`seqera.machineRequirement.provisioning`
+: The instance provisioning mode. Can be `'spot'`, `'ondemand'`, or `'spotFirst'`.
+
+`seqera.machineRequirement.maxSpotAttempts`
+: The maximum number of spot retry attempts before falling back to on-demand. Only used when `provisioning` is `'spot'` or `'spotFirst'`.
+
+`seqera.machineRequirement.machineFamilies`
+: List of acceptable EC2 instance families, e.g. `['m5', 'c5', 'r5']`.
+
+`seqera.retryPolicy.delay`
+: The initial delay when a failing HTTP request is retried (default: `'450ms'`).
+
+`seqera.retryPolicy.maxDelay`
+: The maximum delay when a failing HTTP request is retried (default: `'90s'`).
+
+`seqera.retryPolicy.maxAttempts`
+: The maximum number of retry attempts (default: `10`).
+
+`seqera.retryPolicy.jitter`
+: The jitter factor for randomizing retry delays (default: `0.25`).
+
+`seqera.retryPolicy.multiplier`
+: The multiplier for exponential backoff (default: `2.0`).
+
 (config-spack)=
 
 ## `spack`

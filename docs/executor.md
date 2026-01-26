@@ -414,6 +414,35 @@ Resource requests and other job characteristics can be controlled via the follow
 - {ref}`process-queue`
 - {ref}`process-time`
 
+(seqera-executor)=
+
+## Seqera
+
+:::{versionadded} 26.04.0
+:::
+
+:::{warning}
+*Preview feature: may change in a future release.*
+:::
+
+The `seqera` executor allows you to run your pipeline using the [Seqera](https://seqera.io) cloud infrastructure. It enables the seamless execution of Nextflow pipelines by offloading process executions to the Seqera scheduler service.
+
+The pipeline processes must specify the Docker image to use by defining the `container` directive, either in the pipeline script or the `nextflow.config` file. Additionally, an S3 bucket must be used as the pipeline work directory.
+
+To enable this executor, set `process.executor = 'seqera'` in the `nextflow.config` file.
+
+Resource requests and other job characteristics can be controlled via the following process directives:
+
+- {ref}`process-arch`
+- {ref}`process-container`
+- {ref}`process-containerOptions`
+- {ref}`process-cpus`
+- {ref}`process-disk`
+- {ref}`process-memory`
+- {ref}`process-time`
+
+See the {ref}`seqera scope <config-seqera>` for the available configuration options.
+
 (slurm-executor)=
 
 ## SLURM
