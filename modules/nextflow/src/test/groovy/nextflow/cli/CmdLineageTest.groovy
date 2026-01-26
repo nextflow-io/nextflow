@@ -85,6 +85,7 @@ class CmdLineageTest extends Specification {
                 .findResults { line -> !line.contains('DEBUG') ? line : null }
                 .findResults { line -> !line.contains('INFO') ? line : null }
                 .findResults { line -> !line.contains('plugin') ? line : null }
+                .findResults { line -> !line.contains('-> [') ? line : null }  // filter pf4j dependency graph lines
 
         then:
             stdout.size() == 2
@@ -114,6 +115,7 @@ class CmdLineageTest extends Specification {
             .findResults { line -> !line.contains('INFO') ? line : null }
             .findResults { line -> !line.contains('WARN') ? line : null }
             .findResults { line -> !line.contains('plugin') ? line : null }
+            .findResults { line -> !line.contains('-> [') ? line : null }  // filter pf4j dependency graph lines
 
         then:
         stdout.size() == 1
@@ -149,6 +151,7 @@ class CmdLineageTest extends Specification {
                 .findResults { line -> !line.contains('DEBUG') ? line : null }
                 .findResults { line -> !line.contains('INFO') ? line : null }
                 .findResults { line -> !line.contains('plugin') ? line : null }
+                .findResults { line -> !line.contains('-> [') ? line : null }  // filter pf4j dependency graph lines
 
         then:
             stdout.size() == expectedOutput.readLines().size()
@@ -176,6 +179,7 @@ class CmdLineageTest extends Specification {
                 .findResults { line -> !line.contains('DEBUG') ? line : null }
                 .findResults { line -> !line.contains('INFO') ? line : null }
                 .findResults { line -> !line.contains('plugin') ? line : null }
+                .findResults { line -> !line.contains('-> [') ? line : null }  // filter pf4j dependency graph lines
 
         then:
             stdout.size() == 1
@@ -252,6 +256,7 @@ class CmdLineageTest extends Specification {
             .findResults { line -> !line.contains('DEBUG') ? line : null }
             .findResults { line -> !line.contains('INFO') ? line : null }
             .findResults { line -> !line.contains('plugin') ? line : null }
+            .findResults { line -> !line.contains('-> [') ? line : null }  // filter pf4j dependency graph lines
 
         then:
         stdout.size() == 1
@@ -290,6 +295,7 @@ class CmdLineageTest extends Specification {
             .findResults { line -> !line.contains('DEBUG') ? line : null }
             .findResults { line -> !line.contains('INFO') ? line : null }
             .findResults { line -> !line.contains('plugin') ? line : null }
+            .findResults { line -> !line.contains('-> [') ? line : null }  // filter pf4j dependency graph lines
 
         then:
         stdout.size() == expectedOutput.readLines().size()

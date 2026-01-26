@@ -109,6 +109,7 @@ class CmdLogTest extends Specification {
                 .findResults { line -> !line.contains('DEBUG') ? line : null }
                 .findResults { line -> !line.contains('INFO') ? line : null }
                 .findResults { line -> !line.contains('plugin') ? line : null }
+                .findResults { line -> !line.contains('-> [') ? line : null }  // filter pf4j dependency graph lines
                 .join('\n')
         then:
         stdout.readLines().size() == 3

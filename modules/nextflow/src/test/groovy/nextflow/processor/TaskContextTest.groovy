@@ -199,8 +199,8 @@ class TaskContextTest extends Specification {
         // the template is a relative path
         result = context.template('foo.txt')
         then:
-        // the path is resolved against the module templates
-        result == moduleDir.resolve('templates/foo.txt')
+        // the path is resolved against the module templates (using real path for consistent lookups)
+        result == moduleDir.resolve('templates/foo.txt').toRealPath()
 
         cleanup:
         NextflowDelegatingMetaClass.provider = null
