@@ -296,6 +296,8 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
         result.put('native_id', getNativeId())
         result.machineInfo = getMachineInfo()
         result.numSpotInterruptions = getNumSpotInterruptions()
+        // Override executor name to include cloud backend for cost tracking
+        result.executorName = "${SeqeraExecutor.SEQERA}/aws"
         return result
     }
 }

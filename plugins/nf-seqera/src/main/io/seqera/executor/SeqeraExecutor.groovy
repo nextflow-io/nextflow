@@ -41,9 +41,11 @@ import org.pf4j.ExtensionPoint
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-@ServiceName('seqera')
+@ServiceName(SEQERA)
 @CompileStatic
 class SeqeraExecutor extends Executor implements ExtensionPoint {
+
+    public static final String SEQERA = 'seqera'
 
     private SeqeraConfig seqeraConfig
 

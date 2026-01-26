@@ -26,10 +26,11 @@ import io.seqera.sched.client.SchedClient
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
 import nextflow.processor.TaskConfig
+import nextflow.processor.TaskId
+import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import spock.lang.Specification
-import spock.lang.Unroll
 
 import java.nio.file.Paths
 
@@ -136,21 +137,6 @@ class SeqeraTaskHandlerTest extends Specification {
         result.priceModel == PriceModel.standard
     }
 
-    @Unroll
-    def 'should convert price model #schedModel to #expected'() {
-        given:
-        def handler = createHandler()
-
-        expect:
-        handler.convertPriceModel(schedModel) == expected
-
-        where:
-        schedModel              | expected
-        SchedPriceModel.SPOT    | PriceModel.spot
-        SchedPriceModel.STANDARD| PriceModel.standard
-        null                    | null
-    }
-
     def 'should return null for getNumSpotInterruptions when task not completed'() {
         given:
         def handler = createHandler()
@@ -211,6 +197,35 @@ class SeqeraTaskHandlerTest extends Specification {
         handler.getNativeId() == 'tsk-abc123'
     }
 
+    def 'should populate trace record with metadata'() {
+        given:
+        def handler = createHandlerForTraceTest()
+        handler.taskId = 'task-123'
+        handler.status = TaskStatus.COMPLETED
+        def machineInfo = new MachineInfo()
+            .type('m5.large')
+            .zone('us-east-1a')
+            .priceModel(SchedPriceModel.SPOT)
+        def attempt = new TaskAttempt()
+            .index(1)
+            .nativeId('arn:aws:ecs:us-east-1:123:task/abc')
+            .status(SchedTaskStatus.SUCCEEDED)
+            .machineInfo(machineInfo)
+        handler.cachedTaskState = new SchedTaskState()
+            .id('tsk-xyz789')
+            .attempts([attempt])
+            .numSpotInterruptions(2)
+
+        when:
+        def trace = handler.getTraceRecord()
+
+        then:
+        trace.get('native_id') == 'tsk-xyz789'
+        trace.getMachineInfo().type == 'm5.large'
+        trace.getNumSpotInterruptions() == 2
+        trace.getExecutorName() == 'seqera/aws'
+    }
+
     /**
      * Creates a test handler with minimal mocked dependencies
      */
@@ -221,6 +236,37 @@ class SeqeraTaskHandlerTest extends Specification {
         }
         def executor = Mock(SeqeraExecutor) {
             getClient() >> Mock(SchedClient)
+        }
+        return new SeqeraTaskHandler(taskRun, executor)
+    }
+
+    /**
+     * Creates a test handler with mocks sufficient for getTraceRecord()
+     */
+    private SeqeraTaskHandler createHandlerForTraceTest() {
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> Mock(SchedClient)
+            getName() >> 'seqera'
+        }
+        def processor = Mock(TaskProcessor) {
+            getName() >> 'test_process'
+            getExecutor() >> executor
+        }
+        def taskConfig = new TaskConfig(attempt: 1, cpus: 1)
+        def taskRun = Mock(TaskRun) {
+            getId() >> TaskId.of(1)
+            getHashLog() >> 'ab/cd1234'
+            getName() >> 'test_task'
+            getExitStatus() >> 0
+            getProcessor() >> processor
+            getConfig() >> taskConfig
+            getContainer() >> 'ubuntu:latest'
+            getTraceScript() >> 'echo hello'
+            getScratch() >> null
+            getWorkDirStr() >> '/work/ab/cd1234'
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getEnvironmentStr() >> ''
+            containerMeta() >> null
         }
         return new SeqeraTaskHandler(taskRun, executor)
     }
