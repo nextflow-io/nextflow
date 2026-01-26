@@ -32,6 +32,8 @@ import nextflow.util.HistoryFile
 import org.junit.Rule
 import spock.lang.Specification
 import test.OutputCapture
+
+import static test.TestHelper.filterLogNoise
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -102,20 +104,12 @@ class CmdLogTest extends Specification {
         when:
         def log = new CmdLog(basePath: folder, args: [runName])
         log.run()
-        def stdout = capture
-                .toString()
-                .readLines()
-                // remove the log part
-                .findResults { line -> !line.contains('DEBUG') ? line : null }
-                .findResults { line -> !line.contains('INFO') ? line : null }
-                .findResults { line -> !line.contains('plugin') ? line : null }
-                .findResults { line -> !line.contains('-> [') ? line : null }  // filter pf4j dependency graph lines
-                .join('\n')
+        def stdout = filterLogNoise(capture)
         then:
-        stdout.readLines().size() == 3
-        stdout.readLines().contains( "$folder/aaa" .toString())
-        stdout.readLines().contains( "$folder/bbb" .toString())
-        stdout.readLines().contains( "$folder/ccc" .toString())
+        stdout.size() == 3
+        stdout.contains( "$folder/aaa" .toString())
+        stdout.contains( "$folder/bbb" .toString())
+        stdout.contains( "$folder/ccc" .toString())
 
     }
 
@@ -175,15 +169,10 @@ class CmdLogTest extends Specification {
         def log = new CmdLog(basePath: folder, filterStr: 'exit == 0', args: ['test_1'])
         log.run()
 
-        def stdout = capture
-                .toString()
-                .readLines()
-                // remove the log part
-                .findResults { line -> !line.contains('DEBUG') ? line : null }
-                .join('\n')
+        def stdout = filterLogNoise(capture)
         then:
-        stdout.readLines().contains( "$folder/aaa" .toString())
-        stdout.readLines().contains( "$folder/ccc" .toString())
+        stdout.contains( "$folder/aaa" .toString())
+        stdout.contains( "$folder/ccc" .toString())
 
     }
 
