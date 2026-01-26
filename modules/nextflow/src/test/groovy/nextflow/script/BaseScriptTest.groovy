@@ -16,18 +16,16 @@
 
 package nextflow.script
 
+import static test.ScriptHelper.*
+
 import java.nio.file.Files
 import java.nio.file.Paths
 
 import nextflow.NextflowMeta
-import nextflow.Session
 import nextflow.SysEnv
 import nextflow.extension.FilesEx
-import nextflow.script.ScriptBinding
 import nextflow.secret.SecretsLoader
 import test.Dsl2Spec
-
-import static test.ScriptHelper.*
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -64,7 +62,7 @@ class BaseScriptTest extends Dsl2Spec {
         result.workDir == WORK_DIR
         result.launchDir == Paths.get('.').toRealPath()
         // moduleDir uses real path (symlinks resolved) for consistent lookups
-        result.moduleDir == script.parent.toRealPath()
+        result.moduleDir == script.parent
         result.workflow instanceof WorkflowMetadata
         result.nextflow == NextflowMeta.instance
 

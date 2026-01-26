@@ -24,7 +24,6 @@ import groovy.runtime.metaclass.NextflowDelegatingMetaClass
 import groovy.transform.InheritConstructors
 import nextflow.Global
 import nextflow.NF
-import nextflow.NextflowMeta
 import nextflow.Session
 import nextflow.script.BaseScript
 import nextflow.script.BodyDef
@@ -200,7 +199,7 @@ class TaskContextTest extends Specification {
         result = context.template('foo.txt')
         then:
         // the path is resolved against the module templates (using real path for consistent lookups)
-        result == moduleDir.resolve('templates/foo.txt').toRealPath()
+        result == moduleDir.resolve('templates/foo.txt')
 
         cleanup:
         NextflowDelegatingMetaClass.provider = null

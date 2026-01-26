@@ -65,9 +65,8 @@ class ScriptMeta {
     }
 
     static BaseScript getScriptByPath(Path path) {
-        // resolve symlinks to ensure consistent path matching
-        // (e.g., /var -> /private/var on macOS)
-        return scriptsByPath.get(path.toRealPath())
+        return scriptsByPath.get(path)
+            ?: scriptsByPath.get(path.toRealPath())
     }
 
     static Set<String> allProcessNames() {
@@ -136,10 +135,8 @@ class ScriptMeta {
     }
 
     void setScriptPath(Path path) {
-        // resolve symlinks to ensure consistent path matching
-        final realPath = path.toRealPath()
-        scriptsByPath.put(realPath, script)
-        scriptPath = realPath
+        scriptsByPath.put(path, script)
+        scriptPath = path
     }
 
     void setModule(boolean val) {

@@ -842,7 +842,7 @@ class ScriptIncludesTest extends Dsl2Spec {
 
         workflow {
           // moduleDir uses real path (symlinks resolved) for consistent lookups
-          assert moduleDir == file("$folder/module/dir").toRealPath()
+          assert moduleDir == file("$folder/module/dir")
           assert projectDir == file("$folder")
           assert launchDir == file('.')
         }
@@ -853,7 +853,7 @@ class ScriptIncludesTest extends Dsl2Spec {
 
         workflow {
           // moduleDir uses real path (symlinks resolved) for consistent lookups
-          assert moduleDir == file("$folder").toRealPath()
+          assert moduleDir == file("$folder")
           assert projectDir == file("$folder")
           assert launchDir == file('.')
         }
