@@ -908,7 +908,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         when:
         def trace = handler.getTraceRecord()
         then:
-        2 * handler.isCompleted() >> false
+        1 * handler.isCompleted() >> false
         1 * handler.getMachineInfo() >> new CloudMachineInfo('x1.large', 'us-east-1b', PriceModel.spot)
         
         and:
@@ -944,8 +944,6 @@ class AwsBatchTaskHandlerTest extends Specification {
         attempt2.container() >> null
         def job = JobDetail.builder().attempts([attempt1, attempt2]).build()
 
-        // Stub BEFORE calling the method
-        handler.isCompleted() >> true
         handler.getMachineInfo() >> new CloudMachineInfo('x1.large', 'us-east-1b', PriceModel.spot)
         handler.describeJob('xyz-123') >> job
 
@@ -1299,14 +1297,12 @@ class AwsBatchTaskHandlerTest extends Specification {
         when:
         def resultNoAttempts = handler.getNumSpotInterruptions('job-123')
         then:
-        1 * handler.isCompleted() >> true
         1 * handler.describeJob('job-123') >> JobDetail.builder().attempts([]).build()
         resultNoAttempts == 0
 
         when:
         def resultNonSpot = handler.getNumSpotInterruptions('job-456')
         then:
-        1 * handler.isCompleted() >> true
         1 * handler.describeJob('job-456') >> JobDetail.builder().attempts([attempt1, attempt2]).build()
         resultNonSpot == 0
     }
@@ -1318,21 +1314,18 @@ class AwsBatchTaskHandlerTest extends Specification {
         when:
         def resultNotCompleted = handler.getNumSpotInterruptions('job-123')
         then:
-        1 * handler.isCompleted() >> false
-        0 * handler.describeJob(_)
+        1 * handler.describeJob(_)
         resultNotCompleted == null
 
         when:
         def resultNullJobId = handler.getNumSpotInterruptions(null)
         then:
-        0 * handler.isCompleted()
         0 * handler.describeJob(_)
         resultNullJobId == null
 
         when:
         def resultException = handler.getNumSpotInterruptions('job-789')
         then:
-        1 * handler.isCompleted() >> true
         1 * handler.describeJob('job-789') >> { throw new RuntimeException("Error") }
         resultException == null
     }

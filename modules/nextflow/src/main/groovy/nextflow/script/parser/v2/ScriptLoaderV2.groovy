@@ -160,9 +160,11 @@ class ScriptLoaderV2 implements ScriptLoader {
         final script = InvokerHelper.createScript(clazz, binding)
         if( script instanceof BaseScript ) {
             final meta = ScriptMeta.get(script)
-            meta.setScriptPath(path)
+            if( path!=null ) {
+                meta.setScriptPath(path)
+                binding.setScriptPath(path)
+            }
             meta.setModule(module)
-            binding.setScriptPath(path)
             binding.setSession(session)
             return script
         }

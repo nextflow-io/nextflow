@@ -144,7 +144,6 @@ class ChannelFactoryInstanceTest extends Specification {
 
     def 'should invoke multiple extensions' () {
         given:
-        NextflowMeta.instance.enableDsl2()
         Global.session = Mock(Session)
         and:
         def ext1 = new Ext1(); def ext2 = new Ext2()
@@ -185,7 +184,6 @@ class ChannelFactoryInstanceTest extends Specification {
 
         cleanup:
         PluginExtensionProvider.reset()
-        NextflowMeta.instance.disableDsl2()
     }
 
     def 'should invoke operator extension' () {

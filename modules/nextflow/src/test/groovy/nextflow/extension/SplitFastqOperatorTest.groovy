@@ -15,25 +15,22 @@
  */
 
 package nextflow.extension
-import static test.TestHelper.gunzip
 
 import java.nio.file.Files
 
 import nextflow.Channel
-import nextflow.Session
 import spock.lang.Specification
 import spock.lang.Timeout
 import test.TestHelper
+
+import static test.ScriptHelper.runDataflow
+import static test.TestHelper.gunzip
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Timeout(10)
 class SplitFastqOperatorTest extends Specification {
-
-    def setupSpec() {
-        new Session()
-    }
 
     String READS = '''
         @SRR636272.19519409/1
@@ -77,7 +74,9 @@ class SplitFastqOperatorTest extends Specification {
     def 'should split a fastq' () {
 
         when:
-        def target = Channel.of(READS).splitFastq(by:2)
+        def target = runDataflow {
+            Channel.of(READS).splitFastq(by:2)
+        }
         then:
         target.val == '''
             @SRR636272.19519409/1
@@ -112,7 +111,9 @@ class SplitFastqOperatorTest extends Specification {
         def folder = Files.createTempDirectory('test')
 
         when:
-        def target = Channel.of(READS).splitFastq(by:2, compress:true, file:folder)
+        def target = runDataflow {
+            Channel.of(READS).splitFastq(by:2, compress:true, file:folder)
+        }
         then:
         gunzip(target.val) == '''
             @SRR636272.19519409/1
@@ -147,7 +148,9 @@ class SplitFastqOperatorTest extends Specification {
     def 'should split read pairs' () {
 
         when:
-        def result = Channel.of(['sample_id',READS,READS2]).splitFastq(by:1, elem:[1,2]).toList().val
+        def result = runDataflow {
+            Channel.of(['sample_id',READS,READS2]).splitFastq(by:1, elem:[1,2]).toList()
+        }.val
 
         then:
         result.size() ==4
@@ -217,7 +220,9 @@ class SplitFastqOperatorTest extends Specification {
         def result
 
         when:
-        channel = Channel.of(['sample_id',file1,file2]).splitFastq(by:1, pe:true)
+        channel = runDataflow {
+            Channel.of(['sample_id',file1,file2]).splitFastq(by:1, pe:true)
+        }
         result = channel.val
         then:
         result[0] == 'sample_id'
@@ -304,9 +309,10 @@ class SplitFastqOperatorTest extends Specification {
         def result
 
         when:
-        channel = Channel
-                    .from([ ['aaa_id',file_a_1,file_a_2], ['bbb_id',file_b_1,file_b_2] ])
-                    .splitFastq(by:1, pe:true, file:folder)
+        channel = runDataflow {
+            Channel.from([ ['aaa_id',file_a_1,file_a_2], ['bbb_id',file_b_1,file_b_2] ])
+                .splitFastq(by:1, pe:true, file:folder)
+        }
         result = channel.val
         then:
         result[0] == 'aaa_id'
