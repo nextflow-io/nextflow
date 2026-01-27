@@ -86,7 +86,11 @@ class BatchLoggingTest extends Specification {
 
     @Timeout(value = 10, unit = TimeUnit.MINUTES)
     @IgnoreIf({System.getenv('NXF_SMOKE')})
-    @Requires({System.getenv('GOOGLE_APPLICATION_CREDENTIALS')})
+    @Requires({
+        if( !System.getenv('GOOGLE_APPLICATION_CREDENTIALS') ) return false
+        def f = new File(System.getenv('GOOGLE_APPLICATION_CREDENTIALS'))
+        return f.exists() && f.text.contains('"project_id"')
+    })
     def 'should fetch logs' () {
         given:
         def sess = Mock(Session) { getConfig() >> [:] }
