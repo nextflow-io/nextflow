@@ -8,13 +8,14 @@ configurations {
     legacy.extendsFrom defaultCfg
     tower.extendsFrom defaultCfg
     wave.extendsFrom defaultCfg
+    seqera.extendsFrom defaultCfg
 }
 
 dependencies {
     api project(':nextflow')
     // include Ivy at runtime in order to have Grape @Grab work correctly
     defaultCfg "org.apache.ivy:ivy:2.5.2"
-    // default cfg = runtime + httpfs + lineage + amazon + tower client + wave client
+    // default cfg = runtime + httpfs + lineage + seqera
     defaultCfg project(':nf-httpfs')
     defaultCfg project(':nf-lineage')
     console project(':plugins:nf-console')
@@ -23,6 +24,7 @@ dependencies {
     azure   project(':plugins:nf-azure')
     tower   project(':plugins:nf-tower')
     wave    project(':plugins:nf-wave')
+    seqera  project(':plugins:nf-seqera')
 }
 
 

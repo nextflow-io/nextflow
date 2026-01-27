@@ -157,6 +157,10 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
 
     @Override
     boolean checkIfCompleted() {
+        // Handle batch submission failure - task error was set but never reached RUNNING state
+        if (task.error && isCompleted()) {
+            return true
+        }
         if (!isRunning())
             return false
         final schedStatus = schedTaskStatus()

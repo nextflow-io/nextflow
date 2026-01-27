@@ -226,6 +226,29 @@ class SeqeraTaskHandlerTest extends Specification {
         trace.getExecutorName() == 'seqera/aws'
     }
 
+    def 'should detect completion when batch submission fails'() {
+        given:
+        def error = new RuntimeException('Batch submission failed')
+        def handler = createHandlerWithError(error)
+        // Simulate batch submission failure - task has error and status is COMPLETED but never went through RUNNING
+        handler.status = TaskStatus.COMPLETED
+
+        expect:
+        // checkIfCompleted should return true to allow proper error propagation
+        handler.checkIfCompleted() == true
+    }
+
+    def 'should not detect completion for normal pending task'() {
+        given:
+        def handler = createHandler()
+        // Normal task that has been submitted but not yet running
+        handler.status = TaskStatus.SUBMITTED
+
+        expect:
+        // checkIfCompleted should return false - task is still pending
+        handler.checkIfCompleted() == false
+    }
+
     /**
      * Creates a test handler with minimal mocked dependencies
      */
@@ -233,6 +256,21 @@ class SeqeraTaskHandlerTest extends Specification {
         def taskRun = Mock(TaskRun) {
             getWorkDir() >> Paths.get('/work/ab/cd1234')
             getConfig() >> Mock(TaskConfig)
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> Mock(SchedClient)
+        }
+        return new SeqeraTaskHandler(taskRun, executor)
+    }
+
+    /**
+     * Creates a test handler with an error set on the task
+     */
+    private SeqeraTaskHandler createHandlerWithError(Throwable error) {
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getConfig() >> Mock(TaskConfig)
+            getError() >> error
         }
         def executor = Mock(SeqeraExecutor) {
             getClient() >> Mock(SchedClient)
