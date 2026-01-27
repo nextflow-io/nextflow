@@ -97,7 +97,7 @@ class KryoHelper {
             if( v instanceof Class )
                 kryo.register(k,(Serializer)v.newInstance())
 
-            else if( v instanceof Closure<Serializer> )
+            else if( v instanceof Closure )
                 kryo.register(k, v.call(kryo))
 
             else

@@ -75,7 +75,7 @@ class CombineOp {
     }
 
     CombineOp setPivot( pivot ) {
-        this.pivot = (List<Integer>)(pivot instanceof List<Integer> ? pivot : [pivot])
+        this.pivot = (List<Integer>)(pivot instanceof List ? pivot : [pivot])
         return this
     }
 

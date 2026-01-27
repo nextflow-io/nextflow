@@ -1262,7 +1262,7 @@ class TaskProcessor {
             if( value instanceof Path ) {
                 files.add((Path)value)
             }
-            else if( value instanceof Collection<Path> ) {
+            else if( value instanceof Collection ) {
                 files.addAll(value)
             }
             else if( value != null ) {

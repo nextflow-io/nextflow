@@ -94,7 +94,7 @@ class SplitOp {
             multiSplit = true
             pairedEnd = true
         }
-        if( params.elem instanceof List<Integer> ) {
+        if( params.elem instanceof List ) {
             indexes = params.elem as List<Integer>
             multiSplit = true
         }
