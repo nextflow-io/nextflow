@@ -16,18 +16,16 @@
 
 package nextflow.script
 
+import static test.ScriptHelper.*
+
 import java.nio.file.Files
 import java.nio.file.Paths
 
 import nextflow.NextflowMeta
-import nextflow.Session
 import nextflow.SysEnv
 import nextflow.extension.FilesEx
-import nextflow.script.ScriptBinding
 import nextflow.secret.SecretsLoader
 import test.Dsl2Spec
-
-import static test.ScriptHelper.*
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>

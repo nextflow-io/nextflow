@@ -24,7 +24,6 @@ import groovy.runtime.metaclass.NextflowDelegatingMetaClass
 import groovy.transform.InheritConstructors
 import nextflow.Global
 import nextflow.NF
-import nextflow.NextflowMeta
 import nextflow.Session
 import nextflow.script.BaseScript
 import nextflow.script.BodyDef

@@ -66,6 +66,7 @@ class ScriptMeta {
 
     static BaseScript getScriptByPath(Path path) {
         return scriptsByPath.get(path)
+            ?: scriptsByPath.get(path.toRealPath())
     }
 
     static Set<String> allProcessNames() {
