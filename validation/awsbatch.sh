@@ -7,6 +7,8 @@ get_abs_filename() {
 
 export NXF_CMD=${NXF_CMD:-$(get_abs_filename ../launch.sh)}
 
+bash test-s3-git-remote.sh 's3://nextflow-ci/work'
+
 # Execution should fail ignoring
 $NXF_CMD run test-aws-unstage-fail.nf -c awsbatch-unstage-fail.config || true
 [[ `grep -c "Error executing process > 'test (1)'" .nextflow.log` == 1 ]] || false
