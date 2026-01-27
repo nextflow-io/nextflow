@@ -149,12 +149,13 @@ class SeqeraBatchSubmitter {
                     try {
                         log.debug "[SEQERA] Sending keep-alive for session ${sessionId}"
                         client.createTasks(sessionId, Collections.emptyList())
-                        previous = System.currentTimeMillis()
                     }
                     catch (Exception e) {
                         log.warn "[SEQERA] Keep-alive failed: ${e.message}"
                         // Don't crash the thread for keep-alive failures
                     }
+                    // Always update timestamp to avoid rapid retry on failure
+                    previous = System.currentTimeMillis()
                 }
             }
 
