@@ -60,6 +60,7 @@ class SeqeraBatchSubmitter {
     private final String sessionId
     private final Duration requestInterval
     private final Duration keepAliveInterval
+    private final Closure onError
     private final LinkedBlockingQueue<PendingTask> pendingQueue = new LinkedBlockingQueue<>()
     private Thread sender
     private volatile boolean completed = false
@@ -72,11 +73,12 @@ class SeqeraBatchSubmitter {
         this(client, sessionId, requestInterval, KEEP_ALIVE_INTERVAL)
     }
 
-    SeqeraBatchSubmitter(SchedClient client, String sessionId, Duration requestInterval, Duration keepAliveInterval) {
+    SeqeraBatchSubmitter(SchedClient client, String sessionId, Duration requestInterval, Duration keepAliveInterval, Closure onError=null) {
         this.client = client
         this.sessionId = sessionId
         this.requestInterval = requestInterval
         this.keepAliveInterval = keepAliveInterval
+        this.onError = onError
     }
 
     /**
@@ -118,40 +120,88 @@ class SeqeraBatchSubmitter {
         final long period = requestInterval.millis
         final long delay = period / 10 as long
 
-        while (!completed || !pendingQueue.isEmpty()) {
-            // Poll with timeout
-            final PendingTask pending = pendingQueue.poll(delay, TimeUnit.MILLISECONDS)
-            if (pending) {
-                // Start the batch timer when first task arrives
-                if (batch.isEmpty()) {
-                    previous = System.currentTimeMillis()
+        try {
+            while (!completed || !pendingQueue.isEmpty()) {
+                // Poll with timeout
+                final PendingTask pending = pendingQueue.poll(delay, TimeUnit.MILLISECONDS)
+                if (pending) {
+                    // Start the batch timer when first task arrives
+                    if (batch.isEmpty()) {
+                        previous = System.currentTimeMillis()
+                    }
+                    batch.add(pending)
                 }
-                batch.add(pending)
+
+                // Check if we should flush
+                final now = System.currentTimeMillis()
+                final delta = now - previous
+
+                if (!batch.isEmpty()) {
+                    // Flush if: time elapsed OR batch full OR shutting down
+                    if (delta > period || batch.size() >= TASKS_PER_REQUEST || completed) {
+                        flushBatch(batch)
+                        previous = System.currentTimeMillis()
+                        batch.clear()
+                    }
+                }
+                else if (delta > keepAliveInterval.millis) {
+                    // Keep-alive: send empty submission to maintain session
+                    try {
+                        log.debug "[SEQERA] Sending keep-alive for session ${sessionId}"
+                        client.createTasks(sessionId, Collections.emptyList())
+                        previous = System.currentTimeMillis()
+                    }
+                    catch (Exception e) {
+                        log.warn "[SEQERA] Keep-alive failed: ${e.message}"
+                        // Don't crash the thread for keep-alive failures
+                    }
+                }
             }
 
-            // Check if we should flush
-            final now = System.currentTimeMillis()
-            final delta = now - previous
-
+            // Final flush of any remaining tasks
             if (!batch.isEmpty()) {
-                // Flush if: time elapsed OR batch full OR shutting down
-                if (delta > period || batch.size() >= TASKS_PER_REQUEST || completed) {
-                    flushBatch(batch)
-                    previous = System.currentTimeMillis()
-                    batch.clear()
-                }
-            }
-            else if (delta > keepAliveInterval.millis) {
-                // Keep-alive: send empty submission to maintain session
-                log.debug "[SEQERA] Sending keep-alive for session ${sessionId}"
-                client.createTasks(sessionId, Collections.emptyList())
-                previous = System.currentTimeMillis()
+                flushBatch(batch)
             }
         }
+        catch (Throwable e) {
+            log.error "[SEQERA] Fatal error in batch submitter thread", e
+            // Convert Throwable to Exception for handler API
+            final Exception exception = e instanceof Exception ? (Exception) e : new RuntimeException(e)
+            // Fail any tasks in the current batch
+            for (PendingTask pending : batch) {
+                try {
+                    pending.handler.onBatchSubmitFailure(exception)
+                }
+                catch (Exception ex) {
+                    log.warn "[SEQERA] Error failing batch task", ex
+                }
+            }
+            // Drain and fail any remaining pending tasks
+            drainAndFailPendingTasks(exception)
+            // Invoke error callback to abort session
+            if (onError) {
+                try {
+                    onError.call(e)
+                }
+                catch (Throwable t) {
+                    log.warn "[SEQERA] Error in failure callback", t
+                }
+            }
+        }
+    }
 
-        // Final flush of any remaining tasks
-        if (!batch.isEmpty()) {
-            flushBatch(batch)
+    /**
+     * Drain the pending queue and fail all tasks with the given error
+     */
+    private void drainAndFailPendingTasks(Exception cause) {
+        PendingTask pending
+        while ((pending = pendingQueue.poll()) != null) {
+            try {
+                pending.handler.onBatchSubmitFailure(cause)
+            }
+            catch (Exception e) {
+                log.warn "[SEQERA] Error failing pending task", e
+            }
         }
     }
 

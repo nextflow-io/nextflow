@@ -89,8 +89,14 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
         final response = client.createSession(seqeraConfig.region, session.runName, machineReq)
         this.sessionId = response.getSessionId()
         log.debug "[SEQERA] Session created id: ${sessionId}"
-        // Initialize and start batch submitter
-        this.batchSubmitter = new SeqeraBatchSubmitter(client, sessionId, seqeraConfig.batchFlushInterval)
+        // Initialize and start batch submitter with error callback to abort session on fatal errors
+        this.batchSubmitter = new SeqeraBatchSubmitter(
+            client,
+            sessionId,
+            seqeraConfig.batchFlushInterval,
+            SeqeraBatchSubmitter.KEEP_ALIVE_INTERVAL,
+            { Throwable t -> session.abort(t) }
+        )
         this.batchSubmitter.start()
     }
 

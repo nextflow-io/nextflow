@@ -353,6 +353,129 @@ class SeqeraBatchSubmitterTest extends Specification {
         submissions.every { it.taskCount > 0 }
     }
 
+    def 'should invoke error callback on fatal error in thread'() {
+        given:
+        // Use an Error to simulate a truly fatal condition that escapes flushBatch
+        def fatalError = new OutOfMemoryError('Fatal thread error')
+        def errorReceived = null
+        def onError = { Throwable t -> errorReceived = t }
+        def client = Stub(SchedClient) {
+            createTasks(_, _) >> { String sessionId, List<Task> tasks ->
+                // Throw a fatal Error that will escape flushBatch
+                throw fatalError
+            }
+        }
+        def submitter = new SeqeraBatchSubmitter(client, TEST_SESSION, Duration.of('100ms'), Duration.of('10s'), onError)
+        def handler = Mock(SeqeraTaskHandler)
+
+        when:
+        submitter.start()
+        submitter.enqueue(handler, new Task().image('img1'))
+        sleep(300)
+        submitter.shutdown()
+
+        then: 'handler should receive failure (wrapped in RuntimeException since it was an Error)'
+        1 * handler.onBatchSubmitFailure({ it instanceof RuntimeException && it.cause == fatalError })
+        and: 'error callback should be invoked with original error'
+        errorReceived == fatalError
+    }
+
+    def 'should drain and fail pending tasks on fatal error'() {
+        given:
+        def fatalError = new RuntimeException('Fatal thread error')
+        def failedHandlers = [].asSynchronized()
+        def onError = { Throwable t -> /* no-op */ }
+        def client = Stub(SchedClient) {
+            createTasks(_, _) >> { String sessionId, List<Task> tasks ->
+                // Always throw to simulate fatal error
+                throw fatalError
+            }
+        }
+        def submitter = new SeqeraBatchSubmitter(client, TEST_SESSION, Duration.of('100ms'), Duration.of('10s'), onError)
+
+        // Create handlers that track when they receive failure notification
+        def handlers = (1..3).collect {
+            def h = Mock(SeqeraTaskHandler) {
+                onBatchSubmitFailure(_) >> { args -> failedHandlers << it }
+            }
+            h
+        }
+
+        when:
+        submitter.start()
+        handlers.each { h ->
+            submitter.enqueue(h, new Task().image('img'))
+        }
+        sleep(300)
+        submitter.shutdown()
+
+        then: 'all handlers should receive failure notification'
+        handlers.each { h ->
+            1 * h.onBatchSubmitFailure(fatalError)
+        }
+    }
+
+    def 'should continue after keep-alive failure'() {
+        given:
+        def keepAliveFailCount = new AtomicInteger()
+        def taskSubmissions = [].asSynchronized()
+        def client = Stub(SchedClient) {
+            createTasks(_, _) >> { String sessionId, List<Task> tasks ->
+                if (tasks.isEmpty()) {
+                    // Keep-alive call - fail it
+                    keepAliveFailCount.incrementAndGet()
+                    throw new RuntimeException('Keep-alive failed')
+                }
+                // Normal task submission
+                taskSubmissions << tasks.size()
+                Stub(CreateTasksResponse) {
+                    getTaskIds() >> tasks.collect { "task-${System.nanoTime()}" }
+                }
+            }
+        }
+        // Short keep-alive interval to trigger failures quickly
+        def submitter = new SeqeraBatchSubmitter(client, TEST_SESSION, Duration.of('500ms'), Duration.of('100ms'))
+
+        when: 'start submitter, let keep-alive fail, then submit tasks'
+        submitter.start()
+        // Wait for a few keep-alive failures
+        sleep(350)
+        // Now submit a task
+        submitter.enqueue(createMockHandler(), new Task().image('img1'))
+        // Wait for task to be submitted
+        sleep(700)
+        submitter.shutdown()
+
+        then: 'keep-alive should have failed but thread should continue'
+        keepAliveFailCount.get() >= 1
+        and: 'task submission should still succeed'
+        taskSubmissions.size() >= 1
+    }
+
+    def 'should work without error callback'() {
+        given:
+        def taskSubmissions = [].asSynchronized()
+        def client = Stub(SchedClient) {
+            createTasks(_, _) >> { String sessionId, List<Task> tasks ->
+                taskSubmissions << tasks.size()
+                Stub(CreateTasksResponse) {
+                    getTaskIds() >> tasks.collect { "task-${System.nanoTime()}" }
+                }
+            }
+        }
+        // Constructor without error callback (null)
+        def submitter = new SeqeraBatchSubmitter(client, TEST_SESSION, Duration.of('100ms'), Duration.of('10s'), null)
+
+        when:
+        submitter.start()
+        submitter.enqueue(createMockHandler(), new Task().image('img1'))
+        sleep(300)
+        submitter.shutdown()
+
+        then: 'should work normally'
+        taskSubmissions.size() >= 1
+    }
+
     /**
      * Creates a mock handler that can track setBatchTaskId and onBatchSubmitFailure calls
      */
