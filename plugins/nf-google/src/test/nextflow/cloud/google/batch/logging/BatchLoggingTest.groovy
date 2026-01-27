@@ -89,7 +89,14 @@ class BatchLoggingTest extends Specification {
     @Requires({
         if( !System.getenv('GOOGLE_APPLICATION_CREDENTIALS') ) return false
         def f = new File(System.getenv('GOOGLE_APPLICATION_CREDENTIALS'))
-        return f.exists() && f.text.contains('"project_id"')
+        if( !f.exists() ) return false
+        try {
+            def json = new groovy.json.JsonSlurper().parse(f)
+            return json instanceof Map && json.get('project_id')
+        }
+        catch( Exception e ) {
+            return false
+        }
     })
     def 'should fetch logs' () {
         given:
