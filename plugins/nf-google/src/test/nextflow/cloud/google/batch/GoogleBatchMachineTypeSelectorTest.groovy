@@ -112,4 +112,35 @@ class GoogleBatchMachineTypeSelectorTest extends Specification {
         'a3-highgpu-1g' | 0    | true
         'g2-standard-4' | 0    | true
     }
+
+    def 'should identify hyperdisk only families'() {
+        expect:
+        GoogleBatchMachineTypeSelector.INSTANCE.isHyperdiskOnly(TYPE) == EXPECTED
+
+        where:
+        TYPE            | EXPECTED
+        'c4-standard-4' | true
+        'c4a-standard-4'| true
+        'c4d-standard-4'| true
+        'n4-standard-4' | true
+        'n4d-standard-4'| true
+        'n4a-standard-4'| true
+        'n2-standard-4' | false
+        'e2-standard-4' | false
+    }
+
+    def 'should return 0 for local ssd on unsupported families'() {
+        expect:
+        final machineType = new MachineType(type: TYPE, family: FAMILY, cpusPerVm: 4)
+        GoogleBatchMachineTypeSelector.INSTANCE.findValidLocalSSDSize(MemoryUnit.of('375 GB'), machineType) == MemoryUnit.of('0 GB')
+
+        where:
+        TYPE                 | FAMILY
+        'n4-standard-4'      | 'n4'
+        'n4a-standard-4'     | 'n4a'
+        'n4d-standard-4'     | 'n4d'
+        'c4-standard-4-lssd' | 'c4'
+        'c4a-standard-4-lssd'| 'c4a'
+        'c4d-standard-4-lssd'| 'c4d'
+    }
 }
