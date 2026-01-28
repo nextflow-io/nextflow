@@ -4,9 +4,12 @@
 - Status: draft
 - Date: 2025-01-06
 - Tags: modules, dsl, registry, versioning, architecture
-- Version: 2.5
+- Version: 2.6
 
 ## Updates
+
+### Version 2.6 (2026-01-28)
+- **Removed module parameters**: Module parameters specification moved to separate spec document.
 
 ### Version 2.5 (2026-01-23)
 - **Module parameters**: Replaced structured tool arguments with general module parameters defined in `meta.yaml`
@@ -222,28 +225,20 @@ Run a module directly without requiring a wrapper workflow script. This command 
 **Options**:
 - `-version <ver>`: Run a specific version (default: latest or configured version)
 - `--<input_name> <value>`: Map value to the corresponding module process input channel
-- `--<param_name> <value>`: Configure module parameters (validated against meta.yaml schema)
 - All standard `nextflow run` options (e.g., `-profile`, `-work-dir`, `-resume`, etc.)
 
 **Behavior**:
 1. Checks if module is installed locally; if not, downloads from registry
 2. Parses the module's `main.nf` to identify the main process and its input declarations
 3. Validates command-line arguments against the process input schema
-4. Validates parameters against the `params` schema in `meta.yaml`
-5. Generates an implicit workflow that wires CLI arguments to process inputs
-6. Executes the workflow using standard Nextflow runtime
+4. Generates an implicit workflow that wires CLI arguments to process inputs
+5. Executes the workflow using standard Nextflow runtime
 
 **Input Mapping**:
 - Named arguments (`--reads`, `--reference`) are mapped to corresponding process inputs
 - File paths are automatically converted to file channels
 - Multiple values can be provided for inputs expecting collections
 - Required inputs without defaults must be provided; optional inputs use declared defaults
-
-**Module Parameters**:
-- Parameters defined in `meta.yaml` can be configured via CLI arguments
-- Boolean flags can be specified without value (e.g., `--use_soft_clipping`)
-- Arguments are validated against the `params` schema in `meta.yaml`
-- Invalid parameter names or values that fail type validation produce errors
 
 **Example**:
 ```bash
@@ -264,14 +259,6 @@ nextflow module run nf-core/salmon \
     --index salmon_index \
     -work-dir /tmp/work \
     -output-dir results/
-
-# Run with module parameters
-nextflow module run nf-core/bwa-align \
-    --reads 'samples/*_{1,2}.fastq.gz' \
-    --reference genome.fa \
-    --batch_size 100000000 \
-    --use_soft_clipping \
-    --output_format cram
 ```
 
 ---
@@ -474,73 +461,6 @@ project-root/
 
 **Phase 5**: Advanced features (search UI, language server integration, ontology validation)
 
-## Module Parameters
-
-The module system introduces a structured approach to module configuration through parameters defined in `meta.yaml`. Parameters provide a documented, type-safe way to customize module behavior.
-
-### Parameter Definition
-
-Modules declare available parameters in `meta.yaml` under the `params` section. Each parameter has a name and optional attributes for type and description.
-
-```yaml
-params:
-  - name: batch_size
-    type: integer
-    description: "Process INT input bases in each batch"
-    example: 100000000
-
-  - name: use_soft_clipping
-    type: boolean
-    description: "Use soft clipping for supplementary alignments"
-
-  - name: output_format
-    type: string
-    description: "Output format (sam, bam, or cram)"
-```
-
-### Parameter Attributes
-
-| Attribute | Required | Description |
-|-----------|----------|-------------|
-| `name` | Yes | Parameter identifier |
-| `type` | No | Data type: `boolean`, `integer`, `float`, `string`, `file`, `path` |
-| `description` | No | Human-readable description |
-| `example` | No | Example value for the parameter |
-
-### Configuration Usage
-
-Parameters are configured using standard Nextflow params syntax:
-
-```groovy
-withName: 'BWA_MEM' {
-    params.batch_size = 100000000
-    params.use_soft_clipping = true
-    params.output_format = "cram"
-}
-```
-
-### Script Usage
-
-In module scripts, access parameters via the standard `params` variable:
-
-```groovy
-def batch_arg = params.batch_size ? "-K ${params.batch_size}" : ''
-def soft_clip = params.use_soft_clipping ? "-Y" : ''
-
-bwa mem ${batch_arg} ${soft_clip} -t $task.cpus $index $reads \
-    | samtools sort --output-fmt ${params.output_format ?: 'bam'} -o ${prefix}.bam -
-```
-
-### Benefits
-
-| Aspect | `ext.args` (Legacy) | Module Parameters (New) |
-|--------|---------------------|-------------------------|
-| Documentation | None | In meta.yaml |
-| Type Safety | None | Validated |
-| IDE Support | None | Autocompletion |
-| Clarity | Opaque strings | Named parameters |
-| Defaults | Manual | Schema-defined |
-
 ## Technical Details
 
 **Dependency Resolution Flow**:
@@ -681,7 +601,6 @@ These fields extend the schema to support the new Nextflow module system:
 | `license` | string | Registry | SPDX license identifier for module code |
 | `requires` | object | Optional | Runtime requirements |
 | `requires.nextflow` | string | Optional | Nextflow version constraint |
-| `params` | array[object] | Optional | Module parameter specifications |
 
 ### Detailed Field Specifications
 
@@ -762,35 +681,6 @@ tools:
 | `license` | Recommended | SPDX license(s) |
 | `identifier` | Recommended | bio.tools identifier |
 | `manual` | No | User manual URL |
-
-#### `params`
-
-Defines configurable parameters for the module:
-
-```yaml
-params:
-  - name: batch_size
-    type: integer
-    description: "Process INT input bases in each batch"
-    example: 100000000
-
-  - name: use_soft_clipping
-    type: boolean
-    description: "Use soft clipping for supplementary alignments"
-
-  - name: output_format
-    type: string
-    description: "Output format (sam, bam, or cram)"
-```
-
-**Parameter Properties:**
-
-| Property | Required | Description |
-|----------|----------|-------------|
-| `name` | Yes | Parameter identifier |
-| `type` | No | Data type: `boolean`, `integer`, `float`, `string`, `file`, `path` |
-| `description` | No | Human-readable description |
-| `example` | No | Example value for the parameter |
 
 #### `input` and `output`
 
@@ -923,7 +813,7 @@ The following attributes from the nf-core meta schema are **not supported** in t
 
 | Attribute | Reason | Alternative |
 |-----------|--------|-------------|
-| `extra_args` | Not adopted in practice by nf-core modules | Use `params` section to define module parameters |
+| `extra_args` | Not adopted in practice by nf-core modules | To be defined |
 | `components` | No longer supported | Module dependencies are managed via `nextflow.config` |
 
 ### Complete Examples
@@ -985,20 +875,6 @@ tools:
       doi: 10.1093/bioinformatics/btp324
       license: ["GPL-3.0-or-later"]
       identifier: biotools:bwa
-
-params:
-  - name: batch_size
-    type: integer
-    description: "Process INT input bases in each batch"
-    example: 100000000
-
-  - name: use_soft_clipping
-    type: boolean
-    description: "Use soft clipping for supplementary alignments"
-
-  - name: output_format
-    type: string
-    description: "Output format (sam, bam, or cram)"
 
 authors:
   - "@nf-core"
