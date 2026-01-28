@@ -31,6 +31,7 @@ import io.seqera.sched.api.schema.v1a1.TaskStatus as SchedTaskStatus
 import io.seqera.sched.client.SchedClient
 import io.seqera.util.MapperUtil
 import nextflow.cloud.types.CloudMachineInfo
+import nextflow.exception.ProcessException
 import nextflow.fusion.FusionAwareTask
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
@@ -170,6 +171,11 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
             // finalize the task
             task.exitStatus = readExitFile()
             if (isFailed(schedStatus)) {
+                // When no exit code available, get the error message from task state
+                if (task.exitStatus == Integer.MAX_VALUE) {
+                    final errorMessage = cachedTaskState?.getErrorMessage() ?: "Task failed for unknown reason"
+                    task.error = new ProcessException(errorMessage)
+                }
                 final logs = getTaskLogs(taskId)
                 task.stdout = logs?.stdout ?: outputFile
                 task.stderr = logs?.stderr ?: errorFile

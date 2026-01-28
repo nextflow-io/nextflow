@@ -17,6 +17,8 @@
 
 package io.seqera.executor
 
+import io.seqera.sched.api.schema.v1a1.DescribeTaskResponse
+import io.seqera.sched.api.schema.v1a1.GetTaskLogsResponse
 import io.seqera.sched.api.schema.v1a1.MachineInfo
 import io.seqera.sched.api.schema.v1a1.PriceModel as SchedPriceModel
 import io.seqera.sched.api.schema.v1a1.TaskAttempt
@@ -25,6 +27,7 @@ import io.seqera.sched.api.schema.v1a1.TaskStatus as SchedTaskStatus
 import io.seqera.sched.client.SchedClient
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
+import nextflow.exception.ProcessException
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskId
 import nextflow.processor.TaskProcessor
@@ -247,6 +250,130 @@ class SeqeraTaskHandlerTest extends Specification {
         expect:
         // checkIfCompleted should return false - task is still pending
         handler.checkIfCompleted() == false
+    }
+
+    def 'should set task error with error message when failed with no exit code'() {
+        given:
+        Throwable capturedError = null
+        Integer capturedExitStatus = null
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getWorkDirStr() >> '/work/ab/cd1234'
+            getConfig() >> Mock(TaskConfig)
+            lazyName() >> 'test_task'
+            setExitStatus(_) >> { args -> capturedExitStatus = args[0] }
+            getExitStatus() >> { capturedExitStatus }
+            setError(_) >> { args -> capturedError = args[0] }
+            setStdout(_) >> {}
+            setStderr(_) >> {}
+        }
+        def taskState = new SchedTaskState()
+            .status(SchedTaskStatus.FAILED)
+            .errorMessage('Container terminated with OOMKilled')
+        def describeResponse = new DescribeTaskResponse().taskState(taskState)
+        def client = Mock(SchedClient) {
+            describeTask(_) >> describeResponse
+            getTaskLogs(_) >> null
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> client
+        }
+        def handler = Spy(new SeqeraTaskHandler(taskRun, executor)) {
+            readExitFile() >> Integer.MAX_VALUE
+        }
+        handler.setBatchTaskId('task-123')
+        handler.status = TaskStatus.RUNNING
+
+        when:
+        def completed = handler.checkIfCompleted()
+
+        then:
+        completed
+        capturedExitStatus == Integer.MAX_VALUE
+        capturedError instanceof ProcessException
+        capturedError.message == 'Container terminated with OOMKilled'
+    }
+
+    def 'should set task error with fallback message when failed with no exit code and no error message'() {
+        given:
+        Throwable capturedError = null
+        Integer capturedExitStatus = null
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getWorkDirStr() >> '/work/ab/cd1234'
+            getConfig() >> Mock(TaskConfig)
+            lazyName() >> 'test_task'
+            setExitStatus(_) >> { args -> capturedExitStatus = args[0] }
+            getExitStatus() >> { capturedExitStatus }
+            setError(_) >> { args -> capturedError = args[0] }
+            setStdout(_) >> {}
+            setStderr(_) >> {}
+        }
+        def taskState = new SchedTaskState()
+            .status(SchedTaskStatus.FAILED)
+        def describeResponse = new DescribeTaskResponse().taskState(taskState)
+        def client = Mock(SchedClient) {
+            describeTask(_) >> describeResponse
+            getTaskLogs(_) >> null
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> client
+        }
+        def handler = Spy(new SeqeraTaskHandler(taskRun, executor)) {
+            readExitFile() >> Integer.MAX_VALUE
+        }
+        handler.setBatchTaskId('task-456')
+        handler.status = TaskStatus.RUNNING
+
+        when:
+        def completed = handler.checkIfCompleted()
+
+        then:
+        completed
+        capturedExitStatus == Integer.MAX_VALUE
+        capturedError instanceof ProcessException
+        capturedError.message == 'Task failed for unknown reason'
+    }
+
+    def 'should not set task error when failed with valid exit code'() {
+        given:
+        Throwable capturedError = null
+        Integer capturedExitStatus = null
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getWorkDirStr() >> '/work/ab/cd1234'
+            getConfig() >> Mock(TaskConfig)
+            lazyName() >> 'test_task'
+            setExitStatus(_) >> { args -> capturedExitStatus = args[0] }
+            getExitStatus() >> { capturedExitStatus }
+            setError(_) >> { args -> capturedError = args[0] }
+            setStdout(_) >> {}
+            setStderr(_) >> {}
+        }
+        def taskState = new SchedTaskState()
+            .status(SchedTaskStatus.FAILED)
+            .errorMessage('Some error')
+        def describeResponse = new DescribeTaskResponse().taskState(taskState)
+        def client = Mock(SchedClient) {
+            describeTask(_) >> describeResponse
+            getTaskLogs(_) >> null
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> client
+        }
+        def handler = Spy(new SeqeraTaskHandler(taskRun, executor)) {
+            readExitFile() >> 1
+        }
+        handler.setBatchTaskId('task-789')
+        handler.status = TaskStatus.RUNNING
+
+        when:
+        def completed = handler.checkIfCompleted()
+
+        then:
+        completed
+        capturedExitStatus == 1
+        capturedError == null
     }
 
     /**
