@@ -25,6 +25,7 @@ import org.codehaus.groovy.ast.MethodNode;
 import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.ast.expr.Expression;
 import org.codehaus.groovy.ast.expr.VariableExpression;
+import org.codehaus.groovy.ast.stmt.BlockStatement;
 import org.codehaus.groovy.ast.stmt.EmptyStatement;
 import org.codehaus.groovy.ast.stmt.ExpressionStatement;
 import org.codehaus.groovy.ast.stmt.Statement;
@@ -53,7 +54,7 @@ public class WorkflowNode extends MethodNode {
     }
 
     public WorkflowNode(String name, Statement main) {
-        this(name, Parameter.EMPTY_ARRAY, main, EmptyStatement.INSTANCE, EmptyStatement.INSTANCE, EmptyStatement.INSTANCE, EmptyStatement.INSTANCE);
+        this(name, Parameter.EMPTY_ARRAY, main, EmptyStatement.INSTANCE, new BlockStatement(), EmptyStatement.INSTANCE, EmptyStatement.INSTANCE);
     }
 
     public boolean isEntry() {
