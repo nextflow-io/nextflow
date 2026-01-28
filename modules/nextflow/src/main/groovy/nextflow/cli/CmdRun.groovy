@@ -28,7 +28,6 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
-import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsConfig
 import nextflow.BuildInfo
@@ -157,9 +156,6 @@ class CmdRun extends CmdBase implements HubOptions {
 
     @Parameter(names=['-latest'], description = 'Pull latest changes before run')
     boolean latest
-
-    @Parameter(names='-stdin', hidden = true)
-    boolean stdin
 
     @Parameter(names = ['-ansi'], hidden = true, arity = 0)
     void setAnsi(boolean value) {
@@ -291,18 +287,10 @@ class CmdRun extends CmdBase implements HubOptions {
     @Override
     String getName() { NAME }
 
-    String getParamsFile() {
-        return paramsFile ?: sysEnv.get('NXF_PARAMS_FILE')
-    }
-
-    boolean hasParams() {
-        return params || getParamsFile()
-    }
-
     @Override
     void run() {
         final scriptArgs = (args?.size()>1 ? args[1..-1] : []) as List<String>
-        final pipeline = stdin ? '-' : ( args ? args[0] : null )
+        final pipeline = args ? args[0] : null
         if( !pipeline )
             throw new AbortOperationException("No project name was specified")
 
@@ -321,6 +309,10 @@ class CmdRun extends CmdBase implements HubOptions {
         if( offline && latest )
             throw new AbortOperationException("Command line options `-latest` and `-offline` cannot be specified at the same time")
 
+        // -- read stdin if available
+        final stdin = System.in.available() ? System.in.text : null
+        // final stdin = System.in.text
+
         checkRunName()
 
         printBanner()
@@ -332,7 +324,8 @@ class CmdRun extends CmdBase implements HubOptions {
 
         // -- load command line params
         final baseDir = scriptFile.parent
-        final cliParams = parsedParams(ConfigBuilder.getConfigVars(baseDir, null))
+        final configVars = ConfigBuilder.getConfigVars(baseDir, null)
+        final cliParams = new ParamsCollector(params, paramsFile, stdin).apply(configVars)
 
         /*
          * 2-PHASE CONFIGURATION LOADING STRATEGY
@@ -569,20 +562,6 @@ class CmdRun extends CmdBase implements HubOptions {
         assert pipelineName
 
         /*
-         * read from the stdin
-         */
-        if( pipelineName == '-' ) {
-            def file = tryReadFromStdin()
-            if( !file )
-                throw new AbortOperationException("Cannot access `stdin` stream")
-
-            if( revision )
-                throw new AbortOperationException("Revision option cannot be used when running a script from stdin")
-
-            return new ScriptFile(file)
-        }
-
-        /*
          * look for a file with the specified pipeline name
          */
         def script = new File(pipelineName)
@@ -638,21 +617,6 @@ class CmdRun extends CmdBase implements HubOptions {
 
     }
 
-    static protected File tryReadFromStdin() {
-        if( !System.in.available() )
-            return null
-
-        getScriptFromStream(System.in)
-    }
-
-    static protected File getScriptFromStream( InputStream input, String name = 'nextflow' ) {
-        input != null
-        File result = File.createTempFile(name, null)
-        result.deleteOnExit()
-        input.withReader { Reader reader -> result << reader }
-        return result
-    }
-
     /**
      * Check the Nextflow version against the version required by
      * the pipeline via `manifest.nextflowVersion`.
@@ -690,158 +654,6 @@ class CmdRun extends CmdBase implements HubOptions {
 
     protected void showVersionWarning(String ver) {
         log.warn "Nextflow version ${BuildInfo.version} does not match version required by pipeline: ${ver} -- execution will continue, but things might break!"
-    }
-
-    @Memoized  // <-- avoid parse multiple times the same file and params
-    Map parsedParams(Map configVars) {
-
-        final result = [:]
-
-        // apply params file
-        final file = getParamsFile()
-        if( file ) {
-            def path = validateParamsFile(file)
-            def type = path.extension.toLowerCase() ?: null
-            if( type == 'json' )
-                readJsonFile(path, configVars, result)
-            else if( type == 'yml' || type == 'yaml' )
-                readYamlFile(path, configVars, result)
-        }
-
-        // apply CLI params
-        if( !params )
-            return result
-
-        for( Map.Entry<String,String> entry : params ) {
-            addParam( result, entry.key, entry.value )
-        }
-        return result
-    }
-
-
-    static final private Pattern DOT_ESCAPED = ~/\\\./
-    static final private Pattern DOT_NOT_ESCAPED = ~/(?<!\\)\./
-
-    static protected void addParam(Map params, String key, String value, List path=[], String fullKey=null) {
-        if( !fullKey )
-            fullKey = key
-        final m = DOT_NOT_ESCAPED.matcher(key)
-        if( m.find() ) {
-            final p = m.start()
-            final root = key.substring(0, p)
-            if( !root ) throw new AbortOperationException("Invalid parameter name: $fullKey")
-            path.add(root)
-            def nested = params.get(root)
-            if( nested == null ) {
-                nested = new LinkedHashMap<>()
-                params.put(root, nested)
-            }
-            else if( nested !instanceof Map ) {
-                log.warn "Command line parameter --${path.join('.')} is overwritten by --${fullKey}"
-                nested = new LinkedHashMap<>()
-                params.put(root, nested)
-            }
-            addParam((Map)nested, key.substring(p+1), value, path, fullKey)
-        }
-        else {
-            addParam0(params, key.replaceAll(DOT_ESCAPED,'.'), parseParamValue(value))
-        }
-    }
-
-    static protected void addParam0(Map params, String key, Object value) {
-        if( key.contains('-') )
-            key = kebabToCamelCase(key)
-        params.put(key, value)
-    }
-
-    static protected String kebabToCamelCase(String str) {
-        final result = new StringBuilder()
-        str.split('-').eachWithIndex { String entry, int i ->
-            result << (i>0 ? StringUtils.capitalize(entry) : entry )
-        }
-        return result.toString()
-    }
-
-    static protected parseParamValue(String str) {
-        if ( SysEnv.get('NXF_DISABLE_PARAMS_TYPE_DETECTION') || NF.isSyntaxParserV2() )
-            return str
-
-        if ( str == null ) return null
-
-        if ( str.toLowerCase() == 'true') return Boolean.TRUE
-        if ( str.toLowerCase() == 'false' ) return Boolean.FALSE
-
-        if ( str==~/-?\d+(\.\d+)?/ && str.isInteger() ) return str.toInteger()
-        if ( str==~/-?\d+(\.\d+)?/ && str.isLong() ) return str.toLong()
-        if ( str==~/-?\d+(\.\d+)?/ && str.isDouble() ) return str.toDouble()
-
-        return str
-    }
-
-    private Path validateParamsFile(String file) {
-
-        def result = FileHelper.asPath(file)
-        def ext = result.getExtension()
-        if( !VALID_PARAMS_FILE.contains(ext) )
-            throw new AbortOperationException("Not a valid params file extension: $file -- It must be one of the following: ${VALID_PARAMS_FILE.join(',')}")
-
-        return result
-    }
-
-    static private Pattern PARAMS_VAR = ~/(?m)\$\{(\p{javaJavaIdentifierStart}\p{javaJavaIdentifierPart}*)}/
-
-    protected String replaceVars0(String content, Map binding) {
-        content.replaceAll(PARAMS_VAR) { List<String> matcher ->
-            // - the regex matcher is represented as list
-            // - the first element is the matching string ie. `${something}`
-            // - the second element is the group content ie. `something`
-            // - make sure the regex contains at least a group otherwise the closure
-            // parameter is a string instead of a list of the call fail
-            final placeholder = matcher.get(0)
-            final key = matcher.get(1)
-
-            if( !binding.containsKey(key) ) {
-                final msg = "Missing params file variable: $placeholder"
-                if(NF.strictMode)
-                    throw new AbortOperationException(msg)
-                log.warn msg
-                return placeholder
-            }
-
-            return binding.get(key)
-        }
-    }
-
-    private void readJsonFile(Path file, Map configVars, Map result) {
-        try {
-            def text = configVars ? replaceVars0(file.text, configVars) : file.text
-            def json = (Map<String,Object>) new JsonSlurper().parseText(text)
-            json.forEach((name, value) -> {
-                addParam0(result, name, value)
-            })
-        }
-        catch (NoSuchFileException | FileNotFoundException e) {
-            throw new AbortOperationException("Specified params file does not exist: ${file.toUriString()}")
-        }
-        catch( Exception e ) {
-            throw new AbortOperationException("Cannot parse params file: ${file.toUriString()} - Cause: ${e.message}", e)
-        }
-    }
-
-    private void readYamlFile(Path file, Map configVars, Map result) {
-        try {
-            def text = configVars ? replaceVars0(file.text, configVars) : file.text
-            def yaml = (Map<String,Object>) new Yaml().load(text)
-            yaml.forEach((name, value) -> {
-                addParam0(result, name, value)
-            })
-        }
-        catch (NoSuchFileException | FileNotFoundException e) {
-            throw new AbortOperationException("Specified params file does not exist: ${file.toUriString()}")
-        }
-        catch( Exception e ) {
-            throw new AbortOperationException("Cannot parse params file: ${file.toUriString()}", e)
-        }
     }
 
 }
