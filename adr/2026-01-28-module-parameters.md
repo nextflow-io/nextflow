@@ -175,7 +175,7 @@ Parameters can be overridden via CLI:
 
 ```bash
 # For standard workflow execution
-nextflow run <script> -process.BWA_MEM.batch_size=100000000
+nextflow run <script> -process.BWA_MEM.params.batch_size=100000000
 
 # For module run command
 nextflow module run nf-core/bwa-align --batch_size=100000000 --use_soft_clipping
