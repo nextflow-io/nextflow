@@ -16,12 +16,15 @@
 
 package nextflow.script
 
+import groovy.json.JsonBuilder
+import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Session
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
+import nextflow.extension.DumpHelper
 import nextflow.extension.PublishOp
 /**
  * Implements the DSL for publishing workflow outputs
@@ -72,6 +75,11 @@ class OutputDsl {
 
             if( opts.enabled == null || opts.enabled )
                 output[name] = new PublishOp(session, name, CH.getReadChannel(source), opts).apply()
+        }
+
+        // write output to stdout as JSON
+        session.addIgniter {
+            println DumpHelper.prettyPrintJson(getOutput())
         }
     }
 
