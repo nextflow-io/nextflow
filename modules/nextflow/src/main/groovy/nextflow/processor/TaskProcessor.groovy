@@ -1924,7 +1924,7 @@ class TaskProcessor {
     }
 
     @PackageScope boolean isResumable() {
-        isCacheable() && session.resumeMode
+        isCacheable() && (session.resumeMode || session.globalCache)
     }
 
     /**
