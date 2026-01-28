@@ -25,6 +25,7 @@ import io.seqera.sched.api.schema.v1a1.MachineRequirement
 import io.seqera.sched.api.schema.v1a1.PriceModel as SchedPriceModel
 import io.seqera.sched.api.schema.v1a1.ProvisioningModel
 import nextflow.cloud.types.PriceModel
+import nextflow.fusion.FusionConfig
 import nextflow.util.MemoryUnit
 
 /**
@@ -80,28 +81,30 @@ class MapperUtil {
      * @return the MachineRequirement API object, or null if no settings
      */
     static MachineRequirement toMachineRequirement(MachineRequirementOpts opts, String taskArch) {
-        return toMachineRequirement(opts, taskArch, null)
+        return toMachineRequirement(opts, taskArch, null, false)
     }
 
     /**
-     * Maps MachineRequirementOpts to MachineRequirement API object, merging with task arch and disk.
+     * Maps MachineRequirementOpts to MachineRequirement API object, merging with task arch, disk, and snapshots.
      * Task arch overrides config arch if specified.
      *
      * @param opts the config options (can be null)
      * @param taskArch the task container platform/arch (can be null)
      * @param diskSize the disk size from task config (can be null)
+     * @param snapshotEnabled whether Fusion snapshots are enabled
      * @return the MachineRequirement API object, or null if no settings
      */
-    static MachineRequirement toMachineRequirement(MachineRequirementOpts opts, String taskArch, MemoryUnit diskSize) {
+    static MachineRequirement toMachineRequirement(MachineRequirementOpts opts, String taskArch, MemoryUnit diskSize, boolean snapshotEnabled) {
         final arch = taskArch ?: opts?.arch
         final provisioning = opts?.provisioning
         final maxSpotAttempts = opts?.maxSpotAttempts
+            ?: (snapshotEnabled ? FusionConfig.DEFAULT_SNAPSHOT_MAX_SPOT_ATTEMPTS : null)
         final machineFamilies = opts?.machineFamilies
         // task disk overrides config disk
         final effectiveDiskSize = diskSize ?: opts?.diskSize
         final diskReq = toDiskRequirement(effectiveDiskSize, opts)
         // return null if no settings
-        if (!arch && !provisioning && !maxSpotAttempts && !machineFamilies && !diskReq)
+        if (!arch && !provisioning && !maxSpotAttempts && !machineFamilies && !diskReq && !snapshotEnabled)
             return null
         new MachineRequirement()
             .arch(arch)
@@ -109,6 +112,7 @@ class MapperUtil {
             .maxSpotAttempts(maxSpotAttempts)
             .machineFamilies(machineFamilies)
             .disk(diskReq)
+            .snapshotEnabled(snapshotEnabled ? Boolean.TRUE : null)
     }
 
     /**

@@ -22,6 +22,7 @@ import io.seqera.sched.api.schema.v1a1.DiskAllocation
 import io.seqera.sched.api.schema.v1a1.PriceModel as SchedPriceModel
 import io.seqera.sched.api.schema.v1a1.ProvisioningModel
 import nextflow.cloud.types.PriceModel
+import nextflow.fusion.FusionConfig
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
 
@@ -182,7 +183,8 @@ class MapperUtilTest extends Specification {
         def result = MapperUtil.toMachineRequirement(
             new MachineRequirementOpts([arch: 'x86_64']),
             null,
-            MemoryUnit.of('200 GB')
+            MemoryUnit.of('200 GB'),
+            false
         )
 
         then:
@@ -193,7 +195,7 @@ class MapperUtilTest extends Specification {
 
     def 'should return machine requirement with only disk' () {
         when:
-        def result = MapperUtil.toMachineRequirement(null, null, MemoryUnit.of('100 GB'))
+        def result = MapperUtil.toMachineRequirement(null, null, MemoryUnit.of('100 GB'), false)
 
         then:
         result != null
@@ -204,7 +206,7 @@ class MapperUtilTest extends Specification {
 
     def 'should return null when no arch, no opts, and no disk' () {
         expect:
-        MapperUtil.toMachineRequirement(null, null, null) == null
+        MapperUtil.toMachineRequirement(null, null, null, false) == null
     }
 
     // tests for custom disk configuration options
@@ -295,7 +297,7 @@ class MapperUtilTest extends Specification {
         ])
 
         when:
-        def result = MapperUtil.toMachineRequirement(opts, null, MemoryUnit.of('500 GB'))
+        def result = MapperUtil.toMachineRequirement(opts, null, MemoryUnit.of('500 GB'), false)
 
         then:
         result.arch == 'arm64'
@@ -367,7 +369,7 @@ class MapperUtilTest extends Specification {
         ])
 
         when:
-        def result = MapperUtil.toMachineRequirement(opts, null, MemoryUnit.of('200 GB'))
+        def result = MapperUtil.toMachineRequirement(opts, null, MemoryUnit.of('200 GB'), false)
 
         then:
         result.arch == 'x86_64'
@@ -455,6 +457,53 @@ class MapperUtilTest extends Specification {
         e.message.contains('diskType')
         e.message.contains('diskIops')
         e.message.contains('diskEncrypted')
+    }
+
+    // tests for snapshot maxSpotAttempts defaulting
+
+    def 'should return machine requirement with only snapshot enabled' () {
+        when:
+        def result = MapperUtil.toMachineRequirement(null, null, null, true)
+
+        then:
+        result != null
+        result.snapshotEnabled == true
+        result.maxSpotAttempts == FusionConfig.DEFAULT_SNAPSHOT_MAX_SPOT_ATTEMPTS
+    }
+
+    def 'should use explicit maxSpotAttempts when snapshot enabled' () {
+        when:
+        def result = MapperUtil.toMachineRequirement(new MachineRequirementOpts([maxSpotAttempts: 2]), null, null, true)
+
+        then:
+        result.snapshotEnabled == true
+        result.maxSpotAttempts == 2
+    }
+
+    def 'should not default maxSpotAttempts when snapshot disabled' () {
+        when:
+        def result = MapperUtil.toMachineRequirement(new MachineRequirementOpts([arch: 'x86_64']), null, null, false)
+
+        then:
+        result.snapshotEnabled == null
+        result.maxSpotAttempts == null
+    }
+
+    def 'should combine snapshot with other machine requirement settings' () {
+        when:
+        def result = MapperUtil.toMachineRequirement(
+            new MachineRequirementOpts([arch: 'arm64', provisioning: 'spot']),
+            null,
+            MemoryUnit.of('100 GB'),
+            true
+        )
+
+        then:
+        result.arch == 'arm64'
+        result.provisioning == ProvisioningModel.SPOT
+        result.disk.sizeGiB == 100
+        result.snapshotEnabled == true
+        result.maxSpotAttempts == FusionConfig.DEFAULT_SNAPSHOT_MAX_SPOT_ATTEMPTS
     }
 
 }
