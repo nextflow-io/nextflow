@@ -36,9 +36,12 @@ public class ScriptParser {
     private Compiler compiler;
 
     public ScriptParser() {
+        this(new GroovyClassLoader());
+    }
+
+    public ScriptParser(GroovyClassLoader classLoader) {
         var config = getConfig();
-        var classLoader = new GroovyClassLoader();
-        compiler = new Compiler(config, classLoader);
+        this.compiler = new Compiler(config, classLoader);
     }
 
     public Compiler compiler() {
