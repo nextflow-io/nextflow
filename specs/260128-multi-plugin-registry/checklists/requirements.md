@@ -1,4 +1,4 @@
-# Specification Quality Checklist: Multiple Plugin Registry Support
+# Specification Quality Checklist: Multiple Nextflow Registry Support
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
 **Created**: 2026-01-28

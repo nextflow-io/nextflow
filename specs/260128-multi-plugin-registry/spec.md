@@ -1,15 +1,15 @@
-# Feature Specification: Multiple Plugin Registry Support
+# Feature Specification: Multiple Nextflow Registry Support
 
 **Feature Branch**: `260128-multi-plugin-registry`
 **Created**: 2026-01-28
 **Status**: Draft
-**Input**: User description: "Organizations running Nextflow in enterprise or air-gapped environments need to host private plugin registries while optionally falling back to the public registry. Extend the plugin registry configuration to support an ordered list of registries with deterministic resolution order."
+**Input**: User description: "Organizations running Nextflow in enterprise or air-gapped environments need to host private Nextflow registries while optionally falling back to the public registry. Extend the Nextflow registry configuration to support an ordered list of registries with deterministic resolution order."
 
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Configure Multiple Registries via Config File (Priority: P1)
 
-An enterprise administrator configures Nextflow to check their private plugin registry first, then fall back to the public registry when a plugin is not found internally.
+An enterprise administrator configures Nextflow to check their private Nextflow registry first, then fall back to the public registry when a plugin is not found internally.
 
 **Why this priority**: This is the core use case - enabling organizations to maintain private plugins while still accessing the public ecosystem.
 
@@ -118,7 +118,7 @@ A user receives clear diagnostic information when a plugin cannot be found in an
 
 ### Key Entities
 
-- **Registry**: A plugin repository endpoint identified by URL, supporting either HTTP API format or legacy JSON format.
+- **Nextflow Registry**: A Nextflow plugin repository endpoint identified by URL, supporting either HTTP API format or legacy JSON format.
 - **Registry List**: An ordered collection of registries defining the resolution priority (first registry has highest priority).
 - **Plugin Resolution**: The process of locating and downloading a plugin, now iterating through the registry list until found or exhausted.
 
