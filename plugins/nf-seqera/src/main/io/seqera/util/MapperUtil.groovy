@@ -59,18 +59,32 @@ class MapperUtil {
      * @return the MachineRequirement API object, or null if no settings
      */
     static MachineRequirement toMachineRequirement(MachineRequirementOpts opts, String taskArch) {
+        return toMachineRequirement(opts, taskArch, false)
+    }
+
+    /**
+     * Maps MachineRequirementOpts to MachineRequirement API object, merging with task arch
+     * and snapshot settings.
+     *
+     * @param opts the config options (can be null)
+     * @param taskArch the task container platform/arch (can be null)
+     * @param snapshotEnabled whether Fusion snapshots are enabled
+     * @return the MachineRequirement API object, or null if no settings
+     */
+    static MachineRequirement toMachineRequirement(MachineRequirementOpts opts, String taskArch, boolean snapshotEnabled) {
         final arch = taskArch ?: opts?.arch
         final provisioning = opts?.provisioning
         final maxSpotAttempts = opts?.maxSpotAttempts
         final machineFamilies = opts?.machineFamilies
         // return null if no settings
-        if (!arch && !provisioning && !maxSpotAttempts && !machineFamilies)
+        if (!arch && !provisioning && !maxSpotAttempts && !machineFamilies && !snapshotEnabled)
             return null
         new MachineRequirement()
             .arch(arch)
             .provisioning(toProvisioningModel(provisioning))
             .maxSpotAttempts(maxSpotAttempts)
             .machineFamilies(machineFamilies)
+            .snapshotEnabled(snapshotEnabled ? Boolean.TRUE : null)
     }
 
     /**
