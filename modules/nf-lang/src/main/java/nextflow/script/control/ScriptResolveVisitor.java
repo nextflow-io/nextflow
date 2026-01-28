@@ -15,19 +15,24 @@
  */
 package nextflow.script.control;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.FunctionNode;
+import nextflow.script.ast.IncludeNode;
 import nextflow.script.ast.OutputNode;
 import nextflow.script.ast.ParamNodeV1;
 import nextflow.script.ast.ProcessNodeV1;
 import nextflow.script.ast.ProcessNodeV2;
+import nextflow.script.ast.RecordNode;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
+import nextflow.script.ast.TupleParameter;
 import nextflow.script.ast.WorkflowNode;
 import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.ast.FieldNode;
 import org.codehaus.groovy.ast.DynamicVariable;
 import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.ast.expr.VariableExpression;
@@ -48,11 +53,14 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
 
     private SourceUnit sourceUnit;
 
+    private List<ClassNode> imports;
+
     private ResolveVisitor resolver;
 
     public ScriptResolveVisitor(SourceUnit sourceUnit, CompilationUnit compilationUnit, List<ClassNode> defaultImports, List<ClassNode> libImports) {
         this.sourceUnit = sourceUnit;
-        this.resolver = new ResolveVisitor(sourceUnit, compilationUnit, defaultImports, libImports);
+        this.imports = new ArrayList<>(defaultImports);
+        this.resolver = new ResolveVisitor(sourceUnit, compilationUnit, imports, libImports);
     }
 
     @Override
@@ -67,6 +75,14 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
             var variableScopeVisitor = new VariableScopeVisitor(sourceUnit);
             variableScopeVisitor.declare();
             variableScopeVisitor.visit();
+
+            // append included types to default imports
+            for( var includeNode : sn.getIncludes() ) {
+                for( var entry : includeNode.entries ) {
+                    if( entry.getTarget() instanceof ClassNode cn )
+                        imports.add(cn);
+                }
+            }
     
             // resolve type names
             if( sn.getParams() != null )
@@ -79,6 +95,12 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
                 visitProcess(processNode);
             for( var functionNode : sn.getFunctions() )
                 visitFunction(functionNode);
+            for( var type : sn.getClasses() ) {
+                if( type instanceof RecordNode rn )
+                    visitRecord(rn);
+                else if( type.isEnum() )
+                    visitEnum(type);
+            }
             if( sn.getOutputs() != null )
                 visitOutputs(sn.getOutputs());
     
@@ -126,8 +148,13 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitProcessV2(ProcessNodeV2 node) {
-        for( var input : node.inputs )
+        for( var input : node.inputs ) {
             resolver.resolveOrFail(input.getType(), input);
+            if( input instanceof TupleParameter tp && tp.isRecord() ) {
+                for( var component : tp.components )
+                    resolver.resolveOrFail(component.getType(), component);
+            }
+        }
         resolver.visit(node.directives);
         resolver.visit(node.stagers);
         resolveTypedOutputs(node.outputs);
@@ -156,6 +183,11 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
         }
         resolver.resolveOrFail(node.getReturnType(), node);
         resolver.visit(node.getCode());
+    }
+
+    @Override
+    public void visitField(FieldNode node) {
+        resolver.resolveOrFail(node.getType(), node);
     }
 
     @Override

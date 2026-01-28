@@ -33,7 +33,6 @@ import nextflow.script.ast.ProcessNodeV1;
 import nextflow.script.ast.ProcessNodeV2;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
-import nextflow.script.ast.TupleParameter;
 import nextflow.script.ast.WorkflowNode;
 import nextflow.script.dsl.Constant;
 import nextflow.script.dsl.EntryWorkflowDsl;
@@ -114,6 +113,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
                 declareMethod(processNode);
             for( var functionNode : sn.getFunctions() )
                 declareMethod(functionNode);
+            declareTypes(sn);
         }
     }
 
@@ -174,6 +174,26 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
             .filter(other -> !(mn instanceof FunctionNode) || !(other instanceof FunctionNode))
             .findFirst()
             .orElse(null);
+    }
+
+    private void declareTypes(ScriptNode sn) {
+        var types = sn.getTypes();
+        for( int i = 0; i < types.size(); i++ ) {
+            var second = types.get(i);
+            // check includes
+            var name = second.getName();
+            var otherInclude = vsc.getInclude(name);
+            if( otherInclude != null ) {
+                vsc.addError("`" + name + "` is already included", second, "First included here", otherInclude);
+            }
+            // check declarations
+            for( int j = 0; j < i; j++ ) {
+                var first = types.get(j);
+                if( !first.getName().equals(second.getName()) )
+                    continue;
+                vsc.addError("`" + second.getName() + "` is already declared", second, "First declared here", first);
+            }
+        }
     }
 
     public void visit() {
