@@ -182,7 +182,8 @@ class MapperUtilTest extends Specification {
         def result = MapperUtil.toMachineRequirement(
             new MachineRequirementOpts([arch: 'x86_64']),
             null,
-            MemoryUnit.of('200 GB')
+            MemoryUnit.of('200 GB'),
+            false
         )
 
         then:
@@ -193,7 +194,7 @@ class MapperUtilTest extends Specification {
 
     def 'should return machine requirement with only disk' () {
         when:
-        def result = MapperUtil.toMachineRequirement(null, null, MemoryUnit.of('100 GB'))
+        def result = MapperUtil.toMachineRequirement(null, null, MemoryUnit.of('100 GB'), false)
 
         then:
         result != null
@@ -204,7 +205,7 @@ class MapperUtilTest extends Specification {
 
     def 'should return null when no arch, no opts, and no disk' () {
         expect:
-        MapperUtil.toMachineRequirement(null, null, null) == null
+        MapperUtil.toMachineRequirement(null, null, null, false) == null
     }
 
     // tests for custom disk configuration options
@@ -295,7 +296,7 @@ class MapperUtilTest extends Specification {
         ])
 
         when:
-        def result = MapperUtil.toMachineRequirement(opts, null, MemoryUnit.of('500 GB'))
+        def result = MapperUtil.toMachineRequirement(opts, null, MemoryUnit.of('500 GB'), false)
 
         then:
         result.arch == 'arm64'
@@ -367,7 +368,7 @@ class MapperUtilTest extends Specification {
         ])
 
         when:
-        def result = MapperUtil.toMachineRequirement(opts, null, MemoryUnit.of('200 GB'))
+        def result = MapperUtil.toMachineRequirement(opts, null, MemoryUnit.of('200 GB'), false)
 
         then:
         result.arch == 'x86_64'
