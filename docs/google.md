@@ -291,4 +291,3 @@ Nextflow will automatically manage the transfer of input and output files betwee
 - Compute resources in Google Cloud are subject to [resource quotas](https://cloud.google.com/compute/quotas), which may affect your ability to run pipelines at scale. You can request quota increases, and your quotas may automatically increase over time as you use the platform. In particular, GPU quotas are initially set to 0, so you must explicitly request a quota increase in order to use GPUs. You can initially request an increase to 1 GPU at a time, and after one billing cycle you may be able to increase it further.
 
 - Currently, it's not possible to specify a disk type different from the default one assigned by the service depending on the chosen instance type.
-

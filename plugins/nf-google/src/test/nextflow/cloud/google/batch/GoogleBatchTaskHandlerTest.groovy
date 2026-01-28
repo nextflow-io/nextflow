@@ -1132,4 +1132,39 @@ class GoogleBatchTaskHandlerTest extends Specification {
         result.getContainer().getOptions() == '--privileged'
     }
 
+    def 'should use hyperdisk-balanced for boot disk on new machine families' () {
+        given:
+        def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
+        def CONTAINER_IMAGE = 'debian:latest'
+        def exec = Mock(GoogleBatchExecutor) {
+            getBatchConfig() >> Mock(BatchConfig)
+        }
+        def bean = new TaskBean(workDir: WORK_DIR, inputFiles: [:])
+        def task = Mock(TaskRun) {
+            toTaskBean() >> bean
+            getHashLog() >> 'abcd1234'
+            getWorkDir() >> WORK_DIR
+            getContainer() >> CONTAINER_IMAGE
+            getConfig() >> Mock(TaskConfig) {
+                getCpus() >> 4
+                getResourceLabels() >> [:]
+                getMachineType() >> MACHINE_TYPE
+            }
+        }
+        def handler = Spy(new GoogleBatchTaskHandler(task, exec))
+        def launcher = new GoogleBatchLauncherSpecMock('bash .command.run', [])
+
+        when:
+        def req = handler.newSubmitRequest(task, launcher)
+        then:
+        handler.fusionEnabled() >> false
+        handler.findBestMachineType(_, false) >> new GoogleBatchMachineTypeSelector.MachineType(type: MACHINE_TYPE, location: "location", priceModel: PriceModel.spot)
+
+        and:
+        def instancePolicy = req.getAllocationPolicy().getInstances(0).getPolicy()
+        instancePolicy.getBootDisk().getType() == 'hyperdisk-balanced'
+
+        where:
+        MACHINE_TYPE << ['c4-standard-4', 'c4a-standard-4', 'c4d-standard-4', 'n4-standard-4', 'n4d-standard-4', 'n4a-standard-4']
+    }
 }

@@ -419,6 +419,22 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                 )
             }
 
+            // Configure boot disk
+            final bootDisk = AllocationPolicy.Disk.newBuilder()
+            boolean setBoot = false
+            if( batchConfig.getBootDiskImage() ) {
+                bootDisk.setImage( batchConfig.getBootDiskImage() )
+                setBoot = true
+            }
+
+            if( machineType && GoogleBatchMachineTypeSelector.INSTANCE.isHyperdiskOnly(machineType.type) ) {
+                bootDisk.setType('hyperdisk-balanced')
+                setBoot = true
+            }
+
+            if( setBoot )
+                instancePolicy.setBootDisk(bootDisk)
+
             if( task.config.getAccelerator() ) {
                 final accelerator = AllocationPolicy.Accelerator.newBuilder()
                     .setCount(task.config.getAccelerator().getRequest())
