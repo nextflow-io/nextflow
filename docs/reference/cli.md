@@ -1264,6 +1264,11 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 `-disable-jobs-cancellation`
 : Prevent the cancellation of child jobs on execution termination
 
+`-dry`
+: :::{versionadded} 25.10.0
+  :::
+: Print the tasks that will be executed, then exit without executing any tasks. Can be combined with `-resume` to test how much a previous run can be resumed.
+
 `-dsl1`
 : :::{deprecated} 23.10.0
   :::
