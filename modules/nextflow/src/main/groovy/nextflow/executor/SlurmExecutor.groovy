@@ -25,6 +25,7 @@ import nextflow.fusion.FusionHelper
 import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskRun
+import nextflow.util.MemoryUnit
 /**
  * Processor for SLURM resource manager
  *
@@ -74,15 +75,28 @@ class SlurmExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
             result << '--signal' << 'B:USR2@30'
         }
 
-        if( task.config.getCpus() > 1 ) {
-            result << '-c' << task.config.getCpus().toString()
+        String memPerCoreEnvVar = System.getenv('NXF_EXECUTOR_MEM_GIGA_PER_CORE')
+        int nbCpus = task.config.getCpus()
+
+        if( memPerCoreEnvVar != null ) {
+
+
+            def memPerCore = MemoryUnit.of(memPerCoreEnvVar + ' GB').mega
+
+            if( task.config.getMemory() ) {
+                nbCpus = Math.max(task.config.getCpus(), (int) Math.ceil((task.config.getMemory().toMega() / memPerCore)))
+            }
+        }
+
+        if( nbCpus > 1 ) {
+            result << '-c' << nbCpus.toString()
         }
 
         if( task.config.getTime() ) {
             result << '-t' << task.config.getTime().format('HH:mm:ss')
         }
 
-        if( task.config.getMemory() ) {
+        if( task.config.getMemory() && memPerCoreEnvVar == null ) {
             //NOTE: Enforcement of memory limits currently relies upon the task/cgroup plugin or
             // enabling of accounting, which samples memory use on a periodic basis (data need not
             // be stored, just collected). In both cases memory use is based upon the job's
