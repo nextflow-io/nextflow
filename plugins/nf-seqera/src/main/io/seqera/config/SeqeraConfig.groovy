@@ -62,7 +62,6 @@ class SeqeraConfig implements ConfigScope {
     """)
     final Duration batchFlushInterval
 
-    @ConfigOption
     @Description("""
         Machine/infrastructure requirements for session tasks.
     """)
