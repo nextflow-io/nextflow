@@ -151,6 +151,8 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         final workDir = Escape.path(task.workDir)
 
         final result = new ArrayList(BashWrapperBuilder.BASH)
+        result.add('-o')
+        result.add('pipefail')
         result.add('-c')
         result.add("bash ${workDir}/${TaskRun.CMD_RUN} 2>&1 | tee ${workDir}/${TaskRun.CMD_LOG}")
         return result

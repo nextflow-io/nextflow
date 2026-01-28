@@ -19,7 +19,6 @@ package nextflow.config.control
 import java.nio.file.Path
 
 import org.codehaus.groovy.syntax.SyntaxException
-import spock.lang.Ignore
 import spock.lang.Specification
 import test.TestUtils
 
@@ -82,7 +81,6 @@ class ResolveIncludeTest extends Specification {
         deleteDir(root)
     }
 
-    @Ignore("requires http filesystem to test properly")
     def 'should not resolve remote includes' () {
         given:
         def root = tempDir()

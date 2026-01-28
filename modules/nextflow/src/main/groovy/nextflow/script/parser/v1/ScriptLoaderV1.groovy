@@ -186,7 +186,8 @@ class ScriptLoaderV1 implements ScriptLoader {
             }
             script = (BaseScript)parsed
             final meta = ScriptMeta.get(script)
-            meta.setScriptPath(scriptPath)
+            if( scriptPath!=null )
+                meta.setScriptPath(scriptPath)
             meta.setModule(module)
             meta.validate()
             return this
