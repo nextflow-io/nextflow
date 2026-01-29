@@ -141,5 +141,9 @@ class SysEnvTest extends Specification {
         [CLAUDECODE:'true']         | true
         // Multiple can be set, any true triggers agent mode
         [NXF_AGENT:'true', AGENT:'false']  | true
+        // Support '1' as truthy value (common Unix convention)
+        [NXF_AGENT:'1']             | true
+        [AGENT:'1']                 | true
+        [CLAUDECODE:'1']            | true
     }
 }
