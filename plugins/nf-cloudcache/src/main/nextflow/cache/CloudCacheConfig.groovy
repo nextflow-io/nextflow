@@ -18,7 +18,6 @@
 package nextflow.cache
 
 import groovy.transform.CompileStatic
-import groovy.transform.ToString
 import nextflow.config.spec.ConfigOption
 import nextflow.config.spec.ConfigScope
 import nextflow.config.spec.ScopeName
@@ -33,7 +32,6 @@ import nextflow.script.dsl.Description
 @Description("""
     The `cloudcache` scope controls the use of object storage as cache storage for workflow execution metadata.
 """)
-@ToString(includeNames = true, includePackage = false, includeFields = true)
 @CompileStatic
 class CloudCacheConfig implements ConfigScope {
 

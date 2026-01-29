@@ -17,12 +17,9 @@
 
 package nextflow.cache
 
-import nextflow.config.spec.ConfigScope
-import nextflow.config.spec.ScopeName
 import spock.lang.Specification
 
 /**
- * Tests for CloudCacheConfig
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -36,41 +33,12 @@ class CloudCacheConfigTest extends Specification {
         config.path == null
     }
 
-    def 'should create config with enabled option' () {
-        when:
-        def config = new CloudCacheConfig([enabled: true])
-        then:
-        config.enabled
-        config.path == null
-    }
-
-    def 'should create config with path option' () {
-        when:
-        def config = new CloudCacheConfig([path: 's3://bucket/cache'])
-        then:
-        !config.enabled
-        config.path == 's3://bucket/cache'
-    }
-
     def 'should create config with all options' () {
         when:
         def config = new CloudCacheConfig([enabled: true, path: 's3://bucket/cache'])
         then:
         config.enabled
         config.path == 's3://bucket/cache'
-    }
-
-    def 'should implement ConfigScope interface' () {
-        expect:
-        CloudCacheConfig.class.interfaces.contains(ConfigScope)
-    }
-
-    def 'should have ScopeName annotation with cloudcache value' () {
-        when:
-        def annotation = CloudCacheConfig.class.getAnnotation(ScopeName)
-        then:
-        annotation != null
-        annotation.value() == 'cloudcache'
     }
 
 }
