@@ -51,7 +51,7 @@ class SysEnv {
 
     static boolean getBool(String name, boolean defValue) {
         final result = get(name,String.valueOf(defValue))
-        return Boolean.parseBoolean(result)
+        return Boolean.parseBoolean(result) || result == '1'
     }
 
     static Integer getInteger(String name, Integer defValue) {
