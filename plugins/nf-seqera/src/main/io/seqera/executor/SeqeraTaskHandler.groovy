@@ -102,10 +102,11 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
             if( accelerator.type )
                 resourceReq.acceleratorName(accelerator.type)
         }
-        // build machine requirement merging config settings with task arch
+        // build machine requirement merging config settings with task arch and snapshot settings
         final machineReq = MapperUtil.toMachineRequirement(
             executor.getSeqeraConfig().machineRequirement,
-            task.getContainerPlatform()
+            task.getContainerPlatform(),
+            fusionConfig().snapshotsEnabled()
         )
         final schedTask = new Task()
             .name(task.lazyName())
