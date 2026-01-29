@@ -15,9 +15,7 @@
  *
  */
 
-package nextflow
-
-import java.nio.file.Path
+package nextflow.cache
 
 import spock.lang.Specification
 
@@ -25,24 +23,22 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ConstTest extends Specification {
+class CloudCacheConfigTest extends Specification {
 
-    def 'should get app default cache dir' () {
-        given:
-        SysEnv.push([:])
-        expect:
-        Const.appCacheDir == Path.of('.nextflow')
-        cleanup:
-        SysEnv.pop()
+    def 'should create empty config' () {
+        when:
+        def config = new CloudCacheConfig([:])
+        then:
+        !config.enabled
+        config.path == null
     }
 
-    def 'should get app custom cache dir' () {
-        given:
-        SysEnv.push(NXF_CACHE_DIR: '/some/path')
-        expect:
-        Const.appCacheDir == Path.of('/some/path')
-        cleanup:
-        SysEnv.pop()
+    def 'should create config with all options' () {
+        when:
+        def config = new CloudCacheConfig([enabled: true, path: 's3://bucket/cache'])
+        then:
+        config.enabled
+        config.path == 's3://bucket/cache'
     }
 
 }
