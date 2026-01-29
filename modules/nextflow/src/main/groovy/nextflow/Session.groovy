@@ -69,6 +69,7 @@ import nextflow.script.ScriptRunner
 import nextflow.script.WorkflowMetadata
 import nextflow.script.dsl.ProcessConfigBuilder
 import nextflow.spack.SpackConfig
+import nextflow.trace.AgentLogObserver
 import nextflow.trace.AnsiLogObserver
 import nextflow.trace.TraceObserver
 import nextflow.trace.TraceObserverFactory
@@ -311,9 +312,13 @@ class Session implements ISession {
 
     boolean ansiLog
 
+    boolean agentLog
+
     boolean disableJobsCancellation
 
     AnsiLogObserver ansiLogObserver
+
+    AgentLogObserver agentLogObserver
 
     FilePorter getFilePorter() { filePorter }
 
@@ -498,6 +503,12 @@ class Session implements ISession {
         final result = new ArrayList<TraceObserverV2>(10)
         this.statsObserver = new WorkflowStatsObserver(this)
         result.add(statsObserver)
+        // Add AgentLogObserver when agent mode is enabled
+        if( agentLog ) {
+            this.agentLogObserver = new AgentLogObserver()
+            agentLogObserver.setStatsObserver(statsObserver)
+            result.add(agentLogObserver)
+        }
         for( TraceObserverFactoryV2 f : Plugins.getExtensions(TraceObserverFactoryV2) ) {
             log.debug "Observer factory (v2): ${f.class.simpleName}"
             result.addAll(f.create(this))
@@ -833,6 +844,7 @@ class Session implements ISession {
             notifyError(null)
             // force termination
             ansiLogObserver?.forceTermination()
+            agentLogObserver?.forceTermination()
             executorFactory?.signalExecutors()
             processesBarrier.forceTermination()
             monitorsBarrier.forceTermination()

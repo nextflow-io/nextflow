@@ -703,7 +703,7 @@ class LoggerHelper {
 
     /**
      * Capture logging events and forward them to. This is only used when
-     * ANSI interactive logging is enabled
+     * ANSI interactive logging or agent logging is enabled
      */
     static private class CaptureAppender extends AppenderBase<ILoggingEvent> {
 
@@ -713,6 +713,19 @@ class LoggerHelper {
 
             try {
                 final message = fmtEvent(event, session, false)
+
+                // Forward to AgentLogObserver when agent mode is enabled
+                final agentRenderer = session?.agentLogObserver
+                if( agentRenderer ) {
+                    if( event.level==Level.ERROR )
+                        agentRenderer.appendError(message)
+                    else if( event.level==Level.WARN )
+                        agentRenderer.appendWarning(message)
+                    else
+                        agentRenderer.appendInfo(message)
+                    return
+                }
+
                 final renderer = session?.ansiLogObserver
                 if( !renderer || !renderer.started || renderer.stopped )
                     System.out.println(message)

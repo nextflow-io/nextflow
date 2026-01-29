@@ -22,7 +22,6 @@ import nextflow.Session
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.trace.event.TaskEvent
-import spock.lang.PendingFeature
 import spock.lang.Specification
 
 /**
@@ -32,7 +31,6 @@ import spock.lang.Specification
  */
 class AgentLogObserverTest extends Specification {
 
-    @PendingFeature
     def 'should output pipeline info on flow begin'() {
         given:
         def output = []
@@ -54,7 +52,6 @@ class AgentLogObserverTest extends Specification {
         output[1].contains('/tmp/work')
     }
 
-    @PendingFeature
     def 'should deduplicate warnings'() {
         given:
         def output = []
@@ -71,7 +68,6 @@ class AgentLogObserverTest extends Specification {
         output[1] == '[WARN] Different warning message'
     }
 
-    @PendingFeature
     def 'should output error with context'() {
         given:
         def output = []
@@ -97,7 +93,6 @@ class AgentLogObserverTest extends Specification {
         output[4].contains('/tmp/work/ab/123456')
     }
 
-    @PendingFeature
     def 'should output summary on flow complete'() {
         given:
         def output = []
@@ -118,7 +113,6 @@ class AgentLogObserverTest extends Specification {
         output[0] == '\n[SUCCESS] completed=10 failed=0 cached=5'
     }
 
-    @PendingFeature
     def 'should output failed summary when tasks fail'() {
         given:
         def output = []
@@ -139,7 +133,6 @@ class AgentLogObserverTest extends Specification {
         output[0] == '\n[FAILED] completed=7 failed=2 cached=0'
     }
 
-    @PendingFeature
     def 'should handle task complete for failed task'() {
         given:
         def output = []
@@ -168,7 +161,6 @@ class AgentLogObserverTest extends Specification {
         output[0] == '[ERROR] TEST_PROC'
     }
 
-    @PendingFeature
     def 'should not output for successful task'() {
         given:
         def output = []
@@ -190,7 +182,6 @@ class AgentLogObserverTest extends Specification {
         output.size() == 0
     }
 
-    @PendingFeature
     def 'should truncate long command'() {
         given:
         def output = []
