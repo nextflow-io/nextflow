@@ -17,6 +17,7 @@
 
 package nextflow
 
+import spock.lang.PendingFeature
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -119,5 +120,28 @@ class SysEnvTest extends Specification {
         [:]             | 1         | 1
         [FOO:'0']       | 1         | 0
         [FOO:'100']     | 1         | 100
+    }
+
+    @PendingFeature
+    @Unroll
+    def 'should detect agent mode' () {
+        given:
+        SysEnv.push(STATE)
+
+        expect:
+        SysEnv.isAgentMode() == EXPECTED
+
+        cleanup:
+        SysEnv.pop()
+
+        where:
+        STATE                       | EXPECTED
+        [:]                         | false
+        [NXF_AGENT:'true']          | true
+        [NXF_AGENT:'false']         | false
+        [AGENT:'true']              | true
+        [CLAUDECODE:'true']         | true
+        // Multiple can be set, any true triggers agent mode
+        [NXF_AGENT:'true', AGENT:'false']  | true
     }
 }
