@@ -64,6 +64,19 @@ class SysEnv {
         return result!=null ? Long.valueOf(result) : null
     }
 
+    /**
+     * Check if agent output mode is enabled via environment variables.
+     * Supports NXF_AGENT=1, AGENT=1, or CLAUDECODE=1.
+     * When enabled, Nextflow produces minimal, AI-friendly output.
+     *
+     * @return true if agent mode is enabled
+     */
+    static boolean isAgentMode() {
+        return getBool('NXF_AGENT', false) ||
+               getBool('AGENT', false) ||
+               getBool('CLAUDECODE', false)
+    }
+
     static void push(Map<String,String> env) {
         history.push(holder.getTarget())
         holder.setTarget(env)

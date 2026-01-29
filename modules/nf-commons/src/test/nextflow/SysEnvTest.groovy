@@ -17,7 +17,6 @@
 
 package nextflow
 
-import spock.lang.PendingFeature
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -122,7 +121,6 @@ class SysEnvTest extends Specification {
         [FOO:'100']     | 1         | 100
     }
 
-    @PendingFeature
     @Unroll
     def 'should detect agent mode' () {
         given:
