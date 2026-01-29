@@ -55,6 +55,33 @@ class MachineRequirementOpts implements ConfigScope {
     """)
     final List<String> machineFamilies
 
+    @ConfigOption
+    @Description("""
+        The EBS volume type for task scratch disk (e.g., `ebs/gp3`, `ebs/io1`).
+        Default: `ebs/gp3`.
+    """)
+    final String diskType
+
+    @ConfigOption
+    @Description("""
+        The throughput in MiB/s for gp3 volumes (125-1000).
+        Default: 325 (Fusion recommended).
+    """)
+    final Integer diskThroughputMiBps
+
+    @ConfigOption
+    @Description("""
+        The IOPS for io1/io2/gp3 volumes. Required for io1/io2.
+    """)
+    final Integer diskIops
+
+    @ConfigOption
+    @Description("""
+        Enable KMS encryption for the EBS volume.
+        Default: false.
+    """)
+    final Boolean diskEncrypted
+
     /* required by config scope -- do not remove */
     MachineRequirementOpts() {}
 
@@ -63,6 +90,10 @@ class MachineRequirementOpts implements ConfigScope {
         this.provisioning = opts.provisioning as String
         this.maxSpotAttempts = opts.maxSpotAttempts as Integer
         this.machineFamilies = opts.machineFamilies as List<String>
+        this.diskType = opts.diskType as String
+        this.diskThroughputMiBps = opts.diskThroughputMiBps as Integer
+        this.diskIops = opts.diskIops as Integer
+        this.diskEncrypted = opts.diskEncrypted as Boolean
     }
 
     String getArch() {
@@ -79,5 +110,21 @@ class MachineRequirementOpts implements ConfigScope {
 
     List<String> getMachineFamilies() {
         return machineFamilies
+    }
+
+    String getDiskType() {
+        return diskType
+    }
+
+    Integer getDiskThroughputMiBps() {
+        return diskThroughputMiBps
+    }
+
+    Integer getDiskIops() {
+        return diskIops
+    }
+
+    Boolean getDiskEncrypted() {
+        return diskEncrypted
     }
 }

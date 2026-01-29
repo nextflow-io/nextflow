@@ -23,6 +23,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import io.seqera.sched.api.schema.v1a1.AcceleratorType
+import io.seqera.sched.api.schema.v1a1.DiskRequirement
 import io.seqera.sched.api.schema.v1a1.GetTaskLogsResponse
 import io.seqera.sched.api.schema.v1a1.ResourceRequirement
 import io.seqera.sched.api.schema.v1a1.Task
@@ -102,10 +103,11 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
             if( accelerator.type )
                 resourceReq.acceleratorName(accelerator.type)
         }
-        // build machine requirement merging config settings with task arch
+        // build machine requirement merging config settings with task arch and disk
         final machineReq = MapperUtil.toMachineRequirement(
             executor.getSeqeraConfig().machineRequirement,
-            task.getContainerPlatform()
+            task.getContainerPlatform(),
+            task.config.getDisk()
         )
         final schedTask = new Task()
             .name(task.lazyName())

@@ -441,6 +441,24 @@ Resource requests and other job characteristics can be controlled via the follow
 - {ref}`process-memory`
 - {ref}`process-time`
 
+### EBS disk support
+
+When the {ref}`process-disk` directive is specified, the Seqera executor provisions an EBS volume that is attached to the task container. By default, a gp3 volume with 325 MiB/s throughput is used (Fusion recommended settings).
+
+You can customize the EBS volume configuration using the `seqera.machineRequirement` options:
+
+```groovy
+seqera {
+    machineRequirement {
+        diskType = 'ebs/io1'       // Use provisioned IOPS SSD
+        diskIops = 10000           // Required for io1/io2
+        diskEncrypted = true       // Enable KMS encryption
+    }
+}
+```
+
+Supported volume types: `ebs/gp3` (default), `ebs/gp2`, `ebs/io1`, `ebs/io2`, `ebs/st1`, `ebs/sc1`.
+
 See the {ref}`seqera scope <config-seqera>` for the available configuration options.
 
 (slurm-executor)=

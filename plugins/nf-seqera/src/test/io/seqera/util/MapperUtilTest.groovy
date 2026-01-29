@@ -21,6 +21,7 @@ import io.seqera.config.MachineRequirementOpts
 import io.seqera.sched.api.schema.v1a1.PriceModel as SchedPriceModel
 import io.seqera.sched.api.schema.v1a1.ProvisioningModel
 import nextflow.cloud.types.PriceModel
+import nextflow.util.MemoryUnit
 import spock.lang.Specification
 
 /**
@@ -138,6 +139,160 @@ class MapperUtilTest extends Specification {
         result.provisioning == ProvisioningModel.SPOT_FIRST
         result.maxSpotAttempts == 3
         result.machineFamilies == ['m5', 'c5']
+    }
+
+    // tests for disk requirement mapping
+
+    def 'should return null disk requirement for null disk size' () {
+        expect:
+        MapperUtil.toDiskRequirement(null) == null
+    }
+
+    def 'should return null disk requirement for zero disk size' () {
+        expect:
+        MapperUtil.toDiskRequirement(MemoryUnit.of(0)) == null
+    }
+
+    def 'should map disk size to disk requirement with defaults' () {
+        when:
+        def result = MapperUtil.toDiskRequirement(MemoryUnit.of('100 GB'))
+
+        then:
+        result.sizeGiB == 100
+        result.type == MapperUtil.DEFAULT_DISK_TYPE
+        result.throughputMiBps == MapperUtil.DEFAULT_DISK_THROUGHPUT_MIBPS
+    }
+
+    def 'should map disk size in different units' () {
+        expect:
+        MapperUtil.toDiskRequirement(MemoryUnit.of('1 TB')).sizeGiB == 1024
+        MapperUtil.toDiskRequirement(MemoryUnit.of('50 GB')).sizeGiB == 50
+        and: 'defaults are applied'
+        MapperUtil.toDiskRequirement(MemoryUnit.of('1 TB')).type == MapperUtil.DEFAULT_DISK_TYPE
+        MapperUtil.toDiskRequirement(MemoryUnit.of('1 TB')).throughputMiBps == MapperUtil.DEFAULT_DISK_THROUGHPUT_MIBPS
+    }
+
+    def 'should include disk in machine requirement' () {
+        when:
+        def result = MapperUtil.toMachineRequirement(
+            new MachineRequirementOpts([arch: 'x86_64']),
+            null,
+            MemoryUnit.of('200 GB')
+        )
+
+        then:
+        result.arch == 'x86_64'
+        result.disk != null
+        result.disk.sizeGiB == 200
+    }
+
+    def 'should return machine requirement with only disk' () {
+        when:
+        def result = MapperUtil.toMachineRequirement(null, null, MemoryUnit.of('100 GB'))
+
+        then:
+        result != null
+        result.arch == null
+        result.disk != null
+        result.disk.sizeGiB == 100
+    }
+
+    def 'should return null when no arch, no opts, and no disk' () {
+        expect:
+        MapperUtil.toMachineRequirement(null, null, null) == null
+    }
+
+    // tests for custom disk configuration options
+
+    def 'should throw exception for invalid disk type' () {
+        given:
+        def opts = new MachineRequirementOpts([diskType: 'local/nvme'])
+
+        when:
+        MapperUtil.toDiskRequirement(MemoryUnit.of('100 GB'), opts)
+
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains("Invalid disk type: local/nvme")
+        e.message.contains("Supported types:")
+    }
+
+    def 'should use custom disk type from config' () {
+        given:
+        def opts = new MachineRequirementOpts([diskType: 'ebs/io1', diskIops: 10000])
+
+        when:
+        def result = MapperUtil.toDiskRequirement(MemoryUnit.of('100 GB'), opts)
+
+        then:
+        result.sizeGiB == 100
+        result.type == 'ebs/io1'
+        result.iops == 10000
+        result.throughputMiBps == null  // throughput only for gp3
+    }
+
+    def 'should use custom throughput from config' () {
+        given:
+        def opts = new MachineRequirementOpts([diskThroughputMiBps: 500])
+
+        when:
+        def result = MapperUtil.toDiskRequirement(MemoryUnit.of('100 GB'), opts)
+
+        then:
+        result.type == MapperUtil.DEFAULT_DISK_TYPE
+        result.throughputMiBps == 500
+    }
+
+    def 'should use encryption from config' () {
+        given:
+        def opts = new MachineRequirementOpts([diskEncrypted: true])
+
+        when:
+        def result = MapperUtil.toDiskRequirement(MemoryUnit.of('100 GB'), opts)
+
+        then:
+        result.encrypted == true
+    }
+
+    def 'should use all disk options from config' () {
+        given:
+        def opts = new MachineRequirementOpts([
+            diskType: 'ebs/gp3',
+            diskThroughputMiBps: 600,
+            diskIops: 8000,
+            diskEncrypted: true
+        ])
+
+        when:
+        def result = MapperUtil.toDiskRequirement(MemoryUnit.of('200 GB'), opts)
+
+        then:
+        result.sizeGiB == 200
+        result.type == 'ebs/gp3'
+        result.throughputMiBps == 600
+        result.iops == 8000
+        result.encrypted == true
+    }
+
+    def 'should pass disk options through machine requirement' () {
+        given:
+        def opts = new MachineRequirementOpts([
+            arch: 'arm64',
+            diskType: 'ebs/io2',
+            diskIops: 15000,
+            diskEncrypted: true
+        ])
+
+        when:
+        def result = MapperUtil.toMachineRequirement(opts, null, MemoryUnit.of('500 GB'))
+
+        then:
+        result.arch == 'arm64'
+        result.disk.sizeGiB == 500
+        result.disk.type == 'ebs/io2'
+        result.disk.iops == 15000
+        result.disk.encrypted == true
+        result.disk.throughputMiBps == null  // io2 doesn't use throughput
     }
 
 }

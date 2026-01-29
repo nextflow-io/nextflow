@@ -1520,6 +1520,18 @@ The following settings are available:
 `seqera.machineRequirement.machineFamilies`
 : List of acceptable EC2 instance families, e.g. `['m5', 'c5', 'r5']`.
 
+`seqera.machineRequirement.diskType`
+: The EBS volume type for task scratch disk. Supported types: `'ebs/gp3'` (default), `'ebs/gp2'`, `'ebs/io1'`, `'ebs/io2'`, `'ebs/st1'`, `'ebs/sc1'`.
+
+`seqera.machineRequirement.diskThroughputMiBps`
+: The throughput in MiB/s for gp3 volumes (125-1000). Default: `325` (Fusion recommended).
+
+`seqera.machineRequirement.diskIops`
+: The IOPS for io1/io2/gp3 volumes. Required for io1/io2 volume types.
+
+`seqera.machineRequirement.diskEncrypted`
+: Enable KMS encryption for the EBS volume (default: `false`).
+
 `seqera.retryPolicy.delay`
 : The initial delay when a failing HTTP request is retried (default: `'450ms'`).
 
