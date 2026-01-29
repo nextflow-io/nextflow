@@ -16,6 +16,7 @@
 package nextflow.script.control;
 
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -28,6 +29,7 @@ import nextflow.script.ast.IncludeNode;
 import nextflow.script.ast.OutputBlockNode;
 import nextflow.script.ast.ParamBlockNode;
 import nextflow.script.ast.ParamNodeV1;
+import nextflow.script.ast.ProcessNode;
 import nextflow.script.ast.ProcessNodeV1;
 import nextflow.script.ast.ProcessNodeV2;
 import nextflow.script.ast.ScriptNode;
@@ -84,7 +86,30 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
     public void visit() {
         if( moduleNode == null )
             return;
-        super.visit(moduleNode);
+
+        var declarations = moduleNode.getDeclarations();
+
+        declarations.sort(Comparator.comparing(node -> node.getLineNumber()));
+
+        for( var decl : declarations ) {
+            if( decl instanceof FeatureFlagNode ffn )
+                visitFeatureFlag(ffn);
+            else if( decl instanceof FunctionNode fn )
+                visitFunction(fn);
+            else if( decl instanceof IncludeNode in )
+                visitInclude(in);
+            else if( decl instanceof OutputBlockNode obn )
+                visitOutputs(obn);
+            else if( decl instanceof ParamBlockNode pbn )
+                visitParams(pbn);
+            else if( decl instanceof ParamNodeV1 pn )
+                visitParamV1(pn);
+            else if( decl instanceof ProcessNode pn )
+                visitProcess(pn);
+            else if( decl instanceof WorkflowNode wn )
+                visitWorkflow(wn);
+        }
+
         if( moduleNode.isEmpty() )
             moduleNode.addStatement(ReturnStatement.RETURN_NULL_OR_VOID);
     }
