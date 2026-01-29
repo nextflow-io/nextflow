@@ -27,6 +27,7 @@ nextflowPlugin {
     useDefaultDependencies = false
     generateSpec = false
     extensionPoints = [
+        'nextflow.cache.CloudCacheConfig',
         'nextflow.cache.CloudCacheFactory'
     ]
 }
