@@ -83,6 +83,12 @@ class GoogleBatchMachineTypeSelector {
      */
     private static final List<String> ACCELERATOR_OPTIMIZED_FAMILIES = ['a2-*', 'a3-*', 'g2-*']
 
+    /*
+     * Families that only support Hyperdisk (no standard PD)
+     * LAST UPDATE 2024-05-22
+     */
+    private static final List<String> HYPERDISK_ONLY_FAMILIES = ['c4-*', 'c4a-*', 'c4d-*', 'n4-*', 'n4d-*', 'n4a-*']
+
     @Immutable
     static class MachineType {
         String type
@@ -256,8 +262,13 @@ class GoogleBatchMachineTypeSelector {
 
         // These families have a local SSD already attached and is not configurable.
         if( ((machineType.family == "c3" || machineType.family == "c3d") && machineType.type.endsWith("-lssd")) ||
+            ((machineType.family == "c4" || machineType.family == "c4a" || machineType.family == "c4d") && machineType.type.endsWith("-lssd")) ||
             machineType.family == "a3" ||
             machineType.type.startsWith("a2-ultragpu-") )
+            return new MemoryUnit( 0 )
+
+        // These families do not support local SSD
+        if( machineType.family == "n4" || machineType.family == "n4a" || machineType.family == "n4d" )
             return new MemoryUnit( 0 )
 
         // For other special families, the user must provide a valid size. If a family does not
@@ -301,6 +312,16 @@ class GoogleBatchMachineTypeSelector {
         // Cloud Info service currently does not currently return gpusPerVm values (or the user
         // could have disabled use of the service) so also check against a known set of families.
         return ACCELERATOR_OPTIMIZED_FAMILIES.any { matchType(it, machineType.type) }
+    }
+
+    /**
+     * Check if the machine type belongs to a family that only supports Hyperdisk.
+     *
+     * @param machineType Machine type
+     * @return Boolean value indicating if the machine type requires Hyperdisk.
+     */
+    boolean isHyperdiskOnly(String machineType) {
+        return HYPERDISK_ONLY_FAMILIES.any { matchType(it, machineType) }
     }
 
 }
