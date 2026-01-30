@@ -441,23 +441,47 @@ Resource requests and other job characteristics can be controlled via the follow
 - {ref}`process-memory`
 - {ref}`process-time`
 
-### EBS disk support
+### Disk support
 
-When the {ref}`process-disk` directive is specified, the Seqera executor provisions an EBS volume that is attached to the task container. By default, a gp3 volume with 325 MiB/s throughput is used (Fusion recommended settings).
+When the {ref}`process-disk` directive is specified, the Seqera executor provisions storage for the task container. There are two disk allocation strategies:
 
-You can customize the EBS volume configuration using the `seqera.machineRequirement` options:
+- **task** (default): A dedicated EBS volume is created for each task at launch time. This provides isolated, high-performance storage with configurable volume type, IOPS, throughput, and encryption.
+
+- **node**: Uses the instance storage attached at the cluster level. This is shared across tasks running on the same node and does not support EBS-specific options.
+
+#### Task allocation (EBS volumes)
+
+By default, a gp3 volume with 325 MiB/s throughput is used (Fusion recommended settings). You can customize the EBS volume configuration:
 
 ```groovy
 seqera {
     machineRequirement {
+        diskAllocation = 'task'    // Per-task EBS volume (default)
         diskType = 'ebs/io1'       // Use provisioned IOPS SSD
         diskIops = 10000           // Required for io1/io2
+        diskThroughputMiBps = 500  // Throughput for gp3 volumes
         diskEncrypted = true       // Enable KMS encryption
     }
 }
 ```
 
 Supported volume types: `ebs/gp3` (default), `ebs/gp2`, `ebs/io1`, `ebs/io2`, `ebs/st1`, `ebs/sc1`.
+
+#### Node allocation (instance storage)
+
+To use instance storage instead of per-task EBS volumes:
+
+```groovy
+seqera {
+    machineRequirement {
+        diskAllocation = 'node'    // Use instance storage
+    }
+}
+```
+
+:::{note}
+When using `node` allocation, the EBS-specific options (`diskType`, `diskIops`, `diskThroughputMiBps`, `diskEncrypted`) are not applicable and will cause an error if specified.
+:::
 
 See the {ref}`seqera scope <config-seqera>` for the available configuration options.
 
