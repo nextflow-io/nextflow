@@ -31,7 +31,7 @@ import java.nio.file.Path
  */
 @Slf4j
 @CompileStatic
-class ModuleManifest {
+class ModuleSpec {
 
     String name
     String version
@@ -45,9 +45,9 @@ class ModuleManifest {
      * Load a module manifest from a meta.yaml file
      *
      * @param metaYamlPath Path to meta.yaml
-     * @return ModuleManifest instance
+     * @return ModuleSpec instance
      */
-    static ModuleManifest load(Path metaYamlPath) {
+    static ModuleSpec load(Path metaYamlPath) {
         if (!Files.exists(metaYamlPath)) {
             throw new AbortOperationException("Module manifest not found: ${metaYamlPath}")
         }
@@ -56,7 +56,7 @@ class ModuleManifest {
             def yaml = new Yaml()
             def data = yaml.load(Files.newInputStream(metaYamlPath)) as Map<String, Object>
 
-            def manifest = new ModuleManifest()
+            def manifest = new ModuleSpec()
             manifest.name = data.name as String
             manifest.version = data.version as String
             manifest.description = data.description as String

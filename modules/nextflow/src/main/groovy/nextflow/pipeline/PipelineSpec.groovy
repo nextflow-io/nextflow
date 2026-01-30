@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package nextflow.util
+package nextflow.pipeline
 
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
@@ -32,14 +32,14 @@ import java.nio.file.StandardOpenOption
  */
 @Slf4j
 @CompileStatic
-class NextflowSpecFile {
+class PipelineSpec {
 
     private static final String SPEC_FILE_NAME = 'nextflow_spec.json'
 
     private final Path baseDir
     private final Path specFile
 
-    NextflowSpecFile(Path baseDir) {
+    PipelineSpec(Path baseDir) {
         this.baseDir = baseDir
         this.specFile = baseDir.resolve(SPEC_FILE_NAME)
     }

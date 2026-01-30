@@ -25,7 +25,7 @@ import nextflow.cli.CmdBase
 import nextflow.config.ConfigBuilder
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
-import nextflow.module.ModuleManifest
+import nextflow.module.ModuleSpec
 import nextflow.module.ModuleReference
 import nextflow.module.ModuleRegistryClient
 import nextflow.module.ModuleStorage
@@ -78,7 +78,7 @@ class ModulePublish extends CmdBase {
 
         // Step 2: Load and validate manifest
         def manifestPath = moduleDir.resolve(ModuleStorage.MODULE_MANIFEST_FILE)
-        def manifest = ModuleManifest.load(manifestPath)
+        def manifest = ModuleSpec.load(manifestPath)
 
         def manifestErrors = manifest.validate()
         if (!manifestErrors.isEmpty()) {
@@ -106,7 +106,7 @@ class ModulePublish extends CmdBase {
 
     }
 
-    private void publishModule(Path moduleDir, RegistryConfig registryConfig, ModuleManifest manifest){
+    private void publishModule(Path moduleDir, RegistryConfig registryConfig, ModuleSpec manifest){
         log.info "Creating module bundle..."
         def storage = new ModuleStorage(moduleDir.parent)
         def tempBundleFile = Files.createTempFile("nf-module-publish-", ".tar.gz")
@@ -155,7 +155,7 @@ class ModulePublish extends CmdBase {
         }
     }
 
-    private void printDryRunInfo(ModuleManifest manifest) {
+    private void printDryRunInfo(ModuleSpec manifest) {
         println "✓ Module structure is valid"
         println ""
         println "Module details:"

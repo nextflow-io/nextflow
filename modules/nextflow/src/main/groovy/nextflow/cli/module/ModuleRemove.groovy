@@ -24,7 +24,7 @@ import nextflow.cli.CmdBase
 import nextflow.exception.AbortOperationException
 import nextflow.module.ModuleReference
 import nextflow.module.ModuleStorage
-import nextflow.util.NextflowSpecFile
+import nextflow.pipeline.PipelineSpec
 
 import java.nio.file.Paths
 
@@ -71,7 +71,7 @@ class ModuleRemove extends CmdBase {
         def baseDir = Paths.get('.').toAbsolutePath().normalize()
 
         //TODO: Decide final location of modules currently in nextflow_spec.json.
-        def specFile = new NextflowSpecFile(baseDir)
+        def specFile = new PipelineSpec(baseDir)
 
         // Create resolver and spec file manager
         def storage = new ModuleStorage(baseDir)

@@ -25,9 +25,10 @@ import nextflow.config.ConfigBuilder
 import nextflow.config.ModulesConfig
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
+import nextflow.file.FileHelper
 import nextflow.module.ModuleReference
 import nextflow.module.ModuleResolver
-import nextflow.util.NextflowSpecFile
+import nextflow.pipeline.PipelineSpec
 
 import java.nio.file.Files
 import java.nio.file.Path
@@ -79,7 +80,7 @@ class ModuleRun extends CmdRun {
         //TODO: Decide final location of modules currently in nextflow_spec.json.
         // Alternative: Use nextflow config. It requires to implement nextflow.config updater features
         // def modulesConfig = config.navigate('modules') as ModulesConfig
-        def specFile = new NextflowSpecFile(baseDir)
+        def specFile = new PipelineSpec(baseDir)
         def modulesConfig = new ModulesConfig(specFile.getModules())
 
         //TODO: Decide if create resolver with a temporarily storage or use current ./modules
@@ -102,29 +103,7 @@ class ModuleRun extends CmdRun {
         }
         finally {
             // Clean up temporary directory
-            if (tempDir && Files.exists(tempDir)) {
-                try {
-                    deleteDirectory(tempDir)
-                    log.debug "Cleaned up temporary directory: ${tempDir}"
-                } catch (Exception e) {
-                    log.warn "Failed to clean up temporary directory: ${tempDir}", e
-                }
-            }
+            FileHelper.deletePath(tempDir)
         }
-    }
-
-    /**
-     * Delete a directory recursively
-     *
-     * @param dir The directory to delete
-     */
-    private void deleteDirectory(Path dir) {
-        if (!Files.exists(dir)) {
-            return
-        }
-
-        Files.walk(dir)
-                .sorted(Comparator.reverseOrder())
-                .each { Path path -> Files.delete(path) }
     }
 }
