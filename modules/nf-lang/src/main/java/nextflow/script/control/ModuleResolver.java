@@ -72,8 +72,8 @@ public class ModuleResolver {
         var source = node.source.getText();
         if( source.startsWith("plugin/") )
             return null;
-        var uri = sourceUnit.getSource().getURI();
-        var includeUri = getIncludeUri(uri, source);
+        var parent = source.startsWith("@") ? Path.of("modules") : Path.of(sourceUnit.getSource().getURI()).getParent();
+        var includeUri = getIncludeUri(parent, source);
         if( compiler.getSource(includeUri) != null )
             return null;
         if( !Files.exists(Path.of(includeUri)) )
@@ -86,8 +86,8 @@ public class ModuleResolver {
         return includeSource;
     }
 
-    private static URI getIncludeUri(URI uri, String source) {
-        Path includePath = Path.of(uri).getParent().resolve(source);
+    private static URI getIncludeUri(Path parent, String source) {
+        Path includePath = parent.resolve(source);
         if( Files.isDirectory(includePath) )
             includePath = includePath.resolve("main.nf");
         else if( !source.endsWith(".nf") )
