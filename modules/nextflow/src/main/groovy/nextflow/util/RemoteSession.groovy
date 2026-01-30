@@ -54,7 +54,7 @@ class RemoteSession implements Serializable, Closeable {
     private transient List<Path> localPaths = deserialiseClasspath()
 
     @Lazy
-    private transient List<Path> resolvedClasspath = ConfigHelper.resolveClassPaths(localPaths)
+    private transient List<Path> resolvedClasspath = ClassLoaderFactory.resolveClassPaths(localPaths)
 
     protected RemoteSession() { }
 

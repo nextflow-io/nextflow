@@ -915,10 +915,16 @@ The `lint` command parses and analyzes the given Nextflow scripts and config fil
 **Options**
 
 `-exclude`
-: File pattern to exclude from linting. Can be specified multiple times (default: `.git, .nf-test, work`).
+: File pattern to exclude from linting (default: `.git, .lineage, .nextflow, .nf-test, nf-test.config, work`).
+: Can be specified multiple times.
 
 `-format`
 : Format scripts and config files that have no errors.
+
+`-lib`
+: :::{versionadded} 26.04.0
+  :::
+: Path to lib directory (default: `'./lib'`).
 
 `-o, -output`
 : Output mode for reporting errors: `full`, `extended`, `concise`, `json`, `markdown` (default: `full`).
