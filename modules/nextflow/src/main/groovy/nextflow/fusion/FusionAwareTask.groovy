@@ -42,7 +42,14 @@ trait FusionAwareTask {
 
     boolean fusionEnabled() {
         if( fusionEnabled==null ) {
-            fusionEnabled = getExecutor0().isFusionEnabled()
+            // Check task-level disk.fusion setting first
+            def diskFusion = getTask().config?.getDiskResource()?.fusion
+            if( diskFusion != null ) {
+                fusionEnabled = diskFusion
+            } else {
+                // Fall back to executor-level setting
+                fusionEnabled = getExecutor0().isFusionEnabled()
+            }
         }
         return fusionEnabled
     }
