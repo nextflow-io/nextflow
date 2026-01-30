@@ -66,16 +66,36 @@ class PublishOp {
         if( opts.pathResolver instanceof Closure )
             this.pathResolver = opts.pathResolver as Closure
         if( opts.index )
-            this.indexOpts = new IndexOpts(session.outputDir, opts.index as Map)
+            this.indexOpts = new IndexOpts(opts.index as Map)
     }
 
     DataflowVariable apply() {
         final events = new HashMap(2)
-        events.onNext = this.&onNext
-        events.onComplete = this.&onComplete
+        events.onNext = { value ->
+            safeExecute { onNext(value) }
+        }
+        events.onComplete = {
+            safeExecute { onComplete() }
+        }
         DataflowHelper.subscribeImpl(source, events)
         this.target = new DataflowVariable()
         return target
+    }
+
+    /**
+     * Perform an action. If an exception is raised, bind the
+     * excpetion to the target and don't perform any more actions.
+     *
+     * @param action
+     */
+    private void safeExecute(Runnable action) {
+        if( target.isError() )
+            return
+        try {
+            action.run()
+        } catch( Throwable e ) {
+            target.bindError(e)
+        }
     }
 
     /**
@@ -151,7 +171,8 @@ class PublishOp {
         if( resolvedPath instanceof CharSequence )
             return outputDir.resolve(resolvedPath.toString())
 
-        throw new ScriptRuntimeException("Invalid output `path` directive -- it should either return a string or use the `>>` operator to publish files")
+        final invalid = mapping ?: resolvedPath
+        throw new ScriptRuntimeException("Invalid `path` directive for workflow output '${name}' -- expected a string or publish statements, but received: ${invalid} [${invalid.class.simpleName}]")
     }
 
     private class PublishDsl {
@@ -165,12 +186,12 @@ class PublishOp {
             }
             else if( source instanceof Collection<Path> ) {
                 if( !target.endsWith('/') )
-                    throw new ScriptRuntimeException("Invalid publish target '${target}' -- should be a directory (end with a `/`) when publishing a collection of files")
+                    throw new ScriptRuntimeException("Invalid publish target '${target}' for workflow output '${name}' -- should be a directory (end with a `/`) when publishing a collection of files")
                 for( final path : source )
                     publish0(path, target)
             }
             else {
-                throw new ScriptRuntimeException("Publish source should be a file or collection of files, but received a ${source.class.name}")
+                throw new ScriptRuntimeException("Invalid publish source for workflow output '${name}' -- expected a file or collection of files, but received: ${source} [${source.class.simpleName}]")
             }
         }
 
@@ -196,14 +217,16 @@ class PublishOp {
      * Once all channel values have been published, publish the final
      * workflow output and index file (if enabled).
      */
-    protected void onComplete(nope) {
+    protected void onComplete() {
         // publish individual record if source is a value channel
         final outputValue = CH.isValue(source)
             ? publishedValues.first()
             : publishedValues
 
         // publish workflow output
-        final indexPath = indexOpts ? indexOpts.path : null
+        final indexPath = indexOpts
+            ? session.outputDir.resolve(indexOpts.path)
+            : null
         session.notifyWorkflowOutput(new WorkflowOutputEvent(name, outputValue, indexPath))
 
         // write value to index file
@@ -220,7 +243,7 @@ class PublishOp {
                 indexPath.text = DumpHelper.prettyPrintYaml(outputValue)
             }
             else {
-                log.warn "Invalid extension '${ext}' for index file '${indexPath}' -- should be CSV, JSON, or YAML"
+                throw new ScriptRuntimeException("Invalid extension '${ext}' for index file '${indexOpts.path}' -- should be CSV, JSON, or YAML")
             }
             session.notifyFilePublish(new FilePublishEvent(null, indexPath, publishOpts.labels as List))
         }
@@ -292,7 +315,7 @@ class PublishOp {
             }
         }
 
-        throw new IllegalArgumentException("Index file record must be a list, map, or file: ${value} [${value.class.simpleName}]")
+        throw new ScriptRuntimeException("Invalid value for workflow output '${name}' -- expected a list, map, or file, but received: ${value} [${value.class.simpleName}]")
     }
 
     /**
@@ -359,13 +382,12 @@ class PublishOp {
     }
 
     static class IndexOpts {
-        Path path
+        String path
         def /* boolean | List<String> */ header = false
         String sep = ','
 
-        IndexOpts(Path targetDir, Map opts) {
-            this.path = targetDir.resolve(opts.path as String)
-
+        IndexOpts(Map opts) {
+            this.path = opts.path as String
             if( opts.header != null )
                 this.header = opts.header
             if( opts.sep )
