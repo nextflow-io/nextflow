@@ -32,10 +32,12 @@ import nextflow.script.ast.ParamNodeV1;
 import nextflow.script.ast.ProcessNode;
 import nextflow.script.ast.ProcessNodeV1;
 import nextflow.script.ast.ProcessNodeV2;
+import nextflow.script.ast.RecordNode;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
 import nextflow.script.ast.WorkflowNode;
 import org.codehaus.groovy.ast.ASTNode;
+import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.CodeVisitorSupport;
 import org.codehaus.groovy.ast.MethodNode;
 import org.codehaus.groovy.ast.Parameter;
@@ -150,7 +152,7 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
             .map((param) -> {
                 var name = constX(param.getName());
                 var type = classX(param.getType());
-                var optional = constX(type.getNodeMetaData(ASTNodeMarker.NULLABLE) != null);
+                var optional = constX(param.getType().getNodeMetaData(ASTNodeMarker.NULLABLE) != null);
                 var arguments = param.hasInitialExpression()
                     ? args(name, type, optional, param.getInitialExpression())
                     : args(name, type, optional);
@@ -282,6 +284,18 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
             .toList();
         var closure = closureX(null, block(new VariableScope(), statements));
         var result = stmt(callThisX("output", args(closure)));
+        moduleNode.addStatement(result);
+    }
+
+    @Override
+    public void visitRecord(RecordNode node) {
+        var result = stmt(callThisX("declareType", args(classX(node))));
+        moduleNode.addStatement(result);
+    }
+
+    @Override
+    public void visitEnum(ClassNode node) {
+        var result = stmt(callThisX("declareType", args(classX(node))));
         moduleNode.addStatement(result);
     }
 

@@ -1766,10 +1766,8 @@ class TaskProcessor {
         for( int i = 0; i < declaredInputs.getParams().size(); i++ ) {
             final param = declaredInputs.getParams()[i]
             final value = values[i]
-            if( value == null && !param.optional )
-                throw new ProcessUnrecoverableException("[${safeTaskName(task)}] input at index ${i} cannot be null -- append `?` to the type annotation to mark it as nullable")
             if( param instanceof ProcessTupleInput )
-                assignTaskTupleInput(task, param, value, i)
+                assignTaskStructuredInput(task, param, value, i)
             else
                 assignTaskInput(task, param, value, i)
         }
@@ -1806,22 +1804,37 @@ class TaskProcessor {
     }
 
     @CompileStatic
-    private void assignTaskTupleInput(TaskRun task, ProcessTupleInput param, Object value, int index) {
-        if( value !instanceof List ) {
-            throw new ProcessUnrecoverableException("[${safeTaskName(task)}] input at index ${index} expected a tuple but received: ${value} [${value.class.simpleName}]")
+    private void assignTaskStructuredInput(TaskRun task, ProcessTupleInput param, Object value, int index) {
+        if( value == null && !param.optional ) {
+            throw new ProcessUnrecoverableException("[${safeTaskName(task)}] input at index ${index} cannot be null -- append `?` to the type annotation to mark it as nullable")
         }
-        final tupleParams = param.getComponents()
-        final tupleValues = value as List
-        if( tupleParams.size() != tupleValues.size() ) {
-            throw new ProcessUnrecoverableException("[${safeTaskName(task)}] input at index ${index} expected a tuple with ${tupleParams.size()} elements but received ${tupleValues.size()} -- offending value: $tupleValues")
+        if( value instanceof List ) {
+            final tupleParams = param.getComponents()
+            final tupleValues = value as List
+            if( tupleParams.size() != tupleValues.size() ) {
+                throw new ProcessUnrecoverableException("[${safeTaskName(task)}] input at index ${index} expected a tuple with ${tupleParams.size()} elements but received ${tupleValues.size()} -- offending value: $tupleValues")
+            }
+            for( int i = 0; i < tupleParams.size(); i++ ) {
+                assignTaskInput(task, tupleParams[i], tupleValues[i], index)
+            }
         }
-        for( int i = 0; i < tupleParams.size(); i++ ) {
-            assignTaskInput(task, tupleParams[i], tupleValues[i], index)
+        else if( value instanceof Map ) {
+            final record = value as Map
+            for( final fieldParam : param.getComponents() ) {
+                final fieldName = fieldParam.getName()
+                assignTaskInput(task, fieldParam, record[fieldName], index)
+            }
+        }
+        else {
+            throw new ProcessUnrecoverableException("[${safeTaskName(task)}] input at index ${index} expected a record or tuple but received: ${value} [${value.class.simpleName}]")
         }
     }
 
     @CompileStatic
     private void assignTaskInput(TaskRun task, ProcessInput param, Object value, int index) {
+        if( value == null && !param.optional ) {
+            throw new ProcessUnrecoverableException("[${safeTaskName(task)}] input at index ${index} cannot be null -- append `?` to the type annotation to mark it as nullable")
+        }
         if( value != null ) {
             final expectedType = param.type
             final actualType = value.getClass()
