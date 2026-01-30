@@ -18,6 +18,7 @@
 package io.seqera.util
 
 import io.seqera.config.MachineRequirementOpts
+import io.seqera.sched.api.schema.v1a1.DiskAllocation
 import io.seqera.sched.api.schema.v1a1.PriceModel as SchedPriceModel
 import io.seqera.sched.api.schema.v1a1.ProvisioningModel
 import nextflow.cloud.types.PriceModel
@@ -157,10 +158,15 @@ class MapperUtilTest extends Specification {
         when:
         def result = MapperUtil.toDiskRequirement(MemoryUnit.of('100 GB'))
 
-        then:
+        then: 'disk size is set'
         result.sizeGiB == 100
-        result.type == MapperUtil.DEFAULT_DISK_TYPE
+        and: 'allocation defaults to null (task allocation on API side)'
+        result.allocation == null
+        and: 'EBS defaults are applied for task allocation'
+        result.volumeType == MapperUtil.DEFAULT_DISK_TYPE
         result.throughputMiBps == MapperUtil.DEFAULT_DISK_THROUGHPUT_MIBPS
+        result.encrypted == false
+        result.iops == null
     }
 
     def 'should map disk size in different units' () {
@@ -168,7 +174,7 @@ class MapperUtilTest extends Specification {
         MapperUtil.toDiskRequirement(MemoryUnit.of('1 TB')).sizeGiB == 1024
         MapperUtil.toDiskRequirement(MemoryUnit.of('50 GB')).sizeGiB == 50
         and: 'defaults are applied'
-        MapperUtil.toDiskRequirement(MemoryUnit.of('1 TB')).type == MapperUtil.DEFAULT_DISK_TYPE
+        MapperUtil.toDiskRequirement(MemoryUnit.of('1 TB')).volumeType == MapperUtil.DEFAULT_DISK_TYPE
         MapperUtil.toDiskRequirement(MemoryUnit.of('1 TB')).throughputMiBps == MapperUtil.DEFAULT_DISK_THROUGHPUT_MIBPS
     }
 
@@ -226,7 +232,7 @@ class MapperUtilTest extends Specification {
 
         then:
         result.sizeGiB == 100
-        result.type == 'ebs/io1'
+        result.volumeType == 'ebs/io1'
         result.iops == 10000
         result.throughputMiBps == null  // throughput only for gp3
     }
@@ -239,7 +245,7 @@ class MapperUtilTest extends Specification {
         def result = MapperUtil.toDiskRequirement(MemoryUnit.of('100 GB'), opts)
 
         then:
-        result.type == MapperUtil.DEFAULT_DISK_TYPE
+        result.volumeType == MapperUtil.DEFAULT_DISK_TYPE
         result.throughputMiBps == 500
     }
 
@@ -268,7 +274,7 @@ class MapperUtilTest extends Specification {
 
         then:
         result.sizeGiB == 200
-        result.type == 'ebs/gp3'
+        result.volumeType == 'ebs/gp3'
         result.throughputMiBps == 600
         result.iops == 8000
         result.encrypted == true
@@ -289,10 +295,160 @@ class MapperUtilTest extends Specification {
         then:
         result.arch == 'arm64'
         result.disk.sizeGiB == 500
-        result.disk.type == 'ebs/io2'
+        result.disk.volumeType == 'ebs/io2'
         result.disk.iops == 15000
         result.disk.encrypted == true
         result.disk.throughputMiBps == null  // io2 doesn't use throughput
+    }
+
+    // tests for disk allocation mapping
+
+    def 'should map disk allocation' () {
+        expect:
+        MapperUtil.toDiskAllocation(null) == null
+        MapperUtil.toDiskAllocation('task') == DiskAllocation.TASK
+        MapperUtil.toDiskAllocation('node') == DiskAllocation.NODE
+    }
+
+    def 'should throw exception for invalid disk allocation' () {
+        when:
+        MapperUtil.toDiskAllocation('invalid')
+
+        then:
+        thrown(IllegalArgumentException)
+    }
+
+    def 'should use task disk allocation from config' () {
+        given:
+        def opts = new MachineRequirementOpts([diskAllocation: 'task'])
+
+        when:
+        def result = MapperUtil.toDiskRequirement(MemoryUnit.of('100 GB'), opts)
+
+        then:
+        result.allocation == DiskAllocation.TASK
+    }
+
+    def 'should use node disk allocation from config' () {
+        given:
+        def opts = new MachineRequirementOpts([diskAllocation: 'node'])
+
+        when:
+        def result = MapperUtil.toDiskRequirement(MemoryUnit.of('100 GB'), opts)
+
+        then:
+        result.allocation == DiskAllocation.NODE
+        result.sizeGiB == 100
+        result.volumeType == null  // node allocation doesn't set EBS options
+        result.throughputMiBps == null
+        result.iops == null
+        result.encrypted == null
+    }
+
+    def 'should default to null disk allocation when not specified' () {
+        when:
+        def result = MapperUtil.toDiskRequirement(MemoryUnit.of('100 GB'))
+
+        then:
+        result.allocation == null
+    }
+
+    def 'should include disk allocation in machine requirement' () {
+        given:
+        def opts = new MachineRequirementOpts([
+            arch: 'x86_64',
+            diskAllocation: 'node'
+        ])
+
+        when:
+        def result = MapperUtil.toMachineRequirement(opts, null, MemoryUnit.of('200 GB'))
+
+        then:
+        result.arch == 'x86_64'
+        result.disk.sizeGiB == 200
+        result.disk.allocation == DiskAllocation.NODE
+    }
+
+    // tests for node allocation validation
+
+    def 'should throw error when diskType is set with node allocation' () {
+        given:
+        def opts = new MachineRequirementOpts([
+            diskAllocation: 'node',
+            diskType: 'ebs/gp3'
+        ])
+
+        when:
+        MapperUtil.toDiskRequirement(MemoryUnit.of('100 GB'), opts)
+
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains('diskType')
+        e.message.contains('node')
+    }
+
+    def 'should throw error when diskIops is set with node allocation' () {
+        given:
+        def opts = new MachineRequirementOpts([
+            diskAllocation: 'node',
+            diskIops: 10000
+        ])
+
+        when:
+        MapperUtil.toDiskRequirement(MemoryUnit.of('100 GB'), opts)
+
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains('diskIops')
+    }
+
+    def 'should throw error when diskThroughputMiBps is set with node allocation' () {
+        given:
+        def opts = new MachineRequirementOpts([
+            diskAllocation: 'node',
+            diskThroughputMiBps: 500
+        ])
+
+        when:
+        MapperUtil.toDiskRequirement(MemoryUnit.of('100 GB'), opts)
+
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains('diskThroughputMiBps')
+    }
+
+    def 'should throw error when diskEncrypted is set with node allocation' () {
+        given:
+        def opts = new MachineRequirementOpts([
+            diskAllocation: 'node',
+            diskEncrypted: true
+        ])
+
+        when:
+        MapperUtil.toDiskRequirement(MemoryUnit.of('100 GB'), opts)
+
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains('diskEncrypted')
+    }
+
+    def 'should report all invalid options with node allocation' () {
+        given:
+        def opts = new MachineRequirementOpts([
+            diskAllocation: 'node',
+            diskType: 'ebs/io1',
+            diskIops: 10000,
+            diskEncrypted: true
+        ])
+
+        when:
+        MapperUtil.toDiskRequirement(MemoryUnit.of('100 GB'), opts)
+
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains('diskType')
+        e.message.contains('diskIops')
+        e.message.contains('diskEncrypted')
     }
 
 }

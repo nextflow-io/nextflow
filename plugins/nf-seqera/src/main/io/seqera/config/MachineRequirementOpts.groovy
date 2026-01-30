@@ -82,6 +82,14 @@ class MachineRequirementOpts implements ConfigScope {
     """)
     final Boolean diskEncrypted
 
+    @ConfigOption
+    @Description("""
+        The disk allocation strategy: `task` or `node`.
+        - `task`: Per-task EBS volume created at task launch (default)
+        - `node`: Per-node instance storage attached at cluster level
+    """)
+    final String diskAllocation
+
     /* required by config scope -- do not remove */
     MachineRequirementOpts() {}
 
@@ -94,6 +102,7 @@ class MachineRequirementOpts implements ConfigScope {
         this.diskThroughputMiBps = opts.diskThroughputMiBps as Integer
         this.diskIops = opts.diskIops as Integer
         this.diskEncrypted = opts.diskEncrypted as Boolean
+        this.diskAllocation = opts.diskAllocation as String
     }
 
     String getArch() {
@@ -126,5 +135,9 @@ class MachineRequirementOpts implements ConfigScope {
 
     Boolean getDiskEncrypted() {
         return diskEncrypted
+    }
+
+    String getDiskAllocation() {
+        return diskAllocation
     }
 }

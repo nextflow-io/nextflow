@@ -19,6 +19,7 @@ package io.seqera.util
 
 import groovy.transform.CompileStatic
 import io.seqera.config.MachineRequirementOpts
+import io.seqera.sched.api.schema.v1a1.DiskAllocation
 import io.seqera.sched.api.schema.v1a1.DiskRequirement
 import io.seqera.sched.api.schema.v1a1.MachineRequirement
 import io.seqera.sched.api.schema.v1a1.PriceModel as SchedPriceModel
@@ -111,6 +112,9 @@ class MapperUtil {
      * Uses config options if provided, otherwise defaults to Fusion recommended settings:
      * EBS gp3 volume with 325 MiB/s throughput.
      *
+     * For 'node' allocation, only sizeGiB and mountPath are applicable.
+     * For 'task' allocation (default), all EBS options can be specified.
+     *
      * @param diskSize the disk size (can be null)
      * @param opts the machine requirement options with disk settings (can be null)
      * @return the DiskRequirement API object, or null if diskSize is null or zero
@@ -118,7 +122,19 @@ class MapperUtil {
     static DiskRequirement toDiskRequirement(MemoryUnit diskSize, MachineRequirementOpts opts=null) {
         if (!diskSize || diskSize.toGiga() <= 0)
             return null
-        // Use config values or Fusion recommended defaults
+
+        final allocation = toDiskAllocation(opts?.diskAllocation)
+
+        // For 'node' allocation, only size and mountPath are valid
+        if (allocation == DiskAllocation.NODE) {
+            validateNodeAllocationOpts(opts)
+            final DiskRequirement req = new DiskRequirement()
+            req.sizeGiB(diskSize.toGiga() as Integer)
+            req.allocation(allocation)
+            return req
+        }
+
+        // For 'task' allocation (default), apply EBS-specific options
         final type = opts?.diskType ?: DEFAULT_DISK_TYPE
         // Validate disk type is supported
         if (!SUPPORTED_DISK_TYPES.contains(type)) {
@@ -128,10 +144,11 @@ class MapperUtil {
         final iops = opts?.diskIops
         final encrypted = opts?.diskEncrypted ?: false
 
-        def req = new DiskRequirement()
-            .sizeGiB(diskSize.toGiga() as Integer)
-            .type(type)
-            .encrypted(encrypted)
+        final DiskRequirement req = new DiskRequirement()
+        req.sizeGiB(diskSize.toGiga() as Integer)
+        req.volumeType(type)
+        req.encrypted(encrypted)
+        req.allocation(allocation)
         // Only set throughput for gp3 volumes
         if (type == DEFAULT_DISK_TYPE) {
             req.throughputMiBps(throughput)
@@ -141,6 +158,44 @@ class MapperUtil {
             req.iops(iops)
         }
         return req
+    }
+
+    /**
+     * Validates that no EBS-specific options are set when using 'node' allocation.
+     * Node allocation uses instance storage, not EBS volumes.
+     *
+     * @param opts the machine requirement options
+     * @throws IllegalArgumentException if EBS-specific options are set with node allocation
+     */
+    private static void validateNodeAllocationOpts(MachineRequirementOpts opts) {
+        if (!opts)
+            return
+        final List<String> invalidOpts = []
+        if (opts.diskType)
+            invalidOpts.add('diskType')
+        if (opts.diskThroughputMiBps)
+            invalidOpts.add('diskThroughputMiBps')
+        if (opts.diskIops)
+            invalidOpts.add('diskIops')
+        if (opts.diskEncrypted)
+            invalidOpts.add('diskEncrypted')
+
+        if (invalidOpts) {
+            throw new IllegalArgumentException(
+                "The following options are not valid with 'node' disk allocation: ${invalidOpts.join(', ')}. " +
+                "Node allocation uses instance storage; only disk size is applicable."
+            )
+        }
+    }
+
+    /**
+     * Maps a disk allocation string to DiskAllocation enum.
+     *
+     * @param value the disk allocation string (task, node)
+     * @return the DiskAllocation enum value, or null if value is null
+     */
+    static DiskAllocation toDiskAllocation(String value) {
+        value ? DiskAllocation.fromValue(value) : null
     }
 
     /**
