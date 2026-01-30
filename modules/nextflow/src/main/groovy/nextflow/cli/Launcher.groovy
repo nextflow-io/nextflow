@@ -111,7 +111,8 @@ class Launcher {
                 new CmdPlugin(),
                 new CmdInspect(),
                 new CmdLint(),
-                new CmdLineage()
+                new CmdLineage(),
+                new CmdModule()
         ]
 
         if(SecretsLoader.isEnabled())
@@ -129,6 +130,9 @@ class Launcher {
             jcommander.addCommand(cmd.name, cmd, aliases(cmd))
         }
         jcommander.setProgramName( APP_NAME )
+
+        //Allow unknown options for module command
+        jcommander.getCommands().get(CmdModule.NAME)?.setAcceptUnknownOptions(true)
     }
 
     private static final String[] EMPTY = new String[0]
@@ -154,6 +158,9 @@ class Launcher {
         jcommander.parse( normalizedArgs as String[] )
         fullVersion = '-version' in normalizedArgs
         command = allCommands.find { it.name == jcommander.getParsedCommand()  }
+        //Attach unknown options to command in case of needed
+        final unknownOptions = jcommander.commands.get(jcommander.getParsedCommand()).getUnknownOptions()
+        command.setUnknownOptions(unknownOptions)
         // whether is running a daemon
         daemonMode = command instanceof CmdNode
         // set the log file name
