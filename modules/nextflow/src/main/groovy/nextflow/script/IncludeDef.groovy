@@ -27,8 +27,13 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.NF
 import nextflow.Session
+import nextflow.config.ModulesConfig
+import nextflow.config.RegistryConfig
 import nextflow.exception.IllegalModulePath
 import nextflow.exception.ScriptCompilationException
+import nextflow.module.ModuleReference
+import nextflow.module.ModuleResolver
+import nextflow.pipeline.PipelineSpec
 import nextflow.plugin.Plugins
 import nextflow.plugin.extension.PluginExtensionProvider
 import nextflow.script.parser.v1.ScriptLoaderV1
@@ -162,7 +167,9 @@ class IncludeDef {
     @PackageScope
     Path resolveModulePath(include) {
         assert include
-
+        if( include.toString().startsWith('@') ) {
+            return resolveRemoteModulePath(include.toString())
+        }
         final result = include as Path
         if( result.isAbsolute() ) {
             if( result.scheme == 'file' ) return result
@@ -172,6 +179,50 @@ class IncludeDef {
         return getOwnerPath().resolveSibling(include.toString())
     }
 
+    @PackageScope
+    Path resolveRemoteModulePath(String moduleName) {
+        //TODO: Decide final location of modules currently in nextflow_spec.json.
+        // Alternative: Use nextflow config. It requires to implement nextflow.config updater features
+        // def modulesConfig = session.config.navigate('modules') as ModulesConfig
+        final modulesConfig = getModuleConfig()
+        final registryConfig = session.config.navigate('registry') as RegistryConfig
+        // Create module resolver
+        def resolver = new ModuleResolver(session.baseDir, modulesConfig, registryConfig)
+        try {
+            log.debug "Resolving remote module: ${moduleName}"
+
+            // Parse module reference
+            def reference = ModuleReference.parse(moduleName)
+
+            // Resolve module (will auto-install if missing or version mismatch)
+            def mainFile = resolver.resolve(reference, null,true)
+
+            log.info "Module ${reference.nameWithoutPrefix} resolved to ${mainFile}"
+            return mainFile
+        } catch (Exception e) {
+            throw new IllegalModulePath(
+                "Failed to resolve remote module ${moduleName}: ${e.message}",
+                e
+            )
+        }
+    }
+
+    @Memoized
+    private ModulesConfig getModuleConfig(){
+        def specFile = new PipelineSpec(session.getBaseDir())
+
+        if( !specFile.exists() ) {
+            log.warn1( "Remote module specified and 'nextflow_spec.json' not found." )
+            return new ModulesConfig()
+        }
+
+        def modules = specFile.getModules()
+        if (!modules || modules.isEmpty()) {
+            log.warn1("Remote module specified and no modules configured in 'nextflow_spec.json'")
+            return new ModulesConfig()
+        }
+        return new ModulesConfig(modules)
+    }
     @PackageScope
     Path realModulePath(include) {
         def module = resolveModulePath(include)
@@ -206,8 +257,8 @@ class IncludeDef {
             throw new IllegalModulePath("Remote modules are not allowed -- Offending module: ${path.toUriString()}")
 
         final str = path.toString()
-        if( !str.startsWith('/') && !str.startsWith('./') && !str.startsWith('../') && !str.startsWith('plugin/') )
-            throw new IllegalModulePath("Module path must start with / or ./ prefix -- Offending module: $str")
+        if( !str.startsWith('/') && !str.startsWith('./') && !str.startsWith('../') && !str.startsWith('plugin/') && !str.startsWith('@') )
+            throw new IllegalModulePath("Module path must start with '/' , './' or '@' prefix -- Offending module: $str")
 
     }
 

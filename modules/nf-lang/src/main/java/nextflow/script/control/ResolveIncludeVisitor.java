@@ -83,7 +83,19 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
             setPlaceholderTargets(node);
             return;
         }
-        var includeUri = getIncludeUri(uri, source);
+
+        var parent = Path.of(uri).getParent();
+
+        // Resolve remote modules paths
+        if( source.startsWith("@") ) {
+            parent = Path.of("modules");
+            if (!Files.exists(parent.resolve(source))) {
+                addError("Module '" + source + "' not locally found at 'modules' folder - use 'nextflow install' to download module files", node);
+                return;
+            }
+        }
+
+        var includeUri = getIncludeUri(parent, source);
         if( !isIncludeStale(node, includeUri) )
             return;
         changed = true;
@@ -121,8 +133,8 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
         }
     }
 
-    private static URI getIncludeUri(URI uri, String source) {
-        Path includePath = Path.of(uri).getParent().resolve(source);
+    private static URI getIncludeUri(Path parent, String source) {
+        Path includePath = parent.resolve(source);
         if( Files.isDirectory(includePath) )
             includePath = includePath.resolve("main.nf");
         else if( !source.endsWith(".nf") )
