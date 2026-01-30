@@ -475,4 +475,187 @@ class LinCommandImplTest extends Specification{
         err.message == "Checksum of '${outputFile}' does not match with lineage metadata"
     }
 
+    def 'should validate equivalent workflow runs'() {
+        given:
+        def encoder = new LinEncoder()
+        // Create two workflow runs with same structure but different ephemeral fields
+        def wf1 = new Workflow([new DataPath("/path/to/main.nf")], "test-wf", "abc123")
+        def wf2 = new Workflow([new DataPath("/path/to/main.nf")], "test-wf", "abc123")
+        def run1 = new WorkflowRun(wf1, "session-1", "crazy_einstein", 
+            [new Parameter("String", "input", "test.fastq")])
+        def run2 = new WorkflowRun(wf2, "session-2", "angry_turing",
+            [new Parameter("String", "input", "test.fastq")])
+        
+        // Store both runs
+        def lid1 = storeLocation.resolve("wf1/.data.json")
+        def lid2 = storeLocation.resolve("wf2/.data.json")
+        Files.createDirectories(lid1.parent)
+        Files.createDirectories(lid2.parent)
+        lid1.text = encoder.encode(run1)
+        lid2.text = encoder.encode(run2)
+
+        when:
+        new LinCommandImpl().validate(configMap, ["lid://wf1", "--against", "lid://wf2"])
+        def stdout = capture
+            .toString()
+            .readLines()
+            .findResults { line -> !line.contains('DEBUG') ? line : null }
+            .findResults { line -> !line.contains('INFO') ? line : null }
+            .findResults { line -> !line.contains('plugin') ? line : null }
+
+        then:
+        stdout.any { it.contains("semantically equivalent") }
+    }
+
+    def 'should detect differences between workflow runs'() {
+        given:
+        def encoder = new LinEncoder()
+        // Create two workflow runs with different params
+        def wf1 = new Workflow([new DataPath("/path/to/main.nf")], "test-wf", "abc123")
+        def wf2 = new Workflow([new DataPath("/path/to/main.nf")], "test-wf", "abc123")
+        def run1 = new WorkflowRun(wf1, "session-1", "run1",
+            [new Parameter("String", "input", "test.fastq")])
+        def run2 = new WorkflowRun(wf2, "session-2", "run2",
+            [new Parameter("String", "input", "different.fastq")])  // Different param value
+        
+        def lid1 = storeLocation.resolve("wf1/.data.json")
+        def lid2 = storeLocation.resolve("wf2/.data.json")
+        Files.createDirectories(lid1.parent)
+        Files.createDirectories(lid2.parent)
+        lid1.text = encoder.encode(run1)
+        lid2.text = encoder.encode(run2)
+
+        when:
+        new LinCommandImpl().validate(configMap, ["lid://wf1", "--against", "lid://wf2"])
+
+        then:
+        def err = thrown(AbortOperationException)
+        err.message.contains("not equivalent")
+    }
+
+    def 'should validate with outputs'() {
+        given:
+        def encoder = new LinEncoder()
+        def time = OffsetDateTime.ofInstant(Instant.ofEpochMilli(123456789), ZoneOffset.UTC)
+        def time2 = OffsetDateTime.ofInstant(Instant.ofEpochMilli(987654321), ZoneOffset.UTC)
+        
+        // Create workflow runs
+        def wf = new Workflow([new DataPath("/path/to/main.nf")], "test-wf", "abc123")
+        def run1 = new WorkflowRun(wf, "session-1", "run1", [])
+        def run2 = new WorkflowRun(wf, "session-2", "run2", [])
+        
+        // Create outputs with same checksums but different timestamps
+        def out1 = new FileOutput("/results/out.txt", new Checksum("hash123", "nextflow", "standard"),
+            "lid://wf1/out.txt", "lid://wf1", null, 1024, time, time, null)
+        def out2 = new FileOutput("/results/out.txt", new Checksum("hash123", "nextflow", "standard"),
+            "lid://wf2/out.txt", "lid://wf2", null, 1024, time2, time2, null)
+        
+        // Store runs and outputs
+        def lid1 = storeLocation.resolve("wf1/.data.json")
+        def lid1out = storeLocation.resolve("wf1/out.txt/.data.json")
+        def lid2 = storeLocation.resolve("wf2/.data.json")
+        def lid2out = storeLocation.resolve("wf2/out.txt/.data.json")
+        Files.createDirectories(lid1out.parent)
+        Files.createDirectories(lid2out.parent)
+        lid1.text = encoder.encode(run1)
+        lid1out.text = encoder.encode(out1)
+        lid2.text = encoder.encode(run2)
+        lid2out.text = encoder.encode(out2)
+
+        when:
+        new LinCommandImpl().validate(configMap, ["lid://wf1", "--against", "lid://wf2"])
+        def stdout = capture
+            .toString()
+            .readLines()
+            .findResults { line -> !line.contains('DEBUG') ? line : null }
+            .findResults { line -> !line.contains('INFO') ? line : null }
+            .findResults { line -> !line.contains('plugin') ? line : null }
+
+        then:
+        // Should be equivalent because timestamps are ignored
+        stdout.any { it.contains("semantically equivalent") }
+    }
+
+    def 'should detect output checksum differences'() {
+        given:
+        def encoder = new LinEncoder()
+        def time = OffsetDateTime.ofInstant(Instant.ofEpochMilli(123456789), ZoneOffset.UTC)
+        
+        def wf = new Workflow([new DataPath("/path/to/main.nf")], "test-wf", "abc123")
+        def run1 = new WorkflowRun(wf, "session-1", "run1", [])
+        def run2 = new WorkflowRun(wf, "session-2", "run2", [])
+        
+        // Outputs with different checksums
+        def out1 = new FileOutput("/results/out.txt", new Checksum("hash123", "nextflow", "standard"),
+            "lid://wf1/out.txt", "lid://wf1", null, 1024, time, time, null)
+        def out2 = new FileOutput("/results/out.txt", new Checksum("different", "nextflow", "standard"),
+            "lid://wf2/out.txt", "lid://wf2", null, 1024, time, time, null)
+        
+        def lid1 = storeLocation.resolve("wf1/.data.json")
+        def lid1out = storeLocation.resolve("wf1/out.txt/.data.json")
+        def lid2 = storeLocation.resolve("wf2/.data.json")
+        def lid2out = storeLocation.resolve("wf2/out.txt/.data.json")
+        Files.createDirectories(lid1out.parent)
+        Files.createDirectories(lid2out.parent)
+        lid1.text = encoder.encode(run1)
+        lid1out.text = encoder.encode(out1)
+        lid2.text = encoder.encode(run2)
+        lid2out.text = encoder.encode(out2)
+
+        when:
+        new LinCommandImpl().validate(configMap, ["lid://wf1", "--against", "lid://wf2"])
+
+        then:
+        def err = thrown(AbortOperationException)
+        err.message.contains("not equivalent")
+    }
+
+    def 'should error if workflow not found'() {
+        when:
+        new LinCommandImpl().validate(configMap, ["lid://nonexistent", "--against", "lid://also-missing"])
+
+        then:
+        def err = thrown(AbortOperationException)
+        err.message.contains("not found")
+    }
+
+    def 'should error without --against argument'() {
+        when:
+        new LinCommandImpl().validate(configMap, ["lid://wf1"])
+
+        then:
+        def err = thrown(AbortOperationException)
+        err.message.contains("--against")
+    }
+
+    def 'should support --ignore-fields option'() {
+        given:
+        def encoder = new LinEncoder()
+        // Workflow runs with different scripts (normally would fail)
+        def wf1 = new Workflow([new DataPath("/path/to/main.nf")], "test-wf", "commit1")
+        def wf2 = new Workflow([new DataPath("/path/to/main.nf")], "test-wf", "commit2")  // Different commitId
+        def run1 = new WorkflowRun(wf1, "session-1", "run1", [])
+        def run2 = new WorkflowRun(wf2, "session-2", "run2", [])
+        
+        def lid1 = storeLocation.resolve("wf1/.data.json")
+        def lid2 = storeLocation.resolve("wf2/.data.json")
+        Files.createDirectories(lid1.parent)
+        Files.createDirectories(lid2.parent)
+        lid1.text = encoder.encode(run1)
+        lid2.text = encoder.encode(run2)
+
+        when:
+        new LinCommandImpl().validate(configMap, 
+            ["lid://wf1", "--against", "lid://wf2", "--ignore-fields", "commitId"])
+        def stdout = capture
+            .toString()
+            .readLines()
+            .findResults { line -> !line.contains('DEBUG') ? line : null }
+            .findResults { line -> !line.contains('INFO') ? line : null }
+            .findResults { line -> !line.contains('plugin') ? line : null }
+
+        then:
+        stdout.any { it.contains("semantically equivalent") }
+    }
+
 }
