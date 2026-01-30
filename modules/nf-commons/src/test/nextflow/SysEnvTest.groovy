@@ -120,4 +120,30 @@ class SysEnvTest extends Specification {
         [FOO:'0']       | 1         | 0
         [FOO:'100']     | 1         | 100
     }
+
+    @Unroll
+    def 'should detect agent mode' () {
+        given:
+        SysEnv.push(STATE)
+
+        expect:
+        SysEnv.isAgentMode() == EXPECTED
+
+        cleanup:
+        SysEnv.pop()
+
+        where:
+        STATE                       | EXPECTED
+        [:]                         | false
+        [NXF_AGENT:'true']          | true
+        [NXF_AGENT:'false']         | false
+        [AGENT:'true']              | true
+        [CLAUDECODE:'true']         | true
+        // Multiple can be set, any true triggers agent mode
+        [NXF_AGENT:'true', AGENT:'false']  | true
+        // Support '1' as truthy value (common Unix convention)
+        [NXF_AGENT:'1']             | true
+        [AGENT:'1']                 | true
+        [CLAUDECODE:'1']            | true
+    }
 }

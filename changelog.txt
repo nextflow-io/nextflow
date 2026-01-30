@@ -1,5 +1,8 @@
 NEXTFLOW CHANGE-LOG
 ===================
+25.13.0-edge - UNRELEASED
+- Add AI agent-friendly output mode via NXF_AGENT/AGENT/CLAUDECODE env vars [NEW]
+
 25.12.0-edge - 19 Dec 2025
 - Add `listDirectory()` to Path type and deprecate `listFiles()` (#6581) [56f0f007]
 - Add default maxSpotAttempts for fusion snapshots in Google Batch (#6652) [458ef97a]
