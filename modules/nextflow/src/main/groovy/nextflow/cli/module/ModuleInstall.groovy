@@ -27,7 +27,7 @@ import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import nextflow.module.ModuleReference
 import nextflow.module.ModuleResolver
-import nextflow.util.NextflowSpecFile
+import nextflow.pipeline.PipelineSpec
 
 import java.nio.file.Paths
 
@@ -76,7 +76,7 @@ class ModuleInstall extends CmdBase {
         //TODO: Decide final location of modules currently in nextflow_spec.json.
         // Alternative: Use nextflow config. It requires to implement nextflow.config updater features
         // def modulesConfig = config.navigate('modules') as ModulesConfig
-        def specFile = new NextflowSpecFile(baseDir)
+        def specFile = new PipelineSpec(baseDir)
         def modulesConfig = new ModulesConfig(specFile.getModules())
 
         // Create resolver and install

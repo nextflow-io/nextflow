@@ -20,15 +20,14 @@ import nextflow.exception.AbortOperationException
 import spock.lang.Specification
 import spock.lang.TempDir
 
-import java.nio.file.Files
 import java.nio.file.Path
 
 /**
- * Tests for ModuleManifest
+ * Tests for ModuleSpec
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ModuleManifestTest extends Specification {
+class ModuleSpecTest extends Specification {
 
     @TempDir
     Path tempDir
@@ -51,7 +50,7 @@ requires:
 '''
 
         when:
-        def manifest = ModuleManifest.load(metaYaml)
+        def manifest = ModuleSpec.load(metaYaml)
 
         then:
         manifest.name == 'nf-core/fastqc'
@@ -68,7 +67,7 @@ requires:
         def metaYaml = tempDir.resolve('meta.yaml')
 
         when:
-        ModuleManifest.load(metaYaml)
+        ModuleSpec.load(metaYaml)
 
         then:
         thrown(AbortOperationException)
@@ -76,7 +75,7 @@ requires:
 
     def 'should validate complete manifest' () {
         given:
-        def manifest = new ModuleManifest(
+        def manifest = new ModuleSpec(
             name: 'nf-core/fastqc',
             version: '1.0.0',
             description: 'FastQC quality control',
@@ -93,7 +92,7 @@ requires:
 
     def 'should detect missing required fields' () {
         given:
-        def manifest = new ModuleManifest(
+        def manifest = new ModuleSpec(
             name: 'nf-core/fastqc'
             // missing version, description, license
         )
@@ -111,7 +110,7 @@ requires:
 
     def 'should validate version format' () {
         given:
-        def manifest = new ModuleManifest(
+        def manifest = new ModuleSpec(
             name: 'nf-core/fastqc',
             version: version,
             description: 'Test',
@@ -136,7 +135,7 @@ requires:
 
     def 'should validate module name format' () {
         given:
-        def manifest = new ModuleManifest(
+        def manifest = new ModuleSpec(
             name: name,
             version: '1.0.0',
             description: 'Test',

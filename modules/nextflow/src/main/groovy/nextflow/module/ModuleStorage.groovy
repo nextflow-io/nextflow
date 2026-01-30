@@ -106,7 +106,7 @@ class ModuleStorage {
 
         // Load checksum if available
         installed.expectedChecksum = ModuleChecksum.load(moduleDir)
-        installed.installedVersion = ModuleManifest.load(installed.manifestFile).version
+        installed.installedVersion = ModuleSpec.load(installed.manifestFile).version
         return installed
     }
 
