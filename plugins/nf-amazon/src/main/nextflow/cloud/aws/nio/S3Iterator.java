@@ -17,6 +17,8 @@
 
 package nextflow.cloud.aws.nio;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -70,7 +72,11 @@ public class S3Iterator implements Iterator<Path> {
             S3Client s3Client = s3FileSystem.getClient();
 
             // This automatically handles pagination
-            it = s3Client.listObjectsV2Paginator(request).stream().flatMap(r -> parseObjectListing(r).stream()).iterator();
+            try {
+                it = s3Client.listObjectsV2Paginator(request).stream().flatMap(r -> parseObjectListing(r).stream()).iterator();
+            }catch( IOException e ){
+                throw new UncheckedIOException(e);
+            }
         }
 
         return it;
