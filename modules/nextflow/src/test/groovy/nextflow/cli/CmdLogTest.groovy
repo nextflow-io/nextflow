@@ -17,6 +17,7 @@
 package nextflow.cli
 import java.nio.file.Files
 
+import nextflow.SysEnv
 import nextflow.cache.CacheDB
 import nextflow.cache.DefaultCacheStore
 import nextflow.executor.CachedTaskHandler
@@ -40,8 +41,13 @@ import static test.TestHelper.filterLogNoise
  */
 class CmdLogTest extends Specification {
 
+    def setup() {
+        SysEnv.push([:])
+    }
+
     def cleanup() {
         Plugins.stop()
+        SysEnv.pop()
     }
     
     /*
