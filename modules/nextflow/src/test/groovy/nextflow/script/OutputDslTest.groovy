@@ -1,10 +1,12 @@
 package nextflow.script
 
 import java.nio.file.Files
+import java.nio.file.Path
 
 import nextflow.Channel
 import nextflow.Session
 import nextflow.SysEnv
+import nextflow.exception.ScriptRuntimeException
 import nextflow.trace.event.FilePublishEvent
 import nextflow.trace.event.WorkflowOutputEvent
 import nextflow.trace.event.WorkflowPublishEvent
@@ -206,6 +208,106 @@ class OutputDslTest extends Specification {
             path: 'path',
             sep: ',',
         ]
+    }
+
+    def 'should report error for invalid path directive' () {
+        when:
+        def session = new Session(outputDir: Path.of('results'))
+
+        session.outputs.put('foo', Channel.of(1, 2, 3))
+
+        def dsl = new OutputDsl()
+        dsl.declare('foo') {
+            path { v -> 42 }
+        }
+        dsl.apply(session)
+        session.fireDataflowNetwork()
+        dsl.getOutput()
+
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message.contains "Invalid `path` directive for workflow output 'foo'"
+        e.message.contains "expected a string or publish statements, but received: 42 [Integer]"
+    }
+
+    def 'should report error for invalid publish target' () {
+        when:
+        def session = new Session(outputDir: Path.of('results'))
+        def file = Path.of('output.txt')
+
+        session.outputs.put('foo', Channel.of([file, file, file]))
+
+        def dsl = new OutputDsl()
+        dsl.declare('foo') {
+            path { files -> publish(files, 'foo.txt') }
+        }
+        dsl.apply(session)
+        session.fireDataflowNetwork()
+        dsl.getOutput()
+
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message.contains "Invalid publish target 'foo.txt' for workflow output 'foo'"
+    }
+
+    def 'should report error for invalid publish source' () {
+        when:
+        def session = new Session(outputDir: Path.of('results'))
+
+        session.outputs.put('foo', Channel.of(42))
+
+        def dsl = new OutputDsl()
+        dsl.declare('foo') {
+            path { v -> publish(v, 'foo') }
+        }
+        dsl.apply(session)
+        session.fireDataflowNetwork()
+        dsl.getOutput()
+
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message.contains "Invalid publish source for workflow output 'foo'"
+        e.message.contains "expected a file or collection of files, but received: 42 [Integer]"
+    }
+
+    def 'should report error for invalid index file extension' () {
+        when:
+        def session = new Session(outputDir: Path.of('results'))
+
+        session.outputs.put('foo', Channel.empty())
+
+        def dsl = new OutputDsl()
+        dsl.declare('foo') {
+            index {
+                path 'index.txt'
+            }
+        }
+        dsl.apply(session)
+        session.fireDataflowNetwork()
+        dsl.getOutput()
+
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message.contains "Invalid extension 'txt' for index file 'index.txt'"
+    }
+
+    def 'should report error for invalid published value' () {
+        when:
+        def session = new Session(outputDir: Path.of('results'))
+
+        session.outputs.put('foo', Channel.of(42))
+
+        def dsl = new OutputDsl()
+        dsl.declare('foo') {
+        }
+        dsl.apply(session)
+        session.fireDataflowNetwork()
+        dsl.getOutput()
+
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message.contains "Invalid value for workflow output 'foo'"
+        e.message.contains "expected a list, map, or file, but received: 42 [Integer]"
     }
 
 }

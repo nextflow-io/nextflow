@@ -325,4 +325,36 @@ class ScriptLoaderV2Test extends Dsl2Spec {
         parser.getResult().toString() == 'TUESDAY'
     }
 
+    def 'should report error for invalid publish statements in output block' () {
+        given:
+        def session = new Session()
+        def parser = new ScriptLoaderV2(session)
+
+        def TEXT = '''
+            workflow {
+                main:
+                ch = channel.empty()
+
+                publish:
+                samples = ch
+            }
+
+            output {
+                samples {
+                    path { v ->
+                        if( true ) return 42
+                        v >> 'foo'
+                    }
+                }
+            }
+            '''
+
+        when:
+        parser.parse(TEXT)
+        parser.runScript()
+        then:
+        def e = thrown(ScriptCompilationException)
+        e.cause.message.contains 'Publish statements cannot be mixed with other statements in a dynamic publish path'
+    }
+
 }
