@@ -179,7 +179,10 @@ public class ScriptToGroovyHelper {
                     k++;
                 builder.append( line.substring(0, k) );
             }
-
+            // Skip if it last line and only contains the closing closure char "}" to keep coherence with V1 parser.
+            // https://github.com/nextflow-io/nextflow/issues/6788
+            if( i == last && line.trim().equals("}") )
+                continue;
             var begin = (i == first) ? colx - 1 : 0;
             var end = (i == last) ? colz - 1 : line.length();
             builder.append( line.substring(begin, end) ).append('\n');
