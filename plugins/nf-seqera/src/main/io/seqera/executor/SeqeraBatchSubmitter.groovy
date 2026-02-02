@@ -17,18 +17,22 @@
 
 package io.seqera.executor
 
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 
 import groovy.transform.CompileStatic
 import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
+import io.seqera.sched.api.schema.v1a1.InputFilesMetrics
 import io.seqera.sched.api.schema.v1a1.Task
 import io.seqera.sched.client.SchedClient
 import nextflow.SysEnv
 import nextflow.util.Duration
+import nextflow.util.ThreadPoolBuilder
 import nextflow.util.Threads
-
 /**
  * Batches task submissions to the Seqera scheduler API.
  *
@@ -47,13 +51,17 @@ class SeqeraBatchSubmitter {
     /** Keep-alive interval - send empty submission to maintain session */
     static final Duration KEEP_ALIVE_INTERVAL = SysEnv.get('NXF_SEQERA_KEEP_ALIVE_INTERVAL', '60 sec') as Duration
 
+    /** Timeout for waiting on metrics computation */
+    static final Duration METRICS_TIMEOUT = SysEnv.get('NXF_SEQERA_METRICS_TIMEOUT', '30 sec') as Duration
+
     /**
-     * Holds a task handler and its prepared Task object pending submission
+     * Holds a task handler, its prepared Task object, and async metrics computation
      */
     @TupleConstructor
     static class PendingTask {
         SeqeraTaskHandler handler
         Task task
+        CompletableFuture<InputFilesMetrics> metricsFuture
     }
 
     private final SchedClient client
@@ -64,6 +72,9 @@ class SeqeraBatchSubmitter {
     private final LinkedBlockingQueue<PendingTask> pendingQueue = new LinkedBlockingQueue<>()
     private Thread sender
     private volatile boolean completed = false
+
+    /** Executor pool for async input file metrics computation */
+    private final ExecutorService metricsExecutor
 
     SeqeraBatchSubmitter(SchedClient client, String sessionId) {
         this(client, sessionId, REQUEST_INTERVAL, KEEP_ALIVE_INTERVAL)
@@ -79,6 +90,14 @@ class SeqeraBatchSubmitter {
         this.requestInterval = requestInterval
         this.keepAliveInterval = keepAliveInterval
         this.onError = onError
+        // Create a thread pool for metrics computation
+        this.metricsExecutor = new ThreadPoolBuilder()
+                .withName('seqera-metrics')
+                .withMinSize(0)
+                .withMaxSize(10)
+                .withKeepAliveTime(60_000L)
+                .withAllowCoreThreadTimeout(true)
+                .build()
     }
 
     /**
@@ -91,12 +110,21 @@ class SeqeraBatchSubmitter {
 
     /**
      * Enqueue a task for batch submission.
+     * Starts async computation of input files metrics immediately.
      */
     void enqueue(SeqeraTaskHandler handler, Task task) {
         if (completed) {
             throw new IllegalStateException("Batch submitter has been shutdown")
         }
-        pendingQueue.add(new PendingTask(handler, task))
+
+        // Start async metrics computation
+        final taskRun = handler.task
+        final metricsFuture = CompletableFuture.supplyAsync(
+            ()-> InputFilesComputer.compute(taskRun),
+            metricsExecutor
+        )
+
+        pendingQueue.add(new PendingTask(handler, task, metricsFuture))
     }
 
     /**
@@ -107,6 +135,17 @@ class SeqeraBatchSubmitter {
         completed = true
         if (sender) {
             sender.join()
+        }
+        // Shutdown metrics executor
+        metricsExecutor.shutdown()
+        try {
+            if (!metricsExecutor.awaitTermination(30, TimeUnit.SECONDS)) {
+                metricsExecutor.shutdownNow()
+            }
+        }
+        catch (InterruptedException e) {
+            metricsExecutor.shutdownNow()
+            Thread.currentThread().interrupt()
         }
         log.debug "[SEQERA] Batch submitter shutdown complete"
     }
@@ -213,6 +252,9 @@ class SeqeraBatchSubmitter {
         log.debug "[SEQERA] Submitting batch of ${batch.size()} tasks"
 
         try {
+            // Resolve async metrics for all tasks in batch
+            resolveMetrics(batch)
+
             // Extract Task objects for API call
             final List<Task> tasks = batch.collect { it.task }
 
@@ -244,6 +286,30 @@ class SeqeraBatchSubmitter {
                 } catch (Exception ex) {
                     log.warn "[SEQERA] Error handling batch failure for task", ex
                 }
+            }
+        }
+    }
+
+    /**
+     * Wait for and attach metrics to all tasks in the batch.
+     * Uses timeout to avoid blocking indefinitely on slow computations.
+     */
+    private void resolveMetrics(List<PendingTask> batch) {
+        final timeout = METRICS_TIMEOUT.millis
+
+        for (PendingTask pending : batch) {
+            try {
+                final metrics = pending.metricsFuture.get(timeout, TimeUnit.MILLISECONDS)
+                if (metrics) {
+                    pending.task.inputFilesMetrics(metrics)
+                }
+            }
+            catch (TimeoutException e) {
+                log.warn "[SEQERA] Timeout computing input files metrics for task: ${pending.handler.task.name}"
+                pending.metricsFuture.cancel(true)
+            }
+            catch (Exception e) {
+                log.warn "[SEQERA] Failed to compute input files metrics for task: ${pending.handler.task.name} - ${e.message}"
             }
         }
     }
