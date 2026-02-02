@@ -403,7 +403,7 @@ variableDeclaration
     ;
 
 nameTypePairs
-    :   LPAREN nameTypePair (COMMA nameTypePair)+ rparen
+    :   LPAREN nls nameTypePair (COMMA nls nameTypePair)+ nls rparen
     ;
 
 nameTypePair
@@ -416,7 +416,7 @@ multipleAssignmentStatement
     ;
 
 variableNames
-    :   LPAREN identifier (COMMA identifier)+ rparen
+    :   LPAREN nls identifier (COMMA nls identifier)+ nls rparen
     ;
 
 assignmentStatement
