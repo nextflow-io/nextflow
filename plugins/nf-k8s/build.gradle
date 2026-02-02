@@ -56,8 +56,8 @@ dependencies {
     api 'org.bouncycastle:bcpkix-jdk18on:1.79'
 
     testImplementation(testFixtures(project(":nextflow")))
-    testImplementation "org.apache.groovy:groovy:4.0.29"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.29"
+    testImplementation "org.apache.groovy:groovy:4.0.30"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.30"
 }
 
 test {

@@ -385,9 +385,14 @@ class ScriptFormatterTest extends Specification {
             '''\
             def x=42
             def(x,y)=tuple(1,2)
+            def(
+            x,
+            y
+            )=tuple(1,2)
             ''',
             '''\
             def x = 42
+            def (x, y) = tuple(1, 2)
             def (x, y) = tuple(1, 2)
             '''
         )
@@ -419,11 +424,16 @@ class ScriptFormatterTest extends Specification {
             list[0]='first'
             map.key='value'
             (x,y)=tuple(1,2)
+            (
+            x,
+            y
+            )=tuple(1,2)
             ''',
             '''\
             v = 42
             list[0] = 'first'
             map.key = 'value'
+            (x, y) = tuple(1, 2)
             (x, y) = tuple(1, 2)
             '''
         )
