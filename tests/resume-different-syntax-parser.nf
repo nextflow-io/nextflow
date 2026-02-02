@@ -15,13 +15,19 @@
  * limitations under the License.
  */
 
-process foo {
+process hello {
+    input:
+    val greeting
+
+    output:
+    stdout
+
     script:
     """
-    echo ciao
+    echo '${greeting}'
     """
 }
 
 workflow {
-  foo()
+    hello( 'ciao' ).view()
 }
