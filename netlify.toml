@@ -24,20 +24,69 @@
 # Proxy redirects to integrate with other documentation sites
 # Status 200 creates a proxy/rewrite (appears as one site) instead of a redirect
 
-# Seqera API docs are too large to host / build on netlify on their own.
-# The appropriate ENVVAR is set to disable the API Builds on Netlify for the main docs site. 
+# Platform Cloud docs - hosted on seqera-docs.netlify.app
+[[redirects]]
+  from = "/platform-cloud/*"
+  to = "https://seqera-docs.netlify.app/platform-cloud/:splat"
+  status = 200
+
+# Platform Enterprise docs - hosted on seqera-docs.netlify.app
+[[redirects]]
+  from = "/platform-enterprise/*"
+  to = "https://seqera-docs.netlify.app/platform-enterprise/:splat"
+  status = 200
+
+# MultiQC docs - hosted on seqera-docs.netlify.app
+[[redirects]]
+  from = "/multiqc/*"
+  to = "https://seqera-docs.netlify.app/multiqc/:splat"
+  status = 200
+
+
+# Wave docs - hosted on seqera-docs.netlify.app
+[[redirects]]
+  from = "/wave/*"
+  to = "https://seqera-docs.netlify.app/wave/:splat"
+  status = 200
+
+# Fusion docs - hosted on seqera-docs.netlify.app
+[[redirects]]
+  from = "/fusion/*"
+  to = "https://seqera-docs.netlify.app/fusion/:splat"
+  status = 200
+
+# Changelog docs - hosted on seqera-docs.netlify.app
+[[redirects]]
+  from = "/changelog/*"
+  to = "https://seqera-docs.netlify.app/changelog/:splat"
+  status = 200
+
+# Platform CLI docs - hosted on seqera-docs.netlify.app
+[[redirects]]
+  from = "/platform-cli/*"
+  to = "https://seqera-docs.netlify.app/platform-cli/:splat"
+  status = 200
+
+# Platform API docs - too large to build on main site
 [[redirects]]
   from = "/platform-api/*"
   to = "https://seqera-docs-api.netlify.app/platform-api/:splat"
   status = 200
 
-
-# Redirect missing assets (so that we don't lose CSS on the API docs)
-# NB: Force is not true, so will use local if available
+# Fallback asset redirects for proxied pages
+# Note: These serve as fallback when assets don't exist locally
 [[redirects]]
   from = "/assets/*"
-  to = "https://seqera-docs-api.netlify.app/assets/:splat"
+  to = "https://seqera-docs.netlify.app/assets/:splat"
   status = 200
 
-[headers.values]
+[[redirects]]
+  from = "/img/*"
+  to = "https://seqera-docs.netlify.app/img/:splat"
+  status = 200
+
+# Add noindex header to prevent search engine indexing
+[[headers]]
+  for = "/*"
+  [headers.values]
     X-Robots-Tag = "noindex"
