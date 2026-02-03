@@ -50,6 +50,12 @@ class CmdDrop extends CmdBase {
     @Override
     void run() {
         Plugins.init()
-        new AssetManager(args[0]).drop(revision, force)
+        final manager = new AssetManager(args[0])
+        try {
+            manager.drop(revision, force)
+        }
+        finally {
+            manager.close()
+        }
     }
 }

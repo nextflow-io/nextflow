@@ -76,24 +76,29 @@ class CmdInfo extends CmdBase {
 
         Plugins.init()
         final manager = new AssetManager(args[0])
-        if( manager.isNotInitialized() ) {
-            throw new AbortOperationException("Unknown project `${args[0]}`")
-        }
+        try {
+            if( manager.isNotInitialized() ) {
+                throw new AbortOperationException("Unknown project `${args[0]}`")
+            }
 
-        if( !format || format == 'text' ) {
-            printText(manager,level)
-            return
-        }
+            if( !format || format == 'text' ) {
+                printText(manager,level)
+                return
+            }
 
-        def map = createMap(manager)
-        if( format == 'json' ) {
-            printJson(map)
+            def map = createMap(manager)
+            if( format == 'json' ) {
+                printJson(map)
+            }
+            else if( format == 'yaml' ) {
+                printYaml(map)
+            }
+            else
+                throw new AbortOperationException("Unknown output format: $format");
         }
-        else if( format == 'yaml' ) {
-            printYaml(map)
+        finally {
+            manager.close()
         }
-        else
-            throw new AbortOperationException("Unknown output format: $format");
 
     }
 

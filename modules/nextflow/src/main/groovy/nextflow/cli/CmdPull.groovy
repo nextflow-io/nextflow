@@ -83,8 +83,14 @@ class CmdPull extends CmdBase implements HubOptions {
 
         for( String proj : list ) {
             if( all ) {
-                def branches = new AssetManager(proj).getBranchesAndTags(false).pulled as List<String>
-                branches.each { rev -> pullProjectRevision(proj, rev) }
+                def mgr = new AssetManager(proj)
+                try {
+                    def branches = mgr.getBranchesAndTags(false).pulled as List<String>
+                    branches.each { rev -> pullProjectRevision(proj, rev) }
+                }
+                finally {
+                    mgr.close()
+                }
             } else {
                 pullProjectRevision(proj, revision)
             }
@@ -93,29 +99,33 @@ class CmdPull extends CmdBase implements HubOptions {
 
     private pullProjectRevision(String project, String revision) {
         final manager = new AssetManager(project, this)
-
-        if( manager.isUsingLegacyStrategy() ) {
-            if( migrate ) {
-                log.info "Migrating ${project} revision ${revision} to multi-revision strategy"
-                manager.setStrategyType(AssetManager.RepositoryStrategyType.MULTI_REVISION)
-            } else {
-                log.warn "The local asset for ${project} does not support multi-revision - Pulling with legacy strategy\n" +
-                    "Consider updating the project ${project} using '-migrate' option"
+        try {
+            if( manager.isUsingLegacyStrategy() ) {
+                if( migrate ) {
+                    log.info "Migrating ${project} revision ${revision} to multi-revision strategy"
+                    manager.setStrategyType(AssetManager.RepositoryStrategyType.MULTI_REVISION)
+                } else {
+                    log.warn "The local asset for ${project} does not support multi-revision - Pulling with legacy strategy\n" +
+                        "Consider updating the project ${project} using '-migrate' option"
+                }
             }
+
+            if( revision )
+                manager.setRevision(revision)
+
+            log.info "Checking ${manager.getProjectWithRevision()} ..."
+
+            def result = manager.download(revision, deep)
+            manager.updateModules()
+
+            def scriptFile = manager.getScriptFile()
+            String message = !result ? " done" : " $result"
+            message += " - revision: ${scriptFile.revisionInfo}"
+            log.info message
         }
-
-        if( revision )
-            manager.setRevision(revision)
-
-        log.info "Checking ${manager.getProjectWithRevision()} ..."
-
-        def result = manager.download(revision, deep)
-        manager.updateModules()
-
-        def scriptFile = manager.getScriptFile()
-        String message = !result ? " done" : " $result"
-        message += " - revision: ${scriptFile.revisionInfo}"
-        log.info message
+        finally {
+            manager.close()
+        }
     }
 
 }

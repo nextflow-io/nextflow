@@ -53,24 +53,28 @@ class CmdClone extends CmdBase implements HubOptions {
         // the pipeline name
         String pipeline = args[0]
         final manager = new AssetManager(pipeline, this)
+        try {
+            // the target directory is the second parameter
+            // otherwise default the current pipeline name
+            def target = new File(args.size()> 1 ? args[1] : manager.getBaseName())
+            if( target.exists() ) {
+                if( target.isFile() )
+                    throw new AbortOperationException("A file with the same name already exists: $target")
+                if( !target.empty() )
+                    throw new AbortOperationException("Clone target directory must be empty: $target")
+            }
+            else if( !target.mkdirs() ) {
+                throw new AbortOperationException("Cannot create clone target directory: $target")
+            }
 
-        // the target directory is the second parameter
-        // otherwise default the current pipeline name
-        def target = new File(args.size()> 1 ? args[1] : manager.getBaseName())
-        if( target.exists() ) {
-            if( target.isFile() )
-                throw new AbortOperationException("A file with the same name already exists: $target")
-            if( !target.empty() )
-                throw new AbortOperationException("Clone target directory must be empty: $target")
+            manager.checkValidRemoteRepo()
+            print "Cloning ${manager.getProjectWithRevision()} ..."
+            manager.clone(target, revision, deep)
+            print "\r"
+            println "${manager.getProjectWithRevision()} cloned to: $target"
         }
-        else if( !target.mkdirs() ) {
-            throw new AbortOperationException("Cannot create clone target directory: $target")
+        finally {
+            manager.close()
         }
-
-        manager.checkValidRemoteRepo()
-        print "Cloning ${manager.getProjectWithRevision()} ..."
-        manager.clone(target, revision, deep)
-        print "\r"
-        println "${manager.getProjectWithRevision()} cloned to: $target"
     }
 }
