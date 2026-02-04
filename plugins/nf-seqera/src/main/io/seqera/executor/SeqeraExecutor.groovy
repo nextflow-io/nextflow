@@ -85,8 +85,9 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
 
     protected void createSession() {
         final machineReq = MapperUtil.toMachineRequirement(seqeraConfig.machineRequirement)
-        log.debug "[SEQERA] Creating session for workflow in region: ${seqeraConfig.region}, runName: ${session.runName}, machineRequirement: ${machineReq}"
-        final response = client.createSession(seqeraConfig.region, session.runName, machineReq)
+        final labels = seqeraConfig.labels
+        log.debug "[SEQERA] Creating session for workflow in region: ${seqeraConfig.region}, runName: ${session.runName}, machineRequirement: ${machineReq}, labels: ${labels}"
+        final response = client.createSession(seqeraConfig.region, session.runName, machineReq, labels)
         this.sessionId = response.getSessionId()
         log.debug "[SEQERA] Session created id: ${sessionId}"
         // Initialize and start batch submitter with error callback to abort session on fatal errors

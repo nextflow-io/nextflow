@@ -67,6 +67,13 @@ class SeqeraConfig implements ConfigScope {
     """)
     final MachineRequirementOpts machineRequirement
 
+    @ConfigOption
+    @Description("""
+        Custom labels to apply to AWS resources for cost tracking and resource organization.
+        Labels are propagated to ECS tasks, capacity providers, and EC2 instances.
+    """)
+    final Map<String, String> labels
+
     /* required by config scope -- do not remove */
     SeqeraConfig() {}
 
@@ -83,6 +90,8 @@ class SeqeraConfig implements ConfigScope {
             : Duration.of('1 sec')
         // machine requirement settings
         this.machineRequirement = new MachineRequirementOpts(opts.machineRequirement as Map ?: Map.of())
+        // labels for cost tracking
+        this.labels = opts.labels as Map<String, String>
     }
 
     RetryOpts retryOpts() {
@@ -107,5 +116,9 @@ class SeqeraConfig implements ConfigScope {
 
     MachineRequirementOpts getMachineRequirement() {
         return machineRequirement
+    }
+
+    Map<String, String> getLabels() {
+        return labels
     }
 }
