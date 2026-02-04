@@ -92,7 +92,7 @@ class SeqeraBatchSubmitter {
     /**
      * Enqueue a task for batch submission.
      */
-    void enqueue(SeqeraTaskHandler handler, Task task) {
+    void submit(SeqeraTaskHandler handler, Task task) {
         if (completed) {
             throw new IllegalStateException("Batch submitter has been shutdown")
         }

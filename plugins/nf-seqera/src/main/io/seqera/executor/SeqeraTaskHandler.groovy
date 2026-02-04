@@ -23,7 +23,6 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import io.seqera.sched.api.schema.v1a1.AcceleratorType
-import io.seqera.sched.api.schema.v1a1.DiskRequirement
 import io.seqera.sched.api.schema.v1a1.GetTaskLogsResponse
 import io.seqera.sched.api.schema.v1a1.ResourceRequirement
 import io.seqera.sched.api.schema.v1a1.Task
@@ -33,6 +32,7 @@ import io.seqera.sched.client.SchedClient
 import io.seqera.util.MapperUtil
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.exception.ProcessException
+import nextflow.exception.ProcessUnrecoverableException
 import nextflow.fusion.FusionAwareTask
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
@@ -109,17 +109,22 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
             task.getContainerPlatform(),
             task.config.getDisk()
         )
+        // validate container - Seqera executor requires all processes to specify a container image
+        final container = task.getContainer()
+        if( !container )
+            throw new ProcessUnrecoverableException("Process `${task.lazyName()}` failed because the container image was not specified -- the Seqera executor requires all processes define a container image")
+        // build the scheduler task with all required attributes
         final schedTask = new Task()
-            .name(task.lazyName())
-            .image(task.getContainer())
-            .command(fusionSubmitCli())
-            .environment(fusionLauncher().fusionEnv())
-            .resourceRequirement(resourceReq)
-            .workDir(task.getWorkDirStr())
-            .machineRequirement(machineReq)
+            .name(task.lazyName())       // process name for identification
+            .image(container)             // container image to run
+            .command(fusionSubmitCli())   // fusion-based command launcher
+            .environment(fusionLauncher().fusionEnv())  // fusion environment variables
+            .resourceRequirement(resourceReq)  // cpu, memory, accelerators
+            .workDir(task.getWorkDirStr())     // task working directory
+            .machineRequirement(machineReq)    // machine type and disk requirements
         log.debug "[SEQERA] Enqueueing task for batch submission: ${schedTask}"
         // Enqueue for batch submission - status will be set by setBatchTaskId callback
-        executor.getBatchSubmitter().enqueue(this, schedTask)
+        executor.getBatchSubmitter().submit(this, schedTask)
     }
 
     /**

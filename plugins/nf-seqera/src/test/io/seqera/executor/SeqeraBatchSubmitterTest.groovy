@@ -55,7 +55,7 @@ class SeqeraBatchSubmitterTest extends Specification {
         when: 'start submitter and enqueue tasks quickly'
         submitter.start()
         handlers.eachWithIndex { handler, i ->
-            submitter.enqueue(handler, tasks[i])
+            submitter.submit(handler, tasks[i])
         }
         // Wait for the batch interval to elapse and tasks to be submitted
         sleep(800)
@@ -90,12 +90,12 @@ class SeqeraBatchSubmitterTest extends Specification {
         when: 'enqueue first batch, wait for flush, then enqueue second batch'
         submitter.start()
         // First batch - tasks s1 and s2
-        submitter.enqueue(createMockHandler(), new Task().image('s1'))
-        submitter.enqueue(createMockHandler(), new Task().image('s2'))
+        submitter.submit(createMockHandler(), new Task().image('s1'))
+        submitter.submit(createMockHandler(), new Task().image('s2'))
         // Wait for first batch to flush (interval + buffer)
         sleep(400)
         // Second batch - task s3
-        submitter.enqueue(createMockHandler(), new Task().image('s3'))
+        submitter.submit(createMockHandler(), new Task().image('s3'))
         // Wait for second batch to flush
         sleep(400)
         submitter.shutdown()
@@ -126,7 +126,7 @@ class SeqeraBatchSubmitterTest extends Specification {
         when: 'enqueue exactly TASKS_PER_REQUEST tasks'
         submitter.start()
         (1..SeqeraBatchSubmitter.TASKS_PER_REQUEST).each {
-            submitter.enqueue(createMockHandler(), new Task().image("img$it"))
+            submitter.submit(createMockHandler(), new Task().image("img$it"))
         }
         // Give a small delay for the batch to be processed
         sleep(200)
@@ -154,7 +154,7 @@ class SeqeraBatchSubmitterTest extends Specification {
         when: 'enqueue more than TASKS_PER_REQUEST tasks'
         submitter.start()
         (1..totalTasks).each {
-            submitter.enqueue(createMockHandler(), new Task().image("img$it"))
+            submitter.submit(createMockHandler(), new Task().image("img$it"))
         }
         // Wait for batches to be processed
         sleep(500)
@@ -181,8 +181,8 @@ class SeqeraBatchSubmitterTest extends Specification {
 
         when: 'enqueue tasks and immediately shutdown'
         submitter.start()
-        submitter.enqueue(createMockHandler(), new Task().image('img1'))
-        submitter.enqueue(createMockHandler(), new Task().image('img2'))
+        submitter.submit(createMockHandler(), new Task().image('img1'))
+        submitter.submit(createMockHandler(), new Task().image('img2'))
         // Shutdown without waiting for interval
         submitter.shutdown()
 
@@ -198,7 +198,7 @@ class SeqeraBatchSubmitterTest extends Specification {
         when:
         submitter.start()
         submitter.shutdown()
-        submitter.enqueue(createMockHandler(), new Task().image('img1'))
+        submitter.submit(createMockHandler(), new Task().image('img1'))
 
         then:
         thrown(IllegalStateException)
@@ -216,8 +216,8 @@ class SeqeraBatchSubmitterTest extends Specification {
 
         when:
         submitter.start()
-        submitter.enqueue(handler1, new Task().image('img1'))
-        submitter.enqueue(handler2, new Task().image('img2'))
+        submitter.submit(handler1, new Task().image('img1'))
+        submitter.submit(handler2, new Task().image('img2'))
         sleep(300)
         submitter.shutdown()
 
@@ -243,9 +243,9 @@ class SeqeraBatchSubmitterTest extends Specification {
 
         when:
         submitter.start()
-        submitter.enqueue(handler1, new Task().image('img1'))
-        submitter.enqueue(handler2, new Task().image('img2'))
-        submitter.enqueue(handler3, new Task().image('img3'))
+        submitter.submit(handler1, new Task().image('img1'))
+        submitter.submit(handler2, new Task().image('img2'))
+        submitter.submit(handler3, new Task().image('img3'))
         sleep(300)
         submitter.shutdown()
 
@@ -273,8 +273,8 @@ class SeqeraBatchSubmitterTest extends Specification {
         // Wait longer than the batch interval before enqueueing
         sleep(500)
         def enqueueTime = System.currentTimeMillis()
-        submitter.enqueue(createMockHandler(), new Task().image('img1'))
-        submitter.enqueue(createMockHandler(), new Task().image('img2'))
+        submitter.submit(createMockHandler(), new Task().image('img1'))
+        submitter.submit(createMockHandler(), new Task().image('img2'))
         // Wait for batch to flush
         sleep(500)
         submitter.shutdown()
@@ -342,7 +342,7 @@ class SeqeraBatchSubmitterTest extends Specification {
         submitter.start()
         // Enqueue tasks at intervals shorter than keep-alive
         5.times { i ->
-            submitter.enqueue(createMockHandler(), new Task().image("img$i"))
+            submitter.submit(createMockHandler(), new Task().image("img$i"))
             sleep(80)
         }
         sleep(200) // Wait for final batch to flush
@@ -370,7 +370,7 @@ class SeqeraBatchSubmitterTest extends Specification {
 
         when:
         submitter.start()
-        submitter.enqueue(handler, new Task().image('img1'))
+        submitter.submit(handler, new Task().image('img1'))
         sleep(300)
         submitter.shutdown()
 
@@ -404,7 +404,7 @@ class SeqeraBatchSubmitterTest extends Specification {
         when:
         submitter.start()
         handlers.each { h ->
-            submitter.enqueue(h, new Task().image('img'))
+            submitter.submit(h, new Task().image('img'))
         }
         sleep(300)
         submitter.shutdown()
@@ -441,7 +441,7 @@ class SeqeraBatchSubmitterTest extends Specification {
         // Wait for a few keep-alive failures
         sleep(350)
         // Now submit a task
-        submitter.enqueue(createMockHandler(), new Task().image('img1'))
+        submitter.submit(createMockHandler(), new Task().image('img1'))
         // Wait for task to be submitted
         sleep(700)
         submitter.shutdown()
@@ -468,7 +468,7 @@ class SeqeraBatchSubmitterTest extends Specification {
 
         when:
         submitter.start()
-        submitter.enqueue(createMockHandler(), new Task().image('img1'))
+        submitter.submit(createMockHandler(), new Task().image('img1'))
         sleep(300)
         submitter.shutdown()
 
