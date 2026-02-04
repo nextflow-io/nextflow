@@ -208,6 +208,7 @@ nxf_trace_linux() {
     available_cpus=$(echo "$available_cpus" | cut -f 2)
     local cpus=0
 
+    local parts
     IFS=',' read -ra parts <<< "$available_cpus"
     for p in "${parts[@]}"; do
         if [[ $p =~ ^([0-9]+)-([0-9]+)$ ]]; then
