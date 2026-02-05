@@ -66,35 +66,47 @@ public class S3ObjectSummaryLookup {
         }
 
         /*
-         * Lookup for the object summary for the specified object key
-         * by using a `listObjects` request
+         * First: try HEAD request for exact object (fast, works on all bucket types including Express)
          */
-        String marker = null;
-        while( true ) {
-            ListObjectsRequest.Builder request = ListObjectsRequest.builder();
-            request.bucket(s3Path.getBucket());
-            request.prefix(s3Path.getKey());
-            request.maxKeys(250);
-            if( marker != null )
-                request.marker(marker);
-
-            ListObjectsResponse listing = client.listObjects(request.build());
-            List<S3Object> results = listing.contents();
-
-            if (results.isEmpty()){
-                break;
+        try {
+            HeadObjectResponse metadata = client.getObjectMetadata(s3Path.getBucket(), s3Path.getKey());
+            if( metadata != null ) {
+                return S3Object.builder()
+                        .key(s3Path.getKey())
+                        .size(metadata.contentLength())
+                        .lastModified(metadata.lastModified())
+                        .eTag(metadata.eTag())
+                        .storageClass(metadata.storageClassAsString())
+                        .build();
             }
-
-            for( S3Object item : results ) {
-                if( matchName(s3Path.getKey(), item)) {
-                    return item;
-                }
+        }
+        catch (S3Exception e) {
+            if( e.statusCode() != 404 ) {
+                throw e;
             }
+            // 404 = object doesn't exist as a file, fall through to directory check
+        }
 
-            if( listing.isTruncated() )
-                marker = listing.nextMarker();
-            else
-                break;
+        /*
+         * Second: check if it's a "directory" by listing with trailing slash.
+         * S3 Express One Zone buckets require prefixes to end with a delimiter.
+         */
+        String prefix = s3Path.getKey();
+        if( !prefix.endsWith("/") ) {
+            prefix = prefix + "/";
+        }
+
+        ListObjectsV2Request request = ListObjectsV2Request.builder()
+                .bucket(s3Path.getBucket())
+                .prefix(prefix)
+                .maxKeys(1)  // only need to find one child to confirm directory exists
+                .build();
+
+        for( S3Object item : client.listObjectsV2Paginator(request).contents() ) {
+            // Found a child, so this "directory" exists - return a synthetic S3Object for it
+            return S3Object.builder()
+                    .key(s3Path.getKey())
+                    .build();
         }
 
         throw new NoSuchFileException("s3://" + s3Path.getBucket() + "/" + s3Path.getKey());

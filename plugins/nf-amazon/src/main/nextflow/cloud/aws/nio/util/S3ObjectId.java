@@ -46,4 +46,14 @@ public class S3ObjectId {
     public String versionId() {
         return versionId;
     }
+
+    /**
+     * Determines if this object is in an S3 Express One Zone bucket.
+     * S3 Express One Zone bucket names follow the pattern: base-bucket-name--zone-id--x-s3
+     *
+     * @return true if this is an S3 Express One Zone bucket
+     */
+    public boolean isExpressOneZone() {
+        return bucket != null && bucket.endsWith("--x-s3");
+    }
 }
