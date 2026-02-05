@@ -21,6 +21,7 @@ import groovy.transform.CompileStatic
 import nextflow.config.spec.ConfigOption
 import nextflow.config.spec.ConfigScope
 import nextflow.script.dsl.Description
+import nextflow.util.MemoryUnit
 
 /**
  * Machine/infrastructure requirements configuration options.
@@ -90,6 +91,12 @@ class MachineRequirementOpts implements ConfigScope {
     """)
     final String diskAllocation
 
+    @ConfigOption
+    @Description("""
+        The disk size for session-level storage (e.g., `100.GB`).
+    """)
+    final MemoryUnit diskSize
+
     /* required by config scope -- do not remove */
     MachineRequirementOpts() {}
 
@@ -103,6 +110,9 @@ class MachineRequirementOpts implements ConfigScope {
         this.diskIops = opts.diskIops as Integer
         this.diskEncrypted = opts.diskEncrypted as Boolean
         this.diskAllocation = opts.diskAllocation as String
+        this.diskSize = opts.diskSize instanceof MemoryUnit
+            ? opts.diskSize as MemoryUnit
+            : (opts.diskSize ? MemoryUnit.of(opts.diskSize as String) : null)
     }
 
     String getArch() {
@@ -139,5 +149,9 @@ class MachineRequirementOpts implements ConfigScope {
 
     String getDiskAllocation() {
         return diskAllocation
+    }
+
+    MemoryUnit getDiskSize() {
+        return diskSize
     }
 }

@@ -160,12 +160,12 @@ class MapperUtilTest extends Specification {
 
         then: 'disk size is set'
         result.sizeGiB == 100
-        and: 'allocation defaults to null (task allocation on API side)'
-        result.allocation == null
-        and: 'EBS defaults are applied for task allocation'
-        result.volumeType == MapperUtil.DEFAULT_DISK_TYPE
-        result.throughputMiBps == MapperUtil.DEFAULT_DISK_THROUGHPUT_MIBPS
-        result.encrypted == false
+        and: 'allocation defaults to node'
+        result.allocation == DiskAllocation.NODE
+        and: 'node allocation does not set EBS options'
+        result.volumeType == null
+        result.throughputMiBps == null
+        result.encrypted == null
         result.iops == null
     }
 
@@ -173,9 +173,8 @@ class MapperUtilTest extends Specification {
         expect:
         MapperUtil.toDiskRequirement(MemoryUnit.of('1 TB')).sizeGiB == 1024
         MapperUtil.toDiskRequirement(MemoryUnit.of('50 GB')).sizeGiB == 50
-        and: 'defaults are applied'
-        MapperUtil.toDiskRequirement(MemoryUnit.of('1 TB')).volumeType == MapperUtil.DEFAULT_DISK_TYPE
-        MapperUtil.toDiskRequirement(MemoryUnit.of('1 TB')).throughputMiBps == MapperUtil.DEFAULT_DISK_THROUGHPUT_MIBPS
+        and: 'defaults to node allocation'
+        MapperUtil.toDiskRequirement(MemoryUnit.of('1 TB')).allocation == DiskAllocation.NODE
     }
 
     def 'should include disk in machine requirement' () {
@@ -212,7 +211,7 @@ class MapperUtilTest extends Specification {
 
     def 'should throw exception for invalid disk type' () {
         given:
-        def opts = new MachineRequirementOpts([diskType: 'local/nvme'])
+        def opts = new MachineRequirementOpts([diskAllocation: 'task', diskType: 'local/nvme'])
 
         when:
         MapperUtil.toDiskRequirement(MemoryUnit.of('100 GB'), opts)
@@ -225,13 +224,14 @@ class MapperUtilTest extends Specification {
 
     def 'should use custom disk type from config' () {
         given:
-        def opts = new MachineRequirementOpts([diskType: 'ebs/io1', diskIops: 10000])
+        def opts = new MachineRequirementOpts([diskAllocation: 'task', diskType: 'ebs/io1', diskIops: 10000])
 
         when:
         def result = MapperUtil.toDiskRequirement(MemoryUnit.of('100 GB'), opts)
 
         then:
         result.sizeGiB == 100
+        result.allocation == DiskAllocation.TASK
         result.volumeType == 'ebs/io1'
         result.iops == 10000
         result.throughputMiBps == null  // throughput only for gp3
@@ -239,30 +239,33 @@ class MapperUtilTest extends Specification {
 
     def 'should use custom throughput from config' () {
         given:
-        def opts = new MachineRequirementOpts([diskThroughputMiBps: 500])
+        def opts = new MachineRequirementOpts([diskAllocation: 'task', diskThroughputMiBps: 500])
 
         when:
         def result = MapperUtil.toDiskRequirement(MemoryUnit.of('100 GB'), opts)
 
         then:
+        result.allocation == DiskAllocation.TASK
         result.volumeType == MapperUtil.DEFAULT_DISK_TYPE
         result.throughputMiBps == 500
     }
 
     def 'should use encryption from config' () {
         given:
-        def opts = new MachineRequirementOpts([diskEncrypted: true])
+        def opts = new MachineRequirementOpts([diskAllocation: 'task', diskEncrypted: true])
 
         when:
         def result = MapperUtil.toDiskRequirement(MemoryUnit.of('100 GB'), opts)
 
         then:
+        result.allocation == DiskAllocation.TASK
         result.encrypted == true
     }
 
     def 'should use all disk options from config' () {
         given:
         def opts = new MachineRequirementOpts([
+            diskAllocation: 'task',
             diskType: 'ebs/gp3',
             diskThroughputMiBps: 600,
             diskIops: 8000,
@@ -274,6 +277,7 @@ class MapperUtilTest extends Specification {
 
         then:
         result.sizeGiB == 200
+        result.allocation == DiskAllocation.TASK
         result.volumeType == 'ebs/gp3'
         result.throughputMiBps == 600
         result.iops == 8000
@@ -284,6 +288,7 @@ class MapperUtilTest extends Specification {
         given:
         def opts = new MachineRequirementOpts([
             arch: 'arm64',
+            diskAllocation: 'task',
             diskType: 'ebs/io2',
             diskIops: 15000,
             diskEncrypted: true
@@ -295,6 +300,7 @@ class MapperUtilTest extends Specification {
         then:
         result.arch == 'arm64'
         result.disk.sizeGiB == 500
+        result.disk.allocation == DiskAllocation.TASK
         result.disk.volumeType == 'ebs/io2'
         result.disk.iops == 15000
         result.disk.encrypted == true
@@ -345,12 +351,12 @@ class MapperUtilTest extends Specification {
         result.encrypted == null
     }
 
-    def 'should default to null disk allocation when not specified' () {
+    def 'should default to node disk allocation when not specified' () {
         when:
         def result = MapperUtil.toDiskRequirement(MemoryUnit.of('100 GB'))
 
         then:
-        result.allocation == null
+        result.allocation == DiskAllocation.NODE
     }
 
     def 'should include disk allocation in machine requirement' () {

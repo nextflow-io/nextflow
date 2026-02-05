@@ -20,7 +20,9 @@ package io.seqera.executor
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.seqera.config.SeqeraConfig
+import io.seqera.config.ExecutorOpts
 import io.seqera.util.MapperUtil
+import io.seqera.sched.api.schema.v1a1.CreateSessionRequest
 import io.seqera.sched.client.SchedClient
 import io.seqera.sched.client.SchedClientConfig
 import nextflow.exception.AbortOperationException
@@ -47,7 +49,7 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
 
     public static final String SEQERA = 'seqera'
 
-    private SeqeraConfig seqeraConfig
+    private ExecutorOpts seqeraConfig
 
     private SchedClient client
 
@@ -69,7 +71,10 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
     }
 
     protected void createClient() {
-        this.seqeraConfig = new SeqeraConfig(session.config.seqera as Map ?: Collections.emptyMap())
+        final seqera = new SeqeraConfig(session.config.seqera as Map ?: Collections.<String,Object>emptyMap())
+        this.seqeraConfig = seqera.executor
+        if (!seqeraConfig)
+            throw new IllegalArgumentException("Missing Seqera executor configuration - make sure to specify 'seqera.executor' settings")
         // Get access token and refresh token from tower config (shares authentication with Platform)
         def towerConfig = session.config.tower as Map ?: Collections.emptyMap()
         def accessToken = PlatformHelper.getAccessToken(towerConfig, SysEnv.get())
@@ -84,10 +89,15 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
     }
 
     protected void createSession() {
-        final machineReq = MapperUtil.toMachineRequirement(seqeraConfig.machineRequirement)
-        final labels = seqeraConfig.labels
-        log.debug "[SEQERA] Creating session for workflow in region: ${seqeraConfig.region}, runName: ${session.runName}, machineRequirement: ${machineReq}, labels: ${labels}"
-        final response = client.createSession(seqeraConfig.region, session.runName, machineReq, labels)
+        final towerConfig = session.config.tower as Map ?: Collections.emptyMap()
+        final request = new CreateSessionRequest()
+                .region(seqeraConfig.region)
+                .name(session.runName)
+                .machineRequirement(MapperUtil.toMachineRequirement(seqeraConfig.machineRequirement))
+                .labels(seqeraConfig.labels)
+                .workspaceId(PlatformHelper.getWorkspaceId(towerConfig, SysEnv.get()) as Long)
+        log.debug "[SEQERA] Creating session: ${request}"
+        final response = client.createSession(request)
         this.sessionId = response.getSessionId()
         log.debug "[SEQERA] Session created id: ${sessionId}"
         // Initialize and start batch submitter with error callback to abort session on fatal errors
@@ -147,7 +157,7 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
         return batchSubmitter
     }
 
-    SeqeraConfig getSeqeraConfig() {
+    ExecutorOpts getSeqeraConfig() {
         return seqeraConfig
     }
 }

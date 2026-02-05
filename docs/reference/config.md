@@ -1498,56 +1498,63 @@ The following settings are available:
 *Preview feature: may change in a future release.*
 :::
 
-The `seqera` scope allows you to configure the interactions with the Seqera scheduler service for the {ref}`seqera-executor`.
+The `seqera` scope allows you to configure the interactions with Seqera services.
+
+### `executor`
+
+The `seqera.executor` scope configures the Seqera scheduler service for the {ref}`seqera-executor`.
 
 The following settings are available:
 
-`seqera.endpoint`
+`seqera.executor.endpoint`
 : The Seqera scheduler service endpoint URL (required).
 
-`seqera.region`
+`seqera.executor.region`
 : The AWS region for task execution (default: `'eu-central-1'`).
 
-`seqera.machineRequirement.arch`
+`seqera.executor.labels`
+: Custom labels to apply to AWS resources for cost tracking and resource organization. Labels are propagated to ECS tasks, capacity providers, and EC2 instances.
+
+`seqera.executor.machineRequirement.arch`
 : The CPU architecture for task execution, e.g. `'x86_64'` or `'arm64'`.
 
-`seqera.machineRequirement.provisioning`
+`seqera.executor.machineRequirement.provisioning`
 : The instance provisioning mode. Can be `'spot'`, `'ondemand'`, or `'spotFirst'`.
 
-`seqera.machineRequirement.maxSpotAttempts`
+`seqera.executor.machineRequirement.maxSpotAttempts`
 : The maximum number of spot retry attempts before falling back to on-demand. Only used when `provisioning` is `'spot'` or `'spotFirst'`.
 
-`seqera.machineRequirement.machineFamilies`
+`seqera.executor.machineRequirement.machineFamilies`
 : List of acceptable EC2 instance families, e.g. `['m5', 'c5', 'r5']`.
 
-`seqera.machineRequirement.diskAllocation`
+`seqera.executor.machineRequirement.diskAllocation`
 : The disk allocation strategy. Can be `'task'` (default) for per-task EBS volumes, or `'node'` for per-node instance storage. When using `'node'` allocation, EBS-specific options (`diskType`, `diskIops`, `diskThroughputMiBps`, `diskEncrypted`) are not applicable.
 
-`seqera.machineRequirement.diskType`
+`seqera.executor.machineRequirement.diskType`
 : The EBS volume type for task scratch disk. Supported types: `'ebs/gp3'` (default), `'ebs/gp2'`, `'ebs/io1'`, `'ebs/io2'`, `'ebs/st1'`, `'ebs/sc1'`. Only applicable when `diskAllocation` is `'task'`.
 
-`seqera.machineRequirement.diskThroughputMiBps`
+`seqera.executor.machineRequirement.diskThroughputMiBps`
 : The throughput in MiB/s for gp3 volumes (125-1000). Default: `325` (Fusion recommended). Only applicable when `diskAllocation` is `'task'`.
 
-`seqera.machineRequirement.diskIops`
+`seqera.executor.machineRequirement.diskIops`
 : The IOPS for io1/io2/gp3 volumes. Required for io1/io2 volume types. Only applicable when `diskAllocation` is `'task'`.
 
-`seqera.machineRequirement.diskEncrypted`
+`seqera.executor.machineRequirement.diskEncrypted`
 : Enable KMS encryption for the EBS volume (default: `false`). Only applicable when `diskAllocation` is `'task'`.
 
-`seqera.retryPolicy.delay`
+`seqera.executor.retryPolicy.delay`
 : The initial delay when a failing HTTP request is retried (default: `'450ms'`).
 
-`seqera.retryPolicy.maxDelay`
+`seqera.executor.retryPolicy.maxDelay`
 : The maximum delay when a failing HTTP request is retried (default: `'90s'`).
 
-`seqera.retryPolicy.maxAttempts`
+`seqera.executor.retryPolicy.maxAttempts`
 : The maximum number of retry attempts (default: `10`).
 
-`seqera.retryPolicy.jitter`
+`seqera.executor.retryPolicy.jitter`
 : The jitter factor for randomizing retry delays (default: `0.25`).
 
-`seqera.retryPolicy.multiplier`
+`seqera.executor.retryPolicy.multiplier`
 : The multiplier for exponential backoff (default: `2.0`).
 
 (config-spack)=

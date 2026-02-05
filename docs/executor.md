@@ -455,12 +455,14 @@ By default, a gp3 volume with 325 MiB/s throughput is used (Fusion recommended s
 
 ```groovy
 seqera {
-    machineRequirement {
-        diskAllocation = 'task'    // Per-task EBS volume (default)
-        diskType = 'ebs/io1'       // Use provisioned IOPS SSD
-        diskIops = 10000           // Required for io1/io2
-        diskThroughputMiBps = 500  // Throughput for gp3 volumes
-        diskEncrypted = true       // Enable KMS encryption
+    executor {
+        machineRequirement {
+            diskAllocation = 'task'    // Per-task EBS volume (default)
+            diskType = 'ebs/io1'       // Use provisioned IOPS SSD
+            diskIops = 10000           // Required for io1/io2
+            diskThroughputMiBps = 500  // Throughput for gp3 volumes
+            diskEncrypted = true       // Enable KMS encryption
+        }
     }
 }
 ```
@@ -473,8 +475,10 @@ To use instance storage instead of per-task EBS volumes:
 
 ```groovy
 seqera {
-    machineRequirement {
-        diskAllocation = 'node'    // Use instance storage
+    executor {
+        machineRequirement {
+            diskAllocation = 'node'    // Use instance storage
+        }
     }
 }
 ```

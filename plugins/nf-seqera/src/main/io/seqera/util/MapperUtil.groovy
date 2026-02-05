@@ -60,13 +60,15 @@ class MapperUtil {
     static MachineRequirement toMachineRequirement(MachineRequirementOpts opts) {
         if (!opts)
             return null
-        if (!opts.arch && !opts.provisioning && !opts.maxSpotAttempts && !opts.machineFamilies)
+        final diskReq = toDiskRequirement(opts.diskSize, opts)
+        if (!opts.arch && !opts.provisioning && !opts.maxSpotAttempts && !opts.machineFamilies && !diskReq)
             return null
         new MachineRequirement()
             .arch(opts.arch)
             .provisioning(toProvisioningModel(opts.provisioning))
             .maxSpotAttempts(opts.maxSpotAttempts)
             .machineFamilies(opts.machineFamilies)
+            .disk(diskReq)
     }
 
     /**
@@ -95,7 +97,9 @@ class MapperUtil {
         final provisioning = opts?.provisioning
         final maxSpotAttempts = opts?.maxSpotAttempts
         final machineFamilies = opts?.machineFamilies
-        final diskReq = toDiskRequirement(diskSize, opts)
+        // task disk overrides config disk
+        final effectiveDiskSize = diskSize ?: opts?.diskSize
+        final diskReq = toDiskRequirement(effectiveDiskSize, opts)
         // return null if no settings
         if (!arch && !provisioning && !maxSpotAttempts && !machineFamilies && !diskReq)
             return null
@@ -112,8 +116,8 @@ class MapperUtil {
      * Uses config options if provided, otherwise defaults to Fusion recommended settings:
      * EBS gp3 volume with 325 MiB/s throughput.
      *
-     * For 'node' allocation, only sizeGiB and mountPath are applicable.
-     * For 'task' allocation (default), all EBS options can be specified.
+     * For 'node' allocation (default), only sizeGiB and mountPath are applicable.
+     * For 'task' allocation, all EBS options can be specified.
      *
      * @param diskSize the disk size (can be null)
      * @param opts the machine requirement options with disk settings (can be null)
@@ -123,9 +127,9 @@ class MapperUtil {
         if (!diskSize || diskSize.toGiga() <= 0)
             return null
 
-        final allocation = toDiskAllocation(opts?.diskAllocation)
+        final allocation = toDiskAllocation(opts?.diskAllocation) ?: DiskAllocation.NODE
 
-        // For 'node' allocation, only size and mountPath are valid
+        // For 'node' allocation (default), only size and mountPath are valid
         if (allocation == DiskAllocation.NODE) {
             validateNodeAllocationOpts(opts)
             final DiskRequirement req = new DiskRequirement()
@@ -134,7 +138,7 @@ class MapperUtil {
             return req
         }
 
-        // For 'task' allocation (default), apply EBS-specific options
+        // For 'task' allocation, apply EBS-specific options
         final type = opts?.diskType ?: DEFAULT_DISK_TYPE
         // Validate disk type is supported
         if (!SUPPORTED_DISK_TYPES.contains(type)) {
