@@ -108,6 +108,53 @@ nxf_mem_watch() {
         "inv_ctxt=${nxf_stat_ret[7]}" >> "$trace_file" || >&2 echo "Error: Failed to append to file: $trace_file"
 }
 
+nxf_cpu_watch(){
+    set -u
+
+    root_pid="$1"
+    local -A seen_cpus
+
+    collect_child_processes() {
+        local queue=("$1")
+        local out=()
+
+        while ((${#queue[@]})); do
+            local p=${queue[0]}
+            queue=("${queue[@]:1}")
+
+            [[ -d /proc/$p ]] || continue
+            out+=("$p")
+
+            mapfile -t kids < <(pgrep -P "$p" 2>/dev/null)
+            queue+=("${kids[@]}")
+        done
+
+        printf "%s\n" "${out[@]}"
+    }
+
+    sample_pid_threads() {
+        local pid="$1"
+
+        for t in /proc/"$pid"/task/*; do
+            [[ -r "$t/stat" ]] || continue
+            cpu=$(awk '{print $39}' "$t/stat" 2>/dev/null) || continue
+            [[ $cpu =~ ^[0-9]+$ ]] && seen_cpus["$cpu"]=1
+        done
+    }
+
+    while kill -0 "$root_pid" 2>/dev/null; do
+        mapfile -t pids < <(collect_child_processes "$root_pid")
+
+        for p in "${pids[@]}"; do
+            sample_pid_threads "$p"
+        done
+
+        nxf_sleep 0.1
+    done
+
+    echo "${#seen_cpus[@]}"
+}
+
 nxf_write_trace() {
     printf "%s\n" \
         "nextflow.trace/v2" \
@@ -155,11 +202,11 @@ nxf_trace_linux() {
     /bin/bash -ue {{folder}}/.command.sh &
     local task=$!
 
-    local available_cpus=$(grep Cpus_allowed_list /proc/$task/status)
-
     mem_fd=$(nxf_fd)
     eval "exec $mem_fd> >(nxf_mem_watch $task)"
     local mem_proc=$!
+
+    local cpus=$(nxf_cpu_watch "$task")
 
     wait $task
 
@@ -176,19 +223,6 @@ nxf_trace_linux() {
 
     local wall_time=$((end_millis-start_millis))
     [ $NXF_DEBUG = 1 ] && echo "+++ STATS %CPU=$ucpu TIME=$wall_time I/O=${io_stat1[*]}"
-
-    available_cpus=$(echo "$available_cpus" | cut -f 2)
-    local cpus=0
-
-    local parts
-    IFS=',' read -ra parts <<< "$available_cpus"
-    for p in "${parts[@]}"; do
-        if [[ $p =~ ^([0-9]+)-([0-9]+)$ ]]; then
-            ((cpus += ${BASH_REMATCH[2]} - ${BASH_REMATCH[1]} + 1))
-        else
-            ((cpus++))
-        fi
-    done
 
     printf "%s\n" \
         "nextflow.trace/v2" \
