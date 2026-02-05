@@ -150,15 +150,222 @@ globalHash = hash(
 - **Content-based inputs**: Files hashed by full content (checksum), not path/metadata
 - **Container digest**: Use SHA256 digest (e.g., `sha256:abc123...`) instead of tag
 
-### Content-Based File Hashing and alternatives
+### Input File Hashing Alternatives
 
-Global cache requires deep content inspection to check if the input for a task is the same as the one used during its computation.
-Nextflow already implements a deep caching mode, but it is not used as default because the hash computation can take time with large files.
-In the pipeline resume cache, the file path/modifications approach is sufficient because paths are the same across different executions, but this is not the case in the global cache.
-A task could use the same input file from different paths (e.g., a task could use a file as output of a predecessor task or as the published version). The global cache with the standard Nextflow hashing will not hit in these cases.
-However, we can envision two possible optimizations to reduce the number of checksum computations:
-- **Original Lineage id (`lid`) alternative**: For each path, check if a lineage metadata entry exists, validate it has not been modified, and check if this entry is an original `lid` or has source data. Use the original `lid` to compute the hash. If no `lid` exists, create a new `lid` for this data. This option requires extending or modifying the lineage to have a path/modification hash as an entry, or creating a file output index to relate file hashes with lineage entries.
-- **Use cloud storage checksums**: Since in global cache the workdir is a bucket, we could get the computed checksum for each file from the cloud storage and use it to compute the hash. External data will be transferred, so data both before and after the execution will be in the workdir bucket.
+The global cache requires a method to fingerprint input files as part of the task hash computation. Unlike local resume cache where file paths remain stable across executions, global cache must handle scenarios where identical file content exists at different paths, locations, or across different pipeline executions. The choice of hashing strategy directly impacts cache hit rates, performance overhead, and cross-execution compatibility.
+
+#### Alternative 1: File Path and Attributes (Current Default for Local Resume)
+
+**Description:** Hash based on file path, size, and modification timestamp.
+
+**Pros:**
+- Very fast (~1ms per file)
+- Minimal computational overhead
+- Works perfectly for local resume with stable paths
+
+**Cons:**
+- Different paths produce different hashes even for identical content
+- Timestamps and paths change across environments
+
+**Cache hit scenarios in global cache:**
+- **Low hit rate** - only when same absolute paths used:
+  - Shared filesystem with consistent mount points (e.g., `/data/refs/hg38.fa` always at same path)
+  - Published outputs accessed from fixed publish directories
+  - Standardized organizational data layouts
+- **Misses when:**
+  - Same file copied/moved to different path
+  - Files accessed from different machines/mount points
+  - Cross-user sharing (different home directories)
+
+**Performance:** ⚡ Fastest - negligible overhead
+
+---
+
+#### Alternative 2: Deep Content Hashing (SHA256 of Full File)
+
+**Description:** Compute cryptographic hash of entire file content.
+
+**Pros:**
+- Content-based - identical content always produces same hash regardless of path
+- Cryptographically secure and collision-resistant
+- Enables true cross-pipeline and cross-environment sharing
+- No external dependencies required
+
+**Cons:**
+- High computational cost (~100-500 MB/s throughput)
+- Significant overhead for large files (10 GB file = ~20-100 seconds)
+- Repeated computation for same file used by multiple tasks
+- I/O intensive on network storage
+
+**Cache hit scenarios in global cache:**
+- **High hit rate** - whenever file content matches:
+  - Same content at different paths (e.g., `/user1/genome.fa` vs `/user2/refs/hg38.fa`)
+  - Files copied, moved, or republished
+  - Cross-pipeline intermediate result sharing
+  - Reference data accessed from various locations
+- **Always achieves hit for identical content** (correctness guaranteed)
+
+**Best for:**
+- Small to medium files (<100 MB)
+- High-value computations where cache hit saves significant time
+- Scenarios where correctness is critical
+
+**Performance:** Slowest - O(file size)
+
+---
+
+#### Alternative 3: Lineage Metadata-Based (`lid` Fingerprinting)
+
+**Description:** Use Nextflow lineage tracking to identify file content via lineage ID (`lid`). Check if lineage entry exists for file path; if yes, use original `lid` as fingerprint; if no, fall back to deep hash and create lineage entry.
+
+**Pros:**
+- Fast lookup for tracked files (~1ms)
+- Avoids re-hashing Nextflow-managed files
+- Maintains content-based semantics
+- Leverages existing lineage infrastructure
+
+**Cons:**
+- Requires extending lineage schema to track content hashes
+- Lineage database must be shared across executions
+- Only works for Nextflow-managed files
+- External files require fallback to deep hash
+
+**Cache hit scenarios in global cache:**
+- **High hit rate for Nextflow ecosystem files:**
+  - Task output reused by downstream tasks (lineage tracks creation)
+  - Published files consumed by other pipelines (lineage tracks publish)
+  - Same file referenced from multiple paths but same `lid`
+- **Requires deep hash fallback for:**
+  - External reference data not created by Nextflow (first use only)
+  - User-uploaded files (first use only)
+  - Files from non-Nextflow sources
+- **Example:** Preprocessing output used by 50 downstream tasks - first task deep hashes and creates `lid`, remaining 49 use fast lookup
+
+**Best for:**
+- Workflows with many intermediate file reuse patterns
+- DAG fan-out (one file → many consumers)
+- Environments where most inputs are Nextflow-generated outputs
+
+**Limitations:**
+- Only achieves cache hits for files previously used or published by Nextflow within the global cache system
+- Files from external sources (uploaded directly to cloud, other tools) cannot be matched even if content identical
+- Most effective in closed ecosystem where Nextflow manages all files
+
+**Performance:** Variable: Fast for tracked files, Slow for deep hash fallback for external files
+
+**Implementation requirements:**
+- Extend lineage schema to store content hash alongside `lid`
+- File path → lineage entry index for lookups
+- Lineage validation (verify file unmodified since tracking)
+- Lineage database synchronization across distributed executions
+
+---
+
+#### Alternative 4: Cloud Storage Provider Checksums
+
+**Description:** Use checksums computed by cloud storage (S3 ETags, GCS MD5, Azure MD5) instead of local computation.
+
+**Pros:**
+- Fast (~100ms metadata API call vs seconds for deep hash)
+- No local computation - provider pre-computes checksums
+- Works for any file in cloud storage
+
+**Cons:**
+- **No consistent algorithm across providers:**
+  - GCS/Azure: MD5 (not collision-resistant)
+  - S3: Multiple algorithms depending on upload method
+- **MD5 security concerns:** Vulnerable to collisions
+- **S3 inconsistency:** Different objects may use MD5, SHA256, CRC32
+- **Multipart uploads:** S3 ETags are composite hashes, not standard checksums
+
+**Cache hit scenarios in global cache:**
+- **Medium hit rate with significant constraints:**
+  - **GCS or Azure only deployments:** Consistent MD5 across all objects → high hit rate within provider, but MD5 collision risk
+  - **S3 with consistent upload method:** Hits when same algorithm used (e.g., all files uploaded with SHA256 via Nextflow)
+- **Misses when:**
+  - Same content uploaded with different algorithms in S3 (one upload MD5, another SHA256)
+  - Files transferred between cloud providers (GCS MD5 ≠ S3 SHA256)
+  - Multipart vs single-part uploads in S3 (different ETag formats)
+  - External files uploaded without checksums or with incompatible algorithms
+- **Example hits:** Pure Azure deployment where all files use MD5, or S3 environment with governance policy enforcing SHA256 for all uploads
+- **Example misses:** File uploaded to S3 as multipart (composite ETag) cannot match same content uploaded as single object (standard checksum)
+
+**Provider-specific characteristics:**
+
+| Provider | Algorithm | Collision-Resistant | Consistent | Multipart Handling | Reliability |
+|----------|-----------|--------------|------|-------------------|-------------|
+| GCS | MD5 | No | Yes | Standard MD5 | Medium (consistent but MD5 risk) |
+| Azure | MD5 | No | Yes | Standard MD5 | Medium (consistent but MD5 risk) |
+| S3 | Varies | Depends | No | Composite ETag | Low (algorithm inconsistency) |
+
+**Detailed provider constraints:**
+
+- **Google Cloud Storage:** Always MD5. Consistent across all objects, enabling reliable matching within GCS. However, MD5 is not cryptographically secure and vulnerable to collisions.
+
+- **Azure Blob Storage:** Always MD5. Similar to GCS - consistent within Azure, but MD5 collision vulnerability.
+
+- **AWS S3:** Supports multiple algorithms (MD5, SHA256, CRC32, CRC32C). Algorithm varies based on:
+  - Upload method (PUT vs multipart)
+  - Client SDK settings and version
+  - PUT request headers (can specify SHA256 via `x-amz-checksum-sha256`, see #6321)
+  - Historical objects uploaded before SHA256 support
+  - **Multipart uploads use composite ETags** (hash of chunk hashes, not file content hash)
+
+  **Result:** Cannot reliably match files across different upload methods or time periods within same S3 bucket.
+
+**Best for:**
+- Proof-of-concept implementations
+- Trusted environments without collision attack concerns
+- Single cloud provider with enforced upload standards
+- Performance-critical scenarios accepting correctness trade-offs
+
+**Performance:** Fast - ~100ms API call
+
+---
+
+#### Alternative 5: Hybrid Tiered Approach
+
+**Description:** Combine multiple methods with fallback chain:
+1. Lineage metadata (if available) → fast
+2. Cloud provider checksums (if single-provider environment) → medium
+3. Deep content hash (for external/mixed data) → slow but correct
+
+**Pros:**
+- Optimizes common cases (lineage) while ensuring correctness (deep hash fallback)
+- Adaptable to different deployment scenarios
+- Balances performance and correctness
+
+**Cons:**
+- Implementation complexity with multiple code paths
+- Difficult to reason about behavior and cache hit rates
+- Requires lineage database synchronization
+- Inconsistent performance depending on file source
+
+**Cache hit scenarios:**
+- Variable depending on which tier matches
+- Best case: Lineage hit (fast, high reliability)
+- Medium case: Cloud checksum hit (medium speed, medium reliability)
+- Worst case: Deep hash (slow, high reliability)
+
+**Best for:**
+- Production deployments with diverse file sources
+- Mixed workloads (internal + external data)
+- Organizations willing to accept complexity for optimization
+
+**Performance:** Variable - 1ms to minutes depending on tier
+
+---
+
+#### Comparison Summary
+
+| Alternative | Performance | Cache Hit Rate (Global) | Correctness | Implementation Complexity | Best Environment |
+|-------------|-----------|------------------------|-------------|--------------------------|------------------|
+| Path/Attributes | ⚡⚡⚡ Fastest | 🔴 Low | ❌ Path-dependent | ✅ Simple | Local resume only |
+| Deep Content Hash | Slowest | 🟢 Highest | ✅ Guaranteed | ✅ Simple | Universal (MVP choice) |
+| Lineage Metadata | ⚡⚡ Fast | 🟢 High (Nextflow files) | ✅ Good | ⚠️ Medium | Closed Nextflow ecosystem |
+| Cloud Checksums | ⚡⚡ Fast | 🟡 Medium | ⚠️ Provider-dependent | ⚠️ Medium | Single-provider, trusted |
+| Hybrid Tiered |  Variable | 🟢 High (variable) | ✅ Good | 🔴 Complex | Production, mixed workloads |
+
 
 
 ### Concurrent Access Control
