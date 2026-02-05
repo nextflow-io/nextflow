@@ -565,6 +565,10 @@ The following settings are available:
 
 ## `dag`
 
+:::{deprecated} 26.04.0
+Use the `workflow.report.dag` scope instead.
+:::
+
 The `dag` scope controls the generation of the {ref}`workflow-diagram`.
 
 The following settings are available:
@@ -1375,6 +1379,10 @@ The following settings are available:
 
 ## `report`
 
+:::{deprecated} 26.04.0
+Use the `workflow.report.execution` scope instead.
+:::
+
 The `report` scope controls the generation of the {ref}`execution-report`.
 
 The following settings are available:
@@ -1515,6 +1523,10 @@ The following settings are available:
 
 ## `timeline`
 
+:::{deprecated} 26.04.0
+Use the `workflow.report.timeline` scope instead.
+:::
+
 The `timeline` scope controls the generation of the {ref}`timeline-report`.
 
 The following settings are available:
@@ -1556,6 +1568,10 @@ The following settings are available:
 (config-trace)=
 
 ## `trace`
+
+:::{deprecated} 26.04.0
+Use the `workflow.report.trace` scope instead.
+:::
 
 The `trace` scope controls the generation of the {ref}`trace-report`.
 
@@ -1850,30 +1866,42 @@ The following settings are available:
 
 ## `workflow`
 
-:::{versionadded} 24.10.0
-:::
-
 The `workflow` scope provides workflow execution options.
 
 The following settings are available:
 
 `workflow.failOnIgnore`
-: :::{versionadded} 24.05.0-edge
+: :::{versionadded} 24.10.0
   :::
 : When `true`, the pipeline will exit with a non-zero exit code if any failed tasks are ignored using the `ignore` {ref}`error strategy <process-error-strategy>` (default: `false`).
 
 `workflow.onComplete`
+: :::{deprecated} 25.10.0
+  Use a {ref}`trace observer <plugins-trace-observers>` in a plugin to add custom workflow handlers to a pipeline via configuration.
+  :::
 : Specify a closure that will be invoked at the end of a workflow run (including failed runs). See {ref}`workflow-handlers` for more information.
 
 `workflow.onError`
+: :::{deprecated} 25.10.0
+  Use a {ref}`trace observer <plugins-trace-observers>` in a plugin to add custom workflow handlers to a pipeline via configuration.
+  :::
 : Specify a closure that will be invoked if a workflow run is terminated. See {ref}`workflow-handlers` for more information.
+
+### `workflow.output`
+
+:::{versionadded} 24.10.0
+:::
+
+The `workflow.output` scope controls how workflow outputs are published.
+
+The following settings are available:
 
 `workflow.output.contentType`
 : *Currently only supported for S3.*
 : Specify the media type, also known as [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/MIME_types), of published files (default: `false`). Can be a string (e.g. `'text/html'`), or `true` to infer the content type from the file extension.
 
 `workflow.output.copyAttributes`
-: :::{versionadded} 25.01.0-edge
+: :::{versionadded} 25.04.0
   :::
 : *Currently only supported for local and shared filesystems.*
 : Copy file attributes (such as the last modified timestamp) to the published file (default: `false`).
@@ -1940,3 +1968,79 @@ The following settings are available:
   ```groovy
   workflow.output.tags = [FOO: 'hello', BAR: 'world']
   ```
+
+### `workflow.report`
+
+:::{versionadded} 26.04.0
+:::
+
+The `workflow.report` scope controls the standard {ref}`reports <reports-page>` provided by Nextflow.
+
+The following settings are available:
+
+**`workflow.report.dag`**
+
+`workflow.report.dag.depth`
+: *Supported by the HTML and Mermaid renderers.*
+: Controls the maximum depth at which to render sub-workflows (default: no limit).
+
+`workflow.report.dag.direction`
+: *Supported by the Graphviz, DOT, HTML and Mermaid renderers.*
+: Controls the direction of the DAG, can be `'LR'` (left-to-right) or `'TB'` (top-to-bottom) (default: `'TB'`).
+
+`workflow.report.dag.enabled`
+: Create the {ref}`workflow-diagram` on workflow completion (default: `false`).
+
+`workflow.report.dag.file`
+: DAG file path relative to the output directory (default: `'dag-<timestamp>.html'`).
+: The output format is inferred from the file extension. See {ref}`config-dag` for the list of supported formats.
+
+`workflow.report.dag.overwrite`
+: When `true` overwrites any existing DAG file with the same name (default: `false`).
+
+`workflow.report.dag.verbose`
+: *Only supported by the HTML and Mermaid renderers.*
+: When `false`, channel names are omitted, operators are collapsed, and empty workflow inputs are removed (default: `false`).
+
+**`workflow.report.execution`**
+
+`workflow.report.execution.enabled`
+: Create the {ref}`execution-report` on workflow completion (default: `false`).
+
+`workflow.report.execution.file`
+: Report file path relative to the output directory (default: `'report-<timestamp>.html'`).
+
+`workflow.report.execution.overwrite`
+: Overwrite any existing report file with the same name (default: `false`).
+
+**`workflow.report.timeline`**
+
+`workflow.report.timeline.enabled`
+: Create the {ref}`timeline-report` on workflow completion (default: `false`).
+
+`workflow.report.timeline.file`
+: Timeline file path relative to the output directory (default: `'timeline-<timestamp>.html'`).
+
+`workflow.report.timeline.overwrite`
+: Overwrite any existing timeline file with the same name (default: `false`).
+
+**`workflow.report.trace`**
+
+`workflow.report.trace.enabled`
+: Create the {ref}`trace-report` on workflow completion (default: `false`).
+
+`workflow.report.trace.fields`
+: Comma-separated list of fields to include in the trace file.
+: See {ref}`config-trace` for the list of available fields.
+
+`workflow.report.trace.file`
+: Trace file path relative to the output directory (default: `'trace-<timestamp>.txt'`).
+
+`workflow.report.trace.overwrite`
+: Overwrite any existing trace file with the same name (default: `false`).
+
+`workflow.report.trace.raw`
+: Report trace metrics as raw numbers where applicable, i.e. report duration values in milliseconds and memory values in bytes (default: `false`).
+
+`workflow.report.trace.sep`
+: Character used to separate values in each row (default: `\t`).

@@ -17,6 +17,7 @@
 package nextflow.trace
 
 import java.nio.file.Files
+import java.nio.file.Path
 
 import nextflow.Session
 import nextflow.executor.Executor
@@ -46,7 +47,7 @@ class TraceFileObserverTest extends Specification {
 
     def createObserver() {
         def config = new TraceConfig([:])
-        return new TraceFileObserver(config)
+        return new TraceFileObserver(config, Path.of('.'))
     }
 
     def 'test set fields'() {
@@ -101,7 +102,7 @@ class TraceFileObserverTest extends Specification {
 
         given:
         def testFolder = Files.createTempDirectory('trace-dir')
-        def file = testFolder.resolve('trace')
+        def file = testFolder.resolve('trace.txt')
 
         // the handler
         def task = new TaskRun(id:TaskId.of(111), name:'simple_task', hash: CacheHelper.hasher(1).hash(), config: new TaskConfig())
@@ -115,8 +116,8 @@ class TraceFileObserverTest extends Specification {
         def now = System.currentTimeMillis()
 
         // the observer class under test
-        def config = new TraceConfig(file: file.toString())
-        def observer = new TraceFileObserver(config)
+        def config = new TraceConfig(file: 'trace.txt')
+        def observer = new TraceFileObserver(config, testFolder)
 
         when:
         observer.onFlowCreate(null)
