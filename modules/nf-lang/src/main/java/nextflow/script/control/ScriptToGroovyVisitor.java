@@ -148,7 +148,7 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
             .map((param) -> {
                 var name = constX(param.getName());
                 var type = classX(param.getType());
-                var optional = constX(type.getNodeMetaData(ASTNodeMarker.NULLABLE) != null);
+                var optional = constX(param.getType().getNodeMetaData(ASTNodeMarker.NULLABLE) != null);
                 var arguments = param.hasInitialExpression()
                     ? args(name, type, optional, param.getInitialExpression())
                     : args(name, type, optional);
