@@ -130,11 +130,33 @@ class ModuleStorage {
             // Remove @ prefix from directory name to get scope
             def scope = scopeDirName.startsWith('@') ? scopeDirName.substring(1) : scopeDirName
 
-            // Iterate over module directories within scope
-            Files.list(scopeDir).each { Path moduleDir ->
-                if (!Files.isDirectory(moduleDir)) return
+            // Recursively find all directories containing meta.yml under this scope
+            findModulesRecursive(scopeDir, scope, modules)
+        }
 
-                def name = moduleDir.fileName.toString()
+        return modules
+    }
+
+    /**
+     * Recursively find modules in subdirectories
+     * @param dir Current directory to search
+     * @param scope Module scope
+     * @param modules List to accumulate found modules
+     */
+    private void findModulesRecursive(Path dir, String scope, List<InstalledModule> modules) {
+        if (!Files.isDirectory(dir)) return
+
+        // Check if current directory contains meta.yml (is a module)
+        if (Files.exists(dir.resolve(MODULE_MANIFEST_FILE))) {
+            // Calculate the module name from the path relative to scope directory
+            def scopeDir = dir.getParent()
+            while (scopeDir != null && !scopeDir.fileName.toString().equals('@' + scope)) {
+                scopeDir = scopeDir.getParent()
+            }
+
+            if (scopeDir != null) {
+                def relativePath = scopeDir.relativize(dir).toString()
+                def name = relativePath.replace('\\', '/') // Normalize path separators
                 def reference = new ModuleReference(scope, name)
 
                 def installed = getInstalledModule(reference)
@@ -144,7 +166,16 @@ class ModuleStorage {
             }
         }
 
-        return modules
+        // Recursively search subdirectories
+        try {
+            Files.list(dir).each { Path subDir ->
+                if (Files.isDirectory(subDir)) {
+                    findModulesRecursive(subDir, scope, modules)
+                }
+            }
+        } catch (IOException e) {
+            log.warn "Failed to list directory ${dir}: ${e.message}"
+        }
     }
 
     /**

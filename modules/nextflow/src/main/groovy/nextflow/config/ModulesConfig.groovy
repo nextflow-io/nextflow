@@ -22,6 +22,7 @@ import nextflow.config.spec.ConfigOption
 import nextflow.config.spec.ConfigScope
 import nextflow.config.spec.ScopeName
 import nextflow.script.dsl.Description
+import nextflow.util.TestOnly
 
 /**
  * Configuration scope for module version declarations
@@ -47,7 +48,7 @@ class ModulesConfig implements ConfigScope {
     ModulesConfig(Map opts) {
         if (opts) {
             opts.each { key, value ->
-                modules[key.toString()] = value.toString()
+                this.modules.put(key.toString(), value.toString())
             }
         }
     }
@@ -59,7 +60,7 @@ class ModulesConfig implements ConfigScope {
      * @return The configured version, or null if not configured
      */
     String getVersion(String moduleName) {
-        return modules.get(moduleName)
+        return this.modules.get(moduleName)
     }
 
     /**
@@ -67,7 +68,8 @@ class ModulesConfig implements ConfigScope {
      *
      * @return Map of module name to version
      */
-    Map<String, String> getModules() {
+    @TestOnly
+    Map<String, String> getAllModules() {
         return Collections.unmodifiableMap(modules)
     }
 
@@ -78,7 +80,7 @@ class ModulesConfig implements ConfigScope {
      * @param version The version to set
      */
     void setVersion(String moduleName, String version) {
-        modules[moduleName] = version
+        this.modules.put(moduleName, version)
     }
 
     /**

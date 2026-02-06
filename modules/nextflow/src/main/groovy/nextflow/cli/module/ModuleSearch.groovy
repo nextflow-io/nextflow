@@ -28,6 +28,7 @@ import nextflow.config.ConfigBuilder
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import nextflow.module.ModuleRegistryClient
+import nextflow.util.TestOnly
 
 import java.nio.file.Paths
 
@@ -50,6 +51,9 @@ class ModuleSearch extends CmdBase {
     @Parameter(description = "<query>", required = true)
     List<String> args
 
+    @TestOnly
+    protected ModuleRegistryClient client
+
     @Override
     String getName() {
         return 'search'
@@ -71,14 +75,14 @@ class ModuleSearch extends CmdBase {
 
         final registryConfig = config.navigate('registry') as RegistryConfig
 
-        // Create client to seach
-        final client = new ModuleRegistryClient(registryConfig)
+        // Create client to search
+        final client = this.client ?: new ModuleRegistryClient(registryConfig)
 
         try {
             println "Searching for '${query}'..."
             final results = client.search(query, limit)
 
-            if (results.totalResults == 0 || !results.results || results.results.isEmpty()) {
+            if (!results || results.totalResults == 0 || !results.results || results.results.isEmpty()) {
                 println "No modules found"
                 return
             }

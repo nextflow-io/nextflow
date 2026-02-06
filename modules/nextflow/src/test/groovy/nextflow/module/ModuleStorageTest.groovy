@@ -161,6 +161,50 @@ class ModuleStorageTest extends Specification {
         installed*.reference.fullName.sort() == ['@myorg/custom', '@nf-core/fastqc', '@nf-core/multiqc']
     }
 
+    def 'should list nested modules recursively'() {
+        given:
+        def storage = new ModuleStorage(tempDir)
+
+        // Create modules with nested paths
+        def modules = [
+            new ModuleReference('nf-core', 'fastqc'),
+            new ModuleReference('nf-core', 'gfatools/gfa2fa'),
+            new ModuleReference('nf-core', 'gfatools/gfa2gfa'),
+            new ModuleReference('myorg', 'tools/subtools/module')
+        ]
+
+        modules.each { ref ->
+            def moduleDir = storage.getModuleDir(ref)
+            Files.createDirectories(moduleDir)
+
+            // Create main.nf
+            moduleDir.resolve('main.nf').text = 'process TEST { }'
+
+            // Create meta.yml with version
+            moduleDir.resolve('meta.yml').text = """
+                name: ${ref.nameWithoutPrefix}
+                version: 1.0.0
+                description: Test module
+                license: MIT
+            """.stripIndent()
+
+            // Create .checksum
+            moduleDir.resolve('.checksum').text = 'checksum'
+        }
+
+        when:
+        def installed = storage.listInstalled()
+
+        then:
+        installed.size() == 4
+        installed*.reference.fullName.sort() == [
+            '@myorg/tools/subtools/module',
+            '@nf-core/fastqc',
+            '@nf-core/gfatools/gfa2fa',
+            '@nf-core/gfatools/gfa2gfa'
+        ]
+    }
+
     def 'should return empty list when no modules installed'() {
         given:
         def storage = new ModuleStorage(tempDir)

@@ -27,8 +27,10 @@ import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
 import nextflow.module.ModuleReference
+import nextflow.module.ModuleRegistryClient
 import nextflow.module.ModuleResolver
 import nextflow.pipeline.PipelineSpec
+import nextflow.util.TestOnly
 
 import java.nio.file.Files
 import java.nio.file.Path
@@ -45,6 +47,12 @@ import java.nio.file.Paths
 class ModuleRun extends CmdRun {
     @Parameter(names = ["-version"], description = "Module version")
     String version
+
+    @TestOnly
+    protected Path root
+
+    @TestOnly
+    protected ModuleRegistryClient client
 
     @Override
     String getName() {
@@ -69,7 +77,7 @@ class ModuleRun extends CmdRun {
         }
 
         // Get config
-        def baseDir = Paths.get('.').toAbsolutePath().normalize()
+        def baseDir = root ?: Paths.get('.').toAbsolutePath().normalize()
         def config = new ConfigBuilder()
                 .setOptions(launcher.options)
                 .setBaseDir(baseDir)
@@ -77,15 +85,11 @@ class ModuleRun extends CmdRun {
 
         def registryConfig = config.navigate('registry') as RegistryConfig
 
-        //TODO: Decide final location of modules currently in nextflow_spec.json.
-        // Alternative: Use nextflow config. It requires to implement nextflow.config updater features
-        // def modulesConfig = config.navigate('modules') as ModulesConfig
+        //Get module version from nextflow_spec.json.
         def specFile = new PipelineSpec(baseDir)
         def modulesConfig = new ModulesConfig(specFile.getModules())
 
-        //TODO: Decide if create resolver with a temporarily storage or use current ./modules
-        def tempDir = Files.createTempDirectory("nf-module-run-")
-        def resolver = new ModuleResolver(tempDir, modulesConfig, registryConfig)
+        def resolver = new ModuleResolver(baseDir, client ?: new ModuleRegistryClient(registryConfig), modulesConfig)
         try{
             Path moduleFile = resolver.installModule(reference, version)
             if( moduleFile ) {
@@ -100,10 +104,6 @@ class ModuleRun extends CmdRun {
         catch (Exception e) {
             log.error("Failed to run module", e)
             throw new AbortOperationException("Module run failed: ${e.message}", e)
-        }
-        finally {
-            // Clean up temporary directory
-            FileHelper.deletePath(tempDir)
         }
     }
 }

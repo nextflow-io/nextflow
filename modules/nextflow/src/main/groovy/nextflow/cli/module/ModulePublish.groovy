@@ -29,6 +29,7 @@ import nextflow.module.ModuleSpec
 import nextflow.module.ModuleReference
 import nextflow.module.ModuleRegistryClient
 import nextflow.module.ModuleStorage
+import nextflow.util.TestOnly
 
 import java.nio.file.Files
 import java.nio.file.Path
@@ -52,6 +53,12 @@ class ModulePublish extends CmdBase {
 
     @Parameter(description = "Module directory path or scope/name")
     List<String> args
+
+    @TestOnly
+    protected Path root
+
+    @TestOnly
+    protected ModuleRegistryClient client
 
     @Override
     String getName() {
@@ -240,7 +247,7 @@ class ModulePublish extends CmdBase {
         }
 
         final ref =  ModuleReference.parse('@' + module)
-        final localStorage = new ModuleStorage(Paths.get('.').toAbsolutePath().normalize())
+        final localStorage = new ModuleStorage(root ?: Paths.get('.').toAbsolutePath().normalize())
 
         if (!localStorage.isInstalled(ref)){
             throw new AbortOperationException("No module diretory found for $module")

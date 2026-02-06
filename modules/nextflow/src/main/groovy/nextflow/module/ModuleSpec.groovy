@@ -98,9 +98,9 @@ class ModuleSpec {
             errors << "Invalid version format: ${version} (expected semantic versioning, e.g., 1.0.0)".toString()
         }
 
-        // Validate name format (scope/name)
-        if (name && !name.matches(/^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+$/)) {
-            errors << "Invalid module name format: ${name} (expected scope/name, e.g., nf-core/fastqc)".toString()
+        // Validate name format (scope/name or scope/path/to/name for nested modules)
+        if (name && !name.matches(/^[a-zA-Z0-9._-]+\/[a-zA-Z0-9_-]+(?:\/[a-zA-Z0-9_-]+)*$/)) {
+            errors << "Invalid module name format: ${name} (expected scope/name or scope/path/to/name, e.g., nf-core/fastqc or nf-core/gfatools/gfa2fa)".toString()
         }
 
         return errors
