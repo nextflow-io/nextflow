@@ -37,13 +37,16 @@ class ModuleResolver {
     private final ModuleRegistryClient registryClient
     private final ModuleStorage storage
     private final ModulesConfig modulesConfig
-    private final RegistryConfig registryConfig
 
-    ModuleResolver(Path baseDir, ModulesConfig modulesConfig = null, RegistryConfig registryConfig = null) {
-        this.registryConfig = registryConfig ?: new RegistryConfig()
-        this.registryClient = new ModuleRegistryClient(this.registryConfig)
+    ModuleResolver (Path baseDir, ModuleRegistryClient registryClient, ModulesConfig modulesConfig = null) {
+        this.registryClient = registryClient
         this.storage = new ModuleStorage(baseDir)
         this.modulesConfig = modulesConfig ?: new ModulesConfig()
+    }
+
+    ModuleResolver(Path baseDir, ModulesConfig modulesConfig = null, RegistryConfig registryConfig = null) {
+        this(baseDir, new ModuleRegistryClient(registryConfig ?: new RegistryConfig()), modulesConfig)
+
     }
 
     /**

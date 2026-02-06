@@ -149,12 +149,17 @@ requires:
         errors.isEmpty() == valid
 
         where:
-        name                | valid
-        'nf-core/fastqc'    | true
-        'myorg/my-module'   | true
-        'org_1/tool_2'      | true
-        'fastqc'            | false
-        '@nf-core/fastqc'   | false
-        'nf-core/fast qc'   | false
+        name                        | valid
+        'nf-core/fastqc'            | true
+        'myorg/my-module'           | true
+        'org_1/tool_2'              | true
+        'nf-core/gfatools/gfa2fa'   | true   // nested module path
+        'myorg/tools/sub/module'    | true   // deeply nested
+        'org.name/tool/sub'         | true   // dot in scope
+        'fastqc'                    | false
+        '@nf-core/fastqc'           | false
+        'nf-core/fast qc'           | false
+        'nf-core/'                  | false  // trailing slash
+        '/nf-core/fastqc'           | false  // leading slash
     }
 }

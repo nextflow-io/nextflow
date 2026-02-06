@@ -25,7 +25,9 @@ import nextflow.exception.AbortOperationException
 import nextflow.module.ModuleReference
 import nextflow.module.ModuleStorage
 import nextflow.pipeline.PipelineSpec
+import nextflow.util.TestOnly
 
+import java.nio.file.Path
 import java.nio.file.Paths
 
 /**
@@ -46,6 +48,9 @@ class ModuleRemove extends CmdBase {
 
     @Parameter(names = ["-keep-files"], description = "Remove from config but keep local files", arity = 0)
     boolean keepFiles = false
+
+    @TestOnly
+    protected Path root
 
     @Override
     String getName() {
@@ -68,9 +73,9 @@ class ModuleRemove extends CmdBase {
         def reference = ModuleReference.parse(moduleRef)
 
         // Get config
-        def baseDir = Paths.get('.').toAbsolutePath().normalize()
+        def baseDir = root ?: Paths.get('.').toAbsolutePath().normalize()
 
-        //TODO: Decide final location of modules currently in nextflow_spec.json.
+        //Get module versions from nextflow_spec.json.
         def specFile = new PipelineSpec(baseDir)
 
         // Create resolver and spec file manager

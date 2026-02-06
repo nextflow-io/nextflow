@@ -26,7 +26,9 @@ import nextflow.exception.AbortOperationException
 import nextflow.module.InstalledModule
 import nextflow.module.ModuleIntegrity
 import nextflow.module.ModuleStorage
+import nextflow.util.TestOnly
 
+import java.nio.file.Path
 import java.nio.file.Paths
 
 /**
@@ -42,6 +44,9 @@ class ModuleList extends CmdBase {
     @Parameter(names = ["-json"], description = "Output in JSON format", arity=0)
     boolean jsonOutput = false
 
+    @TestOnly
+    protected Path root
+
     @Override
     String getName() {
         return 'list'
@@ -51,7 +56,7 @@ class ModuleList extends CmdBase {
     void run() {
 
         // Get config
-        def baseDir = Paths.get('.').toAbsolutePath().normalize()
+        def baseDir = root ?: Paths.get('.').toAbsolutePath().normalize()
 
 
         // Create resolver and list modules

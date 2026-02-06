@@ -26,9 +26,12 @@ import nextflow.config.ModulesConfig
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import nextflow.module.ModuleReference
+import nextflow.module.ModuleRegistryClient
 import nextflow.module.ModuleResolver
 import nextflow.pipeline.PipelineSpec
+import nextflow.util.TestOnly
 
+import java.nio.file.Path
 import java.nio.file.Paths
 
 /**
@@ -50,6 +53,12 @@ class ModuleInstall extends CmdBase {
     @Parameter(description = "[scope/name]", required = true)
     List<String> args
 
+    @TestOnly
+    protected Path root
+
+    @TestOnly
+    protected ModuleRegistryClient client
+
     @Override
     String getName() {
         return 'install'
@@ -66,21 +75,19 @@ class ModuleInstall extends CmdBase {
         def reference = ModuleReference.parse(moduleRef)
 
         // Get config
-        def baseDir = Paths.get('.').toAbsolutePath().normalize()
+        def baseDir = root ?: Paths.get('.').toAbsolutePath().normalize()
         def config = new ConfigBuilder()
                 .setOptions(launcher.options)
                 .setBaseDir(baseDir)
                 .build()
-        def registryConfig = config.navigate('registry') as RegistryConfig
+        final registryConfig = config.navigate('registry') as RegistryConfig
 
-        //TODO: Decide final location of modules currently in nextflow_spec.json.
-        // Alternative: Use nextflow config. It requires to implement nextflow.config updater features
-        // def modulesConfig = config.navigate('modules') as ModulesConfig
-        def specFile = new PipelineSpec(baseDir)
-        def modulesConfig = new ModulesConfig(specFile.getModules())
+        // Get modules versions from nextflow_spec.json.
+        final specFile = new PipelineSpec(baseDir)
+        final modulesConfig = new ModulesConfig(specFile.getModules())
 
         // Create resolver and install
-        def resolver = new ModuleResolver(baseDir, modulesConfig, registryConfig)
+        def resolver = new ModuleResolver(baseDir, client ?: new ModuleRegistryClient(registryConfig), modulesConfig)
 
         try {
             def installedMainFile = resolver.installModule(reference, version, force)
