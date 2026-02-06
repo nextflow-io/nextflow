@@ -416,6 +416,18 @@ class AnsiLogObserver implements TraceObserverV2 {
     private final static Pattern TAG_REGEX = ~/ \((.+)\)( *)$/
     private final static Pattern LBL_REPLACE = ~/ \(.+\) *$/
 
+    // OSC 8 hyperlink escape sequences (using BEL as String Terminator)
+    private final static String HYPERLINK_START = '\033]8;;'
+    private final static String HYPERLINK_SEP = '\007'
+    private final static String HYPERLINK_END = '\033]8;;\007'
+
+    protected static String hyperlink(String text, String url) {
+        if( !url )
+            return text
+        final href = url.startsWith('/') ? 'file://' + url : url
+        return HYPERLINK_START + href + HYPERLINK_SEP + text + HYPERLINK_END
+    }
+
     protected Ansi line(ProgressRecord stats) {
         final term = ansi()
         final float tot = stats.getTotalCount()
@@ -442,9 +454,10 @@ class AnsiLogObserver implements TraceObserverV2 {
         // eg. 1 of 1
         final numbs = " ${(int)com} of ${(int)tot}".toString()
 
-        // Task hash, eg: [fa/71091a]
+        // Task hash - make clickable hyperlink to work dir when available (and cleanup not enabled)
+        final hashDisplay = (stats.workDir && !session.config.cleanup) ? hyperlink(hh, stats.workDir) : hh
         term.a(Attribute.INTENSITY_FAINT).a('[').reset()
-        term.fg(Color.BLUE).a(hh).reset()
+        term.fg(Color.BLUE).a(hashDisplay).reset()
         term.a(Attribute.INTENSITY_FAINT).a('] ').reset()
 
         // Only show 'process > ' if the terminal has lots of width
