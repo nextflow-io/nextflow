@@ -603,6 +603,28 @@ class FilesExTest extends Specification {
         sourceFolder.deleteDir()
     }
 
+    def 'should list files in symlinked directory' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        def realDir = folder.resolve('realDir')
+        Files.createDirectories(realDir)
+        realDir.resolve('file1.txt').text = 'Hello1'
+        realDir.resolve('file2.txt').text = 'Hello2'
+        def linkDir = folder.resolve('linkDir')
+        Files.createSymbolicLink(linkDir, realDir)
+
+        when:
+        def paths = linkDir.listFiles()
+
+        then:
+        paths.size() == 2
+        paths.collect { it.name }.sort() == ['file1.txt', 'file2.txt']
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
 
     def testSetReadonly() {
 

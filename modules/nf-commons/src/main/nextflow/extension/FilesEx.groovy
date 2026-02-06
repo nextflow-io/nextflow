@@ -22,6 +22,7 @@ import java.nio.ByteBuffer
 import java.nio.channels.SeekableByteChannel
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileSystemException
+import java.nio.file.FileVisitOption
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.LinkOption
@@ -658,8 +659,9 @@ class FilesEx {
             return null
 
         final result = []
+        final opts = EnumSet.of(FileVisitOption.FOLLOW_LINKS)
 
-        Files.walkFileTree(self, new SimpleFileVisitor<Path>() {
+        Files.walkFileTree(self, opts, Integer.MAX_VALUE, new SimpleFileVisitor<Path>() {
 
             FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
                 if( filter == null || invokeFilter(filter, file, attrs) )
