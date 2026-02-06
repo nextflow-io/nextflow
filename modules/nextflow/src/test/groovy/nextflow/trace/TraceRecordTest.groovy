@@ -161,6 +161,7 @@ class TraceRecordTest extends Specification {
             nextflow.trace/v2
             realtime=12021
             %cpu=997
+            used_cpus=32
             rchar=50838
             wchar=317
             syscr=120
@@ -181,6 +182,7 @@ class TraceRecordTest extends Specification {
         then:
         trace.realtime == 12021
         trace.'%cpu' == 99.7
+        trace.used_cpus == 32
         trace.rchar == 50838
         trace.wchar == 317
         trace.syscr == 120
