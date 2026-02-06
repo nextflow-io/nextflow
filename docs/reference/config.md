@@ -1512,8 +1512,11 @@ The following settings are available:
 `seqera.executor.region`
 : The AWS region for task execution (default: `'eu-central-1'`).
 
+`seqera.executor.autoLabels`
+: When `true`, automatically adds workflow metadata labels to the session with the `nextflow.io/` prefix (default: `false`). The following labels are added: `projectName`, `userName`, `runName`, `sessionId`, `resume`, `revision`, `commitId`, `repository`, `manifestName`, `runtimeVersion`. A `seqera.io/runId` label is also added, computed as a SipHash of the session ID and run name.
+
 `seqera.executor.labels`
-: Custom labels to apply to AWS resources for cost tracking and resource organization. Labels are propagated to ECS tasks, capacity providers, and EC2 instances.
+: Custom labels to apply to AWS resources for cost tracking and resource organization. Labels are propagated to ECS tasks, capacity providers, and EC2 instances. When used together with `autoLabels`, user-defined labels take precedence over auto-generated labels.
 
 `seqera.executor.machineRequirement.arch`
 : The CPU architecture for task execution, e.g. `'x86_64'` or `'arm64'`.

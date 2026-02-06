@@ -90,11 +90,15 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
 
     protected void createSession() {
         final towerConfig = session.config.tower as Map ?: Collections.emptyMap()
+        final labels = new Labels()
+        if( seqeraConfig.autoLabels )
+            labels.withWorkflowMetadata(session.workflowMetadata)
+        labels.withUserLabels(seqeraConfig.labels)
         final request = new CreateSessionRequest()
                 .region(seqeraConfig.region)
                 .name(session.runName)
                 .machineRequirement(MapperUtil.toMachineRequirement(seqeraConfig.machineRequirement))
-                .labels(seqeraConfig.labels)
+                .labels(labels.entries)
                 .workspaceId(PlatformHelper.getWorkspaceId(towerConfig, SysEnv.get()) as Long)
         log.debug "[SEQERA] Creating session: ${request}"
         final response = client.createSession(request)

@@ -48,6 +48,7 @@ class ExecutorOptsTest extends Specification {
         config.machineRequirement != null
         config.machineRequirement.arch == null
         config.machineRequirement.provisioning == null
+        !config.autoLabels
     }
 
     def 'should create config with custom region' () {
@@ -161,6 +162,17 @@ class ExecutorOptsTest extends Specification {
 
         then:
         config.labels == [:]
+    }
+
+    def 'should enable auto labels' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            autoLabels: true
+        ])
+
+        then:
+        config.autoLabels
     }
 
 }

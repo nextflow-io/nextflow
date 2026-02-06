@@ -72,6 +72,13 @@ class ExecutorOpts implements ConfigScope {
     """)
     final Map<String, String> labels
 
+    @ConfigOption
+    @Description("""
+        When `true`, automatically adds workflow metadata labels (e.g. project name,
+        run name, session ID) with the `nextflow.io/` prefix to the session (default: `false`).
+    """)
+    final boolean autoLabels
+
     /* required by config scope -- do not remove */
 
     ExecutorOpts() {}
@@ -91,6 +98,7 @@ class ExecutorOpts implements ConfigScope {
         this.machineRequirement = new MachineRequirementOpts(opts.machineRequirement as Map ?: Map.of())
         // labels for cost tracking
         this.labels = opts.labels as Map<String, String>
+        this.autoLabels = opts.autoLabels as boolean ?: false
     }
 
     RetryOpts retryOpts() {
@@ -119,5 +127,9 @@ class ExecutorOpts implements ConfigScope {
 
     Map<String, String> getLabels() {
         return labels
+    }
+
+    boolean getAutoLabels() {
+        return autoLabels
     }
 }
