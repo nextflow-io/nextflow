@@ -419,7 +419,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         when:
         def trace = handler.getTraceRecord()
         then:
-        1 * handler.isCompleted() >> true
+        2 * handler.isCompleted() >> true
         1 * client.getTaskStatus('xyz-123', '0') >> taskStatus
         and:
         trace.native_id == 'xyz-123/0/789'
@@ -869,6 +869,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def result = handler.getNumSpotInterruptions('job-123')
 
         then:
+        handler.isCompleted() >> true
         result == 0
     }
 
@@ -900,6 +901,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def result = handler.getNumSpotInterruptions('job-123')
 
         then:
+        handler.isCompleted() >> true
         result == 2
     }
 
@@ -913,6 +915,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def resultIncompleteTask = handler.getNumSpotInterruptions('job-123')
 
         then:
+        handler.isCompleted() >> false
         resultNullJobId == null
         resultIncompleteTask == null
     }
@@ -929,6 +932,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def result = handler.getNumSpotInterruptions('job-123')
 
         then:
+        handler.isCompleted() >> true
         result == null
     }
 
