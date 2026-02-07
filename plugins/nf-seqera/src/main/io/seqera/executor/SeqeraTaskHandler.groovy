@@ -103,11 +103,12 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
             if( accelerator.type )
                 resourceReq.acceleratorName(accelerator.type)
         }
-        // build machine requirement merging config settings with task arch and disk
+        // build machine requirement merging config settings with task arch, disk, and snapshot settings
         final machineReq = MapperUtil.toMachineRequirement(
             executor.getSeqeraConfig().machineRequirement,
             task.getContainerPlatform(),
-            task.config.getDisk()
+            task.config.getDisk(),
+            fusionConfig().snapshotsEnabled()
         )
         // validate container - Seqera executor requires all processes to specify a container image
         final container = task.getContainer()
