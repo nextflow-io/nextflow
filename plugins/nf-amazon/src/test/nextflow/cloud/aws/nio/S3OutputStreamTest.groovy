@@ -159,4 +159,55 @@ class S3OutputStreamTest extends Specification implements AwsS3BaseSpec {
         capturedParts[2].partNumber() == 2
 
     }
+
+    def 'should include CRC32C checksum for uploads'() {
+        given:
+        def path = s3path("s3://test-bucket--use1-az1--x-s3/file.txt")
+        def multipart = new S3MultipartOptions()
+        def client = Mock(S3Client)
+        def writer = new S3OutputStream(client, path.toS3ObjectId(), multipart)
+        def capturedUploadRequest = null
+        def capturedPutRequest = null
+        // Pre-computed CRC32C checksum bytes (4 bytes big-endian)
+        def checksumBytes = [0x12, 0x34, 0x56, 0x78] as byte[]
+        def expectedChecksum = Base64.getEncoder().encodeToString(checksumBytes)
+
+        when: 'upload with multipart'
+        writer.init()
+        writer.uploadPart(InputStream.nullInputStream(), 25, checksumBytes, 1, true)
+
+        then:
+        1 * client.createMultipartUpload(_) >> CreateMultipartUploadResponse.builder().uploadId("upload-id").build()
+        1 * client.uploadPart(_, _) >> { args ->
+            capturedUploadRequest = args[0]
+            return UploadPartResponse.builder().eTag('etag').build()
+        }
+        capturedUploadRequest.contentMD5() == null
+        capturedUploadRequest.checksumCRC32C() == expectedChecksum
+
+        when: 'upload without multipart'
+        path = s3path("s3://test-bucket/small.txt")
+        writer = new S3OutputStream(client, path.toS3ObjectId(), multipart)
+        writer.write("test".bytes)
+        writer.close()
+
+        then:
+        1 * client.putObject(_, _) >> { args ->
+            capturedPutRequest = args[0]
+            return null
+        }
+        capturedPutRequest.contentMD5() == null
+        capturedPutRequest.checksumCRC32C() != null
+        and: 'verify CRC32C is correct for "test" bytes'
+        def crc = new java.util.zip.CRC32C()
+        crc.update("test".bytes)
+        def expectedCrc = crc.getValue()
+        def expectedCrcBytes = [
+            (byte)((expectedCrc >> 24) & 0xFF),
+            (byte)((expectedCrc >> 16) & 0xFF),
+            (byte)((expectedCrc >> 8) & 0xFF),
+            (byte)(expectedCrc & 0xFF)
+        ] as byte[]
+        capturedPutRequest.checksumCRC32C() == Base64.getEncoder().encodeToString(expectedCrcBytes)
+    }
 }

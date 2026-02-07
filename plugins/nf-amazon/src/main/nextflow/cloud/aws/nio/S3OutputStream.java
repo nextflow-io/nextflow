@@ -24,9 +24,8 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.ByteBuffer;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
+import java.util.zip.CRC32C;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Queue;
@@ -129,7 +128,7 @@ public final class S3OutputStream extends OutputStream {
      */
     private ByteBuffer buf;
 
-    private MessageDigest md5;
+    private CRC32C crc32c;
 
     /**
      * Phaser object to synchronize stream termination
@@ -208,15 +207,25 @@ public final class S3OutputStream extends OutputStream {
     }
 
     /**
-     * @return A MD5 message digester
+     * @return A new CRC32C checksum instance
      */
-    private MessageDigest createMd5() {
-        try {
-            return MessageDigest.getInstance("MD5");
-        }
-        catch(NoSuchAlgorithmException e) {
-            throw new IllegalStateException("Cannot find a MD5 algorithm provider",e);
-        }
+    private CRC32C createCrc32c() {
+        return new CRC32C();
+    }
+
+    /**
+     * Convert CRC32C checksum value to a 4-byte big-endian array
+     * @param crc32c The CRC32C checksum instance
+     * @return The checksum as a 4-byte array
+     */
+    private byte[] getCrc32cBytes(CRC32C crc32c) {
+        long value = crc32c.getValue();
+        return new byte[] {
+            (byte) ((value >> 24) & 0xFF),
+            (byte) ((value >> 16) & 0xFF),
+            (byte) ((value >> 8) & 0xFF),
+            (byte) (value & 0xFF)
+        };
     }
 
     /**
@@ -233,7 +242,7 @@ public final class S3OutputStream extends OutputStream {
         }
         if( buf == null ) {
             buf = allocate();
-            md5 = createMd5();
+            crc32c = createCrc32c();
         }
         else if( !buf.hasRemaining() ) {
             if( buf.position() < bufferSize ) {
@@ -243,13 +252,13 @@ public final class S3OutputStream extends OutputStream {
                 flush();
                 // create a new buffer
                 buf = allocate();
-                md5 = createMd5();
+                crc32c = createCrc32c();
             }
         }
 
         buf.put((byte) b);
-        // update the md5 checksum
-        md5.update((byte) b);
+        // update the checksum
+        crc32c.update(b);
     }
 
     /**
@@ -263,7 +272,7 @@ public final class S3OutputStream extends OutputStream {
         if( uploadBuffer(buf, false) ) {
             // clear the current buffer
             buf = null;
-            md5 = null;
+            crc32c = null;
         }
     }
 
@@ -312,7 +321,7 @@ public final class S3OutputStream extends OutputStream {
         }
 
         // set the buffer in read mode and submit for upload
-        executor.submit( task(buf, md5.digest(), ++partsCount) );
+        executor.submit( task(buf, getCrc32cBytes(crc32c), ++partsCount) );
 
         return true;
     }
@@ -382,10 +391,10 @@ public final class S3OutputStream extends OutputStream {
 
         if (uploadId == null) {
             if( buf != null )
-                putObject(buf, md5.digest());
+                putObject(buf, getCrc32cBytes(crc32c));
             else
-                // this is needed when trying to upload an empty 
-                putObject(new ByteArrayInputStream(new byte[]{}), 0, createMd5().digest());
+                // this is needed when trying to upload an empty
+                putObject(new ByteArrayInputStream(new byte[]{}), 0, getCrc32cBytes(createCrc32c()));
         }
         else {
             // -- upload remaining chunk
@@ -500,7 +509,7 @@ public final class S3OutputStream extends OutputStream {
         reqBuilder.uploadId(uploadId);
         reqBuilder.partNumber(partNumber);
         reqBuilder.contentLength(contentLength);
-        reqBuilder.contentMD5(Base64.getEncoder().encodeToString(checksum));
+        reqBuilder.checksumCRC32C(Base64.getEncoder().encodeToString(checksum));
 
         final UploadPartResponse resp = s3.uploadPart(reqBuilder.build(), RequestBody.fromInputStream(content, contentLength));
         log.trace("Uploaded part {} with length {} for {}: {}", partNumber, contentLength, objectId, resp.eTag());
@@ -598,7 +607,7 @@ public final class S3OutputStream extends OutputStream {
         reqBuilder.bucket(objectId.bucket());
         reqBuilder.key(objectId.key());
         reqBuilder.contentLength(contentLength);
-        reqBuilder.contentMD5( Base64.getEncoder().encodeToString(checksum) );
+        reqBuilder.checksumCRC32C(Base64.getEncoder().encodeToString(checksum));
         if( cannedAcl!=null ) {
             reqBuilder.acl(cannedAcl);
         }
