@@ -73,8 +73,8 @@ class ReportObserver implements TraceObserverV2 {
      */
     private boolean overwrite
 
-    ReportObserver(ReportConfig config) {
-        this.reportFile = FileHelper.asPath(config.file)
+    ReportObserver(ReportConfig config, Path baseDir) {
+        this.reportFile = baseDir.resolve(config.file)
         this.maxTasks = config.maxTasks
         this.overwrite = config.overwrite
     }

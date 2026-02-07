@@ -20,6 +20,10 @@ import nextflow.config.spec.ConfigOption
 import nextflow.config.spec.ConfigScope
 import nextflow.config.spec.ScopeName
 import nextflow.script.dsl.Description
+import nextflow.trace.config.DagConfig
+import nextflow.trace.config.ReportConfig
+import nextflow.trace.config.TimelineConfig
+import nextflow.trace.config.TraceConfig
 
 @ScopeName("workflow")
 @Description("""
@@ -47,11 +51,18 @@ class WorkflowConfig implements ConfigScope {
     final Closure onError
 
     @Description("""
-        The `workflow.output` scope provides options for publishing workflow outputs.
+        The `workflow.output` scope controls how workflow outputs are published.
     
         [Read more](https://nextflow.io/docs/latest/reference/config.html#workflow)
     """)
     final WorkflowOutputConfig output
+
+    @Description("""
+        The `workflow.report` scope controls the standard reports provided by Nextflow.
+    
+        [Read more](https://nextflow.io/docs/latest/reference/config.html#workflow)
+    """)
+    final WorkflowReportConfig report
 
     /* required by extension point -- do not remove */
     WorkflowConfig() {}
@@ -61,6 +72,7 @@ class WorkflowConfig implements ConfigScope {
         onComplete = opts.onComplete as Closure
         onError = opts.onError as Closure
         output = new WorkflowOutputConfig(opts.output as Map ?: Collections.emptyMap())
+        report = new WorkflowReportConfig(opts.report as Map ?: Collections.emptyMap())
     }
 
 }
@@ -124,9 +136,6 @@ class WorkflowOutputConfig implements ConfigScope {
     """)
     final Map tags
 
-    /* required by extension point -- do not remove */
-    WorkflowOutputConfig() {}
-
     WorkflowOutputConfig(Map opts) {
         contentType = opts.contentType
         copyAttributes = opts.copyAttributes as boolean
@@ -136,6 +145,26 @@ class WorkflowOutputConfig implements ConfigScope {
         overwrite = opts.overwrite
         storageClass = opts.storageClass
         tags = opts.tags as Map
+    }
+
+}
+
+@CompileStatic
+class WorkflowReportConfig implements ConfigScope {
+
+    final DagConfig dag
+
+    final ReportConfig execution
+
+    final TimelineConfig timeline
+
+    final TraceConfig trace
+
+    WorkflowReportConfig(Map opts) {
+        dag = new DagConfig(opts.dag as Map ?: Collections.emptyMap())
+        execution = new ReportConfig(opts.execution as Map ?: Collections.emptyMap())
+        timeline = new TimelineConfig(opts.timeline as Map ?: Collections.emptyMap())
+        trace = new TraceConfig(opts.trace as Map ?: Collections.emptyMap())
     }
 
 }
