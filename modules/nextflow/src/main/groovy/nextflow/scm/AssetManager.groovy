@@ -782,7 +782,7 @@ class AssetManager implements Closeable {
             clone.setBranch(revision)
         if( deep )
             clone.setDepth(deep)
-        clone.call()
+        clone.call().close()
     }
 
     /**
