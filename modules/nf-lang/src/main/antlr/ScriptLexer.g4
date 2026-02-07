@@ -312,7 +312,7 @@ NEW           : 'new';
 // PRIVATE       : 'private';
 // PROTECTED     : 'protected';
 // PUBLIC        : 'public';
-// RECORD        : 'record';
+RECORD        : 'record';
 RETURN        : 'return';
 // SEALED        : 'sealed';
 

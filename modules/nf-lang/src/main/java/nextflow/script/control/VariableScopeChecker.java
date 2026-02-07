@@ -28,6 +28,7 @@ import nextflow.script.dsl.Operator;
 import nextflow.script.ast.ProcessNode;
 import nextflow.script.ast.WorkflowNode;
 import nextflow.script.types.Record;
+import org.codehaus.groovy.ast.AnnotatedNode;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
@@ -58,7 +59,7 @@ public class VariableScopeChecker {
 
     private SourceUnit sourceUnit;
 
-    private Map<String,MethodNode> includes = new HashMap<>();
+    private Map<String,AnnotatedNode> includes = new HashMap<>();
 
     private VariableScope currentScope;
 
@@ -78,11 +79,11 @@ public class VariableScopeChecker {
         return currentScope;
     }
 
-    public void include(String name, MethodNode variable) {
+    public void include(String name, AnnotatedNode variable) {
         includes.put(name, variable);
     }
 
-    public MethodNode getInclude(String name) {
+    public AnnotatedNode getInclude(String name) {
         return includes.get(name);
     }
 
@@ -209,8 +210,8 @@ public class VariableScopeChecker {
                 : null;
         }
 
-        if( includes.containsKey(name) )
-            return wrapMethodAsVariable(includes.get(name), name);
+        if( includes.get(name) instanceof MethodNode mn )
+            return wrapMethodAsVariable(mn, name);
 
         return null;
     }
@@ -281,8 +282,8 @@ public class VariableScopeChecker {
             scope = scope.getParent();
         }
 
-        return includes.containsKey(name)
-            ? List.of(includes.get(name))
+        return includes.get(name) instanceof MethodNode mn
+            ? List.of(mn)
             : Collections.emptyList();
     }
 

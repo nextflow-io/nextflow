@@ -376,4 +376,32 @@ class ScriptAstBuilderTest extends Specification {
         errors.size() == 0
     }
 
+    def 'should report error for invalid record definition' () {
+        when:
+        def errors = check(
+            '''\
+            record Sample {}
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 1
+        errors[0].getOriginalMessage() == "Missing record body"
+
+        when:
+        errors = check(
+            '''\
+            record Sample {
+                id
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 2
+        errors[0].getStartColumn() == 5
+        errors[0].getOriginalMessage() == "Missing field type"
+    }
+
 }
