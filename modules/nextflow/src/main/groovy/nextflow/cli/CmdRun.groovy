@@ -599,9 +599,7 @@ class CmdRun extends CmdBase implements HubOptions {
         /*
          * try to look for a pipeline in the repository
          */
-        def manager = new AssetManager(pipelineName, this)
-        if( revision )
-            manager.setRevision(revision)
+        def manager = new AssetManager(pipelineName, revision, mainScript, this)
         def repo = manager.getProjectWithRevision()
 
         boolean checkForUpdate = true
