@@ -34,21 +34,21 @@ import spock.lang.Timeout
 @Timeout(30)
 class SeqeraBatchSubmitterTest extends Specification {
 
-    static final String TEST_SESSION = 'ses-test:local'
+    static final String TEST_RUN = 'run-test:local'
 
     def 'should batch multiple tasks submitted within the interval'() {
         given:
         def taskIds = ['task-1', 'task-2', 'task-3']
         def capturedTasks = []
         def client = Stub(SchedClient) {
-            createTasks(_, _) >> { String sessionId, List<Task> tasks ->
+            createTasks(_, _) >> { String runId, List<Task> tasks ->
                 capturedTasks.addAll(tasks)
                 Stub(CreateTasksResponse) {
                     getTaskIds() >> taskIds.take(tasks.size())
                 }
             }
         }
-        def submitter = new SeqeraBatchSubmitter(client, TEST_SESSION, Duration.of('500ms'))
+        def submitter = new SeqeraBatchSubmitter(client, TEST_RUN, Duration.of('500ms'))
         def handlers = (1..3).collect { createMockHandler() }
         def tasks = (1..3).collect { new Task().image("image-$it") }
 
@@ -76,7 +76,7 @@ class SeqeraBatchSubmitterTest extends Specification {
         def batchCount = new AtomicInteger()
         def batches = [].asSynchronized()  // thread-safe list to capture batches
         def client = Stub(SchedClient) {
-            createTasks(_, _) >> { String sessionId, List<Task> tasks ->
+            createTasks(_, _) >> { String runId, List<Task> tasks ->
                 def batchNum = batchCount.incrementAndGet()
                 def tasksInBatch = tasks.collect { it.image }
                 batches << [batch: batchNum, tasks: tasksInBatch]
@@ -85,7 +85,7 @@ class SeqeraBatchSubmitterTest extends Specification {
                 }
             }
         }
-        def submitter = new SeqeraBatchSubmitter(client, TEST_SESSION, Duration.of('200ms'))
+        def submitter = new SeqeraBatchSubmitter(client, TEST_RUN, Duration.of('200ms'))
 
         when: 'enqueue first batch, wait for flush, then enqueue second batch'
         submitter.start()
@@ -114,14 +114,14 @@ class SeqeraBatchSubmitterTest extends Specification {
         given:
         def batchSizes = [].asSynchronized()
         def client = Stub(SchedClient) {
-            createTasks(_, _) >> { String sessionId, List<Task> tasks ->
+            createTasks(_, _) >> { String runId, List<Task> tasks ->
                 batchSizes << tasks.size()
                 Stub(CreateTasksResponse) {
                     getTaskIds() >> tasks.collect { "task-${System.nanoTime()}" }
                 }
             }
         }
-        def submitter = new SeqeraBatchSubmitter(client, TEST_SESSION, Duration.of('10s')) // Long interval
+        def submitter = new SeqeraBatchSubmitter(client, TEST_RUN, Duration.of('10s')) // Long interval
 
         when: 'enqueue exactly TASKS_PER_REQUEST tasks'
         submitter.start()
@@ -142,14 +142,14 @@ class SeqeraBatchSubmitterTest extends Specification {
         def totalTasks = SeqeraBatchSubmitter.TASKS_PER_REQUEST + 20  // 120 tasks
         def batchSizes = [].asSynchronized()
         def client = Stub(SchedClient) {
-            createTasks(_, _) >> { String sessionId, List<Task> tasks ->
+            createTasks(_, _) >> { String runId, List<Task> tasks ->
                 batchSizes << tasks.size()
                 Stub(CreateTasksResponse) {
                     getTaskIds() >> tasks.collect { "task-${System.nanoTime()}" }
                 }
             }
         }
-        def submitter = new SeqeraBatchSubmitter(client, TEST_SESSION, Duration.of('10s')) // Long interval
+        def submitter = new SeqeraBatchSubmitter(client, TEST_RUN, Duration.of('10s')) // Long interval
 
         when: 'enqueue more than TASKS_PER_REQUEST tasks'
         submitter.start()
@@ -170,14 +170,14 @@ class SeqeraBatchSubmitterTest extends Specification {
         given:
         def capturedTasks = [].asSynchronized()
         def client = Stub(SchedClient) {
-            createTasks(_, _) >> { String sessionId, List<Task> tasks ->
+            createTasks(_, _) >> { String runId, List<Task> tasks ->
                 capturedTasks.addAll(tasks)
                 Stub(CreateTasksResponse) {
                     getTaskIds() >> tasks.collect { "task-${System.nanoTime()}" }
                 }
             }
         }
-        def submitter = new SeqeraBatchSubmitter(client, TEST_SESSION, Duration.of('10s')) // Long interval
+        def submitter = new SeqeraBatchSubmitter(client, TEST_RUN, Duration.of('10s')) // Long interval
 
         when: 'enqueue tasks and immediately shutdown'
         submitter.start()
@@ -193,7 +193,7 @@ class SeqeraBatchSubmitterTest extends Specification {
     def 'should throw exception when enqueueing after shutdown'() {
         given:
         def client = Stub(SchedClient)
-        def submitter = new SeqeraBatchSubmitter(client, TEST_SESSION, Duration.of('1s'))
+        def submitter = new SeqeraBatchSubmitter(client, TEST_RUN, Duration.of('1s'))
 
         when:
         submitter.start()
@@ -210,7 +210,7 @@ class SeqeraBatchSubmitterTest extends Specification {
         def client = Stub(SchedClient) {
             createTasks(_, _) >> { throw apiError }
         }
-        def submitter = new SeqeraBatchSubmitter(client, TEST_SESSION, Duration.of('100ms'))
+        def submitter = new SeqeraBatchSubmitter(client, TEST_RUN, Duration.of('100ms'))
         def handler1 = Mock(SeqeraTaskHandler)
         def handler2 = Mock(SeqeraTaskHandler)
 
@@ -229,14 +229,14 @@ class SeqeraBatchSubmitterTest extends Specification {
     def 'should propagate failure to handlers when API returns wrong number of task IDs'() {
         given:
         def client = Stub(SchedClient) {
-            createTasks(_, _) >> { String sessionId, List<Task> tasks ->
+            createTasks(_, _) >> { String runId, List<Task> tasks ->
                 Stub(CreateTasksResponse) {
                     // Return fewer IDs than tasks submitted
                     getTaskIds() >> ['task-1']
                 }
             }
         }
-        def submitter = new SeqeraBatchSubmitter(client, TEST_SESSION, Duration.of('100ms'))
+        def submitter = new SeqeraBatchSubmitter(client, TEST_RUN, Duration.of('100ms'))
         def handler1 = Mock(SeqeraTaskHandler)
         def handler2 = Mock(SeqeraTaskHandler)
         def handler3 = Mock(SeqeraTaskHandler)
@@ -259,14 +259,14 @@ class SeqeraBatchSubmitterTest extends Specification {
         given:
         def submitTimes = [].asSynchronized()
         def client = Stub(SchedClient) {
-            createTasks(_, _) >> { String sessionId, List<Task> tasks ->
+            createTasks(_, _) >> { String runId, List<Task> tasks ->
                 submitTimes << System.currentTimeMillis()
                 Stub(CreateTasksResponse) {
                     getTaskIds() >> tasks.collect { "task-${System.nanoTime()}" }
                 }
             }
         }
-        def submitter = new SeqeraBatchSubmitter(client, TEST_SESSION, Duration.of('300ms'))
+        def submitter = new SeqeraBatchSubmitter(client, TEST_RUN, Duration.of('300ms'))
 
         when: 'start submitter, wait longer than interval, then enqueue tasks'
         submitter.start()
@@ -292,7 +292,7 @@ class SeqeraBatchSubmitterTest extends Specification {
         def client = Stub(SchedClient)
 
         when:
-        def submitter = new SeqeraBatchSubmitter(client, TEST_SESSION)
+        def submitter = new SeqeraBatchSubmitter(client, TEST_RUN)
 
         then:
         submitter.requestInterval == SeqeraBatchSubmitter.REQUEST_INTERVAL
@@ -303,15 +303,15 @@ class SeqeraBatchSubmitterTest extends Specification {
         given:
         def submissions = [].asSynchronized()
         def client = Stub(SchedClient) {
-            createTasks(_, _) >> { String sessionId, List<Task> tasks ->
-                submissions << [sessionId: sessionId, taskCount: tasks.size()]
+            createTasks(_, _) >> { String runId, List<Task> tasks ->
+                submissions << [runId: runId, taskCount: tasks.size()]
                 Stub(CreateTasksResponse) {
                     getTaskIds() >> tasks.collect { "task-${System.nanoTime()}" }
                 }
             }
         }
         // Short keep-alive interval for testing
-        def submitter = new SeqeraBatchSubmitter(client, TEST_SESSION, Duration.of('10s'), Duration.of('200ms'))
+        def submitter = new SeqeraBatchSubmitter(client, TEST_RUN, Duration.of('10s'), Duration.of('200ms'))
 
         when: 'start submitter and wait for keep-alive interval without enqueueing tasks'
         submitter.start()
@@ -328,15 +328,15 @@ class SeqeraBatchSubmitterTest extends Specification {
         given:
         def submissions = [].asSynchronized()
         def client = Stub(SchedClient) {
-            createTasks(_, _) >> { String sessionId, List<Task> tasks ->
-                submissions << [sessionId: sessionId, taskCount: tasks.size()]
+            createTasks(_, _) >> { String runId, List<Task> tasks ->
+                submissions << [runId: runId, taskCount: tasks.size()]
                 Stub(CreateTasksResponse) {
                     getTaskIds() >> tasks.collect { "task-${System.nanoTime()}" }
                 }
             }
         }
         // Short intervals for testing
-        def submitter = new SeqeraBatchSubmitter(client, TEST_SESSION, Duration.of('100ms'), Duration.of('300ms'))
+        def submitter = new SeqeraBatchSubmitter(client, TEST_RUN, Duration.of('100ms'), Duration.of('300ms'))
 
         when: 'start submitter and continuously enqueue tasks'
         submitter.start()
@@ -360,12 +360,12 @@ class SeqeraBatchSubmitterTest extends Specification {
         def errorReceived = null
         def onError = { Throwable t -> errorReceived = t }
         def client = Stub(SchedClient) {
-            createTasks(_, _) >> { String sessionId, List<Task> tasks ->
+            createTasks(_, _) >> { String runId, List<Task> tasks ->
                 // Throw a fatal Error that will escape flushBatch
                 throw fatalError
             }
         }
-        def submitter = new SeqeraBatchSubmitter(client, TEST_SESSION, Duration.of('100ms'), Duration.of('10s'), onError)
+        def submitter = new SeqeraBatchSubmitter(client, TEST_RUN, Duration.of('100ms'), Duration.of('10s'), onError)
         def handler = Mock(SeqeraTaskHandler)
 
         when:
@@ -386,12 +386,12 @@ class SeqeraBatchSubmitterTest extends Specification {
         def failedHandlers = [].asSynchronized()
         def onError = { Throwable t -> /* no-op */ }
         def client = Stub(SchedClient) {
-            createTasks(_, _) >> { String sessionId, List<Task> tasks ->
+            createTasks(_, _) >> { String runId, List<Task> tasks ->
                 // Always throw to simulate fatal error
                 throw fatalError
             }
         }
-        def submitter = new SeqeraBatchSubmitter(client, TEST_SESSION, Duration.of('100ms'), Duration.of('10s'), onError)
+        def submitter = new SeqeraBatchSubmitter(client, TEST_RUN, Duration.of('100ms'), Duration.of('10s'), onError)
 
         // Create handlers that track when they receive failure notification
         def handlers = (1..3).collect {
@@ -420,7 +420,7 @@ class SeqeraBatchSubmitterTest extends Specification {
         def keepAliveFailCount = new AtomicInteger()
         def taskSubmissions = [].asSynchronized()
         def client = Stub(SchedClient) {
-            createTasks(_, _) >> { String sessionId, List<Task> tasks ->
+            createTasks(_, _) >> { String runId, List<Task> tasks ->
                 if (tasks.isEmpty()) {
                     // Keep-alive call - fail it
                     keepAliveFailCount.incrementAndGet()
@@ -434,7 +434,7 @@ class SeqeraBatchSubmitterTest extends Specification {
             }
         }
         // Short keep-alive interval to trigger failures quickly
-        def submitter = new SeqeraBatchSubmitter(client, TEST_SESSION, Duration.of('500ms'), Duration.of('100ms'))
+        def submitter = new SeqeraBatchSubmitter(client, TEST_RUN, Duration.of('500ms'), Duration.of('100ms'))
 
         when: 'start submitter, let keep-alive fail, then submit tasks'
         submitter.start()
@@ -456,7 +456,7 @@ class SeqeraBatchSubmitterTest extends Specification {
         given:
         def taskSubmissions = [].asSynchronized()
         def client = Stub(SchedClient) {
-            createTasks(_, _) >> { String sessionId, List<Task> tasks ->
+            createTasks(_, _) >> { String runId, List<Task> tasks ->
                 taskSubmissions << tasks.size()
                 Stub(CreateTasksResponse) {
                     getTaskIds() >> tasks.collect { "task-${System.nanoTime()}" }
@@ -464,7 +464,7 @@ class SeqeraBatchSubmitterTest extends Specification {
             }
         }
         // Constructor without error callback (null)
-        def submitter = new SeqeraBatchSubmitter(client, TEST_SESSION, Duration.of('100ms'), Duration.of('10s'), null)
+        def submitter = new SeqeraBatchSubmitter(client, TEST_RUN, Duration.of('100ms'), Duration.of('10s'), null)
 
         when:
         submitter.start()

@@ -24,7 +24,7 @@ import nextflow.NextflowMeta
 import nextflow.script.WorkflowMetadata
 
 /**
- * Helper class to manage session labels.
+ * Helper class to manage run labels.
  *
  * Builds the labels map from workflow metadata ({@code nextflow.io/*}),
  * scheduler metadata ({@code seqera:sched:*}), and user-configured labels.
@@ -67,9 +67,9 @@ class Labels {
     /**
      * Add {@code seqera:sched:*} scheduler labels
      */
-    Labels withSchedSessionId(String sessionId) {
-        if( sessionId )
-            entries.put('seqera:sched:sessionId', sessionId)
+    Labels withSchedRunId(String runId) {
+        if( runId )
+            entries.put('seqera:sched:runId', runId)
         return this
     }
 

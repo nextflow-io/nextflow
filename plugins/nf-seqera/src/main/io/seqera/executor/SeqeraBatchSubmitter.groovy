@@ -44,7 +44,7 @@ class SeqeraBatchSubmitter {
     /** Default flush interval */
     static final Duration REQUEST_INTERVAL = SysEnv.get('NXF_SEQERA_REQUEST_INTERVAL', '1 sec') as Duration
 
-    /** Keep-alive interval - send empty submission to maintain session */
+    /** Keep-alive interval - send empty submission to maintain run */
     static final Duration KEEP_ALIVE_INTERVAL = SysEnv.get('NXF_SEQERA_KEEP_ALIVE_INTERVAL', '60 sec') as Duration
 
     /**
@@ -57,7 +57,7 @@ class SeqeraBatchSubmitter {
     }
 
     private final SchedClient client
-    private final String sessionId
+    private final String runId
     private final Duration requestInterval
     private final Duration keepAliveInterval
     private final Closure onError
@@ -65,17 +65,17 @@ class SeqeraBatchSubmitter {
     private Thread sender
     private volatile boolean completed = false
 
-    SeqeraBatchSubmitter(SchedClient client, String sessionId) {
-        this(client, sessionId, REQUEST_INTERVAL, KEEP_ALIVE_INTERVAL)
+    SeqeraBatchSubmitter(SchedClient client, String runId) {
+        this(client, runId, REQUEST_INTERVAL, KEEP_ALIVE_INTERVAL)
     }
 
-    SeqeraBatchSubmitter(SchedClient client, String sessionId, Duration requestInterval) {
-        this(client, sessionId, requestInterval, KEEP_ALIVE_INTERVAL)
+    SeqeraBatchSubmitter(SchedClient client, String runId, Duration requestInterval) {
+        this(client, runId, requestInterval, KEEP_ALIVE_INTERVAL)
     }
 
-    SeqeraBatchSubmitter(SchedClient client, String sessionId, Duration requestInterval, Duration keepAliveInterval, Closure onError=null) {
+    SeqeraBatchSubmitter(SchedClient client, String runId, Duration requestInterval, Duration keepAliveInterval, Closure onError=null) {
         this.client = client
-        this.sessionId = sessionId
+        this.runId = runId
         this.requestInterval = requestInterval
         this.keepAliveInterval = keepAliveInterval
         this.onError = onError
@@ -145,10 +145,10 @@ class SeqeraBatchSubmitter {
                     }
                 }
                 else if (delta > keepAliveInterval.millis) {
-                    // Keep-alive: send empty submission to maintain session
+                    // Keep-alive: send empty submission to maintain run
                     try {
-                        log.debug "[SEQERA] Sending keep-alive for session ${sessionId}"
-                        client.createTasks(sessionId, Collections.emptyList())
+                        log.debug "[SEQERA] Sending keep-alive for run ${runId}"
+                        client.createTasks(runId, Collections.emptyList())
                     }
                     catch (Exception e) {
                         log.warn "[SEQERA] Keep-alive failed: ${e.message}"
@@ -179,7 +179,7 @@ class SeqeraBatchSubmitter {
             }
             // Drain and fail any remaining pending tasks
             drainAndFailPendingTasks(exception)
-            // Invoke error callback to abort session
+            // Invoke error callback to abort run
             if (onError) {
                 try {
                     onError.call(e)
@@ -217,7 +217,7 @@ class SeqeraBatchSubmitter {
             final List<Task> tasks = batch.collect { it.task }
 
             // Submit batch to API
-            final response = client.createTasks(sessionId, tasks)
+            final response = client.createTasks(runId, tasks)
             final List<String> taskIds = response.getTaskIds()
 
             // Validate response

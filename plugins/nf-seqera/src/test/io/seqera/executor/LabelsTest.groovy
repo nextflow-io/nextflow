@@ -106,22 +106,22 @@ class LabelsTest extends Specification {
     def 'should add scheduler labels'() {
         when:
         def labels = new Labels()
-                .withSchedSessionId('sched-session-123')
+                .withSchedRunId('run-123')
                 .withSchedClusterId('cluster-456')
 
         then:
-        labels.entries['seqera:sched:sessionId'] == 'sched-session-123'
+        labels.entries['seqera:sched:runId'] == 'run-123'
         labels.entries['seqera:sched:clusterId'] == 'cluster-456'
     }
 
     def 'should skip null scheduler labels'() {
         when:
         def labels = new Labels()
-                .withSchedSessionId(null)
+                .withSchedRunId(null)
                 .withSchedClusterId(null)
 
         then:
-        !labels.entries.containsKey('seqera:sched:sessionId')
+        !labels.entries.containsKey('seqera:sched:runId')
         !labels.entries.containsKey('seqera:sched:clusterId')
     }
 
