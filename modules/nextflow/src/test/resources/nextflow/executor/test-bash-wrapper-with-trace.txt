@@ -144,14 +144,18 @@ nxf_fd() {
 nxf_trace_linux() {
     local pid=$$
     command -v ps &>/dev/null || { >&2 echo "Command 'ps' required by nextflow to collect task metrics cannot be found"; exit 1; }
-    local num_cpus=$(< /proc/cpuinfo grep '^processor' -c)
     local cpu_model=$(< /proc/cpuinfo grep '^model name' | head -n 1 | awk 'BEGIN{FS="\t: "} { print $2 }')
-    local tot_time0=$(grep '^cpu ' /proc/stat | awk '{sum=$2+$3+$4+$5+$6+$7+$8+$9; printf "%.0f",sum}')
-    local cpu_time0=$(2> /dev/null < /proc/$pid/stat awk '{printf "%.0f", ($16+$17)*10 }' || echo -n 'X')
+
+    local stat_array_0
+    local stat_array_1
+    local end_array
+
+    read -ra stat_array_0 < <(sed -E 's/\([^)]+\)/X/' "/proc/$$/stat")
     local io_stat0=($(2> /dev/null < /proc/$pid/io sed 's/^.*:\s*//' | head -n 6 | tr '\n' ' ' || echo -n '0 0 0 0 0 0'))
     local start_millis=$(nxf_date)
+
     trap 'kill $mem_proc' ERR
-    
+
     /bin/bash -ue {{folder}}/.command.sh &
     local task=$!
 
@@ -162,15 +166,20 @@ nxf_trace_linux() {
     wait $task
 
     local end_millis=$(nxf_date)
-    local tot_time1=$(grep '^cpu ' /proc/stat | awk '{sum=$2+$3+$4+$5+$6+$7+$8+$9; printf "%.0f",sum}')
-    local cpu_time1=$(2> /dev/null < /proc/$pid/stat awk '{printf "%.0f", ($16+$17)*10 }' || echo -n 'X')
-    local ucpu=$(awk -v p1=$cpu_time1 -v p0=$cpu_time0 -v t1=$tot_time1 -v t0=$tot_time0 -v n=$num_cpus 'BEGIN { pct=(p1-p0)/(t1-t0)*100*n; printf("%.0f", pct>0 ? pct : 0) }' )
-
+    read -ra stat_array_1 < <(sed -E 's/\([^)]+\)/X/' "/proc/$$/stat")
+    read -ra end_array < <(sed -E 's/\([^)]+\)/X/' "/proc/self/stat")
     local io_stat1=($(2> /dev/null < /proc/$pid/io sed 's/^.*:\s*//' | head -n 6 | tr '\n' ' ' || echo -n '0 0 0 0 0 0'))
+
     local i
     for i in {0..5}; do
         io_stat1[i]=$((io_stat1[i]-io_stat0[i]))
     done
+
+    local start_ticks=${stat_array_0[21]}
+    local end_ticks=${end_array[21]}
+    local task_ticks=$(( "${stat_array_1[15]}" + "${stat_array_1[16]}" - "${stat_array_0[15]}" - "${stat_array_0[16]}"))
+    local wrapper_ticks=$(( "${stat_array_1[13]}" + "${stat_array_1[14]}" ))
+    local ucpu=$( awk 'BEGIN {printf "%.0f",  ( ('$task_ticks' / ( ( '$end_ticks' - '$start_ticks' ) - '$wrapper_ticks' ) ) * 1000 )}' )
 
     local wall_time=$((end_millis-start_millis))
     [ $NXF_DEBUG = 1 ] && echo "+++ STATS %CPU=$ucpu TIME=$wall_time I/O=${io_stat1[*]}"
