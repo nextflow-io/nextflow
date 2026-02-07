@@ -30,9 +30,7 @@ import nextflow.config.ConfigClosurePlaceholder
 import nextflow.exception.ConfigParseException
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
-import spock.lang.Ignore
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -483,7 +481,7 @@ class ConfigParserV1Test extends Specification {
         result.str1 instanceof String
         result.str2 instanceof GString
         result.closure1 instanceof Closure
-        result.map1.bar instanceof Closure
+        result.map1.bar instanceof Closure;
 
         when:
         result = new ConfigParserV1()
@@ -493,7 +491,7 @@ class ConfigParserV1Test extends Specification {
         result.str1 instanceof String
         result.str2 instanceof GString
         result.closure1 instanceof Closure
-        result.map1.bar instanceof Closure
+        result.map1.bar instanceof Closure;
 
         when:
         result = new ConfigParserV1()

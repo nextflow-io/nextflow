@@ -274,7 +274,7 @@ class ConfigDsl extends Script {
 
     private static class PluginsDsl extends ConfigBlockDsl {
         PluginsDsl(ConfigDsl dsl) {
-            super(dsl, Collections.emptyList())
+            super(dsl, Collections.<String>emptyList())
         }
 
         void id(String value) {
@@ -305,7 +305,7 @@ class ConfigDsl extends Script {
         private Map<String,Closure> blocks = [:]
 
         ProfilesDsl(ConfigDsl dsl, List<String> profiles) {
-            super(dsl, Collections.emptyList())
+            super(dsl, Collections.<String>emptyList())
             this.profiles = profiles
         }
 
