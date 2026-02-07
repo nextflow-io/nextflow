@@ -16,16 +16,16 @@
 
 package nextflow.script
 
+import static test.ScriptHelper.*
+
 import java.nio.file.Files
 import java.nio.file.Paths
 
 import nextflow.NextflowMeta
-import nextflow.Session
 import nextflow.SysEnv
 import nextflow.extension.FilesEx
 import nextflow.secret.SecretsLoader
 import test.Dsl2Spec
-import test.TestHelper
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -36,21 +36,12 @@ class BaseScriptTest extends Dsl2Spec {
     def 'should define implicit variables' () {
 
         given:
-        def script = Files.createTempFile('test',null)
-        and:
-        def WORKFLOW = Mock(WorkflowMetadata)
-        def WORK_DIR = Paths.get('/work/dir')
-        def PROJECT_DIR = Paths.get('/some/base')
-        and:
-        def session = Mock(Session) {
-            getBaseDir() >> PROJECT_DIR
-            getWorkDir() >> WORK_DIR
-            getWorkflowMetadata() >> WORKFLOW
-        }
-        def binding = new ScriptBinding([:])
-        def parser = ScriptLoaderFactory.create(session)
+        def folder = Files.createTempDirectory('test')
+        def WORK_DIR = folder.resolve('work')
 
         when:
+        def config = [workDir: WORK_DIR]
+        def script = folder.resolve('main.nf')
         script.text = '''
                 result = [:]
                 result.baseDir = baseDir
@@ -60,92 +51,22 @@ class BaseScriptTest extends Dsl2Spec {
                 result.workflow = workflow
                 result.launchDir = launchDir 
                 result.moduleDir = moduleDir
+                result
                 '''
 
-        parser.setBinding(binding)
-        parser.runScript(script)
+        def result = runScript(script, config: config)
 
         then:
-        binding.result.baseDir == PROJECT_DIR
-        binding.result.projectDir == PROJECT_DIR
-        binding.result.workDir == WORK_DIR
-        binding.result.launchDir == Paths.get('.').toRealPath()
-        binding.result.moduleDir == script.parent
-        binding.workflow == WORKFLOW
-        binding.nextflow == NextflowMeta.instance
+        result.baseDir == script.parent
+        result.projectDir == script.parent
+        result.workDir == WORK_DIR
+        result.launchDir == Paths.get('.').toRealPath()
+        result.moduleDir == script.parent
+        result.workflow instanceof WorkflowMetadata
+        result.nextflow == NextflowMeta.instance
 
         cleanup:
         script?.delete()
-    }
-
-    def 'should use custom entry workflow' () {
-
-        given:
-        def script = Files.createTempFile('test',null)
-        and:
-        def session = Mock(Session) {
-            getConfig() >> [:]
-        }
-        def binding = new ScriptBinding([:])
-        def parser = ScriptLoaderFactory.create(session)
-
-        when:
-        script.text = '''
-                workflow foo {
-                }
-
-                workflow {
-                    error 'you were supposed to run foo!'
-                }
-                '''
-
-        parser.setBinding(binding)
-        parser.setEntryName('foo')
-        parser.runScript(script)
-
-        then:
-        noExceptionThrown()
-
-        cleanup:
-        script?.delete()
-    }
-
-    def 'should use entry workflow from module' () {
-
-        given:
-        def folder = TestHelper.createInMemTempDir()
-        def module = folder.resolve('module.nf')
-        def script = folder.resolve('main.nf')
-        and:
-        def session = Mock(Session) {
-            getConfig() >> [:]
-        }
-        def binding = new ScriptBinding([:])
-        def parser = ScriptLoaderFactory.create(session)
-
-        when:
-        module.text = '''
-                workflow foo {
-                }
-                '''
-
-        script.text = '''
-                include { foo } from './module.nf'
-
-                workflow {
-                    error 'you were supposed to run foo!'
-                }
-                '''
-
-        parser.setBinding(binding)
-        parser.setEntryName('foo')
-        parser.runScript(script)
-
-        then:
-        noExceptionThrown()
-
-        cleanup:
-        folder?.delete()
     }
 
     def 'should resolve secret in a script' () {
@@ -167,20 +88,13 @@ class BaseScriptTest extends Dsl2Spec {
         and:
         FilesEx.setPermissions(secrets, 'rw-------')
         SysEnv.push(NXF_SECRETS_FILE:secrets.toAbsolutePath().toString())
-        and:
-        def session = Mock(Session)
-        def binding = new ScriptBinding([:])
-        def parser = ScriptLoaderFactory.create(session)
 
         when:
         script.text = '''
-                return secrets.FOO
+                secrets.FOO
                 '''
 
-        def result = parser
-            .setBinding(binding)
-            .runScript(script)
-            .getResult()
+        def result = runScript(script)
 
         then:
         result == 'ciao'

@@ -17,8 +17,9 @@
 package nextflow.extension
 
 import spock.lang.Timeout
-
 import test.Dsl2Spec
+
+import static test.ScriptHelper.*
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -28,13 +29,12 @@ class MixOpTest extends Dsl2Spec {
 
     def 'should mix channels'() {
         when:
-        def result = dsl_eval('''
-            c1 = Channel.of( 1,2,3 )
-            c2 = Channel.of( 'a','b' )
-            c3 = Channel.value( 'z' )
-            c1.mix(c2,c3)
-            
-        ''') .toList().val
+        def result = runScript('''
+            c1 = channel.of( 1,2,3 )
+            c2 = channel.of( 'a','b' )
+            c3 = channel.value( 'z' )
+            c1.mix(c2, c3).collect()
+            ''').val
 
         then:
         1 in result
@@ -49,20 +49,20 @@ class MixOpTest extends Dsl2Spec {
 
     def 'should mix with value channels'() {
         when:
-        def result = dsl_eval('''
-            Channel.value(1).mix( Channel.fromList([2,3])  )
+        def result = runScript('''
+            channel.value(1).mix( channel.of(2,3) ).collect()
             ''')
         then:
-        result.toList().val.sort() == [1,2,3]
+        result.val.sort() == [1,2,3]
     }
 
     def 'should mix with two singleton'() {
         when:
-        def result = dsl_eval('''
-            Channel.value(1).mix( Channel.value(2)  )
+        def result = runScript('''
+            channel.value(1).mix( channel.value(2) ).collect()
             ''')
         then:
-        result.toList().val.sort() == [1,2]
+        result.val.sort() == [1,2]
     }
 
 }

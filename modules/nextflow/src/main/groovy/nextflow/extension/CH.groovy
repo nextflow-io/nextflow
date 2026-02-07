@@ -1,7 +1,5 @@
 package nextflow.extension
 
-import static nextflow.Channel.*
-
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -15,7 +13,6 @@ import groovyx.gpars.dataflow.stream.DataflowStreamReadAdapter
 import groovyx.gpars.dataflow.stream.DataflowStreamWriteAdapter
 import nextflow.Channel
 import nextflow.Global
-import nextflow.NF
 import nextflow.Session
 /**
  * Helper class to handle channel internal api ops
@@ -41,10 +38,10 @@ class CH {
 
     static DataflowReadChannel getReadChannel(channel) {
         if (channel instanceof DataflowQueue)
-            return getRead1(channel)
+            return readChannelFromQueue(channel)
 
         if (channel instanceof DataflowBroadcast)
-            return getRead2(channel)
+            return readChannelFromBroadcast(channel)
 
         if (channel instanceof DataflowReadChannel)
             return channel
@@ -52,10 +49,7 @@ class CH {
         throw new IllegalArgumentException("Illegal channel source type: ${channel?.getClass()?.getName()}")
     }
 
-    static synchronized private DataflowReadChannel getRead1(DataflowQueue queue) {
-        if( !NF.isDsl2() )
-            return queue
-
+    static synchronized private DataflowReadChannel readChannelFromQueue(DataflowQueue queue) {
         def broadcast = bridges.get(queue)
         if( broadcast == null ) {
             broadcast = new DataflowBroadcast()
@@ -64,7 +58,7 @@ class CH {
         return broadcast.createReadChannel()
     }
 
-    static private DataflowReadChannel getRead2(DataflowBroadcast channel) {
+    static private DataflowReadChannel readChannelFromBroadcast(DataflowBroadcast channel) {
         channel.createReadChannel()
     }
 
@@ -96,14 +90,14 @@ class CH {
                 final ch = new ArrayList(topic.sources)
                 // the mix operator requires at least two sources, add an empty channel if needed
                 if( ch.size()==1 )
-                    ch.add(empty())
+                    ch.add(Channel.empty())
                 // map write channels to read channels
                 final sources = ch.collect(it -> getReadChannel(it))
                 // mix all of them 
                 new MixOp(sources).withTarget(topic.broadcaster).apply()
             }
             else {
-                topic.broadcaster.bind(STOP)
+                topic.broadcaster.bind(Channel.STOP)
             }
         }
     }
@@ -130,10 +124,7 @@ class CH {
         if( value )
             return new DataflowVariable()
 
-        if( NF.isDsl2() )
-            return new DataflowBroadcast()
-
-        return new DataflowQueue()
+        return new DataflowBroadcast()
     }
 
     static DataflowBroadcast topic(String name) {
@@ -198,28 +189,22 @@ class CH {
 
 
     static DataflowWriteChannel emit(DataflowWriteChannel ch, Object value) {
-        if(NF.isDsl2()) {
-            session().addIgniter { ch.bind(value) }
-        }
-        else {
+        session().addIgniter {
             ch.bind(value)
         }
         return ch
     }
 
     static <T extends DataflowWriteChannel> T emitValues(T ch, Collection items) {
-        if(NF.dsl2) {
-            session().addIgniter {-> for( def it : items ) ch.bind(it) }
-        }
-        else {
-            for( def it : items ) ch.bind(it)
+        session().addIgniter {->
+            for( final it : items ) ch.bind(it)
         }
         return ch
     }
 
     static <T extends DataflowWriteChannel> T emitAndClose(T ch, Collection items) {
         def values = items!=null ? new ArrayList(items) : new ArrayList<>(1)
-        values.add(STOP)
+        values.add(Channel.STOP)
         emitValues(ch, values)
     }
 }

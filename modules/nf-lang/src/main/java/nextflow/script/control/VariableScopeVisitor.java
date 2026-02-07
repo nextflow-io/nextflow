@@ -159,15 +159,21 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         if( otherInclude != null ) {
             vsc.addError("`" + name + "` is already included", mn, "First included here", otherInclude);
         }
-        var otherMethods = cn.getDeclaredMethods(name);
-        if( otherMethods.size() > 0 ) {
-            var other = otherMethods.get(0);
+        var other = firstConflictingMethod(mn, cn);
+        if( other != null ) {
             var first = mn.getLineNumber() < other.getLineNumber() ? mn : other;
             var second = mn.getLineNumber() < other.getLineNumber() ? other : mn;
             vsc.addError("`" + name + "` is already declared", second, "First declared here", first);
             return;
         }
         cn.addMethod(mn);
+    }
+
+    private static MethodNode firstConflictingMethod(MethodNode mn, ClassNode cn) {
+        return cn.getDeclaredMethods(mn.getName()).stream()
+            .filter(other -> !(mn instanceof FunctionNode) || !(other instanceof FunctionNode))
+            .findFirst()
+            .orElse(null);
     }
 
     public void visit() {
