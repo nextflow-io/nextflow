@@ -60,7 +60,6 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import com.google.common.base.Preconditions;
@@ -196,21 +195,13 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		Preconditions.checkArgument(!s3Path.getKey().equals(""),
 				"cannot create InputStream for root directory: %s", FilesEx.toUriString(s3Path));
 
-		InputStream result;
-		try {
-			result = s3Path
+		InputStream result = s3Path
 					.getFileSystem()
 					.getClient()
 					.getObject(s3Path.getBucket(), s3Path.getKey());
 
-			if (result == null)
-				throw new IOException(String.format("The specified path is a directory: %s", FilesEx.toUriString(s3Path)));
-		}catch (AwsServiceException e) {
-			if (e.statusCode() == 404)
-				throw new NoSuchFileException(path.toString());
-			// otherwise throws a generic IO exception
-			throw new IOException(String.format("Cannot access file: %s", FilesEx.toUriString(s3Path)),e);
-		}
+        if (result == null)
+			throw new IOException(String.format("The specified path is a directory: %s", FilesEx.toUriString(s3Path)));
 
 		return result;
 	}
@@ -369,9 +360,8 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 
 			Files.write(tempFile, IOUtils.toByteArray(is));
 		}
-		catch (S3Exception e) {
-			if (e.awsErrorDetails().sdkHttpResponse().statusCode() != 404)
-				throw new IOException(String.format("Cannot access file: %s", path),e);
+        catch (NoSuchFileException e){
+            // Intentionally ignored. File could not exist.
 		}
 
         // and we can use the File SeekableByteChannel implementation
@@ -801,7 +791,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
             s3ObjectSummaryLookup.lookup(path);
 			return true;
 		}
-        catch(NoSuchFileException e) {
+        catch(IOException e) {
 			return false;
 		}
 	}
@@ -813,10 +803,13 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
      *
 	 * @param path {@link S3Path}
 	 * @return AccessControlList
-	 * @throws NoSuchFileException if not found the path and any child
+	 * @throws IOException if error getting access control
 	 */
-	private AccessControlPolicy getAccessControl(S3Path path) throws NoSuchFileException{
-        return path.getFileSystem().getClient().getObjectAcl(path.getBucket(), path.getKey());
+	private AccessControlPolicy getAccessControl(S3Path path) throws IOException{
+        String key = path.getKey();
+        if (key == null || key.isEmpty())
+            return path.getFileSystem().getClient().getBucketAcl(path.getBucket());
+        return path.getFileSystem().getClient().getObjectAcl(path.getBucket(), key);
 	}
 
     /**
