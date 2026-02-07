@@ -83,13 +83,9 @@ class CmdPull extends CmdBase implements HubOptions {
 
         for( String proj : list ) {
             if( all ) {
-                def mgr = new AssetManager(proj)
-                try {
+                try (def mgr = new AssetManager(proj)) {
                     def branches = mgr.getBranchesAndTags(false).pulled as List<String>
                     branches.each { rev -> pullProjectRevision(proj, rev) }
-                }
-                finally {
-                    mgr.close()
                 }
             } else {
                 pullProjectRevision(proj, revision)
@@ -98,8 +94,7 @@ class CmdPull extends CmdBase implements HubOptions {
     }
 
     private pullProjectRevision(String project, String revision) {
-        final manager = new AssetManager(project, this)
-        try {
+        try (final manager = new AssetManager(project, this)) {
             if( manager.isUsingLegacyStrategy() ) {
                 if( migrate ) {
                     log.info "Migrating ${project} revision ${revision} to multi-revision strategy"
@@ -122,9 +117,6 @@ class CmdPull extends CmdBase implements HubOptions {
             String message = !result ? " done" : " $result"
             message += " - revision: ${scriptFile.revisionInfo}"
             log.info message
-        }
-        finally {
-            manager.close()
         }
     }
 

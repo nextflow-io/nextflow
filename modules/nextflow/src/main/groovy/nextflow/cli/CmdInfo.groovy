@@ -75,8 +75,7 @@ class CmdInfo extends CmdBase {
         }
 
         Plugins.init()
-        final manager = new AssetManager(args[0])
-        try {
+        try (final manager = new AssetManager(args[0])) {
             if( manager.isNotInitialized() ) {
                 throw new AbortOperationException("Unknown project `${args[0]}`")
             }
@@ -95,9 +94,6 @@ class CmdInfo extends CmdBase {
             }
             else
                 throw new AbortOperationException("Unknown output format: $format");
-        }
-        finally {
-            manager.close()
         }
 
     }

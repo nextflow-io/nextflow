@@ -52,8 +52,7 @@ class CmdClone extends CmdBase implements HubOptions {
         Plugins.init()
         // the pipeline name
         String pipeline = args[0]
-        final manager = new AssetManager(pipeline, this)
-        try {
+        try (final manager = new AssetManager(pipeline, this)) {
             // the target directory is the second parameter
             // otherwise default the current pipeline name
             def target = new File(args.size()> 1 ? args[1] : manager.getBaseName())
@@ -72,9 +71,6 @@ class CmdClone extends CmdBase implements HubOptions {
             manager.clone(target, revision, deep)
             print "\r"
             println "${manager.getProjectWithRevision()} cloned to: $target"
-        }
-        finally {
-            manager.close()
         }
     }
 }

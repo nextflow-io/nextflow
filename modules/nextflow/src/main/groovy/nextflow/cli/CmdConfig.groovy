@@ -233,16 +233,12 @@ class CmdConfig extends CmdBase {
             return file.parent ?: Paths.get('/')
         }
 
-        final manager = new AssetManager(path, revision)
-        try {
+        try (final manager = new AssetManager(path, revision)) {
             if( revision && manager.isUsingLegacyStrategy() ){
                 log.warn("The local asset for ${path} does not support multi-revision - 'revision' option is ignored\n" +
                     "Consider updating the project using 'nextflow pull ${path} -r $revision -migrate'")
             }
             return manager.isLocal() ? manager.localPath.toPath() : manager.configFile?.parent
-        }
-        finally {
-            manager.close()
         }
     }
 

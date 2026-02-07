@@ -54,8 +54,7 @@ class CmdView extends CmdBase {
     @Override
     void run() {
         Plugins.init()
-        final manager = new AssetManager(args[0], revision)
-        try {
+        try (final manager = new AssetManager(args[0], revision)) {
             if( !manager.isLocal() )
                 throw new AbortOperationException("Unknown project `${manager.getProjectWithRevision()}`")
             if( revision && manager.isUsingLegacyStrategy()){
@@ -84,9 +83,6 @@ class CmdView extends CmdBase {
 
                 script.readLines().each { println it }
             }
-        }
-        finally {
-            manager.close()
         }
     }
 }
