@@ -260,7 +260,7 @@ class ScriptRunner {
         }
 
         // -- when resume, make sure the session id exists in the executions history
-        if( session.resumeMode && !HistoryFile.DEFAULT.checkExistsById(session.uniqueId.toString()) ) {
+        if( session.resumeMode && session.uniqueId != new UUID(0L, 0L) && !HistoryFile.DEFAULT.checkExistsById(session.uniqueId.toString()) ) {
             throw new AbortOperationException("Can't find a run with the specified id: ${session.uniqueId} -- Execution can't be resumed")
         }
 
