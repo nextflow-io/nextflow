@@ -295,4 +295,28 @@ class ScriptLoaderV2Test extends Dsl2Spec {
         outputs.getFiles().size() == 3
     }
 
+    def 'should allow optional param' () {
+
+        given:
+        def session = new Session()
+        def parser = new ScriptLoaderV2(session)
+
+        def TEXT = '''
+            params {
+                path: Path?
+            }
+
+            workflow {
+                params.path
+            }
+            '''
+
+        when:
+        parser.parse(TEXT)
+        parser.runScript()
+
+        then:
+        parser.getResult() == null
+    }
+
 }
