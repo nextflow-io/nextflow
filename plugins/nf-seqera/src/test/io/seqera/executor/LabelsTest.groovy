@@ -19,6 +19,7 @@ package io.seqera.executor
 
 import nextflow.NextflowMeta
 import nextflow.config.Manifest
+import nextflow.script.PlatformMetadata
 import nextflow.script.WorkflowMetadata
 import spock.lang.Specification
 
@@ -59,7 +60,6 @@ class LabelsTest extends Specification {
         labels.entries['nextflow.io/repository'] == 'https://github.com/nf-core/rnaseq'
         labels.entries['nextflow.io/manifestName'] == 'nf-core/rnaseq'
         labels.entries['nextflow.io/runtimeVersion'] == NextflowMeta.instance.version.toString()
-        labels.entries['seqera.io/runId'] == Labels.runId(sessionId.toString(), 'crazy_darwin')
     }
 
     def 'should compute stable runId from sessionId and runName'() {
@@ -148,6 +148,46 @@ class LabelsTest extends Specification {
         labels.entries['nextflow.io/runName'] == 'custom_name'
         labels.entries['team'] == 'research'
         labels.entries['nextflow.io/projectName'] == 'hello'
+    }
+
+    def 'should include platform workflowId when available'() {
+        given:
+        def workflow = Mock(WorkflowMetadata) {
+            getProjectName() >> 'hello'
+            getUserName() >> 'user1'
+            getRunName() >> 'happy_turing'
+            getSessionId() >> UUID.randomUUID()
+            isResume() >> false
+            getManifest() >> new Manifest([:])
+            getPlatform() >> new PlatformMetadata('wf-abc123')
+        }
+
+        when:
+        def labels = new Labels()
+                .withWorkflowMetadata(workflow)
+
+        then:
+        labels.entries['seqera.io/platform/workflowId'] == 'wf-abc123'
+    }
+
+    def 'should omit platform workflowId when not set'() {
+        given:
+        def workflow = Mock(WorkflowMetadata) {
+            getProjectName() >> 'hello'
+            getUserName() >> 'user1'
+            getRunName() >> 'happy_turing'
+            getSessionId() >> UUID.randomUUID()
+            isResume() >> false
+            getManifest() >> new Manifest([:])
+            getPlatform() >> new PlatformMetadata()
+        }
+
+        when:
+        def labels = new Labels()
+                .withWorkflowMetadata(workflow)
+
+        then:
+        !labels.entries.containsKey('seqera.io/platform/workflowId')
     }
 
     def 'should handle null user labels'() {

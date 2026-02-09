@@ -49,8 +49,6 @@ class Labels {
         if( workflow.sessionId )
             entries.put('nextflow.io/sessionId', workflow.sessionId.toString())
         entries.put('nextflow.io/resume', String.valueOf(workflow.resume))
-        if( workflow.sessionId && workflow.runName )
-            entries.put('seqera.io/runId', runId(workflow.sessionId.toString(), workflow.runName))
         if( workflow.revision )
             entries.put('nextflow.io/revision', workflow.revision)
         if( workflow.commitId )
@@ -61,6 +59,8 @@ class Labels {
             entries.put('nextflow.io/manifestName', workflow.manifest.name)
         if( NextflowMeta.instance.version )
             entries.put('nextflow.io/runtimeVersion', NextflowMeta.instance.version.toString())
+        if( workflow.platform?.workflowId )
+            entries.put('seqera.io/platform/workflowId', workflow.platform.workflowId)
         return this
     }
 

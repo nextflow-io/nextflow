@@ -292,6 +292,7 @@ class TowerClient implements TraceObserverV2 {
         this.workflowId = ret.workflowId
         if( !workflowId )
             throw new AbortOperationException("Invalid Seqera Platform API response - Missing workflow Id")
+        session.workflowMetadata.platform.workflowId = workflowId
         if( ret.message )
             log.warn(ret.message.toString())
 
