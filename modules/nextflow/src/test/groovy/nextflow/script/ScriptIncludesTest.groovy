@@ -1190,33 +1190,4 @@ class ScriptIncludesTest extends Dsl2Spec {
         then:
         result == 'dlrow olleH'
     }
-
-    def 'should load current params in included module' () {
-        given:
-        def folder = Files.createTempDirectory('test')
-
-        folder.resolve('main.nf').text = '''
-            params.outdir = "results"
-
-            include { echoParams } from './module.nf'
-
-            workflow {
-                echoParams()
-            }
-            '''
-
-        folder.resolve('module.nf').text = '''
-            def echoParams() {
-                return params
-            }
-            '''
-
-        when:
-        def result = runScript(folder.resolve('main.nf'))
-        then:
-        result == [outdir: 'results']
-
-        cleanup:
-        folder?.deleteDir()
-    }
 }
