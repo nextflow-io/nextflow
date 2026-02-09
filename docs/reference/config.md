@@ -878,7 +878,7 @@ The following settings are available:
 
   :::{note}
   This configuration does not mount or provide access to credential files. For example, AWS credentials like `~/.aws/credentials`, `~/.aws/config`, and SSO cache files are not mounted. AWS SSO users must export credentials to environment variables:
-  
+
   ```bash
   eval "$(aws configure export-credentials --format env)"
   ```
@@ -1161,7 +1161,7 @@ The following settings are available:
 : Enable generation of lineage metadata (default: `false`).
 
 `lineage.store.location`
-: The location of the lineage metadata store (default: `./.lineage`).
+: The location of the lineage metadata store (default: `./.lineage`). Can be any local or remote-writeable path.
 
 (config-mail)=
 
