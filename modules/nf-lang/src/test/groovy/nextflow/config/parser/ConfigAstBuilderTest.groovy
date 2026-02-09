@@ -113,6 +113,22 @@ class ConfigAstBuilderTest extends Specification {
         when:
         errors = check(
             '''\
+            try {
+                includeConfig 'http://example.com/nextflow.config'
+            }
+            catch( Exception e ) {
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 1
+        errors[0].getOriginalMessage() == "Try-catch blocks cannot be mixed with config statements"
+
+        when:
+        errors = check(
+            '''\
             def trace_timestamp = new Date().format('yyyy-MM-dd_HH-mm-ss')
             '''
         )

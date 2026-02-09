@@ -1,5 +1,10 @@
 nf-google changelog
 ===================
+1.26.0 - 8 Feb 2026
+- Fix isCompleted check in getNumSpotInterruptions (#6805) [76558481a]
+- Remove isCompleted() from getNumSpotInterruptions (#6729) [24cc59e27]
+- Refactor GoogleBatchTaskHandler.newSubmitRequest for reduced complexity (#6687) [38c39108c]
+
 1.25.0 - 19 Dec 2025
 - Add spot interruption tracking to trace records (#6606) [eecd81671]
 - Refactor Google Batch getExitCode to imperative style (#6649) [addd59e9f]

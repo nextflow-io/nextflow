@@ -1,5 +1,10 @@
 nf-tower changelog
 ===================
+1.20.0 - 8 Feb 2026
+- Fix spurious WARN when workflow fails before onFlowBegin (#6816) [584003712]
+- Fix LogsCheckpoint thread blocking shutdown for up to 90 seconds (#6787) [54a595805]
+- Add accelerator request to trace record (#6703) [00f35b3a9]
+
 1.19.0 - 19 Dec 2025
 - Add spot interruption tracking to trace records (#6606) [eecd81671]
 

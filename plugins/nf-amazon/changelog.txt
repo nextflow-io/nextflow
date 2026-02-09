@@ -1,5 +1,12 @@
 nf-amazon changelog
 ===================
+3.7.0 - 8 Feb 2026
+- Fix isCompleted check in getNumSpotInterruptions (#6805) [76558481a]
+- Fix AWS Batch spot instance detection (#6722) [29356f60e]
+- Fix error when checking whether an S3 bucket exists (#6706) [c1bd552ab]
+- Remove isCompleted() from getNumSpotInterruptions (#6729) [24cc59e27]
+- Add aws.batch.forceGlacierTransfer config option (#6700) [e3bf3153b]
+
 3.6.0 - 19 Dec 2025
 - Add spot interruption tracking to trace records (#6606) [eecd81671]
 

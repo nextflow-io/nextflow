@@ -28,8 +28,12 @@ import spock.lang.Specification
 class ConstTest extends Specification {
 
     def 'should get app default cache dir' () {
+        given:
+        SysEnv.push([:])
         expect:
         Const.appCacheDir == Path.of('.nextflow')
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'should get app custom cache dir' () {

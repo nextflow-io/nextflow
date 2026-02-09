@@ -1,3 +1,4 @@
+#!/usr/bin/env nextflow
 /*
  * Copyright 2013-2024, Seqera Labs
  *
@@ -14,31 +15,19 @@
  * limitations under the License.
  */
 
-package nextflow.trace.event
+process hello {
+    input:
+    val greeting
 
-import java.nio.file.Path
+    output:
+    stdout
 
-import groovy.transform.Canonical
-import groovy.transform.CompileStatic
+    script:
+    """
+    echo '${greeting}'
+    """
+}
 
-/**
- * Models a file publish event.
- *
- * @author Ben Sherman <bentshermann@gmail.com>
- */
-@Canonical
-@CompileStatic
-class FilePublishEvent {
-    /**
-     * The source path.
-     */
-    Path source
-    /**
-     * The target path.
-     */
-    Path target
-    /**
-     * Labels associated with the published file.
-     */
-    List<String> labels
+workflow {
+    hello( 'ciao' ).view()
 }

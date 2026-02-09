@@ -180,8 +180,14 @@ public class ScriptToGroovyHelper {
                 builder.append( line.substring(0, k) );
             }
 
+            // determine range of current line
             var begin = (i == first) ? colx - 1 : 0;
             var end = (i == last) ? colz - 1 : line.length();
+
+            // skip trailing newline (e.g. for block statements)
+            if( i == last && begin == end )
+                continue;
+
             builder.append( line.substring(begin, end) ).append('\n');
         }
         return builder.toString();
