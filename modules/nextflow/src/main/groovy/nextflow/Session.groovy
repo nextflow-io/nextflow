@@ -70,7 +70,7 @@ import nextflow.script.WorkflowMetadata
 import nextflow.script.dsl.ProcessConfigBuilder
 import nextflow.spack.SpackConfig
 import nextflow.trace.AgentLogObserver
-import nextflow.trace.AnsiLogObserver
+import nextflow.trace.LogObserver
 import nextflow.trace.TraceObserver
 import nextflow.trace.TraceObserverFactory
 import nextflow.trace.TraceObserverFactoryV2
@@ -316,9 +316,7 @@ class Session implements ISession {
 
     boolean disableJobsCancellation
 
-    AnsiLogObserver ansiLogObserver
-
-    AgentLogObserver agentLogObserver
+    LogObserver logObserver
 
     FilePorter getFilePorter() { filePorter }
 
@@ -505,9 +503,10 @@ class Session implements ISession {
         result.add(statsObserver)
         // Add AgentLogObserver when agent mode is enabled
         if( agentLog ) {
-            this.agentLogObserver = new AgentLogObserver()
-            agentLogObserver.setStatsObserver(statsObserver)
-            result.add(agentLogObserver)
+            def observer = new AgentLogObserver()
+            observer.setStatsObserver(statsObserver)
+            this.logObserver = observer
+            result.add(observer)
         }
         for( TraceObserverFactoryV2 f : Plugins.getExtensions(TraceObserverFactoryV2) ) {
             log.debug "Observer factory (v2): ${f.class.simpleName}"
@@ -843,8 +842,7 @@ class Session implements ISession {
             shutdown0()
             notifyError(null)
             // force termination
-            ansiLogObserver?.forceTermination()
-            agentLogObserver?.forceTermination()
+            logObserver?.forceTermination()
             executorFactory?.signalExecutors()
             processesBarrier.forceTermination()
             monitorsBarrier.forceTermination()
@@ -1290,8 +1288,8 @@ class Session implements ISession {
     }
 
     void printConsole(String str, boolean newLine=false) {
-        if( ansiLogObserver )
-            ansiLogObserver.appendInfo(str)
+        if( logObserver )
+            logObserver.appendInfo(str)
         else if( newLine )
             System.out.println(str)
         else
@@ -1299,7 +1297,7 @@ class Session implements ISession {
     }
 
     void printConsole(Path file) {
-        ansiLogObserver ? ansiLogObserver.appendInfo(file.text) : Files.copy(file, System.out)
+        logObserver ? logObserver.appendInfo(file.text) : Files.copy(file, System.out)
     }
 
     private volatile ThreadPoolManager finalizePoolManager
