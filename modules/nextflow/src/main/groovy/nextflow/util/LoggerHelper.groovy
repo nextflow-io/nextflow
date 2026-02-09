@@ -56,6 +56,7 @@ import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Global
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.trace.AnsiLogObserver
 import nextflow.cli.CliOptions
 import nextflow.cli.Launcher
@@ -261,7 +262,7 @@ class LoggerHelper {
 
         final Appender<ILoggingEvent> result = daemon && opts.isBackground()
                 ? (Appender<ILoggingEvent>) null
-                : (opts.ansiLog ? new CaptureAppender() : new ConsoleAppender<ILoggingEvent>())
+                : ((opts.ansiLog || SysEnv.isAgentMode()) ? new CaptureAppender() : new ConsoleAppender<ILoggingEvent>())
         if( result )  {
             final filter = new ConsoleLoggerFilter( packages )
             filter.setContext(loggerContext)

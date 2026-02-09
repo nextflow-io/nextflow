@@ -58,7 +58,7 @@ class AgentLogObserver implements TraceObserverV2, LogObserver {
      * Print a line to standard output (agent format)
      */
     protected void println(String line) {
-        System.out.println(line)
+        System.err.println(line)
     }
 
     // -- TraceObserverV2 lifecycle methods --
