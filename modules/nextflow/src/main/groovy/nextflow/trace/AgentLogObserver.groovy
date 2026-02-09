@@ -39,7 +39,7 @@ import nextflow.trace.event.TaskEvent
  * @author Edmund Miller <edmund.miller@utdallas.edu>
  */
 @Slf4j
-class AgentLogObserver implements TraceObserverV2 {
+class AgentLogObserver implements TraceObserverV2, LogObserver {
 
     private Session session
     private WorkflowStatsObserver statsObserver
