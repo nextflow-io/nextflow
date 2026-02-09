@@ -70,6 +70,7 @@ import nextflow.script.WorkflowMetadata
 import nextflow.script.dsl.ProcessConfigBuilder
 import nextflow.spack.SpackConfig
 import nextflow.trace.AgentLogObserver
+import nextflow.trace.AnsiLogObserver
 import nextflow.trace.LogObserver
 import nextflow.trace.TraceObserver
 import nextflow.trace.TraceObserverFactory
@@ -1288,7 +1289,7 @@ class Session implements ISession {
     }
 
     void printConsole(String str, boolean newLine=false) {
-        if( logObserver )
+        if( logObserver instanceof AnsiLogObserver )
             logObserver.appendInfo(str)
         else if( newLine )
             System.out.println(str)
@@ -1297,7 +1298,7 @@ class Session implements ISession {
     }
 
     void printConsole(Path file) {
-        logObserver ? logObserver.appendInfo(file.text) : Files.copy(file, System.out)
+        logObserver instanceof AnsiLogObserver ? logObserver.appendInfo(file.text) : Files.copy(file, System.out)
     }
 
     private volatile ThreadPoolManager finalizePoolManager
