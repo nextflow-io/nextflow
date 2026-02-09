@@ -207,12 +207,12 @@ class AssetManagerTest extends Specification {
         def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
 
         when:
-        manager.download("6b9515aba6c7efc6a9b3f273ce116fc0c224bf68")
+        manager.download("d828daeef77f391c456896a7a6384b5f76ceea41")
         then:
         folder.resolve('nextflow-io/hello/.git').isDirectory()
 
         when:
-        def result = manager.download("6b9515aba6c7efc6a9b3f273ce116fc0c224bf68")
+        def result = manager.download("d828daeef77f391c456896a7a6384b5f76ceea41")
         then:
         noExceptionThrown()
         result == "Already-up-to-date"
