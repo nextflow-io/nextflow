@@ -30,6 +30,7 @@ import nextflow.cloud.types.PriceModel
 import nextflow.container.DockerConfig
 import nextflow.container.resolver.ContainerMeta
 import nextflow.exception.AbortOperationException
+import nextflow.script.PlatformMetadata
 import nextflow.script.ScriptBinding
 import nextflow.script.WorkflowMetadata
 import nextflow.trace.TraceRecord
@@ -378,9 +379,11 @@ class TowerClientTest extends Specification {
     def 'should post create request' () {
         given:
         def uuid = UUID.randomUUID()
+        def platform = new PlatformMetadata()
         def meta = Mock(WorkflowMetadata) {
             getProjectName() >> 'the-project-name'
             getRepository() >> 'git://repo.com/foo'
+            getPlatform() >> platform
         }
         def session = Mock(Session) {
             getUniqueId() >> uuid
@@ -403,6 +406,8 @@ class TowerClientTest extends Specification {
         and:
         client.workflowId == 'xyz123'
         !client.towerLaunch
+        and:
+        platform.workflowId == 'xyz123'
 
     }
 
