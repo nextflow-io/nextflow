@@ -27,13 +27,9 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.NF
 import nextflow.Session
-import nextflow.config.ModulesConfig
-import nextflow.config.RegistryConfig
 import nextflow.exception.IllegalModulePath
 import nextflow.exception.ScriptCompilationException
-import nextflow.module.ModuleReference
-import nextflow.module.ModuleResolver
-import nextflow.pipeline.PipelineSpec
+import nextflow.module.spi.RemoteModuleResolverProvider
 import nextflow.plugin.Plugins
 import nextflow.plugin.extension.PluginExtensionProvider
 import nextflow.script.parser.v1.ScriptLoaderV1
@@ -181,48 +177,11 @@ class IncludeDef {
 
     @PackageScope
     Path resolveRemoteModulePath(String moduleName) {
-        //TODO: Decide final location of modules currently in nextflow_spec.json.
-        // Alternative: Use nextflow config. It requires to implement nextflow.config updater features
-        // def modulesConfig = session.config.navigate('modules') as ModulesConfig
-        final modulesConfig = getModuleConfig()
-        final registryConfig = session.config.navigate('registry') as RegistryConfig
-        // Create module resolver
-        def resolver = new ModuleResolver(session.baseDir, modulesConfig, registryConfig)
-        try {
-            log.debug "Resolving remote module: ${moduleName}"
-
-            // Parse module reference
-            def reference = ModuleReference.parse(moduleName)
-
-            // Resolve module (will auto-install if missing or version mismatch)
-            def mainFile = resolver.resolve(reference, null,true)
-
-            log.info "Module ${reference.nameWithoutPrefix} resolved to ${mainFile}"
-            return mainFile
-        } catch (Exception e) {
-            throw new IllegalModulePath(
-                "Failed to resolve remote module ${moduleName}: ${e.message}",
-                e
-            )
-        }
+        // Use SPI to get the remote module resolver implementation
+        def resolver = RemoteModuleResolverProvider.getInstance()
+        return resolver.resolve(moduleName, session.baseDir)
     }
 
-    @Memoized
-    private ModulesConfig getModuleConfig(){
-        def specFile = new PipelineSpec(session.getBaseDir())
-
-        if( !specFile.exists() ) {
-            log.warn1( "Remote module specified and 'nextflow_spec.json' not found." )
-            return new ModulesConfig()
-        }
-
-        def modules = specFile.getModules()
-        if (!modules || modules.isEmpty()) {
-            log.warn1("Remote module specified and no modules configured in 'nextflow_spec.json'")
-            return new ModulesConfig()
-        }
-        return new ModulesConfig(modules)
-    }
     @PackageScope
     Path realModulePath(include) {
         def module = resolveModulePath(include)

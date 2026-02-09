@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
+import nextflow.module.spi.RemoteModuleResolverProvider;
 import nextflow.script.ast.FunctionNode;
 import nextflow.script.ast.IncludeNode;
 import nextflow.script.ast.ScriptNode;
@@ -84,17 +85,7 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
             return;
         }
 
-        var parent = Path.of(uri).getParent();
-
-        // Resolve remote modules paths
-        if( source.startsWith("@") ) {
-            parent = Path.of("modules");
-            if (!Files.exists(parent.resolve(source))) {
-                addError("Module '" + source + "' not locally found at 'modules' folder - use 'nextflow install' to download module files", node);
-                return;
-            }
-        }
-
+        var parent = source.startsWith("@") ? Path.of("modules") : Path.of(uri).getParent();
         var includeUri = getIncludeUri(parent, source);
         if( !isIncludeStale(node, includeUri) )
             return;
