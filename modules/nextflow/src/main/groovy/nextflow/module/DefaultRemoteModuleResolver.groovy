@@ -21,6 +21,7 @@ import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.NF
 import nextflow.Session
+import nextflow.config.ConfigBuilder
 import nextflow.config.ModulesConfig
 import nextflow.config.RegistryConfig
 import nextflow.exception.IllegalModulePath
@@ -50,7 +51,9 @@ class DefaultRemoteModuleResolver implements RemoteModuleResolver {
     Path resolve(String moduleName, Path baseDir) {
 
         final modulesConfig = getModuleConfig(baseDir)
-        final registryConfig = Global.config.navigate('registry') as RegistryConfig
+
+        final config = Global.config ?: new ConfigBuilder().setBaseDir(baseDir).build()
+        final registryConfig = config.navigate('registry') as RegistryConfig
 
         // Create module resolver
         def resolver = new ModuleResolver(baseDir, modulesConfig, registryConfig)
@@ -83,7 +86,7 @@ class DefaultRemoteModuleResolver implements RemoteModuleResolver {
         def specFile = new PipelineSpec(baseDir)
 
         if (!specFile.exists()) {
-            log.warn1("Remote module specified and 'nextflow_spec.json' not found.")
+            log.warn1("Remote module specified and 'nextflow_spec.json' not found")
             return new ModulesConfig()
         }
 
