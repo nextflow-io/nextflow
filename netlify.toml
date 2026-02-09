@@ -73,17 +73,15 @@
   to = "https://seqera-docs-api.netlify.app/platform-api/:splat"
   status = 200
 
-# Fallback asset redirects for proxied pages
-# Note: These serve as fallback when assets don't exist locally
-[[redirects]]
-  from = "/assets/*"
-  to = "https://seqera-docs.netlify.app/assets/:splat"
-  status = 200
+# Asset and image routing handled by Edge Function
+# See .netlify/edge-functions/asset-proxy.js
+[[edge_functions]]
+  function = "asset-proxy"
+  path = "/assets/*"
 
-[[redirects]]
-  from = "/img/*"
-  to = "https://seqera-docs.netlify.app/img/:splat"
-  status = 200
+[[edge_functions]]
+  function = "asset-proxy"
+  path = "/img/*"
 
 # Add noindex header to prevent search engine indexing
 [[headers]]
