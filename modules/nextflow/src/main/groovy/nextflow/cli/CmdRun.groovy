@@ -606,7 +606,7 @@ class CmdRun extends CmdBase implements HubOptions {
 
         boolean checkForUpdate = true
         if( !manager.isRunnable() || latest ) {
-            if( offline )
+            if( offline && !pipelineName.startsWith('file:/' ) )
                 throw new AbortOperationException("Unknown project `$repo` -- NOTE: automatic download from remote repositories is disabled")
             log.info "Pulling $repo ..."
             def result = manager.download(revision,deep)
