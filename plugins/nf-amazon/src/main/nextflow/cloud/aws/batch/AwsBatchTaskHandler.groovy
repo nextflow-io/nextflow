@@ -925,7 +925,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      * @return The number of times this job was retried due to spot instance reclamation
      */
     protected Integer getNumSpotInterruptions(String jobId) {
-        if (!jobId)
+        if (!jobId || !isCompleted())
             return null
 
         try {
