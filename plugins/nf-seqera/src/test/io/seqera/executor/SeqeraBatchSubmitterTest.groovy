@@ -17,13 +17,18 @@
 
 package io.seqera.executor
 
+import java.nio.file.Files
+import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicInteger
 
 import io.seqera.sched.api.schema.v1a1.CreateTasksResponse
 import io.seqera.sched.api.schema.v1a1.Task
 import io.seqera.sched.client.SchedClient
+import nextflow.file.FileHolder
+import nextflow.processor.TaskRun
 import nextflow.util.Duration
 import spock.lang.Specification
+import spock.lang.TempDir
 import spock.lang.Timeout
 
 /**
@@ -474,6 +479,109 @@ class SeqeraBatchSubmitterTest extends Specification {
 
         then: 'should work normally'
         taskSubmissions.size() >= 1
+    }
+
+    // -- input files metrics tests --
+
+    @TempDir
+    Path tempDir
+
+    def 'should attach input files metrics to task before submission'() {
+        given:
+        def file1 = tempDir.resolve('a.txt')
+        Files.write(file1, new byte[500])
+        def file2 = tempDir.resolve('b.txt')
+        Files.write(file2, new byte[3000])
+        def capturedTasks = [].asSynchronized()
+        def client = Stub(SchedClient) {
+            createTasks(_, _) >> { String runId, List<Task> tasks ->
+                capturedTasks.addAll(tasks)
+                Stub(CreateTasksResponse) {
+                    getTaskIds() >> tasks.collect { "task-${System.nanoTime()}" }
+                }
+            }
+        }
+        def submitter = new SeqeraBatchSubmitter(client, TEST_RUN, Duration.of('100ms'))
+        def taskRun = Mock(TaskRun) {
+            getInputFiles() >> [new FileHolder(file1), new FileHolder(file2)]
+        }
+        def handler = Mock(SeqeraTaskHandler) {
+            getTask() >> taskRun
+        }
+
+        when:
+        submitter.start()
+        submitter.submit(handler, new Task().image('img1'))
+        sleep(300)
+        submitter.shutdown()
+
+        then: 'metrics should be set on the submitted task'
+        capturedTasks.size() == 1
+        def metrics = capturedTasks[0].getInputFiles()
+        metrics != null
+        metrics.count == 2
+        metrics.totalBytes == 3500
+        metrics.maxFileBytes == 3000
+        metrics.minFileBytes == 500
+    }
+
+    def 'should submit task without metrics when no input files'() {
+        given:
+        def capturedTasks = [].asSynchronized()
+        def client = Stub(SchedClient) {
+            createTasks(_, _) >> { String runId, List<Task> tasks ->
+                capturedTasks.addAll(tasks)
+                Stub(CreateTasksResponse) {
+                    getTaskIds() >> tasks.collect { "task-${System.nanoTime()}" }
+                }
+            }
+        }
+        def submitter = new SeqeraBatchSubmitter(client, TEST_RUN, Duration.of('100ms'))
+        def taskRun = Mock(TaskRun) {
+            getInputFiles() >> []
+        }
+        def handler = Mock(SeqeraTaskHandler) {
+            getTask() >> taskRun
+        }
+
+        when:
+        submitter.start()
+        submitter.submit(handler, new Task().image('img1'))
+        sleep(300)
+        submitter.shutdown()
+
+        then: 'task should be submitted without metrics'
+        capturedTasks.size() == 1
+        capturedTasks[0].getInputFiles() == null
+    }
+
+    def 'should submit task even when metrics computation fails'() {
+        given:
+        def capturedTasks = [].asSynchronized()
+        def client = Stub(SchedClient) {
+            createTasks(_, _) >> { String runId, List<Task> tasks ->
+                capturedTasks.addAll(tasks)
+                Stub(CreateTasksResponse) {
+                    getTaskIds() >> tasks.collect { "task-${System.nanoTime()}" }
+                }
+            }
+        }
+        def submitter = new SeqeraBatchSubmitter(client, TEST_RUN, Duration.of('100ms'))
+        def taskRun = Mock(TaskRun) {
+            getInputFiles() >> { throw new RuntimeException('Cannot access input files') }
+        }
+        def handler = Mock(SeqeraTaskHandler) {
+            getTask() >> taskRun
+        }
+
+        when:
+        submitter.start()
+        submitter.submit(handler, new Task().image('img1'))
+        sleep(300)
+        submitter.shutdown()
+
+        then: 'task should still be submitted despite metrics failure'
+        capturedTasks.size() == 1
     }
 
     /**
