@@ -102,6 +102,7 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
                 .machineRequirement(MapperUtil.toMachineRequirement(seqeraConfig.machineRequirement))
                 .labels(labels.entries)
                 .workspaceId(PlatformHelper.getWorkspaceId(towerConfig, SysEnv.get()) as Long)
+                .workflowId(session.workflowMetadata?.platform?.workflowId)
         log.debug "[SEQERA] Creating run: ${request}"
         final response = client.createRun(request)
         this.runId = response.getRunId()
