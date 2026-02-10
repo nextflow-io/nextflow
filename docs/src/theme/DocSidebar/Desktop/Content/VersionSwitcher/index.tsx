@@ -56,6 +56,19 @@ const VersionSwitcher: React.FC<VersionSwitcherProps> = ({ isOpen, setIsOpen }) 
     savePreferredVersionName(version);
   }
 
+  // Get the display label for a version
+  // Returns object with label and whether to show "v" prefix
+  function getVersionLabel(version: any): { label: string; showV: boolean } {
+    // Check if the label looks like a version number (contains dots or is all digits)
+    const isVersionNumber = /^[\d.]+/.test(version.label);
+
+    // Version numbers get "v" prefix, text labels like "Latest" don't
+    return {
+      label: version.label,
+      showV: isVersionNumber
+    };
+  }
+
   if (typeof window === "undefined") return null;
   if (!isNextflowPage) return null;
   // Only show version switcher if there are multiple versions (2 or more)
@@ -83,10 +96,10 @@ const VersionSwitcher: React.FC<VersionSwitcherProps> = ({ isOpen, setIsOpen }) 
           className="h-9 w-full flex items-center justify-between px-3 text-sm bg-transparent border-none cursor-pointer relative z-10 text-gray-900 dark:text-white transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
         >
           <span>
-            {currentVersion ? `v${currentVersion.label}` : "Version"}{" "}
-            {currentVersion && currentVersion.label === versions[0]?.label
-              ? "(current)"
-              : ""}
+            {currentVersion ? (() => {
+              const { label, showV } = getVersionLabel(currentVersion);
+              return showV ? `v${label}` : label;
+            })() : "Version"}
           </span>
           <svg
             className={`w-5 h-5 transition-transform duration-200 ${isOpen ? 'rotate-0' : '-rotate-90'}`}
@@ -110,8 +123,10 @@ const VersionSwitcher: React.FC<VersionSwitcherProps> = ({ isOpen, setIsOpen }) 
                   to={`${version.path}${urlSuffix}`}
                   className="h-9 w-full flex items-center justify-between px-3 text-sm bg-transparent cursor-pointer text-gray-900 dark:text-white transition-colors hover:bg-gray-100 dark:hover:bg-gray-800 no-underline border-t border-gray-200 dark:border-gray-700 first:border-t-0"
                 >
-                  v{version.label}{" "}
-                  {version.label === versions[0]?.label ? "(current)" : ""}
+                  {(() => {
+                    const { label, showV } = getVersionLabel(version);
+                    return showV ? `v${label}` : label;
+                  })()}
                 </Link>
               </div>
             ))}

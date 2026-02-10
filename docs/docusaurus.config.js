@@ -22,7 +22,17 @@ export default async function createConfigAsync() {
           showLastUpdateTime: false,
           // For PR Previews we want to see the latest doc-set with expected changes.
           includeCurrentVersion: process.env.INCLUDE_NEXT !== "false",
-          lastVersion: latest_version || undefined,
+          // Set current as lastVersion to serve it at base path (/nextflow/)
+          lastVersion: 'current',
+          versions: {
+            current: {
+              label: 'Latest',
+              banner: 'none',
+            },
+            '24.10': {
+              banner: 'none',
+            },
+          },
           rehypePlugins: [require("rehype-katex")],
           remarkPlugins: [
             (await import("remark-math")).default,
@@ -46,6 +56,45 @@ export default async function createConfigAsync() {
     themeConfig: getSeqeraThemeConfig({
       prism: {
         additionalLanguages: ['nextflow', 'groovy', 'java', 'bash', 'yaml', 'json'],
+      },
+      navbar: {
+        items: [
+          {
+            label: 'Cloud',
+            href: '/platform-cloud/',
+          },
+          {
+            label: 'Enterprise',
+            href: '/platform-enterprise/',
+          },
+          {
+            label: 'Nextflow',
+            href: '/nextflow/',
+          },
+          {
+            label: 'MultiQC',
+            href: '/multiqc/',
+          },
+          {
+            label: 'Wave',
+            href: '/wave/',
+          },
+          {
+            label: 'Fusion',
+            href: '/fusion/',
+          },
+        ],
+      },
+      seqera: {
+        docs: {
+          versionDropdown: {
+            default: {
+              enabled: true,
+              showCurrent: true,
+              currentLabel: 'Latest',
+            },
+          },
+        },
       },
     }),
   });
