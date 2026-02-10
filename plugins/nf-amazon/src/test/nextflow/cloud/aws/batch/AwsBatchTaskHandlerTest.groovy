@@ -944,8 +944,6 @@ class AwsBatchTaskHandlerTest extends Specification {
         attempt2.container() >> null
         def job = JobDetail.builder().attempts([attempt1, attempt2]).build()
 
-        // Stub BEFORE calling the method
-        handler.isCompleted() >> true
         handler.getMachineInfo() >> new CloudMachineInfo('x1.large', 'us-east-1b', PriceModel.spot)
         handler.describeJob('xyz-123') >> job
 

@@ -15,46 +15,44 @@
  */
 
 package nextflow.extension
+
 import nextflow.Channel
-import nextflow.Session
 import nextflow.util.ArrayBag
 import spock.lang.Specification
 import spock.lang.Timeout
 
+import static test.ScriptHelper.runDataflow
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class CollectOpTest extends Specification {
 
-    def setupSpec() {
-        new Session()
-    }
-
     @Timeout(1)
     def 'should collect items into a list'() {
 
         when:
-        def source = Channel.of(1,2,3)
-        def result = source.collect()
+        def result = runDataflow {
+            Channel.of(1,2,3).collect()
+        }
         then:
         result.val == [1,2,3]
         result.val instanceof ArrayBag
 
         when:
-        source = Channel.empty()
-        result = source.collect()
+        result = runDataflow {
+            Channel.empty().collect()
+        }
         then:
         result.val == Channel.STOP
 
     }
 
     def 'should collect and invoke a closure on each entry' () {
-        given:
-        def source = ['hello', 'ciao', 'bonjour']
-
         when:
-        def result = source.channel().collect { it.length() }
+        def result = runDataflow {
+            Channel.of('hello', 'ciao', 'bonjour').collect { it.length() }
+        }
         then:
         result.val == [5, 4, 7]
         result.val instanceof ArrayBag
@@ -67,25 +65,33 @@ class CollectOpTest extends Specification {
         def source = [[1,['a','b']], [3,['c','d']], [5,['p','q']]]
 
         when:
-        def result = source.channel().collect()
+        def result = runDataflow {
+            Channel.fromList(source).collect()
+        }
         then:
         result.val == [1,['a','b'],3,['c','d'],5,['p','q']]
         result.val instanceof ArrayBag
 
         when:
-        result = source.channel().collect(flat: true)
+        result = runDataflow {
+            Channel.fromList(source).collect(flat: true)
+        }
         then:
         result.val == [1,['a','b'],3,['c','d'],5,['p','q']]
         result.val instanceof ArrayBag
 
         when:
-        result = source.channel().collect(flat: false)
+        result = runDataflow {
+            Channel.fromList(source).collect(flat: false)
+        }
         then:
         result.val == [[1,['a','b']], [3,['c','d']], [5,['p','q']]]
         result.val instanceof ArrayBag
 
         when:
-        result = source.channel().collect { it.flatten() }
+        result = runDataflow {
+            Channel.fromList(source).collect { it.flatten() }
+        }
         then:
         result.val == [1,'a','b',3,'c','d',5,'p','q']
         result.val instanceof ArrayBag
@@ -96,19 +102,25 @@ class CollectOpTest extends Specification {
     def 'should collect items into a sorted list '() {
 
         when:
-        def result = [3,1,4,2].channel().collect(sort: true)
+        def result = runDataflow {
+            Channel.of(3,1,4,2).collect(sort: true)
+        }
         then:
         result.val == [1,2,3,4]
         result.val instanceof ArrayBag
 
         when:
-        result = ['aaa','bb', 'c'].channel().collect(sort: {it->it.size()} as Closure)
+        result = runDataflow {
+            Channel.of('aaa','bb', 'c').collect(sort: {v -> v.size()} as Closure)
+        }
         then:
         result.val == ['c','bb','aaa']
         result.val instanceof ArrayBag
 
         when:
-        result = ['aaa','bb', 'c'].channel().collect(sort: {a,b -> a.size()<=>b.size()} as Comparator)
+        result = runDataflow {
+            Channel.of('aaa','bb', 'c').collect(sort: {a,b -> a.size()<=>b.size()} as Comparator)
+        }
         then:
         result.val == ['c','bb','aaa']
         result.val instanceof ArrayBag

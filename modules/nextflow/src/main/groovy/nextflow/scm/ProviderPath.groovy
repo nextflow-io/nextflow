@@ -20,6 +20,7 @@ import java.nio.file.LinkOption
 import java.nio.file.Path
 import java.nio.file.Paths
 
+import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
@@ -39,6 +40,7 @@ import groovy.util.logging.Slf4j
  */
 @EqualsAndHashCode
 @Slf4j
+@CompileStatic
 class ProviderPath implements Path {
 
     @PackageScope
@@ -59,18 +61,27 @@ class ProviderPath implements Path {
         this.delegate = path
     }
 
+    @Override
+    Path relativize(Path other) {
+        new ProviderPath(provider, delegate.relativize(other))
+    }
+
+    @Override
     Path resolveSibling(Path other) {
         new ProviderPath(provider, delegate.resolveSibling(other.toString()))
     }
 
+    @Override
     Path resolveSibling(String other) {
         new ProviderPath(provider, delegate.resolveSibling(other))
     }
 
+    @Override
     Path resolve(Path other) {
         new ProviderPath(provider, delegate.resolve(other.toString()))
     }
 
+    @Override
     Path resolve(String other) {
         new ProviderPath(provider, delegate.resolve(other))
     }
@@ -97,10 +108,16 @@ class ProviderPath implements Path {
         provider.readText(delegate.toString())
     }
 
+    @Override
+    URI toUri() {
+        URI.create(toUriString())
+    }
+
     String toUriString() {
         provider.getContentUrl(delegate.toString())
     }
 
+    @Override
     String toString() {
         final base = provider.getRepositoryUrl()
         final file = delegate.toString()
@@ -110,6 +127,7 @@ class ProviderPath implements Path {
     /**
      * @return the path itself because it's absolute by definition being a remote file
      */
+    @Override
     Path toAbsolutePath() {
         return this
     }
@@ -117,6 +135,7 @@ class ProviderPath implements Path {
     /**
      * @return {@code true} because it's absolute by definition being a remote file
      */
+    @Override
     boolean isAbsolute() {
         return true
     }
@@ -124,6 +143,7 @@ class ProviderPath implements Path {
     /**
      * @return the path itself because it's absolute by definition being a remote file
      */
+    @Override
     Path normalize() {
         return this
     }

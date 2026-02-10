@@ -53,6 +53,7 @@ class ConfigValidator {
     private static final List<String> CORE_PLUGIN_SCOPES = List.of(
         'aws',
         'azure',
+        'cloudcache',
         'google',
         'k8s',
         'tower',

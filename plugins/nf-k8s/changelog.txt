@@ -1,5 +1,9 @@
 nf-k8s changelog
 ===================
+1.5.0 - 8 Feb 2026
+- Fix K8s job fallback to not return incorrect zero exit code (#6746) [573067999]
+- Add time-based caching for K8sConfig.getClient() (#6742) [73e507558]
+
 1.4.0 - 19 Dec 2025
 - Implementation of Git multiple revisions (#6620) [ce9d7b592]
 - Add runtimeClassName to the pod options (#6633) [ddcef4f45]

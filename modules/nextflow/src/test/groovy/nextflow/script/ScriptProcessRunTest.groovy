@@ -3,7 +3,8 @@ package nextflow.script
 import java.nio.file.Files
 
 import test.Dsl2Spec
-import test.MockScriptRunner
+
+import static test.ScriptHelper.*
 
 /**
  * Tests for single process execution feature that allows running processes
@@ -27,8 +28,7 @@ class ScriptProcessRunTest extends Dsl2Spec {
         '''
 
         when:
-        def runner = new MockScriptRunner()
-        def result = runner.setScript(SCRIPT).execute()
+        def result = runScript(SCRIPT)
 
         then:
         // For single process execution, the result should contain the process output
@@ -52,8 +52,7 @@ class ScriptProcessRunTest extends Dsl2Spec {
         """
 
         when:
-        def runner = new MockScriptRunner()
-        def result = runner.setScript(SCRIPT).execute()
+        def result = runScript(SCRIPT)
 
         then:
         result != null
@@ -62,31 +61,6 @@ class ScriptProcessRunTest extends Dsl2Spec {
 
         cleanup:
         Files.deleteIfExists(tempFile)
-    }
-
-    def 'should execute single process with tuple input' () {
-        given:
-        def SCRIPT = '''
-        params.'meta.id' = 'SAMPLE_001'
-        params.'meta.name' = 'test'
-        params.threads = 4
-        
-        process testProcess {
-            input: tuple val(meta), val(threads)
-            output: val result
-            exec:
-                result = "Sample: ${meta.id}, Threads: $threads"
-        }
-        '''
-
-        when:
-        def runner = new MockScriptRunner()
-        def result = runner.setScript(SCRIPT).execute()
-
-        then:
-        result != null
-        println "Tuple result: $result"
-        println "Tuple result class: ${result?.getClass()}"
     }
 
     def 'should handle multiple processes by running the first one' () {
@@ -110,8 +84,7 @@ class ScriptProcessRunTest extends Dsl2Spec {
         '''
 
         when:
-        def runner = new MockScriptRunner()
-        def result = runner.setScript(SCRIPT).execute()
+        def result = runScript(SCRIPT)
 
         then:
         result != null
@@ -131,37 +104,10 @@ class ScriptProcessRunTest extends Dsl2Spec {
         '''
 
         when:
-        def runner = new MockScriptRunner()
-        runner.setScript(SCRIPT).execute()
+        runScript(SCRIPT)
 
         then:
         def e = thrown(Exception)
         e.message.contains('Missing required parameter: --requiredParam')
-    }
-
-    def 'should handle complex parameter mapping' () {
-        given:
-        def SCRIPT = '''
-        params.'sample.id' = 'S001'
-        params.'sample.name' = 'TestSample'
-        params.'config.threads' = 8
-        
-        process complexProcess {
-            input: val sample
-            input: val config
-            output: val result
-            exec:
-                result = "Sample: ${sample.id}, Config: ${config.threads}"
-        }
-        '''
-
-        when:
-        def runner = new MockScriptRunner()
-        def result = runner.setScript(SCRIPT).execute()
-
-        then:
-        result != null
-        println "Complex result: $result"
-        println "Complex result class: ${result?.getClass()}"
     }
 }

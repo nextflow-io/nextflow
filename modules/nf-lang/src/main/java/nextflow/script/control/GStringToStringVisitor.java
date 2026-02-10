@@ -53,11 +53,14 @@ public class GStringToStringVisitor extends ClassCodeExpressionTransformer {
 
     @Override
     public Expression transform(Expression node) {
-        if( node instanceof ClosureExpression ce )
-            super.visitClosureExpression(ce);
+        if( node instanceof ClosureExpression ce ) {
+            ce.visit(this);
+            return ce;
+        }
 
-        if( node instanceof GStringExpression gse )
+        if( node instanceof GStringExpression gse ) {
             return transformToString(gse);
+        }
 
         return super.transform(node);
     }

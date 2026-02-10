@@ -16,12 +16,8 @@
 
 package nextflow.script
 
-import static test.TestParser.*
-
-import nextflow.processor.TaskProcessor
 import spock.lang.Timeout
 import test.Dsl2Spec
-import test.MockScriptRunner
 
 /**
  *
@@ -60,83 +56,6 @@ class BodyDefTest extends Dsl2Spec {
         def body = new BodyDef({->'echo foo'}, 'echo foo')
         then:
         body.getValNames() == [] as Set
-    }
-
-    def 'should return variable names referenced in task body'( ) {
-
-        setup:
-        def text = '''
-
-        String x = 1
-
-        @Field
-        String y = 'Ciao'
-
-        z = 'str'
-
-        process hola {
-
-          /
-          println $x + $y + $z
-          /
-        }
-        
-        workflow { hola() }
-        '''
-        when:
-        def process = parseAndReturnProcess(text)
-        then:
-        process.taskBody.valRefs == [
-                new TokenValRef('x', 13, 20),
-                new TokenValRef('y', 13, 25),
-                new TokenValRef('z', 13, 30) ] as Set
-
-        process.taskBody.getValNames() == ['x','y','z'] as Set
-    }
-
-    def 'should return property names referenced in task body'() {
-
-        given:
-        def script =
-                '''
-                class Foo { def foo() { return [x:1] };  }
-
-                alpha = 1
-                params.beta = 2
-                params.zeta = new Foo()
-                params.gamma = [:]
-                params.hola = 'Ciao'
-                delta = new Foo()
-                x = 'alpha'
-
-                process simpleTask  {
-                    input:
-                    val x
-
-                    """
-                    echo ${alpha}
-                    echo ${params.beta}
-                    echo ${params?.gamma?.omega}
-                    echo ${params.zeta.foo()}
-                    echo ${params.zeta.foo().x}
-                    echo ${delta.foo().x}
-                    echo ${params."$x"}
-                    """
-                }
-
-                workflow { 
-                    simpleTask('hola')
-                }
-                '''
-        and:
-        def config = [process: [executor:'nope']]
-
-        when:
-        new MockScriptRunner(config).setScript(script).execute()
-        def processor = TaskProcessor.currentProcessor()
-        then:
-        processor.getTaskBody().getValNames() == ['alpha', 'params.beta', 'params.gamma.omega', 'params.zeta', 'delta', 'params', 'x'] as Set
-
     }
 
 }

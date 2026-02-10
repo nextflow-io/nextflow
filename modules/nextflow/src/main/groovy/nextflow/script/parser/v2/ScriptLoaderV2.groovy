@@ -42,6 +42,8 @@ class ScriptLoaderV2 implements ScriptLoader {
 
     private boolean skipEntryFlow
 
+    private Object result
+
     ScriptLoaderV2(Session session) {
         this.session = session
     }
@@ -69,7 +71,9 @@ class ScriptLoaderV2 implements ScriptLoader {
     }
 
     @Override
-    Object getResult() { null }
+    Object getResult() {
+        return result
+    }
 
     @Override
     ScriptLoaderV2 parse(Path scriptPath) {
@@ -83,14 +87,16 @@ class ScriptLoaderV2 implements ScriptLoader {
     }
 
     ScriptLoaderV2 parse(String scriptText) {
-        return parse0(scriptText, null)
+        parse0(scriptText, null)
+        return this
     }
 
     @Override
     ScriptLoaderV2 runScript() {
         assert session
         assert mainScript
-        mainScript.run()
+        // capture the last statement of the snippet or entry workflow (used for testing)
+        this.result = mainScript.run()
         return this
     }
 
@@ -104,17 +110,17 @@ class ScriptLoaderV2 implements ScriptLoader {
     private void parse0(String scriptText, Path scriptPath) {
         final compiler = getCompiler()
         try {
-            final result = scriptPath
+            final compileResult = scriptPath
                 ? compiler.compile(scriptPath.toFile())
                 : compiler.compile(scriptText)
 
-            mainScript = createScript(result.main(), session.binding, scriptPath, skipEntryFlow)
+            this.mainScript = createScript(compileResult.main(), session.binding, scriptPath, skipEntryFlow)
 
-            result.modules().forEach((path, clazz) -> {
+            compileResult.modules().forEach((path, clazz) -> {
                 createScript(clazz, new ScriptBinding(), path, true)
             })
 
-            for( final name : result.processNames() )
+            for( final name : compileResult.processNames() )
                 ScriptMeta.addResolvedName(name)
         }
         catch( CompilationFailedException e ) {
@@ -154,9 +160,11 @@ class ScriptLoaderV2 implements ScriptLoader {
         final script = InvokerHelper.createScript(clazz, binding)
         if( script instanceof BaseScript ) {
             final meta = ScriptMeta.get(script)
-            meta.setScriptPath(path)
+            if( path!=null ) {
+                meta.setScriptPath(path)
+                binding.setScriptPath(path)
+            }
             meta.setModule(module)
-            binding.setScriptPath(path)
             binding.setSession(session)
             return script
         }
