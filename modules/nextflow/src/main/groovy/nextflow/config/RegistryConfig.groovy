@@ -39,15 +39,15 @@ class RegistryConfig implements ConfigScope {
 
     @ConfigOption
     @Description("Primary registry URL")
-    private String url
+    final private String url
 
     @ConfigOption
     @Description("List of registry URLs to try in order")
-    private List<String> urls
+    final private List<String> urls
 
     @ConfigOption
     @Description("Authentication configuration per registry (registry URL -> token)")
-    private Map<String, String> auth
+    final private Map<String, String> auth
 
     /* required by extension point -- do not remove */
     RegistryConfig() {

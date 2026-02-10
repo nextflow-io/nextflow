@@ -19,6 +19,7 @@ nextflow.conda.CondaConfig
 nextflow.config.ConfigMap
 nextflow.config.Manifest
 nextflow.config.WorkflowConfig
+nextflow.config.RegistryConfig
 nextflow.container.ApptainerConfig
 nextflow.container.CharliecloudConfig
 nextflow.container.DockerConfig
