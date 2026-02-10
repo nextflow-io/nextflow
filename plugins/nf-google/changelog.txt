@@ -1,5 +1,8 @@
 nf-google changelog
 ===================
+1.23.5 - 10 Feb 2026
+- Add isCompleted check in getNumSpotInterruptions (#6806) [21390a1fb]
+
 1.23.4 - 22 Jan 2026
 - Add spot interruption tracking to trace records (#6606) [f59137e6c]
 - Add default maxSpotAttempts for fusion snapshots (#6652) [ad7114eb4]
