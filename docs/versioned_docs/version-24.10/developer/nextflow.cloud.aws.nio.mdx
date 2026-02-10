@@ -1,0 +1,51 @@
+
+# `nextflow.cloud.aws.nio`
+
+The `nextflow.cloud.aws.nio` package implements the S3 filesystem.
+
+## Class Diagram
+
+```mermaid
+classDiagram
+    %%
+    %% nextflow.cloud.aws.nio
+    %%
+    FileSystemProvider <|-- S3FileSystemProvider
+
+    S3FileSystemProvider --> S3FileSystem : newFileSystem
+
+    class S3FileSystem {
+        client : S3Client
+        endpoint : String
+    }
+    S3FileSystem --* S3Client
+
+    class S3Client {
+        client : AmazonS3
+        cannedAcl : CannedAccessControlList
+        kmsKeyId : String
+        storageEncryption : SSEAlgorithm
+        transferManager : TransferManager
+        transferPool : ExecutorService
+        uploadChunkSize : Long
+        uploadMaxThreads : Integer
+    }
+
+    Path <|-- S3Path
+
+    class S3Path {
+        bucket : String
+        parts : List~String~
+        fileSystem : S3FileSystem
+    }
+    S3Path --* S3FileSystem
+
+```
+
+:::note
+Some classes may be excluded from the above diagrams for brevity.
+:::
+
+## Notes
+
+The S3 filesystem translates Java Path API calls into S3 API calls, which allows Nextflow to interact with S3 objects through the same interface for local files.

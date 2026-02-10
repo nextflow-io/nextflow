@@ -1,0 +1,69 @@
+flowchart TB
+  subgraph Launcher
+    subgraph CmdRun
+      subgraph AssetManager
+        ScriptFile
+      end
+      subgraph ConfigBuilder
+        ConfigParser([ConfigParser])
+        ConfigBase([ConfigBase])
+      end
+      subgraph ScriptRunner
+        subgraph Session
+          ConfigMap
+          DAG
+          ExecutorFactory([ExecutorFactory])
+          subgraph TaskProcessor
+            TaskRun
+          end
+          subgraph Executor
+            subgraph TaskMonitor
+              TaskHandler
+            end
+            TaskBean
+            BashWrapperBuilder([BashWrapperBuilder])
+          end
+          TraceRecord
+          CacheFactory([CacheFactory])
+          CacheDB
+          TraceObserver([TraceObserver])
+        end
+        ScriptParser([ScriptParser])
+        BaseScript([BaseScript])
+        subgraph ScriptMeta
+          WorkflowDef([WorkflowDef])
+          ProcessDef([ProcessDef])
+          FunctionDef([FunctionDef])
+        end
+        IncludeDef([IncludeDef])
+        OpCall([OpCall])
+      end
+      ConfigParser --> ConfigBase
+      ConfigBase --> ConfigMap
+      ScriptFile --> ScriptParser
+      ScriptParser --> BaseScript
+      BaseScript --> WorkflowDef
+      BaseScript --> ProcessDef
+      BaseScript --> FunctionDef
+      BaseScript --> IncludeDef
+      IncludeDef --> ScriptParser
+      WorkflowDef --> OpCall
+      OpCall --> DAG
+      ProcessDef --> DAG
+      DAG --> TaskRun
+      TaskRun --> DAG
+      ExecutorFactory --> Executor
+      ConfigMap --> Executor
+      ProcessDef --> TaskProcessor
+      ConfigMap --> TaskProcessor
+      TaskRun --> TaskHandler
+      TaskRun --> TaskBean
+      TaskBean --> BashWrapperBuilder
+      BashWrapperBuilder --> TaskHandler
+      CacheFactory --> CacheDB
+      TaskHandler --> CacheDB
+      TaskHandler --> TraceRecord
+      TraceRecord --> CacheDB
+      TaskHandler --> TraceObserver
+    end
+  end

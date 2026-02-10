@@ -1,0 +1,44 @@
+classDiagram
+    %%
+    %% nextflow.processor
+    %%
+    %% ProcessDef --> TaskProcessor : run
+
+    class TaskProcessor {
+        config : ProcessConfig
+        executor : Executor
+        id : int
+        name : String
+        operator : DataflowProcessor
+        taskBody : BodyDef
+    }
+    TaskProcessor --> TaskRun : invokeTask
+    TaskProcessor --> PublishDir : finalizeTask
+
+    class TaskRun {
+        config : TaskConfig
+        context : TaskContext
+        hash : HashCode
+        id : TaskId
+        index : int
+        inputs : Map
+        name : String
+        outputs : Map
+        runType : RunType
+        type : ScriptType
+        workDir : Path
+    }
+    TaskRun --* TaskConfig
+    TaskRun --* TaskContext
+    TaskRun --> TaskBean : toTaskBean
+
+    class TaskConfig {
+        target : Map
+        binding : Map
+    }
+
+    class TaskContext {
+        holder : Map
+        script : Script
+        name : String
+    }

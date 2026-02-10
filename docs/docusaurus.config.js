@@ -3,6 +3,7 @@ import {
   getSeqeraThemeConfig,
   getSeqeraPresetOptions,
 } from "@seqera/docusaurus-preset-seqera";
+import latest_version from "./latest_version.js";
 
 export default async function createConfigAsync() {
   return createSeqeraConfig({
@@ -19,6 +20,9 @@ export default async function createConfigAsync() {
           sidebarPath: "./sidebars.js",
           showLastUpdateAuthor: false,
           showLastUpdateTime: false,
+          // For PR Previews we want to see the latest doc-set with expected changes.
+          includeCurrentVersion: process.env.INCLUDE_NEXT !== "false",
+          lastVersion: latest_version || undefined,
           rehypePlugins: [require("rehype-katex")],
           remarkPlugins: [
             (await import("remark-math")).default,
