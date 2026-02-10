@@ -1,5 +1,8 @@
 nf-tower changelog
 ===================
+1.17.5 - 10 Feb 2026
+- Fix LogsCheckpoint thread blocking shutdown for up to 90 seconds (#6787) [118e1dca8]
+
 1.17.4 - 22 Jan 2026
 - Add spot interruption tracking to trace records (#6606) [f59137e6c]
 
