@@ -214,7 +214,7 @@ The global cache requires a method to fingerprint input files as part of the tas
 
 ---
 
-#### Alternative 3: Lineage Metadata-Based (`lid` Fingerprinting)
+#### Alternative 3: Copy tracking based (Lineage Metadata-Based or not)
 
 **Description:** Use Nextflow lineage tracking to identify file content via lineage ID (`lid`). Check if lineage entry exists for file path; if yes, use original `lid` as fingerprint; if no, fall back to deep hash and create lineage entry.
 
@@ -258,6 +258,36 @@ The global cache requires a method to fingerprint input files as part of the tas
 - File path → lineage entry index for lookups
 - Lineage validation (verify file unmodified since tracking)
 - Lineage database synchronization across distributed executions
+
+**Simplified alternative (copy-tracking without lineage):**
+
+Instead of using the full lineage infrastructure, a simpler approach tracks the original fast hash (path + size + mtime) when files are copied:
+
+```
+1. File first seen at pathA:
+   - Compute fastHashA = hash(pathA, size, mtime)
+
+2. File copied/published to pathB (via Nextflow):
+   - Track: pathB → fastHashA (original hash)
+
+3. When computing hash for pathB:
+   - Lookup: is pathB a tracked copy?
+   - If yes: use fastHashA (original fast hash)
+   - If no: compute fastHashB = hash(pathB, size, mtime)
+```
+
+**Benefits:**
+- No lineage database needed - simple hash mapping store
+- Automatically detects if original file changed (size/mtime different)
+- Works for published outputs, staged files
+- Same content at different paths gets same hash reference
+
+**Limitations:**
+- Only tracks Nextflow-managed copies (publish, stage operations)
+- External copies (manual cp) not tracked
+- Still path-dependent for non-tracked files
+
+This approach provides similar benefits for Nextflow-managed files without requiring the full lineage infrastructure.
 
 ---
 
@@ -356,17 +386,137 @@ The global cache requires a method to fingerprint input files as part of the tas
 
 ---
 
+#### Alternative 6: File Content Sketches + Bloom Filter (Rejected)
+
+**Description:** Compute a lightweight "sketch" of file content (hash of size + first4KB + last4KB + middle4KB) and use it as a key to cache full content hashes. A Bloom filter provides fast pre-check to avoid unnecessary store lookups.
+
+**Architecture:**
+```
+1. Compute sketch = hash(size, first4KB, last4KB, middle4KB)  ~1-10ms
+2. bloomFilter.mightContain(sketch)?
+   - NO  → Compute full BLAKE3, store sketch → hash mapping
+   - YES → Lookup sketch in store
+     - Found → Return cached hash
+     - Not found (false positive) → Compute full BLAKE3
+```
+
+**Pros:**
+- Faster than full content hashing for large files (~1-10ms vs seconds)
+- Content-based rather than path-based
+- Works across different file paths
+- Bloom filter reduces unnecessary store lookups
+
+**Cons:**
+- **Correctness risk from sketch collisions:** If two different files produce the same sketch, the store returns the same hash for both files. This causes false cache hits in the global cache where different inputs would incorrectly match the same cached task result.
+- **Why not use sketch directly?** If we accept that sketch collisions can occur, there's no benefit to storing sketch → hash mappings - we might as well use the sketch itself as the hash, eliminating the need for both the store and Bloom filter.
+- **Cloud storage I/O overhead:** Computing sketches for cloud-stored files requires either downloading the entire file or making 3-4 range requests (head, tail, middle chunks), negating the performance benefit.
+- **Redundancy:** Both Bloom filter and store track existence, adding complexity.
+
+**Cache hit scenarios in global cache:**
+- **Unreliable:** Sketch collisions produce false cache hits with different file content
+- Cannot guarantee correctness even with cryptographic hash of sketch components
+- Risk increases with number of files processed
+
+**Rejection rationale:**
+
+This approach was proposed but rejected due to the following issues:
+
+1. **Collision correctness problem:** When two files have the same sketch but different content, the second file retrieves the first file's hash from the store. This causes the global cache to incorrectly match tasks with different inputs.
+
+3. **Cloud performance issues:** For cloud-stored files, computing sketches requires multiple range requests, eliminating the performance advantage over full hashing.
+
+**Performance:** Variable - 1-10ms for local files, much slower for cloud storage
+
+---
+
+#### Alternative 7: Fast Hash → Deep Hash Cache with Bloom Filter
+
+**Description:** Use Nextflow's existing fast file hash (path + size + mtime) as a lookup key to cache expensive deep content hashes. A Bloom filter provides fast pre-check for new files, avoiding unnecessary store lookups.
+
+**Architecture:**
+```
+1. Compute fastHash = hash(path, size, mtime)           ~1ms (metadata only)
+2. bloomFilter.mightContain(fastHash)?
+   - NO    → Skip store, compute deepHash, store mapping, return deepHash
+   - MAYBE → Check store.get(fastHash)
+     - Found     → Return cached deepHash (cache hit!)
+     - Not found → Compute deepHash, store mapping, return deepHash
+3. Use deepHash for global cache task hash
+```
+
+**Pros:**
+- **No correctness risk:** Fast hash is only a lookup key, not used for cache decisions. Deep hash is always computed correctly.
+- **Leverages existing code:** Uses `HashBuilder` has methods already in Nextflow
+- **Significant performance gains:** Deep hash computed once per unique (path, size, mtime), then cached
+- **Cloud-friendly:** Single metadata API call, no range requests needed
+- **Bloom filter savings:** Avoids ~100ms cloud store GET + API cost for new files
+- **Simple implementation:** Straightforward cache pattern, no complex algorithms
+
+**Cons:**
+- Requires persistent store for fast → deep hash mappings
+- Path-dependent: Same content at different paths requires separate deep hash computation (but this is correct behavior for detecting file moves)
+- Memory overhead for Bloom filter (~1.2 MB per million files)
+
+**Cache hit scenarios:**
+- **High hit rate for common patterns:**
+  - Same file reused across multiple tasks (e.g., reference genome used by 50 tasks → compute once, cache 49 times)
+  - Iterative development with unchanged input files
+  - Parameter sweeps with shared input datasets
+- **Correct cache misses when:**
+  - File modified (mtime changed)
+  - File moved to different path
+  - First time processing this file
+
+**Performance breakdown:**
+
+| Scenario | Without Bloom | With Bloom | Savings |
+|----------|--------------|------------|---------|
+| **New file (miss)** | fastHash (1ms) + store GET (100ms) + deepHash (10s) = 10.1s | fastHash (1ms) + Bloom (0.1ms) + deepHash (10s) = 10.001s | ~100ms + 1 API call |
+| **Cached file (hit)** | fastHash (1ms) + store GET (100ms) = 101ms | fastHash (1ms) + Bloom (0.1ms) + store GET (100ms) = 101ms | No difference |
+| **False positive** | N/A | Extra 100ms store GET (performance only, no correctness impact) | -100ms (rare) |
+
+**Best for:**
+- **Universal applicability:** Works for all deployment scenarios
+- **Cloud-backed stores:** Bloom filter saves significant latency and API costs
+- **Workflows with file reuse:** DAG fan-out patterns get maximum benefit
+- **MVP implementation:** Simple, correct, leverages existing infrastructure
+
+**Implementation requirements:**
+- Persistent store for fastHash → deepHash mappings
+- In-memory Bloom filter (persisted with store for durability)
+- Integration with existing `HashBuilder` functions
+
+**Relationship to other alternatives:**
+- Enhances Alternative 2 (Deep Content Hash) by adding caching layer
+- Can be combined with Alternative 3 (Copy tracking or cloud metadata to reduce number of deep hash computation)
+
+**Performance:**
+- First access: ~10 seconds (full deep hash computation)
+- Cached access: ~100ms (cloud store GET) or ~1ms (local store)
+- New file with Bloom: ~10 seconds (skips store lookup)
+
+---
+
 #### Comparison Summary
 
-| Alternative | Performance | Cache Hit Rate (Global) | Correctness | Implementation Complexity | Best Environment |
-|-------------|-----------|------------------------|-------------|--------------------------|------------------|
-| Path/Attributes | ⚡⚡⚡ Fastest | 🔴 Low | ❌ Path-dependent | ✅ Simple | Local resume only |
-| Deep Content Hash | Slowest | 🟢 Highest | ✅ Guaranteed | ✅ Simple | Universal (MVP choice) |
-| Lineage Metadata | ⚡⚡ Fast | 🟢 High (Nextflow files) | ✅ Good | ⚠️ Medium | Closed Nextflow ecosystem |
-| Cloud Checksums | ⚡⚡ Fast | 🟡 Medium | ⚠️ Provider-dependent | ⚠️ Medium | Single-provider, trusted |
-| Hybrid Tiered |  Variable | 🟢 High (variable) | ✅ Good | 🔴 Complex | Production, mixed workloads |
+| Alternative                | Performance | Cache Hit Rate (Global) | Correctness | Implementation Complexity | Best Environment | Notes                    |
+|----------------------------|-----------|------------------------|-------------|--------------------------|------------------|--------------------------|
+| 1. Path/Attributes         | ⚡⚡⚡ Fastest (~1ms) | 🔴 Low | ❌ Path-dependent | ✅ Simple | Local resume only | Current default          |
+| 2. Deep Content Hash       | 🔴 Slowest (~10s) | 🟢 Highest | ✅ Guaranteed | ✅ Simple | Universal | MVP baseline             |
+| 3. Copy-tracking (lineage) | ⚡⚡ Fast (~1ms) | 🟢 High (NF files) | ✅ Good | ⚠️ Medium | Closed NF ecosystem | copies hash store        |
+| 4. Cloud Checksums         | ⚡⚡ Fast (~100ms) | 🟡 Medium | ⚠️ Provider-dependent | ⚠️ Medium | Single-provider | MD5 collision risk       |
+| 5. Hybrid Tiered           | 🟡 Variable | 🟢 High (variable) | ✅ Good | 🔴 Complex | Production, mixed | Multiple fallback paths  |
+| 6. Sketch + Bloom          | 🟡 Variable | 🔴 Low | ❌ Collision risk | ⚠️ Medium | None | Rejected - see rationale |
+| 7. Fast→Deep Cache + Bloom | ⚡⚡ Fast (~100ms cached) | 🟢 High | ✅ Guaranteed | ⚠️ Medium | Universal | Caching optimization     |
 
+**Analysis:**
 
+Alternative 7 (Fast→Deep Cache + Bloom) addresses the sketch approach's shortcomings by using the fast hash purely as a lookup key rather than for correctness. It provides an optimization layer on top of Alternative 2 that maintains correctness guarantees while improving performance for common file reuse patterns.
+
+The choice between alternatives depends on deployment requirements: 
+- Alternative 2 (Deep Content Hash) serving as the simple, correct baseline for MVP implementation.
+- Alternative 7 (Fast→Deep Cache + Bloom) would be the recommended option when the deep cache computation cost and overhead is admitted in first executions. 
+- Alternative 3 (Copy-tracking) is the fastest approach when deep hashing is too slow and data are mainly from previous Nextflow results or input data is not replicated data across different sources (same data in different paths). 
 
 ### Concurrent Access Control
 
@@ -562,21 +712,235 @@ In a global cache, these intermediate files could be required in case of a cache
 - **Benefit:** Reduced compute costs from cache hits typically far exceed storage costs
 
 
-### Storage Management
+### Storage Management and Cache Cleanup
 
-**Cache growth:**
-- Unbounded growth as more unique tasks are cached
-- Monitor storage usage
+**The Problem:**
 
-**Incomplete entry cleanup:**
-- Tasks that crash leave incomplete entries in the workdir (`.command.begin` present but no `.exitcode`)
-- These entries prevent cache hits and waste storage
-- Periodic cleanup required to remove stale incomplete entries
+Global cache work directories accumulate data over time, leading to:
+- Unbounded storage growth as more unique tasks are cached
+- Storage costs increasing linearly with unique task executions
+- Stale cached results consuming space indefinitely
+- Incomplete entries from crashed tasks wasting storage
 
-**Manual cleanup:**
+Unlike local caches that are session-specific and easily cleaned, global caches are shared across pipelines and time, requiring sophisticated cleanup strategies.
+
+---
+
+#### Cleanup Approach 1: Cloud Storage Lifecycle Policies (Simple but Risky)
+
+**Description:** Use cloud provider lifecycle/retention policies (S3 Lifecycle, GCS Object Lifecycle, Azure Blob Lifecycle) to automatically delete objects after a fixed time period.
+
+**Example (S3):**
+```xml
+<LifecycleConfiguration>
+  <Rule>
+    <Filter>
+      <Prefix>global-cache/</Prefix>
+    </Filter>
+    <Status>Enabled</Status>
+    <Expiration>
+      <Days>30</Days>
+    </Expiration>
+  </Rule>
+</LifecycleConfiguration>
+```
+
+**Pros:**
+- Simple to configure (one-time setup)
+- No custom cleanup code required
+- Cloud-native, leverages provider infrastructure
+- No operational overhead
+
+**Cons:**
+- **Critical risk: May delete task outputs while downstream tasks are using them**
+- Object-level deletion, not task-level (all objects in a task dir deleted independently)
+- Fixed time-based deletion ignores actual usage patterns
+- Cannot distinguish between actively-used and stale cache entries
+- No protection for long-running workflows (may delete mid-execution)
+
+**Example failure scenario:**
+```
+Day 0:  Task A completes, outputs stored in cache
+Day 28: Task B (downstream) starts, depends on Task A outputs
+Day 30: Lifecycle policy deletes Task A outputs (30 days old)
+Day 31: Task B tries to access Task A outputs → FAILURE (files deleted)
+```
+
+**Verdict:** Not suitable for global cache due to deletion-while-in-use risk.
+
+---
+
+#### Cleanup Approach 2: Access-Time Based Cleanup (Recommended)
+
+**Description:** Custom cleanup mechanism that deletes task cache entries based on last access time, with downstream tasks "touching" upstream dependencies to prevent premature deletion.
+
+**Key features:**
+1. **Task-level management:** Track access time per task (entire work directory), not per object
+2. **Configurable TTL:** Delete tasks not accessed for X hours (e.g., 24h, 168h)
+3. **Dependency touch:** Downstream tasks update access time of upstream tasks before execution
+4. **Race condition handling:** Atomic checks to prevent deletion during access
+
+**Architecture:**
+
+```
+Task Cache Entry:
+  - workDir: s3://bucket/cache/ab/cdef123.../
+  - lastAccessTime: timestamp
+  - status: completed | in_progress
+
+Cleanup Flow:
+1. Periodic cleanup job (e.g., hourly)
+2. For each task in cache:
+   - If (now - lastAccessTime) > TTL AND status == completed:
+     - Atomically mark for deletion (if not recently accessed)
+     - Delete work directory
+   - If incomplete (no .exitcode):
+     - If (now - creationTime) > crash_timeout:
+       - Delete incomplete entry
+
+Touch Flow (before task execution):
+1. Task about to execute
+2. For each upstream task dependency:
+   - Update upstream task's lastAccessTime to now
+   - Prevents deletion while in use
+```
+
+**Access time tracking:**
+
+Store task metadata in index/database:
+```
+task_hash | last_access_time | status | workdir_path
+----------|------------------|--------|-------------
+abc123... | 2026-02-10 14:00 | completed | s3://...
+def456... | 2026-02-09 10:00 | completed | s3://...
+```
+
+**Downstream touch mechanism:**
+
+```groovy
+// Before task execution
+void touchUpstreamDependencies(Task task) {
+    for (input in task.inputs) {
+        if (input.fromCache) {
+            def upstreamHash = input.taskHash
+            cacheIndex.updateAccessTime(upstreamHash, now())
+        }
+    }
+}
+```
+
+**Configuration:**
+```groovy
+// nextflow.config
+cache {
+    cleanup {
+        enabled = true
+        ttl = '24h'              // Delete after 24 hours of no access
+        interval = '1h'          // Run cleanup every hour
+        crashTimeout = '6h'      // Delete incomplete entries after 6h
+    }
+}
+```
+
+**Pros:**
+- Respects actual usage: Actively-used tasks are preserved
+- Task-level granularity: Entire task dir managed atomically
+- Configurable TTL: Users control retention policy
+- Protects running workflows: Downstream tasks touch upstream dependencies
+- Handles incomplete entries: Crashed tasks cleaned up automatically
+
+**Cons:**
+- Requires custom cleanup service/job
+- Needs task access time tracking (index/database)
+- Touch mechanism adds overhead before task execution
+- Potential race conditions (see below)
+
+---
+
+#### Race Condition Handling
+
+**Scenario:** Cleanup job tries to delete task while downstream task tries to access it.
+
+```
+Time    Cleanup Job                    Downstream Task
+----    ---------------------------    ---------------------------
+T0      Check lastAccessTime(taskA)
+        → 25 hours ago, exceeds TTL
+
+T1      Mark taskA for deletion
+
+T2                                     Start execution, try to touch taskA
+
+T3      Delete taskA workDir
+
+T4                                     Try to access taskA outputs → FAIL
+```
+
+**Solution: Atomic touch operation with conditional delete**
+
+```groovy
+// Cleanup side (atomic check-and-delete)
+def deleteIfStale(taskHash, ttl) {
+    // Atomic operation: delete only if lastAccessTime still stale
+    def deleted = cacheIndex.deleteIfLastAccessBefore(taskHash, now() - ttl)
+
+    if (deleted) {
+        cloudStorage.delete(workDir)
+    }
+}
+
+// Task side (atomic touch)
+def touchUpstreamDependency(upstreamHash) {
+    // Update access time atomically
+    def updated = cacheIndex.updateAccessTime(upstreamHash, now())
+
+    if (!updated) {
+        // Task was deleted, cache miss
+        return false
+    }
+    return true
+}
+```
+
+**Implementation:**
+- Use atomic operations (S3 conditional PUT, DynamoDB conditional updates)
+- Check access time immediately before deletion
+- Task checks if touch succeeded before assuming cache hit
+
+**Worst case:** Race condition causes cache miss (task re-executes), but no data corruption or failures.
+
+---
+
+#### Comparison Summary
+
+| Approach | Complexity | Risk | Respects Usage | Task-Level | User Control |
+|----------|-----------|------|----------------|------------|--------------|
+| Cloud Lifecycle | ✅ Simple | ❌ High (delete-while-in-use) | ❌ No | ❌ No | ⚠️ Limited |
+| Access-Time Based | ⚠️ Medium | ✅ Low (with atomic ops) | ✅ Yes | ✅ Yes | ✅ Full (TTL config) |
+
+**Recommendation:** Implement access-time based cleanup with configurable TTL and atomic touch mechanism.
+
+---
+
+#### Manual Cleanup Commands
+
+Users should have manual control for immediate cleanup:
+
 ```bash
-# Clean all cache entries
+# Clean all global cache entries
 nextflow cache clean -global
+
+# Clean entries older than N days
+nextflow cache clean -global -older-than 7d
+
+# Clean specific task hash
+nextflow cache clean -global -hash abc123...
+
+# Clean incomplete entries only
+nextflow cache clean -global -incomplete
+
+# Dry run (show what would be deleted)
+nextflow cache clean -global -dry-run
 ```
 
 ### Security and Access Control
