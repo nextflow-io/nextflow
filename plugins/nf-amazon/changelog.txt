@@ -1,5 +1,8 @@
 nf-amazon changelog
 ===================
+3.4.4 - 10 Feb 2026
+- Add isCompleted check in getNumSpotInterruptions (#6806) [21390a1fb]
+
 3.4.3 - 22 Jan 2026
 - Fix error when checking whether an S3 bucket exists (#6706) [16e0dc3cc]
 - Add spot interruption tracking to trace records (#6606) [f59137e6c]
