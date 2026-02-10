@@ -22,8 +22,7 @@ import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 
 /**
- * Models a file publish event, which is emitted for each file
- * that is published in a workflow output or publishDir.
+ * Models a file publish event.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */

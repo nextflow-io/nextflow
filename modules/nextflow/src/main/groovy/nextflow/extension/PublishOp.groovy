@@ -27,7 +27,6 @@ import nextflow.exception.ScriptRuntimeException
 import nextflow.processor.PublishDir
 import nextflow.trace.event.FilePublishEvent
 import nextflow.trace.event.WorkflowOutputEvent
-import nextflow.trace.event.WorkflowPublishEvent
 import nextflow.util.CsvWriter
 /**
  * Publish a workflow output.
@@ -53,7 +52,7 @@ class PublishOp {
 
     private IndexOpts indexOpts
 
-    private List publishedValues = []
+    private List indexRecords = []
 
     private DataflowVariable target
 
@@ -107,7 +106,7 @@ class PublishOp {
      * @param value
      */
     protected void onNext(value) {
-        log.trace "Received value for workflow output '${name}': ${value}"
+        log.trace "Publish operator received: $value"
 
         // evaluate dynamic path
         final targetResolver = getTargetDir(value)
@@ -131,12 +130,10 @@ class PublishOp {
             publisher.apply(files, sourceDir)
         }
 
-        // publish value to workflow output
-        final normalizedValue = normalizeValue(value, targetResolver)
-
-        log.trace "Published value to workflow output '${name}': ${normalizedValue}"
-        publishedValues << normalizedValue
-        session.notifyWorkflowPublish(new WorkflowPublishEvent(name, normalizedValue))
+        // append record to index
+        final normalized = normalizePaths(value, targetResolver)
+        log.trace "Normalized record for index file: ${normalized}"
+        indexRecords << normalized
     }
 
     /**
@@ -219,28 +216,28 @@ class PublishOp {
      */
     protected void onComplete() {
         // publish individual record if source is a value channel
-        final outputValue = CH.isValue(source)
-            ? publishedValues.first()
-            : publishedValues
+        final value = CH.isValue(source)
+            ? indexRecords.first()
+            : indexRecords
 
         // publish workflow output
         final indexPath = indexOpts
             ? session.outputDir.resolve(indexOpts.path)
             : null
-        session.notifyWorkflowOutput(new WorkflowOutputEvent(name, outputValue, indexPath))
+        session.notifyWorkflowOutput(new WorkflowOutputEvent(name, value, indexPath))
 
         // write value to index file
         if( indexOpts ) {
             final ext = indexPath.getExtension()
             indexPath.parent.mkdirs()
             if( ext == 'csv' ) {
-                new CsvWriter(header: indexOpts.header, sep: indexOpts.sep).apply(publishedValues, indexPath)
+                new CsvWriter(header: indexOpts.header, sep: indexOpts.sep).apply(indexRecords, indexPath)
             }
             else if( ext == 'json' ) {
-                indexPath.text = DumpHelper.prettyPrintJson(outputValue)
+                indexPath.text = DumpHelper.prettyPrintJson(value)
             }
             else if( ext == 'yaml' || ext == 'yml' ) {
-                indexPath.text = DumpHelper.prettyPrintYaml(outputValue)
+                indexPath.text = DumpHelper.prettyPrintYaml(value)
             }
             else {
                 throw new ScriptRuntimeException("Invalid extension '${ext}' for index file '${indexOpts.path}' -- should be CSV, JSON, or YAML")
@@ -248,8 +245,8 @@ class PublishOp {
             session.notifyFilePublish(new FilePublishEvent(null, indexPath, publishOpts.labels as List))
         }
 
-        log.trace "Completed workflow output '${name}'"
-        target.bind(indexPath ?: outputValue)
+        log.trace "Publish operator complete"
+        target.bind(indexPath ?: value)
     }
 
     /**
@@ -286,7 +283,7 @@ class PublishOp {
      * @param value
      * @param targetResolver
      */
-    protected Object normalizeValue(value, targetResolver) {
+    protected Object normalizePaths(value, targetResolver) {
         if( value instanceof Path ) {
             return normalizePath(value, targetResolver)
         }
@@ -296,9 +293,9 @@ class PublishOp {
                 if( el instanceof Path )
                     return normalizePath(el, targetResolver)
                 if( el instanceof Collection<Path> )
-                    return normalizeValue(el, targetResolver)
+                    return normalizePaths(el, targetResolver)
                 if( el instanceof Map )
-                    return normalizeValue(el, targetResolver)
+                    return normalizePaths(el, targetResolver)
                 return el
             }
         }
@@ -308,9 +305,9 @@ class PublishOp {
                 if( v instanceof Path )
                     return [k, normalizePath(v, targetResolver)]
                 if( v instanceof Collection<Path> )
-                    return [k, normalizeValue(v, targetResolver)]
+                    return [k, normalizePaths(v, targetResolver)]
                 if( v instanceof Map )
-                    return [k, normalizeValue(v, targetResolver)]
+                    return [k, normalizePaths(v, targetResolver)]
                 return [k, v]
             }
         }
