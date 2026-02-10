@@ -1,5 +1,16 @@
 NEXTFLOW CHANGE-LOG
 ===================
+25.10.4 - 10 Feb 2026
+- Add isCompleted check in getNumSpotInterruptions (#6806) [21390a1fb]
+- Fix false error with optional param (#6811) [f3816365e]
+- Fix false error with multi-line tuple assignment in v2 parser (#6786) [39e4c42cf]
+- Fix false error in v2 parser when including config file from http url (#6753) [473850c3c]
+- Fix LogsCheckpoint thread blocking shutdown for up to 90 seconds (#6787) [118e1dca8]
+- Remove unnecessary runtime checks with strict syntax (#6539) [408e45994]
+- Bump nf-amazon@3.4.4
+- Bump nf-google@1.23.5
+- Bump nf-tower@1.17.5
+
 25.10.3 - 22 Jan 2026
 - Add Channel::mix(Value...) [a2bb57158]
 - Add spot interruption tracking to trace records (#6606) [f59137e6c]
