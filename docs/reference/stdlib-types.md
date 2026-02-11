@@ -600,10 +600,10 @@ The following methods are available for writing to files:
 : Appends text to a file without replacing existing content.
 
 `setText( text: String )`
-: Writes text to a file. Equivalent to setting the `text` property.
+: Writes text to a file, replacing any existing content. Equivalent to setting the `text` property.
 
 `write( text: String )`
-: Writes a string to a file, replacing any existing content.
+: Writes text to a file, replacing any existing content. Equivalent to `setText()`.
 
 <h3>Filesystem operations</h3>
 
