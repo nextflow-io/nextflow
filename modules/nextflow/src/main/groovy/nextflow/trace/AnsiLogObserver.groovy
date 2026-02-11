@@ -454,7 +454,8 @@ class AnsiLogObserver implements TraceObserverV2 {
         // eg. 1 of 1
         final numbs = " ${(int)com} of ${(int)tot}".toString()
 
-        // Task hash - make clickable hyperlink to work dir when available (and cleanup not enabled)
+        // Task hash, eg: [fa/71091a]
+        // make clickable hyperlink to work dir inferred from session workDir and task hash
         final hashDisplay = (stats.workDir && !session.config.cleanup) ? hyperlink(hh, stats.workDir) : hh
         term.a(Attribute.INTENSITY_FAINT).a('[').reset()
         term.fg(Color.BLUE).a(hashDisplay).reset()
