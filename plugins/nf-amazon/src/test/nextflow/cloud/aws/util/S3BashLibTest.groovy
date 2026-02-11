@@ -50,7 +50,7 @@ class S3BashLibTest extends Specification {
                           timeout=\$(( timeout * 2 ))
                         done
                     }
-                    
+
                     nxf_parallel() {
                         IFS=$'\\n\'
                         local cmd=("$@")
@@ -68,7 +68,7 @@ class S3BashLibTest extends Specification {
                               [[ -e /proc/$x ]] && copy+=($x) || wait $x
                             done
                             pid=("${copy[@]}")
-                    
+
                             if ((${#pid[@]}>=$max)); then
                               nxf_sleep 0.2
                             else
@@ -83,20 +83,20 @@ class S3BashLibTest extends Specification {
                         )
                         unset IFS
                     }
-                    
+
                     # aws helper
                     nxf_s3_upload() {
                         local name=$1
                         local s3path=$2
                         if [[ "$name" == - ]]; then
-                          aws s3 cp --only-show-errors --storage-class STANDARD - "$s3path"
+                          aws s3 cp --only-show-errors - "$s3path"
                         elif [[ -d "$name" ]]; then
-                          aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
+                          aws s3 cp --only-show-errors --recursive "$name" "$s3path/$name"
                         else
-                          aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
+                          aws s3 cp --only-show-errors "$name" "$s3path/$name"
                         fi
                     }
-                    
+
                     nxf_s3_download() {
                         local source=$1
                         local target=$2
@@ -230,11 +230,11 @@ class S3BashLibTest extends Specification {
                 local name=$1
                 local s3path=$2
                 if [[ "$name" == - ]]; then
-                  aws s3 cp --only-show-errors --storage-class STANDARD - "$s3path"
+                  aws s3 cp --only-show-errors - "$s3path"
                 elif [[ -d "$name" ]]; then
-                  aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
+                  aws s3 cp --only-show-errors --recursive "$name" "$s3path/$name"
                 else
-                  aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
+                  aws s3 cp --only-show-errors "$name" "$s3path/$name"
                 fi
             }
             
@@ -268,14 +268,14 @@ class S3BashLibTest extends Specification {
                 local name=$1
                 local s3path=$2
                 if [[ "$name" == - ]]; then
-                  aws s3 cp --only-show-errors --storage-class STANDARD - "$s3path"
+                  aws s3 cp --only-show-errors - "$s3path"
                 elif [[ -d "$name" ]]; then
-                  aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
+                  aws s3 cp --only-show-errors --recursive "$name" "$s3path/$name"
                 else
-                  aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
+                  aws s3 cp --only-show-errors "$name" "$s3path/$name"
                 fi
             }
-            
+
             nxf_s3_download() {
                 local source=$1
                 local target=$2
@@ -303,14 +303,14 @@ class S3BashLibTest extends Specification {
                 local name=$1
                 local s3path=$2
                 if [[ "$name" == - ]]; then
-                  aws s3 cp --only-show-errors --storage-class STANDARD - "$s3path"
+                  aws s3 cp --only-show-errors - "$s3path"
                 elif [[ -d "$name" ]]; then
-                  aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
+                  aws s3 cp --only-show-errors --recursive "$name" "$s3path/$name"
                 else
-                  aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
+                  aws s3 cp --only-show-errors "$name" "$s3path/$name"
                 fi
             }
-            
+
             nxf_s3_download() {
                 local source=$1
                 local target=$2
@@ -341,14 +341,14 @@ class S3BashLibTest extends Specification {
                 local name=$1
                 local s3path=$2
                 if [[ "$name" == - ]]; then
-                  /some/bin/aws s3 cp --only-show-errors --storage-class STANDARD - "$s3path"
+                  /some/bin/aws s3 cp --only-show-errors - "$s3path"
                 elif [[ -d "$name" ]]; then
-                  /some/bin/aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
+                  /some/bin/aws s3 cp --only-show-errors --recursive "$name" "$s3path/$name"
                 else
-                  /some/bin/aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
+                  /some/bin/aws s3 cp --only-show-errors "$name" "$s3path/$name"
                 fi
             }
-            
+
             nxf_s3_download() {
                 local source=$1
                 local target=$2
@@ -396,7 +396,7 @@ class S3BashLibTest extends Specification {
                   timeout=$(( timeout * 2 ))
                 done
             }
-            
+
             nxf_parallel() {
                 IFS=$'\\n'
                 local cmd=("$@")
@@ -414,7 +414,7 @@ class S3BashLibTest extends Specification {
                       [[ -e /proc/$x ]] && copy+=($x) || wait $x
                     done
                     pid=("${copy[@]}")
-            
+
                     if ((${#pid[@]}>=$max)); then
                       nxf_sleep 0.2
                     else
@@ -429,20 +429,20 @@ class S3BashLibTest extends Specification {
                 )
                 unset IFS
             }
-            
+
             # aws helper
             nxf_s3_upload() {
                 local name=$1
                 local s3path=$2
                 if [[ "$name" == - ]]; then
-                  aws s3 cp --only-show-errors --storage-class STANDARD - "$s3path"
+                  aws s3 cp --only-show-errors - "$s3path"
                 elif [[ -d "$name" ]]; then
-                  aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
+                  aws s3 cp --only-show-errors --recursive "$name" "$s3path/$name"
                 else
-                  aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
+                  aws s3 cp --only-show-errors "$name" "$s3path/$name"
                 fi
             }
-            
+
             nxf_s3_download() {
                 local source=$1
                 local target=$2
@@ -487,7 +487,7 @@ class S3BashLibTest extends Specification {
                   timeout=$(( timeout * 2 ))
                 done
             }
-            
+
             nxf_parallel() {
                 IFS=$'\\n'
                 local cmd=("$@")
@@ -505,7 +505,7 @@ class S3BashLibTest extends Specification {
                       [[ -e /proc/$x ]] && copy+=($x) || wait $x
                     done
                     pid=("${copy[@]}")
-            
+
                     if ((${#pid[@]}>=$max)); then
                       nxf_sleep 0.2
                     else
@@ -520,20 +520,20 @@ class S3BashLibTest extends Specification {
                 )
                 unset IFS
             }
-            
+
             # aws helper
             nxf_s3_upload() {
                 local name=$1
                 local s3path=$2
                 if [[ "$name" == - ]]; then
-                  aws s3 cp --only-show-errors --storage-class STANDARD - "$s3path"
+                  aws s3 cp --only-show-errors - "$s3path"
                 elif [[ -d "$name" ]]; then
-                  aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
+                  aws s3 cp --only-show-errors --recursive "$name" "$s3path/$name"
                 else
-                  aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
+                  aws s3 cp --only-show-errors "$name" "$s3path/$name"
                 fi
             }
-            
+
             nxf_s3_download() {
                 local source=$1
                 local target=$2
@@ -581,7 +581,7 @@ class S3BashLibTest extends Specification {
                   timeout=$(( timeout * 2 ))
                 done
             }
-            
+
             nxf_parallel() {
                 IFS=$'\\n'
                 local cmd=("$@")
@@ -599,7 +599,7 @@ class S3BashLibTest extends Specification {
                       [[ -e /proc/$x ]] && copy+=($x) || wait $x
                     done
                     pid=("${copy[@]}")
-            
+
                     if ((${#pid[@]}>=$max)); then
                       nxf_sleep 0.2
                     else
@@ -614,7 +614,7 @@ class S3BashLibTest extends Specification {
                 )
                 unset IFS
             }
-            
+
             # aws cli retry config
             export AWS_RETRY_MODE=standard
             export AWS_MAX_ATTEMPTS=5
@@ -623,14 +623,14 @@ class S3BashLibTest extends Specification {
                 local name=$1
                 local s3path=$2
                 if [[ "$name" == - ]]; then
-                  aws s3 cp --only-show-errors --sse aws:kms --sse-kms-key-id my-kms-key --storage-class STANDARD - "$s3path"
+                  aws s3 cp --only-show-errors --sse aws:kms --sse-kms-key-id my-kms-key - "$s3path"
                 elif [[ -d "$name" ]]; then
-                  aws s3 cp --only-show-errors --recursive --sse aws:kms --sse-kms-key-id my-kms-key --storage-class STANDARD "$name" "$s3path/$name"
+                  aws s3 cp --only-show-errors --recursive --sse aws:kms --sse-kms-key-id my-kms-key "$name" "$s3path/$name"
                 else
-                  aws s3 cp --only-show-errors --sse aws:kms --sse-kms-key-id my-kms-key --storage-class STANDARD "$name" "$s3path/$name"
+                  aws s3 cp --only-show-errors --sse aws:kms --sse-kms-key-id my-kms-key "$name" "$s3path/$name"
                 fi
             }
-            
+
             nxf_s3_download() {
                 local source=$1
                 local target=$2
@@ -679,7 +679,7 @@ class S3BashLibTest extends Specification {
                   timeout=$(( timeout * 2 ))
                 done
             }
-            
+
             nxf_parallel() {
                 IFS=$'\\n'
                 local cmd=("$@")
@@ -697,7 +697,7 @@ class S3BashLibTest extends Specification {
                       [[ -e /proc/$x ]] && copy+=($x) || wait $x
                     done
                     pid=("${copy[@]}")
-            
+
                     if ((${#pid[@]}>=$max)); then
                       nxf_sleep 0.2
                     else
@@ -712,7 +712,7 @@ class S3BashLibTest extends Specification {
                 )
                 unset IFS
             }
-            
+
             # aws cli retry config
             export AWS_RETRY_MODE=standard
             export AWS_MAX_ATTEMPTS=5
@@ -721,14 +721,14 @@ class S3BashLibTest extends Specification {
                 local name=$1
                 local s3path=$2
                 if [[ "$name" == - ]]; then
-                  aws s3 cp --only-show-errors --acl public-read --storage-class STANDARD - "$s3path"
+                  aws s3 cp --only-show-errors --acl public-read - "$s3path"
                 elif [[ -d "$name" ]]; then
-                  aws s3 cp --only-show-errors --recursive --acl public-read --storage-class STANDARD "$name" "$s3path/$name"
+                  aws s3 cp --only-show-errors --recursive --acl public-read "$name" "$s3path/$name"
                 else
-                  aws s3 cp --only-show-errors --acl public-read --storage-class STANDARD "$name" "$s3path/$name"
+                  aws s3 cp --only-show-errors --acl public-read "$name" "$s3path/$name"
                 fi
             }
-            
+
             nxf_s3_download() {
                 local source=$1
                 local target=$2
@@ -758,14 +758,14 @@ class S3BashLibTest extends Specification {
                 if [[ "$name" == - ]]; then
                   local tmp=$(nxf_mktemp)
                   cp /dev/stdin $tmp/$name
-                  s5cmd cp --storage-class STANDARD $tmp/$name "$s3path"
+                  s5cmd cp $tmp/$name "$s3path"
                 elif [[ -d "$name" ]]; then
-                  s5cmd cp --storage-class STANDARD "$name/" "$s3path/$name/"
+                  s5cmd cp "$name/" "$s3path/$name/"
                 else
-                  s5cmd cp --storage-class STANDARD "$name" "$s3path/$name"
+                  s5cmd cp "$name" "$s3path/$name"
                 fi
             }
-            
+
             nxf_s3_download() {
                 local source=$1
                 local target=$2
@@ -795,11 +795,11 @@ class S3BashLibTest extends Specification {
                 if [[ "$name" == - ]]; then
                   local tmp=$(nxf_mktemp)
                   cp /dev/stdin $tmp/$name
-                  s5cmd cp --acl public-read --storage-class STANDARD $tmp/$name "$s3path"
+                  s5cmd cp --acl public-read $tmp/$name "$s3path"
                 elif [[ -d "$name" ]]; then
-                  s5cmd cp --acl public-read --storage-class STANDARD "$name/" "$s3path/$name/"
+                  s5cmd cp --acl public-read "$name/" "$s3path/$name/"
                 else
-                  s5cmd cp --acl public-read --storage-class STANDARD "$name" "$s3path/$name"
+                  s5cmd cp --acl public-read "$name" "$s3path/$name"
                 fi
             }
 
@@ -833,11 +833,11 @@ class S3BashLibTest extends Specification {
                 local name=$1
                 local s3path=$2
                 if [[ "$name" == - ]]; then
-                  aws s3 cp --only-show-errors --storage-class STANDARD - "$s3path"
+                  aws s3 cp --only-show-errors - "$s3path"
                 elif [[ -d "$name" ]]; then
-                  aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
+                  aws s3 cp --only-show-errors --recursive "$name" "$s3path/$name"
                 else
-                  aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
+                  aws s3 cp --only-show-errors "$name" "$s3path/$name"
                 fi
             }
 

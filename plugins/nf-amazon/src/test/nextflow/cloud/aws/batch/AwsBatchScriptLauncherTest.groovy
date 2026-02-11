@@ -124,11 +124,11 @@ class AwsBatchScriptLauncherTest extends Specification {
                     local name=$1
                     local s3path=$2
                     if [[ "$name" == - ]]; then
-                      /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors --storage-class STANDARD - "$s3path"
+                      /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors - "$s3path"
                     elif [[ -d "$name" ]]; then
-                      /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
+                      /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors --recursive "$name" "$s3path/$name"
                     else
-                      /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
+                      /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors "$name" "$s3path/$name"
                     fi
                 }
                 
@@ -303,11 +303,11 @@ class AwsBatchScriptLauncherTest extends Specification {
                         local name=$1
                         local s3path=$2
                         if [[ "$name" == - ]]; then
-                          aws s3 cp --only-show-errors --storage-class STANDARD - "$s3path"
+                          aws s3 cp --only-show-errors - "$s3path"
                         elif [[ -d "$name" ]]; then
-                          aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
+                          aws s3 cp --only-show-errors --recursive "$name" "$s3path/$name"
                         else
-                          aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
+                          aws s3 cp --only-show-errors "$name" "$s3path/$name"
                         fi
                     }
                     
@@ -475,11 +475,11 @@ class AwsBatchScriptLauncherTest extends Specification {
                         local name=$1
                         local s3path=$2
                         if [[ "$name" == - ]]; then
-                          aws s3 cp --only-show-errors --storage-class STANDARD - "$s3path"
+                          aws s3 cp --only-show-errors - "$s3path"
                         elif [[ -d "$name" ]]; then
-                          aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
+                          aws s3 cp --only-show-errors --recursive "$name" "$s3path/$name"
                         else
-                          aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
+                          aws s3 cp --only-show-errors "$name" "$s3path/$name"
                         fi
                     }
                     
@@ -591,11 +591,11 @@ class AwsBatchScriptLauncherTest extends Specification {
                         local name=$1
                         local s3path=$2
                         if [[ "$name" == - ]]; then
-                          aws s3 cp --only-show-errors --storage-class STANDARD - "$s3path"
+                          aws s3 cp --only-show-errors - "$s3path"
                         elif [[ -d "$name" ]]; then
-                          aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
+                          aws s3 cp --only-show-errors --recursive "$name" "$s3path/$name"
                         else
-                          aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
+                          aws s3 cp --only-show-errors "$name" "$s3path/$name"
                         fi
                     }
                     
