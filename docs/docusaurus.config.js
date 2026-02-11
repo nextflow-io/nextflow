@@ -27,7 +27,7 @@ export default async function createConfigAsync() {
           versions: {
             current: {
               label: 'Latest',
-              banner: 'none',
+              banner: 'unreleased',
             },
             '24.10': {
               banner: 'none',
