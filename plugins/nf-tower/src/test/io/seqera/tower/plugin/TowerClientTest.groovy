@@ -528,6 +528,22 @@ class TowerClientTest extends Specification {
         client.getNewContainers([trace1, trace2, trace3]) == [c2]
     }
 
+    def 'should not send complete request when onFlowBegin was not invoked' () {
+        given:
+        def client = Spy(new TowerClient())
+        client.@workflowId = 'xyz-123'
+        client.@sender = null
+        client.@reports = Mock(TowerReports)
+
+        when:
+        client.onFlowComplete()
+
+        then:
+        1 * client.@reports.publishRuntimeReports()
+        1 * client.@reports.flowComplete()
+        0 * client.sendHttpMessage(_, _, _)
+    }
+
     def 'should handle HTTP request with content'() {
         given: 'a TowerClient'
         def tower = new TowerClient()

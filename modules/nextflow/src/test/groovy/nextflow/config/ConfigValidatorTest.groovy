@@ -148,4 +148,16 @@ class ConfigValidatorTest extends Specification {
         !capture.toString().contains('Unrecognized config option')
     }
 
+    def 'should not validate core plugin config when plugin is not loaded' () {
+        when:
+        new ConfigValidator().validate([
+            cloudcache: [
+                enabled: true,
+                path: 's3://bucket/cache'
+            ]
+        ])
+        then:
+        !capture.toString().contains("Unrecognized config option 'cloudcache'")
+    }
+
 }

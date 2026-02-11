@@ -12,31 +12,33 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
-package nextflow.trace.event
+package nextflow.cache
 
-import groovy.transform.Canonical
-import groovy.transform.CompileStatic
+import spock.lang.Specification
 
 /**
- * Models a workflow publish event, which is emitted for each value
- * that is published to a workflow output from a dataflow source.
  *
- * @author Rob Syme <rob.syme@gmail.com>
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Canonical
-@CompileStatic
-class WorkflowPublishEvent {
-    /**
-     * The name of the workflow output.
-     */
-    String name
-    /**
-     * The published value.
-     *
-     * File paths from the work directory are normalized to
-     * their corresponding path in the output directory.
-     */
-    Object value
+class CloudCacheConfigTest extends Specification {
+
+    def 'should create empty config' () {
+        when:
+        def config = new CloudCacheConfig([:])
+        then:
+        !config.enabled
+        config.path == null
+    }
+
+    def 'should create config with all options' () {
+        when:
+        def config = new CloudCacheConfig([enabled: true, path: 's3://bucket/cache'])
+        then:
+        config.enabled
+        config.path == 's3://bucket/cache'
+    }
+
 }
