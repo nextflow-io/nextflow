@@ -1125,6 +1125,187 @@ $ nextflow log tiny_leavitt -F 'process =~ /split_letters/'
 work/1f/f1ea9158fb23b53d5083953121d6b6
 ```
 
+(cli-module)=
+
+### `module`
+
+:::{versionadded} 26.04.0
+:::
+
+Manage Nextflow modules from registries.
+
+**Usage**
+
+```console
+$ nextflow module <subcommand> [options]
+```
+
+**Description**
+
+The `module` command provides a comprehensive system for managing reusable, registry-based modules. It enables installing modules from registries, running them directly, searching for available modules, and publishing your own modules for community use.
+
+**Subcommands**
+
+(cli-module-install)=
+
+`install [options] [scope/name]`
+
+: Install a module from the registry into your project.
+: Downloaded modules are stored in the `modules/` directory and version information is tracked in `nextflow_spec.json`.
+: The following options are available:
+
+  `-version`
+  : Specify the module version to install (e.g., `1.0.0`). If not specified, installs the latest version.
+
+  `-force`
+  : Force reinstall even if the module exists locally with modifications. Without this flag, Nextflow prevents overwriting locally modified modules.
+
+: **Examples:**
+
+  ```console
+  # Install latest version
+  $ nextflow module install nf-core/fastqc
+
+  # Install specific version
+  $ nextflow module install nf-core/fastqc -version 1.0.0
+
+  # Force reinstall over local modifications
+  $ nextflow module install nf-core/fastqc -force
+  ```
+
+(cli-module-run)=
+
+`run [options] [scope/name] [--<input_name> <input-value>]`
+
+: Execute a module directly from the registry without creating a wrapper workflow.
+: Automatically downloads the module if not already installed. Accepts all standard Nextflow run options.
+: The following options are available:
+
+  `-version`
+  : Specify the module version to run (e.g., `1.0.0`). If not specified, uses the latest version.
+
+  All standard `run` command options
+  : The `module run` command extends the `run` command and accepts all its options, including `-profile`, `-resume`, `-c`, etc.
+
+: **Examples:**
+
+  ```console
+  # Run module with inputs
+  $ nextflow module run nf-core/fastqc --input 'data/*.fastq.gz'
+
+  # Run specific version with Nextflow options
+  $ nextflow module run nf-core/fastqc \
+      --input 'data/*.fastq.gz' \
+      -version 1.0.0 \
+      -profile docker \
+      -resume
+  ```
+
+(cli-module-list)=
+
+`list [options]`
+
+: List all modules currently installed in your project.
+: Shows module names, versions, and integrity status (whether they've been modified locally).
+: The following options are available:
+
+  `-json`
+  : Output results in JSON format for programmatic processing.
+
+: **Examples:**
+
+  ```console
+  # Display installed modules in formatted table
+  $ nextflow module list
+
+  # Output as JSON
+  $ nextflow module list -json
+  ```
+
+(cli-module-search)=
+
+`search [options] [query]`
+
+: Search for modules in the registry by keyword or name.
+: Returns modules matching the query with their names, versions, descriptions, and download statistics.
+: The following options are available:
+
+  `-limit`
+  : Maximum number of results to return (default: varies by registry).
+
+  `-json`
+  : Output results in JSON format for programmatic processing.
+
+: **Examples:**
+
+  ```console
+  # Search for alignment-related modules
+  $ nextflow module search alignment
+
+  # Search with limited results
+  $ nextflow module search "quality control" -limit 10
+
+  # Get results as JSON
+  $ nextflow module search bwa -json
+  ```
+
+(cli-module-remove)=
+
+`remove [options] [scope/name]`
+
+: Remove a module from your project.
+: By default, removes both local files and configuration entries. Use options to control what gets removed.
+: The following options are available:
+
+  `-keep-config`
+  : Keep the version entry in `nextflow_spec.json` but delete local files from the `modules/` directory.
+
+  `-keep-files`
+  : Remove the version entry from `nextflow_spec.json` but keep local files in the `modules/` directory.
+
+: **Examples:**
+
+  ```console
+  # Remove module completely
+  $ nextflow module remove nf-core/fastqc
+
+  # Delete files but keep version config
+  $ nextflow module remove nf-core/fastqc -keep-config
+
+  # Remove from config but keep local files
+  $ nextflow module remove nf-core/fastqc -keep-files
+  ```
+
+(cli-module-publish)=
+
+`publish [options] [scope/name]`
+
+: Publish a module to the registry, making it available for others to install.
+: Requires authentication via `NXF_REGISTRY_TOKEN` environment variable or `registry.auth` configuration.
+: The module directory must contain `main.nf`, `meta.yaml`, and `README.md`.
+: The following options are available:
+
+  `-dry-run`
+  : Validate the module structure and metadata without uploading to the registry. Useful for testing before publishing.
+  
+  `-registry`
+  : Specify the registry to publish the module (default: `https://registry.nextflow.io`)
+
+: **Examples:**
+
+  ```console
+  # Validate module structure without publishing
+  $ nextflow module publish myorg/my-module -dry-run
+
+  # Publish to nextflow registry
+  $ export NXF_REGISTRY_TOKEN=your-token
+  $ nextflow module publish myorg/my-module
+  
+  # Publish to a custom registry
+  $ export NXF_REGISTRY_TOKEN=your-token
+  $ nextflow module publish myorg/my-module -registry 'https://custom.registry.com'
+  ```
+
 (cli-plugin)=
 
 ### `plugin`
