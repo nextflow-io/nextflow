@@ -22,7 +22,7 @@
     "@docusaurus/preset-classic": "3.9.2",
     "@docusaurus/theme-mermaid": "3.9.2",
     "@mdx-js/react": "^3.0.0",
-    "@seqera/docusaurus-preset-seqera": "^1.0.15",
+    "@seqera/docusaurus-preset-seqera": "^1.0.16",
     "clsx": "^2.0.0",
     "daisyui": "^5.5.14",
     "postcss-import": "^16.1.1",
