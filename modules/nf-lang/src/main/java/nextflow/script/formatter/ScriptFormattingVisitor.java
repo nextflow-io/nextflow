@@ -32,11 +32,14 @@ import nextflow.script.ast.ParamBlockNode;
 import nextflow.script.ast.ProcessNode;
 import nextflow.script.ast.ProcessNodeV1;
 import nextflow.script.ast.ProcessNodeV2;
+import nextflow.script.ast.RecordNode;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
 import nextflow.script.ast.TupleParameter;
 import nextflow.script.ast.WorkflowNode;
+import nextflow.script.types.Types;
 import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.ast.FieldNode;
 import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.ast.expr.EmptyExpression;
 import org.codehaus.groovy.ast.expr.Expression;
@@ -131,6 +134,8 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
                 visitParamV1(pn);
             else if( decl instanceof ProcessNode pn )
                 visitProcess(pn);
+            else if( decl instanceof RecordNode rn )
+                visitRecord(rn);
             else if( decl instanceof WorkflowNode wn )
                 visitWorkflow(wn);
         }
@@ -314,12 +319,15 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         for( var input : inputs ) {
             fmt.appendIndent();
             if( input instanceof TupleParameter tp ) {
+                var components = Arrays.stream(tp.components)
+                    .map(p -> (
+                        tp.isRecord() && fmt.hasType(p)
+                            ? p.getName() + ": " + Types.getName(p.getType())
+                            : p.getName()
+                    ))
+                    .collect(Collectors.joining(", "));
                 fmt.append('(');
-                fmt.append(
-                    Arrays.stream(tp.components)
-                        .map(p -> p.getName())
-                        .collect(Collectors.joining(", "))
-                );
+                fmt.append(components);
                 fmt.append(')');
             }
             else {
@@ -574,6 +582,45 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         fmt.visit(node.getCode());
         fmt.decIndent();
         fmt.append("}\n");
+    }
+
+    @Override
+    public void visitRecord(RecordNode node) {
+        fmt.appendLeadingComments(node);
+        fmt.append("record ");
+        fmt.append(node.getName());
+        visitRecordBody(node);
+    }
+
+    private void visitRecordBody(RecordNode node) {
+        var alignmentWidth = options.harshilAlignment()
+            ? maxFieldWidth(node.getFields())
+            : 0;
+
+        fmt.append(" {\n");
+        fmt.incIndent();
+        for( var fn : node.getFields() ) {
+            fmt.appendIndent();
+            fmt.append(fn.getName());
+            if( fmt.hasType(fn) ) {
+                if( alignmentWidth > 0 ) {
+                    var padding = alignmentWidth - fn.getName().length() + 1;
+                    fmt.append(" ".repeat(padding));
+                }
+                fmt.append(": ");
+                fmt.visitTypeAnnotation(fn.getType());
+            }
+            fmt.appendNewLine();
+        }
+        fmt.decIndent();
+        fmt.appendIndent();
+        fmt.append("}\n");
+    }
+
+    private int maxFieldWidth(List<FieldNode> fields) {
+        return fields.stream()
+            .map(fn -> fn.getName().length())
+            .max(Integer::compare).orElse(0);
     }
 
     @Override

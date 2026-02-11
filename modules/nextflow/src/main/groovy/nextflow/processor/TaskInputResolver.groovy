@@ -89,15 +89,38 @@ class TaskInputResolver {
         final normalized = normalizeInputToFiles(value, count, true)
         final resolved = expandWildcards( fileInput.getFilePattern(ctx), normalized )
 
-        // update param value in task context if applicable
-        for( final param : task.inputs.keySet() ) {
-            if( task.inputs[param] == value )
-                ctx.put( param.name, singleItemOrList(resolved, value instanceof Path, task.type) )
-        }
-
         count += resolved.size()
 
         return resolved
+    }
+
+    /**
+     * Transform a value (i.e. path, collection, or map) by
+     * replacing any source paths with staged paths.
+     *
+     * @param value
+     * @param holders
+     */
+    Object normalizeValue(Object value, Map<Path,FileHolder> holders) {
+        if( value instanceof Path ) {
+            return normalizePath(value, holders)
+        }
+
+        if( value instanceof Collection ) {
+            return value.collect { el -> normalizeValue(el, holders) }
+        }
+
+        if( value instanceof Map ) {
+            return value.collectEntries { k, v -> [k, normalizeValue(v, holders)] }
+        }
+
+        return value
+    }
+
+    private Path normalizePath(Path value, Map<Path,FileHolder> holders) {
+        return holders.containsKey(value)
+            ? new TaskPath(holders[value])
+            : value
     }
 
     protected List<FileHolder> normalizeInputToFiles( Object obj, int count, boolean coerceToPath ) {
@@ -110,7 +133,7 @@ class TaskInputResolver {
         for( def item : allItems ) {
 
             if( item instanceof Path || coerceToPath ) {
-                final path = resolvePath(item)
+                final path = normalizeToPath(item)
                 final target = executor.isForeignFile(path) ? foreignFiles.addToForeign(path) : path
                 final holder = new FileHolder(path, target)
                 files << holder
@@ -123,14 +146,10 @@ class TaskInputResolver {
         return files
     }
 
-    protected static Path resolvePath(Object item) {
-        final result = normalizeToPath(item)
-        return result instanceof LogicalDataPath
-            ? result.toTargetPath()
-            : result
-    }
-
     protected static Path normalizeToPath( obj ) {
+        if( obj instanceof LogicalDataPath )
+            return obj.toTargetPath()
+
         if( obj instanceof Path )
             return obj
 

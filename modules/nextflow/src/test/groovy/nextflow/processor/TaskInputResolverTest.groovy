@@ -19,7 +19,6 @@ package nextflow.processor
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.Paths
 
 import nextflow.Global
 import nextflow.ISession
@@ -27,8 +26,12 @@ import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.Executor
 import nextflow.file.FileHolder
 import nextflow.file.FilePorter
+import nextflow.script.params.v2.ProcessFileInput
+import nextflow.script.params.FileInParam
+import nextflow.script.params.InParam
 import nextflow.script.ScriptType
 import nextflow.util.ArrayBag
+import nextflow.util.RecordMap
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -37,13 +40,144 @@ import spock.lang.Unroll
  */
 class TaskInputResolverTest extends Specification {
 
+    def holdersMap(List<FileHolder> holders) {
+        final result = [:]
+        for( final holder : holders )
+            result[ holder.getSourcePath() ] = holder
+        return result
+    }
+
+    def 'should resolve a legacy param' () {
+        given:
+        def task = new TaskRun(type: ScriptType.SCRIPTLET)
+        def batch = Mock(FilePorter.Batch)
+        def executor = Mock(Executor)
+        def resolver = new TaskInputResolver(task, batch, executor)
+        and:
+        def param
+        def value
+        def result
+
+        when: 'staging a file'
+        task.context = new TaskContext(holder: [:])
+        and:
+        param = new FileInParam(Mock(Binding), [])
+            .setPathQualifier(true)
+            .setStageAs('input.txt')
+            .bind('myFile')
+        value = Path.of('/some/file.txt')
+        result = resolver.resolve(param, value)
+        then:
+        1 * executor.isForeignFile(_ as Path) >> false
+        and:
+        result.size() == 1
+        result[0].storePath == value
+        result[0].stageName == 'input.txt'
+        and:
+        task.context.myFile.toString() == 'input.txt'
+
+        when: 'staging a file collection'
+        task.context = new TaskContext(holder: [:])
+        and:
+        param = new FileInParam(Mock(Binding), [])
+            .setPathQualifier(true)
+            .setStageAs('file*.txt')
+            .bind('myFiles')
+        value = [ Path.of('/other/foo.txt'), Path.of('/other/bar.txt')]
+        result = resolver.resolve(param, value)
+        then:
+        1 * executor.isForeignFile(_ as Path) >> false
+        1 * executor.isForeignFile(_ as Path) >> false
+        and:
+        result.size() == 2
+        result[0].storePath == value[0]
+        result[0].stageName == 'file1.txt'
+        result[1].storePath == value[1]
+        result[1].stageName == 'file2.txt'
+        and:
+        task.context.myFiles*.toString() == ['file1.txt', 'file2.txt']
+    }
+
+    def 'should resolve a typed param' () {
+        given:
+        def task = new TaskRun(type: ScriptType.SCRIPTLET)
+        def batch = Mock(FilePorter.Batch)
+        def executor = Mock(Executor)
+        def resolver = new TaskInputResolver(task, batch, executor)
+        and:
+        def param
+        def fileInput
+        def value
+        def result
+
+        when: 'staging a file'
+        task.context = new TaskContext(holder: [:])
+        task.inputs = [:]
+        and:
+        param = Mock(InParam) { getName() >> 'fastq' }
+        fileInput = new ProcessFileInput('input.fastq', { -> fastq })
+        value = Path.of('/some/sample1.fastq')
+        task.setInput(param, value)
+        result = resolver.resolve(fileInput, value)
+        task.context.put( param.name, resolver.normalizeValue(value, holdersMap(result)) )
+        then:
+        1 * executor.isForeignFile(_ as Path) >> false
+        and:
+        result.size() == 1
+        result[0].storePath == value
+        result[0].stageName == 'input.fastq'
+        and:
+        task.context.fastq.toString() == 'input.fastq'
+
+        when: 'staging a file collection'
+        task.context = new TaskContext(holder: [:])
+        task.inputs = [:]
+        and:
+        param = Mock(InParam) { getName() >> 'samples' }
+        fileInput = new ProcessFileInput('sample_*.fastq', { -> samples })
+        value = [ Path.of('/other/foo.fq'), Path.of('/other/bar.fq')]
+        task.setInput(param, value)
+        result = resolver.resolve(fileInput, value)
+        task.context.put( param.name, resolver.normalizeValue(value, holdersMap(result)) )
+        then:
+        1 * executor.isForeignFile(_ as Path) >> false
+        1 * executor.isForeignFile(_ as Path) >> false
+        and:
+        result.size() == 2
+        result[0].storePath == value[0]
+        result[0].stageName == 'sample_1.fastq'
+        result[1].storePath == value[1]
+        result[1].stageName == 'sample_2.fastq'
+        and:
+        task.context.samples*.toString() == ['sample_1.fastq', 'sample_2.fastq']
+
+        when: 'staging a file in a record'
+        task.context = new TaskContext(holder: [:])
+        task.inputs = [:]
+        and:
+        param = Mock(InParam) { getName() >> 'input' }
+        fileInput = new ProcessFileInput('input.bam', { -> input.bam })
+        value = Path.of('/some/sample1.bam')
+        task.context.put('input', new RecordMap(bam: value))
+        task.setInput(param, task.context.input)
+        result = resolver.resolve(fileInput, value)
+        task.context.put( param.name, resolver.normalizeValue(task.context.input, holdersMap(result)) )
+        then:
+        1 * executor.isForeignFile(_ as Path) >> false
+        and:
+        result.size() == 1
+        result[0].storePath == value
+        result[0].stageName == 'input.bam'
+        and:
+        task.context.input.bam.toString() == 'input.bam'
+    }
 
     def 'should return single item or collection'() {
 
         setup:
-        def path1 = Paths.get('file1')
-        def path2 = Paths.get('file2')
-        def path3 = Paths.get('file3')
+        def path1 = Path.of('file1')
+        def path2 = Path.of('file2')
+        def path3 = Path.of('file3')
 
         when:
         def list = [ FileHolder.get(path1, 'x_file_1') ]
@@ -269,7 +403,7 @@ class TaskInputResolverTest extends Specification {
         and:
         TaskInputResolver.normalizeToPath('file:///foo/bar') == '/foo/bar' as Path
         and:
-        TaskInputResolver.normalizeToPath(Paths.get('foo.txt')) == Paths.get('foo.txt')
+        TaskInputResolver.normalizeToPath(Path.of('foo.txt')) == Path.of('foo.txt')
 
         when:
         TaskInputResolver.normalizeToPath('abc')
@@ -286,7 +420,7 @@ class TaskInputResolverTest extends Specification {
         given:
         def batch = Mock(FilePorter.Batch)
         def executor = Mock(Executor)
-        def PATH = Paths.get('/some/path')
+        def PATH = Path.of('/some/path')
         def resolver = new TaskInputResolver(Mock(TaskRun), batch, executor)
 
         when:
