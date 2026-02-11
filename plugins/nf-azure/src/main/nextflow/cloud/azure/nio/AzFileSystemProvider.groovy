@@ -396,9 +396,10 @@ class AzFileSystemProvider extends FileSystemProvider {
         }
 
         // -- mode write
-        if( options.contains(CREATE_NEW) ) {
-            if( fs.exists(path) )
-                throw new FileAlreadyExistsException(path.toUriString())
+        final boolean createNew = options.contains(CREATE_NEW)
+        if( createNew ) {
+            // For CREATE_NEW, we'll use atomic conditional upload with If-None-Match
+            // The actual atomicity is enforced in newWritableByteChannel
         }
         else if( !options.contains(CREATE)  ) {
             if( !fs.exists(path) )
@@ -407,7 +408,7 @@ class AzFileSystemProvider extends FileSystemProvider {
         if( options.contains(APPEND) ) {
             throw new IllegalArgumentException("File APPEND mode is not supported by Azure Blob Storage")
         }
-        return fs.newWritableByteChannel(path)
+        return fs.newWritableByteChannel(path, createNew)
     }
 
 

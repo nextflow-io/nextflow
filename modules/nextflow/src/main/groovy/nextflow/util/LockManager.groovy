@@ -35,12 +35,12 @@ class LockManager {
     /**
      * Maintain a pool of lock handler to reduce garbage collection
      */
-    private List<LockHandle> pool = new ArrayList<>(MAX_SIZE)
+    private List<DefaultLockHandle> pool = new ArrayList<>(MAX_SIZE)
 
     /**
      * Associate a lock handle for each key
      */
-    private ConcurrentHashMap<Object, LockHandle> entries = new ConcurrentHashMap<>()
+    private ConcurrentHashMap<Object, DefaultLockHandle> entries = new ConcurrentHashMap<>()
 
 
     /**
@@ -58,32 +58,32 @@ class LockManager {
      * @return The lock handler
      */
     LockHandle acquire(key) {
-        LockHandle result = entries.computeIfAbsent(key,newLock())
+        DefaultLockHandle result = entries.computeIfAbsent(key,newLock())
         result.sync.lock()
         result.count++
         return result
     }
 
-    private Function<Object, LockHandle> newLock() {
-        new Function<Object, LockHandle>() {
+    private Function<Object, DefaultLockHandle> newLock() {
+        new Function<Object, DefaultLockHandle>() {
             @Override
-            LockHandle apply(Object key) {
+            DefaultLockHandle apply(Object key) {
                 return getOrCreate0(key)
             }
         }
     }
 
 
-    private synchronized LockHandle getOrCreate0(key) {
+    private synchronized DefaultLockHandle getOrCreate0(key) {
         if( pool.size() ) {
             def handle = pool.remove(pool.size()-1)
             handle.key = key
             return handle
         }
-        new LockHandle(key)
+        new DefaultLockHandle(key)
     }
 
-    private synchronized void release0(LockHandle handle) {
+    private synchronized void release0(DefaultLockHandle handle) {
         entries.remove(handle.key)
         handle.key = null
         if( pool.size()<MAX_SIZE )
@@ -91,12 +91,12 @@ class LockManager {
     }
 
 
-    class LockHandle {
+    class DefaultLockHandle implements LockHandle{
         Lock sync
         volatile Object key
         volatile int count
 
-        LockHandle(key) {
+        DefaultLockHandle(key) {
             this.key = key
             this.sync = new ReentrantLock()
         }

@@ -19,6 +19,7 @@ import java.nio.channels.Channels
 import java.nio.channels.SeekableByteChannel
 import java.nio.file.DirectoryNotEmptyException
 import java.nio.file.DirectoryStream
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileStore
 import java.nio.file.FileSystem
 import java.nio.file.NoSuchFileException
@@ -36,8 +37,10 @@ import com.azure.storage.blob.BlobServiceClient
 import com.azure.storage.blob.models.BlobContainerItem
 import com.azure.storage.blob.models.BlobCopyInfo
 import com.azure.storage.blob.models.BlobItem
+import com.azure.storage.blob.models.BlobRequestConditions
 import com.azure.storage.blob.models.BlobStorageException
 import com.azure.storage.blob.models.ListBlobsOptions
+import com.azure.storage.blob.options.BlockBlobOutputStreamOptions
 import dev.failsafe.Failsafe
 import dev.failsafe.RetryPolicy
 import dev.failsafe.event.EventListener
@@ -217,19 +220,34 @@ class AzFileSystem extends FileSystem {
     }
 
     @PackageScope
-    SeekableByteChannel newWritableByteChannel(AzPath path) {
+    SeekableByteChannel newWritableByteChannel(AzPath path, boolean createNew = false) {
         if( path.isContainer() )
             throw new IllegalArgumentException("Operation not allowed on blob container path: ${path.toUriString()}")
 
         try {
             final client = path.blobClient()
-            final outStream = client.getBlockBlobClient().getBlobOutputStream(true)
-            final writer = Channels.newChannel(outStream)
-            return new AzWriteableByteChannel(writer)
+            if( createNew ) {
+                // Use If-None-Match: * for atomic CREATE_NEW semantics
+                // This ensures the blob doesn't exist before upload
+                final blobRequestConditions = new BlobRequestConditions()
+                    .setIfNoneMatch("*")
+                final outStream = client.getBlockBlobClient()
+                    .getBlobOutputStream(new BlockBlobOutputStreamOptions()
+                        .setRequestConditions(blobRequestConditions))
+                final writer = Channels.newChannel(outStream)
+                return new AzWriteableByteChannel(writer)
+            }
+            else {
+                final outStream = client.getBlockBlobClient().getBlobOutputStream(true)
+                final writer = Channels.newChannel(outStream)
+                return new AzWriteableByteChannel(writer)
+            }
         }
         catch (BlobStorageException e) {
             if( e.statusCode == 404 )
                 throw new NoSuchFileException(path.toUriString())
+            else if( (e.statusCode == 409 || e.statusCode == 412) && createNew )
+                throw new FileAlreadyExistsException(path.toUriString())
             else
                 throw new IOException("Unexpected exception processing Azure container blob: ${path.toUriString()}", e)
         }
