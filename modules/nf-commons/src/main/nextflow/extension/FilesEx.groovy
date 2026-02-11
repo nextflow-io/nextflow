@@ -650,16 +650,16 @@ class FilesEx {
      * @param self
      */
     static Collection<Path> listDirectory(Path self) {
-        return listFiles0(self)
+        return listFiles0(self, null, true)
     }
 
-    private static Collection<Path> listFiles0(Path self, Closure<Boolean> filter=null) {
+    private static Collection<Path> listFiles0(Path self, Closure<Boolean> filter=null, boolean followLinks=false) {
 
         if( !self.isDirectory() )
             return null
 
         final result = []
-        final opts = EnumSet.of(FileVisitOption.FOLLOW_LINKS)
+        final opts = followLinks ? EnumSet.of(FileVisitOption.FOLLOW_LINKS) : EnumSet.noneOf(FileVisitOption)
 
         Files.walkFileTree(self, opts, Integer.MAX_VALUE, new SimpleFileVisitor<Path>() {
 

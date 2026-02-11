@@ -603,7 +603,7 @@ class FilesExTest extends Specification {
         sourceFolder.deleteDir()
     }
 
-    def 'should list files in symlinked directory' () {
+    def 'listFiles should not follow symlinked directory' () {
 
         given:
         def folder = Files.createTempDirectory('test')
@@ -616,6 +616,29 @@ class FilesExTest extends Specification {
 
         when:
         def paths = linkDir.listFiles()
+
+        then:
+        // without FOLLOW_LINKS, walkFileTree treats the symlink as a file
+        paths.size() == 1
+        paths[0] == linkDir
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'listDirectory should follow symlinked directory' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        def realDir = folder.resolve('realDir')
+        Files.createDirectories(realDir)
+        realDir.resolve('file1.txt').text = 'Hello1'
+        realDir.resolve('file2.txt').text = 'Hello2'
+        def linkDir = folder.resolve('linkDir')
+        Files.createSymbolicLink(linkDir, realDir)
+
+        when:
+        def paths = linkDir.listDirectory()
 
         then:
         paths.size() == 2
