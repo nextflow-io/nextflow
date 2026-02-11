@@ -404,7 +404,8 @@ class CmdRun extends CmdBase implements HubOptions {
         runner.setPreview(this.preview, previewAction)
         runner.session.profile = profile
         runner.session.commandLine = launcher.cliString
-        runner.session.ansiLog = launcher.options.ansiLog
+        runner.session.ansiLog = launcher.options.ansiLog && !SysEnv.isAgentMode()
+        runner.session.agentLog = SysEnv.isAgentMode()
         runner.session.debug = launcher.options.remoteDebug
         runner.session.disableJobsCancellation = getDisableJobsCancellation()
 
@@ -435,6 +436,11 @@ class CmdRun extends CmdBase implements HubOptions {
     }
 
     protected void printBanner() {
+        // Suppress banner in agent mode for minimal output
+        if( SysEnv.isAgentMode() ) {
+            return
+        }
+
         if( launcher.options.ansiLog ){
             // Plain header for verbose log
             log.debug "N E X T F L O W  ~  version ${BuildInfo.version}"
@@ -499,6 +505,11 @@ class CmdRun extends CmdBase implements HubOptions {
     }
 
     protected void printLaunchInfo(String repo, String head, String revision) {
+        // Agent mode output is handled by AgentLogObserver
+        if( SysEnv.isAgentMode() ) {
+            return
+        }
+
         if( launcher.options.ansiLog ){
             log.debug "${head} [$runName] - revision: ${revision}"
 

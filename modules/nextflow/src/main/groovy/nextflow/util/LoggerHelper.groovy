@@ -56,6 +56,8 @@ import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Global
 import nextflow.Session
+import nextflow.SysEnv
+import nextflow.trace.AnsiLogObserver
 import nextflow.cli.CliOptions
 import nextflow.cli.Launcher
 import nextflow.exception.AbortOperationException
@@ -260,7 +262,7 @@ class LoggerHelper {
 
         final Appender<ILoggingEvent> result = daemon && opts.isBackground()
                 ? (Appender<ILoggingEvent>) null
-                : (opts.ansiLog ? new CaptureAppender() : new ConsoleAppender<ILoggingEvent>())
+                : ((opts.ansiLog || SysEnv.isAgentMode()) ? new CaptureAppender() : new ConsoleAppender<ILoggingEvent>())
         if( result )  {
             final filter = new ConsoleLoggerFilter( packages )
             filter.setContext(loggerContext)
@@ -703,7 +705,7 @@ class LoggerHelper {
 
     /**
      * Capture logging events and forward them to. This is only used when
-     * ANSI interactive logging is enabled
+     * ANSI interactive logging or agent logging is enabled
      */
     static private class CaptureAppender extends AppenderBase<ILoggingEvent> {
 
@@ -713,21 +715,32 @@ class LoggerHelper {
 
             try {
                 final message = fmtEvent(event, session, false)
-                final renderer = session?.ansiLogObserver
-                if( !renderer || !renderer.started || renderer.stopped )
+
+                final observer = session?.logObserver
+                if( observer instanceof AnsiLogObserver ) {
+                    final renderer = (AnsiLogObserver)observer
+                    if( !renderer.started || renderer.stopped )
+                        System.out.println(message)
+                    else if( event.marker == STICKY )
+                        renderer.appendSticky(message)
+                    else if( event.level==Level.ERROR )
+                        renderer.appendError(message)
+                    else if( event.level==Level.WARN )
+                        renderer.appendWarning(message)
+                    else
+                        renderer.appendInfo(message)
+                }
+                else if( observer ) {
+                    if( event.level==Level.ERROR )
+                        observer.appendError(message)
+                    else if( event.level==Level.WARN )
+                        observer.appendWarning(message)
+                    else
+                        observer.appendInfo(message)
+                }
+                else {
                     System.out.println(message)
-
-                else if( event.marker == STICKY )
-                    renderer.appendSticky(message)
-
-                else if( event.level==Level.ERROR )
-                    renderer.appendError(message)
-
-                else if( event.level==Level.WARN )
-                    renderer.appendWarning(message)
-
-                else
-                    renderer.appendInfo(message)
+                }
             }
             catch (Throwable e) {
                 e.printStackTrace()

@@ -1,5 +1,8 @@
 NEXTFLOW CHANGE-LOG
 ===================
+26.02.0-edge - UNRELEASED
+- Add AI agent-friendly output mode via NXF_AGENT/AGENT/CLAUDECODE env vars [NEW]
+
 26.01.0-edge - 8 Feb 2026
 - Add accelerator request to trace record (#6703) [00f35b3a9]
 - Add aws.batch.forceGlacierTransfer config option (#6700) [e3bf3153b]
