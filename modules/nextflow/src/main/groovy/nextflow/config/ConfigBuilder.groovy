@@ -33,6 +33,7 @@ import nextflow.cli.CmdNode
 import nextflow.cli.CmdRun
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
+import nextflow.file.FileHelper
 import nextflow.secret.SecretsLoader
 import nextflow.secret.SecretsProvider
 import nextflow.util.HistoryFile
@@ -754,6 +755,24 @@ class ConfigBuilder {
         if( cliParams )
             config.params = mergeMaps( (Map)config.params, cliParams, NF.strictMode )
 
+        // -- use global cache if specified
+        final globalCachePath = env.get('NXF_GLOBALCACHE_PATH')
+        if( globalCachePath ) {
+            final sessionId = new UUID(0L, 0L).toString()
+            config.resume = sessionId
+            config.cloudcache = [
+                enabled: true,
+                path: "${globalCachePath}/cache"
+            ]
+            config.workDir = "${globalCachePath}/work"
+
+            log.warn "Enabling global cache. This will enable resume, set the cache path to ${config.cloudcache.path}, and set the work directory to ${config.workDir}"
+
+            final cachePath = FileHelper.asPath(globalCachePath)
+            cachePath.resolve("cache/${sessionId}").mkdirs()
+        }
+
+        // -- set container options
         if( cmdRun.withoutDocker && config.docker instanceof Map ) {
             // disable docker execution
             log.debug "Disabling execution in Docker container as requested by command-line option `-without-docker`"
