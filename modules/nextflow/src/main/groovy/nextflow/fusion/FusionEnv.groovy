@@ -17,6 +17,8 @@
 
 package nextflow.fusion
 
+import java.nio.file.Path
+
 /**
  * Allow importing platform specific env variables in the Fusion context
  *
@@ -25,4 +27,6 @@ package nextflow.fusion
 interface FusionEnv {
 
     Map<String,String> getEnvironment(String scheme, FusionConfig config)
+
+    Map<String,String> getEnvironmentFromPath(Path path, FusionConfig config)
 }

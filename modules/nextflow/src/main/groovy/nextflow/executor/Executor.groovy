@@ -16,6 +16,8 @@
 
 package nextflow.executor
 
+import nextflow.fusion.FusionHelper
+
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
@@ -128,6 +130,8 @@ abstract class Executor {
     }
 
     boolean isForeignFile(Path path) {
+        if ( isFusionEnabled() && path.scheme in FusionHelper.SUPPORTED_CLOUD_SCHEMES )
+            return false
         path.scheme != getStageDir().scheme
     }
 
