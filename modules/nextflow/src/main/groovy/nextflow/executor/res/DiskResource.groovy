@@ -23,7 +23,7 @@ import nextflow.util.MemoryUnit
 
 /**
  * Models disk resource request
- * 
+ *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @ToString(includeNames = true, includePackage = false)
@@ -33,30 +33,34 @@ class DiskResource {
 
     final MemoryUnit request
     final String type
+    final Boolean fusion
 
-    DiskResource( value ) {
+    DiskResource(value) {
         this(request: value)
     }
 
-    DiskResource( Map opts ) {
-        this.request = toMemoryUnit(opts.request)
+    DiskResource(Map opts) {
+        this.request = opts.request != null ? toMemoryUnit(opts.request) : null
 
-        if( opts.type )
+        if (opts.type)
             this.type = opts.type as String
+
+        if (opts.fusion != null)
+            this.fusion = opts.fusion as Boolean
     }
 
     DiskResource withRequest(MemoryUnit value) {
-        return new DiskResource(request: value, type: this.type)
+        return new DiskResource(request: value, type: this.type, fusion: this.fusion)
     }
 
-    private static MemoryUnit toMemoryUnit( value ) {
-        if( value instanceof MemoryUnit )
-            return (MemoryUnit)value
+    private static MemoryUnit toMemoryUnit(value) {
+        if (value instanceof MemoryUnit)
+            return (MemoryUnit) value
 
         try {
             return new MemoryUnit(value.toString().trim())
         }
-        catch( Exception e ) {
+        catch (Exception e) {
             throw new IllegalArgumentException("Not a valid disk value: $value")
         }
     }
