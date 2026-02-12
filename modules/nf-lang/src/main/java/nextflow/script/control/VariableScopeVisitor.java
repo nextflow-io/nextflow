@@ -17,7 +17,9 @@ package nextflow.script.control;
 
 import java.lang.reflect.Modifier;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import groovy.lang.groovydoc.GroovydocHolder;
 import nextflow.script.ast.ASTNodeMarker;
@@ -26,6 +28,7 @@ import nextflow.script.ast.FeatureFlagNode;
 import nextflow.script.ast.FunctionNode;
 import nextflow.script.ast.ImplicitClosureParameter;
 import nextflow.script.ast.IncludeNode;
+import nextflow.script.ast.OutputBlockNode;
 import nextflow.script.ast.OutputNode;
 import nextflow.script.ast.ParamBlockNode;
 import nextflow.script.ast.ProcessNode;
@@ -47,6 +50,7 @@ import nextflow.script.types.ParamsMap;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.ast.CodeVisitorSupport;
 import org.codehaus.groovy.ast.DynamicVariable;
 import org.codehaus.groovy.ast.FieldNode;
 import org.codehaus.groovy.ast.MethodNode;
@@ -74,6 +78,7 @@ import org.codehaus.groovy.syntax.SyntaxException;
 import org.codehaus.groovy.syntax.Types;
 
 import static nextflow.script.ast.ASTUtils.*;
+import static org.codehaus.groovy.ast.tools.GeneralUtils.*;
 
 /**
  * Initialize the variable scopes for an AST.
@@ -178,9 +183,79 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
 
     public void visit() {
         var moduleNode = sourceUnit.getAST();
-        if( moduleNode instanceof ScriptNode sn ) {
-            super.visit(sn);
-            vsc.checkUnusedVariables();
+        if( !(moduleNode instanceof ScriptNode) )
+            return;
+        var scriptNode = (ScriptNode) moduleNode;
+
+        var entry = scriptNode.getEntry();
+        if( entry != null && entry.isCodeSnippet() ) {
+            visitCodeSnippet(scriptNode);
+            return;
+        }
+
+        super.visit(scriptNode);
+        vsc.checkUnusedVariables();
+    }
+
+    private void visitCodeSnippet(ScriptNode node) {
+        var entry = node.getEntry();
+        var code = entry.main;
+
+        // infer parameters from references
+        var paramDecls = new ParamsReferencesCollector().apply(code).stream()
+            .map(name -> new Parameter(ClassHelper.STRING_TYPE, name))
+            .toArray(Parameter[]::new);
+        node.setParams(new ParamBlockNode(paramDecls));
+
+        // visit code
+        visitWorkflow(entry);
+
+        // infer outputs from implicit variable declarations
+        var outputVars = asBlockStatements(code).stream()
+            .filter(stmt -> (
+                stmt instanceof ExpressionStatement es
+                    && es.getExpression() instanceof AssignmentExpression ae
+                    && ae.getLeftExpression() instanceof VariableExpression
+            ))
+            .map((stmt) -> {
+                var es = (ExpressionStatement)stmt;
+                var ae = (AssignmentExpression)es.getExpression();
+                var target = (VariableExpression)ae.getLeftExpression();
+                return target;
+            })
+            .toList();
+
+        var publishers = (BlockStatement) entry.publishers;
+        for( var outputVar : outputVars ) {
+            var name = outputVar.getName();
+            var source = varX(name);
+            source.setAccessedVariable(outputVar);
+            var stmt = stmt(new AssignmentExpression(varX(name), source));
+            publishers.addStatement(stmt);
+        }
+
+        var outputDecls = outputVars.stream()
+            .map(outputVar -> new OutputNode(outputVar.getName(), ClassHelper.dynamicType(), new BlockStatement()))
+            .toList();
+        node.setOutputs(new OutputBlockNode(outputDecls));
+    }
+
+    private static class ParamsReferencesCollector extends CodeVisitorSupport {
+
+        private Set<String> params;
+
+        public Set<String> apply(Statement node) {
+            params = new HashSet<>();
+            visit(node);
+            return params;
+        }
+
+        @Override
+        public void visitPropertyExpression(PropertyExpression node) {
+            super.visitPropertyExpression(node);
+
+            if( node.getObjectExpression() instanceof VariableExpression ve && "params".equals(ve.getName()) )
+                params.add(node.getPropertyAsString());
         }
     }
 
