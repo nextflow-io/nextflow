@@ -24,6 +24,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import io.seqera.sched.api.schema.v1a1.AcceleratorType
 import io.seqera.sched.api.schema.v1a1.GetTaskLogsResponse
+import io.seqera.sched.api.schema.v1a1.NextflowTask
 import io.seqera.sched.api.schema.v1a1.ResourceRequirement
 import io.seqera.sched.api.schema.v1a1.Task
 import io.seqera.sched.api.schema.v1a1.TaskState as SchedTaskState
@@ -121,8 +122,11 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
             .command(fusionSubmitCli())   // fusion-based command launcher
             .environment(fusionLauncher().fusionEnv())  // fusion environment variables
             .resourceRequirement(resourceReq)  // cpu, memory, accelerators
-            .workDir(task.getWorkDirStr())     // task working directory
             .machineRequirement(machineReq)    // machine type and disk requirements
+            .nextflow(new NextflowTask()
+                .taskId(task.id?.intValue())
+                .hash(task.hash?.toString())
+                .workDir(task.getWorkDirStr()))
         log.debug "[SEQERA] Enqueueing task for batch submission: ${schedTask}"
         // Enqueue for batch submission - status will be set by setBatchTaskId callback
         executor.getBatchSubmitter().submit(this, schedTask)

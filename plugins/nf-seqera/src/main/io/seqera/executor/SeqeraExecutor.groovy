@@ -22,8 +22,9 @@ import groovy.util.logging.Slf4j
 import io.seqera.config.SeqeraConfig
 import io.seqera.config.ExecutorOpts
 import io.seqera.util.MapperUtil
-import io.seqera.sched.api.schema.v1a1.CreateSessionRequest
+import io.seqera.sched.api.schema.v1a1.CreateRunRequest
 import io.seqera.sched.client.SchedClient
+import io.seqera.sched.api.schema.v1a1.TerminateRunRequest
 import io.seqera.sched.client.SchedClientConfig
 import nextflow.exception.AbortOperationException
 import nextflow.executor.Executor
@@ -53,21 +54,22 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
 
     private SchedClient client
 
-    private String sessionId
+    private String runId
 
     private SeqeraBatchSubmitter batchSubmitter
 
     @Override
     protected void register() {
         createClient()
-        createSession()
+        createRun()
     }
 
     @Override
     void shutdown() {
-        // Flush any pending batch jobs before deleting session
+        // Flush any pending batch jobs before terminating run
+        session.error
         batchSubmitter?.shutdown()
-        deleteSession()
+        terminateRun()
     }
 
     protected void createClient() {
@@ -88,26 +90,27 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
         this.client = new SchedClient(clientConfig)
     }
 
-    protected void createSession() {
+    protected void createRun() {
         final towerConfig = session.config.tower as Map ?: Collections.emptyMap()
         final labels = new Labels()
         if( seqeraConfig.autoLabels )
             labels.withWorkflowMetadata(session.workflowMetadata)
         labels.withUserLabels(seqeraConfig.labels)
-        final request = new CreateSessionRequest()
+        final request = new CreateRunRequest()
                 .region(seqeraConfig.region)
                 .name(session.runName)
                 .machineRequirement(MapperUtil.toMachineRequirement(seqeraConfig.machineRequirement))
                 .labels(labels.entries)
                 .workspaceId(PlatformHelper.getWorkspaceId(towerConfig, SysEnv.get()) as Long)
-        log.debug "[SEQERA] Creating session: ${request}"
-        final response = client.createSession(request)
-        this.sessionId = response.getSessionId()
-        log.debug "[SEQERA] Session created id: ${sessionId}"
-        // Initialize and start batch submitter with error callback to abort session on fatal errors
+                .workflowId(session.workflowMetadata?.platform?.workflowId)
+        log.debug "[SEQERA] Creating run: ${request}"
+        final response = client.createRun(request)
+        this.runId = response.getRunId()
+        log.debug "[SEQERA] Run created id: ${runId}"
+        // Initialize and start batch submitter with error callback to abort on fatal errors
         this.batchSubmitter = new SeqeraBatchSubmitter(
             client,
-            sessionId,
+            runId,
             seqeraConfig.batchFlushInterval,
             SeqeraBatchSubmitter.KEEP_ALIVE_INTERVAL,
             { Throwable t -> session.abort(t) }
@@ -115,13 +118,14 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
         this.batchSubmitter.start()
     }
 
-    protected void deleteSession() {
-        if (!sessionId) {
+    protected void terminateRun() {
+        if (!runId) {
             return
         }
-        log.debug "[SEQERA] Deleting session: ${sessionId}"
-        client.deleteSession(sessionId)
-        log.debug "[SEQERA] Session deleted"
+        final stopReason = truncate(session.fault?.report, 10_000)
+        log.debug "[SEQERA] Terminating run: ${runId}; stopReason: ${stopReason}"
+        client.terminateRun(runId, new TerminateRunRequest().stopReason(stopReason))
+        log.debug "[SEQERA] Run terminated"
     }
 
     @Override
@@ -153,8 +157,8 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
         return client
     }
 
-    String getSessionId() {
-        return sessionId
+    String getRunId() {
+        return runId
     }
 
     SeqeraBatchSubmitter getBatchSubmitter() {
@@ -163,5 +167,11 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
 
     ExecutorOpts getSeqeraConfig() {
         return seqeraConfig
+    }
+
+    protected static String truncate(String value, int maxLen) {
+        if (!value || value.length() <= maxLen)
+            return value
+        return value.take(maxLen) + '\n.. [TRUNCATED]'
     }
 }

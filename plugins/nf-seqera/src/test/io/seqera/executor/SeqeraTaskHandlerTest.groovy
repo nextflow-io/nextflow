@@ -17,10 +17,14 @@
 
 package io.seqera.executor
 
+import com.google.common.hash.HashCode
+import io.seqera.config.ExecutorOpts
 import io.seqera.sched.api.schema.v1a1.DescribeTaskResponse
 import io.seqera.sched.api.schema.v1a1.GetTaskLogsResponse
 import io.seqera.sched.api.schema.v1a1.MachineInfo
+import io.seqera.sched.api.schema.v1a1.NextflowTask
 import io.seqera.sched.api.schema.v1a1.PriceModel as SchedPriceModel
+import io.seqera.sched.api.schema.v1a1.Task
 import io.seqera.sched.api.schema.v1a1.TaskAttempt
 import io.seqera.sched.api.schema.v1a1.TaskState as SchedTaskState
 import io.seqera.sched.api.schema.v1a1.TaskStatus as SchedTaskStatus
@@ -374,6 +378,104 @@ class SeqeraTaskHandlerTest extends Specification {
         completed
         capturedExitStatus == 1
         capturedError == null
+    }
+
+    def 'should set index and hash on submitted task'() {
+        given:
+        Task capturedTask = null
+        def batchSubmitter = Mock(SeqeraBatchSubmitter) {
+            submit(_, _) >> { handler, task -> capturedTask = task }
+        }
+        def seqeraConfig = Mock(ExecutorOpts) {
+            getMachineRequirement() >> null
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> Mock(SchedClient)
+            getBatchSubmitter() >> batchSubmitter
+            getSeqeraConfig() >> seqeraConfig
+        }
+        def taskConfig = Mock(TaskConfig) {
+            getCpus() >> 1
+            getMemory() >> null
+            getAccelerator() >> null
+            getDisk() >> null
+        }
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getWorkDirStr() >> '/work/ab/cd1234'
+            getConfig() >> taskConfig
+            getContainer() >> 'ubuntu:latest'
+            getContainerPlatform() >> null
+            lazyName() >> 'test_task'
+            getId() >> TaskId.of(42)
+            getHash() >> HashCode.fromString('abcd1234')
+        }
+        def handler = Spy(new SeqeraTaskHandler(taskRun, executor)) {
+            fusionEnabled() >> true
+            fusionSubmitCli() >> ['bash', '-c', 'echo hello']
+            fusionLauncher() >> Mock(nextflow.fusion.FusionScriptLauncher) {
+                fusionEnv() >> [:]
+            }
+        }
+
+        when:
+        handler.submit()
+
+        then:
+        capturedTask != null
+        capturedTask.getNextflow() != null
+        capturedTask.getNextflow().getTaskId() == 42
+        capturedTask.getNextflow().getHash() == 'abcd1234'
+        capturedTask.getNextflow().getWorkDir() == '/work/ab/cd1234'
+    }
+
+    def 'should handle null task id and hash'() {
+        given:
+        Task capturedTask = null
+        def batchSubmitter = Mock(SeqeraBatchSubmitter) {
+            submit(_, _) >> { handler, task -> capturedTask = task }
+        }
+        def seqeraConfig = Mock(ExecutorOpts) {
+            getMachineRequirement() >> null
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> Mock(SchedClient)
+            getBatchSubmitter() >> batchSubmitter
+            getSeqeraConfig() >> seqeraConfig
+        }
+        def taskConfig = Mock(TaskConfig) {
+            getCpus() >> 1
+            getMemory() >> null
+            getAccelerator() >> null
+            getDisk() >> null
+        }
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getWorkDirStr() >> '/work/ab/cd1234'
+            getConfig() >> taskConfig
+            getContainer() >> 'ubuntu:latest'
+            getContainerPlatform() >> null
+            lazyName() >> 'test_task'
+            getId() >> null
+            getHash() >> null
+        }
+        def handler = Spy(new SeqeraTaskHandler(taskRun, executor)) {
+            fusionEnabled() >> true
+            fusionSubmitCli() >> ['bash', '-c', 'echo hello']
+            fusionLauncher() >> Mock(nextflow.fusion.FusionScriptLauncher) {
+                fusionEnv() >> [:]
+            }
+        }
+
+        when:
+        handler.submit()
+
+        then:
+        capturedTask != null
+        capturedTask.getNextflow() != null
+        capturedTask.getNextflow().getTaskId() == null
+        capturedTask.getNextflow().getHash() == null
+        capturedTask.getNextflow().getWorkDir() == '/work/ab/cd1234'
     }
 
     /**
