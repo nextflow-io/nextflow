@@ -175,4 +175,38 @@ class ExecutorOptsTest extends Specification {
         config.autoLabels
     }
 
+    def 'should create config with prediction model' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            predictionModel: 'qr/v1'
+        ])
+
+        then:
+        config.predictionModel == 'qr/v1'
+    }
+
+    def 'should default prediction model to null' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com'
+        ])
+
+        then:
+        config.predictionModel == null
+    }
+
+    def 'should reject invalid prediction model' () {
+        when:
+        new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            predictionModel: 'invalid'
+        ])
+
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains("Invalid prediction model 'invalid'")
+        e.message.contains('qr/v1')
+    }
+
 }

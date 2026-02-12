@@ -23,6 +23,7 @@ import io.seqera.config.SeqeraConfig
 import io.seqera.config.ExecutorOpts
 import io.seqera.util.MapperUtil
 import io.seqera.sched.api.schema.v1a1.CreateRunRequest
+import io.seqera.sched.api.schema.v1a1.PredictionModel
 import io.seqera.sched.client.SchedClient
 import io.seqera.sched.api.schema.v1a1.TerminateRunRequest
 import io.seqera.sched.client.SchedClientConfig
@@ -96,6 +97,7 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
         if( seqeraConfig.autoLabels )
             labels.withWorkflowMetadata(session.workflowMetadata)
         labels.withUserLabels(seqeraConfig.labels)
+        final predictionModel = seqeraConfig.predictionModel ? PredictionModel.fromValue(seqeraConfig.predictionModel) : null
         final request = new CreateRunRequest()
                 .region(seqeraConfig.region)
                 .name(session.runName)
@@ -103,6 +105,7 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
                 .labels(labels.entries)
                 .workspaceId(PlatformHelper.getWorkspaceId(towerConfig, SysEnv.get()) as Long)
                 .workflowId(session.workflowMetadata?.platform?.workflowId)
+                .predictionModel(predictionModel)
         log.debug "[SEQERA] Creating run: ${request}"
         final response = client.createRun(request)
         this.runId = response.getRunId()

@@ -79,6 +79,14 @@ class ExecutorOpts implements ConfigScope {
     """)
     final boolean autoLabels
 
+    @ConfigOption
+    @Description("""
+        The resource prediction model to use for estimating task resource requirements
+        based on historical execution metrics. Supported values: `qr/v1` (quantile regression).
+        When not set, no resource estimation is applied.
+    """)
+    final String predictionModel
+
     /* required by config scope -- do not remove */
 
     ExecutorOpts() {}
@@ -99,6 +107,18 @@ class ExecutorOpts implements ConfigScope {
         // labels for cost tracking
         this.labels = opts.labels as Map<String, String>
         this.autoLabels = opts.autoLabels as boolean ?: false
+        // prediction model
+        this.predictionModel = parsePredictionModel(opts.predictionModel as String)
+    }
+
+    private static final Set<String> VALID_PREDICTION_MODELS = Set.of('qr/v1')
+
+    private static String parsePredictionModel(String value) {
+        if( !value )
+            return null
+        if( !VALID_PREDICTION_MODELS.contains(value) )
+            throw new IllegalArgumentException("Invalid prediction model '${value}'. Supported values: ${VALID_PREDICTION_MODELS.join(', ')}")
+        return value
     }
 
     RetryOpts retryOpts() {
@@ -131,5 +151,9 @@ class ExecutorOpts implements ConfigScope {
 
     boolean getAutoLabels() {
         return autoLabels
+    }
+
+    String getPredictionModel() {
+        return predictionModel
     }
 }
