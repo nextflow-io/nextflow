@@ -965,6 +965,40 @@ class AzBatchServiceTest extends Specification {
         thrown(IllegalArgumentException)
     }
 
+    def 'should create job release task for image cleanup' () {
+        given:
+        def CONFIG = [batch:[deleteImagesOnCompletion: true]]
+        def exec = createExecutor(CONFIG)
+        def svc = new AzBatchService(exec)
+
+        when:
+        def releaseTask = svc.createJobReleaseTask()
+
+        then:
+        releaseTask != null
+        releaseTask.id == 'nf-image-cleanup'
+        releaseTask.commandLine == '/bin/sh -c "docker image prune -a -f"'
+        releaseTask.userIdentity.autoUser.elevationLevel == ElevationLevel.ADMIN
+        releaseTask.containerSettings == null
+
+        when:
+        def prepTask = svc.createJobPreparationTask()
+
+        then:
+        prepTask != null
+        prepTask.commandLine == '/bin/sh -c "echo nf-image-cleanup-prep"'
+    }
+
+    def 'should not create job release task by default' () {
+        given:
+        def CONFIG = [:]
+        def exec = createExecutor(CONFIG)
+        def svc = new AzBatchService(exec)
+
+        expect:
+        !svc.config.batch().deleteImagesOnCompletion
+    }
+
     def 'should test createJobConstraints method with Duration input' () {
         given:
         def exec = createExecutor()

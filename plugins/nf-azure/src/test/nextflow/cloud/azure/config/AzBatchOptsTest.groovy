@@ -105,4 +105,21 @@ class AzBatchOptsTest extends Specification {
         then:
         opts3.jobMaxWallClockTime.toString() == '12h'
     }
+
+    def 'should set deleteImagesOnCompletion' () {
+        when:
+        def opts1 = new AzBatchOpts([:], [:])
+        then:
+        !opts1.deleteImagesOnCompletion
+
+        when:
+        def opts2 = new AzBatchOpts([deleteImagesOnCompletion: true], [:])
+        then:
+        opts2.deleteImagesOnCompletion
+
+        when:
+        def opts3 = new AzBatchOpts([deleteImagesOnCompletion: false], [:])
+        then:
+        !opts3.deleteImagesOnCompletion
+    }
 }

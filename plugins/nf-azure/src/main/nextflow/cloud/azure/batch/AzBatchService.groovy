@@ -33,6 +33,8 @@ import com.azure.compute.batch.models.AutoUserSpecification
 import com.azure.compute.batch.models.AzureFileShareConfiguration
 import com.azure.compute.batch.models.BatchJobCreateContent
 import com.azure.compute.batch.models.BatchJobConstraints
+import com.azure.compute.batch.models.BatchJobPreparationTask
+import com.azure.compute.batch.models.BatchJobReleaseTask
 import com.azure.compute.batch.models.BatchJobUpdateContent
 import com.azure.compute.batch.models.BatchNodeFillType
 import com.azure.compute.batch.models.BatchPool
@@ -450,9 +452,38 @@ class AzBatchService implements Closeable {
         if (config.batch().jobMaxWallClockTime) {
             content.setConstraints(createJobConstraints(config.batch().jobMaxWallClockTime))
         }
-        
+
+        if (config.batch().deleteImagesOnCompletion) {
+            // Azure Batch requires a preparation task when a release task is specified
+            content.setJobPreparationTask(createJobPreparationTask())
+            content.setJobReleaseTask(createJobReleaseTask())
+        }
+
         apply(() -> client.createJob(content))
         return jobId
+    }
+
+    /**
+     * Create a no-op job preparation task required by Azure Batch when a release task is specified.
+     */
+    protected BatchJobPreparationTask createJobPreparationTask() {
+        return new BatchJobPreparationTask('/bin/sh -c "echo nf-image-cleanup-prep"')
+    }
+
+    /**
+     * Create a job release task that prunes unused Docker images on compute nodes
+     * when the job completes. The release task runs on the host (not inside a container)
+     * with admin elevation to access the Docker daemon.
+     *
+     * This frees disk space by removing images that are no longer referenced by any
+     * running or stopped container. Images still in use by other jobs are not affected.
+     */
+    protected BatchJobReleaseTask createJobReleaseTask() {
+        final releaseTask = new BatchJobReleaseTask('/bin/sh -c "docker image prune -a -f"')
+        releaseTask.setId('nf-image-cleanup')
+        // run as admin on the host to access the Docker daemon
+        releaseTask.setUserIdentity(userIdentity(true, null, AutoUserScope.POOL))
+        return releaseTask
     }
 
     String makeJobId(TaskRun task) {

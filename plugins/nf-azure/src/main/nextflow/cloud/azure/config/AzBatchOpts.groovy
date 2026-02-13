@@ -80,6 +80,12 @@ class AzBatchOpts implements ConfigScope, CloudTransferOptions {
 
     @ConfigOption
     @Description("""
+        Delete all Docker images from compute nodes when each job completes, freeing disk space (default: `false`). Uses a job release task to run `docker image prune -a -f` on each node.
+    """)
+    final Boolean deleteImagesOnCompletion
+
+    @ConfigOption
+    @Description("""
         Delete all jobs when the workflow completes (default: `false`).
     """)
     final Boolean deleteJobsOnCompletion
@@ -139,6 +145,7 @@ class AzBatchOpts implements ConfigScope, CloudTransferOptions {
         autoPoolMode = config.autoPoolMode as Boolean
         allowPoolCreation = config.allowPoolCreation as Boolean
         terminateJobsOnCompletion = config.terminateJobsOnCompletion != Boolean.FALSE
+        deleteImagesOnCompletion = config.deleteImagesOnCompletion as Boolean
         deleteJobsOnCompletion = config.deleteJobsOnCompletion as Boolean
         deletePoolsOnCompletion = config.deletePoolsOnCompletion as Boolean
         deleteTasksOnCompletion = config.deleteTasksOnCompletion as Boolean
