@@ -92,6 +92,7 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
 
     protected void createRun() {
         final towerConfig = session.config.tower as Map ?: Collections.emptyMap()
+        final workflowId = session.workflowMetadata?.platform?.workflowId
         final labels = new Labels()
         if( seqeraConfig.autoLabels )
             labels.withWorkflowMetadata(session.workflowMetadata)
@@ -103,12 +104,12 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
                 .machineRequirement(MapperUtil.toMachineRequirement(seqeraConfig.machineRequirement))
                 .labels(labels.entries)
                 .workspaceId(PlatformHelper.getWorkspaceId(towerConfig, SysEnv.get()) as Long)
-                .workflowId(session.workflowMetadata?.platform?.workflowId)
+                .workflowId(workflowId)
                 .predictionModel(predictionModel)
         log.debug "[SEQERA] Creating run: ${request}"
         final response = client.createRun(request)
         this.runId = response.getRunId()
-        log.debug "[SEQERA] Run created id: ${runId}"
+        log.debug "[SEQERA] Run created id: ${runId}; workflowId: '${workflowId}'"
         // Initialize and start batch submitter with error callback to abort on fatal errors
         this.batchSubmitter = new SeqeraBatchSubmitter(
             client,
