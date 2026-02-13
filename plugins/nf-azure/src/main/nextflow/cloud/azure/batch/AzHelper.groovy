@@ -148,7 +148,6 @@ class AzHelper {
         final expiryTime = (indicatedExpiryTime.toEpochSecond() <= maxExpiryTime.toEpochSecond()) ? indicatedExpiryTime : maxExpiryTime
 
         final signature = new BlobServiceSasSignatureValues()
-                .setPermissions(BLOB_PERMS)
                 .setPermissions(CONTAINER_PERMS)
                 .setStartTime(startTime)
                 .setExpiryTime(expiryTime)
