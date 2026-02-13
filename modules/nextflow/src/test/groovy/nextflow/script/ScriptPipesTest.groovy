@@ -1,10 +1,9 @@
 package nextflow.script
 
-import java.nio.file.Files
-
 import spock.lang.Timeout
 import test.Dsl2Spec
-import test.MockScriptRunner
+
+import static test.ScriptHelper.*
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -30,17 +29,13 @@ class ScriptPipesTest extends Dsl2Spec {
         } 
 
         workflow {
-            main: Channel.of('Hello') | map { it.reverse() } | (foo & bar)
-            emit:
-                foo.out
-                bar.out
+            channel.of('Hello') | map { it.reverse() } | (foo & bar)
         }
         
         '''
 
         when:
-        def runner = new MockScriptRunner()
-        def result = runner.setScript(SCRIPT).execute()
+        def result = runScript(SCRIPT)
 
         then:
         result[0].val == 'olleH mundo'
@@ -66,13 +61,12 @@ class ScriptPipesTest extends Dsl2Spec {
         } 
 
         workflow {
-            emit: Channel.of('Hola') | foo | map { it.reverse() } | bar
+            channel.of('Hola') | foo | map { it.reverse() } | bar
         }
         '''
 
         when:
-        def runner = new MockScriptRunner()
-        def result = runner.setScript(SCRIPT).execute()
+        def result = runScript(SCRIPT)
 
         then:
         result.val == 'DLROW ALOH'
@@ -105,13 +99,12 @@ class ScriptPipesTest extends Dsl2Spec {
         // the multiple output channels 
         // to the `bar` process receiving multiple inputs
         workflow {
-            emit: Channel.of('hello') | foo | bar 
+            channel.of('hello') | foo | bar 
         }
         '''
 
         when:
-        def runner = new MockScriptRunner()
-        def result = runner.setScript(SCRIPT).execute()
+        def result = runScript(SCRIPT)
 
         then:
         result.val == 'olleh + HELLO'
@@ -136,13 +129,12 @@ class ScriptPipesTest extends Dsl2Spec {
         // pipe the multiple output channels 
         // to the `concat` operator
         workflow {
-            emit: Channel.of('hola') | foo | concat 
+            channel.of('hola') | foo | concat 
         }
         '''
 
         when:
-        def runner = new MockScriptRunner()
-        def result = runner.setScript(SCRIPT).execute()
+        def result = runScript(SCRIPT)
 
         then:
         result.val == 'aloh'
@@ -162,13 +154,12 @@ class ScriptPipesTest extends Dsl2Spec {
         }     
         
         workflow {
-            emit: foo | map { it.reverse() }
+            foo | map { it.reverse() }
         }
         '''
 
         when:
-        def runner = new MockScriptRunner()
-        def result = runner.setScript(SCRIPT).execute()
+        def result = runScript(SCRIPT)
 
         then:
         result.val == 'aloh'
@@ -192,13 +183,12 @@ class ScriptPipesTest extends Dsl2Spec {
         }
         
         workflow {
-            emit: foo | bar
+            foo | bar
         }
         '''
 
         when:
-        def runner = new MockScriptRunner()
-        def result = runner.setScript(SCRIPT).execute()
+        def result = runScript(SCRIPT)
 
         then:
         result.val == 'HOLA'
@@ -216,13 +206,12 @@ class ScriptPipesTest extends Dsl2Spec {
         }     
         
         workflow {
-            emit: Channel.of(1,2,3) | square | collect 
+            channel.of(1,2,3) | square | collect 
         }
         '''
 
         when:
-        def runner = new MockScriptRunner()
-        def result = runner.setScript(SCRIPT).execute()
+        def result = runScript(SCRIPT)
 
         then:
         result.val.sort() == [1, 4, 9]
@@ -232,11 +221,11 @@ class ScriptPipesTest extends Dsl2Spec {
     def 'should pipe branch output to concat operator' () {
         given:
         def SCRIPT ='''   
-        Channel.of(10,20,30) | branch { foo: it <=10; bar: true } | concat 
+        channel.of(10,20,30) | branch { foo: it <=10; bar: true } | concat 
         '''
 
         when:
-        def result = new MockScriptRunner().setScript(SCRIPT).execute()
+        def result = runScript(SCRIPT)
         then:
         result.val == 10
         result.val == 20
@@ -248,193 +237,20 @@ class ScriptPipesTest extends Dsl2Spec {
         given:
         def SCRIPT ='''
         process foo {
-          input: val x 
-          input: val y
+          input: val x ; val y
           output: val ret
           exec: ret=x*2+y
         }
 
         workflow {
-           emit: Channel.of(10,20) | branch { foo: it <=10; bar: true } | foo 
+           channel.of(10,20) | branch { foo: it <=10; bar: true } | foo 
         }
         '''
 
         when:
-        def result = new MockScriptRunner().setScript(SCRIPT).execute()
+        def result = runScript(SCRIPT)
         then:
         result.val == 40
-    }
-
-    def 'should compose custom funs' () {
-        given:
-        def SCRIPT = """
-        process foo {
-          output: val ret
-          exec: ret=10
-        }
-        
-        def bar(ch) {
-          ch.map { it +1 }
-        }
-
-        workflow {
-            emit: foo | bar | map{ it*2 } 
-        }
-        """
-
-        when:
-        def result = new MockScriptRunner().setScript(SCRIPT).execute()
-        then:
-        result.val == 22
-
-    }
-
-    def 'should compose custom funs/2' () {
-        given:
-        def SCRIPT = """
-        process foo {
-          output: 
-            val x
-            val y
-          exec: 
-            x=1; y=2
-        }
-
-        def bar(ch1, ch2) {
-          ch1.combine(ch2)
-        }
-
-        workflow {
-            emit: foo | bar | view
-        }
-        """
-
-        when:
-        def result = new MockScriptRunner().setScript(SCRIPT).execute()
-        then:
-        result.val == [1,2]
-
-    }
-
-    def 'should compose custom funs/3' () {
-        given:
-        def SCRIPT = """
-        process foo {
-          input:
-            val str
-          output: 
-            val x
-          exec: 
-            x=str.reverse()
-        }
-        
-        def init(str='hi'){
-            Channel.of(str)
-        }
-        
-        workflow {
-            emit: init | foo | view
-        }
-        """
-
-        when:
-        def result = new MockScriptRunner().setScript(SCRIPT).execute()
-        then:
-        result.val == 'hi'.reverse()
-
-    }
-
-    def 'should compose custom funs/4' () {
-        given:
-        def SCRIPT = """
-        process foo {
-          input:
-            val str
-          output: 
-            val x
-          exec: 
-            x=str.reverse()
-        }
-        
-        def init(str='hi'){
-            Channel.of(str)
-        }
-        
-        workflow {
-            emit: init('hello') | foo | view
-        }
-        """
-
-        when:
-        def result = new MockScriptRunner().setScript(SCRIPT).execute()
-        then:
-        result.val == 'hello'.reverse()
-
-    }
-
-    def 'should compose custom funs/5' () {
-        given:
-        def SCRIPT = """
-        process foo {
-          input:
-            val str
-          output: 
-            val x
-          exec: 
-            x=str.reverse()
-        }
-        
-        def init(str='hi'){
-            Channel.of(str)
-        }
-
-        def bar(ch1=null) {            
-          ch1.map{ it.toUpperCase() }
-        }
-
-        workflow {
-            emit: init | foo | bar | view
-        }
-        """
-
-        when:
-        def result = new MockScriptRunner().setScript(SCRIPT).execute()
-        then:
-        result.val == 'HI'.reverse()
-
-    }
-
-    def 'should compose imported funs' () {
-        given:
-        def folder = Files.createTempDirectory('test')
-        def MODULE = folder.resolve('module.nf')
-        MODULE.text = '''
-        process foo {
-          output: val ret
-          exec: ret=10
-        }
-
-        def bar(ch) {
-          ch.map { it +1 }
-        }
-
-        '''
-        def SCRIPT = """
-        include{ foo; bar } from "$MODULE"
-
-        workflow {
-            emit: foo | bar | map{ it*3 }
-        }
-        """
-
-        when:
-        def result = new MockScriptRunner().setScript(SCRIPT).execute()
-        then:
-        result.val == 33
-
-
-        cleanup:
-        folder?.deleteDir()
     }
 
 }

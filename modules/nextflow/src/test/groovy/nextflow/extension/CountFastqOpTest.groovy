@@ -16,11 +16,11 @@
 
 package nextflow.extension
 
-import spock.lang.Specification
-
 import nextflow.Channel
+import spock.lang.Specification
 import test.TestHelper
 
+import static test.ScriptHelper.runDataflow
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -66,7 +66,9 @@ class CountFastqOpTest extends Specification {
 
 
         when:
-        def result = Channel.of( READS, READS2 ).countFastq()
+        def result = runDataflow {
+            Channel.of( READS, READS2 ).countFastq()
+        }
         then:
         result.val == 7
 
@@ -122,7 +124,9 @@ class CountFastqOpTest extends Specification {
 
 
         when:
-        def result = Channel.of(file1, file2).countFastq()
+        def result = runDataflow {
+            Channel.of(file1, file2).countFastq()
+        }
         then:
         result.val == 9
 

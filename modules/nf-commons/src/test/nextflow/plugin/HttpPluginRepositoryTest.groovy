@@ -5,21 +5,20 @@ import java.time.ZoneOffset
 import java.time.ZonedDateTime
 
 import com.github.tomakehurst.wiremock.junit.WireMockRule
-import com.github.tomjankes.wiremock.WireMockGroovy
 import nextflow.BuildInfo
 import org.junit.Rule
 import org.pf4j.PluginRuntimeException
 import spock.lang.Specification
 
+import static com.github.tomakehurst.wiremock.client.WireMock.*
+
 class HttpPluginRepositoryTest extends Specification {
     @Rule
     WireMockRule wiremock = new WireMockRule(0)
 
-    def wm
     HttpPluginRepository unit
 
     def setup() {
-        wm = new WireMockGroovy(wiremock.port())
         unit = new HttpPluginRepository("test-repo", new URI(wiremock.baseUrl()))
     }
 
@@ -27,23 +26,17 @@ class HttpPluginRepositoryTest extends Specification {
 
     def 'prefetch metadata for plugin with no releases'() {
         given:
-        wm.stub {
-            request {
-                method 'GET'
-                url "/v1/plugins/dependencies?plugins=nf-fake&nextflowVersion=${BuildInfo.version}"
-            }
-            response {
-                status 200
-                body """{
+        wiremock.stubFor(get(urlEqualTo("/v1/plugins/dependencies?plugins=nf-fake&nextflowVersion=${BuildInfo.version}"))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withBody("""{
                   "plugins": [
                     {
                       "id": "nf-fake"
                     }
                   ]
                 }
-                """
-            }
-        }
+                """)))
 
         when:
         unit.prefetch([new PluginRef("nf-fake")])
@@ -57,14 +50,10 @@ class HttpPluginRepositoryTest extends Specification {
 
     def 'prefetch plugin metadata with release'() {
         given:
-        wm.stub {
-            request {
-                method 'GET'
-                url "/v1/plugins/dependencies?plugins=nf-fake&nextflowVersion=${BuildInfo.version}"
-            }
-            response {
-                status 200
-                body """{
+        wiremock.stubFor(get(urlEqualTo("/v1/plugins/dependencies?plugins=nf-fake&nextflowVersion=${BuildInfo.version}"))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withBody("""{
                   "plugins": [
                     {
                       "id": "nf-fake",
@@ -80,9 +69,7 @@ class HttpPluginRepositoryTest extends Specification {
                     }
                   ]
                 }
-                """
-            }
-        }
+                """)))
 
         when:
         unit.prefetch([new PluginRef("nf-fake")])
@@ -117,18 +104,32 @@ class HttpPluginRepositoryTest extends Specification {
 
     // ------------------------------------------------------------------------
 
+    def 'handle prefetch error with percent chars in error message'() {
+        given:
+        // Test that URLs containing '%' characters (like URL-encoded values) are handled
+        // correctly when an exception occurs. The '%' must be escaped to '%%' to avoid
+        // String.format interpretation in PluginRuntimeException.
+        def repoWithEncodedUrl = new HttpPluginRepository("test-repo", new URI("http://localhost:${wiremock.port()}/path%20with%20spaces/"))
+        wiremock.stop()
+
+        when:
+        repoWithEncodedUrl.prefetch([new PluginRef("nf-fake")])
+
+        then:
+        def err = thrown PluginRuntimeException
+        // Verify the error message is properly formatted and contains the URL with encoded spaces
+        err.message.contains("Unable to connect to")
+        err.message.contains("path%20with%20spaces")
+    }
+
+    // ------------------------------------------------------------------------
+
     def 'handle prefetch error when metadata service returns an error response'() {
         given:
-        wm.stub {
-            request {
-                method 'GET'
-                url "/v1/plugins/dependencies?plugins=nf-fake&nextflowVersion=${BuildInfo.version}"
-            }
-            response {
-                status 500
-                body "Server error!"
-            }
-        }
+        wiremock.stubFor(get(urlEqualTo("/v1/plugins/dependencies?plugins=nf-fake&nextflowVersion=${BuildInfo.version}"))
+            .willReturn(aResponse()
+                .withStatus(500)
+                .withBody("Server error!")))
 
         when:
         unit.prefetch([new PluginRef("nf-fake")])
@@ -145,23 +146,17 @@ class HttpPluginRepositoryTest extends Specification {
 
     def 'handle prefetch error when metadata service sends back incorrectly formatted response'() {
         given:
-        wm.stub {
-            request {
-                method 'GET'
-                url "/v1/plugins/dependencies?plugins=nf-fake&nextflowVersion=${BuildInfo.version}"
-            }
-            response {
-                status 200
-                body """{
+        wiremock.stubFor(get(urlEqualTo("/v1/plugins/dependencies?plugins=nf-fake&nextflowVersion=${BuildInfo.version}"))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withBody("""{
                   "not-plugins": [
                     {
                       "id": "nf-fake"
                     }
                   ]
                 }
-                """
-            }
-        }
+                """)))
 
         when:
         unit.prefetch([new PluginRef("nf-fake")])
@@ -175,19 +170,13 @@ class HttpPluginRepositoryTest extends Specification {
 
     def 'handle prefetch error caused by nextflow sending a bad request to metadata service'() {
         given:
-        wm.stub {
-            request {
-                method 'GET'
-                url "/v1/plugins/dependencies?plugins=nf-fake&nextflowVersion=${BuildInfo.version}"
-            }
-            response {
-                status 400
-                body """{
+        wiremock.stubFor(get(urlEqualTo("/v1/plugins/dependencies?plugins=nf-fake&nextflowVersion=${BuildInfo.version}"))
+            .willReturn(aResponse()
+                .withStatus(400)
+                .withBody("""{
                   "type": "SOME_ERROR",
                   "message": "Unparseable request"
-                }"""
-            }
-        }
+                }""")))
 
         when:
         unit.prefetch([new PluginRef("nf-fake")])
@@ -205,15 +194,11 @@ class HttpPluginRepositoryTest extends Specification {
         def utcDateStr = "2023-12-25T14:30:45Z"
         def estDateStr = "2023-06-15T09:15:30-05:00"
         def cestDateStr = "2023-08-10T16:45:00+02:00"
-        
-        wm.stub {
-            request {
-                method 'GET'
-                url "/v1/plugins/dependencies?plugins=date-test-plugin&nextflowVersion=${BuildInfo.version}"
-            }
-            response {
-                status 200
-                body """{
+
+        wiremock.stubFor(get(urlEqualTo("/v1/plugins/dependencies?plugins=date-test-plugin&nextflowVersion=${BuildInfo.version}"))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withBody("""{
                   "plugins": [
                     {
                       "id": "date-test-plugin",
@@ -251,9 +236,7 @@ class HttpPluginRepositoryTest extends Specification {
                     }
                   ]
                 }
-                """
-            }
-        }
+                """)))
 
         when:
         unit.prefetch([new PluginRef("date-test-plugin")])

@@ -28,7 +28,9 @@ class ProviderPathTest extends Specification {
     def 'should resolve with a github remote provider path' () {
 
         given:
-        def provider = Mock(RepositoryProvider)
+        def provider = Mock(RepositoryProvider) {
+            getContentUrl(_) >> { args -> "https://github.com/nf-core/sarek/${args[0]}" }
+        }
         def path = new ProviderPath(provider, 'nextflow.config')
 
         def MAIN_CONFIG = '''

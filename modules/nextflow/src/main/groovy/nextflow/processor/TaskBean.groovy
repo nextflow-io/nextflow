@@ -115,6 +115,8 @@ class TaskBean implements Serializable, Cloneable {
 
     List<Path> arrayInputFiles
 
+    Boolean stageFileEnabled
+
     @PackageScope
     TaskBean() {
         shell = BashWrapperBuilder.BASH
@@ -168,8 +170,8 @@ class TaskBean implements Serializable, Cloneable {
         this.binDirs = task.getProcessor().getBinDirs()
         this.stageInMode = task.config.getStageInMode()
         this.stageOutMode = task.config.getStageOutMode()
-
         this.resourceLabels = task.config.getResourceLabels()
+        this.stageFileEnabled = task.isStageFileEnabled()
 
         // job array
         if( task instanceof TaskArrayRun ) {

@@ -483,6 +483,8 @@ path x, name: 'my-dir/file.txt'
 In this case, `x.name` returns the file name with the parent directory (e.g. `my-dir/file.txt`), whereas normally it would return the file name (e.g. `file.txt`). You can use `x.fileName.name` to get the file name.
 :::
 
+(process-multiple-input-files)=
+
 ### Multiple input files
 
 A `path` input can also accept a collection of files instead of a single value. In this case, the input variable will be a list.
@@ -514,7 +516,7 @@ seq1 seq2 seq3
 ...
 ```
 
-The target input file name may contain the `*` and `?` wildcards, which can be used to control the name of staged files. The following table shows how the wildcards are replaced depending on the cardinality of the received input collection.
+The target input file name may contain the {index}`*` and {index}`?` wildcards, which can be used to control the name of staged files. The following table shows how the {index}`wildcards` are replaced depending on the cardinality of the received input collection.
 
 | Arity       | Name pattern | Staged file names                                                                                       |
 | ----------- | ------------ | ------------------------------------------------------------------------------------------------------- |
@@ -1348,7 +1350,7 @@ Many fields from the previous task attempts are accessible. See {ref}`trace-repo
 
 ### Dynamic retry with backoff
 
-There are cases in which the required execution resources may be temporary unavailable e.g. network congestion. In these cases immediately re-executing the task will likely result in the identical error. A retry with an exponential backoff delay can better recover these error conditions:
+There are cases in which the required execution resources may be temporarily unavailable e.g. network congestion. In these cases immediately re-executing the task will likely result in the identical error. A retry with an exponential backoff delay can better recover these error conditions:
 
 ```nextflow
 process hello {

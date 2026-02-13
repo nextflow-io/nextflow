@@ -53,6 +53,7 @@ class ConfigValidator {
     private static final List<String> CORE_PLUGIN_SCOPES = List.of(
         'aws',
         'azure',
+        'cloudcache',
         'google',
         'k8s',
         'tower',
@@ -106,16 +107,13 @@ class ConfigValidator {
                 names.clear()
 
             if( value instanceof Map ) {
-                log.debug "validate config block ${names}"
                 if( isSelector(key) )
                     names.removeLast()
-                log.debug "  is map option ${isMapOption(names)}"
                 if( isMapOption(names) )
                     continue
                 validate(value, names)
             }
             else {
-                log.debug "validate config option ${names}"
                 validateOption(names)
             }
         }
@@ -181,8 +179,11 @@ class ConfigValidator {
     }
 
     /**
-     * Determine whether a config option is a map option or a
-     * property thereof.
+     * Determine whether a config option is a map option.
+     *
+     * This method is needed to distinguish between config scopes
+     * and config options that happen to be maps, since this distinction
+     * is lost when the config is resolved.
      *
      * @param names
      */
@@ -193,7 +194,7 @@ class ConfigValidator {
 
     private static boolean isMapOption0(SpecNode.Scope scope, List<String> names) {
         final node = scope.getOption(names)
-        return node != null && node.type() == Map.class
+        return node != null && node.types().contains(Map.class)
     }
 
     /**

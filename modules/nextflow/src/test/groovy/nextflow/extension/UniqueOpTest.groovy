@@ -21,17 +21,19 @@ import nextflow.Channel
 import spock.lang.Timeout
 import test.Dsl2Spec
 
+import static test.ScriptHelper.*
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Timeout(10)
-class OperatorDsl2Test extends Dsl2Spec {
+@Timeout(5)
+class UniqueOpTest extends Dsl2Spec {
 
     def 'should test unique' () {
         when:
-        def channel = dsl_eval("""
-            Channel.of(1,2,3).unique()
+        def channel = runScript("""
+            channel.of(1,2,3).unique()
         """)
         then:
         channel.val == 1
@@ -42,8 +44,8 @@ class OperatorDsl2Test extends Dsl2Spec {
 
     def 'should test unique with value' () {
         when:
-        def channel = dsl_eval("""
-            Channel.value(1).unique()
+        def channel = runScript("""
+            channel.value(1).unique()
         """)
         then:
         channel.val == 1
@@ -51,11 +53,10 @@ class OperatorDsl2Test extends Dsl2Spec {
 
     def 'should test unique with collect' () {
         when:
-        def ch = dsl_eval("""
-            Channel.of( 'a', 'b', 'c')
+        def ch = runScript("""
+            channel.of( 'a', 'b', 'c')
               .collect()
               .unique()
-             .view()
             """)
        then:
        ch.val == ['a','b','c']

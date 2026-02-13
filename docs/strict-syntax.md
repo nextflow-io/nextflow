@@ -9,7 +9,15 @@ If you are still using DSL1, see {ref}`dsl1-page` to learn how to migrate your N
 :::
 
 :::{versionadded} 25.04.0
-The strict syntax can be enabled in Nextflow by setting the environment variable `NXF_SYNTAX_PARSER=v2`.
+To enable strict syntax, set the `NXF_SYNTAX_PARSER` environment variable to `v2`:
+
+```bash
+export NXF_SYNTAX_PARSER=v2
+```
+:::
+
+:::{versionchanged} 26.04.0
+The strict syntax is enabled by default. You can disable it by setting the environment variable `NXF_SYNTAX_PARSER=v1`.
 :::
 
 ## Overview
@@ -534,7 +542,7 @@ To enable these checks, set **Nextflow > Error reporting mode** to **paranoid** 
 
 ### Using params outside the entry workflow
 
-While params can be used anywhere in the pipeline code, they are only intended to be used in the entry workflow.
+While params can be used anywhere in the pipeline code, they are only intended to be used in the entry workflow and the `output` block.
 
 As a best practice, processes and workflows should receive params as explicit inputs:
 
@@ -568,7 +576,11 @@ The process {ref}`process-when` section is discouraged. As a best practice, cond
 ## Configuration syntax
 
 :::{versionadded} 25.04.0
-The strict config syntax can be enabled in Nextflow by setting the environment variable `NXF_SYNTAX_PARSER=v2`.
+To enable the {ref}`strict syntax <strict-syntax-page>`, set the `NXF_SYNTAX_PARSER` environment variable to `v2`:
+
+```bash
+export NXF_SYNTAX_PARSER=v2
+```
 :::
 
 See {ref}`Configuration <config-syntax>` for a comprehensive description of the configuration language.

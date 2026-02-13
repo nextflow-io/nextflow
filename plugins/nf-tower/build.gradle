@@ -15,12 +15,13 @@ plugins {
 }
 
 nextflowPlugin {
-    nextflowVersion = '25.09.2-edge'
+    nextflowVersion = '25.12.0-edge'
 
     provider = "${nextflowPluginProvider}"
     description = 'Integrates with Seqera Platform for comprehensive workflow monitoring, resource tracking, and cache management capabilities'
     className = 'io.seqera.tower.plugin.TowerPlugin'
     useDefaultDependencies = false
+    generateSpec = false
     extensionPoints = [
         'io.seqera.tower.plugin.TowerConfig',
         'io.seqera.tower.plugin.TowerFactory',
@@ -54,9 +55,9 @@ dependencies {
     api "com.fasterxml.jackson.core:jackson-databind:2.12.7.1"
 
     testImplementation(testFixtures(project(":nextflow")))
-    testImplementation "org.apache.groovy:groovy:4.0.29"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.29"
-    testImplementation "org.apache.groovy:groovy-json:4.0.29"
+    testImplementation "org.apache.groovy:groovy:4.0.30"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.30"
+    testImplementation "org.apache.groovy:groovy-json:4.0.30"
     // wiremock required by TowerFusionEnvTest
     testImplementation "org.wiremock:wiremock:3.13.1"
     // Address security vulnerabilities CVE-2022-45688 and CVE-2023-5072

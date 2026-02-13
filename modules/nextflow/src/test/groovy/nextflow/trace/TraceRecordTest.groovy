@@ -246,6 +246,8 @@ class TraceRecordTest extends Specification {
         record.cpus = 4
         record.time = 3_600_000L
         record.memory = 1024L * 1024L * 1024L * 8L
+        record.accelerator = 3
+        record.accelerator_type = 'v100'
 
         when:
         def json = new JsonSlurper().parseText(record.renderJson().toString())
@@ -261,6 +263,8 @@ class TraceRecordTest extends Specification {
         json.cpus == '4'
         json.time == '1h'
         json.memory == '8 GB'
+        json.accelerator == '3'
+        json.accelerator_type == 'v100'
 
     }
 
@@ -344,4 +348,29 @@ class TraceRecordTest extends Specification {
         then:
         thrown(NoSuchFileException)
     }
+
+    def 'should manage numSpotInterruptions and not persist it across serialization'() {
+        given:
+        def rec = new TraceRecord()
+
+        expect:
+        rec.getNumSpotInterruptions() == null
+        and:
+        rec.numSpotInterruptions ==  null
+
+        when:
+        rec.setNumSpotInterruptions(3)
+
+        then:
+        rec.getNumSpotInterruptions() == 3
+        rec.numSpotInterruptions == 3
+
+        when:
+        def buf = rec.serialize()
+        def rec2 = TraceRecord.deserialize(buf)
+
+        then:
+        rec2.getNumSpotInterruptions() == null
+    }
+
 }

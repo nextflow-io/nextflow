@@ -114,6 +114,28 @@ class ConfigValidatorTest extends Specification {
     def 'should support map options' () {
         when:
         new ConfigValidator().validate([
+            k8s: [
+                pod: [env: 'MESSAGE', value: 'hello world']
+            ]
+        ])
+        then:
+        !capture.toString().contains('Unrecognized config option')
+
+        when:
+        new ConfigValidator().validate([
+            process: [
+                publishDir: [
+                    path: { "results/foo" },
+                    mode: 'copy',
+                    saveAs: { filename -> filename }
+                ]
+            ]
+        ])
+        then:
+        !capture.toString().contains('Unrecognized config option')
+
+        when:
+        new ConfigValidator().validate([
             process: [
                 resourceLimits: [
                     cpus: 4,
@@ -124,6 +146,18 @@ class ConfigValidatorTest extends Specification {
         ])
         then:
         !capture.toString().contains('Unrecognized config option')
+    }
+
+    def 'should not validate core plugin config when plugin is not loaded' () {
+        when:
+        new ConfigValidator().validate([
+            cloudcache: [
+                enabled: true,
+                path: 's3://bucket/cache'
+            ]
+        ])
+        then:
+        !capture.toString().contains("Unrecognized config option 'cloudcache'")
     }
 
 }

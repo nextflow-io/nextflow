@@ -410,7 +410,8 @@ class TowerClient implements TraceObserverV2 {
         // wait and flush reports content
         reports.flowComplete()
         // notify the workflow completion
-        if( workflowId ) {
+        // note: only send complete if onFlowBegin was invoked (sender is set there)
+        if( workflowId && sender ) {
             final req = makeCompleteReq(session)
             final resp = sendHttpMessage(urlTraceComplete, req, 'PUT')
             logHttpResponse(urlTraceComplete, resp)
@@ -660,6 +661,7 @@ class TowerClient implements TraceObserverV2 {
         record.cloudZone = trace.getMachineInfo()?.zone
         record.machineType = trace.getMachineInfo()?.type
         record.priceModel = trace.getMachineInfo()?.priceModel?.toString()
+        record.numSpotInterruptions = trace.getNumSpotInterruptions()
 
         return record
     }

@@ -78,14 +78,13 @@ class FastaSplitterTest extends Specification {
                 IENY
                 """.stripIndent()
 
-        def count = 0
-        def q = new FastaSplitter().options(each:{ count++; it }).target(fasta).channel()
+        def result = new FastaSplitter().target(fasta).list()
 
         then:
-        count == 2
-        q.val == ">prot1\nLCLYTHIGRNIYYGS1\nEWIWGGFSVDKATLN\n"
-        q.val == ">prot2\nLLILILLLLLLALLS\nGLMPFLHTSKHRSMM\nIENY\n"
-        q.val == Channel.STOP
+        result == [
+            ">prot1\nLCLYTHIGRNIYYGS1\nEWIWGGFSVDKATLN\n",
+            ">prot2\nLLILILLLLLLALLS\nGLMPFLHTSKHRSMM\nIENY\n"
+        ]
 
     }
 
@@ -107,13 +106,14 @@ class FastaSplitterTest extends Specification {
                 """.stripIndent()
 
         when:
-        def q = new FastaSplitter().options(record: [id:true, seqString:true]).target(fasta) .channel()
+        def result = new FastaSplitter().options(record: [id:true, seqString:true]).target(fasta) .list()
 
         then:
-        q.val == [id:'1aboA', seqString: 'NLFVALYDFVASGDNTLSITKGEKLRVLGYNHNGEWCEAQTKNGQGWVPSNYITPVN']
-        q.val == [id:'1ycsB', seqString: 'KGVIYALWDYEPQNDDELPMKEGDCMTIIHREDEDEIEWWWARLNDKEGYVPRNLLGLYP']
-        q.val == [id:'1pht', seqString: 'GYQYRALYDYKKEREEDIDLHLGDILTVNKGSLVALGFSDGQEARPEEIGWLNGYNETTGERGDFPGTYVEYIGRKKISP']
-        q.val == Channel.STOP
+        result == [
+            [id:'1aboA', seqString: 'NLFVALYDFVASGDNTLSITKGEKLRVLGYNHNGEWCEAQTKNGQGWVPSNYITPVN'],
+            [id:'1ycsB', seqString: 'KGVIYALWDYEPQNDDELPMKEGDCMTIIHREDEDEIEWWWARLNDKEGYVPRNLLGLYP'],
+            [id:'1pht', seqString: 'GYQYRALYDYKKEREEDIDLHLGDILTVNKGSLVALGFSDGQEARPEEIGWLNGYNETTGERGDFPGTYVEYIGRKKISP']
+        ]
 
     }
 
