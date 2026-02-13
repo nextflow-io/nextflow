@@ -64,7 +64,7 @@ class AzFileAttributes implements BasicFileAttributes {
         // Support for Azure Data Lake Storage Gen2 with hierarchical namespace enabled
         final meta = props.getMetadata()
         if( meta.containsKey("hdi_isfolder") && size == 0 ){
-            directory = meta.get("hdi_isfolder")
+            directory = "true".equalsIgnoreCase(meta.get("hdi_isfolder") as String)
         }
     }
 
