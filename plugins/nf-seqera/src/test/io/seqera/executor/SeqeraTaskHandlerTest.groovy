@@ -422,6 +422,7 @@ class SeqeraTaskHandlerTest extends Specification {
         handler.submit()
 
         then:
+        1 * executor.ensureRunCreated()
         capturedTask != null
         capturedTask.getNextflow() != null
         capturedTask.getNextflow().getTaskId() == 42

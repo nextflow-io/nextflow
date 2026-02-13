@@ -55,14 +55,13 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
 
     private SchedClient client
 
-    private String runId
+    private volatile String runId
 
     private SeqeraBatchSubmitter batchSubmitter
 
     @Override
     protected void register() {
         createClient()
-        createRun()
     }
 
     @Override
@@ -154,6 +153,18 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
         if (!enabled)
             throw new AbortOperationException("Seqera executor requires the use of Fusion file system")
         return true
+    }
+
+    /**
+     * Lazily creates the run on first access, ensuring workflowId and labels
+     * are available (they are set by TowerClient.onFlowCreate before tasks are submitted).
+     */
+    void ensureRunCreated() {
+        if (runId) return
+        synchronized (this) {
+            if (runId) return
+            createRun()
+        }
     }
 
     SchedClient getClient() {

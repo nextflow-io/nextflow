@@ -31,7 +31,11 @@ import groovy.transform.ToString
 @EqualsAndHashCode
 class PlatformMetadata {
 
-    String workflowId
+    /**
+     * Volatile because it is written by TowerClient.onFlowCreate on the main thread
+     * and read by SeqeraExecutor.createRun on the executor thread.
+     */
+    volatile String workflowId
 
     PlatformMetadata() {}
 

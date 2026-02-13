@@ -88,6 +88,7 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
 
     @Override
     void submit() {
+        executor.ensureRunCreated()
         int cpuShares = (task.config.getCpus() ?: 1) * 1024
         int memoryMiB = task.config.getMemory() ? (int) (task.config.getMemory().toBytes() / (1024 * 1024)) : 1024
         final resourceReq = new ResourceRequirement()
