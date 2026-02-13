@@ -61,9 +61,7 @@ class AzBatchProcessObserver implements TraceObserver {
         }
 
         // Find and set auto-termination for all jobs associated with this processor
-        batchService.allJobIds.findAll { key, jobId ->
-            key.processor == processor
-        }.values().each { jobId ->
+        batchService.getJobIdsForProcessor(processor).each { jobId ->
             log.debug "Setting Azure Batch job ${jobId} to auto-terminate for completed process: ${processor.name}"
             try {
                 batchService.setJobTermination(jobId)

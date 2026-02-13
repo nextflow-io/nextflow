@@ -444,7 +444,7 @@ The following settings are available:
 `azure.batch.terminateJobsOnCompletion`
 : :::{versionadded} 23.05.0-edge
   :::
-: Set all jobs to terminate on task completion (default: `true`).
+: If `true`, Azure Batch jobs are set to auto-terminate when all their tasks complete. This happens eagerly after each task submission and at workflow completion (default: `true`).
 
 `azure.managedIdentity.clientId`
 : The client ID for an Azure [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview). Defaults to environment variable `AZURE_MANAGED_IDENTITY_USER`.

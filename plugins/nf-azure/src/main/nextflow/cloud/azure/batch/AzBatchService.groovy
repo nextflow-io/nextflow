@@ -23,6 +23,7 @@ import java.nio.file.Path
 import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeoutException
 import java.util.function.Predicate
 
@@ -86,6 +87,7 @@ import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.config.AzFileShareOpts
 import nextflow.cloud.azure.config.AzPoolOpts
 import nextflow.cloud.azure.config.AzStartTaskOpts
+import nextflow.processor.TaskProcessor
 import nextflow.cloud.azure.config.CopyToolInstallMode
 import nextflow.cloud.azure.nio.AzPath
 import nextflow.cloud.types.CloudMachineInfo
@@ -116,7 +118,7 @@ class AzBatchService implements Closeable {
 
     AzConfig config
 
-    Map<AzJobKey,String> allJobIds = new HashMap<>(50)
+    Map<AzJobKey,String> allJobIds = new ConcurrentHashMap<>(50)
 
     AzBatchService(AzBatchExecutor executor) {
         assert executor
@@ -578,7 +580,7 @@ class AzBatchService implements Closeable {
         final BatchTaskCreateContent taskToAdd = createTask(poolId, jobId, task)
         final AzTaskKey submitted = submitTaskToJob(poolId, jobId, task, taskToAdd)
         // Set auto-terminate so it does not consume quota after all tasks complete
-        setAutoTerminateIfEnabled(submitted.jobId, taskToAdd.getId())
+        setAutoTerminateIfEnabled(submitted.jobId)
         return submitted
     }
 
@@ -630,6 +632,16 @@ class AzBatchService implements Closeable {
     }
 
     /**
+     * Get the job IDs associated with a specific processor.
+     *
+     * @param processor The task processor to find jobs for
+     * @return A list of job IDs associated with the processor
+     */
+    List<String> getJobIdsForProcessor(TaskProcessor processor) {
+        allJobIds.findAll { key, jobId -> key.processor == processor }.values().toList()
+    }
+
+    /**
      * Configure job for auto-termination after task submission if enabled.
      * Sets job to terminate when all tasks complete, freeing quota immediately.
      *
@@ -639,7 +651,7 @@ class AzBatchService implements Closeable {
      *
      * Errors are logged but don't fail the task submission.
      */
-    protected void setAutoTerminateIfEnabled(String jobId, String taskId) {
+    protected void setAutoTerminateIfEnabled(String jobId) {
         if( !config.batch().terminateJobsOnCompletion )
             return
 
@@ -647,17 +659,17 @@ class AzBatchService implements Closeable {
             // Verify job has tasks before setting auto-terminate
             // Since this is called after task submission, there should be at least one task
             final tasks = apply(() -> client.listTasks(jobId))
-            final taskCount = tasks.size()
+            final hasTasks = tasks.iterator().hasNext()
 
-            if( taskCount > 0 ) {
-                log.trace "Setting job ${jobId} to auto-terminate (${taskCount} task(s) in job)"
+            if( hasTasks ) {
+                log.debug "Setting job ${jobId} to auto-terminate"
                 setJobTermination(jobId)
             } else {
-                log.trace "Deferring auto-terminate for job ${jobId} - no tasks found yet"
+                log.debug "Deferring auto-terminate for job ${jobId} - no tasks found yet"
             }
         }
         catch( Exception e ) {
-            log.trace "Failed to set auto-termination for job ${jobId} - ${e.message ?: e}"
+            log.debug "Failed to set auto-termination for job ${jobId} - ${e.message ?: e}"
         }
     }
 

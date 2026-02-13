@@ -1018,13 +1018,11 @@ class AzBatchServiceTest extends Specification {
         def exec = createExecutor(CONFIG)
         def service = Spy(new AzBatchService(exec))
         def jobId = 'test-job'
-        def taskId = 'test-task'
 
         when:
-        service.setAutoTerminateIfEnabled(jobId, taskId)
+        service.setAutoTerminateIfEnabled(jobId)
 
         then:
-        // Should query for tasks and find at least one
         1 * service.apply(_) >> [[state: 'ACTIVE']]
         noExceptionThrown()
     }
@@ -1035,15 +1033,12 @@ class AzBatchServiceTest extends Specification {
         def exec = createExecutor(CONFIG)
         def service = Spy(new AzBatchService(exec))
         def jobId = 'test-job'
-        def taskId = 'test-task'
 
         when:
-        service.setAutoTerminateIfEnabled(jobId, taskId)
+        service.setAutoTerminateIfEnabled(jobId)
 
         then:
-        // apply returns empty list - no tasks
         1 * service.apply(_) >> []
-        // setJobTermination should NOT be called
         0 * service.setJobTermination(_)
     }
 
@@ -1053,10 +1048,9 @@ class AzBatchServiceTest extends Specification {
         def exec = createExecutor(CONFIG)
         def service = Spy(new AzBatchService(exec))
         def jobId = 'test-job'
-        def taskId = 'test-task'
 
         when:
-        service.setAutoTerminateIfEnabled(jobId, taskId)
+        service.setAutoTerminateIfEnabled(jobId)
 
         then:
         0 * service.setJobTermination(_)
