@@ -42,12 +42,14 @@ import nextflow.util.MemoryUnit
 @CompileStatic
 class FusionConfig implements ConfigScope {
 
-    final static public String DEFAULT_FUSION_AMD64_URL = 'https://fusionfs.seqera.io/releases/v2.4-amd64.json'
-    final static public String DEFAULT_FUSION_ARM64_URL = 'https://fusionfs.seqera.io/releases/v2.4-arm64.json'
-    final static public String DEFAULT_SNAPSHOT_AMD64_URL = 'https://fusionfs.seqera.io/releases/v2.4-snap_amd64.json'
-    final static public String DEFAULT_SNAPSHOT_ARM64_URL = 'https://fusionfs.seqera.io/releases/v2.4-snap_arm64.json'
+    final static public String DEFAULT_FUSION_AMD64_URL = 'https://fusionfs.seqera.io/releases/v2.5-amd64.json'
+    final static public String DEFAULT_FUSION_ARM64_URL = 'https://fusionfs.seqera.io/releases/v2.5-arm64.json'
+    final static public String DEFAULT_SNAPSHOT_AMD64_URL = 'https://fusionfs.seqera.io/releases/v2.5-snap_amd64.json'
+    final static public String DEFAULT_SNAPSHOT_ARM64_URL = 'https://fusionfs.seqera.io/releases/v2.5-snap_arm64.json'
 
     final static public String DEFAULT_TAGS = "[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)"
+
+    final static public int DEFAULT_SNAPSHOT_MAX_SPOT_ATTEMPTS = 5
 
     final static public String FUSION_PATH = '/usr/bin/fusion'
 

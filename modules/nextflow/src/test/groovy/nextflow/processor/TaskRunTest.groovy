@@ -579,6 +579,28 @@ class TaskRunTest extends Specification {
         isNative
     }
 
+    def 'should check stage file enabled flag' () {
+
+        given:
+        def executor = Mock(Executor)
+        def task = Spy(TaskRun)
+        task.processor = Mock(TaskProcessor)
+
+        when:
+        def enabled = task.isStageFileEnabled()
+        then:
+        1 * task.processor.getExecutor() >> executor
+        1 * executor.isStageFileEnabled() >> false
+        !enabled
+
+        when:
+        enabled = task.isStageFileEnabled()
+        then:
+        1 * task.processor.getExecutor() >> executor
+        1 * executor.isStageFileEnabled() >> true
+        enabled
+    }
+
     def 'should check container enabled flag' () {
 
         given:
@@ -860,11 +882,13 @@ class TaskRunTest extends Specification {
         !task.isArray()
     }
 
+    // note: use `stubRun >> value` instead of `getStubRun() >> value` because
+    // Spock 2.4 requires property stubbing for direct property access (session.stubRun)
     def 'should resolve task body' () {
         given:
         def task = Spy(TaskRun)
         task.processor = Mock(TaskProcessor) {
-            getSession()>>Mock(Session) { getStubRun() >> false}
+            getSession()>>Mock(Session) { stubRun >> false}
         }
         and:
         def body = Mock(BodyDef)
@@ -880,7 +904,7 @@ class TaskRunTest extends Specification {
         given:
         def task = Spy(TaskRun)
         task.processor = Mock(TaskProcessor) {
-            getSession()>>Mock(Session) { getStubRun() >> true}
+            getSession()>>Mock(Session) { stubRun >> true}
         }
         task.config = Mock(TaskConfig) { getStubBlock()>> null }
         and:
@@ -901,7 +925,7 @@ class TaskRunTest extends Specification {
         def task = Spy(TaskRun)
         task.config = Mock(TaskConfig) { getStubBlock()>>stub }
         task.processor = Mock(TaskProcessor) {
-            getSession()>>Mock(Session) { getStubRun() >> true}
+            getSession()>>Mock(Session) { stubRun >> true}
         }
 
         when:

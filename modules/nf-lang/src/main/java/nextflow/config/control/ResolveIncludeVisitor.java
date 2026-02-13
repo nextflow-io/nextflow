@@ -76,6 +76,16 @@ public class ResolveIncludeVisitor extends ConfigVisitorSupport {
     }
 
     protected static URI getIncludeUri(URI uri, String source) {
+        // return source URI if it is already an absolute URI (e.g. http URL)
+        try {
+            var sourceUri = new URI(source);
+            if( sourceUri.getScheme() != null )
+                return sourceUri;
+        }
+        catch( Exception e ) {
+            // ignore
+        }
+        // otherwise, resolve the source path against the including URI
         return Path.of(uri).getParent().resolve(source).normalize().toUri();
     }
 

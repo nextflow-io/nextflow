@@ -123,6 +123,10 @@ class BitbucketRepositoryProviderTest extends Specification {
             .setRevision('test/tag/v2')
             .getContentUrl('main.nf') == 'https://api.bitbucket.org/2.0/repositories/pditommaso/tutorial/src/8f849beceb2ea479ef836809ca33d3daeeed25f9/main.nf'
 
+        and:
+        new BitbucketRepositoryProvider('pditommaso/tutorial', config)
+            .setRevision('test/branch+with&special-chars')
+            .getContentUrl('main.nf') == 'https://api.bitbucket.org/2.0/repositories/pditommaso/tutorial/src/755ba829cbc4f28dcb3c16b9dcc1c49c7ee47ff5/main.nf'
     }
 
     @Requires( { System.getenv('NXF_BITBUCKET_ACCESS_TOKEN') } )
@@ -171,6 +175,14 @@ class BitbucketRepositoryProviderTest extends Specification {
         then:
         !data.contains('world')
         data.contains('mundo')
+
+        when:
+        repo.setRevision('test/branch+with&special-chars')
+        and:
+        data = repo.readText('main.nf')
+        then:
+        data.contains('world')
+        !data.contains('WORLD')
     }
 
     @Unroll

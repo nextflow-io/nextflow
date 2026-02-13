@@ -65,8 +65,14 @@ class PluginsFacade implements PluginStateListener {
         root = getPluginsDir()
         indexUrl = getPluginsRegistryUrl()
         offline = env.get('NXF_OFFLINE') == 'true'
-        if( mode==DEV_MODE && root.toString()=='plugins' && !isRunningFromDistArchive() )
-            root = detectPluginsDevRoot()
+        if( mode==DEV_MODE && root.toString()=='plugins' ) {
+            // In dev mode with default 'plugins' path, try to detect the actual plugins directory
+            // by looking for the nextflow project root. This is needed when running tests via Gradle
+            // where classes are loaded from JARs but the plugins are in the project directory.
+            final detected = detectPluginsDevRoot0()
+            if( detected )
+                root = detected
+        }
         System.setProperty('pf4j.mode', mode)
     }
 
@@ -160,6 +166,24 @@ class PluginsFacade implements PluginStateListener {
     }
 
     /**
+     * Try to detect the development plugin root without throwing an exception.
+     *
+     * @return The nextflow plugins project path, or null if not found
+     */
+    protected Path detectPluginsDevRoot0() {
+        def file = new File('.').canonicalFile
+        while( file!=null ) {
+            final root = pluginsDevRoot(file)
+            if( root ) {
+                log.debug "Detected dev plugins root: $root"
+                return root
+            }
+            file = file.parentFile
+        }
+        return null
+    }
+
+    /**
      * Determine the development plugin root. This is required to
      * allow running unit tests for plugin projects importing the
      * nextflow core runtime.
@@ -168,18 +192,12 @@ class PluginsFacade implements PluginStateListener {
      * a sibling directory respect to the plugin project
      *
      * @return The nextflow plugins project path in the local file system
+     * @throws IllegalStateException if the plugins root cannot be detected
      */
     protected Path detectPluginsDevRoot() {
-        def file = new File('.').absoluteFile
-        do {
-            final root = pluginsDevRoot(file)
-            if( root ) {
-                log.debug "Detected dev plugins root: $root"
-                return root
-            }
-            file = file.parentFile
-        }
-        while( file!=null )
+        final root = detectPluginsDevRoot0()
+        if( root )
+            return root
         throw new IllegalStateException("Unable to detect local plugins root")
     }
 
@@ -255,7 +273,7 @@ class PluginsFacade implements PluginStateListener {
 
         log.debug "Setting up plugin manager > mode=${mode}; embedded=$embedded; plugins-dir=$root; core-plugins: ${defaultPlugins.toSortedString()}"
         // make sure plugins dir exists
-        if( mode!=DEV_MODE && !FilesEx.mkdirs(root) )
+        if( mode!=DEV_MODE && !FilesEx.exists(root) && !FilesEx.mkdirs(root) )
             throw new IOException("Unable to create plugins dir: $root")
 
         this.manager = createManager(root, embedded)

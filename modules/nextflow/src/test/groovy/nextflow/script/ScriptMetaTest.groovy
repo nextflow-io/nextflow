@@ -20,7 +20,6 @@ import java.nio.file.Files
 
 import groovy.transform.InheritConstructors
 import nextflow.NF
-import nextflow.exception.DuplicateModuleFunctionException
 import test.Dsl2Spec
 import test.TestHelper
 
@@ -164,19 +163,6 @@ class ScriptMetaTest extends Dsl2Spec {
 
     }
 
-    def 'should not throw a duplicate process name exception' () {
-        given:
-        def script = new FooScript(new ScriptBinding())
-        def meta = new ScriptMeta(script)
-        def comp1 = Mock(ComponentDef)
-
-        when:
-        meta.@imports.clear()
-        meta.addModule0(comp1)
-        then:
-        2 * comp1.getName() >> 'foo'
-    }
-
     def 'should get module bundle' () {
         given:
         def folder = TestHelper.createInMemTempDir()
@@ -201,47 +187,5 @@ class ScriptMetaTest extends Dsl2Spec {
         bundle.dockerfile == dockerPath
         bundle.getEntries() == ['foo.txt', 'bar.txt'] as Set
 
-    }
-
-    def 'should throw duplicate name exception' () {
-
-        given:
-        def script1 = new FooScript(new ScriptBinding())
-        def script2 = new FooScript(new ScriptBinding())
-        def meta1 = new ScriptMeta(script1)
-        def meta2 = new ScriptMeta(script2)
-
-        // import module into main script
-        def func2 = new FunctionDef(name: 'func1', alias: 'func1')
-        def proc2 = createProcessDef(script2, 'proc1')
-        def work2 = new WorkflowDef(name: 'work1')
-        meta2.addDefinition(proc2, func2, work2)
-
-        meta1.addModule(meta2, 'func1', null)
-        meta1.addModule(meta2, 'proc1', null)
-        meta1.addModule(meta2, 'work1', null)
-
-        // attempt to define duplicate components in main script
-        def func1 = new FunctionDef(name: 'func1', alias: 'func1')
-        def proc1 = createProcessDef(script1, 'proc1')
-        def work1 = new WorkflowDef(name: 'work1')
-
-        when:
-        meta1.addDefinition(func1)
-        then:
-        def e = thrown(DuplicateModuleFunctionException)
-        e.message.contains "A function named 'func1' is already defined"
-
-        when:
-        meta1.addDefinition(proc1)
-        then:
-        e = thrown(DuplicateModuleFunctionException)
-        e.message.contains "A process named 'proc1' is already defined"
-
-        when:
-        meta1.addDefinition(work1)
-        then:
-        e = thrown(DuplicateModuleFunctionException)
-        e.message.contains "A workflow named 'work1' is already defined"
     }
 }

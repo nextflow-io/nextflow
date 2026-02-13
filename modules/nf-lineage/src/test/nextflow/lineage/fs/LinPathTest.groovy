@@ -35,6 +35,8 @@ import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
 import test.OutputCapture
+
+import static test.TestHelper.filterLogNoise
 /**
  * LID Path Tests
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
@@ -89,12 +91,7 @@ class LinPathTest extends Specification {
     def 'should warn if query is specified'() {
         when:
         new LinPath(fs, new URI("lid://1234/hola?query"))
-        def stdout = capture
-            .toString()
-            .readLines()// remove the log part
-            .findResults { line -> !line.contains('DEBUG') ? line : null }
-            .findResults { line -> !line.contains('INFO') ? line : null }
-            .findResults { line -> !line.contains('plugin') ? line : null }
+        def stdout = filterLogNoise(capture)
 
         then:
         stdout.size() == 1

@@ -2,6 +2,7 @@ package nextflow.script
 
 import spock.lang.Specification
 
+import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
 import nextflow.exception.DuplicateChannelNameException
@@ -16,8 +17,8 @@ class ChannelOutTest extends Specification {
 
     def 'should get out by name' () {
         given:
-        def ch1 = Channel.value('a')
-        def ch2 = Channel.value('b')
+        def ch1 = new DataflowVariable() ; ch1.bind('a')
+        def ch2 = new DataflowVariable() ; ch2.bind('b')
 
         when:
         def out = new ChannelOut([foo:ch1, bar:ch2])

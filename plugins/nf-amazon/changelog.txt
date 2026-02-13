@@ -1,5 +1,22 @@
 nf-amazon changelog
 ===================
+3.7.0 - 8 Feb 2026
+- Fix isCompleted check in getNumSpotInterruptions (#6805) [76558481a]
+- Fix AWS Batch spot instance detection (#6722) [29356f60e]
+- Fix error when checking whether an S3 bucket exists (#6706) [c1bd552ab]
+- Remove isCompleted() from getNumSpotInterruptions (#6729) [24cc59e27]
+- Add aws.batch.forceGlacierTransfer config option (#6700) [e3bf3153b]
+
+3.6.0 - 19 Dec 2025
+- Add spot interruption tracking to trace records (#6606) [eecd81671]
+
+3.5.0 - 28 Nov 2025
+- Optimize exit code handling by relying on scheduler status for successful executions (#6484) [454a2ae85]
+
+3.4.2 - 28 Nov 2025
+- Fix incorrect AWS region when specifying a S3 regional endpoint (#6530) [770bdd3eb]
+- Fix unordered completed parts in AWS multipart upload (#6560) [89eb70130]
+
 3.4.1 - 22 Oct 2025
 - Fix no secrets in AWS Batch jobs (#6499) [c76c32582]
 - Simplify S3 configuration options (#6496) [0b7f18049]

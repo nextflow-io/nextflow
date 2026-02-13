@@ -221,7 +221,7 @@ See the {ref}`Kubernetes <k8s-page>` page to learn how to set up a Kubernetes cl
 
 ## Local
 
-The `local` executor is used by default. It runs the pipeline processes on the computer where Nextflow is launched. The processes are parallelised by spawning multiple threads, taking advantage of the multi-core architecture of the CPU.
+The `local` executor is used by default. It runs the pipeline processes on the computer where Nextflow is launched. The processes are parallelized by spawning multiple threads, taking advantage of the multi-core architecture of the CPU.
 
 The `local` executor is useful for developing and testing a pipeline script on your computer, before switching to a cluster or cloud environment with production data.
 
@@ -444,6 +444,10 @@ Nextflow does not provide direct support for SLURM multi-clusters. If you need t
 
 :::{versionadded} 23.07.0-edge
 Some SLURM clusters require memory allocations to be specified with `--mem-per-cpu` instead of `--mem`. You can specify `executor.perCpuMemAllocation = true` in the Nextflow configuration to enable this behavior. Nextflow will automatically compute the memory per CPU for each task (by default 1 CPU is used).
+:::
+
+:::{versionadded} 25.12.0-edge
+Since SLURM 24, `squeue` supports an `--only-job-state` option that ignores the partition (`-p`) or user (`-u`) filters. To enable this behavior, specify `executor.$slurm.onlyJobState = true` in your Nextflow configuration. If `SchedulerParameters=enable_job_state_cache` is enabled, you can expect improved Nextflow performance and reduced load on the SLURM controller. See [`enable_job_state_cache`](https://slurm.schedmd.com/slurm.conf.html#OPT_enable_job_state_cache) and [`--only-job-state`](https://slurm.schedmd.com/squeue.html#OPT_only-job-state) for more information.
 :::
 
 (tcs-executor)=

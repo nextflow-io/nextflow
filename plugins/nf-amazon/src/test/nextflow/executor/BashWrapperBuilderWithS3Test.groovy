@@ -65,7 +65,7 @@ class BashWrapperBuilderWithS3Test extends Specification {
 
         binding.helpers_script == '''\
             # aws cli retry config
-            export AWS_RETRY_MODE=standard 
+            export AWS_RETRY_MODE=standard
             export AWS_MAX_ATTEMPTS=5
             # aws helper
             nxf_s3_upload() {
@@ -87,7 +87,7 @@ class BashWrapperBuilderWithS3Test extends Specification {
                 local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
                 if [[ $is_dir == 1 ]]; then
                     aws s3 cp --only-show-errors --recursive "$source" "$target"
-                else 
+                else
                     aws s3 cp --only-show-errors "$source" "$target"
                 fi
             }
@@ -207,7 +207,7 @@ class BashWrapperBuilderWithS3Test extends Specification {
                 local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
                 if [[ $is_dir == 1 ]]; then
                     aws s3 cp --only-show-errors --recursive "$source" "$target"
-                else 
+                else
                     aws s3 cp --only-show-errors "$source" "$target"
                 fi
             }

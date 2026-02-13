@@ -17,9 +17,7 @@ package nextflow.processor
 
 import static nextflow.processor.ErrorStrategy.*
 
-import java.lang.reflect.InvocationTargetException
 import java.nio.file.FileSystems
-import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -29,7 +27,6 @@ import java.util.regex.Pattern
 
 import ch.artecat.grengine.Grengine
 import com.google.common.hash.HashCode
-import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
@@ -62,8 +59,6 @@ import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessRetryableException
 import nextflow.exception.ProcessSubmitTimeoutException
 import nextflow.exception.ProcessUnrecoverableException
-import nextflow.exception.ShowOnlyExceptionMessage
-import nextflow.exception.UnexpectedException
 import nextflow.executor.CachedTaskHandler
 import nextflow.executor.Executor
 import nextflow.executor.StoredTaskHandler
@@ -72,8 +67,6 @@ import nextflow.extension.DataflowHelper
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.file.FilePorter
-import nextflow.plugin.Plugins
-import nextflow.processor.tip.TaskTipProvider
 import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
@@ -104,11 +97,9 @@ import nextflow.script.params.v2.ProcessInput
 import nextflow.script.params.v2.ProcessTupleInput
 import nextflow.script.types.Types
 import nextflow.trace.TraceRecord
-import nextflow.util.CacheHelper
 import nextflow.util.Escape
 import nextflow.util.HashBuilder
 import nextflow.util.LockManager
-import nextflow.util.LoggerHelper
 import nextflow.util.TestOnly
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
@@ -375,14 +366,6 @@ class TaskProcessor {
     int getMaxForks() { maxForks }
 
     boolean hasErrors() { errorCount>0 }
-
-    @Memoized
-    protected TaskTipProvider getTipProvider() {
-        final provider = Plugins.getPriorityExtensions(TaskTipProvider).find(it-> it.enabled())
-        if( !provider )
-            throw new IllegalStateException("Unable to find any tip provider")
-        return provider
-    }
 
     boolean isSingleton() { singleton }
 
@@ -684,7 +667,7 @@ class TaskProcessor {
         // -- download foreign files
         session.filePorter.transfer(foreignFiles)
 
-        def hash = createTaskHashKey(task)
+        final hash = new TaskHasher(task).compute()
         checkCachedOrLaunchTask(task, hash, resumable)
     }
 
@@ -1125,22 +1108,23 @@ class TaskProcessor {
             }
 
             def dumpStackTrace = log.isTraceEnabled()
+            def errorFormatter = new TaskErrorFormatter()
             message << "Error executing process > '${safeTaskName(task)}'"
             switch( error ) {
                 case ProcessException:
-                    formatTaskError( message, error, task )
+                    errorFormatter.formatTaskError( message, error, task )
                     break
 
                 case ProcessEvalException:
-                    formatCommandError( message, error, task )
+                    errorFormatter.formatCommandError( message, error, task )
                     break
 
                 case FailedGuardException:
-                    formatGuardError( message, error as FailedGuardException, task )
+                    errorFormatter.formatGuardError( message, error as FailedGuardException, task )
                     break;
 
                 default:
-                    message << formatErrorCause(error)
+                    message << errorFormatter.formatErrorCause(error)
                     dumpStackTrace = true
             }
 
@@ -1206,139 +1190,6 @@ class TaskProcessor {
         return action
     }
 
-    final protected List<String> formatCommandError(List<String> message, ProcessEvalException error, TaskRun task) {
-        // compose a readable error message
-        message << formatErrorCause(error)
-
-        // - print the executed command
-        message << "Command executed:\n"
-        error.command.stripIndent(true)?.trim()?.eachLine {
-            message << "  ${it}"
-        }
-
-        // - the exit status
-        message << "\nCommand exit status:\n  ${error.status}"
-
-        // - the tail of the process stdout
-        message << "\nCommand output:"
-        def lines = error.output.readLines()
-        if( lines.size() == 0 ) {
-            message << "  (empty)"
-        }
-        for( String it : lines ) {
-            message << "  ${stripWorkDir(it, task.workDir)}"
-        }
-
-        if( task?.workDir )
-            message << "\nWork dir:\n  ${task.workDirStr}"
-
-        return message
-    }
-
-    final protected List<String> formatGuardError( List<String> message, FailedGuardException error, TaskRun task ) {
-        // compose a readable error message
-        message << formatErrorCause(error)
-
-        if( error.source )  {
-            message << "\nWhen block:"
-            error.source.stripIndent(true).eachLine {
-                message << "  $it"
-            }
-        }
-
-        if( task?.workDir )
-            message << "\nWork dir:\n  ${task.workDirStr}"
-
-        return message
-    }
-
-    final protected List<String> formatTaskError( List<String> message, Throwable error, TaskRun task ) {
-
-        // compose a readable error message
-        message << formatErrorCause( error )
-
-        /*
-         * task executing scriptlets
-         */
-        if( task?.script ) {
-            // - print the executed command
-            message << "Command executed${task.template ? " [$task.template]": ''}:\n"
-            task.script?.stripIndent(true)?.trim()?.eachLine {
-                message << "  ${it}"
-            }
-
-            // - the exit status
-            message << "\nCommand exit status:\n  ${task.exitStatus != Integer.MAX_VALUE ? task.exitStatus : '-'}"
-
-            // - the tail of the process stdout
-            message << "\nCommand output:"
-            final max = 50
-            def lines = task.dumpStdout(max)
-            if( lines.size() == 0 ) {
-                message << "  (empty)"
-            }
-            for( String it : lines ) {
-                message << "  ${stripWorkDir(it, task.workDir)}"
-            }
-
-            // - the tail of the process stderr
-            lines = task.dumpStderr(max)
-            if( lines ) {
-                message << "\nCommand error:"
-                for( String it : lines ) {
-                    message << "  ${stripWorkDir(it, task.workDir)}"
-                }
-            }
-            // - this is likely a task wrapper issue
-            else if( task.exitStatus != 0 ) {
-                lines = task.dumpLogFile(max)
-                if( lines ) {
-                    message << "\nCommand wrapper:"
-                    for( String it : lines ) {
-                        message << "  ${stripWorkDir(it, task.workDir)}"
-                    }
-                }
-            }
-
-        }
-        else {
-            if( task?.source )  {
-                message << "Source block:"
-                task.source.stripIndent(true).eachLine {
-                    message << "  $it"
-                }
-            }
-
-        }
-
-        if( task?.workDir )
-            message << "\nWork dir:\n  ${task.workDirStr}"
-
-        if( task?.isContainerEnabled() )
-            message << "\nContainer:\n  ${task.container}".toString()
-
-        message << suggestTip(message)
-
-        return message
-    }
-
-    private String suggestTip(List<String> message) {
-        try {
-            return "\nTip: ${getTipProvider().suggestTip(message)}"
-        }
-        catch (Exception e) {
-            log.debug "Unable to get tip for task message: $message", e
-            return ''
-        }
-    }
-
-    private static String stripWorkDir(String line, Path workDir) {
-        if( workDir==null ) return line
-        if( workDir.fileSystem != FileSystems.default ) return line
-        return workDir ? line.replace(workDir.toString()+'/','') : line
-    }
-
-
     /**
      * Send a poison pill over all the outputs channel
      */
@@ -1361,49 +1212,6 @@ class TaskProcessor {
                 channel.bind( PoisonPill.instance )
             }
         }
-    }
-
-    private String formatErrorCause( Throwable error ) {
-
-        def result = new StringBuilder()
-        result << '\nCaused by:\n'
-
-        def message
-        if( error instanceof ShowOnlyExceptionMessage || !error.cause )
-            message = err0(error)
-        else
-            message = err0(error.cause)
-
-        for( String line : message.readLines() ) {
-            result << '  ' << line << '\n'
-        }
-
-        result
-            .append('\n')
-            .toString()
-    }
-
-
-    static String err0(Throwable e) {
-        final fail = e instanceof InvocationTargetException ? e.targetException : e
-
-        if( fail instanceof NoSuchFileException ) {
-            return "No such file or directory: $fail.message"
-        }
-        if( fail instanceof MissingPropertyException ) {
-            def name = fail.property ?: LoggerHelper.getDetailMessage(fail)
-            def result = "No such variable: ${name}"
-            def details = LoggerHelper.findErrorLine(fail)
-            if( details )
-                result += " -- Check script '${details[0]}' at line: ${details[1]}"
-            return result
-        }
-        def result = fail.message ?: fail.toString()
-        def details = LoggerHelper.findErrorLine(fail)
-        if( details ){
-            result += " -- Check script '${details[0]}' at line: ${details[1]}"
-        }
-        return result
     }
 
     /**
@@ -2024,146 +1832,6 @@ class TaskProcessor {
         task.setInput(param, value)
     }
 
-    final protected HashCode createTaskHashKey(TaskRun task) {
-
-        List keys = [ session.uniqueId, name, task.source ]
-
-        if( task.isContainerEnabled() )
-            keys << task.getContainerFingerprint()
-
-        // add all the input name-value pairs to the key generator
-        for( Map.Entry<InParam,Object> it : task.inputs ) {
-            keys.add( it.key.name )
-            keys.add( it.value )
-        }
-
-        // add eval output commands to the hash for proper cache invalidation (fixes issue #5470)
-        final outEvals = task.getOutputEvals()
-        if( outEvals ) {
-            keys.add("eval_outputs")
-            keys.add(computeEvalOutputsContent(outEvals))
-        }
-
-        // add all variable references in the task script but not declared as input/output
-        def vars = getTaskGlobalVars(task)
-        if( vars ) {
-            log.trace "Task: $name > Adding script vars hash code: ${vars}"
-            keys.add(vars.entrySet())
-        }
-
-        final binEntries = getTaskBinEntries(task.source)
-        if( binEntries ) {
-            log.trace "Task: $name > Adding scripts on project bin path: ${-> binEntries.join('; ')}"
-            keys.addAll(binEntries)
-        }
-
-        final modules = task.getConfig().getModule()
-        if( modules ) {
-            keys.addAll(modules)
-        }
-        
-        final conda = task.getCondaEnv()
-        if( conda ) {
-            keys.add(conda)
-        }
-
-        final spack = task.getSpackEnv()
-        final arch = task.getConfig().getArchitecture()
-
-        if( spack ) {
-            keys.add(spack)
-
-            if( arch ) {
-                keys.add(arch)
-            }
-        }
-
-        if( session.stubRun && task.config.getStubBlock() ) {
-            keys.add('stub-run')
-        }
-
-        final mode = config.getHashMode()
-        final hash = computeHash(keys, mode)
-        if( session.dumpHashes ) {
-            session.dumpHashes=='json'
-                ? traceInputsHashesJson(task, keys, mode, hash)
-                : traceInputsHashes(task, keys, mode, hash)
-        }
-        return hash
-    }
-
-    HashCode computeHash(List keys, CacheHelper.HashMode mode) {
-        try {
-            return CacheHelper.hasher(keys, mode).hash()
-        }
-        catch (Throwable e) {
-            final msg = "Something went wrong while creating task '$name' unique id -- Offending keys: ${ keys.collect {"\n - type=${it.getClass().getName()} value=$it"} }"
-            throw new UnexpectedException(msg,e)
-        }
-    }
-
-
-    /**
-     * This method scans the task command string looking for invocations of scripts
-     * defined in the project bin folder.
-     *
-     * @param script The task command string
-     * @return The list of paths of scripts in the project bin folder referenced in the task command
-     */
-    @Memoized
-    List<Path> getTaskBinEntries(String script) {
-        List<Path> result = []
-        def tokenizer = new StringTokenizer(script," \t\n\r\f()[]{};&|<>`")
-        while( tokenizer.hasMoreTokens() ) {
-            def token = tokenizer.nextToken()
-            def path = session.binEntries.get(token)
-            if( path )
-                result.add(path)
-        }
-        return result
-    }
-
-    private void traceInputsHashesJson( TaskRun task, List entries, CacheHelper.HashMode mode, hash ) {
-        final collector = (item) -> [
-            hash: CacheHelper.hasher(item, mode).hash().toString(),
-            type: item?.getClass()?.getName(),
-            value: item?.toString()
-        ]
-        final json = JsonOutput.toJson(entries.collect(collector))
-        log.info "[${safeTaskName(task)}] cache hash: ${hash}; mode: ${mode}; entries: ${JsonOutput.prettyPrint(json)}"
-    }
-
-    private void traceInputsHashes( TaskRun task, List entries, CacheHelper.HashMode mode, hash ) {
-
-        def buffer = new StringBuilder()
-        buffer.append("[${safeTaskName(task)}] cache hash: ${hash}; mode: $mode; entries: \n")
-        for( Object item : entries ) {
-            buffer.append( "  ${CacheHelper.hasher(item, mode).hash()} [${item?.getClass()?.getName()}] $item \n")
-        }
-
-        log.info(buffer.toString())
-    }
-
-    Map<String,Object> getTaskGlobalVars(TaskRun task) {
-        final result = task.getGlobalVars(ownerScript.binding)
-        final directives = getTaskExtensionDirectiveVars(task)
-        result.putAll(directives)
-        return result
-    }
-
-    protected Map<String,Object> getTaskExtensionDirectiveVars(TaskRun task) {
-        final variableNames = task.getVariableNames()
-        final result = new HashMap(variableNames.size())
-        final taskConfig = task.config
-        for( String key : variableNames ) {
-            if( !key.startsWith('task.ext.') ) continue
-            final value = taskConfig.eval(key.substring(5))
-            result.put(key, value)
-        }
-
-        return result
-    }
-
     /**
      * Execute the specified task shell script
      *
@@ -2457,43 +2125,5 @@ class TaskProcessor {
             // return `true` to terminate the dataflow processor
             handleException( error, currentTask.get() )
         }
-    }
-
-    /**
-     * Compute a deterministic string representation of eval output commands for cache hashing.
-     * This method creates a consistent hash key based on the semantic names and command values
-     * of eval outputs, ensuring cache invalidation when eval outputs change.
-     *
-     * @param outEvals Map of eval parameter names to their command strings
-     * @return A concatenated string of "name=command" pairs, sorted for deterministic hashing
-     */
-    protected String computeEvalOutputsContent(Map<String, String> outEvals) {
-        // Assert precondition that outEvals should not be null or empty when this method is called
-        assert outEvals != null && !outEvals.isEmpty(), "Eval outputs should not be null or empty"
-        
-        final result = new StringBuilder()
-        
-        // Sort entries by key for deterministic ordering. This ensures that the same set of
-        // eval outputs always produces the same hash regardless of map iteration order,
-        // which is critical for cache consistency across different JVM runs.
-        // Without sorting, HashMap iteration order can vary between executions, leading to
-        // different cache keys for identical eval output configurations and causing
-        // unnecessary cache misses and task re-execution
-        final sortedEntries = outEvals.entrySet().sort { a, b -> a.key.compareTo(b.key) }
-        
-        // Build content using for loop to concatenate "name=command" pairs.
-        // This creates a symmetric pattern with input parameter hashing where both
-        // the parameter name and its value contribute to the cache key
-        for( Map.Entry<String, String> entry : sortedEntries ) {
-            // Add newline separator between entries for readability in debug scenarios
-            if( result.length() > 0 ) {
-                result.append('\n')
-            }
-            // Format: "semantic_name=bash_command" - both name and command value are
-            // included because changing either should invalidate the task cache
-            result.append(entry.key).append('=').append(entry.value)
-        }
-        
-        return result.toString()
     }
 }

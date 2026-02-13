@@ -112,6 +112,8 @@ class AzureRepositoryProviderTest extends Specification {
 
         expect:
         new AzureRepositoryProvider('t-neumann/hello', obj).setRevision("a-branch").getContentUrl('main.nf') == 'https://dev.azure.com/t-neumann/hello/_apis/git/repositories/hello/items?download=false&includeContent=true&includeContentMetadata=false&api-version=6.0&\$format=json&path=main.nf&versionDescriptor.version=a-branch'
+        and:
+        new AzureRepositoryProvider('t-neumann/hello', obj).setRevision("test/branch+with&strangecharacters").getContentUrl('main.nf') == 'https://dev.azure.com/t-neumann/hello/_apis/git/repositories/hello/items?download=false&includeContent=true&includeContentMetadata=false&api-version=6.0&\$format=json&path=main.nf&versionDescriptor.version=test%2Fbranch%2Bwith%26strangecharacters'
     }
 
     /*
@@ -133,6 +135,8 @@ class AzureRepositoryProviderTest extends Specification {
         def result = repo.readText('main.nf')
         then:
         result == 'println "Hello from Azure repos!"'
+
+
     }
 
     @IgnoreIf({System.getenv('NXF_SMOKE')})
@@ -189,6 +193,7 @@ class AzureRepositoryProviderTest extends Specification {
                 new RepositoryProvider.BranchInfo('dev', 'cc0ca18640a5c995231e22d91f1527d5155d024b'),
                 new RepositoryProvider.BranchInfo('feature-x', '13456a001ba5a27d643755614ab8e814d94ef888'),
                 new RepositoryProvider.BranchInfo('master', 'a207636e419f18c4b8c8586b00e329ab4788a7f5'),
+                new RepositoryProvider.BranchInfo('test/branch+with&special-chars','a207636e419f18c4b8c8586b00e329ab4788a7f5')
         ]
     }
 
@@ -225,6 +230,15 @@ class AzureRepositoryProviderTest extends Specification {
         def result = repo.readText('file-on-dev.txt')
         then:
         result=='hello\n'
+
+        when:
+        // check revision with special branches
+        repo = new AzureRepositoryProvider('pditommaso/nf-azure-repo', config)
+        repo.revision = 'test/branch+with&special-chars'
+        result = repo.readText('main.nf')
+        then:
+        result == 'println "Hello from Azure repos!"'
+
     }
 
     @IgnoreIf({System.getenv('NXF_SMOKE')})
