@@ -220,6 +220,8 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		Preconditions.checkArgument(path instanceof S3Path, "path must be an instance of %s", S3Path.class.getName());
 		S3Path s3Path = (S3Path)path;
 
+		boolean createNew = false;
+
 		// validate options
 		if (options.length > 0) {
 			Set<OpenOption> opts = new LinkedHashSet<>(Arrays.asList(options));
@@ -234,7 +236,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 			}
 
 			boolean create = opts.remove(StandardOpenOption.CREATE);
-			boolean createNew = opts.remove(StandardOpenOption.CREATE_NEW);
+			createNew = opts.remove(StandardOpenOption.CREATE_NEW);
 			boolean truncateExisting = opts.remove(StandardOpenOption.TRUNCATE_EXISTING);
 
 			// remove irrelevant/ignored options
@@ -258,7 +260,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 			}
 		}
 
-		return createUploaderOutputStream(s3Path);
+		return createUploaderOutputStream(s3Path, createNew);
 	}
 
 	@Override
@@ -333,7 +335,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		}
 	}
 
-	private S3OutputStream createUploaderOutputStream( S3Path fileToUpload ) {
+	private S3OutputStream createUploaderOutputStream( S3Path fileToUpload, boolean createNew ) {
 		S3Client s3 = fileToUpload.getFileSystem().getClient();
 		Properties props = fileToUpload.getFileSystem().properties();
 
@@ -346,7 +348,8 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 				.setStorageEncryption(props.getProperty("storage_encryption"))
 				.setKmsKeyId(props.getProperty("storage_kms_key_id"))
 				.setContentType(fileToUpload.getContentType())
-				.setTags(fileToUpload.getTagsList());
+				.setTags(fileToUpload.getTagsList())
+				.setCreateNew(createNew);
 		return stream;
 	}
 

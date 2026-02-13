@@ -24,18 +24,17 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.ByteBuffer;
+import java.nio.file.FileAlreadyExistsException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Base64;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Queue;
+import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Phaser;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -145,6 +144,11 @@ public final class S3OutputStream extends OutputStream {
 
     private ObjectCannedACL cannedAcl;
 
+    /**
+     * When true, uses If-None-Match precondition for atomic CREATE_NEW semantics
+     */
+    private boolean createNew;
+
     private List<Tag> tags;
 
     private final AtomicInteger bufferCounter = new AtomicInteger();
@@ -204,6 +208,11 @@ public final class S3OutputStream extends OutputStream {
 
     public S3OutputStream setContentType(String type) {
         this.contentType = type;
+        return this;
+    }
+
+    public S3OutputStream setCreateNew(boolean createNew) {
+        this.createNew = createNew;
         return this;
     }
 
@@ -622,6 +631,13 @@ public final class S3OutputStream extends OutputStream {
         if( contentType != null ) {
             reqBuilder.contentType(contentType);
         }
+
+        if( createNew ) {
+            // Use If-None-Match: * for atomic CREATE_NEW semantics
+            // This ensures the object doesn't exist before upload
+            reqBuilder.ifNoneMatch("*");
+        }
+
         PutObjectRequest request = reqBuilder.build();
         if( log.isTraceEnabled() ) {
             log.trace("S3 putObject {}", request);
@@ -629,6 +645,12 @@ public final class S3OutputStream extends OutputStream {
 
         try {
             s3.putObject(request, RequestBody.fromInputStream(content, contentLength));
+        } catch (final AwsServiceException e) {
+            // S3 returns 412 Precondition Failed when If-None-Match fails
+            if (createNew && (e.statusCode() == 412 || e.statusCode() == 409)) {
+                log.debug("Failed with precondition "+ e.statusCode());
+                throw new FileAlreadyExistsException(objectId.toString());
+            }
         } catch (final SdkException e) {
             throw new IOException("Failed to put data into Amazon S3 object", e);
         }

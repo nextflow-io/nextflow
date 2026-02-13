@@ -97,6 +97,7 @@ import nextflow.script.params.v2.ProcessInput
 import nextflow.script.params.v2.ProcessTupleInput
 import nextflow.script.types.Types
 import nextflow.trace.TraceRecord
+import nextflow.util.GlobalCacheLockManager
 import nextflow.util.Escape
 import nextflow.util.HashBuilder
 import nextflow.util.LockManager
@@ -822,8 +823,8 @@ class TaskProcessor {
                 continue
             }
 
-            final lock = lockManager.acquire(hash)
             final workDir = task.getWorkDirFor(hash)
+            final lock = lockManager.acquire(hash)
             try {
                 if( resumeDir != workDir )
                     exists = workDir.exists()
@@ -831,18 +832,59 @@ class TaskProcessor {
                     tries++
                     continue
                 }
-                else if( !workDir.mkdirs() )
-                    throw new IOException("Unable to create directory=$workDir -- check file system permissions")
+                else {
+                    // In global cache two pipelines could reach this point at same time.
+                    if ( !safeCheckAndCreateDir(workDir, hash) ){
+                        tries++
+                        continue
+                    }
+                }
             }
             finally {
                 lock.release()
             }
 
             // submit task for execution
-            submitTask( task, hash, workDir )
+            submitTask(task, hash, workDir)
             break
         }
 
+    }
+    /**
+     * This method provides a safe creation of a task workdir
+     *
+     * When using global cache, as workdirs are shared two pipelines could reach this point at same time when trying to run the same tasks at first time.
+     * This method uses the GlobalCacheLock manager to ensure this pipeline is the one creating the task workdir.
+     *
+     * It will return true if the process has successfully created the workdir, otherwise returns false or throws and exception
+     *
+     * @param workDir Task working dir
+     * @param hash Task hash as string
+     * @return
+     */
+    private boolean safeCheckAndCreateDir(workDir, hash) {
+        if( session.uniqueId == new UUID(0L, 0L) ) {
+            final lock = new GlobalCacheLockManager(session.workDir).acquire(hash.toString())
+            try {
+                // Another pipeline is creating the workdir
+                if( lock == null ) {
+                    return false
+                }
+                //Must check again in case another process has created before acquiring the lock
+                if( workDir.exists() ) {
+                    return false
+                }
+                if( !workDir.mkdirs() )
+                    throw new IOException("Unable to create directory=$workDir -- check file system permissions")
+                return true
+            } finally {
+                lock.release()
+            }
+        } else {
+            if( !workDir.mkdirs() )
+                    throw new IOException("Unable to create directory=$workDir -- check file system permissions")
+                return true
+        }
     }
 
     /**
