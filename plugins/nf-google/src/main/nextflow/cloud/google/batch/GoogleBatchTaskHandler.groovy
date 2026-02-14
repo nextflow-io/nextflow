@@ -313,6 +313,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             .setImageUri(task.container)
             .addAllCommands(cmd)
             .addAllVolumes(launcher.getContainerMounts())
+            .setEnableImageStreaming(batchConfig?.enableImageStreaming ?: false)
 
         def containerOptions = task.config.getContainerOptions() ?: ''
         if( fusionEnabled() ) {

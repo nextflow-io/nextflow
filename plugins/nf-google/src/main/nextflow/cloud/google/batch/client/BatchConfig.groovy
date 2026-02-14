@@ -92,6 +92,15 @@ class BatchConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
+        Enable container image streaming for faster startup. process.containerOptions
+        is ignored when image streaming is enabled. See
+        [documentation](https://docs.cloud.google.com/batch/docs/use-image-streaming)
+        for a full list of other limitations (default: `false`).
+    """)
+    final boolean enableImageStreaming
+
+    @ConfigOption
+    @Description("""
         Max number of execution attempts of a job interrupted by a Compute Engine Spot reclaim event (default: `0`).
     """)
     final int maxSpotAttempts
@@ -148,6 +157,7 @@ class BatchConfig implements ConfigScope {
         gcsfuseOptions = opts.gcsfuseOptions as List<String> ?: DEFAULT_GCSFUSE_OPTS
         installGpuDrivers = opts.installGpuDrivers as boolean
         logsPath = opts.logsPath
+        enableImageStreaming = opts.enableImageStreaming != null ? opts.enableImageStreaming as boolean : false
         maxSpotAttempts = opts.maxSpotAttempts != null ? opts.maxSpotAttempts as int : DEFAULT_MAX_SPOT_ATTEMPTS
         network = opts.network
         networkTags = opts.networkTags as List<String> ?: Collections.emptyList()
