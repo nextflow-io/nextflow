@@ -971,6 +971,13 @@ The following settings are available:
 : The Google Cloud Storage path where job logs should be stored, e.g. `gs://my-logs-bucket/logs`.
 : When specified, Google Batch will write job logs to this location instead of [Cloud Logging](https://cloud.google.com/logging/docs). The bucket must be accessible and writable by the service account.
 
+`google.batch.enableImageStreaming`
+: :::{versionadded} 26.02.1-edge
+  :::
+: Enable container image streaming to speed up job start-up (default: `false`). This can reduce latency for large images but comes with some
+[limitations](https://docs.cloud.google.com/batch/docs/use-image-streaming).
+: Notably, `process.containerOptions` is ignored when image streaming is enabled.
+
 `google.batch.maxSpotAttempts`
 : :::{versionadded} 23.11.0-edge
   :::
