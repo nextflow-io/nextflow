@@ -98,6 +98,13 @@ class AnsiLogObserver implements TraceObserverV2 {
 
     private Boolean enableSummary = SysEnv.get('NXF_ANSI_SUMMARY') as Boolean
 
+    /**
+     * Enable/disable OSC 9;4 terminal progress bar.
+     * Defaults to true. Set NXF_OSC_PROGRESS=false to disable
+     * (e.g. for iTerm2 which uses OSC 9;4 for notifications).
+     */
+    private boolean enableOscProgress = SysEnv.get('NXF_OSC_PROGRESS') != 'false'
+
     private final int WARN_MESSAGE_TIMEOUT = 35_000
 
     private WorkflowStatsObserver statsObserver
@@ -380,6 +387,8 @@ class AnsiLogObserver implements TraceObserverV2 {
      * Calculate aggregate workflow progress and emit OSC 9;4 sequence
      */
     protected void renderTerminalProgress(WorkflowStats stats) {
+        if( !enableOscProgress )
+            return
         final processes = stats.getProcesses()
         if( !processes )
             return
@@ -410,6 +419,8 @@ class AnsiLogObserver implements TraceObserverV2 {
      * Clear terminal progress bar (set to hidden)
      */
     protected void clearTerminalProgress() {
+        if( !enableOscProgress )
+            return
         AnsiConsole.out.print(oscProgress(PROGRESS_HIDDEN, 0))
         AnsiConsole.out.flush()
     }

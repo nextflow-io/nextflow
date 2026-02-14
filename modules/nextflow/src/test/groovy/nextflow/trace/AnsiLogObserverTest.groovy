@@ -16,6 +16,7 @@
 
 package nextflow.trace
 
+import nextflow.SysEnv
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -100,6 +101,30 @@ class AnsiLogObserverTest extends Specification {
         2     | 75  | "\033]9;4;2;75\007"       // error 75%
         3     | 0   | "\033]9;4;3;0\007"        // indeterminate
         4     | 25  | "\033]9;4;4;25\007"       // warning 25%
+    }
+
+    def 'should disable OSC progress when NXF_OSC_PROGRESS is false' () {
+        given:
+        SysEnv.push(NXF_OSC_PROGRESS: 'false')
+        def ansi = new AnsiLogObserver()
+
+        expect:
+        !ansi.@enableOscProgress
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def 'should enable OSC progress by default' () {
+        given:
+        SysEnv.push([:])
+        def ansi = new AnsiLogObserver()
+
+        expect:
+        ansi.@enableOscProgress
+
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'should chop a string' () {
