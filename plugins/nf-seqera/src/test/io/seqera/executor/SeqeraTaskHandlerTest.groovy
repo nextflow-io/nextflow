@@ -24,6 +24,7 @@ import io.seqera.sched.api.schema.v1a1.GetTaskLogsResponse
 import io.seqera.sched.api.schema.v1a1.MachineInfo
 import io.seqera.sched.api.schema.v1a1.NextflowTask
 import io.seqera.sched.api.schema.v1a1.PriceModel as SchedPriceModel
+import io.seqera.sched.api.schema.v1a1.ResourceRequirement
 import io.seqera.sched.api.schema.v1a1.Task
 import io.seqera.sched.api.schema.v1a1.TaskAttempt
 import io.seqera.sched.api.schema.v1a1.TaskState as SchedTaskState
@@ -31,6 +32,8 @@ import io.seqera.sched.api.schema.v1a1.TaskStatus as SchedTaskStatus
 import io.seqera.sched.client.SchedClient
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
+import nextflow.util.Duration
+import nextflow.util.MemoryUnit
 import nextflow.exception.ProcessException
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskId
@@ -477,6 +480,75 @@ class SeqeraTaskHandlerTest extends Specification {
         capturedTask.getNextflow().getTaskId() == null
         capturedTask.getNextflow().getHash() == null
         capturedTask.getNextflow().getWorkDir() == '/work/ab/cd1234'
+    }
+
+    def 'should return granted cpus from resource requirement'() {
+        given:
+        def handler = createHandler()
+        handler.cachedTaskState = new SchedTaskState()
+            .resourceRequirement(new ResourceRequirement().cpuShares(4096))
+
+        expect:
+        handler.getGrantedCpus() == 4
+    }
+
+    def 'should fallback to config cpus when cachedTaskState is null'() {
+        given:
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getConfig() >> Mock(TaskConfig) { getCpus() >> 2 }
+        }
+        def executor = Mock(SeqeraExecutor) { getClient() >> Mock(SchedClient) }
+        def handler = new SeqeraTaskHandler(taskRun, executor)
+
+        expect:
+        handler.getGrantedCpus() == 2
+    }
+
+    def 'should return granted memory from resource requirement'() {
+        given:
+        def handler = createHandler()
+        handler.cachedTaskState = new SchedTaskState()
+            .resourceRequirement(new ResourceRequirement().memoryMiB(2048))
+
+        expect:
+        handler.getGrantedMemory() == 2048L * 1024 * 1024
+    }
+
+    def 'should fallback to config memory when cachedTaskState is null'() {
+        given:
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getConfig() >> Mock(TaskConfig) { getMemory() >> new MemoryUnit('4 GB') }
+        }
+        def executor = Mock(SeqeraExecutor) { getClient() >> Mock(SchedClient) }
+        def handler = new SeqeraTaskHandler(taskRun, executor)
+
+        expect:
+        handler.getGrantedMemory() == 4L * 1024 * 1024 * 1024
+    }
+
+    def 'should return granted time from resource requirement'() {
+        given:
+        def handler = createHandler()
+        handler.cachedTaskState = new SchedTaskState()
+            .resourceRequirement(new ResourceRequirement().time('2h'))
+
+        expect:
+        handler.getGrantedTime() == '2h'
+    }
+
+    def 'should fallback to config time when cachedTaskState is null'() {
+        given:
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getConfig() >> Mock(TaskConfig) { getTime() >> Duration.of('6h') }
+        }
+        def executor = Mock(SeqeraExecutor) { getClient() >> Mock(SchedClient) }
+        def handler = new SeqeraTaskHandler(taskRun, executor)
+
+        expect:
+        handler.getGrantedTime() == '6h'
     }
 
     /**
