@@ -102,6 +102,16 @@ class AnsiLogObserver implements TraceObserverV2 {
 
     private WorkflowStatsObserver statsObserver
 
+    /**
+     * OSC 9;4 progress state constants for ConEmu-style terminal progress bars.
+     * Supported by Ghostty, Windows Terminal, ConEmu, and others.
+     */
+    static final private int PROGRESS_HIDDEN = 0
+    static final private int PROGRESS_NORMAL = 1
+    static final private int PROGRESS_ERROR = 2
+    static final private int PROGRESS_INDETERMINATE = 3
+    static final private int PROGRESS_WARNING = 4
+
     private static Integer getEnvTerminalWidth() {
         final env = SysEnv.get('TERMINAL_WIDTH')
         if( !env )
@@ -203,6 +213,7 @@ class AnsiLogObserver implements TraceObserverV2 {
         final stats = statsObserver.getStats()
         renderProgress(stats)
         renderSummary(stats)
+        clearTerminalProgress()
     }
 
     protected void renderMessages( Ansi term, List<Event> allMessages, Color color=null )  {
@@ -319,6 +330,9 @@ class AnsiLogObserver implements TraceObserverV2 {
         if( printedLines )
             AnsiConsole.out.println ansi().cursorUp(printedLines+gapLines+1)
 
+        // -- emit OSC 9;4 terminal progress bar
+        renderTerminalProgress(stats)
+
         // -- print processes
         final term = ansi()
         renderSticky(term)
@@ -349,6 +363,55 @@ class AnsiLogObserver implements TraceObserverV2 {
         }
         else
             return 0
+    }
+
+    /**
+     * Emit OSC 9;4 terminal progress bar sequence.
+     * Format: ESC ] 9 ; 4 ; state ; progress BEL
+     *
+     * @param state Progress state (0=hidden, 1=normal, 2=error, 3=indeterminate, 4=warning)
+     * @param progress Percentage 0-100 (ignored for hidden/indeterminate)
+     */
+    static String oscProgress(int state, int progress) {
+        "\033]9;4;${state};${progress}\007"
+    }
+
+    /**
+     * Calculate aggregate workflow progress and emit OSC 9;4 sequence
+     */
+    protected void renderTerminalProgress(WorkflowStats stats) {
+        final processes = stats.getProcesses()
+        if( !processes )
+            return
+
+        float totalTasks = 0
+        float completedTasks = 0
+        boolean hasErrors = false
+
+        for( ProgressRecord entry : processes ) {
+            totalTasks += entry.getTotalCount()
+            completedTasks += entry.getCompletedCount()
+            if( entry.errored )
+                hasErrors = true
+        }
+
+        if( totalTasks == 0 ) {
+            // tasks created but none submitted yet
+            AnsiConsole.out.print(oscProgress(PROGRESS_INDETERMINATE, 0))
+            return
+        }
+
+        final int pct = Math.floor(completedTasks / totalTasks * 100f).toInteger()
+        final int state = hasErrors ? PROGRESS_ERROR : PROGRESS_NORMAL
+        AnsiConsole.out.print(oscProgress(state, pct))
+    }
+
+    /**
+     * Clear terminal progress bar (set to hidden)
+     */
+    protected void clearTerminalProgress() {
+        AnsiConsole.out.print(oscProgress(PROGRESS_HIDDEN, 0))
+        AnsiConsole.out.flush()
     }
 
     protected void renderSummary(WorkflowStats stats) {
@@ -536,5 +599,6 @@ class AnsiLogObserver implements TraceObserverV2 {
     void forceTermination() {
         stopped = true
         endTimestamp = System.currentTimeMillis()
+        clearTerminalProgress()
     }
 }

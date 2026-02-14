@@ -88,6 +88,20 @@ class AnsiLogObserverTest extends Specification {
         '12345678'  | 9     | 6   | '123…78'
     }
 
+    def 'should generate OSC 9;4 progress sequence' () {
+        expect:
+        AnsiLogObserver.oscProgress(STATE, PCT) == EXPECTED
+
+        where:
+        STATE | PCT | EXPECTED
+        0     | 0   | "\033]9;4;0;0\007"       // hidden
+        1     | 50  | "\033]9;4;1;50\007"       // normal 50%
+        1     | 100 | "\033]9;4;1;100\007"      // normal 100%
+        2     | 75  | "\033]9;4;2;75\007"       // error 75%
+        3     | 0   | "\033]9;4;3;0\007"        // indeterminate
+        4     | 25  | "\033]9;4;4;25\007"       // warning 25%
+    }
+
     def 'should chop a string' () {
         given:
         def ansi = new AnsiLogObserver()
