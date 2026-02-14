@@ -34,6 +34,7 @@ import io.seqera.util.MapperUtil
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessUnrecoverableException
+import nextflow.util.Duration
 import nextflow.fusion.FusionAwareTask
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
@@ -318,9 +319,9 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
         return memoryMiB != null ? (long) memoryMiB * 1024 * 1024 : task.config.getMemory()?.toBytes()
     }
 
-    protected String getGrantedTime() {
+    protected Long getGrantedTime() {
         final time = cachedTaskState?.getResourceRequirement()?.getTime()
-        return time != null ? time : task.config.getTime()?.toString()
+        return time != null ? Duration.of(time).toMillis() : task.config.getTime()?.toMillis()
     }
 
     /**
@@ -336,10 +337,9 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
         result.numSpotInterruptions = getNumSpotInterruptions()
         // Override executor name to include cloud backend for cost tracking
         result.executorName = "${SeqeraExecutor.SEQERA}/aws"
-        // Override cpus, memory and time with the actual resource assigned by the scheduler
+        // Override cpus and memory with the actual resource assigned by the scheduler
         result.put('cpus', getGrantedCpus())
         result.put('memory', getGrantedMemory())
-        result.put('time', getGrantedTime())
         return result
     }
 }

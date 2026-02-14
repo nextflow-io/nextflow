@@ -535,7 +535,7 @@ class SeqeraTaskHandlerTest extends Specification {
             .resourceRequirement(new ResourceRequirement().time('2h'))
 
         expect:
-        handler.getGrantedTime() == '2h'
+        handler.getGrantedTime() == Duration.of('2h').toMillis()
     }
 
     def 'should fallback to config time when cachedTaskState is null'() {
@@ -548,7 +548,7 @@ class SeqeraTaskHandlerTest extends Specification {
         def handler = new SeqeraTaskHandler(taskRun, executor)
 
         expect:
-        handler.getGrantedTime() == '6h'
+        handler.getGrantedTime() == Duration.of('6h').toMillis()
     }
 
     /**
