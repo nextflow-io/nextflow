@@ -309,16 +309,6 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
         return cachedTaskState?.getId()
     }
 
-    protected Integer getGrantedCpus() {
-        final cpuShares = cachedTaskState?.getResourceRequirement()?.getCpuShares()
-        return cpuShares != null ? (int) (cpuShares / 1024) : task.config.getCpus()
-    }
-
-    protected Long getGrantedMemory() {
-        final memoryMiB = cachedTaskState?.getResourceRequirement()?.getMemoryMiB()
-        return memoryMiB != null ? (long) memoryMiB * 1024 * 1024 : task.config.getMemory()?.toBytes()
-    }
-
     protected Long getGrantedTime() {
         final time = cachedTaskState?.getResourceRequirement()?.getTime()
         return time != null ? Duration.of(time).toMillis() : task.config.getTime()?.toMillis()
@@ -337,9 +327,6 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
         result.numSpotInterruptions = getNumSpotInterruptions()
         // Override executor name to include cloud backend for cost tracking
         result.executorName = "${SeqeraExecutor.SEQERA}/aws"
-        // Override cpus and memory with the actual resource assigned by the scheduler
-        result.put('cpus', getGrantedCpus())
-        result.put('memory', getGrantedMemory())
         return result
     }
 }
