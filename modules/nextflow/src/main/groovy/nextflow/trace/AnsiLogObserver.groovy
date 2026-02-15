@@ -373,14 +373,27 @@ class AnsiLogObserver implements TraceObserverV2 {
     }
 
     /**
+     * Whether running inside tmux (requires DCS passthrough wrapping for OSC sequences)
+     */
+    private boolean insideTmux = SysEnv.get('TERM_PROGRAM') == 'tmux' || SysEnv.get('TMUX')
+
+    /**
      * Emit OSC 9;4 terminal progress bar sequence.
      * Format: ESC ] 9 ; 4 ; state ; progress BEL
+     *
+     * When inside tmux, wraps in DCS passthrough: ESC P tmux; ESC <osc> ESC \
+     * Requires tmux's allow-passthrough option to be enabled.
      *
      * @param state Progress state (0=hidden, 1=normal, 2=error, 3=indeterminate, 4=warning)
      * @param progress Percentage 0-100 (ignored for hidden/indeterminate)
      */
     static String oscProgress(int state, int progress) {
-        "\033]9;4;${state};${progress}\007"
+        oscProgress(state, progress, false)
+    }
+
+    static String oscProgress(int state, int progress, boolean tmux) {
+        final osc = "\033]9;4;${state};${progress}\007"
+        tmux ? "\033Ptmux;\033${osc}\033\\" : osc
     }
 
     /**
@@ -406,13 +419,13 @@ class AnsiLogObserver implements TraceObserverV2 {
 
         if( totalTasks == 0 ) {
             // tasks created but none submitted yet
-            AnsiConsole.out.print(oscProgress(PROGRESS_INDETERMINATE, 0))
+            AnsiConsole.out.print(oscProgress(PROGRESS_INDETERMINATE, 0, insideTmux))
             return
         }
 
         final int pct = Math.floor(completedTasks / totalTasks * 100f).toInteger()
         final int state = hasErrors ? PROGRESS_ERROR : PROGRESS_NORMAL
-        AnsiConsole.out.print(oscProgress(state, pct))
+        AnsiConsole.out.print(oscProgress(state, pct, insideTmux))
     }
 
     /**
@@ -421,7 +434,7 @@ class AnsiLogObserver implements TraceObserverV2 {
     protected void clearTerminalProgress() {
         if( !enableOscProgress )
             return
-        AnsiConsole.out.print(oscProgress(PROGRESS_HIDDEN, 0))
+        AnsiConsole.out.print(oscProgress(PROGRESS_HIDDEN, 0, insideTmux))
         AnsiConsole.out.flush()
     }
 

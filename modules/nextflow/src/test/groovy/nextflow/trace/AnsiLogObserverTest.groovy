@@ -103,6 +103,36 @@ class AnsiLogObserverTest extends Specification {
         4     | 25  | "\033]9;4;4;25\007"       // warning 25%
     }
 
+    def 'should wrap OSC 9;4 in DCS passthrough for tmux' () {
+        expect:
+        AnsiLogObserver.oscProgress(1, 50, true) == "\033Ptmux;\033\033]9;4;1;50\007\033\\"
+        AnsiLogObserver.oscProgress(0, 0, true) == "\033Ptmux;\033\033]9;4;0;0\007\033\\"
+    }
+
+    def 'should detect tmux from TERM_PROGRAM' () {
+        given:
+        SysEnv.push(TERM_PROGRAM: 'tmux')
+        def ansi = new AnsiLogObserver()
+
+        expect:
+        ansi.@insideTmux
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def 'should detect tmux from TMUX env var' () {
+        given:
+        SysEnv.push(TMUX: '/tmp/tmux-501/default,12345,0')
+        def ansi = new AnsiLogObserver()
+
+        expect:
+        ansi.@insideTmux
+
+        cleanup:
+        SysEnv.pop()
+    }
+
     def 'should disable OSC progress when NXF_OSC_PROGRESS is false' () {
         given:
         SysEnv.push(NXF_OSC_PROGRESS: 'false')
