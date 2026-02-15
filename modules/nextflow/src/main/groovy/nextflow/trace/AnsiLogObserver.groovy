@@ -402,9 +402,19 @@ class AnsiLogObserver implements TraceObserverV2 {
     protected void renderTerminalProgress(WorkflowStats stats) {
         if( !enableOscProgress )
             return
+        final seq = computeTerminalProgress(stats)
+        if( seq )
+            AnsiConsole.out.print(seq)
+    }
+
+    /**
+     * Compute the OSC 9;4 sequence for current workflow progress.
+     * Returns null if no processes are available.
+     */
+    protected String computeTerminalProgress(WorkflowStats stats) {
         final processes = stats.getProcesses()
         if( !processes )
-            return
+            return null
 
         float totalTasks = 0
         float completedTasks = 0
@@ -419,13 +429,12 @@ class AnsiLogObserver implements TraceObserverV2 {
 
         if( totalTasks == 0 ) {
             // tasks created but none submitted yet
-            AnsiConsole.out.print(oscProgress(PROGRESS_INDETERMINATE, 0, insideTmux))
-            return
+            return oscProgress(PROGRESS_INDETERMINATE, 0, insideTmux)
         }
 
         final int pct = Math.floor(completedTasks / totalTasks * 100f).toInteger()
         final int state = hasErrors ? PROGRESS_ERROR : PROGRESS_NORMAL
-        AnsiConsole.out.print(oscProgress(state, pct, insideTmux))
+        return oscProgress(state, pct, insideTmux)
     }
 
     /**

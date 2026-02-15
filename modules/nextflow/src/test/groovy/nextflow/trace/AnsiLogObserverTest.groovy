@@ -109,52 +109,61 @@ class AnsiLogObserverTest extends Specification {
         AnsiLogObserver.oscProgress(0, 0, true) == "\033Ptmux;\033\033]9;4;0;0\007\033\\"
     }
 
-    def 'should detect tmux from TERM_PROGRAM' () {
+    @Unroll
+    def 'should configure OSC progress from env: #DESC' () {
         given:
-        SysEnv.push(TERM_PROGRAM: 'tmux')
+        SysEnv.push(ENV)
         def ansi = new AnsiLogObserver()
 
         expect:
-        ansi.@insideTmux
+        ansi.@enableOscProgress == PROGRESS
+        ansi.@insideTmux == TMUX
 
         cleanup:
         SysEnv.pop()
+
+        where:
+        DESC                | ENV                                     | PROGRESS | TMUX
+        'defaults'          | [:]                                     | true     | false
+        'disabled'          | [NXF_OSC_PROGRESS: 'false']             | false    | false
+        'tmux via TERM'     | [TERM_PROGRAM: 'tmux']                  | true     | true
+        'tmux via TMUX'     | [TMUX: '/tmp/tmux-501/default,12345,0'] | true     | true
     }
 
-    def 'should detect tmux from TMUX env var' () {
-        given:
-        SysEnv.push(TMUX: '/tmp/tmux-501/default,12345,0')
-        def ansi = new AnsiLogObserver()
-
-        expect:
-        ansi.@insideTmux
-
-        cleanup:
-        SysEnv.pop()
-    }
-
-    def 'should disable OSC progress when NXF_OSC_PROGRESS is false' () {
-        given:
-        SysEnv.push(NXF_OSC_PROGRESS: 'false')
-        def ansi = new AnsiLogObserver()
-
-        expect:
-        !ansi.@enableOscProgress
-
-        cleanup:
-        SysEnv.pop()
-    }
-
-    def 'should enable OSC progress by default' () {
+    @Unroll
+    def 'should compute terminal progress: #DESC' () {
         given:
         SysEnv.push([:])
         def ansi = new AnsiLogObserver()
+        def stats = Mock(WorkflowStats) { getProcesses() >> PROCS }
 
         expect:
-        ansi.@enableOscProgress
+        def result = ansi.computeTerminalProgress(stats)
+        EXPECTED == null ? result == null : result.contains(EXPECTED)
 
         cleanup:
         SysEnv.pop()
+
+        where:
+        DESC                | PROCS                        | EXPECTED
+        'no processes'      | []                           | null
+        'indeterminate'     | [proc(0, 'a', 0, 0, false)] | '9;4;3;0'
+        'normal 44%'        | [proc(0, 'a', 5, 5, false),
+                               proc(1, 'b', 5, 3, false)] | '9;4;1;44'
+        'error state'       | [proc(0, 'a', 5, 3, true)]  | '9;4;2;'
+        '100% complete'     | [proc(0, 'up', 0, 10, false),
+                               proc(1, 'dn', 0, 10, false)] | '9;4;1;100'
+        'dependent 84%'     | [proc(0, 'up', 0, 10, false),
+                               proc(1, 'dn', 2, 1, false)]  | '9;4;1;84'
+    }
+
+    /** Helper to build a ProgressRecord with submitted/succeeded counts */
+    private static ProgressRecord proc(int id, String name, int submitted, int succeeded, boolean errored) {
+        def p = new ProgressRecord(id, name)
+        p.submitted = submitted
+        p.succeeded = succeeded
+        p.errored = errored
+        return p
     }
 
     def 'should chop a string' () {
