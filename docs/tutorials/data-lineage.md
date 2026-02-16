@@ -40,7 +40,7 @@ lineage.store.location = '<PATH_TO_STORAGE>'
 For global configuration, add these settings to `$HOME/.nextflow/config`.
 :::
 
-The location can be local or remote (for example, an s3 storage bucket). See the {ref}`config-lineage` configuration scope for details.
+The location can be local or remote (e.g., an s3 storage bucket). See the {ref}`config-lineage` configuration scope for details.
 
 ## Generate lineage metadata
 
