@@ -1,5 +1,14 @@
 NEXTFLOW CHANGE-LOG
 ===================
+26.01.1-edge - 11 Feb 2026
+- Add OSC 8 hyperlinks to task hashes in progress output (#6799) [8d266c76b]
+- Fix JGit resources not being closed in CLI commands (#6795) [908e4c70d]
+- Fix listDirectory() to follow symbolic links (#6821) [1ee59b3d0]
+- Improve documentation of workflow outputs (#6822) [3f6c6b351]
+- Bump ch.qos.logback@1.5.26 — fix false version mismatch warning in shadow JAR [0b97f4a84]
+- Bump ch.qos.logback@1.5.25 (CVE-2026-1225) [97dec3af6]
+- Bump com.gradleup.shadow@9.3.1 (CVE-2025-68161) [d31e6edc7]
+
 26.01.0-edge - 8 Feb 2026
 - Add accelerator request to trace record (#6703) [00f35b3a9]
 - Add aws.batch.forceGlacierTransfer config option (#6700) [e3bf3153b]
