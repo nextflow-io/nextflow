@@ -24,6 +24,7 @@ import io.seqera.sched.api.schema.v1a1.GetTaskLogsResponse
 import io.seqera.sched.api.schema.v1a1.MachineInfo
 import io.seqera.sched.api.schema.v1a1.NextflowTask
 import io.seqera.sched.api.schema.v1a1.PriceModel as SchedPriceModel
+import io.seqera.sched.api.schema.v1a1.ResourceLimit
 import io.seqera.sched.api.schema.v1a1.ResourceRequirement
 import io.seqera.sched.api.schema.v1a1.Task
 import io.seqera.sched.api.schema.v1a1.TaskAttempt
@@ -33,6 +34,7 @@ import io.seqera.sched.client.SchedClient
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
 import nextflow.util.Duration
+import nextflow.util.MemoryUnit
 import nextflow.exception.ProcessException
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskId
@@ -502,6 +504,120 @@ class SeqeraTaskHandlerTest extends Specification {
 
         expect:
         handler.getGrantedTime() == Duration.of('6h').toMillis()
+    }
+
+    def 'should build resource limit from task config'() {
+        given:
+        def taskConfig = Mock(TaskConfig) {
+            getResourceLimit('memory') >> MemoryUnit.of('2 GB')
+            getResourceLimit('cpus') >> 4
+        }
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getConfig() >> taskConfig
+        }
+        def executor = Mock(SeqeraExecutor) { getClient() >> Mock(SchedClient) }
+        def handler = new SeqeraTaskHandler(taskRun, executor)
+
+        when:
+        def result = handler.toResourceLimit()
+
+        then:
+        result != null
+        result.memoryMiB == 2048
+        result.cpuShares == 4096
+    }
+
+    def 'should build resource limit with only memory'() {
+        given:
+        def taskConfig = Mock(TaskConfig) {
+            getResourceLimit('memory') >> MemoryUnit.of('800 MB')
+            getResourceLimit('cpus') >> null
+        }
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getConfig() >> taskConfig
+        }
+        def executor = Mock(SeqeraExecutor) { getClient() >> Mock(SchedClient) }
+        def handler = new SeqeraTaskHandler(taskRun, executor)
+
+        when:
+        def result = handler.toResourceLimit()
+
+        then:
+        result != null
+        result.memoryMiB == 800
+        result.cpuShares == null
+    }
+
+    def 'should return null resource limit when no limits defined'() {
+        given:
+        def taskConfig = Mock(TaskConfig) {
+            getResourceLimit('memory') >> null
+            getResourceLimit('cpus') >> null
+        }
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getConfig() >> taskConfig
+        }
+        def executor = Mock(SeqeraExecutor) { getClient() >> Mock(SchedClient) }
+        def handler = new SeqeraTaskHandler(taskRun, executor)
+
+        when:
+        def result = handler.toResourceLimit()
+
+        then:
+        result == null
+    }
+
+    def 'should include resource limit in submitted task'() {
+        given:
+        Task capturedTask = null
+        def batchSubmitter = Mock(SeqeraBatchSubmitter) {
+            submit(_, _) >> { handler, task -> capturedTask = task }
+        }
+        def seqeraConfig = Mock(ExecutorOpts) {
+            getMachineRequirement() >> null
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> Mock(SchedClient)
+            getBatchSubmitter() >> batchSubmitter
+            getSeqeraConfig() >> seqeraConfig
+        }
+        def taskConfig = Mock(TaskConfig) {
+            getCpus() >> 1
+            getMemory() >> null
+            getAccelerator() >> null
+            getDisk() >> null
+            getResourceLimit('memory') >> MemoryUnit.of('2 GB')
+            getResourceLimit('cpus') >> null
+        }
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getWorkDirStr() >> '/work/ab/cd1234'
+            getConfig() >> taskConfig
+            getContainer() >> 'ubuntu:latest'
+            getContainerPlatform() >> null
+            lazyName() >> 'test_task'
+            getId() >> TaskId.of(1)
+            getHash() >> HashCode.fromString('abcd1234')
+        }
+        def handler = Spy(new SeqeraTaskHandler(taskRun, executor)) {
+            fusionEnabled() >> true
+            fusionSubmitCli() >> ['bash', '-c', 'echo hello']
+            fusionLauncher() >> Mock(nextflow.fusion.FusionScriptLauncher) {
+                fusionEnv() >> [:]
+            }
+        }
+
+        when:
+        handler.submit()
+
+        then:
+        capturedTask != null
+        capturedTask.getResourceLimit() != null
+        capturedTask.getResourceLimit().memoryMiB == 2048
+        capturedTask.getResourceLimit().cpuShares == null
     }
 
     /**

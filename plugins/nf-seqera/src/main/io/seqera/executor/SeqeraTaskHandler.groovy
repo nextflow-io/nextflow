@@ -25,6 +25,7 @@ import groovy.util.logging.Slf4j
 import io.seqera.sched.api.schema.v1a1.AcceleratorType
 import io.seqera.sched.api.schema.v1a1.GetTaskLogsResponse
 import io.seqera.sched.api.schema.v1a1.NextflowTask
+import io.seqera.sched.api.schema.v1a1.ResourceLimit
 import io.seqera.sched.api.schema.v1a1.ResourceRequirement
 import io.seqera.sched.api.schema.v1a1.Task
 import io.seqera.sched.api.schema.v1a1.TaskState as SchedTaskState
@@ -35,6 +36,7 @@ import nextflow.cloud.types.CloudMachineInfo
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.util.Duration
+import nextflow.util.MemoryUnit
 import nextflow.fusion.FusionAwareTask
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
@@ -113,6 +115,8 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
             task.config.getDisk(),
             fusionConfig().snapshotsEnabled()
         )
+        // build resource limit from process resourceLimits directive (upper bound for OOM retry scaling)
+        final resourceLim = toResourceLimit()
         // validate container - Seqera executor requires all processes to specify a container image
         final container = task.getContainer()
         if( !container )
@@ -124,6 +128,7 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
             .command(fusionSubmitCli())   // fusion-based command launcher
             .environment(fusionLauncher().fusionEnv())  // fusion environment variables
             .resourceRequirement(resourceReq)  // cpu, memory, accelerators
+            .resourceLimit(resourceLim)         // resource upper bounds for OOM retry
             .machineRequirement(machineReq)    // machine type and disk requirements
             .nextflow(new NextflowTask()
                 .taskId(task.id?.intValue())
@@ -150,6 +155,23 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
         log.debug "[SEQERA] Batch submission failed for task ${task.lazyName()}: ${cause.message}"
         task.error = cause
         this.status = TaskStatus.COMPLETED
+    }
+
+    /**
+     * Build a {@link ResourceLimit} from the process {@code resourceLimits} directive.
+     * Returns {@code null} if no resource limits are defined.
+     */
+    protected ResourceLimit toResourceLimit() {
+        final memoryLimit = task.config.getResourceLimit('memory') as MemoryUnit
+        final cpusLimit = task.config.getResourceLimit('cpus') as Integer
+        if( !memoryLimit && !cpusLimit )
+            return null
+        final result = new ResourceLimit()
+        if( memoryLimit )
+            result.memoryMiB((int)(memoryLimit.toBytes() / (1024 * 1024)))
+        if( cpusLimit )
+            result.cpuShares(cpusLimit * 1024)
+        return result
     }
 
     protected SchedTaskStatus schedTaskStatus() {
