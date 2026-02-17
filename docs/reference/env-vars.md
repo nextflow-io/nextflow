@@ -144,6 +144,9 @@ The following environment variables control the configuration of the Nextflow ru
 `NXF_OPTS`
 : Provides extra options for the Java and Nextflow runtime. It must be a blank separated list of `-Dkey[=value]` properties.
 
+`NXF_OSC_NOTIFY`
+: Enables/disables native terminal desktop notifications on workflow completion. Uses OSC 777 (Ghostty, WezTerm), OSC 9 (iTerm2), or OSC 99 (Kitty) with automatic terminal detection. Requires `allow-passthrough on` in tmux (default: `true`). Set to `false` to disable.
+
 `NXF_ORG`
 : Default `organization` prefix when looking for a hosted repository (default: `nextflow-io`).
 
