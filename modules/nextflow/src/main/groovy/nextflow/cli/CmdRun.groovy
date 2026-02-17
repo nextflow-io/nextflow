@@ -506,7 +506,7 @@ class CmdRun extends CmdBase implements HubOptions {
             fmt.a("Launching").fg(Color.MAGENTA).a(" `$repo` ").reset()
             fmt.a(Attribute.INTENSITY_FAINT).a("[").reset()
             fmt.bold().fg(Color.CYAN).a(runName).reset()
-            fmt.a(Attribute.INTENSITY_FAINT).a("]")
+            fmt.a(Attribute.INTENSITY_FAINT).a("] ").reset()
             fmt.fg(Color.CYAN).a("revision: ").reset()
             fmt.fg(Color.CYAN).a(revision).reset()
             fmt.a("\n")
