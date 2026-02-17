@@ -144,6 +144,9 @@ The following environment variables control the configuration of the Nextflow ru
 `NXF_OPTS`
 : Provides extra options for the Java and Nextflow runtime. It must be a blank separated list of `-Dkey[=value]` properties.
 
+`NXF_OSC_PROGRESS`
+: Enables/disables the OSC 9;4 terminal progress bar, which shows workflow progress in the terminal tab/title bar. Supported by Ghostty, Windows Terminal, ConEmu, and other terminals (default: `true`). Set to `false` to disable.
+
 `NXF_ORG`
 : Default `organization` prefix when looking for a hosted repository (default: `nextflow-io`).
 
