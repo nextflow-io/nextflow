@@ -674,7 +674,6 @@ param2 = 'value2'"""
 
     def 'should collect status with valid authentication'() {
         given:
-        def cmd = Spy(AuthCommandImpl)
         def config = [
             'tower.accessToken': 'test-token',
             'tower.endpoint': 'https://api.cloud.seqera.io',
@@ -682,11 +681,12 @@ param2 = 'value2'"""
         ]
 
         // Mock API calls
-        cmd.checkApiConnection(_) >> true
-        cmd.commonApi = Mock(TowerCommonApi){
+        def commonApi = Mock(TowerCommonApi){
             getUserInfo(_, _) >> [userName: 'testuser', id: '123']
             getWorkflowDetails(_, _, _) >> null
         }
+        def cmd = Spy(new AuthCommandImpl(commonApi))
+        cmd.checkApiConnection(_) >> true
         cmd.listComputeEnvironments(_, _, _) >> [[name: 'ce_test', platform: 'aws', workDir: 's3://test', primary: true]]
 
         when:
@@ -760,15 +760,14 @@ param2 = 'value2'"""
 
     def 'should collect status with failed authentication'() {
         given:
-        def cmd = Spy(AuthCommandImpl)
         def config = ['tower.accessToken': 'invalid-token']
         SysEnv.push([:])  // Isolate from actual environment variables
 
-        cmd.checkApiConnection(_) >> true
-        cmd.commonApi = Mock(TowerCommonApi){
+        def commonApi = Mock(TowerCommonApi){
             getUserInfo(_, _) >> { throw new RuntimeException('Invalid token') }
         }
-
+        def cmd = Spy(new AuthCommandImpl(commonApi))
+        cmd.checkApiConnection(_) >> true
         when:
         def status = cmd.collectStatus(config)
 
@@ -816,14 +815,12 @@ param2 = 'value2'"""
 
     def 'should collect status with workspace details'() {
         given:
-        def cmd = Spy(AuthCommandImpl)
+
         def config = [
             'tower.accessToken': 'test-token',
             'tower.workspaceId': '12345'
         ]
-
-        cmd.checkApiConnection(_) >> true
-        cmd.commonApi = Mock(TowerCommonApi){
+        def commonApi = Mock(TowerCommonApi){
             getUserInfo(_, _) >> [userName: 'testuser', id: '123']
             getUserWorkspaceDetails(_, _, _, _) >> [
                 orgName: 'TestOrg',
@@ -831,6 +828,9 @@ param2 = 'value2'"""
                 workspaceFullName: 'test-org/test-workspace'
             ]
         }
+        def cmd = Spy(new AuthCommandImpl(commonApi))
+        cmd.checkApiConnection(_) >> true
+
         when:
         def status = cmd.collectStatus(config)
 
@@ -845,8 +845,8 @@ param2 = 'value2'"""
 
     def 'should collect status with workspace ID but no details'() {
         given:
-        def cmd = Spy(AuthCommandImpl)
-        cmd.commonApi = Mock(TowerCommonApi){
+
+        def commonApi = Mock(TowerCommonApi){
             getUserInfo(_, _) >> [userName: 'testuser', id: '123']
             getUserWorkspaceDetails(_, _, _, _) >> null
         }
@@ -854,7 +854,7 @@ param2 = 'value2'"""
             'tower.accessToken': 'test-token',
             'tower.workspaceId': '12345'
         ]
-
+        def cmd = Spy(new AuthCommandImpl(commonApi))
         cmd.checkApiConnection(_) >> true
 
         when:
@@ -869,13 +869,12 @@ param2 = 'value2'"""
 
     def 'should collect status from environment variables'() {
         given:
-        def cmd = Spy(AuthCommandImpl)
-        cmd.commonApi  = Mock(TowerCommonApi){
+        def commonApi  = Mock(TowerCommonApi){
             getUserInfo(_, _) >> [userName: 'envuser', id: '456']
             getUserWorkspaceDetails(_, _, _, _) >> [:]
         }
         def config = [:]
-
+        def cmd = Spy(new AuthCommandImpl(commonApi))
         cmd.checkApiConnection(_) >> true
         cmd.listComputeEnvironments(_,_,_) >> []
 
@@ -922,7 +921,10 @@ param2 = 'value2'"""
 
     def 'should collect status with mixed sources'() {
         given:
-        def cmd = Spy(AuthCommandImpl)
+        def commonApi = Mock(TowerCommonApi) {
+            getUserInfo(_, _) >> [userName: 'mixeduser', id: '789']
+        }
+        def cmd = Spy(new AuthCommandImpl(commonApi))
         def authFile = tempDir.resolve('seqera-auth.config')
         def configFile = tempDir.resolve('config')
 
@@ -935,9 +937,6 @@ param2 = 'value2'"""
         ]
 
         cmd.checkApiConnection(_) >> true
-        cmd.commonApi = Mock(TowerCommonApi) {
-            getUserInfo(_, _) >> [userName: 'mixeduser', id: '789']
-        }
         SysEnv.push(['TOWER_WORKSPACE_ID': '99999'])
 
         when:

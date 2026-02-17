@@ -102,6 +102,8 @@ class PlatformMetadata {
     Pipeline pipeline
     List labels
 
+    PlatformMetadata() {}
+
     PlatformMetadata(String id, User user, Workspace workspace, ComputeEnv computeEnv, Pipeline pipeline, List labels) {
         this.workflowId = id
         this.user = user

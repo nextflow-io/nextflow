@@ -32,6 +32,7 @@ import groovy.json.JsonBuilder
 import groovy.json.JsonSlurper
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
+import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.SysEnv
@@ -56,6 +57,7 @@ import static nextflow.util.ColorUtil.colorize
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@InheritConstructors
 @CompileStatic
 class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
     static final int AUTH_POLL_TIMEOUT_RETRIES = 60

@@ -20,6 +20,7 @@ import groovy.json.JsonBuilder
 import groovy.json.JsonSlurper
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
+import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
 import io.seqera.http.HxClient
 import io.seqera.tower.plugin.BaseCommandImpl
@@ -46,6 +47,7 @@ import java.util.regex.Pattern
  * @author Phil Ewels <phil.ewels@seqera.io>
  */
 @Slf4j
+@InheritConstructors
 @CompileStatic
 class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchCommand {
 

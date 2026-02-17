@@ -296,7 +296,7 @@ class TowerClient extends TowerCommonApi implements TraceObserverV2 {
         if( ret.message )
             log.warn(ret.message.toString())
 
-        session.workflowMetadata.seqeraPlatform = getPlatformMetadata(workflowId)
+        session.workflowMetadata.platform = getPlatformMetadata(workflowId)
 
         // Prepare to collect report paths if tower configuration has a 'reports' section
         reports.flowCreate(workflowId)

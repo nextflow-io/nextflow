@@ -221,7 +221,7 @@ class WorkflowMetadata {
     /**
      * Workflow metadata associated to the Seqera Platform execution.
      */
-    PlatformMetadata seqeraPlatform
+    PlatformMetadata platform
 
     /**
      * The list of files that concurred to create the config object
@@ -502,4 +502,14 @@ class WorkflowMetadata {
         session.statsObserver.getStats()
     }
 
+    PlatformMetadata getPlatform() {
+        if( platform!=null )
+            return platform
+        synchronized (this) {
+            if( platform!=null )
+                return platform
+            platform = new PlatformMetadata()
+        }
+        return platform
+    }
 }

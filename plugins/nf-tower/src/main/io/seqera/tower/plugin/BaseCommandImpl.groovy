@@ -22,7 +22,6 @@ import groovy.util.logging.Slf4j
 import io.seqera.http.HxClient
 import nextflow.Const
 import nextflow.config.ConfigBuilder
-import nextflow.util.TestOnly
 
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
@@ -36,12 +35,16 @@ class BaseCommandImpl {
     /**
      * Provides common API operations for Seqera Platform
      */
-    protected TowerCommonApi commonApi = new TowerCommonApi()
+    protected TowerCommonApi commonApi
 
-    @TestOnly
-    void setCommonApi( TowerCommonApi commonApi ){
+    BaseCommandImpl(){
+        this.commonApi = new TowerCommonApi()
+    }
+
+    BaseCommandImpl( TowerCommonApi commonApi ) {
         this.commonApi = commonApi
     }
+
     /**
      * Creates an HxClient instance with optional authentication token.
      *
