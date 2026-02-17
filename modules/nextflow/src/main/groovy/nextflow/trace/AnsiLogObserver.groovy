@@ -98,6 +98,18 @@ class AnsiLogObserver implements TraceObserverV2 {
 
     private Boolean enableSummary = SysEnv.get('NXF_ANSI_SUMMARY') as Boolean
 
+    /**
+     * Enable/disable terminal notifications on workflow completion.
+     * Defaults to true. Set NXF_OSC_NOTIFY=false to disable.
+     * Uses OSC 777 (Ghostty/WezTerm), OSC 9 (iTerm2), or OSC 99 (Kitty).
+     */
+    private boolean enableOscNotify = SysEnv.get('NXF_OSC_NOTIFY') != 'false'
+
+    /**
+     * Whether running inside tmux (requires DCS passthrough wrapping for OSC sequences)
+     */
+    private boolean insideTmux = SysEnv.get('TERM_PROGRAM') == 'tmux' || SysEnv.get('TMUX')
+
     private final int WARN_MESSAGE_TIMEOUT = 35_000
 
     private WorkflowStatsObserver statsObserver
@@ -203,6 +215,7 @@ class AnsiLogObserver implements TraceObserverV2 {
         final stats = statsObserver.getStats()
         renderProgress(stats)
         renderSummary(stats)
+        sendNotification(stats)
     }
 
     protected void renderMessages( Ansi term, List<Event> allMessages, Color color=null )  {
@@ -373,6 +386,120 @@ class AnsiLogObserver implements TraceObserverV2 {
 
             printAnsi(report, Color.GREEN, true)
             AnsiConsole.out.flush()
+        }
+    }
+
+    // -- Terminal notification support (OSC 777, OSC 9, OSC 99) --
+
+    /**
+     * Notification protocol identifiers
+     */
+    static final String NOTIFY_OSC777 = 'osc777'
+    static final String NOTIFY_OSC9 = 'osc9'
+    static final String NOTIFY_OSC99 = 'osc99'
+
+    /**
+     * Detect which notification protocol to use based on terminal environment.
+     * Priority: Kitty (KITTY_WINDOW_ID) > iTerm2 (TERM_PROGRAM/ITERM_SESSION_ID) > OSC 777 (default)
+     */
+    static String detectNotifyProtocol() {
+        if( SysEnv.get('KITTY_WINDOW_ID') )
+            return NOTIFY_OSC99
+        if( SysEnv.get('TERM_PROGRAM') == 'iTerm.app' || SysEnv.get('ITERM_SESSION_ID') )
+            return NOTIFY_OSC9
+        return NOTIFY_OSC777
+    }
+
+    /**
+     * Generate OSC 777 notification sequence (Ghostty, WezTerm, rxvt-unicode).
+     * Format: ESC ] 777 ; notify ; title ; body BEL
+     */
+    static String oscNotify777(String title, String body, boolean tmux) {
+        final osc = "\033]777;notify;${title};${body}\007"
+        tmux ? wrapTmuxPassthrough(osc) : osc
+    }
+
+    /**
+     * Generate OSC 9 notification sequence (iTerm2).
+     * Format: ESC ] 9 ; message BEL
+     */
+    static String oscNotify9(String message, boolean tmux) {
+        final osc = "\033]9;${message}\007"
+        tmux ? wrapTmuxPassthrough(osc) : osc
+    }
+
+    /**
+     * Generate OSC 99 notification sequences (Kitty).
+     * Format: ESC ] 99 ; i=id:d=0 ; title ST  +  ESC ] 99 ; i=id:p=body ; body ST
+     * Uses ST (ESC \) instead of BEL per Kitty protocol spec.
+     */
+    static String oscNotify99(String title, String body, boolean tmux) {
+        final titleSeq = "\033]99;i=nxf:d=0;${title}\033\\"
+        final bodySeq = "\033]99;i=nxf:p=body;${body}\033\\"
+        if( tmux ) {
+            return wrapTmuxPassthrough(titleSeq) + wrapTmuxPassthrough(bodySeq)
+        }
+        return titleSeq + bodySeq
+    }
+
+    /**
+     * Wrap an OSC sequence in tmux DCS passthrough.
+     * Format: ESC P tmux ; ESC <osc> ESC \
+     */
+    static String wrapTmuxPassthrough(String osc) {
+        "\033Ptmux;\033${osc}\033\\"
+    }
+
+    /**
+     * Build notification title and body from workflow stats.
+     * Returns [title, body] pair.
+     */
+    protected List<String> computeNotification(WorkflowStats stats) {
+        final boolean success = session.isSuccess()
+        final String title = success ? 'Nextflow: completed \u2714' : 'Nextflow: failed \u2718'
+        final long delta = endTimestamp - startTimestamp
+        final duration = new Duration(delta)
+        final List<String> parts = new ArrayList<String>()
+        parts.add("${stats.succeedCountFmt} succeeded".toString())
+        if( stats.cachedCount )
+            parts.add("${stats.cachedCountFmt} cached".toString())
+        if( stats.failedCount )
+            parts.add("${stats.failedCountFmt} failed".toString())
+        final String body = "${duration} \u2014 ${parts.join(', ')}".toString()
+        return Arrays.asList(title, body)
+    }
+
+    /**
+     * Send terminal notification on workflow completion.
+     */
+    protected void sendNotification(WorkflowStats stats) {
+        if( !enableOscNotify )
+            return
+        final seq = computeNotificationSequence(stats)
+        if( seq ) {
+            AnsiConsole.out.print(seq)
+            AnsiConsole.out.flush()
+        }
+    }
+
+    /**
+     * Compute the notification escape sequence string.
+     * Returns null if stats are unavailable.
+     */
+    protected String computeNotificationSequence(WorkflowStats stats) {
+        if( !stats || stats.progressLength == 0 )
+            return null
+        final notification = computeNotification(stats)
+        final title = notification[0]
+        final body = notification[1]
+        final protocol = detectNotifyProtocol()
+        switch( protocol ) {
+            case NOTIFY_OSC9:
+                return oscNotify9("${title}: ${body}", insideTmux)
+            case NOTIFY_OSC99:
+                return oscNotify99(title, body, insideTmux)
+            default:
+                return oscNotify777(title, body, insideTmux)
         }
     }
 
