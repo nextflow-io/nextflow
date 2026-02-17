@@ -52,4 +52,23 @@ class PlatformMetadataTest extends Specification {
         then:
         meta.workflowId == 'xyz789'
     }
+
+    def 'should create with null workflowUrl by default'() {
+        when:
+        def meta = new PlatformMetadata()
+
+        then:
+        meta.workflowUrl == null
+    }
+
+    def 'should allow setting workflowUrl after construction'() {
+        given:
+        def meta = new PlatformMetadata()
+
+        when:
+        meta.workflowUrl = 'https://cloud.seqera.io/watch/abc123'
+
+        then:
+        meta.workflowUrl == 'https://cloud.seqera.io/watch/abc123'
+    }
 }

@@ -385,6 +385,7 @@ class TowerClient implements TraceObserverV2 {
 
         final payload = parseTowerResponse(resp)
         this.watchUrl = payload.watchUrl
+        session.workflowMetadata.platform.workflowUrl = watchUrl
         this.sender = Threads.start('Tower-thread', this.&sendTasks0)
         final msg = "Monitor the execution with Seqera Platform using this URL: ${watchUrl}"
         log.info(LoggerHelper.STICKY, msg)

@@ -411,6 +411,29 @@ class TowerClientTest extends Specification {
 
     }
 
+    def 'should set workflowUrl on platform metadata during onFlowBegin' () {
+        given:
+        def platform = new PlatformMetadata()
+        def meta = Mock(WorkflowMetadata) {
+            getPlatform() >> platform
+        }
+        def session = Mock(Session) {
+            getWorkflowMetadata() >> meta
+        }
+        def config = new TowerConfig([:], [:])
+        def client = Spy(new TowerClient(session, config))
+        client.@workflowId = 'abc123'
+
+        when:
+        client.onFlowBegin()
+        then:
+        1 * client.makeBeginReq(session) >> [foo: 'bar']
+        1 * client.sendHttpMessage(_, [foo: 'bar'], 'PUT') >> new TowerClient.Response(200, '{"watchUrl":"https://cloud.seqera.io/watch/abc123"}')
+        and:
+        client.@watchUrl == 'https://cloud.seqera.io/watch/abc123'
+        platform.workflowUrl == 'https://cloud.seqera.io/watch/abc123'
+    }
+
     def 'should get trace endpoint' () {
         given:
         def config = new TowerConfig([:], [:])

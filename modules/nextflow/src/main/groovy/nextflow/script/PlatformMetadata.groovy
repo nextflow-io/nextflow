@@ -37,6 +37,12 @@ class PlatformMetadata {
      */
     volatile String workflowId
 
+    /**
+     * The Platform watch URL for the current workflow execution.
+     * Set by TowerClient.onFlowBegin and read by SeqeraExecutor.createRun.
+     */
+    volatile String workflowUrl
+
     PlatformMetadata() {}
 
     PlatformMetadata(String workflowId) {
