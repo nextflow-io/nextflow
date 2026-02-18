@@ -1,0 +1,88 @@
+# Dataflow
+
+Nextflow uses a **dataflow** programming model to define workflows declaratively. In this model, [processes][process-page] in a pipeline are connected to each other through *dataflow channels* and *dataflow values*.
+
+## Channels
+
+A *dataflow channel* (or simply *channel*) is an asynchronous sequence of values.
+
+The values in a channel cannot be accessed directly, but only through an operator or process. For example:
+
+```nextflow
+channel.of(1, 2, 3).view { v -> "channel emits ${v}" }
+```
+
+```console
+channel emits 1
+channel emits 2
+channel emits 3
+```
+
+### Factories
+
+A channel can be created by factories in the `channel` namespace. For example, the `channel.fromPath()` factory creates a channel from a file name or glob pattern, similar to the `files()` function:
+
+```nextflow
+channel.fromPath('input/*.txt').view()
+```
+
+See [Channel factories][channel-factory] for the full list of channel factories.
+
+### Operators
+
+Channel operators, or *operators* for short, are functions that consume and produce channels. Because channels are asynchronous, operators are necessary to manipulate the values in a channel. Operators are particularly useful for implementing glue logic between processes.
+
+Commonly used operators include:
+
+- [combine][operator-combine]: emit the combinations of two channels
+- [collect][operator-collect]: collect the values from a channel into a list
+- [filter][operator-filter]: select the values in a channel that satisfy a condition
+- [flatMap][operator-flatMap]: transform each value from a channel into a list and emit each list element separately
+- [groupTuple][operator-grouptuple]: group the values from a channel based on a grouping key
+- [join][operator-join]: join the values from two channels based on a matching key
+- [map][operator-map]: transform each value from a channel with a mapping function
+- [mix][operator-mix]: emit the values from multiple channels
+- [view][operator-view]: print each value in a channel to standard output
+
+See [Operators][operator-page] for the full list of operators.
+
+## Values
+
+A *dataflow value* is an asynchronous value.
+
+Dataflow values can be created using the [value][channel-value] factory, and they are created by processes (under [certain conditions][process-out-singleton]).
+
+A dataflow value cannot be accessed directly, but only through an operator or process. For example:
+
+```nextflow
+channel.value(1).view { v -> "dataflow value is ${v}" }
+```
+
+```console
+dataflow value is 1
+```
+
+See [Value][stdlib-types-value] for the set of available methods for dataflow values.
+
+[channel-of]: ./reference/channel#of
+[channel-path]: ./reference/channel#frompath
+[operator-map]: ./reference/operator#map
+[operator-flatmap]: ./reference/operator#flatmap
+[process-output]: ./process#outputs
+[channel-value]: ./reference/channel#value
+[operator-first]: ./reference/operator#first
+[operator-collect]: ./reference/operator#collect
+[operator-reduce]: ./reference/operator#reduce
+[process-page]: ./process
+[process-out-singleton]: ./process#singleton-outputs
+[process-multiple-input-channels]: ./process#multiple-input-channels
+[channel-factory]: ./channel
+[operator-combine]: ./reference/operator#combine
+[operator-filter]: ./reference/operator#filter
+[operator-flatMap]: ./reference/operator#flatmap
+[operator-grouptuple]: ./reference/operator#grouptuple
+[operator-join]: ./reference/operator#join
+[operator-mix]: ./reference/operator#mix
+[operator-view]: ./reference/operator#view
+[operator-page]: ./reference/operator
+[stdlib-types-value]: ./reference/stdlib-types#valuev

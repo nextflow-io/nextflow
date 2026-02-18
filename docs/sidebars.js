@@ -1,0 +1,196 @@
+module.exports = {
+    sidebar: [
+        "index",
+        {
+            type: "category",
+            label: "Getting started",
+            collapsed: false,
+            items: [
+                "overview",
+                "install",
+                "developer-env",
+                "your-first-script"
+            ]
+        },
+        {
+            type: "category",
+            label: "Running pipelines",
+            collapsed: true,
+            items: [
+                "cli",
+                "config",
+                "executor",
+                "cache-and-resume",
+                "reports"
+            ]
+        },
+        {
+            type: "category",
+            label: "Developing pipelines",
+            collapsed: true,
+            items: [
+                "script",
+                "working-with-files",
+                "process",
+                "process-typed",
+                "channel",
+                "workflow",
+                "module",
+                "notifications",
+                "secrets",
+                "sharing",
+                "vscode"
+            ]
+        },
+        {
+            type: "category",
+            label: "Software dependencies",
+            collapsed: true,
+            items: [
+                "git",
+                "container",
+                "conda",
+                "spack",
+                "wave"
+            ]
+        },
+        {
+            type: "category",
+            label: "Compute and storage",
+            collapsed: true,
+            items: [
+                "aws",
+                "amazons3",
+                "azure",
+                "google",
+                "kubernetes",
+                "fusion"
+            ]
+        },
+        {
+            type: "category",
+            label: "Plugins",
+            collapsed: true,
+            items: [
+                "plugins/plugins",
+                "plugins/using-plugins",
+                "plugins/developing-plugins",
+                "plugins/plugin-registry"
+            ]
+        },
+        {
+            type: "category",
+            label: "Language reference",
+            collapsed: true,
+            items: [
+                "reference/feature-flags",
+                "reference/syntax",
+                {
+                    type: "category",
+                    label: "Standard library",
+                    link: { type: "doc", id: "reference/stdlib" },
+                    items: [
+                        "reference/stdlib-namespaces",
+                        "reference/stdlib-types",
+                        "reference/stdlib-groovy"
+                    ]
+                },
+                "reference/process",
+                "reference/channel",
+                "reference/operator"
+            ]
+        },
+        {
+            type: "category",
+            label: "Runtime reference",
+            collapsed: true,
+            items: [
+                "reference/cli",
+                "reference/config",
+                "reference/env-vars"
+            ]
+        },
+        {
+            type: "category",
+            label: "Updates",
+            collapsed: true,
+            items: [
+                "updating-nextflow",
+                "strict-syntax",
+                {
+                    type: "category",
+                    label: "Migration notes",
+                    link: { type: "doc", id: "migrations/index" },
+                    items: [
+                        "migrations/25-10",
+                        "migrations/25-04",
+                        "migrations/24-10",
+                        "migrations/24-04",
+                        "migrations/dsl1"
+                    ]
+                }
+            ]
+        },
+        {
+            type: "category",
+            label: "Contributing",
+            collapsed: true,
+            items: [
+                "developer/index",
+                "developer/diagram",
+                "developer/config-scopes",
+                {
+                    type: "category",
+                    label: "Packages",
+                    link: { type: "doc", id: "developer/packages" },
+                    items: [
+                        "developer/nextflow",
+                        "developer/nextflow.ast",
+                        "developer/nextflow.cache",
+                        "developer/nextflow.cli",
+                        "developer/nextflow.cloud.aws",
+                        "developer/nextflow.cloud.aws.nio",
+                        "developer/nextflow.cloud.azure",
+                        "developer/nextflow.cloud.google",
+                        "developer/nextflow.config",
+                        "developer/nextflow.container",
+                        "developer/nextflow.dag",
+                        "developer/nextflow.executor",
+                        "developer/nextflow.extension",
+                        "developer/nextflow.k8s",
+                        "developer/nextflow.plugin",
+                        "developer/nextflow.processor",
+                        "developer/nextflow.scm",
+                        "developer/nextflow.script",
+                        "developer/nextflow.secret",
+                        "developer/nextflow.trace"
+                    ]
+                }
+            ]
+        },
+        {
+            type: "category",
+            label: "Tutorials",
+            collapsed: true,
+            items: [
+                "tutorials/rnaseq-nf",
+                "tutorials/data-lineage",
+                "tutorials/workflow-outputs",
+                "tutorials/static-types",
+                "tutorials/metrics",
+                "tutorials/flux"
+            ]
+        },
+        {
+            type: "category",
+            label: "Guides",
+            collapsed: true,
+            items: [
+                "guides/aws-java-sdk-v2",
+                "guides/gradle-plugin",
+                "guides/migrate-plugin",
+                "guides/updating-spot-retries"
+            ]
+        }
+    ]
+};

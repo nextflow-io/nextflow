@@ -86,7 +86,6 @@ class PluginUpdater extends UpdateManager {
     static private List<UpdateRepository> wrap(URL remote, Path local, boolean offline) {
         List<UpdateRepository> result = new ArrayList<>(1)
         if( offline ) {
-            log.debug "Using local update repository: ${local}"
             result.add(new LocalUpdateRepository('downloaded', local))
         }
         else {
@@ -94,7 +93,6 @@ class PluginUpdater extends UpdateManager {
                 ? new DefaultUpdateRepository('nextflow.io', remote)
                 : new HttpPluginRepository('registry', remote.toURI())
 
-            log.debug "Using plugin repository: ${remoteRepo.getClass().getSimpleName()} [${remoteRepo.id}]; url=${remote}"
             result.add(remoteRepo)
             result.addAll(customRepos())
         }
@@ -153,7 +151,6 @@ class PluginUpdater extends UpdateManager {
         // which could fail anything which hasn't had a chance to prefetch yet
         for( def repo : this.@repositories ) {
             if( repo instanceof PrefetchUpdateRepository ) {
-                log.trace "Prefetching plugin metadata from repository: ${repo.getClass().getSimpleName()} [${repo.id}]; plugins=${plugins}"
                 repo.prefetch(plugins)
             }
         }

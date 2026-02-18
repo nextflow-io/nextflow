@@ -1,0 +1,7 @@
+#/platform-enterprise/  https://seqera-docs.netlify.app/platform-enterprise/:splat  200!
+#/platform-cloud/*      https://seqera-docs.netlify.app/platform-cloud/:splat       200!
+#/wave/*                https://seqera-docs.netlify.app/wave/:splat                 200!
+#/fusion/*              https://seqera-docs.netlify.app/fusion/:splat               200!
+#/multiqc/*             https://seqera-docs.netlify.app/multiqc/:splat              200!
+#/platform-api/*        https://seqera-docs-api.netlify.app/platform-api/:splat     200!
+#/changelog/*           https://seqera-docs.netlify.app/changelog/:splat            200!

@@ -1,0 +1,28 @@
+# Netlify configuration for Nextflow documentation
+
+# No deployment previews unless the docs are edited
+[build]
+  # Base directory for the build
+  base = "docs/"
+
+  # Build command
+  command = "npm run build"
+
+  # Directory to publish (output directory)
+  publish = "build/"
+
+  # Ignore builds if no changes in docs directory
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF ."
+
+# Node.js version
+[build.environment]
+  # Set node version
+  NODE_VERSION = "22"
+  # Limit Node.js memory to 2GB
+  NODE_OPTIONS = "--max-old-space-size=2048"
+
+# Add noindex header to prevent search engine indexing
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Robots-Tag = "noindex"

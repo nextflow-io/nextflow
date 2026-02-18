@@ -1,0 +1,106 @@
+May-18 21:16:09.405 [main] DEBUG nextflow.cli.Launcher - $> ../../launch.sh -q run splitjson-with-path.nf
+May-18 21:16:09.489 [main] INFO  nextflow.cli.CmdRun - N E X T F L O W  ~  version 23.05.0-edge
+May-18 21:16:09.531 [main] DEBUG nextflow.plugin.PluginsFacade - Setting up plugin manager > mode=dev; embedded=false; plugins-dir=/home/bent/projects/nextflow-io_nextflow/plugins; core-plugins: nf-amazon@2.0.0,nf-azure@1.1.0,nf-codecommit@0.1.5,nf-console@1.0.6,nf-ga4gh@1.0.6,nf-google@1.7.4,nf-tower@1.5.13,nf-wave@0.9.0
+May-18 21:16:09.531 [main] DEBUG nextflow.plugin.DevPluginManager - Add plugin root repository: /home/bent/projects/nextflow-io_nextflow/plugins
+May-18 21:16:09.535 [main] INFO  o.pf4j.DefaultPluginStatusProvider - Enabled plugins: []
+May-18 21:16:09.536 [main] INFO  o.pf4j.DefaultPluginStatusProvider - Disabled plugins: []
+May-18 21:16:09.542 [main] INFO  org.pf4j.DefaultPluginManager - PF4J version 3.4.1 in 'development' mode
+May-18 21:16:09.553 [main] DEBUG nextflow.plugin.DevPluginClasspath - Groovy DEV plugin classpath: classes-dirs=[build/classes/groovy/main, build/classes/main, build/resources/main]; jars-dirs=[build/target/libs]
+May-18 21:16:09.564 [main] INFO  org.pf4j.AbstractPluginManager - Plugin 'nf-wave@0.9.0' resolved
+May-18 21:16:09.564 [main] INFO  org.pf4j.AbstractPluginManager - Plugin 'nf-amazon@2.0.0' resolved
+May-18 21:16:09.564 [main] INFO  org.pf4j.AbstractPluginManager - Plugin 'nf-google@1.7.4' resolved
+May-18 21:16:09.564 [main] INFO  org.pf4j.AbstractPluginManager - Plugin 'nf-ga4gh@1.0.6' resolved
+May-18 21:16:09.564 [main] INFO  org.pf4j.AbstractPluginManager - Plugin 'nf-tower@1.5.13' resolved
+May-18 21:16:09.564 [main] INFO  org.pf4j.AbstractPluginManager - Plugin 'nf-codecommit@0.1.5' resolved
+May-18 21:16:09.564 [main] INFO  org.pf4j.AbstractPluginManager - Plugin 'nf-console@1.0.6' resolved
+May-18 21:16:09.565 [main] INFO  org.pf4j.AbstractPluginManager - Plugin 'nf-azure@1.1.0' resolved
+May-18 21:16:09.612 [main] DEBUG nextflow.cli.CmdRun - Applied DSL=2 by global default
+May-18 21:16:09.623 [main] INFO  nextflow.cli.CmdRun - Launching `splitjson-with-path.nf` [sad_hawking] DSL2 - revision: 75f20d5d34
+May-18 21:16:09.624 [main] DEBUG nextflow.plugin.PluginsFacade - Plugins default=[]
+May-18 21:16:09.624 [main] DEBUG nextflow.plugin.PluginsFacade - Plugins resolved requirement=[]
+May-18 21:16:09.634 [main] DEBUG n.secret.LocalSecretsProvider - Secrets store: /home/bent/.nextflow/secrets/store.json
+May-18 21:16:09.638 [main] DEBUG nextflow.secret.SecretsLoader - Discovered secrets providers: [nextflow.secret.LocalSecretsProvider@72805168] - activable => nextflow.secret.LocalSecretsProvider@72805168
+May-18 21:16:09.687 [main] DEBUG nextflow.Session - Session UUID: cd50afbf-cb5d-4dc2-87de-474cdc70dcc6
+May-18 21:16:09.687 [main] DEBUG nextflow.Session - Run name: sad_hawking
+May-18 21:16:09.688 [main] DEBUG nextflow.Session - Executor pool size: 12
+May-18 21:16:09.693 [main] DEBUG nextflow.file.FilePorter - File porter settings maxRetries=3; maxTransfers=50; pollTimeout=null
+May-18 21:16:09.697 [main] DEBUG nextflow.util.ThreadPoolBuilder - Creating thread pool 'FileTransfer' minSize=10; maxSize=36; workQueue=LinkedBlockingQueue[10000]; allowCoreThreadTimeout=false
+May-18 21:16:09.718 [main] DEBUG nextflow.cli.CmdRun - 
+  Version: 23.05.0-edge build 5864
+  Created: 19-05-2023 02:15 UTC (18-05-2023 21:15 CDT)
+  System: Linux 5.10.16.3-microsoft-standard-WSL2
+  Runtime: Groovy 3.0.17 on OpenJDK 64-Bit Server VM 17.0.6+10
+  Encoding: UTF-8 (UTF-8)
+  Process: 31895@LAPTOP-2GR8K3GP [127.0.1.1]
+  CPUs: 12 - Mem: 7.6 GB (4.5 GB) - Swap: 2 GB (2 GB)
+May-18 21:16:09.744 [main] DEBUG nextflow.Session - Work-dir: /home/bent/projects/nextflow-io_nextflow/docs/snippets/work [ext2/ext3]
+May-18 21:16:09.745 [main] DEBUG nextflow.Session - Script base path does not exist or is not a directory: /home/bent/projects/nextflow-io_nextflow/docs/snippets/bin
+May-18 21:16:09.752 [main] DEBUG nextflow.executor.ExecutorFactory - Extension executors providers=[]
+May-18 21:16:09.759 [main] DEBUG nextflow.Session - Observer factory: DefaultObserverFactory
+May-18 21:16:09.771 [main] DEBUG nextflow.cache.CacheFactory - Using Nextflow cache factory: nextflow.cache.DefaultCacheFactory
+May-18 21:16:09.777 [main] DEBUG nextflow.util.CustomThreadPool - Creating default thread pool > poolSize: 13; maxThreads: 1000
+May-18 21:16:09.841 [main] DEBUG nextflow.Session - Session start
+May-18 21:16:10.198 [main] DEBUG nextflow.script.ScriptRunner - > Launching execution
+May-18 21:16:10.259 [main] DEBUG nextflow.Session - Workflow process names [dsl2]: 
+May-18 21:16:10.260 [main] DEBUG nextflow.Session - Igniting dataflow network (1)
+May-18 21:16:10.260 [main] DEBUG nextflow.script.ScriptRunner - > Awaiting termination 
+May-18 21:16:10.260 [main] DEBUG nextflow.Session - Session await
+May-18 21:16:10.260 [main] DEBUG nextflow.Session - Session await > all processes finished
+May-18 21:16:10.261 [main] DEBUG nextflow.Session - Session await > all barriers passed
+May-18 21:16:10.265 [Actor Thread 3] ERROR nextflow.extension.DataflowHelper - @unknown
+java.lang.IllegalStateException: Error while parsing JSON content - cause: java.lang.NullPointerException
+	at nextflow.splitter.JsonSplitter.process(JsonSplitter.groovy:95)
+	at nextflow.splitter.JsonSplitter.process(JsonSplitter.groovy)
+	at nextflow.splitter.AbstractSplitter.apply(AbstractSplitter.groovy:154)
+	at nextflow.extension.SplitOp$_applySplittingOperator_closure1.doCall(SplitOp.groovy:190)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:568)
+	at org.codehaus.groovy.reflection.CachedMethod.invoke(CachedMethod.java:107)
+	at groovy.lang.MetaMethod.doMethodInvoke(MetaMethod.java:323)
+	at org.codehaus.groovy.runtime.metaclass.ClosureMetaClass.invokeMethod(ClosureMetaClass.java:274)
+	at groovy.lang.MetaClassImpl.invokeMethod(MetaClassImpl.java:1035)
+	at org.codehaus.groovy.runtime.callsite.PogoMetaClassSite.call(PogoMetaClassSite.java:38)
+	at org.codehaus.groovy.runtime.callsite.CallSiteArray.defaultCall(CallSiteArray.java:47)
+	at org.codehaus.groovy.runtime.callsite.AbstractCallSite.call(AbstractCallSite.java:125)
+	at org.codehaus.groovy.runtime.callsite.AbstractCallSite.call(AbstractCallSite.java:139)
+	at nextflow.extension.DataflowHelper$_subscribeImpl_closure2.doCall(DataflowHelper.groovy:284)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:568)
+	at org.codehaus.groovy.reflection.CachedMethod.invoke(CachedMethod.java:107)
+	at groovy.lang.MetaMethod.doMethodInvoke(MetaMethod.java:323)
+	at org.codehaus.groovy.runtime.metaclass.ClosureMetaClass.invokeMethod(ClosureMetaClass.java:274)
+	at groovy.lang.MetaClassImpl.invokeMethod(MetaClassImpl.java:1035)
+	at groovy.lang.Closure.call(Closure.java:412)
+	at groovyx.gpars.dataflow.operator.DataflowOperatorActor.startTask(DataflowOperatorActor.java:120)
+	at groovyx.gpars.dataflow.operator.DataflowOperatorActor.onMessage(DataflowOperatorActor.java:108)
+	at groovyx.gpars.actor.impl.SDAClosure$1.call(SDAClosure.java:43)
+	at groovyx.gpars.actor.AbstractLoopingActor.runEnhancedWithoutRepliesOnMessages(AbstractLoopingActor.java:293)
+	at groovyx.gpars.actor.AbstractLoopingActor.access$400(AbstractLoopingActor.java:30)
+	at groovyx.gpars.actor.AbstractLoopingActor$1.handleMessage(AbstractLoopingActor.java:93)
+	at groovyx.gpars.util.AsyncMessagingCore.run(AsyncMessagingCore.java:132)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:833)
+Caused by: java.lang.NullPointerException: null
+	at java.base/java.util.Objects.requireNonNull(Objects.java:208)
+	at java.base/java.util.ImmutableCollections$MapN.<init>(ImmutableCollections.java:1186)
+	at java.base/java.util.Map.of(Map.java:1373)
+	at nextflow.splitter.JsonSplitter.processObject(JsonSplitter.groovy:224)
+	at nextflow.splitter.JsonSplitter.scanJsonForPath(JsonSplitter.groovy:138)
+	at nextflow.splitter.JsonSplitter.scanJsonForPath(JsonSplitter.groovy:144)
+	at nextflow.splitter.JsonSplitter.scanJsonForPath(JsonSplitter.groovy:128)
+	at nextflow.splitter.JsonSplitter.scanJsonForPath(JsonSplitter.groovy:144)
+	at nextflow.splitter.JsonSplitter.process(JsonSplitter.groovy:88)
+	... 35 common frames omitted
+May-18 21:16:10.271 [Actor Thread 3] DEBUG nextflow.Session - Session aborted -- Cause: Error while parsing JSON content - cause: java.lang.NullPointerException
+May-18 21:16:10.307 [Actor Thread 3] DEBUG nextflow.Session - The following nodes are still active:
+  [operator] splitJson
+  [operator] view
+
+May-18 21:16:10.343 [main] DEBUG n.trace.WorkflowStatsObserver - Workflow completed > WorkflowStats[succeededCount=0; failedCount=0; ignoredCount=0; cachedCount=0; pendingCount=0; submittedCount=0; runningCount=0; retriesCount=0; abortedCount=0; succeedDuration=0ms; failedDuration=0ms; cachedDuration=0ms;loadCpus=0; loadMemory=0; peakRunning=0; peakCpus=0; peakMemory=0; ]
+May-18 21:16:10.363 [main] DEBUG nextflow.cache.CacheDB - Closing CacheDB done
+May-18 21:16:10.392 [main] DEBUG nextflow.script.ScriptRunner - > Execution complete -- Goodbye

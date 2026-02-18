@@ -1,0 +1,13 @@
+/* Section indentation */
+section > section h5 ~ *,
+section > section h6 ~ *,
+section h5 ~ *,
+section h6 ~ *,
+section .admonition {
+  margin-left: 2em !important;
+}
+
+/* Make h5 and h6 headings smaller and bold */
+h5, h6 {
+  font-size: 1rem !important;
+}

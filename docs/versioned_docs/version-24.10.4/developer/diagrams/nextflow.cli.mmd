@@ -1,0 +1,29 @@
+classDiagram
+    %%
+    %% nextflow.cli
+    %%
+    class Launcher {
+        cliOptions : CliOptions
+        command : CmdBase
+    } 
+    Launcher --* CliOptions
+    Launcher --* CmdBase
+
+    %% CmdBase <|-- CmdClean
+    %% CmdBase <|-- CmdClone
+    %% CmdBase <|-- CmdConfig
+    CmdBase <|-- CmdConsole
+    %% CmdBase <|-- CmdDrop
+    %% CmdBase <|-- CmdFs
+    CmdBase <|-- CmdHelp
+    CmdBase <|-- CmdInfo
+    %% CmdBase <|-- CmdKubeRun
+    %% CmdBase <|-- CmdList
+    %% CmdBase <|-- CmdLog
+    %% CmdBase <|-- CmdNode
+    %% CmdBase <|-- CmdPlugin
+    %% CmdBase <|-- CmdPull
+    CmdBase <|-- CmdRun
+    %% CmdBase <|-- CmdSecret
+    %% CmdBase <|-- CmdSelfUpdate
+    %% CmdBase <|-- CmdView

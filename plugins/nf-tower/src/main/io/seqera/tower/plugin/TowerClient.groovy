@@ -271,7 +271,7 @@ class TowerClient implements TraceObserverV2 {
         log.debug "Creating Seqera Platform observer -- endpoint=$endpoint; requestInterval=$requestInterval; aliveInterval=$aliveInterval; maxRetries=$maxRetries; backOffBase=$backOffBase; backOffDelay=$backOffDelay"
 
         this.session = session
-        this.aggregator = new ResourcesAggregator()
+        this.aggregator = new ResourcesAggregator(session)
         this.runName = session.getRunName()
         this.runId = session.getUniqueId()
         this.httpClient = newHttpClient()

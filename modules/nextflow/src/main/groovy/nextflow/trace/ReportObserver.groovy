@@ -113,7 +113,7 @@ class ReportObserver implements TraceObserverV2 {
     @Override
     void onFlowCreate(Session session) {
         this.session = session
-        this.aggregator = new ResourcesAggregator()
+        this.aggregator = new ResourcesAggregator(session)
         // check if the process exists
         if( Files.exists(reportFile) && !overwrite )
             throw new AbortOperationException("Report file already exists: ${reportFile.toUriString()} -- enable the 'report.overwrite' option in your config file to overwrite existing files")
