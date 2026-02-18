@@ -111,6 +111,36 @@ Copying a map with the `+` operator is a safer way to modify maps in Nextflow, s
 
 See {ref}`stdlib-types-map` for the set of available map operations.
 
+(script-records)=
+
+## Records
+
+Records are used to store a set of related fields, where each field can have its own type. They are created using the `record` function:
+
+```nextflow
+person = record(name: 'Alice', age: 42, is_male: false)
+```
+
+Record fields are accessed by name:
+
+```nextflow
+name = person.name
+age = person.age
+is_male = person.is_male
+```
+
+Records are immutable -- once a record is created, it cannot be modified. Use record operations to create new records instead. 
+
+For example:
+
+```nextflow
+person + record(age: 43) - ['is_male']
+
+// record(name: 'Alice', age: 43)
+```
+
+See {ref}`stdlib-types-record` for the set of available record operations.
+
 (script-tuples)=
 
 ## Tuples

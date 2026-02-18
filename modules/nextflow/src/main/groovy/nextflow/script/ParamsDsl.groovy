@@ -46,6 +46,8 @@ class ParamsDsl {
     private Map<String,Param> declarations = [:]
 
     void declare(String name, Class type, boolean optional, Object defaultValue = null) {
+        if( defaultValue == null && type == Boolean )
+            defaultValue = false
         declarations[name] = new Param(name, type, optional, defaultValue)
     }
 

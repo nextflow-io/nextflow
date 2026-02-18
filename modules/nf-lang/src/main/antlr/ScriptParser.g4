@@ -112,6 +112,7 @@ scriptDeclaration
     |   importDeclaration           #importDeclAlt
     |   paramsDef                   #paramsDefAlt
     |   paramDeclarationV1          #paramDeclV1Alt
+    |   recordDef                   #recordDefAlt
     |   enumDef                     #enumDefAlt
     |   processDef                  #processDefAlt
     |   workflowDef                 #workflowDefAlt
@@ -167,6 +168,17 @@ paramDeclaration
 // -- legacy parameter declaration
 paramDeclarationV1
     :   PARAMS (DOT identifier)+ nls ASSIGN nls expression
+    ;
+
+// -- record definition
+recordDef
+    :   RECORD identifier nls LBRACE
+        nls recordBody?
+        nls RBRACE
+    ;
+
+recordBody
+    :   nameTypePair (sep nameTypePair)*
     ;
 
 // -- enum definition
@@ -228,7 +240,7 @@ processInputs
 
 processInput
     :   identifier (COLON type)?
-    |   LPAREN identifier (COMMA identifier)+ rparen (COLON type)?
+    |   LPAREN nls nameTypePair (nls COMMA nls nameTypePair)* nls rparen (COLON type)?
     |   statement
     ;
 
@@ -576,6 +588,7 @@ identifier
     |   NEXTFLOW
     |   PARAMS
     |   FROM
+    |   RECORD
     |   PROCESS
     |   EXEC
     |   INPUT
@@ -778,6 +791,7 @@ keywords
     |   PARAMS
     |   INCLUDE
     |   FROM
+    |   RECORD
     |   PROCESS
     |   EXEC
     |   INPUT

@@ -1,5 +1,5 @@
 /*
- * Copyright 2025, Seqera Labs
+ * Copyright 2024-2025, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,27 +15,25 @@
  */
 package nextflow.script.ast;
 
-import java.util.List;
+import java.lang.reflect.Modifier;
 
+import nextflow.script.types.Record;
+import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
-import org.codehaus.groovy.ast.Parameter;
 
 /**
- * A parameter that destructures the components of a record
- * or tuple by name.
+ * A record type definition.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
-public class TupleParameter extends Parameter {
-    public final Parameter[] components;
-
-    public TupleParameter(ClassNode type, Parameter[] components) {
-        super(type, "");
-        this.components = components;
+public class RecordNode extends ClassNode {
+    public RecordNode(String name) {
+        super(name, Modifier.PUBLIC | Modifier.FINAL, ClassHelper.OBJECT_TYPE);
+        setInterfaces(new ClassNode[] { ClassHelper.makeCached(Record.class) });
     }
 
-    public boolean isRecord() {
-        return "Record".equals(getType().getUnresolvedName())
-            || "Record".equals(getType().getNameWithoutPackage());
+    @Override
+    public Class getTypeClass() {
+        return Record.class;
     }
 }

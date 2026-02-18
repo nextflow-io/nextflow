@@ -231,6 +231,27 @@ class ScriptFormatterTest extends Specification {
             }
             '''
         )
+
+        checkFormat(
+            '''\
+            nextflow.preview.types=true
+
+            process hello{
+            input: (id:String,infile:Path):Record ; script: 'cat input.txt > output.txt'
+            }
+            ''',
+            '''\
+            nextflow.preview.types = true
+
+            process hello {
+                input:
+                (id: String, infile: Path): Record
+
+                script:
+                'cat input.txt > output.txt'
+            }
+            '''
+        )
     }
 
     def 'should format a function definition' () {
@@ -287,6 +308,22 @@ class ScriptFormatterTest extends Specification {
                 RED,
                 GREEN,
                 BLUE,
+            }
+            '''
+        )
+    }
+
+    def 'should format a record definition' () {
+        expect:
+        checkFormat(
+            '''\
+            record FastqPair{id:String;fastq_1: Path;fastq_2: Path?}
+            ''',
+            '''\
+            record FastqPair {
+                id: String
+                fastq_1: Path
+                fastq_2: Path?
             }
             '''
         )
