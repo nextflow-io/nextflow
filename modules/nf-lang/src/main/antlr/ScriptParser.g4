@@ -240,8 +240,19 @@ processInputs
 
 processInput
     :   identifier (COLON type)?
-    |   LPAREN nls nameTypePair (nls COMMA nls nameTypePair)* nls rparen (COLON type)?
+    |   processRecordInput
+    |   processTupleInput
     |   statement
+    ;
+
+processRecordInput
+    :   identifier (COLON type)? nls LBRACE
+        nls recordBody?
+        nls RBRACE
+    ;
+
+processTupleInput
+    :   LPAREN identifier (COMMA identifier)* rparen (COLON type)?
     ;
 
 processStage

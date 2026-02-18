@@ -24,6 +24,7 @@ import nextflow.script.ast.ASTNodeMarker;
 import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.ProcessNodeV2;
 import nextflow.script.ast.RecordNode;
+import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.TupleParameter;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
@@ -56,10 +57,13 @@ public class ProcessToGroovyVisitorV2 {
 
     private SourceUnit sourceUnit;
 
+    private ScriptNode moduleNode;
+
     private ScriptToGroovyHelper sgh;
 
     public ProcessToGroovyVisitorV2(SourceUnit sourceUnit) {
         this.sourceUnit = sourceUnit;
+        this.moduleNode = (ScriptNode) sourceUnit.getAST();
         this.sgh = new ScriptToGroovyHelper(sourceUnit);
     }
 
@@ -149,6 +153,8 @@ public class ProcessToGroovyVisitorV2 {
             stagers.addStatement(stager);
         }
         else if( isRecordType(cn) ) {
+            if( cn.getNameWithoutPackage().startsWith("__Record") )
+                moduleNode.addClass(cn);
             for( var fn : cn.getFields() )
                 visitProcessInputType(fn, propX(target, fn.getName()), stagers);
         }

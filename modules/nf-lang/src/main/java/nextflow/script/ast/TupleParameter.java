@@ -15,8 +15,6 @@
  */
 package nextflow.script.ast;
 
-import java.util.List;
-
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.Parameter;
 
@@ -32,10 +30,5 @@ public class TupleParameter extends Parameter {
     public TupleParameter(ClassNode type, Parameter[] components) {
         super(type, "");
         this.components = components;
-    }
-
-    public boolean isRecord() {
-        return "Record".equals(getType().getUnresolvedName())
-            || "Record".equals(getType().getNameWithoutPackage());
     }
 }

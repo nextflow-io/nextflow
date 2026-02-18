@@ -532,68 +532,71 @@ public class ScriptAstBuilder {
             return null;
         }
 
-        var type = type(ctx.type());
+        Parameter result = null;
+
         if( ctx.identifier() != null ) {
+            var type = type(ctx.type());
             var name = identifier(ctx.identifier());
-            var result = ast( param(type, name), ctx );
+            result = ast( param(type, name), ctx );
             checkInvalidVarName(name, result);
             if( ctx.type() == null )
                 collectWarning("Process input should have a type annotation", name, result);
-            saveTrailingComment(result, ctx);
-            return result;
         }
 
-        if( "Record".equals(type.getUnresolvedName()) ) {
-            var result = processRecordInput(type, ctx);
-            saveTrailingComment(result, ctx);
-            return result;
+        else if( ctx.processRecordInput() != null ) {
+            result = processRecordInput(ctx.processRecordInput());
         }
 
-        if( "Tuple".equals(type.getUnresolvedName()) ) {
-            var result = processTupleInput(type, ctx);
-            saveTrailingComment(result, ctx);
-            return result;
+        else if( ctx.processTupleInput() != null ) {
+            result = processTupleInput(ctx.processTupleInput());
         }
-
-        var result = ast( new EmptyStatement(), ctx );
-        collectSyntaxError(new SyntaxException("Destructured process input should have type Record or Tuple", result));
-        return null;
+        
+        saveTrailingComment(result, ctx);
+        return result;
     }
 
-    private TupleParameter processRecordInput(ClassNode type, ProcessInputContext ctx) {
-        var components = ctx.nameTypePair().stream()
-            .map((ntp) -> {
-                var name = identifier(ntp.identifier());
-                var componentType = type(ntp.type());
-                var component = ast( param(componentType, name), ntp );
-                checkInvalidVarName(name, component);
-                if( ntp.type() == null )
-                    collectWarning("Record component should have a type annotation", component.getName(), component);
-                return component;
-            })
-            .toArray(Parameter[]::new);
-        return ast( new TupleParameter(type, components), ctx );
+    private Parameter processRecordInput(ProcessRecordInputContext ctx) {
+        var name = identifier(ctx.identifier());
+        var type = type(ctx.type());
+        if( !"Record".equals(type.getUnresolvedName()) )
+            collectSyntaxError(new SyntaxException("Process record input must have type `Record`", ast( new EmptyStatement(), ctx )));
+
+        var recordNode = ast( new RecordNode(nextRecordName()), ctx );
+        if( ctx.recordBody() != null )
+            recordBody(ctx.recordBody(), recordNode);
+        else
+            collectSyntaxError(new SyntaxException("Missing record body", recordNode));
+
+        return ast( new Parameter(recordNode.getPlainNodeReference(), name), ctx );
     }
 
-    private TupleParameter processTupleInput(ClassNode type, ProcessInputContext ctx) {
-        var numComponents = ctx.nameTypePair().size();
+    private static AtomicInteger nextRecordId = new AtomicInteger(1);
+
+    private static String nextRecordName() {
+        var id = nextRecordId.getAndIncrement();
+        return "__Record_" + id;
+    }
+
+    private TupleParameter processTupleInput(ProcessTupleInputContext ctx) {
+        var type = type(ctx.type());
+        var numComponents = ctx.identifier().size();
         var componentTypes = tupleComponentTypes(type, numComponents);
         var components = new Parameter[numComponents];
         for( int i = 0; i < numComponents; i++ ) {
-            var ntp = ctx.nameTypePair().get(i);
-            var name = identifier(ntp.identifier());
+            var ident = ctx.identifier().get(i);
+            var name = identifier(ident);
             var componentType = componentTypes != null ? componentTypes.get(i) : ClassHelper.dynamicType();
-            var component = ast( param(componentType, name), ntp.identifier() );
+            var component = ast( param(componentType, name), ident );
             checkInvalidVarName(component.getName(), component);
-            if( ntp.type() != null )
-                collectWarning("Tuple component should not have a type annotation", component.getName(), component);
             components[i] = component;
         }
         var result = ast( new TupleParameter(type, components), ctx );
-        if( !type.isUsingGenerics() || type.getGenericsTypes().length != numComponents )
+        if( !"Tuple".equals(type.getUnresolvedName()) )
+            collectSyntaxError(new SyntaxException("Process tuple input must have type `Tuple<...>`", result));
+        else if( numComponents == 1 )
+            collectSyntaxError(new SyntaxException("Process tuple input must have more than one component", result));
+        else if( !type.isUsingGenerics() || type.getGenericsTypes().length != numComponents )
             collectSyntaxError(new SyntaxException("Process tuple input type must have " + numComponents + " type arguments (one for each tuple component)", result));
-        if( components.length == 1 )
-            collectSyntaxError(new SyntaxException("Process tuple input type more than one component", result));
         return result;
     }
 

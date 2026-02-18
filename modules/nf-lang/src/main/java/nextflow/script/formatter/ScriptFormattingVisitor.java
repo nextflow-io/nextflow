@@ -320,11 +320,7 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             fmt.appendIndent();
             if( input instanceof TupleParameter tp ) {
                 var components = Arrays.stream(tp.components)
-                    .map(p -> (
-                        tp.isRecord() && fmt.hasType(p)
-                            ? p.getName() + ": " + Types.getName(p.getType())
-                            : p.getName()
-                    ))
+                    .map(p -> p.getName())
                     .collect(Collectors.joining(", "));
                 fmt.append('(');
                 fmt.append(components);
@@ -339,7 +335,11 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
                     fmt.append(" ".repeat(padding));
                 }
                 fmt.append(": ");
-                fmt.visitTypeAnnotation(input.getType());
+                var type = input.getType();
+                if( type.getNameWithoutPackage().startsWith("__Record") )
+                    visitProcessInputRecordType((RecordNode) type.redirect());
+                else
+                    fmt.visitTypeAnnotation(type);
             }
             fmt.appendTrailingComment(input);
             fmt.appendNewLine();
@@ -350,6 +350,11 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         return param instanceof TupleParameter tp
             ? Arrays.stream(tp.components).mapToInt(p -> 2 + p.getName().length()).sum()
             : param.getName().length();
+    }
+
+    private void visitProcessInputRecordType(RecordNode type) {
+        fmt.append("Record");
+        visitRecordBody(type);
     }
 
     private void visitTypedOutputs(List<Statement> outputs) {
@@ -590,6 +595,7 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         fmt.append("record ");
         fmt.append(node.getName());
         visitRecordBody(node);
+        fmt.appendNewLine();
     }
 
     private void visitRecordBody(RecordNode node) {
@@ -614,7 +620,7 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         }
         fmt.decIndent();
         fmt.appendIndent();
-        fmt.append("}\n");
+        fmt.append("}");
     }
 
     private int maxFieldWidth(List<FieldNode> fields) {

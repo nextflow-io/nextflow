@@ -149,11 +149,10 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
     @Override
     public void visitProcessV2(ProcessNodeV2 node) {
         for( var input : node.inputs ) {
-            resolver.resolveOrFail(input.getType(), input);
-            if( input instanceof TupleParameter tp && tp.isRecord() ) {
-                for( var component : tp.components )
-                    resolver.resolveOrFail(component.getType(), component);
-            }
+            var type = input.getType();
+            resolver.resolveOrFail(type, input);
+            if( type.getNameWithoutPackage().startsWith("__Record") )
+                visitRecord((RecordNode) type.redirect());
         }
         resolver.visit(node.directives);
         resolver.visit(node.stagers);

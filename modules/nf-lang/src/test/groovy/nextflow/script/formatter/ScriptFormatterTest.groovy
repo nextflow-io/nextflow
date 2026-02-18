@@ -237,7 +237,7 @@ class ScriptFormatterTest extends Specification {
             nextflow.preview.types=true
 
             process hello{
-            input: (id:String,infile:Path):Record ; script: 'cat input.txt > output.txt'
+            input: sample:Record{id:String;infile:Path} ; script: 'cat input.txt > output.txt'
             }
             ''',
             '''\
@@ -245,7 +245,10 @@ class ScriptFormatterTest extends Specification {
 
             process hello {
                 input:
-                (id: String, infile: Path): Record
+                sample: Record {
+                    id: String
+                    infile: Path
+                }
 
                 script:
                 'cat input.txt > output.txt'

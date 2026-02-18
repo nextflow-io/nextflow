@@ -94,17 +94,20 @@ Inputs with type `Record` can declare the name and type of each record field:
 ```nextflow
 process fastqc {
     input:
-    (id: String, fastq: Path): Record
+    sample: Record {
+        id: String
+        fastq: Path
+    }
 
     script:
     """
-    echo 'id: ${id}`
-    echo 'fastq: ${fastq}'
+    echo 'id: ${sample.id}`
+    echo 'fastq: ${sample.fastq}'
     """
 }
 ```
 
-This pattern is called *record destructuring*. Each record field is staged into the task the same way as an individual input.
+In this example, the record is staged into the task as `sample`, and `sample.fastq` is staged as an input file since the `fastq` field is declared with type `Path`.
 
 When the process is invoked, the incoming record should contain the specified fields, or else the run will fail. If the record has additional fields not declared by the process input, they are ignored.
 
@@ -112,9 +115,7 @@ When the process is invoked, the incoming record should contain the specified fi
 Record inputs are a useful way to select a subset of fields from a larger record. This way, the process only stages what it needs, allowing you to keep related data together in your workflow logic.
 :::
 
-### Record type inputs
-
-Record inputs can also be declared using a custom record type:
+You can achieve the same behavior using an external record type:
 
 ```nextflow
 process fastqc {
@@ -134,9 +135,7 @@ record Sample {
 }
 ```
 
-In this example, the record is staged into the task as `sample`, and `sample.fastq` is staged as an input file since the `fastq` field is declared with type `Path`.
-
-When the process is invoked, the incoming record should contain the fields specified by the record type, or else the run will fail. If the record has additional fields not declared by the record type, they are ignored.
+This approach is useful when the record type can be re-used elsewhere in the pipeline.
 
 ### Tuple inputs
 
@@ -311,10 +310,13 @@ The `record()` standard library function can be used to create a record:
 ```nextflow
 process fastqc {
     input:
-    (id: String, fastq: Path): Record
+    sample: Record {
+        id: String
+        fastq: Path
+    }
 
     output:
-    record(id: id, fastqc: file('fastqc_logs'))
+    record(id: sample.id, fastqc: file('fastqc_logs'))
 
     script:
     // ...

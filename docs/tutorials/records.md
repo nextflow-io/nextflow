@@ -74,11 +74,15 @@ Is converted to:
 ```nextflow
 process ALIGN {
     input:
-    (meta: Map, reads: Path, index: Path): Record
+    sample: Record {
+        meta: Map
+        reads: Path
+        index: Path
+    }
 
     output:
     record(
-        meta: meta,
+        meta: sample.meta,
         bam: file('*.bam'),
         bai: file('*.bai')
     )
@@ -188,7 +192,8 @@ The `FASTQ` process is defined with the following inputs and outputs:
 
 ```nextflow
 process FASTQC {
-    // ...
+    tag id
+    conda 'bioconda::fastqc=0.12.1'
 
     input:
     (id, fastq_1, fastq_2): Tuple<String, Path, Path>
@@ -196,7 +201,10 @@ process FASTQC {
     output:
     tuple(id, file("fastqc_${id}_logs"))
 
-    // ...
+    script:
+    """
+    fastqc.sh "${id}" "${fastq_1} ${fastq_2}"
+    """
 }
 ```
 
@@ -204,18 +212,26 @@ To migrate this process, rewrite the inputs and outputs as follows:
 
 ```nextflow
 process FASTQC {
-    // ...
+    tag sample.id
+    conda 'bioconda::fastqc=0.12.1'
 
     input:
-    (id: String, fastq_1: Path, fastq_2: Path): Record
+    sample: Record {
+        id: String
+        fastq_1: Path
+        fastq_2: Path
+    }
 
     output:
     record(
-        id: id,
-        fastqc: file("fastqc_${id}_logs")
+        id: sample.id,
+        fastqc: file("fastqc_${sample.id}_logs")
     )
 
-    // ...
+    script:
+    """
+    fastqc.sh "${sample.id}" "${sample.fastq_1} ${sample.fastq_2}"
+    """
 }
 ```
 
@@ -223,13 +239,11 @@ In the above:
 
 - The tuple input is converted to a record input using the type `Record`. The field types are specified alongside the field names.
 
+- Since the record input cannot be destructured like a tuple, you must define a name for the record itself (e.g., `sample`), and you must update all references to tuple inputs (e.g., replace `id` with `sample.id`).
+
 - The tuple output is converted to a record by using the `record()` function and specifying a name for each record field.
 
 - Whereas tuple elements must be specified in a particular order, record fields can be specified in any order. The records supplied by the calling workflow must have the same field names and types as the process definition.
-
-:::{note}
-Other process sections, such as the directives and the `script:` block, are not shown because they do not require changes. As long as the inputs and outputs declare and reference the same variable names and file patterns, the other process sections will behave the same as before.
-:::
 
 <h4>QUANT</h4>
 
@@ -237,7 +251,8 @@ The `QUANT` process is defined with the following inputs and outputs:
 
 ```nextflow
 process QUANT {
-    // ...
+    tag id
+    conda 'bioconda::salmon=1.10.3'
 
     input:
     (id, fastq_1, fastq_2): Tuple<String, Path, Path>
@@ -246,7 +261,16 @@ process QUANT {
     output:
     tuple(id, file("quant_${id}"))
 
-    // ...
+    script:
+    """
+    salmon quant \
+        --threads ${task.cpus} \
+        --libType=U \
+        -i ${index} \
+        -1 ${fastq_1} \
+        -2 ${fastq_2} \
+        -o quant_${id}
+    """
 }
 ```
 
@@ -254,19 +278,33 @@ To migrate this process, rewrite the inputs and outputs as follows:
 
 ```nextflow
 process QUANT {
-    // ...
+    tag sample.id
+    conda 'bioconda::salmon=1.10.3'
 
     input:
-    (id: String, fastq_1: Path, fastq_2: Path): Record
+    sample: Record {
+        id: String
+        fastq_1: Path
+        fastq_2: Path
+    }
     index: Path
 
     output:
     record(
-        id: id,
-        quant: file("quant_${id}")
+        id: sample.id,
+        quant: file("quant_${sample.id}")
     )
 
-    // ...
+    script:
+    """
+    salmon quant \
+        --threads ${task.cpus} \
+        --libType=U \
+        -i ${index} \
+        -1 ${sample.fastq_1} \
+        -2 ${sample.fastq_2} \
+        -o quant_${sample.id}
+    """
 }
 ```
 
