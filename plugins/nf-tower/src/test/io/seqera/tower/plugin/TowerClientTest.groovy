@@ -399,15 +399,17 @@ class TowerClientTest extends Specification {
         then:
         1 * client.getAccessToken() >> 'secret'
         1 * client.makeCreateReq(session) >> [runName: 'foo']
-        1 * client.sendHttpMessage('https://api.cloud.seqera.io/trace/create', [runName: 'foo'], 'POST') >> new TowerClient.Response(200, '{"workflowId":"xyz123"}')
+        1 * client.sendHttpMessage('https://api.cloud.seqera.io/trace/create', [runName: 'foo'], 'POST') >> new TowerClient.Response(200, '{"workflowId":"xyz123","watchUrl":"https://cloud.seqera.io/watch/xyz123"}')
         and:
         client.runName == 'foo_bar'
         client.runId == uuid.toString()
         and:
         client.workflowId == 'xyz123'
+        client.@watchUrl == 'https://cloud.seqera.io/watch/xyz123'
         !client.towerLaunch
         and:
         platform.workflowId == 'xyz123'
+        platform.workflowUrl == 'https://cloud.seqera.io/watch/xyz123'
 
     }
 
