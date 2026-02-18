@@ -83,6 +83,13 @@ class GoogleBatchMachineTypeSelector {
      */
     private static final List<String> ACCELERATOR_OPTIMIZED_FAMILIES = ['a2-*', 'a3-*', 'g2-*']
 
+    /*
+     * Families that only support Hyperdisk disk types (not pd-standard, pd-balanced, pd-ssd).
+     * These require 'hyperdisk-*' as boot disk type.
+     * https://docs.cloud.google.com/compute/docs/general-purpose-machines?hl=en#supported_disk_types_for_c4
+     */
+    private static final List<String> HYPERDISK_ONLY_FAMILIES = ['c4-*', 'c4a-*', 'c4d-*', 'n4-*', 'n4a-*', 'n4d-*']
+
     @Immutable
     static class MachineType {
         String type
@@ -256,6 +263,7 @@ class GoogleBatchMachineTypeSelector {
 
         // These families have a local SSD already attached and is not configurable.
         if( ((machineType.family == "c3" || machineType.family == "c3d") && machineType.type.endsWith("-lssd")) ||
+            ((machineType.family == "c4" || machineType.family == "c4a" || machineType.family == "c4d") && machineType.type.endsWith("-lssd")) ||
             machineType.family == "a3" ||
             machineType.type.startsWith("a2-ultragpu-") )
             return new MemoryUnit( 0 )
@@ -286,6 +294,16 @@ class GoogleBatchMachineTypeSelector {
             numberOfDisks = allowedPartitions.last()
 
         return new MemoryUnit( numberOfDisks * 375L * (1<<30) )
+    }
+
+    /**
+     * Check if the machine type belongs to a family that only supports Hyperdisk.
+     *
+     * @param machineType Machine type
+     * @return Boolean value indicating if the machine type requires Hyperdisk.
+     */
+    boolean isHyperdiskOnly(String machineType) {
+        return HYPERDISK_ONLY_FAMILIES.any { matchType(it, machineType) }
     }
 
     /**
