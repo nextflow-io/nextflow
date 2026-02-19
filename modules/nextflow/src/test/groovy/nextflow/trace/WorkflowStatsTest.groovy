@@ -222,9 +222,11 @@ class WorkflowStatsTest extends Specification {
         def PENDING = 10
         def SUBMITTED = 20
         def HASH = 'xyz'
+        def WORKDIR = 'file:///work/xy/z123456'
         and:
         def task = Mock(TaskRun) {
             getHashLog() >> HASH
+            getWorkDirStr() >> WORKDIR
             getProcessor() >> Mock(TaskProcessor) { getId() >> 0 }
         }
         and:
@@ -247,6 +249,7 @@ class WorkflowStatsTest extends Specification {
         rec.submitted == SUBMITTED +1
         and:
         rec.hash == HASH
+        rec.workDir == WORKDIR
     }
 
     def 'should mark running' () {
@@ -724,9 +727,11 @@ class WorkflowStatsTest extends Specification {
         given:
         def CACHED = 10
         def STORED = 20
+        def WORKDIR = 'file:///work/xy/z123456'
         and:
         def task = Mock(TaskRun) {
             getHashLog() >> 'XYZ'
+            getWorkDirStr() >> WORKDIR
             getProcessor() >> Mock(TaskProcessor) { getId() >> 0 }
         }
         and:
@@ -749,6 +754,7 @@ class WorkflowStatsTest extends Specification {
         stats.cachedDuration == 5.sec
         and:
         rec.hash == 'XYZ'
+        rec.workDir == WORKDIR
         rec.cached == CACHED +1
         rec.stored == STORED
     }
@@ -760,6 +766,7 @@ class WorkflowStatsTest extends Specification {
         and:
         def task = Mock(TaskRun) {
             getHashLog() >> 'XYZ'
+            getWorkDirStr() >> 'file:///work/xy/z123456'
             getProcessor() >> Mock(TaskProcessor) { getId() >> 0 }
         }
         and:
@@ -781,6 +788,7 @@ class WorkflowStatsTest extends Specification {
         rec.stored == STORED +1
         and:
         rec.hash == 'skipped'
+        rec.workDir == null
     }
 
 
