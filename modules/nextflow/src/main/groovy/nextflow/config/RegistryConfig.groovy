@@ -35,7 +35,7 @@ import nextflow.script.dsl.Description
 @CompileStatic
 class RegistryConfig implements ConfigScope {
 
-    final static public String DEFAULT_REGISTRY_URL = 'https://registry.nextflow.io'
+    final static public String DEFAULT_REGISTRY_URL = 'https://registry.nextflow.io/api'
 
     @ConfigOption
     @Description("Primary registry URL")
