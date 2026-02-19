@@ -67,34 +67,25 @@ public class S3ObjectSummaryLookup {
 
         /*
          * Lookup for the object summary for the specified object key
-         * by using a `listObjects` request
+         * by using a `listObjects` request.
+         *
+         * Only 2 results are needed: the exact key match or its first
+         * child (key + "/"). Fetching more would cause unbounded pagination
+         * on prefixes with millions of objects.
          */
-        String marker = null;
-        while( true ) {
-            ListObjectsRequest.Builder request = ListObjectsRequest.builder();
-            request.bucket(s3Path.getBucket());
-            request.prefix(s3Path.getKey());
-            request.maxKeys(250);
-            if( marker != null )
-                request.marker(marker);
+        ListObjectsRequest request = ListObjectsRequest.builder()
+                .bucket(s3Path.getBucket())
+                .prefix(s3Path.getKey())
+                .maxKeys(2)
+                .build();
 
-            ListObjectsResponse listing = client.listObjects(request.build());
-            List<S3Object> results = listing.contents();
+        ListObjectsResponse listing = client.listObjects(request);
+        List<S3Object> results = listing.contents();
 
-            if (results.isEmpty()){
-                break;
+        for( S3Object item : results ) {
+            if( matchName(s3Path.getKey(), item)) {
+                return item;
             }
-
-            for( S3Object item : results ) {
-                if( matchName(s3Path.getKey(), item)) {
-                    return item;
-                }
-            }
-
-            if( listing.isTruncated() )
-                marker = listing.nextMarker();
-            else
-                break;
         }
 
         throw new NoSuchFileException("s3://" + s3Path.getBucket() + "/" + s3Path.getKey());

@@ -292,6 +292,11 @@ class TowerClient implements TraceObserverV2 {
         this.workflowId = ret.workflowId
         if( !workflowId )
             throw new AbortOperationException("Invalid Seqera Platform API response - Missing workflow Id")
+        log.debug "Platform workflow id: $workflowId; workflow url: ${ret.watchUrl}"
+        session.workflowMetadata.platform.workflowId = workflowId
+        // note: `watchUrl` in the create response requires Platform 26.01 or later
+        this.watchUrl = ret.watchUrl as String
+        session.workflowMetadata.platform.workflowUrl = watchUrl
         if( ret.message )
             log.warn(ret.message.toString())
 
@@ -382,7 +387,8 @@ class TowerClient implements TraceObserverV2 {
         }
 
         final payload = parseTowerResponse(resp)
-        this.watchUrl = payload.watchUrl
+        this.watchUrl ?= payload.watchUrl
+        session.workflowMetadata.platform.workflowUrl ?= watchUrl
         this.sender = Threads.start('Tower-thread', this.&sendTasks0)
         final msg = "Monitor the execution with Seqera Platform using this URL: ${watchUrl}"
         log.info(LoggerHelper.STICKY, msg)
