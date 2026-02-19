@@ -985,6 +985,84 @@ class GoogleBatchTaskHandlerTest extends Specification {
         result == null
     }
 
+    def 'should set hyperdisk-balanced boot disk for hyperdisk-only machine families' () {
+        given:
+        def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
+        def CONTAINER_IMAGE = 'debian:latest'
+        def MACHINE_TYPE = 'c4-standard-8'
+        def exec = Mock(GoogleBatchExecutor) {
+            getBatchConfig() >> Mock(BatchConfig)
+        }
+        and:
+        def bean = new TaskBean(workDir: WORK_DIR, inputFiles: [:])
+        def task = Mock(TaskRun) {
+            toTaskBean() >> bean
+            getHashLog() >> 'abcd1234'
+            getWorkDir() >> WORK_DIR
+            getContainer() >> CONTAINER_IMAGE
+            getConfig() >> Mock(TaskConfig) {
+                getCpus() >> 8
+                getResourceLabels() >> [:]
+            }
+        }
+        and:
+        def mounts = ['/mnt/disks/foo/scratch:/mnt/disks/foo/scratch:rw']
+        def launcher = new GoogleBatchLauncherSpecMock('bash .command.run', mounts, [])
+
+        and:
+        def handler = Spy(new GoogleBatchTaskHandler(task, exec))
+
+        when:
+        def req = handler.newSubmitRequest(task, launcher)
+        then:
+        handler.fusionEnabled() >> false
+        handler.findBestMachineType(_, false) >> new GoogleBatchMachineTypeSelector.MachineType(type: MACHINE_TYPE, family: 'c4', location: 'us-central1', priceModel: PriceModel.standard)
+
+        and:
+        def instancePolicy = req.getAllocationPolicy().getInstances(0).getPolicy()
+        instancePolicy.getMachineType() == MACHINE_TYPE
+        instancePolicy.getBootDisk().getType() == 'hyperdisk-balanced'
+    }
+
+    def 'should not set hyperdisk boot disk for standard machine families' () {
+        given:
+        def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
+        def CONTAINER_IMAGE = 'debian:latest'
+        def MACHINE_TYPE = 'n2-standard-8'
+        def exec = Mock(GoogleBatchExecutor) {
+            getBatchConfig() >> Mock(BatchConfig)
+        }
+        and:
+        def bean = new TaskBean(workDir: WORK_DIR, inputFiles: [:])
+        def task = Mock(TaskRun) {
+            toTaskBean() >> bean
+            getHashLog() >> 'abcd1234'
+            getWorkDir() >> WORK_DIR
+            getContainer() >> CONTAINER_IMAGE
+            getConfig() >> Mock(TaskConfig) {
+                getCpus() >> 8
+                getResourceLabels() >> [:]
+            }
+        }
+        and:
+        def mounts = ['/mnt/disks/foo/scratch:/mnt/disks/foo/scratch:rw']
+        def launcher = new GoogleBatchLauncherSpecMock('bash .command.run', mounts, [])
+
+        and:
+        def handler = Spy(new GoogleBatchTaskHandler(task, exec))
+
+        when:
+        def req = handler.newSubmitRequest(task, launcher)
+        then:
+        handler.fusionEnabled() >> false
+        handler.findBestMachineType(_, false) >> new GoogleBatchMachineTypeSelector.MachineType(type: MACHINE_TYPE, family: 'n2', location: 'us-central1', priceModel: PriceModel.standard)
+
+        and:
+        def instancePolicy = req.getAllocationPolicy().getInstances(0).getPolicy()
+        instancePolicy.getMachineType() == MACHINE_TYPE
+        instancePolicy.getBootDisk().getType() == ''
+    }
+
     // ==========================================================================
     // Tests for extracted helper methods
     // ==========================================================================
