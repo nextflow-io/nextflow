@@ -17,6 +17,8 @@
 
 package io.seqera.tower.plugin
 
+import nextflow.script.PlatformMetadata
+
 import java.net.http.HttpResponse
 import java.nio.file.Files
 import java.time.Instant
@@ -382,6 +384,7 @@ class TowerClientTest extends Specification {
         def meta = Mock(WorkflowMetadata) {
             getProjectName() >> 'the-project-name'
             getRepository() >> 'git://repo.com/foo'
+            getPlatform() >> new PlatformMetadata()
         }
         def session = Mock(Session) {
             getUniqueId() >> uuid
@@ -395,7 +398,7 @@ class TowerClientTest extends Specification {
         when:
         client.onFlowCreate(session)
         then:
-        1 * client.getPlatformMetadata(_) >> null
+        1 * client.addPlatformMetadata(_) >> null
         1 * client.getAccessToken() >> 'secret'
         1 * client.makeCreateReq(session) >> [runName: 'foo']
         1 * client.sendHttpMessage('https://api.cloud.seqera.io/trace/create', [runName: 'foo'], 'POST') >> new TowerClient.Response(200, '{"workflowId":"xyz123"}')
@@ -553,9 +556,12 @@ class TowerClientTest extends Specification {
         request.uri().toString() == 'http://example.com/test'
     }
 
-    def 'should retreive platform metadata content'() {
+    def 'should add platform metadata content'() {
+        def metadata = new WorkflowMetadata()
+        def session = Mock(Session){
+            getWorkflowMetadata() >> metadata
+        }
 
-        def session = Mock(Session)
         def config = new TowerConfig( [accessToken: 'token-1234', workspaceId: '1234'] , SysEnv.get() )
         def towerClient = Spy(new TowerClient(session, config)) {
             apiGet(_, 'https://api.cloud.seqera.io', '/user-info', _) >> [ user: [ id: 'u1234', userName: 'user', email: 'john@acme.com', firstName: 'John', lastName: 'Smith', organization: 'ACME Inc.']]
@@ -566,21 +572,20 @@ class TowerClientTest extends Specification {
         def workflowId = 'wf1234'
 
         when:
-        def metadata = towerClient.getPlatformMetadata(workflowId)
+        towerClient.addPlatformMetadata(workflowId)
 
         then:
-        metadata.workflowId == 'wf1234'
-        metadata.user.id == 'u1234'
-        metadata.user.userName == 'user'
-        metadata.user.email == 'john@acme.com'
-        metadata.workspace.id == '1234'
-        metadata.workspace.name == "Workspace-Name"
-        metadata.workspace.organization == "ACME Inc."
-        metadata.pipeline.id == 'pipe1234'
-        metadata.pipeline.name == 'test-pipeline'
-        metadata.pipeline.revision == 'v1.1'
-        metadata.pipeline.commitId == 'abcd12345'
-        metadata.labels == ['key1=value1', 'value2']
+        metadata.platform.user.id == 'u1234'
+        metadata.platform.user.userName == 'user'
+        metadata.platform.user.email == 'john@acme.com'
+        metadata.platform.workspace.id == '1234'
+        metadata.platform.workspace.name == "Workspace-Name"
+        metadata.platform.workspace.organization == "ACME Inc."
+        metadata.platform.pipeline.id == 'pipe1234'
+        metadata.platform.pipeline.name == 'test-pipeline'
+        metadata.platform.pipeline.revision == 'v1.1'
+        metadata.platform.pipeline.commitId == 'abcd12345'
+        metadata.platform.labels == ['key1=value1', 'value2']
     }
     def 'should include numSpotInterruptions in task map'() {
         given:

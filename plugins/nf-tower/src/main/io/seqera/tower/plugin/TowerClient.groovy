@@ -293,39 +293,41 @@ class TowerClient extends TowerCommonApi implements TraceObserverV2 {
         this.workflowId = ret.workflowId
         if( !workflowId )
             throw new AbortOperationException("Invalid Seqera Platform API response - Missing workflow Id")
+        session.workflowMetadata.platform.workflowId = workflowId
         if( ret.message )
             log.warn(ret.message.toString())
-
-        session.workflowMetadata.platform = getPlatformMetadata(workflowId)
+        addPlatformMetadata(workflowId)
 
         // Prepare to collect report paths if tower configuration has a 'reports' section
         reports.flowCreate(workflowId)
     }
 
-    protected PlatformMetadata getPlatformMetadata(String workflowId) {
+    protected addPlatformMetadata(String workflowId) {
+
         try {
             final userInfo = getUserInfo(this.httpClient, this.endpoint)
-            final queryParams = workspaceId ? [workspaceId: workspaceId.toString()] : [:]
-            final workflowDetails = getWorkflowDetails(this.httpClient, this.endpoint, workflowId, queryParams)
             final workspaceDetails = getUserWorkspaceDetails(this.httpClient, userInfo?.id as String, this.endpoint, this.workspaceId)
-
-            if( workspaceDetails?.roles ) {
+            //Include workspace roles to user info
+            if( workspaceDetails?.roles && userInfo) {
                 final roles = workspaceDetails.remove('roles')
                 userInfo.roles = roles
             }
+            if( userInfo )
+                session.workflowMetadata.platform.user = new PlatformMetadata.User(userInfo)
+            if( workspaceDetails )
+                session.workflowMetadata.platform.workspace = new PlatformMetadata.Workspace(workspaceDetails)
+            final queryParams = workspaceId ? [workspaceId: workspaceId.toString()] : [:]
             final workflowLaunch = getWorkflowLaunchDetails(workflowId, queryParams)
-
-            return new PlatformMetadata(
-                workflowId,
-                userInfo ? new PlatformMetadata.User(userInfo) : null,
-                workspaceDetails ? new PlatformMetadata.Workspace(workspaceDetails) : null,
-                workflowLaunch?.computeEnv as PlatformMetadata.ComputeEnv,
-                workflowLaunch?.pipeline as PlatformMetadata.Pipeline,
-                getLabels(workflowDetails?.labels as List<Map>)
-            )
+            if( workflowLaunch ) {
+                session.workflowMetadata.platform.computeEnv = workflowLaunch.computeEnv as PlatformMetadata.ComputeEnv
+                session.workflowMetadata.platform.pipeline = workflowLaunch?.pipeline as PlatformMetadata.Pipeline
+            }
+            final workflowDetails = getWorkflowDetails(this.httpClient, this.endpoint, workflowId, queryParams)
+            if( workflowDetails?.labels ){
+                session.workflowMetadata.platform.labels = getLabels(workflowDetails?.labels as List<Map>)
+            }
         }catch(Throwable e){
             log.debug("Exception getting platform metadata", e)
-            return null
         }
     }
 
@@ -341,16 +343,21 @@ class TowerClient extends TowerCommonApi implements TraceObserverV2 {
 
 
     private Map getWorkflowLaunchDetails(workflowId, Map queryParams) {
-        final launch = apiGet(this.httpClient, this.endpoint, "/workflow/${workflowId}/launch", queryParams).launch as Map
-        return [
-            computeEnv: launch.computeEnv ? new PlatformMetadata.ComputeEnv(launch.computeEnv as Map) : null,
-            pipeline : new PlatformMetadata.Pipeline(
-                id: launch.pipelineId as String,
-                name: launch.pipeline as String,
-                revision: launch.revision as String,
-                commitId: launch.commitId as String
-            )
-        ]
+        try {
+            final launch = apiGet(this.httpClient, this.endpoint, "/workflow/${workflowId}/launch", queryParams).launch as Map
+            return [
+                computeEnv: launch.computeEnv ? new PlatformMetadata.ComputeEnv(launch.computeEnv as Map) : null,
+                pipeline  : new PlatformMetadata.Pipeline(
+                    id: launch.pipelineId as String,
+                    name: launch.pipeline as String,
+                    revision: launch.revision as String,
+                    commitId: launch.commitId as String
+                )
+            ]
+        } catch (Throwable e){
+            log.debug("Exception getting workflow launch metadata", e)
+            return null
+        }
     }
 
     protected HxClient newHttpClient() {
