@@ -16,6 +16,13 @@
 
 package nextflow.script
 
+import groovyx.gpars.dataflow.DataflowReadChannel
+import groovyx.gpars.dataflow.DataflowWriteChannel
+import nextflow.exception.AbortOperationException
+import nextflow.extension.CH
+import nextflow.extension.DataflowHelper
+import nextflow.extension.DumpHelper
+
 import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -28,6 +35,8 @@ import nextflow.script.params.StdInParam
 import nextflow.script.params.TupleInParam
 import nextflow.script.params.v2.ProcessInput
 import nextflow.script.params.v2.ProcessTupleInput
+
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Helper class for process entry execution feature.
@@ -47,6 +56,8 @@ class ProcessEntryHandler {
     private final BaseScript script
     private final Session session
     private final ScriptMeta meta
+    // Map to store process outputs
+    private Map<String, Object> processOutputs
 
     ProcessEntryHandler(BaseScript script, Session session, ScriptMeta meta) {
         this.script = script
@@ -86,7 +97,7 @@ class ProcessEntryHandler {
                 // Get input parameter values and execute the process
                 final inputArgs = getProcessArguments(processDef)
                 final processResult = script.invokeMethod(processName, inputArgs as Object[])
-
+                printOutput(processName, processResult)
                 return processResult
             }
 
@@ -96,6 +107,70 @@ class ProcessEntryHandler {
         }
 
         return new WorkflowDef(script, workflowBody)
+    }
+    /**
+     * Prints the process outputs.
+     * ChannelOut has two structures containing the outputs and anonymous channels.
+     * @param processName
+     * @param processResult ChannelOut containing the process outputs
+     */
+    private printOutput(String processName, def processResult){
+        if( ! processResult instanceof ChannelOut ) {
+            throw new AbortOperationException("Not a valid process output ($processResult.class)")
+        }
+        final results = processResult as ChannelOut
+        if (results.isEmpty()){
+            log.debug("No outputs found for $processName")
+            return
+        }
+
+        final named = new HashMap<DataflowWriteChannel, String>(results.size())
+
+        //Compute reverse index for named outputs
+        for (String name : results.getNames()){
+            named.put(results.getProperty(name) as DataflowWriteChannel, name)
+        }
+        // Create the processOutputs map to keep the outputs order, and create the subcriber per output channel to collect the output values
+        int unnamedIndex = 1
+        processOutputs = new LinkedHashMap<>(results.size())
+        results.each {
+            String name = named.get(it)
+            if (!name) {
+                name = "anonymous-$unnamedIndex".toString()
+                unnamedIndex++
+            }
+            processOutputs.put(name, [])
+            createProcessOutputSubscriber(name, CH.getReadChannel(it))
+        }
+        //Add workflow
+        session.workflowMetadata.onComplete {
+            if( processOutputs) {
+                println ""
+                println "Process $processName Outputs:"
+                println DumpHelper.prettyPrintJson(processOutputs)
+                println ""
+            }
+        }
+    }
+
+    /**
+     * Create a subscriber operator to inspect the output channels and build a map.
+     * At `onNext` event, add the output value in the `processOutputs` map with the output name as key.
+     * At `onComplete` event, convert single element list to single value.
+     *
+     * @param name Process output name
+     * @param channel Process output channel
+     */
+    private void createProcessOutputSubscriber(String name, DataflowReadChannel channel ){
+        def onNextClosure  = { it ->
+            (processOutputs[name] as List).add(it) }
+        def onCompleteClosure = {
+            final list = processOutputs[name] as List
+            if( list.size() == 1) {
+                processOutputs[name] = list[0]
+            }
+        }
+        DataflowHelper.subscribeImpl(channel, [onNext: onNextClosure, onComplete: onCompleteClosure])
     }
 
     /**
