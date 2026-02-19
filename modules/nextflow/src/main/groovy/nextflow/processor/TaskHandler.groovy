@@ -207,7 +207,7 @@ abstract class TaskHandler {
         record.process = task.processor.getName()
         record.tag = task.config.tag
         record.module = task.config.module
-        record.container = task.getContainer()
+        record.container = task.isContainerEnabled() ? task.getContainer() : null
         record.attempt = task.config.attempt
 
         record.script = task.getTraceScript()
