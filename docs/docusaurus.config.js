@@ -82,7 +82,7 @@ export default async function createConfigAsync() {
           group_limit: 1,
           num_typos: 1,
           prioritize_exact_match: true,
-          filter_by: 'docusaurus_tag:!=[default,doc_tag_doc_list,blog_posts_list,blog_tags_posts,doc_tags_list,blog_tags_list]',
+          filter_by: 'docusaurus_tag:!=[default,doc_tag_doc_list,blog_posts_list,blog_tags_posts,doc_tags_list,blog_tags_list]', // Can be removed later once the scraper is updated
         },
         contextualSearch: false,
         placeholder: 'Search Seqera docs...',
