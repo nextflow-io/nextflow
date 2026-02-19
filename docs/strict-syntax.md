@@ -585,6 +585,8 @@ export NXF_SYNTAX_PARSER=v2
 
 See {ref}`Configuration <config-syntax>` for a comprehensive description of the configuration language.
 
+### Mixing config statements and scripting statements
+
 Currently, Nextflow parses config files as Groovy scripts, allowing the use of scripting constructs like variables, helper functions, try-catch blocks, and conditional logic for dynamic configuration:
 
 ```groovy
@@ -625,10 +627,30 @@ Each conditional configuration is defined in a separate config file:
 // small.config
 params.max_memory = 32.GB
 params.max_cpus = 8
+```
 
+```groovy
 // large.config
 params.max_memory = 128.GB
 params.max_cpus = 32
+```
+
+### Referencing config settings as variables
+
+The legacy parser allows config settings to be referenced like variables:
+
+```groovy
+google.location = "us-west1"
+google.batch.subnetwork = "regions/${google.location}/subnetworks/default"
+```
+
+The strict config syntax does not support this. Only params can be referenced as variables:
+
+```groovy
+params.location = "us-west1"
+
+google.location = params.location
+google.batch.subnetwork = "regions/${params.location}/subnetworks/default"
 ```
 
 ## Preserving Groovy code
