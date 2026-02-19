@@ -47,6 +47,7 @@ import nextflow.container.ShifterConfig
 import nextflow.container.SingularityConfig
 import nextflow.dag.DAG
 import nextflow.exception.AbortOperationException
+import nextflow.exception.AbortRunException
 import nextflow.exception.AbortSignalException
 import nextflow.exception.IllegalConfigException
 import nextflow.exception.MissingLibraryException
@@ -1108,6 +1109,11 @@ class Session implements ISession {
             final observer = observers.get(i)
             try {
                 action.accept(observer)
+            }
+            catch (AbortRunException e) {
+                // AbortRunException are forwarded to produce an error in the execution
+                log.error("Abort exception produced when notifying an event - $e.message")
+                throw e
             }
             catch ( Throwable e ) {
                 log.debug(e.getMessage(), e)
