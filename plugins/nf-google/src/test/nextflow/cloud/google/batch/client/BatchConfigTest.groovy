@@ -31,6 +31,8 @@ class BatchConfigTest extends Specification {
         then:
         !config.getSpot()
         and:
+        !config.enableImageStreaming
+        and:
         config.retryConfig.maxAttempts == 5
         config.maxSpotAttempts == 0
         config.autoRetryExitCodes == [50001]
@@ -44,6 +46,7 @@ class BatchConfigTest extends Specification {
         given:
         def opts = [
             spot: true,
+            enableImageStreaming: true,
             maxSpotAttempts: 8,
             autoRetryExitCodes: [50001, 50003, 50005],
             retryPolicy: [maxAttempts: 10],
