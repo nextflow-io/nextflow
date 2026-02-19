@@ -109,17 +109,8 @@ class ModuleSearch extends CmdBase {
 
         response.results.each { ModuleSearchResult result ->
             println "  ${result.name}"
-            if (result.relevanceScore != null) {
-                println "    Relevance:   ${String.format('%.2f', result.relevanceScore)}"
-            }
             if (result.description) {
                 println "    Description: ${result.description}"
-            }
-            if (result.keywords && !result.keywords.isEmpty()) {
-                println "    Keywords:    ${result.keywords.join(', ')}"
-            }
-            if (result.tools && !result.tools.isEmpty()) {
-                println "    Tools:       ${result.tools.join(', ')}"
             }
             println ""
         }

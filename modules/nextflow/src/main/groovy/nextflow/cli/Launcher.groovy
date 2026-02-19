@@ -159,8 +159,10 @@ class Launcher {
         fullVersion = '-version' in normalizedArgs
         command = allCommands.find { it.name == jcommander.getParsedCommand()  }
         //Attach unknown options to command in case of needed
-        final unknownOptions = jcommander.commands.get(jcommander.getParsedCommand()).getUnknownOptions()
-        command.setUnknownOptions(unknownOptions)
+        if (command) {
+            final unknownOptions = jcommander.commands.get(jcommander.getParsedCommand())?.getUnknownOptions() ?: []
+            command.setUnknownOptions(unknownOptions)
+        }
         // whether is running a daemon
         daemonMode = command instanceof CmdNode
         // set the log file name

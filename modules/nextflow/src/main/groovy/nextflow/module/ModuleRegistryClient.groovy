@@ -92,7 +92,7 @@ class ModuleRegistryClient {
      * Fetch module from a specific registry URL
      */
     private Module fetchModuleFromRegistry(String registryUrl, String name) {
-        def endpoint = "${registryUrl}/api/modules/${encodeName(name)}"
+        def endpoint = "${registryUrl}/v1/modules/${encodeName(name)}"
         def uri = URI.create(endpoint)
 
         def requestBuilder = HttpRequest.newBuilder()
@@ -170,7 +170,7 @@ class ModuleRegistryClient {
      * Fetch release from a specific registry URL
      */
     private ModuleRelease fetchReleaseFromRegistry(String registryUrl, String name, String version) {
-        def endpoint = "${registryUrl}/api/modules/${encodeName(name)}/${version}"
+        def endpoint = "${registryUrl}/v1/modules/${encodeName(name)}/${version}"
         def uri = URI.create(endpoint)
 
         def requestBuilder = HttpRequest.newBuilder()
@@ -245,7 +245,7 @@ class ModuleRegistryClient {
      * Download module from a specific registry URL
      */
     private Path downloadModuleFromRegistry(String registryUrl, String name, String version, Path targetPath) {
-        def endpoint = "${registryUrl}/api/modules/${encodeName(name)}/${version}/download"
+        def endpoint = "${registryUrl}/v1/modules/${encodeName(name)}/${version}/download"
         def uri = URI.create(endpoint)
 
         def requestBuilder = HttpRequest.newBuilder()
@@ -361,7 +361,7 @@ class ModuleRegistryClient {
      * Search in a specific registry
      */
     private SearchModulesResponse searchInRegistry(String registryUrl, String query, int limit) {
-        def endpoint = "${registryUrl}/api/modules?query=${URLEncoder.encode(query, 'UTF-8')}&limit=${limit}"
+        def endpoint = "${registryUrl}/v1/modules?query=${URLEncoder.encode(query, 'UTF-8')}&limit=${limit}"
         def uri = URI.create(endpoint)
 
         def requestBuilder = HttpRequest.newBuilder()
@@ -439,7 +439,7 @@ class ModuleRegistryClient {
             def request,
             String authToken) {
 
-        String endpoint = "${registryUrl}/api/modules/${encodeName(name)}".toString()
+        String endpoint = "${registryUrl}/v1/modules/${encodeName(name)}".toString()
         URI uri = URI.create(endpoint)
 
         // Serialize request to JSON

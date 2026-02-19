@@ -22,6 +22,7 @@ import com.beust.jcommander.ParameterException
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.cli.module.ModuleInfo
 import nextflow.cli.module.ModuleInstall
 import nextflow.cli.module.ModuleList
 import nextflow.cli.module.ModulePublish
@@ -52,11 +53,12 @@ class CmdModule extends CmdBase implements UsageAware {
         commands << new ModuleList()
         commands << new ModuleRemove()
         commands << new ModuleSearch()
+        commands << new ModuleInfo()
         commands << new ModulePublish()
     }
 
-    protected JCommander commander(){
-        if (!this.jCommander) {
+    protected JCommander commander() {
+        if( !this.jCommander ) {
             this.jCommander = new JCommander(this)
             this.jCommander.setProgramName('nextflow module')
             // Register all subcommands
@@ -81,25 +83,29 @@ class CmdModule extends CmdBase implements UsageAware {
 
 
         try {
+            if( !args ) {
+                usage()
+                return
+            }
             final jc = commander()
             final moduleArgs = args + unknownOptions
             jc.parse(moduleArgs as String[])
 
             final parsedCommand = jc.getParsedCommand()
-            if (!parsedCommand) {
+            if( !parsedCommand ) {
                 jc.usage()
                 return
             }
 
             // Get the parsed subcommand instance
             final subcommand = jc.getCommands()
-                  .get(parsedCommand)
-                  .getObjects()[0] as CmdBase
+                .get(parsedCommand)
+                .getObjects()[0] as CmdBase
 
             // Execute with fields already populated by JCommander
             subcommand.run()
 
-        } catch ( ParameterException e) {
+        } catch( ParameterException e ) {
             throw new AbortOperationException("${e.getMessage()} -- Check the available commands and options and syntax with 'nextflow module -h'")
         }
     }
@@ -124,7 +130,7 @@ class CmdModule extends CmdBase implements UsageAware {
     @Override
     void usage(List<String> args) {
         def result = []
-        if (!args) {
+        if( !args ) {
             result << 'Usage: nextflow module <command> [options]'
             result << ''
             result << 'Commands:'
@@ -134,13 +140,11 @@ class CmdModule extends CmdBase implements UsageAware {
             }
             result << ''
             println result.join('\n').toString()
-        }
-        else {
+        } else {
             final sub = findCmd(args[0])
-            if (sub) {
+            if( sub ) {
                 commander().usage(args[0])
-            }
-            else {
+            } else {
                 throw new AbortOperationException("Unknown module sub-command: ${args[0]}")
             }
         }

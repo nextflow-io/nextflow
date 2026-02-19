@@ -44,11 +44,13 @@ class ModuleRegistryClientTest extends Specification {
     Path tempDir
 
     WireMockServer wireMock
-
+    String url
+    static final String MODULES_API_PATH = "/api/v1/modules"
     def setup() {
         wireMock = new WireMockServer(wireMockConfig().dynamicPort())
         wireMock.start()
         WireMock.configureFor("localhost", wireMock.port())
+        url = "http://localhost:${wireMock.port()}/api"
     }
 
     def cleanup() {
@@ -67,14 +69,14 @@ class ModuleRegistryClientTest extends Specification {
         ]
 
         // Note: nf-core/fastqc is URL-encoded as nf-core%2Ffastqc
-        stubFor(get(urlEqualTo('/api/modules/nf-core%2Ffastqc'))
+        stubFor(get(urlEqualTo(MODULES_API_PATH + '/nf-core%2Ffastqc'))
             .willReturn(aResponse()
                 .withStatus(200)
                 .withHeader('Content-Type', 'application/json')
                 .withBody(JsonOutput.toJson(moduleResponse))))
 
         and:
-        def config = new RegistryConfig([url: "http://localhost:${wireMock.port()}"])
+        def config = new RegistryConfig([url: url])
         def client = new ModuleRegistryClient(config)
 
         when:
@@ -87,7 +89,7 @@ class ModuleRegistryClientTest extends Specification {
         result.latest.version == '1.1.0'
 
         and: 'verify request was made'
-        verify(getRequestedFor(urlEqualTo('/api/modules/nf-core%2Ffastqc')))
+        verify(getRequestedFor(urlEqualTo(MODULES_API_PATH + '/nf-core%2Ffastqc')))
     }
 
     def 'should search modules in registry'() {
@@ -115,7 +117,7 @@ class ModuleRegistryClientTest extends Specification {
             ]
         ]
 
-        stubFor(get(urlPathEqualTo('/api/modules'))
+        stubFor(get(urlPathEqualTo(MODULES_API_PATH))
             .withQueryParam('query', equalTo('fastqc'))
             .withQueryParam('limit', equalTo('10'))
             .willReturn(aResponse()
@@ -124,7 +126,7 @@ class ModuleRegistryClientTest extends Specification {
                 .withBody(JsonOutput.toJson(searchResponse))))
 
         and:
-        def config = new RegistryConfig([url: "http://localhost:${wireMock.port()}"])
+        def config = new RegistryConfig([url: url])
         def client = new ModuleRegistryClient(config)
 
         when:
@@ -140,7 +142,7 @@ class ModuleRegistryClientTest extends Specification {
         Math.abs(result.results[0].relevanceScore - 0.95) < 0.001
 
         and: 'verify query parameters'
-        verify(getRequestedFor(urlPathEqualTo('/api/modules'))
+        verify(getRequestedFor(urlPathEqualTo(MODULES_API_PATH))
             .withQueryParam('query', equalTo('fastqc'))
             .withQueryParam('limit', equalTo('10')))
     }
@@ -151,7 +153,7 @@ class ModuleRegistryClientTest extends Specification {
         def expectedChecksum = "${computeSha256(modulePackage)}"
 
         // Note: URL-encoded path
-        stubFor(get(urlEqualTo('/api/modules/nf-core%2Ffastqc/1.0.0/download'))
+        stubFor(get(urlEqualTo(MODULES_API_PATH + '/nf-core%2Ffastqc/1.0.0/download'))
             .willReturn(aResponse()
                 .withStatus(200)
                 .withHeader('Content-Type', 'application/gzip')
@@ -159,7 +161,7 @@ class ModuleRegistryClientTest extends Specification {
                 .withBody(modulePackage)))
 
         and:
-        def config = new RegistryConfig([url: "http://localhost:${wireMock.port()}"])
+        def config = new RegistryConfig([url: url])
         def client = new ModuleRegistryClient(config)
         def destFile = tempDir.resolve('module.tgz')
 
@@ -172,19 +174,19 @@ class ModuleRegistryClientTest extends Specification {
         Files.size(destFile) == modulePackage.length
 
         and:
-        verify(getRequestedFor(urlEqualTo('/api/modules/nf-core%2Ffastqc/1.0.0/download')))
+        verify(getRequestedFor(urlEqualTo(MODULES_API_PATH +'/nf-core%2Ffastqc/1.0.0/download')))
     }
 
     def 'should successfully fetch module without authentication'() {
         given:
-        stubFor(get(urlEqualTo('/api/modules/nf-core%2Ffastqc'))
+        stubFor(get(urlEqualTo(MODULES_API_PATH + '/nf-core%2Ffastqc'))
             .willReturn(aResponse()
                 .withStatus(200)
                 .withHeader('Content-Type', 'application/json')
                 .withBody(JsonOutput.toJson([name: 'nf-core/fastqc', latest: [version: '1.0.0']]))))
 
         and:
-        def config = new RegistryConfig([url: "http://localhost:${wireMock.port()}"])
+        def config = new RegistryConfig([url: url])
         def client = new ModuleRegistryClient(config)
 
         when:
@@ -195,18 +197,18 @@ class ModuleRegistryClientTest extends Specification {
         result.name == 'nf-core/fastqc'
 
         and: 'verify request was made'
-        verify(getRequestedFor(urlEqualTo('/api/modules/nf-core%2Ffastqc')))
+        verify(getRequestedFor(urlEqualTo(MODULES_API_PATH + '/nf-core%2Ffastqc')))
     }
 
     def 'should handle 404 not found error'() {
         given:
-        stubFor(get(urlEqualTo('/api/modules/nf-core%2Fnonexistent'))
+        stubFor(get(urlEqualTo(MODULES_API_PATH + '/nf-core%2Fnonexistent'))
             .willReturn(aResponse()
                 .withStatus(404)
                 .withBody('Module not found')))
 
         and:
-        def config = new RegistryConfig([url: "http://localhost:${wireMock.port()}"])
+        def config = new RegistryConfig([url: url])
         def client = new ModuleRegistryClient(config)
 
         when:
@@ -217,18 +219,18 @@ class ModuleRegistryClientTest extends Specification {
         ex.message.contains('Unable to fetch module') || ex.message.contains('Module not found')
 
         and:
-        verify(getRequestedFor(urlEqualTo('/api/modules/nf-core%2Fnonexistent')))
+        verify(getRequestedFor(urlEqualTo(MODULES_API_PATH + '/nf-core%2Fnonexistent')))
     }
 
     def 'should handle 500 server error'() {
         given:
-        stubFor(get(urlEqualTo('/api/modules/nf-core%2Ffastqc'))
+        stubFor(get(urlEqualTo(MODULES_API_PATH + '/nf-core%2Ffastqc'))
             .willReturn(aResponse()
                 .withStatus(500)
                 .withBody('Internal Server Error')))
 
         and:
-        def config = new RegistryConfig([url: "http://localhost:${wireMock.port()}"])
+        def config = new RegistryConfig([url: url])
         def client = new ModuleRegistryClient(config)
 
         when:
@@ -240,27 +242,27 @@ class ModuleRegistryClientTest extends Specification {
 
     def 'should send user agent header'() {
         given:
-        stubFor(get(urlEqualTo('/api/modules/nf-core%2Ffastqc'))
+        stubFor(get(urlEqualTo(MODULES_API_PATH + '/nf-core%2Ffastqc'))
             .willReturn(aResponse()
                 .withStatus(200)
                 .withHeader('Content-Type', 'application/json')
                 .withBody(JsonOutput.toJson([name: 'nf-core/fastqc', latest: [version: '1.0.0'], releases: []]))))
 
         and:
-        def config = new RegistryConfig([url: "http://localhost:${wireMock.port()}"])
+        def config = new RegistryConfig([url: url])
         def client = new ModuleRegistryClient(config)
 
         when:
         client.fetchModule('nf-core/fastqc')
 
         then:
-        verify(getRequestedFor(urlEqualTo('/api/modules/nf-core%2Ffastqc'))
+        verify(getRequestedFor(urlEqualTo(MODULES_API_PATH + '/nf-core%2Ffastqc'))
             .withHeader('User-Agent', matching('.*')))
     }
 
     def 'should handle empty search results'() {
         given:
-        stubFor(get(urlPathEqualTo('/api/modules'))
+        stubFor(get(urlPathEqualTo(MODULES_API_PATH))
             .withQueryParam('query', equalTo('nonexistent'))
             .willReturn(aResponse()
                 .withStatus(200)
@@ -272,7 +274,7 @@ class ModuleRegistryClientTest extends Specification {
                 ]))))
 
         and:
-        def config = new RegistryConfig([url: "http://localhost:${wireMock.port()}"])
+        def config = new RegistryConfig([url: url])
         def client = new ModuleRegistryClient(config)
 
         when:
@@ -286,7 +288,7 @@ class ModuleRegistryClientTest extends Specification {
 
     def 'should respect custom search limit'() {
         given:
-        stubFor(get(urlPathEqualTo('/api/modules'))
+        stubFor(get(urlPathEqualTo(MODULES_API_PATH))
             .willReturn(aResponse()
                 .withStatus(200)
                 .withHeader('Content-Type', 'application/json')
@@ -297,27 +299,27 @@ class ModuleRegistryClientTest extends Specification {
                 ]))))
 
         and:
-        def config = new RegistryConfig([url: "http://localhost:${wireMock.port()}"])
+        def config = new RegistryConfig([url: url])
         def client = new ModuleRegistryClient(config)
 
         when:
         client.search('test', 25)
 
         then:
-        verify(getRequestedFor(urlPathEqualTo('/api/modules'))
+        verify(getRequestedFor(urlPathEqualTo(MODULES_API_PATH ))
             .withQueryParam('limit', equalTo('25')))
     }
 
     def 'should handle malformed JSON response'() {
         given:
-        stubFor(get(urlEqualTo('/api/modules/nf-core%2Ffastqc'))
+        stubFor(get(urlEqualTo(MODULES_API_PATH + '/nf-core%2Ffastqc'))
             .willReturn(aResponse()
                 .withStatus(200)
                 .withHeader('Content-Type', 'application/json')
                 .withBody('not valid json {]')))
 
         and:
-        def config = new RegistryConfig([url: "http://localhost:${wireMock.port()}"])
+        def config = new RegistryConfig([url: url])
         def client = new ModuleRegistryClient(config)
 
         when:
@@ -332,7 +334,7 @@ class ModuleRegistryClientTest extends Specification {
         def modulePackage = createTestModulePackage()
         def checksum = "sha256:${computeSha256(modulePackage)}"
 
-        stubFor(get(urlEqualTo('/api/modules/nf-core%2Ffastqc/1.0.0/download'))
+        stubFor(get(urlEqualTo(MODULES_API_PATH + '/nf-core%2Ffastqc/1.0.0/download'))
             .willReturn(aResponse()
                 .withStatus(200)
                 .withHeader('Content-Type', 'application/gzip')
@@ -341,7 +343,7 @@ class ModuleRegistryClientTest extends Specification {
                 .withBody(modulePackage)))
 
         and:
-        def config = new RegistryConfig([url: "http://localhost:${wireMock.port()}"])
+        def config = new RegistryConfig([url: url])
         def client = new ModuleRegistryClient(config)
         def destFile = tempDir.resolve('module.tgz')
 
@@ -353,7 +355,7 @@ class ModuleRegistryClientTest extends Specification {
         Files.exists(destFile)
 
         and: 'verify checksum header was present'
-        verify(getRequestedFor(urlEqualTo('/api/modules/nf-core%2Ffastqc/1.0.0/download')))
+        verify(getRequestedFor(urlEqualTo(MODULES_API_PATH + '/nf-core%2Ffastqc/1.0.0/download')))
     }
 
     def 'should handle network errors gracefully'() {
@@ -371,7 +373,7 @@ class ModuleRegistryClientTest extends Specification {
 
     def 'should require authentication for publish'() {
         given:
-        def config = new RegistryConfig([url: "http://localhost:${wireMock.port()}"])
+        def config = new RegistryConfig([url: url])
         def client = new ModuleRegistryClient(config)
         def publishRequest = [name: 'nf-core/mymodule', version: '1.0.0']
 
@@ -385,7 +387,7 @@ class ModuleRegistryClientTest extends Specification {
 
     def 'should handle publish failure with no auth token'() {
         given:
-        def config = new RegistryConfig([url: "http://localhost:${wireMock.port()}"])
+        def config = new RegistryConfig([url: url])
         def client = new ModuleRegistryClient(config)
         def publishRequest = [name: 'nf-core/mymodule', version: '1.0.0']
 

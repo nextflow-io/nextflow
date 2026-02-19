@@ -344,6 +344,22 @@ Results include module names, versions, descriptions, and download statistics. U
 
 See {ref}`cli-module-search` for more information.
 
+### Viewing module information
+
+The `module info` command displays detailed metadata and usage information for a specific module from the registry.
+
+Use this to understand module requirements, view input/output specifications, see available tools, or generate usage templates before installing or running a module.
+
+```console
+$ nextflow module info nf-core/fastqc
+$ nextflow module info nf-core/fastqc -version 1.0.0
+$ nextflow module info nf-core/fastqc -json
+```
+
+The output includes the module's version, description, authors, keywords, tools, input/output channels, and a generated usage template showing how to run the module. Use `-json` for machine-readable output suitable for programmatic access.
+
+See {ref}`cli-module-info` for more information.
+
 ### Removing modules
 
 The `module remove` command deletes modules from your project, removing local files and configuration entries.
