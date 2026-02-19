@@ -495,6 +495,24 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
 
     }
 
+    def 'should delete a non-empty directory on S3 without throwing' () {
+        given:
+        def bucketName = createBucket()
+        and:
+        createObject("$bucketName/dir1/file1.txt", 'HELLO')
+        createObject("$bucketName/dir1/file2.txt", 'WORLD')
+
+        when:
+        def path = s3path("s3://$bucketName/dir1")
+        Files.delete(path)
+
+        then:
+        noExceptionThrown()
+
+        cleanup:
+        deleteBucket(bucketName)
+    }
+
     @Ignore //FIXME
     def 'should validate exists method' () {
         given:
