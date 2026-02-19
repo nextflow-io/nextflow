@@ -974,9 +974,11 @@ The following settings are available:
 `google.batch.enableImageStreaming`
 : :::{versionadded} 26.02.1-edge
   :::
-: Enable container image streaming to speed up job start-up (default: `false`). This can reduce latency for large images but comes with some
-[limitations](https://docs.cloud.google.com/batch/docs/use-image-streaming).
-: Notably, `process.containerOptions` is ignored when image streaming is enabled.
+: Enable container image streaming to speed up job start-up (default: `false`). This can reduce latency for large images but comes with some [limitations](https://cloud.google.com/batch/docs/use-image-streaming), including:
+
+  - `process.containerOptions` is ignored when image streaming is enabled.
+  - Image streaming only supports container images stored in Artifact Registry. If you currently use Container Registry, you should [transition to Artifact Registry](https://cloud.google.com/artifact-registry/docs/transition/transition-from-gcr).
+  - You must run your Batch job's VMs in the same [location](https://cloud.google.com/artifact-registry/docs/repositories/repo-locations) as the Artifact Registry storing the container image.
 
 `google.batch.maxSpotAttempts`
 : :::{versionadded} 23.11.0-edge

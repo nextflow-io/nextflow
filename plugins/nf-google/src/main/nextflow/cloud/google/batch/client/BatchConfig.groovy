@@ -92,10 +92,17 @@ class BatchConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        Enable container image streaming for faster startup. process.containerOptions
-        is ignored when image streaming is enabled. See
-        [documentation](https://docs.cloud.google.com/batch/docs/use-image-streaming)
-        for a full list of other limitations (default: `false`).
+        Enable container image streaming to speed up job start-up (default: `false`).
+        This can reduce latency for large images but comes with some
+        [limitations](https://cloud.google.com/batch/docs/use-image-streaming), including:
+
+        - `process.containerOptions` is ignored when image streaming is enabled.
+        - Image streaming only supports container images stored in Artifact Registry.
+          If you currently use Container Registry, you should 
+          [transition to Artifact Registry](https://cloud.google.com/artifact-registry/docs/transition/transition-from-gcr).
+        - You must run your Batch job's VMs in the same
+          [location](https://cloud.google.com/artifact-registry/docs/repositories/repo-locations)
+          as the Artifact Registry storing the container image.
     """)
     final boolean enableImageStreaming
 
