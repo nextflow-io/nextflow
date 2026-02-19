@@ -32,6 +32,7 @@ class ProgressRecord implements Cloneable {
     final int index
     final String name     // process name
     String hash     // current task hash
+    String workDir  // current task work directory URI
     String taskName // current task name
     int pending     // number of new tasks ready to be submitted
     int submitted   // number of tasks submitted for execution not yet started

@@ -23,6 +23,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Function;
 
+import nextflow.module.spi.RemoteModuleResolverProvider;
 import nextflow.script.ast.IncludeNode;
 import nextflow.script.ast.ScriptNode;
 import org.codehaus.groovy.control.SourceUnit;
@@ -72,8 +73,19 @@ public class ModuleResolver {
         var source = node.source.getText();
         if( source.startsWith("plugin/") )
             return null;
-        var uri = sourceUnit.getSource().getURI();
-        var includeUri = getIncludeUri(uri, source);
+
+        var parent = Path.of(sourceUnit.getSource().getURI()).getParent();
+
+        // Resolve remote modules paths
+        if( source.startsWith("@") ) {
+            // Use SPI to get the remote module resolver implementation
+            var modules = Path.of("./modules");
+            var resolver = RemoteModuleResolverProvider.getInstance();
+            resolver.resolve(source, modules.getParent());
+            parent = modules;
+        }
+
+        var includeUri = getIncludeUri(parent, source);
         if( compiler.getSource(includeUri) != null )
             return null;
         if( !Files.exists(Path.of(includeUri)) )
@@ -86,8 +98,8 @@ public class ModuleResolver {
         return includeSource;
     }
 
-    private static URI getIncludeUri(URI uri, String source) {
-        Path includePath = Path.of(uri).getParent().resolve(source);
+    private static URI getIncludeUri(Path parent, String source) {
+        Path includePath = parent.resolve(source);
         if( Files.isDirectory(includePath) )
             includePath = includePath.resolve("main.nf");
         else if( !source.endsWith(".nf") )

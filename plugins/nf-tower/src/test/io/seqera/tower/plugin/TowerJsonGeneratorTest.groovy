@@ -113,6 +113,7 @@ class TowerJsonGeneratorTest extends Specification {
         progress.get(0) == [
                 index:1,
                 name: 'foo',
+                workDir: null,
                 pending: 0,
                 submitted: 0,
                 running: 0,
@@ -133,6 +134,7 @@ class TowerJsonGeneratorTest extends Specification {
         progress[1] == [
                 index:2,
                 name: 'bar',
+                workDir: null,
                 pending: 1,
                 submitted: 2,
                 running: 3,

@@ -29,6 +29,7 @@ import nextflow.NF
 import nextflow.Session
 import nextflow.exception.IllegalModulePath
 import nextflow.exception.ScriptCompilationException
+import nextflow.module.spi.RemoteModuleResolverProvider
 import nextflow.plugin.Plugins
 import nextflow.plugin.extension.PluginExtensionProvider
 import nextflow.script.parser.v1.ScriptLoaderV1
@@ -162,7 +163,9 @@ class IncludeDef {
     @PackageScope
     Path resolveModulePath(include) {
         assert include
-
+        if( include.toString().startsWith('@') ) {
+            return resolveRemoteModulePath(include.toString())
+        }
         final result = include as Path
         if( result.isAbsolute() ) {
             if( result.scheme == 'file' ) return result
@@ -170,6 +173,13 @@ class IncludeDef {
         }
 
         return getOwnerPath().resolveSibling(include.toString())
+    }
+
+    @PackageScope
+    Path resolveRemoteModulePath(String moduleName) {
+        // Use SPI to get the remote module resolver implementation
+        def resolver = RemoteModuleResolverProvider.getInstance()
+        return resolver.resolve(moduleName, session.baseDir)
     }
 
     @PackageScope
@@ -206,8 +216,8 @@ class IncludeDef {
             throw new IllegalModulePath("Remote modules are not allowed -- Offending module: ${path.toUriString()}")
 
         final str = path.toString()
-        if( !str.startsWith('/') && !str.startsWith('./') && !str.startsWith('../') && !str.startsWith('plugin/') )
-            throw new IllegalModulePath("Module path must start with / or ./ prefix -- Offending module: $str")
+        if( !str.startsWith('/') && !str.startsWith('./') && !str.startsWith('../') && !str.startsWith('plugin/') && !str.startsWith('@') )
+            throw new IllegalModulePath("Module path must start with '/' , './' or '@' prefix -- Offending module: $str")
 
     }
 

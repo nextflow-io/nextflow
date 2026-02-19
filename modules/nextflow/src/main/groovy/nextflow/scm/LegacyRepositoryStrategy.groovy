@@ -86,7 +86,7 @@ class LegacyRepositoryStrategy extends AbstractRepositoryStrategy {
                 .setCloneSubmodules(manifest.recurseSubmodules)
             if( deep )
                 clone.setDepth(deep)
-            clone.call()
+            clone.call().close()
 
             // git cli would automatically create a 'refs/remotes/origin/HEAD' symbolic ref pointing at the remote's
             // default branch. jgit doesn't do this, but since it automatically checked out the default branch on clone

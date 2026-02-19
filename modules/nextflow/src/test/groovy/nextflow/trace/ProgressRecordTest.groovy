@@ -31,6 +31,8 @@ class ProgressRecordTest extends Specification {
         with(rec) {
             index == 10
             name == 'foo'
+            hash == null
+            workDir == null
             pending == 0
             submitted == 0
             running == 0

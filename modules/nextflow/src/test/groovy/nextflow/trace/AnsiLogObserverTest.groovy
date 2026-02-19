@@ -16,6 +16,7 @@
 
 package nextflow.trace
 
+import nextflow.Session
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -106,6 +107,65 @@ class AnsiLogObserverTest extends Specification {
         '12345678'  | 5     | '12345'
         '12345678'  | 6     | '123…78'
 
+    }
+
+    def 'should create hyperlink' () {
+        expect:
+        // Local paths (starting with /) get file:// prefix added automatically
+        AnsiLogObserver.hyperlink('hash', '/path/to/work') == '\033]8;;file:///path/to/work\007hash\033]8;;\007'
+        // URLs with schemes are used as-is
+        AnsiLogObserver.hyperlink('hash', 's3://bucket/path') == '\033]8;;s3://bucket/path\007hash\033]8;;\007'
+        AnsiLogObserver.hyperlink('hash', 'gs://bucket/path') == '\033]8;;gs://bucket/path\007hash\033]8;;\007'
+        AnsiLogObserver.hyperlink('hash', 'az://container/path') == '\033]8;;az://container/path\007hash\033]8;;\007'
+        AnsiLogObserver.hyperlink('text', null) == 'text'
+        AnsiLogObserver.hyperlink('text', '') == 'text'
+    }
+
+    def 'should render hash as hyperlink when workDir is set' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [cleanup: false] }
+        def observer = new AnsiLogObserver()
+        observer.@session = session
+        observer.@labelWidth = 3
+        observer.@cols = 190
+        and:
+        def stats = new ProgressRecord(1, 'foo')
+        stats.submitted = 1
+        stats.hash = '4e/486876'
+        stats.workDir = WORKDIR
+
+        when:
+        def result = observer.line(stats).toString()
+
+        then:
+        result.contains('\033]8;;' + EXPECTED_HREF + '\007')
+        result.contains('\033]8;;\007')
+
+        where:
+        WORKDIR                          | EXPECTED_HREF
+        '/work/4e/486876abc'             | 'file:///work/4e/486876abc'
+        's3://bucket/work/4e/486876abc'  | 's3://bucket/work/4e/486876abc'
+    }
+
+    def 'should not render hyperlink when cleanup is enabled' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [cleanup: true] }
+        def observer = new AnsiLogObserver()
+        observer.@session = session
+        observer.@labelWidth = 3
+        observer.@cols = 190
+        and:
+        def stats = new ProgressRecord(1, 'foo')
+        stats.submitted = 1
+        stats.hash = '4e/486876'
+        stats.workDir = '/work/4e/486876abc'
+
+        when:
+        def result = observer.line(stats).toString()
+
+        then:
+        // Should NOT contain hyperlink start sequence
+        !result.contains('\033]8;;')
     }
 
 }
