@@ -139,8 +139,14 @@ class TaskArrayCollector {
     protected TaskArrayRun createTaskArray(List<TaskRun> tasks) {
         // prepare child job launcher scripts
         final handlers = tasks.collect( t -> executor.createTaskHandler(t).withArrayChild(true) )
-        for( TaskHandler handler : handlers ) {
-            handler.prepareLauncher()
+        // prepare launchers in parallel to avoid sequential blocking I/O on cloud storage
+        handlers.parallelStream().forEach { handler ->
+            try {
+                handler.prepareLauncher()
+            } catch (Exception e) {
+                log.error("Failed to prepare launcher for task ${handler.task.name}", e)
+                throw e
+            }
         }
 
         // create work directory
