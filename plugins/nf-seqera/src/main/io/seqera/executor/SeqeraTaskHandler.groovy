@@ -43,6 +43,11 @@ import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
 /**
+ * Task handler for the Seqera scheduler executor.
+ *
+ * <p>Manages the lifecycle of a single task submitted to the Seqera scheduler,
+ * including submission via batch submitter, status polling, completion handling,
+ * and trace record enrichment with machine info and spot interruption metadata.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

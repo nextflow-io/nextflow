@@ -41,6 +41,11 @@ import nextflow.util.ServiceName
 import org.pf4j.ExtensionPoint
 
 /**
+ * Nextflow executor that delegates task execution to the Seqera scheduler API.
+ *
+ * <p>This executor creates a run on the Seqera scheduler, submits tasks in batches
+ * via {@link SeqeraBatchSubmitter}, and monitors their lifecycle through the scheduler API.
+ * It requires Fusion file system to be enabled and all processes to specify a container image.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
