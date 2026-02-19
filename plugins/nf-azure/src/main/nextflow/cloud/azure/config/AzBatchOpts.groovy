@@ -80,7 +80,7 @@ class AzBatchOpts implements ConfigScope, CloudTransferOptions {
 
     @ConfigOption
     @Description("""
-        Delete all Docker images from compute nodes when each job completes, freeing disk space (default: `false`). Uses a job release task to run `docker image prune -a -f` on each node.
+        Delete all Docker images from compute nodes before and after each job runs, freeing disk space (default: `false`). Uses job preparation and release tasks to run `docker image prune -a -f` on each node.
     """)
     final Boolean deleteImagesOnCompletion
 

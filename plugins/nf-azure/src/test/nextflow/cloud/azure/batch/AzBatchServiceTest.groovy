@@ -986,7 +986,10 @@ class AzBatchServiceTest extends Specification {
 
         then:
         prepTask != null
-        prepTask.commandLine == '/bin/sh -c "echo nf-image-cleanup-prep"'
+        prepTask.id == 'nf-image-cleanup-prep'
+        prepTask.commandLine == '/bin/sh -c "docker image prune -a -f"'
+        prepTask.userIdentity.autoUser.elevationLevel == ElevationLevel.ADMIN
+        prepTask.containerSettings == null
     }
 
     def 'should not create job release task by default' () {

@@ -464,10 +464,19 @@ class AzBatchService implements Closeable {
     }
 
     /**
-     * Create a no-op job preparation task required by Azure Batch when a release task is specified.
+     * Create a job preparation task that prunes unused Docker images on compute nodes
+     * before the job's tasks start. The preparation task runs on the host (not inside a container)
+     * with admin elevation to access the Docker daemon.
+     *
+     * This frees disk space by removing images that are no longer referenced by any
+     * running or stopped container, maximising available storage for the current job.
      */
     protected BatchJobPreparationTask createJobPreparationTask() {
-        return new BatchJobPreparationTask('/bin/sh -c "echo nf-image-cleanup-prep"')
+        final prepTask = new BatchJobPreparationTask('/bin/sh -c "docker image prune -a -f"')
+        prepTask.setId('nf-image-cleanup-prep')
+        // run as admin on the host to access the Docker daemon
+        prepTask.setUserIdentity(userIdentity(true, null, AutoUserScope.POOL))
+        return prepTask
     }
 
     /**
