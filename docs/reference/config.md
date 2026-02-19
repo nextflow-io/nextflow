@@ -1545,6 +1545,9 @@ The following settings are available:
 `seqera.executor.machineRequirement.diskEncrypted`
 : Enable KMS encryption for the EBS volume (default: `false`). Only applicable when `diskAllocation` is `'task'`.
 
+`seqera.executor.taskEnvironment`
+: Custom environment variables to apply to all tasks submitted by the Seqera executor. These are merged with the Fusion environment variables, with Fusion variables taking precedence. For example: `taskEnvironment = [MY_VAR: 'value']`.
+
 `seqera.executor.retryPolicy.delay`
 : The initial delay when a failing HTTP request is retried (default: `'450ms'`).
 

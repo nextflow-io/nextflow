@@ -131,7 +131,7 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
             .name(task.lazyName())       // process name for identification
             .image(container)             // container image to run
             .command(fusionSubmitCli())   // fusion-based command launcher
-            .environment(fusionLauncher().fusionEnv())  // fusion environment variables
+            .environment(getTaskEnvironment())  // fusion + user-configured environment variables
             .resourceRequirement(resourceReq)  // cpu, memory, accelerators
             .resourceLimit(resourceLim)         // resource upper bounds for OOM retry
             .machineRequirement(machineReq)    // machine type and disk requirements
@@ -142,6 +142,20 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
         log.debug "[SEQERA] Enqueueing task for batch submission: ${schedTask}"
         // Enqueue for batch submission - status will be set by setBatchTaskId callback
         executor.getBatchSubmitter().submit(this, schedTask)
+    }
+
+    /**
+     * Build the task environment by merging user-configured environment variables
+     * with Fusion environment variables. Fusion variables take precedence.
+     */
+    protected Map<String, String> getTaskEnvironment() {
+        final configEnv = executor.getSeqeraConfig()?.taskEnvironment
+        final fusionEnv = fusionLauncher().fusionEnv()
+        if( !configEnv )
+            return fusionEnv
+        final result = new LinkedHashMap<String, String>(configEnv)
+        result.putAll(fusionEnv)
+        return result
     }
 
     /**

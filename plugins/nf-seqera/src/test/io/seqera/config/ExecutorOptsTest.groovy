@@ -196,6 +196,38 @@ class ExecutorOptsTest extends Specification {
         config.predictionModel == null
     }
 
+    def 'should create config with taskEnvironment' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            taskEnvironment: [FOO: 'bar', BAZ: 'qux']
+        ])
+
+        then:
+        config.taskEnvironment == [FOO: 'bar', BAZ: 'qux']
+    }
+
+    def 'should handle null taskEnvironment' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com'
+        ])
+
+        then:
+        config.taskEnvironment == null
+    }
+
+    def 'should handle empty taskEnvironment' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            taskEnvironment: [:]
+        ])
+
+        then:
+        config.taskEnvironment == [:]
+    }
+
     def 'should reject invalid prediction model' () {
         when:
         new ExecutorOpts([

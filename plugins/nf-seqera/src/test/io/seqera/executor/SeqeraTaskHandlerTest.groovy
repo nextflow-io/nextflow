@@ -483,6 +483,84 @@ class SeqeraTaskHandlerTest extends Specification {
         capturedTask.getNextflow().getWorkDir() == '/work/ab/cd1234'
     }
 
+    def 'should return only fusion env when no config environment'() {
+        given:
+        def seqeraConfig = Mock(ExecutorOpts) {
+            getTaskEnvironment() >> null
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> Mock(SchedClient)
+            getSeqeraConfig() >> seqeraConfig
+        }
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getConfig() >> Mock(TaskConfig)
+        }
+        def handler = Spy(new SeqeraTaskHandler(taskRun, executor)) {
+            fusionLauncher() >> Mock(nextflow.fusion.FusionScriptLauncher) {
+                fusionEnv() >> [FUSION_KEY: 'fusion_val']
+            }
+        }
+
+        when:
+        def result = handler.getTaskEnvironment()
+
+        then:
+        result == [FUSION_KEY: 'fusion_val']
+    }
+
+    def 'should merge config environment with fusion env'() {
+        given:
+        def seqeraConfig = Mock(ExecutorOpts) {
+            getTaskEnvironment() >> [MY_VAR: 'my_val', OTHER: 'other_val']
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> Mock(SchedClient)
+            getSeqeraConfig() >> seqeraConfig
+        }
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getConfig() >> Mock(TaskConfig)
+        }
+        def handler = Spy(new SeqeraTaskHandler(taskRun, executor)) {
+            fusionLauncher() >> Mock(nextflow.fusion.FusionScriptLauncher) {
+                fusionEnv() >> [FUSION_KEY: 'fusion_val']
+            }
+        }
+
+        when:
+        def result = handler.getTaskEnvironment()
+
+        then:
+        result == [MY_VAR: 'my_val', OTHER: 'other_val', FUSION_KEY: 'fusion_val']
+    }
+
+    def 'should give fusion env precedence over config environment'() {
+        given:
+        def seqeraConfig = Mock(ExecutorOpts) {
+            getTaskEnvironment() >> [SHARED_KEY: 'config_val', MY_VAR: 'my_val']
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> Mock(SchedClient)
+            getSeqeraConfig() >> seqeraConfig
+        }
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getConfig() >> Mock(TaskConfig)
+        }
+        def handler = Spy(new SeqeraTaskHandler(taskRun, executor)) {
+            fusionLauncher() >> Mock(nextflow.fusion.FusionScriptLauncher) {
+                fusionEnv() >> [SHARED_KEY: 'fusion_val']
+            }
+        }
+
+        when:
+        def result = handler.getTaskEnvironment()
+
+        then:
+        result == [MY_VAR: 'my_val', SHARED_KEY: 'fusion_val']
+    }
+
     def 'should return granted time from resource requirement'() {
         given:
         def handler = createHandler()

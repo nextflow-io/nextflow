@@ -87,6 +87,13 @@ class ExecutorOpts implements ConfigScope {
     """)
     final String predictionModel
 
+    @ConfigOption
+    @Description("""
+        Custom environment variables to apply to all tasks submitted by the Seqera executor.
+        These are merged with the Fusion environment variables, with Fusion variables taking precedence.
+    """)
+    final Map<String, String> taskEnvironment
+
     /* required by config scope -- do not remove */
 
     ExecutorOpts() {}
@@ -109,6 +116,8 @@ class ExecutorOpts implements ConfigScope {
         this.autoLabels = opts.autoLabels as boolean ?: false
         // prediction model
         this.predictionModel = parsePredictionModel(opts.predictionModel as String)
+        // custom task environment variables
+        this.taskEnvironment = opts.taskEnvironment as Map<String, String>
     }
 
     private static final Set<String> VALID_PREDICTION_MODELS = Set.of('qr/v1')
@@ -155,5 +164,9 @@ class ExecutorOpts implements ConfigScope {
 
     String getPredictionModel() {
         return predictionModel
+    }
+
+    Map<String, String> getTaskEnvironment() {
+        return taskEnvironment
     }
 }
