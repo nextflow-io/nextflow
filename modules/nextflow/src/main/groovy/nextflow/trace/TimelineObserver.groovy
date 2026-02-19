@@ -61,8 +61,8 @@ class TimelineObserver implements TraceObserverV2 {
 
     private boolean overwrite
 
-    TimelineObserver(TimelineConfig config) {
-        this.reportFile = FileHelper.asPath(config.file)
+    TimelineObserver(TimelineConfig config, Path baseDir) {
+        this.reportFile = baseDir.resolve(config.file)
         this.overwrite = config.overwrite
     }
 

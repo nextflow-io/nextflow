@@ -1440,7 +1440,7 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
   $ nextflow run main.nf -profile docker
   ```
 
-- Execute a pipeline and generate the summary HTML report. For more information on the metrics, please refer the {ref}`tracing-page` section:
+- Execute a pipeline and generate the summary HTML report. For more information on the metrics, please refer the {ref}`reports-page` section:
 
   ```console
   $ nextflow run main.nf -with-report
