@@ -70,6 +70,10 @@ class TowerClient implements TraceObserverV2 {
 
     static private final Duration ALIVE_INTERVAL = Duration.of('1 min')
 
+    static private final int DEFAULT_FAILURES_THRESHOLD = 20
+
+    static private final long LAST_SUCCESS_ALIVE_INTERVAL_TIMES = 10
+
     static private final String TOKEN_PREFIX = '@token:'
 
     @TupleConstructor
@@ -123,6 +127,15 @@ class TowerClient implements TraceObserverV2 {
     private LinkedHashSet<String> processNames = new LinkedHashSet<>(20)
 
     private Map<String,Integer> schema = Collections.emptyMap()
+
+    // Number of failed trace call before skipping tower trace monitoring (heartbeat and progress)
+    private int failuresThreshold = DEFAULT_FAILURES_THRESHOLD
+
+    // Store tower trace call failures
+    private int failuresCount = 0
+
+    // Store the timestamp of the last successfull trace call
+    private long lastSuccess
 
     private int maxRetries = 5
 
@@ -182,6 +195,10 @@ class TowerClient implements TraceObserverV2 {
 
     void setRequestInterval(Duration d) {
         this.requestInterval = d
+    }
+
+    void setFailuresThreshold( int value) {
+        this.failuresThreshold = value
     }
 
     void setMaxRetries( int value ) {
@@ -383,6 +400,7 @@ class TowerClient implements TraceObserverV2 {
 
         final payload = parseTowerResponse(resp)
         this.watchUrl = payload.watchUrl
+        this.lastSuccess = System.currentTimeMillis()
         this.sender = Threads.start('Tower-thread', this.&sendTasks0)
         final msg = "Monitor the execution with Seqera Platform using this URL: ${watchUrl}"
         log.info(LoggerHelper.STICKY, msg)
@@ -715,9 +733,12 @@ class TowerClient implements TraceObserverV2 {
      */
     protected void logHttpResponse(String url, Response resp) {
         if (resp.code >= 200 && resp.code < 300) {
+            this.lastSuccess = System.currentTimeMillis()
+            this.failuresCount = 0
             log.trace "Successfully send message to ${url} -- received status code ${resp.code}"
         }
         else {
+            this.failuresCount++
             def cause = parseCause(resp.cause)
             def msg = """\
                 Unexpected HTTP response.
@@ -786,6 +807,11 @@ class TowerClient implements TraceObserverV2 {
         return result
     }
 
+    protected boolean hasConsistentFailures(){
+        final now = System.currentTimeMillis()
+        return failuresCount > failuresThreshold && now - lastSuccess > LAST_SUCCESS_ALIVE_INTERVAL_TIMES * aliveInterval.millis
+    }
+
     protected void sendTasks0(dummy) {
         final tasks = new HashMap<TaskId, TraceRecord>(TASKS_PER_REQUEST)
         boolean complete = false
@@ -804,6 +830,14 @@ class TowerClient implements TraceObserverV2 {
                     complete = true
             }
 
+            // Skip heartbeat and progress when consistent failures
+            // It is checked after polling events to avoid large memory consumption in events queue.
+            if( hasConsistentFailures() ) {
+                log.warn1("A consistent failure detected in the connection to Seqera Platform - Skipping trace reports")
+                // Clear tasks map to avoid accumulating task reports when reaching max failures
+                tasks.clear()
+                continue;
+            }
             // check if there's something to send
             final now = System.currentTimeMillis()
             final delta = now -previous
