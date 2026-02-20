@@ -16,7 +16,7 @@ You will need the following to get started:
 
 You will run a basic Nextflow pipeline that splits a string of text into two files and then converts lowercase letters to uppercase letters. You can see the pipeline here:
 
-```nextflow
+```nextflow title="main.nf"
 // Default parameter input
 params.str = "Hello world!"
 
@@ -122,7 +122,7 @@ You can enable resumability using the `-resume` flag when running a pipeline. To
 1. Open `main.nf`.
 2. Replace the `convert_to_upper` process with the following:
 
-    ```nextflow
+    ```nextflow title="main.nf"
     process convert_to_upper {
         publishDir "results/upper"
         tag "$y"

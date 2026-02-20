@@ -12,15 +12,14 @@ The Nextflow runtime integrates with many popular execution platforms (HPC sched
 
 In practice a Nextflow pipeline script is made by joining together different processes. Each process can be written in any scripting language that can be executed by the Linux platform (Bash, Perl, Ruby, Python, etc.).
 
-A process can define one or more *inputs* and *outputs*. Data flows from process to process through asynchronous dataflow structures, known as *channels* and *values* in Nextflow. The data dependencies between these processes implicitly determines the flow of execution.
+A process can define one or more *inputs* and *outputs*. Data flows from process to process through asynchronous dataflow structures, known as *channels* and *values* in Nextflow. The data dependencies between these processes implicitly determines the flow of execution. For example:
 
-A Nextflow script looks like this:
-
-```nextflow
+```nextflow title="main.nf"
 // Script parameters
 params.query = "/some/data/sample.fa"
 params.db = "/some/path/pdb"
 
+// Define the blast_search process
 process blast_search {
   input:
   path query
@@ -36,6 +35,7 @@ process blast_search {
   """
 }
 
+// Define the extract_top_hits process
 process extract_top_hits {
   input:
   path top_hits
@@ -50,6 +50,7 @@ process extract_top_hits {
   """
 }
 
+// Define the workflow
 workflow {
   def query_ch = channel.fromPath(params.query)
   blast_search(query_ch, params.db)
@@ -61,7 +62,7 @@ The above example defines two processes. Their execution order is not determined
 
 When the workflow is executed, it creates two processes (`blast_search` and `extract_top_hits`) connected by the channel `query_ch`. Each process executes a task and emits a value for each input that it receives. Whenever `blast_search` emits a value, `extract_top_hits` receives it through the `query_ch` channel.
 
-Read the [Channels][channels-page] and [Dataflow][dataflow-page] pages to learn more about these features.
+See [Channels][channels-page] and [Dataflow][dataflow-page] to learn more.
 
 ## Execution abstraction
 
@@ -101,18 +102,16 @@ See [Scripts][scripts-page] for more information about the Nextflow scripting la
 
 Pipeline configuration properties are defined in a file named `nextflow.config` in the pipeline execution directory.
 
-This file can be used to define which executor to use, the process's environment variables, pipeline parameters etc.
+This file can be used to define which executor to use, the process's environment variables, pipeline parameters etc. For example:
 
-A basic configuration file might look like this:
-
-```groovy
+```groovy title="nextflow.config"
 process {
   executor = 'sge'
   queue = 'cn-el6'
 }
 ```
 
-See [Configuration][configuration-page] to learn more about the Nextflow configuration file and settings.
+See [Configuration][configuration-page] to learn more.
 
 [channels-page]: ./channel
 [configuration-page]: ./config
