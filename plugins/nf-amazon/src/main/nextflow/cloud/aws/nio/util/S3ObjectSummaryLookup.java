@@ -65,39 +65,80 @@ public class S3ObjectSummaryLookup {
             return summary;
         }
 
-        /*
-         * Lookup for the object summary for the specified object key
-         * by using a `listObjects` request
-         */
-        String marker = null;
-        while( true ) {
-            ListObjectsRequest.Builder request = ListObjectsRequest.builder();
-            request.bucket(s3Path.getBucket());
-            request.prefix(s3Path.getKey());
-            request.maxKeys(250);
-            if( marker != null )
-                request.marker(marker);
-
-            ListObjectsResponse listing = client.listObjects(request.build());
-            List<S3Object> results = listing.contents();
-
-            if (results.isEmpty()){
-                break;
-            }
-
-            for( S3Object item : results ) {
-                if( matchName(s3Path.getKey(), item)) {
-                    return item;
-                }
-            }
-
-            if( listing.isTruncated() )
-                marker = listing.nextMarker();
-            else
-                break;
-        }
+        S3Object item = getS3Object(s3Path, client);
+        if( item != null )
+            return item;
 
         throw new NoSuchFileException("s3://" + s3Path.getBucket() + "/" + s3Path.getKey());
+    }
+
+    /**
+     * Lookup for the S3 object matching the specified path using at most two bounded
+     * {@code listObjects} calls (replaces the previous unbounded pagination loop).
+     *
+     * @param s3Path the S3 path to look up
+     * @param client the S3 client
+     * @return the matching {@link S3Object}, or {@code null} if not found
+     */
+    private S3Object getS3Object(S3Path s3Path, S3Client client) {
+
+        // Call 1: list up to 2 objects whose key starts with the target key.
+        //
+        // Why maxKeys(2) instead of paginating all results?
+        // The previous implementation used an unbounded while(true) loop fetching 250 keys
+        // per page. On prefixes with millions of objects this caused excessive S3 LIST API
+        // calls, high latency, and potential timeouts. Two results are enough to cover
+        // the common cases:
+        //   - Exact file match: the key itself exists as an object (e.g. "data.txt")
+        //   - Directory match: a child object (e.g. "data/file1") appears within the
+        //     first 2 lexicographic results
+        ListObjectsRequest request = ListObjectsRequest.builder()
+                .bucket(s3Path.getBucket())
+                .prefix(s3Path.getKey())
+                .maxKeys(2)
+                .build();
+
+        ListObjectsResponse listing = client.listObjects(request);
+        List<S3Object> results = listing.contents();
+
+        for( S3Object item : results ) {
+            if( matchName(s3Path.getKey(), item)) {
+                return item;
+            }
+        }
+
+        // Call 2 (fallback): list 1 object with prefix "key/" to detect directories
+        // that Call 1 missed.
+        //
+        // Why can Call 1 miss a directory?
+        // S3 lists keys in lexicographic (UTF-8 byte) order, and several common characters
+        // sort *before* '/' (0x2F) — notably '-' (0x2D) and '.' (0x2E).
+        //
+        // Example: given keys "a-a/file-3", "a.txt", and "a/file-1", S3 returns them as:
+        //   a-a/file-3   ← '-' (0x2D) < '/' (0x2F)
+        //   a.txt         ← '.' (0x2E) < '/' (0x2F)
+        //   a/file-1      ← '/' (0x2F) — the actual directory child
+        //
+        // With maxKeys(2), Call 1 only sees "a-a/file-3" and "a.txt" — neither matches
+        // key "a" via matchName(). The directory child "a/file-1" is pushed beyond the
+        // result window by sibling keys that sort earlier.
+        //
+        // By searching with prefix "a/" directly, we skip all those siblings and find
+        // "a/file-1", confirming that "a" is a directory.
+        request = ListObjectsRequest.builder()
+                .bucket(s3Path.getBucket())
+                .prefix(s3Path.getKey()+'/')
+                .maxKeys(1)
+                .build();
+
+        listing = client.listObjects(request);
+        results = listing.contents();
+        for( S3Object item : results ) {
+            if( matchName(s3Path.getKey(), item)) {
+                return item;
+            }
+        }
+        return null;
     }
 
     private boolean matchName(String fileName, S3Object summary) {
