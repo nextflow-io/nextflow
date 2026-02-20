@@ -65,14 +65,24 @@ public class S3ObjectSummaryLookup {
             return summary;
         }
 
-        /*
-         * Lookup for the object summary for the specified object key
-         * by using a `listObjects` request.
-         *
-         * Only 2 results are needed: the exact key match or its first
-         * child (key + "/"). Fetching more would cause unbounded pagination
-         * on prefixes with millions of objects.
-         */
+        S3Object item = getS3Object(s3Path, client);
+        if( item != null )
+            return item;
+
+        throw new NoSuchFileException("s3://" + s3Path.getBucket() + "/" + s3Path.getKey());
+    }
+    /**
+     * Lookup for the object summary for the specified object key
+     * by using a `listObjects` request.
+     *
+     * It tries first with 2 results : the exact key match or its first
+     * child (key + "/"). Fetching more would cause unbounded pagination
+     * on prefixes with millions of objects.
+     *
+     * If not found in first 2 results try with 'key/' to check if it is a directory
+     **/
+    private S3Object getS3Object(S3Path s3Path, S3Client client) {
+
         ListObjectsRequest request = ListObjectsRequest.builder()
                 .bucket(s3Path.getBucket())
                 .prefix(s3Path.getKey())
@@ -87,8 +97,21 @@ public class S3ObjectSummaryLookup {
                 return item;
             }
         }
+        // Not found with provided key, try with directory 'key/'
+        request = ListObjectsRequest.builder()
+                .bucket(s3Path.getBucket())
+                .prefix(s3Path.getKey()+'/')
+                .maxKeys(1)
+                .build();
 
-        throw new NoSuchFileException("s3://" + s3Path.getBucket() + "/" + s3Path.getKey());
+        listing = client.listObjects(request);
+        results = listing.contents();
+        for( S3Object item : results ) {
+            if( matchName(s3Path.getKey(), item)) {
+                return item;
+            }
+        }
+        return null;
     }
 
     private boolean matchName(String fileName, S3Object summary) {

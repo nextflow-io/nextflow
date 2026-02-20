@@ -1432,4 +1432,20 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         deleteBucket(bucket1)
     }
 
+    def 'should exists file with similar files' () {
+        given:
+        def bucketName = createBucket()
+        createObject("$bucketName/similar-lexic-order/a/file-1",'File one')
+        createObject("$bucketName/similar-lexic-order/a.txt",'File two')
+        createObject("$bucketName/similar-lexic-order/a-a/file-3",'File three')
+
+        def path = s3path("s3://$bucketName/similar-lexic-order/a")
+        expect:
+        path.exists()
+        path.isDirectory()
+
+        cleanup:
+        deleteBucket(bucketName)
+    }
+
 }
