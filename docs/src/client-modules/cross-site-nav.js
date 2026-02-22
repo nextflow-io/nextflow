@@ -6,7 +6,7 @@
    * Captured once so it doesn't drift as client-side nav happens.
    */
   const firstSegment = window.location.pathname.split('/').filter(Boolean)[0];
-  const PRODUCT_BASE = firstSegment ? `/${firstSegment}/` : '/';
+  const PRODUCT_BASE = firstSegment ? `/${firstSegment}/` : null;
 
   function isExternalToProduct(rawUrl) {
     let url;
@@ -18,6 +18,11 @@
 
     // Ignore different origins — browser handles those natively
     if (url.origin !== window.location.origin) return false;
+
+    // At root (no product prefix), any navigation into a product sub-path is cross-product
+    if (!PRODUCT_BASE) {
+      return url.pathname.split('/').filter(Boolean).length > 0;
+    }
 
     // Force hard load if the path leaves the current product base
     return !url.pathname.startsWith(PRODUCT_BASE);

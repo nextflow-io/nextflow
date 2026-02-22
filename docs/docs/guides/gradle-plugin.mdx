@@ -46,10 +46,10 @@ To install plugins locally:
 2. Run your pipeline:
 
     ```bash
-    nextflow run main.nf -plugins <PLUGIN_NAME>@<VERSION>
+    nextflow run main.nf -plugins <plugin-name>@<version>
     ```
 
-    Replace `<PLUGIN_NAME>@<VERSION>` with your plugin name and version.
+    Replace `<plugin-name>@<version>` with your plugin name and version.
 
     :::note
     Plugins can also be configured via Nextflow configuration files. See [Using plugins][using-plugins-page] for more information.
@@ -115,10 +115,10 @@ To publish plugins to the [Nextflow plugin registry](https://registry.nextflow.i
 3. Add your API key to the file:
 
     ```
-    npr.apiKey=<API_KEY>
+    npr.apiKey=<api-key>
     ```
 
-    Replace `<API_KEY>` with your plugin registry API key. See [Creating an access token][plugin-registry-access-token] for more information.
+    Replace `<api-key>` with your plugin registry API key. See [Creating an access token][plugin-registry-access-token] for more information.
 
 4. Run `make release`.
 

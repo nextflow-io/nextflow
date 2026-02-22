@@ -126,7 +126,7 @@ Get the value of the environment variable with the specified name in the Nextflo
 
 You can define pipeline parameters in config files using the `params` scope:
 
-```groovy
+```groovy title="<filename>.config"
 // dot syntax
 params.max_cpus = 64
 params.publish_mode = 'copy'
@@ -144,13 +144,11 @@ When including a config file, the included config is evaluated with the paramete
 
 You should declare parameters in the config file only when other config options use them. When you use a parameter in the script, you should declare it there and override it in config profiles as needed:
 
-```nextflow
-// main.nf
+```nextflow title="<filename>.nf"
 params.input = null
 ```
 
-```groovy
-// nextflow.config
+```groovy title="<filename>.config"
 params {
     publish_mode = 'copy'
 }

@@ -1,9 +1,11 @@
 
 # Caching and resuming
 
-One of the core features of Nextflow is the ability to cache task executions and re-use them in subsequent runs to minimize duplicate work. Resumability is useful both for recovering from errors and for iteratively developing a pipeline. It is similar to [checkpointing](https://en.wikipedia.org/wiki/Application_checkpointing), a common practice used by HPC applications.
+One of the core features of Nextflow is the ability to cache task executions and re-use them in subsequent runs to minimize duplicate work.
+Resumability is useful both for recovering from errors and for iteratively developing a pipeline. It is similar to [checkpointing](https://en.wikipedia.org/wiki/Application_checkpointing), a common practice used by HPC applications.
 
-You can enable resumability in Nextflow with the `-resume` flag when launching a pipeline with `nextflow run`. In most cases, that is all you need to do and resumability will "just work". This page describes Nextflow's caching behavior in more detail in order to help advanced users understand how the cache works and troubleshoot it when it doesn't work.
+You can enable resumability in Nextflow with the `-resume` flag when launching a pipeline with `nextflow run`.
+In most cases, resumability will _just work_. This page describes Nextflow's caching behavior in detail to help users understand how the cache works and troubleshoot it when it doesn't work.
 
 ## Task cache
 
@@ -33,7 +35,7 @@ The task hash is computed from the following metadata:
 Nextflow also includes an incrementing component in the hash generation process, which allows it to iterate through multiple hash values until it finds one that does not match an existing execution directory. This mechanism typically aligns with task retries (i.e., task attempts), however this is not guaranteed.
 :::
 
-Nextflow computes this hash for every task before it is executed. If resumability is enabled, Nextflow checks whether the task cache contains a matching hash and whether the task outputs are still present in the [work directory](#work-directory). If both conditions are met, the task is resumed; otherwise, it is re-executed.
+Nextflow computes this hash for every task before it is executed. If resumability is enabled, Nextflow checks whether the task cache contains a matching hash and whether the task outputs are still present in the [work directory](#work-directory). If both conditions are met, the task is resumed. Otherwise, it is re-executed.
 
 Files are hashed differently depending on the caching mode. See the [`cache`][process-cache] directive for more details.
 
@@ -46,8 +48,6 @@ The task entry is a serialized blob of the task metadata required to resume a ta
 The default cache store uses the `.nextflow/cache` directory, relative to the launch directory (i.e. `workflow.launchDir`), to store the task cache, with a separate subdirectory for each session ID backed by [LevelDB](https://github.com/dain/leveldb).
 
 Due to the limitations of LevelDB, the database for a given session ID can only be accessed by one reader/writer at a time. This means, for example, that you cannot use `nextflow log` to query the task metadata for a pipeline run while it is still running.
-
-<AddedInVersion version="23.07.0-edge" />
 
 The cloud cache is an alternative cache store that uses cloud storage instead of the local cache directory. You can use it by setting the `NXF_CLOUDCACHE_PATH` environment variable to the desired cache path (e.g. `s3://my-bucket/cache`) and providing the necessary credentials.
 
@@ -84,7 +84,7 @@ The `-resume` option is required to resume a pipeline. Ensure you enable `-resum
 
 The `cache` directive is enabled by default. However, you can disable or modify its behavior for a specific process. For example:
 
-```nextflow
+```nextflow title="<filename>.config"
 process FOO {
   cache false
   // ...
@@ -142,7 +142,7 @@ The [strict syntax][strict-syntax-page] does not allow global variables to be de
 
 A process that merges inputs from different sources non-deterministically may invalidate the cache. For example:
 
-```nextflow
+```nextflow title="<filename>.nf"
 workflow {
     ch_bam = channel.of( ['1', '1.bam'], ['2', '2.bam'] )
     ch_bai = channel.of( ['2', '2.bai'], ['1', '1.bai'] )
@@ -165,7 +165,7 @@ In the above example, the inputs will be merged without matching on `id`, in a s
 
 To resolve this issue, use the `join` operator to join the channels into a single input channel before invoking the process:
 
-```nextflow
+```nextflow title="<filename>.nf"
 workflow {
     ch_bam = channel.of( ['1', '1.bam'], ['2', '2.bam'] )
     ch_bai = channel.of( ['2', '2.bai'], ['1', '1.bai'] )
@@ -206,11 +206,9 @@ One way to debug a resumed run is to compare the task hashes of each run using t
 
 While some manual effort is required, the final diff can often reveal the exact change that caused a task to be re-executed.
 
-<AddedInVersion version="23.10.0" />
-
 When using `-dump-hashes json`, the task hashes can be more easily extracted into a diff. Here is an example Bash script to perform two runs and produce a diff:
 
-```bash
+```bash title="<filename>.sh"
 nextflow -log run_1.log run $pipeline -dump-hashes json
 nextflow -log run_2.log run $pipeline -dump-hashes json -resume
 

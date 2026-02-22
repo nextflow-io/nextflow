@@ -38,7 +38,7 @@ $ nextflow log goofy_kilby
 The `-f` (`-fields`) option specifies which fields to include in the log.
 
 ```bash
-nextflow log <run_name> -f [fields]
+nextflow log <run-name> -f [fields]
 ```
 
 You can set a custom list of fields to focus on specific information. For example, `hash`, `name`, `exit`, and `status`:
@@ -58,7 +58,7 @@ Run the `log` command with the `-l` option to see the full list of fields. See [
 The `-t` option specifies a template (string or file) to use when inspecting a single run:
 
 ```bash
-nextflow log <run_name> -t <template> > <report>
+nextflow log <run-name> -t <template> > <report>
 ```
 
 You can create a template. For example, in Markdown:
@@ -86,7 +86,7 @@ nextflow log goofy_kilby -t my-template.md > execution-report.md
 The `filter` option selects which entries to include in the log.
 
 ```bash
-nextflow log <run_name> -filter '<filters>'
+nextflow log <run-name> -filter '<filters>'
 ```
 
 Any valid Groovy boolean expression on the log fields can be used to define the filter condition. For example, you can filter for task names matching a pattern:
@@ -107,7 +107,7 @@ nextflow run <pipeline> -with-report [file_name]
 
 You can also enable the report in your Nextflow configuration:
 
-```groovy
+```groovy title="<filename>.config"
 report {
     enabled = true
     file = 'report.html'
@@ -163,7 +163,7 @@ nextflow run <pipeline> -with-timeline [file_name]
 
 You can also enable the execution timeline in your Nextflow configuration:
 
-```groovy
+```groovy title="<filename>.config"
 timeline {
     enabled = true
     file = 'timeline.html'
@@ -207,7 +207,7 @@ The following caveats apply to trace metrics:
 
 You can also enable the trace file in your Nextflow configuration:
 
-```groovy
+```groovy title="<filename>.config"
 trace {
     enabled = true
     file = 'trace.txt'

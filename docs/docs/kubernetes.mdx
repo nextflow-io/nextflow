@@ -53,10 +53,10 @@ The `kuberun` is considered an obsolete approach for the deployment of Nextflow 
 To deploy and launch the workflow execution use the Nextflow command `kuberun` as shown below:
 
 ```bash
-nextflow kuberun <pipeline-name> -v vol-claim:/mount/path
+nextflow kuberun <pipeline_name> -v vol-claim:/mount/path
 ```
 
-This command will create and execute a pod running the nextflow orchestrator for the specified workflow. In the above example replace `<pipeline-name>` with an existing nextflow project or the absolute path of a workflow already deployed in the Kubernetes cluster.
+This command will create and execute a pod running the nextflow orchestrator for the specified workflow. In the above example replace `<pipeline_name>` with an existing nextflow project or the absolute path of a workflow already deployed in the Kubernetes cluster.
 
 The `-v` command line option is required to specify the volume claim name and mount path to use for the workflow execution. In the above example replace `vol-claim` with the name of an existing persistent volume claim and `/mount/path` with the path where the volume is required to be mount in the container. Volume claims can also be specified in the Nextflow configuration file. See [k8s][config-k8s>] for details.
 

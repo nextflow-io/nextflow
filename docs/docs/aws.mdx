@@ -111,13 +111,13 @@ Depending on the pipeline configuration, the above actions can be done all in a 
     ```json
     {
         "Version": "2012-10-17",
-        "Id": "<my policy id>",
+        "Id": "<policy-id>",
         "Statement": [
             {
-                "Sid": "<my statement id>",
+                "Sid": "<statement-id>",
                 "Effect": "Allow",
                 "Principal": {
-                    "AWS": "<ARN of the nextflow identity>"
+                    "AWS": "<nextflow-identity-arn>"
                 },
                 "Action": [
                     "s3:GetObject",
@@ -126,7 +126,7 @@ Depending on the pipeline configuration, the above actions can be done all in a 
                     "s3:PutObjectTagging",
                     "s3:AbortMultipartUpload"
                 ],
-                "Resource": "arn:aws:s3:::<bucket name>/*"
+                "Resource": "arn:aws:s3:::<bucket-name>/*"
             },
             {
                 "Sid": "AllowSSLRequestsOnly",
@@ -134,8 +134,8 @@ Depending on the pipeline configuration, the above actions can be done all in a 
                 "Principal": "*",
                 "Action": "s3:*",
                 "Resource": [
-                    "arn:aws:s3:::<bucket name>",
-                    "arn:aws:s3:::<bucket name>/*"
+                    "arn:aws:s3:::<bucket-name>",
+                    "arn:aws:s3:::<bucket-name>/*"
                 ],
                 "Condition": {
                     "Bool": {
@@ -423,11 +423,11 @@ With the above configuration, processes with the `bigTask` [label][process-label
 Then launch the pipeline with the -bucket-dir option to specify an AWS S3 path for the jobs computed with AWS Batch and, optionally, the -work-dir to specify the local storage for the jobs computed locally:
 
 ```bash
-nextflow run <script or project name> -bucket-dir s3://my-bucket/some/path
+nextflow run <script-or-project-name> -bucket-dir s3://<bucket>
 ```
 
 :::warning
-The AWS S3 path needs to contain at least one sub-directory (e.g. `s3://my-bucket/work` rather than `s3://my-bucket`).
+The AWS S3 path needs to contain at least one sub-directory (e.g. `s3://<bucket>/work` rather than `s3://<bucket>`).
 :::
 
 :::note
@@ -465,15 +465,14 @@ The above snippet defines two volume mounts for the jobs executed in your pipeli
 **Problem**: The Pipeline execution terminates with an AWS error message similar to the one shown below:
 
 ```
-JobQueue <your queue> not found
+JobQueue <queue> not found
 ```
-
 Make sure you have defined a AWS region in the Nextflow configuration file and it matches the region in which your Batch environment has been created.
 
 **Problem**: A process execution fails reporting the following error message:
 
 ```
-Process <your task> terminated for an unknown reason -- Likely it has been terminated by the external system
+Process <task> terminated for an unknown reason -- Likely it has been terminated by the external system
 ```
 
 This may happen when Batch is unable to execute the process script. A common cause of this problem is that the Docker container image you have specified uses a non standard [entrypoint](https://docs.docker.com/engine/reference/builder/#entrypoint) which does not allow the execution of the Bash launcher script required by Nextflow to run the job.
@@ -490,7 +489,7 @@ Other places to check for error information:
 
 ```
 executor >  awsbatch (1)
-process > <your process> (1) [  0%] 0 of ....
+process > <process> (1) [  0%] 0 of ....
 ```
 
 It may happen that the pipeline execution hangs indefinitely because one of the jobs is held in the queue and never gets executed. In AWS Console, the queue reports the job as `RUNNABLE` but it never moves from there.
@@ -512,8 +511,8 @@ To enable the use of AWS Fargate in your pipeline use the following settings in 
 
 ```groovy
 process.executor = 'awsbatch'
-process.queue = '<AWS BATCH QUEUE>'
-aws.region = '<AWS REGION>'
+process.queue = '<aws-batch-queue>'
+aws.region = '<aws-region>'
 aws.batch.platformType = 'fargate'
 aws.batch.jobRole = 'JOB ROLE ARN'
 aws.batch.executionRole = 'EXECUTION ROLE ARN'

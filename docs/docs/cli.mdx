@@ -93,7 +93,7 @@ Use tags or commit IDs instead of branches for reproducible pipeline runs. Branc
 
 ### Pipeline parameters
 
-Pipeline parameters are values defined with `params` in your script. Override them on the command line using the `--` prefix to customize pipeline behavior without modifying code.
+Pipeline parameters are values defined with `params` in your script. Override them on the command line using the `--` prefix to customize pipeline behavior without modifying code:
 
 ```bash
 nextflow run main.nf --input data.csv --output results
@@ -121,9 +121,9 @@ nextflow run main.nf --files "*.fasta"
 
 **Parameter files**
 
-For complex parameter sets, use YAML or JSON files with `-params-file`. This is cleaner than long command lines.
+For complex parameter sets, use YAML or JSON files with `-params-file`. This is cleaner than long command lines:
 
-```json title="params.json"
+```json title="<filename>.json"
 {
   "input": "data.csv",
   "output": "results/",
@@ -140,7 +140,7 @@ nextflow run main.nf -params-file params.json
 Nextflow applies parameters defined in multiple places in the following order (lowest to highest priority):
 
 1. Script parameters (`params.foo = 'default'`)
-2. Configuration parameters (see [Parameters][config-params])
+2. Configuration parameters (see [Parameters][config-params] for more information)
 3. Parameter files (`-params-file`)
 4. Command line parameters (`--foo bar`)
 
@@ -148,7 +148,7 @@ Nextflow applies parameters defined in multiple places in the following order (l
 
 The `kuberun` command executes pipelines entirely within a Kubernetes cluster. This experimental feature runs the Nextflow driver itself inside Kubernetes.
 
-Use this when you want both the Nextflow driver and tasks running in Kubernetes. This differs from using the Kubernetes executor with `run`, where only tasks run in Kubernetes while the driver runs externally.
+Use this when you want both the Nextflow driver and tasks running in Kubernetes. This differs from using the Kubernetes executor with `run`, where only tasks run in Kubernetes while the driver runs externally:
 
 ```bash
 nextflow kuberun nextflow-io/hello
@@ -164,7 +164,7 @@ Use these commands to explore available pipelines, inspect their code, maintain 
 
 ### Listing downloaded projects
 
-The `list` command shows all pipelines currently downloaded to your local cache. This helps you track which projects are available offline and manage your cache directory. Pipelines are stored in `$HOME/.nextflow/assets/` by default.
+The `list` command shows all pipelines currently downloaded to your local cache. This helps you track which projects are available offline and manage your cache directory. Pipelines are stored in `$HOME/.nextflow/assets/` by default:
 
 ```bash
 nextflow list
@@ -174,7 +174,7 @@ nextflow list
 
 The `info` command displays detailed metadata about a downloaded project, including its repository location, local path, main script, and available revisions.
 
-Use this to understand a project's structure, see available versions, or verify which revision is currently checked out.
+Use this to understand a project's structure, see available versions, or verify which revision is currently checked out:
 
 ```bash
 nextflow info hello
@@ -206,13 +206,13 @@ This shows:
 
 The `pull` command downloads a pipeline or updates an existing one to the latest version from its Git repository.
 
-Use this to manually download pipelines before running them, update cached pipelines, or download pipelines for offline use.
+Use this to manually download pipelines before running them, update cached pipelines, or download pipelines for offline use:
 
 ```bash
 nextflow pull nextflow-io/hello
 ```
 
-You can specify a particular revision to download.
+You can specify a particular revision to download:
 
 ```bash
 nextflow pull nextflow-io/hello -r mybranch
@@ -224,7 +224,7 @@ See [pull][cli-pull] for more information.
 
 The `view` command displays the contents of a pipeline's main script or lists all files in the repository.
 
-Use this to quickly inspect pipeline code without opening files or explore the project structure. Specify `-l` option lists all repository files instead of showing script contents.
+Use this to quickly inspect pipeline code without opening files or explore the project structure. Specify `-l` option lists all repository files instead of showing script contents:
 
 ```bash
 nextflow view nextflow-io/hello
@@ -237,7 +237,7 @@ See [view][cli-view] for more information.
 
 The `clone` command copies a pipeline from the cache to a local directory and creates a full Git repository you can modify.
 
-Use this when you want to modify an existing pipeline, create a derivative pipeline, or study a pipeline's structure. If you omit the target directory it uses the pipeline name.
+Use this when you want to modify an existing pipeline, create a derivative pipeline, or study a pipeline's structure. If you omit the target directory it uses the pipeline name:
 
 ```bash
 nextflow clone nextflow-io/hello my-hello
@@ -249,7 +249,7 @@ See [clone][cli-clone] for more information.
 
 The `drop` command removes a downloaded pipeline from the local cache.
 
-Use this to free disk space by removing pipelines you no longer need. The project is deleted from `$HOME/.nextflow/assets/`. The next `run` will download it again if needed.
+Use this to free disk space by removing pipelines you no longer need. The project is deleted from `$HOME/.nextflow/assets/`. The next `run` will download it again if needed:
 
 ```bash
 nextflow drop nextflow-io/hello
@@ -261,7 +261,7 @@ See [drop][cli-drop] for more information.
 
 The `secrets` command manages secure pipeline secrets.
 
-Use this to store credentials securely, reference them in pipelines without exposing values, and manage sensitive data centrally across your organization.
+Use this to store credentials securely, reference them in pipelines without exposing values, and manage sensitive data centrally across your organization:
 
 ```bash
 nextflow secrets list
@@ -281,7 +281,7 @@ Use these to customize pipeline configuration, debug configuration issues, verif
 
 The `-c` option adds your configuration on top of the defaults and merges them together.
 
-Use this when you want to override specific settings while keeping other defaults intact. Multiple configuration files can be specified as a comma separated list.
+Use this when you want to override specific settings while keeping other defaults intact. Multiple configuration files can be specified as a comma separated list:
 
 ```bash
 nextflow -c my.config run nextflow-io/hello
@@ -293,7 +293,7 @@ See [Configuration][config-page] for more information.
 
 The `-C` option replaces all default configuration with your custom configuration files. Multiple configuration files can be specified as a comma separated list.
 
-Use this when you want to ensure no default configurations interfere with your custom settings. Unlike `-c` which merges configurations, `-C` ensures only your specified file is used.
+Use this when you want to ensure no default configurations interfere with your custom settings. Unlike `-c` which merges configurations, `-C` ensures only your specified file is used:
 
 ```bash
 nextflow -C my.config run nextflow-io/hello
@@ -305,7 +305,7 @@ See [Configuration][config-page] for more information.
 
 The `config` command prints the resolved configuration for a pipeline.
 
-Use this to debug configuration issues, verify which settings will be applied, understand configuration precedence, or inspect specific configuration properties.
+Use this to debug configuration issues, verify which settings will be applied, understand configuration precedence, or inspect specific configuration properties:
 
 ```bash
 nextflow config
@@ -318,7 +318,7 @@ See [config][cli-config] for more information.
 
 The `inspect` command analyzes process settings in a pipeline without executing it. It outputs container information in JSON or Nextflow configuration format.
 
-Use this to determine which container images will be used by each process before running the pipeline.
+Use this to determine which container images will be used by each process before running the pipeline:
 
 ```bash
 nextflow inspect nextflow-io/hello
@@ -331,7 +331,7 @@ See [inspect][cli-inspect] for more information.
 
 The `lint` command analyzes Nextflow scripts and configuration files for syntax errors and code issues. It can also automatically format your code to maintain consistent style across your project.
 
-Use this to catch syntax errors before execution, enforce consistent code formatting, or validate entire directories of Nextflow code.
+Use this to catch syntax errors before execution, enforce consistent code formatting, or validate entire directories of Nextflow code:
 
 ```bash
 nextflow lint main.nf
@@ -349,7 +349,7 @@ Use these commands to review past executions, free disk space, troubleshoot fail
 
 The `log` command displays execution history and details about past pipeline runs, such as run names, timestamps, and customizable output fields.
 
-Use this to find run names for resuming, review execution history, or debug failed runs. The command shows recent executions by default, with options to view specific runs or customize output fields.
+Use this to find run names for resuming, review execution history, or debug failed runs. The command shows recent executions by default, with options to view specific runs or customize output fields:
 
 ```bash
 nextflow log
@@ -363,7 +363,7 @@ See [log][cli-log] for more information.
 
 The `clean` command removes work directories and cached intermediate files from past executions.
 
-Use this to free disk space, clean up failed or test runs, or maintain your work directory. Use `-n` to perform a dry run and show what would be deleted. Use `-f` to delete files.
+Use this to free disk space, clean up failed or test runs, or maintain your work directory. Use `-n` to perform a dry run and show what would be deleted. Use `-f` to delete files:
 
 ```bash
 nextflow clean -n
@@ -382,7 +382,7 @@ See [clean][cli-clean] for more information.
 
 The `lineage` command explores data lineage and provenance for workflow executions and tracks relationships between inputs, outputs, and processing steps.
 
-Use this to understand input/output relationships between tasks, trace data flow through the pipeline, or establish file provenance. Lineage tracking must be enabled in configuration.
+Use this to understand input/output relationships between tasks, trace data flow through the pipeline, or establish file provenance. Lineage tracking must be enabled in configuration:
 
 ```bash
 nextflow lineage
@@ -402,7 +402,7 @@ Use these commands to authenticate with Seqera Platform and launch workflows dir
 
 The `auth` command manages authentication credentials for Seqera Platform, saving access tokens for API interactions.
 
-Use this to log in or out of the Platform, establishing or removing your authentication credentials.
+Use this to log in or out of the Platform, establishing or removing your authentication credentials:
 
 ```bash
 nextflow auth login
@@ -424,7 +424,7 @@ See [auth][cli-auth] for more information.
 
 The `launch` command submits a workflow to run on Seqera Platform's infrastructure instead of your local machine.
 
-Use this to leverage Platform's cloud resources, monitoring capabilities, and execution management. The Platform handles resource provisioning, execution monitoring, and result storage.
+Use this to leverage Platform's cloud resources, monitoring capabilities, and execution management. The Platform handles resource provisioning, execution monitoring, and result storage:
 
 ```bash
 nextflow launch nextflow-io/hello
@@ -442,7 +442,7 @@ Use these commands for system administration, development, and testing.
 
 The `console` command launches an interactive Groovy console with Nextflow's execution context loaded.
 
-Use this to test Nextflow DSL code interactively, debug expressions, explore Nextflow's APIs, or experiment with syntax. It opens a GUI or REPL depending on your environment.
+Use this to test Nextflow DSL code interactively, debug expressions, explore Nextflow's APIs, or experiment with syntax. It opens a GUI or REPL depending on your environment:
 
 ```bash
 nextflow console
@@ -452,7 +452,7 @@ nextflow console
 
 The `fs` command performs filesystem operations on remote storage systems supported by Nextflow, such as S3, Google Cloud Storage, and Azure Blob Storage.
 
-Use this to manage remote data, test cloud storage access, or perform bulk file operations without additional tools.
+Use this to manage remote data, test cloud storage access, or perform bulk file operations without additional tools:
 
 ```bash
 nextflow fs list s3://my-bucket/data/
@@ -515,7 +515,7 @@ NXF_EDGE=1 nextflow self-update
 
 The `help` command displays detailed usage information for any Nextflow command.
 
-Use this to learn about command-specific options, refresh your memory about syntax, or discover available features for a particular command.
+Use this to learn about command-specific options, refresh your memory about syntax, or discover available features for a particular command:
 
 ```bash
 nextflow help run
@@ -525,21 +525,25 @@ nextflow help run
 
 The `-v` and `-version` options print Nextflow version information.
 
-Use `-v` for minimal output showing version and build number.
+Use `-v` for minimal output showing version and build number:
 
 ```bash
 nextflow -v
 ```
 
+You will see output similar to the following:
+
 ```console
 nextflow version 24.04.0.5917
 ```
 
-Use `-version` for detailed output showing creation date, citation, and website.
+Use `-version` for detailed output showing creation date, citation, and website:
 
 ```bash
 nextflow -version
 ```
+
+You will see output similar to the following:
 
 ```console
 N E X T F L O W

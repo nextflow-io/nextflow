@@ -301,14 +301,16 @@ Resource requests and other job characteristics can be controlled via the follow
 - [time][process-time]
 
 When specifying `clusterOptions` as a string, multiple options must be separated by semicolons to ensure that the job script is formatted correctly:
-```groovy
+
+```groovy title="<filename>.config"
 clusterOptions = '-t besteffort;--project myproject'
 ```
 
 <AddedInVersion version="24.04.0" />
 
 The same behavior can now be achieved using a string list:
-```groovy
+
+```groovy title="<filename>.config"
 clusterOptions = [ '-t besteffort', '--project myproject' ]
 ```
 
@@ -424,7 +426,7 @@ They correspond to `-L` options in the arguments of the `pjsub` command and shou
 
 For example:
 
-```groovy
+```groovy title="<filename>.config"
 process {
   executor = 'tcs'
   time = '00:30:00'

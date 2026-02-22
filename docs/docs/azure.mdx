@@ -28,12 +28,12 @@ To run pipelines with Azure Batch:
 
     - Set `process.executor` to `azurebatch` to make Nextflow submit tasks to Azure Batch.
 
-    - Set `workDir` to a working directory on Azure Blob Storage. For example, `az://<BLOB_CONTAINER>/work`, where `BLOB_CONTAINER` is a blob container in your storage account.
+    - Set `workDir` to a working directory on Azure Blob Storage. For example, `az://<blob-container>/work`, where `blob-container` is a blob container in your storage account.
 
 5. Launch your pipeline with the above configuration:
 
     ```bash
-    nextflow run <PIPELINE_NAME>
+    nextflow run <pipeline-name>
     ```
 
 :::tip
@@ -99,20 +99,20 @@ azure {
         system = true
     }
     storage {
-        accountName = '<STORAGE_ACCOUNT_NAME>'
+        accountName = '<storage-account-name>'
     }
     batch {
-        accountName = '<BATCH_ACCOUNT_NAME>'
-        location = '<BATCH_ACCOUNT_LOCATION>'
+        accountName = '<batch-account-name>'
+        location = '<batch-account-location>'
     }
 }
 ```
 
 Replace the following:
 
-- `STORAGE_ACCOUNT_NAME`: your Azure storage account name
-- `BATCH_ACCOUNT_NAME`: your Azure Batch account name
-- `BATCH_ACCOUNT_LOCATION`: your Azure Batch account location
+- `storage-account-name`: your Azure storage account name
+- `batch-account-name`: your Azure Batch account name
+- `batch-account-location`: your Azure Batch account location
 
 :::tip
 Nextflow uses the `AZURE_MANAGED_IDENTITY_SYSTEM` environment variable if the managed identity is not set in the Nextflow configuration file. Set this to `true` to enable a system-assigned managed identity.
@@ -135,24 +135,24 @@ To use user-assigned managed identity:
 ```groovy
 azure {
     managedIdentity {
-        clientId = '<USER_ASSIGNED_MANAGED_IDENTITY_CLIENT_ID>'
+        clientId = '<user-assigned-managed-identity-client-id>'
     }
     storage {
-        accountName = '<STORAGE_ACCOUNT_NAME>'
+        accountName = '<storage-account-name>'
     }
     batch {
-        accountName = '<BATCH_ACCOUNT_NAME>'
-        location = '<BATCH_ACCOUNT_LOCATION>'
+        accountName = '<batch-account-name>'
+        location = '<batch-account-location>'
     }
 }
 ```
 
 Replace the following:
 
-- `USER_ASSIGNED_MANAGED_IDENTITY_CLIENT_ID`: your user assigned managed identity client ID
-- `STORAGE_ACCOUNT_NAME`: your Azure Storage account name
-- `BATCH_ACCOUNT_NAME`: your Azure Batch account name
-- `BATCH_ACCOUNT_LOCATION`: your Azure Batch account location
+- `user-assigned-managed-identity-client-id`: your user assigned managed identity client ID
+- `storage-account-name`: your Azure Storage account name
+- `batch-account-name`: your Azure Batch account name
+- `batch-account-location`: your Azure Batch account location
 
 :::tip
 Nextflow uses the `AZURE_MANAGED_IDENTITY_USER` environment variable if the managed identity client ID is not provided in the Nextflow configuration file.
@@ -171,16 +171,16 @@ To create a service principal, follow the steps in the [Register a Microsoft Ent
 ```groovy
 azure {
     activeDirectory {
-        servicePrincipalId = '<SERVICE_PRINCIPAL_CLIENT_ID>'
-        servicePrincipalSecret = '<SERVICE_PRINCIPAL_CLIENT_SECRET>'
-        tenantId = '<TENANT_ID>'
+        servicePrincipalId = '<service-principal-client-id>'
+        servicePrincipalSecret = '<service-principal-client-secret>'
+        tenantId = '<tenant-id>'
     }
     storage {
-        accountName = '<STORAGE_ACCOUNT_NAME>'
+        accountName = '<storage-account-name>'
     }
     batch {
-        accountName = '<BATCH_ACCOUNT_NAME>'
-        location = '<BATCH_ACCOUNT_LOCATION>'
+        accountName = '<batch-account-name>'
+        location = '<batch-account-location>'
     }
 }
 ```
@@ -207,13 +207,13 @@ Keep access keys secure and rotate them regularly. Use environment variables ins
 ```groovy
 azure {
     storage {
-        accountName = '<STORAGE_ACCOUNT_NAME>'
-        accountKey = '<STORAGE_ACCOUNT_KEY>'
+        accountName = '<storage-account-name>'
+        accountKey = '<storage-account-key>'
     }
     batch {
-        accountName = '<BATCH_ACCOUNT_NAME>'
-        accountKey = '<BATCH_ACCOUNT_KEY>'
-        location = '<LOCATION>'
+        accountName = '<batch-account-name>'
+        accountKey = '<batch-account-key>'
+        location = '<batch-account-location>'
     }
 }
 ```
@@ -221,7 +221,7 @@ azure {
 You can also use a Shared Access Token (SAS) instead of an account key to provide time-limited access to your storage account:
 
 ```groovy
-azure.storage.sasToken = '<SAS_TOKEN>'
+azure.storage.sasToken = '<sas-token>'
 ```
 
 :::tip
@@ -245,7 +245,7 @@ Azure Storage provides several services for storing and accessing data in Azure.
 Nextflow uses the `az://` URI scheme to enable transparent access to files stored in Azure Blob Storage. Once Azure Storage is configured, you can use this scheme to reference files in any blob container as if they were local. For example, the path `/path/to/file.txt` in a container named `my-container` can be accessed as follows:
 
 ```groovy
-file('az://my-container/path/to/file.txt')
+file('az://<container-path>/file.txt')
 ```
 
 The Blob storage account name and key need to be provided in the Nextflow configuration file as shown below:
@@ -253,7 +253,7 @@ The Blob storage account name and key need to be provided in the Nextflow config
 ```groovy
 azure {
     storage {
-        accountName = '<BLOB_ACCOUNT_NAME>'
+        accountName = '<blob-account-name>'
     }
 }
 ```
@@ -296,15 +296,15 @@ process {
     executor = 'azurebatch'
 }
 
-workDir = 'az://<BLOB_CONTAINER>/work'
+workDir = 'az://<blob-container>/work'
 
 azure {
     storage {
-        accountName = '<STORAGE_ACCOUNT_NAME>'
+        accountName = '<storage-account-name>'
     }
     batch {
-        location = '<LOCATION>'
-        accountName = '<BATCH_ACCOUNT_NAME>'
+        location = '<batch-account-location>'
+        accountName = '<batch-account-name>'
         autoPoolMode = true
         allowPoolCreation = true
     }
@@ -318,7 +318,7 @@ The work directory must be a subdirectory, for example, `az://container/work`, n
 Finally, launch your pipeline with the above configuration:
 
 ```bash
-nextflow run <PIPELINE_NAME>
+nextflow run <pipeline-name>
 ```
 
 ### Quotas
@@ -454,7 +454,7 @@ To enable this feature for pools created by Nextflow, add `autoScale = true` to 
 azure {
     batch {
         pools {
-            <POOL_NAME> {
+            <pool-name> {
                 autoScale = true
                 vmCount = 5        // Initial count
                 maxVmCount = 50    // Maximum count
@@ -482,7 +482,7 @@ $TargetDedicatedNodes = lifespan < interval ? {{vmCount}} : targetPoolSize;
 $NodeDeallocationOption = taskcompletion;
 ```
 
-The `azure.batch.pools.<POOL_NAME>.scaleFormula` setting can be used to specify custom formulas.
+The `azure.batch.pools.<pool-name>.scaleFormula` setting can be used to specify custom formulas.
 
 ### Task authentication
 
@@ -505,7 +505,7 @@ To do this:
 ```groovy
 azure {
     batch {
-        poolIdentityClientId = '<MANAGED_IDENTITY_CLIENT_ID>'
+        poolIdentityClientId = '<managed-identity-client-id>'
     }
 }
 ```
@@ -537,9 +537,9 @@ Nextflow supports both public and private container images. You can pull public 
 ```groovy
 azure {
     registry {
-        server = '<REGISTRY_SERVER>'     // e.g., 'myregistry.azurecr.io'
-        userName = '<REGISTRY_USER>'
-        password = '<REGISTRY_PASSWORD>'
+        server = '<registry-server>'     // e.g., 'myregistry.azurecr.io'
+        userName = '<registry-user>'
+        password = '<registry-password>'
     }
 }
 ```
@@ -572,7 +572,7 @@ Below are example configurations for common operating systems used in scientific
 azure {
     batch {
         pools {
-            <POOL_NAME> {
+            <pool-name> {
                 sku = "batch.node.ubuntu 22.04"
                 offer = "ubuntu-hpc"
                 publisher = "microsoft-dsvm"
@@ -588,7 +588,7 @@ azure {
 azure {
     batch {
         pools {
-            <POOL_NAME> {
+            <pool-name> {
                 sku = "batch.node.centos 8"
                 offer = "centos-container"
                 publisher = "microsoft-azure-batch"
@@ -605,13 +605,13 @@ azure {
 Pools can be configured to use virtual networks to connect to your existing network infrastructure.
 
 ```groovy
-azure.batch.pools.<POOL_NAME>.virtualNetwork = '<SUBNET_ID>'
+azure.batch.pools.<pool-name>.virtualNetwork = '<subnet-id>'
 ```
 
 The subnet ID must be in the following format:
 
 ```
-/subscriptions/<SUBSCRIPTION>/resourceGroups/<GROUP>/providers/Microsoft.Network/virtualNetworks/<VNET>/subnets/<SUBNET>
+/subscriptions/<subscription>/resourceGroups/<group>/providers/Microsoft.Network/virtualNetworks/<vnet>/subnets/<subnet>
 ```
 
 Nextflow can submit tasks to existing pools that are already attached to a virtual network without requiring additional configuration.
@@ -628,7 +628,7 @@ Start tasks are optional commands that run when a node joins the pool. They are 
 azure {
     batch {
         pools {
-            <POOL_NAME> {
+            <pool-name> {
                 startTask {
                     script = 'echo "Hello, world!"'
                     privileged = true  // optional, defaults to false
@@ -683,13 +683,13 @@ bucketDir = 'az://my-container/some/path'
 
 azure {
     storage {
-        accountName = '<STORAGE_ACCOUNT_NAME>'
-        accountKey = '<STORAGE_ACCOUNT_KEY>'
+        accountName = '<storage-account-name>'
+        accountKey = '<storage-account-key>'
     }
     batch {
-        location = '<LOCATION>'
-        accountName = '<BATCH_ACCOUNT_NAME>'
-        accountKey = '<BATCH_ACCOUNT_KEY>'
+        location = '<batch-account-location>'
+        accountName = '<batch-account-name>'
+        accountKey = '<batch-account-key>'
     }
 }
 ```
@@ -699,7 +699,7 @@ With the above configuration, processes labeled as `bigTask` run on Azure Batch 
 Launch the pipeline with the above configuration:
 
 ```bash
-nextflow run <PIPELINE_NAME>
+nextflow run <pipeline-name>
 ```
 
 :::note

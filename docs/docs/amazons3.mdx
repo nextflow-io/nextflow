@@ -33,9 +33,9 @@ The AWS access and secret keys can be specified by using the `aws` section in th
 
 ```groovy
 aws {
-    accessKey = '<Your AWS access key>'
-    secretKey = '<Your AWS secret key>'
-    region = '<AWS region identifier>'
+    accessKey = '<aws-access-key>'
+    secretKey = '<aws-secret-key>'
+    region = '<aws-region-identifier>'
 }
 ```
 
@@ -83,10 +83,10 @@ in your Nextflow configuration as shown below:
 
 ```groovy
 aws {
-    accessKey = '<Your access key>'
-    secretKey = '<Your secret key>'
+    accessKey = '<aws-access-key>'
+    secretKey = '<aws-secret-key>'
     client {
-        endpoint = '<Your storage endpoint URL>'
+        endpoint = '<storage-endpoint-url>'
         s3PathStyleAccess = true
     }
 }

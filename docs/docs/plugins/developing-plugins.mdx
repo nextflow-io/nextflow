@@ -65,13 +65,13 @@ This structure contains the following key files and folders:
 
 - `Makefile`: Defines common tasks for building, testing, and publishing the plugin with Make.​
 
-- `README.md`: The project README, which provides an overview of the project, including its purpose, features, and instructions for usage and development.​
+- `README.md`: The project README, which provides an overview of the project, including its purpose, features, and instructions for usage and development.
 
 - `settings.gradle`: The Gradle project configuration, which specifies project-specific settings such as the project name and included modules.
 
-- `src/main/groovy/<ORGANIZATION>/`: The main source directory, which contains the plugin source code and resources.​
+- `src/main/groovy/<organization>/`: The main source directory, which contains the plugin source code and resources.
 
-- `src/test/groovy/<ORGANIZATION>/`: The test source directory, which contains the plugin unit tests.
+- `src/test/groovy/<organization>/`: The test source directory, which contains the plugin unit tests.
 
 - `validation`: A small Nextflow pipeline which serves as an end-to-end test for the plugin.
 
@@ -293,7 +293,7 @@ class MyFileSystemProvider extends FileSystemProvider {
 You can then use this filesystem in your pipeline:
 
 ```nextflow
-input = file('myfs://<PATH_TO_INPUT_FILE>')
+input = file('myfs://<path-to-file>')
 ```
 
 See [Developing a Custom File System Provider](https://docs.oracle.com/javase/8/docs/technotes/guides/io/fsp/filesystemprovider.html) for more information and the `nf-amazon` plugin (`S3FileSystemProvider`) for an example of a custom filesystem.
