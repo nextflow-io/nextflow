@@ -53,8 +53,6 @@ Nextflow is distributed as an easy to use self-installing package. It is also di
 
 ### Self-install
 
-In order to make the installation process as simple as possible, Nextflow is distributed as a self-installing package.
-
 To install Nextflow with the self-installing package:
 
 1. Download Nextflow:
@@ -63,8 +61,8 @@ To install Nextflow with the self-installing package:
     curl -s https://get.nextflow.io | bash
     ```
 
-    :::tip
-    Set `export CAPSULE_LOG=none` to make the installation logs less verbose.
+    :::warning
+    Nextflow updates its executable during the self-install process. An update can fail if the executable is placed in a directory with restricted permissions.
     :::
 
 2. Make Nextflow executable:
@@ -82,10 +80,6 @@ To install Nextflow with the self-installing package:
 
     :::tip
     Ensure the directory `$HOME/.local/bin/` is included in your `PATH` variable. Temporarily add this directory to `PATH` by setting `export PATH="$PATH:$HOME/.local/bin"`. Add the directory to `PATH` permanently by adding the export command to your shell configuration file, such as `~/.bashrc` or `~/.zshrc`. Alternatively, move the `nextflow` executable to a directory already in your `PATH`.
-    :::
-
-    :::warning
-    Nextflow updates its executable during the self-install process, therefore the update can fail if the executable is placed in a directory with restricted permissions.
     :::
 
 4. Confirm Nextflow is installed correctly:
@@ -122,7 +116,9 @@ Installing Nextflow via Conda may lead to outdated versions, dependency conflict
 
 ### Standalone distribution
 
-The Nextflow standalone distribution (i.e., the `dist` release) is a self-contained `nextflow` executable that can run without needing to download core dependencies at runtime. This distribution is useful for offline environments as well as building and testing Nextflow locally.
+The Nextflow standalone distribution (i.e., the `dist` release) is a self-contained `nextflow` executable that can run without needing to download core dependencies at runtime.
+This distribution is useful for offline environments as well as building and testing Nextflow locally.
+The standalone distribution will still download core and third-party plugins at runtime.
 
 To use the standalone distribution:
 
@@ -139,10 +135,6 @@ To use the standalone distribution:
     ```bash
     ./nextflow-24.10.1-dist run info
     ```
-
-:::note
-The standalone distribution will still download core and third-party plugins as needed at runtime.
-:::
 
 ## Seqera Platform
 
