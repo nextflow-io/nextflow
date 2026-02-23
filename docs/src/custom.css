@@ -11,3 +11,8 @@ section .admonition {
 h5, h6 {
   font-size: 1rem !important;
 }
+
+/* Code blocks in admonitions fill full width */
+.theme-admonition > div {
+  width: 100%;
+}
