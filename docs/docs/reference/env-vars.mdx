@@ -87,8 +87,6 @@ Nextflow automatically checks for a newer version of itself unless this option i
 
 ##### `NXF_DISABLE_JOBS_CANCELLATION`
 
-<AddedInVersion version="21.12.0-edge" />
-
 Disables the cancellation of child jobs on workflow execution termination.
 
 ##### `NXF_DISABLE_PARAMS_TYPE_DETECTION`
@@ -116,8 +114,6 @@ Enable to use of AWS SES native API for sending emails in place of legacy SMTP s
 When enabled the job script will execute Linux `sync` command on job completion. This may be useful to synchronize the job state over shared file systems (default: `false`)
 
 ##### `NXF_ENABLE_SECRETS`
-
-<AddedInVersion version="21.09.0-edge" />
 
 Enable Nextflow secrets features (default: `true`)
 
@@ -155,8 +151,6 @@ Defines the path location of the Java VM installation used to run Nextflow. This
 
 ##### `NXF_JVM_ARGS`
 
-<AddedInVersion version="21.12.1-edge" />
-
 Allows the setting Java VM options. This is similar to `NXF_OPTS` however it's only applied the JVM running Nextflow and not to any java pre-launching commands.
 
 ##### `NXF_LOG_FILE`
@@ -184,8 +178,6 @@ Provides extra options for the Java and Nextflow runtime. It must be a blank sep
 Default `organization` prefix when looking for a hosted repository (default: `nextflow-io`).
 
 ##### `NXF_PARAMS_FILE`
-
-<AddedInVersion version="20.10.0" />
 
 Defines the path location of the pipeline parameters file .
 
@@ -257,8 +249,6 @@ Delay multiplier used for HTTP retryable operations (default: `2.0`).
 
 ##### `NXF_SCM_FILE`
 
-<AddedInVersion version="20.10.0" />
-
 Defines the path location of the SCM config file .
 
 ##### `NXF_SINGULARITY_CACHEDIR`
@@ -266,8 +256,6 @@ Defines the path location of the SCM config file .
 Directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible from all compute nodes.
 
 ##### `NXF_SINGULARITY_LIBRARYDIR`
-
-<AddedInVersion version="21.09.0-edge" />
 
 Directory where remote Singularity images are retrieved. It should be a directory accessible to all compute nodes.
 
@@ -345,25 +333,15 @@ The Seqera Platform workspace ID. Can also be configured using the `tower.worksp
 
 ##### `FTP_PROXY`
 
-<AddedInVersion version="21.06.0-edge" />
-
 Defines the FTP proxy server. Proxy authentication is supported by providing the credentials in the proxy URL, e.g. `ftp://user:password@proxy-host.com:port`.
 
 ##### `HTTP_PROXY`
 
 Defines the HTTP proxy server.
 
-<AddedInVersion version="21.06.0-edge">
-Proxy authentication is supported by providing the credentials in the proxy URL, e.g. `http://user:password@proxy-host.com:port`.
-</AddedInVersion>
-
 ##### `HTTPS_PROXY`
 
 Defines the HTTPS proxy server.
-
-<AddedInVersion version="21.06.0-edge">
-Proxy authentication is supported by providing the credentials in the proxy URL, e.g. `https://user:password@proxy-host.com:port`.
-</AddedInVersion>
 
 ##### `NO_COLOR`
 

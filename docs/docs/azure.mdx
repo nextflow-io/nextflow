@@ -159,8 +159,6 @@ Nextflow uses the `AZURE_MANAGED_IDENTITY_USER` environment variable if the mana
 
 ### Service principals
 
-<AddedInVersion version="22.11.0-edge" />
-
 [Service principal](https://learn.microsoft.com/en-us/entra/identity-platform/app-objects-and-service-principals) credentials can be used to access Azure Batch and Storage accounts.
 
 Similar to a managed identity, a service principal is an application identity that can have specific permissions and role-based access. Unlike managed identities, service principals require a secret key for authentication. The secret key is less secure, but it allows you to authenticate with Azure resources when operating outside of the Azure environment, such as from your local machine or a non-Azure cloud.

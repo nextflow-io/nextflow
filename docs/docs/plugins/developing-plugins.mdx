@@ -308,8 +308,6 @@ Custom filesystems are an advanced plugin extension. Before creating a new files
 
 ### Functions
 
-<AddedInVersion version="22.10.0" />
-
 Plugins can define custom functions that can be included in Nextflow pipelines.
 
 To implement a custom function, create a plugin class that extends the `PluginExtensionPoint` class and implement your function with the `Function` annotation. For example:
@@ -346,8 +344,6 @@ include { reverseString as anotherReverseMethod } from 'plugin/my-plugin'
 ```
 
 ### Operators
-
-<AddedInVersion version="22.04.0" />
 
 Plugins can define custom channel factories and operators that can then be included in pipelines.
 

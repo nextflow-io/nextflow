@@ -13,8 +13,6 @@ When creating a container image to use with Nextflow, make sure that Bash (3.x o
 
 ## Apptainer
 
-<AddedInVersion version="22.11.0-edge" />
-
 [Apptainer](https://apptainer.org) is an alternative container runtime to Docker and an open source fork of Singularity. The main advantages of Apptainer are that it can be used without root privileges and it doesn't require a separate daemon process. These, along with other features such as support for autofs mounts, makes Apptainer better suited to the requirements of HPC workloads. Apptainer is able to use existing Docker images and can pull from Docker registries.
 
 ### Prerequisites
@@ -139,12 +137,6 @@ When pulling Docker images, Apptainer may be unable to determine the container s
 Apptainer advanced configuration settings are described in[Apptainer][config-apptainer] section in the Nextflow configuration page.
 
 ## Charliecloud
-
-<AddedInVersion version="20.12.0-edge" />
-
-<ChangedInVersion version="21.03.0-edge">
-Requires Charliecloud 0.22 to 0.27.
-</ChangedInVersion>
 
 <ChangedInVersion version="22.09.0-edge">
 Requires Charliecloud 0.28 or later.
@@ -329,8 +321,6 @@ Docker advanced configuration settings are described in the [docker][config-dock
 
 ## Podman
 
-<AddedInVersion version="20.01.0" />
-
 [Podman](http://www.podman.io) is a drop-in replacement for Docker that can run containers with or without root privileges.
 
 ### Prerequisites
@@ -414,10 +404,6 @@ See[Process configuration][config-process] to learn more about processes configu
 Podman advanced configuration settings are described in the [podman][config-podman] section in the Nextflow configuration page.
 
 ## Sarus
-
-<AddedInVersion version="22.12.0-edge">
-Requires Sarus 1.5.1 or later.
-</AddedInVersion>
 
 [Sarus](https://sarus.readthedocs.io) is an alternative container runtime to Docker. Sarus works by converting Docker images to a common format that can then be distributed and launched on HPC systems. The user interface to Sarus enables a user to select an image from [Docker Hub](https://hub.docker.com/) and then submit jobs which run entirely within the container.
 
