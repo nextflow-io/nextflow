@@ -11,11 +11,11 @@ export default function DocVersionBanner() {
         <div className="theme-admonition theme-admonition-caution admonition_whTW alert alert--warning block shadow-none border border-gray-200">
           <div className="admonitionContent_pDMz">
             <p>
-              The <strong>Latest</strong> Nextflow documentation is being migrated from nextflow.io. For the most up-to-date content, see{' '}
-              <a href="https://nextflow.io/docs/latest/" target="_blank" rel="noopener noreferrer">
+              Nextflow documentation is being migrated from{' '}
+              <a href="https://nextflow.io/docs/" target="_blank" rel="noopener noreferrer">
                 <strong>https://nextflow.io/docs/</strong>
               </a>
-              {' '}(latest).
+              {' '}. Both sites will remain active during the migration.
             </p>
           </div>
         </div>
