@@ -109,6 +109,8 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
             result += 'chmod +x $HOME/.nextflow-bin/*\n'
             result += 'export PATH=$HOME/.nextflow-bin:$PATH\n'
         }
+        // capture the actual GCP zone from the instance metadata service
+        result += "curl -sf -H 'Metadata-Flavor: Google' http://metadata.google.internal/computeMetadata/v1/instance/zone > ${Escape.path(bean.workDir)}/${TaskRun.CMD_ZONE} 2>/dev/null || true\n"
         return result
     }
 

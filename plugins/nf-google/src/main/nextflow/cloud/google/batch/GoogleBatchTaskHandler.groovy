@@ -119,6 +119,11 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     private volatile long timestamp
 
     /**
+     * Flag to indicate that the zone has been read from the zone file
+     */
+    private volatile boolean zoneUpdated
+
+    /**
      * A flag to indicate that the job has failed without launching any tasks
      */
     private volatile boolean noTaskJobfailure
@@ -770,7 +775,43 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     protected CloudMachineInfo getMachineInfo() {
+        if( machineInfo!=null && !zoneUpdated && isCompleted() )
+            updateZoneFromFile()
         return machineInfo
+    }
+
+    /**
+     * Read the actual execution zone from the .command.zone file written by the
+     * wrapper script via the GCP instance metadata service, and update the
+     * machineInfo zone field accordingly.
+     *
+     * The metadata service returns the zone in the format:
+     * {@code projects/<project-number>/zones/<zone-name>}
+     */
+    private void updateZoneFromFile() {
+        try {
+            final zoneFile = task.workDir.resolve(TaskRun.CMD_ZONE)
+            final content = zoneFile.text?.trim()
+            if( content ) {
+                // extract zone name from the metadata path format: projects/12345/zones/europe-west2-a
+                final idx = content.lastIndexOf('/')
+                final zone = idx >= 0 ? content.substring(idx + 1) : content
+                if( zone ) {
+                    machineInfo = new CloudMachineInfo(
+                        type: machineInfo.type,
+                        zone: zone,
+                        priceModel: machineInfo.priceModel
+                    )
+                }
+            }
+        }
+        catch( Exception e ) {
+            log.debug "[GOOGLE BATCH] Unable to read zone file for task: `${task.lazyName()}` - ${e.message}"
+        }
+        finally {
+            // mark as updated regardless of outcome to avoid repeated remote I/O
+            zoneUpdated = true
+        }
     }
 
     /**

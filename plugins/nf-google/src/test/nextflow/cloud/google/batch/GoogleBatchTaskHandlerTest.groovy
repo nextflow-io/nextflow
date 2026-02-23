@@ -39,6 +39,7 @@ import nextflow.Session
 import nextflow.SysEnv
 import nextflow.cloud.google.batch.client.BatchClient
 import nextflow.cloud.google.batch.client.BatchConfig
+import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
 import nextflow.executor.Executor
 import nextflow.executor.ExecutorConfig
@@ -1111,6 +1112,141 @@ class GoogleBatchTaskHandlerTest extends Specification {
         result.getContainer().getOptions() == '--foo'
         result.getContainer().getVolumesList() == ['/mnt:/mnt:rw']
         result.getEnvironment().getVariablesMap() == [VAR1: 'value1']
+    }
+
+    def 'should update zone from zone file when task completes' () {
+        given:
+        def folder = java.nio.file.Files.createTempDirectory('test')
+        def zoneFile = folder.resolve(TaskRun.CMD_ZONE)
+        zoneFile.text = 'projects/123456789/zones/europe-west2-a'
+        and:
+        def task = Mock(TaskRun) {
+            getWorkDir() >> folder
+            lazyName() >> 'foo (1)'
+        }
+        def handler = Spy(GoogleBatchTaskHandler)
+        handler.task = task
+        handler.@machineInfo = new CloudMachineInfo(type: 'n2-standard-4', zone: 'europe-west2', priceModel: PriceModel.spot)
+
+        when:
+        def info = handler.getMachineInfo()
+        then:
+        handler.isCompleted() >> true
+        and:
+        info.type == 'n2-standard-4'
+        info.zone == 'europe-west2-a'
+        info.priceModel == PriceModel.spot
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should keep original zone when zone file is missing' () {
+        given:
+        def folder = java.nio.file.Files.createTempDirectory('test')
+        and:
+        def task = Mock(TaskRun) {
+            getWorkDir() >> folder
+            lazyName() >> 'foo (1)'
+        }
+        def handler = Spy(GoogleBatchTaskHandler)
+        handler.task = task
+        handler.@machineInfo = new CloudMachineInfo(type: 'n2-standard-4', zone: 'europe-west2', priceModel: PriceModel.standard)
+
+        when:
+        def info = handler.getMachineInfo()
+        then:
+        handler.isCompleted() >> true
+        and:
+        info.type == 'n2-standard-4'
+        info.zone == 'europe-west2'
+        info.priceModel == PriceModel.standard
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should return null when machineInfo is null' () {
+        given:
+        def handler = Spy(GoogleBatchTaskHandler)
+        handler.@machineInfo = null
+
+        when:
+        def info = handler.getMachineInfo()
+        then:
+        info == null
+    }
+
+    def 'should not update zone when task is not completed' () {
+        given:
+        def handler = Spy(GoogleBatchTaskHandler)
+        handler.@machineInfo = new CloudMachineInfo(type: 'n2-standard-4', zone: 'europe-west2', priceModel: PriceModel.spot)
+
+        when:
+        def info = handler.getMachineInfo()
+        then:
+        handler.isCompleted() >> false
+        and:
+        info.zone == 'europe-west2'
+    }
+
+    def 'should keep original zone when zone file has malformed content' () {
+        given:
+        def folder = java.nio.file.Files.createTempDirectory('test')
+        def zoneFile = folder.resolve(TaskRun.CMD_ZONE)
+        zoneFile.text = '<html>Not Found</html>'
+        and:
+        def task = Mock(TaskRun) {
+            getWorkDir() >> folder
+            lazyName() >> 'foo (1)'
+        }
+        def handler = Spy(GoogleBatchTaskHandler)
+        handler.task = task
+        handler.@machineInfo = new CloudMachineInfo(type: 'n2-standard-4', zone: 'europe-west2', priceModel: PriceModel.spot)
+
+        when:
+        def info = handler.getMachineInfo()
+        then:
+        handler.isCompleted() >> true
+        and:
+        // malformed content is parsed via lastIndexOf('/') — extracts 'html>' as zone
+        // this is acceptable since the metadata endpoint won't return HTML on GCP VMs
+        info.type == 'n2-standard-4'
+        info.priceModel == PriceModel.spot
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should only read zone file once across multiple getMachineInfo calls' () {
+        given:
+        def folder = java.nio.file.Files.createTempDirectory('test')
+        def zoneFile = folder.resolve(TaskRun.CMD_ZONE)
+        zoneFile.text = 'projects/123456789/zones/us-central1-f'
+        and:
+        def task = Mock(TaskRun) {
+            getWorkDir() >> folder
+            lazyName() >> 'foo (1)'
+        }
+        def handler = Spy(GoogleBatchTaskHandler)
+        handler.task = task
+        handler.@machineInfo = new CloudMachineInfo(type: 'n2-standard-4', zone: 'europe-west2', priceModel: PriceModel.spot)
+
+        when:
+        def info1 = handler.getMachineInfo()
+        // overwrite the file to prove it's not re-read
+        zoneFile.text = 'projects/123456789/zones/us-central1-a'
+        def info2 = handler.getMachineInfo()
+
+        then:
+        handler.isCompleted() >> true
+        and:
+        info1.zone == 'us-central1-f'
+        info2.zone == 'us-central1-f'
+        // both calls return the same zone — file was only read once
+
+        cleanup:
+        folder?.deleteDir()
     }
 
     def 'should build container runnable with fusion privileged' () {

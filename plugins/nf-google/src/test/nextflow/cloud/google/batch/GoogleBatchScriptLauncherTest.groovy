@@ -88,6 +88,32 @@ class GoogleBatchScriptLauncherTest extends Specification{
         volumes[1].getMountOptionsList() == ['-o rw', '-implicit-dirs', '-o allow_other', '--uid=1000', '--billing-project my-project']
     }
 
+    def 'should include zone metadata capture in header script' () {
+        given:
+        def launcher = new GoogleBatchScriptLauncher()
+        def bean = new nextflow.processor.TaskBean()
+        bean.workDir = java.nio.file.Paths.get('/mnt/disks/bucket/work/dir')
+
+        when:
+        def result = launcher.headerScript(bean)
+
+        then:
+        result.contains("NXF_CHDIR=/mnt/disks/bucket/work/dir")
+        result.contains("curl -sf -H 'Metadata-Flavor: Google' http://metadata.google.internal/computeMetadata/v1/instance/zone > /mnt/disks/bucket/work/dir/${TaskRun.CMD_ZONE}")
+        result.contains('|| true')
+    }
+
+    def 'should not include zone capture in array launch command' () {
+        when:
+        def result = GoogleBatchScriptLauncher.launchArrayCommand('/mnt/disks/bucket/work/dir')
+
+        then:
+        // zone capture is handled per-child via headerScript in .command.run
+        // the array command only dispatches to .command.sh
+        result == "/bin/bash /mnt/disks/bucket/work/dir/${TaskRun.CMD_SCRIPT}"
+        !result.contains('metadata.google.internal')
+    }
+
     def 'should return target files in remote work dir' () {
         given:
         def launcher = new GoogleBatchScriptLauncher()
