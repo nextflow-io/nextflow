@@ -21,6 +21,7 @@ import groovy.transform.CompileStatic
 import io.seqera.config.MachineRequirementOpts
 import io.seqera.sched.api.schema.v1a1.DiskAllocation
 import io.seqera.sched.api.schema.v1a1.DiskRequirement
+import io.seqera.sched.api.schema.v1a1.EcsCapacityMode
 import io.seqera.sched.api.schema.v1a1.MachineRequirement
 import io.seqera.sched.api.schema.v1a1.PriceModel as SchedPriceModel
 import io.seqera.sched.api.schema.v1a1.ProvisioningModel
@@ -62,7 +63,8 @@ class MapperUtil {
         if (!opts)
             return null
         final diskReq = toDiskRequirement(opts.diskSize, opts)
-        if (!opts.arch && !opts.provisioning && !opts.maxSpotAttempts && !opts.machineFamilies && !diskReq)
+        final capacityMode = toEcsCapacityMode(opts.capacityMode)
+        if (!opts.arch && !opts.provisioning && !opts.maxSpotAttempts && !opts.machineFamilies && !diskReq && !capacityMode)
             return null
         new MachineRequirement()
             .arch(opts.arch)
@@ -70,6 +72,7 @@ class MapperUtil {
             .maxSpotAttempts(opts.maxSpotAttempts)
             .machineFamilies(opts.machineFamilies)
             .disk(diskReq)
+            .capacityMode(capacityMode)
     }
 
     /**
@@ -103,8 +106,9 @@ class MapperUtil {
         // task disk overrides config disk
         final effectiveDiskSize = diskSize ?: opts?.diskSize
         final diskReq = toDiskRequirement(effectiveDiskSize, opts)
+        final capacityMode = toEcsCapacityMode(opts?.capacityMode)
         // return null if no settings
-        if (!arch && !provisioning && !maxSpotAttempts && !machineFamilies && !diskReq && !snapshotEnabled)
+        if (!arch && !provisioning && !maxSpotAttempts && !machineFamilies && !diskReq && !snapshotEnabled && !capacityMode)
             return null
         new MachineRequirement()
             .arch(arch)
@@ -113,6 +117,7 @@ class MapperUtil {
             .machineFamilies(machineFamilies)
             .disk(diskReq)
             .snapshotEnabled(snapshotEnabled ? Boolean.TRUE : null)
+            .capacityMode(capacityMode)
     }
 
     /**
@@ -204,6 +209,16 @@ class MapperUtil {
      */
     static DiskAllocation toDiskAllocation(String value) {
         value ? DiskAllocation.fromValue(value) : null
+    }
+
+    /**
+     * Maps a capacity mode string to EcsCapacityMode enum.
+     *
+     * @param value the capacity mode string (managed, asg)
+     * @return the EcsCapacityMode enum value, or null if value is null
+     */
+    static EcsCapacityMode toEcsCapacityMode(String value) {
+        value ? EcsCapacityMode.fromValue(value) : null
     }
 
     /**

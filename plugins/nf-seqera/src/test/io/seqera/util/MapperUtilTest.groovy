@@ -19,6 +19,7 @@ package io.seqera.util
 
 import io.seqera.config.MachineRequirementOpts
 import io.seqera.sched.api.schema.v1a1.DiskAllocation
+import io.seqera.sched.api.schema.v1a1.EcsCapacityMode
 import io.seqera.sched.api.schema.v1a1.PriceModel as SchedPriceModel
 import io.seqera.sched.api.schema.v1a1.ProvisioningModel
 import nextflow.cloud.types.PriceModel
@@ -487,6 +488,46 @@ class MapperUtilTest extends Specification {
         then:
         result.snapshotEnabled == null
         result.maxSpotAttempts == null
+    }
+
+    // tests for capacity mode mapping
+
+    def 'should map capacity mode' () {
+        expect:
+        MapperUtil.toEcsCapacityMode(null) == null
+        MapperUtil.toEcsCapacityMode('managed') == EcsCapacityMode.MANAGED
+        MapperUtil.toEcsCapacityMode('asg') == EcsCapacityMode.ASG
+    }
+
+    def 'should throw exception for invalid capacity mode' () {
+        when:
+        MapperUtil.toEcsCapacityMode('invalid')
+
+        then:
+        thrown(IllegalArgumentException)
+    }
+
+    def 'should include capacity mode in machine requirement' () {
+        when:
+        def result = MapperUtil.toMachineRequirement(new MachineRequirementOpts([capacityMode: 'asg']))
+
+        then:
+        result != null
+        result.capacityMode == EcsCapacityMode.ASG
+    }
+
+    def 'should include capacity mode in machine requirement with task arch' () {
+        when:
+        def result = MapperUtil.toMachineRequirement(
+            new MachineRequirementOpts([capacityMode: 'managed', arch: 'arm64']),
+            null,
+            null,
+            false
+        )
+
+        then:
+        result.arch == 'arm64'
+        result.capacityMode == EcsCapacityMode.MANAGED
     }
 
     def 'should combine snapshot with other machine requirement settings' () {

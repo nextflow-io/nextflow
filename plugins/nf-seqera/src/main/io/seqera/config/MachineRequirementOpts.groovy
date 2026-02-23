@@ -97,6 +97,14 @@ class MachineRequirementOpts implements ConfigScope {
     """)
     final MemoryUnit diskSize
 
+    @ConfigOption
+    @Description("""
+        The ECS capacity provider mode: `managed` (default) or `asg`.
+        - `managed`: ECS Managed Instances
+        - `asg`: Auto Scaling Group-backed capacity provider
+    """)
+    final String capacityMode
+
     /* required by config scope -- do not remove */
     MachineRequirementOpts() {}
 
@@ -113,6 +121,7 @@ class MachineRequirementOpts implements ConfigScope {
         this.diskSize = opts.diskSize instanceof MemoryUnit
             ? opts.diskSize as MemoryUnit
             : (opts.diskSize ? MemoryUnit.of(opts.diskSize as String) : null)
+        this.capacityMode = opts.capacityMode as String
     }
 
     String getArch() {
@@ -153,5 +162,9 @@ class MachineRequirementOpts implements ConfigScope {
 
     MemoryUnit getDiskSize() {
         return diskSize
+    }
+
+    String getCapacityMode() {
+        return capacityMode
     }
 }
