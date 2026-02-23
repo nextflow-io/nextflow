@@ -123,31 +123,74 @@ Supported languages include: `groovy`, `bash`, `python`, `javascript`, `java`, `
   - From `docs/_static/`: `![alt text](./_static/image.png)`
   - From `static/`: `![alt text](/image.png)` (served at root)
 
-## Testing changes
+## Versioning
 
-**Always test before committing:**
+This section explains how versioning is implemented.
 
-1. **Build the site** to catch errors:
-   ```bash
-   npm run build
-   ```
+### Files
 
-2. **Serve locally** to test navigation and links:
-   ```bash
-   npm run serve
-   ```
+- **`versions.json`**: Contains an array of version strings (e.g., `["24.10", "24.04"]`).
+- **`latest_version.js`**: Exports the latest version from `versions.json` (first element in the array).
+- **`docusaurus.config.js`**: Configuration file that includes versioning settings.
 
-3. **Check for**:
-   - Broken links
-   - Missing images
-   - Formatting issues
-   - Proper sidebar navigation
+### Configuration
 
-4. **Clear cache** if you encounter build issues:
-   ```bash
-   npm run clear
-   npm run build
-   ```
+The versioning configuration in `docusaurus.config.js` includes:
+
+- `includeCurrentVersion`: Set to `true` by default. Can be disabled with `INCLUDE_NEXT=false` environment variable for PR previews.
+- `lastVersion`: Points to the latest version from `latest_version.js`, or `undefined` if no versions exist.
+
+### Creating a new version
+
+To create a new version of the documentation, use the Docusaurus versioning command:
+
+```bash
+npm run docusaurus docs:version <version>
+```
+
+This will:
+
+1. Create a copy of the current docs in `versioned_docs/version-<version>/`
+2. Create a copy of the current sidebar in `versioned_sidebars/version-<version>-sidebars.json`
+3. Add the version to `versions.json`
+
+### Directory structure
+
+When versions are created, the structure will be:
+
+```
+docs/                           # Current/next version (latest documentation)
+versioned_docs/
+  version-24.10/               # October 2024 stable release docs
+  version-24.04/               # April 2024 stable release docs
+versioned_sidebars/
+  version-24.10-sidebars.json  # Sidebar for 24.10
+  version-24.04-sidebars.json  # Sidebar for 24.04
+versions.json                   # ["24.10", "24.04"]
+latest_version.js               # Exports "24.10"
+```
+
+### Controlling version switcher visibility
+
+The version switcher will only appear when you have 2+ versions. This includes both:
+- Versioned snapshots in `versions.json` (e.g., "24.10", "24.04")
+- The "next" version (current docs folder) if `includeCurrentVersion: true`
+
+#### Custom theme components
+
+Two theme components are swizzled (customized) from the Seqera theme:
+
+1. **`src/theme/DocSidebar/Desktop/index.tsx`** - Parent component that controls when to show the version switcher
+   - Modified to check for `/nextflow` paths
+   - Renders the VersionSwitcher component when on Nextflow docs pages
+
+2. **`src/theme/DocSidebar/Desktop/Content/VersionSwitcher/index.tsx`** - The version switcher component itself
+   - Uses `"default"` plugin ID instead of `"platform-enterprise"`
+   - Checks for `/nextflow` paths
+   - Uses Docusaurus hooks:
+     - `useVersions("default")` - Gets all available versions
+     - `useDocsVersion()` - Gets the current version
+     - `useDocsPreferredVersion("default")` - Manages user's preferred version selection
 
 ## Contributing
 
@@ -161,13 +204,6 @@ We welcome documentation contributions! Please:
 6. **Submit a pull request** with a clear description
 
 See the main [CONTRIBUTING.md](../CONTRIBUTING.md) for general contribution guidelines.
-
-## Deployment
-
-Documentation is automatically deployed via Netlify:
-
-- **Preview deploys**: Created for pull requests that modify docs
-- **Production deploys**: Triggered on merge to master branch
 
 ## Troubleshooting
 
