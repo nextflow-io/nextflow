@@ -1432,4 +1432,26 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         deleteBucket(bucket1)
     }
 
+    // In S3, keys are listed in lexicographic order and characters such as '-' and '.'
+    // sort before '/'. For example, given keys 'a/', 'a-a/' and 'a.txt', the listing order
+    // is: 'a-a/', 'a.txt', 'a/' — the directory 'a/' appears last.
+    // This means a lookup for the directory 'a' may not find the 'a/' marker in the first
+    // page of results, so the implementation needs a fallback second call to reliably
+    // detect directories when sibling keys with smaller-than-'/' characters exist.
+    def 'should exists file with similar files' () {
+        given:
+        def bucketName = createBucket()
+        createObject("$bucketName/similar-lexic-order/a/file-1",'File one')
+        createObject("$bucketName/similar-lexic-order/a.txt",'File two')
+        createObject("$bucketName/similar-lexic-order/a-a/file-3",'File three')
+
+        def path = s3path("s3://$bucketName/similar-lexic-order/a")
+        expect:
+        path.exists()
+        path.isDirectory()
+
+        cleanup:
+        deleteBucket(bucketName)
+    }
+
 }
