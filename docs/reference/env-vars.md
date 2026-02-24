@@ -148,6 +148,8 @@ The following environment variables control the configuration of the Nextflow ru
 : Default `organization` prefix when looking for a hosted repository (default: `nextflow-io`).
 
 `NXF_PARAMS_FILE`
+: :::{versionadded} 20.10.0
+  :::
 : Defines the path location of the pipeline parameters file .
 
 `NXF_PID_FILE`
@@ -165,7 +167,7 @@ The following environment variables control the configuration of the Nextflow ru
 : The path where the plugin archives are loaded and stored (default: `$NXF_HOME/plugins`).
 
 `NXF_PLUGINS_REGISTRY_URL`
-: :::{versionadded} 25.10.0
+: :::{versionadded} 25.08.0-edge
   :::
 : Specifies the URL of the plugin registry used to download and resolve plugins. This allows using custom or private plugin registries instead of the default public registry.
 
@@ -180,32 +182,34 @@ The following environment variables control the configuration of the Nextflow ru
 : Defines the default behavior of `publishDir.failOnError` setting. See {ref}`publishDir<process-publishdir>` directive for more information.
 
 `NXF_RETRY_POLICY_DELAY`
-: :::{versionadded} 25.10.0
+: :::{versionadded} 25.06.0-edge
   :::
 : Delay used for HTTP retryable operations (default: `350ms`).
 
 `NXF_RETRY_POLICY_JITTER`
-: :::{versionadded} 25.10.0
+: :::{versionadded} 25.06.0-edge
   :::
 : Jitter value used for HTTP retryable operations (default: `0.25`).
 
 `NXF_RETRY_POLICY_MAX_ATTEMPTS`
-: :::{versionadded} 25.10.0
+: :::{versionadded} 25.06.0-edge
   :::
 : Max number of attempts used for HTTP retryable operations (default: `5`).
 
 `NXF_RETRY_POLICY_MAX_DELAY`
-: :::{versionadded} 25.10.0
+: :::{versionadded} 25.06.0-edge
   :::
 : Max delay used for HTTP retryable operations (default: `90s`).
 
 `NXF_RETRY_POLICY_MULTIPLIER`
-: :::{versionadded} 25.10.0
+: :::{versionadded} 25.08.0-edge
   :::
 : Delay multiplier used for HTTP retryable operations (default: `2.0`).
 
 `NXF_SCM_FILE`
-: Defines the path location of the SCM config file.
+: :::{versionadded} 20.10.0
+  :::
+: Defines the path location of the SCM config file .
 
 `NXF_SINGULARITY_CACHEDIR`
 : Directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible from all compute nodes.
