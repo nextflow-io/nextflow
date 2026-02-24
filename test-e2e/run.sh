@@ -64,7 +64,7 @@ echo "Nextflow snapshots launcher image $image"
 #
 # Create an ephemeral container with the scratch image and base Platform launcher image
 #
-launcher=$(wave -i ${base} --include ${image} --platform linux/amd64 --config-env NXF_HOME=/.nextflow)
+launcher=$(wave -i ${base} --include ${image} --platform linux/amd64 --config-env NXF_HOME=/.nextflow --config-env NXF_SYNTAX_PARSER=v1)
 echo "Running Platform tests using image launcher: $launcher"
 
 # determining the e2e test environment checking the $COMMIT_MESSAGE

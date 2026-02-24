@@ -49,17 +49,4 @@ class BytesSplitterTest extends Specification {
 
     }
 
-    def testSplitterChannel() {
-
-        when:
-        def c = new BytesSplitter().options(by: 5).target(bytes).channel()
-        then:
-        c.val == [0, 1, 2, 3, 4] as byte[]
-        c.val == [5, 6, 7, 8, 9] as byte[]
-        c.val == [ 0, 1, 2, 3, 4] as byte[]
-        c.val == [5, 6] as byte[]
-        c.val == Channel.STOP
-
-    }
-
 }

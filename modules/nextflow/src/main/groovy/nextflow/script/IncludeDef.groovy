@@ -56,17 +56,6 @@ class IncludeDef {
     @PackageScope Map addedParams
     private Session session
 
-    IncludeDef(TokenVar token, String alias=null) {
-        def component = token.name; if(alias) component += " as $alias"
-        def msg = "Unwrapped module inclusion is deprecated -- Replace `include $component from './MODULE/PATH'` with `include { $component } from './MODULE/PATH'`"
-        if( NF.isDsl2() )
-            throw new DeprecationException(msg)
-        log.warn msg
-
-        this.modules = new ArrayList<>(1)
-        this.modules << new Module(token.name, alias)
-    }
-
     protected IncludeDef(List<Module> modules) {
         this.modules = new ArrayList<>(modules)
     }
@@ -145,7 +134,7 @@ class IncludeDef {
     static BaseScript loadModuleV2(Path path, Map params, Session session) {
         final script = ScriptMeta.getScriptByPath(path)
         if( !script )
-            throw new IllegalStateException()
+            throw new IllegalStateException("Unable to find module script for path: $path")
         script.getBinding().setParams(params)
         script.run()
         return script

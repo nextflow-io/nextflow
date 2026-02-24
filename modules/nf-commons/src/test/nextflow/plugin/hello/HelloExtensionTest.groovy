@@ -17,14 +17,12 @@
 
 package nextflow.plugin.hello
 
-import groovyx.gpars.dataflow.DataflowQueue
 import nextflow.Channel
 import nextflow.Global
-import nextflow.Session
 import nextflow.plugin.hello.HelloExtension
 import spock.lang.Specification
 
-
+import static test.ScriptHelper.runDataflow
 /**
  * @author : jorge <jorge.aguilera@seqera.io>
  *
@@ -32,15 +30,13 @@ import spock.lang.Specification
 class HelloExtensionTest extends Specification {
 
     def "should create a channel from hello"(){
-        given:
-        def session = Mock(Session)
-        Global.session = session
-
-        and:
-        def helloExtension = new HelloExtension(); helloExtension.init(session)
 
         when:
-        def result = helloExtension.reverse("Hi")
+        def result = runDataflow {
+            def helloExtension = new HelloExtension()
+            helloExtension.init(Global.session)
+            helloExtension.reverse("Hi")
+        }
 
         then:
         result.val == 'iH'
@@ -49,20 +45,14 @@ class HelloExtensionTest extends Specification {
 
     def "should consume a message from script"(){
 
-        given:
-        def session = Mock(Session)
-        Global.session = session
-
-        and:
-        def helloExtension = new HelloExtension(); helloExtension.init(session)
-
-        and:
-        def ch = new DataflowQueue()
-        ch.bind('Goodbye folks')
-        ch.bind( Channel.STOP )
-
         when:
-        def result = helloExtension.goodbye(ch)
+        def result = runDataflow {
+            def helloExtension = new HelloExtension()
+            helloExtension.init(Global.session)
+
+            def ch = Channel.of('Goodbye folks')
+            helloExtension.goodbye(ch.createReadChannel())
+        }
 
         then:
         result.val == 'Goodbye folks'

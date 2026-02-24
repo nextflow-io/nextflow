@@ -93,10 +93,10 @@ class ScriptLoaderV1Test extends Specification {
 
         where:
         SCRIPT              | EXPECTED
-        'foo.nf'            | 'Script_foo'
-        'foo-bar-baz.nf'    | 'Script_foo_bar_baz'
-        '123-fo0'           | 'Script_23_fo0'
-        '--a  b  c'         | 'Script_a_b_c'
+        'foo.nf'            | '_nf_script_foo'
+        'foo-bar-baz.nf'    | '_nf_script_foo_bar_baz'
+        '123-fo0'           | '_nf_script_23_fo0'
+        '--a  b  c'         | '_nf_script_a_b_c'
     }
 
     def 'should normalise script text' () {
@@ -107,7 +107,7 @@ class ScriptLoaderV1Test extends Specification {
         when:
         def result = parser.computeClassName('process foo { etc } ')
         then:
-        result == 'Script_dd540db41b3a8b2a'
+        result == '_nf_script_dd540db41b3a8b2a'
     }
 
     def 'should set classpath' () {

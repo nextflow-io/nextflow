@@ -921,7 +921,7 @@ The `lint` command parses and analyzes the given Nextflow scripts and config fil
 : Format scripts and config files that have no errors.
 
 `-o, -output`
-: Output mode for reporting errors: `full`, `extended`, `concise`, `json` (default: `full`).
+: Output mode for reporting errors: `full`, `extended`, `concise`, `json`, `markdown` (default: `full`).
 
 `-sort-declarations`
 : Sort script declarations in Nextflow scripts (default: `false`).

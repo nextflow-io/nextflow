@@ -40,7 +40,6 @@ class LogsCheckpoint implements TraceObserverV2 {
     private Thread thread
     private Duration interval
     private LogsHandler handler
-    private volatile boolean terminated
 
     @Override
     void onFlowCreate(Session session) {
@@ -57,23 +56,21 @@ class LogsCheckpoint implements TraceObserverV2 {
 
     @Override
     void onFlowComplete() {
-        this.terminated = true
+        thread.interrupt()
         thread.join()
     }
 
     @Override
     void onFlowError(TaskEvent event) {
-        this.terminated = true
+        thread.interrupt()
         thread.join()
     }
 
     protected void run() {
         log.debug "Starting logs checkpoint thread - interval: ${interval}"
         try {
-            while( !terminated && !Thread.currentThread().isInterrupted() ) {
-                // just wait the declared delay
+            while( !Thread.currentThread().isInterrupted() ) {
                 await(interval)
-                // checkpoint the logs
                 handler.saveFiles()
             }
         }
@@ -87,7 +84,7 @@ class LogsCheckpoint implements TraceObserverV2 {
             Thread.sleep(interval.toMillis())
         }
         catch (InterruptedException e) {
-            log.trace "Interrupted logs checkpoint thread"
+            log.debug "Interrupted logs checkpoint thread"
             Thread.currentThread().interrupt()
         }
     }
