@@ -81,4 +81,110 @@ class CmdLintTest extends Specification {
         dir?.deleteDir()
     }
 
+    def 'should read files from --files-from option' () {
+
+        given:
+        def dir = Files.createTempDirectory('test')
+
+        dir.resolve('main.nf').text = '''\
+            process HELLO {
+
+                script:
+                """
+                ${
+                    params.is_paired_end
+                        ? "..."
+                        : "..."
+                }
+                """
+            }
+            '''
+
+        def fileList = dir.resolve('filelist.txt')
+        fileList.text = dir.resolve('main.nf').toString() + '\n'
+
+        when:
+        def cmd = new CmdLint()
+        cmd.filesFrom = fileList.toFile().toString()
+        cmd.launcher = Mock(Launcher) {
+            getOptions() >> Mock(CliOptions)
+        }
+        cmd.run()
+
+        then:
+        thrown(AbortOperationException)
+
+        cleanup:
+        dir?.deleteDir()
+    }
+
+    def 'should combine --files-from with positional args' () {
+
+        given:
+        def dir = Files.createTempDirectory('test')
+
+        dir.resolve('main.nf').text = '''\
+            process HELLO {
+
+                script:
+                """
+                ${
+                    params.is_paired_end
+                        ? "..."
+                        : "..."
+                }
+                """
+            }
+            '''
+
+        dir.resolve('nextflow.config').text = '''\
+            process {
+                withLabel:
+                'bambino' {
+                    container = "..."
+                }
+            }
+            '''
+
+        def fileList = dir.resolve('filelist.txt')
+        fileList.text = dir.resolve('nextflow.config').toString() + '\n'
+
+        when:
+        def cmd = new CmdLint()
+        cmd.args = [dir.resolve('main.nf').toString()]
+        cmd.filesFrom = fileList.toFile().toString()
+        cmd.launcher = Mock(Launcher) {
+            getOptions() >> Mock(CliOptions)
+        }
+        cmd.run()
+
+        then:
+        thrown(AbortOperationException)
+
+        cleanup:
+        dir?.deleteDir()
+    }
+
+    def 'should throw error when --files-from file is empty' () {
+
+        given:
+        def dir = Files.createTempDirectory('test')
+        def fileList = dir.resolve('filelist.txt')
+        fileList.text = '\n'
+
+        when:
+        def cmd = new CmdLint()
+        cmd.filesFrom = fileList.toFile().toString()
+        cmd.launcher = Mock(Launcher) {
+            getOptions() >> Mock(CliOptions)
+        }
+        cmd.run()
+
+        then:
+        thrown(AbortOperationException)
+
+        cleanup:
+        dir?.deleteDir()
+    }
+
 }
