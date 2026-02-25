@@ -141,7 +141,7 @@ class ModuleInfo extends CmdBase {
         println ""
         println "Usage Template:"
         println "-" * 80
-        println generateUsageTemplate(reference, metadata)
+        println generateUsageTemplate(reference, metadata).join(" \\\n    ")
         println ""
     }
 
@@ -195,28 +195,59 @@ class ModuleInfo extends CmdBase {
         }
     }
 
-    private String generateUsageTemplate(ModuleReference reference, ModuleMetadata metadata) {
-        def template = new StringBuilder()
-        template.append("nextflow module run ${reference.nameWithoutPrefix}")
+    private List<String> generateUsageTemplate(ModuleReference reference, ModuleMetadata metadata) {
+        def template = new ArrayList<String>()
+        template.add("nextflow module run ${reference.nameWithoutPrefix}".toString())
         if( version )
-            template.append(" -version $version")
+            template.add(" -version $version".toString())
 
-        // Use metadata from registry if available, otherwise use spec from meta.yml
         def inputs = metadata?.input ?: []
+        inputs.each { input ->
+            input.items.each { ModuleChannelItem item ->
+                template.add(reference.scope == 'nf-core'
+                        ? inferNfCoreParam(item.name, item.type)
+                        : inferNormalParam(item.name, item.type))
 
-        if( inputs ) {
-            inputs.each { input ->
-                input.items.each { ModuleChannelItem item ->
-                    def placeholder = item.name.toUpperCase().replaceAll(/[^A-Z0-9_]/, '_')
-                    if( item.type.equalsIgnoreCase("map") ) {
-                        template.append(" --${item.name}.<key> <${placeholder}_KEY>")
-                    } else {
-                        template.append(" --${item.name} <${placeholder}>")
-                    }
-                }
             }
         }
-        return template.toString()
+        if( reference.scope == 'nf-core' ) {
+            template.add('--outdir <OUTPUT_DIRECTORY>')
+        }
+        return template
+    }
+
+    private static String inferNfCoreParam(String paramName, String type) {
+        if( type?.equalsIgnoreCase("map") && paramName.equalsIgnoreCase("meta") ) {
+            return "--${paramName}.id <ID>"
+        }
+        if( type?.equalsIgnoreCase("file") || type?.equalsIgnoreCase("path") ) {
+            return "--${paramName} ${inferBioFilePlaceholder(paramName)}"
+        }
+        return inferNormalParam(paramName, type)
+    }
+
+    private static String inferBioFilePlaceholder(String paramName) {
+        final String lower = paramName.toLowerCase()
+        if( lower.contains("fasta") ) return "<FASTA_FILE>"
+        if( lower.contains("bam") ) return "<BAM_FILE>"
+        if( lower.contains("fastq") || lower.equals("reads") ) return "<FASTQ_FILE>"
+        if( lower.contains("vcf") ) return "<VCF_FILE>"
+        if( lower.contains("ref") ) return "<REFERENCE_FILE>"
+        if( lower.contains("bed") ) return "<BED_FILE>"
+        if( lower.contains("gff") || lower.contains("gtf") ) return "<ANNOTATION_FILE>"
+
+        return "<${paramName.toUpperCase().replaceAll(/[^A-Z0-9]/, '_')}_PATH>"
+    }
+
+    private static String inferNormalParam(String paramName, String type) {
+        final paramPlaceholder = paramName.toUpperCase().replaceAll(/[^A-Z0-9]/, '_')
+        if( type?.equalsIgnoreCase("map") ) {
+            return "--${paramName}.<KEY> <${paramPlaceholder}_KEY_VALUE>"
+        }
+        if( type?.equalsIgnoreCase("file") || type?.equalsIgnoreCase("path") ) {
+            return "--${paramName} <${paramPlaceholder}_PATH>"
+        }
+        return "--${paramName} <${paramPlaceholder}>"
     }
 
     private void printJsonInfo(ModuleReference reference, ModuleRelease release) {
@@ -276,7 +307,7 @@ class ModuleInfo extends CmdBase {
             }
         }
 
-        info.usageTemplate = generateUsageTemplate(reference, metadata)
+        info.usageTemplate = generateUsageTemplate(reference, metadata).join(" ")
 
         println JsonOutput.prettyPrint(JsonOutput.toJson(info))
     }
