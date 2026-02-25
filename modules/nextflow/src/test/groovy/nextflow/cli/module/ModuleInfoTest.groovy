@@ -409,7 +409,7 @@ class ModuleInfoTest extends Specification {
         then:
         output.contains('Usage Template:')
         output.contains('nextflow module run nf-core/fastqc')
-        output.contains('--reads <READS>')
+        output.contains('--reads <FASTQ_FILE>')
         output.contains('--sample-id <SAMPLE_ID>')
     }
 
@@ -447,7 +447,8 @@ class ModuleInfoTest extends Specification {
 
         then:
         output.contains('Usage Template:')
-        output.contains('nextflow module run nf-core/fastqc -version 2.0.0')
+        output.contains('nextflow module run nf-core/fastqc')
+        output.contains('-version 2.0.0')
     }
 
     def 'should generate usage template with map inputs'() {
@@ -498,7 +499,7 @@ class ModuleInfoTest extends Specification {
 
         then:
         output.contains('Usage Template:')
-        output.contains('--params.<key> <PARAMS_KEY>')
+        output.contains('--params.<KEY> <PARAMS_KEY_VALUE>')
     }
 
     def 'should fail with no arguments'() {

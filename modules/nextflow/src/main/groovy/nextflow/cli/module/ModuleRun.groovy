@@ -19,20 +19,17 @@ package nextflow.cli.module
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
 import nextflow.cli.CmdRun
 import nextflow.config.ConfigBuilder
 import nextflow.config.ModulesConfig
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
-import nextflow.file.FileHelper
 import nextflow.module.ModuleReference
 import nextflow.module.ModuleRegistryClient
 import nextflow.module.ModuleResolver
 import nextflow.pipeline.PipelineSpec
 import nextflow.util.TestOnly
 
-import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
@@ -41,7 +38,6 @@ import java.nio.file.Paths
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
-@Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Run a module directly from the registry")
 class ModuleRun extends CmdRun {
@@ -90,20 +86,11 @@ class ModuleRun extends CmdRun {
         def modulesConfig = new ModulesConfig(specFile.getModules())
 
         def resolver = new ModuleResolver(baseDir, client ?: new ModuleRegistryClient(registryConfig), modulesConfig)
-        try{
-            Path moduleFile = resolver.installModule(reference, version)
-            if( moduleFile ) {
-                println "Executing module..."
-                args[0] = moduleFile.toAbsolutePath().toString()
-                super.run()
-            }
-        }
-        catch (AbortOperationException e) {
-            throw e
-        }
-        catch (Exception e) {
-            log.error("Failed to run module", e)
-            throw new AbortOperationException("Module run failed: ${e.message}", e)
+        Path moduleFile = resolver.installModule(reference, version)
+        if( moduleFile ) {
+            println "Executing module..."
+            args[0] = moduleFile.toAbsolutePath().toString()
+            super.run()
         }
     }
 }

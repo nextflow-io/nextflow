@@ -101,7 +101,7 @@ class ModuleRegistryClient {
 
         // Add authentication if available
         log.debug "Getting auth from: ${registryUrl}"
-        def token = config.getAuthTokenResolved(registryUrl)
+        def token = config.getApiKey()
         if (token) {
             requestBuilder.header("Authorization", "Bearer ${token}")
         }
@@ -177,7 +177,7 @@ class ModuleRegistryClient {
             .uri(uri)
             .GET()
 
-        def token = config.getAuthTokenResolved(registryUrl)
+        def token = config.getApiKey()
         if (token) {
             requestBuilder.header("Authorization", "Bearer ${token}")
         }
@@ -252,7 +252,7 @@ class ModuleRegistryClient {
             .uri(uri)
             .GET()
 
-        def token = config.getAuthTokenResolved(registryUrl)
+        def token = config.getApiKey()
         if (token) {
             requestBuilder.header("Authorization", "Bearer ${token}")
         }
@@ -368,7 +368,7 @@ class ModuleRegistryClient {
             .uri(uri)
             .GET()
 
-        def token = config.getAuthTokenResolved(registryUrl)
+        def token = config.getApiKey()
         if (token) {
             requestBuilder.header("Authorization", "Bearer ${token}")
         }
@@ -410,16 +410,14 @@ class ModuleRegistryClient {
      */
     PublishModuleResponse publishModule(String name, def request, String registry = null) {
         final registryUrl = registry ?: config.url
-        final authToken = config.getAuthTokenResolved(registryUrl)
+        final authToken = config.apiKey
 
         if (!authToken) {
             throw new AbortOperationException(
                 "Authentication required to publish modules.\n" +
-                    "Please set NXF_REGISTRY_TOKEN environment variable or configure registry.auth in nextflow.config:\n\n" +
+                    "Please set 'NXF_REGISTRY_TOKEN' environment variable or configure 'registry.apiKey' in nextflow.config:\n\n" +
                     "  registry {\n" +
-                    "    auth {\n" +
-                    "      '${registryUrl}' = '\${NXF_REGISTRY_TOKEN}'\n" +
-                    "    }\n" +
+                    "    apiKey = '\${NXF_REGISTRY_TOKEN}'\n" +
                     "  }\n"
             )
         }

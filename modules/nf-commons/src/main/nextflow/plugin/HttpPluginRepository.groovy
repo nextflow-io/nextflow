@@ -152,7 +152,7 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
         }
         try {
             final ListDependenciesResponse decoded = encoder.decode(body)
-            if( decoded.plugins == null ) {
+            if( !decoded.plugins ) {
                 throw new PluginRuntimeException("Failed to download plugin metadata: Failed to parse response body")
             }
             final result = new HashMap<String, PluginInfo>()
