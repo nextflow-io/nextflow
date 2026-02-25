@@ -64,13 +64,13 @@ class MapperUtil {
             return null
         final diskReq = toDiskRequirement(opts.diskSize, opts)
         final capacityMode = toEcsCapacityMode(opts.capacityMode)
-        if (!opts.arch && !opts.provisioning && !opts.maxSpotAttempts && !opts.machineFamilies && !diskReq && !capacityMode)
+        if (!opts.arch && !opts.provisioning && !opts.maxSpotAttempts && !opts.machineTypes && !diskReq && !capacityMode)
             return null
         new MachineRequirement()
             .arch(opts.arch)
             .provisioning(toProvisioningModel(opts.provisioning))
             .maxSpotAttempts(opts.maxSpotAttempts)
-            .machineFamilies(opts.machineFamilies)
+            .machineTypes(opts.machineTypes)
             .disk(diskReq)
             .capacityMode(capacityMode)
     }
@@ -102,19 +102,19 @@ class MapperUtil {
         final provisioning = opts?.provisioning
         final maxSpotAttempts = opts?.maxSpotAttempts
             ?: (snapshotEnabled ? FusionConfig.DEFAULT_SNAPSHOT_MAX_SPOT_ATTEMPTS : null)
-        final machineFamilies = opts?.machineFamilies
+        final machineTypes = opts?.machineTypes
         // task disk overrides config disk
         final effectiveDiskSize = diskSize ?: opts?.diskSize
         final diskReq = toDiskRequirement(effectiveDiskSize, opts)
         final capacityMode = toEcsCapacityMode(opts?.capacityMode)
         // return null if no settings
-        if (!arch && !provisioning && !maxSpotAttempts && !machineFamilies && !diskReq && !snapshotEnabled && !capacityMode)
+        if (!arch && !provisioning && !maxSpotAttempts && !machineTypes && !diskReq && !snapshotEnabled && !capacityMode)
             return null
         new MachineRequirement()
             .arch(arch)
             .provisioning(toProvisioningModel(provisioning))
             .maxSpotAttempts(maxSpotAttempts)
-            .machineFamilies(machineFamilies)
+            .machineTypes(machineTypes)
             .disk(diskReq)
             .snapshotEnabled(snapshotEnabled ? Boolean.TRUE : null)
             .capacityMode(capacityMode)

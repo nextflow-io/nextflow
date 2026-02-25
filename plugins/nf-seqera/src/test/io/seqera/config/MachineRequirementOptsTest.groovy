@@ -34,7 +34,7 @@ class MachineRequirementOptsTest extends Specification {
         opts.arch == null
         opts.provisioning == null
         opts.maxSpotAttempts == null
-        opts.machineFamilies == null
+        opts.machineTypes == null
     }
 
     def 'should create with all settings' () {
@@ -43,14 +43,14 @@ class MachineRequirementOptsTest extends Specification {
             arch: 'arm64',
             provisioning: 'spotFirst',
             maxSpotAttempts: 3,
-            machineFamilies: ['m5', 'c5', 'r5']
+            machineTypes: ['m5', 'c5', 'r5']
         ])
 
         then:
         opts.arch == 'arm64'
         opts.provisioning == 'spotFirst'
         opts.maxSpotAttempts == 3
-        opts.machineFamilies == ['m5', 'c5', 'r5']
+        opts.machineTypes == ['m5', 'c5', 'r5']
     }
 
     def 'should create with partial settings' () {
@@ -61,7 +61,7 @@ class MachineRequirementOptsTest extends Specification {
         opts.arch == 'x86_64'
         opts.provisioning == 'spot'
         opts.maxSpotAttempts == null
-        opts.machineFamilies == null
+        opts.machineTypes == null
     }
 
 }

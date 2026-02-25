@@ -52,7 +52,7 @@ class MapperUtilTest extends Specification {
         result.arch == 'arm64'
         result.provisioning == null
         result.maxSpotAttempts == null
-        result.machineFamilies == null
+        result.machineTypes == null
     }
 
     def 'should map all fields' () {
@@ -61,14 +61,14 @@ class MapperUtilTest extends Specification {
             arch: 'x86_64',
             provisioning: 'spotFirst',
             maxSpotAttempts: 3,
-            machineFamilies: ['m5', 'c5']
+            machineTypes: ['m5', 'c5']
         ]))
 
         then:
         result.arch == 'x86_64'
         result.provisioning == ProvisioningModel.SPOT_FIRST
         result.maxSpotAttempts == 3
-        result.machineFamilies == ['m5', 'c5']
+        result.machineTypes == ['m5', 'c5']
     }
 
     def 'should map provisioning model' () {
@@ -132,7 +132,7 @@ class MapperUtilTest extends Specification {
             new MachineRequirementOpts([
                 provisioning: 'spotFirst',
                 maxSpotAttempts: 3,
-                machineFamilies: ['m5', 'c5']
+                machineTypes: ['m5', 'c5']
             ]),
             'arm64'
         )
@@ -141,7 +141,7 @@ class MapperUtilTest extends Specification {
         result.arch == 'arm64'
         result.provisioning == ProvisioningModel.SPOT_FIRST
         result.maxSpotAttempts == 3
-        result.machineFamilies == ['m5', 'c5']
+        result.machineTypes == ['m5', 'c5']
     }
 
     // tests for disk requirement mapping

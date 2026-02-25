@@ -52,9 +52,10 @@ class MachineRequirementOpts implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        List of acceptable EC2 instance families (e.g., `['m5', 'c5', 'r5']`).
+        List of acceptable machine type patterns. Supports exact types (e.g., `t3.small`),
+        family prefixes (e.g., `m5` matches all m5 sizes), and glob wildcards (e.g., `t*.small`).
     """)
-    final List<String> machineFamilies
+    final List<String> machineTypes
 
     @ConfigOption
     @Description("""
@@ -112,7 +113,7 @@ class MachineRequirementOpts implements ConfigScope {
         this.arch = opts.arch as String
         this.provisioning = opts.provisioning as String
         this.maxSpotAttempts = opts.maxSpotAttempts as Integer
-        this.machineFamilies = opts.machineFamilies as List<String>
+        this.machineTypes = (opts.machineTypes ?: opts.machineFamilies) as List<String>
         this.diskType = opts.diskType as String
         this.diskThroughputMiBps = opts.diskThroughputMiBps as Integer
         this.diskIops = opts.diskIops as Integer
@@ -136,8 +137,8 @@ class MachineRequirementOpts implements ConfigScope {
         return maxSpotAttempts
     }
 
-    List<String> getMachineFamilies() {
-        return machineFamilies
+    List<String> getMachineTypes() {
+        return machineTypes
     }
 
     String getDiskType() {

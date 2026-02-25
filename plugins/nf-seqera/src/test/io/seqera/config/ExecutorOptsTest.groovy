@@ -82,7 +82,7 @@ class ExecutorOptsTest extends Specification {
                 arch: 'arm64',
                 provisioning: 'spotFirst',
                 maxSpotAttempts: 3,
-                machineFamilies: ['m6g', 'c6g']
+                machineTypes: ['m6g', 'c6g']
             ]
         ])
 
@@ -91,7 +91,7 @@ class ExecutorOptsTest extends Specification {
         config.machineRequirement.arch == 'arm64'
         config.machineRequirement.provisioning == 'spotFirst'
         config.machineRequirement.maxSpotAttempts == 3
-        config.machineRequirement.machineFamilies == ['m6g', 'c6g']
+        config.machineRequirement.machineTypes == ['m6g', 'c6g']
     }
 
     def 'should create config with retry policy' () {
