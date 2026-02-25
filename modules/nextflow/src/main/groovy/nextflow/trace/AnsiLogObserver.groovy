@@ -345,10 +345,34 @@ class AnsiLogObserver implements TraceObserverV2 {
     protected int printAndCountLines(String str) {
         if( str ) {
             printAnsiLines(str)
-            return str.count(NEWLINE)
+            return countVisualLines(str)
         }
         else
             return 0
+    }
+
+    /**
+     * Count the number of visual lines the string occupies on the terminal,
+     * accounting for lines that wrap when they exceed the terminal width.
+     */
+    protected int countVisualLines(String str) {
+        final lines = str.split(NEWLINE, -1)
+        int count = 0
+        // the last element after split is always empty (trailing newline), skip it
+        for( int i=0; i<lines.length-1; i++ ) {
+            final visualLen = stripAnsi(lines[i]).length()
+            // each line takes at least 1 visual line, plus extra lines for wrapping
+            count += visualLen > 0 && cols > 0 ? Math.ceil((double)visualLen / cols).intValue() : 1
+        }
+        return count
+    }
+
+    /**
+     * Strip ANSI escape codes and OSC hyperlinks from a string
+     * to determine its visual display width.
+     */
+    protected static String stripAnsi(String str) {
+        return ANSI_ESCAPE.matcher(str).replaceAll('')
     }
 
     protected void renderSummary(WorkflowStats stats) {
@@ -415,6 +439,19 @@ class AnsiLogObserver implements TraceObserverV2 {
 
     private final static Pattern TAG_REGEX = ~/ \((.+)\)( *)$/
     private final static Pattern LBL_REPLACE = ~/ \(.+\) *$/
+    private final static Pattern ANSI_ESCAPE = ~/\033\[[0-9;]*[a-zA-Z]|\033][^\007]*\007/
+
+    // OSC 8 hyperlink escape sequences (using BEL as String Terminator)
+    private final static String HYPERLINK_START = '\033]8;;'
+    private final static String HYPERLINK_SEP = '\007'
+    private final static String HYPERLINK_END = '\033]8;;\007'
+
+    protected static String hyperlink(String text, String url) {
+        if( !url )
+            return text
+        final href = url.startsWith('/') ? 'file://' + url : url
+        return HYPERLINK_START + href + HYPERLINK_SEP + text + HYPERLINK_END
+    }
 
     // OSC 8 hyperlink escape sequences (using BEL as String Terminator)
     private final static String HYPERLINK_START = '\033]8;;'
