@@ -20,6 +20,7 @@ import java.nio.file.AccessMode
 import java.nio.file.FileSystemAlreadyExistsException
 import java.nio.file.ReadOnlyFileSystemException
 
+import spock.lang.Unroll
 import spock.lang.Specification
 
 /**
@@ -28,11 +29,8 @@ import spock.lang.Specification
 class DatasetFileSystemProviderTest extends Specification {
 
     def 'should return dataset scheme'() {
-        given:
-        def provider = new DatasetFileSystemProvider()
-
         expect:
-        provider.getScheme() == 'dataset'
+        new DatasetFileSystemProvider().getScheme() == 'dataset'
     }
 
     def 'should create filesystem'() {
@@ -72,79 +70,39 @@ class DatasetFileSystemProviderTest extends Specification {
         (path as DatasetPath).datasetName == 'my-data'
     }
 
-    def 'should reject non-dataset URI'() {
+    @Unroll
+    def 'should reject non-dataset URI #uriString'() {
         given:
         def provider = new DatasetFileSystemProvider()
 
         when:
-        provider.getPath(new URI('s3://bucket/key'))
+        provider.getPath(new URI(uriString))
 
         then:
         thrown(IllegalArgumentException)
+
+        where:
+        uriString << ['s3://bucket/key', 'gs://bucket/key', 'file:///tmp/data.csv']
     }
 
-    // -- read-only enforcement --
-
-    def 'should throw ReadOnlyFileSystemException on createDirectory'() {
+    @Unroll
+    def 'should throw ReadOnlyFileSystemException on #operation'() {
         given:
         def provider = new DatasetFileSystemProvider()
-        def path = provider.getPath(new URI('dataset://test'))
 
         when:
-        provider.createDirectory(path)
+        invoke.call(provider)
 
         then:
         thrown(ReadOnlyFileSystemException)
-    }
 
-    def 'should throw ReadOnlyFileSystemException on delete'() {
-        given:
-        def provider = new DatasetFileSystemProvider()
-        def path = provider.getPath(new URI('dataset://test'))
-
-        when:
-        provider.delete(path)
-
-        then:
-        thrown(ReadOnlyFileSystemException)
-    }
-
-    def 'should throw ReadOnlyFileSystemException on copy'() {
-        given:
-        def provider = new DatasetFileSystemProvider()
-        def src = provider.getPath(new URI('dataset://src'))
-        def dst = provider.getPath(new URI('dataset://dst'))
-
-        when:
-        provider.copy(src, dst)
-
-        then:
-        thrown(ReadOnlyFileSystemException)
-    }
-
-    def 'should throw ReadOnlyFileSystemException on move'() {
-        given:
-        def provider = new DatasetFileSystemProvider()
-        def src = provider.getPath(new URI('dataset://src'))
-        def dst = provider.getPath(new URI('dataset://dst'))
-
-        when:
-        provider.move(src, dst)
-
-        then:
-        thrown(ReadOnlyFileSystemException)
-    }
-
-    def 'should throw ReadOnlyFileSystemException on write access check'() {
-        given:
-        def provider = new DatasetFileSystemProvider()
-        def path = provider.getPath(new URI('dataset://test'))
-
-        when:
-        provider.checkAccess(path, AccessMode.WRITE)
-
-        then:
-        thrown(ReadOnlyFileSystemException)
+        where:
+        operation             | invoke
+        'createDirectory'     | { DatasetFileSystemProvider p -> p.createDirectory(p.getPath(new URI('dataset://test'))) }
+        'delete'              | { DatasetFileSystemProvider p -> p.delete(p.getPath(new URI('dataset://test'))) }
+        'copy'                | { DatasetFileSystemProvider p -> p.copy(p.getPath(new URI('dataset://src')), p.getPath(new URI('dataset://dst'))) }
+        'move'                | { DatasetFileSystemProvider p -> p.move(p.getPath(new URI('dataset://src')), p.getPath(new URI('dataset://dst'))) }
+        'write access check'  | { DatasetFileSystemProvider p -> p.checkAccess(p.getPath(new URI('dataset://test')), AccessMode.WRITE) }
     }
 
     def 'should not be hidden'() {
@@ -156,23 +114,19 @@ class DatasetFileSystemProviderTest extends Specification {
         !provider.isHidden(path)
     }
 
-    def 'should detect same file for equal dataset paths'() {
+    @Unroll
+    def 'should report isSameFile=#expected for #left vs #right'() {
         given:
         def provider = new DatasetFileSystemProvider()
-        def a = provider.getPath(new URI('dataset://test'))
-        def b = provider.getPath(new URI('dataset://test'))
+        def a = provider.getPath(new URI(left))
+        def b = provider.getPath(new URI(right))
 
         expect:
-        provider.isSameFile(a, b)
-    }
+        provider.isSameFile(a, b) == expected
 
-    def 'should detect different files for different dataset paths'() {
-        given:
-        def provider = new DatasetFileSystemProvider()
-        def a = provider.getPath(new URI('dataset://test1'))
-        def b = provider.getPath(new URI('dataset://test2'))
-
-        expect:
-        !provider.isSameFile(a, b)
+        where:
+        left                | right               | expected
+        'dataset://test'    | 'dataset://test'    | true
+        'dataset://test1'   | 'dataset://test2'   | false
     }
 }

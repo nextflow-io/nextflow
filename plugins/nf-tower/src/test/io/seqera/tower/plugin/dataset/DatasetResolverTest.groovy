@@ -16,41 +16,16 @@
 
 package io.seqera.tower.plugin.dataset
 
-import com.github.tomakehurst.wiremock.WireMockServer
-import com.github.tomakehurst.wiremock.client.WireMock
 import nextflow.Global
-import nextflow.Session
 import nextflow.exception.AbortOperationException
-import spock.lang.AutoCleanup
-import spock.lang.Specification
+import spock.lang.Unroll
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*
 
 /**
  * @author Edmund Miller
  */
-class DatasetResolverTest extends Specification {
-
-    @AutoCleanup('stop')
-    WireMockServer wireMock
-
-    def setup() {
-        wireMock = new WireMockServer(0)
-        wireMock.start()
-        WireMock.configureFor(wireMock.port())
-    }
-
-    def cleanup() {
-        Global.session = null
-    }
-
-    private void mockSession(Map extra = [:]) {
-        def endpoint = "http://localhost:${wireMock.port()}"
-        def config = [tower: [endpoint: endpoint, accessToken: 'test-token', workspaceId: '12345'] + extra]
-        Global.session = Mock(Session) {
-            getConfig() >> config
-        }
-    }
+class DatasetResolverTest extends DatasetWireMockSpec {
 
     def 'should throw when no session'() {
         given:
@@ -63,107 +38,67 @@ class DatasetResolverTest extends Specification {
         thrown(AbortOperationException)
     }
 
-    def 'should throw when dataset name is empty'() {
+    @Unroll
+    def 'should reject invalid dataset name: #datasetName'() {
         when:
-        DatasetResolver.resolve('', null)
+        DatasetResolver.resolve(datasetName, null)
 
         then:
         thrown(IllegalArgumentException)
+
+        where:
+        datasetName << ['', null]
     }
 
-    def 'should throw when dataset not found'() {
+    @Unroll
+    def 'should fail dataset lookup when #scenario'() {
         given:
         mockSession()
-
-        wireMock.stubFor(get(urlPathEqualTo('/datasets'))
-            .willReturn(okJson('{"datasets": [{"id": "1", "name": "other-data"}]}')))
+        stubLookup.call()
 
         when:
         DatasetResolver.resolve('my-data', null)
 
         then:
         def e = thrown(AbortOperationException)
-        e.message.contains("not found")
-        e.message.contains("other-data")
+        messageParts.each { part -> assert e.message.contains(part) }
+
+        where:
+        scenario                       | stubLookup                                                                                     | messageParts
+        'dataset does not exist'       | { stubDatasets([[id: '1', name: 'other-data']]) }                                              | ['not found', 'other-data']
+        'workspace has no datasets'    | { stubDatasets([]) }                                                                            | ['No datasets found in workspace']
+        'api returns unauthorized'     | { wireMock.stubFor(get(urlPathEqualTo('/datasets')).willReturn(unauthorized())) }              | ['Access denied']
     }
 
-    def 'should throw when no datasets in workspace'() {
+    @Unroll
+    def 'should fail version lookup when #scenario'() {
         given:
         mockSession()
-
-        wireMock.stubFor(get(urlPathEqualTo('/datasets'))
-            .willReturn(okJson('{"datasets": []}')))
-
-        when:
-        DatasetResolver.resolve('my-data', null)
-
-        then:
-        thrown(AbortOperationException)
-    }
-
-    def 'should throw when API returns 401'() {
-        given:
-        mockSession()
-
-        wireMock.stubFor(get(urlPathEqualTo('/datasets'))
-            .willReturn(unauthorized()))
+        stubDatasets([[id: '42', name: 'my-data']])
+        stubDatasetVersions('42', versions)
 
         when:
-        DatasetResolver.resolve('my-data', null)
+        DatasetResolver.resolve('my-data', requestedVersion)
 
         then:
         def e = thrown(AbortOperationException)
-        e.message.contains("Access denied")
-    }
+        e.message.contains(expectedMessage)
 
-    def 'should throw when version has no backing URL'() {
-        given:
-        mockSession()
-
-        wireMock.stubFor(get(urlPathEqualTo('/datasets'))
-            .willReturn(okJson('{"datasets": [{"id": "42", "name": "my-data"}]}')))
-        wireMock.stubFor(get(urlPathEqualTo('/datasets/42/versions'))
-            .willReturn(okJson('{"versions": [{"version": 1, "url": null}]}')))
-
-        when:
-        DatasetResolver.resolve('my-data', null)
-
-        then:
-        def e = thrown(AbortOperationException)
-        e.message.contains("no backing storage URL")
-    }
-
-    def 'should throw when specific version not found'() {
-        given:
-        mockSession()
-
-        wireMock.stubFor(get(urlPathEqualTo('/datasets'))
-            .willReturn(okJson('{"datasets": [{"id": "42", "name": "my-data"}]}')))
-        wireMock.stubFor(get(urlPathEqualTo('/datasets/42/versions'))
-            .willReturn(okJson('{"versions": [{"version": 1, "url": "s3://bucket/v1.csv"}]}')))
-
-        when:
-        DatasetResolver.resolve('my-data', '99')
-
-        then:
-        def e = thrown(AbortOperationException)
-        e.message.contains("Version '99' not found")
+        where:
+        scenario                               | versions                                       | requestedVersion | expectedMessage
+        'selected version has no backing URL'  | [[version: 1, url: null]]                      | null             | 'no backing storage URL'
+        'requested version does not exist'     | [[version: 1, url: 's3://bucket/v1.csv']]      | '99'             | "Version '99' not found"
     }
 
     def 'should pass workspace ID as query param'() {
         given:
-        mockSession()
-
-        wireMock.stubFor(get(urlPathEqualTo('/datasets'))
-            .withQueryParam('workspaceId', equalTo('12345'))
-            .willReturn(okJson('{"datasets": []}')))
+        mockSession(workspaceId: '12345')
+        stubDatasets([], '12345')
 
         when:
         DatasetResolver.resolve('my-data', null)
 
         then:
-        // will throw because no datasets, but the important thing
-        // is the request was made with correct query param
         thrown(AbortOperationException)
 
         and:
@@ -174,9 +109,7 @@ class DatasetResolverTest extends Specification {
     def 'should send bearer token in Authorization header'() {
         given:
         mockSession()
-
-        wireMock.stubFor(get(urlPathEqualTo('/datasets'))
-            .willReturn(okJson('{"datasets": []}')))
+        stubDatasets([])
 
         when:
         DatasetResolver.resolve('my-data', null)

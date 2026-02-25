@@ -16,59 +16,57 @@
 
 package io.seqera.tower.plugin.dataset
 
+import java.nio.file.Paths
+
+import spock.lang.Shared
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  * @author Edmund Miller
  */
 class DatasetPathFactoryTest extends Specification {
 
-    def 'should return null for non-dataset URIs'() {
-        given:
-        def factory = new DatasetPathFactory()
+    @Shared
+    DatasetPathFactory factory = new DatasetPathFactory()
 
+    @Shared
+    DatasetFileSystem datasetFs = new DatasetFileSystem(new DatasetFileSystemProvider(), null)
+
+    @Unroll
+    def 'parseUri should return null for non-dataset URI #value'() {
         expect:
-        factory.parseUri('s3://bucket/key') == null
-        factory.parseUri('/local/path') == null
-        factory.parseUri('gs://bucket/key') == null
+        factory.parseUri(value) == null
+
+        where:
+        value << ['s3://bucket/key', '/local/path', 'gs://bucket/key']
     }
 
-    def 'should return null for toUriString with non-DatasetPath'() {
+    @Unroll
+    def 'toUriString should return #expected for #scenario'() {
         given:
-        def factory = new DatasetPathFactory()
-        def localPath = java.nio.file.Paths.get('/tmp/test')
+        def path = pathFactory.call()
 
         expect:
-        factory.toUriString(localPath) == null
+        factory.toUriString(path) == expected
+
+        where:
+        scenario              | pathFactory                                         | expected
+        'DatasetPath input'   | { new DatasetPath(datasetFs, 'my-data') }          | 'dataset://my-data'
+        'non-DatasetPath'     | { Paths.get('/tmp/test') }                         | null
     }
 
-    def 'should return uri string for DatasetPath'() {
+    @Unroll
+    def '#methodName should return null for dataset path'() {
         given:
-        def factory = new DatasetPathFactory()
-        def fs = new DatasetFileSystem(new DatasetFileSystemProvider(), null)
-        def path = new DatasetPath(fs, 'my-data')
+        def path = new DatasetPath(datasetFs, 'my-data')
 
         expect:
-        factory.toUriString(path) == 'dataset://my-data'
-    }
+        invoke.call(factory, path) == null
 
-    def 'should return null for getBashLib'() {
-        given:
-        def factory = new DatasetPathFactory()
-        def fs = new DatasetFileSystem(new DatasetFileSystemProvider(), null)
-        def path = new DatasetPath(fs, 'my-data')
-
-        expect:
-        factory.getBashLib(path) == null
-    }
-
-    def 'should return null for getUploadCmd'() {
-        given:
-        def factory = new DatasetPathFactory()
-        def fs = new DatasetFileSystem(new DatasetFileSystemProvider(), null)
-        def path = new DatasetPath(fs, 'my-data')
-
-        expect:
-        factory.getUploadCmd('/tmp/file', path) == null
+        where:
+        methodName     | invoke
+        'getBashLib'   | { DatasetPathFactory f, target -> f.getBashLib(target) }
+        'getUploadCmd' | { DatasetPathFactory f, target -> f.getUploadCmd('/tmp/file', target) }
     }
 }

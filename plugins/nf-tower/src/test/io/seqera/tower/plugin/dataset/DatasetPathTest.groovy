@@ -16,166 +16,109 @@
 
 package io.seqera.tower.plugin.dataset
 
+import spock.lang.Shared
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  * @author Edmund Miller
  */
 class DatasetPathTest extends Specification {
 
-    DatasetFileSystem makeFs() {
-        def provider = new DatasetFileSystemProvider()
-        new DatasetFileSystem(provider, null)
-    }
+    @Shared
+    DatasetFileSystem fileSystem = new DatasetFileSystem(new DatasetFileSystemProvider(), null)
 
-    // -- URI construction --
-
-    def 'should parse dataset URI with host-style name'() {
+    @Unroll
+    def 'should parse dataset URI #uriString'() {
         given:
-        def uri = new URI('dataset://my-samplesheet')
-        def path = new DatasetPath(makeFs(), uri)
+        def path = new DatasetPath(fileSystem, new URI(uriString))
 
         expect:
-        path.datasetName == 'my-samplesheet'
-        path.version == null
-        path.toString() == 'dataset://my-samplesheet'
+        path.datasetName == expectedName
+        path.version == expectedVersion
+        path.toString() == expectedToString
+
+        where:
+        uriString                               | expectedName      | expectedVersion | expectedToString
+        'dataset://my-samplesheet'             | 'my-samplesheet'  | null            | 'dataset://my-samplesheet'
+        'dataset:///my-samplesheet'            | 'my-samplesheet'  | null            | 'dataset://my-samplesheet'
+        'dataset://my-samplesheet?version=3'   | 'my-samplesheet'  | '3'             | 'dataset://my-samplesheet?version=3'
     }
 
-    def 'should parse dataset URI with triple-slash form'() {
+    @Unroll
+    def 'should parse string path #rawPath'() {
         given:
-        def uri = new URI('dataset:///my-samplesheet')
-        def path = new DatasetPath(makeFs(), uri)
+        def path = new DatasetPath(fileSystem, rawPath)
 
         expect:
-        path.datasetName == 'my-samplesheet'
-        path.version == null
+        path.datasetName == expectedName
+        path.version == expectedVersion
+
+        where:
+        rawPath             | expectedName      | expectedVersion
+        'my-samplesheet'    | 'my-samplesheet'  | null
+        '/my-samplesheet'   | 'my-samplesheet'  | null
+        'my-samplesheet@2'  | 'my-samplesheet'  | '2'
     }
 
-    def 'should parse dataset URI with version query param'() {
+    def 'should expose basic path semantics'() {
         given:
-        def uri = new URI('dataset://my-samplesheet?version=3')
-        def path = new DatasetPath(makeFs(), uri)
+        def path = new DatasetPath(fileSystem, 'test')
 
         expect:
-        path.datasetName == 'my-samplesheet'
-        path.version == '3'
-        path.toString() == 'dataset://my-samplesheet?version=3'
-    }
-
-    // -- string construction --
-
-    def 'should parse string path'() {
-        given:
-        def path = new DatasetPath(makeFs(), 'my-samplesheet')
-
-        expect:
-        path.datasetName == 'my-samplesheet'
-        path.version == null
-    }
-
-    def 'should parse string path with leading slash'() {
-        given:
-        def path = new DatasetPath(makeFs(), '/my-samplesheet')
-
-        expect:
-        path.datasetName == 'my-samplesheet'
-        path.version == null
-    }
-
-    def 'should parse string path with version suffix'() {
-        given:
-        def path = new DatasetPath(makeFs(), 'my-samplesheet@2')
-
-        expect:
-        path.datasetName == 'my-samplesheet'
-        path.version == '2'
-    }
-
-    // -- Path interface --
-
-    def 'should be absolute'() {
-        expect:
-        new DatasetPath(makeFs(), 'test').isAbsolute()
-    }
-
-    def 'should have name count of 1'() {
-        expect:
-        new DatasetPath(makeFs(), 'test').getNameCount() == 1
-    }
-
-    def 'should return self for getName(0)'() {
-        given:
-        def path = new DatasetPath(makeFs(), 'test')
-
-        expect:
+        path.isAbsolute()
+        path.getNameCount() == 1
         path.getName(0) == path
-    }
-
-    def 'should throw for getName with invalid index'() {
-        when:
-        new DatasetPath(makeFs(), 'test').getName(1)
-
-        then:
-        thrown(IllegalArgumentException)
-    }
-
-    def 'should return correct URI'() {
-        given:
-        def path = new DatasetPath(makeFs(), 'my-data')
-
-        expect:
-        path.toUri() == new URI('dataset://my-data')
-    }
-
-    def 'should return self for toAbsolutePath'() {
-        given:
-        def path = new DatasetPath(makeFs(), 'test')
-
-        expect:
+        path.toUri() == new URI('dataset://test')
         path.toAbsolutePath().is(path)
     }
 
-    // -- equality --
+    @Unroll
+    def 'should throw for getName(#index)'() {
+        when:
+        new DatasetPath(fileSystem, 'test').getName(index)
 
-    def 'should be equal for same name and version'() {
-        given:
-        def a = new DatasetPath(makeFs(), 'data')
-        def b = new DatasetPath(makeFs(), 'data')
+        then:
+        thrown(IllegalArgumentException)
 
-        expect:
-        a == b
-        a.hashCode() == b.hashCode()
+        where:
+        index << [-1, 1]
     }
 
-    def 'should not be equal for different names'() {
+    @Unroll
+    def 'should compare equality for #left vs #right'() {
         given:
-        def a = new DatasetPath(makeFs(), 'data1')
-        def b = new DatasetPath(makeFs(), 'data2')
+        def a = new DatasetPath(fileSystem, left)
+        def b = new DatasetPath(fileSystem, right)
 
         expect:
-        a != b
+        (a == b) == expectedEqual
+
+        and:
+        if (expectedEqual) {
+            assert a.hashCode() == b.hashCode()
+        }
+
+        where:
+        left      | right     | expectedEqual
+        'data'    | 'data'    | true
+        'data1'   | 'data2'   | false
+        'data@1'  | 'data@2'  | false
     }
 
-    def 'should not be equal for different versions'() {
+    @Unroll
+    def 'should compare order for #left compared to #right'() {
         given:
-        def a = new DatasetPath(makeFs(), 'data@1')
-        def b = new DatasetPath(makeFs(), 'data@2')
+        def a = new DatasetPath(fileSystem, left)
+        def b = new DatasetPath(fileSystem, right)
 
         expect:
-        a != b
-    }
+        Integer.signum(a.compareTo(b)) == expectedSign
 
-    // -- compareTo --
-
-    def 'should compare by name then version'() {
-        given:
-        def a = new DatasetPath(makeFs(), 'alpha')
-        def b = new DatasetPath(makeFs(), 'beta')
-        def c = new DatasetPath(makeFs(), 'alpha@2')
-
-        expect:
-        a.compareTo(b) < 0
-        b.compareTo(a) > 0
-        a.compareTo(c) < 0  // null version < "2"
+        where:
+        left      | right      | expectedSign
+        'alpha'   | 'beta'     | -1
+        'beta'    | 'alpha'    | 1
+        'alpha'   | 'alpha@2'  | -1
     }
 }

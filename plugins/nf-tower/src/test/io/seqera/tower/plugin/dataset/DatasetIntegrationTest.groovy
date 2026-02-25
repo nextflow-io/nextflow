@@ -17,14 +17,11 @@
 package io.seqera.tower.plugin.dataset
 
 import java.nio.file.Files
+import java.nio.file.LinkOption
+import java.nio.file.attribute.BasicFileAttributes
 
-import com.github.tomakehurst.wiremock.WireMockServer
-import com.github.tomakehurst.wiremock.client.WireMock
-import nextflow.Global
-import nextflow.Session
-import spock.lang.AutoCleanup
-import spock.lang.Specification
 import spock.lang.TempDir
+import spock.lang.Unroll
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*
 
@@ -36,50 +33,19 @@ import static com.github.tomakehurst.wiremock.client.WireMock.*
  *
  * @author Edmund Miller
  */
-class DatasetIntegrationTest extends Specification {
-
-    @AutoCleanup('stop')
-    WireMockServer wireMock
+class DatasetIntegrationTest extends DatasetWireMockSpec {
 
     @TempDir
     File tempDir
 
-    def setup() {
-        wireMock = new WireMockServer(0)
-        wireMock.start()
-        WireMock.configureFor(wireMock.port())
-    }
-
-    def cleanup() {
-        Global.session = null
-    }
-
-    private void mockSession() {
-        def endpoint = "http://localhost:${wireMock.port()}"
-        def config = [tower: [endpoint: endpoint, accessToken: 'test-token', workspaceId: '100']]
-        Global.session = Mock(Session) {
-            getConfig() >> config
-        }
-    }
-
     def 'should resolve dataset path and read file contents'() {
         given: 'a local file simulating cloud storage'
-        def csvFile = new File(tempDir, 'samples.csv')
-        csvFile.text = 'sample,fastq_1,fastq_2\nSAMPLE1,s1_R1.fq.gz,s1_R2.fq.gz\n'
-        def fileUri = csvFile.toURI().toString()
+        def csvFile = makeFile('samples.csv', 'sample,fastq_1,fastq_2\nSAMPLE1,s1_R1.fq.gz,s1_R2.fq.gz\n')
 
         and: 'Platform API mocks'
-        mockSession()
-        wireMock.stubFor(get(urlPathEqualTo('/datasets'))
-            .withQueryParam('workspaceId', equalTo('100'))
-            .willReturn(okJson("""{"datasets": [
-                {"id": "42", "name": "my-samplesheet", "mediaType": "text/csv"}
-            ]}""")))
-        wireMock.stubFor(get(urlPathEqualTo('/datasets/42/versions'))
-            .withQueryParam('workspaceId', equalTo('100'))
-            .willReturn(okJson("""{"versions": [
-                {"version": 1, "url": "${fileUri}", "fileName": "samples.csv"}
-            ]}""")))
+        mockSession(workspaceId: '100')
+        stubDatasets([[id: '42', name: 'my-samplesheet', mediaType: 'text/csv']], '100')
+        stubDatasetVersions('42', [[version: 1, url: csvFile.toURI().toString(), fileName: 'samples.csv']], '100')
 
         when: 'resolving the dataset path'
         def path = DatasetResolver.resolve('my-samplesheet', null)
@@ -97,119 +63,65 @@ class DatasetIntegrationTest extends Specification {
             .withQueryParam('workspaceId', equalTo('100')))
     }
 
-    def 'should resolve specific version'() {
+    @Unroll
+    def 'should resolve #scenario'() {
         given:
-        def v1File = new File(tempDir, 'v1.csv')
-        v1File.text = 'version1'
-        def v2File = new File(tempDir, 'v2.csv')
-        v2File.text = 'version2'
+        mockSession(workspaceId: '100')
+        stubDatasets([[id: '42', name: 'my-data']])
 
         and:
-        mockSession()
-        wireMock.stubFor(get(urlPathEqualTo('/datasets'))
-            .willReturn(okJson('{"datasets": [{"id": "42", "name": "my-data"}]}')))
-        wireMock.stubFor(get(urlPathEqualTo('/datasets/42/versions'))
-            .willReturn(okJson("""{"versions": [
-                {"version": 1, "url": "${v1File.toURI()}"},
-                {"version": 2, "url": "${v2File.toURI()}"}
-            ]}""")))
-
-        when: 'requesting version 1'
-        def path = DatasetResolver.resolve('my-data', '1')
-
-        then:
-        Files.readString(path) == 'version1'
-    }
-
-    def 'should resolve latest version when multiple exist'() {
-        given:
-        def v1File = new File(tempDir, 'v1.csv')
-        v1File.text = 'old'
-        def v3File = new File(tempDir, 'v3.csv')
-        v3File.text = 'latest'
-
-        and:
-        mockSession()
-        wireMock.stubFor(get(urlPathEqualTo('/datasets'))
-            .willReturn(okJson('{"datasets": [{"id": "42", "name": "my-data"}]}')))
-        wireMock.stubFor(get(urlPathEqualTo('/datasets/42/versions'))
-            .willReturn(okJson("""{"versions": [
-                {"version": 1, "url": "${v1File.toURI()}"},
-                {"version": 3, "url": "${v3File.toURI()}"}
-            ]}""")))
-
-        when: 'requesting latest (no version specified)'
-        def path = DatasetResolver.resolve('my-data', null)
-
-        then: 'gets version 3 (highest)'
-        Files.readString(path) == 'latest'
-    }
-
-    def 'should read dataset file via provider newInputStream'() {
-        given:
-        def csvFile = new File(tempDir, 'data.csv')
-        csvFile.text = 'col1,col2\na,b\n'
-
-        and:
-        mockSession()
-        wireMock.stubFor(get(urlPathEqualTo('/datasets'))
-            .willReturn(okJson('{"datasets": [{"id": "7", "name": "test-ds"}]}')))
-        wireMock.stubFor(get(urlPathEqualTo('/datasets/7/versions'))
-            .willReturn(okJson("""{"versions": [
-                {"version": 1, "url": "${csvFile.toURI()}"}
-            ]}""")))
-
-        and: 'a DatasetPath created via the provider'
-        def provider = new DatasetFileSystemProvider()
-        def path = provider.getPath(new URI('dataset://test-ds'))
+        def versions = versionRows.collect { row ->
+            def file = makeFile(row.fileName as String, row.content as String)
+            [version: row.version, url: file.toURI().toString()]
+        }
+        stubDatasetVersions('42', versions)
 
         when:
-        def content = provider.newInputStream(path).text
+        def path = DatasetResolver.resolve('my-data', requestedVersion)
 
         then:
-        content == 'col1,col2\na,b\n'
+        Files.readString(path) == expectedContent
+
+        where:
+        scenario                         | versionRows                                                                                                                           | requestedVersion | expectedContent
+        'specific dataset version'       | [[version: 1, fileName: 'v1.csv', content: 'version1'], [version: 2, fileName: 'v2.csv', content: 'version2']]                    | '1'              | 'version1'
+        'latest dataset version'         | [[version: 1, fileName: 'v1.csv', content: 'old'], [version: 3, fileName: 'v3.csv', content: 'latest']]                            | null             | 'latest'
     }
 
-    def 'should read attributes via provider'() {
+    @Unroll
+    def 'should delegate #operation through provider'() {
         given:
-        def csvFile = new File(tempDir, 'data.csv')
-        csvFile.text = 'hello'
+        def dataFile = makeFile('data.csv', fileContent)
 
         and:
-        mockSession()
-        wireMock.stubFor(get(urlPathEqualTo('/datasets'))
-            .willReturn(okJson('{"datasets": [{"id": "7", "name": "test-ds"}]}')))
-        wireMock.stubFor(get(urlPathEqualTo('/datasets/7/versions'))
-            .willReturn(okJson("""{"versions": [
-                {"version": 1, "url": "${csvFile.toURI()}"}
-            ]}""")))
+        mockSession(workspaceId: '100')
+        stubDatasets([[id: '7', name: 'test-ds']])
+        stubDatasetVersions('7', [[version: 1, url: dataFile.toURI().toString()]])
 
         and:
         def provider = new DatasetFileSystemProvider()
         def path = provider.getPath(new URI('dataset://test-ds'))
 
         when:
-        def attrs = provider.readAttributes(path, java.nio.file.attribute.BasicFileAttributes, new java.nio.file.LinkOption[0])
+        def result = operationFn.call(provider, path)
 
         then:
-        attrs.size() == 5
-        !attrs.isDirectory()
-        attrs.isRegularFile()
+        assert assertFn.call(result)
+
+        where:
+        operation         | fileContent         | operationFn                                                                                                                            | assertFn
+        'newInputStream'  | 'col1,col2\na,b\n' | { DatasetFileSystemProvider providerRef, dsPath -> providerRef.newInputStream(dsPath).text }                                          | { value -> value == 'col1,col2\na,b\n' }
+        'readAttributes'  | 'hello'             | { DatasetFileSystemProvider providerRef, dsPath -> providerRef.readAttributes(dsPath, BasicFileAttributes, new LinkOption[0]) }      | { attrs -> attrs.size() == 5 && !attrs.isDirectory() && attrs.isRegularFile() }
     }
 
     def 'should cache resolved path across multiple reads'() {
         given:
-        def csvFile = new File(tempDir, 'data.csv')
-        csvFile.text = 'cached'
+        def dataFile = makeFile('data.csv', 'cached')
 
         and:
-        mockSession()
-        wireMock.stubFor(get(urlPathEqualTo('/datasets'))
-            .willReturn(okJson('{"datasets": [{"id": "7", "name": "test-ds"}]}')))
-        wireMock.stubFor(get(urlPathEqualTo('/datasets/7/versions'))
-            .willReturn(okJson("""{"versions": [
-                {"version": 1, "url": "${csvFile.toURI()}"}
-            ]}""")))
+        mockSession(workspaceId: '100')
+        stubDatasets([[id: '7', name: 'test-ds']])
+        stubDatasetVersions('7', [[version: 1, url: dataFile.toURI().toString()]])
 
         and:
         def provider = new DatasetFileSystemProvider()
@@ -226,5 +138,11 @@ class DatasetIntegrationTest extends Specification {
         and: 'API was only called once (path cached on DatasetPath)'
         wireMock.verify(1, getRequestedFor(urlPathEqualTo('/datasets')))
         wireMock.verify(1, getRequestedFor(urlPathEqualTo('/datasets/7/versions')))
+    }
+
+    private File makeFile(String name, String content) {
+        def file = new File(tempDir, name)
+        file.text = content
+        return file
     }
 }
