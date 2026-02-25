@@ -244,13 +244,3 @@ div.deprecated p:first-child::before     { color: #C3514D; }
     font-size: 0.7rem;
     margin-left: 0.5rem;
 }
-
-/* Site-wide announcement banner */
-.admonition.site-banner {
-    background: #E2F7F3;
-    border-left: none;
-}
-
-.admonition.site-banner .admonition-title {
-    background: #0CAE8E;
-}
