@@ -7,6 +7,10 @@
 # Generated files
 .docusaurus
 .cache-loader
+/nextflow_stable
+/versioned_docs
+/versioned_sidebars
+/versions.json
 
 # Misc
 .DS_Store

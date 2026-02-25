@@ -8,13 +8,16 @@
   "scripts": {
     "docusaurus": "docusaurus",
     "start": "docusaurus start",
+    "prebuild": "npm run fetch-stable",
     "build": "docusaurus build",
+    "prestart": "npm run fetch-stable",
     "swizzle": "docusaurus swizzle",
     "deploy": "docusaurus deploy",
     "clear": "docusaurus clear",
     "serve": "docusaurus serve",
     "write-translations": "docusaurus write-translations",
-    "write-heading-ids": "docusaurus write-heading-ids"
+    "write-heading-ids": "docusaurus write-heading-ids",
+    "fetch-stable": "node internal/fetch-stable.mjs"
   },
   "dependencies": {
     "@docusaurus/core": "3.9.2",
@@ -25,6 +28,8 @@
     "@seqera/docusaurus-preset-seqera": "^1.0.20",
     "clsx": "^2.0.0",
     "daisyui": "^5.5.14",
+    "dotenv": "^17.3.1",
+    "fs-extra": "^11.3.3",
     "postcss-import": "^16.1.1",
     "postcss-loader": "^8.2.0",
     "postcss-nesting": "^14.0.0",
@@ -35,6 +40,7 @@
     "remark-code-snippets": "^1.1.0",
     "remark-math": "^6.0.0",
     "remark-sectionize": "^2.1.0",
+    "simple-git": "^3.32.2",
     "tailwindcss": "^4.1.18"
   },
   "devDependencies": {
