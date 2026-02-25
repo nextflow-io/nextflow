@@ -3,7 +3,6 @@ import {
   getSeqeraThemeConfig,
   getSeqeraPresetOptions,
 } from "@seqera/docusaurus-preset-seqera";
-import latest_version from "./latest_version.js";
 
 export default async function createConfigAsync() {
   return createSeqeraConfig({
@@ -28,12 +27,6 @@ export default async function createConfigAsync() {
           versions: {
             current: {
               label: 'Latest',
-              banner: 'none',
-            },
-            '26.01.1-edge': {
-              banner: 'none',
-            },
-            '25.10.4': {
               banner: 'none',
             },
           },
