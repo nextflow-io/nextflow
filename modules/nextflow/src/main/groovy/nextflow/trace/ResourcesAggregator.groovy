@@ -1,17 +1,16 @@
 package nextflow.trace
 
 import java.util.concurrent.Callable
-import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import java.util.concurrent.Future
 
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.Session
 
 /**
  * Collect and aggregate execution metrics used by execution report
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
@@ -22,15 +21,6 @@ class ResourcesAggregator {
      * Holds a report summary instance for each process group
      */
     final private Map<String,ReportSummary> summaries = new LinkedHashMap<>()
-
-    /**
-     * Executor service used to compute report summary stats
-     */
-    private ExecutorService executor
-
-    ResourcesAggregator(Session session) {
-        this.executor = session.getExecService()
-    }
 
     /**
      * Aggregates task record for each process in order to render the
@@ -71,16 +61,24 @@ class ResourcesAggregator {
             result.put(process, new HashMap(10))
         }
 
-        // submit the parallel execution
-        final allResults = executor.invokeAll(tasks)
+        // use a dedicated thread pool to avoid starvation deadlock
+        // with the shared virtual thread executor (see #6833)
+        final executor = Executors.newFixedThreadPool(Runtime.runtime.availableProcessors())
+        try {
+            // submit the parallel execution
+            final allResults = executor.invokeAll(tasks)
 
-        // compose the final result
-        for( Future<List> future : allResults ) {
-            final triple = future.get()
-            final name = triple[0]      // the process name
-            final series = triple[1]    // the series name eg. `cpu`, `time`, etc
-            final summary = triple[2]   // the computed summary
-            result.get(name).put(series, summary)
+            // compose the final result
+            for( Future<List> future : allResults ) {
+                final triple = future.get()
+                final name = triple[0]      // the process name
+                final series = triple[1]    // the series name eg. `cpu`, `time`, etc
+                final summary = triple[2]   // the computed summary
+                result.get(name).put(series, summary)
+            }
+        }
+        finally {
+            executor.shutdown()
         }
 
         return result
