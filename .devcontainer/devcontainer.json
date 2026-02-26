@@ -5,12 +5,12 @@
 
 	"features": {
 		"ghcr.io/devcontainers/features/java:1": {
-			"version": "24",
+			"version": "21",
 			"jdkDistro": "tem",
 			"installGradle": "true",
-			"gradleVersion": "9.2.0",
+			"gradleVersion": "9.3.1",
 			"installGroovy": "true",
-			"groovyVersion": "4.0.29"
+			"groovyVersion": "4.0.30"
 		}
 	}
 }
