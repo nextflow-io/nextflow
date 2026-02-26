@@ -83,6 +83,11 @@ class AzFileCopyStrategyTest extends Specification {
         then:
         binding.stage_inputs == '''\
                 # stage input files
+                if [[ "${NXF_SCRATCH:-}" && "${NXF_TASK_LAUNCH_DIR:-}" && "$NXF_TASK_LAUNCH_DIR" != "$PWD" ]]; then
+                  cp "$NXF_TASK_LAUNCH_DIR"/.command.sh . 2>/dev/null || true
+                  cp "$NXF_TASK_LAUNCH_DIR"/.command.run . 2>/dev/null || true
+                  cp "$NXF_TASK_LAUNCH_DIR"/.command.in . 2>/dev/null || true
+                fi
                 downloads=(true)
                 
                 nxf_parallel "${downloads[@]}"
@@ -218,6 +223,11 @@ class AzFileCopyStrategyTest extends Specification {
         then:
         binding.stage_inputs == '''\
                 # stage input files
+                if [[ "${NXF_SCRATCH:-}" && "${NXF_TASK_LAUNCH_DIR:-}" && "$NXF_TASK_LAUNCH_DIR" != "$PWD" ]]; then
+                  cp "$NXF_TASK_LAUNCH_DIR"/.command.sh . 2>/dev/null || true
+                  cp "$NXF_TASK_LAUNCH_DIR"/.command.run . 2>/dev/null || true
+                  cp "$NXF_TASK_LAUNCH_DIR"/.command.in . 2>/dev/null || true
+                fi
                 nxf_az_download 'http://account.blob.core.windows.net/my-data/work/remote/bin' $PWD/.nextflow-bin
                 chmod +x $PWD/.nextflow-bin/* || true
                 downloads=(true)
@@ -228,6 +238,7 @@ class AzFileCopyStrategyTest extends Specification {
         binding.task_env == '''\
                     export FOO="1"
                     export BAR="any"
+                    export NXF_TASK_LAUNCH_DIR="$PWD"
                     export PATH="$PWD/.nextflow-bin:$AZ_BATCH_NODE_SHARED_DIR/bin/:$PATH"
                     export AZCOPY_LOG_LOCATION="$PWD/.azcopy_log"
                     export AZ_SAS="12345"
@@ -368,6 +379,11 @@ class AzFileCopyStrategyTest extends Specification {
 
         binding.stage_inputs == '''\
                 # stage input files
+                if [[ "${NXF_SCRATCH:-}" && "${NXF_TASK_LAUNCH_DIR:-}" && "$NXF_TASK_LAUNCH_DIR" != "$PWD" ]]; then
+                  cp "$NXF_TASK_LAUNCH_DIR"/.command.sh . 2>/dev/null || true
+                  cp "$NXF_TASK_LAUNCH_DIR"/.command.run . 2>/dev/null || true
+                  cp "$NXF_TASK_LAUNCH_DIR"/.command.in . 2>/dev/null || true
+                fi
                 downloads=(true)
                 rm -f file1.txt
                 rm -f file2.txt
@@ -389,6 +405,7 @@ class AzFileCopyStrategyTest extends Specification {
         binding.launch_cmd == '/bin/bash .command.run nxf_trace'
 
         binding.task_env == '''\
+                    export NXF_TASK_LAUNCH_DIR="$PWD"
                     export PATH="$PWD/.nextflow-bin:$AZ_BATCH_NODE_SHARED_DIR/bin/:$PATH"
                     export AZCOPY_LOG_LOCATION="$PWD/.azcopy_log"
                     export AZ_SAS="12345"
