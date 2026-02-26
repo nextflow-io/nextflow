@@ -114,8 +114,8 @@ class LinObserverTest extends Specification {
         def store = new DefaultLinStore();
         def uniqueId = UUID.randomUUID()
         def scriptFile = folder.resolve("main.nf")
-        def module1 = folder.resolve("script1.nf"); module1.text = 'hola'
-        def module2 = folder.resolve("script2.nf"); module2.text = 'world'
+        def module1 = folder.resolve("a_script1.nf"); module1.text = 'hola'
+        def module2 = folder.resolve("b_script2.nf"); module2.text = 'world'
         and:
 
         def metadata = Mock(WorkflowMetadata){
@@ -139,7 +139,7 @@ class LinObserverTest extends Specification {
         when:
         def files = observer.collectScriptDataPaths(new PathNormalizer(metadata))
         then:
-        observer.allScriptFiles() >> [ scriptFile, module1, module2 ]
+        observer.allScriptFiles() >> [ module2, scriptFile, module1 ]
         and:
         files.size() == 3
         and:
