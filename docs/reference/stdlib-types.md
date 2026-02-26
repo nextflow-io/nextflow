@@ -521,6 +521,7 @@ The following properties are available:
 
 `name: String`
 : The path name, e.g. `/some/path/file.txt` -> `file.txt`.
+: For files staged as a task input, the path name is the path relative to the task directory (e.g., `my-dir/file.txt`). Use `fileName.name` for task paths to get only the file name.
 
 `parent: Path`
 : The path parent path, e.g. `/some/path/file.txt` -> `/some/path`.
