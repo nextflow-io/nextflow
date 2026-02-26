@@ -346,7 +346,7 @@ class ModuleRegistryClient {
     }
 
     private String getChecksumFromHeader(HttpResponse<InputStream> response) {
-        def checksum = response.headers().firstValue("X-Checksum").orElse(null)
+        def checksum = response.headers().firstValue("X-NF-Module-Checksum").orElse(null)
         if( !checksum ) {
             checksum = response.headers().firstValue("Docker-Content-Digest").orElse(null)
         }
