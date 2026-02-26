@@ -18,14 +18,14 @@ package nextflow.cloud.azure.batch
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.Session
 import nextflow.processor.TaskProcessor
-import nextflow.trace.TraceObserver
+import nextflow.trace.TraceObserverV2
 
 /**
- * Observer that handles process termination events for Azure Batch executor.
- * When a process terminates (all tasks have been submitted and completed), this observer
- * will set the corresponding Azure Batch jobs to auto-terminate when all tasks complete.
+ * Observer that eagerly cleans up Azure Batch jobs.
+ *
+ * When a process terminates (all tasks have completed), this observer
+ * sets the corresponding Azure Batch jobs to auto-terminate.
  *
  * This provides an additional mechanism to ensure jobs are terminated during workflow
  * execution, complementing the eager per-task termination and the workflow-end fallback.
@@ -34,15 +34,13 @@ import nextflow.trace.TraceObserver
  */
 @Slf4j
 @CompileStatic
-class AzBatchProcessObserver implements TraceObserver {
-
-    AzBatchProcessObserver(Session session) {
-        // Session not needed, but required by factory interface
-    }
+class AzBatchJobObserver implements TraceObserverV2 {
 
     /**
-     * Called when a process terminates (all tasks have been submitted and completed).
+     * Called when a process terminates (all tasks have completed).
      * Sets Azure Batch jobs to auto-terminate when all tasks complete.
+     *
+     * @param processor
      */
     @Override
     void onProcessTerminate(TaskProcessor processor) {
@@ -56,7 +54,6 @@ class AzBatchProcessObserver implements TraceObserver {
 
         // Check if auto-termination is enabled
         if( !batchService?.config?.batch()?.terminateJobsOnCompletion ) {
-            log.trace "Azure Batch job auto-termination is disabled, skipping process termination for: ${processor.name}"
             return
         }
 
@@ -67,7 +64,7 @@ class AzBatchProcessObserver implements TraceObserver {
                 batchService.setJobTermination(jobId)
             }
             catch( Exception e ) {
-                log.debug "Failed to set auto-termination for Azure Batch job ${jobId} associated with process '${processor.name}' - ${e.message ?: e}"
+                log.debug "Failed to set auto-termination for Azure Batch job ${jobId} associated with process '${processor.name}' -- ${e.message ?: e}"
             }
         }
     }

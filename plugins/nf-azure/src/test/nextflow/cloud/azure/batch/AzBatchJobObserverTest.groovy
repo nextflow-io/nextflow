@@ -24,11 +24,11 @@ import nextflow.processor.TaskProcessor
 import spock.lang.Specification
 
 /**
- * Tests for {@link AzBatchProcessObserver}
+ * Tests for {@link AzBatchJobObserver}
  *
  * @author Adam Talbot <adam.talbot@seqera.io>
  */
-class AzBatchProcessObserverTest extends Specification {
+class AzBatchJobObserverTest extends Specification {
 
     def 'should set job termination for matching processor'() {
         given:
@@ -47,7 +47,7 @@ class AzBatchProcessObserverTest extends Specification {
         batchService.getJobIdsForProcessor(processor) >> ['job-1', 'job-2']
 
         when:
-        def observer = new AzBatchProcessObserver(Mock(Session))
+        def observer = new AzBatchJobObserver(Mock(Session))
         observer.onProcessTerminate(processor)
 
         then:
@@ -63,7 +63,7 @@ class AzBatchProcessObserverTest extends Specification {
         processor.executor >> executor
 
         when:
-        def observer = new AzBatchProcessObserver(Mock(Session))
+        def observer = new AzBatchJobObserver(Mock(Session))
         observer.onProcessTerminate(processor)
 
         then:
@@ -85,7 +85,7 @@ class AzBatchProcessObserverTest extends Specification {
         batchOpts.terminateJobsOnCompletion >> false
 
         when:
-        def observer = new AzBatchProcessObserver(Mock(Session))
+        def observer = new AzBatchJobObserver(Mock(Session))
         observer.onProcessTerminate(processor)
 
         then:
@@ -111,7 +111,7 @@ class AzBatchProcessObserverTest extends Specification {
         batchService.setJobTermination('job-1') >> { throw new RuntimeException('API error') }
 
         when:
-        def observer = new AzBatchProcessObserver(Mock(Session))
+        def observer = new AzBatchJobObserver(Mock(Session))
         observer.onProcessTerminate(processor)
 
         then:
@@ -136,7 +136,7 @@ class AzBatchProcessObserverTest extends Specification {
         batchService.getJobIdsForProcessor(processor) >> []
 
         when:
-        def observer = new AzBatchProcessObserver(Mock(Session))
+        def observer = new AzBatchJobObserver(Mock(Session))
         observer.onProcessTerminate(processor)
 
         then:

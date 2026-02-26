@@ -18,20 +18,19 @@ package nextflow.cloud.azure.batch
 
 import groovy.transform.CompileStatic
 import nextflow.Session
-import nextflow.trace.TraceObserver
-import nextflow.trace.TraceObserverFactory
+import nextflow.trace.TraceObserverV2
+import nextflow.trace.TraceObserverFactoryV2
 
 /**
- * Factory for creating the Azure Batch process observer that enables process-level
- * termination of Azure Batch jobs when processes complete.
+ * Factory for creating the trace observers used by Azure Batch.
  *
  * @author Adam Talbot <adam.talbot@seqera.io>
  */
 @CompileStatic
-class AzBatchProcessObserverFactory implements TraceObserverFactory {
+class AzBatchObserverFactory implements TraceObserverFactoryV2 {
 
     @Override
-    Collection<TraceObserver> create(Session session) {
-        return [new AzBatchProcessObserver(session)]
+    Collection<TraceObserverV2> create(Session session) {
+        return [ new AzBatchJobObserver() ]
     }
 }

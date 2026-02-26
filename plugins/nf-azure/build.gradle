@@ -28,6 +28,7 @@ nextflowPlugin {
     generateSpec = false
     extensionPoints = [
         'nextflow.cloud.azure.batch.AzBatchExecutor',
+        'nextflow.cloud.azure.batch.AzBatchObserverFactory',
         'nextflow.cloud.azure.config.AzConfig',
         'nextflow.cloud.azure.file.AzPathFactory',
         'nextflow.cloud.azure.file.AzPathSerializer',

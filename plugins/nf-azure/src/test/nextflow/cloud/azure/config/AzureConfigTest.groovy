@@ -113,17 +113,17 @@ class AzureConfigTest extends Specification {
         def session = Mock(Session) {
             getConfig() >> [ azure:
                                      [batch:[
-                                            accountKey: KEY,
-                                            accountName: NAME,
-                                            endpoint: ENDPOINT,
-                                            location: LOCATION,
-                                            autoPoolMode: true,
-                                            allowPoolCreation: true,
-                                            terminateJobsOnCompletion: false,
-                                            deleteJobsOnCompletion: true,
-                                            deletePoolsOnCompletion: true,
-                                            deleteTasksOnCompletion: false,
-                                            pools: [ 
+                                             accountKey: KEY,
+                                             accountName: NAME,
+                                             endpoint: ENDPOINT,
+                                             location: LOCATION,
+                                             autoPoolMode: true,
+                                             allowPoolCreation: true,
+                                             terminateJobsOnCompletion: false,
+                                             deleteJobsOnCompletion: true,
+                                             deletePoolsOnCompletion: true,
+                                             deleteTasksOnCompletion: false,
+                                             pools: [ 
                                                 myPool: [
                                                     vmType: 'Foo_A1',
                                                     autoScale: true,

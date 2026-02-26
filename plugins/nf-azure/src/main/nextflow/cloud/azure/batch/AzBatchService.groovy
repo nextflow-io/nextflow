@@ -87,13 +87,13 @@ import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.config.AzFileShareOpts
 import nextflow.cloud.azure.config.AzPoolOpts
 import nextflow.cloud.azure.config.AzStartTaskOpts
-import nextflow.processor.TaskProcessor
 import nextflow.cloud.azure.config.CopyToolInstallMode
 import nextflow.cloud.azure.nio.AzPath
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
 import nextflow.fusion.FusionHelper
 import nextflow.fusion.FusionScriptLauncher
+import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.util.CacheHelper
 import nextflow.util.MemoryUnit
@@ -421,8 +421,11 @@ class AzBatchService implements Closeable {
     /**
      * Get or create an Azure Batch job for the given pool and task.
      * 
-     * Jobs are cached per (processor, poolId) pair for efficiency. With auto-termination enabled:
-     * - First task creates a new job, subsequent tasks reuse it
+     * Jobs are cached per (processor, poolId) pair. When auto-termination is enabled,
+     * the first task creates a new job, subsequent tasks reuse it.
+     *
+     * @param poolId
+     * @param task
      */
     synchronized String getOrCreateJob(String poolId, TaskRun task) {
         // Use the same job Id for the same Process,PoolId pair
