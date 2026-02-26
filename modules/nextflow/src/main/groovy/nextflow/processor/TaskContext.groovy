@@ -34,6 +34,7 @@ import nextflow.Global
 import nextflow.exception.ProcessException
 import nextflow.script.ScriptBinding
 import nextflow.util.KryoHelper
+import nextflow.util.TestOnly
 /**
  * Map used to delegate variable resolution to script scope
  *
@@ -91,7 +92,7 @@ class TaskContext implements Map<String,Object>, Cloneable {
         log.trace "Binding names for '$name' > $variableNames"
     }
 
-    /** ONLY FOR TEST PURPOSE -- do not use */
+    @TestOnly
     protected TaskContext() { }
 
     TaskContext clone() {
@@ -329,7 +330,7 @@ class TaskContext implements Map<String,Object>, Cloneable {
             return path
 
         // make from the module dir
-        def module = NF.isDsl2() ? ScriptMeta.get(this.script)?.getModuleDir() : null
+        def module = ScriptMeta.get(script)?.getModuleDir()
         if( module ) {
             def target = module.resolve('templates').resolve(path)
             if (Files.exists(target))

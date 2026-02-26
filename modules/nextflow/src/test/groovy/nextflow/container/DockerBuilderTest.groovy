@@ -32,7 +32,7 @@ class DockerBuilderTest extends Specification {
     def 'test docker mounts'() {
 
         given:
-        def builder = Spy(DockerBuilder)
+        def builder = new DockerBuilder('busybox')
         def files =  [Paths.get('/folder/data'),  Paths.get('/folder/db'), Paths.get('/folder/db') ]
         def real = [ Paths.get('/user/yo/nextflow/bin'), Paths.get('/user/yo/nextflow/work'), Paths.get('/db/pdb/local/data') ]
         def quotes =  [ Paths.get('/folder with blanks/A'), Paths.get('/folder with blanks/B') ]
@@ -49,7 +49,7 @@ class DockerBuilderTest extends Specification {
     def 'test docker env'() {
 
         given:
-        def builder = Spy(DockerBuilder)
+        def builder = new DockerBuilder('busybox')
 
         expect:
         builder.makeEnv(ENV).toString() == EXPECT
@@ -77,13 +77,11 @@ class DockerBuilderTest extends Specification {
                 .build()
                 .runCommand == 'docker run -i -e "FOO=1" -e "BAR=hello world" -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
 
-        new DockerBuilder('ubuntu')
-                .params(temp:'/hola')
+        new DockerBuilder('ubuntu', new DockerConfig(temp:'/hola'))
                 .build()
                 .runCommand == 'docker run -i -v /hola:/tmp -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" ubuntu'
 
-        new DockerBuilder('busybox')
-                .params(sudo: true)
+        new DockerBuilder('busybox', new DockerConfig(sudo: true))
                 .build()
                 .runCommand == 'sudo docker run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" busybox'
 
@@ -92,8 +90,7 @@ class DockerBuilderTest extends Specification {
                 .build()
                 .runCommand == 'docker run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --entrypoint /bin/bash busybox'
 
-        new DockerBuilder('busybox')
-                .params(runOptions: '-x --zeta')
+        new DockerBuilder('busybox', new DockerConfig(runOptions: '-x --zeta'))
                 .build()
                 .runCommand == 'docker run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" -x --zeta busybox'
 
@@ -102,8 +99,7 @@ class DockerBuilderTest extends Specification {
                 .build()
                 .runCommand == 'docker run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --name hola busybox'
 
-        new DockerBuilder('busybox')
-                .params(engineOptions: '--tlsverify --tlscert="/path/to/my/cert"')
+        new DockerBuilder('busybox', new DockerConfig(engineOptions: '--tlsverify --tlscert="/path/to/my/cert"'))
                 .build()
                 .runCommand == 'docker --tlsverify --tlscert="/path/to/my/cert" run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" busybox'
 
@@ -114,15 +110,12 @@ class DockerBuilderTest extends Specification {
                 .build()
                 .runCommand == 'docker run -i -e "FOO=1" -e "BAR=hello world" -v /home/db:/home/db -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
 
-        new DockerBuilder('fedora')
-                .params(readOnlyInputs: true)
+        new DockerBuilder('fedora', new DockerConfig(writableInputMounts: false))
                 .addMount(db_file)
                 .build()
                 .runCommand == 'docker run -i -v /home/db:/home/db:ro -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
 
-
-        new DockerBuilder('fedora')
-                .params(mountFlags: 'Z')
+        new DockerBuilder('fedora', new DockerConfig(mountFlags: 'Z'))
                 .addMount(db_file)
                 .build()
                 .runCommand == 'docker run -i -v /home/db:/home/db:Z -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR":Z -w "$NXF_TASK_WORKDIR" fedora'
@@ -147,15 +140,13 @@ class DockerBuilderTest extends Specification {
                 .build()
                 .runCommand == 'docker run -i --cpu-shares 8192 --cpuset-cpus 1,2 -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
 
-        new DockerBuilder('fedora')
-                .params(legacy: true)
+        new DockerBuilder('fedora', new DockerConfig(legacy: true))
                 .setCpuset('1,2')
                 .build()
                 .runCommand == 'docker run -i --cpuset 1,2 -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
 
 
-        new DockerBuilder('fedora')
-                .params(legacy: true)
+        new DockerBuilder('fedora', new DockerConfig(legacy: true))
                 .setCpus(1)
                 .build()
                 .runCommand == 'docker run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
@@ -188,6 +179,23 @@ class DockerBuilderTest extends Specification {
                 .runCommand == 'docker run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --device /dev/fuse --cap-add SYS_ADMIN fedora'
     }
 
+    def 'test container platform' () {
+        expect:
+        new DockerBuilder('fedora')
+            .build()
+            .runCommand == 'docker run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
+
+        new DockerBuilder('fedora')
+            .setPlatform('amd64')
+            .build()
+            .runCommand == 'docker run -i --platform amd64 -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
+
+        new DockerBuilder('fedora')
+            .setPlatform('linux/arm64')
+            .build()
+            .runCommand == 'docker run -i --platform linux/arm64 -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
+    }
+
     def 'test add mount'() {
 
         when:
@@ -207,6 +215,7 @@ class DockerBuilderTest extends Specification {
     def 'test get commands'() {
 
         when:
+        def config
         def docker =  new DockerBuilder('busybox').setName('c1').build()
         then:
         docker.runCommand == 'docker run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --name c1 busybox'
@@ -214,7 +223,8 @@ class DockerBuilderTest extends Specification {
         docker.killCommand == 'docker stop c1'
 
         when:
-        docker =  new DockerBuilder('busybox').setName('c2').params(sudo: true, remove: true).build()
+        config = new DockerConfig(sudo: true, remove: true)
+        docker = new DockerBuilder('busybox', config).setName('c2').build()
         then:
         docker.runCommand == 'sudo docker run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --name c2 busybox'
         docker.removeCommand == 'sudo docker rm c2'
@@ -222,7 +232,8 @@ class DockerBuilderTest extends Specification {
 
 
         when:
-        docker =  new DockerBuilder('busybox').setName('c3').params(remove: true).build()
+        config = new DockerConfig(remove: true)
+        docker = new DockerBuilder('busybox', config).setName('c3').build()
         then:
         docker.runCommand == 'docker run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --name c3 busybox'
         docker.removeCommand == 'docker rm c3'
@@ -234,7 +245,8 @@ class DockerBuilderTest extends Specification {
         docker.killCommand == 'docker kill -s SIGKILL c4'
 
         when:
-        docker =  new DockerBuilder('busybox').setName('c5').params(kill: false,remove: false).build()
+        config = new DockerConfig(remove: false)
+        docker = new DockerBuilder('busybox', config).setName('c5').params(kill: false).build()
         then:
         docker.killCommand == null
         docker.removeCommand == null
@@ -264,7 +276,8 @@ class DockerBuilderTest extends Specification {
     def 'should return mount flags'() {
 
         given:
-        def builder = new DockerBuilder().params(mountFlags: flags)
+        def config = new DockerConfig(mountFlags: flags)
+        def builder = new DockerBuilder('busybox', config)
 
         expect:
         builder.mountFlags(readOnly) == expected

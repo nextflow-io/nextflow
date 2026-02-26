@@ -17,12 +17,16 @@
 
 package nextflow.container.inspect
 
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Executors
+
 import groovy.json.JsonBuilder
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.dag.DAG
 import nextflow.exception.AbortOperationException
+import nextflow.processor.TaskRun
+import nextflow.script.ScriptMeta
 import org.codehaus.groovy.util.ListHashMap
 /**
  * Preview the list of containers used by a pipeline.
@@ -33,14 +37,14 @@ import org.codehaus.groovy.util.ListHashMap
 @CompileStatic
 class ContainersInspector {
 
-    private DAG dag
-
     private String format
 
     private boolean ignoreErrors
 
-    ContainersInspector(DAG dag) {
-        this.dag = dag
+    private boolean concretize
+
+    ContainersInspector(boolean concretize) {
+        this.concretize = concretize
     }
 
     ContainersInspector withFormat(String format) {
@@ -75,15 +79,15 @@ class ContainersInspector {
     protected Map<String,String> getContainers() {
         final containers = new ListHashMap<String,String>()
 
-        for( def vertex : dag.vertices ) {
-            // skip nodes that are not processes
-            final process = vertex.process
-            if( !process )
-                continue
-
+        List<TaskRun> tasks = new ArrayList<>()
+        for( final process : ScriptMeta.allProcesses() ) {
             try {
                 // get container preview
-                containers[process.name] = process.createTaskPreview().getContainer()
+                final task = process.createTaskProcessor().createTaskPreview()
+                final containerName = task.getContainer()
+                containers[process.name] = containerName
+                if( containerName )
+                    tasks.add(task)
             }
             catch( Exception e ) {
                 if( ignoreErrors )
@@ -92,8 +96,40 @@ class ContainersInspector {
                     throw e
             }
         }
-
+        // await for containers to be
+        if( concretize ) {
+            await(tasks)
+        }
         return containers
+    }
+
+    protected void await(List<TaskRun> tasks) {
+        if( !tasks )
+            return
+        final executor = Executors.newFixedThreadPool(10)
+        CompletableFuture<Void>[] futures = new CompletableFuture<Void>[tasks.size()]
+        for( int i=0; i<tasks.size(); i++ ) {
+            final t = tasks[i]
+            futures[i] = CompletableFuture.runAsync(() -> {
+                try {
+                    int c=0
+                    while( !t.isContainerReady() ) {
+                        Thread.sleep(c++< 10 ? 1_000 : 5_000)
+                    }
+                }
+                catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }, executor)
+        }
+
+        // Wait for all tasks to complete
+        CompletableFuture<Void> allFutures = CompletableFuture.allOf(futures)
+
+        // Block until all tasks are completed
+        allFutures.join();  // This will wait until all tasks complete
+        // Shut down the executor
+        executor.shutdown()
     }
 
     protected String renderConfig(Map<String,String> containers) {

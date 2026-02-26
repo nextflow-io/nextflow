@@ -48,11 +48,14 @@ class ScriptMeta {
 
     static private Map<BaseScript,ScriptMeta> REGISTRY = new HashMap<>(10)
 
+    static private Map<Path,BaseScript> scriptsByPath = new HashMap<>(10)
+
     static private Set<String> resolvedProcessNames = new HashSet<>(20)
 
     @TestOnly
     static void reset() {
         REGISTRY.clear()
+        scriptsByPath.clear()
         resolvedProcessNames.clear()
     }
 
@@ -61,12 +64,26 @@ class ScriptMeta {
         return REGISTRY.get(script)
     }
 
+    static BaseScript getScriptByPath(Path path) {
+        return scriptsByPath.get(path)
+            ?: scriptsByPath.get(path.toRealPath())
+    }
+
     static Set<String> allProcessNames() {
         def result = new HashSet()
         for( ScriptMeta entry : REGISTRY.values() )
             result.addAll( entry.getProcessNames() )
         // add all resolved names
         result.addAll(resolvedProcessNames)
+        return result
+    }
+
+    static Set<ProcessDef> allProcesses() {
+        final result = new HashSet()
+        for( final entry : REGISTRY.values() ) {
+            final processes = entry.getDefinitions().findAll { d -> d instanceof ProcessDef }
+            result.addAll(processes)
+        }
         return result
     }
 
@@ -85,8 +102,8 @@ class ScriptMeta {
         get(ExecutionStack.script())
     }
 
-    /** the script {@link Class} object */
-    private Class<? extends BaseScript> clazz
+    /** the script object */
+    private BaseScript script
 
     /** The location path from where the script has been loaded */
     private Path scriptPath
@@ -106,26 +123,22 @@ class ScriptMeta {
 
     Path getModuleDir () { scriptPath?.parent }
 
-    String getScriptName() { clazz.getName() }
+    String getScriptName() { script.getClass().getName() }
 
     boolean isModule() { module }
 
     ScriptMeta(BaseScript script) {
-        this.clazz = script.class
+        this.script = script
         for( def entry : definedFunctions0(script) ) {
             addDefinition(entry)
         }
     }
 
-    /** only for testing */
-    protected ScriptMeta() {}
-
-    @PackageScope
     void setScriptPath(Path path) {
+        scriptsByPath.put(path, script)
         scriptPath = path
     }
 
-    @PackageScope
     void setModule(boolean val) {
         this.module = val
     }
@@ -187,7 +200,8 @@ class ScriptMeta {
         final name = component.name
         if( !module && NF.hasOperator(name) )
             log.warn "${component.type.capitalize()} with name '$name' overrides a built-in operator with the same name"
-        checkComponentName(component, name)
+        if( !NF.isSyntaxParserV2() )
+            checkComponentName(component, name)
         definitions.put(component.name, component)
         if( component instanceof FunctionDef ){
             incFunctionCount(name)
@@ -244,7 +258,7 @@ class ScriptMeta {
         final result = new HashSet(definitions.size() + imports.size())
         // local definitions
         for( def item : definitions.values() ) {
-            if( item instanceof WorkflowDef )
+            if( item instanceof WorkflowDef && item.name )
                 result.add(item.name)
         }
         // processes from imports
@@ -289,6 +303,26 @@ class ScriptMeta {
         return result
     }
 
+    /**
+     * Check if this script has standalone processes that can be executed
+     * automatically without requiring workflows
+     * 
+     * @return true if the script has one or more processes and no workflows
+     */
+    boolean hasExecutableProcesses() {
+        // Don't allow execution of true modules (those are meant for inclusion)
+        if( isModule() )
+            return false
+        
+        // Must have at least one process
+        final processNames = getLocalProcessNames()
+        if( processNames.isEmpty() )
+            return false
+        
+        // Must not have any workflow definitions (including unnamed workflow)
+        return getLocalWorkflowNames().isEmpty()
+    }
+
     void addModule(BaseScript script, String name, String alias) {
        addModule(get(script), name, alias)
     }
@@ -307,13 +341,12 @@ class ScriptMeta {
         assert component
 
         final name = alias ?: component.name
-        checkComponentName(component, name)
-        if( name != component.name ) {
+        if( !NF.isSyntaxParserV2() )
+            checkComponentName(component, name)
+        if( name != component.name )
             imports.put(name, component.cloneWithName(name))
-        }
-        else {
+        else
             imports.put(name, component)
-        }
     }
 
     @Memoized

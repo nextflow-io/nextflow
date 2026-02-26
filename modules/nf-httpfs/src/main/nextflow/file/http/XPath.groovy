@@ -45,6 +45,11 @@ class XPath implements Path {
 
     private String query
 
+    /*
+     * Only needed to prevent serialization issues - see https://github.com/nextflow-io/nextflow/issues/5208
+     */
+    protected XPath(){}
+
     XPath(XFileSystem fs, String path) {
         this(fs, path, EMPTY)
     }

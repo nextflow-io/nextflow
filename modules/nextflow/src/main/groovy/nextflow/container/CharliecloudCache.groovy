@@ -29,6 +29,7 @@ import groovyx.gpars.dataflow.LazyDataflowVariable
 import nextflow.Global
 import nextflow.file.FileMutex
 import nextflow.util.Duration
+import nextflow.util.TestOnly
 /**
  * Handle caching of remote Charliecloud images
  *
@@ -42,27 +43,25 @@ class CharliecloudCache {
 
     static final private Map<String,DataflowVariable<Path>> localImageNames = new ConcurrentHashMap<>()
 
-    private ContainerConfig config
+    private CharliecloudConfig config
 
     private Map<String,String> env
 
     private boolean missingCacheDir
 
-    private Duration pullTimeout = Duration.of('20min')
-
     private String registry
 
-    /** Only for debugging purpose - do not use */
+    @TestOnly
     @PackageScope
     CharliecloudCache() {}
 
     /**
      * Create a Charliecloud cache object
      *
-     * @param config A {@link ContainerConfig} object
+     * @param config A {@link CharliecloudConfig} object
      * @param env The environment configuration object. Specifying {@code null} the current system environment is used
      */
-    CharliecloudCache(ContainerConfig config, Map<String,String> env=null) {
+    CharliecloudCache(CharliecloudConfig config, Map<String,String> env=null) {
         this.config = config
         this.env = env ?: System.getenv()
     }
@@ -117,9 +116,10 @@ class CharliecloudCache {
     /**
      * Retrieve the directory where to store the charliecloud images once downloaded.
      * It tries these settings in the following order:
-     * 1) {@code charliecloud.cacheDir} setting in the nextflow config file
-     * 2) the {@code NXF_CHARLIECLOUD_CACHEDIR} environment variable
-     * 3) the {@code $workDir/charliecloud} path
+     * 1) If writeFake is enabled, the {@code CH_IMAGE_STORAGE} environment variable.
+     * 2) {@code charliecloud.cacheDir} setting in the nextflow config file
+     * 3) the {@code NXF_CHARLIECLOUD_CACHEDIR} environment variable
+     * 4) the {@code $workDir/charliecloud} path
      *
      * @return
      *      the {@code Path} where store the charliecloud images as flattened directories
@@ -127,30 +127,39 @@ class CharliecloudCache {
     @PackageScope
     Path getCacheDir() {
 
-        if( config.pullTimeout )
-            pullTimeout = config.pullTimeout as Duration
+        String str = config.cacheDir
 
-        def str = config.cacheDir as String
-        if( str )
+        final charliecloudImageStorage = env.get('CH_IMAGE_STORAGE')
+
+        if( charliecloudImageStorage && config.writeFake) {
+            return checkDir(charliecloudImageStorage)
+        }
+            
+        if( str ) {
+            // If charliecloudImageStorage exists and writeFake is true, we never get here
+            if( str.equals( charliecloudImageStorage ) ) {
+                throw new Exception("`charliecloud.cacheDir` configuration parameter must be different from env variable `CH_IMAGE_STORAGE`")
+            }
             return checkDir(str)
+        }
 
         str = env.get('NXF_CHARLIECLOUD_CACHEDIR')
-        if( str )
-            return checkDir(str)
 
-        str = env.get('CH_IMAGE_STORAGE')
-        if( str )
+        if( str ) {
+            if( str.equals( charliecloudImageStorage ) ) {
+                throw new Exception("`NXF_CHARLIECLOUD_CACHEDIR` env variable must be different from env variable `CH_IMAGE_STORAGE`")
+            }
             return checkDir(str)
+        }
 
-        def workDir = Global.session.workDir
+        final workDir = Global.session.workDir
+
         if( workDir.fileSystem != FileSystems.default ) {
             throw new IOException("Charliecloud cannot store image in a remote work directory -- Use a POSIX compatible work directory or specify an alternative path with the `NXF_CHARLIECLOUD_CACHEDIR` env variable")
         }
 
         missingCacheDir = true
-        def result = workDir.resolve('charliecloud')
-
-        return result
+        return workDir.resolve('charliecloud')
     }
 
     /**
@@ -232,10 +241,10 @@ class CharliecloudCache {
     int runCommand( String cmd, Path storePath ) {
         log.trace """Charliecloud pull
                      command: $cmd
-                     timeout: $pullTimeout
+                     timeout: $config.pullTimeout
                      folder : $storePath""".stripIndent(true)
 
-        final max = pullTimeout.toMillis()
+        final max = config.pullTimeout.toMillis()
         final builder = new ProcessBuilder(['bash','-c',cmd])
         builder.environment().remove('CH_IMAGE_STORAGE')
         final proc = builder.start()
@@ -245,7 +254,7 @@ class CharliecloudCache {
         def status = proc.exitValue()
         if( status != 0 ) {
             consumer.join()
-            def msg = "Charliecloud failed to pull image\n  command: $cmd\n  status : $status\n  hint   : Try and increase charliecloud.pullTimeout in the config (current is \"${pullTimeout}\")\n  message:\n"
+            def msg = "Charliecloud failed to pull image\n  command: $cmd\n  status : $status\n  hint   : Try and increase charliecloud.pullTimeout in the config (current is \"${config.pullTimeout}\")\n  message:\n"
             msg += err.toString().trim().indent('    ')
             throw new IllegalStateException(msg)
         }

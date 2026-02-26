@@ -16,16 +16,13 @@
 
 package nextflow.script
 
-import java.nio.file.Path
-
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import groovyx.gpars.dataflow.DataflowWriteChannel
+import groovyx.gpars.dataflow.DataflowVariable
+import nextflow.Session
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
-import nextflow.extension.MixOp
 import nextflow.extension.PublishOp
-import nextflow.file.FileHelper
 /**
  * Implements the DSL for publishing workflow outputs
  *
@@ -35,128 +32,72 @@ import nextflow.file.FileHelper
 @CompileStatic
 class OutputDsl {
 
-    private Map<String,Map> publishConfigs = [:]
+    private Map<String,Map> declarations = [:]
 
-    private Path directory
+    private Map<String,DataflowVariable> output = [:]
 
-    private Map defaults = [:]
+    void declare(String name, Closure closure) {
+        if( declarations.containsKey(name) )
+            throw new ScriptRuntimeException("Workflow output '${name}' is declared more than once in the workflow output block")
 
-    private volatile List<PublishOp> ops = []
-
-    void directory(String directory) {
-        if( this.directory )
-            throw new ScriptRuntimeException("Publish directory cannot be defined more than once in the workflow publish definition")
-        this.directory = FileHelper.toCanonicalPath(directory)
-    }
-
-    void contentType(String value) {
-        setDefault('contentType', value)
-    }
-
-    void contentType(boolean value) {
-        setDefault('contentType', value)
-    }
-
-    void ignoreErrors(boolean value) {
-        setDefault('ignoreErrors', value)
-    }
-
-    void mode(String value) {
-        setDefault('mode', value)
-    }
-
-    void overwrite(boolean value) {
-        setDefault('overwrite', value)
-    }
-
-    void overwrite(String value) {
-        setDefault('overwrite', value)
-    }
-
-    void storageClass(String value) {
-        setDefault('storageClass', value)
-    }
-
-    void tags(Map value) {
-        setDefault('tags', value)
-    }
-
-    void enabled( boolean value ) {
-        setDefault('enabled', value)
-    }
-
-    private void setDefault(String name, Object value) {
-        if( defaults.containsKey(name) )
-            throw new ScriptRuntimeException("Default `${name}` option cannot be defined more than once in the workflow publish definition")
-        defaults[name] = value
-    }
-
-    void target(String name, Closure closure) {
-        if( publishConfigs.containsKey(name) )
-            throw new ScriptRuntimeException("Target '${name}' is defined more than once in the workflow publish definition")
-
-        final dsl = new TargetDsl()
+        final dsl = new DeclareDsl()
         final cl = (Closure)closure.clone()
         cl.setResolveStrategy(Closure.DELEGATE_FIRST)
         cl.setDelegate(dsl)
         cl.call()
 
-        publishConfigs[name] = dsl.getOptions()
+        declarations[name] = dsl.getOptions()
     }
 
-    void build(Map<DataflowWriteChannel,String> targets) {
-        // construct mapping of target name -> source channels
-        final Map<String,List<DataflowWriteChannel>> publishSources = [:]
-        for( final source : targets.keySet() ) {
-            final name = targets[source]
-            if( !name )
-                continue
-            if( name !in publishSources )
-                publishSources[name] = []
-            publishSources[name] << source
+    void apply(Session session) {
+        final outputs = session.outputs
+        final defaults = session.config.navigate('workflow.output', Collections.emptyMap()) as Map
+
+        // make sure every output was assigned
+        for( final name : declarations.keySet() ) {
+            if( !outputs.containsKey(name) )
+                throw new ScriptRuntimeException("Workflow output '${name}' was declared in the output block but not assigned in the workflow")
         }
 
-        // create publish op (and optional index op) for each target
-        for( final name : publishSources.keySet() ) {
-            final sources = publishSources[name]
-            final mixed = sources.size() > 1
-                ? new MixOp(sources.collect( ch -> CH.getReadChannel(ch) )).apply()
-                : sources.first()
-            final opts = publishOptions(name, publishConfigs[name] ?: [:])
+        for( final name : outputs.keySet() ) {
+            if( !declarations.containsKey(name) )
+                throw new ScriptRuntimeException("Workflow output '${name}' was assigned in the workflow but not declared in the output block")
+        }
 
-            ops << new PublishOp(CH.getReadChannel(mixed), opts).apply()
+        // create publish op for each output
+        for( final name : outputs.keySet() ) {
+            final source = outputs[name]
+            final overrides = declarations[name] ?: Collections.emptyMap()
+            final opts = publishOptions(name, defaults, overrides)
+
+            if( opts.enabled == null || opts.enabled )
+                output[name] = new PublishOp(session, name, CH.getReadChannel(source), opts).apply()
         }
     }
 
-    private Map publishOptions(String name, Map overrides) {
-        if( !directory )
-            directory = FileHelper.toCanonicalPath('.')
-
+    private Map publishOptions(String name, Map defaults, Map overrides) {
         final opts = defaults + overrides
         if( opts.containsKey('ignoreErrors') )
             opts.failOnError = !opts.remove('ignoreErrors')
         if( !opts.containsKey('overwrite') )
             opts.overwrite = 'standard'
 
-        final path = opts.path as String ?: name
+        final path = opts.path as String ?: '.'
         if( path.startsWith('/') )
-            throw new ScriptRuntimeException("Invalid publish target path '${path}' -- it should be a relative path")
-        opts.path = directory.resolve(path)
+            throw new ScriptRuntimeException("Invalid path '${path}' for workflow output '${name}' -- it must be a relative path")
+        opts.path = path
 
         if( opts.index && !(opts.index as Map).path )
-            throw new ScriptRuntimeException("Index file definition for publish target '${name}' is missing `path` option")
+            throw new ScriptRuntimeException("Index file definition for workflow output '${name}' is missing `path` option")
 
         return opts
     }
 
-    boolean getComplete() {
-        for( final op : ops )
-            if( !op.complete )
-                return false
-        return true
+    Map<String,Object> getOutput() {
+        output.collectEntries { name, dv -> [name, dv.get()] }
     }
 
-    static class TargetDsl {
+    static class DeclareDsl {
 
         private Map opts = [:]
 
@@ -166,6 +107,10 @@ class OutputDsl {
 
         void contentType(boolean value) {
             setOption('contentType', value)
+        }
+
+        void enabled(boolean value) {
+            setOption('enabled', value)
         }
 
         void ignoreErrors(boolean value) {
@@ -179,6 +124,15 @@ class OutputDsl {
             cl.setDelegate(dsl)
             cl.call()
             setOption('index', dsl.getOptions())
+        }
+
+        void label(CharSequence value) {
+            final opts = getOptions()
+            final current = opts.get('labels')
+            if( current instanceof List )
+                current.add(value)
+            else
+                opts.put('labels', [value])
         }
 
         void mode(String value) {
@@ -197,6 +151,11 @@ class OutputDsl {
             setOption('path', value)
         }
 
+        void path(Closure value) {
+            setOption('path', '.')
+            setOption('pathResolver', value)
+        }
+
         void storageClass(String value) {
             setOption('storageClass', value)
         }
@@ -205,13 +164,9 @@ class OutputDsl {
             setOption('tags', value)
         }
 
-        void enabled( boolean value ) {
-            setOption('enabled', value)
-        }
-
         private void setOption(String name, Object value) {
             if( opts.containsKey(name) )
-                throw new ScriptRuntimeException("Publish option `${name}` cannot be defined more than once for a given target")
+                throw new ScriptRuntimeException("Publish option `${name}` cannot be defined more than once for a workflow output")
             opts[name] = value
         }
 
@@ -233,8 +188,8 @@ class OutputDsl {
             setOption('header', value)
         }
 
-        void mapper(Closure value) {
-            setOption('mapper', value)
+        void header(String... value) {
+            setOption('header', value as List)
         }
 
         void path(String value) {

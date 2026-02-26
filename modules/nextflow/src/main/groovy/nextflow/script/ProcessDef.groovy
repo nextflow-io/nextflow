@@ -18,17 +18,20 @@ package nextflow.script
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import groovyx.gpars.dataflow.DataflowBroadcast
+import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Const
 import nextflow.Global
 import nextflow.Session
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
+import nextflow.extension.CombineOp
+import nextflow.processor.TaskProcessor
+import nextflow.script.dsl.ProcessConfigBuilder
 import nextflow.script.params.BaseInParam
 import nextflow.script.params.BaseOutParam
 import nextflow.script.params.EachInParam
-import nextflow.script.params.InputsList
-import nextflow.script.params.OutputsList
 
 /**
  * Models a nextflow process definition
@@ -64,64 +67,38 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
     private String baseName
 
     /**
-     * The closure holding the process definition body
-     */
-    private Closure<BodyDef> rawBody
-
-    /**
      * The resolved process configuration
      */
-    private transient ProcessConfig processConfig
+    private ProcessConfig processConfig
 
     /**
      * The actual process implementation
      */
-    private transient BodyDef taskBody
+    private BodyDef taskBody
 
     /**
      * The result of the process execution
      */
     private transient ChannelOut output
 
-    ProcessDef(BaseScript owner, Closure<BodyDef> body, String name ) {
+    ProcessDef(BaseScript owner, String name, ProcessConfig config, BodyDef taskBody) {
         this.owner = owner
-        this.rawBody = body
         this.simpleName = name
         this.processName = name
         this.baseName = name
+        this.processConfig = config
+        this.taskBody = taskBody
     }
 
     static String stripScope(String str) {
         str.split(Const.SCOPE_SEP).last()
     }
 
-    protected void initialize() {
-        log.trace "Process config > $processName"
-        assert processConfig==null
-
-        // the config object
-        processConfig = new ProcessConfig(owner,processName)
-
-        // Invoke the code block which will return the script closure to the executed.
-        // As side effect will set all the property declarations in the 'taskConfig' object.
-        processConfig.throwExceptionOnMissingProperty(true)
-        final copy = (Closure)rawBody.clone()
-        copy.setResolveStrategy(Closure.DELEGATE_FIRST)
-        copy.setDelegate(processConfig)
-        taskBody = copy.call() as BodyDef
-        processConfig.throwExceptionOnMissingProperty(false)
-        if ( !taskBody )
-            throw new ScriptRuntimeException("Missing script in the specified process block -- make sure it terminates with the script string to be executed")
-
-        // apply config settings to the process
-        processConfig.applyConfig((Map)session.config.process, baseName, simpleName, processName)
-    }
-
     @Override
     ProcessDef clone() {
         def result = (ProcessDef)super.clone()
+        result.@processConfig = processConfig.clone()
         result.@taskBody = taskBody?.clone()
-        result.@rawBody = (Closure)rawBody?.clone()
         return result
     }
 
@@ -131,12 +108,9 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         def result = clone()
         result.@processName = name
         result.@simpleName = stripScope(name)
+        result.@processConfig.processName = name
         return result
     }
-
-    private InputsList getDeclaredInputs() { processConfig.getInputs() }
-
-    private OutputsList getDeclaredOutputs() { processConfig.getOutputs() }
 
     BaseScript getOwner() { owner }
 
@@ -159,17 +133,29 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
     String getType() { 'process' }
 
     private String missMatchErrMessage(String name, int expected, int actual) {
-        final ch = expected > 1 ? "channels" : "channel"
-        return "Process `$name` declares ${expected} input ${ch} but ${actual} were specified"
+        return "Process `$name` declares ${expected} ${expected == 1 ? 'input' : 'inputs'} but was called with ${actual} ${actual == 1 ? 'argument' : 'arguments'}"
     }
 
     @Override
     Object run(Object[] args) {
-        // initialise process config
-        initialize()
+        // invoke process with legacy inputs/outputs
+        if( processConfig instanceof ProcessConfigV1 )
+            output = runV1(args, processConfig)
 
+        // invoke process with typed inputs/outputs
+        else if( processConfig instanceof ProcessConfigV2 )
+            output = runV2(args, processConfig)
+
+        // return process output
+        return output
+    }
+
+    private ChannelOut runV1(Object[] args, ProcessConfigV1 config) {
         // get params 
         final params = ChannelOut.spread(args)
+        final declaredInputs = config.getInputs()
+        final declaredOutputs = config.getOutputs()
+
         // sanity check
         if( params.size() != declaredInputs.size() )
             throw new ScriptRuntimeException(missMatchErrMessage(processName, declaredInputs.size(), params.size()))
@@ -207,30 +193,82 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         }
 
         // make a copy of the output list because execution can change it
-        output = new ChannelOut(declaredOutputs.clone())
+        final output = new ChannelOut(declaredOutputs.clone())
 
-        // register process publish targets
-        for( final entry : processConfig.getPublishTargets() ) {
-            final emit = entry.key
-            final name = entry.value
-            final source = (DataflowWriteChannel)output.getProperty(emit)
-            session.publishTargets[source] = name
-        }
-
-        // create the executor
-        final executor = session
-                .executorFactory
-                .getExecutor(processName, processConfig, taskBody, session)
-
-        // create processor class
-        session
-                .newProcessFactory(owner)
-                .newTaskProcessor(processName, executor, processConfig, taskBody)
-                .run()
+        // start processor
+        createTaskProcessor().run()
 
         // the result channels
         assert declaredOutputs.size()>0, "Process output should contains at least one channel"
         return output
+    }
+
+    private ChannelOut runV2(Object[] args0, ProcessConfigV2 config) {
+        final args = ChannelOut.spread(args0)
+        final declaredInputs = config.getInputs()
+        final declaredOutputs = config.getOutputs()
+
+        // validate arguments
+        if( args.size() != declaredInputs.size() )
+            throw new ScriptRuntimeException(missMatchErrMessage(processName, declaredInputs.size(), args.size()))
+
+        // set input channels
+        for( int i = 0; i < declaredInputs.size(); i++ )
+            declaredInputs[i].setChannel(createSourceChannel(args[i]))
+
+        // set output channels
+        final singleton = declaredInputs.isSingleton()
+
+        final feedbackChannels = getFeedbackChannels()
+        if( feedbackChannels && feedbackChannels.size() != declaredOutputs.size() )
+            throw new ScriptRuntimeException("Process `$processName` inputs and outputs do not have the same cardinality - Feedback loop is not supported"  )
+
+        final channels = new LinkedHashMap<String,DataflowWriteChannel>()
+        for( int i = 0; i < declaredOutputs.size(); i++ ) {
+            final param = declaredOutputs[i]
+            final ch = feedbackChannels ? feedbackChannels[i] : CH.create(singleton)
+            param.setChannel(ch)
+            channels.put(param.getName(), ch)
+        }
+
+        for( final topic : declaredOutputs.getTopics() ) {
+            final ch = CH.createTopicSource(topic.getTarget())
+            topic.setChannel(ch)
+        }
+
+        // start processor
+        createTaskProcessor().run()
+
+        return new ChannelOut(channels)
+    }
+
+    private DataflowReadChannel createSourceChannel(Object value) {
+        if( value instanceof DataflowReadChannel || value instanceof DataflowBroadcast )
+            return CH.getReadChannel(value)
+
+        final result = CH.value()
+        result.bind(value)
+        return result
+    }
+
+    TaskProcessor createTaskProcessor() {
+        // apply process directives from config settings
+        applyConfig()
+
+        // create executor for process
+        final executor = session
+            .executorFactory
+            .getExecutor(processName, processConfig, taskBody, session)
+
+        // create task processor for process
+        return session
+            .newProcessFactory(owner)
+            .newTaskProcessor(processName, executor, processConfig, taskBody)
+    }
+
+    protected void applyConfig() {
+        final configProcessScope = (Map)session.config.process
+        new ProcessConfigBuilder(processConfig).applyConfig(configProcessScope, baseName, simpleName, processName)
     }
 
 }

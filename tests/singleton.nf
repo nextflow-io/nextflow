@@ -17,8 +17,9 @@
 
 process foo {
   output:
-  file x
+  file 'x'
 
+  script:
   '''
   echo -n Hello > x
   '''
@@ -29,6 +30,7 @@ process bar {
   file x
   val y
 
+  script:
   """
   cat $x
   echo $y

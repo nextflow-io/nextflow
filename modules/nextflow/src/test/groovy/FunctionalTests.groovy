@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
-import nextflow.config.ConfigParser
-import nextflow.exception.AbortRunException
+import java.nio.file.Files
+
 import nextflow.processor.TaskProcessor
 import nextflow.util.MemoryUnit
 import spock.lang.Timeout
 import test.Dsl2Spec
-import test.MockScriptRunner
+
+import static test.ScriptHelper.*
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -28,35 +29,10 @@ import test.MockScriptRunner
 @Timeout(10)
 class FunctionalTests extends Dsl2Spec {
 
-    /*
-     * test passing values through command line argument (unnamed parameters)
-     */
-    def 'test args'()  {
-
-        given:
-        def script = """
-            def len = args.size()
-            def x = args[0]
-            def y = args[1]
-
-            return [ x, y, len ]
-            """
-
-        when:
-        def result = new MockScriptRunner().setScript(script).execute(['hello', 'hola'])
-
-        then:
-        result[0] == 'hello'
-        result[1] == 'hola'
-        result[2] == 2
-
-    }
-
-
     def 'test configure processor'() {
 
         given:
-        def config = '''
+        def config = loadConfig('''
              process {
                 dummyField = 99
                 executor = 'nope'
@@ -65,7 +41,7 @@ class FunctionalTests extends Dsl2Spec {
                 maxForks = 10
                 environment = [a:1, b:2,c:3]
             }
-            '''
+            ''')
 
         and:
         def script = '''
@@ -73,6 +49,8 @@ class FunctionalTests extends Dsl2Spec {
             process taskHello {
                 debug true
                 maxForks 11
+
+                script:
                 'echo hello'
             }
 
@@ -80,9 +58,7 @@ class FunctionalTests extends Dsl2Spec {
             '''
 
         when:
-        new MockScriptRunner(new ConfigParser().parse(config))
-                .setScript(script)
-                .execute()
+        loadScript(script, config: config)
         def processor = TaskProcessor.currentProcessor()
 
         then:
@@ -99,9 +75,9 @@ class FunctionalTests extends Dsl2Spec {
     def 'should define default ext property' () {
 
         given:
-        def config = '''
+        def config = loadConfig('''
             process.ext.foo = 'hello'
-        '''
+        ''')
         and:
         def script = '''
 
@@ -116,9 +92,7 @@ class FunctionalTests extends Dsl2Spec {
             '''
 
         when:
-        new MockScriptRunner(new ConfigParser().parse(config))
-                .setScript(script)
-                .execute()
+        loadScript(script, config: config)
         def processor = TaskProcessor.currentProcessor()
         then:
         processor instanceof TaskProcessor
@@ -129,7 +103,7 @@ class FunctionalTests extends Dsl2Spec {
 
     def 'test merge ext properties' () {
         given:
-        def config = '''
+        def config = loadConfig('''
             process {
                 ext {
                     alpha = "aaa"
@@ -142,7 +116,7 @@ class FunctionalTests extends Dsl2Spec {
                     }
                 }
             }
-        '''
+        ''')
         and:
         def script = '''
 
@@ -155,9 +129,7 @@ class FunctionalTests extends Dsl2Spec {
             '''
 
         when:
-        new MockScriptRunner(new ConfigParser().parse(config))
-                .setScript(script)
-                .execute()
+        loadScript(script, config: config)
         def processor = TaskProcessor.currentProcessor()
         then:
         processor instanceof TaskProcessor
@@ -170,14 +142,14 @@ class FunctionalTests extends Dsl2Spec {
     def 'test configure processor with dynamic resources'() {
 
         setup:
-        def config = '''
+        def config = loadConfig('''
              process {
                 cpus = { 2 * task.attempt }
                 memory = { 1.GB * task.attempt  }
                 time = { 1.h * task.attempt }
                 withName: taskHello{ errorStrategy = 'finish' }
             }
-            '''
+            ''')
 
         and:
         def script = '''
@@ -196,9 +168,7 @@ class FunctionalTests extends Dsl2Spec {
             '''
 
         when:
-        new MockScriptRunner(new ConfigParser().parse(config))
-                .setScript(script)
-                .execute()
+        loadScript(script, config: config)
         def processor = TaskProcessor.currentProcessor()
 
         then:
@@ -217,47 +187,45 @@ class FunctionalTests extends Dsl2Spec {
          * A config with a `memory` definition for all process
          * and two labels `small` and `big`
          */
-        String config = '''
+        def config = loadConfig('''
             process {
                 executor = 'nope'
                 memory = 2.GB
-                
+
                 withLabel: small {
-                    cpus = 2 
+                    cpus = 2
                     queue = 'the-small-one'
                 }
-                
+
                 withLabel: big {
-                    cpus = 8 
+                    cpus = 8
                     memory = 4.GB
-                    queue = 'big-partition'                
+                    queue = 'big-partition'
                 }
-                
+
                 withName: legacy {
-                    cpus = 3 
+                    cpus = 3
                     queue = 'legacy-queue'
                 }
             }
-            '''
+            ''')
 
         and:
             /*
              * no label is specified it should only use default directives
              */
-            String script = '''   
+            def script = '''
 
                 process foo {
                     script:
                     'echo hello'
                 }
-                
+
                 workflow { foo() }
                 '''
 
         when:
-            new MockScriptRunner(new ConfigParser().parse(config))
-                    .setScript(script)
-                    .execute()
+            loadScript(script, config: config)
             def processor = TaskProcessor.currentProcessor()
 
         then:
@@ -270,21 +238,19 @@ class FunctionalTests extends Dsl2Spec {
             /*
              * the `small` label is applied
              */
-            script = '''   
+            script = '''
 
                 process foo {
                     label 'small'
                     script:
                     'echo hello'
                 }
-                
+
                 workflow { foo() }
                 '''
 
         and:
-            new MockScriptRunner(new ConfigParser().parse(config))
-                    .setScript(script)
-                    .execute()
+            loadScript(script, config: config)
             processor = TaskProcessor.currentProcessor()
 
         then:
@@ -304,13 +270,11 @@ class FunctionalTests extends Dsl2Spec {
                     script:
                     'echo hello'
                 }
-                
+
                 workflow { foo() }
                 '''
         and:
-            new MockScriptRunner(new ConfigParser().parse(config))
-                    .setScript(script)
-                    .execute()
+            loadScript(script, config: config)
             processor = TaskProcessor.currentProcessor()
 
         then:
@@ -327,19 +291,17 @@ class FunctionalTests extends Dsl2Spec {
         */
         script = '''
                 process legacy {
-                    cpus 1 
+                    cpus 1
                     queue 'one'
                     script:
                     'echo hello'
                 }
-                
+
                 workflow { legacy() }
                 '''
 
         and:
-            new MockScriptRunner(new ConfigParser().parse(config))
-                    .setScript(script)
-                    .execute()
+            loadScript(script, config: config)
             processor = TaskProcessor.currentProcessor()
 
         then:
@@ -356,42 +318,40 @@ class FunctionalTests extends Dsl2Spec {
          * A config with a `memory` definition for all process
          * and two labels `small` and `big`
          */
-        String config = '''
+        def config = loadConfig('''
             process {
-                executor = 'nope' 
-                
+                executor = 'nope'
+
                 withLabel: small {
-                    cpus = 2 
+                    cpus = 2
                     queue = 'the-small-one'
                 }
-                
+
                 withName: bar {
-                    cpus = 8 
+                    cpus = 8
                     memory = 4.GB
-                    queue = 'big-partition'                
+                    queue = 'big-partition'
                 }
             }
-            '''
+            ''')
 
         and:
         /*
          * no label is specified it should only use default directives
          */
-        String script = '''   
+        def script = '''
 
                 process foo {
                     label 'small'
                     script:
                     'echo hello'
                 }
-                
+
                 workflow { foo() }
                 '''
 
         when:
-        new MockScriptRunner(new ConfigParser().parse(config))
-                .setScript(script)
-                .execute()
+        loadScript(script, config: config)
         def processor = TaskProcessor.currentProcessor()
 
         then:
@@ -404,20 +364,18 @@ class FunctionalTests extends Dsl2Spec {
         /*
          * no label is specified it should only use default directives
          */
-        script = '''   
+        script = '''
 
                 process bar {
                     label 'small'
                     script:
                     'echo hello'
                 }
-                
+
                 workflow { bar() }
                 '''
         and:
-        new MockScriptRunner(new ConfigParser().parse(config))
-                .setScript(script)
-                .execute()
+        loadScript(script, config: config)
         processor = TaskProcessor.currentProcessor()
 
         then:
@@ -428,29 +386,27 @@ class FunctionalTests extends Dsl2Spec {
 
     def 'should set module directive' () {
         given:
-        String config = '''
+        def config = loadConfig('''
             process {
                 executor = 'nope'
                 withLabel: 'my_env' {
                     module = 'ncbi-blast/2.2.27:t_coffee/10.0:clustalw/2.1'
                 }
             }
-            '''
+            ''')
         and:
-        String script = '''   
+        def script = '''
                 process foo {
                     module 'mod-a/1.1:mod-b/2.2'
                     script:
                     'echo hello'
                 }
-                
+
                 workflow { foo() }
                 '''
 
         when:
-        new MockScriptRunner(new ConfigParser().parse(config))
-                .setScript(script)
-                .execute()
+        loadScript(script, config: config)
         def processor = TaskProcessor.currentProcessor()
         then:
         processor instanceof TaskProcessor
@@ -459,29 +415,27 @@ class FunctionalTests extends Dsl2Spec {
 
 
         when:
-        config = '''
+        config = loadConfig('''
             process {
                 executor = 'nope'
                 withLabel: 'my_env' {
                     module = 'ncbi-blast/2.2.27:t_coffee/10.0:clustalw/2.1'
                 }
             }
-            '''
+            ''')
         and:
-        script = '''   
+        script = '''
                 process foo {
                     label 'my_env'
                     script:
                     'echo hello'
                 }
-                
+
                 workflow { foo() }
                 '''
 
         and:
-        new MockScriptRunner(new ConfigParser().parse(config))
-                .setScript(script)
-                .execute()
+        loadScript(script, config: config)
         processor = TaskProcessor.currentProcessor()
 
         then:
@@ -493,25 +447,23 @@ class FunctionalTests extends Dsl2Spec {
 
     def 'should set publishDir directive' () {
         given:
-        String config = '''
+        def config = loadConfig('''
             process {
                 executor = 'nope'
                 publishDir = '/some/dir'
             }
-            '''
-        String script = '''   
+            ''')
+        def script = '''
                 process foo {
                     script:
                     'echo hello'
                 }
-                
+
                 workflow { foo() }
                 '''
 
         when:
-        new MockScriptRunner(new ConfigParser().parse(config))
-                .setScript(script)
-                .execute()
+        loadScript(script, config: config)
         def processor = TaskProcessor.currentProcessor()
         then:
         processor instanceof TaskProcessor
@@ -519,25 +471,23 @@ class FunctionalTests extends Dsl2Spec {
 
 
         when:
-        config = '''
+        config = loadConfig('''
             process {
                 executor = 'nope'
                 publishDir = [ '/some/dir', [path:'/other/dir', mode: 'copy'] ]
             }
-            '''
+            ''')
         and:
-        script = '''   
+        script = '''
                 process foo {
                     script:
                     'echo hello'
                 }
-                
+
                 workflow { foo() }
                 '''
         and:
-        new MockScriptRunner(new ConfigParser().parse(config))
-                .setScript(script)
-                .execute()
+        loadScript(script, config: config)
         processor = TaskProcessor.currentProcessor()
         then:
         processor instanceof TaskProcessor
@@ -546,27 +496,25 @@ class FunctionalTests extends Dsl2Spec {
 
 
         when:
-        config = '''
+        config = loadConfig('''
             process {
                 executor = 'nope'
             }
-            '''
+            ''')
         and:
-        script = '''   
+        script = '''
                 process foo {
                     publishDir '/data1'
                     publishDir '/data2', mode: 'symlink'
                     script:
                     'echo hello'
                 }
-                
+
                 workflow { foo() }
                 '''
 
         and:
-        new MockScriptRunner(new ConfigParser().parse(config))
-                .setScript(script)
-                .execute()
+        loadScript(script, config: config)
         processor = TaskProcessor.currentProcessor()
         then:
         processor instanceof TaskProcessor
@@ -575,28 +523,26 @@ class FunctionalTests extends Dsl2Spec {
 
 
         when:
-        config = '''
+        config = loadConfig('''
             process {
                 executor = 'nope'
                 publishDir = '/dir/cfg'
             }
-            '''
+            ''')
         and:
-        script = '''   
+        script = '''
                 process foo {
                     publishDir '/dir/alpha'
-                    publishDir '/dir/bravo'  
+                    publishDir '/dir/bravo'
                     script:
                     'echo hello'
                 }
-                
+
                 workflow { foo() }
                 '''
 
         and:
-        new MockScriptRunner(new ConfigParser().parse(config))
-                .setScript(script)
-                .execute()
+        loadScript(script, config: config)
         processor = TaskProcessor.currentProcessor()
         then:
         processor instanceof TaskProcessor
@@ -606,29 +552,27 @@ class FunctionalTests extends Dsl2Spec {
 
 
         when:
-        config = '''
+        config = loadConfig('''
             process {
                 executor = 'nope'
                 publishDir = '/dir/cfg'
                 withName: foo { publishDir = '/dir/omega' }
             }
-            '''
+            ''')
         and:
-        script = '''   
+        script = '''
                 process foo {
                     publishDir '/dir/alpha'
-                    publishDir '/dir/bravo'  
+                    publishDir '/dir/bravo'
                     script:
                     'echo hello'
                 }
-                
+
                 workflow { foo() }
                 '''
 
         and:
-        new MockScriptRunner(new ConfigParser().parse(config))
-                .setScript(script)
-                .execute()
+        loadScript(script, config: config)
         processor = TaskProcessor.currentProcessor()
         then:
         processor instanceof TaskProcessor
@@ -640,25 +584,23 @@ class FunctionalTests extends Dsl2Spec {
     def 'should set directive label' () {
 
         given:
-        def config = '''
+        def config = loadConfig('''
             process {
                 executor = 'nope'
                 label = 'alpha'
             }
-            '''
-        def script = '''   
+            ''')
+        def script = '''
                 process foo {
                     script:
                     'echo hello'
                 }
-                
+
                 workflow { foo() }
                 '''
 
         when:
-        new MockScriptRunner(new ConfigParser().parse(config))
-                .setScript(script)
-                .execute()
+        loadScript(script, config: config)
         def processor = TaskProcessor.currentProcessor()
         then:
         processor instanceof TaskProcessor
@@ -666,28 +608,26 @@ class FunctionalTests extends Dsl2Spec {
 
 
         when:
-        config = '''
+        config = loadConfig('''
             process {
                 executor = 'nope'
                 label = 'alpha'
             }
-            '''
+            ''')
         and:
-        script = '''   
+        script = '''
                 process foo {
                     label 'bravo'
-                    label 'gamma'  
+                    label 'gamma'
                     script:
                     'echo hello'
                 }
-                
+
                 workflow { foo() }
                 '''
 
         and:
-        new MockScriptRunner(new ConfigParser().parse(config))
-                .setScript(script)
-                .execute()
+        loadScript(script, config: config)
         processor = TaskProcessor.currentProcessor()
         then:
         processor instanceof TaskProcessor
@@ -698,56 +638,93 @@ class FunctionalTests extends Dsl2Spec {
     def 'should create process with repeater'() {
 
         given:
-        def config = '''
+        def config = loadConfig('''
             process {
                 executor = 'nope'
             }
-            '''
+            ''')
         and:
-        def script = '''   
+        def script = '''
                 process foo {
                     input:
                     each x
                     script:
                     'echo hello'
                 }
-                
+
                 workflow { foo([1,2,3]) }
                 '''
 
         when:
-        new MockScriptRunner(new ConfigParser().parse(config))
-                .setScript(script)
-                .execute()
+        loadScript(script, config: config)
         then:
         noExceptionThrown()
     }
 
-    def 'should show the line of the error when throw an exception'() {
+    def 'should show the source line when reporting an error'() {
 
         given:
-        def script = '''/*1*/
-/*2*/   def thisMethodExpectsOnlyOneString(String a){
-/*3*/      a
-/*4*/   }
-/*5*/                   
-/*6*/   process foo {
-/*7*/       input:
-/*8*/           each x
-/*9*/       script:
-/*10*/          "${thisMethodExpectsOnlyOneString(1)}"
-/*11*/      }
-/*12*/
-/*13*/   workflow { foo(1) }
-        '''
+        def script = Files.createTempFile('test', '.nf')
+        script.text = '''\
+            def thisMethodExpectsOnlyOneString(a: String) {
+                a
+            }
+
+            process foo {
+                input:
+                val x
+
+                script:
+                "${thisMethodExpectsOnlyOneString(1)}"
+            }
+
+            workflow {
+                foo(1)
+            }
+            '''
 
         when:
         def config = [process:[executor: 'nope']]
-        def runner = new MockScriptRunner(config)
-        runner.setScript(script).execute()
+        runScript(script, config: config)
+        def processor = TaskProcessor.currentProcessor()
         then:
-        def abort = thrown(AbortRunException)
-        and:
-        runner.session.fault.report ==~ /(?s).*-- Check script '(.*?)' at line: 10.*/
+        processor.session.fault.report ==~ /(?s).*-- Check script '(.*?)' at line: 10.*/
+    }
+
+    def 'should show the source line when reporting an error in a module'() {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+
+        def module = folder.resolve('module.nf')
+        module.text = '''\
+            def thisMethodExpectsOnlyOneString(a: String) {
+                a
+            }
+
+            process foo {
+                input:
+                val x
+
+                script:
+                "${thisMethodExpectsOnlyOneString(1)}"
+            }
+            '''
+
+        def script = folder.resolve('main.nf')
+        script.text = '''\
+            include { foo } from './module.nf'
+
+            workflow {
+                foo(1)
+            }
+            '''
+
+        when:
+        def config = [process:[executor: 'nope']]
+        runScript(script, config: config)
+        def processor = TaskProcessor.currentProcessor()
+        then:
+        processor.session.fault.report ==~ /(?s).*-- Check script '(.*?)' at line: 10.*/
     }
 }

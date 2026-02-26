@@ -58,14 +58,14 @@ class BashWrapperBuilderWithS3Test extends Specification {
         binding.unstage_outputs == '''\
                     IFS=$'\\n'
                     for name in $(eval "ls -1d test.bam test.bai bla\\ nk.txt" | sort | uniq); do
-                        nxf_s3_upload $name s3://some/buck\\ et || true
+                        nxf_s3_upload $name s3://some/buck\\ et
                     done
                     unset IFS
                     '''.stripIndent().rightTrim()
 
         binding.helpers_script == '''\
             # aws cli retry config
-            export AWS_RETRY_MODE=standard 
+            export AWS_RETRY_MODE=standard
             export AWS_MAX_ATTEMPTS=5
             # aws helper
             nxf_s3_upload() {
@@ -87,7 +87,7 @@ class BashWrapperBuilderWithS3Test extends Specification {
                 local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
                 if [[ $is_dir == 1 ]]; then
                     aws s3 cp --only-show-errors --recursive "$source" "$target"
-                else 
+                else
                     aws s3 cp --only-show-errors "$source" "$target"
                 fi
             }
@@ -207,7 +207,7 @@ class BashWrapperBuilderWithS3Test extends Specification {
                 local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
                 if [[ $is_dir == 1 ]]; then
                     aws s3 cp --only-show-errors --recursive "$source" "$target"
-                else 
+                else
                     aws s3 cp --only-show-errors "$source" "$target"
                 fi
             }

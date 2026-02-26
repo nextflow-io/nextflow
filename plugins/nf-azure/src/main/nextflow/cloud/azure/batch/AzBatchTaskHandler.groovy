@@ -15,9 +15,11 @@
  */
 package nextflow.cloud.azure.batch
 
+import nextflow.exception.ProcessException
+import nextflow.util.TestOnly
+
 import java.nio.file.Path
 
-import com.azure.compute.batch.models.BatchTaskExecutionResult
 import com.azure.compute.batch.models.BatchTaskState
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -63,9 +65,6 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         validateConfiguration()
     }
 
-    /** only for testing purpose - DO NOT USE */
-    protected AzBatchTaskHandler() { }
-
     AzBatchService getBatchService() {
         return executor.batchService
     }
@@ -77,7 +76,7 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     protected BashWrapperBuilder createBashWrapper() {
-        fusionEnabled()
+        return fusionEnabled()
                 ? fusionLauncher()
                 : new AzBatchScriptLauncher(task.toTaskBean(), executor)
     }
@@ -101,7 +100,7 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         // note, include complete status otherwise it hangs if the task
         // completes before reaching this check
         final running = state==BatchTaskState.RUNNING || state==BatchTaskState.COMPLETED
-        log.debug "[AZURE BATCH] Task status $task.name taskId=$taskKey; running=$running"
+        log.trace "[AZURE BATCH] Task status $task.name taskId=$taskKey; running=$running"
         if( running )
             this.status = TaskStatus.RUNNING
         return running
@@ -115,13 +114,18 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         final done = taskState0(taskKey)==BatchTaskState.COMPLETED
         if( done ) {
             // finalize the task
-            task.exitStatus = readExitFile()
+            final info = batchService.getTask(taskKey).executionInfo
+            // Try to get exit code from Azure batch API and fallback to .exitcode
+            task.exitStatus = info?.exitCode != null ? info.exitCode : readExitFile()
             task.stdout = outputFile
             task.stderr = errorFile
             status = TaskStatus.COMPLETED
-            final info = batchService.getTask(taskKey).executionInfo
-            if (info.result == BatchTaskExecutionResult.FAILURE)
-                task.error = new ProcessUnrecoverableException(info.failureInfo.message)
+            if( task.exitStatus == Integer.MAX_VALUE && info.failureInfo.message) {
+                final reason = info.failureInfo.message
+                final unrecoverable = reason.contains('CannotPullContainer') && reason.contains('unauthorized')
+                // when task exist code is not defined and there is a Azure Batch task failure raise an exception with Azure's failure message
+                task.error = unrecoverable ? new ProcessUnrecoverableException(reason) : new ProcessException(reason)
+            }
             deleteTask(taskKey, task)
             return true
         }
@@ -129,7 +133,7 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     private Boolean shouldDelete() {
-        executor.config.batch().deleteTasksOnCompletion
+        executor.azConfig.batch().deleteTasksOnCompletion
     }
 
     protected void deleteTask(AzTaskKey taskKey, TaskRun task) {
@@ -177,7 +181,7 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     @Override
-    void kill() {
+    protected void killTask() {
         if( !taskKey )
             return
         batchService.terminate(taskKey)
@@ -202,4 +206,10 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         }
         return machineInfo
     }
+
+    @TestOnly
+    protected setTaskKey(AzTaskKey key){
+        this.taskKey = key
+    }
+
 }

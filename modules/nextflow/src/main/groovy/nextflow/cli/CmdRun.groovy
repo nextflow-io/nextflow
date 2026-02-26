@@ -37,15 +37,21 @@ import nextflow.NextflowMeta
 import nextflow.SysEnv
 import nextflow.config.ConfigBuilder
 import nextflow.config.ConfigMap
+import nextflow.config.ConfigValidator
+import nextflow.config.Manifest
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
 import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
 import nextflow.script.ScriptFile
 import nextflow.script.ScriptRunner
+import nextflow.secret.EmptySecretProvider
+import nextflow.secret.SecretsLoader
 import nextflow.util.CustomPoolFactory
 import nextflow.util.Duration
 import nextflow.util.HistoryFile
+import nextflow.util.VersionNumber
+import org.apache.commons.lang3.StringUtils
 import org.fusesource.jansi.AnsiConsole
 import org.yaml.snakeyaml.Yaml
 /**
@@ -106,6 +112,9 @@ class CmdRun extends CmdBase implements HubOptions {
 
     @Parameter(names=['-test'], description = 'Test a script function with the name specified')
     String test
+
+    @Parameter(names=['-o', '-output-dir'], description = 'Directory where workflow outputs are stored')
+    String outputDir
 
     @Parameter(names=['-w', '-work-dir'], description = 'Directory where intermediate result files are stored')
     String workDir
@@ -315,27 +324,79 @@ class CmdRun extends CmdBase implements HubOptions {
         checkRunName()
 
         printBanner()
+
         Plugins.init()
 
-        // -- specify the arguments
+        // -- resolve main script
         final scriptFile = getScriptFile(pipeline)
 
-        // create the config object
-        final builder = new ConfigBuilder()
+        // -- load command line params
+        final baseDir = scriptFile.parent
+        final cliParams = parsedParams(ConfigBuilder.getConfigVars(baseDir, null))
+
+        /*
+         * 2-PHASE CONFIGURATION LOADING STRATEGY
+         * 
+         * Problem: Configuration files may reference secrets provided by plugins (e.g., AWS secrets),
+         * but plugins are loaded AFTER configuration parsing. This creates a chicken-and-egg problem:
+         * - Config parsing needs secret values to complete
+         * - Plugin loading needs config to determine which plugins to load  
+         * - Secret providers are registered by plugins
+         * 
+         * Solution: Parse configuration twice when secrets are referenced
+         * 
+         * PHASE 1: Parse config with EmptySecretProvider (returns "" for all secrets)
+         * - Configuration must use defensive patterns: secrets.FOO ? "value-${secrets.FOO}" : "fallback"
+         * - Config parses successfully with fallback values
+         * - EmptySecretProvider tracks if ANY secrets were accessed
+         */
+
+        // -- PHASE 1: Load config with mock secrets provider
+        final secretsProvider = new EmptySecretProvider()
+        ConfigBuilder builder = new ConfigBuilder()
+            .setOptions(launcher.options)
+            .setCmdRun(this)
+            .setBaseDir(scriptFile.parent)
+            .setCliParams(cliParams)
+            .setSecretsProvider(secretsProvider)  // Mock provider returns empty strings
+        ConfigMap config = builder.build()
+        Map configParams = builder.getConfigParams()
+
+        // -- Check Nextflow version
+        checkVersion(config)
+
+        // -- Load plugins (may register secret providers)
+        Plugins.load(config)
+
+        // -- Initialize real secrets system
+        SecretsLoader.getInstance().load()
+
+        /*
+         * PHASE 2: Conditionally reload config with real secrets
+         * - Only reload if Phase 1 actually accessed any secrets
+         * - This time, real secret providers are available (including plugin-provided ones)
+         * - Same config expressions now resolve with actual secret values
+         */
+
+        // -- PHASE 2: Reload config if secrets were used in Phase 1
+        if( secretsProvider.usedSecrets() ) {
+            log.debug "Config file used secrets -- reloading config with secrets provider"
+            builder = new ConfigBuilder()
                 .setOptions(launcher.options)
                 .setCmdRun(this)
                 .setBaseDir(scriptFile.parent)
-        final config = builder .build()
+                .setCliParams(cliParams)
+                // No .setSecretsProvider() - uses real secrets system now
+            config = builder.build()
+            configParams = builder.getConfigParams()
+        }
 
         // check DSL syntax in the config
         launchInfo(config, scriptFile)
 
-        // check if NXF_ variables are set in nextflow.config
-        checkConfigEnv(config)
-
-        // -- load plugins
-        final cfg = plugins ? [plugins: plugins.tokenize(',')] : config
-        Plugins.load(cfg)
+        // -- validate config options
+        if( NF.isSyntaxParserV2() )
+            new ConfigValidator().validate(config)
 
         // -- create a new runner instance
         final runner = new ScriptRunner(config)
@@ -348,7 +409,8 @@ class CmdRun extends CmdBase implements HubOptions {
         runner.session.disableJobsCancellation = getDisableJobsCancellation()
 
         final isTowerEnabled = config.navigate('tower.enabled') as Boolean
-        if( isTowerEnabled || log.isTraceEnabled() )
+        final isDataEnabled = config.navigate("lineage.enabled") as Boolean
+        if( isTowerEnabled || isDataEnabled || log.isTraceEnabled() )
             runner.session.resolvedConfig = ConfigBuilder.resolveConfig(scriptFile.parent, this)
         // note config files are collected during the build process
         // this line should be after `ConfigBuilder#build`
@@ -369,7 +431,7 @@ class CmdRun extends CmdBase implements HubOptions {
         }
 
         // -- run it!
-        runner.execute(scriptArgs, this.entryName)
+        runner.execute(scriptArgs, cliParams, configParams, this.entryName)
     }
 
     protected void printBanner() {
@@ -403,87 +465,55 @@ class CmdRun extends CmdBase implements HubOptions {
         }
     }
 
-    protected checkConfigEnv(ConfigMap config) {
-        // Warn about setting NXF_ environment variables within env config scope
-        final env = config.env as Map<String, String>
-        for( String name : env.keySet() ) {
-            if( name.startsWith('NXF_') && name!='NXF_DEBUG' ) {
-                final msg = "Nextflow variables must be defined in the launching environment - The following variable set in the config file is going to be ignored: '$name'"
-                log.warn(msg)
-            }
+    protected void launchInfo(ConfigMap config, ScriptFile scriptFile) {
+        // -- determine strict mode
+        detectStrictFeature(config, sysEnv)
+        // -- determine moduleBinary
+        detectModuleBinaryFeature(config)
+        // -- show launch info
+        final repo = scriptFile.repository ?: scriptFile.source.toString()
+        final head = preview ? "* PREVIEW * $scriptFile.repository" : "Launching `$repo`"
+        final revision = scriptFile.repository
+            ? scriptFile.revisionInfo.toString()
+            : scriptFile.getScriptId()?.substring(0,10)
+        printLaunchInfo(repo, head, revision)
+    }
+
+    static void detectModuleBinaryFeature(ConfigMap config) {
+        final moduleBinaries = config.navigate('nextflow.enable.moduleBinaries', false)
+        if( moduleBinaries ) {
+            log.debug "Enabling module binaries"
+            NextflowMeta.instance.moduleBinaries(true)
         }
     }
 
-    protected void launchInfo(ConfigMap config, ScriptFile scriptFile) {
-        // -- determine strict mode
+    static void detectStrictFeature(ConfigMap config, Map sysEnv) {
+        if( NF.isSyntaxParserV2() )
+            return
         final defStrict = sysEnv.get('NXF_ENABLE_STRICT') ?: false
         final strictMode = config.navigate('nextflow.enable.strict', defStrict)
         if( strictMode ) {
             log.debug "Enabling nextflow strict mode"
             NextflowMeta.instance.strictMode(true)
         }
-        // -- determine dsl mode
-        final dsl = detectDslMode(config, scriptFile.main.text, sysEnv)
-        NextflowMeta.instance.enableDsl(dsl)
-        // -- show launch info
-        final ver = NF.dsl2 ? DSL2 : DSL1
-        final repo = scriptFile.repository ?: scriptFile.source.toString()
-        final head = preview ? "* PREVIEW * $scriptFile.repository" : "Launching `$repo`"
-        final revision = scriptFile.repository
-            ? scriptFile.revisionInfo.toString()
-            : scriptFile.getScriptId()?.substring(0,10)
-        printLaunchInfo(ver, repo, head, revision)
     }
 
-    protected void printLaunchInfo(String ver, String repo, String head, String revision) {
+    protected void printLaunchInfo(String repo, String head, String revision) {
         if( launcher.options.ansiLog ){
-            log.debug "${head} [$runName] DSL${ver} - revision: ${revision}"
+            log.debug "${head} [$runName] - revision: ${revision}"
 
             def fmt = ansi()
             fmt.a("Launching").fg(Color.MAGENTA).a(" `$repo` ").reset()
             fmt.a(Attribute.INTENSITY_FAINT).a("[").reset()
             fmt.bold().fg(Color.CYAN).a(runName).reset()
-            fmt.a(Attribute.INTENSITY_FAINT).a("]")
-            fmt.a(" DSL${ver} - ")
+            fmt.a(Attribute.INTENSITY_FAINT).a("] ").reset()
             fmt.fg(Color.CYAN).a("revision: ").reset()
             fmt.fg(Color.CYAN).a(revision).reset()
             fmt.a("\n")
             AnsiConsole.out().println(fmt.eraseLine())
         }
         else {
-            log.info "${head} [$runName] DSL${ver} - revision: ${revision}"
-        }
-    }
-
-    static String detectDslMode(ConfigMap config, String scriptText, Map sysEnv) {
-        // -- try determine DSL version from config file
-
-        final dsl = config.navigate('nextflow.enable.dsl') as String
-
-        // -- script can still override the DSL version
-        final scriptDsl = NextflowMeta.checkDslMode(scriptText)
-        if( scriptDsl ) {
-            log.debug("Applied DSL=$scriptDsl from script declaration")
-            return scriptDsl
-        }
-        else if( dsl ) {
-            log.debug("Applied DSL=$dsl from config declaration")
-            return dsl
-        }
-        // -- if still unknown try probing for DSL1
-        if( NextflowMeta.probeDsl1(scriptText) ) {
-            log.debug "Applied DSL=1 by probing script field"
-            return DSL1
-        }
-
-        final envDsl = sysEnv.get('NXF_DEFAULT_DSL')
-        if( envDsl ) {
-            log.debug "Applied DSL=$envDsl from NXF_DEFAULT_DSL variable"
-            return envDsl
-        }
-        else {
-            log.debug "Applied DSL=2 by global default"
-            return DSL2
+            log.info "${head} [$runName] - revision: ${revision}"
         }
     }
 
@@ -569,34 +599,42 @@ class CmdRun extends CmdBase implements HubOptions {
         /*
          * try to look for a pipeline in the repository
          */
-        def manager = new AssetManager(pipelineName, this)
-        def repo = manager.getProject()
+        try (def manager = new AssetManager(pipelineName, this)) {
+            if( revision )
+                manager.setRevision(revision)
+            def repo = manager.getProjectWithRevision()
 
-        boolean checkForUpdate = true
-        if( !manager.isRunnable() || latest ) {
-            if( offline )
-                throw new AbortOperationException("Unknown project `$repo` -- NOTE: automatic download from remote repositories is disabled")
-            log.info "Pulling $repo ..."
-            def result = manager.download(revision,deep)
-            if( result )
-                log.info " $result"
-            checkForUpdate = false
-        }
-        // checkout requested revision
-        try {
-            manager.checkout(revision)
-            manager.updateModules()
-            final scriptFile = manager.getScriptFile(mainScript)
-            if( checkForUpdate && !offline )
-                manager.checkRemoteStatus(scriptFile.revisionInfo)
-            // return the script file
-            return scriptFile
-        }
-        catch( AbortOperationException e ) {
-            throw e
-        }
-        catch( Exception e ) {
-            throw new AbortOperationException("Unknown error accessing project `$repo` -- Repository may be corrupted: ${manager.localPath}", e)
+            boolean checkForUpdate = true
+            if( !manager.isRunnable() || latest ) {
+                if( offline )
+                    throw new AbortOperationException("Unknown project `$repo` -- NOTE: automatic download from remote repositories is disabled")
+                log.info "Pulling $repo ..."
+                def result = manager.download(revision,deep)
+                if( result )
+                    log.info " $result"
+                checkForUpdate = false
+            }
+            // Warn if using legacy
+            if( manager.isUsingLegacyStrategy() ){
+                log.warn1 "This Nextflow version supports a new Multi-revision strategy for managing the SCM repositories, " +
+                    "but '${repo}' is single-revision legacy strategy - Please consider to update the repository with the 'nextflow pull -migrate' command."
+            }
+            // post download operations
+            try {
+                manager.checkout(revision)
+                manager.updateModules()
+                final scriptFile = manager.getScriptFile(mainScript)
+                if( checkForUpdate && !offline )
+                    manager.checkRemoteStatus(scriptFile.revisionInfo)
+                // return the script file
+                return scriptFile
+            }
+            catch( AbortOperationException e ) {
+                throw e
+            }
+            catch( Exception e ) {
+                throw new AbortOperationException("Unknown error accessing project `$repo` -- Repository may be corrupted: ${manager.localPath}", e)
+            }
         }
 
     }
@@ -616,10 +654,51 @@ class CmdRun extends CmdBase implements HubOptions {
         return result
     }
 
+    /**
+     * Check the Nextflow version against the version required by
+     * the pipeline via `manifest.nextflowVersion`.
+     *
+     * When the version spec is prefixed with '!', the run will fail
+     * if the Nextflow version does not match.
+     *
+     * @param config
+     */
+    protected void checkVersion(Map config) {
+        final manifest = new Manifest(config.manifest as Map ?: Collections.emptyMap())
+        String version = manifest.nextflowVersion?.trim()
+        if( !version )
+            return
+
+        final important = version.startsWith('!')
+        if( important )
+            version = version.substring(1).trim()
+
+        if( !getCurrentVersion().matches(version) ) {
+            if( important )
+                showVersionError(version)
+            else
+                showVersionWarning(version)
+        }
+    }
+
+    protected VersionNumber getCurrentVersion() {
+        return new VersionNumber(BuildInfo.version)
+    }
+
+    protected void showVersionError(String ver) {
+        throw new AbortOperationException("Nextflow version ${BuildInfo.version} does not match version required by pipeline: ${ver}")
+    }
+
+    protected void showVersionWarning(String ver) {
+        log.warn "Nextflow version ${BuildInfo.version} does not match version required by pipeline: ${ver} -- execution will continue, but things might break!"
+    }
+
     @Memoized  // <-- avoid parse multiple times the same file and params
     Map parsedParams(Map configVars) {
 
         final result = [:]
+
+        // apply params file
         final file = getParamsFile()
         if( file ) {
             def path = validateParamsFile(file)
@@ -630,7 +709,7 @@ class CmdRun extends CmdBase implements HubOptions {
                 readYamlFile(path, configVars, result)
         }
 
-        // set the CLI params
+        // apply CLI params
         if( !params )
             return result
 
@@ -666,13 +745,26 @@ class CmdRun extends CmdBase implements HubOptions {
             addParam((Map)nested, key.substring(p+1), value, path, fullKey)
         }
         else {
-            params.put(key.replaceAll(DOT_ESCAPED,'.'), parseParamValue(value))
+            addParam0(params, key.replaceAll(DOT_ESCAPED,'.'), parseParamValue(value))
         }
     }
 
+    static protected void addParam0(Map params, String key, Object value) {
+        if( key.contains('-') )
+            key = kebabToCamelCase(key)
+        params.put(key, value)
+    }
+
+    static protected String kebabToCamelCase(String str) {
+        final result = new StringBuilder()
+        str.split('-').eachWithIndex { String entry, int i ->
+            result << (i>0 ? StringUtils.capitalize(entry) : entry )
+        }
+        return result.toString()
+    }
 
     static protected parseParamValue(String str) {
-        if ( SysEnv.get('NXF_DISABLE_PARAMS_TYPE_DETECTION') )
+        if ( SysEnv.get('NXF_DISABLE_PARAMS_TYPE_DETECTION') || NF.isSyntaxParserV2() )
             return str
 
         if ( str == null ) return null
@@ -724,8 +816,10 @@ class CmdRun extends CmdBase implements HubOptions {
     private void readJsonFile(Path file, Map configVars, Map result) {
         try {
             def text = configVars ? replaceVars0(file.text, configVars) : file.text
-            def json = (Map)new JsonSlurper().parseText(text)
-            result.putAll(json)
+            def json = (Map<String,Object>) new JsonSlurper().parseText(text)
+            json.forEach((name, value) -> {
+                addParam0(result, name, value)
+            })
         }
         catch (NoSuchFileException | FileNotFoundException e) {
             throw new AbortOperationException("Specified params file does not exist: ${file.toUriString()}")
@@ -738,8 +832,10 @@ class CmdRun extends CmdBase implements HubOptions {
     private void readYamlFile(Path file, Map configVars, Map result) {
         try {
             def text = configVars ? replaceVars0(file.text, configVars) : file.text
-            def yaml = (Map)new Yaml().load(text)
-            result.putAll(yaml)
+            def yaml = (Map<String,Object>) new Yaml().load(text)
+            yaml.forEach((name, value) -> {
+                addParam0(result, name, value)
+            })
         }
         catch (NoSuchFileException | FileNotFoundException e) {
             throw new AbortOperationException("Specified params file does not exist: ${file.toUriString()}")

@@ -39,7 +39,7 @@ class LocalExecutor extends Executor {
 
     @Override
     protected TaskMonitor createTaskMonitor() {
-        return LocalPollingMonitor.create(session, name)
+        return LocalPollingMonitor.create(session, config, name)
     }
 
     @Override

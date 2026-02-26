@@ -2,365 +2,741 @@
 
 # Workflows
 
-In Nextflow, a **workflow** is a composition of processes and dataflow logic (i.e. channels and operators).
+In Nextflow, a **workflow** is a specialized function for composing {ref}`processes <process-page>` and dataflow logic:
 
-The workflow definition starts with the keyword `workflow`, followed by an optional name, and finally the workflow body delimited by curly braces. A basic workflow looks like the following example:
+- An [entry workflow](#entry-workflow) is the entrypoint of a pipeline. It can take [parameters](#parameters) as inputs using the `params` block, and it can publish [outputs](#outputs) using the `output` block.
 
-```groovy
+- A [named workflow](#named-workflows) is a workflow that can be called by other workflows. It can define its own inputs and outputs, which are called *takes* and *emits*.
+
+- Both entry workflows and named workflows can contain [dataflow logic](#dataflow) such as calling processes, workflows, and channel operators.
+
+## Entry workflow
+
+A script can define up to one *entry workflow*, which does not have a name and serves as the entrypoint of the script:
+
+```nextflow
 workflow {
-    foo()
+    channel.of('Bonjour', 'Ciao', 'Hello', 'Hola')
+        .map { v -> "$v world!" }
+        .view()
 }
 ```
 
-Where `foo` could be a function, a process, or another workflow.
+(workflow-params-def)=
 
-Workflows are *lazily executed*, which means that Nextflow parses the entire workflow structure first, and then executes the entire workflow at once. The order in which a task is executed is determined only by its dependencies, so a task will be executed as soon as all of its required inputs are available.
+## Parameters
 
-The syntax of a workflow is defined as follows:
+Parameters can be declared in a Nextflow script with the `params` block or with *legacy* parameter declarations.
+
+### Typed parameters
+
+:::{versionadded} 25.10.0
+:::
+
+:::{note}
+Typed parameters require the {ref}`strict syntax <strict-syntax-page>`. Set the `NXF_SYNTAX_PARSER` environment variable to `v2` to enable:
+
+```bash
+export NXF_SYNTAX_PARSER=v2
+```
+:::
+
+A script can declare parameters using the `params` block:
+
+```nextflow
+params {
+    // Path to input data.
+    input: Path
+
+    // Whether to save intermediate files.
+    save_intermeds: Boolean = false
+}
+```
+
+All {ref}`standard types <stdlib-types>` except for the dataflow types (`Channel` and `Value`) can be used for parameters.
+
+Parameters can be used in the entry workflow:
+
+```nextflow
+workflow {
+    analyze(params.input, params.save_intermeds)
+}
+```
+
+:::{note}
+As a best practice, parameters should only be referenced in the entry workflow or `output` block. Parameters can be passed to workflows and processes as explicit inputs.
+:::
+
+The default value can be overridden by the command line, params file, or config file. Parameters from multiple sources are resolved in the order described in {ref}`cli-params`. Parameters specified on the command line are converted to the appropriate type based on the corresponding type annotation.
+
+A parameter that doesn't specify a default value is a *required* parameter. If a required parameter is not given a value at runtime, the run will fail.
+
+:::{versionadded} 26.04.0
+:::
+
+Parameters with a collection type (i.e., `List`, `Set`, or `Bag`) can be supplied a file path instead of a literal collection. The file must be CSV, JSON, or YAML. Nextflow will parse the file contents and assign the resuling collection to the parameter. An error is thrown if the file contents do not match the parameter type.
+
+:::{note}
+When supplying a CSV file to a collection parameter, the CSV file must contain a header row and must use a comma (`,`) as the column separator.
+:::
+
+(workflow-params-legacy)=
+
+### Legacy parameters
+
+Parameters can be declared by assigning a `params` property to a default value:
+
+```nextflow
+params.input = '/some/data/file'
+params.save_intermeds = false
+
+workflow {
+    if( params.input )
+        analyze(params.input, params.save_intermeds)
+    else
+        analyze(fake_input(), params.save_intermeds)
+}
+```
+
+The default value can be overridden by the command line, params file, or config file. Parameters from multiple sources are resolved in the order described in {ref}`cli-params`.
+
+(workflow-output-def)=
+
+## Outputs
+
+:::{versionadded} 25.10.0
+Workflow outputs are available as a preview in Nextflow {ref}`24.04 <workflow-outputs-first-preview>`, {ref}`24.10 <workflow-outputs-second-preview>`, and {ref}`25.04 <workflow-outputs-third-preview>`.
+:::
+
+:::{note}
+Workflow outputs are intended to replace the {ref}`publishDir <process-publishdir>` directive. See {ref}`migrating-workflow-outputs` for guidance on migrating from `publishDir` to workflow outputs.
+:::
+
+A script can define an *output block* to declare the top-level workflow outputs. Each output should be assigned in the `publish` section of the entry workflow. Any channel in the workflow can be assigned to an output, including process and subworkflow outputs.
+
+**Example:**
+
+```nextflow
+process fetch {
+    // ...
+
+    output:
+    path 'sample.txt'
+
+    // ...
+}
+
+workflow {
+    main:
+    ch_samples = fetch(params.input)
+
+    publish:
+    samples = ch_samples
+}
+
+output {
+    samples {
+        path '.'
+    }
+}
+```
+
+In the above example, the output of process `fetch` is assigned to the `samples` workflow output. How this output is published to a directory structure is described in the next section.
+
+(workflow-publishing-files)=
+
+### Publishing files
+
+Each workflow output can define how files are *published* from the work directory to a designated *output directory*.
+
+**Output directory**
+
+You can set the top-level output directory for a run using the `-output-dir` command-line option or the `outputDir` config option:
+
+```bash
+nextflow run main.nf -output-dir 'my-results'
+```
 
 ```groovy
-workflow [ name ] {
+// nextflow.config
+outputDir = 'my-results'
+```
 
-    take:
-    < workflow inputs >
+The default output directory is `results` in the launch directory.
 
+**Publish path**
+
+By default, Nextflow publishes all output files to the output directory. Each workflow output can define where to publish files within the output directory using the `path` directive:
+
+```nextflow
+workflow {
     main:
-    < dataflow statements >
+    ch_step1 = step1()
+    ch_step2 = step2(ch_step1)
 
-    emit:
-    < workflow outputs >
+    publish:
+    step1 = ch_step1
+    step2 = ch_step2
+}
 
+output {
+    step1 {
+        path 'step1'
+    }
+    step2 {
+        path 'step2'
+    }
 }
 ```
 
-:::{tip}
-The `main:` label can be omitted if there are no `take:` or `emit:` blocks.
-:::
+The following directory structure is created:
+
+```
+results/
+└── step1/
+    └── ...
+└── step2/
+    └── ...
+```
+
+Nextflow publishes all files received by an output into the specified directory. Nextflow recursively scans lists, maps, and tuples for nested files:
+
+```nextflow
+workflow {
+    main:
+    ch_samples = channel.of(
+        tuple( [id: 'SAMP1'], [ file('1.txt'), file('2.txt') ] )
+    )
+
+    publish:
+    samples = ch_samples // 1.txt and 2.txt are published
+}
+```
 
 :::{note}
-Workflows were introduced in DSL2. If you are still using DSL1, see the {ref}`dsl1-page` page to learn how to migrate your Nextflow pipelines to DSL2.
+Files that do not originate from the work directory are not published.
 :::
 
-## Implicit workflow
+**Dynamic publish path**
 
-A script can define a single workflow without a name (also known as the *implicit workflow*), which is the default entrypoint of the script. The `-entry` command line option can be used to execute a different workflow as the entrypoint at runtime.
+The `path` directive can also be a closure which defines a custom publish path for each channel value:
+
+```nextflow
+workflow {
+    main:
+    ch_samples = channel.of(
+        [id: 'SAMP1', fastq_1: file('1.fastq'), fastq_2: file('2.fastq')]
+    )
+
+    publish:
+    samples = ch_samples
+}
+
+output {
+    samples {
+        path { sample -> "fastq/${sample.id}/" }
+    }
+}
+```
+
+The above example publishes each channel value to a different subdirectory. In this case, each pair of FASTQ files is published into a subdirectory based on the sample ID.
+
+Alternatively, you can define a different path for each individual file using the `>>` operator:
+
+```nextflow
+output {
+    samples {
+        path { sample ->
+            sample.fastq_1 >> "fastq/${sample.id}/"
+            sample.fastq_2 >> "fastq/${sample.id}/"
+        }
+    }
+}
+```
+
+Each `>>` specifies a *source file* and *publish target*. The source file should be a file or collection of files, and the publish target should be a directory or file name. If the publish target ends with a slash, Nextflow treats it as the directory in which to publish source files.
+
+When using this syntax, only files captured with the `>>` operator are saved to the output directory.
+
+**Conditional publishing**
+
+Outputs can be conditionally published using pipeline parameters:
+
+```nextflow
+output {
+    samples {
+        path { sample ->
+            sample.fastqc >> "fastqc"
+            sample.bam >> params.save_bams ? "align" : null
+        }
+    }
+}
+```
+
+In the above example, the BAM files specified by `sample.bam` are published only when `params.save_bams` is `true`.
+
+### Index files
+
+Index files are structured metadata files that catalog published outputs and their associated metadata. An index file preserves the structure of channel values, including metadata, which is more robust than encoding this information into file paths. The index file can be a CSV (`.csv`), JSON (`.json`), or YAML (`.yml`, `.yaml`) file. The channel values should be files, lists, maps, or tuples.
+
+Each output can create an index file of its published values:
+
+```nextflow
+workflow {
+    main:
+    ch_samples = channel.of(
+        [id: 1, name: 'sample 1', fastq_1: '1a.fastq', fastq_2: '1b.fastq'],
+        [id: 2, name: 'sample 2', fastq_1: '2a.fastq', fastq_2: '2b.fastq'],
+        [id: 3, name: 'sample 3', fastq_1: '3a.fastq', fastq_2: null]
+    )
+
+    publish:
+    samples = ch_samples
+}
+
+output {
+    samples {
+        path 'fastq'
+        index {
+            path 'samples.csv'
+        }
+    }
+}
+```
+
+The above example writes the following CSV file to `results/samples.csv`:
+
+```
+"1","sample 1","results/fastq/1a.fastq","results/fastq/1b.fastq"
+"2","sample 2","results/fastq/2a.fastq","results/fastq/2b.fastq"
+"3","sample 3","results/fastq/3a.fastq",""
+```
+
+You can customize the index file with additional directives, for example:
+
+```nextflow
+index {
+    path 'samples.csv'
+    header true
+    sep '|'
+}
+```
+
+This example produces the following index file:
+
+```
+"id"|"name"|"fastq_1"|"fastq_2"
+"1"|"sample 1"|"results/fastq/1a.fastq"|"results/fastq/1b.fastq"
+"2"|"sample 2"|"results/fastq/2a.fastq"|"results/fastq/2b.fastq"
+"3"|"sample 3"|"results/fastq/3a.fastq"|""
+```
 
 :::{note}
-Implicit workflow definitions are ignored when a script is included as a module. This way, a script can be written such that it can be either imported as a module or executed as a pipeline.
+Files that do not originate from the work directory are not published, but are included in the index file.
 :::
+
+See [Output directives](#output-directives) for the list of available index directives.
+
+### Output directives
+
+The following directives are available for each output in the output block:
+
+`index`
+: Create an index file containing a record of each published value.
+
+  The following directives are available in an index definition:
+
+  `header`
+  : When `true`, the keys of the first record are used as the column names (default: `false`). Can also be a list of column names. Only used for CSV files.
+
+  `path`
+  : The name of the index file relative to the base output directory (required). Can be a CSV, JSON, or YAML file.
+
+  `sep`
+  : The character used to separate values (default: `','`). Only used for CSV files.
+
+`label`
+: Specify a label to be applied to every published file. Can be specified multiple times.
+
+`path`
+: Specify the publish path relative to the output directory (default: `'.'`). Can be a path, a closure that defines a custom directory for each published value, or a closure that publishes individual files using the `>>` operator.
+
+Additionally, the following options from the {ref}`workflow <config-workflow>` config scope can be specified as directives:
+- `contentType`
+- `enabled`
+- `ignoreErrors`
+- `mode`
+- `overwrite`
+- `storageClass`
+- `tags`
+
+For example:
+
+```nextflow
+output {
+    samples {
+        mode 'copy'
+    }
+}
+```
 
 ## Named workflows
 
-A named workflow is a workflow that can be invoked from other workflows. For example:
+A *named workflow* is a workflow that can be called by other workflows:
 
-```groovy
-workflow my_pipeline {
-    foo()
-    bar( foo.out.collect() )
+```nextflow
+workflow my_workflow {
+    hello()
+    bye( hello.out.collect() )
 }
 
 workflow {
-    my_pipeline()
+    my_workflow()
 }
 ```
 
-The above snippet defines a workflow named `my_pipeline`, that can be invoked from another workflow as `my_pipeline()`, just like any other function or process.
+The above example defines a workflow named `my_workflow` which is called by the entry workflow. Both `hello` and `bye` could be any other process or workflow.
 
-## Using variables and params
+### Takes and emits
 
-A workflow can access any variable or parameter defined in the global scope:
+The `take:` section declares the inputs of a named workflow:
 
-```groovy
-params.data = '/some/data/file'
-
-workflow {
-    if( params.data )
-        bar(params.data)
-    else
-        bar(foo())
-}
-```
-
-:::{tip}
-The use of global variables and params in named workflows is discouraged because it breaks the modularity of the workflow. As a best practice, every workflow input should be explicitly defined as such in the `take:` block, and params should only be used in the implicit workflow.
-:::
-
-## Workflow inputs (`take`)
-
-A workflow can declare one or more input channels using the `take` keyword. For example:
-
-```groovy
-workflow my_pipeline {
+```nextflow
+workflow my_workflow {
     take:
     data1
     data2
 
     main:
-    foo(data1, data2)
-    bar(foo.out)
+    hello(data1, data2)
+    bye(hello.out)
 }
 ```
 
-:::{warning}
-When the `take` keyword is used, the beginning of the workflow body must be defined with the `main` keyword.
+Inputs can be specified like arguments when calling the workflow:
+
+```nextflow
+workflow {
+    my_workflow( channel.of('/some/data') )
+}
+```
+
+The `emit:` section declares the outputs of a named workflow:
+
+```nextflow
+workflow my_workflow {
+    main:
+    hello(data)
+    bye(hello.out)
+
+    emit:
+    bye.out
+}
+```
+
+When calling the workflow, the output can be accessed using the `out` property, i.e. `my_workflow.out`.
+
+If an output is assigned to a name, the name can be used to reference the output from the calling workflow. For example:
+
+```nextflow
+workflow my_workflow {
+    main:
+    hello(data)
+    bye(hello.out)
+
+    emit:
+    my_data = bye.out
+}
+```
+
+The result of the above workflow can be accessed using `my_workflow.out.my_data`.
+
+:::{note}
+Every output must be assigned to a name when multiple outputs are declared.
 :::
 
-Inputs can be specified like arguments when invoking the workflow:
+:::{versionadded} 25.10.0
+:::
 
-```groovy
-workflow {
-    my_pipeline( channel.from('/some/data') )
-}
-```
+When using the {ref}`strict syntax <strict-syntax-page>`, workflow takes and emits can specify a type annotation:
 
-## Workflow outputs (`emit`)
+```nextflow
+workflow my_workflow {
+    take:
+    data: Channel<Path>
 
-A workflow can declare one or more output channels using the `emit` keyword. For example:
-
-```groovy
-workflow my_pipeline {
     main:
-    foo(data)
-    bar(foo.out)
+    ch_hello = hello(data)
+    ch_bye = bye(ch_hello.collect())
 
     emit:
-    bar.out
+    my_data: Value<Path> = ch_bye
 }
 ```
 
-When invoking the workflow, the output channel(s) can be accessed using the `out` property, i.e. `my_pipeline.out`. When multiple output channels are declared, use the array bracket notation or the assignment syntax to access each output channel as described for [process outputs](#process-outputs).
+In the above example, `my_workflow` takes a channel of files (`Channel<Path>`) and emits a dataflow value with a single file (`Value<Path>`). See {ref}`stdlib-types` for the list of available types.
 
-### Named outputs
+(dataflow-page)=
 
-If an output channel is assigned to an identifier in the `emit` block, the identifier can be used to reference the channel from the calling workflow. For example:
+## Dataflow
 
-```groovy
-workflow my_pipeline {
-    main:
-    foo(data)
-    bar(foo.out)
+Workflows consist of *dataflow* logic, in which processes are connected to each other through *dataflow channels* and *dataflow values*.
 
-    emit:
-    my_data = bar.out
-}
+(dataflow-type-channel)=
+
+### Channels
+
+A *dataflow channel* (or simply *channel*) is an asynchronous sequence of values.
+
+The values in a channel cannot be accessed directly, but only through an operator or process. For example:
+
+```nextflow
+channel.of(1, 2, 3).view { v -> "channel emits ${v}" }
 ```
 
-The result of the above workflow can be accessed using `my_pipeline.out.my_data`.
+```console
+channel emits 1
+channel emits 2
+channel emits 3
+```
+
+**Factories**
+
+A channel can be created by factories in the `channel` namespace. For example, the `channel.fromPath()` factory creates a channel from a file name or glob pattern, similar to the `files()` function:
+
+```nextflow
+channel.fromPath('input/*.txt').view()
+```
+
+See {ref}`channel-factory` for the full list of channel factories.
+
+**Operators**
+
+Channel operators, or *operators* for short, are functions that consume and produce channels. Because channels are asynchronous, operators are necessary to manipulate the values in a channel. Operators are particularly useful for implementing glue logic between processes.
+
+Commonly used operators include:
+
+- {ref}`operator-combine`: emit the combinations of two channels
+
+- {ref}`operator-collect`: collect the values from a channel into a list
+
+- {ref}`operator-filter`: select the values in a channel that satisfy a condition
+
+- {ref}`operator-flatMap`: transform each value from a channel into a list and emit each list element separately
+
+- {ref}`operator-grouptuple`: group the values from a channel based on a grouping key
+
+- {ref}`operator-join`: join the values from two channels based on a matching key
+
+- {ref}`operator-map`: transform each value from a channel with a mapping function
+
+- {ref}`operator-mix`: emit the values from multiple channels
+
+- {ref}`operator-view`: print each value in a channel to standard output
+
+See {ref}`operator-page` for the full list of operators.
+
+(dataflow-type-value)=
+
+### Values
+
+A *dataflow value* is an asynchronous value.
+
+Dataflow values can be created using the {ref}`channel.value <channel-value>` factory, and they are created by processes (under {ref}`certain conditions <process-out-singleton>`).
+
+A dataflow value cannot be accessed directly, but only through an operator or process. For example:
+
+```nextflow
+channel.value(1).view { v -> "dataflow value is ${v}" }
+```
+
+```console
+dataflow value is 1
+```
+
+See {ref}`stdlib-types-value` for the set of available methods for dataflow values.
 
 (workflow-process-invocation)=
 
-## Invoking processes
+### Calling processes and workflows
 
-A process can be invoked like a function in a workflow definition, passing the expected input channels like function arguments. For example:
+Processes and workflows are called like functions, passing their inputs as arguments:
 
-```groovy
-process foo {
+```nextflow
+process hello {
     output:
-    path 'foo.txt'
+    path 'hello.txt', emit: txt
 
     script:
     """
-    your_command > foo.txt
+    your_command > hello.txt
     """
 }
 
-process bar {
+process bye {
     input:
-    path x
+    path 'hello.txt'
 
     output:
-    path 'bar.txt'
+    path 'bye.txt', emit: txt
 
     script:
     """
-    another_command $x > bar.txt
+    another_command hello.txt > bye.txt
     """
+}
+
+workflow hello_bye {
+    take:
+    data
+
+    main:
+    hello()
+    bye(data)
 }
 
 workflow {
     data = channel.fromPath('/some/path/*.txt')
-    foo()
-    bar(data)
+    hello_bye(data)
 }
 ```
 
-:::{warning}
-A process can be only be invoked once in a single workflow, however you can get around this restriction by using {ref}`module-aliases`.
-:::
+Processes and workflows have a few extra rules for how they can be called:
 
-### Process composition
+- Processes and workflows can only be called by workflows
 
-Processes with matching input/output declarations can be composed so that the output of the first process is passed as input to the second process. The previous example can be rewritten as follows:
+- A given process or workflow can only be called once in a given workflow. To use a process or workflow multiple times in the same workflow, use {ref}`module-aliases`.
 
-```groovy
-workflow {
-    bar(foo())
-}
-```
+The "return value" of a process or workflow call is the process outputs or workflow emits, respectively. The return value can be assigned to a variable or passed into another call:
 
-### Process outputs
+```nextflow
+workflow hello_bye {
+    take:
+    data
 
-A process output can be accessed using the `out` attribute on the corresponding process object. For example:
-
-```groovy
-workflow {
-    foo()
-    bar(foo.out)
-    bar.out.view()
-}
-```
-
-When a process defines multiple output channels, each output can be accessed by index (`out[0]`, `out[1]`, etc.) or by name (see below).
-
-The process output(s) can also be accessed like the return value of a function:
-
-```groovy
-workflow {
-    f_out = foo()
-    (b1, b2) = bar(f_out)
-    b1.view()
-}
-```
-
-#### Named outputs
-
-The `emit` option can be added to the process output definition to assign a name identifier. This name can be used to reference the channel from the calling workflow. For example:
-
-```groovy
-process foo {
-    output:
-    path '*.bam', emit: samples_bam
-
-    '''
-    your_command --here
-    '''
-}
-
-workflow {
-    foo()
-    foo.out.samples_bam.view()
-}
-```
-
-When referencing a named output directly from the process invocation, you can use a more concise syntax:
-
-```groovy
-workflow {
-    ch_samples = foo().samples_bam
-}
-```
-
-See {ref}`process outputs <process-additional-options>` for more details.
-
-#### Named stdout
-
-The `emit` option can also be used to name a `stdout` output. However, while process output options are usually prefixed with a comma, this is not the case for `stdout`. This is because `stdout` does not have an argument like other types.
-
-
-```groovy
-process sayHello {
-    input:
-    val cheers
-
-    output:
-    stdout emit: verbiage
-
-    script:
-    """
-    echo -n $cheers
-    """
-}
-
-workflow {
-    things = channel.of('Hello world!', 'Yo, dude!', 'Duck!')
-    sayHello(things)
-    sayHello.out.verbiage.view()
-}
-```
-
-## Invoking workflows
-
-Named workflows can be invoked and composed just like any other process or function.
-
-```groovy
-workflow flow1 {
-    take: data
     main:
-        foo(data)
-        bar(foo.out)
+    bye_out = bye(hello(data))
+
     emit:
-        bar.out
-}
-
-workflow flow2 {
-    take: data
-    main:
-        foo(data)
-        baz(foo.out)
-    emit:
-        baz.out
+    bye_out
 }
 
 workflow {
-    take: data
+    data = channel.fromPath('/some/path/*.txt')
+    bye_out = hello_bye(data)
+}
+```
+
+Named outputs can be accessed as properties of the return value:
+
+```nextflow
+workflow hello_bye {
+    take:
+    data
+
     main:
-        flow1(data)
-        flow2(flow1.out)
+    hello_out = hello(data)
+    bye_out = bye(hello_out.txt)
+
+    emit:
+    bye = bye_out.txt
+}
+
+workflow {
+    data = channel.fromPath('/some/path/*.txt')
+    flow_out = hello_bye(data)
+    bye_out = flow_out.bye
+}
+```
+
+As a convenience, process and workflow outputs can also be accessed without first assigning to a variable, by using the `.out` property of the process or workflow name:
+
+```nextflow
+workflow hello_bye {
+    take:
+    data
+
+    main:
+    hello(data)
+    bye(hello.out)
+
+    emit:
+    bye = bye.out
+}
+
+workflow {
+    data = channel.fromPath('/some/path/*.txt')
+    hello_bye(data)
+    hello_bye.out.bye.view()
 }
 ```
 
 :::{note}
-Each workflow invocation has its own scope. As a result, the same process can be invoked in two different workflow scopes, like `foo` in the above snippet, which is used in both `flow1` and `flow2`. The workflow execution path, along with the process names, determines the *fully qualified process name* that is used to distinguish the different process invocations, i.e. `flow1:foo` and `flow2:foo` in the above example.
+Process named outputs are defined using the `emit` option on a process output. See {ref}`naming process outputs <process-naming-outputs>` for more information.
+:::
+
+:::{note}
+Process and workflow outputs can also be accessed by index (e.g., `hello.out[0]`, `hello.out[1]`, etc.). As a best practice, multiple outputs should be accessed by name.
+:::
+
+Workflows can be composed in the same way:
+
+```nextflow
+workflow flow1 {
+    take:
+    data
+
+    main:
+    tick(data)
+    tack(tick.out)
+
+    emit:
+    tack.out
+}
+
+workflow flow2 {
+    take:
+    data
+
+    main:
+    tick(data)
+    tock(tick.out)
+
+    emit:
+    tock.out
+}
+
+workflow {
+    data = channel.fromPath('/some/path/*.txt')
+    flow1(data)
+    flow2(flow1.out)
+}
+```
+
+:::{note}
+The same process can be called in different workflows without using an alias, like `tick` in the above example, which is used in both `flow1` and `flow2`. The workflow call stack determines the *fully qualified process name*, which is used to distinguish the different process calls, i.e. `flow1:tick` and `flow2:tick` in the above example.
 :::
 
 :::{tip}
 The fully qualified process name can be used as a {ref}`process selector <config-process-selectors>` in a Nextflow configuration file, and it takes priority over the simple process name.
 :::
 
-## Special operators
+(workflow-special-operators)=
 
-### Pipe `|`
+### Special operators
 
-The `|` *pipe* operator can be used to compose Nextflow processes and operators. For example:
+The following operators have a special meaning when used in a workflow with process and workflow calls.
 
-```groovy
-process foo {
-    input:
-    val data
-
-    output:
-    val result
-
-    exec:
-    result = "$data world"
-}
-
-workflow {
-   channel.from('Hello','Hola','Ciao') | foo | map { it.toUpperCase() } | view
-}
-```
-
-The above snippet defines a process named `foo` and invokes it with the `data` channel. The result is then piped to the {ref}`operator-map` operator, which converts each string to uppercase, and finally to the {ref}`operator-view` operator which prints it.
-
-:::{tip}
-Statements can also be split across multiple lines for better readability:
-
-```groovy
-workflow {
-    channel.from('Hello','Hola','Ciao')
-      | foo
-      | map { it.toUpperCase() }
-      | view
-}
-```
+:::{note}
+As a best practice, avoid these operators when {ref}`type checking <preparing-static-types>` is enabled. Using these operators will prevent the type checker from validating your code.
 :::
 
-### And `&`
+**Pipe `|`**
 
-The `&` *and* operator can be used to feed multiple processes with the same channel(s). For example:
+The `|` *pipe* operator can be used to chain processes, operators, and workflows:
 
-```groovy
-process foo {
+```nextflow
+process greet {
     input:
     val data
 
@@ -371,7 +747,45 @@ process foo {
     result = "$data world"
 }
 
-process bar {
+workflow {
+    channel.of('Hello', 'Hola', 'Ciao')
+        | greet
+        | map { v -> v.toUpperCase() }
+        | view
+}
+```
+
+The above snippet defines a process named `greet` and invokes it with the input channel. The result is then piped to the {ref}`operator-map` operator, which converts each string to uppercase, and finally to the {ref}`operator-view` operator which prints it.
+
+The same code can also be written as:
+
+```nextflow
+workflow {
+    ch_input = channel.of('Hello', 'Hola', 'Ciao')
+    ch_greet = greet(ch_input)
+    ch_greet
+        .map { v -> v.toUpperCase() }
+        .view()
+}
+```
+
+**And `&`**
+
+The `&` *and* operator can be used to call multiple processes in parallel with the same channel(s):
+
+```nextflow
+process greet {
+    input:
+    val data
+
+    output:
+    val result
+
+    exec:
+    result = "$data world"
+}
+
+process to_upper {
     input:
     val data
 
@@ -383,300 +797,71 @@ process bar {
 }
 
 workflow {
-    channel.from('Hello')
-      | map { it.reverse() }
-      | (foo & bar)
-      | mix
-      | view
+    channel.of('Hello')
+        | map { v -> v.reverse() }
+        | (greet & to_upper)
+        | mix
+        | view
 }
 ```
 
-In the above snippet, the initial channel is piped to the {ref}`operator-map` operator, which reverses the string value. Then, the result is passed to the processes `foo` and `bar`, which are executed in parallel. Each process outputs a channel, and the two channels are combined using the {ref}`operator-mix` operator. Finally, the result is printed using the {ref}`operator-view` operator.
+In the above snippet, the initial channel is piped to the {ref}`operator-map` operator, which reverses the string value. Then, the result is passed to the processes `greet` and `to_upper`, which are executed in parallel. Each process outputs a channel, and the two channels are combined using the {ref}`operator-mix` operator. Finally, the result is printed using the {ref}`operator-view` operator.
 
-(workflow-output-def)=
+The same code can also be written as:
 
-## Publishing outputs
+```nextflow
+workflow {
+    ch = channel.of('Hello').map { v -> v.reverse() }
+    ch_greet = greet(ch)
+    ch_upper = to_upper(ch)
+    ch_greet.mix(ch_upper).view()
+}
+```
 
-:::{versionadded} 24.04.0
+(workflow-recursion)=
+
+### Process and workflow recursion
+
+:::{versionadded} 22.04.0
 :::
 
 :::{note}
-This feature requires the `nextflow.preview.output` feature flag to be enabled.
+This is a preview feature and requires the `nextflow.preview.recursion` feature flag to be enabled. The syntax and behavior may change in future releases.
 :::
 
-A script may define the set of outputs that should be published by the implicit workflow, known as the workflow output definition:
+Processes can be invoked recursively using the `recurse` method.
 
-```groovy
-workflow {
-    foo(bar())
-}
-
-output {
-    directory 'results'
-}
+```{literalinclude} snippets/recurse-process.nf
+:language: nextflow
 ```
 
-The output definition must be defined after the implicit workflow.
-
-### Publishing channels
-
-Processes and workflows can each define a `publish` section which maps channels to publish targets. For example:
-
-```groovy
-process foo {
-    // ...
-
-    output:
-    path 'result.txt', emit: results
-
-    publish:
-    results >> 'foo'
-
-    // ...
-}
-
-workflow foobar {
-    main:
-    foo(data)
-    bar(foo.out)
-
-    publish:
-    foo.out >> 'foobar/foo'
-
-    emit:
-    bar.out
-}
+```{literalinclude} snippets/recurse-process.out
+:language: console
 ```
 
-In the above example, the output `results` of process `foo` is published to the target `foo/` by default. However, when the workflow `foobar` invokes process `foo`, it publishes `foo.out` (i.e. `foo.out.results`) to the target `foobar/foo/`, overriding the default target defined by `foo`.
+In the above example, the `count_down` process is first invoked with the value `params.start`. On each subsequent iteration, the process is invoked again using the output from the previous iteration. The recursion continues until the specified condition is satisfied, as defined by the `until` method, which terminates the recursion.
 
-In a process, any output with an `emit` name can be published. In a workflow, any channel defined in the workflow, including process and subworkflow outputs, can be published.
+The recursive output can also be limited using the `times` method:
 
-:::{note}
-If the publish source is a process/workflow output (e.g. `foo.out`) with multiple channels, each channel will be published. Individual output channels can also be published by index or name (e.g. `foo.out[0]` or `foo.out.results`).
-:::
-
-As shown in the example, workflows can override the publish targets of process and subworkflow outputs. This way, each process and workflow can define some sensible defaults for publishing, which can be overridden by calling workflows as needed.
-
-By default, all files emitted by the channel will be published into the specified directory. If a channel emits list values, any files in the list (including nested lists) will also be published. For example:
-
-```groovy
-workflow {
-    ch_samples = Channel.of(
-        [ [id: 'sample1'], file('sample1.txt') ]
-    )
-
-    publish:
-    ch_samples >> 'samples' // sample1.txt will be published
-}
+```nextflow
+count_down
+    .recurse(params.start)
+    .times(3)
+    .view { v -> "${v}..." }
 ```
 
-### Publish directory
+Workflows can also be invoked recursively:
 
-The `directory` statement is used to set the top-level publish directory of the workflow:
-
-```groovy
-output {
-    directory 'results'
-
-    // ...
-}
+```{literalinclude} snippets/recurse-workflow.nf
+:language: nextflow
 ```
 
-It is optional, and it defaults to the launch directory (`workflow.launchDir`). Published files will be saved within this directory.
-
-### Publish targets
-
-A publish target is a name with a specific publish configuration. By default, when a channel is published to a target in the `publish:` section of a process or workflow, the target name is used as the publish path.
-
-For example, given the following output definition:
-
-```groovy
-workflow {
-    ch_foo = foo()
-    ch_bar = bar(ch_foo)
-
-    publish:
-    ch_foo >> 'foo'
-    ch_bar >> 'bar'
-}
-
-output {
-    directory 'results'
-}
+```{literalinclude} snippets/recurse-workflow.out
+:language: console
 ```
 
-The following directory structure will be created:
+**Limitations**
 
-```
-results/
-└── foo/
-    └── ...
-└── bar/
-    └── ...
-```
+- A recursive process or workflow must have matching inputs and outputs, such that the outputs for each iteration can be supplied as the inputs for the next iteration.
 
-:::{note}
-The trailing slash in the target name is not required; it is only used to denote that the target name is intended to be used as the publish path.
-:::
-
-:::{warning}
-The target name must not begin with a slash (`/`), it should be a relative path name.
-:::
-
-Workflows can also disable publishing for specific channels by redirecting them to `null`:
-
-```groovy
-workflow {
-    ch_foo = foo()
-
-    publish:
-    ch_foo >> (params.save_foo ? 'foo' : null)
-}
-```
-
-Publish targets can be customized in the output definition using a set of options similar to the {ref}`process-publishdir` directive.
-
-For example:
-
-```groovy
-output {
-    directory 'results'
-    mode 'copy'
-
-    'foo' {
-        mode 'link'
-    }
-}
-```
-
-In this example, all files will be copied by default, and files published to `foo/` will be hard-linked, overriding the default option.
-
-Available options:
-
-`contentType`
-: *Currently only supported for S3.*
-: Specify the media type a.k.a. [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_Types) of published files (default: `false`). Can be a string (e.g. `'text/html'`), or `true` to infer the content type from the file extension.
-
-`enabled`
-: Enable or disable publishing (default: `true`).
-
-`ignoreErrors`
-: When `true`, the workflow will not fail if a file can't be published for some reason (default: `false`).
-
-`mode`
-: The file publishing method (default: `'symlink'`). The following options are available:
-
-  `'copy'`
-  : Copy each file into the output directory.
-
-  `'copyNoFollow'`
-  : Copy each file into the output directory without following symlinks, i.e. only the link is copied.
-
-  `'link'`
-  : Create a hard link in the output directory for each file.
-
-  `'move'`
-  : Move each file into the output directory.
-  : Should only be used for files which are not used by downstream processes in the workflow.
-
-  `'rellink'`
-  : Create a relative symbolic link in the output directory for each file.
-
-  `'symlink'`
-  : Create an absolute symbolic link in the output directory for each output file.
-
-`overwrite`
-: When `true` any existing file in the specified folder will be overwritten (default: `'standard'`). The following options are available:
-
-  `false`
-  : Never overwrite existing files.
-
-  `true`
-  : Always overwrite existing files.
-
-  `'deep'`
-  : Overwrite existing files when the file content is different.
-
-  `'lenient'`
-  : Overwrite existing files when the file size is different.
-
-  `'standard'`
-  : Overwrite existing files when the file size or last modified timestamp is different.
-
-`path`
-: Specify the publish path relative to the output directory (default: the target name). Can only be specified within a target definition.
-
-`storageClass`
-: *Currently only supported for S3.*
-: Specify the storage class for published files.
-
-`tags`
-: *Currently only supported for S3.*
-: Specify arbitrary tags for published files. For example:
-  ```groovy
-  tags FOO: 'hello', BAR: 'world'
-  ```
-
-### Index files
-
-A publish target can create an index file of the values that were published. An index file is a useful way to save the metadata associated with files, and is more flexible than encoding metadata in the file path. Currently only CSV files are supported.
-
-For example:
-
-```groovy
-workflow {
-    ch_foo = Channel.of(
-        [id: 1, name: 'foo 1'],
-        [id: 2, name: 'foo 2'],
-        [id: 3, name: 'foo 3']
-    )
-
-    publish:
-    ch_foo >> 'foo'
-}
-
-output {
-    directory 'results'
-
-    'foo' {
-        index {
-            path 'index.csv'
-        }
-    }
-}
-```
-
-The above example will write the following CSV file to `results/foo/index.csv`:
-
-```csv
-"id","name"
-"1","foo 1"
-"2","foo 2"
-"3","foo 3"
-```
-
-You can customize the index file by specifying options in a block, for example:
-
-```groovy
-index {
-    path 'index.csv'
-    header ['name', 'extra_option']
-    sep '\t'
-    mapper { val -> val + [extra_option: 'bar'] }
-}
-```
-
-The following options are available:
-
-`header`
-: When `true`, the keys of the first record are used as the column names (default: `false`). Can also be a list of column names.
-
-`mapper`
-: Closure which defines how to transform each published value into a CSV record. The closure should return a list or map. By default, no transformation is applied.
-
-`path`
-: The name of the index file relative to the target path (required).
-
-`sep`
-: The character used to separate values (default: `','`).
+- Recursive workflows cannot use *reduction* operators such as `collect`, `reduce`, and `toList`, because these operators cause the recursion to hang indefinitely after the initial iteration.

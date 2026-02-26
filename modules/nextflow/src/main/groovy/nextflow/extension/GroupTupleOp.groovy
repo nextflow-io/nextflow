@@ -35,7 +35,6 @@ class GroupTupleOp {
 
     static private List<Integer> GROUP_DEFAULT_INDEX = [0]
 
-
     /**
      * Comparator used to sort tuple entries (when required)
      */
@@ -92,7 +91,7 @@ class GroupTupleOp {
      */
     private void collect(List tuple) {
 
-        final key = tuple[indices]                      // the actual grouping key
+        final key = normalizeKey(tuple[indices])        // the actual grouping key
         final len = tuple.size()
 
         final List items = groups.getOrCreate(key) {    // get the group for the specified key
@@ -127,7 +126,9 @@ class GroupTupleOp {
      * finalize the grouping binding the remaining values
      */
     private void finalise(nop) {
-        groups.each { keys, items -> bindTuple(items, size ?: sizeBy(keys)) }
+        for( Map.Entry<List,List> entry : groups.entrySet() ) {
+            bindTuple(entry.value, size ?: sizeBy(entry.key))
+        }
         target.bind(Channel.STOP)
     }
 
@@ -253,6 +254,21 @@ class GroupTupleOp {
         }
         else
             return 0
+    }
+
+    /**
+     * Normalize key by converting GString objects to String to ensure consistent grouping
+     *
+     * @param key The key object or list of key objects to normalize
+     * @return The normalized key with GString objects converted to String
+     */
+    static protected List normalizeKey(List keyList) {
+        final result = new ArrayList(keyList.size())
+        for( int i=0; i<keyList.size(); i++ ) {
+            final k = keyList[i]
+            result[i] = k instanceof GString ? k.toString() : k
+        }
+        return result
     }
 
 }

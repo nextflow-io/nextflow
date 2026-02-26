@@ -18,6 +18,7 @@
 package io.seqera.tower.plugin
 
 import java.nio.file.Path
+import java.time.Instant
 import java.time.OffsetDateTime
 
 import groovy.json.DefaultJsonGenerator
@@ -39,7 +40,7 @@ import org.apache.groovy.json.internal.CharBuf
 @CompileStatic
 class TowerJsonGenerator extends DefaultJsonGenerator {
 
-    List<String> stack = new ArrayList<>(10)
+    private List<String> stack = new ArrayList<>(10)
     Map<String,Integer> scheme
 
     static TowerJsonGenerator create(Map<String,Integer> scheme) {
@@ -48,6 +49,7 @@ class TowerJsonGenerator extends DefaultJsonGenerator {
                 .addConverter(Duration) { Duration d, String key -> d.durationInMillis }
                 .addConverter(NextflowMeta) { NextflowMeta m, String key -> m.toJsonMap() }
                 .addConverter(OffsetDateTime) { it.toString() }
+                .addConverter(Instant) { it.toString() }
                 .dateFormat(Const.ISO_8601_DATETIME_FORMAT).timezone("UTC")
 
         return new TowerJsonGenerator(opts, scheme)
@@ -72,8 +74,8 @@ class TowerJsonGenerator extends DefaultJsonGenerator {
     }
 
     @Override
-    protected void writeObject(String key, Object object, CharBuf buffer) {
-        final pos=stack.size()
+    protected synchronized void writeObject(String key, Object object, CharBuf buffer) {
+        final pos = stack.size()
         if(key) stack.add(pos, key)
         final fqn = stack.join('.')
         try {

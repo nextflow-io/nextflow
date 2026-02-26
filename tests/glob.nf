@@ -21,6 +21,7 @@ process recurseDir {
     file 'folder/**.fa'
     file 'folder/**/*.txt' 
 
+    script:
     """
     mkdir -p folder/x
     mkdir -p folder/y

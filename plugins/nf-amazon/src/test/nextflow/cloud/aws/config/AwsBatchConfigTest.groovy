@@ -34,7 +34,7 @@ class AwsBatchConfigTest extends Specification {
         batch.maxParallelTransfers == AwsBatchConfig.MAX_TRANSFER
         batch.maxTransferAttempts == AwsBatchConfig.DEFAULT_AWS_MAX_ATTEMPTS
         batch.delayBetweenAttempts == AwsBatchConfig.DEFAULT_DELAY_BETWEEN_ATTEMPTS
-        batch.maxSpotAttempts == AwsBatchConfig.DEFAULT_MAX_SPOT_ATTEMPTS
+        batch.maxSpotAttempts == null
         batch.retryMode == 'standard'
         and:
         !batch.cliPath
@@ -46,6 +46,8 @@ class AwsBatchConfigTest extends Specification {
         !batch.isFargateMode()
         !batch.s5cmdPath
         batch.schedulingPriority == 0
+        !batch.terminateUnschedulableJobs
+        !batch.forceGlacierTransfer
     }
 
     def 'should create config with options' () {
@@ -86,7 +88,7 @@ class AwsBatchConfigTest extends Specification {
     def 'should parse volumes list' () {
 
         given:
-        def executor = Spy(AwsBatchConfig)
+        def executor = new AwsBatchConfig([:])
 
         expect:
         executor.makeVols(OBJ) == EXPECTED
@@ -104,7 +106,7 @@ class AwsBatchConfigTest extends Specification {
 
     def 'should add a volume' () {
         given:
-        def opts = new AwsBatchConfig()
+        def opts = new AwsBatchConfig([:])
 
         when:
         opts.addVolume(Paths.get('/some/dir'))
@@ -139,4 +141,31 @@ class AwsBatchConfigTest extends Specification {
         [platformType: 'fargate', cliPath: "/opt/s5cmd --foo"]      | null              | '/opt/s5cmd --foo'| true
     }
 
+    def 'should parse unschedulable flag' () {
+        given:
+        def opts = new AwsBatchConfig(OPTS)
+
+        expect:
+        opts.terminateUnschedulableJobs == UNSCHEDULABLE
+
+        where:
+        OPTS                                    | UNSCHEDULABLE
+        [:]                                     | false
+        [terminateUnschedulableJobs: false]     | false
+        [terminateUnschedulableJobs: true]      | true
+    }
+
+    def 'should parse forceGlacierTransfer flag' () {
+        given:
+        def opts = new AwsBatchConfig(OPTS)
+
+        expect:
+        opts.forceGlacierTransfer == FORCE_GLACIER
+
+        where:
+        OPTS                                    | FORCE_GLACIER
+        [:]                                     | false
+        [forceGlacierTransfer: false]           | false
+        [forceGlacierTransfer: true]            | true
+    }
 }

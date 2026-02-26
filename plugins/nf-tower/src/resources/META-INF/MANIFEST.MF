@@ -1,6 +1,0 @@
-Manifest-Version: 1.0
-Plugin-Class: io.seqera.tower.plugin.TowerPlugin
-Plugin-Id: nf-tower
-Plugin-Version: 1.9.2
-Plugin-Provider: Seqera Labs
-Plugin-Requires: >=24.04.4

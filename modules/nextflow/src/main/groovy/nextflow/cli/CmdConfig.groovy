@@ -24,7 +24,9 @@ import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.NF
 import nextflow.config.ConfigBuilder
+import nextflow.config.ConfigValidator
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
@@ -41,8 +43,13 @@ class CmdConfig extends CmdBase {
 
     static final public NAME = 'config'
 
+    static final List<String> FORMATS = ['flat','properties','canonical','json','yaml']
+
     @Parameter(description = 'project name')
     List<String> args = []
+
+    @Parameter(names=['-r','-revision'], description = 'Revision of the project (either a git branch, tag or commit SHA number)')
+    String revision
 
     @Parameter(names=['-a','-show-profiles'], description = 'Show all configuration profiles')
     boolean showAllProfiles
@@ -50,10 +57,12 @@ class CmdConfig extends CmdBase {
     @Parameter(names=['-profile'], description = 'Choose a configuration profile')
     String profile
 
-    @Parameter(names = '-properties', description = 'Prints config using Java properties notation')
+    @Deprecated
+    @Parameter(names = '-properties', description = 'Prints config using Java properties notation (deprecated: use `-o properties` instead)')
     boolean printProperties
 
-    @Parameter(names = '-flat', description = 'Print config using flat notation')
+    @Deprecated
+    @Parameter(names = '-flat', description = 'Print config using flat notation (deprecated: use `-o flat` instead)')
     boolean printFlatten
 
     @Parameter(names = '-sort', description = 'Sort config attributes')
@@ -61,6 +70,9 @@ class CmdConfig extends CmdBase {
 
     @Parameter(names = '-value', description = 'Print the value of a config option, or fail if the option is not defined')
     String printValue
+
+    @Parameter(names = ['-o','-output'], description = 'Print the config using the specified format: canonical,properties,flat,json,yaml')
+    String outputFormat
 
     @Override
     String getName() { NAME }
@@ -74,19 +86,30 @@ class CmdConfig extends CmdBase {
         if( args ) base = getBaseDir(args[0])
         if( !base ) base = Paths.get('.')
 
+        // -- validate command line options
         if( profile && showAllProfiles ) {
             throw new AbortOperationException("Option `-profile` conflicts with option `-show-profiles`")
         }
 
         if( printProperties && printFlatten )
-            throw new AbortOperationException("Option `-flat` and `-properties` conflicts")
+            throw new AbortOperationException("Option `-flat` and `-properties` conflicts each other")
 
         if ( printValue && printFlatten )
-            throw new AbortOperationException("Option `-value` and `-flat` conflicts")
+            throw new AbortOperationException("Option `-value` and `-flat` conflicts each other")
 
         if ( printValue && printProperties )
-            throw new AbortOperationException("Option `-value` and `-properties` conflicts")
+            throw new AbortOperationException("Option `-value` and `-properties` conflicts each other")
 
+        if( printValue && outputFormat )
+            throw new AbortOperationException("Option `-value` and `-output` conflicts each other")
+
+        if( printFlatten )
+            outputFormat = 'flat'
+
+        if( printProperties )
+            outputFormat = 'properties'
+
+        // -- build the config
         final builder = new ConfigBuilder()
                 .setShowClosures(true)
                 .setStripSecrets(true)
@@ -97,17 +120,37 @@ class CmdConfig extends CmdBase {
 
         final config = builder.buildConfigObject()
 
-        if( printProperties ) {
-            printProperties0(config, stdout)
+        // -- validate config options
+        if( NF.isSyntaxParserV2() ) {
+            Plugins.load(config)
+            new ConfigValidator().validate(config)
         }
-        else if( printFlatten ) {
-            printFlatten0(config, stdout)
-        }
-        else if( printValue ) {
+
+        // -- print config options
+        if( printValue ) {
             printValue0(config, printValue, stdout)
         }
-        else {
+        else if( outputFormat=='properties' ) {
+            printProperties0(config, stdout)
+        }
+        else if( outputFormat=='flat' ) {
+            printFlatten0(config, stdout)
+        }
+        else if( outputFormat=='yaml' ) {
+            printYaml0(config, stdout)
+        }
+        else if( outputFormat=='json') {
+            printJson0(config, stdout)
+        }
+        else if( !outputFormat || outputFormat=='canonical' ) {
             printCanonical0(config, stdout)
+        }
+        else {
+            def msg = "Unknown output format: $outputFormat"
+            def suggest = FORMATS.closest(outputFormat)
+            if( suggest )
+                msg += " - did you mean '${suggest.first()}' instead?"
+            throw new AbortOperationException(msg)
         }
 
         for( String msg : builder.warnings )
@@ -172,6 +215,13 @@ class CmdConfig extends CmdBase {
         config.writeTo( writer )
     }
 
+    @PackageScope void printJson0(ConfigObject config, OutputStream output) {
+        output << ConfigHelper.toJsonString(config, sort) << '\n'
+    }
+
+    @PackageScope void printYaml0(ConfigObject config, OutputStream output) {
+        output << ConfigHelper.toYamlString(config, sort)
+    }
 
     Path getBaseDir(String path) {
 
@@ -183,9 +233,13 @@ class CmdConfig extends CmdBase {
             return file.parent ?: Paths.get('/')
         }
 
-        final manager = new AssetManager(path)
-        manager.isLocal() ? manager.localPath.toPath() : manager.configFile?.parent
-
+        try (final manager = new AssetManager(path, revision)) {
+            if( revision && manager.isUsingLegacyStrategy() ){
+                log.warn("The local asset for ${path} does not support multi-revision - 'revision' option is ignored\n" +
+                    "Consider updating the project using 'nextflow pull ${path} -r $revision -migrate'")
+            }
+            return manager.isLocal() ? manager.localPath.toPath() : manager.configFile?.parent
+        }
     }
 
 }

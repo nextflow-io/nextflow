@@ -90,7 +90,7 @@ class PbsProExecutor extends PbsExecutor {
         }
 
         // add account from config
-        final account = session.getExecConfigProp(getName(), 'account', null) as String
+        final account = config.getExecConfigProp(name, 'account', null) as String
         if( account ) {
             result << '-P' << account
         }
@@ -127,6 +127,11 @@ class PbsProExecutor extends PbsExecutor {
     @Override
     protected QueueStatus decode(String status) {
         DECODE_STATUS.get(status)
+    }
+
+    @Override
+    String getArrayIndexName() {
+        return 'PBS_ARRAY_INDEX'
     }
 
 }

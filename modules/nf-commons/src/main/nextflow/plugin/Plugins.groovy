@@ -31,8 +31,6 @@ import org.pf4j.PluginManager
 @CompileStatic
 class Plugins {
 
-    public static final String DEFAULT_PLUGINS_REPO = 'https://raw.githubusercontent.com/nextflow-io/plugins/main/plugins.json'
-
     private final static PluginsFacade INSTANCE = new PluginsFacade()
 
     static PluginManager getManager() { INSTANCE.manager }

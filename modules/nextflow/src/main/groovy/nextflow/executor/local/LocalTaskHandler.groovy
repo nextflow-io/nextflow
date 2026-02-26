@@ -218,6 +218,7 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
              */
             if( elapsedTimeMillis() > wallTimeMillis ) {
                 destroy()
+                task.exitStatus = process.exitValue()
                 task.stdout = outputFile
                 task.stderr = errorFile
                 task.error = new ProcessException("Process exceeded running time limit (${task.config.getTime()})")
@@ -236,7 +237,7 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
      * Force the submitted job to quit
      */
     @Override
-    void kill() {
+    protected void killTask() {
         if( !process ) return
         final pid = ProcessHelper.pid(process)
         log.trace("Killing process with pid: ${pid}")

@@ -1,6 +1,8 @@
 
+params.outdir = 'results'
+
 process my_process {
-    publishDir "s3://nf-kms-xyz/work/ci-test/publish-s3"
+    publishDir params.outdir
 
     input:
     val(param)
@@ -15,5 +17,5 @@ process my_process {
 }
 
 workflow {
-  Channel.of(1) | my_process
+  channel.of(1) | my_process
 }

@@ -20,6 +20,7 @@ package nextflow.util
 import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import io.seqera.util.trace.TraceUtils
 import nextflow.BuildInfo
 /**
  * Small and simple http client that sends POST requests
@@ -31,6 +32,7 @@ import nextflow.BuildInfo
  *  Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@Deprecated
 @CompileStatic
 class SimpleHttpClient {
 
@@ -122,6 +124,7 @@ class SimpleHttpClient {
             con.setRequestMethod(method)
             con.setRequestProperty("Content-Type", contentType)
             con.setRequestProperty("User-Agent", userAgent)
+            con.setRequestProperty("Traceparent", TraceUtils.rndTrace())
             // set charset
             if( charset )
                 con.setRequestProperty("charset", "utf-8")

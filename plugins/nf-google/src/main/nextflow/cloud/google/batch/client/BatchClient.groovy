@@ -17,17 +17,21 @@
 package nextflow.cloud.google.batch.client
 
 import java.time.temporal.ChronoUnit
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeoutException
 import java.util.function.Predicate
 
 import com.google.api.gax.core.CredentialsProvider
+import com.google.api.gax.rpc.DeadlineExceededException
 import com.google.api.gax.rpc.FixedHeaderProvider
+import com.google.api.gax.rpc.NotFoundException
 import com.google.api.gax.rpc.UnavailableException
 import com.google.auth.Credentials
 import com.google.cloud.batch.v1.BatchServiceClient
 import com.google.cloud.batch.v1.BatchServiceSettings
 import com.google.cloud.batch.v1.Job
 import com.google.cloud.batch.v1.JobName
+import com.google.cloud.batch.v1.JobStatus
 import com.google.cloud.batch.v1.LocationName
 import com.google.cloud.batch.v1.Task
 import com.google.cloud.batch.v1.TaskGroupName
@@ -40,6 +44,8 @@ import dev.failsafe.event.ExecutionAttemptedEvent
 import dev.failsafe.function.CheckedSupplier
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.cloud.google.GoogleOpts
+import nextflow.util.TestOnly
 /**
  * Implements Google Batch HTTP client
  *
@@ -48,23 +54,24 @@ import groovy.util.logging.Slf4j
 @Slf4j
 @CompileStatic
 class BatchClient {
-
+    private final static long TASK_STATE_INVALID_TIME = 1_000
     protected String projectId
     protected String location
     protected BatchServiceClient batchServiceClient
-    protected BatchConfig config
+    protected GoogleOpts config
+    private Map<String, TaskStatusRecord> arrayTaskStatus = new ConcurrentHashMap<String, TaskStatusRecord>()
 
-    BatchClient(BatchConfig config) {
+    BatchClient(GoogleOpts config) {
         this.config = config
-        this.projectId = config.googleOpts.projectId
-        this.location = config.googleOpts.location
+        this.projectId = config.projectId
+        this.location = config.location
         this.batchServiceClient = createBatchService(config)
     }
 
-    /** Only for testing - do not use */
+    @TestOnly
     protected BatchClient() {}
 
-    protected CredentialsProvider createCredentialsProvider(BatchConfig config) {
+    protected CredentialsProvider createCredentialsProvider(GoogleOpts config) {
         if( !config.getCredentials() )
             return null
         return new CredentialsProvider() {
@@ -75,7 +82,7 @@ class BatchClient {
         }
     }
 
-    protected BatchServiceClient createBatchService(BatchConfig config) {
+    protected BatchServiceClient createBatchService(GoogleOpts config) {
         final provider = createCredentialsProvider(config)
         if( provider ) {
             log.debug "[GOOGLE BATCH] Creating service client with config credentials"
@@ -109,8 +116,8 @@ class BatchClient {
     }
 
     Task describeTask(String jobId, String taskId) {
-        final name = TaskName.of(projectId, location, jobId, 'group0', taskId)
-        return batchServiceClient.getTask(name)
+        final name = generateTaskName(jobId, taskId)
+        return apply(()-> batchServiceClient.getTask(name))
     }
 
     void deleteJob(String jobId) {
@@ -120,6 +127,10 @@ class BatchClient {
 
     TaskStatus getTaskStatus(String jobId, String taskId) {
         return describeTask(jobId, taskId).getStatus()
+    }
+
+    JobStatus getJobStatus(String jobId) {
+        return describeJob(jobId).getStatus()
     }
 
     String getTaskState(String jobId, String taskId) {
@@ -135,6 +146,10 @@ class BatchClient {
         return location
     }
 
+    String generateTaskName(String jobId, String taskId) {
+        TaskName.of(projectId, location, jobId, 'group0', taskId)
+    }
+
     /**
      * Creates a retry policy using the configuration specified by {@link BatchRetryConfig}
      *
@@ -142,7 +157,7 @@ class BatchClient {
      * @return The {@link dev.failsafe.RetryPolicy} instance
      */
     protected <T> RetryPolicy<T> retryPolicy(Predicate<? extends Throwable> cond) {
-        final cfg = config.getRetryConfig()
+        final cfg = config.batch.getRetryConfig()
         final listener = new EventListener<ExecutionAttemptedEvent<T>>() {
             @Override
             void accept(ExecutionAttemptedEvent<T> event) throws Throwable {
@@ -174,9 +189,13 @@ class BatchClient {
             boolean test(Throwable t) {
                 if( t instanceof UnavailableException )
                     return true
+                if( t instanceof DeadlineExceededException )
+                    return true
                 if( t instanceof IOException || t.cause instanceof IOException )
                     return true
                 if( t instanceof TimeoutException || t.cause instanceof TimeoutException )
+                    return true
+                if( t instanceof NotFoundException || t.cause instanceof NotFoundException )
                     return true
                 return false
             }
@@ -185,5 +204,40 @@ class BatchClient {
         final policy = retryPolicy(cond)
         // apply the action with
         return Failsafe.with(policy).get(action)
+    }
+
+
+    TaskStatus getTaskInArrayStatus(String jobId, String taskId) {
+        final taskName = generateTaskName(jobId,taskId)
+        final now = System.currentTimeMillis()
+        TaskStatusRecord record = arrayTaskStatus.get(taskName)
+        if( !record || now - record.timestamp > TASK_STATE_INVALID_TIME ){
+            log.trace("[GOOGLE BATCH] Updating tasks status for job $jobId")
+            updateArrayTasks(jobId, now)
+            record = arrayTaskStatus.get(taskName)
+        }
+        return record?.status
+    }
+
+    private void updateArrayTasks(String jobId, long now){
+        for( Task t: listTasks(jobId) ){
+            arrayTaskStatus.put(t.name, new TaskStatusRecord(t.status, now))
+        }
+    }
+
+    void removeFromArrayTasks(String jobId, String taskId){
+        final taskName = generateTaskName(jobId,taskId)
+        TaskStatusRecord record = arrayTaskStatus.remove(taskName)
+    }
+}
+
+@CompileStatic
+class TaskStatusRecord {
+    protected TaskStatus status
+    protected long timestamp
+
+    TaskStatusRecord(TaskStatus status, long timestamp) {
+        this.status = status
+        this.timestamp = timestamp
     }
 }

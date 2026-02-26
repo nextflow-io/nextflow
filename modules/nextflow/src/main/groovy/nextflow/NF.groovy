@@ -28,8 +28,12 @@ import nextflow.script.WorkflowBinding
  */
 class NF {
 
-    static private Session session() {
-        return (Session)Global.session
+    static String getSyntaxParserVersion() {
+        return SysEnv.get('NXF_SYNTAX_PARSER', 'v2')
+    }
+
+    static boolean isSyntaxParserV2() {
+        return getSyntaxParserVersion() == 'v2'
     }
 
     static void init() {
@@ -42,37 +46,23 @@ class NF {
         NextflowDelegatingMetaClass.provider.operatorNames().contains(name)
     }
 
-    static boolean isDsl1() {
-        !NextflowMeta.instance.isDsl2()
-    }
-
-    static boolean isDsl2() {
-        NextflowMeta.instance.isDsl2()
-    }
-
     static Binding getBinding() {
-        isDsl2() ? ExecutionStack.binding() : session().getBinding()
+        ExecutionStack.binding()
     }
 
     static String lookupVariable(value) {
-        if( isDsl2() )
-            return WorkflowBinding.lookup(value)
-        return session().getBinding().getVariableName(value)
+        return WorkflowBinding.lookup(value)
     }
 
     static boolean isStrictMode() {
         NextflowMeta.instance.isStrictModeEnabled()
     }
 
-    static boolean isOutputDefinitionEnabled() {
-        NextflowMeta.instance.preview.output
+    static boolean isModuleBinariesEnabled() {
+        NextflowMeta.instance.isModuleBinariesEnabled()
     }
 
     static boolean isRecurseEnabled() {
         NextflowMeta.instance.preview.recursion
-    }
-
-    static boolean isTopicChannelEnabled() {
-        NextflowMeta.instance.preview.topic
     }
 }

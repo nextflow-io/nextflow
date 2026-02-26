@@ -20,16 +20,18 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 import com.github.tomakehurst.wiremock.junit.WireMockRule
-import com.github.tomjankes.wiremock.WireMockGroovy
 import org.junit.Rule
+import spock.lang.IgnoreIf
 import spock.lang.Specification
 import spock.lang.Unroll
+
+import static com.github.tomakehurst.wiremock.client.WireMock.*
 /**
  * Created by emilio on 08/11/16.
  */
 class XFileSystemProviderTest extends Specification {
 
-
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
     def "should return input stream"() {
         given:
         def fsp = new HttpFileSystemProvider()
@@ -42,6 +44,7 @@ class XFileSystemProviderTest extends Specification {
 
     def "should return input stream from path"() {
         given:
+        def DATA = 'Hello world'
         def fsp = Spy(new HttpFileSystemProvider())
         def path = fsp.getPath(new URI('http://host.com/index.html?query=123'))
         def connection = Mock(URLConnection)
@@ -54,7 +57,8 @@ class XFileSystemProviderTest extends Specification {
             return connection
         }
         and:
-        connection.getInputStream() >> new ByteArrayInputStream('Hello world'.bytes)
+        connection.getInputStream() >> new ByteArrayInputStream(DATA.bytes)
+        connection.getContentLengthLong() >> DATA.size()
         and:
         stream.text == 'Hello world'
     }
@@ -96,7 +100,7 @@ class XFileSystemProviderTest extends Specification {
         Locale.setDefault(Locale.Category.FORMAT, defLocale)
     }
 
-
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
     def "should read file attributes from HttpPath"() {
         given:
         def fsp = new HttpFileSystemProvider()
@@ -109,6 +113,7 @@ class XFileSystemProviderTest extends Specification {
         attrs.size() > 0
     }
 
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
     def "should read file attributes from FtpPath"() {
         given:
         def fsp = new FtpFileSystemProvider()
@@ -154,59 +159,38 @@ class XFileSystemProviderTest extends Specification {
     }
 
     @Rule
-    WireMockRule wireMockRule = new WireMockRule(18080)
+    WireMockRule wireMockRule = new WireMockRule(0)
 
     @Unroll
     def 'should follow a redirect when read a http file '() {
         given:
-        def wireMock = new WireMockGroovy(18080)
-        wireMock.stub {
-            request {
-                method "GET"
-                url "/index.html"
-            }
-            response {
-                status HTTP_CODE
-                headers {
-                    "Location" "http://localhost:18080${REDIRECT_TO}"
-                }
-            }
-        }
-        wireMock.stub {
-            request {
-                method "GET"
-                url "/index2.html"
-            }
-            response {
-                status HTTP_CODE
-                headers {
-                    "Location" "http://localhost:18080/target.html"
-                }
-            }
-        }
-        wireMock.stub {
-            request {
-                method "GET"
-                url "/target.html"
-            }
-            response {
-                status 200
-                body """a
+        def localhost = "http://localhost:${wireMockRule.port()}"
+        wireMockRule.stubFor(get(urlEqualTo("/index.html"))
+            .willReturn(aResponse()
+                .withStatus(HTTP_CODE)
+                .withHeader("Location", "${localhost}${REDIRECT_TO}")))
+
+        wireMockRule.stubFor(get(urlEqualTo("/index2.html"))
+            .willReturn(aResponse()
+                .withStatus(HTTP_CODE)
+                .withHeader("Location", "${localhost}/target.html")))
+
+        wireMockRule.stubFor(get(urlEqualTo("/target.html"))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withBody("""a
                  b
                  c
                  d
-                 """
-                headers {
-                    "Content-Type" "text/html"
-                    "Content-Length" "10"
-                    "Last-Modified" "Fri, 04 Nov 2016 21:50:34 GMT"
-                }
-            }
-        }
+                 """)
+                .withHeader("Content-Type", "text/html")
+                .withHeader("Content-Length", "10")
+                .withHeader("Last-Modified", "Fri, 04 Nov 2016 21:50:34 GMT")))
+
         and:
         def provider = new HttpFileSystemProvider()
         when:
-        def path = provider.getPath(new URI('http://localhost:18080/index.html'))
+        def path = provider.getPath(new URI("${localhost}/index.html"))
         then:
         path
         Files.size(path) == EXPECTED

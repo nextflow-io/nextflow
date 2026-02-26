@@ -32,6 +32,16 @@ import org.pf4j.ExtensionPoint
 interface ContainerResolver extends ExtensionPoint {
 
     /**
+     * @return {@code true} when this resolved is enabled, or {@code false} otherwise
+     */
+    boolean enabled()
+
+    /**
+     * @return The default container platform define by this provider or {@code null} if not default is defined
+     */
+    String defaultContainerPlatform()
+
+    /**
      * Resolve a container name to the fully qualified name. This method
      * can extend the specified container name with engine specific
      * protocol prefixes and container registry specified in the
@@ -44,6 +54,21 @@ interface ContainerResolver extends ExtensionPoint {
      * @return
      *      The resolved container image name
      */
-    abstract ContainerInfo resolveImage(TaskRun task, String imageName)
+    ContainerInfo resolveImage(TaskRun task, String imageName)
 
+    /**
+     * Check the availability of the specified container reference
+     *
+     * @param key The container reference
+     * @return {@code true} when the container is available for use, {@code false} otherwise
+     */
+    boolean isContainerReady(String key)
+
+    /**
+     * Retrieve the metadata associated with this container request
+     *
+     * @param key The container key
+     * @return A map holding the metadata for this container or {@code null} if not available
+     */
+    ContainerMeta getContainerMeta(String key)
 }

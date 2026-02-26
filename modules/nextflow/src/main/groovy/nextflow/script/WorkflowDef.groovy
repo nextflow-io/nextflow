@@ -24,6 +24,7 @@ import nextflow.exception.MissingProcessException
 import nextflow.exception.MissingValueException
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
+import nextflow.util.TestOnly
 /**
  * Models a script workflow component
  *
@@ -62,12 +63,12 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
         copy.setDelegate(resolver)
         this.body = copy.call()
         // now it can access the parameters
-        this.declaredInputs = new ArrayList<>(resolver.getTakes().keySet())
-        this.declaredOutputs = new ArrayList<>(resolver.getEmits().keySet())
+        this.declaredInputs = new ArrayList<>(resolver.getTakes())
+        this.declaredOutputs = new ArrayList<>(resolver.getEmits())
         this.variableNames = getVarNames0()
     }
 
-    /* ONLY FOR TESTING PURPOSE */
+    @TestOnly
     protected WorkflowDef() {}
 
     WorkflowDef clone() {
@@ -104,8 +105,6 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
     @PackageScope List<String> getDeclaredOutputs() { declaredOutputs }
 
     @PackageScope Map<String,Map> getDeclaredPublish() { declaredPublish }
-
-    @PackageScope String getSource() { body.source }
 
     @PackageScope List<String> getDeclaredVariables() { new ArrayList<String>(variableNames) }
 
@@ -196,15 +195,22 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
     }
 
     private Object run0(Object[] args) {
+        // add inputs to workflow binding
         collectInputs(binding, args)
-        // invoke the workflow execution
+        // execute the workflow
         final closure = body.closure
         closure.setDelegate(binding)
         closure.setResolveStrategy(Closure.DELEGATE_FIRST)
-        closure.call()
-        // collect the workflow outputs
-        output = collectOutputs(declaredOutputs)
-        return output
+        final result = closure.call()
+        if( name == null ) {
+            // return the last statement if entry workflow (used for testing)
+            return result
+        }
+        else {
+            // otherwise collect the outputs from the workflow binding
+            output = collectOutputs(declaredOutputs)
+            return output
+        }
     }
 
 }
@@ -216,22 +222,18 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
 @CompileStatic
 class WorkflowParamsDsl {
 
-    static final private String TAKE_PREFIX = '_take_'
-    static final private String EMIT_PREFIX = '_emit_'
+    private static final String TAKE = '_take_'
+    private static final String EMIT = '_emit_'
 
+    List<String> takes = new ArrayList<>(10)
+    List<String> emits = new ArrayList<>(10)
 
-    Map<String,Object> takes = new LinkedHashMap<>(10)
-    Map<String,Object> emits = new LinkedHashMap<>(10)
-
-    @Override
-    def invokeMethod(String name, Object args) {
-        if( name.startsWith(TAKE_PREFIX) )
-            takes.put(name.substring(TAKE_PREFIX.size()), args)
-
-        else if( name.startsWith(EMIT_PREFIX) )
-            emits.put(name.substring(EMIT_PREFIX.size()), args)
-
-        else
-            throw new MissingMethodException(name, WorkflowDef, args)
+    void _take_(String name) {
+        takes.add(name)
     }
+
+    void _emit_(String name) {
+        emits.add(name)
+    }
+
 }

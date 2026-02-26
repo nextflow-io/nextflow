@@ -1,0 +1,45 @@
+set -e
+
+#
+# run normal mode
+#
+echo ''
+$NXF_RUN | tee stdout
+
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > foo'` == 4 ]] || false
+
+grep '~ Saving my_delta.txt' stdout
+grep '~ Saving my_omega.txt' stdout
+grep '~ Saving my_gamma.txt' stdout
+grep '~ Saving my_alpha.txt' stdout
+
+test -f my_alpha.txt
+test -f my_delta.txt
+test -f my_gamma.txt
+test -f my_omega.txt
+
+diff my_alpha.txt .expected
+diff my_delta.txt .expected
+diff my_gamma.txt .expected
+diff my_omega.txt .expected
+
+rm my_* 
+
+
+#
+# RESUME mode
+#
+echo ''
+$NXF_RUN -resume | tee stdout
+
+[[ `grep 'INFO' .nextflow.log | grep -c 'Cached process > foo'` == 4 ]] || false
+
+grep '~ Saving my_delta.txt' stdout
+grep '~ Saving my_omega.txt' stdout
+grep '~ Saving my_gamma.txt' stdout
+grep '~ Saving my_alpha.txt' stdout
+
+test -f my_alpha.txt
+test -f my_delta.txt
+test -f my_gamma.txt
+test -f my_omega.txt

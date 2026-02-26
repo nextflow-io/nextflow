@@ -23,14 +23,18 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.seqera.wave.plugin.WaveClient
+import io.seqera.wave.plugin.WaveFactory
 import nextflow.Global
 import nextflow.Session
 import nextflow.container.ContainerConfig
 import nextflow.container.resolver.ContainerInfo
+import nextflow.container.resolver.ContainerMeta
 import nextflow.container.resolver.ContainerResolver
 import nextflow.container.resolver.DefaultContainerResolver
 import nextflow.plugin.Priority
 import nextflow.processor.TaskRun
+import nextflow.util.SysHelper
+
 /**
  * Implement Wave container resolve logic
  *
@@ -62,11 +66,27 @@ class WaveContainerResolver implements ContainerResolver {
         return 'docker'
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    boolean enabled() {
+        return WaveFactory.shouldEnable(Global.session as Session)
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    String defaultContainerPlatform() {
+        return SysHelper.DEFAULT_DOCKER_PLATFORM
+    }
+
+    /**
+     * {@inheritDoc}
+     */
     @Override
     ContainerInfo resolveImage(TaskRun task, String imageName) {
-        if( !client().enabled() )
-            return defaultResolver.resolveImage(task, imageName)
-
         final freeze = client().config().freezeMode()
         final config = task.getContainerConfig()
         final engine = getContainerEngine0(config)
@@ -112,7 +132,7 @@ class WaveContainerResolver implements ContainerResolver {
      *      An instance of {@link TaskRun} task representing the current task
      * @param container
      *      The container image name specified by the task. Can be {@code null} if the task
-     *      provides a Dockerfile or a Conda recipe or a Spack recipe
+     *      provides a Dockerfile or a Conda recipe
      * @return
      *      The container image name returned by the Wave backend or {@code null}
      *      when the task does not request any container or dockerfile to build
@@ -127,4 +147,16 @@ class WaveContainerResolver implements ContainerResolver {
         return null
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    boolean isContainerReady(String key) {
+        return client().isContainerReady(key)
+    }
+
+    @Override
+    ContainerMeta getContainerMeta(String key) {
+        return client().getContainerMeta(key)
+    }
 }
