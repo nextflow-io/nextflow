@@ -838,7 +838,11 @@ class AzBatchService implements Closeable {
         // shell interpretation when both azcopy install and user script are present.
         // Single quotes prevent premature variable expansion by the outer shell;
         // bash will expand variables like $AZ_BATCH_NODE_SHARED_DIR at execution time.
-        final combinedScript = commands.join(' && ').replace(/'/, /''/) 
+        // Single quotes within the script are escaped using the '\'' idiom:
+        //   ' ends the current single-quoted segment
+        //   \' adds a literal single quote (backslash-escaped in unquoted context)
+        //   ' starts a new single-quoted segment
+        final combinedScript = commands.join(' && ').replace(/'/, /'\''/) 
         return new BatchStartTask("bash -c '${combinedScript}'".toString())
             .setResourceFiles(resourceFiles)
             .setUserIdentity(userIdentity(opts.privileged, null, AutoUserScope.POOL))

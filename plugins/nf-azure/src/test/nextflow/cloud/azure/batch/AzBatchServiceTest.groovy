@@ -323,7 +323,7 @@ class AzBatchServiceTest extends Specification {
         when:
         def configuredStartTask = svc.createStartTask( new AzStartTaskOpts(script: "echo 'hello-world'") )
         then:
-        configuredStartTask.commandLine == "bash -c 'chmod +x azcopy && mkdir \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/ && echo ''hello-world'''"
+        configuredStartTask.commandLine == "bash -c 'chmod +x azcopy && mkdir \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/ && echo '\\''hello-world'\\'''"
         and:
         configuredStartTask.resourceFiles.size()==1
         configuredStartTask.resourceFiles.first().filePath == 'azcopy'
@@ -351,7 +351,7 @@ class AzBatchServiceTest extends Specification {
         when:
         def configuredStartTask = svc.createStartTask( new AzStartTaskOpts(script: "echo 'hello-world'") )
         then:
-        configuredStartTask.commandLine == "bash -c 'echo ''hello-world'''"
+        configuredStartTask.commandLine == "bash -c 'echo '\\''hello-world'\\'''"
         configuredStartTask.resourceFiles.isEmpty()
     }
 
