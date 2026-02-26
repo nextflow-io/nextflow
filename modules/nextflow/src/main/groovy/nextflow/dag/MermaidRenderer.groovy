@@ -17,6 +17,7 @@
 package nextflow.dag
 
 import java.nio.file.Path
+import java.util.function.Predicate
 
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
@@ -60,7 +61,7 @@ class MermaidRenderer implements DagRenderer {
 
     String renderNetwork(DAG dag) {
         // construct node lookup from DAG
-        def nodeLookup = getNodeLookup(dag)
+        final nodeLookup = getNodeLookup(dag)
 
         // collapse operator nodes
         if( !verbose )
@@ -78,26 +79,26 @@ class MermaidRenderer implements DagRenderer {
             collapseNodeTree(nodeTree, depth, nodeLookup)
 
         // render diagram
-        def lines = [] as List<String>
+        List<String> lines = []
         lines << "flowchart ${direction}".toString()
 
         // render nodes
-        renderNodeTree(lines, null, nodeTree)
+        renderNodeTree(lines, null, null, nodeTree)
 
         // render edges
-        def edges = [] as Set<Edge>
+        Set<Edge> edges = []
 
-        for( def node : nodeLookup.values() ) {
-            for( def source : node.inputs )
+        for( final node : nodeLookup.values() ) {
+            for( final source : node.inputs )
                 edges << new Edge(source.vertex, node.vertex)
-            for( def target : node.outputs )
+            for( final target : node.outputs )
                 edges << new Edge(node.vertex, target.vertex)
         }
 
-        for( def edge : edges ) {
+        for( final edge : edges ) {
             final source = edge.source
             final target = edge.target
-            def label = ""
+            String label = ""
 
             if( verbose ) {
                 final dagEdges = dag.edges.findAll( e -> e.from == source && e.to == target && e.label )
@@ -119,15 +120,15 @@ class MermaidRenderer implements DagRenderer {
      * @param dag
      */
     private Map<DAG.Vertex,Node> getNodeLookup(DAG dag) {
-        def nodeLookup = [:] as Map<DAG.Vertex,Node>
+        Map<DAG.Vertex,Node> nodeLookup = [:]
 
         // create a node for each DAG vertex
-        for( def v : dag.vertices ) {
+        for( final v : dag.vertices ) {
             nodeLookup[v] = new Node(v)
         }
 
         // save the inputs and outputs for each node
-        for( def e : dag.edges ) {
+        for( final e : dag.edges ) {
             final source = nodeLookup[e.from]
             final target = nodeLookup[e.to]
             source.outputs << target
@@ -150,13 +151,13 @@ class MermaidRenderer implements DagRenderer {
      * @param nodeLookup
      */
     private void collapseOperators(Map<DAG.Vertex,Node> nodeLookup) {
-        def queue = nodeLookup
+        final queue = nodeLookup
                 .values()
                 .findAll( n -> n.vertex.type == DAG.Type.OPERATOR ) as List<Node>
 
         while( !queue.isEmpty() ) {
             final node = queue.pop()
-            final subgraph = findSubgraph(node, (Node n) -> n.vertex.type == DAG.Type.OPERATOR)
+            final subgraph = findSubgraph(node, (n) -> n.vertex.type == DAG.Type.OPERATOR && n.vertex.workflow == node.vertex.workflow)
             collapseSubgraph(nodeLookup, subgraph, node.vertex)
             queue.removeAll(subgraph.nodes)
         }
@@ -168,14 +169,14 @@ class MermaidRenderer implements DagRenderer {
      * @param nodeLookup
      */
     private void removeEmptyInputs(Map<DAG.Vertex,Node> nodeLookup) {
-        def queue = nodeLookup
+        final queue = nodeLookup
                 .values()
                 .findAll( n -> n.vertex.type == DAG.Type.ORIGIN )
                 .findAll( n -> n.vertex.label == 'Channel.empty' ) as List<Node>
 
         while( !queue.isEmpty() ) {
             final node = queue.pop()
-            final subgraph = findSubgraph(node, (Node n) -> n.vertex.type != DAG.Type.PROCESS)
+            final subgraph = findSubgraph(node, (n) -> n.vertex.type != DAG.Type.PROCESS)
 
             final hasProcessNeighbors = (subgraph.inputs + subgraph.outputs).any( (Node n) -> n.vertex.type == DAG.Type.PROCESS )
             if( hasProcessNeighbors )
@@ -194,18 +195,18 @@ class MermaidRenderer implements DagRenderer {
      * @param seedNode
      * @param predicate
      */
-    private Subgraph findSubgraph(Node seedNode, Closure predicate) {
-        def queue = [seedNode] as List<Node>
-        def subgraph = new Subgraph()
+    private Subgraph findSubgraph(Node seedNode, Predicate<Node> predicate) {
+        List<Node> queue = [seedNode]
+        final subgraph = new Subgraph()
 
         while( !queue.isEmpty() ) {
             final v = queue.pop()
 
-            for( def w : v.inputs + v.outputs ) {
+            for( final w : v.inputs + v.outputs ) {
                 if( w in subgraph.nodes )
                     continue
 
-                if( predicate(w) )
+                if( predicate.test(w) )
                     queue << w
                 else if( w in v.inputs )
                     subgraph.inputs << w
@@ -234,10 +235,10 @@ class MermaidRenderer implements DagRenderer {
         final summaryNode = new Node(vertex, null, subgraph.inputs, subgraph.outputs)
         nodeLookup[vertex] = summaryNode
 
-        for( def w : subgraph.inputs )
+        for( final w : subgraph.inputs )
             w.outputs << summaryNode
 
-        for( def w : subgraph.outputs )
+        for( final w : subgraph.outputs )
             w.inputs << summaryNode
     }
 
@@ -248,13 +249,13 @@ class MermaidRenderer implements DagRenderer {
      * @param subgraph
      */
     private void removeSubgraph(Map<DAG.Vertex,Node> nodeLookup, Subgraph subgraph) {
-        for( def w : subgraph.nodes )
+        for( final w : subgraph.nodes )
             nodeLookup.remove(w.vertex)
 
-        for( def w : subgraph.inputs )
+        for( final w : subgraph.inputs )
             w.outputs -= subgraph.nodes
 
-        for( def w : subgraph.outputs )
+        for( final w : subgraph.outputs )
             w.inputs -= subgraph.nodes
     }
 
@@ -264,38 +265,25 @@ class MermaidRenderer implements DagRenderer {
      * @param nodeLookup
      */
     private Map<String,Object> getNodeTree(Map<DAG.Vertex,Node> nodeLookup) {
-        // infer subgraphs of operator nodes
-        final inferredKeys = inferSubgraphKeys(nodeLookup)
-
         // construct node tree
-        def nodeTree = [:] as Map<String,Object>
+        Map<String,Object> nodeTree = [:]
 
-        for( def node : nodeLookup.values() ) {
+        for( final node : nodeLookup.values() ) {
             final vertex = node.vertex
 
-            // determine the vertex subgraph
-            def keys = [] as List<String>
+            // set the process simple name
+            if( vertex.type == DAG.Type.PROCESS )
+                node.label = vertex.label.tokenize(':').last()
 
-            if( vertex.type == DAG.Type.PROCESS ) {
-                // extract keys from fully qualified name
-                final result = getSubgraphKeys(vertex.label)
-                keys = (List<String>)result[0]
-                node.label = (String)result[1]
-            }
-            else if( vertex.type == DAG.Type.OPERATOR ) {
-                // use inferred subgraph keys
-                keys = inferredKeys[node]
-            }
-            else if( vertex.type == DAG.Type.ORIGIN ) {
-                keys = [INPUTS]
-            }
-            else if( vertex.type == DAG.Type.NODE ) {
-                keys = [OUTPUTS]
-            }
+            // determine the vertex subgraph
+            final keys = 
+                vertex.type == DAG.Type.ORIGIN ? List.of(INPUTS) :
+                vertex.type == DAG.Type.NODE ? List.of(OUTPUTS) :
+                vertex.workflow.tokenize(':')
 
             // navigate to given subgraph
             def subgraph = nodeTree
-            for( def key : keys ) {
+            for( final key : keys ) {
                 if( key !in subgraph )
                     subgraph[key] = [:]
                 subgraph = subgraph[key]
@@ -309,66 +297,6 @@ class MermaidRenderer implements DagRenderer {
     }
 
     /**
-     * Infer the subgraph of each operator node from neighboring
-     * processes.
-     *
-     * @param nodeLookup
-     */
-    private Map<Node,List> inferSubgraphKeys(Map<DAG.Vertex,Node> nodeLookup) {
-        def inferredKeys = [:] as Map<Node,List>
-        def queue = nodeLookup
-                .values()
-                .findAll( n -> n.vertex.type == DAG.Type.OPERATOR ) as List<Node>
-
-        while( !queue.isEmpty() ) {
-            // find subgraph of operator nodes
-            final node = queue.pop()
-            final subgraph = findSubgraph(node, (Node n) -> n.vertex.type == DAG.Type.OPERATOR)
-
-            // select a neighboring process
-            final inputs = subgraph.inputs.findAll( n -> n.vertex.type == DAG.Type.PROCESS )
-            final outputs = subgraph.outputs.findAll( n -> n.vertex.type == DAG.Type.PROCESS )
-
-            Node process = null
-            if( inputs.size() == 1 )
-                process = inputs[0]
-            else if( outputs.size() == 1 )
-                process = outputs[0]
-            else if( inputs.size() > 0 )
-                process = inputs[0]
-            else if( outputs.size() > 0 )
-                process = outputs[0]
-
-            // extract keys from fully qualified process name
-            final keys = process
-                ? getSubgraphKeys(process.vertex.label)[0] as List
-                : []
-
-            // save inferred keys
-            for( def w : subgraph.nodes )
-                inferredKeys[w] = keys
-
-            // update queue
-            queue.removeAll(subgraph.nodes)
-        }
-
-        return inferredKeys
-    }
-
-    /**
-     * Get the subgraph keys from a fully qualified process name.
-     *
-     * @param name
-     */
-    private List getSubgraphKeys(String name) {
-        final tokens = name.tokenize(':')
-        return [
-            tokens[0..<tokens.size()-1],
-            tokens.last()
-        ]
-    }
-
-    /**
      * Collapse a node tree to the desired depth.
      *
      * @param nodeTree
@@ -377,7 +305,7 @@ class MermaidRenderer implements DagRenderer {
      */
     private void collapseNodeTree(Map<String,Object> nodeTree, int depth, Map<DAG.Vertex,Node> nodeLookup) {
         nodeTree.each { key, value ->
-            if( value !instanceof Map || key in [INPUTS, OUTPUTS] )
+            if( value !instanceof Map || key == INPUTS || key == OUTPUTS )
                 return
 
             if( depth > 0 ) {
@@ -405,10 +333,10 @@ class MermaidRenderer implements DagRenderer {
             nodeTree[key] = summaryNode
             nodeLookup[vertex] = summaryNode
 
-            for( def w : inputs )
+            for( final w : inputs )
                 w.outputs << summaryNode
 
-            for( def w : outputs )
+            for( final w : outputs )
                 w.inputs << summaryNode
         }
     }
@@ -432,17 +360,22 @@ class MermaidRenderer implements DagRenderer {
      *
      * @param lines
      * @param name
+     * @param fqName
      * @param nodeTree
      */
-    private void renderNodeTree(List<String> lines, String name, Map<String,Object> nodeTree) {
+    private void renderNodeTree(List<String> lines, String name, String fqName, Map<String,Object> nodeTree) {
         if( name ) {
-            final label = name in [INPUTS, OUTPUTS] ? '" "' : name
-            lines << "    subgraph ${label}".toString()
+            if( name == INPUTS || name == OUTPUTS )
+                lines << "    subgraph \" \"".toString()
+            else
+                lines << "    subgraph \"${fqName} [${name}]\"".toString()
         }
 
         nodeTree.each { key, value ->
-            if( value instanceof Map )
-                renderNodeTree(lines, key, value)
+            if( value instanceof Map ) {
+                final id = fqName ? "${fqName}:${key}".toString() : key
+                renderNodeTree(lines, key, id, value)
+            }
             else if( value instanceof Node ) {
                 // skip node if it is disconnected
                 if( !value.inputs && !value.outputs )
@@ -465,11 +398,11 @@ class MermaidRenderer implements DagRenderer {
 
         switch( node.vertex.type ) {
             case DAG.Type.PROCESS:
-                return "${id}([${node.label}])"
+                return "${id}([\"${node.label}\"])"
 
             case DAG.Type.OPERATOR:
                 return verbose
-                    ? "${id}([${node.vertex.label}])"
+                    ? "${id}([\"${node.vertex.label}\"])"
                     : "${id}(( ))"
 
             case DAG.Type.ORIGIN:

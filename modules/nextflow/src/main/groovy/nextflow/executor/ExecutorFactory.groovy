@@ -22,7 +22,6 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.executor.local.LocalExecutor
-import nextflow.k8s.K8sExecutor
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
 import nextflow.script.ScriptType
@@ -57,7 +56,6 @@ class ExecutorFactory {
             'crg': CrgExecutor,
             'bsc': LsfExecutor,
             'condor': CondorExecutor,
-            'k8s': K8sExecutor,
             'nqsii': NqsiiExecutor,
             'moab': MoabExecutor,
             'oar': OarExecutor,
@@ -188,7 +186,7 @@ class ExecutorFactory {
         def clazz = getExecutorClass(name)
 
         if( !isTypeSupported(script.type, clazz) ) {
-            log.warn "Process '$processName' cannot be executed by '$name' executor -- Using 'local' executor instead"
+            log.warn1 "Process '$processName' cannot be executed by '$name' executor -- Using 'local' executor instead"
             name = 'local'
             clazz = LocalExecutor.class
         }

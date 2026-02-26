@@ -36,11 +36,6 @@ class BatchLogging implements Closeable {
     private String projectId
     private volatile Logging logging0
 
-    /** only for testing - do not use */
-    protected BatchLogging() {
-
-    }
-
     BatchLogging(BatchConfig config) {
         final creds = config.googleOpts.credentials
         this.projectId = config.googleOpts.projectId
@@ -81,7 +76,7 @@ class BatchLogging implements Closeable {
         return [ stdout.toString(), stderr.toString() ]
     }
 
-    protected void parseOutput(LogEntry logEntry, StringBuilder stdout, StringBuilder stderr) {
+    protected static void parseOutput(LogEntry logEntry, StringBuilder stdout, StringBuilder stderr) {
         final output = logEntry.payload.data.toString()
         if (logEntry.severity == Severity.ERROR) {
             stderr.append(output)

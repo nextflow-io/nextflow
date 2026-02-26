@@ -17,7 +17,6 @@
 
 package nextflow.extension
 
-import static nextflow.extension.DataflowHelper.*
 
 import groovy.transform.CompileStatic
 import groovyx.gpars.dataflow.DataflowReadChannel
@@ -64,18 +63,22 @@ class FilterOp {
                             : null
         final target = CH.createBy(source)
         final stopOnFirst = source instanceof DataflowExpression
-        newOperator(source, target, {
-            final result = criteria instanceof Closure<Boolean>
-                ? DefaultTypeTransformation.castToBoolean(criteria.call(it))
-                : discriminator.invoke(criteria, (Object)it)
-            final dp = getDelegate() as DataflowProcessor
-            if( result ) {
-                Op.bind(dp, target, it)
+        new Op()
+            .withInput(source)
+            .withOutput(target)
+            .withCode {
+                final result = criteria instanceof Closure<Boolean>
+                    ? DefaultTypeTransformation.castToBoolean(criteria.call(it))
+                    : discriminator.invoke(criteria, (Object)it)
+                final dp = getDelegate() as DataflowProcessor
+                if( result ) {
+                    Op.bind(dp, target, it)
+                }
+                if( stopOnFirst ) {
+                    Op.bind(dp, target, Channel.STOP)
+                }
             }
-            if( stopOnFirst ) {
-                Op.bind(dp, target, Channel.STOP)
-            }
-        })
+            .apply()
 
         return target
     }

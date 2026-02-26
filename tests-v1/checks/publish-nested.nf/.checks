@@ -1,0 +1,20 @@
+#
+# run normal mode
+#
+echo First run
+$NXF_RUN --x ciao | tee stdout
+
+[[ `grep INFO .nextflow.log | grep -c 'Submitted process > foo'` == 1 ]] || false
+[[ $(cat data/a/b/c/file.txt) == ciao ]] || false
+
+
+#
+# second run, must overwrite the file 
+#
+echo First run
+$NXF_RUN --x miao | tee stdout
+
+[[ `grep INFO .nextflow.log | grep -c 'Submitted process > foo'` == 1 ]] || false
+[[ $(cat data/a/b/c/file.txt) == miao ]] || false
+
+

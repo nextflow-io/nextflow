@@ -36,8 +36,6 @@ import nextflow.util.Duration
 @CompileStatic
 class AwsBatchConfig implements CloudTransferOptions {
 
-    public static final int DEFAULT_MAX_SPOT_ATTEMPTS = 0
-
     public static final int DEFAULT_AWS_MAX_ATTEMPTS = 5
 
     private int maxParallelTransfers = MAX_TRANSFER
@@ -94,10 +92,10 @@ class AwsBatchConfig implements CloudTransferOptions {
      */
     boolean fargateMode
 
-    /*
-     * only for testing
+    /**
+     * Flag to fail and terminate unscheduled jobs.
      */
-    protected AwsBatchConfig() {}
+    boolean terminateUnschedulableJobs
 
     AwsBatchConfig(Map opts) {
         fargateMode = opts.platformType == 'fargate'
@@ -106,7 +104,7 @@ class AwsBatchConfig implements CloudTransferOptions {
         maxParallelTransfers = opts.maxParallelTransfers as Integer ?: MAX_TRANSFER
         maxTransferAttempts = opts.maxTransferAttempts as Integer ?: defaultMaxTransferAttempts()
         delayBetweenAttempts = opts.delayBetweenAttempts as Duration ?: DEFAULT_DELAY_BETWEEN_ATTEMPTS
-        maxSpotAttempts = opts.maxSpotAttempts!=null ? opts.maxSpotAttempts as Integer : DEFAULT_MAX_SPOT_ATTEMPTS
+        maxSpotAttempts = opts.maxSpotAttempts!=null ? opts.maxSpotAttempts as Integer : null
         volumes = makeVols(opts.volumes)
         jobRole = opts.jobRole
         logsGroup = opts.logsGroup
@@ -114,11 +112,11 @@ class AwsBatchConfig implements CloudTransferOptions {
         shareIdentifier = opts.shareIdentifier
         schedulingPriority = opts.schedulingPriority as Integer ?: 0
         executionRole = opts.executionRole
+        terminateUnschedulableJobs = opts.terminateUnschedulableJobs as boolean
         if( retryMode == 'built-in' )
             retryMode = null // this force falling back on NF built-in retry mode instead of delegating to AWS CLI tool
         if( retryMode && retryMode !in AwsOptions.VALID_RETRY_MODES )
             log.warn "Unexpected value for 'aws.batch.retryMode' config setting - offending value: $retryMode - valid values: ${AwsOptions.VALID_RETRY_MODES.join(',')}"
-
     }
 
     // ====  getters =====

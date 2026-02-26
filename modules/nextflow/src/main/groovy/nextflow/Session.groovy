@@ -22,6 +22,7 @@ import java.nio.file.Paths
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.function.Consumer
 
 import com.google.common.hash.HashCode
 import groovy.transform.CompileDynamic
@@ -65,8 +66,13 @@ import nextflow.spack.SpackConfig
 import nextflow.trace.AnsiLogObserver
 import nextflow.trace.TraceObserver
 import nextflow.trace.TraceObserverFactory
+import nextflow.trace.TraceObserverFactoryV2
+import nextflow.trace.TraceObserverV2
 import nextflow.trace.TraceRecord
 import nextflow.trace.WorkflowStatsObserver
+import nextflow.trace.event.FilePublishEvent
+import nextflow.trace.event.TaskEvent
+import nextflow.trace.event.WorkflowOutputEvent
 import nextflow.util.Barrier
 import nextflow.util.ConfigHelper
 import nextflow.util.Duration
@@ -96,7 +102,7 @@ class Session implements ISession {
 
     final List<Closure> igniters = new ArrayList<>(20)
 
-    final Map<DataflowWriteChannel,String> publishTargets = [:]
+    final Map<String,DataflowWriteChannel> outputs = [:]
 
     /**
      * Creates process executors
@@ -249,7 +255,10 @@ class Session implements ISession {
 
     private int poolSize
 
-    private List<TraceObserver> observers = Collections.emptyList()
+    @Deprecated
+    private List<TraceObserver> observersV1 = Collections.emptyList()
+
+    private List<TraceObserverV2> observersV2 = Collections.emptyList()
 
     private Closure errorAction
 
@@ -431,8 +440,9 @@ class Session implements ISession {
         this.disableRemoteBinDir = getExecConfigProp(null, 'disableRemoteBinDir', false)
         this.classesDir = FileHelper.createLocalDir()
         this.executorFactory = new ExecutorFactory(Plugins.manager)
-        this.observers = createObservers()
-        this.statsEnabled = observers.any { it.enableMetrics() }
+        this.observersV1 = createObserversV1()
+        this.observersV2 = createObserversV2()
+        this.statsEnabled = observersV1.any { ob -> ob.enableMetrics() } || observersV2.any { ob -> ob.enableMetrics() }
         this.workflowMetadata = new WorkflowMetadata(this, scriptFile)
 
         // configure script params
@@ -460,7 +470,7 @@ class Session implements ISession {
      * @return A list of {@link TraceObserver} objects or an empty list
      */
     @PackageScope
-    List<TraceObserver> createObservers() {
+    List<TraceObserver> createObserversV1() {
 
         final result = new ArrayList(10)
 
@@ -476,6 +486,15 @@ class Session implements ISession {
         return result
     }
 
+    @PackageScope
+    List<TraceObserverV2> createObserversV2() {
+        final result = new ArrayList(10)
+        for( TraceObserverFactoryV2 f : Plugins.getExtensions(TraceObserverFactoryV2) ) {
+            log.debug "Observer factory (v2): ${f.class.simpleName}"
+            result.addAll(f.create(this))
+        }
+        return result
+    }
 
     /*
      * intercepts interruption signal i.e. CTRL+C
@@ -689,8 +708,8 @@ class Session implements ISession {
         try {
             log.trace "Session > destroying"
             // shutdown thread pools
-            finalizePoolManager?.shutdown(aborted)
-            publishPoolManager?.shutdown(aborted)
+            finalizePoolManager?.shutdownOrAbort(aborted,this)
+            publishPoolManager?.shutdownOrAbort(aborted,this)
             // invoke shutdown callbacks
             shutdown0()
             log.trace "Session > after cleanup"
@@ -974,6 +993,7 @@ class Session implements ISession {
         errorMessage << message.toString()
         return false
     }
+
     /**
      * Register a shutdown hook to close services when the session terminates
      * @param Closure
@@ -989,40 +1009,19 @@ class Session implements ISession {
     }
 
     void notifyProcessCreate(TaskProcessor process) {
-        for( int i=0; i<observers.size(); i++ ) {
-            final observer = observers.get(i)
-            try {
-                observer.onProcessCreate(process)
-            }
-            catch( Exception e ) {
-                log.debug(e.getMessage(), e)
-            }
-        }
+        notifyEvent(observersV1, ob -> ob.onProcessCreate(process))
+        notifyEvent(observersV2, ob -> ob.onProcessCreate(process))
     }
 
     void notifyProcessTerminate(TaskProcessor process) {
-        for( int i=0; i<observers.size(); i++ ) {
-            final observer = observers.get(i)
-            try {
-                observer.onProcessTerminate(process)
-            }
-            catch( Exception e ) {
-                log.debug(e.getMessage(), e)
-            }
-        }
+        notifyEvent(observersV1, ob -> ob.onProcessTerminate(process))
+        notifyEvent(observersV2, ob -> ob.onProcessTerminate(process))
     }
 
     void notifyTaskPending( TaskHandler handler ) {
         final trace = handler.getTraceRecord()
-        for( int i=0; i<observers.size(); i++ ) {
-            final observer = observers.get(i)
-            try {
-                observer.onProcessPending(handler, trace)
-            }
-            catch( Exception e ) {
-                log.debug(e.getMessage(), e)
-            }
-        }
+        notifyEvent(observersV1, ob -> ob.onProcessPending(handler, trace))
+        notifyEvent(observersV2, ob -> ob.onTaskPending(new TaskEvent(handler, trace)))
     }
 
     /**
@@ -1035,15 +1034,8 @@ class Session implements ISession {
         cache.putIndexAsync(handler)
 
         final trace = handler.getTraceRecord()
-        for( int i=0; i<observers.size(); i++ ) {
-            final observer = observers.get(i)
-            try {
-                observer.onProcessSubmit(handler, trace)
-            }
-            catch( Exception e ) {
-                log.debug(e.getMessage(), e)
-            }
-        }
+        notifyEvent(observersV1, ob -> ob.onProcessSubmit(handler, trace))
+        notifyEvent(observersV2, ob -> ob.onTaskSubmit(new TaskEvent(handler, trace)))
     }
 
     /**
@@ -1051,15 +1043,8 @@ class Session implements ISession {
      */
     void notifyTaskStart( TaskHandler handler ) {
         final trace = handler.getTraceRecord()
-        for( int i=0; i<observers.size(); i++ ) {
-            final observer = observers.get(i)
-            try {
-                observer.onProcessStart(handler, trace)
-            }
-            catch( Exception e ) {
-                log.debug(e.getMessage(), e)
-            }
-        }
+        notifyEvent(observersV1, ob -> ob.onProcessStart(handler, trace))
+        notifyEvent(observersV2, ob -> ob.onTaskStart(new TaskEvent(handler, trace)))
     }
 
     /**
@@ -1078,16 +1063,8 @@ class Session implements ISession {
             failOnIgnore = true
         }
 
-        // notify the event to the observers
-        for( int i=0; i<observers.size(); i++ ) {
-            final observer = observers.get(i)
-            try {
-                observer.onProcessComplete(handler, trace)
-            }
-            catch( Exception e ) {
-                log.debug(e.getMessage(), e)
-            }
-        }
+        notifyEvent(observersV1, ob -> ob.onProcessComplete(handler, trace))
+        notifyEvent(observersV2, ob -> ob.onTaskComplete(new TaskEvent(handler, trace)))
     }
 
     void notifyTaskCached( TaskHandler handler ) {
@@ -1098,15 +1075,8 @@ class Session implements ISession {
             cache.cacheTaskAsync(handler)
         }
 
-        for( int i=0; i<observers.size(); i++ ) {
-            final observer = observers.get(i)
-            try {
-                observer.onProcessCached(handler, trace)
-            }
-            catch( Exception e ) {
-                log.error(e.getMessage(), e)
-            }
-        }
+        notifyEvent(observersV1, ob -> ob.onProcessCached(handler, trace))
+        notifyEvent(observersV2, ob -> ob.onTaskCached(new TaskEvent(handler, trace)))
     }
 
     void notifyBeforeWorkflowExecution() {
@@ -1118,51 +1088,27 @@ class Session implements ISession {
     }
 
     void notifyFlowBegin() {
-        for( TraceObserver trace : observers ) {
-            trace.onFlowBegin()
-        }
+        notifyEvent(observersV1, ob -> ob.onFlowBegin())
+        notifyEvent(observersV2, ob -> ob.onFlowBegin())
     }
 
     void notifyFlowCreate() {
-        for( TraceObserver trace : observers ) {
-            trace.onFlowCreate(this)
-        }
+        notifyEvent(observersV1, ob -> ob.onFlowCreate(this))
+        notifyEvent(observersV2, ob -> ob.onFlowCreate(this))
     }
 
-    void notifyWorkflowPublish(Object value) {
-        for( final observer : observers ) {
-            try {
-                observer.onWorkflowPublish(value)
-            }
-            catch( Exception e ) {
-                log.error "Failed to invoke observer on workflow publish: $observer", e
-            }
-        }
+    void notifyWorkflowOutput(WorkflowOutputEvent event) {
+        notifyEvent(observersV2, ob -> ob.onWorkflowOutput(event))
     }
 
-    void notifyFilePublish(Path destination, Path source=null) {
-        def copy = new ArrayList<TraceObserver>(observers)
-        for( TraceObserver observer : copy  ) {
-            try {
-                observer.onFilePublish(destination, source)
-            }
-            catch( Exception e ) {
-                log.error "Failed to invoke observer on file publish: $observer", e
-            }
-        }
+    void notifyFilePublish(FilePublishEvent event) {
+        notifyEvent(observersV1, ob -> ob.onFilePublish(event.target, event.source))
+        notifyEvent(observersV2, ob -> ob.onFilePublish(event))
     }
 
     void notifyFlowComplete() {
-        def copy = new ArrayList<TraceObserver>(observers)
-        for( TraceObserver observer : copy  ) {
-            try {
-                if( observer )
-                    observer.onFlowComplete()
-            }
-            catch( Exception e ) {
-                log.debug "Failed to invoke observer completion handler: $observer", e
-            }
-        }
+        notifyEvent(observersV1, ob -> ob.onFlowComplete())
+        notifyEvent(observersV2, ob -> ob.onFlowComplete())
     }
 
     /**
@@ -1174,14 +1120,8 @@ class Session implements ISession {
     void notifyError( TaskHandler handler ) {
 
         final trace = handler?.safeTraceRecord()
-        for ( int i=0; i<observers?.size(); i++){
-            try{
-                final observer = observers.get(i)
-                observer.onFlowError(handler, trace)
-            } catch ( Throwable e ) {
-                log.debug(e.getMessage(), e)
-            }
-        }
+        notifyEvent(observersV1, ob -> ob.onFlowError(handler, trace))
+        notifyEvent(observersV2, ob -> ob.onFlowError(new TaskEvent(handler, trace)))
 
         if( !errorAction )
             return
@@ -1191,6 +1131,18 @@ class Session implements ISession {
         }
         catch( Throwable e ) {
             log.debug(e.getMessage(), e)
+        }
+    }
+
+    private static <T> void notifyEvent(List<T> observers, Consumer<T> action) {
+        for ( int i=0; i<observers.size(); i++) {
+            final observer = observers.get(i)
+            try {
+                action.accept(observer)
+            }
+            catch ( Throwable e ) {
+                log.debug(e.getMessage(), e)
+            }
         }
     }
 
@@ -1211,6 +1163,11 @@ class Session implements ISession {
 
         if( aborted || cancelled || error )
             return
+
+        if( workDir.scheme != 'file' ) {
+            log.warn "The `cleanup` option is not supported for remote work directory: ${workDir.toUriString()}"
+            return
+        }
 
         log.trace "Cleaning-up workdir"
         try (CacheDB db = CacheFactory.create(uniqueId, runName).openForRead()) {

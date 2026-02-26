@@ -16,6 +16,7 @@
 
 package nextflow.extension
 
+import nextflow.Session
 import spock.lang.Specification
 
 import nextflow.Channel
@@ -26,8 +27,11 @@ import nextflow.Channel
  */
 class CountLinesOpTest extends Specification {
 
-    def 'should count lines' () {
+    def setup() {
+        new Session()
+    }
 
+    def 'should count lines' () {
         when:
         def str = '''
             line 1
@@ -54,7 +58,6 @@ class CountLinesOpTest extends Specification {
 
         def result = Channel.of(str, str2, str3).countLines()
         then:
-        result.val == 11
-
+        result.unwrap() == 11
     }
 }

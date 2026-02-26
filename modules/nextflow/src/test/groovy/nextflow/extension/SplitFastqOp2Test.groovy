@@ -18,6 +18,7 @@ package nextflow.extension
 
 import java.nio.file.Files
 
+import groovyx.gpars.dataflow.DataflowReadChannel
 import nextflow.Channel
 import test.Dsl2Spec
 /**
@@ -26,7 +27,7 @@ import test.Dsl2Spec
  */
 class SplitFastqOp2Test extends Dsl2Spec {
 
-    String READS = '''
+    static String READS1 = '''
         @SRR636272.19519409/1
         GGCCCGGCAGCAGGATGATGCTCTCCCGGGCCAAGCCGGCTGTGGGGAGCACCCCGCCGCAGGGGGACAGGCGGAGGAAGAAAGGGAAGAAGGTGCCACAGATCG
         +
@@ -45,7 +46,7 @@ class SplitFastqOp2Test extends Dsl2Spec {
         CCCFFFFFHHHHHJJJJJJJJJJJJJJJHFDDBDDBDDDDDDDDDDDDADDDDDDDDDDDDDDDDDDDDDDDDDDBDBDDD9@DDDDDDDDDDDDBBDDDBDD@@
         '''.stripIndent().leftTrim()
 
-    String READS2 = '''
+    static String READS2 = '''
         @SRR636272.19519409/2
         GGCCCGGCAGCAGGATGATGCTCTCCCGGGCCAAGCCGGCTGTGGGGAGCACCCCGCCGCAGGGGGACAGGCGGAGGAAGAAAGGGAAGAAGGTGCCACAGATCG
         +
@@ -68,7 +69,7 @@ class SplitFastqOp2Test extends Dsl2Spec {
     def 'should split pair-ended using dsl2' () {
         given:
         def folder = Files.createTempDirectory('test')
-        def file1 = folder.resolve('one.fq'); file1.text = READS
+        def file1 = folder.resolve('one.fq'); file1.text = READS1
         def file2 = folder.resolve('two.fq'); file2.text = READS2
 
         def result
@@ -77,9 +78,9 @@ class SplitFastqOp2Test extends Dsl2Spec {
         when:
         channel = dsl_eval("""
             Channel.of(['sample_id', file("$file1"), file("$file2")]).splitFastq(by:1, pe:true)
-        """)
+        """) as DataflowReadChannel
 
-        result = channel.val
+        result = channel.unwrap()
         
         then:
         result[0] == 'sample_id'
@@ -97,7 +98,7 @@ class SplitFastqOp2Test extends Dsl2Spec {
                     '''.stripIndent().leftTrim()
 
         when:
-        result = channel.val
+        result = channel.unwrap()
         then:
         result[0] == 'sample_id'
         result[1] == '''
@@ -114,7 +115,7 @@ class SplitFastqOp2Test extends Dsl2Spec {
                     '''.stripIndent().leftTrim()
 
         when:
-        result = channel.val
+        result = channel.unwrap()
         then:
         result[0] == 'sample_id'
         result[1] == '''
@@ -131,7 +132,7 @@ class SplitFastqOp2Test extends Dsl2Spec {
                     '''.stripIndent().leftTrim()
 
         when:
-        result = channel.val
+        result = channel.unwrap()
         then:
         result[0] == 'sample_id'
         result[1] == '''
@@ -148,7 +149,7 @@ class SplitFastqOp2Test extends Dsl2Spec {
                     '''.stripIndent().leftTrim()
 
         when:
-        result = channel.val
+        result = channel.unwrap()
         then:
         result == Channel.STOP
 

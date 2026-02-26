@@ -25,6 +25,7 @@ import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.trace.TraceRecord
+import nextflow.util.TestOnly
 /**
  * Actions to handle the underlying job running the user task.
  *
@@ -44,8 +45,8 @@ abstract class TaskHandler {
         this.task = task
     }
 
-    /** Only for testing purpose */
-    protected TaskHandler() { }
+    @TestOnly
+    protected TaskHandler() {}
 
     /**
      * The task managed by this handler
@@ -56,6 +57,16 @@ abstract class TaskHandler {
      * The task managed by this handler
      */
     TaskRun getTask() { task }
+
+    /**
+     * Whenever this handle reference a job array task child
+     */
+    boolean isArrayChild
+
+    TaskHandler withArrayChild(boolean child) {
+        this.isArrayChild = child
+        return this
+    }
 
     /**
      * Task current status
@@ -175,7 +186,7 @@ abstract class TaskHandler {
             return getTraceRecord()
         }
         catch (Exception e) {
-                log.debug "Unable to get task trace record -- cause: ${e.message}", e
+            log.debug "Unable to get task trace record -- cause: ${e.message}", e
             return null
         }
     }
@@ -209,6 +220,7 @@ abstract class TaskHandler {
         record.time = task.config.getTime()?.toMillis()
         record.env = task.getEnvironmentStr()
         record.executorName = task.processor.executor.getName()
+        record.containerMeta = task.containerMeta()
 
         if( isCompleted() ) {
             record.error_action = task.errorAction?.toString()
@@ -259,7 +271,7 @@ abstract class TaskHandler {
 
     /**
      * Determine if a task is ready for execution or it depends on resources
-     * e.g. container that needs to be provisionied
+     * e.g. container that needs to be provisioned
      *
      * @return {@code true} when the task is ready for execution, {@code false} otherwise
      */

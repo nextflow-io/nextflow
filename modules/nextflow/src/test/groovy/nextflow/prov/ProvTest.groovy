@@ -2,7 +2,8 @@ package nextflow.prov
 
 import static test.TestHelper.*
 
-import nextflow.config.ConfigParser
+import nextflow.config.ConfigParserFactory
+import nextflow.extension.SplitFastqOp2Test
 import nextflow.processor.TaskId
 import nextflow.processor.TaskProcessor
 import spock.lang.Ignore
@@ -22,7 +23,7 @@ class ProvTest extends Dsl2Spec {
     }
 
     ConfigObject globalConfig() {
-        new ConfigParser().parse('''
+        ConfigParserFactory.create().parse('''
         process.fair = true
         ''')
     }
@@ -535,7 +536,7 @@ class ProvTest extends Dsl2Spec {
             process p2 {
               input: val(x)
               exec: 
-                println "$task.process ($task.index) = ${x}"
+                println "${task.name} = ${x}"
             }
         ''')
 
@@ -977,7 +978,7 @@ class ProvTest extends Dsl2Spec {
             process p2 {
               input: val(x)
               exec: 
-                println "$task.process ($task.index) = ${x}"
+                println "${task.name} = ${x}"
             }
         ''')
         then:
@@ -1053,5 +1054,481 @@ class ProvTest extends Dsl2Spec {
         and:
         upstreamTasksOf('p2 (3)')
             .name == ['p1 (3)']
+    }
+
+    def 'should track provenance with splitText operator'() {
+        when:
+        dsl_eval(globalConfig(), '''
+            workflow {
+                Channel.of('aa\\nbb\\ncc') | p1 | splitText | p2
+            }
+            
+            process p1 { 
+              input: val(x)
+              output: val(y) 
+              exec: 
+                y = x 
+            }
+            
+            process p2 {
+              input: val(x)
+              exec: 
+                println x
+            }
+        ''')
+
+        then:
+        upstreamTasksOf('p2 (1)')
+            .name == ['p1 (1)']
+        and:
+        upstreamTasksOf('p2 (2)')
+            .name == ['p1 (1)']
+        and:
+        upstreamTasksOf('p2 (3)')
+            .name == ['p1 (1)']
+    }
+
+    def 'should track provenance with splitJson operator'() {
+        when:
+        dsl_eval(globalConfig(), '''
+            workflow {
+                Channel.of('{"A": 1, "B": 2, "C": 3}') | p1 | splitJson | p2
+            }
+            
+            process p1 { 
+              input: val(x)
+              output: val(y) 
+              exec: 
+                y = x 
+            }
+            
+            process p2 {
+              input: val(x)
+              exec: 
+                println x
+            }
+        ''')
+
+        then:
+        upstreamTasksOf('p2 (1)')
+                .name == ['p1 (1)']
+        and:
+        upstreamTasksOf('p2 (2)')
+                .name == ['p1 (1)']
+        and:
+        upstreamTasksOf('p2 (3)')
+                .name == ['p1 (1)']
+    }
+
+    def 'should track provenance with splitText and a file'() {
+        given:
+
+        when:
+        dsl_eval(globalConfig(), """
+            workflow {
+                p1 | splitText(file:true) | p2
+            }
+            
+            process p1 { 
+              output: path('result.txt') 
+              exec: 
+                task.workDir.resolve('result.txt').text = 'a\\nbb\\nccc\\n' 
+            }
+            
+            process p2 {
+              input: val(chunk)
+              exec: 
+                println "\${task.name}: chunck=\$chunk"
+            }
+        """)
+
+        then:
+        upstreamTasksOf('p2 (1)')
+            .name == ['p1']
+        and:
+        upstreamTasksOf('p2 (2)')
+            .name == ['p1']
+        and:
+        upstreamTasksOf('p2 (3)')
+            .name == ['p1']
+
+    }
+
+    def 'should track provenance with splitFasta and a file'() {
+        given:
+        def FASTA = """\
+                >1aboA
+                NLFVALYDFVASGDNTLSITKGEKLRVLGYNHNGEWCEAQTKNGQGWVPS
+                NYITPVN
+                >1ycsB
+                KGVIYALWDYEPQNDDELPMKEGDCMTIIHREDEDEIEWWWARLNDKEGY
+                VPRNLLGLYP
+                >1pht
+                GYQYRALYDYKKEREEDIDLHLGDILTVNKGSLVALGFSDGQEARPEEIG
+                WLNGYNETTGERGDFPGTYVE
+                YIGRKKISP
+                """.stripIndent()
+
+        when:
+        dsl_eval(globalConfig(), """
+            workflow {
+                p1 | splitFasta(file:true) | p2
+            }
+            
+            process p1 { 
+              output: path('result.txt') 
+              exec: 
+                task.workDir.resolve('result.txt').text = '''${FASTA}''' 
+            }
+            
+            process p2 {
+              input: val(chunk)
+              exec: 
+                println "\${task.name}: chunck=\$chunk"
+            }
+        """)
+
+        then:
+        upstreamTasksOf('p2 (1)')
+            .name == ['p1']
+        and:
+        upstreamTasksOf('p2 (2)')
+            .name == ['p1']
+        and:
+        upstreamTasksOf('p2 (3)')
+            .name == ['p1']
+
+    }
+
+    def 'should track provenance with splitFastq and a file'() {
+        when:
+        dsl_eval(globalConfig(), """
+            workflow {
+                p1 | splitFastq(file:true) | p2
+            }
+            
+            process p1 { 
+              output: path('result.txt') 
+              exec: 
+                task.workDir.resolve('result.txt').text = '''${SplitFastqOp2Test.READS1}''' 
+            }
+            
+            process p2 {
+              input: val(chunk)
+              exec: 
+                println "\${task.name}: chunck=\$chunk"
+            }
+        """)
+
+        then:
+        upstreamTasksOf('p2 (1)')
+            .name == ['p1']
+        and:
+        upstreamTasksOf('p2 (2)')
+            .name == ['p1']
+        and:
+        upstreamTasksOf('p2 (3)')
+            .name == ['p1']
+        and:
+        upstreamTasksOf('p2 (4)')
+            .name == ['p1']
+    }
+
+    def 'should track provenance with splitFastq with paired files'() {
+        when:
+        dsl_eval(globalConfig(), """
+            workflow {
+                p1()
+                p1.out | splitFastq(pe:true, file:true) | p2
+            }
+            
+            process p1 { 
+              output: tuple val(sample), path('one.fq'), path('two.fq') 
+              exec:
+                sample = 'sample_1' 
+                task.workDir.resolve('one.fq').text = '''${SplitFastqOp2Test.READS1}'''
+                task.workDir.resolve('two.fq').text = '''${SplitFastqOp2Test.READS2}'''
+            }
+            process p2 {
+              input: tuple val(sample), path(r1), path(r2)
+              exec:
+                println "\${task.name}: sample=\${sample};"
+            }
+   
+        """)
+
+        then:
+        noExceptionThrown()
+        upstreamTasksOf('p2 (1)')
+            .name == ['p1']
+        and:
+        upstreamTasksOf('p2 (2)')
+            .name == ['p1']
+        and:
+        upstreamTasksOf('p2 (3)')
+            .name == ['p1']
+        and:
+        upstreamTasksOf('p2 (4)')
+            .name == ['p1']
+    }
+
+    def 'should track provenance with splitFastq join and paired files'() {
+        given:
+
+        when:
+        dsl_eval(globalConfig(), """
+            workflow {
+                p1()
+                p2()
+                p1.out | join(p2.out) | splitFastq(by:1, pe:true, file:true) | p3
+            }
+            
+            process p1 { 
+              output: tuple val(sample), path('read1.fq') 
+              exec:
+                sample = 'sample_1' 
+                task.workDir.resolve('read1.fq').text = '''${SplitFastqOp2Test.READS1}'''
+            }
+
+            process p2 { 
+              output: tuple val(sample), path('read2.fq')
+              exec:
+                sample = 'sample_1'  
+                task.workDir.resolve('read2.fq').text = '''${SplitFastqOp2Test.READS2}'''
+            }
+            
+            process p3 {
+              input: tuple val(sample), path(r1), path(r2)
+              exec:
+                println "\${task.name}: sample=\${sample};"
+            }
+   
+        """)
+
+        then:
+        noExceptionThrown()
+        upstreamTasksOf('p3 (1)')
+            .id == [TaskId.of(1), TaskId.of(2)]
+        and:
+        upstreamTasksOf('p3 (2)')
+            .id == [TaskId.of(1), TaskId.of(2)]
+        and:
+        upstreamTasksOf('p3 (3)')
+            .id == [TaskId.of(1), TaskId.of(2)]
+        and:
+        upstreamTasksOf('p3 (4)')
+            .id == [TaskId.of(1), TaskId.of(2)]
+
+    }
+
+    def 'should track provenance with countLines and a file'() {
+        given:
+        def FASTA = """\
+                a
+                bb
+                ccc
+                """.stripIndent()
+
+        when:
+        dsl_eval(globalConfig(), """
+            workflow {
+                p1 | countLines | p2
+            }
+            
+            process p1 { 
+              output: path('result.txt') 
+              exec: 
+                task.workDir.resolve('result.txt').text = '''${FASTA}''' 
+            }
+            
+            process p2 {
+              input: val(count)
+              exec: 
+                println "\${task.name}: count=\$count"
+            }
+        """)
+
+        then:
+        upstreamTasksOf('p2')
+                .name == ['p1']
+    }
+
+    def 'should track provenance with countFasta and a file'() {
+        given:
+        def FASTA = """\
+                >1aboA
+                NLFVALYDFVASGDNTLSITKGEKLRVLGYNHNGEWCEAQTKNGQGWVPS
+                NYITPVN
+                >1ycsB
+                KGVIYALWDYEPQNDDELPMKEGDCMTIIHREDEDEIEWWWARLNDKEGY
+                VPRNLLGLYP
+                >1pht
+                GYQYRALYDYKKEREEDIDLHLGDILTVNKGSLVALGFSDGQEARPEEIG
+                WLNGYNETTGERGDFPGTYVE
+                YIGRKKISP
+                """.stripIndent()
+
+        when:
+        dsl_eval(globalConfig(), """
+            workflow {
+                p1 | countFasta | p2
+            }
+            
+            process p1 { 
+              output: path('result.txt') 
+              exec: 
+                task.workDir.resolve('result.txt').text = '''${FASTA}''' 
+            }
+            
+            process p2 {
+              input: val(count)
+              exec: 
+                println "\${task.name}: count=\$count"
+            }
+        """)
+
+        then:
+        upstreamTasksOf('p2')
+                .name == ['p1']
+    }
+
+    def 'should track provenance with toInteger operator'() {
+        when:
+        dsl_eval(globalConfig(), '''
+            workflow {
+                channel.of('1','2','3') | p1 | toInteger | p2 
+            }
+            
+            process p1 { 
+              input: val(x)
+              output: val(y) 
+              exec: 
+                y = x
+            }
+            
+            process p2 {
+              input: val(x)
+              exec: 
+                println x
+            }
+        ''')
+
+        then:
+        upstreamTasksOf('p2 (1)')
+                .name == ['p1 (1)']
+        and:
+        upstreamTasksOf('p2 (2)')
+                .name == ['p1 (2)']
+    }
+
+    def 'should track provenance with view operator'() {
+        when:
+        dsl_eval(globalConfig(), '''
+            workflow {
+                channel.of('1','2','3') | p1 | view | p2 
+            }
+            
+            process p1 { 
+              input: val(x)
+              output: val(y) 
+              exec: 
+                y = x
+            }
+            
+            process p2 {
+              input: val(x)
+              exec: 
+                println x
+            }
+        ''')
+
+        then:
+        upstreamTasksOf('p2 (1)')
+                .name == ['p1 (1)']
+        and:
+        upstreamTasksOf('p2 (2)')
+                .name == ['p1 (2)']
+        and:
+        upstreamTasksOf('p2 (3)')
+                .name == ['p1 (3)']
+    }
+
+    def 'should track provenance with randomSample operator'() {
+        when:
+        dsl_eval(globalConfig(), '''
+            workflow {
+                channel.of(1..9) | p1 | randomSample(1) | p2 
+            }
+            
+            process p1 { 
+              input: val(x)
+              output: val(y) 
+              exec: 
+                y = x
+            }
+            
+            process p2 {
+              input: val(x)
+              exec: 
+                println x
+            }
+        ''')
+
+        then:
+        upstreamTasksOf('p2 (1)')
+                .name.first =~ /p1 \(\d\)/
+
+    }
+
+    def 'should track provenance with tap operator'() {
+        when:
+        dsl_eval(globalConfig(), '''
+            workflow {
+                channel.of(1..3) | p1 
+                p1.out.tap { ch2 }.set{ ch3 }
+                p2(ch2)
+                p3(ch3)                
+            }
+            
+            process p1 { 
+              input: val(x)
+              output: val(y) 
+              exec: 
+                y = x
+            }
+            
+            process p2 {
+              input: val(x)
+              exec: 
+                println x
+            }
+            
+            process p3 {
+              input: val(x)
+              exec: 
+                println x
+            }
+        ''')
+
+        then:
+        upstreamTasksOf('p2 (1)')
+                .name == ['p1 (1)']
+        and:
+        upstreamTasksOf('p2 (2)')
+                .name == ['p1 (2)']
+        and:
+        upstreamTasksOf('p2 (3)')
+                .name == ['p1 (3)']
+
+        then:
+        upstreamTasksOf('p3 (1)')
+                .name == ['p1 (1)']
+        and:
+        upstreamTasksOf('p3 (2)')
+                .name == ['p1 (2)']
+        and:
+        upstreamTasksOf('p3 (3)')
+                .name == ['p1 (3)']
+
     }
 }

@@ -22,7 +22,6 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.ConcurrentHashMap
 
-import com.google.common.hash.Hashing
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -33,6 +32,7 @@ import nextflow.file.FileMutex
 import nextflow.util.CacheHelper
 import nextflow.util.Duration
 import nextflow.util.Escape
+import nextflow.util.TestOnly
 /**
  * Handle Conda environment creation and caching
  *
@@ -86,9 +86,8 @@ class CondaCache {
         return "conda"
     }
 
-    /** Only for testing purpose - do not use */
-    @PackageScope
-    CondaCache() {}
+    @TestOnly
+    protected CondaCache() {}
 
     /**
      * Create a Conda env cache object
@@ -166,19 +165,6 @@ class CondaCache {
         str.endsWith('.txt') && !str.contains('\n')
     }
 
-    static protected String sipHash(CharSequence data) {
-        Hashing
-            .sipHash24()
-            .newHasher()
-            .putUnencodedChars(data)
-            .hash()
-            .toString()
-    }
-
-    static protected String sipHash(Path path) {
-        sipHash(path.toAbsolutePath().normalize().toString())
-    }
-
     /**
      * Get the path on the file system where store a Conda environment
      *
@@ -200,7 +186,6 @@ class CondaCache {
             try {
                 final path = condaEnv as Path
                 content = path.text
-                name = 'env-' + sipHash(path)
 
             }
             catch( NoSuchFileException e ) {
@@ -214,7 +199,6 @@ class CondaCache {
             try {
                 final path = condaEnv as Path
                 content = path.text
-                name = 'env-' + sipHash(path)
             }
             catch( NoSuchFileException e ) {
                 throw new IllegalArgumentException("Conda environment file does not exist: $condaEnv")
@@ -284,17 +268,19 @@ class CondaCache {
 
     @PackageScope
     Path createLocalCondaEnv0(String condaEnv, Path prefixPath) {
+        if( prefixPath.isDirectory() ) {
+            log.debug "${binaryName} found local env for environment=$condaEnv; path=$prefixPath"
+            return prefixPath
+        }
+
         log.info "Creating env using ${binaryName}: $condaEnv [cache $prefixPath]"
 
         String opts = createOptions ? "$createOptions " : ''
-        // micromamba does not and might never support the mkdir flag, since the mkdir behaviour is the default
-        if( binaryName != 'micromamba' )
-            opts += '--mkdir '
 
         def cmd
         if( isYamlFilePath(condaEnv) ) {
             final target = isYamlUriPath(condaEnv) ? condaEnv : Escape.path(makeAbsolute(condaEnv))
-            final yesOpt = binaryName == 'micromamba' ? '--yes ' : ''
+            final yesOpt = binaryName=="mamba" || binaryName == "micromamba"  ? '--yes ' : ''
             cmd = "${binaryName} env create ${yesOpt}--prefix ${Escape.path(prefixPath)} --file ${target}"
         }
         else if( isTextFilePath(condaEnv) ) {

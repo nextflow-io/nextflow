@@ -39,13 +39,15 @@ class GitlabRepositoryProvider extends RepositoryProvider {
     }
 
     @Override
-    protected void auth( URLConnection connection ) {
+    protected String[] getAuth() {
         if( config.token ) {
             // set the token in the request header
-            connection.setRequestProperty("PRIVATE-TOKEN", config.token)
-        } else if( config.password ) {
-            connection.setRequestProperty("PRIVATE-TOKEN", config.password)
+            return new String[] { "PRIVATE-TOKEN", config.token }
         }
+        if( config.password ) {
+            return new String[] { "PRIVATE-TOKEN", config.password }
+        }
+        return null
     }
 
     @Override
@@ -111,10 +113,8 @@ class GitlabRepositoryProvider extends RepositoryProvider {
     /** {@inheritDoc} */
     @Override
     byte[] readBytes(String path) {
-
         def url = getContentUrl(path)
         Map response  = invokeAndParseResponse(url)
         response.get('content')?.toString()?.decodeBase64()
-
     }
 }

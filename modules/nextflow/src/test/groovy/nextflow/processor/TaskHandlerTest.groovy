@@ -63,7 +63,7 @@ class TaskHandlerTest extends Specification {
         task.processor.getProcessEnvironment() >> [FOO:'hola', BAR: 'mundo', AWS_SECRET: '12345']
         task.context = new TaskContext(Mock(Script), [:], 'none')
 
-        def handler = [:] as TaskHandler
+        def handler = Spy(TaskHandler)
         handler.task = task
         handler.status = TaskStatus.COMPLETED
         handler.submitTimeMillis = 1000
@@ -113,7 +113,7 @@ class TaskHandlerTest extends Specification {
         trace.getFmtStr('disk') == '100 GB'
 
         when:
-        handler = [:] as TaskHandler
+        handler = Spy(TaskHandler)
         handler.status = TaskStatus.COMPLETED
         handler.submitTimeMillis = 1000
         handler.startTimeMillis = 1500
@@ -124,7 +124,7 @@ class TaskHandlerTest extends Specification {
 
 
         when:
-        handler = [:] as TaskHandler
+        handler = Spy(TaskHandler)
         handler.status = TaskStatus.COMPLETED
         handler.submitTimeMillis = 1000
         handler.startTimeMillis = 1500
@@ -276,5 +276,21 @@ class TaskHandlerTest extends Specification {
         handler.kill()
         then:
         0 * handler.killTask()
+    }
+
+    @Unroll
+    def 'should set isChildArray flag'() {
+        given:
+        def handler = Spy(TaskHandler)
+
+        expect:
+        !handler.isArrayChild
+        and:
+        handler.withArrayChild(VALUE).isArrayChild == VALUE
+
+        where:
+        VALUE   | _
+        false   | _
+        true    | _
     }
 }

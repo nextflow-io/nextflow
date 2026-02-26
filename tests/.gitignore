@@ -1,9 +1,8 @@
 .cache
 .nextflow.*
-.vagrant
-Vagrantfile
-scratch
 results
+scratch
 work
 **/checks.out
+**/.stdout
 **/stdout

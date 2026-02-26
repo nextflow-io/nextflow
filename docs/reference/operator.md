@@ -512,7 +512,7 @@ The `tag` option can be used to select which channels to dump:
 :language: nextflow
 ```
 
-Then, you can run your pipeline with `-dump-channels foo` or `-dump-channels bar` to dump the content of either channel. Multiple tag names can be specified as a comma-separated list.
+Then, you can run your pipeline with `-dump-channels plus1` or `-dump-channels exp2` to dump the content of either channel. Multiple tag names can be specified as a comma-separated list.
 
 Available options:
 
@@ -794,6 +794,10 @@ The `map` operator applies a *mapping function* to each item from a source chann
 :language: console
 ```
 
+:::{note}
+`null` values are not emitted by `map`.
+:::
+
 (operator-max)=
 
 ## max
@@ -1037,13 +1041,13 @@ By default, the first item is used as the initial accumulated value. You can opt
 The `set` operator assigns a source channel to a variable, whose name is specified as a closure parameter:
 
 ```nextflow
-Channel.of(10, 20, 30).set { my_channel }
+channel.of(10, 20, 30).set { my_channel }
 ```
 
 Using `set` is semantically equivalent to assigning a variable:
 
 ```nextflow
-my_channel = Channel.of(10, 20, 30)
+my_channel = channel.of(10, 20, 30)
 ```
 
 See also: [tap](#tap)
@@ -1054,7 +1058,7 @@ See also: [tap](#tap)
 
 *Returns: queue channel*
 
-The `splitCsv` operator parses and splits [CSV-formatted](http://en.wikipedia.org/wiki/Comma-separated_values) text from a source channel into records, or groups of records with a given size.
+The `splitCsv` operator parses and splits [CSV](http://en.wikipedia.org/wiki/Comma-separated_values) files or text from a source channel into records.
 
 For example:
 
@@ -1126,7 +1130,7 @@ Available options:
 
 *Returns: queue channel*
 
-The `splitFasta` operator splits [FASTA-formatted](http://en.wikipedia.org/wiki/FASTA_format) text from a source channel into individual sequences.
+The `splitFasta` operator splits [FASTA](http://en.wikipedia.org/wiki/FASTA_format) files or text from a source channel into individual sequences.
 
 The `by` option can be used to group sequences into chunks of a given size. The following example shows how to read a FASTA file and split it into chunks of 10 sequences each:
 
@@ -1198,7 +1202,7 @@ See also: [countFasta](#countfasta)
 
 *Returns: queue channel*
 
-The `splitFasta` operator splits [FASTQ formatted](http://en.wikipedia.org/wiki/FASTQ_format) text from a source channel into individual sequences.
+The `splitFastq` operator splits [FASTQ](http://en.wikipedia.org/wiki/FASTQ_format) files or text from a source channel into individual sequences.
 
 The `by` option can be used to group sequences into chunks of a given size. The following example shows how to read a FASTQ file and split it into chunks of 10 sequences each:
 
@@ -1232,7 +1236,7 @@ Channel
 ```
 
 :::{note}
-`Channel.fromFilePairs()` requires the `flat: true` option in order to emit the file pairs as separate elements in the produced tuples.
+`channel.fromFilePairs()` requires the `flat: true` option in order to emit the file pairs as separate elements in the produced tuples.
 :::
 
 :::{note}
@@ -1281,7 +1285,7 @@ See also: [countFastq](#countfastq)
 
 *Returns: queue channel*
 
-The `splitJson` operator splits [JSON formatted](https://en.wikipedia.org/wiki/JSON) text from a source channel into individual records.
+The `splitJson` operator splits [JSON](https://en.wikipedia.org/wiki/JSON) files or text from a source channel into individual records.
 
 If the source item is a JSON array, each element of the array will be emitted:
 

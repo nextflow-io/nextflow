@@ -27,6 +27,16 @@ else
 mm = 
 endif 
 
+compile:
+	./gradlew compile exportClasspath
+	@echo "DONE `date`"
+
+assemble:
+	./gradlew buildInfo compile assemble
+
+check:
+	./gradlew check
+
 clean:
 	rm -rf .nextflow*
 	rm -rf work 
@@ -38,21 +48,11 @@ clean:
 	rm -rf plugins/*/build
 	./gradlew clean
 
-compile:
-	./gradlew compile exportClasspath
-	@echo "DONE `date`"
-
-assemble:
-	./gradlew buildInfo compile assemble
-
-check:
-	./gradlew check
-
 #
 # install compiled artifacts in Maven local dir
 # 
 install:
-	BUILD_PACK=1 ./gradlew installLauncher publishToMavenLocal -Dmaven.repo.local=${HOME}/.nextflow/capsule/deps/
+	BUILD_PACK=1 ./gradlew installLauncher publishToMavenLocal
 
 #
 # Show dependencies try `make deps config=runtime`, `make deps config=google`

@@ -23,6 +23,7 @@ import java.lang.annotation.Target
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.script.control.TaskCmdXformVisitor
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.control.CompilePhase

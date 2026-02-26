@@ -1,0 +1,42 @@
+set -e
+
+# Skip test if AWS keys are missing
+if [[ ! $AWS_ACCESS_KEY_ID ]]; then
+  echo "Skip cache-bak test since AWS keys are not available"
+  exit 0
+fi
+
+#
+# setup env
+#
+export NXF_IGNORE_RESUME_HISTORY=true
+export NXF_UUID=$(uuidgen | tr [:upper:] [:lower:])
+
+#
+# run normal mode
+#
+$NXF_RUN -name test_1 | tee .stdout
+[[ `grep -c 'Submitted process > foo' .nextflow.log` == 1 ]] || false
+
+#
+# backup cache
+#
+NXF_WORK=s3://nextflow-ci/cache-test  \
+  $NXF_CMD -log .nextflow-backup.log plugin nf-tower:cache-backup
+
+#
+# remove it
+#
+rm -rf .nextflow
+
+#
+# restore cache
+#
+NXF_WORK=s3://nextflow-ci/cache-test  \
+  $NXF_CMD -log .nextflow-restore.log plugin nf-tower:cache-restore
+
+#
+# run resume mode
+#
+$NXF_RUN -name test_2 -resume $NXF_UUID | tee .stdout
+[[ `grep -c 'Cached process > foo' .nextflow.log` == 1 ]] || false

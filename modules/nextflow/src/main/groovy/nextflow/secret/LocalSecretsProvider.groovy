@@ -31,6 +31,7 @@ import nextflow.Const
 import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ProcessUnrecoverableException
+import nextflow.util.CacheHelper
 import nextflow.util.Escape
 /**
  * Implements a secrets store that saves secrets into a JSON file save into the
@@ -197,13 +198,11 @@ class LocalSecretsProvider implements SecretsProvider, Closeable {
         if( !secretsMap )
             return null
 
-        final name = ".nf-${UUID.randomUUID().toString()}.secrets"
+        final name = ".nf-${CacheHelper.hasher(secretsMap.values()).hash()}.secrets"
         final path = storeFile.parent.resolve(name)
         if( path.exists() ) {
             // make sure the file can only be accessed by the owner user
             path.setPermissions(ONLY_OWNER_PERMS)
-            // remove it on completion
-            path.toFile().deleteOnExit()
             return path
         }
 
@@ -216,9 +215,6 @@ class LocalSecretsProvider implements SecretsProvider, Closeable {
         // make sure the file can only be accessed by the owner user
         path.setPermissions(ONLY_OWNER_PERMS)
         path.text = result
-        // remove it on completion
-        path.toFile().deleteOnExit()
-        // return the temp path
         return path
     }
 }

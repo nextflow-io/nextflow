@@ -53,7 +53,6 @@ import groovyx.gpars.group.PGroup
 import nextflow.NF
 import nextflow.Nextflow
 import nextflow.Session
-import nextflow.ast.NextflowDSLImpl
 import nextflow.ast.TaskCmdXform
 import nextflow.ast.TaskTemplateVarsXform
 import nextflow.cloud.CloudSpotTerminationException
@@ -79,6 +78,7 @@ import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.file.FilePatternSplitter
 import nextflow.file.FilePorter
+import nextflow.file.LogicalDataPath
 import nextflow.plugin.Plugins
 import nextflow.processor.tip.TaskTipProvider
 import nextflow.prov.Prov
@@ -293,8 +293,8 @@ class TaskProcessor {
         currentProcessor0 = this
     }
 
-    /* for testing purpose - do not remove */
-    protected TaskProcessor() { }
+    @TestOnly
+    protected TaskProcessor() {}
 
     /**
      * Create and initialize the processor object
@@ -317,15 +317,13 @@ class TaskProcessor {
         this.ownerScript = script
         this.config = config
         this.taskBody = taskBody
-        if( taskBody.isShell )
-            log.warn "Process ${name} > the `shell` block is deprecated, use `script` instead"
         this.name = name
         this.maxForks = config.maxForks && config.maxForks>0 ? config.maxForks as int : 0
         this.forksCount = maxForks ? new LongAdder() : null
         this.isFair0 = config.getFair()
-        
         final arraySize = config.getArray()
         this.arrayCollector = arraySize > 0 ? new TaskArrayCollector(this, executor, arraySize) : null
+        log.debug "Creating process '$name': maxForks=${maxForks}; fair=${isFair0}; array=${arraySize}"
     }
 
     /**
@@ -651,7 +649,7 @@ class TaskProcessor {
         // -- map the inputs to a map and use to delegate closure values interpolation
         final secondPass = [:]
         int count = makeTaskContextStage1(task, secondPass, values)
-        makeTaskContextStage2(task, secondPass, count)
+        final foreignFiles = makeTaskContextStage2(task, secondPass, count)
 
         // verify that `when` guard, when specified, is satisfied
         if( !checkWhenGuard(task) )
@@ -664,6 +662,9 @@ class TaskProcessor {
         //    if true skip the execution and return the stored data
         if( checkStoredOutput(task) )
             return
+
+        // -- download foreign files
+        session.filePorter.transfer(foreignFiles)
 
         def hash = createTaskHashKey(task)
         checkCachedOrLaunchTask(task, hash, resumable)
@@ -870,7 +871,7 @@ class TaskProcessor {
      */
     final boolean checkStoredOutput( TaskRun task ) {
         if( !task.config.storeDir ) {
-            log.trace "[${safeTaskName(task)}] Store dir not set -- return false"
+            log.trace "[${safeTaskName(task)}] storeDir not set -- return false"
             return false
         }
 
@@ -886,12 +887,12 @@ class TaskProcessor {
             return true
         }
         if( invalid ) {
-            checkWarn "[${safeTaskName(task)}] StoreDir can only be used when using 'file' outputs"
+            checkWarn "[${safeTaskName(task)}] storeDir can only be used with `val` and `path` outputs"
             return false
         }
 
         if( !task.config.getStoreDir().exists() ) {
-            log.trace "[${safeTaskName(task)}] Store dir does not exist > ${task.config.storeDir} -- return false"
+            log.trace "[${safeTaskName(task)}] storeDir does not exist > ${task.config.storeDir} -- return false"
             // no folder -> no cached result
             return false
         }
@@ -913,7 +914,7 @@ class TaskProcessor {
             return true
         }
         catch( MissingFileException | MissingValueException e ) {
-            log.trace "[${safeTaskName(task)}] Missed store > ${e.getMessage()} -- folder: ${task.config.storeDir}"
+            log.trace "[${safeTaskName(task)}] Missed storeDir > ${e.getMessage()} -- folder: ${task.config.storeDir}"
             task.exitStatus = Integer.MAX_VALUE
             task.workDir = null
             return false
@@ -1890,6 +1891,13 @@ class TaskProcessor {
         return Collections.unmodifiableMap(result)
     }
 
+    protected Path resolvePath(Object item) {
+        final result = normalizeToPath(item)
+        return result instanceof LogicalDataPath
+            ? result.toTargetPath()
+            : result
+    }
+
     /**
      * An input file parameter can be provided with any value other than a file.
      * This function normalize a generic value to a {@code Path} create a temporary file
@@ -1900,7 +1908,6 @@ class TaskProcessor {
      * @return The {@code Path} that will be staged in the task working folder
      */
     protected FileHolder normalizeInputToFile( Object input, String altName ) {
-
         /*
          * when it is a local file, just return a reference holder to it
          */
@@ -1941,7 +1948,7 @@ class TaskProcessor {
         throw new ProcessUnrecoverableException("Not a valid path value: '$str'")
     }
 
-    protected List<FileHolder> normalizeInputToFiles( Object obj, int count, boolean coerceToPath, FilePorter.Batch batch ) {
+    protected List<FileHolder> normalizeInputToFiles( Object obj, int count, boolean coerceToPath, FilePorter.Batch foreignFiles ) {
 
         Collection allItems = obj instanceof Collection ? obj : [obj]
         def len = allItems.size()
@@ -1951,9 +1958,9 @@ class TaskProcessor {
         for( def item : allItems ) {
 
             if( item instanceof Path || coerceToPath ) {
-                def path = normalizeToPath(item)
-                def target = executor.isForeignFile(path) ? batch.addToForeign(path) : path
-                def holder = new FileHolder(target)
+                final path = resolvePath(item)
+                final target = executor.isForeignFile(path) ? foreignFiles.addToForeign(path) : path
+                final holder = new FileHolder(target)
                 files << holder
             }
             else {
@@ -2152,12 +2159,12 @@ class TaskProcessor {
         return count
     }
 
-    final protected void makeTaskContextStage2( TaskRun task, Map secondPass, int count ) {
+    final protected FilePorter.Batch makeTaskContextStage2( TaskRun task, Map secondPass, int count ) {
 
         final ctx = task.context
         final allNames = new HashMap<String,Integer>()
 
-        final FilePorter.Batch batch = session.filePorter.newBatch(executor.getStageDir())
+        final FilePorter.Batch foreignFiles = session.filePorter.newBatch(executor.getStageDir())
 
         // -- all file parameters are processed in a second pass
         //    so that we can use resolve the variables that eventually are in the file name
@@ -2165,7 +2172,7 @@ class TaskProcessor {
             final param = entry.getKey()
             final val = entry.getValue()
             final fileParam = param as FileInParam
-            final normalized = normalizeInputToFiles(val, count, fileParam.isPathQualifier(), batch)
+            final normalized = normalizeInputToFiles(val, count, fileParam.isPathQualifier(), foreignFiles)
             final resolved = expandWildcards( fileParam.getFilePattern(ctx), normalized )
 
             if( !param.isValidArity(resolved.size()) )
@@ -2193,20 +2200,16 @@ class TaskProcessor {
             def message = "Process `$name` input file name collision -- There are multiple input files for each of the following file names: ${conflicts.keySet().join(', ')}"
             throw new ProcessUnrecoverableException(message)
         }
-
-        // -- download foreign files
-        session.filePorter.transfer(batch)
+        return foreignFiles
     }
 
-    final protected void makeTaskContextStage3( TaskRun task, HashCode hash, Path folder ) {
-
+    protected void makeTaskContextStage3( TaskRun task, HashCode hash, Path folder ) {
         // set hash-code & working directory
         task.hash = hash
         task.workDir = folder
         task.config.workDir = folder
         task.config.hash = hash.toString()
         task.config.name = task.getName()
-
     }
 
     final protected HashCode createTaskHashKey(TaskRun task) {
@@ -2256,7 +2259,7 @@ class TaskProcessor {
             }
         }
 
-        if( session.stubRun ) {
+        if( session.stubRun && task.config.getStubBlock() ) {
             keys.add('stub-run')
         }
 
@@ -2289,7 +2292,7 @@ class TaskProcessor {
      * @return The list of paths of scripts in the project bin folder referenced in the task command
      */
     @Memoized
-    protected List<Path> getTaskBinEntries(String script) {
+    List<Path> getTaskBinEntries(String script) {
         List<Path> result = []
         def tokenizer = new StringTokenizer(script," \t\n\r\f()[]{};&|<>`")
         while( tokenizer.hasMoreTokens() ) {
@@ -2322,7 +2325,7 @@ class TaskProcessor {
         log.info(buffer.toString())
     }
 
-    protected Map<String,Object> getTaskGlobalVars(TaskRun task) {
+    Map<String,Object> getTaskGlobalVars(TaskRun task) {
         final result = task.getGlobalVars(ownerScript.binding)
         final directives = getTaskExtensionDirectiveVars(task)
         result.putAll(directives)
@@ -2353,18 +2356,18 @@ class TaskProcessor {
 
         makeTaskContextStage3(task, hash, folder)
 
-        // add the task to the collection of running tasks
-        if( arrayCollector )
-            arrayCollector.collect(task)
-        else
+        // when no collector is define OR it's a task retry, then submit directly for execution
+        if( !arrayCollector || task.config.getAttempt() > 1 )
             executor.submit(task)
-
+        // add the task to the collection of running tasks
+        else
+            arrayCollector.collect(task)
     }
 
     protected boolean checkWhenGuard(TaskRun task) {
 
         try {
-            def pass = task.config.getGuard(NextflowDSLImpl.PROCESS_WHEN)
+            def pass = task.config.getWhenGuard()
             if( pass ) {
                 return true
             }

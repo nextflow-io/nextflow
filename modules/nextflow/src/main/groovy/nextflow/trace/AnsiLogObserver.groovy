@@ -475,8 +475,8 @@ class AnsiLogObserver implements TraceObserver {
             term.a(Attribute.INTENSITY_FAINT).a(", cached: $stats.cached").reset()
         if( stats.stored )
             term.a(", stored: $stats.stored")
-        if( stats.failed )
-            term.a(", failed: $stats.failed")
+        if( stats.ignored )
+            term.a(", ignored: $stats.ignored")
         if( stats.retries )
             term.a(", retries: $stats.retries")
         // Show red cross ('✘') or green tick ('✔') according to status

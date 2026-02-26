@@ -58,6 +58,37 @@ But when more than one argument is provided, they are always managed as *single*
 channel.from( [1, 2], [5,6], [7,9] )
 ```
 
+(channel-from-lineage)=
+
+## fromLineage
+
+:::{versionadded} 25.04.0
+:::
+
+:::{warning} *Experimental: may change in a future release.*
+:::
+
+The `channel.fromLineage` factory creates a channel that emits files from the {ref}`cli-lineage` store that match the given key-value params:
+
+```nextflow
+channel
+    .fromLineage(workflowRun: 'lid://0d1d1622ced3e4edc690bec768919b45', label: ['alpha', 'beta'])
+    .view()
+```
+
+The above snippet emits files published by the given workflow run that are labeled as `alpha` and `beta`.
+
+Available options:
+
+`label`
+: List of labels associated with the desired files.
+
+`taskRun`
+: LID of the task run that produced the desired files.
+
+`workflowRun`
+: LID of the workflow run that produced the desired files.
+
 (channel-fromlist)=
 
 ## fromList
@@ -331,7 +362,7 @@ Available retry policy properties:
 | `maxAttempts` | Max attempts when retrying failed SRA requests. | `3`     |
 | `maxDelay`    | Max delay when retrying failed SRA requests.    | `30s`   |
 
-The following code snippet shows an example for using the `Channel.fromSRA` factory method with a custom `retryPolicy`.
+The following code snippet shows an example for using the `channel.fromSRA` factory method with a custom `retryPolicy`.
 
   ```nextflow
   channel.fromSRA(ids, retryPolicy: [delay: '250ms', maxAttempts: 5])
@@ -344,16 +375,16 @@ The following code snippet shows an example for using the `Channel.fromSRA` fact
 The `interval` method emits an incrementing index (starting from zero) at a periodic interval. For example:
 
 ```nextflow
-Channel.interval('1s').view()
+channel.interval('1s').view()
 ```
 
 The above snippet will emit 0, 1, 2, and so on, every second, forever. You can use an operator such as {ref}`operator-take` or {ref}`operator-until` to close the channel based on a stopping condition.
 
-An optional closure can be used to transform the index. Additionally, returning `Channel.STOP` will close the channel. For example:
+An optional closure can be used to transform the index. Additionally, returning `channel.STOP` will close the channel. For example:
 
 ```nextflow
-ch = Channel.interval('1s') { i ->
-    i == 10 ? Channel.STOP : i
+ch = channel.interval('1s') { i ->
+    i == 10 ? channel.STOP : i
 }
 ch.view()
 ```
@@ -413,7 +444,7 @@ See also: [channel.fromList](#fromlist) factory method.
 :::
 
 :::{note}
-This feature requires the `nextflow.preview.topic` feature flag to be enabled.
+In versions of Nextflow prior to 25.04, this feature requires the `nextflow.preview.topic` feature flag to be enabled.
 :::
 
 A *topic channel* is a queue channel that can receive values from many source channels *implicitly* based on a matching *topic name*.
@@ -425,16 +456,16 @@ You can think of it as a channel that is shared across many different processes 
 A process output can be assigned to a topic using the `topic` option on an output, for example:
 
 ```nextflow
-process foo {
+process hello {
   output:
-  val('foo'), topic: my_topic
+  val('hello'), topic: my_topic
 
   // ...
 }
 
-process bar {
+process bye {
   output:
-  val('bar'), topic: my_topic
+  val('bye'), topic: my_topic
 
   // ...
 }
@@ -506,6 +537,10 @@ channel
 The `channel.watchPath` factory waits endlessly for files that match the specified pattern and event(s), which means
 that it will cause your pipeline to run forever. Consider using the `take` or `until` operator to close the channel when
 a certain condition is met (e.g. after receiving 10 files, receiving a file named `DONE`).
+:::
+
+:::{note}
+The `channel.watchPath` factory only works with local and shared filesystems. It does not support object storage such as S3.
 :::
 
 See also: [channel.fromPath](#frompath) factory method.

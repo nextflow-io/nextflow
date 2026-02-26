@@ -127,7 +127,7 @@ class SingularityCacheTest extends Specification {
         1 * cache.localCachePath(IMAGE) >> TARGET_FILE
         1 * cache.getTempImagePath(TARGET_FILE) >> TEMP_FILE
         and:
-        1 * cache.runCommand("singularity pull --nohttps --name ${TEMP_FILE.name} $IMAGE > /dev/null", dir) >> 0
+        1 * cache.runCommand("singularity pull --no-https --name ${TEMP_FILE.name} $IMAGE > /dev/null", dir) >> 0
         and:
         TARGET_FILE.exists()
         !TEMP_FILE.exists()
@@ -148,7 +148,7 @@ class SingularityCacheTest extends Specification {
         def container = dir.resolve(LOCAL)
         container.text = 'dummy'
         and:
-        def cache = Spy(SingularityCache)
+        def cache = Spy(new SingularityCache([:] as ContainerConfig))
 
         when:
         def result = cache.downloadContainerImage(IMAGE)
@@ -172,7 +172,7 @@ class SingularityCacheTest extends Specification {
         def container = dir.resolve(LOCAL)
         container.text = 'dummy'
         and:
-        def cache = Spy(SingularityCache)
+        def cache = Spy(new SingularityCache([:] as ContainerConfig))
 
         when:
         def result = cache.downloadContainerImage(IMAGE)
@@ -197,7 +197,7 @@ class SingularityCacheTest extends Specification {
         def dir = Paths.get('/test/path')
         def container = dir.resolve(LOCAL)
         and:
-        def cache = Spy(SingularityCache)
+        def cache = Spy(new SingularityCache([:] as ContainerConfig))
 
         when:
         def file = cache.getCachePathFor(IMAGE)

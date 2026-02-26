@@ -181,7 +181,7 @@ class CharliecloudCacheTest extends Specification {
         def CACHE_PATH = dir.resolve('charliecloud')
         def TARGET_PATH = CACHE_PATH.resolve(LOCAL)
         and:
-        def cache = Spy(CharliecloudCache)
+        def cache = Spy(new CharliecloudCache([:] as ContainerConfig))
 
         when:
         def result = cache.downloadCharliecloudImage(IMAGE)
@@ -207,7 +207,7 @@ class CharliecloudCacheTest extends Specification {
         def CACHE_PATH = dir.resolve('charliecloud')
         def TARGET_PATH = CACHE_PATH.resolve(LOCAL)
         and:
-        def cache = Spy(CharliecloudCache)
+        def cache = Spy(new CharliecloudCache([:] as ContainerConfig))
         TARGET_PATH.mkdirs()
 
         when:
@@ -232,7 +232,7 @@ class CharliecloudCacheTest extends Specification {
         def dir = Paths.get('/test/path')
         def container = dir.resolve(LOCAL)
         and:
-        def cache = Spy(CharliecloudCache)
+        def cache = Spy(new CharliecloudCache([:] as ContainerConfig))
 
         when:
         def file = cache.getCachePathFor(IMAGE)

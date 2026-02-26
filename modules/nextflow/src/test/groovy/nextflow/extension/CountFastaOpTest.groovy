@@ -16,6 +16,7 @@
 
 package nextflow.extension
 
+import nextflow.Session
 import spock.lang.Specification
 
 import nextflow.Channel
@@ -26,6 +27,10 @@ import test.TestHelper
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class CountFastaOpTest extends Specification {
+
+    def setup() {
+        new Session()
+    }
 
     def 'should count fasta channel' () {
         given:

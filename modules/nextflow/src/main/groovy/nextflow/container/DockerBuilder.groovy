@@ -141,6 +141,9 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
         if( memory )
             result << "--memory ${memory} "
 
+        if( platform )
+            result << "--platform ${platform} "
+
         if( tty )
             result << '-t '
 

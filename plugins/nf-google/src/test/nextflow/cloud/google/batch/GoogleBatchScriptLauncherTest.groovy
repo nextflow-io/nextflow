@@ -56,6 +56,7 @@ class GoogleBatchScriptLauncherTest extends Specification{
                 getProjectId() >> 'my-project'
                 getEnableRequesterPaysBuckets() >> true
             }
+            getGcsfuseOptions() >> ['-o rw', '-implicit-dirs', '-o allow_other', '--uid=1000']
         }
         and:
         def PATH1 = CloudStorageFileSystem.forBucket('alpha').getPath('/data/sample1.bam')
@@ -80,10 +81,10 @@ class GoogleBatchScriptLauncherTest extends Specification{
         volumes.size() == 2
         volumes[0].getGcs().getRemotePath() == 'alpha'
         volumes[0].getMountPath() == '/mnt/disks/alpha'
-        volumes[0].getMountOptionsList() == ['-o rw', '-implicit-dirs', '--billing-project my-project']
+        volumes[0].getMountOptionsList() == ['-o rw', '-implicit-dirs', '-o allow_other', '--uid=1000', '--billing-project my-project']
         volumes[1].getGcs().getRemotePath() == 'omega'
         volumes[1].getMountPath() == '/mnt/disks/omega'
-        volumes[1].getMountOptionsList() == ['-o rw', '-implicit-dirs', '--billing-project my-project']
+        volumes[1].getMountOptionsList() == ['-o rw', '-implicit-dirs', '-o allow_other', '--uid=1000', '--billing-project my-project']
     }
 
 }

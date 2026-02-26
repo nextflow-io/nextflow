@@ -56,10 +56,12 @@ Feature flags are used to introduce experimental or other opt-in features. They 
 : :::{versionadded} 21.11.0-edge
   :::
 : *Experimental: may change in a future release.*
-: When `true`, enables process and workflow recursion. See [this GitHub discussion](https://github.com/nextflow-io/nextflow/discussions/2521) for more information.
+: When `true`, enables {ref}`process and workflow recursion <workflow-recursion>`.
 
 `nextflow.preview.topic`
 : :::{versionadded} 23.11.0-edge
   :::
-: *Experimental: may change in a future release.*
+: :::{versionchanged} 25.04.0
+  This feature flag is no longer required to use topic channels.
+  :::
 : When `true`, enables {ref}`topic channels <channel-topic>` feature.

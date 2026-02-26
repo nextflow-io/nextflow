@@ -53,7 +53,7 @@ class ToListOp {
         if( source instanceof DataflowExpression ) {
             final result = new ArrayList(1)
             new SubscribeOp()
-                .withSource(source)
+                .withInput(source)
                 .withOnNext({ result.add(it) })
                 .withOnComplete({ DataflowProcessor dp -> Op.bind(dp, target, result) })
                 .apply()

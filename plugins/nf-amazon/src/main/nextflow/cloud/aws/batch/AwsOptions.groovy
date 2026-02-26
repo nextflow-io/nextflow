@@ -18,7 +18,7 @@ package nextflow.cloud.aws.batch
 
 import java.nio.file.Path
 
-import com.amazonaws.services.s3.model.CannedAccessControlList
+import software.amazon.awssdk.services.s3.model.ObjectCannedACL
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
@@ -45,7 +45,6 @@ class AwsOptions implements CloudTransferOptions {
 
     volatile Boolean fetchInstanceType
 
-    /* Only for testing purpose */
     @TestOnly
     protected AwsOptions() {
         this.awsConfig=new AwsConfig(Collections.emptyMap())
@@ -105,7 +104,7 @@ class AwsOptions implements CloudTransferOptions {
         return awsConfig.batchConfig.getMaxTransferAttempts()
     }
 
-    int getMaxSpotAttempts() {
+    Integer getMaxSpotAttempts() {
         return awsConfig.batchConfig.getMaxSpotAttempts()
     }
 
@@ -125,7 +124,7 @@ class AwsOptions implements CloudTransferOptions {
         return awsConfig.s3Config.getStorageKmsKeyId()
     }
 
-    CannedAccessControlList getS3Acl() {
+    ObjectCannedACL getS3Acl() {
         return awsConfig.s3Config.getS3Acl()
     }
 
@@ -159,6 +158,10 @@ class AwsOptions implements CloudTransferOptions {
 
     String getExecutionRole() {
         return awsConfig.batchConfig.getExecutionRole()
+    }
+
+    boolean terminateUnschedulableJobs() {
+        return awsConfig.batchConfig.terminateUnschedulableJobs
     }
 
 }

@@ -86,6 +86,8 @@ Minimal permissions policies to be attached to the AWS account used by Nextflow 
   "ecr:ListTagsForResource"
   ```
 
+  Alternatively, you can use AWS provided `AmazonEC2ContainerRegistryReadOnly` managed policy.
+
 :::{note}
 If you are running Fargate or Fargate Spot, you may need the following policies in addition to the listed above:
   ```json
@@ -121,7 +123,9 @@ Depending on the pipeline configuration, the above actions can be done all in a 
                 "Action": [
                     "s3:GetObject",
                     "s3:PutObject",
-                    "s3:DeleteObject"
+                    "s3:DeleteObject",
+                    "s3:PutObjectTagging",
+                    "s3:AbortMultipartUpload"
                 ],
                 "Resource": "arn:aws:s3:::<bucket name>/*"
             },
@@ -346,14 +350,13 @@ The grandparent directory of the `aws` tool will be mounted into the container a
 
 ### Docker installation
 
-Docker is required by Nextflow to execute tasks on AWS Batch. The **Amazon ECS-Optimized Amazon Linux 2 (AL2) x86_64 AMI** has Docker installed, however, if you create your AMI from a different AMI that does not have Docker installed, you will need to install it manually.
+Docker is required by Nextflow to execute tasks on AWS Batch. The **Amazon ECS-optimized Amazon Linux 2023 AMI** has Docker installed, however, if you create your AMI from a different AMI that does not have Docker installed, you will need to install it manually.
 
 The following snippet shows how to install Docker on an Amazon EC2 instance:
 
 ```bash
 # install Docker
 sudo yum update -y
-sudo amazon-linux-extras install docker
 sudo yum install docker
 
 # start the Docker service
@@ -363,7 +366,7 @@ sudo service docker start
 sudo usermod -a -G docker ec2-user
 ```
 
-You may have to reboot your instance for the changes to `ec2-user` to take effect.
+You must logging out and logging back in again to use the new `ec2-user` permissions.
 
 These steps must be done *before* creating the AMI from the current EC2 instance.
 
@@ -371,13 +374,12 @@ These steps must be done *before* creating the AMI from the current EC2 instance
 
 The [ECS container agent](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ECS_agent.html) is a component of Amazon Elastic Container Service (Amazon ECS) and is responsible for managing containers on behalf of ECS. AWS Batch uses ECS to execute containerized jobs, therefore it requires the agent to be installed on EC2 instances within your Compute Environments.
 
-The ECS agent is included in the **Amazon ECS-Optimized Amazon Linux 2 (AL2) x86_64 AMI** . If you use a different base AMI, you can also install the agent on any EC2 instance that supports the Amazon ECS specification.
+The ECS agent is included in the **Amazon ECS-optimized Amazon Linux 2023 AMI** . If you use a different base AMI, you can also install the agent on any EC2 instance that supports the Amazon ECS specification.
 
 To install the agent, follow these steps:
 
 ```bash
-sudo amazon-linux-extras disable docker
-sudo amazon-linux-extras install -y ecs
+sudo yum install ecs-init
 sudo systemctl enable --now ecs
 ```
 
@@ -512,6 +514,8 @@ It may happen that the pipeline execution hangs indefinitely because one of the 
 There are multiple reasons why this can happen. They are mainly related to the Compute Environment workload/configuration, the docker service or container configuration, network status, etc.
 
 This [AWS page](https://aws.amazon.com/premiumsupport/knowledge-center/batch-job-stuck-runnable-status/) provides several resolutions and tips to investigate and work around the issue.
+
+(aws-fargate)=
 
 ## AWS Fargate
 

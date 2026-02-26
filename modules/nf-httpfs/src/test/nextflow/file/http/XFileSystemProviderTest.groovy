@@ -22,6 +22,7 @@ import java.nio.file.Path
 import com.github.tomakehurst.wiremock.junit.WireMockRule
 import com.github.tomjankes.wiremock.WireMockGroovy
 import org.junit.Rule
+import spock.lang.IgnoreIf
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -29,7 +30,7 @@ import spock.lang.Unroll
  */
 class XFileSystemProviderTest extends Specification {
 
-
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
     def "should return input stream"() {
         given:
         def fsp = new HttpFileSystemProvider()
@@ -98,7 +99,7 @@ class XFileSystemProviderTest extends Specification {
         Locale.setDefault(Locale.Category.FORMAT, defLocale)
     }
 
-
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
     def "should read file attributes from HttpPath"() {
         given:
         def fsp = new HttpFileSystemProvider()
@@ -111,6 +112,7 @@ class XFileSystemProviderTest extends Specification {
         attrs.size() > 0
     }
 
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
     def "should read file attributes from FtpPath"() {
         given:
         def fsp = new FtpFileSystemProvider()
@@ -156,12 +158,13 @@ class XFileSystemProviderTest extends Specification {
     }
 
     @Rule
-    WireMockRule wireMockRule = new WireMockRule(18080)
+    WireMockRule wireMockRule = new WireMockRule(0)
 
     @Unroll
     def 'should follow a redirect when read a http file '() {
         given:
-        def wireMock = new WireMockGroovy(18080)
+        def wireMock = new WireMockGroovy(wireMockRule.port())
+        def localhost = "http://localhost:${wireMockRule.port()}"
         wireMock.stub {
             request {
                 method "GET"
@@ -170,7 +173,7 @@ class XFileSystemProviderTest extends Specification {
             response {
                 status HTTP_CODE
                 headers {
-                    "Location" "http://localhost:18080${REDIRECT_TO}"
+                    "Location" "${localhost}${REDIRECT_TO}"
                 }
             }
         }
@@ -182,7 +185,7 @@ class XFileSystemProviderTest extends Specification {
             response {
                 status HTTP_CODE
                 headers {
-                    "Location" "http://localhost:18080/target.html"
+                    "Location" "${localhost}/target.html"
                 }
             }
         }
@@ -208,7 +211,7 @@ class XFileSystemProviderTest extends Specification {
         and:
         def provider = new HttpFileSystemProvider()
         when:
-        def path = provider.getPath(new URI('http://localhost:18080/index.html'))
+        def path = provider.getPath(new URI("${localhost}/index.html"))
         then:
         path
         Files.size(path) == EXPECTED

@@ -3,36 +3,37 @@
 # Secrets
 
 :::{versionadded} 22.10.0
-Previewed in `21.09.0-edge`.
 :::
 
-Nextflow has built-in support for pipeline secrets to allow users to safely provide sensitive information to a pipeline execution.
+Nextflow has built-in support for pipeline secrets, allowing users to safely provide sensitive information to a pipeline run.
 
 ## How it works
 
-This feature allows decoupling the use secrets in your pipelines from the pipeline code and configuration files. Secrets are instead managed by Nextflow and store separately into a local store only accessible to the secrets owner.
+This feature allows you to decouple the use of secrets in your pipelines from the pipeline code and configuration files. Secrets are managed by Nextflow and stored separately into a local store only accessible to the secrets owner.
 
-When the pipeline execution is launched Nextflow inject the secrets in pipeline jobs without leaking them into temporary execution files. The secrets are accessible into the job command via environment variables.
+When a pipeline is launched, Nextflow injects the secrets into the run without leaking them into temporary execution files. Secrets are provided to tasks as environment variables.
 
 ## Command line
 
-Nextflow provides a command named `secrets`. This command allows four simple operations:
+The Nextflow {ref}`cli-secrets` sub-command can be used to manage secrets:
 
-`list`
-: List secrets available in the current store e.g. `nextflow secrets list`.
+```bash
+# create a new secret
+nextflow secrets set FOO "Hello world"
 
-`get`
-: Retrieve a secret value e.g. `nextflow secrets get FOO`.
+# list all secrets
+nextflow secrets list
 
-`set`
-: Create or update a secret e.g. `nextflow secrets set FOO "Hello world"`
+# get the value of secret FOO
+nextflow secrets get FOO
 
-`delete`
-: Delete a secret e.g. `nextflow secrets delete FOO`.
+# delete the secret FOO
+nextflow secrets delete FOO
+```
 
 ## Configuration file
 
-Once create the secrets can be used in the pipeline configuration file as implicit variables using the `secrets` scope:
+Secrets can be used in configuration files using the built-in `secrets` variable. For example:
 
 ```groovy
 aws {
@@ -41,18 +42,41 @@ aws {
 }
 ```
 
-The above snippet access the secrets `MY_ACCESS_KEY` and `MY_SECRET_KEY` previously and assign them to the corresponding AWS credentials settings.
+The above snippet accesses the secrets `MY_ACCESS_KEY` and `MY_SECRET_KEY` and assigns them to the corresponding AWS config settings.
 
 :::{warning}
-Secrets **cannot** be assigned to pipeline parameters.
+Secrets cannot be assigned to pipeline parameters.
+:::
+
+(secrets-pipeline-script)=
+
+## Pipeline script
+
+:::{versionadded} 24.04.0
+:::
+
+Secrets can be accessed in the pipeline script using the built-in `secrets` variable. For example:
+
+```nextflow
+workflow {
+    println "The secret is: ${secrets.MY_SECRET}"
+}
+```
+
+:::{warning}
+The above example is only meant to demonstrate how to access a secret, not how to use it. In practice, sensitive information should not be printed to the console or output files.
+:::
+
+:::{note}
+Secrets can only be used with the local or grid executors (e.g., Slurm or Grid Engine). Secrets can be used with the AWS Batch executor when launched from [Seqera Platform](https://seqera.io/blog/pipeline-secrets-secure-handling-of-sensitive-information-in-tower/).
 :::
 
 ## Process directive
 
-Secrets can be access by pipeline processes by using the `secret` directive. For example:
+Secrets can be accesses by processes using the {ref}`process-secret` directive. For example:
 
 ```nextflow
-process someJob {
+process my_task {
     secret 'MY_ACCESS_KEY'
     secret 'MY_SECRET_KEY'
 
@@ -63,29 +87,12 @@ process someJob {
 }
 ```
 
-The above snippet runs a command in with the variables `MY_ACCESS_KEY` and `MY_SECRET_KEY` are injected in the process execution environment holding the values defines in the secret store.
+In the above example, the secrets `MY_ACCESS_KEY` and `MY_SECRET_KEY` are injected into the process script as environment variables.
 
 :::{warning}
-The secrets are made available in the process context running the command script as environment variables. Therefore make sure to escape the variable name identifier with a backslash as shown in the example above, otherwise a variable with the same will be evaluated in the Nextflow script context instead of the command script.
+Secrets are made available as environment variables in the process script. To prevent evaluation in the Nextflow script context, escape variable names with a backslash (e.g., `\$MY_ACCESS_KEY`) as shown above.
 :::
 
 :::{note}
-This feature is only available when using the local or grid executors (Slurm, Grid Engine, etc). The AWS Batch executor allows the use of secrets when deploying the pipeline execution via [Seqera Platform](https://seqera.io/blog/pipeline-secrets-secure-handling-of-sensitive-information-in-tower/).
-:::
-
-## Pipeline script
-
-:::{versionadded} 24.03.0-edge
-:::
-
-Secrets can be accessed in the pipeline script using the `secrets` variable. For example:
-
-```nextflow
-workflow.onComplete {
-    println("The secret is: ${secrets.MY_SECRET}")
-}
-```
-
-:::{note}
-This feature is only available when using the local or grid executors (Slurm, Grid Engine, etc). The AWS Batch executor allows the use of secrets when deploying the pipeline execution via [Seqera Platform](https://seqera.io/blog/pipeline-secrets-secure-handling-of-sensitive-information-in-tower/).
+Secrets can only be used with the local or grid executors (e.g., Slurm or Grid Engine). Secrets can be used with the AWS Batch executor when launched from [Seqera Platform](https://seqera.io/blog/pipeline-secrets-secure-handling-of-sensitive-information-in-tower/).
 :::

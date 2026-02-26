@@ -36,9 +36,14 @@ class FusionConfig {
 
     final static public String DEFAULT_FUSION_AMD64_URL = 'https://fusionfs.seqera.io/releases/v2.4-amd64.json'
     final static public String DEFAULT_FUSION_ARM64_URL = 'https://fusionfs.seqera.io/releases/v2.4-arm64.json'
+    final static public String DEFAULT_SNAPSHOT_AMD64_URL = 'https://fusionfs.seqera.io/releases/v2.4-snap_amd64.json'
+    final static public String DEFAULT_SNAPSHOT_ARM64_URL = 'https://fusionfs.seqera.io/releases/v2.4-snap_arm64.json'
+
     final static public String DEFAULT_TAGS = "[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)"
 
     final static public String FUSION_PATH = '/usr/bin/fusion'
+
+    final static private String PRODUCT_NAME = 'fusion'
 
     final static private Pattern VERSION_JSON = ~/https:\/\/.*\/releases\/v(\d+(?:\.\w+)*)-(\w*)\.json$/
 
@@ -52,6 +57,7 @@ class FusionConfig {
     final private String tagsPattern
     final private boolean privileged
     final private MemoryUnit cacheSize
+    final private boolean snapshots
 
     boolean enabled() { enabled }
 
@@ -73,6 +79,8 @@ class FusionConfig {
 
     MemoryUnit cacheSize() { cacheSize }
 
+    boolean snapshotsEnabled() { snapshots }
+
     URL containerConfigUrl() {
         this.containerConfigUrl ? new URL(this.containerConfigUrl) : null
     }
@@ -92,6 +100,7 @@ class FusionConfig {
         this.tagsPattern = (opts.tags==null || (opts.tags instanceof Boolean && opts.tags)) ? DEFAULT_TAGS : ( opts.tags !instanceof Boolean ? opts.tags as String : null )
         this.privileged = opts.privileged==null || opts.privileged.toString()=='true'
         this.cacheSize = opts.cacheSize as MemoryUnit
+        this.snapshots = opts.snapshots as Boolean
         if( containerConfigUrl && !validProtocol(containerConfigUrl))
             throw new IllegalArgumentException("Fusion container config URL should start with 'http:' or 'https:' protocol prefix - offending value: $containerConfigUrl")
     }
@@ -120,6 +129,15 @@ class FusionConfig {
         if( matcher_json.matches() )
             return matcher_json.group(1)
         return null
+    }
+
+    /**
+     * Return the Fusion SKU string
+     *
+     * @return A string representing the Fusion SKU
+     */
+    String sku() {
+        return enabled ? PRODUCT_NAME : null
     }
 
     String version() {

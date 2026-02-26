@@ -15,7 +15,6 @@
  */
 
 plugins {
-    id "io.codearte.nexus-staging" version "0.30.0"
     id 'java'
     id 'idea'
 }
@@ -67,16 +66,10 @@ allprojects {
     apply plugin: 'jacoco'
 
     java {
+        // these settings apply to all jvm tooling, including groovy
         toolchain {
             languageVersion = JavaLanguageVersion.of(21)
         }
-    }
-
-    compileJava {
-        options.release.set(17)
-    }
-
-    tasks.withType(GroovyCompile) {
         sourceCompatibility = 17
         targetCompatibility = 17
     }
@@ -109,8 +102,8 @@ allprojects {
 
         // Documentation required libraries
         groovyDoc 'org.fusesource.jansi:jansi:2.4.0'
-        groovyDoc "org.apache.groovy:groovy-groovydoc:4.0.24"
-        groovyDoc "org.apache.groovy:groovy-ant:4.0.24"
+        groovyDoc "org.apache.groovy:groovy-groovydoc:4.0.27"
+        groovyDoc "org.apache.groovy:groovy-ant:4.0.27"
     }
 
     test {
@@ -243,7 +236,7 @@ task compile {
 
 def getRuntimeConfigs() {
     def names = subprojects
-            .findAll { prj -> prj.name in ['nextflow','nf-commons','nf-httpfs'] }
+            .findAll { prj -> prj.name in ['nextflow','nf-commons','nf-httpfs','nf-lang','nf-lineage'] }
             .collect { it.name }
 
     FileCollection result = null
@@ -269,20 +262,20 @@ task exportClasspath {
         def home = System.getProperty('user.home')
         def all = getRuntimeConfigs()
         def libs = all.collect { File file ->  /*println file.canonicalPath.replace(home, '$HOME');*/ file.canonicalPath;  }
-        ['nextflow','nf-commons','nf-httpfs'].each {libs << file("modules/$it/build/libs/${it}-${version}.jar").canonicalPath }
+        ['nextflow','nf-commons','nf-httpfs','nf-lang','nf-lineage'].each {libs << file("modules/$it/build/libs/${it}-${version}.jar").canonicalPath }
         file('.launch.classpath').text = libs.unique().join(':')
     }
 }
 
-ext.nexusUsername = project.findProperty('nexusUsername')
-ext.nexusPassword = project.findProperty('nexusPassword')
+ext.nexusUsername = project.findProperty('nexusUsername') ?: System.getenv('AWS_ACCESS_KEY_ID')
+ext.nexusPassword = project.findProperty('nexusPassword') ?: System.getenv('AWS_SECRET_ACCESS_KEY')
 ext.nexusFullName = project.findProperty('nexusFullName')
 ext.nexusEmail = project.findProperty('nexusEmail')
 
 // `signing.keyId` property needs to be defined in the `gradle.properties` file
 ext.enableSignArchives = project.findProperty('signing.keyId')
 
-ext.coreProjects = projects( ':nextflow', ':nf-commons', ':nf-httpfs' )
+ext.coreProjects = projects( ':nextflow', ':nf-commons', ':nf-httpfs', ':nf-lang', ':nf-lineage' )
 
 configure(coreProjects) {
     group = 'io.nextflow'
@@ -353,8 +346,8 @@ configure(coreProjects) {
         repositories {
             maven {
                 // change URLs to point to your repos, e.g. http://my.org/repo
-                def releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
-                def snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots/"
+                def releasesRepoUrl = "s3://maven.seqera.io/releases/"
+                def snapshotsRepoUrl = "s3://maven.seqera.io/snapshots/"
                 url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
                 credentials(PasswordCredentials) {
                     username nexusUsername
@@ -399,17 +392,6 @@ task upload {
     dependsOn coreProjects.publish
 }
 
-/*
- * Configure Nextflow staging plugin -- https://github.com/Codearte/gradle-nexus-staging-plugin
- * It adds the tasks
- * - closeRepository
- * - releaseRepository
- * - closeAndReleaseRepository
- */
-nexusStaging {
-    packageGroup = 'io.nextflow'
-    delayBetweenRetriesInMillis = 10_000
-}
 
 if( System.env.BUILD_PACK ) {
     apply from: 'packing.gradle'

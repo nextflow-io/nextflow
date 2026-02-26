@@ -63,10 +63,6 @@ class DumpOp {
         return this
     }
 
-    /** Only for testing -- do not use */
-    protected DumpOp() {}
-
-
     boolean isEnabled() {
         if( !dumpNames )
             return false
@@ -97,7 +93,7 @@ class DumpOp {
         events.onComplete = { CH.close0(target) }
 
         new SubscribeOp()
-            .withSource(source)
+            .withInput(source)
             .withEvents(events)
             .apply()
 

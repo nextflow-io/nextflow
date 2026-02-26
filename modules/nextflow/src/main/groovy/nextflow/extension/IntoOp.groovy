@@ -22,17 +22,11 @@ import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
-import groovyx.gpars.dataflow.operator.ChainWithClosure
-import groovyx.gpars.dataflow.operator.CopyChannelsClosure
-import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
-import nextflow.Global
-import nextflow.NF
-import nextflow.Session
-import static nextflow.extension.DataflowHelper.newChannelBy
+import nextflow.extension.op.Op
 /**
- * Implements the {@link OperatorImpl#into} operators logic
+ * Implements the "into" operator logic
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -43,8 +37,6 @@ class IntoOp {
     private DataflowReadChannel source
 
     private List<DataflowWriteChannel> outputs
-
-    private Session session = (Session)Global.session
 
     IntoOp( DataflowReadChannel source, List<DataflowWriteChannel> targets ) {
         assert source
@@ -68,46 +60,29 @@ class IntoOp {
     List<DataflowWriteChannel> getOutputs() { outputs }
 
     IntoOp apply() {
-
-        final params = [:]
-        params.inputs = [source]
-        params.outputs = outputs
-        params.listeners = createListener()
-
-        DataflowHelper.newOperator(params, new ChainWithClosure(new CopyChannelsClosure()))
-
+        new SubscribeOp()
+            .withInput(source)
+            .withOnNext(this.&doNext)
+            .withOnComplete(this.&doComplete)
+            .apply()
         return this
     }
 
-    private createListener() {
+    private void doNext(DataflowProcessor dp, Object it) {
+        for( DataflowWriteChannel ch : outputs ) {
+            Op.bind(dp, ch, it)
+        }
+    }
 
-        final stopOnFirst = source instanceof DataflowExpression
-        final listener = new DataflowEventAdapter() {
-            @Override
-            void afterRun(DataflowProcessor dp, List<Object> messages) {
-                if( !stopOnFirst ) return
-                // -- terminate the process
-                dp.terminate()
-                // -- close the output channels
-                for( def it : outputs ) {
-                    if( !(it instanceof DataflowExpression))
-                        it.bind(Channel.STOP)
-
-                    else if( !(it as DataflowExpression).isBound() )
-                        it.bind(Channel.STOP)
-
-                }
+    private void doComplete(DataflowProcessor dp) {
+        for( DataflowWriteChannel ch : outputs ) {
+            if( ch instanceof DataflowExpression ) {
+                if( !ch.isBound()) Op.bind(dp, ch, Channel.STOP)
             }
-
-            @Override
-            public boolean onException(final DataflowProcessor dp, final Throwable e) {
-                log.error("@unknown", e)
-                session.abort(e)
-                return true;
+            else {
+                Op.bind(dp, ch, Channel.STOP)
             }
         }
-
-        return [listener]
     }
 
 }

@@ -1,0 +1,16 @@
+set -e
+
+echo ''
+$NXF_RUN | tee stdout || true
+
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > foo'` == 1 ]] || false
+[[ `grep 'INFO' .nextflow.log | grep -c 'Re-submitted process > foo'` == 2 ]] || false
+
+[[ `< stdout grep -c 'attempt: 1; memory: 1 GB'` == 1 ]] || false
+[[ `< stdout grep -c 'attempt: 1; time: 1h'` == 1 ]] || false
+
+[[ `< stdout grep -c 'attempt: 2; memory: 2 GB'` == 1 ]] || false
+[[ `< stdout grep -c 'attempt: 2; time: 2h'` == 1 ]] || false
+
+[[ `< stdout grep -c 'attempt: 3; memory: 3 GB'` == 1 ]] || false
+[[ `< stdout grep -c 'attempt: 3; time: 3h'` == 1 ]] || false

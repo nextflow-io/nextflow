@@ -19,6 +19,7 @@ package nextflow.util
 import java.nio.file.Files
 import java.nio.file.Paths
 
+import nextflow.SysEnv
 import nextflow.config.ConfigClosurePlaceholder
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -368,6 +369,72 @@ class ConfigHelperTest extends Specification {
         "withName:2foo"     | "'withName:2foo'"     | "withName:'2foo'"
     }
 
+    @Unroll
+    def 'should get config from map' () {
+        given:
+        def NAME = 'foo'
+        def PREFIX = 'P_'
+        and:
+        SysEnv.push(ENV)
 
+        expect:
+        ConfigHelper.valueOf(CONFIG, NAME, PREFIX, DEF_VAL, DEF_TYPE) == EXPECTED
+
+        cleanup:
+        SysEnv.pop()
+
+        where:
+        CONFIG          | ENV           | DEF_VAL       | DEF_TYPE      | EXPECTED
+        null            | [:]           | null          | String        | null
+        [:]             | [:]           | null          | String        | null
+        [:]             | [:]           | 'one'         | String        | 'one'
+        [foo:'two']     | [:]           | 'one'         | String        | 'two'
+        [foo:'']        | [:]           | 'one'         | String        | ''
+        [foo:'two']     | [P_FOO:'bar'] | 'one'         | String        | 'two'
+        [:]             | [P_FOO:'bar'] | 'one'         | String        | 'bar'
+
+        and:
+        null            | [:]           | null          | Integer       | null
+        [:]             | [:]           | null          | Integer       | null
+        [:]             | [:]           | 1             | Integer       | 1
+        [foo:2]         | [:]           | 1             | Integer       | 2
+        [foo:'2']       | [:]           | 1             | Integer       | 2
+        [foo:'2']       | [P_FOO:'3']   | 1             | Integer       | 2
+        [:]             | [P_FOO:'3']   | 1             | Integer       | 3
+
+        and:
+        null            | [:]           | null          | Boolean       | null
+        [:]             | [:]           | true          | Boolean       | true
+        [foo:false]     | [:]           | true          | Boolean       | false
+        [foo:'false']   | [:]           | true          | Boolean       | false
+        [foo:true]      | [:]           | false         | Boolean       | true
+        [foo:'true']    | [:]           | false         | Boolean       | true
+        [foo:'true']    | [P_FOO:'false']| null         | Boolean       | true
+        [:]             | [P_FOO:'false']| null         | Boolean       | false
+        [:]             | [P_FOO:'true'] | null         | Boolean       | true
+
+        and:
+        [:]             | [:]           | Duration.of('1s') | Duration  | Duration.of('1s')
+        [foo:'10ms']    | [:]           | null              | Duration  | Duration.of('10ms')
+        [:]             | [P_FOO:'1s']  | null              | Duration  | Duration.of('1s')
+    }
+
+    def 'should map camelCase to snake uppercase' () {
+        given:
+        SysEnv.push(ENV)
+
+        expect:
+        ConfigHelper.valueOf([:], NAME, PREFIX, null, String) == EXPECTED
+
+        cleanup:
+        SysEnv.pop()
+
+        where:
+        EXPECTED    | PREFIX    | NAME              | ENV
+        null        | 'foo'     | 'bar'             | [:]
+        'one'       | 'foo'     | 'bar'             | [FOO_BAR: 'one']
+        'one'       | 'foo_'    | 'bar'             | [FOO_BAR: 'one']
+        'one'       | 'foo_'    | 'thisAndThat'     | [FOO_THIS_AND_THAT: 'one']
+    }
 
 }

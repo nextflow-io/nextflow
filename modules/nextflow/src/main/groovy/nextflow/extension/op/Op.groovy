@@ -22,8 +22,10 @@ import java.util.concurrent.ConcurrentHashMap
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.Dataflow
+import groovyx.gpars.dataflow.DataflowChannel
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
+import groovyx.gpars.dataflow.expression.DataflowExpression
 import groovyx.gpars.dataflow.operator.DataflowEventListener
 import groovyx.gpars.dataflow.operator.DataflowOperator
 import groovyx.gpars.dataflow.operator.DataflowProcessor
@@ -31,6 +33,7 @@ import groovyx.gpars.dataflow.operator.PoisonPill
 import nextflow.Global
 import nextflow.Session
 import nextflow.dag.NodeMarker
+import nextflow.extension.DataflowHelper
 import nextflow.prov.OperatorRun
 import nextflow.prov.Prov
 import nextflow.prov.Tracker
@@ -66,9 +69,13 @@ class Op {
     }
 
     static void bind(DataflowProcessor dp, DataflowWriteChannel channel, Object msg) {
+        if( dp==null )
+            throw new IllegalStateException("DataflowProcessor argument cannot be null")
         try {
             if( msg instanceof PoisonPill ) {
-                channel.bind(msg)
+                final emit = channel !instanceof DataflowExpression || !(channel as DataflowChannel).isBound()
+                if( emit )
+                    channel.bind(msg)
                 allContexts.remove(dp)
             }
             else {
@@ -291,6 +298,9 @@ class Op {
         assert inputs
         assert code
         assert context
+
+        if( !listeners )
+            listeners = List.of(DataflowHelper.defaultErrorListener())
 
         // Encapsulate the target "code" closure with a "OpClosure" object
         // to grab input data and track the execution provenance

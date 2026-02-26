@@ -104,7 +104,7 @@ class JoinOp {
 
     private void subscribe0(DataflowReadChannel source, Map events) {
         new SubscribeOp()
-            .withSource(source)
+            .withInput(source)
             .withEvents(events)
             .withContext(context)
             .apply()

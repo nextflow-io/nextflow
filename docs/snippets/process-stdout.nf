@@ -1,13 +1,13 @@
-process sayHello {
+process hello {
     output:
     stdout
 
     script:
     """
-    echo Hello world!
+    echo "Hello world!"
     """
 }
 
 workflow {
-    sayHello | view { message -> "I say... $message" }
+    hello | view { message -> "I say... $message" }
 }

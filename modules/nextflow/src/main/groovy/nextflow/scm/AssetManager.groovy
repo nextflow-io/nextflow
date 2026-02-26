@@ -28,8 +28,8 @@ import groovy.transform.ToString
 import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
 import nextflow.cli.HubOptions
-import nextflow.config.ConfigParser
 import nextflow.config.Manifest
+import nextflow.config.ConfigParserFactory
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AmbiguousPipelineNameException
 import nextflow.script.ScriptFile
@@ -455,11 +455,11 @@ class AssetManager {
         }
 
         if( text ) try {
-            def config = new ConfigParser().setIgnoreIncludes(true).parse(text)
+            def config = ConfigParserFactory.create().setIgnoreIncludes(true).setStrict(false).parse(text)
             result = (ConfigObject)config.manifest
         }
         catch( Exception e ) {
-            throw new AbortOperationException("Project config file is malformed -- Cause: ${e.message ?: e}", e)
+            log.warn "Cannot read project manifest -- Cause:  ${e.message ?: e}"
         }
 
         // by default return an empty object

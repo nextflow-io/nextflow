@@ -17,6 +17,7 @@
 
 package io.seqera.wave.plugin.config
 
+import io.seqera.wave.api.BuildCompression
 import io.seqera.wave.api.ScanLevel
 import io.seqera.wave.api.ScanMode
 import nextflow.util.Duration
@@ -99,21 +100,6 @@ class WaveConfigTest extends Specification {
         
     }
 
-    def 'should get spack config' () {
-        when:
-        def opts = new WaveConfig([:])
-        then:
-        opts.spackOpts().basePackages == null
-        opts.spackOpts().commands == null
-
-        when:
-        opts = new WaveConfig([build:[spack:[ basePackages: 'foo bar', commands:['USER hola'] ]]])
-        then:
-        opts.spackOpts().basePackages == 'foo bar'
-        opts.spackOpts().commands == ['USER hola']
-        
-    }
-
     def 'should get build and cache repos' () {
         when:
         def opts = new WaveConfig([:])
@@ -133,7 +119,7 @@ class WaveConfigTest extends Specification {
         when:
         def opts = new WaveConfig([:])
         then:
-        opts.strategy() == ['container','dockerfile','conda','spack']
+        opts.strategy() == ['container','dockerfile','conda']
 
         when:
         opts = new WaveConfig([strategy:STRATEGY])
@@ -142,13 +128,12 @@ class WaveConfigTest extends Specification {
 
         where:
         STRATEGY                | EXPECTED
-        null                    | ['container','dockerfile','conda','spack']
+        null                    | ['container','dockerfile','conda']
         'dockerfile'            | ['dockerfile']
         'conda,container'       | ['conda','container']
         'conda , container'     | ['conda','container']
         ['conda','container']   | ['conda','container']
         [' conda',' container'] | ['conda','container']
-        'spack'                 | ['spack']
     }
 
     def 'should fail to set strategy' () {
@@ -164,7 +149,7 @@ class WaveConfigTest extends Specification {
         def opts = new WaveConfig([:])
         then:
         opts.retryOpts().delay == Duration.of('450ms')
-        opts.retryOpts().maxAttempts == 10
+        opts.retryOpts().maxAttempts == 5
         opts.retryOpts().maxDelay == Duration.of('90s')
 
         when:
@@ -201,7 +186,7 @@ class WaveConfigTest extends Specification {
         given:
         def config = new WaveConfig([enabled: true])
         expect:
-        config.toString() == 'WaveConfig(enabled:true, endpoint:https://wave.seqera.io, containerConfigUrl:[], tokensCacheMaxDuration:30m, condaOpts:CondaOpts(mambaImage=mambaorg/micromamba:1.5.10-noble; basePackages=conda-forge::procps-ng, commands=null), spackOpts:SpackOpts(basePackages=null, commands=null), strategy:[container, dockerfile, conda, spack], bundleProjectResources:null, buildRepository:null, cacheRepository:null, retryOpts:RetryOpts(delay:450ms, maxDelay:1m 30s, maxAttempts:10, jitter:0.25), httpClientOpts:HttpOpts(), freezeMode:null, preserveFileTimestamp:null, buildMaxDuration:40m, mirrorMode:null, scanMode:null, scanAllowedLevels:null)'
+        config.toString() == 'WaveConfig(enabled:true, endpoint:https://wave.seqera.io, containerConfigUrl:[], tokensCacheMaxDuration:30m, condaOpts:CondaOpts(mambaImage=mambaorg/micromamba:1.5.10-noble; basePackages=conda-forge::procps-ng, commands=null), strategy:[container, dockerfile, conda], bundleProjectResources:null, buildRepository:null, cacheRepository:null, retryOpts:RetryOpts(delay:450ms, maxDelay:1m 30s, maxAttempts:5, jitter:0.25), httpClientOpts:HttpOpts(), freezeMode:null, preserveFileTimestamp:null, buildMaxDuration:40m, mirrorMode:null, scanMode:null, scanAllowedLevels:null, buildCompression:null)'
     }
 
     def 'should not allow invalid setting' () {
@@ -273,7 +258,24 @@ class WaveConfigTest extends Specification {
         'low,high'          | List.of(ScanLevel.LOW,ScanLevel.HIGH)
         'LOW, HIGH'         | List.of(ScanLevel.LOW,ScanLevel.HIGH)
         ['medium','high']   | List.of(ScanLevel.MEDIUM,ScanLevel.HIGH)
+    }
 
+    def 'should validate build compression' () {
+        expect:
+        new WaveConfig(build: [compression: COMPRESSION]).buildCompression() == EXPECTED
+        where:
+        COMPRESSION         | EXPECTED
+        null                | null
+        [mode:'gzip']       | BuildCompression.gzip
+        [mode:'estargz']    | BuildCompression.estargz
+        and:
+        [mode:'gzip', level: 1]   | new BuildCompression().withMode(BuildCompression.Mode.gzip).withLevel(1)
+        [mode:'estargz', level: 2]| new BuildCompression().withMode(BuildCompression.Mode.estargz).withLevel(2)
+        [mode:'zstd', level: 3]   | new BuildCompression().withMode(BuildCompression.Mode.zstd).withLevel(3)
+        and:
+        [mode:'gzip', level: 1, force:true]     | new BuildCompression().withMode(BuildCompression.Mode.gzip).withLevel(1).withForce(true)
+        [mode:'estargz', level: 2, force:true ] | new BuildCompression().withMode(BuildCompression.Mode.estargz).withLevel(2).withForce(true)
+        [mode:'zstd', level: 3,force:true]      | new BuildCompression().withMode(BuildCompression.Mode.zstd).withLevel(3).withForce(true)
     }
 
 }

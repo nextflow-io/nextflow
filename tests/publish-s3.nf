@@ -15,5 +15,5 @@ process my_process {
 }
 
 workflow {
-  Channel.of(1) | my_process
+  channel.of(1) | my_process
 }

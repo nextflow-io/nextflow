@@ -29,7 +29,7 @@ import nextflow.util.Duration
 class RetryOpts {
     Duration delay = Duration.of('450ms')
     Duration maxDelay = Duration.of('90s')
-    int maxAttempts = 10
+    int maxAttempts = 5
     double jitter = 0.25
 
     RetryOpts() {

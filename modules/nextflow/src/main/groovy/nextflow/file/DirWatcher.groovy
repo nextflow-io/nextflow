@@ -33,6 +33,7 @@ import java.nio.file.attribute.BasicFileAttributes
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.util.TestOnly
 import nextflow.util.Threads
 
 /**
@@ -79,7 +80,7 @@ class DirWatcher implements DirListener {
 
     private volatile boolean terminated
 
-    /* only for testing */
+    @TestOnly
     protected DirWatcher() {}
 
     DirWatcher(String syntax, String folder, String pattern, boolean skipHidden, String events, FileSystem fs) {

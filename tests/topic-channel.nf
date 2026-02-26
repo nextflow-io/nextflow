@@ -1,6 +1,4 @@
 
-nextflow.preview.topic = true
-
 process foo {
   input:
   val(index)
@@ -28,10 +26,10 @@ process bar {
 }
 
 workflow {
-  Channel.of( 1..3 ) | foo
-  Channel.of( 1..3 ) | bar
+  channel.of( 1..3 ) | foo
+  channel.of( 1..3 ) | bar
 
-  Channel.topic('versions')
+  channel.topic('versions')
   | unique
   | collectFile(name: 'versions.txt', sort: true, storeDir: '.')
 }

@@ -12,6 +12,8 @@ The following environment variables control the configuration of the Nextflow ru
 `JAVA_HOME`
 : Defines the path location of the Java VM installation used to run Nextflow.
 
+(nxf-env-vars)=
+
 ## Nextflow settings
 
 `NXF_ANSI_LOG`
@@ -104,7 +106,7 @@ The following environment variables control the configuration of the Nextflow ru
 : :::{versionadded} 23.05.0-edge
   :::
 : The file storage path against which relative file paths are resolved.
-: For example, with `NXF_FILE_ROOT=/some/root/path`, the use of `file('foo')` will be resolved to the absolute path `/some/root/path/foo`. A remote root path can be specified using the usual protocol prefix, e.g. `NXF_FILE_ROOT=s3://my-bucket/data`. Files defined using an absolute path are not affected by this setting.
+: For example, with `NXF_FILE_ROOT=/some/root/path`, the use of `file('hello')` will be resolved to the absolute path `/some/root/path/hello`. A remote root path can be specified using the usual protocol prefix, e.g. `NXF_FILE_ROOT=s3://my-bucket/data`. Files defined using an absolute path are not affected by this setting.
 
 `NXF_HOME`
 : Nextflow home directory (default: `$HOME/.nextflow`).
@@ -143,6 +145,11 @@ The following environment variables control the configuration of the Nextflow ru
 `NXF_PID_FILE`
 : Name of the file where the process PID is saved when Nextflow is launched in background.
 
+`NXF_PLUGINS_ALLOWED`
+: :::{versionadded} 25.04.0
+  :::
+: Comma separated list of plugin IDs that can be used in a workflow executions e.g. `NXF_PLUGINS_ALLOWED=nf-amazon,nf-tower,nf-wave`. Use empty string to disallow all plugins.
+
 `NXF_PLUGINS_DEFAULT`
 : Whether to use the default plugins when no plugins are specified in the Nextflow configuration (default: `true`).
 
@@ -158,6 +165,26 @@ The following environment variables control the configuration of the Nextflow ru
 : :::{versionadded} 24.04.3
   :::
 : Defines the default behavior of `publishDir.failOnError` setting. See {ref}`publishDir<process-publishdir>` directive for more information.
+
+`NXF_RETRY_POLICY_DELAY`
+: :::{versionadded} 25.06.0-edge
+  :::
+: Delay used for HTTP retryable operations (default: `350ms`).
+
+`NXF_RETRY_POLICY_JITTER`
+: :::{versionadded} 25.06.0-edge
+  :::
+: Jitter value used for HTTP retryable operations (default: `0.25`).
+
+`NXF_RETRY_POLICY_MAX_ATTEMPTS`
+: :::{versionadded} 25.06.0-edge
+  :::
+: Max number of attempts used for HTTP retryable operations (default: `5`).
+
+`NXF_RETRY_POLICY_MAX_DELAY`
+: :::{versionadded} 25.06.0-edge
+  :::
+: Max delay used for HTTP retryable operations (default: `90s`).
 
 `NXF_SCM_FILE`
 : :::{versionadded} 20.10.0
@@ -179,6 +206,11 @@ The following environment variables control the configuration of the Nextflow ru
 : :::{versionadded} 23.02.0-edge
   :::
 : Enable the use of Spack recipes defined by using the {ref}`process-spack` directive. (default: `false`).
+
+`NXF_SYNTAX_PARSER`
+: :::{versionadded} 25.02.0-edge
+  :::
+: Set to `'v2'` to use the {ref}`strict syntax <strict-syntax-page>` for Nextflow scripts and config files (default: `'v1'`).
 
 `NXF_TEMP`
 : Directory where temporary files are stored

@@ -17,47 +17,44 @@
 
 package nextflow.cloud.aws.util
 
-import com.amazonaws.AmazonClientException
-import com.amazonaws.auth.AWSCredentials
-import com.amazonaws.auth.AWSCredentialsProvider
-import com.amazonaws.auth.AnonymousAWSCredentials
+import software.amazon.awssdk.auth.credentials.AwsCredentials
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider
+import software.amazon.awssdk.auth.credentials.AnonymousCredentialsProvider
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 /**
  * AWS credentials provider that delegates the credentials to the
- * specified provider class and fallback to the {@link AnonymousAWSCredentials}
+ * specified provider class and fallback to the {@link AnonymousCredentialsProvider}
  * when no credentials are available.
  *
- * See also {@link com.amazonaws.services.s3.S3CredentialsProviderChain}
+ * See also {@link software.amazon.awssdk.auth.credentials.AwsCredentialsProviderChain}
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 @CompileStatic
-class S3CredentialsProvider implements AWSCredentialsProvider {
+class S3CredentialsProvider implements AwsCredentialsProvider {
 
-    private AWSCredentialsProvider target
+    private AwsCredentialsProvider target
 
-    private volatile AWSCredentials anonymous
+    private volatile AwsCredentials anonymous
 
-    S3CredentialsProvider(AWSCredentialsProvider target) {
+    S3CredentialsProvider(AwsCredentialsProvider target) {
         this.target = target
     }
 
     @Override
-    AWSCredentials getCredentials() {
-        if( anonymous!=null )
+    AwsCredentials resolveCredentials() {
+        if (anonymous != null) {
             return anonymous
-        try {
-            return target.getCredentials();
-        } catch (AmazonClientException e) {
-            log.debug("No AWS credentials available - falling back to anonymous access");
         }
-        return anonymous=new AnonymousAWSCredentials()
+        try {
+            return target.resolveCredentials()
+        } catch (Exception e) {
+            log.debug("No AWS credentials available - falling back to anonymous access")
+        }
+        anonymous = AnonymousCredentialsProvider.create().resolveCredentials()
+        return anonymous
     }
 
-    @Override
-    void refresh() {
-        target.refresh()
-    }
 }

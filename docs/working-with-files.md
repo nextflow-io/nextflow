@@ -226,6 +226,8 @@ myDir.eachFile { item ->
 
 In general, you should not need to manually copy files, because Nextflow will automatically stage files in and out of the task environment based on the definition of process inputs and outputs. Ideally, any operation which transforms files should be encapsulated in a process, in order to leverage Nextflow's staging capabilities as much as possible.
 
+(remote-files)=
+
 ## Remote files
 
 Nextflow works with many types of remote files and objects using the same interface as for local files. The following protocols are supported:

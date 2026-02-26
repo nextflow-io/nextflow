@@ -53,5 +53,14 @@ class DefaultContainerResolverTest extends Specification {
         result.hashKey == 'quay.io/ubuntu:latest'
     }
 
+    def 'should return default meta' () {
+        given:
+        def image = 'my/container:latest'
+        def resolver = new DefaultContainerResolver()
+        when:
+        def meta = resolver.getContainerMeta(image)
+        then:
+        meta == new ContainerMeta(targetImage: image)
+    }
 
 }

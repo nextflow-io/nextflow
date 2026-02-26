@@ -185,7 +185,7 @@ class CombineOp {
 
     private void subscribe0(final DataflowReadChannel source, final Map<String,Closure> events) {
         new SubscribeOp()
-            .withSource(source)
+            .withInput(source)
             .withEvents(events)
             .withContext(context)
             .apply()

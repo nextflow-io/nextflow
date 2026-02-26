@@ -16,14 +16,12 @@
 
 package nextflow.container
 
+import java.nio.file.Files
+import java.nio.file.Paths
+
 import nextflow.executor.Executor
 import spock.lang.Specification
-
-import java.nio.file.Paths
-import java.nio.file.Files
-
 import spock.lang.Unroll
-
 /**
  * @author Emilio Palumbo <emilio.palumbo@crg.eu>
  */
@@ -45,23 +43,24 @@ class ContainerHandlerTest extends Specification {
     }
 
     def 'test normalize docker image name' () {
-
         given:
-        def n = new ContainerHandler([registry: registry])
+        def n = new ContainerHandler([registry: REGISTRY, registryOverride: OVERRIDE])
 
         expect:
-        n.normalizeDockerImageName(image) == expected
+        n.normalizeDockerImageName(IMAGE) == EXPECTED
 
         where:
-        image                       | registry  | expected
-        null                        | null      | null
-        null                        | 'd.reg'   | null
-        'hello'                     | null      | 'hello'
-        'cbcrg/hello'               | null      | 'cbcrg/hello'
-        'cbcrg/hello'               | 'd.reg'   | 'd.reg/cbcrg/hello'
-        'cbcrg/hello'               | 'd.reg/'  | 'd.reg/cbcrg/hello'
-        'registry:5000/cbcrg/hello' | 'd.reg'   | 'registry:5000/cbcrg/hello'
-
+        IMAGE                       | REGISTRY  | OVERRIDE | EXPECTED
+        null                        | null      | null     | null
+        null                        | 'd.reg'   | null     | null
+        'hello'                     | null      | null     | 'hello'
+        'cbcrg/hello'               | null      | null     | 'cbcrg/hello'
+        'cbcrg/hello'               | 'd.reg'   | null     | 'd.reg/cbcrg/hello'
+        'cbcrg/hello'               | 'd.reg/'  | null     | 'd.reg/cbcrg/hello'
+        'registry:5000/cbcrg/hello' | 'd.reg'   | null     | 'registry:5000/cbcrg/hello'
+        and:
+        'registry:5000/cbcrg/hello' | 'd.reg'   | false    | 'registry:5000/cbcrg/hello'
+        'registry:5000/cbcrg/hello' | 'd.reg'   | true     | 'd.reg/cbcrg/hello'
     }
 
     def 'test normalize shifter image name' () {
@@ -351,6 +350,35 @@ class ContainerHandlerTest extends Specification {
         'http://bar:latest'     | 'http://bar:latest'   | 1     | '/local/http/foo.img'
         'https://bar:latest'    | 'https://bar:latest'  | 1     | '/local/https/foo.img'
         '/some/container.img'   | '/some/container.img' | 0     | '/some/container.img'
+    }
+
+
+    @Unroll
+    def "should override the repository registry" () {
+        expect:
+        ContainerHandler.overrideRegistryName(REG, TARGET) == EXPECTED
+        where:
+        REG                     | TARGET        | EXPECTED
+        "foo"                   | "bar.io"      | "bar.io/foo"
+        "this/that"             | "bar.io"      | "bar.io/this/that"
+        "this/that:latest"      | "bar.io"      | "bar.io/this/that:latest"
+        "this/that:latest"      | "bar.io/"     | "bar.io/this/that:latest"
+        and:
+        "d.io/foo"              | "bar.io"      | "bar.io/foo"
+        "d.io/this/that"        | "bar.io"      | "bar.io/this/that"
+        "d.io/this/that:latest" | "bar.io"      | "bar.io/this/that:latest"
+        "d.io/this/that:latest" | "bar.io/"     | "bar.io/this/that:latest"
+        and:
+        "d:80/foo"              | "bar.io"      | "bar.io/foo"
+        "d:80/this/that"        | "bar.io"      | "bar.io/this/that"
+        "d:80/this/that:latest" | "bar.io"      | "bar.io/this/that:latest"
+        and:
+        "d.io:8080/foo"                     | "bar.io"      | "bar.io/foo"
+        "d.io:8080/this/that"               | "bar.io"      | "bar.io/this/that"
+        "d.io:8080/this/that:latest"        | "bar.io"      | "bar.io/this/that:latest"
+        and:
+        "oras://quay.io/foo"                | "bar.io"      | "oras://bar.io/foo"
+        "oras://quay.io/this/that:latest"   | "bar.io"      | "oras://bar.io/this/that:latest"
     }
 
 }

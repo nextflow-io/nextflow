@@ -269,7 +269,7 @@ class CollectFileOp {
     @CompileStatic
     DataflowWriteChannel apply() {
         new SubscribeOp()
-            .withSource(channel)
+            .withInput(channel)
             .withOnNext(this.&processItem)
             .withOnComplete(this.&emitItems)
             .withContext( new ContextGrouping() )

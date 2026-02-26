@@ -223,13 +223,13 @@ providers {
 Then you will be able to run/pull a project with Nextflow using the following command line:
 
 ```bash
-nextflow run foo/bar -hub mygit
+nextflow run acme/hello -hub mygit
 ```
 
 Or, alternatively, using the Git clone URL:
 
 ```bash
-nextflow run http://gitlab.acme.org/foo/bar.git
+nextflow run http://gitlab.acme.org/acme/hello.git
 ```
 
 :::{note}

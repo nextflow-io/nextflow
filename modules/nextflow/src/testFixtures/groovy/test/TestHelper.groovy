@@ -96,6 +96,13 @@ class TestHelper {
         return new String(decodedBytes);
     }
 
+    static int rndServerPort() {
+        ServerSocket socket = new ServerSocket(0)
+        int port = socket.localPort
+        socket.close()
+        return port
+    }
+  
     static List<TaskRun> upstreamTasksOf(v) {
         if( v instanceof TaskRun )
             return upstreamTasksOf(v as TaskRun)
@@ -116,7 +123,7 @@ class TestHelper {
 
     static List<TaskRun> upstreamTasksOf(TaskRun t) {
         final ids = t.upstreamTasks ?: Set.<TaskId>of()
-        return ids.collect(it -> getTaskById(it))
+        return ids.collect(it -> getTaskById(it)).sort((run)->run.id)
     }
 
     static TaskRun getTaskByName(String name) {

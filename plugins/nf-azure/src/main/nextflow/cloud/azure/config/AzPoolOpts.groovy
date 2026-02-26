@@ -35,10 +35,10 @@ import nextflow.util.Duration
 @CompileStatic
 class AzPoolOpts implements CacheFunnel {
 
-    static public final String DEFAULT_PUBLISHER = "microsoft-azure-batch"
-    static public final String DEFAULT_OFFER = "ubuntu-server-container"
-    static public final String DEFAULT_SKU = "batch.node.ubuntu 20.04"
-    static public final String DEFAULT_VM_TYPE = "Standard_D4_v3"
+    static public final String DEFAULT_PUBLISHER = "microsoft-dsvm"
+    static public final String DEFAULT_OFFER = "ubuntu-hpc"
+    static public final String DEFAULT_SKU = "batch.node.ubuntu 22.04"
+    static public final String DEFAULT_VM_TYPE = "Standard_D4a_v4"
     static public final OSType DEFAULT_OS_TYPE = OSType.LINUX
     static public final String DEFAULT_SHARE_ROOT_PATH = "/mnt/batch/tasks/fsmounts"
     static public final Duration DEFAULT_SCALE_INTERVAL = Duration.of('5 min')

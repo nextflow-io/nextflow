@@ -70,7 +70,7 @@ class MultiMapOp {
 
     MultiMapOp apply() {
         new SubscribeOp()
-            .withSource(source)
+            .withInput(source)
             .withOnNext(this.&doNext)
             .withOnComplete(this.&doComplete)
             .apply()

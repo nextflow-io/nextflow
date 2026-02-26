@@ -19,6 +19,8 @@ package nextflow.extension.op
 
 import java.util.concurrent.ConcurrentHashMap
 
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 import nextflow.prov.OperatorRun
 
 /**
@@ -27,6 +29,8 @@ import nextflow.prov.OperatorRun
  * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
+@Slf4j
 class ContextSequential implements OpContext {
 
     private final Map<String,OperatorRun> holder = new ConcurrentHashMap<>(1)
@@ -35,12 +39,14 @@ class ContextSequential implements OpContext {
     OperatorRun allocateRun() {
         final result = new OperatorRun()
         holder.put('run', result)
+        log.trace "+ AllocateRun run=$result"
         return result
     }
 
     @Override
     OperatorRun getOperatorRun() {
         final result = holder.get('run')
+        log.trace "+ GetOperatorRun=$result"
         return result
     }
 }

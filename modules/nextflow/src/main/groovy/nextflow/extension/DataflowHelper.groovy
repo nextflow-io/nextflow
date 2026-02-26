@@ -21,10 +21,7 @@ import java.lang.reflect.InvocationTargetException
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import groovyx.gpars.dataflow.DataflowChannel
-import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
-import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
 import groovyx.gpars.dataflow.operator.DataflowEventAdapter
@@ -46,29 +43,6 @@ class DataflowHelper {
     private static Session getSession() { Global.getSession() as Session }
 
     /**
-     * Create a dataflow object by the type of the specified source argument
-     *
-     * @param source
-     * @return
-     */
-    @Deprecated
-    static <V> DataflowChannel<V> newChannelBy(DataflowReadChannel<?> source) {
-
-        switch( source ) {
-            case DataflowExpression:
-                return new DataflowVariable<V>()
-
-            case DataflowQueue:
-                return new DataflowQueue<V>()
-
-            default:
-                throw new IllegalArgumentException()
-        }
-
-    }
-
-
-    /**
      * Check if a {@code DataflowProcessor} is active
      *
      * @param operator A {@code DataflowProcessor} instance
@@ -88,20 +62,19 @@ class DataflowHelper {
     /*
      * The default operators listener when no other else is specified
      */
-    @PackageScope
-    static DEF_ERROR_LISTENER = new DataflowEventAdapter() {
-        @Override
-        boolean onException(final DataflowProcessor dp, final Throwable t) {
-            final e = t instanceof InvocationTargetException ? t.cause : t
-            OperatorImpl.log.error("@unknown", e)
-            session?.abort(e)
-            return true;
+    static DataflowEventListener defaultErrorListener() {
+        return new DataflowEventAdapter() {
+            @Override
+            boolean onException(final DataflowProcessor dp, final Throwable t) {
+                final e = t instanceof InvocationTargetException ? t.cause : t
+                OperatorImpl.log.error("@unknown", e)
+                session?.abort(e)
+                return true;
+            }
         }
     }
 
-    @PackageScope
-    static DataflowEventAdapter stopErrorListener(DataflowReadChannel source, DataflowWriteChannel target) {
-
+    static DataflowEventListener stopErrorListener(DataflowReadChannel source, DataflowWriteChannel target) {
         new DataflowEventAdapter() {
             @Override
             void afterRun(final DataflowProcessor dp, final List<Object> messages) {
@@ -119,96 +92,11 @@ class DataflowHelper {
                 return true
             }
         }
-
-    }
-
-    @PackageScope
-    static Map createOpParams(inputs, outputs, listeners) {
-        final params = new HashMap(3)
-        params.inputs = inputs instanceof List ? inputs : [inputs]
-        params.outputs = outputs instanceof List ? outputs : [outputs]
-        params.listeners = listeners instanceof List ? listeners : [listeners]
-        return params
-    }
-
-    /**
-     * Creates a new {@code Dataflow.operator} adding the created instance to the current session list
-     *
-     * @see nextflow.Session#allOperators
-     *
-     * @param params The map holding inputs, outputs channels and other parameters
-     * @param code The closure to be executed by the operator
-     */
-    @Deprecated
-    static DataflowProcessor newOperator( Map params, Closure code ) {
-
-        // -- add a default error listener
-        if( !params.listeners ) {
-            // add the default error handler
-            params.listeners = [ DEF_ERROR_LISTENER ]
-        }
-
-        return new Op()
-            .withParams(params)
-            .withCode(code)
-            .apply()
-    }
-
-    /**
-     * Creates a new {@code Dataflow.operator} adding the created instance to the current session list
-     *
-     * @see nextflow.Session#allOperators
-     *
-     * @param inputs The list of the input {@code DataflowReadChannel}s
-     * @param outputs The list of list output {@code DataflowWriteChannel}s
-     * @param code The closure to be executed by the operator
-     */
-    @Deprecated
-    static DataflowProcessor newOperator( List inputs, List outputs, Closure code ) {
-        newOperator( inputs: inputs, outputs: outputs, code )
-    }
-
-    /**
-     * Creates a new {@code Dataflow.operator} adding the created instance to the current session list
-     *
-     * @see nextflow.Session#allOperators
-     *
-     * @param input An instance of {@code DataflowReadChannel} representing the input channel
-     * @param output An instance of {@code DataflowWriteChannel} representing the output channel
-     * @param code The closure to be executed by the operator
-     */
-    static DataflowProcessor newOperator( DataflowReadChannel input, DataflowWriteChannel output, Closure code ) {
-        newOperator(input, output, DEF_ERROR_LISTENER, code )
-    }
-
-    /**
-     * Creates a new {@code Dataflow.operator} adding the created instance to the current session list
-     *
-     * @see nextflow.Session#allOperators
-     *
-     * @param input An instance of {@code DataflowReadChannel} representing the input channel
-     * @param output An instance of {@code DataflowWriteChannel} representing the output channel
-     * @param listener An instance of {@code DataflowEventListener} listening to operator's events
-     * @param code The closure to be executed by the operator
-     */
-    static DataflowProcessor newOperator( DataflowReadChannel input, DataflowWriteChannel output, DataflowEventListener listener, Closure code ) {
-        if( !listener )
-            listener = DEF_ERROR_LISTENER
-
-        final params = [:]
-        params.inputs = [input]
-        params.outputs = [output]
-        params.listeners = [listener]
-
-        return new Op()
-            .withParams(params)
-            .withCode(code)
-            .apply()
     }
 
     static final DataflowProcessor subscribeImpl(final DataflowReadChannel source, final Map<String,Closure> events ) {
         new SubscribeOp()
-            .withSource(source)
+            .withInput(source)
             .withEvents(events)
             .apply()
     }

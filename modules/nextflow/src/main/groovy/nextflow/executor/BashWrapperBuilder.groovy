@@ -39,6 +39,7 @@ import nextflow.processor.TaskRun
 import nextflow.secret.SecretsLoader
 import nextflow.util.Escape
 import nextflow.util.MemoryUnit
+import nextflow.util.TestOnly
 /**
  * Builder to create the Bash script which is used to
  * wrap and launch the user task
@@ -122,8 +123,8 @@ class BashWrapperBuilder {
         this.copyStrategy = strategy ?: new SimpleFileCopyStrategy(bean)
     }
 
-    /** only for testing -- do not use */
-    protected BashWrapperBuilder() { }
+    @TestOnly
+    protected BashWrapperBuilder() {}
 
     /**
      * @return The bash script fragment to change to the 'scratch' directory if it has been specified in the task configuration
@@ -468,6 +469,8 @@ class BashWrapperBuilder {
             return true
         if( e instanceof SocketException )
             return true
+        if( e instanceof SocketTimeoutException )
+            return true
         if( e instanceof RuntimeException )
             return true
         if( e.class.getSimpleName() == 'HttpResponseException' )
@@ -705,6 +708,9 @@ class BashWrapperBuilder {
 
         if( this.containerCpuset )
             builder.addRunOptions(containerCpuset)
+
+        if( this.containerPlatform )
+            builder.setPlatform(this.containerPlatform)
 
         // export task work directory
         builder.addEnv('NXF_TASK_WORKDIR')

@@ -17,7 +17,6 @@
 
 package io.seqera.wave.plugin
 
-import static io.seqera.wave.util.DockerHelper.*
 
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -26,6 +25,7 @@ import java.nio.file.Path
 import java.time.Duration
 import java.time.Instant
 import java.time.OffsetDateTime
+import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
@@ -39,6 +39,7 @@ import com.google.common.util.concurrent.UncheckedExecutionException
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import dev.failsafe.Failsafe
+import dev.failsafe.FailsafeException
 import dev.failsafe.RetryPolicy
 import dev.failsafe.event.EventListener
 import dev.failsafe.event.ExecutionAttemptedEvent
@@ -48,6 +49,7 @@ import groovy.json.JsonSlurper
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
+import io.seqera.util.trace.TraceUtils
 import io.seqera.wave.api.BuildStatusResponse
 import io.seqera.wave.api.ContainerStatus
 import io.seqera.wave.api.ContainerStatusResponse
@@ -57,10 +59,12 @@ import io.seqera.wave.plugin.config.WaveConfig
 import io.seqera.wave.plugin.exception.BadResponseException
 import io.seqera.wave.plugin.exception.UnauthorizedException
 import io.seqera.wave.plugin.packer.Packer
+import io.seqera.wave.util.DockerHelper
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.container.inspect.ContainerInspectMode
 import nextflow.container.resolver.ContainerInfo
+import nextflow.container.resolver.ContainerMeta
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.fusion.FusionConfig
 import nextflow.processor.Architecture
@@ -70,6 +74,8 @@ import nextflow.util.SysHelper
 import nextflow.util.Threads
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import static nextflow.util.SysHelper.DEFAULT_DOCKER_PLATFORM
+
 /**
  * Wave client service
  *
@@ -91,8 +97,6 @@ class WaveClient {
     private static Logger log = LoggerFactory.getLogger(WaveClient)
 
     public static final List<String> DEFAULT_CONDA_CHANNELS = ['conda-forge','bioconda']
-
-    private static final String DEFAULT_DOCKER_PLATFORM = 'linux/amd64'
 
     final private HttpClient httpClient
 
@@ -170,8 +174,6 @@ class WaveClient {
 
     WaveConfig config() { return config }
 
-    Boolean enabled() { return config.enabled() }
-
     protected ContainerLayer makeLayer(ResourcesBundle bundle) {
         final result = packer.layer(bundle.content())
         return result
@@ -229,7 +231,8 @@ class WaveClient {
                 dryRun: ContainerInspectMode.dryRun(),
                 mirror: config.mirrorMode(),
                 scanMode: config.scanMode(),
-                scanLevels: config.scanAllowedLevels()
+                scanLevels: config.scanAllowedLevels(),
+                buildCompression: config.buildCompression()
         )
     }
 
@@ -256,7 +259,8 @@ class WaveClient {
                 dryRun: ContainerInspectMode.dryRun(),
                 mirror: config.mirrorMode(),
                 scanMode: config.scanMode(),
-                scanLevels: config.scanAllowedLevels()
+                scanLevels: config.scanAllowedLevels(),
+                buildCompression: config.buildCompression()
         )
         return sendRequest(request)
     }
@@ -290,12 +294,13 @@ class WaveClient {
         request.towerAccessToken = accessToken
         request.towerRefreshToken = refreshToken
 
+        final trace = TraceUtils.rndTrace()
         final body = JsonOutput.toJson(request)
         final uri = URI.create("${endpoint}/v1alpha2/container")
         log.debug "Wave request: $uri; attempt=$attempt - request: $request"
         final req = HttpRequest.newBuilder()
                 .uri(uri)
-                .headers('Content-Type','application/json')
+                .headers('Content-Type','application/json', 'Traceparent', trace)
                 .POST(HttpRequest.BodyPublishers.ofString(body))
                 .build()
 
@@ -313,7 +318,7 @@ class WaveClient {
                     return sendRequest0(request, attempt+1)
                 }
                 else
-                    throw new UnauthorizedException("Unauthorized [401] - Verify you have provided a valid access token")
+                    throw new UnauthorizedException("Unauthorized [401] - Verify you have provided a valid Seqera Platform access token")
             }
             else
                 throw new BadResponseException("Wave invalid response: POST ${uri} [${resp.statusCode()}] ${resp.body()}")
@@ -364,8 +369,20 @@ class WaveClient {
     protected URL defaultFusionUrl(String platform) {
         final isArm = platform.tokenize('/')?.contains('arm64')
         return isArm
-                ? new URL(FusionConfig.DEFAULT_FUSION_ARM64_URL)
-                : new URL(FusionConfig.DEFAULT_FUSION_AMD64_URL)
+                ? fusionArm64(fusion.snapshotsEnabled())
+                : fusionAmd64(fusion.snapshotsEnabled())
+    }
+
+    protected URL fusionAmd64(boolean snapshots) {
+        return snapshots
+                ? URI.create(FusionConfig.DEFAULT_SNAPSHOT_AMD64_URL).toURL()
+                : URI.create(FusionConfig.DEFAULT_FUSION_AMD64_URL).toURL()
+    }
+
+    protected URL fusionArm64(boolean snapshots) {
+        return snapshots
+            ? URI.create(FusionConfig.DEFAULT_SNAPSHOT_ARM64_URL).toURL()
+            : URI.create(FusionConfig.DEFAULT_FUSION_ARM64_URL).toURL()
     }
 
     protected URL defaultS5cmdUrl(String platform) {
@@ -471,8 +488,7 @@ class WaveClient {
         // get the bundle
         final bundle = task.getModuleBundle()
         // get the architecture
-        final arch = task.config.getArchitecture()
-        final dockerArch = arch? arch.dockerArch : DEFAULT_DOCKER_PLATFORM
+        final dockerArch = task.getContainerPlatform()
         // compose the request attributes
         def attrs = new HashMap<String,String>()
         attrs.container = containerImage
@@ -522,7 +538,7 @@ class WaveClient {
                 if( isCondaLocalFile(attrs.conda) ) {
                     // 'conda' attribute is the path to the local conda environment
                     // note: ignore the 'channels' attribute because they are supposed to be provided by the conda file
-                    final condaFile = condaFileFromPath(attrs.conda, null)
+                    final condaFile = DockerHelper.condaFileFromPath(attrs.conda, null)
                     packagesSpec = new PackagesSpec()
                         .withType(PackagesSpec.Type.CONDA)
                         .withCondaOpts(config.condaOpts())
@@ -534,7 +550,7 @@ class WaveClient {
                         .withType(PackagesSpec.Type.CONDA)
                         .withChannels(condaChannels)
                         .withCondaOpts(config.condaOpts())
-                        .withEntries(condaPackagesToList(attrs.conda))
+                        .withEntries(DockerHelper.condaPackagesToList(attrs.conda))
                 }
 
             }
@@ -670,6 +686,24 @@ class WaveClient {
             return checkBuildCompletion(handle)
         else
             return true
+    }
+
+    ContainerMeta getContainerMeta(String key) {
+        final handle = responses.get(key)
+        if( !handle )
+            return null
+        final resp = handle.response
+        final result = new ContainerMeta()
+        result.requestTime = handle.createdAt?.atZone(ZoneId.systemDefault())?.toOffsetDateTime()
+        result.requestId = resp.requestId
+        result.sourceImage = resp.containerImage
+        result.targetImage = resp.targetImage
+        result.buildId = !resp.mirror ? resp.buildId : null
+        result.mirrorId = resp.mirror ? resp.buildId : null
+        result.scanId = resp.scanId
+        result.cached = resp.cached
+        result.freeze = resp.freeze
+        return result
     }
 
     protected static int randomRange(int min, int max) {
@@ -812,6 +846,11 @@ class WaveClient {
     static private final List<Integer> SERVER_ERRORS = [429,500,502,503,504]
 
     protected HttpResponse<String> httpSend(HttpRequest req)  {
-        return safeApply(() -> httpClient.send(req, HttpResponse.BodyHandlers.ofString()))
+        try {
+            return safeApply(() -> httpClient.send(req, HttpResponse.BodyHandlers.ofString()))
+        }
+        catch (FailsafeException e) {
+            throw e.cause
+        }
     }
 }

@@ -249,7 +249,7 @@ class GroupTupleOp {
          * apply the logic to the source channel
          */
         new SubscribeOp()
-            .withSource(channel)
+            .withInput(channel)
             .withContext(context)
             .withOnNext(this.&collectTuple)
             .withOnComplete(this.&finalise)

@@ -30,9 +30,7 @@ import groovyx.gpars.dataflow.expression.DataflowExpression
 import groovyx.gpars.dataflow.operator.ChainWithClosure
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
-import nextflow.Global
 import nextflow.NF
-import nextflow.Session
 import nextflow.extension.op.ContextRunPerThread
 import nextflow.extension.op.Op
 import nextflow.script.ChannelOut
@@ -57,8 +55,6 @@ class OperatorImpl {
 
     static final public OperatorImpl instance = new OperatorImpl()
 
-    private static Session getSession() { Global.getSession() as Session }
-
     /**
      * Subscribe *onNext* event
      *
@@ -68,7 +64,7 @@ class OperatorImpl {
      */
     DataflowReadChannel subscribe(final DataflowReadChannel source, final Closure closure) {
         new SubscribeOp()
-            .withSource(source)
+            .withInput(source)
             .withOnNext(closure)
             .apply()
         return source
@@ -83,7 +79,7 @@ class OperatorImpl {
      */
     DataflowReadChannel subscribe(final DataflowReadChannel source, final Map<String,Closure> events ) {
         new SubscribeOp()
-            .withSource(source)
+            .withInput(source)
             .withEvents(events)
             .apply()
         return source
@@ -748,7 +744,7 @@ class OperatorImpl {
         final singleton = result instanceof DataflowExpression
 
         new SubscribeOp()
-            .withSource(source)
+            .withInput(source)
             .withContext(new ContextRunPerThread())
             .withOnNext { DataflowProcessor dp, Object it -> Op.bind(dp,result,it); empty=false }
             .withOnComplete { DataflowProcessor dp ->
@@ -778,18 +774,11 @@ class OperatorImpl {
         checkParams('view', opts, PARAMS_VIEW)
         final newLine = opts.newLine != false
 
-        final target = CH.createBy(source);
-
-        new SubscribeOp()
+        return new ViewOp()
             .withSource(source)
-            .withOnNext{
-                final obj = closure != null ? closure.call(it) : it
-                session.printConsole(obj?.toString(), newLine)
-                target.bind(it)
-            }
-            .withOnComplete{ CH.close0(target) }
+            .withNewLine(newLine)
+            .withCode(closure)
             .apply()
-        return target
     }
 
     DataflowWriteChannel view(final DataflowReadChannel source, Closure closure = null) {
@@ -802,8 +791,12 @@ class OperatorImpl {
         final inputs = [source, other]
         final action = closure ? new ChainWithClosure<>(closure) : new DefaultMergeClosure(inputs.size())
         final listener = stopErrorListener(source,result)
-        final params = createOpParams(inputs, result, listener)
-        newOperator(params, action)
+        new Op()
+            .withInputs(inputs)
+            .withOutput(result)
+            .withListener(listener)
+            .withCode(action)
+            .apply()
         return result;
     }
 

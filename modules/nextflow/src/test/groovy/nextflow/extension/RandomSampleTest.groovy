@@ -31,7 +31,6 @@ class RandomSampleTest extends Specification {
     }
 
     def 'should produce random sample' () {
-
         given:
         def ch = Channel.of('A'..'Z')
         def sampler = new RandomSampleOp(ch, 10)
@@ -44,9 +43,7 @@ class RandomSampleTest extends Specification {
         result != 'A'..'J'
     }
 
-
     def 'should produce random sample given a short channel' () {
-
         given:
         def ch = Channel.of('A'..'J')
         def sampler = new RandomSampleOp(ch, 20)
@@ -60,7 +57,6 @@ class RandomSampleTest extends Specification {
     }
 
     def 'should produce random sample given a channel emitting the same number of items as the buffer' () {
-
         given:
         def ch = Channel.of('A'..'J')
         def sampler = new RandomSampleOp(ch, 10)

@@ -52,10 +52,6 @@ class SingularityCache {
 
     private Duration pullTimeout = Duration.of('20min')
 
-    /** Only for debugging purpose - do not use */
-    @PackageScope
-    SingularityCache() {}
-
     protected String getBinaryName() { return 'singularity' }
 
     protected String getAppName() { getBinaryName().capitalize() }
@@ -268,7 +264,7 @@ class SingularityCache {
 
         // Construct a temporary name for the image file
         final tmpFile = getTempImagePath(targetPath)
-        final noHttpsOption = (config.noHttps)? '--nohttps' : ''
+        final noHttpsOption = (config.noHttps)? '--no-https' : ''
 
         String cmd = "${binaryName} pull ${noHttpsOption} --name ${Escape.path(tmpFile.name)} $imageUrl > /dev/null"
         try {

@@ -1,5 +1,26 @@
 nf-amazon changelog
 ===================
+2.15.0 - 8 May 2025
+- Add verbose AWS Batch job cleanup logging [504bd2df]
+- Remove test constructors or mark as TestOnly (#5216) [d4fadd42]
+
+2.14.0 - 23 Apr 2025
+- Add support for data and execution lineage  (#5715) [20e06da7]
+- Manage AWS Batch Unscheduled jobs (#5936) [44abe60c]
+- Workflow outputs (third preview) (#5909) [2e2dea42]
+- Add support for Fusion Snapshots (#5954) [d7f047f8]
+
+2.13.0 - 17 Mar 2025
+- Fix Consider AWS China as custom endpoint (#5840) [232ce9d1]
+- Fix Prevent S3 global option when using custom endpoints (#5779) [ed9da469]
+- Bump groovy 4.0.26 [f740bc56]
+
+2.12.0 - 12 Feb 2025
+- Fix bugs with workflow outputs (#5502) [ab59d30f]
+- Fail the run if publish thread pool times out (#5578) [5325e5a6]
+- Bump groovy 4.0.25 [19c40a4a]
+- Bump io.netty:netty-handler:4.1.118.Final [db4a9037]
+
 2.11.0 - 20 Jan 2025
 - Disable AWS SDK v1 warning [ci fast] [cd00a26d]
 - Ensure job is killed when exception in task status check (#5561) [9eefd207]

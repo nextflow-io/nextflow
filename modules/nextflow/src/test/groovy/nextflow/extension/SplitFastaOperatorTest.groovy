@@ -15,6 +15,8 @@
  */
 
 package nextflow.extension
+
+import groovyx.gpars.dataflow.DataflowReadChannel
 import nextflow.Channel
 import nextflow.Session
 import spock.lang.Shared
@@ -67,23 +69,17 @@ class SplitFastaOperatorTest extends Specification {
                 """.stripIndent()
 
     def 'should split fasta in sequences'() {
-
         given:
-        def sequences = Channel.of(fasta1).splitFasta()
+        def sequences = Channel.of(fasta1).splitFasta() as DataflowReadChannel
 
         expect:
-        with(sequences) {
-            val == '>1aboA\nNLFVALYDFVASGDNTLSITKGEKLRVLGYNHNGEWCEAQTKNGQGWVPS\nNYITPVN\n'
-            val == '>1ycsB\nKGVIYALWDYEPQNDDELPMKEGDCMTIIHREDEDEIEWWWARLNDKEGY\nVPRNLLGLYP\n'
-            val == '>1pht\nGYQYRALYDYKKEREEDIDLHLGDILTVNKGSLVALGFSDGQEARPEEIG\nWLNGYNETTGERGDFPGTYVEYIGRKKISP\n'
-            val == Channel.STOP
-        }
-
+        sequences.unwrap() == '>1aboA\nNLFVALYDFVASGDNTLSITKGEKLRVLGYNHNGEWCEAQTKNGQGWVPS\nNYITPVN\n'
+        sequences.unwrap() == '>1ycsB\nKGVIYALWDYEPQNDDELPMKEGDCMTIIHREDEDEIEWWWARLNDKEGY\nVPRNLLGLYP\n'
+        sequences.unwrap() == '>1pht\nGYQYRALYDYKKEREEDIDLHLGDILTVNKGSLVALGFSDGQEARPEEIG\nWLNGYNETTGERGDFPGTYVEYIGRKKISP\n'
+        sequences.unwrap() == Channel.STOP
     }
 
-
     def 'should split fasta in records' () {
-
         given:
         def records = Channel.of(fasta1, fasta2).splitFasta(record:[id:true])
         expect:
@@ -92,14 +88,12 @@ class SplitFastaOperatorTest extends Specification {
         records.unwrap() == [id:'1pht']
         records.unwrap() == [id:'alpha123']
         records.unwrap() == Channel.STOP
-
     }
 
     def 'should split tuple in fasta records' () {
-
         given:
         def result = Channel
-                .from( [fasta1, 'one'], [fasta2,'two'] )
+                .of( [fasta1, 'one'], [fasta2,'two'] )
                 .splitFasta(record:[id:true])
                 .map{ record, code -> [record.id, code] }
 
@@ -109,13 +103,11 @@ class SplitFastaOperatorTest extends Specification {
         result.unwrap() == ['1pht',  'one']
         result.unwrap() == ['alpha123', 'two']
         result.unwrap() == Channel.STOP
-
     }
 
     def 'should split fasta and forward result into the specified channel' () {
-
         given:
-        def target = Channel.create()
+        def target = CH.queue()
         Channel.of(fasta1,fasta2).splitFasta(record:[id:true], into: target)
 
         expect:
@@ -126,9 +118,7 @@ class SplitFastaOperatorTest extends Specification {
         target.unwrap() == Channel.STOP
     }
 
-
     def 'should apply count on multiple entries'() {
-
         given:
         def F1 = '''
             >1
@@ -149,7 +139,7 @@ class SplitFastaOperatorTest extends Specification {
             '''
                 .stripIndent().trim()
 
-        def target = Channel.create()
+        def target = CH.queue()
 
         when:
         Channel.of(F1,F3).splitFasta(by:2, into: target)
@@ -161,7 +151,6 @@ class SplitFastaOperatorTest extends Specification {
     }
 
     def 'should apply count on multiple entries with a limit'() {
-
         given:
         def F1 = '''
             >1
@@ -190,7 +179,7 @@ class SplitFastaOperatorTest extends Specification {
             '''
                 .stripIndent().trim()
 
-        def target = Channel.create()
+        def target = CH.queue()
 
         when:
         Channel.of(F1,F3).splitFasta(by:2, limit:4, into: target)

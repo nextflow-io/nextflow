@@ -16,6 +16,7 @@
 
 package nextflow.scm
 
+import java.net.http.HttpResponse
 import java.util.regex.Pattern
 
 import groovy.transform.CompileDynamic
@@ -160,17 +161,14 @@ final class AzureRepositoryProvider extends RepositoryProvider {
      * Check for response error status. Throws a {@link nextflow.exception.AbortOperationException} exception
      * when a 401 or 403 error status is returned.
      *
-     * @param connection A {@link HttpURLConnection} connection instance
+     * @param response A {@link HttpURLConnection} connection instance
      */
-    protected checkResponse( HttpURLConnection connection ) {
-
-        if (connection.getHeaderFields().containsKey("x-ms-continuationtoken")) {
-            this.continuationToken = connection.getHeaderField("x-ms-continuationtoken");
-        } else {
-            this.continuationToken = null
-        }
-
-        super.checkResponse(connection)
+    protected checkResponse( HttpResponse<String> response) {
+        this.continuationToken = response
+                .headers()
+                .firstValue("x-ms-continuationtoken")
+                .orElse(null)
+        super.checkResponse(response)
     }
 
     /** {@inheritDoc} */

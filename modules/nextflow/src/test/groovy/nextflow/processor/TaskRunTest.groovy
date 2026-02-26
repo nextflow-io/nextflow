@@ -24,6 +24,8 @@ import nextflow.Session
 import nextflow.ast.TaskCmdXform
 import nextflow.container.ContainerConfig
 import nextflow.container.resolver.ContainerInfo
+import nextflow.container.resolver.ContainerMeta
+import nextflow.container.resolver.ContainerResolver
 import nextflow.executor.Executor
 import nextflow.file.FileHolder
 import nextflow.script.BodyDef
@@ -844,7 +846,6 @@ class TaskRunTest extends Specification {
         and:
         config == new ContainerConfig(engine:'docker')
 
-
         when:
         config = task.getContainerConfig()
         then:
@@ -940,5 +941,55 @@ class TaskRunTest extends Specification {
         then:
         1 * task.resolveStub(stub) >> null
         0 * task.resolveBody(_) >> null
+    }
+
+    def 'should get container info & meta' () {
+        given:
+        def image = 'my/container:latest'
+        def meta = new ContainerMeta(sourceImage: image, targetImage: image)
+        def info = new ContainerInfo(image,image,image)
+        def resolver = Mock(ContainerResolver)
+        def config = Mock(TaskConfig) { getContainer() >> image }
+        def task = Spy(new TaskRun(config:config))
+        task.containerResolver() >> resolver
+
+        when:
+        def result1 = task.containerInfo()
+        then:
+        resolver.resolveImage(task,image) >> info
+        and:
+        result1 == info
+
+        when:
+        def result2 = task.containerMeta()
+        then:
+        resolver.getContainerMeta(image) >> meta
+        and:
+        result2 == meta
+    }
+    
+    def 'should resolve task stub from template' () {
+
+        given:
+        def task = new TaskRun()
+        task.processor = [:] as TaskProcessor
+        task.processor.grengine = new Grengine()
+
+        // create a file template
+        def file = TestHelper.createInMemTempFile('template.sh')
+        file.text = 'echo ${say_hello}'
+        // create the task context with two variables
+        // - my_file
+        // - say_hello
+        task.context = new TaskContext(Mock(Script),[say_hello: 'Ciao mondo', my_file: file],'foo')
+        task.config = new TaskConfig().setContext(task.context)
+
+        when:
+        task.resolveStub(new TaskClosure({-> template(my_file)}, 'template($file)'))
+        then:
+        task.script == 'echo Ciao mondo'
+        task.source == 'echo ${say_hello}'
+        task.template == file
+        task.traceScript == 'echo Ciao mondo'
     }
 }
