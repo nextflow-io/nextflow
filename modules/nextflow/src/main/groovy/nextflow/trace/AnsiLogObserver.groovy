@@ -453,18 +453,6 @@ class AnsiLogObserver implements TraceObserverV2 {
         return HYPERLINK_START + href + HYPERLINK_SEP + text + HYPERLINK_END
     }
 
-    // OSC 8 hyperlink escape sequences (using BEL as String Terminator)
-    private final static String HYPERLINK_START = '\033]8;;'
-    private final static String HYPERLINK_SEP = '\007'
-    private final static String HYPERLINK_END = '\033]8;;\007'
-
-    protected static String hyperlink(String text, String url) {
-        if( !url )
-            return text
-        final href = url.startsWith('/') ? 'file://' + url : url
-        return HYPERLINK_START + href + HYPERLINK_SEP + text + HYPERLINK_END
-    }
-
     protected Ansi line(ProgressRecord stats) {
         final term = ansi()
         final float tot = stats.getTotalCount()
