@@ -288,6 +288,13 @@ public class S3Client {
 		return runWithPermit(() -> client.headObject(HeadObjectRequest.builder().bucket(bucketName).key(key).build()));
 	}
 
+    /**
+     * @see software.amazon.awssdk.services.s3.S3Client#headBucket 
+     */
+    public HeadBucketResponse getBucketMetadata(String bucketName) {
+        return runWithPermit(() -> client.headBucket(HeadBucketRequest.builder().bucket(bucketName).build()));
+    }
+
 	public List<Tag> getObjectTags(String bucketName, String key) {
 		return runWithPermit(() -> client.getObjectTagging(GetObjectTaggingRequest.builder().bucket(bucketName).key(key).build()).tagSet());
 	}

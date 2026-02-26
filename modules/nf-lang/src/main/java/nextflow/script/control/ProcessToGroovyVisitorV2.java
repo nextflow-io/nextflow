@@ -69,8 +69,9 @@ public class ProcessToGroovyVisitorV2 {
         visitProcessInputs(node.inputs, stagers);
 
         var unstagers = new BlockStatement();
-        visitProcessUnstagers(node.outputs, unstagers);
-        visitProcessUnstagers(node.topics, unstagers);
+        var unstageVisitor = new ProcessUnstageVisitor(unstagers);
+        visitProcessUnstagers(node.outputs, unstageVisitor);
+        visitProcessUnstagers(node.topics, unstageVisitor);
 
         if( "script".equals(node.type) )
             node.exec.visit(new TaskCmdXformVisitor(sourceUnit));
@@ -90,7 +91,8 @@ public class ProcessToGroovyVisitorV2 {
                 args(
                     closureX(node.exec),
                     constX(sgh.getSourceText(node.exec)),
-                    constX(node.type)
+                    constX(node.type),
+                    sgh.getVariableRefs(node.exec)
                 )
             ))
         )));
@@ -160,8 +162,7 @@ public class ProcessToGroovyVisitorV2 {
         }
     }
 
-    private void visitProcessUnstagers(Statement outputs, BlockStatement unstagers) {
-        var visitor = new ProcessUnstageVisitor(unstagers);
+    private void visitProcessUnstagers(Statement outputs, ProcessUnstageVisitor visitor) {
         for( var output : asBlockStatements(outputs) )
             visitor.visit(output);
     }

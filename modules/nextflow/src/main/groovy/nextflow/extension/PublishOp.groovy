@@ -21,6 +21,7 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
+import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Session
 import nextflow.exception.ScriptRuntimeException
 import nextflow.processor.PublishDir
@@ -51,9 +52,9 @@ class PublishOp {
 
     private IndexOpts indexOpts
 
-    private List indexRecords = []
+    private List publishedValues = []
 
-    private volatile boolean complete
+    private DataflowVariable target
 
     PublishOp(Session session, String name, DataflowReadChannel source, Map opts) {
         this.session = session
@@ -64,17 +65,36 @@ class PublishOp {
         if( opts.pathResolver instanceof Closure )
             this.pathResolver = opts.pathResolver as Closure
         if( opts.index )
-            this.indexOpts = new IndexOpts(session.outputDir, opts.index as Map)
+            this.indexOpts = new IndexOpts(opts.index as Map)
     }
 
-    boolean getComplete() { complete }
-
-    PublishOp apply() {
+    DataflowVariable apply() {
         final events = new HashMap(2)
-        events.onNext = this.&onNext
-        events.onComplete = this.&onComplete
+        events.onNext = { value ->
+            safeExecute { onNext(value) }
+        }
+        events.onComplete = {
+            safeExecute { onComplete() }
+        }
         DataflowHelper.subscribeImpl(source, events)
-        return this
+        this.target = new DataflowVariable()
+        return target
+    }
+
+    /**
+     * Perform an action. If an exception is raised, bind the
+     * excpetion to the target and don't perform any more actions.
+     *
+     * @param action
+     */
+    private void safeExecute(Runnable action) {
+        if( target.isError() )
+            return
+        try {
+            action.run()
+        } catch( Throwable e ) {
+            target.bindError(e)
+        }
     }
 
     /**
@@ -86,7 +106,7 @@ class PublishOp {
      * @param value
      */
     protected void onNext(value) {
-        log.trace "Publish operator received: $value"
+        log.trace "Received value for workflow output '${name}': ${value}"
 
         // evaluate dynamic path
         final targetResolver = getTargetDir(value)
@@ -110,10 +130,11 @@ class PublishOp {
             publisher.apply(files, sourceDir)
         }
 
-        // append record to index
-        final normalized = normalizePaths(value, targetResolver)
-        log.trace "Normalized record for index file: ${normalized}"
-        indexRecords << normalized
+        // publish value to workflow output
+        final normalizedValue = normalizeValue(value, targetResolver)
+
+        log.trace "Published value to workflow output '${name}': ${normalizedValue}"
+        publishedValues << normalizedValue
     }
 
     /**
@@ -141,14 +162,15 @@ class PublishOp {
         // the resulting mapping to create a saveAs closure
         final mapping = dsl.build()
         if( mapping instanceof Map<String,String> )
-            return { filename -> outputDir.resolve(mapping[filename]) }
+            return { filename -> filename in mapping ? outputDir.resolve(mapping[filename]) : null }
 
         // if the resolved publish path is a string, resolve it
         // against the base output directory
         if( resolvedPath instanceof CharSequence )
             return outputDir.resolve(resolvedPath.toString())
 
-        throw new ScriptRuntimeException("Invalid output `path` directive -- it should either return a string or use the `>>` operator to publish files")
+        final invalid = mapping ?: resolvedPath
+        throw new ScriptRuntimeException("Invalid `path` directive for workflow output '${name}' -- expected a string or publish statements, but received: ${invalid} [${invalid.class.simpleName}]")
     }
 
     private class PublishDsl {
@@ -162,16 +184,18 @@ class PublishOp {
             }
             else if( source instanceof Collection<Path> ) {
                 if( !target.endsWith('/') )
-                    throw new ScriptRuntimeException("Invalid publish target '${target}' -- should be a directory (end with a `/`) when publishing a collection of files")
+                    throw new ScriptRuntimeException("Invalid publish target '${target}' for workflow output '${name}' -- should be a directory (end with a `/`) when publishing a collection of files")
                 for( final path : source )
                     publish0(path, target)
             }
             else {
-                throw new ScriptRuntimeException("Publish source should be a file or collection of files, but received a ${source.class.name}")
+                throw new ScriptRuntimeException("Invalid publish source for workflow output '${name}' -- expected a file or collection of files, but received: ${source} [${source.class.simpleName}]")
             }
         }
 
         private void publish0(Path source, String target) {
+            if( source == null || target == null )
+                return
             log.trace "Publishing ${source} to ${target}"
             if( mapping == null )
                 mapping = [:]
@@ -191,37 +215,39 @@ class PublishOp {
      * Once all channel values have been published, publish the final
      * workflow output and index file (if enabled).
      */
-    protected void onComplete(nope) {
+    protected void onComplete() {
         // publish individual record if source is a value channel
-        final value = CH.isValue(source)
-            ? indexRecords.first()
-            : indexRecords
+        final outputValue = CH.isValue(source)
+            ? publishedValues.first()
+            : publishedValues
 
         // publish workflow output
-        final indexPath = indexOpts ? indexOpts.path : null
-        session.notifyWorkflowOutput(new WorkflowOutputEvent(name, value, indexPath))
+        final indexPath = indexOpts
+            ? session.outputDir.resolve(indexOpts.path)
+            : null
+        session.notifyWorkflowOutput(new WorkflowOutputEvent(name, outputValue, indexPath))
 
         // write value to index file
         if( indexOpts ) {
             final ext = indexPath.getExtension()
             indexPath.parent.mkdirs()
             if( ext == 'csv' ) {
-                new CsvWriter(header: indexOpts.header, sep: indexOpts.sep).apply(indexRecords, indexPath)
+                new CsvWriter(header: indexOpts.header, sep: indexOpts.sep).apply(publishedValues, indexPath)
             }
             else if( ext == 'json' ) {
-                indexPath.text = DumpHelper.prettyPrintJson(value)
+                indexPath.text = DumpHelper.prettyPrintJson(outputValue)
             }
             else if( ext == 'yaml' || ext == 'yml' ) {
-                indexPath.text = DumpHelper.prettyPrintYaml(value)
+                indexPath.text = DumpHelper.prettyPrintYaml(outputValue)
             }
             else {
-                log.warn "Invalid extension '${ext}' for index file '${indexPath}' -- should be CSV, JSON, or YAML"
+                throw new ScriptRuntimeException("Invalid extension '${ext}' for index file '${indexOpts.path}' -- should be CSV, JSON, or YAML")
             }
             session.notifyFilePublish(new FilePublishEvent(null, indexPath, publishOpts.labels as List))
         }
 
-        log.trace "Publish operator complete"
-        this.complete = true
+        log.trace "Completed workflow output '${name}'"
+        target.bind(indexPath ?: outputValue)
     }
 
     /**
@@ -258,7 +284,7 @@ class PublishOp {
      * @param value
      * @param targetResolver
      */
-    protected Object normalizePaths(value, targetResolver) {
+    protected Object normalizeValue(value, targetResolver) {
         if( value instanceof Path ) {
             return normalizePath(value, targetResolver)
         }
@@ -268,9 +294,9 @@ class PublishOp {
                 if( el instanceof Path )
                     return normalizePath(el, targetResolver)
                 if( el instanceof Collection<Path> )
-                    return normalizePaths(el, targetResolver)
+                    return normalizeValue(el, targetResolver)
                 if( el instanceof Map )
-                    return normalizePaths(el, targetResolver)
+                    return normalizeValue(el, targetResolver)
                 return el
             }
         }
@@ -278,16 +304,16 @@ class PublishOp {
         if( value instanceof Map ) {
             return value.collectEntries { k, v ->
                 if( v instanceof Path )
-                    return Map.entry(k, normalizePath(v, targetResolver))
+                    return [k, normalizePath(v, targetResolver)]
                 if( v instanceof Collection<Path> )
-                    return Map.entry(k, normalizePaths(v, targetResolver))
+                    return [k, normalizeValue(v, targetResolver)]
                 if( v instanceof Map )
-                    return Map.entry(k, normalizePaths(v, targetResolver))
+                    return [k, normalizeValue(v, targetResolver)]
                 return [k, v]
             }
         }
 
-        throw new IllegalArgumentException("Index file record must be a list, map, or file: ${value} [${value.class.simpleName}]")
+        throw new ScriptRuntimeException("Invalid value for workflow output '${name}' -- expected a list, map, or file, but received: ${value} [${value.class.simpleName}]")
     }
 
     /**
@@ -307,8 +333,11 @@ class PublishOp {
         // if the target resolver is a closure, use it to transform
         // the source filename to the target path
         if( targetResolver instanceof Closure<Path> ) {
+            // note: the closure can return null to e.g. not
+            // publish specific files
             final relPath = sourceDir.relativize(path).toString()
-            return (targetResolver.call(relPath) as Path).normalize()
+            final resolvedPath = targetResolver.call(relPath) as Path
+            return resolvedPath?.normalize()
         }
 
         // if the target resolver is a directory, resolve the source
@@ -351,13 +380,12 @@ class PublishOp {
     }
 
     static class IndexOpts {
-        Path path
+        String path
         def /* boolean | List<String> */ header = false
         String sep = ','
 
-        IndexOpts(Path targetDir, Map opts) {
-            this.path = targetDir.resolve(opts.path as String)
-
+        IndexOpts(Map opts) {
+            this.path = opts.path as String
             if( opts.header != null )
                 this.header = opts.header
             if( opts.sep )

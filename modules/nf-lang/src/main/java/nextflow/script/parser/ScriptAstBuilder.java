@@ -232,7 +232,7 @@ public class ScriptAstBuilder {
         if( hasDeclarations ) {
             for( var stmt : statements ) {
                 if( !(stmt instanceof InvalidDeclaration) )
-                    collectSyntaxError(new SyntaxException("Statements cannot be mixed with script declarations -- move statements into a process or workflow", stmt));
+                    collectSyntaxError(new SyntaxException("Statements cannot be mixed with script declarations -- move statements into a process, workflow, or function", stmt));
             }
         }
 
@@ -412,7 +412,7 @@ public class ScriptAstBuilder {
 
     private ClassNode enumDef(EnumDefContext ctx) {
         var name = identifier(ctx.identifier());
-        var result = ast( EnumHelper.makeEnumNode(name, Modifier.PUBLIC, null, null), ctx );
+        var result = ast( EnumHelper.makeEnumNode(name, Modifier.PUBLIC, ClassNode.EMPTY_ARRAY, null), ctx );
         if( ctx.enumBody() != null ) {
             for( var ident : ctx.enumBody().identifier() ) {
                 var fn = ast( EnumHelper.addEnumConstant(result, identifier(ident), null), ident );

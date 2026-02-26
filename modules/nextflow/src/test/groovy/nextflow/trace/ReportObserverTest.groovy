@@ -22,6 +22,7 @@ import java.time.OffsetDateTime
 
 import groovy.json.JsonSlurper
 import nextflow.NextflowMeta
+import nextflow.config.Manifest
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskId
 import nextflow.script.FusionMetadata
@@ -126,7 +127,8 @@ class ReportObserverTest extends Specification {
                 stats: new WorkflowStats(),
                 wave: new WaveMetadata(true),
                 fusion: new FusionMetadata(true, '1.2.3'),
-                nextflow: new NextflowMeta('0.27.9', 3232, '2017-12-12')
+                nextflow: new NextflowMeta('0.27.9', 3232, '2017-12-12'),
+                manifest: new Manifest()
         )
 
         def file = TestHelper.createInMemTempFile('report.html')

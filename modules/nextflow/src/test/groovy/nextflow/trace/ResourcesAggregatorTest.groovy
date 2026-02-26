@@ -2,10 +2,7 @@ package nextflow.trace
 
 import spock.lang.Specification
 
-import java.util.concurrent.Executors
-
 import groovy.json.JsonSlurper
-import nextflow.Session
 
 /**
  *
@@ -21,12 +18,7 @@ class ResourcesAggregatorTest extends Specification {
 
     def 'should render summary json' () {
         given:
-        def executor = Executors.newCachedThreadPool()
-        def session = Mock(Session) {
-            getExecService() >> executor
-        }
-
-        def observer = new ResourcesAggregator(session)
+        def observer = new ResourcesAggregator()
         observer.aggregate(r1)
         observer.aggregate(r2)
         observer.aggregate(r3)
@@ -119,21 +111,13 @@ class ResourcesAggregatorTest extends Specification {
         result[1].timeUsage.q2 == 102.50
         result[1].timeUsage.q3 == 108.75
         result[1].timeUsage.mean == 102.50
-
-        cleanup:
-        observer?.executor?.shutdown()
     }
 
 
     def 'should compute summary list' () {
 
         given:
-        def executor = Executors.newCachedThreadPool()
-        def session = Mock(Session) {
-            getExecService() >> executor
-        }
-
-        def observer = new ResourcesAggregator(session)
+        def observer = new ResourcesAggregator()
         observer.aggregate(r1)
         observer.aggregate(r2)
         observer.aggregate(r3)
@@ -156,20 +140,12 @@ class ResourcesAggregatorTest extends Specification {
         result[1].mem."max" == 22000.0
         result[1].time.min == 18000
         result[1].time.max == 23000
-
-        cleanup:
-        observer?.executor?.shutdown()
     }
 
 
     def 'should maintain insertion order' () {
         given:
-        def executor = Executors.newCachedThreadPool()
-        def session = Mock(Session) {
-            getExecService() >> executor
-        }
-
-        def observer = new ResourcesAggregator(session)
+        def observer = new ResourcesAggregator()
         observer.aggregate(new TraceRecord([process: 'gamma', name: 'gamma-1']))
         observer.aggregate(new TraceRecord([process: 'delta', name: 'delta-1']))
         observer.aggregate(new TraceRecord([process: 'delta', name: 'delta-2']))

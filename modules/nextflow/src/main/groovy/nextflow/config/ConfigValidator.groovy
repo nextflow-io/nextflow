@@ -53,6 +53,7 @@ class ConfigValidator {
     private static final List<String> CORE_PLUGIN_SCOPES = List.of(
         'aws',
         'azure',
+        'cloudcache',
         'google',
         'k8s',
         'tower',
@@ -89,35 +90,32 @@ class ConfigValidator {
         pluginScopes = new SpecNode.Scope('', children)
     }
 
-    void validate(ConfigMap config) {
-        validate(config.toConfigObject())
-    }
+    /**
+     * Validate a config block within the given scope.
+     *
+     * @param config
+     * @param scopes
+     */
+    void validate(Map<String,?> config, List<String> scopes=[]) {
+        for( final entry : config.entrySet() ) {
+            final key = entry.key
+            final value = entry.value
 
-    void validate(ConfigObject config) {
-        final flatConfig = config.flatten()
-        for( String key : flatConfig.keySet() ) {
-            final names = key.tokenize('.').findAll { name -> !isSelector(name) }
-            if( names.first() == 'profiles' ) {
-                if( !names.isEmpty() ) names.remove(0)
-                if( !names.isEmpty() ) names.remove(0)
+            final names = scopes + [key]
+
+            if( names.size() == 2 && names.first() == 'profiles' )
+                names.clear()
+
+            if( value instanceof Map ) {
+                if( isSelector(key) )
+                    names.removeLast()
+                if( isMapOption(names) )
+                    continue
+                validate(value, names)
             }
-            final scope = names.first()
-            if( scope == 'env' ) {
-                checkEnv(names.last())
-                continue
+            else {
+                validateOption(names)
             }
-            if( scope == 'params' )
-                continue
-            final fqName = names.join('.')
-            if( fqName.startsWith('process.ext.') )
-                continue
-            if( isValid(names) )
-                continue
-            if( isMissingCorePluginScope(names.first()) )
-                continue
-            if( isMapOption(names) )
-                continue
-            log.warn1 "Unrecognized config option '${fqName}'"
         }
     }
 
@@ -128,6 +126,29 @@ class ConfigValidator {
      */
     private boolean isSelector(String name) {
         return name.startsWith('withLabel:') || name.startsWith('withName:')
+    }
+
+    /**
+     * Validate a config option given by the list of names.
+     *
+     * For example, the option 'process.resourceLimits' is represented
+     * as ['process', 'resourceLimits'].
+     *
+     * @param names
+     */
+    void validateOption(List<String> names) {
+        final scope = names.first()
+        if( scope == 'env' ) {
+            checkEnv(names.last())
+            return
+        }
+        if( scope == 'params' )
+            return
+        if( isMissingCorePluginScope(scope) )
+            return
+        if( isValid(names) )
+            return
+        log.warn1 "Unrecognized config option '${names.join('.')}'"
     }
 
     /**
@@ -158,10 +179,13 @@ class ConfigValidator {
     }
 
     /**
-     * Determine whether a config option is a map option or a
-     * property thereof.
+     * Determine whether a config option is a map option.
      *
-     * @param names Config option split into individual names, e.g. 'process.resourceLimits' -> [process, resourceLimits]
+     * This method is needed to distinguish between config scopes
+     * and config options that happen to be maps, since this distinction
+     * is lost when the config is resolved.
+     *
+     * @param names
      */
     private boolean isMapOption(List<String> names) {
         return isMapOption0(SpecNode.ROOT, names)
@@ -169,18 +193,8 @@ class ConfigValidator {
     }
 
     private static boolean isMapOption0(SpecNode.Scope scope, List<String> names) {
-        SpecNode node = scope
-        for( final name : names ) {
-            if( node instanceof SpecNode.Scope )
-                node = node.children().get(name)
-            else if( node instanceof SpecNode.Placeholder )
-                node = node.scope()
-            else if( node instanceof SpecNode.Option )
-                return node.type() == Map.class
-            else
-                return false
-        }
-        return false
+        final node = scope.getOption(names)
+        return node != null && node.types().contains(Map.class)
     }
 
     /**

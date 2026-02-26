@@ -22,6 +22,11 @@ To view all diagnostics for the workspace, open the **Problems** tab. Here, you 
 The language server parses scripts and config files according to the {ref}`Nextflow language specification <syntax-page>`, which is more strict than the Nextflow CLI. See {ref}`strict-syntax-page` for more information.
 :::
 
+:::{versionadded} 25.10.0
+:::
+
+The extension can perform static type checking. Enable it using the **Nextflow > Type Checking** extension setting. See {ref}`migrating-static-types` for more information about migrating to static types.
+
 ### Hover hints
 
 When you hover over certain source code elements, such as variable names and function calls, the extension provides a tooltip with related information, such as the definition and/or documentation for the element.
@@ -69,7 +74,23 @@ If a `nextflow_schema.json` file exists in the same directory as a script with a
 
 The extension can generate a workflow DAG that includes the workflow inputs, outputs, and any processes or workflows that are called by the selected workflow. The workflow DAG is displayed in a new panel to the side.
 
+The DAG preview is similar to the {ref}`workflow diagram <workflow-diagram>` that can be generated at runtime using the `-with-dag` option. However, it is different in several ways:
+
+- The DAG preview does not require executing Nextflow code.
+
+- The DAG preview shows only a single workflow, whereas the workflow diagram shows the entire pipeline.
+
+- The DAG preview shows all conditional processes, whereas the workflow diagram shows only the processes that were called in a specific run.
+
 To preview the DAG of a workflow, select the **Preview DAG** CodeLens above the workflow definition.
+
+### Automatic code migration
+
+The extension can automatically migrate scripts to static types. See {ref}`migrating-static-types` for details.
+
+To migrate a script, open the Command Palette, search for **Convert script to static types**, and select it.
+
+To migrate an entire pipeline, use the **Convert pipeline to static types** command.
 
 ## Troubleshooting
 
@@ -79,11 +100,22 @@ Report issues at [nextflow-io/vscode-language-nextflow](https://github.com/nextf
 
 ## Limitations
 
-- The language server does not detect certain filesystem changes, such as changing the current Git branch. Restart the language server from the command palette to sync it with your workspace.
+<h3>Git filesystem changes</h3>
 
-- The language server does not recognize configuration options from third-party plugins and will report "Unrecognized config option" warnings for them.
+The language server does not detect certain filesystem changes, such as changing the current Git branch. Restart the language server from the command palette to sync it with your workspace.
 
-- The language server provides limited support for Groovy scripts in the `lib` directory. Errors in Groovy scripts are not reported as diagnostics, and changing a Groovy script does not automatically re-compile the Nextflow scripts that reference it. Edit the Nextflow script or close and re-open it to refresh the diagnostics.
+<h3>Plugin definitions</h3>
+
+The language server does not recognize configuration options from third-party plugins and will report "Unrecognized config option" warnings for them.
+
+:::{versionadded} 25.10.0
+:::
+
+The language server can recognize plugin definitions, including configuration options and functions, for plugins that use the {ref}`Nextflow Gradle plugin <gradle-plugin-page>` and require Nextflow >=25.10. Custom factories and operators are not currently recognized.
+
+<h3>The <code>lib</code> directory</h3>
+
+The language server provides limited support for Groovy scripts in the `lib` directory. Errors in Groovy scripts are not reported as diagnostics, and changing a Groovy script does not automatically re-compile the Nextflow scripts that reference it. Edit the Nextflow script or close and re-open it to refresh the diagnostics.
 
 (vscode-language-server)=
 

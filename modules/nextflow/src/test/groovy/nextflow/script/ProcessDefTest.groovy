@@ -1,6 +1,9 @@
 package nextflow.script
 
 import nextflow.Session
+import nextflow.executor.Executor
+import nextflow.executor.ExecutorFactory
+import nextflow.processor.TaskProcessor
 import spock.lang.Specification
 /**
  *
@@ -58,7 +61,7 @@ class ProcessDefTest extends Specification {
 
         when:
         def copy = proc.clone()
-        copy.initialize()
+        copy.applyConfig()
         then:
         def cfg1 = copy.processConfig.createTaskConfig()
         cfg1.getCpus()==2           // taken from the generic config
@@ -66,7 +69,7 @@ class ProcessDefTest extends Specification {
 
         when:
         copy = proc.cloneWithName('flow1:bar')
-        copy.initialize()
+        copy.applyConfig()
         then:
         def cfg2 = copy.processConfig.createTaskConfig()
         cfg2.getCpus()==4           // taken from the `bar` config
@@ -75,10 +78,38 @@ class ProcessDefTest extends Specification {
 
         when:
         copy = proc.cloneWithName('flow1:flow2:flow3:bar')
-        copy.initialize()
+        copy.applyConfig()
         then:
         def cfg3 = copy.processConfig.createTaskConfig()
         cfg3.getCpus()==4           // <-- taken from `withName: foo`
         cfg3.getMemory().giga == 8  // <-- taken from `withName: 'flow1:flow2:flow3:bar'`
+    }
+
+    def 'should apply config when creating task processor' () {
+        given:
+        def OWNER = Mock(BaseScript)
+        def CONFIG = new ProcessConfig(OWNER, 'foo')
+        CONFIG.container = 'source-container:1.0'
+        def BODY = new BodyDef({->}, 'echo hello')
+        def proc = new ProcessDef(OWNER, 'foo', CONFIG, BODY)
+        and:
+        proc.session = Mock(Session) {
+            config >> [
+                process: [
+                    'withName:foo': [container: 'config-container:2.0']
+                ]
+            ]
+            executorFactory >> Mock(ExecutorFactory) {
+                getExecutor(_, _, _, _) >> Mock(Executor)
+            }
+            newProcessFactory(_) >> Mock(ProcessFactory) {
+                newTaskProcessor(_, _, _, _) >> Mock(TaskProcessor)
+            }
+        }
+
+        when:
+        proc.createTaskProcessor()
+        then:
+        proc.processConfig.container == 'config-container:2.0'
     }
 }

@@ -94,12 +94,6 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         str.split(Const.SCOPE_SEP).last()
     }
 
-    protected void initialize() {
-        // apply config settings to the process
-        final configProcessScope = (Map)session.config.process
-        new ProcessConfigBuilder(processConfig).applyConfig(configProcessScope, baseName, simpleName, processName)
-    }
-
     @Override
     ProcessDef clone() {
         def result = (ProcessDef)super.clone()
@@ -144,9 +138,6 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
 
     @Override
     Object run(Object[] args) {
-        // initialise process config
-        initialize()
-
         // invoke process with legacy inputs/outputs
         if( processConfig instanceof ProcessConfigV1 )
             output = runV1(args, processConfig)
@@ -261,14 +252,23 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
     }
 
     TaskProcessor createTaskProcessor() {
-        if( !processConfig )
-            initialize()
+        // apply process directives from config settings
+        applyConfig()
+
+        // create executor for process
         final executor = session
             .executorFactory
             .getExecutor(processName, processConfig, taskBody, session)
+
+        // create task processor for process
         return session
             .newProcessFactory(owner)
             .newTaskProcessor(processName, executor, processConfig, taskBody)
+    }
+
+    protected void applyConfig() {
+        final configProcessScope = (Map)session.config.process
+        new ProcessConfigBuilder(processConfig).applyConfig(configProcessScope, baseName, simpleName, processName)
     }
 
 }

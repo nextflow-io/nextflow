@@ -15,12 +15,13 @@ plugins {
 }
 
 nextflowPlugin {
-    nextflowVersion = '25.09.2-edge'
+    nextflowVersion = '25.11.0-edge'
 
     provider = "${nextflowPluginProvider}"
     description = 'Provides dynamic container building and augmentation capabilities with on-demand software installation and advanced container management features'
     className = 'io.seqera.wave.plugin.WavePlugin'
     useDefaultDependencies = false
+    generateSpec = false
     extensionPoints = [
         'io.seqera.wave.plugin.WaveFactory',
         'io.seqera.wave.plugin.config.WaveConfig',
@@ -48,18 +49,18 @@ dependencies {
     compileOnly 'org.pf4j:pf4j:3.12.0'
     compileOnly 'io.seqera:lib-trace:0.1.0'
     compileOnly 'io.seqera:lib-httpx:2.1.0'
-    
+    compileOnly 'org.apache.commons:commons-lang3:3.18.0'
+
     // Force lib-httpx version to avoid conflicts with older versions from nf-commons
     testImplementation 'io.seqera:lib-httpx:2.1.0'
 
     api 'org.apache.commons:commons-compress:1.26.1'
-    api 'org.apache.commons:commons-lang3:3.18.0'
     api 'com.google.code.gson:gson:2.13.1'
     api 'org.yaml:snakeyaml:2.2'
-    api 'io.seqera:wave-api:0.16.0'
-    api 'io.seqera:wave-utils:0.15.1'
+    api 'io.seqera:wave-api:1.31.1'
+    api 'io.seqera:wave-utils:1.31.1'
 
     testImplementation(testFixtures(project(":nextflow")))
-    testImplementation "org.apache.groovy:groovy:4.0.28"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.28"
+    testImplementation "org.apache.groovy:groovy:4.0.30"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.30"
 }

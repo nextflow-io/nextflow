@@ -2,13 +2,13 @@
 
 # Workflows
 
-In Nextflow, a **workflow** is a function that is specialized for composing processes and dataflow logic (i.e. channels and operators).
+In Nextflow, a **workflow** is a specialized function for composing {ref}`processes <process-page>` and dataflow logic:
 
-See {ref}`syntax-workflow` for a full description of the workflow syntax.
+- An [entry workflow](#entry-workflow) is the entrypoint of a pipeline. It can take [parameters](#parameters) as inputs using the `params` block, and it can publish [outputs](#outputs) using the `output` block.
 
-:::{note}
-Workflows were introduced in DSL2. If you are still using DSL1, see {ref}`dsl1-page` for more information about how to migrate your Nextflow pipelines to DSL2.
-:::
+- A [named workflow](#named-workflows) is a workflow that can be called by other workflows. It can define its own inputs and outputs, which are called *takes* and *emits*.
+
+- Both entry workflows and named workflows can contain [dataflow logic](#dataflow) such as calling processes, workflows, and channel operators.
 
 ## Entry workflow
 
@@ -28,13 +28,17 @@ workflow {
 
 Parameters can be declared in a Nextflow script with the `params` block or with *legacy* parameter declarations.
 
-### Params block
+### Typed parameters
 
 :::{versionadded} 25.10.0
 :::
 
 :::{note}
-This feature requires the {ref}`strict syntax <strict-syntax-page>` to be enabled (`NXF_SYNTAX_PARSER=v2`).
+Typed parameters require the {ref}`strict syntax <strict-syntax-page>`. Set the `NXF_SYNTAX_PARSER` environment variable to `v2` to enable:
+
+```bash
+export NXF_SYNTAX_PARSER=v2
+```
 :::
 
 A script can declare parameters using the `params` block:
@@ -49,13 +53,7 @@ params {
 }
 ```
 
-The following types can be used for parameters:
-
-- {ref}`stdlib-types-boolean`
-- {ref}`stdlib-types-float`
-- {ref}`stdlib-types-integer`
-- {ref}`stdlib-types-path`
-- {ref}`stdlib-types-string`
+All {ref}`standard types <stdlib-types>` except for the dataflow types (`Channel` and `Value`) can be used for parameters.
 
 Parameters can be used in the entry workflow:
 
@@ -66,12 +64,21 @@ workflow {
 ```
 
 :::{note}
-As a best practice, parameters should only be used directly in the entry workflow and passed to workflows and processes as explicit inputs.
+As a best practice, parameters should only be referenced in the entry workflow or `output` block. Parameters can be passed to workflows and processes as explicit inputs.
 :::
 
 The default value can be overridden by the command line, params file, or config file. Parameters from multiple sources are resolved in the order described in {ref}`cli-params`. Parameters specified on the command line are converted to the appropriate type based on the corresponding type annotation.
 
-A parameter that doesn't specify a default value is a *required* param. If a required param is not given a value at runtime, the run will fail.
+A parameter that doesn't specify a default value is a *required* parameter. If a required parameter is not given a value at runtime, the run will fail.
+
+:::{versionadded} 26.04.0
+:::
+
+Parameters with a collection type (i.e., `List`, `Set`, or `Bag`) can be supplied a file path instead of a literal collection. The file must be CSV, JSON, or YAML. Nextflow will parse the file contents and assign the resuling collection to the parameter. An error is thrown if the file contents do not match the parameter type.
+
+:::{note}
+When supplying a CSV file to a collection parameter, the CSV file must contain a header row and must use a comma (`,`) as the column separator.
+:::
 
 (workflow-params-legacy)=
 
@@ -93,6 +100,286 @@ workflow {
 
 The default value can be overridden by the command line, params file, or config file. Parameters from multiple sources are resolved in the order described in {ref}`cli-params`.
 
+(workflow-output-def)=
+
+## Outputs
+
+:::{versionadded} 25.10.0
+Workflow outputs are available as a preview in Nextflow {ref}`24.04 <workflow-outputs-first-preview>`, {ref}`24.10 <workflow-outputs-second-preview>`, and {ref}`25.04 <workflow-outputs-third-preview>`.
+:::
+
+:::{note}
+Workflow outputs are intended to replace the {ref}`publishDir <process-publishdir>` directive. See {ref}`migrating-workflow-outputs` for guidance on migrating from `publishDir` to workflow outputs.
+:::
+
+A script can define an *output block* to declare the top-level workflow outputs. Each output should be assigned in the `publish` section of the entry workflow. Any channel in the workflow can be assigned to an output, including process and subworkflow outputs.
+
+**Example:**
+
+```nextflow
+process fetch {
+    // ...
+
+    output:
+    path 'sample.txt'
+
+    // ...
+}
+
+workflow {
+    main:
+    ch_samples = fetch(params.input)
+
+    publish:
+    samples = ch_samples
+}
+
+output {
+    samples {
+        path '.'
+    }
+}
+```
+
+In the above example, the output of process `fetch` is assigned to the `samples` workflow output. How this output is published to a directory structure is described in the next section.
+
+(workflow-publishing-files)=
+
+### Publishing files
+
+Each workflow output can define how files are *published* from the work directory to a designated *output directory*.
+
+**Output directory**
+
+You can set the top-level output directory for a run using the `-output-dir` command-line option or the `outputDir` config option:
+
+```bash
+nextflow run main.nf -output-dir 'my-results'
+```
+
+```groovy
+// nextflow.config
+outputDir = 'my-results'
+```
+
+The default output directory is `results` in the launch directory.
+
+**Publish path**
+
+By default, Nextflow publishes all output files to the output directory. Each workflow output can define where to publish files within the output directory using the `path` directive:
+
+```nextflow
+workflow {
+    main:
+    ch_step1 = step1()
+    ch_step2 = step2(ch_step1)
+
+    publish:
+    step1 = ch_step1
+    step2 = ch_step2
+}
+
+output {
+    step1 {
+        path 'step1'
+    }
+    step2 {
+        path 'step2'
+    }
+}
+```
+
+The following directory structure is created:
+
+```
+results/
+└── step1/
+    └── ...
+└── step2/
+    └── ...
+```
+
+Nextflow publishes all files received by an output into the specified directory. Nextflow recursively scans lists, maps, and tuples for nested files:
+
+```nextflow
+workflow {
+    main:
+    ch_samples = channel.of(
+        tuple( [id: 'SAMP1'], [ file('1.txt'), file('2.txt') ] )
+    )
+
+    publish:
+    samples = ch_samples // 1.txt and 2.txt are published
+}
+```
+
+:::{note}
+Files that do not originate from the work directory are not published.
+:::
+
+**Dynamic publish path**
+
+The `path` directive can also be a closure which defines a custom publish path for each channel value:
+
+```nextflow
+workflow {
+    main:
+    ch_samples = channel.of(
+        [id: 'SAMP1', fastq_1: file('1.fastq'), fastq_2: file('2.fastq')]
+    )
+
+    publish:
+    samples = ch_samples
+}
+
+output {
+    samples {
+        path { sample -> "fastq/${sample.id}/" }
+    }
+}
+```
+
+The above example publishes each channel value to a different subdirectory. In this case, each pair of FASTQ files is published into a subdirectory based on the sample ID.
+
+Alternatively, you can define a different path for each individual file using the `>>` operator:
+
+```nextflow
+output {
+    samples {
+        path { sample ->
+            sample.fastq_1 >> "fastq/${sample.id}/"
+            sample.fastq_2 >> "fastq/${sample.id}/"
+        }
+    }
+}
+```
+
+Each `>>` specifies a *source file* and *publish target*. The source file should be a file or collection of files, and the publish target should be a directory or file name. If the publish target ends with a slash, Nextflow treats it as the directory in which to publish source files.
+
+When using this syntax, only files captured with the `>>` operator are saved to the output directory.
+
+**Conditional publishing**
+
+Outputs can be conditionally published using pipeline parameters:
+
+```nextflow
+output {
+    samples {
+        path { sample ->
+            sample.fastqc >> "fastqc"
+            sample.bam >> params.save_bams ? "align" : null
+        }
+    }
+}
+```
+
+In the above example, the BAM files specified by `sample.bam` are published only when `params.save_bams` is `true`.
+
+### Index files
+
+Index files are structured metadata files that catalog published outputs and their associated metadata. An index file preserves the structure of channel values, including metadata, which is more robust than encoding this information into file paths. The index file can be a CSV (`.csv`), JSON (`.json`), or YAML (`.yml`, `.yaml`) file. The channel values should be files, lists, maps, or tuples.
+
+Each output can create an index file of its published values:
+
+```nextflow
+workflow {
+    main:
+    ch_samples = channel.of(
+        [id: 1, name: 'sample 1', fastq_1: '1a.fastq', fastq_2: '1b.fastq'],
+        [id: 2, name: 'sample 2', fastq_1: '2a.fastq', fastq_2: '2b.fastq'],
+        [id: 3, name: 'sample 3', fastq_1: '3a.fastq', fastq_2: null]
+    )
+
+    publish:
+    samples = ch_samples
+}
+
+output {
+    samples {
+        path 'fastq'
+        index {
+            path 'samples.csv'
+        }
+    }
+}
+```
+
+The above example writes the following CSV file to `results/samples.csv`:
+
+```
+"1","sample 1","results/fastq/1a.fastq","results/fastq/1b.fastq"
+"2","sample 2","results/fastq/2a.fastq","results/fastq/2b.fastq"
+"3","sample 3","results/fastq/3a.fastq",""
+```
+
+You can customize the index file with additional directives, for example:
+
+```nextflow
+index {
+    path 'samples.csv'
+    header true
+    sep '|'
+}
+```
+
+This example produces the following index file:
+
+```
+"id"|"name"|"fastq_1"|"fastq_2"
+"1"|"sample 1"|"results/fastq/1a.fastq"|"results/fastq/1b.fastq"
+"2"|"sample 2"|"results/fastq/2a.fastq"|"results/fastq/2b.fastq"
+"3"|"sample 3"|"results/fastq/3a.fastq"|""
+```
+
+:::{note}
+Files that do not originate from the work directory are not published, but are included in the index file.
+:::
+
+See [Output directives](#output-directives) for the list of available index directives.
+
+### Output directives
+
+The following directives are available for each output in the output block:
+
+`index`
+: Create an index file containing a record of each published value.
+
+  The following directives are available in an index definition:
+
+  `header`
+  : When `true`, the keys of the first record are used as the column names (default: `false`). Can also be a list of column names. Only used for CSV files.
+
+  `path`
+  : The name of the index file relative to the base output directory (required). Can be a CSV, JSON, or YAML file.
+
+  `sep`
+  : The character used to separate values (default: `','`). Only used for CSV files.
+
+`label`
+: Specify a label to be applied to every published file. Can be specified multiple times.
+
+`path`
+: Specify the publish path relative to the output directory (default: `'.'`). Can be a path, a closure that defines a custom directory for each published value, or a closure that publishes individual files using the `>>` operator.
+
+Additionally, the following options from the {ref}`workflow <config-workflow>` config scope can be specified as directives:
+- `contentType`
+- `enabled`
+- `ignoreErrors`
+- `mode`
+- `overwrite`
+- `storageClass`
+- `tags`
+
+For example:
+
+```nextflow
+output {
+    samples {
+        mode 'copy'
+    }
+}
+```
+
 ## Named workflows
 
 A *named workflow* is a workflow that can be called by other workflows:
@@ -112,7 +399,7 @@ The above example defines a workflow named `my_workflow` which is called by the 
 
 ### Takes and emits
 
-The `take:` section is used to declare the inputs of a named workflow:
+The `take:` section declares the inputs of a named workflow:
 
 ```nextflow
 workflow my_workflow {
@@ -134,7 +421,7 @@ workflow {
 }
 ```
 
-The `emit:` section is used to declare the outputs of a named workflow:
+The `emit:` section declares the outputs of a named workflow:
 
 ```nextflow
 workflow my_workflow {
@@ -168,9 +455,110 @@ The result of the above workflow can be accessed using `my_workflow.out.my_data`
 Every output must be assigned to a name when multiple outputs are declared.
 :::
 
+:::{versionadded} 25.10.0
+:::
+
+When using the {ref}`strict syntax <strict-syntax-page>`, workflow takes and emits can specify a type annotation:
+
+```nextflow
+workflow my_workflow {
+    take:
+    data: Channel<Path>
+
+    main:
+    ch_hello = hello(data)
+    ch_bye = bye(ch_hello.collect())
+
+    emit:
+    my_data: Value<Path> = ch_bye
+}
+```
+
+In the above example, `my_workflow` takes a channel of files (`Channel<Path>`) and emits a dataflow value with a single file (`Value<Path>`). See {ref}`stdlib-types` for the list of available types.
+
+(dataflow-page)=
+
+## Dataflow
+
+Workflows consist of *dataflow* logic, in which processes are connected to each other through *dataflow channels* and *dataflow values*.
+
+(dataflow-type-channel)=
+
+### Channels
+
+A *dataflow channel* (or simply *channel*) is an asynchronous sequence of values.
+
+The values in a channel cannot be accessed directly, but only through an operator or process. For example:
+
+```nextflow
+channel.of(1, 2, 3).view { v -> "channel emits ${v}" }
+```
+
+```console
+channel emits 1
+channel emits 2
+channel emits 3
+```
+
+**Factories**
+
+A channel can be created by factories in the `channel` namespace. For example, the `channel.fromPath()` factory creates a channel from a file name or glob pattern, similar to the `files()` function:
+
+```nextflow
+channel.fromPath('input/*.txt').view()
+```
+
+See {ref}`channel-factory` for the full list of channel factories.
+
+**Operators**
+
+Channel operators, or *operators* for short, are functions that consume and produce channels. Because channels are asynchronous, operators are necessary to manipulate the values in a channel. Operators are particularly useful for implementing glue logic between processes.
+
+Commonly used operators include:
+
+- {ref}`operator-combine`: emit the combinations of two channels
+
+- {ref}`operator-collect`: collect the values from a channel into a list
+
+- {ref}`operator-filter`: select the values in a channel that satisfy a condition
+
+- {ref}`operator-flatMap`: transform each value from a channel into a list and emit each list element separately
+
+- {ref}`operator-grouptuple`: group the values from a channel based on a grouping key
+
+- {ref}`operator-join`: join the values from two channels based on a matching key
+
+- {ref}`operator-map`: transform each value from a channel with a mapping function
+
+- {ref}`operator-mix`: emit the values from multiple channels
+
+- {ref}`operator-view`: print each value in a channel to standard output
+
+See {ref}`operator-page` for the full list of operators.
+
+(dataflow-type-value)=
+
+### Values
+
+A *dataflow value* is an asynchronous value.
+
+Dataflow values can be created using the {ref}`channel.value <channel-value>` factory, and they are created by processes (under {ref}`certain conditions <process-out-singleton>`).
+
+A dataflow value cannot be accessed directly, but only through an operator or process. For example:
+
+```nextflow
+channel.value(1).view { v -> "dataflow value is ${v}" }
+```
+
+```console
+dataflow value is 1
+```
+
+See {ref}`stdlib-types-value` for the set of available methods for dataflow values.
+
 (workflow-process-invocation)=
 
-## Calling processes and workflows
+### Calling processes and workflows
 
 Processes and workflows are called like functions, passing their inputs as arguments:
 
@@ -333,11 +721,17 @@ The same process can be called in different workflows without using an alias, li
 The fully qualified process name can be used as a {ref}`process selector <config-process-selectors>` in a Nextflow configuration file, and it takes priority over the simple process name.
 :::
 
-## Special operators
+(workflow-special-operators)=
+
+### Special operators
 
 The following operators have a special meaning when used in a workflow with process and workflow calls.
 
-### Pipe `|`
+:::{note}
+As a best practice, avoid these operators when {ref}`type checking <preparing-static-types>` is enabled. Using these operators will prevent the type checker from validating your code.
+:::
+
+**Pipe `|`**
 
 The `|` *pipe* operator can be used to chain processes, operators, and workflows:
 
@@ -354,7 +748,7 @@ process greet {
 }
 
 workflow {
-    channel.of('Hello','Hola','Ciao')
+    channel.of('Hello', 'Hola', 'Ciao')
         | greet
         | map { v -> v.toUpperCase() }
         | view
@@ -367,13 +761,15 @@ The same code can also be written as:
 
 ```nextflow
 workflow {
-    ch1 = channel.of('Hello','Hola','Ciao')
-    ch2 = greet( ch1 )
-    ch2.map { v -> v.toUpperCase() }.view()
+    ch_input = channel.of('Hello', 'Hola', 'Ciao')
+    ch_greet = greet(ch_input)
+    ch_greet
+        .map { v -> v.toUpperCase() }
+        .view()
 }
 ```
 
-### And `&`
+**And `&`**
 
 The `&` *and* operator can be used to call multiple processes in parallel with the same channel(s):
 
@@ -424,13 +820,13 @@ workflow {
 
 (workflow-recursion)=
 
-## Process and workflow recursion
+### Process and workflow recursion
 
-:::{versionadded} 21.11.0-edge
+:::{versionadded} 22.04.0
 :::
 
 :::{note}
-This feature requires the `nextflow.preview.recursion` feature flag to be enabled.
+This is a preview feature and requires the `nextflow.preview.recursion` feature flag to be enabled. The syntax and behavior may change in future releases.
 :::
 
 Processes can be invoked recursively using the `recurse` method.
@@ -447,7 +843,7 @@ In the above example, the `count_down` process is first invoked with the value `
 
 The recursive output can also be limited using the `times` method:
 
-```groovy
+```nextflow
 count_down
     .recurse(params.start)
     .times(3)
@@ -469,252 +865,3 @@ Workflows can also be invoked recursively:
 - A recursive process or workflow must have matching inputs and outputs, such that the outputs for each iteration can be supplied as the inputs for the next iteration.
 
 - Recursive workflows cannot use *reduction* operators such as `collect`, `reduce`, and `toList`, because these operators cause the recursion to hang indefinitely after the initial iteration.
-
-(workflow-output-def)=
-
-## Workflow outputs
-
-:::{versionadded} 25.10.0
-This feature is available as a preview in Nextflow {ref}`24.04 <workflow-outputs-first-preview>`, {ref}`24.10 <workflow-outputs-second-preview>`, and {ref}`25.04 <workflow-outputs-third-preview>`.
-:::
-
-A script can define an *output block* which declares the top-level outputs of the workflow. Each output should be assigned in the `publish` section of the entry workflow. Any channel in the workflow can be assigned to an output, including process and subworkflow outputs. This approach is intended to replace the {ref}`publishDir <process-publishdir>` directive.
-
-Here is a basic example:
-
-```nextflow
-process fetch {
-    // ...
-
-    output:
-    path 'sample.txt'
-
-    // ...
-}
-
-workflow {
-    main:
-    ch_samples = fetch(params.input)
-
-    publish:
-    samples = ch_samples
-}
-
-output {
-    samples {
-        path '.'
-    }
-}
-```
-
-In the above example, the output of process `fetch` is assigned to the `samples` workflow output. How this output is published to a directory structure is described in the next section.
-
-(workflow-publishing-files)=
-
-### Publishing files
-
-The top-level output directory of a workflow run can be set using the `-output-dir` command-line option or the `outputDir` config option:
-
-```bash
-nextflow run main.nf -output-dir 'my-results'
-```
-
-```groovy
-// nextflow.config
-outputDir = 'my-results'
-```
-
-The default output directory is `results` in the launch directory.
-
-By default, all output files are published to the output directory. Each output in the output block can define where files are published using the `path` directive. For example:
-
-```nextflow
-workflow {
-    main:
-    ch_step1 = step1()
-    ch_step2 = step2(ch_step1)
-
-    publish:
-    step1 = ch_step1
-    step2 = ch_step2
-}
-
-output {
-    step1 {
-        path 'step1'
-    }
-    step2 {
-        path 'step2'
-    }
-}
-```
-
-The following directory structure will be created:
-
-```
-results/
-└── step1/
-    └── ...
-└── step2/
-    └── ...
-```
-
-All files received by an output will be published into the specified directory. Lists and maps are recursively scanned for nested files. For example:
-
-```nextflow
-workflow {
-    main:
-    ch_samples = channel.of(
-        [ [id: 'SAMP1'], [ file('1.txt'), file('2.txt') ] ]
-    )
-
-    publish:
-    samples = ch_samples // 1.txt and 2.txt will be published
-}
-```
-
-The `path` directive can also be a closure which defines a custom publish path for each channel value:
-
-```nextflow
-workflow {
-    main:
-    ch_samples = channel.of(
-        [id: 'SAMP1', fastq_1: file('1.fastq'), fastq_2: file('2.fastq')]
-    )
-
-    publish:
-    samples = ch_samples
-}
-
-output {
-    samples {
-        path { sample -> "fastq/${sample.id}/" }
-    }
-}
-```
-
-The above example will publish each channel value to a different subdirectory. In this case, each pair of FASTQ files will be published to a subdirectory based on the sample ID.
-
-The closure can even define a different path for each individual file using the `>>` operator:
-
-```nextflow
-output {
-    samples {
-        path { sample ->
-            sample.fastq_1 >> "fastq/${sample.id}/"
-            sample.fastq_2 >> "fastq/${sample.id}/"
-        }
-    }
-}
-```
-
-Each `>>` specifies a *source file* and *publish target*. The source file should be a file or collection of files, and the publish target should be a directory or file name. If the publish target ends with a slash, it is treated as the directory in which source files are published. Otherwise, it is treated as the target filename of a source file. Only files that are published with the `>>` operator are saved to the output directory.
-
-:::{note}
-Files that do not originate from the work directory are not published.
-:::
-
-### Index files
-
-Each output can create an index file of the values that were published. An index file preserves the structure of channel values, including metadata, which is simpler than encoding this information with directories and file names. The index file can be a CSV (`.csv`), JSON (`.json`), or YAML (`.yml`, `.yaml`) file. The channel values should be files, lists, or maps.
-
-For example:
-
-```nextflow
-workflow {
-    main:
-    ch_samples = channel.of(
-        [id: 1, name: 'sample 1', fastq_1: '1a.fastq', fastq_2: '1b.fastq'],
-        [id: 2, name: 'sample 2', fastq_1: '2a.fastq', fastq_2: '2b.fastq'],
-        [id: 3, name: 'sample 3', fastq_1: '3a.fastq', fastq_2: null]
-    )
-
-    publish:
-    samples = ch_samples
-}
-
-output {
-    samples {
-        path 'fastq'
-        index {
-            path 'samples.csv'
-        }
-    }
-}
-```
-
-The above example will write the following CSV file to `results/samples.csv`:
-
-```
-"1","sample 1","results/fastq/1a.fastq","results/fastq/1b.fastq"
-"2","sample 2","results/fastq/2a.fastq","results/fastq/2b.fastq"
-"3","sample 3","results/fastq/3a.fastq",""
-```
-
-You can customize the index file with additional directives, for example:
-
-```nextflow
-index {
-    path 'samples.csv'
-    header true
-    sep '|'
-}
-```
-
-This example will produce the following index file:
-
-```
-"id"|"name"|"fastq_1"|"fastq_2"
-"1"|"sample 1"|"results/fastq/1a.fastq"|"results/fastq/1b.fastq"
-"2"|"sample 2"|"results/fastq/2a.fastq"|"results/fastq/2b.fastq"
-"3"|"sample 3"|"results/fastq/3a.fastq"|""
-```
-
-:::{note}
-Files that do not originate from the work directory are not published, but are included in the index file.
-:::
-
-See [Output directives](#output-directives) for the list of available index directives.
-
-### Output directives
-
-The following directives are available for each output in the output block:
-
-`index`
-: Create an index file which will contain a record of each published value.
-
-  The following directives are available in an index definition:
-
-  `header`
-  : When `true`, the keys of the first record are used as the column names (default: `false`). Can also be a list of column names. Only used for CSV files.
-
-  `path`
-  : The name of the index file relative to the base output directory (required). Can be a CSV, JSON, or YAML file.
-
-  `sep`
-  : The character used to separate values (default: `','`). Only used for CSV files.
-
-`label`
-: Specify a label to be applied to every published file. Can be specified multiple times.
-
-`path`
-: Specify the publish path relative to the output directory (default: `'.'`). Can be a path, a closure that defines a custom directory for each published value, or a closure that publishes individual files using the `>>` operator.
-
-Additionally, the following options from the {ref}`workflow <config-workflow>` config scope can be specified as directives:
-- `contentType`
-- `enabled`
-- `ignoreErrors`
-- `mode`
-- `overwrite`
-- `storageClass`
-- `tags`
-
-For example:
-
-```nextflow
-output {
-    samples {
-        mode 'copy'
-    }
-}
-```

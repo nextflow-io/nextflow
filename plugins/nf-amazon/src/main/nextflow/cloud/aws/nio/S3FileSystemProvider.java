@@ -485,13 +485,11 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
             throw new NoSuchFileException("the path: " + FilesEx.toUriString(s3Path) + " does not exist");
         }
 
-        if (Files.isDirectory(path)){
-            try (DirectoryStream<Path> stream = Files.newDirectoryStream(path)){
-                if (stream.iterator().hasNext()){
-                    throw new DirectoryNotEmptyException("the path: " + FilesEx.toUriString(s3Path) + " is a directory and is not empty");
-                }
-            }
-        }
+		// NOTE: S3 directories are virtual (marker objects or implied key prefixes),
+		// so we do not check for emptiness before deleting. Enforcing POSIX-like
+		// DirectoryNotEmptyException semantics on S3 is unreliable due to eventual
+		// consistency and unnecessary because deleting a directory marker does not
+		// affect its children.
 
 		// we delete the two objects (sometimes exists the key '/' and sometimes not)
 		s3Path.getFileSystem().getClient()
@@ -740,7 +738,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
         // when enabling that flag, it overrides S3 endpoints with AWS global endpoint
         // see https://github.com/nextflow-io/nextflow/pull/5779
 		final boolean global = bucketName!=null && !awsConfig.getS3Config().isCustomEndpoint();
-		final AwsClientFactory factory = new AwsClientFactory(awsConfig, awsConfig.getS3GlobalRegion());
+		final AwsClientFactory factory = new AwsClientFactory(awsConfig, awsConfig.resolveS3Region());
 		final S3Client client = new S3Client(factory, props, global);
 
 		// set the client acl

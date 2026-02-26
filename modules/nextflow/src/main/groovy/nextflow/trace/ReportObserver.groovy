@@ -113,7 +113,7 @@ class ReportObserver implements TraceObserverV2 {
     @Override
     void onFlowCreate(Session session) {
         this.session = session
-        this.aggregator = new ResourcesAggregator(session)
+        this.aggregator = new ResourcesAggregator()
         // check if the process exists
         if( Files.exists(reportFile) && !overwrite )
             throw new AbortOperationException("Report file already exists: ${reportFile.toUriString()} -- enable the 'report.overwrite' option in your config file to overwrite existing files")
@@ -226,7 +226,7 @@ class ReportObserver implements TraceObserverV2 {
                 readTemplate('assets/bootstrap.min.js'),
                 readTemplate('assets/datatables.min.js'),
                 readTemplate('assets/moment.min.js'),
-                readTemplate('assets/plotly.min.js'),
+                readTemplate('assets/plotly-custom-3.1.2.min.js'),
                 readTemplate('assets/ReportTemplate.js')
             ]
         ]

@@ -33,7 +33,7 @@ dependencies {
     api project(':nextflow')
 
     testImplementation(testFixtures(project(":nextflow")))
-    testImplementation "org.apache.groovy:groovy:4.0.28"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.28"
+    testImplementation "org.apache.groovy:groovy:4.0.30"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.30"
 }
 

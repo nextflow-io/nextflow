@@ -9,7 +9,7 @@
 
 Nextflow has built-in support for Spack that allows the configuration of workflow dependencies using Spack recipes and environment files.
 
-This allows Nextflow applications to build packages from source on the compute infrastructure in use, whilst taking advantage of the configuration flexibility provided by Nextflow. At shared compute facilities where Spack has been configured by the administrators, this may result in optimized builds without user intervention. With appropriate options, this also permits end users to customize binary optimizations by themselves.
+This allows Nextflow applications to build packages from source on the compute infrastructure in use, while taking advantage of the configuration flexibility provided by Nextflow. At shared compute facilities where Spack has been configured by the administrators, this may result in optimized builds without user intervention. With appropriate options, this also permits end users to customize binary optimizations by themselves.
 
 ## Prerequisites
 
@@ -43,7 +43,7 @@ Alternatively, it can be specified by setting the variable `NXF_SPACK_ENABLED=tr
 
 ### Use Spack package names
 
-Spack package names can specified using the `spack` directive. Multiple package names can be specified by separating them with a blank space. For example:
+Spack package names can be specified using the `spack` directive. Multiple package names can be specified by separating them with a blank space. For example:
 
 ```nextflow
 process hello {
@@ -124,7 +124,7 @@ process hello {
 
 ### Building Spack packages for Nextflow pipelines
 
-Spack builds most software package from their source codes, and it does this for a request package and for all its required dependencies. As a result, Spack builds can last for long, even several hours. This can represent an inconvenience, in that it can significantly lengthen the duration of Nextflow processes. Here we briefly discuss two strategies to mitigate this aspect, and render the usage of Spack more effective.
+Spack builds most software packages from their source codes, and it does this for a requested package and for all its required dependencies. As a result, Spack builds can last for long, even several hours. This can represent an inconvenience, in that it can significantly lengthen the duration of Nextflow processes. Here we briefly discuss two strategies to mitigate this aspect, and render the usage of Spack more effective.
 
 1. Use a Spack yaml file, and pre-build the environment outside of Nextflow, prior to running the pipeline.
    Building packages outside of the Nextflow pipeline will work since Spack always installs packages in its own directories,

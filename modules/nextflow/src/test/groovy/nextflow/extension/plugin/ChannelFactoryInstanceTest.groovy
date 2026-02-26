@@ -28,7 +28,8 @@ import nextflow.extension.CH
 import nextflow.plugin.extension.PluginExtensionPoint
 import nextflow.plugin.extension.PluginExtensionProvider
 import spock.lang.Specification
-import test.MockScriptRunner
+
+import static test.ScriptHelper.*
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -91,12 +92,11 @@ class ChannelFactoryInstanceTest extends Specification {
                 .loadPluginExtensionMethods("nf-foo",ext1, ['alpha':'alpha'])
         and:
         def SCRIPT = '''
-        Channel.alpha(['one','two','three'])
+        channel.alpha(['one','two','three'])
         '''
 
         when:
-        def runner = new MockScriptRunner()
-        def result = runner.setScript(SCRIPT).execute()
+        def result = runScript(SCRIPT)
         then:
         result.val == 'one'
         result.val == 'two'
@@ -125,8 +125,7 @@ class ChannelFactoryInstanceTest extends Specification {
         '''
 
         when:
-        def runner = new MockScriptRunner()
-        def result = runner.setScript(SCRIPT).execute()
+        def result = runScript(SCRIPT)
         then:
         result.val == 'one'
         result.val == 'two'
@@ -145,7 +144,6 @@ class ChannelFactoryInstanceTest extends Specification {
 
     def 'should invoke multiple extensions' () {
         given:
-        NextflowMeta.instance.enableDsl2()
         Global.session = Mock(Session)
         and:
         def ext1 = new Ext1(); def ext2 = new Ext2()
@@ -155,28 +153,25 @@ class ChannelFactoryInstanceTest extends Specification {
                 .loadPluginExtensionMethods("nf-foo",ext2, ['omega':'omega'])
         and:
         def SCRIPT = '''
-            def ch1 = channel.alpha([1,2,3])
-            def ch2 = channel.omega(['X','Y','Z'])
-            
             process sayHello {
               input:
                 val x
                 val y
-              output: 
+              output:
                 val z
               exec:
                 z = "$x $y"
             }
-            
+
             workflow {
-              main: sayHello(ch1, ch2)
-              emit: sayHello.out.toSortedList()
+                def ch1 = channel.alpha([1,2,3])
+                def ch2 = channel.omega(['X','Y','Z'])
+                sayHello(ch1, ch2).toSortedList()
             }
             '''
 
         when:
-        def runner = new MockScriptRunner()
-        def result = runner.setScript(SCRIPT).execute()
+        def result = runScript(SCRIPT)
         then:
         result.val == ['1 X', '2 Y', '3 Z']
 
@@ -189,7 +184,6 @@ class ChannelFactoryInstanceTest extends Specification {
 
         cleanup:
         PluginExtensionProvider.reset()
-        NextflowMeta.instance.disableDsl2()
     }
 
     def 'should invoke operator extension' () {
@@ -206,8 +200,7 @@ class ChannelFactoryInstanceTest extends Specification {
             '''
 
         when:
-        def runner = new MockScriptRunner()
-        def result = runner.setScript(SCRIPT).execute()
+        def result = runScript(SCRIPT)
         then:
         result.val == 2
         result.val == 3

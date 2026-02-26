@@ -217,7 +217,7 @@ class ApptainerBuilderTest extends Specification {
         when:
         cmd = new ApptainerBuilder('ubuntu.img').params(entry:'/bin/sh').build().getRunCommand('bwa --this --that file.fastq')
         then:
-        cmd == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer exec --no-home --pid -B "$NXF_TASK_WORKDIR" ubuntu.img /bin/sh -c "cd $NXF_TASK_WORKDIR; bwa --this --that file.fastq"'
+        cmd == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer exec --no-home --pid -B "$NXF_TASK_WORKDIR" ubuntu.img /bin/sh -c "cd \\"$NXF_TASK_WORKDIR\\"; bwa --this --that file.fastq"'
     }
 
     @Unroll

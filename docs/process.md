@@ -483,6 +483,8 @@ path x, name: 'my-dir/file.txt'
 In this case, `x.name` returns the file name with the parent directory (e.g. `my-dir/file.txt`), whereas normally it would return the file name (e.g. `file.txt`). You can use `x.fileName.name` to get the file name.
 :::
 
+(process-multiple-input-files)=
+
 ### Multiple input files
 
 A `path` input can also accept a collection of files instead of a single value. In this case, the input variable will be a list.
@@ -514,7 +516,7 @@ seq1 seq2 seq3
 ...
 ```
 
-The target input file name may contain the `*` and `?` wildcards, which can be used to control the name of staged files. The following table shows how the wildcards are replaced depending on the cardinality of the received input collection.
+The target input file name may contain the {index}`*` and {index}`?` wildcards, which can be used to control the name of staged files. The following table shows how the {index}`wildcards` are replaced depending on the cardinality of the received input collection.
 
 | Arity       | Name pattern | Staged file names                                                                                       |
 | ----------- | ------------ | ------------------------------------------------------------------------------------------------------- |
@@ -678,6 +680,8 @@ In the above example, the `tuple` input consists of the value `x` and the file `
 
 A `tuple` definition may contain any of the following qualifiers, as previously described: `val`, `env`, `path` and `stdin`. Files specified with the `path` qualifier are treated exactly the same as standalone `path` inputs.
 
+(process-input-each)=
+
 ### Input repeaters (`each`)
 
 The `each` qualifier allows you to repeat the execution of a process for each item in a collection, each time a new value is received. For example:
@@ -735,7 +739,7 @@ When multiple repeaters are defined, the process is executed for each *combinati
 :::
 
 :::{note}
-Input repeaters do not support tuples. Use the {ref}`operator-combine` or {ref}`operator-cross` operator to combine the repeated input with the other inputs to produce all of the desired input combinations.
+Input repeaters do not support tuples. Use the {ref}`operator-combine` operator to combine the repeated input with the other inputs to produce all of the desired input combinations.
 :::
 
 (process-multiple-inputs)=
@@ -1198,6 +1202,8 @@ Software dependencies:
 - {ref}`process-conda`: list of conda packages to provision for tasks
 - {ref}`process-container`: container image to use for tasks
 
+(task-directive-values)=
+
 ### Using task directive values
 
 The `task` object also contains the values of all process directives for the given task, which allows you to access these settings at runtime. For examples:
@@ -1336,11 +1342,15 @@ process hello {
 }
 ```
 
-In the above example, the {ref}`process-memory` is set according to previous trace record metrics. In the first attempt, when no trace metrics are available, it is set to 1 GB. In each subsequent attempt, the requested memory is doubled. See {ref}`trace-report` for more information about trace records.
+In the above example, the {ref}`process-memory` is set according to previous trace record metrics. In the first attempt, when no trace metrics are available, it is set to 1 GB. In each subsequent attempt, the requested memory is doubled. 
+
+:::{note}
+Many fields from the previous task attempts are accessible. See {ref}`trace-report` for a list of available fields.
+:::
 
 ### Dynamic retry with backoff
 
-There are cases in which the required execution resources may be temporary unavailable e.g. network congestion. In these cases immediately re-executing the task will likely result in the identical error. A retry with an exponential backoff delay can better recover these error conditions:
+There are cases in which the required execution resources may be temporarily unavailable e.g. network congestion. In these cases immediately re-executing the task will likely result in the identical error. A retry with an exponential backoff delay can better recover these error conditions:
 
 ```nextflow
 process hello {

@@ -19,12 +19,13 @@ plugins {
 }
 
 nextflowPlugin {
-    nextflowVersion = '25.09.2-edge'
+    nextflowVersion = '25.12.0-edge'
 
     provider = "${nextflowPluginProvider}"
     description = 'Provides native Kubernetes execution capability with advanced pod management, volume mounting, and resource allocation features'
     className = 'nextflow.k8s.K8sPlugin'
     useDefaultDependencies = false
+    generateSpec = false
     extensionPoints = [
         'nextflow.k8s.K8sConfig',
         'nextflow.k8s.K8sExecutor',
@@ -52,11 +53,11 @@ dependencies {
     compileOnly 'org.pf4j:pf4j:3.12.0'
 
     api 'org.bouncycastle:bcprov-ext-jdk18on:1.78.1'
-    api 'org.bouncycastle:bcpkix-jdk18on:1.78.1'
+    api 'org.bouncycastle:bcpkix-jdk18on:1.79'
 
     testImplementation(testFixtures(project(":nextflow")))
-    testImplementation "org.apache.groovy:groovy:4.0.28"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.28"
+    testImplementation "org.apache.groovy:groovy:4.0.30"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.30"
 }
 
 test {
