@@ -38,6 +38,24 @@ After installing IntelliJ IDEA, use the following steps to use it with Nextflow:
 
 New files must include the appropriate license header boilerplate and the author name(s) and contact email(s) ([see for example](https://github.com/nextflow-io/nextflow/blob/e8945e8b6fc355d3f2eec793d8f288515db2f409/modules/nextflow/src/main/groovy/nextflow/Const.groovy#L1-L15)).
 
+## Dev Containers
+
+For a reproducible setup with minimal local dependencies, this repository includes a Development Container configuration in `.devcontainer/devcontainer.json`.
+
+It includes:
+
+- Java 21 (matching the configured Gradle toolchain)
+- Docker access for container-related development and tests
+- A persistent Gradle cache volume to speed up rebuilds
+
+To use it in VS Code:
+
+1. Install the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers).
+2. Open the Nextflow repository in VS Code.
+3. Run **Dev Containers: Reopen in Container**.
+
+On first start, `.devcontainer/post-create.sh` runs to initialize Gradle dependencies and compile the project.
+
 ## Groovy
 
 Nextflow is written in [Groovy](http://groovy-lang.org/), which is itself a programming language based on [Java](https://www.java.com/). Groovy is designed to be highly interoperable with Java -- Groovy programs compile to Java bytecode, and nearly any Java program is also a valid Groovy program. However, Groovy adds several language features (e.g. closures, list and map literals, optional typing, optional semicolons, meta-programming) and standard libraries (e.g. JSON and XML parsing) that greatly improve the overall experience of developing for the Java virtual machine.

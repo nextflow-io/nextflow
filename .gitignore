@@ -7,6 +7,9 @@
 .nextflow*
 .node-nextflow*
 .devcontainer
+!.devcontainer/
+!.devcontainer/devcontainer.json
+!.devcontainer/post-create.sh
 .vscode/*
 .lineage/
 */*/bin/*

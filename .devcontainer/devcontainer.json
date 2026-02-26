@@ -1,0 +1,28 @@
+{
+  "name": "Nextflow Dev",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+  "features": {
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "21"
+    },
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "nextflow.nextflow",
+        "vscjava.vscode-java-pack",
+        "EditorConfig.EditorConfig"
+      ]
+    }
+  },
+  "remoteUser": "vscode",
+  "mounts": [
+    "source=nextflow-gradle-cache,target=/home/vscode/.gradle,type=volume"
+  ],
+  "postCreateCommand": ".devcontainer/post-create.sh",
+  "updateContentCommand": "./gradlew --no-daemon help",
+  "containerEnv": {
+    "GRADLE_USER_HOME": "/home/vscode/.gradle"
+  }
+}

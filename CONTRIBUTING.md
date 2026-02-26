@@ -44,4 +44,6 @@ Signed-off-by: Random J Developer <random@developer.example.org>
 
 The process is automatically managed by the [Probot](https://probot.github.io/apps/dco/) app for GitHub.
 
+If you prefer a reproducible local setup with minimal host dependencies, use the repository dev container in `.devcontainer/devcontainer.json` and open the project with VS Code's **Dev Containers: Reopen in Container** command.
+
 For more information about working on the Nextflow source code, visit the [Nextflow docs](https://nextflow.io/docs/latest/developer/).
