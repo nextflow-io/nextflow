@@ -30,6 +30,7 @@ import nextflow.cloud.types.PriceModel
 import nextflow.container.DockerConfig
 import nextflow.container.resolver.ContainerMeta
 import nextflow.exception.AbortOperationException
+import nextflow.exception.AbortRunException
 import nextflow.script.ScriptBinding
 import nextflow.script.WorkflowMetadata
 import nextflow.trace.TraceRecord
@@ -603,4 +604,51 @@ class TowerClientTest extends Specification {
         req.tasks[0].acceleratorType == 'v100'
     }
 
+    def 'should detect abort on error'(){
+        given:
+        def client = new TowerClient().withEnvironment(ENV)
+
+        expect:
+        client.abortOnError == ABORT_ON_ERROR
+
+        where:
+        ENV                                 | ABORT_ON_ERROR
+        [:]                                 | true
+        ['TOWER_ABORT_ON_ERROR': 'true']    | true
+        ['TOWER_ABORT_ON_ERROR': 'false']   | false
+        ['TOWER_ABORT_ON_ERROR': '']        | true
+    }
+
+    def 'should throw abort session when abort on error is true'(){
+        given:
+        def session = Mock(Session)
+        def client = Spy(new TowerClient(session, new TowerConfig([:], [:])).withEnvironment(['TOWER_ABORT_ON_ERROR': 'true'])){
+            newHttpClient() >> Mock(HxClient)
+            makeCreateReq(_) >> [:]
+            makeBeginReq(_) >> [:]
+            makeCompleteReq(_) >> [:]
+            sendHttpMessage(_,_,_) >> new TowerClient.Response(401)
+        }
+
+        when:
+        client.logHttpResponse("endpoint", new TowerClient.Response(401))
+        then:
+        thrown(AbortRunException)
+
+        when:
+        client.parseTowerResponse( new TowerClient.Response(401))
+        then:
+        thrown(AbortRunException)
+
+        when:
+        client.onFlowCreate(session)
+        then:
+        thrown(AbortRunException)
+
+        when:
+        client.onFlowBegin()
+        then:
+        thrown(AbortRunException)
+
+    }
 }

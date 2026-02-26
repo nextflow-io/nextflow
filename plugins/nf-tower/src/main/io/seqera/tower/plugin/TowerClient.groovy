@@ -39,6 +39,7 @@ import nextflow.BuildInfo
 import nextflow.Session
 import nextflow.container.resolver.ContainerMeta
 import nextflow.exception.AbortOperationException
+import nextflow.exception.AbortRunException
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskId
 import nextflow.processor.TaskProcessor
@@ -142,6 +143,8 @@ class TowerClient implements TraceObserverV2 {
 
     private Map<String,Boolean> allContainers = new ConcurrentHashMap<>()
 
+    private boolean abortOnError = true
+
     TowerClient(Session session, TowerConfig config) {
         this.session = session
         this.endpoint = checkUrl(config.endpoint)
@@ -151,11 +154,23 @@ class TowerClient implements TraceObserverV2 {
         this.schema = loadSchema()
         this.generator = TowerJsonGenerator.create(schema)
         this.reports = new TowerReports(session)
+        setAbortOnError(this.env)
     }
 
     TowerClient withEnvironment(Map env) {
         this.env = env
+        setAbortOnError(env)
         return this
+    }
+
+    protected void setAbortOnError(Map env){
+        if( !env ) {
+            return
+        }
+        final abort = env.get("TOWER_ABORT_ON_ERROR") as String
+        if( abort ){
+            this.abortOnError = Boolean.parseBoolean(abort)
+        }
     }
 
     @TestOnly
@@ -268,7 +283,7 @@ class TowerClient implements TraceObserverV2 {
      */
     @Override
     void onFlowCreate(Session session) {
-        log.debug "Creating Seqera Platform observer -- endpoint=$endpoint; requestInterval=$requestInterval; aliveInterval=$aliveInterval; maxRetries=$maxRetries; backOffBase=$backOffBase; backOffDelay=$backOffDelay"
+        log.debug "Creating Seqera Platform observer -- endpoint=$endpoint; requestInterval=$requestInterval; aliveInterval=$aliveInterval; maxRetries=$maxRetries; backOffBase=$backOffBase; backOffDelay=$backOffDelay; abortOnError=$abortOnError"
 
         this.session = session
         this.aggregator = new ResourcesAggregator()
@@ -286,12 +301,19 @@ class TowerClient implements TraceObserverV2 {
                 - status code : $resp.code
                 - response msg: $resp.cause
                 """.stripIndent(true)
+            if( abortOnError ) {
+                throw new AbortRunException(resp.message)
+            }
             throw new AbortOperationException(resp.message)
         }
         final ret = parseTowerResponse(resp)
         this.workflowId = ret.workflowId
-        if( !workflowId )
+        if( !workflowId ) {
+            if( abortOnError ) {
+                throw new AbortRunException("Invalid Seqera Platform API response - Missing workflow Id")
+            }
             throw new AbortOperationException("Invalid Seqera Platform API response - Missing workflow Id")
+        }
         if( ret.message )
             log.warn(ret.message.toString())
 
@@ -378,7 +400,11 @@ class TowerClient implements TraceObserverV2 {
                 - status code : $resp.code
                 - response msg: $resp.cause
                 """.stripIndent(true)
-            throw new AbortOperationException(resp.message)
+            if( abortOnError ) {
+                throw new AbortRunException(resp.message)
+            } else {
+                throw new AbortOperationException(resp.message)
+            }
         }
 
         final payload = parseTowerResponse(resp)
@@ -727,6 +753,9 @@ class TowerClient implements TraceObserverV2 {
                 """.stripIndent(true)
             // append separately otherwise formatting get broken
             msg += "- error cause : ${cause ?: '-'}"
+            if( abortOnError ) {
+                throw new AbortRunException(msg)
+            }
             log.warn(msg)
         }
     }
@@ -746,7 +775,11 @@ class TowerClient implements TraceObserverV2 {
                 """.stripIndent(true)
         // append separately otherwise formatting get broken
         msg += "- error cause : ${cause ?: '-'}"
-        throw new Exception(msg)
+        if( abortOnError ) {
+            throw new AbortRunException(msg)
+        } else {
+            throw new Exception(msg)
+        }
     }
 
     protected String parseCause(String cause) {
@@ -787,46 +820,56 @@ class TowerClient implements TraceObserverV2 {
     }
 
     protected void sendTasks0(dummy) {
-        final tasks = new HashMap<TaskId, TraceRecord>(TASKS_PER_REQUEST)
-        boolean complete = false
-        long previous = System.currentTimeMillis()
-        final long period = requestInterval.millis
-        final long delay = period / 10 as long
+        try {
+            final tasks = new HashMap<TaskId, TraceRecord>(TASKS_PER_REQUEST)
+            boolean complete = false
+            long previous = System.currentTimeMillis()
+            final long period = requestInterval.millis
+            final long delay = period / 10 as long
 
-        while( !complete ) {
-            final ProcessEvent ev = events.poll(delay, TimeUnit.MILLISECONDS)
-            // reconcile task events ie. send out only the last event
-            if( ev ) {
-                log.trace "Tower event=$ev"
-                if( ev.trace )
-                    tasks[ev.trace.taskId] = ev.trace
-                if( ev.completed )
-                    complete = true
-            }
-
-            // check if there's something to send
-            final now = System.currentTimeMillis()
-            final delta = now -previous
-
-            if( !tasks ) {
-                if( delta > aliveInterval.millis ) {
-                    final req = makeHeartbeatReq()
-                    final resp = sendHttpMessage(urlTraceHeartbeat, req, 'PUT')
-                    logHttpResponse(urlTraceHeartbeat, resp)
-                    previous = now
+            while( !complete ) {
+                final ProcessEvent ev = events.poll(delay, TimeUnit.MILLISECONDS)
+                // reconcile task events ie. send out only the last event
+                if( ev ) {
+                    log.trace "Tower event=$ev"
+                    if( ev.trace )
+                        tasks[ev.trace.taskId] = ev.trace
+                    if( ev.completed )
+                        complete = true
                 }
-                continue
+
+                // check if there's something to send
+                final now = System.currentTimeMillis()
+                final delta = now - previous
+
+                if( !tasks ) {
+                    if( delta > aliveInterval.millis ) {
+                        final req = makeHeartbeatReq()
+                        final resp = sendHttpMessage(urlTraceHeartbeat, req, 'PUT')
+                        logHttpResponse(urlTraceHeartbeat, resp)
+                        previous = now
+                    }
+                    continue
+                }
+
+                if( delta > period || tasks.size() >= TASKS_PER_REQUEST || complete ) {
+                    // send
+                    final req = makeTasksReq(tasks.values())
+                    final resp = sendHttpMessage(urlTraceProgress, req, 'PUT')
+                    logHttpResponse(urlTraceProgress, resp)
+
+                    // clean up for next iteration
+                    previous = now
+                    tasks.clear()
+                }
             }
-
-            if( delta > period || tasks.size() >= TASKS_PER_REQUEST || complete ) {
-                // send
-                final req = makeTasksReq(tasks.values())
-                final resp = sendHttpMessage(urlTraceProgress, req, 'PUT')
-                logHttpResponse(urlTraceProgress, resp)
-
-                // clean up for next iteration
-                previous = now
-                tasks.clear()
+        } catch( Exception e ) {
+            this.sender = null
+            if( abortOnError ) {
+                log.error("Aborting session due to Seqera Platform telemetry exception - $e.message", e)
+                session.abort(e)
+            } else {
+                log.warn("Exception in Seqera Platform telemetry - $e.message")
             }
         }
     }
