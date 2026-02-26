@@ -17,6 +17,8 @@
 
 package io.seqera.tower.plugin
 
+import nextflow.util.Duration
+
 import java.net.http.HttpResponse
 import java.nio.file.Files
 import java.time.Instant
@@ -601,6 +603,36 @@ class TowerClientTest extends Specification {
         req.tasks.size() == 1
         req.tasks[0].accelerator == 2
         req.tasks[0].acceleratorType == 'v100'
+    }
+
+    def 'should detect consistent failure'(){
+        def client = new TowerClient()
+        client.setFailuresThreshold(10)
+        client.setAliveInterval(new Duration('1s'))
+        client.@lastSuccess = System.currentTimeMillis()
+
+        expect: 'no failures no time'
+        client.hasConsistentFailures() == false
+
+        when: 'not enough failures'
+        for (int i = 0 ; i < 5; i++) client.logHttpResponse("url", new TowerClient.Response(401))
+        client.@lastSuccess = System.currentTimeMillis() - 15000
+        then:
+        client.hasConsistentFailures() == false
+
+        when: 'enough failures no time'
+        for (int i = 0 ; i < 15; i++) client.logHttpResponse("url", new TowerClient.Response(401))
+        client.@lastSuccess = System.currentTimeMillis() - 5000
+        then:
+        client.hasConsistentFailures() == false
+
+        when: 'enough failures and time'
+        for (int i = 0 ; i < 15; i++) client.logHttpResponse("url", new TowerClient.Response(401))
+        client.@lastSuccess = System.currentTimeMillis() - 15000
+        then:
+        client.hasConsistentFailures() == true
+
+
     }
 
 }
