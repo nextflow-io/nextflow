@@ -73,25 +73,26 @@ class AzBashLib extends BashFunLib<AzBashLib> {
               azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
             fi
         }
-        
+
         nxf_az_download() {
             local source=$1
             local target=$2
             local basedir=$(dirname $2)
-            local ret
             mkdir -p "$basedir"
-        
-            ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
-                ## if fails check if it was trying to download a directory
-                mkdir -p $target
-                azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
-                    rm -rf $target
+
+            # Try to download as file first, let azcopy handle the detection
+            if ! azcopy cp "$source?$AZ_SAS" "$target"; then
+                # If failed, remove any partial target and try as directory
+                rm -rf "$target"
+                mkdir -p "$target"
+                if ! azcopy cp "$source/*?$AZ_SAS" "$target" --recursive; then
+                    rm -rf "$target"
                     >&2 echo "Unable to download path: $source"
                     exit 1
-                }
-            }
+                fi
+            fi
         }
-        '''.stripIndent(true)
+        '''.stripIndent()
     }
 
     String render() {
