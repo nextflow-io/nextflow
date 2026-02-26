@@ -20,6 +20,7 @@ import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.attribute.BasicFileAttributes
 
+import com.github.tomakehurst.wiremock.WireMockServer
 import spock.lang.TempDir
 import spock.lang.Unroll
 
@@ -112,6 +113,69 @@ class DatasetIntegrationTest extends DatasetWireMockSpec {
         operation         | fileContent         | operationFn                                                                                                                            | assertFn
         'newInputStream'  | 'col1,col2\na,b\n' | { DatasetFileSystemProvider providerRef, dsPath -> providerRef.newInputStream(dsPath).text }                                          | { value -> value == 'col1,col2\na,b\n' }
         'readAttributes'  | 'hello'             | { DatasetFileSystemProvider providerRef, dsPath -> providerRef.readAttributes(dsPath, BasicFileAttributes, new LinkOption[0]) }      | { attrs -> attrs.size() == 5 && !attrs.isDirectory() && attrs.isRegularFile() }
+    }
+
+    def 'should forward bearer auth when reading platform dataset download URLs'() {
+        given:
+        mockSession(workspaceId: '100')
+        stubDatasets([[id: '7', name: 'secure-ds']], '100')
+
+        and:
+        def downloadPath = '/workspaces/100/datasets/7/v/1/n/data.csv'
+        def downloadUrl = "http://localhost:${wireMock.port()}${downloadPath}"
+        stubDatasetVersions('7', [[version: 1, url: downloadUrl, fileName: 'data.csv']], '100')
+        wireMock.stubFor(get(urlPathEqualTo(downloadPath))
+            .withHeader('Authorization', equalTo('Bearer test-token'))
+            .willReturn(ok('secure,data\na,b\n')))
+
+        and:
+        def provider = new DatasetFileSystemProvider()
+        def path = provider.getPath(new URI('dataset://secure-ds'))
+
+        when:
+        def content = provider.newInputStream(path).text
+
+        then:
+        content == 'secure,data\na,b\n'
+
+        and:
+        wireMock.verify(1, getRequestedFor(urlPathEqualTo(downloadPath))
+            .withHeader('Authorization', equalTo('Bearer test-token')))
+    }
+
+    def 'should not forward bearer auth to non-platform hosts'() {
+        given:
+        def externalHost = new WireMockServer(0)
+        externalHost.start()
+
+        and:
+        mockSession(workspaceId: '100')
+        stubDatasets([[id: '7', name: 'external-ds']], '100')
+
+        and:
+        def downloadPath = '/workspaces/100/datasets/7/v/1/n/data.csv'
+        def downloadUrl = "http://localhost:${externalHost.port()}${downloadPath}"
+        stubDatasetVersions('7', [[version: 1, url: downloadUrl, fileName: 'data.csv']], '100')
+        externalHost.stubFor(get(urlPathEqualTo(downloadPath))
+            .withHeader('Authorization', matching('.+'))
+            .atPriority(1)
+            .willReturn(unauthorized()))
+        externalHost.stubFor(get(urlPathEqualTo(downloadPath))
+            .atPriority(10)
+            .willReturn(ok('public,data\nx,y\n')))
+
+        and:
+        def provider = new DatasetFileSystemProvider()
+        def path = provider.getPath(new URI('dataset://external-ds'))
+
+        when:
+        def content = provider.newInputStream(path).text
+
+        then:
+        content == 'public,data\nx,y\n'
+
+        cleanup:
+        externalHost.stop()
     }
 
     def 'should cache resolved path across multiple reads'() {

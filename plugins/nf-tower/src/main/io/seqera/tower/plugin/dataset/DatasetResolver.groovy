@@ -44,6 +44,14 @@ import nextflow.platform.PlatformHelper
 @CompileStatic
 class DatasetResolver {
 
+    static String towerEndpoint() {
+        return getEndpoint()
+    }
+
+    static String towerAccessToken() {
+        return getAccessToken()
+    }
+
     /**
      * Resolve a dataset name (and optional version) to the backing cloud storage Path.
      *

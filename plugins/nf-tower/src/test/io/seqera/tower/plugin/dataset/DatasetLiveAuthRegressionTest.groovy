@@ -18,7 +18,6 @@ package io.seqera.tower.plugin.dataset
 
 import nextflow.Global
 import nextflow.Session
-import spock.lang.PendingFeature
 import spock.lang.Requires
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -38,7 +37,6 @@ class DatasetLiveAuthRegressionTest extends Specification {
         Global.session = null
     }
 
-    @PendingFeature(reason = 'Dataset provider does not yet forward Tower bearer auth to resolved HTTP dataset URLs')
     @Unroll
     def 'should read live dataset via provider using bearer auth - #datasetName'() {
         given:

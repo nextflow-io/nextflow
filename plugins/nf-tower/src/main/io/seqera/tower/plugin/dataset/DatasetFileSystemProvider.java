@@ -19,6 +19,7 @@ package io.seqera.tower.plugin.dataset;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.net.URLConnection;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.AccessMode;
 import java.nio.file.CopyOption;
@@ -36,6 +37,10 @@ import java.nio.file.attribute.FileAttributeView;
 import java.nio.file.spi.FileSystemProvider;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
+
+import nextflow.file.http.XAuthProvider;
+import nextflow.file.http.XAuthRegistry;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,6 +60,7 @@ import org.slf4j.LoggerFactory;
 public class DatasetFileSystemProvider extends FileSystemProvider {
 
     private static final Logger log = LoggerFactory.getLogger(DatasetFileSystemProvider.class);
+    private static final Pattern PLATFORM_DATASET_PATH = Pattern.compile(".*?/workspaces/[^/]+/datasets/[^/]+/v/[^/]+/n/.+");
 
     private volatile DatasetFileSystem fileSystem;
 
@@ -99,13 +105,13 @@ public class DatasetFileSystemProvider extends FileSystemProvider {
     public InputStream newInputStream(Path path, OpenOption... options) throws IOException {
         final Path resolved = resolvedPath(path);
         log.debug("newInputStream for dataset path {} -> {}", path, resolved);
-        return resolved.getFileSystem().provider().newInputStream(resolved, options);
+        return withPlatformDatasetAuth(resolved, () -> resolved.getFileSystem().provider().newInputStream(resolved, options));
     }
 
     @Override
     public SeekableByteChannel newByteChannel(Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs) throws IOException {
         final Path resolved = resolvedPath(path);
-        return resolved.getFileSystem().provider().newByteChannel(resolved, options, attrs);
+        return withPlatformDatasetAuth(resolved, () -> resolved.getFileSystem().provider().newByteChannel(resolved, options, attrs));
     }
 
     @Override
@@ -117,20 +123,20 @@ public class DatasetFileSystemProvider extends FileSystemProvider {
     @SuppressWarnings("unchecked")
     public <A extends BasicFileAttributes> A readAttributes(Path path, Class<A> type, LinkOption... options) throws IOException {
         final Path resolved = resolvedPath(path);
-        return resolved.getFileSystem().provider().readAttributes(resolved, type, options);
+        return withPlatformDatasetAuth(resolved, () -> resolved.getFileSystem().provider().readAttributes(resolved, type, options));
     }
 
     @Override
     public Map<String, Object> readAttributes(Path path, String attributes, LinkOption... options) throws IOException {
         final Path resolved = resolvedPath(path);
-        return resolved.getFileSystem().provider().readAttributes(resolved, attributes, options);
+        return withPlatformDatasetAuth(resolved, () -> resolved.getFileSystem().provider().readAttributes(resolved, attributes, options));
     }
 
     @Override
     public <V extends FileAttributeView> V getFileAttributeView(Path path, Class<V> type, LinkOption... options) {
         try {
             final Path resolved = resolvedPath(path);
-            return resolved.getFileSystem().provider().getFileAttributeView(resolved, type, options);
+            return withPlatformDatasetAuth(resolved, () -> resolved.getFileSystem().provider().getFileAttributeView(resolved, type, options));
         }
         catch (IOException e) {
             throw new RuntimeException("Failed to resolve dataset path: " + path, e);
@@ -145,7 +151,10 @@ public class DatasetFileSystemProvider extends FileSystemProvider {
             }
         }
         final Path resolved = resolvedPath(path);
-        resolved.getFileSystem().provider().checkAccess(resolved, modes);
+        withPlatformDatasetAuth(resolved, () -> {
+            resolved.getFileSystem().provider().checkAccess(resolved, modes);
+            return null;
+        });
     }
 
     // -- write operations: read-only in phase 1 --
@@ -206,6 +215,86 @@ public class DatasetFileSystemProvider extends FileSystemProvider {
         return fileSystem;
     }
 
+    private <T> T withPlatformDatasetAuth(Path resolved, IoCallable<T> action) throws IOException {
+        final XAuthProvider authProvider = authProviderFor(resolved);
+        if (authProvider == null) {
+            return action.call();
+        }
+
+        final XAuthRegistry registry = XAuthRegistry.getInstance();
+        registry.register(authProvider);
+        try {
+            return action.call();
+        }
+        finally {
+            registry.unregister(authProvider);
+        }
+    }
+
+    private XAuthProvider authProviderFor(Path resolved) {
+        final URI targetUri = resolved.toUri();
+        if (targetUri == null || !isHttpScheme(targetUri.getScheme())) {
+            return null;
+        }
+        if (!isPlatformDatasetDownloadPath(targetUri.getPath())) {
+            return null;
+        }
+
+        final String endpoint = DatasetResolver.towerEndpoint();
+        final String accessToken = DatasetResolver.towerAccessToken();
+        if (isBlank(endpoint) || isBlank(accessToken)) {
+            return null;
+        }
+
+        final URI endpointUri = URI.create(endpoint);
+        if (!isHttpScheme(endpointUri.getScheme()) || !isSameOrigin(endpointUri, targetUri)) {
+            return null;
+        }
+
+        return new DatasetBearerAuthProvider(endpointUri, accessToken);
+    }
+
+    private boolean isHttpScheme(String scheme) {
+        return "http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme);
+    }
+
+    private boolean isPlatformDatasetDownloadPath(String path) {
+        return path != null && PLATFORM_DATASET_PATH.matcher(path).matches();
+    }
+
+    private static boolean isSameOrigin(URI left, URI right) {
+        if (left.getScheme() == null || right.getScheme() == null) {
+            return false;
+        }
+        if (!left.getScheme().equalsIgnoreCase(right.getScheme())) {
+            return false;
+        }
+        if (left.getHost() == null || right.getHost() == null) {
+            return false;
+        }
+        if (!left.getHost().equalsIgnoreCase(right.getHost())) {
+            return false;
+        }
+        return defaultPort(left) == defaultPort(right);
+    }
+
+    private static int defaultPort(URI uri) {
+        if (uri.getPort() != -1) {
+            return uri.getPort();
+        }
+        if ("https".equalsIgnoreCase(uri.getScheme())) {
+            return 443;
+        }
+        if ("http".equalsIgnoreCase(uri.getScheme())) {
+            return 80;
+        }
+        return -1;
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
+    }
+
     /**
      * Resolve a dataset path to its backing cloud storage path.
      * Caches the resolved path on the DatasetPath instance.
@@ -215,5 +304,42 @@ public class DatasetFileSystemProvider extends FileSystemProvider {
             throw new IllegalArgumentException("Path must be a DatasetPath: " + path);
         }
         return ((DatasetPath) path).getResolvedPath();
+    }
+
+    @FunctionalInterface
+    private interface IoCallable<T> {
+        T call() throws IOException;
+    }
+
+    private static final class DatasetBearerAuthProvider implements XAuthProvider {
+        private final URI endpoint;
+        private final String accessToken;
+
+        private DatasetBearerAuthProvider(URI endpoint, String accessToken) {
+            this.endpoint = endpoint;
+            this.accessToken = accessToken;
+        }
+
+        @Override
+        public boolean authorize(URLConnection connection) {
+            final URI target = URI.create(connection.getURL().toString());
+            if (!isSameOrigin(endpoint, target)) {
+                return false;
+            }
+            if (!PLATFORM_DATASET_PATH.matcher(target.getPath()).matches()) {
+                return false;
+            }
+            if (connection.getRequestProperty("Authorization") != null) {
+                return false;
+            }
+
+            connection.setRequestProperty("Authorization", "Bearer " + accessToken);
+            return true;
+        }
+
+        @Override
+        public boolean refreshToken(URLConnection connection) {
+            return false;
+        }
     }
 }
