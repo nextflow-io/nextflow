@@ -27,7 +27,6 @@ import nextflow.exception.ScriptRuntimeException
 import nextflow.processor.PublishDir
 import nextflow.trace.event.FilePublishEvent
 import nextflow.trace.event.WorkflowOutputEvent
-import nextflow.trace.event.WorkflowPublishEvent
 import nextflow.util.CsvWriter
 /**
  * Publish a workflow output.
@@ -136,7 +135,6 @@ class PublishOp {
 
         log.trace "Published value to workflow output '${name}': ${normalizedValue}"
         publishedValues << normalizedValue
-        session.notifyWorkflowPublish(new WorkflowPublishEvent(name, normalizedValue))
     }
 
     /**

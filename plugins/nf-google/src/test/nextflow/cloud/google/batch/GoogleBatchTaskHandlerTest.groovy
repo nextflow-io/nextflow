@@ -39,6 +39,7 @@ import nextflow.Session
 import nextflow.SysEnv
 import nextflow.cloud.google.batch.client.BatchClient
 import nextflow.cloud.google.batch.client.BatchConfig
+import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
 import nextflow.executor.Executor
 import nextflow.executor.ExecutorConfig
@@ -423,7 +424,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         when:
         def trace = handler.getTraceRecord()
         then:
-        1 * handler.isCompleted() >> true
+        2 * handler.isCompleted() >> true
         1 * client.getTaskStatus('xyz-123', '0') >> taskStatus
         and:
         trace.native_id == 'xyz-123/0/789'
@@ -918,6 +919,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def result = handler.getNumSpotInterruptions('job-123')
 
         then:
+        handler.isCompleted() >> true
         result == 0
     }
 
@@ -949,6 +951,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def result = handler.getNumSpotInterruptions('job-123')
 
         then:
+        handler.isCompleted() >> true
         result == 2
     }
 
@@ -962,6 +965,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def resultIncompleteTask = handler.getNumSpotInterruptions('job-123')
 
         then:
+        handler.isCompleted() >> false
         resultNullJobId == null
         resultIncompleteTask == null
     }
@@ -978,6 +982,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def result = handler.getNumSpotInterruptions('job-123')
 
         then:
+        handler.isCompleted() >> true
         result == null
     }
 
@@ -1107,6 +1112,116 @@ class GoogleBatchTaskHandlerTest extends Specification {
         result.getContainer().getOptions() == '--foo'
         result.getContainer().getVolumesList() == ['/mnt:/mnt:rw']
         result.getEnvironment().getVariablesMap() == [VAR1: 'value1']
+    }
+
+    def 'should resolve zone from status events: #DESCRIPTION' () {
+        given:
+        def handler = Spy(GoogleBatchTaskHandler)
+        handler.@jobId = 'job-123'
+        handler.@taskId = '0'
+        handler.@machineInfo = new CloudMachineInfo(type: 'n2-standard-4', zone: ORIGINAL, priceModel: PriceModel.spot)
+        and:
+        def builder = TaskStatus.newBuilder()
+        if( EVENT_DESC )
+            builder.addStatusEvents(StatusEvent.newBuilder().setDescription(EVENT_DESC).build())
+        def status = builder.build()
+
+        when:
+        def info = handler.getMachineInfo()
+        then:
+        handler.isCompleted() >> true
+        handler.@client = Mock(BatchClient) {
+            getTaskStatus('job-123', '0') >> status
+        }
+        and:
+        info.zone == EXPECTED
+
+        where:
+        DESCRIPTION         | ORIGINAL        | EVENT_DESC                                                                                                                    | EXPECTED
+        'succeeded event'   | 'europe-west2'  | 'Task state is updated from RUNNING to SUCCEEDED on zones/europe-west2-a/instances/i-abc123'                                  | 'europe-west2-a'
+        'preemption event'  | 'us-central1'   | 'Task state is updated from RUNNING to FAILED on zones/us-central1-f/instances/i-xyz789 due to Spot VM preemption with exit code 50001.' | 'us-central1-f'
+        'no zone in event'  | 'europe-west2'  | 'Task state is updated from PENDING to RUNNING'                                                                               | 'europe-west2'
+        'empty events'      | 'europe-west2'  | null                                                                                                                          | 'europe-west2'
+    }
+
+    def 'should not resolve zone when task is not completed or machineInfo is null' () {
+        given:
+        def handler = Spy(GoogleBatchTaskHandler)
+        handler.@machineInfo = MACHINE_INFO
+
+        when:
+        def info = handler.getMachineInfo()
+        then:
+        handler.isCompleted() >> COMPLETED
+        and:
+        info?.zone == EXPECTED
+
+        where:
+        MACHINE_INFO                                                                                 | COMPLETED | EXPECTED
+        new CloudMachineInfo(type: 'n2-standard-4', zone: 'europe-west2', priceModel: PriceModel.spot) | false     | 'europe-west2'
+        null                                                                                         | false     | null
+    }
+
+    def 'should only resolve zone once across multiple getMachineInfo calls' () {
+        given:
+        def mockClient = Mock(BatchClient)
+        def handler = Spy(GoogleBatchTaskHandler)
+        handler.@jobId = 'job-123'
+        handler.@taskId = '0'
+        handler.@client = mockClient
+        handler.@machineInfo = new CloudMachineInfo(type: 'n2-standard-4', zone: 'europe-west2', priceModel: PriceModel.spot)
+        and:
+        def status = TaskStatus.newBuilder()
+            .addStatusEvents(StatusEvent.newBuilder()
+                .setDescription('Task state is updated from RUNNING to SUCCEEDED on zones/europe-west2-a/instances/i-abc123')
+                .build())
+            .build()
+
+        when:
+        handler.isCompleted() >> true
+        def info1 = handler.getMachineInfo()
+        def info2 = handler.getMachineInfo()
+
+        then:
+        1 * mockClient.getTaskStatus('job-123', '0') >> status
+        and:
+        info1.zone == 'europe-west2-a'
+        info2.zone == 'europe-west2-a'
+    }
+
+    def 'should handle API error gracefully when resolving zone' () {
+        given:
+        def handler = Spy(GoogleBatchTaskHandler)
+        handler.@jobId = 'job-123'
+        handler.@taskId = '0'
+        handler.@machineInfo = new CloudMachineInfo(type: 'n2-standard-4', zone: 'europe-west2', priceModel: PriceModel.spot)
+        handler.task = Mock(TaskRun) { lazyName() >> 'foo (1)' }
+
+        when:
+        def info = handler.getMachineInfo()
+        then:
+        handler.isCompleted() >> true
+        handler.@client = Mock(BatchClient) {
+            getTaskStatus('job-123', '0') >> { throw new IOException('API error') }
+        }
+        and:
+        info.zone == 'europe-west2'
+    }
+
+    def 'should resolve zone from events: #DESCRIPTION' () {
+        expect:
+        GoogleBatchTaskHandler.resolveZoneFromEvents(EVENTS) == EXPECTED
+
+        where:
+        DESCRIPTION                 | EVENTS                                                                                                                                                                    | EXPECTED
+        'succeeded event'           | [StatusEvent.newBuilder().setDescription('Task state is updated from RUNNING to SUCCEEDED on zones/europe-west2-a/instances/i-abc').build()]                                | 'europe-west2-a'
+        'preemption event'          | [StatusEvent.newBuilder().setDescription('Task state is updated from RUNNING to FAILED on zones/us-central1-f/instances/i-xyz due to Spot VM preemption').build()]          | 'us-central1-f'
+        'no zone pattern'           | [StatusEvent.newBuilder().setDescription('Task state is updated from PENDING to RUNNING').build()]                                                                          | null
+        'empty description'         | [StatusEvent.newBuilder().setDescription('').build()]                                                                                                                       | null
+        'null description'          | [StatusEvent.newBuilder().build()]                                                                                                                                          | null
+        'null events'               | null                                                                                                                                                                        | null
+        'empty events'              | []                                                                                                                                                                          | null
+        'picks first zone match'    | [StatusEvent.newBuilder().setDescription('no zone here').build(), StatusEvent.newBuilder().setDescription('on zones/us-east1-b/instances/i-1').build()]                      | 'us-east1-b'
     }
 
     def 'should build container runnable with fusion privileged' () {

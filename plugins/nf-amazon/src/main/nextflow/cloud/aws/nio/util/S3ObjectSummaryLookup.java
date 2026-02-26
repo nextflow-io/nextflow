@@ -65,6 +65,22 @@ public class S3ObjectSummaryLookup {
             return summary;
         }
 
+        S3Object item = getS3Object(s3Path, client);
+        if( item != null )
+            return item;
+
+        throw new NoSuchFileException("s3://" + s3Path.getBucket() + "/" + s3Path.getKey());
+    }
+
+    /**
+     * Lookup for the S3 object matching the specified path using at one head request
+     * and one bounded list-objects call.
+     *
+     * @param s3Path the S3 path to look up
+     * @param client the S3 client
+     * @return the matching {@link S3Object}, or {@code null} if not found
+     */
+    private S3Object getS3Object(S3Path s3Path, S3Client client) {
         /*
          * First: try HEAD request for exact object (fast, works on all bucket types including Express)
          */
@@ -109,34 +125,6 @@ public class S3ObjectSummaryLookup {
                     .build();
         }
 
-        throw new NoSuchFileException("s3://" + s3Path.getBucket() + "/" + s3Path.getKey());
-    }
-
-    private boolean matchName(String fileName, S3Object summary) {
-        String foundKey = summary.key();
-
-        // they are different names return false
-        if( !foundKey.startsWith(fileName) ) {
-            return false;
-        }
-
-        // when they are the same length, they are identical
-        if( foundKey.length() == fileName.length() )
-            return true;
-
-        return foundKey.charAt(fileName.length()) == '/';
-    }
-
-    public HeadObjectResponse getS3ObjectMetadata(S3Path s3Path) {
-        S3Client client = s3Path.getFileSystem().getClient();
-        try {
-            return client.getObjectMetadata(s3Path.getBucket(), s3Path.getKey());
-        }
-        catch (S3Exception e){
-            if (e.statusCode() != 404){
-                throw e;
-            }
-            return null;
-        }
+        return null;
     }
 }
