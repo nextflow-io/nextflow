@@ -58,7 +58,7 @@ import org.eclipse.jgit.merge.MergeStrategy
 
 @Slf4j
 @CompileStatic
-class AssetManager {
+class AssetManager implements Closeable {
 
     /**
      * The folder all pipelines scripts are installed
@@ -782,7 +782,7 @@ class AssetManager {
             clone.setBranch(revision)
         if( deep )
             clone.setDepth(deep)
-        clone.call()
+        clone.call().close()
     }
 
     /**
