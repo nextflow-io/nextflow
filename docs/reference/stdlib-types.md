@@ -521,6 +521,8 @@ The following properties are available:
 
 `name: String`
 : The path name, e.g. `/some/path/file.txt` -> `file.txt`.
+  For process `path` inputs staged into a subdirectory, this includes the staged relative path
+  (e.g. `my-dir/file.txt`). Use `fileName.name` to get only the file name in that case.
 
 `parent: Path`
 : The path parent path, e.g. `/some/path/file.txt` -> `/some/path`.
