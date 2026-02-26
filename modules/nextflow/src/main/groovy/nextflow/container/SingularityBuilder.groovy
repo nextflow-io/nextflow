@@ -31,7 +31,7 @@ import nextflow.SysEnv
 @Slf4j
 class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
 
-    private boolean autoMounts
+    protected boolean autoMounts
 
     private boolean homeMount
 
@@ -47,6 +47,11 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
         this.autoMounts = defaultAutoMounts()
         this.newPidNamespace = defaultNewPidNamespace()
         this.runCmd0 = defaultRunCommand()
+    }
+
+    SingularityBuilder(String name, SingularityConfig config) {
+        this(name)
+        applyConfig(config)
     }
 
     private boolean defaultHomeMount() {
@@ -70,35 +75,31 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
 
     protected String getBinaryName() { 'singularity' }
 
+    protected void applyConfig(SingularityConfig config) {
+
+        if( config.autoMounts != null )
+            this.autoMounts = config.autoMounts
+
+        if( config.engineOptions )
+            this.addEngineOptions(config.engineOptions)
+
+        this.ociMode = config.ociMode
+
+        if( config.runOptions )
+            this.addRunOptions(config.runOptions)
+    }
+
     @Override
     SingularityBuilder params(Map params) {
 
-        if( params.containsKey('temp') )
-            this.temp = params.temp
-
         if( params.containsKey('entry') )
             this.entryPoint = params.entry
-
-        if( params.containsKey('engineOptions') )
-            addEngineOptions(params.engineOptions.toString())
-
-        if( params.containsKey('runOptions') )
-            addRunOptions(params.runOptions.toString())
-
-        if( params.autoMounts!=null )
-            autoMounts = params.autoMounts.toString() == 'true'
 
         if( params.newPidNamespace!=null )
             newPidNamespace = params.newPidNamespace.toString() == 'true'
 
         if( params.containsKey('readOnlyInputs') )
             this.readOnlyInputs = params.readOnlyInputs?.toString() == 'true'
-
-        // note: 'oci' flag should be ignored by Apptainer sub-class
-        if( params.oci!=null && this.class==SingularityBuilder )
-            ociMode = params.oci.toString() == 'true'
-        else if( params.ociMode!=null && this.class==SingularityBuilder )
-            ociMode = params.ociMode.toString() == 'true'
 
         return this
     }
@@ -228,7 +229,7 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
 
         if( launcher ) {
             def result = getRunCommand()
-            result += entryPoint ? " $entryPoint -c \"cd \$NXF_TASK_WORKDIR; $launcher\"" : " $launcher"
+            result += entryPoint ? " $entryPoint -c \"cd \\\"\$NXF_TASK_WORKDIR\\\"; $launcher\"" : " $launcher"
             return result
         }
         return getRunCommand() + ' ' + launcher

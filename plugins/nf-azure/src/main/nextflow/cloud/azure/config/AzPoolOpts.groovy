@@ -22,6 +22,9 @@ import com.google.common.hash.Hasher
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
+import nextflow.config.spec.ConfigOption
+import nextflow.config.spec.ConfigScope
+import nextflow.script.dsl.Description
 import nextflow.util.CacheFunnel
 import nextflow.util.CacheHelper
 import nextflow.util.Duration
@@ -33,40 +36,120 @@ import nextflow.util.Duration
 @ToString(includeNames = true, includePackage = false)
 @EqualsAndHashCode
 @CompileStatic
-class AzPoolOpts implements CacheFunnel {
+class AzPoolOpts implements CacheFunnel, ConfigScope {
 
-    static public final String DEFAULT_PUBLISHER = "microsoft-azure-batch"
-    static public final String DEFAULT_OFFER = "ubuntu-server-container"
-    static public final String DEFAULT_SKU = "batch.node.ubuntu 20.04"
-    static public final String DEFAULT_VM_TYPE = "Standard_D4_v3"
+    static public final String DEFAULT_PUBLISHER = "microsoft-dsvm"
+    static public final String DEFAULT_OFFER = "ubuntu-hpc"
+    static public final String DEFAULT_SKU = "batch.node.ubuntu 24.04"
+    static public final String DEFAULT_VM_TYPE = "Standard_D4a_v4"
     static public final OSType DEFAULT_OS_TYPE = OSType.LINUX
     static public final String DEFAULT_SHARE_ROOT_PATH = "/mnt/batch/tasks/fsmounts"
     static public final Duration DEFAULT_SCALE_INTERVAL = Duration.of('5 min')
 
-    String runAs
-    boolean privileged
-    String publisher
-    String offer
-    String fileShareRootPath
-    String sku
+    @ConfigOption
+    @Description("""
+        Enable autoscaling feature for the pool identified with `<name>`.
+    """)
+    final boolean autoScale
+
+    @ConfigOption
+    @Description("""
+        The internal root mount point when mounting File Shares. Must be `/mnt/resource/batch/tasks/fsmounts` for CentOS nodes or `/mnt/batch/tasks/fsmounts` for Ubuntu nodes (default: CentOS).
+    """)
+    final String fileShareRootPath
+
+    @ConfigOption
+    @Description("""
+        Enable the use of low-priority VMs (default: `false`).
+    """)
+    final boolean lowPriority
+
+    @ConfigOption
+    @Description("""
+        The max number of virtual machines when using auto scaling.
+    """)
+    final Integer maxVmCount
+
+    @ConfigOption
+    @Description("""
+        The mount options for mounting the file shares (default: `-o vers=3.0,dir_mode=0777,file_mode=0777,sec=ntlmssp`).
+    """)
+    final String mountOptions
+
+    @ConfigOption
+    @Description("""
+        The offer type of the virtual machine type used by the pool identified with `<name>` (default: `centos-container`).
+    """)
+    final String offer
+
+    @ConfigOption
+    @Description("""
+        Enable the task to run with elevated access. Ignored if `runAs` is set (default: `false`).
+    """)
+    final boolean privileged
+
+    @ConfigOption
+    @Description("""
+        The publisher of virtual machine type used by the pool identified with `<name>` (default: `microsoft-azure-batch`).
+    """)
+    final String publisher
+
+    @ConfigOption
+    @Description("""
+        The username under which the task is run. The user must already exist on each node of the pool.
+    """)
+    final String runAs
+
+    @ConfigOption
+    @Description("""
+        The [scale formula](https://docs.microsoft.com/en-us/azure/batch/batch-automatic-scaling) for the pool identified with `<name>`.
+    """)
+    final String scaleFormula
+
+    @ConfigOption
+    @Description("""
+        The interval at which to automatically adjust the Pool size according to the autoscale formula. Must be at least 5 minutes and at most 168 hours (default: `10 mins`).
+    """)
+    final Duration scaleInterval
+
+    @ConfigOption
+    @Description("""
+        The scheduling policy for the pool identified with `<name>`. Can be either `spread` or `pack` (default: `spread`).
+    """)
+    final String schedulePolicy
+
+    @ConfigOption
+    @Description("""
+        The ID of the Compute Node agent SKU which the pool identified with `<name>` supports (default: `batch.node.centos 8`).
+    """)
+    final String sku
+
+    final AzStartTaskOpts startTask
+
+    @ConfigOption
+    @Description("""
+        The subnet ID of a virtual network in which to create the pool.
+    """)
+    final String virtualNetwork
+
+    @ConfigOption
+    @Description("""
+        The number of virtual machines provisioned by the pool identified with `<name>`.
+    """)
+    final Integer vmCount
+
+    @ConfigOption
+    @Description("""
+        The virtual machine type used by the pool identified with `<name>`.
+    """)
+    final String vmType
+
     OSType osType = DEFAULT_OS_TYPE
     ImageVerificationType verification = ImageVerificationType.VERIFIED
 
-    String vmType
-    Integer vmCount = 1
-    boolean autoScale
-    String scaleFormula
-    Duration scaleInterval
-    Integer maxVmCount
-
-    String schedulePolicy // spread | pack
     String registry
     String userName
     String password
-
-    String virtualNetwork
-    boolean lowPriority
-    AzStartTaskOpts startTask
     
     AzPoolOpts() {
         this(Collections.emptyMap())

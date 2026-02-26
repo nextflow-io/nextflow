@@ -91,4 +91,39 @@ class TestHelper {
         // Convert the decoded bytes into a string
         return new String(decodedBytes);
     }
+
+    static int rndServerPort() {
+        ServerSocket socket = new ServerSocket(0)
+        int port = socket.localPort
+        socket.close()
+        return port
+    }
+
+    /**
+     * Filter captured stdout/stderr output to remove log noise (DEBUG, INFO, WARN, plugin messages, pf4j dependency graph).
+     *
+     * @param capture The OutputCapture instance
+     * @param includeWarn Whether to also filter out WARN lines (default: false)
+     * @return List of filtered output lines
+     */
+    static List<String> filterLogNoise(OutputCapture capture, boolean includeWarn = false) {
+        filterLogNoise(capture.toString(), includeWarn)
+    }
+
+    /**
+     * Filter captured stdout/stderr output to remove log noise (DEBUG, INFO, WARN, plugin messages, pf4j dependency graph).
+     *
+     * @param output The captured output string
+     * @param includeWarn Whether to also filter out WARN lines (default: false)
+     * @return List of filtered output lines
+     */
+    static List<String> filterLogNoise(String output, boolean includeWarn = false) {
+        output.readLines().findAll { line ->
+            !line.contains('DEBUG') &&
+            !line.contains('INFO') &&
+            (!includeWarn || !line.contains('WARN')) &&
+            !line.contains('plugin') &&
+            !line.contains('-> [')  // pf4j dependency graph lines
+        }
+    }
 }

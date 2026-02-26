@@ -38,7 +38,7 @@ class NopeExecutor extends Executor {
 
     @Override
     protected TaskMonitor createTaskMonitor() {
-        return TaskPollingMonitor.create(session, name, 5, Duration.of('50ms'))
+        return TaskPollingMonitor.create(session, config, name, 5, Duration.of('50ms'))
     }
 
     @Override
@@ -50,6 +50,7 @@ class NopeExecutor extends Executor {
 
 
 @Slf4j
+@CompileStatic
 class NopeTaskHandler extends TaskHandler {
 
     protected NopeTaskHandler(TaskRun task) {
@@ -86,7 +87,7 @@ class NopeTaskHandler extends TaskHandler {
     }
 
     @Override
-    void kill() { }
+    protected void killTask() { }
 
 }
 

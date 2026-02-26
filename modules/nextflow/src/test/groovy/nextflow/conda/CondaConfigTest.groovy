@@ -39,10 +39,10 @@ class CondaConfigTest extends Specification {
         false       | [enabled: false]  | [:]
         true        | [enabled: true]   | [:]
         and:
-        false       | [:]               | [NXF_CONDA_ENABLED: false]
-        true        | [:]               | [NXF_CONDA_ENABLED: true]
-        false       | [enabled: false]  | [NXF_CONDA_ENABLED: true]  // <-- config has priority
-        true        | [enabled: true]   | [NXF_CONDA_ENABLED: true]
+        false       | [:]               | [NXF_CONDA_ENABLED: 'false']
+        true        | [:]               | [NXF_CONDA_ENABLED: 'true']
+        false       | [enabled: false]  | [NXF_CONDA_ENABLED: 'true']  // <-- config has priority
+        true        | [enabled: true]   | [NXF_CONDA_ENABLED: 'true']
     }
 
 
@@ -54,14 +54,14 @@ class CondaConfigTest extends Specification {
         conda.getChannels() == EXPECTED
 
         where:
-        EXPECTED                | CONFIG
-        []                      | [:]
-        ['bioconda']            | [channels:'bioconda']
-        ['bioconda']            | [channels:['bioconda']]
+        EXPECTED                   | CONFIG
+        ['conda-forge','bioconda'] | [:]
+        ['bioconda']               | [channels:'bioconda']
+        ['bioconda']               | [channels:['bioconda']]
         and:
-        ['this','that','other'] | [channels:'this,that,other']
-        ['this','that','other'] | [channels:'this, that ,other']
+        ['this','that','other']    | [channels:'this,that,other']
+        ['this','that','other']    | [channels:'this, that ,other']
         and:
-        ['this','that','other'] | [channels:['this','that','other']]
+        ['this','that','other']    | [channels:['this','that','other']]
     }
 }

@@ -32,13 +32,14 @@ class ProgressRecord implements Cloneable {
     final int index
     final String name     // process name
     String hash     // current task hash
+    String workDir  // current task work directory URI
     String taskName // current task name
     int pending     // number of new tasks ready to be submitted
     int submitted   // number of tasks submitted for execution not yet started
     int running     // number of tasks whose execution started
     int succeeded   // number of tasks whose execution completed successfully
     int cached      // number of tasks whose execution
-    int failed
+    int failed      // number of failed tasks -- includes ignored and retried
     int aborted
     int stored
     int ignored
@@ -61,13 +62,15 @@ class ProgressRecord implements Cloneable {
         this.taskName = processName
     }
 
+    // failed tasks that were not retried are included in the total count
     int getTotalCount() {
-        pending+ submitted+ running+
-           succeeded+ failed+ cached+ stored + aborted
+        pending + submitted + running +
+           succeeded + failed - retries + cached + stored + aborted
     }
 
+    // only failed tasks that were ignored are included in the completed count
     int getCompletedCount() {
-        succeeded+ failed+ cached+ stored
+        succeeded + ignored + cached + stored
     }
 
     @Override

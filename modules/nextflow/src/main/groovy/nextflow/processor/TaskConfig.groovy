@@ -21,6 +21,7 @@ import static nextflow.processor.TaskProcessor.*
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.ast.NextflowDSLImpl
 import nextflow.exception.AbortOperationException
@@ -29,7 +30,6 @@ import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.executor.res.AcceleratorResource
 import nextflow.executor.res.DiskResource
-import nextflow.k8s.model.PodOptions
 import nextflow.script.TaskClosure
 import nextflow.util.CmdLineHelper
 import nextflow.util.CmdLineOptionMap
@@ -40,6 +40,7 @@ import nextflow.util.MemoryUnit
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 class TaskConfig extends LazyMap implements Cloneable {
 
@@ -109,7 +110,7 @@ class TaskConfig extends LazyMap implements Cloneable {
         if( object instanceof LazyMap ) {
             result = ((LazyMap)object).getValue(path.first())
         }
-        else if( Object instanceof Map ) {
+        else if( object instanceof Map ) {
             result = ((Map)object).get(path.first())
         }
         else if( path.size()>1 ) {
@@ -380,12 +381,28 @@ class TaskConfig extends LazyMap implements Cloneable {
             return BashWrapperBuilder.BASH
 
         if( value instanceof List )
-            return (List)value
+            return validateShell(value as List)
 
         if( value instanceof CharSequence )
-            return [ value.toString() ]
+            return validateShell(List.of(value.toString()))
 
         throw new IllegalArgumentException("Not a valid `shell` configuration value: ${value}")
+    }
+
+    protected List<String> validateShell(List<String> shell) {
+        for( String it : shell ) {
+            if( !it )
+                throw new IllegalArgumentException("Directive `process.shell` cannot contain empty values - offending value: ${shell}")
+            if( !it || it.contains('\n') || it.contains('\r') ) {
+                log.warn1 "Directive `process.shell` cannot contain new-line characters - offending value: ${shell}"
+                break
+            }
+            if( it.startsWith(' ') || it.endsWith(' ')) {
+                log.warn "Directive `process.shell` cannot contain leading or tralining blanks - offending value: ${shell}"
+                break
+            }
+        }
+        return shell
     }
 
     Path getStoreDir() {
@@ -481,10 +498,6 @@ class TaskConfig extends LazyMap implements Cloneable {
         get('retryCount') as Integer ?: 0
     }
 
-    PodOptions getPodOptions() {
-        new PodOptions((List)get('pod'))
-    }
-
     AcceleratorResource getAccelerator() {
         final value = get('accelerator')
         if( value instanceof Number )
@@ -532,14 +545,13 @@ class TaskConfig extends LazyMap implements Cloneable {
     }
 
     /**
-     * Get a closure guard condition and evaluate to a boolean result
+     * Get the when guard condition if present and evaluate it
      *
-     * @param name The name of the guard to test e.g. {@code when}
      * @return {@code true} when the condition is verified
      */
-    protected boolean getGuard( String name, boolean defValue=true ) throws FailedGuardException {
+    protected boolean getWhenGuard(boolean defValue=true) throws FailedGuardException {
 
-        final code = target.get(name)
+        final code = target.get(NextflowDSLImpl.PROCESS_WHEN)
         if( code == null )
             return defValue
 
@@ -553,7 +565,7 @@ class TaskConfig extends LazyMap implements Cloneable {
             return code as Boolean
         }
         catch( Throwable e ) {
-            throw new FailedGuardException("Cannot evaluate `$name` expression", source, e)
+            throw new FailedGuardException("Cannot evaluate `when` expression", source, e)
         }
     }
 

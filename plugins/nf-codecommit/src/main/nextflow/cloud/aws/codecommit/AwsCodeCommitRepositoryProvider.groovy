@@ -16,16 +16,17 @@
 
 package nextflow.cloud.aws.codecommit
 
-import com.amazonaws.SdkClientException
-import com.amazonaws.auth.AWSStaticCredentialsProvider
-import com.amazonaws.auth.BasicAWSCredentials
-import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
-import com.amazonaws.services.codecommit.AWSCodeCommit
-import com.amazonaws.services.codecommit.AWSCodeCommitClientBuilder
-import com.amazonaws.services.codecommit.model.AWSCodeCommitException
-import com.amazonaws.services.codecommit.model.GetFileRequest
-import com.amazonaws.services.codecommit.model.GetRepositoryRequest
-import com.amazonaws.services.codecommit.model.RepositoryMetadata
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider
+import software.amazon.awssdk.core.exception.SdkException
+import software.amazon.awssdk.regions.Region
+import software.amazon.awssdk.services.codecommit.CodeCommitClient
+import software.amazon.awssdk.services.codecommit.model.CodeCommitException
+import software.amazon.awssdk.services.codecommit.model.GetFileRequest
+import software.amazon.awssdk.services.codecommit.model.GetFolderRequest
+import software.amazon.awssdk.services.codecommit.model.GetRepositoryRequest
+import software.amazon.awssdk.services.codecommit.model.RepositoryMetadata
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
@@ -33,6 +34,7 @@ import nextflow.exception.AbortOperationException
 import nextflow.exception.MissingCredentialsException
 import nextflow.scm.ProviderConfig
 import nextflow.scm.RepositoryProvider
+import nextflow.scm.RepositoryProvider.RepositoryEntry
 import nextflow.util.StringUtils
 import org.eclipse.jgit.api.errors.TransportException
 import org.eclipse.jgit.transport.CredentialsProvider
@@ -56,22 +58,21 @@ class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
     }
 
     private String region
-    private AWSCodeCommit client
+    private CodeCommitClient client
     private String repositoryName
 
 
-    protected AWSCodeCommit createClient(AwsCodeCommitProviderConfig config) {
-        final builder = AWSCodeCommitClientBuilder
-                .standard()
-                .withRegion(region)
+    protected CodeCommitClient createClient(AwsCodeCommitProviderConfig config) {
+        final builder = CodeCommitClient.builder()
+                .region(Region.of(region))
         if( config.user && config.password ) {
-            final creds = new BasicAWSCredentials(config.user, config.password)
+            final creds = AwsBasicCredentials.create(config.user, config.password)
             log.debug "AWS CodeCommit using username=$config.user; password=${StringUtils.redact(config.password)}"
-            builder.withCredentials( new AWSStaticCredentialsProvider(creds) )
+            builder.credentialsProvider( StaticCredentialsProvider.create(creds) )
         }
         else {
             log.debug "AWS CodeCommit using default credentials chain"
-            builder.withCredentials( new DefaultAWSCredentialsProviderChain() )
+            builder.credentialsProvider( DefaultCredentialsProvider.builder().build() )
         }
         builder.build()
     }
@@ -84,12 +85,13 @@ class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
     }
 
     private RepositoryMetadata getRepositoryMetadata() {
-        final request = new GetRepositoryRequest()
-                .withRepositoryName(repositoryName)
+        final request = GetRepositoryRequest.builder()
+                .repositoryName(repositoryName)
+                .build()
 
         return client
                 .getRepository(request)
-                .getRepositoryMetadata()
+                .repositoryMetadata()
     }
 
     /** {@inheritDoc} **/
@@ -134,23 +136,80 @@ class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
     // called by AssetManager
     // called by RepositoryProvider.readText()
     @Override
-    protected byte[] readBytes( String path ) {
+    byte[] readBytes( String path ) {
 
-        final request = new GetFileRequest()
-            .withRepositoryName(repositoryName)
-            .withFilePath(path)
+        final builder = GetFileRequest.builder()
+            .repositoryName(repositoryName)
+            .filePath(path)
         if( revision )
-            request.withCommitSpecifier(revision)
+            builder.commitSpecifier(revision)
 
         try {
             return client
-                    .getFile( request )
-                    .getFileContent()?.array()
+                    .getFile( builder.build() )
+                    .fileContent()?.asByteArray()
         }
         catch (Exception e) {
             checkMissingCredsException(e)
             log.debug "AWS CodeCommit unable to retrieve file: $path from repo: $repositoryName"
             return null
+        }
+    }
+
+    /** {@inheritDoc} **/
+    @Override
+    List<RepositoryEntry> listDirectory(String path, int depth) {
+        try {
+            // AWS CodeCommit doesn't have a dedicated directory listing API like GitHub
+            // We would need to use GetFolder API, but it has limitations
+            def request = GetFolderRequest.builder()
+                .repositoryName(repositoryName)
+                .folderPath(path ?: "/")
+                .commitSpecifier(revision ?: "HEAD")
+                .build()
+                
+            def response = client.getFolder(request)
+            
+            List<RepositoryEntry> entries = []
+            
+            // Add files
+            response.files()?.each { file ->
+                entries.add(new RepositoryEntry(
+                    name: file.relativePath().split('/').last(),
+                    path: ensureAbsolutePath(file.relativePath()),
+                    type: RepositoryProvider.EntryType.FILE,
+                    sha: file.blobId(),
+                    size: null  // AWS CodeCommit API doesn't provide file size in folder response
+                ))
+            }
+            
+            // Add subdirectories - but CodeCommit API has limited support for deep traversal
+            response.subFolders()?.each { folder ->
+                entries.add(new RepositoryEntry(
+                    name: folder.relativePath().split('/').last(),
+                    path: ensureAbsolutePath(folder.relativePath()),
+                    type: RepositoryProvider.EntryType.DIRECTORY,
+                    sha: null, // CodeCommit doesn't provide SHA for directories
+                    size: null
+                ))
+                
+                // For recursive listing, we would need additional API calls
+                // However, this can be expensive and slow for large repositories
+                if (depth != 0 && depth != 1) {
+                    try {
+                        def subEntries = listDirectory(folder.relativePath(), depth == -1 ? -1 : depth - 1)
+                        entries.addAll(subEntries)
+                    } catch (Exception e) {
+                        // Continue with other directories if one fails
+                    }
+                }
+            }
+            
+            return entries.sort { it.name }
+            
+        } catch (Exception e) {
+            checkMissingCredsException(e)
+            throw new UnsupportedOperationException("Directory listing failed for AWS CodeCommit path: $path - ${e.message}", e)
         }
     }
 
@@ -160,9 +219,9 @@ class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
                 "Unable to load AWS credentials",
                 "The security token included in the request is invalid",
                 "The request signature we calculated does not match the signature you provided"]
-        if( e !instanceof SdkClientException )
+        if( e !instanceof SdkException )
             return
-        if( e instanceof AWSCodeCommitException && e.message?.startsWith("Could not find path") ) {
+        if( e instanceof CodeCommitException && e.message?.startsWith("Could not find path") ) {
             // it cannot find the request file
             return
         }

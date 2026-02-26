@@ -20,8 +20,11 @@ import java.util.stream.Collectors
 
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
-import groovy.util.logging.Slf4j
+import nextflow.config.spec.ConfigOption
+import nextflow.config.spec.ConfigScope
+import nextflow.config.spec.ScopeName
 import nextflow.exception.AbortOperationException
+import nextflow.script.dsl.Description
 
 import static nextflow.Const.DEFAULT_MAIN_FILE_NAME
 /**
@@ -29,162 +32,213 @@ import static nextflow.Const.DEFAULT_MAIN_FILE_NAME
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
+@ScopeName("manifest")
+@Description("""
+    The `manifest` scope allows you to define some metadata that is useful when publishing or running your pipeline.
+""")
 @CompileStatic
-class Manifest {
+class Manifest implements ConfigScope {
 
-    private Map target
+    @Deprecated
+    @ConfigOption
+    @Description("""
+        Project author name (use a comma to separate multiple names).
+    """)
+    final String author
 
-    Manifest() { target = Collections.emptyMap() }
+    @ConfigOption
+    @Description("""
+        List of project contributors. Should be a list of maps.
+    """)
+    final List<Contributor> contributors
 
-    Manifest(Map object) {
-        assert object != null
-        this.target = new HashMap(object.size())
-        final validFields = this.metaClass.properties.collect { it.name }.findAll { it!='class' }
-        object.each { key, value ->
-            if( validFields.contains(key) )
-                target.put(key, value)
-            else
-                log.warn("Invalid config manifest attribute `$key`")
-        }
+    @ConfigOption
+    @Description("""
+        Git repository default branch (default: `master`).
+    """)
+    final String defaultBranch
+
+    @ConfigOption
+    @Description("""
+        Free text describing the workflow project.
+    """)
+    final String description
+
+    @ConfigOption
+    @Description("""
+        Project documentation URL.
+    """)
+    final String docsUrl
+
+    @ConfigOption
+    @Description("""
+        Project related publication DOI identifier.
+    """)
+    final String doi
+
+    @ConfigOption
+    @Description("""
+        Controls whether git sub-modules should be cloned with the main repository.
+
+        Can be either a boolean value, a list of submodule names, or a comma-separated string of submodule names.
+    """)
+    final Object gitmodules
+
+    @ConfigOption
+    @Description("""
+        Project home page URL.
+    """)
+    final String homePage
+
+    @ConfigOption
+    @Description("""
+        Project related icon location (Relative path or URL).
+    """)
+    final String icon
+
+    @ConfigOption
+    @Description("""
+        Project license.
+    """)
+    final String license
+
+    @ConfigOption
+    @Description("""
+        Project main script (default: `main.nf`).
+    """)
+    final String mainScript
+
+    @ConfigOption
+    @Description("""
+        Project short name.
+    """)
+    final String name
+
+    @ConfigOption
+    @Description("""
+        Minimum required Nextflow version.
+    """)
+    final String nextflowVersion
+
+    @ConfigOption
+    @Description("""
+        Project organization.
+    """)
+    final String organization
+
+    @ConfigOption
+    @Description("""
+        Pull submodules recursively from the Git repository.
+    """)
+    final boolean recurseSubmodules
+
+    @ConfigOption
+    @Description("""
+        Project version number.
+    """)
+    final String version
+
+    /* required by extension point -- do not remove */
+    Manifest() {}
+
+    Manifest(Map opts) {
+        author = opts.author as String
+        contributors = parseContributors(opts.contributors)
+        defaultBranch = opts.defaultBranch as String
+        description = opts.description as String
+        docsUrl = opts.docsUrl as String
+        doi = opts.doi as String
+        gitmodules = opts.gitmodules
+        homePage = opts.homePage as String
+        icon = opts.icon as String
+        license = opts.license as String
+        mainScript = opts.mainScript as String ?: DEFAULT_MAIN_FILE_NAME
+        name = opts.name as String
+        nextflowVersion = opts.nextflowVersion as String
+        organization = opts.organization as String
+        recurseSubmodules = opts.recurseSubmodules as boolean
+        version = opts.version as String
     }
 
-    String getHomePage() {
-        target.homePage
-    }
-
-
-    String getDefaultBranch() {
-        target.defaultBranch
-    }
-
-    String getDescription() {
-        target.description 
-    }
-
-    String getAuthor() {
-        target.author
-    }
-
-    List<Contributor> getContributors() {
-        if( !target.contributors )
+    private List<Contributor> parseContributors(Object value) {
+        if( !value )
             return Collections.emptyList()
 
         try {
-            final contributors = target.contributors as List<Map>
+            final contributors = value as List<Map>
             return contributors.stream()
                 .map(opts -> new Contributor(opts))
-                .collect(Collectors.toList())
+                .toList()
         }
-        catch( ClassCastException | IllegalArgumentException e ){
-            throw new AbortOperationException("Invalid config option `manifest.contributors` -- should be a list of maps")
+        catch( IllegalArgumentException e ){
+            throw new AbortOperationException(e.message)
         }
-    }
-
-    String getMainScript() {
-        target.mainScript ?: DEFAULT_MAIN_FILE_NAME
-    }
-
-    /**
-     * Controls whether repository sub-modules should be cloned along with the main one.
-     *
-     * @return
-     *      Either a boolean value, a list object submodule names or a comma separated string
-     *      of sub-module names
-     */
-    def getGitmodules() {
-        target.gitmodules
-    }
-
-    boolean getRecurseSubmodules() {
-        target.recurseSubmodules
-    }
-
-    String getNextflowVersion() {
-        target.nextflowVersion
-    }
-
-    String getVersion() {
-        target.version
-    }
-
-    String getName() {
-        target.name
-    }
-
-    String getDoi() {
-        target.doi
-    }
-
-    String getDocsUrl() {
-        target.docsUrl
-    }
-
-    String getIcon() {
-        target.icon
-    }
-
-    String getOrganization() {
-        target.organization
-    }
-
-    String getLicense() {
-        target.license
+        catch( ClassCastException e ){
+            throw new AbortOperationException("Invalid setting for `manifest.contributors` config option -- should be a list of maps")
+        }
     }
 
     Map toMap() {
-        final result = new HashMap(15)
-        result.author = getAuthor()
-        result.contributors = getContributors().stream()
-            .map(c -> c.toMap())
-            .collect(Collectors.toList())
-        result.defaultBranch = getDefaultBranch()
-        result.description = getDescription()
-        result.homePage = homePage
-        result.gitmodules = getGitmodules()
-        result.mainScript = getMainScript()
-        result.version = getVersion()
-        result.nextflowVersion = getNextflowVersion()
-        result.doi = getDoi()
-        result.docsUrl = getDocsUrl()
-        result.icon = getIcon()
-        result.organization = getOrganization()
-        result.license = getLicense()
-        return result
+        return [
+            author: author,
+            contributors: contributors.stream().map(c -> c.toMap()).toList(),
+            defaultBranch: defaultBranch,
+            description: description,
+            homePage: homePage,
+            gitmodules: gitmodules,
+            mainScript: mainScript,
+            version: version,
+            nextflowVersion: nextflowVersion,
+            doi: doi,
+            docsUrl: docsUrl,
+            icon: icon,
+            organization: organization,
+            license: license,
+        ]
     }
 
     @EqualsAndHashCode
     static class Contributor {
-        String name
-        String affiliation
-        String email
-        String github
-        Set<ContributionType> contribution
-        String orcid
+        final String name
+        final String affiliation
+        final String email
+        final String github
+        final List<ContributionType> contribution
+        final String orcid
 
         Contributor(Map opts) {
             name = opts.name as String
             affiliation = opts.affiliation as String
             email = opts.email as String
             github = opts.github as String
-            contribution = (opts.contribution as List<String>).stream()
-                .map(c -> ContributionType.valueOf(c.toUpperCase()))
-                .collect(Collectors.toSet())
+            contribution = parseContributionTypes(opts.contribution as List<String>)
             orcid = opts.orcid as String
         }
 
+        private List<ContributionType> parseContributionTypes(List<String> values) {
+            if( values == null )
+                return []
+            final result = new LinkedList<ContributionType>()
+            for( final value : values ) {
+                try {
+                    result.add(ContributionType.valueOf(value.toUpperCase()))
+                }
+                catch( IllegalArgumentException e ) {
+                    throw new IllegalArgumentException("Invalid contribution type '$value' in `manifest.contributors` config option")
+                }
+            }
+            return result.toSorted()
+        }
+
         Map toMap() {
-            final result = new HashMap(6)
-            result.name = name
-            result.affiliation = affiliation
-            result.email = email
-            result.github = github
-            result.contribution = contribution.stream()
-                .map(c -> c.toString().toLowerCase())
-                .sorted()
-                .collect(Collectors.toList())
-            result.orcid = orcid
-            return result
+            return [
+                name: name,
+                affiliation: affiliation,
+                email: email,
+                github: github,
+                contribution: contribution.stream().map(c -> c.toString().toLowerCase()).toList(),
+                orcid: orcid,
+            ]
         }
     }
 

@@ -19,6 +19,10 @@ package nextflow.conda
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
+import nextflow.config.spec.ConfigOption
+import nextflow.config.spec.ConfigScope
+import nextflow.config.spec.ScopeName
+import nextflow.script.dsl.Description
 import nextflow.util.Duration
 
 /**
@@ -26,58 +30,100 @@ import nextflow.util.Duration
  * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@ScopeName("conda")
+@Description("""
+    The `conda` scope controls the creation of Conda environments by the Conda package manager.
+""")
 @CompileStatic
-class CondaConfig extends LinkedHashMap {
+class CondaConfig implements ConfigScope {
 
-    private Map<String,String> env
+    @ConfigOption
+    @Description("""
+        Execute tasks with Conda environments (default: `false`).
+    """)
+    final boolean enabled
 
-    /* required by Kryo deserialization -- do not remove */
-    private CondaConfig() { }
+    @ConfigOption
+    @Description("""
+        The path where Conda environments are stored. It should be accessible from all compute nodes when using a shared file system.
+    """)
+    final String cacheDir
 
-    CondaConfig(Map config, Map<String, String> env) {
-        super(config)
-        this.env = env
+    @ConfigOption
+    @Description("""
+        The list of Conda channels that can be used to resolve Conda packages. Channel priority decreases from left to right.
+    """)
+    final List<String> channels
+
+    @ConfigOption
+    @Description("""
+        Extra command line options for the `conda create` command. See the [Conda documentation](https://docs.conda.io/projects/conda/en/latest/commands/create.html) for more information.
+    """)
+    final String createOptions
+
+    @ConfigOption
+    @Description("""
+        The amount of time to wait for the Conda environment to be created before failing (default: `20 min`).
+    """)
+    final Duration createTimeout
+
+    @ConfigOption
+    @Description("""
+        Use [Mamba](https://github.com/mamba-org/mamba) instead of `conda` to create Conda environments (default: `false`).
+    """)
+    final boolean useMamba
+
+    @ConfigOption
+    @Description("""
+        Use [Micromamba](https://mamba.readthedocs.io/en/latest/user_guide/micromamba.html) instead of `conda` to create Conda environments (default: `false`).
+    """)
+    final boolean useMicromamba
+
+    /* required by extension point -- do not remove */
+    CondaConfig() {}
+
+    CondaConfig(Map opts, Map<String, String> env) {
+        enabled = opts.enabled != null
+            ? opts.enabled as boolean
+            : (env.NXF_CONDA_ENABLED?.toString() == 'true')
+        cacheDir = opts.cacheDir
+        channels = parseChannels(opts.channels)
+        createOptions = opts.createOptions
+        createTimeout = opts.createTimeout as Duration ?: Duration.of('20min')
+        useMamba = opts.useMamba as boolean
+        useMicromamba = opts.useMicromamba as boolean
+
+        if( useMamba && useMicromamba )
+            throw new IllegalArgumentException("Both conda.useMamba and conda.useMicromamba were enabled -- Please choose only one")
     }
 
-    boolean isEnabled() {
-        def enabled = get('enabled')
-        if( enabled == null )
-            enabled = env.get('NXF_CONDA_ENABLED')
-        return enabled?.toString() == 'true'
-    }
-
-    List<String> getChannels() {
-        final value = get('channels')
-        if( !value ) {
-            return Collections.<String>emptyList()
-        }
-        if( value instanceof List ) {
+    private List<String> parseChannels(Object value) {
+        if( !value )
+            return ['conda-forge','bioconda']
+        if( value instanceof List )
             return value
-        }
-        if( value instanceof CharSequence ) {
+        if( value instanceof CharSequence )
             return value.tokenize(',').collect(it -> it.trim())
-        }
-
         throw new IllegalArgumentException("Unexpected conda.channels value: $value")
     }
 
     Duration createTimeout() {
-        get('createTimeout') as Duration
+        createTimeout
     }
 
     String createOptions() {
-        get('createOptions') as String
+        createOptions
     }
 
     Path cacheDir() {
-        get('cacheDir') as Path
+        cacheDir as Path
     }
 
     boolean useMamba() {
-        get('useMamba') as boolean
+        useMamba
     }
 
     boolean useMicromamba() {
-        get('useMicromamba') as boolean
+        useMicromamba
     }
 }

@@ -24,6 +24,7 @@ import nextflow.Session
 import nextflow.SysEnv
 import nextflow.cloud.aws.config.AwsConfig
 import nextflow.cloud.aws.util.S3PathFactory
+import nextflow.container.DockerConfig
 import nextflow.processor.TaskBean
 import nextflow.util.Duration
 import spock.lang.Specification
@@ -138,7 +139,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                     local is_dir=$(/conda/bin/aws --region eu-west-1 s3 ls $source | grep -F "PRE ${file_name}/" -c)
                     if [[ $is_dir == 1 ]]; then
                         /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors --recursive "$source" "$target"
-                    else 
+                    else
                         /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors "$source" "$target"
                     fi
                 }
@@ -317,7 +318,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                         local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
                         if [[ $is_dir == 1 ]]; then
                             aws s3 cp --only-show-errors --recursive "$source" "$target"
-                        else 
+                        else
                             aws s3 cp --only-show-errors "$source" "$target"
                         fi
                     }
@@ -489,7 +490,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                         local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
                         if [[ $is_dir == 1 ]]; then
                             aws s3 cp --only-show-errors --recursive "$source" "$target"
-                        else 
+                        else
                             aws s3 cp --only-show-errors "$source" "$target"
                         fi
                     }
@@ -583,7 +584,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                     }
                     
                     # aws cli retry config
-                    export AWS_RETRY_MODE=adaptive 
+                    export AWS_RETRY_MODE=adaptive
                     export AWS_MAX_ATTEMPTS=3
                     # aws helper
                     nxf_s3_upload() {
@@ -605,7 +606,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                         local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
                         if [[ $is_dir == 1 ]]; then
                             aws s3 cp --only-show-errors --recursive "$source" "$target"
-                        else 
+                        else
                             aws s3 cp --only-show-errors "$source" "$target"
                         fi
                     }
@@ -623,13 +624,12 @@ class AwsBatchScriptLauncherTest extends Specification {
                 name: 'Hello 1',
                 workDir: Paths.get('/work/dir'),
                 script: 'echo Hello world!',
-                containerConfig: [fixOwnership: true],
+                containerConfig: new DockerConfig(fixOwnership: true),
                 input: 'Ciao ciao' ] as TaskBean, opts)
 
         when:
         def binding = builder.makeBinding()
         then:
-        builder.fixOwnership() >> true
         binding.fix_ownership == '[ ${NXF_OWNER:=\'\'} ] && (shopt -s extglob; GLOBIGNORE=\'..\'; chown -fR --from root $NXF_OWNER /work/dir/{*,.*}) || true'
 
     }

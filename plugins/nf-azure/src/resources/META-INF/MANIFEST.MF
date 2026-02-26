@@ -1,6 +1,0 @@
-Manifest-Version: 1.0
-Plugin-Class: nextflow.cloud.azure.AzurePlugin
-Plugin-Id: nf-azure
-Plugin-Version: 1.11.0
-Plugin-Provider: Seqera Labs
-Plugin-Requires: >=24.04.4

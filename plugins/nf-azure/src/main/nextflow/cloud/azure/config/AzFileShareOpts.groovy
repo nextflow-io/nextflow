@@ -20,6 +20,9 @@ import com.google.common.hash.Hasher
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
+import nextflow.config.spec.ConfigOption
+import nextflow.config.spec.ConfigScope
+import nextflow.script.dsl.Description
 import nextflow.util.CacheFunnel
 import nextflow.util.CacheHelper
 
@@ -31,27 +34,36 @@ import nextflow.util.CacheHelper
 @ToString(includeNames = true, includePackage = false)
 @EqualsAndHashCode
 @CompileStatic
-class AzFileShareOpts implements CacheFunnel {
+class AzFileShareOpts implements CacheFunnel, ConfigScope {
 
-	static public final String DEFAULT_MOUNT_OPTIONS = '-o vers=3.0,dir_mode=0777,file_mode=0777,sec=ntlmssp'
+    static public final String DEFAULT_MOUNT_OPTIONS = '-o vers=3.0,dir_mode=0777,file_mode=0777,sec=ntlmssp'
 
-	String mountPath
-	String mountOptions
+    @ConfigOption
+    @Description("""
+        The file share mount path.
+    """)
+    final String mountPath
 
-	AzFileShareOpts(Map opts) {
-		assert opts != null
-		this.mountPath = opts.mountPath ?: ''
-		this.mountOptions = opts.mountOptions ?: DEFAULT_MOUNT_OPTIONS
-	}
+    @ConfigOption
+    @Description("""
+        The file share mount options.
+    """)
+    final String mountOptions
 
-	AzFileShareOpts() {
-		this(Collections.emptyMap())
-	}
+    AzFileShareOpts(Map opts) {
+        assert opts != null
+        this.mountPath = opts.mountPath ?: ''
+        this.mountOptions = opts.mountOptions ?: DEFAULT_MOUNT_OPTIONS
+    }
 
-	@Override
-	Hasher funnel(Hasher hasher, CacheHelper.HashMode mode) {
-		hasher.putUnencodedChars(mountPath)
-		hasher.putUnencodedChars(mountOptions)
-		return hasher
-	}
+    AzFileShareOpts() {
+        this(Collections.emptyMap())
+    }
+
+    @Override
+    Hasher funnel(Hasher hasher, CacheHelper.HashMode mode) {
+        hasher.putUnencodedChars(mountPath)
+        hasher.putUnencodedChars(mountOptions)
+        return hasher
+    }
 }

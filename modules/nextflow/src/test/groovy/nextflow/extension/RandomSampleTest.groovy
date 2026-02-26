@@ -17,27 +17,21 @@
 package nextflow.extension
 
 import nextflow.Channel
-import nextflow.Session
 import spock.lang.Specification
 
+import static test.ScriptHelper.runDataflow
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class RandomSampleTest extends Specification {
 
-    def setupSpec() {
-        new Session()
-    }
-
     def 'should produce random sample' () {
 
-        given:
-        def ch = Channel.of('A'..'Z')
-        def sampler = new RandomSampleOp(ch, 10)
-
         when:
-        def result = (List)sampler.apply().toList().val
+        def result = (List) runDataflow {
+            Channel.of('A'..'Z').randomSample(10).toList()
+        }.val
         then:
         result.size() == 10
         result.unique().size() == 10
@@ -47,12 +41,10 @@ class RandomSampleTest extends Specification {
 
     def 'should produce random sample given a short channel' () {
 
-        given:
-        def ch = Channel.of('A'..'J')
-        def sampler = new RandomSampleOp(ch, 20)
-
         when:
-        def result = (List)sampler.apply().toList().val
+        def result = (List) runDataflow {
+            Channel.of('A'..'J').randomSample(20).toList()
+        }.val
         then:
         result.size() == 10
         result.unique().size() == 10
@@ -61,12 +53,10 @@ class RandomSampleTest extends Specification {
 
     def 'should produce random sample given a channel emitting the same number of items as the buffer' () {
 
-        given:
-        def ch = Channel.of('A'..'J')
-        def sampler = new RandomSampleOp(ch, 10)
-
         when:
-        def result = (List)sampler.apply().toList().val
+        def result = (List) runDataflow {
+            Channel.of('A'..'J').randomSample(10).toList()
+        }.val
         then:
         result.size() == 10
         result.unique().size() == 10
@@ -75,19 +65,19 @@ class RandomSampleTest extends Specification {
 
     def 'should always produce the same sequence' () {
         given:
-        def testSeq = 'A'..'J'
-        def ch1 = Channel.of(testSeq)
-        def ch2 = Channel.of(testSeq)
-        def seed  = 23
-        def firstSampler = new RandomSampleOp(ch1, 10, seed)
-        def secondSampler = new RandomSampleOp(ch2, 10, seed)
+        def sequence = 'A'..'J'
+        def seed = 23
 
         when:
-        def resultFirstRun = (List)firstSampler.apply().toList().val
-        def resultSecondRun = (List)secondSampler.apply().toList().val
+        def result1 = (List) runDataflow {
+            Channel.of(sequence).randomSample(10, seed).toList()
+        }.val
+        def result2 = (List) runDataflow {
+            Channel.of(sequence).randomSample(10, seed).toList()
+        }.val
 
         then:
-        resultFirstRun == resultSecondRun
+        result1 == result2
     }
 
 }

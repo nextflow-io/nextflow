@@ -14,79 +14,122 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-nextflow.preview.output = true
+nextflow.preview.types = true
 
-params.save_foo = true
+params.save_bam_bai = false
+
+process fastqc {
+  input:
+  id: String
+
+  output:
+  tuple(id, file('*.fastqc.log'))
+
+  script:
+  """
+  echo ${id} > ${id}.fastqc.log
+  """
+}
 
 process align {
   input:
-  val(x)
+  id: String
 
   output:
-  path("*.bam")
-  path("${x}.bai")
+  bam = tuple(id, file('*.bam'))
+  bai = tuple(id, file('*.bai'))
 
   script:
   """
-  echo ${x} > ${x}.bam
-  echo ${x} | rev > ${x}.bai
+  echo ${id} > ${id}.bam
+  echo ${id} | rev > ${id}.bai
   """
 }
 
-process my_combine {
+process quant {
   input:
-  path(bamfile)
-  path(baifile)
+  id: String
 
   output:
-  path 'result.txt'
-
-  script:
-  """
-  cat $bamfile > result.txt
-  cat $baifile >> result.txt
-  """
-}
-
-process foo {
-  output:
-  path 'xxx'
+  tuple(id, file('quant'))
 
   script:
   '''
-  mkdir xxx
-  touch xxx/A
-  touch xxx/B
-  touch xxx/C
+  mkdir quant
+  touch quant/cmd_info.json
+  touch quant/lib_format_counts.json
+  touch quant/quant.sf
+  '''
+}
+
+process summary {
+  input:
+  logs: Bag<Path>
+
+  output:
+  tuple(file('summary_report.html'), file('summary_data/data.json'), file('summary_data/fastqc.txt'))
+
+  script:
+  '''
+  touch summary_report.html
+  mkdir summary_data
+  touch summary_data/data.json
+  touch summary_data/fastqc.txt
   '''
 }
 
 workflow {
   main:
-  input = Channel.of('alpha','beta','delta')
-  align(input)
+  ids = channel.of('alpha', 'beta', 'delta')
+  ch_fastqc = fastqc(ids)
+  (ch_bam, ch_bai) = align(ids)
+  ch_quant = quant(ids)
 
-  bams = align.out[0].toSortedList { bam -> bam.name }
-  bais = align.out[1].toSortedList { bai -> bai.name }
-  my_combine( bams, bais )
-  my_combine.out.view { it -> it.text }
+  ch_samples = ch_fastqc
+    .join(ch_bam)
+    .join(ch_bai)
+    .join(ch_quant)
+    .map { id, fastqc, bam, bai, quant ->
+      [
+        id: id,
+        fastqc: fastqc,
+        bam: bam,
+        bai: bai,
+        quant: quant
+      ]
+    }
 
-  foo()
+  ch_logs = ch_samples
+    .map { sample -> sample.fastqc }
+    .collect()
+
+  summary(ch_logs)
 
   publish:
-  align.out       >> 'data'
-  my_combine.out  >> 'more/data'
-  foo.out         >> (params.save_foo ? 'data' : null)
+  samples = ch_samples
+  summary = summary.out
 }
 
 output {
-  'data' {
-    path { val -> { file -> file } }
+  samples {
+    path { sample ->
+      sample.fastqc >> 'log/'
+      sample.bam >> (params.save_bam_bai ? 'align/' : null)
+      sample.bai >> (params.save_bam_bai ? 'align/' : null)
+      sample.quant >> "quant/${sample.id}"
+    }
     index {
-      path 'index.csv'
-      mapper { val -> [filename: val] }
+      path 'samples.csv'
       header true
       sep ','
+    }
+  }
+
+  summary {
+    path { report, data_json, fastqc_txt ->
+      report >> './'
+      data_json >> './'
+      fastqc_txt >> './'
     }
   }
 }

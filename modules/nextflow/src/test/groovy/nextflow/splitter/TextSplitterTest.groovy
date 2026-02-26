@@ -15,10 +15,10 @@
  */
 
 package nextflow.splitter
+
 import java.nio.file.Files
 import java.util.zip.GZIPOutputStream
 
-import nextflow.Channel
 import nextflow.Session
 import spock.lang.Specification
 import test.TestHelper
@@ -86,24 +86,11 @@ class TextSplitterTest extends Specification {
         lines[4] == 'line5\n'
 
         when:
-        def channel = new TextSplitter().target(file).options(by:2).channel()
+        def chunks = new TextSplitter().target(file).options(by:2).list()
         then:
-        channel.val == 'line1\nline2\n'
-        channel.val == 'line3\nline4\n'
-        channel.val == 'line5\n'
-        channel.val == Channel.STOP
-
-    }
-
-    def testSplitChannel() {
-
-        when:
-        def channel = new TextSplitter().target("Hello\nworld\n!").channel()
-        then:
-        channel.val == 'Hello\n'
-        channel.val == 'world\n'
-        channel.val == '!\n'
-        channel.val == Channel.STOP
+        chunks[0] == 'line1\nline2\n'
+        chunks[1] == 'line3\nline4\n'
+        chunks[2] == 'line5\n'
 
     }
 
@@ -115,12 +102,11 @@ class TextSplitterTest extends Specification {
         file.text = 'a\nbb\nccc'
 
         when:
-        def channel = new TextSplitter().target(file).channel()
+        def lines = new TextSplitter().target(file).list()
         then:
-        channel.val == 'a\n'
-        channel.val == 'bb\n'
-        channel.val == 'ccc\n'
-        channel.val == Channel.STOP
+        lines[0] == 'a\n'
+        lines[1] == 'bb\n'
+        lines[2] == 'ccc\n'
 
     }
 
@@ -134,12 +120,11 @@ class TextSplitterTest extends Specification {
         out.close()
 
         when:
-        def channel = new TextSplitter().target(file).channel()
+        def lines = new TextSplitter().target(file).list()
         then:
-        channel.val == 'a\n'
-        channel.val == 'bb\n'
-        channel.val == 'ccc\n'
-        channel.val == Channel.STOP
+        lines[0] == 'a\n'
+        lines[1] == 'bb\n'
+        lines[2] == 'ccc\n'
 
     }
 
@@ -153,12 +138,11 @@ class TextSplitterTest extends Specification {
         out.close()
 
         when:
-        def channel = new TextSplitter().target(file).options(decompress: true).channel()
+        def lines = new TextSplitter().target(file).options(decompress: true).list()
         then:
-        channel.val == 'a\n'
-        channel.val == 'bb\n'
-        channel.val == 'ccc\n'
-        channel.val == Channel.STOP
+        lines[0] == 'a\n'
+        lines[1] == 'bb\n'
+        lines[2] == 'ccc\n'
 
     }
 

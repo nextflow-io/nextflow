@@ -18,15 +18,18 @@ package nextflow.extension
 
 import groovyx.gpars.dataflow.DataflowVariable
 import org.junit.Rule
-
 import nextflow.Channel
+import spock.lang.Timeout
 import test.Dsl2Spec
 import test.OutputCapture
+
+import static test.ScriptHelper.*
 
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Timeout(5)
 class MultiMapOpTest extends Dsl2Spec {
 
     @Rule
@@ -35,9 +38,8 @@ class MultiMapOpTest extends Dsl2Spec {
     def 'should fork channel' () {
 
         when:
-        def result = dsl_eval('''   
-            Channel
-                .from(0,1,2)
+        def result = runScript('''   
+            channel.of(0,1,2)
                 .multiMap {
                         foo: it+1
                         bar: it*it+2
@@ -67,9 +69,8 @@ class MultiMapOpTest extends Dsl2Spec {
     def 'should fork channel with custom param' () {
 
         when:
-        def result = dsl_eval('''   
-            Channel
-                .from(0,1,2)
+        def result = runScript('''   
+            channel.of(0,1,2)
                 .multiMap { p ->
                         foo: p+1
                         bar: p*p+2
@@ -98,13 +99,13 @@ class MultiMapOpTest extends Dsl2Spec {
 
     def 'should pass criteria as argument' () {
         when:
-        dsl_eval('''   
+        runScript('''   
             criteria = multiMapCriteria { 
                 foo: it
                 bar: it*it
             }
 
-            ch1 = Channel.of(1,2,3).multiMap(criteria)  
+            ch1 = channel.of(1,2,3).multiMap(criteria)  
             
             ch1.foo.view { "foo:$it" }
             ch1.bar.view { "bar:$it" }
@@ -124,9 +125,8 @@ class MultiMapOpTest extends Dsl2Spec {
     def 'should fork channel value ch' () {
 
         when:
-        def result = dsl_eval('''   
-            Channel
-                .value('hello')
+        def result = runScript('''   
+            channel.value('hello')
                 .multiMap { p ->
                         foo: p.toUpperCase()
                         bar: p.reverse()

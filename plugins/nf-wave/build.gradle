@@ -9,10 +9,25 @@
  * defined by the Mozilla Public License, v. 2.0.
  */
 
-apply plugin: 'java'
-apply plugin: 'java-test-fixtures'
-apply plugin: 'idea'
-apply plugin: 'groovy'
+plugins {
+    id 'io.nextflow.nextflow-plugin' version "${nextflowPluginVersion}"
+    id 'java-test-fixtures'
+}
+
+nextflowPlugin {
+    nextflowVersion = '25.11.0-edge'
+
+    provider = "${nextflowPluginProvider}"
+    description = 'Provides dynamic container building and augmentation capabilities with on-demand software installation and advanced container management features'
+    className = 'io.seqera.wave.plugin.WavePlugin'
+    useDefaultDependencies = false
+    generateSpec = false
+    extensionPoints = [
+        'io.seqera.wave.plugin.WaveFactory',
+        'io.seqera.wave.plugin.config.WaveConfig',
+        'io.seqera.wave.plugin.resolver.WaveContainerResolver',
+    ]
+}
 
 sourceSets {
     main.java.srcDirs = []
@@ -30,16 +45,22 @@ configurations {
 
 dependencies {
     compileOnly project(':nextflow')
-    compileOnly 'org.slf4j:slf4j-api:2.0.7'
+    compileOnly 'org.slf4j:slf4j-api:2.0.17'
     compileOnly 'org.pf4j:pf4j:3.12.0'
+    compileOnly 'io.seqera:lib-trace:0.1.0'
+    compileOnly 'io.seqera:lib-httpx:2.1.0'
+    compileOnly 'org.apache.commons:commons-lang3:3.18.0'
+
+    // Force lib-httpx version to avoid conflicts with older versions from nf-commons
+    testImplementation 'io.seqera:lib-httpx:2.1.0'
+
     api 'org.apache.commons:commons-compress:1.26.1'
-    api 'org.apache.commons:commons-lang3:3.12.0'
-    api 'com.google.code.gson:gson:2.10.1'
+    api 'com.google.code.gson:gson:2.13.1'
     api 'org.yaml:snakeyaml:2.2'
-    api 'io.seqera:wave-api:0.14.0'
-    api 'io.seqera:wave-utils:0.15.0'
+    api 'io.seqera:wave-api:1.31.1'
+    api 'io.seqera:wave-utils:1.31.1'
 
     testImplementation(testFixtures(project(":nextflow")))
-    testImplementation "org.apache.groovy:groovy:4.0.24"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.24"
+    testImplementation "org.apache.groovy:groovy:4.0.30"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.30"
 }

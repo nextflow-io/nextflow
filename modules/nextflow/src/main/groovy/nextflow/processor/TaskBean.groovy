@@ -24,7 +24,6 @@ import nextflow.container.ContainerConfig
 import nextflow.executor.BashWrapperBuilder
 import nextflow.executor.TaskArrayExecutor
 import nextflow.util.MemoryUnit
-
 /**
  * Serializable task value object. Holds configuration values required to
  * launch the task execution
@@ -88,6 +87,8 @@ class TaskBean implements Serializable, Cloneable {
 
     String containerOptions
 
+    String containerPlatform
+
     Map<String,Path> inputFiles
 
     List<String> outputFiles
@@ -111,6 +112,10 @@ class TaskBean implements Serializable, Cloneable {
     Integer arrayIndexStart
 
     List<Path> arrayWorkDirs
+
+    List<Path> arrayInputFiles
+
+    Boolean stageFileEnabled
 
     @PackageScope
     TaskBean() {
@@ -150,6 +155,7 @@ class TaskBean implements Serializable, Cloneable {
         this.containerNative = task.isContainerNative()
         this.containerEnabled = task.isContainerEnabled()
         this.containerOptions = task.config.getContainerOptions()
+        this.containerPlatform = task.getContainerPlatform()
         // secret management
         this.secretNative = task.isSecretNative()
         this.secretNames = task.config.getSecret()
@@ -164,8 +170,8 @@ class TaskBean implements Serializable, Cloneable {
         this.binDirs = task.getProcessor().getBinDirs()
         this.stageInMode = task.config.getStageInMode()
         this.stageOutMode = task.config.getStageOutMode()
-
         this.resourceLabels = task.config.getResourceLabels()
+        this.stageFileEnabled = task.isStageFileEnabled()
 
         // job array
         if( task instanceof TaskArrayRun ) {
@@ -173,6 +179,7 @@ class TaskBean implements Serializable, Cloneable {
             this.arrayIndexName = executor.getArrayIndexName()
             this.arrayIndexStart = executor.getArrayIndexStart()
             this.arrayWorkDirs = task.children.collect( h -> h.task.workDir )
+            this.arrayInputFiles = task.children.collectMany { h -> h.task.getInputFilesMap().values() }
         }
     }
 

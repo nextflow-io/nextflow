@@ -17,20 +17,14 @@
 package nextflow.extension
 
 import nextflow.Channel
-
 import spock.lang.Specification
 
-import nextflow.Session
-
+import static test.ScriptHelper.runDataflow
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class GroupTupleOpTest extends Specification {
-
-    def setup() {
-        new Session()
-    }
 
     def 'should reuse the same key' () {
 
@@ -113,7 +107,9 @@ class GroupTupleOpTest extends Specification {
 
         when:
         // here the size is defined as operator argument
-        def result = tuples.channel().groupTuple(size: 2)
+        def result = runDataflow {
+            tuples.channel().groupTuple(size: 2)
+        }
         then:
         result.val == [k1, ['a', 'b'] ]
         result.val == [k1, ['d', 'c'] ]
@@ -122,7 +118,9 @@ class GroupTupleOpTest extends Specification {
 
         when:
         // here the size is inferred by the key itself
-        result = tuples.channel().groupTuple()
+        result = runDataflow {
+            tuples.channel().groupTuple()
+        }
         then:
         result.val == [k1, ['a', 'b'] ]
         result.val == [k1, ['d', 'c'] ]
@@ -131,13 +129,57 @@ class GroupTupleOpTest extends Specification {
 
 
         when:
-        result = tuples.channel().groupTuple(remainder: true)
+        result = runDataflow {
+            tuples.channel().groupTuple(remainder: true)
+        }
         then:
         result.val == [k1, ['a', 'b'] ]
         result.val == [k1, ['d', 'c'] ]
         result.val == [k2, ['x', 'y', 'z'] ]
         result.val == [k3, ['q']]
         result.val == [k1, ['f']]
+        result.val == Channel.STOP
+    }
+
+    def 'should handle GString vs String keys correctly' () {
+        given:
+        def sampleName = "sample1"
+        def gstringKey = "${sampleName}"  // GStringImpl
+        def stringKey = "sample1"         // String
+        
+        def tuples = [
+                [gstringKey, 'file1.txt'],
+                [stringKey, 'file2.txt'],
+                [gstringKey, 'file3.txt']
+        ]
+
+        when:
+        def result = runDataflow {
+            tuples.channel().groupTuple()
+        }
+        then:
+        // Without fix, this would create separate groups for GString and String keys
+        // With fix, they should be grouped together
+        result.val == [gstringKey, ['file1.txt', 'file2.txt', 'file3.txt']]
+        result.val == Channel.STOP
+    }
+
+    def 'should preserve non-string key types' () {
+        given:
+        def tuples = [
+                [1, 'file1.txt'],           // Integer key
+                [new File('/tmp'), 'file2.txt'],  // File key
+                [[a: 1], 'file3.txt']       // Map key
+        ]
+
+        when:
+        def result = runDataflow {
+            tuples.channel().groupTuple()
+        }
+        then:
+        result.val == [1, ['file1.txt']]
+        result.val == [new File('/tmp'), ['file2.txt']]
+        result.val == [[a: 1], ['file3.txt']]
         result.val == Channel.STOP
     }
 }

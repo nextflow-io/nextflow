@@ -85,13 +85,13 @@ class NextflowTest extends Specification {
         Nextflow.file(null)
         then:
         e = thrown(IllegalArgumentException)
-        e.message == 'Argument of `file` function cannot be null'
+        e.message == 'Argument of `file()` function cannot be null'
 
         when:
         Nextflow.file('')
         then:
         e = thrown(IllegalArgumentException)
-        e.message == 'Argument of `file` function cannot be empty'
+        e.message == 'Argument of `file()` function cannot be empty'
     }
 
     def 'should return http path' () {
@@ -347,6 +347,12 @@ class NextflowTest extends Specification {
         then:
         def e = thrown(NoSuchFileException)
         e.message == foo.toString()
+
+        when:
+        Nextflow.file("$folder/*.txt", checkIfExists: true)
+        then:
+        e = thrown(NoSuchFileException)
+        e.message == "$folder/*.txt"
 
         cleanup:
         folder?.deleteDir()

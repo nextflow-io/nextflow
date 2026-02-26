@@ -20,7 +20,6 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
 
@@ -39,6 +38,9 @@ class CmdDrop extends CmdBase {
     @Parameter(required=true, description = 'name of the project to drop')
     List<String> args
 
+    @Parameter(names=['-r','-revision'], description = 'Revision of the project to drop (either a git branch, tag or commit SHA number)')
+    String revision
+
     @Parameter(names='-f', description = 'Delete the repository without taking care of local changes')
     boolean force
 
@@ -48,18 +50,8 @@ class CmdDrop extends CmdBase {
     @Override
     void run() {
         Plugins.init()
-        def manager = new AssetManager(args[0])
-        if( !manager.localPath.exists() ) {
-            throw new AbortOperationException("No match found for: ${args[0]}")
+        try (final manager = new AssetManager(args[0])) {
+            manager.drop(revision, force)
         }
-
-        if( this.force || manager.isClean() ) {
-            manager.close()
-            if( !manager.localPath.deleteDir() )
-                throw new AbortOperationException("Unable to delete project `${manager.project}` -- Check access permissions for path: ${manager.localPath}")
-            return
-        }
-
-        throw new AbortOperationException("Local project repository contains uncommitted changes -- won't drop it")
     }
 }

@@ -15,22 +15,19 @@
  */
 
 package nextflow.extension
+
 import nextflow.Channel
-import nextflow.Session
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Timeout
 
+import static test.ScriptHelper.runDataflow
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Timeout(10)
 class SplitFastaOperatorTest extends Specification {
-
-    def setupSpec() {
-        new Session()
-    }
 
     @Shared
     def fasta1 = """\
@@ -69,15 +66,15 @@ class SplitFastaOperatorTest extends Specification {
     def 'should split fasta in sequences'() {
 
         given:
-        def sequences = Channel.of(fasta1).splitFasta()
+        def sequences = runDataflow {
+            Channel.of(fasta1).splitFasta()
+        }
 
         expect:
-        with(sequences) {
-            val == '>1aboA\nNLFVALYDFVASGDNTLSITKGEKLRVLGYNHNGEWCEAQTKNGQGWVPS\nNYITPVN\n'
-            val == '>1ycsB\nKGVIYALWDYEPQNDDELPMKEGDCMTIIHREDEDEIEWWWARLNDKEGY\nVPRNLLGLYP\n'
-            val == '>1pht\nGYQYRALYDYKKEREEDIDLHLGDILTVNKGSLVALGFSDGQEARPEEIG\nWLNGYNETTGERGDFPGTYVEYIGRKKISP\n'
-            val == Channel.STOP
-        }
+        sequences.val == '>1aboA\nNLFVALYDFVASGDNTLSITKGEKLRVLGYNHNGEWCEAQTKNGQGWVPS\nNYITPVN\n'
+        sequences.val == '>1ycsB\nKGVIYALWDYEPQNDDELPMKEGDCMTIIHREDEDEIEWWWARLNDKEGY\nVPRNLLGLYP\n'
+        sequences.val == '>1pht\nGYQYRALYDYKKEREEDIDLHLGDILTVNKGSLVALGFSDGQEARPEEIG\nWLNGYNETTGERGDFPGTYVEYIGRKKISP\n'
+        sequences.val == Channel.STOP
 
     }
 
@@ -85,7 +82,9 @@ class SplitFastaOperatorTest extends Specification {
     def 'should split fasta in records' () {
 
         given:
-        def records = Channel.of(fasta1, fasta2).splitFasta(record:[id:true])
+        def records = runDataflow {
+            Channel.of(fasta1, fasta2).splitFasta(record:[id:true])
+        }
         expect:
         records.val == [id:'1aboA']
         records.val == [id:'1ycsB']
@@ -98,10 +97,11 @@ class SplitFastaOperatorTest extends Specification {
     def 'should split tuple in fasta records' () {
 
         given:
-        def result = Channel
-                .from( [fasta1, 'one'], [fasta2,'two'] )
+        def result = runDataflow {
+            Channel.of( [fasta1, 'one'], [fasta2,'two'] )
                 .splitFasta(record:[id:true])
-                .map{ record, code -> [record.id, code] }
+                .map { record, code -> [record.id, code] }
+        }
 
         expect:
         result.val == ['1aboA', 'one']
@@ -115,8 +115,9 @@ class SplitFastaOperatorTest extends Specification {
     def 'should split fasta and forward result into the specified channel' () {
 
         given:
-        def target = Channel.create()
-        Channel.of(fasta1,fasta2).splitFasta(record:[id:true], into: target)
+        def target = runDataflow {
+            Channel.of(fasta1,fasta2).splitFasta(record:[id:true])
+        }
 
         expect:
         target.val == [id:'1aboA']
@@ -149,10 +150,10 @@ class SplitFastaOperatorTest extends Specification {
             '''
                 .stripIndent().trim()
 
-        def target = Channel.create()
-
         when:
-        Channel.of(F1,F3).splitFasta(by:2, into: target)
+        def target = runDataflow {
+            Channel.of(F1,F3).splitFasta(by:2)
+        }
         then:
         target.val == '>1\nAAA\n>2\nBBB\n'
         target.val == '>3\nCCC\n'
@@ -190,10 +191,10 @@ class SplitFastaOperatorTest extends Specification {
             '''
                 .stripIndent().trim()
 
-        def target = Channel.create()
-
         when:
-        Channel.of(F1,F3).splitFasta(by:2, limit:4, into: target)
+        def target = runDataflow {
+            Channel.of(F1,F3).splitFasta(by:2, limit:4)
+        }
         then:
         target.val == '>1\nAAA\n>2\nBBB\n'
         target.val == '>3\nCCC\n>4\nDDD\n'

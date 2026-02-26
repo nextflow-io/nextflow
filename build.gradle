@@ -15,7 +15,6 @@
  */
 
 plugins {
-    id "io.codearte.nexus-staging" version "0.30.0"
     id 'java'
     id 'idea'
 }
@@ -67,18 +66,12 @@ allprojects {
     apply plugin: 'jacoco'
 
     java {
+        // these settings apply to all jvm tooling, including groovy
         toolchain {
             languageVersion = JavaLanguageVersion.of(21)
         }
-    }
-
-    compileJava {
-        options.release.set(17)
-    }
-
-    tasks.withType(GroovyCompile) {
-        sourceCompatibility = '17'
-        targetCompatibility = '17'
+        sourceCompatibility = 17
+        targetCompatibility = 17
     }
 
     idea {
@@ -107,10 +100,13 @@ allprojects {
             module("commons-logging:commons-logging") { replacedBy("org.slf4j:jcl-over-slf4j") }
         }
 
+        // JUnit Platform launcher required for Gradle 9.1+ when using useJUnitPlatform()
+        testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
         // Documentation required libraries
         groovyDoc 'org.fusesource.jansi:jansi:2.4.0'
-        groovyDoc "org.apache.groovy:groovy-groovydoc:4.0.24"
-        groovyDoc "org.apache.groovy:groovy-ant:4.0.24"
+        groovyDoc "org.apache.groovy:groovy-groovydoc:4.0.30"
+        groovyDoc "org.apache.groovy:groovy-ant:4.0.30"
     }
 
     test {
@@ -193,16 +189,20 @@ jar.enabled = false
 /*
  * Update the build timestamp in the source source file
  */
-task buildInfo { doLast {
+task buildInfo {
+    // Always run this task - never consider it up-to-date
+    outputs.upToDateWhen { false }
+
+    doLast {
 
     def file0 = file('modules/nextflow/src/main/resources/META-INF/build-info.properties')
     def buildNum = 0
-    def src = file0.text
-    src.find(/build *= *([0-9]*)/) { buildNum = it[1]?.toInteger()+1 }
-    if( !buildNum ) {
-        println "WARN: Unable to find current build number"
+
+    // Use GitHub Actions run number if available, otherwise increment local counter
+    if (System.getenv('GITHUB_RUN_NUMBER')) {
+        buildNum = System.getenv('GITHUB_RUN_NUMBER').toInteger()
+        println "Using GitHub Actions run number: $buildNum"
     }
-    file0.text = src
 
     // -- update build-info file
     file0.text = """\
@@ -211,10 +211,28 @@ task buildInfo { doLast {
     timestamp=${System.currentTimeMillis()}
     commitId=${project.property('commitId')}
     """.stripIndent()
+}}
+
+/*
+ * Update release information in nextflow wrapper, dockerfile, and plugin metadata.
+ *
+ * This task:
+ * 1. Updates the NXF_VER version string in the nextflow launch script
+ * 2. Updates the release version in docker/Dockerfile
+ * 3. Generates plugins-info.txt with current plugin versions from VERSION files
+ *
+ * This task always runs to ensure all release artifacts are updated with current versions.
+ */
+task releaseInfo {
+    dependsOn buildInfo
+    // Always run this task - never consider it up-to-date
+    outputs.upToDateWhen { false }
+
+    doLast {
 
     // -- update 'nextflow' wrapper
-    file0 = file('nextflow')
-    src = file0.text
+    def file0 = file('nextflow')
+    def src = file0.text
     src = src.replaceAll(/NXF_VER\=\$\{NXF_VER:-'.*'\}/, 'NXF_VER=\\${NXF_VER:-\'' + version + '\'}')
     file0.text = src
 
@@ -228,11 +246,75 @@ task buildInfo { doLast {
     def plugins = []
     new File(rootProject.rootDir, 'plugins')
             .eachDir { if(it.name.startsWith('nf-')) plugins << project(":plugins:${it.name}") }
-
-    def meta = plugins .collect { "$it.name@$it.version" }
+    def meta = plugins.collect { "$it.name@$it.version" }
     file('modules/nextflow/src/main/resources/META-INF/plugins-info.txt').text = meta.toSorted().join('\n')
 }}
 
+/*
+ * Validate that plugins-info.txt matches plugin VERSION files and that build-info.properties
+ * contains the correct build number and commit ID when running in GitHub Actions.
+ *
+ * This task ensures:
+ * 1. All plugin versions in plugins-info.txt match their corresponding VERSION files
+ * 2. The build number in build-info.properties matches GITHUB_RUN_NUMBER (in CI)
+ * 3. The commit ID in build-info.properties matches GITHUB_SHA (in CI)
+ *
+ * This validation prevents releases with stale or mismatched metadata.
+ */
+task validatePluginVersions {
+    dependsOn buildInfo
+    inputs.file('modules/nextflow/src/main/resources/META-INF/plugins-info.txt')
+    inputs.file('modules/nextflow/src/main/resources/META-INF/build-info.properties')
+    inputs.files(fileTree('plugins') { include '*/VERSION' })
+
+    doLast {
+        // Get expected versions from plugin projects
+        def expected = []
+        new File(rootProject.rootDir, 'plugins')
+            .eachDir { if(it.name.startsWith('nf-')) expected << project(":plugins:${it.name}") }
+        def expectedVersions = expected.collect { "$it.name@$it.version" }.toSorted()
+
+        // Get actual versions from plugins-info.txt
+        def actualVersions = file('modules/nextflow/src/main/resources/META-INF/plugins-info.txt').readLines()
+
+        // Compare plugin versions
+        if (expectedVersions != actualVersions) {
+            def diffs = []
+            expectedVersions.eachWithIndex { exp, i ->
+                def act = actualVersions.size() > i ? actualVersions[i] : 'missing'
+                if (exp != act) diffs << "  expected: $exp, actual: $act"
+            }
+            throw new GradleException("Plugin version mismatch:\n${diffs.join('\n')}\nRun 'make assemble' to fix.")
+        }
+
+        // Validate build-info.properties - require GitHub Actions environment variables
+        if (!System.getenv('GITHUB_RUN_NUMBER')) {
+            throw new GradleException("GITHUB_RUN_NUMBER environment variable is required")
+        }
+        if (!System.getenv('GITHUB_SHA')) {
+            throw new GradleException("GITHUB_SHA environment variable is required")
+        }
+
+        def buildInfoFile = file('modules/nextflow/src/main/resources/META-INF/build-info.properties')
+        def props = new Properties()
+        buildInfoFile.withInputStream { props.load(it) }
+
+        def actualBuild = props.getProperty('build')
+        def expectedBuild = System.getenv('GITHUB_RUN_NUMBER')
+        if (actualBuild != expectedBuild) {
+            throw new GradleException("Build number mismatch: build-info.properties has '${actualBuild}' but GITHUB_RUN_NUMBER is '${expectedBuild}'. Run 'make assemble' to fix.")
+        }
+
+        def actualCommit = props.getProperty('commitId')
+        def expectedCommit = System.getenv('GITHUB_SHA').take(9) // GitHub SHA is full hash, we use short form
+        if (actualCommit != expectedCommit) {
+            throw new GradleException("Commit ID mismatch: build-info.properties has '${actualCommit}' but GITHUB_SHA is '${expectedCommit}'. Run 'make assemble' to fix.")
+        }
+
+        println "✅ Build info validation passed: build=${actualBuild}, commitId=${actualCommit}"
+        println "✅ Plugin version validation passed: all ${expected.size()} plugin versions match"
+    }
+}
 
 /*
  * Compile sources and copies all libs to target directory
@@ -243,7 +325,7 @@ task compile {
 
 def getRuntimeConfigs() {
     def names = subprojects
-            .findAll { prj -> prj.name in ['nextflow','nf-commons','nf-httpfs'] }
+            .findAll { prj -> prj.name in ['nextflow','nf-commons','nf-httpfs','nf-lang','nf-lineage'] }
             .collect { it.name }
 
     FileCollection result = null
@@ -257,32 +339,55 @@ def getRuntimeConfigs() {
         // note: migrating to gradle 7 does not work any more
         //result = result + cfg.getOutgoing().getArtifacts().getFiles()
     }
-    return result
+    return result?.files ?: []
 }
 
 /*
  * Save the runtime classpath
+ * NOTE: This task uses a provider to delay execution, but still triggers configuration
+ * resolution when the provider is evaluated. While not ideal for Gradle 9.1's strict
+ * configuration resolution requirements, this approach works in practice for our use case.
  */
 task exportClasspath {
     dependsOn allprojects.jar
+    
+    // Use provider to delay configuration resolution until task execution
+    def configurationFiles = provider {
+        def libs = []
+        
+        // Resolve configurations during provider evaluation (not ideal but functional)
+        ['nextflow','nf-commons','nf-httpfs','nf-lang','nf-lineage'].each { moduleName ->
+            def moduleProject = project(":$moduleName")
+            def cfg = moduleProject.configurations.getByName('runtimeClasspath')
+            libs.addAll(cfg.files.collect { it.canonicalPath })
+        }
+        
+        // Add module jars
+        ['nextflow','nf-commons','nf-httpfs','nf-lang','nf-lineage'].each {
+            libs << file("modules/$it/build/libs/${it}-${version}.jar").canonicalPath
+        }
+        
+        return libs.unique()
+    }
+    
+    inputs.files(configurationFiles)
+    outputs.file('.launch.classpath')
+    
     doLast {
-        def home = System.getProperty('user.home')
-        def all = getRuntimeConfigs()
-        def libs = all.collect { File file ->  /*println file.canonicalPath.replace(home, '$HOME');*/ file.canonicalPath;  }
-        ['nextflow','nf-commons','nf-httpfs'].each {libs << file("modules/$it/build/libs/${it}-${version}.jar").canonicalPath }
-        file('.launch.classpath').text = libs.unique().join(':')
+        def libs = configurationFiles.get()
+        file('.launch.classpath').text = libs.join(':')
     }
 }
 
-ext.nexusUsername = project.findProperty('nexusUsername')
-ext.nexusPassword = project.findProperty('nexusPassword')
+ext.nexusUsername = project.findProperty('nexusUsername') ?: System.getenv('AWS_ACCESS_KEY_ID')
+ext.nexusPassword = project.findProperty('nexusPassword') ?: System.getenv('AWS_SECRET_ACCESS_KEY')
 ext.nexusFullName = project.findProperty('nexusFullName')
 ext.nexusEmail = project.findProperty('nexusEmail')
 
 // `signing.keyId` property needs to be defined in the `gradle.properties` file
 ext.enableSignArchives = project.findProperty('signing.keyId')
 
-ext.coreProjects = projects( ':nextflow', ':nf-commons', ':nf-httpfs' )
+ext.coreProjects = projects( ':nextflow', ':nf-commons', ':nf-httpfs', ':nf-lang', ':nf-lineage' )
 
 configure(coreProjects) {
     group = 'io.nextflow'
@@ -352,13 +457,14 @@ configure(coreProjects) {
 
         repositories {
             maven {
+                name = 'Seqera'
                 // change URLs to point to your repos, e.g. http://my.org/repo
-                def releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
-                def snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots/"
+                def releasesRepoUrl = "s3://maven.seqera.io/releases/"
+                def snapshotsRepoUrl = "s3://maven.seqera.io/snapshots/"
                 url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
-                credentials(PasswordCredentials) {
-                    username nexusUsername
-                    password nexusPassword
+                credentials(AwsCredentials) {
+                    accessKey nexusUsername
+                    secretKey nexusPassword
                 }
             }
         }
@@ -392,24 +498,16 @@ task makeDigest { doLast {
     file('nextflow.md5').text = bytesToHex(digest) + '\n'
 }}
 
+// Make releaseInfo task automatically run makeDigest after updating versions
+releaseInfo.finalizedBy makeDigest
+
 
 task upload {
     dependsOn compile
-    dependsOn makeDigest
     dependsOn coreProjects.publish
+    dependsOn validatePluginVersions
 }
 
-/*
- * Configure Nextflow staging plugin -- https://github.com/Codearte/gradle-nexus-staging-plugin
- * It adds the tasks
- * - closeRepository
- * - releaseRepository
- * - closeAndReleaseRepository
- */
-nexusStaging {
-    packageGroup = 'io.nextflow'
-    delayBetweenRetriesInMillis = 10_000
-}
 
 if( System.env.BUILD_PACK ) {
     apply from: 'packing.gradle'

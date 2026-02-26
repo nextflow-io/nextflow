@@ -94,6 +94,10 @@ class BitbucketServerRepositoryProviderTest extends Specification {
         new BitbucketServerRepositoryProvider('pditommaso/hello', obj)
                 .setRevision('foo')
                 .getContentUrl('main.nf') == 'https://bitbucket.server.com/rest/api/1.0/projects/pditommaso/repos/hello/raw/main.nf?at=foo'
+        and:
+        new BitbucketServerRepositoryProvider('pditommaso/hello', obj)
+                .setRevision('test/branch+with&strangecharacters')
+                .getContentUrl('main.nf') == 'https://bitbucket.server.com/rest/api/1.0/projects/pditommaso/repos/hello/raw/main.nf?at=test%2Fbranch%2Bwith%26strangecharacters'
 
     }
 
@@ -126,4 +130,19 @@ class BitbucketServerRepositoryProviderTest extends Specification {
         then:
         result.contains( new RepositoryProvider.TagInfo('v1.0', 'c62df3d9c2464adcaa0fb6c978c8e32e2672b191') )
     }
+
+    @Requires( { System.getenv('NXF_BITBUCKET_SERVER_ACCESS_TOKEN') } )
+    def 'should list root directory contents'() {
+        given:
+        def token = System.getenv('NXF_BITBUCKET_SERVER_ACCESS_TOKEN')
+        def config = new ProviderConfig('bbs', [server:'http://slurm.seqera.io:7990', platform:'bitbucketsever']).setAuth(token)
+        def repo = new BitbucketServerRepositoryProvider('scm/hello/hello', config)
+
+        when:
+        repo.listDirectory("/", 1)
+
+        then:
+        thrown UnsupportedOperationException
+    }
+
 }

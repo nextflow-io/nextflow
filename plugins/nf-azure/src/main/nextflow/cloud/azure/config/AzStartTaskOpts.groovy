@@ -16,15 +16,27 @@
 package nextflow.cloud.azure.config
 
 import groovy.transform.CompileStatic
+import nextflow.config.spec.ConfigOption
+import nextflow.config.spec.ConfigScope
+import nextflow.script.dsl.Description
 
 /**
  * Model Azure pool start task options
  */
 @CompileStatic
-class AzStartTaskOpts {
+class AzStartTaskOpts implements ConfigScope {
 
-    String  script
-    boolean privileged
+    @ConfigOption
+    @Description("""
+        The `startTask` that is executed as the node joins the Azure Batch node pool.
+    """)
+    final String script
+
+    @ConfigOption
+    @Description("""
+        Enable the `startTask` to run with elevated access (default: `false`).
+    """)
+    final boolean privileged
 
     AzStartTaskOpts() {
         this(Collections.emptyMap())
