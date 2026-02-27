@@ -271,7 +271,7 @@ class TowerClient implements TraceObserverV2 {
         log.debug "Creating Seqera Platform observer -- endpoint=$endpoint; requestInterval=$requestInterval; aliveInterval=$aliveInterval; maxRetries=$maxRetries; backOffBase=$backOffBase; backOffDelay=$backOffDelay"
 
         this.session = session
-        this.aggregator = new ResourcesAggregator(session)
+        this.aggregator = new ResourcesAggregator()
         this.runName = session.getRunName()
         this.runId = session.getUniqueId()
         this.httpClient = newHttpClient()
@@ -410,7 +410,8 @@ class TowerClient implements TraceObserverV2 {
         // wait and flush reports content
         reports.flowComplete()
         // notify the workflow completion
-        if( workflowId ) {
+        // note: only send complete if onFlowBegin was invoked (sender is set there)
+        if( workflowId && sender ) {
             final req = makeCompleteReq(session)
             final resp = sendHttpMessage(urlTraceComplete, req, 'PUT')
             logHttpResponse(urlTraceComplete, resp)

@@ -316,6 +316,7 @@ public class ConfigAstBuilder {
         var target = configPrimary(ctx.target);
         var statements = ctx.configBlockStatement().stream()
             .map(this::configBlockStatement)
+            .filter(stmt -> stmt != null)
             .toList();
         return new ConfigBlockNode(kind, target, statements);
     }

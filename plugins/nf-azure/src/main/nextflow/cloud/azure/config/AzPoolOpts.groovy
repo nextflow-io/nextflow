@@ -40,7 +40,7 @@ class AzPoolOpts implements CacheFunnel, ConfigScope {
 
     static public final String DEFAULT_PUBLISHER = "microsoft-dsvm"
     static public final String DEFAULT_OFFER = "ubuntu-hpc"
-    static public final String DEFAULT_SKU = "batch.node.ubuntu 22.04"
+    static public final String DEFAULT_SKU = "batch.node.ubuntu 24.04"
     static public final String DEFAULT_VM_TYPE = "Standard_D4a_v4"
     static public final OSType DEFAULT_OS_TYPE = OSType.LINUX
     static public final String DEFAULT_SHARE_ROOT_PATH = "/mnt/batch/tasks/fsmounts"

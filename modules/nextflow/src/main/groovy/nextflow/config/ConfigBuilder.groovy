@@ -85,7 +85,7 @@ class ConfigBuilder {
 
     List<String> warnings = new ArrayList<>(10)
 
-    Map<String,Object> declaredParams = [:]
+    Map<String,Object> declaredParams
 
     ConfigBuilder() {
         setHomeDir(Const.APP_HOME_DIR)
@@ -407,6 +407,7 @@ class ConfigBuilder {
                 checkValidProfile(parser.getDeclaredProfiles())
             }
 
+            this.declaredParams = parser.getDeclaredParams()
         }
 
         // guarantee top scopes
@@ -438,7 +439,6 @@ class ConfigBuilder {
         final config = parse0(parser, entry)
         if( NF.getSyntaxParserVersion() == 'v1' )
             validate(config, entry)
-        declaredParams.putAll(parser.getDeclaredParams())
         result.merge(config)
     }
 

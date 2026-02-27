@@ -30,7 +30,7 @@ import nextflow.lineage.serde.LinSerializable
 @CompileStatic
 class Workflow implements LinSerializable {
     /**
-     * List of script files defining a workflow
+     * List of script files used by a workflow, starting with the main script
      */
     List<DataPath> scriptFiles
     /**

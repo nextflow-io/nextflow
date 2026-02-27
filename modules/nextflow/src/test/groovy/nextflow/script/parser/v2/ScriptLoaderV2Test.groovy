@@ -254,4 +254,131 @@ class ScriptLoaderV2Test extends Dsl2Spec {
         noExceptionThrown()
     }
 
+    def 'should register outputs and topic emissions' () {
+
+        given:
+        def session = new Session()
+        def parser = new ScriptLoaderV2(session)
+
+        def TEXT = '''
+
+            nextflow.preview.types = true
+
+            process hello {
+
+                output:
+                out1: Path = file("out1.txt")
+                out2: Path = file("out2.txt")
+
+                topic:
+                file("version.txt") >> 'versions'
+
+                script:
+                """
+                echo "version" > version.txt
+                echo "result1" > out1.txt
+                echo "result2" > out2.txt
+                """
+            }
+            '''
+
+        when:
+        parser.setModule(true)
+        parser.parse(TEXT)
+        parser.runScript()
+        def process = ScriptMeta.get(parser.getScript()).getProcess('hello')
+        def outputs = process.getProcessConfig().getOutputs()
+
+        then:
+        outputs.getParams().size() == 2
+        outputs.getTopics().size() == 1
+        outputs.getFiles().size() == 3
+    }
+
+    def 'should allow optional param' () {
+
+        given:
+        def session = new Session()
+        def parser = new ScriptLoaderV2(session)
+
+        def TEXT = '''
+            params {
+                path: Path?
+            }
+
+            workflow {
+                params.path
+            }
+            '''
+
+        when:
+        parser.parse(TEXT)
+        parser.runScript()
+
+        then:
+        parser.getResult() == null
+    }
+
+    def 'should support enums' () {
+
+        given:
+        def session = new Session()
+        def parser = new ScriptLoaderV2(session)
+
+        def TEXT = '''
+            enum Day {
+                MONDAY,
+                TUESDAY,
+                WEDNESDAY,
+                THURSDAY,
+                FRIDAY,
+                SATURDAY,
+                SUNDAY
+            }
+
+            workflow {
+                Day.TUESDAY
+            }
+            '''
+
+        when:
+        parser.parse(TEXT)
+        parser.runScript()
+
+        then:
+        parser.getResult().toString() == 'TUESDAY'
+    }
+
+    def 'should report error for invalid publish statements in output block' () {
+        given:
+        def session = new Session()
+        def parser = new ScriptLoaderV2(session)
+
+        def TEXT = '''
+            workflow {
+                main:
+                ch = channel.empty()
+
+                publish:
+                samples = ch
+            }
+
+            output {
+                samples {
+                    path { v ->
+                        if( true ) return 42
+                        v >> 'foo'
+                    }
+                }
+            }
+            '''
+
+        when:
+        parser.parse(TEXT)
+        parser.runScript()
+        then:
+        def e = thrown(ScriptCompilationException)
+        e.cause.message.contains 'Publish statements cannot be mixed with other statements in a dynamic publish path'
+    }
+
 }

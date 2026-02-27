@@ -17,6 +17,7 @@
 package nextflow.scm
 
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.config.Manifest
@@ -64,6 +65,7 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
     private File revisionSubdir
     private Git _bareGit
     private Git _commitGit
+    private Git _legacyGit
 
     MultiRevisionRepositoryStrategy(String project, String revision = null) {
         super(project)
@@ -126,7 +128,7 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
         String commitId = null
 
         if( hasBareRepo() ) {
-            def rev = Git.open(this.bareRepo)
+            def rev = getBareGit()
                 .getRepository()
                 .resolve(revision ?: Constants.HEAD)
             if( rev )
@@ -177,7 +179,11 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
         }
         final updateRevision = revision ?: getDefaultBranch(manifest)
         log.debug "Fetching (updating) bare repo for ${project} [revision: $updateRevision]"
-        getBareGit().fetch().setRefSpecs(refSpecForName(updateRevision)).call()
+        final fetch = getBareGit().fetch().setRefSpecs(refSpecForName(updateRevision))
+        if( provider.hasCredentials() ) {
+            fetch.setCredentialsProvider(provider.getGitCredentials())
+        }
+        fetch.call()
     }
 
     private void createBareRepo(Manifest manifest) {
@@ -200,6 +206,7 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
                 .setGitDir(this.bareRepo)
                 .setCloneSubmodules(manifest.recurseSubmodules)
                 .call()
+                .close()
         } catch( Throwable t ) {
             // If there is an error creating the bare repo, remove the bare repo path to avoid incorrect repo clones.
             bareRepo.deleteDir()
@@ -297,18 +304,19 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
 
             // clone it, but don't specify a revision - jgit will checkout the default branch
             File bareObjectsDir = new File(this.bareRepo, "objects")
-            FileRepository repo = new FileRepositoryBuilder()
+            try (FileRepository repo = new FileRepositoryBuilder()
                 .setGitDir(new File(getLocalPath(), ".git"))
                 .addAlternateObjectDirectory(bareObjectsDir)
-                .build() as FileRepository
-            repo.create()
+                .build() as FileRepository) {
+                repo.create()
 
-            // Write alternates file (not done by repo create).
-            new File(repo.getObjectsDirectory(), "info/alternates").write(bareObjectsDir.absolutePath)
+                // Write alternates file (not done by repo create).
+                new File(repo.getObjectsDirectory(), "info/alternates").write(bareObjectsDir.absolutePath)
 
-            // Configure remote pointing to the cache repo
-            repo.getConfig().setString("remote", "origin", "url", cloneURL)
-            repo.getConfig().save()
+                // Configure remote pointing to the cache repo
+                repo.getConfig().setString("remote", "origin", "url", cloneURL)
+                repo.getConfig().save()
+            }
 
             final fetch = getCommitGit()
                 .fetch()
@@ -329,20 +337,35 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
     }
 
     private RefSpec refSpecForName(String revision) {
-        // Is it a local branch?
-        Ref branch = getBareGit().getRepository().findRef("refs/heads/" + revision)
+        // First, check if it's a local branch
+        final branchName = "refs/heads/$revision".toString()
+        final branch = getBareGit().getRepository().findRef(branchName)
         if( branch != null ) {
-            return new RefSpec("refs/heads/" + revision + ":refs/heads/" + revision)
+            return new RefSpec("$branchName:$branchName")
         }
 
-        // Is it a tag?
-        Ref tag = getBareGit().getRepository().findRef("refs/tags/" + revision)
+        // Check if it's a local tag
+        final tagName = "refs/tags/$revision".toString()
+        final tag = getBareGit().getRepository().findRef(tagName)
         if( tag != null ) {
-            return new RefSpec("refs/tags/" + revision + ":refs/tags/" + revision)
+            return new RefSpec("$tagName:$tagName")
         }
 
-        // It is a commit
-        return new RefSpec(revision + ":refs/tags/" + revision)
+        // Not found locally - check remote refs
+        final remoteRefs = lsRemote(false)
+
+        // Is it a remote branch?
+        if( remoteRefs.containsKey(branchName) ) {
+            return new RefSpec("$branchName:$branchName")
+        }
+
+        // Is it a remote tag?
+        if( remoteRefs.containsKey(tagName) ) {
+            return new RefSpec("$tagName:$tagName")
+        }
+
+        // Assume it's a commit SHA
+        return new RefSpec("$revision:$tagName")
     }
 
     @Override
@@ -365,24 +388,27 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
         return _commitGit
     }
 
+    private Git getLegacyGit() {
+        if( this.legacyRepoPath && new File(this.legacyRepoPath, '.git').exists() ) {
+            if( !_legacyGit )
+                _legacyGit = Git.open(this.legacyRepoPath)
+            return _legacyGit
+        }
+        return null
+    }
+
     @Override
     Git getGit() {
         if( commitPath && commitPath.exists() )
             return getCommitGit()
-        if( hasBareRepo() )
-            return getBareGit()
-        if( this.legacyRepoPath && new File(this.legacyRepoPath, '.git').exists() )
-            return Git.open(this.legacyRepoPath)
-        return null
+        return getBareGitWithLegacyFallback()
     }
 
     private Git getBareGitWithLegacyFallback() {
         if( hasBareRepo() )
             return getBareGit()
         // Fallback to legacy
-        if( this.legacyRepoPath && new File(this.legacyRepoPath, '.git').exists() )
-            return Git.open(this.legacyRepoPath)
-        return null
+        return getLegacyGit()
     }
 
     @Override
@@ -418,7 +444,7 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
     @Override
     Map<String, Ref> lsRemote(boolean tags) {
         final cmd = getBareGitWithLegacyFallback()?.lsRemote()?.setTags(tags)
-        if( provider.hasCredentials() )
+        if( provider?.hasCredentials() )
             cmd?.setCredentialsProvider(provider.getGitCredentials())
         return cmd?.callAsMap() ?: [:]
     }
@@ -487,6 +513,10 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
         if( _commitGit ) {
             _commitGit.close()
             _commitGit = null
+        }
+        if( _legacyGit ) {
+            _legacyGit.close()
+            _legacyGit = null
         }
     }
 

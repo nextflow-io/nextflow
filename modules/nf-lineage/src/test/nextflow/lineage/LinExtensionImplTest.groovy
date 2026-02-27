@@ -21,9 +21,9 @@ import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 
+import groovyx.gpars.dataflow.DataflowQueue
 import nextflow.Channel
 import nextflow.Session
-import nextflow.extension.CH
 import nextflow.lineage.config.LineageConfig
 import nextflow.lineage.fs.LinPathFactory
 import nextflow.lineage.model.v1beta1.Checksum
@@ -36,6 +36,7 @@ import spock.lang.Specification
 import spock.lang.TempDir
 
 import static nextflow.lineage.fs.LinPath.*
+import static test.ScriptHelper.runDataflow
 
 /**
  * Lineage channel extensions tests
@@ -80,7 +81,7 @@ class LinExtensionImplTest extends Specification {
         lidStore.save(key4, value4)
         def linExt = Spy(new LinExtensionImpl())
         when:
-        def results = CH.create()
+        def results = new DataflowQueue()
         linExt.fromLineage(session, results,  [label: ["value2", "value3"]])
         then:
         linExt.getStore(session) >> lidStore
@@ -89,7 +90,7 @@ class LinExtensionImplTest extends Specification {
         results.val == Channel.STOP
 
         when:
-        results = CH.create()
+        results = new DataflowQueue()
         linExt.fromLineage(session, results, [taskRun: "taskid", label: ["value4"]])
         then:
         linExt.getStore(session) >> lidStore
@@ -98,7 +99,7 @@ class LinExtensionImplTest extends Specification {
         results.val == Channel.STOP
 
         when:
-        results = CH.create()
+        results = new DataflowQueue()
         linExt.fromLineage(session, results, [workflowRun: "testkey", taskRun: "taskid", label: "value2"])
         then:
         linExt.getStore(session) >> lidStore

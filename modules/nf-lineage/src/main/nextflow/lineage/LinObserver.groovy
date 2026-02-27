@@ -38,6 +38,7 @@ import nextflow.lineage.model.v1beta1.WorkflowOutput
 import nextflow.lineage.model.v1beta1.WorkflowRun
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
+import nextflow.processor.TaskHasher
 import nextflow.processor.TaskRun
 import nextflow.script.ScriptMeta
 import nextflow.script.params.BaseParam
@@ -132,7 +133,7 @@ class LinObserver implements TraceObserverV2 {
     }
 
     protected List<DataPath> collectScriptDataPaths(PathNormalizer normalizer) {
-        final allScripts = allScriptFiles()
+        final allScripts = allScriptFiles().sort()
         final result = new ArrayList<DataPath>(allScripts.size()+1)
         // the main script
         result.add( new DataPath(
@@ -147,7 +148,7 @@ class LinObserver implements TraceObserverV2 {
             final dataPath = new DataPath(normalizer.normalizePath(it.normalize()), Checksum.ofNextflow(it.text))
             result.add(dataPath)
         }
-        return result.sort{it.path}
+        return result
     }
 
     protected String storeWorkflowRun(PathNormalizer normalizer) {
@@ -257,8 +258,8 @@ class LinObserver implements TraceObserverV2 {
             normalizer.normalizePath(task.getCondaEnv()),
             normalizer.normalizePath(task.getSpackEnv()),
             task.config?.getArchitecture()?.toString(),
-            task.processor.getTaskGlobalVars(task),
-            task.processor.getTaskBinEntries(task.source).collect { Path p -> new DataPath(
+            getTaskGlobalVars(task),
+            getTaskBinEntries(task).collect { Path p -> new DataPath(
                 normalizer.normalizePath(p.normalize()),
                 Checksum.ofNextflow(p) )
             },
@@ -269,6 +270,14 @@ class LinObserver implements TraceObserverV2 {
         final key = task.hash.toString()
         store.save(key, value)
         return key
+    }
+
+    protected Map<String,Object> getTaskGlobalVars(TaskRun task) {
+        return new TaskHasher(task).getTaskGlobalVars()
+    }
+
+    protected List<Path> getTaskBinEntries(TaskRun task) {
+        return new TaskHasher(task).getTaskBinEntries(task.source)
     }
 
     protected String storeTaskOutput(TaskRun task, Path path) {

@@ -34,7 +34,7 @@ Available options:
 : Print available commands and options.
 
 `-log`
-: Set Nextflow log file path (default: `.nextflow.log`).
+: Set Nextflow log file path (default: `.nextflow.log`). Must be a local path.
 
 `-q, -quiet`
 : Do not print the Nextflow banner and execution progress to the console.
@@ -921,7 +921,7 @@ The `lint` command parses and analyzes the given Nextflow scripts and config fil
 : Format scripts and config files that have no errors.
 
 `-o, -output`
-: Output mode for reporting errors: `full`, `extended`, `concise`, `json` (default: `full`).
+: Output mode for reporting errors: `full`, `extended`, `concise`, `json`, `markdown` (default: `full`).
 
 `-sort-declarations`
 : Sort script declarations in Nextflow scripts (default: `false`).
@@ -1020,7 +1020,9 @@ The `log` command is used to query the execution metadata associated with pipeli
 : Show log entries for runs executed *but* the specified one.
 
 `-f, -fields`
-: Comma-separated list of fields to include in the printed log. Use the `-l` option to see the list of available fields.
+: Comma-separated list of fields to include in the printed log.
+: The same fields as the `trace.fields` option can be specified here, as well as `stdout` and `stderr`. The trace fields `%cpu` and `%mem` must be specified as `pcpu` and `pmem`, respectively.
+: Use the `-l` option to see the complete list of available fields.
 
 `-F, -filter`
 : Filter log entries by a custom expression, e.g. `process =~ /hello.*/ && status == 'COMPLETED'`.

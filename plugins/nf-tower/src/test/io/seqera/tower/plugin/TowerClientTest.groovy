@@ -523,6 +523,22 @@ class TowerClientTest extends Specification {
         client.getNewContainers([trace1, trace2, trace3]) == [c2]
     }
 
+    def 'should not send complete request when onFlowBegin was not invoked' () {
+        given:
+        def client = Spy(new TowerClient())
+        client.@workflowId = 'xyz-123'
+        client.@sender = null
+        client.@reports = Mock(TowerReports)
+
+        when:
+        client.onFlowComplete()
+
+        then:
+        1 * client.@reports.publishRuntimeReports()
+        1 * client.@reports.flowComplete()
+        0 * client.sendHttpMessage(_, _, _)
+    }
+
     def 'should handle HTTP request with content'() {
         given: 'a TowerClient'
         def tower = new TowerClient()
@@ -558,6 +574,33 @@ class TowerClientTest extends Specification {
         then:
         req.tasks.size() == 1
         req.tasks[0].numSpotInterruptions == 3
+    }
+
+    def 'should include accelerator request in task map'() {
+        given:
+        def client = Spy(new TowerClient())
+        client.getWorkflowProgress(true) >> new WorkflowProgress()
+
+        def now = System.currentTimeMillis()
+        def trace = new TraceRecord([
+            taskId: 42,
+            process: 'foo',
+            workdir: "/work/dir",
+            cpus: 1,
+            submit: now-2000,
+            start: now-1000,
+            complete: now,
+            accelerator: 2,
+            acceleratorType: 'v100'
+        ])
+
+        when:
+        def req = client.makeTasksReq([trace])
+
+        then:
+        req.tasks.size() == 1
+        req.tasks[0].accelerator == 2
+        req.tasks[0].acceleratorType == 'v100'
     }
 
 }
