@@ -387,7 +387,7 @@ $ nextflow module publish myorg/my-module
 $ nextflow module publish myorg/my-module -dry-run
 ```
 
-Publishing requires authentication via the `NXF_REGISTRY_TOKEN` environment variable or `registry.auth` in the Nextflow configuration. The module must include `main.nf`, `meta.yaml`, and `README.md` files.
+Publishing requires authentication via the `NXF_REGISTRY_TOKEN` environment variable or `registry.apiKey` in the Nextflow configuration. The module must include `main.nf`, `meta.yaml`, and `README.md` files.
 
 Use `-dry-run` to validate your module structure without uploading.
 
