@@ -79,7 +79,7 @@ class ModuleRun extends CmdRun {
                 .setBaseDir(baseDir)
                 .build()
 
-        def registryConfig = config.navigate('registry') as RegistryConfig
+        def registryConfig = config.navigate('registry') as RegistryConfig ?: new RegistryConfig()
 
         //Get module version from nextflow_spec.json.
         def specFile = new PipelineSpec(baseDir)
