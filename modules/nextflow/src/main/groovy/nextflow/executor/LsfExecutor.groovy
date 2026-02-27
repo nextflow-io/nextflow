@@ -202,7 +202,7 @@ class LsfExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
             'SSUSP': QueueStatus.HOLD,
             'DONE': QueueStatus.DONE,
             'EXIT': QueueStatus.ERROR,
-            'UNKWN': QueueStatus.ERROR,
+            'UNKWN': QueueStatus.HOLD,
             'ZOMBI': QueueStatus.ERROR,
     ]
 
