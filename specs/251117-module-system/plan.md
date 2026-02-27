@@ -15,6 +15,7 @@ Implement client-side module system for Nextflow enabling pipeline developers to
 - Existing config parser (ConfigBuilder, ConfigParser)
 - Existing HTTP client (HxClient from io.seqera.http)
 - Existing plugin authentication infrastructure
+- Existing npr-api (registry data models and schema validation)
 **Storage**: Local filesystem (`modules/@scope/name/` per-project, `.checksum` files)
 **Testing**: Spock Framework for unit tests, integration tests in `tests/` directory
 **Target Platform**: JVM 17+ (same as Nextflow core)
@@ -49,6 +50,7 @@ Implement client-side module system for Nextflow enabling pipeline developers to
 ```text
 specs/251117-module-system/
 ├── plan.md              # This file
+├── spec.md              # Feature specification
 ├── research.md          # Phase 0 output
 ├── data-model.md        # Phase 1 output
 ├── quickstart.md        # Phase 1 output
@@ -61,37 +63,46 @@ specs/251117-module-system/
 ```text
 modules/nextflow/src/main/groovy/nextflow/
 ├── cli/
-│   └── CmdModule.groovy                    # NEW: Module CLI command
+│   ├── CmdModule.groovy                    # Main module command (uses JCommander)
+│   └── module/
+│       ├── ModuleInstall.groovy            # Install subcommand (extends CmdBase)
+│       ├── ModuleRun.groovy                # Run subcommand (extends CmdRun)
+│       ├── ModuleList.groovy               # List subcommand (extends CmdBase)
+│       ├── ModuleRemove.groovy             # Remove subcommand (extends CmdBase)
+│       ├── ModuleSearch.groovy             # Search subcommand (extends CmdBase)
+│       ├── ModuleInfo.groovy               # Info subcommand (extends CmdBase)
+│       └── ModulePublish.groovy            # Publish subcommand (extends CmdBase)
 ├── config/
-│   ├── ConfigBuilder.groovy                # MODIFY: Add modules/registry DSL
-│   └── parser/v1/
-│       ├── ModulesDsl.groovy               # NEW: modules {} block parser
-│       └── RegistryDsl.groovy              # NEW: registry {} block parser
-└── module/
-    ├── ModuleResolver.groovy               # NEW: Core resolution logic
-    ├── ModuleStorage.groovy                # NEW: Local storage management
-    ├── ModuleChecksum.groovy               # NEW: Checksum verification
-    ├── ModuleManifest.groovy               # NEW: meta.yaml parser
-    └── HttpModuleRepository.groovy         # NEW: Registry HTTP client
+│   ├── ModulesConfig.groovy                # modules{} config scope
+│   └── RegistryConfig.groovy               # registry{} config scope (fields: url, apiKey)
+├── module/
+│   ├── ModuleReference.groovy              # @scope/name parser
+│   ├── ModuleResolver.groovy               # Core resolution logic
+│   ├── ModuleStorage.groovy                # Local filesystem operations
+│   ├── ModuleRegistryClient.groovy         # HTTP registry client
+│   ├── ModuleChecksum.groovy               # SHA-256 integrity verification
+│   ├── ModuleSpec.groovy                   # Module manifest (meta.yaml) entity
+│   └── InstalledModule.groovy              # Installed module entity
+└── pipeline/
+    └── PipelineSpec.groovy                 # nextflow_spec.json read/write
 
 modules/nf-lang/src/main/java/nextflow/script/
 └── ResolveIncludeVisitor.java              # MODIFY: Add @scope/name detection
 
 modules/nextflow/src/test/groovy/nextflow/
-├── cli/
-│   └── CmdModuleTest.groovy                # NEW: CLI unit tests
-├── config/
-│   └── ModulesDslTest.groovy               # NEW: Config parsing tests
+├── cli/module/
+│   ├── ModuleInstallTest.groovy
+│   ├── ModuleRunTest.groovy
+│   └── [other subcommand tests]
 └── module/
-    ├── ModuleResolverTest.groovy           # NEW: Resolution logic tests
-    ├── ModuleStorageTest.groovy            # NEW: Storage tests
-    └── ModuleChecksumTest.groovy           # NEW: Checksum tests
+    ├── ModuleResolverTest.groovy
+    ├── ModuleStorageTest.groovy
+    └── [other module tests]
 
-tests/
-└── modules/                                # NEW: Integration tests
-    ├── install-module.nf                   # Test module install + include
-    ├── version-resolution.nf               # Test version management
-    └── checksum-protection.nf              # Test local modification protection
+tests/modules/
+├── install-module.nf                       # Integration tests
+├── run-module.nf
+└── [other integration tests]
 ```
 
 **Structure Decision**: Implementation extends existing Nextflow core modules following modular architecture. New code in `modules/nextflow` for CLI and core logic. DSL parser extension in `modules/nf-lang`. No new plugins required.
