@@ -129,6 +129,18 @@ class AzBatchOpts implements ConfigScope, CloudTransferOptions {
     """)
     final Boolean terminateJobsOnCompletion
 
+    @ConfigOption
+    @Description("""
+        The maximum number of attempts to create a job when the active job quota has been reached (default: `3`). Set to `0` to fail immediately without retrying.
+    """)
+    final int maxJobQuotaRetries
+
+    @ConfigOption
+    @Description("""
+        The delay between attempts to create a job when the active job quota has been reached (default: `'2 min'`).
+    """)
+    final Duration jobQuotaRetryDelay
+
     AzBatchOpts(Map config, Map<String,String> env=null) {
         assert config!=null
         sysEnv = env==null ? new HashMap<String,String>(System.getenv()) : env
@@ -149,6 +161,8 @@ class AzBatchOpts implements ConfigScope, CloudTransferOptions {
         maxTransferAttempts = config.maxTransferAttempts ? config.maxTransferAttempts as int : MAX_TRANSFER_ATTEMPTS
         delayBetweenAttempts = config.delayBetweenAttempts ? config.delayBetweenAttempts as Duration : DEFAULT_DELAY_BETWEEN_ATTEMPTS
         copyToolInstallMode = config.copyToolInstallMode as CopyToolInstallMode
+        maxJobQuotaRetries = config.maxJobQuotaRetries != null ? config.maxJobQuotaRetries as int : 3
+        jobQuotaRetryDelay = config.jobQuotaRetryDelay ? config.jobQuotaRetryDelay as Duration : Duration.of('2 min')
     }
 
     static Map<String,AzPoolOpts> parsePools(Map<String,Map> pools) {
