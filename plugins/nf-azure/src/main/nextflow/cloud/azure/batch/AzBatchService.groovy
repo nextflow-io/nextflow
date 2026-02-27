@@ -451,30 +451,44 @@ class AzBatchService implements Closeable {
             content.setConstraints(createJobConstraints(config.batch().jobMaxWallClockTime))
         }
 
-        safeCreateJob(content)
+        applyCreateJob(content)
         return jobId
     }
 
-    protected void safeCreateJob(BatchJobCreateContent content) {
+    protected void applyCreateJob(BatchJobCreateContent content) {
         final maxRetries = config.batch().maxJobQuotaRetries
         final retryDelay = config.batch().jobQuotaRetryDelay
 
-        for (int attempt = 0; attempt <= maxRetries; attempt++) {
-            try {
-                createJobRequest(content)
-                return
+        // define retry condition for job quota errors
+        final cond = new Predicate<? extends Throwable>() {
+            @Override
+            boolean test(Throwable t) {
+                return t instanceof HttpResponseException && isJobQuotaError((HttpResponseException) t)
             }
-            catch (HttpResponseException e) {
-                if (isJobQuotaError(e)) {
-                    if (attempt >= maxRetries)
-                        throw new IllegalStateException("Azure Batch active job quota reached - exceeded maximum number of retries ($maxRetries). Consider increasing 'azure.batch.maxJobQuotaRetries' or reducing the number of concurrent jobs", e)
-                    log.warn "Azure Batch active job quota reached - waiting ${retryDelay} before retry (attempt ${attempt + 1} of ${maxRetries})"
-                    sleep(retryDelay.toMillis())
-                }
-                else {
-                    throw e
-                }
+        }
+
+        final listener = new EventListener<ExecutionAttemptedEvent<Object>>() {
+            @Override
+            void accept(ExecutionAttemptedEvent<Object> event) throws Throwable {
+                log.warn "Azure Batch active job quota reached - waiting ${retryDelay} before retry (attempt ${event.attemptCount} of ${maxRetries})"
             }
+        }
+
+        // create a retry policy with fixed delay for quota errors
+        final policy = RetryPolicy.builder()
+                .handleIf(cond)
+                .withDelay(Duration.ofMillis(retryDelay.toMillis()))
+                .withMaxAttempts(maxRetries + 1)
+                .onRetry(listener)
+                .build()
+
+        try {
+            Failsafe.with(policy).get(() -> { createJobRequest(content); return null })
+        }
+        catch (HttpResponseException e) {
+            if (isJobQuotaError(e))
+                throw new IllegalStateException("Azure Batch active job quota reached - exceeded maximum number of retries ($maxRetries). Consider increasing 'azure.batch.maxJobQuotaRetries' or reducing the number of concurrent jobs", e)
+            throw e
         }
     }
 

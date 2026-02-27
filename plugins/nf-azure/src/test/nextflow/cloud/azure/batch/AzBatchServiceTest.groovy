@@ -1023,7 +1023,7 @@ class AzBatchServiceTest extends Specification {
         ]
     }
 
-    // -- safeCreateJob tests --
+    // -- applyCreateJob tests --
 
     def 'should create job successfully on first try'() {
         given:
@@ -1038,7 +1038,7 @@ class AzBatchServiceTest extends Specification {
         }
 
         when:
-        service.safeCreateJob(null)
+        service.applyCreateJob(null)
 
         then:
         noExceptionThrown()
@@ -1064,7 +1064,7 @@ class AzBatchServiceTest extends Specification {
         }
 
         when:
-        service.safeCreateJob(null)
+        service.applyCreateJob(null)
 
         then:
         noExceptionThrown()
@@ -1089,7 +1089,7 @@ class AzBatchServiceTest extends Specification {
         }
 
         when:
-        service.safeCreateJob(null)
+        service.applyCreateJob(null)
 
         then:
         def e = thrown(IllegalStateException)
@@ -1116,7 +1116,7 @@ class AzBatchServiceTest extends Specification {
         }
 
         when:
-        service.safeCreateJob(null)
+        service.applyCreateJob(null)
 
         then:
         def e = thrown(IllegalStateException)
@@ -1142,7 +1142,7 @@ class AzBatchServiceTest extends Specification {
         }
 
         when:
-        service.safeCreateJob(null)
+        service.applyCreateJob(null)
 
         then:
         thrown(HttpResponseException)
@@ -1163,7 +1163,7 @@ class AzBatchServiceTest extends Specification {
         }
 
         when:
-        service.safeCreateJob(null)
+        service.applyCreateJob(null)
 
         then:
         thrown(IllegalArgumentException)
