@@ -507,7 +507,7 @@ class LsfExecutorTest extends Specification {
         result['5085604'] == AbstractGridExecutor.QueueStatus.PENDING
         result['5085611'] == AbstractGridExecutor.QueueStatus.HOLD
         result['5085107'] == AbstractGridExecutor.QueueStatus.ERROR
-        result['5085607'] == AbstractGridExecutor.QueueStatus.ERROR
+        result['5085607'] == AbstractGridExecutor.QueueStatus.HOLD
         result['5085608'] == AbstractGridExecutor.QueueStatus.ERROR
         result['5085609'] == AbstractGridExecutor.QueueStatus.RUNNING
         result['5085702'] == AbstractGridExecutor.QueueStatus.RUNNING
