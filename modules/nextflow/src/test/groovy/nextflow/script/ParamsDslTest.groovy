@@ -26,7 +26,7 @@ class ParamsDslTest extends Specification {
         def dsl = new ParamsDsl()
         dsl.declare('input', Path, false)
         dsl.declare('chunk_size', Integer, false, 1)
-        dsl.declare('save_intermeds', Boolean, false, false)
+        dsl.declare('save_intermeds', Boolean, false)
         dsl.apply(session)
         then:
         session.binding.getParams() == [input: FileHelper.asPath('./data'), chunk_size: 3, save_intermeds: false, outdir: 'results']
@@ -55,7 +55,7 @@ class ParamsDslTest extends Specification {
         when:
         def dsl = new ParamsDsl()
         dsl.declare('input', Path, false)
-        dsl.declare('save_intermeds', Boolean, false, false)
+        dsl.declare('save_intermeds', Boolean, false)
         dsl.apply(session)
         then:
         def e = thrown(ScriptRuntimeException)
@@ -72,7 +72,7 @@ class ParamsDslTest extends Specification {
         when:
         def dsl = new ParamsDsl()
         dsl.declare('input', Path, false)
-        dsl.declare('save_intermeds', Boolean, false, false)
+        dsl.declare('save_intermeds', Boolean, false)
         dsl.apply(session)
         then:
         def e = thrown(ScriptRuntimeException)
@@ -89,7 +89,7 @@ class ParamsDslTest extends Specification {
         when:
         def dsl = new ParamsDsl()
         dsl.declare('input', Path, false)
-        dsl.declare('save_intermeds', Boolean, false, false)
+        dsl.declare('save_intermeds', Boolean, false)
         dsl.apply(session)
         then:
         def e = thrown(ScriptRuntimeException)
