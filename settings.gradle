@@ -47,3 +47,6 @@ include 'plugins:nf-codecommit'
 include 'plugins:nf-wave'
 include 'plugins:nf-cloudcache'
 include 'plugins:nf-k8s'
+include 'plugins:nf-seqera'
+
+//includeBuild '../sched'
