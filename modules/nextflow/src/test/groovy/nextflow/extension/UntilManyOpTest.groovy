@@ -19,6 +19,8 @@ package nextflow.extension
 
 import nextflow.Channel
 import spock.lang.Specification
+
+import static test.ScriptHelper.runDataflow
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -28,16 +30,20 @@ class UntilManyOpTest extends Specification {
     def 'should emit channel items until the condition is verified' () {
 
         when:
-        def source = Channel.of(1,2,3,4)
-        def result = new UntilManyOp([source], { it==3 }).apply().get(0)
+        def result = runDataflow {
+            def source = Channel.of(1,2,3,4)
+            new UntilManyOp([read(source)], { it==3 }).apply().get(0)
+        }
         then:
         result.val == 1
         result.val == 2
         result.val == Channel.STOP
 
         when:
-        source = Channel.of(1,2,3)
-        result = new UntilManyOp([source], { it==5 }).apply().get(0)
+        result = runDataflow {
+            def source = Channel.of(1,2,3)
+            new UntilManyOp([read(source)], { it==5 }).apply().get(0)
+        }
         then:
         result.val == 1
         result.val == 2
@@ -47,14 +53,15 @@ class UntilManyOpTest extends Specification {
     }
 
     def 'should emit channels util tuple condition is verified' () {
-        given:
-        def A = Channel.of(1,2,3)
-        def B = Channel.of('alpha','beta')
-        def C = Channel.of('foo', 'bar')
 
         when:
-        def condition = { a, b, c -> a>2 }
-        def (X,Y,Z) = new UntilManyOp([A,B,C], condition).apply()
+        def (X,Y,Z) = runDataflow {
+            def A = Channel.of(1,2,3)
+            def B = Channel.of('alpha','beta')
+            def C = Channel.of('foo', 'bar')
+            def condition = { a, b, c -> a>2 }
+            new UntilManyOp([read(A), read(B), read(C)], condition).apply()
+        }
 
         then:
         X.val == 1
@@ -71,14 +78,15 @@ class UntilManyOpTest extends Specification {
     }
 
     def 'should emit channels until list condition is verified' () {
-        given:
-        def A = Channel.of(1,2,3)
-        def B = Channel.of('alpha','beta')
-        def C = Channel.of('foo', 'bar')
 
         when:
-        def condition = { it -> it[0]>2 }
-        def (X,Y,Z) = new UntilManyOp([A,B,C], condition).apply()
+        def (X,Y,Z) = runDataflow {
+            def A = Channel.of(1,2,3)
+            def B = Channel.of('alpha','beta')
+            def C = Channel.of('foo', 'bar')
+            def condition = { abc -> abc[0]>2 }
+            new UntilManyOp([read(A), read(B), read(C)], condition).apply()
+        }
 
         then:
         X.val == 1
@@ -94,5 +102,8 @@ class UntilManyOpTest extends Specification {
         Z.val == Channel.STOP
     }
 
+    def read(channel) {
+        channel.createReadChannel()
+    }
 
 }

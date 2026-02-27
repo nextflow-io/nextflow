@@ -113,7 +113,7 @@ The following settings are available:
 : The AWS Batch [Execution Role](https://docs.aws.amazon.com/batch/latest/userguide/execution-IAM-role.html) ARN that needs to be used to execute the Batch Job. It is mandatory when using AWS Fargate.
 
 `aws.batch.forceGlacierTransfer`
-: :::{versionadded 26.04.0}
+: :::{versionadded} 26.04.0 
   :::
 : When `true`, add the `--force-glacier-transfer` flag to AWS CLI S3 download commands (default: `false`).
 : This option is needed when staging directories that have been restored from [S3 Glacier](https://aws.amazon.com/s3/storage-classes/glacier/). It does not restore objects from Glacier.
@@ -539,7 +539,10 @@ The following settings are available:
 : The path where Conda environments are stored. It should be accessible from all compute nodes when using a shared file system.
 
 `conda.channels`
-: The list of Conda channels that can be used to resolve Conda packages. Channel priority decreases from left to right.
+: :::{versionchanged} 26.04.0
+  The default was changed to `'conda-forge,bioconda'`.
+  :::
+: The list of Conda channels that can be used to resolve Conda packages (default: `'conda-forge,bioconda'`). Channel priority decreases from left to right.
 
 `conda.createOptions`
 : Extra command line options for the `conda create` command. See the [Conda documentation](https://docs.conda.io/projects/conda/en/latest/commands/create.html) for more information.
@@ -1053,6 +1056,12 @@ The following settings are available:
   - `clientCertFile`
   - `clientKey`
   - `clientKeyFile`
+
+`k8s.clientRefreshInterval`
+: :::{versionadded} 26.01.0-edge
+  :::
+: The interval after which the Kubernetes client configuration is refreshed (default: `50m`).
+: This setting is useful when the Kubernetes authentication token has a limited lifespan and needs to be periodically refreshed. The client configuration will be automatically reloaded after the specified interval, allowing Nextflow to obtain fresh credentials from the Kubernetes configuration.
 
 `k8s.computeResourceType`
 : :::{versionadded} 22.05.0-edge

@@ -35,9 +35,14 @@ class CmdRunTest extends Specification {
 
     @Unroll
     def 'should parse cmd param=#STR' () {
+        setup:
+        SysEnv.push(NXF_SYNTAX_PARSER: 'v1')
 
         expect:
         CmdRun.parseParamValue(STR)  == EXPECTED
+
+        cleanup:
+        SysEnv.pop()
 
         where:
         STR         | EXPECTED
@@ -83,10 +88,10 @@ class CmdRunTest extends Specification {
 
         where:
         PARAMS          | KEY       | VALUE     | EXPECTED
-        [:]             | 'foo'     | '1'       | [foo: 1]
-        [foo: 1]        | 'bar'     | '2'       | [foo: 1, bar: 2]
+        [:]             | 'foo'     | '1'       | [foo: '1']
+        [foo: 1]        | 'bar'     | '2'       | [foo: 1, bar: '2']
         [:]             | 'x.y.z'   | 'Hola'    | [x: [y: [z: 'Hola']]]
-        [a: [p:1], x:3] | 'a.q'     | '2'       | [a: [p:1, q: 2], x:3]
+        [a: [p:1], x:3] | 'a.q'     | '2'       | [a: [p:1, q: '2'], x:3]
         [:]             | /x\.y\.z/ | 'Hola'    | ['x.y.z': 'Hola']
         [:]             | /x.y\.z/  | 'Hola'    | ['x': ['y.z': 'Hola']]
     }
@@ -98,7 +103,7 @@ class CmdRunTest extends Specification {
         CmdRun.addParam(params, 'alphaBeta', '1')
         CmdRun.addParam(params, 'alpha-beta', '10')
         then:
-        params['alphaBeta'] == 10
+        params['alphaBeta'] == '10'
         !params.containsKey('alpha-beta')
 
         when:
@@ -106,7 +111,7 @@ class CmdRunTest extends Specification {
         CmdRun.addParam(params, 'aaa-bbb-ccc', '1')
         CmdRun.addParam(params, 'aaaBbbCcc', '10')
         then:
-        params['aaaBbbCcc'] == 10
+        params['aaaBbbCcc'] == '10'
         !params.containsKey('aaa-bbb-ccc')
 
     }
@@ -326,69 +331,6 @@ class CmdRunTest extends Specification {
         false       | '../some/path'
     }
 
-    def 'should determine dsl mode' () {
-        given:
-        def DSL1_SCRIPT = '''
-        process foo {
-          input: 
-          file x from ch
-        }
-        '''
-
-        def DSL2_SCRIPT = '''
-        process foo {
-          input: 
-          file x
-        }
-        
-        workflow { foo() }
-        '''
-
-        expect:
-        // default to DSL2 if nothing is specified
-        CmdRun.detectDslMode(new ConfigMap(), '', [:]) == '2'
-
-        and:
-        // take from the config
-        CmdRun.detectDslMode(new ConfigMap([nextflow:[enable:[dsl:1]]]), '', [:]) == '1'
-
-        and:
-        // the script declaration has priority
-        CmdRun.detectDslMode(new ConfigMap([nextflow:[enable:[dsl:1]]]), 'nextflow.enable.dsl=3', [:]) == '3'
-
-        and:
-        // env variable is ignored when the config is provided
-        CmdRun.detectDslMode(new ConfigMap([nextflow:[enable:[dsl:1]]]), 'echo hello', [NXF_DEFAULT_DSL:'4']) == '1'
-
-        and:
-        // env variable is used if nothing else is specified
-        CmdRun.detectDslMode(new ConfigMap(), 'echo hello', [NXF_DEFAULT_DSL:'4']) == '4'
-
-        and:
-        // dsl mode is taken from the config
-        CmdRun.detectDslMode(new ConfigMap([nextflow:[enable:[dsl:4]]]), DSL1_SCRIPT, [:]) == '4'
-
-        and:
-        // dsl mode is taken from the config
-        CmdRun.detectDslMode(new ConfigMap([nextflow:[enable:[dsl:4]]]), DSL2_SCRIPT, [:]) == '4'
-
-        and:
-        // detect version from DSL1 script
-        CmdRun.detectDslMode(new ConfigMap(), DSL1_SCRIPT, [NXF_DEFAULT_DSL:'2']) == '1'
-
-        and:
-        // detect version from DSL1 script
-        CmdRun.detectDslMode(new ConfigMap(), DSL1_SCRIPT, [:]) == '1'
-
-        and:
-        // detect version from env
-        CmdRun.detectDslMode(new ConfigMap(), DSL2_SCRIPT, [NXF_DEFAULT_DSL:'2']) == '2'
-
-        and:
-        // detect version from global default
-        CmdRun.detectDslMode(new ConfigMap(), DSL2_SCRIPT, [:]) == '2'
-    }
-
     @Unroll
     def 'should detect moduleBinaries' () {
         given:
@@ -414,6 +356,7 @@ class CmdRunTest extends Specification {
     @Unroll
     def 'should detect strict mode' () {
         given:
+        SysEnv.push(NXF_SYNTAX_PARSER: 'v1')
         NextflowMeta.instance.strictMode(INITIAL)
         CmdRun.detectStrictFeature(new ConfigMap(CONFIG), ENV)
 
@@ -422,6 +365,7 @@ class CmdRunTest extends Specification {
 
         cleanup:
         NextflowMeta.instance.strictMode(false)
+        SysEnv.pop()
 
         where:
         INITIAL | CONFIG                                  | ENV                        | EXPECTED

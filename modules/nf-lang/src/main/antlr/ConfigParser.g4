@@ -388,6 +388,7 @@ identifier
     :   Identifier
     |   CapitalizedIdentifier
     |   IN
+    |   INCLUDE_CONFIG
     ;
 
 // -- primitive literals

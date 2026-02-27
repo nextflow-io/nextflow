@@ -78,7 +78,6 @@ script
 working-with-files
 process
 process-typed
-channel
 workflow
 module
 notifications

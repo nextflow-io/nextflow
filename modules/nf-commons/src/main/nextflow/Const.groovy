@@ -49,14 +49,14 @@ class Const {
     static Path sysHome() {
         def home = System.getProperty("user.home")
         if( !home || home=='?' )
-            home = System.getenv('HOME')
+            home = SysEnv.get('HOME')
         if( !home )
             throw new IllegalStateException("Unable to detect system home path - Make sure the variable HOME or NXF_HOME is defined in your environment")
         return Path.of(home)
     }
 
     private static Path getHomeDir(String appname) {
-        final home = System.getenv('NXF_HOME')
+        final home = SysEnv.get('NXF_HOME')
         final result = home ? Paths.get(home) : sysHome().resolve(".$appname")
 
         if( !result.exists() && !result.mkdir() ) {
@@ -78,11 +78,11 @@ class Const {
 
     static public final String DEFAULT_MAIN_FILE_NAME = 'main.nf'
 
-    static public final String DEFAULT_ORGANIZATION = System.getenv('NXF_ORG') ?: 'nextflow-io'
+    static public final String DEFAULT_ORGANIZATION = SysEnv.get('NXF_ORG') ?: 'nextflow-io'
 
-    static public final String DEFAULT_HUB = System.getenv('NXF_HUB') ?: 'github'
+    static public final String DEFAULT_HUB = SysEnv.get('NXF_HUB') ?: 'github'
 
-    static public final File DEFAULT_ROOT = System.getenv('NXF_ASSETS') ? new File(System.getenv('NXF_ASSETS')) : APP_HOME_DIR.resolve('assets').toFile()
+    static public final File DEFAULT_ROOT = SysEnv.get('NXF_ASSETS') ? new File(SysEnv.get('NXF_ASSETS')) : APP_HOME_DIR.resolve('assets').toFile()
 
     static public final String DEFAULT_BRANCH = 'master'
 

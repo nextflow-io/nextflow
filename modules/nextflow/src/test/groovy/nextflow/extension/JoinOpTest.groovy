@@ -24,24 +24,21 @@ import nextflow.exception.AbortOperationException
 import nextflow.util.ArrayBag
 import spock.lang.Specification
 
+import static test.ScriptHelper.runDataflow
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class JoinOpTest extends Specification {
 
-    def setup() {
-        new Session()
-    }
-
     def 'should join entries' () {
-        given:
-        def ch1 = Channel.of(['X', 1], ['Y', 2], ['Z', 3], ['P', 7])
-        def ch2 = Channel.of(['Z', 6], ['Y', 5], ['X', 4])
 
         when:
-        def op = new JoinOp(ch1, ch2)
-        def result = op.apply().toList().getVal()
+        def result = runDataflow {
+            def ch1 = Channel.of(['X', 1], ['Y', 2], ['Z', 3], ['P', 7])
+            def ch2 = Channel.of(['Z', 6], ['Y', 5], ['X', 4])
+            ch1.join(ch2).toList()
+        }.getVal()
         then:
         result.size() == 3
         result.contains( ['X', 1, 4] )
@@ -52,13 +49,13 @@ class JoinOpTest extends Specification {
 
 
     def 'should join entries by index' () {
-        given:
-        def ch1 = Channel.of([1, 'X'], [2, 'Y'], [3, 'Z'], [7, 'P'])
-        def ch2 = Channel.of([6, 'Z'], [5, 'Y'], [4, 'X'])
 
         when:
-        def op = new JoinOp(ch1, ch2, [by:1])
-        def result = op.apply().toList().getVal()
+        def result = runDataflow {
+            def ch1 = Channel.of([1, 'X'], [2, 'Y'], [3, 'Z'], [7, 'P'])
+            def ch2 = Channel.of([6, 'Z'], [5, 'Y'], [4, 'X'])
+            ch1.join(ch2, by: 1).toList()
+        }.getVal()
         then:
         result.size() == 3
         result.contains( ['X', 1, 4] )
@@ -67,13 +64,13 @@ class JoinOpTest extends Specification {
     }
 
     def 'should join entries with composite index' () {
-        given:
-        def ch1 = Channel.of([1, 'a','b', ['foo']], [2, 'p','q', ['bar']], [3, 'x','y', ['baz']], [7, 'P'])
-        def ch2 = Channel.of([5, 'p','q', [333]], [4, 'a','b', [444]], [6, 'x','y', [555]])
 
         when:
-        def op = new JoinOp(ch1, ch2, [by:[1,2]])
-        def result = op.apply().toList().getVal()
+        def result = runDataflow {
+            def ch1 = Channel.of([1, 'a','b', ['foo']], [2, 'p','q', ['bar']], [3, 'x','y', ['baz']], [7, 'P'])
+            def ch2 = Channel.of([5, 'p','q', [333]], [4, 'a','b', [444]], [6, 'x','y', [555]])
+            ch1.join(ch2, by: [1,2]).toList()
+        }.getVal()
         then:
         result.size() == 3
         result.contains( ['a','b', 1, ['foo'], 4, [444]] )
@@ -84,13 +81,13 @@ class JoinOpTest extends Specification {
 
 
     def 'should join entries with remainder' () {
-        given:
-        def ch1 = Channel.of(['X', 1], ['Y', 2], ['Z', 3], ['P', 7])
-        def ch2 = Channel.of(['Z', 6], ['Y', 5], ['X', 4], ['Q', ['foo','bar', [77,88,99]]])
 
         when:
-        def op = new JoinOp(ch1, ch2, [remainder: true])
-        def result = op.apply().toList().getVal()
+        def result = runDataflow {
+            def ch1 = Channel.of(['X', 1], ['Y', 2], ['Z', 3], ['P', 7])
+            def ch2 = Channel.of(['Z', 6], ['Y', 5], ['X', 4], ['Q', ['foo','bar', [77,88,99]]])
+            ch1.join(ch2, remainder: true).toList()
+        }.getVal()
         then:
         result.size() == 5
         result.contains( ['X', 1, 4] )
@@ -102,13 +99,12 @@ class JoinOpTest extends Specification {
 
     def 'should join single item channels' () {
 
-        given:
-        def ch1 = Channel.of( 1,2,3 )
-        def ch2 = Channel.of( 1,0,0,2,7,8,9,3 )
-
         when:
-        def op = new JoinOp(ch1, ch2)
-        def result = op.apply().toList().getVal()
+        def result = runDataflow {
+            def ch1 = Channel.of( 1,2,3 )
+            def ch2 = Channel.of( 1,0,0,2,7,8,9,3 )
+            ch1.join(ch2).toList()
+        }.getVal()
         then:
         result.size() == 3
         result == [1,2,3]
@@ -116,13 +112,12 @@ class JoinOpTest extends Specification {
 
     def 'should join single item channels with remainder' () {
 
-        given:
-        def ch1 = Channel.of( 1,2,3 )
-        def ch2 = Channel.of( 1,0,0,2,7,8,9,3 )
-
         when:
-        def op = new JoinOp(ch1, ch2, [remainder: true])
-        def result = op.apply().toList().getVal()
+        def result = runDataflow {
+            def ch1 = Channel.of( 1,2,3 )
+            def ch2 = Channel.of( 1,0,0,2,7,8,9,3 )
+            ch1.join(ch2, remainder: true).toList()
+        }.getVal()
         then:
         result.size() == 8
         result == [1, 2, 3, 0, 0, 7, 8, 9]
@@ -131,9 +126,11 @@ class JoinOpTest extends Specification {
     def 'should join empty channel and remainder' () {
 
         when:
-        def left = Channel.of(1,2,3)
-        def right = Channel.empty()
-        def result = left.join(right, remainder: true)
+        def result = runDataflow {
+            def left = Channel.of(1,2,3)
+            def right = Channel.empty()
+            left.join(right, remainder: true)
+        }
         then:
         result.val == 1
         result.val == 2
@@ -145,9 +142,11 @@ class JoinOpTest extends Specification {
     def 'should join empty channel with pairs and remainder' () {
 
         when:
-        def left = Channel.of(['X', 1], ['Y', 2], ['Z', 3])
-        def right = Channel.empty()
-        def result = left.join(right, remainder: true)
+        def result = runDataflow {
+            def left = Channel.of(['X', 1], ['Y', 2], ['Z', 3])
+            def right = Channel.empty()
+            left.join(right, remainder: true)
+        }
         then:
         result.val == ['X', 1, null]
         result.val == ['Y', 2, null]
@@ -158,13 +157,11 @@ class JoinOpTest extends Specification {
     def 'should join a singleton value' () {
 
         when:
-        given:
-        def ch1 = Channel.of( 1,2,3 )
-        def ch2 = Channel.value(1)
-
-        when:
-        def op = new JoinOp(ch1, ch2)
-        def result = op.apply().toList().getVal()
+        def result = runDataflow {
+            def ch1 = Channel.of( 1,2,3 )
+            def ch2 = Channel.value(1)
+            ch1.join(ch2).toList()
+        }.getVal()
         then:
         result == [1]
     }
@@ -173,9 +170,11 @@ class JoinOpTest extends Specification {
     def 'should join pair with singleton and remainder' () {
 
         when:
-        def left = Channel.of(['P', 0], ['X', 1], ['Y', 2], ['Z', 3])
-        def right = Channel.of('X', 'Y', 'Z', 'Q')
-        def result = left.join(right)
+        def result = runDataflow {
+            def left = Channel.of(['P', 0], ['X', 1], ['Y', 2], ['Z', 3])
+            def right = Channel.of('X', 'Y', 'Z', 'Q')
+            left.join(right)
+        }
         then:
         result.val == ['X', 1]
         result.val == ['Y', 2]
@@ -183,9 +182,11 @@ class JoinOpTest extends Specification {
         result.val == Channel.STOP
 
         when:
-        left = Channel.of(['P', 0], ['X', 1], ['Y', 2], ['Z', 3])
-        right = Channel.of('X', 'Y', 'Z', 'Q')
-        result = left.join(right, remainder: true).toList().val.sort { it -> it[0] }
+        result = runDataflow {
+            def left = Channel.of(['P', 0], ['X', 1], ['Y', 2], ['Z', 3])
+            def right = Channel.of('X', 'Y', 'Z', 'Q')
+            left.join(right, remainder: true).toList()
+        }.val.sort { it -> it[0] }
         then:
         result[2] == ['X', 1]
         result[3] == ['Y', 2]
@@ -196,12 +197,13 @@ class JoinOpTest extends Specification {
     }
 
     def 'should match gstrings' () {
-        given:
-        def A = "A"; def B = "B"; def C = "C"
-        def left = Channel.of(['A', 'hola'], ['B', 'hello'], ['C', 'ciao'])
-        def right = Channel.of(["$A", 'mundo'], ["$B", 'world'], ["$C", 'mondo'] )
         when:
-        def result = left.join(right).toList().val.sort { it[0] }
+        def result = runDataflow {
+            def A = "A"; def B = "B"; def C = "C"
+            def left = Channel.of(['A', 'hola'], ['B', 'hello'], ['C', 'ciao'])
+            def right = Channel.of(["$A", 'mundo'], ["$B", 'world'], ["$C", 'mondo'] )
+            left.join(right).toList()
+        }.val.sort { it[0] }
         then:
         result[0] == ['A','hola','mundo']
         result[1] == ['B','hello','world']
@@ -213,12 +215,13 @@ class JoinOpTest extends Specification {
         given:
         def key1 = new ArrayBag(["key"])
         def key2 = new ArrayBag(["key"])
-        def ch1 = Channel.of([key1, "foo"])
-        def ch2 = Channel.of([key2, "bar"])
 
         when:
-        def op = new JoinOp(ch1 as DataflowReadChannel, ch2 as DataflowReadChannel)
-        List result = op.apply().toList().getVal()
+        List result = runDataflow {
+            def ch1 = Channel.of([key1, "foo"])
+            def ch2 = Channel.of([key2, "bar"])
+            ch1.join(ch2).toList()
+        }.getVal()
 
         then:
         !result.isEmpty()
@@ -228,25 +231,26 @@ class JoinOpTest extends Specification {
         given:
         def key1 = new ArrayBag(["key", "key", "quay"])
         def key2 = new ArrayBag(["quay", "quay", "key"])
-        def ch1 = Channel.of([key1, "foo"])
-        def ch2 = Channel.of([key2, "bar"])
 
         when:
-        def op = new JoinOp(ch1 as DataflowReadChannel, ch2 as DataflowReadChannel)
-        List result = op.apply().toList().getVal()
+        List result = runDataflow {
+            def ch1 = Channel.of([key1, "foo"])
+            def ch2 = Channel.of([key2, "bar"])
+            ch1.join(ch2).toList()
+        }.getVal()
 
         then:
         result.isEmpty()
     }
 
     def 'should not fail on mismatches' () {
-        given:
-        def ch1 = (DataflowReadChannel) Channel.of(['X', 1], ['Y', 2])
-        def ch2 = (DataflowReadChannel) Channel.of(['X', 6], ['Y', 5])
 
         when:
-        def op = new JoinOp(ch1, ch2, [failOnMismatch:true])
-        def result = op.apply().toList().getVal()
+        def result = runDataflow {
+            def ch1 = Channel.of(['X', 1], ['Y', 2])
+            def ch2 = Channel.of(['X', 6], ['Y', 5])
+            ch1.join(ch2, failOnMismatch: true).toList()
+        }.getVal()
         then:
         result.size() == 2
         result.contains( ['X', 1, 6] )
@@ -254,16 +258,15 @@ class JoinOpTest extends Specification {
     }
 
     def 'should should fail on mismatches' () {
-        given:
-        def ch1 = (DataflowReadChannel) Channel.of(['X', 1])
-        def ch2 = (DataflowReadChannel) Channel.of(['X', 6], ['Y', 5])
-        and:
-        def sess = Global.session as Session
 
         when:
-        def op = new JoinOp(ch1, ch2, [failOnMismatch:true])
-        def result = op.apply().toList().getVal()
+        def result = runDataflow {
+            def ch1 = Channel.of(['X', 1])
+            def ch2 = Channel.of(['X', 6], ['Y', 5])
+            ch1.join(ch2, failOnMismatch: true).toList()
+        }.getVal()
         and:
+        def sess = Global.session as Session
         await(sess)
         then:
         sess.isAborted()
@@ -299,13 +302,13 @@ class JoinOpTest extends Specification {
     }
 
     def 'should not fail on duplicate matches' () {
-        given:
-        def ch1 = (DataflowReadChannel) Channel.of(['X', 1], ['X', 3])
-        def ch2 = (DataflowReadChannel) Channel.of(['X', 2], ['X', 4])
 
         when:
-        def op = new JoinOp(ch1, ch2, [:])
-        def result = op.apply().toList().getVal()
+        def result = runDataflow {
+            def ch1 = Channel.of(['X', 1], ['X', 3])
+            def ch2 = Channel.of(['X', 2], ['X', 4])
+            ch1.join(ch2).toList()
+        }.getVal()
         then:
         result.size() == 2
         result.contains( ['X', 1, 2] )
@@ -313,17 +316,16 @@ class JoinOpTest extends Specification {
     }
 
     def 'should fail on duplicate matches' () {
-        given:
-        def ch1 = (DataflowReadChannel) Channel.of(['X', 1], ['X', 3], ['X', 5])
-        def ch2 = (DataflowReadChannel) Channel.of(['X', 2], ['X', 4], ['X', 6])
-        and:
-        def sess = Global.session as Session
 
         when:
-        def op = new JoinOp(ch1, ch2, [failOnDuplicate:true])
-        def result = op.apply().toList().getVal()
+        def result = runDataflow {
+            def ch1 = Channel.of(['X', 1], ['X', 3], ['X', 5])
+            def ch2 = Channel.of(['X', 2], ['X', 4], ['X', 6])
+            ch1.join(ch2, failOnDuplicate: true).toList()
+        }.getVal()
         println "result=$result"
         and:
+        def sess = Global.session as Session
         await(sess)
         then:
         sess.isAborted()
@@ -332,16 +334,15 @@ class JoinOpTest extends Specification {
     }
 
     def 'should fail on duplicate with remainder' () {
-        given:
-        def ch1 = (DataflowReadChannel) Channel.of(['X', 1], ['X', 3])
-        def ch2 = (DataflowReadChannel) Channel.of(['X', 2])
-        and:
-        def sess = Global.session as Session
 
         when:
-        def op = new JoinOp(ch1, ch2, [failOnDuplicate:true, remainder: true])
-        def result = op.apply().toList().getVal()
+        def result = runDataflow {
+            def ch1 = Channel.of(['X', 1], ['X', 3])
+            def ch2 = Channel.of(['X', 2])
+            ch1.join(ch2, failOnDuplicate: true, remainder: true).toList()
+        }.getVal()
         and:
+        def sess = Global.session as Session
         await(sess)
         then:
         sess.isAborted()
@@ -349,16 +350,15 @@ class JoinOpTest extends Specification {
     }
 
     def 'should fail on duplicate without remainder' () {
-        given:
-        def ch1 = (DataflowReadChannel) Channel.of(['X', 1], ['X', 3])
-        def ch2 = (DataflowReadChannel) Channel.of(['X', 2])
-        and:
-        def sess = Global.session as Session
 
         when:
-        def op = new JoinOp(ch1, ch2, [failOnDuplicate:true])
-        def result = op.apply().toList().getVal()
+        def result = runDataflow {
+            def ch1 = Channel.of(['X', 1], ['X', 3])
+            def ch2 = Channel.of(['X', 2])
+            ch1.join(ch2, failOnDuplicate: true).toList()
+        }.getVal()
         then:
+        def sess = Global.session as Session
         await(sess)
         then:
         sess.isAborted()

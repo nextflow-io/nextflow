@@ -18,10 +18,12 @@ package nextflow.k8s
 
 import nextflow.k8s.client.K8sRetryConfig
 
+import java.util.concurrent.TimeUnit
 import javax.annotation.Nullable
 
+import com.google.common.cache.Cache
+import com.google.common.cache.CacheBuilder
 import groovy.transform.CompileStatic
-import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.BuildInfo
@@ -55,6 +57,8 @@ class K8sConfig implements ConfigScope {
 
     static final private Map<String,?> DEFAULT_FUSE_PLUGIN = Map.of('nextflow.io/fuse', 1)
 
+    private Cache<String, ClientConfig> clientCache
+
     @ConfigOption
     @Description("""
         Automatically mount host paths into the task pods (default: `false`). Only intended for development purposes when using a single node.
@@ -80,6 +84,12 @@ class K8sConfig implements ConfigScope {
         If this option is specified, it will be used instead of `.kube/config`.
     """)
     final Map client
+
+    @ConfigOption
+    @Description("""
+        The interval after which the Kubernetes client configuration is refreshed (default: `50m`).
+    """)
+    final Duration clientRefreshInterval
 
     @ConfigOption
     @Description("""
@@ -215,6 +225,10 @@ class K8sConfig implements ConfigScope {
         autoMountHostPaths = opts.autoMountHostPaths as boolean
         cleanup = opts.cleanup as Boolean
         client = opts.client as Map
+        clientRefreshInterval = opts.clientRefreshInterval as Duration ?: Duration.of('50m')
+        clientCache = CacheBuilder.newBuilder()
+            .expireAfterWrite(clientRefreshInterval.toMillis(), TimeUnit.MILLISECONDS)
+            .build()
         computeResourceType = opts.computeResourceType
         context = opts.context
         cpuLimits = opts.cpuLimits as boolean
@@ -351,9 +365,11 @@ class K8sConfig implements ConfigScope {
         return result ? result.claimName : null
     }
 
-    @Memoized
     ClientConfig getClient() {
+        return clientCache.get('client', this::getClient0)
+    }
 
+    private ClientConfig getClient0() {
         final result = client != null
                 ? clientFromNextflow(client, namespace, serviceAccount)
                 : clientDiscovery(context, namespace, serviceAccount)

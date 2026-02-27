@@ -17,33 +17,54 @@
 package nextflow.script.params
 
 import nextflow.Channel
-import nextflow.Session
 import spock.lang.Specification
 
+import static test.ScriptHelper.runDataflow
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class EachInParamTest extends Specification {
 
-    def setupSpec() {
-        new Session()
-    }
-
     def testNormalize() {
 
         given:
-        def channel = Channel.of(1,2,3,5)
-        def value = Channel.value('a')
-        def list = Channel.value([4,5,6])
         def each = new EachInParam(Mock(Binding), [])
 
-        expect:
-        each.normalizeToVariable(1).val == [1]
-        each.normalizeToVariable([3,4,5]).val == [3,4,5]
-        each.normalizeToVariable(channel).val == [1,2,3,5]
-        each.normalizeToVariable(value).val == ['a']
-        each.normalizeToVariable(list).val == [4,5,6]
+        when:
+        def result = runDataflow {
+            each.normalizeToVariable(1)
+        }
+        then:
+        result.val == [1]
+
+        when:
+        result = runDataflow {
+            each.normalizeToVariable([3,4,5])
+        }
+        then:
+        result.val == [3,4,5]
+
+        when:
+        result = runDataflow {
+            each.normalizeToVariable(Channel.of(1,2,3,5))
+        }
+        then:
+        result.val == [1,2,3,5]
+
+        when:
+        result = runDataflow {
+            each.normalizeToVariable(Channel.value('a'))
+        }
+        then:
+        result.val == ['a']
+
+        when:
+        result = runDataflow {
+            each.normalizeToVariable(Channel.value([4,5,6]))
+        }
+        then:
+        result.val == [4,5,6]
 
     }
 

@@ -18,19 +18,14 @@ package nextflow.extension
 
 import nextflow.Channel
 import spock.lang.Specification
-
-import nextflow.Session
 import test.OutputCapture
 
+import static test.ScriptHelper.runDataflow
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ViewOperatorTest extends Specification{
-
-    def setupSpec() {
-        new Session()
-    }
+class ViewOperatorTest extends Specification {
 
     /*
      * Read more http://mrhaki.blogspot.com.es/2015/02/spocklight-capture-and-assert-system.html
@@ -42,57 +37,75 @@ class ViewOperatorTest extends Specification{
     def 'should print channel items'() {
 
         when:
-        def result = Channel.of(1,2,3).view()
+        def result = runDataflow {
+            Channel.of(1,2,3).view()
+        }
         then:
         result.val == 1
         result.val == 2
         result.val == 3
         result.val == Channel.STOP
-        capture.toString() == '1\n2\n3\n'
+        viewOutput(capture) == '1\n2\n3\n'
 
     }
 
     def 'should print channel items applying the closure formatting rule'() {
 
         when:
-        def result = Channel.of(1,2,3).view { "~ $it " }
+        def result = runDataflow {
+            Channel.of(1,2,3).view { "~ $it " }
+        }
         then:
         result.val == 1
         result.val == 2
         result.val == 3
         result.val == Channel.STOP
 
-        capture.toString() == '~ 1 \n~ 2 \n~ 3 \n'
+        viewOutput(capture) == '~ 1 \n~ 2 \n~ 3 \n'
 
     }
 
     def 'should print channel items without appending the newline character'() {
 
         when:
-        def result = Channel.of(1,2,3).view(newLine:false) { " ~ $it" }
+        def result = runDataflow {
+            Channel.of(1,2,3).view(newLine:false) { " ~ $it" }
+        }
         then:
         result.val == 1
         result.val == 2
         result.val == 3
         result.val == Channel.STOP
 
-        capture.toString() == ' ~ 1 ~ 2 ~ 3'
+        viewOutput(capture) == ' ~ 1 ~ 2 ~ 3'
     }
 
     def 'should print dataflow value' () {
         when:
-        def result = Channel.value(1).view { ">> $it" }
+        def result = runDataflow {
+            Channel.value(1).view { ">> $it" }
+        }
         then:
         result.val == 1
-        capture.toString() == ">> 1\n"
+        viewOutput(capture) == ">> 1\n"
     }
 
     def 'should return stop signal'() {
         when:
-        def result = Channel.value(Channel.STOP).view { ">> $it" }
+        def result = runDataflow {
+            Channel.value(Channel.STOP).view { ">> $it" }
+        }
         then:
         result.val == Channel.STOP
-        capture.toString() == ''
+        viewOutput(capture) == ''
+    }
+
+    def viewOutput(capture) {
+        final text = capture.toString()
+        final result = text.split('\n')
+            .findAll { line -> !line.contains('[Test worker]') }
+            .join('\n')
+        return text.endsWith('\n') && !result.isEmpty() ? result + '\n' : result
     }
 
 }
