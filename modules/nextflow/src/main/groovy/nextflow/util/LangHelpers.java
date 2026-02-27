@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ class LangHelpers {
      *
      * @param left Left equals operand
      * @param right Right equals operand
-     * @return 
+     * @return
      */
     static boolean compareEqual( Object left, Object right )  {
         // -- legacy
@@ -260,7 +260,7 @@ class LangHelpers {
             return Duration.compareTo((Duration)right, left)<=0;
         }
 
-        // -- fallback on default 
+        // -- fallback on default
         return ScriptBytecodeAdapter.compareTo(left, right) >= 0;
     }
 

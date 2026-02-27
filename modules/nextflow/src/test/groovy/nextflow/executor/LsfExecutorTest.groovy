@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -543,7 +543,7 @@ class LsfExecutorTest extends Specification {
         result['5157610'] == AbstractGridExecutor.QueueStatus.RUNNING
         result['5157674'] == AbstractGridExecutor.QueueStatus.RUNNING
         result['5157710'] == AbstractGridExecutor.QueueStatus.RUNNING
-        result.size() == 6 
+        result.size() == 6
 
     }
 
@@ -732,7 +732,7 @@ class LsfExecutorTest extends Specification {
         'foo'       | 1             | 'foo[2]'
         'bar'       | 2             | 'bar[3]'
     }
-    
+
     @Unroll
     def 'should set lsf account' () {
         given:

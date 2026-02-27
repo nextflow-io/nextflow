@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -136,7 +136,7 @@ class TaskInputResolver {
 
         if( obj == null )
             throw new ProcessUnrecoverableException("Path value cannot be null")
-        
+
         if( !(obj instanceof CharSequence) )
             throw new ProcessUnrecoverableException("Not a valid path value type: ${obj.getClass().getName()} ($obj)")
 
@@ -149,7 +149,7 @@ class TaskInputResolver {
             return FileHelper.asPath(str)
         if( !str )
             throw new ProcessUnrecoverableException("Path value cannot be empty")
-        
+
         throw new ProcessUnrecoverableException("Not a valid path value: '$str'")
     }
 

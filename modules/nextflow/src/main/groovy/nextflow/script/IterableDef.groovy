@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.script
@@ -51,7 +50,7 @@ trait IterableDef {
     /**
      * To support component recursion, the feedback channels must be used as the channel instances
      * for the outputs instead of creating new ones
-     * 
+     *
      * @return A list of output channels bringing the process feedback
      */
     List<DataflowWriteChannel> getFeedbackChannels() { outputChannels }
@@ -112,7 +111,7 @@ trait IterableDef {
         if( input !instanceof DataflowWriteChannel ) {
             // any non channel value is fine, because it will be wrapped into
             // a channel value
-            return 
+            return
         }
         if( !CH.isValue(input) )
             throw new IllegalArgumentException("Recurse operation only allows value inputs -- Check ${index+1}-th argument")

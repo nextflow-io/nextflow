@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ class TaskContextTest extends Specification {
     def setupSpec() {
         NF.init()
     }
-    
+
     def 'should save and read TaskContext object' () {
 
         setup:
