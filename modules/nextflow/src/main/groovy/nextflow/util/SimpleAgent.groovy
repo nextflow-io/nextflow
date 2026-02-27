@@ -106,6 +106,7 @@ class SimpleAgent<T> {
         }
     }
 
+    @Slf4j
     @CompileStatic
     private static class RetrieveValueClosure<T> extends Closure {
 

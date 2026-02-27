@@ -182,7 +182,11 @@ trait IterableDef {
     }
 
     private DataflowWriteChannel accumulator(DataflowReadChannel source, int i) {
-        final mapper = { value -> accumulators[i].add(value); return accumulators[i].clone() }
+        final mapper = { value ->
+            final next = new ArrayList<>(accumulators[i])
+            next.add(value)
+            return next
+        }
         return new MapOp(source, mapper).apply()
     }
 

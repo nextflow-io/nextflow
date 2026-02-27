@@ -108,7 +108,7 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         def result = clone()
         result.@processName = name
         result.@simpleName = stripScope(name)
-        result.@processConfig.processName = name
+        result.@processConfig.setProcessName(name)
         return result
     }
 

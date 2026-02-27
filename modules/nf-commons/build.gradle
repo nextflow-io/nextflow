@@ -27,8 +27,8 @@ sourceSets {
 dependencies {
     api(project(':nf-lang'))
     api "ch.qos.logback:logback-classic:1.5.26"
-    api "org.apache.groovy:groovy:4.0.30"
-    api "org.apache.groovy:groovy-nio:4.0.30"
+    api "org.apache.groovy:groovy:5.0.4"
+    api "org.apache.groovy:groovy-nio:5.0.4"
     api "org.apache.commons:commons-lang3:3.18.0"
     api 'com.google.guava:guava:33.0.0-jre'
     api 'org.pf4j:pf4j:3.12.0'
@@ -44,7 +44,7 @@ dependencies {
     testImplementation(testFixtures(project(":nextflow")))
     testFixturesImplementation(project(":nextflow"))
 
-    testImplementation "org.apache.groovy:groovy-json:4.0.30" // needed by wiremock
+    testImplementation "org.apache.groovy:groovy-json:5.0.4" // needed by wiremock
     testImplementation ('org.wiremock:wiremock:3.13.1') { exclude module: 'groovy-all' }
 }
 

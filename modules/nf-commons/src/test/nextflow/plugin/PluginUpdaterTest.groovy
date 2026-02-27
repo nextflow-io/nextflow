@@ -557,7 +557,7 @@ class PluginUpdaterTest extends Specification {
         
         and:
         // Mock pullPlugin0 to prevent real implementation calls
-        2 * updater.pullPlugin0(_, _) >> null
+        2 * updater.pullPlugin0(_, _) >> { }
 
         cleanup:
         folder?.deleteDir()
