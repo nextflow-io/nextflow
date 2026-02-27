@@ -13,28 +13,44 @@ This document captures technical research and decisions for implementing the Nex
 
 **Research Question**: How should `nextflow module` CLI commands be implemented?
 
-**Decision**: Follow CmdPlugin pattern with sub-command delegation
+**Decision**: JCommander native subcommands — each subcommand extends `CmdBase` directly; no trait needed
 
 **Rationale**:
-- CmdPlugin.groovy provides proven pattern for multi-action commands
-- Uses JCommander `@Parameters` and `@Parameter` annotations
-- Sub-commands (install, search, list, remove, publish, run) handled via positional args
-- PluginExecAware interface allows plugin extensibility if needed later
+- JCommander's subcommand support handles parameter parsing automatically per subcommand
+- Each subcommand (install, run, list, remove, search, info, publish) is a separate class extending CmdBase
+- `ModuleRun` extends `CmdRun` to reuse pipeline execution logic (PR #6381)
+- No custom `ModuleSubCmd` trait needed; cleaner architecture
+- `CmdModule` is registered in `Launcher` alongside all other top-level commands
 
-**Reference Implementation**:
-```
-Location: modules/nextflow/src/main/groovy/nextflow/cli/CmdPlugin.groovy
-Pattern:
-  - Extends CmdBase
-  - @Parameters(commandNames = 'module', commandDescription = '...')
-  - @Parameter(names = ['-h', '--help'])
-  - args list for sub-command + module name
-  - run() method dispatches to install(), search(), etc.
+**Implemented Pattern**:
+```groovy
+@Parameters(commandDescription = "Manage Nextflow modules")
+class CmdModule extends CmdBase implements UsageAware {
+    static final List<CmdBase> commands = []
+
+    static {
+        commands << new ModuleInstall()   // extends CmdBase
+        commands << new ModuleRun()       // extends CmdRun
+        commands << new ModuleList()      // extends CmdBase
+        commands << new ModuleRemove()    // extends CmdBase
+        commands << new ModuleSearch()    // extends CmdBase
+        commands << new ModuleInfo()      // extends CmdBase
+        commands << new ModulePublish()   // extends CmdBase
+    }
+
+    void run() {
+        final jc = commander()    // JCommander with all subcommands registered
+        jc.parse(args as String[])
+        final subcommand = jc.getCommands().get(jc.getParsedCommand()).getObjects()[0]
+        subcommand.run()
+    }
+}
 ```
 
 **Alternatives Considered**:
-- Separate CmdModuleInstall, CmdModuleSearch classes: Rejected - too many entry points, doesn't match existing patterns
-- Plugin-based CLI extension: Rejected - module system is core functionality, not optional
+- CmdFs trait pattern: Considered initially; replaced by JCommander native subcommands — simpler and avoids custom parsing
+- Separate top-level Cmd classes (CmdModuleInstall, etc.): Rejected — too many entry points
+- Plugin-based CLI extension: Rejected — module system is core functionality, not optional
 
 ---
 
@@ -76,46 +92,75 @@ Pattern:
 
 **Research Question**: How to add new config DSL blocks?
 
-**Decision**: Create ModulesDsl and RegistryDsl classes following PluginsDsl pattern
+**Decision**: Create ModulesConfig and RegistryConfig classes implementing ConfigScope interface
 
 **Rationale**:
-- PluginsDsl.groovy provides exact template for DSL block handling
-- ConfigBuilder already supports dynamic DSL registration
-- Groovy's methodMissing enables clean config syntax
+- ConfigScope is an ExtensionPoint (pf4j) that ConfigBuilder automatically discovers
+- Classes implementing ConfigScope and annotated with @ScopeName are automatically parsed
+- No need to modify ConfigBuilder or create custom DSL parsers
+- Pattern used throughout Nextflow: FusionConfig, CondaConfig, DockerConfig, etc.
+- Provides type safety via @CompileStatic and validation via @ConfigOption
 
 **Reference Implementation**:
 ```
-Location: modules/nextflow/src/main/groovy/nextflow/config/parser/v1/PluginsDsl.groovy
+Location: modules/nextflow/src/main/groovy/nextflow/fusion/FusionConfig.groovy
 Pattern:
+  @ScopeName("modules")
+  @Description("Module version declarations")
   @CompileStatic
-  class ModulesDsl {
-      private Map<String, String> modules = [:]
+  class ModulesConfig implements ConfigScope {
+      @ConfigOption
+      @Description("Module version mappings")
+      final Map<String, String> modules = [:]
 
-      def methodMissing(String name, args) {
-          // modules { '@nf-core/fastqc' = '1.0.0' }
-          modules[name] = args[0].toString()
+      ModulesConfig() {}
+
+      ModulesConfig(Map opts) {
+          // Parse from config map
       }
-
-      Map<String, String> getModules() { modules }
   }
 ```
 
-**RegistryDsl Pattern**:
-```groovy
-class RegistryDsl {
-    String url = 'https://registry.nextflow.io'
-    List<String> urls = []  // For multiple registries
-    Map<String, String> auth = [:]
+**ConfigScope Interface**:
+```
+Location: modules/nf-lang/src/main/java/nextflow/config/spec/ConfigScope.java
+public interface ConfigScope extends ExtensionPoint {}
+```
 
-    void url(String value) { this.url = value }
-    void url(List<String> values) { this.urls = values }
-    void auth(Closure config) { /* parse auth block */ }
+**RegistryConfig Pattern**:
+```groovy
+@ScopeName("registry")
+@Description("Module registry configuration")
+@CompileStatic
+class RegistryConfig implements ConfigScope {
+    static final String DEFAULT_REGISTRY_URL = 'https://registry.nextflow.io/api'
+
+    @ConfigOption
+    final Collection<String> url   // One or more URLs in priority order
+
+    @ConfigOption
+    final String apiKey            // API key; falls back to NXF_REGISTRY_TOKEN env var
+
+    RegistryConfig() {
+        url = [DEFAULT_REGISTRY_URL]
+        apiKey = null
+    }
+
+    RegistryConfig(Map opts) {
+        url = opts.url ?: [DEFAULT_REGISTRY_URL]
+        apiKey = opts.apiKey as String
+    }
+
+    String getUrl() { url ? url[0] : DEFAULT_REGISTRY_URL }
+    Collection<String> getAllUrls() { url ?: [DEFAULT_REGISTRY_URL] }
+    String getApiKey() { apiKey ?: SysEnv.get('NXF_REGISTRY_TOKEN') }
 }
 ```
 
-**Integration Point**: ConfigBuilder.build() instantiates DSL objects
+**Integration Point**: ConfigBuilder automatically discovers and parses ConfigScope implementations via ExtensionPoint mechanism
 
 **Alternatives Considered**:
+- Custom DSL parsers (ModulesDsl/RegistryDsl): Rejected - unnecessary complexity, ConfigScope pattern handles this automatically
 - JSON/YAML config file: Rejected - inconsistent with Nextflow config style
 - Dedicated pipeline.yaml: Deferred per ADR Open Questions
 
@@ -169,36 +214,33 @@ POST /api/modules/{name}                     # Publish (authenticated)
 
 **Research Question**: How to handle registry authentication?
 
-**Decision**: Support NXF_REGISTRY_TOKEN env var + registry.auth config block
+**Decision**: Support `NXF_REGISTRY_TOKEN` env var + `registry.apiKey` config field
 
 **Rationale**:
 - Environment variable provides CI/CD compatibility
-- Config block allows per-registry tokens for private registries
-- Follows existing plugin auth patterns
+- `apiKey` config field allows explicit token configuration
+- Authentication is only applied to the primary (first) registry URL
 - Bearer token in Authorization header (standard HTTP auth)
 
-**Reference Implementation**:
+**Implementation**:
 ```
-Location: modules/nextflow/src/main/groovy/nextflow/cli/CmdAuth.groovy
-Pattern:
-  1. Check NXF_REGISTRY_TOKEN environment variable
-  2. Fall back to registry.auth.'registry.nextflow.io' in config
-  3. Add header: Authorization: Bearer <token>
+RegistryConfig.getApiKey() returns:
+  1. registry.apiKey config value if set
+  2. NXF_REGISTRY_TOKEN environment variable as fallback
+  3. null if neither is set (unauthenticated requests)
 ```
 
 **Config Syntax**:
-```groovy
+```nextflow
 registry {
-    auth {
-        'registry.nextflow.io' = '${NXF_REGISTRY_TOKEN}'
-        'private.registry.com' = '${PRIVATE_TOKEN}'
-    }
+    apiKey = '${NXF_REGISTRY_TOKEN}'
 }
 ```
 
 **Alternatives Considered**:
+- Per-registry token map (`auth {}` block): Was in initial design; simplified to single `apiKey` since only the primary registry uses authentication
 - Secrets file (~/.nextflow/secrets.json): Possible future enhancement
-- OAuth flow: Rejected for CLI - token-based simpler
+- OAuth flow: Rejected for CLI — token-based simpler
 
 ---
 
@@ -275,59 +317,7 @@ class ModuleChecksum {
 
 ## 8. Tool Arguments Implementation
 
-**Research Question**: How to implement structured tool arguments (`tools.<name>.args`)?
-
-**Decision**: Implement as implicit variable in process scope, validated at parse time
-
-**Rationale**:
-- `tools` variable accessible in script block like `task`, `params`
-- Validation at parse time catches errors early (per clarification)
-- Schema defined in meta.yaml, parsed by ModuleManifest
-- Concatenation logic handles flag formatting
-
-**Implementation Pattern**:
-```groovy
-class ToolArgs {
-    private Map<String, ArgDef> schema  // From meta.yaml
-    private Map<String, Object> values  // From config
-
-    String getAt(String argName) {
-        def def = schema[argName]
-        def value = values[argName]
-        if (def.type == 'boolean' && value) {
-            return def.flag  // e.g., "-Y"
-        }
-        return "${def.flag} ${value}"  // e.g., "-K 100000"
-    }
-
-    String toString() {
-        // Concatenate all configured args
-        values.collect { name, value ->
-            this[name]
-        }.join(' ')
-    }
-}
-```
-
-**Config Access**:
-```groovy
-withName: 'BWA_MEM' {
-    tools.bwa.args.K = 100000
-    tools.bwa.args.Y = true
-}
-```
-
-**Script Access**:
-```groovy
-script:
-"""
-bwa mem ${tools.bwa.args} -t $task.cpus $index $reads
-"""
-```
-
-**Alternatives Considered**:
-- Runtime validation only: Rejected - late errors waste compute
-- String-only values: Rejected - loses type safety benefits
+> **⚠️ REMOVED FROM ADR** — The tool arguments feature (`tools.<name>.args` in meta.yaml and process config) was removed from the module system ADR. It is not implemented and not planned in the current scope. The `meta.yaml` format used in the actual implementation (`ModuleSpec`) does not include tool/argument definitions.
 
 ---
 
@@ -335,26 +325,21 @@ bwa mem ${tools.bwa.args} -t $task.cpus $index $reads
 
 | Area | Decision | Key Reference |
 |------|----------|---------------|
-| CLI | CmdModule extends CmdBase | CmdPlugin.groovy |
-| DSL Parser | Extend ResolveIncludeVisitor | ResolveIncludeVisitor.java |
-| Config | ModulesDsl + RegistryDsl | PluginsDsl.groovy |
-| Registry HTTP | HttpModuleRepository | HttpPluginRepository.groovy |
-| Authentication | NXF_REGISTRY_TOKEN + config | CmdAuth.groovy |
-| Checksums | SHA-256, .checksum file | Standard Java security |
+| CLI | JCommander subcommands; each extends CmdBase (ModuleRun extends CmdRun) | CmdModule.groovy |
+| DSL Parser | Extend ResolveIncludeVisitor for `@scope/name` — pending | ResolveIncludeVisitor.java |
+| Config | ModulesConfig + RegistryConfig (ConfigScope) | FusionConfig.groovy, ConfigScope.java |
+| Registry HTTP | ModuleRegistryClient using HxClient + npr-api models | HttpPluginRepository.groovy |
+| Authentication | `NXF_REGISTRY_TOKEN` env var or `registry.apiKey` config field (primary registry only) | RegistryConfig.groovy |
+| Checksums | SHA-256/SHA-512, `.checksum` file, download integrity via X-Checksum header | ModuleChecksum.groovy |
+| Version Storage | `nextflow_spec.json` (auto-managed); `modules {}` in nextflow.config (manual alternative) | PipelineSpec.groovy |
 | Version Syntax | Plugin-compatible constraints | VersionNumber class |
-| Tool Args | Implicit variable, parse-time validation | New implementation |
+| Tool Args | ~~Implicit variable, parse-time validation~~ — **Removed from ADR** | N/A |
 
 ---
 
 ## Open Items (Deferred)
 
-These items are noted in the ADR as open questions and do not block implementation:
-
-1. **Local vs managed module distinction**: Whether local modules use `@` prefix or dot file marker
-2. **Tool arguments CLI syntax**: Colon vs dot separator (`--tools:bwa:K` vs `--tools.bwa.K`)
-3. **Module version location**: nextflow.config vs dedicated pipeline.yaml
-
-Current implementation uses:
-- `@` prefix for registry modules only (local paths start with `.` or `/`)
-- Colon-separated CLI syntax per ADR assumption
-- Versions in nextflow.config per ADR decision
+1. **Local vs managed module distinction**: Resolved — `@` prefix for registry modules only; local paths start with `.` or `/`
+2. **Tool arguments**: Removed from ADR — not in scope
+3. **Module version location**: Resolved — `nextflow_spec.json` (auto-managed by `module install`); `modules {}` block in `nextflow.config` supported as alternative
+4. **DSL parser `@scope/name` include**: Pending (T017)

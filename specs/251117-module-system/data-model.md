@@ -2,6 +2,7 @@
 
 **Date**: 2026-01-19
 **Feature**: 251117-module-system
+**Last Updated**: 2026-02-27 (reflects final implementation)
 
 ## Overview
 
@@ -39,88 +40,39 @@ class ModuleReference {
 
 ---
 
-### 2. ModuleManifest
+### 2. ModuleSpec
 
-Parsed representation of `meta.yaml` file.
+Parsed representation of `meta.yaml` file. Class: `nextflow.module.ModuleSpec`.
 
 ```groovy
 @CompileStatic
-class ModuleManifest {
+class ModuleSpec {
     String name            // e.g., "nf-core/fastqc" (without @)
     String version         // e.g., "1.0.0"
     String description     // Module description
     List<String> keywords  // Discovery keywords
     List<String> authors   // GitHub handles
-    List<String> maintainers
     String license         // SPDX identifier
+    Map<String, String> requires  // dependency -> version constraint
 
-    ModuleRequirements requires
-    List<ToolDefinition> tools
-    List<InputDefinition> input
-    Map<String, OutputDefinition> output
-}
-
-@CompileStatic
-class ModuleRequirements {
-    String nextflow        // Version constraint, e.g., ">=24.04.0"
-    List<String> plugins   // e.g., ["nf-amazon@2.0.0"]
-    List<String> modules   // e.g., ["nf-core/samtools@>=1.0.0"]
-    List<String> workflows // e.g., ["nf-core/fastq-align@1.0.0"]
-}
-
-@CompileStatic
-class ToolDefinition {
-    String name            // Tool identifier
-    String description
-    String homepage
-    String documentation
-    String doi
-    List<String> license
-    String identifier      // bio.tools identifier
-    Map<String, ArgDefinition> args
-}
-
-@CompileStatic
-class ArgDefinition {
-    String flag            // CLI flag, e.g., "-K"
-    String type            // boolean, integer, float, string, file, path
-    String description
-    Object defaultValue
-    List<Object> enumValues
-    boolean required = false
+    static ModuleSpec load(Path metaYamlPath) { ... }
+    List<String> validate() { ... }  // Returns list of validation errors
+    boolean isValid() { ... }
 }
 ```
 
 **Validation Rules**:
-- `version`: Must be valid SemVer (MAJOR.MINOR.PATCH)
-- `type` in ArgDefinition: Must be one of: boolean, integer, float, string, file, path
-- `enumValues`: If present, configured value must be in this list
+- `name`: Must match `scope/name` or `scope/path/to/name` pattern
+- `version`: Must be valid SemVer (`MAJOR.MINOR.PATCH[-prerelease]`)
+- `description`, `license`: Required fields (validate() reports missing)
+
+**Note**: Tool/argument definitions were removed from the ADR and are not part of `ModuleSpec`.
 
 ---
 
-### 3. ModuleInfo
+### 3. InstalledModule
 
-Module metadata returned from registry API.
-
-```groovy
-@CompileStatic
-class ModuleInfo {
-    String name            // e.g., "nf-core/fastqc"
-    String version         // Specific version
-    String latestVersion   // Latest available
-    String description
-    String checksum        // SHA-256 of bundle
-    long downloadCount
-    Instant publishedAt
-    List<String> versions  // All available versions
-}
-```
-
----
-
-### 4. InstalledModule
-
-Represents a module in local `modules/` directory.
+Represents a module in the local `modules/` directory.
 
 ```groovy
 @CompileStatic
@@ -132,7 +84,6 @@ class InstalledModule {
     Path checksumFile      // e.g., /project/modules/@nf-core/fastqc/.checksum
     String installedVersion
     String expectedChecksum
-    ModuleManifest manifest
 
     ModuleIntegrity getIntegrity() {
         // Compute and compare checksum
@@ -158,84 +109,77 @@ enum ModuleIntegrity {
 
 ---
 
-### 5. ModuleConfig
+### 4. ModulesConfig and RegistryConfig
 
-Module configuration from `nextflow.config`.
+Modules configuration loaded from `nextflow_spec.json` ( or the `modules {}` block in `nextflow.config` as alternative). Registry settings from the `registry {}` block in `nextflow.config`.
 
 ```groovy
+@ScopeName("modules")
 @CompileStatic
-class ModuleConfig {
-    Map<String, String> modules = [:]  // name -> version
-    RegistryConfig registry
+class ModulesConfig implements ConfigScope {
+    Map<String, String> modules = [:]  // module fullName -> version
+
+    String getVersion(String moduleName) { ... }
+    boolean hasVersion(String moduleName) { ... }
 }
 
+@ScopeName("registry")
 @CompileStatic
-class RegistryConfig {
-    String url = 'https://registry.nextflow.io'
-    List<String> urls = []             // Multiple registries
-    Map<String, String> auth = [:]     // registry -> token expression
+class RegistryConfig implements ConfigScope {
+    static final String DEFAULT_REGISTRY_URL = 'https://registry.nextflow.io/api'
+
+    Collection<String> url    // Registry URL(s) in priority order
+    String apiKey             // API key (falls back to NXF_REGISTRY_TOKEN env var)
+
+    String getUrl()           // Returns primary (first) URL
+    Collection<String> getAllUrls()
+    String getApiKey()        // Returns apiKey or NXF_REGISTRY_TOKEN
 }
 ```
 
 **Config Syntax**:
-```groovy
+```nextflow
+// nextflow_spec.json (current approach)
+{
+  "modules": {
+    "@nf-core/fastqc": "1.0.0",
+    "@nf-core/bwa-align": "1.2.0"
+  }
+}
+
+// nextflow.config (alternative not currently used)
 modules {
     '@nf-core/fastqc' = '1.0.0'
     '@nf-core/bwa-align' = '1.2.0'
 }
 
 registry {
-    url = 'https://registry.nextflow.io'
-    auth {
-        'registry.nextflow.io' = '${NXF_REGISTRY_TOKEN}'
-    }
+    url = [
+        'https://private.registry.myorg.com',
+        'https://registry.nextflow.io/api'
+    ]
+    apiKey = '${MYORG_TOKEN}'  // Only applied to the primary registry
 }
 ```
 
 ---
 
-### 6. ToolArgsContext
+### 5. PipelineSpec
 
-Runtime context for tool arguments in process scripts.
+Reads and writes `nextflow_spec.json` in the project root. Class: `nextflow.pipeline.PipelineSpec`.
 
 ```groovy
-@CompileStatic
-class ToolArgsContext {
-    private Map<String, ToolArgs> tools = [:]
-
-    ToolArgs getAt(String toolName) {
-        return tools[toolName]
-    }
-}
-
-@CompileStatic
-class ToolArgs {
-    private Map<String, ArgDefinition> schema
-    private Map<String, Object> values
-
-    String getAt(String argName) {
-        def def = schema[argName]
-        def value = values[argName]
-        if (value == null) return ''
-        if (def.type == 'boolean') {
-            return value ? def.flag : ''
-        }
-        return "${def.flag} ${value}"
-    }
-
-    String toString() {
-        schema.keySet()
-            .findAll { values.containsKey(it) && values[it] != null }
-            .collect { this[it] }
-            .findAll { it }
-            .join(' ')
-    }
+class PipelineSpec {
+    PipelineSpec(Path baseDir)
+    Map<String, String> getModules()
+    void addModuleEntry(String name, String version)
+    boolean removeModuleEntry(String name)
 }
 ```
 
 ---
 
-### 7. ModuleResolutionResult
+### 6. ModuleResolutionResult
 
 Result of module resolution process.
 
@@ -246,7 +190,6 @@ class ModuleResolutionResult {
     Path resolvedPath          // Absolute path to main.nf
     ResolutionAction action
     String message             // Warning/info message if any
-    ModuleManifest manifest
 }
 
 enum ResolutionAction {
@@ -263,22 +206,14 @@ enum ResolutionAction {
 ## Relationships
 
 ```
-ModuleConfig (1) -----> (*) ModuleReference
-     |
-     v
+PipelineSpec (1) -----> (*) ModuleReference  (nextflow_spec.json)
+ModulesConfig (1) -----> (*) ModuleReference (nextflow.config alternative)
 RegistryConfig (1) -----> (*) Registry URLs
 
 ModuleReference (1) -----> (0..1) InstalledModule
      |
      v (via registry)
-ModuleInfo (1) -----> (1) ModuleManifest
-
-InstalledModule (1) -----> (1) ModuleManifest
-                    -----> (*) ToolDefinition
-                    -----> (*) ArgDefinition
-
-ToolArgsContext (1) -----> (*) ToolArgs
-                    -----> (*) ArgDefinition (schema)
+ModuleSpec (1) <----- InstalledModule (from meta.yaml)
 ```
 
 ---
@@ -287,15 +222,16 @@ ToolArgsContext (1) -----> (*) ToolArgs
 
 ```
 project-root/
-├── nextflow.config              # modules{}, registry{} blocks
+├── nextflow.config              # registry{} block; optional modules{} block
+├── nextflow_spec.json           # auto-managed module version pins
 ├── main.nf                      # include { X } from '@scope/name'
 └── modules/
     └── @scope/
         └── name/
-            ├── .checksum        # SHA-256 from registry
+            ├── .checksum        # SHA-256 from registry (download integrity)
             ├── main.nf          # Entry point (required)
-            ├── meta.yaml        # Manifest (optional but recommended)
-            ├── README.md        # Documentation
+            ├── meta.yaml        # Manifest (required for publishing)
+            ├── README.md        # Documentation (required for publishing)
             └── [other files]    # Supporting files
 ```
 
@@ -306,9 +242,9 @@ project-root/
 | Entity | Field | Validation |
 |--------|-------|------------|
 | ModuleReference | fullName | Pattern: `^@[a-z0-9][a-z0-9-]*/[a-z][a-z0-9_-]*$` |
-| ModuleManifest | version | SemVer: `MAJOR.MINOR.PATCH` |
-| ArgDefinition | type | Enum: boolean, integer, float, string, file, path |
-| ArgDefinition | enumValues | If set, value must be member |
+| ModuleSpec | name | Pattern: `scope/name` or `scope/path/to/name` |
+| ModuleSpec | version | SemVer: `MAJOR.MINOR.PATCH[-prerelease]` |
+| ModuleSpec | description, license | Required (non-empty) |
 | InstalledModule | directory | Must contain main.nf |
-| ModuleConfig | modules | Keys must be valid module references |
+| ModulesConfig | modules keys | Must be valid module fullName |
 | RegistryConfig | url | Valid HTTPS URL |

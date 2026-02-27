@@ -9,7 +9,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.seqera.http.HxClient
 import io.seqera.npr.api.schema.v1.ListDependenciesResponse
-import io.seqera.npr.api.schema.v1.Plugin
+import io.seqera.npr.api.schema.v1.PluginDependency
 import nextflow.BuildInfo
 import nextflow.util.RetryConfig
 import org.pf4j.PluginRuntimeException
@@ -152,11 +152,11 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
         }
         try {
             final ListDependenciesResponse decoded = encoder.decode(body)
-            if( decoded.plugins == null ) {
+            if( !decoded.plugins ) {
                 throw new PluginRuntimeException("Failed to download plugin metadata: Failed to parse response body")
             }
             final result = new HashMap<String, PluginInfo>()
-            for( Plugin plugin : decoded.plugins ) {
+            for( PluginDependency plugin : decoded.plugins ) {
                 if( plugin.releases ) {
                     final pluginInfo = mapToPluginInfo(plugin)
                     result.put(plugin.id, pluginInfo)
@@ -179,7 +179,7 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
      * @param plugin The Plugin object from the repository API response
      * @return A PluginInfo object compatible with pf4j's update repository interface
      */
-    static protected PluginInfo mapToPluginInfo(Plugin plugin) {
+    static protected PluginInfo mapToPluginInfo(PluginDependency plugin) {
         assert plugin.releases, "Plugin releases cannot be empty"
 
         final pluginInfo = new PluginInfo()

@@ -54,9 +54,12 @@ dependencies {
     api 'dev.failsafe:failsafe:3.1.0'
     api 'io.seqera:lib-trace:0.1.0'
     api 'com.fasterxml.woodstox:woodstox-core:7.1.1'
+    api 'org.apache.commons:commons-compress:1.27.1'  // For tar.gz extraction
+    api 'io.seqera:npr-api:0.21.4-SNAPSHOT'
 
     testImplementation 'org.subethamail:subethasmtp:3.1.7'
     testImplementation (project(':nf-lineage'))
+    testImplementation 'org.wiremock:wiremock:3.13.1'
     // test configuration
     testFixturesApi ("org.apache.groovy:groovy-test:4.0.30") { exclude group: 'org.apache.groovy' }
     testFixturesApi ("org.objenesis:objenesis:3.4")
