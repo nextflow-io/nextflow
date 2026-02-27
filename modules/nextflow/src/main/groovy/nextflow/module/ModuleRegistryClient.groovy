@@ -101,7 +101,7 @@ class ModuleRegistryClient {
 
         // Add authentication if available
         log.debug "Getting auth from: ${registryUrl}"
-        def token = config.getAuthTokenResolved(registryUrl)
+        def token = config.getApiKey()
         if (token) {
             requestBuilder.header("Authorization", "Bearer ${token}")
         }
@@ -177,7 +177,7 @@ class ModuleRegistryClient {
             .uri(uri)
             .GET()
 
-        def token = config.getAuthTokenResolved(registryUrl)
+        def token = config.getApiKey()
         if (token) {
             requestBuilder.header("Authorization", "Bearer ${token}")
         }
@@ -252,7 +252,7 @@ class ModuleRegistryClient {
             .uri(uri)
             .GET()
 
-        def token = config.getAuthTokenResolved(registryUrl)
+        def token = config.getApiKey()
         if (token) {
             requestBuilder.header("Authorization", "Bearer ${token}")
         }
@@ -296,13 +296,8 @@ class ModuleRegistryClient {
     }
 
     private void validateDownloadIntegrity(HttpResponse<InputStream> response, uri, Path targetPath, String name, String version) {
-        // Get checksum from headers (X-Checksum or Docker-Content-Digest)
         def checksumType = ModuleChecksum.CHECKSUM_ALGORITHM
-        def checksum = response.headers().firstValue("X-Checksum").orElse(null)
-
-        if( !checksum ) {
-            checksum = response.headers().firstValue("Docker-Content-Digest").orElse(null)
-        }
+        def checksum = getChecksumFromHeaders(response)
 
         if( !checksum ) {
             log.warn "No X-Checksum or Docker-Content-Digest header found in response from ${uri}"
@@ -330,6 +325,34 @@ class ModuleRegistryClient {
         }
         log.debug "Checksum validated successfully: ${checksumType}:${checksum}"
     }
+
+    private String getChecksumFromHeaders(HttpResponse<InputStream> response) {
+        // Get X-Checksum from response headers
+        def checksum = getChecksumFromHeader(response)
+        if( checksum ) {
+            return checksum
+        }
+        // If not look if it is a previous redirected response header
+        Optional<HttpResponse<InputStream>> prev = response.previousResponse()
+        while( prev.isPresent() ) {
+            HttpResponse<InputStream> r = prev.get();
+            checksum = getChecksumFromHeader(r)
+            if( checksum ) {
+                return checksum
+            }
+            prev = r.previousResponse();
+        }
+        return null
+    }
+
+    private String getChecksumFromHeader(HttpResponse<InputStream> response) {
+        def checksum = response.headers().firstValue("X-NF-Module-Checksum").orElse(null)
+        if( !checksum ) {
+            checksum = response.headers().firstValue("Docker-Content-Digest").orElse(null)
+        }
+        return checksum
+    }
+
 
     /**
      * Search for modules in the registry
@@ -368,7 +391,7 @@ class ModuleRegistryClient {
             .uri(uri)
             .GET()
 
-        def token = config.getAuthTokenResolved(registryUrl)
+        def token = config.getApiKey()
         if (token) {
             requestBuilder.header("Authorization", "Bearer ${token}")
         }
@@ -410,16 +433,14 @@ class ModuleRegistryClient {
      */
     PublishModuleResponse publishModule(String name, def request, String registry = null) {
         final registryUrl = registry ?: config.url
-        final authToken = config.getAuthTokenResolved(registryUrl)
+        final authToken = config.apiKey
 
         if (!authToken) {
             throw new AbortOperationException(
                 "Authentication required to publish modules.\n" +
-                    "Please set NXF_REGISTRY_TOKEN environment variable or configure registry.auth in nextflow.config:\n\n" +
+                    "Please set 'NXF_REGISTRY_TOKEN' environment variable or configure 'registry.apiKey' in nextflow.config:\n\n" +
                     "  registry {\n" +
-                    "    auth {\n" +
-                    "      '${registryUrl}' = '\${NXF_REGISTRY_TOKEN}'\n" +
-                    "    }\n" +
+                    "    apiKey = '\${NXF_REGISTRY_TOKEN}'\n" +
                     "  }\n"
             )
         }
