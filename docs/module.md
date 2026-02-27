@@ -279,8 +279,188 @@ This feature requires the use of a local or shared file system for the pipeline 
 
 ## Sharing modules
 
-Modules are designed to be easy to share and re-use across different pipelines, which helps eliminate duplicate work and spread improvements throughout the community. While Nextflow does not provide an explicit mechanism for sharing modules, there are several ways to do it:
+Modules are designed to be easy to share and re-use across different pipelines, which helps eliminate duplicate work and spread improvements throughout the community. There are several ways to share modules:
 
+- Use the Nextflow module registry system (recommended, see below)
 - Simply copy the module files into your pipeline repository
 - Use [Git submodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules) to fetch modules from other Git repositories without maintaining a separate copy
 - Use the [nf-core](https://nf-co.re/tools#modules) CLI to install and update modules with a standard approach used by the nf-core community
+
+(module-registry)=
+
+## Registry-based modules
+
+:::{versionadded} 26.04.0
+:::
+
+Nextflow provides a module registry system that enables you to install, share, and manage reusable modules from centralized registries. This system provides version management, integrity checking, and seamless integration with the Nextflow DSL.
+
+### Installing modules from a registry
+
+Use the `module install` command to download modules from a registry:
+
+```console
+$ nextflow module install nf-core/fastqc
+$ nextflow module install nf-core/fastqc -version 1.0.0
+```
+
+Installed modules are stored in the `modules/` directory and can be included using the registry syntax with the `@` prefix:
+
+```nextflow
+include { FASTQC } from '@nf-core/fastqc'
+
+workflow {
+    reads = Channel.fromFilePairs('data/*_{1,2}.fastq.gz')
+    FASTQC(reads)
+}
+```
+
+### Running modules directly
+
+For ad-hoc tasks or testing, you can run a module directly without creating a workflow:
+
+```console
+$ nextflow module run nf-core/fastqc --input 'data/*.fastq.gz'
+```
+
+This command accepts all standard Nextflow options (`-profile`, `-resume`, etc.) and automatically downloads the module if not already installed.
+
+### Managing module versions
+
+Module versions are tracked in `nextflow_spec.json` in your project directory:
+
+```json
+{
+  "modules": {
+    "@nf-core/fastqc": "1.0.0",
+    "@nf-core/bwa-align": "1.2.0"
+  }
+}
+```
+
+You can also configure versions in `nextflow.config`:
+
+```nextflow
+modules {
+    '@nf-core/fastqc' = '1.0.0'
+    '@nf-core/bwa-align' = '1.2.0'
+}
+```
+
+When you run your workflow, Nextflow automatically installs or updates modules to match the specified versions.
+
+### Discovering modules
+
+Search for available modules using the `module search` command:
+
+```console
+$ nextflow module search alignment
+$ nextflow module search "quality control" -limit 10
+```
+
+List installed modules in your project:
+
+```console
+$ nextflow module list
+```
+
+### Module integrity protection
+
+Nextflow automatically verifies module integrity using checksums. If you modify a module locally, Nextflow will detect the change and prevent accidental overwrites:
+
+```console
+$ nextflow module install nf-core/fastqc -version 1.1.0
+Warning: Module @nf-core/fastqc has local modifications. Use -force to override.
+```
+
+Use the `-force` flag to override local modifications when needed.
+
+### Removing modules
+
+Use the `module remove` command to uninstall a module:
+
+```console
+$ nextflow module remove nf-core/fastqc
+```
+
+By default, both the local module files and the entry in `nextflow_spec.json` are removed. Use the flags below to control this behaviour:
+
+- `-keep-files` — Remove the entry from `nextflow_spec.json` but keep the local module files
+- `-keep-config` — Remove the local module files but keep the entry in `nextflow_spec.json`
+
+### Viewing module information
+
+Use the `module info` command to display metadata and a usage template for a module:
+
+```console
+$ nextflow module info nf-core/fastqc
+$ nextflow module info nf-core/fastqc -version 1.0.0
+```
+
+The output includes the module description, authors, keywords, tools, inputs, outputs, and a ready-to-use command-line template. Use `-json` to get machine-readable output.
+
+### Publishing modules
+
+To share your own modules, use the `module publish` command:
+
+```console
+$ nextflow module publish myorg/my-module
+```
+
+The argument can be either a `scope/name` reference (for an already-installed module) or a local directory path containing the module files.
+
+Your module directory must include:
+
+- `main.nf` - The module entry point
+- `meta.yaml` - Module metadata (name, description, version, etc.)
+- `README.md` - Module documentation
+
+Authentication is required for publishing and can be provided via the `NXF_REGISTRY_TOKEN` environment variable or in your configuration:
+
+```nextflow
+registry {
+    apiKey = 'YOUR_REGISTRY_TOKEN'
+}
+```
+
+Use `-dry-run` to validate your module structure without uploading:
+
+```console
+$ nextflow module publish myorg/my-module -dry-run
+```
+
+### Registry configuration
+
+By default, Nextflow uses the public registry at `https://registry.nextflow.io`. You can configure alternative or additional registries:
+
+```nextflow
+registry {
+    url = [
+        'https://private.registry.myorg.com',
+        'https://registry.nextflow.io'
+    ]
+    apiKey = '${MYORG_TOKEN}'
+}
+```
+
+Registries are queried in the order specified until a module is found. The `apiKey` is used only for the primary (first) registry.
+
+### Module directory structure
+
+Registry modules follow a standard directory structure:
+
+```
+modules/
+└── @scope/
+    └── module-name/
+        ├── main.nf          # Module entry point (required)
+        ├── meta.yaml        # Module metadata (required for publishing)
+        ├── README.md        # Documentation (required for publishing)
+        ├── .checksum        # Integrity checksum (generated automatically)
+        ├── templates/       # Optional: process templates
+        └── resources/       # Optional: module binaries and resources
+```
+
+The `modules/` directory should be committed to your Git repository to ensure reproducibility.
+
+See the {ref}`cli-page` documentation for complete details on all module commands.

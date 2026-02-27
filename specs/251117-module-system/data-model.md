@@ -164,7 +164,29 @@ registry {
 
 ---
 
-### 5. PipelineSpec
+### 5. DefaultRemoteModuleResolver (SPI)
+
+Bridges the DSL parser to the module resolution runtime. Class: `nextflow.module.DefaultRemoteModuleResolver`.
+
+```groovy
+// Implements: nextflow.module.spi.RemoteModuleResolver (nf-lang)
+class DefaultRemoteModuleResolver implements RemoteModuleResolver {
+    int getPriority() { return 0 }  // Can be overridden by plugins with higher priority
+
+    Path resolve(String moduleName, Path baseDir) {
+        // 1. Parse ModuleReference from "@scope/name"
+        // 2. Read version constraints from nextflow_spec.json / ModulesConfig
+        // 3. Call ModuleResolver.installModule(reference, version, autoInstall=true)
+        // 4. Return path to modules/@scope/name/main.nf
+    }
+}
+```
+
+The SPI is loaded via Java `ServiceLoader` by `RemoteModuleResolverProvider` (in `nf-lang`), which selects the highest-priority implementation available.
+
+---
+
+### 6. PipelineSpec
 
 Reads and writes `nextflow_spec.json` in the project root. Class: `nextflow.pipeline.PipelineSpec`.
 
