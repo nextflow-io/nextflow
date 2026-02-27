@@ -119,6 +119,11 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     private volatile long timestamp
 
     /**
+     * Flag to indicate that the zone has been resolved from the status events
+     */
+    private volatile boolean zoneUpdated
+
+    /**
      * A flag to indicate that the job has failed without launching any tasks
      */
     private volatile boolean noTaskJobfailure
@@ -769,8 +774,55 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         }
     }
 
+    /**
+     * Regex pattern to extract zone from StatusEvent description.
+     * Matches the pattern: zones/<zone-name>/instances/<instance-id>
+     */
+    private static final Pattern ZONE_PATTERN = ~/zones\/([^\/]+)\/instances\//
+
     protected CloudMachineInfo getMachineInfo() {
+        if( machineInfo!=null && !zoneUpdated && isCompleted() )
+            updateZoneFromEvents()
         return machineInfo
+    }
+
+    /**
+     * Parse the actual execution zone from StatusEvent descriptions and update
+     * the machineInfo zone field accordingly.
+     *
+     * Google Batch status events include zone info in the description field with
+     * the format: {@code zones/<zone-name>/instances/<instance-id>}
+     */
+    private void updateZoneFromEvents() {
+        try {
+            final events = client.getTaskStatus(jobId, taskId)?.statusEventsList
+            final zone = resolveZoneFromEvents(events)
+            if( zone ) {
+                machineInfo = new CloudMachineInfo(
+                    type: machineInfo.type,
+                    zone: zone,
+                    priceModel: machineInfo.priceModel
+                )
+            }
+        }
+        catch( Exception e ) {
+            log.debug "[GOOGLE BATCH] Unable to resolve zone from events for task: `${task.lazyName()}` - ${e.message}"
+        }
+        finally {
+            zoneUpdated = true
+        }
+    }
+
+    @PackageScope
+    static String resolveZoneFromEvents(List<StatusEvent> events) {
+        if( !events )
+            return null
+        for( def event : events ) {
+            final matcher = ZONE_PATTERN.matcher(event.description ?: '')
+            if( matcher.find() )
+                return matcher.group(1)
+        }
+        return null
     }
 
     /**
@@ -782,7 +834,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
      */
 
     protected Integer getNumSpotInterruptions(String jobId) {
-        if (!jobId || !taskId) {
+        if (!jobId || !taskId  || !isCompleted()) {
             return null
         }
 
