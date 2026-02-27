@@ -77,17 +77,24 @@ modules/nextflow/src/main/groovy/nextflow/
 │   └── RegistryConfig.groovy               # registry{} config scope (fields: url, apiKey)
 ├── module/
 │   ├── ModuleReference.groovy              # @scope/name parser
-│   ├── ModuleResolver.groovy               # Core resolution logic
+│   ├── ModuleResolver.groovy               # Core resolution logic (version/integrity/install)
 │   ├── ModuleStorage.groovy                # Local filesystem operations
 │   ├── ModuleRegistryClient.groovy         # HTTP registry client
 │   ├── ModuleChecksum.groovy               # SHA-256 integrity verification
 │   ├── ModuleSpec.groovy                   # Module manifest (meta.yaml) entity
-│   └── InstalledModule.groovy              # Installed module entity
+│   ├── InstalledModule.groovy              # Installed module entity
+│   └── DefaultRemoteModuleResolver.groovy  # SPI impl: bridges DSL parser → ModuleResolver
 └── pipeline/
     └── PipelineSpec.groovy                 # nextflow_spec.json read/write
 
 modules/nf-lang/src/main/java/nextflow/script/
-└── ResolveIncludeVisitor.java              # MODIFY: Add @scope/name detection
+└── control/ResolveIncludeVisitor.java      # MODIFIED: Delegates @scope/name to SPI resolver
+
+modules/nf-lang/src/main/java/nextflow/module/spi/
+├── RemoteModuleResolver.java               # SPI interface (extensible by plugins)
+├── RemoteModuleResolverProvider.java       # ServiceLoader wrapper (singleton)
+└── FallbackRemoteModuleResolver.java       # Error fallback when no impl found
+
 
 modules/nextflow/src/test/groovy/nextflow/
 ├── cli/module/
@@ -105,7 +112,25 @@ tests/modules/
 └── [other integration tests]
 ```
 
-**Structure Decision**: Implementation extends existing Nextflow core modules following modular architecture. New code in `modules/nextflow` for CLI and core logic. DSL parser extension in `modules/nf-lang`. No new plugins required.
+**Structure Decision**: Implementation extends existing Nextflow core modules following modular architecture. New code in `modules/nextflow` for CLI and core logic. DSL parser extension in `modules/nf-lang` via SPI. No new plugins required.
+
+## Architecture Notes
+
+### Remote Module Inclusion — SPI Pattern
+
+The DSL parser (`ResolveIncludeVisitor`) detects the `@` prefix in `include` statements and delegates resolution to a `RemoteModuleResolver` SPI loaded via Java `ServiceLoader`. This keeps `nf-lang` decoupled from the runtime module resolution logic:
+
+```
+include { X } from '@nf-core/fastqc'
+      ↓
+ResolveIncludeVisitor  (nf-lang)
+  source.startsWith("@") → RemoteModuleResolverProvider.getInstance().resolve(...)
+      ↓
+DefaultRemoteModuleResolver  (nextflow module)
+  auto-installs via ModuleResolver if missing → returns Path to main.nf
+```
+
+The `RemoteModuleResolver` interface in `nf-lang` can be overridden by plugins with a higher priority value.
 
 ## Complexity Tracking
 

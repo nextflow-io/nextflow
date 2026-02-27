@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
+import nextflow.module.spi.RemoteModuleResolverProvider;
 import nextflow.script.ast.FunctionNode;
 import nextflow.script.ast.IncludeNode;
 import nextflow.script.ast.ScriptNode;
@@ -83,7 +84,9 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
             setPlaceholderTargets(node);
             return;
         }
-        var includeUri = getIncludeUri(uri, source);
+
+        var parent = source.startsWith("@") ? Path.of("modules") : Path.of(uri).getParent();
+        var includeUri = getIncludeUri(parent, source);
         if( !isIncludeStale(node, includeUri) )
             return;
         changed = true;
@@ -121,8 +124,8 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
         }
     }
 
-    private static URI getIncludeUri(URI uri, String source) {
-        Path includePath = Path.of(uri).getParent().resolve(source);
+    private static URI getIncludeUri(Path parent, String source) {
+        Path includePath = parent.resolve(source);
         if( Files.isDirectory(includePath) )
             includePath = includePath.resolve("main.nf");
         else if( !source.endsWith(".nf") )
