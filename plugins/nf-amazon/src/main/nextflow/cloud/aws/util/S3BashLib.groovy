@@ -29,7 +29,7 @@ import software.amazon.awssdk.services.s3.model.ObjectCannedACL
 @CompileStatic
 class S3BashLib extends BashFunLib<S3BashLib> {
 
-    private String storageClass = 'STANDARD'
+    private String storageClass = ''
     private String storageEncryption = ''
     private String storageKmsKeyId = ''
     private String debug = ''
@@ -112,17 +112,18 @@ class S3BashLib extends BashFunLib<S3BashLib> {
      * @return The Bash script implementing the S3 helper functions
      */
     protected String s3Lib() {
+        final storageClassParam = storageClass ? "--storage-class $storageClass " : ""
         """
         # aws helper
         nxf_s3_upload() {
             local name=\$1
             local s3path=\$2
             if [[ "\$name" == - ]]; then
-              $cli s3 cp --only-show-errors ${debug}${acl}${storageEncryption}${storageKmsKeyId}${requesterPays}--storage-class $storageClass - "\$s3path"
+              $cli s3 cp --only-show-errors ${debug}${acl}${storageEncryption}${storageKmsKeyId}${requesterPays}${storageClassParam}- "\$s3path"
             elif [[ -d "\$name" ]]; then
-              $cli s3 cp --only-show-errors --recursive ${debug}${acl}${storageEncryption}${storageKmsKeyId}${requesterPays}--storage-class $storageClass "\$name" "\$s3path/\$name"
+              $cli s3 cp --only-show-errors --recursive ${debug}${acl}${storageEncryption}${storageKmsKeyId}${requesterPays}${storageClassParam}"\$name" "\$s3path/\$name"
             else
-              $cli s3 cp --only-show-errors ${debug}${acl}${storageEncryption}${storageKmsKeyId}${requesterPays}--storage-class $storageClass "\$name" "\$s3path/\$name"
+              $cli s3 cp --only-show-errors ${debug}${acl}${storageEncryption}${storageKmsKeyId}${requesterPays}${storageClassParam}"\$name" "\$s3path/\$name"
             fi
         }
         
@@ -148,6 +149,7 @@ class S3BashLib extends BashFunLib<S3BashLib> {
      */
     protected String s5cmdLib() {
         final cli = s5cmdPath
+        final storageClassParam = storageClass ? "--storage-class $storageClass " : ""
         """
         # aws helper for s5cmd
         nxf_s3_upload() {
@@ -156,11 +158,11 @@ class S3BashLib extends BashFunLib<S3BashLib> {
             if [[ "\$name" == - ]]; then
               local tmp=\$(nxf_mktemp)
               cp /dev/stdin \$tmp/\$name
-              $cli cp ${acl}${storageEncryption}${storageKmsKeyId}${requesterPays}--storage-class $storageClass \$tmp/\$name "\$s3path"
+              $cli cp ${acl}${storageEncryption}${storageKmsKeyId}${requesterPays}${storageClassParam}\$tmp/\$name "\$s3path"
             elif [[ -d "\$name" ]]; then
-              $cli cp ${acl}${storageEncryption}${storageKmsKeyId}${requesterPays}--storage-class $storageClass "\$name/" "\$s3path/\$name/"
+              $cli cp ${acl}${storageEncryption}${storageKmsKeyId}${requesterPays}${storageClassParam}"\$name/" "\$s3path/\$name/"
             else
-              $cli cp ${acl}${storageEncryption}${storageKmsKeyId}${requesterPays}--storage-class $storageClass "\$name" "\$s3path/\$name"
+              $cli cp ${acl}${storageEncryption}${storageKmsKeyId}${requesterPays}${storageClassParam}"\$name" "\$s3path/\$name"
             fi
         }
         
