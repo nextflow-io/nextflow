@@ -450,9 +450,44 @@ class AzBatchService implements Closeable {
         if (config.batch().jobMaxWallClockTime) {
             content.setConstraints(createJobConstraints(config.batch().jobMaxWallClockTime))
         }
-        
-        apply(() -> client.createJob(content))
+
+        safeCreateJob(content)
         return jobId
+    }
+
+    protected void safeCreateJob(BatchJobCreateContent content) {
+        final maxRetries = config.batch().maxJobQuotaRetries
+        final retryDelay = config.batch().jobQuotaRetryDelay
+
+        for (int attempt = 0; attempt <= maxRetries; attempt++) {
+            try {
+                createJobRequest(content)
+                return
+            }
+            catch (HttpResponseException e) {
+                if (isJobQuotaError(e)) {
+                    if (attempt >= maxRetries)
+                        throw new IllegalStateException("Azure Batch active job quota reached - exceeded maximum number of retries ($maxRetries). Consider increasing 'azure.batch.maxJobQuotaRetries' or reducing the number of concurrent jobs", e)
+                    log.warn "Azure Batch active job quota reached - waiting ${retryDelay} before retry (attempt ${attempt + 1} of ${maxRetries})"
+                    sleep(retryDelay.toMillis())
+                }
+                else {
+                    throw e
+                }
+            }
+        }
+    }
+
+    protected void createJobRequest(BatchJobCreateContent content) {
+        apply(() -> client.createJob(content))
+    }
+
+    protected boolean isJobQuotaError(HttpResponseException e) {
+        if (e.response.statusCode != 409)
+            return false
+        if (e.message?.contains('ActiveJobAndScheduleQuotaReached'))
+            return true
+        return toString(e.response.body)?.contains('ActiveJobAndScheduleQuotaReached')
     }
 
     String makeJobId(TaskRun task) {

@@ -7,6 +7,7 @@ import java.time.temporal.ChronoUnit
 import java.util.function.Predicate
 
 import com.azure.compute.batch.models.BatchPool
+import com.azure.compute.batch.models.BatchJobCreateContent
 import com.azure.compute.batch.models.ElevationLevel
 import com.azure.compute.batch.models.EnvironmentSetting
 import com.azure.core.exception.HttpResponseException
@@ -1022,4 +1023,150 @@ class AzBatchServiceTest extends Specification {
         ]
     }
 
+    // -- safeCreateJob tests --
+
+    def 'should create job successfully on first try'() {
+        given:
+        def config = new AzConfig([batch: [maxJobQuotaRetries: 2, jobQuotaRetryDelay: '1 sec']])
+        def exec = createExecutor(config)
+        int createCalls = 0
+        def service = new AzBatchService(exec) {
+            @Override
+            protected void createJobRequest(BatchJobCreateContent content) {
+                createCalls++
+            }
+        }
+
+        when:
+        service.safeCreateJob(null)
+
+        then:
+        noExceptionThrown()
+        createCalls == 1
+    }
+
+    def 'should retry on ActiveJobAndScheduleQuotaReached and then succeed'() {
+        given:
+        def config = new AzConfig([batch: [maxJobQuotaRetries: 2, jobQuotaRetryDelay: '1 sec']])
+        def exec = createExecutor(config)
+        int createCalls = 0
+        def service = new AzBatchService(exec) {
+            @Override
+            protected void createJobRequest(BatchJobCreateContent content) {
+                createCalls++
+                if (createCalls == 1)
+                    throw new HttpResponseException('first call', null)
+            }
+            @Override
+            protected boolean isJobQuotaError(HttpResponseException e) {
+                return true
+            }
+        }
+
+        when:
+        service.safeCreateJob(null)
+
+        then:
+        noExceptionThrown()
+        createCalls == 2
+    }
+
+    def 'should throw after exceeding max job quota retries'() {
+        given:
+        def config = new AzConfig([batch: [maxJobQuotaRetries: 2, jobQuotaRetryDelay: '1 sec']])
+        def exec = createExecutor(config)
+        int createCalls = 0
+        def service = new AzBatchService(exec) {
+            @Override
+            protected void createJobRequest(BatchJobCreateContent content) {
+                createCalls++
+                throw new HttpResponseException('quota error', null)
+            }
+            @Override
+            protected boolean isJobQuotaError(HttpResponseException e) {
+                return true
+            }
+        }
+
+        when:
+        service.safeCreateJob(null)
+
+        then:
+        def e = thrown(IllegalStateException)
+        e.message.contains('exceeded maximum number of retries')
+        e.message.contains('2')
+        createCalls == 3  // initial + 2 retries
+    }
+
+    def 'should fail immediately when maxJobQuotaRetries is 0'() {
+        given:
+        def config = new AzConfig([batch: [maxJobQuotaRetries: 0, jobQuotaRetryDelay: '1 sec']])
+        def exec = createExecutor(config)
+        int createCalls = 0
+        def service = new AzBatchService(exec) {
+            @Override
+            protected void createJobRequest(BatchJobCreateContent content) {
+                createCalls++
+                throw new HttpResponseException('quota error', null)
+            }
+            @Override
+            protected boolean isJobQuotaError(HttpResponseException e) {
+                return true
+            }
+        }
+
+        when:
+        service.safeCreateJob(null)
+
+        then:
+        def e = thrown(IllegalStateException)
+        e.message.contains('exceeded maximum number of retries')
+        createCalls == 1
+    }
+
+    def 'should not retry on non-quota 409 error'() {
+        given:
+        def config = new AzConfig([batch: [maxJobQuotaRetries: 2, jobQuotaRetryDelay: '1 sec']])
+        def exec = createExecutor(config)
+        int createCalls = 0
+        def service = new AzBatchService(exec) {
+            @Override
+            protected void createJobRequest(BatchJobCreateContent content) {
+                createCalls++
+                throw new HttpResponseException('Job already exists', null)
+            }
+            @Override
+            protected boolean isJobQuotaError(HttpResponseException e) {
+                return false
+            }
+        }
+
+        when:
+        service.safeCreateJob(null)
+
+        then:
+        thrown(HttpResponseException)
+        createCalls == 1
+    }
+
+    def 'should not retry on non-HttpResponseException'() {
+        given:
+        def config = new AzConfig([batch: [maxJobQuotaRetries: 2, jobQuotaRetryDelay: '1 sec']])
+        def exec = createExecutor(config)
+        int createCalls = 0
+        def service = new AzBatchService(exec) {
+            @Override
+            protected void createJobRequest(BatchJobCreateContent content) {
+                createCalls++
+                throw new IllegalArgumentException('unexpected error')
+            }
+        }
+
+        when:
+        service.safeCreateJob(null)
+
+        then:
+        thrown(IllegalArgumentException)
+        createCalls == 1
+    }
 }
