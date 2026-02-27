@@ -451,8 +451,57 @@ class AzBatchService implements Closeable {
             content.setConstraints(createJobConstraints(config.batch().jobMaxWallClockTime))
         }
 
-        apply(() -> client.createJob(content))
+        applyCreateJob(content)
         return jobId
+    }
+
+    protected void applyCreateJob(BatchJobCreateContent content) {
+        final maxRetries = config.batch().maxJobQuotaRetries
+        final retryDelay = config.batch().jobQuotaRetryDelay
+
+        // define retry condition for job quota errors
+        final cond = new Predicate<? extends Throwable>() {
+            @Override
+            boolean test(Throwable t) {
+                return t instanceof HttpResponseException && isJobQuotaError((HttpResponseException) t)
+            }
+        }
+
+        final listener = new EventListener<ExecutionAttemptedEvent<Object>>() {
+            @Override
+            void accept(ExecutionAttemptedEvent<Object> event) throws Throwable {
+                log.warn "Azure Batch active job quota reached - waiting ${retryDelay} before retry (attempt ${event.attemptCount} of ${maxRetries})"
+            }
+        }
+
+        // create a retry policy with fixed delay for quota errors
+        final policy = RetryPolicy.builder()
+                .handleIf(cond)
+                .withDelay(Duration.ofMillis(retryDelay.toMillis()))
+                .withMaxAttempts(maxRetries + 1)
+                .onRetry(listener)
+                .build()
+
+        try {
+            Failsafe.with(policy).get(() -> { createJobRequest(content); return null })
+        }
+        catch (HttpResponseException e) {
+            if (isJobQuotaError(e))
+                throw new IllegalStateException("Azure Batch active job quota reached - exceeded maximum number of retries ($maxRetries). Consider increasing 'azure.batch.maxJobQuotaRetries' or reducing the number of concurrent jobs", e)
+            throw e
+        }
+    }
+
+    protected void createJobRequest(BatchJobCreateContent content) {
+        apply(() -> client.createJob(content))
+    }
+
+    protected boolean isJobQuotaError(HttpResponseException e) {
+        if (e.response.statusCode != 409)
+            return false
+        if (e.message?.contains('ActiveJobAndScheduleQuotaReached'))
+            return true
+        return toString(e.response.body)?.contains('ActiveJobAndScheduleQuotaReached')
     }
 
     String makeJobId(TaskRun task) {
