@@ -342,6 +342,15 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     /**
+     * Get the log stream identifier for this task.
+     *
+     * @return the log stream ID, or null if not available
+     */
+    protected String getLogStreamId() {
+        return cachedTaskState?.getLogStreamId()
+    }
+
+    /**
      * Get the native backend ID for this task (ECS task ARN or Docker container ID).
      *
      * @return the native ID from the last task attempt, or null if not available
@@ -366,6 +375,7 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
         result.put('native_id', getNativeId())
         result.machineInfo = getMachineInfo()
         result.numSpotInterruptions = getNumSpotInterruptions()
+        result.logStreamId = getLogStreamId()
         // Override executor name to include cloud backend for cost tracking
         result.executorName = "${SeqeraExecutor.SEQERA}/aws"
         return result

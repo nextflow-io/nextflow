@@ -191,6 +191,23 @@ class SeqeraTaskHandlerTest extends Specification {
         handler.getNumSpotInterruptions() == 0
     }
 
+    def 'should return null for getLogStreamId when cachedTaskState is null'() {
+        given:
+        def handler = createHandler()
+
+        expect:
+        handler.getLogStreamId() == null
+    }
+
+    def 'should return log stream id from cached task state'() {
+        given:
+        def handler = createHandler()
+        handler.cachedTaskState = new SchedTaskState().logStreamId('log-stream-abc123')
+
+        expect:
+        handler.getLogStreamId() == 'log-stream-abc123'
+    }
+
     def 'should return null for getNativeId when cachedTaskState is null'() {
         given:
         def handler = createHandler()
@@ -226,6 +243,7 @@ class SeqeraTaskHandlerTest extends Specification {
             .id('tsk-xyz789')
             .attempts([attempt])
             .numSpotInterruptions(2)
+            .logStreamId('log-stream-xyz')
 
         when:
         def trace = handler.getTraceRecord()
@@ -234,6 +252,7 @@ class SeqeraTaskHandlerTest extends Specification {
         trace.get('native_id') == 'tsk-xyz789'
         trace.getMachineInfo().type == 'm5.large'
         trace.getNumSpotInterruptions() == 2
+        trace.getLogStreamId() == 'log-stream-xyz'
         trace.getExecutorName() == 'seqera/aws'
     }
 
