@@ -73,7 +73,7 @@ class ModuleSearch extends CmdBase {
                 .setBaseDir(baseDir)
                 .build()
 
-        final registryConfig = config.navigate('registry') as RegistryConfig
+        final registryConfig = config.navigate('registry') as RegistryConfig ?: new RegistryConfig()
 
         // Create client to search
         final client = this.client ?: new ModuleRegistryClient(registryConfig)

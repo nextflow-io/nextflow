@@ -440,7 +440,7 @@ class ModuleRegistryClient {
                 "Authentication required to publish modules.\n" +
                     "Please set 'NXF_REGISTRY_TOKEN' environment variable or configure 'registry.apiKey' in nextflow.config:\n\n" +
                     "  registry {\n" +
-                    "    apiKey = '\${NXF_REGISTRY_TOKEN}'\n" +
+                    "    apiKey = 'YOUR_REGISTRY_TOKEN'\n" +
                     "  }\n"
             )
         }

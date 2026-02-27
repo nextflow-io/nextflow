@@ -80,7 +80,7 @@ class ModuleInstall extends CmdBase {
                 .setOptions(launcher.options)
                 .setBaseDir(baseDir)
                 .build()
-        final registryConfig = config.navigate('registry') as RegistryConfig
+        final registryConfig = config.navigate('registry') as RegistryConfig ?: new RegistryConfig()
 
         // Get modules versions from nextflow_spec.json.
         final specFile = new PipelineSpec(baseDir)
