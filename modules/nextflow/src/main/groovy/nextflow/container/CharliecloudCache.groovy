@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -79,7 +79,7 @@ class CharliecloudCache {
     String simpleName(String imageUrl) {
         def p = imageUrl.indexOf('://')
         def name = p != -1 ? imageUrl.substring(p+3) : imageUrl
-        
+
         // add registry
         if( registry ) {
             if( !registry.endsWith('/') ) {
@@ -89,7 +89,7 @@ class CharliecloudCache {
         }
 
         name = name.replace(':','+').replace('/','%')
-        return name 
+        return name
     }
 
     /**
@@ -106,7 +106,7 @@ class CharliecloudCache {
         def result = Paths.get(str)
         if( !result.exists() ) {
             log.info "Charliecloud cache directory: $str does not exist -- Charliecloud will attempt to initialize it at the specified location"
-        } 
+        }
         else if( !result.resolve('img').exists() || !result.resolve('dlcache').exists() ) {
             throw new IOException("Charliecloud cache directory exists but seems invalid: $str -- See https://hpc.github.io/charliecloud/faq.html#storage-directory-seems-invalid")
         }
@@ -134,7 +134,7 @@ class CharliecloudCache {
         if( charliecloudImageStorage && config.writeFake) {
             return checkDir(charliecloudImageStorage)
         }
-            
+
         if( str ) {
             // If charliecloudImageStorage exists and writeFake is true, we never get here
             if( str.equals( charliecloudImageStorage ) ) {
@@ -201,7 +201,7 @@ class CharliecloudCache {
                 log.info "Another image is currently pulled. Attempting again in 30 seconds [$count/$maxTries]"
                 Thread.sleep(30000)
             }
-        }   
+        }
         return localPath
 
     }
@@ -221,9 +221,9 @@ class CharliecloudCache {
         if( missingCacheDir )
             log.warn1 "Charliecloud cache directory has not been defined -- Remote image will be stored in the path: $targetPath.parent.parent -- Use the charliecloud.cacheDir config option or set the NXF_CHARLIECLOUD_CACHEDIR variable to specify a different location"
 
-        
+
         log.info "Charliecloud pulling image $imageUrl [cache $targetPath]"
-            
+
         String cmd = "ch-image pull -s $targetPath.parent.parent $imageUrl > /dev/null"
         try {
             runCommand( cmd, targetPath )

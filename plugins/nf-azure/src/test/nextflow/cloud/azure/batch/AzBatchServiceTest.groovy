@@ -1,3 +1,19 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package nextflow.cloud.azure.batch
 
 import java.nio.ByteBuffer
@@ -192,7 +208,7 @@ class AzBatchServiceTest extends Specification {
         given:
         def exec = createExecutor()
         def svc = new AzBatchService(exec)
-        
+
         when:
         def ret = svc.findBestVm('northeurope', 4, MemoryUnit.of(7168), MemoryUnit.of(122880), null)
         then:
@@ -265,7 +281,7 @@ class AzBatchServiceTest extends Specification {
         given:
         def exec = createExecutor()
         def svc = new AzBatchService(exec)
-        
+
         expect:
         svc.computeSlots(CPUS, MemoryUnit.of(MEM*_1GB), MemoryUnit.of(DISK*_1GB), VM_CPUS, MemoryUnit.of(VM_MEM*_1GB), MemoryUnit.of(VM_DISK*_1GB)) == EXPECTED
         where:
@@ -611,7 +627,7 @@ class AzBatchServiceTest extends Specification {
         def result = svc.specFromPoolConfig(POOL_ID)
         then:
         1 * svc.getPool(_) >> new BatchPool(vmSize: 'Standard_D2_v2')
-        and:        
+        and:
         result.vmType.name == 'Standard_D2_v2'
         result.vmType.numberOfCores == 2
         and:
@@ -842,7 +858,7 @@ class AzBatchServiceTest extends Specification {
         ])
         def exec = createExecutor(CONFIG)
         def service = new AzBatchService(exec)
-        
+
         and:
         Global.session = Mock(Session) {
             getConfig() >> [fusion: [enabled: true]]
@@ -853,7 +869,7 @@ class AzBatchServiceTest extends Specification {
         if( service.config.batch().poolIdentityClientId && true ) { // fusionEnabled = true
             env.put('FUSION_AZ_MSI_CLIENT_ID', service.config.batch().poolIdentityClientId)
         }
-        
+
         then:
         env['FUSION_AZ_MSI_CLIENT_ID'] == POOL_IDENTITY_CLIENT_ID
     }
@@ -920,7 +936,7 @@ class AzBatchServiceTest extends Specification {
 
         when: 'pool is created successfully'
         service.safeCreatePool(spec)
-        
+
         then: 'createPool is called once'
         1 * service.createPool(spec) >> null
         and:
@@ -928,7 +944,7 @@ class AzBatchServiceTest extends Specification {
 
         when: 'pool already exists (409 with PoolExists)'
         service.safeCreatePool(spec)
-        
+
         then: 'exception is caught and debug message is logged'
         1 * service.createPool(spec) >> {
             def response = Mock(HttpResponse) {
@@ -944,7 +960,7 @@ class AzBatchServiceTest extends Specification {
 
         when: 'different HttpResponseException occurs'
         service.safeCreatePool(spec)
-        
+
         then: 'exception is rethrown'
         1 * service.createPool(spec) >> {
             def response = Mock(HttpResponse) {
@@ -959,7 +975,7 @@ class AzBatchServiceTest extends Specification {
 
         when: 'a different exception occurs'
         service.safeCreatePool(spec)
-        
+
         then: 'exception is not caught'
         1 * service.createPool(spec) >> { throw new IllegalArgumentException("Some other error") }
         thrown(IllegalArgumentException)
@@ -970,10 +986,10 @@ class AzBatchServiceTest extends Specification {
         def exec = createExecutor()
         def service = new AzBatchService(exec)
         def nfDuration = TIME_STR ? nextflow.util.Duration.of(TIME_STR) : null
-        
+
         when:
         def result = service.createJobConstraints(nfDuration)
-        
+
         then:
         result != null
         if (TIME_STR) {
@@ -982,7 +998,7 @@ class AzBatchServiceTest extends Specification {
         } else {
             assert result.maxWallClockTime == null
         }
-        
+
         where:
         TIME_STR | EXPECTED_DAYS
         '48d'    | 48
@@ -1000,10 +1016,10 @@ class AzBatchServiceTest extends Specification {
                 getTime() >> TIME
             }
         }
-        
+
         when:
         def result = service.taskConstraints(task)
-        
+
         then:
         result != null
         if (TIME) {
@@ -1012,7 +1028,7 @@ class AzBatchServiceTest extends Specification {
         } else {
             assert result.maxWallClockTime == null
         }
-        
+
         where:
         TIME << [
             null,

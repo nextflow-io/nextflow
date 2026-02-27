@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ class MultiMapOpTest extends Dsl2Spec {
     def 'should fork channel' () {
 
         when:
-        def result = runScript('''   
+        def result = runScript('''
             channel.of(0,1,2)
                 .multiMap {
                         foo: it+1
@@ -69,7 +69,7 @@ class MultiMapOpTest extends Dsl2Spec {
     def 'should fork channel with custom param' () {
 
         when:
-        def result = runScript('''   
+        def result = runScript('''
             channel.of(0,1,2)
                 .multiMap { p ->
                         foo: p+1
@@ -99,14 +99,14 @@ class MultiMapOpTest extends Dsl2Spec {
 
     def 'should pass criteria as argument' () {
         when:
-        runScript('''   
-            criteria = multiMapCriteria { 
+        runScript('''
+            criteria = multiMapCriteria {
                 foo: it
                 bar: it*it
             }
 
-            ch1 = channel.of(1,2,3).multiMap(criteria)  
-            
+            ch1 = channel.of(1,2,3).multiMap(criteria)
+
             ch1.foo.view { "foo:$it" }
             ch1.bar.view { "bar:$it" }
         ''')
@@ -125,7 +125,7 @@ class MultiMapOpTest extends Dsl2Spec {
     def 'should fork channel value ch' () {
 
         when:
-        def result = runScript('''   
+        def result = runScript('''
             channel.value('hello')
                 .multiMap { p ->
                         foo: p.toUpperCase()

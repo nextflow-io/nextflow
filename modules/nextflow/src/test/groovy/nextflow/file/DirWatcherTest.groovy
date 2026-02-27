@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -101,7 +101,7 @@ class DirWatcherTest extends Specification {
         folder.resolve('ciao.txt').delete()
         TestHelper.stopUntil { results.size() == 2 }
         watcher.terminate()
-        
+
         then:
         results.size() == 2
         results.contains('hello.txt')

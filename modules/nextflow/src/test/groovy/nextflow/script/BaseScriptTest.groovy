@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,10 +46,10 @@ class BaseScriptTest extends Dsl2Spec {
                 result = [:]
                 result.baseDir = baseDir
                 result.projectDir = projectDir
-                result.workDir = workDir 
+                result.workDir = workDir
                 result.nextflow = nextflow
                 result.workflow = workflow
-                result.launchDir = launchDir 
+                result.launchDir = launchDir
                 result.moduleDir = moduleDir
                 result
                 '''

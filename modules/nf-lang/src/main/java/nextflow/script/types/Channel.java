@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -156,7 +156,7 @@ public interface Channel<E> {
     @Operator
     @Description("""
         The `flatMap` operator applies a mapping function to each value from a source channel.
-        
+
         When the mapping function returns a list, each element in the list is emitted separately. When the mapping function returns a map, each key-value pair in the map is emitted separately.
 
         [Read more](https://nextflow.io/docs/latest/reference/operator.html#flatmap)

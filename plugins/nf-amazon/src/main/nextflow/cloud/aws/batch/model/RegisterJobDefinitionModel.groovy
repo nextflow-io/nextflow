@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -108,7 +108,7 @@ class RegisterJobDefinitionModel {
 
     RegisterJobDefinitionRequest toBatchRequest() {
         final builder = RegisterJobDefinitionRequest.builder()
-        
+
         if (jobDefinitionName)
             builder.jobDefinitionName(jobDefinitionName)
         if (type)
@@ -121,7 +121,7 @@ class RegisterJobDefinitionModel {
             builder.parameters(parameters)
         if (tags)
             builder.tags(tags)
-        
+
         return (RegisterJobDefinitionRequest) builder.build()
     }
 

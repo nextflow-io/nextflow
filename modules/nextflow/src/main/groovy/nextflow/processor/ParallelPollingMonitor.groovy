@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ class ParallelPollingMonitor extends TaskPollingMonitor {
 
     private ThrottlingExecutor submitter
     private Semaphore semaphore
-    
+
     /**
      * Create the task polling monitor with the provided named parameters object.
      * <p>
@@ -85,7 +85,7 @@ class ParallelPollingMonitor extends TaskPollingMonitor {
             @Override
             protected void onFailure(Throwable e) {
                 if( !session.success )
-                    return // ignore error when the session has been interrupted 
+                    return // ignore error when the session has been interrupted
                 handleException(handler, e)
                 notifyTaskComplete(handler)
             }
