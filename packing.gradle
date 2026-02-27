@@ -15,7 +15,7 @@ dependencies {
     api project(':nextflow')
     // include Ivy at runtime in order to have Grape @Grab work correctly
     defaultCfg "org.apache.ivy:ivy:2.5.2"
-    // default cfg = runtime + httpfs + lineage + seqera
+    // default cfg = runtime + httpfs + lineage
     defaultCfg project(':nf-httpfs')
     defaultCfg project(':nf-lineage')
     console project(':plugins:nf-console')
