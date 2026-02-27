@@ -28,12 +28,10 @@ import spock.lang.Specification
  */
 class S3NextflowTest extends Specification {
 
-
     def 'should return s3 uris'() {
         expect:
         Nextflow.file('s3://foo/data/file.log') == Paths.get(new URI('s3:///foo/data/file.log'))
     }
-
 
     def 'should resolve rel paths against env base' () {
         given:
@@ -55,6 +53,16 @@ class S3NextflowTest extends Specification {
         def result = Nextflow.files('s3://ngi-igenomes/*')
         then:
         result.size() == 3
+    }
+
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
+    @Requires({System.getenv('AWS_S3FS_ACCESS_KEY') && System.getenv('AWS_S3FS_SECRET_KEY')})
+    def 'should check s3 bucket exists files' () {
+        when:
+        def result = Nextflow.file('s3://ngi-igenomes/')
+        then:
+        result.exists() == true
+        result.isDirectory() == true
     }
 
 }

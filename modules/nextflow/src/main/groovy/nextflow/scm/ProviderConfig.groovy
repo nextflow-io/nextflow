@@ -23,7 +23,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Const
-import nextflow.config.ConfigParser
+import nextflow.config.ConfigParserFactory
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
 import nextflow.file.FileHelper
@@ -77,13 +77,14 @@ class ProviderConfig {
 
             case 'gitea':
                 attr.platform = name
-                if( !attr.server ) attr.server = 'https://try.gitea.io'
+                if( !attr.server ) attr.server = 'https://gitea.com' // default to free tier
                 if( !attr.endpoint ) attr.endpoint = attr.server.toString().stripEnd('/') + '/api/v1'
                 break
 
             case 'bitbucket':
                 attr.platform = name
                 if( !attr.server ) attr.server = 'https://bitbucket.org'
+                if( !attr.endpoint ) attr.endpoint = 'https://api.bitbucket.org'
                 break
 
             case 'azurerepos':
@@ -245,7 +246,7 @@ class ProviderConfig {
 
     @PackageScope
     static Map parse(String text) {
-        def slurper = new ConfigParser()
+        def slurper = ConfigParserFactory.create()
         slurper.setBinding(env)
         return slurper.parse(text)
     }

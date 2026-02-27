@@ -16,17 +16,17 @@ You can configure your credentials for various Git providers in the Git configur
 
 Nextflow can work with repositories stored in a local or shared file system. The repository must be created as a [bare repository](https://craftquest.io/articles/what-is-a-bare-git-repository).
 
-For example, given a bare repository at `/shared/projects/foo.git`, Nextflow is able to run it using the following syntax:
+For example, given a bare repository at `/shared/projects/hello.git`, Nextflow is able to run it using the following syntax:
 
 ```bash
-nextflow run file:/shared/projects/foo.git
+nextflow run file:/shared/projects/hello.git
 ```
 
-See [Git documentation](https://git-scm.com/book/en/v2/Git-on-the-Server-Getting-Git-on-a-Server) for more details about how create and manage bare repositories.
+See [Git documentation](https://git-scm.com/book/en/v2/Git-on-the-Server-Getting-Git-on-a-Server) for more details about how to create and manage bare repositories.
 
 ## Publishing your pipeline
 
-In order to publish your Nextflow pipeline to GitHub (or any other supported platform) and allow other people to use it, you only need to create a GitHub repository containing all your project script and data files. If you don't know how to do it, follow this simple tutorial that explains how [create a GitHub repository](https://help.github.com/articles/create-a-repo).
+In order to publish your Nextflow pipeline to GitHub (or any other supported platform) and allow other people to use it, you only need to create a GitHub repository containing all your project script and data files. If you don't know how to do it, follow this simple tutorial that explains how to [create a GitHub repository](https://help.github.com/articles/create-a-repo).
 
 Nextflow only requires that the main script in your pipeline project is called `main.nf`. A different name can be used by specifying the `manifest.mainScript` attribute in the `nextflow.config` file that must be included in your project. For example:
 
@@ -38,16 +38,16 @@ To learn more about this and other project metadata information, that can be def
 
 Once you have uploaded your pipeline project to GitHub other people can execute it simply using the project name or the repository URL.
 
-For if your GitHub account name is `foo` and you have uploaded a project into a repository named `bar` the repository URL will be `http://github.com/foo/bar` and people will able to download and run it by using either the command:
+For example, if your GitHub account name is `acme` and you have uploaded a project into a repository named `hello` the repository URL will be `http://github.com/acme/hello` and people will be able to download and run it by using either the command:
 
 ```bash
-nextflow run foo/bar
+nextflow run acme/hello
 ```
 
 or
 
 ```bash
-nextflow run http://github.com/foo/bar
+nextflow run http://github.com/acme/hello
 ```
 
 See the {ref}`CLI <cli-page>` page to learn how to use the Nextflow command line to run pipelines and manage pipeline projects.
@@ -60,10 +60,10 @@ These external dependencies are the primary challenge when sharing software, bec
 
 Nextflow tackles this problem by integrating with existing tools for reproducible software, namely Git for source code and Docker for containers. These tools allow you to keep all the dependencies of your pipeline project in one place and track changes over time with version control.
 
-By making your pipeline project is self-contained, meaning all of its dependencies are fully defined in the project itself, you gain two major advantages:
+By making your pipeline project self-contained, meaning all of its dependencies are fully defined in the project itself, you gain two major advantages:
 
 - **Portability**: the pipeline can be run in virtually any environment with a Java VM and a container runtime
-- **Reproducibility**: any results produced by the pipelined can be easily reproduced, even across different environments
+- **Reproducibility**: any results produced by the pipeline can be easily reproduced, even across different environments
 
 One way to account for dependencies is to break them down into three categories: code, data, and environment. Here we will describe how to include each of these dependencies in your Nextflow pipeline:
 
@@ -115,6 +115,8 @@ For example, shebang definitions `#!/usr/bin/python` and `#!/usr/local/bin/pytho
 ```
 :::
 
+(lib-directory)=
+
 #### The `lib` directory
 
 The `lib` directory can be used to add utility code or external libraries without cluttering the pipeline scripts. The `lib` directory in the Nextflow project root is added to the classpath by default. Classes defined in the `lib` directory will be available in pipeline scripts. Functions defined outside of classes will not be available in pipeline scripts.
@@ -154,10 +156,10 @@ The `DNASequence` class is available in the execution context:
 ```nextflow
 // main.nf
 workflow {
-    Channel.of('ACGTTGCAATGCCGTA', 'GCGTACGGTACGTTAC')
+    channel.of('ACGTTGCAATGCCGTA', 'GCGTACGGTACGTTAC')
         .map { seq -> new DNASequence(seq) }
         .view { dna ->
-            "Found sequence '$dna' with melting temperaure ${dna.getMeltingTemperature()}°C"
+            "Found sequence '$dna' with melting temperature ${dna.getMeltingTemperature()}°C"
         }
 }
 ```
@@ -165,8 +167,8 @@ workflow {
 It prints:
 
 ```
-Found sequence 'DNA[ACGTTGCAATGCCGTA]' with melting temperaure 48.0°C
-Found sequence 'DNA[GCGTACGGTACGTTAC]' with melting temperaure 50.0°C
+Found sequence 'DNA[ACGTTGCAATGCCGTA]' with melting temperature 48.0°C
+Found sequence 'DNA[GCGTACGGTACGTTAC]' with melting temperature 50.0°C
 ```
 
 :::{note}
@@ -213,8 +215,8 @@ Any environment variable that may be required by the tools in your pipeline can 
 
 ```groovy
 env {
-  DELTA = 'foo'
-  GAMMA = 'bar'
+  DELTA = 'hello'
+  GAMMA = 'world'
 }
 ```
 

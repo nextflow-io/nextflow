@@ -49,7 +49,16 @@ rediraffe_redirects = {
     'tracing.md': 'reports.md',
     'mail.md': 'notifications.md',
     'operator.md': 'reference/operator.md',
-    'dsl2.md': 'dsl1.md'
+    'dsl1.md': 'migrations/dsl1.md',
+    'updating-syntax.md': 'strict-syntax.md',
+    'updating-spot-retries.md': 'guides/updating-spot-retries.md',
+    'metrics.md': 'tutorials/metrics.md',
+    'data-lineage.md' : 'tutorials/data-lineage.md',
+    'workflow-outputs.md': 'tutorials/workflow-outputs.md',
+    'flux.md': 'tutorials/flux.md',
+    'developer/plugins.md': 'plugins/developing-plugins.md',
+    'plugins.md': 'plugins/plugins.md',
+    'channel.md': 'workflow.md'
 }
 
 # Add any paths that contain templates here, relative to this directory.
@@ -376,9 +385,8 @@ class NextflowLexer(RegexLexer):
             (r'/\*.*?\*/', Comment.Multiline),
             # keywords: go before method names to avoid lexing "throw new XYZ"
             # as a method signature
-            (r'(assert|catch|else|'
-             r'if|instanceof|new|return|throw|try|in|as)\b',
-             Keyword),
+            (r'(assert|catch|else|if|instanceof|new|return|throw|try|in|as)\b', Keyword),
+            (r'(channel|log)', Name.Namespace),
             # method names
             (r'^(\s*(?:[a-zA-Z_][\w.\[\]]*\s+)+?)'  # return arguments
              r'('
@@ -389,9 +397,8 @@ class NextflowLexer(RegexLexer):
              r'(\s*)(\()',                          # signature start
              bygroups(using(this), Name.Function, Whitespace, Operator)),
             (r'@[a-zA-Z_][\w.]*', Name.Decorator),
-            (r'(def|enum|include|from|output|process|workflow)\b', Keyword.Declaration),
-            (r'(boolean|byte|char|double|float|int|long|short|void)\b',
-             Keyword.Type),
+            (r'(def|enum|include|from|output|params|process|workflow)\b', Keyword.Declaration),
+            (r'(boolean|byte|char|double|float|int|long|short|void)\b', Keyword.Type),
             (r'(true|false|null)\b', Keyword.Constant),
             (r'""".*?"""', String.Double),
             (r"'''.*?'''", String.Single),

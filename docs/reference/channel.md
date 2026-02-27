@@ -58,6 +58,37 @@ But when more than one argument is provided, they are always managed as *single*
 channel.from( [1, 2], [5,6], [7,9] )
 ```
 
+(channel-from-lineage)=
+
+## fromLineage
+
+:::{versionadded} 25.04.0
+:::
+
+:::{warning} *Experimental: may change in a future release.*
+:::
+
+The `channel.fromLineage` factory creates a channel that emits files from the {ref}`cli-lineage` store that match the given key-value params:
+
+```nextflow
+channel
+    .fromLineage(workflowRun: 'lid://0d1d1622ced3e4edc690bec768919b45', label: ['alpha', 'beta'])
+    .view()
+```
+
+The above snippet emits files published by the given workflow run that are labeled as `alpha` and `beta`.
+
+Available options:
+
+`label`
+: List of labels associated with the desired files.
+
+`taskRun`
+: LID of the task run that produced the desired files.
+
+`workflowRun`
+: LID of the workflow run that produced the desired files.
+
 (channel-fromlist)=
 
 ## fromList
@@ -331,7 +362,7 @@ Available retry policy properties:
 | `maxAttempts` | Max attempts when retrying failed SRA requests. | `3`     |
 | `maxDelay`    | Max delay when retrying failed SRA requests.    | `30s`   |
 
-The following code snippet shows an example for using the `Channel.fromSRA` factory method with a custom `retryPolicy`.
+The following code snippet shows an example for using the `channel.fromSRA` factory method with a custom `retryPolicy`.
 
   ```nextflow
   channel.fromSRA(ids, retryPolicy: [delay: '250ms', maxAttempts: 5])
@@ -344,16 +375,16 @@ The following code snippet shows an example for using the `Channel.fromSRA` fact
 The `interval` method emits an incrementing index (starting from zero) at a periodic interval. For example:
 
 ```nextflow
-Channel.interval('1s').view()
+channel.interval('1s').view()
 ```
 
 The above snippet will emit 0, 1, 2, and so on, every second, forever. You can use an operator such as {ref}`operator-take` or {ref}`operator-until` to close the channel based on a stopping condition.
 
-An optional closure can be used to transform the index. Additionally, returning `Channel.STOP` will close the channel. For example:
+An optional closure can be used to transform the index. Additionally, returning `channel.STOP` will close the channel. For example:
 
 ```nextflow
-ch = Channel.interval('1s') { i ->
-    i == 10 ? Channel.STOP : i
+ch = channel.interval('1s') { i ->
+    i == 10 ? channel.STOP : i
 }
 ch.view()
 ```
@@ -413,10 +444,10 @@ See also: [channel.fromList](#fromlist) factory method.
 :::
 
 :::{note}
-This feature requires the `nextflow.preview.topic` feature flag to be enabled.
+In versions of Nextflow prior to 25.04, this feature requires the `nextflow.preview.topic` feature flag to be enabled.
 :::
 
-A *topic channel* is a queue channel that can receive values from many source channels *implicitly* based on a matching *topic name*.
+A *topic channel* is a channel that can receive values from many sources *implicitly* based on a matching *topic name*.
 
 :::{tip}
 You can think of it as a channel that is shared across many different processes using the same topic name.
@@ -425,23 +456,22 @@ You can think of it as a channel that is shared across many different processes 
 A process output can be assigned to a topic using the `topic` option on an output, for example:
 
 ```nextflow
-process foo {
+process hello {
   output:
-  val('foo'), topic: my_topic
+  val('hello'), topic: my_topic
 
   // ...
 }
 
-process bar {
+process bye {
   output:
-  val('bar'), topic: my_topic
+  val('bye'), topic: my_topic
 
   // ...
 }
 ```
 
-The `channel.topic` method allows referencing the topic channel with the specified name, which can be used as a process
-input or operator composition as any other Nextflow channel:
+The `channel.topic` function returns the topic channel for the given name, which can be used as input to a process or operator, like any other channel:
 
 ```nextflow
 channel.topic('my-topic').view()
@@ -459,17 +489,14 @@ See also: {ref}`process-additional-options` for process outputs.
 
 ## value
 
-The `channel.value` method is used to create a value channel. An optional (not `null`) argument can be specified to bind
-the channel to a specific value. For example:
+The `channel.value` function creates a dataflow value bound to the given argument. For example:
 
 ```nextflow
-expl1 = channel.value()
-expl2 = channel.value( 'Hello there' )
-expl3 = channel.value( [1,2,3,4,5] )
+v1 = channel.value( 'Hello there' )
+v2 = channel.value( [1,2,3,4,5] )
 ```
 
-The first line in the example creates an 'empty' variable. The second line creates a channel and binds a string to it.
-The third line creates a channel and binds a list object to it that will be emitted as a single value.
+The first line creates a dataflow value bound to the string `'Hello there'`. The second line creates a dataflow value bound to the list `[1,2,3,4,5]`, which is treated as a single value in dataflow logic.
 
 (channel-watchpath)=
 

@@ -26,6 +26,7 @@ process foo {
     output:
     val y 
 
+    script:
     "echo $x - $y"
 }
 

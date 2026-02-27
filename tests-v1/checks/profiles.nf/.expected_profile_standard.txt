@@ -1,0 +1,7 @@
+echo = true
+foo = 'bar'
+
+process {
+   cpus = 2
+   memory = '2GB'
+}

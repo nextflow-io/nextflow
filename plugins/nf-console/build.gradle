@@ -13,10 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-apply plugin: 'java'
-apply plugin: 'java-test-fixtures'
-apply plugin: 'idea'
-apply plugin: 'groovy'
+plugins {
+    id 'io.nextflow.nextflow-plugin' version "${nextflowPluginVersion}"
+    id 'java-test-fixtures'
+}
+
+nextflowPlugin {
+    nextflowVersion = '25.08.0-edge'
+
+    provider = "${nextflowPluginProvider}"
+    description = 'Provides an interactive console and GUI interface for interactive Nextflow development, testing, and workflow exploration'
+    className = 'nextflow.ui.console.ConsolePlugin'
+    useDefaultDependencies = false
+    generateSpec = false
+    extensionPoints = [
+        'nextflow.ui.console.ConsoleRunner',
+    ]
+}
 
 sourceSets {
     main.java.srcDirs = []
@@ -34,17 +47,17 @@ configurations {
 
 dependencies {
     compileOnly project(':nextflow')
-    compileOnly 'org.slf4j:slf4j-api:2.0.16'
+    compileOnly 'org.slf4j:slf4j-api:2.0.17'
     compileOnly 'org.pf4j:pf4j:3.12.0'
 
     api("org.apache.groovy:groovy-console:4.0.21-patch.2") { transitive=false }
-    api("org.apache.groovy:groovy-swing:4.0.25")  { transitive=false }
+    api("org.apache.groovy:groovy-swing:4.0.30")  { transitive=false }
     // this is required by 'groovy-console'  
     api("com.github.javaparser:javaparser-core:3.25.8")
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
-    testImplementation "org.apache.groovy:groovy:4.0.25"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.25"
+    testImplementation "org.apache.groovy:groovy:4.0.30"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.30"
 }
 

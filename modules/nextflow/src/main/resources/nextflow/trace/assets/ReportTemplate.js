@@ -97,35 +97,35 @@ $(function() {
     writes_raw_data.push({y: norm_mem(smry.writes), name: pname, type:'box', boxmean: true, boxpoints: false});
   }
 
-  Plotly.newPlot('cpuplot', cpu_raw_data, { title: 'CPU Usage', yaxis: {title: '% single core CPU usage', tickformat: '.1f', rangemode: 'tozero'} });
-  Plotly.newPlot('memplot', mem_raw_data, { title: 'Physical Memory Usage', yaxis: {title: 'Memory', tickformat: '.4s', rangemode: 'tozero'} });
-  Plotly.newPlot('timeplot', time_raw_data, { title: 'Task execution real-time', yaxis: {title: 'Execution time (minutes)', tickformat: '.1f', rangemode: 'tozero'} });
-  Plotly.newPlot('readplot', reads_raw_data, { title: 'Number of bytes read', yaxis: {title: 'Read bytes', tickformat: '.4s', rangemode: 'tozero'} });
+  Plotly.newPlot('cpuplot', cpu_raw_data, { title: {text:'CPU Usage'}, yaxis: {title: {text:'% single core CPU usage'}, tickformat: '.1f', rangemode: 'tozero'} });
+  Plotly.newPlot('memplot', mem_raw_data, { title: {text:'Physical Memory Usage'}, yaxis: {title: {text:'Memory'}, tickformat: '.4s', rangemode: 'tozero'} });
+  Plotly.newPlot('timeplot', time_raw_data, { title: {text:'Task execution real-time'}, yaxis: {title: {text:'Execution time (minutes)'}, tickformat: '.1f', rangemode: 'tozero'} });
+  Plotly.newPlot('readplot', reads_raw_data, { title: {text:'Number of bytes read'}, yaxis: {title: {text:'Read bytes'}, tickformat: '.4s', rangemode: 'tozero'} });
 
   // Only plot tabbed plots when shown
   $('#pctcpuplot_tablink').on('shown.bs.tab', function (e) {
     if($('#pctcpuplot').is(':empty')){
-      Plotly.newPlot('pctcpuplot', cpu_usage_data, { title: '% Requested CPU Used', yaxis: {title: '% Allocated CPUs Used', tickformat: '.1f', rangemode: 'tozero'} });
+      Plotly.newPlot('pctcpuplot', cpu_usage_data, { title: {text:'% Requested CPU Used'}, yaxis: {title: {text:'% Allocated CPUs Used'}, tickformat: '.1f', rangemode: 'tozero'} });
     }
   });
   $('#pctmemplot_tablink').on('shown.bs.tab', function (e) {
     if($('#pctmemplot').is(':empty')){
-        Plotly.newPlot('pctmemplot', mem_usage_data, { title: '% Requested Physical Memory Used', yaxis: {title: '% Memory', tickformat: '.1f', rangemode: 'tozero'} });
+        Plotly.newPlot('pctmemplot', mem_usage_data, { title: {text:'% Requested Physical Memory Used'}, yaxis: {title: {text:'% Memory'}, tickformat: '.1f', rangemode: 'tozero'} });
     }
   });
   $('#vmemplot_tablink').on('shown.bs.tab', function (e) {
     if($('#vmemplot').is(':empty')){
-        Plotly.newPlot('vmemplot', vmem_raw_data, { title: 'Virtual Memory Usage', yaxis: {title: 'Memory', tickformat: '.4s', rangemode: 'tozero'} });
+        Plotly.newPlot('vmemplot', vmem_raw_data, { title: {text:'Virtual Memory Usage'}, yaxis: {title: {text:'Memory'}, tickformat: '.4s', rangemode: 'tozero'} });
     }
   });
   $('#pcttimeplot_tablink').on('shown.bs.tab', function (e) {
     if($('#pcttimeplot').is(':empty')){
-        Plotly.newPlot('pcttimeplot', time_usage_data, { title: '% Requested Time Used', yaxis: {title: '% Allocated Time Used', tickformat: '.1f', rangemode: 'tozero'} });
+        Plotly.newPlot('pcttimeplot', time_usage_data, { title: {text:'% Requested Time Used'}, yaxis: {title: {text:'% Allocated Time Used'}, tickformat: '.1f', rangemode: 'tozero'} });
     }
   });
   $('#writeplot_tablink').on('shown.bs.tab', function (e) {
     if($('#writeplot').is(':empty')){
-        Plotly.newPlot('writeplot', writes_raw_data, { title: 'Number of bytes written', yaxis: {title: 'Written bytes', tickformat: '.4s', rangemode: 'tozero'}});
+        Plotly.newPlot('writeplot', writes_raw_data, { title: { text: 'Number of bytes written' }, yaxis: { title: { text: 'Written bytes' }, tickformat: '.4s', rangemode: 'tozero'}});
     }
   });
 

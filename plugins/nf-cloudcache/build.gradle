@@ -13,7 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-apply plugin: 'groovy'
+plugins {
+    id 'io.nextflow.nextflow-plugin' version "${nextflowPluginVersion}"
+    id 'java-test-fixtures'
+}
+
+nextflowPlugin {
+    nextflowVersion = '25.08.0-edge'
+
+    provider = "${nextflowPluginProvider}"
+    description = 'Implements cloud-based caching system to optimize workflow performance by reducing redundant computations and data transfers'
+    className = 'nextflow.CloudCachePlugin'
+    useDefaultDependencies = false
+    generateSpec = false
+    extensionPoints = [
+        'nextflow.cache.CloudCacheConfig',
+        'nextflow.cache.CloudCacheFactory'
+    ]
+}
 
 sourceSets {
     main.java.srcDirs = []
@@ -31,11 +48,11 @@ configurations {
 
 dependencies {
     compileOnly project(':nextflow')
-    compileOnly 'org.slf4j:slf4j-api:2.0.16'
+    compileOnly 'org.slf4j:slf4j-api:2.0.17'
     compileOnly 'org.pf4j:pf4j:3.12.0'
 
     testImplementation(testFixtures(project(":nextflow")))
-    testImplementation "org.apache.groovy:groovy:4.0.25"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.25"
+    testImplementation "org.apache.groovy:groovy:4.0.30"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.30"
 }
 

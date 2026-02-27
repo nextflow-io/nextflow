@@ -24,11 +24,9 @@ import groovy.runtime.metaclass.NextflowDelegatingMetaClass
 import groovy.transform.InheritConstructors
 import nextflow.Global
 import nextflow.NF
-import nextflow.NextflowMeta
 import nextflow.Session
 import nextflow.script.BaseScript
 import nextflow.script.BodyDef
-import nextflow.script.ProcessConfig
 import nextflow.script.ScriptBinding
 import nextflow.script.ScriptMeta
 import nextflow.util.BlankSeparatedList
@@ -48,10 +46,9 @@ class TaskContextTest extends Specification {
     def 'should save and read TaskContext object' () {
 
         setup:
-        def taskConfig = new ProcessConfig([:])
-        def processor = [:] as TaskProcessor
-        processor.metaClass.getTaskConfig = { taskConfig }
-        processor.metaClass.getTaskBody = { new BodyDef(null,'source') }
+        def processor = Mock(TaskProcessor) {
+            getTaskBody() >> new BodyDef(null,'source')
+        }
         def str = 'Hola'
         def map = new TaskContext(processor, [:])
         map.alpha = 1
@@ -187,8 +184,6 @@ class TaskContextTest extends Specification {
         result == temp.resolve('templates/foo.txt')
 
         when:
-        // it's a DSL2 module
-        NextflowMeta.instance.enableDsl2()
         NextflowDelegatingMetaClass.provider = Mock(ExtensionProvider) { operatorNames() >> new HashSet<String>() }
         def meta = ScriptMeta.register(script)
         meta.setScriptPath(temp.resolve('modules/my-module/main.nf'))
@@ -205,7 +200,6 @@ class TaskContextTest extends Specification {
 
         cleanup:
         NextflowDelegatingMetaClass.provider = null
-        NextflowMeta.instance.disableDsl2()
         temp?.deleteDir()
     }
 

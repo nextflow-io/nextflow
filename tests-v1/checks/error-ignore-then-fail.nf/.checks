@@ -1,0 +1,13 @@
+set -e
+
+set +e
+echo ''
+$NXF_CMD -q run $NXF_SCRIPT -c .config  > stdout
+status=$?
+set -e
+
+[ $status -ne 0 ] || false
+
+[[ `< .nextflow.log grep -c 'Submitted process > foo'` == 3 ]] || false
+[[ `< .nextflow.log grep -c 'Submitted process > bar'` == 1 ]] || false
+[[ `< .nextflow.log grep -c 'Error is ignored'` == 1 ]] || false

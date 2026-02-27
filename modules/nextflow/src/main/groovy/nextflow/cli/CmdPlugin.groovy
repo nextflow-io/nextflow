@@ -17,14 +17,18 @@
 
 package nextflow.cli
 
+import static nextflow.cli.PluginExecAware.CMD_SEP
+
+import java.nio.file.Path
+
 import com.beust.jcommander.DynamicParameter
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
-import static nextflow.cli.PluginExecAware.CMD_SEP
-
+import nextflow.plugin.util.PluginRefactor
+import org.eclipse.jgit.api.Git
 /**
  * Plugin manager command
  * 
@@ -44,6 +48,9 @@ class CmdPlugin extends CmdBase {
 
     @Parameter(hidden = true)
     List<String> args
+    
+    @Parameter(names = ['-template'], description = 'Plugin template version to use', hidden = true)
+    String templateVersion = 'v0.3.0'
 
     @Override
     void run() {
@@ -58,6 +65,9 @@ class CmdPlugin extends CmdBase {
             if( args.size()!=2 )
                 throw new AbortOperationException("Missing plugin install target - usage: nextflow plugin install <pluginId,..>")
             Plugins.pull(args[1].tokenize(','))
+        }
+        else if( args[0] == 'create' ) {
+            createPlugin(args, templateVersion)
         }
         // plugin run command
         else if( args[0].contains(CMD_SEP) ) {
@@ -91,4 +101,86 @@ class CmdPlugin extends CmdBase {
         }
     }
 
+    static createPlugin(List<String> args, String templateVersion) {
+        if( args != ['create'] && (args[0] != 'create' || !(args.size() in [3, 4])) )
+            throw new AbortOperationException("Invalid create parameters - usage: nextflow plugin create <Plugin name> <Provider name>")
+
+        final refactor = new PluginRefactor()
+        if( args.size()>1 ) {
+            refactor.withPluginName(args[1])
+            refactor.withProviderName(args[2])
+            refactor.withPluginDir(Path.of(args[3] ?: refactor.pluginName).toFile())
+        }
+        else {
+            // Prompt for plugin name
+            print "Enter plugin name: "
+            refactor.withPluginName(readLine())
+
+            // Prompt for provider name
+            print "Enter provider name: "
+            refactor.withProviderName(readLine())
+
+            // Prompt for project path (default to the normalised plugin name)
+            print "Enter project path [${refactor.pluginName}]: "
+            refactor.withPluginDir(Path.of(readLine() ?: refactor.pluginName).toFile())
+
+            // confirm and proceed
+            print "All good, are you OK to continue [y/N]? "
+            final confirm = readLine()
+            if( confirm?.toLowerCase()!='y' ) {
+                println "Plugin creation aborted."
+                return
+            }
+        }
+
+        // the final directory where the plugin is created
+        final File targetDir = refactor.getPluginDir()
+
+        // clone the template repo
+        clonePluginTemplate(targetDir, templateVersion)
+        // now refactor the template code
+        refactor.apply()
+        // remove git plat
+        cleanup(targetDir)
+        // done
+        println "Plugin created successfully at path: $targetDir"
+    }
+
+    static private String readLine() {
+        final console = System.console()
+        return console != null
+            ? console.readLine()
+            : new BufferedReader(new InputStreamReader(System.in)).readLine()
+    }
+
+    static private void clonePluginTemplate(File targetDir, String templateVersion) {
+        final templateUri = "https://github.com/nextflow-io/nf-plugin-template.git"
+        final isTag = templateVersion.startsWith('v')
+        final refSpec = isTag ? "refs/tags/$templateVersion".toString() : templateVersion
+        
+        try {
+            final gitCmd = Git.cloneRepository()
+                .setURI(templateUri)
+                .setDirectory(targetDir)
+            
+            if (isTag) {
+                gitCmd.setBranchesToClone([refSpec])
+                gitCmd.setBranch(refSpec)
+            } else {
+                // For branches, let Git handle the default behavior
+                gitCmd.setBranch(templateVersion)
+            }
+            
+            gitCmd.call()
+        }
+        catch (Exception e) {
+            throw new AbortOperationException("Unable to clone pluging template repository - cause: ${e.message}")
+        }
+    }
+
+    static private void cleanup(File targetDir) {
+        new File(targetDir, '.git').deleteDir()
+        new File(targetDir, '.github').deleteDir()
+        new File(targetDir, 'validation').deleteDir()
+    }
 }

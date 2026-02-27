@@ -21,14 +21,32 @@ import java.lang.annotation.Retention
 import java.lang.annotation.RetentionPolicy
 import java.lang.annotation.Target
 
+import groovy.transform.CompileStatic
+import org.codehaus.groovy.ast.ASTNode
+import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.control.CompilePhase
+import org.codehaus.groovy.control.SourceUnit
+import org.codehaus.groovy.transform.ASTTransformation
+import org.codehaus.groovy.transform.GroovyASTTransformation
 import org.codehaus.groovy.transform.GroovyASTTransformationClass
 
 /**
- * Xform used to capture variables names declared in task template
+ * Capture variables that are declared in a task template.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Retention(RetentionPolicy.SOURCE)
 @Target(ElementType.METHOD)
 @GroovyASTTransformationClass(classes = [TaskTemplateVarsXformImpl])
-@interface TaskTemplateVarsXform { }
+@interface TaskTemplateVarsXform {
+
+    @CompileStatic
+    @GroovyASTTransformation(phase = CompilePhase.CONVERSION)
+    class TaskTemplateVarsXformImpl implements ASTTransformation {
+
+        @Override
+        void visit(ASTNode[] nodes, SourceUnit source) {
+            new TaskTemplateVisitor(source).visitClass((ClassNode)nodes[1])
+        }
+    }
+}

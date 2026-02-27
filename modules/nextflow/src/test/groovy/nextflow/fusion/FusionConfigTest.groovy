@@ -138,6 +138,7 @@ class FusionConfigTest extends Specification {
         FUSION_URL                              | EXPECTED
         FusionConfig.DEFAULT_FUSION_AMD64_URL   | '2.5'
         FusionConfig.DEFAULT_FUSION_ARM64_URL   | '2.5'
+        FusionConfig.DEFAULT_SNAPSHOT_AMD64_URL | '2.5'
         'https://foo.com/releases/v3.0-amd.json'| '3.0'
     }
 

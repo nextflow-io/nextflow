@@ -1,5 +1,61 @@
 nf-azure changelog
 ===================
+1.21.1
+- Update default Azure Batch VM image SKU to Ubuntu 24.04
+
+1.21.0 - 28 Nov 2025
+- Optimize exit code handling by relying on scheduler status for successful executions (#6484) [454a2ae85]
+
+1.20.2 - 21 Oct 2025
+- Rename `config.schema` package to `config.spec` (#6485) [ef0d2d601]
+
+1.20.1 - 8 Oct 2025
+- Fix unstage controls in command.run when using storeDir (#6364) [a5756da3e]
+
+1.19.0 - 15 Aug 2025
+- Fix Azure Batch startTask concatenation issue (#6300) (#6305) [ci fast] [81d5c0dc]
+- Unify nf-lang config scopes with runtime classes (#6271) [bfa67ca3]
+- Update Azure and AWS deps (#6343) [ci fast] [ff00e2de]
+- Bump groovy 4.0.28 (#6304) [ci fast] [a468f8ef]
+- Bump netty-codec-http2:4.1.124.Final [7e690b44]
+
+1.18.0 - 6 Jun 2025
+- Allow users to provide implicit managed identity to Azure Batch (#6144) [d1f70f50]
+- Minor Azure Batch disk slot calculation demoted to debug (#6234) [ci skip] [c65955ce]
+- Bump Slf4j version 2.0.17 [93199e09]
+
+1.17.0 - 2 Jun 2025
+- Add support for Azure Managed identities on Azure worker nodes with Fusion (#6118) [37981a5f]
+- Bump Groovy to version 4.0.27 (#6125) [258e1790]
+
+1.16.0 - 8 May 2025
+- Add azure.batch.jobMaxWallClockTime config option (#5996) [74963fdc]
+- Remove test constructors or mark as TestOnly (#5216) [d4fadd42]
+
+1.15.0 - 23 Apr 2025
+- Update Azure Batch VM sizes and regions (#5985) [297150b8]
+
+1.14.1 - 19 Mar 2025
+- Fix handling of exit status with Azure Batch and Fusion (#5806) [7085862d]
+- Removing Azure vmList from log [67ffc8ab]
+
+1.14.0 - 17 Mar 2025
+- Add  cpu-shares and memory limits to Azure Batch tasks (#5799) [f9c0cbfd]
+- Add disk directive support in Azure Batch (#5784) [113d7250]
+- Validates Azure region before checking available VMs (#5108) [080893a2]
+- Fix Ignore Azure pool already exists error (#5721) [e267961b]
+- Bump Ubuntu 22.04 as default SKU for Azure Batch (#5804) [e0ba536d]
+- Bump groovy 4.0.26 [f740bc56]
+
+1.13.0 - 12 Feb 2025
+- Allow Azure Batch tasks to be submitted to different pools (#5766) [76790d2a]
+- Fix Check for number of low priority nodes in Azure Batch before raising a pool resize error (#5576) [9b528c11]
+- Update azure deps [b163da95]
+- Bump groovy 4.0.25 [19c40a4a]
+- Bump io.netty:netty-handler:4.1.118.Final [db4a9037]
+- Bump net.minidev:json-smart:2.5.2 [b5c4faf4]
+- Bump netty-common:4.1.118.Final [8574e243]
+
 1.12.0 - 20 Jan 2025
 - Ensure job is killed when exception in task status check (#5561) [9eefd207]
 - Bump logback 1.5.13 + slf4j 2.0.16 [cc0163ac]
@@ -17,7 +73,7 @@ nf-azure changelog
 
 1.10.0 - 2 Oct 2024
 - Fix Azure Fusion env misses credentials when no key or SAS provided (#5328) [e11382c8]
-- Bump groovy 4.0.23 (#5303) [ci fast] [fe3e3ac7]
+- Bump groovy 4.0.23 (#5303) [fe3e3ac7]
 
 1.9.0 - 4 Sep 2024
 - Support Azure Managed Identities in Fusion configuration logic (#5278) [a0bf8b40]
@@ -84,7 +140,7 @@ nf-azure changelog
 
 1.3.0 - 17 Aug 2023
 - Add resource labels support for Azure Batch (#4178) [7b5e50a1]
-- Fix typos in source code comments (#4173) [ci fast] [e78bc37e]
+- Fix typos in source code comments (#4173) [e78bc37e]
 
 1.2.0 - 5 Aug 2023
 - Add deleteTasksOnCompletion to Azure Batch configuration (#4114) [b14674dc]
@@ -110,7 +166,7 @@ nf-azure changelog
 - Fix S3 path normalization [b75ec444]
 
 1.1.0 - 15 May 2023
-- Add support for `time` directive in Azure Batch (#3869) [ci fast] [5c11a0d4]
+- Add support for `time` directive in Azure Batch (#3869) [5c11a0d4]
 - Increase Azure default maxRetries to 10 [a017139f]
 - Fix Azure jobs correctly deleted after completion (#3927) [b173a983]
 - Fix missing SAS token fusion env for Azure [43015029]
@@ -131,7 +187,7 @@ nf-azure changelog
 0.16.0 - 19 Mar 2023
 - Add azure batch pool virtualNetwork option (#3723) [e3917b8e]
 - Update Azure VM sizes (#3751) [1d06e9a6]
-- Increase pwd obfuscation min length [ci fast] [ba23d036]
+- Increase pwd obfuscation min length [ba23d036]
 - Bump groovy 3.0.16 [d3ff5dcb]
 
 0.15.1 - 14 Jan 2023

@@ -12,7 +12,7 @@ This guide details fundamental skills to run a basic Nextflow pipeline. It inclu
 
 You will need the following to get started:
 
-- Nextflow: See {ref}`install-page` for installation instructions.
+- Nextflow version 25.10 or later. See {ref}`install-page` for installation instructions. If you have an older version, see {ref}`updating-nextflow` to update.
 
 ## Run a pipeline
 
@@ -23,13 +23,11 @@ You will run a basic Nextflow pipeline that splits a string of text into two fil
 // Default parameter input
 params.str = "Hello world!"
 
-// splitString process
-process splitString {
-    publishDir "results/lower"
-    
+// split process
+process split {
     input:
     val x
-    
+
     output:
     path 'chunk_*'
 
@@ -39,9 +37,8 @@ process splitString {
     """
 }
 
-// convertToUpper process
-process convertToUpper {
-    publishDir "results/upper"
+// convert_to_upper process
+process convert_to_upper {
     tag "$y"
 
     input:
@@ -58,20 +55,39 @@ process convertToUpper {
 
 // Workflow block
 workflow {
-    ch_str = Channel.of(params.str)     // Create a channel using parameter input
-    ch_chunks = splitString(ch_str)     // Split string into chunks and create a named channel
-    convertToUpper(ch_chunks.flatten()) // Convert lowercase letters to uppercase letters
+    main:
+    ch_str = channel.of(params.str)          // Create a channel using parameter input
+    ch_chunks = split(ch_str)                // Split string into chunks and create a named channel
+    ch_upper = convert_to_upper(ch_chunks.flatten()) // Convert lowercase letters to uppercase letters
+
+    publish:
+    lower = ch_chunks.flatten()
+    upper = ch_upper
+}
+
+output {
+    lower {
+        path 'lower'
+    }
+    upper {
+        path 'upper'
+    }
 }
 ```
 
 This script defines two processes:
 
-- `splitString`: takes a string input, splits it into 6-character chunks, and writes the chunks to files with the prefix `chunk_`
-- `convertToUpper`: takes files as input, transforms their contents to uppercase letters, and writes the uppercase strings to files with the prefix `upper_`
+- `split`: takes a string input, splits it into 6-character chunks, and writes the chunks to files with the prefix `chunk_`
+- `convert_to_upper`: takes files as input, transforms their contents to uppercase letters, and writes the uppercase strings to files with the prefix `upper_`
 
-The `splitString` output is emitted as a single element. The `flatten` operator splits this combined element so that each file is treated as a sole element.
+The `split` output is emitted as a single element. The `flatten` operator splits this combined element so that each file is treated as a sole element.
 
-The outputs from both processes are published in subdirectories, that is, `lower` and `upper`, in the `results` directory.
+The workflow block is organized into two sections:
+
+- `main:`: defines the workflow logic and how processes are connected via channels
+- `publish:`: declares which channels should be published as workflow outputs
+
+The `output` block (outside the workflow) defines where and how each output should be published. In this example, the outputs from both processes are published in subdirectories (`lower` and `upper`) in the default `results` out directory.
 
 To run your pipeline:
 
@@ -87,16 +103,25 @@ To run your pipeline:
 You will see output similar to the following:
 
 ```console
- N E X T F L O W   ~  version 24.10.3
+ N E X T F L O W   ~  version 25.10.0
 
 Launching `main.nf` [big_wegener] DSL2 - revision: 13a41a8946
 
 executor >  local (3)
-[82/457482] splitString (1)           | 1 of 1 ✔
-[2f/056a98] convertToUpper (chunk_aa) | 2 of 2 ✔
+[82/457482] split (1)                   | 1 of 1 ✔
+[2f/056a98] convert_to_upper (chunk_aa) | 2 of 2 ✔
 ```
 
-Nextflow creates a `work` directory to store files used during a pipeline run. Each execution of a process is run as a separate task. The `splitString` process is run as one task and the `convertToUpper` process is run as two tasks. The hexadecimal string, for example, `82/457482`, is the beginning of a unique hash. It is a prefix used to identify the task directory where the script was executed.
+Nextflow creates a `work` directory to store files used during a pipeline run. Each execution of a process is run as a separate task. The `split` process is run as one task and the `convert_to_upper` process is run as two tasks. The hexadecimal string, for example, `82/457482`, is the beginning of a unique hash. It is a prefix used to identify the task directory where the script was executed.
+
+When the pipeline completes, you can view the output files in the `results` directory:
+
+```{code-block} bash
+:class: copyable
+ls -R results/
+```
+
+You will see the published output files organized in the `lower` and `upper` subdirectories.
 
 :::{tip}
 Run your pipeline with `-ansi-log false` to see each task printed on a separate line:
@@ -109,11 +134,11 @@ nextflow run main.nf -ansi-log false
 You will see output similar to the following:
 
 ```console
-N E X T F L O W  ~  version 24.10.3
+N E X T F L O W  ~  version 25.10.0
 Launching `main.nf` [peaceful_watson] DSL2 - revision: 13a41a8946
-[43/f1f8b5] Submitted process > splitString (1)
-[a2/5aa4b1] Submitted process > convertToUpper (chunk_ab)
-[30/ba7de0] Submitted process > convertToUpper (chunk_aa)
+[43/f1f8b5] Submitted process > split (1)
+[a2/5aa4b1] Submitted process > convert_to_upper (chunk_ab)
+[30/ba7de0] Submitted process > convert_to_upper (chunk_aa)
 ```
 
 ::: 
@@ -127,12 +152,11 @@ Nextflow tracks task executions in a task cache, a key-value store of previously
 You can enable resumability using the `-resume` flag when running a pipeline. To modify and resume your pipeline:
 
 1. Open `main.nf`
-2. Replace the `convertToUpper` process with the following:
+2. Replace the `convert_to_upper` process with the following:
 
     ```{code-block} groovy
     :class: copyable
-    process convertToUpper {
-        publishDir "results/upper"
+    process convert_to_upper {
         tag "$y"
 
         input:
@@ -159,16 +183,16 @@ You can enable resumability using the `-resume` flag when running a pipeline. To
 You will see output similar to the following:
 
 ```console
- N E X T F L O W   ~  version 24.10.3
+ N E X T F L O W   ~  version 25.10.0
 
 Launching `main.nf` [furious_curie] DSL2 - revision: 5490f13c43
 
 executor >  local (2)
-[82/457482] splitString (1)           | 1 of 1, cached: 1 ✔
-[02/9db40b] convertToUpper (chunk_aa) | 2 of 2 ✔
+[82/457482] split (1)                   | 1 of 1, cached: 1 ✔
+[02/9db40b] convert_to_upper (chunk_aa) | 2 of 2 ✔
 ```
 
-Nextflow skips the execution of the `splitString` process and retrieves the results from the cache. The `convertToUpper` process is executed twice.
+Nextflow skips the execution of the `split` process and retrieves the results from the cache. The `convert_to_upper` process is executed twice.
 
 See {ref}`cache-resume-page` for more information about Nextflow cache and resume functionality. 
 
@@ -190,16 +214,16 @@ You can configure the `str` parameter in your pipeline. To modify your `str` par
 You will see output similar to the following:
 
 ```console
- N E X T F L O W   ~  version 24.10.3
+ N E X T F L O W   ~  version 25.10.0
 
 Launching `main.nf` [distracted_kalam] DSL2 - revision: 082867d4d6
 
 executor >  local (4)
-[55/a3a700] process > splitString (1)           [100%] 1 of 1 ✔
-[f4/af5ddd] process > convertToUpper (chunk_ac) [100%] 3 of 3 ✔
+[55/a3a700] process > split (1)                   [100%] 1 of 1 ✔
+[f4/af5ddd] process > convert_to_upper (chunk_ac) [100%] 3 of 3 ✔
 ```
 
-The input string is now longer and the `splitString` process splits it into three chunks. The `convertToUpper` process is run three times.
+The input string is now longer and the `split` process splits it into three chunks. The `convert_to_upper` process is run three times.
 
 See {ref}`cli-params` for more information about modifying pipeline parameters.
 

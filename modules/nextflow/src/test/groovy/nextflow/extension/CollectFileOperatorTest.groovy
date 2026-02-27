@@ -26,6 +26,8 @@ import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Timeout
 
+import static test.ScriptHelper.runDataflow
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -34,24 +36,27 @@ import spock.lang.Timeout
 class CollectFileOperatorTest extends Specification {
 
     @Shared
-    def Session session
+    def Map config
 
     def setupSpec() {
-        session = new Session(cacheable: true)
-        session.workDir = Files.createTempDirectory('nxf-test')
+        config = [
+            cacheable: true,
+            workDir: Files.createTempDirectory('nxf-test')
+        ]
     }
 
     def cleanupSpec() {
-        session.workDir.deleteDir()
+        config.workDir.deleteDir()
     }
 
     def testCollectFileString() {
 
         when:
-        def result = Channel
-                .from('alpha','beta','gamma')
+        def result = runDataflow {
+            Channel.of('alpha','beta','gamma')
                 .collectFile { it == 'beta' ? ['file2', it.reverse() ] : ['file1',it] }
                 .toSortedList { it.name }
+        }
 
         List<Path> list = result.val
 
@@ -81,11 +86,13 @@ class CollectFileOperatorTest extends Specification {
         file3.text = 'xyz'
 
         when:
-        def list = Channel
-                .from(file1,file2,file3)
+        def result = runDataflow {
+            Channel.of(file1,file2,file3)
                 .collectFile(sort:'index')
                 .toSortedList { it.name }
-                .getVal() as List<Path>
+        }
+
+        List<Path> list = result.val
 
         then:
         list[0].name == 'A'
@@ -96,11 +103,13 @@ class CollectFileOperatorTest extends Specification {
 
 
         when:
-        list = Channel
-                .from(file1,file2,file3)
+        result = runDataflow {
+            Channel.of(file1,file2,file3)
                 .collectFile(sort:'index', newLine:true)
                 .toSortedList { it.name }
-                .getVal() as List<Path>
+        }
+
+        list = result.val
 
         then:
         list[0].name == 'A'
@@ -116,12 +125,13 @@ class CollectFileOperatorTest extends Specification {
 
 
         when:
-        def list = Channel
-                .from('Hola', 'Ciao', 'Hello', 'Bonjour', 'Halo')
+        def result = runDataflow {
+            Channel.of('Hola', 'Ciao', 'Hello', 'Bonjour', 'Halo')
                 .collectFile(sort:'index') { item -> [ "${item[0]}.txt", item + '\n' ] }
-                .toList()
-                .getVal()
-                .sort { it.name }
+                .toSortedList { it.name }
+        }
+
+        def list = result.val
 
         then:
         list[0].name == 'B.txt'
@@ -137,9 +147,10 @@ class CollectFileOperatorTest extends Specification {
     def testCollectFileWithStrings() {
 
         when:
-        def result = Channel
-                .from('alpha', 'beta', 'gamma')
+        def result = runDataflow {
+            Channel.of('alpha', 'beta', 'gamma')
                 .collectFile(name: 'hello.txt', newLine: true, sort:'index')
+        }
 
         def file = result.val
 
@@ -152,9 +163,10 @@ class CollectFileOperatorTest extends Specification {
     def testCollectFileWithDefaultName() {
 
         when:
-        def result = Channel
-                .from('alpha', 'beta', 'gamma')
+        def result = runDataflow {
+            Channel.of('alpha', 'beta', 'gamma')
                 .collectFile(newLine: true, sort:'index')
+        }
 
         def file = result.val
 
@@ -167,9 +179,10 @@ class CollectFileOperatorTest extends Specification {
     def testCollectFileAndSortWithClosure() {
 
         when:
-        def result = Channel
-                .from('delta', 'beta', 'gamma','alpha')
-                .collectFile(newLine: true, sort:{ it -> it })
+        def result = runDataflow {
+            Channel.of('delta', 'beta', 'gamma','alpha')
+                .collectFile(newLine: true, sort:{ v -> v })
+        }
 
         def file = result.val
 
@@ -182,9 +195,10 @@ class CollectFileOperatorTest extends Specification {
     def testCollectFileAndSortWithComparator() {
 
         when:
-        def result = Channel
-                .from('delta', 'beta', 'gamma','alpha')
+        def result = runDataflow {
+            Channel.of('delta', 'beta', 'gamma','alpha')
                 .collectFile(newLine: true, sort:{ a,b -> b<=>a } as Comparator)
+        }
 
         def file = result.val
 
@@ -212,11 +226,11 @@ class CollectFileOperatorTest extends Specification {
 
 
         when:
-        def files = Channel
-                .from(file1,file2,file3)
+        def files = runDataflow {
+            Channel.of(file1,file2,file3)
                 .collectFile(skip:1, sort: 'index')
                 .toList()
-                .getVal()
+        }.getVal()
 
         def result = [:]; files.each{ result[it.name]=it }
         then:
@@ -228,11 +242,11 @@ class CollectFileOperatorTest extends Specification {
 
 
         when:
-        files = Channel
-                .from(file1,file2,file3)
+        files = runDataflow {
+            Channel.of(file1,file2,file3)
                 .collectFile(skip:2, sort: 'index')
                 .toList()
-                .getVal()
+        }.getVal()
 
         result = [:]; files.each{ result[it.name]=it }
         then:
@@ -244,11 +258,11 @@ class CollectFileOperatorTest extends Specification {
 
 
         when:
-        files = Channel
-                .from(file1,file2,file3)
+        files = runDataflow {
+            Channel.of(file1,file2,file3)
                 .collectFile(skip:3, sort: 'index')
                 .toList()
-                .getVal()
+        }.getVal()
 
         result = [:]; files.each{ result[it.name]=it }
         then:
@@ -260,11 +274,11 @@ class CollectFileOperatorTest extends Specification {
 
 
         when:
-        files = Channel
-                .from(file1,file2,file3)
+        files = runDataflow {
+            Channel.of(file1,file2,file3)
                 .collectFile(skip:10, sort: 'index')
                 .toList()
-                .getVal()
+        }.getVal()
 
         result = [:]; files.each{ result[it.name]=it }
         then:
@@ -293,11 +307,11 @@ class CollectFileOperatorTest extends Specification {
 
 
         when:
-        def files = Channel
-                .from(file1,file2,file3)
+        def files = runDataflow {
+            Channel.of(file1,file2,file3)
                 .collectFile(keepHeader:true, sort: 'index')
                 .toList()
-                .getVal()
+        }.getVal()
 
         def result = [:]; files.each{ result[it.name]=it }
         then:

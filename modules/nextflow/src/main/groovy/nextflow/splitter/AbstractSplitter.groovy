@@ -141,23 +141,23 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
 
         setSource(source)
 
-
-        final chunks = collector = createCollector()
-        if( chunks instanceof CacheableCollector && chunks.checkCached() ) {
-            log.debug "Operator `$operatorName` reusing cached chunks at path: ${chunks.getBaseFile()}"
-            result = resumeFromCache(chunks)
+        this.collector = createCollector()
+        if( collector instanceof CacheableCollector && collector.checkCached() ) {
+            log.debug "Operator `$operatorName` reusing cached chunks at path: ${collector.getBaseFile()}"
+            result = resumeFromCache(collector)
         }
-
         else {
             try {
-                def stream = normalizeSource(source)
+                final stream = normalizeSource(source)
                 result = process(stream)
+
+                if( collector instanceof CacheableCollector )
+                    collector.markComplete()
             }
             catch ( StopSplitIterationException e ) {
                 log.trace 'Split iteration interrupted'
             }
         }
-
 
         /*
          * now close and return the result
@@ -246,7 +246,7 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
      * @param index the current split count
      * @return Either {@link groovyx.gpars.dataflow.DataflowChannel} or a {@code List} which holds the splitted chunks
      */
-    protected abstract process( T targetObject )
+    abstract protected process( T targetObject )
 
     /**
      * Normalise the source object to be splitted

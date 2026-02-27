@@ -130,7 +130,28 @@ make test module=<nextflow|plugins:nf-amazon|...> class=<package>.<class>.<metho
 
 When a test fails, it will give you a report that you can open in your browser to view the reason for each failed test. The **Standard output** tab is particularly useful as it shows the console output of each test.
 
-Refer to the [build.yml](https://github.com/nextflow-io/nextflow/tree/master/.github/workflows/build.yml) configuration to see how to run integration tests locally, if you are interested.
+To run the integration tests:
+
+```bash
+cd tests/checks
+./qrun.sh
+```
+
+To run a specific integration test:
+
+```bash
+cd tests/checks
+./qrun.sh <FOLDER>
+```
+
+To test the documentation snippets:
+
+```bash
+cd docs/snippets
+./test.sh
+```
+
+Refer to the [build.yml](https://github.com/nextflow-io/nextflow/tree/master/.github/workflows/build.yml) configuration to see how to run other end-to-end tests locally.
 
 ## Debugging
 

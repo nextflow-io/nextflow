@@ -15,12 +15,13 @@
  */
 
 package nextflow.trace
+
+import java.nio.file.Path
+
 import groovy.transform.CompileStatic
 import nextflow.Session
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
-
-import java.nio.file.Path
 
 /**
  * Defines the defaults method for application flow observer
@@ -28,15 +29,16 @@ import java.nio.file.Path
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
+@Deprecated
 trait TraceObserver {
 
     /**
-     * The is method is invoked when the flow is going to start
+     * This method is invoked when the flow is going to start
      */
     void onFlowCreate(Session session) {}
 
     /**
-     * The is method is invoked when the flow is going to start
+     * This method is invoked when the flow is going to start
      */
     void onFlowBegin() {}
 
@@ -125,8 +127,11 @@ trait TraceObserver {
     /**
      * Method that is invoked when a value is published from a channel.
      *
+     * NOTE: This method is no longer used.
+     *
      * @param value
      */
+    @Deprecated
     void onWorkflowPublish(Object value){}
 
     /**

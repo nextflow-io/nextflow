@@ -22,6 +22,7 @@
    output:
    file x
 
+   script:
    'echo foo'
  }
 

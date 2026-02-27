@@ -47,17 +47,8 @@ $NXF_CMD -C ./google.config run ./test-complexpaths.nf -resume
 [[ -e 'foo/sample.zip' ]] || false
 [[ -e 'foo/sample_(1 2).vcf' ]] || false
 
-## run test-subdirs inputs/outputs
-$NXF_CMD -C ./gls.config -q run ./test-subdirs.nf
-
-## run publishDir overwrite
-$NXF_CMD -C ./gls.config run ./test-overwrite.nf
-
-## re-executing should overwrite the published file
-[ `$NXF_CMD -C ./gls.config run ./test-overwrite.nf -resume | { grep 'Failed to publish file' -c || true; }` == 0 ] && echo OK || { echo 'Failed to publish file' && false; }
-
 NXF_CLOUDCACHE_PATH=gs://rnaseq-nf/cache \
-$NXF_CMD -C ./google.config \
+$NXF_CMD -trace nextflow,io.seqera -C ./google.config \
     run nextflow-io/rnaseq-nf \
     -with-report \
     -with-trace $OPTS \
@@ -65,7 +56,7 @@ $NXF_CMD -C ./google.config \
 [[ `grep -c 'Using Nextflow cache factory: nextflow.cache.CloudCacheFactory' .nextflow.log` == 1 ]] || false
 
 NXF_CLOUDCACHE_PATH=gs://rnaseq-nf/cache \
-$NXF_CMD -C ./google.config \
+$NXF_CMD -trace nextflow,io.seqera -C ./google.config \
     run nextflow-io/rnaseq-nf \
     -with-report \
     -with-trace $OPTS \
@@ -85,4 +76,5 @@ $NXF_CMD -C ./google.config \
 $NXF_CMD -C ./google.config \
     run nextflow-io/hello \
     -process.array 10
+
 

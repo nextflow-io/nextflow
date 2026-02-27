@@ -49,8 +49,10 @@ import nextflow.SysEnv
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.file.TagAwareFile
+import nextflow.trace.event.FilePublishEvent
 import nextflow.util.HashBuilder
 import nextflow.util.PathTrie
+import nextflow.util.RetryConfig
 /**
  * Implements the {@code publishDir} directory. It create links or copies the output
  * files of a given task to a user specified directory.
@@ -110,6 +112,11 @@ class PublishDir {
     private def tags
 
     /**
+     * Labels to be associated to the target file
+     */
+    private List<String> labels
+
+    /**
      * The content type of the file. Currently only supported by AWS S3.
      * This can be either a MIME type content type string or a Boolean value
      */
@@ -121,7 +128,7 @@ class PublishDir {
      */
     private String storageClass
 
-    private PublishRetryConfig retryConfig
+    private RetryConfig retryConfig
 
     private PathMatcher matcher
 
@@ -211,6 +218,9 @@ class PublishDir {
         if( params.tags != null )
             result.tags = params.tags
 
+        if( params.labels != null )
+            result.labels = params.labels as List<String>
+
         if( params.contentType instanceof Boolean )
             result.contentType = params.contentType
         else if( params.contentType )
@@ -222,19 +232,10 @@ class PublishDir {
         return result
     }
 
-    protected Map getRetryOpts() {
-        def result = session.config.navigate('nextflow.publish.retryPolicy') as Map
-        if( result != null )
-            log.warn 'The `nextflow.publish` config scope has been renamed to `workflow.output`'
-        else
-            result = session.config.navigate('workflow.output.retryPolicy') as Map ?: Collections.emptyMap()
-        return result
-    }
-
     protected void apply0(Set<Path> files) {
         assert path
         // setup the retry policy config to be used
-        this.retryConfig = new PublishRetryConfig(getRetryOpts())
+        this.retryConfig = RetryConfig.config(session.config)
 
         createPublishDir()
         validatePublishMode()
@@ -581,7 +582,7 @@ class PublishDir {
     }
 
     protected void notifyFilePublish(Path destination, Path source=null) {
-        session.notifyFilePublish(destination, source)
+        session.notifyFilePublish(new FilePublishEvent(source, destination, labels))
     }
 
 }

@@ -12,12 +12,28 @@ This page documents how to handle workflow events and send notifications.
 
 ### Completion handler
 
-Due to the asynchronous nature of Nextflow the termination of a script does not correspond to the termination of the running workflow. Thus some information, only available on execution completion, needs to be accessed by using an asynchronous handler.
+Due to the asynchronous nature of Nextflow, the termination of a script does not correspond to the termination of the running workflow. Thus some information, only available on execution completion, needs to be accessed by using an asynchronous handler.
 
-The `onComplete` event handler is invoked by the framework when the workflow execution is completed. It allows one to access the workflow termination status and other useful information. For example:
+Nextflow invokes the `onComplete` event handler when the workflow execution is completed. It allows one to access the workflow termination status and other useful information. For example:
 
 ```nextflow
 workflow.onComplete {
+    println "Pipeline completed at: $workflow.complete"
+    println "Execution status: ${ workflow.success ? 'OK' : 'failed' }"
+}
+```
+
+:::{versionadded} 25.10.0
+:::
+
+Entry workflows can define an `onComplete` section instead of using `workflow.onComplete`:
+
+```nextflow
+workflow {
+    main:
+    // ...
+
+    onComplete:
     println "Pipeline completed at: $workflow.complete"
     println "Execution status: ${ workflow.success ? 'OK' : 'failed' }"
 }
@@ -27,7 +43,7 @@ workflow.onComplete {
 
 ### Error handler
 
-The `onError` event handler is invoked by Nextflow when a runtime or process error caused the pipeline execution to stop. For example:
+Nextflow invokes the `onError` event handler when a runtime or process error caused the pipeline execution to stop. For example:
 
 ```nextflow
 workflow.onError {
@@ -36,8 +52,23 @@ workflow.onError {
 ```
 
 :::{note}
-Both the `onError` and `onComplete` handlers are invoked when an error condition is encountered. The first is called as soon as the error is raised, while the second is called just before the pipeline execution is about to terminate. When using the `finish` {ref}`process-error-strategy`, there may be a significant gap between the two, depending on the time required to complete any pending job.
+Both the `onError` and `onComplete` handlers are invoked when an error condition is encountered. The `onError` handler is called as soon as the error is raised, while `onComplete` is called just before the pipeline execution is about to terminate. When using the `finish` {ref}`process-error-strategy`, there may be a significant gap between the two, depending on the time required to complete any pending job.
 :::
+
+:::{versionadded} 25.10.0
+:::
+
+Entry workflows can define an `onError` section instead of using `workflow.onError`:
+
+```nextflow
+workflow {
+    main:
+    // ...
+
+    onError:
+    println "Error: Pipeline execution stopped with the following message: ${workflow.errorMessage}"
+}
+```
 
 ## Mail
 
@@ -74,19 +105,19 @@ sendMail(mail)
 The following parameters can be specified:
 
 `to`
-: *Multiple email addresses can be specified separating them with a comma.*
+: *Multiple email addresses can be specified by separating them with a comma.*
 : The mail target recipients.
 
 `cc`
-: *Multiple email addresses can be specified separating them with a comma.*
+: *Multiple email addresses can be specified by separating them with a comma.*
 : The mail CC recipients.
 
 `bcc`
-: *Multiple email addresses can be specified separating them with a comma.*
+: *Multiple email addresses can be specified by separating them with a comma.*
 : The mail BCC recipients.
 
 `from`
-: *Multiple email addresses can be specified separating them with a comma.*
+: *Multiple email addresses can be specified by separating them with a comma.*
 : The mail sender address.
 
 `subject`
@@ -177,9 +208,9 @@ sendMail {
 
 ### Mail configuration
 
-If no mail server configuration is provided, Nextflow tries to send the email by using the external mail command eventually provided by the underlying system (e.g. `sendmail` or `mail`).
+If no mail server configuration is provided, Nextflow tries to send the email using the external mail command eventually provided by the underlying system (e.g. `sendmail` or `mail`).
 
-If your system does not provide access to none of the above you can configure a SMTP server in the `nextflow.config` file. For example:
+If your system does not provide access to any of the above you can configure a SMTP server in the `nextflow.config` file. For example:
 
 ```groovy
 mail {
@@ -189,6 +220,16 @@ mail {
 }
 ```
 
+:::{note}
+Some versions of Java (e.g. Java 11 Corretto) do not default to TLS v1.2, and as a result may have issues with 3rd party integrations that enforce TLS v1.2 (e.g. Azure Active Directory OIDC). This problem can be addressed by setting the following config option:
+
+```groovy
+mail {
+    smtp.ssl.protocols = 'TLSv1.2'
+}
+```
+:::
+
 See the {ref}`mail scope <config-mail>` section to learn more the mail server configuration options.
 
 ### AWS SES configuration
@@ -196,10 +237,9 @@ See the {ref}`mail scope <config-mail>` section to learn more the mail server co
 :::{versionadded} 23.06.0-edge
 :::
 
-Nextflow supports [AWS SES](https://aws.amazon.com/ses/) native API as an alternative
-provider to send emails in place of SMTP server.
+Nextflow supports the [AWS Simple Email Service](https://aws.amazon.com/ses/) API as an alternative provider to send emails in place of an SMTP server.
 
-To enable this feature add the following environment variable in the launching environment:
+To enable this feature, set the following environment variable in the launch environment:
 
 ```bash
 export NXF_ENABLE_AWS_SES=true
@@ -211,9 +251,23 @@ Make also sure to add the following AWS IAM permission to the AWS user (or role)
 ses:SendRawEmail
 ```
 
+The following snippet shows how to configure Nextflow to send emails through SES:
+
+```groovy
+mail {
+    smtp.host = 'email-smtp.us-east-1.amazonaws.com'
+    smtp.port = 587
+    smtp.user = '<Your AWS SES access key>'
+    smtp.password = '<Your AWS SES secret key>'
+    smtp.auth = true
+    smtp.starttls.enable = true
+    smtp.starttls.required = true
+}
+```
+
 ## Mail notification
 
-You can use the `sendMail` function with a {ref}`workflow completion handler <metadata-completion-handler>` to notify the completion of a workflow completion. For example:
+You can use the `sendMail` function with a {ref}`workflow completion handler <metadata-completion-handler>` to notify a workflow completion. For example:
 
 ```nextflow
 workflow.onComplete {
@@ -237,7 +291,7 @@ This is useful to send a custom notification message. Note however that Nextflow
 
 ## Workflow notification
 
-Nextflow includes a built-in workflow notification features that automatically sends a notification message when a workflow execution terminates.
+Nextflow includes built-in workflow notification features that automatically sends a notification message when a workflow execution terminates.
 
 To enable simply specify the `-N` option when launching the pipeline execution. For example:
 

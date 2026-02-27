@@ -55,4 +55,5 @@ class AwsClientFactoryTest extends Specification {
         cleanup:
         SysEnv.pop()
     }
+
 }

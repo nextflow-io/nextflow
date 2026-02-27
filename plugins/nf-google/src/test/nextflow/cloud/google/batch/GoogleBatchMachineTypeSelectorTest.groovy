@@ -98,4 +98,18 @@ class GoogleBatchMachineTypeSelectorTest extends Specification {
         '50 GB'   | 'c2d-highmem-56'  | 'c2d'  | 56   | '1500 GB'
         '750 GB'  | 'm3-megamem-64'   | 'm3'   | 64   | '1500 GB'
     }
+
+    def 'should know when to install GPU drivers'() {
+        expect:
+        final machineType = new MachineType(type: TYPE, gpusPerVm: GPUS)
+        GoogleBatchMachineTypeSelector.INSTANCE.installGpuDrivers(machineType) == EXPECTED
+
+        where:
+        TYPE            | GPUS | EXPECTED
+        'n2-standard-4' | 0    | false
+        'n2-standard-4' | 1    | true
+        'a2-highgpu-1g' | 0    | true
+        'a3-highgpu-1g' | 0    | true
+        'g2-standard-4' | 0    | true
+    }
 }

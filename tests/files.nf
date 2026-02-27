@@ -16,7 +16,6 @@
  */
 
 params.in = "$baseDir/data/sample.fa"
-SPLIT = (System.properties['os.name'] == 'Mac OS X' ? 'gcsplit' : 'csplit')
 
 process split {
     input:
@@ -25,6 +24,8 @@ process split {
     output:
     path 'seq_*'
 
+    script:
+    SPLIT = (System.properties['os.name'] == 'Mac OS X' ? 'gcsplit' : 'csplit')
     """
     $SPLIT query.fa '%^>%' '/^>/' '{*}' -f seq_
     """
@@ -40,6 +41,7 @@ process printTwo {
     output:
     file 'chunk1:chunk3'
 
+    script:
     """
     cat chunk* | rev
     """
@@ -55,6 +57,7 @@ process printLast {
     output:
     file 'chunk'
 
+    script:
     """
     cat chunk
     """

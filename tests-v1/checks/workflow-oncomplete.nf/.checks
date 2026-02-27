@@ -1,0 +1,48 @@
+set -e
+export NXF_ASSETS=$PWD/assets
+cp .config nextflow.config
+
+#
+# First run test `success` is `true` 
+#
+echo ''
+$NXF_RUN -name first > stdout
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > sayHello'` == 5 ]] || false
+
+[[ `grep -c 'DONE' stdout` == 1 ]] || false
+[[ `grep -c 'command: echo' stdout` == 1 ]] || false
+[[ `grep -c 'revision: null' stdout` == 1 ]] || false
+[[ `grep -c 'repository: null' stdout` == 1 ]] || false
+[[ `grep -c 'success: true' stdout` == 1 ]] || false
+[[ `grep -c 'exitStatus: 0' stdout` == 1 ]] || false
+[[ `grep -c 'runName: first' stdout` == 1 ]] || false
+
+#
+# Second run test `success` if `false` 
+# 
+echo ''
+$NXF_RUN -name second --command xxx > stdout || true
+
+[[ `grep -c 'DONE' stdout` == 1 ]] || false
+[[ `grep -c 'command: xxx' stdout` == 1 ]] || false
+[[ `grep -c 'revision: null' stdout` == 1 ]] || false
+[[ `grep -c 'repository: null' stdout` == 1 ]] || false
+[[ `grep -c 'success: false' stdout` == 1 ]] || false
+[[ `grep -c 'exitStatus: 127' stdout` == 1 ]] || false
+[[ `grep -c 'runName: second' stdout` == 1 ]] || false
+
+#
+# Third run download the script from Github and test `repository` and `revision` are set
+#
+echo ''
+$NXF_CMD run nextflow-io/hello -name third --command hola > stdout
+
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > sayHello'` == 4 ]] || false
+
+[[ `grep -c 'DONE' stdout` == 1 ]] || false
+[[ `grep -c 'command: hola' stdout` == 1 ]] || false
+[[ `grep -c 'revision: master' stdout` == 1 ]] || false
+[[ `grep -c 'repository: https://github.com/nextflow-io/hello' stdout` == 1 ]] || false
+[[ `grep -c 'success: true' stdout` == 1 ]] || false
+[[ `grep -c 'exitStatus: 0' stdout` == 1 ]] || false
+[[ `grep -c 'runName: third' stdout` == 1 ]] || false

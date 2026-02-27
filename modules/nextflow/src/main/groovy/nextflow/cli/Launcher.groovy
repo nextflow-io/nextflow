@@ -30,6 +30,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.BuildInfo
+import nextflow.NF
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortRunException
 import nextflow.exception.ConfigParseException
@@ -89,11 +90,13 @@ class Launcher {
 
     protected void init() {
         allCommands = (List<CmdBase>)[
+                new CmdAuth(),
                 new CmdClean(),
                 new CmdClone(),
                 new CmdConsole(),
                 new CmdFs(),
                 new CmdInfo(),
+                new CmdLaunch(),
                 new CmdList(),
                 new CmdLog(),
                 new CmdPull(),
@@ -106,7 +109,9 @@ class Launcher {
                 new CmdHelp(),
                 new CmdSelfUpdate(),
                 new CmdPlugin(),
-                new CmdInspect()
+                new CmdInspect(),
+                new CmdLint(),
+                new CmdLineage()
         ]
 
         if(SecretsLoader.isEnabled())
@@ -119,11 +124,18 @@ class Launcher {
 
         options = new CliOptions()
         jcommander = new JCommander(options)
-        allCommands.each { cmd ->
+        for( CmdBase cmd : allCommands ) {
             cmd.launcher = this;
-            jcommander.addCommand(cmd.name, cmd)
+            jcommander.addCommand(cmd.name, cmd, aliases(cmd))
         }
         jcommander.setProgramName( APP_NAME )
+    }
+
+    private static final String[] EMPTY = new String[0]
+
+    private static String[] aliases(CmdBase cmd) {
+        final aliases = cmd.getClass().getAnnotation(Parameters)?.commandNames()
+        return aliases ?: EMPTY
     }
 
     /**
@@ -169,7 +181,7 @@ class Launcher {
         if( !options.logFile ) {
             if( isDaemon() )
                 options.logFile = System.getenv('NXF_LOG_FILE') ?: '.node-nextflow.log'
-            else if( command instanceof CmdRun || options.debug || options.trace )
+            else if( command instanceof CmdRun || command instanceof CmdLaunch || command instanceof CmdAuth || options.debug || options.trace )
                 options.logFile = System.getenv('NXF_LOG_FILE') ?: ".nextflow.log"
         }
     }
@@ -526,11 +538,16 @@ class Launcher {
         }
 
         catch( ConfigParseException e )  {
-            def message = e.message
-            if( e.cause?.message ) {
-                message += "\n\n${e.cause.message.toString().indent('  ')}"
+            if( NF.isSyntaxParserV2() ) {
+                log.error(e.message, e)
             }
-            log.error(message, e.cause ?: e)
+            else {
+                def message = e.message
+                if( e.cause?.message ) {
+                    message += "\n\n${e.cause.message.toString().indent('  ')}"
+                }
+                log.error(message, e.cause ?: e)
+            }
             return(1)
         }
 

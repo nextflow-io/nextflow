@@ -25,8 +25,9 @@ process foo {
   file 'result.txt'
 
   output:
-  tuple val(x), file('result.txt')
+  tuple val(task.process), val(x), file('result.txt')
 
+  script:
   """
   echo World >> result.txt
   """
@@ -36,9 +37,9 @@ process foo {
 workflow {
   def data = 'Hello\n'
   def list = ['alpha', 'delta', 'gamma', 'omega']
-  foo(list, data) | subscribe { code, file ->
-                      println "~ Result ${file}"
-                      file.copyTo("my_${code}.txt")
-                    }
+  foo(list, data).subscribe { process, code, file ->
+    println "~ Result ${file} from process ${process}"
+    file.copyTo("my_${code}.txt")
+  }
 
 }

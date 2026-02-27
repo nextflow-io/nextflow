@@ -22,9 +22,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import com.amazonaws.services.s3.model.ListObjectsRequest;
-import com.amazonaws.services.s3.model.ObjectListing;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
+import software.amazon.awssdk.services.s3.model.*;
 import com.google.common.base.Preconditions;
 
 /**
@@ -67,57 +65,48 @@ public class S3Iterator implements Iterator<Path> {
 
     private Iterator<S3Path> getIterator() {
         if (it == null) {
-            List<S3Path> listPath = new ArrayList<>();
+            ListObjectsV2Request request = buildRequest();
 
-            // iterator over this list
-            ObjectListing current = s3FileSystem.getClient().listObjects(buildRequest());
+            S3Client s3Client = s3FileSystem.getClient();
 
-            while (current.isTruncated()) {
-                // parse the elements
-                parseObjectListing(listPath, current);
-                // continue
-                current = s3FileSystem.getClient().listNextBatchOfObjects(current);
-            }
-
-            parseObjectListing(listPath, current);
-
-            it = listPath.iterator();
+            // This automatically handles pagination
+            it = s3Client.listObjectsV2Paginator(request).stream().flatMap(r -> parseObjectListing(r).stream()).iterator();
         }
 
         return it;
     }
 
-    private ListObjectsRequest buildRequest(){
+    private ListObjectsV2Request buildRequest(){
 
-        ListObjectsRequest request = new ListObjectsRequest();
-        request.setBucketName(bucket);
-        request.setPrefix(key);
-        request.setMarker(key);
-        request.setDelimiter("/");
-        return request;
+        return ListObjectsV2Request.builder()
+                .bucket(bucket)
+                .prefix(key)
+                .delimiter("/")
+                .build();
     }
 
     /**
      * add to the listPath the elements at the same level that s3Path
-     * @param listPath List not null list to add
-     * @param current ObjectListing to walk
+     * @param current ListObjectsResponseto walk
      */
-    private void parseObjectListing(List<S3Path> listPath, ObjectListing current) {
-
-        // add all the objects i.e. the files
-        for (final S3ObjectSummary objectSummary : current.getObjectSummaries()) {
-            final String key = objectSummary.getKey();
+    private List<S3Path> parseObjectListing( ListObjectsV2Response current) {
+        List<S3Path> listPath = new ArrayList<>();
+        // add all the objects i.e. the files, except iterator key.
+        // In V2, object listing is also returning the key of the request. Skip it from the iterator to avoid loops.
+        for (final S3Object objectSummary : current.contents()) {
+            final String key = objectSummary.key();
+            if( this.key.equals(key)) continue;
             final S3Path path = new S3Path(s3FileSystem, "/" + bucket, key.split("/"));
             path.setObjectSummary(objectSummary);
             listPath.add(path);
         }
 
-        // add all the common prefixes i.e. the directories
-        for(final String dir : current.getCommonPrefixes()) {
-            if( dir.equals("/") ) continue;
-            listPath.add(new S3Path(s3FileSystem, "/" + bucket, dir));
+        // add all the common prefixes i.e. the directories, except iterator key
+        for(final CommonPrefix prefix : current.commonPrefixes()) {
+            if( prefix.prefix().equals("/") || this.key.equals(prefix.prefix())) continue;
+            listPath.add(new S3Path(s3FileSystem, "/" + bucket, prefix.prefix()));
         }
-
+        return listPath;
     }
 
     /**

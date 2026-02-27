@@ -72,7 +72,7 @@ import nextflow.script.FunctionDef
 import nextflow.script.ScriptMeta
 import nextflow.script.WorkflowBinding
 import nextflow.script.WorkflowDef
-import org.apache.commons.lang.exception.ExceptionUtils
+import org.apache.commons.lang3.exception.ExceptionUtils
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.Marker
@@ -217,7 +217,7 @@ class LoggerHelper {
         final logger = createLogger(MAIN_PACKAGE, mainLevel)
 
         // -- set AWS lib level to WARN to reduce noise in the log file
-        final AWS = 'com.amazonaws'
+        final AWS = 'software.amazon'
         if( !debugConf.contains(AWS) && !traceConf.contains(AWS)) {
             createLogger(AWS, Level.WARN)
         }
@@ -633,17 +633,17 @@ class LoggerHelper {
     }
 
     static List<String> findErrorLine( Throwable e, Map<String, Path> allNames ) {
-        def lines = getErrorLines(e)
-        List error = null
-        for( String str : lines ) {
-            if( (error=getErrorLine(str,allNames))) {
-                break
-            }
+        final lines = getErrorLines(e)
+        for( final line : lines ) {
+            final error = getErrorLine(line, allNames)
+            if( error )
+                return error
         }
-        return error
+        return null
     }
 
-    static @PackageScope String[] getErrorLines(Throwable e) {
+    @PackageScope
+    static String[] getErrorLines(Throwable e) {
         try {
             return ExceptionUtils.getStackTrace(e).split('\n')
         }
@@ -653,7 +653,7 @@ class LoggerHelper {
         }
     }
 
-    static private Pattern ERR_LINE_REGEX = ~/\((Script_[0-9a-f]{16}):(\d*)\)$/
+    static private Pattern ERR_LINE_REGEX = ~/\((Main|_nf_script_[0-9a-f]{16}):(\d*)\)$/
 
     @PackageScope
     static List<String> getErrorLine( String str, Map<String,Path> allNames ) {

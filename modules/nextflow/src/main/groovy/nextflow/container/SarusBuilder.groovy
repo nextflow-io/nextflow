@@ -28,15 +28,28 @@ class SarusBuilder extends ContainerBuilder<SarusBuilder> {
 
     private boolean verbose
 
-    SarusBuilder( String image ) {
-        assert image
+    SarusBuilder(String image, SarusConfig config) {
         this.image = image
+
+        if( config.runOptions )
+            addRunOptions(config.runOptions)
+        this.tty = config.tty
+        this.verbose = config.verbose
+    }
+
+    SarusBuilder(String image) {
+        this(image, new SarusConfig([:]))
+    }
+
+    SarusBuilder params( Map params ) {
+        if( params.containsKey('entry') )
+            this.entryPoint = params.entry
+
+        return this
     }
 
     @Override
     SarusBuilder build(StringBuilder result) {
-        assert image
-
         result << 'sarus '
 
         if( verbose )
@@ -61,23 +74,6 @@ class SarusBuilder extends ContainerBuilder<SarusBuilder> {
         result << image
 
         runCommand = result.toString()
-        return this
-    }
-
-    SarusBuilder params( Map params ) {
-
-        if( params.containsKey('verbose') )
-            this.verbose = params.verbose.toString() == 'true'
-
-        if( params.containsKey('entry') )
-            this.entryPoint = params.entry
-
-        if( params.containsKey('runOptions') )
-            addRunOptions(params.runOptions.toString())
-
-        if( params.containsKey('tty') )
-            this.tty = params.tty?.toString() == 'true'
-
         return this
     }
 

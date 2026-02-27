@@ -33,7 +33,7 @@ class ApptainerCacheTest extends Specification {
     def 'should return a simple name given an image url'() {
 
         given:
-        def helper = new ApptainerCache(Mock(ContainerConfig))
+        def helper = new ApptainerCache(new ApptainerConfig([:]))
 
         expect:
         helper.simpleName(url) == expected
@@ -57,7 +57,7 @@ class ApptainerCacheTest extends Specification {
         def dir = Files.createTempDirectory('test')
 
         when:
-        def cache = new ApptainerCache([libraryDir: "$dir"] as ContainerConfig)
+        def cache = new ApptainerCache([libraryDir: "$dir"] as ApptainerConfig)
         then:
         cache.getLibraryDir() == dir
 
@@ -71,7 +71,7 @@ class ApptainerCacheTest extends Specification {
         def dir = Files.createTempDirectory('test')
 
         when:
-        def cache = new ApptainerCache(GroovyMock(ContainerConfig), [NXF_APPTAINER_LIBRARYDIR: "$dir"])
+        def cache = new ApptainerCache(new ApptainerConfig([:]), [NXF_APPTAINER_LIBRARYDIR: "$dir"])
         then:
         cache.getLibraryDir() == dir
 
@@ -85,7 +85,7 @@ class ApptainerCacheTest extends Specification {
         def dir = Files.createTempDirectory('test')
 
         when:
-        def cache = new ApptainerCache([cacheDir: "$dir"] as ContainerConfig)
+        def cache = new ApptainerCache([cacheDir: "$dir"] as ApptainerConfig)
         then:
         cache.getCacheDir() == dir
 
@@ -99,7 +99,7 @@ class ApptainerCacheTest extends Specification {
         def dir = Files.createTempDirectory('test')
 
         when:
-        def cache = new ApptainerCache(GroovyMock(ContainerConfig), [NXF_APPTAINER_CACHEDIR: "$dir"])
+        def cache = new ApptainerCache(new ApptainerConfig([:]), [NXF_APPTAINER_CACHEDIR: "$dir"])
         then:
         cache.getCacheDir() == dir
 
@@ -116,7 +116,7 @@ class ApptainerCacheTest extends Specification {
         def LOCAL = 'foo-latest.img'
         def TARGET_FILE = dir.resolve(LOCAL)
         def TEMP_FILE = dir.resolve('foo-latest.pulling'); TEMP_FILE.text = 'foo'
-        ContainerConfig config = [noHttps: true]
+        ApptainerConfig config = [noHttps: true]
         and:
         def cache = Spy(new ApptainerCache(config))
 
@@ -127,7 +127,7 @@ class ApptainerCacheTest extends Specification {
         1 * cache.localCachePath(IMAGE) >> TARGET_FILE
         1 * cache.getTempImagePath(TARGET_FILE) >> TEMP_FILE
         and:
-        1 * cache.runCommand("apptainer pull --nohttps --name ${TEMP_FILE.name} $IMAGE > /dev/null", dir) >> 0
+        1 * cache.runCommand("apptainer pull --no-https --name ${TEMP_FILE.name} $IMAGE > /dev/null", dir) >> 0
         and:
         TARGET_FILE.exists()
         !TEMP_FILE.exists()
@@ -148,7 +148,7 @@ class ApptainerCacheTest extends Specification {
         def container = dir.resolve(LOCAL)
         container.text = 'dummy'
         and:
-        def cache = Spy(ApptainerCache)
+        def cache = Spy(new ApptainerCache([:] as ApptainerConfig))
 
         when:
         def result = cache.downloadContainerImage(IMAGE)
@@ -172,7 +172,7 @@ class ApptainerCacheTest extends Specification {
         def container = dir.resolve(LOCAL)
         container.text = 'dummy'
         and:
-        def cache = Spy(ApptainerCache)
+        def cache = Spy(new ApptainerCache([:] as ApptainerConfig))
 
         when:
         def result = cache.downloadContainerImage(IMAGE)
@@ -197,7 +197,7 @@ class ApptainerCacheTest extends Specification {
         def dir = Paths.get('/test/path')
         def container = dir.resolve(LOCAL)
         and:
-        def cache = Spy(ApptainerCache)
+        def cache = Spy(new ApptainerCache([:] as ApptainerConfig))
 
         when:
         def file = cache.getCachePathFor(IMAGE)

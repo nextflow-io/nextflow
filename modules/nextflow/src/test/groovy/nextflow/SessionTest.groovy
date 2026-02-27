@@ -22,12 +22,16 @@ import java.nio.file.attribute.PosixFilePermission
 
 import nextflow.config.Manifest
 import nextflow.container.ContainerConfig
+import nextflow.container.DockerConfig
+import nextflow.container.PodmanConfig
+import nextflow.container.SarusConfig
 import nextflow.exception.AbortOperationException
+import nextflow.file.FileHelper
 import nextflow.script.ScriptFile
 import nextflow.script.WorkflowMetadata
+import nextflow.trace.TraceFileObserver
 import nextflow.trace.TraceHelper
 import nextflow.trace.WorkflowStatsObserver
-import nextflow.trace.TraceFileObserver
 import nextflow.util.Duration
 import nextflow.util.VersionNumber
 import spock.lang.Specification
@@ -70,120 +74,6 @@ class SessionTest extends Specification {
         base.deleteDir()
 
     }
-
-
-    def 'test get queue size'() {
-
-        when:
-        def session = [:] as Session
-        session.config = [ executor:['$sge':[queueSize: 123] ] ]
-        then:
-        session.getQueueSize('sge', 1) == 123
-        session.getQueueSize('xxx', 1) == 1
-        session.getQueueSize(null, 1) == 1
-
-        when:
-        def session2 = [:] as Session
-        session2.config = [ executor:[ queueSize: 321, '$sge':[queueSize:789] ] ]
-        then:
-        session2.getQueueSize('sge', 2) == 789
-        session2.getQueueSize('xxx', 2) == 321
-        session2.getQueueSize(null, 2) == 321
-
-
-        when:
-        def session3 = [:] as Session
-        session3.config = [ executor: 'sge' ]
-        then:
-        session3.getQueueSize('sge', 1) == 1
-        session3.getQueueSize('xxx', 2) == 2
-        session3.getQueueSize(null, 3) == 3
-
-
-    }
-
-    def 'test get poll interval'() {
-
-        when:
-        def session1 = [:] as Session
-        session1.config = [ executor:['$sge':[pollInterval: 345] ] ]
-        then:
-        session1.getPollInterval('sge').toMillis() == 345
-        session1.getPollInterval('xxx').toMillis() == 1_000
-        session1.getPollInterval(null).toMillis() == 1_000
-        session1.getPollInterval(null, 2_000 as Duration).toMillis() == 2_000
-
-        when:
-        def session2 = [:] as Session
-        session2.config = [ executor:[ pollInterval: 321, '$sge':[pollInterval:789] ] ]
-        then:
-        session2.getPollInterval('sge').toMillis() == 789
-        session2.getPollInterval('xxx').toMillis() == 321
-        session2.getPollInterval(null).toMillis() == 321
-
-        when:
-        def session3 = [:] as Session
-        session3.config = [ executor: 'lsf' ]
-        then:
-        session3.getPollInterval('sge', 33 as Duration ).toMillis() == 33
-        session3.getPollInterval('xxx', 44 as Duration ).toMillis() == 44
-        session3.getPollInterval(null, 55 as Duration).toMillis() == 55
-
-    }
-
-    def 'test get exit read timeout'() {
-
-        setup:
-        def session1 = [:] as Session
-        session1.config = [ executor:['$sge':[exitReadTimeout: '5s'] ] ]
-
-        expect:
-        session1.getExitReadTimeout('sge') == '5sec' as Duration
-        session1.getExitReadTimeout('lsf', '3sec' as Duration) == '3sec' as Duration
-
-    }
-
-    def 'test get queue stat interval'() {
-
-        setup:
-        def session1 = [:] as Session
-        session1.config = [ executor:['$sge':[queueStatInterval: '4sec'] ] ]
-
-        expect:
-        session1.getQueueStatInterval('sge') == '4sec' as Duration
-        session1.getQueueStatInterval('lsf', '1sec' as Duration) == '1sec' as Duration
-
-    }
-
-    def 'test monitor dump interval'() {
-
-        setup:
-        def session1 = [:] as Session
-        session1.config = [ executor:['$sge':[dumpInterval: '6sec'] ] ]
-
-        expect:
-        session1.getMonitorDumpInterval('sge') == '6sec' as Duration
-        session1.getMonitorDumpInterval('lsf', '2sec' as Duration) == '2sec' as Duration
-
-    }
-
-    def 'test get exec config prop'() {
-
-        when:
-        def session = [:] as Session
-        session.config = [ executor: [x:123, y:222, '$hazelcast': [y:333] ] ]
-        then:
-        session.getExecConfigProp( 'hazelcast', 'x', null ) == 123
-        session.getExecConfigProp( 'hazelcast', 'y', null ) == 333
-        session.getExecConfigProp( 'local', 'y', null ) == 222
-        session.getExecConfigProp( 'local', 'y', 'beta') == 222
-        session.getExecConfigProp( 'hazelcast', 'z', null ) ==  null
-        session.getExecConfigProp( 'hazelcast', 'z', 'alpha') == 'alpha'
-        session.getExecConfigProp( 'hazelcast', 'z', 'alpha', [NXF_EXECUTOR_Z:'hola']) == 'hola'
-        session.getExecConfigProp( 'hazelcast', 'p.q.z', null, [NXF_EXECUTOR_P_Q_Z:'hello']) == 'hello'
-    }
-
-
 
     def 'test add lib path'() {
 
@@ -246,7 +136,7 @@ class SessionTest extends Specification {
 
         when:
         session = [:] as Session
-        result = session.createObservers()
+        result = session.createObserversV2()
         then:
         result.size()==1
         result.any { it instanceof WorkflowStatsObserver }
@@ -254,39 +144,39 @@ class SessionTest extends Specification {
         when:
         session = [:] as Session
         session.config = [trace: [enabled: true, file:'name.txt']]
-        result = session.createObservers()
+        result = session.createObserversV2()
         observer = result[1] as TraceFileObserver
         then:
         result.size() == 2
-        observer.tracePath == Paths.get('name.txt').complete()
+        observer.tracePath == FileHelper.asPath('name.txt')
         observer.separator == '\t'
 
         when:
         session = [:] as Session
         session.config = [trace: [enabled: true, sep: 'x', fields: 'task_id,name,exit', file: 'alpha.txt']]
-        result = session.createObservers()
+        result = session.createObserversV2()
         observer = result[1] as TraceFileObserver
         then:
         result.size() == 2
-        observer.tracePath == Paths.get('alpha.txt').complete()
+        observer.tracePath == FileHelper.asPath('alpha.txt')
         observer.separator == 'x'
         observer.fields == ['task_id','name','exit']
 
         when:
         session = [:] as Session
         session.config = [trace: [sep: 'x', fields: 'task_id,name,exit']]
-        result = session.createObservers()
+        result = session.createObserversV2()
         then:
         !result.any { it instanceof TraceFileObserver }
 
         when:
         session = [:] as Session
         session.config = [trace: [enabled: true, fields: 'task_id,name,exit,vmem']]
-        result = session.createObservers()
+        result = session.createObserversV2()
         observer = result[1] as TraceFileObserver
         then:
         result.size() == 2
-        observer.tracePath == Paths.get('trace-20221001.txt').complete()
+        observer.tracePath == FileHelper.asPath('trace-20221001.txt')
         observer.separator == '\t'
         observer.fields == ['task_id','name','exit','vmem']
 
@@ -304,15 +194,16 @@ class SessionTest extends Specification {
         session.init(script)
 
         then:
-        session.binding != null 
+        session.binding != null
         session.baseDir == folder
         session.workDir.isAbsolute()
         !session.workDir.toString().contains('..')
         session.scriptName == 'pipeline.nf'
         session.classesDir.exists()
-        session.observers != null
+        session.observersV1 != null
+        session.observersV2 != null
         session.workflowMetadata != null
-        
+
         cleanup:
         session.classesDir?.deleteDir()
 
@@ -357,7 +248,7 @@ class SessionTest extends Specification {
         def session =  new Session([(ENGINE): CONFIG])
 
         expect:
-        session.containerConfig == new ContainerConfig(CONFIG + [engine:ENGINE])
+        session.containerConfig instanceof ContainerConfig
         session.containerConfig.enabled
         session.containerConfig.engine == ENGINE
 
@@ -367,7 +258,6 @@ class SessionTest extends Specification {
         'docker'       | [enabled: true, x:'alpha', y: 'beta', registry: 'd.reg']
         'podman'       | [enabled: true, x:'alpha', y: 'beta']
         'podman'       | [enabled: true, x:'alpha', y: 'beta', registry: 'd.reg']
-        'udocker'      | [enabled: true, x:'alpha', y: 'beta']
         'sarus'        | [enabled: true, x:'delta', y: 'gamma']
         'shifter'      | [enabled: true, x:'delta', y: 'gamma']
         'singularity'  | [enabled: true, x:'delta', y: 'gamma']
@@ -380,13 +270,13 @@ class SessionTest extends Specification {
         def session = new Session(config)
 
         expect:
-        session.getContainerConfig(null) == new ContainerConfig(engine:'docker', registry:'docker.io')
+        session.getContainerConfig(null) == new DockerConfig(registry:'docker.io')
         and:
-        session.getContainerConfig('docker') == new ContainerConfig(engine:'docker', registry:'docker.io')
+        session.getContainerConfig('docker') == new DockerConfig(registry:'docker.io')
         and:
-        session.getContainerConfig('podman') == new ContainerConfig(engine:'podman', registry:'quay.io')
+        session.getContainerConfig('podman') == new PodmanConfig(registry:'quay.io')
         and:
-        session.getContainerConfig('sarus') == new ContainerConfig(engine:'sarus')
+        session.getContainerConfig('sarus') == new SarusConfig([:])
     }
 
     @Unroll
@@ -395,7 +285,7 @@ class SessionTest extends Specification {
         def session =  Spy(new Session([conda: CONFIG]))
         expect:
         session.condaConfig.isEnabled() == EXPECTED
-        
+
         where:
         EXPECTED    | CONFIG            | ENV
         false       | [:]               | [:]
@@ -410,7 +300,7 @@ class SessionTest extends Specification {
         def session =  Spy(new Session([spack: CONFIG]))
         expect:
         session.spackConfig.isEnabled() == EXPECTED
-        
+
         where:
         EXPECTED    | CONFIG            | ENV
         false       | [:]               | [:]
@@ -427,59 +317,12 @@ class SessionTest extends Specification {
         when:
         def session = new Session([manifest: MAN])
         then:
-        session.manifest.with {
+        session.getManifest().with {
             author == 'pablo'
             nextflowVersion == '1.2.3'
             name == 'foo'
             description == null
         }
-    }
-
-    def 'should get config attribute' () {
-
-        given:
-        def session = Spy(Session)
-
-        when:
-        def result = session.getConfigAttribute('alpha', 'hello')
-        then:
-        result == 'hello'
-
-        when:
-        result = session.getConfigAttribute('delta', 'hello')
-        then:
-        session.getConfig() >> [delta: '1234']
-        result == '1234'
-
-        when:
-        result = session.getConfigAttribute('omega', 'hello')
-        then:
-        session.getSystemEnv() >> [NXF_OMEGA: '6789']
-        result == '6789'
-    }
-
-    def 'should get config nested attribute' () {
-
-        given:
-        def session = Spy(Session)
-
-        when:
-        def result = session.getConfigAttribute('alpha.beta.delta', 'hello')
-        then:
-        result == 'hello'
-
-        when:
-        result = session.getConfigAttribute('alpha.beta.gamma', 'hello')
-        then:
-        session.getConfig() >> [alpha: [beta: [gamma: 'abc']]]
-        result == 'abc'
-
-        when:
-        result = session.getConfigAttribute('alpha.beta.omega', 'hello')
-        then:
-        session.getSystemEnv() >> [NXF_ALPHA_BETA_OMEGA: 'OK']
-        result == 'OK'
-
     }
 
     @Unroll
@@ -493,7 +336,7 @@ class SessionTest extends Specification {
         session.checkValidProcessName(NAMES, SELECTOR, error)
         then:
         error[0] == MSG
-        
+
         where:
         SELECTOR    | NAMES         | MSG
         'foo'       | ['foo','bar'] | null
@@ -556,49 +399,6 @@ class SessionTest extends Specification {
         session.binding.setVariable('workflow',meta)
         then:
         session.fetchContainers() == 'ngi/rnaseq:1.2'
-    }
-
-
-    def 'should validate version'() {
-
-        given:
-        def manifest = Mock(Manifest)
-        def session = Spy(Session)
-
-        when:
-        session.checkVersion()
-        then:
-        session.getManifest() >> manifest
-        1 * session.getCurrentVersion() >> new VersionNumber('1.1')
-        1 * manifest.getNextflowVersion() >> '>= 1.0'
-        0 * session.showVersionWarning(_)
-
-        when:
-        session.checkVersion()
-        then:
-        session.getManifest() >> manifest
-        1 * session.getCurrentVersion() >> new VersionNumber('1.1')
-        1 * manifest.getNextflowVersion() >> '>= 1.2'
-        1 * session.showVersionWarning('>= 1.2')
-
-        when:
-        session.checkVersion()
-        then:
-        session.getManifest() >> manifest
-        1 * session.getCurrentVersion() >> new VersionNumber('1.1')
-        1 * manifest.getNextflowVersion() >> '! >= 1.2'
-        1 * session.showVersionError('>= 1.2')
-        thrown(AbortOperationException)
-
-        when:
-        session.checkVersion()
-        then:
-        session.getManifest() >> manifest
-        1 * manifest.getNextflowVersion() >> null
-        0 * session.getCurrentVersion() >> null
-        0 * session.showVersionWarning(_)
-        0 * session.showVersionError(_)
-
     }
 
     @Unroll

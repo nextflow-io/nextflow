@@ -119,7 +119,7 @@ nxf_write_trace() {
         "syscr=${io_stat1[2]}" \
         "syscw=${io_stat1[3]}" \
         "read_bytes=${io_stat1[4]}" \
-        "write_bytes=${io_stat1[5]}" > "$trace_file" || >&2 echo "Error: Failed to write to file: $trace_file"
+        "write_bytes=${io_stat1[5]}" >| "$trace_file" || >&2 echo "Error: Failed to write to file: $trace_file"
 }
 
 nxf_trace_mac() {
@@ -185,7 +185,7 @@ nxf_trace_linux() {
         "syscr=${io_stat1[2]}" \
         "syscw=${io_stat1[3]}" \
         "read_bytes=${io_stat1[4]}" \
-        "write_bytes=${io_stat1[5]}" > "$trace_file" || >&2 echo "Error: Failed to write to file: $trace_file"
+        "write_bytes=${io_stat1[5]}" >| "$trace_file" || >&2 echo "Error: Failed to write to file: $trace_file"
 
     [ -e /proc/$mem_proc ] && eval "echo 'DONE' >&$mem_fd" || true
     wait $mem_proc 2>/dev/null || true
@@ -261,7 +261,10 @@ nxf_fs_move() {
 }
 
 nxf_fs_rsync() {
-  rsync -rRl $1 $2
+  local source=$1
+  local target=$2
+  mkdir -p $target
+  rsync -rRl $source $target
 }
 
 nxf_fs_rclone() {

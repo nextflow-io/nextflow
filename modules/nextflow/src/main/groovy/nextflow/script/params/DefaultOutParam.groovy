@@ -18,7 +18,7 @@ package nextflow.script.params
 
 
 import groovyx.gpars.dataflow.DataflowQueue
-import nextflow.script.ProcessConfig
+import nextflow.script.ProcessConfigV1
 /**
  * Model a process default output parameter
  *
@@ -28,7 +28,7 @@ final class DefaultOutParam extends BaseOutParam {
 
     static enum Completion { DONE }
 
-    DefaultOutParam(ProcessConfig config ) {
+    DefaultOutParam(ProcessConfigV1 config ) {
         super(config)
         bind('-')
         setInto(new DataflowQueue())

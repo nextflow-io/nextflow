@@ -17,16 +17,15 @@
 package nextflow.script
 
 import groovyx.gpars.dataflow.DataflowVariable
-import nextflow.config.ConfigParser
-import nextflow.exception.AbortRunException
-import nextflow.exception.ProcessUnrecoverableException
+import nextflow.exception.ScriptCompilationException
+import nextflow.extension.Bolts
 import nextflow.processor.TaskProcessor
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import spock.lang.Timeout
 import test.Dsl2Spec
-import test.MockScriptRunner
-import test.MockSession
+
+import static test.ScriptHelper.*
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -51,19 +50,15 @@ class ScriptRunnerTest extends Dsl2Spec {
               script:
                 "echo Hello world"
             }
-            
+
             workflow {
-              main: sayHello()
-              emit: sayHello.out
+              sayHello()
             }
             """
 
         when:
-        def result = new MockScriptRunner(config)
-                .setScript(script)
-                .execute()
+        def result = runScript(script, config)
 
-        // when no outputs are specified, the 'stdout' is the default output
         then:
         result instanceof DataflowVariable
         result.val == "echo Hello world"
@@ -83,22 +78,20 @@ class ScriptRunnerTest extends Dsl2Spec {
             '''
             process simpleTask  {
                 input:
-                val x 
+                val x
                 output:
-                stdout 
+                stdout
 
+                script:
                 """echo $x"""
             }
 
             workflow {
-              main: simpleTask(1)
-              emit: simpleTask.out
+                simpleTask(1)
             }
             '''
         when:
-        new MockScriptRunner(config)
-                .setScript(script)
-                .execute()
+        runScript(script, config)
         def processor = TaskProcessor.currentProcessor()
         then:
         processor.name == 'simpleTask'
@@ -117,17 +110,17 @@ class ScriptRunnerTest extends Dsl2Spec {
                 output:
                 stdout
 
+                script:
                 """echo $x - $y"""
             }
 
             workflow {
-              main: simpleTask(1, channel.of(3))
-              emit: simpleTask.out
+                simpleTask(1, channel.of(3))
             }
             '''
 
         when:
-        def result = new MockScriptRunner().setScript(script).execute()
+        def result = runScript(script)
 
         then:
         result.val == 'echo 1 - 3'
@@ -142,25 +135,24 @@ class ScriptRunnerTest extends Dsl2Spec {
             '''
             process simpleTask  {
                 input:
-                val x 
+                val x
                 output:
                 stdout
 
+                script:
                 "echo $x"
             }
-            
+
             workflow {
-              main: simpleTask(1)
-              emit: simpleTask.out
+                simpleTask(1)
             }
             '''
 
         when:
-        def runner = new MockScriptRunner().setScript(script)
-        runner.execute()
+        def result = runScript(script)
 
         then:
-        runner.result.val == 'echo 1'
+        result.val == 'echo 1'
         TaskProcessor.currentProcessor().name == 'simpleTask'
 
     }
@@ -170,26 +162,24 @@ class ScriptRunnerTest extends Dsl2Spec {
 
         given:
         def script = '''
-            X = 1
-            Y = 200
             process simpleTask {
                 input:
+                val X
                 val Y
                 output:
                 stdout
 
+                script:
                 "$X-$Y-3"
             }
 
             workflow {
-              main: simpleTask(2)
-              emit: simpleTask.out
+                simpleTask(1, 2)
             }
             '''
 
         when:
-        def runner = new MockScriptRunner().setScript(script)
-        def result = runner.execute()
+        def result = runScript(script)
         then:
         result.val == '1-2-3'
 
@@ -199,27 +189,25 @@ class ScriptRunnerTest extends Dsl2Spec {
 
         given:
         def script = '''
-            X = 1
-            Y = 200
             process simpleTask {
                 input:
+                val X
                 val Y
                 output:
                 stdout
+
                 script:
                 def Z = 3
                 "$X-$Y-$Z"
             }
 
             workflow {
-              main: simpleTask(2)
-              emit: simpleTask.out
+                simpleTask(1, 2)
             }
             '''
 
         when:
-        def runner = new MockScriptRunner().setScript(script)
-        def result = runner.execute()
+        def result = runScript(script)
         then:
         result.val == '1-2-3'
 
@@ -239,40 +227,12 @@ class ScriptRunnerTest extends Dsl2Spec {
 
         when:
         def config = [process:[executor: 'nope']]
-        def runner = new MockScriptRunner(config)
-        runner.setScript(script) .execute()
+        runScript(script, config)
 
         then:
-        thrown(AbortRunException)
+        def e = thrown(ScriptCompilationException)
         and:
-        runner.session.fault.error instanceof ProcessUnrecoverableException
-        runner.session.fault.error.cause instanceof MissingPropertyException
-        runner.session.fault.error.cause.message =~ /Unknown variable 'HELLO' -- .*/
-        // if this fails, likely there's something wrong in the LoggerHelper#getErrorLine method
-        runner.session.fault.report =~ /No such variable: HELLO -- .*/
-
-    }
-
-
-    def 'test process fallback variable' () {
-        given:
-        def script = '''
-            process simpleTask {
-                output: val(x)
-                exec:
-                x = "$HELLO"
-            }
-
-            workflow { 
-              main: simpleTask()
-              emit: simpleTask.out
-            }
-            '''
-        and:
-        def config = [executor: 'nope', env: [HELLO: 'Hello world!']]
-
-        expect:
-        new MockScriptRunner(config).setScript(script).execute().val == 'Hello world!'
+        e.cause.message.contains '`HELLO` is not defined'
 
     }
 
@@ -280,27 +240,28 @@ class ScriptRunnerTest extends Dsl2Spec {
     def 'test process output file' () {
         given:
         def script = '''
-            X = file('filename')
-
             process simpleTask {
                 input:
                 file X
                 output:
                 stdout
 
+                script:
                 "cat $X"
             }
 
-            workflow { 
-                main: simpleTask(X)
-                emit: simpleTask.out 
+            workflow {
+                X = file('filename')
+                simpleTask(X)
             }
             '''
         and:
-        def config = [executor: 'nope']
+        def config = [process: [executor: 'nope']]
 
-        expect:
-        new MockScriptRunner(config).setScript(script).execute().val == 'cat filename'
+        when:
+        def result = runScript(script, config)
+        then:
+        result.val == 'cat filename'
 
     }
 
@@ -308,36 +269,33 @@ class ScriptRunnerTest extends Dsl2Spec {
     def 'test process name options' ( ) {
 
         given:
-        // -- this represent the configuration file
-        def config = '''
-            executor = 'nope'
+        def config = loadConfig('''
             process {
+                executor = 'nope'
                 memory = '333'
                 withName: hola { cpus = '222'; time = '555' }
                 withName: ciao { cpus = '999' }
             }
-            '''
+            ''')
 
         def script = '''
             process hola {
               penv 1
               cpus 2
 
+              script:
               'echo hola'
             }
-            
+
             workflow { hola() }
             '''
 
-        and:
-        def session = new MockSession(new ConfigParser().parse(config))
-
         when:
-        new MockScriptRunner(session).setScript(script).execute()
+        runScript(script, config)
         def process = TaskProcessor.currentProcessor()
 
         then:
-        TaskProcessor.currentProcessor().config instanceof ProcessConfig
+        process.config instanceof ProcessConfig
         process.config.penv == 1
         process.config.cpus == '222'  // !! this value is overridden by the one in the config file
         process.config.memory == '333'
@@ -348,11 +306,9 @@ class ScriptRunnerTest extends Dsl2Spec {
     def 'test process name options 2'( ) {
 
         given:
-        // -- this represent the configuration file
-        def config = '''
-            executor = 'nope'
-
+        def config = loadConfig('''
             process {
+                executor = 'nope'
                 memory = '333'
 
                 withName: hola {
@@ -364,24 +320,22 @@ class ScriptRunnerTest extends Dsl2Spec {
                     cpus = '999'
                 }
             }
-            '''
+            ''')
 
         def script = '''
             process hola {
               penv 1
               cpus 2
 
+              script:
               'echo hola'
             }
-            
+
             workflow { hola() }
             '''
 
-        and:
-        def session = new MockSession(new ConfigParser().parse(config))
-
         when:
-        new MockScriptRunner(session).setScript(script).execute()
+        runScript(script, config)
         def process = TaskProcessor.currentProcessor()
 
         then:
@@ -396,27 +350,25 @@ class ScriptRunnerTest extends Dsl2Spec {
     def 'test module config'() {
 
         given:
-        // -- this represent the configuration file
-        def config = '''
-            executor = 'nope'
+        def config = loadConfig('''
+            process.executor = 'nope'
             process.module = 'a/1'
-            '''
+            ''')
 
         def script = '''
             process hola {
               module 'b/2'
               module 'c/3'
 
+              script:
               'echo 1'
             }
-            
-            workflow { hola() }               
+
+            workflow { hola() }
             '''
-        and:
-        def session = new MockSession(new ConfigParser().parse(config))
 
         when:
-        new MockScriptRunner(session).setScript(script).execute()
+        runScript(script, config)
         def process = TaskProcessor.currentProcessor()
 
         then:
@@ -431,30 +383,28 @@ class ScriptRunnerTest extends Dsl2Spec {
         /*
          * the module defined in the config file 'b/2' has priority and overrides the 'a/1' and 'c/3'
          */
-        def config = '''
-            executor = 'nope'
+        def config = loadConfig('''
             process {
+                executor = 'nope'
                 module = 'a/1'
                 withName: hola { module = 'b/2:z/9' }
             }
-            '''
+            ''')
 
         def script = '''
             process hola {
               module 'c/3'
               module 'd/4'
 
+              script:
               'echo 1'
             }
-            
+
             workflow { hola() }
             '''
 
-        and:
-        def session = new MockSession(new ConfigParser().parse(config))
-
         when:
-        new MockScriptRunner(session).setScript(script).execute()
+        runScript(script, config)
         def process = TaskProcessor.currentProcessor()
 
         then:
@@ -469,23 +419,21 @@ class ScriptRunnerTest extends Dsl2Spec {
         /*
          * the module defined in the config file 'b/2' has priority and overrides the 'a/1' and 'c/3'
          */
-        def config = '''
-            executor = 'nope'
+        def config = loadConfig('''
+            process.executor = 'nope'
             process.module = 'a/1'
-            '''
+            ''')
 
         def script = '''
             process hola {
               'echo 1'
             }
-            
+
             workflow { hola() }
             '''
-        and:
-        def session = new MockSession(new ConfigParser().parse(config))
 
         when:
-        new MockScriptRunner(session).setScript(script).execute()
+        runScript(script, config)
         def process = TaskProcessor.currentProcessor()
 
         then:
@@ -499,21 +447,21 @@ class ScriptRunnerTest extends Dsl2Spec {
 
     def 'test resource'() {
         given:
-        // -- this represent the configuration file
-        def config = '''
-            executor = 'nope'
+        def config = loadConfig('''
             process {
+              executor = 'nope'
               queue = 'short'
               cpus  = 2
               time  = '6 hour'
               penv  = 'mpi'
               memory = '10G'
             }
-            '''
+            ''')
 
         def script = '''
             process hola {
               output: stdout
+              script:
               """
               queue: ${task.queue}
               cpus: ${task.cpus}
@@ -523,19 +471,14 @@ class ScriptRunnerTest extends Dsl2Spec {
               memory: ${task.memory}
               """
             }
-            
-            workflow { 
-              main: hola() 
-              emit: hola.out
+
+            workflow {
+              hola()
             }
             '''
-        and:
-        def session = new MockSession(new ConfigParser().parse(config))
 
         when:
-        def result = new MockScriptRunner(session)
-                .setScript(script)
-                .execute()
+        def result = runScript(script, config)
                 .getVal()
                 .toString()
                 .stripIndent()
@@ -568,14 +511,14 @@ class ScriptRunnerTest extends Dsl2Spec {
         def script = '''
             process hola {
               output: stdout
+              script:
               """
               cpus: ${task.cpus}
               """
             }
-            
-            workflow { 
-              main: hola()
-              emit: hola.out 
+
+            workflow {
+              hola()
             }
             '''
 
@@ -583,9 +526,7 @@ class ScriptRunnerTest extends Dsl2Spec {
         def config = [process: [executor:'nope']]
 
         when:
-        def result = new MockScriptRunner(config)
-                .setScript(script)
-                .execute()
+        def result = runScript(script, config)
                 .getVal()
                 .toString()
                 .stripIndent()
@@ -605,20 +546,20 @@ class ScriptRunnerTest extends Dsl2Spec {
 
     def 'should parse mem and duration units' () {
         given:
-        def script = '''  
-            def result = [:] 
+        def script = '''
+            def result = [:]
             result.mem1 = 1.GB
             result.mem2 = 1_000_000.toMemory()
             result.mem3 = MemoryUnit.of(2_000)
             result.time1 = 2.hours
             result.time2 = 60_000.toDuration()
             result.time3 = Duration.of(120_000)
-            result.flag = 10000 < 1.GB 
+            result.flag = 10000 < 1.GB
             result // return result object
            '''
 
         when:
-        def result = new MockScriptRunner().setScript(script).execute()
+        def result = runScript(script)
         then:
         result.mem1 instanceof MemoryUnit
         result.mem1 == MemoryUnit.of('1 GB')
@@ -635,23 +576,25 @@ class ScriptRunnerTest extends Dsl2Spec {
 
         given:
         def script = '''
-            X = 10
             process taskHello {
                 maxRetries -1
                 maxErrors -X
+                input:
+                val X
+                script:
                 'echo hello'
             }
-            
-            workflow { taskHello() }
+
+            workflow { taskHello(10) }
             '''
 
         when:
-        def result = new MockScriptRunner().setScript(script).execute()
+        def result = runScript(script)
         def processor = TaskProcessor.currentProcessor()
 
         then:
         processor.config.maxRetries == -1
-        processor.config.maxErrors == -10
+        Bolts.resolveLazy([X: 10], processor.config.maxErrors) == -10
 
     }
 
@@ -662,109 +605,31 @@ class ScriptRunnerTest extends Dsl2Spec {
         /*
          * the module defined in the config file 'b/2' has priority and overrides the 'a/1' and 'c/3'
          */
-        def config = '''
-            executor = 'nope'
+        def config = loadConfig('''
+            process.executor = 'nope'
             stubRun = true
-            '''
+            ''')
 
         def script = '''
             process hola {
                 output:
-                  stdout
-                stub:
-                 /echo foo/
+                stdout
+
                 script:
-                  /echo bar/
-            }
-            
-            workflow { 
-              main: hola() 
-              emit: hola.out 
-            }
-            '''
+                /echo bar/
 
-        and:
-        def session = new MockSession(new ConfigParser().parse(config))
-
-        when:
-        def result = new MockScriptRunner(session).setScript(script).execute()
-
-        // when no outputs are specified, the 'stdout' is the default output
-        then:
-        result instanceof DataflowVariable
-        result.val == "echo foo"
-
-    }
-
-    def 'test stub after script'() {
-
-        given:
-        /*
-         * the module defined in the config file 'b/2' has priority and overrides the 'a/1' and 'c/3'
-         */
-        def config = '''
-            executor = 'nope'
-            stubRun = true
-            '''
-
-        def script = '''
-            process hola {
-                output:
-                  stdout
-                script:
-                  /echo bar/
                 stub:
-                 /echo foo/
+                /echo foo/
             }
-            
-            workflow { main: hola(); emit: hola.out }
-            '''
 
-        and:
-        def session = new MockSession(new ConfigParser().parse(config))
+            workflow {
+                hola()
+            }
+            '''
 
         when:
-        def result = new MockScriptRunner(session).setScript(script).execute()
+        def result = runScript(script, config)
 
-        // when no outputs are specified, the 'stdout' is the default output
-        then:
-        result instanceof DataflowVariable
-        result.val == "echo foo"
-
-    }
-
-    def 'test stub only script'() {
-
-        given:
-        /*
-         * the module defined in the config file 'b/2' has priority and overrides the 'a/1' and 'c/3'
-         */
-        def config = '''
-            executor = 'nope'
-            stubRun = true
-            '''
-
-        def script = '''
-            process hola {
-                output:
-                 stdout
-                stub:
-                 /echo foo/
-            }
-            
-            workflow { 
-              main: hola() 
-              emit: hola.out 
-            }
-            '''
-
-        and:
-        def session = new MockSession(new ConfigParser().parse(config))
-
-        when:
-        def result = new MockScriptRunner(session).setScript(script).execute()
-
-        // when no outputs are specified, the 'stdout' is the default output
         then:
         result instanceof DataflowVariable
         result.val == "echo foo"

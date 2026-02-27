@@ -19,6 +19,9 @@ package io.seqera.wave.plugin.config
 
 import groovy.transform.CompileStatic
 import groovy.transform.ToString
+import nextflow.config.spec.ConfigOption
+import nextflow.config.spec.ConfigScope
+import nextflow.script.dsl.Description
 import nextflow.util.Duration
 import nextflow.util.RateUnit
 
@@ -29,10 +32,18 @@ import nextflow.util.RateUnit
  */
 @ToString(includeNames = true, includePackage = false)
 @CompileStatic
-class HttpOpts {
+class HttpOpts implements ConfigScope {
 
+    @ConfigOption
+    @Description("""
+        The connection timeout for the Wave HTTP client (default: `30s`).
+    """)
     final private Duration connectTimeout
 
+    @ConfigOption
+    @Description("""
+        The maximum request rate for the Wave HTTP client (default: `1/sec`).
+    """)
     final private RateUnit maxRate
 
     HttpOpts(Map opts) {

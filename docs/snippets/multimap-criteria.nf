@@ -3,8 +3,8 @@ def criteria = multiMapCriteria { v ->
     large: [v, v > 10]
 }
 
-Channel.of(1, 2, 30).multiMap(criteria).set { ch1 }
-Channel.of(10, 20, 1).multiMap(criteria).set { ch2 }
+channel.of(1, 2, 30).multiMap(criteria).set { ch1 }
+channel.of(10, 20, 1).multiMap(criteria).set { ch2 }
 
 ch1.small.view { v, is_small -> "ch1: $v is small: $is_small" }
 ch1.large.view { v, is_large -> "ch1: $v is large: $is_large" }

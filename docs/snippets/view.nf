@@ -1,1 +1,1 @@
-Channel.of(1, 2, 3).view()
+channel.of(1, 2, 3).view()

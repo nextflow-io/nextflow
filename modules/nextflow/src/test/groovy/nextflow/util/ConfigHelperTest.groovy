@@ -22,27 +22,11 @@ import java.nio.file.Paths
 import nextflow.config.ConfigClosurePlaceholder
 import spock.lang.Specification
 import spock.lang.Unroll
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class ConfigHelperTest extends Specification {
-
-    @Unroll
-    def "get config property" () {
-
-        expect:
-        ConfigHelper.getConfigProperty(config, execName, 'foo') == value
-
-        where:
-        config               | execName | value
-        [foo: 0]             | null     | 0
-        [foo: 100]           | null     | 100
-        [foo: 'bar']         | null     | 'bar'
-        [$sge: [foo: 'bar']] | 'sge'    | 'bar'
-
-    }
 
     @Unroll
     def "should parse string value: #str" () {
@@ -367,7 +351,6 @@ class ConfigHelperTest extends Specification {
         "withName:foo"      | "'withName:foo'"      | "withName:foo"
         "withName:2foo"     | "'withName:2foo'"     | "withName:'2foo'"
     }
-
 
 
 }

@@ -1,14 +1,14 @@
 package nextflow.extension
 
-import spock.lang.Specification
-
 import java.util.concurrent.TimeUnit
 
 import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Channel
-import nextflow.NextflowMeta
+import spock.lang.Specification
+
+import static test.ScriptHelper.runDataflow
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -18,29 +18,13 @@ class CHTest extends Specification {
     def 'should create dataflow variable or queue' () {
 
         expect:
-        CH.create() instanceof DataflowQueue
-        CH.create(false) instanceof DataflowQueue
-        CH.create(true) instanceof DataflowVariable
-
-        CH.createBy(new DataflowVariable()) instanceof DataflowVariable
-        CH.createBy(new DataflowQueue()) instanceof DataflowQueue
-
-
-        when:
-        NextflowMeta.instance.enableDsl2()
-        then:
         CH.create() instanceof DataflowBroadcast
         CH.create(false) instanceof DataflowBroadcast
         CH.create(true) instanceof DataflowVariable
 
         CH.createBy(new DataflowVariable()) instanceof DataflowVariable
         CH.createBy(new DataflowQueue()) instanceof DataflowBroadcast
-
-        cleanup:
-        NextflowMeta.instance.disableDsl2()
-
     }
-
 
     def 'should check queue channel' () {
         expect:
@@ -67,7 +51,9 @@ class CHTest extends Specification {
         !v1.isBound()
 
         when:
-        def v2 = CH.value('hello')
+        def v2 = runDataflow {
+            CH.value('hello')
+        }
         then:
         v2 instanceof DataflowVariable
         v2.val == 'hello'
@@ -77,7 +63,9 @@ class CHTest extends Specification {
         given:
         def ch = new DataflowQueue()
         when:
-        CH.emit(ch, 'hello')
+        runDataflow {
+            CH.emit(ch, 'hello')
+        }
         then:
         ch.val == 'hello'
     }
@@ -86,7 +74,9 @@ class CHTest extends Specification {
         given:
         def ch = new DataflowQueue()
         when:
-        CH.emitValues(ch, [1, 2, 3])
+        runDataflow {
+            CH.emitValues(ch, [1, 2, 3])
+        }
         then:
         ch.val == 1
         ch.val == 2
@@ -107,8 +97,12 @@ class CHTest extends Specification {
     }
 
     def 'should create dataflow queue w/o stop' () {
+        given:
+        def ch = CH.queue()
         when:
-        def ch = CH.emitValues(CH.queue(), [1,2,3])
+        runDataflow {
+            CH.emitValues(ch, [1,2,3])
+        }
         then:
         ch instanceof DataflowQueue
         ch.val == 1
@@ -119,8 +113,12 @@ class CHTest extends Specification {
     }
 
     def 'should create dataflow queue with stop' () {
+        given:
+        def ch = CH.queue()
         when:
-        def ch = CH.emitAndClose(CH.queue(), [1,2,3])
+        runDataflow {
+            CH.emitAndClose(ch, [1,2,3])
+        }
         then:
         ch instanceof DataflowQueue
         ch.val == 1

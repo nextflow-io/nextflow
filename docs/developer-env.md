@@ -9,7 +9,7 @@ Setting up a Nextflow development environment is a prerequisite for creating, te
 - {ref}`devenv-vscode`: A versatile code editor that enhances your Nextflow development with features like syntax highlighting and debugging.
 - {ref}`devenv-extensions`: The VS Code marketplace offers a variety of extensions to enhance development. The {ref}`Nextflow extension <devenv-nextflow>` is specifically designed to enhance Nextflow development with diagnostics, hover hints, code navigation, code completion, and more.
 - {ref}`devenv-docker`: A containerization platform that ensures your Nextflow workflows run consistently across different environments by packaging dependencies into isolated containers.
-- {ref}`devenv-git`: A version control system that helps manage and track changes in your Nextflow projects, making collaboration, and code management more efficient.
+- {ref}`devenv-git`: A version control system that helps manage and track changes in your Nextflow projects, making collaboration and code management more efficient.
 
 The sections below outline the steps for setting up these tools.
 
@@ -37,7 +37,7 @@ To install VS Code on Windows:
 
 1. Visit the [VS Code](https://code.visualstudio.com/download) website.
 1. Download VS Code for Windows.
-1. Double-click the installer executable (`.exe`) file and follow the set up steps.
+1. Double-click the installer executable (`.exe`) file and follow the setup steps.
 
 ```
 
@@ -96,9 +96,9 @@ See {ref}`vscode-page` for more information about the Nextflow extension feature
 
 **nf-core**
 
-The [nf-core extension pack](https://marketplace.visualstudio.com/items?itemName=nf-core.nf-core-extensionpack) adds a selection of tools that help develop with nf-core, a community effort to collect a curated set of analysis pipelines built using Nextflow.
+[nf-core](https://nf-co.re/) is a community effort to collect a curated set of analysis pipelines built using Nextflow. The [nf-core extension pack](https://marketplace.visualstudio.com/items?itemName=nf-core.nf-core-extensionpack) adds a selection of tools that support development. For example, it includes [Code Spell Checker](https://marketplace.visualstudio.com/items?itemName=streetsidesoftware.code-spell-checker), [Prettier](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode), [Todo Tree](https://marketplace.visualstudio.com/items?itemName=Gruntfuggly.todo-tree), and [Markdown Extended](https://marketplace.visualstudio.com/items?itemName=jebbs.markdown-extended).
 
-The nf-core extension pack includes several useful extensions. For example, [Code Spell Checker](https://marketplace.visualstudio.com/items?itemName=streetsidesoftware.code-spell-checker), [Prettier](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode), [Todo Tree](https://marketplace.visualstudio.com/items?itemName=Gruntfuggly.todo-tree), and [Markdown Extended](https://marketplace.visualstudio.com/items?itemName=jebbs.markdown-extended). See [nf-core extension pack](https://marketplace.visualstudio.com/items?itemName=nf-core.nf-core-extensionpack) for more information about the tools included in the nf-core extension pack.
+See the [nf-core extension pack](https://marketplace.visualstudio.com/items?itemName=nf-core.nf-core-extensionpack) for more information about the included tools.
 
 (devenv-remote)=
 
@@ -243,7 +243,7 @@ Nextflow supports multiple container technologies (e.g., Singularity and Podman)
 
 Git provides powerful version control that helps track code changes. Git operates locally, meaning you don't need an internet connection to track changes, but it can also be used with remote platforms like GitHub, GitLab, or Bitbucket for collaborative development.
 
-Nextflow seamlessly integrates with Git for source code management providers for managing pipelines as version-controlled Git repositories.
+Nextflow seamlessly integrates with Git for source code management providers to manage pipelines as version-controlled Git repositories.
 
 ````{tabs}
 
