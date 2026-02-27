@@ -21,7 +21,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.seqera.config.SeqeraConfig
 import io.seqera.config.ExecutorOpts
-import io.seqera.util.MapperUtil
+import io.seqera.util.SchemaMapperUtil
 import io.seqera.sched.api.schema.v1a1.CreateRunRequest
 import io.seqera.sched.api.schema.v1a1.PredictionModel
 import io.seqera.sched.client.SchedClient
@@ -109,7 +109,7 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
         final request = new CreateRunRequest()
                 .region(seqeraConfig.region)
                 .name(session.runName)
-                .machineRequirement(MapperUtil.toMachineRequirement(seqeraConfig.machineRequirement))
+                .machineRequirement(SchemaMapperUtil.toMachineRequirement(seqeraConfig.machineRequirement))
                 .labels(labels.entries)
                 .workspaceId(PlatformHelper.getWorkspaceId(towerConfig, SysEnv.get()) as Long)
                 .workflowId(workflowId)

@@ -31,7 +31,7 @@ import io.seqera.sched.api.schema.v1a1.Task
 import io.seqera.sched.api.schema.v1a1.TaskState as SchedTaskState
 import io.seqera.sched.api.schema.v1a1.TaskStatus as SchedTaskStatus
 import io.seqera.sched.client.SchedClient
-import io.seqera.util.MapperUtil
+import io.seqera.util.SchemaMapperUtil
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessUnrecoverableException
@@ -114,7 +114,7 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
                 resourceReq.acceleratorName(accelerator.type)
         }
         // build machine requirement merging config settings with task arch, disk, and snapshot settings
-        final machineReq = MapperUtil.toMachineRequirement(
+        final machineReq = SchemaMapperUtil.toMachineRequirement(
             executor.getSeqeraConfig().machineRequirement,
             task.getContainerPlatform(),
             task.config.getDisk(),
@@ -316,7 +316,7 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
             machineInfo = new CloudMachineInfo(
                 type: lastInfo.getType(),
                 zone: lastInfo.getZone(),
-                priceModel: MapperUtil.toPriceModel(lastInfo.getPriceModel())
+                priceModel: SchemaMapperUtil.toPriceModel(lastInfo.getPriceModel())
             )
             log.trace "[SEQERA] taskId=$taskId => machineInfo=$machineInfo"
             return machineInfo

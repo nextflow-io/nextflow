@@ -35,7 +35,7 @@ import nextflow.util.MemoryUnit
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-class MapperUtil {
+class SchemaMapperUtil {
 
     /** Default EBS volume type - gp3 provides good balance of price and performance */
     static final String DEFAULT_DISK_TYPE = 'ebs/gp3'
