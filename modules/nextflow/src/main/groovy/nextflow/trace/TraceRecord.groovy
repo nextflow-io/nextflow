@@ -124,6 +124,7 @@ class TraceRecord implements Serializable {
     transient private CloudMachineInfo machineInfo
     transient private ContainerMeta containerMeta
     transient private Integer numSpotInterruptions
+    transient private String logStreamId
 
     /**
      * Convert the given value to a string
@@ -620,6 +621,14 @@ class TraceRecord implements Serializable {
 
     void setNumSpotInterruptions(Integer numSpotInterruptions) {
         this.numSpotInterruptions = numSpotInterruptions
+    }
+
+    String getLogStreamId() {
+        return logStreamId
+    }
+
+    void setLogStreamId(String logStreamId) {
+        this.logStreamId = logStreamId
     }
 
     ContainerMeta getContainerMeta() {

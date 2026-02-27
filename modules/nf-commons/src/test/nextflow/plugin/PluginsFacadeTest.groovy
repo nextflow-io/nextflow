@@ -90,6 +90,7 @@ class PluginsFacadeTest extends Specification {
                 'nf-amazon': new PluginRef('nf-amazon', '0.1.0'),
                 'nf-cloudcache': new PluginRef('nf-cloudcache', '0.1.0'),
                 'nf-google': new PluginRef('nf-google', '0.1.0'),
+                'nf-seqera': new PluginRef('nf-seqera', '0.1.0'),
                 'nf-tower': new PluginRef('nf-tower', '0.1.0'),
                 'nf-wave': new PluginRef('nf-wave', '0.1.0')
         ])
@@ -173,6 +174,13 @@ class PluginsFacadeTest extends Specification {
         result = handler.pluginsRequirement([cloudcache:[enabled:true]])
         then:
         result == [ new PluginRef('nf-cloudcache', '0.1.0') ]
+
+        // seqera executor requires nf-seqera plugin
+        when:
+        handler = new PluginsFacade(defaultPlugins: defaults, env: [:])
+        result = handler.pluginsRequirement([process:[executor:'seqera']])
+        then:
+        result == [ new PluginRef('nf-seqera', '0.1.0') ]
 
     }
 

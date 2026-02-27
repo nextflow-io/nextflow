@@ -30,6 +30,7 @@ import nextflow.cloud.types.PriceModel
 import nextflow.container.DockerConfig
 import nextflow.container.resolver.ContainerMeta
 import nextflow.exception.AbortOperationException
+import nextflow.script.PlatformMetadata
 import nextflow.script.ScriptBinding
 import nextflow.script.WorkflowMetadata
 import nextflow.trace.TraceRecord
@@ -378,9 +379,11 @@ class TowerClientTest extends Specification {
     def 'should post create request' () {
         given:
         def uuid = UUID.randomUUID()
+        def platform = new PlatformMetadata()
         def meta = Mock(WorkflowMetadata) {
             getProjectName() >> 'the-project-name'
             getRepository() >> 'git://repo.com/foo'
+            getPlatform() >> platform
         }
         def session = Mock(Session) {
             getUniqueId() >> uuid
@@ -396,14 +399,41 @@ class TowerClientTest extends Specification {
         then:
         1 * client.getAccessToken() >> 'secret'
         1 * client.makeCreateReq(session) >> [runName: 'foo']
-        1 * client.sendHttpMessage('https://api.cloud.seqera.io/trace/create', [runName: 'foo'], 'POST') >> new TowerClient.Response(200, '{"workflowId":"xyz123"}')
+        1 * client.sendHttpMessage('https://api.cloud.seqera.io/trace/create', [runName: 'foo'], 'POST') >> new TowerClient.Response(200, '{"workflowId":"xyz123","watchUrl":"https://cloud.seqera.io/watch/xyz123"}')
         and:
         client.runName == 'foo_bar'
         client.runId == uuid.toString()
         and:
         client.workflowId == 'xyz123'
+        client.@watchUrl == 'https://cloud.seqera.io/watch/xyz123'
         !client.towerLaunch
+        and:
+        platform.workflowId == 'xyz123'
+        platform.workflowUrl == 'https://cloud.seqera.io/watch/xyz123'
 
+    }
+
+    def 'should set workflowUrl on platform metadata during onFlowBegin' () {
+        given:
+        def platform = new PlatformMetadata()
+        def meta = Mock(WorkflowMetadata) {
+            getPlatform() >> platform
+        }
+        def session = Mock(Session) {
+            getWorkflowMetadata() >> meta
+        }
+        def config = new TowerConfig([:], [:])
+        def client = Spy(new TowerClient(session, config))
+        client.@workflowId = 'abc123'
+
+        when:
+        client.onFlowBegin()
+        then:
+        1 * client.makeBeginReq(session) >> [foo: 'bar']
+        1 * client.sendHttpMessage(_, [foo: 'bar'], 'PUT') >> new TowerClient.Response(200, '{"watchUrl":"https://cloud.seqera.io/watch/abc123"}')
+        and:
+        client.@watchUrl == 'https://cloud.seqera.io/watch/abc123'
+        platform.workflowUrl == 'https://cloud.seqera.io/watch/abc123'
     }
 
     def 'should get trace endpoint' () {
