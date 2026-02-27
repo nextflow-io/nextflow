@@ -1305,10 +1305,11 @@ The `module` command provides a comprehensive system for managing reusable, regi
 
 (cli-module-publish)=
 
-`publish [options] [scope/name]`
+`publish [options] [scope/name | path]`
 
 : Publish a module to the registry, making it available for others to install.
-: Requires authentication via `NXF_REGISTRY_TOKEN` environment variable or `registry.auth` configuration.
+: The argument can be either a `scope/name` reference (for an already-installed module) or a local directory path containing the module files.
+: Requires authentication via `NXF_REGISTRY_TOKEN` environment variable or `registry.apiKey` configuration.
 : The module directory must contain `main.nf`, `meta.yaml`, and `README.md`.
 : The following options are available:
 

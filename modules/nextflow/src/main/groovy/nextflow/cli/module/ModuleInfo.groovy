@@ -85,7 +85,7 @@ class ModuleInfo extends CmdBase {
             .setOptions(launcher.options)
             .setBaseDir(baseDir)
             .build()
-        final registryConfig = config.navigate('registry') as RegistryConfig
+        final registryConfig = config.navigate('registry') as RegistryConfig ?: new RegistryConfig()
 
 
         // Fetch full metadata from registry to get input/output parameters

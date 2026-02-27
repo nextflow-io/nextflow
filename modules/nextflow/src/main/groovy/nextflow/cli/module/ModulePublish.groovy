@@ -48,8 +48,8 @@ class ModulePublish extends CmdBase {
     @Parameter(names = ["-dry-run"], description = "Validate without uploading", arity=0)
     boolean dryRun = false
 
-    @Parameter(names = ["-registry"], description = "Target registry URL")
-    String registryUrl = RegistryConfig.DEFAULT_REGISTRY_URL
+    @Parameter(names = ["-registry"], description = "Target registry URL.")
+    String registryUrl
 
     @Parameter(description = "Module directory path or scope/name")
     List<String> args
@@ -107,7 +107,7 @@ class ModulePublish extends CmdBase {
             .setBaseDir(moduleDir)
             .build()
 
-        def registryConfig = config.navigate('registry') as RegistryConfig
+        def registryConfig = config.navigate('registry') as RegistryConfig ?: new RegistryConfig()
 
         publishModule(moduleDir, registryConfig, manifest)
 
@@ -135,7 +135,7 @@ class ModulePublish extends CmdBase {
             ]
 
             // Publish to registry
-            log.info "Publishing module to registry: ${registryUrl}"
+            log.info "Publishing module to registry: ${registryUrl ?: registryConfig.url}"
             def registryClient = new ModuleRegistryClient(registryConfig)
             def response = registryClient.publishModule(manifest.name, request, registryUrl)
 
