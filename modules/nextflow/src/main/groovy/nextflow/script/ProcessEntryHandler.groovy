@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -283,7 +283,7 @@ class ProcessEntryHandler {
      * Parses file input handling comma-separated values.
      * If the input contains commas, splits and returns a list of files.
      * Otherwise returns a single file object.
-     * 
+     *
      * @param fileInput String representation of file path(s)
      * @return Single file object or List of file objects
      */

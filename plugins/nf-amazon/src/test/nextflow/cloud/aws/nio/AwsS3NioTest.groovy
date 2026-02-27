@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.cloud.aws.nio
@@ -213,7 +212,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         when:
         def bucketName = createBucket()
         def target = s3path("s3://$bucketName/data/file.txt")
-        
+
         and:
         def stream = new ByteArrayInputStream(new String(TEXT).bytes)
         Files.copy(stream, target)
@@ -920,7 +919,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         deleteBucket(bucketName)
     }
 
-    @Ignore // FIXME 
+    @Ignore // FIXME
     def 'should handle dir and files having the same name' () {
 
         given:
@@ -1058,7 +1057,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         FileHelper.copyPath(source, target)
         then:
         target.exists()
-        
+
         cleanup:
         folder?.deleteDir()
     }
@@ -1078,7 +1077,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         FileHelper.copyPath(source, target)
         then:
         target.exists()
-        
+
         expect:
         target.getFileSystem().getClient().getObjectKmsKeyId(target.bucket, target.key) == KEY
         and:

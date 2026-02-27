@@ -1,5 +1,5 @@
 /*
- * Copyright 2022, Google Inc.
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.cloud.google.batch
@@ -84,7 +83,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def mounts = ['/mnt/disks/foo/scratch:/mnt/disks/foo/scratch:rw']
         def volumes = [GCS_VOL]
         def launcher = new GoogleBatchLauncherSpecMock('bash .command.run', mounts, volumes)
-        
+
         and:
         def handler = Spy(new GoogleBatchTaskHandler(task, exec))
 

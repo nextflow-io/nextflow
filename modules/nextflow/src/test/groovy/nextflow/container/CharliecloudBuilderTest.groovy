@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,7 +51,7 @@ class CharliecloudBuilderTest extends Specification {
         new CharliecloudBuilder('/cacheDir/busybox', new CharliecloudConfig(runOptions: '-j --no-home'))
                 .build()
                 .runCommand == 'ch-run --unset-env="*" -c "$NXF_TASK_WORKDIR" --set-env --write-fake -b "$NXF_TASK_WORKDIR" -j --no-home /cacheDir/busybox --'
-        
+
         new CharliecloudBuilder('/cacheDir/busybox', new CharliecloudConfig(temp: '/foo'))
                 .build()
                 .runCommand == 'ch-run --unset-env="*" -c "$NXF_TASK_WORKDIR" --set-env --write-fake -b /foo:/tmp -b "$NXF_TASK_WORKDIR" /cacheDir/busybox --'

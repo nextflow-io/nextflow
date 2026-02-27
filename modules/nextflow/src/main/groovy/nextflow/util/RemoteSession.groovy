@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -74,7 +74,7 @@ class RemoteSession implements Serializable, Closeable {
     }
 
     List<Path> getClasspath() { resolvedClasspath }
-    
+
     /**
      * @param path A {@link File} representing either a regular file or a directory
      * @return The source path as a string. It guarantees that a directory path ends with a slash character

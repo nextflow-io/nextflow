@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.cloud.aws.nio;
@@ -49,7 +48,7 @@ import static com.google.common.collect.Iterables.transform;
 import static java.lang.String.format;
 
 public class S3Path implements Path, TagAwareFile {
-	
+
 	public static final String PATH_SEPARATOR = "/";
 	/**
 	 * bucket name
@@ -84,7 +83,7 @@ public class S3Path implements Path, TagAwareFile {
 	 *
 	 */
 	public S3Path(S3FileSystem fileSystem, String path) {
-	
+
 		this(fileSystem, path, "");
 	}
 
@@ -141,7 +140,7 @@ public class S3Path implements Path, TagAwareFile {
         this.fileSystem = fileSystem;
     }
 
-	
+
 	public String getBucket() {
 		return bucket;
 	}
@@ -227,15 +226,15 @@ public class S3Path implements Path, TagAwareFile {
 
 	@Override
 	public boolean startsWith(Path other) {
-		
+
 		if (other.getNameCount() > this.getNameCount()){
 			return false;
 		}
-		
+
 		if (!(other instanceof S3Path)){
 			return false;
 		}
-		
+
 		S3Path path = (S3Path) other;
 
 		if (path.parts.size() == 0 && path.bucket == null &&
@@ -253,7 +252,7 @@ public class S3Path implements Path, TagAwareFile {
 				return false;
 			}
 		}
-		return true;		
+		return true;
 	}
 
 	@Override
@@ -268,11 +267,11 @@ public class S3Path implements Path, TagAwareFile {
 			return false;
 		}
 		// empty
-		if (other.getNameCount() == 0 && 
+		if (other.getNameCount() == 0 &&
 				this.getNameCount() != 0){
 			return false;
 		}
-		
+
 		if (!(other instanceof S3Path)){
 			return false;
 		}
@@ -283,13 +282,13 @@ public class S3Path implements Path, TagAwareFile {
 				(path.getBucket() != null && this.getBucket() == null)){
 			return false;
 		}
-		
+
 		// check subkeys
-		
+
 		int i = path.parts.size() - 1;
 		int j = this.parts.size() - 1;
 		for (; i >= 0 && j >= 0 ;){
-			
+
 			if (!path.parts.get(i).equals(this.parts.get(j))){
 				return false;
 			}
@@ -383,19 +382,19 @@ public class S3Path implements Path, TagAwareFile {
 		Preconditions.checkArgument(bucket.equals(s3Path.getBucket()),
 				"Cannot relativize paths with different buckets: '%s', '%s'",
 				this, other);
-		
+
 		Preconditions.checkArgument(parts.size() <= s3Path.parts.size(),
 				"Cannot relativize against a parent path: '%s', '%s'",
 				this, other);
-		
-		
+
+
 		int startPart = 0;
 		for (int i = 0; i <this.parts.size() ; i++){
 			if (this.parts.get(i).equals(s3Path.parts.get(i))){
 				startPart++;
 			}
 		}
-		
+
 		List<String> resultParts = new ArrayList<>();
 		for (int i = startPart; i < s3Path.parts.size(); i++){
 			resultParts.add(s3Path.parts.get(i));
@@ -579,7 +578,7 @@ public class S3Path implements Path, TagAwareFile {
 			}
 		};
 	}
-	
+
 	private static Predicate<String> notEmpty() {
 		return new Predicate<String>() {
 			@Override
@@ -592,11 +591,11 @@ public class S3Path implements Path, TagAwareFile {
 	 * delete redundant "/" and empty parts
 	 */
 	private abstract static class KeyParts{
-		
+
 		private static ImmutableList<String> parse(List<String> parts) {
 			return ImmutableList.copyOf(filter(transform(parts, strip("/")), notEmpty()));
 		}
-		
+
 		private static ImmutableList<String> parse(Iterable<String> parts) {
 			return ImmutableList.copyOf(filter(transform(parts, strip("/")), notEmpty()));
 		}

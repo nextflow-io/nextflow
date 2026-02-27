@@ -1,6 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
- * Copyright 2022, CEA-CNRGH
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +30,7 @@ class BridgeExecutorTest extends Specification {
     def testParseJob() {
 
         given:
-        def exec = [:] as BridgeExecutor 
+        def exec = [:] as BridgeExecutor
 
         expect:
         //submission pattern example: Submitted Batch Session 1277017
@@ -48,7 +47,7 @@ class BridgeExecutorTest extends Specification {
     def testKill() {
 
         given:
-        def exec = [:] as BridgeExecutor 
+        def exec = [:] as BridgeExecutor
         expect:
         exec.killTaskCommand(123) == ['ccc_mdel','123']
 
@@ -57,7 +56,7 @@ class BridgeExecutorTest extends Specification {
     def testGetCommandLine() {
 
         when:
-        def exec = [:] as BridgeExecutor 
+        def exec = [:] as BridgeExecutor
         then:
         exec.getSubmitCommandLine(Mock(TaskRun), Paths.get('/some/path/job.sh')) == ['ccc_msub', 'job.sh']
     }
@@ -82,7 +81,7 @@ class BridgeExecutorTest extends Specification {
         task.config = new TaskConfig()
         task.config.queue = 'normal'
         task.config.time = '10h'
-        task.config.memory = '8 GB' 
+        task.config.memory = '8 GB'
         task.config.cpus = 2
         then:
         executor.getHeaders(task) == '''

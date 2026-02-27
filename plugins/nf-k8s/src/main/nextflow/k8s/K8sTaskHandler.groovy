@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -235,7 +235,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
 
         if( SysEnv.containsKey('NXF_DEBUG') )
             builder.withEnv(PodEnv.value('NXF_DEBUG', SysEnv.get('NXF_DEBUG')))
-        
+
         // add computing resources
         final cpus = taskCfg.getCpus()
         final mem = taskCfg.getMemory()
@@ -357,7 +357,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
                 }
             }
             return state
-        } 
+        }
         catch (NodeTerminationException | PodUnschedulableException e) {
             // create a synthetic `state` object adding an extra `nodeTermination`
             // attribute to return the error to the caller method
@@ -500,7 +500,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
 
         if( cleanupDisabled() )
             return
-        
+
         log.trace "[K8s] deleting ${resourceType.lower()} name=$podName"
         delete0(podName)
     }

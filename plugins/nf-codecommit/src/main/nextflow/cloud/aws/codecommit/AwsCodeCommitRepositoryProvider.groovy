@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -167,11 +167,11 @@ class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
                 .folderPath(path ?: "/")
                 .commitSpecifier(revision ?: "HEAD")
                 .build()
-                
+
             def response = client.getFolder(request)
-            
+
             List<RepositoryEntry> entries = []
-            
+
             // Add files
             response.files()?.each { file ->
                 entries.add(new RepositoryEntry(
@@ -182,7 +182,7 @@ class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
                     size: null  // AWS CodeCommit API doesn't provide file size in folder response
                 ))
             }
-            
+
             // Add subdirectories - but CodeCommit API has limited support for deep traversal
             response.subFolders()?.each { folder ->
                 entries.add(new RepositoryEntry(
@@ -192,7 +192,7 @@ class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
                     sha: null, // CodeCommit doesn't provide SHA for directories
                     size: null
                 ))
-                
+
                 // For recursive listing, we would need additional API calls
                 // However, this can be expensive and slow for large repositories
                 if (depth != 0 && depth != 1) {
@@ -204,9 +204,9 @@ class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
                     }
                 }
             }
-            
+
             return entries.sort { it.name }
-            
+
         } catch (Exception e) {
             checkMissingCredsException(e)
             throw new UnsupportedOperationException("Directory listing failed for AWS CodeCommit path: $path - ${e.message}", e)

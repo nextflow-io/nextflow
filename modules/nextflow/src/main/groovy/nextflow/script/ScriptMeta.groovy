@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -306,19 +306,19 @@ class ScriptMeta {
     /**
      * Check if this script has standalone processes that can be executed
      * automatically without requiring workflows
-     * 
+     *
      * @return true if the script has one or more processes and no workflows
      */
     boolean hasExecutableProcesses() {
         // Don't allow execution of true modules (those are meant for inclusion)
         if( isModule() )
             return false
-        
+
         // Must have at least one process
         final processNames = getLocalProcessNames()
         if( processNames.isEmpty() )
             return false
-        
+
         // Must not have any workflow definitions (including unnamed workflow)
         return getLocalWorkflowNames().isEmpty()
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -336,15 +336,15 @@ class CmdRun extends CmdBase implements HubOptions {
 
         /*
          * 2-PHASE CONFIGURATION LOADING STRATEGY
-         * 
+         *
          * Problem: Configuration files may reference secrets provided by plugins (e.g., AWS secrets),
          * but plugins are loaded AFTER configuration parsing. This creates a chicken-and-egg problem:
          * - Config parsing needs secret values to complete
-         * - Plugin loading needs config to determine which plugins to load  
+         * - Plugin loading needs config to determine which plugins to load
          * - Secret providers are registered by plugins
-         * 
+         *
          * Solution: Parse configuration twice when secrets are referenced
-         * 
+         *
          * PHASE 1: Parse config with EmptySecretProvider (returns "" for all secrets)
          * - Configuration must use defensive patterns: secrets.FOO ? "value-${secrets.FOO}" : "fallback"
          * - Config parses successfully with fallback values
