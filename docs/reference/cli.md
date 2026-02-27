@@ -1329,6 +1329,11 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
   :::
 : Run the workflow script skipping the execution of all processes.
 
+`-print-output`
+: :::{versionadded} 26.04.0
+  :::
+: Print JSON-formatted workflow outputs to standard output.
+
 `-process.<key>=<value>`
 : Set process config options.
 

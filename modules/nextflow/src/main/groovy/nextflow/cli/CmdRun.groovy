@@ -116,6 +116,9 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-o', '-output-dir'], description = 'Directory where workflow outputs are stored')
     String outputDir
 
+    @Parameter(names=['-print-output'], description = 'Print workflow outputs to standard output')
+    String printOutput
+
     @Parameter(names=['-w', '-work-dir'], description = 'Directory where intermediate result files are stored')
     String workDir
 

@@ -150,6 +150,11 @@ class Session implements ISession {
     Path outputDir
 
     /**
+     * Print workflow outputs to standard output
+     */
+    boolean printOutput
+
+    /**
      * The folder where tasks temporary files are stored
      */
     Path workDir
@@ -407,6 +412,7 @@ class Session implements ISession {
 
         // -- init output dir
         this.outputDir = FileHelper.toCanonicalPath(config.outputDir ?: 'results')
+        this.printOutput = config.printOutput
 
         // -- init work dir
         this.workDir = FileHelper.toCanonicalPath(config.workDir ?: 'work')
