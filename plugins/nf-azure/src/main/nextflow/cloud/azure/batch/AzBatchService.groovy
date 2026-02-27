@@ -23,6 +23,7 @@ import java.nio.file.Path
 import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeoutException
 import java.util.function.Predicate
 
@@ -92,6 +93,7 @@ import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
 import nextflow.fusion.FusionHelper
 import nextflow.fusion.FusionScriptLauncher
+import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.util.CacheHelper
 import nextflow.util.MemoryUnit
@@ -116,7 +118,7 @@ class AzBatchService implements Closeable {
 
     AzConfig config
 
-    Map<AzJobKey,String> allJobIds = new HashMap<>(50)
+    Map<AzJobKey,String> allJobIds = new ConcurrentHashMap<>(50)
 
     AzBatchService(AzBatchExecutor executor) {
         assert executor
@@ -336,7 +338,7 @@ class AzBatchService implements Closeable {
     }
 
     protected AzureNamedKeyCredential createBatchCredentialsWithKey() {
-        log.debug "[AZURE BATCH] Creating Azure Batch client using shared key creddentials"
+        log.debug "[AZURE BATCH] Creating Azure Batch client using shared key credentials"
 
         if( !config.batch().endpoint )
             throw new IllegalArgumentException("Missing Azure Batch endpoint -- Specify it in the nextflow.config file using the setting 'azure.batch.endpoint'")
@@ -416,6 +418,15 @@ class AzBatchService implements Closeable {
         new CloudMachineInfo(type: type, priceModel: PriceModel.standard, zone: config.batch().location)
     }
 
+    /**
+     * Get or create an Azure Batch job for the given pool and task.
+     * 
+     * Jobs are cached per (processor, poolId) pair. When auto-termination is enabled,
+     * the first task creates a new job, subsequent tasks reuse it.
+     *
+     * @param poolId
+     * @param task
+     */
     synchronized String getOrCreateJob(String poolId, TaskRun task) {
         // Use the same job Id for the same Process,PoolId pair
         // The Pool is added to allow using different queue names (corresponding
@@ -447,6 +458,7 @@ class AzBatchService implements Closeable {
         final jobId = makeJobId(task)
         final content = new BatchJobCreateContent(jobId, new BatchPoolInfo(poolId: poolId))
 
+        // Set job constraints (max wall clock time) if specified
         if (config.batch().jobMaxWallClockTime) {
             content.setConstraints(createJobConstraints(config.batch().jobMaxWallClockTime))
         }
@@ -568,9 +580,100 @@ class AzBatchService implements Closeable {
     }
 
     AzTaskKey runTask(String poolId, String jobId, TaskRun task) {
-        final taskToAdd = createTask(poolId, jobId, task)
-        apply(() -> client.createTask(jobId, taskToAdd))
-        return new AzTaskKey(jobId, taskToAdd.getId())
+        final BatchTaskCreateContent taskToAdd = createTask(poolId, jobId, task)
+        final AzTaskKey submitted = submitTaskToJob(poolId, jobId, task, taskToAdd)
+        // Set auto-terminate so it does not consume quota after all tasks complete
+        setAutoTerminateIfEnabled(submitted.jobId)
+        return submitted
+    }
+
+    /**
+     * Submit a task to an Azure Batch job with automatic handling of terminated jobs.
+     * 
+     * Handles 409 conflicts when submitting to auto-terminated jobs by recreating
+     * the job and retrying the submission.
+     */
+    protected AzTaskKey submitTaskToJob(String poolId, String jobId, TaskRun task, BatchTaskCreateContent taskToAdd) {
+        try {
+            apply(() -> client.createTask(jobId, taskToAdd))
+            return new AzTaskKey(jobId, taskToAdd.getId())
+        }
+        catch( HttpResponseException e ) {
+            if( e.response.statusCode == 409 && config.batch().terminateJobsOnCompletion ) {
+                final String newJobId = recreateJobForTask(poolId, task, jobId, taskToAdd.getId())
+                apply(() -> client.createTask(newJobId, taskToAdd))
+                return new AzTaskKey(newJobId, taskToAdd.getId())
+            }
+            throw e
+        }
+    }
+
+    /**
+     * Create a new job when the original job is terminated and update job mappings.
+     * The new job will also be configured for auto-termination.
+     * 
+     * This method is synchronized to prevent race conditions with getOrCreateJob
+     * and concurrent recreateJobForTask calls on the same mapKey.
+     */
+    synchronized protected String recreateJobForTask(String poolId, TaskRun task, String oldJobId, String taskId) {
+        log.debug "Job ${oldJobId} is in completed/terminating state, creating a new job for task ${taskId}"
+        final AzJobKey mapKey = new AzJobKey(task.processor, poolId)
+        
+        // Check if another thread already recreated the job for this mapKey
+        if (allJobIds.containsKey(mapKey) && allJobIds[mapKey] != oldJobId) {
+            log.debug "Job already recreated for mapKey ${mapKey}, returning existing job ${allJobIds[mapKey]}"
+            return allJobIds[mapKey]
+        }
+        
+        // Create new job first to ensure it succeeds before updating mapping
+        final String newJobId = createJob0(poolId, task)
+        
+        // Atomically update the job mapping
+        allJobIds[mapKey] = newJobId
+        
+        return newJobId
+    }
+
+    /**
+     * Get the job IDs associated with a specific processor.
+     *
+     * @param processor The task processor to find jobs for
+     * @return A list of job IDs associated with the processor
+     */
+    List<String> getJobIdsForProcessor(TaskProcessor processor) {
+        allJobIds.findAll { key, jobId -> key.processor == processor }.values().toList()
+    }
+
+    /**
+     * Configure job for auto-termination after task submission if enabled.
+     * Sets job to terminate when all tasks complete, freeing quota immediately.
+     *
+     * This method is called after task submission, so the job should have at least
+     * one task. We verify this to ensure the job won't terminate immediately upon
+     * creation due to having no tasks.
+     *
+     * Errors are logged but don't fail the task submission.
+     */
+    protected void setAutoTerminateIfEnabled(String jobId) {
+        if( !config.batch().terminateJobsOnCompletion )
+            return
+
+        try {
+            // Verify job has tasks before setting auto-terminate
+            // Since this is called after task submission, there should be at least one task
+            final tasks = apply(() -> client.listTasks(jobId))
+            final hasTasks = tasks.iterator().hasNext()
+
+            if( hasTasks ) {
+                log.debug "Setting job ${jobId} to auto-terminate"
+                setJobTermination(jobId)
+            } else {
+                log.debug "Deferring auto-terminate for job ${jobId} - no tasks found yet"
+            }
+        }
+        catch( Exception e ) {
+            log.debug "Failed to set auto-termination for job ${jobId} - ${e.message ?: e}"
+        }
     }
 
     protected List<String> getShareVolumeMounts(AzVmPoolSpec spec) {
@@ -636,7 +739,7 @@ class AzBatchService implements Closeable {
     }
 
     protected OutputFile destFile(String localPath, Path targetDir, String sas) {
-        log.debug "Task output path: $localPath -> ${targetDir.toUriString()}"
+        log.trace "Task output path: $localPath -> ${targetDir.toUriString()}"
         def target = targetDir.resolve(localPath)
         final dest = new OutputFileBlobContainerDestination(AzHelper.toContainerUrl(targetDir,sas))
                 .setPath(target.subpath(1,target.nameCount).toString())
@@ -977,28 +1080,30 @@ class AzBatchService implements Closeable {
     }
 
     /**
-     * Set all jobs to terminate on completion.
+     * Set a job to terminate when all tasks complete.
+     * 
+     * @param jobId The Azure Batch job ID to set for auto-termination
      */
-    protected void terminateJobs() {
-        for( String jobId : allJobIds.values() ) {
-            try {
-                log.trace "Setting Azure job ${jobId} to terminate on completion"
+    protected void setJobTermination(String jobId) {
+        log.trace "Setting Azure Batch job ${jobId} to auto-terminate when all tasks complete"
+        try {
+            final job = apply(() -> client.getJob(jobId))
+            
+            final poolInfo = job.poolInfo
 
-                final job = apply(() -> client.getJob(jobId))
-                final poolInfo = job.poolInfo
-
-                final jobParameter = new BatchJobUpdateContent()
-                        .setOnAllTasksComplete(OnAllBatchTasksComplete.TERMINATE_JOB)
-                        .setPoolInfo(poolInfo)
-
-                apply(() -> client.updateJob(jobId, jobParameter))
-            }
-            catch (HttpResponseException e) {
-                if (e.response.statusCode == 409) {
-                    log.debug "Azure Batch job ${jobId} already terminated, skipping termination"
-                } else {
-                    log.warn "Unable to terminate Azure Batch job ${jobId} - Status: ${e.response.statusCode}, Reason: ${e.message ?: e}"
-                }
+            final jobParameter = new BatchJobUpdateContent()
+                    .setOnAllTasksComplete(OnAllBatchTasksComplete.TERMINATE_JOB)
+                    .setPoolInfo(poolInfo)
+            apply(() -> client.updateJob(jobId, jobParameter))
+        }
+        catch (Exception e) {
+            if (e instanceof HttpResponseException && e.response.statusCode == 409) {
+                log.debug "Azure Batch job ${jobId} already terminated or in terminal state, skipping auto-termination setup"
+            } else {
+                final reason = e instanceof HttpResponseException 
+                    ? "HTTP Status: ${e.response.statusCode}, Reason: ${e.message ?: e}"
+                    : "Reason: ${e.message ?: e}"
+                log.warn "Unable to set auto-termination for Azure Batch job ${jobId} - ${reason}"
             }
         }
     }
@@ -1040,9 +1145,10 @@ class AzBatchService implements Closeable {
 
     @Override
     void close() {
-        // terminate all jobs to prevent them from occupying quota
+        // terminate jobs that weren't eagerly terminated
+        // This catches jobs where eager termination was deferred due to tasks waiting for resources
         if( config.batch().terminateJobsOnCompletion ) {
-            terminateJobs()
+            terminateAllJobs()
         }
 
         // delete all jobs
@@ -1053,6 +1159,18 @@ class AzBatchService implements Closeable {
         // delete all autopools
         if( config.batch().canCreatePool() && config.batch().deletePoolsOnCompletion ) {
             cleanupPools()
+        }
+    }
+
+    protected void terminateAllJobs() {
+        for( String jobId : allJobIds.values() ) {
+            try {
+                log.trace "Setting Azure job ${jobId} to terminate on task completion"
+                setJobTermination(jobId)
+            }
+            catch (Exception e) {
+                log.debug "Unable to set termination for Azure Batch job ${jobId} - ${e.message ?: e}"
+            }
         }
     }
 
