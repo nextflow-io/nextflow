@@ -16,6 +16,8 @@
 
 package nextflow.trace
 
+import java.nio.file.Path
+
 import groovy.transform.CompileStatic
 import nextflow.Session
 import nextflow.trace.config.DagConfig
@@ -30,6 +32,8 @@ import nextflow.trace.config.TraceConfig
  */
 @CompileStatic
 class DefaultObserverFactory implements TraceObserverFactoryV2 {
+
+    private static final Path launchDir = Path.of('.').complete()
 
     private Session session
 
@@ -54,31 +58,59 @@ class DefaultObserverFactory implements TraceObserverFactoryV2 {
     }
 
     protected void createReportObserver(Collection<TraceObserverV2> result) {
-        final opts = session.config.report as Map ?: Collections.emptyMap()
+        def opts = session.config.navigate('workflow.report.execution') as Map
+        def baseDir = session.outputDir
+
+        if( !opts ) {
+            opts = session.config.report as Map ?: Collections.emptyMap()
+            baseDir = launchDir
+        }
+
         final config = new ReportConfig(opts)
         if( config.enabled )
-            result << new ReportObserver(config)
+            result << new ReportObserver(config, baseDir)
     }
 
     protected void createTimelineObserver(Collection<TraceObserverV2> result) {
-        final opts = session.config.timeline as Map ?: Collections.emptyMap()
+        def opts = session.config.navigate('workflow.report.timeline') as Map
+        def baseDir = session.outputDir
+
+        if( !opts ) {
+            opts = session.config.timeline as Map ?: Collections.emptyMap()
+            baseDir = launchDir
+        }
+
         final config = new TimelineConfig(opts)
         if( config.enabled )
-            result << new TimelineObserver(config)
+            result << new TimelineObserver(config, baseDir)
     }
 
     protected void createGraphObserver(Collection<TraceObserverV2> result) {
-        final opts = session.config.dag as Map ?: Collections.emptyMap()
+        def opts = session.config.navigate('workflow.report.dag') as Map
+        def baseDir = session.outputDir
+
+        if( !opts ) {
+            opts = session.config.dag as Map ?: Collections.emptyMap()
+            baseDir = launchDir
+        }
+
         final config = new DagConfig(opts)
         if( config.enabled )
-            result << new GraphObserver(config)
+            result << new GraphObserver(config, baseDir)
     }
 
     protected void createTraceFileObserver(Collection<TraceObserverV2> result) {
-        final opts = session.config.trace as Map ?: Collections.emptyMap()
+        def opts = session.config.navigate('workflow.report.trace') as Map
+        def baseDir = session.outputDir
+
+        if( !opts ) {
+            opts = session.config.trace as Map ?: Collections.emptyMap()
+            baseDir = launchDir
+        }
+
         final config = new TraceConfig(opts)
         if( config.enabled )
-            result << new TraceFileObserver(config)
+            result << new TraceFileObserver(config, baseDir)
     }
 
 }
