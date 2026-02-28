@@ -1,5 +1,23 @@
 NEXTFLOW CHANGE-LOG
 ===================
+26.02.0-edge - 28 Feb 2026
+- Add agent output mode (NXF_AGENT_MODE) [eae9f7d09]
+- Allow boolean params to implicitly default to false (#6764) [775a0fb87]
+- Ensure main script is first in the WorkflowRun lineage record (#6845) [ef01581d5]
+- Fix AgentLogObserver println clash with Groovy GDK method [c6314d7b5]
+- Fix AnsiLogObserver sticky messages duplicated when lines wrap (#6852) [4a06f705a]
+- Fix missing space before revision in launch info (#6834) [f30d782f5]
+- Fix ResourcesAggregator deadlock with virtual thread executor (#6840) [7ac4f3ea9]
+- Fix S3 delete throwing DirectoryNotEmptyException due to eventual consistency (#6833) [f3ac49754]
+- Fix S3 lookup unbounded pagination with double call (#6851) [a2e67eb99]
+- Fix vertical alignment in timeline report (#6794) [bbe0a27c9]
+- Handle Azure Batch ActiveJobAndScheduleQuotaReached with retry (#6874) [6e66aaa58]
+- Report actual GCP zone in Google Batch trace records (#6855) [465791294]
+- Sched core implementation alpha1 (#6242) [870c858af]
+- Treat LSF job status UNKWN as HOLD (#5756) [63aae8933]
+- Update default Azure Batch VM image to Ubuntu 24.04 (#6844) [b621fc7cb]
+- Use explicit memory units for LSF executor (#5217) [a369d6f33]
+
 26.01.1-edge - 11 Feb 2026
 - Add OSC 8 hyperlinks to task hashes in progress output (#6799) [8d266c76b]
 - Fix JGit resources not being closed in CLI commands (#6795) [908e4c70d]
