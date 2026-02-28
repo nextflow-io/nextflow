@@ -16,6 +16,7 @@
 
 package nextflow.lineage
 
+import nextflow.extension.FilesEx
 import nextflow.lineage.exception.OutputRelativePathException
 
 import java.nio.file.Files
@@ -163,14 +164,31 @@ class LinObserverTest extends Specification {
         def store = new DefaultLinStore();
         def uniqueId = UUID.randomUUID()
         def scriptFile = folder.resolve("main.nf")
+        def map = [
+            repository: "https://nextflow.io/nf-test/",
+            commitId: "123456",
+            scriptId: "78910",
+            scriptFile: scriptFile,
+            projectDir: folder.resolve("projectDir"),
+            revision: "main",
+            projectName: "nextflow.io/nf-test",
+            workDir: folder.resolve("workDir")
+        ]
         def metadata = Mock(WorkflowMetadata){
-            getRepository() >> "https://nextflow.io/nf-test/"
-            getCommitId() >> "123456"
-            getScriptId() >> "78910"
-            getScriptFile() >> scriptFile
-            getProjectDir() >> folder.resolve("projectDir")
-            getWorkDir() >> folder.resolve("workDir")
+            getRepository() >> map.repository
+            getCommitId() >> map.commitId
+            getScriptId() >> map.scriptId
+            getScriptFile() >> map.scriptFile
+            getProjectDir() >> map.projectDir
+            getRevision() >> map.revision
+            getProjectName() >> map.projectName
+            getWorkDir() >> map.workDir
+            toMap() >> map
         }
+        def expectedMap = [
+            projectDir: FilesEx.toUriString(map.projectDir),
+            workDir: FilesEx.toUriString(map.workDir)
+        ]
         def session = Mock(Session) {
             getConfig() >> config
             getUniqueId() >> uniqueId
@@ -181,8 +199,8 @@ class LinObserverTest extends Specification {
         store.open(LineageConfig.create(session))
         def observer = new LinObserver(session, store)
         def mainScript = new DataPath("file://${scriptFile.toString()}", new Checksum("78910", "nextflow", "standard"))
-        def workflow = new Workflow([mainScript],"https://nextflow.io/nf-test/", "123456" )
-        def workflowRun = new WorkflowRun(workflow, uniqueId.toString(), "test_run", [], config)
+        def workflow = new Workflow([mainScript], map.repository, map.commitId, map.revision, map.projectName )
+        def workflowRun = new WorkflowRun(workflow, uniqueId.toString(), "test_run", [], config, expectedMap)
         when:
         observer.onFlowCreate(session)
         observer.onFlowBegin()
