@@ -15,18 +15,27 @@ plugins {
 Configure the Seqera executor:
 
 ```groovy
-process.executor = 'seqera'
+process {
+    executor = 'seqera'
+}
 
 seqera {
-    endpoint = '<SEQERA ENDPOINT>'
+    executor {
+        region = 'eu-west-1'
+        autoLabels = true
+    }
+}
+
+tower {
     accessToken = '<YOUR ACCESS TOKEN>'
 }
+
 ```
 
 Alternatively, set the access token via environment variable:
 
 ```bash
-export SEQERA_ACCESS_TOKEN='<YOUR ACCESS TOKEN>'
+export TOWER_ACCESS_TOKEN='<YOUR ACCESS TOKEN>'
 ```
 
 ## Examples
@@ -38,20 +47,12 @@ plugins {
     id 'nf-seqera'
 }
 
-process.executor = 'seqera'
-
-seqera {
-    endpoint = 'https://api.cloud.seqera.io'
-    accessToken = System.getenv('SEQERA_ACCESS_TOKEN')
+process {
+    executor = 'seqera'
 }
-```
 
-### Custom Endpoint
-
-```groovy
-seqera {
-    endpoint = 'https://seqera.mycompany.com/api'
-    accessToken = System.getenv('SEQERA_ACCESS_TOKEN')
+tower {
+    accessToken = '<YOUR ACCESS TOKEN>'
 }
 ```
 
