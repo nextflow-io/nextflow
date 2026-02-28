@@ -1,0 +1,4 @@
+nf-seqera changelog
+====================
+0.12.0 - 28 Feb 2026
+- Sched core implementation alpha1 (#6242) [870c858af]
