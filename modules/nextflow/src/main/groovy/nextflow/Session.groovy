@@ -427,7 +427,7 @@ class Session implements ISession {
             return null
         final String path = cloudcache.path
         final result = path ? FileHelper.asPath(path) : workDir
-        if( result.scheme !in ['s3','az','gs'] ) {
+        if( result.scheme !in ['file','s3','az','gs'] ) {
             throw new IllegalArgumentException("Storage path not supported by Cloud-cache - offending value: '${result}'")
         }
         return result
