@@ -39,7 +39,7 @@ import org.fusesource.jansi.AnsiConsole
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-class AnsiLogObserver implements TraceObserverV2 {
+class AnsiLogObserver implements TraceObserverV2, LogObserver {
 
     static final private String NEWLINE = '\n'
 

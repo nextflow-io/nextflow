@@ -69,7 +69,7 @@ import nextflow.script.ScriptRunner
 import nextflow.script.WorkflowMetadata
 import nextflow.script.dsl.ProcessConfigBuilder
 import nextflow.spack.SpackConfig
-import nextflow.trace.AnsiLogObserver
+import nextflow.trace.LogObserver
 import nextflow.trace.TraceObserver
 import nextflow.trace.TraceObserverFactory
 import nextflow.trace.TraceObserverFactoryV2
@@ -311,9 +311,11 @@ class Session implements ISession {
 
     boolean ansiLog
 
+    boolean agentLog
+
     boolean disableJobsCancellation
 
-    AnsiLogObserver ansiLogObserver
+    LogObserver logObserver
 
     FilePorter getFilePorter() { filePorter }
 
@@ -832,7 +834,7 @@ class Session implements ISession {
             shutdown0()
             notifyError(null)
             // force termination
-            ansiLogObserver?.forceTermination()
+            logObserver?.forceTermination()
             executorFactory?.signalExecutors()
             processesBarrier.forceTermination()
             monitorsBarrier.forceTermination()
@@ -1278,8 +1280,8 @@ class Session implements ISession {
     }
 
     void printConsole(String str, boolean newLine=false) {
-        if( ansiLogObserver )
-            ansiLogObserver.appendInfo(str)
+        if( logObserver )
+            logObserver.appendInfo(str)
         else if( newLine )
             System.out.println(str)
         else
@@ -1287,7 +1289,7 @@ class Session implements ISession {
     }
 
     void printConsole(Path file) {
-        ansiLogObserver ? ansiLogObserver.appendInfo(file.text) : Files.copy(file, System.out)
+        logObserver ? logObserver.appendInfo(file.text) : Files.copy(file, System.out)
     }
 
     private volatile ThreadPoolManager finalizePoolManager
