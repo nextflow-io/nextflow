@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023, Pawsey Supercomputing Research Centre
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ import nextflow.util.Duration
 
 /**
  * Model Spack configuration
- * 
+ *
  * @author Marco De La Pierre <marco.delapierre@gmail.com>
  */
 @ScopeName("spack")

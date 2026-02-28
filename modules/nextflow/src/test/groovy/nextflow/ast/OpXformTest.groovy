@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ class OpXformTest extends Specification {
         class OpTest {
             def branch(Closure c) { c.call() }
         }
-        
+
         new OpTest().branch ( $stmt )
 
         """)
@@ -59,7 +59,7 @@ class OpXformTest extends Specification {
         class OpTest {
             def multiMap(Closure c) { c.call() }
         }
-        
+
         new OpTest().multiMap ( $stmt )
 
         """)
@@ -148,7 +148,7 @@ class OpXformTest extends Specification {
                 def alpha=1
                 def delta=2
                 def omega=alpha+delta
-                x: p < 1; 
+                x: p < 1;
                 return omega;
             }
         ''')
@@ -163,11 +163,11 @@ class OpXformTest extends Specification {
     def 'should parse multiMap block' () {
         when:
         def result = eval_multiMap('''
-            { it -> 
+            { it ->
                 foo:
                 it+1
-                
-                bar: 
+
+                bar:
                 it*it
             }
         ''')
@@ -183,12 +183,12 @@ class OpXformTest extends Specification {
     def 'should parse multiMap multi-block' () {
         when:
         def result = eval_multiMap('''
-            { it -> 
+            { it ->
                 alpha:
                 beta:
                 delta:
                 it+1
-                
+
                 omega:
                 it*2
             }
@@ -203,7 +203,7 @@ class OpXformTest extends Specification {
     def 'should parse multiMap long ending' () {
         when:
         def result = eval_multiMap('''
-            { it -> 
+            { it ->
                 alpha:
                 it+1
                 omega:

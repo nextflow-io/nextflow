@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,7 +40,7 @@ class SplitterExTest extends Specification {
             line 3
             line 4
             line 5
-            line 6 
+            line 6
             line 7
             line 8
             '''
@@ -155,7 +155,7 @@ class SplitterExTest extends Specification {
             CCCFFFFFHHHHHJJJJJJJJJJJJJJJHFDDBDDBDDDDDDDDDDDDADDDDDDDDDDDDDDDDDDDDDDDDDDBDBDDD9@DDDDDDDDDDDDBBDDDBDD@@
             '''.stripIndent().strip()
         out.close()
-        
+
         expect:
         file.countFastq() == 4
 
@@ -177,7 +177,7 @@ class SplitterExTest extends Specification {
         given:
         def file = TestHelper.createInMemTempFile('foo.txt')
         file.text = "hello\nworld"
-        
+
         when:
         def list = file.splitText(each: { it.trim().reverse() })
         then:
@@ -237,7 +237,7 @@ class SplitterExTest extends Specification {
         when:
         def result = file.splitFasta()
         then:
-        result.size() == 5 
+        result.size() == 5
         result[0] == '''\
             >1aboA
             NLFVALYDFVASGDNTLSITKGEKLRVLGYNHNGEWCEAQTKNGQGWVPS
@@ -338,7 +338,7 @@ class SplitterExTest extends Specification {
         when:
         def result = file.splitCsv()
         then:
-        result.size() == 3 
+        result.size() == 3
         result[0] == ['a','b','c']
         result[1] == ['p','q','s']
         result[2] == ['x','y','z']

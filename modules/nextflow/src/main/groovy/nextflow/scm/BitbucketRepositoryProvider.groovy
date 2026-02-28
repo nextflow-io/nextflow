@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -200,21 +200,21 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
         final ref = revision ? getRefForRevision(revision) : getMainBranch()
         // Normalize path using base class helper
         final dirPath = normalizePath(path)
-        
+
         // Build the src API URL - BitBucket's src endpoint returns directory listings when path is a directory
         String url = "${config.endpoint}/2.0/repositories/$project/src/$ref/$dirPath"
-        
+
         try {
             // Make the API call
             Map response = invokeAndParseResponse(url)
             List<Map> values = response?.values as List<Map>
-            
+
             if (!values) {
                 return []
             }
-            
+
             List<RepositoryEntry> entries = []
-            
+
             for (Map entry : values) {
                 String entryPath = entry.get('path') as String
                 // Filter entries based on depth using base class helper
@@ -222,9 +222,9 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
                     entries.add(createRepositoryEntry(entry, path))
                 }
             }
-            
+
             return entries.sort { it.name }
-            
+
         } catch (Exception e) {
             // If API call fails, it might be because the path is not a directory
             // or the API doesn't support directory listing
@@ -235,17 +235,17 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
     private RepositoryEntry createRepositoryEntry(Map entry, String basePath) {
         String entryPath = entry.get('path') as String
         String name = entryPath?.split('/')?.last() ?: entry.get('name') as String
-        
+
         // Determine type based on BitBucket's response
         String type = entry.get('type') as String
         EntryType entryType = (type == 'commit_directory') ? EntryType.DIRECTORY : EntryType.FILE
-        
+
         String sha = entry.get('commit')?.get('hash') as String
         Long size = entry.get('size') as Long
-        
+
         // Ensure absolute path using base class helper
         String fullPath = ensureAbsolutePath(entryPath)
-        
+
         return new RepositoryEntry(
             name: name,
             path: fullPath,

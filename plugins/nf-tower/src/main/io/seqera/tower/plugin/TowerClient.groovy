@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package io.seqera.tower.plugin
@@ -271,7 +270,7 @@ class TowerClient implements TraceObserverV2 {
         log.debug "Creating Seqera Platform observer -- endpoint=$endpoint; requestInterval=$requestInterval; aliveInterval=$aliveInterval; maxRetries=$maxRetries; backOffBase=$backOffBase; backOffDelay=$backOffDelay"
 
         this.session = session
-        this.aggregator = new ResourcesAggregator(session)
+        this.aggregator = new ResourcesAggregator()
         this.runName = session.getRunName()
         this.runId = session.getUniqueId()
         this.httpClient = newHttpClient()
@@ -292,6 +291,11 @@ class TowerClient implements TraceObserverV2 {
         this.workflowId = ret.workflowId
         if( !workflowId )
             throw new AbortOperationException("Invalid Seqera Platform API response - Missing workflow Id")
+        log.debug "Platform workflow id: $workflowId; workflow url: ${ret.watchUrl}"
+        session.workflowMetadata.platform.workflowId = workflowId
+        // note: `watchUrl` in the create response requires Platform 26.01 or later
+        this.watchUrl = ret.watchUrl as String
+        session.workflowMetadata.platform.workflowUrl = watchUrl
         if( ret.message )
             log.warn(ret.message.toString())
 
@@ -382,7 +386,8 @@ class TowerClient implements TraceObserverV2 {
         }
 
         final payload = parseTowerResponse(resp)
-        this.watchUrl = payload.watchUrl
+        this.watchUrl ?= payload.watchUrl
+        session.workflowMetadata.platform.workflowUrl ?= watchUrl
         this.sender = Threads.start('Tower-thread', this.&sendTasks0)
         final msg = "Monitor the execution with Seqera Platform using this URL: ${watchUrl}"
         log.info(LoggerHelper.STICKY, msg)

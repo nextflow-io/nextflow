@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -108,7 +108,7 @@ class AbstractGridExecutorTest extends Specification {
         given:
         def LONG = 'abcd' * 100
         def exec = [:] as AbstractGridExecutor
-        
+
         expect:
         exec.sanitizeJobName('foo') == 'foo'
         exec.sanitizeJobName(LONG) == LONG.substring(0,256)
@@ -129,7 +129,7 @@ class AbstractGridExecutorTest extends Specification {
                 NXF_CHDIR=/some/dir
                 '''.stripIndent()
     }
-    
+
     def 'should fetch queue status'() {
         given:
         def STATUS = ['123': AbstractGridExecutor.QueueStatus.RUNNING]

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -336,15 +336,15 @@ class CmdRun extends CmdBase implements HubOptions {
 
         /*
          * 2-PHASE CONFIGURATION LOADING STRATEGY
-         * 
+         *
          * Problem: Configuration files may reference secrets provided by plugins (e.g., AWS secrets),
          * but plugins are loaded AFTER configuration parsing. This creates a chicken-and-egg problem:
          * - Config parsing needs secret values to complete
-         * - Plugin loading needs config to determine which plugins to load  
+         * - Plugin loading needs config to determine which plugins to load
          * - Secret providers are registered by plugins
-         * 
+         *
          * Solution: Parse configuration twice when secrets are referenced
-         * 
+         *
          * PHASE 1: Parse config with EmptySecretProvider (returns "" for all secrets)
          * - Configuration must use defensive patterns: secrets.FOO ? "value-${secrets.FOO}" : "fallback"
          * - Config parses successfully with fallback values
@@ -517,7 +517,7 @@ class CmdRun extends CmdBase implements HubOptions {
             fmt.a("Launching").fg(Color.MAGENTA).a(" `$repo` ").reset()
             fmt.a(Attribute.INTENSITY_FAINT).a("[").reset()
             fmt.bold().fg(Color.CYAN).a(runName).reset()
-            fmt.a(Attribute.INTENSITY_FAINT).a("]")
+            fmt.a(Attribute.INTENSITY_FAINT).a("] ").reset()
             fmt.fg(Color.CYAN).a("revision: ").reset()
             fmt.fg(Color.CYAN).a(revision).reset()
             fmt.a("\n")
@@ -610,41 +610,42 @@ class CmdRun extends CmdBase implements HubOptions {
         /*
          * try to look for a pipeline in the repository
          */
-        def manager = new AssetManager(pipelineName, this)
-        if( revision )
-            manager.setRevision(revision)
-        def repo = manager.getProjectWithRevision()
+        try (def manager = new AssetManager(pipelineName, this)) {
+            if( revision )
+                manager.setRevision(revision)
+            def repo = manager.getProjectWithRevision()
 
-        boolean checkForUpdate = true
-        if( !manager.isRunnable() || latest ) {
-            if( offline )
-                throw new AbortOperationException("Unknown project `$repo` -- NOTE: automatic download from remote repositories is disabled")
-            log.info "Pulling $repo ..."
-            def result = manager.download(revision,deep)
-            if( result )
-                log.info " $result"
-            checkForUpdate = false
-        }
-        // Warn if using legacy
-        if( manager.isUsingLegacyStrategy() ){
-            log.warn1 "This Nextflow version supports a new Multi-revision strategy for managing the SCM repositories, " +
-                "but '${repo}' is single-revision legacy strategy - Please consider to update the repository with the 'nextflow pull -migrate' command."
-        }
-        // post download operations
-        try {
-            manager.checkout(revision)
-            manager.updateModules()
-            final scriptFile = manager.getScriptFile(mainScript)
-            if( checkForUpdate && !offline )
-                manager.checkRemoteStatus(scriptFile.revisionInfo)
-            // return the script file
-            return scriptFile
-        }
-        catch( AbortOperationException e ) {
-            throw e
-        }
-        catch( Exception e ) {
-            throw new AbortOperationException("Unknown error accessing project `$repo` -- Repository may be corrupted: ${manager.localPath}", e)
+            boolean checkForUpdate = true
+            if( !manager.isRunnable() || latest ) {
+                if( offline )
+                    throw new AbortOperationException("Unknown project `$repo` -- NOTE: automatic download from remote repositories is disabled")
+                log.info "Pulling $repo ..."
+                def result = manager.download(revision,deep)
+                if( result )
+                    log.info " $result"
+                checkForUpdate = false
+            }
+            // Warn if using legacy
+            if( manager.isUsingLegacyStrategy() ){
+                log.warn1 "This Nextflow version supports a new Multi-revision strategy for managing the SCM repositories, " +
+                    "but '${repo}' is single-revision legacy strategy - Please consider to update the repository with the 'nextflow pull -migrate' command."
+            }
+            // post download operations
+            try {
+                manager.checkout(revision)
+                manager.updateModules()
+                final scriptFile = manager.getScriptFile(mainScript)
+                if( checkForUpdate && !offline )
+                    manager.checkRemoteStatus(scriptFile.revisionInfo)
+                // return the script file
+                return scriptFile
+            }
+            catch( AbortOperationException e ) {
+                throw e
+            }
+            catch( Exception e ) {
+                throw new AbortOperationException("Unknown error accessing project `$repo` -- Repository may be corrupted: ${manager.localPath}", e)
+            }
         }
 
     }

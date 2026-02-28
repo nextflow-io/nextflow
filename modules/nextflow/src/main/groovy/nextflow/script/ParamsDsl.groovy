@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,6 +46,8 @@ class ParamsDsl {
     private Map<String,Param> declarations = [:]
 
     void declare(String name, Class type, boolean optional, Object defaultValue = null) {
+        if( defaultValue == null && type == Boolean )
+            defaultValue = false
         declarations[name] = new Param(name, type, optional, defaultValue)
     }
 

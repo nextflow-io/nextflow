@@ -1,3 +1,19 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package nextflow.plugin
 
 
@@ -213,7 +229,7 @@ class HttpPluginRepositoryTest extends Specification {
                           "requires": ">=20.0.0"
                         },
                         {
-                          "version": "1.1.0", 
+                          "version": "1.1.0",
                           "url": "https://example.com/plugin-1.1.0.zip",
                           "date": "${estDateStr}",
                           "sha512sum": "hash2",
@@ -221,7 +237,7 @@ class HttpPluginRepositoryTest extends Specification {
                         },
                         {
                           "version": "1.2.0",
-                          "url": "https://example.com/plugin-1.2.0.zip", 
+                          "url": "https://example.com/plugin-1.2.0.zip",
                           "date": "${cestDateStr}",
                           "sha512sum": "hash3",
                           "requires": ">=22.0.0"
@@ -244,23 +260,23 @@ class HttpPluginRepositoryTest extends Specification {
         then:
         def plugins = unit.getPlugins()
         plugins.size() == 1
-        
+
         def pluginInfo = plugins.get("date-test-plugin")
-        
+
         // Verify basic plugin mapping through the mapToPluginInfo method
         pluginInfo.id == "date-test-plugin"
         pluginInfo.projectUrl == "https://example.com/test-plugin"
         pluginInfo.provider == "Test Provider"
         pluginInfo.releases.size() == 4
         pluginInfo.releases != null // Verify never null
-        
+
         // Verify UTC date conversion (Z suffix)
         def release1 = pluginInfo.releases[0]
         release1.version == "1.0.0"
         release1.date == toDate(ZonedDateTime.of(2023, 12, 25, 14, 30, 45, 0, ZoneOffset.UTC))
         release1.sha512sum == "hash1"
         release1.requires == ">=20.0.0"
-        
+
         // Verify EST date conversion (-05:00 offset)
         def release2 = pluginInfo.releases[1]
         release2.version == "1.1.0"
@@ -268,7 +284,7 @@ class HttpPluginRepositoryTest extends Specification {
         release2.date == toDate(ZonedDateTime.of(2023, 6, 15, 14, 15, 30, 0, ZoneOffset.UTC))
         release2.sha512sum == "hash2"
         release2.requires == ">=21.0.0"
-        
+
         // Verify CEST date conversion (+02:00 offset)
         def release3 = pluginInfo.releases[2]
         release3.version == "1.2.0"
@@ -276,7 +292,7 @@ class HttpPluginRepositoryTest extends Specification {
         release3.date == toDate(ZonedDateTime.of(2023, 8, 10, 14, 45, 0, 0, ZoneOffset.UTC))
         release3.sha512sum == "hash3"
         release3.requires == ">=22.0.0"
-        
+
         // Verify null date handling (missing date field)
         def release4 = pluginInfo.releases[3]
         release4.version == "1.3.0"

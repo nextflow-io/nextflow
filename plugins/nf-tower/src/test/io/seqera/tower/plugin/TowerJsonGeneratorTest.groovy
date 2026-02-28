@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package io.seqera.tower.plugin
@@ -113,6 +112,7 @@ class TowerJsonGeneratorTest extends Specification {
         progress.get(0) == [
                 index:1,
                 name: 'foo',
+                workDir: null,
                 pending: 0,
                 submitted: 0,
                 running: 0,
@@ -133,6 +133,7 @@ class TowerJsonGeneratorTest extends Specification {
         progress[1] == [
                 index:2,
                 name: 'bar',
+                workDir: null,
                 pending: 1,
                 submitted: 2,
                 running: 3,

@@ -1,5 +1,8 @@
 nf-azure changelog
 ===================
+1.21.1
+- Update default Azure Batch VM image SKU to Ubuntu 24.04
+
 1.21.0 - 28 Nov 2025
 - Optimize exit code handling by relying on scheduler status for successful executions (#6484) [454a2ae85]
 

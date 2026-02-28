@@ -1,5 +1,5 @@
 /*
- * Copyright 2023, Pawsey Supercomputing Research Centre
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,9 +21,9 @@ import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
 
 /**
- * Implements the {@code arch} process directive, to hold information on the 
+ * Implements the {@code arch} process directive, to hold information on the
  * CPU (micro)architecture required by the process.
- * 
+ *
  * @author Marco De La Pierre <marco.delapierre@gmail.com>
  */
 @ToString
@@ -34,14 +34,14 @@ class Architecture {
 /*
  * example of notation in process: arch 'linux/x86_64', target: 'haswell'
  * example of notation in config:  arch = [name: 'linux/x86_64', target: 'haswell']
- * 
+ *
  * where dockerArch = 'linux/x86_64'
  *       spackArch = target ?: arch  // plus some validation for Spack syntax
- * 
+ *
  *       platform = 'linux'
  *       arch = 'x86_64'
  *       target = 'haswell'
- * 
+ *
  * [alternate example: 'arch linux/arm/v8', where platform = 'linux' and arch = 'arm/v8']
  */
     // used in Nextflow

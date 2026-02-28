@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -67,7 +67,7 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
             var variableScopeVisitor = new VariableScopeVisitor(sourceUnit);
             variableScopeVisitor.declare();
             variableScopeVisitor.visit();
-    
+
             // resolve type names
             if( sn.getParams() != null )
                 visitParams(sn.getParams());
@@ -81,7 +81,7 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
                 visitFunction(functionNode);
             if( sn.getOutputs() != null )
                 visitOutputs(sn.getOutputs());
-    
+
             // report errors for any unresolved variable references
             new DynamicVariablesVisitor().visit(sn);
         }

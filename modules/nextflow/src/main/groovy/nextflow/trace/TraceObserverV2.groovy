@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -121,15 +121,19 @@ interface TraceObserverV2 {
     default void onFlowError(TaskEvent event) {}
 
     /**
-     * Invoked when a workflow output is published.
+     * Invoked when a workflow output is completed.
+     *
+     * For a given workflow output, this event is guaranteed
+     * to be emitted after all files for that output have been
+     * published via onFilePublish().
      *
      * @param event
      */
     default void onWorkflowOutput(WorkflowOutputEvent event) {}
 
     /**
-     * Invoked when a file is published, either by a `publishDir` directive
-     * or a workflow output.
+     * Invoked when a file is published by a workflow output
+     * or `publishDir` directive.
      *
      * @param event
      */

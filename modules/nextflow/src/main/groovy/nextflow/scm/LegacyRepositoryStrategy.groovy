@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -86,7 +86,7 @@ class LegacyRepositoryStrategy extends AbstractRepositoryStrategy {
                 .setCloneSubmodules(manifest.recurseSubmodules)
             if( deep )
                 clone.setDepth(deep)
-            clone.call()
+            clone.call().close()
 
             // git cli would automatically create a 'refs/remotes/origin/HEAD' symbolic ref pointing at the remote's
             // default branch. jgit doesn't do this, but since it automatically checked out the default branch on clone

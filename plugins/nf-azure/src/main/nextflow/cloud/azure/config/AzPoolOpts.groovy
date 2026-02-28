@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, Microsoft Corp
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,7 +40,7 @@ class AzPoolOpts implements CacheFunnel, ConfigScope {
 
     static public final String DEFAULT_PUBLISHER = "microsoft-dsvm"
     static public final String DEFAULT_OFFER = "ubuntu-hpc"
-    static public final String DEFAULT_SKU = "batch.node.ubuntu 22.04"
+    static public final String DEFAULT_SKU = "batch.node.ubuntu 24.04"
     static public final String DEFAULT_VM_TYPE = "Standard_D4a_v4"
     static public final OSType DEFAULT_OS_TYPE = OSType.LINUX
     static public final String DEFAULT_SHARE_ROOT_PATH = "/mnt/batch/tasks/fsmounts"
@@ -150,7 +150,7 @@ class AzPoolOpts implements CacheFunnel, ConfigScope {
     String registry
     String userName
     String password
-    
+
     AzPoolOpts() {
         this(Collections.emptyMap())
     }
