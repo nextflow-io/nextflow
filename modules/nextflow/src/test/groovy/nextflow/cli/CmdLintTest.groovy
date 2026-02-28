@@ -81,4 +81,39 @@ class CmdLintTest extends Specification {
         dir?.deleteDir()
     }
 
+    def 'should add lib directory to class loader' () {
+
+        given:
+        def dir = Files.createTempDirectory('test')
+
+        dir.resolve('main.nf').text = '''\
+            println Utils.hello()
+            '''
+
+        dir.resolve('lib').mkdir()
+        dir.resolve('lib/Utils.groovy').text = '''\
+            class Utils {
+
+                String hello() {
+                    return 'Hello!'
+                }
+            }
+            '''
+
+        when:
+        def cmd = new CmdLint()
+        cmd.args = [dir.toString()]
+        cmd.libDir = dir.resolve('lib').toString()
+        cmd.launcher = Mock(Launcher) {
+            getOptions() >> Mock(CliOptions)
+        }
+        cmd.run()
+
+        then:
+        noExceptionThrown()
+
+        cleanup:
+        dir?.deleteDir()
+    }
+
 }
