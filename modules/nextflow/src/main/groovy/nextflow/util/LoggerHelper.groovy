@@ -716,27 +716,27 @@ class LoggerHelper {
             try {
                 final message = fmtEvent(event, session, false)
 
-                final observer = session?.logObserver
-                if( observer instanceof AnsiLogObserver ) {
-                    final renderer = (AnsiLogObserver)observer
-                    if( !renderer.started || renderer.stopped )
+                final ansiObserver = session?.ansiLogObserver
+                final agentObserver = session?.agentLogObserver
+                if( ansiObserver ) {
+                    if( !ansiObserver.started || ansiObserver.stopped )
                         System.out.println(message)
                     else if( event.marker == STICKY )
-                        renderer.appendSticky(message)
+                        ansiObserver.appendSticky(message)
                     else if( event.level==Level.ERROR )
-                        renderer.appendError(message)
+                        ansiObserver.appendError(message)
                     else if( event.level==Level.WARN )
-                        renderer.appendWarning(message)
+                        ansiObserver.appendWarning(message)
                     else
-                        renderer.appendInfo(message)
+                        ansiObserver.appendInfo(message)
                 }
-                else if( observer ) {
+                else if( agentObserver ) {
                     if( event.level==Level.ERROR )
-                        observer.appendError(message)
+                        agentObserver.appendError(message)
                     else if( event.level==Level.WARN )
-                        observer.appendWarning(message)
+                        agentObserver.appendWarning(message)
                     else
-                        observer.appendInfo(message)
+                        agentObserver.appendInfo(message)
                 }
                 else {
                     System.out.println(message)

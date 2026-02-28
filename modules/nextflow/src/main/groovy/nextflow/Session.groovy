@@ -71,7 +71,6 @@ import nextflow.script.dsl.ProcessConfigBuilder
 import nextflow.spack.SpackConfig
 import nextflow.trace.AgentLogObserver
 import nextflow.trace.AnsiLogObserver
-import nextflow.trace.LogObserver
 import nextflow.trace.TraceObserver
 import nextflow.trace.TraceObserverFactory
 import nextflow.trace.TraceObserverFactoryV2
@@ -317,7 +316,9 @@ class Session implements ISession {
 
     boolean disableJobsCancellation
 
-    LogObserver logObserver
+    AnsiLogObserver ansiLogObserver
+
+    AgentLogObserver agentLogObserver
 
     FilePorter getFilePorter() { filePorter }
 
@@ -506,7 +507,7 @@ class Session implements ISession {
         if( agentLog ) {
             def observer = new AgentLogObserver()
             observer.setStatsObserver(statsObserver)
-            this.logObserver = observer
+            this.agentLogObserver = observer
             result.add(observer)
         }
         for( TraceObserverFactoryV2 f : Plugins.getExtensions(TraceObserverFactoryV2) ) {
@@ -843,7 +844,8 @@ class Session implements ISession {
             shutdown0()
             notifyError(null)
             // force termination
-            logObserver?.forceTermination()
+            ansiLogObserver?.forceTermination()
+            agentLogObserver?.forceTermination()
             executorFactory?.signalExecutors()
             processesBarrier.forceTermination()
             monitorsBarrier.forceTermination()
@@ -1289,8 +1291,10 @@ class Session implements ISession {
     }
 
     void printConsole(String str, boolean newLine=false) {
-        if( logObserver instanceof AnsiLogObserver )
-            logObserver.appendInfo(str)
+        if( ansiLogObserver )
+            ansiLogObserver.appendInfo(str)
+        else if( agentLogObserver )
+            agentLogObserver.appendInfo(str)
         else if( newLine )
             System.out.println(str)
         else
@@ -1298,7 +1302,7 @@ class Session implements ISession {
     }
 
     void printConsole(Path file) {
-        logObserver instanceof AnsiLogObserver ? logObserver.appendInfo(file.text) : Files.copy(file, System.out)
+        ansiLogObserver ? ansiLogObserver.appendInfo(file.text) : Files.copy(file, System.out)
     }
 
     private volatile ThreadPoolManager finalizePoolManager

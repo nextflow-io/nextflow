@@ -49,7 +49,7 @@ class DefaultObserverFactory implements TraceObserverFactoryV2 {
     protected void createAnsiLogObserver(Collection<TraceObserverV2> result) {
         if( session.ansiLog ) {
             def observer = new AnsiLogObserver()
-            session.logObserver = observer
+            session.ansiLogObserver = observer
             result << observer
         }
     }
