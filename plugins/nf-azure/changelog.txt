@@ -1,7 +1,8 @@
 nf-azure changelog
 ===================
-1.21.1
-- Update default Azure Batch VM image SKU to Ubuntu 24.04
+1.22.0 - 28 Feb 2026
+- Handle Azure Batch ActiveJobAndScheduleQuotaReached with retry (#6874) [6e66aaa58]
+- Update default Azure Batch VM image to Ubuntu 24.04 (#6844) [b621fc7cb]
 
 1.21.0 - 28 Nov 2025
 - Optimize exit code handling by relying on scheduler status for successful executions (#6484) [454a2ae85]
