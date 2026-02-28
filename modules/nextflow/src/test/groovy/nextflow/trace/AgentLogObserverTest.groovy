@@ -217,7 +217,7 @@ class AgentLogObserverTest extends Specification {
         }
 
         @Override
-        protected void println(String line) {
+        protected void printLine(String line) {
             output << line
         }
     }

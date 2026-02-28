@@ -61,8 +61,8 @@ class AgentLogObserver implements TraceObserverV2, LogObserver {
     /**
      * Print a line to standard output (agent format)
      */
-    protected void println(String line) {
-        System.err.println(line)
+    protected void printLine(String line) {
+        System.out.println(line)
     }
 
     // -- TraceObserverV2 lifecycle methods --
@@ -88,12 +88,12 @@ class AgentLogObserver implements TraceObserverV2, LogObserver {
         if( version )
             info += " ${version}"
         info += " | profile=${profile}"
-        println(info)
+        printLine(info)
 
         // Print work directory
         def workDir = session.workDir?.toUriString() ?: session.workDir?.toString()
         if( workDir )
-            println("[WORKDIR] ${workDir}")
+            printLine("[WORKDIR] ${workDir}")
     }
 
     @Override
@@ -113,7 +113,7 @@ class AgentLogObserver implements TraceObserverV2, LogObserver {
     void onTaskSubmit(TaskEvent event) {
         def task = event.handler?.task
         if( task )
-            println("[PROCESS ${task.hashLog}] ${task.name}")
+            printLine("[PROCESS ${task.hashLog}] ${task.name}")
     }
 
     @Override
@@ -139,7 +139,7 @@ class AgentLogObserver implements TraceObserverV2, LogObserver {
         // Normalize and deduplicate
         def normalized = message.trim().replaceAll(/\s+/, ' ')
         if( seenWarnings.add(normalized) ) {
-            println("[WARN] ${normalized}")
+            printLine("[WARN] ${normalized}")
         }
     }
 
@@ -148,7 +148,7 @@ class AgentLogObserver implements TraceObserverV2, LogObserver {
      */
     void appendError(String message) {
         if( message )
-            println("[ERROR] ${message}")
+            printLine("[ERROR] ${message}")
     }
 
     /**
@@ -166,12 +166,12 @@ class AgentLogObserver implements TraceObserverV2, LogObserver {
      */
     protected void printTaskError(TaskRun task) {
         def name = task.getName()
-        println("[ERROR] ${name}")
+        printLine("[ERROR] ${name}")
 
         // Exit status
         def exitStatus = task.getExitStatus()
         if( exitStatus != null && exitStatus != Integer.MAX_VALUE ) {
-            println("exit: ${exitStatus}")
+            printLine("exit: ${exitStatus}")
         }
 
         // Command/script (first line or truncated)
@@ -180,7 +180,7 @@ class AgentLogObserver implements TraceObserverV2, LogObserver {
             // Truncate long commands
             def cmd = script.length() > 200 ? script.substring(0, 200) + '...' : script
             cmd = cmd.replaceAll(/\n/, ' ').replaceAll(/\s+/, ' ')
-            println("cmd: ${cmd}")
+            printLine("cmd: ${cmd}")
         }
 
         // Stderr
@@ -190,7 +190,7 @@ class AgentLogObserver implements TraceObserverV2, LogObserver {
             if( lines.size() > 10 ) {
                 lines = lines[-10..-1]
             }
-            println("stderr: ${lines.join(' | ')}")
+            printLine("stderr: ${lines.join(' | ')}")
         }
 
         // Stdout (only if relevant)
@@ -200,13 +200,13 @@ class AgentLogObserver implements TraceObserverV2, LogObserver {
             if( lines.size() > 5 ) {
                 lines = lines[-5..-1]
             }
-            println("stdout: ${lines.join(' | ')}")
+            printLine("stdout: ${lines.join(' | ')}")
         }
 
         // Work directory
         def workDir = task.getWorkDir()
         if( workDir ) {
-            println("workdir: ${workDir.toUriString()}")
+            printLine("workdir: ${workDir.toUriString()}")
         }
     }
 
@@ -221,7 +221,7 @@ class AgentLogObserver implements TraceObserverV2, LogObserver {
         def completed = succeeded + failed
 
         def status = failed > 0 ? 'FAILED' : 'SUCCESS'
-        println("\n[${status}] completed=${completed} failed=${failed} cached=${cached}")
+        printLine("\n[${status}] completed=${completed} failed=${failed} cached=${cached}")
     }
 
     /**
