@@ -1,0 +1,16 @@
+matmul1: gpu 0
+matmul1: gpu 1
+matmul1: gpu 2
+matmul1: gpu 3
+matmul1: gpu 4
+matmul1: gpu 5
+matmul1: gpu 6
+matmul1: gpu 7
+matmul2: gpu 0
+matmul2: gpu 1
+matmul2: gpu 2
+matmul2: gpu 3
+matmul2: gpu 4
+matmul2: gpu 5
+matmul2: gpu 6
+matmul2: gpu 7
