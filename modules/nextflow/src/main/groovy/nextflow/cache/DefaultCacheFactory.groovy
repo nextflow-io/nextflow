@@ -19,6 +19,9 @@ package nextflow.cache
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+import nextflow.SysEnv
+import nextflow.cache.sqlite.SQLiteCacheStore
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Priority
 
@@ -29,6 +32,7 @@ import nextflow.plugin.Priority
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 @Priority(0)
 class DefaultCacheFactory extends CacheFactory {
@@ -37,7 +41,13 @@ class DefaultCacheFactory extends CacheFactory {
     protected CacheDB newInstance(UUID uniqueId, String runName, Path home) {
         if( !uniqueId ) throw new AbortOperationException("Missing cache `uuid`")
         if( !runName ) throw new AbortOperationException("Missing cache `runName`")
-        final store = new DefaultCacheStore(uniqueId, runName, home)
+        final provider = SysEnv.get('NXF_CACHE_PROVIDER')
+        final store = switch (provider)  {
+            case 'sqlite' -> new SQLiteCacheStore(uniqueId, runName, home)
+            case null -> new DefaultCacheStore(uniqueId, runName, home)
+            default -> throw new IllegalArgumentException("Unknown cache provider: $provider")
+        }
+        log.debug "Use nextflow cache ${store}"
         return new CacheDB(store)
     }
 
