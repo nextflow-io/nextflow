@@ -118,6 +118,12 @@ class CliOptions {
         if( noColor ) {
             return ansiLog = false
         }
+
+        // Disable ANSI log in agent mode for plain, parseable output
+        if( SysEnv.isAgentMode() ) {
+            return ansiLog = false
+        }
+
         return Ansi.isEnabled()
     }
 

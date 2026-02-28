@@ -50,7 +50,7 @@ class SysEnv {
 
     static boolean getBool(String name, boolean defValue) {
         final result = get(name,String.valueOf(defValue))
-        return Boolean.parseBoolean(result)
+        return Boolean.parseBoolean(result) || result == '1'
     }
 
     static Integer getInteger(String name, Integer defValue) {
@@ -61,6 +61,22 @@ class SysEnv {
     static Long getLong(String name, Long defValue) {
         final result = get(name, defValue!=null ? String.valueOf(defValue) : null)
         return result!=null ? Long.valueOf(result) : null
+    }
+
+    /**
+     * Check if agent output mode is enabled via environment variables.
+     * When enabled, Nextflow replaces interactive ANSI logging with minimal,
+     * structured output optimized for AI agents.
+     *
+     * Supported variables (any truthy value activates the mode):
+     * {@code NXF_AGENT_MODE}, {@code AGENT}, {@code CLAUDECODE}.
+     *
+     * @return {@code true} if agent mode is enabled
+     */
+    static boolean isAgentMode() {
+        return getBool('NXF_AGENT_MODE', false) ||
+               getBool('AGENT', false) ||
+               getBool('CLAUDECODE', false)
     }
 
     static void push(Map<String,String> env) {
