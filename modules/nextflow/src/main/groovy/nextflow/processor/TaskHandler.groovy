@@ -233,12 +233,6 @@ abstract class TaskHandler {
                 // elapsed time since submit until completion
                 if( submitTimeMillis )
                     record.duration = completeTimeMillis - submitTimeMillis
-                // elapsed time since start of the job until completion
-                // note: this may be override run time provided by the trace file (3rd line)
-                if( startTimeMillis ) {
-                    record.realtime = completeTimeMillis - startTimeMillis
-                    log.trace "task stats: ${task.name}; start: ${startTimeMillis}; complete: ${completeTimeMillis}; realtime: ${completeTimeMillis - startTimeMillis} [${record.realtime}]; "
-                }
             }
 
             final file = task.workDir?.resolve(TaskRun.CMD_TRACE)
