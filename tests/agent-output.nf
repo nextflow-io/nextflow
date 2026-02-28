@@ -5,10 +5,10 @@ workflow {
 
 
 /*
- * Test for agent output mode (NXF_AGENT=true)
+ * Test for agent output mode (NXF_AGENT_MODE=true)
  * 
  * This test verifies the minimal agent-friendly output format.
- * Run with: NXF_AGENT=true nextflow run agent-output.nf
+ * Run with: NXF_AGENT_MODE=true nextflow run agent-output.nf
  */
 
 process HELLO {

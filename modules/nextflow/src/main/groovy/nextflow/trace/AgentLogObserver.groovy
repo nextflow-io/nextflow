@@ -18,10 +18,12 @@ package nextflow.trace
 
 import java.util.concurrent.ConcurrentHashMap
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.processor.TaskRun
 import nextflow.trace.event.TaskEvent
+import nextflow.util.LoggerHelper
 
 /**
  * AI agent-friendly log observer that outputs minimal, structured information
@@ -40,6 +42,7 @@ import nextflow.trace.event.TaskEvent
  * @author Edmund Miller <edmund.miller@utdallas.edu>
  */
 @Slf4j
+@CompileStatic
 class AgentLogObserver implements TraceObserverV2, LogObserver {
 
     private Session session
@@ -149,14 +152,13 @@ class AgentLogObserver implements TraceObserverV2, LogObserver {
     }
 
     /**
-     * Append info (suppressed in agent mode except for critical messages)
+     * Append info message to stdout.
+     * Hash-prefixed task log lines (e.g. {@code [ab/123456] Submitted process > ...})
+     * are filtered out because {@link #onTaskSubmit} already emits a {@code [PROCESS]} line.
      */
     void appendInfo(String message) {
-        // Suppress most info messages in agent mode
-        // Only pass through if it contains critical keywords
-        if( message && (message.contains('ERROR') || message.contains('WARN')) ) {
-            println(message)
-        }
+        if( message && !LoggerHelper.isHashLogPrefix(message) )
+            System.out.print(message)
     }
 
     /**

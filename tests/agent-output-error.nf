@@ -5,10 +5,10 @@ workflow {
 
 
 /*
- * Test for agent output mode error handling (NXF_AGENT=true)
+ * Test for agent output mode error handling (NXF_AGENT_MODE=true)
  * 
  * This test verifies the error output format in agent mode.
- * Run with: NXF_AGENT=true nextflow run agent-output-error.nf
+ * Run with: NXF_AGENT_MODE=true nextflow run agent-output-error.nf
  */
 
 process FAIL {
