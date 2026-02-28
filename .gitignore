@@ -38,6 +38,10 @@ temp
 .dockerignore
 .launch.classpath
 plugins-prod
-sandbox
-wave-tests
-x/*
+/minio
+/sandbox
+/wave-tests
+/test-sched
+/test-module
+/results
+/x/*
