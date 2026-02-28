@@ -54,6 +54,7 @@ class AzFileSystemProvider extends FileSystemProvider {
 
     public static final String AZURE_STORAGE_ACCOUNT_NAME = 'AZURE_STORAGE_ACCOUNT_NAME'
     public static final String AZURE_STORAGE_ACCOUNT_KEY = 'AZURE_STORAGE_ACCOUNT_KEY'
+    public static final String AZURE_STORAGE_ENDPOINT = 'AZURE_STORAGE_ENDPOINT'
     public static final String AZURE_STORAGE_SAS_TOKEN = 'AZURE_STORAGE_SAS_TOKEN'
 
     public static final String AZURE_CLIENT_ID = 'AZURE_CLIENT_ID'
@@ -110,20 +111,20 @@ class AzFileSystemProvider extends FileSystemProvider {
         return uri.authority.toLowerCase()
     }
 
-    protected BlobServiceClient createBlobServiceWithKey(String accountName, String accountKey) {
-        AzHelper.getOrCreateBlobServiceWithKey(accountName, accountKey)
+    protected BlobServiceClient createBlobServiceWithKey(String accountName, String accountKey, String endpoint) {
+        AzHelper.getOrCreateBlobServiceWithKey(accountName, accountKey, endpoint)
     }
 
-    protected BlobServiceClient createBlobServiceWithToken(String accountName, String sasToken) {
-        AzHelper.getOrCreateBlobServiceWithToken(accountName, sasToken)
+    protected BlobServiceClient createBlobServiceWithToken(String accountName, String sasToken, String endpoint) {
+        AzHelper.getOrCreateBlobServiceWithToken(accountName, sasToken, endpoint)
     }
 
-    protected BlobServiceClient createBlobServiceWithServicePrincipal(String accountName, String clientId, String clientSecret, String tenantId) {
-        AzHelper.getOrCreateBlobServiceWithServicePrincipal(accountName, clientId, clientSecret, tenantId)
+    protected BlobServiceClient createBlobServiceWithServicePrincipal(String accountName, String clientId, String clientSecret, String tenantId, String endpoint) {
+        AzHelper.getOrCreateBlobServiceWithServicePrincipal(accountName, clientId, clientSecret, tenantId, endpoint)
     }
 
-    protected BlobServiceClient createBlobServiceWithManagedIdentity(String accountName, String clientId) {
-        AzHelper.getOrCreateBlobServiceWithManagedIdentity(accountName, clientId)
+    protected BlobServiceClient createBlobServiceWithManagedIdentity(String accountName, String clientId, String endpoint) {
+        AzHelper.getOrCreateBlobServiceWithManagedIdentity(accountName, clientId, endpoint)
     }
 
     /**
@@ -190,6 +191,7 @@ class AzFileSystemProvider extends FileSystemProvider {
 
         final accountName = config.get(AZURE_STORAGE_ACCOUNT_NAME) as String
         final accountKey = config.get(AZURE_STORAGE_ACCOUNT_KEY) as String
+        final endpoint = config.get(AZURE_STORAGE_ENDPOINT) as String
         final sasToken = config.get(AZURE_STORAGE_SAS_TOKEN) as String
 
         final servicePrincipalId = config.get(AZURE_CLIENT_ID) as String
@@ -205,17 +207,17 @@ class AzFileSystemProvider extends FileSystemProvider {
         BlobServiceClient client
 
         if( managedIdentityUser || managedIdentitySystem ) {
-            client = createBlobServiceWithManagedIdentity(accountName, managedIdentityUser)
+            client = createBlobServiceWithManagedIdentity(accountName, managedIdentityUser, endpoint)
         }
         else if( servicePrincipalSecret && servicePrincipalId && tenantId ) {
-            client = createBlobServiceWithServicePrincipal(accountName, servicePrincipalId, servicePrincipalSecret, tenantId)
+            client = createBlobServiceWithServicePrincipal(accountName, servicePrincipalId, servicePrincipalSecret, tenantId, endpoint)
         }
         else if( sasToken ) {
-            client = createBlobServiceWithToken(accountName, sasToken)
+            client = createBlobServiceWithToken(accountName, sasToken, endpoint)
             this.sasToken = sasToken
         }
         else if( accountKey ) {
-            client = createBlobServiceWithKey(accountName, accountKey)
+            client = createBlobServiceWithKey(accountName, accountKey, endpoint)
             this.accountKey = accountKey
         }
         else {
