@@ -1,5 +1,7 @@
 # Seqera Executor plugin for Nextflow
 
+## Summary
+
 The Seqera Executor plugin provides integration with Seqera Cloud for executing Nextflow tasks using Seqera's managed compute infrastructure.
 
 ## Get Started
@@ -27,7 +29,7 @@ seqera {
 }
 
 tower {
-    accessToken = '<YOUR ACCESS TOKEN>'
+    accessToken = '<SEQERA ACCESS TOKEN>'
 }
 
 ```
@@ -40,7 +42,9 @@ export TOWER_ACCESS_TOKEN='<YOUR ACCESS TOKEN>'
 
 ## Examples
 
-### Basic Configuration
+### Running a workflow with the Seqera executor
+
+`nextflow.config`:
 
 ```groovy
 plugins {
@@ -52,7 +56,54 @@ process {
 }
 
 tower {
-    accessToken = '<YOUR ACCESS TOKEN>'
+    accessToken = '<SEQERA ACCESS TOKEN>'
+}
+
+seqera {
+    executor {
+        region = 'eu-west-1'
+    }
+}
+```
+
+`main.nf`:
+
+```groovy
+process HELLO {
+    output:
+    path 'hello.txt'
+
+    script:
+    '''
+    echo "Hello from Seqera Cloud" > hello.txt
+    '''
+}
+
+workflow {
+    HELLO()
+}
+```
+
+### Using resource labels for cost tracking
+
+```groovy
+seqera {
+    executor {
+        region = 'us-east-1'
+        labels = [team: 'genomics', project: 'wgs-analysis']
+        autoLabels = true
+    }
+}
+```
+
+### Using the resource prediction model
+
+```groovy
+seqera {
+    executor {
+        region = 'eu-west-1'
+        predictionModel = 'qr/v1'
+    }
 }
 ```
 

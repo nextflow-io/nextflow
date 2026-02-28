@@ -1,5 +1,7 @@
 # Wave containers plugin for Nextflow
 
+## Summary
+
 The Wave containers plugin provides integration with the Wave container service for dynamic container building, augmentation, and on-demand software provisioning.
 
 ## Get started
