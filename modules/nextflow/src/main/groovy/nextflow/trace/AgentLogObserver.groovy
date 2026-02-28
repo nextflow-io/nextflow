@@ -25,21 +25,22 @@ import nextflow.trace.event.TaskEvent
 
 /**
  * AI agent-friendly log observer that outputs minimal, structured information
- * optimized for AI context windows.
+ * to standard error, optimized for AI context windows.
  *
- * Activated via environment variables: NXF_AGENT=1, AGENT=1, or CLAUDECODE=1
+ * Activated via environment variable {@code NXF_AGENT_MODE=1}.
  *
  * Output format:
- * - [PIPELINE] name version | profile=X
- * - [WORKDIR] /path/to/work
- * - [WARN] warning message (deduplicated)
- * - [ERROR] PROCESS_NAME (sample_id) with exit/cmd/stderr/workdir
- * - [SUCCESS|FAILED] completed=N failed=N cached=N
+ * - {@code [PIPELINE] name version | profile=X}
+ * - {@code [WORKDIR] /path/to/work}
+ * - {@code [PROCESS hash] name (tag)}
+ * - {@code [WARN] warning message} (deduplicated)
+ * - {@code [ERROR] name} with exit/cmd/stderr/workdir
+ * - {@code [SUCCESS|FAILED] completed=N failed=N cached=N}
  *
  * @author Edmund Miller <edmund.miller@utdallas.edu>
  */
 @Slf4j
-class AgentLogObserver implements TraceObserverV2 {
+class AgentLogObserver implements TraceObserverV2, LogObserver {
 
     private Session session
     private WorkflowStatsObserver statsObserver
@@ -107,7 +108,9 @@ class AgentLogObserver implements TraceObserverV2 {
 
     @Override
     void onTaskSubmit(TaskEvent event) {
-        // Not reported in agent mode
+        def task = event.handler?.task
+        if( task )
+            println("[PROCESS ${task.hashLog}] ${task.name}")
     }
 
     @Override

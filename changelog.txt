@@ -1,8 +1,5 @@
 NEXTFLOW CHANGE-LOG
 ===================
-26.02.0-edge - UNRELEASED
-- Add AI agent-friendly output mode via NXF_AGENT/AGENT/CLAUDECODE env vars [NEW]
-
 26.01.1-edge - 11 Feb 2026
 - Add OSC 8 hyperlinks to task hashes in progress output (#6799) [8d266c76b]
 - Fix JGit resources not being closed in CLI commands (#6795) [908e4c70d]

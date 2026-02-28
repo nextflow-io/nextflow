@@ -65,13 +65,16 @@ class SysEnv {
 
     /**
      * Check if agent output mode is enabled via environment variables.
-     * Supports NXF_AGENT=1, AGENT=1, or CLAUDECODE=1.
-     * When enabled, Nextflow produces minimal, AI-friendly output.
+     * When enabled, Nextflow replaces interactive ANSI logging with minimal,
+     * structured output optimized for AI agents.
      *
-     * @return true if agent mode is enabled
+     * Supported variables (any truthy value activates the mode):
+     * {@code NXF_AGENT_MODE}, {@code AGENT}, {@code CLAUDECODE}.
+     *
+     * @return {@code true} if agent mode is enabled
      */
     static boolean isAgentMode() {
-        return getBool('NXF_AGENT', false) ||
+        return getBool('NXF_AGENT_MODE', false) ||
                getBool('AGENT', false) ||
                getBool('CLAUDECODE', false)
     }

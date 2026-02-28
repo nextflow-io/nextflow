@@ -57,7 +57,6 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Global
 import nextflow.Session
 import nextflow.SysEnv
-import nextflow.trace.AnsiLogObserver
 import nextflow.cli.CliOptions
 import nextflow.cli.Launcher
 import nextflow.exception.AbortOperationException
@@ -716,27 +715,18 @@ class LoggerHelper {
             try {
                 final message = fmtEvent(event, session, false)
 
-                final ansiObserver = session?.ansiLogObserver
-                final agentObserver = session?.agentLogObserver
-                if( ansiObserver ) {
-                    if( !ansiObserver.started || ansiObserver.stopped )
+                final observer = session?.logObserver
+                if( observer ) {
+                    if( !observer.started || observer.stopped )
                         System.out.println(message)
                     else if( event.marker == STICKY )
-                        ansiObserver.appendSticky(message)
+                        observer.appendSticky(message)
                     else if( event.level==Level.ERROR )
-                        ansiObserver.appendError(message)
+                        observer.appendError(message)
                     else if( event.level==Level.WARN )
-                        ansiObserver.appendWarning(message)
+                        observer.appendWarning(message)
                     else
-                        ansiObserver.appendInfo(message)
-                }
-                else if( agentObserver ) {
-                    if( event.level==Level.ERROR )
-                        agentObserver.appendError(message)
-                    else if( event.level==Level.WARN )
-                        agentObserver.appendWarning(message)
-                    else
-                        agentObserver.appendInfo(message)
+                        observer.appendInfo(message)
                 }
                 else {
                     System.out.println(message)
