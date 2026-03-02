@@ -81,4 +81,85 @@ class CmdLintTest extends Specification {
         dir?.deleteDir()
     }
 
+    def 'should suppress progress output with quiet flag' () {
+
+        given:
+        def dir = Files.createTempDirectory('test')
+
+        dir.resolve('main.nf').text = '''\
+            process HELLO {
+                input:
+                val x
+
+                script:
+                "echo hello"
+            }
+            '''
+
+        when:
+        def cmd = new CmdLint()
+        cmd.args = [dir.toFile().toString()]
+        cmd.launcher = Mock(Launcher) {
+            getOptions() >> Mock(CliOptions) {
+                getQuiet() >> true
+                getAnsiLog() >> false
+            }
+        }
+        cmd.run()
+
+        then:
+        noExceptionThrown()
+        and:
+        !capture.toString().contains("Linting Nextflow code")
+        !capture.toString().contains("Linting:")
+        !capture.toString().contains("Nextflow linting complete")
+
+        cleanup:
+        dir?.deleteDir()
+    }
+
+    def 'should still show errors with quiet flag' () {
+
+        given:
+        def dir = Files.createTempDirectory('test')
+
+        dir.resolve('main.nf').text = '''\
+            process HELLO {
+
+                script:
+                """
+                ${
+                    params.is_paired_end
+                        ? "..."
+                        : "..."
+                }
+                """
+            }
+            '''
+
+        when:
+        def cmd = new CmdLint()
+        cmd.args = [dir.toFile().toString()]
+        cmd.launcher = Mock(Launcher) {
+            getOptions() >> Mock(CliOptions) {
+                getQuiet() >> true
+                getAnsiLog() >> false
+            }
+        }
+        cmd.run()
+
+        then:
+        thrown(AbortOperationException)
+        and:
+        !capture.toString().contains("Linting Nextflow code")
+        !capture.toString().contains("Linting:")
+        !capture.toString().contains("Nextflow linting complete")
+        and:
+        capture.toString().contains("Error")
+        capture.toString().contains("Unexpected input")
+
+        cleanup:
+        dir?.deleteDir()
+    }
+
 }

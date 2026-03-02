@@ -127,7 +127,7 @@ class CmdLint extends CmdBase {
             ? new JsonErrorListener()
             : outputMode == 'markdown'
             ? new MarkdownErrorListener()
-            : new StandardErrorListener(outputMode, launcher.options.ansiLog)
+            : new StandardErrorListener(outputMode, launcher.options.ansiLog, launcher.options.quiet)
         formattingOptions = new FormattingOptions(spaces, !tabs, harhsilAlignment, false, sortDeclarations)
 
         errorListener.beforeAll()

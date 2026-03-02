@@ -55,10 +55,12 @@ class ErrorSummary {
 class StandardErrorListener implements ErrorListener {
     private String mode
     private boolean ansiLog
+    private boolean quiet
 
-    StandardErrorListener(String mode, boolean ansiLog) {
+    StandardErrorListener(String mode, boolean ansiLog, boolean quiet=false) {
         this.mode = mode
         this.ansiLog = ansiLog
+        this.quiet = quiet
     }
 
     private Ansi ansi() {
@@ -69,6 +71,8 @@ class StandardErrorListener implements ErrorListener {
 
     @Override
     void beforeAll() {
+        if( quiet )
+            return
         final line = ansi().a("Linting Nextflow code..").newline()
         AnsiConsole.out.print(line)
         AnsiConsole.out.flush()
@@ -76,6 +80,8 @@ class StandardErrorListener implements ErrorListener {
 
     @Override
     void beforeFile(File file) {
+        if( quiet )
+            return
         final line = ansi()
             .cursorUp(1).eraseLine()
             .a(Ansi.Attribute.INTENSITY_FAINT).a("Linting: ${file}")
@@ -88,7 +94,7 @@ class StandardErrorListener implements ErrorListener {
 
     @Override
     void beforeErrors() {
-        term = ansi().cursorUp(1).eraseLine()
+        term = quiet ? ansi() : ansi().cursorUp(1).eraseLine()
     }
 
     @Override
@@ -215,14 +221,18 @@ class StandardErrorListener implements ErrorListener {
 
     @Override
     void afterErrors() {
-        // print extra newline since next file status will chomp back one
-        term.fg(Ansi.Color.DEFAULT).newline()
+        if( !quiet ) {
+            // print extra newline since next file status will chomp back one
+            term.fg(Ansi.Color.DEFAULT).newline()
+        }
         AnsiConsole.out.print(term)
         AnsiConsole.out.flush()
     }
 
     @Override
     void beforeFormat(File file) {
+        if( quiet )
+            return
         final line = ansi()
             .cursorUp(1).eraseLine()
             .a(Ansi.Attribute.INTENSITY_FAINT).a("Formatting: ${file}")
@@ -233,6 +243,8 @@ class StandardErrorListener implements ErrorListener {
 
     @Override
     void afterAll(ErrorSummary summary) {
+        if( quiet )
+            return
         final term = ansi()
         term.cursorUp(1).eraseLine()
         // print extra newline if no code is being shown
