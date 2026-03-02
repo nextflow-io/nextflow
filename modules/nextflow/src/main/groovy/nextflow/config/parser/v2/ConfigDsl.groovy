@@ -128,13 +128,64 @@ class ConfigDsl extends Script {
         }
     }
 
+    /**
+     * Assign a value to a config option.
+     *
+     * When assigning a param, if the param was specified
+     * on the command line, then the command line value takes
+     * precedence. CLI params are applied here in order to ensure
+     * that if the param is referenced later in the config file,
+     * the command line value is used.
+     *
+     * @param names
+     * @param value
+     */
     void assign(List<String> names, Object value) {
         if( names.size() == 2 && names.first() == 'params' ) {
-            declareParam(names.last(), value)
-            if( cliParams.containsKey(names.last()) )
-                return
+            final name = names.last()
+            declareParam(name, value)
+            if( cliParams.containsKey(name) )
+                value = asDeclaredType(cliParams[name], value)
         }
         navigate(names.init()).put(names.last(), value)
+    }
+
+    /**
+     * Convert a CLI param override to an appropriate type based
+     * on the default param value in the config file.
+     *
+     * Note: this applies only to numbers and booleans.
+     *
+     * @param value
+     * @param declValue
+     */
+    private Object asDeclaredType(Object value, Object declValue) {
+        if( value == null )
+            return null
+
+        if( value !instanceof CharSequence )
+            return value
+
+        final str = value.toString()
+
+        if( declValue instanceof Boolean ) {
+            if( str.toLowerCase() == 'true' ) return Boolean.TRUE
+            if( str.toLowerCase() == 'false' ) return Boolean.FALSE
+        }
+
+        if( declValue instanceof Integer || declValue instanceof Float ) {
+            if( str.isInteger() ) return str.toInteger()
+            if( str.isLong() ) return str.toLong()
+            if( str.isBigInteger() ) return str.toBigInteger()
+        }
+
+        if( declValue instanceof Float ) {
+            if( str.isFloat() ) return str.toFloat()
+            if( str.isDouble() ) return str.toDouble()
+            if( str.isBigDecimal() ) return str.toBigDecimal()
+        }
+
+        return value
     }
 
     private Map navigate(List<String> names) {
@@ -248,8 +299,8 @@ class ConfigDsl extends Script {
             this.scope = scope
         }
 
-        void assign(List<String> names, Object right) {
-            dsl.assign(scope + names, right)
+        void assign(List<String> names, Object value) {
+            dsl.assign(scope + names, value)
         }
 
         void block(String name, Closure closure) {
@@ -310,7 +361,7 @@ class ConfigDsl extends Script {
         }
 
         @Override
-        void assign(List<String> names, Object right) {
+        void assign(List<String> names, Object value) {
             throw new ConfigParseException("Only profile blocks are allowed in the `profiles` scope")
         }
 
