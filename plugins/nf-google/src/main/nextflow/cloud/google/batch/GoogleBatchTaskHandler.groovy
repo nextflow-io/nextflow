@@ -473,6 +473,12 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             instancePolicyOrTemplate.setPolicy(instancePolicy)
         }
 
+        if( batchConfig.installOpsAgent ) {
+            if( !batchConfig.bootDiskImage?.toLowerCase()?.contains('debian') )
+                log.warn1 "The Ops Agent requires a compatible boot disk image. Set 'google.batch.bootDiskImage' to a batch-debian image."
+            instancePolicyOrTemplate.setInstallOpsAgent( true )
+        }
+
         return new InstancePolicyResult(instancePolicyOrTemplate.build(), requiresScratchVolume)
     }
 
