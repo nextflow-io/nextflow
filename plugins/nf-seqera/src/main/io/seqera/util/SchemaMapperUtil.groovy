@@ -132,17 +132,30 @@ class SchemaMapperUtil {
      * @return the DiskRequirement API object, or null if diskSize is null or zero
      */
     static DiskRequirement toDiskRequirement(MemoryUnit diskSize, MachineRequirementOpts opts=null) {
+        final allocation = toDiskAllocation(opts?.diskAllocation)
+
+        // For NVMe allocation, disk size is instance-determined — no size required
+        if (allocation == DiskAllocation.NVME) {
+            validateNvmeAllocationOpts(opts)
+            final DiskRequirement req = new DiskRequirement()
+            req.sizeGiB(diskSize ? diskSize.toGiga() as Integer : 0)
+            req.allocation(allocation)
+            req.mountPath(opts?.diskMountPath)
+            return req
+        }
+
         if (!diskSize || diskSize.toGiga() <= 0)
             return null
 
-        final allocation = toDiskAllocation(opts?.diskAllocation) ?: DiskAllocation.NODE
+        final effectiveAllocation = allocation ?: DiskAllocation.NODE
 
         // For 'node' allocation (default), only size and mountPath are valid
-        if (allocation == DiskAllocation.NODE) {
+        if (effectiveAllocation == DiskAllocation.NODE) {
             validateNodeAllocationOpts(opts)
             final DiskRequirement req = new DiskRequirement()
             req.sizeGiB(diskSize.toGiga() as Integer)
-            req.allocation(allocation)
+            req.allocation(effectiveAllocation)
+            req.mountPath(opts?.diskMountPath)
             return req
         }
 
@@ -169,6 +182,7 @@ class SchemaMapperUtil {
         if (iops) {
             req.iops(iops)
         }
+        req.mountPath(opts?.diskMountPath)
         return req
     }
 
@@ -196,6 +210,31 @@ class SchemaMapperUtil {
             throw new IllegalArgumentException(
                 "The following options are not valid with 'node' disk allocation: ${invalidOpts.join(', ')}. " +
                 "Node allocation uses instance storage; only disk size is applicable."
+            )
+        }
+    }
+
+    /**
+     * Validates that no EBS-specific options are set when using 'nvme' allocation.
+     * NVMe uses instance store disks, not EBS volumes.
+     */
+    private static void validateNvmeAllocationOpts(MachineRequirementOpts opts) {
+        if (!opts)
+            return
+        final List<String> invalidOpts = []
+        if (opts.diskType)
+            invalidOpts.add('diskType')
+        if (opts.diskThroughputMiBps)
+            invalidOpts.add('diskThroughputMiBps')
+        if (opts.diskIops)
+            invalidOpts.add('diskIops')
+        if (opts.diskEncrypted)
+            invalidOpts.add('diskEncrypted')
+
+        if (invalidOpts) {
+            throw new IllegalArgumentException(
+                "The following options are not valid with 'nvme' disk allocation: ${invalidOpts.join(', ')}. " +
+                "NVMe uses instance store disks; EBS options are not applicable."
             )
         }
     }

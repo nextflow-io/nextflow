@@ -462,6 +462,7 @@ seqera {
             diskIops = 10000           // Required for io1/io2
             diskThroughputMiBps = 500  // Throughput for gp3 volumes
             diskEncrypted = true       // Enable KMS encryption
+            diskMountPath = '/data'    // Container mount path (default: /tmp)
         }
     }
 }
