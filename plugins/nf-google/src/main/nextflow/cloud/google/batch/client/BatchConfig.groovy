@@ -92,6 +92,22 @@ class BatchConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
+        Enable container image streaming to speed up job start-up (default: `false`).
+        This can reduce latency for large images but comes with some
+        [limitations](https://cloud.google.com/batch/docs/use-image-streaming), including:
+
+        - `process.containerOptions` is ignored when image streaming is enabled.
+        - Image streaming only supports container images stored in Artifact Registry.
+          If you currently use Container Registry, you should 
+          [transition to Artifact Registry](https://cloud.google.com/artifact-registry/docs/transition/transition-from-gcr).
+        - You must run your Batch job's VMs in the same
+          [location](https://cloud.google.com/artifact-registry/docs/repositories/repo-locations)
+          as the Artifact Registry storing the container image.
+    """)
+    final boolean enableImageStreaming
+
+    @ConfigOption
+    @Description("""
         Max number of execution attempts of a job interrupted by a Compute Engine Spot reclaim event (default: `0`).
     """)
     final int maxSpotAttempts
@@ -148,6 +164,7 @@ class BatchConfig implements ConfigScope {
         gcsfuseOptions = opts.gcsfuseOptions as List<String> ?: DEFAULT_GCSFUSE_OPTS
         installGpuDrivers = opts.installGpuDrivers as boolean
         logsPath = opts.logsPath
+        enableImageStreaming = opts.enableImageStreaming != null ? opts.enableImageStreaming as boolean : false
         maxSpotAttempts = opts.maxSpotAttempts != null ? opts.maxSpotAttempts as int : DEFAULT_MAX_SPOT_ATTEMPTS
         network = opts.network
         networkTags = opts.networkTags as List<String> ?: Collections.emptyList()
