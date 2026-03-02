@@ -1,3 +1,19 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package nextflow.cloud.azure.batch
 
 import java.nio.ByteBuffer
@@ -7,6 +23,7 @@ import java.time.temporal.ChronoUnit
 import java.util.function.Predicate
 
 import com.azure.compute.batch.models.BatchPool
+import com.azure.compute.batch.models.BatchJobCreateContent
 import com.azure.compute.batch.models.ElevationLevel
 import com.azure.compute.batch.models.EnvironmentSetting
 import com.azure.core.exception.HttpResponseException
@@ -192,7 +209,7 @@ class AzBatchServiceTest extends Specification {
         given:
         def exec = createExecutor()
         def svc = new AzBatchService(exec)
-        
+
         when:
         def ret = svc.findBestVm('northeurope', 4, MemoryUnit.of(7168), MemoryUnit.of(122880), null)
         then:
@@ -265,7 +282,7 @@ class AzBatchServiceTest extends Specification {
         given:
         def exec = createExecutor()
         def svc = new AzBatchService(exec)
-        
+
         expect:
         svc.computeSlots(CPUS, MemoryUnit.of(MEM*_1GB), MemoryUnit.of(DISK*_1GB), VM_CPUS, MemoryUnit.of(VM_MEM*_1GB), MemoryUnit.of(VM_DISK*_1GB)) == EXPECTED
         where:
@@ -611,7 +628,7 @@ class AzBatchServiceTest extends Specification {
         def result = svc.specFromPoolConfig(POOL_ID)
         then:
         1 * svc.getPool(_) >> new BatchPool(vmSize: 'Standard_D2_v2')
-        and:        
+        and:
         result.vmType.name == 'Standard_D2_v2'
         result.vmType.numberOfCores == 2
         and:
@@ -842,7 +859,7 @@ class AzBatchServiceTest extends Specification {
         ])
         def exec = createExecutor(CONFIG)
         def service = new AzBatchService(exec)
-        
+
         and:
         Global.session = Mock(Session) {
             getConfig() >> [fusion: [enabled: true]]
@@ -853,7 +870,7 @@ class AzBatchServiceTest extends Specification {
         if( service.config.batch().poolIdentityClientId && true ) { // fusionEnabled = true
             env.put('FUSION_AZ_MSI_CLIENT_ID', service.config.batch().poolIdentityClientId)
         }
-        
+
         then:
         env['FUSION_AZ_MSI_CLIENT_ID'] == POOL_IDENTITY_CLIENT_ID
     }
@@ -920,7 +937,7 @@ class AzBatchServiceTest extends Specification {
 
         when: 'pool is created successfully'
         service.safeCreatePool(spec)
-        
+
         then: 'createPool is called once'
         1 * service.createPool(spec) >> null
         and:
@@ -928,7 +945,7 @@ class AzBatchServiceTest extends Specification {
 
         when: 'pool already exists (409 with PoolExists)'
         service.safeCreatePool(spec)
-        
+
         then: 'exception is caught and debug message is logged'
         1 * service.createPool(spec) >> {
             def response = Mock(HttpResponse) {
@@ -944,7 +961,7 @@ class AzBatchServiceTest extends Specification {
 
         when: 'different HttpResponseException occurs'
         service.safeCreatePool(spec)
-        
+
         then: 'exception is rethrown'
         1 * service.createPool(spec) >> {
             def response = Mock(HttpResponse) {
@@ -959,7 +976,7 @@ class AzBatchServiceTest extends Specification {
 
         when: 'a different exception occurs'
         service.safeCreatePool(spec)
-        
+
         then: 'exception is not caught'
         1 * service.createPool(spec) >> { throw new IllegalArgumentException("Some other error") }
         thrown(IllegalArgumentException)
@@ -970,10 +987,10 @@ class AzBatchServiceTest extends Specification {
         def exec = createExecutor()
         def service = new AzBatchService(exec)
         def nfDuration = TIME_STR ? nextflow.util.Duration.of(TIME_STR) : null
-        
+
         when:
         def result = service.createJobConstraints(nfDuration)
-        
+
         then:
         result != null
         if (TIME_STR) {
@@ -982,7 +999,7 @@ class AzBatchServiceTest extends Specification {
         } else {
             assert result.maxWallClockTime == null
         }
-        
+
         where:
         TIME_STR | EXPECTED_DAYS
         '48d'    | 48
@@ -1000,10 +1017,10 @@ class AzBatchServiceTest extends Specification {
                 getTime() >> TIME
             }
         }
-        
+
         when:
         def result = service.taskConstraints(task)
-        
+
         then:
         result != null
         if (TIME) {
@@ -1012,7 +1029,7 @@ class AzBatchServiceTest extends Specification {
         } else {
             assert result.maxWallClockTime == null
         }
-        
+
         where:
         TIME << [
             null,
@@ -1022,4 +1039,150 @@ class AzBatchServiceTest extends Specification {
         ]
     }
 
+    // -- applyCreateJob tests --
+
+    def 'should create job successfully on first try'() {
+        given:
+        def config = new AzConfig([batch: [maxJobQuotaRetries: 2, jobQuotaRetryDelay: '1 sec']])
+        def exec = createExecutor(config)
+        int createCalls = 0
+        def service = new AzBatchService(exec) {
+            @Override
+            protected void createJobRequest(BatchJobCreateContent content) {
+                createCalls++
+            }
+        }
+
+        when:
+        service.applyCreateJob(null)
+
+        then:
+        noExceptionThrown()
+        createCalls == 1
+    }
+
+    def 'should retry on ActiveJobAndScheduleQuotaReached and then succeed'() {
+        given:
+        def config = new AzConfig([batch: [maxJobQuotaRetries: 2, jobQuotaRetryDelay: '1 sec']])
+        def exec = createExecutor(config)
+        int createCalls = 0
+        def service = new AzBatchService(exec) {
+            @Override
+            protected void createJobRequest(BatchJobCreateContent content) {
+                createCalls++
+                if (createCalls == 1)
+                    throw new HttpResponseException('first call', null)
+            }
+            @Override
+            protected boolean isJobQuotaError(HttpResponseException e) {
+                return true
+            }
+        }
+
+        when:
+        service.applyCreateJob(null)
+
+        then:
+        noExceptionThrown()
+        createCalls == 2
+    }
+
+    def 'should throw after exceeding max job quota retries'() {
+        given:
+        def config = new AzConfig([batch: [maxJobQuotaRetries: 2, jobQuotaRetryDelay: '1 sec']])
+        def exec = createExecutor(config)
+        int createCalls = 0
+        def service = new AzBatchService(exec) {
+            @Override
+            protected void createJobRequest(BatchJobCreateContent content) {
+                createCalls++
+                throw new HttpResponseException('quota error', null)
+            }
+            @Override
+            protected boolean isJobQuotaError(HttpResponseException e) {
+                return true
+            }
+        }
+
+        when:
+        service.applyCreateJob(null)
+
+        then:
+        def e = thrown(IllegalStateException)
+        e.message.contains('exceeded maximum number of retries')
+        e.message.contains('2')
+        createCalls == 3  // initial + 2 retries
+    }
+
+    def 'should fail immediately when maxJobQuotaRetries is 0'() {
+        given:
+        def config = new AzConfig([batch: [maxJobQuotaRetries: 0, jobQuotaRetryDelay: '1 sec']])
+        def exec = createExecutor(config)
+        int createCalls = 0
+        def service = new AzBatchService(exec) {
+            @Override
+            protected void createJobRequest(BatchJobCreateContent content) {
+                createCalls++
+                throw new HttpResponseException('quota error', null)
+            }
+            @Override
+            protected boolean isJobQuotaError(HttpResponseException e) {
+                return true
+            }
+        }
+
+        when:
+        service.applyCreateJob(null)
+
+        then:
+        def e = thrown(IllegalStateException)
+        e.message.contains('exceeded maximum number of retries')
+        createCalls == 1
+    }
+
+    def 'should not retry on non-quota 409 error'() {
+        given:
+        def config = new AzConfig([batch: [maxJobQuotaRetries: 2, jobQuotaRetryDelay: '1 sec']])
+        def exec = createExecutor(config)
+        int createCalls = 0
+        def service = new AzBatchService(exec) {
+            @Override
+            protected void createJobRequest(BatchJobCreateContent content) {
+                createCalls++
+                throw new HttpResponseException('Job already exists', null)
+            }
+            @Override
+            protected boolean isJobQuotaError(HttpResponseException e) {
+                return false
+            }
+        }
+
+        when:
+        service.applyCreateJob(null)
+
+        then:
+        thrown(HttpResponseException)
+        createCalls == 1
+    }
+
+    def 'should not retry on non-HttpResponseException'() {
+        given:
+        def config = new AzConfig([batch: [maxJobQuotaRetries: 2, jobQuotaRetryDelay: '1 sec']])
+        def exec = createExecutor(config)
+        int createCalls = 0
+        def service = new AzBatchService(exec) {
+            @Override
+            protected void createJobRequest(BatchJobCreateContent content) {
+                createCalls++
+                throw new IllegalArgumentException('unexpected error')
+            }
+        }
+
+        when:
+        service.applyCreateJob(null)
+
+        then:
+        thrown(IllegalArgumentException)
+        createCalls == 1
+    }
 }

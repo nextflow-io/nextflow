@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,19 +34,19 @@ class ProviderPathTest extends Specification {
         def path = new ProviderPath(provider, 'nextflow.config')
 
         def MAIN_CONFIG = '''
-            params.foo = 1 
-            
+            params.foo = 1
+
             includeConfig 'conf/nested.config'
             '''
 
         def NESTED_CONFIG = '''
-            params.bar = 2 
+            params.bar = 2
             process {
-                cpus = 3 
+                cpus = 3
                 memory = '4 GB'
             }
             '''
-        
+
         when:
         def cfg = new ConfigBuilder().buildGivenFiles(path)
         then:
@@ -94,7 +94,7 @@ class ProviderPathTest extends Specification {
         def path = new ProviderPath(provider, 'some/dir/nextflow.config')
 
         expect:
-        path.isAbsolute() 
+        path.isAbsolute()
         path.toAbsolutePath().equals(path)
         path.normalize().equals(path)
     }

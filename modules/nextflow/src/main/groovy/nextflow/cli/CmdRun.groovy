@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -336,15 +336,15 @@ class CmdRun extends CmdBase implements HubOptions {
 
         /*
          * 2-PHASE CONFIGURATION LOADING STRATEGY
-         * 
+         *
          * Problem: Configuration files may reference secrets provided by plugins (e.g., AWS secrets),
          * but plugins are loaded AFTER configuration parsing. This creates a chicken-and-egg problem:
          * - Config parsing needs secret values to complete
-         * - Plugin loading needs config to determine which plugins to load  
+         * - Plugin loading needs config to determine which plugins to load
          * - Secret providers are registered by plugins
-         * 
+         *
          * Solution: Parse configuration twice when secrets are referenced
-         * 
+         *
          * PHASE 1: Parse config with EmptySecretProvider (returns "" for all secrets)
          * - Configuration must use defensive patterns: secrets.FOO ? "value-${secrets.FOO}" : "fallback"
          * - Config parses successfully with fallback values
@@ -404,7 +404,8 @@ class CmdRun extends CmdBase implements HubOptions {
         runner.setPreview(this.preview, previewAction)
         runner.session.profile = profile
         runner.session.commandLine = launcher.cliString
-        runner.session.ansiLog = launcher.options.ansiLog
+        runner.session.ansiLog = launcher.options.ansiLog && !SysEnv.isAgentMode()
+        runner.session.agentLog = SysEnv.isAgentMode()
         runner.session.debug = launcher.options.remoteDebug
         runner.session.disableJobsCancellation = getDisableJobsCancellation()
 
@@ -435,6 +436,11 @@ class CmdRun extends CmdBase implements HubOptions {
     }
 
     protected void printBanner() {
+        // Suppress banner in agent mode for minimal output
+        if( SysEnv.isAgentMode() ) {
+            return
+        }
+
         if( launcher.options.ansiLog ){
             // Plain header for verbose log
             log.debug "N E X T F L O W  ~  version ${BuildInfo.version}"
@@ -499,6 +505,11 @@ class CmdRun extends CmdBase implements HubOptions {
     }
 
     protected void printLaunchInfo(String repo, String head, String revision) {
+        // Agent mode output is handled by AgentLogObserver
+        if( SysEnv.isAgentMode() ) {
+            return
+        }
+
         if( launcher.options.ansiLog ){
             log.debug "${head} [$runName] - revision: ${revision}"
 

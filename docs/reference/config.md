@@ -113,7 +113,7 @@ The following settings are available:
 : The AWS Batch [Execution Role](https://docs.aws.amazon.com/batch/latest/userguide/execution-IAM-role.html) ARN that needs to be used to execute the Batch Job. It is mandatory when using AWS Fargate.
 
 `aws.batch.forceGlacierTransfer`
-: :::{versionadded 26.04.0}
+: :::{versionadded} 26.04.0 
   :::
 : When `true`, add the `--force-glacier-transfer` flag to AWS CLI S3 download commands (default: `false`).
 : This option is needed when staging directories that have been restored from [S3 Glacier](https://aws.amazon.com/s3/storage-classes/glacier/). It does not restore objects from Glacier.
@@ -1408,6 +1408,82 @@ The following settings are available:
 
 `sarus.tty`
 : Allocates a pseudo-tty (default: `false`).
+
+(config-seqera)=
+
+## `seqera`
+
+:::{versionadded} 26.04.0
+:::
+
+:::{warning}
+*Preview feature: may change in a future release.*
+:::
+
+The `seqera` scope allows you to configure the interactions with Seqera services.
+
+### `executor`
+
+The `seqera.executor` scope configures the Seqera scheduler service for the {ref}`seqera-executor`.
+
+The following settings are available:
+
+`seqera.executor.endpoint`
+: The Seqera scheduler service endpoint URL (required).
+
+`seqera.executor.region`
+: The AWS region for task execution (default: `'eu-central-1'`).
+
+`seqera.executor.autoLabels`
+: When `true`, automatically adds workflow metadata labels to the session with the `nextflow.io/` prefix (default: `false`). The following labels are added: `projectName`, `userName`, `runName`, `sessionId`, `resume`, `revision`, `commitId`, `repository`, `manifestName`, `runtimeVersion`. A `seqera.io/runId` label is also added, computed as a SipHash of the session ID and run name.
+
+`seqera.executor.labels`
+: Custom labels to apply to AWS resources for cost tracking and resource organization. Labels are propagated to ECS tasks, capacity providers, and EC2 instances. When used together with `autoLabels`, user-defined labels take precedence over auto-generated labels.
+
+`seqera.executor.machineRequirement.arch`
+: The CPU architecture for task execution, e.g. `'x86_64'` or `'arm64'`.
+
+`seqera.executor.machineRequirement.provisioning`
+: The instance provisioning mode. Can be `'spot'`, `'ondemand'`, or `'spotFirst'`.
+
+`seqera.executor.machineRequirement.maxSpotAttempts`
+: The maximum number of spot retry attempts before falling back to on-demand. Only used when `provisioning` is `'spot'` or `'spotFirst'`.
+
+`seqera.executor.machineRequirement.machineFamilies`
+: List of acceptable EC2 instance families, e.g. `['m5', 'c5', 'r5']`.
+
+`seqera.executor.machineRequirement.diskAllocation`
+: The disk allocation strategy. Can be `'task'` (default) for per-task EBS volumes, or `'node'` for per-node instance storage. When using `'node'` allocation, EBS-specific options (`diskType`, `diskIops`, `diskThroughputMiBps`, `diskEncrypted`) are not applicable.
+
+`seqera.executor.machineRequirement.diskType`
+: The EBS volume type for task scratch disk. Supported types: `'ebs/gp3'` (default), `'ebs/gp2'`, `'ebs/io1'`, `'ebs/io2'`, `'ebs/st1'`, `'ebs/sc1'`. Only applicable when `diskAllocation` is `'task'`.
+
+`seqera.executor.machineRequirement.diskThroughputMiBps`
+: The throughput in MiB/s for gp3 volumes (125-1000). Default: `325` (Fusion recommended). Only applicable when `diskAllocation` is `'task'`.
+
+`seqera.executor.machineRequirement.diskIops`
+: The IOPS for io1/io2/gp3 volumes. Required for io1/io2 volume types. Only applicable when `diskAllocation` is `'task'`.
+
+`seqera.executor.machineRequirement.diskEncrypted`
+: Enable KMS encryption for the EBS volume (default: `false`). Only applicable when `diskAllocation` is `'task'`.
+
+`seqera.executor.taskEnvironment`
+: Custom environment variables to apply to all tasks submitted by the Seqera executor. These are merged with the Fusion environment variables, with Fusion variables taking precedence. For example: `taskEnvironment = [MY_VAR: 'value']`.
+
+`seqera.executor.retryPolicy.delay`
+: The initial delay when a failing HTTP request is retried (default: `'450ms'`).
+
+`seqera.executor.retryPolicy.maxDelay`
+: The maximum delay when a failing HTTP request is retried (default: `'90s'`).
+
+`seqera.executor.retryPolicy.maxAttempts`
+: The maximum number of retry attempts (default: `10`).
+
+`seqera.executor.retryPolicy.jitter`
+: The jitter factor for randomizing retry delays (default: `0.25`).
+
+`seqera.executor.retryPolicy.multiplier`
+: The multiplier for exponential backoff (default: `2.0`).
 
 (config-shifter)=
 

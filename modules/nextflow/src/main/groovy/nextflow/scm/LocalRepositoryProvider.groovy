@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -157,11 +157,11 @@ class LocalRepositoryProvider extends RepositoryProvider {
 
     private RepositoryEntry createRepositoryEntry(TreeWalk treeWalk, String entryPath) {
         String name = entryPath.split('/').last()
-        
+
         // Determine if it's a directory or file based on file mode
         EntryType type = treeWalk.isSubtree() ? EntryType.DIRECTORY : EntryType.FILE
         String sha = treeWalk.getObjectId(0).name()
-        
+
         // For files, try to get size
         Long size = null
         if (type == EntryType.FILE) {
@@ -173,7 +173,7 @@ class LocalRepositoryProvider extends RepositoryProvider {
                 // Size not available, leave as null
             }
         }
-        
+
         return new RepositoryEntry(
             name: name,
             path: entryPath,

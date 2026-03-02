@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -350,29 +350,29 @@ def getRuntimeConfigs() {
  */
 task exportClasspath {
     dependsOn allprojects.jar
-    
+
     // Use provider to delay configuration resolution until task execution
     def configurationFiles = provider {
         def libs = []
-        
+
         // Resolve configurations during provider evaluation (not ideal but functional)
         ['nextflow','nf-commons','nf-httpfs','nf-lang','nf-lineage'].each { moduleName ->
             def moduleProject = project(":$moduleName")
             def cfg = moduleProject.configurations.getByName('runtimeClasspath')
             libs.addAll(cfg.files.collect { it.canonicalPath })
         }
-        
+
         // Add module jars
         ['nextflow','nf-commons','nf-httpfs','nf-lang','nf-lineage'].each {
             libs << file("modules/$it/build/libs/${it}-${version}.jar").canonicalPath
         }
-        
+
         return libs.unique()
     }
-    
+
     inputs.files(configurationFiles)
     outputs.file('.launch.classpath')
-    
+
     doLast {
         def libs = configurationFiles.get()
         file('.launch.classpath').text = libs.join(':')

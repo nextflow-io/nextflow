@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -82,7 +82,7 @@ class MemoryUnitTest extends Specification {
     }
 
     def 'test getters' () {
-        
+
         expect:
         new MemoryUnit('3.5 PB').bytes == 3.5 * 1024 * 1024 * 1024L* 1024L* 1024L
         new MemoryUnit('3.5 PB').kilo == 3.5 * 1024 * 1024 * 1024L* 1024L
@@ -166,7 +166,7 @@ class MemoryUnitTest extends Specification {
     def 'should validate to unit method' () {
         expect:
         MemoryUnit.of(STR).toUnit(UNIT) == EXPECT
-        
+
         where:
         STR         | UNIT  | EXPECT
         '2 MB'      | 'B'   | 2 * 1024 * 1024

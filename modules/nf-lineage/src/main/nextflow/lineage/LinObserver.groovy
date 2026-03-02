@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -138,7 +138,7 @@ class LinObserver implements TraceObserverV2 {
     }
 
     protected List<DataPath> collectScriptDataPaths(PathNormalizer normalizer) {
-        final allScripts = allScriptFiles()
+        final allScripts = allScriptFiles().sort()
         final result = new ArrayList<DataPath>(allScripts.size()+1)
         // the main script
         result.add( new DataPath(
@@ -153,7 +153,7 @@ class LinObserver implements TraceObserverV2 {
             final dataPath = new DataPath(normalizer.normalizePath(it.normalize()), Checksum.ofNextflow(it.text))
             result.add(dataPath)
         }
-        return result.sort{it.path}
+        return result
     }
 
     protected String storeWorkflowRun(PathNormalizer normalizer) {

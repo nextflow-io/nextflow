@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -499,7 +499,7 @@ class TaskConfigTest extends Specification {
         dsl.publishDir '/there', pattern: '*.fq'
         def dirs = process.createTaskConfig().getPublishDir()
         then:
-        dirs.size() == 2 
+        dirs.size() == 2
         dirs[0].path == Paths.get('/here')
         dirs[0].pattern == null
         dirs[1].path == Paths.get('/there')
@@ -551,7 +551,7 @@ class TaskConfigTest extends Specification {
         def dsl = new ProcessBuilder(process)
         dsl.pod secret: 'foo', mountPath: '/this'
         dsl.pod secret: 'bar', env: 'BAR_XXX'
-        
+
         then:
         process.get('pod') == [
                     [secret: 'foo', mountPath: '/this'],
@@ -572,7 +572,7 @@ class TaskConfigTest extends Specification {
         dsl.accelerator 5
         def res = process.createTaskConfig().getAccelerator()
         then:
-        res.limit == 5 
+        res.limit == 5
         res.request == 5
 
         when:

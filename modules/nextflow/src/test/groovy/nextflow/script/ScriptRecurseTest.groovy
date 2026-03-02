@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.script
@@ -37,13 +36,13 @@ class ScriptRecurseTest extends Dsl2Spec {
     def 'should recourse a process execution' () {
         given:
         def SCRIPT = '''
-         
+
         process foo {
           input: val x
           output: val y
           exec: y = x +1
         }
-       
+
         workflow {
             foo.recurse(1).times(3)
             foo.out
@@ -62,13 +61,13 @@ class ScriptRecurseTest extends Dsl2Spec {
     def 'should recourse a process until a condition is verified' () {
         given:
         def SCRIPT = '''
-         
+
         process foo {
           input: val x
           output: val y
           exec: y = x+1
         }
-       
+
         workflow {
             foo.recurse(1).until { it >= 4 }
             foo.out
@@ -88,31 +87,31 @@ class ScriptRecurseTest extends Dsl2Spec {
     def 'should recourse a workflow execution' () {
         given:
         def SCRIPT = '''
-         
+
         process foo {
           input: val x
           output: val y
           exec: y = x+1
         }
-  
+
         process bar {
           input: val x
           output: val y
           exec: y = x*x
         }
-       
+
         workflow group {
-            take: x 
-            main: 
+            take: x
+            main:
               foo(x)
               bar(foo.out)
             emit:
               bar.out
         }
-        
+
         workflow {
             group.recurse(1).times(3)
-            group.out  
+            group.out
         }
         '''
 
@@ -136,9 +135,9 @@ class ScriptRecurseTest extends Dsl2Spec {
            exec:
               z = x.sum()+1
          }
-         
+
          workflow {
-             data = channel.of(10,20,30) 
+             data = channel.of(10,20,30)
              foo.scan(data)
              foo.out
          }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,11 +21,10 @@ import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
-
 /**
- * Store the workflow platform-related metadata
+ * Models Seqera Platform metadata for Nextflow execution
  *
- * @author Jorge Ejarque <jorge.ejarque@seqera.io>
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 @CompileStatic
@@ -95,21 +94,28 @@ class PlatformMetadata {
         }
     }
 
-    String workflowId
-    User user
-    Workspace workspace
-    ComputeEnv computeEnv
-    Pipeline pipeline
-    List labels
+    /**
+     * Volatile because it is written by TowerClient.onFlowCreate on the main thread
+     * and read by SeqeraExecutor.createRun on the executor thread.
+     */
+    volatile String workflowId
+
+    /**
+     * The Platform watch URL for the current workflow execution.
+     * Set by TowerClient.onFlowBegin and read by SeqeraExecutor.createRun.
+     */
+    volatile String workflowUrl
+    
+    volatile User user
+    volatile Workspace workspace
+    volatile ComputeEnv computeEnv
+    volatile Pipeline pipeline
+    volatile List labels
 
     PlatformMetadata() {}
 
-    PlatformMetadata(String id, User user, Workspace workspace, ComputeEnv computeEnv, Pipeline pipeline, List labels) {
-        this.workflowId = id
-        this.user = user
-        this.workspace = workspace
-        this.computeEnv = computeEnv
-        this.pipeline = pipeline
-        this.labels = labels
+    PlatformMetadata(String workflowId) {
+        this.workflowId = workflowId
     }
+    
 }

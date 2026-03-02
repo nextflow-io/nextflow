@@ -1,0 +1,46 @@
+#!/bin/bash
+#
+# Test agent output mode (NXF_AGENT_MODE=true)
+#
+
+set -e
+
+# Run workflow with agent mode enabled
+NXF_AGENT_MODE=true $NXF_CMD -q run $NXF_SCRIPT > stdout.txt 2> stderr.txt || true
+
+# Verify agent output format in stdout
+# Should contain [PIPELINE], [WORKDIR], and [SUCCESS] or [FAILED]
+
+if ! grep -q '\[PIPELINE\]' stdout.txt; then
+    echo "ERROR: Missing [PIPELINE] in agent output"
+    cat stdout.txt
+    exit 1
+fi
+
+if ! grep -q '\[WORKDIR\]' stdout.txt; then
+    echo "ERROR: Missing [WORKDIR] in agent output"
+    cat stdout.txt
+    exit 1
+fi
+
+if ! grep -q '\[SUCCESS\]' stdout.txt; then
+    echo "ERROR: Missing [SUCCESS] in agent output"
+    cat stdout.txt
+    exit 1
+fi
+
+# Verify banner is suppressed (should NOT contain "N E X T F L O W")
+if grep -q 'N E X T F L O W' stdout.txt; then
+    echo "ERROR: Banner should be suppressed in agent mode"
+    cat stdout.txt
+    exit 1
+fi
+
+# Verify workflow output is present
+if ! grep -q 'World received: Hello from agent mode' stdout.txt; then
+    echo "ERROR: Workflow stdout incorrect"
+    cat stdout.txt
+    exit 1
+fi
+
+echo "Agent output mode test passed"

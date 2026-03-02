@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -86,7 +86,7 @@ public sealed interface SpecNode {
     private static SpecNode processScope() {
         var description = """
             The `process` scope allows you to specify default directives for processes in your pipeline.
-        
+
             [Read more](https://nextflow.io/docs/latest/config.html#process-configuration)
         """;
         var children = new HashMap<String, SpecNode>();
@@ -103,7 +103,7 @@ public sealed interface SpecNode {
         }
         return new Scope(description, children);
     }
-    
+
     private static String annotatedDescription(AnnotatedElement el, String defaultValue) {
         var annot = el.getAnnotation(Description.class);
         return annot != null ? annot.value() : defaultValue;
@@ -156,7 +156,7 @@ public sealed interface SpecNode {
         String description,
         Map<String, SpecNode> children
     ) implements SpecNode {
-    
+
         /**
          * Get the spec node at the given path.
          *
@@ -174,7 +174,7 @@ public sealed interface SpecNode {
             }
             return node;
         }
-    
+
         /**
          * Get the config dsl option at the given path.
          *
@@ -183,7 +183,7 @@ public sealed interface SpecNode {
         public DslOption getDslOption(List<String> names) {
             return getChild(names) instanceof DslOption option ? option : null;
         }
-    
+
         /**
          * Get the config option at the given path.
          *
@@ -201,7 +201,7 @@ public sealed interface SpecNode {
         public Scope getScope(List<String> names) {
             return getChild(names) instanceof Scope scope ? scope : null;
         }
-    
+
         /**
          * Create a scope node from a ConfigScope class.
          *

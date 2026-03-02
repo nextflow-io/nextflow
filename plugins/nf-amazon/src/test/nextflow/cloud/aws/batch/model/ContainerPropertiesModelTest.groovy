@@ -1,3 +1,19 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package nextflow.cloud.aws.batch.model
 
 import software.amazon.awssdk.services.batch.model.ContainerProperties
@@ -22,7 +38,7 @@ class ContainerPropertiesModelTest extends Specification {
     def 'should create empty model'() {
         when:
         def model = new ContainerPropertiesModel()
-        
+
         then:
         model.image == null
         model.command == null
@@ -46,10 +62,10 @@ class ContainerPropertiesModelTest extends Specification {
     def 'should set and get image'() {
         given:
         def model = new ContainerPropertiesModel()
-        
+
         when:
         def result = model.image('ubuntu:20.04')
-        
+
         then:
         result == model
         model.image == 'ubuntu:20.04'
@@ -58,10 +74,10 @@ class ContainerPropertiesModelTest extends Specification {
     def 'should set and get command'() {
         given:
         def model = new ContainerPropertiesModel()
-        
+
         when:
         def result = model.command('echo', 'hello', 'world')
-        
+
         then:
         result == model
         model.command == ['echo', 'hello', 'world']
@@ -79,10 +95,10 @@ class ContainerPropertiesModelTest extends Specification {
             .type(ResourceType.MEMORY)
             .value('1024')
             .build()
-        
+
         when:
         def result = model.resourceRequirements(req1, req2)
-        
+
         then:
         result == model
         model.resourceRequirements.size() == 2
@@ -94,10 +110,10 @@ class ContainerPropertiesModelTest extends Specification {
         given:
         def model = new ContainerPropertiesModel()
         def arn = 'arn:aws:iam::123456789012:role/BatchJobRole'
-        
+
         when:
         def result = model.jobRoleArn(arn)
-        
+
         then:
         result == model
         model.jobRoleArn == arn
@@ -107,10 +123,10 @@ class ContainerPropertiesModelTest extends Specification {
         given:
         def model = new ContainerPropertiesModel()
         def arn = 'arn:aws:iam::123456789012:role/BatchExecutionRole'
-        
+
         when:
         def result = model.executionRoleArn(arn)
-        
+
         then:
         result == model
         model.executionRoleArn == arn
@@ -119,10 +135,10 @@ class ContainerPropertiesModelTest extends Specification {
     def 'should set and get user'() {
         given:
         def model = new ContainerPropertiesModel()
-        
+
         when:
         def result = model.user('batch-user')
-        
+
         then:
         result == model
         model.user == 'batch-user'
@@ -131,10 +147,10 @@ class ContainerPropertiesModelTest extends Specification {
     def 'should set and get readonly root filesystem'() {
         given:
         def model = new ContainerPropertiesModel()
-        
+
         when:
         def result = model.readonlyRootFilesystem(true)
-        
+
         then:
         result == model
         model.readonlyRootFilesystem == true
@@ -147,10 +163,10 @@ class ContainerPropertiesModelTest extends Specification {
             KeyValuePair.builder().name('VAR1').value('value1').build(),
             KeyValuePair.builder().name('VAR2').value('value2').build()
         ] as ArrayList<KeyValuePair>
-        
+
         when:
         def result = model.environment(env)
-        
+
         then:
         result == model
         model.environment == env
@@ -167,10 +183,10 @@ class ContainerPropertiesModelTest extends Specification {
         def linuxParams = LinuxParameters.builder()
             .initProcessEnabled(true)
             .build()
-        
+
         when:
         def result = model.linuxParameters(linuxParams)
-        
+
         then:
         result == model
         model.linuxParameters == linuxParams
@@ -179,10 +195,10 @@ class ContainerPropertiesModelTest extends Specification {
     def 'should set and get privileged'() {
         given:
         def model = new ContainerPropertiesModel()
-        
+
         when:
         def result = model.privileged(true)
-        
+
         then:
         result == model
         model.privileged == true
@@ -195,10 +211,10 @@ class ContainerPropertiesModelTest extends Specification {
             Ulimit.builder().name('nofile').softLimit(1024).hardLimit(2048).build(),
             Ulimit.builder().name('nproc').softLimit(16).hardLimit(32).build()
         ] as ArrayList<Ulimit>
-        
+
         when:
         def result = model.ulimits(ulimits)
-        
+
         then:
         result == model
         model.ulimits == ulimits
@@ -215,10 +231,10 @@ class ContainerPropertiesModelTest extends Specification {
             .logDriver('awslogs')
             .options(['awslogs-group': '/aws/batch/job'])
             .build()
-        
+
         when:
         def result = model.logConfiguration(logConfig)
-        
+
         then:
         result == model
         model.logConfiguration == logConfig
@@ -234,10 +250,10 @@ class ContainerPropertiesModelTest extends Specification {
                 .readOnly(false)
                 .build()
         ]
-        
+
         when:
         def result = model.mountPoints(mountPoints)
-        
+
         then:
         result == model
         model.mountPoints == mountPoints
@@ -255,10 +271,10 @@ class ContainerPropertiesModelTest extends Specification {
                 .name('tmp')
                 .build()
         ]
-        
+
         when:
         def result = model.volumes(volumes)
-        
+
         then:
         result == model
         model.volumes == volumes
@@ -272,10 +288,10 @@ class ContainerPropertiesModelTest extends Specification {
         def networkConfig = NetworkConfiguration.builder()
             .assignPublicIp('ENABLED')
             .build()
-        
+
         when:
         def result = model.networkConfiguration(networkConfig)
-        
+
         then:
         result == model
         model.networkConfiguration == networkConfig
@@ -287,10 +303,10 @@ class ContainerPropertiesModelTest extends Specification {
         def ephemeralStorage = EphemeralStorage.builder()
             .sizeInGiB(20)
             .build()
-        
+
         when:
         def result = model.ephemeralStorage(ephemeralStorage)
-        
+
         then:
         result == model
         model.ephemeralStorage == ephemeralStorage
@@ -303,10 +319,10 @@ class ContainerPropertiesModelTest extends Specification {
             .operatingSystemFamily('LINUX')
             .cpuArchitecture('X86_64')
             .build()
-        
+
         when:
         def result = model.runtimePlatform(runtimePlatform)
-        
+
         then:
         result == model
         model.runtimePlatform == runtimePlatform
@@ -322,7 +338,7 @@ class ContainerPropertiesModelTest extends Specification {
         def env = [
             KeyValuePair.builder().name('VAR1').value('value1').build()
         ] as ArrayList<KeyValuePair>
-        
+
         when:
         def result = model
             .image('ubuntu:20.04')
@@ -334,7 +350,7 @@ class ContainerPropertiesModelTest extends Specification {
             .readonlyRootFilesystem(true)
             .environment(env)
             .privileged(false)
-        
+
         then:
         result == model
         model.image == 'ubuntu:20.04'
@@ -355,7 +371,7 @@ class ContainerPropertiesModelTest extends Specification {
             .type(ResourceType.VCPU)
             .value('1')
             .build()
-        
+
         when:
         model.image('ubuntu:20.04')
              .command('echo', 'hello')
@@ -363,7 +379,7 @@ class ContainerPropertiesModelTest extends Specification {
              .jobRoleArn('arn:aws:iam::123456789012:role/BatchJobRole')
              .privileged(true)
              .user('batch-user')
-        
+
         then:
         def toString = model.toString()
         toString.contains('ContainerPropertiesModel{')
@@ -378,10 +394,10 @@ class ContainerPropertiesModelTest extends Specification {
     def 'should handle null values in toString'() {
         given:
         def model = new ContainerPropertiesModel()
-        
+
         when:
         def toString = model.toString()
-        
+
         then:
         toString.contains('ContainerPropertiesModel{')
         toString.contains("image='null'")
@@ -396,13 +412,13 @@ class ContainerPropertiesModelTest extends Specification {
     def 'should handle empty collections'() {
         given:
         def model = new ContainerPropertiesModel()
-        
+
         when:
         model.environment([] as ArrayList<KeyValuePair>)
              .ulimits([] as ArrayList<Ulimit>)
              .mountPoints([])
              .volumes([])
-        
+
         then:
         model.environment == []
         model.ulimits == []
@@ -413,10 +429,10 @@ class ContainerPropertiesModelTest extends Specification {
     def 'should handle single command argument'() {
         given:
         def model = new ContainerPropertiesModel()
-        
+
         when:
         model.command('single-command')
-        
+
         then:
         model.command == ['single-command']
         model.command.size() == 1
@@ -429,10 +445,10 @@ class ContainerPropertiesModelTest extends Specification {
             .type(ResourceType.MEMORY)
             .value('512')
             .build()
-        
+
         when:
         model.resourceRequirements(req)
-        
+
         then:
         model.resourceRequirements.size() == 1
         model.resourceRequirements[0] == req
@@ -441,19 +457,19 @@ class ContainerPropertiesModelTest extends Specification {
     def 'should handle boolean values correctly'() {
         given:
         def model = new ContainerPropertiesModel()
-        
+
         when:
         model.privileged(false)
              .readonlyRootFilesystem(false)
-        
+
         then:
         model.privileged == false
         model.readonlyRootFilesystem == false
-        
+
         when:
         model.privileged(true)
              .readonlyRootFilesystem(true)
-        
+
         then:
         model.privileged == true
         model.readonlyRootFilesystem == true
@@ -498,7 +514,7 @@ class ContainerPropertiesModelTest extends Specification {
         def linuxParams = LinuxParameters.builder()
             .initProcessEnabled(true)
             .build()
-        
+
         when:
         model.image('ubuntu:20.04')
              .command('echo', 'hello')
@@ -517,9 +533,9 @@ class ContainerPropertiesModelTest extends Specification {
              .networkConfiguration(networkConfig)
              .ephemeralStorage(ephemeralStorage)
              .runtimePlatform(runtimePlatform)
-        
+
         def containerProperties = model.toBatchContainerProperties()
-        
+
         then:
         containerProperties instanceof ContainerProperties
         containerProperties.image() == 'ubuntu:20.04'
@@ -549,10 +565,10 @@ class ContainerPropertiesModelTest extends Specification {
     def 'should convert to ContainerProperties with null fields'() {
         given:
         def model = new ContainerPropertiesModel()
-        
+
         when:
         def containerProperties = model.toBatchContainerProperties()
-        
+
         then:
         containerProperties instanceof ContainerProperties
         containerProperties.image() == null
@@ -577,15 +593,15 @@ class ContainerPropertiesModelTest extends Specification {
     def 'should convert to ContainerProperties with empty collections'() {
         given:
         def model = new ContainerPropertiesModel()
-        
+
         when:
         model.environment([] as ArrayList<KeyValuePair>)
              .ulimits([] as ArrayList<Ulimit>)
              .mountPoints([])
              .volumes([])
-        
+
         def containerProperties = model.toBatchContainerProperties()
-        
+
         then:
         containerProperties instanceof ContainerProperties
         containerProperties.environment() == []

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -372,10 +372,10 @@ class Duration implements IDuration, TemporalAmount, Comparable<Duration>, Seria
     }
 
     // TemporalAmount interface methods
-    
+
     /**
      * Gets the value of the requested unit.
-     * 
+     *
      * @param unit the TemporalUnit for which to return the value
      * @return the long value of the unit
      */
@@ -401,7 +401,7 @@ class Duration implements IDuration, TemporalAmount, Comparable<Duration>, Seria
 
     /**
      * Returns a list of units uniquely defining the value of this TemporalAmount.
-     * 
+     *
      * @return a list of the supported ChronoUnits, not null
      */
     @Override
@@ -411,7 +411,7 @@ class Duration implements IDuration, TemporalAmount, Comparable<Duration>, Seria
 
     /**
      * Adds this amount to the specified temporal object.
-     * 
+     *
      * @param temporal the temporal object to adjust, not null
      * @return an object of the same type with the adjustment made, not null
      */
@@ -422,7 +422,7 @@ class Duration implements IDuration, TemporalAmount, Comparable<Duration>, Seria
 
     /**
      * Subtracts this amount from the specified temporal object.
-     * 
+     *
      * @param temporal the temporal object to adjust, not null
      * @return an object of the same type with the adjustment made, not null
      */

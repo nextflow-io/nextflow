@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, Microsoft Corp
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -244,7 +244,7 @@ class AzBatchService implements Closeable {
 
         // Calculate weighted scores
         double score = 0.0
-        
+
         // CPU score - heavily weight exact matches
         double cpuScore = Math.abs(cpus - vmCores)
         score += cpuScore * 10  // Give more weight to CPU match
@@ -258,7 +258,7 @@ class AzBatchService implements Closeable {
             score += memScore
         }
 
-        // Disk score if specified  
+        // Disk score if specified
         if( disk ) {
             double diskGb = disk.toGiga()
             if( diskGb > vmDiskGb )
@@ -450,9 +450,58 @@ class AzBatchService implements Closeable {
         if (config.batch().jobMaxWallClockTime) {
             content.setConstraints(createJobConstraints(config.batch().jobMaxWallClockTime))
         }
-        
-        apply(() -> client.createJob(content))
+
+        applyCreateJob(content)
         return jobId
+    }
+
+    protected void applyCreateJob(BatchJobCreateContent content) {
+        final maxRetries = config.batch().maxJobQuotaRetries
+        final retryDelay = config.batch().jobQuotaRetryDelay
+
+        // define retry condition for job quota errors
+        final cond = new Predicate<? extends Throwable>() {
+            @Override
+            boolean test(Throwable t) {
+                return t instanceof HttpResponseException && isJobQuotaError((HttpResponseException) t)
+            }
+        }
+
+        final listener = new EventListener<ExecutionAttemptedEvent<Object>>() {
+            @Override
+            void accept(ExecutionAttemptedEvent<Object> event) throws Throwable {
+                log.warn "Azure Batch active job quota reached - waiting ${retryDelay} before retry (attempt ${event.attemptCount} of ${maxRetries})"
+            }
+        }
+
+        // create a retry policy with fixed delay for quota errors
+        final policy = RetryPolicy.builder()
+                .handleIf(cond)
+                .withDelay(Duration.ofMillis(retryDelay.toMillis()))
+                .withMaxAttempts(maxRetries + 1)
+                .onRetry(listener)
+                .build()
+
+        try {
+            Failsafe.with(policy).get(() -> { createJobRequest(content); return null })
+        }
+        catch (HttpResponseException e) {
+            if (isJobQuotaError(e))
+                throw new IllegalStateException("Azure Batch active job quota reached - exceeded maximum number of retries ($maxRetries). Consider increasing 'azure.batch.maxJobQuotaRetries' or reducing the number of concurrent jobs", e)
+            throw e
+        }
+    }
+
+    protected void createJobRequest(BatchJobCreateContent content) {
+        apply(() -> client.createJob(content))
+    }
+
+    protected boolean isJobQuotaError(HttpResponseException e) {
+        if (e.response.statusCode != 409)
+            return false
+        if (e.message?.contains('ActiveJobAndScheduleQuotaReached'))
+            return true
+        return toString(e.response.body)?.contains('ActiveJobAndScheduleQuotaReached')
     }
 
     String makeJobId(TaskRun task) {
@@ -514,7 +563,7 @@ class AzBatchService implements Closeable {
             // Create the FusionScriptLauncher from the TaskBean
             final taskBean = task.toTaskBean()
             final launcher = FusionScriptLauncher.create(taskBean, 'az')
-            
+
             // Add container options
             opts += "--privileged "
 
@@ -525,7 +574,7 @@ class AzBatchService implements Closeable {
                     opts += "-e $it.key=$it.value "
                 }
             }
-            
+
             // Get the fusion submit command
             final List<String> cmdList = launcher.fusionSubmitCli(task)
             fusionCmd = cmdList ? String.join(' ', cmdList) : null
@@ -556,7 +605,7 @@ class AzBatchService implements Closeable {
 
     /**
      * Create task constraints based on the task configuration
-     * 
+     *
      * @param task The task run to create constraints for
      * @return The BatchTaskConstraints object
      */
@@ -943,14 +992,14 @@ class AzBatchService implements Closeable {
             // Get pool lifetime since creation.
             lifespan = time() - time("{{poolCreationTime}}");
             interval = TimeInterval_Minute * {{scaleInterval}};
-            
+
             // Compute the target nodes based on pending tasks.
             // \$PendingTasks == The sum of \$ActiveTasks and \$RunningTasks
             \$samples = \$PendingTasks.GetSamplePercent(interval);
             \$tasks = \$samples < 70 ? max(0, \$PendingTasks.GetSample(1)) : max( \$PendingTasks.GetSample(1), avg(\$PendingTasks.GetSample(interval)));
             \$targetVMs = \$tasks > 0 ? \$tasks : max(0, \$TargetDedicatedNodes/2);
             targetPoolSize = max(0, min(\$targetVMs, {{maxVmCount}}));
-            
+
             // For first interval deploy 1 node, for other intervals scale up/down as per tasks.
             \$${target} = lifespan < interval ? {{vmCount}} : targetPoolSize;
             \$NodeDeallocationOption = taskcompletion;

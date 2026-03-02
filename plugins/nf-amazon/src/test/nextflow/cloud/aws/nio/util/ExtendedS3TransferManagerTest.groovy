@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.cloud.aws.nio.util
@@ -86,7 +85,7 @@ class ExtendedS3TransferManagerTest extends Specification {
         def props = new Properties()
         props.setProperty('max_download_heap_memory', maxBuffer)
         props.setProperty('minimum_part_size', partSize)
-        
+
         when:
         def extendedManager = new ExtendedS3TransferManager(mockTransferManager, props)
 

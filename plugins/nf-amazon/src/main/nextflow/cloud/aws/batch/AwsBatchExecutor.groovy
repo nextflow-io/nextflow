@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -366,30 +366,30 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExec
         final kms = opts.storageKmsKeyId ? " --sse-kms-key-id $opts.storageKmsKeyId" : ''
         final requesterPays = opts.requesterPays ? ' --request-payer requester' : ''
         final aws = "$cli s3 cp --only-show-errors${sse}${kms}${debug}${requesterPays}"
-        
+
         /*
          * Enhanced signal handling for AWS Batch tasks to fix nested Nextflow execution issues.
          * This implementation addresses the problem of proper signal forwarding when Nextflow
          * processes are executed within AWS Batch containers.
-         * 
+         *
          * References: https://github.com/nextflow-io/nextflow/pull/6414
-         * 
+         *
          * Trap command breakdown:
-         * 
+         *
          * 1. TERM signal trap: `trap \"[[ -n \\\$pid ]] && kill -TERM \\\$pid\" TERM`
          *    - Captures SIGTERM signals sent to the parent shell process
          *    - Conditionally forwards the TERM signal to the background bash process (stored in $pid)
          *    - The `[[ -n \\\$pid ]]` test ensures we only attempt to kill if $pid is set and non-empty
          *    - This prevents attempts to kill process ID 0 or empty values, which could cause unintended behavior
          *    - Essential for proper cleanup when AWS Batch terminates jobs or when users cancel workflows
-         * 
+         *
          * 2. EXIT signal trap: `trap \"{ ret=\$?; $aws ${TaskRun.CMD_LOG} ${workDir}/${TaskRun.CMD_LOG}||true; exit \$ret; }\" EXIT`
          *    - Executes cleanup actions when the shell process exits (normal or abnormal termination)
          *    - Captures the exit status ($?) of the last executed command before cleanup
          *    - Uploads the command log file to S3 for debugging and monitoring purposes
          *    - Uses `||true` to prevent the trap from failing if S3 upload fails (ensures exit code preservation)
          *    - Preserves and returns the original exit status to maintain proper error propagation
-         * 
+         *
          * 3. Background execution pattern: `bash > >(tee ${TaskRun.CMD_LOG}) 2>&1 & pid=\$!; wait \$pid`
          *    - Runs the actual task command in background (&) to allow signal handling
          *    - Redirects both stdout and stderr (2>&1) to process substitution for real-time logging
@@ -407,24 +407,24 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExec
         final sse = opts.storageEncryption ? " --sse $opts.storageEncryption" : ''
         final kms = opts.storageKmsKeyId ? " --sse-kms-key-id $opts.storageKmsKeyId" : ''
         final requesterPays = opts.requesterPays ? ' --request-payer requester' : ''
-        
+
         /*
          * Enhanced signal handling for AWS Batch tasks using s5cmd (high-performance S3 client).
-         * This implementation mirrors the s3Cmd method but uses s5cmd instead of aws-cli for 
+         * This implementation mirrors the s3Cmd method but uses s5cmd instead of aws-cli for
          * improved S3 transfer performance.
-         * 
+         *
          * References: https://github.com/nextflow-io/nextflow/pull/6414
-         * 
+         *
          * The trap commands follow the same pattern as s3Cmd method:
-         * 
+         *
          * 1. TERM signal trap: `trap \"[[ -n \\\$pid ]] && kill -TERM \\\$pid\" TERM`
          *    - Ensures proper signal forwarding to background processes when SIGTERM is received
          *    - Critical for handling AWS Batch job termination and user-initiated cancellations
-         * 
+         *
          * 2. EXIT signal trap: `trap \"{ ret=\$?; $cli cp${sse}${kms}${requesterPays} ${TaskRun.CMD_LOG} ${workDir}/${TaskRun.CMD_LOG}||true; exit \$ret; }\" EXIT`
          *    - Performs cleanup by uploading task logs using s5cmd instead of aws-cli
          *    - Maintains exit status preservation for proper error reporting
-         * 
+         *
          * 3. Background execution with s5cmd: `$cli cat ${workDir}/${TaskRun.CMD_RUN} | bash > >(tee ${TaskRun.CMD_LOG}) 2>&1 & pid=\$!; wait \$pid`
          *    - Uses s5cmd to stream the task script directly into bash execution
          *    - Maintains the same signal-responsive background execution pattern
