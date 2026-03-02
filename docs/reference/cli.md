@@ -1328,10 +1328,71 @@ The `module` command provides a comprehensive system for managing reusable, regi
   # Publish to nextflow registry
   $ export NXF_REGISTRY_TOKEN=your-token
   $ nextflow module publish myorg/my-module
-  
+
   # Publish to a custom registry
   $ export NXF_REGISTRY_TOKEN=your-token
   $ nextflow module publish myorg/my-module -registry 'https://custom.registry.com'
+  ```
+
+(cli-module-generate-meta)=
+
+`generate-meta [options] [<module-dir>]`
+
+: Generate a `meta.yml` manifest for a local module by statically analysing its `main.nf`.
+: Parses the first `process` block and extracts input/output channel declarations with inferred types. The generated file includes `TODO` placeholders for any field not supplied via a flag.
+: If `<module-dir>` is omitted the current working directory is used.
+: The following options are available:
+
+  `-name <scope/name>`
+  : Module name in `scope/name` format (e.g. `nf-core/fastqc`). Replaces the `<scope-placeholder>/…` default.
+
+  `-version <version>`
+  : Module version string (e.g. `1.0.0`). Defaults to `TODO: Add version`.
+
+  `-description <text>`
+  : Short description of what the module does. Defaults to `TODO: Add description`.
+
+  `-license <identifier>`
+  : SPDX license identifier (e.g. `MIT`, `Apache-2.0`). Defaults to `TODO: Add license (e.g., MIT)`.
+
+  `-author <name>`
+  : Module author. May be specified multiple times, once per author. Defaults to `[TODO: Add author]`.
+
+  `-force`
+  : Overwrite an existing `meta.yml` without prompting.
+
+  `-dry-run`
+  : Print the generated YAML to stdout without writing any file.
+
+: **Type detection hints (shown in the generated file header):**
+: - `val` channels are inferred as `string`; manually change to `map` for structured meta objects.
+: - `path` outputs with glob patterns (`*`, `?`, `{}`, `[]`) resolve to `list`; literal filenames resolve to `file`.
+: - `arity: '1'` forces `file`; `arity: '1..*'` forces `list`, overriding glob detection.
+
+: **Examples:**
+
+  ```console
+  # Generate in the current directory
+  $ nextflow module generate-meta
+
+  # Generate for a specific module path
+  $ nextflow module generate-meta ./modules/my-module
+
+  # Provide all required fields to avoid TODO placeholders
+  $ nextflow module generate-meta \
+      -name nf-core/fastqc \
+      -version 1.0.0 \
+      -description "Quality control of raw sequencing reads" \
+      -license MIT \
+      -author "@drpatelh" \
+      -author "@joseespinosa" \
+      ./modules/nf-core/fastqc
+
+  # Preview without writing
+  $ nextflow module generate-meta -dry-run ./modules/my-module
+
+  # Regenerate an existing meta.yml
+  $ nextflow module generate-meta -force ./modules/my-module
   ```
 
 (cli-plugin)=
