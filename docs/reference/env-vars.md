@@ -19,7 +19,7 @@ The following environment variables control the configuration of the Nextflow ru
 `NXF_AGENT_MODE`
 : :::{versionadded} 26.04.0
   :::
-: When `true`, enables agent output mode. In this mode, Nextflow replaces the interactive ANSI log with minimal, structured output optimized for AI agents and non-interactive environments. The output uses tagged lines such as `[PIPELINE]`, `[PROCESS]`, `[WARN]`, `[ERROR]`, and `[SUCCESS]`/`[FAILED]` written to standard error (default: `false`).
+: When `true`, enables agent output mode. In this mode, Nextflow replaces the interactive ANSI log with minimal, structured output optimized for AI agents and non-interactive environments. The output uses tagged lines such as `[PIPELINE]`, `[PROCESS]`, `[WARN]`, `[ERROR]`, and `[SUCCESS]`/`[FAILED]` written to standard output  (default: `false`).
 
 `NXF_ANSI_LOG`
 : Enables/disables ANSI console output (default `true` when ANSI terminal is detected).
