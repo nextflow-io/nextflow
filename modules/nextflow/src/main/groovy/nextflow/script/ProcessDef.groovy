@@ -20,13 +20,14 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowReadChannel
-import groovyx.gpars.dataflow.DataflowWriteChannel
+import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Const
 import nextflow.Global
 import nextflow.Session
+import nextflow.dataflow.ChannelImpl
+import nextflow.dataflow.ValueImpl
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
-import nextflow.extension.CombineOp
 import nextflow.processor.TaskProcessor
 import nextflow.script.dsl.ProcessConfigBuilder
 import nextflow.script.params.BaseInParam
@@ -143,8 +144,9 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
             output = runV1(args, processConfig)
 
         // invoke process with typed inputs/outputs
+        // NOTE: .out property is not accessible with typed dataflow
         else if( processConfig instanceof ProcessConfigV2 )
-            output = runV2(args, processConfig)
+            return runV2(args, processConfig)
 
         // return process output
         return output
@@ -203,8 +205,7 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         return output
     }
 
-    private ChannelOut runV2(Object[] args0, ProcessConfigV2 config) {
-        final args = ChannelOut.spread(args0)
+    private Object runV2(Object[] args, ProcessConfigV2 config) {
         final declaredInputs = config.getInputs()
         final declaredOutputs = config.getOutputs()
 
@@ -212,24 +213,20 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         if( args.size() != declaredInputs.size() )
             throw new ScriptRuntimeException(missMatchErrMessage(processName, declaredInputs.size(), args.size()))
 
-        // set input channels
+        // set inputs
         for( int i = 0; i < declaredInputs.size(); i++ )
             declaredInputs[i].setChannel(createSourceChannel(args[i]))
 
-        // set output channels
+        // set output
         final singleton = declaredInputs.isSingleton()
 
         final feedbackChannels = getFeedbackChannels()
         if( feedbackChannels && feedbackChannels.size() != declaredOutputs.size() )
             throw new ScriptRuntimeException("Process `$processName` inputs and outputs do not have the same cardinality - Feedback loop is not supported"  )
 
-        final channels = new LinkedHashMap<String,DataflowWriteChannel>()
-        for( int i = 0; i < declaredOutputs.size(); i++ ) {
-            final param = declaredOutputs[i]
-            final ch = feedbackChannels ? feedbackChannels[i] : CH.create(singleton)
-            param.setChannel(ch)
-            channels.put(param.getName(), ch)
-        }
+        final outputParam = declaredOutputs[0]
+        final output = feedbackChannels ? feedbackChannels[0] : CH.create(singleton)
+        outputParam.setChannel(output)
 
         for( final topic : declaredOutputs.getTopics() ) {
             final ch = CH.createTopicSource(topic.getTarget())
@@ -239,10 +236,17 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         // start processor
         createTaskProcessor().run()
 
-        return new ChannelOut(channels)
+        return output instanceof DataflowVariable
+            ? new ValueImpl(output)
+            : new ChannelImpl(output)
     }
 
     private DataflowReadChannel createSourceChannel(Object value) {
+        value =
+            value instanceof ChannelImpl ? value.getSource() :
+            value instanceof ValueImpl ? value.getSource() :
+            value
+
         if( value instanceof DataflowReadChannel || value instanceof DataflowBroadcast )
             return CH.getReadChannel(value)
 

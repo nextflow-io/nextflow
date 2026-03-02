@@ -5,15 +5,12 @@ process foo {
   input:
   index: Integer
 
-  output:
-  versions = stdout()
-
   topic:
-  stdout() >> 'versions'
+  record(name: 'foo', version: stdout()) >> 'versions'
 
   script:
   """
-  echo 'foo: 0.1.0'
+  echo '0.1.0'
   """
 }
 
@@ -21,23 +18,36 @@ process bar {
   input:
   index: Integer
 
-  output:
-  versions = stdout()
-
   topic:
-  stdout() >> 'versions'
+  record(name: 'bar', version: stdout()) >> 'versions'
 
   script:
   """
-  echo 'bar: 0.9.0'
+  echo '0.9.0'
   """
 }
 
 workflow {
-  channel.of( 1..3 ) | foo
-  channel.of( 1..3 ) | bar
+  main:
+  ch_inputs = channel.of( 1..3 )
+  foo( ch_inputs )
+  bar( ch_inputs )
 
-  channel.topic('versions')
-  | unique
-  | collectFile(name: 'versions.txt', sort: true, storeDir: '.')
+  ch_versions = channel.topic('versions')
+    .unique()
+    .collect()
+    .flatMap { rows ->
+      rows.toSorted { r -> r.name }
+    }
+
+  publish:
+  versions = ch_versions
+}
+
+output {
+  versions {
+    index {
+      path 'versions.txt'
+    }
+  }
 }

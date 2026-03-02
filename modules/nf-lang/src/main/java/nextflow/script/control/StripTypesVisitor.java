@@ -18,6 +18,7 @@ package nextflow.script.control;
 
 import java.util.List;
 
+import nextflow.script.types.Channel;
 import nextflow.script.types.Record;
 import nextflow.script.types.Tuple;
 import nextflow.script.types.Value;
@@ -45,6 +46,7 @@ public class StripTypesVisitor extends ClassCodeExpressionTransformer {
 
     private static final List<ClassNode> STRIP_TYPES = List.of(
         ClassHelper.makeWithoutCaching("nextflow.Channel"),
+        ClassHelper.makeCached(Channel.class),
         ClassHelper.makeCached(Record.class),
         ClassHelper.makeCached(Tuple.class),
         ClassHelper.makeCached(Value.class)

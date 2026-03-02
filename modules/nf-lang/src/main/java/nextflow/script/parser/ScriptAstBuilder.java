@@ -661,7 +661,8 @@ public class ScriptAstBuilder {
             return null;
         }
         if( !hasEmitExpression && statements.size() > 1 ) {
-            collectWarning("Typed process should have only one output -- consider combining outputs into a record", ctx.OUTPUT().getText(), ast( new EmptyStatement(), ctx.OUTPUT() ));
+            collectSyntaxError(new SyntaxException("Typed process must have at most one output -- consider combining multiple outputs into a record", ast( new EmptyStatement(), ctx.OUTPUT() )));
+            return null;
         }
         return result;
     }

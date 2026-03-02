@@ -283,8 +283,10 @@ class ScriptLoaderV2Test extends Dsl2Spec {
             process hello {
 
                 output:
-                out1: Path = file("out1.txt")
-                out2: Path = file("out2.txt")
+                record(
+                    out1: file("out1.txt"),
+                    out2: file("out2.txt")
+                )
 
                 topic:
                 file("version.txt") >> 'versions'
@@ -306,7 +308,7 @@ class ScriptLoaderV2Test extends Dsl2Spec {
         def outputs = process.getProcessConfig().getOutputs()
 
         then:
-        outputs.getParams().size() == 2
+        outputs.getParams().size() == 1
         outputs.getTopics().size() == 1
         outputs.getFiles().size() == 3
     }
