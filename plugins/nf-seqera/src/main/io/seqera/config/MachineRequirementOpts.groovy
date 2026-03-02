@@ -93,6 +93,13 @@ class MachineRequirementOpts implements ConfigScope {
 
     @ConfigOption
     @Description("""
+        The container path where the disk is mounted (e.g., `/data`).
+        Default: `/tmp`.
+    """)
+    final String diskMountPath
+
+    @ConfigOption
+    @Description("""
         The disk size for session-level storage (e.g., `100.GB`).
     """)
     final MemoryUnit diskSize
@@ -118,6 +125,7 @@ class MachineRequirementOpts implements ConfigScope {
         this.diskIops = opts.diskIops as Integer
         this.diskEncrypted = opts.diskEncrypted as Boolean
         this.diskAllocation = opts.diskAllocation as String
+        this.diskMountPath = opts.diskMountPath as String
         this.diskSize = opts.diskSize instanceof MemoryUnit
             ? opts.diskSize as MemoryUnit
             : (opts.diskSize ? MemoryUnit.of(opts.diskSize as String) : null)
@@ -158,6 +166,10 @@ class MachineRequirementOpts implements ConfigScope {
 
     String getDiskAllocation() {
         return diskAllocation
+    }
+
+    String getDiskMountPath() {
+        return diskMountPath
     }
 
     MemoryUnit getDiskSize() {

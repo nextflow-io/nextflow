@@ -1467,6 +1467,9 @@ The following settings are available:
 `seqera.executor.machineRequirement.diskEncrypted`
 : Enable KMS encryption for the EBS volume (default: `false`). Only applicable when `diskAllocation` is `'task'`.
 
+`seqera.executor.machineRequirement.diskMountPath`
+: The container path where the disk is mounted (default: `'/tmp'`). Applicable to all disk allocation strategies.
+
 `seqera.executor.taskEnvironment`
 : Custom environment variables to apply to all tasks submitted by the Seqera executor. These are merged with the Fusion environment variables, with Fusion variables taking precedence. For example: `taskEnvironment = [MY_VAR: 'value']`.
 
