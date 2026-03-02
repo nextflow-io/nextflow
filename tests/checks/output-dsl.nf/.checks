@@ -1,10 +1,12 @@
 
 echo "Initial run"
-$NXF_RUN --save_bam_bai | tee stdout
+$NXF_RUN -print-output --save_bam_bai | tee stdout
 
 [[ $(grep INFO .nextflow.log | grep -c 'Submitted process > fastqc') == 3 ]] || false
 [[ $(grep INFO .nextflow.log | grep -c 'Submitted process > align') == 3 ]] || false
 [[ $(grep INFO .nextflow.log | grep -c 'Submitted process > quant') == 3 ]] || false
+sed "s|"$(dirname "$(realpath "$0")")"||g" stdout > stdout.norm
+cmp .expected stdout.norm || false
 
 [[ -f results/log/alpha.fastqc.log ]] || false
 [[ -f results/log/beta.fastqc.log ]] || false
