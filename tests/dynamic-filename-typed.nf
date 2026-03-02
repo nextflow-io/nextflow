@@ -44,7 +44,8 @@ process foo {
 
 workflow {
   ch_names = channel.fromList(params.names)
-  ch_foo = foo( ch_names.cross(params.input) )
+  ch_inputs = ch_names.cross( channel.of(params.input) )
+  ch_foo = foo( ch_inputs, params.prefix )
   ch_foo.subscribe { it ->
     println "~ Saving ${it.name}"
     it.copyTo('.')

@@ -124,31 +124,32 @@ class ChannelImpl {
         return new ChannelImpl(target)
     }
 
-    ChannelImpl groupBy(Function<?,Tuple> transform = null) {
+    ChannelImpl groupBy() {
         final target = CH.create()
 
         final groups = new HashMap<?,Bag<?>>()
         final sizes = new HashMap<?,Integer>()
         final emitted = new HashSet<>()
 
-        final onNext = { value ->
+        final onNext = { ksv ->
             // obtain key, group size, and value
-            final ksv = (transform != null ? transform.apply(value) : value) as List
-
-            def key, size, groupValue
-            if( ksv.size() == 2 )
-                (key, size, groupValue) = [ ksv[0], -1, ksv[1] ]
-            else if( ksv.size() == 3 )
-                (key, size, groupValue) = [ ksv[0], ksv[1] as Integer, ksv[2] ]
-            else
+            def key, size, value
+            if( ksv instanceof List && ksv.size() == 2 ) {
+                (key, size, value) = [ ksv[0], -1, ksv[1] ]
+            }
+            else if( ksv instanceof List && ksv.size() == 3 ) {
+                (key, size, value) = [ ksv[0], ksv[1] as Integer, ksv[2] ]
+            }
+            else {
                 throw new ScriptRuntimeException("Operator `groupBy` expected a 3-tuple of (key, size, value) or a 2-tuple of (key, value) but received: ${ksv}")
+            }
 
             if( emitted.contains(key) )
                 throw new ScriptRuntimeException("Operator `groupBy` received too many values for grouping key: ${key} (expected ${size})")
 
             // append value to group
             final group = groups.computeIfAbsent(key, (k) -> new HashBag<>())
-            group.add(groupValue)
+            group.add(value)
 
             // set group size
             if( sizes.containsKey(key) ) {

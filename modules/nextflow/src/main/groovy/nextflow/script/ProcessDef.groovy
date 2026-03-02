@@ -218,15 +218,16 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
             declaredInputs[i].setChannel(createSourceChannel(args[i]))
 
         // set output
-        final singleton = declaredInputs.isSingleton()
-
         final feedbackChannels = getFeedbackChannels()
         if( feedbackChannels && feedbackChannels.size() != declaredOutputs.size() )
             throw new ScriptRuntimeException("Process `$processName` inputs and outputs do not have the same cardinality - Feedback loop is not supported"  )
 
-        final outputParam = declaredOutputs[0]
-        final output = feedbackChannels ? feedbackChannels[0] : CH.create(singleton)
-        outputParam.setChannel(output)
+        Object output = null
+        if( declaredOutputs.size() > 0 ) {
+            final singleton = declaredInputs.isSingleton()
+            output = feedbackChannels ? feedbackChannels[0] : CH.create(singleton)
+            declaredOutputs[0].setChannel(output)
+        }
 
         for( final topic : declaredOutputs.getTopics() ) {
             final ch = CH.createTopicSource(topic.getTarget())
@@ -236,9 +237,10 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         // start processor
         createTaskProcessor().run()
 
-        return output instanceof DataflowVariable
-            ? new ValueImpl(output)
-            : new ChannelImpl(output)
+        return \
+            output instanceof DataflowVariable ? new ValueImpl(output) :
+            output instanceof DataflowBroadcast ? new ChannelImpl(output) :
+            null
     }
 
     private DataflowReadChannel createSourceChannel(Object value) {

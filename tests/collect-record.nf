@@ -16,8 +16,8 @@ process align {
 
   output:
   record(
-    barcode: barcode,
-    seq_id: seq_id,
+    barcode: in.barcode,
+    seq_id: in.seq_id,
     bam: file('bam'),
     bai: file('bai')
   )
@@ -37,23 +37,18 @@ process merge {
   debug true
 
   input:
-  group: Record {
-    barcode: String
-    seq_ids: Bag<String>
-    bam: Bag<Path>
-    bai: Bag<Path>
-  }
+  (barcode, samples): Tuple<String, Bag<Record>>
 
   stage:
-  stageAs 'bam?', group.bam
-  stageAs 'bai?', group.bai
+  stageAs 'bam?', samples*.bam
+  stageAs 'bai?', samples*.bai
 
   script:
   """
-  echo barcode: ${group.barcode}
-  echo seq_ids: ${group.seq_ids.join(' ')}
-  echo bam    : ${group.bam.join(' ')}
-  echo bai    : ${group.bai.join(' ')}
+  echo barcode: ${barcode}
+  echo seq_ids: ${samples*.seq_id.join(' ')}
+  echo bam    : ${samples*.bam.join(' ')}
+  echo bai    : ${samples*.bai.join(' ')}
   """
 }
 
@@ -69,6 +64,8 @@ workflow {
     .map { barcode, seq_id -> record(barcode: barcode, seq_id: seq_id) }
 
   ch_aligned = align( ch_inputs )
-  ch_grouped = ch_aligned.groupTuple { r -> tuple(r.barcode, r) }
-  merge( ch_grouped )
+    .map { r -> tuple(r.barcode, r) }
+    .groupBy()
+
+  merge( ch_aligned )
 }
