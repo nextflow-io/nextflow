@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -106,7 +106,7 @@ abstract class TaskHandler {
             killTask()
         }
     }
-    
+
     /**
      * Submit the task for execution.
      *
@@ -190,7 +190,7 @@ abstract class TaskHandler {
             return null
         }
     }
-    
+
     /**
      * @return An {@link TraceRecord} instance holding task runtime information
      */

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -647,7 +647,7 @@ class K8sTaskHandlerTest extends Specification {
         def POD_NAME = 'pod-xyz'
         def client = Mock(K8sClient)
         def handler = Spy(new K8sTaskHandler(client:client, podName: POD_NAME))
-        
+
         when:
         def state = handler.getState()
         then:
@@ -912,7 +912,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * k8sConfig.getPodOptions() >> new PodOptions([[env: 'FUSION_BUCKETS', value: 's3://nextflow-ci'], [privileged: true]])
         and:
         1 * handler.taskPodOptions() >> new PodOptions([:])
-        and: 
+        and:
         opts == new PodOptions([[env: 'FUSION_BUCKETS', value: 's3://nextflow-ci'], [privileged: true]])
     }
 

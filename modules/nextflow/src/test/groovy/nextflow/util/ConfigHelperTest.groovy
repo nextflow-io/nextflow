@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -124,7 +124,7 @@ class ConfigHelperTest extends Specification {
                        executor = 'slurm'
                        queue = 'long'
                     }
-                    
+
                     docker {
                        enabled = true
                     }
@@ -148,7 +148,7 @@ class ConfigHelperTest extends Specification {
                     docker {
                        enabled = true
                     }
-                    
+
                     mail {
                        from = 'yo@mail.com'
                        smtp {

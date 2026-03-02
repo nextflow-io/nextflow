@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -138,7 +138,7 @@ class ProcessEntryHandlerTest extends Specification {
         then:
         def fastaResult = handler.getValueForInput(pathInput, complexParams)
         def fileResult = handler.getValueForInput(fileInput, complexParams)
-        
+
         // Should convert string paths to Path objects (mocked here)
         fastaResult.toString().contains('file.fa')
         fileResult.toString().contains('data.txt')
@@ -168,7 +168,7 @@ class ProcessEntryHandlerTest extends Specification {
         def session = Mock(Session) {
             getParams() >> [
                 'meta.id': 'SAMPLE_001',
-                'meta.name': 'TestSample', 
+                'meta.name': 'TestSample',
                 'meta.other': 'some-value',
                 'fasta': '/path/to/file.fa'
             ]
@@ -187,10 +187,10 @@ class ProcessEntryHandlerTest extends Specification {
             ]
         }
 
-        // Test the parameter mapping logic manually 
+        // Test the parameter mapping logic manually
         def namedArgs = handler.parseComplexParameters(session.getParams())
         def tupleElements = []
-        
+
         for( def innerParam : tupleParam.inner ) {
             def value = handler.getValueForInput(innerParam, namedArgs)
             tupleElements.add(value)
@@ -202,7 +202,7 @@ class ProcessEntryHandlerTest extends Specification {
         namedArgs.meta.name == 'TestSample'
         namedArgs.meta.other == 'some-value'
         namedArgs.fasta == '/path/to/file.fa'
-        
+
         tupleElements.size() == 2
         tupleElements[0] instanceof Map  // meta as map
         tupleElements[0].id == 'SAMPLE_001'
