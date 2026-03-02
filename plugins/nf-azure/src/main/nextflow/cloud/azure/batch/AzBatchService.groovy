@@ -862,12 +862,12 @@ class AzBatchService implements Closeable {
 
     protected BatchStartTask createStartTask(AzStartTaskOpts opts) {
         log.trace "AzStartTaskOpts: ${opts}"
-        final startCmd = new ArrayList<String>(5)
+        final commands = new ArrayList<String>(5)
         final resourceFiles = new ArrayList<ResourceFile>()
 
         // If enabled, append azcopy installer to start task command
         if( config.batch().getCopyToolInstallMode() == CopyToolInstallMode.node ) {
-            startCmd << 'bash -c "chmod +x azcopy && mkdir \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/"'
+            commands << 'chmod +x azcopy && mkdir \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/'
             resourceFiles << new ResourceFile()
                 .setHttpUrl(AZCOPY_URL)
                 .setFilePath('azcopy')
@@ -875,16 +875,24 @@ class AzBatchService implements Closeable {
 
         // Get any custom start task command
         if ( opts.script ) {
-            startCmd << "bash -c '${opts.script.replace(/'/,/''/)}'".toString()
+            commands << opts.script
         }
 
         // If there is no start task contents we return a null to indicate no start task
-        if( !startCmd ) {
+        if( !commands ) {
             return null
         }
 
-        // otherwise return a StartTask object with the start task command and resource files
-        return new BatchStartTask(startCmd.join(' && '))
+        // Combine all commands into a single bash -c invocation to ensure proper
+        // shell interpretation when both azcopy install and user script are present.
+        // Single quotes prevent premature variable expansion by the outer shell;
+        // bash will expand variables like $AZ_BATCH_NODE_SHARED_DIR at execution time.
+        // Single quotes within the script are escaped using the '\'' idiom:
+        //   ' ends the current single-quoted segment
+        //   \' adds a literal single quote (backslash-escaped in unquoted context)
+        //   ' starts a new single-quoted segment
+        final combinedScript = commands.join(' && ').replace(/'/, /'\''/) 
+        return new BatchStartTask("bash -c '${combinedScript}'".toString())
             .setResourceFiles(resourceFiles)
             .setUserIdentity(userIdentity(opts.privileged, null, AutoUserScope.POOL))
     }
