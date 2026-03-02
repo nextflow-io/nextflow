@@ -138,7 +138,7 @@ class CmdModule extends CmdBase implements UsageAware {
             result << 'Commands:'
             commands.each {
                 def description = it.getClass().getAnnotation(Parameters)?.commandDescription()
-                result << "  ${it.name.padRight(12)}${description}"
+                result << "  ${it.name.padRight(15)}${description}"
             }
             result << ''
             println result.join('\n').toString()

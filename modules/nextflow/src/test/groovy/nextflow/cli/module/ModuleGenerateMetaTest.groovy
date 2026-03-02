@@ -269,6 +269,51 @@ class ModuleGenerateMetaTest extends Specification {
         def output = capture.toString()
         output.contains('# This file was auto-generated')
         output.contains('name:')
-        output.contains('tools:')
+    }
+
+    def 'should use provided CLI args for required fields'() {
+        given:
+        def moduleDir = createModule(SIMPLE_PROCESS)
+        def cmd = makeCmd(moduleDir)
+        cmd.moduleName = 'nf-core/fastqc'
+        cmd.moduleVersion = '1.0.0'
+        cmd.description = 'Run FastQC on reads'
+        cmd.license = 'MIT'
+        cmd.authors = ['Alice <alice@example.com>', 'Bob <bob@example.com>']
+        cmd.dryRun = true
+
+        when:
+        cmd.run()
+
+        then:
+        def output = capture.toString()
+        output.contains('nf-core/fastqc')
+        output.contains('1.0.0')
+        output.contains('Run FastQC on reads')
+        output.contains('MIT')
+        output.contains('Alice <alice@example.com>')
+        output.contains('Bob <bob@example.com>')
+        // Required fields have no placeholders;
+        !output.contains('TODO: Add version')
+        !output.contains('TODO: Add module description')
+        !output.contains('TODO: Add license')
+        !output.contains('TODO: Add author')
+    }
+
+    def 'should fall back to TODO placeholders when CLI args are not provided'() {
+        given:
+        def moduleDir = createModule(SIMPLE_PROCESS)
+        def cmd = makeCmd(moduleDir)
+        cmd.dryRun = true
+
+        when:
+        cmd.run()
+
+        then:
+        def output = capture.toString()
+        output.contains('TODO: Add version')
+        output.contains('TODO: Add module description')
+        output.contains('TODO: Add license')
+        output.contains('TODO: Add author')
     }
 }

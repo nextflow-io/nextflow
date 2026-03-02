@@ -376,6 +376,49 @@ By default, both local files and configuration entries are removed. Use `-keep-c
 
 See {ref}`cli-module-remove` for more information.
 
+### Generating module metadata
+
+The `module generate-meta` command bootstraps a `meta.yml` manifest for a local module by statically analysing its `main.nf`. It extracts the first process definition and infers input/output channel types automatically.
+
+Use this before publishing a new module, or to regenerate metadata after changing a process signature.
+
+```console
+$ nextflow module generate-meta ./modules/my-module
+```
+
+Supply the required fields directly on the command line to avoid `TODO` placeholders in the generated file:
+
+```console
+$ nextflow module generate-meta \
+    -name nf-core/fastqc \
+    -version 1.0.0 \
+    -description "Quality control of raw sequencing reads" \
+    -license MIT \
+    -author "@drpatelh" \
+    -author "@joseespinosa" \
+    ./modules/nf-core/fastqc
+```
+
+The available flags for required fields are:
+
+| Flag | Description |
+|------|-------------|
+| `-name` | Module name in `scope/name` format (e.g. `nf-core/fastqc`) |
+| `-version` | Module version (e.g. `1.0.0`) |
+| `-description` | Short description of what the module does |
+| `-license` | SPDX license identifier (e.g. `MIT`, `Apache-2.0`) |
+| `-author` | Author name; repeat for multiple authors |
+
+The generated file header also contains guidance on reviewing the auto-detected channel types:
+
+- `val` channels default to `string` — change to `map` for structured meta objects.
+- `path` outputs with glob patterns (`*`, `?`, `{}`, `[]`) resolve to `list`; literal filenames resolve to `file`.
+- `arity: '1'` overrides glob detection and forces `file`; `arity: '1..*'` forces `list`.
+
+Use `-dry-run` to preview the output without writing, and `-force` to overwrite an existing `meta.yml`.
+
+See {ref}`cli-module-generate-meta` for all available options.
+
 ### Publishing modules
 
 The `module publish` command uploads modules to a registry, making them available for others to install and use.

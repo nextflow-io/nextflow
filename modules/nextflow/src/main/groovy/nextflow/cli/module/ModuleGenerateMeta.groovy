@@ -50,6 +50,21 @@ class ModuleGenerateMeta extends CmdBase {
     @Parameter(names = ["-dry-run"], description = "Print generated YAML to stdout without writing any file", arity = 0)
     boolean dryRun = false
 
+    @Parameter(names = ["-name"], description = "Module name in 'scope/name' format (e.g. nf-core/fastqc)")
+    String moduleName
+
+    @Parameter(names = ["-version"], description = "Module version (e.g. 1.0.0)")
+    String moduleVersion
+
+    @Parameter(names = ["-description"], description = "Short description of what the module does")
+    String description
+
+    @Parameter(names = ["-license"], description = "Module license identifier (e.g. MIT, Apache-2.0)")
+    String license
+
+    @Parameter(names = ["-author"], description = "Module author; may be specified multiple times")
+    List<String> authors
+
     @TestOnly
     protected Path root
 
@@ -64,9 +79,16 @@ class ModuleGenerateMeta extends CmdBase {
 
         if( !Files.exists(mainNfPath) )
             throw new AbortOperationException("Missing required file: main.nf in ${moduleDir}")
-        final session = createSession(baseDir)
+
         final metadata = parseModule(mainNfPath)
-        final yamlContent = MetaYmlGenerator.render(metadata)
+        final renderOptions = new MetaYmlGenerator.RenderOptions(
+            name: moduleName,
+            version: moduleVersion,
+            description: description,
+            license: license,
+            authors: authors ?: []
+        )
+        final yamlContent = MetaYmlGenerator.render(metadata, renderOptions)
 
         if( dryRun ) {
             println yamlContent
@@ -79,15 +101,6 @@ class ModuleGenerateMeta extends CmdBase {
 
         Files.writeString(metaYmlPath, yamlContent)
         println "Generated: ${metaYmlPath}"
-    }
-    private Session createSession(Path baseDir) {
-        // create the config
-        final config = new ConfigBuilder()
-            .setOptions(getLauncher().getOptions())
-            .setBaseDir(baseDir)
-            .build()
-
-        return new Session(config)
     }
 
     private Path resolveModuleDir(Path baseDir) {
