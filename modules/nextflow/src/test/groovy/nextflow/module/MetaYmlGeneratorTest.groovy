@@ -1031,7 +1031,7 @@ class MetaYmlGeneratorTest extends Specification {
         then:
         (parsed['name'] as String).contains('my_tool')
         parsed['version'] == 'TODO: Add version'
-        parsed['description'] == 'TODO: Add description'
+        parsed['description'] == 'TODO: Add module description'
         (parsed['license'] as String).startsWith('TODO:')
         parsed['authors'] == ['TODO: Add author']
     }
