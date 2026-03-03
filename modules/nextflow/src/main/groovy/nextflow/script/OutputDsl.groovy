@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ class OutputDsl {
 
     private Map<String,Map> declarations = [:]
 
-    private Map<String,DataflowVariable> output = [:]
+    private Map<String,DataflowVariable> dataflowOutputs = [:]
 
     void declare(String name, Closure closure) {
         if( declarations.containsKey(name) )
@@ -71,7 +71,12 @@ class OutputDsl {
             final opts = publishOptions(name, defaults, overrides)
 
             if( opts.enabled == null || opts.enabled )
-                output[name] = new PublishOp(session, name, CH.getReadChannel(source), opts).apply()
+                dataflowOutputs[name] = new PublishOp(session, name, CH.getReadChannel(source), opts).apply()
+        }
+
+        // retrieve workflow outputs in order to propagate any errors
+        session.addIgniter {
+            getOutput()
         }
     }
 
@@ -94,7 +99,7 @@ class OutputDsl {
     }
 
     Map<String,Object> getOutput() {
-        output.collectEntries { name, dv -> [name, dv.get()] }
+        dataflowOutputs.collectEntries { name, dv -> [name, dv.get()] }
     }
 
     static class DeclareDsl {
