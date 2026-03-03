@@ -81,16 +81,12 @@ class CmdLintTest extends Specification {
         dir?.deleteDir()
     }
 
-    def 'should suppress progress output with quiet flag' () {
+    def 'should suppress progress with nextflow -q lint (global quiet flag)'() {
 
         given:
         def dir = Files.createTempDirectory('test')
-
         dir.resolve('main.nf').text = '''\
             process HELLO {
-                input:
-                val x
-
                 script:
                 "echo hello"
             }
@@ -118,7 +114,74 @@ class CmdLintTest extends Specification {
         dir?.deleteDir()
     }
 
-    def 'should still show errors with quiet flag' () {
+    def 'should suppress progress when ansiLog is false (non-interactive output)'() {
+
+        given:
+        def dir = Files.createTempDirectory('test')
+        dir.resolve('main.nf').text = '''\
+            process HELLO {
+                script:
+                "echo hello"
+            }
+            '''
+
+        when:
+        def cmd = new CmdLint()
+        cmd.args = [dir.toFile().toString()]
+        cmd.launcher = Mock(Launcher) {
+            getOptions() >> Mock(CliOptions) {
+                isQuiet() >> false
+                getAnsiLog() >> false
+            }
+        }
+        cmd.run()
+
+        then:
+        noExceptionThrown()
+        and:
+        !capture.toString().contains("Linting Nextflow code")
+        !capture.toString().contains("Linting:")
+        !capture.toString().contains("Nextflow linting complete")
+
+        cleanup:
+        dir?.deleteDir()
+    }
+
+    def 'should suppress progress with lint -q flag (lint-level quiet, keeps ANSI)'() {
+
+        given:
+        def dir = Files.createTempDirectory('test')
+        dir.resolve('main.nf').text = '''\
+            process HELLO {
+                script:
+                "echo hello"
+            }
+            '''
+
+        when:
+        def cmd = new CmdLint()
+        cmd.quiet = true
+        cmd.args = [dir.toFile().toString()]
+        cmd.launcher = Mock(Launcher) {
+            getOptions() >> Mock(CliOptions) {
+                isQuiet() >> false
+                getAnsiLog() >> false
+            }
+        }
+        cmd.run()
+
+        then:
+        noExceptionThrown()
+        and:
+        !capture.toString().contains("Linting Nextflow code")
+        !capture.toString().contains("Linting:")
+        !capture.toString().contains("Nextflow linting complete")
+
+        cleanup:
+        dir?.deleteDir()
+    }
+
+    def 'should still show errors when progress is suppressed' () {
 
         given:
         def dir = Files.createTempDirectory('test')

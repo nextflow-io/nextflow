@@ -55,12 +55,19 @@ class ErrorSummary {
 class StandardErrorListener implements ErrorListener {
     private String mode
     private boolean ansiLog
-    private boolean quiet
+    /** When true, suppress progress/summary messages (file-by-file status and
+     *  the final summary).  Errors and warnings are always shown.
+     *  Automatically set when ansiLog is false (non-interactive output) or
+     *  when the global --quiet / -q flag is active. */
+    private boolean suppressProgress
 
     StandardErrorListener(String mode, boolean ansiLog, boolean quiet=false) {
         this.mode = mode
         this.ansiLog = ansiLog
-        this.quiet = quiet
+        // Suppress the animated progress lines whenever ANSI is off (they
+        // rely on cursor-up/erase-line sequences) or when the caller has
+        // explicitly requested quiet mode.
+        this.suppressProgress = !ansiLog || quiet
     }
 
     private Ansi ansi() {
@@ -88,14 +95,14 @@ class StandardErrorListener implements ErrorListener {
 
     @Override
     void beforeAll() {
-        if( quiet )
+        if( suppressProgress )
             return
         print(ansi().a("Linting Nextflow code..").newline())
     }
 
     @Override
     void beforeFile(File file) {
-        if( quiet )
+        if( suppressProgress )
             return
         print(ansi()
             .cursorUp(1).eraseLine()
@@ -107,7 +114,7 @@ class StandardErrorListener implements ErrorListener {
 
     @Override
     void beforeErrors() {
-        term = quiet ? ansi() : ansi().cursorUp(1).eraseLine()
+        term = suppressProgress ? ansi() : ansi().cursorUp(1).eraseLine()
     }
 
     @Override
@@ -234,7 +241,7 @@ class StandardErrorListener implements ErrorListener {
 
     @Override
     void afterErrors() {
-        if( !quiet ) {
+        if( !suppressProgress ) {
             // print extra newline since next file status will chomp back one
             term.fg(Ansi.Color.DEFAULT).newline()
         }
@@ -243,7 +250,7 @@ class StandardErrorListener implements ErrorListener {
 
     @Override
     void beforeFormat(File file) {
-        if( quiet )
+        if( suppressProgress )
             return
         print(ansi()
             .cursorUp(1).eraseLine()
@@ -253,7 +260,7 @@ class StandardErrorListener implements ErrorListener {
 
     @Override
     void afterAll(ErrorSummary summary) {
-        if( quiet )
+        if( suppressProgress )
             return
         final term = ansi()
         term.cursorUp(1).eraseLine()
