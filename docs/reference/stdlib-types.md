@@ -521,6 +521,7 @@ The following properties are available:
 
 `name: String`
 : The path name, e.g. `/some/path/file.txt` -> `file.txt`.
+: For files staged as a task input, the path name is the path relative to the task directory (e.g., `my-dir/file.txt`). Use `fileName.name` for task paths to get only the file name.
 
 `parent: Path`
 : The path parent path, e.g. `/some/path/file.txt` -> `/some/path`.
@@ -600,10 +601,10 @@ The following methods are available for writing to files:
 : Appends text to a file without replacing existing content.
 
 `setText( text: String )`
-: Writes text to a file. Equivalent to setting the `text` property.
+: Writes text to a file, replacing any existing content. Equivalent to setting the `text` property.
 
 `write( text: String )`
-: Writes a string to a file, replacing any existing content.
+: Writes text to a file, replacing any existing content. Equivalent to `setText()`.
 
 <h3>Filesystem operations</h3>
 

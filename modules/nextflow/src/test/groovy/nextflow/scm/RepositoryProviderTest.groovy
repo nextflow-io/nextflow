@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -185,30 +185,30 @@ class RepositoryProviderTest extends Specification {
         return new HttpResponse<byte[]>() {
             @Override
             int statusCode() { return 200 }
-            
+
             @Override
             HttpRequest request() { return null }
-            
+
             @Override
             Optional<HttpResponse<byte[]>> previousResponse() { return Optional.empty() }
-            
+
             @Override
             java.net.http.HttpHeaders headers() {
                 return java.net.http.HttpHeaders.of(
-                    ['Content-Length': [contentLength.toString()]], 
+                    ['Content-Length': [contentLength.toString()]],
                     (a, b) -> true
                 )
             }
-            
+
             @Override
             byte[] body() { return new byte[0] }
-            
+
             @Override
             Optional<SSLSession> sslSession() { return Optional.empty() }
-            
+
             @Override
             URI uri() { return new URI('https://api.github.com/repos/test/repo') }
-            
+
             @Override
             HttpClient.Version version() { return HttpClient.Version.HTTP_1_1 }
         }
@@ -266,20 +266,20 @@ class RepositoryProviderTest extends Specification {
         "docs/sub/file.md"  | null        | 2     | true     | "deeply nested file with depth 2"
         "main.nf"           | ""          | 0     | true     | "immediate child with empty basePath"
         "main.nf"           | "/"         | 0     | true     | "immediate child with root basePath"
-        
-        // Subdirectory tests  
+
+        // Subdirectory tests
         "docs/guide.md"     | "docs"      | 0     | true     | "immediate child in subdirectory"
         "docs/sub/file.md"  | "docs"      | 0     | false    | "nested file in subdirectory with depth 0"
         "docs/sub/file.md"  | "docs"      | 1     | true     | "nested file in subdirectory with depth 1"
         "docs/guide.md"     | "/docs"     | 0     | true     | "immediate child with absolute basePath"
-        
+
         // Edge cases
         "docs"              | "docs"      | 0     | false    | "base directory itself should be excluded"
         "other/file.md"     | "docs"      | 0     | false    | "file outside basePath should be excluded"
         "main.nf"           | null        | -1    | true     | "unlimited depth should include everything"
         "docs/sub/deep.md"  | null        | -1    | true     | "unlimited depth with nested file"
         ""                  | null        | 0     | false    | "empty entryPath should be excluded"
-        
+
         // Complex path tests
         "docs/api/index.md" | "docs"      | 1     | true     | "api subdirectory file with depth 1"
         "docs/api/ref.md"   | "docs/api"  | 0     | true     | "immediate child of nested basePath"
@@ -291,7 +291,7 @@ class RepositoryProviderTest extends Specification {
         given:
         def entries = [
             "/main.nf",
-            "/nextflow.config", 
+            "/nextflow.config",
             "/README.md",
             "/docs/guide.md",
             "/docs/api/index.md",
@@ -300,31 +300,31 @@ class RepositoryProviderTest extends Specification {
             "/src/utils/helper.nf",
             "/test/test-data.csv"
         ]
-        
+
         when: "listing root with depth 0"
         def rootDepth0 = entries.findAll { RepositoryProvider.shouldIncludeAtDepth(it, "/", 0) }
-        
+
         then:
         rootDepth0.size() == 3
         rootDepth0.containsAll(["/main.nf", "/nextflow.config", "/README.md"])
-        
-        when: "listing root with depth 1" 
+
+        when: "listing root with depth 1"
         def rootDepth1 = entries.findAll { RepositoryProvider.shouldIncludeAtDepth(it, "/", 1) }
-        
+
         then:
         rootDepth1.size() == 6
         rootDepth1.containsAll(["/main.nf", "/nextflow.config", "/README.md", "/docs/guide.md", "/src/process.nf", "/test/test-data.csv"])
-        
+
         when: "listing docs with depth 0"
         def docsDepth0 = entries.findAll { RepositoryProvider.shouldIncludeAtDepth(it, "/docs", 0) }
-        
+
         then:
         docsDepth0.size() == 1
         docsDepth0.contains("/docs/guide.md")
-        
+
         when: "listing docs with depth 1"
         def docsDepth1 = entries.findAll { RepositoryProvider.shouldIncludeAtDepth(it, "/docs", 1) }
-        
+
         then:
         docsDepth1.size() == 3
         docsDepth1.containsAll(["/docs/guide.md", "/docs/api/index.md", "/docs/api/reference.md"])

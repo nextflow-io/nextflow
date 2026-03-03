@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -154,7 +154,7 @@ class NameGenerator {
 
             // Piero Angela - Italian television host, science journalist, writer, and pianist. He is best known as the creator and presenter of broadcasting science outreach programmes modelled on BBC and David Attenborough documentaries, and also for his scientific journalism published in numerous publications. https://en.wikipedia.org/wiki/Piero_Angela
             "angela",
-        
+
             // Archimedes was a physicist, engineer and mathematician who invented too many things to list them here. https://en.wikipedia.org/wiki/Archimedes
             "archimedes",
 
@@ -229,7 +229,7 @@ class NameGenerator {
 
             // Walter Houser Brattain co-invented the transistor. https://en.wikipedia.org/wiki/Walter_Houser_Brattain
             "brattain",
-        
+
             // Vital Brazil Mineiro da Campanha, also known as Vital Brazil, was a Brazilian physician, biomedical scientist and immunologist, known to develop the first anti-scorpion and anti-spider serums. https://en.wikipedia.org/wiki/Vital_Brazil
             "brazil",
 
@@ -501,7 +501,7 @@ class NameGenerator {
 
             // Cesare Mansueto Giulio Lattes, also known as César Lattes, was a Brazilian experimental physicist and one of the discoverers of the pion, a composite subatomic particle made of a quark and an antiquark. https://en.wikipedia.org/wiki/César_Lattes
             "lattes",
-        
+
             // Antoine Lavoisier - French chemist central to the 18th-century chemical revolution and had a large influence on both the history of chemistry and the history of biology. https://en.wikipedia.org/wiki/Antoine_Lavoisier
             "lavoisier",
 
@@ -608,7 +608,7 @@ class NameGenerator {
             "murdock",
 
             // Angelo Moriondo was an Italian inventor usually credited for patenting the earliest known espresso machine. https://en.wikipedia.org/wiki/Angelo_Moriondo
-            "moriondo", 
+            "moriondo",
 
             // John von Neumann (Hungarian: Neumann János Lajos) was a Hungarian-American mathematician, physicist, computer scientist, engineer and polymath. The Von Neumann architecture, his namesake, is still used to this day in computer design. He also designed the policy of "mutually assured destruction" during the Cold War. https://en.wikipedia.org/wiki/John_von_Neumann
             "neumann",
@@ -801,7 +801,7 @@ class NameGenerator {
 
             // Alfred Wegener - German climatologist, geologist, geophysicist, meteorologist, and polar researcher. Best known for proposing the theory of continental drift, the precursor to plate tectonics. https://en.wikipedia.org/wiki/Alfred_Wegener
             "wegener",
-        
+
             // Marlyn Wescoff - one of the original programmers of the ENIAC. https://en.wikipedia.org/wiki/ENIAC - https://en.wikipedia.org/wiki/Marlyn_Meltzer
             "wescoff",
 

@@ -1,5 +1,13 @@
 {% extends "!layout.html" %}
 
+{% block document %}
+    <div class="admonition site-banner" style="background: #E2F7F3; border-left: none;">
+        <p class="admonition-title" style="background: #0CAE8E;">Nextflow documentation is migrating</p>
+        <p>Nextflow documentation is being migrated to <a href="https://docs.seqera.io/nextflow/">docs.seqera.io/nextflow</a>. This site will remain available throughout the migration.</p>
+    </div>
+    {{ super() }}
+{% endblock %}
+
 {% block sidebartitle %}
     {{ super() }}
     {%- set version_selected = "stable" -%}

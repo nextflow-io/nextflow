@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -482,7 +482,7 @@ public interface ProcessDsl extends DslScope {
                 @NamedParam(value = "optional", type = Boolean.class),
                 @NamedParam(value = "type", type = String.class),
             })
-            Map<String,?> opts, 
+            Map<String,?> opts,
             String pattern
         );
         Set<Path> files(String pattern);

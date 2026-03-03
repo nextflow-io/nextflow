@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.cloud.aws.nio;
@@ -485,13 +484,11 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
             throw new NoSuchFileException("the path: " + FilesEx.toUriString(s3Path) + " does not exist");
         }
 
-        if (Files.isDirectory(path)){
-            try (DirectoryStream<Path> stream = Files.newDirectoryStream(path)){
-                if (stream.iterator().hasNext()){
-                    throw new DirectoryNotEmptyException("the path: " + FilesEx.toUriString(s3Path) + " is a directory and is not empty");
-                }
-            }
-        }
+		// NOTE: S3 directories are virtual (marker objects or implied key prefixes),
+		// so we do not check for emptiness before deleting. Enforcing POSIX-like
+		// DirectoryNotEmptyException semantics on S3 is unreliable due to eventual
+		// consistency and unnecessary because deleting a directory marker does not
+		// affect its children.
 
 		// we delete the two objects (sometimes exists the key '/' and sometimes not)
 		s3Path.getFileSystem().getClient()

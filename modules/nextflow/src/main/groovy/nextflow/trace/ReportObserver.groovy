@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -113,7 +113,7 @@ class ReportObserver implements TraceObserverV2 {
     @Override
     void onFlowCreate(Session session) {
         this.session = session
-        this.aggregator = new ResourcesAggregator(session)
+        this.aggregator = new ResourcesAggregator()
         // check if the process exists
         if( Files.exists(reportFile) && !overwrite )
             throw new AbortOperationException("Report file already exists: ${reportFile.toUriString()} -- enable the 'report.overwrite' option in your config file to overwrite existing files")

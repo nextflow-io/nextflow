@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,13 +62,13 @@ class NextflowXformImplTest extends Specification {
         def shell = new GroovyShell(new Binding(p:p, t:t, q:q, s:s, u:u, z:z), config)
         shell.evaluate('''
             assert p == t && t == p
-            assert t == u && u == t && t == t 
+            assert t == u && u == t && t == t
             assert s == z && z == s
             assert p != q && q != p
-            assert t != q && q != t   
+            assert t != q && q != t
             assert q != s
-            assert p != q 
-            assert p != s  
+            assert p != q
+            assert p != s
         ''')
         then:
         noExceptionThrown()
@@ -111,9 +111,9 @@ class NextflowXformImplTest extends Specification {
             final a = new TaskPath(p)
             final b = new TaskPath(p)
             final c = new TaskPath(p)
-            final x = ( a == b && b == c )  
+            final x = ( a == b && b == c )
             assert x
-  
+
         ''')
         then:
         noExceptionThrown()
@@ -131,7 +131,7 @@ class NextflowXformImplTest extends Specification {
         when:
         shell.evaluate('''
 
-           // memory as LEFT operand   
+           // memory as LEFT operand
             assert 1.KB < 2000
             assert 1.KB < 2.KB
             assert 1.KB < '2 KB'
@@ -156,35 +156,35 @@ class NextflowXformImplTest extends Specification {
             assert 1.KB != 2.KB
             assert 1.KB != '2 KB'
 
-            // memory as RIGHT operand   
-            assert 100 < 1.GB 
+            // memory as RIGHT operand
+            assert 100 < 1.GB
             assert 100.B < 1.GB
             assert '100B' < 1.GB
 
-            assert 100 <= 1.GB 
+            assert 100 <= 1.GB
             assert 100.B <= 1.GB
             assert '100B' <= 1.GB
 
-            assert 100 <= 100.GB 
+            assert 100 <= 100.GB
             assert 100.B <= 100.GB
             assert '100B' <= 100.GB
 
-            assert 100 >= 100.B 
+            assert 100 >= 100.B
             assert 100.B >= 100.B
             assert '100B' >= 100.B
 
-            assert 200 > 100.B 
+            assert 200 > 100.B
             assert 200.B > 100.B
-            assert '200 B' > 100.B 
-            
+            assert '200 B' > 100.B
+
             assert 100 == 100.B
-            assert 100.B == 100.B 
+            assert 100.B == 100.B
             assert '100 KB' == 100.KB
 
             assert 101 != 100.B
-            assert 101.B != 100.B 
+            assert 101.B != 100.B
             assert '101 KB' != 100.KB
-            
+
         ''')
         then:
         noExceptionThrown()
@@ -202,7 +202,7 @@ class NextflowXformImplTest extends Specification {
         when:
         shell.evaluate('''
 
-           // duration as LEFT operand   
+           // duration as LEFT operand
             assert 1.sec < 10_000
             assert 1.sec < 10.sec
             assert 1.sec < '10 sec'
@@ -218,35 +218,35 @@ class NextflowXformImplTest extends Specification {
             assert 1.min >= 1_000
             assert 1.min >= 1.sec
             assert 1.min >= '1 sec'
-  
+
             assert 1.sec == 1_000
             assert 1.sec == 1.sec
             assert 1.sec == '1 sec'
- 
+
             assert 1.sec != 2_000
             assert 1.sec != 2.sec
             assert 1.sec != '2 sec'
-            
-            // duration as RIGHT operand   
-            assert 1000 < 10.sec 
-            assert 1.sec < 10.sec 
-            assert '1 sec' < 10.sec 
-            
-            assert 10000 <= 10.sec 
-            assert 10.sec <= 10.sec 
-            assert '10 sec' <= 10.sec 
 
-            assert 10000 >= 10.sec 
-            assert 10.sec >= 10.sec 
-            assert '10 sec' >= 10.sec 
+            // duration as RIGHT operand
+            assert 1000 < 10.sec
+            assert 1.sec < 10.sec
+            assert '1 sec' < 10.sec
 
-            assert 10000 == 10.sec 
-            assert 10.sec == 10.sec 
-            assert '10 sec' == 10.sec 
+            assert 10000 <= 10.sec
+            assert 10.sec <= 10.sec
+            assert '10 sec' <= 10.sec
 
-            assert 11000 != 10.sec 
-            assert 11.sec != 10.sec 
-            assert '11 sec' != 10.sec                                                                      
+            assert 10000 >= 10.sec
+            assert 10.sec >= 10.sec
+            assert '10 sec' >= 10.sec
+
+            assert 10000 == 10.sec
+            assert 10.sec == 10.sec
+            assert '10 sec' == 10.sec
+
+            assert 11000 != 10.sec
+            assert 11.sec != 10.sec
+            assert '11 sec' != 10.sec
         ''')
         then:
         noExceptionThrown()
@@ -285,8 +285,8 @@ class NextflowXformImplTest extends Specification {
         shell.evaluate '''
         enum MyEnum { FOO, BAR, BAZ }
         def stage = 'FOO' as MyEnum
-        assert stage == MyEnum.FOO 
-        assert stage.is(MyEnum.FOO) 
+        assert stage == MyEnum.FOO
+        assert stage.is(MyEnum.FOO)
         '''
         then:
         noExceptionThrown()
@@ -306,15 +306,15 @@ class NextflowXformImplTest extends Specification {
         assert 1.gb <= null == false
         assert 1.gb <  null == false
         assert 1.gb >= null == false
-        assert 1.gb == null == false 
+        assert 1.gb == null == false
         assert 1.gb != null == true
 
-        assert null >  1.gb == false        
+        assert null >  1.gb == false
         assert null >= 1.gb == false
-        assert null <  1.gb == false        
+        assert null <  1.gb == false
         assert null <= 1.gb == false
         assert null == 1.gb == false
-        assert null != 1.gb == true      
+        assert null != 1.gb == true
         '''
         then:
         noExceptionThrown()
@@ -334,15 +334,15 @@ class NextflowXformImplTest extends Specification {
         assert 1.min <= null == false
         assert 1.min <  null == false
         assert 1.min >= null == false
-        assert 1.min == null == false 
+        assert 1.min == null == false
         assert 1.min != null == true
 
-        assert null >  1.min == false        
+        assert null >  1.min == false
         assert null >= 1.min == false
-        assert null <  1.min == false        
+        assert null <  1.min == false
         assert null <= 1.min == false
         assert null == 1.min == false
-        assert null != 1.min == true      
+        assert null != 1.min == true
         '''
         then:
         noExceptionThrown()
@@ -358,8 +358,8 @@ class NextflowXformImplTest extends Specification {
 
         when:
         shell.evaluate '''
-          System.properties['os.name'] == 'Mac OS X'    
-          System.properties['os.name'] == 'Mac OS X' ? 'gcsplit' : 'csplit' 
+          System.properties['os.name'] == 'Mac OS X'
+          System.properties['os.name'] == 'Mac OS X' ? 'gcsplit' : 'csplit'
         '''
         then:
         noExceptionThrown()

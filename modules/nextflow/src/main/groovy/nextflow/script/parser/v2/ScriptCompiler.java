@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -157,7 +157,7 @@ public class ScriptCompiler {
 
         // collect script classes
         var classes = (List<Class>) collector.getLoadedClasses().stream()
-            .map((o) -> 
+            .map((o) ->
                 o instanceof Class c && BASE_CLASS_NAME.equals(c.getSuperclass().getName())
                     ? c
                     : null

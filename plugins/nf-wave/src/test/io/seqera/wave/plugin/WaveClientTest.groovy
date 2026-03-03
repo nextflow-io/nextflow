@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package io.seqera.wave.plugin
@@ -964,7 +963,7 @@ class WaveClientTest extends Specification {
 
         expect:
         wave.defaultFusionUrl(ARCH).toURI().toString() == EXPECTED
-        
+
         where:
         ARCH                | SNAP  | EXPECTED
         'linux/amd64'       | null  | 'https://fusionfs.seqera.io/releases/v2.5-amd64.json'
@@ -1159,7 +1158,7 @@ class WaveClientTest extends Specification {
         wave.checkBuildCompletion(new WaveClient.Handle(response,Instant.now().minusSeconds(10)))
         then:
         1 * wave.buildStatus(BUILD_ID) >> PENDING
-        
+
         then:
         def err = thrown(ProcessUnrecoverableException)
         err.message == "Wave provisioning for container 'my/container:latest' is exceeding max allowed duration (500ms) - check details here: https://wave.seqera.io/view/builds/build-123"
