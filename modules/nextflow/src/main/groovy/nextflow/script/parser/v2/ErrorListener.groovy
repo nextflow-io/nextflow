@@ -64,16 +64,15 @@ class StandardErrorListener implements ErrorListener {
     }
 
     private Ansi ansi() {
-        final ansi = Ansi.ansi()
-        ansi.setEnabled(ansiLog)
-        return ansi
+        // Ansi.setEnabled() is static-only in Jansi 2.x: codes are baked into
+        // the Ansi buffer when fg()/bold() etc. are called, not at toString()
+        // time.  Set the global flag here so every Ansi object created by this
+        // listener appends codes only when ansiLog=true.
+        Ansi.setEnabled(ansiLog)
+        return Ansi.ansi()
     }
 
     private void print(Object text) {
-        // Evaluate Ansi.isEnabled() just before rendering to ensure the global
-        // state reflects our ansiLog setting, regardless of what other components
-        // may have set. When ansiLog is false this guarantees plain-text output.
-        Ansi.setEnabled(ansiLog)
         final str = text.toString()
         if( ansiLog ) {
             // AnsiConsole.out handles TTY detection: renders ANSI on a terminal,
