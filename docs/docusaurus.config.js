@@ -61,12 +61,12 @@ export default async function createConfigAsync() {
         typesenseServerConfig: {
           nodes: [
             {
-              host: '9scwdgbn4v8r1lyfp.a1.typesense.net',
+              host: 'uk4gflrza0d8yx5sp-1.a1.typesense.net',
               port: 443,
               protocol: 'https',
             },
           ],
-          apiKey: 'UUIEzlGORRp9lV5GndPR1zYBVBCPIJOl',
+          apiKey: 'KZsuSjc7jPqDm7pkl1kN8TkoHH9b3dwY',
           connectionTimeoutSeconds: 2,
         },
         typesenseSearchParameters: {
