@@ -22,6 +22,7 @@ import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.control.messages.WarningMessage
 import org.codehaus.groovy.syntax.SyntaxException
 import org.fusesource.jansi.Ansi
+import org.fusesource.jansi.AnsiConsole
 /**
  * Interfaces and stdout implementation for reporting compilation errors.
  *
@@ -68,25 +69,39 @@ class StandardErrorListener implements ErrorListener {
         return ansi
     }
 
+    private void print(Object text) {
+        // Evaluate Ansi.isEnabled() just before rendering to ensure the global
+        // state reflects our ansiLog setting, regardless of what other components
+        // may have set. When ansiLog is false this guarantees plain-text output.
+        Ansi.setEnabled(ansiLog)
+        final str = text.toString()
+        if( ansiLog ) {
+            // AnsiConsole.out handles TTY detection: renders ANSI on a terminal,
+            // strips codes when output is piped.
+            AnsiConsole.out.print(str)
+            AnsiConsole.out.flush()
+        }
+        else {
+            System.out.print(str)
+            System.out.flush()
+        }
+    }
+
     @Override
     void beforeAll() {
         if( quiet )
             return
-        final line = ansi().a("Linting Nextflow code..").newline()
-        System.out.print(line)
-        System.out.flush()
+        print(ansi().a("Linting Nextflow code..").newline())
     }
 
     @Override
     void beforeFile(File file) {
         if( quiet )
             return
-        final line = ansi()
+        print(ansi()
             .cursorUp(1).eraseLine()
             .a(Ansi.Attribute.INTENSITY_FAINT).a("Linting: ${file}")
-            .reset().newline().toString()
-        System.out.print(line)
-        System.out.flush()
+            .reset().newline())
     }
 
     private Ansi term
@@ -224,20 +239,17 @@ class StandardErrorListener implements ErrorListener {
             // print extra newline since next file status will chomp back one
             term.fg(Ansi.Color.DEFAULT).newline()
         }
-        System.out.print(term)
-        System.out.flush()
+        print(term)
     }
 
     @Override
     void beforeFormat(File file) {
         if( quiet )
             return
-        final line = ansi()
+        print(ansi()
             .cursorUp(1).eraseLine()
             .a(Ansi.Attribute.INTENSITY_FAINT).a("Formatting: ${file}")
-            .reset().newline().toString()
-        System.out.print(line)
-        System.out.flush()
+            .reset().newline())
     }
 
     @Override
@@ -265,8 +277,7 @@ class StandardErrorListener implements ErrorListener {
         if( summary.filesWithErrors == 0 && summary.filesWithoutErrors == 0 ) {
             term.a(" No files found to process").newline()
         }
-        System.out.print(term)
-        System.out.flush()
+        print(term)
     }
 
     private static record Range(
