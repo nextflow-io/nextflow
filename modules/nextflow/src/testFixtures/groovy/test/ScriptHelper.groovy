@@ -251,7 +251,7 @@ class ScriptHelper {
 
     private static Object normalizeResult0(value) {
         if( value instanceof ChannelImpl )
-            return value.getSource()
+            return value.getSource().createReadChannel()
 
         if( value instanceof ValueImpl )
             return value.getSource()

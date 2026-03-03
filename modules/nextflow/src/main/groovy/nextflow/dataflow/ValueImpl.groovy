@@ -23,6 +23,7 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Global
 import nextflow.Session
+import nextflow.dag.NodeMarker
 import nextflow.extension.CH
 import nextflow.extension.DataflowHelper
 
@@ -58,6 +59,7 @@ class ValueImpl {
             target << CH.stop()
         }
         DataflowHelper.subscribeImpl(source, [onNext: onNext])
+        NodeMarker.addOperatorNode("flatMap", [source], [target])
         return new ChannelImpl(target)
     }
 
@@ -67,15 +69,18 @@ class ValueImpl {
             target.bind(transform.apply(value))
         }
         DataflowHelper.subscribeImpl(source, [onNext: onNext])
+        NodeMarker.addOperatorNode("map", [source], [target])
         return new ValueImpl(target)
     }
 
     void subscribe(Closure onNext) {
         DataflowHelper.subscribeImpl(source, [onNext: onNext])
+        NodeMarker.addOperatorNode("subscribe", [source], [])
     }
 
     void subscribe(Map<String,Closure> events) {
         DataflowHelper.subscribeImpl(source, events)
+        NodeMarker.addOperatorNode("subscribe", [source], [])
     }
 
     ValueImpl view(Function<?,?> transform = null) {
@@ -87,6 +92,7 @@ class ValueImpl {
             target.bind(value)
         }
         DataflowHelper.subscribeImpl(source, [onNext: onNext])
+        NodeMarker.addOperatorNode("view", [source], [target])
         return new ValueImpl(target)
     }
 

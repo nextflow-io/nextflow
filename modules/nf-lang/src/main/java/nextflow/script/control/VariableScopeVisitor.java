@@ -283,8 +283,10 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         var result = new ClassNode(entry ? EntryWorkflowDsl.class : WorkflowDsl.class);
         if( !previewTypes ) {
             var v1 = ClassHelper.makeCached(WorkflowDslV1.class);
-            for( var mn : v1.getMethods() )
-                result.addMethod(mn);
+            for( var mn : v1.getMethods() ) {
+                if( vsc.isOperator(mn) )
+                    result.addMethod(mn);
+            }
         }
         return result;
     }

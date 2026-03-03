@@ -23,7 +23,6 @@ import java.util.function.Function
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowBroadcast
-import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Global
@@ -52,20 +51,26 @@ class ChannelImpl {
 
     private static Session getSession() { Global.getSession() as Session }
 
-    private DataflowReadChannel source
+    private DataflowWriteChannel source
 
-    ChannelImpl(source) {
-        this.source = read0(source)
+    ChannelImpl(DataflowWriteChannel source) {
+        this.source = source
     }
 
-    private <T> T read0(source) {
-        T result
+    DataflowWriteChannel getSource() {
+        return source
+    }
+
+    DataflowReadChannel getReadChannel() {
+        return read0(source)
+    }
+
+    private static DataflowReadChannel read0(DataflowWriteChannel source) {
+        DataflowReadChannel result
         if( source instanceof DataflowBroadcast )
-            result = (T)CH.getReadChannel(source)
-        else if( source instanceof DataflowQueue )
-            result = (T)CH.getReadChannel(source)
+            result = CH.getReadChannel(source)
         else
-            result = (T)source
+            throw new IllegalArgumentException()
         // track this relationship so that the source channel
         // can be retrieved when rendering the DAG
         if( source != result )
@@ -73,11 +78,8 @@ class ChannelImpl {
         return result
     }
 
-    DataflowReadChannel getSource() {
-        return source
-    }
-
     ValueImpl collect() {
+        final source = getReadChannel()
         final target = CH.value()
         final result = new HashBag<>()
         final onNext = { value ->
@@ -87,15 +89,20 @@ class ChannelImpl {
             target.bind(result)
         }
         DataflowHelper.subscribeImpl(source, [onNext: onNext, onComplete: onComplete])
+        NodeMarker.addOperatorNode("collect", [source], [target])
         return new ValueImpl(target)
     }
 
-    ChannelImpl cross(ChannelImpl right) {
-        final target = new CrossOpV2(this.source, right.source).apply()
+    ChannelImpl cross(ChannelImpl other) {
+        final left = this.getReadChannel()
+        final right = other.getReadChannel()
+        final target = new CrossOpV2(left, right).apply()
+        NodeMarker.addOperatorNode("cross", [left, right], [target])
         return new ChannelImpl(target)
     }
 
     ChannelImpl filter(Closure condition) {
+        final source = getReadChannel()
         final target = CH.create()
         final onNext = { value ->
             if( condition.call(value) )
@@ -105,10 +112,12 @@ class ChannelImpl {
             target << CH.stop()
         }
         DataflowHelper.subscribeImpl(source, [onNext: onNext, onComplete: onComplete])
+        NodeMarker.addOperatorNode("filter", [source], [target])
         return new ChannelImpl(target)
     }
 
     ChannelImpl flatMap(Function<?,Iterable> transform = null) {
+        final source = getReadChannel()
         final target = CH.create()
         final onNext = { value ->
             final iterable = transform != null ? transform.apply(value) : value
@@ -121,10 +130,12 @@ class ChannelImpl {
             target << CH.stop()
         }
         DataflowHelper.subscribeImpl(source, [onNext: onNext, onComplete: onComplete])
+        NodeMarker.addOperatorNode("flatMap", [source], [target])
         return new ChannelImpl(target)
     }
 
     ChannelImpl groupBy() {
+        final source = getReadChannel()
         final target = CH.create()
 
         final groups = new HashMap<?,Bag<?>>()
@@ -178,15 +189,20 @@ class ChannelImpl {
             target << CH.stop()
         }
         DataflowHelper.subscribeImpl(source, [onNext: onNext, onComplete: onComplete])
+        NodeMarker.addOperatorNode("groupBy", [source], [target])
         return new ChannelImpl(target)
     }
 
-    ChannelImpl join(Map opts = [:], ChannelImpl right) {
-        final target = new JoinOpV2(this.source, right.source, opts).apply()
+    ChannelImpl join(Map opts = [:], ChannelImpl other) {
+        final left = this.getReadChannel()
+        final right = other.getReadChannel()
+        final target = new JoinOpV2(left, right, opts).apply()
+        NodeMarker.addOperatorNode("join", [left, right], [target])
         return new ChannelImpl(target)
     }
 
     ChannelImpl map(Function<?,?> transform) {
+        final source = getReadChannel()
         final target = CH.create()
         final onNext = { value ->
             target << transform.apply(value)
@@ -195,18 +211,19 @@ class ChannelImpl {
             target << CH.stop()
         }
         DataflowHelper.subscribeImpl(source, [onNext: onNext, onComplete: onComplete])
+        NodeMarker.addOperatorNode("map", [source], [target])
         return new ChannelImpl(target)
     }
 
     ChannelImpl mix(Object... others) {
         final List<DataflowReadChannel> sources = []
-        sources.add(this.source)
+        sources.add(this.getReadChannel())
 
         for( final other : others ) {
             if( other instanceof ChannelImpl )
-                sources.add(other.source)
+                sources.add(other.getReadChannel())
             else if( other instanceof ValueImpl )
-                sources.add(other.source)
+                sources.add(other.getSource())
             else
                 throw new ScriptRuntimeException("Operator `mix` expected a channel or dataflow value but received: ${other} [${other.class.simpleName}]")
         }
@@ -220,14 +237,14 @@ class ChannelImpl {
             if( count.decrementAndGet() == 0 )
                 target << CH.stop()
         }
-
         for( final ch : sources )
             DataflowHelper.subscribeImpl(ch, [onNext: onNext, onComplete: onComplete])
-
+        NodeMarker.addOperatorNode("mix", sources, [target])
         return new ChannelImpl(target)
     }
 
     ValueImpl reduce(BiFunction<?,?,?> accumulator) {
+        final source = getReadChannel()
         final target = CH.value()
 
         boolean first = true
@@ -245,10 +262,12 @@ class ChannelImpl {
             target.bind(result)
         }
         DataflowHelper.subscribeImpl(source, [onNext: onNext, onComplete: onComplete])
+        NodeMarker.addOperatorNode("reduce", [source], [target])
         return new ValueImpl(target)
     }
 
     ValueImpl reduce(Object seed, BiFunction<?,?,?> accumulator) {
+        final source = getReadChannel()
         final target = CH.value()
 
         def result = seed
@@ -259,15 +278,20 @@ class ChannelImpl {
             target.bind(result)
         }
         DataflowHelper.subscribeImpl(source, [onNext: onNext, onComplete: onComplete])
+        NodeMarker.addOperatorNode("reduce", [source], [target])
         return new ValueImpl(target)
     }
 
     void subscribe(Closure onNext) {
+        final source = getReadChannel()
         DataflowHelper.subscribeImpl(source, [onNext: onNext])
+        NodeMarker.addOperatorNode("subscribe", [source], [])
     }
 
     void subscribe(Map<String,Closure> events) {
+        final source = getReadChannel()
         DataflowHelper.subscribeImpl(source, events)
+        NodeMarker.addOperatorNode("subscribe", [source], [])
     }
 
     ChannelImpl unique() {
@@ -275,6 +299,7 @@ class ChannelImpl {
     }
 
     ChannelImpl unique(Function<?,?> transform) {
+        final source = getReadChannel()
         final target = CH.create()
         final history = new HashSet<>()
 
@@ -290,10 +315,12 @@ class ChannelImpl {
             target << CH.stop()
         }
         DataflowHelper.subscribeImpl(source, [onNext: onNext, onComplete: onComplete])
+        NodeMarker.addOperatorNode("unique", [source], [target])
         return new ChannelImpl(target)
     }
 
     ChannelImpl until(Closure condition) {
+        final source = getReadChannel()
         final target = CH.create()
 
         boolean done = false
@@ -313,10 +340,12 @@ class ChannelImpl {
                 target << CH.stop()
         }
         DataflowHelper.subscribeImpl(source, [onNext: onNext, onComplete: onComplete])
+        NodeMarker.addOperatorNode("until", [source], [target])
         return new ChannelImpl(target)
     }
 
     ChannelImpl view(Function<?,?> transform = null) {
+        final source = getReadChannel()
         final target = CH.create()
 
         final onNext = { value ->
@@ -328,6 +357,7 @@ class ChannelImpl {
             target << CH.stop()
         }
         DataflowHelper.subscribeImpl(source, [onNext: onNext, onComplete: onComplete])
+        NodeMarker.addOperatorNode("view", [source], [target])
         return new ChannelImpl(target)
     }
 

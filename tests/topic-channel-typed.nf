@@ -10,7 +10,7 @@ process foo {
 
   script:
   """
-  echo '0.1.0'
+  printf '0.1.0'
   """
 }
 
@@ -23,7 +23,7 @@ process bar {
 
   script:
   """
-  echo '0.9.0'
+  printf '0.9.0'
   """
 }
 
@@ -47,7 +47,7 @@ workflow {
 output {
   versions {
     index {
-      path 'versions.txt'
+      path 'versions.csv'
     }
   }
 }

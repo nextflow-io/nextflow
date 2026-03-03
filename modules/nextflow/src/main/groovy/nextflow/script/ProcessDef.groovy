@@ -244,13 +244,11 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
     }
 
     private DataflowReadChannel createSourceChannel(Object value) {
-        value =
-            value instanceof ChannelImpl ? value.getSource() :
-            value instanceof ValueImpl ? value.getSource() :
-            value
+        if( value instanceof ChannelImpl )
+            return CH.getReadChannel(value.getSource())
 
-        if( value instanceof DataflowReadChannel || value instanceof DataflowBroadcast )
-            return CH.getReadChannel(value)
+        if( value instanceof ValueImpl )
+            return value.getSource()
 
         final result = CH.value()
         result.bind(value)

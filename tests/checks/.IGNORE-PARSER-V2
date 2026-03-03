@@ -1,5 +1,4 @@
 # TESTS THAT SHOULD ONLY BE RUN BY THE V2 PARSER
-chunk.nf
 collect-record.nf
 dynamic-filename-typed.nf
 env-typed.nf
