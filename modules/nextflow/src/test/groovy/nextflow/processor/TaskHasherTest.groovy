@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -131,7 +131,7 @@ class TaskHasherTest extends Specification {
             'nxf_out_eval_1': 'echo "value1"',
             'nxf_out_eval_3': 'echo "value3"'
         ])
-        
+
         def result2 = TaskHasher.computeEvalOutputCommands([
             'nxf_out_eval_3': 'echo "value3"',
             'nxf_out_eval_1': 'echo "value1"',

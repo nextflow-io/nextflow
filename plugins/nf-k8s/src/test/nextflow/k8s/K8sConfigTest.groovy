@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -369,7 +369,7 @@ class K8sConfigTest extends Specification {
                     new PodVolumeClaim('nf-0001', '/workspace'),
                     new PodVolumeClaim('nf-0002', '/data', '/home')
         ] as Set
-        
+
     }
 
 
@@ -449,7 +449,7 @@ class K8sConfigTest extends Specification {
         then:
         !cfg.getDebug().getYaml()
     }
-  
+
     def 'should set fetchNodeName' () {
         when:
         def cfg = new K8sConfig( fetchNodeName: true )

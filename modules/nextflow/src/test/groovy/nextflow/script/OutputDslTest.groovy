@@ -1,3 +1,19 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package nextflow.script
 
 import java.nio.file.Files
@@ -61,7 +77,6 @@ class OutputDslTest extends Specification {
         }
         dsl.apply(session)
         session.fireDataflowNetwork()
-        dsl.getOutput()
 
         then:
         outputDir.resolve('foo/file1.txt').text == 'Hello'
@@ -106,7 +121,6 @@ class OutputDslTest extends Specification {
         }
         dsl.apply(session)
         session.fireDataflowNetwork()
-        dsl.getOutput()
 
         then:
         outputDir.resolve('file1.txt').text == 'Hello'
@@ -146,7 +160,6 @@ class OutputDslTest extends Specification {
         }
         dsl.apply(session)
         session.fireDataflowNetwork()
-        dsl.getOutput()
 
         then:
         0 * session.notifyFilePublish(_)
@@ -207,7 +220,9 @@ class OutputDslTest extends Specification {
 
     def 'should report error for invalid path directive' () {
         when:
-        def session = new Session(outputDir: Path.of('results'))
+        def session = new Session(outputDir: Path.of('results')) {
+            void abort(Throwable cause) { throw cause }
+        }
 
         session.outputs.put('foo', Channel.of(1, 2, 3))
 
@@ -217,7 +232,6 @@ class OutputDslTest extends Specification {
         }
         dsl.apply(session)
         session.fireDataflowNetwork()
-        dsl.getOutput()
 
         then:
         def e = thrown(ScriptRuntimeException)
@@ -227,7 +241,9 @@ class OutputDslTest extends Specification {
 
     def 'should report error for invalid publish target' () {
         when:
-        def session = new Session(outputDir: Path.of('results'))
+        def session = new Session(outputDir: Path.of('results')) {
+            void abort(Throwable cause) { throw cause }
+        }
         def file = Path.of('output.txt')
 
         session.outputs.put('foo', Channel.of([file, file, file]))
@@ -238,7 +254,6 @@ class OutputDslTest extends Specification {
         }
         dsl.apply(session)
         session.fireDataflowNetwork()
-        dsl.getOutput()
 
         then:
         def e = thrown(ScriptRuntimeException)
@@ -247,7 +262,9 @@ class OutputDslTest extends Specification {
 
     def 'should report error for invalid publish source' () {
         when:
-        def session = new Session(outputDir: Path.of('results'))
+        def session = new Session(outputDir: Path.of('results')) {
+            void abort(Throwable cause) { throw cause }
+        }
 
         session.outputs.put('foo', Channel.of(42))
 
@@ -257,7 +274,6 @@ class OutputDslTest extends Specification {
         }
         dsl.apply(session)
         session.fireDataflowNetwork()
-        dsl.getOutput()
 
         then:
         def e = thrown(ScriptRuntimeException)
@@ -267,7 +283,9 @@ class OutputDslTest extends Specification {
 
     def 'should report error for invalid index file extension' () {
         when:
-        def session = new Session(outputDir: Path.of('results'))
+        def session = new Session(outputDir: Path.of('results')) {
+            void abort(Throwable cause) { throw cause }
+        }
 
         session.outputs.put('foo', Channel.empty())
 
@@ -279,7 +297,6 @@ class OutputDslTest extends Specification {
         }
         dsl.apply(session)
         session.fireDataflowNetwork()
-        dsl.getOutput()
 
         then:
         def e = thrown(ScriptRuntimeException)
@@ -288,7 +305,9 @@ class OutputDslTest extends Specification {
 
     def 'should report error for invalid published value' () {
         when:
-        def session = new Session(outputDir: Path.of('results'))
+        def session = new Session(outputDir: Path.of('results')) {
+            void abort(Throwable cause) { throw cause }
+        }
 
         session.outputs.put('foo', Channel.of(42))
 
@@ -297,7 +316,6 @@ class OutputDslTest extends Specification {
         }
         dsl.apply(session)
         session.fireDataflowNetwork()
-        dsl.getOutput()
 
         then:
         def e = thrown(ScriptRuntimeException)

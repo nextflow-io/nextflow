@@ -1,0 +1,236 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package nextflow.trace
+
+import java.util.concurrent.ConcurrentHashMap
+
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+import nextflow.Session
+import nextflow.processor.TaskRun
+import nextflow.trace.event.TaskEvent
+import nextflow.util.LoggerHelper
+
+/**
+ * AI agent-friendly log observer that outputs minimal, structured information
+ * to standard error, optimized for AI context windows.
+ *
+ * Activated via environment variable {@code NXF_AGENT_MODE=1}.
+ *
+ * Output format:
+ * - {@code [PIPELINE] name version | profile=X}
+ * - {@code [WORKDIR] /path/to/work}
+ * - {@code [PROCESS hash] name (tag)}
+ * - {@code [WARN] warning message} (deduplicated)
+ * - {@code [ERROR] name} with exit/cmd/stderr/workdir
+ * - {@code [SUCCESS|FAILED] completed=N failed=N cached=N}
+ *
+ * @author Edmund Miller <edmund.miller@utdallas.edu>
+ */
+@Slf4j
+@CompileStatic
+class AgentLogObserver implements TraceObserverV2, LogObserver {
+
+    private Session session
+    private WorkflowStatsObserver statsObserver
+    private final Set<String> seenWarnings = ConcurrentHashMap.newKeySet()
+    private volatile boolean started = false
+    private volatile boolean completed = false
+
+    /**
+     * Set the workflow stats observer for retrieving task statistics
+     */
+    void setStatsObserver(WorkflowStatsObserver observer) {
+        this.statsObserver = observer
+    }
+
+    /**
+     * Print a line to standard output (agent format)
+     */
+    protected void printLine(String line) {
+        System.out.println(line)
+    }
+
+    // -- TraceObserverV2 lifecycle methods --
+
+    @Override
+    void onFlowCreate(Session session) {
+        this.session = session
+    }
+
+    @Override
+    void onFlowBegin() {
+        if( started )
+            return
+        started = true
+
+        // Print pipeline info
+        def manifest = session.manifest
+        def pipelineName = manifest?.name ?: session.scriptName ?: 'unknown'
+        def version = manifest?.version ?: ''
+        def profile = session.profile ?: 'standard'
+
+        def info = "[PIPELINE] ${pipelineName}"
+        if( version )
+            info += " ${version}"
+        info += " | profile=${profile}"
+        printLine(info)
+
+        // Print work directory
+        def workDir = session.workDir?.toUriString() ?: session.workDir?.toString()
+        if( workDir )
+            printLine("[WORKDIR] ${workDir}")
+    }
+
+    @Override
+    void onFlowComplete() {
+        if( completed )
+            return
+        completed = true
+        printSummary()
+    }
+
+    @Override
+    void onFlowError(TaskEvent event) {
+        // Error is already reported by onTaskComplete for failed tasks
+    }
+
+    @Override
+    void onTaskSubmit(TaskEvent event) {
+        def task = event.handler?.task
+        if( task )
+            printLine("[PROCESS ${task.hashLog}] ${task.name}")
+    }
+
+    @Override
+    void onTaskComplete(TaskEvent event) {
+        def handler = event.handler
+        def task = handler?.task
+        if( task?.isFailed() ) {
+            printTaskError(task)
+        }
+    }
+
+    @Override
+    void onTaskCached(TaskEvent event) {
+        // Not reported in agent mode
+    }
+
+    /**
+     * Append a warning message (deduplicated)
+     */
+    void appendWarning(String message) {
+        if( message == null )
+            return
+        // Normalize and deduplicate
+        def normalized = message.trim().replaceAll(/\s+/, ' ')
+        if( seenWarnings.add(normalized) ) {
+            printLine("[WARN] ${normalized}")
+        }
+    }
+
+    /**
+     * Append an error message
+     */
+    void appendError(String message) {
+        if( message )
+            printLine("[ERROR] ${message}")
+    }
+
+    /**
+     * Append info message to stdout.
+     * Hash-prefixed task log lines (e.g. {@code [ab/123456] Submitted process > ...})
+     * are filtered out because {@link #onTaskSubmit} already emits a {@code [PROCESS]} line.
+     */
+    void appendInfo(String message) {
+        if( message && !LoggerHelper.isHashLogPrefix(message) )
+            System.out.print(message)
+    }
+
+    /**
+     * Print task error with full diagnostic context
+     */
+    protected void printTaskError(TaskRun task) {
+        def name = task.getName()
+        printLine("[ERROR] ${name}")
+
+        // Exit status
+        def exitStatus = task.getExitStatus()
+        if( exitStatus != null && exitStatus != Integer.MAX_VALUE ) {
+            printLine("exit: ${exitStatus}")
+        }
+
+        // Command/script (first line or truncated)
+        def script = task.getScript()?.toString()?.trim()
+        if( script ) {
+            // Truncate long commands
+            def cmd = script.length() > 200 ? script.substring(0, 200) + '...' : script
+            cmd = cmd.replaceAll(/\n/, ' ').replaceAll(/\s+/, ' ')
+            printLine("cmd: ${cmd}")
+        }
+
+        // Stderr
+        def stderr = task.getStderr()
+        if( stderr ) {
+            def lines = stderr.readLines()
+            if( lines.size() > 10 ) {
+                lines = lines[-10..-1]
+            }
+            printLine("stderr: ${lines.join(' | ')}")
+        }
+
+        // Stdout (only if relevant)
+        def stdout = task.getStdout()
+        if( stdout && !stderr ) {
+            def lines = stdout.readLines()
+            if( lines.size() > 5 ) {
+                lines = lines[-5..-1]
+            }
+            printLine("stdout: ${lines.join(' | ')}")
+        }
+
+        // Work directory
+        def workDir = task.getWorkDir()
+        if( workDir ) {
+            printLine("workdir: ${workDir.toUriString()}")
+        }
+    }
+
+    /**
+     * Print final summary line
+     */
+    protected void printSummary() {
+        def stats = statsObserver?.getStats()
+        def succeeded = stats?.succeededCount ?: 0
+        def failed = stats?.failedCount ?: 0
+        def cached = stats?.cachedCount ?: 0
+        def completed = succeeded + failed
+
+        def status = failed > 0 ? 'FAILED' : 'SUCCESS'
+        printLine("\n[${status}] completed=${completed} failed=${failed} cached=${cached}")
+    }
+
+    /**
+     * Force termination - called on abort
+     */
+    void forceTermination() {
+        if( !completed ) {
+            completed = true
+            printSummary()
+        }
+    }
+}
