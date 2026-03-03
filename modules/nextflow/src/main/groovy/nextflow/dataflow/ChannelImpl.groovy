@@ -29,19 +29,19 @@ import nextflow.Global
 import nextflow.Session
 import nextflow.dag.NodeMarker
 import nextflow.dataflow.ops.CrossOpV2
+import nextflow.dataflow.ops.GroupByOp
 import nextflow.dataflow.ops.JoinOpV2
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
 import nextflow.extension.DataflowHelper
-import nextflow.script.types.Bag
 import nextflow.script.types.Tuple
-import nextflow.util.ArrayTuple
 import nextflow.util.HashBag
 
 /**
  * Implements the Channel type for dataflow v2.
  *
  * @see nextflow.script.types.Channel
+ * @see nextflow.script.types.ChannelV2
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
@@ -136,59 +136,7 @@ class ChannelImpl {
 
     ChannelImpl groupBy() {
         final source = getReadChannel()
-        final target = CH.create()
-
-        final groups = new HashMap<?,Bag<?>>()
-        final sizes = new HashMap<?,Integer>()
-        final emitted = new HashSet<>()
-
-        final onNext = { ksv ->
-            // obtain key, group size, and value
-            def key, size, value
-            if( ksv instanceof List && ksv.size() == 2 ) {
-                (key, size, value) = [ ksv[0], -1, ksv[1] ]
-            }
-            else if( ksv instanceof List && ksv.size() == 3 ) {
-                (key, size, value) = [ ksv[0], ksv[1] as Integer, ksv[2] ]
-            }
-            else {
-                throw new ScriptRuntimeException("Operator `groupBy` expected a 3-tuple of (key, size, value) or a 2-tuple of (key, value) but received: ${ksv}")
-            }
-
-            if( emitted.contains(key) )
-                throw new ScriptRuntimeException("Operator `groupBy` received too many values for grouping key: ${key} (expected ${size})")
-
-            // append value to group
-            final group = groups.computeIfAbsent(key, (k) -> new HashBag<>())
-            group.add(value)
-
-            // set group size
-            if( sizes.containsKey(key) ) {
-                if( size != sizes[key] )
-                    throw new ScriptRuntimeException("Operator `groupBy` received inconsistent group size for key ${key} -- ${size} != ${sizes[key]}\n")
-            }
-            else {
-                sizes[key] = size
-            }
-
-            // emit group when it is complete
-            if( group.size() == size ) {
-                target << new ArrayTuple<>([key, group])
-                groups.remove(key)
-                emitted.add(key)
-            }
-        }
-        final onComplete = {
-            // emit remaining groups
-            groups.each { key, values ->
-                if( sizes[key] != -1 )
-                    throw new ScriptRuntimeException("Operator `groupBy` received too few values for grouping keys: ${key}")
-                target << new ArrayTuple<>([key, values])
-            }
-
-            target << CH.stop()
-        }
-        DataflowHelper.subscribeImpl(source, [onNext: onNext, onComplete: onComplete])
+        final target = new GroupByOp(source).apply()
         NodeMarker.addOperatorNode("groupBy", [source], [target])
         return new ChannelImpl(target)
     }
@@ -215,19 +163,17 @@ class ChannelImpl {
         return new ChannelImpl(target)
     }
 
-    ChannelImpl mix(Object... others) {
-        final List<DataflowReadChannel> sources = []
-        sources.add(this.getReadChannel())
+    ChannelImpl mix(Object other) {
+        DataflowReadChannel left = this.getReadChannel()
+        DataflowReadChannel right
+        if( other instanceof ChannelImpl )
+            right = other.getReadChannel()
+        else if( other instanceof ValueImpl )
+            right = other.getSource()
+        else
+            throw new ScriptRuntimeException("Operator `mix` expected a channel or dataflow value but received: ${other} [${other.class.simpleName}]")
 
-        for( final other : others ) {
-            if( other instanceof ChannelImpl )
-                sources.add(other.getReadChannel())
-            else if( other instanceof ValueImpl )
-                sources.add(other.getSource())
-            else
-                throw new ScriptRuntimeException("Operator `mix` expected a channel or dataflow value but received: ${other} [${other.class.simpleName}]")
-        }
-
+        final sources = [left, right]
         final target = CH.create()
         final count = new AtomicInteger(sources.size())
         final onNext = { value ->

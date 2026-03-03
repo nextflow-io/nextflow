@@ -73,6 +73,10 @@ class ValueImpl {
         return new ValueImpl(target)
     }
 
+    ChannelImpl mix(ChannelImpl other) {
+        return other.mix(this)
+    }
+
     void subscribe(Closure onNext) {
         DataflowHelper.subscribeImpl(source, [onNext: onNext])
         NodeMarker.addOperatorNode("subscribe", [source], [])

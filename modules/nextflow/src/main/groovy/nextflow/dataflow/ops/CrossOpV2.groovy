@@ -20,7 +20,6 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
-import nextflow.Channel
 import nextflow.extension.CH
 import nextflow.extension.DataflowHelper
 import nextflow.script.types.Tuple
@@ -89,7 +88,7 @@ class CrossOpV2 {
         if( count > 0 )
             return
 
-        target << Channel.STOP
+        target << CH.stop()
     }
 
 }
