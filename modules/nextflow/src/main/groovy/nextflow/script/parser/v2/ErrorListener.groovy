@@ -260,10 +260,9 @@ class StandardErrorListener implements ErrorListener {
 
     @Override
     void afterAll(ErrorSummary summary) {
-        if( suppressProgress )
-            return
         final term = ansi()
-        term.cursorUp(1).eraseLine()
+        if( !suppressProgress )
+            term.cursorUp(1).eraseLine()
         // print extra newline if no code is being shown
         if( mode == 'concise' )
             term.newline()

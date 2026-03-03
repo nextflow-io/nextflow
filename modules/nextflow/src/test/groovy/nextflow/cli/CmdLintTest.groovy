@@ -108,7 +108,8 @@ class CmdLintTest extends Specification {
         and:
         !capture.toString().contains("Linting Nextflow code")
         !capture.toString().contains("Linting:")
-        !capture.toString().contains("Nextflow linting complete")
+        and:
+        capture.toString().contains("Nextflow linting complete")
 
         cleanup:
         dir?.deleteDir()
@@ -141,7 +142,8 @@ class CmdLintTest extends Specification {
         and:
         !capture.toString().contains("Linting Nextflow code")
         !capture.toString().contains("Linting:")
-        !capture.toString().contains("Nextflow linting complete")
+        and:
+        capture.toString().contains("Nextflow linting complete")
 
         cleanup:
         dir?.deleteDir()
@@ -175,7 +177,8 @@ class CmdLintTest extends Specification {
         and:
         !capture.toString().contains("Linting Nextflow code")
         !capture.toString().contains("Linting:")
-        !capture.toString().contains("Nextflow linting complete")
+        and:
+        capture.toString().contains("Nextflow linting complete")
 
         cleanup:
         dir?.deleteDir()
@@ -216,10 +219,10 @@ class CmdLintTest extends Specification {
         and:
         !capture.toString().contains("Linting Nextflow code")
         !capture.toString().contains("Linting:")
-        !capture.toString().contains("Nextflow linting complete")
         and:
         capture.toString().contains("Error")
         capture.toString().contains("Unexpected input")
+        capture.toString().contains("Nextflow linting complete")
 
         cleanup:
         dir?.deleteDir()
