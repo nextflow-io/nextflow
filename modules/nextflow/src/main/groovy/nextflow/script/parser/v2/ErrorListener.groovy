@@ -22,7 +22,6 @@ import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.control.messages.WarningMessage
 import org.codehaus.groovy.syntax.SyntaxException
 import org.fusesource.jansi.Ansi
-import org.fusesource.jansi.AnsiConsole
 /**
  * Interfaces and stdout implementation for reporting compilation errors.
  *
@@ -74,8 +73,8 @@ class StandardErrorListener implements ErrorListener {
         if( quiet )
             return
         final line = ansi().a("Linting Nextflow code..").newline()
-        AnsiConsole.out.print(line)
-        AnsiConsole.out.flush()
+        System.out.print(line)
+        System.out.flush()
     }
 
     @Override
@@ -86,8 +85,8 @@ class StandardErrorListener implements ErrorListener {
             .cursorUp(1).eraseLine()
             .a(Ansi.Attribute.INTENSITY_FAINT).a("Linting: ${file}")
             .reset().newline().toString()
-        AnsiConsole.out.print(line)
-        AnsiConsole.out.flush()
+        System.out.print(line)
+        System.out.flush()
     }
 
     private Ansi term
@@ -225,8 +224,8 @@ class StandardErrorListener implements ErrorListener {
             // print extra newline since next file status will chomp back one
             term.fg(Ansi.Color.DEFAULT).newline()
         }
-        AnsiConsole.out.print(term)
-        AnsiConsole.out.flush()
+        System.out.print(term)
+        System.out.flush()
     }
 
     @Override
@@ -237,8 +236,8 @@ class StandardErrorListener implements ErrorListener {
             .cursorUp(1).eraseLine()
             .a(Ansi.Attribute.INTENSITY_FAINT).a("Formatting: ${file}")
             .reset().newline().toString()
-        AnsiConsole.out.print(line)
-        AnsiConsole.out.flush()
+        System.out.print(line)
+        System.out.flush()
     }
 
     @Override
@@ -266,8 +265,8 @@ class StandardErrorListener implements ErrorListener {
         if( summary.filesWithErrors == 0 && summary.filesWithoutErrors == 0 ) {
             term.a(" No files found to process").newline()
         }
-        AnsiConsole.out.print(term)
-        AnsiConsole.out.flush()
+        System.out.print(term)
+        System.out.flush()
     }
 
     private static record Range(

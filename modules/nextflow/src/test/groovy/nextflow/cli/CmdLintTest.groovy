@@ -101,7 +101,7 @@ class CmdLintTest extends Specification {
         cmd.args = [dir.toFile().toString()]
         cmd.launcher = Mock(Launcher) {
             getOptions() >> Mock(CliOptions) {
-                getQuiet() >> true
+                isQuiet() >> true
                 getAnsiLog() >> false
             }
         }
@@ -142,7 +142,7 @@ class CmdLintTest extends Specification {
         cmd.args = [dir.toFile().toString()]
         cmd.launcher = Mock(Launcher) {
             getOptions() >> Mock(CliOptions) {
-                getQuiet() >> true
+                isQuiet() >> true
                 getAnsiLog() >> false
             }
         }
