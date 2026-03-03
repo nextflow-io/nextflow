@@ -16,6 +16,13 @@ import nextflow.processor.TaskProcessor
 @CompileStatic
 class TaskNode {
 
+    enum ProcessingState {
+    UNVISITED,    // Not yet processed
+    VISITING,     // Currently being processed 
+    VISITED       // Fully processed
+    }
+
+    private ProcessingState state // State for cycle detection during level assignment
     private DAG.Vertex vertex // Reference to the DAG vertex
     private TaskProcessor processor // Reference to the task processor
     private String name // Name of the process from Vertex.label
@@ -24,7 +31,7 @@ class TaskNode {
     private List<Long> upstreamDependencies // List of vertex ids of upstream process dependencies
     private List<Long> downstreamDependencies // List of vertex ids of downstream process dependencies
     private boolean isParallelizable // Flag indicating if the process is parallelizable based on resources
-
+    private int level // Dependency level in the DAG 
 
     TaskNode(DAG.Vertex vertex, TaskProcessor processor, Map<String, Object> resources) {
         this.vertex = vertex
@@ -35,38 +42,40 @@ class TaskNode {
         this.isParallelizable = false // Default value 
         this.upstreamDependencies = new ArrayList<>()
         this.downstreamDependencies = new ArrayList<>()
+        this.level = 0
+        this.state = ProcessingState.UNVISITED
     }
 
     DAG.Vertex getVertex() {
-        return vertex
+        return this.vertex
     }
 
     TaskProcessor getProcessor() {
-        return processor
+        return this.processor
     }
 
     String getName() {
-        return name
+        return this.name
     }
 
     long getId() {
-        return id
+        return this.id
     }
 
     Map<String, Object> getResources() {
-        return resources
+        return this.resources
     }
 
     List<Long> getUpstreamDependencies() {
-        return upstreamDependencies
+        return this.upstreamDependencies
     }
 
     List<Long> getDownstreamDependencies() {
-        return downstreamDependencies
+        return this.downstreamDependencies
     }
 
     boolean getIsParallelizable() {
-        return isParallelizable
+        return this.isParallelizable
     }
 
     void setUpstreamDependencies(List<Long> dependencies) {
@@ -81,18 +90,41 @@ class TaskNode {
         this.isParallelizable = parallelizable
     }
 
-    void addUpstreamDependency(long processId) {
-        if (upstreamDependencies == null) {
-            upstreamDependencies = new ArrayList<>()
-        }
-        upstreamDependencies.add(processId)
+    int getLevel() {
+        return this.level
     }
 
-    void addDownstreamDependency(long processId) {
-        if (downstreamDependencies == null) {
-            downstreamDependencies = new ArrayList<>()
-        }
-        downstreamDependencies.add(processId)
+    void setLevel(int level) {
+        this.level = level
     }
 
+    ProcessingState getState() {
+        return this.state
+    }
+
+    void setState(ProcessingState state) {
+        this.state = state
+    }
+
+    /**
+     * Add an upstream dependency by vertex ID
+     * @param vertexId the vertex ID of the upstream dependency
+     */
+    void addUpstreamDependency(long vertexId) {
+        if (this.upstreamDependencies == null) {
+            this.upstreamDependencies = new ArrayList<>()
+        }
+        this.upstreamDependencies.add(vertexId)
+    }
+
+    /**
+     * Add a downstream dependency by vertex ID
+     * @param vertexId the vertex ID of the downstream dependency
+     */
+    void addDownstreamDependency(long vertexId) {
+        if (this.downstreamDependencies == null) {
+            this.downstreamDependencies = new ArrayList<>()
+        }
+        this.downstreamDependencies.add(vertexId)
+    }
 }

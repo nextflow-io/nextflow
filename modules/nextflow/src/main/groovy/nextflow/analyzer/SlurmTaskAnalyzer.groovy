@@ -27,12 +27,9 @@ class SlurmTaskGroupAnalyzer {
     }
 
     /**
-     * Analyze the workflow DAG for task grouping opportunities.
-     * 
-     * This method:
-     * 1. Accesses the DAG to iterate through processes (vertices)
-     * 2. Builds dependency graph using DAG edges
-     * 3. Identifies processes with static resource requirements
+     * Main method to perform analysis for Slurm task grouping.
+     * It checks if task grouping is enabled, collects process vertices, builds a dependency graph,
+     * and identifies parallelizable tasks based on their levels in the graph.
      */
     void analyze() {
         if( !isTaskGroupingEnabled() ) {
@@ -41,7 +38,7 @@ class SlurmTaskGroupAnalyzer {
         }
         log.debug "[SLURM TASK GROUPING] Task grouping enabled. Starting Slurm Analyzer"
         try {
-            if( dag == null ) {
+            if( this.dag == null ) {
                 log.debug "[SLURM TASK GROUPING] No DAG available for analysis"
                 return
             }
@@ -54,8 +51,9 @@ class SlurmTaskGroupAnalyzer {
             log.debug "[SLURM TASK GROUPING] Dependency graph built with ${dependencyGraph.getNodes().size()} nodes"
             
             // Identify parallelizable tasks
-            List<TaskNode> parallelTasks = identifyParallelTasks(dependencyGraph)
-            log.debug "[SLURM TASK GROUPING] Identified ${parallelTasks.size()} parallelizable tasks for grouping"
+            Map<Integer, List<Long>> parallelTasks = identifyParallelTasks(dependencyGraph)
+            log.debug "[SLURM TASK GROUPING] Tasks grouped by levels: ${parallelTasks.collect { k, v -> "Level $k: ${v.size()} tasks" }.join(', ')}"
+        
 
         }
         catch( Exception e ) {
@@ -77,7 +75,7 @@ class SlurmTaskGroupAnalyzer {
      */
     private List<DAG.Vertex> collectProcessVertices() {
         final List<DAG.Vertex> result = []
-        for (DAG.Vertex vertex : dag.vertices) {
+        for (DAG.Vertex vertex : this.dag.vertices) {
             if (vertex.type == DAG.Type.PROCESS && vertex.process != null) {
                 result << vertex
             }
@@ -90,7 +88,7 @@ class SlurmTaskGroupAnalyzer {
      * @param processVertices the list of process vertices to include in the graph
      */
     private DependencyGraph buildDependencyGraph(List<DAG.Vertex> processVertices) {
-        DependencyGraph dependencyGraph = new DependencyGraph(session)
+        DependencyGraph dependencyGraph = new DependencyGraph(this.session)
 
         // Add all process nodes to the graph
         for( DAG.Vertex vertex : processVertices ) {
@@ -137,19 +135,26 @@ class SlurmTaskGroupAnalyzer {
     } 
 
     /**
-     * Identify parallelizable tasks based on the dependency graph
+     * Identify parallelizable tasks based on dependency graph levels.
+     * Tasks at the same level have no dependency relationship with 
+     * each other and can potentially be executed in parallel.
+     * Uses iterative topological sort (Kahn's algorithm) for O(V+E) performance.
+     *
      * @param dependencyGraph the graph representing process dependencies
-     * @return list of parallelizable TaskNodes
+     * @return a map of level to list of TaskNode IDs that can be grouped together
      */
-    private List<TaskNode> identifyParallelTasks(DependencyGraph dependencyGraph) {
-        List<TaskNode> parallelTasks = new ArrayList<>()
-        for (TaskNode node : dependencyGraph.getNodes().values()) {
-            if (node.getUpstreamDependencies().isEmpty()) {
-                node.setIsParallelizable(true)
-                parallelTasks.add(node)
-            }
+    Map<Integer, List<Long>> identifyParallelTasks(DependencyGraph dependencyGraph) {
+        // Use iterative topological sort for better performance
+        dependencyGraph.assignLevelsIteratively()
+        
+        final Map<Integer, List<Long>> groups = dependencyGraph.groupByLevels()
+        
+        // Log summary of grouping results
+        for (Map.Entry<Integer, List<Long>> entry : groups.entrySet()) {
+            log.debug "[SLURM TASK GROUPING] Level ${entry.getKey()}: ${entry.getValue().size()} task(s)"
         }
-        return parallelTasks
+        
+        return groups
     }
 
 }
