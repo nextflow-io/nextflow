@@ -93,9 +93,20 @@ class ChannelImpl {
         return new ValueImpl(target)
     }
 
-    ChannelImpl cross(ChannelImpl other) {
-        final left = this.getReadChannel()
-        final right = other.getReadChannel()
+    ChannelImpl cross(Object other) {
+        DataflowReadChannel left = this.getReadChannel()
+        DataflowReadChannel right
+        if( other instanceof ChannelImpl ) {
+            right = other.getReadChannel()
+        }
+        else if( other instanceof ValueImpl ) {
+            right = other.getSource()
+        }
+        else {
+            right = CH.value()
+            right.bind(other)
+        }
+
         final target = new CrossOpV2(left, right).apply()
         NodeMarker.addOperatorNode("cross", [left, right], [target])
         return new ChannelImpl(target)

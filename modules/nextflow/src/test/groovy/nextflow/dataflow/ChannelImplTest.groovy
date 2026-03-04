@@ -302,7 +302,7 @@ class ChannelImplTest extends Specification {
             def c1 = channel.of( 1,2,3 )
             def c2 = channel.of( 'a','b' )
             def c3 = channel.value( 'z' )
-            c1.mix(c2,c3).collect()
+            c1.mix(c2).mix(c3).collect()
         }.val
 
         then:
