@@ -171,7 +171,14 @@ class TraceFileObserver implements TraceObserverV2 {
             Files.createDirectories(parent)
 
         // create a new trace file
-        traceFile = new PrintWriter(TraceHelper.newFileWriter(tracePath,overwrite, 'Trace'))
+        try {
+            traceFile = new PrintWriter(TraceHelper.newFileWriter(tracePath, overwrite, 'Trace'))
+        }
+        catch (Exception e) {
+            log.warn "Failed to create trace file: ${tracePath.toUriString()} -- ${e.message}"
+            log.debug "Trace file creation error details", e
+            return
+        }
 
         // launch the agent
         writer = new Agent<PrintWriter>(traceFile)
@@ -186,12 +193,14 @@ class TraceFileObserver implements TraceObserverV2 {
         log.debug "Workflow completed -- saving trace file"
 
         // wait for termination and flush the agent content
-        writer.await()
+        writer?.await()
 
         // write the remaining records
-        current.values().each { record -> traceFile.println(render(record)) }
-        traceFile.flush()
-        traceFile.close()
+        if( traceFile ) {
+            current.values().each { record -> traceFile.println(render(record)) }
+            traceFile.flush()
+            traceFile.close()
+        }
     }
 
     @Override
@@ -216,7 +225,7 @@ class TraceFileObserver implements TraceObserverV2 {
         current.remove(taskId)
 
         // save to the file
-        writer.send { PrintWriter it ->
+        writer?.send { PrintWriter it ->
             it.println(render(event.trace))
             it.flush()
         }
@@ -230,7 +239,7 @@ class TraceFileObserver implements TraceObserverV2 {
         }
 
         // save to the file
-        writer.send { PrintWriter it ->
+        writer?.send { PrintWriter it ->
             it.println(render(event.trace))
             it.flush()
         }
