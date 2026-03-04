@@ -66,7 +66,7 @@ class SlurmTaskGroupAnalyzer {
       * @return true if enabled, false otherwise
       */
     private boolean isTaskGroupingEnabled() {
-         return session.config?.executor?.slurm?.taskGrouping == true
+        return session.config.navigate('executor.slurm.taskGrouping', false) as boolean
     }
 
     /**
