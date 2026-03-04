@@ -100,6 +100,7 @@ import nextflow.util.Threads
 import org.apache.commons.lang3.exception.ExceptionUtils
 import sun.misc.Signal
 import sun.misc.SignalHandler
+import nextflow.analyzer.SlurmTaskGroupAnalyzer
 /**
  * Holds the information on the current execution
  *
