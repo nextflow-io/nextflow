@@ -20,11 +20,11 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.Session
 import nextflow.cli.CmdBase
-import nextflow.config.ConfigBuilder
 import nextflow.exception.AbortOperationException
-import nextflow.module.MetaYmlGenerator
+import nextflow.module.ModuleReference
+import nextflow.module.ModuleSpec
+import nextflow.module.ModuleStorage
 import nextflow.util.TestOnly
 
 import java.nio.file.Files
@@ -32,16 +32,16 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 /**
- * Implements the {@code nextflow module generate-meta} subcommand.
+ * Implements the {@code nextflow module spec} subcommand.
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Generate a meta.yml manifest for a local module")
-class ModuleGenerateMeta extends CmdBase {
+class CmdModuleSpec extends CmdBase {
 
-    @Parameter(description = "Module directory path")
+    @Parameter(description = "Reference to local module (scope/name) or module directory path")
     List<String> args
 
     @Parameter(names = ["-force"], description = "Overwrite existing meta.yml", arity = 0)
@@ -50,8 +50,8 @@ class ModuleGenerateMeta extends CmdBase {
     @Parameter(names = ["-dry-run"], description = "Print generated YAML to stdout without writing any file", arity = 0)
     boolean dryRun = false
 
-    @Parameter(names = ["-name"], description = "Module name in 'scope/name' format (e.g. nf-core/fastqc)")
-    String moduleName
+    @Parameter(names = ["-scope"], description = "Module scope")
+    String moduleScope
 
     @Parameter(names = ["-version"], description = "Module version (e.g. 1.0.0)")
     String moduleVersion
@@ -68,27 +68,32 @@ class ModuleGenerateMeta extends CmdBase {
     @TestOnly
     protected Path root
 
+    private moduleName
+
     @Override
-    String getName() { 'generate-meta' }
+    String getName() { 'spec' }
 
     @Override
     void run() {
+        if( !args ){
+            throw new AbortOperationException("Reference to local module (scope/name) or path is required")
+        }
         final baseDir = root ?: Paths.get('.').toAbsolutePath().normalize()
-        final moduleDir = resolveModuleDir(baseDir)
+        def moduleDir = resolveAsModuleReference(baseDir, args[0])
+        if( moduleDir ) {
+            moduleName = args[0]
+            log.info("Module name inferred as $moduleName ${moduleScope ? '- scope parameter is ignored':''}")
+        } else {
+            moduleDir = resolveAsPath(baseDir, args[0])
+            if( !moduleScope )
+                throw new AbortOperationException("Module name can't be inferred from module directory path. Provide -scope parameter")
+        }
         final mainNfPath = moduleDir.resolve('main.nf')
 
         if( !Files.exists(mainNfPath) )
             throw new AbortOperationException("Missing required file: main.nf in ${moduleDir}")
 
-        final metadata = parseModule(mainNfPath)
-        final renderOptions = new MetaYmlGenerator.RenderOptions(
-            name: moduleName,
-            version: moduleVersion,
-            description: description,
-            license: license,
-            authors: authors ?: []
-        )
-        final yamlContent = MetaYmlGenerator.render(metadata, renderOptions)
+        final yamlContent = parseModule(mainNfPath).render()
 
         if( dryRun ) {
             println yamlContent
@@ -103,20 +108,41 @@ class ModuleGenerateMeta extends CmdBase {
         println "Generated: ${metaYmlPath}"
     }
 
-    private Path resolveModuleDir(Path baseDir) {
-        if( !args ) {
-            return baseDir
+    private Path resolveAsModuleReference(Path baseDir, String module) {
+        try {
+            final ref = ModuleReference.parse('@' + module)
+            final localStorage = new ModuleStorage(baseDir)
+            if( localStorage.isInstalled(ref) ) {
+                log.debug("Argument $args refers to a local module reference")
+                return localStorage.getModuleDir(ref)
+            }
+            log.debug("Argument $args is not a local module reference")
+            return null
+        } catch( AbortOperationException e ) {
+            log.debug("Argument $args is not a correct module reference")
+            return null
         }
-        final path = Paths.get(args[0])
-        final moduleDir = path.absolute ? path : baseDir.resolve(args[0])
+    }
+
+    private Path resolveAsPath(Path baseDir, String module) {
+        final path = Paths.get(module)
+        final moduleDir = path.isAbsolute() ? path : baseDir.resolve(args[0])
         if( !Files.isDirectory(moduleDir) )
             throw new AbortOperationException("Not a directory: ${moduleDir}")
         return moduleDir
     }
 
-    private MetaYmlGenerator.ProcessMetadata parseModule(Path mainNfPath) {
+    private ModuleSpec parseModule(Path mainNfPath) {
         try {
-            final metadata = MetaYmlGenerator.extract(mainNfPath)
+            final options = new ModuleSpec.ExtractOptions(
+                name: moduleName,
+                scope: moduleScope,
+                version: moduleVersion,
+                description: description,
+                license: license,
+                authors: authors
+            )
+            final metadata = ModuleSpec.extract(mainNfPath, options)
             if( !metadata )
                 throw new AbortOperationException("No process definition found in: ${mainNfPath}")
             return metadata

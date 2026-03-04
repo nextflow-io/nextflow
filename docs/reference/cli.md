@@ -1334,17 +1334,19 @@ The `module` command provides a comprehensive system for managing reusable, regi
   $ nextflow module publish myorg/my-module -registry 'https://custom.registry.com'
   ```
 
-(cli-module-generate-meta)=
+(cli-module-spec)=
 
-`generate-meta [options] [<module-dir>]`
+`spec [options] <module-ref-or-path>`
 
 : Generate a `meta.yml` manifest for a local module by statically analysing its `main.nf`.
 : Parses the first `process` block and extracts input/output channel declarations with inferred types. The generated file includes `TODO` placeholders for any field not supplied via a flag.
-: If `<module-dir>` is omitted the current working directory is used.
+: The argument can be:
+  - A module reference in `scope/name` format (e.g. `nf-core/fastqc`). If the module is installed locally under `modules/@scope/name`, the module name in the generated `meta.yml` is set to `scope/name` automatically and `-scope` is ignored.
+  - A directory path to a local module (e.g. `./modules/my-module`). In this case, `-scope` is **required** to form the module name as `scope/process-name`.
 : The following options are available:
 
-  `-name <scope/name>`
-  : Module name in `scope/name` format (e.g. `nf-core/fastqc`). Replaces the `<scope-placeholder>/…` default.
+  `-scope <scope>`
+  : Module scope, used to construct the module name as `scope/process-name` when the argument is a directory path. Required when a path is provided; ignored when an installed module reference is resolved.
 
   `-version <version>`
   : Module version string (e.g. `1.0.0`). Defaults to `TODO: Add version`.
@@ -1372,15 +1374,15 @@ The `module` command provides a comprehensive system for managing reusable, regi
 : **Examples:**
 
   ```console
-  # Generate in the current directory
-  $ nextflow module generate-meta
+  # Generate for an installed module reference (name inferred automatically)
+  $ nextflow module spec nf-core/fastqc
 
-  # Generate for a specific module path
-  $ nextflow module generate-meta ./modules/my-module
+  # Generate for a local directory path (scope required)
+  $ nextflow module spec -scope nf-core ./modules/my-module
 
-  # Provide all required fields to avoid TODO placeholders
-  $ nextflow module generate-meta \
-      -name nf-core/fastqc \
+  # Provide all optional fields to avoid TODO placeholders
+  $ nextflow module spec \
+      -scope nf-core \
       -version 1.0.0 \
       -description "Quality control of raw sequencing reads" \
       -license MIT \
@@ -1389,10 +1391,10 @@ The `module` command provides a comprehensive system for managing reusable, regi
       ./modules/nf-core/fastqc
 
   # Preview without writing
-  $ nextflow module generate-meta -dry-run ./modules/my-module
+  $ nextflow module spec -dry-run -scope nf-core ./modules/my-module
 
-  # Regenerate an existing meta.yml
-  $ nextflow module generate-meta -force ./modules/my-module
+  # Regenerate an existing meta.yml for an installed module
+  $ nextflow module spec -force nf-core/fastqc
   ```
 
 (cli-plugin)=
