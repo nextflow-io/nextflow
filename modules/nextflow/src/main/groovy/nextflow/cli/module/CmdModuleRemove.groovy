@@ -38,7 +38,7 @@ import java.nio.file.Paths
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Remove an installed module")
-class ModuleRemove extends CmdBase {
+class CmdModuleRemove extends CmdBase {
 
     @Parameter(description = "<module>", required = true)
     List<String> args

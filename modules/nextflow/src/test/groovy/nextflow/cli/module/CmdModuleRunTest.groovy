@@ -36,11 +36,11 @@ import java.nio.file.Path
 import java.util.zip.GZIPOutputStream
 
 /**
- * Tests for ModuleRun command
+ * Tests for CmdModuleRun command
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
-class ModuleRunTest extends Specification {
+class CmdModuleRunTest extends Specification {
 
     @Rule
     OutputCapture capture = new OutputCapture()
@@ -98,7 +98,7 @@ class ModuleRunTest extends Specification {
         }
 
         and:
-        def cmd = new ModuleRun()
+        def cmd = new CmdModuleRun()
         cmd.launcher = Mock(Launcher) {
             getOptions() >> new CliOptions()
             getCliString() >> "nextflow module run nf-core/test-module"
@@ -158,7 +158,7 @@ class ModuleRunTest extends Specification {
         }
 
         and:
-        def cmd = new ModuleRun()
+        def cmd = new CmdModuleRun()
         cmd.launcher = Mock(Launcher) {
             getOptions() >> new CliOptions()
             getCliString() >> "nextflow module run nf-core/test-module"
@@ -186,7 +186,7 @@ class ModuleRunTest extends Specification {
 
     def 'should fail with no arguments'() {
         given:
-        def cmd = new ModuleRun()
+        def cmd = new CmdModuleRun()
         cmd.launcher = Mock(Launcher) {
             getOptions() >> null
         }
@@ -202,7 +202,7 @@ class ModuleRunTest extends Specification {
 
     def 'should fail with invalid module reference'() {
         given:
-        def cmd = new ModuleRun()
+        def cmd = new CmdModuleRun()
         cmd.launcher = Mock(Launcher) {
             getOptions() >> null
         }

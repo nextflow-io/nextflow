@@ -28,11 +28,11 @@ import test.OutputCapture
 
 
 /**
- * Tests for ModuleSearch command
+ * Tests for CmdModuleSearch command
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
-class ModuleSearchTest extends Specification {
+class CmdModuleSearchTest extends Specification {
 
     @Rule
     OutputCapture capture = new OutputCapture()
@@ -61,7 +61,7 @@ class ModuleSearchTest extends Specification {
         )
 
         and:
-        def cmd = new ModuleSearch()
+        def cmd = new CmdModuleSearch()
         cmd.args = ['quality']
         cmd.launcher = Mock(Launcher){
             getOptions() >> null
@@ -107,7 +107,7 @@ class ModuleSearchTest extends Specification {
         )
 
         and:
-        def cmd = new ModuleSearch()
+        def cmd = new CmdModuleSearch()
         cmd.launcher = Mock(Launcher){
             getOptions() >> null
         }
@@ -141,7 +141,7 @@ class ModuleSearchTest extends Specification {
 
     def 'should handle no search results'() {
         given:
-        def cmd = new ModuleSearch()
+        def cmd = new CmdModuleSearch()
         cmd.launcher = Mock(Launcher){
             getOptions() >> null
         }
@@ -169,7 +169,7 @@ class ModuleSearchTest extends Specification {
 
     def 'should fail with no arguments'() {
         given:
-        def cmd = new ModuleSearch()
+        def cmd = new CmdModuleSearch()
         cmd.launcher = Mock(Launcher){
             getOptions() >> null
         }
@@ -196,7 +196,7 @@ class ModuleSearchTest extends Specification {
         }
 
         and:
-        def cmd = new ModuleSearch()
+        def cmd = new CmdModuleSearch()
         cmd.launcher = Mock(Launcher){
             getOptions() >> null
         }

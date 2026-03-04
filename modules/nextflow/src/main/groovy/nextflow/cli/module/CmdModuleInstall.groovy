@@ -42,7 +42,7 @@ import java.nio.file.Paths
 @Slf4j
 @Parameters(commandDescription = "Install a module from the registry")
 @CompileStatic
-class ModuleInstall extends CmdBase {
+class CmdModuleInstall extends CmdBase {
 
     @Parameter(names = ["-version"], description = "Module version")
     String version

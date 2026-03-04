@@ -43,7 +43,7 @@ import java.nio.file.Paths
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Publish a module to the registry")
-class ModulePublish extends CmdBase {
+class CmdModulePublish extends CmdBase {
 
     @Parameter(names = ["-dry-run"], description = "Validate without uploading", arity=0)
     boolean dryRun = false

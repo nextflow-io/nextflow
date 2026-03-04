@@ -34,11 +34,11 @@ import test.OutputCapture
 import java.nio.file.Path
 
 /**
- * Tests for ModuleInfo command
+ * Tests for CmdModuleInfo command
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
-class ModuleInfoTest extends Specification {
+class CmdModuleInfoTest extends Specification {
 
     @Rule
     OutputCapture capture = new OutputCapture()
@@ -62,7 +62,7 @@ class ModuleInfoTest extends Specification {
         )
 
         and:
-        def cmd = new ModuleInfo()
+        def cmd = new CmdModuleInfo()
         cmd.args = ['nf-core/fastqc']
         cmd.launcher = Mock(Launcher) {
             getOptions() >> null
@@ -110,7 +110,7 @@ class ModuleInfoTest extends Specification {
         )
 
         and:
-        def cmd = new ModuleInfo()
+        def cmd = new CmdModuleInfo()
         cmd.args = ['nf-core/fastqc']
         cmd.version = '0.9.0'
         cmd.launcher = Mock(Launcher) {
@@ -149,7 +149,7 @@ class ModuleInfoTest extends Specification {
         )
 
         and:
-        def cmd = new ModuleInfo()
+        def cmd = new CmdModuleInfo()
         cmd.args = ['nf-core/fastqc']
         cmd.jsonOutput = true
         cmd.launcher = Mock(Launcher) {
@@ -207,7 +207,7 @@ class ModuleInfoTest extends Specification {
         )
 
         and:
-        def cmd = new ModuleInfo()
+        def cmd = new CmdModuleInfo()
         cmd.args = ['nf-core/fastqc']
         cmd.launcher = Mock(Launcher) {
             getOptions() >> null
@@ -266,7 +266,7 @@ class ModuleInfoTest extends Specification {
         )
 
         and:
-        def cmd = new ModuleInfo()
+        def cmd = new CmdModuleInfo()
         cmd.args = ['nf-core/fastqc']
         cmd.launcher = Mock(Launcher) {
             getOptions() >> null
@@ -324,7 +324,7 @@ class ModuleInfoTest extends Specification {
         )
 
         and:
-        def cmd = new ModuleInfo()
+        def cmd = new CmdModuleInfo()
         cmd.args = ['nf-core/fastqc']
         cmd.launcher = Mock(Launcher) {
             getOptions() >> null
@@ -386,7 +386,7 @@ class ModuleInfoTest extends Specification {
         )
 
         and:
-        def cmd = new ModuleInfo()
+        def cmd = new CmdModuleInfo()
         cmd.args = ['nf-core/fastqc']
         cmd.launcher = Mock(Launcher) {
             getOptions() >> null
@@ -427,7 +427,7 @@ class ModuleInfoTest extends Specification {
         )
 
         and:
-        def cmd = new ModuleInfo()
+        def cmd = new CmdModuleInfo()
         cmd.args = ['nf-core/fastqc']
         cmd.version = '2.0.0'
         cmd.launcher = Mock(Launcher) {
@@ -477,7 +477,7 @@ class ModuleInfoTest extends Specification {
         )
 
         and:
-        def cmd = new ModuleInfo()
+        def cmd = new CmdModuleInfo()
         cmd.args = ['nf-core/fastqc']
         cmd.launcher = Mock(Launcher) {
             getOptions() >> null
@@ -504,7 +504,7 @@ class ModuleInfoTest extends Specification {
 
     def 'should fail with no arguments'() {
         given:
-        def cmd = new ModuleInfo()
+        def cmd = new CmdModuleInfo()
         cmd.launcher = Mock(Launcher) {
             getOptions() >> null
         }
@@ -520,7 +520,7 @@ class ModuleInfoTest extends Specification {
 
     def 'should fail with multiple arguments'() {
         given:
-        def cmd = new ModuleInfo()
+        def cmd = new CmdModuleInfo()
         cmd.launcher = Mock(Launcher) {
             getOptions() >> null
         }
@@ -550,7 +550,7 @@ class ModuleInfoTest extends Specification {
         )
 
         and:
-        def cmd = new ModuleInfo()
+        def cmd = new CmdModuleInfo()
         cmd.args = ['nf-core/fastqc']
         cmd.launcher = Mock(Launcher) {
             getOptions() >> null
@@ -593,7 +593,7 @@ class ModuleInfoTest extends Specification {
         )
 
         and:
-        def cmd = new ModuleInfo()
+        def cmd = new CmdModuleInfo()
         cmd.args = ['nf-core/fastqc']
         cmd.launcher = Mock(Launcher) {
             getOptions() >> null
@@ -649,7 +649,7 @@ class ModuleInfoTest extends Specification {
         )
 
         and:
-        def cmd = new ModuleInfo()
+        def cmd = new CmdModuleInfo()
         cmd.args = ['nf-core/fastqc']
         cmd.launcher = Mock(Launcher) {
             getOptions() >> null
@@ -701,7 +701,7 @@ class ModuleInfoTest extends Specification {
         )
 
         and:
-        def cmd = new ModuleInfo()
+        def cmd = new CmdModuleInfo()
         cmd.args = ['nf-core/fastqc']
         cmd.jsonOutput = true
         cmd.launcher = Mock(Launcher) {
@@ -776,7 +776,7 @@ class ModuleInfoTest extends Specification {
         )
 
         and:
-        def cmd = new ModuleInfo()
+        def cmd = new CmdModuleInfo()
         cmd.args = ['nf-core/fastqc']
         cmd.jsonOutput = true
         cmd.launcher = Mock(Launcher) {

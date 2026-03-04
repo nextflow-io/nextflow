@@ -40,7 +40,7 @@ import java.nio.file.Paths
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Search for modules in the registry")
-class ModuleSearch extends CmdBase {
+class CmdModuleSearch extends CmdBase {
 
     @Parameter(names = ["-limit"], description = "Maximum number of results")
     int limit = 20

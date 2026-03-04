@@ -30,11 +30,8 @@ import nextflow.cli.CmdBase
 import nextflow.config.ConfigBuilder
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
-import nextflow.module.InstalledModule
 import nextflow.module.ModuleReference
 import nextflow.module.ModuleRegistryClient
-import nextflow.module.ModuleSpec
-import nextflow.module.ModuleStorage
 import nextflow.util.TestOnly
 
 import java.nio.file.Path
@@ -48,7 +45,7 @@ import java.nio.file.Paths
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Show module information and usage template")
-class ModuleInfo extends CmdBase {
+class CmdModuleInfo extends CmdBase {
 
     @Parameter(names = ["-version"], description = "Module version")
     String version

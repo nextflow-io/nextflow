@@ -39,7 +39,7 @@ import java.nio.file.Paths
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "List all installed modules")
-class ModuleList extends CmdBase {
+class CmdModuleList extends CmdBase {
 
     @Parameter(names = ["-json"], description = "Output in JSON format", arity=0)
     boolean jsonOutput = false

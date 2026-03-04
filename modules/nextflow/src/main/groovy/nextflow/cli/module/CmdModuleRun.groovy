@@ -40,7 +40,7 @@ import java.nio.file.Paths
  */
 @CompileStatic
 @Parameters(commandDescription = "Run a module directly from the registry")
-class ModuleRun extends CmdRun {
+class CmdModuleRun extends CmdRun {
     @Parameter(names = ["-version"], description = "Module version")
     String version
 
