@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -310,8 +310,8 @@ class K8sClientTest extends Specification {
                      "app": "nextflow"
                  }
              },
-             
-             
+
+
              "status": {
                  "phase": "Succeeded",
                  "conditions": [
@@ -448,7 +448,7 @@ class K8sClientTest extends Specification {
                          "taskName": "markDuplicates_22028_2_118_1AlignedByCoord.out"
                      }
                  },
-              
+
                  "status": {
                      "phase": "Pending",
                      "conditions": [
@@ -461,12 +461,12 @@ class K8sClientTest extends Specification {
                      ],
                      "qosClass": "Guaranteed"
                  }
-             }        
+             }
         '''
 
         def client = Spy(K8sClient)
         final POD_NAME = 'nf-eb853c8010b8e173b23d8d15489d1a31'
-        
+
         when:
         def result = client.podState(POD_NAME)
         then:
@@ -496,7 +496,7 @@ class K8sClientTest extends Specification {
                         "taskName": "split_input_file_variants.gord_chr11_72000001-78000000",
                     }
                 },
-                
+
                 "status": {
                     "phase": "Pending",
                     "qosClass": "Guaranteed"
@@ -522,7 +522,7 @@ class K8sClientTest extends Specification {
                   "kind": "Status",
                   "apiVersion": "v1",
                   "metadata": {
-                      
+
                   },
                   "status": "Failure",
                   "message": "pods \\"nf-7cee928c1dd05b39cd50ab79a3e742f9\\" not found",
@@ -612,7 +612,7 @@ class K8sClientTest extends Specification {
                      }
                  },
                  "spec": {
- 
+
                  },
                  "status": {
                      "phase": "Pending",
@@ -651,7 +651,7 @@ class K8sClientTest extends Specification {
                                  }
                              },
                              "lastState": {
-                                 
+
                              },
                              "ready": false,
                              "restartCount": 0,
@@ -817,7 +817,7 @@ class K8sClientTest extends Specification {
                                  }
                              },
                              "lastState": {
-                                 
+
                              },
                              "ready": false,
                              "restartCount": 0,
@@ -911,7 +911,7 @@ class K8sClientTest extends Specification {
                      }
                  },
                  "spec": {
-            
+
                  },
                  "status": {
                      "phase": "Pending",
@@ -950,7 +950,7 @@ class K8sClientTest extends Specification {
                                  }
                              },
                              "lastState": {
-                                 
+
                              },
                              "ready": false,
                              "restartCount": 0,

@@ -1,3 +1,19 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package nextflow.cloud.aws.util
 
 import nextflow.Global
@@ -50,7 +66,7 @@ class S3BashLibTest extends Specification {
                           timeout=\$(( timeout * 2 ))
                         done
                     }
-                    
+
                     nxf_parallel() {
                         IFS=$'\\n\'
                         local cmd=("$@")
@@ -68,7 +84,7 @@ class S3BashLibTest extends Specification {
                               [[ -e /proc/$x ]] && copy+=($x) || wait $x
                             done
                             pid=("${copy[@]}")
-                    
+
                             if ((${#pid[@]}>=$max)); then
                               nxf_sleep 0.2
                             else
@@ -83,7 +99,7 @@ class S3BashLibTest extends Specification {
                         )
                         unset IFS
                     }
-                    
+
                     # aws helper
                     nxf_s3_upload() {
                         local name=$1
@@ -96,7 +112,7 @@ class S3BashLibTest extends Specification {
                           aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
                         fi
                     }
-                    
+
                     nxf_s3_download() {
                         local source=$1
                         local target=$2
@@ -149,7 +165,7 @@ class S3BashLibTest extends Specification {
                           timeout=\$(( timeout * 2 ))
                         done
                     }
-                    
+
                     nxf_parallel() {
                         IFS=$'\\n\'
                         local cmd=("$@")
@@ -167,7 +183,7 @@ class S3BashLibTest extends Specification {
                               [[ -e /proc/$x ]] && copy+=($x) || wait $x
                             done
                             pid=("${copy[@]}")
-                    
+
                             if ((${#pid[@]}>=$max)); then
                               nxf_sleep 0.2
                             else
@@ -182,7 +198,7 @@ class S3BashLibTest extends Specification {
                         )
                         unset IFS
                     }
-                    
+
                     # aws helper
                     nxf_s3_upload() {
                         local name=$1
@@ -195,7 +211,7 @@ class S3BashLibTest extends Specification {
                           /foo/bin/aws s3 cp --only-show-errors --sse S-ENCRYPT --storage-class S-CLAZZ "$name" "$s3path/$name"
                         fi
                     }
-                    
+
                     nxf_s3_download() {
                         local source=$1
                         local target=$2
@@ -237,7 +253,7 @@ class S3BashLibTest extends Specification {
                   aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
                 fi
             }
-            
+
             nxf_s3_download() {
                 local source=$1
                 local target=$2
@@ -275,7 +291,7 @@ class S3BashLibTest extends Specification {
                   aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
                 fi
             }
-            
+
             nxf_s3_download() {
                 local source=$1
                 local target=$2
@@ -310,7 +326,7 @@ class S3BashLibTest extends Specification {
                   aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
                 fi
             }
-            
+
             nxf_s3_download() {
                 local source=$1
                 local target=$2
@@ -348,7 +364,7 @@ class S3BashLibTest extends Specification {
                   /some/bin/aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
                 fi
             }
-            
+
             nxf_s3_download() {
                 local source=$1
                 local target=$2
@@ -396,7 +412,7 @@ class S3BashLibTest extends Specification {
                   timeout=$(( timeout * 2 ))
                 done
             }
-            
+
             nxf_parallel() {
                 IFS=$'\\n'
                 local cmd=("$@")
@@ -414,7 +430,7 @@ class S3BashLibTest extends Specification {
                       [[ -e /proc/$x ]] && copy+=($x) || wait $x
                     done
                     pid=("${copy[@]}")
-            
+
                     if ((${#pid[@]}>=$max)); then
                       nxf_sleep 0.2
                     else
@@ -429,7 +445,7 @@ class S3BashLibTest extends Specification {
                 )
                 unset IFS
             }
-            
+
             # aws helper
             nxf_s3_upload() {
                 local name=$1
@@ -442,7 +458,7 @@ class S3BashLibTest extends Specification {
                   aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
                 fi
             }
-            
+
             nxf_s3_download() {
                 local source=$1
                 local target=$2
@@ -487,7 +503,7 @@ class S3BashLibTest extends Specification {
                   timeout=$(( timeout * 2 ))
                 done
             }
-            
+
             nxf_parallel() {
                 IFS=$'\\n'
                 local cmd=("$@")
@@ -505,7 +521,7 @@ class S3BashLibTest extends Specification {
                       [[ -e /proc/$x ]] && copy+=($x) || wait $x
                     done
                     pid=("${copy[@]}")
-            
+
                     if ((${#pid[@]}>=$max)); then
                       nxf_sleep 0.2
                     else
@@ -520,7 +536,7 @@ class S3BashLibTest extends Specification {
                 )
                 unset IFS
             }
-            
+
             # aws helper
             nxf_s3_upload() {
                 local name=$1
@@ -533,7 +549,7 @@ class S3BashLibTest extends Specification {
                   aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
                 fi
             }
-            
+
             nxf_s3_download() {
                 local source=$1
                 local target=$2
@@ -581,7 +597,7 @@ class S3BashLibTest extends Specification {
                   timeout=$(( timeout * 2 ))
                 done
             }
-            
+
             nxf_parallel() {
                 IFS=$'\\n'
                 local cmd=("$@")
@@ -599,7 +615,7 @@ class S3BashLibTest extends Specification {
                       [[ -e /proc/$x ]] && copy+=($x) || wait $x
                     done
                     pid=("${copy[@]}")
-            
+
                     if ((${#pid[@]}>=$max)); then
                       nxf_sleep 0.2
                     else
@@ -614,7 +630,7 @@ class S3BashLibTest extends Specification {
                 )
                 unset IFS
             }
-            
+
             # aws cli retry config
             export AWS_RETRY_MODE=standard
             export AWS_MAX_ATTEMPTS=5
@@ -630,7 +646,7 @@ class S3BashLibTest extends Specification {
                   aws s3 cp --only-show-errors --sse aws:kms --sse-kms-key-id my-kms-key --storage-class STANDARD "$name" "$s3path/$name"
                 fi
             }
-            
+
             nxf_s3_download() {
                 local source=$1
                 local target=$2
@@ -679,7 +695,7 @@ class S3BashLibTest extends Specification {
                   timeout=$(( timeout * 2 ))
                 done
             }
-            
+
             nxf_parallel() {
                 IFS=$'\\n'
                 local cmd=("$@")
@@ -697,7 +713,7 @@ class S3BashLibTest extends Specification {
                       [[ -e /proc/$x ]] && copy+=($x) || wait $x
                     done
                     pid=("${copy[@]}")
-            
+
                     if ((${#pid[@]}>=$max)); then
                       nxf_sleep 0.2
                     else
@@ -712,7 +728,7 @@ class S3BashLibTest extends Specification {
                 )
                 unset IFS
             }
-            
+
             # aws cli retry config
             export AWS_RETRY_MODE=standard
             export AWS_MAX_ATTEMPTS=5
@@ -728,7 +744,7 @@ class S3BashLibTest extends Specification {
                   aws s3 cp --only-show-errors --acl public-read --storage-class STANDARD "$name" "$s3path/$name"
                 fi
             }
-            
+
             nxf_s3_download() {
                 local source=$1
                 local target=$2
@@ -765,7 +781,7 @@ class S3BashLibTest extends Specification {
                   s5cmd cp --storage-class STANDARD "$name" "$s3path/$name"
                 fi
             }
-            
+
             nxf_s3_download() {
                 local source=$1
                 local target=$2

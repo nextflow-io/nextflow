@@ -1,5 +1,8 @@
 nf-google changelog
 ===================
+1.26.1 - 28 Feb 2026
+- Report actual GCP zone in Google Batch trace records (#6855) [465791294]
+
 1.26.0 - 8 Feb 2026
 - Fix isCompleted check in getNumSpotInterruptions (#6805) [76558481a]
 - Remove isCompleted() from getNumSpotInterruptions (#6729) [24cc59e27]

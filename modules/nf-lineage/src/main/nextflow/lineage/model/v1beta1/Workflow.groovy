@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ import nextflow.lineage.serde.LinSerializable
 @CompileStatic
 class Workflow implements LinSerializable {
     /**
-     * List of script files defining a workflow
+     * List of script files used by a workflow, starting with the main script
      */
     List<DataPath> scriptFiles
     /**
