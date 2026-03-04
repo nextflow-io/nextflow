@@ -23,7 +23,9 @@ import io.seqera.config.SeqeraConfig
 import io.seqera.config.ExecutorOpts
 import io.seqera.util.SchemaMapperUtil
 import io.seqera.sched.api.schema.v1a1.CreateRunRequest
+import io.seqera.sched.api.schema.v1a1.PipelineSpec
 import io.seqera.sched.api.schema.v1a1.PredictionModel
+
 import io.seqera.sched.client.SchedClient
 import io.seqera.sched.api.schema.v1a1.TerminateRunRequest
 import io.seqera.sched.client.SchedClientConfig
@@ -109,11 +111,13 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
         final request = new CreateRunRequest()
                 .region(seqeraConfig.region)
                 .name(session.runName)
+                .pipeline(new PipelineSpec()
+                        .workDir(session.workDir?.toUriString())
+                        .workflowId(workflowId)
+                        .workflowUrl(workflowUrl))
                 .machineRequirement(SchemaMapperUtil.toMachineRequirement(seqeraConfig.machineRequirement))
                 .labels(labels.entries)
                 .workspaceId(PlatformHelper.getWorkspaceId(towerConfig, SysEnv.get()) as Long)
-                .workflowId(workflowId)
-                .workflowUrl(workflowUrl)
                 .predictionModel(predictionModel)
         log.debug "[SEQERA] Creating run: ${request}"
         final response = client.createRun(request)
