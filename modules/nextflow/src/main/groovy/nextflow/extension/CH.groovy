@@ -25,6 +25,8 @@ import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
+import groovyx.gpars.dataflow.operator.ControlMessage
+import groovyx.gpars.dataflow.operator.PoisonPill
 import groovyx.gpars.dataflow.stream.DataflowStreamReadAdapter
 import groovyx.gpars.dataflow.stream.DataflowStreamWriteAdapter
 import nextflow.Channel
@@ -42,6 +44,8 @@ class CH {
     static private Session session() {
         return (Session) Global.session
     }
+
+    static ControlMessage stop() { PoisonPill.getInstance() }
 
     static class Topic {
         DataflowBroadcast broadcaster = new DataflowBroadcast()
