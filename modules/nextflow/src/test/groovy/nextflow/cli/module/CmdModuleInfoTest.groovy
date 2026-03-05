@@ -151,7 +151,7 @@ class CmdModuleInfoTest extends Specification {
         and:
         def cmd = new CmdModuleInfo()
         cmd.args = ['nf-core/fastqc']
-        cmd.jsonOutput = true
+        cmd.output = 'json'
         cmd.launcher = Mock(Launcher) {
             getOptions() >> null
         }
@@ -703,7 +703,7 @@ class CmdModuleInfoTest extends Specification {
         and:
         def cmd = new CmdModuleInfo()
         cmd.args = ['nf-core/fastqc']
-        cmd.jsonOutput = true
+        cmd.output = 'json'
         cmd.launcher = Mock(Launcher) {
             getOptions() >> null
         }
@@ -778,7 +778,7 @@ class CmdModuleInfoTest extends Specification {
         and:
         def cmd = new CmdModuleInfo()
         cmd.args = ['nf-core/fastqc']
-        cmd.jsonOutput = true
+        cmd.output = 'json'
         cmd.launcher = Mock(Launcher) {
             getOptions() >> null
         }

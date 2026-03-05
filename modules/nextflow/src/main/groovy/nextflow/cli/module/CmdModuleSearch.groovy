@@ -16,7 +16,9 @@
 
 package nextflow.cli.module
 
+import com.beust.jcommander.IParameterValidator
 import com.beust.jcommander.Parameter
+import com.beust.jcommander.ParameterException
 import com.beust.jcommander.Parameters
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
@@ -45,8 +47,23 @@ class CmdModuleSearch extends CmdBase {
     @Parameter(names = ["-limit"], description = "Maximum number of results")
     int limit = 20
 
-    @Parameter(names = ["-json"], description = "Output in JSON format", arity=0)
-    boolean jsonOutput = false
+    @Parameter(
+        names = ['-o', '-output'],
+        description = 'Output mode for reporting search results: simple, json',
+        validateWith = OutputModeValidator
+    )
+    String output = 'simple'
+
+    static class OutputModeValidator implements IParameterValidator {
+
+        private static final List<String> MODES = List.of('simple', 'json')
+
+        @Override
+        void validate(String name, String value) {
+            if( !MODES.contains(value) )
+                throw new ParameterException("Output mode must be one of $MODES (found: $value)")
+        }
+    }
 
     @Parameter(description = "<query>", required = true)
     List<String> args
@@ -61,7 +78,7 @@ class CmdModuleSearch extends CmdBase {
 
     @Override
     void run() {
-        if (!args && args.size() != 1 ) {
+        if( !args || args.size() != 1 ) {
             throw new AbortOperationException("Unexpected number of parameters")
         }
         String query = args[0]
@@ -69,9 +86,9 @@ class CmdModuleSearch extends CmdBase {
         // Get config
         def baseDir = Paths.get('.').toAbsolutePath().normalize()
         def config = new ConfigBuilder()
-                .setOptions(launcher.options)
-                .setBaseDir(baseDir)
-                .build()
+            .setOptions(launcher.options)
+            .setBaseDir(baseDir)
+            .build()
 
         final registryConfig = config.navigate('registry') as RegistryConfig ?: new RegistryConfig()
 
@@ -82,21 +99,23 @@ class CmdModuleSearch extends CmdBase {
             println "Searching for '${query}'..."
             final results = client.search(query, limit)
 
-            if (!results || results.totalResults == 0 || !results.results || results.results.isEmpty()) {
+            if( !results || results.totalResults == 0 || !results.results || results.results.isEmpty() ) {
                 println "No modules found"
                 return
             }
 
-            if (jsonOutput) {
+            if( !output || output == 'simple' ) {
+                printFormattedResults(results)
+            } else if( output == 'json' ) {
                 printJsonResults(results)
             } else {
-                printFormattedResults(results)
+                throw new AbortOperationException("Not implemented output mode $output)")
             }
         }
-        catch (AbortOperationException e) {
+        catch( AbortOperationException e ) {
             throw e
         }
-        catch (Exception e) {
+        catch( Exception e ) {
             log.error("Failed to search modules", e)
             throw new AbortOperationException("Search failed: ${e.message}", e)
         }
@@ -109,7 +128,7 @@ class CmdModuleSearch extends CmdBase {
 
         response.results.each { ModuleSearchResult result ->
             println "  ${result.name}"
-            if (result.description) {
+            if( result.description ) {
                 println "    Description: ${result.description}"
             }
             println ""
@@ -119,20 +138,20 @@ class CmdModuleSearch extends CmdBase {
     private void printJsonResults(SearchModulesResponse response) {
         final modules = response.results.collect { ModuleSearchResult result ->
             [
-                name: result.name,
+                name          : result.name,
                 repositoryPath: result.repositoryPath,
-                description: result.description,
+                description   : result.description,
                 relevanceScore: result.relevanceScore,
-                keywords: result.keywords,
-                tools: result.tools,
-                revoked: result.revoked
+                keywords      : result.keywords,
+                tools         : result.tools,
+                revoked       : result.revoked
             ]
         }
 
-        println JsonOutput.toJson(
+        println JsonOutput.prettyPrint(JsonOutput.toJson(
             query: response.query,
             totalResults: response.totalResults,
             results: modules
-        )
+        ))
     }
 }

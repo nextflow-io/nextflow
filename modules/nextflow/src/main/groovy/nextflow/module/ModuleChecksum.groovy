@@ -42,7 +42,7 @@ class ModuleChecksum {
      * @return The hex-encoded SHA-256 checksum
      */
     static String compute(Path moduleDir) {
-        if (!Files.exists(moduleDir) || !Files.isDirectory(moduleDir)) {
+        if( !Files.exists(moduleDir) || !Files.isDirectory(moduleDir) ) {
             throw new IllegalArgumentException("Module directory does not exist or is not a directory: ${moduleDir}")
         }
 
@@ -51,27 +51,34 @@ class ModuleChecksum {
 
             // Collect all files in sorted order for consistent checksums
             List<Path> files = []
-            Files.walk(moduleDir)
-                .filter { Path path -> Files.isRegularFile(path) }
-                .filter { Path path -> !path.fileName.toString().equals(CHECKSUM_FILE) }
-                .sorted()
-                .each { Path path -> files.add(path) }
+            try( final walkStream = Files.walk(moduleDir) ) {
+                walkStream
+                    .filter { Path path -> Files.isRegularFile(path) }
+                    .filter { Path path -> !path.fileName.toString().equals(CHECKSUM_FILE) }
+                    .sorted()
+                    .each { Path path -> files.add(path) }
+            }
 
             // Compute checksum over all file contents
-            for (Path file : files) {
+            byte[] buf = new byte[8192]
+            for( Path file : files ) {
                 // Include relative path in checksum for directory structure integrity
                 def relativePath = moduleDir.relativize(file).toString()
                 digest.update(relativePath.bytes)
 
-                // Include file contents
-                def bytes = Files.readAllBytes(file)
-                digest.update(bytes)
+                // Include file contents via streaming to avoid loading large files into memory
+                Files.newInputStream(file).withCloseable { is ->
+                    int n
+                    while( (n = is.read(buf)) != -1 ) {
+                        digest.update(buf, 0, n)
+                    }
+                }
             }
 
             def hashBytes = digest.digest()
             return bytesToHex(hashBytes)
         }
-        catch (Exception e) {
+        catch( Exception e ) {
             log.error("Failed to compute checksum for module directory: ${moduleDir}", e)
             throw new RuntimeException("Failed to compute module checksum", e)
         }
@@ -96,7 +103,7 @@ class ModuleChecksum {
      */
     static String load(Path moduleDir) {
         def checksumFile = moduleDir.resolve(CHECKSUM_FILE)
-        if (!Files.exists(checksumFile)) {
+        if( !Files.exists(checksumFile) ) {
             return null
         }
         return checksumFile.text
@@ -122,18 +129,22 @@ class ModuleChecksum {
      * @return The hex-encoded checksum
      */
     static String computeFile(Path file, String type = CHECKSUM_ALGORITHM) {
-        if (!Files.exists(file) || !Files.isRegularFile(file)) {
+        if( !Files.exists(file) || !Files.isRegularFile(file) ) {
             throw new IllegalArgumentException("File does not exist or is not a regular file: ${file}")
         }
 
         try {
             final digest = MessageDigest.getInstance(type)
-            final bytes = Files.readAllBytes(file)
-            digest.update(bytes)
-            final hashBytes = digest.digest()
-            return bytesToHex(hashBytes)
+            final byte[] buf = new byte[8192]
+            Files.newInputStream(file).withCloseable { is ->
+                int n
+                while( (n = is.read(buf)) != -1 ) {
+                    digest.update(buf, 0, n)
+                }
+            }
+            return bytesToHex(digest.digest())
         }
-        catch (Exception e) {
+        catch( Exception e ) {
             log.error("Failed to compute checksum for file: ${file}", e)
             throw new RuntimeException("Failed to compute file checksum", e)
         }
@@ -147,7 +158,7 @@ class ModuleChecksum {
      */
     private static String bytesToHex(byte[] bytes) {
         def hexChars = new char[bytes.length * 2]
-        for (int i = 0; i < bytes.length; i++) {
+        for( int i = 0; i < bytes.length; i++ ) {
             int v = bytes[i] & 0xFF
             hexChars[i * 2] = Character.forDigit(v >>> 4, 16)
             hexChars[i * 2 + 1] = Character.forDigit(v & 0x0F, 16)

@@ -77,7 +77,7 @@ class CmdModuleListTest extends Specification {
 
         and:
         def cmd = new CmdModuleList()
-        cmd.jsonOutput = true
+        cmd.output = 'json'
         cmd.root = tempDir
 
         when:

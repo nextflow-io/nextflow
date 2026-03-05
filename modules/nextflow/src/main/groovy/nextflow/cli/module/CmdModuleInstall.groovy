@@ -66,7 +66,7 @@ class CmdModuleInstall extends CmdBase {
 
     @Override
     void run() {
-        if (!args || args.size() != 1) {
+        if( !args || args.size() != 1 ) {
             throw new AbortOperationException("Incorrect number of arguments")
         }
 
@@ -77,9 +77,9 @@ class CmdModuleInstall extends CmdBase {
         // Get config
         def baseDir = root ?: Paths.get('.').toAbsolutePath().normalize()
         def config = new ConfigBuilder()
-                .setOptions(launcher.options)
-                .setBaseDir(baseDir)
-                .build()
+            .setOptions(launcher.options)
+            .setBaseDir(baseDir)
+            .build()
         final registryConfig = config.navigate('registry') as RegistryConfig ?: new RegistryConfig()
 
         // Get modules versions from nextflow_spec.json.
@@ -98,10 +98,10 @@ class CmdModuleInstall extends CmdBase {
 
             println "Module ${reference.nameWithoutPrefix}@${installedVersion} installed and configured successfully"
         }
-        catch (AbortOperationException e) {
+        catch( AbortOperationException e ) {
             throw e
         }
-        catch (Exception e) {
+        catch( Exception e ) {
             throw new AbortOperationException("Installation failed: ${e.message}", e)
         }
     }

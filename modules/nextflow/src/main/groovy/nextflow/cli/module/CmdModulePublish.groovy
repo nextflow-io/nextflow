@@ -218,8 +218,8 @@ class CmdModulePublish extends CmdBase {
         }
 
         // Check bundle size (1MB uncompressed limit)
-        try {
-            long totalSize = Files.walk(moduleDir)
+        try (final sizeStream = Files.walk(moduleDir)){
+            long totalSize = sizeStream
                 .filter { Files.isRegularFile(it) }
                 .mapToLong { Files.size(it) }
                 .sum()

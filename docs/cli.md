@@ -284,7 +284,7 @@ $ nextflow module install nf-core/fastqc
 $ nextflow module install nf-core/fastqc -version 1.0.0
 ```
 
-After installation, module will be available in `modules/@nf-core/fastqc` and included in `nextflow_spec.json` 
+After installation, module will be available in `modules/@nf-core/fastqc` and included in `nextflow_spec.json`
 
 Use the `-force` flag to reinstall a module even if local modifications exist.
 
@@ -321,7 +321,7 @@ Use this to review installed modules, check module versions, or detect local mod
 
 ```console
 $ nextflow module list
-$ nextflow module list -json
+$ nextflow module list -output json
 ```
 
 The output shows each module's name, installed version, and whether it has been modified locally. Use `-json` for machine-readable output suitable for scripting.
@@ -337,10 +337,10 @@ Use this to find modules for specific tasks, explore available tools, or discove
 ```console
 $ nextflow module search alignment
 $ nextflow module search "quality control" -limit 10
-$ nextflow module search bwa -json
+$ nextflow module search bwa -output json
 ```
 
-Results include module names, versions, descriptions, and download statistics. Use `-limit` to control the number of results and `-json` for programmatic access.
+Results include module names, versions, descriptions, and download statistics. Use `-limit` to control the number of results and `-output json` for programmatic access.
 
 See {ref}`cli-module-search` for more information.
 
@@ -353,7 +353,7 @@ Use this to understand module requirements, view input/output specifications, se
 ```console
 $ nextflow module info nf-core/fastqc
 $ nextflow module info nf-core/fastqc -version 1.0.0
-$ nextflow module info nf-core/fastqc -json
+$ nextflow module info nf-core/fastqc -output json
 ```
 
 The output includes the module's version, description, authors, keywords, tools, input/output channels, and a generated usage template showing how to run the module. Use `-json` for machine-readable output suitable for programmatic access.
@@ -513,7 +513,7 @@ Use this to understand input/output relationships between tasks, trace data flow
 $ nextflow lineage
 ```
 
-See {ref}`data-lineage-page` to get started and {ref}`cli-lineage` for more information. 
+See {ref}`data-lineage-page` to get started and {ref}`cli-lineage` for more information.
 
 ## Seqera Platform
 

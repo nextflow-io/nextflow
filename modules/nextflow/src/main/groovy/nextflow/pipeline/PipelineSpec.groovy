@@ -89,7 +89,8 @@ class PipelineSpec {
              return false
         }
         final modules = spec.modules as Map<String,String>
-        modules.remove(normalizedName)
+        if( modules.remove(normalizedName) == null )
+            return false
         writeSpecFile(spec)
         log.info "Removed ${normalizedName} from ${SPEC_FILE_NAME}"
         return true

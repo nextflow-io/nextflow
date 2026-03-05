@@ -113,7 +113,7 @@ class CmdModuleSearchTest extends Specification {
         }
         cmd.args = ['fastqc']
         cmd.limit = 10
-        cmd.jsonOutput = true
+        cmd.output = 'json'
 
         and:
         // Mock the registry client

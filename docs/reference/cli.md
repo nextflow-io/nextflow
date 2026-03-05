@@ -1209,8 +1209,8 @@ The `module` command provides a comprehensive system for managing reusable, regi
 : Shows module names, versions, and integrity status (whether they've been modified locally).
 : The following options are available:
 
-  `-json`
-  : Output results in JSON format for programmatic processing.
+  `-o, -output` (`table`)
+  : Output mode for list results. Options: `table` (default), `json`.
 
 : **Examples:**
 
@@ -1219,7 +1219,7 @@ The `module` command provides a comprehensive system for managing reusable, regi
   $ nextflow module list
 
   # Output as JSON
-  $ nextflow module list -json
+  $ nextflow module list -output 'json'
   ```
 
 (cli-module-search)=
@@ -1233,8 +1233,8 @@ The `module` command provides a comprehensive system for managing reusable, regi
   `-limit`
   : Maximum number of results to return (default: varies by registry).
 
-  `-json`
-  : Output results in JSON format for programmatic processing.
+  `-o, -output` (`simple`)
+  : Output mode for search results. Options: `simple` (default), `json`.
 
 : **Examples:**
 
@@ -1246,7 +1246,7 @@ The `module` command provides a comprehensive system for managing reusable, regi
   $ nextflow module search "quality control" -limit 10
 
   # Get results as JSON
-  $ nextflow module search bwa -json
+  $ nextflow module search bwa -output json
   ```
 
 (cli-module-info)=
@@ -1260,8 +1260,8 @@ The `module` command provides a comprehensive system for managing reusable, regi
   `-version`
   : Specify the module version to query (e.g., `1.0.0`). If not specified, displays information for the latest version.
 
-  `-json`
-  : Output results in JSON format for programmatic processing.
+  `-o, -output` (`text`)
+  : Output mode for info results. Options: `text` (default), `json`.
 
 : **Examples:**
 
@@ -1273,7 +1273,7 @@ The `module` command provides a comprehensive system for managing reusable, regi
   $ nextflow module info nf-core/fastqc -version 1.0.0
 
   # Get results as JSON
-  $ nextflow module info nf-core/fastqc -json
+  $ nextflow module info nf-core/fastqc -output json
   ```
 
 (cli-module-remove)=
@@ -1315,7 +1315,7 @@ The `module` command provides a comprehensive system for managing reusable, regi
 
   `-dry-run`
   : Validate the module structure and metadata without uploading to the registry. Useful for testing before publishing.
-  
+
   `-registry`
   : Specify the registry to publish the module (default: `https://registry.nextflow.io`)
 
@@ -1328,7 +1328,7 @@ The `module` command provides a comprehensive system for managing reusable, regi
   # Publish to nextflow registry
   $ export NXF_REGISTRY_TOKEN=your-token
   $ nextflow module publish myorg/my-module
-  
+
   # Publish to a custom registry
   $ export NXF_REGISTRY_TOKEN=your-token
   $ nextflow module publish myorg/my-module -registry 'https://custom.registry.com'
@@ -1380,7 +1380,7 @@ The `pull` command downloads a pipeline from a Git-hosting platform into the glo
 : Update all downloaded projects.
 
 `-d, -deep`
-: :::{deprecated} 25.12.0-edge. 
+: :::{deprecated} 25.12.0-edge.
   Ignored for new multi-revision asset management strategy. Still used in legacy assets.
   :::
 : Create a shallow clone of the specified depth.
