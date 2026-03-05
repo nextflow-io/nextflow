@@ -34,11 +34,11 @@ import java.nio.file.Path
 import java.util.zip.GZIPOutputStream
 
 /**
- * Tests for ModuleInstall command
+ * Tests for CmdModuleInstall command
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
-class ModuleInstallTest extends Specification {
+class CmdModuleInstallTest extends Specification {
 
     @Rule
     OutputCapture capture = new OutputCapture()
@@ -48,7 +48,7 @@ class ModuleInstallTest extends Specification {
 
     def 'should install module with latest version'() {
         given:
-        def cmd = new ModuleInstall()
+        def cmd = new CmdModuleInstall()
         cmd.launcher = Mock(Launcher) {
             getOptions() >> null
         }
@@ -93,7 +93,7 @@ class ModuleInstallTest extends Specification {
 
     def 'should install module with specific version'() {
         given:
-        def cmd = new ModuleInstall()
+        def cmd = new CmdModuleInstall()
         cmd.launcher = Mock(Launcher) {
             getOptions() >> null
         }
@@ -142,7 +142,7 @@ class ModuleInstallTest extends Specification {
         spec.addModuleEntry('@nf-core/fastqc', '1.0.0')
 
         and:
-        def cmd = new ModuleInstall()
+        def cmd = new CmdModuleInstall()
         cmd.launcher = Mock(Launcher) {
             getOptions() >> null
         }
@@ -193,7 +193,7 @@ class ModuleInstallTest extends Specification {
         spec.addModuleEntry('@nf-core/fastqc', '1.0.0')
 
         and:
-        def cmd = new ModuleInstall()
+        def cmd = new CmdModuleInstall()
         cmd.launcher = Mock(Launcher) {
             getOptions() >> null
         }
@@ -218,7 +218,7 @@ class ModuleInstallTest extends Specification {
 
     def 'should handle module with scope in name'() {
         given:
-        def cmd = new ModuleInstall()
+        def cmd = new CmdModuleInstall()
         cmd.launcher = Mock(Launcher) {
             getOptions() >> null
         }
@@ -254,7 +254,7 @@ class ModuleInstallTest extends Specification {
 
     def 'should create modules directory if it does not exist'() {
         given:
-        def cmd = new ModuleInstall()
+        def cmd = new CmdModuleInstall()
         cmd.launcher = Mock(Launcher) {
             getOptions() >> null
         }
@@ -286,7 +286,7 @@ class ModuleInstallTest extends Specification {
 
     def 'should create checksum file after installation'() {
         given:
-        def cmd = new ModuleInstall()
+        def cmd = new CmdModuleInstall()
         cmd.launcher = Mock(Launcher) {
             getOptions() >> null
         }
@@ -322,7 +322,7 @@ class ModuleInstallTest extends Specification {
 
     def 'should fail with no arguments'() {
         given:
-        def cmd = new ModuleInstall()
+        def cmd = new CmdModuleInstall()
         cmd.launcher = Mock(Launcher) {
             getOptions() >> null
         }
@@ -338,7 +338,7 @@ class ModuleInstallTest extends Specification {
 
     def 'should fail with too many arguments'() {
         given:
-        def cmd = new ModuleInstall()
+        def cmd = new CmdModuleInstall()
         cmd.launcher = Mock(Launcher) {
             getOptions() >> null
         }
@@ -354,7 +354,7 @@ class ModuleInstallTest extends Specification {
 
     def 'should fail with invalid module reference'() {
         given:
-        def cmd = new ModuleInstall()
+        def cmd = new CmdModuleInstall()
         cmd.launcher = Mock(Launcher) {
             getOptions() >> null
         }

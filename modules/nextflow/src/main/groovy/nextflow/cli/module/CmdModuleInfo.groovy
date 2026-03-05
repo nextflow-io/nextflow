@@ -16,7 +16,9 @@
 
 package nextflow.cli.module
 
+import com.beust.jcommander.IParameterValidator
 import com.beust.jcommander.Parameter
+import com.beust.jcommander.ParameterException
 import com.beust.jcommander.Parameters
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
@@ -30,11 +32,8 @@ import nextflow.cli.CmdBase
 import nextflow.config.ConfigBuilder
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
-import nextflow.module.InstalledModule
 import nextflow.module.ModuleReference
 import nextflow.module.ModuleRegistryClient
-import nextflow.module.ModuleSpec
-import nextflow.module.ModuleStorage
 import nextflow.util.TestOnly
 
 import java.nio.file.Path
@@ -48,13 +47,28 @@ import java.nio.file.Paths
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Show module information and usage template")
-class ModuleInfo extends CmdBase {
+class CmdModuleInfo extends CmdBase {
 
     @Parameter(names = ["-version"], description = "Module version")
     String version
 
-    @Parameter(names = ["-json"], description = "Output in JSON format", arity = 0)
-    boolean jsonOutput = false
+    @Parameter(
+        names = ['-o', '-output'],
+        description = 'Output mode for reporting search results: text, json',
+        validateWith = OutputModeValidator
+    )
+    String output = 'text'
+
+    static class OutputModeValidator implements IParameterValidator {
+
+        private static final List<String> MODES = List.of('text', 'json')
+
+        @Override
+        void validate(String name, String value) {
+            if( !MODES.contains(value) )
+                throw new ParameterException("Output mode must be one of $MODES (found: $value)")
+        }
+    }
 
     @Parameter(description = "[scope/name]", required = true)
     List<String> args
@@ -102,21 +116,28 @@ class ModuleInfo extends CmdBase {
         } catch( Exception e ) {
             log.warn "Failed to fetch metadata from registry: ${e.message}"
         }
-        if( release?.metadata ) {
-            log.info("No metadata found for $reference.nameWithoutPrefix ${release?.version ? "($release.version)" : ''}")
+        if( !release ) {
+            throw new AbortOperationException("No release information available for ${reference.nameWithoutPrefix}")
         }
-        if( jsonOutput ) {
-            printJsonInfo(reference, release)
+        if( !release.metadata ) {
+            log.info("No metadata found for $reference.nameWithoutPrefix ${release.version ? "($release.version)" : ''}")
+        }
+        def moduleUrl = buildModuleUrl(registryConfig.url, reference, release.version)
+        if( !output || output == 'text' ) {
+            printFormattedInfo(reference, release, moduleUrl)
+        } else if( output == 'json' ) {
+            printJsonInfo(reference, release, moduleUrl)
         } else {
-            printFormattedInfo(reference, release)
+            throw new AbortOperationException("Not implemented output mode $output)")
         }
     }
 
-    private void printFormattedInfo(ModuleReference reference, ModuleRelease release) {
+    private void printFormattedInfo(ModuleReference reference, ModuleRelease release, String moduleUrl) {
         ModuleMetadata metadata = release.metadata
         println ""
         println "Module:      ${reference.nameWithoutPrefix}"
         println "Version:     ${release.version}"
+        println "URL:         ${moduleUrl}"
         println "Description: ${metadata.description ?: release.description ?: 'N/A'}"
 
         if( metadata.authors ) {
@@ -205,8 +226,8 @@ class ModuleInfo extends CmdBase {
         inputs.each { input ->
             input.items.each { ModuleChannelItem item ->
                 template.add(reference.scope == 'nf-core'
-                        ? inferNfCoreParam(item.name, item.type)
-                        : inferNormalParam(item.name, item.type))
+                    ? inferNfCoreParam(item.name, item.type)
+                    : inferNormalParam(item.name, item.type))
 
             }
         }
@@ -250,12 +271,20 @@ class ModuleInfo extends CmdBase {
         return "--${paramName} <${paramPlaceholder}>"
     }
 
-    private void printJsonInfo(ModuleReference reference, ModuleRelease release) {
+    private static String buildModuleUrl(String registryUrl, ModuleReference reference, String version) {
+        // Strip /api suffix to get the base UI URL
+        def baseUrl = registryUrl.endsWith('/api') ? registryUrl[0..-5] : registryUrl
+        def encodedName = URLEncoder.encode(reference.name, 'UTF-8')
+        return "${baseUrl}/admin/modules/${reference.scope}/${encodedName}@${version}"
+    }
+
+    private void printJsonInfo(ModuleReference reference, ModuleRelease release, String moduleUrl) {
         def metadata = release?.metadata
         def info = [
             name       : reference.nameWithoutPrefix,
             fullName   : reference.fullName,
             version    : release.version,
+            url        : moduleUrl,
             description: metadata.description ?: release.description,
             authors    : metadata.authors,
             keywords   : metadata.keywords,

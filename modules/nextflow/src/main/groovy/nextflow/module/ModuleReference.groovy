@@ -54,7 +54,7 @@ class ModuleReference {
      * @throws AbortOperationException if the format is invalid
      */
     static ModuleReference parse(String source) {
-        if (!source) {
+        if( !source ) {
             throw new AbortOperationException("Module reference cannot be empty")
         }
 
@@ -62,11 +62,11 @@ class ModuleReference {
         source = source.trim()
 
         def matcher = MODULE_NAME_PATTERN.matcher(source)
-        if (!matcher.matches()) {
+        if( !matcher.matches() ) {
             throw new AbortOperationException(
                 "Invalid module reference: '${source}'. " +
-                "Expected format: [@]scope/name where scope is lowercase alphanumeric with dots/underscores/hyphens " +
-                "and name is lowercase alphanumeric with underscores/hyphens, optionally with slash-separated segments"
+                    "Expected format: [@]scope/name where scope is lowercase alphanumeric with dots/underscores/hyphens " +
+                    "and name is lowercase alphanumeric with underscores/hyphens, optionally with slash-separated segments"
             )
         }
 

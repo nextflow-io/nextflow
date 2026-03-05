@@ -38,7 +38,7 @@ class ModuleResolver {
     private final ModuleStorage storage
     private final ModulesConfig modulesConfig
 
-    ModuleResolver (Path baseDir, ModuleRegistryClient registryClient, ModulesConfig modulesConfig = null) {
+    ModuleResolver(Path baseDir, ModuleRegistryClient registryClient, ModulesConfig modulesConfig = null) {
         this.registryClient = registryClient
         this.storage = new ModuleStorage(baseDir)
         this.modulesConfig = modulesConfig ?: new ModulesConfig()
@@ -64,30 +64,30 @@ class ModuleResolver {
         // Check if module is already installed
         def installed = storage.getInstalledModule(reference)
 
-        if (installed) {
+        if( installed ) {
             // Check integrity
             def integrity = installed.integrity
-            if (integrity == ModuleIntegrity.CORRUPTED) {
+            if( integrity == ModuleIntegrity.CORRUPTED ) {
                 throw new AbortOperationException(
                     "Module ${reference.nameWithoutPrefix} is corrupted (missing required files). " +
-                    "Please remove and reinstall."
+                        "Please remove and reinstall."
                 )
             }
 
-            if (integrity == ModuleIntegrity.MODIFIED) {
+            if( integrity == ModuleIntegrity.MODIFIED ) {
                 log.warn "Module ${reference.nameWithoutPrefix} has local modifications (checksum mismatch)"
             }
 
             // Check if version matches
-            if (targetVersion && installed.installedVersion != targetVersion) {
-                if (autoInstall) {
+            if( targetVersion && installed.installedVersion != targetVersion ) {
+                if( autoInstall ) {
                     log.info "Upgrading module ${reference.nameWithoutPrefix} from ${installed.installedVersion} to ${targetVersion}"
                     return installModule(reference, targetVersion)
                 } else {
                     throw new AbortOperationException(
                         "Module ${reference.nameWithoutPrefix} version mismatch: " +
-                        "installed=${installed.installedVersion}, required=${targetVersion}. " +
-                        "Run 'nextflow module install ${reference.nameWithoutPrefix}@${targetVersion}' to update."
+                            "installed=${installed.installedVersion}, required=${targetVersion}. " +
+                            "Run 'nextflow module install ${reference.nameWithoutPrefix}@${targetVersion}' to update."
                     )
                 }
             }
@@ -97,20 +97,20 @@ class ModuleResolver {
         }
 
         // Module not installed
-        if (autoInstall) {
+        if( autoInstall ) {
             return installModule(reference, targetVersion)
         } else {
             throw new AbortOperationException(
                 "Module ${reference.nameWithoutPrefix} is not installed. " +
-                "Run 'nextflow module install ${reference.nameWithoutPrefix}' to install."
+                    "Run 'nextflow module install ${reference.nameWithoutPrefix}' to install."
             )
         }
     }
 
-    String resolveVersion(ModuleReference reference){
+    String resolveVersion(ModuleReference reference) {
         final version = modulesConfig.getVersion(reference.fullName)
             ?: registryClient.fetchModule(reference.fullName).latest?.version
-        if (!version) {
+        if( !version ) {
             throw new AbortOperationException("Module ${reference.nameWithoutPrefix} has no published versions")
         }
         return version
@@ -125,22 +125,22 @@ class ModuleResolver {
      * @return Path to the installed module's main.nf file
      */
     Path installModule(ModuleReference reference, String version = null, boolean force = false) {
-        if (!version)
+        if( !version )
             version = resolveVersion(reference)
         // Check if already installed
-        if (storage.isInstalled(reference)) {
+        if( storage.isInstalled(reference) ) {
             def installed = storage.getInstalledModule(reference)
-            if (installed.installedVersion == version) {
+            if( installed.installedVersion == version ) {
                 log.info "Module ${reference.nameWithoutPrefix}@${installed.installedVersion} is already installed (version $version)"
                 return installed.mainFile
             }
 
             // No desired version, check for local modifications
             def integrity = installed.integrity
-            if (integrity == ModuleIntegrity.MODIFIED && !force) {
+            if( integrity == ModuleIntegrity.MODIFIED && !force ) {
                 throw new AbortOperationException(
                     "Module ${reference.nameWithoutPrefix} has local modifications. " +
-                    "Use --force to override, or save your changes first."
+                        "Use --force to override, or save your changes first."
                 )
             }
         }
@@ -162,7 +162,7 @@ class ModuleResolver {
         }
         finally {
             // Clean up temporary file
-            if (Files.exists(tempFile)) {
+            if( Files.exists(tempFile) ) {
                 Files.delete(tempFile)
             }
         }

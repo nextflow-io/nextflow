@@ -48,7 +48,7 @@ class ModuleSpec {
      * @return ModuleSpec instance
      */
     static ModuleSpec load(Path metaYamlPath) {
-        if (!Files.exists(metaYamlPath)) {
+        if( !Files.exists(metaYamlPath) ) {
             throw new AbortOperationException("Module manifest not found: ${metaYamlPath}")
         }
 
@@ -67,7 +67,7 @@ class ModuleSpec {
 
             return manifest
         }
-        catch (Exception e) {
+        catch( Exception e ) {
             throw new AbortOperationException("Failed to parse module manifest: ${metaYamlPath}", e)
         }
     }
@@ -80,26 +80,26 @@ class ModuleSpec {
     List<String> validate() {
         List<String> errors = []
 
-        if (!name) {
+        if( !name ) {
             errors << "Missing required field: name"
         }
-        if (!version) {
+        if( !version ) {
             errors << "Missing required field: version"
         }
-        if (!description) {
+        if( !description ) {
             errors << "Missing required field: description"
         }
-        if (!license) {
+        if( !license ) {
             errors << "Missing required field: license"
         }
 
         // Validate version format (semantic versioning)
-        if (version && !version.matches(/^\d+\.\d+\.\d+(-[\w.-]+)?$/)) {
+        if( version && !version.matches(/^\d+\.\d+\.\d+(-[\w.-]+)?$/) ) {
             errors << "Invalid version format: ${version} (expected semantic versioning, e.g., 1.0.0)".toString()
         }
 
         // Validate name format (scope/name or scope/path/to/name for nested modules)
-        if (name && !name.matches(/^[a-zA-Z0-9._-]+\/[a-zA-Z0-9_-]+(?:\/[a-zA-Z0-9_-]+)*$/)) {
+        if( name && !name.matches(/^[a-zA-Z0-9._-]+\/[a-zA-Z0-9_-]+(?:\/[a-zA-Z0-9_-]+)*$/) ) {
             errors << "Invalid module name format: ${name} (expected scope/name or scope/path/to/name, e.g., nf-core/fastqc or nf-core/gfatools/gfa2fa)".toString()
         }
 

@@ -24,11 +24,11 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 /**
- * Tests for ModulePublish command
+ * Tests for CmdModulePublish command
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
-class ModulePublishTest extends Specification {
+class CmdModulePublishTest extends Specification {
 
     @TempDir
     Path tempDir
@@ -49,7 +49,7 @@ license: MIT
 '''
 
         and:
-        def cmd = new ModulePublish()
+        def cmd = new CmdModulePublish()
         cmd.dryRun = true
         cmd.args = [moduleDir.toString()]
 
@@ -69,7 +69,7 @@ license: MIT
         moduleDir.resolve('main.nf').text = 'process TEST { }'
 
         and:
-        def cmd = new ModulePublish()
+        def cmd = new CmdModulePublish()
 
         when:
         def errors = cmd.invokeMethod('validateModuleStructure', moduleDir)
@@ -101,7 +101,7 @@ license: MIT
         Files.writeString(largeFile, content)
 
         and:
-        def cmd = new ModulePublish()
+        def cmd = new CmdModulePublish()
 
         when:
         def errors = cmd.invokeMethod('validateModuleStructure', moduleDir)
@@ -127,7 +127,7 @@ license: MIT
 '''
 
         and:
-        def cmd = new ModulePublish()
+        def cmd = new CmdModulePublish()
         def launcher = new Launcher()
         launcher.options = [:]
         cmd.launcher = launcher

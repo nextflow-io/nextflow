@@ -123,15 +123,17 @@ class ModuleStorage {
         List<InstalledModule> modules = []
 
         // Iterate over scope directories
-        Files.list(modulesDir).each { Path scopeDir ->
-            if (!Files.isDirectory(scopeDir)) return
+        try( final scopeStream = Files.list(modulesDir) ){
+            scopeStream.each { Path scopeDir ->
+                if (!Files.isDirectory(scopeDir)) return
 
-            def scopeDirName = scopeDir.fileName.toString()
-            // Remove @ prefix from directory name to get scope
-            def scope = scopeDirName.startsWith('@') ? scopeDirName.substring(1) : scopeDirName
+                def scopeDirName = scopeDir.fileName.toString()
+                // Remove @ prefix from directory name to get scope
+                def scope = scopeDirName.startsWith('@') ? scopeDirName.substring(1) : scopeDirName
 
-            // Recursively find all directories containing meta.yml under this scope
-            findModulesRecursive(scopeDir, scope, modules)
+                // Recursively find all directories containing meta.yml under this scope
+                findModulesRecursive(scopeDir, scope, modules)
+            }
         }
 
         return modules
@@ -167,12 +169,13 @@ class ModuleStorage {
         }
 
         // Recursively search subdirectories
-        try {
-            Files.list(dir).each { Path subDir ->
-                if (Files.isDirectory(subDir)) {
-                    findModulesRecursive(subDir, scope, modules)
+        try (final subStream = Files.list(dir) ) {
+                subStream.each { Path subDir ->
+                    if (Files.isDirectory(subDir)) {
+                        findModulesRecursive(subDir, scope, modules)
+                    }
                 }
-            }
+
         } catch (IOException e) {
             log.warn "Failed to list directory ${dir}: ${e.message}"
         }
@@ -406,31 +409,34 @@ class ModuleStorage {
      * @param currentPath The current path being added
      */
     private void addToTarArchive(TarArchiveOutputStream tos, Path sourceDir, Path currentPath) {
-        Files.list(currentPath).each { Path path ->
-            // Skip .checksum file when creating bundle
-            if (path.fileName.toString() == ModuleChecksum.CHECKSUM_FILE) {
-                return
-            }
 
-            def relativePath = sourceDir.relativize(path).toString()
+        try ( def tarStream = Files.list(currentPath)) {
+            tarStream.each { Path path ->
+                // Skip .checksum file when creating bundle
+                if (path.fileName.toString() == ModuleChecksum.CHECKSUM_FILE) {
+                    return
+                }
 
-            if (Files.isDirectory(path)) {
-                // Add directory entry
-                def entry = new TarArchiveEntry(path.toFile(), "${relativePath}/")
-                tos.putArchiveEntry(entry)
-                tos.closeArchiveEntry()
+                def relativePath = sourceDir.relativize(path).toString()
 
-                // Recursively add directory contents
-                addToTarArchive(tos, sourceDir, path)
-            } else {
-                // Add file entry
-                def entry = new TarArchiveEntry(path.toFile(), relativePath)
-                entry.setSize(Files.size(path))
-                tos.putArchiveEntry(entry)
+                if (Files.isDirectory(path)) {
+                    // Add directory entry
+                    def entry = new TarArchiveEntry(path.toFile(), "${relativePath}/")
+                    tos.putArchiveEntry(entry)
+                    tos.closeArchiveEntry()
 
-                // Copy file content
-                Files.copy(path, tos)
-                tos.closeArchiveEntry()
+                    // Recursively add directory contents
+                    addToTarArchive(tos, sourceDir, path)
+                } else {
+                    // Add file entry
+                    def entry = new TarArchiveEntry(path.toFile(), relativePath)
+                    entry.setSize(Files.size(path))
+                    tos.putArchiveEntry(entry)
+
+                    // Copy file content
+                    Files.copy(path, tos)
+                    tos.closeArchiveEntry()
+                }
             }
         }
     }

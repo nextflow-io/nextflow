@@ -157,7 +157,7 @@ class ModuleRegistryClientTest extends Specification {
             .willReturn(aResponse()
                 .withStatus(200)
                 .withHeader('Content-Type', 'application/gzip')
-                .withHeader('X-Checksum', "sha256:${expectedChecksum}")
+                .withHeader('X-NF-Module-Checksum', "sha256:${expectedChecksum}")
                 .withBody(modulePackage)))
 
         and:
@@ -338,7 +338,7 @@ class ModuleRegistryClientTest extends Specification {
             .willReturn(aResponse()
                 .withStatus(200)
                 .withHeader('Content-Type', 'application/gzip')
-                .withHeader('X-Checksum', checksum)
+                .withHeader('X-NF-Module-Checksum', checksum)
                 .withHeader('Docker-Content-Digest', checksum)
                 .withBody(modulePackage)))
 

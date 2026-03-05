@@ -43,7 +43,7 @@ import java.nio.file.Paths
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Publish a module to the registry")
-class ModulePublish extends CmdBase {
+class CmdModulePublish extends CmdBase {
 
     @Parameter(names = ["-dry-run"], description = "Validate without uploading", arity=0)
     boolean dryRun = false
@@ -218,8 +218,8 @@ class ModulePublish extends CmdBase {
         }
 
         // Check bundle size (1MB uncompressed limit)
-        try {
-            long totalSize = Files.walk(moduleDir)
+        try (final sizeStream = Files.walk(moduleDir)){
+            long totalSize = sizeStream
                 .filter { Files.isRegularFile(it) }
                 .mapToLong { Files.size(it) }
                 .sum()

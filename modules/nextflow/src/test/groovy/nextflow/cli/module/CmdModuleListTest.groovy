@@ -29,11 +29,11 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 /**
- * Tests for ModuleList command
+ * Tests for CmdModuleList command
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
-class ModuleListTest extends Specification {
+class CmdModuleListTest extends Specification {
 
     @Rule
     OutputCapture capture = new OutputCapture()
@@ -52,7 +52,7 @@ class ModuleListTest extends Specification {
         createTestModule(storage, 'nf-core', 'multiqc', '2.1.0')
 
         and:
-        def cmd = new ModuleList()
+        def cmd = new CmdModuleList()
         cmd.root = tempDir
 
         when:
@@ -76,8 +76,8 @@ class ModuleListTest extends Specification {
         createTestModule(storage, 'nf-core', 'fastqc', '1.5.0')
 
         and:
-        def cmd = new ModuleList()
-        cmd.jsonOutput = true
+        def cmd = new CmdModuleList()
+        cmd.output = 'json'
         cmd.root = tempDir
 
         when:
@@ -95,7 +95,7 @@ class ModuleListTest extends Specification {
 
     def 'should handle no installed modules'() {
         given:
-        def cmd = new ModuleList()
+        def cmd = new CmdModuleList()
         cmd.root = tempDir  // Use test directory with no modules
 
         when:
@@ -115,7 +115,7 @@ class ModuleListTest extends Specification {
         moduleDir.resolve('main.nf').text = 'process MODIFIED { }'
 
         and:
-        def cmd = new ModuleList()
+        def cmd = new CmdModuleList()
         cmd.root = tempDir
 
         when:
@@ -137,7 +137,7 @@ class ModuleListTest extends Specification {
         createTestModule(storage, 'myorg', 'custom', '2.0.0')
 
         and:
-        def cmd = new ModuleList()
+        def cmd = new CmdModuleList()
         cmd.root = tempDir
 
         when:

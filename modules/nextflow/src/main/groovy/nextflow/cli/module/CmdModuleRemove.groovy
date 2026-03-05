@@ -38,7 +38,7 @@ import java.nio.file.Paths
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Remove an installed module")
-class ModuleRemove extends CmdBase {
+class CmdModuleRemove extends CmdBase {
 
     @Parameter(description = "<module>", required = true)
     List<String> args
@@ -59,12 +59,12 @@ class ModuleRemove extends CmdBase {
 
     @Override
     void run() {
-        if (!args || args.size() != 1) {
+        if( !args || args.size() != 1 ) {
             throw new AbortOperationException("Incorrect number of arguments")
         }
 
         // Validate flags
-        if (keepConfig && keepFiles) {
+        if( keepConfig && keepFiles ) {
             throw new AbortOperationException("Cannot use both -keep-config and -keep-files flags together")
         }
 
@@ -86,10 +86,10 @@ class ModuleRemove extends CmdBase {
             def configRemoved = false
 
             // Remove local files unless -keep-files is set
-            if (!keepFiles) {
+            if( !keepFiles ) {
                 println "Removing module files for ${reference.nameWithoutPrefix}..."
                 filesRemoved = storage.removeModule(reference)
-                if (filesRemoved) {
+                if( filesRemoved ) {
                     println "Module files removed successfully"
                 } else {
                     println "Module ${reference.nameWithoutPrefix} was not installed locally"
@@ -99,10 +99,10 @@ class ModuleRemove extends CmdBase {
             }
 
             // Remove config entry unless -keep-config is set
-            if (!keepConfig) {
+            if( !keepConfig ) {
                 println "Removing module entry from nextflow_spec.json..."
                 configRemoved = specFile.removeModuleEntry(reference.fullName)
-                if (configRemoved) {
+                if( configRemoved ) {
                     println "Module entry removed from configuration"
                 } else {
                     println "Module ${reference.nameWithoutPrefix} was not configured in nextflow_spec.json"
@@ -112,16 +112,16 @@ class ModuleRemove extends CmdBase {
             }
 
             // Summary
-            if (filesRemoved || configRemoved) {
+            if( filesRemoved || configRemoved ) {
                 println "\nModule ${reference.nameWithoutPrefix} removal completed"
             } else {
                 println "\nModule ${reference.nameWithoutPrefix} was not found"
             }
         }
-        catch (AbortOperationException e) {
+        catch( AbortOperationException e ) {
             throw e
         }
-        catch (Exception e) {
+        catch( Exception e ) {
             log.error("Failed to remove module", e)
             throw new AbortOperationException("Removal failed: ${e.message}", e)
         }
