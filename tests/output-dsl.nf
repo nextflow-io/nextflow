@@ -16,14 +16,16 @@
  */
 nextflow.preview.types = true
 
-params.save_bam_bai = false
+params {
+  save_bam_bai = false
+}
 
 process fastqc {
   input:
   id: String
 
   output:
-  tuple(id, file('*.fastqc.log'))
+  record(id: id, fastqc: file('*.fastqc.log'))
 
   script:
   """
@@ -36,8 +38,7 @@ process align {
   id: String
 
   output:
-  bam = tuple(id, file('*.bam'))
-  bai = tuple(id, file('*.bai'))
+  record(id: id, bam: file('*.bam'), bai: file('*.bai'))
 
   script:
   """
@@ -51,7 +52,7 @@ process quant {
   id: String
 
   output:
-  tuple(id, file('quant'))
+  record(id: id, quant: file('quant'))
 
   script:
   '''
@@ -67,7 +68,11 @@ process summary {
   logs: Bag<Path>
 
   output:
-  tuple(file('summary_report.html'), file('summary_data/data.json'), file('summary_data/fastqc.txt'))
+  record(
+    report: file('summary_report.html'), 
+    data: file('summary_data/data.json'), 
+    fastqc: file('summary_data/fastqc.txt')
+  )
 
   script:
   '''
@@ -82,32 +87,22 @@ workflow {
   main:
   ids = channel.of('alpha', 'beta', 'delta')
   ch_fastqc = fastqc(ids)
-  (ch_bam, ch_bai) = align(ids)
+  ch_align = align(ids)
   ch_quant = quant(ids)
 
   ch_samples = ch_fastqc
-    .join(ch_bam)
-    .join(ch_bai)
-    .join(ch_quant)
-    .map { id, fastqc, bam, bai, quant ->
-      [
-        id: id,
-        fastqc: fastqc,
-        bam: bam,
-        bai: bai,
-        quant: quant
-      ]
-    }
+    .join(ch_align, by: 'id')
+    .join(ch_quant, by: 'id')
 
   ch_logs = ch_samples
     .map { sample -> sample.fastqc }
     .collect()
 
-  summary(ch_logs)
+  ch_summary = summary(ch_logs)
 
   publish:
   samples = ch_samples
-  summary = summary.out
+  summary = ch_summary
 }
 
 output {
@@ -126,10 +121,10 @@ output {
   }
 
   summary {
-    path { report, data_json, fastqc_txt ->
-      report >> './'
-      data_json >> './'
-      fastqc_txt >> './'
+    path { r ->
+      r.report >> './'
+      r.data >> './'
+      r.fastqc >> './'
     }
   }
 }

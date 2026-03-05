@@ -17,12 +17,18 @@ package nextflow.script.control;
 
 import nextflow.script.ast.ASTNodeMarker;
 import nextflow.script.ast.ProcessNode;
+import nextflow.script.ast.ProcessNodeV2;
+import nextflow.script.ast.RecordNode;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
 import nextflow.script.ast.WorkflowNode;
+import nextflow.script.types.Record;
 import org.codehaus.groovy.ast.ASTNode;
+import org.codehaus.groovy.ast.ClassHelper;
+import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.MethodNode;
 import org.codehaus.groovy.ast.expr.MethodCallExpression;
+import org.codehaus.groovy.ast.expr.NamedArgumentListExpression;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage;
 import org.codehaus.groovy.syntax.SyntaxException;
@@ -35,6 +41,8 @@ import static nextflow.script.ast.ASTUtils.*;
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 public class TypeCheckingVisitor extends ScriptVisitorSupport {
+
+    private static final ClassNode RECORD_TYPE = ClassHelper.makeCached(Record.class);
 
     private SourceUnit sourceUnit;
 
@@ -66,8 +74,25 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
     private void checkMethodCallArguments(MethodCallExpression node, MethodNode defNode) {
         var argsCount = asMethodCallArguments(node).size();
         var paramsCount = defNode.getParameters().length;
-        if( argsCount != paramsCount )
-            addError(String.format("Incorrect number of call arguments, expected %d but received %d", paramsCount, argsCount), node);
+        if( argsCount == paramsCount )
+            return;
+        if( isProcessCallWithNamedArgs(node) )
+            return;
+        addError(String.format("Incorrect number of call arguments, expected %d but received %d", paramsCount, argsCount), node);
+    }
+
+    private static boolean isProcessCallWithNamedArgs(MethodCallExpression node) {
+        var defNode = (MethodNode) node.getNodeMetaData(ASTNodeMarker.METHOD_TARGET);
+        var args = asMethodCallArguments(node);
+        return defNode instanceof ProcessNodeV2
+            && defNode.getParameters().length == 1
+            && isRecordType(defNode.getParameters()[0].getType())
+            && args.size() == 2
+            && args.get(0) instanceof NamedArgumentListExpression;
+    }
+
+    private static boolean isRecordType(ClassNode type) {
+        return RECORD_TYPE.equals(type) || type.redirect() instanceof RecordNode;
     }
 
     @Override

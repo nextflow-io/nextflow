@@ -20,6 +20,8 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
+import nextflow.dataflow.ChannelImpl
+import nextflow.dataflow.ValueImpl
 import nextflow.exception.MissingProcessException
 import nextflow.exception.MissingValueException
 import nextflow.exception.ScriptRuntimeException
@@ -136,19 +138,26 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
         }
     }
 
-    protected ChannelOut collectOutputs(List<String> emissions) {
+    protected Object collectOutputs(List<String> emissions) {
         // make sure feedback channel cardinality matches
         if( feedbackChannels && feedbackChannels.size() != emissions.size() )
             throw new ScriptRuntimeException("Workflow `$name` inputs and outputs do not have the same cardinality - Feedback loop is not supported"  )
 
-        final channels = new LinkedHashMap<String, DataflowWriteChannel>(emissions.size())
+        final channels = new LinkedHashMap<String,?>(emissions.size())
+        boolean typedDataflow = false
         for( int i=0; i<emissions.size(); i++ ) {
             final targetName = emissions[i]
             if( !binding.hasVariable(targetName) )
                 throw new MissingValueException("Missing workflow output parameter: $targetName")
             final obj = binding.getVariable(targetName)
 
-            if( CH.isChannel(obj) ) {
+            if( obj instanceof ChannelImpl || obj instanceof ValueImpl ) {
+                // TODO: feedbackChannels
+                typedDataflow = true
+                channels.put(targetName, obj)
+            }
+
+            else if( CH.isChannel(obj) ) {
                 channels.put(targetName, target(i, obj))
             }
 
@@ -168,7 +177,9 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
                 channels.put(targetName, value)
             }
         }
-        return new ChannelOut(channels)
+        return typedDataflow
+            ? (channels.size() == 1 && channels.containsKey('$out') ? channels['$out'] : channels)
+            : new ChannelOut(channels as Map<String,DataflowWriteChannel>)
     }
 
     protected DataflowWriteChannel target(int index, Object output) {
@@ -208,8 +219,10 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
         }
         else {
             // otherwise collect the outputs from the workflow binding
-            output = collectOutputs(declaredOutputs)
-            return output
+            final out = collectOutputs(declaredOutputs)
+            if( out instanceof ChannelOut )
+                this.output = out
+            return out
         }
     }
 

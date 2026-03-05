@@ -32,5 +32,5 @@ process bar {
 }
 
 workflow {
-    channel.of('foo') | foo | bar | view
+    bar(foo(channel.of('foo'))).view()
 }
