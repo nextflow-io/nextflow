@@ -12,6 +12,22 @@ export default async function createConfigAsync() {
       mermaid: true,
     },
     plugins: [
+      ['docusaurus-plugin-llms', {
+        id: 'llms-nextflow',
+        docsDir: 'docs',
+        llmsTxtFilename: 'llms-nextflow.txt',
+        title: 'Nextflow',
+        description: 'Documentation for Nextflow.',
+        rootContent: 'This file contains links to Nextflow documentation following the llmstxt.org standard.',
+        generateLLMsTxt: true,
+        generateLLMsFullTxt: false,
+        generateMarkdownFiles: true,
+        includeBlog: false,
+        excludeImports: true,
+        removeDuplicateHeadings: true,
+        ignoreFiles: ['**/tags', '**/tags/**'],
+        processingBatchSize: 50,
+      }],
       [
         "@docusaurus/plugin-content-docs",
         {
