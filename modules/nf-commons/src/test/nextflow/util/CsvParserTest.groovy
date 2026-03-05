@@ -94,4 +94,24 @@ class CsvParserTest extends Specification {
 
     }
 
+    def 'should handle comment character' () {
+
+        given:
+        def parser = new CsvParser()
+                    .setComment(COMMENT)
+
+        expect:
+        parser.parse(LINE) == EXPECTED
+
+        where:
+        LINE                        | COMMENT   | EXPECTED
+        'a,b,c'                     | '#'       | ['a','b','c']
+        'a,b # comment'             | '#'       | ['a','b ']
+        'a,b,c # comment'           | '#'       | ['a','b','c ']
+        'a # comment,ignored'       | '#'       | ['a ']
+        '# full line comment'       | '#'       | ['']
+        'a,b,c'                     | null      | ['a','b','c']
+        'a,b # not a comment'       | null      | ['a','b # not a comment']
+    }
+
 }

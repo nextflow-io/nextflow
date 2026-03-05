@@ -39,6 +39,22 @@ class CsvParser {
 
     private boolean strip
 
+    private char comment
+
+    CsvParser setComment(char ch) {
+        this.comment = ch
+        return this
+    }
+
+    CsvParser setComment(String ch) {
+        this.comment = firstChar(ch)
+        return this
+    }
+
+    char getComment() {
+        return this.comment
+    }
+
     CsvParser setQuote(char ch) {
         this.quote = ch
         return this
@@ -91,6 +107,11 @@ class CsvParser {
 
     private String readSimpleValue(String line, List<String> result) {
         def p = line.indexOf( (int)separator )
+        def c = comment ? line.indexOf( (int)comment ) : -1
+        if( c != -1 && (p == -1 || c < p) ) {
+            result.add(stripBlanks(line.substring(0,c)) ?: empty)
+            return null
+        }
         if( p == -1 ) {
             result.add(stripBlanks(line))
             return null
