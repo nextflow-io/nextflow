@@ -127,7 +127,10 @@ class CmdModuleSearchTest extends Specification {
 
         when:
         cmd.run()
-        def output = capture.toString().readLines().last
+        def output = capture.toString().readLines()
+            .findResults { line -> !line.contains('DEBUG') ? line : null }
+            .findResults { line -> !line.contains('INFO') ? line : null }
+            .findResults { line -> !line.contains('Searching for') ? line : null }.join("\n")
         def json = new JsonSlurper().parseText(output)
 
         then:
