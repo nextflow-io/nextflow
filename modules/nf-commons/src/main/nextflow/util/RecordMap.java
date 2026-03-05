@@ -64,4 +64,11 @@ public class RecordMap extends HashMap<String,Object> implements Record {
         return new RecordMap(DefaultGroovyMethods.subMap(this, keys));
     }
 
+    public RecordMap plus(RecordMap other) {
+        var result = new HashMap<String,Object>();
+        result.putAll(this);
+        result.putAll(other);
+        return new RecordMap(result);
+    }
+
 }

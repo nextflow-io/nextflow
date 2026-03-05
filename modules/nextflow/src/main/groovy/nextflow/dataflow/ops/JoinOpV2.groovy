@@ -82,37 +82,30 @@ class JoinOpV2 {
     private int count = 2
 
     private synchronized void onNext(DataflowWriteChannel target, Object value, int index) {
-        if( value !instanceof Map )
+        if( value !instanceof RecordMap )
             throw new ScriptRuntimeException("Operator `join` expected a record but received: ${value} [${value.class.simpleName}]")
         if( index == 0 ) {
-            final leftValue = value as Map
+            final leftValue = value as RecordMap
             final key = leftValue[pivot]
             final leftValues = mappingsLeft.computeIfAbsent(key, (k) -> new ArrayList<>())
             final rightValues = mappingsRight.computeIfAbsent(key, (k) -> new ArrayList<>())
             for( final rightValue : rightValues )
-                target << join0(leftValue, rightValue)
+                target << leftValue.plus(rightValue)
             if( !rightValues.isEmpty() )
                 emitted.add(key)
             leftValues.add(leftValue)
         }
         else if( index == 1 ) {
-            final rightValue = value as Map
+            final rightValue = value as RecordMap
             final key = rightValue[pivot]
             final leftValues = mappingsLeft.computeIfAbsent(key, (k) -> new ArrayList<>())
             final rightValues = mappingsRight.computeIfAbsent(key, (k) -> new ArrayList<>())
             for( final leftValue : leftValues )
-                target << join0(leftValue, rightValue)
+                target << leftValue.plus(rightValue)
             if( !leftValues.isEmpty() )
                 emitted.add(key)
             rightValues.add(rightValue)
         }
-    }
-
-    private static Record join0(Map<String,?> left, Map<String,?> right) {
-        final result = new HashMap<String,?>()
-        result.putAll(left)
-        result.putAll(right)
-        return new RecordMap(result)
     }
 
     private synchronized void onComplete(DataflowWriteChannel target, int index) {

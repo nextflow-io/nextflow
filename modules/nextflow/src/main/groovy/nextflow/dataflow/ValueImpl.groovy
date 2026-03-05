@@ -24,6 +24,7 @@ import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Global
 import nextflow.Session
 import nextflow.dag.NodeMarker
+import nextflow.dataflow.ops.CrossOpV2
 import nextflow.extension.CH
 import nextflow.extension.DataflowHelper
 
@@ -50,6 +51,22 @@ class ValueImpl {
         return source
     }
 
+    ValueImpl cross(Object other) {
+        DataflowVariable left = this.getSource()
+        DataflowVariable right
+        if( other instanceof ValueImpl ) {
+            right = other.getSource()
+        }
+        else {
+            right = CH.value()
+            right.bind(other)
+        }
+
+        final target = (DataflowVariable) new CrossOpV2(left, right).apply()
+        NodeMarker.addOperatorNode("cross", [left, right], [target])
+        return new ValueImpl(target)
+    }
+
     ChannelImpl flatMap(Function<?,Iterable> transform = null) {
         final target = CH.create()
         final onNext = { value ->
@@ -63,7 +80,7 @@ class ValueImpl {
         return new ChannelImpl(target)
     }
 
-    ValueImpl map(Function<?,?> transform) {
+    <V> ValueImpl map(Function<V,?> transform) {
         final target = CH.value()
         final onNext = { value ->
             target.bind(transform.apply(value))

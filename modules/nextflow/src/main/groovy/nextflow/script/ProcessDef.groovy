@@ -33,6 +33,9 @@ import nextflow.script.dsl.ProcessConfigBuilder
 import nextflow.script.params.BaseInParam
 import nextflow.script.params.BaseOutParam
 import nextflow.script.params.EachInParam
+import nextflow.script.params.v2.ProcessInputsDef
+import nextflow.script.types.Record
+import nextflow.util.RecordMap
 
 /**
  * Models a nextflow process definition
@@ -209,6 +212,9 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         final declaredInputs = config.getInputs()
         final declaredOutputs = config.getOutputs()
 
+        // combine named args if applicable
+        args = combineNamedArgs(args, declaredInputs)
+
         // validate arguments
         if( args.size() != declaredInputs.size() )
             throw new ScriptRuntimeException(missMatchErrMessage(processName, declaredInputs.size(), args.size()))
@@ -241,6 +247,23 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
             output instanceof DataflowVariable ? new ValueImpl(output) :
             output instanceof DataflowBroadcast ? new ChannelImpl(output) :
             null
+    }
+
+    private Object[] combineNamedArgs(Object[] args, ProcessInputsDef declaredInputs) {
+        if( !(args.length == 2 && args[0] instanceof Map) )
+            return args
+        if( !(declaredInputs.size() == 1 && Record.class.isAssignableFrom(declaredInputs[0].getType())) )
+            return args
+        final opts = (Map<String,Object>) args[0]
+        def result = args[1]
+        for( final name : opts.keySet() ) {
+            final value = opts[name]
+            if( result instanceof ChannelImpl )
+                result = result.cross(value).map { List rv -> ((RecordMap) rv[0]).plus(new RecordMap([(name): rv[1]])) }
+            else if( result instanceof ValueImpl )
+                result = result.cross(value).map { List rv -> ((RecordMap) rv[0]).plus(new RecordMap([(name): rv[1]])) }
+        }
+        return new Object[] { result }
     }
 
     private DataflowReadChannel createSourceChannel(Object value) {

@@ -160,7 +160,7 @@ class ChannelImpl {
         return new ChannelImpl(target)
     }
 
-    ChannelImpl map(Function<?,?> transform) {
+    <E> ChannelImpl map(Function<E,?> transform) {
         final source = getReadChannel()
         final target = CH.create()
         final onNext = { value ->
