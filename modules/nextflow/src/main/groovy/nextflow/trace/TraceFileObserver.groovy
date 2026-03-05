@@ -176,7 +176,6 @@ class TraceFileObserver implements TraceObserverV2 {
         }
         catch (Exception e) {
             log.warn "Failed to create trace file: ${tracePath.toUriString()} -- ${e.message}"
-            log.debug "Trace file creation error details", e
             return
         }
 
