@@ -955,4 +955,42 @@ class ScriptIncludesTest extends Dsl2Spec {
         cleanup:
         folder?.deleteDir()
     }
+
+    def 'should allow record types with same name in different modules' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+
+        folder.resolve('main.nf').text = '''
+            include { printSample } from './module.nf'
+
+            workflow {
+                s = record(id: '1', fastq: file('1.fastq'))
+                printSample(s)
+            }
+
+            record Sample {
+                id: String
+                fastq: Path
+            }
+            '''
+
+        folder.resolve('module.nf').text = '''
+            def printSample(s: Sample) {
+                println s
+            }
+
+            record Sample {
+                id: String
+                fastq: Path
+            }
+            '''
+
+        when:
+        runScript(folder.resolve('main.nf'))
+        then:
+        noExceptionThrown()
+
+        cleanup:
+        folder?.deleteDir()
+    }
 }

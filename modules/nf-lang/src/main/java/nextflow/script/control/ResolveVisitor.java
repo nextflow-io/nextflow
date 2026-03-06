@@ -172,7 +172,7 @@ public class ResolveVisitor extends ClassCodeExpressionTransformer {
         var name = type.getName();
         var module = sourceUnit.getAST();
         for( var cn : module.getClasses() ) {
-            if( name.equals(cn.getName()) ) {
+            if( name.equals(cn.getNameWithoutPackage()) ) {
                 if( cn != type )
                     type.setRedirect(cn);
                 return true;
