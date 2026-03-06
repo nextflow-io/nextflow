@@ -61,15 +61,12 @@ class CmdModuleRun extends CmdRun {
             throw new AbortOperationException("Arguments not provided")
         }
 
-        // Parse module reference (first argument starting with @)
-        String moduleRef = '@' + args[0]
-
         // Parse and validate module reference
         ModuleReference reference
         try {
-            reference = ModuleReference.parse(moduleRef)
+            reference = ModuleReference.parse(args[0])
         } catch( Exception e ) {
-            throw new AbortOperationException("Invalid module reference: ${moduleRef}", e)
+            throw new AbortOperationException("Invalid module reference: ${args[0]}", e)
         }
 
         // Get config

@@ -51,8 +51,8 @@ class PipelineSpec {
      * @param version The module version
      */
     void addModuleEntry(String moduleName, String version) {
-        // Normalize module name (ensure it starts with @)
-        def normalizedName = moduleName.startsWith('@') ? moduleName : '@' + moduleName
+        // Normalize module name (strip leading @ if present)
+        def normalizedName = moduleName.startsWith('@') ? moduleName.substring(1) : moduleName
 
         def spec = readSpecFile()
 
@@ -80,8 +80,6 @@ class PipelineSpec {
      * @return true if entry was removed, false if it didn't exist
      */
     boolean removeModuleEntry(String moduleName) {
-        // Normalize module name (ensure it starts with @)
-        def normalizedName = moduleName.startsWith('@') ? moduleName : '@' + moduleName
 
         def spec = readSpecFile()
 
@@ -89,10 +87,10 @@ class PipelineSpec {
              return false
         }
         final modules = spec.modules as Map<String,String>
-        if( modules.remove(normalizedName) == null )
+        if( modules.remove(moduleName) == null )
             return false
         writeSpecFile(spec)
-        log.info "Removed ${normalizedName} from ${SPEC_FILE_NAME}"
+        log.info "Removed ${moduleName} from ${SPEC_FILE_NAME}"
         return true
     }
     /**

@@ -56,10 +56,7 @@ class ModuleRegistryClient {
     }
 
     private String encodeName(String name) {
-        return URLEncoder.encode(
-            name.startsWith('@') ? name.substring(1) : name,
-            'UTF-8'
-        )
+        return URLEncoder.encode(name, 'UTF-8')
     }
 
     /**
@@ -443,11 +440,7 @@ class ModuleRegistryClient {
                     "  }\n"
             )
         }
-        try {
-            return publishModuleToRegistry(registryUrl, name, request, authToken)
-        } catch( Exception e ) {
-            throw new AbortOperationException("Failed to publish to ${registryUrl}", e)
-        }
+        return publishModuleToRegistry(registryUrl, name, request, authToken)
     }
 
     /**

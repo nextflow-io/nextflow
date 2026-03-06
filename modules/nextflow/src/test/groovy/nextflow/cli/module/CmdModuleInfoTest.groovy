@@ -177,7 +177,7 @@ class CmdModuleInfoTest extends Specification {
 
         then:
         json.name == 'nf-core/fastqc'
-        json.fullName == '@nf-core/fastqc'
+        json.fullName == 'nf-core/fastqc'
         json.version == '1.0.0'
         json.description == 'FastQC quality control'
         json.authors == ['nf-core']

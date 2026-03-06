@@ -90,8 +90,7 @@ class CmdModuleInfo extends CmdBase {
             throw new AbortOperationException("Incorrect number of arguments")
         }
 
-        def moduleRef = '@' + args[0]
-        def reference = ModuleReference.parse(moduleRef)
+        def reference = ModuleReference.parse(args[0])
 
         // Get config
         def baseDir = root ?: Paths.get('.').toAbsolutePath().normalize()
@@ -117,10 +116,10 @@ class CmdModuleInfo extends CmdBase {
             log.warn "Failed to fetch metadata from registry: ${e.message}"
         }
         if( !release ) {
-            throw new AbortOperationException("No release information available for ${reference.nameWithoutPrefix}")
+            throw new AbortOperationException("No release information available for ${reference}")
         }
         if( !release.metadata ) {
-            log.info("No metadata found for $reference.nameWithoutPrefix ${release.version ? "($release.version)" : ''}")
+            log.info("No metadata found for $reference ${release.version ? "($release.version)" : ''}")
         }
         def moduleUrl = buildModuleUrl(registryConfig.url, reference, release.version)
         if( !output || output == 'text' ) {
@@ -135,7 +134,7 @@ class CmdModuleInfo extends CmdBase {
     private void printFormattedInfo(ModuleReference reference, ModuleRelease release, String moduleUrl) {
         ModuleMetadata metadata = release.metadata
         println ""
-        println "Module:      ${reference.nameWithoutPrefix}"
+        println "Module:      ${reference}"
         println "Version:     ${release.version}"
         println "URL:         ${moduleUrl}"
         println "Description: ${metadata.description ?: release.description ?: 'N/A'}"
@@ -218,7 +217,7 @@ class CmdModuleInfo extends CmdBase {
 
     private List<String> generateUsageTemplate(ModuleReference reference, ModuleMetadata metadata) {
         def template = new ArrayList<String>()
-        template.add("nextflow module run ${reference.nameWithoutPrefix}".toString())
+        template.add("nextflow module run ${reference}".toString())
         if( version )
             template.add(" -version $version".toString())
 
@@ -281,7 +280,7 @@ class CmdModuleInfo extends CmdBase {
     private void printJsonInfo(ModuleReference reference, ModuleRelease release, String moduleUrl) {
         def metadata = release?.metadata
         def info = [
-            name       : reference.nameWithoutPrefix,
+            name       : reference.toString(),
             fullName   : reference.fullName,
             version    : release.version,
             url        : moduleUrl,
