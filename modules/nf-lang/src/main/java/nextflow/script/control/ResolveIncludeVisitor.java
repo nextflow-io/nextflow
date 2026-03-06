@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-import nextflow.module.spi.RemoteModuleResolverProvider;
 import nextflow.script.ast.FunctionNode;
 import nextflow.script.ast.IncludeNode;
 import nextflow.script.ast.ScriptNode;
@@ -85,7 +84,8 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
             return;
         }
 
-        var parent = source.startsWith("@") ? Path.of("modules") : Path.of(uri).getParent();
+        var isRemoteModule = ModuleResolver.isRemoteModule(source);
+        var parent = isRemoteModule ? Path.of("modules") : Path.of(uri).getParent();
         var includeUri = getIncludeUri(parent, source);
         if( !isIncludeStale(node, includeUri) )
             return;

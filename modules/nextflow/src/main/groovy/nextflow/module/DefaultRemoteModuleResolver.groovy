@@ -67,7 +67,7 @@ class DefaultRemoteModuleResolver implements RemoteModuleResolver {
             // Resolve module (will auto-install if missing or version mismatch)
             def mainFile = resolver.resolve(reference, null, true)
 
-            log.info "Module ${reference.nameWithoutPrefix} resolved to ${mainFile}"
+            log.debug "Module ${reference} resolved to ${mainFile}"
             return mainFile
         } catch (Exception e) {
             throw new IllegalModulePath(

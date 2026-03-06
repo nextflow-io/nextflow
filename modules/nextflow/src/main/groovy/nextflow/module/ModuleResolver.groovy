@@ -69,25 +69,27 @@ class ModuleResolver {
             def integrity = installed.integrity
             if( integrity == ModuleIntegrity.CORRUPTED ) {
                 throw new AbortOperationException(
-                    "Module ${reference.nameWithoutPrefix} is corrupted (missing required files). " +
+                    "Module ${reference} is corrupted (missing required files). " +
                         "Please remove and reinstall."
                 )
             }
 
             if( integrity == ModuleIntegrity.MODIFIED ) {
-                log.warn "Module ${reference.nameWithoutPrefix} has local modifications (checksum mismatch)"
+                log.warn1 "Module ${reference} has local modifications (checksum mismatch)"
+            } else if( integrity == ModuleIntegrity.NO_REMOTE_MODULE ) {
+                log.warn1 "Module ${reference} has no registry origin (.module-info missing)"
             }
 
             // Check if version matches
             if( targetVersion && installed.installedVersion != targetVersion ) {
                 if( autoInstall ) {
-                    log.info "Upgrading module ${reference.nameWithoutPrefix} from ${installed.installedVersion} to ${targetVersion}"
+                    log.info "Upgrading module ${reference} from ${installed.installedVersion} to ${targetVersion}"
                     return installModule(reference, targetVersion)
                 } else {
                     throw new AbortOperationException(
-                        "Module ${reference.nameWithoutPrefix} version mismatch: " +
+                        "Module ${reference} version mismatch: " +
                             "installed=${installed.installedVersion}, required=${targetVersion}. " +
-                            "Run 'nextflow module install ${reference.nameWithoutPrefix}@${targetVersion}' to update."
+                            "Run 'nextflow module install ${reference}@${targetVersion}' to update."
                     )
                 }
             }
@@ -101,17 +103,17 @@ class ModuleResolver {
             return installModule(reference, targetVersion)
         } else {
             throw new AbortOperationException(
-                "Module ${reference.nameWithoutPrefix} is not installed. " +
-                    "Run 'nextflow module install ${reference.nameWithoutPrefix}' to install."
+                "Module ${reference} is not installed. " +
+                    "Run 'nextflow module install ${reference}' to install."
             )
         }
     }
 
     String resolveVersion(ModuleReference reference) {
         final version = modulesConfig.getVersion(reference.fullName)
-            ?: registryClient.fetchModule(reference.fullName).latest?.version
+            ?: registryClient.fetchModule(reference.fullName)?.latest?.version
         if( !version ) {
-            throw new AbortOperationException("Module ${reference.nameWithoutPrefix} has no published versions")
+            throw new AbortOperationException("Module ${reference} has no published versions")
         }
         return version
     }
@@ -131,7 +133,7 @@ class ModuleResolver {
         if( storage.isInstalled(reference) ) {
             def installed = storage.getInstalledModule(reference)
             if( installed.installedVersion == version ) {
-                log.info "Module ${reference.nameWithoutPrefix}@${installed.installedVersion} is already installed (version $version)"
+                log.info "Module ${reference}@${installed.installedVersion} is already installed (version $version)"
                 return installed.mainFile
             }
 
@@ -139,14 +141,20 @@ class ModuleResolver {
             def integrity = installed.integrity
             if( integrity == ModuleIntegrity.MODIFIED && !force ) {
                 throw new AbortOperationException(
-                    "Module ${reference.nameWithoutPrefix} has local modifications. " +
+                    "Module ${reference} has local modifications. " +
+                        "Use --force to override, or save your changes first."
+                )
+            }
+            if( integrity == ModuleIntegrity.NO_REMOTE_MODULE && !force ) {
+                throw new AbortOperationException(
+                    " Folder 'modules/${reference}' already exists and is not a valid remote module. " +
                         "Use --force to override, or save your changes first."
                 )
             }
         }
 
 
-        log.info "Installing module ${reference.nameWithoutPrefix}@${version}..."
+        log.info "Installing module ${reference}@${version}..."
 
         // Download module package to temporary location
         Path tempFile = Files.createTempFile("nf-module-", ".tgz")
@@ -157,7 +165,7 @@ class ModuleResolver {
             // Install to modules directory (will compute directory checksum for future integrity checks)
             InstalledModule installed = storage.installModule(reference, version, tempFile)
 
-            log.info "Module ${reference.nameWithoutPrefix}@${version} installed successfully at ${installed.mainFile.parent}"
+            log.info "Module ${reference}@${version} installed successfully at ${installed.mainFile.parent}"
             return installed.mainFile
         }
         finally {

@@ -89,7 +89,7 @@ class CmdModuleRunTest extends Specification {
         def moduleRelease = new ModuleRelease()
         moduleRelease.version = '1.0.0'
         def module = new Module()
-        module.name = '@nf-core/test-module'
+        module.name = 'nf-core/test-module'
         module.latest = moduleRelease
         mockClient.fetchModule(_) >> module  // Use wildcard to match any argument
         mockClient.downloadModule(_, _, _) >> { String name, String version, Path dest ->
@@ -152,7 +152,7 @@ class CmdModuleRunTest extends Specification {
         def modulePackage = createModulePackage(moduleScript)
 
         def mockClient = Mock(ModuleRegistryClient)
-        mockClient.downloadModule('@nf-core/test-module', '2.0.0', _) >> { String name, String version, Path dest ->
+        mockClient.downloadModule('nf-core/test-module', '2.0.0', _) >> { String name, String version, Path dest ->
             Files.write(dest, modulePackage)
             return dest
         }

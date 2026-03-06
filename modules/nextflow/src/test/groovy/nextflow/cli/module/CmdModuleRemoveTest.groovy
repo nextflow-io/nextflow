@@ -51,7 +51,7 @@ class CmdModuleRemoveTest extends Specification {
 
         // Create spec file with module entry
         def specFile = new PipelineSpec(tempDir)
-        specFile.addModuleEntry('@nf-core/fastqc', '1.0.0')
+        specFile.addModuleEntry('nf-core/fastqc', '1.0.0')
 
         and:
         def cmd = new CmdModuleRemove()
@@ -71,7 +71,7 @@ class CmdModuleRemoveTest extends Specification {
 
         and:
         def spec = new PipelineSpec(tempDir)
-        spec.getModules().get('@nf-core/fastqc') == null
+        spec.getModules().get('nf-core/fastqc') == null
     }
 
     def 'should keep config with -keep-config flag'() {
@@ -82,7 +82,7 @@ class CmdModuleRemoveTest extends Specification {
 
         // Create spec file
         def specFile = new PipelineSpec(tempDir)
-        specFile.addModuleEntry('@nf-core/fastqc', '1.0.0')
+        specFile.addModuleEntry('nf-core/fastqc', '1.0.0')
 
         and:
         def cmd = new CmdModuleRemove()
@@ -101,7 +101,7 @@ class CmdModuleRemoveTest extends Specification {
 
         and:
         def spec = new PipelineSpec(tempDir)
-        spec.getModules().get('@nf-core/fastqc') == '1.0.0'
+        spec.getModules().get('nf-core/fastqc') == '1.0.0'
     }
 
     def 'should keep files with -keep-files flag'() {
@@ -112,7 +112,7 @@ class CmdModuleRemoveTest extends Specification {
 
         // Create spec file
         def specFile = new PipelineSpec(tempDir)
-        specFile.addModuleEntry('@nf-core/fastqc', '1.0.0')
+        specFile.addModuleEntry('nf-core/fastqc', '1.0.0')
 
         and:
         def cmd = new CmdModuleRemove()
@@ -132,7 +132,7 @@ class CmdModuleRemoveTest extends Specification {
 
         and:
         def spec = new PipelineSpec(tempDir)
-        spec.getModules().get('@nf-core/fastqc') == null
+        spec.getModules().get('nf-core/fastqc') == null
     }
 
     def 'should fail when both keep flags are set'() {

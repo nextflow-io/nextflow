@@ -76,9 +76,8 @@ public class ModuleResolver {
 
         var parent = Path.of(sourceUnit.getSource().getURI()).getParent();
 
-        // Resolve remote modules paths
-        if( source.startsWith("@") ) {
-            // Use SPI to get the remote module resolver implementation
+        // Resolve remote module paths (scope/name format, not starting with local prefixes)
+        if( isRemoteModule(source) ) {
             var modules = Path.of("./modules");
             var resolver = RemoteModuleResolverProvider.getInstance();
             resolver.resolve(source, modules.getParent());
@@ -96,6 +95,13 @@ public class ModuleResolver {
         if( includeSource.getAST() == null )
             return null;
         return includeSource;
+    }
+
+    static boolean isRemoteModule(String source) {
+        if( source.startsWith("/") || source.startsWith("./") || source.startsWith("../") )
+            return false;
+        // Must match scope/name pattern: scope is lowercase alphanumeric with dots/underscores/hyphens
+        return source.matches("^[a-z0-9][a-z0-9._\\-]*/[a-z][a-z0-9._\\-]*(/[a-z][a-z0-9._\\-]*)*$");
     }
 
     private static URI getIncludeUri(Path parent, String source) {

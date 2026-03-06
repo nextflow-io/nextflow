@@ -65,7 +65,7 @@ class CmdModuleListTest extends Specification {
         output.contains('1.0.0')
         output.contains('nf-core/multiqc')
         output.contains('2.1.0')
-        output.contains('OK') || output.contains('NO CHECKSUM')
+        output.contains('OK')
     }
 
     def 'should list installed modules with JSON output'() {
@@ -177,9 +177,8 @@ class CmdModuleListTest extends Specification {
             description: Test module
         """.stripIndent()
 
-        // Create checksum
-        def checksum = ModuleChecksum.compute(moduleDir)
-        moduleDir.resolve('.checksum').text = checksum
+        // Create .module-info
+        ModuleChecksum.save(moduleDir, ModuleChecksum.compute(moduleDir))
 
         return moduleDir
     }
