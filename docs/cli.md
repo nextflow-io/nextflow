@@ -284,7 +284,7 @@ $ nextflow module install nf-core/fastqc
 $ nextflow module install nf-core/fastqc -version 1.0.0
 ```
 
-After installation, module will be available in `modules/@nf-core/fastqc` and included in `nextflow_spec.json`
+After installation, module will be available in `modules/nf-core/fastqc` and included in `nextflow_spec.json`
 
 Use the `-force` flag to reinstall a module even if local modifications exist.
 

@@ -304,10 +304,10 @@ $ nextflow module install nf-core/fastqc
 $ nextflow module install nf-core/fastqc -version 1.0.0
 ```
 
-Installed modules are stored in the `modules/` directory and can be included using the registry syntax with the `@` prefix:
+Installed modules are stored in the `modules/` directory and can be included by name instead of by relative path:
 
 ```nextflow
-include { FASTQC } from '@nf-core/fastqc'
+include { FASTQC } from 'nf-core/fastqc'
 
 workflow {
     reads = Channel.fromFilePairs('data/*_{1,2}.fastq.gz')
@@ -332,8 +332,8 @@ Module versions are tracked in `nextflow_spec.json` in your project directory:
 ```json
 {
   "modules": {
-    "@nf-core/fastqc": "1.0.0",
-    "@nf-core/bwa-align": "1.2.0"
+    "nf-core/fastqc": "1.0.0",
+    "nf-core/bwa-align": "1.2.0"
   }
 }
 ```
@@ -361,7 +361,7 @@ Nextflow automatically verifies module integrity using checksums. If you modify 
 
 ```console
 $ nextflow module install nf-core/fastqc -version 1.1.0
-Warning: Module @nf-core/fastqc has local modifications. Use -force to override.
+Warning: Module nf-core/fastqc has local modifications. Use -force to override.
 ```
 
 Use the `-force` flag to override local modifications when needed.
@@ -442,7 +442,7 @@ Registry modules follow a standard directory structure:
 
 ```
 modules/
-└── @scope/
+└── scope/
     └── module-name/
         ├── .checksum        # Integrity checksum (generated automatically)
         ├── README.md        # Documentation (required for publishing)
