@@ -52,7 +52,7 @@ process fastqc {
 
     script:
     """
-    echo 'meta: ${meta}`
+    echo 'meta: ${meta}'
     echo 'fastq: ${fastq}'
     echo 'extra_args: ${extra_args}'
     """
@@ -101,7 +101,7 @@ process fastqc {
 
     script:
     """
-    echo 'id: ${sample.id}`
+    echo 'id: ${sample.id}'
     echo 'fastq: ${sample.fastq}'
     """
 }
@@ -124,7 +124,7 @@ process fastqc {
 
     script:
     """
-    echo 'id: ${sample.id}`
+    echo 'id: ${sample.id}'
     echo 'fastq: ${sample.fastq}'
     """
 }
@@ -148,7 +148,7 @@ process fastqc {
 
     script:
     """
-    echo 'id: ${id}`
+    echo 'id: ${id}'
     echo 'fastq: ${fastq}'
     """
 }
