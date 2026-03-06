@@ -68,9 +68,7 @@ class CmdModuleRemove extends CmdBase {
             throw new AbortOperationException("Cannot use both -keep-config and -keep-files flags together")
         }
 
-        def moduleRef = '@' + args[0]
-
-        def reference = ModuleReference.parse(moduleRef)
+        def reference = ModuleReference.parse(args[0])
 
         // Get config
         def baseDir = root ?: Paths.get('.').toAbsolutePath().normalize()
@@ -87,15 +85,15 @@ class CmdModuleRemove extends CmdBase {
 
             // Remove local files unless -keep-files is set
             if( !keepFiles ) {
-                println "Removing module files for ${reference.nameWithoutPrefix}..."
+                println "Removing module files for ${reference}..."
                 filesRemoved = storage.removeModule(reference)
                 if( filesRemoved ) {
                     println "Module files removed successfully"
                 } else {
-                    println "Module ${reference.nameWithoutPrefix} was not installed locally"
+                    println "Module ${reference} was not installed locally"
                 }
             } else {
-                println "Keeping module files for ${reference.nameWithoutPrefix} (due to -keep-files flag)"
+                println "Keeping module files for ${reference} (due to -keep-files flag)"
             }
 
             // Remove config entry unless -keep-config is set
@@ -105,7 +103,7 @@ class CmdModuleRemove extends CmdBase {
                 if( configRemoved ) {
                     println "Module entry removed from configuration"
                 } else {
-                    println "Module ${reference.nameWithoutPrefix} was not configured in nextflow_spec.json"
+                    println "Module ${reference} was not configured in nextflow_spec.json"
                 }
             } else {
                 println "Keeping module entry in nextflow_spec.json (due to -keep-config flag)"
@@ -113,9 +111,9 @@ class CmdModuleRemove extends CmdBase {
 
             // Summary
             if( filesRemoved || configRemoved ) {
-                println "\nModule ${reference.nameWithoutPrefix} removal completed"
+                println "\nModule ${reference} removal completed"
             } else {
-                println "\nModule ${reference.nameWithoutPrefix} was not found"
+                println "\nModule ${reference} was not found"
             }
         }
         catch( AbortOperationException e ) {

@@ -58,33 +58,40 @@ class CmdModule extends CmdBase implements UsageAware {
 
 **Research Question**: How to extend `include` statement parsing for registry modules?
 
-**Decision**: Extend ResolveIncludeVisitor to detect `@` prefix and delegate to ModuleResolver
+**Decision**: Extend `ResolveIncludeVisitor` to detect `@` prefix and delegate to a `RemoteModuleResolver` SPI loaded via Java `ServiceLoader`
 
 **Rationale**:
-- IncludeNode already captures source path as string
-- Detection: `source.startsWith('@')` distinguishes registry vs local paths
-- Resolution happens at parse time (after plugin resolution) per ADR
-- Preserves existing local file include behavior
+- Keeps `nf-lang` decoupled from runtime module resolution (`nf-lang` has no dependency on `nextflow` module)
+- SPI pattern allows plugins or custom implementations to override the default resolver
+- Detection: `source.startsWith('@')` distinguishes registry vs local paths — preserves existing include behavior
+- Resolution at parse time (after plugin resolution) per ADR
 
-**Reference Implementation**:
+**Implemented Architecture**:
 ```
-Location: modules/nf-lang/src/main/java/nextflow/script/ResolveIncludeVisitor.java
-Extension Point: visitInclude() method
-Pattern:
-  1. Check if source starts with '@'
-  2. If yes: call ModuleResolver.resolve(source, configuredVersion)
-  3. ModuleResolver returns absolute path to modules/@scope/name/main.nf
-  4. Continue with standard include processing
+include { X } from '@scope/name'
+      ↓
+ResolveIncludeVisitor.visitInclude()  [nf-lang]
+  source.startsWith("@") → RemoteModuleResolverProvider.getInstance().resolve(source, baseDir)
+      ↓
+RemoteModuleResolverProvider  [nf-lang]
+  Java ServiceLoader discovers implementations; picks highest priority
+      ↓
+DefaultRemoteModuleResolver  [nextflow module]
+  Calls ModuleResolver.installModule(reference, version, autoInstall=true)
+  Returns Path to modules/@scope/name/main.nf
 ```
 
 **Key Files**:
-- `IncludeNode.java` - AST representation
-- `IncludeEntryNode.java` - Individual entries
-- `ResolveIncludeVisitor.java` - Visitor for resolution
+- `modules/nf-lang/src/main/java/nextflow/module/spi/RemoteModuleResolver.java` — SPI interface
+- `modules/nf-lang/src/main/java/nextflow/module/spi/RemoteModuleResolverProvider.java` — ServiceLoader singleton
+- `modules/nf-lang/src/main/java/nextflow/module/spi/FallbackRemoteModuleResolver.java` — error fallback
+- `modules/nf-lang/src/main/java/nextflow/script/control/ResolveIncludeVisitor.java` — MODIFIED
+- `modules/nextflow/src/main/groovy/nextflow/module/DefaultRemoteModuleResolver.groovy` — default impl
 
 **Alternatives Considered**:
-- New ANTLR grammar token for `@`: Rejected - unnecessary parser complexity
-- Dot file marker for local modules: Deferred to Open Questions in ADR
+- New ANTLR grammar token for `@`: Rejected — unnecessary parser complexity
+- Direct dependency from nf-lang to nextflow module: Rejected — circular dependency risk; SPI decouples cleanly
+- Dot file marker for local modules: Deferred in ADR; current impl uses `@` for registry, `.`/`/` for local
 
 ---
 
@@ -326,7 +333,7 @@ class ModuleChecksum {
 | Area | Decision | Key Reference |
 |------|----------|---------------|
 | CLI | JCommander subcommands; each extends CmdBase (ModuleRun extends CmdRun) | CmdModule.groovy |
-| DSL Parser | Extend ResolveIncludeVisitor for `@scope/name` — pending | ResolveIncludeVisitor.java |
+| DSL Parser | SPI pattern — ResolveIncludeVisitor delegates to RemoteModuleResolver; DefaultRemoteModuleResolver bridges to ModuleResolver | ResolveIncludeVisitor.java, RemoteModuleResolver.java |
 | Config | ModulesConfig + RegistryConfig (ConfigScope) | FusionConfig.groovy, ConfigScope.java |
 | Registry HTTP | ModuleRegistryClient using HxClient + npr-api models | HttpPluginRepository.groovy |
 | Authentication | `NXF_REGISTRY_TOKEN` env var or `registry.apiKey` config field (primary registry only) | RegistryConfig.groovy |
@@ -342,4 +349,4 @@ class ModuleChecksum {
 1. **Local vs managed module distinction**: Resolved — `@` prefix for registry modules only; local paths start with `.` or `/`
 2. **Tool arguments**: Removed from ADR — not in scope
 3. **Module version location**: Resolved — `nextflow_spec.json` (auto-managed by `module install`); `modules {}` block in `nextflow.config` supported as alternative
-4. **DSL parser `@scope/name` include**: Pending (T017)
+4. **DSL parser `@scope/name` include**: ✅ Resolved — SPI pattern implemented (T017a-d)

@@ -33,7 +33,7 @@ import java.security.MessageDigest
 class ModuleChecksum {
 
     public static final String CHECKSUM_ALGORITHM = "SHA-256"
-    public static final String CHECKSUM_FILE = ".checksum"
+    public static final String MODULE_INFO_FILE = ".module-info"
 
     /**
      * Compute the SHA-256 checksum of a module directory
@@ -54,7 +54,7 @@ class ModuleChecksum {
             try( final walkStream = Files.walk(moduleDir) ) {
                 walkStream
                     .filter { Path path -> Files.isRegularFile(path) }
-                    .filter { Path path -> !path.fileName.toString().equals(CHECKSUM_FILE) }
+                    .filter { Path path -> !path.fileName.toString().equals(MODULE_INFO_FILE) }
                     .sorted()
                     .each { Path path -> files.add(path) }
             }
@@ -85,28 +85,35 @@ class ModuleChecksum {
     }
 
     /**
-     * Save a checksum to the .checksum file in the module directory
+     * Save a checksum to the .module-info file in the module directory
      *
      * @param moduleDir The module directory path
      * @param checksum The checksum to save
      */
     static void save(Path moduleDir, String checksum) {
-        def checksumFile = moduleDir.resolve(CHECKSUM_FILE)
-        Files.writeString(checksumFile, checksum)
+        def moduleInfoFile = moduleDir.resolve(MODULE_INFO_FILE)
+        def props = new Properties()
+        // If file exists loads to update current just checksum property
+        if( Files.exists( moduleInfoFile))
+            moduleInfoFile.withInputStream { is -> props.load(is) }
+        props.setProperty('checksum', checksum)
+        moduleInfoFile.withOutputStream { os -> props.store(os, null) }
     }
 
     /**
-     * Load a checksum from the .checksum file in the module directory
+     * Load a checksum from the .module-info file in the module directory
      *
      * @param moduleDir The module directory path
      * @return The checksum, or null if file doesn't exist
      */
     static String load(Path moduleDir) {
-        def checksumFile = moduleDir.resolve(CHECKSUM_FILE)
-        if( !Files.exists(checksumFile) ) {
+        def moduleInfoFile = moduleDir.resolve(MODULE_INFO_FILE)
+        if( !Files.exists(moduleInfoFile) ) {
             return null
         }
-        return checksumFile.text
+        def props = new Properties()
+        moduleInfoFile.withInputStream { is -> props.load(is) }
+        return props.getProperty('checksum')
     }
 
     /**

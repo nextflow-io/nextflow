@@ -111,7 +111,7 @@ class CmdModuleList extends CmdBase {
 
         installed.each { module ->
             def status = getStatusString(module.integrity)
-            println "${module.reference.nameWithoutPrefix.padRight(40)}${(module.installedVersion ?: 'unknown').padRight(15)}${status}"
+            println "${module.reference.toString().padRight(40)}${(module.installedVersion ?: 'unknown').padRight(15)}${status}"
         }
         println ""
     }
@@ -119,7 +119,7 @@ class CmdModuleList extends CmdBase {
     private void printJsonList(List<InstalledModule> installed) {
         def modules = installed.collect { module ->
             [
-                name     : module.reference.nameWithoutPrefix,
+                name     : module.reference.toString(),
                 version  : module.installedVersion ?: 'unknown',
                 integrity: module.integrity.toString(),
                 directory: module.directory.toString()
@@ -136,8 +136,8 @@ class CmdModuleList extends CmdBase {
                 return 'OK'
             case ModuleIntegrity.MODIFIED:
                 return 'MODIFIED'
-            case ModuleIntegrity.MISSING_CHECKSUM:
-                return 'NO CHECKSUM'
+            case ModuleIntegrity.NO_REMOTE_MODULE:
+                return 'LOCAL'
             case ModuleIntegrity.CORRUPTED:
                 return 'CORRUPTED'
             default:
