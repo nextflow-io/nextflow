@@ -186,7 +186,7 @@ class ModuleResolverTest extends Specification {
         then:
         def e = thrown(AbortOperationException)
         e.message.contains('local modifications')
-        e.message.contains('--force')
+        e.message.contains('-force')
 
         cleanup:
         FileHelper.deletePath(moduleDir)

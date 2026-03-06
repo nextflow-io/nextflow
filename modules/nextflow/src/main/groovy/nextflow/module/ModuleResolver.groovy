@@ -142,13 +142,13 @@ class ModuleResolver {
             if( integrity == ModuleIntegrity.MODIFIED && !force ) {
                 throw new AbortOperationException(
                     "Module ${reference} has local modifications. " +
-                        "Use --force to override, or save your changes first."
+                        "Use '-force' to override, or save your changes first."
                 )
             }
             if( integrity == ModuleIntegrity.NO_REMOTE_MODULE && !force ) {
                 throw new AbortOperationException(
-                    " Folder 'modules/${reference}' already exists and is not a valid remote module. " +
-                        "Use --force to override, or save your changes first."
+                    "Folder 'modules/${reference}' already exists and is not a valid remote module. " +
+                        "Use '-force' to override, or save your changes first."
                 )
             }
         }

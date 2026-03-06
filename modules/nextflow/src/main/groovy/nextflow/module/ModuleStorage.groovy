@@ -43,6 +43,7 @@ import java.util.zip.ZipInputStream
 class ModuleStorage {
     public static final String MODULE_MANIFEST_FILE = "meta.yml"
     public static final String MODULE_README_FILE = "README.md"
+    public static final String MODULE_INFO_FILE = ".module-info"
     private final Path modulesDir
 
     /**
@@ -74,6 +75,16 @@ class ModuleStorage {
     }
 
     /**
+     * Get the module info path for a specific module
+     *
+     * @param reference The module reference
+     * @return The module info path
+     */
+    Path getModuleInfo(ModuleReference reference) {
+        return modulesDir.resolve(reference.scope).resolve(reference.name).resolve(MODULE_INFO_FILE)
+    }
+
+    /**
      * Check if a module is installed locally
      *
      * @param reference The module reference
@@ -101,7 +112,7 @@ class ModuleStorage {
             directory: moduleDir,
             mainFile: moduleDir.resolve(Const.DEFAULT_MAIN_FILE_NAME),
             manifestFile: moduleDir.resolve(MODULE_MANIFEST_FILE),
-            moduleInfoFile: moduleDir.resolve(ModuleChecksum.MODULE_INFO_FILE),
+            moduleInfoFile: moduleDir.resolve(MODULE_INFO_FILE),
         )
 
         // Load checksum if available
@@ -125,7 +136,7 @@ class ModuleStorage {
         try( final walkStream = Files.walk(modulesDir) ) {
             walkStream
                 .filter { Path path -> Files.isDirectory(path) }
-                .filter { Path path -> Files.exists(path.resolve(ModuleChecksum.MODULE_INFO_FILE)) }
+                .filter { Path path -> Files.exists(path.resolve(MODULE_INFO_FILE)) }
                 .each { Path moduleDir ->
                     try {
                         def rel = modulesDir.relativize(moduleDir)
@@ -199,21 +210,33 @@ class ModuleStorage {
      * Remove an installed module
      *
      * @param reference The module reference
+     * @param force Force local module folder
      * @return true if module was removed, false if not installed
      */
-    boolean removeModule(ModuleReference reference) {
-        def moduleDir = getModuleDir(reference)
+    boolean removeModule(ModuleReference reference, boolean force) {
+        final installed = getInstalledModule(reference)
+        if( !installed )
+            return
+        final integrity = installed.integrity
+        if( integrity == ModuleIntegrity.NO_REMOTE_MODULE && !force ) {
+            throw new AbortOperationException(
+                "Folder 'modules/${reference}' already exists and is not a valid remote module ($MODULE_INFO_FILE missing). " +
+                    "Use '-force' to remove, or save your changes first.")
+        }
 
-        if (!Files.exists(moduleDir)) {
-            return false
+        if( integrity == ModuleIntegrity.MODIFIED && !force ) {
+            throw new AbortOperationException(
+                "Module ${reference} has local modifications. " +
+                    "Use '-force' to remove, or save your changes first."
+            )
         }
 
         try {
-            FileHelper.deletePath(moduleDir)
+            FileHelper.deletePath(installed.directory)
             log.debug "Removed module: ${reference}"
 
             // Clean up empty scope directory
-            def scopeDir = moduleDir.parent
+            def scopeDir = installed.directory.parent
             if (Files.exists(scopeDir) && isEmpty(scopeDir)) {
                 Files.delete(scopeDir)
             }
@@ -377,7 +400,7 @@ class ModuleStorage {
         try ( def tarStream = Files.list(currentPath)) {
             tarStream.each { Path path ->
                 // Skip .module-info file when creating bundle
-                if (path.fileName.toString() == ModuleChecksum.MODULE_INFO_FILE) {
+                if (path.fileName.toString() == MODULE_INFO_FILE) {
                     return
                 }
 

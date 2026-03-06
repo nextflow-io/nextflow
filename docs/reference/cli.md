@@ -1284,8 +1284,8 @@ The `module` command provides a comprehensive system for managing reusable, regi
 : By default, removes both local files and configuration entries. Use options to control what gets removed.
 : The following options are available:
 
-  `-keep-config`
-  : Keep the version entry in `nextflow_spec.json` but delete local files from the `modules/` directory.
+  `-force`
+  : Force removal even if the module has no `.module-info` file (i.e. not installed from a registry) or has local modifications.
 
   `-keep-files`
   : Remove the version entry from `nextflow_spec.json` but keep local files in the `modules/` directory.
@@ -1295,9 +1295,6 @@ The `module` command provides a comprehensive system for managing reusable, regi
   ```console
   # Remove module completely
   $ nextflow module remove nf-core/fastqc
-
-  # Delete files but keep version config
-  $ nextflow module remove nf-core/fastqc -keep-config
 
   # Remove from config but keep local files
   $ nextflow module remove nf-core/fastqc -keep-files

@@ -368,11 +368,10 @@ Use this to clean up unused modules, free disk space, or remove deprecated modul
 
 ```console
 $ nextflow module remove nf-core/fastqc
-$ nextflow module remove nf-core/fastqc -keep-config
 $ nextflow module remove nf-core/fastqc -keep-files
 ```
 
-By default, both local files and configuration entries are removed. Use `-keep-config` to preserve version information in `nextflow_spec.json`, or `-keep-files` to remove only the configuration entry while keeping local files.
+By default, both local files and configuration entries are removed. Use `-keep-files` to remove the configuration entry and `.module-info` while keeping local files.
 
 See {ref}`cli-module-remove` for more information.
 
