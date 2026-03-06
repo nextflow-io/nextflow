@@ -27,7 +27,7 @@ A pipeline developer wants to use a pre-built module from the Nextflow registry 
 
 **Acceptance Scenarios**:
 
-1. **Given** a new Nextflow project with no modules installed, **When** user runs `nextflow module install nf-core/fastqc`, **Then** the module is downloaded to `modules/@nf-core/fastqc/`, a `.checksum` file is created, and `nextflow.config` is updated with the version
+1. **Given** a new Nextflow project with no modules installed, **When** user runs `nextflow module install nf-core/fastqc`, **Then** the module is downloaded to `modules/@nf-core/fastqc/`, a `.checksum` file is created, and `nextflow_spec.json` is updated with the version
 2. **Given** a workflow file with `include { FASTQC } from '@nf-core/fastqc'`, **When** user runs `nextflow run main.nf`, **Then** Nextflow resolves the module from local storage and executes the process
 3. **Given** a module version declared in `nextflow.config`, **When** user includes the module, **Then** the declared version is used (not latest)
 
@@ -75,7 +75,7 @@ A pipeline developer wants to pin and manage module versions to ensure reproduci
 
 **Acceptance Scenarios**:
 
-1. **Given** a module is installed at version 1.0.0, **When** user changes `nextflow.config` to specify version 1.1.0 and runs the workflow, **Then** version 1.1.0 is automatically downloaded and replaces the local copy
+1. **Given** a module is installed at version 1.0.0, **When** user changes `nextflow_spec.json` to specify version 1.1.0 and runs the workflow, **Then** version 1.1.0 is automatically downloaded and replaces the local copy
 2. **Given** modules installed locally, **When** user runs `nextflow module list`, **Then** configured version, installed version, latest available version, and status are displayed for each module
 
 ---
@@ -106,7 +106,7 @@ A pipeline developer wants to remove a module they no longer need.
 
 **Acceptance Scenarios**:
 
-1. **Given** a module is installed, **When** user runs `nextflow module remove nf-core/fastqc`, **Then** the module directory is deleted and the entry is removed from `nextflow.config`
+1. **Given** a module is installed, **When** user runs `nextflow module remove nf-core/fastqc`, **Then** the module directory is deleted and the entry is removed from `nextflow_spec.json`
 2. **Given** a module is referenced in workflow files, **When** user runs `nextflow module remove`, **Then** a warning is displayed about the reference but removal proceeds
 
 ---
@@ -166,7 +166,7 @@ A module author wants to publish their module to the Nextflow registry for other
 
 - **FR-001**: System MUST recognize `@scope/name` syntax in `include` statements as registry module references
 - **FR-002**: System MUST distinguish between local file paths (starting with `.` or `/`) and registry modules (starting with `@`)
-- **FR-003**: System MUST resolve module versions from `nextflow.config` `modules {}` block before downloading
+- **FR-003**: System MUST resolve module versions from `nextflow_spec.json` before downloading
 - **FR-004**: System MUST parse and validate `meta.yaml` files for module metadata and dependencies
 
 #### Module Resolution
@@ -192,12 +192,13 @@ A module author wants to publish their module to the Nextflow registry for other
 - **FR-017**: System MUST provide `nextflow module remove scope/name` command to delete modules
 - **FR-018**: System MUST provide `nextflow module publish scope/name` command to upload modules to registry
 - **FR-019**: System MUST provide `nextflow module run scope/name` command to execute modules directly
+- **FR-019b**: System MUST provide `nextflow module info scope/name` command to display module metadata and a usage template
 
 #### Configuration
 
-- **FR-020**: System MUST read module versions from `modules {}` block in `nextflow.config`
-- **FR-021**: System MUST support `registry {}` block for configuring registry URL and authentication
-- **FR-022**: System MUST support `NXF_REGISTRY_TOKEN` environment variable for authentication
+- **FR-020**: System MUST persist module versions in `nextflow_spec.json`; MUST also read versions from `modules {}` block in `nextflow.config` as an alternative
+- **FR-021**: System MUST support `registry {}` block with `url` and `apiKey` fields for configuring registry URL and authentication
+- **FR-022**: System MUST support `NXF_REGISTRY_TOKEN` environment variable as fallback for `registry.apiKey`
 - **FR-023**: System MUST support multiple registry URLs with fallback ordering
 
 #### Module Parameters

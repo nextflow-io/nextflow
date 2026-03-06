@@ -22,7 +22,7 @@ nextflow module install nf-core/fastqc
 nextflow module install nf-core/fastqc -version 1.0.0
 ```
 
-This downloads the module to `modules/@nf-core/fastqc/` and updates `nextflow.config`.
+This downloads the module to `modules/@nf-core/fastqc/` and updates `nextflow_spec.json` with the installed version.
 
 ### Use in your workflow
 
@@ -52,11 +52,8 @@ Execute a module without writing a wrapper workflow:
 # Basic usage
 nextflow module run nf-core/fastqc --input 'data/*.fastq.gz'
 
-# With tool arguments
-nextflow module run nf-core/bwa-align \
-    --reads 'samples/*_{1,2}.fastq.gz' \
-    --reference genome.fa \
-    --tools:bwa:K 100000000
+# Run specific version
+nextflow module run nf-core/fastqc --input 'data/*.fastq.gz' -version 1.0.0
 
 # With Nextflow options
 nextflow module run nf-core/salmon \
@@ -66,18 +63,43 @@ nextflow module run nf-core/salmon \
     -resume
 ```
 
+## 3. View Module Information
+
+```bash
+# Show module metadata and a generated usage template
+nextflow module info nf-core/fastqc
+
+# Show a specific version
+nextflow module info nf-core/fastqc -version 1.0.0
+
+# JSON output for scripting
+nextflow module info nf-core/fastqc -json
+```
+
 ---
 
-## 3. Manage Module Versions
+## 4. Manage Module Versions
 
-### Configure versions in nextflow.config
+### Version tracking
 
-```groovy
-// nextflow.config
+Module versions are automatically recorded in `nextflow_spec.json` by `nextflow module install`. You can also pin versions manually:
+
+```json
+// nextflow_spec.json
+{
+  "modules": {
+    "@nf-core/fastqc": "1.0.0",
+    "@nf-core/bwa-align": "1.2.0"
+  }
+}
+```
+
+Alternatively, declare versions in `nextflow.config` (not currently used):
+
+```nextflow
 modules {
     '@nf-core/fastqc' = '1.0.0'
     '@nf-core/bwa-align' = '1.2.0'
-    '@nf-core/samtools' = '2.1.0'
 }
 ```
 
@@ -96,17 +118,11 @@ nextflow module list
 
 ### Update a module
 
-Change the version in `nextflow.config`, then run your workflow. Nextflow automatically downloads the new version.
-
-```groovy
-modules {
-    '@nf-core/fastqc' = '1.2.0'  // Changed from 1.0.0
-}
-```
+Change the version in `nextflow_spec.json` (or `nextflow.config`), then run your workflow. Nextflow automatically downloads the new version.
 
 ---
 
-## 4. Search for Modules
+## 5. Search for Modules
 
 ```bash
 # Search by keyword
@@ -121,69 +137,19 @@ nextflow module search bwa -json
 
 ---
 
-## 5. Configure Tool Arguments
-
-### Define in meta.yaml (module author)
-
-```yaml
-# modules/@nf-core/bwa-align/meta.yaml
-tools:
-  - bwa:
-      description: BWA aligner
-      args:
-        K:
-          flag: "-K"
-          type: integer
-          description: "Process INT input bases in each batch"
-        Y:
-          flag: "-Y"
-          type: boolean
-          description: "Use soft clipping for supplementary alignments"
-```
-
-### Configure in nextflow.config (user)
-
-```groovy
-// nextflow.config
-process {
-    withName: 'BWA_ALIGN' {
-        tools.bwa.args.K = 100000000
-        tools.bwa.args.Y = true
-    }
-}
-```
-
-### Access in script (module author)
-
-```groovy
-// main.nf
-process BWA_ALIGN {
-    script:
-    """
-    bwa mem ${tools.bwa.args} -t $task.cpus $index $reads
-    """
-}
-```
-
----
-
 ## 6. Work with Private Registries
 
 ### Configure authentication
 
-```groovy
+```nextflow
 // nextflow.config
 registry {
     // Multiple registries (tried in order)
     url = [
         'https://private.registry.myorg.com',
-        'https://registry.nextflow.io'
+        'https://registry.nextflow.io/api'
     ]
-
-    auth {
-        'private.registry.myorg.com' = '${MYORG_TOKEN}'
-        'registry.nextflow.io' = '${NXF_REGISTRY_TOKEN}'
-    }
+    apiKey = 'MYORG_TOKEN'  // Applied to the primary (first) registry only
 }
 ```
 
@@ -254,13 +220,6 @@ nextflow module remove nf-core/fastqc -keep-files
 ---
 
 ## Common Patterns
-
-### Install all configured modules
-
-```bash
-# Installs all modules listed in nextflow.config
-nextflow module install
-```
 
 ### Offline operation
 

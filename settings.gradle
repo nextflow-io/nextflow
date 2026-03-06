@@ -50,3 +50,4 @@ include 'plugins:nf-k8s'
 include 'plugins:nf-seqera'
 
 //includeBuild '../sched'
+//includeBuild('../plugin-registry')
