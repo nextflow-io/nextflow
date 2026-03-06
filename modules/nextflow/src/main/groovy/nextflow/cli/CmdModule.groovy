@@ -22,6 +22,7 @@ import com.beust.jcommander.ParameterException
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.cli.module.CmdModuleSpec
 import nextflow.cli.module.CmdModuleInfo
 import nextflow.cli.module.CmdModuleInstall
 import nextflow.cli.module.CmdModuleList
@@ -48,6 +49,7 @@ class CmdModule extends CmdBase implements UsageAware {
     static final List<CmdBase> commands = new ArrayList<>()
 
     static {
+        commands << new CmdModuleSpec()
         commands << new CmdModuleInstall()
         commands << new CmdModuleRun()
         commands << new CmdModuleList()
@@ -136,7 +138,7 @@ class CmdModule extends CmdBase implements UsageAware {
             result << 'Commands:'
             commands.each {
                 def description = it.getClass().getAnnotation(Parameters)?.commandDescription()
-                result << "  ${it.name.padRight(12)}${description}"
+                result << "  ${it.name.padRight(15)}${description}"
             }
             result << ''
             println result.join('\n').toString()

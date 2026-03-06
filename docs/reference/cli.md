@@ -1331,6 +1331,69 @@ The `module` command provides a comprehensive system for managing reusable, regi
   $ nextflow module publish myorg/my-module -registry 'https://custom.registry.com'
   ```
 
+(cli-module-spec)=
+
+`spec [options] <module-ref-or-path>`
+
+: Generate a `meta.yml` manifest for a local module by statically analysing its `main.nf`.
+: Parses the first `process` block and extracts input/output channel declarations with inferred types. The generated file includes `TODO` placeholders for any field not supplied via a flag.
+: The argument can be:
+  - A module reference in `scope/name` format (e.g. `nf-core/fastqc`). If the module is installed locally under `modules/@scope/name`, the module name in the generated `meta.yml` is set to `scope/name` automatically and `-scope` is ignored.
+  - A directory path to a local module (e.g. `./modules/my-module`). In this case, `-scope` is **required** to form the module name as `scope/process-name`.
+: The following options are available:
+
+  `-scope <scope>`
+  : Module scope, used to construct the module name as `scope/process-name` when the argument is a directory path. Required when a path is provided; ignored when an installed module reference is resolved.
+
+  `-version <version>`
+  : Module version string (e.g. `1.0.0`). Defaults to `TODO: Add version`.
+
+  `-description <text>`
+  : Short description of what the module does. Defaults to `TODO: Add description`.
+
+  `-license <identifier>`
+  : SPDX license identifier (e.g. `MIT`, `Apache-2.0`). Defaults to `TODO: Add license (e.g., MIT)`.
+
+  `-author <name>`
+  : Module author. May be specified multiple times, once per author. Defaults to `[TODO: Add author]`.
+
+  `-force`
+  : Overwrite an existing `meta.yml` without prompting.
+
+  `-dry-run`
+  : Print the generated YAML to stdout without writing any file.
+
+: **Type detection hints (shown in the generated file header):**
+: - `val` channels are inferred as `string`; manually change to `map` for structured meta objects.
+: - `path` outputs with glob patterns (`*`, `?`, `{}`, `[]`) resolve to `list`; literal filenames resolve to `file`.
+: - `arity: '1'` forces `file`; `arity: '1..*'` forces `list`, overriding glob detection.
+
+: **Examples:**
+
+  ```console
+  # Generate for an installed module reference (name inferred automatically)
+  $ nextflow module spec nf-core/fastqc
+
+  # Generate for a local directory path (scope required)
+  $ nextflow module spec -scope nf-core ./modules/my-module
+
+  # Provide all optional fields to avoid TODO placeholders
+  $ nextflow module spec \
+      -scope nf-core \
+      -version 1.0.0 \
+      -description "Quality control of raw sequencing reads" \
+      -license MIT \
+      -author "@drpatelh" \
+      -author "@joseespinosa" \
+      ./modules/nf-core/fastqc
+
+  # Preview without writing
+  $ nextflow module spec -dry-run -scope nf-core ./modules/my-module
+
+  # Regenerate an existing meta.yml for an installed module
+  $ nextflow module spec -force nf-core/fastqc
+  ```
+
 (cli-plugin)=
 
 ### `plugin`

@@ -267,19 +267,24 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         for( var stmt : asBlockStatements(outputs) ) {
             var es = (ExpressionStatement)stmt;
             var output = es.getExpression();
-            if( output instanceof AssignmentExpression assign ) {
+            VariableExpression target = null;
+            if( output instanceof VariableExpression ) {
+               target = (VariableExpression)output;
+            }
+            else if( output instanceof AssignmentExpression assign ) {
                 visit(assign.getRightExpression());
-
-                var target = (VariableExpression)assign.getLeftExpression();
+                target = (VariableExpression)assign.getLeftExpression();
+            }
+            else {
+                visit(output);
+            }
+            if( target != null ) {
                 var name = target.getName();
                 var other = declaredOutputs.get(name);
                 if( other != null )
                     vsc.addError(typeLabel + " `" + name + "` is already declared", target, "First declared here", other);
                 else
                     declaredOutputs.put(name, target);
-            }
-            else {
-                visit(output);
             }
         }
     }

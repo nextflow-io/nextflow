@@ -375,6 +375,59 @@ By default, both local files and configuration entries are removed. Use `-keep-f
 
 See {ref}`cli-module-remove` for more information.
 
+### Generating module metadata
+
+The `module spec` command bootstraps a `meta.yml` manifest for a local module by statically analysing its `main.nf`. It extracts the first process definition and infers input/output channel types automatically.
+
+Use this before publishing a new module, or to regenerate metadata after changing a process signature.
+
+The required argument can be either:
+
+- A **module reference** (`scope/name`) for a module already installed locally — the name is inferred automatically and `-scope` is ignored:
+
+  ```console
+  $ nextflow module spec nf-core/fastqc
+  ```
+
+- A **directory path** to a local module — `-scope` is required to form the module name as `scope/process-name`:
+
+  ```console
+  $ nextflow module spec -scope nf-core ./modules/my-module
+  ```
+
+Supply optional fields directly on the command line to avoid missing fields in the generated file:
+
+```console
+$ nextflow module spec \
+    -scope nf-core \
+    -version 1.0.0 \
+    -description "Quality control of raw sequencing reads" \
+    -license MIT \
+    -author "@drpatelh" \
+    -author "@joseespinosa" \
+    ./modules/my-module
+```
+
+The available flags are:
+
+| Flag           | Description                                                                                      |
+|----------------|--------------------------------------------------------------------------------------------------|
+| `-scope`       | Module scope; required when the argument is a directory path, ignored for installed module references |
+| `-version`     | Module version (e.g. `1.0.0`)                                                                    |
+| `-description` | Short description of what the module does                                                        |
+| `-license`     | SPDX license identifier (e.g. `MIT`, `Apache-2.0`)                                               |
+| `-author`      | Author name; repeat for multiple authors                                                         |
+
+The generated file header also contains guidance on reviewing the auto-detected channel types:
+
+- `val` channels default to `string` — change to `map` for structured meta objects.
+- `path` outputs with glob patterns (`*`, `?`, `{}`, `[]`) resolve to `list`; literal filenames resolve to `file`.
+- `arity: '1'` overrides glob detection and forces `file`; `arity: '1..*'` forces `list`.
+
+Use `-dry-run` to preview the output without writing, and `-force` to overwrite an existing `meta.yml`.
+
+See {ref}`cli-module-spec` for all available options.
+
 ### Publishing modules
 
 The `module publish` command uploads modules to a registry, making them available for others to install and use.
