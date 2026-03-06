@@ -29,11 +29,11 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 /**
- * Tests for ModuleRemove command
+ * Tests for CmdModuleRemove command
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
-class ModuleRemoveTest extends Specification {
+class CmdModuleRemoveTest extends Specification {
 
     @Rule
     OutputCapture capture = new OutputCapture()
@@ -51,10 +51,10 @@ class ModuleRemoveTest extends Specification {
 
         // Create spec file with module entry
         def specFile = new PipelineSpec(tempDir)
-        specFile.addModuleEntry('@nf-core/fastqc', '1.0.0')
+        specFile.addModuleEntry('nf-core/fastqc', '1.0.0')
 
         and:
-        def cmd = new ModuleRemove()
+        def cmd = new CmdModuleRemove()
         cmd.args = ['nf-core/fastqc']
         cmd.root = tempDir
 
@@ -71,7 +71,7 @@ class ModuleRemoveTest extends Specification {
 
         and:
         def spec = new PipelineSpec(tempDir)
-        spec.getModules().get('@nf-core/fastqc') == null
+        spec.getModules().get('nf-core/fastqc') == null
     }
 
     def 'should keep config with -keep-config flag'() {
@@ -82,10 +82,10 @@ class ModuleRemoveTest extends Specification {
 
         // Create spec file
         def specFile = new PipelineSpec(tempDir)
-        specFile.addModuleEntry('@nf-core/fastqc', '1.0.0')
+        specFile.addModuleEntry('nf-core/fastqc', '1.0.0')
 
         and:
-        def cmd = new ModuleRemove()
+        def cmd = new CmdModuleRemove()
         cmd.args = ['nf-core/fastqc']
         cmd.keepConfig = true
         cmd.root = tempDir
@@ -101,7 +101,7 @@ class ModuleRemoveTest extends Specification {
 
         and:
         def spec = new PipelineSpec(tempDir)
-        spec.getModules().get('@nf-core/fastqc') == '1.0.0'
+        spec.getModules().get('nf-core/fastqc') == '1.0.0'
     }
 
     def 'should keep files with -keep-files flag'() {
@@ -112,10 +112,10 @@ class ModuleRemoveTest extends Specification {
 
         // Create spec file
         def specFile = new PipelineSpec(tempDir)
-        specFile.addModuleEntry('@nf-core/fastqc', '1.0.0')
+        specFile.addModuleEntry('nf-core/fastqc', '1.0.0')
 
         and:
-        def cmd = new ModuleRemove()
+        def cmd = new CmdModuleRemove()
         cmd.args = ['nf-core/fastqc']
         cmd.keepFiles = true
         cmd.root = tempDir
@@ -132,12 +132,12 @@ class ModuleRemoveTest extends Specification {
 
         and:
         def spec = new PipelineSpec(tempDir)
-        spec.getModules().get('@nf-core/fastqc') == null
+        spec.getModules().get('nf-core/fastqc') == null
     }
 
     def 'should fail when both keep flags are set'() {
         given:
-        def cmd = new ModuleRemove()
+        def cmd = new CmdModuleRemove()
         cmd.args = ['nf-core/fastqc']
         cmd.keepConfig = true
         cmd.keepFiles = true
@@ -153,7 +153,7 @@ class ModuleRemoveTest extends Specification {
 
     def 'should handle removing non-existent module'() {
         given:
-        def cmd = new ModuleRemove()
+        def cmd = new CmdModuleRemove()
         cmd.args = ['nf-core/nonexistent']
         cmd.root = tempDir
 
@@ -167,7 +167,7 @@ class ModuleRemoveTest extends Specification {
 
     def 'should fail with no arguments'() {
         given:
-        def cmd = new ModuleRemove()
+        def cmd = new CmdModuleRemove()
         cmd.args = []
         cmd.root = tempDir
 
@@ -180,7 +180,7 @@ class ModuleRemoveTest extends Specification {
 
     def 'should fail with too many arguments'() {
         given:
-        def cmd = new ModuleRemove()
+        def cmd = new CmdModuleRemove()
         cmd.args = ['nf-core/fastqc', 'extra-arg']
         cmd.root = tempDir
 

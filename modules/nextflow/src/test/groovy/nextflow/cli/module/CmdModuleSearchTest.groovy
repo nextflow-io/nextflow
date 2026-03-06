@@ -28,11 +28,11 @@ import test.OutputCapture
 
 
 /**
- * Tests for ModuleSearch command
+ * Tests for CmdModuleSearch command
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
-class ModuleSearchTest extends Specification {
+class CmdModuleSearchTest extends Specification {
 
     @Rule
     OutputCapture capture = new OutputCapture()
@@ -61,7 +61,7 @@ class ModuleSearchTest extends Specification {
         )
 
         and:
-        def cmd = new ModuleSearch()
+        def cmd = new CmdModuleSearch()
         cmd.args = ['quality']
         cmd.launcher = Mock(Launcher){
             getOptions() >> null
@@ -107,13 +107,13 @@ class ModuleSearchTest extends Specification {
         )
 
         and:
-        def cmd = new ModuleSearch()
+        def cmd = new CmdModuleSearch()
         cmd.launcher = Mock(Launcher){
             getOptions() >> null
         }
         cmd.args = ['fastqc']
         cmd.limit = 10
-        cmd.jsonOutput = true
+        cmd.output = 'json'
 
         and:
         // Mock the registry client
@@ -127,7 +127,10 @@ class ModuleSearchTest extends Specification {
 
         when:
         cmd.run()
-        def output = capture.toString().readLines().last
+        def output = capture.toString().readLines()
+            .findResults { line -> !line.contains('DEBUG') ? line : null }
+            .findResults { line -> !line.contains('INFO') ? line : null }
+            .findResults { line -> !line.contains('Searching for') ? line : null }.join("\n")
         def json = new JsonSlurper().parseText(output)
 
         then:
@@ -141,7 +144,7 @@ class ModuleSearchTest extends Specification {
 
     def 'should handle no search results'() {
         given:
-        def cmd = new ModuleSearch()
+        def cmd = new CmdModuleSearch()
         cmd.launcher = Mock(Launcher){
             getOptions() >> null
         }
@@ -169,7 +172,7 @@ class ModuleSearchTest extends Specification {
 
     def 'should fail with no arguments'() {
         given:
-        def cmd = new ModuleSearch()
+        def cmd = new CmdModuleSearch()
         cmd.launcher = Mock(Launcher){
             getOptions() >> null
         }
@@ -196,7 +199,7 @@ class ModuleSearchTest extends Specification {
         }
 
         and:
-        def cmd = new ModuleSearch()
+        def cmd = new CmdModuleSearch()
         cmd.launcher = Mock(Launcher){
             getOptions() >> null
         }

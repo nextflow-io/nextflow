@@ -39,7 +39,7 @@ class InstalledModule {
     Path directory
     Path mainFile
     Path manifestFile
-    Path checksumFile
+    Path moduleInfoFile
     String installedVersion
     String expectedChecksum
 
@@ -50,13 +50,13 @@ class InstalledModule {
      */
     ModuleIntegrity getIntegrity() {
         // Check if main.nf exists
-        if (!Files.exists(mainFile) || !Files.exists(manifestFile)) {
+        if( !Files.exists(mainFile) || !Files.exists(manifestFile) ) {
             return ModuleIntegrity.CORRUPTED
         }
 
-        // Check if checksum file exists
-        if (!Files.exists(checksumFile)) {
-            return ModuleIntegrity.MISSING_CHECKSUM
+        // Check if .module-info file exists
+        if( !Files.exists(moduleInfoFile) ) {
+            return ModuleIntegrity.NO_REMOTE_MODULE
         }
 
         try {
@@ -64,14 +64,14 @@ class InstalledModule {
             def actualChecksum = ModuleChecksum.compute(directory)
 
             // Compare with expected
-            if (actualChecksum == expectedChecksum) {
+            if( actualChecksum == expectedChecksum ) {
                 return ModuleIntegrity.VALID
             } else {
                 log.debug("Actual: $actualChecksum, expected: $expectedChecksum")
                 return ModuleIntegrity.MODIFIED
             }
-        } catch (Exception e) {
-            log.warn "Failed to compute checksum for module ${reference.nameWithoutPrefix}: ${e.message}"
+        } catch( Exception e ) {
+            log.warn "Failed to compute checksum for module ${reference}: ${e.message}"
             return ModuleIntegrity.CORRUPTED
         }
     }
@@ -84,6 +84,6 @@ class InstalledModule {
 enum ModuleIntegrity {
     VALID,              // Checksum matches
     MODIFIED,           // Checksum mismatch (local changes)
-    MISSING_CHECKSUM,   // No .checksum file
+    NO_REMOTE_MODULE,   // No .module-info file (local-only module, no registry origin)
     CORRUPTED           // Missing required files
 }

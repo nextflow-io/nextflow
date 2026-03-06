@@ -50,7 +50,7 @@ class ModuleStorageTest extends Specification {
         def moduleDir = storage.getModuleDir(reference)
 
         then:
-        moduleDir == tempDir.resolve('modules/@nf-core/fastqc')
+        moduleDir == tempDir.resolve('modules/nf-core/fastqc')
     }
 
     def 'should check if module is installed'() {
@@ -107,9 +107,9 @@ class ModuleStorageTest extends Specification {
               - fastqc
         '''.stripIndent()
 
-        // Create .checksum file
-        def checksumFile = moduleDir.resolve('.checksum')
-        checksumFile.text = 'abc123def456'
+        // Create .module-info file
+        ModuleChecksum.save(moduleDir, 'abc123def456')
+        def moduleInfoFile = moduleDir.resolve('.module-info')
 
         when:
         def installed = storage.getInstalledModule(reference)
@@ -120,7 +120,7 @@ class ModuleStorageTest extends Specification {
         installed.directory == moduleDir
         installed.mainFile == mainFile
         installed.manifestFile == moduleDir.resolve('meta.yml')
-        installed.checksumFile == checksumFile
+        installed.moduleInfoFile == moduleInfoFile
         installed.expectedChecksum == 'abc123def456'
         installed.installedVersion == '1.0.0'
     }
@@ -145,12 +145,12 @@ class ModuleStorageTest extends Specification {
 
             // Create meta.yml with version
             moduleDir.resolve('meta.yml').text = """
-                name: ${ref.nameWithoutPrefix}
+                name: ${ref}
                 version: 1.0.0
             """.stripIndent()
 
-            // Create .checksum
-            moduleDir.resolve('.checksum').text = 'checksum'
+            // Create .module-info
+            ModuleChecksum.save(moduleDir, 'checksum')
         }
 
         when:
@@ -158,7 +158,7 @@ class ModuleStorageTest extends Specification {
 
         then:
         installed.size() == 3
-        installed*.reference.fullName.sort() == ['@myorg/custom', '@nf-core/fastqc', '@nf-core/multiqc']
+        installed*.reference.fullName.sort() == ['myorg/custom', 'nf-core/fastqc', 'nf-core/multiqc']
     }
 
     def 'should list nested modules recursively'() {
@@ -182,14 +182,14 @@ class ModuleStorageTest extends Specification {
 
             // Create meta.yml with version
             moduleDir.resolve('meta.yml').text = """
-                name: ${ref.nameWithoutPrefix}
+                name: ${ref}
                 version: 1.0.0
                 description: Test module
                 license: MIT
             """.stripIndent()
 
-            // Create .checksum
-            moduleDir.resolve('.checksum').text = 'checksum'
+            // Create .module-info
+            ModuleChecksum.save(moduleDir, 'checksum')
         }
 
         when:
@@ -198,10 +198,10 @@ class ModuleStorageTest extends Specification {
         then:
         installed.size() == 4
         installed*.reference.fullName.sort() == [
-            '@myorg/tools/subtools/module',
-            '@nf-core/fastqc',
-            '@nf-core/gfatools/gfa2fa',
-            '@nf-core/gfatools/gfa2gfa'
+            'myorg/tools/subtools/module',
+            'nf-core/fastqc',
+            'nf-core/gfatools/gfa2fa',
+            'nf-core/gfatools/gfa2gfa'
         ]
     }
 
@@ -234,7 +234,7 @@ class ModuleStorageTest extends Specification {
         installed.reference == reference
         installed.installedVersion == '1.0.0'
         Files.exists(installed.mainFile)
-        Files.exists(installed.checksumFile)
+        Files.exists(installed.moduleInfoFile)
 
         cleanup:
         packageFile?.delete()
@@ -313,7 +313,7 @@ class ModuleStorageTest extends Specification {
         then:
         installed.expectedChecksum != null
         installed.expectedChecksum.length() > 0
-        Files.exists(installed.checksumFile)
+        Files.exists(installed.moduleInfoFile)
 
         cleanup:
         packageFile?.delete()

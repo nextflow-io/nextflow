@@ -88,7 +88,7 @@ class ModuleResolverTest extends Specification {
             name: nf-core/fastqc
             version: 1.0.0
         '''
-        moduleDir.resolve('.checksum').text = 'wrong-checksum'
+        ModuleChecksum.save(moduleDir, 'wrong-checksum')
 
         when:
         def result = resolver.resolve(reference, null, false)
@@ -103,7 +103,7 @@ class ModuleResolverTest extends Specification {
 
     def 'should throw exception when version mismatch without auto-install'() {
         given:
-        def modulesConfig = new ModulesConfig(['@nf-core/fastqc': '2.0.0'])
+        def modulesConfig = new ModulesConfig(['nf-core/fastqc': '2.0.0'])
         def resolver = new ModuleResolver(tempDir, modulesConfig, null)
         def reference = new ModuleReference('nf-core', 'fastqc')
         def storage = new ModuleStorage(tempDir)
@@ -119,7 +119,7 @@ class ModuleResolverTest extends Specification {
 
         // Compute and save correct checksum
         def checksum = ModuleChecksum.compute(moduleDir)
-        moduleDir.resolve('.checksum').text = checksum
+        ModuleChecksum.save(moduleDir, checksum)
 
         when:
         resolver.resolve(reference, null, false)
@@ -152,7 +152,7 @@ class ModuleResolverTest extends Specification {
 
         // Compute and save correct checksum
         def checksum = ModuleChecksum.compute(moduleDir)
-        moduleDir.resolve('.checksum').text = checksum
+        ModuleChecksum.save(moduleDir, checksum)
 
         when:
         def result = resolver.resolve(reference, '1.0.0', false)
@@ -178,7 +178,7 @@ class ModuleResolverTest extends Specification {
             name: nf-core/fastqc
             version: 1.0.0
         '''
-        moduleDir.resolve('.checksum').text = 'wrong-checksum'
+        ModuleChecksum.save(moduleDir, 'wrong-checksum')
 
         when:
         resolver.installModule(reference, '2.0.0', false)

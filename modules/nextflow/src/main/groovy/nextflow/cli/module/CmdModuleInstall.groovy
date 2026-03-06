@@ -42,7 +42,7 @@ import java.nio.file.Paths
 @Slf4j
 @Parameters(commandDescription = "Install a module from the registry")
 @CompileStatic
-class ModuleInstall extends CmdBase {
+class CmdModuleInstall extends CmdBase {
 
     @Parameter(names = ["-version"], description = "Module version")
     String version
@@ -66,20 +66,18 @@ class ModuleInstall extends CmdBase {
 
     @Override
     void run() {
-        if (!args || args.size() != 1) {
+        if( !args || args.size() != 1 ) {
             throw new AbortOperationException("Incorrect number of arguments")
         }
 
-        def moduleRef = '@' + args[0]
-
-        def reference = ModuleReference.parse(moduleRef)
+        def reference = ModuleReference.parse(args[0])
 
         // Get config
         def baseDir = root ?: Paths.get('.').toAbsolutePath().normalize()
         def config = new ConfigBuilder()
-                .setOptions(launcher.options)
-                .setBaseDir(baseDir)
-                .build()
+            .setOptions(launcher.options)
+            .setBaseDir(baseDir)
+            .build()
         final registryConfig = config.navigate('registry') as RegistryConfig ?: new RegistryConfig()
 
         // Get modules versions from nextflow_spec.json.
@@ -96,12 +94,12 @@ class ModuleInstall extends CmdBase {
             def installedVersion = version ?: resolver.resolveVersion(reference)
             specFile.addModuleEntry(reference.fullName, installedVersion)
 
-            println "Module ${reference.nameWithoutPrefix}@${installedVersion} installed and configured successfully"
+            println "Module ${reference}@${installedVersion} installed and configured successfully"
         }
-        catch (AbortOperationException e) {
+        catch( AbortOperationException e ) {
             throw e
         }
-        catch (Exception e) {
+        catch( Exception e ) {
             throw new AbortOperationException("Installation failed: ${e.message}", e)
         }
     }

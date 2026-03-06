@@ -60,7 +60,7 @@ class InstalledModuleTest extends Specification {
             directory: moduleDir,
             mainFile: mainFile,
             manifestFile: metaFile,
-            checksumFile: moduleDir.resolve('.checksum'),
+            moduleInfoFile: moduleDir.resolve('.module-info'),
             expectedChecksum: actualChecksum,
             installedVersion: "0.0.1"
         )
@@ -95,7 +95,7 @@ class InstalledModuleTest extends Specification {
             directory: moduleDir,
             mainFile: mainFile,
             manifestFile: metaFile,
-            checksumFile: moduleDir.resolve('.checksum'),
+            moduleInfoFile: moduleDir.resolve('.module-info'),
             expectedChecksum: originalChecksum,
             installedVersion: "0.0.1"
         )
@@ -118,15 +118,15 @@ class InstalledModuleTest extends Specification {
         def metaFile = moduleDir.resolve('meta.yml')
         metaFile.text = 'name: test/module\nversion: 0.0.1'
 
-        def checksumFile = moduleDir.resolve('.checksum')
-        checksumFile.text = 'some-checksum'
+        def moduleInfoFile = moduleDir.resolve('.module-info')
+        // CORRUPTED check happens before .module-info check, so content doesn't matter here
 
         def installed = new InstalledModule(
             reference: new ModuleReference('test', 'module'),
             directory: moduleDir,
             mainFile: mainFile,
             manifestFile: metaFile,
-            checksumFile: checksumFile,
+            moduleInfoFile: moduleInfoFile,
             expectedChecksum: 'some-checksum'
         )
 
@@ -137,7 +137,7 @@ class InstalledModuleTest extends Specification {
         integrity == ModuleIntegrity.CORRUPTED
     }
 
-    def 'should report MISSING_CHECKSUM when checksum file absent'() {
+    def 'should report NO_REMOTE_MODULE when .module-info file absent'() {
         given:
         def moduleDir = tempDir.resolve('module')
         Files.createDirectories(moduleDir)
@@ -148,15 +148,15 @@ class InstalledModuleTest extends Specification {
         def metaFile = moduleDir.resolve('meta.yml')
         metaFile.text = 'name: test/module\nversion: 0.0.1'
 
-        def checksumFile = moduleDir.resolve('.checksum')
-        // Don't create checksum file
+        def moduleInfoFile = moduleDir.resolve('.module-info')
+        // Don't create .module-info file
 
         def installed = new InstalledModule(
             reference: new ModuleReference('test', 'module'),
             directory: moduleDir,
             mainFile: mainFile,
             manifestFile: metaFile,
-            checksumFile: checksumFile,
+            moduleInfoFile: moduleInfoFile,
             expectedChecksum: null
         )
 
@@ -164,7 +164,7 @@ class InstalledModuleTest extends Specification {
         def integrity = installed.getIntegrity()
 
         then:
-        integrity == ModuleIntegrity.MISSING_CHECKSUM
+        integrity == ModuleIntegrity.NO_REMOTE_MODULE
     }
 
     def 'should handle checksum computation failure gracefully'() {
@@ -178,16 +178,16 @@ class InstalledModuleTest extends Specification {
         def metaFile = moduleDir.resolve('meta.yml')
         metaFile.text = 'name: test/module\nversion: 0.0.1'
 
-        // Create checksum file with a value that won't match the computed checksum
-        def checksumFile = moduleDir.resolve('.checksum')
-        checksumFile.text = 'expected-checksum-that-will-not-match'
+        // Create .module-info with a checksum that won't match the computed checksum
+        ModuleChecksum.save(moduleDir, 'expected-checksum-that-will-not-match')
+        def moduleInfoFile = moduleDir.resolve('.module-info')
 
         def installed = new InstalledModule(
             reference: new ModuleReference('test', 'module'),
             directory: moduleDir,
             mainFile: mainFile,
             manifestFile: metaFile,
-            checksumFile: checksumFile,
+            moduleInfoFile: moduleInfoFile,
             expectedChecksum: 'expected-checksum-that-will-not-match'
         )
 

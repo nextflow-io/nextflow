@@ -16,7 +16,9 @@
 
 package nextflow.cli.module
 
+import com.beust.jcommander.IParameterValidator
 import com.beust.jcommander.Parameter
+import com.beust.jcommander.ParameterException
 import com.beust.jcommander.Parameters
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
@@ -39,10 +41,25 @@ import java.nio.file.Paths
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "List all installed modules")
-class ModuleList extends CmdBase {
+class CmdModuleList extends CmdBase {
 
-    @Parameter(names = ["-json"], description = "Output in JSON format", arity=0)
-    boolean jsonOutput = false
+    @Parameter(
+        names = ['-o', '-output'],
+        description = 'Output mode for reporting search results: table, json',
+        validateWith = OutputModeValidator
+    )
+    String output = 'table'
+
+    static class OutputModeValidator implements IParameterValidator {
+
+        private static final List<String> MODES = List.of('table', 'json')
+
+        @Override
+        void validate(String name, String value) {
+            if( !MODES.contains(value) )
+                throw new ParameterException("Output mode must be one of $MODES (found: $value)")
+        }
+    }
 
     @TestOnly
     protected Path root
@@ -65,18 +82,21 @@ class ModuleList extends CmdBase {
         try {
             def installed = storage.listInstalled()
 
-            if (installed.isEmpty()) {
+            if( installed.isEmpty() ) {
                 println "No modules installed"
                 return
             }
 
-            if (jsonOutput) {
+            if( !output || output == 'table' ) {
+                printFormattedList(installed)
+            } else if( output == 'json' ) {
                 printJsonList(installed)
             } else {
-                printFormattedList(installed)
+                throw new AbortOperationException("Not implemented output mode $output)")
             }
+
         }
-        catch (Exception e) {
+        catch( Exception e ) {
             log.error("Failed to list modules", e)
             throw new AbortOperationException("List failed: ${e.message}", e)
         }
@@ -87,11 +107,11 @@ class ModuleList extends CmdBase {
         println "Installed modules:"
         println ""
         println "Module".padRight(40) + "Version".padRight(15) + "Status"
-        println ("-" * 70)
+        println("-" * 70)
 
         installed.each { module ->
             def status = getStatusString(module.integrity)
-            println "${module.reference.nameWithoutPrefix.padRight(40)}${(module.installedVersion ?: 'unknown').padRight(15)}${status}"
+            println "${module.reference.toString().padRight(40)}${(module.installedVersion ?: 'unknown').padRight(15)}${status}"
         }
         println ""
     }
@@ -99,25 +119,25 @@ class ModuleList extends CmdBase {
     private void printJsonList(List<InstalledModule> installed) {
         def modules = installed.collect { module ->
             [
-                name: module.reference.nameWithoutPrefix,
-                version: module.installedVersion ?: 'unknown',
+                name     : module.reference.toString(),
+                version  : module.installedVersion ?: 'unknown',
                 integrity: module.integrity.toString(),
                 directory: module.directory.toString()
             ]
         }
 
         // Simple JSON output (could use groovy.json.JsonOutput for better formatting)
-        println JsonOutput.toJson(modules: modules)
+        println JsonOutput.prettyPrint(JsonOutput.toJson(modules: modules))
     }
 
     private String getStatusString(ModuleIntegrity integrity) {
-        switch (integrity) {
+        switch( integrity ) {
             case ModuleIntegrity.VALID:
                 return 'OK'
             case ModuleIntegrity.MODIFIED:
                 return 'MODIFIED'
-            case ModuleIntegrity.MISSING_CHECKSUM:
-                return 'NO CHECKSUM'
+            case ModuleIntegrity.NO_REMOTE_MODULE:
+                return 'LOCAL'
             case ModuleIntegrity.CORRUPTED:
                 return 'CORRUPTED'
             default:

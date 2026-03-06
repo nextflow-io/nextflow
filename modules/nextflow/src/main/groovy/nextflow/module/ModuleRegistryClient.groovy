@@ -50,16 +50,13 @@ class ModuleRegistryClient {
     ModuleRegistryClient(RegistryConfig config) {
         this.config = config ?: new RegistryConfig()
         this.httpClient = HxClient.newBuilder()
-                .retryConfig(RetryConfig.config())
-                .followRedirects(HttpClient.Redirect.NORMAL)
-                .build()
+            .retryConfig(RetryConfig.config())
+            .followRedirects(HttpClient.Redirect.NORMAL)
+            .build()
     }
 
     private String encodeName(String name) {
-        return URLEncoder.encode(
-            name.startsWith('@') ? name.substring(1) : name,
-            'UTF-8'
-        )
+        return URLEncoder.encode(name, 'UTF-8')
     }
 
     /**
@@ -72,11 +69,11 @@ class ModuleRegistryClient {
         def registryUrls = config.allUrls
 
         Exception lastError = null
-        for (String registryUrl : registryUrls) {
+        for( String registryUrl : registryUrls ) {
             log.debug "Trying to fetch from $registryUrl"
             try {
                 return fetchModuleFromRegistry(registryUrl, name)
-            } catch (Exception e) {
+            } catch( Exception e ) {
                 log.debug "Failed to fetch module from ${registryUrl}: ${e.message}"
                 lastError = e
             }
@@ -102,7 +99,7 @@ class ModuleRegistryClient {
         // Add authentication if available
         log.debug "Getting auth from: ${registryUrl}"
         def token = config.getApiKey()
-        if (token) {
+        if( token ) {
             requestBuilder.header("Authorization", "Bearer ${token}")
         }
         log.debug "Building request: ${registryUrl}"
@@ -115,15 +112,15 @@ class ModuleRegistryClient {
 
             log.debug "Registry request: ${response.uri()}\n- code: ${response.statusCode()}\n- body: ${body}"
 
-            if (response.statusCode() == 404) {
+            if( response.statusCode() == 404 ) {
                 throw new AbortOperationException("Module not found: ${name}")
             }
 
-            if (response.statusCode() != 200) {
+            if( response.statusCode() != 200 ) {
                 throw new AbortOperationException(
                     "Invalid response from registry: ${uri}\n" +
-                    "- http status: ${response.statusCode()}\n" +
-                    "- response: ${body}"
+                        "- http status: ${response.statusCode()}\n" +
+                        "- response: ${body}"
                 )
             }
 
@@ -131,11 +128,10 @@ class ModuleRegistryClient {
             def encoder = new GsonEncoder<Module>() {}
             return encoder.decode(body)
         }
-        catch (AbortOperationException e) {
+        catch( AbortOperationException e ) {
             throw e
         }
-        catch (Exception e) {
-            e.printStackTrace()
+        catch( Exception e ) {
             throw new AbortOperationException("Failed to fetch module from: ${uri}", e)
         }
     }
@@ -151,10 +147,10 @@ class ModuleRegistryClient {
         def registryUrls = config.allUrls
 
         Exception lastError = null
-        for (String registryUrl : registryUrls) {
+        for( String registryUrl : registryUrls ) {
             try {
                 return fetchReleaseFromRegistry(registryUrl, name, version)
-            } catch (Exception e) {
+            } catch( Exception e ) {
                 log.debug "Failed to fetch release from ${registryUrl}: ${e.message}"
                 lastError = e
             }
@@ -178,7 +174,7 @@ class ModuleRegistryClient {
             .GET()
 
         def token = config.getApiKey()
-        if (token) {
+        if( token ) {
             requestBuilder.header("Authorization", "Bearer ${token}")
         }
 
@@ -189,25 +185,25 @@ class ModuleRegistryClient {
             def response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
             def body = response.body()
 
-            if (response.statusCode() == 404) {
+            if( response.statusCode() == 404 ) {
                 throw new AbortOperationException("Module version not found: ${name}@${version}")
             }
 
-            if (response.statusCode() != 200) {
+            if( response.statusCode() != 200 ) {
                 throw new AbortOperationException(
                     "Invalid response from registry: ${uri}\n" +
-                    "- http status: ${response.statusCode()}\n" +
-                    "- response: ${body}"
+                        "- http status: ${response.statusCode()}\n" +
+                        "- response: ${body}"
                 )
             }
 
             // Parse response using npr-api ModuleRelease model
-             return new GsonEncoder<ModuleRelease>() {}.decode(body)
+            return new GsonEncoder<ModuleRelease>() {}.decode(body)
         }
-        catch (AbortOperationException e) {
+        catch( AbortOperationException e ) {
             throw e
         }
-        catch (Exception e) {
+        catch( Exception e ) {
             throw new AbortOperationException("Failed to fetch module release from: ${uri}", e)
         }
     }
@@ -222,14 +218,14 @@ class ModuleRegistryClient {
      */
     Path downloadModule(String name, String version, Path targetPath) {
         def registryUrls = config.allUrls
-        if (targetPath.exists()){
+        if( targetPath.exists() ) {
             targetPath.delete()
         }
         Exception lastError = null
-        for (String registryUrl : registryUrls) {
+        for( String registryUrl : registryUrls ) {
             try {
                 return downloadModuleFromRegistry(registryUrl, name, version, targetPath)
-            } catch (Exception e) {
+            } catch( Exception e ) {
                 log.debug "Failed to download from ${registryUrl}: ${e.message}"
                 lastError = e
             }
@@ -253,7 +249,7 @@ class ModuleRegistryClient {
             .GET()
 
         def token = config.getApiKey()
-        if (token) {
+        if( token ) {
             requestBuilder.header("Authorization", "Bearer ${token}")
         }
 
@@ -263,19 +259,19 @@ class ModuleRegistryClient {
             log.debug "Downloading module from: ${uri}"
             def response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream())
 
-            if (response.statusCode() == 404) {
+            if( response.statusCode() == 404 ) {
                 throw new AbortOperationException("Module bundle not found: ${name}@${version}")
             }
 
-            if (response.statusCode() != 200) {
+            if( response.statusCode() != 200 ) {
                 throw new AbortOperationException(
                     "Invalid response from registry: ${uri}\n" +
-                    "- http status: ${response.statusCode()}"
+                        "- http status: ${response.statusCode()}"
                 )
             }
 
             // Create parent directories if needed
-            if (targetPath.parent) {
+            if( targetPath.parent ) {
                 Files.createDirectories(targetPath.parent)
             }
 
@@ -287,10 +283,10 @@ class ModuleRegistryClient {
 
             return targetPath
         }
-        catch (AbortOperationException e) {
+        catch( AbortOperationException e ) {
             throw e
         }
-        catch (Exception e) {
+        catch( Exception e ) {
             throw new AbortOperationException("Failed to download module from: ${uri}", e)
         }
     }
@@ -365,10 +361,10 @@ class ModuleRegistryClient {
         def registryUrls = config.allUrls
 
         Exception lastError = null
-        for (String registryUrl : registryUrls) {
+        for( String registryUrl : registryUrls ) {
             try {
                 return searchInRegistry(registryUrl, query, limit)
-            } catch (Exception e) {
+            } catch( Exception e ) {
                 log.debug "Failed to search in ${registryUrl}: ${e.message}"
                 lastError = e
             }
@@ -392,7 +388,7 @@ class ModuleRegistryClient {
             .GET()
 
         def token = config.getApiKey()
-        if (token) {
+        if( token ) {
             requestBuilder.header("Authorization", "Bearer ${token}")
         }
 
@@ -403,11 +399,11 @@ class ModuleRegistryClient {
             def response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
             def body = response.body()
 
-            if (response.statusCode() != 200) {
+            if( response.statusCode() != 200 ) {
                 throw new AbortOperationException(
                     "Invalid response from registry: ${uri}\n" +
-                    "- http status: ${response.statusCode()}\n" +
-                    "- response: ${body}"
+                        "- http status: ${response.statusCode()}\n" +
+                        "- response: ${body}"
                 )
             }
 
@@ -415,10 +411,10 @@ class ModuleRegistryClient {
             def encoder = new GsonEncoder<SearchModulesResponse>() {}
             return encoder.decode(body)
         }
-        catch (AbortOperationException e) {
+        catch( AbortOperationException e ) {
             throw e
         }
-        catch (Exception e) {
+        catch( Exception e ) {
             throw new AbortOperationException("Failed to search modules in: ${uri}", e)
         }
     }
@@ -435,7 +431,7 @@ class ModuleRegistryClient {
         final registryUrl = registry ?: config.url
         final authToken = config.apiKey
 
-        if (!authToken) {
+        if( !authToken ) {
             throw new AbortOperationException(
                 "Authentication required to publish modules.\n" +
                     "Please set 'NXF_REGISTRY_TOKEN' environment variable or configure 'registry.apiKey' in nextflow.config:\n\n" +
@@ -444,21 +440,17 @@ class ModuleRegistryClient {
                     "  }\n"
             )
         }
-        try {
-            return publishModuleToRegistry(registryUrl, name, request, authToken)
-        } catch( Exception e ) {
-            throw new AbortOperationException("Failed to publish to ${registryUrl}", e)
-        }
+        return publishModuleToRegistry(registryUrl, name, request, authToken)
     }
 
     /**
      * Publish module to a specific registry
      */
     private PublishModuleResponse publishModuleToRegistry(
-            String registryUrl,
-            String name,
-            def request,
-            String authToken) {
+        String registryUrl,
+        String name,
+        def request,
+        String authToken) {
 
         String endpoint = "${registryUrl}/v1/modules/${encodeName(name)}".toString()
         URI uri = URI.create(endpoint)
@@ -481,21 +473,21 @@ class ModuleRegistryClient {
             HttpResponse<String> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString())
             String body = response.body()
 
-            if (response.statusCode() != 201) {
+            if( response.statusCode() != 201 ) {
                 throw new AbortOperationException(
                     "Failed to publish module: ${uri}\n" +
-                    "- http status: ${response.statusCode()}\n" +
-                    "- response: ${body}"
+                        "- http status: ${response.statusCode()}\n" +
+                        "- response: ${body}"
                 )
             }
 
             // Parse response using npr-api PublishModuleResponse model
             return new GsonEncoder<PublishModuleResponse>() {}.decode(body)
         }
-        catch (AbortOperationException e) {
+        catch( AbortOperationException e ) {
             throw e
         }
-        catch (Exception e) {
+        catch( Exception e ) {
             throw new AbortOperationException("Failed to publish module to: ${uri}", e)
         }
     }

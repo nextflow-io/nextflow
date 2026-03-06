@@ -34,7 +34,7 @@ class ModuleReference {
     // Pattern allows: optional @, scope with letters/digits/hyphens/dots/underscores, name segments separated by slashes (no trailing slash)
     // Scope: starts with letter/digit, followed by letters/digits/dots/underscores/hyphens
     // Name: one or more segments (each starting with letter, followed by letters/digits/underscores/hyphens), separated by slashes
-    private static final Pattern MODULE_NAME_PATTERN = ~/^@?([a-z0-9][a-z0-9._\-]*)\/([a-z][a-z0-9_\-]*(?:\/[a-z][a-z0-9_\-]*)*)$/
+    private static final Pattern MODULE_NAME_PATTERN = ~/^([a-z0-9][a-z0-9._\-]*)\/([a-z][a-z0-9._\-]*(?:\/[a-z][a-z0-9._\-]*)*)$/
 
     final String scope
     final String name
@@ -43,7 +43,7 @@ class ModuleReference {
     ModuleReference(String scope, String name) {
         this.scope = scope
         this.name = name
-        this.fullName = "@${scope}/${name}"
+        this.fullName = "${scope}/${name}"
     }
 
     /**
@@ -54,7 +54,7 @@ class ModuleReference {
      * @throws AbortOperationException if the format is invalid
      */
     static ModuleReference parse(String source) {
-        if (!source) {
+        if( !source ) {
             throw new AbortOperationException("Module reference cannot be empty")
         }
 
@@ -62,24 +62,15 @@ class ModuleReference {
         source = source.trim()
 
         def matcher = MODULE_NAME_PATTERN.matcher(source)
-        if (!matcher.matches()) {
+        if( !matcher.matches() ) {
             throw new AbortOperationException(
                 "Invalid module reference: '${source}'. " +
-                "Expected format: [@]scope/name where scope is lowercase alphanumeric with dots/underscores/hyphens " +
-                "and name is lowercase alphanumeric with underscores/hyphens, optionally with slash-separated segments"
+                    "Expected format: scope/name where scope is lowercase alphanumeric with dots/underscores/hyphens " +
+                    "and name is lowercase alphanumeric with underscores/hyphens, optionally with slash-separated segments"
             )
         }
 
         return new ModuleReference(matcher.group(1), matcher.group(2))
-    }
-
-    /**
-     * Get the module name without the @ prefix
-     *
-     * @return Module name in format "scope/name"
-     */
-    String getNameWithoutPrefix() {
-        return "${scope}/${name}"
     }
 
     @Override

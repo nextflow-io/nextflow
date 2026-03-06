@@ -97,7 +97,7 @@ class ModuleChecksumTest extends Specification {
         checksum1 != checksum2
     }
 
-    def 'should exclude .checksum file from computation'() {
+    def 'should exclude .module-info file from computation'() {
         given:
         def moduleDir = tempDir.resolve('module')
         Files.createDirectories(moduleDir)
@@ -107,14 +107,14 @@ class ModuleChecksumTest extends Specification {
         // Compute initial checksum
         def checksum1 = ModuleChecksum.compute(moduleDir)
 
-        // Add .checksum file
-        moduleDir.resolve('.checksum').text = 'some-checksum-value'
+        // Add .module-info file
+        ModuleChecksum.save(moduleDir, 'some-checksum-value')
 
         // Compute checksum again
         def checksum2 = ModuleChecksum.compute(moduleDir)
 
         expect:
-        checksum1 == checksum2  // Should be the same, .checksum is ignored
+        checksum1 == checksum2  // Should be the same, .module-info is ignored
     }
 
     def 'should include subdirectories in checksum'() {
@@ -139,7 +139,7 @@ class ModuleChecksumTest extends Specification {
         checksum1 != checksum2  // Checksums should differ
     }
 
-    def 'should save checksum to .checksum file'() {
+    def 'should save checksum to .module-info file'() {
         given:
         def moduleDir = tempDir.resolve('module')
         Files.createDirectories(moduleDir)
@@ -149,17 +149,16 @@ class ModuleChecksumTest extends Specification {
         ModuleChecksum.save(moduleDir, checksumValue)
 
         then:
-        def checksumFile = moduleDir.resolve('.checksum')
-        Files.exists(checksumFile)
-        checksumFile.text.trim() == checksumValue
+        def moduleInfoFile = moduleDir.resolve('.module-info')
+        Files.exists(moduleInfoFile)
+        ModuleChecksum.load(moduleDir) == checksumValue
     }
 
-    def 'should load checksum from .checksum file'() {
+    def 'should load checksum from .module-info file'() {
         given:
         def moduleDir = tempDir.resolve('module')
         Files.createDirectories(moduleDir)
-        def checksumFile = moduleDir.resolve('.checksum')
-        checksumFile.text = 'abc123def456'
+        ModuleChecksum.save(moduleDir, 'abc123def456')
 
         when:
         def checksum = ModuleChecksum.load(moduleDir)

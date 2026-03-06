@@ -70,7 +70,7 @@ class ModuleStorage {
      * @return The module directory path
      */
     Path getModuleDir(ModuleReference reference) {
-        return modulesDir.resolve("@${reference.scope}").resolve(reference.name)
+        return modulesDir.resolve(reference.scope).resolve(reference.name)
     }
 
     /**
@@ -101,7 +101,7 @@ class ModuleStorage {
             directory: moduleDir,
             mainFile: moduleDir.resolve(Const.DEFAULT_MAIN_FILE_NAME),
             manifestFile: moduleDir.resolve(MODULE_MANIFEST_FILE),
-            checksumFile: moduleDir.resolve(ModuleChecksum.CHECKSUM_FILE),
+            moduleInfoFile: moduleDir.resolve(ModuleChecksum.MODULE_INFO_FILE),
         )
 
         // Load checksum if available
@@ -111,7 +111,7 @@ class ModuleStorage {
     }
 
     /**
-     * List all installed modules
+     * List all installed modules by scanning for directories containing a .module-info marker file.
      *
      * @return List of InstalledModule objects
      */
@@ -122,60 +122,27 @@ class ModuleStorage {
 
         List<InstalledModule> modules = []
 
-        // Iterate over scope directories
-        Files.list(modulesDir).each { Path scopeDir ->
-            if (!Files.isDirectory(scopeDir)) return
-
-            def scopeDirName = scopeDir.fileName.toString()
-            // Remove @ prefix from directory name to get scope
-            def scope = scopeDirName.startsWith('@') ? scopeDirName.substring(1) : scopeDirName
-
-            // Recursively find all directories containing meta.yml under this scope
-            findModulesRecursive(scopeDir, scope, modules)
+        try( final walkStream = Files.walk(modulesDir) ) {
+            walkStream
+                .filter { Path path -> Files.isDirectory(path) }
+                .filter { Path path -> Files.exists(path.resolve(ModuleChecksum.MODULE_INFO_FILE)) }
+                .each { Path moduleDir ->
+                    try {
+                        def rel = modulesDir.relativize(moduleDir)
+                        if( rel.nameCount < 2 ) return  // Need at least scope/name
+                        def reference = ModuleReference.parse(rel.toString())
+                        def installed = getInstalledModule(reference)
+                        if( installed ) modules.add(installed)
+                    } catch(Exception e){
+                        // Catching exception to go on inspecting other valid folders
+                        log.debug("Not a valid module reference - $e.message")
+                    }
+                }
+        } catch (IOException e) {
+            log.warn "Failed to scan modules directory ${modulesDir}: ${e.message}"
         }
 
         return modules
-    }
-
-    /**
-     * Recursively find modules in subdirectories
-     * @param dir Current directory to search
-     * @param scope Module scope
-     * @param modules List to accumulate found modules
-     */
-    private void findModulesRecursive(Path dir, String scope, List<InstalledModule> modules) {
-        if (!Files.isDirectory(dir)) return
-
-        // Check if current directory contains meta.yml (is a module)
-        if (Files.exists(dir.resolve(MODULE_MANIFEST_FILE))) {
-            // Calculate the module name from the path relative to scope directory
-            def scopeDir = dir.getParent()
-            while (scopeDir != null && !scopeDir.fileName.toString().equals('@' + scope)) {
-                scopeDir = scopeDir.getParent()
-            }
-
-            if (scopeDir != null) {
-                def relativePath = scopeDir.relativize(dir).toString()
-                def name = relativePath.replace('\\', '/') // Normalize path separators
-                def reference = new ModuleReference(scope, name)
-
-                def installed = getInstalledModule(reference)
-                if (installed) {
-                    modules.add(installed)
-                }
-            }
-        }
-
-        // Recursively search subdirectories
-        try {
-            Files.list(dir).each { Path subDir ->
-                if (Files.isDirectory(subDir)) {
-                    findModulesRecursive(subDir, scope, modules)
-                }
-            }
-        } catch (IOException e) {
-            log.warn "Failed to list directory ${dir}: ${e.message}"
-        }
     }
 
     /**
@@ -211,7 +178,7 @@ class ModuleStorage {
             def checksum = ModuleChecksum.compute(moduleDir)
             ModuleChecksum.save(moduleDir, checksum)
 
-            log.debug "Installed module ${reference.nameWithoutPrefix}@${version} to ${moduleDir}"
+            log.debug "Installed module ${reference}@${version} to ${moduleDir}"
 
             return getInstalledModule(reference)
         }
@@ -224,7 +191,7 @@ class ModuleStorage {
                     log.warn "Failed to clean up after installation failure: ${cleanupError.message}"
                 }
             }
-            throw new AbortOperationException("Failed to install module ${reference.nameWithoutPrefix}@${version}", e)
+            throw new AbortOperationException("Failed to install module ${reference}@${version}", e)
         }
     }
 
@@ -243,7 +210,7 @@ class ModuleStorage {
 
         try {
             FileHelper.deletePath(moduleDir)
-            log.debug "Removed module: ${reference.nameWithoutPrefix}"
+            log.debug "Removed module: ${reference}"
 
             // Clean up empty scope directory
             def scopeDir = moduleDir.parent
@@ -254,7 +221,7 @@ class ModuleStorage {
             return true
         }
         catch (Exception e) {
-            throw new AbortOperationException("Failed to remove module ${reference.nameWithoutPrefix}", e)
+            throw new AbortOperationException("Failed to remove module ${reference}", e)
         }
     }
 
@@ -359,9 +326,9 @@ class ModuleStorage {
      *
      * @param moduleDir The module directory to bundle
      * @param targetFile The target bundle file path
-     * @return The created bundle file with its checksum
+     * @return The created bundle file checksum
      */
-    Path createBundle(Path moduleDir, Path targetFile) {
+    static String createBundle(Path moduleDir, Path targetFile) {
         if (!Files.exists(moduleDir) || !Files.isDirectory(moduleDir)) {
             throw new AbortOperationException("Module directory not found: ${moduleDir}")
         }
@@ -381,9 +348,9 @@ class ModuleStorage {
                     }
                 }
             }
-
-            log.debug "Created module bundle: ${targetFile} (size: ${Files.size(targetFile)} bytes)"
-            return targetFile
+            final checksum = computeBundleChecksum(targetFile)
+            log.debug "Created module bundle: ${targetFile} (size: ${Files.size(targetFile)} bytes, checksum: $checksum)"
+            return checksum
         }
         catch (Exception e) {
             // Clean up partial file on failure
@@ -405,32 +372,35 @@ class ModuleStorage {
      * @param sourceDir The source directory being archived
      * @param currentPath The current path being added
      */
-    private void addToTarArchive(TarArchiveOutputStream tos, Path sourceDir, Path currentPath) {
-        Files.list(currentPath).each { Path path ->
-            // Skip .checksum file when creating bundle
-            if (path.fileName.toString() == ModuleChecksum.CHECKSUM_FILE) {
-                return
-            }
+    private static void addToTarArchive(TarArchiveOutputStream tos, Path sourceDir, Path currentPath) {
 
-            def relativePath = sourceDir.relativize(path).toString()
+        try ( def tarStream = Files.list(currentPath)) {
+            tarStream.each { Path path ->
+                // Skip .module-info file when creating bundle
+                if (path.fileName.toString() == ModuleChecksum.MODULE_INFO_FILE) {
+                    return
+                }
 
-            if (Files.isDirectory(path)) {
-                // Add directory entry
-                def entry = new TarArchiveEntry(path.toFile(), "${relativePath}/")
-                tos.putArchiveEntry(entry)
-                tos.closeArchiveEntry()
+                def relativePath = sourceDir.relativize(path).toString()
 
-                // Recursively add directory contents
-                addToTarArchive(tos, sourceDir, path)
-            } else {
-                // Add file entry
-                def entry = new TarArchiveEntry(path.toFile(), relativePath)
-                entry.setSize(Files.size(path))
-                tos.putArchiveEntry(entry)
+                if (Files.isDirectory(path)) {
+                    // Add directory entry
+                    def entry = new TarArchiveEntry(path.toFile(), "${relativePath}/")
+                    tos.putArchiveEntry(entry)
+                    tos.closeArchiveEntry()
 
-                // Copy file content
-                Files.copy(path, tos)
-                tos.closeArchiveEntry()
+                    // Recursively add directory contents
+                    addToTarArchive(tos, sourceDir, path)
+                } else {
+                    // Add file entry
+                    def entry = new TarArchiveEntry(path.toFile(), relativePath)
+                    entry.setSize(Files.size(path))
+                    tos.putArchiveEntry(entry)
+
+                    // Copy file content
+                    Files.copy(path, tos)
+                    tos.closeArchiveEntry()
+                }
             }
         }
     }
@@ -441,7 +411,7 @@ class ModuleStorage {
      * @param bundleFile The bundle file
      * @return The SHA-256 checksum as hex string
      */
-    String computeBundleChecksum(Path bundleFile) {
+    static String computeBundleChecksum(Path bundleFile) {
         if (!Files.exists(bundleFile)) {
             throw new AbortOperationException("Bundle file not found: ${bundleFile}")
         }

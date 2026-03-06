@@ -23,13 +23,13 @@ import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.cli.module.CmdModuleSpec
-import nextflow.cli.module.ModuleInfo
-import nextflow.cli.module.ModuleInstall
-import nextflow.cli.module.ModuleList
-import nextflow.cli.module.ModulePublish
-import nextflow.cli.module.ModuleRemove
-import nextflow.cli.module.ModuleRun
-import nextflow.cli.module.ModuleSearch
+import nextflow.cli.module.CmdModuleInfo
+import nextflow.cli.module.CmdModuleInstall
+import nextflow.cli.module.CmdModuleList
+import nextflow.cli.module.CmdModulePublish
+import nextflow.cli.module.CmdModuleRemove
+import nextflow.cli.module.CmdModuleRun
+import nextflow.cli.module.CmdModuleSearch
 import nextflow.exception.AbortOperationException
 
 /**
@@ -50,13 +50,13 @@ class CmdModule extends CmdBase implements UsageAware {
 
     static {
         commands << new CmdModuleSpec()
-        commands << new ModuleInstall()
-        commands << new ModuleRun()
-        commands << new ModuleList()
-        commands << new ModuleRemove()
-        commands << new ModuleSearch()
-        commands << new ModuleInfo()
-        commands << new ModulePublish()
+        commands << new CmdModuleInstall()
+        commands << new CmdModuleRun()
+        commands << new CmdModuleList()
+        commands << new CmdModuleRemove()
+        commands << new CmdModuleSearch()
+        commands << new CmdModuleInfo()
+        commands << new CmdModulePublish()
     }
 
     protected JCommander commander() {

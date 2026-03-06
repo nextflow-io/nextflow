@@ -36,11 +36,11 @@ import java.nio.file.Path
 import java.util.zip.GZIPOutputStream
 
 /**
- * Tests for ModuleRun command
+ * Tests for CmdModuleRun command
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
-class ModuleRunTest extends Specification {
+class CmdModuleRunTest extends Specification {
 
     @Rule
     OutputCapture capture = new OutputCapture()
@@ -89,7 +89,7 @@ class ModuleRunTest extends Specification {
         def moduleRelease = new ModuleRelease()
         moduleRelease.version = '1.0.0'
         def module = new Module()
-        module.name = '@nf-core/test-module'
+        module.name = 'nf-core/test-module'
         module.latest = moduleRelease
         mockClient.fetchModule(_) >> module  // Use wildcard to match any argument
         mockClient.downloadModule(_, _, _) >> { String name, String version, Path dest ->
@@ -98,7 +98,7 @@ class ModuleRunTest extends Specification {
         }
 
         and:
-        def cmd = new ModuleRun()
+        def cmd = new CmdModuleRun()
         cmd.launcher = Mock(Launcher) {
             getOptions() >> new CliOptions()
             getCliString() >> "nextflow module run nf-core/test-module"
@@ -152,13 +152,13 @@ class ModuleRunTest extends Specification {
         def modulePackage = createModulePackage(moduleScript)
 
         def mockClient = Mock(ModuleRegistryClient)
-        mockClient.downloadModule('@nf-core/test-module', '2.0.0', _) >> { String name, String version, Path dest ->
+        mockClient.downloadModule('nf-core/test-module', '2.0.0', _) >> { String name, String version, Path dest ->
             Files.write(dest, modulePackage)
             return dest
         }
 
         and:
-        def cmd = new ModuleRun()
+        def cmd = new CmdModuleRun()
         cmd.launcher = Mock(Launcher) {
             getOptions() >> new CliOptions()
             getCliString() >> "nextflow module run nf-core/test-module"
@@ -186,7 +186,7 @@ class ModuleRunTest extends Specification {
 
     def 'should fail with no arguments'() {
         given:
-        def cmd = new ModuleRun()
+        def cmd = new CmdModuleRun()
         cmd.launcher = Mock(Launcher) {
             getOptions() >> null
         }
@@ -202,7 +202,7 @@ class ModuleRunTest extends Specification {
 
     def 'should fail with invalid module reference'() {
         given:
-        def cmd = new ModuleRun()
+        def cmd = new CmdModuleRun()
         cmd.launcher = Mock(Launcher) {
             getOptions() >> null
         }

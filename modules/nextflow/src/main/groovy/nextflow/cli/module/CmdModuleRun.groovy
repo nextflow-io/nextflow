@@ -40,7 +40,7 @@ import java.nio.file.Paths
  */
 @CompileStatic
 @Parameters(commandDescription = "Run a module directly from the registry")
-class ModuleRun extends CmdRun {
+class CmdModuleRun extends CmdRun {
     @Parameter(names = ["-version"], description = "Module version")
     String version
 
@@ -57,27 +57,24 @@ class ModuleRun extends CmdRun {
 
     @Override
     void run() {
-        if (!args ) {
+        if( !args ) {
             throw new AbortOperationException("Arguments not provided")
         }
-
-        // Parse module reference (first argument starting with @)
-        String moduleRef = '@' + args[0]
 
         // Parse and validate module reference
         ModuleReference reference
         try {
-            reference = ModuleReference.parse(moduleRef)
-        } catch (Exception e) {
-            throw new AbortOperationException("Invalid module reference: ${moduleRef}", e)
+            reference = ModuleReference.parse(args[0])
+        } catch( Exception e ) {
+            throw new AbortOperationException("Invalid module reference: ${args[0]}", e)
         }
 
         // Get config
         def baseDir = root ?: Paths.get('.').toAbsolutePath().normalize()
         def config = new ConfigBuilder()
-                .setOptions(launcher.options)
-                .setBaseDir(baseDir)
-                .build()
+            .setOptions(launcher.options)
+            .setBaseDir(baseDir)
+            .build()
 
         def registryConfig = config.navigate('registry') as RegistryConfig ?: new RegistryConfig()
 

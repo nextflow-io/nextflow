@@ -26,16 +26,6 @@ import spock.lang.Specification
  */
 class ModuleReferenceTest extends Specification {
 
-    def 'should parse valid module reference with @'() {
-        when:
-        def ref = ModuleReference.parse('@nf-core/fastqc')
-
-        then:
-        ref.scope == 'nf-core'
-        ref.name == 'fastqc'
-        ref.fullName == '@nf-core/fastqc'
-    }
-
     def 'should parse valid module reference without @'() {
         when:
         def ref = ModuleReference.parse('nf-core/fastqc')
@@ -43,17 +33,25 @@ class ModuleReferenceTest extends Specification {
         then:
         ref.scope == 'nf-core'
         ref.name == 'fastqc'
-        ref.fullName == '@nf-core/fastqc'
+        ref.fullName == 'nf-core/fastqc'
+    }
+
+    def 'should reject module reference with @ prefix'() {
+        when:
+        ModuleReference.parse('@nf-core/fastqc')
+
+        then:
+        thrown(AbortOperationException)
     }
 
     def 'should parse module reference with multiple slashes'() {
         when:
-        def ref = ModuleReference.parse('@myorg/samtools/view')
+        def ref = ModuleReference.parse('myorg/samtools/view')
 
         then:
         ref.scope == 'myorg'
         ref.name == 'samtools/view'
-        ref.fullName == '@myorg/samtools/view'
+        ref.fullName == 'myorg/samtools/view'
     }
 
     def 'should reject invalid module reference without scope'() {
@@ -80,7 +78,7 @@ class ModuleReferenceTest extends Specification {
         thrown(AbortOperationException)
     }
 
-    def 'should reject module reference with only @'() {
+    def 'should reject bare @ character'() {
         when:
         ModuleReference.parse('@')
 
@@ -90,15 +88,15 @@ class ModuleReferenceTest extends Specification {
 
     def 'should reject module reference with only scope'() {
         when:
-        ModuleReference.parse('@nf-core/')
+        ModuleReference.parse('nf-core/')
 
         then:
         thrown(AbortOperationException)
     }
 
-    def 'should handle module reference with trailing slash'() {
+    def 'should reject module reference with trailing slash'() {
         when:
-        ModuleReference.parse('@nf-core/fastqc/')
+        ModuleReference.parse('nf-core/fastqc/')
 
         then:
         thrown(AbortOperationException)
@@ -111,12 +109,12 @@ class ModuleReferenceTest extends Specification {
         then:
         ref.scope == 'nf-core'
         ref.name == 'fastqc'
-        ref.fullName == '@nf-core/fastqc'
+        ref.fullName == 'nf-core/fastqc'
     }
 
     def 'should handle scope names with hyphens'() {
         when:
-        def ref = ModuleReference.parse('@my-org/my-module')
+        def ref = ModuleReference.parse('my-org/my-module')
 
         then:
         ref.scope == 'my-org'
@@ -125,7 +123,7 @@ class ModuleReferenceTest extends Specification {
 
     def 'should handle scope names with underscores'() {
         when:
-        def ref = ModuleReference.parse('@my_org/my_module')
+        def ref = ModuleReference.parse('my_org/my_module')
 
         then:
         ref.scope == 'my_org'
@@ -134,7 +132,7 @@ class ModuleReferenceTest extends Specification {
 
     def 'should handle module names with numbers'() {
         when:
-        def ref = ModuleReference.parse('@nf-core/bwa-mem2')
+        def ref = ModuleReference.parse('nf-core/bwa-mem2')
 
         then:
         ref.scope == 'nf-core'
@@ -143,9 +141,9 @@ class ModuleReferenceTest extends Specification {
 
     def 'should implement equals correctly'() {
         given:
-        def ref1 = ModuleReference.parse('@nf-core/fastqc')
-        def ref2 = ModuleReference.parse('@nf-core/fastqc')
-        def ref3 = ModuleReference.parse('@nf-core/multiqc')
+        def ref1 = ModuleReference.parse('nf-core/fastqc')
+        def ref2 = ModuleReference.parse('nf-core/fastqc')
+        def ref3 = ModuleReference.parse('nf-core/multiqc')
 
         expect:
         ref1 == ref2
@@ -154,8 +152,8 @@ class ModuleReferenceTest extends Specification {
 
     def 'should implement hashCode correctly'() {
         given:
-        def ref1 = ModuleReference.parse('@nf-core/fastqc')
-        def ref2 = ModuleReference.parse('@nf-core/fastqc')
+        def ref1 = ModuleReference.parse('nf-core/fastqc')
+        def ref2 = ModuleReference.parse('nf-core/fastqc')
 
         expect:
         ref1.hashCode() == ref2.hashCode()
@@ -163,17 +161,17 @@ class ModuleReferenceTest extends Specification {
 
     def 'should implement toString correctly'() {
         given:
-        def ref = ModuleReference.parse('@nf-core/fastqc')
+        def ref = ModuleReference.parse('nf-core/fastqc')
 
         expect:
-        ref.toString() == '@nf-core/fastqc'
+        ref.toString() == 'nf-core/fastqc'
     }
 
     def 'should be usable as map key'() {
         given:
-        def ref1 = ModuleReference.parse('@nf-core/fastqc')
-        def ref2 = ModuleReference.parse('@nf-core/fastqc')
-        def ref3 = ModuleReference.parse('@nf-core/multiqc')
+        def ref1 = ModuleReference.parse('nf-core/fastqc')
+        def ref2 = ModuleReference.parse('nf-core/fastqc')
+        def ref3 = ModuleReference.parse('nf-core/multiqc')
 
         def map = [:]
         map[ref1] = 'value1'
@@ -187,7 +185,7 @@ class ModuleReferenceTest extends Specification {
 
     def 'should handle org-style scopes'() {
         when:
-        def ref = ModuleReference.parse('@mycompany.io/custom-module')
+        def ref = ModuleReference.parse('mycompany.io/custom-module')
 
         then:
         ref.scope == 'mycompany.io'
@@ -196,7 +194,7 @@ class ModuleReferenceTest extends Specification {
 
     def 'should reject module reference with spaces'() {
         when:
-        ModuleReference.parse('@nf-core/fast qc')
+        ModuleReference.parse('nf-core/fast qc')
 
         then:
         thrown(AbortOperationException)
@@ -204,7 +202,7 @@ class ModuleReferenceTest extends Specification {
 
     def 'should reject module reference with special characters'() {
         when:
-        ModuleReference.parse('@nf-core/fastqc!')
+        ModuleReference.parse('nf-core/fastqc!')
 
         then:
         thrown(AbortOperationException)
@@ -212,17 +210,17 @@ class ModuleReferenceTest extends Specification {
 
     def 'should handle deeply nested module names'() {
         when:
-        def ref = ModuleReference.parse('@nf-core/samtools/sort/parallel')
+        def ref = ModuleReference.parse('nf-core/samtools/sort/parallel')
 
         then:
         ref.scope == 'nf-core'
         ref.name == 'samtools/sort/parallel'
-        ref.fullName == '@nf-core/samtools/sort/parallel'
+        ref.fullName == 'nf-core/samtools/sort/parallel'
     }
 
     def 'should parse from string with leading/trailing whitespace'() {
         when:
-        def ref = ModuleReference.parse('  @nf-core/fastqc  ')
+        def ref = ModuleReference.parse('  nf-core/fastqc  ')
 
         then:
         ref.scope == 'nf-core'

@@ -25,6 +25,7 @@ import nextflow.cli.CmdBase
 import nextflow.config.ConfigBuilder
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
+import nextflow.module.ModuleChecksum
 import nextflow.module.ModuleSpec
 import nextflow.module.ModuleReference
 import nextflow.module.ModuleRegistryClient
@@ -43,7 +44,7 @@ import java.nio.file.Paths
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Publish a module to the registry")
-class ModulePublish extends CmdBase {
+class CmdModulePublish extends CmdBase {
 
     @Parameter(names = ["-dry-run"], description = "Validate without uploading", arity=0)
     boolean dryRun = false
@@ -59,6 +60,9 @@ class ModulePublish extends CmdBase {
 
     @TestOnly
     protected ModuleRegistryClient client
+
+    //Flag if publish is invoked from a scope/name. In this case we should create/update the .module-info with the correct checksum
+    private boolean useModuleReference = false
 
     @Override
     String getName() {
@@ -115,14 +119,10 @@ class ModulePublish extends CmdBase {
 
     private void publishModule(Path moduleDir, RegistryConfig registryConfig, ModuleSpec manifest){
         log.info "Creating module bundle..."
-        def storage = new ModuleStorage(moduleDir.parent)
         def tempBundleFile = Files.createTempFile("nf-module-publish-", ".tar.gz")
 
         try {
-            storage.createBundle(moduleDir, tempBundleFile)
-
-            // Compute bundle checksum
-            def checksum = storage.computeBundleChecksum(tempBundleFile)
+            def checksum = ModuleStorage.createBundle(moduleDir, tempBundleFile)
             log.info "Bundle checksum: ${checksum}"
 
             // Read bundle content as bytes
@@ -139,6 +139,14 @@ class ModulePublish extends CmdBase {
             def registryClient = new ModuleRegistryClient(registryConfig)
             def response = registryClient.publishModule(manifest.name, request, registryUrl)
 
+            if (useModuleReference) {
+                // If publish is performed using the module reference we should create/update the .module-info with the correct checksum
+                try {
+                    ModuleChecksum.save(moduleDir, ModuleChecksum.compute(moduleDir))
+                }catch (Exception e){
+                    log.warn("Unable to save the checksum - ${e.message}")
+                }
+            }
             println "✓ Module published successfully!"
             println ""
             println "Module details:"
@@ -218,8 +226,8 @@ class ModulePublish extends CmdBase {
         }
 
         // Check bundle size (1MB uncompressed limit)
-        try {
-            long totalSize = Files.walk(moduleDir)
+        try (final sizeStream = Files.walk(moduleDir)){
+            long totalSize = sizeStream
                 .filter { Files.isRegularFile(it) }
                 .mapToLong { Files.size(it) }
                 .sum()
@@ -246,13 +254,13 @@ class ModulePublish extends CmdBase {
             return Paths.get(module).toAbsolutePath().normalize()
         }
 
-        final ref =  ModuleReference.parse('@' + module)
+        final ref =  ModuleReference.parse(module)
         final localStorage = new ModuleStorage(root ?: Paths.get('.').toAbsolutePath().normalize())
 
         if (!localStorage.isInstalled(ref)){
             throw new AbortOperationException("No module diretory found for $module")
         }
-
+        useModuleReference = true
         return localStorage.getModuleDir(ref)
     }
 }

@@ -20,6 +20,7 @@ import io.seqera.npr.api.schema.v1.Module
 import io.seqera.npr.api.schema.v1.ModuleRelease
 import nextflow.cli.Launcher
 import nextflow.exception.AbortOperationException
+import nextflow.module.ModuleChecksum
 import nextflow.module.ModuleRegistryClient
 import nextflow.pipeline.PipelineSpec
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry
@@ -34,11 +35,11 @@ import java.nio.file.Path
 import java.util.zip.GZIPOutputStream
 
 /**
- * Tests for ModuleInstall command
+ * Tests for CmdModuleInstall command
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
-class ModuleInstallTest extends Specification {
+class CmdModuleInstallTest extends Specification {
 
     @Rule
     OutputCapture capture = new OutputCapture()
@@ -48,7 +49,7 @@ class ModuleInstallTest extends Specification {
 
     def 'should install module with latest version'() {
         given:
-        def cmd = new ModuleInstall()
+        def cmd = new CmdModuleInstall()
         cmd.launcher = Mock(Launcher) {
             getOptions() >> null
         }
@@ -61,11 +62,11 @@ class ModuleInstallTest extends Specification {
 
         // Mock registry client
         def mockClient = Mock(ModuleRegistryClient)
-        mockClient.fetchModule('@nf-core/fastqc') >> new Module(
-            name: '@nf-core/fastqc',
+        mockClient.fetchModule('nf-core/fastqc') >> new Module(
+            name: 'nf-core/fastqc',
             latest: new ModuleRelease(version: '1.0.0')
         )
-        mockClient.downloadModule('@nf-core/fastqc', '1.0.0', _) >> { String name, String version, Path dest ->
+        mockClient.downloadModule('nf-core/fastqc', '1.0.0', _) >> { String name, String version, Path dest ->
             Files.write(dest, modulePackage)
             return dest
         }
@@ -81,19 +82,19 @@ class ModuleInstallTest extends Specification {
         output.contains('1.0.0')
 
         and:
-        def moduleDir = tempDir.resolve('modules/@nf-core/fastqc')
+        def moduleDir = tempDir.resolve('modules/nf-core/fastqc')
         Files.exists(moduleDir)
         Files.exists(moduleDir.resolve('main.nf'))
         Files.exists(moduleDir.resolve('meta.yml'))
 
         and:
         def spec = new PipelineSpec(tempDir)
-        spec.getModules().get('@nf-core/fastqc') == '1.0.0'
+        spec.getModules().get('nf-core/fastqc') == '1.0.0'
     }
 
     def 'should install module with specific version'() {
         given:
-        def cmd = new ModuleInstall()
+        def cmd = new CmdModuleInstall()
         cmd.launcher = Mock(Launcher) {
             getOptions() >> null
         }
@@ -122,14 +123,14 @@ class ModuleInstallTest extends Specification {
 
         and:
         def spec = new PipelineSpec(tempDir)
-        spec.getModules().get('@nf-core/fastqc') == '2.0.0'
+        spec.getModules().get('nf-core/fastqc') == '2.0.0'
 
     }
 
     def 'should update existing module with force flag'() {
         given:
         // Pre-install version 1.0.0
-        def moduleDir = tempDir.resolve('modules/@nf-core/fastqc')
+        def moduleDir = tempDir.resolve('modules/nf-core/fastqc')
         Files.createDirectories(moduleDir)
         moduleDir.resolve('main.nf').text = 'process OLD { }'
         moduleDir.resolve('meta.yml').text = """
@@ -139,10 +140,10 @@ class ModuleInstallTest extends Specification {
                                                     """.stripIndent()
 
         def spec = new PipelineSpec(tempDir)
-        spec.addModuleEntry('@nf-core/fastqc', '1.0.0')
+        spec.addModuleEntry('nf-core/fastqc', '1.0.0')
 
         and:
-        def cmd = new ModuleInstall()
+        def cmd = new CmdModuleInstall()
         cmd.launcher = Mock(Launcher) {
             getOptions() >> null
         }
@@ -155,7 +156,7 @@ class ModuleInstallTest extends Specification {
         def modulePackage = createModulePackage('nf-core', 'fastqc', '2.0.0')
 
         def mockClient = Mock(ModuleRegistryClient)
-        mockClient.downloadModule('@nf-core/fastqc', '2.0.0', _) >> { String name, String version, Path dest ->
+        mockClient.downloadModule('nf-core/fastqc', '2.0.0', _) >> { String name, String version, Path dest ->
             Files.write(dest, modulePackage)
             return dest
         }
@@ -171,7 +172,7 @@ class ModuleInstallTest extends Specification {
 
         and:
         def updatedSpec = new PipelineSpec(tempDir)
-        updatedSpec.getModules().get('@nf-core/fastqc') == '2.0.0'
+        updatedSpec.getModules().get('nf-core/fastqc') == '2.0.0'
 
         and:
         moduleDir.resolve('main.nf').text.contains('FASTQC')  // New content
@@ -180,7 +181,7 @@ class ModuleInstallTest extends Specification {
     def 'should fail when module already installed without force'() {
         given:
         // Pre-install the module
-        def moduleDir = tempDir.resolve('modules/@nf-core/fastqc')
+        def moduleDir = tempDir.resolve('modules/nf-core/fastqc')
         Files.createDirectories(moduleDir)
         moduleDir.resolve('main.nf').text = 'process FASTQC { }'
         moduleDir.resolve('meta.yml').text = """
@@ -188,12 +189,12 @@ class ModuleInstallTest extends Specification {
                                                     version: '1.0.0'
                                                     description: Test module
                                                     """.stripIndent()
-        moduleDir.resolve('.checksum').text = 'wrong-checksum'
+        ModuleChecksum.save(moduleDir, 'wrong-checksum')
         def spec = new PipelineSpec(tempDir)
-        spec.addModuleEntry('@nf-core/fastqc', '1.0.0')
+        spec.addModuleEntry('nf-core/fastqc', '1.0.0')
 
         and:
-        def cmd = new ModuleInstall()
+        def cmd = new CmdModuleInstall()
         cmd.launcher = Mock(Launcher) {
             getOptions() >> null
         }
@@ -202,8 +203,8 @@ class ModuleInstallTest extends Specification {
         cmd.root = tempDir
 
         def mockClient = Mock(ModuleRegistryClient)
-        mockClient.fetchModule('@nf-core/fastqc') >> new Module(
-            name: '@nf-core/fastqc',
+        mockClient.fetchModule('nf-core/fastqc') >> new Module(
+            name: 'nf-core/fastqc',
             latest: new ModuleRelease(version: '2.0.0')
         )
         cmd.client = mockClient
@@ -218,7 +219,7 @@ class ModuleInstallTest extends Specification {
 
     def 'should handle module with scope in name'() {
         given:
-        def cmd = new ModuleInstall()
+        def cmd = new CmdModuleInstall()
         cmd.launcher = Mock(Launcher) {
             getOptions() >> null
         }
@@ -229,11 +230,11 @@ class ModuleInstallTest extends Specification {
         def modulePackage = createModulePackage('myorg', 'custom-module', '1.0.0')
 
         def mockClient = Mock(ModuleRegistryClient)
-        mockClient.fetchModule('@myorg/custom-module') >> new Module(
-            name: '@myorg/custom-module',
+        mockClient.fetchModule('myorg/custom-module') >> new Module(
+            name: 'myorg/custom-module',
             latest: new ModuleRelease(version: '1.0.0')
         )
-        mockClient.downloadModule('@myorg/custom-module', '1.0.0', _) >> { String name, String version, Path dest ->
+        mockClient.downloadModule('myorg/custom-module', '1.0.0', _) >> { String name, String version, Path dest ->
             Files.write(dest, modulePackage)
             return dest
         }
@@ -243,18 +244,18 @@ class ModuleInstallTest extends Specification {
         cmd.run()
 
         then:
-        def moduleDir = tempDir.resolve('modules/@myorg/custom-module')
+        def moduleDir = tempDir.resolve('modules/myorg/custom-module')
         Files.exists(moduleDir)
         Files.exists(moduleDir.resolve('main.nf'))
 
         and:
         def spec = new PipelineSpec(tempDir)
-        spec.getModules().get('@myorg/custom-module') == '1.0.0'
+        spec.getModules().get('myorg/custom-module') == '1.0.0'
     }
 
     def 'should create modules directory if it does not exist'() {
         given:
-        def cmd = new ModuleInstall()
+        def cmd = new CmdModuleInstall()
         cmd.launcher = Mock(Launcher) {
             getOptions() >> null
         }
@@ -265,11 +266,11 @@ class ModuleInstallTest extends Specification {
         def modulePackage = createModulePackage('nf-core', 'fastqc', '1.0.0')
 
         def mockClient = Mock(ModuleRegistryClient)
-        mockClient.fetchModule('@nf-core/fastqc') >> new Module(
+        mockClient.fetchModule('nf-core/fastqc') >> new Module(
             name: 'nf-core/fastqc',
             latest: new ModuleRelease(version: '1.0.0')
         )
-        mockClient.downloadModule('@nf-core/fastqc', '1.0.0', _) >> { String name, String version, Path dest ->
+        mockClient.downloadModule('nf-core/fastqc', '1.0.0', _) >> { String name, String version, Path dest ->
             Files.write(dest, modulePackage)
             return dest
         }
@@ -280,13 +281,13 @@ class ModuleInstallTest extends Specification {
 
         then:
         Files.exists(tempDir.resolve('modules'))
-        Files.exists(tempDir.resolve('modules/@nf-core'))
-        Files.exists(tempDir.resolve('modules/@nf-core/fastqc'))
+        Files.exists(tempDir.resolve('modules/nf-core'))
+        Files.exists(tempDir.resolve('modules/nf-core/fastqc'))
     }
 
     def 'should create checksum file after installation'() {
         given:
-        def cmd = new ModuleInstall()
+        def cmd = new CmdModuleInstall()
         cmd.launcher = Mock(Launcher) {
             getOptions() >> null
         }
@@ -297,11 +298,11 @@ class ModuleInstallTest extends Specification {
         def modulePackage = createModulePackage('nf-core', 'fastqc', '1.0.0')
 
         def mockClient = Mock(ModuleRegistryClient)
-        mockClient.fetchModule('@nf-core/fastqc') >> new Module(
+        mockClient.fetchModule('nf-core/fastqc') >> new Module(
             name: 'nf-core/fastqc',
             latest: new ModuleRelease(version: '1.0.0')
         )
-        mockClient.downloadModule('@nf-core/fastqc', '1.0.0', _) >> { String name, String version, Path dest ->
+        mockClient.downloadModule('nf-core/fastqc', '1.0.0', _) >> { String name, String version, Path dest ->
             Files.write(dest, modulePackage)
             return dest
         }
@@ -311,18 +312,18 @@ class ModuleInstallTest extends Specification {
         cmd.run()
 
         then:
-        def moduleDir = tempDir.resolve('modules/@nf-core/fastqc')
-        Files.exists(moduleDir.resolve('.checksum'))
+        def moduleDir = tempDir.resolve('modules/nf-core/fastqc')
+        Files.exists(moduleDir.resolve('.module-info'))
 
         and:
-        def checksum = moduleDir.resolve('.checksum').text
+        def checksum = ModuleChecksum.load(moduleDir)
         checksum != null
         !checksum.isEmpty()
     }
 
     def 'should fail with no arguments'() {
         given:
-        def cmd = new ModuleInstall()
+        def cmd = new CmdModuleInstall()
         cmd.launcher = Mock(Launcher) {
             getOptions() >> null
         }
@@ -338,7 +339,7 @@ class ModuleInstallTest extends Specification {
 
     def 'should fail with too many arguments'() {
         given:
-        def cmd = new ModuleInstall()
+        def cmd = new CmdModuleInstall()
         cmd.launcher = Mock(Launcher) {
             getOptions() >> null
         }
@@ -354,7 +355,7 @@ class ModuleInstallTest extends Specification {
 
     def 'should fail with invalid module reference'() {
         given:
-        def cmd = new ModuleInstall()
+        def cmd = new CmdModuleInstall()
         cmd.launcher = Mock(Launcher) {
             getOptions() >> null
         }
