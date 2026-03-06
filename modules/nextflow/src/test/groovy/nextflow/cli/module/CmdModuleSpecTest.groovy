@@ -59,7 +59,7 @@ class CmdModuleSpecTest extends Specification {
 
     /** Create a locally-installed module under tempDir/modules/@scope/name/ */
     private Path createInstalledModule(String scope, String name, String processCode) {
-        def moduleDir = tempDir.resolve("modules/@${scope}/${name}")
+        def moduleDir = tempDir.resolve("modules/${scope}/${name}")
         Files.createDirectories(moduleDir)
         moduleDir.resolve('main.nf').text = processCode
         return moduleDir

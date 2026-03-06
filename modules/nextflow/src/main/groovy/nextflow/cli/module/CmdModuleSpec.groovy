@@ -68,7 +68,7 @@ class CmdModuleSpec extends CmdBase {
     @TestOnly
     protected Path root
 
-    private moduleName
+    private String moduleName
 
     @Override
     String getName() { 'spec' }
@@ -110,23 +110,23 @@ class CmdModuleSpec extends CmdBase {
 
     private Path resolveAsModuleReference(Path baseDir, String module) {
         try {
-            final ref = ModuleReference.parse('@' + module)
+            final ref = ModuleReference.parse(module)
             final localStorage = new ModuleStorage(baseDir)
             if( localStorage.isInstalled(ref) ) {
-                log.debug("Argument $args refers to a local module reference")
+                log.debug("Argument $module refers to a local module reference")
                 return localStorage.getModuleDir(ref)
             }
-            log.debug("Argument $args is not a local module reference")
+            log.debug("Argument $module is not a local module reference")
             return null
         } catch( AbortOperationException e ) {
-            log.debug("Argument $args is not a correct module reference")
+            log.debug("Argument $module is not a correct module reference")
             return null
         }
     }
 
     private Path resolveAsPath(Path baseDir, String module) {
         final path = Paths.get(module)
-        final moduleDir = path.isAbsolute() ? path : baseDir.resolve(args[0])
+        final moduleDir = path.isAbsolute() ? path : baseDir.resolve(module)
         if( !Files.isDirectory(moduleDir) )
             throw new AbortOperationException("Not a directory: ${moduleDir}")
         return moduleDir
