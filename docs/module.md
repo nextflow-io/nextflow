@@ -377,7 +377,7 @@ $ nextflow module remove nf-core/fastqc
 By default, both the local module files and the entry in `nextflow_spec.json` are removed. Use the flags below to control this behaviour:
 
 - `-keep-files` — Remove the entry from `nextflow_spec.json` but keep the local module files
-- `-keep-config` — Remove the local module files but keep the entry in `nextflow_spec.json`
+- `-force` — Force removal even if the module has no `.module-info` file (i.e. not installed from a registry) or has local modifications
 
 ### Viewing module information
 

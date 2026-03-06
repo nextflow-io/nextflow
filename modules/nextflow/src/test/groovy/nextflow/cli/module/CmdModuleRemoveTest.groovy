@@ -17,6 +17,7 @@
 package nextflow.cli.module
 
 import nextflow.exception.AbortOperationException
+import nextflow.module.ModuleChecksum
 import nextflow.module.ModuleReference
 import nextflow.module.ModuleStorage
 import nextflow.pipeline.PipelineSpec
@@ -47,7 +48,7 @@ class CmdModuleRemoveTest extends Specification {
         given:
         def storage = new ModuleStorage(tempDir)
         def reference = new ModuleReference('nf-core', 'fastqc')
-        def moduleDir = createTestModule(storage, reference)
+        def moduleDir = createTestModule(storage, reference, true)
 
         // Create spec file with module entry
         def specFile = new PipelineSpec(tempDir)
@@ -63,10 +64,8 @@ class CmdModuleRemoveTest extends Specification {
         def output = capture.toString()
 
         then:
-        output.contains('Removing module files')
-        output.contains('Module files removed successfully')
-        output.contains('Removing module entry from nextflow_spec.json')
-        output.contains('Module entry removed from configuration')
+        output.contains('Module nf-core/fastqc files removed successfully')
+        output.contains('Module nf-core/fastqc entry removed from spec')
         !Files.exists(moduleDir)
 
         and:
@@ -74,41 +73,11 @@ class CmdModuleRemoveTest extends Specification {
         spec.getModules().get('nf-core/fastqc') == null
     }
 
-    def 'should keep config with -keep-config flag'() {
-        given:
-        def storage = new ModuleStorage(tempDir)
-        def reference = new ModuleReference('nf-core', 'fastqc')
-        def moduleDir = createTestModule(storage, reference)
-
-        // Create spec file
-        def specFile = new PipelineSpec(tempDir)
-        specFile.addModuleEntry('nf-core/fastqc', '1.0.0')
-
-        and:
-        def cmd = new CmdModuleRemove()
-        cmd.args = ['nf-core/fastqc']
-        cmd.keepConfig = true
-        cmd.root = tempDir
-
-        when:
-        cmd.run()
-        def output = capture.toString()
-
-        then:
-        output.contains('Removing module files')
-        output.contains('Keeping module entry in nextflow_spec.json')
-        !Files.exists(moduleDir)
-
-        and:
-        def spec = new PipelineSpec(tempDir)
-        spec.getModules().get('nf-core/fastqc') == '1.0.0'
-    }
-
     def 'should keep files with -keep-files flag'() {
         given:
         def storage = new ModuleStorage(tempDir)
         def reference = new ModuleReference('nf-core', 'fastqc')
-        def moduleDir = createTestModule(storage, reference)
+        def moduleDir = createTestModule(storage, reference, true)
 
         // Create spec file
         def specFile = new PipelineSpec(tempDir)
@@ -125,21 +94,22 @@ class CmdModuleRemoveTest extends Specification {
         def output = capture.toString()
 
         then:
-        output.contains('Keeping module files')
-        output.contains('Removing module entry from nextflow_spec.json')
+        output.contains('Keeping module files for nf-core/fastqc ')
+        output.contains('Module nf-core/fastqc entry removed from spec file')
         Files.exists(moduleDir)
         Files.exists(moduleDir.resolve('main.nf'))
+        !Files.exists(moduleDir.resolve(ModuleStorage.MODULE_INFO_FILE))
 
         and:
         def spec = new PipelineSpec(tempDir)
         spec.getModules().get('nf-core/fastqc') == null
     }
 
-    def 'should fail when both keep flags are set'() {
+    def 'should fail when both keep-files and force are set'() {
         given:
         def cmd = new CmdModuleRemove()
         cmd.args = ['nf-core/fastqc']
-        cmd.keepConfig = true
+        cmd.force = true
         cmd.keepFiles = true
         cmd.root = tempDir
 
@@ -148,7 +118,91 @@ class CmdModuleRemoveTest extends Specification {
 
         then:
         def e = thrown(AbortOperationException)
-        e.message.contains('Cannot use both -keep-config and -keep-files')
+        e.message.contains('Cannot use both -keep-files and -force options')
+    }
+
+    def 'should fail to remove module without .module-info when force not set'() {
+        given:
+        def storage = new ModuleStorage(tempDir)
+        def reference = new ModuleReference('nf-core', 'fastqc')
+        createTestModule(storage, reference)   // no .module-info created
+
+        and:
+        def cmd = new CmdModuleRemove()
+        cmd.args = ['nf-core/fastqc']
+        cmd.root = tempDir
+
+        when:
+        cmd.run()
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message.contains('.module-info missing')
+    }
+
+    def 'should force remove module without .module-info'() {
+        given:
+        def storage = new ModuleStorage(tempDir)
+        def reference = new ModuleReference('nf-core', 'fastqc')
+        def moduleDir = createTestModule(storage, reference)   // no .module-info created
+
+        and:
+        def cmd = new CmdModuleRemove()
+        cmd.args = ['nf-core/fastqc']
+        cmd.force = true
+        cmd.root = tempDir
+
+        when:
+        cmd.run()
+        def output = capture.toString()
+
+        then:
+        output.contains('Module nf-core/fastqc files removed successfully')
+        !Files.exists(moduleDir)
+    }
+
+    def 'should fail to remove modified module when force not set'() {
+        given:
+        def storage = new ModuleStorage(tempDir)
+        def reference = new ModuleReference('nf-core', 'fastqc')
+        def moduleDir = createTestModule(storage, reference, true)
+        // Modify a file to cause checksum mismatch
+        moduleDir.resolve('main.nf').text = 'process MODIFIED { }'
+
+        and:
+        def cmd = new CmdModuleRemove()
+        cmd.args = ['nf-core/fastqc']
+        cmd.root = tempDir
+
+        when:
+        cmd.run()
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message.contains('local modifications')
+    }
+
+    def 'should force remove modified module'() {
+        given:
+        def storage = new ModuleStorage(tempDir)
+        def reference = new ModuleReference('nf-core', 'fastqc')
+        def moduleDir = createTestModule(storage, reference, true)
+        // Modify a file to cause checksum mismatch
+        moduleDir.resolve('main.nf').text = 'process MODIFIED { }'
+
+        and:
+        def cmd = new CmdModuleRemove()
+        cmd.args = ['nf-core/fastqc']
+        cmd.force = true
+        cmd.root = tempDir
+
+        when:
+        cmd.run()
+        def output = capture.toString()
+
+        then:
+        output.contains('Module nf-core/fastqc files removed successfully')
+        !Files.exists(moduleDir)
     }
 
     def 'should handle removing non-existent module'() {
@@ -162,7 +216,7 @@ class CmdModuleRemoveTest extends Specification {
         def output = capture.toString()
 
         then:
-        output.contains('was not installed locally') || output.contains('was not found')
+        output.contains('Module nf-core/nonexistent not found locally')
     }
 
     def 'should fail with no arguments'() {
@@ -191,7 +245,7 @@ class CmdModuleRemoveTest extends Specification {
         thrown(AbortOperationException)
     }
 
-    private Path createTestModule(ModuleStorage storage, ModuleReference reference) {
+    private Path createTestModule(ModuleStorage storage, ModuleReference reference, boolean withModuleInfo = false) {
         def moduleDir = storage.getModuleDir(reference)
         Files.createDirectories(moduleDir)
 
@@ -217,6 +271,10 @@ class CmdModuleRemoveTest extends Specification {
             version: 1.0.0
             description: FastQC quality control
         '''.stripIndent()
+
+        if( withModuleInfo ) {
+            ModuleChecksum.save(moduleDir, ModuleChecksum.compute(moduleDir))
+        }
 
         return moduleDir
     }

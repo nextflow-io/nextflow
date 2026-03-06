@@ -273,15 +273,17 @@ class ModuleStorageTest extends Specification {
         def reference = new ModuleReference('nf-core', 'fastqc')
         def moduleDir = storage.getModuleDir(reference)
 
-        // Create module
+        // Create valid module with correct checksum
         Files.createDirectories(moduleDir)
         moduleDir.resolve('main.nf').text = 'process TEST { }'
+        moduleDir.resolve('meta.yml').text = 'name: nf-core/fastqc\nversion: 1.0.0\n'
+        ModuleChecksum.save(moduleDir, ModuleChecksum.compute(moduleDir))
 
         expect:
         Files.exists(moduleDir)
 
         when:
-        def removed = storage.removeModule(reference)
+        def removed = storage.removeModule(reference, false)
 
         then:
         removed
@@ -294,10 +296,96 @@ class ModuleStorageTest extends Specification {
         def reference = new ModuleReference('nf-core', 'nonexistent')
 
         when:
-        def removed = storage.removeModule(reference)
+        def removed = storage.removeModule(reference, false)
 
         then:
         !removed
+    }
+
+    def 'should throw when removing module without .module-info and force is false'() {
+        given:
+        def storage = new ModuleStorage(tempDir)
+        def reference = new ModuleReference('nf-core', 'fastqc')
+        def moduleDir = storage.getModuleDir(reference)
+
+        // Create module WITHOUT .module-info (but with required files for NO_REMOTE_MODULE integrity)
+        Files.createDirectories(moduleDir)
+        moduleDir.resolve('main.nf').text = 'process TEST { }'
+        moduleDir.resolve('meta.yml').text = 'name: nf-core/fastqc\nversion: 1.0.0\n'
+
+        when:
+        storage.removeModule(reference, false)
+
+        then:
+        def e = thrown(nextflow.exception.AbortOperationException)
+        e.message.contains('.module-info missing')
+        Files.exists(moduleDir)
+    }
+
+    def 'should force remove module without .module-info'() {
+        given:
+        def storage = new ModuleStorage(tempDir)
+        def reference = new ModuleReference('nf-core', 'fastqc')
+        def moduleDir = storage.getModuleDir(reference)
+
+        // Create module WITHOUT .module-info (but with required files for NO_REMOTE_MODULE integrity)
+        Files.createDirectories(moduleDir)
+        moduleDir.resolve('main.nf').text = 'process TEST { }'
+        moduleDir.resolve('meta.yml').text = 'name: nf-core/fastqc\nversion: 1.0.0\n'
+
+        expect:
+        Files.exists(moduleDir)
+
+        when:
+        def removed = storage.removeModule(reference, true)
+
+        then:
+        removed
+        !Files.exists(moduleDir)
+    }
+
+    def 'should throw when removing modified module and force is false'() {
+        given:
+        def storage = new ModuleStorage(tempDir)
+        def reference = new ModuleReference('nf-core', 'fastqc')
+        def moduleDir = storage.getModuleDir(reference)
+
+        // Create module with mismatched checksum (simulates local modification)
+        Files.createDirectories(moduleDir)
+        moduleDir.resolve('main.nf').text = 'process TEST { }'
+        moduleDir.resolve('meta.yml').text = 'name: nf-core/fastqc\nversion: 1.0.0\n'
+        ModuleChecksum.save(moduleDir, 'stale-checksum-from-install')
+        // Now modify a file to cause checksum mismatch
+        moduleDir.resolve('main.nf').text = 'process TEST_MODIFIED { }'
+
+        when:
+        storage.removeModule(reference, false)
+
+        then:
+        def e = thrown(nextflow.exception.AbortOperationException)
+        e.message.contains('local modifications')
+        Files.exists(moduleDir)
+    }
+
+    def 'should force remove modified module'() {
+        given:
+        def storage = new ModuleStorage(tempDir)
+        def reference = new ModuleReference('nf-core', 'fastqc')
+        def moduleDir = storage.getModuleDir(reference)
+
+        // Create module with mismatched checksum (simulates local modification)
+        Files.createDirectories(moduleDir)
+        moduleDir.resolve('main.nf').text = 'process TEST { }'
+        moduleDir.resolve('meta.yml').text = 'name: nf-core/fastqc\nversion: 1.0.0\n'
+        ModuleChecksum.save(moduleDir, 'stale-checksum-from-install')
+        moduleDir.resolve('main.nf').text = 'process TEST_MODIFIED { }'
+
+        when:
+        def removed = storage.removeModule(reference, true)
+
+        then:
+        removed
+        !Files.exists(moduleDir)
     }
 
     def 'should compute and save checksum on install'() {

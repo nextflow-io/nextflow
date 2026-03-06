@@ -27,6 +27,7 @@ import nextflow.module.ModuleStorage
 import nextflow.pipeline.PipelineSpec
 import nextflow.util.TestOnly
 
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
@@ -43,11 +44,11 @@ class CmdModuleRemove extends CmdBase {
     @Parameter(description = "<module>", required = true)
     List<String> args
 
-    @Parameter(names = ["-keep-config"], description = "Remove local files but keep the entry in nextflow_spec.json", arity = 0)
-    boolean keepConfig = false
-
     @Parameter(names = ["-keep-files"], description = "Remove from config but keep local files", arity = 0)
     boolean keepFiles = false
+
+    @Parameter(names = ["-force"], description = "Force remove", arity = 0)
+    boolean force = false
 
     @TestOnly
     protected Path root
@@ -62,10 +63,8 @@ class CmdModuleRemove extends CmdBase {
         if( !args || args.size() != 1 ) {
             throw new AbortOperationException("Incorrect number of arguments")
         }
-
-        // Validate flags
-        if( keepConfig && keepFiles ) {
-            throw new AbortOperationException("Cannot use both -keep-config and -keep-files flags together")
+        if( keepFiles && force ) {
+            throw new AbortOperationException("Cannot use both -keep-files and -force options")
         }
 
         def reference = ModuleReference.parse(args[0])
@@ -85,43 +84,32 @@ class CmdModuleRemove extends CmdBase {
 
             // Remove local files unless -keep-files is set
             if( !keepFiles ) {
-                println "Removing module files for ${reference}..."
-                filesRemoved = storage.removeModule(reference)
+                filesRemoved = storage.removeModule(reference, force)
                 if( filesRemoved ) {
-                    println "Module files removed successfully"
+                    println "Module ${reference} files removed successfully"
                 } else {
-                    println "Module ${reference} was not installed locally"
+                    println "Module ${reference} not found locally"
                 }
             } else {
-                println "Keeping module files for ${reference} (due to -keep-files flag)"
-            }
-
-            // Remove config entry unless -keep-config is set
-            if( !keepConfig ) {
-                println "Removing module entry from nextflow_spec.json..."
-                configRemoved = specFile.removeModuleEntry(reference.fullName)
-                if( configRemoved ) {
-                    println "Module entry removed from configuration"
-                } else {
-                    println "Module ${reference} was not configured in nextflow_spec.json"
+                println "Keeping module files for ${reference} (-keep-files flag)"
+                final moduleInfo = storage.getModuleInfo(reference)
+                if( Files.exists(moduleInfo) ) {
+                    Files.delete(moduleInfo)
                 }
-            } else {
-                println "Keeping module entry in nextflow_spec.json (due to -keep-config flag)"
             }
 
-            // Summary
-            if( filesRemoved || configRemoved ) {
-                println "\nModule ${reference} removal completed"
-            } else {
-                println "\nModule ${reference} was not found"
+
+            configRemoved = specFile.removeModuleEntry(reference.fullName)
+            if( configRemoved ) {
+                println "Module ${reference} entry removed from spec file"
             }
+
         }
         catch( AbortOperationException e ) {
             throw e
         }
         catch( Exception e ) {
-            log.error("Failed to remove module", e)
-            throw new AbortOperationException("Removal failed: ${e.message}", e)
+            throw new AbortOperationException("Failed to remove module $reference: ${e.message}", e)
         }
     }
 }

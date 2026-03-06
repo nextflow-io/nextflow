@@ -23,6 +23,8 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.security.MessageDigest
 
+import static nextflow.module.ModuleStorage.MODULE_INFO_FILE
+
 /**
  * Utility class for computing SHA-256 checksums of module directories
  *
@@ -33,7 +35,6 @@ import java.security.MessageDigest
 class ModuleChecksum {
 
     public static final String CHECKSUM_ALGORITHM = "SHA-256"
-    public static final String MODULE_INFO_FILE = ".module-info"
 
     /**
      * Compute the SHA-256 checksum of a module directory
