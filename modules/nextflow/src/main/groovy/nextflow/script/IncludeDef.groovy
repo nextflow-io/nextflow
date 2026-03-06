@@ -171,7 +171,7 @@ class IncludeDef {
         }
         final str = include.toString()
         if( str.startsWith('./') || str.startsWith('../') ) {
-            return getOwnerPath().resolveSibling(str)
+            return getOwnerPath().resolveSibling(str).normalize()
         }
         // Not a local path — treat as remote module reference (scope/name)
         return resolveRemoteModulePath(str)
