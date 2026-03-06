@@ -41,8 +41,8 @@ import nextflow.util.MemoryUnit
 @CompileStatic
 class FusionConfig implements ConfigScope {
 
-    final static public String DEFAULT_FUSION_AMD64_URL = 'https://fusionfs.seqera.io/releases/v2.5.8-amd64.json'
-    final static public String DEFAULT_FUSION_ARM64_URL = 'https://fusionfs.seqera.io/releases/v2.5.8-arm64.json'
+    final static public String DEFAULT_FUSION_AMD64_URL = 'https://fusionfs.seqera.io/releases/v2.5-amd64.json'
+    final static public String DEFAULT_FUSION_ARM64_URL = 'https://fusionfs.seqera.io/releases/v2.5-arm64.json'
     final static public String DEFAULT_SNAPSHOT_AMD64_URL = 'https://fusionfs.seqera.io/releases/v2.5-snap_amd64.json'
     final static public String DEFAULT_SNAPSHOT_ARM64_URL = 'https://fusionfs.seqera.io/releases/v2.5-snap_arm64.json'
 
