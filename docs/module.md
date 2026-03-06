@@ -281,7 +281,7 @@ This feature requires the use of a local or shared file system for the pipeline 
 
 Modules are designed to be easy to share and re-use across different pipelines, which helps eliminate duplicate work and spread improvements throughout the community. There are several ways to share modules:
 
-- Use the Nextflow module registry system (recommended, see below)
+- Use the Nextflow module registry (recommended, see below)
 - Simply copy the module files into your pipeline repository
 - Use [Git submodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules) to fetch modules from other Git repositories without maintaining a separate copy
 - Use the [nf-core](https://nf-co.re/tools#modules) CLI to install and update modules with a standard approach used by the nf-core community
@@ -293,7 +293,7 @@ Modules are designed to be easy to share and re-use across different pipelines, 
 :::{versionadded} 26.04.0
 :::
 
-Nextflow provides a module registry system that enables you to install, share, and manage reusable modules from centralized registries. This system provides version management, integrity checking, and seamless integration with the Nextflow DSL.
+Nextflow provides a module registry that enables you to install, share, and manage modules from centralized registries. This system provides version management, integrity checking, and seamless integration with the Nextflow DSL.
 
 ### Installing modules from a registry
 
@@ -338,15 +338,6 @@ Module versions are tracked in `nextflow_spec.json` in your project directory:
 }
 ```
 
-You can also configure versions in `nextflow.config`:
-
-```nextflow
-modules {
-    '@nf-core/fastqc' = '1.0.0'
-    '@nf-core/bwa-align' = '1.2.0'
-}
-```
-
 When you run your workflow, Nextflow automatically installs or updates modules to match the specified versions.
 
 ### Discovering modules
@@ -364,7 +355,7 @@ List installed modules in your project:
 $ nextflow module list
 ```
 
-### Module integrity protection
+### Module checksum verification
 
 Nextflow automatically verifies module integrity using checksums. If you modify a module locally, Nextflow will detect the change and prevent accidental overwrites:
 
@@ -417,7 +408,7 @@ Your module directory must include:
 
 Authentication is required for publishing and can be provided via the `NXF_REGISTRY_TOKEN` environment variable or in your configuration:
 
-```nextflow
+```groovy
 registry {
     apiKey = 'YOUR_REGISTRY_TOKEN'
 }
@@ -433,7 +424,7 @@ $ nextflow module publish myorg/my-module -dry-run
 
 By default, Nextflow uses the public registry at `https://registry.nextflow.io`. You can configure alternative or additional registries:
 
-```nextflow
+```groovy
 registry {
     url = [
         'https://private.registry.myorg.com',
@@ -453,12 +444,12 @@ Registry modules follow a standard directory structure:
 modules/
 └── @scope/
     └── module-name/
+        ├── .checksum        # Integrity checksum (generated automatically)
+        ├── README.md        # Documentation (required for publishing)
         ├── main.nf          # Module entry point (required)
         ├── meta.yaml        # Module metadata (required for publishing)
-        ├── README.md        # Documentation (required for publishing)
-        ├── .checksum        # Integrity checksum (generated automatically)
-        ├── templates/       # Optional: process templates
-        └── resources/       # Optional: module binaries and resources
+        ├── resources/       # Optional: module binaries and resources
+        └── templates/       # Optional: process templates
 ```
 
 The `modules/` directory should be committed to your Git repository to ensure reproducibility.
