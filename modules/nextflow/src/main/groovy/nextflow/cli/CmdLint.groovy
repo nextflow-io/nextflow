@@ -82,6 +82,9 @@ class CmdLint extends CmdBase {
         }
     }
 
+    @Parameter(names = ['-q', '-quiet'], description = 'Suppress progress messages (file-by-file status and summary); errors are still shown')
+    boolean quiet
+
     @Parameter(names = ['-format'], description = 'Format scripts and config files that have no errors')
     boolean formatting
 
@@ -127,7 +130,7 @@ class CmdLint extends CmdBase {
             ? new JsonErrorListener()
             : outputMode == 'markdown'
             ? new MarkdownErrorListener()
-            : new StandardErrorListener(outputMode, launcher.options.ansiLog)
+            : new StandardErrorListener(outputMode, launcher.options.ansiLog, quiet || launcher.options.quiet)
         formattingOptions = new FormattingOptions(spaces, !tabs, harhsilAlignment, false, sortDeclarations)
 
         errorListener.beforeAll()

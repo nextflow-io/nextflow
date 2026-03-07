@@ -55,40 +55,66 @@ class ErrorSummary {
 class StandardErrorListener implements ErrorListener {
     private String mode
     private boolean ansiLog
+    /** When true, suppress progress/summary messages (file-by-file status and
+     *  the final summary).  Errors and warnings are always shown.
+     *  Automatically set when ansiLog is false (non-interactive output) or
+     *  when the global --quiet / -q flag is active. */
+    private boolean suppressProgress
 
-    StandardErrorListener(String mode, boolean ansiLog) {
+    StandardErrorListener(String mode, boolean ansiLog, boolean quiet=false) {
         this.mode = mode
         this.ansiLog = ansiLog
+        // Suppress the animated progress lines whenever ANSI is off (they
+        // rely on cursor-up/erase-line sequences) or when the caller has
+        // explicitly requested quiet mode.
+        this.suppressProgress = !ansiLog || quiet
     }
 
     private Ansi ansi() {
-        final ansi = Ansi.ansi()
-        ansi.setEnabled(ansiLog)
-        return ansi
+        // Ansi.setEnabled() is static-only in Jansi 2.x: codes are baked into
+        // the Ansi buffer when fg()/bold() etc. are called, not at toString()
+        // time.  Set the global flag here so every Ansi object created by this
+        // listener appends codes only when ansiLog=true.
+        Ansi.setEnabled(ansiLog)
+        return Ansi.ansi()
+    }
+
+    private void print(Object text) {
+        final str = text.toString()
+        if( ansiLog ) {
+            // AnsiConsole.out handles TTY detection: renders ANSI on a terminal,
+            // strips codes when output is piped.
+            AnsiConsole.out.print(str)
+            AnsiConsole.out.flush()
+        }
+        else {
+            System.out.print(str)
+            System.out.flush()
+        }
     }
 
     @Override
     void beforeAll() {
-        final line = ansi().a("Linting Nextflow code..").newline()
-        AnsiConsole.out.print(line)
-        AnsiConsole.out.flush()
+        if( suppressProgress )
+            return
+        print(ansi().a("Linting Nextflow code..").newline())
     }
 
     @Override
     void beforeFile(File file) {
-        final line = ansi()
+        if( suppressProgress )
+            return
+        print(ansi()
             .cursorUp(1).eraseLine()
             .a(Ansi.Attribute.INTENSITY_FAINT).a("Linting: ${file}")
-            .reset().newline().toString()
-        AnsiConsole.out.print(line)
-        AnsiConsole.out.flush()
+            .reset().newline())
     }
 
     private Ansi term
 
     @Override
     void beforeErrors() {
-        term = ansi().cursorUp(1).eraseLine()
+        term = suppressProgress ? ansi() : ansi().cursorUp(1).eraseLine()
     }
 
     @Override
@@ -215,26 +241,28 @@ class StandardErrorListener implements ErrorListener {
 
     @Override
     void afterErrors() {
-        // print extra newline since next file status will chomp back one
-        term.fg(Ansi.Color.DEFAULT).newline()
-        AnsiConsole.out.print(term)
-        AnsiConsole.out.flush()
+        if( !suppressProgress ) {
+            // print extra newline since next file status will chomp back one
+            term.fg(Ansi.Color.DEFAULT).newline()
+        }
+        print(term)
     }
 
     @Override
     void beforeFormat(File file) {
-        final line = ansi()
+        if( suppressProgress )
+            return
+        print(ansi()
             .cursorUp(1).eraseLine()
             .a(Ansi.Attribute.INTENSITY_FAINT).a("Formatting: ${file}")
-            .reset().newline().toString()
-        AnsiConsole.out.print(line)
-        AnsiConsole.out.flush()
+            .reset().newline())
     }
 
     @Override
     void afterAll(ErrorSummary summary) {
         final term = ansi()
-        term.cursorUp(1).eraseLine()
+        if( !suppressProgress )
+            term.cursorUp(1).eraseLine()
         // print extra newline if no code is being shown
         if( mode == 'concise' )
             term.newline()
@@ -254,8 +282,7 @@ class StandardErrorListener implements ErrorListener {
         if( summary.filesWithErrors == 0 && summary.filesWithoutErrors == 0 ) {
             term.a(" No files found to process").newline()
         }
-        AnsiConsole.out.print(term)
-        AnsiConsole.out.flush()
+        print(term)
     }
 
     private static record Range(
