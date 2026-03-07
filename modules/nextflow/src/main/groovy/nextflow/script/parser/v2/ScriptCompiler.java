@@ -20,6 +20,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
+import java.security.CodeSource;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -31,6 +32,7 @@ import java.util.Set;
 import groovy.lang.GroovyClassLoader;
 import groovy.lang.GroovyCodeSource;
 import com.google.common.hash.Hashing;
+import nextflow.script.ast.RecordNode;
 import nextflow.script.ast.WorkflowNode;
 import nextflow.script.control.CallSiteCollector;
 import nextflow.script.control.Compiler;
@@ -48,7 +50,9 @@ import nextflow.script.parser.ScriptParserPluginFactory;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.ast.CompileUnit;
 import org.codehaus.groovy.ast.MethodNode;
+import org.codehaus.groovy.ast.ModuleNode;
 import org.codehaus.groovy.control.CompilationFailedException;
 import org.codehaus.groovy.control.CompilationUnit;
 import org.codehaus.groovy.control.CompilerConfiguration;
@@ -227,6 +231,10 @@ public class ScriptCompiler {
 
         ScriptCompilationUnit(CompilerConfiguration configuration, GroovyClassLoader loader) {
             super(configuration, null, loader);
+            // Replace the compile unit with one that renames record types before
+            // the duplicate class check, avoiding collisions between modules that
+            // declare record types with the same name.
+            this.ast = new ScriptCompileUnit(getClassLoader(), null, getConfiguration());
             super.addPhaseOperation(source -> analyze(source), Phases.CONVERSION);
         }
 
@@ -331,6 +339,34 @@ public class ScriptCompiler {
                     .putUnencodedChars(uri.toString())
                     .hash();
             return "_nf_script_" + hash;
+        }
+    }
+
+    /**
+     * Custom CompileUnit that renames record types with a unique package prefix
+     * before adding them to the class map, preventing duplicate class name errors
+     * when multiple modules declare record types with the same name.
+     */
+    private static class ScriptCompileUnit extends CompileUnit {
+
+        ScriptCompileUnit(GroovyClassLoader loader, CodeSource codeSource, CompilerConfiguration config) {
+            super(loader, codeSource, config);
+        }
+
+        @Override
+        public void addModule(ModuleNode module) {
+            if( module != null ) {
+                // Determine the unique package name from the script class (first non-record class)
+                var scriptClass = module.getClasses().get(0);
+                if( scriptClass != null ) {
+                    var packageName = scriptClass.getNameWithoutPackage();
+                    for( var cn : module.getClasses() ) {
+                        if( cn instanceof RecordNode )
+                            cn.setName(packageName + "." + cn.getNameWithoutPackage());
+                    }
+                }
+            }
+            super.addModule(module);
         }
     }
 

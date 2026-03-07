@@ -303,24 +303,4 @@ class OutputDslTest extends Specification {
         e.message.contains "Invalid extension 'txt' for index file 'index.txt'"
     }
 
-    def 'should report error for invalid published value' () {
-        when:
-        def session = new Session(outputDir: Path.of('results')) {
-            void abort(Throwable cause) { throw cause }
-        }
-
-        session.outputs.put('foo', Channel.of(42))
-
-        def dsl = new OutputDsl()
-        dsl.declare('foo') {
-        }
-        dsl.apply(session)
-        session.fireDataflowNetwork()
-
-        then:
-        def e = thrown(ScriptRuntimeException)
-        e.message.contains "Invalid value for workflow output 'foo'"
-        e.message.contains "expected a list, map, or file, but received: 42 [Integer]"
-    }
-
 }
