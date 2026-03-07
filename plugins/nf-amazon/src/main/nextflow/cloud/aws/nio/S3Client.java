@@ -335,8 +335,39 @@ public class S3Client {
 			Thread.currentThread().interrupt();
 			throw new InterruptedIOException(String.format("S3 download file: s3://%s/%s cancelled", source.getBucket(), source.getKey()));
 		} catch (ExecutionException e) {
+			Throwable cause = e.getCause();
+			if (cause instanceof software.amazon.awssdk.services.s3.model.S3Exception && ((software.amazon.awssdk.services.s3.model.S3Exception) cause).statusCode() == 416) {
+				log.debug("HTTP 416 Range Not Satisfiable when downloading s3://{}/{}. Falling back to standard getObject.", source.getBucket(), source.getKey());
+				downloadFileFallback(source, target);
+				return;
+			}
 			String msg = String.format("Exception thrown downloading S3 object s3://%s/%s", source.getBucket(), source.getKey());
-			throw new IOException(msg, e.getCause());
+			throw new IOException(msg, cause);
+		}
+	}
+
+	private void downloadFileFallback(S3Path source, java.io.File target) throws IOException {
+		int maxRetries = 5;
+		int maxBackoffMs = 10000;
+		int currentBackoffMs = 1000;
+		
+		for (int attempt = 1; attempt <= maxRetries; attempt++) {
+			try (software.amazon.awssdk.core.ResponseInputStream<software.amazon.awssdk.services.s3.model.GetObjectResponse> s3is = getObject(source.getBucket(), source.getKey())) {
+				java.nio.file.Files.copy(s3is, target.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+				return;
+			} catch (Exception e) {
+				if (attempt == maxRetries) {
+					throw new IOException(String.format("Fallback download failed after %d attempts for S3 object s3://%s/%s", maxRetries, source.getBucket(), source.getKey()), e);
+				}
+				log.debug("Fallback download attempt {} failed for s3://{}/{}. Retrying in {}ms: {}", attempt, source.getBucket(), source.getKey(), currentBackoffMs, e.getMessage());
+				try {
+					Thread.sleep(currentBackoffMs);
+				} catch (InterruptedException ie) {
+					Thread.currentThread().interrupt();
+					throw new java.io.InterruptedIOException("Interrupted during backoff in S3 fallback download");
+				}
+				currentBackoffMs = Math.min(maxBackoffMs, currentBackoffMs * 2);
+			}
 		}
 	}
 
@@ -389,7 +420,7 @@ public class S3Client {
                         .destination(newFile)
                         .build();
                     FileDownload it = transferManager().downloadFile(downloadFileRequest, attr.size());
-                    allDownloads.add(new OngoingFileDownload(s3Path.getBucket(), s3Path.getKey(), it));
+                    allDownloads.add(new OngoingFileDownload(s3Path.getBucket(), s3Path.getKey(), it, s3Path, newFile.toFile()));
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     // Don't throw immediately - store the exception and continue to clean-up
@@ -416,6 +447,15 @@ public class S3Client {
                     current.download.completionFuture().get();
                 } catch (ExecutionException e) {
                     Throwable cause = e.getCause();
+                    if (cause instanceof software.amazon.awssdk.services.s3.model.S3Exception && ((software.amazon.awssdk.services.s3.model.S3Exception) cause).statusCode() == 416) {
+                        log.debug("HTTP 416 Range Not Satisfiable when downloading s3://{}/{}. Falling back to standard getObject.", current.bucket, current.key);
+                        try {
+                            downloadFileFallback(current.sourcePath, current.targetFile);
+                            continue;
+                        } catch (IOException fallbackException) {
+                            cause = fallbackException;
+                        }
+                    }
                     log.debug("Exception thrown downloading S3 object s3://{}/{}", current.bucket, current.key, cause);
                     if (firstException == null) {
                         firstException = new IOException(String.format("Transfer failed for s3://%s/%s", current.bucket, current.key), cause);
@@ -546,11 +586,15 @@ public class S3Client {
         String bucket;
         String key;
         FileDownload download;
+        S3Path sourcePath;
+        java.io.File targetFile;
 
-        public OngoingFileDownload(String bucket, String key, FileDownload download) {
+        public OngoingFileDownload(String bucket, String key, FileDownload download, S3Path sourcePath, java.io.File targetFile) {
             this.bucket = bucket;
             this.key = key;
             this.download = download;
+            this.sourcePath = sourcePath;
+            this.targetFile = targetFile;
         }
 
     }
