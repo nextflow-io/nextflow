@@ -18,7 +18,7 @@ package nextflow.processor
 
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
-import groovy.transform.ToString
+import groovy.transform.Memoized
 
 /**
  * Implements the {@code arch} process directive, to hold information on the
@@ -26,82 +26,88 @@ import groovy.transform.ToString
  *
  * @author Marco De La Pierre <marco.delapierre@gmail.com>
  */
-@ToString
 @EqualsAndHashCode
 @CompileStatic
 class Architecture {
 
-/*
- * example of notation in process: arch 'linux/x86_64', target: 'haswell'
- * example of notation in config:  arch = [name: 'linux/x86_64', target: 'haswell']
- *
- * where dockerArch = 'linux/x86_64'
- *       spackArch = target ?: arch  // plus some validation for Spack syntax
- *
- *       platform = 'linux'
- *       arch = 'x86_64'
- *       target = 'haswell'
- *
- * [alternate example: 'arch linux/arm/v8', where platform = 'linux' and arch = 'arm/v8']
- */
-    // used in Nextflow
-    final String dockerArch
-    final String spackArch
+    @EqualsAndHashCode
+    @CompileStatic
+    static class Arch {
+        final String value
 
-    // defined, but currently not used
-    final String platform
-    final String arch
-    final String target
+        static protected String normalize( String name ) {
+            def chunks = name.tokenize('/')
+            if( chunks.size() == 3 )
+                return chunks[1] + '/' + chunks[2]
+            else if( chunks.size() == 2 )
+                return chunks[1]
+            else
+                return chunks[0]
+        }
 
-    static protected String getPlatform( String value ) {
-        // return value.minus(~'/.*') // keeping for reference
-        final chunks = value.tokenize('/')
-        if( chunks.size() > 1 )
-            return chunks[0]
-        else
-            return null
+        static private void validate( String value, String name ) {
+            if( value == 'x86_64' || value == 'amd64' )
+                return
+            if( value == 'aarch64' || value == 'arm64' || value == 'arm64/v8' )
+                return
+            if( value == 'arm64/v7' )
+                return
+            throw new IllegalArgumentException("Not a valid `arch` value: ${name}")
+        }
+
+        static Arch parse( String name ) {
+            final value = normalize(name)
+            validate(value, name)
+            return new Arch(value)
+        }
+
+        private Arch( String value ) {
+            this.value = value
+        }
+
+        @Override
+        String toString() {
+            return value
+        }
     }
 
-    static protected String getArch( String value ) {
-        // return value.minus(~'.*/') // keeping for reference
-        def chunks = value.tokenize('/')
-        if( chunks.size() == 3 )
-            return chunks[1] + '/' + chunks[2]
-        else if( chunks.size() == 2 )
-            return chunks[1]
-        else
-            return chunks[0]
+    private final List<Arch> archs
+    private final String target
+
+    List<String> platforms() {
+        archs.collect(it -> toDockerArch(it))
     }
 
-    static private String validateArchToDockerArch( Map res ) {
-        def value = getArch(res.name as String)
-        def name = res.name as String
+    String containerPlatform() {
+        platforms().join(',')
+    }
+
+    static private String toDockerArch( Arch arch ) {
+        final value = arch.value
         if( value == 'x86_64' || value == 'amd64' )
             return 'linux/amd64'
         if( value == 'aarch64' || value == 'arm64' || value == 'arm64/v8' )
             return 'linux/arm64'
         if( value == 'arm64/v7' )
             return 'linux/arm64/v7'
-        throw new IllegalArgumentException("Not a valid `arch` value: ${name}")
+        return null
     }
 
-    static private String validateArchToSpackArch( String value, String inputArch ) {
+    @Memoized
+    String getDockerArch() {
+        return toDockerArch(archs[0])
+    }
+
+    @Memoized
+    String getSpackArch() {
+        if( target != null )
+            return target
+        final value = archs[0].value
         if( value == 'x86_64' || value == 'amd64' )
             return 'x86_64'
         if( value == 'aarch64' || value == 'arm64' || value == 'arm64/v8' )
             return 'aarch64'
-        if( value == 'arm64/v7' )
-            return null
-        throw new IllegalArgumentException("Not a valid `arch` value: ${inputArch}")
-    }
-
-    static protected String getSpackArch( Map res ) {
-        if( res.target != null )
-            return res.target as String
-        else if( res.name != null )
-            return validateArchToSpackArch(getArch(res.name as String), res.name as String)
-        else
-            return null
+        return null
     }
 
     Architecture( String value ) {
@@ -112,14 +118,15 @@ class Architecture {
         if( !res.name )
             throw new IllegalArgumentException("Missing architecture `name` attribute")
 
-        this.dockerArch = validateArchToDockerArch(res)
-        this.platform = getPlatform(res.name as String)
-        this.arch = getArch(res.name as String)
+        this.target = res.target as String
+        this.archs = (res.name as String)
+            .tokenize(',')
+            .collect(it -> Arch.parse(it.trim()) )
+    }
 
-        if( res.target != null )
-            this.target = res.target as String
-        if( res.name!=null || res.target!=null )
-            this.spackArch = getSpackArch(res)
+    @Override
+    String toString() {
+        return platforms().join(',')
     }
 
 }
