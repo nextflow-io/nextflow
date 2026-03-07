@@ -796,7 +796,7 @@ class TaskProcessor {
     @CompileStatic
     final protected void checkCachedOrLaunchTask( TaskRun task, HashCode hash, boolean shouldTryCache ) {
 
-        int tries = task.failCount +1
+        int tries = 1
         while( true ) {
             hash = HashBuilder.defaultHasher().putBytes(hash.asBytes()).putInt(tries).hash()
 
@@ -1050,8 +1050,13 @@ class TaskProcessor {
                 final taskCopy = task.makeCopy()
                 session.getExecService().submit {
                     try {
+                        // Compute the base hash with attempt=1 so the hash chain is consistent
+                        // with what checkCachedOrLaunchTask produces on -resume (which always
+                        // starts from a fresh task with attempt=1).
+                        taskCopy.config.attempt = 1
+                        final retryHash = new TaskHasher(taskCopy).compute()
                         taskCopy.runType = RunType.RETRY
-                        checkCachedOrLaunchTask( taskCopy, taskCopy.hash, false )
+                        checkCachedOrLaunchTask( taskCopy, retryHash, false )
                     }
                     catch( Throwable e ) {
                         log.error("Unable to re-submit task `${taskCopy.name}`", e)
@@ -1170,11 +1175,17 @@ class TaskProcessor {
                 final taskCopy = task.makeCopy()
                 session.getExecService().submit({
                     try {
+                        // Compute the base hash with attempt=1 so the hash chain is consistent
+                        // with what checkCachedOrLaunchTask produces on -resume (which always
+                        // starts from a fresh task with attempt=1).  This must happen before
+                        // taskCopy.config.attempt is bumped to the retry attempt number.
+                        taskCopy.config.attempt = 1
+                        final retryHash = new TaskHasher(taskCopy).compute()
                         taskCopy.config.attempt = taskErrCount+1
                         taskCopy.config.submitAttempt = submitRetries+1
                         taskCopy.runType = RunType.RETRY
                         taskCopy.resolve(taskBody)
-                        checkCachedOrLaunchTask( taskCopy, taskCopy.hash, false )
+                        checkCachedOrLaunchTask( taskCopy, retryHash, false )
                     }
                     catch( Throwable e ) {
                         log.error("Unable to re-submit task `${safeTaskName(taskCopy)}`", e)
