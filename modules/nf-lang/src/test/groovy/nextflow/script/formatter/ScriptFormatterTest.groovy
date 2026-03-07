@@ -620,6 +620,14 @@ class ScriptFormatterTest extends Specification {
             [(x): 1]
             '''
         )
+        checkFormat(
+            '''\
+            [(x.y):1]
+            ''',
+            '''\
+            [(x.y): 1]
+            '''
+        )
     }
 
     def 'should format a closure' () {

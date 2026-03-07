@@ -334,6 +334,7 @@ public class ResolveVisitor extends ClassCodeExpressionTransformer {
         property = transform(pe.getProperty());
         var result = new PropertyExpression(objectExpression, property, pe.isSafe());
         result.setSpreadSafe(pe.isSpreadSafe());
+        result.copyNodeMetaData(pe);
         // attempt to resolve property expression as a fully-qualified class name
         var className = lookupClassName(result);
         if( className != null ) {
