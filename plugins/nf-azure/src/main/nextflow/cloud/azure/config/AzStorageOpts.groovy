@@ -16,6 +16,8 @@
 
 package nextflow.cloud.azure.config
 
+import java.util.concurrent.ConcurrentHashMap
+
 import groovy.transform.CompileStatic
 import nextflow.SysEnv
 import nextflow.cloud.azure.batch.AzHelper
@@ -63,8 +65,9 @@ class AzStorageOpts implements ConfigScope {
     /**
      * Per-container SAS tokens, keyed by container name.
      * Used when accessing multiple blob containers with AD/MI authentication.
+     * ConcurrentHashMap ensures safe concurrent reads and writes from multiple task threads.
      */
-    private final Map<String,String> containerSasTokens = new LinkedHashMap<>()
+    private final Map<String,String> containerSasTokens = new ConcurrentHashMap<>()
 
     AzStorageOpts(Map config, Map<String,String> env=SysEnv.get()) {
         assert config!=null

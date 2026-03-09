@@ -18,7 +18,6 @@ package nextflow.cloud.azure.batch
 
 import java.nio.file.Path
 
-import com.azure.storage.blob.BlobContainerClient
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -119,24 +118,6 @@ class AzBatchExecutor extends Executor implements ExtensionPoint {
         }
 
         Global.onCleanup((it) -> batchService.close())
-    }
-
-    void generateContainerSasIfNeeded(String containerName, BlobContainerClient client) {
-        if( azConfig == null )
-            return
-        // Only needed for AD/MI auth when no global SAS is set
-        if( azConfig.storage().sasToken )
-            return
-        if( !azConfig.activeDirectory().isConfigured() && !azConfig.managedIdentity().isConfigured() )
-            return
-        // Already registered?
-        if( azConfig.storage().getSasToken(containerName) != null )
-            return
-        log.debug "Generating SAS token for Azure container: $containerName"
-        final duration = azConfig.storage().tokenDuration
-        final key = AzHelper.generateUserDelegationKey(workDir, duration)
-        final sas = AzHelper.generateContainerSasWithActiveDirectory(client, duration, key)
-        azConfig.storage().setSasToken(containerName, sas)
     }
 
     /**

@@ -115,8 +115,12 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
         AzHelper.toHttpUrl(path, getSasForPath(path))
     }
 
-    static String uploadCmd(String source, Path targetDir) {
-        "nxf_az_upload ${Escape.path(source)} '${AzHelper.toHttpUrl(targetDir)}'"
+    String uploadCmd(String source, Path targetDir) {
+        "nxf_az_upload ${Escape.path(source)} '${httpUrl(targetDir)}'"
+    }
+
+    static String uploadCmd(String source, Path targetDir, String sas) {
+        "nxf_az_upload ${Escape.path(source)} '${AzHelper.toHttpUrl(targetDir, sas)}'"
     }
 
     @Override

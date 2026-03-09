@@ -33,34 +33,23 @@ class AzBashLibTest extends Specification {
             export AZCOPY_BLOCK_SIZE_MB=4
             export AZCOPY_BLOCK_BLOB_TIER=None
 
-                nxf_az_sas() {
-                    local url=$1
-                    [[ "$url" == *[?]* ]] && { echo; return; }
-                    local tmp="${url#*://}"
-                    local container="${tmp#*/}"
-                    container="${container%%/*}"
-                    local var_name="AZ_SAS_${container^^}"
-                    var_name="${var_name//[^A-Z0-9]/_}"
-                    local sas="${!var_name:-${AZ_SAS:-}}"
-                    echo "$sas"
-                }
-
             nxf_az_upload() {
                 local name=$1
                 local target=${2%/} ## remove ending slash
                 local base_name="$(basename "$name")"
                 local dir_name="$(dirname "$name")"
-                local sas
-                sas=$(nxf_az_sas "$target")
+                local target_base="${target%%\\?*}"
+                local target_qs="${target#*\\?}"
+                [[ "$target_base" == "$target" ]] && target_qs=""
 
                 if [[ -d $name ]]; then
                   if [[ "$base_name" == "$name" ]]; then
-                    azcopy cp "$name" "$target${sas:+?$sas}" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                    azcopy cp "$name" "$target_base${target_qs:+?$target_qs}" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                   else
-                    azcopy cp "$name" "$target/$dir_name${sas:+?$sas}" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                    azcopy cp "$name" "$target_base/$dir_name${target_qs:+?$target_qs}" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                   fi
                 else
-                  azcopy cp "$name" "$target/$name${sas:+?$sas}" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                  azcopy cp "$name" "$target_base/$name${target_qs:+?$target_qs}" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                 fi
             }
 
@@ -69,15 +58,13 @@ class AzBashLibTest extends Specification {
                 local target=$2
                 local basedir=$(dirname $2)
                 local ret
-                local sas
-                sas=$(nxf_az_sas "$source")
                 mkdir -p "$basedir"
 
-                ret=$(azcopy cp "$source${sas:+?$sas}" "$target" 2>&1) || {
+                ret=$(azcopy cp "$source" "$target" 2>&1) || {
                     ## if fails check if it was trying to download a directory
                     mkdir -p $target
-                    local source_base="${source%%\?*}"
-                    local source_qs="${source#*\?}"
+                    local source_base="${source%%\\?*}"
+                    local source_qs="${source#*\\?}"
                     [[ "$source_base" == "$source" ]] && source_qs=""
                     local source_dir="${source_base}/*${source_qs:+?$source_qs}"
                     azcopy cp "$source_dir" "$target" --recursive >/dev/null || {
@@ -155,34 +142,23 @@ class AzBashLibTest extends Specification {
             export AZCOPY_BLOCK_SIZE_MB=4
             export AZCOPY_BLOCK_BLOB_TIER=None
 
-                nxf_az_sas() {
-                    local url=$1
-                    [[ "$url" == *[?]* ]] && { echo; return; }
-                    local tmp="${url#*://}"
-                    local container="${tmp#*/}"
-                    container="${container%%/*}"
-                    local var_name="AZ_SAS_${container^^}"
-                    var_name="${var_name//[^A-Z0-9]/_}"
-                    local sas="${!var_name:-${AZ_SAS:-}}"
-                    echo "$sas"
-                }
-
             nxf_az_upload() {
                 local name=$1
                 local target=${2%/} ## remove ending slash
                 local base_name="$(basename "$name")"
                 local dir_name="$(dirname "$name")"
-                local sas
-                sas=$(nxf_az_sas "$target")
+                local target_base="${target%%\\?*}"
+                local target_qs="${target#*\\?}"
+                [[ "$target_base" == "$target" ]] && target_qs=""
 
                 if [[ -d $name ]]; then
                   if [[ "$base_name" == "$name" ]]; then
-                    azcopy cp "$name" "$target${sas:+?$sas}" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                    azcopy cp "$name" "$target_base${target_qs:+?$target_qs}" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                   else
-                    azcopy cp "$name" "$target/$dir_name${sas:+?$sas}" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                    azcopy cp "$name" "$target_base/$dir_name${target_qs:+?$target_qs}" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                   fi
                 else
-                  azcopy cp "$name" "$target/$name${sas:+?$sas}" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                  azcopy cp "$name" "$target_base/$name${target_qs:+?$target_qs}" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                 fi
             }
 
@@ -191,15 +167,13 @@ class AzBashLibTest extends Specification {
                 local target=$2
                 local basedir=$(dirname $2)
                 local ret
-                local sas
-                sas=$(nxf_az_sas "$source")
                 mkdir -p "$basedir"
 
-                ret=$(azcopy cp "$source${sas:+?$sas}" "$target" 2>&1) || {
+                ret=$(azcopy cp "$source" "$target" 2>&1) || {
                     ## if fails check if it was trying to download a directory
                     mkdir -p $target
-                    local source_base="${source%%\?*}"
-                    local source_qs="${source#*\?}"
+                    local source_base="${source%%\\?*}"
+                    local source_qs="${source#*\\?}"
                     [[ "$source_base" == "$source" ]] && source_qs=""
                     local source_dir="${source_base}/*${source_qs:+?$source_qs}"
                     azcopy cp "$source_dir" "$target" --recursive >/dev/null || {
@@ -277,34 +251,23 @@ class AzBashLibTest extends Specification {
             export AZCOPY_BLOCK_SIZE_MB=10
             export AZCOPY_BLOCK_BLOB_TIER=Hot
 
-                nxf_az_sas() {
-                    local url=$1
-                    [[ "$url" == *[?]* ]] && { echo; return; }
-                    local tmp="${url#*://}"
-                    local container="${tmp#*/}"
-                    container="${container%%/*}"
-                    local var_name="AZ_SAS_${container^^}"
-                    var_name="${var_name//[^A-Z0-9]/_}"
-                    local sas="${!var_name:-${AZ_SAS:-}}"
-                    echo "$sas"
-                }
-
             nxf_az_upload() {
                 local name=$1
                 local target=${2%/} ## remove ending slash
                 local base_name="$(basename "$name")"
                 local dir_name="$(dirname "$name")"
-                local sas
-                sas=$(nxf_az_sas "$target")
+                local target_base="${target%%\\?*}"
+                local target_qs="${target#*\\?}"
+                [[ "$target_base" == "$target" ]] && target_qs=""
 
                 if [[ -d $name ]]; then
                   if [[ "$base_name" == "$name" ]]; then
-                    azcopy cp "$name" "$target${sas:+?$sas}" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                    azcopy cp "$name" "$target_base${target_qs:+?$target_qs}" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                   else
-                    azcopy cp "$name" "$target/$dir_name${sas:+?$sas}" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                    azcopy cp "$name" "$target_base/$dir_name${target_qs:+?$target_qs}" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                   fi
                 else
-                  azcopy cp "$name" "$target/$name${sas:+?$sas}" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                  azcopy cp "$name" "$target_base/$name${target_qs:+?$target_qs}" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                 fi
             }
 
@@ -313,15 +276,13 @@ class AzBashLibTest extends Specification {
                 local target=$2
                 local basedir=$(dirname $2)
                 local ret
-                local sas
-                sas=$(nxf_az_sas "$source")
                 mkdir -p "$basedir"
 
-                ret=$(azcopy cp "$source${sas:+?$sas}" "$target" 2>&1) || {
+                ret=$(azcopy cp "$source" "$target" 2>&1) || {
                     ## if fails check if it was trying to download a directory
                     mkdir -p $target
-                    local source_base="${source%%\?*}"
-                    local source_qs="${source#*\?}"
+                    local source_base="${source%%\\?*}"
+                    local source_qs="${source#*\\?}"
                     [[ "$source_base" == "$source" ]] && source_qs=""
                     local source_dir="${source_base}/*${source_qs:+?$source_qs}"
                     azcopy cp "$source_dir" "$target" --recursive >/dev/null || {

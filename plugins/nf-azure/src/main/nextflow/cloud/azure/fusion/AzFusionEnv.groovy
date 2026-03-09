@@ -75,16 +75,11 @@ class AzFusionEnv implements FusionEnv {
         }
 
         final containerTokens = cfg.storage().containerSasTokens
-        if( containerTokens ) {
-            for( Map.Entry<String,String> entry : containerTokens.entrySet() ) {
-                final envKey = "AZURE_STORAGE_SAS_TOKEN_${entry.key.toUpperCase().replaceAll('[^A-Z0-9]', '_')}"
-                result.put(envKey, entry.value)
-            }
-            result.AZURE_STORAGE_SAS_TOKEN = getOrCreateSasToken()
+        for( Map.Entry<String,String> entry : containerTokens.entrySet() ) {
+            final envKey = "AZURE_STORAGE_SAS_TOKEN_${entry.key.toUpperCase().replaceAll('[^A-Z0-9]', '_')}"
+            result.put(envKey, entry.value)
         }
-        else {
-            result.AZURE_STORAGE_SAS_TOKEN = getOrCreateSasToken()
-        }
+        result.AZURE_STORAGE_SAS_TOKEN = getOrCreateSasToken()
 
         return result
     }

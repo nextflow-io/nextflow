@@ -97,7 +97,11 @@ class AzPathFactory extends FileSystemPathFactory {
 
     @Override
     protected String getUploadCmd(String source, Path target) {
-        return target instanceof AzPath ?  AzFileCopyStrategy.uploadCmd(source, target) : null
+        if( !(target instanceof AzPath) )
+            return null
+        final container = ((AzPath)target).getContainerName() as String
+        final sas = AzConfig.getConfig().storage().getSasToken(container)
+        return AzFileCopyStrategy.uploadCmd(source, target, sas)
     }
 
 }
