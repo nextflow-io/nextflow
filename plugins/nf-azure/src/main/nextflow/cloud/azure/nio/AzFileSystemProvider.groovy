@@ -273,9 +273,9 @@ class AzFileSystemProvider extends FileSystemProvider {
             return
         final duration = azConfig.storage().tokenDuration
         final containerClient = serviceClient.getBlobContainerClient(bucket)
-        final sas = accountKey
+        final String sas = accountKey
                 ? AzHelper.generateContainerSasWithAccountKey(containerClient, duration)
-                : AzHelper.generateContainerSasWithActiveDirectory(containerClient, duration, AzHelper.generateUserDelegationKey(serviceClient, duration))
+                : AzHelper.generateContainerUserDelegationSas(containerClient, duration, AzHelper.generateUserDelegationKey(serviceClient, duration))
         containerSasTokens.put(bucket, sas)
         log.debug "Generated SAS token for Azure container: $bucket"
     }

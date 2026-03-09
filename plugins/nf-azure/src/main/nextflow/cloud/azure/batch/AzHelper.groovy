@@ -114,20 +114,6 @@ class AzHelper {
         return generateContainerUserDelegationSas(azPath.containerClient(), duration, key)
     }
 
-    /**
-     * Generate a container-scoped SAS token for the given {@link BlobContainerClient} using
-     * an already-obtained user delegation key.  This overload avoids a redundant key fetch
-     * when generating tokens for multiple containers that share the same service client.
-     *
-     * @param client   The container client to generate the SAS for
-     * @param duration The requested token lifetime
-     * @param key      A user delegation key obtained from the parent {@link BlobServiceClient}
-     * @return The SAS token string
-     */
-    static String generateContainerSasWithActiveDirectory(BlobContainerClient client, Duration duration, UserDelegationKey key) {
-        return generateContainerUserDelegationSas(client, duration, key)
-    }
-
     static String generateContainerSasWithAccountKey(BlobContainerClient client, Duration duration) {
         final startTime = OffsetDateTime.now()
         final expiryTime = startTime.plusSeconds(duration.toSeconds())
@@ -171,7 +157,6 @@ class AzHelper {
         final expiryTime = (indicatedExpiryTime.toEpochSecond() <= maxExpiryTime.toEpochSecond()) ? indicatedExpiryTime : maxExpiryTime
 
         final signature = new BlobServiceSasSignatureValues()
-                .setPermissions(BLOB_PERMS)
                 .setPermissions(CONTAINER_PERMS)
                 .setStartTime(startTime)
                 .setExpiryTime(expiryTime)
@@ -268,7 +253,10 @@ class AzHelper {
 
     @Memoized
     static protected RequestRetryOptions requestRetryOptions() {
-        final cfg = AzConfig.getConfig().retryConfig()
+        // Fall back to defaults when no Nextflow session exists (e.g. unit tests, NIO-only usage)
+        final cfg = nextflow.Global.session
+                ? AzConfig.getConfig().retryConfig()
+                : new AzRetryConfig()
         return requestRetryOptions0(cfg)
     }
 

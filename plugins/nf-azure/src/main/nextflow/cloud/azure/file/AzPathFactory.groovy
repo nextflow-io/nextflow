@@ -103,7 +103,7 @@ class AzPathFactory extends FileSystemPathFactory {
         final azPath = (AzPath)target
         final provider = (AzFileSystemProvider) azPath.fileSystem.provider()
         final sas = provider.getSasToken(azPath.getContainerName() as String)
-        return AzFileCopyStrategy.uploadCmd(source, target, sas)
+        return AzFileCopyStrategy.uploadCmdWithSas(source, target, sas)
     }
 
 }

@@ -55,11 +55,13 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
         this.delayBetweenAttempts = config.batch().delayBetweenAttempts
         if( bean.workDir instanceof AzPath )
             this.azProvider = (AzFileSystemProvider) ((AzPath) bean.workDir).fileSystem.provider()
+        // Pre-warm the per-container SAS token cache for all paths this task will access.
+        // getSasForPath() generates and registers a token on first call for each container.
         final List<Path> paths = []
         if( remoteBinDir ) paths << remoteBinDir
         if( bean.workDir ) paths << bean.workDir
         paths.addAll( bean.inputFiles.values() )
-        for( Path p : paths ) getSasForPath(p)
+        prewarmSasTokenCache(paths)
     }
 
     @Override
@@ -104,6 +106,10 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
         return sas
     }
 
+    private void prewarmSasTokenCache(List<Path> paths) {
+        for( Path p : paths ) getSasForPath(p)
+    }
+
     protected String httpUrl(Path path) {
         AzHelper.toHttpUrl(path, getSasForPath(path))
     }
@@ -112,7 +118,7 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
         "nxf_az_upload ${Escape.path(source)} '${httpUrl(targetDir)}'"
     }
 
-    static String uploadCmd(String source, Path targetDir, String sas) {
+    static String uploadCmdWithSas(String source, Path targetDir, String sas) {
         "nxf_az_upload ${Escape.path(source)} '${AzHelper.toHttpUrl(targetDir, sas)}'"
     }
 
