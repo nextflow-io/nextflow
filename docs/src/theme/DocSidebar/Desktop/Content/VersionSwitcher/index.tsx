@@ -20,13 +20,13 @@ const VersionSwitcher: React.FC<VersionSwitcherProps> = ({ isOpen, setIsOpen }) 
   // check if the plugin exists first
   let pluginData;
   try {
-    pluginData = usePluginData('docusaurus-plugin-content-docs', 'default');
+    pluginData = usePluginData('docusaurus-plugin-content-docs', 'nextflow');
   } catch (e) {
     return null;
   }
 
-  const { savePreferredVersionName } = useDocsPreferredVersion("default");
-  const versions = useVersions("default");
+  const { savePreferredVersionName } = useDocsPreferredVersion("nextflow");
+  const versions = useVersions("nextflow");
   const currentVersion = useDocsVersion();
   const [isNextflowPage, setNextflowPage] = useState(false);
 

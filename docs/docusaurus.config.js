@@ -31,6 +31,7 @@ export default async function createConfigAsync() {
       [
         "@docusaurus/plugin-content-docs",
         {
+          id: "nextflow",
           routeBasePath: "/nextflow",
           path: "docs",
           sidebarPath: "./sidebars.js",
@@ -127,7 +128,7 @@ export default async function createConfigAsync() {
       seqera: {
         docs: {
           versionDropdown: {
-            default: {
+            nextflow: {
               enabled: true,
               showCurrent: true,
               currentLabel: 'Latest',
