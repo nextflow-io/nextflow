@@ -132,7 +132,6 @@ class AzHelper {
         final startTime = OffsetDateTime.now()
         final expiryTime = startTime.plusSeconds(duration.toSeconds())
         final signature = new BlobServiceSasSignatureValues()
-                .setPermissions(BLOB_PERMS)
                 .setPermissions(CONTAINER_PERMS)
                 .setStartTime(startTime)
                 .setExpiryTime(expiryTime)

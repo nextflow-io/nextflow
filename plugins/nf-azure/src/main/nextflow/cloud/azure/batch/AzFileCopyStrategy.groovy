@@ -80,11 +80,10 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
 
     }
 
-    @groovy.transform.CompileDynamic
     protected String getSasForPath(Path path) {
         if( !(path instanceof AzPath) )
             return null
-        final AzPath azPath = path
+        final AzPath azPath = (AzPath) path
         final container = azPath.getContainerName() as String
         if( !container )
             return null
@@ -99,8 +98,7 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
         }
         else if( config.storage().accountKey ) {
             log.debug "Generating SAS token for Azure container: $container"
-            final containerClient = azPath.fileSystem.getBlobServiceClient().getBlobContainerClient(container)
-            sas = AzHelper.generateContainerSasWithAccountKey(containerClient, duration)
+            sas = AzHelper.generateContainerSasWithAccountKey(azPath.containerClient(), duration)
             azProvider?.setSasToken(container, sas)
         }
         return sas
