@@ -25,6 +25,8 @@ import nextflow.cloud.azure.batch.AzFileCopyStrategy
 import nextflow.cloud.azure.batch.AzHelper
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.file.AzPathFactory
+import nextflow.cloud.azure.nio.AzFileSystemProvider
+import nextflow.cloud.azure.nio.AzPath
 import nextflow.processor.TaskBean
 import spock.lang.Requires
 import spock.lang.Specification
@@ -53,6 +55,8 @@ class BashWrapperBuilderWithAzTest extends Specification {
         ])
 
         def copy = new SimpleFileCopyStrategy(bean)
+        def provider = (AzFileSystemProvider) ((AzPath) target).fileSystem.provider()
+        def sas = provider.getSasToken(((AzPath) target).getContainerName() as String)
 
         /*
          * simple bash run
@@ -63,7 +67,7 @@ class BashWrapperBuilderWithAzTest extends Specification {
         binding.unstage_outputs == """\
                     IFS=\$'\\n'
                     for name in \$(eval "ls -1d test.bam test.bai" | sort | uniq); do
-                        nxf_az_upload \$name '${AzHelper.toHttpUrl(target)}'
+                        nxf_az_upload \$name '${AzHelper.toHttpUrl(target, sas)}'
                     done
                     unset IFS
                     """.stripIndent().rightTrim()
@@ -140,6 +144,8 @@ class BashWrapperBuilderWithAzTest extends Specification {
         }
         and:
         def copy = new AzFileCopyStrategy(bean, exec)
+        def provider = (AzFileSystemProvider) ((AzPath) target).fileSystem.provider()
+        def sas = provider.getSasToken(((AzPath) target).getContainerName() as String)
 
         /*
          * simple bash run
@@ -151,7 +157,7 @@ class BashWrapperBuilderWithAzTest extends Specification {
                     uploads=()
                     IFS=\$'\\n'
                     for name in \$(eval "ls -1d test.bam test.bai" | sort | uniq); do
-                        uploads+=("nxf_az_upload '\$name' '${AzHelper.toHttpUrl(target)}'")
+                        uploads+=("nxf_az_upload '\$name' '${AzHelper.toHttpUrl(target, sas)}'")
                     done
                     unset IFS
                     nxf_parallel "\${uploads[@]}"
