@@ -109,9 +109,23 @@ class AzHelper {
 
 
     static String generateContainerSasWithActiveDirectory(Path path, Duration duration) {
-        final key = generateUserDelegationKey(az0(path), duration)
+        final azPath = az0(path)
+        final key = generateUserDelegationKey(azPath, duration)
+        return generateContainerUserDelegationSas(azPath.containerClient(), duration, key)
+    }
 
-        return generateContainerUserDelegationSas(az0(path).containerClient(), duration, key)
+    /**
+     * Generate a container-scoped SAS token for the given {@link BlobContainerClient} using
+     * an already-obtained user delegation key.  This overload avoids a redundant key fetch
+     * when generating tokens for multiple containers that share the same service client.
+     *
+     * @param client   The container client to generate the SAS for
+     * @param duration The requested token lifetime
+     * @param key      A user delegation key obtained from the parent {@link BlobServiceClient}
+     * @return The SAS token string
+     */
+    static String generateContainerSasWithActiveDirectory(BlobContainerClient client, Duration duration, UserDelegationKey key) {
+        return generateContainerUserDelegationSas(client, duration, key)
     }
 
     static String generateAccountSasWithAccountKey(Path path, Duration duration) {
@@ -119,9 +133,10 @@ class AzHelper {
     }
 
     static UserDelegationKey generateUserDelegationKey(Path path, Duration duration) {
+        return generateUserDelegationKey(az0(path).getFileSystem().getBlobServiceClient(), duration)
+    }
 
-        final client = az0(path).getFileSystem().getBlobServiceClient()
-
+    static UserDelegationKey generateUserDelegationKey(BlobServiceClient client, Duration duration) {
         final startTime = OffsetDateTime.now()
         final indicatedExpiryTime = startTime.plusHours(duration.toHours())
 
@@ -131,9 +146,7 @@ class AzHelper {
 
         final expiryTime = (indicatedExpiryTime.toEpochSecond() <= maxExpiryTime.toEpochSecond()) ? indicatedExpiryTime : maxExpiryTime
 
-        final delegationKey = client.getUserDelegationKey(startTime, expiryTime)
-
-        return delegationKey
+        return client.getUserDelegationKey(startTime, expiryTime)
     }
 
     static String generateContainerUserDelegationSas(BlobContainerClient client, Duration duration, UserDelegationKey key) {

@@ -518,12 +518,18 @@ class AzBatchService implements Closeable {
         return key.size()>MAX_LEN ? key.substring(0,MAX_LEN) : key
     }
 
+    protected String getSasForPath(Path path) {
+        if( path instanceof AzPath )
+            return config.storage().getSasToken(path.getContainerName() as String)
+        return null
+    }
+
     protected BatchTaskCreateContent createTask(String poolId, String jobId, TaskRun task) {
         assert poolId, 'Missing Azure Batch poolId argument'
         assert jobId, 'Missing Azure Batch jobId argument'
         assert task, 'Missing Azure Batch task argument'
 
-        final sas = config.storage().sasToken
+        final sas = config.storage().sasToken ?: getSasForPath(task.workDir)
         if( !sas )
             throw new IllegalArgumentException("Missing Azure Blob storage SAS token")
 

@@ -18,6 +18,7 @@ package nextflow.cloud.azure.batch
 
 import java.nio.file.Path
 
+import com.azure.storage.blob.BlobContainerClient
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -101,14 +102,41 @@ class AzBatchExecutor extends Executor implements ExtensionPoint {
         azConfig = AzConfig.getConfig(session)
         batchService = new AzBatchService(this)
 
-        // Generate an account SAS token using either activeDirectory configs or storage account keys
+        // When using account key, generate an account-level SAS (covers all containers).
+        // When using AD/MI, SAS tokens are generated lazily per-container on first access
+        // via AzFileSystemProvider.newFileSystem0() — see generateContainerSasIfNeeded().
         if (!azConfig.storage().sasToken) {
-            azConfig.storage().sasToken = azConfig.activeDirectory().isConfigured() || azConfig.managedIdentity().isConfigured()
-                    ? AzHelper.generateContainerSasWithActiveDirectory(workDir, azConfig.storage().tokenDuration)
-                    : AzHelper.generateAccountSasWithAccountKey(workDir, azConfig.storage().tokenDuration)
+            if( !azConfig.activeDirectory().isConfigured() && !azConfig.managedIdentity().isConfigured() ) {
+                azConfig.storage().sasToken = AzHelper.generateAccountSasWithAccountKey(workDir, azConfig.storage().tokenDuration)
+            }
+            // For AD/MI: generate a SAS for the workDir container eagerly so it is available
+            // immediately, then additional containers are handled lazily on first access.
+            else {
+                final container = (workDir as AzPath).getContainerName() as String
+                final sas = AzHelper.generateContainerSasWithActiveDirectory(workDir, azConfig.storage().tokenDuration)
+                azConfig.storage().setSasToken(container, sas)
+            }
         }
 
         Global.onCleanup((it) -> batchService.close())
+    }
+
+    void generateContainerSasIfNeeded(String containerName, BlobContainerClient client) {
+        if( azConfig == null )
+            return
+        // Only needed for AD/MI auth when no global SAS is set
+        if( azConfig.storage().sasToken )
+            return
+        if( !azConfig.activeDirectory().isConfigured() && !azConfig.managedIdentity().isConfigured() )
+            return
+        // Already registered?
+        if( azConfig.storage().getSasToken(containerName) != null )
+            return
+        log.debug "Generating SAS token for Azure container: $containerName"
+        final duration = azConfig.storage().tokenDuration
+        final key = AzHelper.generateUserDelegationKey(workDir, duration)
+        final sas = AzHelper.generateContainerSasWithActiveDirectory(client, duration, key)
+        azConfig.storage().setSasToken(containerName, sas)
     }
 
     /**

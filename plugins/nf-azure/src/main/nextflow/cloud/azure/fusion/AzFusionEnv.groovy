@@ -74,36 +74,43 @@ class AzFusionEnv implements FusionEnv {
             return result
         }
 
-        // If no managed identity, use the standard environment with SAS token
-        result.AZURE_STORAGE_SAS_TOKEN = getOrCreateSasToken()
+        final containerTokens = cfg.storage().containerSasTokens
+        if( containerTokens ) {
+            for( Map.Entry<String,String> entry : containerTokens.entrySet() ) {
+                final envKey = "AZURE_STORAGE_SAS_TOKEN_${entry.key.toUpperCase().replaceAll('[^A-Z0-9]', '_')}"
+                result.put(envKey, entry.value)
+            }
+            result.AZURE_STORAGE_SAS_TOKEN = getOrCreateSasToken()
+        }
+        else {
+            result.AZURE_STORAGE_SAS_TOKEN = getOrCreateSasToken()
+        }
 
         return result
     }
 
-    /**
-     * Return the SAS token if it is defined in the configuration, otherwise generate one based on the requested
-     * authentication method.
-     */
     synchronized String getOrCreateSasToken() {
         final cfg = AzConfig.config
 
-        // Check for incompatible configuration
         if (cfg.storage().accountKey && cfg.storage().sasToken) {
             throw new IllegalArgumentException("Azure Storage Access key and SAS token detected. Only one is allowed")
         }
 
-        // If a SAS token is already defined in the configuration, just return it
         if (cfg.storage().sasToken) {
             return cfg.storage().sasToken
         }
 
-        // For Active Directory and Managed Identity, we cannot generate an *account* SAS token, but we can generate
-        // a *container* SAS token for the work directory.
         if (cfg.activeDirectory().isConfigured() || cfg.managedIdentity().isConfigured()) {
-            return AzHelper.generateContainerSasWithActiveDirectory(Global.session.workDir, cfg.storage().tokenDuration)
+            final workDir = Global.session.workDir
+            final container = (workDir as nextflow.cloud.azure.nio.AzPath).getContainerName()
+            final existing = cfg.storage().getSasToken(container as String)
+            if( existing )
+                return existing
+            final sas = AzHelper.generateContainerSasWithActiveDirectory(workDir, cfg.storage().tokenDuration)
+            cfg.storage().setSasToken(container as String, sas)
+            return sas
         }
 
-        // Shared Key authentication can use an account SAS token
         return AzHelper.generateAccountSasWithAccountKey(Global.session.workDir, cfg.storage().tokenDuration)
     }
 }

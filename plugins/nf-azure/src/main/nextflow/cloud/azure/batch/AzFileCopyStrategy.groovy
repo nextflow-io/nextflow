@@ -21,6 +21,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.file.AzBashLib
+import nextflow.cloud.azure.nio.AzPath
 import nextflow.executor.SimpleFileCopyStrategy
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskRun
@@ -64,14 +65,47 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
         copy.remove('PATH')
         copy.put('PATH', '$PWD/.nextflow-bin:$AZ_BATCH_NODE_SHARED_DIR/bin/:$PATH')
         copy.put('AZCOPY_LOG_LOCATION', '$PWD/.azcopy_log')
-        copy.put('AZ_SAS', sasToken)
+        if( sasToken ) {
+            copy.put('AZ_SAS', sasToken)
+        }
+        else {
+            for( Map.Entry<String,String> entry : config.storage().containerSasTokens.entrySet() ) {
+                final varName = 'AZ_SAS_' + entry.key.toUpperCase().replaceAll('[^A-Z0-9]', '_')
+                copy.put(varName, entry.value)
+            }
+        }
 
-        // finally render the environment
         final envSnippet = super.getEnvScript(copy,false)
         if( envSnippet )
             result << envSnippet
         return result.toString()
 
+    }
+
+    protected String getSasForPath(Path path) {
+        if( sasToken )
+            return sasToken
+        if( !(path instanceof AzPath) )
+            return null
+        final container = (path as AzPath).getContainerName() as String
+        if( !container )
+            return null
+        String sas = config.storage().getSasToken(container)
+        if( sas )
+            return sas
+        // No SAS registered yet for this container — generate one now.
+        // This handles input files from containers that were opened before
+        // the executor started (e.g. az://igenomes accessed during task graph build).
+        if( config.activeDirectory().isConfigured() || config.managedIdentity().isConfigured() ) {
+            log.debug "Generating SAS token for Azure container: $container"
+            sas = AzHelper.generateContainerSasWithActiveDirectory(path, config.storage().tokenDuration)
+            config.storage().setSasToken(container, sas)
+        }
+        return sas
+    }
+
+    protected String httpUrl(Path path) {
+        AzHelper.toHttpUrl(path, getSasForPath(path))
     }
 
     static String uploadCmd(String source, Path targetDir) {
@@ -86,7 +120,7 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
     @Override
     String getStageInputFilesScript(Map<String, Path> inputFiles) {
         String result = ( remoteBinDir ? """\
-            nxf_az_download '${AzHelper.toHttpUrl(remoteBinDir)}' \$PWD/.nextflow-bin
+            nxf_az_download '${httpUrl(remoteBinDir)}' \$PWD/.nextflow-bin
             chmod +x \$PWD/.nextflow-bin/* || true
             """.stripIndent(true) : '' )
 
@@ -103,8 +137,8 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
     String stageInputFile( Path path, String targetName ) {
         // third param should not be escaped, because it's used in the grep match rule
         def stage_cmd = maxTransferAttempts > 1
-                ? "downloads+=(\"nxf_cp_retry nxf_az_download '${AzHelper.toHttpUrl(path)}' ${Escape.path(targetName)}\")"
-                : "downloads+=(\"nxf_az_download '${AzHelper.toHttpUrl(path)}' ${Escape.path(targetName)}\")"
+                ? "downloads+=(\"nxf_cp_retry nxf_az_download '${httpUrl(path)}' ${Escape.path(targetName)}\")"
+                : "downloads+=(\"nxf_az_download '${httpUrl(path)}' ${Escape.path(targetName)}\")"
         return stage_cmd
     }
 
@@ -128,7 +162,7 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
             uploads=()
             IFS=\$'\\n'
             for name in \$(eval "ls -1d ${escape.join(' ')}" | sort | uniq); do
-                uploads+=("nxf_az_upload '\$name' '${AzHelper.toHttpUrl(targetDir)}'")
+                uploads+=("nxf_az_upload '\$name' '${httpUrl(targetDir)}'")
             done
             unset IFS
             nxf_parallel "\${uploads[@]}"
@@ -156,7 +190,7 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
      */
     @Override
     String copyFile( String name, Path target ) {
-        "nxf_az_upload ${Escape.path(name)} '${AzHelper.toHttpUrl(target.parent)}'"
+        "nxf_az_upload ${Escape.path(name)} '${httpUrl(target.parent)}'"
     }
 
     /**

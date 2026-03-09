@@ -78,4 +78,31 @@ class AzStorageOptsTest extends Specification {
         storageOpts.fileShares.get('file1').getMountPath() == 'mountPath1'
         storageOpts.fileShares.get('file1').getMountOptions() == AzFileShareOpts.DEFAULT_MOUNT_OPTIONS
     }
+
+    def 'should support per-container SAS tokens'() {
+        given:
+        def opts = new AzStorageOpts([:], [:])
+
+        when:
+        opts.setSasToken('my-container', 'sas-token-1')
+        opts.setSasToken('igenomes', 'sas-token-2')
+
+        then:
+        opts.getSasToken('my-container') == 'sas-token-1'
+        opts.getSasToken('igenomes') == 'sas-token-2'
+        opts.getSasToken('unknown') == null
+        opts.containerSasTokens == ['my-container': 'sas-token-1', 'igenomes': 'sas-token-2']
+    }
+
+    def 'should fall back to global sasToken when no per-container token registered'() {
+        given:
+        def opts = new AzStorageOpts([sasToken: 'global-sas'], [:])
+
+        when:
+        opts.setSasToken('my-container', 'container-sas')
+
+        then:
+        opts.getSasToken('my-container') == 'container-sas'
+        opts.getSasToken('other-container') == 'global-sas'
+    }
 }
