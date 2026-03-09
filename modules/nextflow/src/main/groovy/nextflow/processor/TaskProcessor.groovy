@@ -796,7 +796,7 @@ class TaskProcessor {
     @CompileStatic
     final protected void checkCachedOrLaunchTask( TaskRun task, HashCode hash, boolean shouldTryCache ) {
 
-        int tries = task.failCount +1
+        int tries = task.failCount + task.abortedCount + 1
         while( true ) {
             hash = HashBuilder.defaultHasher().putBytes(hash.asBytes()).putInt(tries).hash()
 
@@ -812,6 +812,12 @@ class TaskProcessor {
                 final cached = shouldTryCache && exists && entry.trace.isCompleted() && checkCachedOutput(task.clone(), resumeDir, hash, entry)
                 if( cached )
                     break
+                // #6448 When not cached but there is an entry whose status is ABORT or FAILED, the task counters for these status must be incremented to be sure future retries takes it into account to calculate the hash.
+                if( entry?.trace?.isFailed() ) {
+                    task.failCount += 1
+                    task.config.attempt = task.failCount + 1
+                }
+                if( entry?.trace?.isAborted() ) task.abortedCount+=1
             }
             catch (Throwable t) {
                 log.warn1("[${safeTaskName(task)}] Unable to resume cached task -- See log file for details", causedBy: t)
