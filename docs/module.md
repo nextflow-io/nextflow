@@ -304,7 +304,7 @@ $ nextflow module install nf-core/fastqc
 $ nextflow module install nf-core/fastqc -version 1.0.0
 ```
 
-Installed modules are stored in the `modules/` directory and can be included by name instead of by relative path:
+Installed modules are stored in the `modules/` directory and can be included by name instead of a relative path:
 
 ```nextflow
 include { FASTQC } from 'nf-core/fastqc'
@@ -402,9 +402,9 @@ The argument can be either a `scope/name` reference (for an already-installed mo
 
 Your module directory must include:
 
-- `main.nf` - The module entry point
-- `meta.yaml` - Module metadata (name, description, version, etc.)
-- `README.md` - Module documentation
+- `main.nf`: The module entry point
+- `meta.yaml`: Module metadata (name, description, version, etc.)
+- `README.md`: Module documentation
 
 Authentication is required for publishing and can be provided via the `NXF_REGISTRY_TOKEN` environment variable or in your configuration:
 
@@ -454,4 +454,4 @@ modules/
 
 The `modules/` directory should be committed to your Git repository to ensure reproducibility.
 
-See the {ref}`cli-page` documentation for complete details on all module commands.
+See the {ref}`cli-page` documentation for more information about module commands.
