@@ -76,15 +76,8 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
         copy.remove('PATH')
         copy.put('PATH', '$PWD/.nextflow-bin:$AZ_BATCH_NODE_SHARED_DIR/bin/:$PATH')
         copy.put('AZCOPY_LOG_LOCATION', '$PWD/.azcopy_log')
-        if( sasToken ) {
+        if( sasToken )
             copy.put('AZ_SAS', sasToken)
-        }
-        else if( azProvider ) {
-            for( Map.Entry<String,String> entry : azProvider.containerSasTokens.entrySet() ) {
-                final varName = 'AZ_SAS_' + entry.key.toUpperCase().replaceAll('[^A-Z0-9]', '_')
-                copy.put(varName, entry.value)
-            }
-        }
 
         final envSnippet = super.getEnvScript(copy,false)
         if( envSnippet )

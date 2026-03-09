@@ -532,22 +532,17 @@ class AzFileCopyStrategyTest extends Specification {
 
     }
 
-    def 'should export per-container SAS env vars when using AD/MI auth'() {
+    def 'should not export AZ_SAS env var when using AD/MI auth'() {
         given:
         def config = new AzConfig([storage:[:]])
-        def provider = Mock(AzFileSystemProvider)
-        provider.getContainerSasTokens() >> ['my-data': 'sas-my-data-token', 'igenomes': 'sas-igenomes-token']
         def strategy = new AzFileCopyStrategy()
         strategy.config = config
-        strategy.azProvider = provider
 
         when:
         def env = strategy.getEnvScript([:], false)
 
         then:
-        env.contains('export AZ_SAS_MY_DATA="sas-my-data-token"')
-        env.contains('export AZ_SAS_IGENOMES="sas-igenomes-token"')
-        !env.contains('export AZ_SAS=')
+        !env.contains('export AZ_SAS')
     }
 
 }
