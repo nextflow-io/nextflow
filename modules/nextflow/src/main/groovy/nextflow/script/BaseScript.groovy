@@ -188,10 +188,24 @@ abstract class BaseScript extends Script implements ExecutionContext {
         publisher = new OutputDef(closure)
     }
 
+    /**
+     * Include definitions from another script.
+     *
+     * @param include
+     */
     protected IncludeDef include( IncludeDef include ) {
         if(ExecutionStack.withinWorkflow())
             throw new IllegalStateException("Include statement is not allowed within a workflow definition")
         include .setSession(session)
+    }
+
+    /**
+     * Define a custom type.
+     *
+     * @param type
+     */
+    protected void declareType(Class type) {
+        meta.addDefinition(new TypeDef(type))
     }
 
     /**
