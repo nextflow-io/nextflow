@@ -34,10 +34,12 @@ import com.google.cloud.batch.v1.TaskSpec
 import com.google.cloud.batch.v1.Volume
 import com.google.cloud.storage.contrib.nio.CloudStoragePath
 import com.google.protobuf.Duration
+import groovy.json.JsonSlurper
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.SysEnv
 import nextflow.cloud.google.batch.client.BatchClient
 import nextflow.cloud.google.batch.client.BatchConfig
 import nextflow.cloud.types.CloudMachineInfo
@@ -327,14 +329,41 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         if( containerOptions )
             container.setOptions(containerOptions)
 
-        final env = Environment.newBuilder()
+        final envBuilder = Environment.newBuilder()
             .putAllVariables(launcher.getEnvironment())
-            .build()
+        final secretVars = getSecretVariables()
+        if( secretVars )
+            envBuilder.putAllSecretVariables(secretVars)
+        final env = envBuilder.build()
 
         return Runnable.newBuilder()
             .setContainer(container)
             .setEnvironment(env)
             .build()
+    }
+
+    /**
+     * Reads the GCP Secret Manager variable references set by Seqera Platform
+     * via the {@code NXF_GOOGLE_SECRET_VARS} environment variable.
+     *
+     * The value is a Base64-encoded JSON map of secret names to Secret Manager
+     * resource paths, e.g.:
+     * {@code {"MY_SECRET":"projects/my-project/secrets/tower-wf123-MY_SECRET/versions/latest"}}
+     *
+     * @return A map of secret variable names to GCP Secret Manager paths, or null if not set.
+     */
+    protected Map<String,String> getSecretVariables() {
+        final encoded = SysEnv.get('NXF_GOOGLE_SECRET_VARS')
+        if( !encoded )
+            return null
+        try {
+            final json = new String(encoded.decodeBase64())
+            return (Map<String,String>) new JsonSlurper().parseText(json)
+        }
+        catch( Exception e ) {
+            log.warn "[GOOGLE BATCH] Failed to decode NXF_GOOGLE_SECRET_VARS - ${e.message}"
+            return null
+        }
     }
 
     /**

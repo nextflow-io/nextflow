@@ -140,6 +140,13 @@ class GoogleBatchExecutorTest extends Specification {
         false   | true        | '/nfs/work/dir'     | 'bash /nfs/work/dir/.command.run 2>&1 > /nfs/work/dir/.command.log'
     }
 
+    def 'should report secret native' () {
+        given:
+        def executor = Spy(GoogleBatchExecutor)
+        expect:
+        executor.isSecretNative()
+    }
+
     def 'should validate shouldDeleteJob method' () {
         given:
         def executor = Spy(GoogleBatchExecutor)

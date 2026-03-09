@@ -1225,6 +1225,107 @@ class GoogleBatchTaskHandlerTest extends Specification {
         'picks first zone match'    | [StatusEvent.newBuilder().setDescription('no zone here').build(), StatusEvent.newBuilder().setDescription('on zones/us-east1-b/instances/i-1').build()]                      | 'us-east1-b'
     }
 
+    def 'should return null secret variables when env var is not set' () {
+        given:
+        def handler = Spy(GoogleBatchTaskHandler)
+
+        when:
+        def result = handler.getSecretVariables()
+
+        then:
+        result == null
+    }
+
+    def 'should decode secret variables from base64 encoded JSON' () {
+        given:
+        def secrets = '{"ALT_USER":"projects/my-project/secrets/tower-wf123-ALT_USER/versions/latest","ALT_PASS":"projects/my-project/secrets/tower-wf123-ALT_PASS/versions/latest"}'
+        def encoded = secrets.bytes.encodeBase64().toString()
+        SysEnv.push(NXF_GOOGLE_SECRET_VARS: encoded)
+        def handler = Spy(GoogleBatchTaskHandler)
+
+        when:
+        def result = handler.getSecretVariables()
+
+        then:
+        result == [
+            ALT_USER: 'projects/my-project/secrets/tower-wf123-ALT_USER/versions/latest',
+            ALT_PASS: 'projects/my-project/secrets/tower-wf123-ALT_PASS/versions/latest'
+        ]
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def 'should return null for invalid secret variables encoding' () {
+        given:
+        SysEnv.push(NXF_GOOGLE_SECRET_VARS: 'not-valid-base64!!!')
+        def handler = Spy(GoogleBatchTaskHandler)
+
+        when:
+        def result = handler.getSecretVariables()
+
+        then:
+        result == null
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def 'should build container runnable with secret variables' () {
+        given:
+        def secrets = '{"MY_SECRET":"projects/test-project/secrets/tower-wf1-MY_SECRET/versions/latest"}'
+        def encoded = secrets.bytes.encodeBase64().toString()
+        SysEnv.push(NXF_GOOGLE_SECRET_VARS: encoded)
+        and:
+        def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
+        def exec = Mock(GoogleBatchExecutor)
+        def task = Mock(TaskRun) {
+            getHashLog() >> 'abcd1234'
+            getWorkDir() >> WORK_DIR
+            getContainer() >> 'ubuntu:latest'
+            getConfig() >> Mock(TaskConfig) {
+                getContainerOptions() >> ''
+            }
+        }
+        def handler = Spy(new GoogleBatchTaskHandler(task, exec))
+        def launcher = new GoogleBatchLauncherSpecMock('bash .command.run', [], [], [VAR1: 'value1'])
+
+        when:
+        def result = handler.buildContainerRunnable(task, launcher)
+
+        then:
+        handler.fusionEnabled() >> false
+        result.getEnvironment().getVariablesMap() == [VAR1: 'value1']
+        result.getEnvironment().getSecretVariablesMap() == [MY_SECRET: 'projects/test-project/secrets/tower-wf1-MY_SECRET/versions/latest']
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def 'should build container runnable without secret variables when env var is not set' () {
+        given:
+        def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
+        def exec = Mock(GoogleBatchExecutor)
+        def task = Mock(TaskRun) {
+            getHashLog() >> 'abcd1234'
+            getWorkDir() >> WORK_DIR
+            getContainer() >> 'ubuntu:latest'
+            getConfig() >> Mock(TaskConfig) {
+                getContainerOptions() >> ''
+            }
+        }
+        def handler = Spy(new GoogleBatchTaskHandler(task, exec))
+        def launcher = new GoogleBatchLauncherSpecMock('bash .command.run', [], [], [VAR1: 'value1'])
+
+        when:
+        def result = handler.buildContainerRunnable(task, launcher)
+
+        then:
+        handler.fusionEnabled() >> false
+        result.getEnvironment().getVariablesMap() == [VAR1: 'value1']
+        result.getEnvironment().getSecretVariablesMap() == [:]
+    }
+
     def 'should build container runnable with fusion privileged' () {
         given:
         def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')

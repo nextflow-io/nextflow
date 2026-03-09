@@ -70,6 +70,11 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint, TaskArrayE
     }
 
     @Override
+    final boolean isSecretNative() {
+        return true
+    }
+
+    @Override
     String containerConfigEngine() {
         return 'docker'
     }
