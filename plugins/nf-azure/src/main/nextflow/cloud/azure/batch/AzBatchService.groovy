@@ -532,7 +532,7 @@ class AzBatchService implements Closeable {
         assert jobId, 'Missing Azure Batch jobId argument'
         assert task, 'Missing Azure Batch task argument'
 
-        final sas = config.storage().sasToken ?: getSasForPath(task.workDir)
+        final sas = getSasForPath(task.workDir)
         if( !sas )
             throw new IllegalArgumentException("Missing Azure Blob storage SAS token")
 

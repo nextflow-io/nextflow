@@ -48,7 +48,7 @@ class AzStorageOpts implements ConfigScope {
     @Description("""
         The blob storage shared access signature (SAS) token, which can be provided instead of an account key. Defaults to environment variable `AZURE_STORAGE_SAS_TOKEN`.
     """)
-    String sasToken
+    final String sasToken
 
     @ConfigOption
     @Description("""

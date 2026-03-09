@@ -72,6 +72,7 @@ class AzFileCopyStrategyTest extends Specification {
         result.getParent() >> { def p=path.lastIndexOf('/'); p!=-1 ? mockAzPath("${path.substring(0,p)}", true) : null }
         result.getFileName() >> { Paths.get(tokens[-1]) }
         result.getName() >> tokens[1]
+        result.getContainerName() >> tokens[1]
         result.blobClient() >> BLOB_CLIENT
         return result
     }
@@ -253,7 +254,6 @@ class AzFileCopyStrategyTest extends Specification {
                     export BAR="any"
                     export PATH="$PWD/.nextflow-bin:$AZ_BATCH_NODE_SHARED_DIR/bin/:$PATH"
                     export AZCOPY_LOG_LOCATION="$PWD/.azcopy_log"
-                    export AZ_SAS="12345"
                     '''.stripIndent()
 
         binding.helpers_script == '''\
@@ -421,7 +421,6 @@ class AzFileCopyStrategyTest extends Specification {
         binding.task_env == '''\
                     export PATH="$PWD/.nextflow-bin:$AZ_BATCH_NODE_SHARED_DIR/bin/:$PATH"
                     export AZCOPY_LOG_LOCATION="$PWD/.azcopy_log"
-                    export AZ_SAS="12345"
                     '''.stripIndent()
 
         binding.helpers_script == '''\

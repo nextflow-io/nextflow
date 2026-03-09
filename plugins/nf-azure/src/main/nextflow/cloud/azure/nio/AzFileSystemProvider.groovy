@@ -43,6 +43,7 @@ import com.azure.storage.blob.BlobServiceClient
 import com.azure.storage.blob.models.BlobStorageException
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.Global
 import nextflow.cloud.azure.batch.AzHelper
 import nextflow.cloud.azure.config.AzConfig
 /**
@@ -253,6 +254,7 @@ class AzFileSystemProvider extends FileSystemProvider {
         else if( accountKey ) {
             client = createBlobServiceWithKey(accountName, accountKey)
             this.accountKey = accountKey
+            generateAndRegisterContainerSas(client, bucket, config)
         }
         else {
             throw new IllegalArgumentException("Missing Azure storage credentials: please specify a managed identity, service principal, or storage account key")
@@ -264,13 +266,16 @@ class AzFileSystemProvider extends FileSystemProvider {
     }
 
     protected void generateAndRegisterContainerSas(BlobServiceClient serviceClient, String bucket, Map<String,?> config) {
+        if( !Global.session?.config )
+            return
         final azConfig = AzConfig.getConfig()
         if( azConfig.storage().sasToken )
             return
         final duration = azConfig.storage().tokenDuration
         final containerClient = serviceClient.getBlobContainerClient(bucket)
-        final key = AzHelper.generateUserDelegationKey(serviceClient, duration)
-        final sas = AzHelper.generateContainerSasWithActiveDirectory(containerClient, duration, key)
+        final sas = accountKey
+                ? AzHelper.generateContainerSasWithAccountKey(containerClient, duration)
+                : AzHelper.generateContainerSasWithActiveDirectory(containerClient, duration, AzHelper.generateUserDelegationKey(serviceClient, duration))
         containerSasTokens.put(bucket, sas)
         log.debug "Generated SAS token for Azure container: $bucket"
     }

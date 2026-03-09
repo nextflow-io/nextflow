@@ -42,7 +42,6 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
     private int maxTransferAttempts
     private int maxParallelTransfers
     private Duration delayBetweenAttempts
-    private String sasToken
     private Path remoteBinDir
 
     protected AzFileCopyStrategy() {}
@@ -51,19 +50,16 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
         super(bean)
         this.config = executor.azConfig
         this.remoteBinDir = executor.remoteBinDir
-        this.sasToken = config.storage().sasToken
         this.maxParallelTransfers = config.batch().maxParallelTransfers
         this.maxTransferAttempts = config.batch().maxTransferAttempts
         this.delayBetweenAttempts = config.batch().delayBetweenAttempts
         if( bean.workDir instanceof AzPath )
             this.azProvider = (AzFileSystemProvider) ((AzPath) bean.workDir).fileSystem.provider()
-        if( !sasToken ) {
-            final List<Path> paths = []
-            if( remoteBinDir ) paths << remoteBinDir
-            if( bean.workDir ) paths << bean.workDir
-            paths.addAll( bean.inputFiles.values() )
-            for( Path p : paths ) getSasForPath(p)
-        }
+        final List<Path> paths = []
+        if( remoteBinDir ) paths << remoteBinDir
+        if( bean.workDir ) paths << bean.workDir
+        paths.addAll( bean.inputFiles.values() )
+        for( Path p : paths ) getSasForPath(p)
     }
 
     @Override
@@ -76,8 +72,6 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
         copy.remove('PATH')
         copy.put('PATH', '$PWD/.nextflow-bin:$AZ_BATCH_NODE_SHARED_DIR/bin/:$PATH')
         copy.put('AZCOPY_LOG_LOCATION', '$PWD/.azcopy_log')
-        if( sasToken )
-            copy.put('AZ_SAS', sasToken)
 
         final envSnippet = super.getEnvScript(copy,false)
         if( envSnippet )
@@ -86,20 +80,27 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
 
     }
 
+    @groovy.transform.CompileDynamic
     protected String getSasForPath(Path path) {
-        if( sasToken )
-            return sasToken
         if( !(path instanceof AzPath) )
             return null
-        final container = (path as AzPath).getContainerName() as String
+        final AzPath azPath = path
+        final container = azPath.getContainerName() as String
         if( !container )
             return null
-        String sas = azProvider?.getSasToken(container)
+        String sas = azProvider?.getSasToken(container) ?: config.storage().sasToken
         if( sas )
             return sas
+        final duration = config.storage().tokenDuration
         if( config.activeDirectory().isConfigured() || config.managedIdentity().isConfigured() ) {
             log.debug "Generating SAS token for Azure container: $container"
-            sas = AzHelper.generateContainerSasWithActiveDirectory(path, config.storage().tokenDuration)
+            sas = AzHelper.generateContainerSasWithActiveDirectory(path, duration)
+            azProvider?.setSasToken(container, sas)
+        }
+        else if( config.storage().accountKey ) {
+            log.debug "Generating SAS token for Azure container: $container"
+            final containerClient = azPath.fileSystem.getBlobServiceClient().getBlobContainerClient(container)
+            sas = AzHelper.generateContainerSasWithAccountKey(containerClient, duration)
             azProvider?.setSasToken(container, sas)
         }
         return sas

@@ -128,6 +128,17 @@ class AzHelper {
         return generateContainerUserDelegationSas(client, duration, key)
     }
 
+    static String generateContainerSasWithAccountKey(BlobContainerClient client, Duration duration) {
+        final startTime = OffsetDateTime.now()
+        final expiryTime = startTime.plusSeconds(duration.toSeconds())
+        final signature = new BlobServiceSasSignatureValues()
+                .setPermissions(BLOB_PERMS)
+                .setPermissions(CONTAINER_PERMS)
+                .setStartTime(startTime)
+                .setExpiryTime(expiryTime)
+        return client.generateSas(signature)
+    }
+
     static String generateAccountSasWithAccountKey(Path path, Duration duration) {
         generateAccountSas(az0(path).getFileSystem().getBlobServiceClient(), duration)
     }
@@ -182,6 +193,7 @@ class AzHelper {
         return client.generateAccountSas(signature)
     }
 
+    // Only used with Fusion and account key, preserved for backwards compatibility
     static String generateAccountSas(String accountName, String accountKey, Duration duration) {
         final client = getOrCreateBlobServiceWithKey(accountName, accountKey)
         return generateAccountSas(client, duration)

@@ -76,48 +76,41 @@ class AzFusionEnv implements FusionEnv {
             return result
         }
 
+        if( cfg.storage().accountKey && cfg.storage().sasToken )
+            throw new IllegalArgumentException("Azure Storage Access key and SAS token detected. Only one is allowed")
+
+        if( cfg.storage().sasToken ) {
+            result.AZURE_STORAGE_SAS_TOKEN = cfg.storage().sasToken
+            return result
+        }
+
+        // If an account key is provided, generate a SAS token for the storage account
+        // This is to preserve backwards compatibility with existing Fusion auth method
+        // It should be replaced by use of Managed Identity and/or container specific SAS where required.
+        if( cfg.storage().accountKey ) {
+            result.AZURE_STORAGE_SAS_TOKEN = generateAccountSas(cfg)
+            return result
+        }
+
         final provider = azProvider()
         if( provider ) {
             for( Map.Entry<String,String> entry : provider.containerSasTokens.entrySet() ) {
-                final envKey = "AZURE_STORAGE_SAS_TOKEN_${entry.key.toUpperCase().replaceAll('[^A-Z0-9]', '_')}"
+                final envKey = ("AZURE_STORAGE_SAS_TOKEN_${entry.key.toUpperCase().replaceAll('[^A-Z0-9]', '_')}").toString()
                 result.put(envKey, entry.value)
             }
         }
-        result.AZURE_STORAGE_SAS_TOKEN = getOrCreateSasToken()
 
         return result
     }
 
-    synchronized String getOrCreateSasToken() {
-        final cfg = AzConfig.config
-
-        if (cfg.storage().accountKey && cfg.storage().sasToken) {
-            throw new IllegalArgumentException("Azure Storage Access key and SAS token detected. Only one is allowed")
-        }
-
-        if (cfg.storage().sasToken) {
-            return cfg.storage().sasToken
-        }
-
-        if (cfg.activeDirectory().isConfigured() || cfg.managedIdentity().isConfigured()) {
-            final workDir = Global.session.workDir
-            final container = (workDir as AzPath).getContainerName() as String
-            final provider = azProvider()
-            final existing = provider?.getSasToken(container)
-            if( existing )
-                return existing
-            final sas = AzHelper.generateContainerSasWithActiveDirectory(workDir, cfg.storage().tokenDuration)
-            provider?.setSasToken(container, sas)
-            return sas
-        }
-
-        return AzHelper.generateAccountSasWithAccountKey(Global.session.workDir, cfg.storage().tokenDuration)
-    }
-
-    private static AzFileSystemProvider azProvider() {
+    protected AzFileSystemProvider azProvider() {
         final workDir = Global.session?.workDir
         if( workDir instanceof AzPath )
             return (AzFileSystemProvider) (workDir as AzPath).fileSystem.provider()
         return null
+    }
+
+    protected String generateAccountSas(AzConfig cfg) {
+        AzHelper.generateAccountSasWithAccountKey(Global.session.workDir, cfg.storage().tokenDuration)
     }
 }

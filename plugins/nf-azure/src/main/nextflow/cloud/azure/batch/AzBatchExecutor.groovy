@@ -23,7 +23,6 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.cloud.azure.config.AzConfig
-import nextflow.cloud.azure.nio.AzFileSystemProvider
 import nextflow.cloud.azure.nio.AzPath
 import nextflow.exception.AbortOperationException
 import nextflow.executor.Executor
@@ -101,23 +100,6 @@ class AzBatchExecutor extends Executor implements ExtensionPoint {
     protected void initBatchService() {
         azConfig = AzConfig.getConfig(session)
         batchService = new AzBatchService(this)
-
-        // When using account key, generate an account-level SAS (covers all containers).
-        // When using AD/MI, SAS tokens are generated lazily per-container on first access
-        // via AzFileSystemProvider.newFileSystem0() — see generateContainerSasIfNeeded().
-        if (!azConfig.storage().sasToken) {
-            if( !azConfig.activeDirectory().isConfigured() && !azConfig.managedIdentity().isConfigured() ) {
-                azConfig.storage().sasToken = AzHelper.generateAccountSasWithAccountKey(workDir, azConfig.storage().tokenDuration)
-            }
-            // For AD/MI: generate a SAS for the workDir container eagerly so it is available
-            // immediately, then additional containers are handled lazily on first access.
-            else {
-                final container = (workDir as AzPath).getContainerName() as String
-                final sas = AzHelper.generateContainerSasWithActiveDirectory(workDir, azConfig.storage().tokenDuration)
-                final provider = (AzFileSystemProvider) (workDir as AzPath).fileSystem.provider()
-                provider.setSasToken(container, sas)
-            }
-        }
 
         Global.onCleanup((it) -> batchService.close())
     }
