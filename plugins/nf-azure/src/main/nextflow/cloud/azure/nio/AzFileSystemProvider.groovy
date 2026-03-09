@@ -37,6 +37,7 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.attribute.FileAttribute
 import java.nio.file.attribute.FileAttributeView
 import java.nio.file.spi.FileSystemProvider
+import java.util.concurrent.ConcurrentHashMap
 
 import com.azure.storage.blob.BlobServiceClient
 import com.azure.storage.blob.models.BlobStorageException
@@ -72,7 +73,7 @@ class AzFileSystemProvider extends FileSystemProvider {
     private String sasToken = null
     private String accountKey = null
     /** Per-container SAS tokens generated lazily for AD/MI auth. */
-    private final Map<String,String> containerSasTokens = new LinkedHashMap<>()
+    private final Map<String,String> containerSasTokens = new ConcurrentHashMap<>()
 
     /**
      * @inheritDoc
@@ -104,7 +105,7 @@ class AzFileSystemProvider extends FileSystemProvider {
      * @param containerName The blob container name
      * @param token         The SAS token
      */
-    synchronized void setSasToken(String containerName, String token) {
+    void setSasToken(String containerName, String token) {
         containerSasTokens.put(containerName, token)
     }
 
