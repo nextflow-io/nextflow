@@ -87,6 +87,7 @@ import nextflow.cloud.azure.config.AzFileShareOpts
 import nextflow.cloud.azure.config.AzPoolOpts
 import nextflow.cloud.azure.config.AzStartTaskOpts
 import nextflow.cloud.azure.config.CopyToolInstallMode
+import nextflow.cloud.azure.nio.AzFileSystemProvider
 import nextflow.cloud.azure.nio.AzPath
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
@@ -519,8 +520,10 @@ class AzBatchService implements Closeable {
     }
 
     protected String getSasForPath(Path path) {
-        if( path instanceof AzPath )
-            return config.storage().getSasToken(path.getContainerName() as String)
+        if( path instanceof AzPath ) {
+            final provider = (AzFileSystemProvider) (path as AzPath).fileSystem.provider()
+            return provider.getSasToken(path.getContainerName() as String)
+        }
         return null
     }
 

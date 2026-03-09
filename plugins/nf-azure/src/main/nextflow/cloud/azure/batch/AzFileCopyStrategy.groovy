@@ -21,6 +21,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.file.AzBashLib
+import nextflow.cloud.azure.nio.AzFileSystemProvider
 import nextflow.cloud.azure.nio.AzPath
 import nextflow.executor.SimpleFileCopyStrategy
 import nextflow.processor.TaskBean
@@ -37,6 +38,7 @@ import nextflow.util.Escape
 class AzFileCopyStrategy extends SimpleFileCopyStrategy {
 
     private AzConfig config
+    private AzFileSystemProvider azProvider
     private int maxTransferAttempts
     private int maxParallelTransfers
     private Duration delayBetweenAttempts
@@ -53,6 +55,8 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
         this.maxParallelTransfers = config.batch().maxParallelTransfers
         this.maxTransferAttempts = config.batch().maxTransferAttempts
         this.delayBetweenAttempts = config.batch().delayBetweenAttempts
+        if( bean.workDir instanceof AzPath )
+            this.azProvider = (AzFileSystemProvider) ((AzPath) bean.workDir).fileSystem.provider()
         if( !sasToken ) {
             final List<Path> paths = []
             if( remoteBinDir ) paths << remoteBinDir
@@ -75,8 +79,8 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
         if( sasToken ) {
             copy.put('AZ_SAS', sasToken)
         }
-        else {
-            for( Map.Entry<String,String> entry : config.storage().containerSasTokens.entrySet() ) {
+        else if( azProvider ) {
+            for( Map.Entry<String,String> entry : azProvider.containerSasTokens.entrySet() ) {
                 final varName = 'AZ_SAS_' + entry.key.toUpperCase().replaceAll('[^A-Z0-9]', '_')
                 copy.put(varName, entry.value)
             }
@@ -97,16 +101,13 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
         final container = (path as AzPath).getContainerName() as String
         if( !container )
             return null
-        String sas = config.storage().getSasToken(container)
+        String sas = azProvider?.getSasToken(container)
         if( sas )
             return sas
-        // No SAS registered yet for this container — generate one now.
-        // This handles input files from containers that were opened before
-        // the executor started (e.g. az://igenomes accessed during task graph build).
         if( config.activeDirectory().isConfigured() || config.managedIdentity().isConfigured() ) {
             log.debug "Generating SAS token for Azure container: $container"
             sas = AzHelper.generateContainerSasWithActiveDirectory(path, config.storage().tokenDuration)
-            config.storage().setSasToken(container, sas)
+            azProvider?.setSasToken(container, sas)
         }
         return sas
     }

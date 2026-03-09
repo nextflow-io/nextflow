@@ -109,6 +109,13 @@ class AzFileSystemProvider extends FileSystemProvider {
         containerSasTokens.put(containerName, token)
     }
 
+    /**
+     * Return all registered per-container SAS tokens (unmodifiable view).
+     */
+    Map<String,String> getContainerSasTokens() {
+        return Collections.unmodifiableMap(containerSasTokens)
+    }
+
     String getAccountKey() {
         return this.accountKey
     }
@@ -264,7 +271,6 @@ class AzFileSystemProvider extends FileSystemProvider {
         final containerClient = serviceClient.getBlobContainerClient(bucket)
         final key = AzHelper.generateUserDelegationKey(serviceClient, duration)
         final sas = AzHelper.generateContainerSasWithActiveDirectory(containerClient, duration, key)
-        azConfig.storage().setSasToken(bucket, sas)
         containerSasTokens.put(bucket, sas)
         log.debug "Generated SAS token for Azure container: $bucket"
     }

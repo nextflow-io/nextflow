@@ -20,12 +20,12 @@ package nextflow.cloud.azure.batch
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.attribute.BasicFileAttributes
-import java.nio.file.spi.FileSystemProvider
 
 import com.azure.storage.blob.BlobClient
 import nextflow.Session
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.nio.AzFileSystem
+import nextflow.cloud.azure.nio.AzFileSystemProvider
 import nextflow.cloud.azure.nio.AzPath
 import nextflow.processor.TaskBean
 import spock.lang.Specification
@@ -47,7 +47,7 @@ class AzFileCopyStrategyTest extends Specification {
         attr.isRegularFile() >> !isDir
         attr.isSymbolicLink() >> false
 
-        def provider = Mock(FileSystemProvider)
+        def provider = Mock(AzFileSystemProvider)
         provider.getScheme() >> 'az'
         provider.readAttributes(_, _, _) >> attr
 
@@ -535,11 +535,11 @@ class AzFileCopyStrategyTest extends Specification {
     def 'should export per-container SAS env vars when using AD/MI auth'() {
         given:
         def config = new AzConfig([storage:[:]])
-        config.storage().setSasToken('my-data', 'sas-my-data-token')
-        config.storage().setSasToken('igenomes', 'sas-igenomes-token')
-        def executor = Mock(AzBatchExecutor) { getAzConfig() >> config }
+        def provider = Mock(AzFileSystemProvider)
+        provider.getContainerSasTokens() >> ['my-data': 'sas-my-data-token', 'igenomes': 'sas-igenomes-token']
         def strategy = new AzFileCopyStrategy()
         strategy.config = config
+        strategy.azProvider = provider
 
         when:
         def env = strategy.getEnvScript([:], false)

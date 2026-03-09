@@ -16,11 +16,8 @@
 
 package nextflow.cloud.azure.config
 
-import java.util.concurrent.ConcurrentHashMap
-
 import groovy.transform.CompileStatic
 import nextflow.SysEnv
-import nextflow.cloud.azure.batch.AzHelper
 import nextflow.cloud.azure.nio.AzFileSystemProvider
 import nextflow.config.spec.ConfigOption
 import nextflow.config.spec.ConfigScope
@@ -62,13 +59,6 @@ class AzStorageOpts implements ConfigScope {
     @PlaceholderName("<name>")
     final Map<String,AzFileShareOpts> fileShares
 
-    /**
-     * Per-container SAS tokens, keyed by container name.
-     * Used when accessing multiple blob containers with AD/MI authentication.
-     * ConcurrentHashMap ensures safe concurrent reads and writes from multiple task threads.
-     */
-    private final Map<String,String> containerSasTokens = new ConcurrentHashMap<>()
-
     AzStorageOpts(Map config, Map<String,String> env=SysEnv.get()) {
         assert config!=null
         this.accountKey = config.accountKey ?: env.get('AZURE_STORAGE_ACCOUNT_KEY')
@@ -78,34 +68,6 @@ class AzStorageOpts implements ConfigScope {
         this.fileShares = parseFileShares(config.fileShares instanceof Map ? config.fileShares as Map<String, Map>
                 : Collections.<String,Map> emptyMap())
 
-    }
-
-    /**
-     * Return the SAS token for the given container name.
-     * Falls back to the global {@link #sasToken} if no per-container token is registered.
-     *
-     * @param containerName The blob container name
-     * @return The SAS token, or {@code null} if none is available
-     */
-    String getSasToken(String containerName) {
-        return containerSasTokens.getOrDefault(containerName, sasToken)
-    }
-
-    /**
-     * Register a SAS token for a specific container.
-     *
-     * @param containerName The blob container name
-     * @param token         The SAS token to associate with the container
-     */
-    void setSasToken(String containerName, String token) {
-        containerSasTokens.put(containerName, token)
-    }
-
-    /**
-     * Return all registered per-container SAS tokens (unmodifiable view).
-     */
-    Map<String,String> getContainerSasTokens() {
-        return Collections.unmodifiableMap(containerSasTokens)
     }
 
     Map<String,Object> getEnv() {

@@ -16,11 +16,13 @@
 
 package nextflow.cloud.azure.fusion
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.cloud.azure.batch.AzHelper
-import groovy.transform.CompileStatic
 import nextflow.cloud.azure.config.AzConfig
+import nextflow.cloud.azure.nio.AzFileSystemProvider
+import nextflow.cloud.azure.nio.AzPath
 import nextflow.fusion.FusionConfig
 import nextflow.fusion.FusionEnv
 import org.pf4j.Extension
@@ -74,10 +76,12 @@ class AzFusionEnv implements FusionEnv {
             return result
         }
 
-        final containerTokens = cfg.storage().containerSasTokens
-        for( Map.Entry<String,String> entry : containerTokens.entrySet() ) {
-            final envKey = "AZURE_STORAGE_SAS_TOKEN_${entry.key.toUpperCase().replaceAll('[^A-Z0-9]', '_')}"
-            result.put(envKey, entry.value)
+        final provider = azProvider()
+        if( provider ) {
+            for( Map.Entry<String,String> entry : provider.containerSasTokens.entrySet() ) {
+                final envKey = "AZURE_STORAGE_SAS_TOKEN_${entry.key.toUpperCase().replaceAll('[^A-Z0-9]', '_')}"
+                result.put(envKey, entry.value)
+            }
         }
         result.AZURE_STORAGE_SAS_TOKEN = getOrCreateSasToken()
 
@@ -97,15 +101,23 @@ class AzFusionEnv implements FusionEnv {
 
         if (cfg.activeDirectory().isConfigured() || cfg.managedIdentity().isConfigured()) {
             final workDir = Global.session.workDir
-            final container = (workDir as nextflow.cloud.azure.nio.AzPath).getContainerName()
-            final existing = cfg.storage().getSasToken(container as String)
+            final container = (workDir as AzPath).getContainerName() as String
+            final provider = azProvider()
+            final existing = provider?.getSasToken(container)
             if( existing )
                 return existing
             final sas = AzHelper.generateContainerSasWithActiveDirectory(workDir, cfg.storage().tokenDuration)
-            cfg.storage().setSasToken(container as String, sas)
+            provider?.setSasToken(container, sas)
             return sas
         }
 
         return AzHelper.generateAccountSasWithAccountKey(Global.session.workDir, cfg.storage().tokenDuration)
+    }
+
+    private static AzFileSystemProvider azProvider() {
+        final workDir = Global.session?.workDir
+        if( workDir instanceof AzPath )
+            return (AzFileSystemProvider) (workDir as AzPath).fileSystem.provider()
+        return null
     }
 }

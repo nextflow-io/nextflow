@@ -23,6 +23,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.cloud.azure.config.AzConfig
+import nextflow.cloud.azure.nio.AzFileSystemProvider
 import nextflow.cloud.azure.nio.AzPath
 import nextflow.exception.AbortOperationException
 import nextflow.executor.Executor
@@ -113,7 +114,8 @@ class AzBatchExecutor extends Executor implements ExtensionPoint {
             else {
                 final container = (workDir as AzPath).getContainerName() as String
                 final sas = AzHelper.generateContainerSasWithActiveDirectory(workDir, azConfig.storage().tokenDuration)
-                azConfig.storage().setSasToken(container, sas)
+                final provider = (AzFileSystemProvider) (workDir as AzPath).fileSystem.provider()
+                provider.setSasToken(container, sas)
             }
         }
 
