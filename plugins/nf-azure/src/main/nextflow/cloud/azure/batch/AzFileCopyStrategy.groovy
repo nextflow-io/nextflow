@@ -53,6 +53,13 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
         this.maxParallelTransfers = config.batch().maxParallelTransfers
         this.maxTransferAttempts = config.batch().maxTransferAttempts
         this.delayBetweenAttempts = config.batch().delayBetweenAttempts
+        if( !sasToken ) {
+            final List<Path> paths = []
+            if( remoteBinDir ) paths << remoteBinDir
+            if( bean.workDir ) paths << bean.workDir
+            paths.addAll( bean.inputFiles.values() )
+            for( Path p : paths ) getSasForPath(p)
+        }
     }
 
     @Override

@@ -176,10 +176,12 @@ class AzFileCopyStrategyTest extends Specification {
 
                 nxf_az_sas() {
                     local url=$1
-                    [[ "$url" == *'?'* ]] && { echo ''; return; }
-                    local container
-                    container=$(echo "$url" | sed 's|https://[^/]*/\\([^/?]*\\).*|\\1|')
-                    local var_name="AZ_SAS_$(echo "$container" | tr '[:lower:]' '[:upper:]' | tr -c 'A-Z0-9' '_')"
+                    [[ "$url" == *[?]* ]] && { echo; return; }
+                    local tmp="${url#*://}"
+                    local container="${tmp#*/}"
+                    container="${container%%/*}"
+                    local var_name="AZ_SAS_${container^^}"
+                    var_name="${var_name//[^A-Z0-9]/_}"
                     local sas="${!var_name:-${AZ_SAS:-}}"
                     echo "$sas"
                 }
@@ -215,9 +217,11 @@ class AzFileCopyStrategyTest extends Specification {
                     ret=$(azcopy cp "$source${sas:+?$sas}" "$target" 2>&1) || {
                         ## if fails check if it was trying to download a directory
                         mkdir -p $target
-                        local source_dir="${source/\\?/*?}"
-                        [[ "$source_dir" == "$source" ]] && source_dir="$source/*"
-                        azcopy cp "$source_dir${sas:+?$sas}" "$target" --recursive >/dev/null || {
+                        local source_base="${source%%\?*}"
+                        local source_qs="${source#*\?}"
+                        [[ "$source_base" == "$source" ]] && source_qs=""
+                        local source_dir="${source_base}/*${source_qs:+?$source_qs}"
+                        azcopy cp "$source_dir" "$target" --recursive >/dev/null || {
                             rm -rf $target
                             >&2 echo "Unable to download path: $source"
                             exit 1
@@ -329,10 +333,12 @@ class AzFileCopyStrategyTest extends Specification {
 
                 nxf_az_sas() {
                     local url=$1
-                    [[ "$url" == *'?'* ]] && { echo ''; return; }
-                    local container
-                    container=$(echo "$url" | sed 's|https://[^/]*/\\([^/?]*\\).*|\\1|')
-                    local var_name="AZ_SAS_$(echo "$container" | tr '[:lower:]' '[:upper:]' | tr -c 'A-Z0-9' '_')"
+                    [[ "$url" == *[?]* ]] && { echo; return; }
+                    local tmp="${url#*://}"
+                    local container="${tmp#*/}"
+                    container="${container%%/*}"
+                    local var_name="AZ_SAS_${container^^}"
+                    var_name="${var_name//[^A-Z0-9]/_}"
                     local sas="${!var_name:-${AZ_SAS:-}}"
                     echo "$sas"
                 }
@@ -368,9 +374,11 @@ class AzFileCopyStrategyTest extends Specification {
                     ret=$(azcopy cp "$source${sas:+?$sas}" "$target" 2>&1) || {
                         ## if fails check if it was trying to download a directory
                         mkdir -p $target
-                        local source_dir="${source/\\?/*?}"
-                        [[ "$source_dir" == "$source" ]] && source_dir="$source/*"
-                        azcopy cp "$source_dir${sas:+?$sas}" "$target" --recursive >/dev/null || {
+                        local source_base="${source%%\?*}"
+                        local source_qs="${source#*\?}"
+                        [[ "$source_base" == "$source" ]] && source_qs=""
+                        local source_dir="${source_base}/*${source_qs:+?$source_qs}"
+                        azcopy cp "$source_dir" "$target" --recursive >/dev/null || {
                             rm -rf $target
                             >&2 echo "Unable to download path: $source"
                             exit 1
@@ -545,9 +553,11 @@ class AzFileCopyStrategyTest extends Specification {
                         ret=$(azcopy cp "$source${sas:+?$sas}" "$target" 2>&1) || {
                             ## if fails check if it was trying to download a directory
                             mkdir -p $target
-                            local source_dir="${source/\\?/*?}"
-                            [[ "$source_dir" == "$source" ]] && source_dir="$source/*"
-                            azcopy cp "$source_dir${sas:+?$sas}" "$target" --recursive >/dev/null || {
+                            local source_base="${source%%\?*}"
+                            local source_qs="${source#*\?}"
+                            [[ "$source_base" == "$source" ]] && source_qs=""
+                            local source_dir="${source_base}/*${source_qs:+?$source_qs}"
+                            azcopy cp "$source_dir" "$target" --recursive >/dev/null || {
                                 rm -rf $target
                                 >&2 echo "Unable to download path: $source"
                                 exit 1
