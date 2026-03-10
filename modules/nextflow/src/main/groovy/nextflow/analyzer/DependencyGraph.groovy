@@ -144,7 +144,7 @@ class DependencyGraph {
         Map<Integer, List<Long>> tasksByLevels = new HashMap<>()
         for (TaskNode node : this.nodes.values()) {
             int level = node.getLevel()
-            tasksByLevels.putIfAbsent(level, new ArrayList<>()).add(node.getId())
+            tasksByLevels.computeIfAbsent(level, k -> new ArrayList<>()).add(node.getId())
         }
         return tasksByLevels
     }
