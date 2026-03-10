@@ -18,9 +18,9 @@ package nextflow.cli.module
 
 import nextflow.exception.AbortOperationException
 import nextflow.module.ModuleChecksum
+import nextflow.module.ModuleInfo
 import nextflow.module.ModuleReference
 import nextflow.module.ModuleStorage
-import nextflow.pipeline.PipelineSpec
 import org.junit.Rule
 import spock.lang.Specification
 import spock.lang.TempDir
@@ -44,15 +44,11 @@ class CmdModuleRemoveTest extends Specification {
 
     // No setup needed - using root field directly
 
-    def 'should remove module files and config entry'() {
+    def 'should remove all module files'() {
         given:
         def storage = new ModuleStorage(tempDir)
         def reference = new ModuleReference('nf-core', 'fastqc')
         def moduleDir = createTestModule(storage, reference, true)
-
-        // Create spec file with module entry
-        def specFile = new PipelineSpec(tempDir)
-        specFile.addModuleEntry('nf-core/fastqc', '1.0.0')
 
         and:
         def cmd = new CmdModuleRemove()
@@ -65,12 +61,7 @@ class CmdModuleRemoveTest extends Specification {
 
         then:
         output.contains('Module nf-core/fastqc files removed successfully')
-        output.contains('Module nf-core/fastqc entry removed from spec')
         !Files.exists(moduleDir)
-
-        and:
-        def spec = new PipelineSpec(tempDir)
-        spec.getModules().get('nf-core/fastqc') == null
     }
 
     def 'should keep files with -keep-files flag'() {
@@ -78,10 +69,6 @@ class CmdModuleRemoveTest extends Specification {
         def storage = new ModuleStorage(tempDir)
         def reference = new ModuleReference('nf-core', 'fastqc')
         def moduleDir = createTestModule(storage, reference, true)
-
-        // Create spec file
-        def specFile = new PipelineSpec(tempDir)
-        specFile.addModuleEntry('nf-core/fastqc', '1.0.0')
 
         and:
         def cmd = new CmdModuleRemove()
@@ -95,14 +82,9 @@ class CmdModuleRemoveTest extends Specification {
 
         then:
         output.contains('Keeping module files for nf-core/fastqc ')
-        output.contains('Module nf-core/fastqc entry removed from spec file')
         Files.exists(moduleDir)
         Files.exists(moduleDir.resolve('main.nf'))
-        !Files.exists(moduleDir.resolve(ModuleStorage.MODULE_INFO_FILE))
-
-        and:
-        def spec = new PipelineSpec(tempDir)
-        spec.getModules().get('nf-core/fastqc') == null
+        !Files.exists(moduleDir.resolve(ModuleInfo.MODULE_INFO_FILE))
     }
 
     def 'should fail when both keep-files and force are set'() {

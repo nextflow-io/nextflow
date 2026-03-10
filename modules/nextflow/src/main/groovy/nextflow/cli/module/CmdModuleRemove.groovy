@@ -22,9 +22,10 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.cli.CmdBase
 import nextflow.exception.AbortOperationException
+import nextflow.module.ModuleInfo
 import nextflow.module.ModuleReference
 import nextflow.module.ModuleStorage
-import nextflow.pipeline.PipelineSpec
+
 import nextflow.util.TestOnly
 
 import java.nio.file.Files
@@ -44,7 +45,7 @@ class CmdModuleRemove extends CmdBase {
     @Parameter(description = "<module>", required = true)
     List<String> args
 
-    @Parameter(names = ["-keep-files"], description = "Remove from config but keep local files", arity = 0)
+    @Parameter(names = ["-keep-files"], description = "Remove only .module-info keeping the local files", arity = 0)
     boolean keepFiles = false
 
     @Parameter(names = ["-force"], description = "Force remove", arity = 0)
@@ -72,15 +73,11 @@ class CmdModuleRemove extends CmdBase {
         // Get config
         def baseDir = root ?: Paths.get('.').toAbsolutePath().normalize()
 
-        //Get module versions from nextflow_spec.json.
-        def specFile = new PipelineSpec(baseDir)
-
         // Create resolver and spec file manager
         def storage = new ModuleStorage(baseDir)
 
         try {
             def filesRemoved = false
-            def configRemoved = false
 
             // Remove local files unless -keep-files is set
             if( !keepFiles ) {
@@ -96,12 +93,6 @@ class CmdModuleRemove extends CmdBase {
                 if( Files.exists(moduleInfo) ) {
                     Files.delete(moduleInfo)
                 }
-            }
-
-
-            configRemoved = specFile.removeModuleEntry(reference.fullName)
-            if( configRemoved ) {
-                println "Module ${reference} entry removed from spec file"
             }
 
         }

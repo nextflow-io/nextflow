@@ -18,7 +18,7 @@ package nextflow.module
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.config.ModulesConfig
+
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 
@@ -36,16 +36,14 @@ class ModuleResolver {
 
     private final ModuleRegistryClient registryClient
     private final ModuleStorage storage
-    private final ModulesConfig modulesConfig
 
-    ModuleResolver(Path baseDir, ModuleRegistryClient registryClient, ModulesConfig modulesConfig = null) {
+    ModuleResolver(Path baseDir, ModuleRegistryClient registryClient) {
         this.registryClient = registryClient
         this.storage = new ModuleStorage(baseDir)
-        this.modulesConfig = modulesConfig ?: new ModulesConfig()
     }
 
-    ModuleResolver(Path baseDir, ModulesConfig modulesConfig = null, RegistryConfig registryConfig = null) {
-        this(baseDir, new ModuleRegistryClient(registryConfig ?: new RegistryConfig()), modulesConfig)
+    ModuleResolver(Path baseDir, RegistryConfig registryConfig = null) {
+        this(baseDir, new ModuleRegistryClient(registryConfig ?: new RegistryConfig()))
 
     }
 
@@ -58,8 +56,6 @@ class ModuleResolver {
      * @return Path to the module's main.nf file
      */
     Path resolve(ModuleReference reference, String version = null, boolean autoInstall = false) {
-        // Determine version: explicit > config > latest
-        def targetVersion = version ?: modulesConfig.getVersion(reference.fullName)
 
         // Check if module is already installed
         def installed = storage.getInstalledModule(reference)
@@ -81,15 +77,15 @@ class ModuleResolver {
             }
 
             // Check if version matches
-            if( targetVersion && installed.installedVersion != targetVersion ) {
+            if( version && installed.installedVersion != version ) {
                 if( autoInstall ) {
-                    log.info "Upgrading module ${reference} from ${installed.installedVersion} to ${targetVersion}"
-                    return installModule(reference, targetVersion)
+                    log.info "Upgrading module ${reference} from ${installed.installedVersion} to ${version}"
+                    return installModule(reference, version)
                 } else {
                     throw new AbortOperationException(
                         "Module ${reference} version mismatch: " +
-                            "installed=${installed.installedVersion}, required=${targetVersion}. " +
-                            "Run 'nextflow module install ${reference}@${targetVersion}' to update."
+                            "installed=${installed.installedVersion}, required=${version}. " +
+                            "Run 'nextflow module install ${reference}@${version}' to update."
                     )
                 }
             }
@@ -100,7 +96,7 @@ class ModuleResolver {
 
         // Module not installed
         if( autoInstall ) {
-            return installModule(reference, targetVersion)
+            return installModule(reference, version)
         } else {
             throw new AbortOperationException(
                 "Module ${reference} is not installed. " +
@@ -110,8 +106,7 @@ class ModuleResolver {
     }
 
     String resolveVersion(ModuleReference reference) {
-        final version = modulesConfig.getVersion(reference.fullName)
-            ?: registryClient.fetchModule(reference.fullName)?.latest?.version
+        final version = registryClient.fetchModule(reference.fullName)?.latest?.version
         if( !version ) {
             throw new AbortOperationException("Module ${reference} has no published versions")
         }
@@ -160,10 +155,10 @@ class ModuleResolver {
         Path tempFile = Files.createTempFile("nf-module-", ".tgz")
         try {
             // Download and validate integrity using server checksum
-            def downloadResult = registryClient.downloadModule(reference.fullName, version, tempFile)
+            def downloadUrl = registryClient.downloadModule(reference.fullName, version, tempFile)
 
             // Install to modules directory (will compute directory checksum for future integrity checks)
-            InstalledModule installed = storage.installModule(reference, version, tempFile)
+            InstalledModule installed = storage.installModule(reference, version, tempFile, downloadUrl)
 
             log.info "Module ${reference}@${version} installed successfully at ${installed.mainFile.parent}"
             return installed.mainFile

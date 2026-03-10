@@ -214,9 +214,9 @@ class ModuleRegistryClient {
      * @param name The module name
      * @param version The module version
      * @param targetPath The target path to download to
-     * @return Path with the downloaded file path
+     * @return URL of the repository used to downloaded file path
      */
-    Path downloadModule(String name, String version, Path targetPath) {
+    String downloadModule(String name, String version, Path targetPath) {
         def registryUrls = config.allUrls
         if( targetPath.exists() ) {
             targetPath.delete()
@@ -240,7 +240,7 @@ class ModuleRegistryClient {
     /**
      * Download module from a specific registry URL
      */
-    private Path downloadModuleFromRegistry(String registryUrl, String name, String version, Path targetPath) {
+    private String downloadModuleFromRegistry(String registryUrl, String name, String version, Path targetPath) {
         def endpoint = "${registryUrl}/v1/modules/${encodeName(name)}/${version}/download"
         def uri = URI.create(endpoint)
 
@@ -281,7 +281,7 @@ class ModuleRegistryClient {
 
             validateDownloadIntegrity(response, uri, targetPath, name, version)
 
-            return targetPath
+            return registryUrl
         }
         catch( AbortOperationException e ) {
             throw e

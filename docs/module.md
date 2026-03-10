@@ -325,20 +325,6 @@ $ nextflow module run nf-core/fastqc --input 'data/*.fastq.gz'
 
 This command accepts all standard Nextflow options (`-profile`, `-resume`, etc.) and automatically downloads the module if not already installed.
 
-### Managing module versions
-
-Module versions are tracked in `nextflow_spec.json` in your project directory:
-
-```json
-{
-  "modules": {
-    "nf-core/fastqc": "1.0.0",
-    "nf-core/bwa-align": "1.2.0"
-  }
-}
-```
-
-When you run your workflow, Nextflow automatically installs or updates modules to match the specified versions.
 
 ### Discovering modules
 
@@ -374,9 +360,9 @@ Use the `module remove` command to uninstall a module:
 $ nextflow module remove nf-core/fastqc
 ```
 
-By default, both the local module files and the entry in `nextflow_spec.json` are removed. Use the flags below to control this behaviour:
+By default, both the module files and the `.module-info` file are removed. Use the flags below to control this behaviour:
 
-- `-keep-files` — Remove the entry from `nextflow_spec.json` but keep the local module files
+- `-keep-files` — Remove the `.module-info` file created at install but keep the rest of files
 - `-force` — Force removal even if the module has no `.module-info` file (i.e. not installed from a registry) or has local modifications
 
 ### Viewing module information

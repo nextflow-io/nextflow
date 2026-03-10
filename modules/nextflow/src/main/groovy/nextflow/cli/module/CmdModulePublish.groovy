@@ -26,6 +26,7 @@ import nextflow.config.ConfigBuilder
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import nextflow.module.ModuleChecksum
+import nextflow.module.ModuleInfo
 import nextflow.module.ModuleSpec
 import nextflow.module.ModuleReference
 import nextflow.module.ModuleRegistryClient
@@ -135,14 +136,15 @@ class CmdModulePublish extends CmdBase {
             ]
 
             // Publish to registry
+            final registry = registryUrl ?: registryConfig.url
             log.info "Publishing module to registry: ${registryUrl ?: registryConfig.url}"
             def registryClient = new ModuleRegistryClient(registryConfig)
-            def response = registryClient.publishModule(manifest.name, request, registryUrl)
+            def response = registryClient.publishModule(manifest.name, request, registry)
 
             if (useModuleReference) {
                 // If publish is performed using the module reference we should create/update the .module-info with the correct checksum
                 try {
-                    ModuleChecksum.save(moduleDir, ModuleChecksum.compute(moduleDir))
+                    ModuleInfo.save(moduleDir, [checksum: ModuleChecksum.compute(moduleDir), registryUrl: registry] )
                 }catch (Exception e){
                     log.warn("Unable to save the checksum - ${e.message}")
                 }

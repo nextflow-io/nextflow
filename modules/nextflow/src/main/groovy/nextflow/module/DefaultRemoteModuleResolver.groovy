@@ -19,14 +19,11 @@ package nextflow.module
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Global
-import nextflow.NF
-import nextflow.Session
 import nextflow.config.ConfigBuilder
-import nextflow.config.ModulesConfig
+
 import nextflow.config.RegistryConfig
 import nextflow.exception.IllegalModulePath
 import nextflow.module.spi.RemoteModuleResolver
-import nextflow.pipeline.PipelineSpec
 
 import java.nio.file.Path
 
@@ -50,13 +47,11 @@ class DefaultRemoteModuleResolver implements RemoteModuleResolver {
     @Override
     Path resolve(String moduleName, Path baseDir) {
 
-        final modulesConfig = getModuleConfig(baseDir)
-
         final config = Global.config ?: new ConfigBuilder().setBaseDir(baseDir).build()
         final registryConfig = config.navigate('registry') as RegistryConfig
 
         // Create module resolver
-        def resolver = new ModuleResolver(baseDir, modulesConfig, registryConfig)
+        def resolver = new ModuleResolver(baseDir, registryConfig)
 
         try {
             log.debug "Resolving remote module: ${moduleName}"
@@ -80,21 +75,5 @@ class DefaultRemoteModuleResolver implements RemoteModuleResolver {
     @Override
     int getPriority() {
         return 0  // Default implementation has lowest priority
-    }
-
-    private ModulesConfig getModuleConfig(Path baseDir) {
-        def specFile = new PipelineSpec(baseDir)
-
-        if (!specFile.exists()) {
-            log.warn1("Remote module specified and 'nextflow_spec.json' not found")
-            return new ModulesConfig()
-        }
-
-        def modules = specFile.getModules()
-        if (!modules || modules.isEmpty()) {
-            log.warn1("Remote module specified and no modules configured in 'nextflow_spec.json'")
-            return new ModulesConfig()
-        }
-        return new ModulesConfig(modules)
     }
 }

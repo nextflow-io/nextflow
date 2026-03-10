@@ -23,7 +23,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.security.MessageDigest
 
-import static nextflow.module.ModuleStorage.MODULE_INFO_FILE
+import static nextflow.module.ModuleInfo.MODULE_INFO_FILE
 
 /**
  * Utility class for computing SHA-256 checksums of module directories
@@ -92,13 +92,7 @@ class ModuleChecksum {
      * @param checksum The checksum to save
      */
     static void save(Path moduleDir, String checksum) {
-        def moduleInfoFile = moduleDir.resolve(MODULE_INFO_FILE)
-        def props = new Properties()
-        // If file exists loads to update current just checksum property
-        if( Files.exists( moduleInfoFile))
-            moduleInfoFile.withInputStream { is -> props.load(is) }
-        props.setProperty('checksum', checksum)
-        moduleInfoFile.withOutputStream { os -> props.store(os, null) }
+        ModuleInfo.save(moduleDir,'checksum', checksum)
     }
 
     /**
@@ -108,13 +102,7 @@ class ModuleChecksum {
      * @return The checksum, or null if file doesn't exist
      */
     static String load(Path moduleDir) {
-        def moduleInfoFile = moduleDir.resolve(MODULE_INFO_FILE)
-        if( !Files.exists(moduleInfoFile) ) {
-            return null
-        }
-        def props = new Properties()
-        moduleInfoFile.withInputStream { is -> props.load(is) }
-        return props.getProperty('checksum')
+        ModuleInfo.load(moduleDir, 'checksum')
     }
 
     /**

@@ -21,13 +21,13 @@ import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import nextflow.cli.CmdRun
 import nextflow.config.ConfigBuilder
-import nextflow.config.ModulesConfig
+
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import nextflow.module.ModuleReference
 import nextflow.module.ModuleRegistryClient
 import nextflow.module.ModuleResolver
-import nextflow.pipeline.PipelineSpec
+
 import nextflow.util.TestOnly
 
 import java.nio.file.Path
@@ -78,11 +78,7 @@ class CmdModuleRun extends CmdRun {
 
         def registryConfig = config.navigate('registry') as RegistryConfig ?: new RegistryConfig()
 
-        //Get module version from nextflow_spec.json.
-        def specFile = new PipelineSpec(baseDir)
-        def modulesConfig = new ModulesConfig(specFile.getModules())
-
-        def resolver = new ModuleResolver(baseDir, client ?: new ModuleRegistryClient(registryConfig), modulesConfig)
+        def resolver = new ModuleResolver(baseDir, client ?: new ModuleRegistryClient(registryConfig))
         Path moduleFile = resolver.installModule(reference, version)
         if( moduleFile ) {
             println "Executing module..."

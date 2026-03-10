@@ -42,6 +42,7 @@ class InstalledModule {
     Path moduleInfoFile
     String installedVersion
     String expectedChecksum
+    String registryUrl
 
     /**
      * Get the integrity status of this installed module

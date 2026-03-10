@@ -169,7 +169,7 @@ class ModuleRegistryClientTest extends Specification {
         def result = client.downloadModule('nf-core/fastqc', '1.0.0', destFile)
 
         then:
-        result == destFile
+        result == url
         Files.exists(destFile)
         Files.size(destFile) == modulePackage.length
 
@@ -351,7 +351,7 @@ class ModuleRegistryClientTest extends Specification {
         def result = client.downloadModule('nf-core/fastqc', '1.0.0', destFile)
 
         then:
-        result == destFile
+        result == url
         Files.exists(destFile)
 
         and: 'verify checksum header was present'

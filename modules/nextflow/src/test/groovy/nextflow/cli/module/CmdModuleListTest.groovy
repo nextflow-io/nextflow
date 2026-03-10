@@ -18,6 +18,7 @@ package nextflow.cli.module
 
 import groovy.json.JsonSlurper
 import nextflow.module.ModuleChecksum
+import nextflow.module.ModuleInfo
 import nextflow.module.ModuleReference
 import nextflow.module.ModuleStorage
 import org.junit.Rule
@@ -178,7 +179,7 @@ class CmdModuleListTest extends Specification {
         """.stripIndent()
 
         // Create .module-info
-        ModuleChecksum.save(moduleDir, ModuleChecksum.compute(moduleDir))
+        ModuleInfo.save(moduleDir, [checksum: ModuleChecksum.compute(moduleDir), registryUrl: 'http://registry.com'])
 
         return moduleDir
     }

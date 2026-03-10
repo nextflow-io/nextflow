@@ -22,13 +22,13 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.cli.CmdBase
 import nextflow.config.ConfigBuilder
-import nextflow.config.ModulesConfig
+
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import nextflow.module.ModuleReference
 import nextflow.module.ModuleRegistryClient
 import nextflow.module.ModuleResolver
-import nextflow.pipeline.PipelineSpec
+
 import nextflow.util.TestOnly
 
 import java.nio.file.Path
@@ -80,19 +80,12 @@ class CmdModuleInstall extends CmdBase {
             .build()
         final registryConfig = config.navigate('registry') as RegistryConfig ?: new RegistryConfig()
 
-        // Get modules versions from nextflow_spec.json.
-        final specFile = new PipelineSpec(baseDir)
-        final modulesConfig = new ModulesConfig(specFile.getModules())
-
         // Create resolver and install
-        def resolver = new ModuleResolver(baseDir, client ?: new ModuleRegistryClient(registryConfig), modulesConfig)
+        def resolver = new ModuleResolver(baseDir, client ?: new ModuleRegistryClient(registryConfig))
 
         try {
             def installedMainFile = resolver.installModule(reference, version, force)
-
-            // Update nextflow_spec.json with the installed module version
             def installedVersion = version ?: resolver.resolveVersion(reference)
-            specFile.addModuleEntry(reference.fullName, installedVersion)
 
             println "Module ${reference}@${installedVersion} installed and configured successfully"
         }

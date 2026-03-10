@@ -19,10 +19,12 @@ package nextflow.cli.module
 import io.seqera.npr.api.schema.v1.Module
 import io.seqera.npr.api.schema.v1.ModuleRelease
 import nextflow.cli.Launcher
+import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import nextflow.module.ModuleChecksum
+import nextflow.module.ModuleInfo
 import nextflow.module.ModuleRegistryClient
-import nextflow.pipeline.PipelineSpec
+import nextflow.module.ModuleStorage
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream
 import org.junit.Rule
@@ -85,11 +87,8 @@ class CmdModuleInstallTest extends Specification {
         def moduleDir = tempDir.resolve('modules/nf-core/fastqc')
         Files.exists(moduleDir)
         Files.exists(moduleDir.resolve('main.nf'))
-        Files.exists(moduleDir.resolve('meta.yml'))
-
-        and:
-        def spec = new PipelineSpec(tempDir)
-        spec.getModules().get('nf-core/fastqc') == '1.0.0'
+        Files.exists(moduleDir.resolve(ModuleStorage.MODULE_MANIFEST_FILE))
+        Files.exists(moduleDir.resolve(ModuleInfo.MODULE_INFO_FILE))
     }
 
     def 'should install module with specific version'() {
@@ -108,7 +107,7 @@ class CmdModuleInstallTest extends Specification {
         def mockClient = Mock(ModuleRegistryClient)
         mockClient.downloadModule(_, _, _) >> { String name, String version, Path dest ->
             Files.write(dest, modulePackage)
-            return dest
+            return 'http://registry.com'
         }
         cmd.client = mockClient
 
@@ -120,10 +119,12 @@ class CmdModuleInstallTest extends Specification {
         output.contains('Installing')
         output.contains('nf-core/fastqc')
         output.contains('2.0.0')
-
-        and:
-        def spec = new PipelineSpec(tempDir)
-        spec.getModules().get('nf-core/fastqc') == '2.0.0'
+        def moduleDir = tempDir.resolve('modules/nf-core/fastqc')
+        Files.exists(moduleDir)
+        Files.exists(moduleDir.resolve('main.nf'))
+        Files.exists(moduleDir.resolve(ModuleStorage.MODULE_MANIFEST_FILE))
+        Files.exists(moduleDir.resolve(ModuleInfo.MODULE_INFO_FILE))
+        ModuleInfo.load(moduleDir, 'registryUrl') == "http://registry.com"
 
     }
 
@@ -138,9 +139,6 @@ class CmdModuleInstallTest extends Specification {
                                                     version: '1.0.0'
                                                     description: Test module
                                                     """.stripIndent()
-
-        def spec = new PipelineSpec(tempDir)
-        spec.addModuleEntry('nf-core/fastqc', '1.0.0')
 
         and:
         def cmd = new CmdModuleInstall()
@@ -158,7 +156,7 @@ class CmdModuleInstallTest extends Specification {
         def mockClient = Mock(ModuleRegistryClient)
         mockClient.downloadModule('nf-core/fastqc', '2.0.0', _) >> { String name, String version, Path dest ->
             Files.write(dest, modulePackage)
-            return dest
+            return 'registry'
         }
         cmd.client = mockClient
 
@@ -169,10 +167,6 @@ class CmdModuleInstallTest extends Specification {
         then:
         output.contains('Installing')
         output.contains('2.0.0')
-
-        and:
-        def updatedSpec = new PipelineSpec(tempDir)
-        updatedSpec.getModules().get('nf-core/fastqc') == '2.0.0'
 
         and:
         moduleDir.resolve('main.nf').text.contains('FASTQC')  // New content
@@ -190,8 +184,6 @@ class CmdModuleInstallTest extends Specification {
                                                     description: Test module
                                                     """.stripIndent()
         ModuleChecksum.save(moduleDir, 'wrong-checksum')
-        def spec = new PipelineSpec(tempDir)
-        spec.addModuleEntry('nf-core/fastqc', '1.0.0')
 
         and:
         def cmd = new CmdModuleInstall()
@@ -247,10 +239,6 @@ class CmdModuleInstallTest extends Specification {
         def moduleDir = tempDir.resolve('modules/myorg/custom-module')
         Files.exists(moduleDir)
         Files.exists(moduleDir.resolve('main.nf'))
-
-        and:
-        def spec = new PipelineSpec(tempDir)
-        spec.getModules().get('myorg/custom-module') == '1.0.0'
     }
 
     def 'should create modules directory if it does not exist'() {

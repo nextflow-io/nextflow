@@ -1151,7 +1151,8 @@ The `module` command provides a comprehensive system for managing reusable, regi
 `install [options] [scope/name]`
 
 : Install a module from the registry into your project.
-: Downloaded modules are stored in the `modules/` directory and version information is tracked in `nextflow_spec.json`.
+: Downloaded modules are stored in the `modules/` directory.
+: The `.module-info` file is created in the module directory during the installation to store additional information of the installed module, such as the checksum of the downloaded module files to detect if a module is locally modified and the URL of the registry used to download the module.
 : The following options are available:
 
   `-version`
@@ -1288,7 +1289,7 @@ The `module` command provides a comprehensive system for managing reusable, regi
   : Force removal even if the module has no `.module-info` file (i.e. not installed from a registry) or has local modifications.
 
   `-keep-files`
-  : Remove the version entry from `nextflow_spec.json` but keep local files in the `modules/` directory.
+  : Remove the `.module-info` but keep local files in the `modules/` directory.
 
 : **Examples:**
 

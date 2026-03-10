@@ -22,6 +22,8 @@ import java.util.zip.GZIPOutputStream
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream
 
+import nextflow.exception.AbortOperationException
+
 import spock.lang.Specification
 
 /**
@@ -221,13 +223,14 @@ class ModuleStorageTest extends Specification {
         def storage = new ModuleStorage(tempDir)
         def reference = new ModuleReference('nf-core', 'fastqc')
         def version = '1.0.0'
+        def url = "http://registry.com"
 
         // Create a gzip package file
         def packageFile = Files.createTempFile('module-', '.tgz')
         createTestPackage(packageFile)
 
         when:
-        def installed = storage.installModule(reference, version, packageFile)
+        def installed = storage.installModule(reference, version, packageFile, url)
 
         then:
         installed != null
@@ -235,6 +238,9 @@ class ModuleStorageTest extends Specification {
         installed.installedVersion == '1.0.0'
         Files.exists(installed.mainFile)
         Files.exists(installed.moduleInfoFile)
+        Files.exists(installed.directory)
+        installed.registryUrl == url
+        installed.expectedChecksum == ModuleChecksum.compute(installed.directory)
 
         cleanup:
         packageFile?.delete()
@@ -245,6 +251,7 @@ class ModuleStorageTest extends Specification {
         def storage = new ModuleStorage(tempDir)
         def reference = new ModuleReference('nf-core', 'fastqc')
         def moduleDir = storage.getModuleDir(reference)
+        def url = "http://registry.com"
 
         // Create existing installation
         Files.createDirectories(moduleDir)
@@ -256,7 +263,7 @@ class ModuleStorageTest extends Specification {
         createTestPackage(packageFile)
 
         when:
-        def installed = storage.installModule(reference, '2.0.0', packageFile)
+        def installed = storage.installModule(reference, '2.0.0', packageFile, url)
 
         then:
         installed != null
@@ -317,7 +324,7 @@ class ModuleStorageTest extends Specification {
         storage.removeModule(reference, false)
 
         then:
-        def e = thrown(nextflow.exception.AbortOperationException)
+        def e = thrown(AbortOperationException)
         e.message.contains('.module-info missing')
         Files.exists(moduleDir)
     }
@@ -362,7 +369,7 @@ class ModuleStorageTest extends Specification {
         storage.removeModule(reference, false)
 
         then:
-        def e = thrown(nextflow.exception.AbortOperationException)
+        def e = thrown(AbortOperationException)
         e.message.contains('local modifications')
         Files.exists(moduleDir)
     }
@@ -394,9 +401,10 @@ class ModuleStorageTest extends Specification {
         def reference = new ModuleReference('nf-core', 'fastqc')
         def packageFile = Files.createTempFile('module-', '.tgz')
         createTestPackage(packageFile)
+        def url = "http://registry.com"
 
         when:
-        def installed = storage.installModule(reference, '1.0.0', packageFile)
+        def installed = storage.installModule(reference, '1.0.0', packageFile, url)
 
         then:
         installed.expectedChecksum != null
@@ -415,7 +423,7 @@ class ModuleStorageTest extends Specification {
         invalidPackage.text = 'not a valid gzip file'
 
         when:
-        storage.installModule(reference, '1.0.0', invalidPackage)
+        storage.installModule(reference, '1.0.0', invalidPackage, null)
 
         then:
         thrown(Exception)

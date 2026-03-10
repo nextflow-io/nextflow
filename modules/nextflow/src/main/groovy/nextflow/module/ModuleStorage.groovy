@@ -33,6 +33,8 @@ import java.util.stream.Stream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 
+import static nextflow.module.ModuleInfo.MODULE_INFO_FILE
+
 /**
  * Manages local filesystem storage for modules
  *
@@ -43,7 +45,6 @@ import java.util.zip.ZipInputStream
 class ModuleStorage {
     public static final String MODULE_MANIFEST_FILE = "meta.yml"
     public static final String MODULE_README_FILE = "README.md"
-    public static final String MODULE_INFO_FILE = ".module-info"
     private final Path modulesDir
 
     /**
@@ -116,7 +117,9 @@ class ModuleStorage {
         )
 
         // Load checksum if available
-        installed.expectedChecksum = ModuleChecksum.load(moduleDir)
+        Map infoProps = ModuleInfo.load(moduleDir)
+        installed.expectedChecksum = infoProps?.checksum
+        installed.registryUrl = infoProps?.registryUrl
         installed.installedVersion = ModuleSpec.load(installed.manifestFile).version
         return installed
     }
@@ -164,7 +167,7 @@ class ModuleStorage {
      * @param packageFile The downloaded package file (zip or tar.gz)
      * @return The InstalledModule object
      */
-    InstalledModule installModule(ModuleReference reference, String version, Path packageFile) {
+    InstalledModule installModule(ModuleReference reference, String version, Path packageFile, String downloadUrl) {
         def moduleDir = getModuleDir(reference)
 
         try {
@@ -187,7 +190,7 @@ class ModuleStorage {
             // Compute and save checksum of extracted directory contents
             // This checksum is used to detect local modifications
             def checksum = ModuleChecksum.compute(moduleDir)
-            ModuleChecksum.save(moduleDir, checksum)
+            ModuleInfo.save(moduleDir, [checksum: checksum, registryUrl: downloadUrl])
 
             log.debug "Installed module ${reference}@${version} to ${moduleDir}"
 

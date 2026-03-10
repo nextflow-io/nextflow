@@ -275,7 +275,7 @@ Use these commands to discover modules in registries, install them into your pro
 
 ### Installing modules
 
-The `module install` command downloads modules from a registry and makes them available in your workflow. Modules are stored locally in the `modules/` directory and version information is tracked in `nextflow_spec.json`.
+The `module install` command downloads modules from a registry and makes them available in your workflow. Modules are stored locally in the `modules/` directory. An additional `.module-info` file is created during to store installation information such as the module checksum at installation and the registry URL.
 
 Use this to add reusable modules to your pipeline, manage module versions, or update modules to newer versions.
 
@@ -284,7 +284,7 @@ $ nextflow module install nf-core/fastqc
 $ nextflow module install nf-core/fastqc -version 1.0.0
 ```
 
-After installation, module will be available in `modules/nf-core/fastqc` and included in `nextflow_spec.json`
+After installation, module will be available in `modules/nf-core/fastqc`.
 
 Use the `-force` flag to reinstall a module even if local modifications exist.
 

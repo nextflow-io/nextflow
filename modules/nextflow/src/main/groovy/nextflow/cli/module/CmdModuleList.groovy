@@ -122,7 +122,8 @@ class CmdModuleList extends CmdBase {
                 name     : module.reference.toString(),
                 version  : module.installedVersion ?: 'unknown',
                 integrity: module.integrity.toString(),
-                directory: module.directory.toString()
+                directory: module.directory.toString(),
+                registry : module.registryUrl ?: 'unknown'
             ]
         }
 

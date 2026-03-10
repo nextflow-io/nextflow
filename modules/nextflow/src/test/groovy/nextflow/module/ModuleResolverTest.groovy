@@ -16,7 +16,7 @@
 
 package nextflow.module
 
-import nextflow.config.ModulesConfig
+import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
 import spock.lang.Specification
@@ -103,8 +103,7 @@ class ModuleResolverTest extends Specification {
 
     def 'should throw exception when version mismatch without auto-install'() {
         given:
-        def modulesConfig = new ModulesConfig(['nf-core/fastqc': '2.0.0'])
-        def resolver = new ModuleResolver(tempDir, modulesConfig, null)
+        def resolver = new ModuleResolver(tempDir, new RegistryConfig())
         def reference = new ModuleReference('nf-core', 'fastqc')
         def storage = new ModuleStorage(tempDir)
         def moduleDir = storage.getModuleDir(reference)
@@ -122,7 +121,7 @@ class ModuleResolverTest extends Specification {
         ModuleChecksum.save(moduleDir, checksum)
 
         when:
-        resolver.resolve(reference, null, false)
+        resolver.resolve(reference, '2.0.0', false)
 
         then:
         def e = thrown(AbortOperationException)
@@ -131,7 +130,7 @@ class ModuleResolverTest extends Specification {
         e.message.contains('required=2.0.0')
 
         cleanup:
-        FileHelper.deletePath(moduleDir)
+        if( moduleDir ) FileHelper.deletePath(moduleDir)
     }
 
     def 'should resolve installed module with matching version'() {
