@@ -111,6 +111,36 @@ Copying a map with the `+` operator is a safer way to modify maps in Nextflow, s
 
 See {ref}`stdlib-types-map` for the set of available map operations.
 
+(script-records)=
+
+## Records
+
+Records are used to store a set of related fields, where each field can have its own type. They are created using the `record` function:
+
+```nextflow
+person = record(name: 'Alice', age: 42, is_alive: true)
+```
+
+Record fields are accessed by name:
+
+```nextflow
+name = person.name
+age = person.age
+is_alive = person.is_alive
+```
+
+Records are immutable -- once a record is created, it cannot be modified. Use record operations to create new records instead. 
+
+For example:
+
+```nextflow
+person + record(age: 43) - ['is_alive']
+
+// record(name: 'Alice', age: 43)
+```
+
+See {ref}`stdlib-types-record` for the set of available record operations.
+
 (script-tuples)=
 
 ## Tuples
@@ -118,7 +148,7 @@ See {ref}`stdlib-types-map` for the set of available map operations.
 Tuples are used to store a fixed sequence of heterogeneous values. They are created using the `tuple` function:
 
 ```nextflow
-person = tuple('Alice', 42, false)
+person = tuple('Alice', 42, true)
 ```
 
 Tuple elements are accessed by index:
@@ -126,13 +156,13 @@ Tuple elements are accessed by index:
 ```nextflow
 name = person[0]
 age = person[1]
-is_male = person[2]
+is_alive = person[2]
 ```
 
 Tuples can be destructured in assignments:
 
 ```nextflow
-(name, age, is_male) = person
+(name, age, is_alive) = person
 ```
 
 As well as closure parameters:
