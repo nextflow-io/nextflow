@@ -812,11 +812,10 @@ class TaskProcessor {
                 final cached = shouldTryCache && exists && entry.trace.isCompleted() && checkCachedOutput(task.clone(), resumeDir, hash, entry)
                 if( cached )
                     break
-                // #6448 When not cached but there is an entry whose status is ABORT or FAILED, the task counters for these status must be incremented to be sure future retries takes it into account to calculate the hash.
-                if( entry?.trace?.isFailed() ) {
-                    task.failCount += 1
-                    task.config.attempt = task.failCount + 1
-                }
+
+                // Issue #6884: https://github.com/nextflow-io/nextflow/issues/6884
+                // When not cached but there is an entry whose status is ABORT or FAILED, the task counters for these status must be incremented to be sure future retries takes it into account to calculate the hash.
+                if( entry?.trace?.isFailed() ) task.failCount += 1
                 if( entry?.trace?.isAborted() ) task.abortedCount+=1
             }
             catch (Throwable t) {
@@ -843,7 +842,12 @@ class TaskProcessor {
             finally {
                 lock.release()
             }
-
+            // Issue #6884: https://github.com/nextflow-io/nextflow/issues/6884
+            // When cached tasks include failures and aborts and not cached. The task.attempt could not be sync with cached failures. We update the task.attempts and task.scripts
+            if( task.failCount > 0 && task.config.getAttempt() != task.failCount + 1 ) {
+                task.config.attempt = task.failCount + 1
+                task.resolve(taskBody)
+            }
             // submit task for execution
             submitTask( task, hash, workDir )
             break
