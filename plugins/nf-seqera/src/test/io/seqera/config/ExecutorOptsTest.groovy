@@ -227,6 +227,27 @@ class ExecutorOptsTest extends Specification {
         config.taskEnvironment == [:]
     }
 
+    def 'should create config with computeEnvId' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            computeEnvId: 'ce-12345'
+        ])
+
+        then:
+        config.computeEnvId == 'ce-12345'
+    }
+
+    def 'should default computeEnvId to null' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com'
+        ])
+
+        then:
+        config.computeEnvId == null
+    }
+
     def 'should reject invalid prediction model' () {
         when:
         new ExecutorOpts([
