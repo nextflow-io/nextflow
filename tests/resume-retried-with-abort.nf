@@ -47,7 +47,7 @@ process SMALL_SLEEP_RETRY {
 	script:
 	"""
 	echo "SMALL_SLEEP_RETRY attempt: ${task.attempt}"
-	sleep 5
+	sleep 7
 
 	if [[ ${task.attempt} -eq 1 ]]; then
 	  echo "Failing first attempt on purpose"
