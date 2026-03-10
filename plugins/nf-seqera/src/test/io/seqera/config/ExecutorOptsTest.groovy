@@ -41,7 +41,8 @@ class ExecutorOptsTest extends Specification {
 
         then:
         config.endpoint == 'https://sched.example.com'
-        config.region == 'eu-central-1'  // default
+        config.region == null
+        config.provider == null
         config.keyPairName == null
         config.batchFlushInterval == Duration.of('1 sec')
         config.machineRequirement != null
@@ -246,6 +247,40 @@ class ExecutorOptsTest extends Specification {
 
         then:
         config.computeEnvId == null
+    }
+
+    def 'should create config with provider' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            provider: 'aws'
+        ])
+
+        then:
+        config.provider == 'aws'
+    }
+
+    def 'should default provider to null' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com'
+        ])
+
+        then:
+        config.provider == null
+    }
+
+    def 'should create config with provider and region' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            provider: 'aws',
+            region: 'us-west-2'
+        ])
+
+        then:
+        config.provider == 'aws'
+        config.region == 'us-west-2'
     }
 
     def 'should reject invalid prediction model' () {
