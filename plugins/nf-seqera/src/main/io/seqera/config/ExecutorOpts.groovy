@@ -43,6 +43,13 @@ class ExecutorOpts implements ConfigScope {
 
     @ConfigOption
     @Description("""
+        The compute backend provider type (e.g. `aws`, `local`).
+        When specified, used together with region to select the matching compute environment.
+    """)
+    final String provider
+
+    @ConfigOption
+    @Description("""
         The AWS region for task execution (default: `eu-central-1`).
     """)
     final String region
@@ -93,6 +100,14 @@ class ExecutorOpts implements ConfigScope {
     """)
     final Map<String, String> taskEnvironment
 
+    @ConfigOption
+    @Description("""
+        The Seqera Platform compute environment ID. When specified, the scheduler resolves
+        the compute environment directly by this ID instead of listing all workspace CEs.
+        Used as a fallback when the workflow launch does not include a CE reference.
+    """)
+    final String computeEnvId
+
     /* required by config scope -- do not remove */
 
     ExecutorOpts() {}
@@ -103,7 +118,8 @@ class ExecutorOpts implements ConfigScope {
         if (!endpoint)
             throw new IllegalArgumentException("Missing Seqera endpoint - make sure to specify 'seqera.executor.endpoint' settings")
 
-        this.region = opts.region as String ?: "eu-central-1"
+        this.provider = opts.provider as String
+        this.region = opts.region as String
         this.keyPairName = opts.keyPairName as String
         this.batchFlushInterval = opts.batchFlushInterval
             ? Duration.of(opts.batchFlushInterval as String)
@@ -117,6 +133,8 @@ class ExecutorOpts implements ConfigScope {
         this.predictionModel = parsePredictionModel(opts.predictionModel as String)
         // custom task environment variables
         this.taskEnvironment = opts.taskEnvironment as Map<String, String>
+        // compute environment ID
+        this.computeEnvId = opts.computeEnvId as String
     }
 
     private static final Set<String> VALID_PREDICTION_MODELS = Set.of('qr/v1')
@@ -135,6 +153,10 @@ class ExecutorOpts implements ConfigScope {
 
     String getEndpoint() {
         return endpoint
+    }
+
+    String getProvider() {
+        return provider
     }
 
     String getRegion() {
@@ -167,5 +189,9 @@ class ExecutorOpts implements ConfigScope {
 
     Map<String, String> getTaskEnvironment() {
         return taskEnvironment
+    }
+
+    String getComputeEnvId() {
+        return computeEnvId
     }
 }
