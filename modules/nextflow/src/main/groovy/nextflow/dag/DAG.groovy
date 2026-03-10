@@ -56,7 +56,6 @@ import java.util.concurrent.atomic.AtomicLong
 @CompileStatic
 class DAG {
 
-    @PackageScope
     static enum Type {
         PROCESS,
         OPERATOR,
