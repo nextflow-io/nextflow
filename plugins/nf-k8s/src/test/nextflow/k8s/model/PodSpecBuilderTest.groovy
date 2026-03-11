@@ -622,7 +622,7 @@ class PodSpecBuilderTest extends Specification {
         inputType              | req | lim | existing              | expectedReq                        | expectedLim
         null                   | 2   | 5   | null                  | ['nvidia.com/gpu': 2]              | ['nvidia.com/gpu': 5]
         'foo'                  | null| 5   | null                  | ['foo.com/gpu': 5]                 | ['foo.com/gpu': 5]
-        'foo.org'              | 5   | null| null                  | ['foo.org/gpu': 5]                | null
+        'foo.org'              | 5   | null| null                  | ['foo.org/gpu': 5]                 | null
         'foo.org'              | 5   | null| [requests: [cpu: 2]]  | [cpu: 2, 'foo.org/gpu': 5]         | null
         'foo.org'              | 5   | 10  | [requests: [cpu: 2]]  | [cpu: 2, 'foo.org/gpu': 5]         | ['foo.org/gpu': 10]
         'example.com/fpga'     | 5   | null| null                  | ['example.com/fpga': 5]            | null
