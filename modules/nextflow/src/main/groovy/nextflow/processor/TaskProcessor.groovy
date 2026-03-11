@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -95,6 +95,7 @@ import nextflow.script.params.ValueInParam
 import nextflow.script.params.ValueOutParam
 import nextflow.script.params.v2.ProcessInput
 import nextflow.script.params.v2.ProcessTupleInput
+import nextflow.script.types.Record
 import nextflow.script.types.Types
 import nextflow.trace.TraceRecord
 import nextflow.util.Escape
@@ -303,7 +304,7 @@ class TaskProcessor {
      * @return The processor unique id
      */
     int getId() { id }
-  
+
     /**
      * @return The {@code TaskConfig} object holding the task configuration properties
      */
@@ -1307,7 +1308,7 @@ class TaskProcessor {
                     fairBuffers.remove(0)
                     // increase the index of the next emission
                     currentEmission++
-                    // take the next task 
+                    // take the next task
                     task = fairBuffers[0]
                 }
             }
@@ -1766,8 +1767,6 @@ class TaskProcessor {
         for( int i = 0; i < declaredInputs.getParams().size(); i++ ) {
             final param = declaredInputs.getParams()[i]
             final value = values[i]
-            if( value == null && !param.optional )
-                throw new ProcessUnrecoverableException("[${safeTaskName(task)}] input at index ${i} cannot be null -- append `?` to the type annotation to mark it as nullable")
             if( param instanceof ProcessTupleInput )
                 assignTaskTupleInput(task, param, value, i)
             else
@@ -1800,6 +1799,26 @@ class TaskProcessor {
             resolvedValues.add(value)
         }
 
+        // -- normalize input values by replacing source paths with staged paths
+        final Map<Path,FileHolder> holders = [:]
+        for( final holder : task.inputFiles )
+            holders.put(holder.getSourcePath(), holder)
+
+        for( final param : declaredInputs.getParams() ) {
+            if( param instanceof ProcessTupleInput ) {
+                for( final innerParam : param.getComponents() ) {
+                    final value = task.inputs[innerParam]
+                    final normalizedValue = resolver.normalizeValue(value, holders)
+                    task.context.put( innerParam.name, normalizedValue )
+                }
+            }
+            else {
+                final value = task.inputs[param]
+                final normalizedValue = resolver.normalizeValue(value, holders)
+                task.context.put( param.name, normalizedValue )
+            }
+        }
+
         // -- set the delegate map as context in the task config
         //    so that lazy directives will be resolved against it
         task.config.context = ctx
@@ -1807,6 +1826,9 @@ class TaskProcessor {
 
     @CompileStatic
     private void assignTaskTupleInput(TaskRun task, ProcessTupleInput param, Object value, int index) {
+        if( value == null && !param.optional ) {
+            throw new ProcessUnrecoverableException("[${safeTaskName(task)}] input at index ${index} cannot be null -- append `?` to the type annotation to mark it as nullable")
+        }
         if( value !instanceof List ) {
             throw new ProcessUnrecoverableException("[${safeTaskName(task)}] input at index ${index} expected a tuple but received: ${value} [${value.class.simpleName}]")
         }
@@ -1822,14 +1844,25 @@ class TaskProcessor {
 
     @CompileStatic
     private void assignTaskInput(TaskRun task, ProcessInput param, Object value, int index) {
+        if( value == null && !param.optional ) {
+            throw new ProcessUnrecoverableException("[${safeTaskName(task)}] input at index ${index} cannot be null -- append `?` to the type annotation to mark it as nullable")
+        }
         if( value != null ) {
             final expectedType = param.type
             final actualType = value.getClass()
-            if( expectedType != null && !expectedType.isAssignableFrom(actualType) )
+            if( expectedType != null && !isAssignableFrom(expectedType, actualType) )
                 log.warn "[${safeTaskName(task)}] invalid argument type at index ${index} -- expected a ${Types.getName(expectedType)} but got a ${Types.getName(actualType)}"
         }
         task.context.put(param.getName(), value)
         task.setInput(param, value)
+    }
+
+    private static boolean isAssignableFrom(Class targetType, Class sourceType) {
+        // treat all record types as compatible
+        // record types are validated at compile-time
+        if( Record.class.isAssignableFrom(targetType) && Record.class.isAssignableFrom(sourceType) )
+            return true
+        return targetType.isAssignableFrom(sourceType)
     }
 
     /**

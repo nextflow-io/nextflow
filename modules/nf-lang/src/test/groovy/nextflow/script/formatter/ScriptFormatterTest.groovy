@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -231,6 +231,30 @@ class ScriptFormatterTest extends Specification {
             }
             '''
         )
+
+        checkFormat(
+            '''\
+            nextflow.preview.types=true
+
+            process hello{
+            input: sample:Record{id:String;infile:Path} ; script: 'cat input.txt > output.txt'
+            }
+            ''',
+            '''\
+            nextflow.preview.types = true
+
+            process hello {
+                input:
+                sample: Record {
+                    id: String
+                    infile: Path
+                }
+
+                script:
+                'cat input.txt > output.txt'
+            }
+            '''
+        )
     }
 
     def 'should format a function definition' () {
@@ -292,6 +316,22 @@ class ScriptFormatterTest extends Specification {
         )
     }
 
+    def 'should format a record definition' () {
+        expect:
+        checkFormat(
+            '''\
+            record FastqPair{id:String;fastq_1: Path;fastq_2: Path?}
+            ''',
+            '''\
+            record FastqPair {
+                id: String
+                fastq_1: Path
+                fastq_2: Path?
+            }
+            '''
+        )
+    }
+
     def 'should format an output block' () {
         expect:
         checkFormat(
@@ -340,7 +380,7 @@ class ScriptFormatterTest extends Specification {
 
     def 'should not sort script declarations by default' () {
         given:
-        def source = 
+        def source =
             '''\
             params.foo = 'bar'
 
@@ -618,6 +658,14 @@ class ScriptFormatterTest extends Specification {
             ''',
             '''\
             [(x): 1]
+            '''
+        )
+        checkFormat(
+            '''\
+            [(x.y):1]
+            ''',
+            '''\
+            [(x.y): 1]
             '''
         )
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -79,7 +79,7 @@ dependencies {
     implementation 'io.netty:netty-common:4.1.125.Final'
     implementation 'io.netty:netty-handler:4.1.125.Final'
     implementation 'io.netty:netty-codec-http2:4.1.125.Final'
-    
+
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
     testImplementation "org.apache.groovy:groovy:4.0.30"

@@ -1,5 +1,9 @@
 nf-amazon changelog
 ===================
+3.7.1 - 28 Feb 2026
+- Fix S3 lookup unbounded pagination with double call (#6851) [a2e67eb99]
+- Fix S3 delete throwing DirectoryNotEmptyException due to eventual consistency (#6833) [f3ac49754]
+
 3.7.0 - 8 Feb 2026
 - Fix isCompleted check in getNumSpotInterruptions (#6805) [76558481a]
 - Fix AWS Batch spot instance detection (#6722) [29356f60e]

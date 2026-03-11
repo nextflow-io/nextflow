@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,6 +42,7 @@ import nextflow.script.ast.ParamBlockNode;
 import nextflow.script.ast.ProcessNode;
 import nextflow.script.ast.ProcessNodeV1;
 import nextflow.script.ast.ProcessNodeV2;
+import nextflow.script.ast.RecordNode;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.TupleParameter;
 import nextflow.script.ast.WorkflowNode;
@@ -66,6 +67,7 @@ import org.codehaus.groovy.antlr.EnumHelper;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.ast.FieldNode;
 import org.codehaus.groovy.ast.GenericsType;
 import org.codehaus.groovy.ast.ModuleNode;
 import org.codehaus.groovy.ast.NodeMetaDataHandler;
@@ -317,6 +319,12 @@ public class ScriptAstBuilder {
             moduleNode.addProcess(node);
         }
 
+        else if( ctx instanceof RecordDefAltContext rdac ) {
+            var node = recordDef(rdac.recordDef());
+            saveLeadingComments(node, ctx);
+            moduleNode.addClass(node);
+        }
+
         else if( ctx instanceof WorkflowDefAltContext wdac ) {
             var node = workflowDef(wdac.workflowDef());
             saveLeadingComments(node, ctx);
@@ -410,6 +418,33 @@ public class ScriptAstBuilder {
         return ast( new IncludeNode(source, entries), ctx );
     }
 
+    private RecordNode recordDef(RecordDefContext ctx) {
+        var name = identifier(ctx.identifier());
+        var result = ast( new RecordNode(name), ctx );
+        if( ctx.recordBody() != null )
+            recordBody(ctx.recordBody(), result);
+        else
+            collectSyntaxError(new SyntaxException("Missing record body", result));
+        groovydocManager.handle(result, ctx);
+        return result;
+    }
+
+    private void recordBody(RecordBodyContext ctx, RecordNode result) {
+        for( var el : ctx.nameTypePair() ) {
+            var param = nameTypePair(el);
+            if( el.type() == null )
+                collectSyntaxError(new SyntaxException("Missing field type", param));
+            var fn = ast( new FieldNode(
+                param.getText(),
+                Modifier.PUBLIC,
+                param.getType(),
+                result,
+                null), el );
+            groovydocManager.handle(fn, el);
+            result.addField(fn);
+        }
+    }
+
     private ClassNode enumDef(EnumDefContext ctx) {
         var name = identifier(ctx.identifier());
         var result = ast( EnumHelper.makeEnumNode(name, Modifier.PUBLIC, ClassNode.EMPTY_ARRAY, null), ctx );
@@ -496,40 +531,79 @@ public class ScriptAstBuilder {
             collectSyntaxError(new SyntaxException("Invalid input declaration in typed process", result));
             return null;
         }
-        var type = type(ctx.type());
-        var names = ctx.identifier().stream().map(this::identifier).toList();
-        var result = names.size() == 1
-            ? ast( param(type, names.get(0)), ctx )
-            : processTupleInput(type, names, ctx);
-        for( var name : names )
+
+        Parameter result = null;
+
+        if( ctx.identifier() != null ) {
+            var type = type(ctx.type());
+            var name = identifier(ctx.identifier());
+            result = ast( param(type, name), ctx );
             checkInvalidVarName(name, result);
-        if( names.size() == 1 && ctx.type() == null )
-            collectWarning("Process input should have a type annotation", names.get(0), result);
+            if( ctx.type() == null )
+                collectWarning("Process input should have a type annotation", name, result);
+        }
+
+        else if( ctx.processRecordInput() != null ) {
+            result = processRecordInput(ctx.processRecordInput());
+        }
+
+        else if( ctx.processTupleInput() != null ) {
+            result = processTupleInput(ctx.processTupleInput());
+        }
+        
         saveTrailingComment(result, ctx);
         return result;
     }
 
-    private TupleParameter processTupleInput(ClassNode type, List<String> names, ProcessInputContext ctx) {
-        var componentTypes = tupleComponentTypes(type, names.size());
-        var components = new Parameter[names.size()];
-        for( int i = 0; i < names.size(); i++ ) {
+    private Parameter processRecordInput(ProcessRecordInputContext ctx) {
+        var name = identifier(ctx.identifier());
+        var type = type(ctx.type());
+        if( !"Record".equals(type.getUnresolvedName()) )
+            collectSyntaxError(new SyntaxException("Process record input must have type `Record`", ast( new EmptyStatement(), ctx )));
+
+        var recordNode = ast( new RecordNode(nextRecordName()), ctx );
+        if( ctx.recordBody() != null )
+            recordBody(ctx.recordBody(), recordNode);
+        else
+            collectSyntaxError(new SyntaxException("Missing record body", recordNode));
+
+        return ast( new Parameter(recordNode.getPlainNodeReference(), name), ctx );
+    }
+
+    private static AtomicInteger nextRecordId = new AtomicInteger(1);
+
+    private static String nextRecordName() {
+        var id = nextRecordId.getAndIncrement();
+        return "__Record_" + id;
+    }
+
+    private TupleParameter processTupleInput(ProcessTupleInputContext ctx) {
+        var type = type(ctx.type());
+        var numComponents = ctx.identifier().size();
+        var componentTypes = tupleComponentTypes(type, numComponents);
+        var components = new Parameter[numComponents];
+        for( int i = 0; i < numComponents; i++ ) {
+            var ident = ctx.identifier().get(i);
+            var name = identifier(ident);
             var componentType = componentTypes != null ? componentTypes.get(i) : ClassHelper.dynamicType();
-            components[i] = ast( param(componentType, names.get(i)), ctx.identifier().get(i) );
+            var component = ast( param(componentType, name), ident );
+            checkInvalidVarName(component.getName(), component);
+            components[i] = component;
         }
         var result = ast( new TupleParameter(type, components), ctx );
         if( !"Tuple".equals(type.getUnresolvedName()) )
             collectSyntaxError(new SyntaxException("Process tuple input must have type `Tuple<...>`", result));
-        if( !type.isUsingGenerics() || type.getGenericsTypes().length != names.size() )
-            collectSyntaxError(new SyntaxException("Process tuple input type must have " + names.size() + " type arguments (one for each tuple component)", result));
+        else if( numComponents == 1 )
+            collectSyntaxError(new SyntaxException("Process tuple input must have more than one component", result));
+        else if( !type.isUsingGenerics() || type.getGenericsTypes().length != numComponents )
+            collectSyntaxError(new SyntaxException("Process tuple input type must have " + numComponents + " type arguments (one for each tuple component)", result));
         return result;
     }
 
     private List<ClassNode> tupleComponentTypes(ClassNode type, int n) {
         if( !"Tuple".equals(type.getUnresolvedName()) )
             return null;
-        if( !type.isUsingGenerics() )
-            return null;
-        if( type.getGenericsTypes().length != n )
+        if( !type.isUsingGenerics() || type.getGenericsTypes().length != n )
             return null;
         return Arrays.stream(type.getGenericsTypes())
             .map(gt -> gt.getType())
@@ -551,9 +625,9 @@ public class ScriptAstBuilder {
         if( ctx.statement() != null ) {
             result = statement(ctx.statement());
         }
-        else if( ctx.identifier().size() == 1 && ctx.type() == null ) {
+        else if( ctx.identifier() != null && ctx.type() == null ) {
             // identifier with no type annotation should be parsed as legacy input declaration
-            result = ast( stmt(variableName(ctx.identifier().get(0))), ctx );
+            result = ast( stmt(variableName(ctx.identifier())), ctx );
         }
         else {
             collectSyntaxError(new SyntaxException("Typed input declaration is not allowed in legacy process -- set `nextflow.preview.types = true` to use typed processes in this script", ast(new EmptyStatement(), ctx)));
@@ -586,6 +660,9 @@ public class ScriptAstBuilder {
             collectSyntaxError(new SyntaxException("Every output must be assigned to a name when there are multiple outputs", result));
             return null;
         }
+        if( !hasEmitExpression && statements.size() > 1 ) {
+            collectWarning("Typed process should have only one output -- consider combining outputs into a record", ctx.OUTPUT().getText(), ast( new EmptyStatement(), ctx.OUTPUT() ));
+        }
         return result;
     }
 
@@ -608,7 +685,7 @@ public class ScriptAstBuilder {
             result = stmt(target);
         }
         saveTrailingComment(result, ctx);
-        return result;
+        return ast( result, ctx );
     }
 
     private Statement processOutputsV1(ProcessOutputsContext ctx) {
@@ -840,7 +917,7 @@ public class ScriptAstBuilder {
             result = stmt(target);
         }
         saveTrailingComment(result, ctx);
-        return result;
+        return ast( result, ctx );
     }
 
     private boolean isEmitExpression(Statement stmt) {
@@ -870,14 +947,14 @@ public class ScriptAstBuilder {
         var target = nameTypePair(ctx.nameTypePair());
         Statement result;
         if( ctx.expression() != null ) {
-        var source = expression(ctx.expression());
+            var source = expression(ctx.expression());
             result = stmt(ast( new AssignmentExpression(target, source), ctx ));
         }
         else {
             result = stmt(target);
         }
         saveTrailingComment(result, ctx);
-        return result;
+        return ast( result, ctx );
     }
 
     private OutputBlockNode outputDef(OutputDefContext ctx) {
@@ -1568,7 +1645,7 @@ public class ScriptAstBuilder {
     /**
      * Builder for GStringExpression that inserts empty strings
      * to ensure that there are n+1 strings for n values.
-     * 
+     *
      * @see org.codehaus.groovy.runtime.GStringUtil.writeToImpl()
      */
     private static class GStringBuilder {
@@ -1699,7 +1776,7 @@ public class ScriptAstBuilder {
     private List<Expression> expressionList(ExpressionListContext ctx) {
         if( ctx == null )
             return Collections.emptyList();
-        
+
         return ctx.expression().stream()
             .map(this::expression)
             .toList();
@@ -1929,7 +2006,7 @@ public class ScriptAstBuilder {
                 result.setGenericsTypes( typeArguments(ctx.typeArguments()) );
             if( ctx.QUESTION() != null )
                 result.putNodeMetaData(ASTNodeMarker.NULLABLE, Boolean.TRUE);
-            return result;
+            return ast( result, ctx );
         }
 
         throw createParsingFailedException("Unrecognized type: " + ctx.getText(), ctx);

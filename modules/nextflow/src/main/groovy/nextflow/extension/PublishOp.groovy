@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -69,6 +69,7 @@ class PublishOp {
     }
 
     DataflowVariable apply() {
+        this.target = new DataflowVariable()
         final events = new HashMap(2)
         events.onNext = { value ->
             safeExecute { onNext(value) }
@@ -77,7 +78,6 @@ class PublishOp {
             safeExecute { onComplete() }
         }
         DataflowHelper.subscribeImpl(source, events)
-        this.target = new DataflowVariable()
         return target
     }
 
@@ -177,7 +177,7 @@ class PublishOp {
         private Map<String,String> mapping = null
 
         void publish(Object source, String target) {
-            if( source == null )
+            if( source == null || target == null )
                 return
             if( source instanceof Path ) {
                 publish0(source, target)
@@ -194,7 +194,7 @@ class PublishOp {
         }
 
         private void publish0(Path source, String target) {
-            if( source == null || target == null )
+            if( source == null )
                 return
             log.trace "Publishing ${source} to ${target}"
             if( mapping == null )
@@ -288,32 +288,13 @@ class PublishOp {
         if( value instanceof Path ) {
             return normalizePath(value, targetResolver)
         }
-
         if( value instanceof Collection ) {
-            return value.collect { el ->
-                if( el instanceof Path )
-                    return normalizePath(el, targetResolver)
-                if( el instanceof Collection<Path> )
-                    return normalizeValue(el, targetResolver)
-                if( el instanceof Map )
-                    return normalizeValue(el, targetResolver)
-                return el
-            }
+            return value.collect { el -> normalizeValue(el, targetResolver) }
         }
-
         if( value instanceof Map ) {
-            return value.collectEntries { k, v ->
-                if( v instanceof Path )
-                    return [k, normalizePath(v, targetResolver)]
-                if( v instanceof Collection<Path> )
-                    return [k, normalizeValue(v, targetResolver)]
-                if( v instanceof Map )
-                    return [k, normalizeValue(v, targetResolver)]
-                return [k, v]
-            }
+            return value.collectEntries { k, v -> [k, normalizeValue(v, targetResolver)] }
         }
-
-        throw new ScriptRuntimeException("Invalid value for workflow output '${name}' -- expected a list, map, or file, but received: ${value} [${value.class.simpleName}]")
+        return value
     }
 
     /**

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -214,6 +214,7 @@ class DefaultSerializers implements SerializerRegistrant {
         serializers.put( File, FileSerializer )
         serializers.put( Pattern, PatternSerializer )
         serializers.put( ArrayTuple, ArrayTupleSerializer )
+        serializers.put( RecordMap, RecordMapSerializer )
         serializers.put( SerializableMarker, null )
     }
 }
@@ -446,5 +447,31 @@ class MapEntrySerializer extends Serializer<Map.Entry> {
         def key = kryo.readClassAndObject(input)
         def val = kryo.readClassAndObject(input)
         new MapEntry(key,val)
+    }
+}
+
+@CompileStatic
+class RecordMapSerializer extends Serializer<RecordMap> {
+
+    @Override
+    void write(Kryo kryo, Output output, RecordMap record) {
+        final len = record.size()
+        output.writeInt(len)
+        for( Map.Entry<String,Object> entry : record.entrySet() ) {
+            output.writeString(entry.getKey())
+            kryo.writeClassAndObject(output, entry.getValue())
+        }
+    }
+
+    @Override
+    RecordMap read(Kryo kryo, Input input, Class<RecordMap> type) {
+        final len = input.readInt()
+        final props = new HashMap<String,Object>(len)
+        for( int i=0; i<len; i++ ) {
+            final key = input.readString()
+            final value = kryo.readClassAndObject(input)
+            props.put(key, value)
+        }
+        return new RecordMap(props)
     }
 }

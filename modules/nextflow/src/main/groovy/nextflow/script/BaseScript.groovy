@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -188,10 +188,24 @@ abstract class BaseScript extends Script implements ExecutionContext {
         publisher = new OutputDef(closure)
     }
 
+    /**
+     * Include definitions from another script.
+     *
+     * @param include
+     */
     protected IncludeDef include( IncludeDef include ) {
         if(ExecutionStack.withinWorkflow())
             throw new IllegalStateException("Include statement is not allowed within a workflow definition")
         include .setSession(session)
+    }
+
+    /**
+     * Define a custom type.
+     *
+     * @param type
+     */
+    protected void declareType(Class type) {
+        meta.addDefinition(new TypeDef(type))
     }
 
     /**
