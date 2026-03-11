@@ -683,10 +683,9 @@ class PodSpecBuilder {
         // Default to standard NVIDIA GPU if left entirely blank.
         def type = accelerator.type?.toLowerCase() ?: 'nvidia.com'
 
-        if (type.contains('/')) {
+        if ( type.contains('/') )
             // Assume the user has fully specified the resource type.
             return type
-        }
 
         // Map common vendor shorthands to their standard K8s Extended Resource strings.
         if (type =~ /\b(nvidia|tesla|ampere|h100|a100)\b/)  return 'nvidia.com/gpu'
