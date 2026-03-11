@@ -680,28 +680,28 @@ class PodSpecBuilder {
     @PackageScope
     String getAcceleratorType(AcceleratorResource accelerator) {
 
-    // Default to standard NVIDIA GPU if left entirely blank.
-    def type = accelerator.type?.toLowerCase() ?: 'nvidia.com/gpu'
+        // Default to standard NVIDIA GPU if left entirely blank.
+        def type = accelerator.type?.toLowerCase() ?: 'nvidia.com'
 
-    if (type.contains('/')) {
-        // Assume the user has fully specified the resource type.
-        return type
+        if (type.contains('/')) {
+            // Assume the user has fully specified the resource type.
+            return type
+        }
+
+        // Map common vendor shorthands to their standard K8s Extended Resource strings.
+        if (type =~ /\b(nvidia|tesla|ampere|h100|a100)\b/)  return 'nvidia.com/gpu'
+        if (type =~ /\b(amd|radeon|instinct)\b/)            return 'amd.com/gpu'
+        if (type =~ /\b(tpu|google)\b/)                     return 'google.com/tpu'
+        if (type =~ /\b(neuron|inferentia|trainium|aws)\b/) return 'aws.amazon.com/neuron'
+        if (type =~ /\b(intel|gaudi)\b/)                    return 'gpu.intel.com/i915'
+
+        // keep custom domain names
+        if( !type.contains('.') ) type += '.com'
+
+        // Append /gpu if not there yet
+        return "${type}/gpu"
+
     }
-
-    // Map common vendor shorthands to their standard K8s Extended Resource strings.
-    if (type =~ /\b(nvidia|tesla|ampere|h100|a100)\b/)  return 'nvidia.com/gpu'
-    if (type =~ /\b(amd|radeon|instinct)\b/)            return 'amd.com/gpu'
-    if (type =~ /\b(tpu|google)\b/)                     return 'google.com/tpu'
-    if (type =~ /\b(neuron|inferentia|trainium|aws)\b/) return 'aws.amazon.com/neuron'
-    if (type =~ /\b(intel|gaudi)\b/)                    return 'gpu.intel.com/i915'
-
-    // keep custom domain names
-    if( !type.contains('.') ) type += '.com'
-
-    // Append /gpu if not there yet
-    return "${type}/gpu"
-
-}
 
 
     @PackageScope
