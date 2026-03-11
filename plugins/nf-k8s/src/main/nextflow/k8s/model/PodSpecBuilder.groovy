@@ -695,12 +695,11 @@ class PodSpecBuilder {
         if (type =~ /\b(neuron|inferentia|trainium|aws)\b/) return 'aws.amazon.com/neuron'
         if (type =~ /\b(intel|gaudi)\b/)                    return 'gpu.intel.com/i915'
 
-        // keep custom domain names
+        // Assume we're using GPU and update as necessary.
         if( !type.contains('.') ) type += '.com'
+        type += '/gpu'
 
-        // Append /gpu if not there yet
-        return "${type}/gpu"
-
+        return type
     }
 
 
