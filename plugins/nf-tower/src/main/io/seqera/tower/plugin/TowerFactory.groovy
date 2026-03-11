@@ -68,7 +68,7 @@ class TowerFactory implements TraceObserverFactoryV2 {
             tower.aliveInterval = aliveInterval
         if( requestInterval )
             tower.requestInterval = requestInterval
-
+        tower.initHttpClient()
         // register auth provider
         // note: this is needed to authorize access to resources via XFileSystemProvider used by NF
         // it's not needed by the tower client logic
@@ -94,6 +94,13 @@ class TowerFactory implements TraceObserverFactoryV2 {
     }
 
     static TowerClient client() {
+        log.debug("Session $Global.session, env ${SysEnv.get()}")
         client(Global.session as Session, SysEnv.get())
+    }
+
+    @Memoized
+    static TowerClient fsClient(Map<String,String> env){
+        final config = new TowerConfig(Collections.emptyMap(), env)
+        createTowerClient0(Global.session as Session, config, env)
     }
 }

@@ -273,7 +273,6 @@ class TowerClient implements TraceObserverV2 {
         this.aggregator = new ResourcesAggregator()
         this.runName = session.getRunName()
         this.runId = session.getUniqueId()
-        this.httpClient = newHttpClient()
 
         // send hello to verify auth
         final req = makeCreateReq(session)
@@ -303,12 +302,12 @@ class TowerClient implements TraceObserverV2 {
         reports.flowCreate(workflowId)
     }
 
-    protected HxClient newHttpClient() {
+    protected void initHttpClient() {
         final builder = HxClient.newBuilder()
         // auth settings
         setupClientAuth(builder, getAccessToken())
         // retry settings
-        builder
+        this.httpClient = builder
             .retryConfig(this.retryPolicy)
             .followRedirects(HttpClient.Redirect.NORMAL)
             .version(HttpClient.Version.HTTP_1_1)
@@ -536,13 +535,20 @@ class TowerClient implements TraceObserverV2 {
         }
     }
 
-    protected HttpRequest makeRequest(String url, String payload, String verb) {
-        assert payload, "Tower request cannot be empty"
+    Response sendApiRequest(String url, Map payload=null, String method='GET') {
+        sendHttpMessage(url, payload, method)
+    }
 
+    protected HttpRequest makeRequest(String url, String payload, String verb) {
         final builder = HttpRequest.newBuilder(URI.create(url))
-            .header('Content-Type', 'application/json; charset=utf-8')
             .header('User-Agent', "Nextflow/$BuildInfo.version")
             .header('Traceparent', TraceUtils.rndTrace())
+
+        if( verb == 'GET' )
+            return builder.GET().build()
+
+        assert payload, "Tower request cannot be empty"
+        builder.header('Content-Type', 'application/json; charset=utf-8')
 
         if( verb == 'PUT' )
             return builder.PUT(HttpRequest.BodyPublishers.ofString(payload)).build()
