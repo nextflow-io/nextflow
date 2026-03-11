@@ -44,21 +44,94 @@ class DependencyGraph {
 
     /**
      * Build dependencies between nodes based on DAG edges.
-     * Only considers edges between PROCESS vertices.
+     * Finds all PROCESS-to-PROCESS dependencies by traversing through intermediate vertices.
      */
     void buildDependencies() {
-        for (DAG.Edge edge : this.dag.edges) {
-            // Only process edges between actual process vertices
-            if (edge.from?.type == DAG.Type.PROCESS && edge.to?.type == DAG.Type.PROCESS) {
-                final TaskNode fromNode = this.nodes.get(edge.from.id)
-                final TaskNode toNode = this.nodes.get(edge.to.id)
-                
-                if (fromNode != null && toNode != null) {
-                    toNode.addUpstreamDependency(edge.from.id)
-                    fromNode.addDownstreamDependency(edge.to.id)
+        // For each PROCESS node, find all upstream and downstream PROCESS dependencies
+        for (TaskNode node : this.nodes.values()) {
+            final Set<Long> upstreamProcesses = findUpstreamProcesses(node.getVertex())
+            final Set<Long> downstreamProcesses = findDownstreamProcesses(node.getVertex())
+            
+            for (Long upstreamId : upstreamProcesses) {
+                node.addUpstreamDependency(upstreamId)
+                final TaskNode upstream = this.nodes.get(upstreamId)
+                if (upstream != null) {
+                    upstream.addDownstreamDependency(node.getId())
                 }
             }
         }
+    }
+    
+    /**
+     * Find all upstream PROCESS vertices by traversing back through the DAG.
+     * @param vertex The starting vertex
+     * @return Set of vertex IDs of upstream PROCESS vertices
+     */
+    private Set<Long> findUpstreamProcesses(DAG.Vertex vertex) {
+        final Set<Long> result = new HashSet<>()
+        final Set<Long> visited = new HashSet<>()
+        final Queue<DAG.Vertex> queue = new LinkedList<>()
+        queue.offer(vertex)
+        visited.add(vertex.id)
+        
+        while (!queue.isEmpty()) {
+            final DAG.Vertex current = queue.poll()
+            
+            // Find all edges pointing to this vertex
+            for (DAG.Edge edge : this.dag.edges) {
+                if (edge.to?.id == current.id && edge.from != null) {
+                    if (!visited.contains(edge.from.id)) {
+                        visited.add(edge.from.id)
+                        
+                        if (edge.from.type == DAG.Type.PROCESS && edge.from.id != vertex.id) {
+                            // Found an upstream PROCESS vertex
+                            result.add(edge.from.id)
+                        } else {
+                            // Continue traversing through non-PROCESS vertices
+                            queue.offer(edge.from)
+                        }
+                    }
+                }
+            }
+        }
+        
+        return result
+    }
+    
+    /**
+     * Find all downstream PROCESS vertices by traversing forward through the DAG.
+     * @param vertex The starting vertex
+     * @return Set of vertex IDs of downstream PROCESS vertices
+     */
+    private Set<Long> findDownstreamProcesses(DAG.Vertex vertex) {
+        final Set<Long> result = new HashSet<>()
+        final Set<Long> visited = new HashSet<>()
+        final Queue<DAG.Vertex> queue = new LinkedList<>()
+        queue.offer(vertex)
+        visited.add(vertex.id)
+        
+        while (!queue.isEmpty()) {
+            final DAG.Vertex current = queue.poll()
+            
+            // Find all edges starting from this vertex
+            for (DAG.Edge edge : this.dag.edges) {
+                if (edge.from?.id == current.id && edge.to != null) {
+                    if (!visited.contains(edge.to.id)) {
+                        visited.add(edge.to.id)
+                        
+                        if (edge.to.type == DAG.Type.PROCESS && edge.to.id != vertex.id) {
+                            // Found a downstream PROCESS vertex
+                            result.add(edge.to.id)
+                        } else {
+                            // Continue traversing through non-PROCESS vertices
+                            queue.offer(edge.to)
+                        }
+                    }
+                }
+            }
+        }
+        
+        return result
     }
 
     /**
