@@ -92,7 +92,8 @@ The output can optionally be an assignment with a type annotation:
 ```
 
 - Good, because input block syntax mirrors the top-level `record` definition.
-- Bad, because two different notations for the same concept in the same process definition.
+- Good, because the different `Record { ... }` and `record(...)`  reflect the slightly different semantics of staging an input vs unstaging an output.
+- Bad, because two different notations for similar concepts (records) create asymmetry in the process definition.
 - Bad, because `Record { ... }` block syntax only exists in input declarations — it is not a general-purpose construct.
 
 ### Option 2: Block syntax for both inputs and outputs
