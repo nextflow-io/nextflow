@@ -45,11 +45,11 @@ class TaskNode {
         this.name = vertex.label
         this.id = vertex.id
         final config = processor.config
-        this.cpus = config.getCpus()
-        this.memory = config.getMemory()
-        this.time = config.getTime()
-        this.disk = config.getDisk()
-        this.queue = config.queue as String
+        this.cpus = config.get('cpus') as int
+        this.memory = config.get('memory')
+        this.time = config.get('time')
+        this.disk = config.get('disk')
+        this.queue = config.get('queue') as String
         this.isParallelizable = false // Default value
         this.upstreamDependencies = new ArrayList<>()
         this.downstreamDependencies = new ArrayList<>()
