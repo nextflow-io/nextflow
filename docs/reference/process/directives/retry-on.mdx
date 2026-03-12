@@ -1,0 +1,59 @@
+---
+title: retryOn
+description: Reference for the `retryOn` process directive.
+---
+
+# `retryOn`
+
+<AddedInVersion version="27.04" />
+
+The `retryOn` directive defines one or more task termination reasons that cause a failed task to be retried, regardless of the [errorStrategy](./error-strategy) directive.
+
+## Usage
+
+For example:
+
+```nextflow
+process hello {
+    retryOn 'OOMKilled'
+    memory { 2.GB * task.attempt }
+
+    script:
+    """
+    your_command --here
+    """
+}
+```
+
+In this example, a task that is terminated because it ran out of memory is retried with more memory, while any other failure is handled by the error strategy.
+
+You can also set it in the Nextflow configuration, using a list to specify multiple reasons:
+
+```nextflow
+process {
+    withName: 'hello' {
+        retryOn = ['OOMKilled', 'OOMKilled(exit137)']
+    }
+}
+```
+
+When the termination reason of a failed task matches any of the given values, the error strategy is overridden with `retry`. The `errorStrategy` directive is still evaluated, so any side effects of a dynamic error strategy (for example, logging) are preserved. Retries remain subject to the [maxRetries](./max-retries) and [maxErrors](./max-errors) directives.
+
+The termination reason of a failed task is available as [`task.terminationReason`](../task-properties#taskterminationreason).
+
+## Executor support
+
+Termination reasons are currently reported only by the [Kubernetes](../../executor/kubernetes) executor. With other executors, `retryOn` has no effect.
+
+The Kubernetes executor reports the following termination reasons:
+
+- The container termination reason reported by Kubernetes, for example, `OOMKilled`. The generic reasons `Error` and `Completed` are not reported.
+- `OOMKilled(exit137)`: the task exited with code 137 (`SIGKILL`) without a more specific reason, which usually indicates that it ran out of memory.
+- `SignalTerm(exit143)`: the task exited with code 143 (`SIGTERM`) without a more specific reason.
+
+Infrastructure failures (`Evicted`, `Preempting`, `DeadlineExceeded`, and `Shutdown`) are retried automatically, without the need for `retryOn`.
+
+## See also
+
+- [errorStrategy](./error-strategy)
+- [maxRetries](./max-retries)
