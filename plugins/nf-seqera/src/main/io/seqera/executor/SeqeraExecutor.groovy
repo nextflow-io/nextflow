@@ -111,6 +111,7 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
                 .workflowUrl(workflowUrl)
                 .workDir(session.workDir?.toUriString())
         final request = new CreateRunRequest()
+                .provider(seqeraConfig.provider)
                 .region(seqeraConfig.region)
                 .name(session.runName)
                 .machineRequirement(SchemaMapperUtil.toMachineRequirement(seqeraConfig.machineRequirement))
