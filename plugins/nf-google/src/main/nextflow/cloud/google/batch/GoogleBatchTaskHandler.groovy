@@ -405,7 +405,12 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                 instancePolicy.setBootDisk(AllocationPolicy.Disk.newBuilder().setImage(batchConfig.getBootDiskImage()))
 
             if( fusionEnabled() && !disk ) {
-                disk = new DiskResource(request: '375 GB', type: 'local-ssd')
+                final reqMachineType = task.config.getMachineType()
+                if ( reqMachineType ) {
+                    disk = new DiskResource(request: '375 GB', type: chooseFusionDiskType(reqMachineType) )
+                } else {
+                    disk = new DiskResource(request: '375 GB', type: 'local-ssd')
+                }
                 log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - adding local volume as fusion scratch: $disk"
             }
 
@@ -494,6 +499,22 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         }
 
         return new InstancePolicyResult(instancePolicyOrTemplate.build(), requiresScratchVolume)
+    }
+
+    /**
+     * Choose the disk type for Fusion according to the machine or family.
+     * Preference is 'local-ssd', 'hyperdisk-balanced' and 'pd-balanced' other types can be set by setting disk directive
+     * @param machineTypeOrFamily
+     * @return Disk type
+     */
+    protected String chooseFusionDiskType(String machineTypeOrFamily){
+        if( !GoogleBatchMachineTypeSelector.unsupportedLocalSSD(machineTypeOrFamily) ){
+            return 'local-ssd'
+        } else if( GoogleBatchMachineTypeSelector.isPdOnly(machineTypeOrFamily) ){
+            return 'pd-balanced'
+        } else {
+            return 'hyperdisk-balanced'
+        }
     }
 
     /**

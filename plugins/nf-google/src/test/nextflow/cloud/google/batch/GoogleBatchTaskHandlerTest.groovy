@@ -1326,4 +1326,53 @@ class GoogleBatchTaskHandlerTest extends Specification {
         result.getContainer().getOptions() == '--privileged'
     }
 
+    def 'should choose fusion disk type'() {
+        given:
+        def exec = Mock(GoogleBatchExecutor) {
+            getBatchConfig() >> Mock(BatchConfig)
+        }
+        def task = Mock(TaskRun) {
+            getHashLog() >> 'abcd1234'
+            getWorkDir() >> CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
+            getContainer() >> 'ubuntu:latest'
+            getConfig() >> Mock(TaskConfig)
+        }
+        def handler = new GoogleBatchTaskHandler(task, exec)
+
+        expect:
+        handler.chooseFusionDiskType(machineType) == expected
+
+        where:
+        machineType           | expected
+        // exact machine types
+        'n2-standard-4'       | 'local-ssd'          // standard family: supports local SSD
+        'c2-standard-8'       | 'local-ssd'          // compute-optimized: supports local SSD
+        'n1-standard-1'       | 'local-ssd'          // legacy N1: supports local SSD
+        'e2-standard-4'       | 'pd-balanced'        // E2: no local SSD, pd-only
+        'e2-micro'            | 'pd-balanced'        // E2 small: no local SSD, pd-only
+        'h3-standard-88'      | 'hyperdisk-balanced' // H3: no local SSD, not pd-only
+        'n4-standard-4'       | 'hyperdisk-balanced' // N4: no local SSD, not pd-only
+        't2a-standard-4'      | 'hyperdisk-balanced' // T2A: no local SSD, not pd-only
+        't2d-standard-4'      | 'hyperdisk-balanced' // T2D: no local SSD, not pd-only
+        'm2-ultramem-208'     | 'hyperdisk-balanced' // M2: no local SSD, not pd-only
+        'm4-megamem-416'      | 'hyperdisk-balanced' // M4: no local SSD, not pd-only
+        'x4-megamem-1440'     | 'hyperdisk-balanced' // X4: no local SSD, not pd-only
+        // glob families with * (family glob passed directly)
+        'n2-*'                | 'local-ssd'          // N2 family glob: supports local SSD
+        'c3-*'                | 'local-ssd'          // C3 family glob: partial lssd support, not in NO_LOCAL_SSD
+        'a2-*'                | 'local-ssd'          // A2 accelerator family glob: supports local SSD
+        'e2-*'                | 'pd-balanced'        // E2 family glob: no local SSD, pd-only
+        'h3-*'                | 'hyperdisk-balanced' // H3 family glob: no local SSD, not pd-only
+        'n4-*'                | 'hyperdisk-balanced' // N4 family glob: no local SSD, not pd-only
+        't2a-*'               | 'hyperdisk-balanced' // T2A family glob: no local SSD, not pd-only
+        'm2-*'                | 'hyperdisk-balanced' // M2 family glob: no local SSD, not pd-only
+        // glob patterns with ? in the type suffix (? is matched literally by .* in family regex)
+        'n2-standard-?'       | 'local-ssd'          // n2 prefix still not in NO_LOCAL_SSD
+        'e2-standard-?'       | 'pd-balanced'        // e2 prefix matches e2-* → pd-only
+        'h3-standard-??'      | 'hyperdisk-balanced' // h3 prefix matches h3-* → no local SSD, not pd-only
+        // ? replacing the family discriminator digit is treated as a literal character (not a wildcard)
+        'e?-standard-4'       | 'local-ssd'          // 'e?' does not match regex ^e2-.*$, so not classified as e2
+        'h?-standard-88'      | 'local-ssd'          // 'h?' does not match regex ^h3-.*$, so not classified as h3
+    }
+
 }

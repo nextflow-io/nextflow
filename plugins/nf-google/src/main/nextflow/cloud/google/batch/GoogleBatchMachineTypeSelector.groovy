@@ -87,7 +87,19 @@ class GoogleBatchMachineTypeSelector {
      * These require 'hyperdisk-*' as boot disk type.
      * https://docs.cloud.google.com/compute/docs/general-purpose-machines?hl=en#supported_disk_types_for_c4
      */
-    private static final List<String> HYPERDISK_ONLY_FAMILIES = ['c4-*', 'c4a-*', 'c4d-*', 'n4-*', 'n4a-*', 'n4d-*']
+    private static final List<String> HYPERDISK_ONLY_FAMILIES = ['c4-*', 'c4a-*', 'c4d-*', 'n4-*', 'n4a-*', 'n4d-*', 'z3-*']
+    /*
+     * Families that do not support Local SSD
+     */
+    private static final List<String> PD_ONLY_FAMILIES = ['e2-*']
+    /*
+     * Families that do not support Local SSD
+     */
+    private static final List<String> NO_LOCAL_SSD_SUPPORT_FAMILIES = ['e2-*', 'h3-*', 'm2-*', 'm4-*', 'n4-*', 't2a-*', 't2d-*', 'x4-*']
+    /*
+     * Families that support local SSD with 'lssd' suffix
+     */
+    private static final List<String> PARTIAL_LOCAL_SSD_SUPPORT_FAMILIES = ['c3-*', 'c3a-*', 'c3d-*', 'c4-*', 'c4a-*', 'c4d-*', 'h4d-*', 'z3-*']
 
     @Immutable
     static class MachineType {
@@ -129,11 +141,13 @@ class GoogleBatchMachineTypeSelector {
         final matchMachineType = {String type -> !families || families.find { matchType(it, type) }}
 
         // find machines with enough resources and SSD local disk
-        final validMachineTypes = getAvailableMachineTypes(region, spot).findAll {
+        def validMachineTypes = getAvailableMachineTypes(region, spot).findAll {
                     it.cpusPerVm >= cpus &&
                     it.memPerVm >= memoryGB &&
                     matchMachineType(it.type)
         }.collect()
+        if (fusionEnabled)
+            validMachineTypes = validMachineTypes.findAll { hasLocalSsd(it.type)}.collect()
 
         final sortedByCost = validMachineTypes.sort {
             (it.cpusPerVm > 2 || it.memPerVm > 2 ? FAMILY_COST_CORRECTION.get(it.family, 1.0) : 1.0) * (spot ? it.spotPrice : it.onDemandPrice)
@@ -142,7 +156,7 @@ class GoogleBatchMachineTypeSelector {
         return sortedByCost.first()
     }
 
-    protected boolean matchType(String family, String vmType) {
+    protected static boolean matchType(String family, String vmType) {
         if (!family)
             return true
         if (family.contains('*'))
@@ -301,8 +315,42 @@ class GoogleBatchMachineTypeSelector {
      * @param machineType Machine type
      * @return Boolean value indicating if the machine type requires Hyperdisk.
      */
-    boolean isHyperdiskOnly(String machineType) {
+    static boolean isHyperdiskOnly(String machineType) {
         return HYPERDISK_ONLY_FAMILIES.any { matchType(it, machineType) }
+    }
+
+    /**
+     * Check if the machine type belongs to a family that only supports pd-* disk.
+     *
+     * @param machineType Machine type
+     * @return Boolean value indicating if the machine type requires pd-* disk type.
+     */
+    static boolean isPdOnly(String machineType) {
+        return PD_ONLY_FAMILIES.any { matchType(it, machineType) }
+    }
+
+    /**
+     * Check if the machine type allow to have a local-ssd .
+     *
+     * @param machineType Machine type
+     * @return Boolean value indicating if the machine type can have local ssd disks.
+     */
+    static boolean hasLocalSsd(String machineType) {
+        if( machineType.contains('lssd') )
+            return true
+
+        if( (PARTIAL_LOCAL_SSD_SUPPORT_FAMILIES + NO_LOCAL_SSD_SUPPORT_FAMILIES).any { matchType(it, machineType) } )
+            return false
+
+        return true
+    }
+    /**
+     * Check if a machine type doesn't support
+     * @param machineTypeOrFamily
+     * @return
+     */
+    static boolean unsupportedLocalSSD(String machineTypeOrFamily) {
+        return NO_LOCAL_SSD_SUPPORT_FAMILIES.any { matchType(it, machineTypeOrFamily) }
     }
 
     /**
