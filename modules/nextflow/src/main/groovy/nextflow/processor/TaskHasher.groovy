@@ -16,6 +16,7 @@
 package nextflow.processor
 
 import java.nio.file.Path
+import java.nio.file.Files
 
 import com.google.common.hash.HashCode
 import groovy.json.JsonOutput
@@ -215,11 +216,26 @@ class TaskHasher {
         final tokenizer = new StringTokenizer(script, " \t\n\r\f()[]{};&|<>`")
         while( tokenizer.hasMoreTokens() ) {
             final token = tokenizer.nextToken()
-            final path = session.binEntries.get(token)
+            final path = getBinEntry(token)
             if( path )
                 result.add(path)
         }
         return result
+    }
+
+    @Memoized
+    protected Path getBinEntry(String name) {
+        final fromProjectBin = session.binEntries.get(name)
+        if( fromProjectBin )
+            return fromProjectBin
+
+        for( final dir : processor.getBinDirs() ) {
+            final candidate = dir.resolve(name)
+            if( Files.isExecutable(candidate) )
+                return candidate
+        }
+
+        return null
     }
 
     private String safeTaskName(TaskRun task) {
