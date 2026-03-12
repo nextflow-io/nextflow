@@ -304,6 +304,12 @@ public interface ProcessDsl extends DslScope {
         );
 
         @Description("""
+            The `retryOn` directive allows you to specify termination reasons (e.g. OOMKilled) that should trigger a retry, overriding the error strategy.
+        """)
+        void retryOn(String value);
+        void retryOn(List<String> value);
+
+        @Description("""
             The `scratch` directive allows you to execute each task in a temporary directory that is local to the compute node.
 
             [Read more](https://nextflow.io/docs/latest/reference/process.html#scratch)
