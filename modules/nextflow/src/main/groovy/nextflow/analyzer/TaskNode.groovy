@@ -46,9 +46,9 @@ class TaskNode {
         this.id = vertex.id
         final config = processor.config
         this.cpus = config.get('cpus') as int
-        this.memory = config.get('memory')
-        this.time = config.get('time')
-        this.disk = config.get('disk')
+        this.memory = config.get('memory') as MemoryUnit
+        this.time = config.get('time') as Duration
+        this.disk = config.get('disk') as MemoryUnit
         this.queue = config.get('queue') as String
         this.isParallelizable = false // Default value
         this.upstreamDependencies = new ArrayList<>()
