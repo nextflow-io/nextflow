@@ -152,7 +152,7 @@ process FASTQC {
 - Good, because `record()` is already a general-purpose function, no new syntax needed.
 - Good, because type annotations follow standard rules — `sample: Sample = record(...)` works like any typed assignment.
 - Bad, because input `record()` arguments are types rather than values, which is a different usage of the function.
-
+- Bad, because the use of an assignment in the input declaration to describe the record structure conflicts with the conventional meaning of input assignments as default values.
 ## Solution or decision outcome
 
 **Option 3**: Use the `record()` function-call notation uniformly for both process inputs and outputs, combined with standard assignment (`=`) and optional type annotation (`: Type`).
