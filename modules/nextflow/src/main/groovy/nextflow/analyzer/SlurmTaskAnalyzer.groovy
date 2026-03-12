@@ -108,29 +108,8 @@ class SlurmTaskGroupAnalyzer {
       */
     private TaskNode analyzeVertex(DAG.Vertex vertex) {
         final TaskProcessor processor = vertex.process
-        log.debug "[SLURM TASK GROUPING] Analyzing vertex: ${vertex.label}"
-
-        // Extract static resource requirements from processor config
-        final config = processor.config
-
-        final Integer cpus = config.get('cpus') as Integer
-        final def memory = config.get('memory')
-        final def time = config.get('time')
-        final def disk = config.get('disk')
-        final String queue = config.get('queue') as String
-
-        log.debug "[SLURM TASK GROUPING] Vertex ${vertex.label} resources: cpus=${cpus}, memory=${memory}, time=${time}"
-
-        Map<String, Object> resources = [
-            cpus: cpus, 
-            memory: memory, 
-            time: time, 
-            disk: disk,
-            queue: queue
-        ]
-
-        // Create and return TaskNode with vertex reference
-        TaskNode node = new TaskNode(vertex, processor, resources)
+        final TaskNode node = new TaskNode(vertex, processor)
+        log.debug "[SLURM TASK GROUPING] Analyzing vertex: ${vertex.label} — cpus=${node.getCpus()}, memory=${node.getMemory()}, time=${node.getTime()}"
         return node
     } 
 

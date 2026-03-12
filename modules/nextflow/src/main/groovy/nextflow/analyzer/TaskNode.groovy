@@ -4,6 +4,8 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.dag.DAG
 import nextflow.processor.TaskProcessor
+import nextflow.util.Duration
+import nextflow.util.MemoryUnit
 
 /**
  * TaskNode represents a process in the workflow DAG for analysis purposes.
@@ -27,19 +29,28 @@ class TaskNode {
     private TaskProcessor processor // Reference to the task processor
     private String name // Name of the process from Vertex.label
     private long id // Vertex ID from Vertex.id
-    private Map<String, Object> resources // Process resource requirements
+    private int cpus
+    private MemoryUnit memory
+    private Duration time
+    private MemoryUnit disk
+    private String queue
     private List<Long> upstreamDependencies // List of vertex ids of upstream process dependencies
     private List<Long> downstreamDependencies // List of vertex ids of downstream process dependencies
     private boolean isParallelizable // Flag indicating if the process is parallelizable based on resources
     private int level // Dependency level in the DAG 
 
-    TaskNode(DAG.Vertex vertex, TaskProcessor processor, Map<String, Object> resources) {
+    TaskNode(DAG.Vertex vertex, TaskProcessor processor) {
         this.vertex = vertex
         this.processor = processor
         this.name = vertex.label
         this.id = vertex.id
-        this.resources = resources
-        this.isParallelizable = false // Default value 
+        final config = processor.config
+        this.cpus = config.getCpus()
+        this.memory = config.getMemory()
+        this.time = config.getTime()
+        this.disk = config.getDisk()
+        this.queue = config.queue as String
+        this.isParallelizable = false // Default value
         this.upstreamDependencies = new ArrayList<>()
         this.downstreamDependencies = new ArrayList<>()
         this.level = 0
@@ -62,9 +73,15 @@ class TaskNode {
         return this.id
     }
 
-    Map<String, Object> getResources() {
-        return this.resources
-    }
+    int getCpus() { return this.cpus }
+
+    MemoryUnit getMemory() { return this.memory }
+
+    Duration getTime() { return this.time }
+
+    MemoryUnit getDisk() { return this.disk }
+
+    String getQueue() { return this.queue }
 
     List<Long> getUpstreamDependencies() {
         return this.upstreamDependencies
