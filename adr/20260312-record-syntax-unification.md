@@ -34,7 +34,11 @@ process FASTQC {
 process FASTQC {
     ...
     output:
-    record(id: sample.id, html: file('*.html'), zip: file('*.zip'))
+    record(
+        id: sample.id,
+        html: file('*.html'),
+        zip: file('*.zip')
+    )
 }
 ```
 
@@ -68,7 +72,11 @@ process FASTQC {
     }
 
     output:
-    record(id: sample.id, html: file('*.html'), zip: file('*.zip'))
+    record(
+        id: sample.id,
+        html: file('*.html'),
+        zip: file('*.zip')
+    )
 }
 ```
 
