@@ -80,10 +80,20 @@ process FASTQC {
 }
 ```
 
+The output can optionally be an assignment with a type annotation:
+
+```nextflow
+    output:
+    result: FastqcResult = record(
+        id: sample.id,
+        html: file('*.html'),
+        zip: file('*.zip')
+    )
+```
+
 - Good, because input block syntax mirrors the top-level `record` definition.
 - Bad, because two different notations for the same concept in the same process definition.
 - Bad, because `Record { ... }` block syntax only exists in input declarations — it is not a general-purpose construct.
-- Bad, because output `record()` as a bare statement (no assignment) doesn't allow naming the output.
 
 ### Option 2: Block syntax for both inputs and outputs
 
