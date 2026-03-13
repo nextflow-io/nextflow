@@ -32,6 +32,19 @@ class BaseCommandImpl {
     private static final int API_TIMEOUT_MS = 10_000
 
     /**
+     * Provides common API operations for Seqera Platform
+     */
+    protected TowerCommonApi commonApi
+
+    BaseCommandImpl(){
+        this.commonApi = new TowerCommonApi()
+    }
+
+    BaseCommandImpl( TowerCommonApi commonApi ) {
+        this.commonApi = commonApi
+    }
+
+    /**
      * Creates an HxClient instance with optional authentication token.
      *
      * @param accessToken Optional personal access token for authentication (PAT)
@@ -58,76 +71,7 @@ class BaseCommandImpl {
         return builder.buildConfigObject().flatten()
     }
 
-    /**
-     * Calls the Seqera Platform user-info API to retrieve user information.
-     *
-     * @param accessToken Authentication token
-     * @param apiUrl Seqera Platform API endpoint
-     * @return Map containing user information (id, userName, email, etc.)
-     * @throws RuntimeException if the API call fails
-     */
-    protected Map getUserInfo(String accessToken, String apiUrl) {
-        final client = createHttpClient(accessToken)
-        final url = "${apiUrl}/user-info"
-        log.debug "Platform get user info - GET ${url}"
-        final request = HttpRequest.newBuilder()
-            .uri(URI.create(url))
-            .GET()
-            .build()
-
-        final response = client.send(request, HttpResponse.BodyHandlers.ofString())
-
-        if (response.statusCode() != 200) {
-            final error = response.body() ?: "HTTP ${response.statusCode()}"
-            throw new RuntimeException("Failed to get user info: ${error}")
-        }
-
-        final json = new JsonSlurper().parseText(response.body()) as Map
-        return json.user as Map
-    }
-
-    protected Map getWorkspaceDetails(String accessToken, String endpoint, String workspaceId) {
-        try {
-            final userInfo = getUserInfo(accessToken, endpoint)
-            final userId = userInfo.id as String
-
-            final client = createHttpClient(accessToken)
-            final url = "${endpoint}/user/${userId}/workspaces"
-            log.debug "Platform get workdspace - GET ${url}"
-            final request = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .GET()
-                .build()
-
-            final response = client.send(request, HttpResponse.BodyHandlers.ofString())
-
-            if (response.statusCode() != 200) {
-                return null
-            }
-
-            final json = new JsonSlurper().parseText(response.body()) as Map
-            final orgsAndWorkspaces = json.orgsAndWorkspaces as List
-
-            final workspace = orgsAndWorkspaces.find { ((Map)it).workspaceId?.toString() == workspaceId }
-            if (workspace) {
-                final ws = workspace as Map
-                return [
-                    orgName: ws.orgName,
-                    workspaceName: ws.workspaceName,
-                    workspaceFullName: ws.workspaceFullName,
-                    roles: ws.roles
-                ]
-            }
-
-            return null
-        } catch (Exception e) {
-            log.debug("Failed to get workspace details for workspace ${workspaceId}: ${e.message}", e)
-            return null
-        }
-    }
-
-    protected List listUserWorkspaces(String accessToken, String endpoint, String userId) {
-        final client = createHttpClient(accessToken)
+    protected List listUserWorkspaces(HxClient client, String endpoint, String userId) {
         final url = "${endpoint}/user/${userId}/workspaces"
         log.debug "Platform list workspaces - GET ${url}"
         final request = HttpRequest.newBuilder()
@@ -148,8 +92,7 @@ class BaseCommandImpl {
         return orgsAndWorkspaces.findAll { ((Map) it).workspaceId != null }
     }
 
-    protected List listComputeEnvironments(String accessToken, String endpoint, String workspaceId) {
-        final client = createHttpClient(accessToken)
+    protected List listComputeEnvironments(HxClient client, String endpoint, String workspaceId) {
         final uri = workspaceId
             ? "${endpoint}/compute-envs?workspaceId=${workspaceId}"
             : "${endpoint}/compute-envs"
@@ -171,8 +114,7 @@ class BaseCommandImpl {
         return json.computeEnvs as List ?: []
     }
 
-    protected Map getComputeEnvironment(String accessToken, String endpoint, String computeEnvId, String workspaceId) {
-        final client = createHttpClient(accessToken)
+    protected Map getComputeEnvironment(HxClient client, String endpoint, String computeEnvId, String workspaceId) {
         final uri = workspaceId ?
             "${endpoint}/compute-envs/${computeEnvId}?workspaceId=${workspaceId}" :
             "${endpoint}/compute-envs"
