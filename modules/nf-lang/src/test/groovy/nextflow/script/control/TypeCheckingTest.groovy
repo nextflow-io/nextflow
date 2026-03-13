@@ -85,4 +85,34 @@ class TypeCheckingTest extends Specification {
         errors[0].getOriginalMessage() == 'Incorrect number of call arguments, expected 2 but received 1'
     }
 
+    def 'should allow typed process to be called with named args' () {
+        when:
+        def errors = check(
+            '''\
+            nextflow.preview.types = true
+
+            process align {
+                input:
+                in: Record {
+                    id: String
+                    fastq: Path
+                    index: Path
+                }
+
+                script:
+                """
+                """
+            }
+
+            workflow {
+                ch_samples = channel.of( record(id: '1', fastq: file('1.fastq')) )
+                index = file('index.fasta')
+                align( ch_samples, index: index )
+            }
+            '''
+        )
+        then:
+        errors.size() == 0
+    }
+
 }

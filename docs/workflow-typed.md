@@ -181,6 +181,70 @@ The `Value` type supports the following operators:
 
 See {ref}`operator-typed-page` for more information about each operator. See {ref}`migrating-typed-operators` to learn how to migrate existing operators to typed workflows.
 
+### Process named arguments
+
+A common pattern is for a workflow to combine a channel with one or more dataflow values into a single input for a process:
+
+```nextflow
+nextflow.preview.types = true
+
+process align {
+    input:
+    input: Record {
+        id: String
+        fastq: Path
+        index: Path
+    }
+
+    // ...
+}
+
+workflow align_dedup {
+    take:
+    ch_samples: Channel<Sample>
+    index: Value<Path>
+
+    main:
+    ch_align_inputs = ch_samples
+        .cross(index)
+        .map { sample, index -> sample + record(index: index) }
+
+    align( ch_align_inputs )
+
+    // ...
+}
+
+record Sample {
+    id: String
+    fastq: Path
+}
+```
+
+This pattern requires a `cross` and `map` operation for each dataflow value that must be added, which quickly becomes verbose.
+
+In a typed workflow, the same behavior can be achieved by calling the process with named arguments:
+
+```nextflow
+workflow align_dedup {
+    take:
+    ch_samples: Channel<Sample>
+    index: Value<Path>
+
+    main:
+    align(ch_samples, index: index)
+
+    // ...
+}
+```
+
+The named arguments supplied to `align` are automatically added to each record in `ch_samples`, producing the equivalent of `ch_align_inputs` in the previous example.
+
+Named arguments can be used with a process under the following conditions:
+
+- The process declares a single record input  
+- The positional argument (i.e. `ch_samples`) is a channel of records  
+- The named arguments are regular values or dataflow values, not channels
+
 ### Restricted syntax
 
 The following syntax patterns are not supported in typed workflows.
