@@ -41,34 +41,46 @@ class SlurmTaskGroupAnalyzer {
      * and identifies parallelizable tasks based on their levels in the graph.
      */
     void analyze() {
-        if( !isTaskGroupingEnabled() ) {
-            log.debug "[SLURM TASK GROUPING] Task grouping is disabled"
+        final DependencyGraph dependencyGraph = analyzeDependencyGraph()
+        if( dependencyGraph == null )
             return
-        }
-        log.debug "[SLURM TASK GROUPING] Task grouping enabled. Starting Slurm Analyzer"
-        readNodeCapacity()
+
         try {
-            if( this.dag == null ) {
-                log.debug "[SLURM TASK GROUPING] No DAG available for analysis"
-                return
-            }
-            // Collect process vertices from the DAG
-            final List<DAG.Vertex> processVertices = collectProcessVertices()
-            log.debug "[SLURM TASK GROUPING] Found ${processVertices.size()} processes to analyze"
-            
-            // Build dependency graph
-            DependencyGraph dependencyGraph = buildDependencyGraph(processVertices)
-            log.debug "[SLURM TASK GROUPING] Dependency graph built with ${dependencyGraph.getNodes().size()} nodes"
-            
-            // Identify parallelizable tasks
             Map<Integer, List<Long>> parallelTasks = identifyParallelTasks(dependencyGraph)
             log.debug "[SLURM TASK GROUPING] Tasks grouped by levels: ${parallelTasks.collect { k, v -> "Level $k: ${v.size()} tasks" }.join(', ')}"
-        
-
         }
         catch( Exception e ) {
             log.error "[SLURM TASK GROUPING] Error during analysis: ${e.message}", e
         }
+    }
+
+    /**
+     * Build and return the dependency graph with process nodes and dependencies.
+     * This method also initializes node-capacity limits from config.
+     *
+     * @return The populated dependency graph, or {@code null} when task grouping is disabled
+     * or no DAG is available.
+     */
+    DependencyGraph analyzeDependencyGraph() {
+        if( !isTaskGroupingEnabled() ) {
+            log.debug "[SLURM TASK GROUPING] Task grouping is disabled"
+            return null
+        }
+
+        log.debug "[SLURM TASK GROUPING] Task grouping enabled. Starting Slurm Analyzer"
+        readNodeCapacity()
+
+        if( this.dag == null ) {
+            log.debug "[SLURM TASK GROUPING] No DAG available for analysis"
+            return null
+        }
+
+        final List<DAG.Vertex> processVertices = collectProcessVertices()
+        log.debug "[SLURM TASK GROUPING] Found ${processVertices.size()} processes to analyze"
+
+        final DependencyGraph dependencyGraph = buildDependencyGraph(processVertices)
+        log.debug "[SLURM TASK GROUPING] Dependency graph built with ${dependencyGraph.getNodes().size()} nodes"
+        return dependencyGraph
     }
 
     /**
