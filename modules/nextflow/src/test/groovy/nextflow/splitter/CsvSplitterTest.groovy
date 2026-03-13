@@ -317,4 +317,148 @@ class CsvSplitterTest extends Specification {
 
     }
 
+    def 'should skip comment lines' () {
+        given:
+        def LINES = '''
+                # This is a comment
+                alpha,beta,delta
+                gamma,,zeta
+                # Another comment
+                eta,theta,iota
+                '''
+                .stripIndent().trim()
+
+        when:
+        def items = new CsvSplitter().target(LINES).options(comment: '#').list()
+
+        then:
+        items.size() == 3
+        items[0] == ['alpha', 'beta', 'delta']
+        items[1] == ['gamma', '', 'zeta']
+        items[2] == ['eta', 'theta', 'iota']
+    }
+
+    def 'should skip comment lines with header' () {
+        given:
+        def LINES = '''
+                # This is a comment at the start
+                x,y,z
+                # Comment after header
+                alpha,beta,delta
+                gamma,,zeta
+                '''
+                .stripIndent().trim()
+
+        when:
+        def items = new CsvSplitter().target(LINES).options(header: true, comment: '#').list()
+
+        then:
+        items.size() == 2
+        items[0].x == 'alpha'
+        items[0].y == 'beta'
+        items[0].z == 'delta'
+        items[1].x == 'gamma'
+        items[1].y == ''
+        items[1].z == 'zeta'
+    }
+
+    def 'should skip comment lines with skip option' () {
+        given:
+        def LINES = '''
+                skip this line
+                # This is a comment
+                alpha,beta,delta
+                gamma,,zeta
+                '''
+                .stripIndent().trim()
+
+        when:
+        def items = new CsvSplitter().target(LINES).options(skip: 1, comment: '#').list()
+
+        then:
+        items.size() == 2
+        items[0] == ['alpha', 'beta', 'delta']
+        items[1] == ['gamma', '', 'zeta']
+    }
+
+    def 'should handle TSV with comments' () {
+        given:
+        def LINES = '''
+                # Comment line
+                alpha\tbeta\tdelta
+                gamma\t\tzeta
+                '''
+                .stripIndent().trim()
+
+        when:
+        def items = new CsvSplitter().target(LINES).options(sep: '\t', comment: '#').list()
+
+        then:
+        items.size() == 2
+        items[0] == ['alpha', 'beta', 'delta']
+        items[1] == ['gamma', '', 'zeta']
+    }
+
+    def 'should not skip comments when option not set' () {
+        given:
+        def LINES = '''
+                #alpha,beta,delta
+                gamma,,zeta
+                '''
+                .stripIndent().trim()
+
+        when:
+        def items = new CsvSplitter().target(LINES).list()
+
+        then:
+        items.size() == 2
+        items[0] == ['#alpha', 'beta', 'delta']
+        items[1] == ['gamma', '', 'zeta']
+    }
+
+    def 'should handle custom comment character' () {
+        given:
+        def LINES = '''
+                ; This is a comment
+                alpha,beta,delta
+                gamma,,zeta
+                '''
+                .stripIndent().trim()
+
+        when:
+        def items = new CsvSplitter().target(LINES).options(comment: ';').list()
+
+        then:
+        items.size() == 2
+        items[0] == ['alpha', 'beta', 'delta']
+        items[1] == ['gamma', '', 'zeta']
+    }
+
+    def 'should reject multi-character comment' () {
+        when:
+        new CsvSplitter().options(comment: '//')
+
+        then:
+        thrown(IllegalArgumentException)
+    }
+
+    def 'should handle inline comments' () {
+        given:
+        def LINES = '''
+                alpha,beta,delta
+                gamma,zeta # inline comment
+                eta,theta,iota
+                '''
+                .stripIndent().trim()
+
+        when:
+        def items = new CsvSplitter().target(LINES).options(comment: '#').list()
+
+        then:
+        items.size() == 3
+        items[0] == ['alpha', 'beta', 'delta']
+        items[1] == ['gamma', 'zeta ']
+        items[2] == ['eta', 'theta', 'iota']
+    }
+
 }
