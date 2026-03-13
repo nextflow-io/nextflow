@@ -227,6 +227,7 @@ The `local` executor is useful for developing and testing a pipeline script on y
 
 Resource requests and other job characteristics can be controlled via the following process directives:
 
+- {ref}`process-accelerator`
 - {ref}`process-cpus`
 - {ref}`process-memory`
 - {ref}`process-time`
@@ -240,6 +241,25 @@ While the `local` executor limits the number of concurrent tasks based on reques
 The local executor supports two types of tasks:
 - Script tasks (processes with a `script` or `shell` block) - executed via a Bash wrapper
 - Native tasks (processes with an `exec` block) - executed directly in the JVM.
+
+(local-accelerators)=
+
+### Accelerators
+
+:::{versionadded} 25.10.0
+:::
+
+The local executor can use the `accelerator` directive to allocate accelerators, such as GPUs. To use accelerators, set the corresponding environment variable:
+
+- `CUDA_VISIBLE_DEVICES` for [NVIDIA CUDA](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#cuda-environment-variables) applications
+
+- `HIP_VISIBLE_DEVICES` for [HIP](https://rocm.docs.amd.com/projects/HIP/en/docs-develop/reference/env_variables.html) applications
+
+- `ROCR_VISIBLE_DEVICES` for [AMD ROCm](https://rocm.docs.amd.com/en/latest/conceptual/gpu-isolation.html) applications
+
+Set the environment variable to a comma-separated list of device IDs for Nextflow to access. Nextflow uses this environment variable to allocate accelerators for tasks that request them.
+
+For example, to use all GPUs on a node with four NVIDIA GPUs, set `CUDA_VISIBLE_DEVICES` to `0,1,2,3`. If four tasks each request one GPU, they will be executed with `CUDA_VISIBLE_DEVICES` set to `0`, `1`, `2`, and `3`, respectively.
 
 (lsf-executor)=
 
