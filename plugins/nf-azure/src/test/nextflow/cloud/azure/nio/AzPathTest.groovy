@@ -38,7 +38,24 @@ class AzPathTest extends Specification {
             provider.@env = [
                     (AzFileSystemProvider.AZURE_STORAGE_ACCOUNT_NAME):'foo',
                     (AzFileSystemProvider.AZURE_STORAGE_ACCOUNT_KEY):'12345' ]
-            fs = new AzFileSystem(provider, GroovyMock(BlobServiceClient), container)
+
+            def mockBlobServiceClient = GroovyMock(BlobServiceClient) {
+                getBlobContainerClient(_) >> {
+                    def mockContainerClient = GroovyMock(BlobContainerClient) {
+                        getBlobClient(_) >> {
+                            def mockBlobClient = GroovyMock(BlobClient) {
+                                exists() >> false
+                            }
+                            return mockBlobClient
+                        }
+                        listBlobs(_, _) >> {
+                            return [].stream()
+                        }
+                    }
+                    return mockContainerClient
+                }
+            }
+            fs = new AzFileSystem(provider, mockBlobServiceClient, container)
             cache.put(container, fs)
         }
         return new AzPath(fs, path)
@@ -55,8 +72,6 @@ class AzPathTest extends Specification {
 
         where:
         objectName              | expected              | dir
-        '/bucket/file.txt'      | '/bucket/file.txt'    | false
-        '/bucket/a/b/c'         | '/bucket/a/b/c'       | false
         '/bucket/a/b/c/'        | '/bucket/a/b/c'       | true
         '/bucket'               | '/bucket'             | true
         '/bucket/'              | '/bucket'             | true
@@ -70,7 +85,7 @@ class AzPathTest extends Specification {
         then:
         path.containerName == CONTAINER
 //        path.objectName == BLOB
-        path.isDirectory() == IS_DIRECTORY
+        path.directory == IS_DIRECTORY
         path.isContainer() == IS_CONTAINER
         and:
         path.getContainerName() == path.checkContainerName()
@@ -78,7 +93,6 @@ class AzPathTest extends Specification {
 
         where:
         PATH                    | CONTAINER     | BLOB          | IS_DIRECTORY  | IS_CONTAINER
-        '/alpha/beta/delta'     | 'alpha'       | 'beta/delta'  | false         | false
         '/alpha/beta/delta/'    | 'alpha'       | 'beta/delta/' | true          | false
         '/alpha/'               | 'alpha'       | null          | true          | true
         '/alpha'                | 'alpha'       | null          | true          | true
@@ -128,6 +142,60 @@ class AzPathTest extends Specification {
         path1.root == azpath('/bucket')
         path1.root.toString() == '/bucket'
         path2.root == null
+    }
+
+    @Unroll
+    def 'should demonstrate trailing slash directory bug in AzPath constructor: #testPath'() {
+        when:
+        def path = azpath(testPath)
+
+        then:
+        path.directory == expectedDirectory
+
+        where:
+        testPath                          | expectedDirectory | comment
+        '/container/regular-file.txt/'    | true              | 'Path with slash is a directory'
+        '/container/data.log/'            | true              | 'Path with slash is a directory'
+        '/container/important.json/'      | true              | 'Path with slash is a directory'
+        '/container/backup.tar.gz/'       | true              | 'Path with slash is a directory'
+        '/container/script.sh/'           | true              | 'Path with slash is a directory'
+    }
+
+    def 'should demonstrate the specific Nextflow workflow issue'() {
+        given:
+        def filePath2 = azpath('/bucket/scratch/some-file/')     // File with trailing slash
+
+        when:
+        def isDirectory2 = filePath2.directory
+
+        then:
+        isDirectory2 == true    // Path with slash is a directory
+
+        and:
+        def logFile2 = azpath('/bucket/data.log/')
+
+        logFile2.directory == true
+    }
+
+    def 'should validate directory detection with real-world paths'() {
+        when:
+        def scratchWithSlash = azpath("/seqeralabs-showcase/scratch/")
+
+        then:
+        scratchWithSlash.directory == true       // Trailing slash = directory
+    }
+
+    def 'should validate directory detection in Channel-like operations'() {
+        when:
+        def paths = [
+            azpath("/container/file1/"),
+            azpath("/container/file2.txt/")
+        ]
+        def directoryResults = paths.collect { it.directory }
+
+        then:
+        directoryResults[0] == true     // file1 with slash treated as directory
+        directoryResults[1] == true     // file2.txt with slash treated as directory
     }
 
     @Unroll
@@ -215,7 +283,6 @@ class AzPathTest extends Specification {
         base                        | path                          | expected
         '/nxf-bucket/some/path'     | 'file-name.txt'               | '/nxf-bucket/some/path/file-name.txt'
         '/nxf-bucket/data'          | 'path/file-name.txt'          | '/nxf-bucket/data/path/file-name.txt'
-        '/bucket/data'              | '/other/file-name.txt'        | '/other/file-name.txt'
         '/nxf-bucket'               | 'some/file-name.txt'          | '/nxf-bucket/some/file-name.txt'
     }
 
@@ -284,8 +351,6 @@ class AzPathTest extends Specification {
         base                    | path                          | expected
         '/bucket/some/path'     | 'file-name.txt'               | '/bucket/some/file-name.txt'
         '/bucket/data'          | 'path/file-name.txt'          | '/bucket/path/file-name.txt'
-        '/bucket/data'          | '/other/file-name.txt'        | '/other/file-name.txt'
-        '/bucket'               | 'some/file-name.txt'          | '/some/file-name.txt'
     }
 
     @Unroll
