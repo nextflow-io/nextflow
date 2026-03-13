@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,6 +50,8 @@ class CmdDrop extends CmdBase {
     @Override
     void run() {
         Plugins.init()
-        new AssetManager(args[0]).drop(revision, force)
+        try (final manager = new AssetManager(args[0])) {
+            manager.drop(revision, force)
+        }
     }
 }

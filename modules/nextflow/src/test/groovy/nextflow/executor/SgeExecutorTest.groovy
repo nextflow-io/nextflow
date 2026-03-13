@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -283,7 +283,7 @@ class SgeExecutorTest extends Specification {
         7548349 0.00050 nf-exonera pditommaso   hqw   02/10/2014 12:32:56 long@node-hp0303.linux.crg.es      1
         7548904 0.00050 nf-exonera pditommaso   qw    02/10/2014 13:07:09                                    1
         7548960 0.00050 nf-exonera pditommaso   Eqw   02/10/2014 13:08:11                                    1
-        47261  11.00790 nf-alignRe bschuster    hr    04/07/2020 23:27:15 byslot.q@node06.pri.cortex2.al     4  
+        47261  11.00790 nf-alignRe bschuster    hr    04/07/2020 23:27:15 byslot.q@node06.pri.cortex2.al     4
         """.stripIndent().trim()
 
 
@@ -313,7 +313,7 @@ class SgeExecutorTest extends Specification {
               1261 0.17254 run_mappin epalumbo     qw    08/29/2014 11:28:11 short@node-ib0208bi.linux.crg.                                    4
               1262 0.17254 run_mappin epalumbo     Eqw   08/29/2014 11:28:31 short@node-ib0209bi.linux.crg.                                    4
               1263 0.17254 run_mappin epalumbo     Tr    08/29/2014 11:28:31 short@node-ib0209bi.linux.crg.                                    4
-              24261953 0.00005 nf-collect benjamin     T     03/18/2020 11:13:25 short.qc@compc038.hpc.in.bmrc.                                    1 
+              24261953 0.00005 nf-collect benjamin     T     03/18/2020 11:13:25 short.qc@compc038.hpc.in.bmrc.                                    1
               1265 0.17254 run_mappin epalumbo     S     08/29/2014 11:28:31 short@node-ib0209bi.linux.crg.                                    4
               1266 0.17254 run_mappin epalumbo     N     08/29/2014 11:28:31 short@node-ib0209bi.linux.crg.                                    4
               1267 0.17254 run_mappin epalumbo     h     08/29/2014 11:28:11 short@node-ib0208bi.linux.crg.                                    4

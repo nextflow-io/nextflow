@@ -52,7 +52,7 @@ process fastqc {
 
     script:
     """
-    echo 'meta: ${meta}`
+    echo 'meta: ${meta}'
     echo 'fastq: ${fastq}'
     echo 'extra_args: ${extra_args}'
     """
@@ -65,6 +65,8 @@ All {ref}`standard types <stdlib-types>` except for the dataflow types (`Channel
 
 Nextflow automatically stages `Path` inputs and `Path` collections (such as `Set<Path>`) into the task directory.
 
+### Nullable inputs
+
 By default, tasks fail if any input receives a `null` value. To allow `null` values, add `?` to the type annotation:
 
 ```nextflow
@@ -73,7 +75,7 @@ process cat_opt {
     input: Path?
 
     stage:
-    stageAs 'input.txt', input
+    stageAs input, 'input.txt'
 
     output:
     stdout()
@@ -85,9 +87,82 @@ process cat_opt {
 }
 ```
 
-### Stage directives
+### Record inputs
+
+Inputs with type `Record` can declare the name and type of each record field:
+
+```nextflow
+process fastqc {
+    input:
+    sample: Record {
+        id: String
+        fastq: Path
+    }
+
+    script:
+    """
+    echo 'id: ${sample.id}'
+    echo 'fastq: ${sample.fastq}'
+    """
+}
+```
+
+In this example, the record is staged into the task as `sample`, and `sample.fastq` is staged as an input file since the `fastq` field is declared with type `Path`.
+
+When the process is invoked, the incoming record should contain the specified fields, or else the run will fail. If the record has additional fields not declared by the process input, they are ignored.
+
+:::{tip}
+Record inputs are a useful way to select a subset of fields from a larger record. This way, the process only stages what it needs, allowing you to keep related data together in your workflow logic.
+:::
+
+You can achieve the same behavior using an external record type:
+
+```nextflow
+process fastqc {
+    input:
+    sample: Sample
+
+    script:
+    """
+    echo 'id: ${sample.id}'
+    echo 'fastq: ${sample.fastq}'
+    """
+}
+
+record Sample {
+    id: String
+    fastq: Path
+}
+```
+
+This approach is useful when the record type can be re-used elsewhere in the pipeline.
+
+### Tuple inputs
+
+Inputs with type `Tuple` can declare the name of each tuple component:
+
+```nextflow
+process fastqc {
+    input:
+    (id, fastq): Tuple<String,Path>
+
+    script:
+    """
+    echo 'id: ${id}'
+    echo 'fastq: ${fastq}'
+    """
+}
+```
+
+This pattern is called *tuple destructuring*. Each tuple component is staged into the task the same way as an individual input.
+
+The generic types inside the `Tuple<...>` annotation specify the type of each tuple compomnent and should match the component names. In the above example, `id` has type `String` and `fastq` has type `Path`.
+
+## Stage directives
 
 The `stage:` section defines custom staging behavior using *stage directives*.  It should be specified after the `input:` section. These directives serve the same purpose as input qualifiers such as `env` and `stdin` in the legacy syntax. 
+
+### Environment variables
 
 The `env` directive declares an environment variable in terms of task inputs:
 
@@ -106,6 +181,8 @@ process echo_env {
 }
 ```
 
+### Standard input (stdin)
+
 The `stdin` directive defines the standard input of the task script:
 
 ```nextflow
@@ -123,6 +200,12 @@ process cat {
 }
 ```
 
+### Custom file staging
+
+:::{versionchanged} 26.04.0
+The method signature for `stageAs` was changed from `(filePattern, value)` to `(value, filePattern)`.
+:::
+
 The `stageAs` directive stages an input file (or files) under a custom file pattern:
 
 ```nextflow
@@ -131,7 +214,7 @@ process blast {
     fasta: Path
 
     stage:
-    stageAs 'query.fa', fasta
+    stageAs fasta, 'query.fa'
 
     script:
     """
@@ -149,7 +232,7 @@ process grep {
     fasta: Path
 
     stage:
-    stageAs "${id}.fa", fasta
+    stageAs fasta, "${id}.fa"
 
     script:
     """
@@ -219,6 +302,46 @@ process foo {
     """
     exit 0
     """
+}
+```
+
+### Structured outputs
+
+Whereas legacy process outputs could only be structured using specific qualifiers like `val` and `tuple`, typed process outputs are regular values.
+
+The `record()` standard library function can be used to create a record:
+
+```nextflow
+process fastqc {
+    input:
+    sample: Record {
+        id: String
+        fastq: Path
+    }
+
+    output:
+    record(
+        id: sample.id,
+        fastqc: file('fastqc_logs')
+    )
+
+    script:
+    // ...
+}
+```
+
+The `tuple()` standard library function can be used to create a tuple:
+
+```nextflow
+process fastqc {
+    input:
+    (id, fastq): Tuple<String,Path>
+
+    output:
+    tuple(id, file('fastqc_logs'))
+
+    script:
+    // ...
 }
 ```
 

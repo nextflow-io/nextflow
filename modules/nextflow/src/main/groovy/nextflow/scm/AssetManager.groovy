@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -58,7 +58,7 @@ import org.eclipse.jgit.merge.MergeStrategy
 
 @Slf4j
 @CompileStatic
-class AssetManager {
+class AssetManager implements Closeable {
 
     /**
      * The folder all pipelines scripts are installed
@@ -782,7 +782,7 @@ class AssetManager {
             clone.setBranch(revision)
         if( deep )
             clone.setDepth(deep)
-        clone.call()
+        clone.call().close()
     }
 
     /**

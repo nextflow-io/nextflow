@@ -1,5 +1,7 @@
 # Cloud cache plugin for Nextflow
 
+## Summary
+
 The Cloud cache plugin provides cloud-based caching support for Nextflow pipelines. It enables workflow resume capability when using cloud storage as the work directory.
 
 ## Get Started

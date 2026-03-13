@@ -27,7 +27,7 @@ process foo {
   (name, txt): Tuple<String, Path>
 
   stage:
-  stageAs "${params.prefix}_${name}.txt", txt
+  stageAs txt, "${params.prefix}_${name}.txt"
 
   output:
   file("${params.prefix}_${name}.txt")

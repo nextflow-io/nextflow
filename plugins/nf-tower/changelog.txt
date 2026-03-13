@@ -1,5 +1,9 @@
 nf-tower changelog
 ===================
+1.21.0 - 28 Feb 2026
+- Fix ResourcesAggregator deadlock with virtual thread executor (#6840) [7ac4f3ea9]
+- Propagate workflow ID and watch URL to session metadata (#6242) [870c858af]
+
 1.20.0 - 8 Feb 2026
 - Fix spurious WARN when workflow fails before onFlowBegin (#6816) [584003712]
 - Fix LogsCheckpoint thread blocking shutdown for up to 90 seconds (#6787) [54a595805]
