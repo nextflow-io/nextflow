@@ -88,7 +88,9 @@ class TaskInputResolver {
     List<FileHolder> resolve(ProcessFileInput fileInput, Object value) {
         final ctx = task.context
         final normalized = normalizeInputToFiles(value, count, true)
-        final resolved = expandWildcards( fileInput.getFilePattern(ctx), normalized )
+        final resolved = fileInput.getStagingClosure() != null
+            ? expandStagingClosure( fileInput.getStagingClosure(), normalized )
+            : expandWildcards( fileInput.getFilePattern(ctx), normalized )
 
         count += resolved.size()
 
@@ -293,6 +295,24 @@ class TaskInputResolver {
         }
         m.appendTail(result)
         result.toString()
+    }
+
+    /**
+     * When a staging closure is provided for a collection of files,
+     * stage each file by applying the staging closure.
+     *
+     * @param stager
+     * @param files
+     */
+    protected static List<FileHolder> expandStagingClosure(Closure stagingClosure, List<FileHolder> files) {
+        assert files != null
+
+        final result = new ArrayBag(files.size())
+        for( final holder : files ) {
+            final stageName = stagingClosure.call(holder.getStorePath())
+            result << holder.withName(stageName)
+        }
+        return result
     }
 
     protected static Object singleItemOrList( List<FileHolder> items, boolean single, ScriptType type ) {

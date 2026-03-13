@@ -241,6 +241,28 @@ process grep {
 }
 ```
 
+:::{versionadded} 26.04.0
+:::
+
+Input files can be staged using a *staging closure* instead of a file pattern:
+
+```nextflow
+process ls {
+    input:
+    slice: Set<Path>
+
+    stage:
+    stageAs(slice) { file -> "${file.parent.name}/${file.name}" }
+
+    script:
+    """
+    ls -1 */*.txt | sort
+    """
+}
+```
+
+The staging closure should define the stage name for a given input file.
+
 See {ref}`process-reference-typed` for available stage directives.
 
 ## Outputs

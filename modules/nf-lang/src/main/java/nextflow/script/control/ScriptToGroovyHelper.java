@@ -21,6 +21,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.codehaus.groovy.ast.CodeVisitorSupport;
+import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.ast.Variable;
 import org.codehaus.groovy.ast.expr.ClosureExpression;
 import org.codehaus.groovy.ast.expr.Expression;
@@ -119,14 +120,21 @@ public class ScriptToGroovyHelper {
      * wrapping it in a closure if it references variables.
      *
      * @param node
+     * @param implicitParam
      */
-    public Expression transformToLazy(Expression node)  {
+    public Expression transformToLazy(Expression node, boolean implicitParam) {
         if( node instanceof ClosureExpression )
             return node;
         var vars = new VariableCollector().collect(node);
-        if( !vars.isEmpty() )
-            return closureX(stmt(node));
+        if( !vars.isEmpty() ) {
+            var parameters = implicitParam ? Parameter.EMPTY_ARRAY : null;
+            return closureX(parameters, stmt(node));
+        }
         return node;
+    }
+
+    public Expression transformToLazy(Expression node) {
+        return transformToLazy(node, true);
     }
 
     private class VariableCollector extends CodeVisitorSupport {
