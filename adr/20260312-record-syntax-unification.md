@@ -58,7 +58,7 @@ This asymmetry means the same concept (a record) is expressed with two different
 
 ## Considered Options
 
-### Option 1: Current syntax (status quo)
+### Option 1: Block syntax for inputs, call syntax for outputs (current state)
 
 Input uses a dedicated block syntax, output uses the `record()` function call:
 
@@ -122,7 +122,7 @@ process FASTQC {
 - Bad, because the output block mixes type declarations with value assignments (`Path = file(...)`).
 - Bad, because block syntax in process I/O diverges from the function-call style already established for `record()`.
 
-### Option 3: Unified `record()` function notation with assignment
+### Option 3: Call syntax for both inputs and outputs
 
 Use the `record()` function-call syntax for both inputs and outputs, with standard assignment:
 
