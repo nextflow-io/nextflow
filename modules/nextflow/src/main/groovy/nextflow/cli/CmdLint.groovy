@@ -40,6 +40,7 @@ import nextflow.script.formatter.ScriptFormattingVisitor
 import nextflow.script.parser.v2.ErrorListener
 import nextflow.script.parser.v2.ErrorSummary
 import nextflow.script.parser.v2.StandardErrorListener
+import nextflow.util.ClassLoaderFactory
 import nextflow.util.PathUtils
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage
@@ -62,7 +63,13 @@ class CmdLint extends CmdBase {
         names = ['-exclude'],
         description = 'File pattern to exclude from error checking (can be specified multiple times)'
     )
-    List<String> excludePatterns = ['.git', '.lineage', '.nf-test', '.nextflow', 'work', 'nf-test.config']
+    List<String> excludePatterns = ['.git', '.lineage', '.nextflow', '.nf-test', 'nf-test.config', 'work']
+
+    @Parameter(
+        names = ['-lib'],
+        description = 'Path to lib directory (default: ./lib)'
+    )
+    String libDir
 
     @Parameter(
         names = ['-o', '-output'],
@@ -121,7 +128,10 @@ class CmdLint extends CmdBase {
         if( !spaces && !tabs )
             spaces = 4
 
-        scriptParser = new ScriptParser()
+        final libPath = Path.of(libDir ?: 'lib')
+        final classLoader = ClassLoaderFactory.create([ libPath ])
+
+        scriptParser = new ScriptParser(classLoader)
         configParser = new ConfigParser()
         errorListener = outputMode == 'json'
             ? new JsonErrorListener()
