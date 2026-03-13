@@ -1060,15 +1060,13 @@ class K8sClientTest extends Specification {
         e.message == "K8s pod in Failed state"
     }
 
-    def 'should fallback to job status when pod is gone and not return hardcoded exit code' () {
+    def 'should fallback to job status when pod is gone and return exit code zero' () {
         given:
         def JOB_STATUS_JSON = '''
         {
             "apiVersion": "batch/v1",
             "kind": "Job",
-            "metadata": {
-                "name": "test-job"
-            },
+            "metadata": { "name": "nf-abc123" },
             "status": {
                 "succeeded": 1,
                 "startTime": "2025-01-15T10:00:00Z",
@@ -1084,22 +1082,21 @@ class K8sClientTest extends Specification {
             }
         }
         '''
+        def JOB_NAME = 'nf-abc123'
         def client = Spy(K8sClient)
-        final JOB_NAME = 'test-job'
 
         when:
-        def result = client.jobStateFallback0(JOB_NAME)
-
+        def result = client.jobState(JOB_NAME)
         then:
+        // findPodNameForJob returns null (pod is gone)
+        1 * client.findPodNameForJob(JOB_NAME) >> null
+        // falls back to jobStateFallback0 which calls jobStatus
         1 * client.jobStatus(JOB_NAME) >> new K8sResponseJson(JOB_STATUS_JSON)
-
         and:
-        result.terminated != null
         result.terminated.reason == 'Completed'
         result.terminated.startedAt == '2025-01-15T10:00:00Z'
         result.terminated.finishedAt == '2025-01-15T10:05:00Z'
-        // The key assertion: exitCode should not be present (null) so fallback to .exitcode file works
-        result.terminated.exitCode == null
-        result.terminated.exitcode == null
+        // K8s only reports succeeded==1 when exit code is 0, so synthetic status should include it
+        result.terminated.exitCode == 0
     }
 }
