@@ -91,6 +91,7 @@ class ProcessEntryHandler {
                 session.addIgniter {
                     printOutput(processName, output)
                 }
+                return output
             }
 
             // Create the body definition with execution logic
