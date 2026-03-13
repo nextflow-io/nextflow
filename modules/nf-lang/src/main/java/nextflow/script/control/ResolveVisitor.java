@@ -69,6 +69,7 @@ public class ResolveVisitor extends ClassCodeExpressionTransformer {
         ClassHelper.LIST_TYPE,
         ClassHelper.MAP_TYPE,
         ClassHelper.makeCached(java.nio.file.Path.class),
+        ClassHelper.makeCached(nextflow.script.types.Record.class),
         ClassHelper.SET_TYPE,
         ClassHelper.STRING_TYPE,
         ClassHelper.makeCached(nextflow.script.types.Tuple.class)
@@ -171,7 +172,7 @@ public class ResolveVisitor extends ClassCodeExpressionTransformer {
         var name = type.getName();
         var module = sourceUnit.getAST();
         for( var cn : module.getClasses() ) {
-            if( name.equals(cn.getName()) ) {
+            if( name.equals(cn.getNameWithoutPackage()) ) {
                 if( cn != type )
                     type.setRedirect(cn);
                 return true;
@@ -360,6 +361,7 @@ public class ResolveVisitor extends ClassCodeExpressionTransformer {
         property = transform(pe.getProperty());
         var result = new PropertyExpression(objectExpression, property, pe.isSafe());
         result.setSpreadSafe(pe.isSpreadSafe());
+        result.copyNodeMetaData(pe);
         // attempt to resolve property expression as a fully-qualified class name
         var className = lookupClassName(result);
         if( className != null ) {
