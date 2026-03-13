@@ -328,6 +328,11 @@ class TaskRun implements Cloneable {
     volatile int failCount
 
     /**
+     * The number of times the execution of the task has been aborted
+     */
+    volatile int abortedCount
+
+    /**
      * The number of times the submit of the task has been retried
      */
     volatile int submitRetries
