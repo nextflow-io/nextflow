@@ -81,7 +81,6 @@ class CmdModuleRun extends CmdRun {
         def resolver = new ModuleResolver(baseDir, client ?: new ModuleRegistryClient(registryConfig))
         Path moduleFile = resolver.installModule(reference, version)
         if( moduleFile ) {
-            println "Executing module..."
             args[0] = moduleFile.toAbsolutePath().toString()
             super.run()
         }

@@ -128,7 +128,7 @@ class ModuleResolver {
         if( storage.isInstalled(reference) ) {
             def installed = storage.getInstalledModule(reference)
             if( installed.installedVersion == version ) {
-                log.info "Module ${reference}@${installed.installedVersion} is already installed (version $version)"
+                log.debug "Module ${reference}@${installed.installedVersion} is already installed (version $version)"
                 return installed.mainFile
             }
 
