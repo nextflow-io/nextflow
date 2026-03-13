@@ -93,7 +93,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
     K8sTaskHandler( TaskRun task, K8sExecutor executor ) {
         super(task)
         this.executor = executor
-        this.client = executor.client
+        this.client = executor.getClient()
         this.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
         this.errorFile = task.workDir.resolve(TaskRun.CMD_ERRFILE)
         this.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)

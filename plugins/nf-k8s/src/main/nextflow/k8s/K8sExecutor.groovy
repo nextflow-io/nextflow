@@ -41,20 +41,20 @@ import org.pf4j.ExtensionPoint
 class K8sExecutor extends Executor implements ExtensionPoint {
 
     /**
-     * The Kubernetes HTTP client
-     */
-    private K8sClient client
-
-    protected K8sClient getClient() {
-        client
-    }
-
-    /**
      * @return The `k8s` configuration scope in the nextflow configuration object
      */
     @Memoized
     protected K8sConfig getK8sConfig() {
         new K8sConfig( (Map<String,Object>)session.config.k8s )
+    }
+
+    /**
+     * @return The Kubernetes HTTP client. Delegates to {@link K8sConfig#getClient()} on each
+     * invocation so that the underlying Guava cache can refresh the client configuration
+     * (including the service account token) when it expires.
+     */
+    protected K8sClient getClient() {
+        new K8sClient(k8sConfig.getClient())
     }
 
     /**
@@ -65,7 +65,6 @@ class K8sExecutor extends Executor implements ExtensionPoint {
         super.register()
         final k8sConfig = getK8sConfig()
         final clientConfig = k8sConfig.getClient()
-        this.client = new K8sClient(clientConfig)
         log.debug "[K8s] config=$k8sConfig; API client config=$clientConfig"
     }
 
