@@ -357,7 +357,7 @@ process PROKKA {
 
     output:
     record(
-        id: sample.meta.id,
+        meta: sample.meta,
         gff: file("${prefix}/*.gff"),
         gbk: file("${prefix}/*.gbk"),
         fna: file("${prefix}/*.fna"),
