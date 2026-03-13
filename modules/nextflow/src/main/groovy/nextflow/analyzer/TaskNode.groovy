@@ -3,6 +3,7 @@ package nextflow.analyzer
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.dag.DAG
+import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
@@ -44,12 +45,18 @@ class TaskNode {
         this.processor = processor
         this.name = vertex.label
         this.id = vertex.id
-        final config = processor.config
-        this.cpus = config.get('cpus') as int
-        this.memory = config.get('memory') as MemoryUnit
-        this.time = config.get('time') as Duration
-        this.disk = config.get('disk') as MemoryUnit
-        this.queue = config.get('queue') as String
+        final TaskConfig config = processor.config.createTaskConfig()
+        try {
+            this.cpus = config.getCpus()
+            this.memory = config.getMemory()
+            this.time = config.getTime()
+            this.disk = config.getDisk()
+            this.queue = config.queue as String
+        }
+        catch( IllegalStateException e ) {
+            log.warn "[SLURM TASK GROUPING] Process '${vertex.label}' uses dynamic resource directives — static grouping will use defaults: ${e.message}"
+            if( !this.cpus ) this.cpus = 1
+        }
         this.isParallelizable = false // Default value
         this.upstreamDependencies = new ArrayList<>()
         this.downstreamDependencies = new ArrayList<>()

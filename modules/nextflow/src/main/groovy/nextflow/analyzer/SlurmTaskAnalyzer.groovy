@@ -5,6 +5,8 @@ import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.dag.DAG
 import nextflow.processor.TaskProcessor
+import nextflow.util.Duration
+import nextflow.util.MemoryUnit
 
 /**
  * Analyzer for Slurm task grouping.
@@ -20,6 +22,13 @@ class SlurmTaskGroupAnalyzer {
 
     private Session session
     private DAG dag
+    private int nodeMaxCpus
+    private MemoryUnit nodeMaxMemory
+    private Duration nodeMaxTime
+
+    int getNodeMaxCpus() { nodeMaxCpus }
+    MemoryUnit getNodeMaxMemory() { nodeMaxMemory }
+    Duration getNodeMaxTime() { nodeMaxTime }
 
     SlurmTaskGroupAnalyzer(Session session) {
         this.session = session
@@ -37,6 +46,7 @@ class SlurmTaskGroupAnalyzer {
             return
         }
         log.debug "[SLURM TASK GROUPING] Task grouping enabled. Starting Slurm Analyzer"
+        readNodeCapacity()
         try {
             if( this.dag == null ) {
                 log.debug "[SLURM TASK GROUPING] No DAG available for analysis"
@@ -67,6 +77,36 @@ class SlurmTaskGroupAnalyzer {
       */
     private boolean isTaskGroupingEnabled() {
         return session.config.navigate('executor.slurm.taskGrouping', false) as boolean
+    }
+
+    /**
+     * Read node capacity limits from config.
+     * Expects an optional 'executor.slurm.nodeCapacity' block, e.g.:
+     *
+     *   executor {
+     *     slurm {
+     *       taskGrouping = true
+     *       nodeCapacity {
+     *         cpus   = 32
+     *         memory = '256 GB'
+     *         time   = '24h'
+     *       }
+     *     }
+     *   }
+     *
+     * Any omitted field is left null/0, meaning that dimension is unconstrained during grouping.
+     */
+    private void readNodeCapacity() {
+        final cpus = session.config.navigate('executor.slurm.nodeCapacity.cpus')
+        nodeMaxCpus = cpus ? cpus as int : 0
+
+        final memory = session.config.navigate('executor.slurm.nodeCapacity.memory')
+        nodeMaxMemory = memory ? new MemoryUnit(memory.toString()) : null
+
+        final time = session.config.navigate('executor.slurm.nodeCapacity.time')
+        nodeMaxTime = time ? new Duration(time.toString()) : null
+
+        log.debug "[SLURM TASK GROUPING] Node capacity — cpus=${nodeMaxCpus ?: 'unlimited'}, memory=${nodeMaxMemory ?: 'unlimited'}, time=${nodeMaxTime ?: 'unlimited'}"
     }
 
     /**
