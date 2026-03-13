@@ -17,6 +17,7 @@
 package nextflow.cli
 
 import java.nio.file.Path
+import java.nio.file.Files
 import java.time.Instant
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
@@ -57,6 +58,12 @@ class CmdLint extends CmdBase {
 
     @Parameter(description = 'List of paths to lint')
     List<String> args = []
+
+    @Parameter(
+        names = ['-files-from'],
+        description = 'Read list of paths to lint from file (one per line, use - for stdin)'
+    )
+    String filesFrom
 
     @Parameter(
         names = ['-exclude'],
@@ -112,6 +119,20 @@ class CmdLint extends CmdBase {
 
     @Override
     void run() {
+        // Read paths from --files-from if specified
+        if( filesFrom ) {
+            if( args == null )
+                args = []
+            final lines = filesFrom == '-'
+                ? new BufferedReader(new InputStreamReader(System.in)).readLines()
+                : Files.readAllLines(Path.of(filesFrom))
+            for( final line : lines ) {
+                final trimmed = line.trim()
+                if( trimmed )
+                    args.add(trimmed)
+            }
+        }
+
         if( !args )
             throw new AbortOperationException("Error: No input files were specified")
 
