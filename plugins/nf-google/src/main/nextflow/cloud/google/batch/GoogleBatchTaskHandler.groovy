@@ -403,11 +403,10 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
             if( fusionEnabled() && !disk ) {
                 final reqMachineType = task.config.getMachineType()
-                if ( reqMachineType ) {
-                    disk = new DiskResource(request: '375 GB', type: chooseFusionDiskType(reqMachineType) )
-                } else {
-                    disk = new DiskResource(request: '375 GB', type: 'local-ssd')
-                }
+                disk = new DiskResource(
+                    request: '375 GB',
+                    type: reqMachineType ? chooseFusionDiskType(reqMachineType) : 'local-ssd'
+                )
                 log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - adding local volume as fusion scratch: $disk"
             }
 

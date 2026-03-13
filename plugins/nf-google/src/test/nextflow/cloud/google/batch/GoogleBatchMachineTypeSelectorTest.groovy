@@ -161,4 +161,34 @@ class GoogleBatchMachineTypeSelectorTest extends Specification {
         'a3-highgpu-1g' | 0    | true
         'g2-standard-4' | 0    | true
     }
+
+    def 'should detect non-configurable local SSD'() {
+        expect:
+        final machineType = new MachineType(type: TYPE, family: FAMILY)
+        GoogleBatchMachineTypeSelector.INSTANCE.notConfigurableLocalSSD(machineType) == EXPECTED
+
+        where:
+        TYPE                        | FAMILY | EXPECTED
+        // c3/c3d with -lssd suffix → true
+        'c3-standard-8-lssd'        | 'c3'   | true
+        'c3d-standard-8-lssd'       | 'c3d'  | true
+        // c4/c4a/c4d with -lssd suffix → true
+        'c4-standard-8-lssd'        | 'c4'   | true
+        'c4a-standard-8-lssd'       | 'c4a'  | true
+        'c4d-standard-8-lssd'       | 'c4d'  | true
+        // a3 family → always true regardless of type
+        'a3-highgpu-8g'             | 'a3'   | true
+        'a3-megagpu-64g'            | 'a3'   | true
+        // a2-ultragpu- prefix → true regardless of family
+        'a2-ultragpu-1g'            | 'a2'   | true
+        'a2-ultragpu-8g'            | 'a2'   | true
+        // c3/c4 without -lssd suffix → false
+        'c3-standard-8'             | 'c3'   | false
+        'c4-standard-8'             | 'c4'   | false
+        // a2 non-ultragpu → false
+        'a2-highgpu-1g'             | 'a2'   | false
+        // unrelated families → false
+        'n2-standard-4'             | 'n2'   | false
+        'e2-standard-8'             | 'e2'   | false
+    }
 }

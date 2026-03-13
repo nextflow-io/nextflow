@@ -274,16 +274,20 @@ class GoogleBatchMachineTypeSelector {
                 return findFirstValidSize(requested, [8])
         }
 
-        // These families have a local SSD already attached and is not configurable.
-        if( ((machineType.family == "c3" || machineType.family == "c3d") && machineType.type.endsWith("-lssd")) ||
-            ((machineType.family == "c4" || machineType.family == "c4a" || machineType.family == "c4d") && machineType.type.endsWith("-lssd")) ||
-            machineType.family == "a3" ||
-            machineType.type.startsWith("a2-ultragpu-") )
+        if( notConfigurableLocalSSD(machineType) )
             return new MemoryUnit( 0 )
 
         // For other special families, the user must provide a valid size. If a family does not
         // support local disks, then Google Batch shall return an appropriate error.
         return requested
+    }
+
+    protected notConfigurableLocalSSD(MachineType machineType) {
+        // These families have a local SSD already attached and is not configurable.
+        return  ((machineType.family == "c3" || machineType.family == "c3d") && machineType.type.endsWith("-lssd")) ||
+                ((machineType.family == "c4" || machineType.family == "c4a" || machineType.family == "c4d") && machineType.type.endsWith("-lssd")) ||
+                machineType.family == "a3" ||
+                machineType.type.startsWith("a2-ultragpu-")
     }
 
     /**
