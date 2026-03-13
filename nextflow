@@ -18,7 +18,14 @@
 [[ "$NXF_DEBUG" == 'x' ]] && set -x
 NXF_VER=${NXF_VER:-'26.02.0-edge'}
 NXF_ORG=${NXF_ORG:-'nextflow-io'}
-NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
+if [[ "$HOME" == "/cygdrive/"* ]]; then
+  drive_letter="${HOME:10:1}"
+  replacement="$drive_letter:"
+  normalized_home="${HOME/\/cygdrive\/$drive_letter/$replacement}/.nextflow"
+  NXF_HOME=${NXF_HOME:-$normalized_home/.nextflow}
+else
+  NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
+fi
 NXF_PROT=${NXF_PROT:-'https'}
 NXF_BASE=${NXF_BASE:-$NXF_PROT://www.nextflow.io/releases}
 NXF_TEMP=${NXF_TEMP:-$TMPDIR}
