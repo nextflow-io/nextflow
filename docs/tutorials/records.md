@@ -135,7 +135,71 @@ record Sample {
 
 The `Sample` type also matches the updated `reads_pair_ch` channel that is passed as input from the entry workflow.
 
-<!-- TODO: workflow emits, `join` operator -->
+The `FASTQC` and `QUANT` processes produce the channels `fastqc_ch` and `quant_ch`. After migrating these processes to use records in the next section, `fastqc_ch` will contain records with the fields `id` and `fastqc`, and `quant_ch` will contain records with the fields `id` and `quant`. These two channels need to be joined in order to produce the channel `samples_ch`.
+
+At this point, you need to enable the `nextflow.preview.types` feature flag in enable *typed workflows*. Typed workflows use a new `join` operator that operates on records instead of tuples.
+
+Rewrite the `join` operator to join on the `id` field:
+
+```nextflow
+nextflow.preview.types = true
+
+workflow RNASEQ {
+    take:
+    read_pairs_ch: Channel<Sample>
+    transcriptome: Path
+
+    main:
+    index = INDEX(transcriptome)
+    fastqc_ch = FASTQC(reads_ch)
+    quant_ch = QUANT(reads_ch, index)
+    samples_ch = fastqc_ch.join(quant_ch, by: 'id')
+
+    // ...
+}
+
+record Sample {
+    id      : String
+    fastq_1 : Path
+    fastq_2 : Path
+}
+```
+
+Finally, the workflow emits need to be updated to accept records instead of tuples. While you could use the generic `Record` type, it is better to use an explicit record type so that downstream workflows know which record fields are available.
+
+Rewrite the workflow emits to use a record type for the `samples` output:
+
+```nextflow
+nextflow.preview.types = true
+
+workflow RNASEQ {
+    take:
+    read_pairs_ch: Channel<Sample>
+    transcriptome: Path
+
+    main:
+    index = INDEX(transcriptome)
+    fastqc_ch = FASTQC(reads_ch)
+    quant_ch = QUANT(reads_ch, index)
+    samples_ch = fastqc_ch.join(quant_ch, by: 'id')
+
+    emit:
+    samples : Channel<AlignedSample> = samples_ch
+    index   : Value<Path> = index
+}
+
+record Sample {
+    id      : String
+    fastq_1 : Path
+    fastq_2 : Path
+}
+
+record AlignedSample {
+    id      : String
+    fastqc  : Path
+    quant   : Path
+}
+```
 
 ### Migrating processes
 

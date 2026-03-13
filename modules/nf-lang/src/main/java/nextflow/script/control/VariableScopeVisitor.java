@@ -42,6 +42,7 @@ import nextflow.script.dsl.OutputDsl;
 import nextflow.script.dsl.ProcessDsl;
 import nextflow.script.dsl.ScriptDsl;
 import nextflow.script.dsl.WorkflowDsl;
+import nextflow.script.dsl.WorkflowDslV1;
 import nextflow.script.types.ParamsMap;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.ClassHelper;
@@ -87,6 +88,8 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
 
     private VariableScopeChecker vsc;
 
+    private boolean typingEnabled;
+
     private MethodNode currentDefinition;
 
     public VariableScopeVisitor(SourceUnit sourceUnit) {
@@ -102,6 +105,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
     public void declare() {
         var moduleNode = sourceUnit.getAST();
         if( moduleNode instanceof ScriptNode sn ) {
+            typingEnabled = sn.isTypingEnabled();
             for( var includeNode : sn.getIncludes() )
                 declareInclude(includeNode);
             declareParams(sn);
@@ -247,7 +251,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitWorkflow(WorkflowNode node) {
-        var classScope = ClassHelper.makeCached(node.isEntry() ? EntryWorkflowDsl.class : WorkflowDsl.class);
+        var classScope = workflowDsl(node.isEntry());
         if( node.isEntry() && paramsType != null ) {
             classScope = new ClassNode(classScope.getTypeClass());
             var paramsMethod = classScope.getDeclaredMethods("getParams").get(0);
@@ -273,6 +277,18 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
 
         currentDefinition = null;
         vsc.popScope();
+    }
+
+    private ClassNode workflowDsl(boolean entry) {
+        var result = new ClassNode(entry ? EntryWorkflowDsl.class : WorkflowDsl.class);
+        if( !typingEnabled ) {
+            var v1 = ClassHelper.makeCached(WorkflowDslV1.class);
+            for( var mn : v1.getMethods() ) {
+                if( vsc.isOperator(mn) )
+                    result.addMethod(mn);
+            }
+        }
+        return result;
     }
 
     private void copyVariableScope(VariableScope source) {

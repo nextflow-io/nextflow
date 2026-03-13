@@ -33,7 +33,6 @@ import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.operator.ControlMessage
-import groovyx.gpars.dataflow.operator.PoisonPill
 import nextflow.dag.NodeMarker
 import nextflow.datasource.SraExplorer
 import nextflow.exception.AbortOperationException
@@ -62,7 +61,7 @@ import org.codehaus.groovy.runtime.NullObject
 @CompileStatic
 class Channel  {
 
-    static public ControlMessage STOP = PoisonPill.getInstance()
+    static public ControlMessage STOP = CH.stop()
 
     static public NullObject VOID = NullObject.getNullObject()
 

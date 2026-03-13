@@ -121,7 +121,7 @@ params {
 }
 ```
 
-See {ref}`workflow-params-def` for more information about the `params` block.
+See {ref}`workflow-typed-params` for more information about the `params` block.
 
 :::{note}
 Parameters used only in the config file should be declared there, not in the script. Since rnaseq-nf has no such parameters, all parameters are declared in the script. See {ref}`config-params` for more information.
