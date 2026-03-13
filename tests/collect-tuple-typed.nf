@@ -32,8 +32,8 @@ process merge {
   (barcode, seq_ids, bam, bai): Tuple<String, Bag<String>, Bag<Path>, Bag<Path>>
 
   stage:
-  stageAs 'bam?', bam
-  stageAs 'bai?', bai
+  stageAs bam, 'bam?'
+  stageAs bai, 'bai?'
 
   script:
   """
