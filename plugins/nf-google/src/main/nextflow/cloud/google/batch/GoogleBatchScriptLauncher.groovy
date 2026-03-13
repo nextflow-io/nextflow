@@ -26,6 +26,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.cloud.google.GoogleOpts
 import nextflow.executor.BashWrapperBuilder
+import nextflow.executor.SimpleFileCopyStrategy
 import nextflow.extension.FilesEx
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskRun
@@ -56,6 +57,13 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
 
     GoogleBatchScriptLauncher(TaskBean bean, Path remoteBinDir) {
         super(bean)
+        // Default to 'copy' stage-out mode on Google Batch. Task outputs are
+        // unstaged from local scratch to a gcsfuse-mounted work directory, which
+        // is always a cross-device operation. Using 'mv' for this fails when
+        // output declarations overlap (directory moved before its children) or
+        // when staged input symlinks resolve to the target path.
+        if( !bean.stageOutMode )
+            ((SimpleFileCopyStrategy) copyStrategy).stageoutMode = 'copy'
         // keep track the google storage work dir
         this.remoteWorkDir = (CloudStoragePath) bean.workDir
         this.remoteBinDir = toContainerMount(remoteBinDir)
