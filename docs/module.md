@@ -389,7 +389,7 @@ The argument can be either a `scope/name` reference (for an already-installed mo
 Your module directory must include:
 
 - `main.nf`: The module entry point
-- `meta.yaml`: Module metadata (name, description, version, etc.)
+- `meta.yml`: Module spec (name, description, version, etc.)
 - `README.md`: Module documentation
 
 Authentication is required for publishing and can be provided via the `NXF_REGISTRY_TOKEN` environment variable or in your configuration:
@@ -432,8 +432,8 @@ modules/
     └── module-name/
         ├── .module-info     # Integrity checksum (generated automatically)
         ├── README.md        # Documentation (required for publishing)
-        ├── main.nf          # Module entry point (required)
-        ├── meta.yaml        # Module metadata (required for publishing)
+        ├── main.nf          # Module script (required)
+        ├── meta.yml         # Module spec (required for publishing)
         ├── resources/       # Optional: module binaries and resources
         └── templates/       # Optional: process templates
 ```

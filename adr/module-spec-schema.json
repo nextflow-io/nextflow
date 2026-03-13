@@ -2,12 +2,12 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/nextflow-io/schemas/main/module/v1/schema.json",
   "title": "Nextflow Module Schema",
-  "description": "Schema for Nextflow module meta.yaml files, supporting both nf-core community patterns and the Nextflow module system",
+  "description": "Schema for Nextflow module meta.yml files, supporting both nf-core community patterns and the Nextflow module system",
   "type": "object",
   "properties": {
     "name": {
       "type": "string",
-      "description": "Module name. Can be a simple identifier (e.g., 'fastqc', 'bwa_mem') for local/nf-core modules, or a fully qualified scoped name (e.g., 'nf-core/fastqc', 'myorg/custom') for registry modules. Note: The '@' prefix is only used in DSL include statements, not in meta.yaml",
+      "description": "Module name. Can be a simple identifier (e.g., 'fastqc', 'bwa_mem') for local/nf-core modules, or a fully qualified scoped name (e.g., 'nf-core/fastqc', 'myorg/custom') for registry modules.",
       "examples": ["fastqc", "bwa_mem", "nf-core/fastqc", "myorg/salmon-quant"],
       "pattern": "^([a-z0-9][a-z0-9-]*/)?[a-z][a-z0-9_-]*$"
     },

@@ -65,7 +65,7 @@ license: MIT
         def moduleDir = tempDir.resolve('my-module')
         Files.createDirectories(moduleDir)
 
-        // Only create main.nf, missing meta.yaml and README.md
+        // Only create main.nf, missing meta.yml and README.md
         moduleDir.resolve('main.nf').text = 'process TEST { }'
 
         and:

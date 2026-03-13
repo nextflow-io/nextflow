@@ -1308,7 +1308,7 @@ The `module` command provides a comprehensive system for managing reusable, regi
 : Publish a module to the registry, making it available for others to install.
 : The argument can be either a `scope/name` reference (for an already-installed module) or a local directory path containing the module files.
 : Requires authentication via `NXF_REGISTRY_TOKEN` environment variable or `registry.apiKey` configuration.
-: The module directory must contain `main.nf`, `meta.yaml`, and `README.md`.
+: The module directory must contain `main.nf`, `meta.yml`, and `README.md`.
 : The following options are available:
 
   `-dry-run`

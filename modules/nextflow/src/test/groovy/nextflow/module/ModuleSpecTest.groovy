@@ -32,9 +32,9 @@ class ModuleSpecTest extends Specification {
     @TempDir
     Path tempDir
 
-    def 'should load valid manifest' () {
+    def 'should load valid spec' () {
         given:
-        def metaYaml = tempDir.resolve('meta.yaml')
+        def metaYaml = tempDir.resolve('meta.yml')
         metaYaml.text = '''
 name: nf-core/fastqc
 version: 1.0.0
@@ -50,21 +50,21 @@ requires:
 '''
 
         when:
-        def manifest = ModuleSpec.load(metaYaml)
+        def spec = ModuleSpec.load(metaYaml)
 
         then:
-        manifest.name == 'nf-core/fastqc'
-        manifest.version == '1.0.0'
-        manifest.description == 'FastQC quality control'
-        manifest.authors == ['John Doe']
-        manifest.license == 'MIT'
-        manifest.keywords == ['quality-control', 'fastq']
-        manifest.requires == ['nextflow': '>=24.04.0']
+        spec.name == 'nf-core/fastqc'
+        spec.version == '1.0.0'
+        spec.description == 'FastQC quality control'
+        spec.authors == ['John Doe']
+        spec.license == 'MIT'
+        spec.keywords == ['quality-control', 'fastq']
+        spec.requires == ['nextflow': '>=24.04.0']
     }
 
-    def 'should fail to load non-existent manifest' () {
+    def 'should fail to load non-existent spec' () {
         given:
-        def metaYaml = tempDir.resolve('meta.yaml')
+        def metaYaml = tempDir.resolve('meta.yml')
 
         when:
         ModuleSpec.load(metaYaml)
@@ -73,9 +73,9 @@ requires:
         thrown(AbortOperationException)
     }
 
-    def 'should validate complete manifest' () {
+    def 'should validate complete spec' () {
         given:
-        def manifest = new ModuleSpec(
+        def spec = new ModuleSpec(
             name: 'nf-core/fastqc',
             version: '1.0.0',
             description: 'FastQC quality control',
@@ -83,34 +83,34 @@ requires:
         )
 
         when:
-        def errors = manifest.validate()
+        def errors = spec.validate()
 
         then:
         errors.isEmpty()
-        manifest.isValid()
+        spec.isValid()
     }
 
     def 'should detect missing required fields' () {
         given:
-        def manifest = new ModuleSpec(
+        def spec = new ModuleSpec(
             name: 'nf-core/fastqc'
             // missing version, description, license
         )
 
         when:
-        def errors = manifest.validate()
+        def errors = spec.validate()
 
         then:
         errors.size() == 3
         errors.any { it.contains('version') }
         errors.any { it.contains('description') }
         errors.any { it.contains('license') }
-        !manifest.isValid()
+        !spec.isValid()
     }
 
     def 'should validate version format' () {
         given:
-        def manifest = new ModuleSpec(
+        def spec = new ModuleSpec(
             name: 'nf-core/fastqc',
             version: version,
             description: 'Test',
@@ -118,7 +118,7 @@ requires:
         )
 
         when:
-        def errors = manifest.validate()
+        def errors = spec.validate()
 
         then:
         errors.isEmpty() == valid
@@ -135,7 +135,7 @@ requires:
 
     def 'should validate module name format' () {
         given:
-        def manifest = new ModuleSpec(
+        def spec = new ModuleSpec(
             name: name,
             version: '1.0.0',
             description: 'Test',
@@ -143,7 +143,7 @@ requires:
         )
 
         when:
-        def errors = manifest.validate()
+        def errors = spec.validate()
 
         then:
         errors.isEmpty() == valid

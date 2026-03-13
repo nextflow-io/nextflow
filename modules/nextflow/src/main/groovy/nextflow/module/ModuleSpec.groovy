@@ -25,7 +25,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 /**
- * Represents a module manifest (meta.yaml) with validation
+ * Represents a module spec (meta.yml) with validation
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
@@ -42,38 +42,38 @@ class ModuleSpec {
     Map<String, String> requires
 
     /**
-     * Load a module manifest from a meta.yaml file
+     * Load a module spec from a meta.yml file
      *
-     * @param metaYamlPath Path to meta.yaml
+     * @param metaYamlPath Path to meta.yml
      * @return ModuleSpec instance
      */
     static ModuleSpec load(Path metaYamlPath) {
         if( !Files.exists(metaYamlPath) ) {
-            throw new AbortOperationException("Module manifest not found: ${metaYamlPath}")
+            throw new AbortOperationException("Module spec not found: ${metaYamlPath}")
         }
 
         try {
             def yaml = new Yaml()
             def data = yaml.load(Files.newInputStream(metaYamlPath)) as Map<String, Object>
 
-            def manifest = new ModuleSpec()
-            manifest.name = data.name as String
-            manifest.version = data.version as String
-            manifest.description = data.description as String
-            manifest.authors = data.authors as List<String> ?: []
-            manifest.license = data.license as String
-            manifest.keywords = data.keywords as List<String> ?: []
-            manifest.requires = data.requires as Map<String, String> ?: [:]
+            def spec = new ModuleSpec()
+            spec.name = data.name as String
+            spec.version = data.version as String
+            spec.description = data.description as String
+            spec.authors = data.authors as List<String> ?: []
+            spec.license = data.license as String
+            spec.keywords = data.keywords as List<String> ?: []
+            spec.requires = data.requires as Map<String, String> ?: [:]
 
-            return manifest
+            return spec
         }
         catch( Exception e ) {
-            throw new AbortOperationException("Failed to parse module manifest: ${metaYamlPath}", e)
+            throw new AbortOperationException("Failed to parse module spec: ${metaYamlPath}", e)
         }
     }
 
     /**
-     * Validate the module manifest for required fields
+     * Validate the module spec for required fields
      *
      * @return List of validation errors (empty if valid)
      */
@@ -107,7 +107,7 @@ class ModuleSpec {
     }
 
     /**
-     * Check if the manifest is valid
+     * Check if the spec is valid
      *
      * @return true if valid, false otherwise
      */

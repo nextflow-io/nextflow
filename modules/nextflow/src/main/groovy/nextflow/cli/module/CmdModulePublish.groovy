@@ -88,21 +88,21 @@ class CmdModulePublish extends CmdBase {
             )
         }
 
-        // Step 2: Load and validate manifest
+        // Step 2: Load and validate spec
         def manifestPath = moduleDir.resolve(ModuleStorage.MODULE_MANIFEST_FILE)
-        def manifest = ModuleSpec.load(manifestPath)
+        def spec = ModuleSpec.load(manifestPath)
 
-        def manifestErrors = manifest.validate()
+        def manifestErrors = spec.validate()
         if (!manifestErrors.isEmpty()) {
             throw new AbortOperationException(
-                "Module manifest validation failed:\n" + manifestErrors.collect { "  - ${it}" }.join('\n')
+                "Module spec validation failed:\n" + manifestErrors.collect { "  - ${it}" }.join('\n')
             )
         }
 
-        log.info "Module validated: ${manifest.name}@${manifest.version}"
+        log.info "Module validated: ${spec.name}@${spec.version}"
 
         if (dryRun) {
-            printDryRunInfo(manifest)
+            printDryRunInfo(spec)
             return
         }
 
@@ -114,11 +114,11 @@ class CmdModulePublish extends CmdBase {
 
         def registryConfig = config.navigate('registry') as RegistryConfig ?: new RegistryConfig()
 
-        publishModule(moduleDir, registryConfig, manifest)
+        publishModule(moduleDir, registryConfig, spec)
 
     }
 
-    private void publishModule(Path moduleDir, RegistryConfig registryConfig, ModuleSpec manifest){
+    private void publishModule(Path moduleDir, RegistryConfig registryConfig, ModuleSpec spec){
         log.info "Creating module bundle..."
         def tempBundleFile = Files.createTempFile("nf-module-publish-", ".tar.gz")
 
@@ -131,7 +131,7 @@ class CmdModulePublish extends CmdBase {
 
             // Create publish request as a map (npr-api will serialize it)
             def request = [
-                version: manifest.version,
+                version: spec.version,
                 bundle: bundleBytes
             ]
 
@@ -139,7 +139,7 @@ class CmdModulePublish extends CmdBase {
             final registry = registryUrl ?: registryConfig.url
             log.info "Publishing module to registry: ${registryUrl ?: registryConfig.url}"
             def registryClient = new ModuleRegistryClient(registryConfig)
-            def response = registryClient.publishModule(manifest.name, request, registry)
+            def response = registryClient.publishModule(spec.name, request, registry)
 
             if (useModuleReference) {
                 // If publish is performed using the module reference we should create/update the .module-info with the correct checksum
@@ -152,13 +152,13 @@ class CmdModulePublish extends CmdBase {
             println "✓ Module published successfully!"
             println ""
             println "Module details:"
-            println "  Name: ${manifest.name}"
-            println "  Version: ${manifest.version}"
+            println "  Name: ${spec.name}"
+            println "  Version: ${spec.version}"
             println "  DownloadUrl: ${response.downloadUrl}"
 
             println ""
             println "Others can now install this module using:"
-            println "  nextflow module install ${manifest.name}"
+            println "  nextflow module install ${spec.name}"
 
         } finally {
             // Clean up temporary bundle file
@@ -172,23 +172,23 @@ class CmdModulePublish extends CmdBase {
         }
     }
 
-    private void printDryRunInfo(ModuleSpec manifest) {
+    private void printDryRunInfo(ModuleSpec spec) {
         println "✓ Module structure is valid"
         println ""
         println "Module details:"
-        println "  Name: ${manifest.name}"
-        println "  Version: ${manifest.version}"
-        println "  Description: ${manifest.description}"
-        println "  License: ${manifest.license}"
-        if( manifest.authors ) {
-            println "  Authors: ${manifest.authors.join(', ')}"
+        println "  Name: ${spec.name}"
+        println "  Version: ${spec.version}"
+        println "  Description: ${spec.description}"
+        println "  License: ${spec.license}"
+        if( spec.authors ) {
+            println "  Authors: ${spec.authors.join(', ')}"
         }
-        if( manifest.keywords ) {
-            println "  Keywords: ${manifest.keywords.join(', ')}"
+        if( spec.keywords ) {
+            println "  Keywords: ${spec.keywords.join(', ')}"
         }
-        if( manifest.requires ) {
+        if( spec.requires ) {
             println "  Requires:"
-            manifest.requires.each { name, version ->
+            spec.requires.each { name, version ->
                 println "    - ${name}: ${version}"
             }
         }

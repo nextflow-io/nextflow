@@ -11,13 +11,13 @@
 ### Version 2.7 (2026-03-09)
 - **Renamed `.checksum` to `.module-info`**: Leaves room for additional properties in the future
 - **Removed `@` prefix from module scopes**: Local modules are distinguished from remote modules by presence/absence of `./` prefix
-- **Removed version pinning from config**: Installed module versions are now inferred from the `meta.yaml` of each module in the `modules/` directory instead of being declared in `nextflow.config`
+- **Removed version pinning from config**: Installed module versions are now inferred from the `meta.yml` of each module in the `modules/` directory instead of being declared in `nextflow.config`
 
 ### Version 2.6 (2026-01-28)
 - **Removed module parameters**: Module parameters specification moved to separate spec document.
 
 ### Version 2.5 (2026-01-23)
-- **Module parameters**: Replaced structured tool arguments with general module parameters defined in `meta.yaml`
+- **Module parameters**: Replaced structured tool arguments with general module parameters defined in `meta.yml`
 - **Simplified tools section**: Removed `args` property from tools; tool arguments now configured via module parameters
 - **Simplified `requires` block**: Removed `plugins`, `modules`, and `subworkflows` sub-properties; `requires` now only contains `nextflow` version constraint
 - **Process modules focus**: Removed sub-workflow references; spec is now focused on process modules only
@@ -74,7 +74,7 @@ include { MY_PROCESS } from './modules/my-process.nf'
 
 **Module Naming**: Scoped modules `scope/name` (e.g., `nf-core/salmon`, `myorg/custom`). Local paths supported for backwards compatibility. No nested paths with the module are allowed - each module must have a `main.nf` as the entry point.
 
-**Version Resolution**: Installed module versions are inferred from the `meta.yaml` of each module in the `modules/` directory. If a module is not present locally, the latest available version is downloaded from the registry.
+**Version Resolution**: Installed module versions are inferred from the `meta.yml` of each module in the `modules/` directory. If a module is not present locally, the latest available version is downloaded from the registry.
 
 **Resolution Order**:
 1. Check local `modules/scope/name/` exists
@@ -86,7 +86,7 @@ include { MY_PROCESS } from './modules/my-process.nf'
 | Local State | Action |
 |-------------|--------|
 | Missing | Download latest from registry |
-| Exists, checksum valid | Use local module (version from `meta.yaml`) |
+| Exists, checksum valid | Use local module (version from `meta.yml`) |
 | Exists, checksum mismatch | **Warn**: locally modified, will NOT replace unless `-force` is used |
 
 **Key Behaviors**:
@@ -120,7 +120,7 @@ registry {
 }
 ```
 
-**Module Spec** (`meta.yaml`):
+**Module Spec** (`meta.yml`):
 ```yaml
 name: nf-core/bwa-align
 version: 1.2.4                    # This module's version
@@ -158,7 +158,7 @@ This avoids introducing new notation that would require additional parser suppor
 
 **Module Resolution**:
 
-Installed module versions are inferred from the `meta.yaml` file for each module in the `modules/` directory.
+Installed module versions are inferred from the `meta.yml` file for each module in the `modules/` directory.
 
 ### 3. Unified Nextflow Registry
 
@@ -190,7 +190,7 @@ Note: The `{name}` parameter includes the namespace prefix (e.g., "nf-core/fastq
 
 **Artifact Types**:
 - **Plugins**: JAR files with JSON metadata, resolved at startup
-- **Modules**: Source archives (.nf + meta.yaml), resolved at parse time
+- **Modules**: Source archives (.nf + meta.yml), resolved at parse time
 
 **Benefits**:
 - Reuses existing infrastructure (HTTP service, S3 storage, authentication)
@@ -318,7 +318,7 @@ Display the status of all modules, comparing what is configured in `nextflow.con
 
 **Output columns**:
 - Module name (`scope/name`)
-- Installed version (from `modules/scope/name/meta.yaml`)
+- Installed version (from `modules/scope/name/meta.yml`)
 - Latest available version (from registry)
 - Status indicator (up-to-date, outdated, missing)
 
@@ -364,7 +364,7 @@ Publish a module to the Nextflow registry, making it available for others to ins
 - `-dry-run`: Validate without publishing
 
 **Behavior**:
-1. Validates `meta.yaml` schema and required fields (name, version, description)
+1. Validates `meta.yml` schema and required fields (name, version, description)
 2. Verifies that `main.nf` exists and is valid Nextflow syntax
 3. Verifies that `README.md` documentation is present
 4. Authenticates with registry using configured credentials
@@ -372,7 +372,7 @@ Publish a module to the Nextflow registry, making it available for others to ins
 6. Publishes the release, making it available for installation
 
 **Requirements**:
-- Valid `meta.yaml` with name, version, and description
+- Valid `meta.yml` with name, version, and description
 - `main.nf` entry point file
 - `README.md` documentation
 - Authentication token configured in `registry.auth` or `NXF_REGISTRY_TOKEN`
@@ -391,12 +391,12 @@ Everything within the module directory should be uploaded. Module bundle should 
 ```
 my-module/
 ├── main.nf      # Required: entry point for module
-├── meta.yaml    # Required: Module spec (version, metadata, I/O specs)
+├── meta.yml    # Required: Module spec (version, metadata, I/O specs)
 ├── README.md    # Required: Module description
 └── tests/       # Optional tests
 ```
 
-**Module Spec extension** (`meta.yaml`):
+**Module Spec extension** (`meta.yml`):
 ```yaml
 name: nf-core/bwa-align
 version: 1.2.4              # This module's version
@@ -418,16 +418,16 @@ project-root/
     ├── nf-core/
     │   ├── bwa-align/
     │   │   ├── .module-info        # Cached registry checksum
-    │   │   ├── meta.yaml
+    │   │   ├── meta.yml
     │   │   └── main.nf             # Required entry point
     │   └── samtools/view/
     │       ├── .module-info
-    │       ├── meta.yaml
+    │       ├── meta.yml
     │       └── main.nf             # Required entry point
     └── myorg/
         └── custom-process/
             ├── .module-info
-            ├── meta.yaml
+            ├── meta.yml
             └── main.nf             # Required entry point
 ```
 
@@ -455,12 +455,12 @@ project-root/
 1. Parse `include` statements → extract module names (e.g., `nf-core/bwa-align`)
 2. For each module:
    a. Check local `modules/scope/name/` exists
-      - If exists → read installed version from `modules/scope/name/meta.yaml`
+      - If exists → read installed version from `modules/scope/name/meta.yml`
       - If missing → download latest version from registry
    b. Verify local module integrity against `.module-info` file
       - Checksum mismatch → warn and do NOT override (local changes detected)
 3. On download: store module to `modules/scope/name/` with `.module-info` file
-4. Read `meta.yaml` file: Validates Nextflow requirement → Fail if not fulfilled
+4. Read `meta.yml` file: Validates Nextflow requirement → Fail if not fulfilled
 5. Parse module's `main.nf` file → make processes available
 
 **Security**:
@@ -484,7 +484,7 @@ project-root/
 | Metadata | JSON spec | YAML spec |
 | Naming | `nf-amazon` | `nf-core/salmon` |
 | Cache Location | `$NXF_HOME/plugins/` | `modules/scope/name/` |
-| Version Config | `plugins {}` in config | `meta.yaml` in `modules/` directory |
+| Version Config | `plugins {}` in config | `meta.yml` in `modules/` directory |
 | Registry Path | `/api/v1/plugins/` | `/api/modules/{name}` |
 
 ## Rationale
@@ -495,9 +495,9 @@ project-root/
 - Lower operational overhead
 - Type-specific handling maintains separation of concerns
 
-**Why infer versions from `meta.yaml` instead of pinning in a separate file?**
+**Why infer versions from `meta.yml` instead of pinning in a separate file?**
 - Simple: install a version once and it is captured in the module files
-- Reproducibility via committing the `modules/` directory (including `meta.yaml`) to the project git repository
+- Reproducibility via committing the `modules/` directory (including `meta.yml`) to the project git repository
 - Reduces configuration burden: no need to keep config in sync with installed state
 
 **Why parse-time resolution?**
@@ -520,12 +520,12 @@ project-root/
 
 **Positive**:
 - Enables ecosystem-wide code reuse
-- Reproducible workflows via committing the `modules/` directory (including `meta.yaml`) to the project git repository
+- Reproducible workflows via committing the `modules/` directory (including `meta.yml`) to the project git repository
 - Centralized discovery and distribution via unified registry
 - Minimal operational overhead (single registry for both plugins and modules)
 - Module scoping enables organization namespaces and private registries
 - Local `modules/` directory provides project isolation
-- No version duplication: installed `meta.yaml` is the single source of truth
+- No version duplication: installed `meta.yml` is the single source of truth
 - Simple module structure: each module has single `main.nf` entry point
 
 **Negative**:
@@ -548,7 +548,7 @@ project-root/
 
 ## Appendix A: Module Schema Specification
 
-This appendix defines the JSON schema for module `meta.yaml` files. The schema maintains backward compatibility with existing nf-core module metadata patterns while supporting the new Nextflow module system features.
+This appendix defines the JSON schema for module `meta.yml` files. The schema maintains backward compatibility with existing nf-core module metadata patterns while supporting the new Nextflow module system features.
 
 **Schema File:** [module-spec-schema.json](module-spec-schema.json)
 **Published URL:** `https://registry.nextflow.io/schemas/module-spec/v1.0.0`
@@ -761,7 +761,7 @@ output:
 
 #### Schema Validation
 
-Use the schema reference in your `meta.yaml`:
+Use the schema reference in your `meta.yml`:
 
 ```yaml
 # yaml-language-server: $schema=https://registry.nextflow.io/schemas/module-spec/v1.0.0
