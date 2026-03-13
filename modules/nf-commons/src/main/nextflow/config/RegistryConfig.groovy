@@ -36,15 +36,15 @@ import nextflow.script.dsl.Description
 @CompileStatic
 class RegistryConfig implements ConfigScope {
 
-    final static public String DEFAULT_REGISTRY_URL = 'https://registry.nextflow.io/api'
+    public static final String DEFAULT_REGISTRY_URL = 'https://registry.nextflow.io/api'
 
     @ConfigOption
     @Description("Registry URL or list of registry URLs in priority order (primary URL first)")
-    final private Collection<String> url
+    private final Collection<String> url
 
     @ConfigOption
     @Description("API key for authenticating with the primary registry")
-    final private String apiKey
+    private final String apiKey
 
     /* required by extension point -- do not remove */
     RegistryConfig() {

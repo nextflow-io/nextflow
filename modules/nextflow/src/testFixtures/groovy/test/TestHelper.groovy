@@ -16,17 +16,16 @@
 
 package test
 
-import com.google.common.jimfs.JimfsPath
-import nextflow.util.KryoHelper
-import nextflow.util.PathSerializer
-
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.zip.GZIPInputStream
 
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
+import com.google.common.jimfs.JimfsPath
 import groovy.transform.Memoized
+import nextflow.util.KryoHelper
+import nextflow.util.PathSerializer
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>

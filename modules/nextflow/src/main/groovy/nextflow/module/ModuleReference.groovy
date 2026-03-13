@@ -31,7 +31,7 @@ import java.util.regex.Pattern
 @EqualsAndHashCode
 class ModuleReference {
 
-    // Pattern allows: optional @, scope with letters/digits/hyphens/dots/underscores, name segments separated by slashes (no trailing slash)
+    // Pattern allows: scope with letters/digits/hyphens/dots/underscores, name segments separated by slashes (no trailing slash)
     // Scope: starts with letter/digit, followed by letters/digits/dots/underscores/hyphens
     // Name: one or more segments (each starting with letter, followed by letters/digits/underscores/hyphens), separated by slashes
     private static final Pattern MODULE_NAME_PATTERN = ~/^([a-z0-9][a-z0-9._\-]*)\/([a-z][a-z0-9._\-]*(?:\/[a-z][a-z0-9._\-]*)*)$/
@@ -47,7 +47,7 @@ class ModuleReference {
     }
 
     /**
-     * Parse a module reference from a string in "@scope/name" or "scope/name" format
+     * Parse a module reference from a string as "scope/name"
      *
      * @param source The module reference string
      * @return A ModuleReference object

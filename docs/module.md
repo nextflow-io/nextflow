@@ -362,8 +362,8 @@ $ nextflow module remove nf-core/fastqc
 
 By default, both the module files and the `.module-info` file are removed. Use the flags below to control this behaviour:
 
-- `-keep-files` — Remove the `.module-info` file created at install but keep the rest of files
-- `-force` — Force removal even if the module has no `.module-info` file (i.e. not installed from a registry) or has local modifications
+- `-keep-files`: Remove the `.module-info` file created at install but keep the rest of files
+- `-force`: Force removal even if the module has no `.module-info` file (i.e. not installed from a registry) or has local modifications
 
 ### Viewing module information
 
@@ -430,7 +430,7 @@ Registry modules follow a standard directory structure:
 modules/
 └── scope/
     └── module-name/
-        ├── .checksum        # Integrity checksum (generated automatically)
+        ├── .module-info     # Integrity checksum (generated automatically)
         ├── README.md        # Documentation (required for publishing)
         ├── main.nf          # Module entry point (required)
         ├── meta.yaml        # Module metadata (required for publishing)

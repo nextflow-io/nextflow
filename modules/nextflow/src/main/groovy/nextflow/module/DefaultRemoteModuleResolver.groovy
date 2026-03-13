@@ -65,10 +65,7 @@ class DefaultRemoteModuleResolver implements RemoteModuleResolver {
             log.debug "Module ${reference} resolved to ${mainFile}"
             return mainFile
         } catch (Exception e) {
-            throw new IllegalModulePath(
-                "Failed to resolve remote module ${moduleName}: ${e.message}",
-                e
-            )
+            throw new IllegalModulePath("Failed to resolve remote module ${moduleName}: ${e.message}", e)
         }
     }
 
