@@ -130,8 +130,9 @@ Each tuple has three elements -- the sample ID (inferred from the file names) an
 
 This approach will not work with static typing because `fromFilePairs()` does not have a well-defined return type. A more robust way to model a collection of samples is with a *samplesheet* -- a CSV file specifying samples as rows and sample fields as columns.
 
-The test dataset for rnaseq-nf can be modeled with the following samplesheet:
+Create the following samplesheet to represent the test data:
 
+**`data/allreads.csv`**
 ```
 id,fastq_1,fastq_2
 gut,https://raw.githubusercontent.com/nextflow-io/rnaseq-nf/refs/heads/master/data/ggal/ggal_gut_1.fq,https://raw.githubusercontent.com/nextflow-io/rnaseq-nf/refs/heads/master/data/ggal/ggal_gut_2.fq
@@ -161,7 +162,7 @@ read_pairs_ch = channel.of(params.reads)
     }
 ```
 
-The samplesheet loading can be simplified further by modeling `params.reads` as a collection of records instead of a file path.
+This code can be simplified further by modeling `params.reads` as a collection of records instead of a file path.
 
 Add a header row to the samplesheet:
 
@@ -199,7 +200,7 @@ read_pairs_ch = channel.fromList(params.reads)
 ```
 
 :::{note}
-Collection params can also be loaded from JSON and YAML samplesheets. See {ref}`workflow-typed-params` for more information.
+Collection-type params can also be loaded from JSON and YAML samplesheets. See {ref}`workflow-typed-params` for more information.
 :::
 
 ### Migrating processes
@@ -207,7 +208,7 @@ Collection params can also be loaded from JSON and YAML samplesheets. See {ref}`
 See {ref}`process-typed-page` for an overview of typed processes.
 
 :::{note}
-You will need to enable the `nextflow.preview.types` feature flag in your script in order to use typed processes.
+You will need to enable the `nextflow.preview.types` feature flag in your script to use typed processes.
 :::
 
 <h4>FASTQC</h4>
@@ -261,7 +262,7 @@ process FASTQC {
 
 The tuple input is converted to a record input using the type `Record`. The field types are specified alongside the field names. The tuple output is converted to a record using the `record()` function and specifying a name for each record field.
 
-Since the record input cannot be destructured like a tuple, you must define a name for the record itself (e.g., `sample`), and you must update all references to tuple inputs (e.g., replace `id` with `sample.id`).
+Since the record input cannot be destructured like a tuple, you must define a name for the record itself (e.g., `sample`) and update all references to tuple inputs (e.g., replace `id` with `sample.id`).
 
 The `path` input qualifier is replaced by the `Path` type, and the `path` output qualifier is replaced by the `file()` function (or `files()` if multiple files are expected). See {ref}`process outputs <process-reference-typed>` for the list of special functions that can be used in the `output:` section to retrieve task outputs.
 
@@ -381,7 +382,7 @@ In a legacy process, you can use the `arity` option to specify whether a `path` 
 :::
 
 :::{note}
-While `List<Path>` and `Bag<Path>` are also valid path collection types, `Set<Path>` is recommended because it most accurately represents an unordered collection of files. You should only use `List<Path>` when you want the collection to be ordered.
+While `List<Path>` and `Bag<Path>` are also valid path collection types, `Set<Path>` is preferred in this case because it represents an unordered collection of files. You should only use `List<Path>` when you want the collection to be ordered.
 :::
 
 <h4>INDEX</h4>
@@ -390,12 +391,12 @@ Apply the same migration principles from the previous processes to migrate `INDE
 
 ### Migrating workflows
 
-Once each process used by a workflow has been migrated to static typing, the workflow itself can be migrated.
+Once every process called by a workflow has been migrated to static typing, the workflow itself can be migrated.
 
 See {ref}`workflow-typed-page` for an overview of typed workflows.
 
 :::{note}
-You will need to enable the `nextflow.preview.types` feature flag in your script in order to used typed workflows.
+You will need to enable the `nextflow.preview.types` feature flag in your script to use typed workflows.
 :::
 
 <h4>RNASEQ</h4>
@@ -463,7 +464,7 @@ The `read_pairs_ch` channel also needs to provide all of the record fields requi
 The `Sample` record type contains all of the required fields.
 
 :::{note}
-In this case, `read_pairs_ch` is identical to the record inputs of `FASTQC` and `QUANT`. However, `read_pairs_ch` would still be compatible if it contained additional fields, as long as it contains the fields required by the two processes. In other words, records are *duck-typed*.
+In this case, the records in `read_pairs_ch` are identical to the record inputs of `FASTQC` and `QUANT`. However, `read_pairs_ch` would still be compatible if it contained additional record fields, as long as it contains the fields required by the two processes.
 :::
 
 The `FASTQC` and `QUANT` processes produce the channels `fastqc_ch` and `quant_ch`, both of which have type `Channel<Record>`:
@@ -471,9 +472,9 @@ The `FASTQC` and `QUANT` processes produce the channels `fastqc_ch` and `quant_c
 - `fastqc_ch` contains records with the fields `id` and `fastqc`
 - `quant_ch` contains records with the fields `id` and `quant`
 
-This type information can be inferred from the process outputs from the previous section.
+This type information can be inferred from the respective process outputs as shown in the previous section.
 
-These channels are emitted as the outputs of `RNASEQ`. However, with records it is usually simpler to combine related channels into a single channel (e.g., to publish the channel as a {ref}`workflow output <migrating-workflow-outputs>`).
+These channels are emitted as the outputs of `RNASEQ`. However, with records it is usually simpler to join related channels into a single channel (e.g., to publish the channel as a {ref}`workflow output <migrating-workflow-outputs>`).
 
 Use the `join` operator to join `fastqc_ch` and `quant_ch` by sample ID:
 
@@ -495,7 +496,7 @@ workflow RNASEQ {
 
 Finally, the workflow needs to be updated to only emit the `samples_ch` channel. Type annotations are not required for emits, but they are still useful as documentation and as a sanity chcek -- if the declared output type doesn't match the assigned value's type, the language server will report it.
 
-While `samples_ch` can use the type `Channel<Record>`, it is better to use an explicit record type so that downstream workflows know which record fields are available.
+While `samples_ch` could be emitted as type `Channel<Record>`, the best practice to use an explicit record type so that downstream workflows know which record fields are available.
 
 Define a new record type based on the available fields in `samples_ch`:
 
@@ -543,8 +544,8 @@ Before you migrate to static typing, ensure your code adheres to the strict synt
 When preparing for the strict syntax, try to address {ref}`deprecation warnings <strict-syntax-deprecated>` as much as possible. For example:
 
 ```nextflow
-Channel.from(1, 2, 3).map { it * 2 }    // deprecated
-channel.of(1, 2, 3).map { v -> v * 2 }  // best practice
+Channel.from(1, 2, 3).map { it * 2 }        // deprecated
+channel.of(1, 2, 3).map { it -> it * 2 }    // best practice
 ```
 
 The above example shows how to avoid three deprecated patterns:
@@ -659,7 +660,7 @@ The `each` qualifier is discouraged in modern Nextflow code. While it provides a
 
 Many {ref}`operators <operator-page>` are not supported in typed workflows. In many cases, an unsupported operator can be replaced by another operator that is supported and/or a standard library function.
 
-For example, the `splitCsv` operator is not supported in typed workflows. Use `flatMap` and the equivalent {ref}`stdlib-types-path` method:
+For example, the `splitCsv` operator is not supported in typed workflows. Use `flatMap` and the equivalent {ref}`stdlib-types-path` method instead:
 
 ```nextflow
 // before
@@ -680,7 +681,7 @@ See {ref}`migrating-typed-operators` for more information about migrating operat
 See the following links to learn more about static typing:
 
 - {ref}`process-typed-page`
+- {ref}`workflow-typed-page`
 - {ref}`stdlib-types`
 - {ref}`script-records`
-- {ref}`syntax-process-typed`
 - {ref}`syntax-record-type`

@@ -14,7 +14,7 @@ export NXF_SYNTAX_PARSER=v2
 :::
 
 :::{note}
-Typed workflows require the `nextflow.preview.types` feature flag to be enabled in each script that uses them.
+Typed workflows require the `nextflow.preview.types` feature flag to be enabled in each script that uses them. The syntax and behavior may change in future releases.
 :::
 
 Typed workflows provide first-class support for static typing. They can use type annotations to describe workflow inputs and outputs, and they provide a streamlined set of dataflow operators.
@@ -45,10 +45,12 @@ Tyepd parameters should only be referenced in the entry workflow or `output` blo
 
 The default value can be overridden by the command line, params file, or config file. Parameters from multiple sources are resolved in the order described in {ref}`cli-params`. Parameters specified on the command line are converted to the appropriate type based on the corresponding type annotation.
 
-A parameter that doesn't specify a default value is a *required* parameter. If a required parameter is not given a value at runtime, the run will fail. Boolean parameters that don't specify a default value default to `false`.
+A parameter that doesn't specify a default value is a *required* parameter. If a required parameter is not given a value at runtime, the run will fail.
 
 :::{versionadded} 26.04.0
 :::
+
+Boolean parameters that don't specify a default value will default to `false`.
 
 Parameters with a collection type (i.e., `List`, `Set`, or `Bag`) can be supplied a file path instead of a literal collection. The file must be CSV, JSON, or YAML. Nextflow will parse the file contents and assign the resuling collection to the parameter. An error is thrown if the file contents do not match the parameter type.
 
