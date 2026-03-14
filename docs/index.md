@@ -177,7 +177,6 @@ tutorials/rnaseq-nf
 tutorials/data-lineage
 tutorials/workflow-outputs
 tutorials/static-types
-tutorials/records
 tutorials/typed-operators
 tutorials/metrics
 tutorials/flux

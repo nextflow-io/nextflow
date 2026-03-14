@@ -6,7 +6,7 @@
 :::
 
 :::{note}
-Static types require the {ref}`strict syntax <strict-syntax-page>`. Set the `NXF_SYNTAX_PARSER` environment variable to `v2` to enable:
+Typed workflows require the {ref}`strict syntax <strict-syntax-page>`. Set the `NXF_SYNTAX_PARSER` environment variable to `v2` to enable:
 
 ```bash
 export NXF_SYNTAX_PARSER=v2
@@ -145,15 +145,14 @@ In the above example, `hello_bye` takes a channel of files (`Channel<Path>`) and
 
 Typed workflows introduce the following new behaviors for dataflow logic:
 
-- Simplified operator library that supports static types and records
-- Support for named arguments when calling processes
-- Restrictions on legacy syntax patterns
+- Simplified operator library that supports static typing and records
+- Removal of legacy syntax patterns
 
 ### Operators
 
 Channels in a typed workflow use a new set of operators.
 
-These operators are a subset of the legacy operators. They provide a core set of dataflow operations, as well as first-class support for static types and records.
+These operators are a subset of the legacy operators. They provide a core set of dataflow operations, as well as first-class support for static typing and records.
 
 The `Channel` type supports the following operators:
 
@@ -183,57 +182,11 @@ See {ref}`operator-typed-page` for more information about each operator. See {re
 
 ### Restricted syntax
 
-The following syntax patterns are not supported in typed workflows.
+The following syntax patterns are not supported in typed workflows:
 
-**Using `Channel` to access channel factories**
+- Using `Channel` to access channel factories (use `channel` instead)
+- Using implicit closure parameters (declare parameters explicitly instead)
+- Composing dataflow logic with `|` and `&` (use standard method calls instead)
+- Accessing process and workflow outputs via `.out` (use standard assignments instead)
 
-Channel factories should be accessed using the `channel` namespace instead of the `Channel` type:
-
-```nextflow
-Channel.of(1, 2, 3) // incorrect
-channel.of(1, 2, 3) // correct
-```
-
-See {ref}`stdlib-namespaces-channel` and {ref}`stdlib-types-channel` for more information.
-
-**Implicit closure parameter**
-
-Closures that expect a single parameter should always declare the parameter rather than relying on the implicit `it` parameter:
-
-```nextflow
-ch.map { it * 2 }       // incorrect
-ch.map { it -> it * 2 } // correct
-ch.map { v -> v * 2 }   // correct
-```
-
-**Special operators `|` and `&`**
-
-The {ref}`special operators <workflow-special-operators>` `|` and `&` cannot be used. Use standard method calls instead:
-
-```nextflow
-// incorrect
-channel.of(1, 2, 2, 3)
-    | unique
-    | view
-
-// correct
-channel.of(1, 2, 2, 3)
-    .unique()
-    .view()
-```
-
-**Accessing process and workflow outputs via `.out`**
-
-The implicit `.out` property for process outputs and workflow emits cannot be used. Use standard assignments instead:
-
-```nextflow
-// incorrect
-MY_WORKFLOW()
-MY_WORKFLOW.out.foo.view()
-MY_WORKFLOW.out.bar.view()
-
-// correct
-my_out = MY_WORKFLOW()
-my_out.foo.view()
-my_out.bar.view()
-```
+See {ref}`preparing-static-types` for more information.
