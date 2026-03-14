@@ -1,6 +1,10 @@
 (operator-page)=
 
-# Operators
+# Operators (legacy)
+
+This page describes the channel operators that can be used in {ref}`legacy workflows <workflow-page>`.
+
+See {ref}`operator-typed-page` for the list of operators that can be used in typed workflows.
 
 (operator-branch)=
 

@@ -63,7 +63,7 @@ The above example defines two processes. Their execution order is not determined
 
 When the workflow is executed, it creates two processes (`blast_search` and `extract_top_hits`) connected by the channel `query_ch`. Each process executes a task and emits a value for each input that it receives. Whenever `blast_search` emits a value, `extract_top_hits` receives it through the `query_ch` channel.
 
-See {ref}`process-page`, {ref}`dataflow-page`, and {ref}`workflow-page` to learn more about these features.
+See {ref}`process-page`, {ref}`dataflow-legacy`, and {ref}`workflow-page` to learn more about these features.
 
 ## Execution abstraction
 

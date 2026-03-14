@@ -22,67 +22,9 @@ workflow {
 }
 ```
 
-(workflow-params-def)=
-
-## Parameters
-
-Parameters can be declared in a Nextflow script with the `params` block or with *legacy* parameter declarations.
-
-### Typed parameters
-
-:::{versionadded} 25.10.0
-:::
-
-:::{note}
-Typed parameters require the {ref}`strict syntax <strict-syntax-page>`. Set the `NXF_SYNTAX_PARSER` environment variable to `v2` to enable:
-
-```bash
-export NXF_SYNTAX_PARSER=v2
-```
-:::
-
-A script can declare parameters using the `params` block:
-
-```nextflow
-params {
-    // Path to input data.
-    input: Path
-
-    // Whether to save intermediate files.
-    save_intermeds: Boolean
-}
-```
-
-All {ref}`standard types <stdlib-types>` except for the dataflow types (`Channel` and `Value`) can be used for parameters.
-
-Parameters can be used in the entry workflow:
-
-```nextflow
-workflow {
-    analyze(params.input, params.save_intermeds)
-}
-```
-
-:::{note}
-As a best practice, parameters should only be referenced in the entry workflow or `output` block. Parameters can be passed to workflows and processes as explicit inputs.
-:::
-
-The default value can be overridden by the command line, params file, or config file. Parameters from multiple sources are resolved in the order described in {ref}`cli-params`. Parameters specified on the command line are converted to the appropriate type based on the corresponding type annotation.
-
-A parameter that doesn't specify a default value is a *required* parameter. If a required parameter is not given a value at runtime, the run will fail. Boolean parameters that don't specify a default value default to `false`.
-
-:::{versionadded} 26.04.0
-:::
-
-Parameters with a collection type (i.e., `List`, `Set`, or `Bag`) can be supplied a file path instead of a literal collection. The file must be CSV, JSON, or YAML. Nextflow will parse the file contents and assign the resuling collection to the parameter. An error is thrown if the file contents do not match the parameter type.
-
-:::{note}
-When supplying a CSV file to a collection parameter, the CSV file must contain a header row and must use a comma (`,`) as the column separator.
-:::
-
 (workflow-params-legacy)=
 
-### Legacy parameters
+## Parameters
 
 Parameters can be declared by assigning a `params` property to a default value:
 
@@ -455,28 +397,7 @@ The result of the above workflow can be accessed using `my_workflow.out.my_data`
 Every output must be assigned to a name when multiple outputs are declared.
 :::
 
-:::{versionadded} 25.10.0
-:::
-
-When using the {ref}`strict syntax <strict-syntax-page>`, workflow takes and emits can specify a type annotation:
-
-```nextflow
-workflow my_workflow {
-    take:
-    data: Channel<Path>
-
-    main:
-    ch_hello = hello(data)
-    ch_bye = bye(ch_hello.collect())
-
-    emit:
-    my_data: Value<Path> = ch_bye
-}
-```
-
-In the above example, `my_workflow` takes a channel of files (`Channel<Path>`) and emits a dataflow value with a single file (`Value<Path>`). See {ref}`stdlib-types` for the list of available types.
-
-(dataflow-page)=
+(dataflow-legacy)=
 
 ## Dataflow
 
@@ -534,7 +455,7 @@ Commonly used operators include:
 
 - {ref}`operator-view`: print each value in a channel to standard output
 
-See {ref}`operator-page` for the full list of operators.
+See {ref}`operator-page` for the full set of operators.
 
 (dataflow-type-value)=
 

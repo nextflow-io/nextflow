@@ -43,6 +43,14 @@ public interface Value<V> {
 
     @Operator
     @Description("""
+        The `mix` operator emits the values from two source channels into a single output channel.
+
+        [Read more](https://nextflow.io/docs/latest/reference/operator.html#mix)
+    """)
+    Channel<V> mix(Channel<V> other);
+
+    @Operator
+    @Description("""
         Invokes the given closure on the dataflow value.
     """)
     void subscribe(Consumer<V> action);

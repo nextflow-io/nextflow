@@ -21,6 +21,8 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.NF
+import nextflow.dataflow.ChannelImpl
+import nextflow.dataflow.ValueImpl
 import nextflow.exception.IllegalInvocationException
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
@@ -169,9 +171,11 @@ class WorkflowBinding extends Binding  {
             source = source[0]
         }
 
-        owner.session.outputs[name] = source instanceof DataflowWriteChannel
-            ? source
-            : CH.value(source)
+        owner.session.outputs[name] =
+            source instanceof ChannelImpl ? source.getSource() :
+            source instanceof ValueImpl ? source.getSource() :
+            source instanceof DataflowWriteChannel ? source :
+            CH.value(source)
     }
 
 }

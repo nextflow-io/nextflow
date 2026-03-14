@@ -79,6 +79,7 @@ working-with-files
 process
 process-typed
 workflow
+workflow-typed
 module
 notifications
 secrets
@@ -133,6 +134,7 @@ reference/stdlib
 reference/process
 reference/channel
 reference/operator
+reference/operator-typed
 ```
 
 ```{toctree}
@@ -175,6 +177,7 @@ tutorials/rnaseq-nf
 tutorials/data-lineage
 tutorials/workflow-outputs
 tutorials/static-types
+tutorials/typed-operators
 tutorials/metrics
 tutorials/flux
 ```

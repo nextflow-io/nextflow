@@ -196,6 +196,31 @@ In order for a script to be executable, it must either define an entry workflow 
 
 Entry workflow definitions are ignored when a script is included as a module. This way, the same script can be included as a module or executed as a pipeline.
 
+### Workflow (typed)
+
+A typed workflow is a workflow that uses static typing for inputs/outputs and dataflow logic:
+
+```nextflow
+nextflow.preview.types = true
+
+workflow greet {
+    take:
+    greetings: Channel<String>
+
+    main:
+    messages = greetings.map { v -> "$v world!" }
+
+    emit:
+    messages: Channel<String>
+}
+```
+
+- Each workflow input in the `take:` section has a name and a type.
+
+- Each named workflow output in the `emit:` section may specify a type.
+
+See {ref}`workflow-typed-page` for more information on the semantics of typed workflows.
+
 (syntax-process)=
 
 ### Process
@@ -269,9 +294,11 @@ See {ref}`process-page` for more information on the semantics of each process se
 
 ### Process (typed)
 
-A typed process is a process that uses static types for inputs and/or outputs:
+A typed process is a process that uses static typing for inputs and outputs:
 
 ```nextflow
+nextflow.preview.types = true
+
 process greet {
     input: 
     greeting: String
@@ -362,6 +389,8 @@ enum Day {
 ```
 
 Enum values in the above example can be accessed as `Day.MONDAY`, `Day.TUESDAY`, and so on.
+
+(syntax-record-type)=
 
 ### Record type
 

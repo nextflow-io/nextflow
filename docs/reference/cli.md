@@ -1276,6 +1276,7 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 
 `-dump-channels`
 : Dump channels for debugging purpose.
+: This option can specify one or more tags as a comma-separated list to only dump channels with a matching tag.
 
 `-dump-hashes`
 : Dump task hash keys for debugging purposes.
