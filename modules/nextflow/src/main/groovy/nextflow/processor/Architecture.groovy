@@ -71,7 +71,7 @@ class Architecture {
         }
     }
 
-    private final List<Arch> archs
+    private final List<ArchEntry> entries
     private final String target
 
     List<String> platforms() {
