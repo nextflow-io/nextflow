@@ -175,6 +175,7 @@ module.exports = {
             items: [
                 "tutorials/rnaseq-nf",
                 "tutorials/data-lineage",
+                "tutorials/records",
                 "tutorials/workflow-outputs",
                 "tutorials/static-types",
                 "tutorials/metrics",
