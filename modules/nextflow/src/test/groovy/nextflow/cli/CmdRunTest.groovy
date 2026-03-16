@@ -341,14 +341,15 @@ class CmdRunTest extends Specification {
         NextflowMeta.instance.isModuleBinariesEnabled() == EXPECTED
 
         cleanup:
-        NextflowMeta.instance.moduleBinaries(false)
+        NextflowMeta.instance.enable.moduleBinaries = false
+        NextflowMeta.instance.moduleBinariesDisabled = false
 
         where:
         INITIAL | CONFIG                                          | EXPECTED
         true    | [nextflow: [enable: [ moduleBinaries: true ]]]  | true
         false   | [nextflow: [enable: [ moduleBinaries: true ]]]  | true
         false   | [nextflow: [enable: [ moduleBinaries: false ]]] | false
-        true    | [nextflow: [enable: [ moduleBinaries: false ]]] | true
+        true    | [nextflow: [enable: [ moduleBinaries: false ]]] | false
         false   | [:]                                             | false
         true    | [:]                                             | true
     }

@@ -202,6 +202,7 @@ class ResourcesBundle {
     }
 
     final private static List<String> BIN_PATHS = ['bin','usr/bin','usr/local/bin']
+    final private static List<String> BIN_PREFIXES = BIN_PATHS.collect { it + '/' }
 
     List<Path> getBinDirs() {
         final result = new ArrayList<Path>(10)
@@ -212,5 +213,28 @@ class ResourcesBundle {
         // sort to make order predictable
         Collections.sort(result)
         return result
+    }
+
+    /**
+     * Collect all executable files under bin directories in this bundle.
+     *
+     * @return A map of filename to file path, e.g. {@code 'myscript.sh' -> /path/to/resources/bin/myscript.sh}
+     */
+    Map<String,Path> getBinFiles() {
+        final result = new LinkedHashMap<String,Path>(10)
+        for( Map.Entry<String,Path> it : content ) {
+            if( hasBinPrefix(it.key) && Files.isRegularFile(it.value) ) {
+                result.put(it.value.getFileName().toString(), it.value)
+            }
+        }
+        return result
+    }
+
+    private static boolean hasBinPrefix(String key) {
+        for( String pfx : BIN_PREFIXES ) {
+            if( key.startsWith(pfx) )
+                return true
+        }
+        return false
     }
 }

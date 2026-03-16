@@ -391,6 +391,7 @@ class BashWrapperBuilder {
         binding.trace_cmd = getTraceCommand(interpreter)
         binding.launch_cmd = getLaunchCommand(interpreter,env)
         binding.stage_cmd = getStageCommand()
+        binding.module_bin_path = binFilesStaged ? getBinPathScript() : null
         binding.unstage_cmd = getUnstageCommand()
         binding.unstage_controls = changeDir || shouldUnstageControls() ? getUnstageControls() : null
 
@@ -700,9 +701,6 @@ class BashWrapperBuilder {
         if( stageInMode != 'copy' && allowContainerMounts )
             builder.addMountForInputs(inputFiles)
 
-        if( allowContainerMounts )
-            builder.addMounts(binDirs)
-
         if(this.containerMount)
             builder.addMount(containerMount)
 
@@ -773,6 +771,12 @@ class BashWrapperBuilder {
     String moduleLoad(String name) {
         int p = name.lastIndexOf('/')
         p != -1 ? "nxf_module_load ${name.substring(0,p)} ${name.substring(p+1)}" : "nxf_module_load ${name}"
+    }
+
+    protected String getBinPathScript() {
+        final binDir = TaskRun.BIN_DIR
+        "chmod +x ${binDir}/*\n" +
+        "export PATH=\"\$PWD/${binDir}:\$PATH\""
     }
 
     protected String getStageCommand() { 'nxf_stage' }

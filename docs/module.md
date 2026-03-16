@@ -253,13 +253,13 @@ baseDir
 
 Modules can define binary scripts that are locally scoped to the processes defined by the tasks.
 
-To enable this feature, set the following flag in your pipeline script or configuration file:
+The binary scripts can be placed in any of the following directories within the module:
 
-```nextflow
-nextflow.enable.moduleBinaries = true
-```
+- `<module-dir>/resources/bin`
+- `<module-dir>/resources/usr/bin`
+- `<module-dir>/resources/usr/local/bin`
 
-The binary scripts must be placed in the module directory named `<module-dir>/resources/usr/bin`:
+For example:
 
 ```
 <module-dir>
@@ -271,11 +271,7 @@ The binary scripts must be placed in the module directory named `<module-dir>/re
             └── another-module-script2.py
 ```
 
-Those scripts will be made accessible like any other command in the task environment, provided they have been granted the Linux execute permissions.
-
-:::{note}
-This feature requires the use of a local or shared file system for the pipeline work directory, or {ref}`wave-page` when using cloud-based executors.
-:::
+Those scripts will be made accessible like any other command in the task environment, provided they have been granted the Linux execute permissions. Module binaries work on all executors, including cloud-based executors.
 
 ## Sharing modules
 

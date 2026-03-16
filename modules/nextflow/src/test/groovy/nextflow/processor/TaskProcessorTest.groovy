@@ -75,53 +75,126 @@ class TaskProcessorTest extends Specification {
         def session = new Session([env: [X:"1", Y:"2"]])
         session.setBaseDir(home)
         def processor = createProcessor('task1', session)
-        def builder = new ProcessBuilder()
-        builder.environment().putAll( processor.getProcessEnvironment() )
+        def env = processor.getProcessEnvironment()
         then:
         noExceptionThrown()
-        builder.environment().X == '1'
-        builder.environment().Y == '2'
-        builder.environment().PATH == "\$PATH:${binFolder.toString()}"
+        env.X == '1'
+        env.Y == '2'
+        !env.containsKey('PATH')
 
         when:
         session = new Session([env: [X:"1", Y:"2", PATH:'/some']])
         session.setBaseDir(home)
         processor = createProcessor('task1', session)
-        builder = new ProcessBuilder()
-        builder.environment().putAll( processor.getProcessEnvironment() )
+        env = processor.getProcessEnvironment()
         then:
         noExceptionThrown()
-        builder.environment().X == '1'
-        builder.environment().Y == '2'
-        builder.environment().PATH == "/some:${binFolder.toString()}"
+        env.X == '1'
+        env.Y == '2'
+        env.PATH == '/some'
 
         cleanup:
         home.deleteDir()
 
     }
 
-    @Unroll
-    def 'should add module bin paths to task env' () {
+    def 'should not inject bin dirs into process environment' () {
         given:
         def session = Mock(Session) { getConfig() >> [:] }
         def executor = Mock(Executor) { getBinDir() >> Path.of('/project/bin')}
         and:
         TaskProcessor processor = Spy(TaskProcessor, constructorArgs: [[session:session, executor:executor]])
-        and:
+
         when:
         def result = processor.getProcessEnvironment()
         then:
-        session.enableModuleBinaries() >> MODULE_BIN
-        processor.getModuleBundle() >> Mock(ResourcesBundle)  { getBinDirs() >> [Path.of('/foo'), Path.of('/bar')] }
-        processor.isLocalWorkDir() >> LOCAL
-        and:
-        result == EXPECTED
+        result == [:]
+    }
 
-        where:
-        LOCAL   | MODULE_BIN    | EXPECTED
-        false   | false         | [:]
-        true    | false         | [PATH:'$PATH:/project/bin']
-        true    | true          | [PATH:'$PATH:/foo:/bar:/project/bin']
+    def 'should collect module bin files for staging' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [:] }
+        def executor = Mock(Executor) { getBinDir() >> null }
+        and:
+        def rawBinFiles = ['script.sh': Path.of('/modules/foo/resources/bin/script.sh')]
+        def bundle = Mock(ResourcesBundle) { getBinFiles() >> rawBinFiles }
+        and:
+        TaskProcessor processor = Spy(TaskProcessor, constructorArgs: [[session:session, executor:executor]])
+        processor.getModuleBundle() >> bundle
+        processor.isLocalWorkDir() >> true
+
+        when:
+        def result = processor.getModuleBinFiles()
+        then:
+        result == ['.bin/script.sh': Path.of('/modules/foo/resources/bin/script.sh')]
+    }
+
+    def 'should upload module bin files for cloud work dir' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [:] }
+        def cloudWorkDir = Mock(Path)
+        def executor = Mock(Executor) { getBinDir() >> null; getWorkDir() >> cloudWorkDir }
+        and:
+        def rawBinFiles = ['script.sh': Path.of('/modules/foo/resources/bin/script.sh')]
+        def bundle = Mock(ResourcesBundle) { getBinFiles() >> rawBinFiles }
+        and:
+        TaskProcessor processor = Spy(TaskProcessor, constructorArgs: [[session:session, executor:executor]])
+        processor.getModuleBundle() >> bundle
+        processor.isLocalWorkDir() >> false
+        def uploadedFiles = ['script.sh': Path.of('/cloud/bin/script.sh')]
+        processor.uploadBinFiles(rawBinFiles) >> uploadedFiles
+
+        when:
+        def result = processor.getModuleBinFiles()
+        then:
+        result == ['.bin/script.sh': Path.of('/cloud/bin/script.sh')]
+    }
+
+    def 'should return empty map when no module bundle' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [:] }
+        def executor = Mock(Executor) { getBinDir() >> null }
+        and:
+        TaskProcessor processor = Spy(TaskProcessor, constructorArgs: [[session:session, executor:executor]])
+        processor.getModuleBundle() >> null
+
+        when:
+        def result = processor.getModuleBinFiles()
+        then:
+        result == [:]
+    }
+
+    def 'should collect project bin files for staging' () {
+        given:
+        def binEntries = ['script.sh': Path.of('/project/bin/script.sh'), 'tool.py': Path.of('/project/bin/tool.py')]
+        def session = Mock(Session) { getConfig() >> [:]; getBinEntries() >> binEntries }
+        def executor = Mock(Executor) { getBinDir() >> Path.of('/project/bin') }
+        and:
+        TaskProcessor processor = Spy(TaskProcessor, constructorArgs: [[session:session, executor:executor]])
+        processor.isLocalWorkDir() >> true
+
+        when:
+        def result = processor.getProjectBinFiles()
+        then:
+        result == ['.bin/script.sh': Path.of('/project/bin/script.sh'), '.bin/tool.py': Path.of('/project/bin/tool.py')]
+    }
+
+    def 'should upload project bin files for cloud work dir' () {
+        given:
+        def binEntries = ['script.sh': Path.of('/project/bin/script.sh')]
+        def session = Mock(Session) { getConfig() >> [:]; getBinEntries() >> binEntries }
+        def cloudWorkDir = Mock(Path)
+        def executor = Mock(Executor) { getBinDir() >> Path.of('/project/bin'); getWorkDir() >> cloudWorkDir }
+        and:
+        TaskProcessor processor = Spy(TaskProcessor, constructorArgs: [[session:session, executor:executor]])
+        processor.isLocalWorkDir() >> false
+        def uploadedFiles = ['script.sh': Path.of('/cloud/bin/script.sh')]
+        processor.uploadBinFiles(binEntries) >> uploadedFiles
+
+        when:
+        def result = processor.getProjectBinFiles()
+        then:
+        result == ['.bin/script.sh': Path.of('/cloud/bin/script.sh')]
     }
 
     def 'should fetch interpreter from shebang line'() {

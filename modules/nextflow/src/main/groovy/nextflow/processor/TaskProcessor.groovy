@@ -19,6 +19,7 @@ import static nextflow.processor.ErrorStrategy.*
 
 import java.nio.file.FileSystems
 import java.nio.file.Path
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicIntegerArray
@@ -64,6 +65,7 @@ import nextflow.executor.Executor
 import nextflow.executor.StoredTaskHandler
 import nextflow.extension.CH
 import nextflow.extension.DataflowHelper
+import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.file.FilePorter
@@ -1568,16 +1570,114 @@ class TaskProcessor {
         return meta?.isModule() ? meta.getModuleBundle() : null
     }
 
-    @Memoized
+    /**
+     * @deprecated Bin dirs are no longer bind-mounted. Bin scripts are now staged
+     * as input files under {@link TaskRun#BIN_DIR}. Kept for backward compatibility
+     * with plugins (e.g. nf-k8s) that reference this method.
+     */
+    @Deprecated
     protected List<Path> getBinDirs() {
-        final result = new ArrayList(10)
-        // module bundle bin dir have priority, add before
-        final bundle = session.enableModuleBinaries() ? getModuleBundle() : null
-        if( bundle!=null )
-            result.addAll(bundle.getBinDirs())
-        // then add project bin dir
-        if( executor.binDir )
-            result.add(executor.binDir)
+        return Collections.<Path>emptyList()
+    }
+
+    /**
+     * Collect module bin files to be staged into the task work directory.
+     * These are scripts from the module's resources/bin/ directory that will
+     * be staged as input files under {@link TaskRun#BIN_DIR} and made available via PATH.
+     *
+     * @return A map of staging name to file path, e.g. {@code '.bin/myscript.sh' -> /path/to/file}
+     */
+    @Memoized
+    Map<String,Path> getModuleBinFiles() {
+        if( NF.isModuleBinariesDisabled() )
+            return Collections.<String,Path>emptyMap()
+        final bundle = getModuleBundle()
+        if( bundle == null )
+            return Collections.<String,Path>emptyMap()
+        final rawFiles = bundle.getBinFiles()
+        if( rawFiles.isEmpty() )
+            return Collections.<String,Path>emptyMap()
+        final files = isLocalWorkDir() ? rawFiles : uploadBinFiles(rawFiles)
+        return prefixBinFiles(files)
+    }
+
+    /**
+     * Collect project-level bin files to be staged into the task work directory.
+     * These are scripts from the project's bin/ directory that will be staged
+     * as input files under {@link TaskRun#BIN_DIR} and made available via PATH.
+     *
+     * @return A map of staging name to file path, e.g. {@code '.bin/myscript.sh' -> /path/to/file}
+     */
+    @Memoized
+    Map<String,Path> getProjectBinFiles() {
+        final entries = session.binEntries
+        if( !entries )
+            return Collections.<String,Path>emptyMap()
+        final files = isLocalWorkDir() ? entries : uploadBinFiles(entries)
+        return prefixBinFiles(files)
+    }
+
+    static final String SCRIPT_TOKEN_DELIMITERS = " \t\n\r\f()[]{};&|<>`"
+
+    /**
+     * Filter project bin files to only those referenced in the given script.
+     * Memoized so tokenization runs once per unique script source across all tasks in a process.
+     */
+    @Memoized
+    Map<String,Path> getReferencedProjectBinFiles(String script) {
+        final allBinFiles = getProjectBinFiles()
+        if( !allBinFiles || !script )
+            return Collections.<String,Path>emptyMap()
+        final referenced = new LinkedHashMap<String,Path>(allBinFiles.size())
+        final tokenizer = new StringTokenizer(script, SCRIPT_TOKEN_DELIMITERS)
+        while( tokenizer.hasMoreTokens() ) {
+            final key = TaskRun.BIN_DIR + '/' + tokenizer.nextToken()
+            final path = allBinFiles.get(key)
+            if( path )
+                referenced.put(key, path)
+        }
+        return referenced
+    }
+
+    /**
+     * Prefix all keys in the given map with the bin staging directory name.
+     */
+    private static Map<String,Path> prefixBinFiles(Map<String,Path> files) {
+        if( files.isEmpty() )
+            return Collections.<String,Path>emptyMap()
+        final prefix = TaskRun.BIN_DIR + '/'
+        final result = new LinkedHashMap<String,Path>(files.size())
+        for( Map.Entry<String,Path> e : files ) {
+            result.put(prefix + e.key, e.value)
+        }
+        return result
+    }
+
+    private static final ConcurrentHashMap<Path,Path> uploadedBinFiles = new ConcurrentHashMap<>()
+
+    @TestOnly
+    static void resetBinFileUploadCache() {
+        uploadedBinFiles.clear()
+    }
+
+    /**
+     * Upload bin files to cloud storage so they can be staged by cloud copy strategies.
+     * Files are uploaded to {@code {workDir}/.nextflow/bin/}. Uses a shared cache
+     * so that multiple processors sharing the same work directory upload each file only once.
+     */
+    @PackageScope
+    Map<String,Path> uploadBinFiles(Map<String,Path> files) {
+        final stageDir = executor.workDir.resolve('.nextflow/bin')
+        FilesEx.mkdirs(stageDir)
+        final result = new LinkedHashMap<String,Path>(files.size())
+        for( Map.Entry<String,Path> e : files ) {
+            final target = stageDir.resolve(e.key)
+            final uploaded = uploadedBinFiles.putIfAbsent(e.value, target)
+            if( uploaded == null ) {
+                FileHelper.copyPath(e.value, target)
+            }
+            result.put(e.key, target)
+        }
         return result
     }
 
@@ -1602,24 +1702,6 @@ class TaskProcessor {
         }
         else {
             log.debug "Invalid 'session.config.env' object: ${session.config.env?.class?.name}"
-        }
-
-        // append the 'bin' folder to the task environment
-        List<Path> paths
-        if( isLocalWorkDir() && (paths=getBinDirs()) ) {
-            for( Path it : paths ) {
-                if( result.containsKey('PATH') ) {
-                    // note: do not escape potential blanks in the bin path because the PATH
-                    // variable is enclosed in `"` when in rendered in the launcher script -- see #630
-                    result['PATH'] =  "${result['PATH']}:${it}".toString()
-                }
-                else {
-                    // note: append custom bin path *after* the system PATH
-                    // to prevent unnecessary network round-trip for each command
-                    // when the added path is a shared file system directory
-                    result['PATH'] = "\$PATH:${it}".toString()
-                }
-            }
         }
 
         return Collections.unmodifiableMap(result)

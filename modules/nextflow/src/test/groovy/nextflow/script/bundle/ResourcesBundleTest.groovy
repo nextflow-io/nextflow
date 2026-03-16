@@ -231,4 +231,28 @@ class ResourcesBundleTest extends Specification {
 
     }
 
+    def 'should return bin files for staging' () {
+        given:
+        def root = folder.resolve('mod2'); root.mkdir()
+        and:
+        root.resolve('bin').mkdirs()
+        root.resolve('bin/script1.sh').text = '#!/bin/bash\necho hello'
+        root.resolve('bin/script2.py').text = '#!/usr/bin/env python\nprint("hello")'
+        root.resolve('usr/local/bin').mkdirs()
+        root.resolve('usr/local/bin/tool.sh').text = '#!/bin/bash\necho tool'
+        and:
+        root.resolve('data').mkdirs()
+        root.resolve('data/file.txt').text = 'data'
+
+        when:
+        def bundle = ResourcesBundle.scan(root)
+        def binFiles = bundle.getBinFiles()
+
+        then:
+        binFiles.size() == 3
+        binFiles['script1.sh'] == root.resolve('bin/script1.sh')
+        binFiles['script2.py'] == root.resolve('bin/script2.py')
+        binFiles['tool.sh'] == root.resolve('usr/local/bin/tool.sh')
+    }
+
 }

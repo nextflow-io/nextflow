@@ -124,8 +124,12 @@ class NextflowMeta {
         return enable.moduleBinaries
     }
 
+    boolean moduleBinariesDisabled
+
     void moduleBinaries(boolean mode) {
         enable.moduleBinaries = mode
+        if( !mode )
+            moduleBinariesDisabled = true
     }
 
 }

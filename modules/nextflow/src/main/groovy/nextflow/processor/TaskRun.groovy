@@ -562,6 +562,11 @@ class TaskRun implements Cloneable {
     static final public String CMD_TRACE = '.command.trace'
     static final public String CMD_ENV = '.command.env'
 
+    /**
+     * The directory name used for staging bin scripts in the task work directory
+     */
+    static final public String BIN_DIR = '.bin'
+
 
     String toString( ) {
         "id: $id; name: $name; type: $type; exit: ${exitStatus==Integer.MAX_VALUE ? '-' : exitStatus}; error: $error; workDir: $workDir"
