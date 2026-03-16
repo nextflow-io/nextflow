@@ -1747,6 +1747,10 @@ The following settings are available:
 
 The Seqera scheduler service endpoint URL (required).
 
+###### `seqera.executor.provider`
+
+The compute backend provider type (e.g. `'aws'`, `'local'`). When specified, used together with `region` to select the matching compute environment.
+
 ###### `seqera.executor.region`
 
 The AWS region for task execution (default: `'eu-central-1'`).

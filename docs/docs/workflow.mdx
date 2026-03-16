@@ -260,8 +260,8 @@ Outputs can be conditionally published using pipeline parameters:
 output {
     samples {
         path { sample ->
-            sample.fastqc >> "fastqc"
-            sample.bam >> params.save_bams ? "align" : null
+            sample.fastqc >> "fastqc/"
+            sample.bam >> (params.save_bams ? "align/" : null)
         }
     }
 }
