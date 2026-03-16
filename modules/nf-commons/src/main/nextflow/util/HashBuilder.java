@@ -85,7 +85,14 @@ public class HashBuilder {
 
     private Path basePath;
 
+    private int version = 2;
+
     public HashBuilder() {}
+
+    public HashBuilder withVersion(int version) {
+        this.version = version;
+        return this;
+    }
 
     public HashBuilder withHasher(Hasher hasher) {
         this.hasher = hasher;
@@ -146,11 +153,16 @@ public class HashBuilder {
                 with(item);
         }
 
-        else if( value instanceof CacheFunnel )
+        else if( version >= 2 && value instanceof CacheFunnel )
             ((CacheFunnel)value).funnel(hasher, mode);
 
-        else if( value instanceof Map )
-            hashUnorderedCollection(hasher, ((Map) value).entrySet(), mode);
+        else if( value instanceof Map ) {
+            if( version >= 2 )
+                hashUnorderedCollection(hasher, ((Map) value).entrySet(), mode);
+            else
+                for( Object item : ((Map)value).values() )
+                    with(item);
+        }
 
         else if( value instanceof Map.Entry ) {
             Map.Entry entry = (Map.Entry)value;
@@ -182,6 +194,9 @@ public class HashBuilder {
         else if( value instanceof SerializableMarker)
             hasher.putInt( value.hashCode() );
 
+        else if( version < 2 && value instanceof CacheFunnel )
+            ((CacheFunnel)value).funnel(hasher, mode);
+
         else if( value instanceof Enum )
             hasher.putUnencodedChars( value.getClass().getName() + "." + value );
 
@@ -202,10 +217,15 @@ public class HashBuilder {
     }
 
     public static Hasher hasher( Hasher hasher, Object value, HashMode mode ) {
+        return hasher(hasher, value, mode, 2);
+    }
+
+    public static Hasher hasher( Hasher hasher, Object value, HashMode mode, int version ) {
 
         return new HashBuilder()
                 .withHasher(hasher)
                 .withMode(mode)
+                .withVersion(version)
                 .with(value)
                 .getHasher();
     }

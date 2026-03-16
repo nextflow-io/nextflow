@@ -15,21 +15,24 @@
  */
 package nextflow.processor
 
-import java.nio.file.Path
-
-import com.google.common.hash.HashCode
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 /**
- * Define the interface for task hash computation
+ * Implement the v2 task hash computation strategy.
+ *
+ * This version uses order-independent Map hashing (via entrySet)
+ * and checks CacheFunnel before Map in the hash builder.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
-interface TaskHasher {
+class TaskHasherV2 extends TaskHasherV1 {
 
-    HashCode compute()
+    TaskHasherV2(TaskRun task) {
+        super(task)
+    }
 
-    Map<String,Object> getTaskGlobalVars()
-
-    List<Path> getTaskBinEntries(String script)
+    @Override
+    protected int hashVersion() { 2 }
 }

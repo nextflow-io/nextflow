@@ -15,21 +15,35 @@
  */
 package nextflow.processor
 
-import java.nio.file.Path
-
-import com.google.common.hash.HashCode
 import groovy.transform.CompileStatic
+import nextflow.SysEnv
 /**
- * Define the interface for task hash computation
+ * Factory for creating versioned {@link TaskHasher} instances.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-interface TaskHasher {
+class TaskHasherFactory {
 
-    HashCode compute()
+    enum Version {
+        V1,
+        V2
 
-    Map<String,Object> getTaskGlobalVars()
+        static Version DEFAULT() {
+            final val = SysEnv.get('NXF_TASK_HASH_VER')
+            return val ? valueOf(val.toUpperCase()) : V2
+        }
+    }
 
-    List<Path> getTaskBinEntries(String script)
+    static TaskHasher create(TaskRun task) {
+        final version = task.processor.session.hashStrategy
+        switch( version ) {
+            case Version.V1:
+                return new TaskHasherV1(task)
+            case Version.V2:
+                return new TaskHasherV2(task)
+            default:
+                throw new IllegalArgumentException("Unknown task hasher version: ${version}")
+        }
+    }
 }

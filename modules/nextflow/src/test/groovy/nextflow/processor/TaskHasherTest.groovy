@@ -19,6 +19,7 @@ package nextflow.processor
 import java.nio.file.Path
 
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.script.ProcessConfig
 import spock.lang.Specification
 /**
@@ -48,7 +49,7 @@ class TaskHasherTest extends Specification {
             getProcessor() >> processor
         }
         and:
-        def hasher = Spy(new TaskHasher(task))
+        def hasher = Spy(new TaskHasherV1(task))
 
         when:
         def uuid1 = hasher.compute()
@@ -78,7 +79,7 @@ class TaskHasherTest extends Specification {
         def task = Mock(TaskRun) {
             getProcessor() >> processor
         }
-        def hasher = new TaskHasher(task)
+        def hasher = new TaskHasherV1(task)
 
         when:
         def result = hasher.getTaskBinEntries('var=x foo.sh')
@@ -114,7 +115,7 @@ class TaskHasherTest extends Specification {
         }
 
         when:
-        def result = new TaskHasher(task).getTaskExtensionDirectiveVars()
+        def result = new TaskHasherV1(task).getTaskExtensionDirectiveVars()
         then:
         result == [
             'task.ext.alpha': 'AAAA',
@@ -123,16 +124,77 @@ class TaskHasherTest extends Specification {
         ]
     }
 
+    def 'should create v1 hasher when configured'() {
+        given:
+        def session = Mock(Session) {
+            getHashStrategy() >> TaskHasherFactory.Version.V1
+        }
+        def processor = Mock(TaskProcessor) {
+            getSession() >> session
+        }
+        def task = Mock(TaskRun) {
+            getProcessor() >> processor
+        }
+
+        when:
+        def hasher = TaskHasherFactory.create(task)
+
+        then:
+        hasher instanceof TaskHasherV1
+        hasher.class == TaskHasherV1
+    }
+
+    def 'should create v2 hasher by default'() {
+        given:
+        def session = Mock(Session) {
+            getHashStrategy() >> TaskHasherFactory.Version.V2
+        }
+        def processor = Mock(TaskProcessor) {
+            getSession() >> session
+        }
+        def task = Mock(TaskRun) {
+            getProcessor() >> processor
+        }
+
+        when:
+        def hasher = TaskHasherFactory.create(task)
+
+        then:
+        hasher instanceof TaskHasherV2
+    }
+
+    def 'should resolve version from env var'() {
+        given:
+        SysEnv.push(['NXF_TASK_HASH_VER': 'V1'])
+
+        expect:
+        TaskHasherFactory.Version.DEFAULT() == TaskHasherFactory.Version.V1
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def 'should default to v2 when env var not set'() {
+        given:
+        SysEnv.push([:])
+
+        expect:
+        TaskHasherFactory.Version.DEFAULT() == TaskHasherFactory.Version.V2
+
+        cleanup:
+        SysEnv.pop()
+    }
+
     def 'should compute hash entries for eval outputs'() {
 
         when:
-        def result1 = TaskHasher.computeEvalOutputCommands([
+        def result1 = TaskHasherV1.computeEvalOutputCommands([
             'nxf_out_eval_2': 'echo "value2"',
             'nxf_out_eval_1': 'echo "value1"',
             'nxf_out_eval_3': 'echo "value3"'
         ])
 
-        def result2 = TaskHasher.computeEvalOutputCommands([
+        def result2 = TaskHasherV1.computeEvalOutputCommands([
             'nxf_out_eval_3': 'echo "value3"',
             'nxf_out_eval_1': 'echo "value1"',
             'nxf_out_eval_2': 'echo "value2"'
