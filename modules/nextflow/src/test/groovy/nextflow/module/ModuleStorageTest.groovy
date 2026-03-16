@@ -207,6 +207,37 @@ class ModuleStorageTest extends Specification {
         ]
     }
 
+    def 'should ignore directories without MODULE_INFO_FILE and not descend into module subdirectories'() {
+        given:
+        def storage = new ModuleStorage(tempDir)
+
+        // A valid module with subdirectories (bin/, src/)
+        def moduleDir = storage.getModuleDir(new ModuleReference('nf-core', 'fastqc'))
+        Files.createDirectories(moduleDir)
+        moduleDir.resolve('main.nf').text = 'process FASTQC { }'
+        moduleDir.resolve('meta.yml').text = 'name: nf-core/fastqc\nversion: 1.0.0\n'
+        ModuleChecksum.save(moduleDir, 'checksum')
+        // Subdirectories inside the module — must NOT be listed as separate modules
+        def binDir = moduleDir.resolve('bin')
+        Files.createDirectories(binDir)
+        binDir.resolve('fastqc.sh').text = '#!/bin/bash'
+        def srcDir = moduleDir.resolve('src/main')
+        Files.createDirectories(srcDir)
+        srcDir.resolve('helper.groovy').text = 'def foo() {}'
+
+        // A plain directory tree with no MODULE_INFO_FILE anywhere — must be ignored entirely
+        def orphanDir = tempDir.resolve('modules/other-org/tool/deep/nested')
+        Files.createDirectories(orphanDir)
+        orphanDir.resolve('somefile.txt').text = 'not a module'
+
+        when:
+        def installed = storage.listInstalled()
+
+        then:
+        installed.size() == 1
+        installed[0].reference.fullName == 'nf-core/fastqc'
+    }
+
     def 'should return empty list when no modules installed'() {
         given:
         def storage = new ModuleStorage(tempDir)

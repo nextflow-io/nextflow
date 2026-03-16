@@ -27,8 +27,11 @@ import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream
 
+import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.SimpleFileVisitor
+import java.nio.file.attribute.BasicFileAttributes
 import java.util.stream.Stream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
@@ -136,22 +139,28 @@ class ModuleStorage {
 
         List<InstalledModule> modules = []
 
-        try( final walkStream = Files.walk(modulesDir) ) {
-            walkStream
-                .filter { Path path -> Files.isDirectory(path) }
-                .filter { Path path -> Files.exists(path.resolve(MODULE_INFO_FILE)) }
-                .each { Path moduleDir ->
-                    try {
-                        def rel = modulesDir.relativize(moduleDir)
-                        if( rel.nameCount < 2 ) return  // Need at least scope/name
-                        def reference = ModuleReference.parse(rel.toString())
-                        def installed = getInstalledModule(reference)
-                        if( installed ) modules.add(installed)
-                    } catch(Exception e){
-                        // Catching exception to go on inspecting other valid folders
-                        log.debug("Not a valid module reference - $e.message")
+        try {
+            Files.walkFileTree(modulesDir, new SimpleFileVisitor<Path>() {
+                @Override
+                FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
+                    if( dir == modulesDir ) return FileVisitResult.CONTINUE
+                    if( Files.exists(dir.resolve(MODULE_INFO_FILE)) ) {
+                        try {
+                            def rel = modulesDir.relativize(dir)
+                            if( rel.nameCount >= 2 ) {
+                                def reference = ModuleReference.parse(rel.toString())
+                                def installed = getInstalledModule(reference)
+                                if( installed ) modules.add(installed)
+                            }
+                        } catch(Exception e) {
+                            // Catching exception to go on inspecting other valid folders
+                            log.debug("Not a valid module reference - $e.message")
+                        }
+                        return FileVisitResult.SKIP_SUBTREE
                     }
+                    return FileVisitResult.CONTINUE
                 }
+            })
         } catch (IOException e) {
             log.warn "Failed to scan modules directory ${modulesDir}: ${e.message}"
         }
