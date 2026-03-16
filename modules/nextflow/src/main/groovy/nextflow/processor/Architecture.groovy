@@ -24,7 +24,13 @@ import groovy.transform.Memoized
  * Implements the {@code arch} process directive, to hold information on the
  * CPU (micro)architecture required by the process.
  *
+ * <p>Supports multiple comma-separated architectures (e.g. {@code arch 'linux/amd64,linux/arm64'}).
+ * Multi-arch is fully supported by selected executors (e.g. Seqera) via {@link #platforms()} and
+ * {@link #containerPlatform()}. Other executors use {@link #getDockerArch()} and {@link #getSpackArch()},
+ * which return only the first (primary) architecture.
+ *
  * @author Marco De La Pierre <marco.delapierre@gmail.com>
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @EqualsAndHashCode
 @CompileStatic
@@ -32,7 +38,7 @@ class Architecture {
 
     @EqualsAndHashCode
     @CompileStatic
-    static class Arch {
+    static class ArchEntry {
         final String value
 
         static protected String normalize( String name ) {
@@ -55,13 +61,13 @@ class Architecture {
             throw new IllegalArgumentException("Not a valid `arch` value: ${name}")
         }
 
-        static Arch parse( String name ) {
+        static ArchEntry parse(String name) {
             final value = normalize(name)
             validate(value, name)
-            return new Arch(value)
+            return new ArchEntry(value)
         }
 
-        private Arch( String value ) {
+        private ArchEntry(String value ) {
             this.value = value
         }
 
@@ -72,17 +78,25 @@ class Architecture {
     }
 
     private final List<ArchEntry> entries
+
     private final String target
 
+    /**
+     * @return all architectures as Docker platform strings (e.g. {@code ['linux/amd64', 'linux/arm64']})
+     */
     List<String> platforms() {
-        archs.collect(it -> toDockerArch(it))
+        entries.collect(it -> toDockerArch(it))
     }
 
+    /**
+     * @return all architectures as a comma-separated Docker platform string
+     *         (e.g. {@code 'linux/amd64,linux/arm64'})
+     */
     String containerPlatform() {
         platforms().join(',')
     }
 
-    static private String toDockerArch( Arch arch ) {
+    static private String toDockerArch(ArchEntry arch) {
         final value = arch.value
         if( value == 'x86_64' || value == 'amd64' )
             return 'linux/amd64'
@@ -93,16 +107,23 @@ class Architecture {
         return null
     }
 
+    /**
+     * @return the Docker platform string for the first (primary) architecture
+     */
     @Memoized
     String getDockerArch() {
-        return toDockerArch(archs[0])
+        return toDockerArch(entries[0])
     }
 
+    /**
+     * @return the Spack-compatible architecture name for the first (primary) architecture,
+     *         or the explicit {@code target} microarchitecture if specified
+     */
     @Memoized
     String getSpackArch() {
         if( target != null )
             return target
-        final value = archs[0].value
+        final value = entries[0].value
         if( value == 'x86_64' || value == 'amd64' )
             return 'x86_64'
         if( value == 'aarch64' || value == 'arm64' || value == 'arm64/v8' )
@@ -119,9 +140,9 @@ class Architecture {
             throw new IllegalArgumentException("Missing architecture `name` attribute")
 
         this.target = res.target as String
-        this.archs = (res.name as String)
+        this.entries = (res.name as String)
             .tokenize(',')
-            .collect(it -> Arch.parse(it.trim()) )
+            .collect(it -> ArchEntry.parse(it.trim()) )
     }
 
     @Override

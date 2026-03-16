@@ -62,7 +62,7 @@ class ArchitectureTest extends Specification {
     @Unroll
     def 'should normalize arch from name' () {
         expect:
-        Architecture.Arch.normalize(NAME) == EXPECTED
+        Architecture.ArchEntry.normalize(NAME) == EXPECTED
 
         where:
         NAME             | EXPECTED
@@ -95,5 +95,30 @@ class ArchitectureTest extends Specification {
         def arch = new Architecture('linux/amd64, linux/arm64')
         then:
         arch.platforms() == ['linux/amd64', 'linux/arm64']
+    }
+
+    def 'should return containerPlatform as comma-separated string' () {
+        expect:
+        new Architecture('linux/amd64').containerPlatform() == 'linux/amd64'
+        new Architecture('linux/amd64,linux/arm64').containerPlatform() == 'linux/amd64,linux/arm64'
+    }
+
+    def 'should define multi-arch with map' () {
+        when:
+        def arch = new Architecture([name: 'amd64,arm64', target: 'zen3'])
+        then:
+        arch.dockerArch == 'linux/amd64'
+        arch.spackArch == 'zen3'
+        arch.platforms() == ['linux/amd64', 'linux/arm64']
+        arch.containerPlatform() == 'linux/amd64,linux/arm64'
+    }
+
+    def 'should use primary arch for dockerArch and spackArch with multi-arch' () {
+        when:
+        def arch = new Architecture('arm64,amd64')
+        then:
+        arch.dockerArch == 'linux/arm64'
+        arch.spackArch == 'aarch64'
+        arch.platforms() == ['linux/arm64', 'linux/amd64']
     }
 }
