@@ -269,9 +269,25 @@ See {ref}`cli-secrets` for more information.
 :::{versionadded} 26.04.0
 :::
 
-Module management commands enable working with reusable, registry-based modules. The Nextflow module system allows you to install, run, search, and publish standardized modules from registries, eliminating duplicate work and spreading improvements throughout the community.
+The `module` command enables working with reusable, registry-based modules. The Nextflow module system allows you to install, run, search, and publish standardized modules from registries, eliminating duplicate work and sharing improvements with the community.
 
 Use these commands to discover modules in registries, install them into your project, run them directly without creating a workflow, and publish your own modules for others to use.
+
+### Searching for modules
+
+The `module search` command queries the module registry to discover available modules by keyword or name.
+
+Use this to find modules for specific tasks, explore available tools, or discover community modules.
+
+```console
+$ nextflow module search alignment
+$ nextflow module search "quality control" -limit 10
+$ nextflow module search bwa -output json
+```
+
+Results include module names, versions, descriptions, and download statistics. Use `-limit` to control the number of results and `-output json` for JSON-formatted output.
+
+See {ref}`cli-module-search` for more information.
 
 ### Installing modules
 
@@ -284,11 +300,42 @@ $ nextflow module install nf-core/fastqc
 $ nextflow module install nf-core/fastqc -version 1.0.0
 ```
 
-After installation, module will be available in `modules/nf-core/fastqc`.
+The installed module will be available in `modules/nf-core/fastqc`.
 
 Use the `-force` flag to reinstall a module even if local modifications exist.
 
 See {ref}`cli-module-install` for more information.
+
+### Listing modules
+
+The `module list` command displays all modules currently installed in your project, showing their versions and integrity status.
+
+Use this to review installed modules, check module versions, or detect local modifications.
+
+```console
+$ nextflow module list
+$ nextflow module list -output json
+```
+
+The output shows each module's name, installed version, and whether it has been modified locally. Use `-o json` for JSON-formatted output.
+
+See {ref}`cli-module-list` for more information.
+
+### Viewing module information
+
+The `module info` command displays detailed metadata and usage information for a specific module from the registry.
+
+Use this to understand module requirements, view input/output specifications, see available tools, or generate usage templates before installing or running a module.
+
+```console
+$ nextflow module info nf-core/fastqc
+$ nextflow module info nf-core/fastqc -version 1.0.0
+$ nextflow module info nf-core/fastqc -output json
+```
+
+The output includes the module's version, description, authors, keywords, tools, input/output channels, and a generated usage template showing how to run the module. Use `-json` for machine-readable output suitable for programmatic access.
+
+See {ref}`cli-module-info` for more information.
 
 ### Running modules directly
 
@@ -311,54 +358,9 @@ $ nextflow module run nf-core/salmon \
     -resume
 ```
 
+Process inputs can be specified like params on the command line. For example, `--reads reads.fq` corresponds to the `reads` input in the `nf-core/salmon` module. Run `nextflow module info nf-core/salmon` to see the available params for the module.
+
 See {ref}`cli-module-run` for more information.
-
-### Listing modules
-
-The `module list` command displays all modules currently installed in your project, showing their versions and integrity status.
-
-Use this to review installed modules, check module versions, or detect local modifications.
-
-```console
-$ nextflow module list
-$ nextflow module list -output json
-```
-
-The output shows each module's name, installed version, and whether it has been modified locally. Use `-json` for machine-readable output suitable for scripting.
-
-See {ref}`cli-module-list` for more information.
-
-### Searching for modules
-
-The `module search` command queries the module registry to discover available modules by keyword or name.
-
-Use this to find modules for specific tasks, explore available tools, or discover community contributions.
-
-```console
-$ nextflow module search alignment
-$ nextflow module search "quality control" -limit 10
-$ nextflow module search bwa -output json
-```
-
-Results include module names, versions, descriptions, and download statistics. Use `-limit` to control the number of results and `-output json` for programmatic access.
-
-See {ref}`cli-module-search` for more information.
-
-### Viewing module information
-
-The `module info` command displays detailed metadata and usage information for a specific module from the registry.
-
-Use this to understand module requirements, view input/output specifications, see available tools, or generate usage templates before installing or running a module.
-
-```console
-$ nextflow module info nf-core/fastqc
-$ nextflow module info nf-core/fastqc -version 1.0.0
-$ nextflow module info nf-core/fastqc -output json
-```
-
-The output includes the module's version, description, authors, keywords, tools, input/output channels, and a generated usage template showing how to run the module. Use `-json` for machine-readable output suitable for programmatic access.
-
-See {ref}`cli-module-info` for more information.
 
 ### Removing modules
 
@@ -386,7 +388,7 @@ $ nextflow module publish myorg/my-module
 $ nextflow module publish myorg/my-module -dry-run
 ```
 
-Publishing requires authentication via the `NXF_REGISTRY_TOKEN` environment variable or `registry.apiKey` in the Nextflow configuration. The module must include `main.nf`, `meta.yml`, and `README.md` files.
+Publishing requires authentication via the `NXF_REGISTRY_TOKEN` environment variable or the `registry.apiKey` config option. The module must include `main.nf`, `meta.yml`, and `README.md` files.
 
 Use `-dry-run` to validate your module structure without uploading.
 

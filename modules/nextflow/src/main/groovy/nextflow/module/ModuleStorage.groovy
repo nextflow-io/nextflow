@@ -143,22 +143,22 @@ class ModuleStorage {
             Files.walkFileTree(modulesDir, new SimpleFileVisitor<Path>() {
                 @Override
                 FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
-                    if( dir == modulesDir ) return FileVisitResult.CONTINUE
-                    if( Files.exists(dir.resolve(MODULE_INFO_FILE)) ) {
-                        try {
-                            def rel = modulesDir.relativize(dir)
-                            if( rel.nameCount >= 2 ) {
-                                def reference = ModuleReference.parse(rel.toString())
-                                def installed = getInstalledModule(reference)
-                                if( installed ) modules.add(installed)
-                            }
-                        } catch(Exception e) {
-                            // Catching exception to go on inspecting other valid folders
-                            log.debug("Not a valid module reference - $e.message")
+                    if( dir == modulesDir )
+                        return FileVisitResult.CONTINUE
+                    if( !Files.exists(dir.resolve(MODULE_INFO_FILE)) )
+                        return FileVisitResult.CONTINUE
+                    try {
+                        final rel = modulesDir.relativize(dir)
+                        if( rel.nameCount >= 2 ) {
+                            final reference = ModuleReference.parse(rel.toString())
+                            final installed = getInstalledModule(reference)
+                            if( installed ) modules.add(installed)
                         }
-                        return FileVisitResult.SKIP_SUBTREE
+                    } catch(Exception e) {
+                        // Catching exception to continue inspecting other valid folders
+                        log.debug("Not a valid module reference: $e.message")
                     }
-                    return FileVisitResult.CONTINUE
+                    return FileVisitResult.SKIP_SUBTREE
                 }
             })
         } catch (IOException e) {

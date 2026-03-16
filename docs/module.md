@@ -293,7 +293,7 @@ Modules are designed to be easy to share and re-use across different pipelines, 
 :::{versionadded} 26.04.0
 :::
 
-Nextflow provides a module registry that enables you to install, share, and manage modules from centralized registries. This system provides version management, integrity checking, and seamless integration with the Nextflow DSL.
+Nextflow provides a module registry that enables you to install, publish, and manage modules from centralized registries. This system provides version management, integrity checking, and seamless integration with the Nextflow language.
 
 ### Installing modules from a registry
 
@@ -323,8 +323,7 @@ For ad-hoc tasks or testing, you can run a module directly without creating a wo
 $ nextflow module run nf-core/fastqc --input 'data/*.fastq.gz'
 ```
 
-This command accepts all standard Nextflow options (`-profile`, `-resume`, etc.) and automatically downloads the module if not already installed.
-
+This command accepts all standard `nextflow run` options (`-profile`, `-resume`, etc.) and automatically downloads the module if not already installed.
 
 ### Discovering modules
 
@@ -374,7 +373,7 @@ $ nextflow module info nf-core/fastqc
 $ nextflow module info nf-core/fastqc -version 1.0.0
 ```
 
-The output includes the module description, authors, keywords, tools, inputs, outputs, and a ready-to-use command-line template. Use `-json` to get machine-readable output.
+The output includes the module description, authors, keywords, tools, inputs, outputs, and a ready-to-use command-line template. Use `-o json` to get machine-readable output.
 
 ### Publishing modules
 
