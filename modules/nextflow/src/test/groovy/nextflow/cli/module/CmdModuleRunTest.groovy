@@ -33,6 +33,7 @@ import test.OutputCapture
 
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.regex.Pattern
 import java.util.zip.GZIPOutputStream
 
 /**
@@ -96,15 +97,20 @@ class CmdModuleRunTest extends Specification {
             Files.write(dest, modulePackage)
             return dest
         }
+        def escapedPath = Pattern.quote(tempDir.toString())
+        def pattern = ~/"${escapedPath}\/.+\/test_output\.txt"/
 
         and:
         def cmd = new CmdModuleRun()
+        def opts = new CliOptions()
+        opts.setQuiet(true)
         cmd.launcher = Mock(Launcher) {
-            getOptions() >> new CliOptions()
+            getOptions() >> opts
             getCliString() >> "nextflow module run nf-core/test-module"
         }
         cmd.args = ['nf-core/test-module']
         cmd.root = tempDir
+        cmd.workDir = tempDir.toString()
         cmd.client = mockClient
 
         when:
@@ -116,9 +122,7 @@ class CmdModuleRunTest extends Specification {
             .findResults { line -> !line.contains('INFO') ? line : null }.join(" ")
 
         then:
-        stdout.contains('Executing module...')
-        stdout.contains('Process CREATE_FILE Outputs:')
-        stdout.contains("test_output.txt")
+        assert (stdout =~ pattern).find()
         and:
         // Verify module was installed
         Files.exists(moduleDir)
@@ -131,7 +135,7 @@ class CmdModuleRunTest extends Specification {
         def moduleScript = '''
             process CREATE_FILE_V2 {
                 output:
-                path "test_output_v2.txt"
+                path "test_output_v2.txt", emit: output_path
 
                 script:
                 """
@@ -147,6 +151,8 @@ class CmdModuleRunTest extends Specification {
         Files.createDirectories(moduleDir)
         moduleDir.resolve('main.nf').text = moduleScript
         moduleDir.resolve('meta.yml').text = 'name: nf-core/test-module\nversion: 2.0.0'
+        def escapedPath = Pattern.quote(tempDir.toString())
+        def pattern = ~/"output_path": "${escapedPath}\/.+\/test_output_v2\.txt"/
 
         and:
         def modulePackage = createModulePackage(moduleScript)
@@ -159,13 +165,16 @@ class CmdModuleRunTest extends Specification {
 
         and:
         def cmd = new CmdModuleRun()
+        def opts = new CliOptions()
+        opts.setQuiet(true)
         cmd.launcher = Mock(Launcher) {
-            getOptions() >> new CliOptions()
+            getOptions() >> opts
             getCliString() >> "nextflow module run nf-core/test-module"
         }
         cmd.args = ['nf-core/test-module']
         cmd.version = '2.0.0'
         cmd.root = tempDir
+        cmd.workDir = tempDir.toString()
         cmd.client = mockClient
 
         when:
@@ -178,9 +187,7 @@ class CmdModuleRunTest extends Specification {
             .findResults { line -> !line.contains('DEBUG') ? line : null }
             .findResults { line -> !line.contains('INFO') ? line : null }
             .findResults { line -> !line.contains('plugin') ? line : null }.join(" ")
-        stdout.contains('Executing module...')
-        stdout.contains('Process CREATE_FILE_V2 Outputs:')
-        stdout.contains("test_output_v2.txt")
+        assert (stdout =~ pattern).find()
 
     }
 
