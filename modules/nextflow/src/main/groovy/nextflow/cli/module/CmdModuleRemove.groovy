@@ -22,7 +22,6 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.cli.CmdBase
 import nextflow.exception.AbortOperationException
-import nextflow.module.ModuleInfo
 import nextflow.module.ModuleReference
 import nextflow.module.ModuleStorage
 

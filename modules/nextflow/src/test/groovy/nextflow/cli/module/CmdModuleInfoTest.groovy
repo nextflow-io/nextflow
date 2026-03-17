@@ -17,6 +17,7 @@
 package nextflow.cli.module
 
 import groovy.json.JsonSlurper
+import io.seqera.npr.client.RegistryClient
 import io.seqera.npr.api.schema.v1.Module
 import io.seqera.npr.api.schema.v1.ModuleChannel
 import io.seqera.npr.api.schema.v1.ModuleChannelItem
@@ -25,7 +26,6 @@ import io.seqera.npr.api.schema.v1.ModuleRelease
 import io.seqera.npr.api.schema.v1.ModuleTool
 import nextflow.cli.Launcher
 import nextflow.exception.AbortOperationException
-import nextflow.module.ModuleRegistryClient
 import org.junit.Rule
 import spock.lang.Specification
 import spock.lang.TempDir
@@ -73,7 +73,7 @@ class CmdModuleInfoTest extends Specification {
         def mockModule = Stub(Module) {
             getLatest() >> release
         }
-        def mockClient = Mock(ModuleRegistryClient) {
+        def mockClient = Mock(RegistryClient) {
             fetchModule(_) >> mockModule
         }
         cmd.client = mockClient
@@ -119,7 +119,7 @@ class CmdModuleInfoTest extends Specification {
         cmd.root = tempDir
 
         and:
-        def mockClient = Mock(ModuleRegistryClient) {
+        def mockClient = Mock(RegistryClient) {
             fetchRelease(_, _) >> release
         }
         cmd.client = mockClient
@@ -161,7 +161,7 @@ class CmdModuleInfoTest extends Specification {
         def mockModule = Stub(Module) {
             getLatest() >> release
         }
-        def mockClient = Mock(ModuleRegistryClient) {
+        def mockClient = Mock(RegistryClient) {
             fetchModule(_) >> mockModule
         }
         cmd.client = mockClient
@@ -218,7 +218,7 @@ class CmdModuleInfoTest extends Specification {
         def mockModule = Stub(Module) {
             getLatest() >> release
         }
-        def mockClient = Mock(ModuleRegistryClient) {
+        def mockClient = Mock(RegistryClient) {
             fetchModule(_) >> mockModule
         }
         cmd.client = mockClient
@@ -277,7 +277,7 @@ class CmdModuleInfoTest extends Specification {
         def mockModule = Stub(Module) {
             getLatest() >> release
         }
-        def mockClient = Mock(ModuleRegistryClient) {
+        def mockClient = Mock(RegistryClient) {
             fetchModule(_) >> mockModule
         }
         cmd.client = mockClient
@@ -335,7 +335,7 @@ class CmdModuleInfoTest extends Specification {
         def mockModule = Stub(Module) {
             getLatest() >> release
         }
-        def mockClient = Mock(ModuleRegistryClient) {
+        def mockClient = Mock(RegistryClient) {
             fetchModule(_) >> mockModule
         }
         cmd.client = mockClient
@@ -397,7 +397,7 @@ class CmdModuleInfoTest extends Specification {
         def mockModule = Stub(Module) {
             getLatest() >> release
         }
-        def mockClient = Mock(ModuleRegistryClient) {
+        def mockClient = Mock(RegistryClient) {
             fetchModule(_) >> mockModule
         }
         cmd.client = mockClient
@@ -436,7 +436,7 @@ class CmdModuleInfoTest extends Specification {
         cmd.root = tempDir
 
         and:
-        def mockClient = Mock(ModuleRegistryClient) {
+        def mockClient = Mock(RegistryClient) {
             fetchRelease(_, _) >> release
         }
         cmd.client = mockClient
@@ -488,7 +488,7 @@ class CmdModuleInfoTest extends Specification {
         def mockModule = Stub(Module) {
             getLatest() >> release
         }
-        def mockClient = Mock(ModuleRegistryClient) {
+        def mockClient = Mock(RegistryClient) {
             fetchModule(_) >> mockModule
         }
         cmd.client = mockClient
@@ -561,7 +561,7 @@ class CmdModuleInfoTest extends Specification {
         def mockModule = Stub(Module) {
             getLatest() >> release
         }
-        def mockClient = Mock(ModuleRegistryClient) {
+        def mockClient = Mock(RegistryClient) {
             fetchModule(_) >> mockModule
         }
         cmd.client = mockClient
@@ -604,7 +604,7 @@ class CmdModuleInfoTest extends Specification {
         def mockModule = Stub(Module) {
             getLatest() >> release
         }
-        def mockClient = Mock(ModuleRegistryClient) {
+        def mockClient = Mock(RegistryClient) {
             fetchModule(_) >> mockModule
         }
         cmd.client = mockClient
@@ -660,7 +660,7 @@ class CmdModuleInfoTest extends Specification {
         def mockModule = Stub(Module) {
             getLatest() >> release
         }
-        def mockClient = Mock(ModuleRegistryClient) {
+        def mockClient = Mock(RegistryClient) {
             fetchModule(_) >> mockModule
         }
         cmd.client = mockClient
@@ -713,7 +713,7 @@ class CmdModuleInfoTest extends Specification {
         def mockModule = Stub(Module) {
             getLatest() >> release
         }
-        def mockClient = Mock(ModuleRegistryClient) {
+        def mockClient = Mock(RegistryClient) {
             fetchModule(_) >> mockModule
         }
         cmd.client = mockClient
@@ -788,7 +788,7 @@ class CmdModuleInfoTest extends Specification {
         def mockModule = Stub(Module) {
             getLatest() >> release
         }
-        def mockClient = Mock(ModuleRegistryClient) {
+        def mockClient = Mock(RegistryClient) {
             fetchModule(_) >> mockModule
         }
         cmd.client = mockClient
