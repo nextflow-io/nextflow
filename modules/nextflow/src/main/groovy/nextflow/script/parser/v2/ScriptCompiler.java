@@ -32,6 +32,7 @@ import java.util.Set;
 import groovy.lang.GroovyClassLoader;
 import groovy.lang.GroovyCodeSource;
 import com.google.common.hash.Hashing;
+import nextflow.Global;
 import nextflow.script.ast.RecordNode;
 import nextflow.script.ast.WorkflowNode;
 import nextflow.script.control.CallSiteCollector;
@@ -268,8 +269,9 @@ public class ScriptCompiler {
 
         private void analyze(SourceUnit source) {
             // on first pass, recursively add included modules to queue
+            Path baseDir = Global.getSession() != null ? Global.getSession().getBaseDir() : null;
             if( entry == null ) {
-                modules = new ModuleResolver(compiler).resolve(source, uri -> createSourceUnit(uri));
+                modules = new ModuleResolver(compiler, baseDir).resolve(source, uri -> createSourceUnit(uri));
                 for( var su : modules )
                     addSource(su);
                 entry = source;
@@ -283,7 +285,7 @@ public class ScriptCompiler {
             var cn = source.getAST().getClasses().get(0);
 
             // perform strict syntax checking
-            var includeResolver = new ResolveIncludeVisitor(source, compiler);
+            var includeResolver = new ResolveIncludeVisitor(source, compiler, baseDir);
             includeResolver.visit();
             for( var error : includeResolver.getErrors() )
                 source.getErrorCollector().addErrorAndContinue(error);

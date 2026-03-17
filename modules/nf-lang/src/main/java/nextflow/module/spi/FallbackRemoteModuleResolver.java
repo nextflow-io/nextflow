@@ -31,14 +31,11 @@ import java.nio.file.Path;
 public class FallbackRemoteModuleResolver implements RemoteModuleResolver {
 
     @Override
-    public Path resolve(String moduleName) {
-        // Use CWD-relative "modules" directory as a best-effort fallback when no
-        // RemoteModuleResolver SPI implementation is available (e.g. running outside
-        // a full Nextflow session).
-        final Path baseDir = Path.of("modules").toAbsolutePath();
-        final var resolved = baseDir.resolve(moduleName).normalize();
+    public Path resolve(String moduleName, Path projectDir) {
+        final Path modulesDir = (projectDir == null) ? projectDir.resolve("modules") : Path.of("modules").toAbsolutePath();
+        final var resolved = modulesDir.resolve(moduleName).normalize();
         // Prevent path traversal outside the base directory
-        if (!resolved.startsWith(baseDir.normalize())) {
+        if (!resolved.startsWith(modulesDir.normalize())) {
             throw new IllegalStateException("Invalid module name '" + moduleName + "' - path escapes the modules directory");
         }
         if (!Files.exists(resolved)) {

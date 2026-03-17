@@ -37,9 +37,15 @@ import org.codehaus.groovy.control.SourceUnit;
 public class ModuleResolver {
 
     private Compiler compiler;
+    private Path projectDir;
+
+    public ModuleResolver(Compiler compiler, Path projectDir) {
+        this.compiler = compiler;
+        this.projectDir = projectDir;
+    }
 
     public ModuleResolver(Compiler compiler) {
-        this.compiler = compiler;
+        this(compiler, null);
     }
 
     /**
@@ -75,7 +81,7 @@ public class ModuleResolver {
             return null;
 
         var includeUri = isRemoteModule(source) ?
-            RemoteModuleResolverProvider.getInstance().resolve(source).normalize().toUri() :
+            RemoteModuleResolverProvider.getInstance().resolve(source, projectDir).normalize().toUri() :
             getIncludeUri(Path.of(sourceUnit.getSource().getURI()).getParent(), source);
         if( compiler.getSource(includeUri) != null )
             return null;

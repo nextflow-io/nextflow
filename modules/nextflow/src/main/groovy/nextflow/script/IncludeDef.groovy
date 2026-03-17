@@ -181,7 +181,7 @@ class IncludeDef {
     Path resolveRemoteModulePath(String moduleName) {
         // Use SPI to get the remote module resolver implementation
         def resolver = RemoteModuleResolverProvider.getInstance()
-        return resolver.resolve(moduleName)
+        return resolver.resolve(moduleName, session.baseDir)
     }
 
     @PackageScope

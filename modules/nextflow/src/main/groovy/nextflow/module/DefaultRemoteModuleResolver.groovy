@@ -45,8 +45,8 @@ import java.nio.file.Path
 class DefaultRemoteModuleResolver implements RemoteModuleResolver {
 
     @Override
-    Path resolve(String moduleName) {
-        def baseDir = Global.session?.baseDir ?: Path.of('.').toAbsolutePath()
+    Path resolve(String moduleName, Path projectDir) {
+        final baseDir = projectDir ?: Path.of('.').toAbsolutePath()
         final config = Global.config ?: new ConfigBuilder().setBaseDir(baseDir).build()
         final registryConfig = config.navigate('registry') as RegistryConfig
 

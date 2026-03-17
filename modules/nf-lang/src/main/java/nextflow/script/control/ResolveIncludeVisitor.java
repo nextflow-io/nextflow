@@ -57,15 +57,22 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
 
     private boolean changed;
 
-    public ResolveIncludeVisitor(SourceUnit sourceUnit, Compiler compiler, Set<URI> changedUris) {
+    private Path projectDir;
+
+    public ResolveIncludeVisitor(SourceUnit sourceUnit, Compiler compiler, Set<URI> changedUris, Path projectDir) {
         this.sourceUnit = sourceUnit;
         this.uri = sourceUnit.getSource().getURI();
         this.compiler = compiler;
         this.changedUris = changedUris;
+        this.projectDir = projectDir;
+    }
+
+    public ResolveIncludeVisitor(SourceUnit sourceUnit, Compiler compiler, Path projectDir) {
+        this(sourceUnit, compiler, null, projectDir);
     }
 
     public ResolveIncludeVisitor(SourceUnit sourceUnit, Compiler compiler) {
-        this(sourceUnit, compiler, null);
+        this(sourceUnit, compiler, null, null);
     }
 
     @Override
@@ -90,7 +97,7 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
         URI includeUri;
         if( ModuleResolver.isRemoteModule(source) ) {
             try {
-                includeUri = RemoteModuleResolverProvider.getInstance().resolve(source).normalize().toUri();
+                includeUri = RemoteModuleResolverProvider.getInstance().resolve(source, projectDir).normalize().toUri();
             }
             catch( IllegalStateException e ) {
                 addError(e.getMessage(), node);
