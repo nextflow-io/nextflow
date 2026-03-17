@@ -16,13 +16,13 @@
 
 package nextflow.cli.module
 
+import io.seqera.npr.client.RegistryClient
 import io.seqera.npr.api.schema.v1.Module
 import io.seqera.npr.api.schema.v1.ModuleRelease
 import nextflow.cli.CliOptions
 import nextflow.cli.Launcher
 import nextflow.exception.AbortOperationException
 import nextflow.module.ModuleReference
-import io.seqera.npr.client.RegistryClient
 import nextflow.module.ModuleStorage
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream

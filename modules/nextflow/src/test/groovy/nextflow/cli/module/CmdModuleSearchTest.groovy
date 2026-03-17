@@ -17,10 +17,10 @@
 package nextflow.cli.module
 
 import groovy.json.JsonSlurper
+import io.seqera.npr.client.RegistryClient
 import io.seqera.npr.api.schema.v1.ModuleSearchResult
 import io.seqera.npr.api.schema.v1.SearchModulesResponse
 import nextflow.exception.AbortOperationException
-import io.seqera.npr.client.RegistryClient
 import nextflow.cli.Launcher
 import org.junit.Rule
 import spock.lang.Specification

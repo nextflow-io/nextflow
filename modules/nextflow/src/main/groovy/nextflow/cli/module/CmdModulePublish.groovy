@@ -20,6 +20,7 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import io.seqera.npr.client.RegistryClient
 import nextflow.Const
 import nextflow.cli.CmdBase
 import nextflow.config.ConfigBuilder
@@ -29,7 +30,6 @@ import nextflow.module.ModuleChecksum
 import nextflow.module.ModuleInfo
 import nextflow.module.ModuleSpec
 import nextflow.module.ModuleReference
-import io.seqera.npr.client.RegistryClient
 import nextflow.module.RegistryClientFactory
 import nextflow.module.ModuleStorage
 import nextflow.util.TestOnly

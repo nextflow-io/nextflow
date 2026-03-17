@@ -19,13 +19,12 @@ package nextflow.cli.module
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
+import io.seqera.npr.client.RegistryClient
 import nextflow.cli.CmdRun
 import nextflow.config.ConfigBuilder
-
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import nextflow.module.ModuleReference
-import io.seqera.npr.client.RegistryClient
 import nextflow.module.RegistryClientFactory
 import nextflow.module.ModuleResolver
 

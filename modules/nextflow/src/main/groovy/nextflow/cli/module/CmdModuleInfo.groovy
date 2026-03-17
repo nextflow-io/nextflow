@@ -23,6 +23,7 @@ import com.beust.jcommander.Parameters
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import io.seqera.npr.client.RegistryClient
 import io.seqera.npr.api.schema.v1.ModuleChannel
 import io.seqera.npr.api.schema.v1.ModuleChannelItem
 import io.seqera.npr.api.schema.v1.ModuleMetadata
@@ -33,7 +34,6 @@ import nextflow.config.ConfigBuilder
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import nextflow.module.ModuleReference
-import io.seqera.npr.client.RegistryClient
 import nextflow.module.RegistryClientFactory
 import nextflow.util.TestOnly
 

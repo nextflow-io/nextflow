@@ -25,11 +25,11 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.seqera.npr.api.schema.v1.ModuleSearchResult
 import io.seqera.npr.api.schema.v1.SearchModulesResponse
+import io.seqera.npr.client.RegistryClient
 import nextflow.cli.CmdBase
 import nextflow.config.ConfigBuilder
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
-import io.seqera.npr.client.RegistryClient
 import nextflow.module.RegistryClientFactory
 import nextflow.util.TestOnly
 
