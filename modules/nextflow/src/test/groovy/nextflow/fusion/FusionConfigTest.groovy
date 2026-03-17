@@ -155,9 +155,9 @@ class FusionConfigTest extends Specification {
     @Unroll
     def 'should replace version in url' () {
         expect:
-        FusionConfig.replaceVersion(URL, VERSION) == EXPECTED
+        FusionConfig.replaceVersion(FUSION_URL, VER) == EXPECTED
         where:
-        URL                                                     | VERSION   | EXPECTED
+        FUSION_URL                                              | VER       | EXPECTED
         'https://fusionfs.seqera.io/releases/v2.5-amd64.json'  | '2.6'     | 'https://fusionfs.seqera.io/releases/v2.6-amd64.json'
         'https://fusionfs.seqera.io/releases/v2.5-arm64.json'  | '2.6'     | 'https://fusionfs.seqera.io/releases/v2.6-arm64.json'
         'https://fusionfs.seqera.io/releases/v2.5-snap_amd64.json' | '2.6' | 'https://fusionfs.seqera.io/releases/v2.6-snap_amd64.json'
@@ -168,23 +168,23 @@ class FusionConfigTest extends Specification {
     @Unroll
     def 'should resolve default fusion url with version override' () {
         given:
-        def config = new FusionConfig([targetVersion: DEFAULT_VERSION])
+        def config = new FusionConfig([targetVersion: TARGET_VER])
         expect:
-        config.targetFusionUrl(URL) == EXPECTED
+        config.targetFusionUrl(FUSION_URL) == EXPECTED
         where:
-        URL                                     | DEFAULT_VERSION | EXPECTED
-        FusionConfig.DEFAULT_FUSION_AMD64_URL   | null            | FusionConfig.DEFAULT_FUSION_AMD64_URL
-        FusionConfig.DEFAULT_FUSION_AMD64_URL   | '2.6'           | 'https://fusionfs.seqera.io/releases/v2.6-amd64.json'
-        FusionConfig.DEFAULT_FUSION_ARM64_URL   | '2.6'           | 'https://fusionfs.seqera.io/releases/v2.6-arm64.json'
-        FusionConfig.DEFAULT_SNAPSHOT_AMD64_URL | '2.6'           | 'https://fusionfs.seqera.io/releases/v2.6-snap_amd64.json'
-        FusionConfig.DEFAULT_SNAPSHOT_ARM64_URL | '2.6'           | 'https://fusionfs.seqera.io/releases/v2.6-snap_arm64.json'
+        FUSION_URL                              | TARGET_VER  | EXPECTED
+        FusionConfig.DEFAULT_FUSION_AMD64_URL   | null        | FusionConfig.DEFAULT_FUSION_AMD64_URL
+        FusionConfig.DEFAULT_FUSION_AMD64_URL   | '2.6'       | 'https://fusionfs.seqera.io/releases/v2.6-amd64.json'
+        FusionConfig.DEFAULT_FUSION_ARM64_URL   | '2.6'       | 'https://fusionfs.seqera.io/releases/v2.6-arm64.json'
+        FusionConfig.DEFAULT_SNAPSHOT_AMD64_URL | '2.6'       | 'https://fusionfs.seqera.io/releases/v2.6-snap_amd64.json'
+        FusionConfig.DEFAULT_SNAPSHOT_ARM64_URL | '2.6'       | 'https://fusionfs.seqera.io/releases/v2.6-snap_arm64.json'
     }
 
     def 'should get version with targetVersion override' () {
         expect:
-        new FusionConfig([enabled:ENABLED, targetVersion:DEFAULT_VERSION]).version() == EXPECTED
+        new FusionConfig([enabled:ENABLED, targetVersion:TARGET_VER]).version() == EXPECTED
         where:
-        ENABLED | DEFAULT_VERSION | EXPECTED
+        ENABLED | TARGET_VER | EXPECTED
         false   | '2.6'          | null
         true    | null            | '2.5'
         true    | '2.6'          | '2.6'
