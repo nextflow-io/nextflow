@@ -46,7 +46,7 @@ class DefaultRemoteModuleResolver implements RemoteModuleResolver {
 
     @Override
     Path resolve(String moduleName) {
-        def baseDir = Global.session?.baseDir ?: Path.of('.')
+        def baseDir = Global.session?.baseDir ?: Path.of('.').toAbsolutePath()
         final config = Global.config ?: new ConfigBuilder().setBaseDir(baseDir).build()
         final registryConfig = config.navigate('registry') as RegistryConfig
 

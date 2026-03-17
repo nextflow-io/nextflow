@@ -87,9 +87,19 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
             return;
         }
 
-        var includeUri = ModuleResolver.isRemoteModule(source) ?
-            RemoteModuleResolverProvider.getInstance().resolve(source).normalize().toUri() :
-            getIncludeUri(Path.of(sourceUnit.getSource().getURI()).getParent(), source);
+        URI includeUri;
+        if( ModuleResolver.isRemoteModule(source) ) {
+            try {
+                includeUri = RemoteModuleResolverProvider.getInstance().resolve(source).normalize().toUri();
+            }
+            catch( IllegalStateException e ) {
+                addError(e.getMessage(), node);
+                return;
+            }
+        }
+        else {
+            includeUri = getIncludeUri(Path.of(sourceUnit.getSource().getURI()).getParent(), source);
+        }
         if( !isIncludeStale(node, includeUri) )
             return;
         changed = true;
