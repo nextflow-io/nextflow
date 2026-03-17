@@ -27,7 +27,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.NF
 import nextflow.Session
-import nextflow.exception.IllegalModulePath
+import nextflow.exception.IllegalModulePathException
 import nextflow.exception.ScriptCompilationException
 import nextflow.module.ModuleReference
 import nextflow.module.spi.RemoteModuleResolverProvider
@@ -167,7 +167,7 @@ class IncludeDef {
         final result = include as Path
         if( result.isAbsolute() ) {
             if( result.scheme == 'file' ) return result
-            throw new IllegalModulePath("Cannot resolve module path: ${result.toUriString()}")
+            throw new IllegalModulePathException("Cannot resolve module path: ${result.toUriString()}")
         }
         final str = include.toString()
         if( str.startsWith('./') || str.startsWith('../') ) {
@@ -212,10 +212,10 @@ class IncludeDef {
     @PackageScope
     void checkValidPath(path) {
         if( !path )
-            throw new IllegalModulePath("Missing module path attribute")
+            throw new IllegalModulePathException("Missing module path attribute")
 
         if( path instanceof Path && path.scheme != 'file' )
-            throw new IllegalModulePath("Remote modules are not allowed -- Offending module: ${path.toUriString()}")
+            throw new IllegalModulePathException("Remote modules are not allowed -- Offending module: ${path.toUriString()}")
 
         final str = path.toString()
         if( str.startsWith('/') || str.startsWith('./') || str.startsWith('../') || str.startsWith('plugin/') )
@@ -225,7 +225,7 @@ class IncludeDef {
         try {
             ModuleReference.parse(str)
         } catch( Exception e ) {
-            throw new IllegalModulePath("Module path must start with '/', './', '../' or 'plugin/' prefix, or be a valid remote module reference (scope/name) -- Offending module: $str")
+            throw new IllegalModulePathException("Module path must start with '/', './', '../' or 'plugin/' prefix, or be a valid remote module reference (scope/name) -- Offending module: $str")
         }
     }
 

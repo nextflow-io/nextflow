@@ -34,18 +34,18 @@ import org.codehaus.groovy.control.messages.WarningMessage;
  */
 public class ScriptParser {
 
-    private Compiler compiler;
     private Path projectDir;
-
-    public ScriptParser() {
-        this(null);
-    }
+    private Compiler compiler;
 
     public ScriptParser(Path projectDir) {
+        this.projectDir = projectDir;
         var config = getConfig();
         var classLoader = new GroovyClassLoader();
         this.compiler = new Compiler(config, classLoader);
-        this.projectDir = projectDir;
+    }
+
+    public ScriptParser() {
+        this(null);
     }
 
     public Compiler compiler() {
@@ -75,11 +75,11 @@ public class ScriptParser {
     public void analyze() {
         var sources = new ArrayList<>(compiler.getSources().values());
         for( var source : sources ) {
-            new ModuleResolver(compiler(), projectDir).resolve(source, (uri) -> compiler.createSourceUnit(new File(uri)));
+            new ModuleResolver(projectDir, compiler()).resolve(source, (uri) -> compiler.createSourceUnit(new File(uri)));
         }
 
         for( var source : compiler.getSources().values() ) {
-            var includeResolver = new ResolveIncludeVisitor(source, compiler, projectDir);
+            var includeResolver = new ResolveIncludeVisitor(source, projectDir, compiler);
             includeResolver.visit();
             for( var error : includeResolver.getErrors() )
                 source.getErrorCollector().addErrorAndContinue(error);

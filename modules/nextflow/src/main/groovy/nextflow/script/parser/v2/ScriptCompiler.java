@@ -32,7 +32,6 @@ import java.util.Set;
 import groovy.lang.GroovyClassLoader;
 import groovy.lang.GroovyCodeSource;
 import com.google.common.hash.Hashing;
-import nextflow.Global;
 import nextflow.script.ast.RecordNode;
 import nextflow.script.ast.WorkflowNode;
 import nextflow.script.control.CallSiteCollector;
@@ -89,16 +88,18 @@ public class ScriptCompiler {
 
     private final CompilerConfiguration config;
     private final GroovyClassLoader loader;
+    private final Path projectDir;
 
     private Compiler compiler;
 
-    public ScriptCompiler(boolean debug, Path targetDirectory, ClassLoader parent) {
-        this(getConfig(debug, targetDirectory), parent);
+    public ScriptCompiler(boolean debug, Path targetDirectory, ClassLoader parent, Path projectDir) {
+        this(getConfig(debug, targetDirectory), parent, projectDir);
     }
 
-    public ScriptCompiler(CompilerConfiguration config, ClassLoader parent) {
+    public ScriptCompiler(CompilerConfiguration config, ClassLoader parent, Path projectDir) {
         this.config = config;
         this.loader = new GroovyClassLoader(parent, config);
+        this.projectDir = projectDir;
     }
 
     private static CompilerConfiguration getConfig(boolean debug, Path targetDirectory) {
@@ -269,9 +270,8 @@ public class ScriptCompiler {
 
         private void analyze(SourceUnit source) {
             // on first pass, recursively add included modules to queue
-            Path baseDir = Global.getSession() != null ? Global.getSession().getBaseDir() : null;
             if( entry == null ) {
-                modules = new ModuleResolver(compiler, baseDir).resolve(source, uri -> createSourceUnit(uri));
+                modules = new ModuleResolver(projectDir, compiler).resolve(source, uri -> createSourceUnit(uri));
                 for( var su : modules )
                     addSource(su);
                 entry = source;
@@ -285,7 +285,7 @@ public class ScriptCompiler {
             var cn = source.getAST().getClasses().get(0);
 
             // perform strict syntax checking
-            var includeResolver = new ResolveIncludeVisitor(source, compiler, baseDir);
+            var includeResolver = new ResolveIncludeVisitor(source, projectDir, compiler);
             includeResolver.visit();
             for( var error : includeResolver.getErrors() )
                 source.getErrorCollector().addErrorAndContinue(error);

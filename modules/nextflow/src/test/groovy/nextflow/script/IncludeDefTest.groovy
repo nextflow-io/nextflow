@@ -24,7 +24,7 @@ import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
 import nextflow.ast.NextflowDSL
-import nextflow.exception.IllegalModulePath
+import nextflow.exception.IllegalModulePathException
 import nextflow.file.FileHelper
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
@@ -51,7 +51,7 @@ class IncludeDefTest extends Specification {
         when:
         include.resolveModulePath('http://foo.com/bar')
         then:
-        thrown(IllegalModulePath)
+        thrown(IllegalModulePathException)
 
     }
 
@@ -147,17 +147,17 @@ class IncludeDefTest extends Specification {
         when:
         include.checkValidPath('invalid!')
         then:
-        thrown(IllegalModulePath)
+        thrown(IllegalModulePathException)
 
         when:
         include.checkValidPath( 'http://foo.com/x.y')
         then:
-        thrown(IllegalModulePath)
+        thrown(IllegalModulePathException)
 
         when:
         include.checkValidPath(FileHelper.asPath('http://foo.com/x/y/z'))
         then:
-        thrown(IllegalModulePath)
+        thrown(IllegalModulePathException)
 
     }
 
