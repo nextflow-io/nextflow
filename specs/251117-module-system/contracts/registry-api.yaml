@@ -1,0 +1,388 @@
+openapi: 3.0.3
+info:
+  title: Nextflow Module Registry API
+  description: |
+    API specification for the Nextflow Module Registry.
+    This documents the endpoints that the Nextflow module system client consumes.
+    The registry backend is assumed to be already implemented at registry.nextflow.io.
+  version: 1.0.0
+  contact:
+    name: Nextflow Team
+    url: https://nextflow.io
+
+servers:
+  - url: https://registry.nextflow.io/api
+    description: Production registry
+
+security:
+  - BearerAuth: []
+
+paths:
+  /modules:
+    get:
+      operationId: searchModules
+      summary: Search modules
+      description: Search for modules by query text (semantic search across name, description, keywords)
+      tags:
+        - Modules
+      parameters:
+        - name: query
+          in: query
+          required: true
+          description: Search query text
+          schema:
+            type: string
+            example: "alignment"
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of results
+          schema:
+            type: integer
+            default: 10
+            maximum: 100
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  modules:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ModuleSummary'
+                  total:
+                    type: integer
+                    description: Total matching modules
+        '400':
+          description: Invalid query parameters
+
+  /modules/{name}:
+    get:
+      operationId: getModule
+      summary: Get module details
+      description: Get module metadata including latest release information
+      tags:
+        - Modules
+      parameters:
+        - name: name
+          in: path
+          required: true
+          description: Module name including scope (e.g., nf-core/fastqc)
+          schema:
+            type: string
+            example: "nf-core/fastqc"
+      responses:
+        '200':
+          description: Module details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModuleDetails'
+        '404':
+          description: Module not found
+
+    post:
+      operationId: publishModule
+      summary: Publish module version
+      description: Upload and publish a new module version (requires authentication)
+      tags:
+        - Modules
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: name
+          in: path
+          required: true
+          description: Module name including scope
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - bundle
+              properties:
+                bundle:
+                  type: string
+                  format: binary
+                  description: Module bundle (tar.gz archive)
+                tags:
+                  type: array
+                  items:
+                    type: string
+                  description: Additional tags for discoverability
+      responses:
+        '201':
+          description: Module published successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublishResult'
+        '400':
+          description: Invalid module bundle or manifest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          description: Authentication required
+        '403':
+          description: Insufficient permissions for scope
+
+  /modules/{name}/releases:
+    get:
+      operationId: listReleases
+      summary: List module releases
+      description: Get all available versions of a module
+      tags:
+        - Modules
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of releases
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  releases:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ReleaseInfo'
+        '404':
+          description: Module not found
+
+  /modules/{name}/{version}:
+    get:
+      operationId: getRelease
+      summary: Get specific release
+      description: Get metadata for a specific module version
+      tags:
+        - Modules
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: version
+          in: path
+          required: true
+          description: Semantic version (e.g., 1.0.0)
+          schema:
+            type: string
+            example: "1.0.0"
+      responses:
+        '200':
+          description: Release details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReleaseInfo'
+        '404':
+          description: Module or version not found
+
+  /modules/{name}/{version}/download:
+    get:
+      operationId: downloadModule
+      summary: Download module bundle
+      description: Download the module source archive for a specific version
+      tags:
+        - Modules
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: version
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Module bundle
+          headers:
+            X-Checksum:
+              description: SHA-256 checksum of the bundle
+              schema:
+                type: string
+                example: "sha256:abc123..."
+            Content-Disposition:
+              description: Suggested filename
+              schema:
+                type: string
+                example: "attachment; filename=nf-core-fastqc-1.0.0.tar.gz"
+          content:
+            application/gzip:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Module or version not found
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: |
+        Authentication token. Can be provided via:
+        - NXF_REGISTRY_TOKEN environment variable
+        - registry.auth config block
+
+  schemas:
+    ModuleSummary:
+      type: object
+      required:
+        - name
+        - latestVersion
+        - description
+      properties:
+        name:
+          type: string
+          description: Full module name with scope
+          example: "nf-core/fastqc"
+        latestVersion:
+          type: string
+          description: Latest available version
+          example: "1.2.0"
+        description:
+          type: string
+          description: Short module description
+          example: "Run FastQC on sequenced reads"
+        downloadCount:
+          type: integer
+          description: Total download count
+          example: 15420
+        keywords:
+          type: array
+          items:
+            type: string
+          example: ["quality control", "fastq"]
+
+    ModuleDetails:
+      type: object
+      required:
+        - name
+        - latestVersion
+        - description
+      properties:
+        name:
+          type: string
+          example: "nf-core/fastqc"
+        latestVersion:
+          type: string
+          example: "1.2.0"
+        description:
+          type: string
+        authors:
+          type: array
+          items:
+            type: string
+          example: ["@drpatelh"]
+        maintainers:
+          type: array
+          items:
+            type: string
+        license:
+          type: string
+          example: "MIT"
+        keywords:
+          type: array
+          items:
+            type: string
+        downloadCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        latestRelease:
+          $ref: '#/components/schemas/ReleaseInfo'
+
+    ReleaseInfo:
+      type: object
+      required:
+        - version
+        - checksum
+        - publishedAt
+      properties:
+        version:
+          type: string
+          description: Semantic version
+          example: "1.2.0"
+        checksum:
+          type: string
+          description: SHA-256 checksum of bundle
+          example: "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        publishedAt:
+          type: string
+          format: date-time
+        size:
+          type: integer
+          description: Bundle size in bytes
+          example: 45678
+        requires:
+          type: object
+          properties:
+            nextflow:
+              type: string
+              example: ">=24.04.0"
+            plugins:
+              type: array
+              items:
+                type: string
+            modules:
+              type: array
+              items:
+                type: string
+
+    PublishResult:
+      type: object
+      properties:
+        name:
+          type: string
+        version:
+          type: string
+        checksum:
+          type: string
+        publishedAt:
+          type: string
+          format: date-time
+        downloadUrl:
+          type: string
+          format: uri
+
+    ValidationError:
+      type: object
+      properties:
+        code:
+          type: string
+          enum:
+            - INVALID_MANIFEST
+            - MISSING_MAIN_NF
+            - MISSING_README
+            - INVALID_VERSION
+            - BUNDLE_TOO_LARGE
+            - DUPLICATE_VERSION
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            type: string
