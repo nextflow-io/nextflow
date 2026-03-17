@@ -1,6 +1,6 @@
 nf-seqera changelog
 ====================
-0.15.0 - 17 Mar 2026
+0.16.0 - 17 Mar 2026
 - Add provider option to Seqera executor config (#6908) [c70376d0a]
 - Default Fusion to v2.6 for Seqera executor (#6933) [8a7e53957]
 
