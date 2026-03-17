@@ -401,11 +401,22 @@ class WaveClient {
             : new URL(DEFAULT_S5CMD_AMD64_URL)
     }
 
+    protected static URL replaceFusionArch(URL url, String platform) {
+        final isArm = platform.tokenize('/')?.contains('arm64')
+        final targetArch = isArm ? 'arm64' : 'amd64'
+        final replaced = url.toString().replaceAll(/(?<=[-_])(amd64|arm64)(?=\.)/, targetArch)
+        return replaced != url.toString() ? new URL(replaced) : url
+    }
+
     ContainerConfig resolveContainerConfig(String platform = DEFAULT_DOCKER_PLATFORM) {
         final urls = new ArrayList<URL>(config.containerConfigUrl())
+        final platforms = platform ? platform.tokenize(',') : List.of(DEFAULT_DOCKER_PLATFORM)
         if( fusion.enabled() ) {
-            final fusionUrl = fusion.containerConfigUrl() ?: defaultFusionUrl(platform)
-            urls.add(fusionUrl)
+            final customUrl = fusion.containerConfigUrl()
+            for( String p : platforms ) {
+                final fusionUrl = customUrl ? replaceFusionArch(customUrl, p.trim()) : defaultFusionUrl(p.trim())
+                urls.add(fusionUrl)
+            }
         }
         if( awsFargate ) {
             final s5cmdUrl = s5cmdConfigUrl ?: defaultS5cmdUrl(platform)
@@ -520,7 +531,7 @@ class WaveClient {
         return resolveAssets0(attrs, bundle, singularity, dockerArch)
     }
 
-    protected WaveAssets resolveAssets0(Map<String,String> attrs, ResourcesBundle bundle, boolean singularity, String dockerArch) {
+    protected WaveAssets resolveAssets0(Map<String,String> attrs, ResourcesBundle bundle, boolean singularity, String platform) {
 
         final scriptType = singularity ? 'singularityfile' : 'dockerfile'
         String containerScript = attrs.get(scriptType)
@@ -580,11 +591,6 @@ class WaveClient {
         final projectRes = config.bundleProjectResources() && session.binDir
                     ? projectResources(session.binDir)
                     : null
-
-        /*
-         * the container platform to be used
-         */
-        final platform = dockerArch
 
         // check is a valid container image
         WaveAssets.validateContainerName(containerImage)
