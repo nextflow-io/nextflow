@@ -17,10 +17,10 @@
 package nextflow.cli.module
 
 import groovy.json.JsonSlurper
+import io.seqera.npr.client.RegistryClient
 import io.seqera.npr.api.schema.v1.ModuleSearchResult
 import io.seqera.npr.api.schema.v1.SearchModulesResponse
 import nextflow.exception.AbortOperationException
-import nextflow.module.ModuleRegistryClient
 import nextflow.cli.Launcher
 import org.junit.Rule
 import spock.lang.Specification
@@ -76,7 +76,7 @@ class CmdModuleSearchTest extends Specification {
         )
         assert response.results
         // Mock the registry client directly using the test field
-        def mockClient = Mock(ModuleRegistryClient) {
+        def mockClient = Mock(RegistryClient) {
             search(_, _) >> response
         }
         cmd.client = mockClient
@@ -117,7 +117,7 @@ class CmdModuleSearchTest extends Specification {
 
         and:
         // Mock the registry client
-        def mockClient = Mock(ModuleRegistryClient)
+        def mockClient = Mock(RegistryClient)
         mockClient.search('fastqc', 10) >> new SearchModulesResponse(
             query: 'fastqc',
             totalResults: 1,
@@ -153,7 +153,7 @@ class CmdModuleSearchTest extends Specification {
 
         and:
         // Mock empty results
-        def mockClient = Mock(ModuleRegistryClient)
+        def mockClient = Mock(RegistryClient)
         mockClient.search('nonexistent-module', 20) >> new SearchModulesResponse(
             query: 'nonexistent-module',
             totalResults: 0,
@@ -208,7 +208,7 @@ class CmdModuleSearchTest extends Specification {
 
         and:
         // Mock the client with 5 results
-        def mockClient = Mock(ModuleRegistryClient)
+        def mockClient = Mock(RegistryClient)
         mockClient.search('test', 5) >> new SearchModulesResponse(
             query: 'test',
             totalResults: 5,

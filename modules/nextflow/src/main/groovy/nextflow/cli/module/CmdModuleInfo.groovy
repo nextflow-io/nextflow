@@ -23,6 +23,7 @@ import com.beust.jcommander.Parameters
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import io.seqera.npr.client.RegistryClient
 import io.seqera.npr.api.schema.v1.ModuleChannel
 import io.seqera.npr.api.schema.v1.ModuleChannelItem
 import io.seqera.npr.api.schema.v1.ModuleMetadata
@@ -33,7 +34,7 @@ import nextflow.config.ConfigBuilder
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import nextflow.module.ModuleReference
-import nextflow.module.ModuleRegistryClient
+import nextflow.module.RegistryClientFactory
 import nextflow.util.TestOnly
 
 import java.nio.file.Path
@@ -77,7 +78,7 @@ class CmdModuleInfo extends CmdBase {
     protected Path root
 
     @TestOnly
-    protected ModuleRegistryClient client
+    protected RegistryClient client
 
     @Override
     String getName() {
@@ -102,7 +103,7 @@ class CmdModuleInfo extends CmdBase {
 
 
         // Fetch full metadata from registry to get input/output parameters
-        def registryClient = this.client ?: new ModuleRegistryClient(registryConfig)
+        def registryClient = this.client ?: RegistryClientFactory.forConfig(registryConfig)
         ModuleRelease release = null
 
         try {
@@ -119,7 +120,7 @@ class CmdModuleInfo extends CmdBase {
             throw new AbortOperationException("No release information available for ${reference}")
         }
         if( !release.metadata ) {
-            log.info("No metadata found for $reference ${release.version ? "($release.version)" : ''}")
+            throw new AbortOperationException("No metadata found for ${reference}${release.version ? " (${release.version})" : ''}")
         }
         def moduleUrl = buildModuleUrl(registryConfig.url, reference, release.version)
         if( !output || output == 'text' ) {

@@ -18,6 +18,7 @@ package nextflow.module
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import io.seqera.npr.client.RegistryClient
 
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
@@ -34,16 +35,16 @@ import java.nio.file.Path
 @CompileStatic
 class ModuleResolver {
 
-    private final ModuleRegistryClient registryClient
+    private final RegistryClient registryClient
     private final ModuleStorage storage
 
-    ModuleResolver(Path baseDir, ModuleRegistryClient registryClient) {
+    ModuleResolver(Path baseDir, RegistryClient registryClient) {
         this.registryClient = registryClient
         this.storage = new ModuleStorage(baseDir)
     }
 
     ModuleResolver(Path baseDir, RegistryConfig registryConfig = null) {
-        this(baseDir, new ModuleRegistryClient(registryConfig ?: new RegistryConfig()))
+        this(baseDir, RegistryClientFactory.forConfig(registryConfig ?: new RegistryConfig()))
 
     }
 

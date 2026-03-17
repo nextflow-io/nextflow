@@ -25,11 +25,12 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.seqera.npr.api.schema.v1.ModuleSearchResult
 import io.seqera.npr.api.schema.v1.SearchModulesResponse
+import io.seqera.npr.client.RegistryClient
 import nextflow.cli.CmdBase
 import nextflow.config.ConfigBuilder
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
-import nextflow.module.ModuleRegistryClient
+import nextflow.module.RegistryClientFactory
 import nextflow.util.TestOnly
 
 import java.nio.file.Paths
@@ -69,7 +70,7 @@ class CmdModuleSearch extends CmdBase {
     List<String> args
 
     @TestOnly
-    protected ModuleRegistryClient client
+    protected RegistryClient client
 
     @Override
     String getName() {
@@ -93,7 +94,7 @@ class CmdModuleSearch extends CmdBase {
         final registryConfig = config.navigate('registry') as RegistryConfig ?: new RegistryConfig()
 
         // Create client to search
-        final client = this.client ?: new ModuleRegistryClient(registryConfig)
+        final client = this.client ?: RegistryClientFactory.forConfig(registryConfig)
 
         try {
             println "Searching for '${query}'..."
