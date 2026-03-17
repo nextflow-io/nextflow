@@ -1,4 +1,14 @@
 nf-seqera changelog
 ====================
+0.15.0 - 17 Mar 2026
+- Add provider option to Seqera executor config (#6908) [c70376d0a]
+- Default Fusion to v2.6 for Seqera executor (#6933) [8a7e53957]
+
+0.14.0 - 4 Mar 2026
+- Use PipelineSpec model in CreateRunRequest (#6887) [4bd7e4f02]
+
+0.13.0 - 3 Mar 2026
+- Add NVMe disk allocation and diskMountPath support (#6879) [6644d3c90]
+
 0.12.0 - 28 Feb 2026
 - Sched core implementation alpha1 (#6242) [870c858af]
