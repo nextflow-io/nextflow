@@ -19,8 +19,10 @@ package nextflow.script
 import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Session
 import nextflow.Nextflow
+import nextflow.extension.DumpHelper
 import nextflow.script.params.EnvInParam
 import nextflow.script.params.FileInParam
 import nextflow.script.params.InParam
@@ -85,9 +87,11 @@ class ProcessEntryHandler {
             final workflowExecutionClosure = { ->
                 // Get input parameter values and execute the process
                 final inputArgs = getProcessArguments(processDef)
-                final processResult = script.invokeMethod(processName, inputArgs as Object[])
-
-                return processResult
+                final output = meta.getProcess(processName).run(inputArgs as Object[]) as ChannelOut
+                session.addIgniter {
+                    printOutput(processName, output)
+                }
+                return output
             }
 
             // Create the body definition with execution logic
@@ -96,6 +100,48 @@ class ProcessEntryHandler {
         }
 
         return new WorkflowDef(script, workflowBody)
+    }
+
+    /**
+     * Prints the process outputs.
+     *
+     * @param processName
+     * @param output
+     */
+    private void printOutput(String processName, ChannelOut output) {
+        if( output.isEmpty() ) {
+            log.debug("Process ${processName} does not declare any outputs")
+            return
+        }
+
+        Object result = null
+
+        // print process output directly if it is a single expression
+        if( output.size() == 1 && (output.getNames().isEmpty() || output.getNames().first() == '$out') ) {
+            result = (output[0] as DataflowVariable).get()
+        }
+
+        // otherwise, construct map of process emits
+        else {
+            if( output.size() != output.getNames().size() )
+                log.warn("Process ${processName} is missing emit names for one or more outputs -- unnamed outputs will be omitted")
+
+            // compute reverse lookup of emit names
+            final reverseLookup = new HashMap<Object, String>(output.size())
+            for( final name : output.getNames() )
+                reverseLookup.put(output.getProperty(name), name)
+
+            // combine process emits into map
+            final combinedOutputs = new LinkedHashMap<String, Object>(output.size())
+            for( final ch : output ) {
+                final name = reverseLookup.get(ch)
+                combinedOutputs.put(name, (ch as DataflowVariable).get())
+            }
+
+            result = combinedOutputs
+        }
+
+        println DumpHelper.prettyPrintJson(result)
     }
 
     /**
