@@ -18,6 +18,7 @@ package io.seqera.executor
 
 import io.seqera.config.SeqeraConfig
 import io.seqera.sched.client.SchedClientConfig
+import nextflow.Session
 import nextflow.SysEnv
 import nextflow.platform.PlatformHelper
 import spock.lang.Specification
@@ -107,6 +108,34 @@ class SeqeraExecutorTest extends Specification {
         config.platformUrl == 'https://api.config.example.com'
         config.accessToken == 'config-access-token'
         config.refreshToken == 'config-refresh-token'
+    }
+
+    def 'should set fusion default version when not configured' () {
+        given:
+        def fusionConfig = [enabled: true]
+        def config = [fusion: fusionConfig]
+        def session = Mock(Session) { getConfig() >> config }
+        def executor = new SeqeraExecutor(session: session)
+
+        when:
+        executor.applyFusionDefaults()
+
+        then:
+        fusionConfig.targetVersion == '2.6'
+    }
+
+    def 'should not override fusion version when containerConfigUrl is set' () {
+        given:
+        def fusionConfig = [enabled: true, containerConfigUrl: 'https://custom.url/v3.0-amd64.json']
+        def config = [fusion: fusionConfig]
+        def session = Mock(Session) { getConfig() >> config }
+        def executor = new SeqeraExecutor(session: session)
+
+        when:
+        executor.applyFusionDefaults()
+
+        then:
+        fusionConfig.targetVersion == null
     }
 
     /**

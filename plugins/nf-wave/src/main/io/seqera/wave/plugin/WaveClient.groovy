@@ -383,15 +383,17 @@ class WaveClient {
     }
 
     protected URL fusionAmd64(boolean snapshots) {
-        return snapshots
-                ? URI.create(FusionConfig.DEFAULT_SNAPSHOT_AMD64_URL).toURL()
-                : URI.create(FusionConfig.DEFAULT_FUSION_AMD64_URL).toURL()
+        final url = snapshots
+                ? FusionConfig.DEFAULT_SNAPSHOT_AMD64_URL
+                : FusionConfig.DEFAULT_FUSION_AMD64_URL
+        return URI.create(fusion.targetFusionUrl(url)).toURL()
     }
 
     protected URL fusionArm64(boolean snapshots) {
-        return snapshots
-            ? URI.create(FusionConfig.DEFAULT_SNAPSHOT_ARM64_URL).toURL()
-            : URI.create(FusionConfig.DEFAULT_FUSION_ARM64_URL).toURL()
+        final url = snapshots
+            ? FusionConfig.DEFAULT_SNAPSHOT_ARM64_URL
+            : FusionConfig.DEFAULT_FUSION_ARM64_URL
+        return URI.create(fusion.targetFusionUrl(url)).toURL()
     }
 
     protected URL defaultS5cmdUrl(String platform) {
