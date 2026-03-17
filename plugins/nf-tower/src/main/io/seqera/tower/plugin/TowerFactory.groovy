@@ -94,13 +94,6 @@ class TowerFactory implements TraceObserverFactoryV2 {
     }
 
     static TowerClient client() {
-        log.debug("Session $Global.session, env ${SysEnv.get()}")
         client(Global.session as Session, SysEnv.get())
-    }
-
-    @Memoized
-    static TowerClient fsClient(Map<String,String> env){
-        final config = new TowerConfig(Collections.emptyMap(), env)
-        createTowerClient0(Global.session as Session, config, env)
     }
 }
