@@ -20,13 +20,13 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import io.seqera.npr.client.RegistryClient
 import nextflow.cli.CmdBase
 import nextflow.config.ConfigBuilder
-
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import nextflow.module.ModuleReference
-import nextflow.module.ModuleRegistryClient
+import nextflow.module.RegistryClientFactory
 import nextflow.module.ModuleResolver
 import nextflow.module.ModuleSpec
 
@@ -58,7 +58,7 @@ class CmdModuleInstall extends CmdBase {
     protected Path root
 
     @TestOnly
-    protected ModuleRegistryClient client
+    protected RegistryClient client
 
     @Override
     String getName() {
@@ -82,7 +82,7 @@ class CmdModuleInstall extends CmdBase {
         final registryConfig = config.navigate('registry') as RegistryConfig ?: new RegistryConfig()
 
         // Create resolver and install
-        def resolver = new ModuleResolver(baseDir, client ?: new ModuleRegistryClient(registryConfig))
+        def resolver = new ModuleResolver(baseDir, client ?: RegistryClientFactory.forConfig(registryConfig))
 
         try {
             def installedMainFile = resolver.installModule(reference, version, force)

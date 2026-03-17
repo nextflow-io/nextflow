@@ -97,11 +97,17 @@ public class ModuleResolver {
         return includeSource;
     }
 
+    /**
+     * Module name pattern matching the canonical format used by ModuleReference.
+     * Scope: lowercase alphanumeric with dots/underscores/hyphens.
+     * Name: one or more slash-separated segments, each lowercase alphanumeric with dots/underscores/hyphens.
+     */
+    static final String REMOTE_MODULE_PATTERN = "^[a-z0-9][a-z0-9._\\-]*/[a-z][a-z0-9._\\-]*(/[a-z][a-z0-9._\\-]*)*$";
+
     static boolean isRemoteModule(String source) {
         if( source.startsWith("/") || source.startsWith("./") || source.startsWith("../") )
             return false;
-        // Must match scope/name pattern: scope is lowercase alphanumeric with dots/underscores/hyphens
-        return source.matches("^[a-z0-9][a-z0-9._\\-]*/[a-z][a-z0-9._\\-]*(/[a-z][a-z0-9._\\-]*)*$");
+        return source.matches(REMOTE_MODULE_PATTERN);
     }
 
     private static URI getIncludeUri(Path parent, String source) {

@@ -16,13 +16,13 @@
 
 package nextflow.cli.module
 
+import io.seqera.npr.client.RegistryClient
 import io.seqera.npr.api.schema.v1.Module
 import io.seqera.npr.api.schema.v1.ModuleRelease
 import nextflow.cli.CliOptions
 import nextflow.cli.Launcher
 import nextflow.exception.AbortOperationException
 import nextflow.module.ModuleReference
-import nextflow.module.ModuleRegistryClient
 import nextflow.module.ModuleStorage
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream
@@ -86,7 +86,7 @@ class CmdModuleRunTest extends Specification {
         def modulePackage = createModulePackage(moduleScript)
 
         // Mock registry client
-        def mockClient = Stub(ModuleRegistryClient)
+        def mockClient = Stub(RegistryClient)
         def moduleRelease = new ModuleRelease()
         moduleRelease.version = '1.0.0'
         def module = new Module()
@@ -157,7 +157,7 @@ class CmdModuleRunTest extends Specification {
         and:
         def modulePackage = createModulePackage(moduleScript)
 
-        def mockClient = Mock(ModuleRegistryClient)
+        def mockClient = Mock(RegistryClient)
         mockClient.downloadModule('nf-core/test-module', '2.0.0', _) >> { String name, String version, Path dest ->
             Files.write(dest, modulePackage)
             return dest
