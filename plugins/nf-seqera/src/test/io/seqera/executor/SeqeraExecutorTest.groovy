@@ -112,6 +112,7 @@ class SeqeraExecutorTest extends Specification {
 
     def 'should set fusion default version when not configured' () {
         given:
+        SysEnv.push([:])
         def fusionConfig = [enabled: true]
         def config = [fusion: fusionConfig]
         def session = Mock(Session) { getConfig() >> config }
@@ -126,6 +127,7 @@ class SeqeraExecutorTest extends Specification {
 
     def 'should not override fusion version when containerConfigUrl is set' () {
         given:
+        SysEnv.push([:])
         def fusionConfig = [enabled: true, containerConfigUrl: 'https://custom.url/v3.0-amd64.json']
         def config = [fusion: fusionConfig]
         def session = Mock(Session) { getConfig() >> config }
