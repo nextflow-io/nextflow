@@ -276,7 +276,9 @@ class ModuleRegistryClient {
             }
 
             // Write response body to file
-            Files.copy(response.body(), targetPath)
+            try( def body = response.body() ) {
+                Files.copy(body, targetPath)
+            }
             log.debug "Downloaded module to: ${targetPath}"
 
             validateDownloadIntegrity(response, uri, targetPath, name, version)
