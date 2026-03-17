@@ -29,6 +29,8 @@ import nextflow.NF
 import nextflow.Session
 import nextflow.exception.IllegalModulePath
 import nextflow.exception.ScriptCompilationException
+import nextflow.module.ModuleReference
+import nextflow.module.spi.RemoteModuleResolverProvider
 import nextflow.plugin.Plugins
 import nextflow.plugin.extension.PluginExtensionProvider
 import nextflow.script.parser.v1.ScriptLoaderV1
@@ -162,14 +164,24 @@ class IncludeDef {
     @PackageScope
     Path resolveModulePath(include) {
         assert include
-
         final result = include as Path
         if( result.isAbsolute() ) {
             if( result.scheme == 'file' ) return result
             throw new IllegalModulePath("Cannot resolve module path: ${result.toUriString()}")
         }
+        final str = include.toString()
+        if( str.startsWith('./') || str.startsWith('../') ) {
+            return getOwnerPath().resolveSibling(str).normalize()
+        }
+        // Not a local path — treat as remote module reference (scope/name)
+        return resolveRemoteModulePath(str)
+    }
 
-        return getOwnerPath().resolveSibling(include.toString())
+    @PackageScope
+    Path resolveRemoteModulePath(String moduleName) {
+        // Use SPI to get the remote module resolver implementation
+        def resolver = RemoteModuleResolverProvider.getInstance()
+        return resolver.resolve(moduleName, session.baseDir)
     }
 
     @PackageScope
@@ -206,9 +218,15 @@ class IncludeDef {
             throw new IllegalModulePath("Remote modules are not allowed -- Offending module: ${path.toUriString()}")
 
         final str = path.toString()
-        if( !str.startsWith('/') && !str.startsWith('./') && !str.startsWith('../') && !str.startsWith('plugin/') )
-            throw new IllegalModulePath("Module path must start with / or ./ prefix -- Offending module: $str")
+        if( str.startsWith('/') || str.startsWith('./') || str.startsWith('../') || str.startsWith('plugin/') )
+            return
 
+        // Otherwise must be a valid remote module reference in scope/name format
+        try {
+            ModuleReference.parse(str)
+        } catch( Exception e ) {
+            throw new IllegalModulePath("Module path must start with '/', './', '../' or 'plugin/' prefix, or be a valid remote module reference (scope/name) -- Offending module: $str")
+        }
     }
 
     @PackageScope
