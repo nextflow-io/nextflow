@@ -1,5 +1,8 @@
 nf-azure changelog
 ===================
+1.22.1 - 17 Mar 2026
+- Record types (#6679) [d54ff29af]
+
 1.22.0 - 28 Feb 2026
 - Handle Azure Batch ActiveJobAndScheduleQuotaReached with retry (#6874) [6e66aaa58]
 - Update default Azure Batch VM image to Ubuntu 24.04 (#6844) [b621fc7cb]
