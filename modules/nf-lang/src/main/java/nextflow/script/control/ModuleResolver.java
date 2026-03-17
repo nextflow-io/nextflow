@@ -74,17 +74,9 @@ public class ModuleResolver {
         if( source.startsWith("plugin/") )
             return null;
 
-        var parent = Path.of(sourceUnit.getSource().getURI()).getParent();
-
-        // Resolve remote module paths (scope/name format, not starting with local prefixes)
-        if( isRemoteModule(source) ) {
-            var modules = Path.of("./modules");
-            var resolver = RemoteModuleResolverProvider.getInstance();
-            resolver.resolve(source, modules.getParent());
-            parent = modules;
-        }
-
-        var includeUri = getIncludeUri(parent, source);
+        var includeUri = isRemoteModule(source) ?
+            RemoteModuleResolverProvider.getInstance().resolve(source).normalize().toUri() :
+            getIncludeUri(Path.of(sourceUnit.getSource().getURI()).getParent(), source);
         if( compiler.getSource(includeUri) != null )
             return null;
         if( !Files.exists(Path.of(includeUri)) )

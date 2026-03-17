@@ -31,7 +31,8 @@ import java.nio.file.Path;
 public class FallbackRemoteModuleResolver implements RemoteModuleResolver {
 
     @Override
-    public Path resolve(String moduleName, Path baseDir) {
+    public Path resolve(String moduleName) {
+        final Path baseDir = Path.of("modules");
         if (!Files.exists(baseDir.resolve(moduleName))) {
             throw new IllegalStateException("Module '" + moduleName + "' not locally found at 'modules' folder - use 'nextflow install' to download module files");
         }
