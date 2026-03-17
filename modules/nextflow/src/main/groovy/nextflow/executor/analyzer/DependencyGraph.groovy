@@ -1,4 +1,4 @@
-package nextflow.analyzer
+package nextflow.executor.analyzer
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
