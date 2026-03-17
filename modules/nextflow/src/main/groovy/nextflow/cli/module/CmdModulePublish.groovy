@@ -29,7 +29,8 @@ import nextflow.module.ModuleChecksum
 import nextflow.module.ModuleInfo
 import nextflow.module.ModuleSpec
 import nextflow.module.ModuleReference
-import nextflow.module.ModuleRegistryClient
+import io.seqera.npr.client.RegistryClient
+import nextflow.module.RegistryClientFactory
 import nextflow.module.ModuleStorage
 import nextflow.util.TestOnly
 
@@ -60,7 +61,7 @@ class CmdModulePublish extends CmdBase {
     protected Path root
 
     @TestOnly
-    protected ModuleRegistryClient client
+    protected RegistryClient client
 
     //Flag if publish is invoked from a scope/name. In this case we should create/update the .module-info with the correct checksum
     private boolean useModuleReference = false
@@ -138,7 +139,7 @@ class CmdModulePublish extends CmdBase {
             // Publish to registry
             final registry = registryUrl ?: registryConfig.url
             log.info "Publishing module to registry: ${registryUrl ?: registryConfig.url}"
-            def registryClient = new ModuleRegistryClient(registryConfig)
+            def registryClient = RegistryClientFactory.forConfig(registryConfig)
             def response = registryClient.publishModule(spec.name, request, registry)
 
             if (useModuleReference) {

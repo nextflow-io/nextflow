@@ -25,7 +25,8 @@ import nextflow.config.ConfigBuilder
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import nextflow.module.ModuleReference
-import nextflow.module.ModuleRegistryClient
+import io.seqera.npr.client.RegistryClient
+import nextflow.module.RegistryClientFactory
 import nextflow.module.ModuleResolver
 
 import nextflow.util.TestOnly
@@ -48,7 +49,7 @@ class CmdModuleRun extends CmdRun {
     protected Path root
 
     @TestOnly
-    protected ModuleRegistryClient client
+    protected RegistryClient client
 
     @Override
     String getName() {
@@ -78,7 +79,7 @@ class CmdModuleRun extends CmdRun {
 
         def registryConfig = config.navigate('registry') as RegistryConfig ?: new RegistryConfig()
 
-        def resolver = new ModuleResolver(baseDir, client ?: new ModuleRegistryClient(registryConfig))
+        def resolver = new ModuleResolver(baseDir, client ?: RegistryClientFactory.forConfig(registryConfig))
         Path moduleFile = resolver.installModule(reference, version)
         if( moduleFile ) {
             args[0] = moduleFile.toAbsolutePath().toString()

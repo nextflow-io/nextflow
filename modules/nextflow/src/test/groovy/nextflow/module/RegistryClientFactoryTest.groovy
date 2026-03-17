@@ -20,7 +20,7 @@ import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock
 import groovy.json.JsonOutput
 import nextflow.config.RegistryConfig
-import nextflow.exception.AbortOperationException
+import io.seqera.npr.client.RegistryException
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream
 import spock.lang.Specification
@@ -34,11 +34,11 @@ import static com.github.tomakehurst.wiremock.client.WireMock.*
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig
 
 /**
- * Integration tests for ModuleRegistryClient using WireMock
+ * Integration tests for RegistryClientFactory using WireMock
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
-class ModuleRegistryClientTest extends Specification {
+class RegistryClientFactoryTest extends Specification {
 
     @TempDir
     Path tempDir
@@ -77,7 +77,7 @@ class ModuleRegistryClientTest extends Specification {
 
         and:
         def config = new RegistryConfig([url: url])
-        def client = new ModuleRegistryClient(config)
+        def client = RegistryClientFactory.forConfig(config)
 
         when:
         def result = client.fetchModule('nf-core/fastqc')
@@ -127,7 +127,7 @@ class ModuleRegistryClientTest extends Specification {
 
         and:
         def config = new RegistryConfig([url: url])
-        def client = new ModuleRegistryClient(config)
+        def client = RegistryClientFactory.forConfig(config)
 
         when:
         def result = client.search('fastqc', 10)
@@ -162,7 +162,7 @@ class ModuleRegistryClientTest extends Specification {
 
         and:
         def config = new RegistryConfig([url: url])
-        def client = new ModuleRegistryClient(config)
+        def client = RegistryClientFactory.forConfig(config)
         def destFile = tempDir.resolve('module.tgz')
 
         when:
@@ -187,7 +187,7 @@ class ModuleRegistryClientTest extends Specification {
 
         and:
         def config = new RegistryConfig([url: url])
-        def client = new ModuleRegistryClient(config)
+        def client = RegistryClientFactory.forConfig(config)
 
         when:
         def result = client.fetchModule('nf-core/fastqc')
@@ -209,14 +209,14 @@ class ModuleRegistryClientTest extends Specification {
 
         and:
         def config = new RegistryConfig([url: url])
-        def client = new ModuleRegistryClient(config)
+        def client = RegistryClientFactory.forConfig(config)
 
         when:
         client.fetchModule('nf-core/nonexistent')
 
         then:
-        def ex = thrown(AbortOperationException)
-        ex.message.contains('Unable to fetch module') || ex.message.contains('Module not found')
+        def ex = thrown(RegistryException)
+        ex.message.contains('any configured registry') || ex.message.contains('Not found')
 
         and:
         verify(getRequestedFor(urlEqualTo(MODULES_API_PATH + '/nf-core%2Fnonexistent')))
@@ -231,13 +231,13 @@ class ModuleRegistryClientTest extends Specification {
 
         and:
         def config = new RegistryConfig([url: url])
-        def client = new ModuleRegistryClient(config)
+        def client = RegistryClientFactory.forConfig(config)
 
         when:
         client.fetchModule('nf-core/fastqc')
 
         then:
-        thrown(AbortOperationException)
+        thrown(RegistryException)
     }
 
     def 'should send user agent header'() {
@@ -250,7 +250,7 @@ class ModuleRegistryClientTest extends Specification {
 
         and:
         def config = new RegistryConfig([url: url])
-        def client = new ModuleRegistryClient(config)
+        def client = RegistryClientFactory.forConfig(config)
 
         when:
         client.fetchModule('nf-core/fastqc')
@@ -275,7 +275,7 @@ class ModuleRegistryClientTest extends Specification {
 
         and:
         def config = new RegistryConfig([url: url])
-        def client = new ModuleRegistryClient(config)
+        def client = RegistryClientFactory.forConfig(config)
 
         when:
         def result = client.search('nonexistent', 10)
@@ -300,7 +300,7 @@ class ModuleRegistryClientTest extends Specification {
 
         and:
         def config = new RegistryConfig([url: url])
-        def client = new ModuleRegistryClient(config)
+        def client = RegistryClientFactory.forConfig(config)
 
         when:
         client.search('test', 25)
@@ -320,13 +320,13 @@ class ModuleRegistryClientTest extends Specification {
 
         and:
         def config = new RegistryConfig([url: url])
-        def client = new ModuleRegistryClient(config)
+        def client = RegistryClientFactory.forConfig(config)
 
         when:
         client.fetchModule('nf-core/fastqc')
 
         then:
-        thrown(AbortOperationException)
+        thrown(RegistryException)
     }
 
     def 'should verify download includes checksum header'() {
@@ -344,7 +344,7 @@ class ModuleRegistryClientTest extends Specification {
 
         and:
         def config = new RegistryConfig([url: url])
-        def client = new ModuleRegistryClient(config)
+        def client = RegistryClientFactory.forConfig(config)
         def destFile = tempDir.resolve('module.tgz')
 
         when:
@@ -362,40 +362,40 @@ class ModuleRegistryClientTest extends Specification {
         given:
         // Stub will not be set up, causing connection refused
         def config = new RegistryConfig([url: "http://localhost:9999"]) // Invalid port
-        def client = new ModuleRegistryClient(config)
+        def client = RegistryClientFactory.forConfig(config)
 
         when:
         client.fetchModule('nf-core/fastqc')
 
         then:
-        thrown(AbortOperationException)
+        thrown(RegistryException)
     }
 
     def 'should require authentication for publish'() {
         given:
         def config = new RegistryConfig([url: url])
-        def client = new ModuleRegistryClient(config)
+        def client = RegistryClientFactory.forConfig(config)
         def publishRequest = [name: 'nf-core/mymodule', version: '1.0.0']
 
         when:
-        client.publishModule('nf-core/mymodule', publishRequest)
+        client.publishModule('nf-core/mymodule', publishRequest, null)
 
         then:
-        def ex = thrown(AbortOperationException)
+        def ex = thrown(RegistryException)
         ex.message.contains('Authentication required')
     }
 
     def 'should handle publish failure with no auth token'() {
         given:
         def config = new RegistryConfig([url: url])
-        def client = new ModuleRegistryClient(config)
+        def client = RegistryClientFactory.forConfig(config)
         def publishRequest = [name: 'nf-core/mymodule', version: '1.0.0']
 
         when:
-        client.publishModule('nf-core/mymodule', publishRequest)
+        client.publishModule('nf-core/mymodule', publishRequest, null)
 
         then:
-        def ex = thrown(AbortOperationException)
+        def ex = thrown(RegistryException)
         ex.message.contains('Authentication required')
     }
 

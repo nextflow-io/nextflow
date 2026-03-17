@@ -23,7 +23,7 @@ import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import nextflow.module.ModuleChecksum
 import nextflow.module.ModuleInfo
-import nextflow.module.ModuleRegistryClient
+import io.seqera.npr.client.RegistryClient
 import nextflow.module.ModuleStorage
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream
@@ -63,7 +63,7 @@ class CmdModuleInstallTest extends Specification {
         def modulePackage = createModulePackage('nf-core', 'fastqc', '1.0.0')
 
         // Mock registry client
-        def mockClient = Mock(ModuleRegistryClient)
+        def mockClient = Mock(RegistryClient)
         mockClient.fetchModule('nf-core/fastqc') >> new Module(
             name: 'nf-core/fastqc',
             latest: new ModuleRelease(version: '1.0.0')
@@ -104,7 +104,7 @@ class CmdModuleInstallTest extends Specification {
         and:
         def modulePackage = createModulePackage('nf-core', 'fastqc', '2.0.0')
 
-        def mockClient = Mock(ModuleRegistryClient)
+        def mockClient = Mock(RegistryClient)
         mockClient.downloadModule(_, _, _) >> { String name, String version, Path dest ->
             Files.write(dest, modulePackage)
             return 'http://registry.com'
@@ -153,7 +153,7 @@ class CmdModuleInstallTest extends Specification {
         and:
         def modulePackage = createModulePackage('nf-core', 'fastqc', '2.0.0')
 
-        def mockClient = Mock(ModuleRegistryClient)
+        def mockClient = Mock(RegistryClient)
         mockClient.downloadModule('nf-core/fastqc', '2.0.0', _) >> { String name, String version, Path dest ->
             Files.write(dest, modulePackage)
             return 'registry'
@@ -194,7 +194,7 @@ class CmdModuleInstallTest extends Specification {
         cmd.version = '2.0.0'
         cmd.root = tempDir
 
-        def mockClient = Mock(ModuleRegistryClient)
+        def mockClient = Mock(RegistryClient)
         mockClient.fetchModule('nf-core/fastqc') >> new Module(
             name: 'nf-core/fastqc',
             latest: new ModuleRelease(version: '2.0.0')
@@ -221,7 +221,7 @@ class CmdModuleInstallTest extends Specification {
         and:
         def modulePackage = createModulePackage('myorg', 'custom-module', '1.0.0')
 
-        def mockClient = Mock(ModuleRegistryClient)
+        def mockClient = Mock(RegistryClient)
         mockClient.fetchModule('myorg/custom-module') >> new Module(
             name: 'myorg/custom-module',
             latest: new ModuleRelease(version: '1.0.0')
@@ -253,7 +253,7 @@ class CmdModuleInstallTest extends Specification {
         and:
         def modulePackage = createModulePackage('nf-core', 'fastqc', '1.0.0')
 
-        def mockClient = Mock(ModuleRegistryClient)
+        def mockClient = Mock(RegistryClient)
         mockClient.fetchModule('nf-core/fastqc') >> new Module(
             name: 'nf-core/fastqc',
             latest: new ModuleRelease(version: '1.0.0')
@@ -285,7 +285,7 @@ class CmdModuleInstallTest extends Specification {
         and:
         def modulePackage = createModulePackage('nf-core', 'fastqc', '1.0.0')
 
-        def mockClient = Mock(ModuleRegistryClient)
+        def mockClient = Mock(RegistryClient)
         mockClient.fetchModule('nf-core/fastqc') >> new Module(
             name: 'nf-core/fastqc',
             latest: new ModuleRelease(version: '1.0.0')
