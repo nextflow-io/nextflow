@@ -261,7 +261,7 @@ class CmdModulePublish extends CmdBase {
         final localStorage = new ModuleStorage(root ?: Paths.get('.').toAbsolutePath().normalize())
 
         if (!localStorage.isInstalled(ref)){
-            throw new AbortOperationException("No module diretory found for $module")
+            throw new AbortOperationException("No module directory found for $module")
         }
         useModuleReference = true
         return localStorage.getModuleDir(ref)

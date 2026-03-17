@@ -169,7 +169,7 @@ class ModuleInfoTest extends Specification {
         result['registryUrl'] == 'http://registry.com'
     }
 
-    def 'should return empty map when loading all from non-existent file'() {
+    def 'should return null when loading all from non-existent file'() {
         given:
         def moduleDir = tempDir.resolve('module')
         Files.createDirectories(moduleDir)
@@ -178,6 +178,6 @@ class ModuleInfoTest extends Specification {
         def result = ModuleInfo.load(moduleDir)
 
         then:
-        result == [:]
+        result == null
     }
 }

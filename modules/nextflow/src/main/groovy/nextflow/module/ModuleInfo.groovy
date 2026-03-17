@@ -94,13 +94,13 @@ class ModuleInfo {
      * Load all properties from the .module-info file in the module directory
      *
      * @param moduleDir The module directory path
-     * @return The checksum, or null if file doesn't exist
+     * @return Map of properties, or null if file doesn't exist
      */
     static Map<String, String> load(Path moduleDir) {
         def moduleInfoFile = moduleDir.resolve(MODULE_INFO_FILE)
         if( !Files.exists(moduleInfoFile) ) {
             log.debug("Module file $moduleInfoFile not found")
-            return [:]
+            return null
         }
         def props = new Properties()
         moduleInfoFile.withInputStream { is -> props.load(is) }

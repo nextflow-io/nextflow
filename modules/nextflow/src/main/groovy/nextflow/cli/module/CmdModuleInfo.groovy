@@ -120,7 +120,7 @@ class CmdModuleInfo extends CmdBase {
             throw new AbortOperationException("No release information available for ${reference}")
         }
         if( !release.metadata ) {
-            log.info("No metadata found for $reference ${release.version ? "($release.version)" : ''}")
+            throw new AbortOperationException("No metadata found for ${reference}${release.version ? " (${release.version})" : ''}")
         }
         def moduleUrl = buildModuleUrl(registryConfig.url, reference, release.version)
         if( !output || output == 'text' ) {

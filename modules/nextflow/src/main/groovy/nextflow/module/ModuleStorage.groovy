@@ -228,7 +228,7 @@ class ModuleStorage {
     boolean removeModule(ModuleReference reference, boolean force) {
         final installed = getInstalledModule(reference)
         if( !installed )
-            return
+            return false
         final integrity = installed.integrity
         if( integrity == ModuleIntegrity.NO_REMOTE_MODULE && !force ) {
             throw new AbortOperationException(

@@ -29,6 +29,7 @@ import nextflow.module.ModuleReference
 import io.seqera.npr.client.RegistryClient
 import nextflow.module.RegistryClientFactory
 import nextflow.module.ModuleResolver
+import nextflow.module.ModuleSpec
 
 import nextflow.util.TestOnly
 
@@ -86,7 +87,8 @@ class CmdModuleInstall extends CmdBase {
 
         try {
             def installedMainFile = resolver.installModule(reference, version, force)
-            def installedVersion = version ?: resolver.resolveVersion(reference)
+            // Read the installed version from meta.yml to avoid a redundant registry call
+            def installedVersion = ModuleSpec.load(installedMainFile.parent.resolve('meta.yml')).version
 
             println "Module ${reference}@${installedVersion} installed and configured successfully"
         }
