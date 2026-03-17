@@ -31,9 +31,7 @@ import java.util.regex.Pattern
 @EqualsAndHashCode
 class ModuleReference {
 
-    // Pattern allows: scope with letters/digits/hyphens/dots/underscores, name segments separated by slashes (no trailing slash)
-    // Scope: starts with letter/digit, followed by letters/digits/dots/underscores/hyphens
-    // Name: one or more segments (each starting with letter, followed by letters/digits/underscores/hyphens), separated by slashes
+    // Must stay in sync with ModuleResolver.REMOTE_MODULE_PATTERN in nf-lang
     private static final Pattern MODULE_NAME_PATTERN = ~/^([a-z0-9][a-z0-9._\-]*)\/([a-z][a-z0-9._\-]*(?:\/[a-z][a-z0-9._\-]*)*)$/
 
     final String scope

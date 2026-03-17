@@ -54,7 +54,10 @@ class ModuleSpec {
 
         try {
             def yaml = new Yaml()
-            def data = yaml.load(Files.newInputStream(metaYamlPath)) as Map<String, Object>
+            Map<String, Object> data
+            try( def stream = Files.newInputStream(metaYamlPath) ) {
+                data = yaml.load(stream) as Map<String, Object>
+            }
 
             def spec = new ModuleSpec()
             spec.name = data.name as String

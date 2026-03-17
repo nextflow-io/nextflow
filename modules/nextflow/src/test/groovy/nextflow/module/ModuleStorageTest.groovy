@@ -507,19 +507,21 @@ class ModuleStorageTest extends Specification {
             new GZIPOutputStream(fos).withCloseable { gzos ->
                 new TarArchiveOutputStream(gzos).withCloseable { tos ->
                     // Add all files from tempModuleDir
-                    Files.walk(tempModuleDir).each { Path path ->
-                        if (Files.isRegularFile(path)) {
-                            // Get relative path
-                            def relativePath = tempModuleDir.relativize(path).toString()
+                    Files.walk(tempModuleDir).withCloseable { stream ->
+                        stream.each { Path path ->
+                            if (Files.isRegularFile(path)) {
+                                // Get relative path
+                                def relativePath = tempModuleDir.relativize(path).toString()
 
-                            // Create tar entry
-                            def entry = new TarArchiveEntry(path.toFile(), relativePath)
-                            tos.putArchiveEntry(entry)
+                                // Create tar entry
+                                def entry = new TarArchiveEntry(path.toFile(), relativePath)
+                                tos.putArchiveEntry(entry)
 
-                            // Write file content
-                            Files.copy(path, tos)
+                                // Write file content
+                                Files.copy(path, tos)
 
-                            tos.closeArchiveEntry()
+                                tos.closeArchiveEntry()
+                            }
                         }
                     }
                 }
