@@ -343,7 +343,10 @@ class GoogleBatchMachineTypeSelector {
         if( machineType.contains('lssd') )
             return true
 
-        if( (PARTIAL_LOCAL_SSD_SUPPORT_FAMILIES + NO_LOCAL_SSD_SUPPORT_FAMILIES).any { matchType(it, machineType) } )
+        if( PARTIAL_LOCAL_SSD_SUPPORT_FAMILIES.any { matchType(it, machineType) } )
+            return false
+
+        if( NO_LOCAL_SSD_SUPPORT_FAMILIES.any { matchType(it, machineType) } )
             return false
 
         return true
