@@ -31,14 +31,15 @@ import java.nio.file.Path;
 public class FallbackRemoteModuleResolver implements RemoteModuleResolver {
 
     @Override
-    public Path resolve(String moduleName, Path baseDir) {
-        final var resolved = baseDir.resolve(moduleName).normalize();
-        // Prevent path traversal outside the base directory
-        if (!resolved.startsWith(baseDir.normalize())) {
-            throw new IllegalStateException("Invalid module name '" + moduleName + "' - path escapes the modules directory");
+    public Path resolve(String moduleName, Path projectDir) {
+        var baseDir = projectDir != null ? projectDir : Path.of(".").toAbsolutePath();
+        var modulesDir = baseDir.resolve("modules").normalize();
+        var resolved = modulesDir.resolve(moduleName).normalize();
+        if( !resolved.startsWith(modulesDir) ) {
+            throw new IllegalStateException("Invalid module name '" + moduleName + "' -- path escapes the modules directory");
         }
-        if (!Files.exists(resolved)) {
-            throw new IllegalStateException("Module '" + moduleName + "' not locally found at 'modules' folder - use 'nextflow module install' to download module files");
+        if( !Files.exists(resolved) ) {
+            throw new IllegalStateException("Module '" + moduleName + "' not found in 'modules' directory -- use 'nextflow module install' to install module first");
         }
         return resolved.resolve("main.nf");
     }

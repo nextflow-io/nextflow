@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
+import nextflow.module.spi.RemoteModuleResolverProvider;
 import nextflow.script.ast.FunctionNode;
 import nextflow.script.ast.IncludeNode;
 import nextflow.script.ast.ScriptNode;
@@ -48,6 +49,8 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
 
     private URI uri;
 
+    private Path projectDir;
+
     private Compiler compiler;
 
     private Set<URI> changedUris;
@@ -56,15 +59,16 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
 
     private boolean changed;
 
-    public ResolveIncludeVisitor(SourceUnit sourceUnit, Compiler compiler, Set<URI> changedUris) {
+    public ResolveIncludeVisitor(SourceUnit sourceUnit, Path projectDir, Compiler compiler, Set<URI> changedUris) {
         this.sourceUnit = sourceUnit;
         this.uri = sourceUnit.getSource().getURI();
         this.compiler = compiler;
         this.changedUris = changedUris;
+        this.projectDir = projectDir;
     }
 
-    public ResolveIncludeVisitor(SourceUnit sourceUnit, Compiler compiler) {
-        this(sourceUnit, compiler, null);
+    public ResolveIncludeVisitor(SourceUnit sourceUnit, Path projectDir, Compiler compiler) {
+        this(sourceUnit, projectDir, compiler, null);
     }
 
     @Override
@@ -86,9 +90,15 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
             return;
         }
 
-        var isRemoteModule = ModuleResolver.isRemoteModule(source);
-        var parent = isRemoteModule ? Path.of("modules") : Path.of(uri).getParent();
-        var includeUri = getIncludeUri(parent, source);
+        URI includeUri;
+        try {
+            includeUri = getIncludeUri(source);
+        }
+        catch( Exception e ) {
+            addError(e.getMessage(), node);
+            return;
+        }
+
         if( !isIncludeStale(node, includeUri) )
             return;
         changed = true;
@@ -126,7 +136,20 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
         }
     }
 
-    private static URI getIncludeUri(Path parent, String source) {
+    private URI getIncludeUri(String source) {
+        if( ModuleResolver.isRemoteModule(source) ) {
+            return RemoteModuleResolverProvider.getInstance()
+                .resolve(source, projectDir)
+                .normalize()
+                .toUri();
+        }
+        else {
+            var parent = Path.of(uri).getParent();
+            return getLocalIncludeUri(parent, source);
+        }
+    }
+
+    private static URI getLocalIncludeUri(Path parent, String source) {
         Path includePath = parent.resolve(source);
         if( Files.isDirectory(includePath) )
             includePath = includePath.resolve("main.nf");

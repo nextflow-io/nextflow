@@ -161,7 +161,7 @@ class ModuleResolver {
             // Install to modules directory (will compute directory checksum for future integrity checks)
             InstalledModule installed = storage.installModule(reference, version, tempFile, downloadUrl)
 
-            log.info "Module ${reference}@${version} installed successfully at ${installed.mainFile.parent}"
+            log.info "Module ${reference}@${version} installed successfully at ${installed.mainFile.parent.toAbsolutePath()}"
             return installed.mainFile
         }
         finally {

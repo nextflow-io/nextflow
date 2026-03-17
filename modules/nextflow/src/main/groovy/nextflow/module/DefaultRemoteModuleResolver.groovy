@@ -22,7 +22,7 @@ import nextflow.Global
 import nextflow.config.ConfigBuilder
 
 import nextflow.config.RegistryConfig
-import nextflow.exception.IllegalModulePath
+import nextflow.exception.IllegalModulePathException
 import nextflow.module.spi.RemoteModuleResolver
 
 import java.nio.file.Path
@@ -45,8 +45,8 @@ import java.nio.file.Path
 class DefaultRemoteModuleResolver implements RemoteModuleResolver {
 
     @Override
-    Path resolve(String moduleName, Path baseDir) {
-
+    Path resolve(String moduleName, Path projectDir) {
+        final baseDir = projectDir ?: Path.of('.').toAbsolutePath()
         final config = Global.config ?: new ConfigBuilder().setBaseDir(baseDir).build()
         final registryConfig = config.navigate('registry') as RegistryConfig
 
@@ -65,7 +65,7 @@ class DefaultRemoteModuleResolver implements RemoteModuleResolver {
             log.debug "Module ${reference} resolved to ${mainFile}"
             return mainFile
         } catch (Exception e) {
-            throw new IllegalModulePath("Failed to resolve remote module ${moduleName}: ${e.message}", e)
+            throw new IllegalModulePathException("Failed to resolve remote module ${moduleName}: ${e.message}", e)
         }
     }
 

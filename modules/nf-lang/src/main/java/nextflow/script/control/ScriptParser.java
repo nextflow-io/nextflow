@@ -16,6 +16,7 @@
 package nextflow.script.control;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 
@@ -33,12 +34,18 @@ import org.codehaus.groovy.control.messages.WarningMessage;
  */
 public class ScriptParser {
 
+    private Path projectDir;
     private Compiler compiler;
 
-    public ScriptParser() {
+    public ScriptParser(Path projectDir) {
+        this.projectDir = projectDir;
         var config = getConfig();
         var classLoader = new GroovyClassLoader();
-        compiler = new Compiler(config, classLoader);
+        this.compiler = new Compiler(config, classLoader);
+    }
+
+    public ScriptParser() {
+        this(null);
     }
 
     public Compiler compiler() {
@@ -68,11 +75,11 @@ public class ScriptParser {
     public void analyze() {
         var sources = new ArrayList<>(compiler.getSources().values());
         for( var source : sources ) {
-            new ModuleResolver(compiler()).resolve(source, (uri) -> compiler.createSourceUnit(new File(uri)));
+            new ModuleResolver(projectDir, compiler()).resolve(source, (uri) -> compiler.createSourceUnit(new File(uri)));
         }
 
         for( var source : compiler.getSources().values() ) {
-            var includeResolver = new ResolveIncludeVisitor(source, compiler);
+            var includeResolver = new ResolveIncludeVisitor(source, projectDir, compiler);
             includeResolver.visit();
             for( var error : includeResolver.getErrors() )
                 source.getErrorCollector().addErrorAndContinue(error);

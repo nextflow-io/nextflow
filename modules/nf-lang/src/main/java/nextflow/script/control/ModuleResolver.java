@@ -37,9 +37,11 @@ import org.codehaus.groovy.control.SourceUnit;
 public class ModuleResolver {
 
     private Compiler compiler;
+    private Path projectDir;
 
-    public ModuleResolver(Compiler compiler) {
+    public ModuleResolver(Path projectDir, Compiler compiler) {
         this.compiler = compiler;
+        this.projectDir = projectDir;
     }
 
     /**
@@ -74,17 +76,8 @@ public class ModuleResolver {
         if( source.startsWith("plugin/") )
             return null;
 
-        var parent = Path.of(sourceUnit.getSource().getURI()).getParent();
-
-        // Resolve remote module paths (scope/name format, not starting with local prefixes)
-        if( isRemoteModule(source) ) {
-            var modules = Path.of("./modules");
-            var resolver = RemoteModuleResolverProvider.getInstance();
-            resolver.resolve(source, modules.getParent());
-            parent = modules;
-        }
-
-        var includeUri = getIncludeUri(parent, source);
+        var uri = sourceUnit.getSource().getURI();
+        var includeUri = getIncludeUri(uri, source);
         if( compiler.getSource(includeUri) != null )
             return null;
         if( !Files.exists(Path.of(includeUri)) )
@@ -97,12 +90,25 @@ public class ModuleResolver {
         return includeSource;
     }
 
+    private URI getIncludeUri(URI uri, String source) {
+        if( isRemoteModule(source) ) {
+            return RemoteModuleResolverProvider.getInstance()
+                .resolve(source, projectDir)
+                .normalize()
+                .toUri();
+        }
+        else {
+            var parent = Path.of(uri).getParent();
+            return getLocalIncludeUri(parent, source);
+        }
+    }
+
     /**
      * Module name pattern matching the canonical format used by ModuleReference.
      * Scope: lowercase alphanumeric with dots/underscores/hyphens.
      * Name: one or more slash-separated segments, each lowercase alphanumeric with dots/underscores/hyphens.
      */
-    static final String REMOTE_MODULE_PATTERN = "^[a-z0-9][a-z0-9._\\-]*/[a-z][a-z0-9._\\-]*(/[a-z][a-z0-9._\\-]*)*$";
+    private static final String REMOTE_MODULE_PATTERN = "^[a-z0-9][a-z0-9._\\-]*/[a-z][a-z0-9._\\-]*(/[a-z][a-z0-9._\\-]*)*$";
 
     static boolean isRemoteModule(String source) {
         if( source.startsWith("/") || source.startsWith("./") || source.startsWith("../") )
@@ -110,7 +116,7 @@ public class ModuleResolver {
         return source.matches(REMOTE_MODULE_PATTERN);
     }
 
-    private static URI getIncludeUri(Path parent, String source) {
+    private static URI getLocalIncludeUri(Path parent, String source) {
         Path includePath = parent.resolve(source);
         if( Files.isDirectory(includePath) )
             includePath = includePath.resolve("main.nf");
