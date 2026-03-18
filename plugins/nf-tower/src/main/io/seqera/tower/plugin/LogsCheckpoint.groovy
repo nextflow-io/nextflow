@@ -68,8 +68,10 @@ class LogsCheckpoint implements TraceObserverV2 {
     protected void run() {
         log.debug "Starting logs checkpoint thread - interval: ${interval}"
         try {
-            while( !Thread.currentThread().isInterrupted() ) {
+            while( true ) {
                 await(interval)
+                if( Thread.currentThread().isInterrupted() )
+                    break
                 handler.saveFiles()
             }
         }
