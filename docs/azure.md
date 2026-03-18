@@ -535,6 +535,8 @@ Resource overprovisioning can occur if tasks consume more than their allocated s
 Azure virtual machines come with fixed storage disks that are not expandable. Tasks will fail if the tasks running concurrently on a node use more storage than the machine has available.
 :::
 
+By default, Docker and containerd store image layers on the OS disk, which can fill up quickly when pulling large container images. On VMs with an attached data disk (e.g., `Standard_E16ds_v5`), you can use a pool [start task](#start-tasks) to relocate Docker and containerd storage to `$AZ_BATCH_NODE_ROOT_DIR`, which uses the larger data disk.
+
 ### Task containers
 
 Every process in your pipeline must specify a container in order to be executed on Azure Batch.
