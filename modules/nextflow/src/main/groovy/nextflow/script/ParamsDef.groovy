@@ -20,22 +20,22 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
 /**
- * Models the workflow output definition
+ * Models the workflow params definition
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @Slf4j
 @CompileStatic
-class OutputDef {
+class ParamsDef {
 
     private Closure closure
 
-    OutputDef(Closure closure) {
+    ParamsDef(Closure closure) {
         this.closure = closure
     }
 
     void apply(Session session) {
-        final dsl = new OutputDsl()
+        final dsl = new ParamsDsl()
         final cl = (Closure)closure.clone()
         cl.setDelegate(dsl)
         cl.setResolveStrategy(Closure.DELEGATE_FIRST)

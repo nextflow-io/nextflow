@@ -190,7 +190,7 @@ class ScriptHelper {
         def session = opts.config ? new MockSession(opts.config) : new MockSession()
         session.setBinding(new ScriptBinding())
 
-        session.init( new ScriptFile(path) )
+        session.init( new ScriptFile(path), null, opts.params, null )
         session.start()
 
         def loader = ScriptLoaderFactory.create(session)

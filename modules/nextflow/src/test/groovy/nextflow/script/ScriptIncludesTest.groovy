@@ -955,4 +955,44 @@ class ScriptIncludesTest extends Dsl2Spec {
         cleanup:
         folder?.deleteDir()
     }
+
+    def 'should ignore params block from included modules' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+
+        folder.resolve('main.nf').text = '''
+            include { test2 } from './module.nf'
+
+            params {
+                test1: String = "test"
+            }
+
+            workflow {
+                params
+            }
+            '''
+
+        folder.resolve('module.nf').text = '''
+
+            params {
+                test2: String = "test2"
+            }
+
+            def test2() {
+            }
+            '''
+
+        when:
+        def result = runScript(folder.resolve('main.nf'))
+        then:
+        result == [test1: 'test']
+
+        when:
+        result = runScript(folder.resolve('main.nf'), params: [test1: 'hello'])
+        then:
+        result == [test1: 'hello']
+
+        cleanup:
+        folder?.deleteDir()
+    }
 }
