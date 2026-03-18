@@ -1243,6 +1243,7 @@ All directives can be assigned a dynamic value except the following:
 - {ref}`process-executor`
 - {ref}`process-label`
 - {ref}`process-maxforks`
+- {ref}`process-secret`
 
 :::{versionadded} 25.10
 :::
