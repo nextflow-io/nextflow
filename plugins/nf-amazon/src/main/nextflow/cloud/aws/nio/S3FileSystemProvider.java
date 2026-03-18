@@ -295,7 +295,13 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 			s3Client.downloadDirectory(source, localDestination.toFile());
 		}
 		else {
-			s3Client.downloadFile(source, localDestination.toFile(), size);
+            if( size == 0 ) {
+                Files.deleteIfExists(localDestination);
+		        Files.createFile(localDestination);
+            }
+            else {
+                s3Client.downloadFile(source, localDestination.toFile(), size);
+            }
 		}
 	}
 
