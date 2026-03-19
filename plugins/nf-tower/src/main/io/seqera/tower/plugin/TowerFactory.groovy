@@ -87,7 +87,7 @@ class TowerFactory implements TraceObserverFactoryV2 {
     static TowerClient client(Session session, Map<String,String> env) {
         final opts = session.config.tower as Map ?: Collections.emptyMap()
         final config = new TowerConfig(opts, env)
-        Boolean isEnabled = config.enabled || env.get('TOWER_WORKFLOW_ID') || session.config.navigate('fusion.enabled') as Boolean
+        Boolean isEnabled = config.enabled || config.accessToken || env.get('TOWER_WORKFLOW_ID') || session.config.navigate('fusion.enabled') as Boolean
         return isEnabled
             ? createTowerClient0(session, config, env)
             : null

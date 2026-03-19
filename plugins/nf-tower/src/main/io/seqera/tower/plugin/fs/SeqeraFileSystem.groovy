@@ -132,7 +132,7 @@ class SeqeraFileSystem extends FileSystem {
     /**
      * @return distinct org names visible to the authenticated user
      */
-    Set<String> listOrgNames() {
+    synchronized Set<String> listOrgNames() {
         loadOrgWorkspaceCache()
         return Collections.unmodifiableSet(orgCache.keySet())
     }
@@ -140,7 +140,7 @@ class SeqeraFileSystem extends FileSystem {
     /**
      * @return workspace names for the given org
      */
-    List<String> listWorkspaceNames(String org) {
+    synchronized List<String> listWorkspaceNames(String org) {
         loadOrgWorkspaceCache()
         return workspaceCache.keySet()
             .findAll { String k -> k.startsWith("${org}/") }
@@ -151,7 +151,7 @@ class SeqeraFileSystem extends FileSystem {
      * Resolve a workspace ID by org and workspace name.
      * @throws NoSuchFileException if the org or workspace is not in the cache
      */
-    long resolveWorkspaceId(String org, String workspace) throws NoSuchFileException {
+    synchronized long resolveWorkspaceId(String org, String workspace) throws NoSuchFileException {
         loadOrgWorkspaceCache()
         final key = "${org}/${workspace}" as String
         final id = workspaceCache.get(key)

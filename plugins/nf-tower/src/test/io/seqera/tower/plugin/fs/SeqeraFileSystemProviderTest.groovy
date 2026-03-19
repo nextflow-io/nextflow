@@ -68,6 +68,7 @@ class SeqeraFileSystemProviderTest extends Specification {
     private static String datasetsJson() {
         JsonOutput.toJson([datasets: [
             [id: 'ds-1', name: 'samples', version: 2L, mediaType: 'text/csv',
+             workspaceId: 10L,
              dateCreated: '2024-01-01T00:00:00Z', lastUpdated: '2024-01-02T00:00:00Z']
         ], totalSize: 1])
     }
@@ -89,9 +90,9 @@ class SeqeraFileSystemProviderTest extends Specification {
         tc.sendApiRequest("${ENDPOINT}/user-info") >> ok(userInfoJson())
         tc.sendApiRequest("${ENDPOINT}/user/42/workspaces") >> ok(workspacesJson())
         tc.sendApiRequest("${ENDPOINT}/datasets?workspaceId=10") >> ok(datasetsJson())
-        tc.sendApiRequest("${ENDPOINT}/datasets/ds-1/versions") >> ok(versionsJson())
+        tc.sendApiRequest("${ENDPOINT}/datasets/ds-1/versions?workspaceId=10") >> ok(versionsJson())
         final csvContent = 'col1,col2\n1,2\n3,4\n'
-        tc.sendApiRequest("${ENDPOINT}/datasets/ds-1/v/2/n/samples_v2.csv") >> ok(csvContent)
+        tc.sendApiRequest("${ENDPOINT}/datasets/ds-1/v/2/n/samples_v2.csv?workspaceId=10") >> ok(csvContent)
 
         final fs = buildFs(tc)
         final path = new SeqeraPath(fs, 'seqera://acme/research/datasets/samples')
@@ -111,9 +112,9 @@ class SeqeraFileSystemProviderTest extends Specification {
         tc.sendApiRequest("${ENDPOINT}/user-info") >> ok(userInfoJson())
         tc.sendApiRequest("${ENDPOINT}/user/42/workspaces") >> ok(workspacesJson())
         tc.sendApiRequest("${ENDPOINT}/datasets?workspaceId=10") >> ok(datasetsJson())
-        tc.sendApiRequest("${ENDPOINT}/datasets/ds-1/versions") >> ok(versionsJson())
+        tc.sendApiRequest("${ENDPOINT}/datasets/ds-1/versions?workspaceId=10") >> ok(versionsJson())
         final csvContent = 'col1,col2\n1,2\n'
-        tc.sendApiRequest("${ENDPOINT}/datasets/ds-1/v/1/n/samples.csv") >> ok(csvContent)
+        tc.sendApiRequest("${ENDPOINT}/datasets/ds-1/v/1/n/samples.csv?workspaceId=10") >> ok(csvContent)
 
         final fs = buildFs(tc)
         final path = new SeqeraPath(fs, 'seqera://acme/research/datasets/samples@1')
@@ -153,7 +154,7 @@ class SeqeraFileSystemProviderTest extends Specification {
         tc.sendApiRequest("${ENDPOINT}/user-info") >> ok(userInfoJson())
         tc.sendApiRequest("${ENDPOINT}/user/42/workspaces") >> ok(workspacesJson())
         tc.sendApiRequest("${ENDPOINT}/datasets?workspaceId=10") >> ok(datasetsJson())
-        tc.sendApiRequest("${ENDPOINT}/datasets/ds-1/versions") >> ok(versionsJson())
+        tc.sendApiRequest("${ENDPOINT}/datasets/ds-1/versions?workspaceId=10") >> ok(versionsJson())
 
         final fs = buildFs(tc)
         final path = new SeqeraPath(fs, 'seqera://acme/research/datasets/samples@99')
@@ -294,9 +295,9 @@ class SeqeraFileSystemProviderTest extends Specification {
         tc.sendApiRequest("${ENDPOINT}/user-info") >> ok(userInfoJson())
         tc.sendApiRequest("${ENDPOINT}/user/42/workspaces") >> ok(workspacesJson())
         tc.sendApiRequest("${ENDPOINT}/datasets?workspaceId=10") >> ok(JsonOutput.toJson([datasets: [
-            [id: 'ds-1', name: 'samples', version: 1L, mediaType: 'text/csv',
+            [id: 'ds-1', name: 'samples', version: 1L, mediaType: 'text/csv', workspaceId: 10L,
              dateCreated: '2024-01-01T00:00:00Z', lastUpdated: '2024-01-02T00:00:00Z'],
-            [id: 'ds-2', name: 'results', version: 1L, mediaType: 'text/csv',
+            [id: 'ds-2', name: 'results', version: 1L, mediaType: 'text/csv', workspaceId: 10L,
              dateCreated: '2024-01-01T00:00:00Z', lastUpdated: '2024-01-02T00:00:00Z']
         ], totalSize: 2]))
 

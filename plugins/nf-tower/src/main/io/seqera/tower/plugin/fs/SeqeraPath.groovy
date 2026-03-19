@@ -228,10 +228,10 @@ class SeqeraPath implements Path {
         final d = depth()
         if (index < 0 || index >= d)
             throw new IllegalArgumentException("Index out of range: $index")
-        if (index == 0) return new SeqeraPath(fs, org, null, null, null, null)
-        if (index == 1) return new SeqeraPath(fs, org, workspace, null, null, null)
-        if (index == 2) return new SeqeraPath(fs, org, workspace, resourceType, null, null)
-        return new SeqeraPath(fs, org, workspace, resourceType, datasetName, version)
+        if (index == 0) return new SeqeraPath(org)
+        if (index == 1) return new SeqeraPath(workspace)
+        if (index == 2) return new SeqeraPath(resourceType)
+        return new SeqeraPath((version ? "${datasetName}@${version}" : datasetName) as String)
     }
 
     @Override
@@ -412,14 +412,12 @@ class SeqeraPath implements Path {
         if( !path )
             throw new IllegalArgumentException("Missing 'path' argument")
         if( !path.startsWith(PROTOCOL) )
-            throw new IllegalArgumentException("Invalid Seqera file system path URI - it must start with '${PROTOCOL}' prefix - offendinf value: $path")
+            throw new IllegalArgumentException("Invalid Seqera file system path URI - it must start with '${PROTOCOL}' prefix - offending value: $path")
         if( path.startsWith(PROTOCOL + SEPARATOR) && path.length() > PROTOCOL.length() + 1 )
-            throw new IllegalArgumentException("Invalid Seqera file system path URI - make sure the schema prefix does not container more than two slash characters or a query in the root '/' - offending value: $path")
+            throw new IllegalArgumentException("Invalid Seqera file system path URI - make sure the scheme prefix does not contain more than two slash characters or a query in the root '/' - offending value: $path")
 
         //URI strings like seqera://./something are converted to seqera://something
         if( path.startsWith(PROTOCOL + './') ) {
-            def subPath = path.substring(PROTOCOL.length() + 2)
-
             path = PROTOCOL + path.substring(PROTOCOL.length() + 2)
         }
 

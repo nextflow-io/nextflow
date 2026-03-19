@@ -16,9 +16,6 @@
 
 package io.seqera.tower.plugin.fs
 
-import nextflow.Global
-import nextflow.Session
-
 import java.nio.ByteBuffer
 import java.nio.channels.SeekableByteChannel
 import java.nio.file.AccessDeniedException
@@ -31,6 +28,7 @@ import java.nio.file.FileSystemNotFoundException
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.NoSuchFileException
+import java.nio.file.NotDirectoryException
 import java.nio.file.OpenOption
 import java.nio.file.Path
 import java.nio.file.ProviderMismatchException
@@ -83,10 +81,9 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
         final key = fsKey(uri, env)
         if (fileSystems.containsKey(key))
             return fileSystems.get(key)
-        checkTowerEnabled()
         final TowerClient towerClient = TowerFactory.client()
         if (!towerClient)
-            throw new IllegalStateException("seqera:// paths require Seqera Platform to be enabled (tower.accessToken and tower.endpoint)")
+            throw new IllegalStateException("seqera:// paths require tower.accessToken to be configured")
         final client = new SeqeraDatasetClient(towerClient)
         final seqeraFs = new SeqeraFileSystem(this, client)
         fileSystems.put(key, seqeraFs)
@@ -176,9 +173,15 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
                 throw new AccessDeniedException(path.toString(), null, "EXECUTE not supported on seqera:// paths")
         }
         // For READ and WRITE, verify the path resolves without throwing NoSuchFileException
-        if (sp.depth() >= 2) {
+        if (sp.depth() >= 1) {
             final fs = sp.getFileSystem() as SeqeraFileSystem
-            fs.resolveWorkspaceId(sp.org, sp.workspace)
+            if (sp.depth() == 1) {
+                fs.loadOrgWorkspaceCache()
+                if (!fs.listOrgNames().contains(sp.org))
+                    throw new NoSuchFileException(path.toString(), null, "Organisation not found")
+            } else {
+                fs.resolveWorkspaceId(sp.org, sp.workspace)
+            }
         }
     }
 
@@ -235,17 +238,18 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
 
     @Override
     void copy(Path source, Path target, CopyOption... options) throws IOException {
-        final sp = toSeqeraPath(source)
+        toSeqeraPath(source)
         if (target instanceof SeqeraPath) {
             // within-provider: download then upload
-            final bytes = newInputStream(source).bytes
-            final out = newOutputStream(target)
-            out.write(bytes)
-            out.close()
+            newInputStream(source).withCloseable { InputStream is ->
+                final bytes = is.bytes
+                newOutputStream(target).withCloseable { out -> out.write(bytes) }
+            }
         } else {
             // cross-provider (seqera → local): stream to target
-            final inputStream = newInputStream(source)
-            Files.copy(inputStream, target, StandardCopyOption.REPLACE_EXISTING)
+            newInputStream(source).withCloseable { InputStream is ->
+                Files.copy(is, target, StandardCopyOption.REPLACE_EXISTING)
+            }
         }
     }
 
@@ -338,23 +342,6 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
         if (!latest)
             throw new NoSuchFileException("seqera:///datasets/${dataset.name}", null, "No enabled versions for dataset '${dataset.name}'")
         return latest
-    }
-
-    /**
-     * Check if tower is enabled and enables it if not
-     */
-    private void checkTowerEnabled() {
-        Session session = Global.session as Session
-        if( !session )
-             throw new IllegalStateException("Session not found creating a Seqera file system provider")
-        if( !session.config.tower ) {
-            session.config.tower = [enabled: true]
-            return
-        }
-        final tower = session.config.tower as Map
-        if ( !tower.enabled )
-            tower.enabled = true
-
     }
 
     // ---- inner classes ----
@@ -460,9 +447,4 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
         }
     }
 
-    /** Thrown by newDirectoryStream for non-directory paths */
-    @CompileStatic
-    private static class NotDirectoryException extends IOException {
-        NotDirectoryException(String path) { super("Not a directory: $path") }
-    }
 }
