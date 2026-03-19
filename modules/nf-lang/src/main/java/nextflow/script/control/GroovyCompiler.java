@@ -52,12 +52,7 @@ public class GroovyCompiler {
         compilationUnit.addSource(sourceUnit);
 
         // compile source files
-        try {
-            compilationUnit.compile(Phases.CANONICALIZATION);
-        }
-        catch( GroovyBugError | Exception e ) {
-            // ignore
-        }
+        compilationUnit.compile(Phases.CANONICALIZATION);
 
         // collect compiled classes
         var moduleNode = sourceUnit.getAST();
