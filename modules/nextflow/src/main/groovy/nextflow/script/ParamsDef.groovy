@@ -17,14 +17,12 @@
 package nextflow.script
 
 import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
 import nextflow.Session
 /**
  * Models the workflow params definition
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
-@Slf4j
 @CompileStatic
 class ParamsDef {
 
