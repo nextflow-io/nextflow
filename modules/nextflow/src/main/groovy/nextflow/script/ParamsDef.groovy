@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,25 +17,23 @@
 package nextflow.script
 
 import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
 import nextflow.Session
 /**
- * Models the workflow output definition
+ * Models the workflow params definition
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
-@Slf4j
 @CompileStatic
-class OutputDef {
+class ParamsDef {
 
     private Closure closure
 
-    OutputDef(Closure closure) {
+    ParamsDef(Closure closure) {
         this.closure = closure
     }
 
     void apply(Session session) {
-        final dsl = new OutputDsl()
+        final dsl = new ParamsDsl()
         final cl = (Closure)closure.clone()
         cl.setDelegate(dsl)
         cl.setResolveStrategy(Closure.DELEGATE_FIRST)
