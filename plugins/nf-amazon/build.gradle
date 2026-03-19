@@ -72,7 +72,6 @@ dependencies {
     api ('software.amazon.awssdk:aws-crt-client:2.33.2')
 
     // address security vulnerabilities
-    api 'com.fasterxml.jackson.core:jackson-databind:2.21.1'
     implementation 'io.netty:netty-common:4.1.129.Final'
     implementation 'io.netty:netty-handler:4.1.129.Final'
     implementation 'io.netty:netty-codec-http2:4.1.129.Final'
