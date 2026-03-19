@@ -1055,7 +1055,6 @@ class Session implements ISession {
     }
 
     void notifyAfterWorkflowExecution() {
-
     }
 
     void notifyFlowBegin() {
