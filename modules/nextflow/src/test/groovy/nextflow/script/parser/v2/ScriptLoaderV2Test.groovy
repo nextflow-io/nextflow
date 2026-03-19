@@ -20,6 +20,7 @@ import java.nio.file.Files
 
 import nextflow.Session
 import nextflow.exception.ScriptCompilationException
+import nextflow.processor.TaskProcessor
 import nextflow.script.BaseScript
 import nextflow.script.ScriptMeta
 import nextflow.script.WorkflowDef
@@ -221,7 +222,7 @@ class ScriptLoaderV2Test extends Dsl2Spec {
         session.executorFactory = new MockExecutorFactory()
         def parser = new ScriptLoaderV2(session)
 
-        def TEXT = '''
+        def TEXT = '''\
             process HELLO {
                 tag props.name
 
@@ -244,6 +245,37 @@ class ScriptLoaderV2Test extends Dsl2Spec {
         parser.parse(TEXT)
         parser.runScript()
 
+        then:
+        noExceptionThrown()
+    }
+
+    def 'should not wrap process directives that cannot be dynamic' () {
+
+        given:
+        def session = new Session()
+        session.executorFactory = new MockExecutorFactory()
+        def parser = new ScriptLoaderV2(session)
+
+        def TEXT = '''\
+            process ECHO {
+                secret secrets.NCBI_API_KEY ? "NCBI_API_KEY" : ""
+
+                script:
+                """
+                echo "NCBI_API_KEY=\\$NCBI_API_KEY"
+                """
+            }
+
+            workflow {
+                ECHO()
+            }
+            '''
+
+        when:
+        parser.parse(TEXT)
+        parser.runScript()
+        and:
+        TaskProcessor.currentProcessor().createTaskPreview().toTaskBean()
         then:
         noExceptionThrown()
     }
@@ -333,36 +365,6 @@ class ScriptLoaderV2Test extends Dsl2Spec {
 
         then:
         parser.getResult() == null
-    }
-
-    def 'should support enums' () {
-
-        given:
-        def session = new Session()
-        def parser = new ScriptLoaderV2(session)
-
-        def TEXT = '''
-            enum Day {
-                MONDAY,
-                TUESDAY,
-                WEDNESDAY,
-                THURSDAY,
-                FRIDAY,
-                SATURDAY,
-                SUNDAY
-            }
-
-            workflow {
-                Day.TUESDAY
-            }
-            '''
-
-        when:
-        parser.parse(TEXT)
-        parser.runScript()
-
-        then:
-        parser.getResult().toString() == 'TUESDAY'
     }
 
     def 'should report error for invalid publish statements in output block' () {

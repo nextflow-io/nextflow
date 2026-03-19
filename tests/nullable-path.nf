@@ -20,7 +20,7 @@ process bar {
     input: Path?
 
     stage:
-    stageAs 'input.txt', input
+    stageAs input, 'input.txt'
 
     output:
     stdout()

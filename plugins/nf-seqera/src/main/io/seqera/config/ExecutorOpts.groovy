@@ -43,6 +43,13 @@ class ExecutorOpts implements ConfigScope {
 
     @ConfigOption
     @Description("""
+        The compute backend provider type (e.g. `aws`, `local`).
+        When specified, used together with region to select the matching compute environment.
+    """)
+    final String provider
+
+    @ConfigOption
+    @Description("""
         The AWS region for task execution (default: `eu-central-1`).
     """)
     final String region
@@ -103,6 +110,7 @@ class ExecutorOpts implements ConfigScope {
         if (!endpoint)
             throw new IllegalArgumentException("Missing Seqera endpoint - make sure to specify 'seqera.executor.endpoint' settings")
 
+        this.provider = opts.provider as String
         this.region = opts.region as String ?: "eu-central-1"
         this.keyPairName = opts.keyPairName as String
         this.batchFlushInterval = opts.batchFlushInterval
@@ -135,6 +143,10 @@ class ExecutorOpts implements ConfigScope {
 
     String getEndpoint() {
         return endpoint
+    }
+
+    String getProvider() {
+        return provider
     }
 
     String getRegion() {

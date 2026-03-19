@@ -15,8 +15,6 @@
  */
 package nextflow.script.ast;
 
-import java.util.List;
-
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.Parameter;
 

@@ -43,7 +43,9 @@ public abstract class ScriptVisitorSupport extends ClassCodeVisitorSupport imple
         for( var functionNode : script.getFunctions() )
             visitFunction(functionNode);
         for( var classNode : script.getClasses() ) {
-            if( classNode.isEnum() )
+            if( classNode instanceof RecordNode rn )
+                visitRecord(rn);
+            else if( classNode.isEnum() )
                 visitEnum(classNode);
         }
         if( script.getOutputs() != null )
@@ -115,6 +117,12 @@ public abstract class ScriptVisitorSupport extends ClassCodeVisitorSupport imple
     @Override
     public void visitFunction(FunctionNode node) {
         visit(node.getCode());
+    }
+
+    @Override
+    public void visitRecord(RecordNode node) {
+        for( var fn : node.getFields() )
+            visitField(fn);
     }
 
     @Override
