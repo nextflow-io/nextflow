@@ -40,6 +40,10 @@ dependencies {
     api 'com.google.code.gson:gson:2.13.1'
     api 'io.seqera:npr-api:0.22.0-SNAPSHOT'
 
+    // address security vulnerabilities due to npr-api dependencies
+    implementation 'io.netty:netty-bom:4.1.129.Final'
+    implementation 'com.fasterxml.jackson:jackson-bom:2.21.1'
+
     /* testImplementation inherited from top gradle build file */
     testImplementation(testFixtures(project(":nextflow")))
     testFixturesImplementation(project(":nextflow"))
