@@ -13,9 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nextflow.processor
-
-import java.nio.file.Path
+package nextflow.processor.hash
 
 import com.google.common.hash.HashCode
 import groovy.transform.CompileStatic
@@ -28,8 +26,4 @@ import groovy.transform.CompileStatic
 interface TaskHasher {
 
     HashCode compute()
-
-    Map<String,Object> getTaskGlobalVars()
-
-    List<Path> getTaskBinEntries(String script)
 }

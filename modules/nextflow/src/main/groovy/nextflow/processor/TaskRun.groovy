@@ -1010,6 +1010,43 @@ class TaskRun implements Cloneable {
         return result
     }
 
+    /**
+     * Get the mapping of global variables referenced by the task script,
+     * including {@code task.ext.*} directive variables.
+     */
+    Map<String,Object> getTaskGlobalVars() {
+        final result = getGlobalVars(processor.getOwnerScript().getBinding())
+        final variableNames = getVariableNames()
+        final taskConfig = config
+        for( final key : variableNames ) {
+            if( !key.startsWith('task.ext.') )
+                continue
+            final value = taskConfig.eval(key.substring(5))
+            result.put(key, value)
+        }
+        return result
+    }
+
+    /**
+     * Scan the task command string looking for invocations of scripts
+     * defined in the project bin folder.
+     *
+     * @param script The task command string
+     * @return The list of paths of scripts in the project bin folder referenced in the task command
+     */
+    List<Path> getTaskBinEntries(String script) {
+        List<Path> result = []
+        final entries = processor.session.binEntries
+        final tokenizer = new StringTokenizer(script, " \t\n\r\f()[]{};&|<>`")
+        while( tokenizer.hasMoreTokens() ) {
+            final token = tokenizer.nextToken()
+            final path = entries.get(token)
+            if( path )
+                result.add(path)
+        }
+        return result
+    }
+
     TaskBean toTaskBean() {
         return new TaskBean(this)
     }

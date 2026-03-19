@@ -38,7 +38,6 @@ import nextflow.lineage.model.v1beta1.WorkflowOutput
 import nextflow.lineage.model.v1beta1.WorkflowRun
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
-import nextflow.processor.TaskHasherV1
 import nextflow.processor.TaskRun
 import nextflow.script.ScriptMeta
 import nextflow.script.params.BaseParam
@@ -273,11 +272,11 @@ class LinObserver implements TraceObserverV2 {
     }
 
     protected Map<String,Object> getTaskGlobalVars(TaskRun task) {
-        return new TaskHasherV1(task).getTaskGlobalVars()
+        return task.getTaskGlobalVars()
     }
 
     protected List<Path> getTaskBinEntries(TaskRun task) {
-        return new TaskHasherV1(task).getTaskBinEntries(task.source)
+        return task.getTaskBinEntries(task.source)
     }
 
     protected String storeTaskOutput(TaskRun task, Path path) {

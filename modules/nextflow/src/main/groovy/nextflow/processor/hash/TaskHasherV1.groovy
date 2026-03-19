@@ -13,26 +13,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nextflow.processor
+package nextflow.processor.hash
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.processor.TaskRun
+import nextflow.util.HashBuilder
 /**
- * Implement the v2 task hash computation strategy.
+ * V1 task hash computation strategy.
  *
- * This version uses order-independent Map hashing (via entrySet)
- * and checks CacheFunnel before Map in the hash builder.
+ * This is the original hashing behavior before the record types change.
+ * Maps are hashed by values only (order-dependent) and CacheFunnel
+ * is checked after Map and SerializableMarker.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 @CompileStatic
-class TaskHasherV2 extends TaskHasherV1 {
+class TaskHasherV1 extends AbstractTaskHasher {
 
-    TaskHasherV2(TaskRun task) {
+    TaskHasherV1(TaskRun task) {
         super(task)
     }
 
     @Override
-    protected int hashVersion() { 2 }
+    protected HashBuilder createHashBuilder() {
+        return new HashBuilder()
+            .withOrderIndependentMaps(false)
+            .withCacheFunnelFirst(false)
+    }
 }

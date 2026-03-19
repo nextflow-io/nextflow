@@ -85,12 +85,29 @@ public class HashBuilder {
 
     private Path basePath;
 
-    private int version = 2;
+    private boolean orderIndependentMaps = true;
+
+    private boolean cacheFunnelFirst = true;
 
     public HashBuilder() {}
 
-    public HashBuilder withVersion(int version) {
-        this.version = version;
+    /**
+     * When {@code true} (default), Maps are hashed using order-independent
+     * hashing on their entrySet. When {@code false}, only the values are
+     * hashed in iteration order (legacy V1 behaviour).
+     */
+    public HashBuilder withOrderIndependentMaps(boolean value) {
+        this.orderIndependentMaps = value;
+        return this;
+    }
+
+    /**
+     * When {@code true} (default), {@link CacheFunnel} is checked before
+     * Map and SerializableMarker. When {@code false}, it is checked after
+     * them (legacy V1 behaviour).
+     */
+    public HashBuilder withCacheFunnelFirst(boolean value) {
+        this.cacheFunnelFirst = value;
         return this;
     }
 
@@ -153,11 +170,11 @@ public class HashBuilder {
                 with(item);
         }
 
-        else if( version >= 2 && value instanceof CacheFunnel )
+        else if( cacheFunnelFirst && value instanceof CacheFunnel )
             ((CacheFunnel)value).funnel(hasher, mode);
 
         else if( value instanceof Map ) {
-            if( version >= 2 )
+            if( orderIndependentMaps )
                 hashUnorderedCollection(hasher, ((Map) value).entrySet(), mode);
             else
                 for( Object item : ((Map)value).values() )
@@ -194,7 +211,7 @@ public class HashBuilder {
         else if( value instanceof SerializableMarker)
             hasher.putInt( value.hashCode() );
 
-        else if( version < 2 && value instanceof CacheFunnel )
+        else if( !cacheFunnelFirst && value instanceof CacheFunnel )
             ((CacheFunnel)value).funnel(hasher, mode);
 
         else if( value instanceof Enum )
@@ -217,15 +234,10 @@ public class HashBuilder {
     }
 
     public static Hasher hasher( Hasher hasher, Object value, HashMode mode ) {
-        return hasher(hasher, value, mode, 2);
-    }
-
-    public static Hasher hasher( Hasher hasher, Object value, HashMode mode, int version ) {
 
         return new HashBuilder()
                 .withHasher(hasher)
                 .withMode(mode)
-                .withVersion(version)
                 .with(value)
                 .getHasher();
     }

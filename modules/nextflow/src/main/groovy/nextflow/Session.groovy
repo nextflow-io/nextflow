@@ -59,7 +59,7 @@ import nextflow.plugin.Plugins
 import nextflow.processor.ErrorStrategy
 import nextflow.processor.TaskFault
 import nextflow.processor.TaskHandler
-import nextflow.processor.TaskHasherFactory
+import nextflow.processor.hash.TaskHasherFactory
 import nextflow.processor.TaskProcessor
 import nextflow.script.BaseScript
 import nextflow.script.ProcessFactory

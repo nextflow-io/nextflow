@@ -99,6 +99,7 @@ import nextflow.script.types.Record
 import nextflow.script.types.Types
 import nextflow.trace.TraceRecord
 import nextflow.util.Escape
+import nextflow.processor.hash.TaskHasherFactory
 import nextflow.util.HashBuilder
 import nextflow.util.LockManager
 import nextflow.util.TestOnly

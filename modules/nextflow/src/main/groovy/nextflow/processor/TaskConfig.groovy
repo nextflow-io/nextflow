@@ -570,7 +570,7 @@ class TaskConfig extends LazyMap implements Cloneable {
     }
 
 
-    protected TaskClosure getStubBlock() {
+    TaskClosure getStubBlock() {
         final code = target.get(NextflowDSLImpl.PROCESS_STUB)
         if( !code )
             return null

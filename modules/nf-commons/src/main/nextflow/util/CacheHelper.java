@@ -78,8 +78,4 @@ public class CacheHelper {
         return HashBuilder.hasher(hasher, value, mode);
     }
 
-    public static Hasher hasher( Object value, HashMode mode, int version ) {
-        return HashBuilder.hasher( HashBuilder.defaultHasher(), value, mode, version );
-    }
-
 }

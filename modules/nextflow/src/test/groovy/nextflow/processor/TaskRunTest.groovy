@@ -28,6 +28,8 @@ import nextflow.container.resolver.ContainerInfo
 import nextflow.container.resolver.ContainerMeta
 import nextflow.container.resolver.ContainerResolver
 import nextflow.executor.Executor
+import nextflow.script.BaseScript
+import nextflow.script.ProcessConfig
 import nextflow.file.FileHolder
 import nextflow.script.BodyDef
 import nextflow.script.ScriptBinding
@@ -983,5 +985,38 @@ class TaskRunTest extends Specification {
         task.source == 'echo ${say_hello}'
         task.template == file
         task.traceScript == 'echo Ciao mondo'
+    }
+
+    def 'should get task extension directive vars' () {
+        given:
+        def binding = new ScriptBinding()
+        def ownerScript = Mock(BaseScript) {
+            getBinding() >> binding
+        }
+        def processor = Mock(TaskProcessor) {
+            getConfig() >> Mock(ProcessConfig)
+            getOwnerScript() >> ownerScript
+        }
+        and:
+        def config = new TaskConfig()
+        config.cpus = 4
+        config.ext.alpha = 'AAAA'
+        config.ext.delta = { foo }
+        config.ext.omega = "${-> bar}"
+        config.context = [foo: 'DDDD', bar: 'OOOO']
+        and:
+        def task = Spy(TaskRun)
+        task.processor = processor
+        task.config = config
+        task.context = Mock(TaskContext)
+        task.getVariableNames() >> { [ 'task.cpus', 'task.ext.alpha', 'task.ext.delta', 'task.ext.omega' ] as Set }
+
+        when:
+        def result = task.getTaskGlobalVars()
+        then:
+        result['task.ext.alpha'] == 'AAAA'
+        result['task.ext.delta'] == 'DDDD'
+        result['task.ext.omega'] == 'OOOO'
+        !result.containsKey('task.cpus')
     }
 }

@@ -13,10 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nextflow.processor
+package nextflow.processor.hash
 
 import groovy.transform.CompileStatic
 import nextflow.SysEnv
+import nextflow.processor.TaskRun
 /**
  * Factory for creating versioned {@link TaskHasher} instances.
  *
@@ -26,21 +27,37 @@ import nextflow.SysEnv
 class TaskHasherFactory {
 
     enum Version {
-        V1,
-        V2
+        STD_V1('std/v1'),
+        STD_V2('std/v2')
+
+        final String value
+
+        Version(String value) {
+            this.value = value
+        }
+
+        String toString() { value }
+
+        static Version of(String val) {
+            for( Version v : values() ) {
+                if( v.value == val )
+                    return v
+            }
+            throw new IllegalArgumentException("Unknown task hasher version: ${val}")
+        }
 
         static Version DEFAULT() {
             final val = SysEnv.get('NXF_TASK_HASH_VER')
-            return val ? valueOf(val.toUpperCase()) : V2
+            return val ? of(val) : STD_V2
         }
     }
 
     static TaskHasher create(TaskRun task) {
         final version = task.processor.session.hashStrategy
         switch( version ) {
-            case Version.V1:
+            case Version.STD_V1:
                 return new TaskHasherV1(task)
-            case Version.V2:
+            case Version.STD_V2:
                 return new TaskHasherV2(task)
             default:
                 throw new IllegalArgumentException("Unknown task hasher version: ${version}")

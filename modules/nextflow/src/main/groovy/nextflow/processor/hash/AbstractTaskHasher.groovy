@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nextflow.processor
+package nextflow.processor.hash
 
 import java.nio.file.Path
 
@@ -24,19 +24,21 @@ import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.UnexpectedException
+import nextflow.processor.TaskProcessor
+import nextflow.processor.TaskRun
 import nextflow.util.CacheHelper
+import nextflow.util.HashBuilder
 /**
- * Implement the v1 task hash computation strategy.
+ * Common logic for task hash computation strategies.
  *
- * This is the original hashing behavior before the record types change.
- * Maps are hashed by values only (order-dependent) and CacheFunnel
- * is checked after Map and SerializableMarker.
+ * Subclasses implement {@link #createHashBuilder()} to configure
+ * version-specific hashing behaviour.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 @CompileStatic
-class TaskHasherV1 implements TaskHasher {
+abstract class AbstractTaskHasher implements TaskHasher {
 
     protected TaskRun task
 
@@ -44,16 +46,16 @@ class TaskHasherV1 implements TaskHasher {
 
     protected Session session
 
-    TaskHasherV1(TaskRun task) {
+    AbstractTaskHasher(TaskRun task) {
         this.task = task
         this.processor = task.processor
         this.session = task.processor.session
     }
 
     /**
-     * @return The hash builder version used by this strategy
+     * Create a {@link HashBuilder} configured for this hashing strategy.
      */
-    protected int hashVersion() { 1 }
+    abstract protected HashBuilder createHashBuilder()
 
     @Override
     HashCode compute() {
@@ -168,40 +170,13 @@ class TaskHasherV1 implements TaskHasher {
         return result.toString()
     }
 
-    @Override
-    Map<String,Object> getTaskGlobalVars() {
-        final result = task.getGlobalVars(task.processor.getOwnerScript().getBinding())
-        final directives = getTaskExtensionDirectiveVars()
-        result.putAll(directives)
-        return result
+    protected Map<String,Object> getTaskGlobalVars() {
+        return task.getTaskGlobalVars()
     }
 
-    protected Map<String,Object> getTaskExtensionDirectiveVars() {
-        final variableNames = task.getVariableNames()
-        final result = new HashMap(variableNames.size())
-        final taskConfig = task.config
-        for( final key : variableNames ) {
-            if( !key.startsWith('task.ext.') )
-                continue
-            final value = taskConfig.eval(key.substring(5))
-            result.put(key, value)
-        }
-
-        return result
-    }
-
-    @Override
     @Memoized
-    List<Path> getTaskBinEntries(String script) {
-        List<Path> result = []
-        final tokenizer = new StringTokenizer(script, " \t\n\r\f()[]{};&|<>`")
-        while( tokenizer.hasMoreTokens() ) {
-            final token = tokenizer.nextToken()
-            final path = session.binEntries.get(token)
-            if( path )
-                result.add(path)
-        }
-        return result
+    protected List<Path> getTaskBinEntries(String script) {
+        return task.getTaskBinEntries(script)
     }
 
     private String safeTaskName(TaskRun task) {
@@ -210,7 +185,7 @@ class TaskHasherV1 implements TaskHasher {
 
     protected HashCode computeHash(List keys, CacheHelper.HashMode mode) {
         try {
-            return CacheHelper.hasher(keys, mode, hashVersion()).hash()
+            return createHashBuilder().withMode(mode).with(keys).build()
         }
         catch (Throwable e) {
             final msg = "Something went wrong while creating task hash for process '${task.processor.name}' -- Offending keys: ${ keys.collect { k -> "\n - type=${k.getClass().getName()} value=$k" } }"
@@ -220,7 +195,7 @@ class TaskHasherV1 implements TaskHasher {
 
     private void dumpHashEntriesJson(TaskRun task, List entries, CacheHelper.HashMode mode, hash) {
         final collector = (item) -> [
-            hash: CacheHelper.hasher(item, mode, hashVersion()).hash().toString(),
+            hash: createHashBuilder().withMode(mode).with(item).build().toString(),
             type: item?.getClass()?.getName(),
             value: item?.toString()
         ]
@@ -232,7 +207,7 @@ class TaskHasherV1 implements TaskHasher {
         final buffer = new StringBuilder()
         buffer.append("[${safeTaskName(task)}] cache hash: ${hash}; mode: $mode; entries: \n")
         for( final entry : entries ) {
-            buffer.append( "  ${CacheHelper.hasher(entry, mode, hashVersion()).hash()} [${entry?.getClass()?.getName()}] $entry \n")
+            buffer.append( "  ${createHashBuilder().withMode(mode).with(entry).build()} [${entry?.getClass()?.getName()}] $entry \n")
         }
         log.info(buffer.toString())
     }
