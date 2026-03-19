@@ -24,5 +24,5 @@ import groovy.transform.InheritConstructors
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @InheritConstructors
-class IllegalModulePath extends Exception {
+class IllegalModulePathException extends Exception {
 }

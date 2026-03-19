@@ -401,11 +401,12 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         else {
             final instancePolicy = AllocationPolicy.InstancePolicy.newBuilder()
 
-            if( batchConfig.getBootDiskImage() )
-                instancePolicy.setBootDisk(AllocationPolicy.Disk.newBuilder().setImage(batchConfig.getBootDiskImage()))
-
             if( fusionEnabled() && !disk ) {
-                disk = new DiskResource(request: '375 GB', type: 'local-ssd')
+                final reqMachineType = task.config.getMachineType()
+                disk = new DiskResource(
+                    request: '375 GB',
+                    type: reqMachineType ? chooseFusionDiskType(reqMachineType) : 'local-ssd'
+                )
                 log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - adding local volume as fusion scratch: $disk"
             }
 
@@ -422,6 +423,20 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                     priceModel: machineType.priceModel
                 )
             }
+
+            // Configure boot disk
+            final bootDisk = AllocationPolicy.Disk.newBuilder()
+            boolean setBoot = false
+            if( batchConfig.getBootDiskImage() ) {
+                bootDisk.setImage(batchConfig.getBootDiskImage())
+                setBoot = true
+            }
+            if( machineType && GoogleBatchMachineTypeSelector.INSTANCE.isHyperdiskOnly(machineType.type) ) {
+                bootDisk.setType('hyperdisk-balanced')
+                setBoot = true
+            }
+            if( setBoot )
+                instancePolicy.setBootDisk(bootDisk)
 
             if( task.config.getAccelerator() ) {
                 final accelerator = AllocationPolicy.Accelerator.newBuilder()
@@ -480,6 +495,22 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         }
 
         return new InstancePolicyResult(instancePolicyOrTemplate.build(), requiresScratchVolume)
+    }
+
+    /**
+     * Choose the disk type for Fusion according to the machine or family.
+     * Preference is 'local-ssd', 'hyperdisk-balanced' and 'pd-balanced' other types can be set by setting disk directive
+     * @param machineTypeOrFamily
+     * @return Disk type
+     */
+    protected String chooseFusionDiskType(String machineTypeOrFamily){
+        if( !GoogleBatchMachineTypeSelector.unsupportedLocalSSD(machineTypeOrFamily) ){
+            return 'local-ssd'
+        } else if( GoogleBatchMachineTypeSelector.isPdOnly(machineTypeOrFamily) ){
+            return 'pd-balanced'
+        } else {
+            return 'hyperdisk-balanced'
+        }
     }
 
     /**
@@ -688,6 +719,10 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                 task.stderr = executor.logging.stderr(uid, taskId) ?: errorFile
             }
             else {
+                // Retried spot instances could keep the 500xx exit code event when the automatic retied succeeds. In this case, we need to read the exit code from .exitcode
+                // https://github.com/nextflow-io/nextflow/issues/6779
+                if( task.exitStatus >= 50000 )
+                    task.exitStatus = readExitFile()
                 task.stdout = outputFile
                 task.stderr = errorFile
             }

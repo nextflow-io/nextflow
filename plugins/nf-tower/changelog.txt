@@ -1,5 +1,9 @@
 nf-tower changelog
 ===================
+1.22.0 - 17 Mar 2026
+- Add logStreamId to Tower task record (#6877) [df49fdb68]
+- Increase tasks.cloudZone width from 15 to 25 (#6907) [a217a459f]
+
 1.21.0 - 28 Feb 2026
 - Fix ResourcesAggregator deadlock with virtual thread executor (#6840) [7ac4f3ea9]
 - Propagate workflow ID and watch URL to session metadata (#6242) [870c858af]

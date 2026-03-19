@@ -1,5 +1,9 @@
 nf-wave changelog
 ==================
+1.19.0 - 17 Mar 2026
+- Add multi-arch support to arch process directive (#6897) [c7ca36902]
+- Default Fusion to v2.6 for Seqera executor (#6933) [8a7e53957]
+
 1.18.0 - 19 Dec 2025
 - Fix WaveClient sending Bearer token to public S3 URLs (#6672) [ffaef0b6a]
 - Add wave.build.template config option (#6639) [d08a8952a]
