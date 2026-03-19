@@ -396,7 +396,6 @@ class TowerClientTest extends Specification {
         when:
         client.onFlowCreate(session)
         then:
-        1 * client.getAccessToken() >> 'secret'
         1 * client.makeCreateReq(session) >> [runName: 'foo']
         1 * client.sendHttpMessage('https://api.cloud.seqera.io/trace/create', [runName: 'foo'], 'POST') >> new TowerClient.Response(200, '{"workflowId":"xyz123","watchUrl":"https://cloud.seqera.io/watch/xyz123"}')
         and:

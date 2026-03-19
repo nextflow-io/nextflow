@@ -207,7 +207,7 @@ class SeqeraPath implements Path {
                    : d == 3 ? resourceType
                    : d == 2 ? workspace
                    : org
-        return new SeqeraPath(fs, name as String, null, null, null, null)
+        return new SeqeraPath( name as String)
     }
 
     @Override
@@ -413,9 +413,17 @@ class SeqeraPath implements Path {
             throw new IllegalArgumentException("Missing 'path' argument")
         if( !path.startsWith(PROTOCOL) )
             throw new IllegalArgumentException("Invalid Seqera file system path URI - it must start with '${PROTOCOL}' prefix - offendinf value: $path")
-        if( path.startsWith(PROTOCOL + SEPARATOR) && path.length() > 7 )
+        if( path.startsWith(PROTOCOL + SEPARATOR) && path.length() > PROTOCOL.length() + 1 )
             throw new IllegalArgumentException("Invalid Seqera file system path URI - make sure the schema prefix does not container more than two slash characters or a query in the root '/' - offending value: $path")
-        if( path == PROTOCOL ) //Empty path case
+
+        //URI strings like seqera://./something are converted to seqera://something
+        if( path.startsWith(PROTOCOL + './') ) {
+            def subPath = path.substring(PROTOCOL.length() + 2)
+
+            path = PROTOCOL + path.substring(PROTOCOL.length() + 2)
+        }
+
+        if( path == PROTOCOL || path == PROTOCOL + '.') //Empty path case
             return new URI(PROTOCOL + '/')
         return new URI(path)
     }

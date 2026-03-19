@@ -16,6 +16,7 @@
 
 package io.seqera.tower.plugin.fs
 
+import io.seqera.tower.plugin.dataset.SeqeraDatasetClient
 import spock.lang.Specification
 
 /**
@@ -25,7 +26,7 @@ class SeqeraPathTest extends Specification {
 
     private SeqeraFileSystem mockFs() {
         def provider = new SeqeraFileSystemProvider()
-        def client = Mock(io.seqera.tower.plugin.dataset.SeqeraDatasetClient)
+        def client = Mock(SeqeraDatasetClient)
         return new SeqeraFileSystem(provider, client)
     }
 
@@ -315,5 +316,83 @@ class SeqeraPathTest extends Specification {
         expect:
         !rel.isAbsolute()
         rel.toString() == 'research'
+    }
+
+    // ---- getFileName ----
+
+    def "getFileName returns relative path for each depth"() {
+        given:
+        def fs = mockFs()
+
+        expect:
+        new SeqeraPath(fs, 'seqera://').getFileName() == null
+        new SeqeraPath(fs, 'seqera://acme').getFileName().toString() == 'acme'
+        !new SeqeraPath(fs, 'seqera://acme').getFileName().isAbsolute()
+        new SeqeraPath(fs, 'seqera://acme/research').getFileName().toString() == 'research'
+        new SeqeraPath(fs, 'seqera://acme/research/datasets').getFileName().toString() == 'datasets'
+        new SeqeraPath(fs, 'seqera://acme/research/datasets/samples').getFileName().toString() == 'samples'
+        new SeqeraPath(fs, 'seqera://acme/research/datasets/samples@2').getFileName().toString() == 'samples@2'
+    }
+
+    def "getFileName is not absolute (uses relative constructor)"() {
+        given:
+        def fs = mockFs()
+        def name = new SeqeraPath(fs, 'seqera://acme/research').getFileName()
+
+        expect:
+        !name.isAbsolute()
+        name.toString() == 'research'
+        name.getFileSystem() == null
+    }
+
+    // ---- asUri ----
+
+    def "asUri - valid full path round-trips"() {
+        expect:
+        SeqeraPath.asUri('seqera://acme/research/datasets/samples').toString() == 'seqera://acme/research/datasets/samples'
+        SeqeraPath.asUri('seqera://acme/research').toString() == 'seqera://acme/research'
+    }
+
+    def "asUri - empty path returns root URI"() {
+        expect:
+        SeqeraPath.asUri('seqera://').toString() == 'seqera:///'
+    }
+
+    def "asUri - path starting with dot has dot stripped"() {
+        expect:
+        // seqera://. → strips dot → seqera:// → hits empty-path case → seqera:///
+        SeqeraPath.asUri('seqera://.').toString() == 'seqera:///'
+        // seqera://./foo/bar → strips dot only (substring from index 10) → seqera:///foo/bar
+        SeqeraPath.asUri('seqera://./foo/bar').toString() == 'seqera://foo/bar'
+    }
+
+    def "asUri - triple slash path throws IllegalArgumentException"() {
+        when:
+        SeqeraPath.asUri('seqera:///something')
+
+        then:
+        thrown(IllegalArgumentException)
+    }
+
+    def "asUri - missing protocol prefix throws IllegalArgumentException"() {
+        when:
+        SeqeraPath.asUri('s3://bucket/key')
+
+        then:
+        thrown(IllegalArgumentException)
+    }
+
+    def "asUri - null or empty throws IllegalArgumentException"() {
+        when:
+        SeqeraPath.asUri(null)
+
+        then:
+        thrown(IllegalArgumentException)
+
+        when:
+        SeqeraPath.asUri('')
+
+        then:
+        thrown(IllegalArgumentException)
     }
 }

@@ -138,11 +138,11 @@ class SeqeraDatasetClientTest extends Specification {
              mediaType: 'text/csv', hasHeader: true, dateCreated: '2024-01-01T00:00:00Z', disabled: false]
         ]])
         def tc = mockTower()
-        tc.sendApiRequest('https://api.example.com/datasets/ds-1/versions') >> ok(body)
+        tc.sendApiRequest('https://api.example.com/datasets/ds-1/versions?workspaceId=1234') >> ok(body)
         def client = new SeqeraDatasetClient(tc)
 
         when:
-        def list = client.listVersions('ds-1')
+        def list = client.listVersions('ds-1', 1234)
 
         then:
         list.size() == 1
@@ -158,11 +158,11 @@ class SeqeraDatasetClientTest extends Specification {
         given:
         def content = 'col1,col2\n1,2\n'
         def tc = mockTower()
-        tc.sendApiRequest('https://api.example.com/datasets/ds-1/v/1/n/samples.csv') >> ok(content)
+        tc.sendApiRequest('https://api.example.com/datasets/ds-1/v/1/n/samples.csv?workspaceId=1234') >> ok(content)
         def client = new SeqeraDatasetClient(tc)
 
         when:
-        def stream = client.downloadDataset('ds-1', '1', 'samples.csv')
+        def stream = client.downloadDataset('ds-1', '1', 'samples.csv', 1234)
 
         then:
         stream.text == content
@@ -174,10 +174,10 @@ class SeqeraDatasetClientTest extends Specification {
         def client = new SeqeraDatasetClient(tc)
 
         when:
-        client.downloadDataset('ds-1', '1', 'my file.csv')
+        client.downloadDataset('ds-1', '1', 'my file.csv',1234)
 
         then:
-        1 * tc.sendApiRequest('https://api.example.com/datasets/ds-1/v/1/n/my+file.csv') >> ok('data')
+        1 * tc.sendApiRequest('https://api.example.com/datasets/ds-1/v/1/n/my+file.csv?workspaceId=1234') >> ok('data')
     }
 
     def "downloadDataset throws NoSuchFileException on 404"() {
@@ -187,7 +187,7 @@ class SeqeraDatasetClientTest extends Specification {
         def client = new SeqeraDatasetClient(tc)
 
         when:
-        client.downloadDataset('ds-missing', '1', 'file.csv')
+        client.downloadDataset('ds-missing', '1', 'file.csv', 1234)
 
         then:
         thrown(NoSuchFileException)
@@ -200,7 +200,7 @@ class SeqeraDatasetClientTest extends Specification {
         def client = new SeqeraDatasetClient(tc)
 
         when:
-        client.downloadDataset('ds-1', '1', 'file.csv')
+        client.downloadDataset('ds-1', '1', 'file.csv', 1234)
 
         then:
         thrown(AccessDeniedException)
