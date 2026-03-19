@@ -1196,6 +1196,175 @@ $ nextflow log tiny_leavitt -F 'process =~ /split_letters/'
 work/1f/f1ea9158fb23b53d5083953121d6b6
 ```
 
+### `module`
+
+<AddedInVersion version="26.04.0" />
+
+Manage Nextflow modules.
+
+#### Usage
+
+```console
+$ nextflow module <subcommand> [options]
+```
+
+#### Description
+
+The `module` command provides a comprehensive system for managing registry-based modules. It enables installing modules from registries, running them directly, searching for available modules, and publishing your own modules to a registry.
+
+#### Subcommands
+
+##### `info [options] [scope/name]` {#module-info}
+
+Display detailed information about a module from the registry.
+Shows module name, version, description, and other metadata, as well as example usage.
+
+The following options are available:
+
+###### `-version`
+
+Specify the module version to query (e.g., `1.0.0`). If not specified, displays information for the latest version.
+
+###### `-o, -output` (`text`)
+
+Output mode for info results. Options: `text` (default), `json`.
+
+##### `install [options] [scope/name]` {#module-install}
+
+Install a module from the registry into your project.
+Downloaded modules are stored in the `modules/` directory.
+The `.module-info` file is created in the module directory to store additional information of the installed module.
+
+The following options are available:
+
+###### `-version`
+
+Specify the module version to install (e.g., `1.0.0`). If not specified, installs the latest version.
+
+###### `-force`
+
+Force reinstall even if the module exists locally with modifications. Without this flag, Nextflow prevents overwriting locally modified modules.
+
+##### `list [options]` {#module-list}
+
+List all modules currently installed in your project.
+Shows each module's name, version, and integrity status (whether it has been modified locally).
+
+The following options are available:
+
+###### `-o, -output` (`table`)
+
+Output mode for list results. Options: `table` (default), `json`.
+
+##### `publish [options] [scope/name | path]` {#module-publish}
+
+Publish a module to the registry, making it available for others to install.
+The argument can be either a `scope/name` reference (for an already-installed module) or a local directory path containing the module files.
+Requires authentication via the `NXF_REGISTRY_TOKEN` environment variable or the `registry.apiKey` config option.
+The module directory must contain `main.nf`, `meta.yml`, and `README.md`.
+
+The following options are available:
+
+###### `-dry-run`
+
+Validate the module structure and metadata without uploading to the registry. Useful for testing before publishing.
+
+###### `-registry`
+
+Specify the registry to publish the module (default: `https://registry.nextflow.io`)
+
+##### `remove [options] [scope/name]` {#module-remove}
+
+Remove a module from your project. By default, removes both local files and configuration entries. Use options to control what gets removed.
+
+The following options are available:
+
+###### `-force`
+
+Force removal even if the module has no `.module-info` file (i.e. not installed from a registry) or has local modifications.
+
+###### `-keep-files`
+
+Remove the `.module-info` but keep local files in the `modules/` directory.
+
+##### `run [options] [scope/name] [--<input_name> <input-value>]` {#module-run}
+
+Execute a module directly from the registry without creating a wrapper workflow.
+Automatically downloads the module if not already installed. Accepts all standard Nextflow run options.
+The `module run` command extends the `run` command and accepts all its options, including `-profile`, `-resume`, `-c`, etc. Command-line params (i.e., `--<input_name>`) are inferred from the module's declared inputs.
+
+The following additional options are available:
+
+###### `-version`
+
+Specify the module version to run (e.g., `1.0.0`). If not specified, uses the latest version.
+
+##### `search [options] [query]` {#module-search}
+
+Search for modules in the registry by keyword or name.
+Returns modules matching the query with their names, versions, descriptions, and download statistics.
+
+The following options are available:
+
+###### `-limit`
+
+Maximum number of results to return (default: varies by registry).
+
+###### `-o, -output` (`simple`)
+
+Output mode for search results. Options: `simple` (default), `json`.
+
+#### Examples
+
+Install the latest module version.
+
+```console
+$ nextflow module install nf-core/fastqc
+```
+
+Display installed modules in formatted table.
+
+```console
+$ nextflow module list
+```
+
+Validate module structure without publishing
+
+```console
+$ nextflow module publish myorg/my-module -dry-run
+```
+
+Publish module to nextflow registry
+
+```console
+$ export NXF_REGISTRY_TOKEN=your-token
+$ nextflow module publish myorg/my-module
+```
+
+Display information for latest module version.
+
+```console
+$ nextflow module info nf-core/fastqc
+```
+
+Remove module completely.
+
+```console
+$ nextflow module remove nf-core/fastqc
+```
+
+Run module with inputs
+
+```console
+$ nextflow module run nf-core/fastqc --input 'data/*.fastq.gz'
+```
+
+Search for alignment-related modules.
+
+```console
+$ nextflow module search alignment
+```
+
 ### `plugin`
 
 Manage plugins and run plugin-specific commands.
@@ -1272,7 +1441,7 @@ When passing a git tag or branch, the `workflow.revision` and `workflow.commitId
 
 Private repository user name.
 
-#### Examples
+#### 
 
 Download a new pipeline or pull the latest revision for a specific project.
 
@@ -1557,52 +1726,52 @@ Directory where intermediate result files are stored.
 
 #### Examples
 
-- Run a specific revision of a remote pipeline.
+Run a specific revision of a remote pipeline.
 
-  ```console
-  $ nextflow run nextflow-io/hello -r v1.1
+```console
+$ nextflow run nextflow-io/hello -r v1.1
 
-  N E X T F L O W  ~  version 20.07.1
-  Launching `nextflow-io/hello` [grave_cajal] - revision: 1c3e9e7404 [v1.1]
-  ```
+N E X T F L O W  ~  version 20.07.1
+Launching `nextflow-io/hello` [grave_cajal] - revision: 1c3e9e7404 [v1.1]
+```
 
-- Choose a `profile` for running the project. Assumes that a profile named `docker` has already been defined in the config file.
+Choose a `profile` for running the project. Assumes that a profile named `docker` has already been defined in the config file.
 
-  ```console
-  $ nextflow run main.nf -profile docker
-  ```
+```console
+$ nextflow run main.nf -profile docker
+```
 
-- Execute a pipeline and generate the summary HTML report. For more information on the metrics, see [Reports][tracing-page]:
+Execute a pipeline and generate the summary HTML report. For more information on the metrics, see [Reports][tracing-page]:
 
-  ```console
-  $ nextflow run main.nf -with-report
-  ```
+```console
+$ nextflow run main.nf -with-report
+```
 
-- Execute a pipeline with a custom queue size. By default, the queue size is the number of available CPUs.
+Execute a pipeline with a custom queue size. By default, the queue size is the number of available CPUs.
 
-  ```console
-  $ nextflow run nextflow-io/hello -qs 4
-  ```
+```console
+$ nextflow run nextflow-io/hello -qs 4
+```
 
-- Invoke the pipeline with a specific workflow as the entry-point.
+Invoke the pipeline with a specific workflow as the entry-point.
 
-  ```console
-  $ nextflow run main.nf -entry workflow_A
-  ```
+```console
+$ nextflow run main.nf -entry workflow_A
+```
 
-- Execute a pipeline with integrated monitoring in [Seqera Platform](https://seqera.io).
+Execute a pipeline with integrated monitoring in [Seqera Platform](https://seqera.io).
 
-  ```console
-  $ nextflow run nextflow-io/hello -with-tower
-  ```
+```console
+$ nextflow run nextflow-io/hello -with-tower
+```
 
-- Execute a pipeline with a custom parameters file (YAML or JSON).
+Execute a pipeline with a custom parameters file (YAML or JSON).
 
-  ```console
-  $ nextflow run main.nf -params-file pipeline_params.yml
-  ```
+```console
+$ nextflow run main.nf -params-file pipeline_params.yml
+```
 
-  See [Pipeline parameters][cli-params] for more information about writing custom parameters files.
+See [Pipeline parameters][cli-params] for more information about writing custom parameters files.
 
 ### `secrets`
 
