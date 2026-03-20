@@ -35,7 +35,9 @@ class ProcessEntryHandlerTest extends Specification {
         given:
         def session = Mock(Session)
         def script = Mock(BaseScript)
-        def meta = Mock(ScriptMeta)
+        def meta = Mock(ScriptMeta) {
+            getLocalProcessNames() >> [ 'hello' ]
+        }
         def handler = new ProcessEntryHandler(script, session, meta)
 
         when:
@@ -58,7 +60,9 @@ class ProcessEntryHandlerTest extends Specification {
         given:
         def session = Mock(Session)
         def script = Mock(BaseScript)
-        def meta = Mock(ScriptMeta)
+        def meta = Mock(ScriptMeta) {
+            getLocalProcessNames() >> [ 'hello' ]
+        }
         def handler = new ProcessEntryHandler(script, session, meta)
 
         when:
@@ -84,7 +88,9 @@ class ProcessEntryHandlerTest extends Specification {
         given:
         def session = Mock(Session)
         def script = Mock(BaseScript)
-        def meta = Mock(ScriptMeta)
+        def meta = Mock(ScriptMeta) {
+            getLocalProcessNames() >> [ 'hello' ]
+        }
         def handler = new ProcessEntryHandler(script, session, meta)
 
         when:
@@ -123,7 +129,9 @@ class ProcessEntryHandlerTest extends Specification {
         given:
         def session = Mock(Session)
         def script = Mock(BaseScript)
-        def meta = Mock(ScriptMeta)
+        def meta = Mock(ScriptMeta) {
+            getLocalProcessNames() >> [ 'hello' ]
+        }
         def handler = new ProcessEntryHandler(script, session, meta)
 
         when:
@@ -143,7 +151,9 @@ class ProcessEntryHandlerTest extends Specification {
         given:
         def session = Mock(Session)
         def script = Mock(BaseScript)
-        def meta = Mock(ScriptMeta)
+        def meta = Mock(ScriptMeta) {
+            getLocalProcessNames() >> [ 'hello' ]
+        }
         def handler = new ProcessEntryHandler(script, session, meta)
 
         when:
@@ -167,7 +177,9 @@ class ProcessEntryHandlerTest extends Specification {
         given:
         def session = Mock(Session)
         def script = Mock(BaseScript)
-        def meta = Mock(ScriptMeta)
+        def meta = Mock(ScriptMeta) {
+            getLocalProcessNames() >> [ 'hello' ]
+        }
         def handler = new ProcessEntryHandler(script, session, meta)
 
         when:
@@ -193,7 +205,9 @@ class ProcessEntryHandlerTest extends Specification {
             ]
         }
         def script = Mock(BaseScript)
-        def meta = Mock(ScriptMeta)
+        def meta = Mock(ScriptMeta) {
+            getLocalProcessNames() >> [ 'hello' ]
+        }
         def processDef = Mock(ProcessDef)
         def handler = new ProcessEntryHandler(script, session, meta)
 
@@ -235,7 +249,9 @@ class ProcessEntryHandlerTest extends Specification {
         given:
         def session = Mock(Session)
         def script = Mock(BaseScript)
-        def meta = Mock(ScriptMeta)
+        def meta = Mock(ScriptMeta) {
+            getLocalProcessNames() >> [ 'hello' ]
+        }
         def handler = new ProcessEntryHandler(script, session, meta)
 
         expect:
