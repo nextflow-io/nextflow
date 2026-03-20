@@ -19,6 +19,7 @@ package nextflow.cloud.aws.batch
 import nextflow.cloud.types.PriceModel
 import software.amazon.awssdk.services.batch.BatchClient
 import software.amazon.awssdk.services.ec2.model.Instance
+import software.amazon.awssdk.services.ec2.model.InstanceType
 import software.amazon.awssdk.services.ec2.model.InstanceLifecycleType
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -49,5 +50,25 @@ class AwsBatchHelperTest extends Specification {
         InstanceLifecycleType.SPOT      | PriceModel.spot
         InstanceLifecycleType.SCHEDULED | PriceModel.standard
         null                            | PriceModel.standard   // on-demand instances return null
+    }
+
+    def 'should preserve raw aws instance type values'() {
+        given:
+        def helper = new AwsBatchHelper(Mock(BatchClient), null)
+
+        expect:
+        helper.getInstanceType(instance) == expected
+
+        where:
+        instance                                                                                         | expected
+        Instance.builder().instanceType(InstanceType.M4_LARGE).build()                                   | 'm4.large'
+        Instance.builder().instanceType(InstanceType.UNKNOWN_TO_SDK_VERSION).instanceType('r8id.xlarge').build() | 'r8id.xlarge'
+    }
+
+    def 'should map unknown generation 8 instance types to sdk sentinel'() {
+        expect:
+        InstanceType.fromValue('r8id.xlarge') == InstanceType.UNKNOWN_TO_SDK_VERSION
+        InstanceType.fromValue('m8id.xlarge') == InstanceType.UNKNOWN_TO_SDK_VERSION
+        InstanceType.fromValue('c8id.xlarge') == InstanceType.UNKNOWN_TO_SDK_VERSION
     }
 }
