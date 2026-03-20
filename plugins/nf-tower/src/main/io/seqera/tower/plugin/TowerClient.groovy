@@ -543,6 +543,7 @@ class TowerClient implements TraceObserverV2 {
             .header('Content-Type', 'application/json; charset=utf-8')
             .header('User-Agent', "Nextflow/$BuildInfo.version")
             .header('Traceparent', TraceUtils.rndTrace())
+            .timeout(java.time.Duration.ofSeconds(60))
 
         if( verb == 'PUT' )
             return builder.PUT(HttpRequest.BodyPublishers.ofString(payload)).build()
