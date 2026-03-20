@@ -16,7 +16,6 @@
 
 package io.seqera.tower.plugin.fs
 
-import java.nio.ByteBuffer
 import java.nio.channels.SeekableByteChannel
 import java.nio.file.AccessDeniedException
 import java.nio.file.AccessMode
@@ -41,10 +40,10 @@ import java.nio.file.spi.FileSystemProvider
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import io.seqera.tower.model.DatasetDto
+import io.seqera.tower.model.DatasetVersionDto
 import io.seqera.tower.plugin.TowerClient
 import io.seqera.tower.plugin.TowerFactory
-import io.seqera.tower.plugin.dataset.DatasetDto
-import io.seqera.tower.plugin.dataset.DatasetVersionDto
 import io.seqera.tower.plugin.dataset.SeqeraDatasetClient
 
 /**
@@ -64,8 +63,6 @@ import io.seqera.tower.plugin.dataset.SeqeraDatasetClient
 class SeqeraFileSystemProvider extends FileSystemProvider {
 
     static final String SCHEME = 'seqera'
-
-    static final long MAX_UPLOAD_BYTES = 10L * 1024 * 1024  // 10 MB
 
     /** One filesystem per (endpoint + accessToken) key */
     private final Map<String, SeqeraFileSystem> fileSystems = new LinkedHashMap<>()
@@ -133,9 +130,9 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
     @Override
     SeekableByteChannel newByteChannel(Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs) throws IOException {
         if (options?.contains(StandardOpenOption.WRITE) || options?.contains(StandardOpenOption.APPEND))
-            throw new UnsupportedOperationException("WRITE channel not yet supported for seqera:// paths — use newOutputStream")
+            throw new UnsupportedOperationException("seqera:// filesystem is read-only")
         final inputStream = newInputStream(path)
-        return new InputStreamSeekableByteChannel(inputStream)
+        return new DatasetInputStream(inputStream)
     }
 
     // ---- Metadata ----
@@ -169,10 +166,10 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
     void checkAccess(Path path, AccessMode... modes) throws IOException {
         final sp = toSeqeraPath(path)
         for (AccessMode m : modes) {
-            if (m == AccessMode.EXECUTE)
-                throw new AccessDeniedException(path.toString(), null, "EXECUTE not supported on seqera:// paths")
+            if (m == AccessMode.WRITE || m == AccessMode.EXECUTE)
+                throw new AccessDeniedException(path.toString(), null, "seqera:// filesystem is read-only")
         }
-        // For READ and WRITE, verify the path resolves without throwing NoSuchFileException
+        // For READ, verify the path resolves without throwing NoSuchFileException
         if (sp.depth() >= 1) {
             final fs = sp.getFileSystem() as SeqeraFileSystem
             if (sp.depth() == 1) {
@@ -224,32 +221,16 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
         }
     }
 
-    // ---- Write operations ----
-
-    @Override
-    OutputStream newOutputStream(Path path, OpenOption... options) throws IOException {
-        final sp = toSeqeraPath(path)
-        if (sp.depth() != 4)
-            throw new IllegalArgumentException("newOutputStream requires a dataset path (depth 4): $path")
-        return new DatasetOutputStream(sp)
-    }
-
     // ---- Copy ----
 
     @Override
     void copy(Path source, Path target, CopyOption... options) throws IOException {
         toSeqeraPath(source)
-        if (target instanceof SeqeraPath) {
-            // within-provider: download then upload
-            newInputStream(source).withCloseable { InputStream is ->
-                final bytes = is.bytes
-                newOutputStream(target).withCloseable { out -> out.write(bytes) }
-            }
-        } else {
-            // cross-provider (seqera → local): stream to target
-            newInputStream(source).withCloseable { InputStream is ->
-                Files.copy(is, target, StandardCopyOption.REPLACE_EXISTING)
-            }
+        if (target instanceof SeqeraPath)
+            throw new UnsupportedOperationException("seqera:// filesystem is read-only")
+        // cross-provider (seqera → local): stream to target
+        newInputStream(source).withCloseable { InputStream is ->
+            Files.copy(is, target, StandardCopyOption.REPLACE_EXISTING)
         }
     }
 
@@ -342,109 +323,6 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
         if (!latest)
             throw new NoSuchFileException("seqera:///datasets/${dataset.name}", null, "No enabled versions for dataset '${dataset.name}'")
         return latest
-    }
-
-    // ---- inner classes ----
-
-    /**
-     * Minimal {@link SeekableByteChannel} backed by an {@link InputStream}.
-     * Supports sequential reads only (no seek/position).
-     */
-    @CompileStatic
-    private static class InputStreamSeekableByteChannel implements SeekableByteChannel {
-        private final InputStream inputStream
-        private long position0 = 0L
-        private boolean open = true
-
-        InputStreamSeekableByteChannel(InputStream inputStream) {
-            this.inputStream = inputStream
-        }
-
-        @Override
-        int read(ByteBuffer dst) throws IOException {
-            final bytes = new byte[dst.remaining()]
-            final n = inputStream.read(bytes)
-            if (n > 0) {
-                dst.put(bytes, 0, n)
-                position0 += n
-            }
-            return n
-        }
-
-        @Override
-        int write(ByteBuffer src) { throw new UnsupportedOperationException() }
-
-        @Override
-        long position() { position0 }
-
-        @Override
-        SeekableByteChannel position(long newPosition) { throw new UnsupportedOperationException("seek not supported") }
-
-        @Override
-        long size() { -1L }
-
-        @Override
-        SeekableByteChannel truncate(long size) { throw new UnsupportedOperationException() }
-
-        @Override
-        boolean isOpen() { open }
-
-        @Override
-        void close() throws IOException {
-            open = false
-            inputStream.close()
-        }
-    }
-
-    /**
-     * Buffered {@link OutputStream} that uploads to the Seqera Platform on {@code close()}.
-     * Enforces the 10 MB platform size limit before making the API call.
-     */
-    @CompileStatic
-    private static class DatasetOutputStream extends OutputStream {
-        private final SeqeraPath path
-        private final ByteArrayOutputStream buffer = new ByteArrayOutputStream()
-        private boolean closed = false
-
-        DatasetOutputStream(SeqeraPath path) {
-            this.path = path
-        }
-
-        @Override
-        void write(int b) throws IOException {
-            buffer.write(b)
-        }
-
-        @Override
-        void write(byte[] b, int off, int len) throws IOException {
-            buffer.write(b, off, len)
-        }
-
-        @Override
-        void close() throws IOException {
-            if (closed) return
-            closed = true
-            final bytes = buffer.toByteArray()
-            if (bytes.length > MAX_UPLOAD_BYTES)
-                throw new IOException("Dataset '${path.datasetName}' exceeds the 10 MB Seqera Platform limit (${bytes.length} bytes)")
-
-            final fs = path.getFileSystem() as SeqeraFileSystem
-            final workspaceId = fs.resolveWorkspaceId(path.org, path.workspace)
-
-            // Resolve or create the dataset
-            String datasetId
-            try {
-                final existing = fs.resolveDataset(workspaceId, path.datasetName)
-                datasetId = existing.id
-            } catch (NoSuchFileException ignored) {
-                final created = fs.client.createDataset(workspaceId, path.datasetName)
-                datasetId = created.id
-            }
-
-            final fileName = path.datasetName
-            fs.client.uploadDataset(datasetId, bytes, fileName, false)
-            fs.invalidateDatasetCache(workspaceId)
-        }
     }
 
 }

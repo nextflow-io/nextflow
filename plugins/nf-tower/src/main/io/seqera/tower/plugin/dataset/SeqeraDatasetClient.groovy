@@ -18,10 +18,14 @@ package io.seqera.tower.plugin.dataset
 
 import java.nio.file.AccessDeniedException
 import java.nio.file.NoSuchFileException
+import java.time.OffsetDateTime
 
 import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import io.seqera.tower.model.DatasetDto
+import io.seqera.tower.model.DatasetVersionDto
+import io.seqera.tower.model.OrgAndWorkspaceDto
 import io.seqera.tower.plugin.TowerClient
 import nextflow.exception.AbortOperationException
 
@@ -60,14 +64,14 @@ class SeqeraDatasetClient {
     /**
      * @return all orgs and workspaces accessible to the given user from GET /user/{userId}/workspaces
      */
-    List<WorkspaceOrgDto> listUserWorkspacesAndOrgs(long userId) {
+    List<OrgAndWorkspaceDto> listUserWorkspacesAndOrgs(long userId) {
         final url = "${endpoint}/user/${userId}/workspaces"
         log.debug "SeqeraDatasetClient GET $url"
         final resp = towerClient.sendApiRequest(url)
         checkResponse(resp, url)
         final json = new JsonSlurper().parseText(resp.message) as Map
         final list = json.orgsAndWorkspaces as List<Map>
-        return list.collect { m -> mapWorkspaceOrg(m) }
+        return list.collect { m -> mapOrgAndWorkspace(m) }
     }
 
     /**
@@ -128,7 +132,7 @@ class SeqeraDatasetClient {
      * Requires direct HTTP access — to be implemented in US4.
      */
     DatasetVersionDto uploadDataset(String datasetId, byte[] content, String fileName, boolean hasHeader) {
-        throw new UnsupportedOperationException("uploadDataset not yet implemented — requires US4 multipart support")
+        throw new UnsupportedOperationException("uploadDataset not yet implemented")
     }
 
     // ---- private helpers ----
@@ -145,8 +149,8 @@ class SeqeraDatasetClient {
         throw new IOException("Seqera API error: HTTP ${code} for ${url}")
     }
 
-    private static WorkspaceOrgDto mapWorkspaceOrg(Map m) {
-        final dto = new WorkspaceOrgDto()
+    private static OrgAndWorkspaceDto mapOrgAndWorkspace(Map m) {
+        final dto = new OrgAndWorkspaceDto()
         dto.orgId = (m.orgId as Long) ?: 0L
         dto.orgName = m.orgName as String
         dto.workspaceId = (m.workspaceId as Long) ?: 0L
@@ -163,8 +167,8 @@ class SeqeraDatasetClient {
         dto.version = (m.version as Long) ?: 0L
         dto.mediaType = m.mediaType as String
         dto.workspaceId = (m.workspaceId as Long) ?: 0L
-        dto.dateCreated = m.dateCreated as String
-        dto.lastUpdated = m.lastUpdated as String
+        dto.dateCreated = m.dateCreated ? OffsetDateTime.parse(m.dateCreated as String) : null
+        dto.lastUpdated = m.lastUpdated ? OffsetDateTime.parse(m.lastUpdated as String) : null
         return dto
     }
 
@@ -175,7 +179,7 @@ class SeqeraDatasetClient {
         dto.fileName = m.fileName as String
         dto.mediaType = m.mediaType as String
         dto.hasHeader = (m.hasHeader as Boolean) ?: false
-        dto.dateCreated = m.dateCreated as String
+        dto.dateCreated = m.dateCreated ? OffsetDateTime.parse(m.dateCreated as String) : null
         dto.disabled = (m.disabled as Boolean) ?: false
         return dto
     }

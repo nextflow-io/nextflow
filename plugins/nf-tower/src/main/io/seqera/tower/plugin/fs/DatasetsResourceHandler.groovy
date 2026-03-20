@@ -20,7 +20,7 @@ import java.nio.file.DirectoryStream
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
-import io.seqera.tower.plugin.dataset.DatasetDto
+import io.seqera.tower.model.DatasetDto
 
 /**
  * {@link ResourceTypeHandler} implementation for Seqera Platform datasets.

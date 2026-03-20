@@ -49,6 +49,7 @@ sourceSets {
 configurations {
     // see https://docs.gradle.org/4.1/userguide/dependency_management.html#sub:exclude_transitive_dependencies
     runtimeClasspath.exclude group: 'org.slf4j', module: 'slf4j-api'
+
 }
 
 dependencies {
@@ -56,7 +57,9 @@ dependencies {
     compileOnly 'org.slf4j:slf4j-api:2.0.17'
     compileOnly 'org.pf4j:pf4j:3.12.0'
     compileOnly 'io.seqera:lib-httpx:2.1.0'
-
+    api('io.seqera:tower-api:1.121.0') {
+        exclude group: 'io.micronaut.servlet'
+    }
     api "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.21.1"
     api "com.fasterxml.jackson.core:jackson-databind:2.21.1"
 

@@ -27,9 +27,9 @@ import java.nio.file.spi.FileSystemProvider
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import io.seqera.tower.plugin.dataset.DatasetDto
+import io.seqera.tower.model.DatasetDto
+import io.seqera.tower.model.OrgAndWorkspaceDto
 import io.seqera.tower.plugin.dataset.SeqeraDatasetClient
-import io.seqera.tower.plugin.dataset.WorkspaceOrgDto
 
 /**
  * FileSystem instance for the {@code seqera://} scheme.
@@ -71,7 +71,7 @@ class SeqeraFileSystem extends FileSystem {
     boolean isOpen() { true }
 
     @Override
-    boolean isReadOnly() { false }
+    boolean isReadOnly() { true }
 
     @Override
     String getSeparator() { '/' }
@@ -120,7 +120,7 @@ class SeqeraFileSystem extends FileSystem {
         final userInfo = client.getUserInfo()
         final userId = (userInfo.id as long)
         final entries = client.listUserWorkspacesAndOrgs(userId)
-        for (WorkspaceOrgDto entry : entries) {
+        for (OrgAndWorkspaceDto entry : entries) {
             if (entry.orgName)
                 orgCache.put(entry.orgName, entry.orgId)
             if (entry.orgName && entry.workspaceName && entry.workspaceId)

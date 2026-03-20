@@ -21,7 +21,7 @@ import java.nio.file.attribute.FileTime
 import java.time.Instant
 
 import groovy.transform.CompileStatic
-import io.seqera.tower.plugin.dataset.DatasetDto
+import io.seqera.tower.model.DatasetDto
 
 /**
  * {@link BasicFileAttributes} for {@code seqera://} paths.
@@ -51,11 +51,7 @@ class SeqeraFileAttributes implements BasicFileAttributes {
     @Override
     FileTime lastModifiedTime() {
         if (dataset?.lastUpdated) {
-            try {
-                return FileTime.from(Instant.parse(dataset.lastUpdated))
-            } catch (Exception e) {
-                // fall through to epoch
-            }
+            return FileTime.from(dataset.lastUpdated.toInstant())
         }
         return FileTime.from(Instant.EPOCH)
     }
@@ -66,11 +62,7 @@ class SeqeraFileAttributes implements BasicFileAttributes {
     @Override
     FileTime creationTime() {
         if (dataset?.dateCreated) {
-            try {
-                return FileTime.from(Instant.parse(dataset.dateCreated))
-            } catch (Exception e) {
-                // fall through to epoch
-            }
+            return FileTime.from(dataset.dateCreated.toInstant())
         }
         return FileTime.from(Instant.EPOCH)
     }
