@@ -40,6 +40,7 @@ import nextflow.script.formatter.ScriptFormattingVisitor
 import nextflow.script.parser.v2.ErrorListener
 import nextflow.script.parser.v2.ErrorSummary
 import nextflow.script.parser.v2.StandardErrorListener
+import nextflow.util.ClassLoaderFactory
 import nextflow.util.PathUtils
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage
@@ -62,7 +63,7 @@ class CmdLint extends CmdBase {
         names = ['-exclude'],
         description = 'File pattern to exclude from error checking (can be specified multiple times)'
     )
-    List<String> excludePatterns = ['.git', '.lineage', '.nf-test', '.nextflow', 'work', 'nf-test.config']
+    List<String> excludePatterns = ['.git', '.lineage', '.nextflow', '.nf-test', 'nf-test.config', 'work']
 
     @Parameter(
         names = ['-o', '-output'],
@@ -81,6 +82,12 @@ class CmdLint extends CmdBase {
                 throw new ParameterException("Output mode must be one of $MODES (found: $value)")
         }
     }
+
+    @Parameter(
+        names = ['-project-dir'],
+        description = 'Path to project directory (default: .)'
+    )
+    String projectDir = '.'
 
     @Parameter(names = ['-format'], description = 'Format scripts and config files that have no errors')
     boolean formatting
@@ -121,7 +128,11 @@ class CmdLint extends CmdBase {
         if( !spaces && !tabs )
             spaces = 4
 
-        scriptParser = new ScriptParser()
+        final baseDir = Path.of(projectDir)
+        final libDir = baseDir.resolve('lib')
+        final classLoader = ClassLoaderFactory.create([ libDir ])
+
+        scriptParser = new ScriptParser(baseDir, classLoader)
         configParser = new ConfigParser()
         errorListener = outputMode == 'json'
             ? new JsonErrorListener()
