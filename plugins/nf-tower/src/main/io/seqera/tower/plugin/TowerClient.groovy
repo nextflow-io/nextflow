@@ -71,6 +71,8 @@ class TowerClient implements TraceObserverV2 {
 
     static private final String TOKEN_PREFIX = '@token:'
 
+    static private final Duration DEFAULT_REQUEST_TIMEOUT = Duration.of('1 min')
+
     @TupleConstructor
     static class Response {
         final int code
@@ -141,6 +143,8 @@ class TowerClient implements TraceObserverV2 {
 
     private Map<String,Boolean> allContainers = new ConcurrentHashMap<>()
 
+    private Duration requestTimeout = DEFAULT_REQUEST_TIMEOUT
+
     TowerClient(Session session, TowerConfig config) {
         this.session = session
         this.endpoint = checkUrl(config.endpoint)
@@ -154,6 +158,11 @@ class TowerClient implements TraceObserverV2 {
 
     TowerClient withEnvironment(Map env) {
         this.env = env
+        return this
+    }
+
+    TowerClient withRequestTimeout(Duration duration) {
+        this.requestTimeout = duration
         return this
     }
 
@@ -543,7 +552,7 @@ class TowerClient implements TraceObserverV2 {
             .header('Content-Type', 'application/json; charset=utf-8')
             .header('User-Agent', "Nextflow/$BuildInfo.version")
             .header('Traceparent', TraceUtils.rndTrace())
-            .timeout(java.time.Duration.ofSeconds(60))
+            .timeout(java.time.Duration.ofMillis(requestTimeout.millis))
 
         if( verb == 'PUT' )
             return builder.PUT(HttpRequest.BodyPublishers.ofString(payload)).build()
