@@ -41,6 +41,7 @@ import nextflow.processor.TaskHandler
 import nextflow.processor.TaskId
 import nextflow.processor.TaskRun
 import nextflow.script.ScriptBinding
+import nextflow.script.PlatformMetadata
 import nextflow.script.ScriptMeta
 import nextflow.script.TokenVar
 import nextflow.script.WorkflowMetadata
@@ -202,6 +203,70 @@ class LinObserverTest extends Specification {
         observer.onFlowBegin()
         then:
         folder.resolve("${observer.executionHash}/.data.json").text == new LinEncoder().encode(workflowRun)
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should strip sensitive user data from platform metadata in lineage' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def config = [lineage:[enabled: true, store:[location:folder.toString()]]]
+        def store = new DefaultLinStore()
+        def uniqueId = UUID.randomUUID()
+        def scriptFile = folder.resolve("main.nf")
+        and:
+        def platformMeta = new PlatformMetadata()
+        platformMeta.user = new PlatformMetadata.User([
+            id: 'u1234', userName: 'john-smith', email: 'john.smith@acme.com',
+            firstName: 'John', lastName: 'Smith', organization: 'ACME'
+        ])
+        platformMeta.workspace = new PlatformMetadata.Workspace([
+            workspaceId: '1234', workspaceName: 'my-ws', workspaceFullName: 'My WS', orgName: 'ACME'
+        ])
+        def map = [
+            repository: "https://nextflow.io/nf-test/",
+            commitId: "123456",
+            scriptId: "78910",
+            scriptFile: scriptFile,
+            projectDir: folder.resolve("projectDir"),
+            revision: "main",
+            projectName: "nextflow.io/nf-test",
+            workDir: folder.resolve("workDir"),
+            platform: platformMeta
+        ]
+        def metadata = Mock(WorkflowMetadata) {
+            getRepository() >> map.repository
+            getCommitId()  >> map.commitId
+            getScriptId()  >> map.scriptId
+            getScriptFile() >> map.scriptFile
+            getProjectDir() >> map.projectDir
+            getWorkDir()   >> map.workDir
+            toMap()        >> map
+        }
+        def session = Mock(Session) {
+            getConfig()          >> config
+            getUniqueId()        >> uniqueId
+            getRunName()         >> "test_run"
+            getWorkflowMetadata() >> metadata
+            getParams()          >> new ScriptBinding.ParamsMap()
+        }
+        store.open(LineageConfig.create(session))
+        def observer = new LinObserver(session, store)
+
+        when:
+        observer.onFlowCreate(session)
+        observer.onFlowBegin()
+        def stored = store.load(observer.executionHash) as WorkflowRun
+
+        then:
+        def storedPlatform = stored.metadata.platform as Map
+        storedPlatform.user.id == 'u1234'
+        storedPlatform.user.userName == 'john-smith'
+        storedPlatform.user.organization == 'ACME'
+        !storedPlatform.user.containsKey('email')
+        !storedPlatform.user.containsKey('firstName')
+        !storedPlatform.user.containsKey('lastName')
 
         cleanup:
         folder?.deleteDir()

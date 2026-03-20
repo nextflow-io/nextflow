@@ -42,6 +42,7 @@ import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.processor.TaskHasher
 import nextflow.processor.TaskRun
+import nextflow.script.PlatformMetadata
 import nextflow.script.ScriptMeta
 import nextflow.script.params.BaseParam
 import nextflow.script.params.CmdEvalParam
@@ -170,7 +171,7 @@ class LinObserver implements TraceObserverV2 {
             session.runName,
             getNormalizedParams(session.params, normalizer),
             SecretHelper.hideSecrets(session.config.deepClone()) as Map,
-            addOtherMetadata(normalizer)
+            collectWorkflowMetadata(normalizer)
         )
         final executionHash = CacheHelper.hasher(value).hash().toString()
         store.save(executionHash, value)
@@ -490,7 +491,7 @@ class LinObserver implements TraceObserverV2 {
         return paths
     }
 
-    private Map addOtherMetadata(PathNormalizer normalizer) {
+    private Map collectWorkflowMetadata(PathNormalizer normalizer) {
         try {
             def metadata = session.workflowMetadata.toMap()
                 .collectEntries { it.value instanceof Path ? [it.key, FilesEx.toUriString(it.value as Path) ] : [it.key, it.value] }
@@ -499,8 +500,22 @@ class LinObserver implements TraceObserverV2 {
                 metadata["nextflow"] = (metadata["nextflow"] as NextflowMeta).toJsonMap()
             if( metadata.containsKey("configFiles") )
                 metadata["configFiles"] = (metadata["configFiles"] as List<Path>).collect {normalizer.normalizePath(it)}
+            // Strip sensitive personal data from platform user metadata before persisting to lineage
+            if( metadata.containsKey("platform") && metadata["platform"] instanceof PlatformMetadata ) {
+                final platformMeta = metadata["platform"] as PlatformMetadata
+                final user = platformMeta.user
+                metadata["platform"] = [
+                    workflowId : platformMeta.workflowId,
+                    workflowUrl: platformMeta.workflowUrl,
+                    user       : user ? [id: user.id, userName: user.userName, organization: user.organization] : null,
+                    workspace  : platformMeta.workspace,
+                    computeEnv : platformMeta.computeEnv,
+                    pipeline   : platformMeta.pipeline,
+                    labels     : platformMeta.labels
+                ]
+            }
             return metadata
-        }catch( Throwable e){
+        } catch( Throwable e) {
             log.debug("Error creating metadata", e)
             return [:]
         }

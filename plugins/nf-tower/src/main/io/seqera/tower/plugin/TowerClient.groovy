@@ -60,7 +60,7 @@ import nextflow.util.Threads
  */
 @Slf4j
 @CompileStatic
-class TowerClient extends TowerCommonApi implements TraceObserverV2 {
+class TowerClient implements TraceObserverV2 {
 
     static final public String DEF_ENDPOINT_URL = 'https://api.cloud.seqera.io'
 
@@ -142,6 +142,8 @@ class TowerClient extends TowerCommonApi implements TraceObserverV2 {
 
     private Map<String,Boolean> allContainers = new ConcurrentHashMap<>()
 
+    protected TowerCommonApi commonApi
+
     TowerClient(Session session, TowerConfig config) {
         this.session = session
         this.endpoint = checkUrl(config.endpoint)
@@ -151,6 +153,7 @@ class TowerClient extends TowerCommonApi implements TraceObserverV2 {
         this.schema = loadSchema()
         this.generator = TowerJsonGenerator.create(schema)
         this.reports = new TowerReports(session)
+        this.commonApi = new TowerCommonApi()
     }
 
     TowerClient withEnvironment(Map env) {
@@ -161,6 +164,7 @@ class TowerClient extends TowerCommonApi implements TraceObserverV2 {
     @TestOnly
     protected TowerClient() {
         this.generator = TowerJsonGenerator.create(Collections.EMPTY_MAP)
+        this.commonApi = new TowerCommonApi()
     }
 
     @Override
@@ -305,14 +309,14 @@ class TowerClient extends TowerCommonApi implements TraceObserverV2 {
         reports.flowCreate(workflowId)
     }
 
-    protected addPlatformMetadata(String workflowId) {
+    protected void addPlatformMetadata(String workflowId) {
 
         try {
-            final userInfo = getUserInfo(this.httpClient, this.endpoint)
-            final workspaceDetails = getUserWorkspaceDetails(this.httpClient, userInfo?.id as String, this.endpoint, this.workspaceId)
+            final userInfo = commonApi.getUserInfo(this.httpClient, this.endpoint)
+            final workspaceDetails = commonApi.getUserWorkspaceDetails(this.httpClient, userInfo?.id as String, this.endpoint, this.workspaceId)
             //Include workspace roles to user info
             if( workspaceDetails?.roles && userInfo) {
-                final roles = workspaceDetails.remove('roles')
+                final roles = (workspaceDetails as Map).remove('roles')
                 userInfo.roles = roles
             }
             if( userInfo )
@@ -325,11 +329,11 @@ class TowerClient extends TowerCommonApi implements TraceObserverV2 {
                 session.workflowMetadata.platform.computeEnv = workflowLaunch.computeEnv as PlatformMetadata.ComputeEnv
                 session.workflowMetadata.platform.pipeline = workflowLaunch?.pipeline as PlatformMetadata.Pipeline
             }
-            final workflowDetails = getWorkflowDetails(this.httpClient, this.endpoint, workflowId, queryParams)
+            final workflowDetails = commonApi.getWorkflowDetails(this.httpClient, this.endpoint, workflowId, queryParams)
             if( workflowDetails?.labels ){
                 session.workflowMetadata.platform.labels = getLabels(workflowDetails?.labels as List<Map>)
             }
-        }catch(Throwable e){
+        } catch(Throwable e) {
             log.debug("Exception getting platform metadata", e)
         }
     }
@@ -347,7 +351,7 @@ class TowerClient extends TowerCommonApi implements TraceObserverV2 {
 
     private Map getWorkflowLaunchDetails(workflowId, Map queryParams) {
         try {
-            final launch = apiGet(this.httpClient, this.endpoint, "/workflow/${workflowId}/launch", queryParams).launch as Map
+            final launch = commonApi.apiGet(this.httpClient, this.endpoint, "/workflow/${workflowId}/launch", queryParams).launch as Map
             return [
                 computeEnv: launch.computeEnv ? new PlatformMetadata.ComputeEnv(launch.computeEnv as Map) : null,
                 pipeline  : new PlatformMetadata.Pipeline(
@@ -357,7 +361,7 @@ class TowerClient extends TowerCommonApi implements TraceObserverV2 {
                     commitId: launch.commitId as String
                 )
             ]
-        } catch (Throwable e){
+        } catch (Throwable e) {
             log.debug("Exception getting workflow launch metadata", e)
             return null
         }
@@ -664,9 +668,9 @@ class TowerClient extends TowerCommonApi implements TraceObserverV2 {
 
     protected Map makeCompleteReq(Session session) {
         def workflow = session.getWorkflowMetadata().toMap()
-        //Remove retrieved seqeraPlatform info
-        if( workflow.seqeraPlatform )
-            workflow.remove('seqeraPlatform')
+        //Remove retrieved platform info
+        if( workflow.platform )
+            workflow.remove('platform')
 
         workflow.params = session.getParams()
         workflow.id = getWorkflowId()

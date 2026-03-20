@@ -77,7 +77,7 @@ class LinEncoderTest extends Specification{
             containerEngine: "docker",
             wave           : [enabled: true],
             fusion         : [enabled: true, version: "2.4"],
-            seqeraPlatform : [
+            platform : [
                 workflowId: "wf1234",
                 user      : [id: "xxx", userName: "john-smith", email: "john.smith@acme.com", firstName: "John", lastName: "Smith", organization: "acme"],
                 workspace : [id: "1234", name: "test-workspace", fullName: "Test workspace", organization: "acme"],
@@ -114,8 +114,7 @@ class LinEncoderTest extends Specification{
         result.params.get(0).name == "param1"
         result.config.process.container == "quay.io/nextflow/bash"
         result.config.process.executor == "local"
-        result.metadata.seqeraPlatform.workflowId == "wf1234"
-
+        result.metadata.platform.workflowId == "wf1234"
     }
 
     def 'should decode WorkflowRuns without metadata'(){

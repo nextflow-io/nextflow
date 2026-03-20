@@ -61,7 +61,7 @@ class PlatformMetadata {
         Workspace(Map opts) {
             id = opts.workspaceId as String
             name = opts.workspaceName as String
-            fullName = opts.workspaceFullName
+            fullName = opts.workspaceFullName as String
             organization = opts.orgName as String
         }
     }
@@ -105,17 +105,17 @@ class PlatformMetadata {
      * Set by TowerClient.onFlowBegin and read by SeqeraExecutor.createRun.
      */
     volatile String workflowUrl
-    
+
     volatile User user
     volatile Workspace workspace
     volatile ComputeEnv computeEnv
     volatile Pipeline pipeline
-    volatile List labels
+    volatile List<String> labels
 
     PlatformMetadata() {}
 
     PlatformMetadata(String workflowId) {
         this.workflowId = workflowId
     }
-    
+
 }

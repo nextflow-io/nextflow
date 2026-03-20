@@ -591,11 +591,12 @@ class TowerClientTest extends Specification {
         }
 
         def config = new TowerConfig( [accessToken: 'token-1234', workspaceId: '1234'] , SysEnv.get() )
-        def towerClient = Spy(new TowerClient(session, config)) {
-            apiGet(_, 'https://api.cloud.seqera.io', '/user-info', _) >> [ user: [ id: 'u1234', userName: 'user', email: 'john@acme.com', firstName: 'John', lastName: 'Smith', organization: 'ACME Inc.']]
-            apiGet(_, 'https://api.cloud.seqera.io', '/workflow/wf1234', _) >> [ workflow: [ id: 'wf1234', labels: [ [key: 'key1', value: 'value1'], [value: 'value2'] ] ] ]
-            apiGet(_, 'https://api.cloud.seqera.io', '/user/u1234/workspaces', _) >> [ orgsAndWorkspaces: [ [ orgId: 123, orgName: "ACME Inc.", workspaceId: 1234, workspaceName: "Workspace-Name", workspaceFullName: "Full Workspace Name", roles: ["member"]], [orgId: 234, orgName: "Name", workspaceId: "5434"]]]
-            apiGet(_, 'https://api.cloud.seqera.io', '/workflow/wf1234/launch', _) >> [ launch: [ id: 'l1234', computeEnv: [id: 'ce1234', name: 'ce-test', platform: 'aws-batch'], pipeline: 'test-pipeline', pipelineId: 'pipe1234', revision: 'v1.1', commitId: 'abcd12345']]
+        def towerClient = new TowerClient(session, config)
+        towerClient.commonApi = Mock(TowerCommonApi) {
+            getUserInfo(_, _) >> [ id: 'u1234', userName: 'user', email: 'john@acme.com', firstName: 'John', lastName: 'Smith', organization: 'ACME Inc.']
+            getUserWorkspaceDetails(_, 'u1234', _, '1234') >> [ orgId: 123, orgName: "ACME Inc.", workspaceId: 1234, workspaceName: "Workspace-Name", workspaceFullName: "Full Workspace Name", roles: ["member"]]
+            getWorkflowDetails(_, _, 'wf1234', _) >> [ id: 'wf1234', labels: [ [key: 'key1', value: 'value1'], [value: 'value2'] ] ]
+            apiGet(_, _, '/workflow/wf1234/launch', _) >> [ launch: [ id: 'l1234', computeEnv: [id: 'ce1234', name: 'ce-test', platform: 'aws-batch'], pipeline: 'test-pipeline', pipelineId: 'pipe1234', revision: 'v1.1', commitId: 'abcd12345']]
         }
         def workflowId = 'wf1234'
 
