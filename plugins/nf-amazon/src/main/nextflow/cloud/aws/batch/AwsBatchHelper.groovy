@@ -16,10 +16,19 @@
 
 package nextflow.cloud.aws.batch
 
+import groovy.transform.CompileStatic
+import groovy.transform.Memoized
+import groovy.util.logging.Slf4j
+import nextflow.cloud.aws.AwsClientFactory
+import nextflow.cloud.types.CloudMachineInfo
+import nextflow.cloud.types.PriceModel
 import software.amazon.awssdk.services.batch.BatchClient
 import software.amazon.awssdk.services.batch.model.DescribeComputeEnvironmentsRequest
 import software.amazon.awssdk.services.batch.model.DescribeJobQueuesRequest
 import software.amazon.awssdk.services.batch.model.DescribeJobsRequest
+import software.amazon.awssdk.services.cloudwatchlogs.CloudWatchLogsClient
+import software.amazon.awssdk.services.cloudwatchlogs.model.GetLogEventsRequest
+import software.amazon.awssdk.services.cloudwatchlogs.model.OutputLogEvent
 import software.amazon.awssdk.services.ec2.Ec2Client
 import software.amazon.awssdk.services.ec2.model.DescribeInstancesRequest
 import software.amazon.awssdk.services.ec2.model.Instance
@@ -28,15 +37,6 @@ import software.amazon.awssdk.services.ecs.EcsClient
 import software.amazon.awssdk.services.ecs.model.DescribeContainerInstancesRequest
 import software.amazon.awssdk.services.ecs.model.DescribeTasksRequest
 import software.amazon.awssdk.services.ecs.model.InvalidParameterException
-import software.amazon.awssdk.services.cloudwatchlogs.CloudWatchLogsClient
-import software.amazon.awssdk.services.cloudwatchlogs.model.GetLogEventsRequest
-import software.amazon.awssdk.services.cloudwatchlogs.model.OutputLogEvent
-import groovy.transform.CompileStatic
-import groovy.transform.Memoized
-import groovy.util.logging.Slf4j
-import nextflow.cloud.aws.AwsClientFactory
-import nextflow.cloud.types.CloudMachineInfo
-import nextflow.cloud.types.PriceModel
 /**
  * Helper class to resolve Batch related metadata
  *
@@ -172,7 +172,7 @@ class AwsBatchHelper {
     }
 
     protected String getInstanceType(Instance instance) {
-        instance.instanceTypeAsString() ?: instance.instanceType()?.toString()
+        return instance ? instance.instanceTypeAsString() : null
     }
 
     private PriceModel getPrice(Instance instance) {

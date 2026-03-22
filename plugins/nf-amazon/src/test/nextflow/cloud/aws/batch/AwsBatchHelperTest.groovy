@@ -36,17 +36,17 @@ class AwsBatchHelperTest extends Specification {
         given:
         def helper = new AwsBatchHelper(Mock(BatchClient), null)
         def instance = Instance.builder()
-            .instanceLifecycle(lifecycle)
+            .instanceLifecycle(LIFECYCLE)
             .build()
 
         when:
         def result = helper.getPrice(instance)
 
         then:
-        result == expected
+        result == EXPECTED
 
         where:
-        lifecycle                       | expected
+        LIFECYCLE                       | EXPECTED
         InstanceLifecycleType.SPOT      | PriceModel.spot
         InstanceLifecycleType.SCHEDULED | PriceModel.standard
         null                            | PriceModel.standard   // on-demand instances return null
@@ -57,12 +57,14 @@ class AwsBatchHelperTest extends Specification {
         def helper = new AwsBatchHelper(Mock(BatchClient), null)
 
         expect:
-        helper.getInstanceType(instance) == expected
+        helper.getInstanceType(INSTANCE) == TYPE
 
         where:
-        instance                                                                                         | expected
-        Instance.builder().instanceType(InstanceType.M4_LARGE).build()                                   | 'm4.large'
-        Instance.builder().instanceType(InstanceType.UNKNOWN_TO_SDK_VERSION).instanceType('r8id.xlarge').build() | 'r8id.xlarge'
+        TYPE            | _
+        'm4.large'      | _
+        'r8id.xlarge'   | _
+        and:
+        INSTANCE = Instance.builder().instanceType(InstanceType.fromValue(TYPE)).instanceType(TYPE).build()
     }
 
     def 'should map unknown generation 8 instance types to sdk sentinel'() {
