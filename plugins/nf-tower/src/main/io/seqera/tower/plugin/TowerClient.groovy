@@ -335,7 +335,7 @@ class TowerClient implements TraceObserverV2 {
     }
 
 
-    private Map getWorkflowLaunchDetails(workflowId, Map queryParams) {
+    private Map getWorkflowLaunchDetails(String workflowId, Map queryParams) {
         try {
             final launch = commonApi.apiGet(this.httpClient, this.endpoint, "/workflow/${workflowId}/launch", queryParams).launch as Map
             return [

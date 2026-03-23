@@ -47,14 +47,14 @@ class TowerCommonApi {
     }
 
     /**
-     * Calls the Seqera Platform to retrieve a the user's workspaces information
+     * Calls the Seqera Platform to retrieve the user's workspaces information
      * and select the one matching with the workspace Id.
      *
      * @param client HTTP client to perform the API calls
      * @param userId Id of the workspace user
      * @param endpoint Seqera Platform API endpoint
      * @param workspaceId Id of the workspace
-     * @return Map containing workspace informatiion
+     * @return Map containing workspace information
      * @throws RuntimeException if the API call fails
      */
     Map getUserWorkspaceDetails(HxClient client, String userId, String endpoint, String workspaceId) {
@@ -86,7 +86,7 @@ class TowerCommonApi {
     }
 
     /**
-     * Calls the Seqera Platform to retrieve a the workflow information.
+     * Calls the Seqera Platform to retrieve the workflow information.
      *
      * @param client HTTP client to perform the API calls
      * @param endpoint Seqera Platform API endpoint

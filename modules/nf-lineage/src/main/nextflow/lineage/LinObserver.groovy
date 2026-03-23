@@ -75,9 +75,9 @@ import nextflow.util.TestOnly
 @Slf4j
 @CompileStatic
 class LinObserver implements TraceObserverV2 {
-    private static List<String> workflowMetadataPropertiesToRemove = [
+    private static Set<String> workflowMetadataPropertiesToRemove = Set.of(
         "completed", "duration", "exitStatus", "errorMessage", "errorReport", "stats", "success" // Only existing at the end
-    ]
+    )
     private static Map<Class<? extends BaseParam>, String> taskParamToValue = [
         (StdOutParam)  : "stdout",
         (StdInParam)   : "stdin",
@@ -492,12 +492,12 @@ class LinObserver implements TraceObserverV2 {
     }
 
     /**
-     * Collects lineage data from workflow metadata applying the followig transformations:
+     * Collects lineage data from workflow metadata applying the following transformations:
      *  - Normalizes paths against the original remote URL, or work directory and convert to URI strings
      *  - Remove transient properties (completed, duration, exitStatus, errorMessage, errorReport, stats, success)
      *  - Convert Nextflow metadata as Json Map
      * @param normalizer
-     * @return
+     * @return Map with workflow metadata or null when error
      */
     private Map collectWorkflowMetadata(PathNormalizer normalizer) {
         try {
@@ -511,7 +511,7 @@ class LinObserver implements TraceObserverV2 {
             return metadata
         } catch( Throwable e) {
             log.debug("Error creating metadata", e)
-            return [:]
+            return null
         }
     }
 }

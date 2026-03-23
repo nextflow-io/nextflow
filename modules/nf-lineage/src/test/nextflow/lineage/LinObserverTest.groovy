@@ -571,7 +571,7 @@ class LinObserverTest extends Specification {
         def stored = store.load(observer.executionHash) as WorkflowRun
 
         then:
-        stored.metadata == [:]
+        stored.metadata == null
 
         cleanup:
         folder?.deleteDir()
