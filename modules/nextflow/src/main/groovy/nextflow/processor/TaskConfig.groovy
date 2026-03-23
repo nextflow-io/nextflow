@@ -531,6 +531,8 @@ class TaskConfig extends LazyMap implements Cloneable {
 
     List<List> getConsumableResources() {
         def value = get('consumableResources')
+        if( value instanceof CharSequence )
+            return [[value.toString(), 1]]
         if( value instanceof Map )
             return (value as Map).collect { k, v -> [k.toString(), v as int] }
         if( value instanceof List )

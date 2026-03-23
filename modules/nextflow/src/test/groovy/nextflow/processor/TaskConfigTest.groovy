@@ -617,6 +617,14 @@ class TaskConfigTest extends Specification {
         then:
         res == [['my-license', 1], ['other', 4]]
 
+        // from config: string shorthand (e.g. process.consumableResources = 'my-license')
+        when:
+        config = new TaskConfig()
+        config.put('consumableResources', 'my-license')
+        res = config.getConsumableResources()
+        then:
+        res == [['my-license', 1]]
+
         // absent directive returns null
         when:
         config = new TaskConfig()
