@@ -17,6 +17,7 @@
 package io.seqera.tower.plugin
 
 import groovy.json.JsonSlurper
+import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import io.seqera.http.HxClient
 import nextflow.Const
@@ -50,6 +51,7 @@ class BaseCommandImpl {
      * @param accessToken Optional personal access token for authentication (PAT)
      * @return Configured HxClient instance with timeout settings
      */
+    @Memoized
     protected HxClient createHttpClient(String accessToken = null) {
         return HxClient.newBuilder()
             .connectTimeout(Duration.ofMillis(API_TIMEOUT_MS))

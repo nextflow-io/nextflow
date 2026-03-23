@@ -606,7 +606,6 @@ class TowerClientTest extends Specification {
         then:
         metadata.platform.user.id == 'u1234'
         metadata.platform.user.userName == 'user'
-        metadata.platform.user.email == 'john@acme.com'
         metadata.platform.workspace.id == '1234'
         metadata.platform.workspace.name == "Workspace-Name"
         metadata.platform.workspace.organization == "ACME Inc."
@@ -614,7 +613,6 @@ class TowerClientTest extends Specification {
         metadata.platform.pipeline.name == 'test-pipeline'
         metadata.platform.pipeline.revision == 'v1.1'
         metadata.platform.pipeline.commitId == 'abcd12345'
-        metadata.platform.labels == ['key1=value1', 'value2']
     }
     def 'should include numSpotInterruptions in task map'() {
         given:

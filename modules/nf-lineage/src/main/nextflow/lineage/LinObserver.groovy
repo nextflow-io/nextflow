@@ -491,6 +491,14 @@ class LinObserver implements TraceObserverV2 {
         return paths
     }
 
+    /**
+     * Collects lineage data from workflow metadata applying the followig transformations:
+     *  - Normalizes paths against the original remote URL, or work directory and convert to URI strings
+     *  - Remove transient properties (completed, duration, exitStatus, errorMessage, errorReport, stats, success)
+     *  - Convert Nextflow metadata as Json Map
+     * @param normalizer
+     * @return
+     */
     private Map collectWorkflowMetadata(PathNormalizer normalizer) {
         try {
             def metadata = session.workflowMetadata.toMap()
@@ -500,20 +508,6 @@ class LinObserver implements TraceObserverV2 {
                 metadata["nextflow"] = (metadata["nextflow"] as NextflowMeta).toJsonMap()
             if( metadata.containsKey("configFiles") )
                 metadata["configFiles"] = (metadata["configFiles"] as List<Path>).collect {normalizer.normalizePath(it)}
-            // Strip sensitive personal data from platform user metadata before persisting to lineage
-            if( metadata.containsKey("platform") && metadata["platform"] instanceof PlatformMetadata ) {
-                final platformMeta = metadata["platform"] as PlatformMetadata
-                final user = platformMeta.user
-                metadata["platform"] = [
-                    workflowId : platformMeta.workflowId,
-                    workflowUrl: platformMeta.workflowUrl,
-                    user       : user ? [id: user.id, userName: user.userName, organization: user.organization] : null,
-                    workspace  : platformMeta.workspace,
-                    computeEnv : platformMeta.computeEnv,
-                    pipeline   : platformMeta.pipeline,
-                    labels     : platformMeta.labels
-                ]
-            }
             return metadata
         } catch( Throwable e) {
             log.debug("Error creating metadata", e)

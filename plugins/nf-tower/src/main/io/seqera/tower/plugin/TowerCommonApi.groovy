@@ -17,6 +17,7 @@
 package io.seqera.tower.plugin
 
 import groovy.json.JsonSlurper
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.seqera.http.HxClient
 
@@ -29,6 +30,7 @@ import java.net.http.HttpResponse
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
 @Slf4j
+@CompileStatic
 class TowerCommonApi {
 
     /**

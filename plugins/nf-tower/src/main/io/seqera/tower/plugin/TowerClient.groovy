@@ -329,23 +329,9 @@ class TowerClient implements TraceObserverV2 {
                 session.workflowMetadata.platform.computeEnv = workflowLaunch.computeEnv as PlatformMetadata.ComputeEnv
                 session.workflowMetadata.platform.pipeline = workflowLaunch?.pipeline as PlatformMetadata.Pipeline
             }
-            final workflowDetails = commonApi.getWorkflowDetails(this.httpClient, this.endpoint, workflowId, queryParams)
-            if( workflowDetails?.labels ){
-                session.workflowMetadata.platform.labels = getLabels(workflowDetails?.labels as List<Map>)
-            }
         } catch(Throwable e) {
             log.debug("Exception getting platform metadata", e)
         }
-    }
-
-    private List getLabels(List<Map> labelsMap){
-        if( !labelsMap )
-            return []
-        final labels = []
-        for (Map label: labelsMap){
-            labels.add( label.key ? "${label.key}=${label.value}" : label.value as String )
-        }
-        return labels
     }
 
 

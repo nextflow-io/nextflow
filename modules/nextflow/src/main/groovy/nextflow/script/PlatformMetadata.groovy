@@ -36,17 +36,11 @@ class PlatformMetadata {
     static class User {
         String id
         String userName
-        String email
-        String firstName
-        String lastName
         String organization
 
         User(Map opts) {
             id = opts.id as String
             userName = opts.userName as String
-            email = opts.email as String
-            firstName = opts.firstName as String
-            lastName = opts.lastName as String
             organization = opts.organization as String
         }
     }
@@ -106,11 +100,25 @@ class PlatformMetadata {
      */
     volatile String workflowUrl
 
+    /**
+     * Platform user executing the current workflow
+     */
     volatile User user
+
+    /**
+     * Platform workspace for current workflow execution
+     */
     volatile Workspace workspace
+
+    /**
+     * Platform Compute environment for current workflow execution
+     */
     volatile ComputeEnv computeEnv
+
+    /**
+     * Platform pipeline for current workflow execution
+     */
     volatile Pipeline pipeline
-    volatile List<String> labels
 
     PlatformMetadata() {}
 
