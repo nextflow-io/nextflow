@@ -123,12 +123,11 @@ public interface ProcessDsl extends DslScope {
         void conda(String value);
 
         @Description("""
-            The `consumableResources` directive allows you to specify AWS Batch consumable resources required by the task, such as software license seats.
+            The `hints` directive allows you to specify executor-specific scheduling hints using namespaced keys. Executors consume the hints they understand and ignore the rest.
 
-            [Read more](https://nextflow.io/docs/latest/reference/process.html#consumableresources)
+            [Read more](https://nextflow.io/docs/latest/reference/process.html#hints)
         """)
-        void consumableResources(Map<String,Integer> value);
-        void consumableResources(String value);
+        void hints(Map<String,?> value);
 
         @Description("""
             The `container` directive allows you to execute the process script in a container.

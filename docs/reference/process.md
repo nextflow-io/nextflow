@@ -582,20 +582,24 @@ Containers are a very useful way to execute your scripts in a reproducible self-
 This directive is ignored for processes that are {ref}`executed natively <process-native>`.
 :::
 
-(process-consumableresources)=
+(process-hints)=
 
-### consumableResources
+### hints
 
 :::{versionadded} 25.04.0-edge
 :::
 
-The `consumableResources` directive allows you to specify [AWS Batch consumable resources](https://docs.aws.amazon.com/batch/latest/userguide/resource-aware-scheduling.html) required by the task. This is useful for managing limited resources such as software license seats — AWS Batch will hold jobs in `RUNNABLE` until the required resources are available, then lock them for the duration of the job.
+The `hints` directive allows you to specify executor-specific scheduling hints using namespaced keys. Executors consume the hints they understand and silently ignore the rest. This directive is repeatable — multiple calls are merged.
+
+Currently supported hint namespaces:
+
+**`consumable-resource:`** — Maps to [AWS Batch consumable resources](https://docs.aws.amazon.com/batch/latest/userguide/resource-aware-scheduling.html) for managing limited resources such as software license seats. AWS Batch will hold jobs in `RUNNABLE` until the required resources are available, then lock them for the duration of the job.
 
 For example, to require one license seat per task:
 
 ```nextflow
 process runDragen {
-    consumableResources 'my-dragen-license'
+    hints 'consumable-resource:my-dragen-license': 1
     cpus 4
     memory '16 GB'
 
@@ -606,24 +610,11 @@ process runDragen {
 }
 ```
 
-The string shorthand above implies a quantity of 1. To specify an explicit quantity, use the map syntax:
-
-```nextflow
-process runLicensedTool {
-    consumableResources 'seat-license': 2
-
-    script:
-    """
-    licensed-tool ...
-    """
-}
-```
-
-This directive is repeatable — multiple calls accumulate, and multiple resources can be specified in a single call:
+Multiple hints can be specified in a single call or across multiple calls:
 
 ```nextflow
 process runMultiLicense {
-    consumableResources 'license-a': 1, 'license-b': 3
+    hints 'consumable-resource:license-a': 1, 'consumable-resource:license-b': 3
 
     script:
     """
@@ -633,15 +624,11 @@ process runMultiLicense {
 ```
 
 :::{note}
-The consumable resources must be created in your AWS account before using this directive. See the [AWS Batch documentation](https://docs.aws.amazon.com/batch/latest/userguide/resource-aware-scheduling-how-to-create.html) for details.
+Consumable resources must be created in your AWS account before using this hint. See the [AWS Batch documentation](https://docs.aws.amazon.com/batch/latest/userguide/resource-aware-scheduling-how-to-create.html) for details.
 :::
 
 :::{warning}
 AWS Batch job queues use FIFO ordering by default. A job waiting for a consumable resource will block all subsequent jobs in the same queue — even those that don't require the resource. To avoid this, use a dedicated job queue (via the `queue` directive) for processes that require consumable resources, or use a fair-share scheduling policy on the job queue.
-:::
-
-:::{note}
-This directive is only supported by the {ref}`awsbatch-executor` executor.
 :::
 
 (process-containeroptions)=

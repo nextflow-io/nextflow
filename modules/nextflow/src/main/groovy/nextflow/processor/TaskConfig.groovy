@@ -529,16 +529,12 @@ class TaskConfig extends LazyMap implements Cloneable {
         return CmdLineOptionMap.emptyOption()
     }
 
-    List<List> getConsumableResources() {
-        def value = get('consumableResources')
-        if( value instanceof CharSequence )
-            return [[value.toString(), 1]]
+    Map<String, Object> getHints() {
+        def value = get('hints')
         if( value instanceof Map )
-            return (value as Map).collect { k, v -> [k.toString(), v as int] }
-        if( value instanceof List )
-            return (List<List>) value
+            return (Map<String, Object>) value
         if( value != null )
-            throw new IllegalArgumentException("Invalid `consumableResources` directive value: $value [${value.getClass().getName()}]")
+            throw new IllegalArgumentException("Invalid `hints` directive value: $value [${value.getClass().getName()}]")
         return null
     }
 

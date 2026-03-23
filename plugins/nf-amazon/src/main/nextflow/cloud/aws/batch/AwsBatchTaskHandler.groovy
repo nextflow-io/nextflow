@@ -625,23 +625,29 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         // finally set the container options
         result.containerProperties(container)
 
-        // set consumable resource properties
-        final List<List> consumable = task.config.getConsumableResources()
-        if( consumable ) {
-            final List<ConsumableResourceRequirement> resourceList = new ArrayList<>(consumable.size())
-            for( List entry : consumable ) {
-                resourceList.add(
-                    ConsumableResourceRequirement.builder()
-                        .consumableResource(entry[0] as String)
-                        .quantity(entry[1] as Long)
+        // set consumable resource properties from hints
+        final hints = task.config.getHints()
+        final consumablePrefix = 'consumable-resource:'
+        if( hints ) {
+            final List<ConsumableResourceRequirement> resourceList = new ArrayList<>()
+            for( Map.Entry<String, Object> entry : hints.entrySet() ) {
+                if( entry.key.startsWith(consumablePrefix) ) {
+                    final resourceName = entry.key.substring(consumablePrefix.length())
+                    resourceList.add(
+                        ConsumableResourceRequirement.builder()
+                            .consumableResource(resourceName)
+                            .quantity(entry.value as Long)
+                            .build()
+                    )
+                }
+            }
+            if( resourceList ) {
+                result.consumableResourceProperties(
+                    ConsumableResourceProperties.builder()
+                        .consumableResourceList(resourceList)
                         .build()
                 )
             }
-            result.consumableResourceProperties(
-                ConsumableResourceProperties.builder()
-                    .consumableResourceList(resourceList)
-                    .build()
-            )
         }
 
         // add to this list all values that has to contribute to the
@@ -650,8 +656,8 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         hashingTokens.add(container.toString())
         if( containerOpts )
             hashingTokens.add(containerOpts)
-        if( consumable )
-            hashingTokens.add(consumable.toString())
+        if( hints )
+            hashingTokens.add(hints.toString())
 
         return result
     }

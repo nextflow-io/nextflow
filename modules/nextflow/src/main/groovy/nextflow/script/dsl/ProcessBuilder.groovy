@@ -50,7 +50,7 @@ class ProcessBuilder {
             'cache',
             'clusterOptions',
             'conda',
-            'consumableResources',
+            'hints',
             'container',
             'containerOptions',
             'cpus',
@@ -418,39 +418,24 @@ class ProcessBuilder {
     }
 
     /**
-     * Implements the {@code consumableResources} directive with string shorthand.
+     * Implements the {@code hints} directive.
      *
-     * Example: consumableResources 'my-license'
-     * Implies quantity of 1.
-     *
-     * @param value The consumable resource name
-     */
-    void consumableResources(String value) {
-        if( !value ) return
-        consumableResources([(value): 1])
-    }
-
-    /**
-     * Implements the {@code consumableResources} directive with a map.
-     *
-     * Example: consumableResources 'license-a': 1, 'license-b': 2
+     * Example: hints 'consumable-resource:my-license': 1, 'consumable-resource:other': 2
      *
      * This directive can be specified (invoked) multiple times in
-     * the process definition.
+     * the process definition. Multiple calls are merged.
      *
-     * @param value A map of resource name to quantity
+     * @param map A map of namespaced hint keys to values
      */
-    void consumableResources(Map value) {
-        if( !value ) return
+    void hints(Map<String, Object> map) {
+        if( !map ) return
 
-        def current = (List) config.get('consumableResources')
-        if( current == null ) {
-            current = new ConfigList()
-            config.put('consumableResources', current)
+        def allHints = (Map)config.get('hints')
+        if( !allHints ) {
+            allHints = [:]
         }
-        value.each { name, quantity ->
-            current << [name.toString(), quantity as int]
-        }
+        allHints += map
+        config.put('hints', allHints)
     }
 
     /// SCRIPT

@@ -602,15 +602,15 @@ class AwsBatchTaskHandlerTest extends Specification {
         result.containerProperties.volumes[0].name() == 'aws-cli'
     }
 
-    def 'should create a job definition with consumable resources' () {
+    def 'should create a job definition with consumable resource hints' () {
         given:
         def IMAGE = 'foo/bar:1.0'
         def JOB_NAME = 'nf-foo-bar-1-0'
-        def CONSUMABLE = [['my-license', 1]]
+        def HINTS = ['consumable-resource:my-license': 1]
         def task = Mock(TaskRun) {
             getContainer() >> IMAGE
             getConfig() >> Mock(TaskConfig) {
-                getConsumableResources() >> CONSUMABLE
+                getHints() >> HINTS
             }
         }
         def handler = Spy(AwsBatchTaskHandler) {
@@ -630,15 +630,15 @@ class AwsBatchTaskHandlerTest extends Specification {
         result.consumableResourceProperties.consumableResourceList()[0].quantity() == 1
     }
 
-    def 'should create a job definition with multiple consumable resources' () {
+    def 'should create a job definition with multiple consumable resource hints' () {
         given:
         def IMAGE = 'foo/bar:1.0'
         def JOB_NAME = 'nf-foo-bar-1-0'
-        def CONSUMABLE = [['license-a', 2], ['license-b', 3]]
+        def HINTS = ['consumable-resource:license-a': 2, 'consumable-resource:license-b': 3]
         def task = Mock(TaskRun) {
             getContainer() >> IMAGE
             getConfig() >> Mock(TaskConfig) {
-                getConsumableResources() >> CONSUMABLE
+                getHints() >> HINTS
             }
         }
         def handler = Spy(AwsBatchTaskHandler) {
@@ -660,14 +660,39 @@ class AwsBatchTaskHandlerTest extends Specification {
         result.consumableResourceProperties.consumableResourceList()[1].quantity() == 3
     }
 
-    def 'should not set consumable resources when directive is absent' () {
+    def 'should ignore non-consumable hints in job definition' () {
+        given:
+        def IMAGE = 'foo/bar:1.0'
+        def JOB_NAME = 'nf-foo-bar-1-0'
+        def HINTS = ['some-other-hint': 'value']
+        def task = Mock(TaskRun) {
+            getContainer() >> IMAGE
+            getConfig() >> Mock(TaskConfig) {
+                getHints() >> HINTS
+            }
+        }
+        def handler = Spy(AwsBatchTaskHandler) {
+            getTask() >> task
+            fusionEnabled() >> false
+        }
+        handler.@executor = Mock(AwsBatchExecutor)
+
+        when:
+        def result = handler.makeJobDefRequest(task)
+        then:
+        1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
+        1 * handler.getAwsOptions() >> new AwsOptions()
+        result.consumableResourceProperties == null
+    }
+
+    def 'should not set consumable resources when hints absent' () {
         given:
         def IMAGE = 'foo/bar:1.0'
         def JOB_NAME = 'nf-foo-bar-1-0'
         def task = Mock(TaskRun) {
             getContainer() >> IMAGE
             getConfig() >> Mock(TaskConfig) {
-                getConsumableResources() >> null
+                getHints() >> null
             }
         }
         def handler = Spy(AwsBatchTaskHandler) {

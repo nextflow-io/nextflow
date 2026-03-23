@@ -586,49 +586,41 @@ class TaskConfigTest extends Specification {
         res.type == 'nvidia'
     }
 
-    def 'should get consumable resources'() {
+    def 'should get hints'() {
         given:
         def script = Mock(BaseScript)
 
-        // from DSL: accumulated ConfigList of [name, quantity] pairs
+        // from DSL: merged map
         when:
         def process = new ProcessConfig(script)
         def dsl = new ProcessBuilder(process)
-        dsl.consumableResources 'my-license'
-        def res = process.createTaskConfig().getConsumableResources()
+        dsl.hints 'consumable-resource:my-license': 1
+        def res = process.createTaskConfig().getHints()
         then:
-        res == [['my-license', 1]]
+        res == ['consumable-resource:my-license': 1]
 
-        // from DSL: multiple resources
+        // from DSL: multiple calls merge
         when:
         process = new ProcessConfig(script)
         dsl = new ProcessBuilder(process)
-        dsl.consumableResources 'license-a': 2
-        dsl.consumableResources 'license-b': 3
-        res = process.createTaskConfig().getConsumableResources()
+        dsl.hints 'consumable-resource:license-a': 2
+        dsl.hints 'consumable-resource:license-b': 3
+        res = process.createTaskConfig().getHints()
         then:
-        res == [['license-a', 2], ['license-b', 3]]
+        res == ['consumable-resource:license-a': 2, 'consumable-resource:license-b': 3]
 
         // from config: map syntax
         when:
         def config = new TaskConfig()
-        config.put('consumableResources', ['my-license': 1, 'other': 4])
-        res = config.getConsumableResources()
+        config.put('hints', ['consumable-resource:my-license': 1, 'other-hint': 'value'])
+        res = config.getHints()
         then:
-        res == [['my-license', 1], ['other', 4]]
-
-        // from config: string shorthand (e.g. process.consumableResources = 'my-license')
-        when:
-        config = new TaskConfig()
-        config.put('consumableResources', 'my-license')
-        res = config.getConsumableResources()
-        then:
-        res == [['my-license', 1]]
+        res == ['consumable-resource:my-license': 1, 'other-hint': 'value']
 
         // absent directive returns null
         when:
         config = new TaskConfig()
-        res = config.getConsumableResources()
+        res = config.getHints()
         then:
         res == null
     }

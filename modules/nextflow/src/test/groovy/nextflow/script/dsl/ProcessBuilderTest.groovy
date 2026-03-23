@@ -134,30 +134,29 @@ class ProcessBuilderTest extends Specification {
         config.getSecret() == ['foo', 'bar']
     }
 
-    def 'should set consumableResources'() {
-        when:
+    def 'should set hints'() {
+        given:
         def builder = createBuilder()
         def config = builder.getConfig()
-        then:
-        config.get('consumableResources') == null
+        expect:
+        config.get('hints') == null
 
-        // string shorthand implies quantity 1
         when:
-        builder.consumableResources 'my-license'
+        builder.hints 'consumable-resource:my-license': 1
         then:
-        config.get('consumableResources') == [['my-license', 1]]
+        config.get('hints') == ['consumable-resource:my-license': 1]
 
-        // map syntax with explicit quantity
+        // multiple calls merge
         when:
-        builder.consumableResources 'other-license': 3
+        builder.hints 'consumable-resource:other-license': 3
         then:
-        config.get('consumableResources') == [['my-license', 1], ['other-license', 3]]
+        config.get('hints') == ['consumable-resource:my-license': 1, 'consumable-resource:other-license': 3]
 
-        // multi-resource map in one call
+        // multi-key map in one call
         when:
-        builder.consumableResources 'license-a': 2, 'license-b': 5
+        builder.hints 'consumable-resource:license-a': 2, 'some-other-hint': 'value'
         then:
-        config.get('consumableResources') == [['my-license', 1], ['other-license', 3], ['license-a', 2], ['license-b', 5]]
+        config.get('hints') == ['consumable-resource:my-license': 1, 'consumable-resource:other-license': 3, 'consumable-resource:license-a': 2, 'some-other-hint': 'value']
     }
 
     def 'should set process labels'() {
