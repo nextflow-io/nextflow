@@ -529,6 +529,17 @@ class TaskConfig extends LazyMap implements Cloneable {
         return CmdLineOptionMap.emptyOption()
     }
 
+    List<List> getConsumableResources() {
+        def value = get('consumableResources')
+        if( value instanceof Map )
+            return (value as Map).collect { k, v -> [k.toString(), v as int] }
+        if( value instanceof List )
+            return (List<List>) value
+        if( value != null )
+            throw new IllegalArgumentException("Invalid `consumableResources` directive value: $value [${value.getClass().getName()}]")
+        return null
+    }
+
     Map<String, String> getResourceLabels() {
         return get('resourceLabels') as Map<String, String> ?: Collections.<String,String>emptyMap()
     }
