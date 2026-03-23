@@ -50,6 +50,7 @@ class ProcessBuilder {
             'cache',
             'clusterOptions',
             'conda',
+            'consumableResources',
             'container',
             'containerOptions',
             'cpus',
@@ -414,6 +415,42 @@ class ProcessBuilder {
         // -- avoid duplicates
         if( !allSecrets.contains(name) )
             allSecrets.add(name)
+    }
+
+    /**
+     * Implements the {@code consumableResources} directive with string shorthand.
+     *
+     * Example: consumableResources 'my-license'
+     * Implies quantity of 1.
+     *
+     * @param value The consumable resource name
+     */
+    void consumableResources(String value) {
+        if( !value ) return
+        consumableResources([(value): 1])
+    }
+
+    /**
+     * Implements the {@code consumableResources} directive with a map.
+     *
+     * Example: consumableResources 'license-a': 1, 'license-b': 2
+     *
+     * This directive can be specified (invoked) multiple times in
+     * the process definition.
+     *
+     * @param value A map of resource name to quantity
+     */
+    void consumableResources(Map value) {
+        if( !value ) return
+
+        def current = (List) config.get('consumableResources')
+        if( current == null ) {
+            current = new ConfigList()
+            config.put('consumableResources', current)
+        }
+        value.each { name, quantity ->
+            current << [name.toString(), quantity as int]
+        }
     }
 
     /// SCRIPT

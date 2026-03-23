@@ -134,6 +134,32 @@ class ProcessBuilderTest extends Specification {
         config.getSecret() == ['foo', 'bar']
     }
 
+    def 'should set consumableResources'() {
+        when:
+        def builder = createBuilder()
+        def config = builder.getConfig()
+        then:
+        config.get('consumableResources') == null
+
+        // string shorthand implies quantity 1
+        when:
+        builder.consumableResources 'my-license'
+        then:
+        config.get('consumableResources') == [['my-license', 1]]
+
+        // map syntax with explicit quantity
+        when:
+        builder.consumableResources 'other-license': 3
+        then:
+        config.get('consumableResources') == [['my-license', 1], ['other-license', 3]]
+
+        // multi-resource map in one call
+        when:
+        builder.consumableResources 'license-a': 2, 'license-b': 5
+        then:
+        config.get('consumableResources') == [['my-license', 1], ['other-license', 3], ['license-a', 2], ['license-b', 5]]
+    }
+
     def 'should set process labels'() {
         when:
         def builder = createBuilder()
