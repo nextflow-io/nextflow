@@ -3,16 +3,13 @@
 .*.log*
 .cache/*
 .vagrant/*
-.cache/*
 .nextflow*
 .node-nextflow*
 .devcontainer
 .vscode/*
 .lineage/
 */*/bin/*
-**/build/**
-build/**
-modules/**/build/
+**/build/
 modules/**/*.iml
 modules/nextflow/work/
 **/out/*
@@ -28,6 +25,7 @@ tests_other
 other
 docs/_build/
 ./*.txt
+!changelog.txt
 errors/
 misc/
 cloud/my-*
