@@ -73,6 +73,9 @@ dependencies {
     api 'org.apache.commons:commons-compress:1.27.1'  // For tar.gz extraction
     api 'io.seqera:npr-api:0.22.0-SNAPSHOT'
     api 'io.seqera:npr-client:0.22.0-SNAPSHOT'
+    // Force patched version to address CVE-2025-67735 (GHSA-84h7-rjj3-6jx4: Netty CRLF Injection)
+    // npr-api pulls netty-bom:4.2.5.Final which constrains netty-codec-http to a vulnerable version
+    runtimeOnly 'io.netty:netty-codec-http:4.2.8.Final'
 
     testImplementation 'org.subethamail:subethasmtp:3.1.7'
     testImplementation (project(':nf-lineage'))

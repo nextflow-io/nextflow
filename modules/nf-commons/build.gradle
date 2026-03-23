@@ -39,6 +39,9 @@ dependencies {
     // patch gson dependency required by pf4j
     api 'com.google.code.gson:gson:2.13.1'
     api 'io.seqera:npr-api:0.22.0-SNAPSHOT'
+    // Force patched version to address CVE-2025-67735 (GHSA-84h7-rjj3-6jx4: Netty CRLF Injection)
+    // npr-api pulls netty-bom:4.2.5.Final which constrains netty-codec-http to a vulnerable version
+    runtimeOnly 'io.netty:netty-codec-http:4.2.8.Final'
 
     /* testImplementation inherited from top gradle build file */
     testImplementation(testFixtures(project(":nextflow")))
