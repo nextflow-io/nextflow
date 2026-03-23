@@ -39,6 +39,7 @@ class LogsCheckpoint implements TraceObserverV2 {
     private Thread thread
     private Duration interval
     private LogsHandler handler
+    private final Object lock = new Object()
 
     @Override
     void onFlowCreate(Session session) {
@@ -55,13 +56,17 @@ class LogsCheckpoint implements TraceObserverV2 {
 
     @Override
     void onFlowComplete() {
-        thread.interrupt()
+        synchronized(lock) {
+            thread.interrupt()
+        }
         thread.join()
     }
 
     @Override
     void onFlowError(TaskEvent event) {
-        thread.interrupt()
+        synchronized(lock) {
+            thread.interrupt()
+        }
         thread.join()
     }
 
@@ -72,7 +77,11 @@ class LogsCheckpoint implements TraceObserverV2 {
                 await(interval)
                 if( Thread.currentThread().isInterrupted() )
                     break
-                handler.saveFiles()
+                synchronized(lock) {
+                    if( Thread.currentThread().isInterrupted() )
+                        break
+                    handler.saveFiles()
+                }
             }
         }
         finally {
