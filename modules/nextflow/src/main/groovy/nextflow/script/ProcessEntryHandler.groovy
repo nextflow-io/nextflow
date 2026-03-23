@@ -19,9 +19,12 @@ package nextflow.script
 import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
+import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Session
 import nextflow.Nextflow
+import nextflow.extension.CH
 import nextflow.extension.DumpHelper
 import nextflow.script.params.EnvInParam
 import nextflow.script.params.FileInParam
@@ -118,7 +121,7 @@ class ProcessEntryHandler {
 
         // print process output directly if it is a single expression
         if( output.size() == 1 && (output.getNames().isEmpty() || output.getNames().first() == '$out') ) {
-            result = (output[0] as DataflowVariable).get()
+            result = readChannelValue(output[0] as DataflowWriteChannel)
         }
 
         // otherwise, construct map of process emits
@@ -135,13 +138,25 @@ class ProcessEntryHandler {
             final combinedOutputs = new LinkedHashMap<String, Object>(output.size())
             for( final ch : output ) {
                 final name = reverseLookup.get(ch)
-                combinedOutputs.put(name, (ch as DataflowVariable).get())
+                combinedOutputs.put(name, readChannelValue(ch as DataflowWriteChannel))
             }
 
             result = combinedOutputs
         }
 
         println DumpHelper.prettyPrintJson(result)
+    }
+
+    /**
+     * Reads a single value from a channel, handling both value channels
+     * ({@link DataflowVariable}) and queue channels ({@link groovyx.gpars.dataflow.DataflowBroadcast}).
+     */
+    private static Object readChannelValue(DataflowWriteChannel ch) {
+        if( CH.isValue(ch) ) {
+            return (ch as DataflowVariable).get()
+        }
+        final readCh = CH.getReadChannel(ch)
+        return (readCh as DataflowReadChannel).getVal()
     }
 
     /**

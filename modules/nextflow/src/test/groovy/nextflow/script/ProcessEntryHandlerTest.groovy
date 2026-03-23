@@ -17,6 +17,8 @@
 package nextflow.script
 
 import java.nio.file.Path
+import groovyx.gpars.dataflow.DataflowBroadcast
+import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Session
 import nextflow.script.params.FileInParam
 import nextflow.script.params.InParam
@@ -230,5 +232,43 @@ class ProcessEntryHandlerTest extends Specification {
         ' /path/to/file1.txt , /path/to/file2.txt , /path/to/file3.txt '  | [Path.of('/path/to/file1.txt'), Path.of('/path/to/file2.txt'), Path.of('/path/to/file3.txt')]
         '/path/to/file1.txt,,/path/to/file2.txt, ,/path/to/file3.txt'     | [Path.of('/path/to/file1.txt'), Path.of('/path/to/file2.txt'), Path.of('/path/to/file3.txt')]
         'file1.txt,file2.txt'                                             | [Path.of('file1.txt').toAbsolutePath(), Path.of('file2.txt').toAbsolutePath()]
+    }
+
+    def 'should read value from DataflowVariable channel' () {
+        given:
+        def session = Mock(Session)
+        def script = Mock(BaseScript)
+        def meta = Mock(ScriptMeta)
+        def handler = new ProcessEntryHandler(script, session, meta)
+        and:
+        def ch = new DataflowVariable()
+        ch.bind('hello')
+
+        expect:
+        handler.readChannelValue(ch) == 'hello'
+    }
+
+    def 'should read value from DataflowBroadcast channel' () {
+        given:
+        def session = Mock(Session)
+        def script = Mock(BaseScript)
+        def meta = Mock(ScriptMeta)
+        def handler = new ProcessEntryHandler(script, session, meta)
+        and:
+        def ch = new DataflowBroadcast()
+
+        when:
+        // simulate production flow: readChannelValue subscribes, then data arrives on another thread
+        def result = null
+        def thread = Thread.start {
+            result = handler.readChannelValue(ch)
+        }
+        // allow read channel to be created before binding
+        sleep(100)
+        ch.bind('world')
+        thread.join(5000)
+
+        then:
+        result == 'world'
     }
 }
