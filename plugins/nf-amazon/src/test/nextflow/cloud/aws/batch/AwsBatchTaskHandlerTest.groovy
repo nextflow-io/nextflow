@@ -61,6 +61,8 @@ import software.amazon.awssdk.services.batch.model.ResourceType
 import software.amazon.awssdk.services.batch.model.RetryStrategy
 import software.amazon.awssdk.services.batch.model.SubmitJobRequest
 import software.amazon.awssdk.services.batch.model.SubmitJobResponse
+import software.amazon.awssdk.services.batch.model.ConsumableResourceProperties
+import software.amazon.awssdk.services.batch.model.ConsumableResourceRequirement
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -598,6 +600,88 @@ class AwsBatchTaskHandlerTest extends Specification {
         result.containerProperties.mountPoints[0].readOnly()
         result.containerProperties.volumes[0].host().sourcePath() == '/home/conda'
         result.containerProperties.volumes[0].name() == 'aws-cli'
+    }
+
+    def 'should create a job definition with consumable resources' () {
+        given:
+        def IMAGE = 'foo/bar:1.0'
+        def JOB_NAME = 'nf-foo-bar-1-0'
+        def CONSUMABLE = [['my-license', 1]]
+        def task = Mock(TaskRun) {
+            getContainer() >> IMAGE
+            getConfig() >> Mock(TaskConfig) {
+                getConsumableResources() >> CONSUMABLE
+            }
+        }
+        def handler = Spy(AwsBatchTaskHandler) {
+            getTask() >> task
+            fusionEnabled() >> false
+        }
+        handler.@executor = Mock(AwsBatchExecutor)
+
+        when:
+        def result = handler.makeJobDefRequest(task)
+        then:
+        1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
+        1 * handler.getAwsOptions() >> new AwsOptions()
+        result.consumableResourceProperties != null
+        result.consumableResourceProperties.consumableResourceList().size() == 1
+        result.consumableResourceProperties.consumableResourceList()[0].consumableResource() == 'my-license'
+        result.consumableResourceProperties.consumableResourceList()[0].quantity() == 1
+    }
+
+    def 'should create a job definition with multiple consumable resources' () {
+        given:
+        def IMAGE = 'foo/bar:1.0'
+        def JOB_NAME = 'nf-foo-bar-1-0'
+        def CONSUMABLE = [['license-a', 2], ['license-b', 3]]
+        def task = Mock(TaskRun) {
+            getContainer() >> IMAGE
+            getConfig() >> Mock(TaskConfig) {
+                getConsumableResources() >> CONSUMABLE
+            }
+        }
+        def handler = Spy(AwsBatchTaskHandler) {
+            getTask() >> task
+            fusionEnabled() >> false
+        }
+        handler.@executor = Mock(AwsBatchExecutor)
+
+        when:
+        def result = handler.makeJobDefRequest(task)
+        then:
+        1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
+        1 * handler.getAwsOptions() >> new AwsOptions()
+        result.consumableResourceProperties != null
+        result.consumableResourceProperties.consumableResourceList().size() == 2
+        result.consumableResourceProperties.consumableResourceList()[0].consumableResource() == 'license-a'
+        result.consumableResourceProperties.consumableResourceList()[0].quantity() == 2
+        result.consumableResourceProperties.consumableResourceList()[1].consumableResource() == 'license-b'
+        result.consumableResourceProperties.consumableResourceList()[1].quantity() == 3
+    }
+
+    def 'should not set consumable resources when directive is absent' () {
+        given:
+        def IMAGE = 'foo/bar:1.0'
+        def JOB_NAME = 'nf-foo-bar-1-0'
+        def task = Mock(TaskRun) {
+            getContainer() >> IMAGE
+            getConfig() >> Mock(TaskConfig) {
+                getConsumableResources() >> null
+            }
+        }
+        def handler = Spy(AwsBatchTaskHandler) {
+            getTask() >> task
+            fusionEnabled() >> false
+        }
+        handler.@executor = Mock(AwsBatchExecutor)
+
+        when:
+        def result = handler.makeJobDefRequest(task)
+        then:
+        1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
+        1 * handler.getAwsOptions() >> new AwsOptions()
+        result.consumableResourceProperties == null
     }
 
     def 'should create a fargate job definition' () {
