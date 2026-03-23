@@ -24,6 +24,7 @@ Resource requests and other job characteristics can be controlled via the follow
 
 - {ref}`process-accelerator`
 - {ref}`process-arch` (only when using Fargate platform type for AWS Batch)
+- {ref}`process-consumableresources`
 - {ref}`process-container`
 - {ref}`process-containerOptions`
 - {ref}`process-cpus`
