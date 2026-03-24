@@ -22,6 +22,8 @@ import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
 
+import com.github.tomakehurst.wiremock.WireMockServer
+import com.github.tomakehurst.wiremock.client.WireMock
 import io.seqera.http.HxClient
 import nextflow.Session
 import nextflow.cloud.types.CloudMachineInfo
@@ -35,6 +37,7 @@ import nextflow.script.WorkflowMetadata
 import nextflow.trace.TraceRecord
 import nextflow.trace.WorkflowStats
 import nextflow.trace.WorkflowStatsObserver
+import nextflow.util.Duration
 import nextflow.util.ProcessHelper
 import spock.lang.Specification
 /**
@@ -655,6 +658,40 @@ class TowerClientTest extends Specification {
         req.tasks.size() == 1
         req.tasks[0].accelerator == 2
         req.tasks[0].acceleratorType == 'v100'
+    }
+
+    def 'should return error response on http request timeout' () {
+        given: 'a WireMock server that hangs for 5 seconds'
+        def wireMock = new WireMockServer(0)
+        wireMock.start()
+        wireMock.stubFor(
+            WireMock.post(WireMock.anyUrl())
+                .willReturn(WireMock.aResponse()
+                    .withFixedDelay(5_000)
+                    .withStatus(200)
+                    .withBody('{}'))
+        )
+
+        and: 'a TowerClient whose requests carry a 200ms timeout'
+        TowerClient client = Spy(new TowerClient().withRequestTimeout(Duration.of('200 ms'))) {
+            // inject a short per-request timeout so the test doesn't wait 5 seconds
+
+            newHttpClient() >> HxClient.newBuilder()
+                .connectTimeout(java.time.Duration.ofSeconds(5))
+                .build()
+        }
+        client.@httpClient = client.newHttpClient()
+        client.@endpoint = wireMock.baseUrl()
+
+        when:
+        def response = client.sendHttpMessage("${wireMock.baseUrl()}/trace/create", [runName: 'test'], 'POST')
+
+        then: 'a timeout produces an error response with code 0'
+        response.code == 0
+        response.message.contains('Unable to connect')
+
+        cleanup:
+        wireMock.stop()
     }
 
 }
