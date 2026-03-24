@@ -41,6 +41,7 @@ import nextflow.exception.AbortOperationException
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskId
 import nextflow.processor.TaskProcessor
+import nextflow.script.PlatformMetadata
 import nextflow.trace.ResourcesAggregator
 import nextflow.trace.TraceObserverV2
 import nextflow.trace.TraceRecord
@@ -141,6 +142,8 @@ class TowerClient implements TraceObserverV2 {
 
     private Map<String,Boolean> allContainers = new ConcurrentHashMap<>()
 
+    protected TowerCommonApi commonApi
+  
     private Duration readTimeout = TowerConfig.DEFAULT_READ_TIMEOUT
 
     private Duration connectTimeout = TowerConfig.DEFAULT_CONNECT_TIMEOUT
@@ -156,6 +159,7 @@ class TowerClient implements TraceObserverV2 {
         this.schema = loadSchema()
         this.generator = TowerJsonGenerator.create(schema)
         this.reports = new TowerReports(session)
+        this.commonApi = new TowerCommonApi()
     }
 
     TowerClient withEnvironment(Map env) {
@@ -171,6 +175,7 @@ class TowerClient implements TraceObserverV2 {
     @TestOnly
     protected TowerClient() {
         this.generator = TowerJsonGenerator.create(Collections.EMPTY_MAP)
+        this.commonApi = new TowerCommonApi()
     }
 
     @Override
@@ -309,9 +314,54 @@ class TowerClient implements TraceObserverV2 {
         session.workflowMetadata.platform.workflowUrl = watchUrl
         if( ret.message )
             log.warn(ret.message.toString())
+        addPlatformMetadata(workflowId)
 
         // Prepare to collect report paths if tower configuration has a 'reports' section
         reports.flowCreate(workflowId)
+    }
+
+    protected void addPlatformMetadata(String workflowId) {
+
+        try {
+            final userInfo = commonApi.getUserInfo(this.httpClient, this.endpoint)
+            final workspaceDetails = commonApi.getUserWorkspaceDetails(this.httpClient, userInfo?.id as String, this.endpoint, this.workspaceId)
+            //Include workspace roles to user info
+            if( workspaceDetails?.roles && userInfo) {
+                final roles = (workspaceDetails as Map).remove('roles')
+                userInfo.roles = roles
+            }
+            if( userInfo )
+                session.workflowMetadata.platform.user = new PlatformMetadata.User(userInfo)
+            if( workspaceDetails )
+                session.workflowMetadata.platform.workspace = new PlatformMetadata.Workspace(workspaceDetails)
+            final queryParams = workspaceId ? [workspaceId: workspaceId.toString()] : [:]
+            final workflowLaunch = getWorkflowLaunchDetails(workflowId, queryParams)
+            if( workflowLaunch ) {
+                session.workflowMetadata.platform.computeEnv = workflowLaunch.computeEnv as PlatformMetadata.ComputeEnv
+                session.workflowMetadata.platform.pipeline = workflowLaunch?.pipeline as PlatformMetadata.Pipeline
+            }
+        } catch(Throwable e) {
+            log.debug("Exception getting platform metadata", e)
+        }
+    }
+
+
+    private Map getWorkflowLaunchDetails(String workflowId, Map queryParams) {
+        try {
+            final launch = commonApi.apiGet(this.httpClient, this.endpoint, "/workflow/${workflowId}/launch", queryParams).launch as Map
+            return [
+                computeEnv: launch.computeEnv ? new PlatformMetadata.ComputeEnv(launch.computeEnv as Map) : null,
+                pipeline  : new PlatformMetadata.Pipeline(
+                    id: launch.pipelineId as String,
+                    name: launch.pipeline as String,
+                    revision: launch.revision as String,
+                    commitId: launch.commitId as String
+                )
+            ]
+        } catch (Throwable e) {
+            log.debug("Exception getting workflow launch metadata", e)
+            return null
+        }
     }
 
     protected HxClient newHttpClient() {
@@ -616,6 +666,10 @@ class TowerClient implements TraceObserverV2 {
 
     protected Map makeCompleteReq(Session session) {
         def workflow = session.getWorkflowMetadata().toMap()
+        //Remove retrieved platform info
+        if( workflow.platform )
+            workflow.remove('platform')
+
         workflow.params = session.getParams()
         workflow.id = getWorkflowId()
         // render as a string
