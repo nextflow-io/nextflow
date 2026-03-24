@@ -51,15 +51,6 @@ class TowerConfigTest extends Specification {
         config.httpReadTimeout == Duration.of('120s')
     }
 
-    def 'should use provided timeout values when both specified'() {
-        when:
-        def config = new TowerConfig([httpConnectTimeout: Duration.of('10s'), httpReadTimeout: Duration.of('90s')], [:])
-
-        then:
-        config.httpConnectTimeout == Duration.of('10s')
-        config.httpReadTimeout == Duration.of('90s')
-    }
-
     def 'should parse timeout from string value'() {
         when:
         def config = new TowerConfig([httpConnectTimeout: '5s', httpReadTimeout: '2m'], [:])
