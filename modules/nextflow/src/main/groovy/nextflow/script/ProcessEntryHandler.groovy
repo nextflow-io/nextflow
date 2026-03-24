@@ -417,7 +417,6 @@ class ProcessEntryHandler {
     }
 
     private Object getTypedValueForInput(Class type, Object value) {
-        log.debug("Getting type for input: $type.name, $value")
         if( value !instanceof String )
             return value
 
