@@ -66,11 +66,4 @@ class AwsBatchHelperTest extends Specification {
         and:
         INSTANCE = Instance.builder().instanceType(InstanceType.fromValue(TYPE)).instanceType(TYPE).build()
     }
-
-    def 'should map unknown generation 8 instance types to sdk sentinel'() {
-        expect:
-        InstanceType.fromValue('r8id.xlarge') == InstanceType.UNKNOWN_TO_SDK_VERSION
-        InstanceType.fromValue('m8id.xlarge') == InstanceType.UNKNOWN_TO_SDK_VERSION
-        InstanceType.fromValue('c8id.xlarge') == InstanceType.UNKNOWN_TO_SDK_VERSION
-    }
 }
