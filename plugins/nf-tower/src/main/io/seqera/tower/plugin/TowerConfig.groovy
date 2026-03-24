@@ -36,11 +36,21 @@ import nextflow.util.Duration
 @CompileStatic
 class TowerConfig implements ConfigScope {
 
+    static final Duration DEFAULT_CONNECT_TIMEOUT = Duration.of('60s')
+
+    static final Duration DEFAULT_READ_TIMEOUT = Duration.of('60s')
+
     @ConfigOption
     @Description("""
         The unique access token for your Seqera Platform account.
     """)
     final String accessToken
+
+    @ConfigOption
+    @Description("""
+        The Compute Environment ID in Seqera Platform in which to launch the run (default: the primary environment in the workspace).
+    """)
+    final String computeEnvId
 
     @ConfigOption
     @Description("""
@@ -54,20 +64,6 @@ class TowerConfig implements ConfigScope {
     """)
     final String endpoint
 
-    final TowerRetryPolicy retryPolicy
-
-    @ConfigOption
-    @Description("""
-        The workspace ID in Seqera Platform in which to save the run (default: the launching user's personal workspace).
-    """)
-    final String workspaceId
-
-    @ConfigOption
-    @Description("""
-        The Compute Environment ID in Seqera Platform in which to launch the run (default: the primary environment in the workspace).
-    """)
-    final String computeEnvId
-
     @ConfigOption
     @Description("""
         The HTTP connection timeout for Seqera Platform API requests (default: `'60s'`).
@@ -80,22 +76,26 @@ class TowerConfig implements ConfigScope {
     """)
     final Duration httpReadTimeout
 
-    static final Duration DEFAULT_READ_TIMEOUT = Duration.of('60s')
+    final TowerRetryPolicy retryPolicy
 
-    static final Duration DEFAULT_CONNECT_TIMEOUT = Duration.of('60s')
+    @ConfigOption
+    @Description("""
+        The workspace ID in Seqera Platform in which to save the run (default: the launching user's personal workspace).
+    """)
+    final String workspaceId
 
     /* required by extension point -- do not remove */
     TowerConfig() {}
 
     TowerConfig(Map opts, Map<String,String> env) {
         this.accessToken = PlatformHelper.getAccessToken(opts, env)
-        this.enabled = opts.enabled as boolean
-        this.endpoint = PlatformHelper.getEndpoint(opts, env)
-        this.retryPolicy = new TowerRetryPolicy(opts.retryPolicy as Map ?: Map.of(), opts)
-        this.workspaceId = PlatformHelper.getWorkspaceId(opts, env)
         if( opts.computeEnvId )
             this.computeEnvId = opts.computeEnvId as String
-        httpConnectTimeout = opts.httpConnectTimeout ? opts.httpConnectTimeout as Duration : DEFAULT_CONNECT_TIMEOUT
-        httpReadTimeout = opts.httpReadTimeout ? opts.httpReadTimeout as Duration : DEFAULT_READ_TIMEOUT
+        this.enabled = opts.enabled as boolean
+        this.endpoint = PlatformHelper.getEndpoint(opts, env)
+        this.httpConnectTimeout = opts.httpConnectTimeout ? opts.httpConnectTimeout as Duration : DEFAULT_CONNECT_TIMEOUT
+        this.httpReadTimeout = opts.httpReadTimeout ? opts.httpReadTimeout as Duration : DEFAULT_READ_TIMEOUT
+        this.retryPolicy = new TowerRetryPolicy(opts.retryPolicy as Map ?: Map.of(), opts)
+        this.workspaceId = PlatformHelper.getWorkspaceId(opts, env)
     }
 }
