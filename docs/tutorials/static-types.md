@@ -240,7 +240,7 @@ process FASTQC {
     // ...
 
     input:
-    (id, fastq_1, fastq_2): Tuple<String,Path,Path>
+    tuple(id: String, fastq_1: Path, fastq_2: Path)
 
     output:
     file("fastqc_${id}_logs")
@@ -287,7 +287,7 @@ process QUANT {
     // ...
 
     input:
-    (id, fastq_1, fastq_2): Tuple<String,Path,Path>
+    tuple(id: String, fastq_1: Path, fastq_2: Path)
     index: Path
 
     output:

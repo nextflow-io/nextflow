@@ -22,23 +22,23 @@ process TOUCH {
 
 process FASTQC {
     input:
-    sample: Record {
-        id: String
-        fastq_1: Path
+    record(
+        id: String,
+        fastq_1: Path,
         fastq_2: Path
-    }
+    )
 
     output:
     record(
-        id: sample.id,
+        id: id,
         html: file('*.html'),
         zip: file('*.zip')
     )
 
     script:
     """
-    touch ${sample.id}.html
-    touch ${sample.id}.zip
+    touch ${id}.html
+    touch ${id}.zip
     """
 }
 
