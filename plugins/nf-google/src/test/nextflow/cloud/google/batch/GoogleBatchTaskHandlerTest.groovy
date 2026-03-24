@@ -160,6 +160,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
                 getServiceAccountEmail() >> 'foo@bar.baz'
                 getSubnetwork() >> 'subnet-1'
                 usePrivateAddress >> true
+                installOpsAgent >> true
                 logsPath() >> LOGS_PATH
             }
         }
@@ -226,6 +227,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         allocationPolicy.getLocation().getAllowedLocations(0) == 'zones/us-central1-a'
         allocationPolicy.getLocation().getAllowedLocations(1) == 'zones/us-central1-c'
         allocationPolicy.getInstances(0).getInstallGpuDrivers() == true
+        allocationPolicy.getInstances(0).getInstallOpsAgent() == true
         allocationPolicy.getLabelsMap() == [foo: 'bar']
         allocationPolicy.getServiceAccount().getEmail() == 'foo@bar.baz'
         allocationPolicy.getTagsList() == ['tag1', 'tag2']
@@ -794,7 +796,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def client = Mock(BatchClient){
             getTaskInArrayStatus(jobId, taskId) >> { TASK_STATE ? makeTaskStatus(TASK_STATE, DESC, EXIT_CODE): null }
             getTaskStatus(jobId, taskId) >> { TASK_STATE ? makeTaskStatus(TASK_STATE, DESC, EXIT_CODE): null }
-            getJobStatus(jobId ) >> makeJobStatus(JobStatus.State.FAILED,DESC)
+            getJobStatus(jobId ) >> makeJobStatus(JOB_STATE,DESC)
         }
         def logging = Mock(BatchLogging)
         def executor = Mock(GoogleBatchExecutor){
@@ -806,16 +808,18 @@ class GoogleBatchTaskHandlerTest extends Specification {
         when:
         def result = handler.checkIfCompleted()
         then:
-        0 * handler.readExitFile() >> EXIT_STATUS
+        NUM_READ_EXIT * handler.readExitFile() >> EXIT_STATUS
         handler.status == TASK_STATUS
         handler.task.exitStatus == EXIT_STATUS
         handler.task.error?.message == TASK_ERROR
         result == RESULT
 
         where:
-        TASK_STATE              | DESC                                                          | EXIT_CODE | ARRAY_CHILD    | TASK_STATUS                               | EXIT_STATUS       | RESULT    | TASK_ERROR
-        TaskStatus.State.FAILED | 'Task failed due to Spot VM preemption with exit code 50001.' | 50001     | true           | nextflow.processor.TaskStatus.COMPLETED   | 50001             | true      | 'Task failed due to Spot VM preemption with exit code 50001.'
-        TaskStatus.State.FAILED | 'Task failed due to Spot VM preemption with exit code 50001.' | 50001     | false          | nextflow.processor.TaskStatus.COMPLETED   | 50001             | true      | 'Task failed due to Spot VM preemption with exit code 50001.'
+        TASK_STATE                  | JOB_STATE                 | NUM_READ_EXIT | DESC                                                          | EXIT_CODE | ARRAY_CHILD    | TASK_STATUS                               | EXIT_STATUS       | RESULT    | TASK_ERROR
+        TaskStatus.State.FAILED     | JobStatus.State.FAILED    | 0             | 'Task failed due to Spot VM preemption with exit code 50001.' | 50001     | true           | nextflow.processor.TaskStatus.COMPLETED   | 50001             | true      | 'Task failed due to Spot VM preemption with exit code 50001.'
+        TaskStatus.State.FAILED     | JobStatus.State.FAILED    | 0             | 'Task failed due to Spot VM preemption with exit code 50001.' | 50001     | false          | nextflow.processor.TaskStatus.COMPLETED   | 50001             | true      | 'Task failed due to Spot VM preemption with exit code 50001.'
+        TaskStatus.State.SUCCEEDED  | JobStatus.State.SUCCEEDED | 1             | null                                                          | 50001     | true           | nextflow.processor.TaskStatus.COMPLETED   | 0                 | true      | null
+        TaskStatus.State.SUCCEEDED  | JobStatus.State.SUCCEEDED | 1             | null                                                          | 50001     | false          | nextflow.processor.TaskStatus.COMPLETED   | 0                 | true      | null
     }
 
     StatusEvent makeStatusEventWithTime(long seconds, Integer exitCode) {
@@ -983,6 +987,84 @@ class GoogleBatchTaskHandlerTest extends Specification {
         then:
         handler.isCompleted() >> true
         result == null
+    }
+
+    def 'should set hyperdisk-balanced boot disk for hyperdisk-only machine families' () {
+        given:
+        def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
+        def CONTAINER_IMAGE = 'debian:latest'
+        def MACHINE_TYPE = 'c4-standard-8'
+        def exec = Mock(GoogleBatchExecutor) {
+            getBatchConfig() >> Mock(BatchConfig)
+        }
+        and:
+        def bean = new TaskBean(workDir: WORK_DIR, inputFiles: [:])
+        def task = Mock(TaskRun) {
+            toTaskBean() >> bean
+            getHashLog() >> 'abcd1234'
+            getWorkDir() >> WORK_DIR
+            getContainer() >> CONTAINER_IMAGE
+            getConfig() >> Mock(TaskConfig) {
+                getCpus() >> 8
+                getResourceLabels() >> [:]
+            }
+        }
+        and:
+        def mounts = ['/mnt/disks/foo/scratch:/mnt/disks/foo/scratch:rw']
+        def launcher = new GoogleBatchLauncherSpecMock('bash .command.run', mounts, [])
+
+        and:
+        def handler = Spy(new GoogleBatchTaskHandler(task, exec))
+
+        when:
+        def req = handler.newSubmitRequest(task, launcher)
+        then:
+        handler.fusionEnabled() >> false
+        handler.findBestMachineType(_, false) >> new GoogleBatchMachineTypeSelector.MachineType(type: MACHINE_TYPE, family: 'c4', location: 'us-central1', priceModel: PriceModel.standard)
+
+        and:
+        def instancePolicy = req.getAllocationPolicy().getInstances(0).getPolicy()
+        instancePolicy.getMachineType() == MACHINE_TYPE
+        instancePolicy.getBootDisk().getType() == 'hyperdisk-balanced'
+    }
+
+    def 'should not set hyperdisk boot disk for standard machine families' () {
+        given:
+        def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
+        def CONTAINER_IMAGE = 'debian:latest'
+        def MACHINE_TYPE = 'n2-standard-8'
+        def exec = Mock(GoogleBatchExecutor) {
+            getBatchConfig() >> Mock(BatchConfig)
+        }
+        and:
+        def bean = new TaskBean(workDir: WORK_DIR, inputFiles: [:])
+        def task = Mock(TaskRun) {
+            toTaskBean() >> bean
+            getHashLog() >> 'abcd1234'
+            getWorkDir() >> WORK_DIR
+            getContainer() >> CONTAINER_IMAGE
+            getConfig() >> Mock(TaskConfig) {
+                getCpus() >> 8
+                getResourceLabels() >> [:]
+            }
+        }
+        and:
+        def mounts = ['/mnt/disks/foo/scratch:/mnt/disks/foo/scratch:rw']
+        def launcher = new GoogleBatchLauncherSpecMock('bash .command.run', mounts, [])
+
+        and:
+        def handler = Spy(new GoogleBatchTaskHandler(task, exec))
+
+        when:
+        def req = handler.newSubmitRequest(task, launcher)
+        then:
+        handler.fusionEnabled() >> false
+        handler.findBestMachineType(_, false) >> new GoogleBatchMachineTypeSelector.MachineType(type: MACHINE_TYPE, family: 'n2', location: 'us-central1', priceModel: PriceModel.standard)
+
+        and:
+        def instancePolicy = req.getAllocationPolicy().getInstances(0).getPolicy()
+        instancePolicy.getMachineType() == MACHINE_TYPE
+        instancePolicy.getBootDisk().getType() == ''
     }
 
     // ==========================================================================
@@ -1244,6 +1326,55 @@ class GoogleBatchTaskHandlerTest extends Specification {
         then:
         handler.fusionEnabled() >> true
         result.getContainer().getOptions() == '--privileged'
+    }
+
+    def 'should choose fusion disk type'() {
+        given:
+        def exec = Mock(GoogleBatchExecutor) {
+            getBatchConfig() >> Mock(BatchConfig)
+        }
+        def task = Mock(TaskRun) {
+            getHashLog() >> 'abcd1234'
+            getWorkDir() >> CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
+            getContainer() >> 'ubuntu:latest'
+            getConfig() >> Mock(TaskConfig)
+        }
+        def handler = new GoogleBatchTaskHandler(task, exec)
+
+        expect:
+        handler.chooseFusionDiskType(machineType) == expected
+
+        where:
+        machineType           | expected
+        // exact machine types
+        'n2-standard-4'       | 'local-ssd'          // standard family: supports local SSD
+        'c2-standard-8'       | 'local-ssd'          // compute-optimized: supports local SSD
+        'n1-standard-1'       | 'local-ssd'          // legacy N1: supports local SSD
+        'e2-standard-4'       | 'pd-balanced'        // E2: no local SSD, pd-only
+        'e2-micro'            | 'pd-balanced'        // E2 small: no local SSD, pd-only
+        'h3-standard-88'      | 'hyperdisk-balanced' // H3: no local SSD, not pd-only
+        'n4-standard-4'       | 'hyperdisk-balanced' // N4: no local SSD, not pd-only
+        't2a-standard-4'      | 'hyperdisk-balanced' // T2A: no local SSD, not pd-only
+        't2d-standard-4'      | 'hyperdisk-balanced' // T2D: no local SSD, not pd-only
+        'm2-ultramem-208'     | 'hyperdisk-balanced' // M2: no local SSD, not pd-only
+        'm4-megamem-416'      | 'hyperdisk-balanced' // M4: no local SSD, not pd-only
+        'x4-megamem-1440'     | 'hyperdisk-balanced' // X4: no local SSD, not pd-only
+        // glob families with * (family glob passed directly)
+        'n2-*'                | 'local-ssd'          // N2 family glob: supports local SSD
+        'c3-*'                | 'local-ssd'          // C3 family glob: partial lssd support, not in NO_LOCAL_SSD
+        'a2-*'                | 'local-ssd'          // A2 accelerator family glob: supports local SSD
+        'e2-*'                | 'pd-balanced'        // E2 family glob: no local SSD, pd-only
+        'h3-*'                | 'hyperdisk-balanced' // H3 family glob: no local SSD, not pd-only
+        'n4-*'                | 'hyperdisk-balanced' // N4 family glob: no local SSD, not pd-only
+        't2a-*'               | 'hyperdisk-balanced' // T2A family glob: no local SSD, not pd-only
+        'm2-*'                | 'hyperdisk-balanced' // M2 family glob: no local SSD, not pd-only
+        // glob patterns with ? in the type suffix (? is matched literally by .* in family regex)
+        'n2-standard-?'       | 'local-ssd'          // n2 prefix still not in NO_LOCAL_SSD
+        'e2-standard-?'       | 'pd-balanced'        // e2 prefix matches e2-* → pd-only
+        'h3-standard-??'      | 'hyperdisk-balanced' // h3 prefix matches h3-* → no local SSD, not pd-only
+        // ? replacing the family discriminator digit is treated as a literal character (not a wildcard)
+        'e?-standard-4'       | 'local-ssd'          // 'e?' does not match regex ^e2-.*$, so not classified as e2
+        'h?-standard-88'      | 'local-ssd'          // 'h?' does not match regex ^h3-.*$, so not classified as h3
     }
 
 }

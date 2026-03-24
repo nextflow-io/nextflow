@@ -20,6 +20,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
+import java.security.CodeSource;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -31,6 +32,7 @@ import java.util.Set;
 import groovy.lang.GroovyClassLoader;
 import groovy.lang.GroovyCodeSource;
 import com.google.common.hash.Hashing;
+import nextflow.script.ast.RecordNode;
 import nextflow.script.ast.WorkflowNode;
 import nextflow.script.control.CallSiteCollector;
 import nextflow.script.control.Compiler;
@@ -48,7 +50,9 @@ import nextflow.script.parser.ScriptParserPluginFactory;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.ast.CompileUnit;
 import org.codehaus.groovy.ast.MethodNode;
+import org.codehaus.groovy.ast.ModuleNode;
 import org.codehaus.groovy.control.CompilationFailedException;
 import org.codehaus.groovy.control.CompilationUnit;
 import org.codehaus.groovy.control.CompilerConfiguration;
@@ -84,16 +88,18 @@ public class ScriptCompiler {
 
     private final CompilerConfiguration config;
     private final GroovyClassLoader loader;
+    private final Path projectDir;
 
     private Compiler compiler;
 
-    public ScriptCompiler(boolean debug, Path targetDirectory, ClassLoader parent) {
-        this(getConfig(debug, targetDirectory), parent);
+    public ScriptCompiler(boolean debug, Path targetDirectory, ClassLoader parent, Path projectDir) {
+        this(getConfig(debug, targetDirectory), parent, projectDir);
     }
 
-    public ScriptCompiler(CompilerConfiguration config, ClassLoader parent) {
+    public ScriptCompiler(CompilerConfiguration config, ClassLoader parent, Path projectDir) {
         this.config = config;
         this.loader = new GroovyClassLoader(parent, config);
+        this.projectDir = projectDir;
     }
 
     private static CompilerConfiguration getConfig(boolean debug, Path targetDirectory) {
@@ -227,6 +233,10 @@ public class ScriptCompiler {
 
         ScriptCompilationUnit(CompilerConfiguration configuration, GroovyClassLoader loader) {
             super(configuration, null, loader);
+            // Replace the compile unit with one that renames types before
+            // the duplicate class check, avoiding collisions between modules that
+            // declare types with the same name.
+            this.ast = new ScriptCompileUnit(getClassLoader(), null, getConfiguration());
             super.addPhaseOperation(source -> analyze(source), Phases.CONVERSION);
         }
 
@@ -261,7 +271,7 @@ public class ScriptCompiler {
         private void analyze(SourceUnit source) {
             // on first pass, recursively add included modules to queue
             if( entry == null ) {
-                modules = new ModuleResolver(compiler).resolve(source, uri -> createSourceUnit(uri));
+                modules = new ModuleResolver(projectDir, compiler).resolve(source, uri -> createSourceUnit(uri));
                 for( var su : modules )
                     addSource(su);
                 entry = source;
@@ -275,7 +285,7 @@ public class ScriptCompiler {
             var cn = source.getAST().getClasses().get(0);
 
             // perform strict syntax checking
-            var includeResolver = new ResolveIncludeVisitor(source, compiler);
+            var includeResolver = new ResolveIncludeVisitor(source, projectDir, compiler);
             includeResolver.visit();
             for( var error : includeResolver.getErrors() )
                 source.getErrorCollector().addErrorAndContinue(error);
@@ -331,6 +341,31 @@ public class ScriptCompiler {
                     .putUnencodedChars(uri.toString())
                     .hash();
             return "_nf_script_" + hash;
+        }
+    }
+
+    /**
+     * Custom CompileUnit that renames types with a unique package prefix
+     * before adding them to the class map, preventing duplicate class name errors
+     * when multiple modules declare types with the same name.
+     */
+    private static class ScriptCompileUnit extends CompileUnit {
+
+        ScriptCompileUnit(GroovyClassLoader loader, CodeSource codeSource, CompilerConfiguration config) {
+            super(loader, codeSource, config);
+        }
+
+        @Override
+        public void addModule(ModuleNode module) {
+            // Use the script class name as the package name for declared typess
+            var classes = module.getClasses();
+            var scriptClass = classes.get(0);
+            var packageName = scriptClass.getNameWithoutPackage();
+            for( int i = 1; i < classes.size(); i++ ) {
+                var cn = classes.get(i);
+                cn.setName(packageName + "." + cn.getNameWithoutPackage());
+            }
+            super.addModule(module);
         }
     }
 

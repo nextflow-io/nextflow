@@ -316,6 +316,7 @@ class MapperUtilTest extends Specification {
         SchemaMapperUtil.toDiskAllocation(null) == null
         SchemaMapperUtil.toDiskAllocation('task') == DiskAllocation.TASK
         SchemaMapperUtil.toDiskAllocation('node') == DiskAllocation.NODE
+        SchemaMapperUtil.toDiskAllocation('nvme') == DiskAllocation.NVME
     }
 
     def 'should throw exception for invalid disk allocation' () {
@@ -544,6 +545,84 @@ class MapperUtilTest extends Specification {
         result.disk.sizeGiB == 100
         result.snapshotEnabled == true
         result.maxSpotAttempts == FusionConfig.DEFAULT_SNAPSHOT_MAX_SPOT_ATTEMPTS
+    }
+
+    // tests for NVMe disk allocation
+
+    def 'should create nvme disk requirement without disk size' () {
+        given:
+        def opts = new MachineRequirementOpts([diskAllocation: 'nvme'])
+
+        when:
+        def result = SchemaMapperUtil.toDiskRequirement(null, opts)
+
+        then:
+        result != null
+        result.allocation == DiskAllocation.NVME
+        result.sizeGiB == 0
+        result.volumeType == null
+        result.throughputMiBps == null
+        result.iops == null
+        result.encrypted == null
+    }
+
+    def 'should create nvme disk requirement with disk size (ignored)' () {
+        given:
+        def opts = new MachineRequirementOpts([diskAllocation: 'nvme'])
+
+        when:
+        def result = SchemaMapperUtil.toDiskRequirement(MemoryUnit.of('100 GB'), opts)
+
+        then:
+        result != null
+        result.allocation == DiskAllocation.NVME
+        result.sizeGiB == 100
+    }
+
+    def 'should include nvme disk in machine requirement' () {
+        given:
+        def opts = new MachineRequirementOpts([arch: 'x86_64', diskAllocation: 'nvme', capacityMode: 'asg'])
+
+        when:
+        def result = SchemaMapperUtil.toMachineRequirement(opts)
+
+        then:
+        result != null
+        result.arch == 'x86_64'
+        result.disk != null
+        result.disk.allocation == DiskAllocation.NVME
+        result.disk.sizeGiB == 0
+    }
+
+    def 'should set diskMountPath for all allocation types' () {
+        given:
+        def opts = new MachineRequirementOpts([diskAllocation: ALLOCATION, diskMountPath: '/data'])
+
+        when:
+        def result = SchemaMapperUtil.toDiskRequirement(MemoryUnit.of('100 GB'), opts)
+
+        then:
+        result.allocation == EXPECTED_ALLOCATION
+        result.mountPath == '/data'
+
+        where:
+        ALLOCATION | EXPECTED_ALLOCATION
+        'node'     | DiskAllocation.NODE
+        'task'     | DiskAllocation.TASK
+        'nvme'     | DiskAllocation.NVME
+    }
+
+    def 'should throw error when EBS options are set with nvme allocation' () {
+        given:
+        def opts = new MachineRequirementOpts([diskAllocation: 'nvme', diskType: 'ebs/gp3'])
+
+        when:
+        SchemaMapperUtil.toDiskRequirement(null, opts)
+
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains('diskType')
+        e.message.contains('nvme')
     }
 
 }

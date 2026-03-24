@@ -22,6 +22,7 @@ import io.seqera.config.SeqeraConfig
 import io.seqera.config.ExecutorOpts
 import io.seqera.util.SchemaMapperUtil
 import io.seqera.sched.api.schema.v1a1.CreateRunRequest
+import io.seqera.sched.api.schema.v1a1.PipelineSpec
 import io.seqera.sched.api.schema.v1a1.PredictionModel
 import io.seqera.sched.client.SchedClient
 import io.seqera.sched.api.schema.v1a1.TerminateRunRequest
@@ -55,6 +56,8 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
 
     public static final String SEQERA = 'seqera'
 
+    private static final String DEFAULT_FUSION_VERSION = '2.6'
+
     private ExecutorOpts seqeraConfig
 
     private SchedClient client
@@ -65,7 +68,15 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
 
     @Override
     protected void register() {
+        applyFusionDefaults()
         createClient()
+    }
+
+    protected void applyFusionDefaults() {
+        final fusionConfig = session.config.fusion as Map
+        if( fusionConfig!=null && !fusionConfig.containerConfigUrl ) {
+            fusionConfig.put('targetVersion', DEFAULT_FUSION_VERSION)
+        }
     }
 
     @Override
@@ -105,14 +116,18 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
             labels.withWorkflowMetadata(session.workflowMetadata)
         labels.withUserLabels(seqeraConfig.labels)
         final predictionModel = seqeraConfig.predictionModel ? PredictionModel.fromValue(seqeraConfig.predictionModel) : null
+        final pipeline = new PipelineSpec()
+                .workflowId(workflowId)
+                .workflowUrl(workflowUrl)
+                .workDir(session.workDir?.toUriString())
         final request = new CreateRunRequest()
+                .provider(seqeraConfig.provider)
                 .region(seqeraConfig.region)
                 .name(session.runName)
                 .machineRequirement(SchemaMapperUtil.toMachineRequirement(seqeraConfig.machineRequirement))
                 .labels(labels.entries)
                 .workspaceId(PlatformHelper.getWorkspaceId(towerConfig, SysEnv.get()) as Long)
-                .workflowId(workflowId)
-                .workflowUrl(workflowUrl)
+                .pipeline(pipeline)
                 .predictionModel(predictionModel)
         log.debug "[SEQERA] Creating run: ${request}"
         final response = client.createRun(request)

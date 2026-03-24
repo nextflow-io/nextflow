@@ -24,7 +24,7 @@ import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
 import nextflow.ast.NextflowDSL
-import nextflow.exception.IllegalModulePath
+import nextflow.exception.IllegalModulePathException
 import nextflow.file.FileHelper
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
@@ -45,13 +45,13 @@ class IncludeDefTest extends Specification {
 
         expect:
         include.resolveModulePath('/abs/foo.nf') == '/abs/foo.nf' as Path
-        include.resolveModulePath('module.nf') == '/some/path/module.nf' as Path
-        include.resolveModulePath('foo/bar.nf') == '/some/path/foo/bar.nf' as Path
+        include.resolveModulePath('./module.nf') == '/some/path/module.nf' as Path
+        include.resolveModulePath('./foo/bar.nf') == '/some/path/foo/bar.nf' as Path
 
         when:
         include.resolveModulePath('http://foo.com/bar')
         then:
-        thrown(IllegalModulePath)
+        thrown(IllegalModulePathException)
 
     }
 
@@ -66,17 +66,17 @@ class IncludeDefTest extends Specification {
         include.getOwnerPath() >> script
 
         when:
-        def result = include.realModulePath( 'mod-x.nf')
+        def result = include.realModulePath( './mod-x.nf')
         then:
         result == module
 
         when:
-        result = include.realModulePath('mod-x')
+        result = include.realModulePath('./mod-x')
         then:
         result == module
 
         when:
-        include.realModulePath('xyz')
+        include.realModulePath('./xyz')
         then:
         thrown(NoSuchFileException)
 
@@ -98,21 +98,21 @@ class IncludeDefTest extends Specification {
         // when the module name reference a directory that contains
         // a file named 'main.nf', it's considered a module 'bundle'
         when:
-        def result = include.realModulePath('foo')
+        def result = include.realModulePath('./foo')
         then:
         result == module
 
         when:
-        include.realModulePath('bar')
+        include.realModulePath('./bar')
         then:
         thrown(NoSuchFileException)
 
         when:
         folder.resolve('bar').mkdir()
-        include.realModulePath('bar')
+        include.realModulePath('./bar')
         then:
         def e = thrown(ScriptCompilationException)
-        e.message == "Include 'bar' does not provide any module script -- the following path should contain a 'main.nf' script: '${folder.resolve('bar')}'"
+        e.message == "Include './bar' does not provide any module script -- the following path should contain a 'main.nf' script: '${folder.resolve('bar')}'"
     }
 
     def 'should check valid path' () {
@@ -137,17 +137,27 @@ class IncludeDefTest extends Specification {
         when:
         include.checkValidPath('this/dir')
         then:
-        thrown(IllegalModulePath)
+        noExceptionThrown()  // valid remote module reference (scope/name)
+
+        when:
+        include.checkValidPath('nf-core/fastqc')
+        then:
+        noExceptionThrown()  // valid remote module reference
+
+        when:
+        include.checkValidPath('invalid!')
+        then:
+        thrown(IllegalModulePathException)
 
         when:
         include.checkValidPath( 'http://foo.com/x.y')
         then:
-        thrown(IllegalModulePath)
+        thrown(IllegalModulePathException)
 
         when:
         include.checkValidPath(FileHelper.asPath('http://foo.com/x/y/z'))
         then:
-        thrown(IllegalModulePath)
+        thrown(IllegalModulePathException)
 
     }
 

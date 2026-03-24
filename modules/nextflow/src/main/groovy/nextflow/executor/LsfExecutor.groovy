@@ -179,7 +179,7 @@ class LsfExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
     }
 
     @Override
-    protected List<String> getKillCommand() { ['bkill'] }
+    protected List<String> getKillCommand() { ['bkill', '-d'] }
 
     @Override
     protected List<String> queueStatusCommand( queue ) {

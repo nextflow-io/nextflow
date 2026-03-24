@@ -44,7 +44,7 @@ class TowerRetryPolicyTest extends Specification {
         def customOptions = [
                 delay: '1s' as nextflow.util.Duration,
                 maxDelay: '60s' as nextflow.util.Duration,
-                maxAttemps: 3,
+                maxAttempts: 3,
                 jitter: 0.5,
                 multiplier: 1.5
         ]

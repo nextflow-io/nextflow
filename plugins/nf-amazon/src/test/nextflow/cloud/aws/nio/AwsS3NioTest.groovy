@@ -658,6 +658,27 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         deleteBucket(bucketName)
     }
 
+    def 'should download empty file from bucket' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def target = folder.resolve('empty.txt')
+        and:
+        def bucketName = createBucket()
+        final path = s3path("s3://$bucketName/empty.txt")
+        createObject(path, '')
+
+        when:
+        FileHelper.copyPath(path, target)
+
+        then:
+        Files.exists(target)
+        Files.size(target) == 0
+
+        cleanup:
+        folder?.deleteDir()
+        deleteBucket(bucketName)
+    }
+
     def 'should create a newOutputStream' () {
         given:
         def bucketName = createBucket()

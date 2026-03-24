@@ -18,12 +18,14 @@ package nextflow.script.control;
 
 import java.util.List;
 
+import nextflow.script.ast.RecordNode;
 import nextflow.script.types.Record;
 import nextflow.script.types.Tuple;
 import nextflow.script.types.Value;
 import org.codehaus.groovy.ast.ClassCodeExpressionTransformer;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.ast.MethodNode;
 import org.codehaus.groovy.ast.expr.CastExpression;
 import org.codehaus.groovy.ast.expr.ClosureExpression;
 import org.codehaus.groovy.ast.expr.DeclarationExpression;
@@ -59,6 +61,17 @@ public class StripTypesVisitor extends ClassCodeExpressionTransformer {
     @Override
     protected SourceUnit getSourceUnit() {
         return sourceUnit;
+    }
+
+    @Override
+    public void visitMethod(MethodNode node) {
+        // Erase record type parameters so that records (with type Record)
+        // can be dispatched to these methods at runtime
+        for( var param : node.getParameters() ) {
+            if( param.getType().redirect() instanceof RecordNode )
+                param.setType(ClassHelper.dynamicType());
+        }
+        super.visitMethod(node);
     }
 
     @Override
