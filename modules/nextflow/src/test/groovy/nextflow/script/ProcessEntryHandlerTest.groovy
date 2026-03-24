@@ -212,6 +212,139 @@ class ProcessEntryHandlerTest extends Specification {
         tupleElements[1].toString().contains('file.fa')
     }
 
+    def 'validateAndCastParam should pass map value through for map type' () {
+        given:
+        def value = [id: 'sample1', name: 'test']
+
+        expect:
+        ProcessEntryHandler.validateAndCastParam('meta', value, 'map') == value
+    }
+
+    def 'validateAndCastParam should throw for map type when value is not a map' () {
+        when:
+        ProcessEntryHandler.validateAndCastParam('meta', 'scalar', 'map')
+
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains('--meta')
+        e.message.contains('map')
+    }
+
+    def 'validateAndCastParam should cast string to integer' () {
+        expect:
+        ProcessEntryHandler.validateAndCastParam('threads', VALUE, 'integer') == EXPECTED
+
+        where:
+        VALUE   | EXPECTED
+        '4'     | 4
+        '0'     | 0
+        '-1'    | -1
+        '99999999999' | 99999999999L
+    }
+
+    def 'validateAndCastParam should pass through existing integer value' () {
+        expect:
+        ProcessEntryHandler.validateAndCastParam('threads', 4, 'integer') == 4
+        ProcessEntryHandler.validateAndCastParam('threads', 4L, 'integer') == 4L
+    }
+
+    def 'validateAndCastParam should throw for integer type when value is non-numeric string' () {
+        when:
+        ProcessEntryHandler.validateAndCastParam('threads', 'abc', 'integer')
+
+        then:
+        thrown(IllegalArgumentException)
+    }
+
+    def 'validateAndCastParam should throw for integer type when value is a map' () {
+        when:
+        ProcessEntryHandler.validateAndCastParam('threads', [a: 1], 'integer')
+
+        then:
+        thrown(IllegalArgumentException)
+    }
+
+    def 'validateAndCastParam should cast string to float' () {
+        expect:
+        ProcessEntryHandler.validateAndCastParam('ratio', '1.5', 'float') == 1.5f
+        ProcessEntryHandler.validateAndCastParam('ratio', '3.14', 'float') instanceof Number
+    }
+
+    def 'validateAndCastParam should widen integer to double for float type' () {
+        expect:
+        ProcessEntryHandler.validateAndCastParam('ratio', 2, 'float') == 2.0d
+    }
+
+    def 'validateAndCastParam should throw for float type when value is non-numeric string' () {
+        when:
+        ProcessEntryHandler.validateAndCastParam('ratio', 'abc', 'float')
+
+        then:
+        thrown(IllegalArgumentException)
+    }
+
+    def 'validateAndCastParam should cast string to boolean' () {
+        expect:
+        ProcessEntryHandler.validateAndCastParam('flag', 'true', 'boolean') == Boolean.TRUE
+        ProcessEntryHandler.validateAndCastParam('flag', 'false', 'boolean') == Boolean.FALSE
+        ProcessEntryHandler.validateAndCastParam('flag', 'TRUE', 'boolean') == Boolean.TRUE
+        ProcessEntryHandler.validateAndCastParam('flag', 'False', 'boolean') == Boolean.FALSE
+    }
+
+    def 'validateAndCastParam should pass through existing boolean value' () {
+        expect:
+        ProcessEntryHandler.validateAndCastParam('flag', Boolean.TRUE, 'boolean') == Boolean.TRUE
+        ProcessEntryHandler.validateAndCastParam('flag', Boolean.FALSE, 'boolean') == Boolean.FALSE
+    }
+
+    def 'validateAndCastParam should throw for boolean type when value is not true or false' () {
+        when:
+        ProcessEntryHandler.validateAndCastParam('flag', '1', 'boolean')
+
+        then:
+        thrown(IllegalArgumentException)
+    }
+
+    def 'validateAndCastParam should throw for boolean type when value is a map' () {
+        when:
+        ProcessEntryHandler.validateAndCastParam('flag', [a: 1], 'boolean')
+
+        then:
+        thrown(IllegalArgumentException)
+    }
+
+    def 'validateAndCastParam should pass through string value for string type' () {
+        expect:
+        ProcessEntryHandler.validateAndCastParam('name', 'hello', 'string') == 'hello'
+    }
+
+    def 'validateAndCastParam should throw for string type when value is a map' () {
+        when:
+        ProcessEntryHandler.validateAndCastParam('name', [a: 1], 'string')
+
+        then:
+        thrown(IllegalArgumentException)
+    }
+
+    def 'validateAndCastParam should pass through path string for file and directory types' () {
+        expect:
+        ProcessEntryHandler.validateAndCastParam('reads', '/path/to/file.txt', 'file') == '/path/to/file.txt'
+        ProcessEntryHandler.validateAndCastParam('outdir', '/results', 'directory') == '/results'
+    }
+
+    def 'validateAndCastParam should throw for file type when value is a map' () {
+        when:
+        ProcessEntryHandler.validateAndCastParam('reads', [a: 1], 'file')
+
+        then:
+        thrown(IllegalArgumentException)
+    }
+
+    def 'validateAndCastParam should pass through value unchanged for unknown type' () {
+        expect:
+        ProcessEntryHandler.validateAndCastParam('x', 'anything', 'unknowntype') == 'anything'
+    }
+
     def 'should parse file input correctly' () {
         given:
         def session = Mock(Session)

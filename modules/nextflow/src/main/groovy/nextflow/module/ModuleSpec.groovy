@@ -76,6 +76,81 @@ class ModuleSpec {
     }
 
     /**
+     * Load a flat map of input parameter name -> declared type from a meta.yml file.
+     * Both the paramSpec format ({name, type, description}) and the old nf-core format
+     * ({paramName: {type, description}}) are supported. Tuple inputs are flattened.
+     *
+     * @param metaYamlPath Path to meta.yml
+     * @return Map of parameter name -> type string, or null if the file has no input section
+     */
+    static Map<String, String> loadInputTypes(Path metaYamlPath) {
+        if( !Files.exists(metaYamlPath) ) return null
+
+        Map<String, Object> data
+        try {
+            try( final stream = Files.newInputStream(metaYamlPath) ) {
+                data = new Yaml().load(stream) as Map<String, Object>
+            }
+        }
+        catch( Exception e ) {
+            log.warn "Failed to parse meta.yml at ${metaYamlPath}: ${e.message}"
+            return null
+        }
+
+        final inputSection = data?.get('input') as List
+        if( !inputSection ) return null
+
+        final Map<String, String> typeMap = new LinkedHashMap<>()
+        for( final item : inputSection ) {
+            extractParamTypes(item, typeMap)
+        }
+
+        return typeMap.isEmpty() ? null : typeMap
+    }
+
+    /**
+     * Recursively extracts parameter name -> type entries from a structuredParameter item.
+     * Handles:
+     * - paramSpec format: {name: "...", type: "..."}
+     * - Old nf-core format: {paramName: {type: "...", ...}}
+     * - Arrays (tuples): recursively flatten all items
+     */
+    private static void extractParamTypes(Object item, Map<String, String> result) {
+        if( item instanceof List ) {
+            for( final element : (List) item ) {
+                extractParamTypes(element, result)
+            }
+        }
+        else if( item instanceof Map ) {
+            final m = (Map) item
+            final name = m.get('name')
+            final type = m.get('type')
+            if( name != null && type != null ) {
+                // New paramSpec format: {name: "...", type: "..."}
+                result.put(name.toString(), type.toString())
+            }
+            else {
+                // Old nf-core format: {paramName: {type: "...", description: "..."}}
+                // Also handles tuple-as-map-value: {tuple: [{paramName: {type: ...}}, ...]}
+                for( final entry : ((Map<Object, Object>) m).entrySet() ) {
+                    if( entry.value instanceof Map ) {
+                        final innerType = ((Map) entry.value).get('type')
+                        if( innerType != null ) {
+                            result.put(entry.key.toString(), innerType.toString())
+                        }
+                    }
+                    else if( entry.value instanceof List ) {
+                        // Tuple described as a map value, e.g. {tuple: [{meta: {type: map}}, ...]}
+                        for( final element : (List) entry.value ) {
+                            extractParamTypes(element, result)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
      * Validate the module spec for required fields
      *
      * @return List of validation errors (empty if valid)

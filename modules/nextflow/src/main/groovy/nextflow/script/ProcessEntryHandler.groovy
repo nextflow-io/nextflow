@@ -16,6 +16,8 @@
 
 package nextflow.script
 
+import nextflow.module.ModuleStorage
+
 import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -30,6 +32,7 @@ import nextflow.script.params.StdInParam
 import nextflow.script.params.TupleInParam
 import nextflow.script.params.v2.ProcessInput
 import nextflow.script.params.v2.ProcessTupleInput
+import nextflow.module.ModuleSpec
 
 /**
  * Helper class for process entry execution feature.
@@ -173,11 +176,14 @@ class ProcessEntryHandler {
     /**
      * Parses complex parameters with dot notation support.
      * Converts flat parameters like --meta.id=1 --meta.name=test to nested maps.
+     * If a meta.yml file exists in the script's parent directory, validates and casts
+     * each parameter according to its declared input type.
      *
      * @param params Flat parameter map from session.params
-     * @return Map with nested structures for complex parameters
+     * @return Map with nested structures for complex parameters, type-validated and cast
      */
-    private Map parseComplexParameters(Map params) {
+    protected Map parseComplexParameters(Map params) {
+
         Map complexParams = [:]
 
         params.each { key, value ->
@@ -198,7 +204,120 @@ class ProcessEntryHandler {
             }
         }
 
+        // Validate and cast based on meta.yml input types if available
+        final typeMap = loadInputTypesFromMetaYml()
+        if( typeMap != null ) {
+            final keys = new ArrayList(complexParams.keySet())
+            for( final key : keys ) {
+                final name = key.toString()
+                final type = typeMap.get(name) as String
+                if( type != null ) {
+                    complexParams.put(key, validateAndCastParam(name, complexParams.get(key), type))
+                }
+            }
+        }
+
         return complexParams
+    }
+
+    /**
+     * Loads a flat map of input parameter name -> declared type from a meta.yml file
+     * located in the parent directory of the current script.
+     * Tuple inputs are flattened. Both the new paramSpec format ({name, type, description})
+     * and the old nf-core format ({paramName: {type, description}}) are supported.
+     *
+     * @return Map of parameter name -> type string, or null if meta.yml is absent or unreadable
+     */
+    private Map<String, String> loadInputTypesFromMetaYml() {
+        try {
+            final binding = script.getBinding() as ScriptBinding
+            if( binding == null ) return null
+            final scriptPath = binding.getScriptPath()
+            if( scriptPath == null ) return null
+
+            final metaYml = scriptPath.parent.resolve(ModuleStorage.MODULE_MANIFEST_FILE)
+            final typeMap = ModuleSpec.loadInputTypes(metaYml)
+            return typeMap
+        }
+        catch( Exception e ) {
+            log.debug "Could not load input types from meta.yml: ${e.message}"
+            return null
+        }
+    }
+
+    /**
+     * Validates and casts a parameter value to the declared type from meta.yml.
+     * Types: boolean, integer, float, string, map, file, directory.
+     *
+     * @param name  Parameter name (used in error messages)
+     * @param value The parsed parameter value (may be a String, Map, etc.)
+     * @param type  The declared type string from meta.yml
+     * @return The validated and appropriately cast value
+     * @throws IllegalArgumentException if the value is incompatible with the declared type
+     */
+    protected static Object validateAndCastParam(String name, Object value, String type) {
+        switch( type ) {
+            case 'map':
+                if( !(value instanceof Map) )
+                    throw new IllegalArgumentException(
+                        "Parameter '--${name}' expects a map type but got a scalar value '${value}'. " +
+                        "Use dot notation (e.g. --${name}.key=value) to provide map parameters.")
+                return value
+
+            case 'integer':
+                if( value instanceof Integer || value instanceof Long ) return value
+                if( value instanceof CharSequence ) {
+                    final str = value.toString()
+                    if( str.isInteger() ) return str.toInteger()
+                    if( str.isLong() ) return str.toLong()
+                    throw new IllegalArgumentException(
+                        "Parameter '--${name}' expects an integer value but got: '${value}'")
+                }
+                throw new IllegalArgumentException(
+                    "Parameter '--${name}' expects an integer value but got type ${value?.class?.simpleName}: '${value}'")
+
+            case 'float':
+                if( value instanceof Float || value instanceof Double ) return value
+                if( value instanceof Number ) return ((Number) value).doubleValue()
+                if( value instanceof CharSequence ) {
+                    final str = value.toString()
+                    if( str.isFloat() ) return str.toFloat()
+                    if( str.isDouble() ) return str.toDouble()
+                    throw new IllegalArgumentException(
+                        "Parameter '--${name}' expects a float value but got: '${value}'")
+                }
+                throw new IllegalArgumentException(
+                    "Parameter '--${name}' expects a float value but got type ${value?.class?.simpleName}: '${value}'")
+
+            case 'boolean':
+                if( value instanceof Boolean ) return value
+                if( value instanceof CharSequence ) {
+                    final lower = value.toString().toLowerCase()
+                    if( lower == 'true' ) return Boolean.TRUE
+                    if( lower == 'false' ) return Boolean.FALSE
+                    throw new IllegalArgumentException(
+                        "Parameter '--${name}' expects a boolean value (true/false) but got: '${value}'")
+                }
+                throw new IllegalArgumentException(
+                    "Parameter '--${name}' expects a boolean value but got type ${value?.class?.simpleName}: '${value}'")
+
+            case 'string':
+                if( !(value instanceof CharSequence) )
+                    throw new IllegalArgumentException(
+                        "Parameter '--${name}' expects a string value but got type ${value?.class?.simpleName}: '${value}'.")
+                return value
+
+            case 'file':
+            case 'directory':
+                if( !(value instanceof CharSequence) )
+                    throw new IllegalArgumentException(
+                        "Parameter '--${name}' expects a file/directory path but got type ${value?.class?.simpleName}: '${value}'.")
+                return value
+
+            default:
+                log.debug "Unknown spec type '${type}' for parameter '--${name}' — skipping cast"
+                return value
+        }
     }
 
     private List getProcessArgumentsV1(ProcessConfigV1 config) {
@@ -298,6 +417,7 @@ class ProcessEntryHandler {
     }
 
     private Object getTypedValueForInput(Class type, Object value) {
+        log.debug("Getting type for input: $type.name, $value")
         if( value !instanceof String )
             return value
 
