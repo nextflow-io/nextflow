@@ -19,9 +19,10 @@ package nextflow.script
 import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import groovyx.gpars.dataflow.DataflowVariable
+import groovyx.gpars.dataflow.DataflowReadChannel
 import nextflow.Session
 import nextflow.Nextflow
+import nextflow.extension.CH
 import nextflow.extension.DumpHelper
 import nextflow.script.params.EnvInParam
 import nextflow.script.params.FileInParam
@@ -88,8 +89,11 @@ class ProcessEntryHandler {
                 // Get input parameter values and execute the process
                 final inputArgs = getProcessArguments(processDef)
                 final output = meta.getProcess(processName).run(inputArgs as Object[]) as ChannelOut
+                // Create read channels now, before the dataflow network fires,
+                // so they are subscribed before values are emitted
+                final readChannels = createReadChannels(output)
                 session.addIgniter {
-                    printOutput(processName, output)
+                    printOutput(processName, output, readChannels)
                 }
                 return output
             }
@@ -103,12 +107,18 @@ class ProcessEntryHandler {
     }
 
     /**
-     * Prints the process outputs.
-     *
-     * @param processName
-     * @param output
+     * Creates read channels for all output channels before the dataflow network fires.
+     * This ensures broadcast channels have subscribers before values are emitted.
      */
-    private void printOutput(String processName, ChannelOut output) {
+    protected static List<DataflowReadChannel> createReadChannels(ChannelOut output) {
+        final result = new ArrayList<DataflowReadChannel>(output.size())
+        for( final ch : output ) {
+            result.add(CH.getReadChannel(ch))
+        }
+        return result
+    }
+
+    private void printOutput(String processName, ChannelOut output, List<DataflowReadChannel> readChannels) {
         if( output.isEmpty() ) {
             log.debug("Process ${processName} does not declare any outputs")
             return
@@ -118,7 +128,7 @@ class ProcessEntryHandler {
 
         // print process output directly if it is a single expression
         if( output.size() == 1 && (output.getNames().isEmpty() || output.getNames().first() == '$out') ) {
-            result = (output[0] as DataflowVariable).get()
+            result = readChannels[0].getVal()
         }
 
         // otherwise, construct map of process emits
@@ -133,9 +143,9 @@ class ProcessEntryHandler {
 
             // combine process emits into map
             final combinedOutputs = new LinkedHashMap<String, Object>(output.size())
-            for( final ch : output ) {
-                final name = reverseLookup.get(ch)
-                combinedOutputs.put(name, (ch as DataflowVariable).get())
+            for( int i = 0; i < output.size(); i++ ) {
+                final name = reverseLookup.get(output[i])
+                combinedOutputs.put(name, readChannels[i].getVal())
             }
 
             result = combinedOutputs

@@ -17,7 +17,13 @@
 package nextflow.script
 
 import java.nio.file.Path
+import groovyx.gpars.dataflow.DataflowBroadcast
+import groovyx.gpars.dataflow.DataflowQueue
+import groovyx.gpars.dataflow.DataflowVariable
+import groovyx.gpars.dataflow.DataflowWriteChannel
+import nextflow.Channel
 import nextflow.Session
+import nextflow.extension.CH
 import nextflow.script.params.FileInParam
 import nextflow.script.params.InParam
 import nextflow.script.params.TupleInParam
@@ -210,6 +216,25 @@ class ProcessEntryHandlerTest extends Specification {
         tupleElements[0].other == 'some-value'
         // tupleElements[1] should be a Path object (mocked)
         tupleElements[1].toString().contains('file.fa')
+    }
+
+    def 'should create read channels from mixed channel types' () {
+        given:
+        'createReadChannels handles DataflowVariable, DataflowQueue, and DataflowBroadcast'
+        def var = new DataflowVariable()
+        var.bind('value1')
+        def broadcast = new DataflowBroadcast()
+        def output = new ChannelOut([var, broadcast] as List<DataflowWriteChannel>)
+
+        when:
+        def readChannels = ProcessEntryHandler.createReadChannels(output)
+
+        then:
+        readChannels.size() == 2
+        // DataflowVariable is returned as-is (it implements DataflowReadChannel)
+        readChannels[0].getVal() == 'value1'
+        // DataflowBroadcast is converted to a read channel via createReadChannel
+        readChannels[1] != null
     }
 
     def 'should parse file input correctly' () {
