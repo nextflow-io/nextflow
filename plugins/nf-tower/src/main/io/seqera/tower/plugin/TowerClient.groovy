@@ -141,9 +141,9 @@ class TowerClient implements TraceObserverV2 {
 
     private Map<String,Boolean> allContainers = new ConcurrentHashMap<>()
 
-    private Duration readTimeout = TowerConfig.DEFAULT_READ_TIMEOUT
+    private Duration readTimeout
 
-    private Duration connectTimeout = TowerConfig.DEFAULT_CONNECT_TIMEOUT
+    private Duration connectTimeout
 
     TowerClient(Session session, TowerConfig config) {
         this.session = session
