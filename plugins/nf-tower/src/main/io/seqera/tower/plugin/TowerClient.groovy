@@ -71,8 +71,6 @@ class TowerClient implements TraceObserverV2 {
 
     static private final String TOKEN_PREFIX = '@token:'
 
-    static private final Duration DEFAULT_REQUEST_TIMEOUT = Duration.of('1 min')
-
     @TupleConstructor
     static class Response {
         final int code
@@ -143,7 +141,9 @@ class TowerClient implements TraceObserverV2 {
 
     private Map<String,Boolean> allContainers = new ConcurrentHashMap<>()
 
-    private Duration requestTimeout = DEFAULT_REQUEST_TIMEOUT
+    private Duration readTimeout = TowerConfig.DEFAULT_READ_TIMEOUT
+
+    private Duration connectTimeout = TowerConfig.DEFAULT_CONNECT_TIMEOUT
 
     TowerClient(Session session, TowerConfig config) {
         this.session = session
@@ -151,6 +151,8 @@ class TowerClient implements TraceObserverV2 {
         this.accessToken = config.accessToken
         this.workspaceId = config.workspaceId
         this.retryPolicy = config.retryPolicy
+        this.readTimeout = config.httpReadTimeout
+        this.connectTimeout = config.httpConnectTimeout
         this.schema = loadSchema()
         this.generator = TowerJsonGenerator.create(schema)
         this.reports = new TowerReports(session)
@@ -162,7 +164,7 @@ class TowerClient implements TraceObserverV2 {
     }
 
     TowerClient withRequestTimeout(Duration duration) {
-        this.requestTimeout = duration
+        this.readTimeout = duration
         return this
     }
 
@@ -321,7 +323,7 @@ class TowerClient implements TraceObserverV2 {
             .retryConfig(this.retryPolicy)
             .followRedirects(HttpClient.Redirect.NORMAL)
             .version(HttpClient.Version.HTTP_1_1)
-            .connectTimeout(java.time.Duration.ofSeconds(60))
+            .connectTimeout(java.time.Duration.ofMillis(connectTimeout.millis))
             .build()
     }
 
@@ -552,7 +554,7 @@ class TowerClient implements TraceObserverV2 {
             .header('Content-Type', 'application/json; charset=utf-8')
             .header('User-Agent', "Nextflow/$BuildInfo.version")
             .header('Traceparent', TraceUtils.rndTrace())
-            .timeout(java.time.Duration.ofMillis(requestTimeout.millis))
+            .timeout(java.time.Duration.ofMillis(readTimeout.millis))
 
         if( verb == 'PUT' )
             return builder.PUT(HttpRequest.BodyPublishers.ofString(payload)).build()

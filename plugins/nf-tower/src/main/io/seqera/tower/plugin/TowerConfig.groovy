@@ -22,6 +22,7 @@ import nextflow.config.spec.ConfigScope
 import nextflow.config.spec.ScopeName
 import nextflow.script.dsl.Description
 import nextflow.platform.PlatformHelper
+import nextflow.util.Duration
 
 /**
  * Model Seqera Platform configuration
@@ -67,6 +68,22 @@ class TowerConfig implements ConfigScope {
     """)
     final String computeEnvId
 
+    @ConfigOption
+    @Description("""
+        The HTTP connection timeout for Seqera Platform API requests (default: `'60s'`).
+    """)
+    final Duration httpConnectTimeout
+
+    @ConfigOption
+    @Description("""
+        The HTTP read timeout for Seqera Platform API requests (default: `'60s'`).
+    """)
+    final Duration httpReadTimeout
+
+    static final Duration DEFAULT_READ_TIMEOUT = Duration.of('60s')
+
+    static final Duration DEFAULT_CONNECT_TIMEOUT = Duration.of('60s')
+
     /* required by extension point -- do not remove */
     TowerConfig() {}
 
@@ -78,5 +95,7 @@ class TowerConfig implements ConfigScope {
         this.workspaceId = PlatformHelper.getWorkspaceId(opts, env)
         if( opts.computeEnvId )
             this.computeEnvId = opts.computeEnvId as String
+        httpConnectTimeout = opts.httpConnectTimeout ? opts.httpConnectTimeout as Duration : DEFAULT_CONNECT_TIMEOUT
+        httpReadTimeout = opts.httpReadTimeout ? opts.httpReadTimeout as Duration : DEFAULT_READ_TIMEOUT
     }
 }
