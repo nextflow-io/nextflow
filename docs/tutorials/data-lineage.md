@@ -60,7 +60,7 @@ First, use the `list` subcommand to list the workflow runs in the lineage store:
 
 ```console
 $ nextflow lineage list
-TIMESTAMP               RUN NAME                SESSION ID                              LINEAGE ID                            
+TIMESTAMP               RUN NAME                SESSION ID                              LINEAGE ID
 2025-05-09 13:28:30 CDT peaceful_blackwell      065bdc6b-89b4-42ee-92c1-2a5af37f2c50    lid://16b31030474f2e96c55f4940bca3ab64
 ```
 
@@ -315,7 +315,7 @@ View the workflow output in the lineage metadata:
 $ nextflow lineage view lid://9410d13abeec617640b5fe9735ba12fc#output
 [
   {
-    "type": "Collection",
+    "type": "List",
     "name": "samples",
     "value": "lid://9410d13abeec617640b5fe9735ba12fc/samples.json"
   },

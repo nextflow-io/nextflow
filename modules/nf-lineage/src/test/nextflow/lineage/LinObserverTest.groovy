@@ -592,11 +592,8 @@ class LinObserverTest extends Specification {
         new StdOutParam(null, [])                       | "stdout"
         Path.of("test")                                 | "Path"
         "hello"                                         | "String"
-        new ArrayBag([])                                | "Bag"
-        ["test"] as Set                                 | "Set"
         ["test"]                                        | "List"
         [key:"value"]                                   | "Map"
-        new ArrayDeque([1, 2, 3])                       | "Iterable"
         42                                              | "Integer"
     }
 
