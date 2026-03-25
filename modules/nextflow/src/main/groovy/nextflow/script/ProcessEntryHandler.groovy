@@ -50,8 +50,8 @@ class ProcessEntryHandler {
 
     private final BaseScript script
     private final Session session
-    private Map<String, String> moduleSpecInputTypes
     private final ProcessDef processDef
+    private Map<String, String> moduleSpecInputTypes
 
     ProcessEntryHandler(BaseScript script, Session session, ScriptMeta meta) {
         this.script = script

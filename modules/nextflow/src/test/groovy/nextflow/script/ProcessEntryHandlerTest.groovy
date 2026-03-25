@@ -251,7 +251,7 @@ class ProcessEntryHandlerTest extends Specification {
         tupleElements[1].toString().contains('file.fa')
     }
 
-    def 'validateAndCastParam should pass map value through for map type' () {
+    def 'validateAndCastParam should pass map value through for map type'() {
         given:
         def value = [id: 'sample1', name: 'test']
 
@@ -259,7 +259,7 @@ class ProcessEntryHandlerTest extends Specification {
         ProcessEntryHandler.validateAndCastParam('meta', value, 'map') == value
     }
 
-    def 'validateAndCastParam should throw for map type when value is not a map' () {
+    def 'validateAndCastParam should throw for map type when value is not a map'() {
         when:
         ProcessEntryHandler.validateAndCastParam('meta', 'scalar', 'map')
 
@@ -269,25 +269,25 @@ class ProcessEntryHandlerTest extends Specification {
         e.message.contains('map')
     }
 
-    def 'validateAndCastParam should cast string to integer' () {
+    def 'validateAndCastParam should cast string to integer'() {
         expect:
         ProcessEntryHandler.validateAndCastParam('threads', VALUE, 'integer') == EXPECTED
 
         where:
-        VALUE   | EXPECTED
-        '4'     | 4
-        '0'     | 0
-        '-1'    | -1
+        VALUE         | EXPECTED
+        '4'           | 4
+        '0'           | 0
+        '-1'          | -1
         '99999999999' | 99999999999L
     }
 
-    def 'validateAndCastParam should pass through existing integer value' () {
+    def 'validateAndCastParam should pass through existing integer value'() {
         expect:
         ProcessEntryHandler.validateAndCastParam('threads', 4, 'integer') == 4
         ProcessEntryHandler.validateAndCastParam('threads', 4L, 'integer') == 4L
     }
 
-    def 'validateAndCastParam should throw for integer type when value is non-numeric string' () {
+    def 'validateAndCastParam should throw for integer type when value is non-numeric string'() {
         when:
         ProcessEntryHandler.validateAndCastParam('threads', 'abc', 'integer')
 
@@ -295,7 +295,7 @@ class ProcessEntryHandlerTest extends Specification {
         thrown(IllegalArgumentException)
     }
 
-    def 'validateAndCastParam should throw for integer type when value is a map' () {
+    def 'validateAndCastParam should throw for integer type when value is a map'() {
         when:
         ProcessEntryHandler.validateAndCastParam('threads', [a: 1], 'integer')
 
@@ -303,18 +303,18 @@ class ProcessEntryHandlerTest extends Specification {
         thrown(IllegalArgumentException)
     }
 
-    def 'validateAndCastParam should cast string to float' () {
+    def 'validateAndCastParam should cast string to float'() {
         expect:
         ProcessEntryHandler.validateAndCastParam('ratio', '1.5', 'float') == 1.5f
         ProcessEntryHandler.validateAndCastParam('ratio', '3.14', 'float') instanceof Number
     }
 
-    def 'validateAndCastParam should widen integer to double for float type' () {
+    def 'validateAndCastParam should widen integer to double for float type'() {
         expect:
         ProcessEntryHandler.validateAndCastParam('ratio', 2, 'float') == 2.0d
     }
 
-    def 'validateAndCastParam should throw for float type when value is non-numeric string' () {
+    def 'validateAndCastParam should throw for float type when value is non-numeric string'() {
         when:
         ProcessEntryHandler.validateAndCastParam('ratio', 'abc', 'float')
 
@@ -322,7 +322,7 @@ class ProcessEntryHandlerTest extends Specification {
         thrown(IllegalArgumentException)
     }
 
-    def 'validateAndCastParam should cast string to boolean' () {
+    def 'validateAndCastParam should cast string to boolean'() {
         expect:
         ProcessEntryHandler.validateAndCastParam('flag', 'true', 'boolean') == Boolean.TRUE
         ProcessEntryHandler.validateAndCastParam('flag', 'false', 'boolean') == Boolean.FALSE
@@ -330,13 +330,13 @@ class ProcessEntryHandlerTest extends Specification {
         ProcessEntryHandler.validateAndCastParam('flag', 'False', 'boolean') == Boolean.FALSE
     }
 
-    def 'validateAndCastParam should pass through existing boolean value' () {
+    def 'validateAndCastParam should pass through existing boolean value'() {
         expect:
         ProcessEntryHandler.validateAndCastParam('flag', Boolean.TRUE, 'boolean') == Boolean.TRUE
         ProcessEntryHandler.validateAndCastParam('flag', Boolean.FALSE, 'boolean') == Boolean.FALSE
     }
 
-    def 'validateAndCastParam should throw for boolean type when value is not true or false' () {
+    def 'validateAndCastParam should throw for boolean type when value is not true or false'() {
         when:
         ProcessEntryHandler.validateAndCastParam('flag', '1', 'boolean')
 
@@ -344,7 +344,7 @@ class ProcessEntryHandlerTest extends Specification {
         thrown(IllegalArgumentException)
     }
 
-    def 'validateAndCastParam should throw for boolean type when value is a map' () {
+    def 'validateAndCastParam should throw for boolean type when value is a map'() {
         when:
         ProcessEntryHandler.validateAndCastParam('flag', [a: 1], 'boolean')
 
@@ -352,18 +352,18 @@ class ProcessEntryHandlerTest extends Specification {
         thrown(IllegalArgumentException)
     }
 
-    def 'validateAndCastParam should pass through string value for string type' () {
+    def 'validateAndCastParam should pass through string value for string type'() {
         expect:
         ProcessEntryHandler.validateAndCastParam('name', 'hello', 'string') == 'hello'
     }
 
-    def 'validateAndCastParam should pass through path string for file and directory types' () {
+    def 'validateAndCastParam should pass through path string for file and directory types'() {
         expect:
         ProcessEntryHandler.validateAndCastParam('reads', '/path/to/file.txt', 'file') == Path.of('/path/to/file.txt')
         ProcessEntryHandler.validateAndCastParam('outdir', '/results', 'directory') == Path.of('/results')
     }
 
-    def 'validateAndCastParam should throw for file type when value is a map' () {
+    def 'validateAndCastParam should throw for file type when value is a map'() {
         when:
         ProcessEntryHandler.validateAndCastParam('reads', [a: 1], 'file')
 
@@ -371,17 +371,17 @@ class ProcessEntryHandlerTest extends Specification {
         thrown(IllegalArgumentException)
     }
 
-    def 'validateAndCastParam should pass through value unchanged for unknown type' () {
+    def 'validateAndCastParam should pass through value unchanged for unknown type'() {
         expect:
         ProcessEntryHandler.validateAndCastParam('x', 'anything', 'unknowntype') == 'anything'
     }
 
-    def 'should parse file input correctly' () {
+    def 'should parse file input correctly'() {
         given:
         def session = Mock(Session)
         def script = Mock(BaseScript)
         def meta = Mock(ScriptMeta) {
-            getLocalProcessNames() >> [ 'hello' ]
+            getLocalProcessNames() >> ['hello']
         }
         def handler = new ProcessEntryHandler(script, session, meta)
 
@@ -389,23 +389,23 @@ class ProcessEntryHandlerTest extends Specification {
         handler.parseFileInput(INPUT) == EXPECTED_FILES
 
         where:
-        INPUT                                                             | EXPECTED_FILES
-        '/path/to/file.txt'                                               | Path.of('/path/to/file.txt')
+        INPUT                                                            | EXPECTED_FILES
+        '/path/to/file.txt'                                              | Path.of('/path/to/file.txt')
         and:
-        '/path/to/file1.txt,/path/to/file2.txt,/path/to/file3.txt'        | [Path.of('/path/to/file1.txt'), Path.of('/path/to/file2.txt'), Path.of('/path/to/file3.txt')]
-        ' /path/to/file1.txt , /path/to/file2.txt , /path/to/file3.txt '  | [Path.of('/path/to/file1.txt'), Path.of('/path/to/file2.txt'), Path.of('/path/to/file3.txt')]
-        '/path/to/file1.txt,,/path/to/file2.txt, ,/path/to/file3.txt'     | [Path.of('/path/to/file1.txt'), Path.of('/path/to/file2.txt'), Path.of('/path/to/file3.txt')]
-        'file1.txt,file2.txt'                                             | [Path.of('file1.txt').toAbsolutePath(), Path.of('file2.txt').toAbsolutePath()]
+        '/path/to/file1.txt,/path/to/file2.txt,/path/to/file3.txt'       | [Path.of('/path/to/file1.txt'), Path.of('/path/to/file2.txt'), Path.of('/path/to/file3.txt')]
+        ' /path/to/file1.txt , /path/to/file2.txt , /path/to/file3.txt ' | [Path.of('/path/to/file1.txt'), Path.of('/path/to/file2.txt'), Path.of('/path/to/file3.txt')]
+        '/path/to/file1.txt,,/path/to/file2.txt, ,/path/to/file3.txt'    | [Path.of('/path/to/file1.txt'), Path.of('/path/to/file2.txt'), Path.of('/path/to/file3.txt')]
+        'file1.txt,file2.txt'                                            | [Path.of('file1.txt').toAbsolutePath(), Path.of('file2.txt').toAbsolutePath()]
     }
 
     // --- getProcessArguments: V1 config ---
 
-    def 'should get process arguments for V1 config with simple val inputs' () {
+    def 'should get process arguments for V1 config with simple val inputs'() {
         given:
         def session = Mock(Session) {
             getParams() >> [sampleId: 'S001', threads: '4']
         }
-        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta))
+        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta) { getLocalProcessNames() >> ['hello'] })
 
         def inputs = new InputsList()
         inputs.addAll([
@@ -419,18 +419,18 @@ class ProcessEntryHandlerTest extends Specification {
         }
 
         when:
-        def result = handler.getProcessArguments(processDef)
+        def result = handler.getProcessArguments(processDef, session.params)
 
         then:
         result == ['S001', '4']
     }
 
-    def 'should get process arguments for V1 config with file input' () {
+    def 'should get process arguments for V1 config with file input'() {
         given:
         def session = Mock(Session) {
             getParams() >> [reads: '/data/sample.fastq']
         }
-        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta))
+        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta) { getLocalProcessNames() >> ['hello'] })
 
         def inputs = new InputsList()
         inputs.add(Mock(FileInParam) { getName() >> 'reads' })
@@ -441,7 +441,7 @@ class ProcessEntryHandlerTest extends Specification {
         }
 
         when:
-        def result = handler.getProcessArguments(processDef)
+        def result = handler.getProcessArguments(processDef, session.params)
 
         then:
         result.size() == 1
@@ -449,12 +449,12 @@ class ProcessEntryHandlerTest extends Specification {
         result[0].toString().endsWith('sample.fastq')
     }
 
-    def 'should get process arguments for V1 config with comma-separated file list' () {
+    def 'should get process arguments for V1 config with comma-separated file list'() {
         given:
         def session = Mock(Session) {
             getParams() >> [reads: '/data/r1.fastq,/data/r2.fastq']
         }
-        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta))
+        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta) { getLocalProcessNames() >> ['hello'] })
 
         def inputs = new InputsList()
         inputs.add(Mock(FileInParam) { getName() >> 'reads' })
@@ -465,7 +465,7 @@ class ProcessEntryHandlerTest extends Specification {
         }
 
         when:
-        def result = handler.getProcessArguments(processDef)
+        def result = handler.getProcessArguments(processDef, session.params)
 
         then:
         result.size() == 1
@@ -478,12 +478,12 @@ class ProcessEntryHandlerTest extends Specification {
         files[1].toString().endsWith('r2.fastq')
     }
 
-    def 'should get process arguments for V1 config with map parameter from dot notation' () {
+    def 'should get process arguments for V1 config with map parameter from dot notation'() {
         given:
         def session = Mock(Session) {
             getParams() >> ['meta.id': 'S001', 'meta.name': 'Test']
         }
-        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta))
+        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta) { getLocalProcessNames() >> ['hello'] })
 
         def inputs = new InputsList()
         inputs.add(Mock(ValueInParam) { getName() >> 'meta' })
@@ -495,7 +495,7 @@ class ProcessEntryHandlerTest extends Specification {
         }
 
         when:
-        def result = handler.getProcessArguments(processDef)
+        def result = handler.getProcessArguments(processDef, session.params)
 
         then:
         result.size() == 1
@@ -504,17 +504,17 @@ class ProcessEntryHandlerTest extends Specification {
         (result[0] as Map).name == 'Test'
     }
 
-    def 'should get process arguments for V1 config with tuple input (val + path)' () {
+    def 'should get process arguments for V1 config with tuple input (val + path)'() {
         given:
         def session = Mock(Session) {
             getParams() >> ['meta.id': 'S001', 'meta.name': 'Test', fasta: '/data/genome.fa']
         }
-        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta))
+        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta) { getLocalProcessNames() >> ['hello'] })
 
         def tupleParam = Mock(TupleInParam) {
             getInner() >> [
                 Mock(ValueInParam) { getName() >> 'meta' },
-                Mock(FileInParam)  { getName() >> 'fasta' }
+                Mock(FileInParam) { getName() >> 'fasta' }
             ]
         }
         def inputs = new InputsList()
@@ -526,7 +526,7 @@ class ProcessEntryHandlerTest extends Specification {
         }
 
         when:
-        def result = handler.getProcessArguments(processDef)
+        def result = handler.getProcessArguments(processDef, session.params)
 
         then:
         result.size() == 1
@@ -540,10 +540,10 @@ class ProcessEntryHandlerTest extends Specification {
         tuple[1].toString().endsWith('genome.fa')
     }
 
-    def 'should return empty list for V1 config with no inputs' () {
+    def 'should return empty list for V1 config with no inputs'() {
         given:
-        def session = Mock(Session) { getParams() >> [:] }
-        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta))
+        def session = Mock(Session)
+        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta) { getLocalProcessNames() >> ['hello'] })
 
         def config = Mock(ProcessConfigV1) { getInputs() >> new InputsList() }
         def processDef = Mock(ProcessDef) {
@@ -552,7 +552,7 @@ class ProcessEntryHandlerTest extends Specification {
         }
 
         when:
-        def result = handler.getProcessArguments(processDef)
+        def result = handler.getProcessArguments(processDef, [:])
 
         then:
         result == []
@@ -566,12 +566,12 @@ class ProcessEntryHandlerTest extends Specification {
         return def_
     }
 
-    def 'should get process arguments for V2 config with String input' () {
+    def 'should get process arguments for V2 config with String input'() {
         given:
         def session = Mock(Session) {
             getParams() >> [sampleId: 'S001']
         }
-        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta))
+        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta) { getLocalProcessNames() >> ['hello'] })
 
         def inputsDef = v2Inputs(new ProcessInput('sampleId', String, false))
         def config = Mock(ProcessConfigV2) { getInputs() >> inputsDef }
@@ -581,18 +581,18 @@ class ProcessEntryHandlerTest extends Specification {
         }
 
         when:
-        def result = handler.getProcessArguments(processDef)
+        def result = handler.getProcessArguments(processDef, session.params)
 
         then:
         result == ['S001']
     }
 
-    def 'should get process arguments for V2 config with integer type casting from string' () {
+    def 'should get process arguments for V2 config with integer type casting from string'() {
         given:
         def session = Mock(Session) {
             getParams() >> [threads: '8']
         }
-        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta))
+        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta) { getLocalProcessNames() >> ['hello'] })
 
         def inputsDef = v2Inputs(new ProcessInput('threads', Integer, false))
         def config = Mock(ProcessConfigV2) { getInputs() >> inputsDef }
@@ -602,19 +602,19 @@ class ProcessEntryHandlerTest extends Specification {
         }
 
         when:
-        def result = handler.getProcessArguments(processDef)
+        def result = handler.getProcessArguments(processDef, session.params)
 
         then:
         result == [8]
         result[0] instanceof Integer
     }
 
-    def 'should get process arguments for V2 config with float type casting from string' () {
+    def 'should get process arguments for V2 config with float type casting from string'() {
         given:
         def session = Mock(Session) {
             getParams() >> [ratio: '0.75']
         }
-        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta))
+        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta) { getLocalProcessNames() >> ['hello'] })
 
         def inputsDef = v2Inputs(new ProcessInput('ratio', Float, false))
         def config = Mock(ProcessConfigV2) { getInputs() >> inputsDef }
@@ -624,7 +624,7 @@ class ProcessEntryHandlerTest extends Specification {
         }
 
         when:
-        def result = handler.getProcessArguments(processDef)
+        def result = handler.getProcessArguments(processDef, session.params)
 
         then:
         result.size() == 1
@@ -632,12 +632,12 @@ class ProcessEntryHandlerTest extends Specification {
         (result[0] as Number).floatValue() == 0.75f
     }
 
-    def 'should get process arguments for V2 config with boolean type casting from string' () {
+    def 'should get process arguments for V2 config with boolean type casting from string'() {
         given:
         def session = Mock(Session) {
             getParams() >> [flag: 'true']
         }
-        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta))
+        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta) { getLocalProcessNames() >> ['hello'] })
 
         def inputsDef = v2Inputs(new ProcessInput('flag', Boolean, false))
         def config = Mock(ProcessConfigV2) { getInputs() >> inputsDef }
@@ -647,18 +647,18 @@ class ProcessEntryHandlerTest extends Specification {
         }
 
         when:
-        def result = handler.getProcessArguments(processDef)
+        def result = handler.getProcessArguments(processDef, session.params)
 
         then:
         result == [Boolean.TRUE]
     }
 
-    def 'should get process arguments for V2 config with Path input' () {
+    def 'should get process arguments for V2 config with Path input'() {
         given:
         def session = Mock(Session) {
             getParams() >> [reads: '/data/sample.fastq']
         }
-        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta))
+        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta) { getLocalProcessNames() >> ['hello'] })
 
         def inputsDef = v2Inputs(new ProcessInput('reads', Path, false))
         def config = Mock(ProcessConfigV2) { getInputs() >> inputsDef }
@@ -668,7 +668,7 @@ class ProcessEntryHandlerTest extends Specification {
         }
 
         when:
-        def result = handler.getProcessArguments(processDef)
+        def result = handler.getProcessArguments(processDef, session.params)
 
         then:
         result.size() == 1
@@ -676,12 +676,12 @@ class ProcessEntryHandlerTest extends Specification {
         result[0].toString().endsWith('sample.fastq')
     }
 
-    def 'should get process arguments for V2 config with comma-separated file list' () {
+    def 'should get process arguments for V2 config with comma-separated file list'() {
         given:
         def session = Mock(Session) {
             getParams() >> [reads: '/data/r1.fastq,/data/r2.fastq,/data/r3.fastq']
         }
-        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta))
+        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta) { getLocalProcessNames() >> ['hello'] })
 
         def inputsDef = v2Inputs(new ProcessInput('reads', List<Path>, false))
         def config = Mock(ProcessConfigV2) { getInputs() >> inputsDef }
@@ -691,7 +691,7 @@ class ProcessEntryHandlerTest extends Specification {
         }
 
         when:
-        def result = handler.getProcessArguments(processDef)
+        def result = handler.getProcessArguments(processDef, session.params)
 
         then:
         result.size() == 1
@@ -703,12 +703,12 @@ class ProcessEntryHandlerTest extends Specification {
         files[2].toString().endsWith('r3.fastq')
     }
 
-    def 'should get process arguments for V2 config with map from dot notation' () {
+    def 'should get process arguments for V2 config with map from dot notation'() {
         given:
         def session = Mock(Session) {
             getParams() >> ['meta.id': 'S001', 'meta.name': 'Test', 'meta.paired': 'true']
         }
-        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta))
+        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta) { getLocalProcessNames() >> ['hello'] })
 
         def inputsDef = v2Inputs(new ProcessInput('meta', Map, false))
         def config = Mock(ProcessConfigV2) { getInputs() >> inputsDef }
@@ -718,7 +718,7 @@ class ProcessEntryHandlerTest extends Specification {
         }
 
         when:
-        def result = handler.getProcessArguments(processDef)
+        def result = handler.getProcessArguments(processDef, session.params)
 
         then:
         result.size() == 1
@@ -728,12 +728,12 @@ class ProcessEntryHandlerTest extends Specification {
         (result[0] as Map).paired == 'true'
     }
 
-    def 'should get process arguments for V2 config with tuple (val map + path)' () {
+    def 'should get process arguments for V2 config with tuple (val map + path)'() {
         given:
         def session = Mock(Session) {
             getParams() >> ['meta.id': 'S001', 'meta.name': 'Test', fasta: '/data/genome.fa']
         }
-        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta))
+        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta) { getLocalProcessNames() >> ['hello'] })
 
         def tupleComponents = [
             new ProcessInput('meta', Map, false),
@@ -748,7 +748,7 @@ class ProcessEntryHandlerTest extends Specification {
         }
 
         when:
-        def result = handler.getProcessArguments(processDef)
+        def result = handler.getProcessArguments(processDef, session.params)
 
         then:
         result.size() == 1
@@ -762,16 +762,16 @@ class ProcessEntryHandlerTest extends Specification {
         tuple[1].toString().endsWith('genome.fa')
     }
 
-    def 'should get process arguments for V2 config with multiple mixed inputs' () {
+    def 'should get process arguments for V2 config with multiple mixed inputs'() {
         given:
         def session = Mock(Session) {
             getParams() >> ['meta.id': 'S001', reads: '/data/r1.fastq', threads: '4']
         }
-        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta))
+        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta) { getLocalProcessNames() >> ['hello'] })
 
         def inputsDef = v2Inputs(
-            new ProcessInput('meta',    Map,     false),
-            new ProcessInput('reads',   Path,    false),
+            new ProcessInput('meta', Map, false),
+            new ProcessInput('reads', Path, false),
             new ProcessInput('threads', Integer, false)
         )
         def config = Mock(ProcessConfigV2) { getInputs() >> inputsDef }
@@ -781,7 +781,7 @@ class ProcessEntryHandlerTest extends Specification {
         }
 
         when:
-        def result = handler.getProcessArguments(processDef)
+        def result = handler.getProcessArguments(processDef, session.params)
 
         then:
         result.size() == 3
@@ -791,10 +791,10 @@ class ProcessEntryHandlerTest extends Specification {
         result[2] == 4
     }
 
-    def 'should return empty list for V2 config with no inputs' () {
+    def 'should return empty list for V2 config with no inputs'() {
         given:
         def session = Mock(Session) { getParams() >> [:] }
-        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta))
+        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta) { getLocalProcessNames() >> ['hello'] })
 
         def config = Mock(ProcessConfigV2) { getInputs() >> new ProcessInputsDef() }
         def processDef = Mock(ProcessDef) {
@@ -803,7 +803,7 @@ class ProcessEntryHandlerTest extends Specification {
         }
 
         when:
-        def result = handler.getProcessArguments(processDef)
+        def result = handler.getProcessArguments(processDef, session.params)
 
         then:
         result == []
@@ -825,7 +825,7 @@ class ProcessEntryHandlerTest extends Specification {
         return Mock(BaseScript) { getBinding() >> binding }
     }
 
-    def 'should cast integer, float and boolean params via meta.yml in V1 config' () {
+    def 'should cast integer, float and boolean params via meta.yml in V1 config'() {
         given:
         def script = scriptWithMetaYml('''\
 input:
@@ -841,7 +841,7 @@ input:
         def session = Mock(Session) {
             getParams() >> [sampleId: 'S001', threads: '8', ratio: '0.75', 'paired': 'false']
         }
-        def handler = new ProcessEntryHandler(script, session, Mock(ScriptMeta))
+        def handler = new ProcessEntryHandler(script, session, Mock(ScriptMeta) { getLocalProcessNames() >> ['hello'] })
 
         def inputs = new InputsList()
         inputs.addAll([
@@ -857,19 +857,19 @@ input:
         }
 
         when:
-        def result = handler.getProcessArguments(processDef)
+        def result = handler.getProcessArguments(processDef, session.params)
 
         then:
         result[0] == 'S001'
         result[1] == 8
         result[1] instanceof Integer
-        result[2] instanceof Number
+            result[2] instanceof Number
         (result[2] as Number).floatValue() == 0.75f
         result[3] == Boolean.FALSE
 
     }
 
-    def 'should accept meta map and file path via meta.yml tuple declaration in V1 config' () {
+    def 'should accept meta map and file path via meta.yml tuple declaration in V1 config'() {
         given:
         // Tuple in meta.yml: list-of-list (paramSpec format)
         def script = scriptWithMetaYml('''\
@@ -882,12 +882,12 @@ input:
         def session = Mock(Session) {
             getParams() >> ['meta.id': 'S001', 'meta.name': 'Test', fasta: '/data/genome.fa']
         }
-        def handler = new ProcessEntryHandler(script, session, Mock(ScriptMeta))
+        def handler = new ProcessEntryHandler(script, session, Mock(ScriptMeta) { getLocalProcessNames() >> ['hello'] })
 
         def tupleParam = Mock(TupleInParam) {
             getInner() >> [
                 Mock(ValueInParam) { getName() >> 'meta' },
-                Mock(FileInParam)  { getName() >> 'fasta' }
+                Mock(FileInParam) { getName() >> 'fasta' }
             ]
         }
         def inputs = new InputsList()
@@ -899,7 +899,7 @@ input:
         }
 
         when:
-        def result = handler.getProcessArguments(processDef)
+        def result = handler.getProcessArguments(processDef, session.params)
 
         then:
         result.size() == 1
@@ -910,7 +910,7 @@ input:
         tuple[1].toString().endsWith('genome.fa')
     }
 
-    def 'should handle comma-separated file list with meta.yml file type in V1 config' () {
+    def 'should handle comma-separated file list with meta.yml file type in V1 config'() {
         given:
         def script = scriptWithMetaYml('''\
 input:
@@ -920,7 +920,7 @@ input:
         def session = Mock(Session) {
             getParams() >> [reads: '/data/r1.fastq,/data/r2.fastq,/data/r3.fastq']
         }
-        def handler = new ProcessEntryHandler(script, session, Mock(ScriptMeta))
+        def handler = new ProcessEntryHandler(script, session, Mock(ScriptMeta) { getLocalProcessNames() >> ['hello'] })
 
         def inputs = new InputsList()
         inputs.add(Mock(FileInParam) { getName() >> 'reads' })
@@ -931,7 +931,7 @@ input:
         }
 
         when:
-        def result = handler.getProcessArguments(processDef)
+        def result = handler.getProcessArguments(processDef, session.params)
 
         then:
         result.size() == 1
@@ -943,7 +943,7 @@ input:
         files[2].toString().endsWith('r3.fastq')
     }
 
-    def 'should cast params via old nf-core meta.yml format in V1 config' () {
+    def 'should cast params via old nf-core meta.yml format in V1 config'() {
         given:
         def script = scriptWithMetaYml('''\
 input:
@@ -957,7 +957,7 @@ input:
         def session = Mock(Session) {
             getParams() >> [sampleId: 'S001', threads: '16', ratio: '1.5']
         }
-        def handler = new ProcessEntryHandler(script, session, Mock(ScriptMeta))
+        def handler = new ProcessEntryHandler(script, session, Mock(ScriptMeta) { getLocalProcessNames() >> ['hello'] })
 
         def inputs = new InputsList()
         inputs.addAll([
@@ -972,7 +972,7 @@ input:
         }
 
         when:
-        def result = handler.getProcessArguments(processDef)
+        def result = handler.getProcessArguments(processDef, session.params)
 
         then:
         result[0] == 'S001'
@@ -981,7 +981,7 @@ input:
         (result[2] as Number).floatValue() == 1.5f
     }
 
-    def 'should cast params via meta.yml in V2 config with typed ProcessInput' () {
+    def 'should cast params via meta.yml in V2 config with typed ProcessInput'() {
         given:
         // meta.yml declares integer for threads; ProcessInput also says Integer — both agree
         def script = scriptWithMetaYml('''\
@@ -994,11 +994,11 @@ input:
         def session = Mock(Session) {
             getParams() >> [sampleId: 'S001', threads: '4']
         }
-        def handler = new ProcessEntryHandler(script, session, Mock(ScriptMeta))
+        def handler = new ProcessEntryHandler(script, session, Mock(ScriptMeta) { getLocalProcessNames() >> ['hello'] })
 
         def inputsDef = v2Inputs(
-            new ProcessInput('sampleId', String,  false),
-            new ProcessInput('threads',  Integer, false)
+            new ProcessInput('sampleId', String, false),
+            new ProcessInput('threads', Integer, false)
         )
         def config = Mock(ProcessConfigV2) { getInputs() >> inputsDef }
         def processDef = Mock(ProcessDef) {
@@ -1007,7 +1007,7 @@ input:
         }
 
         when:
-        def result = handler.getProcessArguments(processDef)
+        def result = handler.getProcessArguments(processDef, session.params)
 
         then:
         result[0] == 'S001'
@@ -1015,7 +1015,7 @@ input:
         result[1] instanceof Integer
     }
 
-    def 'should throw when meta.yml type conflicts with provided value in V1 config' () {
+    def 'should throw when meta.yml type conflicts with provided value in V1 config'() {
         given:
         def script = scriptWithMetaYml('''\
 input:
@@ -1025,7 +1025,7 @@ input:
         def session = Mock(Session) {
             getParams() >> [threads: 'not-a-number']
         }
-        def handler = new ProcessEntryHandler(script, session, Mock(ScriptMeta))
+        def handler = new ProcessEntryHandler(script, session, Mock(ScriptMeta) { getLocalProcessNames() >> ['hello'] })
 
         def inputs = new InputsList()
         inputs.add(Mock(ValueInParam) { getName() >> 'threads' })
@@ -1036,7 +1036,7 @@ input:
         }
 
         when:
-        handler.getProcessArguments(processDef)
+        handler.getProcessArguments(processDef, session.params)
 
         then:
         def e = thrown(IllegalArgumentException)
