@@ -595,6 +595,7 @@ class TowerClientTest extends Specification {
 
         def config = new TowerConfig( [accessToken: 'token-1234', workspaceId: '1234'] , SysEnv.get() )
         def towerClient = new TowerClient(session, config)
+        towerClient.env = [TOWER_WORKFLOW_ID: 'wf1234']
         towerClient.commonApi = Mock(TowerCommonApi) {
             getUserInfo(_, _) >> [ id: 'u1234', userName: 'user', email: 'john@acme.com', firstName: 'John', lastName: 'Smith', organization: 'ACME Inc.']
             getUserWorkspaceDetails(_, 'u1234', _, '1234') >> [ orgId: 123, orgName: "ACME Inc.", workspaceId: 1234, workspaceName: "Workspace-Name", workspaceFullName: "Full Workspace Name", roles: ["member"]]

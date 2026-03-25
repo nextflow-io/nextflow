@@ -335,7 +335,11 @@ class TowerClient implements TraceObserverV2 {
             if( workspaceDetails )
                 session.workflowMetadata.platform.workspace = new PlatformMetadata.Workspace(workspaceDetails)
             final queryParams = workspaceId ? [workspaceId: workspaceId.toString()] : [:]
-            final workflowLaunch = getWorkflowLaunchDetails(workflowId, queryParams)
+            // Only fetch launch details when the run was submitted via Platform (TOWER_WORKFLOW_ID is set),
+            // because the launch record only exists on the server side in that case
+            final workflowLaunch = env.get('TOWER_WORKFLOW_ID') ?
+                    getWorkflowLaunchDetails(workflowId, queryParams)
+                    : null
             if( workflowLaunch ) {
                 session.workflowMetadata.platform.computeEnv = workflowLaunch.computeEnv as PlatformMetadata.ComputeEnv
                 session.workflowMetadata.platform.pipeline = workflowLaunch?.pipeline as PlatformMetadata.Pipeline
