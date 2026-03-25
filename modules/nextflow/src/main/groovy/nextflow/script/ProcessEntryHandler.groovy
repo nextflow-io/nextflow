@@ -52,6 +52,7 @@ class ProcessEntryHandler {
     private final BaseScript script
     private final Session session
     private final ScriptMeta meta
+    private Map<String, String> moduleSpecInputTypes
 
     ProcessEntryHandler(BaseScript script, Session session, ScriptMeta meta) {
         this.script = script
@@ -201,20 +202,6 @@ class ProcessEntryHandler {
                 complexParams[entry.key] = entry.value
             }
         }
-
-        // Validate and cast based on meta.yml input types if available
-        final typeMap = loadInputTypesFromMetaYml()
-        if( typeMap != null ) {
-            final keys = new ArrayList(complexParams.keySet())
-            for( final key : keys ) {
-                final name = key.toString()
-                final type = typeMap.get(name) as String
-                if( type != null ) {
-                    complexParams.put(key, validateAndCastParam(name, complexParams.get(key), type))
-                }
-            }
-        }
-
         return complexParams
     }
 
@@ -226,7 +213,10 @@ class ProcessEntryHandler {
      *
      * @return Map of parameter name -> type string, or null if meta.yml is absent or unreadable
      */
-    private Map<String, String> loadInputTypesFromMetaYml() {
+    private Map<String, String> getModuleSpecInputTypes() {
+        if ( this.moduleSpecInputTypes )
+            return this.moduleSpecInputTypes
+
         try {
             final binding = script.getBinding() as ScriptBinding
             if( binding == null ) return null
@@ -235,6 +225,7 @@ class ProcessEntryHandler {
 
             final metaYml = scriptPath.parent.resolve(ModuleStorage.MODULE_MANIFEST_FILE)
             final typeMap = ModuleSpec.loadInputTypes(metaYml)
+            this.moduleSpecInputTypes = typeMap
             return typeMap
         }
         catch( Exception e ) {
@@ -300,21 +291,41 @@ class ProcessEntryHandler {
                     "Parameter '--${name}' expects a boolean value but got type ${value?.class?.simpleName}: '${value}'")
 
             case 'string':
-                if( !(value instanceof CharSequence) )
-                    throw new IllegalArgumentException(
-                        "Parameter '--${name}' expects a string value but got type ${value?.class?.simpleName}: '${value}'.")
-                return value
+                return value.toString()
 
             case 'file':
             case 'directory':
+                if( value instanceof Path || value instanceof List<Path> ){
+                    return value
+                }
                 if( !(value instanceof CharSequence) )
                     throw new IllegalArgumentException(
                         "Parameter '--${name}' expects a file/directory path but got type ${value?.class?.simpleName}: '${value}'.")
-                return value
+                return parseFileInput(value.toString())
 
             default:
-                log.debug "Unknown spec type '${type}' for parameter '--${name}' — skipping cast"
+                log.debug "Unknown spec type '${type}' for parameter '--${name}' - skipping cast"
                 return value
+        }
+    }
+
+    /**
+     * Validate and cast parameters based on the module spec (meta.yml) input types if available
+     *
+     * @param params Parameters to validate
+     */
+    private void updateParamsWithModuleSpecTypes(Map params){
+
+        final typeMap = getModuleSpecInputTypes()
+        if( typeMap != null ) {
+            final keys = new ArrayList(params.keySet())
+            for( final key : keys ) {
+                final name = key.toString()
+                final type = typeMap.get(name) as String
+                if( type != null ) {
+                    params.put(key, validateAndCastParam(name, params.get(key), type))
+                }
+            }
         }
     }
 
@@ -327,6 +338,7 @@ class ProcessEntryHandler {
 
         // Parse complex parameters from session.params (handles dot notation)
         final complexParams = parseComplexParameters(session.params)
+        updateParamsWithModuleSpecTypes(complexParams)
         log.debug "Complex parameters: ${complexParams}"
 
         // Map declared inputs to command-line arguments
@@ -401,6 +413,9 @@ class ProcessEntryHandler {
 
         switch( param ) {
             case FileInParam:
+                if( paramValue instanceof Path || paramValue instanceof List<Path> ){
+                    return paramValue
+                }
                 return parseFileInput(paramValue.toString())
 
             case EnvInParam:
@@ -439,6 +454,11 @@ class ProcessEntryHandler {
             return Nextflow.file(str)
         }
 
+        if( type == List<Path> ) {
+            final parsedFiles = parseFileInput(str)
+            return parsedFiles instanceof Path ? [ parsedFiles ] as List<Path> : parsedFiles
+        }
+
         return value
     }
 
@@ -450,7 +470,7 @@ class ProcessEntryHandler {
      * @param fileInput String representation of file path(s)
      * @return Single file object or List of file objects
      */
-    protected Object parseFileInput(String fileInput) {
+    protected static Object parseFileInput(String fileInput) {
         if (fileInput.contains(',')) {
             // Split by comma, trim whitespace, and convert each to a file
             return fileInput.tokenize(',')

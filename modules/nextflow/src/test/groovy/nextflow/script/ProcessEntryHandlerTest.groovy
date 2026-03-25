@@ -16,12 +16,16 @@
 
 package nextflow.script
 
+import nextflow.script.params.InputsList
+
+import java.nio.file.Files
 import java.nio.file.Path
 import nextflow.Session
 import nextflow.script.params.FileInParam
-import nextflow.script.params.InParam
 import nextflow.script.params.TupleInParam
 import nextflow.script.params.ValueInParam
+import nextflow.script.params.v2.ProcessInput
+import nextflow.script.params.v2.ProcessInputsDef
 import spock.lang.Specification
 
 /**
@@ -337,18 +341,10 @@ class ProcessEntryHandlerTest extends Specification {
         ProcessEntryHandler.validateAndCastParam('name', 'hello', 'string') == 'hello'
     }
 
-    def 'validateAndCastParam should throw for string type when value is a map' () {
-        when:
-        ProcessEntryHandler.validateAndCastParam('name', [a: 1], 'string')
-
-        then:
-        thrown(IllegalArgumentException)
-    }
-
     def 'validateAndCastParam should pass through path string for file and directory types' () {
         expect:
-        ProcessEntryHandler.validateAndCastParam('reads', '/path/to/file.txt', 'file') == '/path/to/file.txt'
-        ProcessEntryHandler.validateAndCastParam('outdir', '/results', 'directory') == '/results'
+        ProcessEntryHandler.validateAndCastParam('reads', '/path/to/file.txt', 'file') == Path.of('/path/to/file.txt')
+        ProcessEntryHandler.validateAndCastParam('outdir', '/results', 'directory') == Path.of('/results')
     }
 
     def 'validateAndCastParam should throw for file type when value is a map' () {
@@ -382,5 +378,650 @@ class ProcessEntryHandlerTest extends Specification {
         ' /path/to/file1.txt , /path/to/file2.txt , /path/to/file3.txt '  | [Path.of('/path/to/file1.txt'), Path.of('/path/to/file2.txt'), Path.of('/path/to/file3.txt')]
         '/path/to/file1.txt,,/path/to/file2.txt, ,/path/to/file3.txt'     | [Path.of('/path/to/file1.txt'), Path.of('/path/to/file2.txt'), Path.of('/path/to/file3.txt')]
         'file1.txt,file2.txt'                                             | [Path.of('file1.txt').toAbsolutePath(), Path.of('file2.txt').toAbsolutePath()]
+    }
+
+    // --- getProcessArguments: V1 config ---
+
+    def 'should get process arguments for V1 config with simple val inputs' () {
+        given:
+        def session = Mock(Session) {
+            getParams() >> [sampleId: 'S001', threads: '4']
+        }
+        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta))
+
+        def inputs = new InputsList()
+        inputs.addAll([
+            Mock(ValueInParam) { getName() >> 'sampleId' },
+            Mock(ValueInParam) { getName() >> 'threads' }
+        ])
+        def config = Mock(ProcessConfigV1) { getInputs() >> inputs }
+        def processDef = Mock(ProcessDef) {
+            getProcessConfig() >> config
+            getName() >> 'myProcess'
+        }
+
+        when:
+        def result = handler.getProcessArguments(processDef)
+
+        then:
+        result == ['S001', '4']
+    }
+
+    def 'should get process arguments for V1 config with file input' () {
+        given:
+        def session = Mock(Session) {
+            getParams() >> [reads: '/data/sample.fastq']
+        }
+        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta))
+
+        def inputs = new InputsList()
+        inputs.add(Mock(FileInParam) { getName() >> 'reads' })
+        def config = Mock(ProcessConfigV1) { getInputs() >> inputs }
+        def processDef = Mock(ProcessDef) {
+            getProcessConfig() >> config
+            getName() >> 'myProcess'
+        }
+
+        when:
+        def result = handler.getProcessArguments(processDef)
+
+        then:
+        result.size() == 1
+        result[0] instanceof Path
+        result[0].toString().endsWith('sample.fastq')
+    }
+
+    def 'should get process arguments for V1 config with comma-separated file list' () {
+        given:
+        def session = Mock(Session) {
+            getParams() >> [reads: '/data/r1.fastq,/data/r2.fastq']
+        }
+        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta))
+
+        def inputs = new InputsList()
+        inputs.add(Mock(FileInParam) { getName() >> 'reads' })
+        def config = Mock(ProcessConfigV1) { getInputs() >> inputs }
+        def processDef = Mock(ProcessDef) {
+            getProcessConfig() >> config
+            getName() >> 'myProcess'
+        }
+
+        when:
+        def result = handler.getProcessArguments(processDef)
+
+        then:
+        result.size() == 1
+        result[0] instanceof List
+        def files = result[0] as List
+        files.size() == 2
+        files[0] instanceof Path
+        files[0].toString().endsWith('r1.fastq')
+        files[1] instanceof Path
+        files[1].toString().endsWith('r2.fastq')
+    }
+
+    def 'should get process arguments for V1 config with map parameter from dot notation' () {
+        given:
+        def session = Mock(Session) {
+            getParams() >> ['meta.id': 'S001', 'meta.name': 'Test']
+        }
+        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta))
+
+        def inputs = new InputsList()
+        inputs.add(Mock(ValueInParam) { getName() >> 'meta' })
+
+        def config = Mock(ProcessConfigV1) { getInputs() >> inputs }
+        def processDef = Mock(ProcessDef) {
+            getProcessConfig() >> config
+            getName() >> 'myProcess'
+        }
+
+        when:
+        def result = handler.getProcessArguments(processDef)
+
+        then:
+        result.size() == 1
+        result[0] instanceof Map
+        (result[0] as Map).id == 'S001'
+        (result[0] as Map).name == 'Test'
+    }
+
+    def 'should get process arguments for V1 config with tuple input (val + path)' () {
+        given:
+        def session = Mock(Session) {
+            getParams() >> ['meta.id': 'S001', 'meta.name': 'Test', fasta: '/data/genome.fa']
+        }
+        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta))
+
+        def tupleParam = Mock(TupleInParam) {
+            getInner() >> [
+                Mock(ValueInParam) { getName() >> 'meta' },
+                Mock(FileInParam)  { getName() >> 'fasta' }
+            ]
+        }
+        def inputs = new InputsList()
+        inputs.add(tupleParam)
+        def config = Mock(ProcessConfigV1) { getInputs() >> inputs }
+        def processDef = Mock(ProcessDef) {
+            getProcessConfig() >> config
+            getName() >> 'myProcess'
+        }
+
+        when:
+        def result = handler.getProcessArguments(processDef)
+
+        then:
+        result.size() == 1
+        result[0] instanceof List
+        def tuple = result[0] as List
+        tuple.size() == 2
+        tuple[0] instanceof Map
+        (tuple[0] as Map).id == 'S001'
+        (tuple[0] as Map).name == 'Test'
+        tuple[1] instanceof Path
+        tuple[1].toString().endsWith('genome.fa')
+    }
+
+    def 'should return empty list for V1 config with no inputs' () {
+        given:
+        def session = Mock(Session) { getParams() >> [:] }
+        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta))
+
+        def config = Mock(ProcessConfigV1) { getInputs() >> new InputsList() }
+        def processDef = Mock(ProcessDef) {
+            getProcessConfig() >> config
+            getName() >> 'myProcess'
+        }
+
+        when:
+        def result = handler.getProcessArguments(processDef)
+
+        then:
+        result == []
+    }
+
+    // --- getProcessArguments: V2 config ---
+
+    private static ProcessInputsDef v2Inputs(ProcessInput... inputs) {
+        def def_ = new ProcessInputsDef()
+        inputs.each { def_.params.add(it) }
+        return def_
+    }
+
+    def 'should get process arguments for V2 config with String input' () {
+        given:
+        def session = Mock(Session) {
+            getParams() >> [sampleId: 'S001']
+        }
+        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta))
+
+        def inputsDef = v2Inputs(new ProcessInput('sampleId', String, false))
+        def config = Mock(ProcessConfigV2) { getInputs() >> inputsDef }
+        def processDef = Mock(ProcessDef) {
+            getProcessConfig() >> config
+            getName() >> 'myProcess'
+        }
+
+        when:
+        def result = handler.getProcessArguments(processDef)
+
+        then:
+        result == ['S001']
+    }
+
+    def 'should get process arguments for V2 config with integer type casting from string' () {
+        given:
+        def session = Mock(Session) {
+            getParams() >> [threads: '8']
+        }
+        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta))
+
+        def inputsDef = v2Inputs(new ProcessInput('threads', Integer, false))
+        def config = Mock(ProcessConfigV2) { getInputs() >> inputsDef }
+        def processDef = Mock(ProcessDef) {
+            getProcessConfig() >> config
+            getName() >> 'myProcess'
+        }
+
+        when:
+        def result = handler.getProcessArguments(processDef)
+
+        then:
+        result == [8]
+        result[0] instanceof Integer
+    }
+
+    def 'should get process arguments for V2 config with float type casting from string' () {
+        given:
+        def session = Mock(Session) {
+            getParams() >> [ratio: '0.75']
+        }
+        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta))
+
+        def inputsDef = v2Inputs(new ProcessInput('ratio', Float, false))
+        def config = Mock(ProcessConfigV2) { getInputs() >> inputsDef }
+        def processDef = Mock(ProcessDef) {
+            getProcessConfig() >> config
+            getName() >> 'myProcess'
+        }
+
+        when:
+        def result = handler.getProcessArguments(processDef)
+
+        then:
+        result.size() == 1
+        result[0] instanceof Number
+        (result[0] as Number).floatValue() == 0.75f
+    }
+
+    def 'should get process arguments for V2 config with boolean type casting from string' () {
+        given:
+        def session = Mock(Session) {
+            getParams() >> [flag: 'true']
+        }
+        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta))
+
+        def inputsDef = v2Inputs(new ProcessInput('flag', Boolean, false))
+        def config = Mock(ProcessConfigV2) { getInputs() >> inputsDef }
+        def processDef = Mock(ProcessDef) {
+            getProcessConfig() >> config
+            getName() >> 'myProcess'
+        }
+
+        when:
+        def result = handler.getProcessArguments(processDef)
+
+        then:
+        result == [Boolean.TRUE]
+    }
+
+    def 'should get process arguments for V2 config with Path input' () {
+        given:
+        def session = Mock(Session) {
+            getParams() >> [reads: '/data/sample.fastq']
+        }
+        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta))
+
+        def inputsDef = v2Inputs(new ProcessInput('reads', Path, false))
+        def config = Mock(ProcessConfigV2) { getInputs() >> inputsDef }
+        def processDef = Mock(ProcessDef) {
+            getProcessConfig() >> config
+            getName() >> 'myProcess'
+        }
+
+        when:
+        def result = handler.getProcessArguments(processDef)
+
+        then:
+        result.size() == 1
+        result[0] instanceof Path
+        result[0].toString().endsWith('sample.fastq')
+    }
+
+    def 'should get process arguments for V2 config with comma-separated file list' () {
+        given:
+        def session = Mock(Session) {
+            getParams() >> [reads: '/data/r1.fastq,/data/r2.fastq,/data/r3.fastq']
+        }
+        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta))
+
+        def inputsDef = v2Inputs(new ProcessInput('reads', List<Path>, false))
+        def config = Mock(ProcessConfigV2) { getInputs() >> inputsDef }
+        def processDef = Mock(ProcessDef) {
+            getProcessConfig() >> config
+            getName() >> 'myProcess'
+        }
+
+        when:
+        def result = handler.getProcessArguments(processDef)
+
+        then:
+        result.size() == 1
+        result[0] instanceof List
+        def files = result[0] as List
+        files.size() == 3
+        files[0].toString().endsWith('r1.fastq')
+        files[1].toString().endsWith('r2.fastq')
+        files[2].toString().endsWith('r3.fastq')
+    }
+
+    def 'should get process arguments for V2 config with map from dot notation' () {
+        given:
+        def session = Mock(Session) {
+            getParams() >> ['meta.id': 'S001', 'meta.name': 'Test', 'meta.paired': 'true']
+        }
+        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta))
+
+        def inputsDef = v2Inputs(new ProcessInput('meta', Map, false))
+        def config = Mock(ProcessConfigV2) { getInputs() >> inputsDef }
+        def processDef = Mock(ProcessDef) {
+            getProcessConfig() >> config
+            getName() >> 'myProcess'
+        }
+
+        when:
+        def result = handler.getProcessArguments(processDef)
+
+        then:
+        result.size() == 1
+        result[0] instanceof Map
+        (result[0] as Map).id == 'S001'
+        (result[0] as Map).name == 'Test'
+        (result[0] as Map).paired == 'true'
+    }
+
+    def 'should get process arguments for V2 config with tuple (val map + path)' () {
+        given:
+        def session = Mock(Session) {
+            getParams() >> ['meta.id': 'S001', 'meta.name': 'Test', fasta: '/data/genome.fa']
+        }
+        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta))
+
+        def tupleComponents = [
+            new ProcessInput('meta', Map, false),
+            new ProcessInput('fasta', Path, false)
+        ]
+        def inputsDef = new ProcessInputsDef()
+        inputsDef.addTupleParam(tupleComponents, List)
+        def config = Mock(ProcessConfigV2) { getInputs() >> inputsDef }
+        def processDef = Mock(ProcessDef) {
+            getProcessConfig() >> config
+            getName() >> 'myProcess'
+        }
+
+        when:
+        def result = handler.getProcessArguments(processDef)
+
+        then:
+        result.size() == 1
+        result[0] instanceof List
+        def tuple = result[0] as List
+        tuple.size() == 2
+        tuple[0] instanceof Map
+        (tuple[0] as Map).id == 'S001'
+        (tuple[0] as Map).name == 'Test'
+        tuple[1] instanceof Path
+        tuple[1].toString().endsWith('genome.fa')
+    }
+
+    def 'should get process arguments for V2 config with multiple mixed inputs' () {
+        given:
+        def session = Mock(Session) {
+            getParams() >> ['meta.id': 'S001', reads: '/data/r1.fastq', threads: '4']
+        }
+        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta))
+
+        def inputsDef = v2Inputs(
+            new ProcessInput('meta',    Map,     false),
+            new ProcessInput('reads',   Path,    false),
+            new ProcessInput('threads', Integer, false)
+        )
+        def config = Mock(ProcessConfigV2) { getInputs() >> inputsDef }
+        def processDef = Mock(ProcessDef) {
+            getProcessConfig() >> config
+            getName() >> 'myProcess'
+        }
+
+        when:
+        def result = handler.getProcessArguments(processDef)
+
+        then:
+        result.size() == 3
+        (result[0] as Map).id == 'S001'
+        result[1] instanceof Path
+        result[1].toString().endsWith('r1.fastq')
+        result[2] == 4
+    }
+
+    def 'should return empty list for V2 config with no inputs' () {
+        given:
+        def session = Mock(Session) { getParams() >> [:] }
+        def handler = new ProcessEntryHandler(Mock(BaseScript), session, Mock(ScriptMeta))
+
+        def config = Mock(ProcessConfigV2) { getInputs() >> new ProcessInputsDef() }
+        def processDef = Mock(ProcessDef) {
+            getProcessConfig() >> config
+            getName() >> 'myProcess'
+        }
+
+        when:
+        def result = handler.getProcessArguments(processDef)
+
+        then:
+        result == []
+    }
+
+    // --- getProcessArguments with meta.yml type casting ---
+
+    /**
+     * Creates a mock BaseScript whose binding points to a fake main.nf in a temp dir
+     * that also contains meta.yml with the given YAML content.
+     */
+    private BaseScript scriptWithMetaYml(String yamlContent) {
+        def tmpDir = Files.createTempDirectory('nxf-test-meta-')
+        tmpDir.toFile().deleteOnExit()
+        Files.write(tmpDir.resolve('meta.yml'), yamlContent.bytes)
+        def scriptPath = tmpDir.resolve('main.nf')
+        Files.write(scriptPath, ''.bytes)
+        def binding = Mock(ScriptBinding) { getScriptPath() >> scriptPath }
+        return Mock(BaseScript) { getBinding() >> binding }
+    }
+
+    def 'should cast integer, float and boolean params via meta.yml in V1 config' () {
+        given:
+        def script = scriptWithMetaYml('''\
+input:
+  - name: sampleId
+    type: string
+  - name: threads
+    type: integer
+  - name: ratio
+    type: float
+  - name: paired
+    type: boolean
+''')
+        def session = Mock(Session) {
+            getParams() >> [sampleId: 'S001', threads: '8', ratio: '0.75', 'paired': 'false']
+        }
+        def handler = new ProcessEntryHandler(script, session, Mock(ScriptMeta))
+
+        def inputs = new InputsList()
+        inputs.addAll([
+            Mock(ValueInParam) { getName() >> 'sampleId' },
+            Mock(ValueInParam) { getName() >> 'threads' },
+            Mock(ValueInParam) { getName() >> 'ratio' },
+            Mock(ValueInParam) { getName() >> 'paired' }
+        ])
+        def config = Mock(ProcessConfigV1) { getInputs() >> inputs }
+        def processDef = Mock(ProcessDef) {
+            getProcessConfig() >> config
+            getName() >> 'myProcess'
+        }
+
+        when:
+        def result = handler.getProcessArguments(processDef)
+
+        then:
+        result[0] == 'S001'
+        result[1] == 8
+        result[1] instanceof Integer
+        result[2] instanceof Number
+        (result[2] as Number).floatValue() == 0.75f
+        result[3] == Boolean.FALSE
+
+    }
+
+    def 'should accept meta map and file path via meta.yml tuple declaration in V1 config' () {
+        given:
+        // Tuple in meta.yml: list-of-list (paramSpec format)
+        def script = scriptWithMetaYml('''\
+input:
+  - - name: meta
+      type: map
+    - name: fasta
+      type: file
+''')
+        def session = Mock(Session) {
+            getParams() >> ['meta.id': 'S001', 'meta.name': 'Test', fasta: '/data/genome.fa']
+        }
+        def handler = new ProcessEntryHandler(script, session, Mock(ScriptMeta))
+
+        def tupleParam = Mock(TupleInParam) {
+            getInner() >> [
+                Mock(ValueInParam) { getName() >> 'meta' },
+                Mock(FileInParam)  { getName() >> 'fasta' }
+            ]
+        }
+        def inputs = new InputsList()
+        inputs.add(tupleParam)
+        def config = Mock(ProcessConfigV1) { getInputs() >> inputs }
+        def processDef = Mock(ProcessDef) {
+            getProcessConfig() >> config
+            getName() >> 'myProcess'
+        }
+
+        when:
+        def result = handler.getProcessArguments(processDef)
+
+        then:
+        result.size() == 1
+        def tuple = result[0] as List
+        tuple[0] instanceof Map
+        (tuple[0] as Map).id == 'S001'
+        (tuple[0] as Map).name == 'Test'
+        tuple[1].toString().endsWith('genome.fa')
+    }
+
+    def 'should handle comma-separated file list with meta.yml file type in V1 config' () {
+        given:
+        def script = scriptWithMetaYml('''\
+input:
+  - name: reads
+    type: file
+''')
+        def session = Mock(Session) {
+            getParams() >> [reads: '/data/r1.fastq,/data/r2.fastq,/data/r3.fastq']
+        }
+        def handler = new ProcessEntryHandler(script, session, Mock(ScriptMeta))
+
+        def inputs = new InputsList()
+        inputs.add(Mock(FileInParam) { getName() >> 'reads' })
+        def config = Mock(ProcessConfigV1) { getInputs() >> inputs }
+        def processDef = Mock(ProcessDef) {
+            getProcessConfig() >> config
+            getName() >> 'myProcess'
+        }
+
+        when:
+        def result = handler.getProcessArguments(processDef)
+
+        then:
+        result.size() == 1
+        result[0] instanceof List<Path>
+        def files = result[0] as List
+        files.size() == 3
+        files[0].toString().endsWith('r1.fastq')
+        files[1].toString().endsWith('r2.fastq')
+        files[2].toString().endsWith('r3.fastq')
+    }
+
+    def 'should cast params via old nf-core meta.yml format in V1 config' () {
+        given:
+        def script = scriptWithMetaYml('''\
+input:
+  - sampleId:
+      type: string
+  - threads:
+      type: integer
+  - ratio:
+      type: float
+''')
+        def session = Mock(Session) {
+            getParams() >> [sampleId: 'S001', threads: '16', ratio: '1.5']
+        }
+        def handler = new ProcessEntryHandler(script, session, Mock(ScriptMeta))
+
+        def inputs = new InputsList()
+        inputs.addAll([
+            Mock(ValueInParam) { getName() >> 'sampleId' },
+            Mock(ValueInParam) { getName() >> 'threads' },
+            Mock(ValueInParam) { getName() >> 'ratio' }
+        ])
+        def config = Mock(ProcessConfigV1) { getInputs() >> inputs }
+        def processDef = Mock(ProcessDef) {
+            getProcessConfig() >> config
+            getName() >> 'myProcess'
+        }
+
+        when:
+        def result = handler.getProcessArguments(processDef)
+
+        then:
+        result[0] == 'S001'
+        result[1] == 16
+        result[1] instanceof Integer
+        (result[2] as Number).floatValue() == 1.5f
+    }
+
+    def 'should cast params via meta.yml in V2 config with typed ProcessInput' () {
+        given:
+        // meta.yml declares integer for threads; ProcessInput also says Integer — both agree
+        def script = scriptWithMetaYml('''\
+input:
+  - name: sampleId
+    type: string
+  - name: threads
+    type: integer
+''')
+        def session = Mock(Session) {
+            getParams() >> [sampleId: 'S001', threads: '4']
+        }
+        def handler = new ProcessEntryHandler(script, session, Mock(ScriptMeta))
+
+        def inputsDef = v2Inputs(
+            new ProcessInput('sampleId', String,  false),
+            new ProcessInput('threads',  Integer, false)
+        )
+        def config = Mock(ProcessConfigV2) { getInputs() >> inputsDef }
+        def processDef = Mock(ProcessDef) {
+            getProcessConfig() >> config
+            getName() >> 'myProcess'
+        }
+
+        when:
+        def result = handler.getProcessArguments(processDef)
+
+        then:
+        result[0] == 'S001'
+        result[1] == 4
+        result[1] instanceof Integer
+    }
+
+    def 'should throw when meta.yml type conflicts with provided value in V1 config' () {
+        given:
+        def script = scriptWithMetaYml('''\
+input:
+  - name: threads
+    type: integer
+''')
+        def session = Mock(Session) {
+            getParams() >> [threads: 'not-a-number']
+        }
+        def handler = new ProcessEntryHandler(script, session, Mock(ScriptMeta))
+
+        def inputs = new InputsList()
+        inputs.add(Mock(ValueInParam) { getName() >> 'threads' })
+        def config = Mock(ProcessConfigV1) { getInputs() >> inputs }
+        def processDef = Mock(ProcessDef) {
+            getProcessConfig() >> config
+            getName() >> 'myProcess'
+        }
+
+        when:
+        handler.getProcessArguments(processDef)
+
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains('--threads')
     }
 }
