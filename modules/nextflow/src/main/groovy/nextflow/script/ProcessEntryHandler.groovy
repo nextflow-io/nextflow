@@ -240,15 +240,14 @@ class ProcessEntryHandler {
     private Map<String, Class> getModuleSpecInputTypes() {
         try {
             final scriptPath = script.getBinding().getScriptPath()
-            if( scriptPath == null ) 
-                return null
-            final specPath = scriptPath.resolveSibling(ModuleStorage.MODULE_MANIFEST_FILE)
-            return ModuleSpec.loadInputTypes(specPath)
+            final specPath = scriptPath?.resolveSibling(ModuleStorage.MODULE_MANIFEST_FILE)
+            if( specPath )
+                return ModuleSpec.loadInputTypes(specPath)
         }
         catch( Exception e ) {
             log.debug "Could not load input types from module spec: ${e.message}"
-            return null
         }
+        return Collections.emptyMap()
     }
 
     /**

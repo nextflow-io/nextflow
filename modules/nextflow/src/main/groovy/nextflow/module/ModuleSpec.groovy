@@ -83,7 +83,7 @@ class ModuleSpec {
      */
     static Map<String, Class> loadInputTypes(Path path) {
         if( !Files.exists(path) )
-            return null
+            return Collections.emptyMap()
 
         Map<String, Object> data
         try( final stream = Files.newInputStream(path) ) {
@@ -91,19 +91,18 @@ class ModuleSpec {
         }
         catch( Exception e ) {
             log.warn "Failed to parse module spec at ${path}: ${e.message}"
-            return null
+            return Collections.emptyMap()
         }
 
         final inputSection = data?.get('input') as List
         if( !inputSection )
-            return null
+            return Collections.emptyMap()
 
         final Map<String, Class> inputTypes = new LinkedHashMap<>()
-        for( final item : inputSection ) {
+        for( final item : inputSection )
             extractInputTypes(item, inputTypes)
-        }
 
-        return inputTypes.isEmpty() ? null : inputTypes
+        return inputTypes
     }
 
     /**

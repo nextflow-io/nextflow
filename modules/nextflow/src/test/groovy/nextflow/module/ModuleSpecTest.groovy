@@ -133,12 +133,12 @@ requires:
         '1.0.0.0'       | false
     }
 
-    def 'should return null from loadInputTypes when file does not exist' () {
+    def 'should return empty input types when file does not exist' () {
         expect:
-        ModuleSpec.loadInputTypes(tempDir.resolve('nonexistent.yml')) == null
+        ModuleSpec.loadInputTypes(tempDir.resolve('nonexistent.yml')) == [:]
     }
 
-    def 'should return null from loadInputTypes when no input section' () {
+    def 'should return empty input types when no input section' () {
         given:
         def metaYaml = tempDir.resolve('meta.yml')
         metaYaml.text = '''\
@@ -146,7 +146,7 @@ requires:
             description: FastQC quality control
             '''.stripIndent()
         expect:
-        ModuleSpec.loadInputTypes(metaYaml) == null
+        ModuleSpec.loadInputTypes(metaYaml) == [:]
     }
 
     def 'should load input types in new module spec format' () {
@@ -197,13 +197,13 @@ requires:
         types == [meta: Map, reads: Path, index: Path]
     }
 
-    def 'should return null from loadInputTypes for malformed YAML' () {
+    def 'should return empty input types for malformed YAML' () {
         given:
         def metaYaml = tempDir.resolve('meta.yml')
         metaYaml.text = ': invalid: yaml: {'
 
         expect:
-        ModuleSpec.loadInputTypes(metaYaml) == null
+        ModuleSpec.loadInputTypes(metaYaml) == [:]
     }
 
     def 'should validate module name format' () {
