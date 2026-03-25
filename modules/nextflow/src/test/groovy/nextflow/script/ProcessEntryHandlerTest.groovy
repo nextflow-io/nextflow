@@ -100,6 +100,25 @@ class ProcessEntryHandlerTest extends Specification {
         result.dataFile == '/path/to/data.txt'
     }
 
+    def 'should handle dotted key overwriting plain value' () {
+        given:
+        def session = Mock(Session)
+        def script = Mock(BaseScript)
+        def meta = Mock(ScriptMeta)
+        def handler = new ProcessEntryHandler(script, session, meta)
+
+        when:
+        'both --foo bar and --foo.id 1 are passed, the dotted key wins'
+        def result = handler.parseComplexParameters([
+            'foo': 'bar',
+            'foo.id': '1'
+        ])
+
+        then:
+        result.foo instanceof Map
+        result.foo.id == '1'
+    }
+
     def 'should get value for val input type' () {
         given:
         def session = Mock(Session)

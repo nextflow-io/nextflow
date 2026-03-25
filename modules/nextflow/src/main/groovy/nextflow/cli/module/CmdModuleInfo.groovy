@@ -274,8 +274,7 @@ class CmdModuleInfo extends CmdBase {
     private static String buildModuleUrl(String registryUrl, ModuleReference reference, String version) {
         // Strip /api suffix to get the base UI URL
         def baseUrl = registryUrl.endsWith('/api') ? registryUrl[0..-5] : registryUrl
-        def encodedName = URLEncoder.encode(reference.name, 'UTF-8')
-        return "${baseUrl}/admin/modules/${reference.scope}/${encodedName}@${version}"
+        return "${baseUrl}/modules/${reference.fullName}@${version}"
     }
 
     private void printJsonInfo(ModuleReference reference, ModuleRelease release, String moduleUrl) {
