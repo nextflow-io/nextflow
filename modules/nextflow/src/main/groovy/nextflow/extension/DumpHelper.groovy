@@ -55,7 +55,7 @@ class DumpHelper {
         if( value == null ) {
             return nullValue
         }
-        return value.toString()
+        return value
     }
 
     /**

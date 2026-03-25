@@ -110,7 +110,9 @@ class ProcessEntryHandlerTest extends Specification {
         given:
         def session = Mock(Session)
         def script = Mock(BaseScript)
-        def meta = Mock(ScriptMeta)
+        def meta = Mock(ScriptMeta) {
+            getLocalProcessNames() >> [ 'hello' ]
+        }
         def handler = new ProcessEntryHandler(script, session, meta)
 
         when:

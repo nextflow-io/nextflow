@@ -324,6 +324,9 @@ class CmdRun extends CmdBase implements HubOptions {
         if( offline && latest )
             throw new AbortOperationException("Command line options `-latest` and `-offline` cannot be specified at the same time")
 
+        if( outputFormat !in ['json', 'text'] )
+            throw new AbortOperationException("Command line option `-output-format` should be either `json` or `text`")
+
         checkRunName()
 
         printBanner()
