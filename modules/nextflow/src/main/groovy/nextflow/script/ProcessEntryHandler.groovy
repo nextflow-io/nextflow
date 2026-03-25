@@ -180,21 +180,19 @@ class ProcessEntryHandler {
     private Map parseComplexParameters(Map params) {
         Map complexParams = [:]
 
-        params.each { key, value ->
-            def parts = key.toString().split('\\.')
+        for( final entry : params.entrySet() ) {
+            final parts = entry.key.toString().split('\\.')
             if( parts.length > 1 ) {
-                // Handle dot notation - build nested map
-                def current = complexParams
+                Map current = complexParams
                 for( int i = 0; i < parts.length - 1; i++ ) {
-                    if( !current.containsKey(parts[i]) ) {
+                    if( current[parts[i]] !instanceof Map ) {
                         current[parts[i]] = [:]
                     }
-                    current = current[parts[i]]
+                    current = (Map) current[parts[i]]
                 }
-                current[parts[-1]] = value
+                current[parts[-1]] = entry.value
             } else {
-                // Simple parameter
-                complexParams[key] = value
+                complexParams[entry.key] = entry.value
             }
         }
 
