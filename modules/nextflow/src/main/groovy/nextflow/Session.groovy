@@ -150,6 +150,11 @@ class Session implements ISession {
     Path outputDir
 
     /**
+     * Output format for workflow outputs
+     */
+    String outputFormat
+
+    /**
      * The folder where tasks temporary files are stored
      */
     Path workDir
@@ -409,6 +414,7 @@ class Session implements ISession {
 
         // -- init output dir
         this.outputDir = FileHelper.toCanonicalPath(config.outputDir ?: 'results')
+        this.outputFormat = config.outputFormat
 
         // -- init work dir
         this.workDir = FileHelper.toCanonicalPath(config.workDir ?: 'work')
