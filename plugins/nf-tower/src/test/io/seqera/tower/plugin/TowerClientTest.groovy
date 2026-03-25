@@ -595,6 +595,7 @@ class TowerClientTest extends Specification {
 
         def config = new TowerConfig( [accessToken: 'token-1234', workspaceId: '1234'] , SysEnv.get() )
         def towerClient = new TowerClient(session, config)
+        towerClient.env = [TOWER_WORKFLOW_ID: 'wf1234']
         towerClient.commonApi = Mock(TowerCommonApi) {
             getUserInfo(_, _) >> [ id: 'u1234', userName: 'user', email: 'john@acme.com', firstName: 'John', lastName: 'Smith', organization: 'ACME Inc.']
             getUserWorkspaceDetails(_, 'u1234', _, '1234') >> [ orgId: 123, orgName: "ACME Inc.", workspaceId: 1234, workspaceName: "Workspace-Name", workspaceFullName: "Full Workspace Name", roles: ["member"]]
@@ -612,6 +613,52 @@ class TowerClientTest extends Specification {
         metadata.platform.workspace.id == '1234'
         metadata.platform.workspace.name == "Workspace-Name"
         metadata.platform.workspace.organization == "ACME Inc."
+        metadata.platform.pipeline.id == 'pipe1234'
+        metadata.platform.pipeline.name == 'test-pipeline'
+        metadata.platform.pipeline.revision == 'v1.1'
+        metadata.platform.pipeline.commitId == 'abcd12345'
+    }
+
+    def 'should apply platform metadata from trace create response'() {
+        given:
+        def metadata = new WorkflowMetadata()
+        def session = Mock(Session) {
+            getWorkflowMetadata() >> metadata
+        }
+        def config = new TowerConfig([accessToken: 'token-1234', workspaceId: '1234'], SysEnv.get())
+        def towerClient = new TowerClient(session, config)
+
+        def responseMetadata = [
+            userId: 39,
+            userName: 'user',
+            userOrganization: 'ACME Inc.',
+            workspaceId: 1234,
+            workspaceName: 'Workspace-Name',
+            workspaceFullName: 'Full Workspace Name',
+            orgName: 'ACME Inc.',
+            computeEnvId: 'ce1234',
+            computeEnvName: 'ce-test',
+            computeEnvPlatform: 'aws-batch',
+            pipelineName: 'test-pipeline',
+            pipelineId: 'pipe1234',
+            revision: 'v1.1',
+            commitId: 'abcd12345'
+        ]
+
+        when:
+        towerClient.applyPlatformMetadata(responseMetadata)
+
+        then:
+        metadata.platform.user.id == '39'
+        metadata.platform.user.userName == 'user'
+        metadata.platform.user.organization == 'ACME Inc.'
+        metadata.platform.workspace.id == '1234'
+        metadata.platform.workspace.name == 'Workspace-Name'
+        metadata.platform.workspace.fullName == 'Full Workspace Name'
+        metadata.platform.workspace.organization == 'ACME Inc.'
+        metadata.platform.computeEnv.id == 'ce1234'
+        metadata.platform.computeEnv.name == 'ce-test'
+        metadata.platform.computeEnv.platform == 'aws-batch'
         metadata.platform.pipeline.id == 'pipe1234'
         metadata.platform.pipeline.name == 'test-pipeline'
         metadata.platform.pipeline.revision == 'v1.1'

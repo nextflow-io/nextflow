@@ -314,7 +314,12 @@ class TowerClient implements TraceObserverV2 {
         session.workflowMetadata.platform.workflowUrl = watchUrl
         if( ret.message )
             log.warn(ret.message.toString())
-        addPlatformMetadata(workflowId)
+        // populate platform metadata from the create response if available (Platform 26.04+),
+        // otherwise fall back to separate API calls for older Platform versions
+        if( ret.metadata )
+            applyPlatformMetadata(ret.metadata as Map)
+        else
+            addPlatformMetadata(workflowId)
 
         // Prepare to collect report paths if tower configuration has a 'reports' section
         reports.flowCreate(workflowId)
@@ -335,7 +340,11 @@ class TowerClient implements TraceObserverV2 {
             if( workspaceDetails )
                 session.workflowMetadata.platform.workspace = new PlatformMetadata.Workspace(workspaceDetails)
             final queryParams = workspaceId ? [workspaceId: workspaceId.toString()] : [:]
-            final workflowLaunch = getWorkflowLaunchDetails(workflowId, queryParams)
+            // Only fetch launch details when the run was submitted via Platform (TOWER_WORKFLOW_ID is set),
+            // because the launch record only exists on the server side in that case
+            final workflowLaunch = env.get('TOWER_WORKFLOW_ID') ?
+                    getWorkflowLaunchDetails(workflowId, queryParams)
+                    : null
             if( workflowLaunch ) {
                 session.workflowMetadata.platform.computeEnv = workflowLaunch.computeEnv as PlatformMetadata.ComputeEnv
                 session.workflowMetadata.platform.pipeline = workflowLaunch?.pipeline as PlatformMetadata.Pipeline
@@ -345,6 +354,48 @@ class TowerClient implements TraceObserverV2 {
         }
     }
 
+
+    /**
+     * Apply platform metadata received inline from the trace create response.
+     * This avoids extra API calls to fetch user, workspace, and launch details.
+     */
+    protected void applyPlatformMetadata(Map metadata) {
+        try {
+            final platform = session.workflowMetadata.platform
+            // user info
+            if( metadata.userId )
+                platform.user = new PlatformMetadata.User(
+                    id: metadata.userId as String,
+                    userName: metadata.userName as String,
+                    organization: metadata.userOrganization as String
+                )
+            // workspace info
+            if( metadata.workspaceId )
+                platform.workspace = new PlatformMetadata.Workspace(
+                    workspaceId: metadata.workspaceId as String,
+                    workspaceName: metadata.workspaceName as String,
+                    workspaceFullName: metadata.workspaceFullName as String,
+                    orgName: metadata.orgName as String
+                )
+            // launch details (only present for Platform-submitted runs)
+            if( metadata.computeEnvId )
+                platform.computeEnv = new PlatformMetadata.ComputeEnv(
+                    id: metadata.computeEnvId as String,
+                    name: metadata.computeEnvName as String,
+                    platform: metadata.computeEnvPlatform as String
+                )
+            if( metadata.pipelineName )
+                platform.pipeline = new PlatformMetadata.Pipeline(
+                    id: metadata.pipelineId as String,
+                    name: metadata.pipelineName as String,
+                    revision: metadata.revision as String,
+                    commitId: metadata.commitId as String
+                )
+        }
+        catch( Exception e ) {
+            log.debug("Failed to apply platform metadata from create response", e)
+        }
+    }
 
     private Map getWorkflowLaunchDetails(String workflowId, Map queryParams) {
         try {
