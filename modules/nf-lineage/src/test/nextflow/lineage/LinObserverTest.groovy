@@ -47,6 +47,7 @@ import nextflow.script.ScriptMeta
 import nextflow.script.TokenVar
 import nextflow.script.WorkflowMetadata
 import nextflow.script.params.EnvOutParam
+import nextflow.util.ArrayBag
 import nextflow.script.params.FileInParam
 import nextflow.script.params.FileOutParam
 import nextflow.script.params.InParam
@@ -590,8 +591,13 @@ class LinObserverTest extends Specification {
         new StdInParam(null, [])                        | "stdin"
         new StdOutParam(null, [])                       | "stdout"
         Path.of("test")                                 | "Path"
-        ["test"]                                        | "Collection"
+        "hello"                                         | "String"
+        new ArrayBag([])                                | "Bag"
+        ["test"] as Set                                 | "Set"
+        ["test"]                                        | "List"
         [key:"value"]                                   | "Map"
+        new ArrayDeque([1, 2, 3])                       | "Iterable"
+        42                                              | "Integer"
     }
 
     def 'should save task run' () {

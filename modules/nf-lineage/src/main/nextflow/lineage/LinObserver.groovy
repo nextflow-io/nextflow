@@ -19,6 +19,7 @@ package nextflow.lineage
 import nextflow.NextflowMeta
 import nextflow.extension.FilesEx
 import nextflow.lineage.exception.OutputRelativePathException
+import nextflow.script.types.Bag
 
 import static nextflow.lineage.fs.LinPath.*
 
@@ -408,10 +409,16 @@ class LinObserver implements TraceObserverV2 {
             return Path.simpleName
         if (param instanceof CharSequence)
             return String.simpleName
-        if( param instanceof Collection )
-            return Collection.simpleName
-        if( param instanceof Map)
+        if( param instanceof Bag )
+            return Bag.simpleName
+        if( param instanceof Set )
+            return Set.simpleName
+        if( param instanceof List )
+            return List.simpleName
+        if( param instanceof Map )
             return Map.simpleName
+        if( param instanceof Iterable )
+            return Iterable.simpleName
         if( param==null ) {
             log.debug "Unexpected lineage param type null"
             return null
