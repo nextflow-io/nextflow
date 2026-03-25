@@ -141,106 +141,60 @@ requires:
     def 'should return null from loadInputTypes when no input section' () {
         given:
         def metaYaml = tempDir.resolve('meta.yml')
-        metaYaml.text = '''
-name: nf-core/fastqc
-description: FastQC quality control
-'''
+        metaYaml.text = '''\
+            name: nf-core/fastqc
+            description: FastQC quality control
+            '''.stripIndent()
         expect:
         ModuleSpec.loadInputTypes(metaYaml) == null
     }
 
-    def 'should load input types in new paramSpec format' () {
+    def 'should load input types in new module spec format' () {
         given:
         def metaYaml = tempDir.resolve('meta.yml')
-        metaYaml.text = '''
-name: nf-core/fastqc
-description: FastQC quality control
-input:
-  - name: meta
-    type: map
-    description: Sample metadata
-  - name: reads
-    type: file
-    description: Input reads
-'''
+        metaYaml.text = '''\
+            name: nf-core/fastqc
+            description: FastQC quality control
+            input:
+            - - name: meta
+                type: map
+                description: Sample metadata
+              - name: reads
+                type: file
+                description: Input reads
+            - name: index
+              type: directory
+              description: Index directory
+            '''.stripIndent()
         when:
         def types = ModuleSpec.loadInputTypes(metaYaml)
 
         then:
-        types == [meta: 'map', reads: 'file']
+        types == [meta: Map, reads: Path, index: Path]
     }
 
     def 'should load input types in old nf-core format' () {
         given:
         def metaYaml = tempDir.resolve('meta.yml')
-        metaYaml.text = '''
-name: nf-core/fastqc
-description: FastQC quality control
-input:
-  - - meta:
-        type: map
-        description: Sample metadata
-    - reads:
-        type: file
-        description: Input reads
-  - index:
-      type: directory
-      description: Index directory
-'''
+        metaYaml.text = '''\
+            name: nf-core/fastqc
+            description: FastQC quality control
+            input:
+            - - meta:
+                  type: map
+                  description: Sample metadata
+              - reads:
+                  type: file
+                  description: Input reads
+            - index:
+                type: directory
+                description: Index directory
+            '''.stripIndent()
         when:
         def types = ModuleSpec.loadInputTypes(metaYaml)
 
         then:
-        types == [meta: 'map', reads: 'file', index: 'directory']
-    }
-
-    def 'should flatten tuple inputs in paramSpec format' () {
-        given:
-        def metaYaml = tempDir.resolve('meta.yml')
-        metaYaml.text = '''
-name: nf-core/tool
-description: Tool
-input:
-  - - name: meta
-      type: map
-      description: Sample metadata
-    - name: reads
-      type: file
-      description: Input reads
-  - name: index
-    type: directory
-    description: Index directory
-'''
-        when:
-        def types = ModuleSpec.loadInputTypes(metaYaml)
-
-        then:
-        types == [meta: 'map', reads: 'file', index: 'directory']
-    }
-
-    def 'should flatten tuple inputs in nf-core tuple-as-map-value format' () {
-        given:
-        def metaYaml = tempDir.resolve('meta.yml')
-        metaYaml.text = '''
-name: nf-core/tool
-description: Tool
-input:
-  - tuple:
-      - meta:
-          type: map
-          description: Sample metadata
-      - reads:
-          type: file
-          description: Input reads
-  - index:
-      type: directory
-      description: Index directory
-'''
-        when:
-        def types = ModuleSpec.loadInputTypes(metaYaml)
-
-        then:
-        types == [meta: 'map', reads: 'file', index: 'directory']
+        types == [meta: Map, reads: Path, index: Path]
     }
 
     def 'should return null from loadInputTypes for malformed YAML' () {

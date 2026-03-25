@@ -16,13 +16,13 @@
 
 package nextflow.script
 
-import nextflow.module.ModuleStorage
-
 import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.Nextflow
+import nextflow.module.ModuleSpec
+import nextflow.module.ModuleStorage
 import nextflow.script.params.EnvInParam
 import nextflow.script.params.FileInParam
 import nextflow.script.params.InParam
@@ -30,7 +30,6 @@ import nextflow.script.params.StdInParam
 import nextflow.script.params.TupleInParam
 import nextflow.script.params.v2.ProcessInput
 import nextflow.script.params.v2.ProcessTupleInput
-import nextflow.module.ModuleSpec
 
 /**
  * Helper class for process entry execution feature.
@@ -51,7 +50,6 @@ class ProcessEntryHandler {
     private final BaseScript script
     private final Session session
     private final ProcessDef processDef
-    private Map<String, String> moduleSpecInputTypes
 
     ProcessEntryHandler(BaseScript script, Session session, ScriptMeta meta) {
         this.script = script
@@ -174,14 +172,11 @@ class ProcessEntryHandler {
     /**
      * Parses complex parameters with dot notation support.
      * Converts flat parameters like --meta.id=1 --meta.name=test to nested maps.
-     * If a meta.yml file exists in the script's parent directory, validates and casts
-     * each parameter according to its declared input type.
      *
      * @param params Flat parameter map from session.params
-     * @return Map with nested structures for complex parameters, type-validated and cast
+     * @return Map with nested structures for complex parameters
      */
-    protected Map parseComplexParameters(Map params) {
-
+    private Map parseComplexParameters(Map params) {
         Map complexParams = [:]
 
         for( final entry : params.entrySet() ) {
@@ -199,131 +194,8 @@ class ProcessEntryHandler {
                 complexParams[entry.key] = entry.value
             }
         }
+
         return complexParams
-    }
-
-    /**
-     * Loads a flat map of input parameter name -> declared type from a meta.yml file
-     * located in the parent directory of the current script.
-     * Tuple inputs are flattened. Both the new paramSpec format ({name, type, description})
-     * and the old nf-core format ({paramName: {type, description}}) are supported.
-     *
-     * @return Map of parameter name -> type string, or null if meta.yml is absent or unreadable
-     */
-    private Map<String, String> getModuleSpecInputTypes() {
-        if ( this.moduleSpecInputTypes )
-            return this.moduleSpecInputTypes
-
-        try {
-            final binding = script.getBinding() as ScriptBinding
-            if( binding == null ) return null
-            final scriptPath = binding.getScriptPath()
-            if( scriptPath == null ) return null
-
-            final metaYml = scriptPath.parent.resolve(ModuleStorage.MODULE_MANIFEST_FILE)
-            final typeMap = ModuleSpec.loadInputTypes(metaYml)
-            this.moduleSpecInputTypes = typeMap
-            return typeMap
-        }
-        catch( Exception e ) {
-            log.debug "Could not load input types from meta.yml: ${e.message}"
-            return null
-        }
-    }
-
-    /**
-     * Validates and casts a parameter value to the declared type from meta.yml.
-     * Types: boolean, integer, float, string, map, file, directory.
-     *
-     * @param name  Parameter name (used in error messages)
-     * @param value The parsed parameter value (may be a String, Map, etc.)
-     * @param type  The declared type string from meta.yml
-     * @return The validated and appropriately cast value
-     * @throws IllegalArgumentException if the value is incompatible with the declared type
-     */
-    protected static Object validateAndCastParam(String name, Object value, String type) {
-        switch( type ) {
-            case 'map':
-                if( !(value instanceof Map) )
-                    throw new IllegalArgumentException(
-                        "Parameter '--${name}' expects a map type but got a scalar value '${value}'. " +
-                        "Use dot notation (e.g. --${name}.key=value) to provide map parameters.")
-                return value
-
-            case 'integer':
-                if( value instanceof Integer || value instanceof Long ) return value
-                if( value instanceof CharSequence ) {
-                    final str = value.toString()
-                    if( str.isInteger() ) return str.toInteger()
-                    if( str.isLong() ) return str.toLong()
-                    throw new IllegalArgumentException(
-                        "Parameter '--${name}' expects an integer value but got: '${value}'")
-                }
-                throw new IllegalArgumentException(
-                    "Parameter '--${name}' expects an integer value but got type ${value?.class?.simpleName}: '${value}'")
-
-            case 'float':
-                if( value instanceof Float || value instanceof Double ) return value
-                if( value instanceof Number ) return ((Number) value).doubleValue()
-                if( value instanceof CharSequence ) {
-                    final str = value.toString()
-                    if( str.isFloat() ) return str.toFloat()
-                    if( str.isDouble() ) return str.toDouble()
-                    throw new IllegalArgumentException(
-                        "Parameter '--${name}' expects a float value but got: '${value}'")
-                }
-                throw new IllegalArgumentException(
-                    "Parameter '--${name}' expects a float value but got type ${value?.class?.simpleName}: '${value}'")
-
-            case 'boolean':
-                if( value instanceof Boolean ) return value
-                if( value instanceof CharSequence ) {
-                    final lower = value.toString().toLowerCase()
-                    if( lower == 'true' ) return Boolean.TRUE
-                    if( lower == 'false' ) return Boolean.FALSE
-                    throw new IllegalArgumentException(
-                        "Parameter '--${name}' expects a boolean value (true/false) but got: '${value}'")
-                }
-                throw new IllegalArgumentException(
-                    "Parameter '--${name}' expects a boolean value but got type ${value?.class?.simpleName}: '${value}'")
-
-            case 'string':
-                return value.toString()
-
-            case 'file':
-            case 'directory':
-                if( value instanceof Path || value instanceof List<Path> ){
-                    return value
-                }
-                if( !(value instanceof CharSequence) )
-                    throw new IllegalArgumentException(
-                        "Parameter '--${name}' expects a file/directory path but got type ${value?.class?.simpleName}: '${value}'.")
-                return parseFileInput(value.toString())
-
-            default:
-                log.debug "Unknown spec type '${type}' for parameter '--${name}' - skipping cast"
-                return value
-        }
-    }
-
-    /**
-     * Validate and cast parameters based on the module spec (meta.yml) input types if available
-     *
-     * @param params Parameters to validate
-     */
-    private void updateParamsWithModuleSpecTypes(Map params){
-
-        final typeMap = getModuleSpecInputTypes()
-        if( typeMap != null ) {
-            final keys = new ArrayList(params.keySet())
-            for( final key : keys ) {
-                final name = key.toString()
-                final type = typeMap.get(name) as String
-                if( type != null ) {
-                    params.put(key, validateAndCastParam(name, params.get(key), type))
-                }
-            }
-        }
     }
 
     private List getProcessArgumentsV1(ProcessConfigV1 config, Map params) {
@@ -333,10 +205,13 @@ class ProcessEntryHandler {
             return []
         }
 
-        // Parse complex parameters from session.params (handles dot notation)
-        final complexParams = parseComplexParameters(params)
-        updateParamsWithModuleSpecTypes(complexParams)
-        log.debug "Complex parameters: ${complexParams}"
+        // Parse parameter values from session.params (handles dot notation)
+        final paramValues = parseComplexParameters(params)
+
+        // Load parameter types from module spec (if available)
+        final paramTypes = getModuleSpecInputTypes()
+
+        log.debug "Parameter values: ${paramValues}"
 
         // Map declared inputs to command-line arguments
         List arguments = []
@@ -344,18 +219,101 @@ class ProcessEntryHandler {
             if( param instanceof TupleInParam ) {
                 List tupleElements = []
                 for( final innerParam : param.inner ) {
-                    final value = getValueForInput(innerParam, complexParams)
+                    final value = getValueForInputV1(innerParam, paramValues, paramTypes)
                     tupleElements.add(value)
                 }
                 arguments.add(tupleElements)
             }
             else {
-                final value = getValueForInput(param, complexParams)
+                final value = getValueForInputV1(param, paramValues, paramTypes)
                 arguments.add(value)
             }
         }
 
         return arguments
+    }
+
+    /**
+     * Load mapping of input types from the module spec if available. Returns null
+     * if module spec is absent or unreadable.
+     */
+    private Map<String, Class> getModuleSpecInputTypes() {
+        try {
+            final scriptPath = script.getBinding().getScriptPath()
+            if( scriptPath == null ) 
+                return null
+            final specPath = scriptPath.resolveSibling(ModuleStorage.MODULE_MANIFEST_FILE)
+            return ModuleSpec.loadInputTypes(specPath)
+        }
+        catch( Exception e ) {
+            log.debug "Could not load input types from module spec: ${e.message}"
+            return null
+        }
+    }
+
+    /**
+     * Gets the appropriate value for a legacy process input.
+     *
+     * @param param Input declaration
+     * @param namedArgs Map of command-line arguments
+     * @param paramTypes Map of input types from module spec
+     * @return Properly typed value for the input
+     */
+    private Object getValueForInputV1(InParam param, Map namedArgs, Map<String,Class> paramTypes) {
+        final name = param.getName()
+        final type = paramTypes.get(name)
+        final value = namedArgs.get(name)
+
+        if( value == null ) {
+            throw new IllegalArgumentException("Missing required parameter: --${name}")
+        }
+
+        // handle file, path, env, stdin inputs
+        switch( param ) {
+            case FileInParam:
+                return parseFileInput(value.toString())
+
+            case EnvInParam:
+                throw new IllegalArgumentException("Process `env` input qualifier is not supported by implicit process entry")
+
+            case StdInParam:
+                throw new IllegalArgumentException("Process `stdin` input qualifier is not supported by implicit process entry")
+        }
+
+        // handle val inputs
+        if( value !instanceof String ) {
+            if( type != null && !type.isAssignableFrom(value.class) )
+                throw new IllegalArgumentException("Parameter '--${name}' expects a ${type.simpleName} but received: ${value} [${value.class.simpleName}]")
+            return value
+        }
+
+        final str = (String) value
+
+        if( type == Boolean ) {
+            if( str.toLowerCase() == 'true' ) return Boolean.TRUE
+            if( str.toLowerCase() == 'false' ) return Boolean.FALSE
+            throw new IllegalArgumentException("Parameter '--${name}' expects a boolean (true/false) but received: '${str}'")
+        }
+
+        if( type == Integer ) {
+            if( str.isInteger() ) return str.toInteger()
+            if( str.isLong() ) return str.toLong()
+            throw new IllegalArgumentException("Parameter '--${name}' expects an integer but received: '${str}'")
+        }
+
+        if( type == Number ) {
+            if( str.isFloat() ) return str.toFloat()
+            if( str.isDouble() ) return str.toDouble()
+            throw new IllegalArgumentException("Parameter '--${name}' expects a floating-point number but received: '${str}'")
+        }
+
+        if( type == Map ) {
+            throw new IllegalArgumentException(
+                "Parameter '--${name}' expects a map but received: '${str}'. " +
+                "Use dot notation (e.g. --${name}.key=value) to supply map properties.")
+        }
+
+        return str
     }
 
     private List getProcessArgumentsV2(ProcessConfigV2 config, Map params) {
@@ -366,8 +324,8 @@ class ProcessEntryHandler {
         }
 
         // Parse complex parameters from session.params (handles dot notation)
-        final complexParams = parseComplexParameters(params)
-        log.debug "Complex parameters: ${complexParams}"
+        final paramValues = parseComplexParameters(params)
+        log.debug "Parameter values: ${paramValues}"
 
         // Map declared inputs to command-line arguments
         List arguments = []
@@ -375,13 +333,13 @@ class ProcessEntryHandler {
             if( param instanceof ProcessTupleInput ) {
                 List tupleElements = []
                 for( final innerParam : param.getComponents() ) {
-                    final value = getValueForInput(innerParam, complexParams)
+                    final value = getValueForInputV2(innerParam, paramValues)
                     tupleElements.add(value)
                 }
                 arguments.add(tupleElements)
             }
             else {
-                final value = getValueForInput(param, complexParams)
+                final value = getValueForInputV2(param, paramValues)
                 arguments.add(value)
             }
         }
@@ -390,43 +348,21 @@ class ProcessEntryHandler {
     }
 
     /**
-     * Gets the appropriate value for an input definition, handling type conversion.
+     * Gets the appropriate value for a typed process input.
      *
      * @param param Input declaration
      * @param namedArgs Map of command-line arguments
      * @return Properly typed value for the input
      */
-    private Object getValueForInput(InParam param, Map namedArgs) {
-        final paramName = param.getName()
-        final paramValue = namedArgs.get(paramName)
+    private Object getValueForInputV2(ProcessInput param, Map namedArgs) {
+        final name = param.getName()
+        final type = param.getType()
+        final value = namedArgs.get(name)
 
-        if( paramValue == null ) {
-            throw new IllegalArgumentException("Missing required parameter: --${paramName}")
+        if( value == null ) {
+            throw new IllegalArgumentException("Missing required parameter: --${name}")
         }
 
-        if( param instanceof ProcessInput ) {
-            return getTypedValueForInput(param.type, paramValue)
-        }
-
-        switch( param ) {
-            case FileInParam:
-                if( paramValue instanceof Path || paramValue instanceof List<Path> ){
-                    return paramValue
-                }
-                return parseFileInput(paramValue.toString())
-
-            case EnvInParam:
-                throw new IllegalArgumentException("Process `env` input qualifier is not supported by implicit process entry")
-
-            case StdInParam:
-                throw new IllegalArgumentException("Process `stdin` input qualifier is not supported by implicit process entry")
-
-            default:
-                return paramValue
-        }
-    }
-
-    private Object getTypedValueForInput(Class type, Object value) {
         if( value !instanceof String )
             return value
 
@@ -451,11 +387,6 @@ class ProcessEntryHandler {
             return Nextflow.file(str)
         }
 
-        if( type == List<Path> ) {
-            final parsedFiles = parseFileInput(str)
-            return parsedFiles instanceof Path ? [ parsedFiles ] as List<Path> : parsedFiles
-        }
-
         return value
     }
 
@@ -467,7 +398,7 @@ class ProcessEntryHandler {
      * @param fileInput String representation of file path(s)
      * @return Single file object or List of file objects
      */
-    protected static Object parseFileInput(String fileInput) {
+    protected Object parseFileInput(String fileInput) {
         if (fileInput.contains(',')) {
             // Split by comma, trim whitespace, and convert each to a file
             return fileInput.tokenize(',')

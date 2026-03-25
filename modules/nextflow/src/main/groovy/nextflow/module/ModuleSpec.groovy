@@ -42,20 +42,20 @@ class ModuleSpec {
     Map<String, String> requires
 
     /**
-     * Load a module spec from a meta.yml file
+     * Load a module spec from a file
      *
-     * @param metaYamlPath Path to meta.yml
+     * @param path Path to module spec file
      * @return ModuleSpec instance
      */
-    static ModuleSpec load(Path metaYamlPath) {
-        if( !Files.exists(metaYamlPath) ) {
-            throw new AbortOperationException("Module spec not found: ${metaYamlPath}")
+    static ModuleSpec load(Path path) {
+        if( !Files.exists(path) ) {
+            throw new AbortOperationException("Module spec not found: ${path}")
         }
 
         try {
             def yaml = new Yaml()
             Map<String, Object> data
-            try( def stream = Files.newInputStream(metaYamlPath) ) {
+            try( def stream = Files.newInputStream(path) ) {
                 data = yaml.load(stream) as Map<String, Object>
             }
 
@@ -71,82 +71,93 @@ class ModuleSpec {
             return spec
         }
         catch( Exception e ) {
-            throw new AbortOperationException("Failed to parse module spec: ${metaYamlPath}", e)
+            throw new AbortOperationException("Failed to parse module spec: ${path}", e)
         }
     }
 
     /**
-     * Load a flat map of input parameter name -> declared type from a meta.yml file.
-     * Both the paramSpec format ({name, type, description}) and the old nf-core format
-     * ({paramName: {type, description}}) are supported. Tuple inputs are flattened.
+     * Load a map of input name -> declared type from a module spec.
      *
-     * @param metaYamlPath Path to meta.yml
-     * @return Map of parameter name -> type string, or null if the file has no input section
+     * @param path Path to module spec file
+     * @return Map of input name -> type, or null if the file has no input section
      */
-    static Map<String, String> loadInputTypes(Path metaYamlPath) {
-        if( !Files.exists(metaYamlPath) ) return null
+    static Map<String, Class> loadInputTypes(Path path) {
+        if( !Files.exists(path) )
+            return null
 
         Map<String, Object> data
-        try {
-            try( final stream = Files.newInputStream(metaYamlPath) ) {
-                data = new Yaml().load(stream) as Map<String, Object>
-            }
+        try( final stream = Files.newInputStream(path) ) {
+            data = new Yaml().load(stream) as Map<String, Object>
         }
         catch( Exception e ) {
-            log.warn "Failed to parse meta.yml at ${metaYamlPath}: ${e.message}"
+            log.warn "Failed to parse module spec at ${path}: ${e.message}"
             return null
         }
 
         final inputSection = data?.get('input') as List
-        if( !inputSection ) return null
+        if( !inputSection )
+            return null
 
-        final Map<String, String> typeMap = new LinkedHashMap<>()
+        final Map<String, Class> inputTypes = new LinkedHashMap<>()
         for( final item : inputSection ) {
-            extractParamTypes(item, typeMap)
+            extractInputTypes(item, inputTypes)
         }
 
-        return typeMap.isEmpty() ? null : typeMap
+        return inputTypes.isEmpty() ? null : inputTypes
     }
 
     /**
-     * Recursively extracts parameter name -> type entries from a structuredParameter item.
+     * Recursively extract name -> type entries from a structuredParameter item.
+     *
      * Handles:
-     * - paramSpec format: {name: "...", type: "..."}
-     * - Old nf-core format: {paramName: {type: "...", ...}}
-     * - Arrays (tuples): recursively flatten all items
+     * - Tuples: recursively traverse tuple components
+     * - New module spec format: {name: "...", type: "..."}
+     * - Old nf-core format: {<name>: {type: "...", ...}}
+     *
+     * @param item
+     * @param result
      */
-    private static void extractParamTypes(Object item, Map<String, String> result) {
+    private static void extractInputTypes(Object item, Map<String, Class> result) {
         if( item instanceof List ) {
+            // Traverse tuple components as individual params
             for( final element : (List) item ) {
-                extractParamTypes(element, result)
+                extractInputTypes(element, result)
             }
         }
         else if( item instanceof Map ) {
             final m = (Map) item
-            final name = m.get('name')
-            final type = m.get('type')
-            if( name != null && type != null ) {
-                // New paramSpec format: {name: "...", type: "..."}
-                result.put(name.toString(), type.toString())
+            if( m.values().size() == 1 && m.values().first() instanceof Map ) {
+                // Old nf-core format: {<name>: {type: "...", description: "..."}}
+                final name = m.keySet().first()
+                final type = ((Map) m[name]).get('type')
+                if( type != null )
+                    result.put(name.toString(), inputType(type.toString()))
             }
             else {
-                // Old nf-core format: {paramName: {type: "...", description: "..."}}
-                // Also handles tuple-as-map-value: {tuple: [{paramName: {type: ...}}, ...]}
-                for( final entry : ((Map<Object, Object>) m).entrySet() ) {
-                    if( entry.value instanceof Map ) {
-                        final innerType = ((Map) entry.value).get('type')
-                        if( innerType != null ) {
-                            result.put(entry.key.toString(), innerType.toString())
-                        }
-                    }
-                    else if( entry.value instanceof List ) {
-                        // Tuple described as a map value, e.g. {tuple: [{meta: {type: map}}, ...]}
-                        for( final element : (List) entry.value ) {
-                            extractParamTypes(element, result)
-                        }
-                    }
-                }
+                // New paramSpec format: {name: "...", type: "..."}
+                final name = m.get('name')
+                final type = m.get('type')
+                if( name != null && type != null )
+                    result.put(name.toString(), inputType(type.toString()))
             }
+        }
+    }
+
+    /**
+     * Return the corresponding class for a given type name.
+     *
+     * @param type
+     */
+    private static Class inputType(String type) {
+        return switch( type ) {
+            case 'boolean' -> Boolean
+            case 'file' -> Path
+            case 'directory' -> Path
+            case 'float' -> Number
+            case 'integer' -> Integer
+            case 'map' -> Map
+            case 'string' -> String
+            default -> null
         }
     }
 
