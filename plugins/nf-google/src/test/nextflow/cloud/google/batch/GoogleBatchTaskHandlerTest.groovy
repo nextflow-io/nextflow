@@ -773,5 +773,36 @@ class GoogleBatchTaskHandlerTest extends Specification {
         TaskStatus.State.FAILED | 'Task failed due to Spot VM preemption with exit code 50001.' | 50001     | false          | nextflow.processor.TaskStatus.COMPLETED   | 50001             | true      | 'Task failed due to Spot VM preemption with exit code 50001.'
     }
 
+    def 'should use exitcode file when job succeeded after spot preemption retry' () {
+        given:
+        def jobId = '1'
+        def taskId = '1'
+        // Simulate: job SUCCEEDED but API status events only contain the failed preemption attempt's exit code (50001)
+        // The SUCCEEDED event from Google Batch does not carry a TaskExecution, so getExitCode() finds only 50001
+        def client = Mock(BatchClient){
+            getTaskInArrayStatus(jobId, taskId) >> makeTaskStatus(TaskStatus.State.SUCCEEDED, '', 50001)
+            getTaskStatus(jobId, taskId) >> makeTaskStatus(TaskStatus.State.SUCCEEDED, '', 50001)
+            getJobStatus(jobId) >> makeJobStatus(JobStatus.State.SUCCEEDED, '')
+        }
+        def logging = Mock(BatchLogging)
+        def executor = Mock(GoogleBatchExecutor){
+            getLogging() >> logging
+        }
+        def task = new TaskRun()
+        task.name = 'hello'
+        def handler = Spy(new GoogleBatchTaskHandler(jobId: jobId, taskId: taskId, client: client, task: task, isArrayChild: ARRAY_CHILD, status: nextflow.processor.TaskStatus.RUNNING, executor: executor))
+        when:
+        def result = handler.checkIfCompleted()
+        then:
+        1 * handler.readExitFile() >> 0
+        handler.status == nextflow.processor.TaskStatus.COMPLETED
+        handler.task.exitStatus == 0
+        handler.task.error == null
+        result == true
+
+        where:
+        ARRAY_CHILD << [true, false]
+    }
+
 
 }

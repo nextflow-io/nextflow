@@ -559,6 +559,13 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - terminated job=$jobId; task=$taskId; state=$state"
             // finalize the task
             task.exitStatus = getExitCode()
+            // When the Batch job succeeded but the API-reported exit code reflects a failed
+            // intermediate attempt (e.g. spot preemption with exit code 50001 that was retried),
+            // fall back to the .exitcode file written by the final successful attempt
+            if( state == 'SUCCEEDED' && task.exitStatus != 0 ) {
+                log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - job SUCCEEDED but API reported exit code ${task.exitStatus}; falling back to .exitcode file"
+                task.exitStatus = readExitFile()
+            }
             if( state == 'FAILED' ) {
                 // When no exit code or 500XX codes, get the jobError reason from events
                 if( task.exitStatus == Integer.MAX_VALUE || task.exitStatus >= 50000)
