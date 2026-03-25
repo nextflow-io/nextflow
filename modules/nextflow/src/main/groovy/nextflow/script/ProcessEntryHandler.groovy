@@ -19,10 +19,8 @@ package nextflow.script
 import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Session
 import nextflow.Nextflow
-import nextflow.extension.DumpHelper
 import nextflow.script.params.EnvInParam
 import nextflow.script.params.FileInParam
 import nextflow.script.params.InParam
@@ -38,6 +36,7 @@ import nextflow.script.params.v2.ProcessTupleInput
  * - Single process scripts run automatically: `nextflow run script.nf --param value`
  * - Multi-process scripts run the first process automatically: `nextflow run script.nf --param value`
  * - Command-line parameters are mapped directly to process inputs
+ * - Process outputs are mapped to workflow outputs
  * - Supports the following process input qualifiers: val, path, tuple, each
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -48,49 +47,39 @@ class ProcessEntryHandler {
 
     private final BaseScript script
     private final Session session
-    private final ScriptMeta meta
+    private final ProcessDef processDef
 
     ProcessEntryHandler(BaseScript script, Session session, ScriptMeta meta) {
         this.script = script
         this.session = session
-        this.meta = meta
-    }
 
-    /**
-     * Creates a workflow to execute a standalone process automatically.
-     * For single process scripts, executes that process.
-     * For multi-process scripts, executes the first process.
-     *
-     * @return WorkflowDef that executes the process with parameter mapping
-     */
-    WorkflowDef createAutoProcessEntry() {
         final processNames = meta.getLocalProcessNames()
-        if( processNames.isEmpty() ) {
-            throw new IllegalStateException("No processes found for auto-execution")
-        }
+        if( processNames.isEmpty() )
+            throw new IllegalStateException("No processes found for automatic execution")
 
         // Always pick the first process (whether single or multiple processes)
         final processName = processNames.first()
-        final processDef = meta.getProcess(processName)
-
-        return createProcessEntry(processDef)
+        this.processDef = meta.getProcess(processName)
     }
 
     /**
-     * Creates a workflow to execute the specified process with automatic parameter mapping.
+     * Creates a workflow to execute the specified process.
+     *
+     * Parameters are autoamtically mapped to process inputs, and
+     * process outputs are mapped to workflow outputs.
      */
-    private WorkflowDef createProcessEntry(ProcessDef processDef) {
+    WorkflowDef createEntryWorkflow() {
         final processName = processDef.name
-
         final workflowBody = { ->
             // Create the workflow execution logic
             final workflowExecutionClosure = { ->
-                // Get input parameter values and execute the process
-                final inputArgs = getProcessArguments(processDef)
-                final output = meta.getProcess(processName).run(inputArgs as Object[]) as ChannelOut
-                session.addIgniter {
-                    printOutput(processName, output)
-                }
+                // Map parameters to process inputs
+                final inputArgs = getProcessArguments(processDef, session.params)
+                // Execute the process
+                final output = processDef.run(inputArgs as Object[]) as ChannelOut
+                // Publish process outputs as workflow outputs
+                assignOutputs(output)
+                publishOutputs()
                 return output
             }
 
@@ -102,46 +91,54 @@ class ProcessEntryHandler {
         return new WorkflowDef(script, workflowBody)
     }
 
-    /**
-     * Prints the process outputs.
-     *
-     * @param processName
-     * @param output
-     */
-    private void printOutput(String processName, ChannelOut output) {
-        if( output.isEmpty() ) {
-            log.debug("Process ${processName} does not declare any outputs")
-            return
+    private void assignOutputs(ChannelOut output) {
+        final config = processDef.getProcessConfig()
+        final outputNames = getProcessOutputs(config)
+        final dsl = script.getBinding()
+        if( output.size() != outputNames.size() )
+            log.warn("Process ${processDef.name} is missing emit names for one or more outputs -- unnamed outputs will be omitted")
+        if( output.size() == 1 && outputNames.size() == 1 ) {
+            dsl._publish_(outputNames.first(), output[0])
         }
-
-        Object result = null
-
-        // print process output directly if it is a single expression
-        if( output.size() == 1 && (output.getNames().isEmpty() || output.getNames().first() == '$out') ) {
-            result = (output[0] as DataflowVariable).get()
-        }
-
-        // otherwise, construct map of process emits
         else {
-            if( output.size() != output.getNames().size() )
-                log.warn("Process ${processName} is missing emit names for one or more outputs -- unnamed outputs will be omitted")
-
-            // compute reverse lookup of emit names
-            final reverseLookup = new HashMap<Object, String>(output.size())
-            for( final name : output.getNames() )
-                reverseLookup.put(output.getProperty(name), name)
-
-            // combine process emits into map
-            final combinedOutputs = new LinkedHashMap<String, Object>(output.size())
-            for( final ch : output ) {
-                final name = reverseLookup.get(ch)
-                combinedOutputs.put(name, (ch as DataflowVariable).get())
-            }
-
-            result = combinedOutputs
+            for( final name : outputNames )
+                dsl._publish_(name, output.getProperty(name))
         }
+    }
 
-        println DumpHelper.prettyPrintJson(result)
+    private void publishOutputs() {
+        final config = processDef.getProcessConfig()
+        final outputNames = getProcessOutputs(config)
+        final dsl = new OutputDsl()
+        for( final name : outputNames )
+            dsl.declare(name, { -> })
+        dsl.apply(session)
+    }
+
+    private List<String> getProcessOutputs(ProcessConfig config) {
+        return config instanceof ProcessConfigV1
+            ? getProcessOutputsV1(config)
+            : getProcessOutputsV2((ProcessConfigV2) config)
+    }
+
+    private List<String> getProcessOutputsV1(ProcessConfigV1 config) {
+        final output = config.getOutputs()
+        final names = output*.getChannelEmitName().findAll { it != null }
+        if( output.isEmpty() )
+            return Collections.emptyList()
+        if( output.size() == 1 && names.isEmpty() )
+            return List.of('result')
+        return names
+    }
+
+    private List<String> getProcessOutputsV2(ProcessConfigV2 config) {
+        final output = config.getOutputs().getParams()
+        final names = output*.getName()
+        if( output.isEmpty() )
+            return Collections.emptyList()
+        if( output.size() == 1 && (names.isEmpty() || names.first() == '$out') )
+            return List.of('result')
+        return names
     }
 
     /**
@@ -151,15 +148,15 @@ class ProcessEntryHandler {
      * @param processDef The ProcessDef object containing the process definition
      * @return List of parameter values to pass to the process
      */
-    private List getProcessArguments(ProcessDef processDef) {
+    private List getProcessArguments(ProcessDef processDef, Map params) {
         try {
             log.debug "Getting input arguments for process: ${processDef.name}"
-            log.debug "Session params: ${session.params}"
+            log.debug "Session params: ${params}"
 
             final config = processDef.getProcessConfig()
             final inputArgs = config instanceof ProcessConfigV1
-                ? getProcessArgumentsV1(config)
-                : getProcessArgumentsV2((ProcessConfigV2) config)
+                ? getProcessArgumentsV1(config, params)
+                : getProcessArgumentsV2((ProcessConfigV2) config, params)
 
             log.debug "Final input arguments: ${inputArgs}"
             return inputArgs
@@ -199,7 +196,7 @@ class ProcessEntryHandler {
         return complexParams
     }
 
-    private List getProcessArgumentsV1(ProcessConfigV1 config) {
+    private List getProcessArgumentsV1(ProcessConfigV1 config, Map params) {
         final declaredInputs = config.getInputs()
 
         if( declaredInputs.isEmpty() ) {
@@ -207,7 +204,7 @@ class ProcessEntryHandler {
         }
 
         // Parse complex parameters from session.params (handles dot notation)
-        final complexParams = parseComplexParameters(session.params)
+        final complexParams = parseComplexParameters(params)
         log.debug "Complex parameters: ${complexParams}"
 
         // Map declared inputs to command-line arguments
@@ -230,7 +227,7 @@ class ProcessEntryHandler {
         return arguments
     }
 
-    private List getProcessArgumentsV2(ProcessConfigV2 config) {
+    private List getProcessArgumentsV2(ProcessConfigV2 config, Map params) {
         final declaredInputs = config.getInputs().getParams()
 
         if( declaredInputs.isEmpty() ) {
@@ -238,7 +235,7 @@ class ProcessEntryHandler {
         }
 
         // Parse complex parameters from session.params (handles dot notation)
-        final complexParams = parseComplexParameters(session.params)
+        final complexParams = parseComplexParameters(params)
         log.debug "Complex parameters: ${complexParams}"
 
         // Map declared inputs to command-line arguments
