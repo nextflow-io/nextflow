@@ -246,8 +246,6 @@ class TraceRecordTest extends Specification {
         record.cpus = 4
         record.time = 3_600_000L
         record.memory = 1024L * 1024L * 1024L * 8L
-        record.accelerator = 3
-        record.accelerator_type = 'v100'
 
         when:
         def json = new JsonSlurper().parseText(record.renderJson().toString())
@@ -263,8 +261,6 @@ class TraceRecordTest extends Specification {
         json.cpus == '4'
         json.time == '1h'
         json.memory == '8 GB'
-        json.accelerator == '3'
-        json.accelerator_type == 'v100'
 
     }
 

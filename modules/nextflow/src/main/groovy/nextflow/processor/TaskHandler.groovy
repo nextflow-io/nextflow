@@ -221,8 +221,6 @@ abstract class TaskHandler {
         record.env = task.getEnvironmentStr()
         record.executorName = task.processor.executor.getName()
         record.containerMeta = task.containerMeta()
-        record.accelerator = task.config.getAccelerator()?.request
-        record.accelerator_type = task.config.getAccelerator()?.type
 
         if( isCompleted() ) {
             record.error_action = task.errorAction?.toString()
