@@ -667,6 +667,31 @@ class TowerClientTest extends Specification {
         req.tasks[0].logStreamId == 'arn:aws:logs:us-east-1:123456789:log-group:/ecs/task:log-stream:abc123'
     }
 
+    def 'should include resourceAllocation in task map'() {
+        given:
+        def client = Spy(new TowerClient())
+        client.getWorkflowProgress(true) >> new WorkflowProgress()
+
+        def now = System.currentTimeMillis()
+        def trace = new TraceRecord([
+            taskId: 42,
+            process: 'foo',
+            workdir: "/work/dir",
+            cpus: 1,
+            submit: now-2000,
+            start: now-1000,
+            complete: now
+        ])
+        trace.setResourceAllocation([cpuShares: 2048, memoryMiB: 4096, time: '1h'])
+
+        when:
+        def req = client.makeTasksReq([trace])
+
+        then:
+        req.tasks.size() == 1
+        req.tasks[0].resourceAllocation == [cpuShares: 2048, memoryMiB: 4096, time: '1h']
+    }
+
     def 'should include accelerator request in task map'() {
         given:
         def client = Spy(new TowerClient())

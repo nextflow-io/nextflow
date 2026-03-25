@@ -358,8 +358,45 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
         return cachedTaskState?.getId()
     }
 
+    /**
+     * Get the allocated resources for this task from the last task attempt.
+     * Falls back to the resource requirement from the task state if no attempts exist.
+     *
+     * @return a map of allocated resource fields, or null if not available
+     */
+    protected Map<String,Object> getResourceAllocation() {
+        if (!cachedTaskState)
+            return null
+
+        def resources = null
+        final attempts = cachedTaskState.getAttempts()
+        if (attempts && !attempts.isEmpty()) {
+            resources = attempts.get(attempts.size() - 1).getResources()
+        }
+        if (!resources) {
+            resources = cachedTaskState.getResourceAllocation()
+        }
+        if (!resources)
+            return null
+
+        final result = new LinkedHashMap<String,Object>()
+        if (resources.getCpuShares() != null)
+            result.put('cpuShares', resources.getCpuShares())
+        if (resources.getMemoryMiB() != null)
+            result.put('memoryMiB', resources.getMemoryMiB())
+        if (resources.getAcceleratorCount() != null)
+            result.put('acceleratorCount', resources.getAcceleratorCount())
+        if (resources.getAcceleratorType() != null)
+            result.put('acceleratorType', resources.getAcceleratorType().toString())
+        if (resources.getAcceleratorName() != null)
+            result.put('acceleratorName', resources.getAcceleratorName())
+        if (resources.getTime() != null)
+            result.put('time', resources.getTime())
+        return result.isEmpty() ? null : result
+    }
+
     protected Long getGrantedTime() {
-        final time = cachedTaskState?.getResourceRequirement()?.getTime()
+        final time = cachedTaskState?.getResourceAllocation()?.getTime()
         return time != null ? Duration.of(time).toMillis() : task.config.getTime()?.toMillis()
     }
 
@@ -375,6 +412,7 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
         result.machineInfo = getMachineInfo()
         result.numSpotInterruptions = getNumSpotInterruptions()
         result.logStreamId = getLogStreamId()
+        result.resourceAllocation = getResourceAllocation()
         // Override executor name to include cloud backend for cost tracking
         result.executorName = "${SeqeraExecutor.SEQERA}/aws"
         return result
