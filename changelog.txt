@@ -1,5 +1,29 @@
 NEXTFLOW CHANGE-LOG
 ===================
+26.03.1-edge - 26 Mar 2026
+- Add `-project-dir` option to `lint` command (#6728) [1679b9f3a]
+- Add platform-related metadata to WorkflowRun lineage record (#6545) [fc4d7dd6e]
+- Add request timeout to tower client (#6950) [ff773ba72]
+- Add support for Java 26 (#6969) [9c2b9ff0d]
+- Fix AWS Batch machine type trace for new instance families (#6952) [06e78ba0b]
+- Fix AgentLogObserver printing [SUCCESS] on failed runs (#6962) [342d27c64]
+- Fix LogsCheckpoint thread interrupt race condition (#6939) [9d65b9eea]
+- Fix download of empty files in old minio based S3 transfers (#6944) [ccded1845]
+- Fix incorrect evaluation of `secret` process directive (#6934) [235329312]
+- Fix jackson-databind dependency in nf-amazon (#6941) [321c57f88]
+- Fix netty and jackson vulnerabilities (#6955) [8dafdd95d]
+- Fix params block in included module (#6940) [bbafcc714]
+- Fix security vulnerabilities (#6938) [8b1ab40c4]
+- Fix typo in TowerRetryPolicy: maxAttemps -> maxAttempts (#6949) [97eb0d1b3]
+- Fix: cast module run CLI params to declared meta.yml input types (#6968) [0c525672f]
+- Fix: handle empty publishedValues in PublishOp.onComplete for optional outputs (#6979) [a99fb5dc2]
+- Harden ProcessEntryHandler types and add test for dot-notation conflicts (#6966) [80041612a]
+- Improve module command: enable logging for module run, fix info URL and search output (#6961) [30c5dca95]
+- Print workflow outputs on run completion (#6875) [b8752e41f]
+- Skip launch metadata fetch for CLI-submitted runs (#6975) [3c9875720]
+- Use -d flag for bkill in LSF Executor (#6784) [19409304e]
+- Use destructuring syntax for process record/tuple inputs (#6912) [028e4cc1d]
+
 26.03.0-edge - 18 Mar 2026
 - Add module system (#6650) [a0ac594ec]
 - Add multi-arch support to arch process directive (#6897) [c7ca36902]
