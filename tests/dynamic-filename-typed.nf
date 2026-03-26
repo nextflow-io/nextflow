@@ -24,7 +24,7 @@ process foo {
   stageInMode 'copy'
 
   input:
-  (name, txt): Tuple<String, Path>
+  tuple(name: String, txt: Path)
 
   stage:
   stageAs txt, "${params.prefix}_${name}.txt"
