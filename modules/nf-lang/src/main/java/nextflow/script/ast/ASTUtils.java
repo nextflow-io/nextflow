@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -92,7 +92,7 @@ public class ASTUtils {
     /**
      * Given a statement which represents a block statement of directives,
      * iterate through each directive as a method call expression.
-     * 
+     *
      * @param statement
      */
     public static Stream<MethodCallExpression> asDirectives(Statement statement) {
@@ -106,7 +106,7 @@ public class ASTUtils {
      * Given a method call which represents a definition (i.e. DSL) block, get
      * the definition body, which is the block statement of the last closure argument
      * in the method call.
-     * 
+     *
      * @param call
      * @param argsCount
      */

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,9 +42,11 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     private ScriptMeta meta
 
+    private ParamsDef paramsDef
+
     private WorkflowDef entryFlow
 
-    private OutputDef publisher
+    private OutputDef outputDef
 
     BaseScript() {
         meta = ScriptMeta.register(this)
@@ -108,13 +110,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
         if( ExecutionStack.withinWorkflow() )
             throw new IllegalStateException("Workflow params definition is not allowed within a workflow")
 
-        final dsl = new ParamsDsl()
-        final cl = (Closure)body.clone()
-        cl.setDelegate(dsl)
-        cl.setResolveStrategy(Closure.DELEGATE_FIRST)
-        cl.call()
-
-        dsl.apply(session)
+        this.paramsDef = new ParamsDef(body)
     }
 
     /**
@@ -177,21 +173,35 @@ abstract class BaseScript extends Script implements ExecutionContext {
     /**
      * Define an output block.
      *
-     * @param closure
+     * @param body
      */
-    protected void output(Closure closure) {
+    protected void output(Closure body) {
         if( !entryFlow )
             throw new IllegalStateException("Workflow output definition must be defined after the entry workflow")
         if( ExecutionStack.withinWorkflow() )
             throw new IllegalStateException("Workflow output definition is not allowed within a workflow")
 
-        publisher = new OutputDef(closure)
+        this.outputDef = new OutputDef(body)
     }
 
+    /**
+     * Include definitions from another script.
+     *
+     * @param include
+     */
     protected IncludeDef include( IncludeDef include ) {
-        if(ExecutionStack.withinWorkflow())
+        if( ExecutionStack.withinWorkflow() )
             throw new IllegalStateException("Include statement is not allowed within a workflow definition")
-        include .setSession(session)
+        return include.setSession(session)
+    }
+
+    /**
+     * Define a custom type.
+     *
+     * @param type
+     */
+    protected void declareType(Class type) {
+        meta.addDefinition(new TypeDef(type))
     }
 
     /**
@@ -232,7 +242,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
             if( meta.hasExecutableProcesses() ) {
                 // Create a workflow to execute the process (single process or first of multiple)
                 final handler = new ProcessEntryHandler(this, session, meta)
-                entryFlow = handler.createAutoProcessEntry()
+                this.entryFlow = handler.createEntryWorkflow()
             }
             else {
                 return result
@@ -241,9 +251,11 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
         // invoke the entry workflow
         session.notifyBeforeWorkflowExecution()
+        if( paramsDef )
+            paramsDef.apply(session)
         final ret = entryFlow.invoke_a(BaseScriptConsts.EMPTY_ARGS)
-        if( publisher )
-            publisher.apply(session)
+        if( outputDef )
+            outputDef.apply(session)
         session.notifyAfterWorkflowExecution()
         return ret
     }

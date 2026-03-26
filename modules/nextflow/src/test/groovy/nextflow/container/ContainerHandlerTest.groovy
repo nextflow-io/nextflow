@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -202,7 +202,7 @@ class ContainerHandlerTest extends Specification {
         0 * handler.normalizeDockerImageName(IMAGE) >> null
         and:
         result == 'shifter://image'
-            
+
     }
 
     @Unroll
@@ -350,7 +350,7 @@ class ContainerHandlerTest extends Specification {
         def result = handler.normalizeImageName(IMG)
         then:
         TIMES * handler.createSingularityCache(_, NORM) >> EXPECTED
-        
+
         then:
         result == EXPECTED
 

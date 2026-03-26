@@ -46,7 +46,6 @@ process split {
 
 // convert_to_upper process
 process convert_to_upper {
-    publishDir "results/upper"
     tag "$y"
 
     input:
@@ -159,7 +158,6 @@ You can enable resumability using the `-resume` flag when running a pipeline. To
 
     ```nextflow title="main.nf"
     process convert_to_upper {
-        publishDir "results/upper"
         tag "$y"
 
         input:

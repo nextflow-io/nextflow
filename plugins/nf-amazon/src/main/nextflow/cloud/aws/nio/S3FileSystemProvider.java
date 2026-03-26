@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.cloud.aws.nio;
@@ -295,9 +294,13 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		if( isDir ) {
 			s3Client.downloadDirectory(source, localDestination.toFile());
 		}
+        else if( size > 0 ) {
+            s3Client.downloadFile(source, localDestination.toFile(), size);
+        }
 		else {
-			s3Client.downloadFile(source, localDestination.toFile(), size);
-		}
+            Files.deleteIfExists(localDestination);
+            Files.createFile(localDestination);
+        }
 	}
 
 	@Override

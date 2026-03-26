@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -211,7 +211,7 @@ class ConfigBuilder {
 
         def result = []
         if ( files ) {
-            for( String fileName : files ) { 
+            for( String fileName : files ) {
                 def thisFile = currentDir.resolve(fileName)
                 if(!thisFile.exists()) {
                     throw new AbortOperationException("The specified configuration file does not exist: $thisFile -- check the name or choose another file")
@@ -568,6 +568,9 @@ class ConfigBuilder {
         if( cmdRun.outputDir )
             config.outputDir = cmdRun.outputDir
 
+        if( cmdRun.outputFormat )
+            config.outputFormat = cmdRun.outputFormat
+
         if( cmdRun.preview )
             config.preview = cmdRun.preview
 
@@ -889,7 +892,7 @@ class ConfigBuilder {
             final value = entry.value
             final previous = getConfigVal0(config, key)
             keys << entry.key
-            
+
             if( previous==null ) {
                 config[key] = value
             }
@@ -929,12 +932,18 @@ class ConfigBuilder {
                 .setBaseDir(baseDir)
                 .buildConfigObject()
 
-        // strip secret
+        // strip secrets
         SecretHelper.hideSecrets(config)
+        // strip command line options
+        stripCliOptions(config)
         // compute config
         final result = toCanonicalString(config, false)
         // dump config for debugging
         log.trace "Resolved config:\n${result.indent('\t')}"
         return result
+    }
+
+    private static void stripCliOptions(Map config) {
+        config.remove('outputFormat')
     }
 }

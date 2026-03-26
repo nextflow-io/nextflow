@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.cloud.aws.nio
@@ -213,7 +212,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         when:
         def bucketName = createBucket()
         def target = s3path("s3://$bucketName/data/file.txt")
-        
+
         and:
         def stream = new ByteArrayInputStream(new String(TEXT).bytes)
         Files.copy(stream, target)
@@ -641,6 +640,27 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         deleteBucket(bucketName)
     }
 
+    def 'should download empty file from bucket' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def target = folder.resolve('empty.txt')
+        and:
+        def bucketName = createBucket()
+        final path = s3path("s3://$bucketName/empty.txt")
+        createObject(path, '')
+
+        when:
+        FileHelper.copyPath(path, target)
+
+        then:
+        Files.exists(target)
+        Files.size(target) == 0
+
+        cleanup:
+        folder?.deleteDir()
+        deleteBucket(bucketName)
+    }
+
     def 'should create a newOutputStream' () {
         given:
         def bucketName = createBucket()
@@ -902,7 +922,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         deleteBucket(bucketName)
     }
 
-    @Ignore // FIXME 
+    @Ignore // FIXME
     def 'should handle dir and files having the same name' () {
 
         given:
@@ -1040,7 +1060,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         FileHelper.copyPath(source, target)
         then:
         target.exists()
-        
+
         cleanup:
         folder?.deleteDir()
     }
@@ -1060,7 +1080,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         FileHelper.copyPath(source, target)
         then:
         target.exists()
-        
+
         expect:
         target.getFileSystem().getClient().getObjectKmsKeyId(target.bucket, target.key) == KEY
         and:
@@ -1412,6 +1432,28 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
 
         cleanup:
         deleteBucket(bucket1)
+    }
+
+    // In S3, keys are listed in lexicographic order and characters such as '-' and '.'
+    // sort before '/'. For example, given keys 'a/', 'a-a/' and 'a.txt', the listing order
+    // is: 'a-a/', 'a.txt', 'a/' — the directory 'a/' appears last.
+    // This means a lookup for the directory 'a' may not find the 'a/' marker in the first
+    // page of results, so the implementation needs a fallback second call to reliably
+    // detect directories when sibling keys with smaller-than-'/' characters exist.
+    def 'should exists file with similar files' () {
+        given:
+        def bucketName = createBucket()
+        createObject("$bucketName/similar-lexic-order/a/file-1",'File one')
+        createObject("$bucketName/similar-lexic-order/a.txt",'File two')
+        createObject("$bucketName/similar-lexic-order/a-a/file-3",'File three')
+
+        def path = s3path("s3://$bucketName/similar-lexic-order/a")
+        expect:
+        path.exists()
+        path.isDirectory()
+
+        cleanup:
+        deleteBucket(bucketName)
     }
 
 }

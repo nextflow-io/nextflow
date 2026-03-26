@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@
 
 package nextflow.lineage
 
+import nextflow.NextflowMeta
+import nextflow.extension.FilesEx
 import nextflow.lineage.exception.OutputRelativePathException
 
 import static nextflow.lineage.fs.LinPath.*
@@ -40,6 +42,7 @@ import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.processor.TaskHasher
 import nextflow.processor.TaskRun
+import nextflow.script.PlatformMetadata
 import nextflow.script.ScriptMeta
 import nextflow.script.params.BaseParam
 import nextflow.script.params.CmdEvalParam
@@ -72,6 +75,9 @@ import nextflow.util.TestOnly
 @Slf4j
 @CompileStatic
 class LinObserver implements TraceObserverV2 {
+    private static Set<String> workflowMetadataPropertiesToRemove = Set.of(
+        "completed", "duration", "exitStatus", "errorMessage", "errorReport", "stats", "success" // Only existing at the end
+    )
     private static Map<Class<? extends BaseParam>, String> taskParamToValue = [
         (StdOutParam)  : "stdout",
         (StdInParam)   : "stdin",
@@ -133,7 +139,7 @@ class LinObserver implements TraceObserverV2 {
     }
 
     protected List<DataPath> collectScriptDataPaths(PathNormalizer normalizer) {
-        final allScripts = allScriptFiles()
+        final allScripts = allScriptFiles().sort()
         final result = new ArrayList<DataPath>(allScripts.size()+1)
         // the main script
         result.add( new DataPath(
@@ -148,7 +154,7 @@ class LinObserver implements TraceObserverV2 {
             final dataPath = new DataPath(normalizer.normalizePath(it.normalize()), Checksum.ofNextflow(it.text))
             result.add(dataPath)
         }
-        return result.sort{it.path}
+        return result
     }
 
     protected String storeWorkflowRun(PathNormalizer normalizer) {
@@ -164,7 +170,8 @@ class LinObserver implements TraceObserverV2 {
             session.uniqueId.toString(),
             session.runName,
             getNormalizedParams(session.params, normalizer),
-            SecretHelper.hideSecrets(session.config.deepClone()) as Map
+            SecretHelper.hideSecrets(session.config.deepClone()) as Map,
+            collectWorkflowMetadata(normalizer)
         )
         final executionHash = CacheHelper.hasher(value).hash().toString()
         store.save(executionHash, value)
@@ -482,5 +489,29 @@ class LinObserver implements TraceObserverV2 {
             )
         }
         return paths
+    }
+
+    /**
+     * Collects lineage data from workflow metadata applying the following transformations:
+     *  - Normalizes paths against the original remote URL, or work directory and convert to URI strings
+     *  - Remove transient properties (completed, duration, exitStatus, errorMessage, errorReport, stats, success)
+     *  - Convert Nextflow metadata as Json Map
+     * @param normalizer
+     * @return Map with workflow metadata or null when error
+     */
+    private Map collectWorkflowMetadata(PathNormalizer normalizer) {
+        try {
+            def metadata = session.workflowMetadata.toMap()
+                .collectEntries { it.value instanceof Path ? [it.key, FilesEx.toUriString(it.value as Path) ] : [it.key, it.value] }
+            metadata.removeAll {it.key.toString() in workflowMetadataPropertiesToRemove }
+            if( metadata.containsKey("nextflow") )
+                metadata["nextflow"] = (metadata["nextflow"] as NextflowMeta).toJsonMap()
+            if( metadata.containsKey("configFiles") )
+                metadata["configFiles"] = (metadata["configFiles"] as List<Path>).collect {normalizer.normalizePath(it)}
+            return metadata
+        } catch( Throwable e) {
+            log.debug("Error creating metadata", e)
+            return null
+        }
     }
 }

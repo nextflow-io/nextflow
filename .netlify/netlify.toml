@@ -1,0 +1,37 @@
+headersOrigin = "config"
+plugins = []
+redirects = []
+
+[functions]
+
+[functions."*"]
+
+[build]
+publish = "/Users/chris.hakkaart/workspace/architecture/nextflow/build"
+publishOrigin = "config"
+commandOrigin = "config"
+command = "npm run build"
+base = "/Users/chris.hakkaart/workspace/architecture/nextflow/docs"
+ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF ."
+
+[build.environment]
+NODE_VERSION = "22"
+NODE_OPTIONS = "--max-old-space-size=2048"
+
+[build.processing]
+
+[build.processing.css]
+
+[build.processing.html]
+
+[build.processing.images]
+
+[build.processing.js]
+
+[build.services]
+
+[[headers]]
+for = "/*"
+
+[headers.values]
+X-Robots-Tag = "noindex"

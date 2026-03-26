@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -244,7 +244,7 @@ class TaskHandlerTest extends Specification {
         handler.isSubmitted() == EXPECT_SUBMITTED
         handler.isActive() == EXPECTED_ACTIVE
         handler.isCompleted() == EXPECT_COMPLETE
-        
+
         where:
         STATUS              | EXPECT_NEW  | EXPECT_SUBMITTED | EXPECT_RUNNING | EXPECTED_ACTIVE | EXPECT_COMPLETE
         TaskStatus.NEW      | true        | false            | false          | false           | false

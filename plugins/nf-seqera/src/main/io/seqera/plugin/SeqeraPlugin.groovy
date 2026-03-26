@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +14,21 @@
  * limitations under the License.
  */
 
-package nextflow.exception
+package io.seqera.plugin
 
-import groovy.transform.InheritConstructors
+import groovy.transform.CompileStatic
+import nextflow.plugin.BasePlugin
+import org.pf4j.PluginWrapper
 
 /**
- * Exception thrown when an illegal module path is specified
- * 
+ * Seqera plugin entry point
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@InheritConstructors
-class IllegalModulePath extends Exception {
+@CompileStatic
+class SeqeraPlugin extends BasePlugin {
+
+    SeqeraPlugin(PluginWrapper wrapper) {
+        super(wrapper)
+    }
 }

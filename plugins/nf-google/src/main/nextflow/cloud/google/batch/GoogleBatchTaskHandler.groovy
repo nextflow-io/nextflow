@@ -1,6 +1,5 @@
 /*
- * Copyright 2023, Seqera Labs
- * Copyright 2022, Google Inc.
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -60,7 +59,7 @@ import nextflow.trace.TraceRecord
 import nextflow.util.TestOnly
 /**
  * Implements a task handler for Google Batch executor
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
@@ -117,6 +116,11 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     private volatile CloudMachineInfo machineInfo
 
     private volatile long timestamp
+
+    /**
+     * Flag to indicate that the zone has been resolved from the status events
+     */
+    private volatile boolean zoneUpdated
 
     /**
      * A flag to indicate that the job has failed without launching any tasks
@@ -397,11 +401,12 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         else {
             final instancePolicy = AllocationPolicy.InstancePolicy.newBuilder()
 
-            if( batchConfig.getBootDiskImage() )
-                instancePolicy.setBootDisk(AllocationPolicy.Disk.newBuilder().setImage(batchConfig.getBootDiskImage()))
-
             if( fusionEnabled() && !disk ) {
-                disk = new DiskResource(request: '375 GB', type: 'local-ssd')
+                final reqMachineType = task.config.getMachineType()
+                disk = new DiskResource(
+                    request: '375 GB',
+                    type: reqMachineType ? chooseFusionDiskType(reqMachineType) : 'local-ssd'
+                )
                 log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - adding local volume as fusion scratch: $disk"
             }
 
@@ -418,6 +423,20 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                     priceModel: machineType.priceModel
                 )
             }
+
+            // Configure boot disk
+            final bootDisk = AllocationPolicy.Disk.newBuilder()
+            boolean setBoot = false
+            if( batchConfig.getBootDiskImage() ) {
+                bootDisk.setImage(batchConfig.getBootDiskImage())
+                setBoot = true
+            }
+            if( machineType && GoogleBatchMachineTypeSelector.INSTANCE.isHyperdiskOnly(machineType.type) ) {
+                bootDisk.setType('hyperdisk-balanced')
+                setBoot = true
+            }
+            if( setBoot )
+                instancePolicy.setBootDisk(bootDisk)
 
             if( task.config.getAccelerator() ) {
                 final accelerator = AllocationPolicy.Accelerator.newBuilder()
@@ -469,7 +488,29 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             instancePolicyOrTemplate.setPolicy(instancePolicy)
         }
 
+        if( batchConfig.installOpsAgent ) {
+            if( !batchConfig.bootDiskImage?.toLowerCase()?.contains('debian') )
+                log.warn1 "The Ops Agent requires a compatible boot disk image. Set 'google.batch.bootDiskImage' to a batch-debian image."
+            instancePolicyOrTemplate.setInstallOpsAgent( true )
+        }
+
         return new InstancePolicyResult(instancePolicyOrTemplate.build(), requiresScratchVolume)
+    }
+
+    /**
+     * Choose the disk type for Fusion according to the machine or family.
+     * Preference is 'local-ssd', 'hyperdisk-balanced' and 'pd-balanced' other types can be set by setting disk directive
+     * @param machineTypeOrFamily
+     * @return Disk type
+     */
+    protected String chooseFusionDiskType(String machineTypeOrFamily){
+        if( !GoogleBatchMachineTypeSelector.unsupportedLocalSSD(machineTypeOrFamily) ){
+            return 'local-ssd'
+        } else if( GoogleBatchMachineTypeSelector.isPdOnly(machineTypeOrFamily) ){
+            return 'pd-balanced'
+        } else {
+            return 'hyperdisk-balanced'
+        }
     }
 
     /**
@@ -678,6 +719,10 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                 task.stderr = executor.logging.stderr(uid, taskId) ?: errorFile
             }
             else {
+                // Retried spot instances could keep the 500xx exit code event when the automatic retied succeeds. In this case, we need to read the exit code from .exitcode
+                // https://github.com/nextflow-io/nextflow/issues/6779
+                if( task.exitStatus >= 50000 )
+                    task.exitStatus = readExitFile()
                 task.stdout = outputFile
                 task.stderr = errorFile
             }
@@ -769,8 +814,55 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         }
     }
 
+    /**
+     * Regex pattern to extract zone from StatusEvent description.
+     * Matches the pattern: zones/<zone-name>/instances/<instance-id>
+     */
+    private static final Pattern ZONE_PATTERN = ~/zones\/([^\/]+)\/instances\//
+
     protected CloudMachineInfo getMachineInfo() {
+        if( machineInfo!=null && !zoneUpdated && isCompleted() )
+            updateZoneFromEvents()
         return machineInfo
+    }
+
+    /**
+     * Parse the actual execution zone from StatusEvent descriptions and update
+     * the machineInfo zone field accordingly.
+     *
+     * Google Batch status events include zone info in the description field with
+     * the format: {@code zones/<zone-name>/instances/<instance-id>}
+     */
+    private void updateZoneFromEvents() {
+        try {
+            final events = client.getTaskStatus(jobId, taskId)?.statusEventsList
+            final zone = resolveZoneFromEvents(events)
+            if( zone ) {
+                machineInfo = new CloudMachineInfo(
+                    type: machineInfo.type,
+                    zone: zone,
+                    priceModel: machineInfo.priceModel
+                )
+            }
+        }
+        catch( Exception e ) {
+            log.debug "[GOOGLE BATCH] Unable to resolve zone from events for task: `${task.lazyName()}` - ${e.message}"
+        }
+        finally {
+            zoneUpdated = true
+        }
+    }
+
+    @PackageScope
+    static String resolveZoneFromEvents(List<StatusEvent> events) {
+        if( !events )
+            return null
+        for( def event : events ) {
+            final matcher = ZONE_PATTERN.matcher(event.description ?: '')
+            if( matcher.find() )
+                return matcher.group(1)
+        }
+        return null
     }
 
     /**

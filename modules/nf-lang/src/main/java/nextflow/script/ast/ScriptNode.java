@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -110,7 +110,7 @@ public class ScriptNode extends ModuleNode {
 
     public List<ClassNode> getTypes() {
         return getClasses().stream()
-            .filter(cn -> cn.isEnum())
+            .filter(cn -> cn instanceof RecordNode || cn.isEnum())
             .toList();
     }
 

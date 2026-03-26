@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -178,7 +178,7 @@ class CmdRunTest extends Specification {
         params.xyz == 2
         and:
         cmd.hasParams()
-        
+
         when:
         file = folder.resolve('params.yaml')
         file.text = YAML
@@ -246,7 +246,7 @@ class CmdRunTest extends Specification {
         def json = folder.resolve('params.yaml')
         json.text = '''\
             alpha: "This is alpha"
-            delta: 
+            delta:
                 beta: "${launchDir}/more"
                 gamma: "$should_not_replace"
                 omega: "${baseDir}/end"
@@ -290,7 +290,7 @@ class CmdRunTest extends Specification {
             gamma: "${012345}"
             omega: "${unknown}"
             '''.stripIndent()
-        
+
         new CmdRun().replaceVars0(text, [baseDir:'/HOME', launchDir: '/WORK' ] ) == '''\
             alpha: "/HOME/hello"
             delta: "/WORK/world"
@@ -320,7 +320,7 @@ class CmdRunTest extends Specification {
     def 'should guss is repo' () {
         expect:
         CmdRun.guessIsRepo(PATH) == EXPECTED
-        
+
         where:
         EXPECTED    | PATH
         true        | 'http://github.com/foo'

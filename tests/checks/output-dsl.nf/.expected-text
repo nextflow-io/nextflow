@@ -1,0 +1,10 @@
+Outputs:
+
+  /results
+
+  samples: samples.csv
+
+  summary:
+    - summary_report.html
+    - summary_data/data.json
+    - summary_data/fastqc.txt

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ plugins {
 }
 
 nextflowPlugin {
-    nextflowVersion = '25.12.0-edge'
+    nextflowVersion = '26.03.0-edge'
 
     provider = "${nextflowPluginProvider}"
     description = 'Provides comprehensive AWS cloud integration including Batch executor, S3 file system, and Fusion support for high-performance data operations'
@@ -71,15 +71,11 @@ dependencies {
     api ('software.amazon.awssdk:apache-client:2.33.2')
     api ('software.amazon.awssdk:aws-crt-client:2.33.2')
 
-    constraints {
-        api 'com.fasterxml.jackson.core:jackson-databind:2.12.7.1'
-    }
-
     // address security vulnerabilities
-    implementation 'io.netty:netty-common:4.1.125.Final'
-    implementation 'io.netty:netty-handler:4.1.125.Final'
-    implementation 'io.netty:netty-codec-http2:4.1.125.Final'
-    
+    implementation 'io.netty:netty-common:4.1.129.Final'
+    implementation 'io.netty:netty-handler:4.1.129.Final'
+    implementation 'io.netty:netty-codec-http2:4.1.129.Final'
+
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
     testImplementation "org.apache.groovy:groovy:4.0.30"

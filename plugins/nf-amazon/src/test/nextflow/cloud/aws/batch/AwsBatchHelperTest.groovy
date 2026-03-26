@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package nextflow.cloud.aws.batch
 import nextflow.cloud.types.PriceModel
 import software.amazon.awssdk.services.batch.BatchClient
 import software.amazon.awssdk.services.ec2.model.Instance
+import software.amazon.awssdk.services.ec2.model.InstanceType
 import software.amazon.awssdk.services.ec2.model.InstanceLifecycleType
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -35,19 +36,34 @@ class AwsBatchHelperTest extends Specification {
         given:
         def helper = new AwsBatchHelper(Mock(BatchClient), null)
         def instance = Instance.builder()
-            .instanceLifecycle(lifecycle)
+            .instanceLifecycle(LIFECYCLE)
             .build()
 
         when:
         def result = helper.getPrice(instance)
 
         then:
-        result == expected
+        result == EXPECTED
 
         where:
-        lifecycle                       | expected
+        LIFECYCLE                       | EXPECTED
         InstanceLifecycleType.SPOT      | PriceModel.spot
         InstanceLifecycleType.SCHEDULED | PriceModel.standard
         null                            | PriceModel.standard   // on-demand instances return null
+    }
+
+    def 'should preserve raw aws instance type values'() {
+        given:
+        def helper = new AwsBatchHelper(Mock(BatchClient), null)
+
+        expect:
+        helper.getInstanceType(INSTANCE) == TYPE
+
+        where:
+        TYPE            | _
+        'm4.large'      | _
+        'r8id.xlarge'   | _
+        and:
+        INSTANCE = Instance.builder().instanceType(InstanceType.fromValue(TYPE)).instanceType(TYPE).build()
     }
 }

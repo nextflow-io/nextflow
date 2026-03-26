@@ -230,6 +230,7 @@ println "PWD = ${System.getenv('PWD')}"
 ```
 
 <AddedInVersion version="24.04.0">
+
 The `env()` function should be used instead of `System.getenv()`:
 
 ```nextflow
@@ -577,6 +578,8 @@ export NXF_SYNTAX_PARSER=v2
 </AddedInVersion>
 
 See [Configuration][config-syntax] for a comprehensive description of the configuration language.
+
+### Mixing config statements and scripting statements
 
 ### Mixing config statements and scripting statements
 

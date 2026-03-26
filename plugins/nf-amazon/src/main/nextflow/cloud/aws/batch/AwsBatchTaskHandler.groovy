@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -584,7 +584,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
         if( opts.executionRole )
             container.executionRoleArn(opts.executionRole)
-        
+
         final logsGroup = opts.getLogsGroup()
         if( logsGroup )
             container.logConfiguration(getLogConfiguration(logsGroup, opts.getRegion()))
@@ -616,7 +616,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             final diskGb = task.config.getDisk()?.toGiga()?.toInteger() ?: 50
             container.ephemeralStorage( EphemeralStorage.builder().sizeInGiB(diskGb).build() )
             // check for arm64 cpu architecture
-            if( task.config.getArchitecture()?.arch == 'arm64' )
+            if( task.config.getArchitecture()?.dockerArch == 'linux/arm64' )
                 container.runtimePlatform(RuntimePlatform.builder().cpuArchitecture('ARM64').build())
         }
 
@@ -633,7 +633,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         return result
     }
 
-    @Memoized 
+    @Memoized
     LogConfiguration getLogConfiguration(String name, String region) {
         LogConfiguration.builder()
             .logDriver('awslogs')
