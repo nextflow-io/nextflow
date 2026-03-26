@@ -242,7 +242,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
             if( meta.hasExecutableProcesses() ) {
                 // Create a workflow to execute the process (single process or first of multiple)
                 final handler = new ProcessEntryHandler(this, session, meta)
-                entryFlow = handler.createAutoProcessEntry()
+                this.entryFlow = handler.createEntryWorkflow()
             }
             else {
                 return result

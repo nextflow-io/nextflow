@@ -46,6 +46,8 @@ import nextflow.script.ast.RecordNode;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.TupleParameter;
 import nextflow.script.ast.WorkflowNode;
+import nextflow.script.types.Record;
+import nextflow.script.types.Tuple;
 import org.antlr.v4.runtime.ANTLRErrorListener;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
@@ -556,58 +558,36 @@ public class ScriptAstBuilder {
     }
 
     private Parameter processRecordInput(ProcessRecordInputContext ctx) {
-        var name = identifier(ctx.identifier());
-        var type = type(ctx.type());
-        if( !"Record".equals(type.getUnresolvedName()) )
-            collectSyntaxError(new SyntaxException("Process record input must have type `Record`", ast( new EmptyStatement(), ctx )));
-
-        var recordNode = ast( new RecordNode(nextRecordName()), ctx );
-        if( ctx.recordBody() != null )
-            recordBody(ctx.recordBody(), recordNode);
-        else
-            collectSyntaxError(new SyntaxException("Missing record body", recordNode));
-
-        return ast( new Parameter(recordNode.getPlainNodeReference(), name), ctx );
+        var components = ctx.nameTypePair().stream()
+            .map((ntp) -> {
+                var name = identifier(ntp.identifier());
+                var fieldType = type(ntp.type());
+                var field = ast( param(fieldType, name), ntp );
+                checkInvalidVarName(field.getName(), field);
+                if( ntp.type() == null )
+                    collectWarning("Record field should have a type annotation", name, field);
+                return field;
+            })
+            .toArray(Parameter[]::new);
+        return ast( new TupleParameter(new ClassNode(Record.class), components), ctx );
     }
 
-    private static AtomicInteger nextRecordId = new AtomicInteger(1);
-
-    private static String nextRecordName() {
-        var id = nextRecordId.getAndIncrement();
-        return "__Record_" + id;
-    }
-
-    private TupleParameter processTupleInput(ProcessTupleInputContext ctx) {
-        var type = type(ctx.type());
-        var numComponents = ctx.identifier().size();
-        var componentTypes = tupleComponentTypes(type, numComponents);
-        var components = new Parameter[numComponents];
-        for( int i = 0; i < numComponents; i++ ) {
-            var ident = ctx.identifier().get(i);
-            var name = identifier(ident);
-            var componentType = componentTypes != null ? componentTypes.get(i) : ClassHelper.dynamicType();
-            var component = ast( param(componentType, name), ident );
-            checkInvalidVarName(component.getName(), component);
-            components[i] = component;
-        }
-        var result = ast( new TupleParameter(type, components), ctx );
-        if( !"Tuple".equals(type.getUnresolvedName()) )
-            collectSyntaxError(new SyntaxException("Process tuple input must have type `Tuple<...>`", result));
-        else if( numComponents == 1 )
+    private Parameter processTupleInput(ProcessTupleInputContext ctx) {
+        var components = ctx.nameTypePair().stream()
+            .map((ntp) -> {
+                var name = identifier(ntp.identifier());
+                var componentType = type(ntp.type());
+                var component = ast( param(componentType, name), ntp );
+                checkInvalidVarName(component.getName(), component);
+                if( ntp.type() == null )
+                    collectWarning("Tuple component should have a type annotation", name, component);
+                return component;
+            })
+            .toArray(Parameter[]::new);
+        var result = ast( new TupleParameter(new ClassNode(Tuple.class), components), ctx );
+        if( ctx.nameTypePair().size() == 1 )
             collectSyntaxError(new SyntaxException("Process tuple input must have more than one component", result));
-        else if( !type.isUsingGenerics() || type.getGenericsTypes().length != numComponents )
-            collectSyntaxError(new SyntaxException("Process tuple input type must have " + numComponents + " type arguments (one for each tuple component)", result));
         return result;
-    }
-
-    private List<ClassNode> tupleComponentTypes(ClassNode type, int n) {
-        if( !"Tuple".equals(type.getUnresolvedName()) )
-            return null;
-        if( !type.isUsingGenerics() || type.getGenericsTypes().length != n )
-            return null;
-        return Arrays.stream(type.getGenericsTypes())
-            .map(gt -> gt.getType())
-            .toList();
     }
 
     private Statement processInputsV1(ProcessInputsContext ctx) {

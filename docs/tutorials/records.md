@@ -112,7 +112,7 @@ The `reads_ch` input is used by `FASTQC` and `QUANT`, which both have the follow
 
 ```nextflow
     input:
-    (id, fastq_1, fastq_2): Tuple<String, Path, Path>
+    tuple(id: String, fastq_1: Path, fastq_2: Path)
 ```
 
 Therefore, you can construct a record type that models these requirements. Update the `reads_ch` input as follows:
@@ -151,7 +151,7 @@ process FASTQC {
     conda 'bioconda::fastqc=0.12.1'
 
     input:
-    (id, fastq_1, fastq_2): Tuple<String, Path, Path>
+    tuple(id: String, fastq_1: Path, fastq_2: Path)
 
     output:
     tuple(id, file("fastqc_${id}_logs"))
@@ -167,34 +167,32 @@ To migrate this process, rewrite the inputs and outputs as follows:
 
 ```nextflow
 process FASTQC {
-    tag sample.id
+    tag id
     conda 'bioconda::fastqc=0.12.1'
 
     input:
-    sample: Record {
-        id: String
-        fastq_1: Path
+    record(
+        id: String,
+        fastq_1: Path,
         fastq_2: Path
-    }
+    )
 
     output:
     record(
-        id: sample.id,
-        fastqc: file("fastqc_${sample.id}_logs")
+        id: id,
+        fastqc: file("fastqc_${id}_logs")
     )
 
     script:
     """
-    fastqc.sh "${sample.id}" "${sample.fastq_1} ${sample.fastq_2}"
+    fastqc.sh "${id}" "${fastq_1} ${fastq_2}"
     """
 }
 ```
 
 In the above:
 
-- The tuple input is converted to a record input using the type `Record`. The field types are specified alongside the field names.
-
-- Since the record input cannot be destructured like a tuple, you must define a name for the record itself (e.g., `sample`), and you must update all references to tuple inputs (e.g., replace `id` with `sample.id`).
+- The tuple input is converted to a record input by simply replacing `tuple` with `record`.
 
 - The tuple output is converted to a record by using the `record()` function and specifying a name for each record field.
 
@@ -210,7 +208,7 @@ process QUANT {
     conda 'bioconda::salmon=1.10.3'
 
     input:
-    (id, fastq_1, fastq_2): Tuple<String, Path, Path>
+    tuple(id: String, fastq_1: Path, fastq_2: Path)
     index: Path
 
     output:
@@ -233,21 +231,21 @@ To migrate this process, rewrite the inputs and outputs as follows:
 
 ```nextflow
 process QUANT {
-    tag sample.id
+    tag id
     conda 'bioconda::salmon=1.10.3'
 
     input:
-    sample: Record {
-        id: String
-        fastq_1: Path
+    record(
+        id: String,
+        fastq_1: Path,
         fastq_2: Path
-    }
+    )
     index: Path
 
     output:
     record(
-        id: sample.id,
-        quant: file("quant_${sample.id}")
+        id: id,
+        quant: file("quant_${id}")
     )
 
     script:
@@ -256,9 +254,9 @@ process QUANT {
         --threads ${task.cpus} \
         --libType=U \
         -i ${index} \
-        -1 ${sample.fastq_1} \
-        -2 ${sample.fastq_2} \
-        -o quant_${sample.id}
+        -1 ${fastq_1} \
+        -2 ${fastq_2} \
+        -o quant_${id}
     """
 }
 ```
