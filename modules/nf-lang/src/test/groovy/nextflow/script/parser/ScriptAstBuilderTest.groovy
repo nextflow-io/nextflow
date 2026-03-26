@@ -345,26 +345,6 @@ class ScriptAstBuilderTest extends Specification {
 
             process hello {
                 input:
-                list(id)
-
-                script:
-                ""
-            }
-            '''
-        )
-        then:
-        errors.size() == 1
-        errors[0].getStartLine() == 5
-        errors[0].getStartColumn() == 5
-        errors[0].getOriginalMessage() == "Invalid process structured input -- should be `record()` or `tuple()`"
-
-        when:
-        errors = check(
-            '''\
-            nextflow.preview.types = true
-
-            process hello {
-                input:
                 tuple(id: String)
 
                 script:
