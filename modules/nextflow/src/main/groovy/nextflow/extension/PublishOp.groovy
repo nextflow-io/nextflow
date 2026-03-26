@@ -217,6 +217,7 @@ class PublishOp {
      */
     protected void onComplete() {
         // publish individual record if source is a value channel
+        // NOTE: handle (invalid) empty dataflow value from legacy process, legacy collect(), etc
         final outputValue = CH.isValue(source)
             ? (publishedValues ? publishedValues.first() : null)
             : publishedValues
