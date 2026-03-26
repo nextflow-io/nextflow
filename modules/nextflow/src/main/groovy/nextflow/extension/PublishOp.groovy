@@ -218,7 +218,7 @@ class PublishOp {
     protected void onComplete() {
         // publish individual record if source is a value channel
         final outputValue = CH.isValue(source)
-            ? publishedValues.first()
+            ? (publishedValues ? publishedValues.first() : null)
             : publishedValues
 
         // publish workflow output
