@@ -47,7 +47,6 @@ import nextflow.script.ScriptMeta
 import nextflow.script.TokenVar
 import nextflow.script.WorkflowMetadata
 import nextflow.script.params.EnvOutParam
-import nextflow.util.ArrayBag
 import nextflow.script.params.FileInParam
 import nextflow.script.params.FileOutParam
 import nextflow.script.params.InParam

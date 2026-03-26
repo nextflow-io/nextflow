@@ -19,7 +19,6 @@ package nextflow.lineage
 import nextflow.NextflowMeta
 import nextflow.extension.FilesEx
 import nextflow.lineage.exception.OutputRelativePathException
-import nextflow.script.types.Bag
 
 import static nextflow.lineage.fs.LinPath.*
 
